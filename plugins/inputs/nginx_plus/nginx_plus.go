@@ -290,10 +290,16 @@ func (s *Status) Gather(tags map[string]string, acc telegraf.Accumulator) {
 }
 
 func (s *Status) gatherProcessesMetrics(tags map[string]string, acc telegraf.Accumulator) {
+	var respawned int
+
+	if s.Processes.Respawned != nil {
+		respawned = *s.Processes.Respawned
+	}
+
 	acc.AddFields(
 		"nginx_plus_processes",
 		map[string]interface{}{
-			"respawned": *s.Processes.Respawned,
+			"respawned": respawned,
 		},
 		tags,
 	)
@@ -390,6 +396,12 @@ func (s *Status) gatherUpstreamMetrics(tags map[string]string, acc telegraf.Accu
 			upstreamTags,
 		)
 		for _, peer := range upstream.Peers {
+			var selected int64
+
+			if peer.Selected != nil {
+				selected = *peer.Selected
+			}
+
 			peerFields := map[string]interface{}{
 				"backup":                 peer.Backup,
 				"weight":                 peer.Weight,
@@ -411,7 +423,7 @@ func (s *Status) gatherUpstreamMetrics(tags map[string]string, acc telegraf.Accu
 				"healthchecks_unhealthy": peer.HealthChecks.Unhealthy,
 				"downtime":               peer.Downtime,
 				"downstart":              peer.Downstart,
-				"selected":               *peer.Selected,
+				"selected":               selected,
 			}
 			if peer.HealthChecks.LastPassed != nil {
 				peerFields["healthchecks_last_passed"] = *peer.HealthChecks.LastPassed
