@@ -60,7 +60,7 @@ github.com/prometheus/procfs 1878d9fbb537119d24b21ca07effd591627cd160
 github.com/rcrowley/go-metrics 1f30fe9094a513ce4c700b9a54458bbb0c96996c
 github.com/samuel/go-zookeeper 1d7be4effb13d2d908342d349d71a284a7542693
 github.com/satori/go.uuid 5bf94b69c6b68ee1b541973bb8e1144db23a194b
-github.com/shirou/gopsutil 9a4a9167ad3b4355dbf1c2c7a0f5f0d3fb1e9ab9
+github.com/shirou/gopsutil a452de7c734a0fa0f16d2e5725b0fa5934d9fbec
 github.com/shirou/w32 3c9377fc6748f222729a8270fe2775d149a249ad
 github.com/Shopify/sarama c01858abb625b73a3af51d0798e4ad42c8147093
 github.com/Sirupsen/logrus 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
