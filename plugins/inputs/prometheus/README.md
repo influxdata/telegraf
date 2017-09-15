@@ -61,6 +61,22 @@ to filter and some tags
   ssl_key = '/path/to/keyfile'
 ```
 
+```toml
+# Use with [Kubernetes headless services](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services)
+[[inputs.prometheus]]
+  # An array of urls to scrape metrics from.
+  urls = ["https://my-headless-service.my-namespace:8080/metrics"]
+
+  # this will look up all the IP addresses behind the host and
+  # query every one of them, using the same schema, port and path
+  do_dns_lookup = true
+
+  # this will add one additional tag with value of the host name
+  # that the metrics came from
+  add_host_tag = true
+
+```
+
 ### Usage for Caddy HTTP server
 
 If you want to monitor Caddy, you need to use Caddy with its Prometheus plugin:
