@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -36,9 +37,7 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Urls:        []string{ts.URL},
-		DoDnsLookup: true,
-		AddHostTag:  false,
+		Urls: []string{ts.URL},
 	}
 
 	var acc testutil.Accumulator
@@ -50,7 +49,7 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	assert.True(t, acc.HasFloatField("go_goroutines", "gauge"))
 	assert.True(t, acc.HasFloatField("test_metric", "value"))
 	assert.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
-	assert.False(t, acc.HasTag("test_metric", "host"))
+	assert.False(t, acc.HasTag("test_metric", "address"))
 }
 
 func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
@@ -60,10 +59,10 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Urls:        []string{ts.URL},
-		DoDnsLookup: true,
-		AddHostTag:  true,
+		KubernetesServices: []string{ts.URL},
 	}
+	u, _ := url.Parse(ts.URL)
+	tsAddress := u.Hostname()
 
 	var acc testutil.Accumulator
 
@@ -74,7 +73,7 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	assert.True(t, acc.HasFloatField("go_goroutines", "gauge"))
 	assert.True(t, acc.HasFloatField("test_metric", "value"))
 	assert.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
-	assert.True(t, acc.TagValue("test_metric", "host") == ts.Listener.Addr().String())
+	assert.True(t, acc.TagValue("test_metric", "address") == tsAddress)
 }
 
 func TestPrometheusGeneratesMetricsAlthoughFirstDNSFails(t *testing.T) {
@@ -88,9 +87,8 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFails(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Urls:        []string{"http://random.telegraf.local:88/metrics", ts.URL},
-		DoDnsLookup: true,
-		AddHostTag:  true,
+		Urls:               []string{ts.URL},
+		KubernetesServices: []string{"http://random.telegraf.local:88/metrics"},
 	}
 
 	var acc testutil.Accumulator

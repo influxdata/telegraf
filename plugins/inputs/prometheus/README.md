@@ -5,9 +5,9 @@ exposing metrics with Prometheus format
 
 ### Configuration:
 
-Example for Kubernetes apiserver
+Example for Kubernetes API server
 ```toml
-# Get all metrics from Kube-apiserver
+# Get all metrics from Kubernetes API server
 [[inputs.prometheus]]
   # An array of urls to scrape metrics from.
   urls = ["http://my-kube-apiserver:8080/metrics"]
@@ -15,7 +15,7 @@ Example for Kubernetes apiserver
 
 Specify a 10 second timeout for slower/over-loaded clients
 ```toml
-# Get all metrics from Kube-apiserver
+# Get all metrics from Kubernetes API server
 [[inputs.prometheus]]
   # An array of urls to scrape metrics from.
   urls = ["http://my-kube-apiserver:8080/metrics"]
@@ -28,7 +28,7 @@ You can use more complex configuration
 to filter and some tags
 
 ```toml
-# Get all metrics from Kube-apiserver
+# Get all metrics from Kubernetes API server
 [[inputs.prometheus]]
   # An array of urls to scrape metrics from.
   urls = ["http://my-kube-apiserver:8080/metrics"]
@@ -65,16 +65,12 @@ to filter and some tags
 # Use with [Kubernetes headless services](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services)
 [[inputs.prometheus]]
   # An array of urls to scrape metrics from.
-  urls = ["https://my-headless-service.my-namespace:8080/metrics"]
+  urls = ["https://my-kube-apiserver:8080/metrics"]
 
-  # this will look up all the IP addresses behind the host and
-  # query every one of them, using the same schema, port and path
-  do_dns_lookup = true
-
-  # this will add one additional tag with value of the host name
-  # that the metrics came from
-  add_host_tag = true
-
+  # An array of Kubernetes services to scrape metrics from.
+  # The IP addresses of all pods behind these services will be resolved and
+  # then scraped
+  kubernetes_services = ["https://my-headless-service.my-namespace:8080/metrics"]
 ```
 
 ### Usage for Caddy HTTP server

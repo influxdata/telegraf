@@ -19,13 +19,11 @@ import (
 const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client.MetricFamily;encoding=delimited;q=0.7,text/plain;version=0.0.4;q=0.3`
 
 type Prometheus struct {
+	// An array of urls to scrape metrics from.
 	Urls []string
 
-	// Lookup IP addresses behind URL and gather from them one by one
-	DoDnsLookup bool
-
-	// Add a tag named host in the form of 'host:port'
-	AddHostTag bool
+	// An array of Kubernetes services to scrape metrics from.
+	KubernetesServices []string
 
 	// Bearer Token authorization file path
 	BearerToken string `toml:"bearer_token"`
@@ -48,11 +46,8 @@ var sampleConfig = `
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
 
-  ## Lookup IP addresses behind URL and gather from them one by one
-  do_dns_lookup = false
-
-  ## Add a tag named host in the form of 'host:port'
-  add_host_tag = false
+  ## An array of Kubernetes services to scrape metrics from.
+  kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
 
   ## Use bearer token for authorization
   # bearer_token = /path/to/bearer/token
@@ -97,6 +92,34 @@ func (p *Prometheus) AddressToURL(u *url.URL, address string) string {
 	return reconstructedUrl.String()
 }
 
+type UrlAndAddress struct {
+	Url     string
+	Address string
+}
+
+func (p *Prometheus) GetAllURLs() ([]UrlAndAddress, error) {
+	allUrls := make([]UrlAndAddress, 0)
+	for _, url := range p.Urls {
+		allUrls = append(allUrls, UrlAndAddress{Url: url})
+	}
+	for _, service := range p.KubernetesServices {
+		u, err := url.Parse(service)
+		if err != nil {
+			return nil, err
+		}
+		resolvedAddresses, err := net.LookupHost(u.Hostname())
+		if err != nil {
+			log.Printf("prometheus: Could not resolve %s, skipping it. Error: %s", u.Host, err)
+			continue
+		}
+		for _, resolved := range resolvedAddresses {
+			serviceUrl := p.AddressToURL(u, resolved)
+			allUrls = append(allUrls, UrlAndAddress{Url: serviceUrl, Address: resolved})
+		}
+	}
+	return allUrls, nil
+}
+
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
 func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
@@ -110,31 +133,16 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 
-	for _, possibleServ := range p.Urls {
-		urls := p.Urls
-		if p.DoDnsLookup {
-			u, err := url.Parse(possibleServ)
-			if err != nil {
-				return err
-			}
-			host := u.Hostname()
-			resolvedAddresses, err := net.LookupHost(host)
-			if err != nil {
-				log.Printf("prometheus: Could not resolve %s, skipping it. Error: %s", u.Host, err)
-				continue
-			}
-			urls = make([]string, len(resolvedAddresses), len(resolvedAddresses))
-			for index, resolved := range resolvedAddresses {
-				urls[index] = p.AddressToURL(u, resolved)
-			}
-		}
-		for _, serv := range urls {
-			wg.Add(1)
-			go func(serviceUrl string) {
-				defer wg.Done()
-				acc.AddError(p.gatherURL(serviceUrl, acc))
-			}(serv)
-		}
+	allUrls, err := p.GetAllURLs()
+	if err != nil {
+		return err
+	}
+	for _, url := range allUrls {
+		wg.Add(1)
+		go func(serviceUrl UrlAndAddress) {
+			defer wg.Done()
+			acc.AddError(p.gatherURL(serviceUrl, acc))
+		}(url)
 	}
 
 	wg.Wait()
@@ -169,8 +177,8 @@ func (p *Prometheus) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
-	var req, err = http.NewRequest("GET", url, nil)
+func (p *Prometheus) gatherURL(url UrlAndAddress, acc telegraf.Accumulator) error {
+	var req, err = http.NewRequest("GET", url.Url, nil)
 	req.Header.Add("Accept", acceptHeader)
 	var token []byte
 	var resp *http.Response
@@ -185,11 +193,11 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 
 	resp, err = p.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error making HTTP request to %s: %s", url, err)
+		return fmt.Errorf("error making HTTP request to %s: %s", url.Url, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
+		return fmt.Errorf("%s returned HTTP status %s", url.Url, resp.Status)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -200,14 +208,14 @@ func (p *Prometheus) gatherURL(url string, acc telegraf.Accumulator) error {
 	metrics, err := Parse(body, resp.Header)
 	if err != nil {
 		return fmt.Errorf("error reading metrics for %s: %s",
-			url, err)
+			url.Url, err)
 	}
 	// Add (or not) collected metrics
 	for _, metric := range metrics {
 		tags := metric.Tags()
-		tags["url"] = url
-		if p.AddHostTag {
-			tags["host"] = req.Host
+		tags["url"] = url.Url
+		if url.Address != "" {
+			tags["address"] = url.Address
 		}
 		acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
 	}
