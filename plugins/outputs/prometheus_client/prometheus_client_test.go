@@ -445,6 +445,7 @@ func setupPrometheus() (*PrometheusClient, *prometheus_input.Prometheus, error) 
 	if pTesting == nil {
 		pTesting = NewClient()
 		pTesting.Listen = "localhost:9127"
+		pTesting.Path = "/metrics"
 		err := pTesting.Start()
 		if err != nil {
 			return nil, nil, err
