@@ -36,9 +36,9 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Urls: []string{ts.URL},
+		Urls:        []string{ts.URL},
 		DoDnsLookup: true,
-		AddHostTag: false,
+		AddHostTag:  false,
 	}
 
 	var acc testutil.Accumulator
@@ -60,9 +60,9 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Urls: []string{ts.URL},
+		Urls:        []string{ts.URL},
 		DoDnsLookup: true,
-		AddHostTag: true,
+		AddHostTag:  true,
 	}
 
 	var acc testutil.Accumulator
@@ -88,9 +88,9 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFails(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Urls: []string{"http://random.telegraf.local:88/metrics", ts.URL},
+		Urls:        []string{"http://random.telegraf.local:88/metrics", ts.URL},
 		DoDnsLookup: true,
-		AddHostTag: true,
+		AddHostTag:  true,
 	}
 
 	var acc testutil.Accumulator
