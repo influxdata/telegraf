@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
@@ -79,26 +78,23 @@ func (p *Prometheus) Description() string {
 
 var ErrProtocolError = errors.New("prometheus protocol error")
 
-func (p *Prometheus) SplitHostAndPort(host string) (string, string) {
-	hostPort := ""
-	hostSplit := strings.Split(host, ":")
-	if len(hostSplit) == 2 {
-		host = hostSplit[0]
-		hostPort = hostSplit[1]
-	}
-	return host, hostPort
-}
-
 func (p *Prometheus) AddressToURL(u *url.URL, address string) string {
-	_, port := p.SplitHostAndPort(u.Host)
-	reconstructed := u.Scheme + "://" + address + u.Path
-	if port != "" {
-		reconstructed = u.Scheme + "://" + address + ":" + port + u.Path
+	host := address
+	if u.Port() != "" {
+		host = address + ":" + u.Port()
 	}
-	if u.RawQuery != "" {
-		reconstructed = reconstructed + "?" + u.RawQuery
+	reconstructedUrl := url.URL{
+		Scheme:     u.Scheme,
+		Opaque:     u.Opaque,
+		User:       u.User,
+		Path:       u.Path,
+		RawPath:    u.RawPath,
+		ForceQuery: u.ForceQuery,
+		RawQuery:   u.RawQuery,
+		Fragment:   u.Fragment,
+		Host:       host,
 	}
-	return reconstructed
+	return reconstructedUrl.String()
 }
 
 // Reads stats from all configured servers accumulates stats.
@@ -121,7 +117,7 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				return err
 			}
-			host, _ := p.SplitHostAndPort(u.Host)
+			host := u.Hostname()
 			resolvedAddresses, err := net.LookupHost(host)
 			if err != nil {
 				log.Printf("prometheus: Could not resolve %s, skipping it. Error: %s", u.Host, err)
