@@ -19,6 +19,7 @@
 - [#3224](https://github.com/influxdata/telegraf/pull/3224): Preserve url path prefix in influx output.
 - [#3234](https://github.com/influxdata/telegraf/pull/3234): Add support for timing sums in statsd input.
 - [#2617](https://github.com/influxdata/telegraf/issues/2617): Add resource limit monitoring to procstat.
+- [#3236](https://github.com/influxdata/telegraf/pull/3236): Add support for k8s service DNS discovery to prometheus input.
 
 ### Bugfixes
 
