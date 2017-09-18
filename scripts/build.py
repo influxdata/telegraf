@@ -274,6 +274,8 @@ def get_system_arch():
         arch = "amd64"
     elif arch == "386":
         arch = "i386"
+    elif "arm64" in arch:
+        arch = "arm64"
     elif 'arm' in arch:
         # Prevent uname from reporting full ARM arch (eg 'armv7l')
         arch = "arm"
@@ -446,6 +448,8 @@ def build(version=None,
         # Handle variations in architecture output
         if arch == "i386" or arch == "i686":
             arch = "386"
+        elif "arm64" in arch:
+            arch = "arm64"
         elif "arm" in arch:
             arch = "arm"
         build_command += "GOOS={} GOARCH={} ".format(platform, arch)
