@@ -47,7 +47,7 @@ var sampleConfig = `
   urls = ["http://localhost:9100/metrics"]
 
   ## An array of Kubernetes services to scrape metrics from.
-  kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
+  # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
 
   ## Use bearer token for authorization
   # bearer_token = /path/to/bearer/token
