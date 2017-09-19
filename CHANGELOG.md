@@ -1,5 +1,8 @@
 ## v1.5 [unreleased]
 
+### New Plugins
+- [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
+
 ### Release Notes
 
 - In the `kinesis` output, use of the `partition_key` and
@@ -21,6 +24,7 @@
 - [#2617](https://github.com/influxdata/telegraf/issues/2617): Add resource limit monitoring to procstat.
 - [#3236](https://github.com/influxdata/telegraf/pull/3236): Add support for k8s service DNS discovery to prometheus input.
 - [#3245](https://github.com/influxdata/telegraf/pull/3245): Add configurable metrics endpoint to prometheus output.
+- [#3214](https://github.com/influxdata/telegraf/pull/3214): Add new nginx_plus input plugin.
 
 ### Bugfixes
 

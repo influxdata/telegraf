@@ -171,6 +171,7 @@ configuration options.
 * [mysql](./plugins/inputs/mysql)
 * [net_response](./plugins/inputs/net_response)
 * [nginx](./plugins/inputs/nginx)
+* [nginx_plus](./plugins/inputs/nginx_plus)
 * [nsq](./plugins/inputs/nsq)
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
