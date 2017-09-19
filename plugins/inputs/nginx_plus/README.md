@@ -67,14 +67,12 @@ Structures for Nginx Plus have been built based on history of
   - port
 
 - nginx_plus_upstream, nginx_plus_stream_upstream
-  - host
   - upstream
   - server
   - port
 
 - nginx_plus_upstream_peer, nginx_plus_stream_upstream_peer
   - id
-  - host
   - upstream
   - server
   - port
@@ -97,12 +95,14 @@ When run with:
 It produces:
 ```
 * Plugin: inputs.nginx_plus, Collection 1
-> nginx_plus_processes,server=localhost,port=12021,host=word.local respawned="0xc420075538" 1504922954000000000
-> nginx_plus_connections,server=localhost,port=12021,host=word.local accepted=4458727685i,dropped=10138424i,active=10256i,idle=29390i 1504922954000000000
-> nginx_plus_ssl,server=localhost,port=12021,host=word.local handshakes=0i,handshakes_failed=0i,session_reuses=0i 1504922954000000000
-> nginx_plus_requests,host=word.local,server=localhost,port=12021 total=147885504244i,current=10019i 1504922954000000000
-> nginx_plus_upstream,host=word.local,upstream=dataserver80,server=localhost,port=12021 zombies=0i,keepalive=0i 1504922954000000000
-> nginx_plus_upstream_peer,id=0,server=localhost,port=12021,host=word.local,upstream=dataserver80,serverAddress=10.10.102.181:80 responses_5xx=27831i,healthchecks_unhealthy=1i,downtime=484817i,healthchecks_last_passed=true,responses_1xx=0i,active=22i,requests=2620930i,responses_total=2620652i,fails=4i,downstart=0i,state="up",responses_4xx=16i,healthchecks_checks=14133i,selected="0xc4201b22e8",response_time=95i,responses_2xx=2592805i,weight=1i,responses_3xx=0i,sent=3802831967i,received=536695496i,unavail=4i,healthchecks_fails=27i,header_time=94i,backup=false 1504922954000000000
+> nginx_plus_processes,server=localhost,port=12021,host=word.local respawned=0i 1505782513000000000
+> nginx_plus_connections,server=localhost,port=12021,host=word.local accepted=5535735212i,dropped=10140186i,active=9541i,idle=67540i 1505782513000000000
+> nginx_plus_ssl,server=localhost,port=12021,host=word.local handshakes=0i,handshakes_failed=0i,session_reuses=0i 1505782513000000000
+> nginx_plus_requests,server=localhost,port=12021,host=word.local total=186780541173i,current=9037i 1505782513000000000
+> nginx_plus_upstream,port=12021,host=word.local,upstream=dataserver80,server=localhost keepalive=0i,zombies=0i 1505782513000000000
+> nginx_plus_upstream_peer,upstream=dataserver80,upstream_address=10.10.102.181:80,id=0,server=localhost,port=12021,host=word.local sent=53806910399i,received=7516943964i,fails=207i,downtime=2325979i,selected=1505782512000i,backup=false,active=6i,responses_4xx=6935i,header_time=80i,response_time=80i,healthchecks_last_passed=true,responses_1xx=0i,responses_2xx=36299890i,responses_5xx=360450i,responses_total=36667275i,unavail=154i,downstart=0i,state="up",requests=36673741i,responses_3xx=0i,healthchecks_unhealthy=5i,weight=1i,healthchecks_checks=177209i,healthchecks_fails=29i 1505782513000000000
+> nginx_plus_stream_upstream,server=localhost,port=12021,host=word.local,upstream=dataserver443 zombies=0i 1505782513000000000
+> nginx_plus_stream_upstream_peer,server=localhost,upstream_address=10.10.102.181:443,id=0,port=12021,host=word.local,upstream=dataserver443 active=1i,healthchecks_unhealthy=1i,weight=1i,unavail=0i,connect_time=24i,first_byte_time=78i,healthchecks_last_passed=true,state="up",sent=4457713140i,received=698065272i,fails=0i,healthchecks_checks=178421i,downstart=0i,selected=1505782512000i,response_time=5156i,backup=false,connections=56251i,healthchecks_fails=20i,downtime=391017i 1505782513000000000
 ```
 
 ### Reference material
