@@ -20,6 +20,7 @@
 - [#3234](https://github.com/influxdata/telegraf/pull/3234): Add support for timing sums in statsd input.
 - [#2617](https://github.com/influxdata/telegraf/issues/2617): Add resource limit monitoring to procstat.
 - [#3236](https://github.com/influxdata/telegraf/pull/3236): Add support for k8s service DNS discovery to prometheus input.
+- [#3245](https://github.com/influxdata/telegraf/pull/3245): Add configurable metrics endpoint to prometheus output.
 
 ### Bugfixes
 
