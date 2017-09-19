@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/filter"
+	"github.com/masami10/telegraf/internal"
+	"github.com/masami10/telegraf/plugins/inputs"
 )
 
 type runner func(cmdName string, UseSudo bool) (*bytes.Buffer, error)

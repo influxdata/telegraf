@@ -3,8 +3,8 @@ package amqp
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/masami10/telegraf/plugins/serializers"
+	"github.com/masami10/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 

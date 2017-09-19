@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/plugins/inputs"
 )
 
 // Mapping of ntpq header names to tag keys
@@ -68,7 +68,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 
 	// Due to problems with a parsing, we have to use regexp expression in order
 	// to remove string that starts from '(' and ends with space
-	// see: https://github.com/influxdata/telegraf/issues/2386
+	// see: https://github.com/masami10/telegraf/issues/2386
 	reg, err := regexp.Compile("\\s+\\([\\S]*")
 	if err != nil {
 		return err
@@ -81,7 +81,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 
 		tags := make(map[string]string)
 		// if there is an ntpq state prefix, remove it and make it it's own tag
-		// see https://github.com/influxdata/telegraf/issues/1161
+		// see https://github.com/masami10/telegraf/issues/1161
 		if strings.ContainsAny(string(line[0]), "*#o+x.-") {
 			tags["state_prefix"] = string(line[0])
 			line = strings.TrimLeft(line, "*#o+x.-")

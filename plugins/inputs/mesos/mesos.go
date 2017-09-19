@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/plugins/inputs"
+	jsonparser "github.com/masami10/telegraf/plugins/parsers/json"
 )
 
 type Role string

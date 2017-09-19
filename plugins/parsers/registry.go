@@ -3,14 +3,14 @@ package parsers
 import (
 	"fmt"
 
-	"github.com/influxdata/telegraf"
+	"github.com/masami10/telegraf"
 
-	"github.com/influxdata/telegraf/plugins/parsers/collectd"
-	"github.com/influxdata/telegraf/plugins/parsers/graphite"
-	"github.com/influxdata/telegraf/plugins/parsers/influx"
-	"github.com/influxdata/telegraf/plugins/parsers/json"
-	"github.com/influxdata/telegraf/plugins/parsers/nagios"
-	"github.com/influxdata/telegraf/plugins/parsers/value"
+	"github.com/masami10/telegraf/plugins/parsers/collectd"
+	"github.com/masami10/telegraf/plugins/parsers/graphite"
+	"github.com/masami10/telegraf/plugins/parsers/influx"
+	"github.com/masami10/telegraf/plugins/parsers/json"
+	"github.com/masami10/telegraf/plugins/parsers/nagios"
+	"github.com/masami10/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/msgpack"
 )
 

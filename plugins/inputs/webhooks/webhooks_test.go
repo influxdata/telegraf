@@ -4,9 +4,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/influxdata/telegraf/plugins/inputs/webhooks/github"
-	"github.com/influxdata/telegraf/plugins/inputs/webhooks/papertrail"
-	"github.com/influxdata/telegraf/plugins/inputs/webhooks/rollbar"
+	"github.com/masami10/telegraf/plugins/inputs/webhooks/github"
+	"github.com/masami10/telegraf/plugins/inputs/webhooks/papertrail"
+	"github.com/masami10/telegraf/plugins/inputs/webhooks/rollbar"
 )
 
 func TestAvailableWebhooks(t *testing.T) {

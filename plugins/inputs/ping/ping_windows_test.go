@@ -4,7 +4,7 @@ package ping
 
 import (
 	"errors"
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/masami10/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

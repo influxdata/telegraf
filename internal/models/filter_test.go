@@ -360,7 +360,7 @@ func TestFilter_FilterTagsMatches(t *testing.T) {
 
 // TestFilter_FilterNamePassAndDrop used for check case when
 // both parameters were defined
-// see: https://github.com/influxdata/telegraf/issues/2860
+// see: https://github.com/masami10/telegraf/issues/2860
 func TestFilter_FilterNamePassAndDrop(t *testing.T) {
 
 	inputData := []string{"name1", "name2", "name3", "name4"}
@@ -380,7 +380,7 @@ func TestFilter_FilterNamePassAndDrop(t *testing.T) {
 
 // TestFilter_FilterFieldPassAndDrop used for check case when
 // both parameters were defined
-// see: https://github.com/influxdata/telegraf/issues/2860
+// see: https://github.com/masami10/telegraf/issues/2860
 func TestFilter_FilterFieldPassAndDrop(t *testing.T) {
 
 	inputData := []string{"field1", "field2", "field3", "field4"}
@@ -400,7 +400,7 @@ func TestFilter_FilterFieldPassAndDrop(t *testing.T) {
 
 // TestFilter_FilterTagsPassAndDrop used for check case when
 // both parameters were defined
-// see: https://github.com/influxdata/telegraf/issues/2860
+// see: https://github.com/masami10/telegraf/issues/2860
 func TestFilter_FilterTagsPassAndDrop(t *testing.T) {
 
 	inputData := []map[string]string{

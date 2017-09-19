@@ -4,8 +4,8 @@ package win_services
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/plugins/inputs"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
 )

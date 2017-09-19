@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/metric"
 )
 
 type JSONParser struct {
@@ -110,7 +110,7 @@ func (f *JSONFlattener) FlattenJSON(
 	if f.Fields == nil {
 		f.Fields = make(map[string]interface{})
 	}
-	return f.FullFlattenJSON(fieldname, v, false, false)
+	return f.FullFlattenJSON(fieldname, v, true, false)
 }
 
 // FullFlattenJSON flattens nested maps/interfaces into a fields map (including bools and string)

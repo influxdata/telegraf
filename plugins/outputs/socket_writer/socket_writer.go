@@ -6,10 +6,10 @@ import (
 	"net"
 	"strings"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/internal"
+	"github.com/masami10/telegraf/plugins/outputs"
+	"github.com/masami10/telegraf/plugins/serializers"
 )
 
 type SocketWriter struct {
@@ -48,7 +48,7 @@ func (sw *SocketWriter) SampleConfig() string {
   ## Data format to generate.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  ## https://github.com/masami10/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"
 `
 }

@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/influxdata/toml"
+	"github.com/masami10/telegraf/internal"
+	"github.com/masami10/telegraf/testutil"
+	"github.com/masami10/toml"
 	"github.com/soniah/gosnmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

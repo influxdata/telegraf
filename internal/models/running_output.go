@@ -5,10 +5,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/buffer"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/selfstat"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/internal/buffer"
+	"github.com/masami10/telegraf/metric"
+	"github.com/masami10/telegraf/selfstat"
 )
 
 const (

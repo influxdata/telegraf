@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/masami10/telegraf/testutil"
 
 	"github.com/couchbase/go-couchbase"
 )

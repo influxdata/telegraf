@@ -7,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/influxdata/telegraf/metric"
+	"github.com/masami10/telegraf/metric"
 )
 
 func TestSerializeMetricFloat(t *testing.T) {

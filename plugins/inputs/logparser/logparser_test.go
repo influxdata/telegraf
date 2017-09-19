@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/masami10/telegraf/testutil"
 
-	"github.com/influxdata/telegraf/plugins/inputs/logparser/grok"
+	"github.com/masami10/telegraf/plugins/inputs/logparser/grok"
 
 	"github.com/stretchr/testify/assert"
 )

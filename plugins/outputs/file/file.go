@@ -5,9 +5,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/plugins/outputs"
+	"github.com/masami10/telegraf/plugins/serializers"
 )
 
 type File struct {
@@ -26,7 +26,7 @@ var sampleConfig = `
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  ## https://github.com/masami10/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
 `
 

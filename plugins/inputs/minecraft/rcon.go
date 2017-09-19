@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/influxdata/telegraf/plugins/inputs/minecraft/internal/rcon"
+	"github.com/masami10/telegraf/plugins/inputs/minecraft/internal/rcon"
 )
 
 const (

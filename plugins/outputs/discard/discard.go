@@ -1,8 +1,8 @@
 package discard
 
 import (
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/plugins/outputs"
 )
 
 type Discard struct{}

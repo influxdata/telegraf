@@ -9,10 +9,10 @@ import (
 	"net"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/internal"
+	"github.com/masami10/telegraf/plugins/outputs"
+	"github.com/masami10/telegraf/plugins/serializers"
 )
 
 type Graphite struct {
@@ -44,7 +44,7 @@ var sampleConfig = `
   ## Prefix metrics name
   prefix = ""
   ## Graphite output template
-  ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  ## see https://github.com/masami10/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   template = "host.tags.measurement.field"
   ## timeout in seconds for the write connection to graphite
   timeout = 2

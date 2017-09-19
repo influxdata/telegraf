@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/influxdata/telegraf"
+	"github.com/masami10/telegraf"
 
-	"github.com/influxdata/telegraf/plugins/serializers/graphite"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
-	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/masami10/telegraf/plugins/serializers/graphite"
+	"github.com/masami10/telegraf/plugins/serializers/influx"
+	"github.com/masami10/telegraf/plugins/serializers/json"
 )
 
 // SerializerOutput is an interface for output plugins that are able to

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/masami10/telegraf/testutil"
 )
 
 func GithubWebhookRequest(event string, jsonString string, t *testing.T) {

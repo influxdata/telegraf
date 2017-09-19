@@ -1,6 +1,6 @@
 package processors
 
-import "github.com/influxdata/telegraf"
+import "github.com/masami10/telegraf"
 
 type Creator func() telegraf.Processor
 

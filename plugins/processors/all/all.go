@@ -1,5 +1,5 @@
 package all
 
 import (
-	_ "github.com/influxdata/telegraf/plugins/processors/printer"
+	_ "github.com/masami10/telegraf/plugins/processors/printer"
 )

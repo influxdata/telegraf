@@ -9,12 +9,12 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/influxdata/telegraf/plugins/serializers/graphite"
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/internal"
+	"github.com/masami10/telegraf/metric"
+	"github.com/masami10/telegraf/plugins/outputs"
+	"github.com/masami10/telegraf/plugins/serializers"
+	"github.com/masami10/telegraf/plugins/serializers/graphite"
 )
 
 var (
@@ -47,7 +47,7 @@ var sampleConfig = `
   ## Prefix the metrics with a given name
   prefix = ""
   ## Stats output template (Graphite formatting)
-  ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
+  ## see https://github.com/masami10/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite
   template = "host.tags.measurement.field"
   ## Timeout in seconds to connect
   timeout = "2s"
