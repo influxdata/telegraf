@@ -2,13 +2,14 @@ package msgpack
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/vmihailenco/msgpack"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/masami10/telegraf"
+	"github.com/masami10/telegraf/metric"
+	"github.com/vmihailenco/msgpack"
 )
 
 type MsgpackParser struct {

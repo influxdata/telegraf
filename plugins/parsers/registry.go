@@ -9,9 +9,9 @@ import (
 	"github.com/masami10/telegraf/plugins/parsers/graphite"
 	"github.com/masami10/telegraf/plugins/parsers/influx"
 	"github.com/masami10/telegraf/plugins/parsers/json"
+	"github.com/masami10/telegraf/plugins/parsers/msgpack"
 	"github.com/masami10/telegraf/plugins/parsers/nagios"
 	"github.com/masami10/telegraf/plugins/parsers/value"
-	"github.com/influxdata/telegraf/plugins/parsers/msgpack"
 )
 
 // ParserInput is an interface for input plugins that are able to parse
@@ -152,9 +152,8 @@ func NewMsgpackParser(
 	metricName string,
 	defaultTags map[string]string,
 ) (Parser, error) {
-	parser := &msgpack.MsgpackParser{
+	return &msgpack.MsgpackParser{
 		MetricName:  metricName,
 		DefaultTags: defaultTags,
-	}
-	return parser, nil
+	}, nil
 }
