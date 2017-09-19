@@ -74,6 +74,7 @@ github.com/wvanbergen/kafka bc265fedb9ff5b5c5d3c0fdcef4a819b3523d3ee
 github.com/wvanbergen/kazoo-go 968957352185472eacb69215fa3dbfcfdbac1096
 github.com/yuin/gopher-lua 66c871e454fcf10251c61bf8eff02d0978cae75a
 github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363
+github.com/vmihailenco/msgpack d91c9f43689d8565046de42f51a19bb80ebb8360
 golang.org/x/crypto dc137beb6cce2043eb6b5f223ab8bf51c32459f4
 golang.org/x/net f2499483f923065a842d38eb4c7f1927e6fc6e6d
 golang.org/x/sys 739734461d1c916b6c72a63d7efda2b27edb369f
