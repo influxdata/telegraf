@@ -1,6 +1,9 @@
 package topk
 
 import (
+	"sort"
+	"fmt"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
@@ -51,7 +54,38 @@ func (t *TopK) Description() string {
 }
 
 func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	return in
+	// Add the metrics received to our internal cache
+	for _, m := range in {
+
+		// Initialize the key with an empty list if necessary
+		if _, ok := t.cache[m.HashID()]; !ok {
+			t.cache[m.HashID()] = make([]telegraf.Metric, 0, 10)
+		}
+
+		// Append the metric to the corresponding key list
+		t.cache[m.HashID()] = append(t.cache[m.HashID()], m)
+	}
+
+	// If enough time has passed
+
+	// Sort the keys by the selected field
+	for _, ms := range t.cache {
+		sort.Reverse(Measurements(ms))
+	}
+
+	// Create a one dimentional list with the top K metrics of each key
+	ret := make([]telegraf.Metric, 0, 100)
+	for _, ms := range t.cache {
+		ret = append(ret, ms[0:min(len(ms), 10)]...)
+		fmt.Println(len(ret))
+	}
+
+	return ret
+}
+
+func min(a, b int) int   {
+	if a > b { return b }
+	return a
 }
 
 func convert(in interface{}) (float64, bool) {
