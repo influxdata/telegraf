@@ -18,6 +18,26 @@ func NewTopK() telegraf.Processor{
 var sampleConfig = `
 `
 
+type Measurements []telegraf.Metric
+
+func (m Measurements) Len() int {
+	return len(m)
+}
+
+func (m Measurements) Less(i, j int) bool {
+	iv, iok := convert(m[i].Fields()["value"])
+	jv, jok := convert(m[j].Fields()["value"])
+	if  iok && jok && (iv < jv) {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (m Measurements) Swap(i, j int) {
+	m[i], m[j] = m[j], m[i]
+}
+
 func (t *TopK) SampleConfig() string {
 	return sampleConfig
 }
