@@ -8,18 +8,27 @@ For more information, please check the [DC/OS Metrics](https://dcos.io/docs/1.9/
 ```toml
 # Input plugin for gathering DC/OS agent metrics
 [[inputs.dcos]]
-  # Base URL of DC/OS cluster, e.g. http://dcos.example.com
-  cluster_url=""
-  # Authentication token, obtained by running: dcos config show core.dcos_acs_token
-  auth_token=""
-  # List of  DC/OS agent hostnames from which the metrics should be gathers. Leave empty for all.
-  agents = []
+  # Hostname or ip address of DC/OS master for access from within DC/OS cluster
+  master_hostname=""
+  # Public URL of DC/OS cluster, e.g. http://dcos.example.com. Use of access from outside of the DC/OS cluster. master_hostname has higher priority, if set
+  #cluster_url=""
+  # Authentication token, obtained by running: dcos config show core.dcos_acs_token. Leave empty for no authentication.
+  # Warning: authentication token is valid only 5 days in DC/OS 1.10.
+  #auth_token=""
+  # List of  DC/OS agent hostnames from which the metrics should be gathered. Leave empty for all.
+  agent_include = []
   # DC/OS agent node file system mount for which related metrics should be gathered. Leave empty for all.
-  file_system_mounts = []
+  path_include = []
   # DC/OS agent node network interface names for which related metrics should be gathered. Leave empty for all.
-  network_interfaces = []
+  interface_include = []
   # HTTP Response timeout, value must be more than a second
-  #client_timeout = 4s
+  #client_timeout = 30s
+  # Set of default allowed tags. See readme.md for more tag keys.
+  taginclude = ["cluster_url","path","interface","hostname","container_id","mesos_id","framework_name"]
+  # Port number of Mesos component on DC/OS master for access from within DC/OS cluster
+  #master_port = 5050
+  # Port number of DC/OS metrics component on DC/OS agents. Must be the same on all agents
+  #metrics_port = 61001
 ```
 
 ### Measurements & Fields
@@ -102,7 +111,9 @@ The set of DC/OS app metrics depends on the metrics exposed by an application ru
 * cluster_id
 * cluster_url
 * hostname
+* interface - _only for dcos_network metric_
 * mesos_id
+* path - _only for dcos_filesystem metric_
 * scope
 
 #### Container metric tags
@@ -133,17 +144,20 @@ The set of DC/OS app metrics depends on the metrics exposed by an application ru
 ### Example Output:
 ```
 * Plugin: inputs.dcos, Collection 1
-> dcos_load,host=GAMGEE,mesos_id=84259197-1dda-44b1-934b-63fdf2ab1d37-S5,cluster_id=5e3d4c26-6bc0-4ad3-8142-d104376ed2b5,hostname=10.0.1.178,scope=node,cluster_url=http://dcos-elasticloadba-ivcirgsfmba4-1406858042.us-west-1.elb.amazonaws.com 1min_count=0,5min_count=0,15min_count=0 1503487657000000000
-> dcos_filesystem,mesos_id=84259197-1dda-44b1-934b-63fdf2ab1d37-S5,cluster_id=5e3d4c26-6bc0-4ad3-8142-d104376ed2b5,hostname=10.0.1.178,scope=node,cluster_url=http://dcos-elasticloadba-ivcirgsfmba4-1406858042.us-west-1.elb.amazonaws.com,path=/,host=GAMGEE inode_free_count=1431256,capacity_total_bytes=5843333120,capacity_used_bytes=1738280960,capacity_free_bytes=3822092288,inode_total_count=1498496,inode_used_count=67240 1503487657000000000
-> dcos_memory,mesos_id=84259197-1dda-44b1-934b-63fdf2ab1d37-S5,cluster_id=5e3d4c26-6bc0-4ad3-8142-d104376ed2b5,hostname=10.0.1.178,scope=node,cluster_url=http://dcos-elasticloadba-ivcirgsfmba4-1406858042.us-west-1.elb.amazonaws.com,host=GAMGEE total_bytes=15776616448,free_bytes=13291368448,buffers_bytes=71159808,cached_bytes=1875877888 1503487657000000000
-> dcos_swap,mesos_id=84259197-1dda-44b1-934b-63fdf2ab1d37-S5,cluster_id=5e3d4c26-6bc0-4ad3-8142-d104376ed2b5,hostname=10.0.1.178,scope=node,cluster_url=http://dcos-elasticloadba-ivcirgsfmba4-1406858042.us-west-1.elb.amazonaws.com,host=GAMGEE total_bytes=0,free_bytes=0,used_bytes=0 1503487657000000000
-> dcos_network,hostname=10.0.1.178,mesos_id=84259197-1dda-44b1-934b-63fdf2ab1d37-S5,scope=node,cluster_url=http://dcos-elasticloadba-ivcirgsfmba4-1406858042.us-west-1.elb.amazonaws.com,interface=eth0,host=GAMGEE,cluster_id=5e3d4c26-6bc0-4ad3-8142-d104376ed2b5 in_packets_count=745823,out_packets_count=452194,in_dropped_count=0,out_dropped_count=0,in_errors_count=0,out_errors_count=0,in_bytes=670494225,out_bytes=51747081 1503487657000000000
-> dcos_process,scope=node,cluster_url=http://dcos-elasticloadba-ivcirgsfmba4-1406858042.us-west-1.elb.amazonaws.com,host=GAMGEE,mesos_id=84259197-1dda-44b1-934b-63fdf2ab1d37-S5,cluster_id=5e3d4c26-6bc0-4ad3-8142-d104376ed2b5,hostname=10.0.1.178 count=188 1503487657000000000
-> dcos_system,mesos_id=84259197-1dda-44b1-934b-63fdf2ab1d37-S5,cluster_id=5e3d4c26-6bc0-4ad3-8142-d104376ed2b5,hostname=10.0.1.178,scope=node,cluster_url=http://dcos-elasticloadba-ivcirgsfmba4-1406858042.us-west-1.elb.amazonaws.com,host=GAMGEE uptime_count=10068 1503487657000000000
-> dcos_cpu,hostname=10.0.1.178,mesos_id=84259197-1dda-44b1-934b-63fdf2ab1d37-S5,cluster_id=5e3d4c26-6bc0-4ad3-8142-d104376ed2b5,scope=node,cluster_url=http://dcos-elasticloadba-ivcirgsfmba4-1406858042.us-west-1.elb.amazonaws.com,host=GAMGEE user_percent=0.17,system_percent=0.13,idle_percent=99.58,wait_percent=0.05,cores_count=4,total_percent=0.30000000000000004 1503487657000000000
-> dcos_cpus,framework_principal=cassandra-principal,mesos_id=84259197-1dda-44b1-934b-63fdf2ab1d37-S3,framework_id=84259197-1dda-44b1-934b-63fdf2ab1d37-0002,hostname=10.0.3.245,scope=container,cluster_url=http://dcos-elasticloadba-ivcirgsfmba4-1406858042.us-west-1.elb.amazonaws.com,executor_name=node-2_executor,executor_id=node-2_executor__171b3056-0eda-4eb5-ba55-65b4a5f82c84,host=GAMGEE,framework_name=cassandra,framework_role=cassandra-role,container_id=2ded88f3-ecce-4dad-9718-c472a65dde27,cluster_id=5e3d4c26-6bc0-4ad3-8142-d104376ed2b5 user_time_seconds=270.73,system_time_seconds=158.24,limit_count=1,throttled_time_seconds=697.690003783 1503487657000000000
-> dcos_mem,source=oinker.9bbc8ad4-87e3-11e7-86f2-b2ce0138a0e3,executor_id=oinker.9bbc8ad4-87e3-11e7-86f2-b2ce0138a0e3,HAPROXY_0_VHOST=oinker.acme.org,cluster_url=http://dcos-elasticloadba-ivcirgsfmba4-1406858042.us-west-1.elb.amazonaws.com,framework_principal=dcos_marathon,executor_name=Command\ Executor\ (Task:\ oinker.9bbc8ad4-87e3-11e7-86f2-b2ce0138a0e3)\ (Command:\ sh\ -c\ 'export\ OINKE...'),host=GAMGEE,container_id=aa3e66b2-b77e-42c9-9e5f-86e6b1cfd1fe,hostname=10.0.3.245,HAPROXY_GROUP=external,framework_name=marathon,framework_id=84259197-1dda-44b1-934b-63fdf2ab1d37-0001,cluster_id=5e3d4c26-6bc0-4ad3-8142-d104376ed2b5,mesos_id=84259197-1dda-44b1-934b-63fdf2ab1d37-S3,framework_role=slave_public,scope=container total_bytes=310349824,limit_bytes=167772160 1503487657000000000
-> dcos_disk,framework_name=marathon,framework_principal=dcos_marathon,scope=container,source=oinker.9bbc8ad4-87e3-11e7-86f2-b2ce0138a0e3,HAPROXY_GROUP=external,framework_role=slave_public,host=GAMGEE,container_id=aa3e66b2-b77e-42c9-9e5f-86e6b1cfd1fe,executor_id=oinker.9bbc8ad4-87e3-11e7-86f2-b2ce0138a0e3,HAPROXY_0_VHOST=oinker.acme.org,cluster_id=5e3d4c26-6bc0-4ad3-8142-d104376ed2b5,framework_id=84259197-1dda-44b1-934b-63fdf2ab1d37-0001,hostname=10.0.3.245,mesos_id=84259197-1dda-44b1-934b-63fdf2ab1d37-S3,cluster_url=http://dcos-elasticloadba-ivcirgsfmba4-1406858042.us-west-1.elb.amazonaws.com,executor_name=Command\ Executor\ (Task:\ oinker.9bbc8ad4-87e3-11e7-86f2-b2ce0138a0e3)\ (Command:\ sh\ -c\ 'export\ OINKE...') limit_bytes=0,used_bytes=0 1503487657000000000
-> dcos_net,hostname=10.0.3.245,HAPROXY_GROUP=external,framework_name=marathon,framework_role=slave_public,framework_principal=dcos_marathon,host=GAMGEE,executor_id=oinker.9bbc8ad4-87e3-11e7-86f2-b2ce0138a0e3,cluster_url=http://dcos-elasticloadba-ivcirgsfmba4-1406858042.us-west-1.elb.amazonaws.com,cluster_id=5e3d4c26-6bc0-4ad3-8142-d104376ed2b5,container_id=aa3e66b2-b77e-42c9-9e5f-86e6b1cfd1fe,HAPROXY_0_VHOST=oinker.acme.org,mesos_id=84259197-1dda-44b1-934b-63fdf2ab1d37-S3,framework_id=84259197-1dda-44b1-934b-63fdf2ab1d37-0001,scope=container,executor_name=Command\ Executor\ (Task:\ oinker.9bbc8ad4-87e3-11e7-86f2-b2ce0138a0e3)\ (Command:\ sh\ -c\ 'export\ OINKE...'),source=oinker.9bbc8ad4-87e3-11e7-86f2-b2ce0138a0e3 tx_bytes=0,tx_errors_count=0,tx_dropped_count=0,rx_packets_count=0,rx_bytes=0,rx_errors_count=0,rx_dropped_count=0,tx_packets_count=0 1503487657000000000
-> dcos_app,cluster_url=http://dcos-elasticloadba-ivcirgsfmba4-1406858042.us-west-1.elb.amazonaws.com,hostname=10.0.3.245,mesos_id=84259197-1dda-44b1-934b-63fdf2ab1d37-S3,container_id=32b42c71-3b6c-48fd-9db3-e8d5d20f1cb2,scope=app,host=GAMGEE,executor_id=cassandra.f9bbb8fe-87e1-11e7-86f2-b2ce0138a0e3,framework_id=84259197-1dda-44b1-934b-63fdf2ab1d37-0001,cluster_id=5e3d4c26-6bc0-4ad3-8142-d104376ed2b5 dcos.metrics.module.container_received_bytes_per_sec=0,dcos.metrics.module.container_throttled_bytes_per_sec=0 1503487657000000000
+> dcos_swap,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S3,cluster_url=http://m1.dcos,hostname=192.168.65.60 total_bytes=2147479552,free_bytes=2147282944,used_bytes=196608 1505917759000000000
+> dcos_system,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S3,cluster_url=http://m1.dcos,hostname=192.168.65.60 uptime_count=137478 1505917759000000000
+> dcos_cpu,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S3,cluster_url=http://m1.dcos,hostname=192.168.65.60 user_percent=1.32,total_percent=2.3,idle_percent=97.61,system_percent=0.98,cores_count=2,wait_percent=0 1505917759000000000
+> dcos_filesystem,hostname=192.168.65.60,path=/,cluster_url=http://m1.dcos,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S3 inode_used_count=127502,inode_total_count=26214400,inode_free_count=26086898,capacity_total_bytes=53660876800,capacity_free_bytes=50554769408,capacity_used_bytes=3106107392 1505917759000000000
+> dcos_memory,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S3,hostname=192.168.65.60,cluster_url=http://m1.dcos total_bytes=1569218560,buffers_bytes=733184,free_bytes=82296832,cached_bytes=835018752 1505917759000000000
+> dcos_process,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S3,cluster_url=http://m1.dcos,hostname=192.168.65.60 count=194 1505917759000000000
+> dcos_load,cluster_url=http://m1.dcos,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S3,hostname=192.168.65.60 1min_count=0.1,5min_count=0.14,15min_count=0.1 1505917759000000000
+> dcos_cpus,cluster_url=http://m1.dcos,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S3,framework_name=marathon,container_id=8fe8b8d1-9549-4f1a-b96c-9ac6a13b78d1,hostname=192.168.65.60 throttled_time_seconds=1.931479049,user_time_seconds=112.1,system_time_seconds=324.08,limit_count=2.1 1505917759000000000
+> dcos_disk,framework_name=marathon,container_id=8fe8b8d1-9549-4f1a-b96c-9ac6a13b78d1,cluster_url=http://m1.dcos,hostname=192.168.65.60,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S3 used_bytes=0,limit_bytes=0 1505917759000000000
+> dcos_net,container_id=8fe8b8d1-9549-4f1a-b96c-9ac6a13b78d1,cluster_url=http://m1.dcos,framework_name=marathon,hostname=192.168.65.60,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S3 rx_dropped_count=0,rx_bytes=0,tx_bytes=0,tx_packets_count=0,rx_errors_count=0,tx_dropped_count=0,rx_packets_count=0,tx_errors_count=0 1505917759000000000
+> dcos_mem,container_id=8fe8b8d1-9549-4f1a-b96c-9ac6a13b78d1,cluster_url=http://m1.dcos,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S3,framework_name=marathon,hostname=192.168.65.60 limit_bytes=301989888,total_bytes=0 1505917759000000000
+> dcos_system,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S2,hostname=192.168.65.111,cluster_url=http://m1.dcos uptime_count=137755 1505917761000000000
+> dcos_swap,hostname=192.168.65.111,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S2,cluster_url=http://m1.dcos used_bytes=94208,free_bytes=2147385344,total_bytes=2147479552 1505917761000000000
+> dcos_memory,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S2,cluster_url=http://m1.dcos,hostname=192.168.65.111 total_bytes=6088818688,buffers_bytes=339968,free_bytes=217067520,cached_bytes=3629289472 1505917761000000000
+> dcos_filesystem,path=/,cluster_url=http://m1.dcos,mesos_id=16a563a0-1560-4e1f-b886-9f3e487b85a6-S2,hostname=192.168.65.111 capacity_used_bytes=25282076672,capacity_free_bytes=28378800128,inode_free_count=26033073,inode_used_count=181327,inode_total_count=26214400,capacity_total_bytes=53660876800 1505917761000000000
+....
 ```
