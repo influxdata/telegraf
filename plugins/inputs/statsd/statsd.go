@@ -2,6 +2,7 @@ package statsd
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -121,6 +122,9 @@ type Statsd struct {
 	TotalConnections   selfstat.Stat
 	PacketsRecv        selfstat.Stat
 	BytesRecv          selfstat.Stat
+
+	// A pool of byte slices to handle parsing
+	bufPool sync.Pool
 }
 
 // One statsd metric, form is <bucket>:<value>|<mtype>|@<samplerate>
@@ -306,6 +310,11 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	s.done = make(chan struct{})
 	s.accept = make(chan bool, s.MaxTCPConnections)
 	s.conns = make(map[string]*net.TCPConn)
+	s.bufPool = sync.Pool{
+		New: func() interface{} {
+			return new(bytes.Buffer)
+		},
+	}
 	for i := 0; i < s.MaxTCPConnections; i++ {
 		s.accept <- true
 	}
@@ -394,11 +403,13 @@ func (s *Statsd) udpListen() error {
 				log.Printf("E! Error READ: %s\n", err.Error())
 				continue
 			}
-			bufCopy := make([]byte, n)
-			copy(bufCopy, buf[:n])
+			b := s.bufPool.Get().(*bytes.Buffer)
+			b.Reset()
+			b.Write(buf[:n])
 
 			select {
-			case s.in <- bufCopy:
+			case s.in <- b.Bytes():
+				s.bufPool.Put(b)
 			default:
 				s.drops++
 				if s.drops == 1 || s.AllowedPendingMessages == 0 || s.drops%s.AllowedPendingMessages == 0 {
@@ -774,12 +785,15 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 			}
 			s.BytesRecv.Incr(int64(n))
 			s.PacketsRecv.Incr(1)
-			bufCopy := make([]byte, n+1)
-			copy(bufCopy, scanner.Bytes())
-			bufCopy[n] = '\n'
+
+			b := s.bufPool.Get().(*bytes.Buffer)
+			b.Reset()
+			b.Write(scanner.Bytes())
+			b.WriteByte('\n')
 
 			select {
-			case s.in <- bufCopy:
+			case s.in <- b.Bytes():
+				s.bufPool.Put(b)
 			default:
 				s.drops++
 				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {
