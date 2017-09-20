@@ -8,6 +8,7 @@ The TopK processor plugin is a filter that keeps only the top k values of a give
 # Print all metrics that pass through this filter.
 [[processors.topk]]
   period=<seconds>
+  k=<int>
 ```
 
 ### Tags:
