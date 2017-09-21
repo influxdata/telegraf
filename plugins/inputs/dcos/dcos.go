@@ -7,7 +7,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -19,21 +18,41 @@ import (
 )
 
 type Dcos struct {
-	MasterHostname    string            `toml:"master_hostname"`
-	MasterPort        uint16            `toml:"master_port"`
-	ClusterURL        string            `toml:"cluster_url"`
-	AuthToken         string            `toml:"auth_token"`
-	Agents            []string          `toml:"agent_include"`
-	FileSystemMounts  []string          `toml:"path_include"`
-	NetworkInterfaces []string          `toml:"interface_include"`
-	ClientTimeout     internal.Duration `toml:"client_timeout"`
-	MetricsPort       uint16            `toml:"metrics_port"`
-
-	localAccess  bool
-	client       *http.Client
-	initialized  bool
+	// Hostname or ip of DC/OS(mesos) master accessible from within the cluster
+	MasterHostname string `toml:"master_hostname"`
+	// Port of the master
+	MasterPort uint16 `toml:"master_port"`
+	// URL for DC/OS cluster for access from outside the cluster
+	ClusterURL string `toml:"cluster_url"`
+	// Authentication token for login when accessing from outside the cluster
+	AuthToken string `toml:"auth_token"`
+	// White list of agents to access
+	Agents []string `toml:"agent_include"`
+	// White list of filessytem paths on node metrics
+	FileSystemMounts []string `toml:"path_include"`
+	// White list of network interface node metrics
+	NetworkInterfaces []string `toml:"interface_include"`
+	// Timeout for a client to wait for a server response
+	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	MetricsPort     uint16            `toml:"metrics_port"`
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to client cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool `toml:"insecure_skip_verify"`
+	// Flag if plugin is accessing DC/OS from inside or outside
+	localAccess bool
+	// HTTP client for reuse
+	client *http.Client
+	// Flag if plugin was already initialized
+	initialized bool
+	// map of HTTP headers for reuse
 	headersCache map[string][]string
-	semaphore    chan int
+	// semaphore for limiting number of concurrent HTTP connections
+	semaphore chan int
 }
 
 var sampleConfig = `
@@ -51,13 +70,18 @@ var sampleConfig = `
   # DC/OS agent node network interface names for which related metrics should be gathered. Leave empty for all.
   interface_include = []
   # HTTP Response timeout, value must be more than a second
-  #client_timeout = 30s
+  #response_timeout = 30s
   # Set of default allowed tags. See readme.md for more tag keys.
   taginclude = ["cluster_url","path","interface","hostname","container_id","mesos_id","framework_name"]
   # Port number of Mesos component on DC/OS master for access from within DC/OS cluster
   #master_port = 5050
   # Port number of DC/OS metrics component on DC/OS agents. Must be the same on all agents
   #metrics_port = 61001
+  # TLS/SSL configuration for cluster_url
+  #ssl_ca = "/etc/telegraf/ca.pem"
+  #ssl_cert = "/etc/telegraf/cert.cer"
+  #ssl_key = "/etc/telegraf/key.key"
+  #insecure_skip_verify = false
 `
 
 func (m *Dcos) Description() string {
@@ -133,7 +157,7 @@ func (m *Dcos) validateConfiguration() error {
 		errorStrings = append(errorStrings, "Invalid configuration, either master_hostname or cluster_url must be set")
 	}
 
-	if 0 < m.ClientTimeout.Duration.Seconds() && m.ClientTimeout.Duration.Seconds() <= 1 {
+	if 0 < m.ResponseTimeout.Duration.Seconds() && m.ResponseTimeout.Duration.Seconds() <= 1 {
 		errorStrings = append(errorStrings, "Invalid configuration, timeout value must be greater than a second")
 	}
 
@@ -166,8 +190,8 @@ func (m *Dcos) init() error {
 		m.ClusterURL = murl.String()
 	}
 
-	if m.ClientTimeout.Duration.Seconds() == 0 {
-		m.ClientTimeout.Duration = time.Second * 30
+	if m.ResponseTimeout.Duration.Seconds() == 0 {
+		m.ResponseTimeout.Duration = time.Second * 30
 	}
 
 	m.headersCache = map[string][]string{
@@ -178,14 +202,22 @@ func (m *Dcos) init() error {
 		m.headersCache["Authorization"] = []string{"token=" + m.AuthToken}
 	}
 
+	tlsCfg, err := internal.GetTLSConfig(
+		m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
+
+	if err != nil {
+		return err
+	}
+
 	tr := &http.Transport{
+		TLSClientConfig:       tlsCfg,
 		MaxIdleConns:          MaxIdleConnections,
 		MaxIdleConnsPerHost:   MaxIdleConnections,
-		ResponseHeaderTimeout: m.ClientTimeout.Duration - time.Second,
+		ResponseHeaderTimeout: m.ResponseTimeout.Duration - time.Second,
 	}
 	m.client = &http.Client{
 		Transport: tr,
-		Timeout:   m.ClientTimeout.Duration,
+		Timeout:   m.ResponseTimeout.Duration,
 	}
 	return nil
 }
@@ -533,13 +565,9 @@ func (m *Dcos) handleJsonRequest(url string, obj interface{}) error {
 		}
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	if len(body) > 0 {
-		err = json.Unmarshal(body, &obj)
+	if resp.StatusCode != 204 {
+		jsonDecoder := json.NewDecoder(resp.Body)
+		err = jsonDecoder.Decode(&obj)
 		if err != nil {
 			return fmt.Errorf("Error parsing data from %s:  %s", url, err.Error())
 		}

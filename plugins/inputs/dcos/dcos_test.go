@@ -727,7 +727,7 @@ func TestConfigError(t *testing.T) {
 		Agents:            []string{},
 		FileSystemMounts:  []string{"/", "/boot"},
 		NetworkInterfaces: []string{"lo, docker0"},
-		ClientTimeout:     timeout,
+		ResponseTimeout:   timeout,
 	}
 	var acc testutil.Accumulator
 	err := dcos.Gather(&acc)

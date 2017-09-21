@@ -22,13 +22,18 @@ For more information, please check the [DC/OS Metrics](https://dcos.io/docs/1.9/
   # DC/OS agent node network interface names for which related metrics should be gathered. Leave empty for all.
   interface_include = []
   # HTTP Response timeout, value must be more than a second
-  #client_timeout = 30s
+  #response_timeout = 30s
   # Set of default allowed tags. See readme.md for more tag keys.
   taginclude = ["cluster_url","path","interface","hostname","container_id","mesos_id","framework_name"]
   # Port number of Mesos component on DC/OS master for access from within DC/OS cluster
   #master_port = 5050
   # Port number of DC/OS metrics component on DC/OS agents. Must be the same on all agents
   #metrics_port = 61001
+  # TLS/SSL configuration for cluster_url
+  #ssl_ca = "/etc/telegraf/ca.pem"
+  #ssl_cert = "/etc/telegraf/cert.cer"
+  #ssl_key = "/etc/telegraf/key.key"
+  #insecure_skip_verify = false
 ```
 
 ### Measurements & Fields
