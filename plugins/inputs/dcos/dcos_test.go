@@ -721,18 +721,29 @@ func TestNoSlaves(t *testing.T) {
 }
 
 func TestConfigError(t *testing.T) {
-	var timeout internal.Duration
-	timeout.Duration = time.Second
+
 	dcos := &Dcos{
 		Agents:            []string{},
 		FileSystemMounts:  []string{"/", "/boot"},
 		NetworkInterfaces: []string{"lo, docker0"},
-		ResponseTimeout:   timeout,
 	}
 	var acc testutil.Accumulator
 	err := dcos.Gather(&acc)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "cluster_url")
+
+	var timeout internal.Duration
+	timeout.Duration = time.Second
+	dcos = &Dcos{
+		ClusterURL:        "http://m1.dcos",
+		Agents:            []string{},
+		FileSystemMounts:  []string{"/", "/boot"},
+		NetworkInterfaces: []string{"lo, docker0"},
+		ResponseTimeout:   timeout,
+	}
+	var acc2 testutil.Accumulator
+	err = dcos.Gather(&acc2)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "timeout")
 }
 

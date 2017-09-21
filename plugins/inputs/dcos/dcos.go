@@ -7,7 +7,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -151,22 +150,15 @@ const MaxIdleConnections = 50
 
 // validateConfiguration tests whether important configuration params are not empty
 func (m *Dcos) validateConfiguration() error {
-	errorStrings := []string{}
-
 	if len(m.MasterHostname) == 0 && len(m.ClusterURL) == 0 {
-		errorStrings = append(errorStrings, "Invalid configuration, either master_hostname or cluster_url must be set")
+		return errors.New("Invalid configuration, either master_hostname or cluster_url must be set")
 	}
 
 	if 0 < m.ResponseTimeout.Duration.Seconds() && m.ResponseTimeout.Duration.Seconds() <= 1 {
-		errorStrings = append(errorStrings, "Invalid configuration, timeout value must be greater than a second")
+		return errors.New("Invalid configuration, timeout value must be greater than a second")
 	}
 
-	if len(errorStrings) > 0 {
-		return errors.New(strings.Join(errorStrings, "\n"))
-	} else {
-		return nil
-	}
-
+	return nil
 }
 
 // init validates configuration and initializes variables
@@ -441,8 +433,6 @@ func (m *Dcos) processMetric(metric *metric, acc telegraf.Accumulator, metricTyp
 				case float64:
 					fields[dp.Name] = t
 					fillTags(tags, dp.Tags)
-				default: //field values come as real numbers. If sth else is found, most probably it is string: "NaN".
-					log.Printf("D! [dcos] Invalid value for field %s: '%s'\n", dp.Name, t)
 				}
 			}
 			acc.AddFields("dcos_"+measurementSuffix, fields, tags, now)
