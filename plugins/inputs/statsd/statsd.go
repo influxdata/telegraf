@@ -814,7 +814,6 @@ func (s *Statsd) remember(id string, conn *net.TCPConn) {
 
 func (s *Statsd) Stop() {
 	s.Lock()
-	defer s.Unlock()
 	log.Println("I! Stopping the statsd service")
 	close(s.done)
 	switch s.Protocol {
@@ -838,9 +837,14 @@ func (s *Statsd) Stop() {
 	default:
 		s.UDPlistener.Close()
 	}
+	s.Unlock()
+
 	s.wg.Wait()
+
+	s.Lock()
 	close(s.in)
 	log.Println("I! Stopped Statsd listener service on ", s.ServiceAddress)
+	s.Unlock()
 }
 
 func init() {
