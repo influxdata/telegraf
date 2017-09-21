@@ -50,6 +50,7 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	assert.True(t, acc.HasFloatField("test_metric", "value"))
 	assert.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 	assert.False(t, acc.HasTag("test_metric", "address"))
+	assert.True(t, acc.TagValue("test_metric", "url") == ts.URL)
 }
 
 func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
@@ -74,6 +75,7 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	assert.True(t, acc.HasFloatField("test_metric", "value"))
 	assert.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 	assert.True(t, acc.TagValue("test_metric", "address") == tsAddress)
+	assert.True(t, acc.TagValue("test_metric", "url") == ts.URL)
 }
 
 func TestPrometheusGeneratesMetricsAlthoughFirstDNSFails(t *testing.T) {
