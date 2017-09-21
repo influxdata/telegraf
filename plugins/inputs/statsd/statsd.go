@@ -90,7 +90,7 @@ type Statsd struct {
 	malformed int
 
 	// Channel for all incoming statsd packets
-	in   chan []byte
+	in   chan *bytes.Buffer
 	done chan struct{}
 
 	// Cache gauges, counters & sets so they can be aggregated as they arrive
@@ -285,9 +285,6 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 
 func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	// Make data structures
-	s.done = make(chan struct{})
-	s.in = make(chan []byte, s.AllowedPendingMessages)
-
 	s.gauges = make(map[string]cachedgauge)
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
@@ -306,7 +303,7 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	s.PacketsRecv = selfstat.Register("statsd", "tcp_packets_received", tags)
 	s.BytesRecv = selfstat.Register("statsd", "tcp_bytes_received", tags)
 
-	s.in = make(chan []byte, s.AllowedPendingMessages)
+	s.in = make(chan *bytes.Buffer, s.AllowedPendingMessages)
 	s.done = make(chan struct{})
 	s.accept = make(chan bool, s.MaxTCPConnections)
 	s.conns = make(map[string]*net.TCPConn)
@@ -408,8 +405,7 @@ func (s *Statsd) udpListen() error {
 			b.Write(buf[:n])
 
 			select {
-			case s.in <- b.Bytes():
-				s.bufPool.Put(b)
+			case s.in <- b:
 			default:
 				s.drops++
 				if s.drops == 1 || s.AllowedPendingMessages == 0 || s.drops%s.AllowedPendingMessages == 0 {
@@ -425,19 +421,19 @@ func (s *Statsd) udpListen() error {
 // single statsd metric into a struct.
 func (s *Statsd) parser() error {
 	defer s.wg.Done()
-	var packet []byte
 	for {
 		select {
 		case <-s.done:
 			return nil
-		case packet = <-s.in:
-			lines := strings.Split(string(packet), "\n")
+		case buf := <-s.in:
+			lines := strings.Split(buf.String(), "\n")
 			for _, line := range lines {
 				line = strings.TrimSpace(line)
 				if line != "" {
 					s.parseStatsdLine(line)
 				}
 			}
+			s.bufPool.Put(buf)
 		}
 	}
 }
@@ -792,8 +788,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 			b.WriteByte('\n')
 
 			select {
-			case s.in <- b.Bytes():
-				s.bufPool.Put(b)
+			case s.in <- b:
 			default:
 				s.drops++
 				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {
