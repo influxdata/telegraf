@@ -1,16 +1,16 @@
 package wavefront
 
 import (
+	"bytes"
 	"fmt"
+	"log"
 	"net"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"log"
 )
 
 type Wavefront struct {
@@ -24,7 +24,6 @@ type Wavefront struct {
 	UseRegex        bool
 	SourceOverride  []string
 	StringToNumber  map[string][]map[string]float64
-	DebugAll        bool
 }
 
 // catch many of the invalid chars that could appear in a metric or tag name
@@ -37,21 +36,21 @@ var sanitizedChars = strings.NewReplacer(
 )
 
 // instead of Replacer which may miss some special characters we can use a regex pattern, but this is significantly slower than Replacer
-var sanitizedRegex, _ = regexp.Compile("[^a-zA-Z\\d_.-]")
+var sanitizedRegex = regexp.MustCompile("[^a-zA-Z\\d_.-]")
 
 var tagValueReplacer = strings.NewReplacer("\"", "\\\"", "*", "-")
 
 var pathReplacer = strings.NewReplacer("_", "_")
 
 var sampleConfig = `
-  ## prefix for metrics keys
-  #prefix = "my.specific.prefix."
-
   ## DNS name of the wavefront proxy server
   host = "wavefront.example.com"
 
   ## Port that the Wavefront proxy server listens on
   port = 2878
+
+  ## prefix for metrics keys
+  #prefix = "my.specific.prefix."
 
   ## whether to use "value" for name of simple fields
   #simple_fields = false
@@ -80,16 +79,14 @@ var sampleConfig = `
   #  green = 1.0
   #  yellow = 0.5
   #  red = 0.0
-
-  ## Print additional debug information requires debug = true at the agent level
-  #debug_all = false
 `
 
-type MetricLine struct {
+type MetricPoint struct {
 	Metric    string
-	Value     string
+	Value     float64
 	Timestamp int64
-	Tags      string
+	Source    string
+	Tags      map[string]string
 }
 
 func (w *Wavefront) Connect() error {
@@ -102,11 +99,11 @@ func (w *Wavefront) Connect() error {
 
 	// Test Connection to Wavefront proxy Server
 	uri := fmt.Sprintf("%s:%d", w.Host, w.Port)
-	tcpAddr, err := net.ResolveTCPAddr("tcp", uri)
+	_, err := net.ResolveTCPAddr("tcp", uri)
 	if err != nil {
 		return fmt.Errorf("Wavefront: TCP address cannot be resolved %s", err.Error())
 	}
-	connection, err := net.DialTCP("tcp", nil, tcpAddr)
+	connection, err := net.Dial("tcp", uri)
 	if err != nil {
 		return fmt.Errorf("Wavefront: TCP connect fail %s", err.Error())
 	}
@@ -115,24 +112,20 @@ func (w *Wavefront) Connect() error {
 }
 
 func (w *Wavefront) Write(metrics []telegraf.Metric) error {
-	if len(metrics) == 0 {
-		return nil
-	}
 
 	// Send Data to Wavefront proxy Server
 	uri := fmt.Sprintf("%s:%d", w.Host, w.Port)
-	tcpAddr, _ := net.ResolveTCPAddr("tcp", uri)
-	connection, err := net.DialTCP("tcp", nil, tcpAddr)
+	connection, err := net.Dial("tcp", uri)
 	if err != nil {
 		return fmt.Errorf("Wavefront: TCP connect fail %s", err.Error())
 	}
 	defer connection.Close()
 
 	for _, m := range metrics {
-		for _, metric := range buildMetrics(m, w) {
-			messageLine := fmt.Sprintf("%s %s %v %s\n", metric.Metric, metric.Value, metric.Timestamp, metric.Tags)
-			log.Printf("D! Output [wavefront] %s", messageLine)
-			_, err := connection.Write([]byte(messageLine))
+		for _, metricPoint := range buildMetrics(m, w) {
+			metricLine := formatMetricPoint(metricPoint, w)
+			//log.Printf("D! Output [wavefront] %s", metricLine)
+			_, err := connection.Write([]byte(metricLine))
 			if err != nil {
 				return fmt.Errorf("Wavefront: TCP writing error %s", err.Error())
 			}
@@ -142,56 +135,10 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func buildTags(mTags map[string]string, w *Wavefront) []string {
-	sourceTagFound := false
+func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricPoint {
+	ret := []*MetricPoint{}
 
-	for _, s := range w.SourceOverride {
-		for k, v := range mTags {
-			if k == s {
-				mTags["source"] = v
-				mTags["telegraf_host"] = mTags["host"]
-				sourceTagFound = true
-				delete(mTags, k)
-				break
-			}
-		}
-		if sourceTagFound {
-			break
-		}
-	}
-
-	if !sourceTagFound {
-		mTags["source"] = mTags["host"]
-	}
-	delete(mTags, "host")
-
-	tags := make([]string, len(mTags))
-	index := 0
-	for k, v := range mTags {
-		if w.UseRegex {
-			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedRegex.ReplaceAllString(k, "-"), tagValueReplacer.Replace(v))
-		} else {
-			tags[index] = fmt.Sprintf("%s=\"%s\"", sanitizedChars.Replace(k), tagValueReplacer.Replace(v))
-		}
-
-		index++
-	}
-
-	sort.Strings(tags)
-	return tags
-}
-
-func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricLine {
-	if w.DebugAll {
-		log.Printf("D! Output [wavefront] original name: %s\n", m.Name())
-	}
-
-	ret := []*MetricLine{}
 	for fieldName, value := range m.Fields() {
-		if w.DebugAll {
-			log.Printf("D! Output [wavefront] original field: %s\n", fieldName)
-		}
-
 		var name string
 		if !w.SimpleFields && fieldName == "value" {
 			name = fmt.Sprintf("%s%s", w.Prefix, m.Name())
@@ -209,71 +156,113 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricLine {
 			name = pathReplacer.Replace(name)
 		}
 
-		metric := &MetricLine{
+		metric := &MetricPoint{
 			Metric:    name,
 			Timestamp: m.UnixNano() / 1000000000,
 		}
+
 		metricValue, buildError := buildValue(value, metric.Metric, w)
 		if buildError != nil {
-			if w.DebugAll {
-				log.Printf("D! Output [wavefront] %s\n", buildError.Error())
-			}
+			log.Printf("D! Output [wavefront] %s\n", buildError.Error())
 			continue
 		}
 		metric.Value = metricValue
-		tagsSlice := buildTags(m.Tags(), w)
-		metric.Tags = fmt.Sprint(strings.Join(tagsSlice, " "))
+
+		source, tags := buildTags(m.Tags(), w)
+		metric.Source = source
+		metric.Tags = tags
+
 		ret = append(ret, metric)
 	}
 	return ret
 }
 
-func buildValue(v interface{}, name string, w *Wavefront) (string, error) {
-	var retv string
+func buildTags(mTags map[string]string, w *Wavefront) (string, map[string]string) {
+	var source string
+	sourceTagFound := false
+
+	for _, s := range w.SourceOverride {
+		for k, v := range mTags {
+			if k == s {
+				source = v
+				mTags["telegraf_host"] = mTags["host"]
+				sourceTagFound = true
+				delete(mTags, k)
+				break
+			}
+		}
+		if sourceTagFound {
+			break
+		}
+	}
+
+	if !sourceTagFound {
+		source = mTags["host"]
+	}
+	delete(mTags, "host")
+
+	return tagValueReplacer.Replace(source), mTags
+}
+
+func buildValue(v interface{}, name string, w *Wavefront) (float64, error) {
 	switch p := v.(type) {
 	case bool:
 		if w.ConvertBool {
-			if bool(p) {
-				return "1.0", nil
+			if p {
+				return 1, nil
 			} else {
-				return "0.0", nil
+				return 0, nil
 			}
 		}
 	case int64:
-		retv = IntToString(int64(p))
+		return float64(v.(int64)), nil
 	case uint64:
-		retv = UIntToString(uint64(p))
+		return float64(v.(uint64)), nil
 	case float64:
-		retv = FloatToString(float64(p))
+		return v.(float64), nil
 	case string:
 		for prefix, mappings := range w.StringToNumber {
 			if strings.HasPrefix(name, prefix) {
 				for _, mapping := range mappings {
 					val, hasVal := mapping[string(p)]
 					if hasVal {
-						retv = FloatToString(val)
-						return retv, nil
+						return val, nil
 					}
 				}
 			}
 		}
-		return retv, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
+		return 0, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 	default:
-		return retv, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
+		return 0, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 	}
-	return retv, nil
+
+	return 0, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 }
 
-func IntToString(input_num int64) string {
-	return strconv.FormatInt(input_num, 10)
-}
+func formatMetricPoint(metricPoint *MetricPoint, w *Wavefront) string {
+	buffer := bytes.NewBufferString("")
+	buffer.WriteString(metricPoint.Metric)
+	buffer.WriteString(" ")
+	buffer.WriteString(strconv.FormatFloat(metricPoint.Value, 'f', 6, 64))
+	buffer.WriteString(" ")
+	buffer.WriteString(strconv.FormatInt(metricPoint.Timestamp, 10))
+	buffer.WriteString(" source=\"")
+	buffer.WriteString(metricPoint.Source)
+	buffer.WriteString("\"")
 
-func UIntToString(input_num uint64) string {
-	return strconv.FormatUint(input_num, 10)
-}
+	for k, v := range metricPoint.Tags {
+		buffer.WriteString(" ")
+		if w.UseRegex {
+			buffer.WriteString(sanitizedRegex.ReplaceAllLiteralString(k, "-"))
+		} else {
+			buffer.WriteString(sanitizedChars.Replace(k))
+		}
+		buffer.WriteString("=\"")
+		buffer.WriteString(tagValueReplacer.Replace(v))
+		buffer.WriteString("\"")
+	}
 
-func FloatToString(input_num float64) string {
-	return strconv.FormatFloat(input_num, 'f', 6, 64)
+	return buffer.String()
 }
 
 func (w *Wavefront) SampleConfig() string {
