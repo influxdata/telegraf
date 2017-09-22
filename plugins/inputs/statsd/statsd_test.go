@@ -125,6 +125,36 @@ func TestCloseConcurrentConns(t *testing.T) {
 }
 
 // benchmark how long it takes to accept & process 100,000 metrics:
+func BenchmarkUDP(b *testing.B) {
+	listener := Statsd{
+		Protocol:               "udp",
+		ServiceAddress:         ":8125",
+		AllowedPendingMessages: 250000,
+	}
+	acc := &testutil.Accumulator{Discard: true}
+
+	// send multiple messages to socket
+	for n := 0; n < b.N; n++ {
+		err := listener.Start(acc)
+		if err != nil {
+			panic(err)
+		}
+
+		time.Sleep(time.Millisecond * 25)
+		conn, err := net.Dial("udp", "127.0.0.1:8125")
+		if err != nil {
+			panic(err)
+		}
+		for i := 0; i < 250000; i++ {
+			fmt.Fprintf(conn, testMsg)
+		}
+		// wait for 250,000 metrics to get added to accumulator
+		time.Sleep(time.Millisecond)
+		listener.Stop()
+	}
+}
+
+// benchmark how long it takes to accept & process 100,000 metrics:
 func BenchmarkTCP(b *testing.B) {
 	listener := Statsd{
 		Protocol:               "tcp",
