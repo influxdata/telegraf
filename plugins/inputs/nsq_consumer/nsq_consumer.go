@@ -11,24 +11,27 @@ import (
 
 //NSQConsumer represents the configuration of the plugin
 type NSQConsumer struct {
-	Server      []string
+	Server      string
+	Nsqd        []string
+	Nsqlookupd  []string
 	Topic       string
 	Channel     string
 	MaxInFlight int
-	Nsqlookupd  bool
 	parser      parsers.Parser
 	consumer    *nsq.Consumer
 	acc         telegraf.Accumulator
 }
 
 var sampleConfig = `
-  ## An string representing the NSQD TCP/NSQLookupd HTTP Endpoints
-  server = ["localhost:4150"]
+  ## Server option still works but is deprecated, we just prepend it to the nsqd array.
+  # server = "localhost:4150"
+  ## An array representing the NSQD TCP HTTP Endpoints
+  nsqd = ["localhost:4150"]
+  ## An array representing the NSQLookupd HTTP Endpoints
+  nsqlookupd = ["localhost:4161"]
   topic = "telegraf"
   channel = "consumer"
   max_in_flight = 100
-	## If nsqlookupd = true, servers are NSQLookupd HTTP API endpoints
-  nsqlookupd = false
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
@@ -74,11 +77,11 @@ func (n *NSQConsumer) Start(acc telegraf.Accumulator) error {
 		message.Finish()
 		return nil
 	}), n.MaxInFlight)
-	if n.Nsqlookupd {
-		n.consumer.ConnectToNSQLookupds(n.Server)
-	} else {
-		n.consumer.ConnectToNSQDs(n.Server)
+
+	if len(n.Nsqlookupd) > 0 {
+		n.consumer.ConnectToNSQLookupds(n.Nsqlookupd)
 	}
+	n.consumer.ConnectToNSQDs(append(n.Nsqd, n.Server))
 	return nil
 }
 

@@ -8,13 +8,15 @@ topic and adds messages to InfluxDB. This plugin allows a message to be in any o
 ```toml
 # Read metrics from NSQD topic(s)
 [[inputs.nsq_consumer]]
-  ## An string representing the NSQD TCP/NSQLookupd HTTP Endpoints
-  server = ["localhost:4150"]
+  ## Server option still works but is deprecated, we just prepend it to the nsqd array.
+  # server = "localhost:4150"
+  ## An array representing the NSQD TCP HTTP Endpoints
+  nsqd = ["localhost:4150"]
+  ## An array representing the NSQLookupd HTTP Endpoints
+  nsqlookupd = ["localhost:4161"]
   topic = "telegraf"
   channel = "consumer"
   max_in_flight = 100
-  ## If nsqlookupd = true, servers are NSQLookupd HTTP API endpoints
-  nsqlookupd = false
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
