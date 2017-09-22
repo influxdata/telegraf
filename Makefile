@@ -49,11 +49,15 @@ test-all: lint
 	go test ./...
 
 package:
-	./scripts/build.py --package --version="$(VERSION)" --platform=linux --arch=all --upload
-
+	./scripts/build.py --package --platform=all --arch=all
 clean:
 	-rm -f telegraf
 	-rm -f telegraf.exe
+
+docker-image:
+	./scripts/build.py --package --platform=linux --arch=amd64
+	cp build/telegraf*$(COMMIT)*.deb .
+	docker build -f scripts/dev.docker --build-arg "package=telegraf*$(COMMIT)*.deb" -t "telegraf-dev:$(COMMIT)" .
 
 # Run all docker containers necessary for integration tests
 docker-run:
@@ -114,4 +118,4 @@ docker-kill:
 		openldap postgres rabbitmq redis riemann zookeeper
 
 .PHONY: deps telegraf telegraf.exe install test test-windows lint test-all \
-	package clean docker-run docker-run-circle docker-kill
+	package clean docker-run docker-run-circle docker-kill docker-image

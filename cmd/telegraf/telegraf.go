@@ -268,7 +268,7 @@ func (p *program) Stop(s service.Service) error {
 
 func displayVersion() string {
 	if version == "" {
-		return fmt.Sprintf("v%s~pre%s", nextVersion, commit)
+		return fmt.Sprintf("v%s~%s", nextVersion, commit)
 	}
 	return "v" + version
 }
