@@ -29,6 +29,8 @@
 ### Bugfixes
 
 - [#3136](https://github.com/influxdata/telegraf/issues/3136): Fix webhooks input address in use during reload.
+- [#3258](https://github.com/influxdata/telegraf/issues/3258): Unlock Statsd when stopping to prevent deadlock.
+
 
 ## v1.4.1 [unreleased]
 
