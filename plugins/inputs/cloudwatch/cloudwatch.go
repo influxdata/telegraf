@@ -209,7 +209,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("cloudwatch", func() telegraf.Input {
-		ttl, _ := time.ParseDuration("1hr")
+		ttl, _ := time.ParseDuration("1h")
 		return &CloudWatch{
 			CacheTTL:  internal.Duration{Duration: ttl},
 			RateLimit: 200,
