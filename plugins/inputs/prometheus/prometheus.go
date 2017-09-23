@@ -93,14 +93,15 @@ func (p *Prometheus) AddressToURL(u *url.URL, address string) string {
 }
 
 type UrlAndAddress struct {
-	Url     string
-	Address string
+	OriginalUrl string
+	Url         string
+	Address     string
 }
 
 func (p *Prometheus) GetAllURLs() ([]UrlAndAddress, error) {
 	allUrls := make([]UrlAndAddress, 0)
 	for _, url := range p.Urls {
-		allUrls = append(allUrls, UrlAndAddress{Url: url})
+		allUrls = append(allUrls, UrlAndAddress{Url: url, OriginalUrl: url})
 	}
 	for _, service := range p.KubernetesServices {
 		u, err := url.Parse(service)
@@ -114,7 +115,7 @@ func (p *Prometheus) GetAllURLs() ([]UrlAndAddress, error) {
 		}
 		for _, resolved := range resolvedAddresses {
 			serviceUrl := p.AddressToURL(u, resolved)
-			allUrls = append(allUrls, UrlAndAddress{Url: serviceUrl, Address: resolved})
+			allUrls = append(allUrls, UrlAndAddress{Url: serviceUrl, Address: resolved, OriginalUrl: service})
 		}
 	}
 	return allUrls, nil
@@ -213,7 +214,7 @@ func (p *Prometheus) gatherURL(url UrlAndAddress, acc telegraf.Accumulator) erro
 	// Add (or not) collected metrics
 	for _, metric := range metrics {
 		tags := metric.Tags()
-		tags["url"] = url.Url
+		tags["url"] = url.OriginalUrl
 		if url.Address != "" {
 			tags["address"] = url.Address
 		}
