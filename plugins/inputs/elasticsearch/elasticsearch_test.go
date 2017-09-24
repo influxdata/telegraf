@@ -13,6 +13,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func defaultTags() map[string]string {
+	return map[string]string{
+		"cluster_name":          "es-testcluster",
+		"node_attribute_master": "true",
+		"node_id":               "SDFsfSDFsdfFSDSDfSFDSDF",
+		"node_name":             "test.host.com",
+		"node_host":             "test",
+	}
+}
+
 type transportMock struct {
 	statusCode int
 	body       string
@@ -45,15 +55,9 @@ func checkIsMaster(es *Elasticsearch, expected bool, t *testing.T) {
 		assert.Fail(t, msg)
 	}
 }
-func checkNodeStatsResult(t *testing.T, acc *testutil.Accumulator) {
-	tags := map[string]string{
-		"cluster_name":          "es-testcluster",
-		"node_attribute_master": "true",
-		"node_id":               "SDFsfSDFsdfFSDSDfSFDSDF",
-		"node_name":             "test.host.com",
-		"node_host":             "test",
-	}
 
+func checkNodeStatsResult(t *testing.T, acc *testutil.Accumulator) {
+	tags := defaultTags()
 	acc.AssertContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
 	acc.AssertContainsTaggedFields(t, "elasticsearch_os", nodestatsOsExpected, tags)
 	acc.AssertContainsTaggedFields(t, "elasticsearch_process", nodestatsProcessExpected, tags)
@@ -79,6 +83,58 @@ func TestGather(t *testing.T) {
 	checkNodeStatsResult(t, &acc)
 }
 
+func TestGatherIncludeFiltered(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.Servers = []string{"http://example.com:9200"}
+	es.Filter = []string{"elasticsearch_jvm"}
+	es.ExcludeFilter = false
+	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+
+	var acc testutil.Accumulator
+	if err := acc.GatherError(es.Gather); err != nil {
+		t.Fatal(err)
+	}
+
+	checkIsMaster(es, false, t)
+
+	tags := defaultTags()
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_os", nodestatsOsExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_process", nodestatsProcessExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_jvm", nodestatsJvmExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_thread_pool", nodestatsThreadPoolExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_fs", nodestatsFsExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_transport", nodestatsTransportExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_http", nodestatsHttpExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_breakers", nodestatsBreakersExpected, tags)
+}
+
+func TestGatherExcludeFiltered(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.Servers = []string{"http://example.com:9200"}
+	es.Filter = []string{"elasticsearch_jvm"}
+	es.ExcludeFilter = true
+	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+
+	var acc testutil.Accumulator
+	if err := acc.GatherError(es.Gather); err != nil {
+		t.Fatal(err)
+	}
+
+	checkIsMaster(es, false, t)
+
+	tags := defaultTags()
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_os", nodestatsOsExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_process", nodestatsProcessExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_jvm", nodestatsJvmExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_thread_pool", nodestatsThreadPoolExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_fs", nodestatsFsExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_transport", nodestatsTransportExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_http", nodestatsHttpExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_breakers", nodestatsBreakersExpected, tags)
+}
+
 func TestGatherNodeStats(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.Servers = []string{"http://example.com:9200"}
@@ -93,6 +149,58 @@ func TestGatherNodeStats(t *testing.T) {
 	checkNodeStatsResult(t, &acc)
 }
 
+func TestGatherNodeStatsIncludeFiltered(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.Servers = []string{"http://example.com:9200"}
+	es.Filter = []string{"elasticsearch_jvm"}
+	es.ExcludeFilter = false
+	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+
+	var acc testutil.Accumulator
+	if err := es.gatherNodeStats("junk", &acc); err != nil {
+		t.Fatal(err)
+	}
+
+	checkIsMaster(es, false, t)
+
+	tags := defaultTags()
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_os", nodestatsOsExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_process", nodestatsProcessExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_jvm", nodestatsJvmExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_thread_pool", nodestatsThreadPoolExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_fs", nodestatsFsExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_transport", nodestatsTransportExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_http", nodestatsHttpExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_breakers", nodestatsBreakersExpected, tags)
+}
+
+func TestGatherNodeStatsExcludeFiltered(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.Servers = []string{"http://example.com:9200"}
+	es.Filter = []string{"elasticsearch_jvm"}
+	es.ExcludeFilter = true
+	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+
+	var acc testutil.Accumulator
+	if err := es.gatherNodeStats("junk", &acc); err != nil {
+		t.Fatal(err)
+	}
+
+	checkIsMaster(es, false, t)
+
+	tags := defaultTags()
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_os", nodestatsOsExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_process", nodestatsProcessExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_jvm", nodestatsJvmExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_thread_pool", nodestatsThreadPoolExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_fs", nodestatsFsExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_transport", nodestatsTransportExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_http", nodestatsHttpExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_breakers", nodestatsBreakersExpected, tags)
+}
+
 func TestGatherClusterHealth(t *testing.T) {
 	es := newElasticsearchWithClient()
 	es.Servers = []string{"http://example.com:9200"}
@@ -105,6 +213,58 @@ func TestGatherClusterHealth(t *testing.T) {
 	checkIsMaster(es, false, t)
 
 	acc.AssertContainsTaggedFields(t, "elasticsearch_cluster_health",
+		clusterHealthExpected,
+		map[string]string{"name": "elasticsearch_telegraf"})
+
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices",
+		v1IndexExpected,
+		map[string]string{"index": "v1"})
+
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices",
+		v2IndexExpected,
+		map[string]string{"index": "v2"})
+}
+
+func TestGatherClusterHealthIncludeFiltered(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.Filter = []string{"elasticsearch_cluster_health"}
+	es.ExcludeFilter = false
+	es.Servers = []string{"http://example.com:9200"}
+	es.ClusterHealth = true
+	es.client.Transport = newTransportMock(http.StatusOK, clusterHealthResponse)
+
+	var acc testutil.Accumulator
+	require.NoError(t, es.gatherClusterHealth("junk", &acc))
+
+	checkIsMaster(es, false, t)
+
+	acc.AssertContainsTaggedFields(t, "elasticsearch_cluster_health",
+		clusterHealthExpected,
+		map[string]string{"name": "elasticsearch_telegraf"})
+
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_indices",
+		v1IndexExpected,
+		map[string]string{"index": "v1"})
+
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_indices",
+		v2IndexExpected,
+		map[string]string{"index": "v2"})
+}
+
+func TestGatherClusterHealthExcludeFiltered(t *testing.T) {
+	es := newElasticsearchWithClient()
+	es.Filter = []string{"elasticsearch_cluster_health"}
+	es.ExcludeFilter = true
+	es.Servers = []string{"http://example.com:9200"}
+	es.ClusterHealth = true
+	es.client.Transport = newTransportMock(http.StatusOK, clusterHealthResponse)
+
+	var acc testutil.Accumulator
+	require.NoError(t, es.gatherClusterHealth("junk", &acc))
+
+	checkIsMaster(es, false, t)
+
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_cluster_health",
 		clusterHealthExpected,
 		map[string]string{"name": "elasticsearch_telegraf"})
 
@@ -158,6 +318,112 @@ func TestGatherClusterStatsMaster(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "elasticsearch_clusterstats_indices", clusterstatsIndicesExpected, tags)
 }
 
+func TestGatherClusterStatsMasterIncludeFiltered(t *testing.T) {
+	// This needs multiple steps to replicate the multiple calls internally.
+	es := newElasticsearchWithClient()
+	es.ClusterStats = true
+	es.Servers = []string{"http://example.com:9200"}
+	es.Filter = []string{"elasticsearch_jvm", "elasticsearch_clusterstats_indices"}
+	es.ExcludeFilter = false
+
+	// first get catMaster
+	es.client.Transport = newTransportMock(http.StatusOK, IsMasterResult)
+	require.NoError(t, es.setCatMaster("junk"))
+
+	IsMasterResultTokens := strings.Split(string(IsMasterResult), " ")
+	if es.catMasterResponseTokens[0] != IsMasterResultTokens[0] {
+		msg := fmt.Sprintf("catmaster is incorrect")
+		assert.Fail(t, msg)
+	}
+
+	// now get node status, which determines whether we're master
+	var acc testutil.Accumulator
+	es.Local = true
+	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+	if err := es.gatherNodeStats("junk", &acc); err != nil {
+		t.Fatal(err)
+	}
+
+	checkIsMaster(es, true, t)
+
+	tags := defaultTags()
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_os", nodestatsOsExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_process", nodestatsProcessExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_jvm", nodestatsJvmExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_thread_pool", nodestatsThreadPoolExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_fs", nodestatsFsExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_transport", nodestatsTransportExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_http", nodestatsHttpExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_breakers", nodestatsBreakersExpected, tags)
+
+	// now test the clusterstats method
+	es.client.Transport = newTransportMock(http.StatusOK, clusterStatsResponse)
+	require.NoError(t, es.gatherClusterStats("junk", &acc))
+
+	tags = map[string]string{
+		"cluster_name": "es-testcluster",
+		"node_name":    "test.host.com",
+		"status":       "red",
+	}
+
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_clusterstats_nodes", clusterstatsNodesExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_clusterstats_indices", clusterstatsIndicesExpected, tags)
+}
+
+func TestGatherClusterStatsMasterExcludeFiltered(t *testing.T) {
+	// This needs multiple steps to replicate the multiple calls internally.
+	es := newElasticsearchWithClient()
+	es.ClusterStats = true
+	es.Servers = []string{"http://example.com:9200"}
+	es.Filter = []string{"elasticsearch_jvm", "elasticsearch_clusterstats_indices"}
+	es.ExcludeFilter = true
+
+	// first get catMaster
+	es.client.Transport = newTransportMock(http.StatusOK, IsMasterResult)
+	require.NoError(t, es.setCatMaster("junk"))
+
+	IsMasterResultTokens := strings.Split(string(IsMasterResult), " ")
+	if es.catMasterResponseTokens[0] != IsMasterResultTokens[0] {
+		msg := fmt.Sprintf("catmaster is incorrect")
+		assert.Fail(t, msg)
+	}
+
+	// now get node status, which determines whether we're master
+	var acc testutil.Accumulator
+	es.Local = true
+	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+	if err := es.gatherNodeStats("junk", &acc); err != nil {
+		t.Fatal(err)
+	}
+
+	checkIsMaster(es, true, t)
+
+	tags := defaultTags()
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_os", nodestatsOsExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_process", nodestatsProcessExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_jvm", nodestatsJvmExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_thread_pool", nodestatsThreadPoolExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_fs", nodestatsFsExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_transport", nodestatsTransportExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_http", nodestatsHttpExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_breakers", nodestatsBreakersExpected, tags)
+
+	// now test the clusterstats method
+	es.client.Transport = newTransportMock(http.StatusOK, clusterStatsResponse)
+	require.NoError(t, es.gatherClusterStats("junk", &acc))
+
+	tags = map[string]string{
+		"cluster_name": "es-testcluster",
+		"node_name":    "test.host.com",
+		"status":       "red",
+	}
+
+	acc.AssertContainsTaggedFields(t, "elasticsearch_clusterstats_nodes", clusterstatsNodesExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_clusterstats_indices", clusterstatsIndicesExpected, tags)
+}
+
 func TestGatherClusterStatsNonMaster(t *testing.T) {
 	// This needs multiple steps to replicate the multiple calls internally.
 	es := newElasticsearchWithClient()
@@ -185,7 +451,88 @@ func TestGatherClusterStatsNonMaster(t *testing.T) {
 	// ensure flag is clear so Cluster Stats would not be done
 	checkIsMaster(es, false, t)
 	checkNodeStatsResult(t, &acc)
+}
 
+func TestGatherClusterStatsNonMasterIncludeFiltered(t *testing.T) {
+	// This needs multiple steps to replicate the multiple calls internally.
+	es := newElasticsearchWithClient()
+	es.ClusterStats = true
+	es.Servers = []string{"http://example.com:9200"}
+	es.Filter = []string{"elasticsearch_jvm", "elasticsearch_clusterstats_indices"}
+	es.ExcludeFilter = false
+
+	// first get catMaster
+	es.client.Transport = newTransportMock(http.StatusOK, IsNotMasterResult)
+	require.NoError(t, es.setCatMaster("junk"))
+
+	IsNotMasterResultTokens := strings.Split(string(IsNotMasterResult), " ")
+	if es.catMasterResponseTokens[0] != IsNotMasterResultTokens[0] {
+		msg := fmt.Sprintf("catmaster is incorrect")
+		assert.Fail(t, msg)
+	}
+
+	// now get node status, which determines whether we're master
+	var acc testutil.Accumulator
+	es.Local = true
+	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+	if err := es.gatherNodeStats("junk", &acc); err != nil {
+		t.Fatal(err)
+	}
+
+	// ensure flag is clear so Cluster Stats would not be done
+	checkIsMaster(es, false, t)
+
+	tags := defaultTags()
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_os", nodestatsOsExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_process", nodestatsProcessExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_jvm", nodestatsJvmExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_thread_pool", nodestatsThreadPoolExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_fs", nodestatsFsExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_transport", nodestatsTransportExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_http", nodestatsHttpExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_breakers", nodestatsBreakersExpected, tags)
+}
+
+func TestGatherClusterStatsNonMasterExcludeFiltered(t *testing.T) {
+	// This needs multiple steps to replicate the multiple calls internally.
+	es := newElasticsearchWithClient()
+	es.ClusterStats = true
+	es.Servers = []string{"http://example.com:9200"}
+	es.Filter = []string{"elasticsearch_jvm", "elasticsearch_clusterstats_indices"}
+	es.ExcludeFilter = true
+
+	// first get catMaster
+	es.client.Transport = newTransportMock(http.StatusOK, IsNotMasterResult)
+	require.NoError(t, es.setCatMaster("junk"))
+
+	IsNotMasterResultTokens := strings.Split(string(IsNotMasterResult), " ")
+	if es.catMasterResponseTokens[0] != IsNotMasterResultTokens[0] {
+		msg := fmt.Sprintf("catmaster is incorrect")
+		assert.Fail(t, msg)
+	}
+
+	// now get node status, which determines whether we're master
+	var acc testutil.Accumulator
+	es.Local = true
+	es.client.Transport = newTransportMock(http.StatusOK, nodeStatsResponse)
+	if err := es.gatherNodeStats("junk", &acc); err != nil {
+		t.Fatal(err)
+	}
+
+	// ensure flag is clear so Cluster Stats would not be done
+	checkIsMaster(es, false, t)
+
+	tags := defaultTags()
+	acc.AssertContainsTaggedFields(t, "elasticsearch_indices", nodestatsIndicesExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_os", nodestatsOsExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_process", nodestatsProcessExpected, tags)
+	acc.AssertDoesNotContainsTaggedFields(t, "elasticsearch_jvm", nodestatsJvmExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_thread_pool", nodestatsThreadPoolExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_fs", nodestatsFsExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_transport", nodestatsTransportExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_http", nodestatsHttpExpected, tags)
+	acc.AssertContainsTaggedFields(t, "elasticsearch_breakers", nodestatsBreakersExpected, tags)
 }
 
 func newElasticsearchWithClient() *Elasticsearch {

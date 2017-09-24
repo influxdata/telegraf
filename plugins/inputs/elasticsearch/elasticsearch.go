@@ -98,6 +98,11 @@ const sampleConfig = `
   ## Master node.
   cluster_stats = false
 
+  ## Optional measurement filtering
+  ## Use measurement names and specify whether to use an include or exclude filtering
+  # filter = ["elasticsearch_jvm"]
+  # exclude_filter = false
+
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
@@ -114,6 +119,8 @@ type Elasticsearch struct {
 	HttpTimeout             internal.Duration
 	ClusterHealth           bool
 	ClusterStats            bool
+	Filter                  []string
+	ExcludeFilter           bool
 	SSLCA                   string `toml:"ssl_ca"`   // Path to CA file
 	SSLCert                 string `toml:"ssl_cert"` // Path to host cert file
 	SSLKey                  string `toml:"ssl_key"`  // Path to cert key file
@@ -121,6 +128,7 @@ type Elasticsearch struct {
 	client                  *http.Client
 	catMasterResponseTokens []string
 	isMaster                bool
+	filterMapping           map[string]bool
 }
 
 // NewElasticsearch return a new instance of Elasticsearch
@@ -219,6 +227,26 @@ func (e *Elasticsearch) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
+func (e *Elasticsearch) generateFilterMapIfNecessary() {
+	e.filterMapping = make(map[string]bool)
+	for _, filter := range e.Filter {
+		e.filterMapping[filter] = true
+	}
+}
+
+func (e *Elasticsearch) record(measurement string) bool {
+	if len(e.Filter) == 0 {
+		return true
+	}
+	e.generateFilterMapIfNecessary()
+	includedInFilter := e.filterMapping[measurement]
+	if e.ExcludeFilter {
+		return !includedInFilter
+	} else {
+		return includedInFilter
+	}
+}
+
 func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) error {
 	nodeStats := &struct {
 		ClusterName string               `json:"cluster_name"`
@@ -259,13 +287,17 @@ func (e *Elasticsearch) gatherNodeStats(url string, acc telegraf.Accumulator) er
 
 		now := time.Now()
 		for p, s := range stats {
+			measurement := "elasticsearch_" + p
+			if !e.record(measurement) {
+				continue
+			}
 			f := jsonparser.JSONFlattener{}
 			// parse Json, ignoring strings and bools
 			err := f.FlattenJSON("", s)
 			if err != nil {
 				return err
 			}
-			acc.AddFields("elasticsearch_"+p, f.Fields, tags, now)
+			acc.AddFields(measurement, f.Fields, tags, now)
 		}
 	}
 	return nil
@@ -288,30 +320,34 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 		"initializing_shards":   healthStats.InitializingShards,
 		"unassigned_shards":     healthStats.UnassignedShards,
 	}
-	acc.AddFields(
-		"elasticsearch_cluster_health",
-		clusterFields,
-		map[string]string{"name": healthStats.ClusterName},
-		measurementTime,
-	)
-
-	for name, health := range healthStats.Indices {
-		indexFields := map[string]interface{}{
-			"status":                health.Status,
-			"number_of_shards":      health.NumberOfShards,
-			"number_of_replicas":    health.NumberOfReplicas,
-			"active_primary_shards": health.ActivePrimaryShards,
-			"active_shards":         health.ActiveShards,
-			"relocating_shards":     health.RelocatingShards,
-			"initializing_shards":   health.InitializingShards,
-			"unassigned_shards":     health.UnassignedShards,
-		}
+	if e.record("elasticsearch_cluster_health") {
 		acc.AddFields(
-			"elasticsearch_indices",
-			indexFields,
-			map[string]string{"index": name},
+			"elasticsearch_cluster_health",
+			clusterFields,
+			map[string]string{"name": healthStats.ClusterName},
 			measurementTime,
 		)
+	}
+
+	if e.record("elasticsearch_indices") {
+		for name, health := range healthStats.Indices {
+			indexFields := map[string]interface{}{
+				"status":                health.Status,
+				"number_of_shards":      health.NumberOfShards,
+				"number_of_replicas":    health.NumberOfReplicas,
+				"active_primary_shards": health.ActivePrimaryShards,
+				"active_shards":         health.ActiveShards,
+				"relocating_shards":     health.RelocatingShards,
+				"initializing_shards":   health.InitializingShards,
+				"unassigned_shards":     health.UnassignedShards,
+			}
+			acc.AddFields(
+				"elasticsearch_indices",
+				indexFields,
+				map[string]string{"index": name},
+				measurementTime,
+			)
+		}
 	}
 	return nil
 }
@@ -334,13 +370,17 @@ func (e *Elasticsearch) gatherClusterStats(url string, acc telegraf.Accumulator)
 	}
 
 	for p, s := range stats {
+		measurement := "elasticsearch_clusterstats_" + p
+		if !e.record(measurement) {
+			continue
+		}
 		f := jsonparser.JSONFlattener{}
 		// parse json, including bools and strings
 		err := f.FullFlattenJSON("", s, true, true)
 		if err != nil {
 			return err
 		}
-		acc.AddFields("elasticsearch_clusterstats_"+p, f.Fields, tags, now)
+		acc.AddFields(measurement, f.Fields, tags, now)
 	}
 
 	return nil
