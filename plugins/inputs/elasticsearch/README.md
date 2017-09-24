@@ -27,6 +27,11 @@ or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/curre
   ## Master node. 
   cluster_stats = false
 
+  ## Optional measurement filtering
+  ## Use measurement names and specify whether to use an include or exclude filtering
+  # filter = ["elasticsearch_jvm"]
+  # exclude_filter = false
+
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
