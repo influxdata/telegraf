@@ -1,6 +1,7 @@
 package statsd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -16,8 +17,8 @@ const (
 	testMsg = "test.tcp.msg:100|c"
 )
 
-func newTestTcpListener() (*Statsd, chan []byte) {
-	in := make(chan []byte, 1500)
+func newTestTcpListener() (*Statsd, chan *bytes.Buffer) {
+	in := make(chan *bytes.Buffer, 1500)
 	listener := &Statsd{
 		Protocol:               "tcp",
 		ServiceAddress:         ":8125",
@@ -34,7 +35,7 @@ func NewTestStatsd() *Statsd {
 
 	// Make data structures
 	s.done = make(chan struct{})
-	s.in = make(chan []byte, s.AllowedPendingMessages)
+	s.in = make(chan *bytes.Buffer, s.AllowedPendingMessages)
 	s.gauges = make(map[string]cachedgauge)
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
