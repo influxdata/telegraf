@@ -25,6 +25,7 @@
 - [#3236](https://github.com/influxdata/telegraf/pull/3236): Add support for k8s service DNS discovery to prometheus input.
 - [#3245](https://github.com/influxdata/telegraf/pull/3245): Add configurable metrics endpoint to prometheus output.
 - [#3214](https://github.com/influxdata/telegraf/pull/3214): Add new nginx_plus input plugin.
+- [#3215](https://github.com/influxdata/telegraf/pull/3215): Add support for NSQLookupd to nsq_consumer.
 
 ### Bugfixes
 
