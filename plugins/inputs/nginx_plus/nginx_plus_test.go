@@ -25,7 +25,7 @@ const sampleStatusResponse = `
     "processes": {
         "respawned": 9999
      },
-    "connections": { 
+    "connections": {
         "accepted": 1234567890000,
         "dropped":  2345678900000,
         "active":   345,
@@ -306,10 +306,10 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 		t,
 		"nginx_plus_connections",
 		map[string]interface{}{
-			"accepted": int(1234567890000),
-			"dropped":  int(2345678900000),
-			"active":   int(345),
-			"idle":     int(567),
+			"accepted": int64(1234567890000),
+			"dropped":  int64(2345678900000),
+			"active":   int64(345),
+			"idle":     int64(567),
 		},
 		map[string]string{
 			"server": host,
