@@ -162,10 +162,10 @@ type Status struct {
 	} `json:"processes"`
 
 	Connections struct {
-		Accepted int `json:"accepted"`
-		Dropped  int `json:"dropped"`
-		Active   int `json:"active"`
-		Idle     int `json:"idle"`
+		Accepted int64 `json:"accepted"`
+		Dropped  int64 `json:"dropped"`
+		Active   int64 `json:"active"`
+		Idle     int64 `json:"idle"`
 	} `json:"connections"`
 
 	Ssl *struct { // added in version 6
