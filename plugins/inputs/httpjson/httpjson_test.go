@@ -560,3 +560,18 @@ func TestHttpJsonArray200Tags(t *testing.T) {
 		}
 	}
 }
+
+var jsonBOM = []byte("\xef\xbb\xbf[{\"value\":17}]")
+
+// TestHttpJsonBOM tests that UTF-8 JSON with a BOM can be parsed
+func TestHttpJsonBOM(t *testing.T) {
+	httpjson := genMockHttpJson(string(jsonBOM), 200)
+
+	for _, service := range httpjson {
+		if service.Name == "other_webapp" {
+			var acc testutil.Accumulator
+			err := acc.GatherError(service.Gather)
+			require.NoError(t, err)
+		}
+	}
+}
