@@ -38,7 +38,7 @@ For more information, please check the [DC/OS Metrics](https://dcos.io/docs/1.9/
 
 ### Measurements & Fields
 
-Below are enumerated the metrics taken from version 1.9 of DC/OS. For a description of those metrics, please see the [DC/OS Metrics Reference](https://dcos.io/docs/1.9/metrics/reference//).
+Below are enumerated the metrics taken from version 1.9 of DC/OS. For a description of these metrics, please see the [DC/OS Metrics Reference](https://dcos.io/docs/1.9/metrics/reference//) page.
 Each field name has an additional suffix following the final underscore to indicate the unit of metric value.
 
 #### Node (Agent) metric fields
@@ -107,8 +107,8 @@ Each field name has an additional suffix following the final underscore to indic
 
 #### App metric fields
 - dcos_app
-  - _app specific metrics_ 
-  
+  - _app specific metrics_
+
 The set of DC/OS app metrics depends on the metrics exposed by an application running inside the container.
 
 ### Tags
