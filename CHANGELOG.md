@@ -1,3 +1,9 @@
+## v1.4.2 [unreleased]
+
+### Bugfixes
+
+- [#3259](https://github.com/influxdata/telegraf/issues/3259): Fix error if int larger than 32-bit in /proc/vmstat #3266
+
 ## v1.4.1 [2017-09-26]
 
 ### Bugfixes
