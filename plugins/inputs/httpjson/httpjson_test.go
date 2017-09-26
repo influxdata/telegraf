@@ -477,15 +477,13 @@ func TestHttpJsonBadJson(t *testing.T) {
 	assert.Equal(t, 0, acc.NFields())
 }
 
-// Test response to empty string as response objectgT
+// Test response to empty string as response object
 func TestHttpJsonEmptyResponse(t *testing.T) {
 	httpjson := genMockHttpJson(empty, 200)
 
 	var acc testutil.Accumulator
 	err := acc.GatherError(httpjson[0].Gather)
-
-	assert.Error(t, err)
-	assert.Equal(t, 0, acc.NFields())
+	assert.NoError(t, err)
 }
 
 // Test that the proper values are ignored or collected
