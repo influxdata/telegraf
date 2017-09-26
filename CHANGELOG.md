@@ -33,7 +33,7 @@
 - [#3258](https://github.com/influxdata/telegraf/issues/3258): Unlock Statsd when stopping to prevent deadlock.
 
 
-## v1.4.1 [unreleased]
+## v1.4.1 [2017-09-26]
 
 ### Bugfixes
 
