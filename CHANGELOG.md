@@ -32,6 +32,11 @@
 - [#3136](https://github.com/influxdata/telegraf/issues/3136): Fix webhooks input address in use during reload.
 - [#3258](https://github.com/influxdata/telegraf/issues/3258): Unlock Statsd when stopping to prevent deadlock.
 
+## v1.4.2 [unreleased]
+
+### Bugfixes
+
+- [#3259](https://github.com/influxdata/telegraf/issues/3259): Fix error if int larger than 32-bit in /proc/vmstat #3266
 
 ## v1.4.1 [2017-09-26]
 
