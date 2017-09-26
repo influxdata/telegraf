@@ -10,10 +10,11 @@ import (
 )
 
 type NetIOStats struct {
-	ps PS
+	ps                        PS
 
-	skipChecks bool
-	Interfaces []string
+	skipChecks                bool
+	Interfaces                []string
+	InterfacesExcludePatterns []string
 }
 
 func (_ *NetIOStats) Description() string {
@@ -26,6 +27,10 @@ var netSampleConfig = `
   ## regardless of status.
   ##
   # interfaces = ["eth0"]
+
+  ## If you want to exlude any interfaces, you can define a list of strings that
+  ## must not be contained in the interface name
+  # interfaces_exclude_patterns = ["veth"]
 `
 
 func (_ *NetIOStats) SampleConfig() string {
@@ -55,6 +60,21 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 		} else if !s.skipChecks {
 			iface, err := net.InterfaceByName(io.Name)
 			if err != nil {
+				continue
+			}
+
+			var ignored bool
+			for _, ignore := range s.InterfacesExcludePatterns {
+				if ignore == "" {
+					continue
+				}
+				if strings.Contains(iface.Name, ignore) {
+					ignored = true
+					break
+				}
+			}
+
+			if ignored {
 				continue
 			}
 
