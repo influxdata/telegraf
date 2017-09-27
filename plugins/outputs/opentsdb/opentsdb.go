@@ -138,7 +138,7 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 			}
 
 			metric := &HttpMetric{
-				Metric: sanitizedChars.Replace(fmt.Sprintf("%s%s%s%s",
+				Metric: sanitize(fmt.Sprintf("%s%s%s%s",
 					o.Prefix, m.Name(), o.Separator, fieldName)),
 				Tags:      tags,
 				Timestamp: now,
@@ -189,7 +189,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 			}
 
 			messageLine := fmt.Sprintf("put %s %v %s %s\n",
-				sanitizedChars.Replace(fmt.Sprintf("%s%s%s%s", o.Prefix, m.Name(), o.Separator, fieldName)),
+				sanitize(fmt.Sprintf("%s%s%s%s", o.Prefix, m.Name(), o.Separator, fieldName)),
 				now, metricValue, tags)
 
 			_, err := connection.Write([]byte(messageLine))
