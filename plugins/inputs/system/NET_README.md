@@ -12,6 +12,10 @@ This plugin gathers metrics about network interface and protocol usage (Linux on
   ## regardless of status.
   ##
   # interfaces = ["eth0"]
+
+  ## If you want to exlude any interfaces, you can define a list of strings that
+  ## must not be contained in the interface name
+  # interfaces_exclude_patterns = ["veth"]
 ```
 
 ### Measurements & Fields:
