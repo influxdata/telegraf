@@ -51,7 +51,7 @@ sudo apt-get install -y rpm
 unset GOGC
 ./scripts/build.py --release --package --platform=all \
   --arch=all --version=${VERSION}
-rm build/telegraf
+#rm build/telegraf
 mv build $CIRCLE_ARTIFACTS
 
 #intall github-release cmd
