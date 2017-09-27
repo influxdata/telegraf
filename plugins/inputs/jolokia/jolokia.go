@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -254,6 +255,10 @@ func (j *Jolokia) extractValues(measurement string, value interface{}, fields ma
 func (j *Jolokia) Gather(acc telegraf.Accumulator) error {
 
 	if j.jClient == nil {
+		log.Println("W! DEPRECATED: the jolokia plugin has been deprecated " +
+			"in favor of the jolokia2 plugin " +
+			"(https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2)")
+
 		tr := &http.Transport{ResponseHeaderTimeout: j.ResponseHeaderTimeout.Duration}
 		j.jClient = &JolokiaClientImpl{&http.Client{
 			Transport: tr,
