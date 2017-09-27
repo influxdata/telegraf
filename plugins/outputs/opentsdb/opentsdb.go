@@ -22,6 +22,7 @@ var (
 		`%`, "-",
 		"#", "-",
 		"$", "-")
+	defaultSeperator = "_"
 )
 
 type OpenTSDB struct {
@@ -56,8 +57,8 @@ var sampleConfig = `
   ## Debug true - Prints OpenTSDB communication
   debug = false
 
-  ## Separator separates measurements
-  separator = "."
+  ## Separator separates measurement name from field
+  separator = "_"
 `
 
 func ToLineFormat(tags map[string]string) string {
@@ -258,6 +259,8 @@ func sanitize(value string) string {
 
 func init() {
 	outputs.Add("opentsdb", func() telegraf.Output {
-		return &OpenTSDB{}
+		return &OpenTSDB{
+			Separator: defaultSeperator,
+		}
 	})
 }
