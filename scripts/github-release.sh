@@ -49,9 +49,9 @@ gem instal fpm
 
 sudo apt-get install -y rpm
 unset GOGC
-./scripts/build.py --release --package --platform=all \
-  --arch=all --version=${VERSION}
-#rm build/telegraf
+./scripts/build.py --release --package --platform=linux \
+  --arch=amd64 --version=${VERSION}
+rm build/telegraf
 mv build $CIRCLE_ARTIFACTS
 
 #intall github-release cmd
