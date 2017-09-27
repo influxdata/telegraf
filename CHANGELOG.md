@@ -2,6 +2,7 @@
 
 ### New Plugins
 - [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
+- [jolokia2](./plugins/inputs/jolokia2/README.md) - Thanks to @dylanmei
 
 ### Release Notes
 
@@ -9,6 +10,10 @@
   `use_random_partitionkey` options has been deprecated in favor of the
   `partition` subtable.  This allows for more flexible methods to set the
   partition key such as by metric name or by tag.
+
+- With the release of the new improved `jolokia2` input, the legacy `jolokia`
+  plugin is deprecated and will be removed in a future release.  Users of this
+  plugin are encouraged to update to the new `jolokia2` plugin.
 
 ### Features
 
@@ -26,6 +31,7 @@
 - [#3245](https://github.com/influxdata/telegraf/pull/3245): Add configurable metrics endpoint to prometheus output.
 - [#3214](https://github.com/influxdata/telegraf/pull/3214): Add new nginx_plus input plugin.
 - [#3215](https://github.com/influxdata/telegraf/pull/3215): Add support for NSQLookupd to nsq_consumer.
+- [#2278](https://github.com/influxdata/telegraf/pull/2278): Add redesigned Jolokia input plugin.
 
 ### Bugfixes
 
