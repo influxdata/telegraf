@@ -46,9 +46,9 @@ CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
 	"name" STRING,
 	"tags" OBJECT(DYNAMIC),
 	"fields" OBJECT(DYNAMIC),
-  "day" TIMESTAMP GENERATED ALWAYS AS date_trunc('day', "timestamp"),
+	"day" TIMESTAMP GENERATED ALWAYS AS date_trunc('day', "timestamp"),
 	PRIMARY KEY ("timestamp", "hash_id","day")
-)PARTITIONED BY("day");
+) PARTITIONED BY("day");
 `
 		ctx, cancel := context.WithTimeout(context.Background(), c.Timeout.Duration)
 		defer cancel()
