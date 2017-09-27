@@ -32,6 +32,7 @@
 - [#3214](https://github.com/influxdata/telegraf/pull/3214): Add new nginx_plus input plugin.
 - [#3215](https://github.com/influxdata/telegraf/pull/3215): Add support for NSQLookupd to nsq_consumer.
 - [#2278](https://github.com/influxdata/telegraf/pull/2278): Add redesigned Jolokia input plugin.
+- [#3106](https://github.com/influxdata/telegraf/pull/3106): Add configurable separator for metrics and fields in opentsdb output.
 
 ### Bugfixes
 
