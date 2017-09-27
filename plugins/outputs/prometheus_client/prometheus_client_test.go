@@ -189,6 +189,56 @@ func TestWrite_MixedValueType(t *testing.T) {
 	require.Equal(t, 1, len(fam.Samples))
 }
 
+func TestWrite_MixedValueTypeUpgrade(t *testing.T) {
+	now := time.Now()
+	p1, err := metric.New(
+		"foo",
+		map[string]string{"a": "x"},
+		map[string]interface{}{"value": 1.0},
+		now,
+		telegraf.Untyped)
+	p2, err := metric.New(
+		"foo",
+		map[string]string{"a": "y"},
+		map[string]interface{}{"value": 2.0},
+		now,
+		telegraf.Gauge)
+	var metrics = []telegraf.Metric{p1, p2}
+
+	client := NewClient()
+	err = client.Write(metrics)
+	require.NoError(t, err)
+
+	fam, ok := client.fam["foo"]
+	require.True(t, ok)
+	require.Equal(t, 2, len(fam.Samples))
+}
+
+func TestWrite_MixedValueTypeDowngrade(t *testing.T) {
+	now := time.Now()
+	p1, err := metric.New(
+		"foo",
+		map[string]string{"a": "x"},
+		map[string]interface{}{"value": 1.0},
+		now,
+		telegraf.Gauge)
+	p2, err := metric.New(
+		"foo",
+		map[string]string{"a": "y"},
+		map[string]interface{}{"value": 2.0},
+		now,
+		telegraf.Untyped)
+	var metrics = []telegraf.Metric{p1, p2}
+
+	client := NewClient()
+	err = client.Write(metrics)
+	require.NoError(t, err)
+
+	fam, ok := client.fam["foo"]
+	require.True(t, ok)
+	require.Equal(t, 2, len(fam.Samples))
+}
+
 func TestWrite_Tags(t *testing.T) {
 	now := time.Now()
 	p1, err := metric.New(
@@ -395,6 +445,7 @@ func setupPrometheus() (*PrometheusClient, *prometheus_input.Prometheus, error) 
 	if pTesting == nil {
 		pTesting = NewClient()
 		pTesting.Listen = "localhost:9127"
+		pTesting.Path = "/metrics"
 		err := pTesting.Start()
 		if err != nil {
 			return nil, nil, err

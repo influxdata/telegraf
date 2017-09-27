@@ -1,65 +1,47 @@
 # Prometheus Input Plugin
 
-The prometheus input plugin gathers metrics from any webpage
-exposing metrics with Prometheus format
+The prometheus input plugin gathers metrics from HTTP servers exposing metrics
+in Prometheus format.
 
 ### Configuration:
 
-Example for Kubernetes apiserver
 ```toml
-# Get all metrics from Kube-apiserver
+# Read metrics from one or many prometheus clients
 [[inputs.prometheus]]
-  # An array of urls to scrape metrics from.
-  urls = ["http://my-kube-apiserver:8080/metrics"]
+  ## An array of urls to scrape metrics from.
+  urls = ["http://localhost:9100/metrics"]
+
+  ## An array of Kubernetes services to scrape metrics from.
+  # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
+
+  ## Use bearer token for authorization
+  # bearer_token = /path/to/bearer/token
+
+  ## Specify timeout duration for slower prometheus clients (default is 3s)
+  # response_timeout = "3s"
+
+  ## Optional SSL Config
+  # ssl_ca = /path/to/cafile
+  # ssl_cert = /path/to/certfile
+  # ssl_key = /path/to/keyfile
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
-Specify a 10 second timeout for slower/over-loaded clients
-```toml
-# Get all metrics from Kube-apiserver
-[[inputs.prometheus]]
-  # An array of urls to scrape metrics from.
-  urls = ["http://my-kube-apiserver:8080/metrics"]
+#### Kubernetes Service Discovery
 
-  # Specify timeout duration for slower prometheus clients (default is 3s)
-  response_timeout = "10s"
-```
+URLs listed in the `kubernetes_services` parameter will be expanded
+by looking up all A records assigned to the hostname as described in
+[Kubernetes DNS service discovery](https://kubernetes.io/docs/concepts/services-networking/service/#dns).
 
-You can use more complex configuration
-to filter and some tags
+This method can be used to locate all
+[Kubernetes headless services](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services).
 
-```toml
-# Get all metrics from Kube-apiserver
-[[inputs.prometheus]]
-  # An array of urls to scrape metrics from.
-  urls = ["http://my-kube-apiserver:8080/metrics"]
-  # Get only metrics with "apiserver_" string is in metric name
-  namepass = ["apiserver_*"]
-  # Add a metric name prefix
-  name_prefix = "k8s_"
-  # Add tags to be able to make beautiful dashboards
-  [inputs.prometheus.tags]
-    kubeservice = "kube-apiserver"
-```
+#### Bearer Token
 
-```toml
-# Authorize with a bearer token skipping cert verification
-[[inputs.prometheus]]
-  # An array of urls to scrape metrics from.
-  urls = ["http://my-kube-apiserver:8080/metrics"]
-  bearer_token = '/path/to/bearer/token'
-  insecure_skip_verify = true
-```
-
-```toml
-# Authorize using x509 certs
-[[inputs.prometheus]]
-  # An array of urls to scrape metrics from.
-  urls = ["https://my-kube-apiserver:8080/metrics"]
-
-  ssl_ca = '/path/to/cafile'
-  ssl_cert = '/path/to/certfile'
-  ssl_key = '/path/to/keyfile'
-```
+If set, the file specified by the `bearer_token` parameter will be read on
+each interval and its contents will be appended to the Bearer string in the
+Authorization header.
 
 ### Usage for Caddy HTTP server
 
@@ -79,46 +61,45 @@ If you want to monitor Caddy, you need to use Caddy with its Prometheus plugin:
 > This is the default URL where Caddy Prometheus plugin will send data.
 > For more details, please read the [Caddy Prometheus documentation](https://github.com/miekg/caddy-prometheus/blob/master/README.md).
 
-### Measurements & Fields & Tags:
+### Metrics:
 
-Measurements and fields could be any thing.
-It just depends of what you're quering.
+Measurement names are based on the Metric Family and tags are created for each
+label.  The value is added to a field named based on the metric type.
 
-Example:
-
-```
-# HELP go_gc_duration_seconds A summary of the GC invocation durations.
-# TYPE go_gc_duration_seconds summary
-go_gc_duration_seconds{quantile="0"} 0.00010425500000000001
-go_gc_duration_seconds{quantile="0.25"} 0.000139108
-go_gc_duration_seconds{quantile="0.5"} 0.00015749400000000002
-go_gc_duration_seconds{quantile="0.75"} 0.000331463
-go_gc_duration_seconds{quantile="1"} 0.000667154
-go_gc_duration_seconds_sum 0.0018183950000000002
-go_gc_duration_seconds_count 7
-# HELP go_goroutines Number of goroutines that currently exist.
-# TYPE go_goroutines gauge
-go_goroutines 15
-```
-
-- go_goroutines,
-    - gauge (integer, unit)
-- go_gc_duration_seconds
-    - field3 (integer, bytes)
-
-- All measurements have the following tags:
-    - url=http://my-kube-apiserver:8080/metrics
-- go_goroutines has the following tags:
-    - kubeservice=kube-apiserver
-- go_gc_duration_seconds has the following tags:
-    - kubeservice=kube-apiserver
+All metrics receive the `url` tag indicating the related URL specified in the
+Telegraf configuration.  If using Kubernetes service discovery the `address`
+tag is also added indicating the discovered ip address.
 
 ### Example Output:
 
-Example of output with configuration given above:
-
+**Source**
 ```
-$ ./telegraf --config telegraf.conf --test
-k8s_go_goroutines,kubeservice=kube-apiserver,url=http://my-kube-apiserver:8080/metrics gauge=536 1456857329391929813
-k8s_go_gc_duration_seconds,kubeservice=kube-apiserver,url=http://my-kube-apiserver:8080/metrics 0=0.038002142,0.25=0.041732467,0.5=0.04336492,0.75=0.047271799,1=0.058295811,count=0,sum=208.334617406 1456857329391929813
+# HELP go_gc_duration_seconds A summary of the GC invocation durations.
+# TYPE go_gc_duration_seconds summary
+go_gc_duration_seconds{quantile="0"} 7.4545e-05
+go_gc_duration_seconds{quantile="0.25"} 7.6999e-05
+go_gc_duration_seconds{quantile="0.5"} 0.000277935
+go_gc_duration_seconds{quantile="0.75"} 0.000706591
+go_gc_duration_seconds{quantile="1"} 0.000706591
+go_gc_duration_seconds_sum 0.00113607
+go_gc_duration_seconds_count 4
+# HELP go_goroutines Number of goroutines that currently exist.
+# TYPE go_goroutines gauge
+go_goroutines 15
+# HELP cpu_usage_user Telegraf collected metric
+# TYPE cpu_usage_user gauge
+cpu_usage_user{cpu="cpu0"} 1.4112903225816156
+cpu_usage_user{cpu="cpu1"} 0.702106318955865
+cpu_usage_user{cpu="cpu2"} 2.0161290322588776
+cpu_usage_user{cpu="cpu3"} 1.5045135406226022
+```
+
+**Output**
+```
+go_gc_duration_seconds,url=http://example.org:9273/metrics 1=0.001336611,count=14,sum=0.004527551,0=0.000057965,0.25=0.000083812,0.5=0.000286537,0.75=0.000365303 1505776733000000000
+go_goroutines,url=http://example.org:9273/metrics gauge=21 1505776695000000000
+cpu_usage_user,cpu=cpu0,url=http://example.org:9273/metrics gauge=1.513622603430151 1505776751000000000
+cpu_usage_user,cpu=cpu1,url=http://example.org:9273/metrics gauge=5.829145728641773 1505776751000000000
+cpu_usage_user,cpu=cpu2,url=http://example.org:9273/metrics gauge=2.119071644805144 1505776751000000000
+cpu_usage_user,cpu=cpu3,url=http://example.org:9273/metrics gauge=1.5228426395944945 1505776751000000000
 ```

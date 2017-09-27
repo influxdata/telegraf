@@ -26,7 +26,7 @@ func TestParseSockId(t *testing.T) {
 func TestParseMonDump(t *testing.T) {
 	dump, err := parseDump(monPerfDump)
 	assert.NoError(t, err)
-	assert.InEpsilon(t, 5678670180, dump["cluster"]["osd_kb_used"], epsilon)
+	assert.InEpsilon(t, int64(5678670180), dump["cluster"]["osd_kb_used"], epsilon)
 	assert.InEpsilon(t, 6866.540527000, dump["paxos"]["store_state_latency.sum"], epsilon)
 }
 

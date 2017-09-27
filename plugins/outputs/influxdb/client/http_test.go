@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"compress/gzip"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -54,6 +55,13 @@ func TestHTTPClient_Write(t *testing.T) {
 				fmt.Fprintln(w, `{"results":[{}],"error":"basic auth incorrect"}`)
 			}
 
+			// test that user-specified http header is set properly
+			if r.Header.Get("X-Test-Header") != "Test-Value" {
+				w.WriteHeader(http.StatusTeapot)
+				w.Header().Set("Content-Type", "application/json")
+				fmt.Fprintln(w, `{"results":[{}],"error":"wrong http header value"}`)
+			}
+
 			// Validate Content-Length Header
 			if r.ContentLength != 13 {
 				w.WriteHeader(http.StatusTeapot)
@@ -89,6 +97,9 @@ func TestHTTPClient_Write(t *testing.T) {
 		UserAgent: "test-agent",
 		Username:  "test-user",
 		Password:  "test-password",
+		HTTPHeaders: HTTPHeaders{
+			"X-Test-Header": "Test-Value",
+		},
 	}
 	wp := WriteParams{
 		Database:        "test",
@@ -340,4 +351,61 @@ func TestHTTPClient_Query_JSONDecodeError(t *testing.T) {
 	err = client.Query(command)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "json")
+}
+
+func TestGzipCompression(t *testing.T) {
+	influxLine := "cpu value=99\n"
+
+	// Compress the payload using GZIP.
+	payload := bytes.NewReader([]byte(influxLine))
+	compressed, err := compressWithGzip(payload)
+	assert.Nil(t, err)
+
+	// Decompress the compressed payload and make sure
+	// that its original value has not changed.
+	gr, err := gzip.NewReader(compressed)
+	assert.Nil(t, err)
+	gr.Close()
+
+	var uncompressed bytes.Buffer
+	_, err = uncompressed.ReadFrom(gr)
+	assert.Nil(t, err)
+
+	assert.Equal(t, []byte(influxLine), uncompressed.Bytes())
+}
+
+func TestHTTPClient_PathPrefix(t *testing.T) {
+	prefix := "/some/random/prefix"
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case prefix + "/write":
+			w.WriteHeader(http.StatusNoContent)
+			w.Header().Set("Content-Type", "application/json")
+		case prefix + "/query":
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprintln(w, `{"results":[{}]}`)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			msg := fmt.Sprintf("Path not found: %s", r.URL.Path)
+			fmt.Fprintln(w, msg)
+		}
+	}))
+	defer ts.Close()
+
+	config := HTTPConfig{
+		URL: ts.URL + prefix,
+	}
+	wp := WriteParams{
+		Database: "test",
+	}
+	client, err := NewHTTP(config, wp)
+	defer client.Close()
+	assert.NoError(t, err)
+	err = client.Query("CREATE DATABASE test")
+	assert.NoError(t, err)
+	_, err = client.Write([]byte("cpu value=99\n"))
+	assert.NoError(t, err)
+	_, err = client.WriteStream(bytes.NewReader([]byte("cpu value=99\n")), 13)
+	assert.NoError(t, err)
 }

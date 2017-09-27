@@ -45,6 +45,7 @@ type MetricFamily struct {
 type PrometheusClient struct {
 	Listen             string
 	ExpirationInterval internal.Duration `toml:"expiration_interval"`
+	Path               string            `toml:"path"`
 
 	server *http.Server
 
@@ -70,8 +71,12 @@ func (p *PrometheusClient) Start() error {
 		p.Listen = "localhost:9273"
 	}
 
+	if p.Path == "" {
+		p.Path = "/metrics"
+	}
+
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", prometheus.Handler())
+	mux.Handle(p.Path, prometheus.Handler())
 
 	p.server = &http.Server{
 		Addr:    p.Listen,
@@ -254,7 +259,17 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				}
 				p.fam[mname] = fam
 			} else {
-				if fam.ValueType != vt {
+				// Metrics can be untyped even though the corresponding plugin
+				// creates them with a type.  This happens when the metric was
+				// transferred over the network in a format that does not
+				// preserve value type and received using an input such as a
+				// queue consumer.  To avoid issues we automatically upgrade
+				// value type from untyped to a typed metric.
+				if fam.ValueType == prometheus.UntypedValue {
+					fam.ValueType = vt
+				}
+
+				if vt != prometheus.UntypedValue && fam.ValueType != vt {
 					// Don't return an error since this would be a permanent error
 					log.Printf("Mixed ValueType for measurement %q; dropping point", point.Name())
 					break

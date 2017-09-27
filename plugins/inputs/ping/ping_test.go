@@ -211,7 +211,8 @@ Request timeout for icmp_seq 0
 `
 
 func mockErrorHostPinger(timeout float64, args ...string) (string, error) {
-	return errorPingOutput, errors.New("No packets received")
+	// This error will not trigger correct error paths
+	return errorPingOutput, nil
 }
 
 // Test that Gather works on a ping with no transmitted packets, even though the

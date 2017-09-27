@@ -23,7 +23,7 @@ install:
   - go env
 
 build_script:
-  - cmd: C:\GnuWin32\bin\make windows
+  - cmd: C:\GnuWin32\bin\make
 
 test_script:
   - cmd: C:\GnuWin32\bin\make test-windows

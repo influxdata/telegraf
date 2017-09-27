@@ -96,6 +96,9 @@ tars.cpu-total.us-east-1.cpu.usage_user 0.89 1455320690
 tars.cpu-total.us-east-1.cpu.usage_idle 98.09 1455320690
 ```
 
+Fields with string values will be skipped.  Boolean fields will be converted
+to 1 (true) or 0 (false).
+
 ### Graphite Configuration:
 
 ```toml
