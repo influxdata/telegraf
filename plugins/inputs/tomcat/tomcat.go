@@ -140,7 +140,6 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 	var status TomcatStatus
 	xml.NewDecoder(resp.Body).Decode(&status)
 
-
 	tags := map[string]string{"instance": s.Instance}
 
 	// add tomcat_jvm_memory measurements
@@ -154,8 +153,8 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 	// add tomcat_jvm_memorypool measurements
 	for _, mp := range status.TomcatJvm.JvmMemoryPools {
 		tcmpTags := map[string]string{
-			"name": mp.Name,
-			"type": mp.Type,
+			"name":     mp.Name,
+			"type":     mp.Type,
 			"instance": s.Instance,
 		}
 
@@ -177,7 +176,7 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 		}
 
 		tccTags := map[string]string{
-			"name": name,
+			"name":     name,
 			"instance": s.Instance,
 		}
 
