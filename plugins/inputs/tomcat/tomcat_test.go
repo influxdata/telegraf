@@ -45,6 +45,7 @@ func TestHTTPTomcat(t *testing.T) {
 	defer ts.Close()
 
 	tc := Tomcat{
+		Instance: "Test",
 		URL:      ts.URL,
 		Username: "tomcat",
 		Password: "s3cret",

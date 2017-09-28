@@ -59,6 +59,7 @@ type RequestInfo struct {
 }
 
 type Tomcat struct {
+	Instance string
 	URL      string
 	Username string
 	Password string
@@ -74,6 +75,9 @@ type Tomcat struct {
 }
 
 var sampleconfig = `
+  ## Instance name
+  # instance = "default"
+
   ## URL of the Tomcat server status
   # url = "http://127.0.0.1:8080/manager/status/all?XML=true"
 
@@ -136,19 +140,22 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 	var status TomcatStatus
 	xml.NewDecoder(resp.Body).Decode(&status)
 
+	tags := map[string]string{"instance": s.Instance}
+
 	// add tomcat_jvm_memory measurements
 	tcm := map[string]interface{}{
 		"free":  status.TomcatJvm.JvmMemory.Free,
 		"total": status.TomcatJvm.JvmMemory.Total,
 		"max":   status.TomcatJvm.JvmMemory.Max,
 	}
-	acc.AddFields("tomcat_jvm_memory", tcm, nil)
+	acc.AddFields("tomcat_jvm_memory", tcm, tags)
 
 	// add tomcat_jvm_memorypool measurements
 	for _, mp := range status.TomcatJvm.JvmMemoryPools {
 		tcmpTags := map[string]string{
-			"name": mp.Name,
-			"type": mp.Type,
+			"name":     mp.Name,
+			"type":     mp.Type,
+			"instance": s.Instance,
 		}
 
 		tcmpFields := map[string]interface{}{
@@ -169,7 +176,8 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 		}
 
 		tccTags := map[string]string{
-			"name": name,
+			"name":     name,
+			"instance": s.Instance,
 		}
 
 		tccFields := map[string]interface{}{
@@ -210,6 +218,7 @@ func (s *Tomcat) createHttpClient() (*http.Client, error) {
 func init() {
 	inputs.Add("tomcat", func() telegraf.Input {
 		return &Tomcat{
+			Instance: "default",
 			URL:      "http://127.0.0.1:8080/manager/status/all?XML=true",
 			Username: "tomcat",
 			Password: "s3cret",
