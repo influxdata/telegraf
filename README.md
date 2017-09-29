@@ -283,3 +283,4 @@ formats may be used with input plugins supporting the `data_format` option:
 * [socket_writer](./plugins/outputs/socket_writer)
 * [tcp](./plugins/outputs/socket_writer)
 * [udp](./plugins/outputs/socket_writer)
+* [wavefront](./plugins/outputs/wavefront)

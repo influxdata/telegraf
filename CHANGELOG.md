@@ -3,6 +3,7 @@
 ### New Plugins
 - [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
 - [jolokia2](./plugins/inputs/jolokia2/README.md) - Thanks to @dylanmei
+- [wavefront](./plugins/inputswavefront/README.md) - Thanks to @puckpuck
 
 ### Release Notes
 
@@ -34,6 +35,7 @@
 - [#2278](https://github.com/influxdata/telegraf/pull/2278): Add redesigned Jolokia input plugin.
 - [#3106](https://github.com/influxdata/telegraf/pull/3106): Add configurable separator for metrics and fields in opentsdb output.
 - [#1692](https://github.com/influxdata/telegraf/pull/1692): Add support for the rollbar occurrence webhook event.
+- [#3160](https://github.com/influxdata/telegraf/pull/3160): Add Wavefront output plugin.
 
 ### Bugfixes
 
