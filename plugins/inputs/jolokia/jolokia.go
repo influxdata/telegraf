@@ -60,6 +60,10 @@ type Jolokia struct {
 }
 
 const sampleConfig = `
+  # DEPRECATED: the jolokia plugin has been deprecated in favor of the
+  # jolokia2 plugin
+  # see https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2
+
   ## This is the context root used to compose the jolokia url
   ## NOTE that Jolokia requires a trailing slash at the end of the context root
   ## NOTE that your jolokia security policy must allow for POST requests.
