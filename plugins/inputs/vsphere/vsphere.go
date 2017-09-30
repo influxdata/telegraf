@@ -24,6 +24,7 @@ type Endpoint struct {
 type VSphere struct {
 	Vcenters []string
 	endpoints []Endpoint
+	mux sync.Mutex
 }
 
 func (e *Endpoint) Init(p *performance.Manager) error {
@@ -217,7 +218,22 @@ func (v *VSphere) Description() string {
 	return "Read metrics from VMware vCenter"
 }
 
+func (v *VSphere) Init()  {
+	v.mux.Lock()
+	defer v.mux.Unlock()
+
+
+	if v.endpoints != nil {
+		return
+	}
+	v.endpoints = make([]Endpoint, len(v.Vcenters))
+	for i, u := range v.Vcenters {
+		v.endpoints[i] = Endpoint{ Url: u }
+	}
+}
+
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
+	v.Init()
 	for _, ep := range v.endpoints {
 		err := ep.Collect(acc)
 		if err != nil {
