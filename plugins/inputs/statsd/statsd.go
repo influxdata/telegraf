@@ -427,13 +427,13 @@ func (s *Statsd) parser() error {
 			return nil
 		case buf := <-s.in:
 			lines := strings.Split(buf.String(), "\n")
+			s.bufPool.Put(buf)
 			for _, line := range lines {
 				line = strings.TrimSpace(line)
 				if line != "" {
 					s.parseStatsdLine(line)
 				}
 			}
-			s.bufPool.Put(buf)
 		}
 	}
 }
@@ -506,7 +506,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			sr := pipesplit[2]
 			errmsg := "E! Error: parsing sample rate, %s, it must be in format like: " +
 				"@0.1, @0.5, etc. Ignoring sample rate for line: %s\n"
-			if strings.Contains(sr, "@") && len(sr) > 1 {
+			if len(sr) > 1 && sr[0] == '@' {
 				samplerate, err := strconv.ParseFloat(sr[1:], 64)
 				if err != nil {
 					log.Printf(errmsg, err.Error(), line)
@@ -529,7 +529,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		}
 
 		// Parse the value
-		if strings.HasPrefix(pipesplit[0], "-") || strings.HasPrefix(pipesplit[0], "+") {
+		if pipesplit[0][0] == '-' || pipesplit[0][0] == '+' {
 			if m.mtype != "g" && m.mtype != "c" {
 				log.Printf("E! Error: +- values are only supported for gauges & counters: %s\n", line)
 				return errors.New("Error Parsing statsd line")
@@ -650,13 +650,13 @@ func (s *Statsd) parseName(bucket string) (string, string, map[string]string) {
 func parseKeyValue(keyvalue string) (string, string) {
 	var key, val string
 
-	split := strings.Split(keyvalue, "=")
-	// Must be exactly 2 to get anything meaningful out of them
-	if len(split) == 2 {
-		key = split[0]
-		val = split[1]
-	} else if len(split) == 1 {
-		val = split[0]
+	ind := strings.IndexByte(keyvalue, '=')
+	// Must be present to get anything meaningful out of them
+	if ind == -1 {
+		val = keyvalue
+	} else {
+		key = keyvalue[:ind]
+		val = keyvalue[ind+1:]
 	}
 
 	return key, val
