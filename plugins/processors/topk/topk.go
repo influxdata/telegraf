@@ -62,15 +62,18 @@ var sampleConfig = `
   aggregation_field = "telegraf_topk_aggregation" # Field with the value of the computed aggregation. Default: "" (deactivated)
 `
 
-type Measurements []telegraf.Metric
+type Measurements struct {
+	metrics []telegraf.Metric
+	field   string
+}
 
 func (m Measurements) Len() int {
-	return len(m)
+	return len(m.metrics)
 }
 
 func (m Measurements) Less(i, j int) bool {
-	iv, iok := convert(m[i].Fields()["value"])
-	jv, jok := convert(m[j].Fields()["value"])
+	iv, iok := convert(m.metrics[i].Fields()["value"])
+	jv, jok := convert(m.metrics[j].Fields()["value"])
 	if  iok && jok && (iv < jv) {
 		return true
 	} else {
@@ -79,7 +82,7 @@ func (m Measurements) Less(i, j int) bool {
 }
 
 func (m Measurements) Swap(i, j int) {
-	m[i], m[j] = m[j], m[i]
+	m.metrics[i], m.metrics[j] = m.metrics[j], m.metrics[i]
 }
 
 func (t *TopK) SampleConfig() string {
@@ -112,8 +115,9 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	elapsed := time.Since(t.last_aggregation)
 	if elapsed >= time.Second*10 {
 		// Sort the keys by the selected field TODO: Make the field configurable
+		if t.Field == "" { t.Field = "value"} // Setup the default value for the field to sort
 		for _, ms := range t.cache {
-			sort.Reverse(Measurements(ms))
+			sort.Reverse(Measurements{metrics: ms, field: t.Field})
 		}
 		
 		// Create a one dimentional list with the top K metrics of each key
