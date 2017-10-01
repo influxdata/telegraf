@@ -9,13 +9,41 @@ import (
 )
 
 type TopK struct {
+	Metric             string
+	Period             int
+	K                  int
+	Field              string
+	Aggregation        string
+	Tags               []string
+        RevertTagMatch     bool `toml:"revert_tag_match"`
+        DropNonMatching    bool `toml:"drop_non_matching"`
+	DropNonTop         bool `toml:"top"`
+	PositionField      string `toml:"position_field"`
+	AggregationField   string `toml:"aggregation_field"`
+
 	cache map[uint64][]telegraf.Metric
 	last_report time.Time
 }
 
 func NewTopK() telegraf.Processor{
+	// Create object
 	topk := &TopK{}
+
+	// Setup defaults
+	topk.Period = 10
+	topk.K = 10
+	topk.Aggregation = "avg"
+	topk.Field = "value"
+	topk.Tags = []string{"*"}
+	topk.RevertTagMatch = false
+	topk.DropNonMatching = false
+	topk.DropNonTop = true
+	topk.PositionField = ""
+	topk.AggregationField = ""
+
+	// Initialize cache
 	topk.Reset()
+
 	return topk
 }
 
