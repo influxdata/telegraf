@@ -22,7 +22,7 @@ type TopK struct {
 	AggregationField   string `toml:"aggregation_field"`
 
 	cache map[uint64][]telegraf.Metric
-	last_report time.Time
+	last_aggregation time.Time
 }
 
 func NewTopK() telegraf.Processor{
@@ -76,7 +76,7 @@ func (t *TopK) SampleConfig() string {
 
 func (t *TopK) Reset() {
 	t.cache = make(map[uint64][]telegraf.Metric)
-	t.last_report = time.Now()
+	t.last_aggregation = time.Now()
 }
 
 func (t *TopK) Description() string {
@@ -96,10 +96,10 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		t.cache[m.HashID()] = append(t.cache[m.HashID()], m)
 	}
 
-	// If enough time has passed
-	elapsed := time.Since(t.last_report)
+	// If enough time has passed TODO: Make the aggregation time configurable
+	elapsed := time.Since(t.last_aggregation)
 	if elapsed >= time.Second*10 {
-		// Sort the keys by the selected field
+		// Sort the keys by the selected field TODO: Make the field configurable
 		for _, ms := range t.cache {
 			sort.Reverse(Measurements(ms))
 		}
@@ -107,7 +107,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		// Create a one dimentional list with the top K metrics of each key
 		ret := make([]telegraf.Metric, 0, 100)
 		for _, ms := range t.cache {
-			ret = append(ret, ms[0:min(len(ms), 10)]...)
+			ret = append(ret, ms[0:min(len(ms), 10)]...) //TODO Make the k configurable
 		}
 
 		t.Reset()
