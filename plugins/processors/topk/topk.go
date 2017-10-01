@@ -123,7 +123,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		// Create a one dimentional list with the top K metrics of each key
 		ret := make([]telegraf.Metric, 0, 100)
 		for _, ms := range t.cache {
-			ret = append(ret, ms[0:min(len(ms), 10)]...) //TODO Make the k configurable
+			ret = append(ret, ms[0:min(len(ms), t.K)]...)
 		}
 
 		t.Reset()
