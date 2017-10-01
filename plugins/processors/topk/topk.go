@@ -3,7 +3,6 @@ package topk
 import (
 	"sort"
 	"time"
-	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
@@ -85,9 +84,6 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 		t.Reset()
 
-		fmt.Println(ret)
-		fmt.Println(len(ret))
-		fmt.Println("===========================================")
 		return ret
 	}
 
