@@ -121,8 +121,8 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("MQTT Consumer, invalid QoS value: %d", m.QoS)
 	}
 
-	if int(m.ConnectionTimeout.Duration) <= 0 {
-		return fmt.Errorf("MQTT Consumer, invalid connection_timeout value: %d", m.ConnectionTimeout)
+	if m.ConnectionTimeout.Duration < 1*time.Second {
+		return fmt.Errorf("MQTT Consumer, invalid connection_timeout value: %s", m.ConnectionTimeout.Duration)
 	}
 
 	opts, err := m.createOpts()
