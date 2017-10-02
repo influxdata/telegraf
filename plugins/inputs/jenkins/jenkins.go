@@ -69,6 +69,7 @@ func (j *Jenkins) Gather(acc telegraf.Accumulator) error {
 		addr, err := url.Parse(uri)
 		if err != nil {
 			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			continue
 		}
 
 		wg.Add(1)
@@ -105,6 +106,9 @@ func (j *Jenkins) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 	}
 
 	parsed, err := parseResponse(resp.Body, addr.Host)
+	if err != nil {
+		return fmt.Errorf("Error parse response: %s", err)
+	}
 	for _, v := range parsed {
 		acc.AddFields("jenkins", v.fields, v.tags)
 	}
@@ -130,7 +134,7 @@ func parseResponse(body io.Reader, server string) ([]parsedResponse, error) {
 	counters.tags["type"] = "counters"
 	for k1, v1 := range jenkinsData.Counters {
 		for k2, v2 := range v1 {
-			counters.fields[fmt.Sprintf("%s.%s", k1, k2)] = v2
+			counters.fields[k1+"."+k2] = v2
 		}
 	}
 	parsed = append(parsed, counters)
@@ -144,7 +148,7 @@ func parseResponse(body io.Reader, server string) ([]parsedResponse, error) {
 			continue
 		}
 		for k2, v2 := range v1 {
-			gauges.fields[fmt.Sprintf("%s.%s", k1, k2)] = v2
+			gauges.fields[k1+"."+k2] = v2
 		}
 	}
 	parsed = append(parsed, gauges)
@@ -158,7 +162,7 @@ func parseResponse(body io.Reader, server string) ([]parsedResponse, error) {
 			if k2 == "values" {
 				continue
 			}
-			metrics.fields[fmt.Sprintf("%s.%s", k1, k2)] = v2
+			metrics.fields[k1+"."+k2] = v2
 		}
 	}
 	parsed = append(parsed, metrics)
@@ -172,7 +176,7 @@ func parseResponse(body io.Reader, server string) ([]parsedResponse, error) {
 			if k2 == "values" {
 				continue
 			}
-			timers.fields[fmt.Sprintf("%s.%s", k1, k2)] = v2
+			timers.fields[k1+"."+k2] = v2
 		}
 	}
 	parsed = append(parsed, timers)
