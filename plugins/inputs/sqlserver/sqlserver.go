@@ -2,10 +2,11 @@ package sqlserver
 
 import (
 	"database/sql"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 
 	// go-mssqldb initialization
 	_ "github.com/zensqlmonitor/go-mssqldb"
@@ -13,7 +14,8 @@ import (
 
 // SQLServer struct
 type SQLServer struct {
-	Servers []string
+	Servers      []string
+	QueryVersion int
 }
 
 // Query struct
@@ -27,6 +29,9 @@ type Query struct {
 type MapQuery map[string]Query
 
 var queries MapQuery
+
+// Initialized flag
+var isInitialized bool = false
 
 var defaultServer = "Server=.;app name=telegraf;log=1;"
 
@@ -68,11 +73,15 @@ func initQueries() {
 	queries["MemoryClerk"] = Query{Script: sqlMemoryClerk, ResultByRow: false}
 	queries["VolumeSpace"] = Query{Script: sqlVolumeSpace, ResultByRow: false}
 	queries["PerformanceMetrics"] = Query{Script: sqlPerformanceMetrics, ResultByRow: false}
+
+	isInitialized = true
 }
 
 // Gather collect data from SQL Server
 func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
-	initQueries()
+	if !isInitialized {
+		initQueries()
+	}
 
 	if len(s.Servers) == 0 {
 		s.Servers = append(s.Servers, defaultServer)
