@@ -237,7 +237,7 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 				tasksNoShutdown[task.ServiceID]++
 			}
 
-			if _, nodeActive := activeNodes[task.NodeID]; nodeActive && task.Status.State == swarm.TaskStateRunning {
+			if task.Status.State == swarm.TaskStateRunning {
 				running[task.ServiceID]++
 			}
 		}
