@@ -495,26 +495,26 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"docker_swarm",
 		map[string]interface{}{
-			"service_mode":  "replicated",
 			"tasks_running": int(2),
 			"tasks_desired": uint64(2),
 		},
 		map[string]string{
 			"service_id":   "qolkls9g5iasdiuihcyz9rnx2",
 			"service_name": "test1",
+			"service_mode":  "replicated",
 		},
 	)
 
 	acc.AssertContainsTaggedFields(t,
 		"docker_swarm",
 		map[string]interface{}{
-			"service_mode":  "global",
 			"tasks_running": int(1),
 			"tasks_desired": int(1),
 		},
 		map[string]string{
 			"service_id":   "qolkls9g5iasdiuihcyz9rn3",
 			"service_name": "test2",
+			"service_mode":  "global",
 		},
 	)
 }
