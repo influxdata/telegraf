@@ -36,7 +36,7 @@ type Docker struct {
 	Endpoint       string
 	ContainerNames []string
 
-	SwarmEnabled bool `toml:"swarm_enabled"`
+	GatherServices bool `toml:"gather_services"`
 
 	Timeout        internal.Duration
 	PerDevice      bool     `toml:"perdevice"`
@@ -86,7 +86,7 @@ var sampleConfig = `
   endpoint = "unix:///var/run/docker.sock"
 
   ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
-  swarm_enabled = false
+  gather_services = false
 
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
@@ -166,7 +166,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		acc.AddError(err)
 	}
 
-	if d.SwarmEnabled {
+	if d.GatherServices {
 		err := d.gatherSwarmInfo(acc)
 		if err != nil {
 			acc.AddError(err)
@@ -245,16 +245,16 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 			tags := map[string]string{}
 			fields := make(map[string]interface{})
 			now := time.Now()
-			tags["swarm_service_id"] = service.ID
-			tags["swarm_service_name"] = service.Spec.Name
+			tags["service_id"] = service.ID
+			tags["service_name"] = service.Spec.Name
 			if service.Spec.Mode.Replicated != nil && service.Spec.Mode.Replicated.Replicas != nil {
-				fields["swarm_service_mode"] = "replicated"
-				fields["swarm_tasks_running"] = running[service.ID]
-				fields["swarm_tasks_desired"] = *service.Spec.Mode.Replicated.Replicas
+				tags["service_mode"] = "replicated"
+				fields["tasks_running"] = running[service.ID]
+				fields["tasks_desired"] = *service.Spec.Mode.Replicated.Replicas
 			} else if service.Spec.Mode.Global != nil {
-				fields["swarm_service_mode"] = "global"
-				fields["swarm_tasks_running"] = running[service.ID]
-				fields["swarm_tasks_desired"] = tasksNoShutdown[service.ID]
+				tags["service_mode"] = "global"
+				fields["tasks_running"] = running[service.ID]
+				fields["tasks_desired"] = tasksNoShutdown[service.ID]
 			}
 			// Add metrics
 			acc.AddFields("docker_swarm",
