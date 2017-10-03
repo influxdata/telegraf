@@ -72,7 +72,7 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 			nIntervals = e.Parent.MaxSamples
 		}
 	}
-	log.Printf("Collecting %d intervals for %s", nIntervals, alias)
+	logrus.Debugf("Collecting %d intervals for %s", nIntervals, alias)
 
 	fullAlias := "vsphere." + alias
 
@@ -109,7 +109,7 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 		// Filled up a chunk or at end of data? Run a query with the collected objects
 		//
 		if len(pqs) >= int(e.Parent.MaxQuery) || total == len(objects)  {
-			log.Printf("Querying %d objects of type %s. Total processed: %d. Total objects %d\n", len(pqs), alias, total, len(objects))
+			logrus.Debugf("Querying %d objects of type %s. Total processed: %d. Total objects %d\n", len(pqs), alias, total, len(objects))
 			metrics, err := p.Query(ctx, pqs)
 			if err != nil {
 				return err
@@ -143,7 +143,7 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 	}
 
 
-	log.Printf("Collection of %s took %v\n", alias, time.Now().Sub(start))
+	logrus.Debugf("Collection of %s took %v\n", alias, time.Now().Sub(start))
 	return nil
 }
 
