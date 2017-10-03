@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -255,6 +256,8 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 				tags["service_mode"] = "global"
 				fields["tasks_running"] = running[service.ID]
 				fields["tasks_desired"] = tasksNoShutdown[service.ID]
+			} else {
+				log.Printf("E! Unknow Replicas Mode")
 			}
 			// Add metrics
 			acc.AddFields("docker_swarm",
