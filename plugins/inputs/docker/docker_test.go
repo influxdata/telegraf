@@ -501,7 +501,7 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 		map[string]string{
 			"service_id":   "qolkls9g5iasdiuihcyz9rnx2",
 			"service_name": "test1",
-			"service_mode":  "replicated",
+			"service_mode": "replicated",
 		},
 	)
 
@@ -514,7 +514,7 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 		map[string]string{
 			"service_id":   "qolkls9g5iasdiuihcyz9rn3",
 			"service_name": "test2",
-			"service_mode":  "global",
+			"service_mode": "global",
 		},
 	)
 }
