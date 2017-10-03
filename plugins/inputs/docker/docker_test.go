@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,6 +17,9 @@ type MockClient struct {
 	ContainerListF    func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
 	ContainerStatsF   func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error)
 	ContainerInspectF func(ctx context.Context, containerID string) (types.ContainerJSON, error)
+	ServiceListF      func(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
+	TaskListF         func(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
+	NodeListF         func(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
 }
 
 func (c *MockClient) Info(ctx context.Context) (types.Info, error) {
@@ -44,6 +48,27 @@ func (c *MockClient) ContainerInspect(
 	return c.ContainerInspectF(ctx, containerID)
 }
 
+func (c *MockClient) ServiceList(
+	ctx context.Context,
+	options types.ServiceListOptions,
+) ([]swarm.Service, error) {
+	return c.ServiceListF(ctx, options)
+}
+
+func (c *MockClient) TaskList(
+	ctx context.Context,
+	options types.TaskListOptions,
+) ([]swarm.Task, error) {
+	return c.TaskListF(ctx, options)
+}
+
+func (c *MockClient) NodeList(
+	ctx context.Context,
+	options types.NodeListOptions,
+) ([]swarm.Node, error) {
+	return c.NodeListF(ctx, options)
+}
+
 func newClient(host string, tlsConfig *tls.Config) (Client, error) {
 	return &MockClient{
 		InfoF: func(context.Context) (types.Info, error) {
@@ -57,6 +82,15 @@ func newClient(host string, tlsConfig *tls.Config) (Client, error) {
 		},
 		ContainerInspectF: func(context.Context, string) (types.ContainerJSON, error) {
 			return containerInspect, nil
+		},
+		ServiceListF: func(context.Context, types.ServiceListOptions) ([]swarm.Service, error) {
+			return ServiceList, nil
+		},
+		TaskListF: func(context.Context, types.TaskListOptions) ([]swarm.Task, error) {
+			return TaskList, nil
+		},
+		NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
+			return NodeList, nil
 		},
 	}, nil
 }
@@ -226,6 +260,15 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 				},
 				ContainerInspectF: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
 					return containerInspect, nil
+				},
+				ServiceListF: func(context.Context, types.ServiceListOptions) ([]swarm.Service, error) {
+					return ServiceList, nil
+				},
+				TaskListF: func(context.Context, types.TaskListOptions) ([]swarm.Task, error) {
+					return TaskList, nil
+				},
+				NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
+					return NodeList, nil
 				},
 			}, nil
 		},
@@ -433,6 +476,45 @@ func TestDockerGatherInfo(t *testing.T) {
 			"ENVVAR7":           "ENVVAR8=ENVVAR9",
 			"label1":            "test_value_1",
 			"label2":            "test_value_2",
+		},
+	)
+}
+
+func TestDockerGatherSwarmInfo(t *testing.T) {
+	var acc testutil.Accumulator
+	d := Docker{
+		newClient: newClient,
+	}
+
+	err := acc.GatherError(d.Gather)
+	require.NoError(t, err)
+
+	d.gatherSwarmInfo(&acc)
+
+	// test docker_container_net measurement
+	acc.AssertContainsTaggedFields(t,
+		"docker_swarm",
+		map[string]interface{}{
+			"tasks_running": int(2),
+			"tasks_desired": uint64(2),
+		},
+		map[string]string{
+			"service_id":   "qolkls9g5iasdiuihcyz9rnx2",
+			"service_name": "test1",
+			"service_mode": "replicated",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_swarm",
+		map[string]interface{}{
+			"tasks_running": int(1),
+			"tasks_desired": int(1),
+		},
+		map[string]string{
+			"service_id":   "qolkls9g5iasdiuihcyz9rn3",
+			"service_name": "test2",
+			"service_mode": "global",
 		},
 	)
 }
