@@ -2,6 +2,9 @@ package http_listener
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -29,6 +32,95 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 	badMsg = "blahblahblah: 42\n"
 
 	emptyMsg = ""
+
+	serviceRootPEM = `-----BEGIN CERTIFICATE-----
+MIIBxzCCATCgAwIBAgIJAOLq2g9+9TVgMA0GCSqGSIb3DQEBCwUAMBYxFDASBgNV
+BAMMC1RlbGVncmFmIENBMB4XDTE3MTAwMjIyNDMwOFoXDTE3MTEwMTIyNDMwOFow
+FjEUMBIGA1UEAwwLVGVsZWdyYWYgQ0EwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJ
+AoGBALHtGXLKZz3HUA4E1H0mR3gAtgNwUSRArxylCjQwO/7tFEYDFVCCPFzAF7G8
+hzHyBNgx5FwNrH3bMEol9iIxzoZNU0XTWS7DzN4S+89C2Tn+NaFko/SeFBMp4IK/
+55YAgcYGe2QbFnPITGYPT05VkbSBMD0PBITNSwsclGZGFVoHAgMBAAGjHTAbMAwG
+A1UdEwQFMAMBAf8wCwYDVR0PBAQDAgEGMA0GCSqGSIb3DQEBCwUAA4GBAIJpAA+X
+QB57JhNxevUlFFLmGx7ASKrOeZLupzak4qUK718erafMAsXhydx1eKL/5Ne7ZcFa
+Tf6dRPzCjv89WzYK/kJ59AgATkXNPvADRUKd0ViQw4Q4EcfuQrTMEym+gl1W2qQl
+U9/eBDE341pcrfdHHGhS5LKv6KTmjyYmDLxl
+-----END CERTIFICATE-----`
+	serviceCertPEM = `-----BEGIN CERTIFICATE-----
+MIIBzzCCATigAwIBAgIBATANBgkqhkiG9w0BAQsFADAWMRQwEgYDVQQDDAtUZWxl
+Z3JhZiBDQTAeFw0xNzEwMDIyMjQzMDhaFw0yNzA5MzAyMjQzMDhaMBQxEjAQBgNV
+BAMMCWxvY2FsaG9zdDCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEAoI/8ceps
+DvvA3KUDViYwZcB+RvfT6XCPCT35mEzuXWP42JHk1VPNA41215U8CGoJF7+OzRcZ
+an3b2WLfAph+bi4Vmpe8eolmPHjf57jJ2fdDeLtMA4T0WF8yR4fHxrrU2UFsgXod
+kpQNqa/R5+iEKNMQVQgD2HjP5BE1u+H6fscCAwEAAaMvMC0wCQYDVR0TBAIwADAL
+BgNVHQ8EBAMCBSAwEwYDVR0lBAwwCgYIKwYBBQUHAwEwDQYJKoZIhvcNAQELBQAD
+gYEAV5vx8FHNlD6Z3e01/MiNSmYXn93CwlixYMRyW1Ri2P6hMtJiMRp59fNFzroa
+iv6djr30uuKYOiAvdKhNaYWERgrtjGVEuPoIMQfaAaKHQj6CKLBXeGZ5Gxhy+M6G
+OE6g0E4ufHOqr1h1GDIiAq88zyJ2AupgLLUCMFtkq0v0mr0=
+-----END CERTIFICATE-----`
+	serviceKeyPEM = `-----BEGIN RSA PRIVATE KEY-----
+MIICXAIBAAKBgQCgj/xx6mwO+8DcpQNWJjBlwH5G99PpcI8JPfmYTO5dY/jYkeTV
+U80DjXbXlTwIagkXv47NFxlqfdvZYt8CmH5uLhWal7x6iWY8eN/nuMnZ90N4u0wD
+hPRYXzJHh8fGutTZQWyBeh2SlA2pr9Hn6IQo0xBVCAPYeM/kETW74fp+xwIDAQAB
+AoGABiRb6NOp3Ize3NHnJcWCNnI9omNalOR8ZEMdqCjROXtYiphSI6L4BbnEoQyR
+ZlUAEgt+3/ORQlScM12n4EaLF4Zi4CTGmibRHUff/ybUDGMg2Lp/AL/ghP/3U37l
+C/oRjohK9Rqn28hf8xgL9Jz+KbQaVv5f+frLwL3EKreYtOkCQQDLe1s89rbxvTZr
+PhtwYrnXC8KbBNPIzJbTXrphqr0H3xuDlTpd+4tvIlL6LoqANYXAmHHlKUuPcar6
+QCj9xNwTAkEAygDRac8qewqIWhZOs0u8phC37dxzwVXslrgjO+kTLxN/Q1srK45T
+gHDbJuCrBPkYrjAXWHd2rIkOWl0rk38A/QJADct4HQLw1iSous6EF7Npu+19LPs/
+zF4qX3wNkK99jzoN6HbGdTandkpSa8mZ9CUswyjSl+Gb0Ma4+6w72zBsZwJBAKn+
+Zj0VCjrhcj3d5/0bD3bxOtgBXaimFqP/8ibIzkwfrEmSv5G4BK1iTAs7prBYsFxm
+PD9GyagI7vs8zR8jEkECQD51jhM8DDPah/ECC31we54Y9dqBOupy1a8y6os1YFkv
+BV7zTVrpOzwUsrkMW+wFyQSX9eyyMfJHJihlobXA+QY=
+-----END RSA PRIVATE KEY-----`
+	clientRootPEM = `-----BEGIN CERTIFICATE-----
+MIIBxzCCATCgAwIBAgIJAOLq2g9+9TVgMA0GCSqGSIb3DQEBCwUAMBYxFDASBgNV
+BAMMC1RlbGVncmFmIENBMB4XDTE3MTAwMjIyNDMwOFoXDTE3MTEwMTIyNDMwOFow
+FjEUMBIGA1UEAwwLVGVsZWdyYWYgQ0EwgZ8wDQYJKoZIhvcNAQEBBQADgY0AMIGJ
+AoGBALHtGXLKZz3HUA4E1H0mR3gAtgNwUSRArxylCjQwO/7tFEYDFVCCPFzAF7G8
+hzHyBNgx5FwNrH3bMEol9iIxzoZNU0XTWS7DzN4S+89C2Tn+NaFko/SeFBMp4IK/
+55YAgcYGe2QbFnPITGYPT05VkbSBMD0PBITNSwsclGZGFVoHAgMBAAGjHTAbMAwG
+A1UdEwQFMAMBAf8wCwYDVR0PBAQDAgEGMA0GCSqGSIb3DQEBCwUAA4GBAIJpAA+X
+QB57JhNxevUlFFLmGx7ASKrOeZLupzak4qUK718erafMAsXhydx1eKL/5Ne7ZcFa
+Tf6dRPzCjv89WzYK/kJ59AgATkXNPvADRUKd0ViQw4Q4EcfuQrTMEym+gl1W2qQl
+U9/eBDE341pcrfdHHGhS5LKv6KTmjyYmDLxl
+-----END CERTIFICATE-----`
+	clientCertPEM = `-----BEGIN CERTIFICATE-----
+MIIBzjCCATegAwIBAgIBAjANBgkqhkiG9w0BAQsFADAWMRQwEgYDVQQDDAtUZWxl
+Z3JhZiBDQTAeFw0xNzEwMDIyMjQzMDhaFw0yNzA5MzAyMjQzMDhaMBMxETAPBgNV
+BAMMCHRlbGVncmFmMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDIrPGv8Sm1
+6tI+vlATzWGOK1D40iNTiGj4FpcS2Tm4SdaDSfa3VL9N5l8aeuN4E8O2YXK3QcR8
+NoeY87cWW06PtFc/ByS42VeWDKt28/DpGzbrzCVNOumS3X5QEyySYLpi0uqI9ZZ5
+O2sOJ2yVua8F3cwqPTveVmU3LeQfVrh7QwIDAQABoy8wLTAJBgNVHRMEAjAAMAsG
+A1UdDwQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDAjANBgkqhkiG9w0BAQsFAAOB
+gQAVEfHePY9fumW8rkbbSbiuQ1dGIINbMGPO17eAjOxMT4Z1jDb8oTVHbaZM0rKo
+wKx4dDp5mnLK+NuMZ1sNxKOf6IMmQ022ANOYM0dkwfg13bpC3BGW8Z7nOFK0xXh6
+4KTcXktBUtubmn6w7szvWY2OajPVoiGgcapwwhCrBEa6rg==
+-----END CERTIFICATE-----`
+	clientKeyPEM = `-----BEGIN RSA PRIVATE KEY-----
+MIICXgIBAAKBgQDIrPGv8Sm16tI+vlATzWGOK1D40iNTiGj4FpcS2Tm4SdaDSfa3
+VL9N5l8aeuN4E8O2YXK3QcR8NoeY87cWW06PtFc/ByS42VeWDKt28/DpGzbrzCVN
+OumS3X5QEyySYLpi0uqI9ZZ5O2sOJ2yVua8F3cwqPTveVmU3LeQfVrh7QwIDAQAB
+AoGAHtvpdqLhRSZNGnTtn33vyIsEsp6t7ASID855gN6Cr8I7CIlxNRQFLxeD/HB1
+VlvDtuIZX/DvJCLGi1C/EOMNm2nY7IT2gZgMpxvmfjfGhHKT1MWYu9cdyiOOacqD
+yRDAcKpubIPEIV3aczglv9sVApXwZcgePzDwweTVfP/Nv5ECQQDthIv5Y5k3UO8h
+Hht+27W8McFJ5eiF5OcLGOQ4nKGHkCOskfD4u/i+j+4dUeGBdpT8CzszgofBa6wh
+dJevQerVAkEA2Ep8PUfXRjel8NiLNL8iK/SR26y8wPduKam31SMUPq71+GROKkFz
+yYYAbKORs+fS6LBT+M48cEu470o+g8eptwJBALzCEMeSOqp2XIRSPAG2NBiq5fSH
+jSIThvYPwxemisyEZYV4uivCnu06zz5n2zIa/k3L0zGdc6vomPRBh2aVmT0CQQCY
+/B5ibfUbqnLKJzBXb7Xo50Vf3w9nYdvexjfMHtLL/47lUXVkOAWBDjIwpYWCfb/V
+bBsJCj7/ot+9CYOsTEaDAkEA4XAGFxx78JMVuJLjevkf0pGUPEocdoOAvpYWT5sR
+9FODrPEtW84ZevSmuByjzeqVzS3ElIxACopRJgSN20d9vg==
+-----END RSA PRIVATE KEY-----`
+)
+
+var (
+	initClient           sync.Once
+	client               *http.Client
+	initServiceCertFiles sync.Once
+	allowedCAFiles       []string
+	serviceCAFiles       []string
+	serviceCertFile      string
+	serviceKeyFile       string
 )
 
 func newTestHTTPListener() *HTTPListener {
@@ -38,14 +130,123 @@ func newTestHTTPListener() *HTTPListener {
 	return listener
 }
 
-func createURL(listener *HTTPListener, path string, rawquery string) string {
+func newTestHTTPSListener() *HTTPListener {
+	initServiceCertFiles.Do(func() {
+		acaf, err := ioutil.TempFile("", "allowedCAFile.crt")
+		if err != nil {
+			panic(err)
+		}
+		defer acaf.Close()
+		_, err = io.Copy(acaf, bytes.NewReader([]byte(clientRootPEM)))
+		allowedCAFiles = []string{acaf.Name()}
+
+		scaf, err := ioutil.TempFile("", "serviceCAFile.crt")
+		if err != nil {
+			panic(err)
+		}
+		defer scaf.Close()
+		_, err = io.Copy(scaf, bytes.NewReader([]byte(serviceRootPEM)))
+		serviceCAFiles = []string{scaf.Name()}
+
+		scf, err := ioutil.TempFile("", "serviceCertFile.crt")
+		if err != nil {
+			panic(err)
+		}
+		defer scf.Close()
+		_, err = io.Copy(scf, bytes.NewReader([]byte(serviceCertPEM)))
+		serviceCertFile = scf.Name()
+
+		skf, err := ioutil.TempFile("", "serviceKeyFile.crt")
+		if err != nil {
+			panic(err)
+		}
+		defer skf.Close()
+		_, err = io.Copy(skf, bytes.NewReader([]byte(serviceKeyPEM)))
+		serviceKeyFile = skf.Name()
+	})
+
+	listener := &HTTPListener{
+		ServiceAddress:    ":0",
+		TlsAllowedCacerts: allowedCAFiles,
+		TlsCert:           serviceCertFile,
+		TlsKey:            serviceKeyFile,
+	}
+
+	return listener
+}
+
+func getHTTPSClient() *http.Client {
+	initClient.Do(func() {
+		cas := x509.NewCertPool()
+		cas.AppendCertsFromPEM([]byte(serviceRootPEM))
+		clientCert, err := tls.X509KeyPair([]byte(clientCertPEM), []byte(clientKeyPEM))
+		if err != nil {
+			panic(err)
+		}
+		client = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs:            cas,
+					Certificates:       []tls.Certificate{clientCert},
+					MinVersion:         tls.VersionTLS12,
+					MaxVersion:         tls.VersionTLS12,
+					CipherSuites:       []uint16{tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+					Renegotiation:      tls.RenegotiateNever,
+					InsecureSkipVerify: false,
+				},
+			},
+		}
+	})
+	return client
+}
+
+func createURL(listener *HTTPListener, scheme string, path string, rawquery string) string {
 	u := url.URL{
-		Scheme:   "http",
+		Scheme:   scheme,
 		Host:     "localhost:" + strconv.Itoa(listener.Port),
 		Path:     path,
 		RawQuery: rawquery,
 	}
 	return u.String()
+}
+
+func TestWriteHTTPSNoClientAuth(t *testing.T) {
+	listener := newTestHTTPSListener()
+	listener.TlsAllowedCacerts = nil
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	cas := x509.NewCertPool()
+	cas.AppendCertsFromPEM([]byte(serviceRootPEM))
+	noClientAuthClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: cas,
+			},
+		},
+	}
+
+	// post single message to listener
+	resp, err := noClientAuthClient.Post(createURL(listener, "https", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.EqualValues(t, 204, resp.StatusCode)
+}
+
+func TestWriteHTTPSWithClientAuth(t *testing.T) {
+	listener := newTestHTTPSListener()
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	// post single message to listener
+	resp, err := getHTTPSClient().Post(createURL(listener, "https", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.EqualValues(t, 204, resp.StatusCode)
 }
 
 func TestWriteHTTP(t *testing.T) {
@@ -56,8 +257,9 @@ func TestWriteHTTP(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)
@@ -67,8 +269,9 @@ func TestWriteHTTP(t *testing.T) {
 	)
 
 	// post multiple message to listener
-	resp, err = http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))
+	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(2)
@@ -82,8 +285,9 @@ func TestWriteHTTP(t *testing.T) {
 	}
 
 	// Post a gigantic metric to the listener and verify that an error is returned:
-	resp, err = http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(hugeMetric)))
+	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(hugeMetric)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 400, resp.StatusCode)
 
 	acc.Wait(3)
@@ -102,8 +306,9 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)
@@ -124,8 +329,9 @@ func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
 	defer listener.Stop()
 
 	// Post a gigantic metric to the listener and verify that it writes OK this time:
-	resp, err := http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(hugeMetric)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(hugeMetric)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
@@ -139,8 +345,9 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	resp, err := http.Post(createURL(listener, "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric)))
+	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 413, resp.StatusCode)
 }
 
@@ -154,8 +361,9 @@ func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	resp, err := http.Post(createURL(listener, "/write", ""), "", bytes.NewBuffer([]byte(testMsgs)))
+	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(testMsgs)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	hostTags := []string{"server02", "server03",
@@ -179,8 +387,9 @@ func TestWriteHTTPLargeLinesSkipped(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	resp, err := http.Post(createURL(listener, "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric+testMsgs)))
+	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric+testMsgs)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 400, resp.StatusCode)
 
 	hostTags := []string{"server02", "server03",
@@ -205,7 +414,7 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 	data, err := ioutil.ReadFile("./testdata/testmsgs.gz")
 	require.NoError(t, err)
 
-	req, err := http.NewRequest("POST", createURL(listener, "/write", ""), bytes.NewBuffer(data))
+	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", ""), bytes.NewBuffer(data))
 	require.NoError(t, err)
 	req.Header.Set("Content-Encoding", "gzip")
 
@@ -240,8 +449,9 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 		go func(innerwg *sync.WaitGroup) {
 			defer innerwg.Done()
 			for i := 0; i < 500; i++ {
-				resp, err := http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))
+				resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))
 				require.NoError(t, err)
+				resp.Body.Close()
 				require.EqualValues(t, 204, resp.StatusCode)
 			}
 		}(&wg)
@@ -262,8 +472,9 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := http.Post(createURL(listener, "/foobar", ""), "", bytes.NewBuffer([]byte(testMsg)))
+	resp, err := http.Post(createURL(listener, "http", "/foobar", ""), "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 404, resp.StatusCode)
 }
 
@@ -275,8 +486,9 @@ func TestWriteHTTPInvalid(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(badMsg)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(badMsg)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 400, resp.StatusCode)
 }
 
@@ -288,8 +500,9 @@ func TestWriteHTTPEmpty(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := http.Post(createURL(listener, "/write", "db=mydb"), "", bytes.NewBuffer([]byte(emptyMsg)))
+	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(emptyMsg)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
@@ -302,13 +515,14 @@ func TestQueryAndPingHTTP(t *testing.T) {
 
 	// post query to listener
 	resp, err := http.Post(
-		createURL(listener, "/query", "db=&q=CREATE+DATABASE+IF+NOT+EXISTS+%22mydb%22"), "", nil)
+		createURL(listener, "http", "/query", "db=&q=CREATE+DATABASE+IF+NOT+EXISTS+%22mydb%22"), "", nil)
 	require.NoError(t, err)
 	require.EqualValues(t, 200, resp.StatusCode)
 
 	// post ping to listener
-	resp, err = http.Post(createURL(listener, "/ping", ""), "", nil)
+	resp, err = http.Post(createURL(listener, "http", "/ping", ""), "", nil)
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 }
 
@@ -321,8 +535,9 @@ func TestWriteWithPrecision(t *testing.T) {
 
 	msg := "xyzzy value=42 1422568543\n"
 	resp, err := http.Post(
-		createURL(listener, "/write", "precision=s"), "", bytes.NewBuffer([]byte(msg)))
+		createURL(listener, "http", "/write", "precision=s"), "", bytes.NewBuffer([]byte(msg)))
 	require.NoError(t, err)
+	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 
 	acc.Wait(1)

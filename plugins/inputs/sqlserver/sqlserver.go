@@ -2,10 +2,11 @@ package sqlserver
 
 import (
 	"database/sql"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 
 	// go-mssqldb initialization
 	_ "github.com/zensqlmonitor/go-mssqldb"
@@ -1022,7 +1023,7 @@ CREATE TABLE #PCounters
 	Primary Key(object_name, counter_name, instance_name)
 );
 INSERT #PCounters
-SELECT RTrim(spi.object_name) object_name
+SELECT DISTINCT RTrim(spi.object_name) object_name
 , RTrim(spi.counter_name) counter_name
 , RTrim(spi.instance_name) instance_name
 , spi.cntr_value
@@ -1044,7 +1045,7 @@ CREATE TABLE #CCounters
 	Primary Key(object_name, counter_name, instance_name)
 );
 INSERT #CCounters
-SELECT RTrim(spi.object_name) object_name
+SELECT DISTINCT RTrim(spi.object_name) object_name
 , RTrim(spi.counter_name) counter_name
 , RTrim(spi.instance_name) instance_name
 , spi.cntr_value
@@ -1436,16 +1437,16 @@ SELECT
 , type = 'Wait stats'
 ---- values
 , [I/O] = SUM([I/O])
-, [Latch] = SUM([Latch])
-, [Lock] = SUM([Lock])
-, [Network] = SUM([Network])
-, [Service broker] = SUM([Service broker])
-, [Memory] = SUM([Memory])
-, [Buffer] = SUM([Buffer])
+, [Latch] = SUM([LATCH])
+, [Lock] = SUM([LOCK])
+, [Network] = SUM([NETWORK])
+, [Service broker] = SUM([SERVICE BROKER])
+, [Memory] = SUM([MEMORY])
+, [Buffer] = SUM([BUFFER])
 , [CLR] = SUM([CLR])
 , [SQLOS] = SUM([SQLOS])
-, [XEvent] = SUM([XEvent])
-, [Other] = SUM([Other])
+, [XEvent] = SUM([XEVENT])
+, [Other] = SUM([OTHER])
 , [Total] = SUM([I/O]+[LATCH]+[LOCK]+[NETWORK]+[SERVICE BROKER]+[MEMORY]+[BUFFER]+[CLR]+[XEVENT]+[SQLOS]+[OTHER])
 FROM
 (
@@ -1479,16 +1480,16 @@ SELECT
 , type = 'Wait stats'
 ---- values
 , [I/O] = SUM([I/O])
-, [Latch] = SUM([Latch])
-, [Lock] = SUM([Lock])
-, [Network] = SUM([Network])
-, [Service broker] = SUM([Service broker])
-, [Memory] = SUM([Memory])
-, [Buffer] = SUM([Buffer])
+, [Latch] = SUM([LATCH])
+, [Lock] = SUM([LOCK])
+, [Network] = SUM([NETWORK])
+, [Service broker] = SUM([SERVICE BROKER])
+, [Memory] = SUM([MEMORY])
+, [Buffer] = SUM([BUFFER])
 , [CLR] = SUM([CLR])
 , [SQLOS] = SUM([SQLOS])
-, [XEvent] = SUM([XEvent])
-, [Other] = SUM([Other])
+, [XEvent] = SUM([XEVENT])
+, [Other] = SUM([OTHER])
 , [Total] = SUM([I/O]+[LATCH]+[LOCK]+[NETWORK]+[SERVICE BROKER]+[MEMORY]+[BUFFER]+[CLR]+[XEVENT]+[SQLOS]+[OTHER])
 FROM
 (

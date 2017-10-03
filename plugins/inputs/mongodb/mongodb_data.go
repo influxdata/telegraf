@@ -77,6 +77,21 @@ var WiredTigerStats = map[string]string{
 	"percent_cache_used":  "CacheUsedPercent",
 }
 
+var WiredTigerExtStats = map[string]string{
+	"wtcache_tracked_dirty_bytes":          "TrackedDirtyBytes",
+	"wtcache_current_bytes":                "CurrentCachedBytes",
+	"wtcache_max_bytes_configured":         "MaxBytesConfigured",
+	"wtcache_app_threads_page_read_count":  "AppThreadsPageReadCount",
+	"wtcache_app_threads_page_read_time":   "AppThreadsPageReadTime",
+	"wtcache_app_threads_page_write_count": "AppThreadsPageWriteCount",
+	"wtcache_bytes_written_from":           "BytesWrittenFrom",
+	"wtcache_bytes_read_into":              "BytesReadInto",
+	"wtcache_pages_evicted_by_app_thread":  "PagesEvictedByAppThread",
+	"wtcache_pages_queued_for_eviction":    "PagesQueuedForEviction",
+	"wtcache_server_evicting_pages":        "ServerEvictingPages",
+	"wtcache_worker_thread_evictingpages":  "WorkerThreadEvictingPages",
+}
+
 var DbDataStats = map[string]string{
 	"collections":  "Collections",
 	"objects":      "Objects",
@@ -121,13 +136,11 @@ func (d *MongodbData) AddDefaultStats() {
 			floatVal, _ := strconv.ParseFloat(percentVal, 64)
 			d.add(key, floatVal)
 		}
+		d.addStat(statLine, WiredTigerExtStats)
 	}
 }
 
-func (d *MongodbData) addStat(
-	statLine reflect.Value,
-	stats map[string]string,
-) {
+func (d *MongodbData) addStat(statLine reflect.Value, stats map[string]string) {
 	for key, value := range stats {
 		val := statLine.FieldByName(value).Interface()
 		d.add(key, val)

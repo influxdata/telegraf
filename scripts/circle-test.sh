@@ -69,7 +69,7 @@ exit_if_fail ./telegraf -config $tmpdir/config.toml \
 
 gzip telegraf -c > "$CIRCLE_ARTIFACTS/telegraf.gz"
 
-if git describe --exact-match HEAD; then
+if git describe --exact-match HEAD 2>&1 >/dev/null; then
     # install fpm (packaging dependency)
     exit_if_fail gem install fpm
     # install boto & rpm (packaging & AWS dependencies)

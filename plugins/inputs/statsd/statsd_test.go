@@ -1,6 +1,7 @@
 package statsd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -16,8 +17,8 @@ const (
 	testMsg = "test.tcp.msg:100|c"
 )
 
-func newTestTcpListener() (*Statsd, chan []byte) {
-	in := make(chan []byte, 1500)
+func newTestTcpListener() (*Statsd, chan *bytes.Buffer) {
+	in := make(chan *bytes.Buffer, 1500)
 	listener := &Statsd{
 		Protocol:               "tcp",
 		ServiceAddress:         ":8125",
@@ -34,7 +35,7 @@ func NewTestStatsd() *Statsd {
 
 	// Make data structures
 	s.done = make(chan struct{})
-	s.in = make(chan []byte, s.AllowedPendingMessages)
+	s.in = make(chan *bytes.Buffer, s.AllowedPendingMessages)
 	s.gauges = make(map[string]cachedgauge)
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
@@ -122,6 +123,36 @@ func TestCloseConcurrentConns(t *testing.T) {
 	assert.NoError(t, err)
 
 	listener.Stop()
+}
+
+// benchmark how long it takes to accept & process 100,000 metrics:
+func BenchmarkUDP(b *testing.B) {
+	listener := Statsd{
+		Protocol:               "udp",
+		ServiceAddress:         ":8125",
+		AllowedPendingMessages: 250000,
+	}
+	acc := &testutil.Accumulator{Discard: true}
+
+	// send multiple messages to socket
+	for n := 0; n < b.N; n++ {
+		err := listener.Start(acc)
+		if err != nil {
+			panic(err)
+		}
+
+		time.Sleep(time.Millisecond * 25)
+		conn, err := net.Dial("udp", "127.0.0.1:8125")
+		if err != nil {
+			panic(err)
+		}
+		for i := 0; i < 250000; i++ {
+			fmt.Fprintf(conn, testMsg)
+		}
+		// wait for 250,000 metrics to get added to accumulator
+		time.Sleep(time.Millisecond)
+		listener.Stop()
+	}
 }
 
 // benchmark how long it takes to accept & process 100,000 metrics:
@@ -407,6 +438,7 @@ func TestParse_Timings(t *testing.T) {
 		"lower":         float64(1),
 		"mean":          float64(3),
 		"stddev":        float64(4),
+		"sum":           float64(15),
 		"upper":         float64(11),
 	}
 
@@ -1154,6 +1186,7 @@ func TestParse_Timings_MultipleFieldsWithTemplate(t *testing.T) {
 		"success_lower":         float64(1),
 		"success_mean":          float64(3),
 		"success_stddev":        float64(4),
+		"success_sum":           float64(15),
 		"success_upper":         float64(11),
 
 		"error_90_percentile": float64(22),
@@ -1161,6 +1194,7 @@ func TestParse_Timings_MultipleFieldsWithTemplate(t *testing.T) {
 		"error_lower":         float64(2),
 		"error_mean":          float64(6),
 		"error_stddev":        float64(8),
+		"error_sum":           float64(30),
 		"error_upper":         float64(22),
 	}
 
@@ -1203,6 +1237,7 @@ func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
 		"lower":         float64(1),
 		"mean":          float64(3),
 		"stddev":        float64(4),
+		"sum":           float64(15),
 		"upper":         float64(11),
 	}
 	expectedError := map[string]interface{}{
@@ -1211,6 +1246,7 @@ func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
 		"lower":         float64(2),
 		"mean":          float64(6),
 		"stddev":        float64(8),
+		"sum":           float64(30),
 		"upper":         float64(22),
 	}
 

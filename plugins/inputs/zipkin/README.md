@@ -12,6 +12,9 @@ based on its main usage cases and the evolution of the OpenTracing standard.*
     port = 9411 # Port on which Telegraf listens
 ```
 
+The plugin accepts spans in `JSON` or `thrift` if the `Content-Type` is `application/json` or `application/x-thrift`, respectively.
+If `Content-Type` is not set, then the plugin assumes it is `JSON` format.
+
 ## Tracing:
 
 This plugin uses Annotations tags and fields to track data from spans

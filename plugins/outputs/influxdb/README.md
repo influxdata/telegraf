@@ -7,14 +7,12 @@ This plugin writes to [InfluxDB](https://www.influxdb.com) via HTTP or UDP.
 ```toml
 # Configuration for influxdb server to send metrics to
 [[outputs.influxdb]]
-  ## The HTTP or UDP URL for your InfluxDB instance.  Each item should be
-  ## of the form:
-  ##   scheme "://" host [ ":" port]
+  ## The full HTTP or UDP URL for your InfluxDB instance.
   ##
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
-  # urls = ["udp://localhost:8089"] # UDP endpoint example
-  urls = ["http://localhost:8086"] # required
+  # urls = ["udp://127.0.0.1:8089"] # UDP endpoint example
+  urls = ["http://127.0.0.1:8086"] # required
   ## The target database for metrics (telegraf will create it if not exists).
   database = "telegraf" # required
 
@@ -44,6 +42,9 @@ This plugin writes to [InfluxDB](https://www.influxdb.com) via HTTP or UDP.
   ## HTTP Proxy Config
   # http_proxy = "http://corporate.proxy:3128"
 
+  ## Optional HTTP headers
+  # http_headers = {"X-Special-Header" = "Special-Value"}
+
   ## Compress each HTTP request payload using GZIP.
   # content_encoding = "gzip"
 ```
@@ -70,4 +71,5 @@ to write to. Each URL should start with either `http://` or `udp://`
 * `ssl_key`: SSL key
 * `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
 * `http_proxy`: HTTP Proxy URI
+* `http_headers`: HTTP headers to add to each HTTP request
 * `content_encoding`: Compress each HTTP request payload using gzip if set to: "gzip"

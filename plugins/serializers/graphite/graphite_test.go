@@ -165,6 +165,58 @@ func TestSerializeValueField2(t *testing.T) {
 	assert.Equal(t, expS, mS)
 }
 
+func TestSerializeValueString(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"host":       "localhost",
+		"cpu":        "cpu0",
+		"datacenter": "us-west-2",
+	}
+	fields := map[string]interface{}{
+		"value": "asdasd",
+	}
+	m, err := metric.New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := GraphiteSerializer{
+		Template: "host.field.tags.measurement",
+	}
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
+	assert.NoError(t, err)
+	assert.Equal(t, "", mS[0])
+}
+
+func TestSerializeValueBoolean(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"host":       "localhost",
+		"cpu":        "cpu0",
+		"datacenter": "us-west-2",
+	}
+	fields := map[string]interface{}{
+		"enabled":  true,
+		"disabled": false,
+	}
+	m, err := metric.New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := GraphiteSerializer{
+		Template: "host.field.tags.measurement",
+	}
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
+	assert.NoError(t, err)
+
+	expS := []string{
+		fmt.Sprintf("localhost.enabled.cpu0.us-west-2.cpu 1 %d", now.Unix()),
+		fmt.Sprintf("localhost.disabled.cpu0.us-west-2.cpu 0 %d", now.Unix()),
+	}
+	sort.Strings(mS)
+	sort.Strings(expS)
+	assert.Equal(t, expS, mS)
+}
+
 // test that fields with spaces get fixed.
 func TestSerializeFieldWithSpaces(t *testing.T) {
 	now := time.Now()

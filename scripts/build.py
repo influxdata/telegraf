@@ -95,6 +95,8 @@ supported_packages = {
     "freebsd": [ "tar" ]
 }
 
+next_version = '1.5.0'
+
 ################
 #### Telegraf Functions
 ################
@@ -158,7 +160,8 @@ def go_get(branch, update=False, no_uncommitted=False):
         get_command = "go get github.com/sparrc/gdm"
         run(get_command)
     logging.info("Retrieving dependencies with `gdm`...")
-    run("{}/bin/gdm restore -v".format(os.environ.get("GOPATH")))
+    run("{}/bin/gdm restore -v".format(os.environ.get("GOPATH",
+        os.path.expanduser("~/go"))))
     return True
 
 def run_tests(race, parallel, timeout, no_vet):
@@ -223,13 +226,16 @@ def increment_minor_version(version):
 def get_current_version_tag():
     """Retrieve the raw git version tag.
     """
-    version = run("git describe --always --tags --abbrev=0")
+    version = run("git describe --exact-match --tags 2>/dev/null",
+            allow_failure=True, shell=True)
     return version
 
 def get_current_version():
     """Parse version information from git tag output.
     """
     version_tag = get_current_version_tag()
+    if not version_tag:
+        return None
     # Remove leading 'v'
     if version_tag[0] == 'v':
         version_tag = version_tag[1:]
@@ -274,6 +280,8 @@ def get_system_arch():
         arch = "amd64"
     elif arch == "386":
         arch = "i386"
+    elif "arm64" in arch:
+        arch = "arm64"
     elif 'arm' in arch:
         # Prevent uname from reporting full ARM arch (eg 'armv7l')
         arch = "arm"
@@ -446,6 +454,8 @@ def build(version=None,
         # Handle variations in architecture output
         if arch == "i386" or arch == "i686":
             arch = "386"
+        elif "arm64" in arch:
+            arch = "arm64"
         elif "arm" in arch:
             arch = "arm"
         build_command += "GOOS={} GOARCH={} ".format(platform, arch)
@@ -470,12 +480,17 @@ def build(version=None,
         if len(tags) > 0:
             build_command += "-tags {} ".format(','.join(tags))
 
-        build_command += "-ldflags=\"-w -s -X main.version={} -X main.branch={} -X main.commit={}\" ".format(
-                version,
-                get_current_branch(),
-                get_current_commit())
+        ldflags = [
+                '-w', '-s',
+                '-X', 'main.branch={}'.format(get_current_branch()),
+                '-X', 'main.commit={}'.format(get_current_commit(short=True))]
+        if version:
+            ldflags.append('-X')
+            ldflags.append('main.version={}'.format(version))
+        build_command += ' -ldflags="{}" '.format(' '.join(ldflags))
+
         if static:
-            build_command += "-a -installsuffix cgo "
+            build_command += " -a -installsuffix cgo "
         build_command += path
         start_time = datetime.utcnow()
         run(build_command, shell=True)
@@ -571,10 +586,8 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                         package_arch = 'armv6hl'
                     else:
                         package_arch = arch
-                    if not release and not nightly:
-                        # For non-release builds, just use the commit hash as the version
-                        package_version = "{}~{}".format(version,
-                                                         get_current_commit(short=True))
+                    if not version:
+                        package_version = "{}~{}".format(next_version, get_current_commit(short=True))
                         package_iteration = "0"
                     package_build_root = build_root
                     current_location = build_output[platform][arch]
@@ -666,9 +679,6 @@ def main(args):
         return 1
 
     if args.nightly:
-        args.version = increment_minor_version(args.version)
-        args.version = "{}~n{}".format(args.version,
-                                       datetime.utcnow().strftime("%Y%m%d%H%M"))
         args.iteration = 0
 
     # Pre-build checks

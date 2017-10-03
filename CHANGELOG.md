@@ -1,6 +1,72 @@
 ## v1.5 [unreleased]
 
-## v1.4 [unreleased]
+### New Plugins
+- [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
+- [jolokia2](./plugins/inputs/jolokia2/README.md) - Thanks to @dylanmei
+- [wavefront](./plugins/inputswavefront/README.md) - Thanks to @puckpuck
+
+### Release Notes
+
+- In the `kinesis` output, use of the `partition_key` and
+  `use_random_partitionkey` options has been deprecated in favor of the
+  `partition` subtable.  This allows for more flexible methods to set the
+  partition key such as by metric name or by tag.
+
+- With the release of the new improved `jolokia2` input, the legacy `jolokia`
+  plugin is deprecated and will be removed in a future release.  Users of this
+  plugin are encouraged to update to the new `jolokia2` plugin.
+
+### Features
+
+- [#3170](https://github.com/influxdata/telegraf/pull/3170): Add support for sharding based on metric name.
+- [#3196](https://github.com/influxdata/telegraf/pull/3196): Add Kafka output plugin topic_suffix option.
+- [#3027](https://github.com/influxdata/telegraf/pull/3027): Include mount mode option in disk metrics.
+- [#3212](https://github.com/influxdata/telegraf/pull/3212): Add support for standard proxy env vars in outputs.
+- [#3191](https://github.com/influxdata/telegraf/pull/3191): TLS and MTLS enhancements to HTTPListener input plugin.
+- [#3213](https://github.com/influxdata/telegraf/pull/3213): Add polling method to logparser and tail inputs.
+- [#3211](https://github.com/influxdata/telegraf/pull/3211): Add timeout option for kubernetes input.
+- [#3224](https://github.com/influxdata/telegraf/pull/3224): Preserve url path prefix in influx output.
+- [#3234](https://github.com/influxdata/telegraf/pull/3234): Add support for timing sums in statsd input.
+- [#2617](https://github.com/influxdata/telegraf/issues/2617): Add resource limit monitoring to procstat.
+- [#3236](https://github.com/influxdata/telegraf/pull/3236): Add support for k8s service DNS discovery to prometheus input.
+- [#3245](https://github.com/influxdata/telegraf/pull/3245): Add configurable metrics endpoint to prometheus output.
+- [#3214](https://github.com/influxdata/telegraf/pull/3214): Add new nginx_plus input plugin.
+- [#3215](https://github.com/influxdata/telegraf/pull/3215): Add support for NSQLookupd to nsq_consumer.
+- [#2278](https://github.com/influxdata/telegraf/pull/2278): Add redesigned Jolokia input plugin.
+- [#3106](https://github.com/influxdata/telegraf/pull/3106): Add configurable separator for metrics and fields in opentsdb output.
+- [#1692](https://github.com/influxdata/telegraf/pull/1692): Add support for the rollbar occurrence webhook event.
+- [#3160](https://github.com/influxdata/telegraf/pull/3160): Add Wavefront output plugin.
+- [#3281](https://github.com/influxdata/telegraf/pull/3281): Add extra wired tiger cache metrics to mongodb input.
+
+### Bugfixes
+
+- [#3136](https://github.com/influxdata/telegraf/issues/3136): Fix webhooks input address in use during reload.
+- [#3258](https://github.com/influxdata/telegraf/issues/3258): Unlock Statsd when stopping to prevent deadlock.
+
+## v1.4.2 [unreleased]
+
+### Bugfixes
+
+- [#3259](https://github.com/influxdata/telegraf/issues/3259): Fix error if int larger than 32-bit in /proc/vmstat.
+- [#3265](https://github.com/influxdata/telegraf/issues/3265): Fix parsing of JSON with a UTF8 BOM in httpjson.
+- [#2887](https://github.com/influxdata/telegraf/issues/2887): Allow JSON data format to contain zero metrics.
+- [#3284](https://github.com/influxdata/telegraf/issues/3284): Fix format of connection_timeout in mqtt_consumer.
+- [#3081](https://github.com/influxdata/telegraf/issues/3081): Fix case sensitivity error in sqlserver input.
+
+## v1.4.1 [2017-09-26]
+
+### Bugfixes
+
+- [#3167](https://github.com/influxdata/telegraf/issues/3167): Fix MQTT input exits if Broker is not available on startup.
+- [#3217](https://github.com/influxdata/telegraf/issues/3217): Fix optional field value conversions in fluentd input.
+- [#3227](https://github.com/influxdata/telegraf/issues/3227): Whitelist allowed char classes for opentsdb output.
+- [#3232](https://github.com/influxdata/telegraf/issues/3232): Fix counter and gauge metric types.
+- [#3235](https://github.com/influxdata/telegraf/issues/3235): Fix skipped line with empty target in iptables.
+- [#3175](https://github.com/influxdata/telegraf/issues/3175): Fix duplicate keys in perf counters sqlserver query.
+- [#3230](https://github.com/influxdata/telegraf/issues/3230): Fix panic in statsd p100 calculation.
+- [#3242](https://github.com/influxdata/telegraf/issues/3242): Fix arm64 packages contain 32-bit executable.
+
+## v1.4 [2017-09-05]
 
 ### Release Notes
 
@@ -64,6 +130,7 @@
 - [#2978](https://github.com/influxdata/telegraf/pull/2978): Add gzip content-encoding support to influxdb output.
 - [#3127](https://github.com/influxdata/telegraf/pull/3127): Allow using system plugin in Windows.
 - [#3112](https://github.com/influxdata/telegraf/pull/3112): Add tomcat input plugin.
+- [#3182](https://github.com/influxdata/telegraf/pull/3182): HTTP headers can be added to InfluxDB output.
 
 ### Bugfixes
 
@@ -95,6 +162,16 @@
 - [#2899](https://github.com/influxdata/telegraf/issues/2899): Skip compilcation of logparser and tail on solaris.
 - [#2951](https://github.com/influxdata/telegraf/issues/2951): Discard logging from tail library.
 - [#3126](https://github.com/influxdata/telegraf/pull/3126): Remove log message on ping timeout.
+- [#3144](https://github.com/influxdata/telegraf/issues/3144): Don't retry points beyond retention policy.
+- [#3015](https://github.com/influxdata/telegraf/issues/3015): Don't start Telegraf on install in Amazon Linux.
+- [#3153](https://github.com/influxdata/telegraf/issues/3053): Enable hddtemp input on all platforms.
+- [#3142](https://github.com/influxdata/telegraf/issues/3142): Escape backslash within string fields.
+- [#3162](https://github.com/influxdata/telegraf/issues/3162): Fix parsing of SHM remotes in ntpq input
+- [#3149](https://github.com/influxdata/telegraf/issues/3149): Don't fail parsing zpool stats if pool health is UNAVAIL on FreeBSD.
+- [#2672](https://github.com/influxdata/telegraf/issues/2672): Fix NSQ input plugin when used with version 1.0.0-compat.
+- [#2523](https://github.com/influxdata/telegraf/issues/2523): Added CloudWatch metric constraint validation.
+- [#3179](https://github.com/influxdata/telegraf/issues/3179): Skip non-numerical values in graphite format.
+- [#3187](https://github.com/influxdata/telegraf/issues/3187): Fix panic when handling string fields with escapes.
 
 ## v1.3.5 [2017-07-26]
 

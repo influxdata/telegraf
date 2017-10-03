@@ -1,19 +1,19 @@
-# Fail2ban Plugin
+# Fail2ban Input Plugin
 
-The fail2ban plugin gathers counts of failed and banned ip addresses from fail2ban.
+The fail2ban plugin gathers the count of failed and banned ip addresses using [fail2ban](https://www.fail2ban.org).
 
-This plugin run fail2ban-client command, and fail2ban-client require root access.
-You have to grant telegraf to run fail2ban-client:
+This plugin runs the `fail2ban-client` command which generally requires root access.
+Acquiring the required permissions can be done using several methods:
 
-- Run telegraf as root. (deprecate)
-- Configure sudo to grant telegraf to fail2ban-client.
+- Use sudo run fail2ban-client.
+- Run telegraf as root. (not recommended)
 
 ### Using sudo
 
 You may edit your sudo configuration with the following:
 
 ``` sudo
-telegraf ALL=(root) NOPASSWD: /usr/bin/fail2ban-client status *
+telegraf ALL=(root) NOEXEC: NOPASSWD: /usr/bin/fail2ban-client status, /usr/bin/fail2ban-client status *
 ```
 
 ### Configuration:
@@ -21,10 +21,7 @@ telegraf ALL=(root) NOPASSWD: /usr/bin/fail2ban-client status *
 ``` toml
 # Read metrics from fail2ban.
 [[inputs.fail2ban]]
-  ## fail2ban-client require root access.
-  ## Setting 'use_sudo' to true will make use of sudo to run fail2ban-client.
-  ## Users must configure sudo to allow telegraf user to run fail2ban-client with no password.
-  ## This plugin run only "fail2ban-client status".
+  ## Use sudo to run fail2ban-client
   use_sudo = false
 ```
 
@@ -38,7 +35,7 @@ telegraf ALL=(root) NOPASSWD: /usr/bin/fail2ban-client status *
 
 - All measurements have the following tags:
   - jail
-  
+
 ### Example Output:
 
 ```
@@ -55,6 +52,5 @@ Status for the jail: sshd
 ```
 
 ```
-$ ./telegraf --config telegraf.conf --input-filter fail2ban --test
 fail2ban,jail=sshd failed=5i,banned=2i 1495868667000000000
 ```

@@ -55,7 +55,11 @@ func (d *Datadog) Connect() error {
 	if d.Apikey == "" {
 		return fmt.Errorf("apikey is a required field for datadog output")
 	}
+
 	d.client = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
 		Timeout: d.Timeout.Duration,
 	}
 	return nil

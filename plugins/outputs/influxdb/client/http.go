@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"time"
 )
 
@@ -53,6 +54,7 @@ func NewHTTP(config HTTPConfig, defaultWP WriteParams) (Client, error) {
 		}
 	} else {
 		transport = http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
 			TLSClientConfig: config.TLSConfig,
 		}
 	}
@@ -67,6 +69,8 @@ func NewHTTP(config HTTPConfig, defaultWP WriteParams) (Client, error) {
 		},
 	}, nil
 }
+
+type HTTPHeaders map[string]string
 
 type HTTPConfig struct {
 	// URL should be of the form "http://host:port" (REQUIRED)
@@ -94,6 +98,9 @@ type HTTPConfig struct {
 
 	// Proxy URL should be of the form "http://host:port"
 	HTTPProxy string
+
+	// HTTP headers to append to HTTP requests.
+	HTTPHeaders HTTPHeaders
 
 	// The content encoding mechanism to use for each request.
 	ContentEncoding string
@@ -253,6 +260,11 @@ func (c *httpClient) makeRequest(uri string, body io.Reader) (*http.Request, err
 	if err != nil {
 		return nil, err
 	}
+
+	for header, value := range c.config.HTTPHeaders {
+		req.Header.Set(header, value)
+	}
+
 	req.Header.Set("Content-Type", "text/plain")
 	req.Header.Set("User-Agent", c.config.UserAgent)
 	if c.config.Username != "" && c.config.Password != "" {
@@ -294,8 +306,11 @@ func writeURL(u *url.URL, wp WriteParams) string {
 	}
 
 	u.RawQuery = params.Encode()
-	u.Path = "write"
-	return u.String()
+	p := u.Path
+	u.Path = path.Join(p, "write")
+	s := u.String()
+	u.Path = p
+	return s
 }
 
 func queryURL(u *url.URL, command string) string {
@@ -303,6 +318,9 @@ func queryURL(u *url.URL, command string) string {
 	params.Set("q", command)
 
 	u.RawQuery = params.Encode()
-	u.Path = "query"
-	return u.String()
+	p := u.Path
+	u.Path = path.Join(p, "query")
+	s := u.String()
+	u.Path = p
+	return s
 }

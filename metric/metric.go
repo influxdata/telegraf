@@ -21,14 +21,14 @@ func New(
 	t time.Time,
 	mType ...telegraf.ValueType,
 ) (telegraf.Metric, error) {
-	if len(fields) == 0 {
-		return nil, fmt.Errorf("Metric cannot be made without any fields")
-	}
 	if len(name) == 0 {
-		return nil, fmt.Errorf("Metric cannot be made with an empty name")
+		return nil, fmt.Errorf("missing measurement name")
+	}
+	if len(fields) == 0 {
+		return nil, fmt.Errorf("%s: must have one or more fields", name)
 	}
 	if strings.HasSuffix(name, `\`) {
-		return nil, fmt.Errorf("Metric cannot have measurement name ending with a backslash")
+		return nil, fmt.Errorf("%s: measurement name cannot end with a backslash", name)
 	}
 
 	var thisType telegraf.ValueType
@@ -49,10 +49,10 @@ func New(
 	taglen := 0
 	for k, v := range tags {
 		if strings.HasSuffix(k, `\`) {
-			return nil, fmt.Errorf("Metric cannot have tag key ending with a backslash")
+			return nil, fmt.Errorf("%s: tag key cannot end with a backslash: %s", name, k)
 		}
 		if strings.HasSuffix(v, `\`) {
-			return nil, fmt.Errorf("Metric cannot have tag value ending with a backslash")
+			return nil, fmt.Errorf("%s: tag value cannot end with a backslash: %s", name, v)
 		}
 
 		if len(k) == 0 || len(v) == 0 {
@@ -77,15 +77,9 @@ func New(
 
 	// pre-allocate capacity of the fields slice
 	fieldlen := 0
-	for k, v := range fields {
+	for k, _ := range fields {
 		if strings.HasSuffix(k, `\`) {
-			return nil, fmt.Errorf("Metric cannot have field key ending with a backslash")
-		}
-		switch val := v.(type) {
-		case string:
-			if strings.HasSuffix(val, `\`) {
-				return nil, fmt.Errorf("Metric cannot have field value ending with a backslash")
-			}
+			return nil, fmt.Errorf("%s: field key cannot end with a backslash: %s", name, k)
 		}
 
 		// 10 bytes is completely arbitrary, but will at least prevent some
@@ -108,7 +102,8 @@ func New(
 }
 
 // indexUnescapedByte finds the index of the first byte equal to b in buf that
-// is not escaped. Returns -1 if not found.
+// is not escaped.  Does not allow the escape char to be escaped. Returns -1 if
+// not found.
 func indexUnescapedByte(buf []byte, b byte) int {
 	var keyi int
 	for {
@@ -126,6 +121,46 @@ func indexUnescapedByte(buf []byte, b byte) int {
 		}
 	}
 	return keyi
+}
+
+// indexUnescapedByteBackslashEscaping finds the index of the first byte equal
+// to b in buf that is not escaped.  Allows for the escape char `\` to be
+// escaped.  Returns -1 if not found.
+func indexUnescapedByteBackslashEscaping(buf []byte, b byte) int {
+	var keyi int
+	for {
+		i := bytes.IndexByte(buf[keyi:], b)
+		if i == -1 {
+			return -1
+		} else if i == 0 {
+			break
+		}
+		keyi += i
+		if countBackslashes(buf, keyi-1)%2 == 0 {
+			break
+		} else {
+			keyi++
+		}
+	}
+	return keyi
+}
+
+// countBackslashes counts the number of preceding backslashes starting at
+// the 'start' index.
+func countBackslashes(buf []byte, index int) int {
+	var count int
+	for {
+		if index < 0 {
+			return count
+		}
+		if buf[index] == '\\' {
+			count++
+			index--
+		} else {
+			break
+		}
+	}
+	return count
 }
 
 type metric struct {
@@ -289,7 +324,7 @@ func (m *metric) Fields() map[string]interface{} {
 		// end index of field value
 		var i3 int
 		if m.fields[i:][i2] == '"' {
-			i3 = indexUnescapedByte(m.fields[i:][i2+1:], '"')
+			i3 = indexUnescapedByteBackslashEscaping(m.fields[i:][i2+1:], '"')
 			if i3 == -1 {
 				i3 = len(m.fields[i:])
 			}

@@ -193,6 +193,25 @@ func BuildMetricDatum(point telegraf.Metric) []*cloudwatch.MetricDatum {
 			continue
 		}
 
+		// Do CloudWatch boundary checking
+		// Constraints at: http://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html
+		if math.IsNaN(value) {
+			datums = datums[:len(datums)-1]
+			continue
+		}
+		if math.IsInf(value, 0) {
+			datums = datums[:len(datums)-1]
+			continue
+		}
+		if value > 0 && value < float64(8.515920e-109) {
+			datums = datums[:len(datums)-1]
+			continue
+		}
+		if value > float64(1.174271e+108) {
+			datums = datums[:len(datums)-1]
+			continue
+		}
+
 		datums[i] = &cloudwatch.MetricDatum{
 			MetricName: aws.String(strings.Join([]string{point.Name(), k}, "_")),
 			Value:      aws.Float64(value),

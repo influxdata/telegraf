@@ -1,3 +1,5 @@
+// +build linux
+
 package dmcache
 
 import (
@@ -33,20 +35,20 @@ func TestPerDeviceGoodOutput(t *testing.T) {
 		"device": "cs-1",
 	}
 	fields1 := map[string]interface{}{
-		"length":             4883791872,
-		"metadata_blocksize": 8,
-		"metadata_used":      1018,
-		"metadata_total":     1501122,
-		"cache_blocksize":    512,
-		"cache_used":         7,
-		"cache_total":        464962,
-		"read_hits":          139,
-		"read_misses":        352643,
-		"write_hits":         15,
-		"write_misses":       46,
-		"demotions":          0,
-		"promotions":         7,
-		"dirty":              0,
+		"length":             int64(4883791872),
+		"metadata_blocksize": int64(8),
+		"metadata_used":      int64(1018),
+		"metadata_total":     int64(1501122),
+		"cache_blocksize":    int64(512),
+		"cache_used":         int64(7),
+		"cache_total":        int64(464962),
+		"read_hits":          int64(139),
+		"read_misses":        int64(352643),
+		"write_hits":         int64(15),
+		"write_misses":       int64(46),
+		"demotions":          int64(0),
+		"promotions":         int64(7),
+		"dirty":              int64(0),
 	}
 	acc.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 
@@ -54,20 +56,20 @@ func TestPerDeviceGoodOutput(t *testing.T) {
 		"device": "cs-2",
 	}
 	fields2 := map[string]interface{}{
-		"length":             4294967296,
-		"metadata_blocksize": 8,
-		"metadata_used":      72352,
-		"metadata_total":     1310720,
-		"cache_blocksize":    128,
-		"cache_used":         26,
-		"cache_total":        24327168,
-		"read_hits":          2409,
-		"read_misses":        286,
-		"write_hits":         265,
-		"write_misses":       524682,
-		"demotions":          0,
-		"promotions":         0,
-		"dirty":              0,
+		"length":             int64(4294967296),
+		"metadata_blocksize": int64(8),
+		"metadata_used":      int64(72352),
+		"metadata_total":     int64(1310720),
+		"cache_blocksize":    int64(128),
+		"cache_used":         int64(26),
+		"cache_total":        int64(24327168),
+		"read_hits":          int64(2409),
+		"read_misses":        int64(286),
+		"write_hits":         int64(265),
+		"write_misses":       int64(524682),
+		"demotions":          int64(0),
+		"promotions":         int64(0),
+		"dirty":              int64(0),
 	}
 	acc.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 
@@ -76,20 +78,20 @@ func TestPerDeviceGoodOutput(t *testing.T) {
 	}
 
 	fields3 := map[string]interface{}{
-		"length":             9178759168,
-		"metadata_blocksize": 16,
-		"metadata_used":      73370,
-		"metadata_total":     2811842,
-		"cache_blocksize":    640,
-		"cache_used":         33,
-		"cache_total":        24792130,
-		"read_hits":          2548,
-		"read_misses":        352929,
-		"write_hits":         280,
-		"write_misses":       524728,
-		"demotions":          0,
-		"promotions":         7,
-		"dirty":              0,
+		"length":             int64(9178759168),
+		"metadata_blocksize": int64(16),
+		"metadata_used":      int64(73370),
+		"metadata_total":     int64(2811842),
+		"cache_blocksize":    int64(640),
+		"cache_used":         int64(33),
+		"cache_total":        int64(24792130),
+		"read_hits":          int64(2548),
+		"read_misses":        int64(352929),
+		"write_hits":         int64(280),
+		"write_misses":       int64(524728),
+		"demotions":          int64(0),
+		"promotions":         int64(7),
+		"dirty":              int64(0),
 	}
 	acc.AssertContainsTaggedFields(t, measurement, fields3, tags3)
 }
@@ -111,20 +113,20 @@ func TestNotPerDeviceGoodOutput(t *testing.T) {
 	}
 
 	fields := map[string]interface{}{
-		"length":             9178759168,
-		"metadata_blocksize": 16,
-		"metadata_used":      73370,
-		"metadata_total":     2811842,
-		"cache_blocksize":    640,
-		"cache_used":         33,
-		"cache_total":        24792130,
-		"read_hits":          2548,
-		"read_misses":        352929,
-		"write_hits":         280,
-		"write_misses":       524728,
-		"demotions":          0,
-		"promotions":         7,
-		"dirty":              0,
+		"length":             int64(9178759168),
+		"metadata_blocksize": int64(16),
+		"metadata_used":      int64(73370),
+		"metadata_total":     int64(2811842),
+		"cache_blocksize":    int64(640),
+		"cache_used":         int64(33),
+		"cache_total":        int64(24792130),
+		"read_hits":          int64(2548),
+		"read_misses":        int64(352929),
+		"write_hits":         int64(280),
+		"write_misses":       int64(524728),
+		"demotions":          int64(0),
+		"promotions":         int64(7),
+		"dirty":              int64(0),
 	}
 	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
 }

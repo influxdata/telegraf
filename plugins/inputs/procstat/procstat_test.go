@@ -95,6 +95,10 @@ func (p *testProc) Times() (*cpu.TimesStat, error) {
 	return &cpu.TimesStat{}, nil
 }
 
+func (p *testProc) RlimitUsage(gatherUsage bool) ([]process.RlimitStat, error) {
+	return []process.RlimitStat{}, nil
+}
+
 var pid PID = PID(42)
 var exe string = "foo"
 
