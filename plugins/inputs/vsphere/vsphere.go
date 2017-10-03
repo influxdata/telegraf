@@ -9,17 +9,16 @@ import (
 	"context"
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/vim25/types"
-	"sync"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"time"
-	"fmt"
+	"github.com/Sirupsen/logrus"
 )
 
 type Endpoint struct {
 	Parent *VSphere
 	Url string
 	intervals []int32
-	mux sync.Mutex
+	lastColl map[string]time.Time
 }
 
 type VSphere struct {
@@ -28,17 +27,16 @@ type VSphere struct {
 	HostInterval int32
 	ClusterInterval int32
 	DatastoreInterval int32
+	MaxSamples int32
+	MaxQuery int32
 	endpoints []Endpoint
-	mux sync.Mutex
 }
 
 type ResourceGetter func (context.Context, *view.ContainerView) (map[string]types.ManagedObjectReference, error)
 
 type InstanceMetrics map[string]map[string]interface{}
 
-func (e *Endpoint) Init(p *performance.Manager) error {
-	e.mux.Lock()
-	defer e.mux.Unlock()
+func (e *Endpoint) init(p *performance.Manager) error {
 	if e.intervals == nil {
 		// Load interval table
 		//
@@ -55,73 +53,101 @@ func (e *Endpoint) Init(p *performance.Manager) error {
 	return nil
 }
 
-func (e *Endpoint) CollectResourceType(p *performance.Manager, ctx context.Context, alias string, acc telegraf.Accumulator,
+func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Context, alias string, acc telegraf.Accumulator,
 	getter ResourceGetter, root *view.ContainerView, interval int32) error {
+
+	// Do we have new data yet?
+	//
+	nIntervals := int32(1)
+	latest, hasLatest := e.lastColl[alias]
+	if(hasLatest) {
+		elapsed := time.Now().Sub(latest).Seconds()
+		if  elapsed < float64(interval) {
+			// No new data would be available. We're outta here!
+			//
+			return nil;
+		}
+		nIntervals := int32(elapsed / (float64(interval)))
+		if nIntervals > e.Parent.MaxSamples {
+			nIntervals = e.Parent.MaxSamples
+		}
+	}
+	log.Printf("Collecting %d intervals for %s", nIntervals, alias)
+
+	fullAlias := "vsphere." + alias
 
 	start := time.Now()
 	objects, err := getter(ctx, root)
 	if err != nil {
 		return err
 	}
-	pqs := make([]types.PerfQuerySpec, len(objects))
+	pqs := make([]types.PerfQuerySpec, 0, e.Parent.MaxQuery)
 	nameLookup := make(map[string]string)
-	idx := 0
+	total := 0;
 	for name, mor := range objects {
 		nameLookup[mor.Reference().Value] = name;
+
 		// Collect metrics
 		//
 		ams, err := p.AvailableMetric(ctx, mor, interval)
 		if err != nil {
 			return err
 		}
-		pqs[idx] = types.PerfQuerySpec{
+
+		pq := types.PerfQuerySpec{
 			Entity: mor,
-			MaxSample: 1,
+			MaxSample: nIntervals,
 			MetricId: ams,
 			IntervalId: interval,
 		}
-		idx++
-	}
-
-	metrics, err := p.Query(ctx, pqs )
-	if err != nil {
-		return err
-	}
-
-	ems, err := p.ToMetricSeries(ctx, metrics)
-	if err != nil {
-		return err
-	}
-
-	// Iterate through result and fields list
-	//
-	for _, em := range ems {
-		im := make(InstanceMetrics)
-		for _, v := range em.Value {
-			name := v.Name
-			m, found := im[v.Instance]
-			if !found {
-				m = make(map[string]interface{})
-				im[v.Instance] = m
-			}
-			m[name] = v.Value[0]
+		if(e.Parent.MaxSamples > 1 && hasLatest) {
+			pq.StartTime = &start
 		}
-		for k, m := range im {
-			moid := em.Entity.Reference().Value
-			tags := map[string]string{
-				"source": nameLookup[moid],
-				"moid": moid}
-			if k != "" {
-				tags["instance"] = k
+		pqs = append(pqs, pq)
+		total++
+
+		// Filled up a chunk or at end of data? Run a query with the collected objects
+		//
+		if len(pqs) >= int(e.Parent.MaxQuery) || total == len(objects)  {
+			log.Printf("Querying %d objects of type %s. Total processed: %d. Total objects %d\n", len(pqs), alias, total, len(objects))
+			metrics, err := p.Query(ctx, pqs)
+			if err != nil {
+				return err
 			}
-			acc.AddFields("vsphere." + alias, m, tags)
+
+			ems, err := p.ToMetricSeries(ctx, metrics)
+			if err != nil {
+				return err
+			}
+
+			// Iterate through result and fields list
+			//
+			for _, em := range ems {
+				moid := em.Entity.Reference().Value
+				for _, v := range em.Value {
+					name := v.Name
+					for idx, value := range v.Value {
+						f := map[string]interface{} { name: value }
+						tags := map[string]string{
+							"source": nameLookup[moid],
+							"moid": moid}
+						if v.Instance != "" {
+							tags["instance"] = v.Instance
+						}
+						acc.AddFields(fullAlias, f, tags, em.SampleInfo[idx].Timestamp)
+					}
+				}
+			}
+			pqs = make([]types.PerfQuerySpec, 0, e.Parent.MaxQuery)
 		}
 	}
-	fmt.Println(time.Now().Sub(start))
+
+
+	log.Printf("Collection of %s took %v\n", alias, time.Now().Sub(start))
 	return nil
 }
 
-func (e *Endpoint) Collect(acc telegraf.Accumulator) error {
+func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 	u, err := soap.ParseURL(e.Url)
 	if(err != nil) {
@@ -146,24 +172,24 @@ func (e *Endpoint) Collect(acc telegraf.Accumulator) error {
 	p.Destroy(ctx)
 
 	// Load cache if needed
-	e.Init(p)
+	e.init(p)
 
-	err = e.CollectResourceType(p, ctx, "vm", acc, e.getVMs, v, e.Parent.VmInterval)
+	err = e.collectResourceType(p, ctx, "vm", acc, e.getVMs, v, e.Parent.VmInterval)
 	if err != nil {
 		return err
 	}
 
-	err = e.CollectResourceType(p, ctx, "host", acc, e.getHosts, v, e.Parent.HostInterval)
+	err = e.collectResourceType(p, ctx, "host", acc, e.getHosts, v, e.Parent.HostInterval)
 	if err != nil {
 		return err
 	}
 
-	err = e.CollectResourceType(p, ctx, "cluster", acc, e.getClusters, v, e.Parent.ClusterInterval)
+	err = e.collectResourceType(p, ctx, "cluster", acc, e.getClusters, v, e.Parent.ClusterInterval)
 	if err != nil {
 		return err
 	}
 
-	err = e.CollectResourceType(p, ctx, "datastore", acc, e.getDatastores, v, e.Parent.DatastoreInterval)
+	err = e.collectResourceType(p, ctx, "datastore", acc, e.getDatastores, v, e.Parent.DatastoreInterval)
 	if err != nil {
 		return err
 	}
@@ -236,28 +262,34 @@ func (v *VSphere) Description() string {
 }
 
 func (v *VSphere) Init()  {
-	v.mux.Lock()
-	defer v.mux.Unlock()
-
-
 	if v.endpoints != nil {
 		return
 	}
 	v.endpoints = make([]Endpoint, len(v.Vcenters))
 	for i, u := range v.Vcenters {
-		v.endpoints[i] = Endpoint{ Url: u, Parent: v }
+		v.endpoints[i] = Endpoint{
+			Url: u,
+			Parent: v,
+			lastColl: make(map[string]time.Time)}
 	}
 }
 
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 	v.Init()
+	results := make(chan error)
 	for _, ep := range v.endpoints {
-		err := ep.Collect(acc)
+		go func() {
+			results <- ep.collect(acc)
+		}()
+	}
+	var finalErr error = nil
+	for range v.endpoints {
+		err := <- results
 		if err != nil {
-			return err
+			finalErr = err
 		}
 	}
-	return nil
+	return finalErr
 }
 
 func init() {
@@ -268,6 +300,8 @@ func init() {
 			HostInterval: 20,
 			ClusterInterval: 300,
 			DatastoreInterval: 300,
+			MaxSamples: 10,
+			MaxQuery: 64,
 		}
 	})
 }
