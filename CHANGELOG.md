@@ -37,6 +37,7 @@
 - [#1692](https://github.com/influxdata/telegraf/pull/1692): Add support for the rollbar occurrence webhook event.
 - [#3160](https://github.com/influxdata/telegraf/pull/3160): Add Wavefront output plugin.
 - [#3281](https://github.com/influxdata/telegraf/pull/3281): Add extra wired tiger cache metrics to mongodb input.
+- [#3141](https://github.com/influxdata/telegraf/pull/3141): Collect Docker Swarm service metrics in docker input plugin.
 
 ### Bugfixes
 
