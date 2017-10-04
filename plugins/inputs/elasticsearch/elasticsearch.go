@@ -3,17 +3,16 @@ package elasticsearch
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"regexp"
-	"sync"
-	"time"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 	"io/ioutil"
+	"net/http"
+	"regexp"
 	"strings"
+	"sync"
+	"time"
 )
 
 // mask for masking username/password from error messages
@@ -94,6 +93,12 @@ const sampleConfig = `
   ## Set cluster_health to true when you want to also obtain cluster health stats
   cluster_health = false
 
+  ## Adjust cluster_health_level when you want to also obtain detailed health stats
+  ## The options are
+  ##  - indices (default)
+  ##  - cluster
+  # cluster_health_level = "indices"
+
   ## Set cluster_stats to true when you want to also obtain cluster stats from the
   ## Master node.
   cluster_stats = false
@@ -113,6 +118,7 @@ type Elasticsearch struct {
 	Servers                 []string
 	HttpTimeout             internal.Duration
 	ClusterHealth           bool
+	ClusterHealthLevel      string
 	ClusterStats            bool
 	SSLCA                   string `toml:"ssl_ca"`   // Path to CA file
 	SSLCert                 string `toml:"ssl_cert"` // Path to host cert file
@@ -126,7 +132,8 @@ type Elasticsearch struct {
 // NewElasticsearch return a new instance of Elasticsearch
 func NewElasticsearch() *Elasticsearch {
 	return &Elasticsearch{
-		HttpTimeout: internal.Duration{Duration: time.Second * 5},
+		HttpTimeout:        internal.Duration{Duration: time.Second * 5},
+		ClusterHealthLevel: "indices",
 	}
 }
 
@@ -182,7 +189,10 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if e.ClusterHealth {
-				url = s + "/_cluster/health?level=indices"
+				url = s + "/_cluster/health"
+				if e.ClusterHealthLevel != "" {
+					url = url + "?level=" + e.ClusterHealthLevel
+				}
 				if err := e.gatherClusterHealth(url, acc); err != nil {
 					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return

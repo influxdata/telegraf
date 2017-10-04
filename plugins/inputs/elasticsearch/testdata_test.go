@@ -11,6 +11,21 @@ const clusterHealthResponse = `
    "active_shards": 15,
    "relocating_shards": 0,
    "initializing_shards": 0,
+   "unassigned_shards": 0
+}
+`
+
+const clusterHealthResponseWithIndices = `
+{
+   "cluster_name": "elasticsearch_telegraf",
+   "status": "green",
+   "timed_out": false,
+   "number_of_nodes": 3,
+   "number_of_data_nodes": 3,
+   "active_primary_shards": 5,
+   "active_shards": 15,
+   "relocating_shards": 0,
+   "initializing_shards": 0,
    "unassigned_shards": 0,
    "indices": {
       "v1": {
