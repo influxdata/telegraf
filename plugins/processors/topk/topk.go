@@ -3,6 +3,8 @@ package topk
 import (
 	"sort"
 	"time"
+	"regexp"
+	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
@@ -22,6 +24,7 @@ type TopK struct {
 	AggregationField   string `toml:"aggregation_field"`
 
 	cache map[uint64][]telegraf.Metric
+	metric_regex *regexp.Regexp
 	last_aggregation time.Time
 }
 
@@ -99,16 +102,26 @@ func (t *TopK) Description() string {
 }
 
 func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	// Generate the regexp struct that we use to match the metrics names
+	if (t.metric_regex == nil) {
+		var err error
+		t.metric_regex, err = regexp.Compile(t.Metric)
+		if (err != nil) {
+			panic(fmt.Sprintf("TopK processor could not parse metric regex '%s'", t.Metric))
+		}
+	}
+
 	// Add the metrics received to our internal cache
 	for _, m := range in {
+		if (t.metric_regex.MatchString(m.Name())){
+			// Initialize the key with an empty list if necessary
+			if _, ok := t.cache[m.HashID()]; !ok {
+				t.cache[m.HashID()] = make([]telegraf.Metric, 0, 10)
+			}
 
-		// Initialize the key with an empty list if necessary
-		if _, ok := t.cache[m.HashID()]; !ok {
-			t.cache[m.HashID()] = make([]telegraf.Metric, 0, 10)
+			// Append the metric to the corresponding key list
+			t.cache[m.HashID()] = append(t.cache[m.HashID()], m)
 		}
-
-		// Append the metric to the corresponding key list
-		t.cache[m.HashID()] = append(t.cache[m.HashID()], m)
 	}
 
 	// If enough time has passed
@@ -119,7 +132,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		for _, ms := range t.cache {
 			sort.Reverse(Measurements{metrics: ms, field: t.Field})
 		}
-		
+
 		// Create a one dimentional list with the top K metrics of each key
 		ret := make([]telegraf.Metric, 0, 100)
 		for _, ms := range t.cache {
