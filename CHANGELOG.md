@@ -39,6 +39,7 @@
 - [#3281](https://github.com/influxdata/telegraf/pull/3281): Add extra wired tiger cache metrics to mongodb input.
 - [#3141](https://github.com/influxdata/telegraf/pull/3141): Collect Docker Swarm service metrics in docker input plugin.
 - [#2449](https://github.com/influxdata/telegraf/pull/2449): Add smart input plugin for collecting S.M.A.R.T. data.
+- [#3269](https://github.com/influxdata/telegraf/pull/3269): Add cluster health level configuration to elasticsearch input.
 
 ### Bugfixes
 
