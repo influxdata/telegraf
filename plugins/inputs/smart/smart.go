@@ -253,13 +253,13 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, path, nockec
 				tags["flags"] = attr[3]
 
 				fields["exit_status"] = exitStatus
-				if i, err := strconv.Atoi(attr[4]); err == nil {
+				if i, err := strconv.ParseInt(attr[4], 10, 64); err == nil {
 					fields["value"] = i
 				}
-				if i, err := strconv.Atoi(attr[5]); err == nil {
+				if i, err := strconv.ParseInt(attr[5], 10, 64); err == nil {
 					fields["worst"] = i
 				}
-				if i, err := strconv.Atoi(attr[6]); err == nil {
+				if i, err := strconv.ParseInt(attr[6], 10, 64); err == nil {
 					fields["threshold"] = i
 				}
 
@@ -283,10 +283,10 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, path, nockec
 	acc.AddFields("smart_device", device_fields, device_tags)
 }
 
-func parseRawValue(rawVal string) (int, error) {
+func parseRawValue(rawVal string) (int64, error) {
 
 	// Integer
-	if i, err := strconv.Atoi(rawVal); err == nil {
+	if i, err := strconv.ParseInt(rawVal, 10, 64); err == nil {
 		return i, nil
 	}
 
@@ -297,7 +297,7 @@ func parseRawValue(rawVal string) (int, error) {
 		return 0, fmt.Errorf("Couldn't parse RAW_VALUE '%s'", rawVal)
 	}
 
-	duration := 0
+	duration := int64(0)
 	for _, part := range parts {
 		timePart := unit.FindStringSubmatch(part)
 		if len(timePart) == 0 {
@@ -305,12 +305,12 @@ func parseRawValue(rawVal string) (int, error) {
 		}
 		switch timePart[2] {
 		case "h":
-			duration += atoi(timePart[1]) * 3600
+			duration += parseInt(timePart[1]) * int64(3600)
 		case "m":
-			duration += atoi(timePart[1]) * 60
+			duration += parseInt(timePart[1]) * int64(60)
 		case "s":
 			// drop fractions of seconds
-			duration += atoi(strings.Split(timePart[1], ".")[0])
+			duration += parseInt(strings.Split(timePart[1], ".")[0])
 		default:
 			// Unknown, ignore
 		}
@@ -318,8 +318,8 @@ func parseRawValue(rawVal string) (int, error) {
 	return duration, nil
 }
 
-func atoi(str string) int {
-	if i, err := strconv.Atoi(str); err == nil {
+func parseInt(str string) int64 {
+	if i, err := strconv.ParseInt(str, 10, 64); err == nil {
 		return i
 	}
 	return 0
