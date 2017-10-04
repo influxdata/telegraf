@@ -23,8 +23,11 @@ or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/curre
   ## Set cluster_health to true when you want to also obtain cluster health stats
   cluster_health = false
 
-  ## Set indices_health to true when you want to also obtain detailed index health stats
-  indices_health = false
+  ## Adjust cluster_health_level when you want to also obtain detailed health stats
+  ## The options are
+  ##  - indices (default)
+  ##  - cluster
+  # cluster_health_level = "indices"
 
   ## Set cluster_stats to true when you want to also obtain cluster stats from the
   ## Master node.
