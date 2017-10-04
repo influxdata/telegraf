@@ -30,6 +30,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/http_listener"
 	_ "github.com/influxdata/telegraf/plugins/inputs/http_response"
 	_ "github.com/influxdata/telegraf/plugins/inputs/httpjson"
+	_ "github.com/influxdata/telegraf/plugins/inputs/hystrix_stream"
 	_ "github.com/influxdata/telegraf/plugins/inputs/influxdb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/internal"
 	_ "github.com/influxdata/telegraf/plugins/inputs/interrupts"
