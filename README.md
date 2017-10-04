@@ -193,6 +193,7 @@ configuration options.
 * [riak](./plugins/inputs/riak)
 * [salesforce](./plugins/inputs/salesforce)
 * [sensors](./plugins/inputs/sensors)
+* [smart](./plugins/inputs/smart)
 * [snmp](./plugins/inputs/snmp)
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)

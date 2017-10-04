@@ -1,9 +1,10 @@
 ## v1.5 [unreleased]
 
 ### New Plugins
-- [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
 - [jolokia2](./plugins/inputs/jolokia2/README.md) - Thanks to @dylanmei
-- [wavefront](./plugins/inputswavefront/README.md) - Thanks to @puckpuck
+- [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
+- [smart](./plugins/inputs/smart/README.md) - Thanks to @rickard-von-essen
+- [wavefront](./plugins/inputs/wavefront/README.md) - Thanks to @puckpuck
 
 ### Release Notes
 
@@ -37,6 +38,7 @@
 - [#3160](https://github.com/influxdata/telegraf/pull/3160): Add Wavefront output plugin.
 - [#3281](https://github.com/influxdata/telegraf/pull/3281): Add extra wired tiger cache metrics to mongodb input.
 - [#3141](https://github.com/influxdata/telegraf/pull/3141): Collect Docker Swarm service metrics in docker input plugin.
+- [#2449](https://github.com/influxdata/telegraf/pull/2449): Add smart input plugin for collecting S.M.A.R.T. data.
 
 ### Bugfixes
 
