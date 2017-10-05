@@ -47,8 +47,6 @@ func (s *HystrixData) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 	}
-
-	return nil
 }
 
 func fieldsFromEntry(entry HystrixStreamEntry) (string, map[string]interface{}, map[string]string, time.Time) {
