@@ -22,8 +22,8 @@ func Test_parse_from_file(t *testing.T) {
 		t.Errorf("Got error when parsing multiple lines from chunk: %v", err)
 	}
 
-	if len(entries) != 362 {
-		t.Errorf("Expected 362 entries, got %d", len(entries))
+	if len(entries) != 181 {
+		t.Errorf("Expected 181 entries, got %d", len(entries))
 	}
 }
 
@@ -37,7 +37,7 @@ func Test_stream_entries(t *testing.T) {
 
 	defer file.Close()
 
-	entryChan, stop := entryStream(file, 362)
+	entryChan, stop := entryStream(file, 181)
 
 
 	stopped := false
@@ -48,12 +48,11 @@ func Test_stream_entries(t *testing.T) {
 			stopped = true;
 		case <-entryChan:
 			entryCount++
-			println(entryCount)
 		}
 	}
 
-	if entryCount != 362 {
-		t.Errorf("Expected to have read 362 entries, read %d", entryCount)
+	if entryCount != 181 {
+		t.Errorf("Expected to have read 181 entries, read %d", entryCount)
 	}
 }
 

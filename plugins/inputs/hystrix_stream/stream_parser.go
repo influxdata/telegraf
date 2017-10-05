@@ -86,10 +86,10 @@ func parseChunk(streamChunk string) ([]HystrixStreamEntry, error) {
 			if len(entryPartOfLine) == 2 {
 				entry := HystrixStreamEntry{}
 				jsonErr := json.Unmarshal([]byte(entryPartOfLine[1]), &entry)
-				if jsonErr == nil && entry.Type == "HystrixCommand" {
-					entries = append(entries, entry)
-				} else {
+				if jsonErr != nil {
 					return entries, jsonErr
+				} else if entry.Type == "HystrixCommand" {
+					entries = append(entries, entry)
 				}
 			}
 		}
