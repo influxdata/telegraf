@@ -58,6 +58,7 @@
 - [#3297](https://github.com/influxdata/telegraf/issues/3297): Add support for proxy environment variables to http_response.
 - [#1588](https://github.com/influxdata/telegraf/issues/1588): Add support for standard proxy env vars in outputs.
 - [#3282](https://github.com/influxdata/telegraf/issues/3282): Fix panic in cpu input if number of cpus changes.
+- [#2854](https://github.com/influxdata/telegraf/issues/2854): Use chunked transfer encoding in InfluxDB output.
 
 ## v1.4.1 [2017-09-26]
 
