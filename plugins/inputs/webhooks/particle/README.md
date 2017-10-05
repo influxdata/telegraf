@@ -1,6 +1,15 @@
 # particle webhooks
 
-You should configure your Rollbar's Webhooks to point at the `webhooks` service. To do this go to `particle.com/` and click `Settings > Notifications > Webhook`. In the resulting page set `URL` to `http://<my_ip>:1619/particle`, and click on `Enable Webhook Integration`.
+You should configure your Particle.io's Webhooks to point at the `webhooks` service. To do this go to `console.particle.io/` and click `Integrations > New Integration > Webhook`. In the resulting page set `URL` to `http://<my_ip>:1619/particle`, and  under `Advanced Settings` click on `JSON` and add:
+
+```
+{
+    "influx_db": "your_database_name"
+}
+```
+
+If required, enter your username and password, etc. and then click `Save`
+
 
 ## Events
 
@@ -18,9 +27,9 @@ String data = String::format("{ \"tags\" : {
 	);
     Particle.publish("event_name", data, PRIVATE);
 ```
-Escaping the "" is required in the source file.
+Escaping the "" is required in the source file on the Particle device.
 The number of tag values and field values is not restrictied so you can send as many values per webhook call as you'd like.
 
-You will need to enable JSON messages in the Webhooks setup of Particle.io
+
 
 See [webhook doc](https://docs.particle.io/reference/webhooks/)
