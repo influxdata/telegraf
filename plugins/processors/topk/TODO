@@ -1,7 +1,9 @@
 Aggregate data over time
-Apply processor only to the selected metrics
-Apply processor only to the metrics with the selected tags
 Honor the drop_non_matching flag
 Honor the drop_non_top flag
 Honor the position_field option
 Honor the aggregation_field option
+
+DONE
+Apply processor only to the selected metrics
+Apply processor only to the metrics with the selected tags
