@@ -207,7 +207,7 @@ func getModificationTime(f *FileStat, filepath string) int64 {
 		if fileInfo == nil {
 			return 0
 		} else {
-			return fileInfo.ModTime().Unix()
+			return fileInfo.ModTime().UnixNano()
 		}
 	}
 
