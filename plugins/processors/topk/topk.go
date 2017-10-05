@@ -78,8 +78,8 @@ func (m Measurements) Len() int {
 }
 
 func (m Measurements) Less(i, j int) bool {
-	iv, iok := convert(m.metrics[i].Fields()["value"])
-	jv, jok := convert(m.metrics[j].Fields()["value"])
+	iv, iok := convert(m.metrics[i].Fields()[m.field])
+	jv, jok := convert(m.metrics[j].Fields()[m.field])
 	if  iok && jok && (iv < jv) {
 		return true
 	} else {
