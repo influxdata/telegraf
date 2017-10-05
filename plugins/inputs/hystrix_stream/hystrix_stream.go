@@ -32,11 +32,11 @@ func (s *HystrixData) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		} else {
-			entries, errors := entryStream(resp.Body, 10)
+			entries, errors := entryStream(resp.Body, 15)
 			for {
 				select {
 				case entry := <-entries:
-					entryToAccumulator(entry, acc)
+					acc.AddFields(fieldsFromEntry(entry))
 				case err := <-errors:
 					if err == io.EOF {
 						return nil
@@ -51,10 +51,12 @@ func (s *HystrixData) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func entryToAccumulator(entry HystrixStreamEntry, accumulator telegraf.Accumulator) {
-	tags := getTags(entry)
+func fieldsFromEntry(entry HystrixStreamEntry)(string, map[string]interface{}, map[string]string, time.Time) {
 	counterName := entry.Group + entry.Name
-	accumulator.AddCounter(counterName, getCounterFields(entry), tags, time.Unix(entry.CurrentTime/1000, 0))
+	fields := getCounterFields(entry)
+	tags := getTags(entry)
+	entryTime := time.Unix(0, entry.CurrentTime*int64(time.Millisecond))
+	return counterName, fields, tags, entryTime
 }
 
 func getTags(entry HystrixStreamEntry) map[string]string {
@@ -68,10 +70,24 @@ func getTags(entry HystrixStreamEntry) map[string]string {
 
 func getCounterFields(entry HystrixStreamEntry) map[string]interface{} {
 	fields := make(map[string]interface{})
-	fields["ErrorCount"] = entry.ErrorCount
-	fields["LatencyTotal"] = entry.LatencyTotal
 	fields["RequestCount"] = entry.RequestCount
-	fields["LatencyExecute"] = entry.LatencyExecute
+	fields["ErrorCount"] = entry.ErrorCount
+	fields["LatencyTotal0"] = entry.LatencyTotal.Num0
+	fields["LatencyTotal25"] = entry.LatencyTotal.Num25
+	fields["LatencyTotal50"] = entry.LatencyTotal.Num50
+	fields["LatencyTotal75"] = entry.LatencyTotal.Num75
+	fields["LatencyTotal90"] = entry.LatencyTotal.Num90
+	fields["LatencyTotal95"] = entry.LatencyTotal.Num95
+	fields["LatencyTotal99"] = entry.LatencyTotal.Num99
+	fields["LatencyTotal100"] = entry.LatencyTotal.Num100
+	fields["LatencyExecute0"] = entry.LatencyExecute.Num0
+	fields["LatencyExecute25"] = entry.LatencyExecute.Num25
+	fields["LatencyExecute50"] = entry.LatencyExecute.Num50
+	fields["LatencyExecute75"] = entry.LatencyExecute.Num75
+	fields["LatencyExecute90"] = entry.LatencyExecute.Num90
+	fields["LatencyExecute95"] = entry.LatencyExecute.Num95
+	fields["LatencyExecute99"] = entry.LatencyExecute.Num99
+	fields["LatencyExecute100"] = entry.LatencyExecute.Num100
 	fields["ReportingHosts"] = entry.ReportingHosts
 	fields["ErrorPercentage"] = entry.ErrorPercentage
 	fields["IsCircuitBreakerOpen"] = entry.IsCircuitBreakerOpen

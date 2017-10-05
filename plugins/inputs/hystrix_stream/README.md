@@ -1,44 +1,48 @@
-# TODO implement this template
+# Hystrix Stream Servlet Input Plugin
 
-# Example Input Plugin
-
-The example plugin gathers metrics about example things.  This description
-explains at a high level what the plugin does and provides links to where
-additional information can be found.
+The example plugin gathers metrics from the hystrix-stream-servlet.  
+This description explains at a high level what the plugin does and 
+provides links to where additional information can be found.
 
 ### Configuration:
 
 This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage <plugin-name>`.
+generate it using `telegraf --usage hystrix-stream`.
 
 ```toml
-# Description
-[[inputs.example]]
-  example_option = "example_value"
+[[inputs.HystrixStream]]
+## Hystrix stream servlet to connect to (with port and full path)
+   hystrix_servlet_url = "http://localhost:8090/hystrix"
 ```
 
 ### Metrics:
 
-Here you should add an optional description and links to where the user can
-get more information about the measurements.
+All counters from the hystrix-stream-servlet are collected. 
+The rolling-values are not collected since these are aggregates and can be computed at a later point.
 
-If the output is determined dynamically based on the input source, or there
-are more metrics than can reasonably be listed, describe how the input is
-mapped to the output.
+See the [hystrix-documentation](https://github.com/Netflix/Hystrix/wiki/Metrics-and-Monitoring) for details of the individual metrics.
 
-- measurement1
+The measurements are named after the CommandKey and the GroupKey and tagged with hostname and threadpoolname.
+
+So if your command is called "MyCommand" in the group "MyGroup" in the threadpool "MyThreadPool" on the host "Myhost", 
+an entry could look like this:
+
+- MyGroupMyCommand
   - tags:
-    - tag1 (optional description)
-    - tag2
+    - host (MyHost)
+    - group (MyGroup)
+    - type (HystrixCommand or HystrixThreadPool)
+    - name
   - fields:
-    - field1 (type, unit)
-    - field2 (float, percent)
-
-- measurement2
-  - tags:
-    - tag3
-  - fields:
-    - field3 (integer, bytes)
+    - RequestCount
+    - ErrorCount
+    - ReportingHosts
+    - ErrorPercentage
+    - IsCircuitBreakerOpen
+    - CurrentConcurrentExecutionCount
+    - LatencyExecute(0,25,50,75,90,95,99,100)
+    - LatencyTotal(0,25,50,75,90,95,99,100)
+    
 
 ### Sample Queries:
 
@@ -46,18 +50,15 @@ This section should contain some useful InfluxDB queries that can be used to
 get started with the plugin or to generate dashboards.  For each query listed,
 describe at a high level what data is returned.
 
-Get the max, mean, and min for the measurement in the last hour:
+Get the max, mean, and min RequestCount for the command in the last hour:
 ```
-SELECT max(field1), mean(field1), min(field1) FROM measurement1 WHERE tag1=bar AND time > now() - 1h GROUP BY tag
+SELECT max(RequestCount), mean(RequestCount), min(RequestCount) FROM MyGroupMyCommand WHERE time > now() - 1h 
 ```
 
 ### Example Output:
 
-This section shows example output in Line Protocol format.  You can often use
-`telegraf --input-filter <plugin-name> --test` or use the `file` output to get
-this information.
 
 ```
-measurement1,tag1=foo,tag2=bar field1=1i,field2=2.1 1453831884664956455
-measurement2,tag1=foo,tag2=bar,tag3=baz field3=1i 1453831884664956455
+ MyGroupMyCommand,name=MyCommand,type=HystrixCommand,group=MyGroup,threadpool=MyThreadPool,host=yoga900 LatencyTotal99=507i,LatencyExecute90=442i,LatencyExecute95=504i,LatencyExecute99=507i,LatencyTotal0=1i,LatencyTotal50=270i,LatencyTotal95=504i,ReportingHosts=1i,CurrentConcurrentExecutionCount=1i,LatencyTotal25=144i,LatencyExecute0=0i,LatencyExecute100=507i,LatencyExecute25=144i,LatencyExecute50=270i,ErrorPercentage=20i,ErrorCount=2i,LatencyTotal90=442i,LatencyTotal100=508i,IsCircuitBreakerOpen=false,RequestCount=10i,LatencyTotal75=349i,LatencyExecute75=349i 1507189604000000000
+ MyGroupMyCommand,name=MyCommand,type=HystrixCommand,group=MyGroup,threadpool=MyThreadPool,host=yoga900 LatencyTotal90=442i,LatencyExecute0=0i,ReportingHosts=1i,CurrentConcurrentExecutionCount=0i,ErrorCount=2i,LatencyTotal50=270i,LatencyTotal95=504i,LatencyTotal99=507i,LatencyExecute25=144i,LatencyExecute95=504i,LatencyExecute100=507i,ErrorPercentage=20i,LatencyTotal75=349i,LatencyTotal100=508i,LatencyExecute50=270i,LatencyExecute75=349i,IsCircuitBreakerOpen=false,RequestCount=10i,LatencyTotal0=1i,LatencyTotal25=144i,LatencyExecute90=442i,LatencyExecute99=507i 1507189605000000000
 ```
