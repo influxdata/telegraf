@@ -1,10 +1,10 @@
 package hystrix_stream
 
 import (
-	"strings"
+	"bufio"
 	"encoding/json"
 	"io"
-	"bufio"
+	"strings"
 )
 
 // HystrixStreamEntry is 1 entry in the stream from the metrics-stream-servlet
@@ -34,7 +34,7 @@ type HystrixStreamEntry struct {
 	CurrentConcurrentExecutionCount    int    `json:"currentConcurrentExecutionCount"`
 	RollingMaxConcurrentExecutionCount int    `json:"rollingMaxConcurrentExecutionCount"`
 	LatencyExecuteMean                 int    `json:"latencyExecute_mean"`
-	LatencyExecute struct {
+	LatencyExecute                     struct {
 		Num0   int `json:"0"`
 		Num25  int `json:"25"`
 		Num50  int `json:"50"`
@@ -46,7 +46,7 @@ type HystrixStreamEntry struct {
 		Nine95 int `json:"99.5"`
 	} `json:"latencyExecute"`
 	LatencyTotalMean int `json:"latencyTotal_mean"`
-	LatencyTotal struct {
+	LatencyTotal     struct {
 		Num0   int `json:"0"`
 		Num25  int `json:"25"`
 		Num50  int `json:"50"`
@@ -113,7 +113,7 @@ func entryStream(reader io.ReadCloser, maxEntries int) (chan HystrixStreamEntry,
 				if entries, err := parseChunk(chunk); err == nil {
 					for _, entry := range entries {
 						entryChannel <- entry
-						entryCounter ++;
+						entryCounter++
 						if maxEntries > 0 && entryCounter >= maxEntries {
 							stopChannel <- io.EOF
 							break forever
@@ -132,7 +132,7 @@ func entryStream(reader io.ReadCloser, maxEntries int) (chan HystrixStreamEntry,
 	return entryChannel, stopChannel
 }
 
-func streamToStrings(scanner *bufio.Scanner) ([]string) {
+func streamToStrings(scanner *bufio.Scanner) []string {
 	result := make([]string, 0)
 	for scanner.Scan() {
 		text := scanner.Text()

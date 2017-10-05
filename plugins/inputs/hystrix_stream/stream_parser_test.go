@@ -2,9 +2,9 @@ package hystrix_stream
 
 import (
 	"io/ioutil"
-	"testing"
-	"os"
 	"net/http"
+	"os"
+	"testing"
 )
 
 func Test_parse_from_file(t *testing.T) {
@@ -39,13 +39,12 @@ func Test_stream_entries(t *testing.T) {
 
 	entryChan, stop := entryStream(file, 181)
 
-
 	stopped := false
 	entryCount := 0
-	for ; !stopped; {
+	for !stopped {
 		select {
 		case <-stop:
-			stopped = true;
+			stopped = true
 		case <-entryChan:
 			entryCount++
 		}
@@ -68,13 +67,12 @@ func local_Test_stream_entries_locally(t *testing.T) {
 
 	entryChan, stop := entryStream(response.Body, 10)
 
-
 	stopped := false
 	entryCount := 0
-	for ; !stopped; {
+	for !stopped {
 		select {
 		case <-stop:
-			stopped = true;
+			stopped = true
 		case <-entryChan:
 			entryCount++
 			println(entryCount)
