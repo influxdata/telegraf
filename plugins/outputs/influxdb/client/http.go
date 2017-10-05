@@ -241,8 +241,6 @@ func (c *httpClient) makeWriteRequest(
 	}
 	if c.config.ContentEncoding == "gzip" {
 		req.Header.Set("Content-Encoding", "gzip")
-	} else {
-		req.Header.Set("Content-Length", fmt.Sprint(contentLength))
 	}
 	return req, nil
 }
