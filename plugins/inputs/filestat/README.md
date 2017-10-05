@@ -33,6 +33,6 @@ The filestat plugin gathers metrics about file existence, size, and other stats.
 ```
 $ telegraf --config /etc/telegraf/telegraf.conf --input-filter filestat --test
 * Plugin: filestat, Collection 1
-> filestat,file=/tmp/foo/bar,host=tyrion exists=0i 1461203374493128216
-> filestat,file=/Users/sparrc/ws/telegraf.conf,host=tyrion exists=1i,size=47894i,modification_time=1470234221i  1461203374493199335
+> filestat,file=/tmp/foo/bar,host=tyrion exists=0i 1507218518192154351
+> filestat,file=/Users/sparrc/ws/telegraf.conf,host=tyrion exists=1i,size=47894i,modification_time=1507152973123456789i  1507218518192154351
 ```
