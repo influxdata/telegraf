@@ -16,7 +16,8 @@ type TopK struct {
 	K                  int
 	Field              string
 	Aggregation        string
-	Tags               []string
+	Tags               map[string]string
+        RevertMetricMatch  bool `toml:"revert_metric_match"`
         RevertTagMatch     bool `toml:"revert_tag_match"`
         DropNonMatching    bool `toml:"drop_non_matching"`
 	DropNonTop         bool `toml:"top"`
@@ -25,6 +26,7 @@ type TopK struct {
 
 	cache map[uint64][]telegraf.Metric
 	metric_regex *regexp.Regexp
+	tags_regexes map[string]*regexp.Regexp
 	last_aggregation time.Time
 }
 
@@ -33,11 +35,12 @@ func NewTopK() telegraf.Processor{
 	topk := &TopK{}
 
 	// Setup defaults
+	topk.Metric = ".*"
 	topk.Period = 10
 	topk.K = 10
 	topk.Aggregation = "avg"
 	topk.Field = "value"
-	topk.Tags = []string{"*"}
+	topk.Tags = nil
 	topk.RevertTagMatch = false
 	topk.DropNonMatching = false
 	topk.DropNonTop = true
@@ -101,19 +104,54 @@ func (t *TopK) Description() string {
 	return "Print all metrics that pass through this filter."
 }
 
-func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	// Generate the regexp struct that we use to match the metrics names
+func (t *TopK) init_regexes() {
+	// Compile regex for the metric name
 	if (t.metric_regex == nil) {
 		var err error
 		t.metric_regex, err = regexp.Compile(t.Metric)
 		if (err != nil) {
-			panic(fmt.Sprintf("TopK processor could not parse metric regex '%s'", t.Metric))
+			panic(fmt.Sprintf("TopK processor could not parse metric name regex '%s'", t.Metric))
 		}
 	}
 
+	// Compile regexes for the tags
+	if (t.Tags != nil) && (t.tags_regexes == nil) {
+		t.tags_regexes = make(map[string]*regexp.Regexp)
+		for key, regex := range t.Tags {
+			regex, err := regexp.Compile(regex)
+			if (err != nil) {
+				panic(fmt.Sprintf("TopK processor could not parse tag regex '%s'", t.Metric))
+			}
+			t.tags_regexes[key] = regex
+		}
+	}
+}
+
+func (t *TopK) match_metric(m telegraf.Metric) bool {
+	// Run metric name against our metric regex
+	match_name := t.metric_regex.MatchString(m.Name())
+	if ! (match_name != t.RevertMetricMatch) { return false }
+
+	// Run every tag against our tags regexes
+	if t.Tags == nil { return true }
+	match_tags := false
+	for key, value := range m.Tags() {
+		if _, ok := t.tags_regexes[key]; ok {
+			match_tags = t.tags_regexes[key].MatchString(value) && (match_tags || ok)
+		}
+	}
+	if ! (match_tags != t.RevertTagMatch) { return false }
+
+	return true
+}
+
+func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	// Generate the regexp structs that we use to match the metrics
+	t.init_regexes()
+
 	// Add the metrics received to our internal cache
 	for _, m := range in {
-		if (t.metric_regex.MatchString(m.Name())){
+		if (t.match_metric(m)){
 			// Initialize the key with an empty list if necessary
 			if _, ok := t.cache[m.HashID()]; !ok {
 				t.cache[m.HashID()] = make([]telegraf.Metric, 0, 10)
