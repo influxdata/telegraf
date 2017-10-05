@@ -1,10 +1,12 @@
 package hystrix_stream
 
 import (
+	"bufio"
+	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"testing"
+	"time"
 )
 
 func Test_parse_from_file(t *testing.T) {
@@ -27,7 +29,7 @@ func Test_parse_from_file(t *testing.T) {
 	}
 }
 
-func Test_stream_entries(t *testing.T) {
+func Test_fill_cache(t *testing.T) {
 
 	file, fileErr := os.Open("testdata/dummy_stream_entries.txt")
 
@@ -37,46 +39,36 @@ func Test_stream_entries(t *testing.T) {
 
 	defer file.Close()
 
-	entryChan, stop := entryStream(file, 181)
+	scanner := bufio.NewScanner(file)
 
-	stopped := false
-	entryCount := 0
-	for !stopped {
-		select {
-		case <-stop:
-			stopped = true
-		case <-entryChan:
-			entryCount++
-		}
-	}
+	go fillCacheForever(scanner)
 
-	if entryCount != 181 {
-		t.Errorf("Expected to have read 181 entries, read %d", entryCount)
+	time.Sleep(100 * time.Millisecond)
+
+	if len(cachedEntries) != 181 {
+		t.Errorf("Expected to have read 181 entries, read %d", len(cachedEntries))
 	}
 }
 
 func local_Test_stream_entries_locally(t *testing.T) {
 
-	response, httpGetError := http.Get("http://localhost:8090/hystrix")
+	_, err := latestEntries("http://localhost:8090/hystrix")
 
-	if httpGetError != nil {
-		t.Fatalf("Could not open url %v", httpGetError)
+	if err != nil {
+		t.Fatalf("Error on first read : %v", err)
 	}
 
-	defer response.Body.Close()
+	time.Sleep(1500 * time.Millisecond)
 
-	entryChan, stop := entryStream(response.Body, 10)
+	entries, err2 := latestEntries("http://localhost:8090/hystrix")
 
-	stopped := false
-	entryCount := 0
-	for !stopped {
-		select {
-		case <-stop:
-			stopped = true
-		case <-entryChan:
-			entryCount++
-			println(entryCount)
-		}
+	if err2 != nil {
+		t.Fatalf("Error on first read : %v", err2)
 	}
 
+	if len(entries) == 0 {
+		t.Error("Expected more than zero entries")
+	}
+
+	fmt.Printf("Got %d entries, cached is %d", len(entries), len(cachedEntries))
 }

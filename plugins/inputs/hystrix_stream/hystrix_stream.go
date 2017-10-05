@@ -3,8 +3,6 @@ package hystrix_stream
 import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"io"
-	"net/http"
 	"time"
 )
 
@@ -27,26 +25,14 @@ func (s *HystrixData) SampleConfig() string {
 
 func (s *HystrixData) Gather(acc telegraf.Accumulator) error {
 
-	for {
-		resp, err := http.Get(s.Hystrix_servlet_url)
-		if err != nil {
-			return err
-		} else {
-			entries, errors := entryStream(resp.Body, 15)
-			for {
-				select {
-				case entry := <-entries:
-					acc.AddFields(fieldsFromEntry(entry))
-				case err := <-errors:
-					if err == io.EOF {
-						return nil
-					} else {
-						return err
-					}
-				}
-			}
-		}
+	entries, errors := latestEntries(s.Hystrix_servlet_url)
+	if errors != nil {
+		return errors
 	}
+	for _, entry := range entries {
+		acc.AddFields(fieldsFromEntry(entry))
+	}
+	return nil
 }
 
 func fieldsFromEntry(entry HystrixStreamEntry) (string, map[string]interface{}, map[string]string, time.Time) {

@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"encoding/json"
 	"io"
+	"log"
+	"net/http"
 	"strings"
 )
 
@@ -77,6 +79,57 @@ type HystrixStreamEntry struct {
 	ThreadPool                                                    string      `json:"threadPool"`
 }
 
+var (
+	healthy       = false
+	scanner       *bufio.Scanner
+	cachedEntries []HystrixStreamEntry
+	reader        io.ReadCloser
+)
+
+func latestEntries(url string) ([]HystrixStreamEntry, error) {
+
+	if !healthy {
+		resp, err := http.Get(url)
+		if err != nil {
+			return make([]HystrixStreamEntry, 0), err
+		}
+		scanner = bufio.NewScanner(resp.Body)
+		reader = resp.Body
+		cachedEntries = make([]HystrixStreamEntry, 0)
+		go fillCacheForever(scanner)
+		healthy = true
+		log.Printf("I! Initialized hystrix-input with url : [%s]", url)
+	}
+
+	if scanner.Err() != nil {
+		log.Printf("E! Error scanning hystrix-servlet: [%v]", scanner.Err())
+		reader.Close()
+		healthy = false
+		return make([]HystrixStreamEntry, 0), scanner.Err()
+	}
+
+	defer clearCache()
+	return cachedEntries, nil
+}
+
+func clearCache() {
+	cachedEntries = cachedEntries[:0]
+}
+
+func fillCacheForever(scanner *bufio.Scanner) {
+	for scanner.Err() == nil {
+		chunks := streamToStrings(scanner)
+		for _, chunk := range chunks {
+			entries, err := parseChunk(chunk)
+			if err == nil {
+				for _, entry := range entries {
+					cachedEntries = append(cachedEntries, entry)
+				}
+			}
+		}
+	}
+}
+
 func parseChunk(streamChunk string) ([]HystrixStreamEntry, error) {
 
 	entries := make([]HystrixStreamEntry, 0)
@@ -98,40 +151,6 @@ func parseChunk(streamChunk string) ([]HystrixStreamEntry, error) {
 	return entries, nil
 }
 
-func entryStream(reader io.ReadCloser, maxEntries int) (chan HystrixStreamEntry, chan error) {
-	entryChannel := make(chan HystrixStreamEntry)
-	stopChannel := make(chan error)
-
-	scanner := bufio.NewScanner(reader)
-	entryCounter := 0
-
-	go func() {
-	forever:
-		for {
-			chunks := streamToStrings(scanner)
-			for _, chunk := range chunks {
-				if entries, err := parseChunk(chunk); err == nil {
-					for _, entry := range entries {
-						entryChannel <- entry
-						entryCounter++
-						if maxEntries > 0 && entryCounter >= maxEntries {
-							stopChannel <- io.EOF
-							break forever
-						}
-					}
-				} else {
-					stopChannel <- err
-					break forever
-				}
-			}
-
-		}
-		reader.Close()
-	}()
-
-	return entryChannel, stopChannel
-}
-
 func streamToStrings(scanner *bufio.Scanner) []string {
 	result := make([]string, 0)
 	for scanner.Scan() {
@@ -143,6 +162,7 @@ func streamToStrings(scanner *bufio.Scanner) []string {
 	}
 	return result
 }
+
 func isData(i string) bool {
 	return len(i) > 0
 }
