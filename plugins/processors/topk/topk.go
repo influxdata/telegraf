@@ -166,7 +166,6 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	elapsed := time.Since(t.last_aggregation)
 	if elapsed >= time.Second * time.Duration(t.Period) {
 		// Sort the keys by the selected field TODO: Make the field configurable
-		if t.Field == "" { t.Field = "value"} // Setup the default value for the field to sort
 		for _, ms := range t.cache {
 			sort.Reverse(Measurements{metrics: ms, field: t.Field})
 		}
