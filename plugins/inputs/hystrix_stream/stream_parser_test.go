@@ -43,7 +43,6 @@ func Test_fill_cache(t *testing.T) {
 
 	fillCacheForeverMax(scanner, 181)
 
-
 	if len(cachedEntries) != 181 {
 		t.Errorf("Expected to have read 181 entries, read %d", len(cachedEntries))
 	}
