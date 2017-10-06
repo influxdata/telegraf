@@ -41,9 +41,8 @@ func Test_fill_cache(t *testing.T) {
 
 	scanner := bufio.NewScanner(file)
 
-	go fillCacheForever(scanner)
+	fillCacheForeverMax(scanner, 181)
 
-	time.Sleep(100 * time.Millisecond)
 
 	if len(cachedEntries) != 181 {
 		t.Errorf("Expected to have read 181 entries, read %d", len(cachedEntries))

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"sync"
 )
 
 // HystrixStreamEntry is 1 entry in the stream from the metrics-stream-servlet
@@ -36,7 +37,7 @@ type HystrixStreamEntry struct {
 	CurrentConcurrentExecutionCount    int    `json:"currentConcurrentExecutionCount"`
 	RollingMaxConcurrentExecutionCount int    `json:"rollingMaxConcurrentExecutionCount"`
 	LatencyExecuteMean                 int    `json:"latencyExecute_mean"`
-	LatencyExecute                     struct {
+	LatencyExecute struct {
 		Num0   int `json:"0"`
 		Num25  int `json:"25"`
 		Num50  int `json:"50"`
@@ -48,7 +49,7 @@ type HystrixStreamEntry struct {
 		Nine95 int `json:"99.5"`
 	} `json:"latencyExecute"`
 	LatencyTotalMean int `json:"latencyTotal_mean"`
-	LatencyTotal     struct {
+	LatencyTotal struct {
 		Num0   int `json:"0"`
 		Num25  int `json:"25"`
 		Num50  int `json:"50"`
@@ -84,6 +85,7 @@ var (
 	scanner       *bufio.Scanner
 	cachedEntries []HystrixStreamEntry
 	reader        io.ReadCloser
+	cacheLock     sync.Mutex
 )
 
 func latestEntries(url string) ([]HystrixStreamEntry, error) {
@@ -113,19 +115,32 @@ func latestEntries(url string) ([]HystrixStreamEntry, error) {
 }
 
 func clearCache() {
+	cacheLock.Lock()
 	cachedEntries = cachedEntries[:0]
+	cacheLock.Unlock()
 }
 
 func fillCacheForever(scanner *bufio.Scanner) {
+	fillCacheForeverMax(scanner, 100000)
+}
+
+func fillCacheForeverMax(scanner *bufio.Scanner, maxEntries int) {
+	newEntryCounter :=0
 	for scanner.Err() == nil {
 		chunks := streamToStrings(scanner)
 		for _, chunk := range chunks {
 			entries, err := parseChunk(chunk)
 			if err == nil {
 				for _, entry := range entries {
+					cacheLock.Lock()
 					cachedEntries = append(cachedEntries, entry)
+					newEntryCounter++
+					cacheLock.Unlock()
 				}
 			}
+		}
+		if newEntryCounter>=maxEntries {
+			return
 		}
 	}
 }
