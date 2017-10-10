@@ -4,7 +4,7 @@
 - [jolokia2](./plugins/inputs/jolokia2/README.md) - Thanks to @dylanmei
 - [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
 - [smart](./plugins/inputs/smart/README.md) - Thanks to @rickard-von-essen
-- [wavefront](./plugins/inputs/wavefront/README.md) - Thanks to @puckpuck
+- [wavefront](./plugins/outputs/wavefront/README.md) - Thanks to @puckpuck
 
 ### Release Notes
 
