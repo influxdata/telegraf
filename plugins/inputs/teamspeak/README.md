@@ -1,7 +1,8 @@
 # Teamspeak 3 Input Plugin
 
 This plugin uses the Teamspeak 3 ServerQuery interface of the Teamspeak server to collect statistics of one or more
-virtual servers.
+virtual servers. If you are querying an external Teamspeak server, make sure to add the host which is running Telegraf
+to query_ip_whitelist.txt in the Teamspeak Server directory.
 
 ### Configuration:
 
@@ -10,7 +11,7 @@ virtual servers.
 ## Server address for Teamspeak 3 ServerQuery
   server = "127.0.0.1:10011"
 ## Username for ServerQuery
-  username = "serveradmin"
+  username = "serverqueryuser"
 ## Password for ServerQuery
   password = "secret"
 ## Array of virtual servers

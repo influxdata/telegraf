@@ -13,6 +13,9 @@ type Teamspeak struct {
 	Username string
 	Password string
 	Vservers []int
+
+	client *ts3.Client
+	connected bool
 }
 
 func (ts *Teamspeak) Description() string {
@@ -23,7 +26,7 @@ const sampleConfig = `
   ## Server address for Teamspeak 3 ServerQuery
   # server = "127.0.0.1:10011"
   ## Username for ServerQuery
-  # username = "serveradmin"
+  # username = "serverqueryuser"
   ## Password for ServerQuery
   # password = "secret"
   ## Array of virtual servers
@@ -36,28 +39,33 @@ func (ts *Teamspeak) SampleConfig() string {
 
 func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 	var err error
-	client, err := ts3.NewClient(ts.Server)
 
-	if err != nil {
-		return err
-	}
-
-	err = client.Login(ts.Username, ts.Password)
-
-	if err != nil {
-		return err
-	}
-
-	for _, vserver := range ts.Vservers {
-		client.Use(vserver)
-
-		sm, err := client.Server.Info()
+	if !ts.connected {
+		ts.client, err = ts3.NewClient(ts.Server)
 		if err != nil {
 			return err
 		}
 
-		sc, err := client.Server.ServerConnectionInfo()
+		err = ts.client.Login(ts.Username, ts.Password)
 		if err != nil {
+			return err
+		}
+
+		ts.connected = true
+	}
+
+	for _, vserver := range ts.Vservers {
+		ts.client.Use(vserver)
+
+		sm, err := ts.client.Server.Info()
+		if err != nil {
+			ts.connected = false
+			return err
+		}
+
+		sc, err := ts.client.Server.ServerConnectionInfo()
+		if err != nil {
+			ts.connected = false
 			return err
 		}
 
@@ -79,7 +87,6 @@ func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 
 		acc.AddFields("teamspeak", fields, tags)
 	}
-	client.Close()
 	return nil
 }
 
