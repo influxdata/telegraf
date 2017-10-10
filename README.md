@@ -255,6 +255,7 @@ formats may be used with input plugins supporting the `data_format` option:
 
 ## Aggregator Plugins
 
+* [basicstats](./plugins/aggregators/basicstats)
 * [minmax](./plugins/aggregators/minmax)
 * [histogram](./plugins/aggregators/histogram)
 

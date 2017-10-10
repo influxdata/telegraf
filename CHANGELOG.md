@@ -1,6 +1,7 @@
 ## v1.5 [unreleased]
 
 ### New Plugins
+- [basicstats](./plugins/aggregators/basicstats/README.md) - Thanks to @toni-moreno
 - [jolokia2](./plugins/inputs/jolokia2/README.md) - Thanks to @dylanmei
 - [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
 - [smart](./plugins/inputs/smart/README.md) - Thanks to @rickard-von-essen
@@ -41,6 +42,7 @@
 - [#2449](https://github.com/influxdata/telegraf/pull/2449): Add smart input plugin for collecting S.M.A.R.T. data.
 - [#3269](https://github.com/influxdata/telegraf/pull/3269): Add cluster health level configuration to elasticsearch input.
 - [#3304](https://github.com/influxdata/telegraf/pull/3304): Add ability to limit node stats in elasticsearch input.
+- [#2167](https://github.com/influxdata/telegraf/pull/2167): Add new basicstats aggregator.
 
 ### Bugfixes
 
