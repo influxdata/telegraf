@@ -151,7 +151,6 @@ func TestModificationTime(t *testing.T) {
 	require.True(t, acc.HasInt64Field("filestat", "modification_time"))
 }
 
-
 func TestNoModificationTime(t *testing.T) {
 	fs := NewFileStat()
 	fs.Files = []string{
