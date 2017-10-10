@@ -24,7 +24,7 @@ emitting the aggregate every `period` seconds.
     - field1_min
     - field1_mean
     - field1_s2 (variance)
-    - field1_stdev (standar deviation)
+    - field1_stdev (standard deviation)
 
 ### Tags:
 

@@ -28,8 +28,7 @@ type basicstats struct {
 	min   float64
 	max   float64
 	mean  float64
-	M2    float64 //intermemedia value for variance/stdev
-	//stdev float64
+	M2    float64 //intermedia value for variance/stdev
 }
 
 var sampleConfig = `
