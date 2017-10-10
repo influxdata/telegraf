@@ -69,9 +69,7 @@ var sampleConfig = `
   # DC/OS agent node network interface names for which related metrics should be gathered. Leave empty for all.
   interface_include = []
   # HTTP Response timeout, value must be more than a second
-  #response_timeout = 30s
-  # Set of default allowed tags. See readme.md for more tag keys.
-  taginclude = ["cluster_url","path","interface","hostname","container_id","mesos_id","framework_name"]
+  #response_timeout = "30s"
   # Port number of Mesos component on DC/OS master for access from within DC/OS cluster
   #master_port = 5050
   # Port number of DC/OS metrics component on DC/OS agents. Must be the same on all agents
@@ -82,6 +80,8 @@ var sampleConfig = `
   #ssl_key = "/etc/telegraf/key.key"
   #insecure_skip_verify = false
 `
+
+var tagInclude = []string{"cluster_id", "cluster_url", "path", "interface", "hostname", "mesos_id", "container_id", "executor_id", "framework_id", "scope", "package_name"}
 
 func (m *Dcos) Description() string {
 	return "Input plugin for gathering DC/OS agent metrics"
@@ -450,8 +450,13 @@ func fillTags(tags map[string]string, source map[string]interface{}) {
 			case map[string]interface{}:
 				fillTags(tags, t)
 			default:
-				s = tagToString(v)
-				tags[k] = s
+
+				k = strings.TrimPrefix(strings.ToLower(k), "dcos_")
+				//use hardcoded filter
+				if !isItemFiltered(tagInclude, k) {
+					s = tagToString(v)
+					tags[k] = s
+				}
 			}
 
 		}
