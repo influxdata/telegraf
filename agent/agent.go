@@ -150,6 +150,7 @@ func gatherWithTimeout(
 	defer ticker.Stop()
 	done := make(chan error)
 	go func() {
+		panicRecover(input)
 		done <- input.Input.Gather(acc)
 	}()
 
