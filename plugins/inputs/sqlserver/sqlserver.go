@@ -245,10 +245,10 @@ UNION ALL
 SELECT 'Average pending disk IO', AveragePendingDiskIOCount = (SELECT AVG(pending_disk_io_count) FROM sys.dm_os_schedulers WITH (NOLOCK) WHERE scheduler_id < 255 )
 UNION ALL
 SELECT 'Buffer pool rate (bytes/sec)', BufferPoolRate = (1.0*cntr_value * 8 * 1024) /
-	(SELECT 1.0*cntr_value FROM sys.dm_os_performance_counters  WHERE object_name like '%Buffer Manager%' AND lower(counter_name) = 'Page life expectancy')
+	(SELECT 1.0*cntr_value FROM sys.dm_os_performance_counters  WHERE object_name like '%Buffer Manager%' AND counter_name = 'Page life expectancy')
 FROM sys.dm_os_performance_counters
 WHERE object_name like '%Buffer Manager%'
-AND counter_name = 'database pages'
+AND counter_name = 'Database pages'
 UNION ALL
 SELECT 'Memory grant pending', MemoryGrantPending = cntr_value
 FROM sys.dm_os_performance_counters
