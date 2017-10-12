@@ -22,16 +22,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type DockerLabelFilter struct {
-	labelInclude filter.Filter
-	labelExclude filter.Filter
-}
-
-type DockerContainerFilter struct {
-	containerInclude filter.Filter
-	containerExclude filter.Filter
-}
-
 // Docker object
 type Docker struct {
 	Endpoint       string
@@ -45,11 +35,9 @@ type Docker struct {
 	TagEnvironment []string `toml:"tag_env"`
 	LabelInclude   []string `toml:"docker_label_include"`
 	LabelExclude   []string `toml:"docker_label_exclude"`
-	LabelFilter    DockerLabelFilter
 
 	ContainerInclude []string `toml:"container_name_include"`
 	ContainerExclude []string `toml:"container_name_exclude"`
-	ContainerFilter  DockerContainerFilter
 
 	SSLCA              string `toml:"ssl_ca"`
 	SSLCert            string `toml:"ssl_cert"`
@@ -59,10 +47,12 @@ type Docker struct {
 	newEnvClient func() (Client, error)
 	newClient    func(string, *tls.Config) (Client, error)
 
-	client         Client
-	httpClient     *http.Client
-	engine_host    string
-	filtersCreated bool
+	client          Client
+	httpClient      *http.Client
+	engine_host     string
+	filtersCreated  bool
+	labelFilter     filter.Filter
+	containerFilter filter.Filter
 }
 
 // KB, MB, GB, TB, PB...human friendly
@@ -374,12 +364,8 @@ func (d *Docker) gatherContainer(
 		"container_version": imageVersion,
 	}
 
-	if len(d.ContainerInclude) > 0 || len(d.ContainerExclude) > 0 {
-		if len(d.ContainerInclude) == 0 || !d.ContainerFilter.containerInclude.Match(cname) {
-			if len(d.ContainerExclude) == 0 || d.ContainerFilter.containerExclude.Match(cname) {
-				return nil
-			}
-		}
+	if !d.containerFilter.Match(cname) {
+		return nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
@@ -400,10 +386,8 @@ func (d *Docker) gatherContainer(
 
 	// Add labels to tags
 	for k, label := range container.Labels {
-		if len(d.LabelInclude) == 0 || d.LabelFilter.labelInclude.Match(k) {
-			if len(d.LabelExclude) == 0 || !d.LabelFilter.labelExclude.Match(k) {
-				tags[k] = label
-			}
+		if d.labelFilter.Match(k) {
+			tags[k] = label
 		}
 	}
 
@@ -749,46 +733,25 @@ func parseSize(sizeStr string) (int64, error) {
 }
 
 func (d *Docker) createContainerFilters() error {
+	// Backwards compatibility for deprecated `container_names` parameter.
 	if len(d.ContainerNames) > 0 {
 		d.ContainerInclude = append(d.ContainerInclude, d.ContainerNames...)
 	}
 
-	if len(d.ContainerInclude) != 0 {
-		var err error
-		d.ContainerFilter.containerInclude, err = filter.Compile(d.ContainerInclude)
-		if err != nil {
-			return err
-		}
+	filter, err := filter.NewIncludeExcludeFilter(d.ContainerInclude, d.ContainerExclude)
+	if err != nil {
+		return err
 	}
-
-	if len(d.ContainerExclude) != 0 {
-		var err error
-		d.ContainerFilter.containerExclude, err = filter.Compile(d.ContainerExclude)
-		if err != nil {
-			return err
-		}
-	}
-
+	d.containerFilter = filter
 	return nil
 }
 
 func (d *Docker) createLabelFilters() error {
-	if len(d.LabelInclude) != 0 {
-		var err error
-		d.LabelFilter.labelInclude, err = filter.Compile(d.LabelInclude)
-		if err != nil {
-			return err
-		}
+	filter, err := filter.NewIncludeExcludeFilter(d.LabelInclude, d.LabelExclude)
+	if err != nil {
+		return err
 	}
-
-	if len(d.LabelExclude) != 0 {
-		var err error
-		d.LabelFilter.labelExclude, err = filter.Compile(d.LabelExclude)
-		if err != nil {
-			return err
-		}
-	}
-
+	d.labelFilter = filter
 	return nil
 }
 
