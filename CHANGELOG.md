@@ -1,3 +1,9 @@
+## v1.4.3 [unreleased]
+
+### Bugfixes
+
+- [#3327](https://github.com/influxdata/telegraf/issues/3327): Fix container name filters in docker input.
+
 ## v1.4.2 [2017-10-10]
 
 ### Bugfixes
