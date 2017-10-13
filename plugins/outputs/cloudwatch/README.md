@@ -13,6 +13,8 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 5. [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
 6. [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
 
+The IAM user needs only the `cloudwatch:PutMetricData` permission.
+
 ## Config
 
 For this output plugin to function correctly the following variables
