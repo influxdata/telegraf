@@ -135,8 +135,8 @@ var serverTypeMapping = map[string]ServerType{
 
 var sampleConfig = `
   ## An array of URLs of the form:
-  ##   "udp://" host [ ":" port]
-  servers = ["udp://127.0.0.1:4020"]
+  ##   host [ ":" port]
+  servers = ["127.0.0.1:4020"]
 `
 
 func (l *LeoFS) SampleConfig() string {
@@ -156,14 +156,17 @@ func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 	for _, endpoint := range l.Servers {
 		results := strings.Split(endpoint, ":")
 
+		port := "4020"
 		if len(results) > 2 {
 			acc.AddError(fmt.Errorf("Unable to parse address %q", endpoint))
 			continue
-		}
-
-		port := "4020"
-		if _, err := strconv.Atoi(results[1]); err == nil {
-			port = results[1]
+		} else if len(results) == 2 {
+			if _, err := strconv.Atoi(results[1]); err == nil {
+				port = results[1]
+			} else {
+				acc.AddError(fmt.Errorf("Unable to parse port from %q", endpoint))
+				continue
+			}
 		}
 
 		st, ok := serverTypeMapping[port]
