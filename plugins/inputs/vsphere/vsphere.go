@@ -11,12 +11,13 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"time"
-	"github.com/Sirupsen/logrus"
+	"log"
+	"net/url"
 )
 
 type Endpoint struct {
 	Parent *VSphere
-	Url string
+	Url *url.URL
 	intervals []int32
 	lastColl map[string]time.Time
 }
@@ -56,6 +57,12 @@ func (e *Endpoint) init(p *performance.Manager) error {
 func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Context, alias string, acc telegraf.Accumulator,
 	getter ResourceGetter, root *view.ContainerView, interval int32) error {
 
+	// Interval = -1 means collection for this metric was diabled, so don't even bother.
+	//
+	if interval == -1 {
+		return nil
+	}
+
 	// Do we have new data yet?
 	//
 	nIntervals := int32(1)
@@ -72,7 +79,12 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 			nIntervals = e.Parent.MaxSamples
 		}
 	}
-	logrus.Debugf("Collecting %d intervals for %s", nIntervals, alias)
+	// log.Printf("URL: %s" + url.U  e.Url)
+	// Get all possible metric ids
+	//
+
+
+	log.Printf("D! Collecting %d intervals for %s", nIntervals, alias)
 
 	fullAlias := "vsphere." + alias
 
@@ -81,23 +93,17 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 	if err != nil {
 		return err
 	}
+	log.Printf("D! Query for %s returned %d objects", alias, len(objects))
 	pqs := make([]types.PerfQuerySpec, 0, e.Parent.MaxQuery)
 	nameLookup := make(map[string]string)
 	total := 0;
 	for name, mor := range objects {
-		nameLookup[mor.Reference().Value] = name;
-
-		// Collect metrics
-		//
-		ams, err := p.AvailableMetric(ctx, mor, interval)
-		if err != nil {
-			return err
-		}
+		nameLookup[mor.Reference().Value] = name
 
 		pq := types.PerfQuerySpec{
 			Entity: mor,
 			MaxSample: nIntervals,
-			MetricId: ams,
+			MetricId: nil,
 			IntervalId: interval,
 		}
 		if(e.Parent.MaxSamples > 1 && hasLatest) {
@@ -109,7 +115,7 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 		// Filled up a chunk or at end of data? Run a query with the collected objects
 		//
 		if len(pqs) >= int(e.Parent.MaxQuery) || total == len(objects)  {
-			logrus.Debugf("Querying %d objects of type %s. Total processed: %d. Total objects %d\n", len(pqs), alias, total, len(objects))
+			log.Printf("D! Querying %d objects of type %s for %s. Total processed: %d. Total objects %d\n", len(pqs), alias, e.Url.Host, total, len(objects))
 			metrics, err := p.Query(ctx, pqs)
 			if err != nil {
 				return err
@@ -129,6 +135,7 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 					for idx, value := range v.Value {
 						f := map[string]interface{} { name: value }
 						tags := map[string]string{
+							"vcenter": e.Url.Host,
 							"source": nameLookup[moid],
 							"moid": moid}
 						if v.Instance != "" {
@@ -143,17 +150,13 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 	}
 
 
-	logrus.Debugf("Collection of %s took %v\n", alias, time.Now().Sub(start))
+	log.Printf("D! Collection of %s took %v\n", alias, time.Now().Sub(start))
 	return nil
 }
 
 func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 	ctx := context.Background()
-	u, err := soap.ParseURL(e.Url)
-	if(err != nil) {
-		return err
-	}
-	c, err := govmomi.NewClient(ctx, u, true)
+	c, err := govmomi.NewClient(ctx, e.Url, true)
 	if(err != nil) {
 		return err
 	}
@@ -266,7 +269,11 @@ func (v *VSphere) Init()  {
 		return
 	}
 	v.endpoints = make([]Endpoint, len(v.Vcenters))
-	for i, u := range v.Vcenters {
+	for i, rawUrl := range v.Vcenters {
+		u, err := soap.ParseURL(rawUrl);
+		if(err != nil) {
+			log.Printf("E! Can't parse URL %s\n", rawUrl)
+		}
 		v.endpoints[i] = Endpoint{
 			Url: u,
 			Parent: v,
@@ -278,14 +285,15 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 	v.Init()
 	results := make(chan error)
 	for _, ep := range v.endpoints {
-		go func() {
-			results <- ep.collect(acc)
-		}()
+		go func(target Endpoint) {
+			results <- target.collect(acc)
+		}(ep)
 	}
 	var finalErr error = nil
 	for range v.endpoints {
 		err := <- results
 		if err != nil {
+			log.Println("E!", err)
 			finalErr = err
 		}
 	}
