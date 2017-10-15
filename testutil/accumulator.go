@@ -297,6 +297,31 @@ func (a *Accumulator) AssertContainsFields(
 	assert.Fail(t, msg)
 }
 
+func (a *Accumulator) HasPoint(
+	measurement string,
+	tags map[string]string,
+	fieldKey string,
+	fieldValue interface{},
+) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement != measurement {
+			continue
+		}
+
+		if !reflect.DeepEqual(tags, p.Tags) {
+			continue
+		}
+
+		v, ok := p.Fields[fieldKey]
+		if ok && reflect.DeepEqual(v, fieldValue) {
+			return true
+		}
+	}
+	return false
+}
+
 func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement string) {
 	a.Lock()
 	defer a.Unlock()

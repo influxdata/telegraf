@@ -145,7 +145,7 @@ func hostPinger(timeout float64, args ...string) (string, error) {
 	}
 	c := exec.Command(bin, args...)
 	out, err := internal.CombinedOutputTimeout(c,
-		time.Second*time.Duration(timeout+1))
+		time.Second*time.Duration(timeout+5))
 	return string(out), err
 }
 

@@ -275,7 +275,7 @@ func TestFormatMetricPoint(t *testing.T) {
 		Tags:      map[string]string{"sp*c!@l\"-ch/rs": "sp*c!@l/ val\"ue"},
 	}
 
-	expected := "test.metric.something 123.456000 1257894000 source=\"testSource\" sp-c--l--ch-rs=\"sp-c!@l/ val\\\"ue\""
+	expected := "test.metric.something 123.456000 1257894000 source=\"testSource\" sp-c--l--ch-rs=\"sp-c!@l/ val\\\"ue\"\n"
 
 	received := formatMetricPoint(testpoint, w)
 
