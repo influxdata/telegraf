@@ -261,9 +261,7 @@ func formatMetricPoint(metricPoint *MetricPoint, w *Wavefront) string {
 		buffer.WriteString(tagValueReplacer.Replace(v))
 		buffer.WriteString("\"")
 	}
-
 	buffer.WriteString("\n")
-
 	return buffer.String()
 }
 
