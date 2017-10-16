@@ -854,7 +854,7 @@ func (s *Statsd) Stop() {
 
 // IsUDP returns true if the protocol is UDP, false otherwise.
 func (s *Statsd) isUDP() bool {
-	return s.Protocol[:3] == "udp"
+	return strings.HasPrefix(s.Protocol, "udp")
 }
 
 func init() {
