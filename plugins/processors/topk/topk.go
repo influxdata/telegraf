@@ -15,16 +15,17 @@ type TopK struct {
 	Period             int
 	K                  int
 	Field              string
-	Aggregation        string
 	Tags               map[string]string
+	Aggregation        string
+        Bottomk            bool
         RevertMetricMatch  bool `toml:"revert_metric_match"`
         RevertTagMatch     bool `toml:"revert_tag_match"`
         DropNonMatching    bool `toml:"drop_non_matching"`
-	DropNonTop         bool `toml:"top"`
+	DropNonTop         bool `toml:"drop_non_top"`
 	PositionField      string `toml:"position_field"`
 	AggregationField   string `toml:"aggregation_field"`
 
-	cache map[uint64][]telegraf.Metric
+	cache map[string][]telegraf.Metric
 	metric_regex *regexp.Regexp
 	tags_regexes map[string]*regexp.Regexp
 	last_aggregation time.Time
@@ -68,27 +69,41 @@ var sampleConfig = `
   aggregation_field = "telegraf_topk_aggregation" # Field with the value of the computed aggregation. Default: "" (deactivated)
 `
 
-type Measurements struct {
-	metrics []telegraf.Metric
-	field   string
+type MetricAggregation struct {
+	metric_name string
+	values map[string]float64
 }
 
-func (m Measurements) Len() int {
-	return len(m.metrics)
+type Aggregations struct {
+	metrics []MetricAggregation
+	field string
 }
 
-func (m Measurements) Less(i, j int) bool {
-	iv, iok := convert(m.metrics[i].Fields()[m.field])
-	jv, jok := convert(m.metrics[j].Fields()[m.field])
-	if  iok && jok && (iv < jv) {
+func (ags Aggregations) Len() int {
+	return len(ags.metrics)
+}
+
+func (ags Aggregations) Less(i, j int) bool {
+	iv := ags.metrics[i].values[ags.field]
+	jv := ags.metrics[j].values[ags.field]
+	if (iv < jv) {
 		return true
 	} else {
 		return false
 	}
 }
 
-func (m Measurements) Swap(i, j int) {
-	m.metrics[i], m.metrics[j] = m.metrics[j], m.metrics[i]
+func (ags Aggregations) Swap(i, j int) {
+	ags.metrics[i], ags.metrics[j] = ags.metrics[j], ags.metrics[i]
+}
+
+func sort_metrics(metrics []MetricAggregation, field string, reverse bool){
+	aggs := Aggregations{metrics: metrics, field: field}
+	if reverse {
+		sort.Sort(aggs)
+	} else {
+		sort.Reverse(aggs)
+	}
 }
 
 func (t *TopK) SampleConfig() string {
@@ -96,7 +111,7 @@ func (t *TopK) SampleConfig() string {
 }
 
 func (t *TopK) Reset() {
-	t.cache = make(map[uint64][]telegraf.Metric)
+	t.cache = make(map[string][]telegraf.Metric)
 	t.last_aggregation = time.Now()
 }
 
@@ -145,6 +160,51 @@ func (t *TopK) match_metric(m telegraf.Metric) bool {
 	return true
 }
 
+func (t *TopK) get_aggregation_function(agg_operation string) func([]telegraf.Metric, []string) map[string]float64 {
+	switch agg_operation {
+	case "avg":
+		return func(ms []telegraf.Metric, fields []string) map[string]float64 {
+			avg := make(map[string]float64)
+			avg_counters := make(map[string]float64)
+			// Compute the sums of the selected fields over all the measurements collected for this metric
+			for _, m := range ms {
+				for i, field := range(fields){
+					field_val, ok := m.Fields()[field]
+					if ! ok {
+						continue // Skip if this metric doesn't have this field set
+					}
+					val, ok := convert(field_val)
+					if ! ok {
+						fmt.Println(m)
+						panic(fmt.Sprintf("Cannot convert value '%s' from metric '%s' with tags '%s'",
+							m.Fields()[t.Field], m.Name(), m.Tags()))
+					}
+					avg[field] += val
+					avg_counters[field] += 1
+				}
+			}
+			// Divide by the number of recorded measurements collected for every field
+			no_measurements_found := true // Canary to check if no field with values was found, so we can return nil
+			for k, _ := range(avg){
+				if (avg_counters[k] == 0) {
+					avg[k] = 0 // FIX. We have no way of knowing if a bucket was ever touched
+					continue
+				}
+				avg[k] = avg[k] / avg_counters[k]
+				no_measurements_found = no_measurements_found && false
+			}
+
+			if no_measurements_found {
+				return nil
+			}
+			return avg
+		}
+
+	default:
+		panic(fmt.Sprintf("Unknown aggregation function '%s'", t.Aggregation))
+	}
+}
+
 func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	// Generate the regexp structs that we use to match the metrics
 	t.init_regexes()
@@ -153,27 +213,37 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, m := range in {
 		if (t.match_metric(m)){
 			// Initialize the key with an empty list if necessary
-			if _, ok := t.cache[m.HashID()]; !ok {
-				t.cache[m.HashID()] = make([]telegraf.Metric, 0, 10)
+			if _, ok := t.cache[m.Name()]; !ok {
+				t.cache[m.Name()] = make([]telegraf.Metric, 0, 10)
 			}
 
 			// Append the metric to the corresponding key list
-			t.cache[m.HashID()] = append(t.cache[m.HashID()], m)
+			t.cache[m.Name()] = append(t.cache[m.Name()], m)
 		}
 	}
 
 	// If enough time has passed
 	elapsed := time.Since(t.last_aggregation)
 	if elapsed >= time.Second * time.Duration(t.Period) {
-		// Sort the keys by the selected field TODO: Make the field configurable
-		for _, ms := range t.cache {
-			sort.Reverse(Measurements{metrics: ms, field: t.Field})
+		ret := nil
+		
+		// Generate aggregations list using the selected field
+		aggregations := make([]MetricAggregation, 0, 100)
+		var f func([]telegraf.Metric, []string) map[string]float64 = t.get_aggregation_function(t.Aggregation);
+		for k, ms := range t.cache {
+			aggregations = append(aggregations, MetricAggregation{metric_name: k, values: f(ms, t.Fields)})
 		}
 
-		// Create a one dimentional list with the top K metrics of each key
-		ret := make([]telegraf.Metric, 0, 100)
-		for _, ms := range t.cache {
-			ret = append(ret, ms[0:min(len(ms), t.K)]...)
+		// Get the top K metrics for each field and add them to the return value
+		for _, field := range(t.Fields) {
+			// Sort the aggregations
+			sort_metrics(aggregations, field, t.Bottomk)
+
+			// Create a one dimentional list with the top K metrics of each key
+			ret = make([]telegraf.Metric, 0, 100)
+			for _, ag := range aggregations[0:min(t.K, len(aggregations))] {
+				ret = append(ret, t.cache[ag.metric_name]...)
+			}
 		}
 
 		t.Reset()
