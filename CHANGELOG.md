@@ -43,6 +43,7 @@
 - [#3269](https://github.com/influxdata/telegraf/pull/3269): Add cluster health level configuration to elasticsearch input.
 - [#3304](https://github.com/influxdata/telegraf/pull/3304): Add ability to limit node stats in elasticsearch input.
 - [#2167](https://github.com/influxdata/telegraf/pull/2167): Add new basicstats aggregator.
+- [#3344](https://github.com/influxdata/telegraf/pull/3344): Add UDP IPv6 support to statsd input.
 
 ### Bugfixes
 
