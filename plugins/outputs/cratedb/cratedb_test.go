@@ -24,7 +24,7 @@ func TestConnectAndWrite(t *testing.T) {
 	// dropSQL drops our table before each test. This simplifies changing the
 	// schema during development :).
 	dropSQL := "DROP TABLE IF EXISTS " + escapeString(table, `"`)
-	db, err := sql.Open("postgres", url)
+	db, err := sql.Open("pgx", url)
 	require.NoError(t, err)
 	_, err = db.Exec(dropSQL)
 	require.NoError(t, err)

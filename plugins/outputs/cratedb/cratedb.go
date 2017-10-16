@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/stdlib"
 )
 
 type CrateDB struct {
@@ -35,7 +35,7 @@ var sampleConfig = `
 `
 
 func (c *CrateDB) Connect() error {
-	db, err := sql.Open("postgres", c.URL)
+	db, err := sql.Open("pgx", c.URL)
 	if err != nil {
 		return err
 	} else if c.TableCreate {
