@@ -5,6 +5,7 @@
 - [#3327](https://github.com/influxdata/telegraf/issues/3327): Fix container name filters in docker input.
 - [#3321](https://github.com/influxdata/telegraf/issues/3321): Fix snmpwalk address format in leofs input.
 - [#3329](https://github.com/influxdata/telegraf/issues/3329): Fix case sensitivity issue in sqlserver query.
+- [#3342](https://github.com/influxdata/telegraf/pull/3342): Fix CPU input plugin stuck after suspend on Linux.
 
 ## v1.4.2 [2017-10-10]
 
