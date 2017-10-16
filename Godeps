@@ -32,7 +32,7 @@ github.com/hashicorp/consul 63d2fc68239b996096a1c55a0d4b400ea4c2583f
 github.com/influxdata/tail a395bf99fe07c233f41fba0735fa2b13b58588ea
 github.com/influxdata/toml 5d1d907f22ead1cd47adde17ceec5bda9cacaf8f
 github.com/influxdata/wlog 7c63b0a71ef8300adc255344d275e10e5c3a71ec
-github.com/jackc/pgx b84338d7d62598f75859b2b146d830b22f1b9ec8
+github.com/jackc/pgx 63f58fd32edb5684b9e9f4cfaac847c6b42b3917
 github.com/jmespath/go-jmespath bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
 github.com/kardianos/osext c2c54e542fb797ad986b31721e1baedf214ca413
 github.com/kardianos/service 6d3a0ee7d3425d9d835debc51a0ca1ffa28f4893
