@@ -171,7 +171,7 @@ func (_ *Statsd) Description() string {
 }
 
 const sampleConfig = `
-  ## Protocol, must be "tcp" or "udp" (default=udp)
+  ## Protocol, must be "tcp", "udp", "udp4" or "udp6" (default=udp)
   protocol = "udp"
 
   ## MaxTCPConnection - applicable when protocol is set to tcp (default=250)
@@ -327,10 +327,9 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 
 	s.wg.Add(2)
 	// Start the UDP listener
-	switch s.Protocol {
-	case "udp":
+	if s.isUDP() {
 		go s.udpListen()
-	case "tcp":
+	} else {
 		go s.tcpListen()
 	}
 	// Start the line parser
@@ -382,8 +381,8 @@ func (s *Statsd) tcpListen() error {
 func (s *Statsd) udpListen() error {
 	defer s.wg.Done()
 	var err error
-	address, _ := net.ResolveUDPAddr("udp", s.ServiceAddress)
-	s.UDPlistener, err = net.ListenUDP("udp", address)
+	address, _ := net.ResolveUDPAddr(s.Protocol, s.ServiceAddress)
+	s.UDPlistener, err = net.ListenUDP(s.Protocol, address)
 	if err != nil {
 		log.Fatalf("ERROR: ListenUDP - %s", err)
 	}
@@ -825,10 +824,9 @@ func (s *Statsd) Stop() {
 	s.Lock()
 	log.Println("I! Stopping the statsd service")
 	close(s.done)
-	switch s.Protocol {
-	case "udp":
+	if s.isUDP() {
 		s.UDPlistener.Close()
-	case "tcp":
+	} else {
 		s.TCPlistener.Close()
 		// Close all open TCP connections
 		//  - get all conns from the s.conns map and put into slice
@@ -843,8 +841,6 @@ func (s *Statsd) Stop() {
 		for _, conn := range conns {
 			conn.Close()
 		}
-	default:
-		s.UDPlistener.Close()
 	}
 	s.Unlock()
 
@@ -854,6 +850,11 @@ func (s *Statsd) Stop() {
 	close(s.in)
 	log.Println("I! Stopped Statsd listener service on ", s.ServiceAddress)
 	s.Unlock()
+}
+
+// IsUDP returns true if the protocol is UDP, false otherwise.
+func (s *Statsd) isUDP() bool {
+	return strings.HasPrefix(s.Protocol, "udp")
 }
 
 func init() {
