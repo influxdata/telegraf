@@ -5,8 +5,7 @@ and writing metrics.
 
 Design goals are to have a minimal memory footprint with a plugin system so
 that developers in the community can easily add support for collecting metrics
-from well known services (like Hadoop, Postgres, or Redis) and third party
-APIs (like Mailchimp, AWS CloudWatch, or Google Analytics).
+from local or remote services.
 
 Telegraf is plugin-driven and has the concept of 4 distinct plugins:
 
@@ -158,7 +157,8 @@ configuration options.
 * [interrupts](./plugins/inputs/interrupts)
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
 * [iptables](./plugins/inputs/iptables)
-* [jolokia](./plugins/inputs/jolokia)
+* [jolokia](./plugins/inputs/jolokia) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
+* [jolokia2](./plugins/inputs/jolokia2)
 * [kapacitor](./plugins/inputs/kapacitor)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
@@ -171,6 +171,7 @@ configuration options.
 * [mysql](./plugins/inputs/mysql)
 * [net_response](./plugins/inputs/net_response)
 * [nginx](./plugins/inputs/nginx)
+* [nginx_plus](./plugins/inputs/nginx_plus)
 * [nsq](./plugins/inputs/nsq)
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
@@ -191,6 +192,7 @@ configuration options.
 * [riak](./plugins/inputs/riak)
 * [salesforce](./plugins/inputs/salesforce)
 * [sensors](./plugins/inputs/sensors)
+* [smart](./plugins/inputs/smart)
 * [snmp](./plugins/inputs/snmp)
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
@@ -252,6 +254,7 @@ formats may be used with input plugins supporting the `data_format` option:
 
 ## Aggregator Plugins
 
+* [basicstats](./plugins/aggregators/basicstats)
 * [minmax](./plugins/aggregators/minmax)
 * [histogram](./plugins/aggregators/histogram)
 
@@ -282,3 +285,4 @@ formats may be used with input plugins supporting the `data_format` option:
 * [socket_writer](./plugins/outputs/socket_writer)
 * [tcp](./plugins/outputs/socket_writer)
 * [udp](./plugins/outputs/socket_writer)
+* [wavefront](./plugins/outputs/wavefront)

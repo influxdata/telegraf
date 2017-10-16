@@ -149,3 +149,38 @@ func assertContainsTaggedFloat(
 		measurement, delta, expectedValue, actualValue)
 	assert.Fail(t, msg)
 }
+
+// TestCPUCountChange tests that no errors are encountered if the number of
+// CPUs increases as reported with LXC.
+func TestCPUCountIncrease(t *testing.T) {
+	var mps MockPS
+	var mps2 MockPS
+	var acc testutil.Accumulator
+	var err error
+
+	cs := NewCPUStats(&mps)
+
+	mps.On("CPUTimes").Return(
+		[]cpu.TimesStat{
+			cpu.TimesStat{
+				CPU: "cpu0",
+			},
+		}, nil)
+
+	err = cs.Gather(&acc)
+	require.NoError(t, err)
+
+	mps2.On("CPUTimes").Return(
+		[]cpu.TimesStat{
+			cpu.TimesStat{
+				CPU: "cpu0",
+			},
+			cpu.TimesStat{
+				CPU: "cpu1",
+			},
+		}, nil)
+	cs.ps = &mps2
+
+	err = cs.Gather(&acc)
+	require.NoError(t, err)
+}

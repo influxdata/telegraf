@@ -45,6 +45,7 @@ type MetricFamily struct {
 type PrometheusClient struct {
 	Listen             string
 	ExpirationInterval internal.Duration `toml:"expiration_interval"`
+	Path               string            `toml:"path"`
 
 	server *http.Server
 
@@ -70,8 +71,12 @@ func (p *PrometheusClient) Start() error {
 		p.Listen = "localhost:9273"
 	}
 
+	if p.Path == "" {
+		p.Path = "/metrics"
+	}
+
 	mux := http.NewServeMux()
-	mux.Handle("/metrics", prometheus.Handler())
+	mux.Handle(p.Path, prometheus.Handler())
 
 	p.server = &http.Server{
 		Addr:    p.Listen,

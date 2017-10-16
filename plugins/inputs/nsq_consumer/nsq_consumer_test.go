@@ -40,6 +40,7 @@ func TestReadsMetricsFromNSQ(t *testing.T) {
 		Topic:       "telegraf",
 		Channel:     "consume",
 		MaxInFlight: 1,
+		Nsqd:        []string{"127.0.0.1:4155"},
 	}
 
 	p, _ := parsers.NewInfluxParser()

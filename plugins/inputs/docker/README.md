@@ -57,6 +57,15 @@ to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.20/)
 When using the `"ENV"` endpoint, the connection is configured using the
 [cli Docker environment variables](https://godoc.org/github.com/moby/moby/client#NewEnvClient).
 
+#### Kubernetes Labels
+
+Kubernetes may add many labels to your containers, if they are not needed you
+may prefer to exclude them:
+```
+  docker_label_exclude = ["annotation.kubernetes*"]
+```
+
+
 ### Measurements & Fields:
 
 Every effort was made to preserve the names based on the JSON response from the
