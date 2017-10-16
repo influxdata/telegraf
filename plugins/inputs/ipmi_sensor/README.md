@@ -55,7 +55,7 @@ ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
 #### Permissions
 
 When gathering from the local system, Telegraf will need permission to the
-impi device node.  When using udev you can create the device node giving
+ipmi device node.  When using udev you can create the device node giving
 `rw` permissions to the `telegraf` user by adding the following rule to
 `/etc/udev/rules.d/52-telegraf-ipmi.rules`:
 
