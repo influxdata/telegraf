@@ -3,6 +3,7 @@ Honor the drop_non_matching flag
 Honor the drop_non_top flag
 Honor the position_field option
 Honor the aggregation_field option
+Add an options to revert the topk to bottomk
 
 DONE
 Apply processor only to the selected metrics
