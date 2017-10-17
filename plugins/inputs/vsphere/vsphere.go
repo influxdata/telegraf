@@ -79,10 +79,6 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 			nIntervals = e.Parent.MaxSamples
 		}
 	}
-	// log.Printf("URL: %s" + url.U  e.Url)
-	// Get all possible metric ids
-	//
-
 
 	log.Printf("D! Collecting %d intervals for %s", nIntervals, alias)
 
@@ -172,7 +168,7 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 	defer v.Destroy(ctx)
 
 	p := performance.NewManager(c.Client)
-	p.Destroy(ctx)
+	defer p.Destroy(ctx)
 
 	// Load cache if needed
 	e.init(p)
