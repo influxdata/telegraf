@@ -16,6 +16,8 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/dns_query"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // HostPinger is a function that runs the "ping" function using a list of
@@ -41,6 +43,9 @@ type Ping struct {
 
 	// host ping function
 	pingHost HostPinger
+
+	// DNS servers to query
+	Servers []string
 }
 
 func (_ *Ping) Description() string {
@@ -60,7 +65,9 @@ const sampleConfig = `
   ## per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
   # timeout = 1.0
   ## interface to send ping from (ping -I <INTERFACE>)
-  # interface = ""
+	# interface = ""
+	## DNS servers to query
+  servers = ["8.8.8.8"] # required
 `
 
 func (_ *Ping) SampleConfig() string {
@@ -76,6 +83,12 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(u string) {
 			defer wg.Done()
+
+			if err := p.dnsLookup(u); err != nil {
+				acc.AddError(err)
+				return
+			}
+
 			args := p.args(u)
 			totalTimeout := float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
 
@@ -218,6 +231,16 @@ func processPingOutput(out string) (int, int, float64, float64, float64, float64
 		}
 	}
 	return trans, recv, min, avg, max, stddev, err
+}
+
+func (p *Ping) dnsLookup(domain string) error {
+	var dnsConfig = dns_query.DnsQuery{
+		Servers: p.Servers,
+		Domains: []string{domain},
+	}
+
+	var acc testutil.Accumulator
+	return acc.GatherError(dnsConfig.Gather)
 }
 
 func init() {
