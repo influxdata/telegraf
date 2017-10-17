@@ -427,13 +427,13 @@ func (s *Statsd) parser() error {
 			return nil
 		case buf := <-s.in:
 			lines := strings.Split(buf.String(), "\n")
+			s.bufPool.Put(buf)
 			for _, line := range lines {
 				line = strings.TrimSpace(line)
 				if line != "" {
 					s.parseStatsdLine(line)
 				}
 			}
-			s.bufPool.Put(buf)
 		}
 	}
 }

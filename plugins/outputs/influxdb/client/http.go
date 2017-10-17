@@ -137,60 +137,13 @@ func (c *httpClient) Query(command string) error {
 	return c.doRequest(req, http.StatusOK)
 }
 
-func (c *httpClient) Write(b []byte) (int, error) {
-	req, err := c.makeWriteRequest(bytes.NewReader(b), len(b), c.writeURL)
+func (c *httpClient) WriteStream(r io.Reader) error {
+	req, err := c.makeWriteRequest(r, c.writeURL)
 	if err != nil {
-		return 0, nil
+		return err
 	}
 
-	err = c.doRequest(req, http.StatusNoContent)
-	if err == nil {
-		return len(b), nil
-	}
-	return 0, err
-}
-
-func (c *httpClient) WriteWithParams(b []byte, wp WriteParams) (int, error) {
-	req, err := c.makeWriteRequest(bytes.NewReader(b), len(b), writeURL(c.url, wp))
-	if err != nil {
-		return 0, nil
-	}
-
-	err = c.doRequest(req, http.StatusNoContent)
-	if err == nil {
-		return len(b), nil
-	}
-	return 0, err
-}
-
-func (c *httpClient) WriteStream(r io.Reader, contentLength int) (int, error) {
-	req, err := c.makeWriteRequest(r, contentLength, c.writeURL)
-	if err != nil {
-		return 0, nil
-	}
-
-	err = c.doRequest(req, http.StatusNoContent)
-	if err == nil {
-		return contentLength, nil
-	}
-	return 0, err
-}
-
-func (c *httpClient) WriteStreamWithParams(
-	r io.Reader,
-	contentLength int,
-	wp WriteParams,
-) (int, error) {
-	req, err := c.makeWriteRequest(r, contentLength, writeURL(c.url, wp))
-	if err != nil {
-		return 0, nil
-	}
-
-	err = c.doRequest(req, http.StatusNoContent)
-	if err == nil {
-		return contentLength, nil
-	}
-	return 0, err
+	return c.doRequest(req, http.StatusNoContent)
 }
 
 func (c *httpClient) doRequest(
@@ -232,7 +185,6 @@ func (c *httpClient) doRequest(
 
 func (c *httpClient) makeWriteRequest(
 	body io.Reader,
-	contentLength int,
 	writeURL string,
 ) (*http.Request, error) {
 	req, err := c.makeRequest(writeURL, body)
@@ -241,8 +193,6 @@ func (c *httpClient) makeWriteRequest(
 	}
 	if c.config.ContentEncoding == "gzip" {
 		req.Header.Set("Content-Encoding", "gzip")
-	} else {
-		req.Header.Set("Content-Length", fmt.Sprint(contentLength))
 	}
 	return req, nil
 }
