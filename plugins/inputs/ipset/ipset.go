@@ -1,9 +1,8 @@
+// +build linux
+
 package ipset
 
 import (
-	"bufio"
-	"fmt"
-	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -16,11 +15,12 @@ import (
 type Ipset struct {
 	ShowAllSets bool
 	UseSudo     bool
+	lister      setLister
 }
 
 // Description returns a short description of the plugin
 func (ipset *Ipset) Description() string {
-	return "Gather packets and bytes counters from ipsets"
+	return "Gather packets and bytes counters from Linux ipsets"
 }
 
 // SampleConfig returns sample configuration options.
@@ -35,14 +35,53 @@ func (ipset *Ipset) SampleConfig() string {
 `
 }
 
-func (ips *Ipset) Gather(acc telegraf.Accumulator) error {
+const measurement = "ipset"
 
+func (ips *Ipset) Gather(acc telegraf.Accumulator) error {
+	list, e := ips.lister()
+	if e != nil {
+		acc.AddError(e)
+	}
+
+	lines := strings.Split(list, "\n")
+	for _, line := range lines {
+		// Ignore sets created without the "counters" option
+		nocomment := strings.Split(line, "\"")[0]
+		if !(strings.Contains(nocomment, "packets") &&
+			strings.Contains(nocomment, "bytes")) {
+			continue
+		}
+
+		data := strings.Split(line, " ")
+		if data[0] == "add" && (data[4] != "0" || ips.ShowAllSets == true) {
+			tags := map[string]string{
+				"set":  data[1],
+				"rule": data[2],
+			}
+			packets_total, err := strconv.ParseInt(data[4], 10, 64)
+			if err != nil {
+				acc.AddError(err)
+			}
+			bytes_total, err := strconv.ParseInt(data[6], 10, 64)
+			if err != nil {
+				acc.AddError(err)
+			}
+			fields := map[string]interface{}{
+				"packets_total": packets_total,
+				"bytes_total":   bytes_total,
+			}
+			acc.AddCounter(measurement, fields, tags)
+		}
+	}
+	return nil
+}
+
+func (ips *Ipset) setList() (string, error) {
 	// Is ipset installed ?
 	ipsetPath, err := exec.LookPath("ipset")
 	if err != nil {
-		return fmt.Errorf("ipset is not installed.")
+		return "", err
 	}
-
 	var args []string
 	cmdName := ipsetPath
 	if ips.UseSudo {
@@ -52,63 +91,16 @@ func (ips *Ipset) Gather(acc telegraf.Accumulator) error {
 	args = append(args, "save")
 
 	cmd := exec.Command(cmdName, args...)
-	cmdReader, err := cmd.StdoutPipe()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error in dumping ipset data.")
-		os.Exit(1)
-	}
-
-	scanner := bufio.NewScanner(cmdReader)
-	go func() {
-		for scanner.Scan() {
-			data := strings.Split(scanner.Text(), " ")
-			if data[0] == "add" && (data[4] != "0" || ips.ShowAllSets == true) {
-				tags := map[string]string{
-					"set":  data[1],
-					"rule": data[2],
-				}
-				// Ignore sets created without the "counters" option
-				nocomment := strings.Split(scanner.Text(), "\"")[0]
-				if !(strings.Contains(nocomment, "packets") &&
-					strings.Contains(nocomment, "bytes")) {
-					continue
-				}
-
-				bytes_total, err := strconv.ParseInt(data[4], 10, 64)
-				if err != nil {
-					acc.AddError(err)
-				}
-				packets_total, err := strconv.ParseInt(data[6], 10, 64)
-				if err != nil {
-					acc.AddError(err)
-				}
-				fields := map[string]interface{}{
-					"bytes_total":   bytes_total,
-					"packets_total": packets_total,
-				}
-				acc.AddCounter("ipset", fields, tags)
-			}
-		}
-	}()
-
-	err = cmd.Start()
-	if err != nil {
-		acc.AddError(err)
-		return nil
-	}
-
-	err = cmd.Wait()
-	if err != nil {
-		acc.AddError(err)
-		return nil
-	}
-
-	return nil
+	out, err := cmd.Output()
+	return string(out), err
 }
+
+type setLister func() (string, error)
 
 func init() {
 	inputs.Add("ipset", func() telegraf.Input {
 		ips := new(Ipset)
+		ips.lister = ips.setList
 		return ips
 	})
 }
