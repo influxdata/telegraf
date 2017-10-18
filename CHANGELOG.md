@@ -26,7 +26,6 @@
 - [#3191](https://github.com/influxdata/telegraf/pull/3191): TLS and MTLS enhancements to HTTPListener input plugin.
 - [#3213](https://github.com/influxdata/telegraf/pull/3213): Add polling method to logparser and tail inputs.
 - [#3211](https://github.com/influxdata/telegraf/pull/3211): Add timeout option for kubernetes input.
-- [#3224](https://github.com/influxdata/telegraf/pull/3224): Preserve url path prefix in influx output.
 - [#3234](https://github.com/influxdata/telegraf/pull/3234): Add support for timing sums in statsd input.
 - [#2617](https://github.com/influxdata/telegraf/issues/2617): Add resource limit monitoring to procstat.
 - [#3236](https://github.com/influxdata/telegraf/pull/3236): Add support for k8s service DNS discovery to prometheus input.
@@ -60,6 +59,7 @@
 - [#3329](https://github.com/influxdata/telegraf/issues/3329): Fix case sensitivity issue in sqlserver query.
 - [#3342](https://github.com/influxdata/telegraf/pull/3342): Fix CPU input plugin stuck after suspend on Linux.
 - [#3013](https://github.com/influxdata/telegraf/issues/3013): Fix mongodb input panic when restarting mongodb.
+- [#3224](https://github.com/influxdata/telegraf/pull/3224): Preserve url path prefix in influx output.
 
 ## v1.4.2 [2017-10-10]
 
