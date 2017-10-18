@@ -224,6 +224,10 @@ func (p *Prometheus) gatherURL(url UrlAndAddress, acc telegraf.Accumulator) erro
 			acc.AddCounter(metric.Name(), metric.Fields(), tags, metric.Time())
 		case telegraf.Gauge:
 			acc.AddGauge(metric.Name(), metric.Fields(), tags, metric.Time())
+		case telegraf.Summary:
+			acc.AddSummary(metric.Name(), metric.Fields(), tags, metric.Time())
+		case telegraf.Histogram:
+			acc.AddHistogram(metric.Name(), metric.Fields(), tags, metric.Time())
 		default:
 			acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
 		}

@@ -103,6 +103,10 @@ func valueType(mt dto.MetricType) telegraf.ValueType {
 		return telegraf.Counter
 	case dto.MetricType_GAUGE:
 		return telegraf.Gauge
+	case dto.MetricType_SUMMARY:
+		return telegraf.Summary
+	case dto.MetricType_HISTOGRAM:
+		return telegraf.Histogram
 	default:
 		return telegraf.Untyped
 	}
@@ -145,11 +149,11 @@ func getNameAndValue(m *dto.Metric) map[string]interface{} {
 			fields["gauge"] = float64(m.GetGauge().GetValue())
 		}
 	} else if m.Counter != nil {
-		if !math.IsNaN(m.GetGauge().GetValue()) {
+		if !math.IsNaN(m.GetCounter().GetValue()) {
 			fields["counter"] = float64(m.GetCounter().GetValue())
 		}
 	} else if m.Untyped != nil {
-		if !math.IsNaN(m.GetGauge().GetValue()) {
+		if !math.IsNaN(m.GetUntyped().GetValue()) {
 			fields["value"] = float64(m.GetUntyped().GetValue())
 		}
 	}

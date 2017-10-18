@@ -9,7 +9,6 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	prometheus_input "github.com/influxdata/telegraf/plugins/inputs/prometheus"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,7 +44,7 @@ func TestWrite_Basic(t *testing.T) {
 
 	fam, ok := client.fam["foo"]
 	require.True(t, ok)
-	require.Equal(t, prometheus.UntypedValue, fam.ValueType)
+	require.Equal(t, telegraf.Untyped, fam.TelegrafValueType)
 	require.Equal(t, map[string]int{}, fam.LabelSet)
 
 	sample, ok := fam.Samples[CreateSampleID(pt1.Tags())]
@@ -119,7 +118,7 @@ func TestWrite_Counters(t *testing.T) {
 		args       args
 		err        error
 		metricName string
-		promType   prometheus.ValueType
+		valueType  telegraf.ValueType
 	}{
 		{
 			name: "field named value is not added to metric name",
@@ -129,7 +128,7 @@ func TestWrite_Counters(t *testing.T) {
 				valueType:   telegraf.Counter,
 			},
 			metricName: "foo",
-			promType:   prometheus.CounterValue,
+			valueType:  telegraf.Counter,
 		},
 		{
 			name: "field named counter is not added to metric name",
@@ -139,7 +138,7 @@ func TestWrite_Counters(t *testing.T) {
 				valueType:   telegraf.Counter,
 			},
 			metricName: "foo",
-			promType:   prometheus.CounterValue,
+			valueType:  telegraf.Counter,
 		},
 		{
 			name: "field with any other name is added to metric name",
@@ -149,7 +148,7 @@ func TestWrite_Counters(t *testing.T) {
 				valueType:   telegraf.Counter,
 			},
 			metricName: "foo_other",
-			promType:   prometheus.CounterValue,
+			valueType:  telegraf.Counter,
 		},
 	}
 	for _, tt := range tests {
@@ -167,7 +166,7 @@ func TestWrite_Counters(t *testing.T) {
 
 			fam, ok := client.fam[tt.metricName]
 			require.True(t, ok)
-			require.Equal(t, tt.promType, fam.ValueType)
+			require.Equal(t, tt.valueType, fam.TelegrafValueType)
 		})
 	}
 }
@@ -196,20 +195,119 @@ func TestWrite_Sanitize(t *testing.T) {
 }
 
 func TestWrite_Gauge(t *testing.T) {
+	type args struct {
+		measurement string
+		tags        map[string]string
+		fields      map[string]interface{}
+		valueType   telegraf.ValueType
+	}
+	var tests = []struct {
+		name       string
+		args       args
+		err        error
+		metricName string
+		valueType  telegraf.ValueType
+	}{
+		{
+			name: "field named value is not added to metric name",
+			args: args{
+				measurement: "foo",
+				fields:      map[string]interface{}{"value": 42},
+				valueType:   telegraf.Gauge,
+			},
+			metricName: "foo",
+			valueType:  telegraf.Gauge,
+		},
+		{
+			name: "field named gauge is not added to metric name",
+			args: args{
+				measurement: "foo",
+				fields:      map[string]interface{}{"gauge": 42},
+				valueType:   telegraf.Gauge,
+			},
+			metricName: "foo",
+			valueType:  telegraf.Gauge,
+		},
+		{
+			name: "field with any other name is added to metric name",
+			args: args{
+				measurement: "foo",
+				fields:      map[string]interface{}{"other": 42},
+				valueType:   telegraf.Gauge,
+			},
+			metricName: "foo_other",
+			valueType:  telegraf.Gauge,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, err := metric.New(
+				tt.args.measurement,
+				tt.args.tags,
+				tt.args.fields,
+				time.Now(),
+				tt.args.valueType,
+			)
+			client := NewClient()
+			err = client.Write([]telegraf.Metric{m})
+			require.Equal(t, tt.err, err)
+
+			fam, ok := client.fam[tt.metricName]
+			require.True(t, ok)
+			require.Equal(t, tt.valueType, fam.TelegrafValueType)
+
+		})
+	}
+}
+
+func TestWrite_Summary(t *testing.T) {
 	client := NewClient()
 
 	p1, err := metric.New(
 		"foo",
 		make(map[string]string),
-		map[string]interface{}{"value": 42},
+		map[string]interface{}{"sum": 84, "count": 42, "0": 2, "0.5": 3, "1": 4},
 		time.Now(),
-		telegraf.Gauge)
+		telegraf.Summary)
+
 	err = client.Write([]telegraf.Metric{p1})
 	require.NoError(t, err)
 
 	fam, ok := client.fam["foo"]
 	require.True(t, ok)
-	require.Equal(t, prometheus.GaugeValue, fam.ValueType)
+	require.Equal(t, 1, len(fam.Samples))
+
+	sample1, ok := fam.Samples[CreateSampleID(p1.Tags())]
+	require.True(t, ok)
+
+	require.Equal(t, 84.0, sample1.Sum)
+	require.Equal(t, uint64(42), sample1.Count)
+	require.Equal(t, 3, len(sample1.SummaryValue))
+}
+
+func TestWrite_Histogram(t *testing.T) {
+	client := NewClient()
+
+	p1, err := metric.New(
+		"foo",
+		make(map[string]string),
+		map[string]interface{}{"sum": 84, "count": 42, "0": 2, "0.5": 3, "1": 4},
+		time.Now(),
+		telegraf.Histogram)
+
+	err = client.Write([]telegraf.Metric{p1})
+	require.NoError(t, err)
+
+	fam, ok := client.fam["foo"]
+	require.True(t, ok)
+	require.Equal(t, 1, len(fam.Samples))
+
+	sample1, ok := fam.Samples[CreateSampleID(p1.Tags())]
+	require.True(t, ok)
+
+	require.Equal(t, 84.0, sample1.Sum)
+	require.Equal(t, uint64(42), sample1.Count)
+	require.Equal(t, 3, len(sample1.HistogramValue))
 }
 
 func TestWrite_MixedValueType(t *testing.T) {
@@ -307,7 +405,7 @@ func TestWrite_Tags(t *testing.T) {
 
 	fam, ok := client.fam["foo"]
 	require.True(t, ok)
-	require.Equal(t, prometheus.UntypedValue, fam.ValueType)
+	require.Equal(t, telegraf.Untyped, fam.TelegrafValueType)
 
 	require.Equal(t, map[string]int{"host": 1}, fam.LabelSet)
 
