@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -243,10 +244,22 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			// Special handling of value field; supports passthrough from
 			// the prometheus input.
 			var mname string
-			if fn == "value" {
-				mname = sanitize(point.Name())
-			} else {
-				mname = sanitize(fmt.Sprintf("%s_%s", point.Name(), fn))
+			switch point.Type() {
+			case telegraf.Counter:
+				if fn == "counter" {
+					mname = sanitize(point.Name())
+				}
+			case telegraf.Gauge:
+				if fn == "gauge" {
+					mname = sanitize(point.Name())
+				}
+			}
+			if mname == "" {
+				if fn == "value" {
+					mname = sanitize(point.Name())
+				} else {
+					mname = sanitize(fmt.Sprintf("%s_%s", point.Name(), fn))
+				}
 			}
 
 			var fam *MetricFamily
