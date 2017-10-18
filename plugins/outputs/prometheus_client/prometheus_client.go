@@ -222,6 +222,15 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			labels[sanitize(k)] = v
 		}
 
+		// Prometheus doesn't have a string value type, so convert string
+		// fields to labels.
+		for fn, fv := range point.Fields() {
+			switch fv := fv.(type) {
+			case string:
+				labels[sanitize(fn)] = fv
+			}
+		}
+
 		for fn, fv := range point.Fields() {
 			// Ignore string and bool fields.
 			var value float64
