@@ -168,7 +168,12 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 	defer v.Destroy(ctx)
 
 	p := performance.NewManager(c.Client)
-	defer p.Destroy(ctx)
+
+	// This causes strange error messages in the vCenter console. Possibly due to a bug in
+	// govmomi. We're commenting it out for now. Should be benign since the logout should
+	// destroy all resources anyway.
+	//
+	//defer p.Destroy(ctx)
 
 	// Load cache if needed
 	e.init(p)
