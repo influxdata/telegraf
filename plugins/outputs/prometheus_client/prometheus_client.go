@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
@@ -47,6 +48,7 @@ type PrometheusClient struct {
 	Listen             string
 	ExpirationInterval internal.Duration `toml:"expiration_interval"`
 	Path               string            `toml:"path"`
+	CollectorsExclude  []string          `toml:"collectors_exclude"`
 
 	server *http.Server
 
@@ -63,10 +65,25 @@ var sampleConfig = `
 
   ## Interval to expire metrics and not deliver to prometheus, 0 == no expiration
   # expiration_interval = "60s"
+
+  ## Collectors to enable, valid entries are "gocollector" and "process".
+  ## If unset, both are enabled.
+  collectors_exclude = ["gocollector", "process"]
 `
 
 func (p *PrometheusClient) Start() error {
 	prometheus.Register(p)
+
+	for _, collector := range p.CollectorsExclude {
+		switch collector {
+		case "gocollector":
+			prometheus.Unregister(prometheus.NewGoCollector())
+		case "process":
+			prometheus.Unregister(prometheus.NewProcessCollector(os.Getpid(), ""))
+		default:
+			return fmt.Errorf("unrecognized collector %s", collector)
+		}
+	}
 
 	if p.Listen == "" {
 		p.Listen = "localhost:9273"
@@ -77,7 +94,9 @@ func (p *PrometheusClient) Start() error {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle(p.Path, prometheus.Handler())
+	mux.Handle(p.Path, promhttp.HandlerFor(
+		prometheus.DefaultGatherer,
+		promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}))
 
 	p.server = &http.Server{
 		Addr:    p.Listen,
