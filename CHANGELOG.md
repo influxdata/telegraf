@@ -7,6 +7,7 @@
 - [#3329](https://github.com/influxdata/telegraf/issues/3329): Fix case sensitivity issue in sqlserver query.
 - [#3342](https://github.com/influxdata/telegraf/pull/3342): Fix CPU input plugin stuck after suspend on Linux.
 - [#3013](https://github.com/influxdata/telegraf/issues/3013): Fix mongodb input panic when restarting mongodb.
+- [#3224](https://github.com/influxdata/telegraf/pull/3224): Preserve url path prefix in influx output.
 
 ## v1.4.2 [2017-10-10]
 
