@@ -92,7 +92,7 @@ type PipelineStats struct {
 }
 
 //Description returns short info about plugin
-func (l *Logstash) Description() string { return "Read metricts exposed by Logstash" }
+func (l *Logstash) Description() string { return "Read metrics exposed by Logstash" }
 
 //SampleConfig returns details how to configure plugin
 func (l *Logstash) SampleConfig() string { return sampleConfig }
