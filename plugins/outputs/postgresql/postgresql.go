@@ -9,13 +9,14 @@ import (
 )
 
 type Postgresql struct {
-	db *sql.DB
+	db      *sql.DB
+	Address string
 }
 
 func (p *Postgresql) Connect() error {
 	fmt.Println("Connect")
 
-	db, err := sql.Open("pgx", "host=localhost database=postgres")
+	db, err := sql.Open("pgx", p.Address)
 
 	if err != nil {
 		fmt.Println("DB Connect failed")
