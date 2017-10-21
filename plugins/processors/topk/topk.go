@@ -14,7 +14,7 @@ type TopK struct {
 	Metric             string
 	Period             int
 	K                  int
-	Field              string
+	Fields             []string
 	Tags               map[string]string
 	Aggregation        string
 	GroupBy            []string `toml:"group_by"`
@@ -41,8 +41,7 @@ func NewTopK() telegraf.Processor{
 	topk.Metric = ".*"
 	topk.Period = 10
 	topk.K = 10
-	topk.Aggregation = "avg"
-	topk.Field = "value"
+	topk.Fields = nil
 	topk.Tags = nil
 	topk.Aggregation = "avg"
 	topk.GroupBy = nil
@@ -268,7 +267,7 @@ func (t *TopK) get_aggregation_function(agg_operation string) func([]telegraf.Me
 			avg_counters := make(map[string]float64)
 			// Compute the sums of the selected fields over all the measurements collected for this metric
 			for _, m := range ms {
-				for i, field := range(fields){
+				for _, field := range(fields){
 					field_val, ok := m.Fields()[field]
 					if ! ok {
 						continue // Skip if this metric doesn't have this field set
@@ -277,7 +276,7 @@ func (t *TopK) get_aggregation_function(agg_operation string) func([]telegraf.Me
 					if ! ok {
 						fmt.Println(m)
 						panic(fmt.Sprintf("Cannot convert value '%s' from metric '%s' with tags '%s'",
-							m.Fields()[t.Field], m.Name(), m.Tags()))
+							m.Fields()[field], m.Name(), m.Tags()))
 					}
 					avg[field] += val
 					avg_counters[field] += 1
