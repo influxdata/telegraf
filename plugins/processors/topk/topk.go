@@ -17,6 +17,8 @@ type TopK struct {
 	Field              string
 	Tags               map[string]string
 	Aggregation        string
+	GroupBy            []string `toml:"group_by"`
+	GroupByMetricName  bool `toml:"group_by_metric_name"`
         Bottomk            bool
         RevertMetricMatch  bool `toml:"revert_metric_match"`
         RevertTagMatch     bool `toml:"revert_tag_match"`
@@ -42,6 +44,9 @@ func NewTopK() telegraf.Processor{
 	topk.Aggregation = "avg"
 	topk.Field = "value"
 	topk.Tags = nil
+	topk.Aggregation = "avg"
+	topk.GroupBy = nil
+	topk.GroupByMetricName = false
 	topk.RevertTagMatch = false
 	topk.DropNonMatching = false
 	topk.DropNonTop = true
@@ -160,6 +165,101 @@ func (t *TopK) match_metric(m telegraf.Metric) bool {
 	return true
 }
 
+func (t *TopK) generate_groupby_key(m telegraf.Metric) string {
+	groupkey := ""
+	if t.GroupByMetricName {
+		groupkey += m.Name() + "&"
+	}
+	for _, tag := range(t.GroupBy) {
+		groupkey += tag + "&"
+	}
+
+	if groupkey == "" {
+		groupkey = "<<default_groupby_key>>"
+	}
+
+	return groupkey
+}
+
+func (t *TopK) group_by(m telegraf.Metric) {
+	// Generate the metric group key
+	groupkey := t.generate_groupby_key(m)
+
+	// Initialize the key with an empty list if necessary
+	if _, ok := t.cache[groupkey]; !ok {
+		t.cache[groupkey] = make([]telegraf.Metric, 0, 10)
+	}
+
+	// Append the metric to the corresponding key list
+	t.cache[groupkey] = append(t.cache[groupkey], m)
+}
+
+func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	// Generate the regexp structs that we use to match the metrics
+	t.init_regexes()
+
+	// Add the metrics received to our internal cache
+	for _, m := range in {
+		if (t.match_metric(m)){
+			t.group_by(m)
+		}
+	}
+
+	// If enough time has passed
+	elapsed := time.Since(t.last_aggregation)
+	if elapsed >= time.Second * time.Duration(t.Period) {
+		ret := make([]telegraf.Metric, 0, 100)
+		
+		// Generate aggregations list using the selected field
+		aggregations := make([]MetricAggregation, 0, 100)
+		var aggregator func([]telegraf.Metric, []string) map[string]float64 = t.get_aggregation_function(t.Aggregation);
+		for k, ms := range t.cache {
+			aggregations = append(aggregations, MetricAggregation{metric_name: k, values: aggregator(ms, t.Fields)})
+		}
+
+		// Get the top K metrics for each field and add them to the return value
+		for _, field := range(t.Fields) {
+			// Sort the aggregations
+			sort_metrics(aggregations, field, t.Bottomk)
+
+			// Create a one dimentional list with the top K metrics of each key
+			for _, ag := range aggregations[0:min(t.K, len(aggregations))] {
+				ret = append(ret, t.cache[ag.metric_name]...)
+			}
+		}
+
+		t.Reset()
+
+		return ret
+	}
+
+	return []telegraf.Metric{}
+}
+
+func min(a, b int) int   {
+	if a > b { return b }
+	return a
+}
+
+func convert(in interface{}) (float64, bool) {
+	switch v := in.(type) {
+	case float64:
+		return v, true
+	case int64:
+		return float64(v), true
+	default:
+		return 0, false
+	}
+}
+
+func init() {
+	processors.Add("topk", func() telegraf.Processor {
+		return NewTopK()
+	})
+}
+
+
+// Here we have the function that generates the aggregation functions
 func (t *TopK) get_aggregation_function(agg_operation string) func([]telegraf.Metric, []string) map[string]float64 {
 	switch agg_operation {
 	case "avg":
@@ -203,75 +303,4 @@ func (t *TopK) get_aggregation_function(agg_operation string) func([]telegraf.Me
 	default:
 		panic(fmt.Sprintf("Unknown aggregation function '%s'", t.Aggregation))
 	}
-}
-
-func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	// Generate the regexp structs that we use to match the metrics
-	t.init_regexes()
-
-	// Add the metrics received to our internal cache
-	for _, m := range in {
-		if (t.match_metric(m)){
-			// Initialize the key with an empty list if necessary
-			if _, ok := t.cache[m.Name()]; !ok {
-				t.cache[m.Name()] = make([]telegraf.Metric, 0, 10)
-			}
-
-			// Append the metric to the corresponding key list
-			t.cache[m.Name()] = append(t.cache[m.Name()], m)
-		}
-	}
-
-	// If enough time has passed
-	elapsed := time.Since(t.last_aggregation)
-	if elapsed >= time.Second * time.Duration(t.Period) {
-		ret := nil
-		
-		// Generate aggregations list using the selected field
-		aggregations := make([]MetricAggregation, 0, 100)
-		var f func([]telegraf.Metric, []string) map[string]float64 = t.get_aggregation_function(t.Aggregation);
-		for k, ms := range t.cache {
-			aggregations = append(aggregations, MetricAggregation{metric_name: k, values: f(ms, t.Fields)})
-		}
-
-		// Get the top K metrics for each field and add them to the return value
-		for _, field := range(t.Fields) {
-			// Sort the aggregations
-			sort_metrics(aggregations, field, t.Bottomk)
-
-			// Create a one dimentional list with the top K metrics of each key
-			ret = make([]telegraf.Metric, 0, 100)
-			for _, ag := range aggregations[0:min(t.K, len(aggregations))] {
-				ret = append(ret, t.cache[ag.metric_name]...)
-			}
-		}
-
-		t.Reset()
-
-		return ret
-	}
-
-	return []telegraf.Metric{}
-}
-
-func min(a, b int) int   {
-	if a > b { return b }
-	return a
-}
-
-func convert(in interface{}) (float64, bool) {
-	switch v := in.(type) {
-	case float64:
-		return v, true
-	case int64:
-		return float64(v), true
-	default:
-		return 0, false
-	}
-}
-
-func init() {
-	processors.Add("topk", func() telegraf.Processor {
-		return NewTopK()
-	})
 }
