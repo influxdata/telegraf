@@ -9,43 +9,131 @@ import (
 )
 
 type Postgresql struct {
-	db      *sql.DB
-	Address string
+	db                *sql.DB
+	Address           string
+	CreateTables      bool
+	TagsAsForeignkeys bool
+	Tables            map[string]bool
+	SchemaTag         string
 }
 
 func (p *Postgresql) Connect() error {
-	fmt.Println("Connect")
-
 	db, err := sql.Open("pgx", p.Address)
-
 	if err != nil {
-		fmt.Println("DB Connect failed")
-		return nil
+		return err
 	}
-	fmt.Println("DB Connect")
 	p.db = db
+	p.Tables = make(map[string]bool)
 
 	return nil
 }
 
 func (p *Postgresql) Close() error {
-	fmt.Println("Close")
-	return nil
+	return p.db.Close()
 }
 
 func (p *Postgresql) SampleConfig() string { return "" }
 func (p *Postgresql) Description() string  { return "Send metrics to PostgreSQL" }
 
-func (p *Postgresql) Write(metrics []telegraf.Metric) error {
+func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
+	var columns []string
+	var pk []string
 
-	for _, m := range metrics {
+	pk = append(pk, "time")
+	columns = append(columns, "time timestamptz")
+
+	for column, _ := range metric.Tags() {
+		pk = append(pk, column)
+		columns = append(columns, fmt.Sprintf("%s text", column))
+	}
+
+	var datatype string
+	for column, v := range metric.Fields() {
+		switch v.(type) {
+		case int64:
+			datatype = "int"
+		case float64:
+			datatype = "real"
+		}
+		columns = append(columns, fmt.Sprintf("%s %s", column, datatype))
+	}
+
+	sql := fmt.Sprintf("CREATE TABLE %s(%s,PRIMARY KEY(%s))", metric.Name(), strings.Join(columns, ","), strings.Join(pk, ","))
+	fmt.Println(sql)
+	return sql
+}
+
+func (p *Postgresql) generateInsert(metric telegraf.Metric) (string, []interface{}) {
+	var columns []string
+	var placeholder []string
+	var values []interface{}
+
+	columns = append(columns, "time")
+	values = append(values, metric.Time().Format("2006-01-02 15:04:05 -0700"))
+	placeholder = append(placeholder, "?")
+
+	for column, value := range metric.Tags() {
+		columns = append(columns, column)
+		values = append(values, value)
+		placeholder = append(placeholder, "?")
+	}
+
+	for column, value := range metric.Fields() {
+		columns = append(columns, column)
+		values = append(values, value)
+		placeholder = append(placeholder, "?")
+	}
+
+	sql := fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", metric.Name(), strings.Join(columns, ","), strings.Join(placeholder, ","))
+	fmt.Println(sql)
+	fmt.Println(values)
+	return sql, values
+}
+
+func (p *Postgresql) writeMetric(metric telegraf.Metric) error {
+	tableName := metric.Name()
+
+	if p.Tables[tableName] == false {
+		createStmt := p.generateCreateTable(metric)
+		_, err := p.db.Exec(createStmt)
+		if err != nil {
+			fmt.Println("Error creating table", err)
+			return err
+		}
+		p.Tables[tableName] = true
+	}
+
+	sql, values := p.generateInsert(metric)
+	_, err := p.db.Exec(sql, values...)
+	if err != nil {
+		fmt.Println("Error during insert", err)
+		return err
+	}
+
+	return nil
+}
+
+func (p *Postgresql) Write(metrics []telegraf.Metric) error {
+	for _, metric := range metrics {
+		p.writeMetric(metric)
+	}
+	return nil
+	var tableName string
+
+	for _, metric := range metrics {
+		var columns []string
 		var keys, values []string
-		for k, v := range m.Tags() {
-			keys = append(keys, k)
+
+		tableName = metric.Name()
+
+		for name, v := range metric.Tags() {
+			keys = append(keys, name)
 			values = append(values, fmt.Sprintf("'%s'", v))
 		}
-		for k, v := range m.Fields() {
+
+		for k, v := range metric.Fields() {
 			keys = append(keys, k)
+			columns = append(columns, k)
 			switch value := v.(type) {
 			case int:
 				values = append(values, fmt.Sprintf("%d", value))
@@ -55,7 +143,8 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 				values = append(values, fmt.Sprintf("'%s'", value))
 			}
 		}
-		fmt.Printf("INSERT INTO %v.%v (%v) VALUES (%v);\n", m.Tags()["host"], m.Name(), strings.Join(keys, ","), strings.Join(values, ","))
+		fmt.Printf("INSERT INTO %v (%v) VALUES (%v);\n", tableName, strings.Join(keys, ","), strings.Join(values, ","))
+
 	}
 
 	return nil
