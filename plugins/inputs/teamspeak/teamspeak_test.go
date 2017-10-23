@@ -34,7 +34,7 @@ func TestGather(t *testing.T) {
 		Server:   l.Addr().String(),
 		Username: "serveradmin",
 		Password: "test",
-		Vservers: []int{1},
+		Virtual_servers: []int{1},
 	}
 	err = testConfig.Gather(&acc)
 

@@ -12,7 +12,7 @@ type Teamspeak struct {
 	Server   string
 	Username string
 	Password string
-	Vservers []int
+	Virtual_servers []int
 
 	client *ts3.Client
 	connected bool
@@ -26,11 +26,11 @@ const sampleConfig = `
   ## Server address for Teamspeak 3 ServerQuery
   # server = "127.0.0.1:10011"
   ## Username for ServerQuery
-  # username = "serverqueryuser"
+  username = "serverqueryuser"
   ## Password for ServerQuery
-  # password = "secret"
+  password = "secret"
   ## Array of virtual servers
-  # vservers = [1]
+  # virtual_servers = [1]
 `
 
 func (ts *Teamspeak) SampleConfig() string {
@@ -54,7 +54,7 @@ func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 		ts.connected = true
 	}
 
-	for _, vserver := range ts.Vservers {
+	for _, vserver := range ts.Virtual_servers {
 		ts.client.Use(vserver)
 
 		sm, err := ts.client.Server.Info()
@@ -70,7 +70,7 @@ func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 		}
 
 		tags := map[string]string{
-			"v_server": strconv.Itoa(sm.ID),
+			"virtual_server": strconv.Itoa(sm.ID),
 			"name":     sm.Name,
 		}
 
@@ -92,6 +92,9 @@ func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("teamspeak", func() telegraf.Input {
-		return &Teamspeak{}
+		return &Teamspeak{
+			Server: "127.0.0.1:10011",
+			Virtual_servers: []int{1},
+		}
 	})
 }
