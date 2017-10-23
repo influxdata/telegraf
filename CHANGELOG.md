@@ -65,6 +65,7 @@
 - [#3224](https://github.com/influxdata/telegraf/pull/3224): Preserve url path prefix in influx output.
 - [#3354](https://github.com/influxdata/telegraf/pull/3354): Fix TELEGRAF_OPTS expansion in systemd service unit.
 - [#3357](https://github.com/influxdata/telegraf/issues/3357): Remove warning when JSON contains null value.
+- [#3375](https://github.com/influxdata/telegraf/issues/3375): Fix ACL token usage in consul input plugin.
 
 ## v1.4.2 [2017-10-10]
 
