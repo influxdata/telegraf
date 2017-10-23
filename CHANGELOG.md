@@ -26,7 +26,6 @@
 - [#3191](https://github.com/influxdata/telegraf/pull/3191): TLS and MTLS enhancements to HTTPListener input plugin.
 - [#3213](https://github.com/influxdata/telegraf/pull/3213): Add polling method to logparser and tail inputs.
 - [#3211](https://github.com/influxdata/telegraf/pull/3211): Add timeout option for kubernetes input.
-- [#3224](https://github.com/influxdata/telegraf/pull/3224): Preserve url path prefix in influx output.
 - [#3234](https://github.com/influxdata/telegraf/pull/3234): Add support for timing sums in statsd input.
 - [#2617](https://github.com/influxdata/telegraf/issues/2617): Add resource limit monitoring to procstat.
 - [#3236](https://github.com/influxdata/telegraf/pull/3236): Add support for k8s service DNS discovery to prometheus input.
@@ -44,12 +43,15 @@
 - [#3304](https://github.com/influxdata/telegraf/pull/3304): Add ability to limit node stats in elasticsearch input.
 - [#2167](https://github.com/influxdata/telegraf/pull/2167): Add new basicstats aggregator.
 - [#3344](https://github.com/influxdata/telegraf/pull/3344): Add UDP IPv6 support to statsd input.
+- [#3350](https://github.com/influxdata/telegraf/pull/3350): Use labels in prometheus output for string fields.
+- [#3358](https://github.com/influxdata/telegraf/pull/3358): Add support for decimal timestamps to ts-epoch modifier.
 
 ### Bugfixes
 
 - [#3136](https://github.com/influxdata/telegraf/issues/3136): Fix webhooks input address in use during reload.
 - [#3258](https://github.com/influxdata/telegraf/issues/3258): Unlock Statsd when stopping to prevent deadlock.
 - [#3319](https://github.com/influxdata/telegraf/issues/3319): Fix cloudwatch output requires unneeded permissions.
+- [#3351](https://github.com/influxdata/telegraf/issues/3351): Fix prometheus passthrough for existing value types.
 
 ## v1.4.3 [unreleased]
 
@@ -59,6 +61,10 @@
 - [#3321](https://github.com/influxdata/telegraf/issues/3321): Fix snmpwalk address format in leofs input.
 - [#3329](https://github.com/influxdata/telegraf/issues/3329): Fix case sensitivity issue in sqlserver query.
 - [#3342](https://github.com/influxdata/telegraf/pull/3342): Fix CPU input plugin stuck after suspend on Linux.
+- [#3013](https://github.com/influxdata/telegraf/issues/3013): Fix mongodb input panic when restarting mongodb.
+- [#3224](https://github.com/influxdata/telegraf/pull/3224): Preserve url path prefix in influx output.
+- [#3354](https://github.com/influxdata/telegraf/pull/3354): Fix TELEGRAF_OPTS expansion in systemd service unit.
+- [#3357](https://github.com/influxdata/telegraf/issues/3357): Remove warning when JSON contains null value.
 
 ## v1.4.2 [2017-10-10]
 

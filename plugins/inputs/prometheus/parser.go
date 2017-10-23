@@ -86,7 +86,7 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 				} else {
 					t = time.Now()
 				}
-				metric, err := metric.New(metricName, tags, fields, t)
+				metric, err := metric.New(metricName, tags, fields, t, valueType(mf.GetType()))
 				if err == nil {
 					metrics = append(metrics, metric)
 				}
@@ -95,6 +95,17 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 	}
 
 	return metrics, err
+}
+
+func valueType(mt dto.MetricType) telegraf.ValueType {
+	switch mt {
+	case dto.MetricType_COUNTER:
+		return telegraf.Counter
+	case dto.MetricType_GAUGE:
+		return telegraf.Gauge
+	default:
+		return telegraf.Untyped
+	}
 }
 
 // Get Quantiles from summary metric
