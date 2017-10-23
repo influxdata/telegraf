@@ -69,6 +69,10 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 		config.Datacenter = c.Datacentre
 	}
 
+	if c.Token != "" {
+		config.Token = c.Token
+	}
+
 	if c.Username != "" {
 		config.HttpAuth = &api.HttpBasicAuth{
 			Username: c.Username,
