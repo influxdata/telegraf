@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -28,8 +29,13 @@ type SampleID string
 type Sample struct {
 	// Labels are the Prometheus labels.
 	Labels map[string]string
-	// Value is the value in the Prometheus output.
-	Value float64
+	// Value is the value in the Prometheus output. Only one of these will populated.
+	Value          float64
+	HistogramValue map[float64]uint64
+	SummaryValue   map[float64]float64
+	// Histograms and Summaries need a count and a sum
+	Count uint64
+	Sum   float64
 	// Expiration is the deadline that this Sample is valid until.
 	Expiration time.Time
 }
@@ -38,8 +44,9 @@ type Sample struct {
 type MetricFamily struct {
 	// Samples are the Sample belonging to this MetricFamily.
 	Samples map[SampleID]*Sample
-	// Type of the Value.
-	ValueType prometheus.ValueType
+	// Need the telegraf ValueType because there isn't a Prometheus ValueType
+	// representing Histogram or Summary
+	TelegrafValueType telegraf.ValueType
 	// LabelSet is the label counts for all Samples.
 	LabelSet map[string]int
 }
@@ -189,7 +196,16 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 				labels = append(labels, v)
 			}
 
-			metric, err := prometheus.NewConstMetric(desc, family.ValueType, sample.Value, labels...)
+			var metric prometheus.Metric
+			var err error
+			switch family.TelegrafValueType {
+			case telegraf.Summary:
+				metric, err = prometheus.NewConstSummary(desc, sample.Count, sample.Sum, sample.SummaryValue, labels...)
+			case telegraf.Histogram:
+				metric, err = prometheus.NewConstHistogram(desc, sample.Count, sample.Sum, sample.HistogramValue, labels...)
+			default:
+				metric, err = prometheus.NewConstMetric(desc, getPromValueType(family.TelegrafValueType), sample.Value, labels...)
+			}
 			if err != nil {
 				log.Printf("E! Error creating prometheus metric, "+
 					"key: %s, labels: %v,\nerr: %s\n",
@@ -205,7 +221,7 @@ func sanitize(value string) string {
 	return invalidNameCharRE.ReplaceAllString(value, "_")
 }
 
-func valueType(tt telegraf.ValueType) prometheus.ValueType {
+func getPromValueType(tt telegraf.ValueType) prometheus.ValueType {
 	switch tt {
 	case telegraf.Counter:
 		return prometheus.CounterValue
@@ -226,6 +242,30 @@ func CreateSampleID(tags map[string]string) SampleID {
 	return SampleID(strings.Join(pairs, ","))
 }
 
+func addSample(fam *MetricFamily, sample *Sample, sampleID SampleID) {
+
+	for k, _ := range sample.Labels {
+		fam.LabelSet[k]++
+	}
+
+	fam.Samples[sampleID] = sample
+}
+
+func (p *PrometheusClient) addMetricFamily(point telegraf.Metric, sample *Sample, mname string, sampleID SampleID) {
+	var fam *MetricFamily
+	var ok bool
+	if fam, ok = p.fam[mname]; !ok {
+		fam = &MetricFamily{
+			Samples:           make(map[SampleID]*Sample),
+			TelegrafValueType: point.Type(),
+			LabelSet:          make(map[string]int),
+		}
+		p.fam[mname] = fam
+	}
+
+	addSample(fam, sample, sampleID)
+}
+
 func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 	p.Lock()
 	defer p.Unlock()
@@ -234,7 +274,6 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 
 	for _, point := range metrics {
 		tags := point.Tags()
-		vt := valueType(point.Type())
 		sampleID := CreateSampleID(tags)
 
 		labels := make(map[string]string)
@@ -251,77 +290,128 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		for fn, fv := range point.Fields() {
-			// Ignore string and bool fields.
-			var value float64
-			switch fv := fv.(type) {
-			case int64:
-				value = float64(fv)
-			case float64:
-				value = fv
-			default:
-				continue
-			}
-
-			sample := &Sample{
-				Labels:     labels,
-				Value:      value,
-				Expiration: now.Add(p.ExpirationInterval.Duration),
-			}
-
-			// Special handling of value field; supports passthrough from
-			// the prometheus input.
+		switch point.Type() {
+		case telegraf.Summary:
 			var mname string
-			switch point.Type() {
-			case telegraf.Counter:
-				if fn == "counter" {
-					mname = sanitize(point.Name())
-				}
-			case telegraf.Gauge:
-				if fn == "gauge" {
-					mname = sanitize(point.Name())
-				}
-			}
-			if mname == "" {
-				if fn == "value" {
-					mname = sanitize(point.Name())
-				} else {
-					mname = sanitize(fmt.Sprintf("%s_%s", point.Name(), fn))
-				}
-			}
-
-			var fam *MetricFamily
-			var ok bool
-			if fam, ok = p.fam[mname]; !ok {
-				fam = &MetricFamily{
-					Samples:   make(map[SampleID]*Sample),
-					ValueType: vt,
-					LabelSet:  make(map[string]int),
-				}
-				p.fam[mname] = fam
-			} else {
-				// Metrics can be untyped even though the corresponding plugin
-				// creates them with a type.  This happens when the metric was
-				// transferred over the network in a format that does not
-				// preserve value type and received using an input such as a
-				// queue consumer.  To avoid issues we automatically upgrade
-				// value type from untyped to a typed metric.
-				if fam.ValueType == prometheus.UntypedValue {
-					fam.ValueType = vt
+			var sum float64
+			var count uint64
+			summaryvalue := make(map[float64]float64)
+			for fn, fv := range point.Fields() {
+				var value float64
+				switch fv := fv.(type) {
+				case int64:
+					value = float64(fv)
+				case float64:
+					value = fv
+				default:
+					continue
 				}
 
-				if vt != prometheus.UntypedValue && fam.ValueType != vt {
-					// Don't return an error since this would be a permanent error
-					log.Printf("Mixed ValueType for measurement %q; dropping point", point.Name())
-					break
+				switch fn {
+				case "sum":
+					sum = value
+				case "count":
+					count = uint64(value)
+				default:
+					limit, err := strconv.ParseFloat(fn, 64)
+					if err == nil {
+						summaryvalue[limit] = value
+					}
 				}
 			}
-
-			for k, _ := range sample.Labels {
-				fam.LabelSet[k]++
+			sample := &Sample{
+				Labels:       labels,
+				SummaryValue: summaryvalue,
+				Count:        count,
+				Sum:          sum,
+				Expiration:   now.Add(p.ExpirationInterval.Duration),
 			}
+			mname = sanitize(point.Name())
 
-			fam.Samples[sampleID] = sample
+			p.addMetricFamily(point, sample, mname, sampleID)
+
+		case telegraf.Histogram:
+			var mname string
+			var sum float64
+			var count uint64
+			histogramvalue := make(map[float64]uint64)
+			for fn, fv := range point.Fields() {
+				var value float64
+				switch fv := fv.(type) {
+				case int64:
+					value = float64(fv)
+				case float64:
+					value = fv
+				default:
+					continue
+				}
+
+				switch fn {
+				case "sum":
+					sum = value
+				case "count":
+					count = uint64(value)
+				default:
+					limit, err := strconv.ParseFloat(fn, 64)
+					if err == nil {
+						histogramvalue[limit] = uint64(value)
+					}
+				}
+			}
+			sample := &Sample{
+				Labels:         labels,
+				HistogramValue: histogramvalue,
+				Count:          count,
+				Sum:            sum,
+				Expiration:     now.Add(p.ExpirationInterval.Duration),
+			}
+			mname = sanitize(point.Name())
+
+			p.addMetricFamily(point, sample, mname, sampleID)
+
+		default:
+			for fn, fv := range point.Fields() {
+				// Ignore string and bool fields.
+				var value float64
+				switch fv := fv.(type) {
+				case int64:
+					value = float64(fv)
+				case float64:
+					value = fv
+				default:
+					continue
+				}
+
+				sample := &Sample{
+					Labels:     labels,
+					Value:      value,
+					Expiration: now.Add(p.ExpirationInterval.Duration),
+				}
+
+				// Special handling of value field; supports passthrough from
+				// the prometheus input.
+				var mname string
+				switch point.Type() {
+				case telegraf.Counter:
+					if fn == "counter" {
+						mname = sanitize(point.Name())
+					}
+				case telegraf.Gauge:
+					if fn == "gauge" {
+						mname = sanitize(point.Name())
+					}
+				}
+				if mname == "" {
+					if fn == "value" {
+						mname = sanitize(point.Name())
+					} else {
+						mname = sanitize(fmt.Sprintf("%s_%s", point.Name(), fn))
+					}
+				}
+
+				p.addMetricFamily(point, sample, mname, sampleID)
+
+			}
 		}
 	}
 	return nil
