@@ -2,6 +2,7 @@ package system
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 
@@ -166,14 +167,13 @@ func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
 var varRegex = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
 
 func (s *DiskIOStats) diskName(devName string) string {
+	// if len(s.NameTemplates) == 0 {
+	// 	return devName
+	// }
+
 	di, err := s.diskInfo(devName)
 	if err != nil {
-		// discard error :-(
-		// We can't return error because it's non-fatal to the Gather().
-		// And we have no logger, so we can't log it.
-		return devName
-	}
-	if di == nil {
+		log.Printf("W! Error gathering disk info: %s", err)
 		return devName
 	}
 
@@ -200,14 +200,13 @@ func (s *DiskIOStats) diskName(devName string) string {
 }
 
 func (s *DiskIOStats) diskTags(devName string) map[string]string {
+	// if len(s.DeviceTags) == 0 {
+	// 	return nil
+	// }
+
 	di, err := s.diskInfo(devName)
 	if err != nil {
-		// discard error :-(
-		// We can't return error because it's non-fatal to the Gather().
-		// And we have no logger, so we can't log it.
-		return nil
-	}
-	if di == nil {
+		log.Printf("W! Error gathering disk info: %s", err)
 		return nil
 	}
 
