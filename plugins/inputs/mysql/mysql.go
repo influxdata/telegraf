@@ -442,9 +442,14 @@ const (
         GROUP BY command,state
         ORDER BY null`
 	infoSchemaUserStatisticsQuery = `
-        SELECT *,count(*)
+        SELECT user, total_connections, concurrent_connections, connected_time, busy_time, cpu_time, bytes_received, bytes_sent, binlog_bytes_written, rows_fetched, rows_updated, table_rows_read, select_commands, update_commands, other_commands, commit_transactions, rollback_transactions, denied_connections, lost_connections, access_denied, empty_queries, total_ssl_connections,count(*)
         FROM information_schema.user_statistics
 	GROUP BY user`
+	infoSchemaUserStatisticsQueryMariaDB = `
+        SELECT user, total_connections, concurrent_connections, connected_time, busy_time, cpu_time, bytes_received, bytes_sent, binlog_bytes_written, rows_updated, select_commands, update_commands, other_commands, commit_transactions, rollback_transactions, denied_connections, lost_connections, access_denied, empty_queries, total_ssl_connections,count(*)
+        FROM information_schema.user_statistics
+	GROUP BY user`
+
 	infoSchemaAutoIncQuery = `
         SELECT table_schema, table_name, column_name, auto_increment,
           CAST(pow(2, case data_type
@@ -951,7 +956,17 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 
 	// gather connection metrics from user_statistics for each user
 	if m.GatherUserStatistics {
+		var isPercona bool = true
 		conn_rows, err := db.Query("select user, total_connections, concurrent_connections, connected_time, busy_time, cpu_time, bytes_received, bytes_sent, binlog_bytes_written, rows_fetched, rows_updated, table_rows_read, select_commands, update_commands, other_commands, commit_transactions, rollback_transactions, denied_connections, lost_connections, access_denied, empty_queries, total_ssl_connections FROM INFORMATION_SCHEMA.USER_STATISTICS GROUP BY user")
+		// Specific case of MariaDB which doesn't implement the row_fetched and table_row_read columns
+		if err != nil {
+			if driverErr, ok := err.(*mysql.MySQLError); ok {
+				if driverErr.Number == 1054 { // Bad Field  (missing field)
+					isPercona = false
+					conn_rows, err = db.Query("select user, total_connections, concurrent_connections, connected_time, busy_time, cpu_time, bytes_received, bytes_sent, binlog_bytes_written, rows_updated, select_commands, update_commands, other_commands, commit_transactions, rollback_transactions, denied_connections, lost_connections, access_denied, empty_queries, total_ssl_connections FROM INFORMATION_SCHEMA.USER_STATISTICS GROUP BY user")
+				}
+			}
+		}
 		if err != nil {
 			log.Printf("E! MySQL Error gathering user stats: %s", err)
 		} else {
@@ -960,8 +975,8 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 				var total_connections int64
 				var concurrent_connections int64
 				var connected_time int64
-				var busy_time int64
-				var cpu_time int64
+				var busy_time float64
+				var cpu_time float64
 				var bytes_received int64
 				var bytes_sent int64
 				var binlog_bytes_written int64
@@ -978,14 +993,21 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 				var access_denied int64
 				var empty_queries int64
 				var total_ssl_connections int64
-
-				err = conn_rows.Scan(&user, &total_connections, &concurrent_connections,
-					&connected_time, &busy_time, &cpu_time, &bytes_received, &bytes_sent, &binlog_bytes_written,
-					&rows_fetched, &rows_updated, &table_rows_read, &select_commands, &update_commands, &other_commands,
-					&commit_transactions, &rollback_transactions, &denied_connections, &lost_connections, &access_denied,
-					&empty_queries, &total_ssl_connections,
-				)
-
+				if isPercona {
+					err = conn_rows.Scan(&user, &total_connections, &concurrent_connections,
+						&connected_time, &busy_time, &cpu_time, &bytes_received, &bytes_sent, &binlog_bytes_written,
+						&rows_fetched, &rows_updated, &table_rows_read, &select_commands, &update_commands, &other_commands,
+						&commit_transactions, &rollback_transactions, &denied_connections, &lost_connections, &access_denied,
+						&empty_queries, &total_ssl_connections,
+					)
+				} else {
+					err = conn_rows.Scan(&user, &total_connections, &concurrent_connections,
+						&connected_time, &busy_time, &cpu_time, &bytes_received, &bytes_sent, &binlog_bytes_written,
+						&rows_updated, &select_commands, &update_commands, &other_commands,
+						&commit_transactions, &rollback_transactions, &denied_connections, &lost_connections, &access_denied,
+						&empty_queries, &total_ssl_connections,
+					)
+				}
 				if err != nil {
 					return err
 				}
@@ -1071,8 +1093,19 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 // GatherUserStatistics can be used to collect metrics on each running command
 // and its state with its running count
 func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+	var isPercona bool = true
 	// run query
 	rows, err := db.Query(infoSchemaUserStatisticsQuery)
+	// Specific case of MariaDB which doesn't implement the row_fetched and table_row_read columns
+	if err != nil {
+		if driverErr, ok := err.(*mysql.MySQLError); ok { // Now the error number is accessible directly
+			if driverErr.Number == 1054 { // bad field (missing fields row_fetched & table_row_read)
+				isPercona = false
+				rows, err = db.Query(infoSchemaUserStatisticsQueryMariaDB)
+			}
+		}
+	}
+
 	if err != nil {
 		return err
 	}
@@ -1082,8 +1115,8 @@ func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegr
 		total_connections      int64
 		concurrent_connections int64
 		connected_time         int64
-		busy_time              int64
-		cpu_time               int64
+		busy_time              float64
+		cpu_time               float64
 		bytes_received         int64
 		bytes_sent             int64
 		binlog_bytes_written   int64
@@ -1105,12 +1138,21 @@ func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegr
 
 	servtag := getDSNTag(serv)
 	for rows.Next() {
-		err = rows.Scan(&user, &total_connections, &concurrent_connections,
-			&connected_time, &busy_time, &cpu_time, &bytes_received, &bytes_sent, &binlog_bytes_written,
-			&rows_fetched, &rows_updated, &table_rows_read, &select_commands, &update_commands, &other_commands,
-			&commit_transactions, &rollback_transactions, &denied_connections, &lost_connections, &access_denied,
-			&empty_queries, &total_ssl_connections, &count,
-		)
+		if isPercona {
+			err = rows.Scan(&user, &total_connections, &concurrent_connections,
+				&connected_time, &busy_time, &cpu_time, &bytes_received, &bytes_sent, &binlog_bytes_written,
+				&rows_fetched, &rows_updated, &table_rows_read, &select_commands, &update_commands, &other_commands,
+				&commit_transactions, &rollback_transactions, &denied_connections, &lost_connections, &access_denied,
+				&empty_queries, &total_ssl_connections, &count,
+			)
+		} else {
+			err = rows.Scan(&user, &total_connections, &concurrent_connections,
+				&connected_time, &busy_time, &cpu_time, &bytes_received, &bytes_sent, &binlog_bytes_written,
+				&rows_updated, &select_commands, &update_commands, &other_commands,
+				&commit_transactions, &rollback_transactions, &denied_connections, &lost_connections, &access_denied,
+				&empty_queries, &total_ssl_connections, &count,
+			)
+		}
 		if err != nil {
 			return err
 		}
