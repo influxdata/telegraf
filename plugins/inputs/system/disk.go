@@ -167,9 +167,9 @@ func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
 var varRegex = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
 
 func (s *DiskIOStats) diskName(devName string) string {
-	// if len(s.NameTemplates) == 0 {
-	// 	return devName
-	// }
+	if len(s.NameTemplates) == 0 {
+		return devName
+	}
 
 	di, err := s.diskInfo(devName)
 	if err != nil {
@@ -200,9 +200,9 @@ func (s *DiskIOStats) diskName(devName string) string {
 }
 
 func (s *DiskIOStats) diskTags(devName string) map[string]string {
-	// if len(s.DeviceTags) == 0 {
-	// 	return nil
-	// }
+	if len(s.DeviceTags) == 0 {
+		return nil
+	}
 
 	di, err := s.diskInfo(devName)
 	if err != nil {
