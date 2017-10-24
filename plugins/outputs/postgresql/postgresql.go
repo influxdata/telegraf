@@ -68,7 +68,7 @@ func (p *Postgresql) generateInsert(metric telegraf.Metric) (string, []interface
 	var values []interface{}
 
 	columns = append(columns, "time")
-	values = append(values, metric.Time().Format("2006-01-02 15:04:05 -0700"))
+	values = append(values, metric.Time())
 
 	for column, value := range metric.Tags() {
 		columns = append(columns, column)
@@ -114,38 +114,11 @@ func (p *Postgresql) writeMetric(metric telegraf.Metric) error {
 
 func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
-		p.writeMetric(metric)
-	}
-	return nil
-	var tableName string
-
-	for _, metric := range metrics {
-		var columns []string
-		var keys, values []string
-
-		tableName = metric.Name()
-
-		for name, v := range metric.Tags() {
-			keys = append(keys, name)
-			values = append(values, fmt.Sprintf("'%s'", v))
+		err := p.writeMetric(metric)
+		if err != nil {
+			return err
 		}
-
-		for k, v := range metric.Fields() {
-			keys = append(keys, k)
-			columns = append(columns, k)
-			switch value := v.(type) {
-			case int:
-				values = append(values, fmt.Sprintf("%d", value))
-			case float64:
-				values = append(values, fmt.Sprintf("%f", value))
-			case string:
-				values = append(values, fmt.Sprintf("'%s'", value))
-			}
-		}
-		fmt.Printf("INSERT INTO %v (%v) VALUES (%v);\n", tableName, strings.Join(keys, ","), strings.Join(values, ","))
-
 	}
-
 	return nil
 }
 
