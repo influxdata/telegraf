@@ -22,7 +22,6 @@ both
 ```
 
 ### Metrics:
-#### If group=true
 - pidstat_pid
 	- fields:
 
