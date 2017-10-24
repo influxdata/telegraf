@@ -159,8 +159,6 @@ func (f *JSONFlattener) FullFlattenJSON(
 			return nil
 		}
 	case nil:
-		// ignored types
-		fmt.Println("json parser ignoring " + fieldname)
 		return nil
 	default:
 		return fmt.Errorf("JSON Flattener: got unexpected type %T with value %v (%s)",

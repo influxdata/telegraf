@@ -100,7 +100,7 @@ current time.
   - ts-rfc3339       ("2006-01-02T15:04:05Z07:00")
   - ts-rfc3339nano   ("2006-01-02T15:04:05.999999999Z07:00")
   - ts-httpd         ("02/Jan/2006:15:04:05 -0700")
-  - ts-epoch         (seconds since unix epoch)
+  - ts-epoch         (seconds since unix epoch, may contain decimal)
   - ts-epochnano     (nanoseconds since unix epoch)
   - ts-"CUSTOM"
 
@@ -128,6 +128,19 @@ This example input and config parses a file using a custom timestamp conversion:
 [[inputs.logparser]]
   [inputs.logparser.grok]
     patterns = ['%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02 15:04:05"} value=%{NUMBER:value:int}']
+```
+
+This example input and config parses a file using a timestamp in unix time:
+
+```
+1466004605 value=42
+1466004605.123456789 value=42
+```
+
+```toml
+[[inputs.logparser]]
+  [inputs.logparser.grok]
+    patterns = ['%{NUMBER:timestamp:ts-epoch} value=%{NUMBER:value:int}']
 ```
 
 This example parses a file using a built-in conversion and a custom pattern:
