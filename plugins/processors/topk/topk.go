@@ -74,7 +74,7 @@ var sampleConfig = `
 `
 
 type MetricAggregation struct {
-	metric_name string
+	groupbykey string
 	values map[string]float64
 }
 
@@ -170,7 +170,7 @@ func (t *TopK) generate_groupby_key(m telegraf.Metric) string {
 		groupkey += m.Name() + "&"
 	}
 	for _, tag := range(t.GroupBy) {
-		groupkey += tag + "&"
+		groupkey += tag + "=" + m.Tags()[tag] + "&"
 	}
 
 	if groupkey == "" {
@@ -208,12 +208,12 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	elapsed := time.Since(t.last_aggregation)
 	if elapsed >= time.Second * time.Duration(t.Period) {
 		ret := make([]telegraf.Metric, 0, 100)
-		
-		// Generate aggregations list using the selected field
+
+		// Generate aggregations list using the selected fields
 		aggregations := make([]MetricAggregation, 0, 100)
 		var aggregator func([]telegraf.Metric, []string) map[string]float64 = t.get_aggregation_function(t.Aggregation);
 		for k, ms := range t.cache {
-			aggregations = append(aggregations, MetricAggregation{metric_name: k, values: aggregator(ms, t.Fields)})
+			aggregations = append(aggregations, MetricAggregation{groupbykey: k, values: aggregator(ms, t.Fields)})
 		}
 
 		// Get the top K metrics for each field and add them to the return value
@@ -223,7 +223,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 			// Create a one dimentional list with the top K metrics of each key
 			for _, ag := range aggregations[0:min(t.K, len(aggregations))] {
-				ret = append(ret, t.cache[ag.metric_name]...)
+				ret = append(ret, t.cache[ag.groupbykey]...)
 			}
 		}
 
