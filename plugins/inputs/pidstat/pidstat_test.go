@@ -13,12 +13,12 @@ import (
 )
 
 var p = Pidstat{
-	interval:   1,
+	interval: 1,
 
-  per_pid: true,
-  per_command: true,
+	per_pid:     true,
+	per_command: true,
 
-  programs: []string{"kworker*"},
+	programs: []string{"kworker*"},
 }
 
 func TestGather(t *testing.T) {
@@ -29,7 +29,7 @@ func TestGather(t *testing.T) {
 
 	err := acc.GatherError(p.Gather)
 	if err != nil {
-    t.Fatal("Error: %s", err)
+		t.Fatal("Error: %s", err)
 	}
 
 	tests := []struct {
@@ -40,78 +40,76 @@ func TestGather(t *testing.T) {
 		{
 			"pidstat_pid",
 			map[string]interface{}{
-						"pct_MEM": 0.03,
-						"pct_system": 0.00,
-						"pct_CPU": 0.00,
-						"CPU": 1.0,
-						"nvcswch_per_s": 0.00,
-						"RSS": 2468.0,
-						"pct_guest": 0.00,
-						"kB_wr_per_s": -1.00,
-						"kB_ccwr_per_s": -1.00,
-						"majflt_per_s": 0.00,
-						"pct_usr": 0.00,
-						"cswch_per_s": 0.00,
-						"iodelay": 2.0,
-						"minflt_per_s": 0.00,
-						"VSZ": 102464.0,
-						"kB_rd_per_s": -1.00,
+				"pct_MEM":       0.03,
+				"pct_system":    0.00,
+				"pct_CPU":       0.00,
+				"CPU":           1.0,
+				"nvcswch_per_s": 0.00,
+				"RSS":           2468.0,
+				"pct_guest":     0.00,
+				"kB_wr_per_s":   -1.00,
+				"kB_ccwr_per_s": -1.00,
+				"majflt_per_s":  0.00,
+				"pct_usr":       0.00,
+				"cswch_per_s":   0.00,
+				"iodelay":       2.0,
+				"minflt_per_s":  0.00,
+				"VSZ":           102464.0,
+				"kB_rd_per_s":   -1.00,
 			},
-						map[string]string{
-						"sys_name": "(tyler-GL753VD)",
-						"arch": "_x86_64_",
-						"os": "Linux",
-						"os_ver": "4.10.0-37-generic",
-						"cores": "(8",
-						"PID": "1005",
-						"UID": "100",
-						"Command": "systemd-timesyn",
-				},
+			map[string]string{
+				"sys_name": "(tyler-GL753VD)",
+				"arch":     "_x86_64_",
+				"os":       "Linux",
+				"os_ver":   "4.10.0-37-generic",
+				"cores":    "(8",
+				"PID":      "1005",
+				"UID":      "100",
+				"Command":  "systemd-timesyn",
 			},
+		},
 
 		{
 			"pidstat_pid",
 			map[string]interface{}{
-						"RSS": 2616.0,
-						"VSZ": 20416.0,
-						"pct_MEM": 0.03,
-						"pct_guest": 0.00,
-						"CPU": 6.0,
-						"minflt_per_s": 0.00,
-						"majflt_per_s": 0.00,
-						"nvcswch_per_s": 0.00,
-						"pct_usr": 0.00,
-						"pct_system": 0.00,
-						"pct_CPU": 0.00,
-						"cswch_per_s": 0.03,
+				"RSS":           2616.0,
+				"VSZ":           20416.0,
+				"pct_MEM":       0.03,
+				"pct_guest":     0.00,
+				"CPU":           6.0,
+				"minflt_per_s":  0.00,
+				"majflt_per_s":  0.00,
+				"nvcswch_per_s": 0.00,
+				"pct_usr":       0.00,
+				"pct_system":    0.00,
+				"pct_CPU":       0.00,
+				"cswch_per_s":   0.03,
 			},
-						map[string]string{
-						"os_ver": "4.10.0-37-generic",
-						"PID": "1012",
-						"Command": "systemd-logind",
-						"cores": "(8",
-						"os": "Linux",
-						"sys_name": "(tyler-GL753VD)",
-						"UID": "0",
-						"arch": "_x86_64_",
-				},
+			map[string]string{
+				"os_ver":   "4.10.0-37-generic",
+				"PID":      "1012",
+				"Command":  "systemd-logind",
+				"cores":    "(8",
+				"os":       "Linux",
+				"sys_name": "(tyler-GL753VD)",
+				"UID":      "0",
+				"arch":     "_x86_64_",
 			},
-
+		},
 	}
 	for _, test := range tests {
 		acc.AssertContainsTaggedFields(t, test.measurement, test.fields, test.tags)
 	}
 }
 
-
 // Helper function that mock the exec.Command call (and call the test binary)
 func fakeExecCommand(command string, args ...string) *exec.Cmd {
 	cs := []string{"-test.run=TestHelperProcess", "--", command}
 	cs = append(cs, args...)
-  //fmt.Printf("execCommand running %s", os.Args[0])
-  //for _, c := range cs{
-    //fmt.Println(c)
-  //}
+	//fmt.Printf("execCommand running %s", os.Args[0])
+	//for _, c := range cs{
+	//fmt.Println(c)
+	//}
 	cmd := exec.Command(os.Args[0], cs...)
 	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
 	return cmd
@@ -128,7 +126,7 @@ func TestHelperProcess(t *testing.T) {
 
 	mockData := map[string]string{
 
-"-d": `Linux 4.10.0-37-generic (tyler-GL753VD)         10/21/2017      _x86_64_        (8 CPU)
+		"-d": `Linux 4.10.0-37-generic (tyler-GL753VD)         10/21/2017      _x86_64_        (8 CPU)
 
 03:06:56 PM   UID       PID   kB_rd/s   kB_wr/s kB_ccwr/s iodelay  Command
 03:06:56 PM     0         1     -1.00     -1.00     -1.00      34  systemd
@@ -139,7 +137,7 @@ func TestHelperProcess(t *testing.T) {
 03:06:56 PM  1000      2752      0.00      0.00      0.00       1  syndaemon
 `,
 
-"-r": `Linux 4.10.0-37-generic (tyler-GL753VD)         10/21/2017      _x86_64_        (8 CPU),
+		"-r": `Linux 4.10.0-37-generic (tyler-GL753VD)         10/21/2017      _x86_64_        (8 CPU),
 
 03:06:56 PM   UID       PID  minflt/s  majflt/s     VSZ     RSS   %MEM  Command
 03:06:56 PM     0         1      0.17      0.00  185440    5584   0.07  systemd
@@ -152,14 +150,14 @@ func TestHelperProcess(t *testing.T) {
 03:06:56 PM  1000      2752      0.00      0.00   22636    1920   0.02  syndaemon"
 `,
 
-"-v": `Linux 4.10.0-37-generic (tyler-GL753VD)         10/21/2017      _x86_64_        (8 CPU),
+		"-v": `Linux 4.10.0-37-generic (tyler-GL753VD)         10/21/2017      _x86_64_        (8 CPU),
 
 03:06:56 PM   UID       PID threads   fd-nr  Command
 03:06:56 PM  1000      1784       1      15  systemd
 03:06:56 PM  1000      2752       1       5  syndaemon
 `,
 
-"-u": `Linux 4.10.0-37-generic (tyler-GL753VD)         10/21/2017      _x86_64_        (8 CPU)
+		"-u": `Linux 4.10.0-37-generic (tyler-GL753VD)         10/21/2017      _x86_64_        (8 CPU)
 03:06:56 PM   UID       PID    %usr %system  %guest    %CPU   CPU  Command
 03:06:56 PM     0         1    0.00    0.00    0.00    0.00     6  systemd
 03:06:56 PM     0       305    0.00    0.00    0.00    0.00     6  systemd-journal
@@ -171,7 +169,7 @@ func TestHelperProcess(t *testing.T) {
 03:06:56 PM  1000      2752    0.00    0.00    0.00    0.00     3  syndaemon
 `,
 
-"-w": `Linux 4.10.0-37-generic (tyler-GL753VD)         10/21/2017      _x86_64_        (8 CPU)
+		"-w": `Linux 4.10.0-37-generic (tyler-GL753VD)         10/21/2017      _x86_64_        (8 CPU)
 
 03:06:56 PM   UID       PID   cswch/s nvcswch/s  Command
 03:06:56 PM     0         1      0.02      0.00  systemd
@@ -184,16 +182,16 @@ func TestHelperProcess(t *testing.T) {
 03:06:56 PM  1000      2752      0.62      0.00  syndaemon
 `,
 
-"-s": `Linux 4.10.0-37-generic (tyler-GL753VD)         10/21/2017      _x86_64_        (8 CPU)
+		"-s": `Linux 4.10.0-37-generic (tyler-GL753VD)         10/21/2017      _x86_64_        (8 CPU)
 
 03:06:56 PM   UID       PID StkSize  StkRef  Command
 03:06:56 PM  1000      1784     132      16  systemd
 03:06:56 PM  1000      2752     132       8  syndaemon
 `,
-}
+	}
 
 	args := os.Args
-  fmt.Fprint(os.Stdout, mockData[args[4]])
+	fmt.Fprint(os.Stdout, mockData[args[4]])
 
 	os.Exit(0)
 }
