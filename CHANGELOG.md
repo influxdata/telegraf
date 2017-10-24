@@ -67,6 +67,7 @@
 - [#3357](https://github.com/influxdata/telegraf/issues/3357): Remove warning when JSON contains null value.
 - [#3375](https://github.com/influxdata/telegraf/issues/3375): Fix ACL token usage in consul input plugin.
 - [#3369](https://github.com/influxdata/telegraf/issues/3369): Fix unquoting error with Tomcat 6.
+- [#3373](https://github.com/influxdata/telegraf/issues/3373): Fix syscall panic in diskio on some Linux systems.
 
 ## v1.4.2 [2017-10-10]
 
