@@ -51,9 +51,9 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 	for column, v := range metric.Fields() {
 		switch v.(type) {
 		case int64:
-			datatype = "int"
+			datatype = "int8"
 		case float64:
-			datatype = "real"
+			datatype = "float8"
 		}
 		columns = append(columns, fmt.Sprintf("%s %s", column, datatype))
 	}
@@ -65,28 +65,27 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 
 func (p *Postgresql) generateInsert(metric telegraf.Metric) (string, []interface{}) {
 	var columns []string
-	var placeholder []string
 	var values []interface{}
 
 	columns = append(columns, "time")
 	values = append(values, metric.Time().Format("2006-01-02 15:04:05 -0700"))
-	placeholder = append(placeholder, "?")
 
 	for column, value := range metric.Tags() {
 		columns = append(columns, column)
 		values = append(values, value)
-		placeholder = append(placeholder, "?")
 	}
 
 	for column, value := range metric.Fields() {
 		columns = append(columns, column)
 		values = append(values, value)
-		placeholder = append(placeholder, "?")
+	}
+
+	var placeholder []string
+	for i := 1; i <= len(values); i++ {
+		placeholder = append(placeholder, fmt.Sprintf("$%d", i))
 	}
 
 	sql := fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", metric.Name(), strings.Join(columns, ","), strings.Join(placeholder, ","))
-	fmt.Println(sql)
-	fmt.Println(values)
 	return sql, values
 }
 
