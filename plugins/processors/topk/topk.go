@@ -198,17 +198,21 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	t.init_regexes()
 
 	// Add the metrics received to our internal cache
+	var ret []telegraf.Metric = nil
 	for _, m := range in {
 		if (t.match_metric(m)){
 			t.group_by(m)
+		} else {
+			if (ret == nil) {
+				ret = make([]telegraf.Metric, 0, len(in))
+			}
+			ret = append(ret, m)
 		}
 	}
 
 	// If enough time has passed
 	elapsed := time.Since(t.last_aggregation)
 	if elapsed >= time.Second * time.Duration(t.Period) {
-		ret := make([]telegraf.Metric, 0, 100)
-
 		// Generate aggregations list using the selected fields
 		aggregations := make([]MetricAggregation, 0, 100)
 		var aggregator func([]telegraf.Metric, []string) map[string]float64 = t.get_aggregation_function(t.Aggregation);
@@ -223,7 +227,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 			// Create a one dimentional list with the top K metrics of each key
 			for _, ag := range aggregations[0:min(t.K, len(aggregations))] {
-				ret = append(ret, t.cache[ag.groupbykey]...)
+				ret = append(ret, t.cache[ag.groupbykey]...) //FIX: This may create duplicates
 			}
 		}
 
@@ -232,7 +236,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		return ret
 	}
 
-	return []telegraf.Metric{}
+	return ret
 }
 
 func min(a, b int) int   {
