@@ -207,7 +207,7 @@ func print_stats(m map[string]Pidstat_record) {
 
 func array_boxes(src []string) {
 	for i, value := range src {
-		fmt.Printf("\t%s: |%s|\n", i, value)
+		fmt.Printf("\t%d: |%s|\n", i, value)
 	}
 }
 
@@ -336,7 +336,7 @@ func stats_from_string(inp []byte, stat_pids map[string]Pidstat_record, stat_com
 			}
 		}
 	}
-	return nil
+	//return nil
 }
 
 // ---- /DATASTRUCTURE FEEDING

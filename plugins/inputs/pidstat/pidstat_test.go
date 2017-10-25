@@ -29,7 +29,7 @@ func TestGather(t *testing.T) {
 
 	err := acc.GatherError(p.Gather)
 	if err != nil {
-		t.Fatal("Error: %s", err)
+		t.Fatal("Error:", err)
 	}
 
 	tests := []struct {
