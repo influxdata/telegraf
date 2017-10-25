@@ -54,7 +54,7 @@
 - [#3319](https://github.com/influxdata/telegraf/issues/3319): Fix cloudwatch output requires unneeded permissions.
 - [#3351](https://github.com/influxdata/telegraf/issues/3351): Fix prometheus passthrough for existing value types.
 
-## v1.4.3 [unreleased]
+## v1.4.3 [2017-10-25]
 
 ### Bugfixes
 
