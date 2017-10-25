@@ -65,7 +65,7 @@ func (p *Pidstat) Gather(acc telegraf.Accumulator) error {
 	}
 	stats_pids := make(map[string]Pidstat_record)
 	stats_commands := make(map[string]Pidstat_record)
-	err := collect(p.Interval, p.Programs, stats_pids, stats_commands)
+	err := collect(10, p.Programs, stats_pids, stats_commands)
 	if err != nil {
 		return fmt.Errorf("collect returned error: %s", err)
 	}
