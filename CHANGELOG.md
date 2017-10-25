@@ -46,6 +46,7 @@
 - [#3350](https://github.com/influxdata/telegraf/pull/3350): Use labels in prometheus output for string fields.
 - [#3358](https://github.com/influxdata/telegraf/pull/3358): Add support for decimal timestamps to ts-epoch modifier.
 - [#3337](https://github.com/influxdata/telegraf/pull/3337): Add histogram and summary types and use in prometheus plugins.
+- [#3365](https://github.com/influxdata/telegraf/pull/3365): Gather concurrently from snmp agents.
 
 ### Bugfixes
 
