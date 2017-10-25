@@ -10,9 +10,6 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
   # Address to listen on
   listen = ":9273"
 
-  # Path to publish the metrics on, defaults to /metrics
-  path = "/metrics"   
-
   # Expiration interval for each metric. 0 == no expiration
   expiration_interval = "60s"
 ```
