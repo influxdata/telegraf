@@ -6,17 +6,18 @@ The TopK processor plugin is a filter that keeps only the top k values of a give
 
 ```toml
 [[processors.topk]]
-  metric = "cpu"               # Which metric to filter. No default. Mandatory
   period = 10                  # How many seconds between aggregations. Default: 10
   k = 10                       # How many top metrics to return. Default: 10
-  field = "user"               # Over which field is the aggregation done. Default: "value"
-  tags = ["node-1", "east"]    # List of tags regexes to match against. Default: "*"
-  aggregation = "avg"          # What aggregation to use over time. Default: "avg". Options: sum, avg, min, max
+  metric = "mymetric"          # Which metrics to consume. Supports regular expressions. No default. Mandatory
+  tags = {"tag_name"="tag_value"}  # Map of tags regexes to match against. Default: "{}" (match all)
+  fields = ["memory_rss"]      # Over which fields are the top k are calculated. Default: "value"
+  aggregation = "avg"          # What aggregation to use. Default: "avg". Options: sum, avg, min, max
+  group_by = ["process_name"]  # Over which tags should the aggregation be done. Default: []
+  group_by_metric_name = false # Wheter or not to also group by metric name
+
+  bottomk = false              # Instead of the top k largest metrics, return the bottom k lowest metrics
+  revert_metric_match = false  # Whether or not to invert the metric name match
   revert_tag_match = false     # Whether or not to invert the tag match
-  drop_non_matching = false    # Whether or not to drop all non matching measurements (for the selected metric only). Default: False
-  drop_non_top = true          # Whether or not to drop measurements that do not reach the top k: Default: True
-  position_field = "telegraf_topk_position"       # Field to add to the top k measurements, with their position as value. Default: "" (deactivated)
-  aggregation_field = "telegraf_topk_aggregation" # Field with the value of the computed aggregation. Default: "" (deactivated)
 ```
 
 ### Tags:
