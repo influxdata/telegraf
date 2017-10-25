@@ -251,6 +251,7 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 
 func TestGetSNMPConnection_v2(t *testing.T) {
 	s := &Snmp{
+		Agents:    []string{"1.2.3.4:567", "1.2.3.4"},
 		Timeout:   internal.Duration{Duration: 3 * time.Second},
 		Retries:   4,
 		Version:   2,
@@ -259,7 +260,7 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 	err := s.init()
 	require.NoError(t, err)
 
-	gsc, err := s.getConnection(0, "1.2.3.4:567")
+	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
 	gs := gsc.(gosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
@@ -267,7 +268,7 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 	assert.Equal(t, gosnmp.Version2c, gs.Version)
 	assert.Equal(t, "foo", gs.Community)
 
-	gsc, err = s.getConnection(1, "1.2.3.4")
+	gsc, err = s.getConnection(1)
 	require.NoError(t, err)
 	gs = gsc.(gosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
@@ -276,6 +277,7 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 
 func TestGetSNMPConnection_v3(t *testing.T) {
 	s := &Snmp{
+		Agents:         []string{"1.2.3.4"},
 		Version:        3,
 		MaxRepetitions: 20,
 		ContextName:    "mycontext",
@@ -292,7 +294,7 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 	err := s.init()
 	require.NoError(t, err)
 
-	gsc, err := s.getConnection(0, "1.2.3.4")
+	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
 	gs := gsc.(gosnmpWrapper)
 	assert.Equal(t, gs.Version, gosnmp.Version3)
@@ -312,17 +314,22 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 }
 
 func TestGetSNMPConnection_caching(t *testing.T) {
-	s := &Snmp{}
+	s := &Snmp{
+		Agents: []string{"1.2.3.4", "1.2.3.5", "1.2.3.5"},
+	}
 	err := s.init()
 	require.NoError(t, err)
-	gs1, err := s.getConnection(0, "1.2.3.4")
+	gs1, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs2, err := s.getConnection(0, "1.2.3.4")
+	gs2, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs3, err := s.getConnection(1, "1.2.3.5")
+	gs3, err := s.getConnection(1)
+	require.NoError(t, err)
+	gs4, err := s.getConnection(2)
 	require.NoError(t, err)
 	assert.True(t, gs1 == gs2)
 	assert.False(t, gs2 == gs3)
+	assert.False(t, gs3 == gs4)
 }
 
 func TestGosnmpWrapper_walk_retry(t *testing.T) {
@@ -566,8 +573,8 @@ func TestGather(t *testing.T) {
 			},
 		},
 
-		connectionCache: map[int]snmpConnection{
-			0: tsc,
+		connectionCache: []snmpConnection{
+			tsc,
 		},
 		initialized: true,
 	}
@@ -613,8 +620,8 @@ func TestGather_host(t *testing.T) {
 			},
 		},
 
-		connectionCache: map[int]snmpConnection{
-			0: tsc,
+		connectionCache: []snmpConnection{
+			tsc,
 		},
 		initialized: true,
 	}

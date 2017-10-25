@@ -135,19 +135,16 @@ type Snmp struct {
 	Name   string
 	Fields []Field `toml:"field"`
 
-	sync.Mutex
-	connectionCache map[int]snmpConnection
+	connectionCache []snmpConnection
 	initialized     bool
 }
 
 func (s *Snmp) init() error {
-	s.Lock()
-	defer s.Unlock()
 	if s.initialized {
 		return nil
 	}
 
-	s.connectionCache = make(map[int]snmpConnection)
+	s.connectionCache = make([]snmpConnection, len(s.Agents))
 
 	for i := range s.Tables {
 		if err := s.Tables[i].init(); err != nil {
@@ -352,7 +349,7 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(i int, agent string) {
 			defer wg.Done()
-			gs, err := s.getConnection(i, agent)
+			gs, err := s.getConnection(i)
 			if err != nil {
 				acc.AddError(Errorf(err, "agent %s", agent))
 				return
@@ -582,16 +579,15 @@ func (gsw gosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
 // result using `agentIndex` as the cache key.  This is done to allow multiple
 // connections to a single address.  It is an error to use a connection in
 // more than one goroutine.
-func (s *Snmp) getConnection(agentIndex int, agent string) (snmpConnection, error) {
-	s.Lock()
-	if gs, ok := s.connectionCache[agentIndex]; ok {
-		s.Unlock()
+func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
+	if gs := s.connectionCache[idx]; gs != nil {
 		return gs, nil
 	}
 
+	agent := s.Agents[idx]
+
 	gs := gosnmpWrapper{&gosnmp.GoSNMP{}}
-	s.connectionCache[agentIndex] = gs
-	s.Unlock()
+	s.connectionCache[idx] = gs
 
 	host, portStr, err := net.SplitHostPort(agent)
 	if err != nil {
