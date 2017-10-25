@@ -203,6 +203,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		if (t.match_metric(m)){
 			t.group_by(m)
 		} else {
+			// If the metric didn't match, add it to the return value, so we don't drop it
 			if (ret == nil) {
 				ret = make([]telegraf.Metric, 0, len(in))
 			}
@@ -226,8 +227,13 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			sort_metrics(aggregations, field, t.Bottomk)
 
 			// Create a one dimentional list with the top K metrics of each key
+			added_keys := make(map[string]bool)
 			for _, ag := range aggregations[0:min(t.K, len(aggregations))] {
-				ret = append(ret, t.cache[ag.groupbykey]...) //FIX: This may create duplicates
+				_, ok := added_keys[ag.groupbykey]
+				if ! ok { // Check that we haven't already added these metrics
+					ret = append(ret, t.cache[ag.groupbykey]...)
+					added_keys[ag.groupbykey] = true
+				}
 			}
 		}
 
