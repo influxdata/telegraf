@@ -157,7 +157,7 @@ func parse_row(row []string, header []string) map[string]string {
 func escape(dirty string) string {
 	var fieldEscaper = strings.NewReplacer(
 		`%`, "pct_",
-    `/`, "_per_",
+		`/`, "_per_",
 	)
 	return fieldEscaper.Replace(dirty)
 }
