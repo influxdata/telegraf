@@ -98,7 +98,7 @@ func tokenize_sanitize(src string) []string {
 
 	for _, f := range src_split {
 		if len(f) > 0 {
-			tokens = append(tokens, escape(f))
+			tokens = append(tokens, f)
 		}
 	}
 
@@ -107,19 +107,12 @@ func tokenize_sanitize(src string) []string {
 
 func tokenize_sanitize_header(src string) []string {
 
-	header_replacer := strings.NewReplacer(
-		`%`, "_",
-		`/`, "_",
-		`:`, "_",
-		`-`, "_",
-	)
-
 	src_split := strings.Split(src, " ")
 	tokens := make([]string, 0)
 
 	for _, f := range src_split {
 		if len(f) > 0 {
-			tokens = append(tokens, header_replacer.Replace(f))
+			tokens = append(tokens, escape(f))
 		}
 	}
 
@@ -164,7 +157,7 @@ func parse_row(row []string, header []string) map[string]string {
 func escape(dirty string) string {
 	var fieldEscaper = strings.NewReplacer(
 		`%`, "pct_",
-		`/`, "_per_",
+    `/`, "_per_",
 	)
 	return fieldEscaper.Replace(dirty)
 }
@@ -299,7 +292,7 @@ func stats_from_string(inp []byte, stat_pids map[string]Pidstat_record, stat_com
 	//return fmt.Errorf( "csvread failed to read table header (second row): %s", err )
 	//}
 
-	header := tokenize_sanitize(record[0])
+	header := tokenize_sanitize_header(record[0])
 	if len(header) >= 4 {
 		header[0] = "time"
 		header[1] = "part_of_day"
@@ -351,7 +344,7 @@ func stats_from_string(inp []byte, stat_pids map[string]Pidstat_record, stat_com
 
 func collect(timeout int, Programs []string, stat_pids map[string]Pidstat_record, stat_commands map[string]Pidstat_record) error {
 
-	extra_args := []string{"-d"}
+	extra_args := []string{"-d", "-l"}
 
 	if len(Programs) > 0 {
 		pstr := ""

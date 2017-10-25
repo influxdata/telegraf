@@ -13,12 +13,12 @@ import (
 )
 
 var p = Pidstat{
-	interval: 1,
+	Interval: 1,
 
-	per_pid:     true,
-	per_command: true,
+	PerPid:     true,
+	PerCommand: true,
 
-	programs: []string{"kworker*"},
+	Programs: []string{"kworker*"},
 }
 
 func TestGather(t *testing.T) {
@@ -116,9 +116,6 @@ func fakeExecCommand(command string, args ...string) *exec.Cmd {
 }
 
 // TestHelperProcess isn't a real test. It's used to mock exec.Command
-// For example, if you run:
-// GO_WANT_HELPER_PROCESS=1 go test -test.run=TestHelperProcess -- sadf -p -- -p -C tmpFile
-// it returns mockData["C"] output.
 func TestHelperProcess(t *testing.T) {
 	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
 		return
@@ -132,7 +129,7 @@ func TestHelperProcess(t *testing.T) {
 03:06:56 PM     0         1     -1.00     -1.00     -1.00      34  systemd
 03:06:56 PM     0       305     -1.00     -1.00     -1.00       3  systemd-journal
 03:06:56 PM   100      1005     -1.00     -1.00     -1.00       2  systemd-timesyn
-03:06:56 PM   104      1056     -1.00     -1.00     -1.00       6  rsyslogd
+03:06:56 PM   104      1056     -1.00     -1.00     -1.00       6  rsyslogd arg arg arg
 03:06:56 PM  1000      1784      0.00      0.00      0.00       0  systemd
 03:06:56 PM  1000      2752      0.00      0.00      0.00       1  syndaemon
 `,
@@ -145,7 +142,7 @@ func TestHelperProcess(t *testing.T) {
 03:06:56 PM     0       330      0.83      0.00   45756    4264   0.05  systemd-udevd
 03:06:56 PM   100      1005      0.00      0.00  102464    2468   0.03  systemd-timesyn
 03:06:56 PM     0      1012      0.00      0.00   20416    2616   0.03  systemd-logind
-03:06:56 PM   104      1056      0.00      0.00  262776    2924   0.04  rsyslogd
+03:06:56 PM   104      1056      0.00      0.00  262776    2924   0.04  rsyslogd arg arg arg
 03:06:56 PM  1000      1784      0.00      0.00   37012    3512   0.04  systemd
 03:06:56 PM  1000      2752      0.00      0.00   22636    1920   0.02  syndaemon"
 `,
@@ -164,7 +161,7 @@ func TestHelperProcess(t *testing.T) {
 03:06:56 PM     0       330    0.00    0.00    0.00    0.00     3  systemd-udevd
 03:06:56 PM   100      1005    0.00    0.00    0.00    0.00     1  systemd-timesyn
 03:06:56 PM     0      1012    0.00    0.00    0.00    0.00     6  systemd-logind
-03:06:56 PM   104      1056    0.00    0.00    0.00    0.00     1  rsyslogd
+03:06:56 PM   104      1056    0.00    0.00    0.00    0.00     1  rsyslogd arg arg arg
 03:06:56 PM  1000      1784    0.00    0.00    0.00    0.00     1  systemd
 03:06:56 PM  1000      2752    0.00    0.00    0.00    0.00     3  syndaemon
 `,
@@ -177,7 +174,7 @@ func TestHelperProcess(t *testing.T) {
 03:06:56 PM     0       330      0.05      0.01  systemd-udevd
 03:06:56 PM   100      1005      0.00      0.00  systemd-timesyn
 03:06:56 PM     0      1012      0.03      0.00  systemd-logind
-03:06:56 PM   104      1056      0.00      0.00  rsyslogd
+03:06:56 PM   104      1056      0.00      0.00  rsyslogd arg arg arg
 03:06:56 PM  1000      1784      0.00      0.00  systemd
 03:06:56 PM  1000      2752      0.62      0.00  syndaemon
 `,
