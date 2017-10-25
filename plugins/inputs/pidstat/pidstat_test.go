@@ -13,7 +13,7 @@ import (
 )
 
 var p = Pidstat{
-	Interval: 1,
+	Interval: 5,
 
 	PerPid:     true,
 	PerCommand: true,
