@@ -59,7 +59,7 @@ var fService = flag.String("service", "",
 //   ie, -ldflags "-X main.version=`git describe --always --tags`"
 
 var (
-	nextVersion = "1.4.0"
+	nextVersion = "1.5.0"
 	version     string
 	commit      string
 	branch      string

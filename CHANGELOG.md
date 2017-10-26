@@ -41,6 +41,17 @@
 - [#3230](https://github.com/influxdata/telegraf/issues/3230): Fix panic in statsd p100 calculation.
 - [#3242](https://github.com/influxdata/telegraf/issues/3242): Fix arm64 packages contain 32-bit executable.
 
+## v1.3.5 [2017-07-26]
+
+### Bugfixes
+
+- [#3049](https://github.com/influxdata/telegraf/issues/3049): Fix prometheus output cannot be reloaded.
+- [#3037](https://github.com/influxdata/telegraf/issues/3037): Fix filestat reporting exists when cannot list directory.
+- [#2386](https://github.com/influxdata/telegraf/issues/2386): Fix ntpq parse issue when using dns_lookup.
+- [#2554](https://github.com/influxdata/telegraf/issues/2554): Fix panic when agent.interval = "0s".
+## v1.5 [unreleased]
+
+## v1.4 [unreleased]
 ## v1.4 [2017-09-05]
 
 ### Release Notes
