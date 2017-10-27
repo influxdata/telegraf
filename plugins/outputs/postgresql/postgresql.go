@@ -59,7 +59,6 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 	}
 
 	sql := fmt.Sprintf("CREATE TABLE %s(%s,PRIMARY KEY(%s))", metric.Name(), strings.Join(columns, ","), strings.Join(pk, ","))
-	fmt.Println(sql)
 	return sql
 }
 
@@ -96,7 +95,6 @@ func (p *Postgresql) writeMetric(metric telegraf.Metric) error {
 		createStmt := p.generateCreateTable(metric)
 		_, err := p.db.Exec(createStmt)
 		if err != nil {
-			fmt.Println("Error creating table", err)
 			return err
 		}
 		p.Tables[tableName] = true
