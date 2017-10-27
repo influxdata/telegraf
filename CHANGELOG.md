@@ -48,6 +48,7 @@
 - [#3337](https://github.com/influxdata/telegraf/pull/3337): Add histogram and summary types and use in prometheus plugins.
 - [#3365](https://github.com/influxdata/telegraf/pull/3365): Gather concurrently from snmp agents.
 - [#3333](https://github.com/influxdata/telegraf/issues/3333): Perform DNS lookup before ping and report result.
+- [#3398](https://github.com/influxdata/telegraf/issues/3398): Add instance name option to varnish plugin.
 
 ### Bugfixes
 
