@@ -88,10 +88,24 @@ func (p *Postgresql) generateInsert(metric telegraf.Metric) (string, []interface
 	return sql, values
 }
 
+func (p *Postgresql) tableExists(tableName string) bool {
+	stmt := "SELECT tablename FROM pg_tables WHERE tablename = $1 AND schemaname NOT IN ('information_schema','pg_catalog');"
+	result, err := p.db.Exec(stmt, tableName)
+	if err != nil {
+		return false
+	}
+	if count, _ := result.RowsAffected(); count == 1 {
+		p.Tables[tableName] = true
+		return true
+	}
+	return false
+
+}
+
 func (p *Postgresql) writeMetric(metric telegraf.Metric) error {
 	tableName := metric.Name()
 
-	if p.Tables[tableName] == false {
+	if p.Tables[tableName] == false && p.tableExists(tableName) == false {
 		createStmt := p.generateCreateTable(metric)
 		_, err := p.db.Exec(createStmt)
 		if err != nil {
