@@ -3,18 +3,18 @@ package postgresql
 import (
 	"database/sql"
 	"fmt"
+	"log"
+	"strings"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"strings"
 )
 
 type Postgresql struct {
-	db                *sql.DB
-	Address           string
-	CreateTables      bool
-	TagsAsForeignkeys bool
-	Tables            map[string]bool
-	SchemaTag         string
+	db          *sql.DB
+	Address     string
+	IgnoredTags []string
+	Tables      map[string]bool
 }
 
 func (p *Postgresql) Connect() error {
@@ -32,6 +32,15 @@ func (p *Postgresql) Close() error {
 	return p.db.Close()
 }
 
+func contains(haystack []string, needle string) bool {
+	for _, key := range haystack {
+		if key == needle {
+			return true
+		}
+	}
+	return false
+}
+
 func (p *Postgresql) SampleConfig() string { return "" }
 func (p *Postgresql) Description() string  { return "Send metrics to PostgreSQL" }
 
@@ -43,6 +52,9 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 	columns = append(columns, "time timestamptz")
 
 	for column, _ := range metric.Tags() {
+		if contains(p.IgnoredTags, column) {
+			continue
+		}
 		pk = append(pk, column)
 		columns = append(columns, fmt.Sprintf("%s text", column))
 	}
@@ -70,6 +82,9 @@ func (p *Postgresql) generateInsert(metric telegraf.Metric) (string, []interface
 	values = append(values, metric.Time())
 
 	for column, value := range metric.Tags() {
+		if contains(p.IgnoredTags, column) {
+			continue
+		}
 		columns = append(columns, column)
 		values = append(values, value)
 	}
@@ -92,6 +107,7 @@ func (p *Postgresql) tableExists(tableName string) bool {
 	stmt := "SELECT tablename FROM pg_tables WHERE tablename = $1 AND schemaname NOT IN ('information_schema','pg_catalog');"
 	result, err := p.db.Exec(stmt, tableName)
 	if err != nil {
+		log.Printf("E! Error checking for existence of metric table %s: %v", tableName, err)
 		return false
 	}
 	if count, _ := result.RowsAffected(); count == 1 {
