@@ -9,12 +9,12 @@ import (
 )
 
 type Teamspeak struct {
-	Server   string
-	Username string
-	Password string
-	Virtual_servers []int
+	Server         string
+	Username       string
+	Password       string
+	VirtualServers []int `toml:"virtual_servers"`
 
-	client *ts3.Client
+	client    *ts3.Client
 	connected bool
 }
 
@@ -54,7 +54,7 @@ func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 		ts.connected = true
 	}
 
-	for _, vserver := range ts.Virtual_servers {
+	for _, vserver := range ts.VirtualServers {
 		ts.client.Use(vserver)
 
 		sm, err := ts.client.Server.Info()
@@ -71,7 +71,7 @@ func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 
 		tags := map[string]string{
 			"virtual_server": strconv.Itoa(sm.ID),
-			"name":     sm.Name,
+			"name":           sm.Name,
 		}
 
 		fields := map[string]interface{}{
@@ -93,8 +93,8 @@ func (ts *Teamspeak) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("teamspeak", func() telegraf.Input {
 		return &Teamspeak{
-			Server: "127.0.0.1:10011",
-			Virtual_servers: []int{1},
+			Server:         "127.0.0.1:10011",
+			VirtualServers: []int{1},
 		}
 	})
 }

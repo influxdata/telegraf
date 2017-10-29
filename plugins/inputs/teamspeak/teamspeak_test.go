@@ -31,10 +31,10 @@ func TestGather(t *testing.T) {
 
 	var acc testutil.Accumulator
 	testConfig := Teamspeak{
-		Server:   l.Addr().String(),
-		Username: "serveradmin",
-		Password: "test",
-		Virtual_servers: []int{1},
+		Server:         l.Addr().String(),
+		Username:       "serveradmin",
+		Password:       "test",
+		VirtualServers: []int{1},
 	}
 	err = testConfig.Gather(&acc)
 
