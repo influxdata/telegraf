@@ -174,6 +174,13 @@ This plugin will format the events in the following way:
   # %H - hour (00..23)
   index_name = "telegraf-%Y.%m.%d" # required.
 
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
+
   ## Template Config
   ## Set to true if you want telegraf to manage its index template.
   ## If enabled it will create a recommended index template for telegraf indexes
