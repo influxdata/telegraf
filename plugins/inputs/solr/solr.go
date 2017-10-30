@@ -38,20 +38,20 @@ type Solr struct {
 	client      *http.Client
 }
 
-// AdminCores is an exported type that
+// AdminCoresStatus is an exported type that
 // contains a response with information about Solr cores.
 type AdminCoresStatus struct {
 	Status map[string]struct {
 		Index struct {
 			SizeInBytes int64 `json:"sizeInBytes"`
-			NumDocs     int   `json:"numDocs"`
-			MaxDoc      int   `json:"maxDoc"`
-			DeletedDocs int   `json:"deletedDocs"`
+			NumDocs     int64 `json:"numDocs"`
+			MaxDoc      int64 `json:"maxDoc"`
+			DeletedDocs int64 `json:"deletedDocs"`
 		} `json:"index"`
 	} `json:"status"`
 }
 
-// Metrics is an exported type that
+// MBeansData is an exported type that
 // contains a response from Solr with metrics
 type MBeansData struct {
 	Headers    ResponseHeader    `json:"responseHeader"`
@@ -61,25 +61,23 @@ type MBeansData struct {
 // ResponseHeader is an exported type that
 // contains a response metrics: QTime and Status
 type ResponseHeader struct {
-	QTime  int `json:"QTime"`
-	Status int `json:"status"`
+	QTime  int64 `json:"QTime"`
+	Status int64 `json:"status"`
 }
 
 // Core is an exported type that
 // contains Core metrics
 type Core struct {
-	Class string `json:"class"`
 	Stats struct {
-		DeletedDocs int `json:"deletedDocs"`
-		MaxDoc      int `json:"maxDoc"`
-		NumDocs     int `json:"numDocs"`
+		DeletedDocs int64 `json:"deletedDocs"`
+		MaxDoc      int64 `json:"maxDoc"`
+		NumDocs     int64 `json:"numDocs"`
 	} `json:"stats"`
 }
 
 // QueryHandler is an exported type that
 // contains query handler metrics
 type QueryHandler struct {
-	Class string `json:"class"`
 	Stats struct {
 		One5minRateReqsPerSecond float64 `json:"15minRateReqsPerSecond"`
 		FiveMinRateReqsPerSecond float64 `json:"5minRateReqsPerSecond"`
@@ -89,11 +87,11 @@ type QueryHandler struct {
 		Nine9thPcRequestTime     float64 `json:"99thPcRequestTime"`
 		AvgRequestsPerSecond     float64 `json:"avgRequestsPerSecond"`
 		AvgTimePerRequest        float64 `json:"avgTimePerRequest"`
-		Errors                   int     `json:"errors"`
-		HandlerStart             int     `json:"handlerStart"`
+		Errors                   int64   `json:"errors"`
+		HandlerStart             int64   `json:"handlerStart"`
 		MedianRequestTime        float64 `json:"medianRequestTime"`
-		Requests                 int     `json:"requests"`
-		Timeouts                 int     `json:"timeouts"`
+		Requests                 int64   `json:"requests"`
+		Timeouts                 int64   `json:"timeouts"`
 		TotalTime                float64 `json:"totalTime"`
 	} `json:"stats"`
 }
@@ -101,45 +99,43 @@ type QueryHandler struct {
 // UpdateHandler is an exported type that
 // contains update handler metrics
 type UpdateHandler struct {
-	Class string `json:"class"`
 	Stats struct {
-		Adds                     int    `json:"adds"`
-		AutocommitMaxDocs        int    `json:"autocommit maxDocs"`
+		Adds                     int64  `json:"adds"`
+		AutocommitMaxDocs        int64  `json:"autocommit maxDocs"`
 		AutocommitMaxTime        string `json:"autocommit maxTime"`
-		Autocommits              int    `json:"autocommits"`
-		Commits                  int    `json:"commits"`
-		CumulativeAdds           int    `json:"cumulative_adds"`
-		CumulativeDeletesByID    int    `json:"cumulative_deletesById"`
-		CumulativeDeletesByQuery int    `json:"cumulative_deletesByQuery"`
-		CumulativeErrors         int    `json:"cumulative_errors"`
-		DeletesByID              int    `json:"deletesById"`
-		DeletesByQuery           int    `json:"deletesByQuery"`
-		DocsPending              int    `json:"docsPending"`
-		Errors                   int    `json:"errors"`
-		ExpungeDeletes           int    `json:"expungeDeletes"`
-		Optimizes                int    `json:"optimizes"`
-		Rollbacks                int    `json:"rollbacks"`
-		SoftAutocommits          int    `json:"soft autocommits"`
+		Autocommits              int64  `json:"autocommits"`
+		Commits                  int64  `json:"commits"`
+		CumulativeAdds           int64  `json:"cumulative_adds"`
+		CumulativeDeletesByID    int64  `json:"cumulative_deletesById"`
+		CumulativeDeletesByQuery int64  `json:"cumulative_deletesByQuery"`
+		CumulativeErrors         int64  `json:"cumulative_errors"`
+		DeletesByID              int64  `json:"deletesById"`
+		DeletesByQuery           int64  `json:"deletesByQuery"`
+		DocsPending              int64  `json:"docsPending"`
+		Errors                   int64  `json:"errors"`
+		ExpungeDeletes           int64  `json:"expungeDeletes"`
+		Optimizes                int64  `json:"optimizes"`
+		Rollbacks                int64  `json:"rollbacks"`
+		SoftAutocommits          int64  `json:"soft autocommits"`
 	} `json:"stats"`
 }
 
 // Cache is an exported type that
 // contains cache metrics
 type Cache struct {
-	Class string `json:"class"`
 	Stats struct {
-		CumulativeEvictions int     `json:"cumulative_evictions"`
+		CumulativeEvictions int64   `json:"cumulative_evictions"`
 		CumulativeHitratio  float64 `json:"cumulative_hitratio,string"`
-		CumulativeHits      int     `json:"cumulative_hits"`
-		CumulativeInserts   int     `json:"cumulative_inserts"`
-		CumulativeLookups   int     `json:"cumulative_lookups"`
-		Evictions           int     `json:"evictions"`
+		CumulativeHits      int64   `json:"cumulative_hits"`
+		CumulativeInserts   int64   `json:"cumulative_inserts"`
+		CumulativeLookups   int64   `json:"cumulative_lookups"`
+		Evictions           int64   `json:"evictions"`
 		Hitratio            float64 `json:"hitratio,string"`
-		Hits                int     `json:"hits"`
-		Inserts             int     `json:"inserts"`
-		Lookups             int     `json:"lookups"`
-		Size                int     `json:"size"`
-		WarmupTime          int     `json:"warmupTime"`
+		Hits                int64   `json:"hits"`
+		Inserts             int64   `json:"inserts"`
+		Lookups             int64   `json:"lookups"`
+		Size                int64   `json:"size"`
+		WarmupTime          int64   `json:"warmupTime"`
 	} `json:"stats"`
 }
 
@@ -185,7 +181,7 @@ func (s *Solr) Gather(acc telegraf.Accumulator) error {
 func (s *Solr) gatherServerMetrics(server string, acc telegraf.Accumulator) error {
 	measurementTime := time.Now()
 	adminCoresStatus := &AdminCoresStatus{}
-	if err := s.gatherData(s.adminUrl(server), adminCoresStatus); err != nil {
+	if err := s.gatherData(s.adminURL(server), adminCoresStatus); err != nil {
 		return err
 	}
 	addAdminCoresStatusToAcc(acc, adminCoresStatus, measurementTime)
@@ -196,7 +192,7 @@ func (s *Solr) gatherServerMetrics(server string, acc telegraf.Accumulator) erro
 		go func(server string, core string, acc telegraf.Accumulator) {
 			defer wg.Done()
 			mBeansData := &MBeansData{}
-			acc.AddError(s.gatherData(s.mbeansUrl(server, core), mBeansData))
+			acc.AddError(s.gatherData(s.mbeansURL(server, core), mBeansData))
 			acc.AddError(addCoreMetricsToAcc(acc, core, mBeansData, measurementTime))
 			acc.AddError(addQueryHandlerMetricsToAcc(acc, core, mBeansData, measurementTime))
 			acc.AddError(addUpdateHandlerMetricsToAcc(acc, core, mBeansData, measurementTime))
@@ -211,9 +207,8 @@ func (s *Solr) gatherServerMetrics(server string, acc telegraf.Accumulator) erro
 func (s *Solr) filterCores(serverCores []string) []string {
 	if len(s.Cores) == 0 {
 		return serverCores
-	} else {
-		return s.Cores
 	}
+	return s.Cores
 }
 
 // Return list of cores from solr server
@@ -255,7 +250,6 @@ func addCoreMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBea
 			continue
 		}
 		coreFields := map[string]interface{}{
-			"class_name":   metrics.Class,
 			"deleted_docs": metrics.Stats.DeletedDocs,
 			"max_docs":     metrics.Stats.MaxDoc,
 			"num_docs":     metrics.Stats.NumDocs,
@@ -281,7 +275,6 @@ func addQueryHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansDa
 	}
 	for name, metrics := range queryMetrics {
 		coreFields := map[string]interface{}{
-			"class_name":                 metrics.Class,
 			"15min_rate_reqs_per_second": metrics.Stats.One5minRateReqsPerSecond,
 			"5min_rate_reqs_per_second":  metrics.Stats.FiveMinRateReqsPerSecond,
 			"75th_pc_request_time":       metrics.Stats.Seven5thPcRequestTime,
@@ -317,12 +310,11 @@ func addUpdateHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansD
 		return err
 	}
 	for name, metrics := range updateMetrics {
-		var autoCommitMaxTime int
+		var autoCommitMaxTime int64
 		if len(metrics.Stats.AutocommitMaxTime) > 2 {
-			autoCommitMaxTime, _ = strconv.Atoi(metrics.Stats.AutocommitMaxTime[:len(metrics.Stats.AutocommitMaxTime)-2])
+			autoCommitMaxTime, _ = strconv.ParseInt(metrics.Stats.AutocommitMaxTime[:len(metrics.Stats.AutocommitMaxTime)-2], 0, 64)
 		}
 		coreFields := map[string]interface{}{
-			"class_name":                  metrics.Class,
 			"adds":                        metrics.Stats.Adds,
 			"autocommit_max_docs":         metrics.Stats.AutocommitMaxDocs,
 			"autocommit_max_time":         autoCommitMaxTime,
@@ -362,7 +354,6 @@ func addCacheMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBe
 	}
 	for name, metrics := range cacheMetrics {
 		coreFields := map[string]interface{}{
-			"class_name":           metrics.Class,
 			"cumulative_evictions": metrics.Stats.CumulativeEvictions,
 			"cumulative_hitratio":  metrics.Stats.CumulativeHitratio,
 			"cumulative_hits":      metrics.Stats.CumulativeHits,
@@ -389,12 +380,12 @@ func addCacheMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBe
 }
 
 // Provide admin url
-func (s *Solr) adminUrl(server string) string {
+func (s *Solr) adminURL(server string) string {
 	return fmt.Sprintf("%s%s", server, adminCoresPath)
 }
 
 // Provide mbeans url
-func (s *Solr) mbeansUrl(server string, core string) string {
+func (s *Solr) mbeansURL(server string, core string) string {
 	return fmt.Sprintf("%s/solr/%s%s", server, core, mbeansPath)
 }
 
