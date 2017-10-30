@@ -25,6 +25,9 @@ type Prometheus struct {
 	// An array of Kubernetes services to scrape metrics from.
 	KubernetesServices []string
 
+	// Use measurment name as field name instead of gauge, counter etc.
+	MeasurementNameAsFieldName bool `toml:"measurement_name_as_field_name"`
+
 	// Bearer Token authorization file path
 	BearerToken string `toml:"bearer_token"`
 
@@ -218,18 +221,26 @@ func (p *Prometheus) gatherURL(url UrlAndAddress, acc telegraf.Accumulator) erro
 		if url.Address != "" {
 			tags["address"] = url.Address
 		}
-
+		fields := metric.Fields()
+		if p.MeasurementNameAsFieldName {
+			newFields := make(map[string]interface{})
+			for _, v := range fields {
+				newFields[metric.Name()] = v
+				break // fields should only contain one metric as per spec
+			}
+			fields = newFields
+		}
 		switch metric.Type() {
 		case telegraf.Counter:
-			acc.AddCounter(metric.Name(), metric.Fields(), tags, metric.Time())
+			acc.AddCounter(metric.Name(), fields, tags, metric.Time())
 		case telegraf.Gauge:
-			acc.AddGauge(metric.Name(), metric.Fields(), tags, metric.Time())
+			acc.AddGauge(metric.Name(), fields, tags, metric.Time())
 		case telegraf.Summary:
-			acc.AddSummary(metric.Name(), metric.Fields(), tags, metric.Time())
+			acc.AddSummary(metric.Name(), fields, tags, metric.Time())
 		case telegraf.Histogram:
-			acc.AddHistogram(metric.Name(), metric.Fields(), tags, metric.Time())
+			acc.AddHistogram(metric.Name(), fields, tags, metric.Time())
 		default:
-			acc.AddFields(metric.Name(), metric.Fields(), tags, metric.Time())
+			acc.AddFields(metric.Name(), fields, tags, metric.Time())
 		}
 	}
 

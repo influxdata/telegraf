@@ -17,6 +17,8 @@ in Prometheus format.
   ## Use bearer token for authorization
   # bearer_token = /path/to/bearer/token
 
+  # measurement_name_as_field_name = true
+
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
 
@@ -42,6 +44,25 @@ This method can be used to locate all
 If set, the file specified by the `bearer_token` parameter will be read on
 each interval and its contents will be appended to the Bearer string in the
 Authorization header.
+
+
+### Measurement Name as Field Name
+
+If `measurement_name_as_field_name` set, output metric fields will use measurement as name instead of `gauge`,
+`counter` etc. This is useful for example in the case when you want to map all 
+metrics under single measurement using `name_override` and still be able to separate
+metrics.
+
+#### Example of output using `measurement_name_as_field_name`
+**Source**
+```
+cpu_usage_user{cpu="cpu3"} 1.5045135406226022
+```
+**Output**
+```
+cpu_usage_user,cpu=cpu3,url=http://example.org:9273/metrics cpu_usage_user=1.5228426395944945 1505776751000000000
+```
+
 
 ### Usage for Caddy HTTP server
 

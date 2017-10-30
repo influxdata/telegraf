@@ -78,6 +78,32 @@ func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
 	assert.True(t, acc.TagValue("test_metric", "url") == ts.URL)
 }
 
+func TestPrometheusGeneratesMetricsWithHostNameTagAndMeasurementNameAsFieldName(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, sampleTextFormat)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		KubernetesServices:         []string{ts.URL},
+		MeasurementNameAsFieldName: true,
+	}
+	u, _ := url.Parse(ts.URL)
+	tsAddress := u.Hostname()
+
+	var acc testutil.Accumulator
+
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
+	assert.True(t, acc.HasFloatField("go_gc_duration_seconds", "go_gc_duration_seconds"))
+	assert.True(t, acc.HasFloatField("go_goroutines", "go_goroutines"))
+	assert.True(t, acc.HasFloatField("test_metric", "test_metric"))
+	assert.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
+	assert.True(t, acc.TagValue("test_metric", "address") == tsAddress)
+	assert.True(t, acc.TagValue("test_metric", "url") == ts.URL)
+}
+
 func TestPrometheusGeneratesMetricsAlthoughFirstDNSFails(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
