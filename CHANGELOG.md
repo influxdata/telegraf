@@ -1,3 +1,7 @@
+## v1.4.4 [unreleased]
+
+- [#3401](https://github.com/influxdata/telegraf/pull/3401): Use schema specified in mqtt_consumer input.
+
 ## v1.4.3 [2017-10-25]
 
 ### Bugfixes
