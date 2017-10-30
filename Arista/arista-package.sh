@@ -22,15 +22,16 @@ TMP_CONFIG_DIR=./rpm_config
 CONFIG_FILES_DIR=./ConfigFiles
 
 LINUX_CONFIG_FILES_VER=1.7
-CONFIG_FILES_ITER=13
 REDIS_CONFIG_FILES_VER=1.7
 PERFORCE_CONFIG_FILES_VER=1.7
 SWIFT_CONFIG_FILES_VER=1.1
 QUBIT_SCYLLA_CONFIG_FILES_VER=1.8
+QUBIT_SCYLLA_DEV_CONFIG_FILES_VER=1.1
 QUBIT_WORKER_CONFIG_FILES_VER=1.7
 QUBIT_SPIN_CONFIG_FILES_VER=1.7
 
-BIN_RPM_ITER=1
+CONFIG_FILES_ITER=14
+BIN_RPM_ITER=2
 
 LICENSE=MIT
 URL=github.com/aristanetworks/telegraf
@@ -137,6 +138,12 @@ fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$SWIFT_C
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-qubit-scylla.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$QUBIT_SCYLLA_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-qubit-scylla" etc lib || cleanup_exit 1
+
+# QUBIT Scylla dev config
+rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
+cp $CONFIG_FILES_DIR/telegraf-qubit-scylla-dev.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$QUBIT_SCYLLA_DEV_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-qubit-scylla-dev" etc lib || cleanup_exit 1
+
 
 # QUBIT Worker config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
