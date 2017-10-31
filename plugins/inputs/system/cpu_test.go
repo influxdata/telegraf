@@ -54,7 +54,7 @@ func TestCPUStats(t *testing.T) {
 	err := cs.Gather(&acc)
 	require.NoError(t, err)
 
-	// Computed values are checked with delta > 0 becasue of floating point arithmatic
+	// Computed values are checked with delta > 0 because of floating point arithmatic
 	// imprecision
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_user", 8.8, 0, cputags)
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_system", 8.2, 0, cputags)
@@ -105,7 +105,7 @@ func TestCPUStats(t *testing.T) {
 // specific tags within a certain distance of a given expected value. Asserts a failure
 // if the measurement is of the wrong type, or if no matching measurements are found
 //
-// Paramaters:
+// Parameters:
 //     t *testing.T            : Testing object to use
 //     acc testutil.Accumulator: Accumulator to examine
 //     measurement string      : Name of the measurement to examine
@@ -224,7 +224,7 @@ func TestCPUTimesDecrease(t *testing.T) {
 	err := cs.Gather(&acc)
 	require.NoError(t, err)
 
-	// Computed values are checked with delta > 0 becasue of floating point arithmatic
+	// Computed values are checked with delta > 0 because of floating point arithmatic
 	// imprecision
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_user", 18, 0, cputags)
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_idle", 80, 0, cputags)

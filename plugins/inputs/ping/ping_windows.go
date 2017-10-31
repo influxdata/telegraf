@@ -175,7 +175,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			totalTimeout := p.timeout() * float64(p.Count)
 			out, err := p.pingHost(totalTimeout, args...)
 			// ping host return exitcode != 0 also when there was no response from host
-			// but command was execute succesfully
+			// but command was execute successfully
 			if err != nil {
 				// Combine go err + stderr output
 				pendingError = errors.New(strings.TrimSpace(out) + ", " + err.Error())
