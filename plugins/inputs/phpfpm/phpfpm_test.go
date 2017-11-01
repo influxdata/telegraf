@@ -62,7 +62,7 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 	// Let OS find an available port
 	tcp, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		t.Fatal("Cannot initalize test server")
+		t.Fatal("Cannot initialize test server")
 	}
 	defer tcp.Close()
 
@@ -106,7 +106,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
 	tcp, err := net.Listen("unix", fmt.Sprintf("/tmp/test-fpm%d.sock", randomNumber))
 	if err != nil {
-		t.Fatal("Cannot initalize server on port ")
+		t.Fatal("Cannot initialize server on port ")
 	}
 
 	defer tcp.Close()
@@ -150,7 +150,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
 	tcp, err := net.Listen("unix", fmt.Sprintf("/tmp/test-fpm%d.sock", randomNumber))
 	if err != nil {
-		t.Fatal("Cannot initalize server on port ")
+		t.Fatal("Cannot initialize server on port ")
 	}
 
 	defer tcp.Close()

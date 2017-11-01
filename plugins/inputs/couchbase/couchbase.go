@@ -21,7 +21,7 @@ var sampleConfig = `
   ##    http://admin:secret@couchbase-0.example.com:8091/
   ##
   ## If no servers are specified, then localhost is used as the host.
-  ## If no protocol is specifed, HTTP is used.
+  ## If no protocol is specified, HTTP is used.
   ## If no port is specified, 8091 is used.
   servers = ["http://localhost:8091"]
 `

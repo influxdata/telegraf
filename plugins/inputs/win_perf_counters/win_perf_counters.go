@@ -110,7 +110,7 @@ func (m *Win_PerfCounters) AddItem(query string, objectName string, counter stri
 		ret = PdhAddEnglishCounter(handle, query, 0, &counterHandle)
 	}
 
-	// Call PdhCollectQueryData one time to check existance of the counter
+	// Call PdhCollectQueryData one time to check existence of the counter
 	ret = PdhCollectQueryData(handle)
 	if ret != ERROR_SUCCESS {
 		PdhCloseQuery(handle)

@@ -197,7 +197,7 @@ func (c *Client) Send(typ int32, command string) (response *Packet, err error) {
 }
 
 // NewClient creates a new Client type, creating the connection
-// to the server specified by the host and port arguements. If
+// to the server specified by the host and port arguments. If
 // the connection fails, an error is returned.
 func NewClient(host string, port int) (client *Client, err error) {
 	client = new(Client)

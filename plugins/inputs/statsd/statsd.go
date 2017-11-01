@@ -66,7 +66,7 @@ type Statsd struct {
 
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string
-	// This flag enables parsing of tags in the dogstatsd extention to the
+	// This flag enables parsing of tags in the dogstatsd extension to the
 	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
 	ParseDataDogTags bool
 

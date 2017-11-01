@@ -181,7 +181,7 @@ func TestMetricReader_SplitWithExactLengthSplit(t *testing.T) {
 	}
 }
 
-// Regresssion test for when a metric requires to be split and one of the
+// Regression test for when a metric requires to be split and one of the
 // split metrics is larger than the buffer.
 //
 // Previously the metric index would be set incorrectly causing a panic.
@@ -218,7 +218,7 @@ func TestMetricReader_SplitOverflowOversized(t *testing.T) {
 	}
 }
 
-// Regresssion test for when a split metric exactly fits in the buffer.
+// Regression test for when a split metric exactly fits in the buffer.
 //
 // Previously the metric would be overflow split when not required.
 func TestMetricReader_SplitOverflowUneeded(t *testing.T) {
