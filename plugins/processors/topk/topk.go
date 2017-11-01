@@ -11,18 +11,13 @@ import (
 )
 
 type TopK struct {
-	Metric             string
 	Period             int
 	K                  int
 	Fields             []string
-	Tags               map[string]string
 	Aggregation        string
 	GroupBy            []string `toml:"group_by"`
 	GroupByMetricName  bool `toml:"group_by_metric_name"`
         Bottomk            bool
-        RevertMetricMatch  bool `toml:"revert_metric_match"`
-        RevertTagMatch     bool `toml:"revert_tag_match"`
-        DropNonMatching    bool `toml:"drop_non_matching"`
 	DropNonTop         bool `toml:"drop_non_top"`
 	PositionField      string `toml:"position_field"`
 	AggregationField   string `toml:"aggregation_field"`
@@ -38,16 +33,12 @@ func NewTopK() telegraf.Processor{
 	topk := &TopK{}
 
 	// Setup defaults
-	topk.Metric = ".*"
 	topk.Period = 10
 	topk.K = 10
 	topk.Fields = nil
-	topk.Tags = nil
 	topk.Aggregation = "avg"
 	topk.GroupBy = nil
 	topk.GroupByMetricName = false
-	topk.RevertTagMatch = false
-	topk.DropNonMatching = false
 	topk.DropNonTop = true
 	topk.PositionField = ""
 	topk.AggregationField = ""
@@ -123,47 +114,6 @@ func (t *TopK) Description() string {
 	return "Print all metrics that pass through this filter."
 }
 
-func (t *TopK) init_regexes() {
-	// Compile regex for the metric name
-	if (t.metric_regex == nil) {
-		var err error
-		t.metric_regex, err = regexp.Compile(t.Metric)
-		if (err != nil) {
-			panic(fmt.Sprintf("TopK processor could not parse metric name regex '%s'", t.Metric))
-		}
-	}
-
-	// Compile regexes for the tags
-	if (t.Tags != nil) && (t.tags_regexes == nil) {
-		t.tags_regexes = make(map[string]*regexp.Regexp)
-		for key, regex := range t.Tags {
-			regex, err := regexp.Compile(regex)
-			if (err != nil) {
-				panic(fmt.Sprintf("TopK processor could not parse tag regex '%s'", t.Metric))
-			}
-			t.tags_regexes[key] = regex
-		}
-	}
-}
-
-func (t *TopK) match_metric(m telegraf.Metric) bool {
-	// Run metric name against our metric regex
-	match_name := t.metric_regex.MatchString(m.Name())
-	if ! (match_name != t.RevertMetricMatch) { return false }
-
-	// Run every tag against our tags regexes
-	if t.Tags == nil { return true }
-	match_tags := false
-	for key, value := range m.Tags() {
-		if _, ok := t.tags_regexes[key]; ok {
-			match_tags = t.tags_regexes[key].MatchString(value) && (match_tags || ok)
-		}
-	}
-	if ! (match_tags != t.RevertTagMatch) { return false }
-
-	return true
-}
-
 func (t *TopK) generate_groupby_key(m telegraf.Metric) string {
 	groupkey := ""
 	if t.GroupByMetricName {
@@ -194,21 +144,10 @@ func (t *TopK) group_by(m telegraf.Metric) {
 }
 
 func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	// Generate the regexp structs that we use to match the metrics
-	t.init_regexes()
-
 	// Add the metrics received to our internal cache
-	var ret []telegraf.Metric = nil
+	var ret []telegraf.Metric = make([]telegraf.Metric, 0, 0)
 	for _, m := range in {
-		if (t.match_metric(m)){
-			t.group_by(m)
-		} else {
-			// If the metric didn't match, add it to the return value, so we don't drop it
-			if (ret == nil) {
-				ret = make([]telegraf.Metric, 0, len(in))
-			}
-			ret = append(ret, m)
-		}
+		t.group_by(m)
 	}
 
 	// If enough time has passed
@@ -242,7 +181,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		return ret
 	}
 
-	return ret
+	return []telegraf.Metric{}
 }
 
 func min(a, b int) int   {
