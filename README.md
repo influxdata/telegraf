@@ -196,6 +196,7 @@ configuration options.
 * [snmp](./plugins/inputs/snmp)
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
+* [teamspeak](./plugins/inputs/teamspeak)
 * [tomcat](./plugins/inputs/tomcat)
 * [twemproxy](./plugins/inputs/twemproxy)
 * [varnish](./plugins/inputs/varnish)

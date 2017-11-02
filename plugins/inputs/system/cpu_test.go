@@ -54,7 +54,7 @@ func TestCPUStats(t *testing.T) {
 	err := cs.Gather(&acc)
 	require.NoError(t, err)
 
-	// Computed values are checked with delta > 0 becasue of floating point arithmatic
+	// Computed values are checked with delta > 0 because of floating point arithmatic
 	// imprecision
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_user", 8.8, 0, cputags)
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_system", 8.2, 0, cputags)
@@ -105,7 +105,7 @@ func TestCPUStats(t *testing.T) {
 // specific tags within a certain distance of a given expected value. Asserts a failure
 // if the measurement is of the wrong type, or if no matching measurements are found
 //
-// Paramaters:
+// Parameters:
 //     t *testing.T            : Testing object to use
 //     acc testutil.Accumulator: Accumulator to examine
 //     measurement string      : Name of the measurement to examine
@@ -183,4 +183,73 @@ func TestCPUCountIncrease(t *testing.T) {
 
 	err = cs.Gather(&acc)
 	require.NoError(t, err)
+}
+
+// TestCPUTimesDecrease tests that telegraf continue to works after
+// CPU times decrease, which seems to occur when Linux system is suspended.
+func TestCPUTimesDecrease(t *testing.T) {
+	var mps MockPS
+	defer mps.AssertExpectations(t)
+	var acc testutil.Accumulator
+
+	cts := cpu.TimesStat{
+		CPU:    "cpu0",
+		User:   18,
+		Idle:   80,
+		Iowait: 2,
+	}
+
+	cts2 := cpu.TimesStat{
+		CPU:    "cpu0",
+		User:   38, // increased by 20
+		Idle:   40, // decreased by 40
+		Iowait: 1,  // decreased by 1
+	}
+
+	cts3 := cpu.TimesStat{
+		CPU:    "cpu0",
+		User:   56,  // increased by 18
+		Idle:   120, // increased by 80
+		Iowait: 3,   // increased by 2
+	}
+
+	mps.On("CPUTimes").Return([]cpu.TimesStat{cts}, nil)
+
+	cs := NewCPUStats(&mps)
+
+	cputags := map[string]string{
+		"cpu": "cpu0",
+	}
+
+	err := cs.Gather(&acc)
+	require.NoError(t, err)
+
+	// Computed values are checked with delta > 0 because of floating point arithmatic
+	// imprecision
+	assertContainsTaggedFloat(t, &acc, "cpu", "time_user", 18, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "cpu", "time_idle", 80, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "cpu", "time_iowait", 2, 0, cputags)
+
+	mps2 := MockPS{}
+	mps2.On("CPUTimes").Return([]cpu.TimesStat{cts2}, nil)
+	cs.ps = &mps2
+
+	// CPU times decreased. An error should be raised
+	err = cs.Gather(&acc)
+	require.Error(t, err)
+
+	mps3 := MockPS{}
+	mps3.On("CPUTimes").Return([]cpu.TimesStat{cts3}, nil)
+	cs.ps = &mps3
+
+	err = cs.Gather(&acc)
+	require.NoError(t, err)
+
+	assertContainsTaggedFloat(t, &acc, "cpu", "time_user", 56, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "cpu", "time_idle", 120, 0, cputags)
+	assertContainsTaggedFloat(t, &acc, "cpu", "time_iowait", 3, 0, cputags)
+
+	assertContainsTaggedFloat(t, &acc, "cpu", "usage_user", 18, 0.0005, cputags)
+	assertContainsTaggedFloat(t, &acc, "cpu", "usage_idle", 80, 0.0005, cputags)
+	assertContainsTaggedFloat(t, &acc, "cpu", "usage_iowait", 2, 0.0005, cputags)
 }

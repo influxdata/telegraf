@@ -20,3 +20,8 @@ If running as a service add the environment variable to `/etc/default/telegraf`:
 ```
 GODEBUG=netdns=cgo
 ```
+
+### Q: When will the next version be released?
+
+The latest release date estimate can be viewed on the
+[milestones](https://github.com/influxdata/telegraf/milestones) page.
