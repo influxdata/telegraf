@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS ` + c.Table + ` (
 func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 	ctx, cancel := context.WithTimeout(context.Background(), c.Timeout.Duration)
 	defer cancel()
-	if sql, err := insertSQL(c.Table, metrics, time.Local); err != nil {
+	if sql, err := insertSQL(c.Table, metrics); err != nil {
 		return err
 	} else if _, err := c.DB.ExecContext(ctx, sql); err != nil {
 		return err
@@ -71,7 +71,7 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-func insertSQL(table string, metrics []telegraf.Metric, loc *time.Location) (string, error) {
+func insertSQL(table string, metrics []telegraf.Metric) (string, error) {
 	rows := make([]string, len(metrics))
 	for i, m := range metrics {
 		// Note: We have to convert HashID from uint64 to int64 below because
@@ -84,7 +84,7 @@ func insertSQL(table string, metrics []telegraf.Metric, loc *time.Location) (str
 
 		cols := []interface{}{
 			int64(m.HashID()),
-			m.Time().In(loc),
+			m.Time().UTC(),
 			m.Name(),
 			m.Tags(),
 			m.Fields(),

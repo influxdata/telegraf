@@ -81,7 +81,7 @@ VALUES
 	}
 
 	for _, test := range tests {
-		if got, err := insertSQL("my_table", test.Metrics, time.UTC); err != nil {
+		if got, err := insertSQL("my_table", test.Metrics); err != nil {
 			t.Error(err)
 		} else if got != test.Want {
 			t.Errorf("got:\n%s\n\nwant:\n%s", got, test.Want)
