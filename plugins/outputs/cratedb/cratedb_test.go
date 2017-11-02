@@ -121,12 +121,24 @@ func Test_escapeValue(t *testing.T) {
 		{map[string]interface{}{`fo"o`: `b'ar`, `ab'c`: `xy"z`, `on"""e`: `mo'''re`}, `{"ab'c" = 'xy"z', "fo""o" = 'b''ar', "on""""""e" = 'mo''''''re'}`},
 	}
 
+	url := testURL()
+	db, err := sql.Open("pgx", url)
+	require.NoError(t, err)
+	defer db.Close()
+
 	for _, test := range tests {
-		if got, err := escapeValue(test.Val); err != nil {
+		got, err := escapeValue(test.Val)
+		if err != nil {
 			t.Errorf("val: %#v: %s", test.Val, err)
 		} else if got != test.Want {
 			t.Errorf("got:\n%s\n\nwant:\n%s", got, test.Want)
 		}
+
+		// This is a smoke test that will blow up if our escaping causing a SQL
+		// syntax error, which may allow for an attack.
+		var reply interface{}
+		row := db.QueryRow("SELECT " + got)
+		require.NoError(t, row.Scan(&reply))
 	}
 }
 
