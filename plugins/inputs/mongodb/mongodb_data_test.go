@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"net/url"
 	"testing"
 	"time"
 
@@ -149,4 +150,39 @@ func TestStateTag(t *testing.T) {
 		"jumbo_chunks":          int64(0),
 	}
 	acc.AssertContainsTaggedFields(t, "mongodb", fields, stateTags)
+}
+
+func Test_parseConnectionStringInvalidServer(t *testing.T) {
+	m := &MongoDB{}
+	server := &Server{}
+	_, err := m.parseConnectionString(server)
+	if err == nil {
+		t.Errorf("Error should not have been nil")
+	}
+}
+
+func Test_parseConnectionStringValidServer(t *testing.T) {
+	m := &MongoDB{}
+	rawurl := "mongodb://user:auth_key@10.10.3.30:27017/authenticationDatabase"
+	u, err := url.Parse(rawurl)
+	if err != nil {
+		t.Errorf("Error should not have been nil")
+	}
+	server := &Server{Url: u}
+	dialInfo, err := m.parseConnectionString(server)
+	if err != nil {
+		t.Errorf("Error should not have been nil")
+	}
+	if dialInfo.Database != "authenticationDatabase" {
+		t.Errorf("dialInfo.Database was not authenticationDatabase")
+	}
+	if dialInfo.Password != "auth_key" {
+		t.Errorf("dialInfo.Password was not auth_key")
+	}
+	if dialInfo.Addrs[0] != "10.10.3.30:27017" {
+		t.Errorf("dialInfo.Addr was not 10.10.3.30:27017")
+	}
+	if dialInfo.Username != "user" {
+		t.Errorf("dialInfo.Username was not user")
+	}
 }

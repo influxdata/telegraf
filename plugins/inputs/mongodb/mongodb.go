@@ -130,7 +130,9 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 }
 
 func (m *MongoDB) parseConnectionString(server *Server) (*mgo.DialInfo, error) {
-
+	if server.Url == nil {
+		return nil, fmt.Errorf("Unable to connect to MongoDB because connection string was not set.")
+	}
 	var dialAddrs []string
 	if server.Url.User != nil {
 		dialAddrs = []string{server.Url.String()}
