@@ -1,0 +1,20 @@
+// protoc --go_out=. metric.proto
+syntax="proto3";
+
+package protobuf;
+
+message field_value {
+    oneof value {
+        string string_value = 1;
+        double float_value = 2;
+        int64 int_value = 3;
+        bool bool_value = 4;
+    }
+}
+
+message metric {
+    string name = 1;
+    map<string, string> tags = 2;
+    map<string, field_value> fields = 3;
+    int64 timestamp = 4;
+}

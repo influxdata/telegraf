@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/influxdata/telegraf/plugins/serializers/protobuf"
 )
 
 // SerializerOutput is an interface for output plugins that are able to
@@ -30,7 +31,7 @@ type Serializer interface {
 // Config is a struct that covers the data types needed for all serializer types,
 // and can be used to instantiate _any_ of the serializers.
 type Config struct {
-	// Dataformat can be one of: influx, graphite, or json
+	// Dataformat can be one of: influx, graphite, json or protobuf
 	DataFormat string
 
 	// Prefix to add to all measurements, only supports Graphite
@@ -42,6 +43,9 @@ type Config struct {
 
 	// Timestamp units to use for JSON formatted output
 	TimestampUnits time.Duration
+
+	// PrependLength to prepend result data length for formats that can not be delimited by them selves.
+	PrependLength bool
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -55,6 +59,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template)
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
+	case "protobuf":
+		serializer, err = NewProtobufSerializer(config.PrependLength)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -74,4 +80,8 @@ func NewGraphiteSerializer(prefix, template string) (Serializer, error) {
 		Prefix:   prefix,
 		Template: template,
 	}, nil
+}
+
+func NewProtobufSerializer(prependLength bool) (Serializer, error) {
+	return &protobuf.ProtobufSerializer{PrependLength: prependLength}, nil
 }

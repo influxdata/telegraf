@@ -1325,10 +1325,23 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["prepend_length"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				prependLength, err := b.Boolean()
+				if err != nil {
+					return nil, fmt.Errorf("Unable to parse prepend_length as a boolean, %s", err)
+				}
+				c.PrependLength = prependLength
+			}
+		}
+	}
+
 	delete(tbl.Fields, "data_format")
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")
 	delete(tbl.Fields, "json_timestamp_units")
+	delete(tbl.Fields, "prepend_length")
 	return serializers.NewSerializer(c)
 }
 
