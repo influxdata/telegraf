@@ -118,6 +118,7 @@ func Test_escapeValue(t *testing.T) {
 		{map[string]interface{}{"foo": "bar"}, `{"foo" = 'bar'}`},
 		{map[string]interface{}{"foo": "bar", "one": "more"}, `{"foo" = 'bar', "one" = 'more'}`},
 		{map[string]interface{}{"foo": map[string]interface{}{"one": "more"}}, `{"foo" = {"one" = 'more'}}`},
+		{map[string]interface{}{`fo"o`: `b'ar`, `ab'c`: `xy"z`, `on"""e`: `mo'''re`}, `{"ab'c" = 'xy"z', "fo""o" = 'b''ar', "on""""""e" = 'mo''''''re'}`},
 	}
 
 	for _, test := range tests {
