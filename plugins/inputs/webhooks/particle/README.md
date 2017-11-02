@@ -1,6 +1,6 @@
 # particle webhooks
 
-You should configure your Rollbar's Webhooks to point at the `webhooks` service. To do this go to `particle.com/` and click `Settings > Notifications > Webhook`. In the resulting page set `URL` to `http://<my_ip>:1619/particle`, and click on `Enable Webhook Integration`.
+You should configure your Rollbar's Webhooks to point at the `webhooks` service. To do this go to `https://console.particle.io/` and click `Settings > Notifications > Webhook`. In the resulting page set `URL` to `http://<my_ip>:1619/particle`, and click on `Enable Webhook Integration`.
 
 ## Events
 
