@@ -2,7 +2,9 @@ package cratedb
 
 import (
 	"context"
+	"crypto/sha512"
 	"database/sql"
+	"encoding/binary"
 	"fmt"
 	"sort"
 	"strings"
@@ -74,16 +76,9 @@ func (c *CrateDB) Write(metrics []telegraf.Metric) error {
 func insertSQL(table string, metrics []telegraf.Metric) (string, error) {
 	rows := make([]string, len(metrics))
 	for i, m := range metrics {
-		// Note: We have to convert HashID from uint64 to int64 below because
-		// CrateDB only supports a signed 64 bit LONG type which would give us
-		// problems, e.g.:
-		//
-		// CREATE TABLE my_long (val LONG);
-		// INSERT INTO my_long(val) VALUES (14305102049502225714);
-		// -> ERROR:  SQLParseException: For input string: "14305102049502225714"
 
 		cols := []interface{}{
-			int64(m.HashID()),
+			hashID(m),
 			m.Time().UTC(),
 			m.Name(),
 			m.Tags(),
@@ -179,6 +174,37 @@ func escapeObject(m map[string]interface{}) (string, error) {
 // of it inside of s with a double quote.
 func escapeString(s string, quote string) string {
 	return quote + strings.Replace(s, quote, quote+quote, -1) + quote
+}
+
+// hashID returns a cryptographic hash int64 hash that includes the metric name
+// and tags. It's used instead of m.HashID() because it's not considered stable
+// and because a cryptogtaphic hash makes more sense for the use case of
+// deduplication.
+// [1] https://github.com/influxdata/telegraf/pull/3210#discussion_r148411201
+func hashID(m telegraf.Metric) int64 {
+	h := sha512.New()
+	h.Write([]byte(m.Name()))
+	tags := m.Tags()
+	tmp := make([]string, len(tags))
+	i := 0
+	for k, v := range tags {
+		tmp[i] = k + v
+		i++
+	}
+	sort.Strings(tmp)
+
+	for _, s := range tmp {
+		h.Write([]byte(s))
+	}
+	sum := h.Sum(nil)
+
+	// Note: We have to convert from uint64 to int64 below because CrateDB only
+	// supports a signed 64 bit LONG type:
+	//
+	// CREATE TABLE my_long (val LONG);
+	// INSERT INTO my_long(val) VALUES (14305102049502225714);
+	// -> ERROR:  SQLParseException: For input string: "14305102049502225714"
+	return int64(binary.LittleEndian.Uint64(sum))
 }
 
 func (c *CrateDB) SampleConfig() string {
