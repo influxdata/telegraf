@@ -1,7 +1,0 @@
-version: "3"
-services:
-  cratedb:
-    image: crate
-    command: crate -Cnetwork.host=0.0.0.0 -Ctransport.host=localhost -Clicense.enterprise=false
-    ports:
-      - "6543:5432"
