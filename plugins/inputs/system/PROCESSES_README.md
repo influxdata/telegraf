@@ -14,6 +14,11 @@ it requires access to execute `ps`.
   # no configuration
 ```
 
+Another possible configuration is to define an alternative path for resolving the /proc location.
+Using the environment variable `HOST_PROC` the plugin will retrieve process information from the specified location.
+
+`docker run -v /proc:/rootfs/proc:ro -e HOST_PROC=/rootfs/proc`
+
 ### Measurements & Fields:
 
 - processes
@@ -54,7 +59,7 @@ None
 ### Example Output:
 
 ```
-$ telegraf -config ~/ws/telegraf.conf -input-filter processes -test
+$ telegraf --config ~/ws/telegraf.conf --input-filter processes --test
 * Plugin: processes, Collection 1
 > processes blocked=8i,running=1i,sleeping=265i,stopped=0i,total=274i,zombie=0i,dead=0i,paging=0i,total_threads=687i 1457478636980905042
 ```

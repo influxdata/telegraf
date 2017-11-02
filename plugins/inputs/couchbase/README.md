@@ -22,7 +22,7 @@
 ### couchbase_node
 
 Tags:
-- cluster: whatever you called it in `servers` in the configuration, e.g.: `http://couchbase-0.example.com/`
+- cluster: sanitized string from `servers` configuration field e.g.: `http://user:password@couchbase-0.example.com:8091/endpoint` -> `http://couchbase-0.example.com:8091/endpoint`
 - hostname: Couchbase's name for the node and port, e.g., `172.16.10.187:8091`
 
 Fields:
@@ -48,7 +48,7 @@ Fields:
 ## Example output
 
 ```
-$ telegraf -config telegraf.conf -input-filter couchbase -test
+$ telegraf --config telegraf.conf --input-filter couchbase --test
 * Plugin: couchbase, Collection 1
 > couchbase_node,cluster=https://couchbase-0.example.com/,hostname=172.16.10.187:8091 memory_free=22927384576,memory_total=64424656896 1458381183695864929
 > couchbase_node,cluster=https://couchbase-0.example.com/,hostname=172.16.10.65:8091 memory_free=23520161792,memory_total=64424656896 1458381183695972112

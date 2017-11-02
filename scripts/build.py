@@ -85,7 +85,7 @@ targets = {
 
 supported_builds = {
     "windows": [ "amd64", "i386" ],
-    "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64" ],
+    "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64", "s390x"],
     "freebsd": [ "amd64", "i386" ]
 }
 
@@ -94,6 +94,8 @@ supported_packages = {
     "windows": [ "zip" ],
     "freebsd": [ "tar" ]
 }
+
+next_version = '1.5.0'
 
 ################
 #### Telegraf Functions
@@ -158,8 +160,8 @@ def go_get(branch, update=False, no_uncommitted=False):
         get_command = "go get github.com/sparrc/gdm"
         run(get_command)
     logging.info("Retrieving dependencies with `gdm`...")
-    run("{}/bin/gdm restore -v -f Godeps_windows".format(os.environ.get("GOPATH")))
-    run("{}/bin/gdm restore -v".format(os.environ.get("GOPATH")))
+    run("{}/bin/gdm restore -v".format(os.environ.get("GOPATH",
+        os.path.expanduser("~/go"))))
     return True
 
 def run_tests(race, parallel, timeout, no_vet):
@@ -224,13 +226,16 @@ def increment_minor_version(version):
 def get_current_version_tag():
     """Retrieve the raw git version tag.
     """
-    version = run("git describe --always --tags --abbrev=0")
+    version = run("git describe --exact-match --tags 2>/dev/null",
+            allow_failure=True, shell=True)
     return version
 
 def get_current_version():
     """Parse version information from git tag output.
     """
     version_tag = get_current_version_tag()
+    if not version_tag:
+        return None
     # Remove leading 'v'
     if version_tag[0] == 'v':
         version_tag = version_tag[1:]
@@ -275,6 +280,8 @@ def get_system_arch():
         arch = "amd64"
     elif arch == "386":
         arch = "i386"
+    elif "arm64" in arch:
+        arch = "arm64"
     elif 'arm' in arch:
         # Prevent uname from reporting full ARM arch (eg 'armv7l')
         arch = "arm"
@@ -447,6 +454,8 @@ def build(version=None,
         # Handle variations in architecture output
         if arch == "i386" or arch == "i686":
             arch = "386"
+        elif "arm64" in arch:
+            arch = "arm64"
         elif "arm" in arch:
             arch = "arm"
         build_command += "GOOS={} GOARCH={} ".format(platform, arch)
@@ -470,28 +479,18 @@ def build(version=None,
             build_command += "-race "
         if len(tags) > 0:
             build_command += "-tags {} ".format(','.join(tags))
-        if "1.4" in get_go_version():
-            if static:
-                build_command += "-ldflags=\"-s -X main.version {} -X main.branch {} -X main.commit {}\" ".format(version,
-                                                                                                                  get_current_branch(),
-                                                                                                                  get_current_commit())
-            else:
-                build_command += "-ldflags=\"-X main.version {} -X main.branch {} -X main.commit {}\" ".format(version,
-                                                                                                               get_current_branch(),
-                                                                                                               get_current_commit())
 
-        else:
-            # Starting with Go 1.5, the linker flag arguments changed to 'name=value' from 'name value'
-            if static:
-                build_command += "-ldflags=\"-s -X main.version={} -X main.branch={} -X main.commit={}\" ".format(version,
-                                                                                                                  get_current_branch(),
-                                                                                                                  get_current_commit())
-            else:
-                build_command += "-ldflags=\"-X main.version={} -X main.branch={} -X main.commit={}\" ".format(version,
-                                                                                                               get_current_branch(),
-                                                                                                               get_current_commit())
+        ldflags = [
+                '-w', '-s',
+                '-X', 'main.branch={}'.format(get_current_branch()),
+                '-X', 'main.commit={}'.format(get_current_commit(short=True))]
+        if version:
+            ldflags.append('-X')
+            ldflags.append('main.version={}'.format(version))
+        build_command += ' -ldflags="{}" '.format(' '.join(ldflags))
+
         if static:
-            build_command += "-a -installsuffix cgo "
+            build_command += " -a -installsuffix cgo "
         build_command += path
         start_time = datetime.utcnow()
         run(build_command, shell=True)
@@ -499,13 +498,12 @@ def build(version=None,
         logging.info("Time taken: {}s".format((end_time - start_time).total_seconds()))
     return True
 
-def generate_md5_from_file(path):
-    """Generate MD5 signature based on the contents of the file at path.
+def generate_sha256_from_file(path):
+    """Generate SHA256 hash signature based on the contents of the file at path.
     """
-    m = hashlib.md5()
+    m = hashlib.sha256()
     with open(path, 'rb') as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            m.update(chunk)
+        m.update(f.read())
     return m.hexdigest()
 
 def generate_sig_from_file(path):
@@ -588,10 +586,8 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                         package_arch = 'armv6hl'
                     else:
                         package_arch = arch
-                    if not release and not nightly:
-                        # For non-release builds, just use the commit hash as the version
-                        package_version = "{}~{}".format(version,
-                                                         get_current_commit(short=True))
+                    if not version:
+                        package_version = "{}~{}".format(next_version, get_current_commit(short=True))
                         package_iteration = "0"
                     package_build_root = build_root
                     current_location = build_output[platform][arch]
@@ -636,6 +632,10 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                     elif package_type not in ['zip', 'tar'] and static or "static_" in arch:
                         logging.info("Skipping package type '{}' for static builds.".format(package_type))
                     else:
+                        if package_type == 'rpm' and release and '~' in package_version:
+                            package_version, suffix = package_version.split('~', 1)
+                            # The ~ indicatees that this is a prerelease so we give it a leading 0.
+                            package_iteration = "0.%s" % suffix
                         fpm_command = "fpm {} --name {} -a {} -t {} --version {} --iteration {} -C {} -p {} ".format(
                             fpm_common_args,
                             name,
@@ -664,9 +664,6 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                                 if package_type == 'rpm':
                                     # rpm's convert any dashes to underscores
                                     package_version = package_version.replace("-", "_")
-                                new_outfile = outfile.replace("{}-{}".format(package_version, package_iteration), package_version)
-                                os.rename(outfile, new_outfile)
-                                outfile = new_outfile
                             outfiles.append(os.path.join(os.getcwd(), outfile))
         logging.debug("Produced package files: {}".format(outfiles))
         return outfiles
@@ -682,9 +679,6 @@ def main(args):
         return 1
 
     if args.nightly:
-        args.version = increment_minor_version(args.version)
-        args.version = "{}~n{}".format(args.version,
-                                       datetime.utcnow().strftime("%Y%m%d%H%M"))
         args.iteration = 0
 
     # Pre-build checks
@@ -789,9 +783,10 @@ def main(args):
             if not upload_packages(packages, bucket_name=args.bucket, overwrite=args.upload_overwrite):
                 return 1
         logging.info("Packages created:")
-        for p in packages:
-            logging.info("{} (MD5={})".format(p.split('/')[-1:][0],
-                                              generate_md5_from_file(p)))
+        for filename in packages:
+            logging.info("%s (SHA256=%s)",
+                         os.path.basename(filename),
+                         generate_sha256_from_file(filename))
     if orig_branch != get_current_branch():
         logging.info("Moving back to original git branch: {}".format(args.branch))
         run("git checkout {}".format(orig_branch))

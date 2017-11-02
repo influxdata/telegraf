@@ -1,15 +1,11 @@
 # Docker Input Plugin
 
-The docker plugin uses the docker remote API to gather metrics on running
-docker containers. You can read Docker's documentation for their remote API
-[here](https://docs.docker.com/engine/reference/api/docker_remote_api_v1.20/#get-container-stats-based-on-resource-usage)
+The docker plugin uses the Docker Engine API to gather metrics on running
+docker containers.
 
-The docker plugin uses the excellent
-[docker engine-api](https://github.com/docker/engine-api) library to
-gather stats. Documentation for the library can be found
-[here](https://godoc.org/github.com/docker/engine-api) and documentation
-for the stat structure can be found
-[here](https://godoc.org/github.com/docker/engine-api/types#Stats)
+The docker plugin uses the [Official Docker Client](https://github.com/moby/moby/tree/master/client)
+to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.20/).
+[Library Documentation](https://godoc.org/github.com/moby/moby/client)
 
 ### Configuration:
 
@@ -20,23 +16,60 @@ for the stat structure can be found
   ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
-  ## Only collect metrics for these containers, collect all if empty
+
+  ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
+  ## Note: configure this in one of the manager nodes in a Swarm cluster.
+  ## configuring in multiple Swarm managers results in duplication of metrics.
+  gather_services = false
+
+  ## Only collect metrics for these containers. Values will be appended to
+  ## container_name_include.
+  ## Deprecated (1.4.0), use container_name_include
   container_names = []
+
+  ## Containers to include and exclude. Collect all if empty. Globs accepted.
+  container_name_include = []
+  container_name_exclude = []
+
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
 
   ## Whether to report for each container per-device blkio (8:0, 8:1...) and
   ## network (eth0, eth1, ...) stats or not
   perdevice = true
+
   ## Whether to report for each container total blkio and network stats or not
   total = false
-  
+
   ## docker labels to include and exclude as tags.  Globs accepted.
   ## Note that an empty array for both will include all labels as tags
   docker_label_include = []
   docker_label_exclude = []
-  
+
+  ## Which environment variables should we use as a tag
+  tag_env = ["JAVA_HOME", "HEAP_SIZE"]
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 ```
+
+#### Environment Configuration
+
+When using the `"ENV"` endpoint, the connection is configured using the
+[cli Docker environment variables](https://godoc.org/github.com/moby/moby/client#NewEnvClient).
+
+#### Kubernetes Labels
+
+Kubernetes may add many labels to your containers, if they are not needed you
+may prefer to exclude them:
+```
+  docker_label_exclude = ["annotation.kubernetes*"]
+```
+
 
 ### Measurements & Fields:
 
@@ -133,6 +166,9 @@ based on the availability of per-cpu stats on your system.
     - available
     - total
     - used
+- docker_swarm
+    - tasks_desired
+    - tasks_running
 
 
 ### Tags:
@@ -163,11 +199,15 @@ based on the availability of per-cpu stats on your system.
     - network
 - docker_container_blkio specific:
     - device
+- docker_swarm specific:
+    - service_id
+    - service_name
+    - service_mode
 
 ### Example Output:
 
 ```
-% ./telegraf -config ~/ws/telegraf.conf -input-filter docker -test
+% ./telegraf --config ~/ws/telegraf.conf --input-filter docker --test
 * Plugin: docker, Collection 1
 > docker n_cpus=8i 1456926671065383978
 > docker n_used_file_descriptors=15i 1456926671065383978
@@ -214,4 +254,7 @@ io_service_bytes_recursive_sync=77824i,io_service_bytes_recursive_total=80293888
 io_service_bytes_recursive_write=368640i,io_serviced_recursive_async=6562i,\
 io_serviced_recursive_read=6492i,io_serviced_recursive_sync=37i,\
 io_serviced_recursive_total=6599i,io_serviced_recursive_write=107i 1453409536840126713
+>docker_swarm,
+service_id=xaup2o9krw36j2dy1mjx1arjw,service_mode=replicated,service_name=test,\
+tasks_desired=3,tasks_running=3 1508968160000000000
 ```

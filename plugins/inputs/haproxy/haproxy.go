@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -25,6 +26,15 @@ type haproxy struct {
 	client *http.Client
 
 	KeepFieldNames bool
+
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
 }
 
 var sampleConfig = `
@@ -32,19 +42,26 @@ var sampleConfig = `
   ## with optional port. ie localhost, 10.10.3.33:1936, etc.
   ## Make sure you specify the complete path to the stats endpoint
   ## including the protocol, ie http://10.10.3.33:1936/haproxy?stats
-  #
+
   ## If no servers are specified, then default to 127.0.0.1:1936/haproxy?stats
   servers = ["http://myhaproxy.com:1936/haproxy?stats"]
-  ##
+
   ## You can also use local socket with standard wildcard globbing.
   ## Server address not starting with 'http' will be treated as a possible
   ## socket, so both examples below are valid.
-  ## servers = ["socket:/run/haproxy/admin.sock", "/run/haproxy/*.sock"]
-  #
+  # servers = ["socket:/run/haproxy/admin.sock", "/run/haproxy/*.sock"]
+
   ## By default, some of the fields are renamed from what haproxy calls them.
   ## Setting this option to true results in the plugin keeping the original
   ## field names.
-  ## keep_field_names = true
+  # keep_field_names = true
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (r *haproxy) SampleConfig() string {
@@ -127,7 +144,15 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	}
 
 	if g.client == nil {
-		tr := &http.Transport{ResponseHeaderTimeout: time.Duration(3 * time.Second)}
+		tlsCfg, err := internal.GetTLSConfig(
+			g.SSLCert, g.SSLKey, g.SSLCA, g.InsecureSkipVerify)
+		if err != nil {
+			return err
+		}
+		tr := &http.Transport{
+			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			TLSClientConfig:       tlsCfg,
+		}
 		client := &http.Client{
 			Transport: tr,
 			Timeout:   time.Duration(4 * time.Second),

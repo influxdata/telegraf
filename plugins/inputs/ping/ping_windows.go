@@ -1,17 +1,20 @@
 // +build windows
+
 package ping
 
 import (
 	"errors"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"net"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // HostPinger is a function that runs the "ping" function using a list of
@@ -38,14 +41,14 @@ func (s *Ping) Description() string {
 }
 
 const sampleConfig = `
-	## urls to ping
-	urls = ["www.google.com"] # required
+	## List of urls to ping
+	urls = ["www.google.com"]
 
 	## number of pings to send per collection (ping -n <COUNT>)
-	count = 4 # required
+	# count = 1
 
-	## Ping timeout, in seconds. 0 means default timeout (ping -w <TIMEOUT>)
-	Timeout = 0
+	## Ping timeout, in seconds. 0.0 means default timeout (ping -w <TIMEOUT>)
+	# timeout = 0.0
 `
 
 func (s *Ping) SampleConfig() string {
@@ -145,6 +148,9 @@ func (p *Ping) args(url string) []string {
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
+	if p.Count < 1 {
+		p.Count = 1
+	}
 	var wg sync.WaitGroup
 	errorChannel := make(chan error, len(p.Urls)*2)
 	var pendingError error = nil
@@ -153,16 +159,27 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(u string) {
 			defer wg.Done()
+
+			tags := map[string]string{"url": u}
+			fields := map[string]interface{}{"result_code": 0}
+
+			_, err := net.LookupHost(u)
+			if err != nil {
+				errorChannel <- err
+				fields["result_code"] = 1
+				acc.AddFields("ping", fields, tags)
+				return
+			}
+
 			args := p.args(u)
 			totalTimeout := p.timeout() * float64(p.Count)
 			out, err := p.pingHost(totalTimeout, args...)
 			// ping host return exitcode != 0 also when there was no response from host
-			// but command was execute succesfully
+			// but command was execute successfully
 			if err != nil {
 				// Combine go err + stderr output
 				pendingError = errors.New(strings.TrimSpace(out) + ", " + err.Error())
 			}
-			tags := map[string]string{"url": u}
 			trans, recReply, receivePacket, avg, min, max, err := processPingOutput(out)
 			if err != nil {
 				// fatal error
@@ -170,24 +187,20 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 					errorChannel <- pendingError
 				}
 				errorChannel <- err
-				fields := map[string]interface{}{
-					"errors": 100.0,
-				}
 
+				fields["errors"] = 100.0
 				acc.AddFields("ping", fields, tags)
-
 				return
 			}
 			// Calculate packet loss percentage
 			lossReply := float64(trans-recReply) / float64(trans) * 100.0
 			lossPackets := float64(trans-receivePacket) / float64(trans) * 100.0
-			fields := map[string]interface{}{
-				"packets_transmitted": trans,
-				"reply_received":      recReply,
-				"packets_received":    receivePacket,
-				"percent_packet_loss": lossPackets,
-				"percent_reply_loss":  lossReply,
-			}
+
+			fields["packets_transmitted"] = trans
+			fields["reply_received"] = recReply
+			fields["packets_received"] = receivePacket
+			fields["percent_packet_loss"] = lossPackets
+			fields["percent_reply_loss"] = lossReply
 			if avg > 0 {
 				fields["average_response_ms"] = float64(avg)
 			}
@@ -218,6 +231,9 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("ping", func() telegraf.Input {
-		return &Ping{pingHost: hostPinger}
+		return &Ping{
+			pingHost: hostPinger,
+			Count:    1,
+		}
 	})
 }

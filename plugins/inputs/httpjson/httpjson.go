@@ -1,7 +1,7 @@
 package httpjson
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -14,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+)
+
+var (
+	utf8BOM = []byte("\xef\xbb\xbf")
 )
 
 // HttpJson struct
@@ -145,31 +149,17 @@ func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
 		h.client.SetHTTPClient(client)
 	}
 
-	errorChannel := make(chan error, len(h.Servers))
-
 	for _, server := range h.Servers {
 		wg.Add(1)
 		go func(server string) {
 			defer wg.Done()
-			if err := h.gatherServer(acc, server); err != nil {
-				errorChannel <- err
-			}
+			acc.AddError(h.gatherServer(acc, server))
 		}(server)
 	}
 
 	wg.Wait()
-	close(errorChannel)
 
-	// Get all errors and return them as one giant error
-	errorStrings := []string{}
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
-
-	if len(errorStrings) == 0 {
-		return nil
-	}
-	return errors.New(strings.Join(errorStrings, "\n"))
+	return nil
 }
 
 // Gathers data from a particular server
@@ -185,7 +175,6 @@ func (h *HttpJson) gatherServer(
 	serverURL string,
 ) error {
 	resp, responseTime, err := h.sendRequest(serverURL)
-
 	if err != nil {
 		return err
 	}
@@ -281,6 +270,7 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 	if err != nil {
 		return string(body), responseTime, err
 	}
+	body = bytes.TrimPrefix(body, utf8BOM)
 
 	// Process response
 	if resp.StatusCode != http.StatusOK {

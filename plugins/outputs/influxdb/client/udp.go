@@ -1,9 +1,9 @@
 package client
 
 import (
-	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/url"
 )
@@ -25,6 +25,7 @@ type UDPConfig struct {
 	PayloadSize int
 }
 
+// NewUDP will return an instance of the telegraf UDP output plugin for influxdb
 func NewUDP(config UDPConfig) (Client, error) {
 	p, err := url.Parse(config.URL)
 	if err != nil {
@@ -55,21 +56,13 @@ type udpClient struct {
 	buffer []byte
 }
 
+// Query will send the provided query command to the client, returning an error if any issues arise
 func (c *udpClient) Query(command string) error {
 	return nil
 }
 
-func (c *udpClient) Write(b []byte) (int, error) {
-	return c.WriteStream(bytes.NewReader(b), -1)
-}
-
-// write params are ignored by the UDP client
-func (c *udpClient) WriteWithParams(b []byte, wp WriteParams) (int, error) {
-	return c.WriteStream(bytes.NewReader(b), -1)
-}
-
-// contentLength is ignored by the UDP client.
-func (c *udpClient) WriteStream(r io.Reader, contentLength int) (int, error) {
+// WriteStream will send the provided data through to the client, contentLength is ignored by the UDP client
+func (c *udpClient) WriteStream(r io.Reader) error {
 	var totaln int
 	for {
 		nR, err := r.Read(c.buffer)
@@ -77,23 +70,36 @@ func (c *udpClient) WriteStream(r io.Reader, contentLength int) (int, error) {
 			break
 		}
 		if err != io.EOF && err != nil {
-			return totaln, err
+			return err
 		}
-		nW, err := c.conn.Write(c.buffer[0:nR])
-		totaln += nW
-		if err != nil {
-			return totaln, err
+
+		if c.buffer[nR-1] == uint8('\n') {
+			nW, err := c.conn.Write(c.buffer[0:nR])
+			totaln += nW
+			if err != nil {
+				return err
+			}
+		} else {
+			log.Printf("E! Could not fit point into UDP payload; dropping")
+			// Scan forward until next line break to realign.
+			for {
+				nR, err := r.Read(c.buffer)
+				if nR == 0 {
+					break
+				}
+				if err != io.EOF && err != nil {
+					return err
+				}
+				if c.buffer[nR-1] == uint8('\n') {
+					break
+				}
+			}
 		}
 	}
-	return totaln, nil
+	return nil
 }
 
-// contentLength is ignored by the UDP client.
-// write params are ignored by the UDP client
-func (c *udpClient) WriteStreamWithParams(r io.Reader, contentLength int, wp WriteParams) (int, error) {
-	return c.WriteStream(r, -1)
-}
-
+// Close will terminate the provided client connection
 func (c *udpClient) Close() error {
 	return c.conn.Close()
 }

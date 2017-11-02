@@ -129,7 +129,7 @@ func parseMetric(buf []byte,
 	// apply precision multiplier
 	var nsec int64
 	multiplier := getPrecisionMultiplier(precision)
-	if multiplier > 1 {
+	if len(ts) > 0 && multiplier > 1 {
 		tsint, err := parseIntBytes(ts, 10, 64)
 		if err != nil {
 			return nil, err
@@ -647,7 +647,7 @@ func skipWhitespace(buf []byte, i int) int {
 }
 
 // makeError is a helper function for making a metric parsing error.
-//   reason is the reason that the error occured.
+//   reason is the reason why the error occurred.
 //   buf should be the current buffer we are parsing.
 //   i is the current index, to give some context on where in the buffer we are.
 func makeError(reason string, buf []byte, i int) error {

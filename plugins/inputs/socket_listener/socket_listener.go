@@ -10,7 +10,10 @@ import (
 	"strings"
 	"sync"
 
+	"time"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -47,6 +50,11 @@ func (ssl *streamSocketListener) listen() {
 		}
 		ssl.connections[c.RemoteAddr().String()] = c
 		ssl.connectionsMtx.Unlock()
+
+		if err := ssl.setKeepAlive(c); err != nil {
+			ssl.AddError(fmt.Errorf("unable to configure keep alive (%s): %s", ssl.ServiceAddress, err))
+		}
+
 		go ssl.read(c)
 	}
 
@@ -55,6 +63,23 @@ func (ssl *streamSocketListener) listen() {
 		c.Close()
 	}
 	ssl.connectionsMtx.Unlock()
+}
+
+func (ssl *streamSocketListener) setKeepAlive(c net.Conn) error {
+	if ssl.KeepAlivePeriod == nil {
+		return nil
+	}
+	tcpc, ok := c.(*net.TCPConn)
+	if !ok {
+		return fmt.Errorf("cannot set keep alive on a %s socket", strings.SplitN(ssl.ServiceAddress, "://", 2)[0])
+	}
+	if ssl.KeepAlivePeriod.Duration == 0 {
+		return tcpc.SetKeepAlive(false)
+	}
+	if err := tcpc.SetKeepAlive(true); err != nil {
+		return err
+	}
+	return tcpc.SetKeepAlivePeriod(ssl.KeepAlivePeriod.Duration)
 }
 
 func (ssl *streamSocketListener) removeConnection(c net.Conn) {
@@ -68,10 +93,16 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	defer c.Close()
 
 	scnr := bufio.NewScanner(c)
-	for scnr.Scan() {
+	for {
+		if ssl.ReadTimeout != nil && ssl.ReadTimeout.Duration > 0 {
+			c.SetReadDeadline(time.Now().Add(ssl.ReadTimeout.Duration))
+		}
+		if !scnr.Scan() {
+			break
+		}
 		metrics, err := ssl.Parse(scnr.Bytes())
 		if err != nil {
-			ssl.AddError(fmt.Errorf("unable to parse incoming line"))
+			ssl.AddError(fmt.Errorf("unable to parse incoming line: %s", err))
 			//TODO rate limit
 			continue
 		}
@@ -81,7 +112,9 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	}
 
 	if err := scnr.Err(); err != nil {
-		if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+		if err, ok := err.(net.Error); ok && err.Timeout() {
+			log.Printf("D! Timeout in plugin [input.socket_listener]: %s", err)
+		} else if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 			ssl.AddError(err)
 		}
 	}
@@ -105,7 +138,7 @@ func (psl *packetSocketListener) listen() {
 
 		metrics, err := psl.Parse(buf[:n])
 		if err != nil {
-			psl.AddError(fmt.Errorf("unable to parse incoming packet"))
+			psl.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
 			//TODO rate limit
 			continue
 		}
@@ -116,9 +149,11 @@ func (psl *packetSocketListener) listen() {
 }
 
 type SocketListener struct {
-	ServiceAddress string
-	MaxConnections int
-	ReadBufferSize int
+	ServiceAddress  string
+	MaxConnections  int
+	ReadBufferSize  int
+	ReadTimeout     *internal.Duration
+	KeepAlivePeriod *internal.Duration
 
 	parsers.Parser
 	telegraf.Accumulator
@@ -148,14 +183,25 @@ func (sl *SocketListener) SampleConfig() string {
   ## 0 (default) is unlimited.
   # max_connections = 1024
 
+  ## Read timeout.
+  ## Only applies to stream sockets (e.g. TCP).
+  ## 0 (default) is unlimited.
+  # read_timeout = "30s"
+
   ## Maximum socket buffer size in bytes.
   ## For stream sockets, once the buffer fills up, the sender will start backing up.
   ## For datagram sockets, once the buffer fills up, metrics will start dropping.
   ## Defaults to the OS default.
   # read_buffer_size = 65535
 
+  ## Period between keep alive probes.
+  ## Only applies to TCP sockets.
+  ## 0 disables keep alive probes.
+  ## Defaults to the OS configuration.
+  # keep_alive_period = "5m"
+
   ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"

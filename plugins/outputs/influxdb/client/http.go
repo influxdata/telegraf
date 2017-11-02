@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"compress/gzip"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"time"
 )
 
@@ -16,7 +18,6 @@ var (
 	defaultRequestTimeout = time.Second * 5
 )
 
-//
 func NewHTTP(config HTTPConfig, defaultWP WriteParams) (Client, error) {
 	// validate required parameters:
 	if len(config.URL) == 0 {
@@ -40,18 +41,36 @@ func NewHTTP(config HTTPConfig, defaultWP WriteParams) (Client, error) {
 		return nil, fmt.Errorf("config.URL scheme must be http(s), got %s", u.Scheme)
 	}
 
+	var transport http.Transport
+	if len(config.HTTPProxy) > 0 {
+		proxyURL, err := url.Parse(config.HTTPProxy)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing config.HTTPProxy: %s", err)
+		}
+
+		transport = http.Transport{
+			Proxy:           http.ProxyURL(proxyURL),
+			TLSClientConfig: config.TLSConfig,
+		}
+	} else {
+		transport = http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
+			TLSClientConfig: config.TLSConfig,
+		}
+	}
+
 	return &httpClient{
 		writeURL: writeURL(u, defaultWP),
 		config:   config,
 		url:      u,
 		client: &http.Client{
-			Timeout: config.Timeout,
-			Transport: &http.Transport{
-				TLSClientConfig: config.TLSConfig,
-			},
+			Timeout:   config.Timeout,
+			Transport: &transport,
 		},
 	}, nil
 }
+
+type HTTPHeaders map[string]string
 
 type HTTPConfig struct {
 	// URL should be of the form "http://host:port" (REQUIRED)
@@ -77,9 +96,14 @@ type HTTPConfig struct {
 	// TLSConfig is the tls auth settings to use for each request.
 	TLSConfig *tls.Config
 
-	// Gzip, if true, compresses each payload using gzip.
-	// TODO
-	// Gzip bool
+	// Proxy URL should be of the form "http://host:port"
+	HTTPProxy string
+
+	// HTTP headers to append to HTTP requests.
+	HTTPHeaders HTTPHeaders
+
+	// The content encoding mechanism to use for each request.
+	ContentEncoding string
 }
 
 // Response represents a list of statement results.
@@ -113,60 +137,13 @@ func (c *httpClient) Query(command string) error {
 	return c.doRequest(req, http.StatusOK)
 }
 
-func (c *httpClient) Write(b []byte) (int, error) {
-	req, err := c.makeWriteRequest(bytes.NewReader(b), len(b), c.writeURL)
+func (c *httpClient) WriteStream(r io.Reader) error {
+	req, err := c.makeWriteRequest(r, c.writeURL)
 	if err != nil {
-		return 0, nil
+		return err
 	}
 
-	err = c.doRequest(req, http.StatusNoContent)
-	if err == nil {
-		return len(b), nil
-	}
-	return 0, err
-}
-
-func (c *httpClient) WriteWithParams(b []byte, wp WriteParams) (int, error) {
-	req, err := c.makeWriteRequest(bytes.NewReader(b), len(b), writeURL(c.url, wp))
-	if err != nil {
-		return 0, nil
-	}
-
-	err = c.doRequest(req, http.StatusNoContent)
-	if err == nil {
-		return len(b), nil
-	}
-	return 0, err
-}
-
-func (c *httpClient) WriteStream(r io.Reader, contentLength int) (int, error) {
-	req, err := c.makeWriteRequest(r, contentLength, c.writeURL)
-	if err != nil {
-		return 0, nil
-	}
-
-	err = c.doRequest(req, http.StatusNoContent)
-	if err == nil {
-		return contentLength, nil
-	}
-	return 0, err
-}
-
-func (c *httpClient) WriteStreamWithParams(
-	r io.Reader,
-	contentLength int,
-	wp WriteParams,
-) (int, error) {
-	req, err := c.makeWriteRequest(r, contentLength, writeURL(c.url, wp))
-	if err != nil {
-		return 0, nil
-	}
-
-	err = c.doRequest(req, http.StatusNoContent)
-	if err == nil {
-		return contentLength, nil
-	}
-	return 0, err
+	return c.doRequest(req, http.StatusNoContent)
 }
 
 func (c *httpClient) doRequest(
@@ -208,32 +185,56 @@ func (c *httpClient) doRequest(
 
 func (c *httpClient) makeWriteRequest(
 	body io.Reader,
-	contentLength int,
 	writeURL string,
 ) (*http.Request, error) {
 	req, err := c.makeRequest(writeURL, body)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Length", fmt.Sprint(contentLength))
-	// TODO
-	// if gzip {
-	// 	req.Header.Set("Content-Encoding", "gzip")
-	// }
+	if c.config.ContentEncoding == "gzip" {
+		req.Header.Set("Content-Encoding", "gzip")
+	}
 	return req, nil
 }
 
 func (c *httpClient) makeRequest(uri string, body io.Reader) (*http.Request, error) {
-	req, err := http.NewRequest("POST", uri, body)
+	var req *http.Request
+	var err error
+	if c.config.ContentEncoding == "gzip" {
+		body, err = compressWithGzip(body)
+		if err != nil {
+			return nil, err
+		}
+	}
+	req, err = http.NewRequest("POST", uri, body)
 	if err != nil {
 		return nil, err
 	}
+
+	for header, value := range c.config.HTTPHeaders {
+		req.Header.Set(header, value)
+	}
+
 	req.Header.Set("Content-Type", "text/plain")
 	req.Header.Set("User-Agent", c.config.UserAgent)
 	if c.config.Username != "" && c.config.Password != "" {
 		req.SetBasicAuth(c.config.Username, c.config.Password)
 	}
 	return req, nil
+}
+
+func compressWithGzip(data io.Reader) (io.Reader, error) {
+	pr, pw := io.Pipe()
+	gw := gzip.NewWriter(pw)
+	var err error
+
+	go func() {
+		_, err = io.Copy(gw, data)
+		gw.Close()
+		pw.Close()
+	}()
+
+	return pr, err
 }
 
 func (c *httpClient) Close() error {
@@ -255,8 +256,11 @@ func writeURL(u *url.URL, wp WriteParams) string {
 	}
 
 	u.RawQuery = params.Encode()
-	u.Path = "write"
-	return u.String()
+	p := u.Path
+	u.Path = path.Join(p, "write")
+	s := u.String()
+	u.Path = p
+	return s
 }
 
 func queryURL(u *url.URL, command string) string {
@@ -264,6 +268,9 @@ func queryURL(u *url.URL, command string) string {
 	params.Set("q", command)
 
 	u.RawQuery = params.Encode()
-	u.Path = "query"
-	return u.String()
+	p := u.Path
+	u.Path = path.Join(p, "query")
+	s := u.String()
+	u.Path = p
+	return s
 }

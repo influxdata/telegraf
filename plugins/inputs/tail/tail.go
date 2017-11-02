@@ -1,7 +1,10 @@
+// +build !solaris
+
 package tail
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/influxdata/tail"
@@ -12,10 +15,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
+const (
+	defaultWatchMethod = "inotify"
+)
+
 type Tail struct {
 	Files         []string
 	FromBeginning bool
 	Pipe          bool
+	WatchMethod   string
 
 	tailers []*tail.Tail
 	parser  parsers.Parser
@@ -47,8 +55,11 @@ const sampleConfig = `
   ## Whether file is a named pipe
   pipe = false
 
+  ## Method used to watch for file updates.  Can be either "inotify" or "poll".
+  # watch_method = "inotify"
+
   ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
@@ -80,7 +91,11 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 		}
 	}
 
-	var errS string
+	var poll bool
+	if t.WatchMethod == "poll" {
+		poll = true
+	}
+
 	// Create a "tailer" for each file
 	for _, filepath := range t.Files {
 		g, err := globpath.Compile(filepath)
@@ -94,10 +109,12 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 					Follow:    true,
 					Location:  seek,
 					MustExist: true,
+					Poll:      poll,
 					Pipe:      t.Pipe,
+					Logger:    tail.DiscardingLogger,
 				})
 			if err != nil {
-				errS += err.Error() + " "
+				acc.AddError(err)
 				continue
 			}
 			// create a goroutine for each "tailer"
@@ -107,9 +124,6 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 		}
 	}
 
-	if errS != "" {
-		return fmt.Errorf(errS)
-	}
 	return nil
 }
 
@@ -127,7 +141,10 @@ func (t *Tail) receiver(tailer *tail.Tail) {
 				tailer.Filename, err))
 			continue
 		}
-		m, err = t.parser.ParseLine(line.Text)
+		// Fix up files with Windows line endings.
+		text := strings.TrimRight(line.Text, "\r")
+
+		m, err = t.parser.ParseLine(text)
 		if err == nil {
 			t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 		} else {

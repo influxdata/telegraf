@@ -7,18 +7,17 @@ This plugin writes to [InfluxDB](https://www.influxdb.com) via HTTP or UDP.
 ```toml
 # Configuration for influxdb server to send metrics to
 [[outputs.influxdb]]
-  ## The HTTP or UDP URL for your InfluxDB instance.  Each item should be
-  ## of the form:
-  ##   scheme "://" host [ ":" port]
+  ## The full HTTP or UDP URL for your InfluxDB instance.
   ##
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
-  # urls = ["udp://localhost:8089"] # UDP endpoint example
-  urls = ["http://localhost:8086"] # required
+  # urls = ["udp://127.0.0.1:8089"] # UDP endpoint example
+  urls = ["http://127.0.0.1:8086"] # required
   ## The target database for metrics (telegraf will create it if not exists).
   database = "telegraf" # required
 
-  ## Retention policy to write to. Empty string writes to the default rp.
+  ## Name of existing retention policy to write to.  Empty string writes to
+  ## the default retention policy.
   retention_policy = ""
   ## Write consistency (clusters only), can be: "any", "one", "quorum", "all"
   write_consistency = "any"
@@ -39,6 +38,15 @@ This plugin writes to [InfluxDB](https://www.influxdb.com) via HTTP or UDP.
   # ssl_key = "/etc/telegraf/key.pem"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## HTTP Proxy Config
+  # http_proxy = "http://corporate.proxy:3128"
+
+  ## Optional HTTP headers
+  # http_headers = {"X-Special-Header" = "Special-Value"}
+
+  ## Compress each HTTP request payload using GZIP.
+  # content_encoding = "gzip"
 ```
 
 ### Required parameters:
@@ -52,7 +60,7 @@ to write to. Each URL should start with either `http://` or `udp://`
 ### Optional parameters:
 
 * `write_consistency`: Write consistency (clusters only), can be: "any", "one", "quorum", "all".
-* `retention_policy`:  Retention policy to write to.
+* `retention_policy`:  Name of existing retention policy to write to.  Empty string writes to the default retention policy.
 * `timeout`: Write timeout (for the InfluxDB client), formatted as a string. If not provided, will default to 5s. 0s means no timeout (not recommended).
 * `username`: Username for influxdb
 * `password`: Password for influxdb
@@ -62,3 +70,6 @@ to write to. Each URL should start with either `http://` or `udp://`
 * `ssl_cert`: SSL CERT
 * `ssl_key`: SSL key
 * `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
+* `http_proxy`: HTTP Proxy URI
+* `http_headers`: HTTP headers to add to each HTTP request
+* `content_encoding`: Compress each HTTP request payload using gzip if set to: "gzip"

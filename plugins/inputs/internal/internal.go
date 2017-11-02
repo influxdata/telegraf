@@ -48,7 +48,7 @@ func (s *Self) Gather(acc telegraf.Accumulator) error {
 			"heap_idle_bytes":     m.HeapIdle,     // bytes in idle spans
 			"heap_in_use_bytes":   m.HeapInuse,    // bytes in non-idle span
 			"heap_released_bytes": m.HeapReleased, // bytes released to the OS
-			"heap_objects_bytes":  m.HeapObjects,  // total number of allocated objects
+			"heap_objects":        m.HeapObjects,  // total number of allocated objects
 			"num_gc":              m.NumGC,
 		}
 		acc.AddFields("internal_memstats", fields, map[string]string{})

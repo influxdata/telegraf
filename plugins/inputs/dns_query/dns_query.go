@@ -3,19 +3,22 @@ package dns_query
 import (
 	"errors"
 	"fmt"
-	"github.com/miekg/dns"
 	"net"
 	"strconv"
 	"time"
 
+	"github.com/miekg/dns"
+
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type DnsQuery struct {
 	// Domains or subdomains to query
 	Domains []string
+
+	// Network protocol name
+	Network string
 
 	// Server to query
 	Servers []string
@@ -32,20 +35,23 @@ type DnsQuery struct {
 
 var sampleConfig = `
   ## servers to query
-  servers = ["8.8.8.8"] # required
+  servers = ["8.8.8.8"]
 
-  ## Domains or subdomains to query. "."(root) is default
-  domains = ["."] # optional
+  ## Network is the network protocol name.
+  # network = "udp"
 
-  ## Query record type. Default is "A"
+  ## Domains or subdomains to query.
+  # domains = ["."]
+
+  ## Query record type.
   ## Posible values: A, AAAA, CNAME, MX, NS, PTR, TXT, SOA, SPF, SRV.
-  record_type = "A" # optional
+  # record_type = "A"
 
-  ## Dns server port. 53 is default
-  port = 53 # optional
+  ## Dns server port.
+  # port = 53
 
-  ## Query timeout in seconds. Default is 2 seconds
-  timeout = 2 # optional
+  ## Query timeout in seconds.
+  # timeout = 2
 `
 
 func (d *DnsQuery) SampleConfig() string {
@@ -58,11 +64,10 @@ func (d *DnsQuery) Description() string {
 func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
 	d.setDefaultValues()
 
-	errChan := errchan.New(len(d.Domains) * len(d.Servers))
 	for _, domain := range d.Domains {
 		for _, server := range d.Servers {
 			dnsQueryTime, err := d.getDnsQueryTime(domain, server)
-			errChan.C <- err
+			acc.AddError(err)
 			tags := map[string]string{
 				"server":      server,
 				"domain":      domain,
@@ -74,10 +79,14 @@ func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	return errChan.Error()
+	return nil
 }
 
 func (d *DnsQuery) setDefaultValues() {
+	if d.Network == "" {
+		d.Network = "udp"
+	}
+
 	if len(d.RecordType) == 0 {
 		d.RecordType = "NS"
 	}
@@ -101,6 +110,7 @@ func (d *DnsQuery) getDnsQueryTime(domain string, server string) (float64, error
 
 	c := new(dns.Client)
 	c.ReadTimeout = time.Duration(d.Timeout) * time.Second
+	c.Net = d.Network
 
 	m := new(dns.Msg)
 	recordType, err := d.parseRecordType()
