@@ -4,7 +4,7 @@ This plugin writes to [CrateDB](https://crate.io/) via its [PostgreSQL protocol]
 
 ## Table Schema
 
-The plugin requires a a table with the following schema.
+The plugin requires a table with the following schema.
 
 
 ```sql
