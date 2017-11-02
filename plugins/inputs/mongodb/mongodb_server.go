@@ -26,7 +26,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 	s.Session.SetMode(mgo.Eventual, true)
 	s.Session.SetSocketTimeout(0)
 	result_server := &ServerStatus{}
-	err := s.Session.DB("admin").Run(bson.D{
+	err := s.Session.DB("").Run(bson.D{
 		{
 			Name:  "serverStatus",
 			Value: 1,
@@ -42,7 +42,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 	result_repl := &ReplSetStatus{}
 	// ignore error because it simply indicates that the db is not a member
 	// in a replica set, which is fine.
-	_ = s.Session.DB("admin").Run(bson.D{
+	_ = s.Session.DB("").Run(bson.D{
 		{
 			Name:  "replSetGetStatus",
 			Value: 1,

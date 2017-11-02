@@ -143,6 +143,9 @@ func (m *MongoDB) parseConnectionString(server *Server) (*mgo.DialInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Unable to parse URL (%s), %s\n", dialAddrs[0], err.Error())
 	}
+	if dialInfo.Database == "" {
+		dialInfo.Database = "admin"
+	}
 	dialInfo.Direct = true
 	dialInfo.Timeout = 5 * time.Second
 
