@@ -25,8 +25,8 @@ type CrateDB struct {
 }
 
 var sampleConfig = `
-  # A lib/pq connection string.
-  # See http://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters
+  # A github.com/jackc/pgx connection string.
+  # See https://godoc.org/github.com/jackc/pgx#ParseDSN
   url = "postgres://user:password@localhost/schema?sslmode=disable"
   # Timeout for all CrateDB queries.
   timeout = "5s"
@@ -106,9 +106,11 @@ VALUES
 //
 // Warning: This is not ideal from a security perspective, but unfortunately
 // CrateDB does not support enough of the PostgreSQL wire protocol to allow
-// using lib/pq with $1, $2 placeholders. Security conscious users of this
+// using pgx with $1, $2 placeholders [1]. Security conscious users of this
 // plugin should probably refrain from using it in combination with untrusted
 // inputs.
+//
+// [1] https://github.com/influxdata/telegraf/pull/3210#issuecomment-339273371
 func escapeValue(val interface{}) (string, error) {
 	switch t := val.(type) {
 	case string:
