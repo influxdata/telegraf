@@ -72,8 +72,8 @@ func NewItemJSON() string {
 			  "humidity": 44.937500,
 			  "pressure": 998.998901,
 			  "altitude": 119.331436,
-			  "broadband": 1266.0,
-			  "infrared": 528.0,
+			  "broadband": 1266,
+			  "infrared": 528,
 			  "lux": 0.0
 		  }
 	  },
