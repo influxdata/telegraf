@@ -15,7 +15,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/github"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/mandrill"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/papertrail"
-	"github.com/influxdata/telegraf/plugins/inputs/webhooks/particle"
 	"github.com/influxdata/telegraf/plugins/inputs/webhooks/rollbar"
 )
 
@@ -35,7 +34,6 @@ type Webhooks struct {
 	Mandrill   *mandrill.MandrillWebhook
 	Rollbar    *rollbar.RollbarWebhook
 	Papertrail *papertrail.PapertrailWebhook
-	Particle   *particle.ParticleWebhook
 
 	srv *http.Server
 }
@@ -64,9 +62,6 @@ func (wb *Webhooks) SampleConfig() string {
 
   [inputs.webhooks.papertrail]
     path = "/papertrail"
-	
-   [inputs.webhooks.particle]
-      path = "/particle"
  `
 }
 
