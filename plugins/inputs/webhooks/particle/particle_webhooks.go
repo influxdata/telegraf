@@ -2,39 +2,13 @@ package particle
 
 import (
 	"encoding/json"
+	"github.com/gorilla/mux"
+	"github.com/influxdata/telegraf"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
-
-	"github.com/gorilla/mux"
-	"github.com/influxdata/telegraf"
 )
-
-type event struct {
-	Name        string `json:"event"`
-	Data        data   `json:"data"`
-	TTL         int    `json:"ttl"`
-	PublishedAt string `json:"published_at"`
-	Database    string `json:"influx_db"`
-}
-
-type data struct {
-	Tags   map[string]string      `json:"tags"`
-	Fields map[string]interface{} `json:"values"`
-}
-
-func newEvent() *event {
-	return &event{
-		Data: data{
-			Tags:   make(map[string]string),
-			Fields: make(map[string]interface{}),
-		},
-	}
-}
-
-func (e *event) Time() (time.Time, error) {
-	return time.Parse("2006-01-02T15:04:05Z", e.PublishedAt)
-}
 
 type ParticleWebhook struct {
 	Path string
@@ -49,19 +23,26 @@ func (rb *ParticleWebhook) Register(router *mux.Router, acc telegraf.Accumulator
 
 func (rb *ParticleWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	e := newEvent()
-	if err := json.NewDecoder(r.Body).Decode(e); err != nil {
-		log.Println(err)
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
-	pTime, err := e.Time()
-	if err != nil {
-		pTime = time.Now()
-		log.Printf("error parsing particle event time: %s. Using telegraf host time instead: %s", e.PublishedAt, pTime)
+	dummy := &DummyData{}
+	if err := json.Unmarshal(data, dummy); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
-
-	rb.acc.AddFields(e.Name, e.Data.Fields, e.Data.Tags, pTime)
+	pd := &ParticleData{}
+	if err := json.Unmarshal([]byte(dummy.Data), pd); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	pTime, err := dummy.Time()
+	if err != nil {
+		log.Printf("Time Conversion Error")
+		pTime = time.Now()
+	}
+	rb.acc.AddFields(dummy.InfluxDB, pd.Fields, pd.Tags, pTime)
 	w.WriteHeader(http.StatusOK)
 }
