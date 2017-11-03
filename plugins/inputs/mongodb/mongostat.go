@@ -127,9 +127,19 @@ type ConcurrentTransStats struct {
 
 // CacheStats stores cache statistics for WiredTiger.
 type CacheStats struct {
-	TrackedDirtyBytes  int64 `bson:"tracked dirty bytes in the cache"`
-	CurrentCachedBytes int64 `bson:"bytes currently in the cache"`
-	MaxBytesConfigured int64 `bson:"maximum bytes configured"`
+	TrackedDirtyBytes         int64 `bson:"tracked dirty bytes in the cache"`
+	CurrentCachedBytes        int64 `bson:"bytes currently in the cache"`
+	MaxBytesConfigured        int64 `bson:"maximum bytes configured"`
+	AppThreadsPageReadCount   int64 `bson:"application threads page read from disk to cache count"`
+	AppThreadsPageReadTime    int64 `bson:"application threads page read from disk to cache time (usecs)"`
+	AppThreadsPageWriteCount  int64 `bson:"application threads page write from cache to disk count"`
+	AppThreadsPageWriteTime   int64 `bson:"application threads page write from cache to disk time (usecs)"`
+	BytesWrittenFrom          int64 `bson:"bytes written from cache"`
+	BytesReadInto             int64 `bson:"bytes read into cache"`
+	PagesEvictedByAppThread   int64 `bson:"pages evicted by application threads"`
+	PagesQueuedForEviction    int64 `bson:"pages queued for eviction"`
+	ServerEvictingPages       int64 `bson:"eviction server evicting pages"`
+	WorkerThreadEvictingPages int64 `bson:"eviction worker thread evicting pages"`
 }
 
 // TransactionStats stores transaction checkpoints in WiredTiger.
@@ -406,6 +416,20 @@ type StatLine struct {
 	CacheDirtyPercent float64
 	CacheUsedPercent  float64
 
+	// Cache ultilization extended (wiredtiger only)
+	TrackedDirtyBytes         int64
+	CurrentCachedBytes        int64
+	MaxBytesConfigured        int64
+	AppThreadsPageReadCount   int64
+	AppThreadsPageReadTime    int64
+	AppThreadsPageWriteCount  int64
+	BytesWrittenFrom          int64
+	BytesReadInto             int64
+	PagesEvictedByAppThread   int64
+	PagesQueuedForEviction    int64
+	ServerEvictingPages       int64
+	WorkerThreadEvictingPages int64
+
 	// Replicated Opcounter fields
 	InsertR, QueryR, UpdateR, DeleteR, GetMoreR, CommandR int64
 	ReplLag                                               int64
@@ -514,7 +538,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.Command = diff(newStat.Opcounters.Command, oldStat.Opcounters.Command, sampleSecs)
 	}
 
-	if newStat.Metrics != nil && newStat.Metrics.TTL != nil && oldStat.Metrics.TTL != nil {
+	if newStat.Metrics != nil && newStat.Metrics.TTL != nil && oldStat.Metrics != nil && oldStat.Metrics.TTL != nil {
 		returnVal.Passes = diff(newStat.Metrics.TTL.Passes, oldStat.Metrics.TTL.Passes, sampleSecs)
 		returnVal.DeletedDocuments = diff(newStat.Metrics.TTL.DeletedDocuments, oldStat.Metrics.TTL.DeletedDocuments, sampleSecs)
 	}
@@ -534,6 +558,19 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.Flushes = newStat.WiredTiger.Transaction.TransCheckpoints - oldStat.WiredTiger.Transaction.TransCheckpoints
 		returnVal.CacheDirtyPercent = float64(newStat.WiredTiger.Cache.TrackedDirtyBytes) / float64(newStat.WiredTiger.Cache.MaxBytesConfigured)
 		returnVal.CacheUsedPercent = float64(newStat.WiredTiger.Cache.CurrentCachedBytes) / float64(newStat.WiredTiger.Cache.MaxBytesConfigured)
+
+		returnVal.TrackedDirtyBytes = newStat.WiredTiger.Cache.TrackedDirtyBytes
+		returnVal.CurrentCachedBytes = newStat.WiredTiger.Cache.CurrentCachedBytes
+		returnVal.MaxBytesConfigured = newStat.WiredTiger.Cache.MaxBytesConfigured
+		returnVal.AppThreadsPageReadCount = newStat.WiredTiger.Cache.AppThreadsPageReadCount
+		returnVal.AppThreadsPageReadTime = newStat.WiredTiger.Cache.AppThreadsPageReadTime
+		returnVal.AppThreadsPageWriteCount = newStat.WiredTiger.Cache.AppThreadsPageWriteCount
+		returnVal.BytesWrittenFrom = newStat.WiredTiger.Cache.BytesWrittenFrom
+		returnVal.BytesReadInto = newStat.WiredTiger.Cache.BytesReadInto
+		returnVal.PagesEvictedByAppThread = newStat.WiredTiger.Cache.PagesEvictedByAppThread
+		returnVal.PagesQueuedForEviction = newStat.WiredTiger.Cache.PagesQueuedForEviction
+		returnVal.ServerEvictingPages = newStat.WiredTiger.Cache.ServerEvictingPages
+		returnVal.WorkerThreadEvictingPages = newStat.WiredTiger.Cache.WorkerThreadEvictingPages
 	} else if newStat.BackgroundFlushing != nil && oldStat.BackgroundFlushing != nil {
 		returnVal.Flushes = newStat.BackgroundFlushing.Flushes - oldStat.BackgroundFlushing.Flushes
 	}

@@ -3,8 +3,6 @@ package leofs
 import (
 	"bufio"
 	"fmt"
-	"log"
-	"net/url"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -19,7 +17,7 @@ import (
 const oid = ".1.3.6.1.4.1.35450"
 
 // For Manager Master
-const defaultEndpoint = "udp://127.0.0.1:4020"
+const defaultEndpoint = "127.0.0.1:4020"
 
 type ServerType int
 
@@ -137,8 +135,8 @@ var serverTypeMapping = map[string]ServerType{
 
 var sampleConfig = `
   ## An array of URLs of the form:
-  ##   "udp://" host [ ":" port]
-  servers = ["udp://127.0.0.1:4020"]
+  ##   host [ ":" port]
+  servers = ["127.0.0.1:4020"]
 `
 
 func (l *LeoFS) SampleConfig() string {
@@ -155,28 +153,22 @@ func (l *LeoFS) Gather(acc telegraf.Accumulator) error {
 		return nil
 	}
 	var wg sync.WaitGroup
-	for i, endpoint := range l.Servers {
-		if !strings.HasPrefix(endpoint, "udp://") {
-			// Preserve backwards compatibility for hostnames without a
-			// scheme, broken in go 1.8. Remove in Telegraf 2.0
-			endpoint = "udp://" + endpoint
-			log.Printf("W! [inputs.mongodb] Using %q as connection URL; please update your configuration to use an URL", endpoint)
-			l.Servers[i] = endpoint
-		}
-		u, err := url.Parse(endpoint)
-		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse address %q: %s", endpoint, err))
-			continue
-		}
-		if u.Host == "" {
+	for _, endpoint := range l.Servers {
+		results := strings.Split(endpoint, ":")
+
+		port := "4020"
+		if len(results) > 2 {
 			acc.AddError(fmt.Errorf("Unable to parse address %q", endpoint))
 			continue
+		} else if len(results) == 2 {
+			if _, err := strconv.Atoi(results[1]); err == nil {
+				port = results[1]
+			} else {
+				acc.AddError(fmt.Errorf("Unable to parse port from %q", endpoint))
+				continue
+			}
 		}
 
-		port := u.Port()
-		if port == "" {
-			port = "4020"
-		}
 		st, ok := serverTypeMapping[port]
 		if !ok {
 			st = ServerTypeStorage
@@ -196,7 +188,7 @@ func (l *LeoFS) gatherServer(
 	serverType ServerType,
 	acc telegraf.Accumulator,
 ) error {
-	cmd := exec.Command("snmpwalk", "-v2c", "-cpublic", endpoint, oid)
+	cmd := exec.Command("snmpwalk", "-v2c", "-cpublic", "-On", endpoint, oid)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err

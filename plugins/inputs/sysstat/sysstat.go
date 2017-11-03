@@ -100,7 +100,7 @@ var sampleConfig = `
   #
   #
   ## Options for the sadf command. The values on the left represent the sadf
-  ## options and the values on the right their description (wich are used for
+  ## options and the values on the right their description (which are used for
   ## grouping and prefixing metrics).
   ##
   ## Run 'sar -h' or 'man sar' to find out the supported options for your

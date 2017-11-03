@@ -647,7 +647,7 @@ func skipWhitespace(buf []byte, i int) int {
 }
 
 // makeError is a helper function for making a metric parsing error.
-//   reason is the reason that the error occured.
+//   reason is the reason why the error occurred.
 //   buf should be the current buffer we are parsing.
 //   i is the current index, to give some context on where in the buffer we are.
 func makeError(reason string, buf []byte, i int) error {

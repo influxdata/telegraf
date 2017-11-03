@@ -82,6 +82,8 @@ following works:
 - github.com/streadway/amqp [BSD](https://github.com/streadway/amqp/blob/master/LICENSE)
 - github.com/stretchr/objx [MIT](https://github.com/stretchr/objx/blob/master/LICENSE.md)
 - github.com/stretchr/testify [MIT](https://github.com/stretchr/testify/blob/master/LICENCE.txt)
+- github.com/mitchellh/mapstructure [MIT](https://github.com/mitchellh/mapstructure/blob/master/LICENSE)
+- github.com/multiplay/go-ts3 [BSD](https://github.com/multiplay/go-ts3/blob/master/LICENSE)
 - github.com/vjeantet/grok [APACHE](https://github.com/vjeantet/grok/blob/master/LICENSE)
 - github.com/wvanbergen/kafka [MIT](https://github.com/wvanbergen/kafka/blob/master/LICENSE)
 - github.com/wvanbergen/kazoo-go [MIT](https://github.com/wvanbergen/kazoo-go/blob/master/MIT-LICENSE)

@@ -5,7 +5,7 @@
 ```toml
 # Statsd Server
 [[inputs.statsd]]
-  ## Protocol, must be "tcp" or "udp" (default=udp)
+  ## Protocol, must be "tcp", "udp4", "udp6" or "udp" (default=udp)
   protocol = "udp"
 
   ## MaxTCPConnection - applicable when protocol is set to tcp (default=250)
