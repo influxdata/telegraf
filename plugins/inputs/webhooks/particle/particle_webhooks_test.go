@@ -74,7 +74,7 @@ func NewItemJSON() string {
 			  "altitude": 119.331436,
 			  "broadband": 1266,
 			  "infrared": 528,
-			  "lux": 0.0
+			  "lux": 0
 		  }
 	  },
 	  "ttl": 60,
