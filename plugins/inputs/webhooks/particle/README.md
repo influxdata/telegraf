@@ -28,7 +28,7 @@ String data = String::format("{ \"tags\" : {
     Particle.publish("event_name", data, PRIVATE);
 ```
 Escaping the "" is required in the source file on the Particle device.
-The number of tag values and field values is not restricted so you can send as many values per webhook call as you'd like.
+The number of tag values and field values is not restrictied so you can send as many values per webhook call as you'd like.
 
 
 
