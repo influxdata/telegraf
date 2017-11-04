@@ -67,6 +67,10 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 }
 
 func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	buf = bytes.TrimSpace(buf)
+	if len(buf) == 0 {
+		return make([]telegraf.Metric, 0), nil
+	}
 
 	if !isarray(buf) {
 		metrics := make([]telegraf.Metric, 0)
@@ -155,8 +159,6 @@ func (f *JSONFlattener) FullFlattenJSON(
 			return nil
 		}
 	case nil:
-		// ignored types
-		fmt.Println("json parser ignoring " + fieldname)
 		return nil
 	default:
 		return fmt.Errorf("JSON Flattener: got unexpected type %T with value %v (%s)",

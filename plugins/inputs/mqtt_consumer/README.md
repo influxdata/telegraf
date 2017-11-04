@@ -14,7 +14,7 @@ The plugin expects messages in the
   ## MQTT QoS, must be 0, 1, or 2
   qos = 0
   ## Connection timeout for initial connection in seconds
-  connection_timeout = 30
+  connection_timeout = "30s"
 
   ## Topics to subscribe to
   topics = [

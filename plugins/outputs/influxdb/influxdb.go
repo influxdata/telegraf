@@ -53,9 +53,7 @@ type InfluxDB struct {
 }
 
 var sampleConfig = `
-  ## The HTTP or UDP URL for your InfluxDB instance.  Each item should be
-  ## of the form:
-  ##   scheme "://" host [ ":" port]
+  ## The full HTTP or UDP URL for your InfluxDB instance.
   ##
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
@@ -185,12 +183,6 @@ func (i *InfluxDB) Description() string {
 // Write will choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
-
-	bufsize := 0
-	for _, m := range metrics {
-		bufsize += m.Len()
-	}
-
 	r := metric.NewReader(metrics)
 
 	// This will get set to nil if a successful write occurs
@@ -198,7 +190,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 
 	p := rand.Perm(len(i.clients))
 	for _, n := range p {
-		if _, e := i.clients[n].WriteStream(r, bufsize); e != nil {
+		if e := i.clients[n].WriteStream(r); e != nil {
 			// If the database was not found, try to recreate it:
 			if strings.Contains(e.Error(), "database not found") {
 				errc := i.clients[n].Query(fmt.Sprintf(`CREATE DATABASE "%s"`, qiReplacer.Replace(i.Database)))

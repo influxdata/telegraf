@@ -15,6 +15,9 @@ import (
 	"github.com/eclipse/paho.mqtt.golang"
 )
 
+// 30 Seconds is the default used by paho.mqtt.golang
+var defaultConnectionTimeout = internal.Duration{Duration: 30 * time.Second}
+
 type MQTTConsumer struct {
 	Servers           []string
 	Topics            []string
@@ -57,7 +60,7 @@ var sampleConfig = `
   ## MQTT QoS, must be 0, 1, or 2
   qos = 0
   ## Connection timeout for initial connection in seconds
-  connection_timeout = 30
+  connection_timeout = "30s"
 
   ## Topics to subscribe to
   topics = [
@@ -118,8 +121,8 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("MQTT Consumer, invalid QoS value: %d", m.QoS)
 	}
 
-	if int(m.ConnectionTimeout.Duration) <= 0 {
-		return fmt.Errorf("MQTT Consumer, invalid connection_timeout value: %d", m.ConnectionTimeout)
+	if m.ConnectionTimeout.Duration < 1*time.Second {
+		return fmt.Errorf("MQTT Consumer, invalid connection_timeout value: %s", m.ConnectionTimeout.Duration)
 	}
 
 	opts, err := m.createOpts()
@@ -270,6 +273,8 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 
 func init() {
 	inputs.Add("mqtt_consumer", func() telegraf.Input {
-		return &MQTTConsumer{}
+		return &MQTTConsumer{
+			ConnectionTimeout: defaultConnectionTimeout,
+		}
 	})
 }
