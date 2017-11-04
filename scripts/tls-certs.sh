@@ -15,7 +15,7 @@ new_certs_dir = ./certs_by_serial
 private_key = ./private/cakey.pem
 serial = ./serial
 
-default_crl_days = 7
+default_crl_days = 3650
 default_days = 3650
 default_md = sha256
 
@@ -53,7 +53,7 @@ basicConstraints = CA:false
 keyUsage = keyEncipherment
 extendedKeyUsage = 1.3.6.1.5.5.7.3.1
 EOF
-openssl req -x509 -config ./openssl.conf -newkey rsa:1024 -out ./certs/cacert.pem -keyout ./private/cakey.pem -subj "/CN=Telegraf CA/" -nodes &&
+openssl req -x509 -config ./openssl.conf -days 3650 -newkey rsa:1024 -out ./certs/cacert.pem -keyout ./private/cakey.pem -subj "/CN=Telegraf CA/" -nodes &&
 
 # Create server keypair
 openssl genrsa -out ./private/serverkey.pem 1024 &&
