@@ -6,6 +6,9 @@ import (
 	"log"
 	"strings"
 
+	// register in driver.
+	_ "github.com/jackc/pgx/stdlib"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
