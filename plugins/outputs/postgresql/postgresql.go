@@ -11,10 +11,11 @@ import (
 )
 
 type Postgresql struct {
-	db          *sql.DB
-	Address     string
-	IgnoredTags []string
-	Tables      map[string]bool
+	db                *sql.DB
+	Address           string
+	IgnoredTags       []string
+	TagsAsForeignkeys bool
+	Tables            map[string]bool
 }
 
 func (p *Postgresql) Connect() error {
@@ -55,8 +56,13 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 		if contains(p.IgnoredTags, column) {
 			continue
 		}
-		pk = append(pk, column)
-		columns = append(columns, fmt.Sprintf("%s text", column))
+		if p.TagsAsForeignkeys {
+			pk = append(pk, column+"_id")
+			columns = append(columns, fmt.Sprintf("%s_id int8", column))
+		} else {
+			pk = append(pk, column)
+			columns = append(columns, fmt.Sprintf("%s text", column))
+		}
 	}
 
 	var datatype string
@@ -74,32 +80,14 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 	return sql
 }
 
-func (p *Postgresql) generateInsert(metric telegraf.Metric) (string, []interface{}) {
-	var columns []string
-	var values []interface{}
-
-	columns = append(columns, "time")
-	values = append(values, metric.Time())
-
-	for column, value := range metric.Tags() {
-		if contains(p.IgnoredTags, column) {
-			continue
-		}
-		columns = append(columns, column)
-		values = append(values, value)
-	}
-
-	for column, value := range metric.Fields() {
-		columns = append(columns, column)
-		values = append(values, value)
-	}
+func (p *Postgresql) generateInsert(tablename string, columns []string, values []interface{}) (string, []interface{}) {
 
 	var placeholder []string
 	for i := 1; i <= len(values); i++ {
 		placeholder = append(placeholder, fmt.Sprintf("$%d", i))
 	}
 
-	sql := fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", metric.Name(), strings.Join(columns, ","), strings.Join(placeholder, ","))
+	sql := fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", tablename, strings.Join(columns, ","), strings.Join(placeholder, ","))
 	return sql, values
 }
 
@@ -115,35 +103,64 @@ func (p *Postgresql) tableExists(tableName string) bool {
 		return true
 	}
 	return false
-
-}
-
-func (p *Postgresql) writeMetric(metric telegraf.Metric) error {
-	tableName := metric.Name()
-
-	if p.Tables[tableName] == false && p.tableExists(tableName) == false {
-		createStmt := p.generateCreateTable(metric)
-		_, err := p.db.Exec(createStmt)
-		if err != nil {
-			return err
-		}
-		p.Tables[tableName] = true
-	}
-
-	sql, values := p.generateInsert(metric)
-	_, err := p.db.Exec(sql, values...)
-	if err != nil {
-		fmt.Println("Error during insert", err)
-		return err
-	}
-
-	return nil
 }
 
 func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 	for _, metric := range metrics {
-		err := p.writeMetric(metric)
+		tablename := metric.Name()
+
+		// create table if needed
+		if p.Tables[tablename] == false && p.tableExists(tablename) == false {
+			createStmt := p.generateCreateTable(metric)
+			_, err := p.db.Exec(createStmt)
+			if err != nil {
+				return err
+			}
+			p.Tables[tablename] = true
+		}
+
+		var columns []string
+		var values []interface{}
+
+		columns = append(columns, "time")
+		values = append(values, metric.Time())
+
+		for column, value := range metric.Tags() {
+			if contains(p.IgnoredTags, column) {
+				continue
+			}
+
+			if p.TagsAsForeignkeys {
+				//				var value_id int
+				//				query := fmt.Sprintf("SELECT %s_id FROM %s_%s WHERE %s=$1", column, metric.Name(), column, column)
+				//				err := p.db.QueryRow(query, value).Scan(&value_id)
+				//
+				//				if err != nil {
+				//					query := fmt.Sprintf("INSERT INTO %s_%s(%s) VALUES($1) RETURNING %s_id", metric.Name(), column, column, column)
+				//					err := p.db.QueryRow(query, value).Scan(&value_id)
+				//				}
+				//				columns = append(columns, column+"_id")
+				//				values = append(values, value_id)
+			} else {
+				columns = append(columns, column)
+				values = append(values, value)
+			}
+		}
+
+		for column, value := range metric.Fields() {
+			columns = append(columns, column)
+			values = append(values, value)
+		}
+
+		var placeholder []string
+		for i := 1; i <= len(values); i++ {
+			placeholder = append(placeholder, fmt.Sprintf("$%d", i))
+		}
+
+		sql, values := p.generateInsert(tablename, columns, values)
+		_, err := p.db.Exec(sql, values...)
 		if err != nil {
+			fmt.Println("Error during insert", err)
 			return err
 		}
 	}
