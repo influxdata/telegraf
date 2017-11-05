@@ -42,7 +42,31 @@ func contains(haystack []string, needle string) bool {
 	return false
 }
 
-func (p *Postgresql) SampleConfig() string { return "" }
+var sampleConfig = `
+  ## specify address via a url matching:
+  ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
+  ##       ?sslmode=[disable|verify-ca|verify-full]
+  ## or a simple string:
+  ##   host=localhost user=pqotest password=... sslmode=... dbname=app_production
+  ##
+  ## All connection parameters are optional.
+  ##
+  ## Without the dbname parameter, the driver will default to a database
+  ## with the same name as the user. This dbname is just for instantiating a
+  ## connection with the server and doesn't restrict the databases we are trying
+  ## to grab metrics for.
+  ##
+  address = "host=localhost user=postgres sslmode=verify-full"
+
+  ## A list of tags to exclude from storing. If not specified, all tags are stored.
+  # ignored_tags = ["foo", "bar"]
+
+  ## Store tags as foreign keys in the metrics table. Default is false.
+  # tags_as_foreignkeys = false
+
+`
+
+func (p *Postgresql) SampleConfig() string { return sampleConfig }
 func (p *Postgresql) Description() string  { return "Send metrics to PostgreSQL" }
 
 func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
