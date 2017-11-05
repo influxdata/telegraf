@@ -5,6 +5,7 @@ Telegraf is able to serialize metrics into the following output data formats:
 1. [InfluxDB Line Protocol](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#influx)
 1. [JSON](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#json)
 1. [Graphite](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#graphite)
+1. [MessagePack](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md#messagepack)
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -161,3 +162,49 @@ microseconds (`us` or `µs`), milliseconds (`ms`), or seconds (`s`). Note that t
 parameter will be truncated to the nearest power of 10 that, so if the `json_timestamp_units`
 are set to `15ms` the timestamps for the JSON format serialized Telegraf metrics will be
 output in hundredths of a second (`10ms`).
+
+# MessagePack:
+
+MessagePack is an efficient binary serialization format. It lets you exchange data among multiple languages like JSON. 
+
+https://msgpack.org
+
+### Format Definitions:
+
+Output of this format is MessagePack binary representation of metrics that have identical structure of the below JSON.
+
+```
+{
+   "name":"cpu",
+   "time": <TIMESTAMP>, // https://github.com/msgpack/msgpack/blob/master/spec.md#timestamp-extension-type
+   "tags":{
+      "tag_1":"host01",
+      ...
+   },
+   "fields":{
+      "field_1":30,
+      "field_2":true,
+      "field_3":"field_value"
+      "field_4":30.1
+      ...
+   }
+}
+```
+
+MessagePack has it's own timestamp representation. You can find additional informations from [MessagePack specification](https://github.com/msgpack/msgpack/blob/master/spec.md#timestamp-extension-type).
+
+### MessagePack Configuration:
+
+There are no additional configuration options for MessagePack format.
+
+```toml
+[[outputs.file]]
+  ## Files to write to, "stdout" is a specially handled file.
+  files = ["stdout", "/tmp/metrics.out"]
+
+  ## Data format to output.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "msgpack"
+```
