@@ -2,14 +2,16 @@ package serializers
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
 	"time"
+
+	"github.com/influxdata/telegraf/plugins/serializers/prometheusremotewrite"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/influxdata/telegraf/plugins/serializers/msgpack"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
@@ -129,6 +131,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewPrometheusSerializer(config)
 	case "prometheusremotewrite":
 		serializer, err = NewPrometheusRemoteWriteSerializer(config)
+	case "msgpack":
+		serializer, err = NewMsgpackSerializer()
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -239,4 +243,8 @@ func NewGraphiteSerializer(prefix, template string, tag_support bool, separator 
 		Separator:  separator,
 		Templates:  graphiteTemplates,
 	}, nil
+}
+
+func NewMsgpackSerializer() (Serializer, error) {
+	return msgpack.NewSerializer(), nil
 }

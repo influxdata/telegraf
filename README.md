@@ -370,6 +370,7 @@ For documentation on the latest development code see the [documentation index][d
 - [SplunkMetric](/plugins/serializers/splunkmetric)
 - [Carbon2](/plugins/serializers/carbon2)
 - [Wavefront](/plugins/serializers/wavefront)
+- [MessagePack](/plugins/serializers/msgpack)
 
 ## Processor Plugins
 
