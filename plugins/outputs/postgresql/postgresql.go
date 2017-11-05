@@ -48,6 +48,7 @@ func (p *Postgresql) Description() string  { return "Send metrics to PostgreSQL"
 func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 	var columns []string
 	var pk []string
+	var sql []string
 
 	pk = append(pk, "time")
 	columns = append(columns, "time timestamptz")
@@ -59,6 +60,7 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 		if p.TagsAsForeignkeys {
 			pk = append(pk, column+"_id")
 			columns = append(columns, fmt.Sprintf("%s_id int8", column))
+			sql = append(sql, fmt.Sprintf("CREATE TABLE %s_%s(%s_id serial primary key,%s text unique)", metric.Name(), column, column, column))
 		} else {
 			pk = append(pk, column)
 			columns = append(columns, fmt.Sprintf("%s text", column))
@@ -76,8 +78,8 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 		columns = append(columns, fmt.Sprintf("%s %s", column, datatype))
 	}
 
-	sql := fmt.Sprintf("CREATE TABLE %s(%s,PRIMARY KEY(%s))", metric.Name(), strings.Join(columns, ","), strings.Join(pk, ","))
-	return sql
+	sql = append(sql, fmt.Sprintf("CREATE TABLE %s(%s,PRIMARY KEY(%s))", metric.Name(), strings.Join(columns, ","), strings.Join(pk, ",")))
+	return strings.Join(sql, ";")
 }
 
 func (p *Postgresql) generateInsert(tablename string, columns []string, values []interface{}) (string, []interface{}) {
@@ -131,16 +133,20 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 			}
 
 			if p.TagsAsForeignkeys {
-				//				var value_id int
-				//				query := fmt.Sprintf("SELECT %s_id FROM %s_%s WHERE %s=$1", column, metric.Name(), column, column)
-				//				err := p.db.QueryRow(query, value).Scan(&value_id)
-				//
-				//				if err != nil {
-				//					query := fmt.Sprintf("INSERT INTO %s_%s(%s) VALUES($1) RETURNING %s_id", metric.Name(), column, column, column)
-				//					err := p.db.QueryRow(query, value).Scan(&value_id)
-				//				}
-				//				columns = append(columns, column+"_id")
-				//				values = append(values, value_id)
+				var value_id int
+
+				query := fmt.Sprintf("SELECT %s_id FROM %s_%s WHERE %s=$1", column, tablename, column, column)
+				err := p.db.QueryRow(query, value).Scan(&value_id)
+				if err != nil {
+					query := fmt.Sprintf("INSERT INTO %s_%s(%s) VALUES($1) RETURNING %s_id", tablename, column, column, column)
+					err := p.db.QueryRow(query, value).Scan(&value_id)
+					if err != nil {
+						return err
+					}
+				}
+
+				columns = append(columns, column+"_id")
+				values = append(values, value_id)
 			} else {
 				columns = append(columns, column)
 				values = append(values, value)
