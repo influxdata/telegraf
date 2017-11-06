@@ -253,12 +253,30 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		case STRING:
 			fields[k] = strings.Trim(v, `"`)
 		case EPOCH:
-			iv, err := strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				log.Printf("E! Error parsing %s to int: %s", v, err)
-			} else {
-				timestamp = time.Unix(iv, 0)
+			parts := strings.SplitN(v, ".", 2)
+			if len(parts) == 0 {
+				log.Printf("E! Error parsing %s to timestamp: %s", v, err)
+				break
 			}
+
+			sec, err := strconv.ParseInt(parts[0], 10, 64)
+			if err != nil {
+				log.Printf("E! Error parsing %s to timestamp: %s", v, err)
+				break
+			}
+			ts := time.Unix(sec, 0)
+
+			if len(parts) == 2 {
+				padded := fmt.Sprintf("%-9s", parts[1])
+				nsString := strings.Replace(padded[:9], " ", "0", -1)
+				nanosec, err := strconv.ParseInt(nsString, 10, 64)
+				if err != nil {
+					log.Printf("E! Error parsing %s to timestamp: %s", v, err)
+					break
+				}
+				ts = ts.Add(time.Duration(nanosec) * time.Nanosecond)
+			}
+			timestamp = ts
 		case EPOCH_NANO:
 			iv, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {

@@ -5,6 +5,7 @@ package ping
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -76,6 +77,17 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(u string) {
 			defer wg.Done()
+			tags := map[string]string{"url": u}
+			fields := map[string]interface{}{"result_code": 0}
+
+			_, err := net.LookupHost(u)
+			if err != nil {
+				acc.AddError(err)
+				fields["result_code"] = 1
+				acc.AddFields("ping", fields, tags)
+				return
+			}
+
 			args := p.args(u)
 			totalTimeout := float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
 
@@ -99,24 +111,23 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 					} else {
 						acc.AddError(err)
 					}
+					acc.AddFields("ping", fields, tags)
 					return
 				}
 			}
 
-			tags := map[string]string{"url": u}
 			trans, rec, min, avg, max, stddev, err := processPingOutput(out)
 			if err != nil {
 				// fatal error
 				acc.AddError(fmt.Errorf("%s: %s", err, u))
+				acc.AddFields("ping", fields, tags)
 				return
 			}
 			// Calculate packet loss percentage
 			loss := float64(trans-rec) / float64(trans) * 100.0
-			fields := map[string]interface{}{
-				"packets_transmitted": trans,
-				"packets_received":    rec,
-				"percent_packet_loss": loss,
-			}
+			fields["packets_transmitted"] = trans
+			fields["packets_received"] = rec
+			fields["percent_packet_loss"] = loss
 			if min > 0 {
 				fields["minimum_response_ms"] = min
 			}
@@ -194,7 +205,6 @@ func processPingOutput(out string) (int, int, float64, float64, float64, float64
 	for _, line := range lines {
 		if strings.Contains(line, "transmitted") &&
 			strings.Contains(line, "received") {
-			err = nil
 			stats := strings.Split(line, ", ")
 			// Transmitted packets
 			trans, err = strconv.Atoi(strings.Split(stats[0], " ")[0])
@@ -209,8 +219,17 @@ func processPingOutput(out string) (int, int, float64, float64, float64, float64
 		} else if strings.Contains(line, "min/avg/max") {
 			stats := strings.Split(line, " ")[3]
 			min, err = strconv.ParseFloat(strings.Split(stats, "/")[0], 64)
+			if err != nil {
+				return trans, recv, min, avg, max, stddev, err
+			}
 			avg, err = strconv.ParseFloat(strings.Split(stats, "/")[1], 64)
+			if err != nil {
+				return trans, recv, min, avg, max, stddev, err
+			}
 			max, err = strconv.ParseFloat(strings.Split(stats, "/")[2], 64)
+			if err != nil {
+				return trans, recv, min, avg, max, stddev, err
+			}
 			stddev, err = strconv.ParseFloat(strings.Split(stats, "/")[3], 64)
 			if err != nil {
 				return trans, recv, min, avg, max, stddev, err

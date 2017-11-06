@@ -3,15 +3,15 @@ package elasticsearch
 import (
 	"context"
 	"fmt"
-	"log"
-	"strconv"
-	"strings"
-	"time"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"gopkg.in/olivere/elastic.v5"
+	"log"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
 )
 
 type Elasticsearch struct {
@@ -25,6 +25,10 @@ type Elasticsearch struct {
 	ManageTemplate      bool
 	TemplateName        string
 	OverwriteTemplate   bool
+	SSLCA               string `toml:"ssl_ca"`   // Path to CA file
+	SSLCert             string `toml:"ssl_cert"` // Path to host cert file
+	SSLKey              string `toml:"ssl_key"`  // Path to cert key file
+	InsecureSkipVerify  bool   // Use SSL but skip chain & host verification
 	Client              *elastic.Client
 }
 
@@ -56,6 +60,13 @@ var sampleConfig = `
   # %H - hour (00..23)
   index_name = "telegraf-%Y.%m.%d" # required.
 
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
+
   ## Template Config
   ## Set to true if you want telegraf to manage its index template.
   ## If enabled it will create a recommended index template for telegraf indexes
@@ -76,7 +87,21 @@ func (a *Elasticsearch) Connect() error {
 
 	var clientOptions []elastic.ClientOptionFunc
 
+	tlsCfg, err := internal.GetTLSConfig(a.SSLCert, a.SSLKey, a.SSLCA, a.InsecureSkipVerify)
+	if err != nil {
+		return err
+	}
+	tr := &http.Transport{
+		TLSClientConfig: tlsCfg,
+	}
+
+	httpclient := &http.Client{
+		Transport: tr,
+		Timeout:   a.Timeout.Duration,
+	}
+
 	clientOptions = append(clientOptions,
+		elastic.SetHttpClient(httpclient),
 		elastic.SetSniff(a.EnableSniffer),
 		elastic.SetURL(a.URLs...),
 		elastic.SetHealthcheckInterval(a.HealthCheckInterval.Duration),
