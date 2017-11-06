@@ -105,7 +105,7 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 		columns = append(columns, fmt.Sprintf("%s %s", column, datatype))
 	}
 
-	sql = append(sql, fmt.Sprintf("CREATE TABLE %s(%s,PRIMARY KEY(%s))", metric.Name(), strings.Join(columns, ","), strings.Join(pk, ",")))
+	sql = append(sql, fmt.Sprintf("CREATE TABLE %[1]s(%[2]s,PRIMARY KEY(%[3]s))", metric.Name(), strings.Join(columns, ","), strings.Join(pk, ",")))
 	return strings.Join(sql, ";")
 }
 
