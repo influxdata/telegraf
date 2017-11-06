@@ -41,11 +41,13 @@ GO
   # By default, the host is localhost, listening on default port (TCP/1433) 
   #    for Windows, the user is the currently running AD user (SSO).
   #    See https://github.com/denisenkom/go-mssqldb for detailed connection parameters.
-
   servers = [
 	"Server=192.168.1.30;Port=1433;User Id=telegraf;Password=T$l$gr@f69*;app name=telegraf;log=1;",
     "Server=192.168.1.30;Port=2222;User Id=telegraf;Password=T$l$gr@f69*;app name=telegraf;log=1;"
 	]
+  ## Specify if queries should not run in parallel
+  # disable_parallel true
+
 ```
 
 
@@ -59,7 +61,9 @@ GO
 	- Memory breakdown (bytes) | Buffer pool, Cache (objects), Cache (sql plans), Other
 - Database size 
 	- Log size (bytes) | databases (included sysdb)
+	- Log max size (bytes) | databases (included sysdb)
 	- Rows size (bytes) | databases (included sysdb)
+	- Rows max size (bytes) | databases (included sysdb)
 - Database IO	
 	- Log writes (bytes/sec) | databases (included sysdb)
 	- Rows writes (bytes/sec) | databases (included sysdb)
@@ -103,6 +107,18 @@ GO
 	- ... 1000+ metrics
 	  See https://msdn.microsoft.com/fr-fr/library/ms190382(v=sql.120).aspx
 
+## Azure SQL Missing Measurement | Fields:
+
+- Database size 
+	- Log Max size (bytes) | databases (included sysdb)
+	- Rows Max size (bytes) | databases (included sysdb)
+- OS Volume    
+	- Volume total space (bytes) | logical volumes 
+	- Volume available space (bytes) | logical volumes 
+	- Volume used space (bytes) | logical volumes
+	- Volume used space (%) | logical volumes
+- Performance metrics
+	- Performance metrics | Available physical memory (bytes), Page File Usage (%)
 	  
 ## Tags:
 - All stats have the following tags:

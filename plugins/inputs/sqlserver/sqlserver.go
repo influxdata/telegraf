@@ -9,12 +9,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	// go-mssqldb initialization
-	_ "github.com/zensqlmonitor/go-mssqldb"
+	_ "github.com/denisenkom/go-mssqldb"
 )
 
 // SQLServer struct
 type SQLServer struct {
-	Servers []string
+	Servers         []string
+	DisableParallel bool
 }
 
 // Query struct
@@ -41,6 +42,9 @@ var sampleConfig = `
   # servers = [
   #  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
   # ]
+  ## Specify if queries should not run in parallel
+  # disable_parallel true
+
 `
 
 // SampleConfig return the sample configuration
@@ -80,34 +84,60 @@ func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var wg sync.WaitGroup
-
 	for _, serv := range s.Servers {
-		for _, query := range queries {
-			wg.Add(1)
-			go func(serv string, query Query) {
-				defer wg.Done()
-				acc.AddError(s.gatherServer(serv, query, acc))
-			}(serv, query)
-		}
-	}
+		wg.Add(1)
+		go func(serv string) {
+			defer wg.Done()
+			conn, err := s.openConn(serv)
 
+			if err != nil {
+				acc.AddError(err)
+				return
+			}
+			defer conn.Close()
+			if s.DisableParallel {
+				for _, query := range queries {
+					acc.AddError(s.gatherServer(conn, query, acc))
+				}
+			} else {
+				var wgs sync.WaitGroup
+				for _, query := range queries {
+					wgs.Add(1)
+					go func(query Query) {
+						defer wgs.Done()
+						acc.AddError(s.gatherServer(conn, query, acc))
+					}(query)
+				}
+				wgs.Wait()
+			}
+		}(serv)
+	}
 	wg.Wait()
 	return nil
+
 }
 
-func (s *SQLServer) gatherServer(server string, query Query, acc telegraf.Accumulator) error {
+func (s *SQLServer) openConn(server string) (*sql.DB, error) {
+
 	// deferred opening
 	conn, err := sql.Open("mssql", server)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// verify that a connection can be made before making a query
 	err = conn.Ping()
 	if err != nil {
 		// Handle error
-		return err
+		return nil, err
 	}
-	defer conn.Close()
+	// Used to ensure keep alive
+	if _, err := conn.Exec("SELECT @@version"); err != nil {
+		return nil, err
+	}
+	return conn, nil
+}
+
+func (s *SQLServer) gatherServer(conn *sql.DB, query Query, acc telegraf.Accumulator) error {
 
 	// execute query
 	rows, err := conn.Query(query.Script)
@@ -193,14 +223,12 @@ const sqlPerformanceMetrics string = `SET NOCOUNT ON;
 SET ARITHABORT ON;
 SET QUOTED_IDENTIFIER ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
-
 DECLARE @PCounters TABLE
 (
 	counter_name nvarchar(64),
 	cntr_value bigint,
 	Primary Key(counter_name)
 );
-
 INSERT @PCounters (counter_name, cntr_value)
 SELECT 'Point In Time Recovery', Value = CASE
 	WHEN  1 > 1.0 * COUNT(*)  / NULLIF((SELECT COUNT(*) FROM sys.databases d WHERE database_id > 4), 0)
@@ -209,15 +237,9 @@ FROM sys.databases d
 WHERE database_id > 4
 	AND recovery_model IN (1)
 UNION ALL
-SELECT 'Page File Usage (%)', CAST(100 * (1 - available_page_file_kb * 1. / total_page_file_kb) as decimal(9,2)) as [PageFileUsage (%)]
-FROM sys.dm_os_sys_memory
-UNION ALL
 SELECT 'Connection memory per connection (bytes)',  Ratio = CAST((cntr_value / (SELECT 1.0 * cntr_value FROM sys.dm_os_performance_counters WHERE counter_name = 'User Connections')) * 1024 as int)
 FROM sys.dm_os_performance_counters
 WHERE counter_name = 'Connection Memory (KB)'
-UNION ALL
-SELECT 'Available physical memory (bytes)', available_physical_memory_kb * 1024
-FROM sys.dm_os_sys_memory
 UNION ALL
 SELECT 'Signal wait (%)', SignalWaitPercent = CAST(100.0 * SUM(signal_wait_time_ms) / SUM (wait_time_ms) AS NUMERIC(20,2))
 FROM sys.dm_os_wait_stats
@@ -262,14 +284,23 @@ SELECT 'Total target memory ratio', TotalTargetMemoryRatio = 100.0 * cntr_value 
 FROM sys.dm_os_performance_counters
 WHERE counter_name = 'Total Server Memory (KB)'
 
+IF (OBJECT_ID('sys.dm_os_sys_memory', 'V') IS NOT NULL)
+BEGIN
+    INSERT @PCounters (counter_name, cntr_value)
+	SELECT 'Available physical memory (bytes)', available_physical_memory_kb * 1024
+	FROM sys.dm_os_sys_memory
+	UNION ALL
+	SELECT 'Page File Usage (%)', CAST(100 * (1 - available_page_file_kb * 1. / total_page_file_kb) as decimal(9,2)) as [PageFileUsage (%)]
+	FROM sys.dm_os_sys_memory
+END
+
+
 IF OBJECT_ID('tempdb..#PCounters') IS NOT NULL DROP TABLE #PCounters;
 SELECT * INTO #PCounters FROM @PCounters
-
 DECLARE @DynamicPivotQuery AS NVARCHAR(MAX)
 DECLARE @ColumnName AS NVARCHAR(MAX)
 SELECT @ColumnName= ISNULL(@ColumnName + ',','') + QUOTENAME(counter_name)
 FROM (SELECT DISTINCT counter_name FROM @PCounters) AS bl
-
 SET @DynamicPivotQuery = N'
 SELECT measurement = ''Performance metrics'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Performance metrics''
 , ' + @ColumnName + '  FROM
@@ -284,21 +315,16 @@ EXEC sp_executesql @DynamicPivotQuery;
 
 const sqlMemoryClerk string = `SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
-
 DECLARE @sqlVers numeric(4,2)
 SELECT @sqlVers = LEFT(CAST(SERVERPROPERTY('productversion') as varchar), 4)
-
 IF OBJECT_ID('tempdb..#clerk') IS NOT NULL
 	DROP TABLE #clerk;
-
 CREATE TABLE #clerk (
     ClerkCategory nvarchar(64) NOT NULL,
     UsedPercent decimal(9,2),
     UsedBytes bigint
 );
-
 DECLARE @DynamicClerkQuery AS NVARCHAR(MAX)
-
 IF @sqlVers < 11
 BEGIN
     SET @DynamicClerkQuery = N'
@@ -378,9 +404,7 @@ PIVOT
 	SUM(UsedPercent)
 	FOR ClerkCategory IN ([Buffer Pool], [Cache (objects)], [Cache (sql plans)], [Other])
 ) AS PivotTable
-
 UNION ALL
-
 SELECT measurement = 'Memory breakdown (bytes)'
 , [Buffer pool] = ISNULL(ROUND([Buffer Pool], 1), 0)
 , [Cache (objects)] = ISNULL(ROUND([Cache (objects)], 1), 0)
@@ -397,26 +421,47 @@ PIVOT
 
 const sqlDatabaseSize string = `SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
-
-IF OBJECT_ID('tempdb..#baseline') IS NOT NULL
-	DROP TABLE #baseline;
-SELECT
-    DB_NAME(mf.database_id) AS database_name ,
-    CAST(mf.size AS BIGINT) as database_size_8k_pages,
-    CAST(mf.max_size AS BIGINT) as database_max_size_8k_pages,
-    size_on_disk_bytes ,
-	type_desc as datafile_type,
-    GETDATE() AS baselineDate
-INTO #baseline
-FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS divfs
-INNER JOIN sys.master_files AS mf ON mf.database_id = divfs.database_id
-	AND mf.file_id = divfs.file_id
+IF OBJECT_ID('tempdb..#baseline1') IS NOT NULL
+	DROP TABLE #baseline1;
+IF OBJECT_ID('tempdb..#baseline2') IS NOT NULL
+	DROP TABLE #baseline2;
+DECLARE @TEMPTABLE AS NVARCHAR(MAX)
+DECLARE @ColumnName AS NVARCHAR(MAX), @ColumnName2 AS NVARCHAR(MAX)
+IF (OBJECT_ID('sys.master_files', 'V') IS NULL)
+	BEGIN 
+		SELECT
+		DB_NAME(database_id) AS database_name ,
+		CAST(size_on_disk_bytes/8/1024 AS BIGINT) as database_size_8k_pages,
+		size_on_disk_bytes ,
+		CASE WHEN (file_id) = 1
+			THEN 'ROWS'
+			ELSE 'LOG' END as datafile_type,
+		GETDATE() AS baselineDate
+		INTO #baseline1
+		FROM sys.dm_io_virtual_file_stats(NULL, NULL)
+		SET @TEMPTABLE = '#baseline1'
+				SELECT @ColumnName= ISNULL(@ColumnName + ',','') + QUOTENAME(database_name)
+		FROM (SELECT DISTINCT database_name FROM #baseline1) AS bl
+	END 
+ELSE
+	BEGIN
+		SELECT
+			DB_NAME(mf.database_id) AS database_name ,
+			CAST(mf.size AS BIGINT) as database_size_8k_pages,
+			CAST(mf.max_size AS BIGINT) as database_max_size_8k_pages,
+			size_on_disk_bytes ,
+			type_desc as datafile_type,
+			GETDATE() AS baselineDate
+		INTO #baseline2
+		FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS divfs
+		INNER JOIN sys.master_files AS mf ON mf.database_id = divfs.database_id
+			AND mf.file_id = divfs.file_id
+		SET @TEMPTABLE = '#baseline2'
+		SELECT @ColumnName= ISNULL(@ColumnName + ',','') + QUOTENAME(database_name)
+		FROM (SELECT DISTINCT database_name FROM #baseline2) AS bl
+	END
 
 DECLARE @DynamicPivotQuery AS NVARCHAR(MAX)
-DECLARE @ColumnName AS NVARCHAR(MAX), @ColumnName2 AS NVARCHAR(MAX)
-
-SELECT @ColumnName= ISNULL(@ColumnName + ',','') + QUOTENAME(database_name)
-FROM (SELECT DISTINCT database_name FROM #baseline) AS bl
 
 --Prepare the PIVOT query using the dynamic
 SET @DynamicPivotQuery = N'
@@ -424,76 +469,68 @@ SELECT measurement = ''Log size (bytes)'', servername = REPLACE(@@SERVERNAME, ''
 , ' + @ColumnName + '  FROM
 (
 SELECT database_name, size_on_disk_bytes
-FROM #baseline
+FROM ' + @TEMPTABLE + '
 WHERE datafile_type = ''LOG''
 ) as V
 PIVOT(SUM(size_on_disk_bytes) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Rows size (bytes)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database size''
 , ' + @ColumnName + '  FROM
 (
 SELECT database_name, size_on_disk_bytes
-FROM #baseline
+FROM ' + @TEMPTABLE + '
 WHERE datafile_type = ''ROWS''
 ) as V
 PIVOT(SUM(size_on_disk_bytes) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Rows size (8KB pages)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database size''
 , ' + @ColumnName + '  FROM
 (
 SELECT database_name, database_size_8k_pages
-FROM #baseline
+FROM ' + @TEMPTABLE + '
 WHERE datafile_type = ''ROWS''
 ) as V
 PIVOT(SUM(database_size_8k_pages) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Log size (8KB pages)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database size''
 , ' + @ColumnName + '  FROM
 (
 SELECT database_name, database_size_8k_pages
-FROM #baseline
+FROM ' + @TEMPTABLE + '
 WHERE datafile_type = ''LOG''
 ) as V
-PIVOT(SUM(database_size_8k_pages) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
-
-UNION ALL
-
-SELECT measurement = ''Rows max size (8KB pages)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database size''
-, ' + @ColumnName + '  FROM
-(
-SELECT database_name, database_max_size_8k_pages
-FROM #baseline
-WHERE datafile_type = ''ROWS''
-) as V
-PIVOT(SUM(database_max_size_8k_pages) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
-
-UNION ALL
-
-SELECT measurement = ''Logs max size (8KB pages)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database size''
-, ' + @ColumnName + '  FROM
-(
-SELECT database_name, database_max_size_8k_pages
-FROM #baseline
-WHERE datafile_type = ''LOG''
-) as V
-PIVOT(SUM(database_max_size_8k_pages) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
-'
+PIVOT(SUM(database_size_8k_pages) FOR database_name IN (' + @ColumnName + ')) AS PVTTable'
+IF (OBJECT_ID('sys.master_files', 'V') IS NOT NULL)
+	BEGIN
+		SET @DynamicPivotQuery += N'
+		UNION ALL
+		SELECT measurement = ''Rows max size (8KB pages)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database size''
+		, ' + @ColumnName + '  FROM
+		(
+		SELECT database_name, database_max_size_8k_pages
+		FROM ' + @TEMPTABLE + '
+		WHERE datafile_type = ''ROWS''
+		) as V
+		PIVOT(SUM(database_max_size_8k_pages) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
+		UNION ALL
+		SELECT measurement = ''Logs max size (8KB pages)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database size''
+		, ' + @ColumnName + '  FROM
+		(
+		SELECT database_name, database_max_size_8k_pages
+		FROM ' + @TEMPTABLE + '
+		WHERE datafile_type = ''LOG''
+		) as V
+		PIVOT(SUM(database_max_size_8k_pages) FOR database_name IN (' + @ColumnName + ')) AS PVTTable
+		'
+	END
 --PRINT @DynamicPivotQuery
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
 const sqlDatabaseStats string = `SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
-
 IF OBJECT_ID('tempdb..#baseline') IS NOT NULL
 	DROP TABLE #baseline;
-
 SELECT
 [ReadLatency] =
     CASE WHEN [num_of_reads] = 0
@@ -515,21 +552,16 @@ SELECT
         THEN 0 ELSE
             (([num_of_bytes_read] + [num_of_bytes_written]) /
             ([num_of_reads] + [num_of_writes])) END,
-DB_NAME ([vfs].[database_id]) AS DatabaseName,
-[mf].type_desc  as datafile_type
+DB_NAME ([database_id]) AS DatabaseName,
+CASE WHEN (file_id) = 1
+			THEN 'ROWS'
+			ELSE 'LOG' END as datafile_type
 INTO #baseline
-FROM sys.dm_io_virtual_file_stats (NULL,NULL) AS [vfs]
-JOIN sys.master_files AS [mf] ON [vfs].[database_id] = [mf].[database_id]
-    AND [vfs].[file_id] = [mf].[file_id]
-
-
-
+FROM sys.dm_io_virtual_file_stats (NULL,NULL)
 DECLARE @DynamicPivotQuery AS NVARCHAR(MAX)
 DECLARE @ColumnName AS NVARCHAR(MAX), @ColumnName2 AS NVARCHAR(MAX)
-
 SELECT @ColumnName= ISNULL(@ColumnName + ',','') + QUOTENAME(DatabaseName)
 FROM (SELECT DISTINCT DatabaseName FROM #baseline) AS bl
-
 --Prepare the PIVOT query using the dynamic
 SET @DynamicPivotQuery = N'
 SELECT measurement = ''Log read latency (ms)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database stats''
@@ -540,9 +572,7 @@ FROM #baseline
 WHERE datafile_type = ''LOG''
 ) as V
 PIVOT(SUM(ReadLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Log write latency (ms)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database stats''
 , ' + @ColumnName + '  FROM
 (
@@ -551,9 +581,7 @@ FROM #baseline
 WHERE datafile_type = ''LOG''
 ) as V
 PIVOT(SUM(WriteLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Rows read latency (ms)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database stats''
 , ' + @ColumnName + '  FROM
 (
@@ -562,9 +590,7 @@ FROM #baseline
 WHERE datafile_type = ''ROWS''
 ) as V
 PIVOT(SUM(ReadLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Rows write latency (ms)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database stats''
 , ' + @ColumnName + '  FROM
 (
@@ -573,9 +599,7 @@ FROM #baseline
 WHERE datafile_type = ''ROWS''
 ) as V
 PIVOT(SUM(WriteLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Rows (average bytes/read)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database stats''
 , ' + @ColumnName + '  FROM
 (
@@ -584,9 +608,7 @@ FROM #baseline
 WHERE datafile_type = ''ROWS''
 ) as V
 PIVOT(SUM(AvgBytesPerRead) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Rows (average bytes/write)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database stats''
 , ' + @ColumnName + '  FROM
 (
@@ -595,9 +617,7 @@ FROM #baseline
 WHERE datafile_type = ''ROWS''
 ) as V
 PIVOT(SUM(AvgBytesPerWrite) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Log (average bytes/read)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database stats''
 , ' + @ColumnName + '  FROM
 (
@@ -606,9 +626,7 @@ FROM #baseline
 WHERE datafile_type = ''LOG''
 ) as V
 PIVOT(SUM(AvgBytesPerRead) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = ''Log (average bytes/write)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''Database stats''
 , ' + @ColumnName + '  FROM
 (
@@ -624,37 +642,35 @@ EXEC sp_executesql @DynamicPivotQuery;
 
 const sqlDatabaseIO string = `SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
-DECLARE @secondsBetween tinyint = 5;
-DECLARE @delayInterval char(8) = CONVERT(Char(8), DATEADD(SECOND, @secondsBetween, '00:00:00'), 108);
 IF OBJECT_ID('tempdb..#baseline') IS NOT NULL
 	DROP TABLE #baseline;
 IF OBJECT_ID('tempdb..#baselinewritten') IS NOT NULL
 	DROP TABLE #baselinewritten;
-SELECT DB_NAME(mf.database_id) AS databaseName ,
-    mf.physical_name,
-    divfs.num_of_bytes_read,
-    divfs.num_of_bytes_written,
-	divfs.num_of_reads,
-	divfs.num_of_writes,
+DECLARE @secondsBetween tinyint = 5;
+DECLARE @delayInterval char(8) = CONVERT(Char(8), DATEADD(SECOND, @secondsBetween, '00:00:00'), 108);
+SELECT DB_NAME(database_id) AS databaseName ,
+	file_id,
+    num_of_bytes_read,
+    num_of_bytes_written,
+	num_of_reads,
+	num_of_writes,
     GETDATE() AS baselinedate
 INTO #baseline
-FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS divfs
-INNER JOIN sys.master_files AS mf ON mf.database_id = divfs.database_id
-	AND mf.file_id = divfs.file_id
+FROM sys.dm_io_virtual_file_stats(NULL, NULL)
 WAITFOR DELAY @delayInterval;
 ;WITH currentLine AS
 (
-	SELECT DB_NAME(mf.database_id) AS databaseName ,
-		type_desc,
-		mf.physical_name,
-		divfs.num_of_bytes_read,
-		divfs.num_of_bytes_written,
-		divfs.num_of_reads,
-	    divfs.num_of_writes,
+	SELECT DB_NAME(database_id) AS databaseName ,
+		CASE WHEN (file_id) = 1
+			THEN 'ROWS'
+			ELSE 'LOG' END as type_desc,
+		file_id,
+		num_of_bytes_read,
+		num_of_bytes_written,
+		num_of_reads,
+	    num_of_writes,
 		GETDATE() AS currentlinedate
-	FROM sys.dm_io_virtual_file_stats(NULL, NULL) AS divfs
-	INNER JOIN sys.master_files AS mf ON mf.database_id = divfs.database_id
-			AND mf.file_id = divfs.file_id
+	FROM sys.dm_io_virtual_file_stats(NULL, NULL)
 )
 SELECT database_name
 , datafile_type
@@ -674,7 +690,7 @@ SELECT
 , num_of_writes_persec =  (currentLine.num_of_writes - T1.num_of_writes) / (DATEDIFF(SECOND,baselinedate,currentlinedate))
 FROM currentLine
 INNER JOIN #baseline T1 ON T1.databaseName = currentLine.databaseName
-	AND T1.physical_name = currentLine.physical_name
+	AND T1.file_id = currentLine.file_id
 ) as T
 GROUP BY database_name, datafile_type
 DECLARE @DynamicPivotQuery AS NVARCHAR(MAX)
@@ -763,7 +779,6 @@ const sqlDatabaseProperties string = `SET NOCOUNT ON;
 SET ARITHABORT ON;
 SET QUOTED_IDENTIFIER ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
-
 IF OBJECT_ID('tempdb..#Databases') IS NOT NULL
 	DROP TABLE #Databases;
 CREATE  TABLE #Databases
@@ -773,7 +788,6 @@ CREATE  TABLE #Databases
 	Value tinyint NOT NULL
 	Primary Key(DatabaseName, Measurement)
 );
-
 INSERT #Databases (	Measurement, DatabaseName, Value)
 SELECT
   Measurement = 'Recovery Model FULL'
@@ -792,7 +806,6 @@ SELECT
 , DatabaseName = d.Name
 , Value = CASE WHEN d.recovery_model = 3 THEN 1 ELSE 0 END
 FROM sys.databases d
-
 UNION ALL
 SELECT
   Measurement = 'State ONLINE'
@@ -835,12 +848,10 @@ SELECT
 , DatabaseName = d.Name
 , Value = CASE WHEN d.state = 6 THEN 1 ELSE 0 END
 FROM sys.databases d
-
 DECLARE @DynamicPivotQuery AS NVARCHAR(MAX)
 DECLARE @ColumnName AS NVARCHAR(MAX)
 SELECT @ColumnName= ISNULL(@ColumnName + ',','') + QUOTENAME(DatabaseName)
 FROM (SELECT DISTINCT DatabaseName FROM #Databases) AS bl
-
 SET @DynamicPivotQuery = N'
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
@@ -852,9 +863,7 @@ FROM #Databases d
 WHERE d.Measurement = ''Recovery Model FULL''
 ) as V
 PIVOT(SUM(Value) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
 , ' + @ColumnName + ', Total FROM
@@ -865,9 +874,7 @@ FROM #Databases d
 WHERE d.Measurement = ''Recovery Model BULK_LOGGED''
 ) as V
 PIVOT(SUM(Value) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
 , ' + @ColumnName + ', Total FROM
@@ -878,10 +885,7 @@ FROM #Databases d
 WHERE d.Measurement = ''Recovery Model SIMPLE''
 ) as V
 PIVOT(SUM(Value) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
-
 UNION ALL
-
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
 , ' + @ColumnName + ', Total FROM
@@ -892,9 +896,7 @@ FROM #Databases d
 WHERE d.Measurement = ''State ONLINE''
 ) as V
 PIVOT(SUM(Value) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
 , ' + @ColumnName + ', Total FROM
@@ -905,9 +907,7 @@ FROM #Databases d
 WHERE d.Measurement = ''State RESTORING''
 ) as V
 PIVOT(SUM(Value) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
 , ' + @ColumnName + ', Total FROM
@@ -918,9 +918,7 @@ FROM #Databases d
 WHERE d.Measurement = ''State RECOVERING''
 ) as V
 PIVOT(SUM(Value) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
 , ' + @ColumnName + ', Total FROM
@@ -931,9 +929,7 @@ FROM #Databases d
 WHERE d.Measurement = ''State RECOVERY_PENDING''
 ) as V
 PIVOT(SUM(Value) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
 , ' + @ColumnName + ', Total FROM
@@ -944,9 +940,7 @@ FROM #Databases d
 WHERE d.Measurement = ''State SUSPECT''
 ) as V
 PIVOT(SUM(Value) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
 , ' + @ColumnName + ', Total FROM
@@ -957,9 +951,7 @@ FROM #Databases d
 WHERE d.Measurement = ''State EMERGENCY''
 ) as V
 PIVOT(SUM(Value) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
-
 UNION ALL
-
 SELECT measurement = Measurement, servername = REPLACE(@@SERVERNAME, ''\'', '':'')
 , type = ''Database properties''
 , ' + @ColumnName + ', Total FROM
@@ -978,11 +970,16 @@ const sqlCPUHistory string = `SET NOCOUNT ON;
 SET ARITHABORT ON;
 SET QUOTED_IDENTIFIER ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
-
 DECLARE @ms_ticks bigint;
-SET @ms_ticks = (Select ms_ticks From sys.dm_os_sys_info);
+IF (OBJECT_ID('sys.dm_os_sys_info', 'V') IS NULL)
+	BEGIN
+		SET @ms_ticks = (SELECT TOP 1sample_ms FROM sys.dm_io_virtual_file_stats(DB_ID(N'tempdb'), 2))
+	END
+ELSE
+	BEGIN
+		SET @ms_ticks = (Select ms_ticks From sys.dm_os_sys_info);
+	END
 DECLARE @maxEvents int = 1
-
 SELECT
 ---- measurement
   measurement = 'CPU (%)'
@@ -1031,9 +1028,7 @@ SELECT DISTINCT RTrim(spi.object_name) object_name
 FROM sys.dm_os_performance_counters spi
 WHERE spi.object_name NOT LIKE 'SQLServer:Backup Device%'
 	AND NOT EXISTS (SELECT 1 FROM sys.databases WHERE Name = spi.instance_name);
-
 WAITFOR DELAY '00:00:01';
-
 IF OBJECT_ID('tempdb..#CCounters') IS NOT NULL DROP TABLE #CCounters
 CREATE TABLE #CCounters
 (
@@ -1053,7 +1048,6 @@ SELECT DISTINCT RTrim(spi.object_name) object_name
 FROM sys.dm_os_performance_counters spi
 WHERE spi.object_name NOT LIKE 'SQLServer:Backup Device%'
 	AND NOT EXISTS (SELECT 1 FROM sys.databases WHERE Name = spi.instance_name);
-
 SELECT
  measurement = cc.counter_name
 	+ CASE WHEN LEN(cc.instance_name) > 0 THEN ' | ' + cc.instance_name ELSE '' END
@@ -1104,7 +1098,6 @@ LEFT JOIN #PCounters pbc On pc.object_name = pbc.object_name
                   Else pc.counter_name + ' base'
              End) = pbc.counter_name
         And pc.cntr_type In (537003264, 1073874176)
-
 IF OBJECT_ID('tempdb..#CCounters') IS NOT NULL DROP TABLE #CCounters;
 IF OBJECT_ID('tempdb..#PCounters') IS NOT NULL DROP TABLE #PCounters;
 `
@@ -1113,7 +1106,6 @@ const sqlWaitStatsCategorized string = `SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
 DECLARE @secondsBetween tinyint = 5
 DECLARE @delayInterval char(8) = CONVERT(Char(8), DATEADD(SECOND, @secondsBetween, '00:00:00'), 108);
-
 DECLARE @w1 TABLE
 (
 	WaitType nvarchar(64) NOT NULL,
@@ -1143,7 +1135,6 @@ DECLARE @w5 TABLE
 	WaitTimeInMs bigint NOT NULL,
 	WaitTaskCount bigint NOT NULL
 )
-
 INSERT @w3 (WaitType)
 VALUES (N'QDS_SHUTDOWN_QUEUE'), (N'HADR_FILESTREAM_IOMGR_IOCOMPLETION'),
 	(N'BROKER_EVENTHANDLER'),            (N'BROKER_RECEIVE_WAITFOR'),
@@ -1178,7 +1169,6 @@ VALUES (N'QDS_SHUTDOWN_QUEUE'), (N'HADR_FILESTREAM_IOMGR_IOCOMPLETION'),
 	(N'WAIT_XTP_HOST_WAIT'),             (N'WAIT_XTP_OFFLINE_CKPT_NEW_LOG'),
 	(N'WAIT_XTP_CKPT_CLOSE'),            (N'XE_DISPATCHER_JOI(N'),
 	(N'XE_DISPATCHER_WAIT'),             (N'XE_TIMER_EVENT');
-
 INSERT @w4 (WaitType, WaitCategory) VALUES ('ABR', 'OTHER') ,
 ('ASSEMBLY_LOAD' , 'OTHER') , ('ASYNC_DISKPOOL_LOCK' , 'I/O') , ('ASYNC_IO_COMPLETION' , 'I/O') ,
 ('ASYNC_NETWORK_IO' , 'NETWORK') , ('AUDIT_GROUPCACHE_LOCK' , 'OTHER') , ('AUDIT_LOGINCACHE_LOCK' ,
@@ -1376,8 +1366,6 @@ INSERT @w4 (WaitType, WaitCategory) VALUES ('ABR', 'OTHER') ,
 ('XE_SESSION_FLUSH' , 'XEVENT') , ('XE_SESSION_SYNC' , 'XEVENT') , ('XE_STM_CREATE' , 'XEVENT') ,
 ('XE_TIMER_EVENT' , 'XEVENT') , ('XE_TIMER_MUTEX' , 'XEVENT')
 , ('XE_TIMER_TASK_DONE' , 'XEVENT');
-
-
 INSERT @w1 (WaitType, WaitTimeInMs, WaitTaskCount, CollectionDate)
 SELECT
   WaitType = wait_type
@@ -1391,9 +1379,7 @@ WHERE [wait_type] NOT IN
 )
 AND [waiting_tasks_count] > 0
 GROUP BY wait_type
-
 WAITFOR DELAY @delayInterval;
-
 INSERT @w2 (WaitType, WaitTimeInMs, WaitTaskCount, CollectionDate)
 SELECT
   WaitType = wait_type
@@ -1407,8 +1393,6 @@ WHERE [wait_type] NOT IN
 )
 AND [waiting_tasks_count] > 0
 GROUP BY wait_type;
-
-
 INSERT @w5 (WaitCategory, WaitTimeInMs, WaitTaskCount)
 SELECT WaitCategory
 , WaitTimeInMs = SUM(WaitTimeInMs)
@@ -1426,9 +1410,6 @@ LEFT JOIN @w4 T4 ON T4.WaitType = T1.WaitType
 WHERE T2.WaitTaskCount - T1.WaitTaskCount > 0
 ) as G
 GROUP BY G.WaitCategory;
-
-
-
 SELECT
 ---- measurement
   measurement = 'Wait time (ms)'
@@ -1469,9 +1450,7 @@ PIVOT
 	FOR WaitCategory IN ([I/O], [LATCH], [LOCK], [NETWORK], [SERVICE BROKER], [MEMORY], [BUFFER], [CLR], [XEVENT], [SQLOS], [OTHER])
 ) AS PivotTable
 ) as T
-
 UNION ALL
-
 SELECT
 ---- measurement
   measurement = 'Wait tasks'
@@ -1516,67 +1495,63 @@ PIVOT
 
 const sqlVolumeSpace string = `SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
-
-IF OBJECT_ID('tempdb..#volumestats') IS NOT NULL
-	DROP TABLE #volumestats;
-SELECT DISTINCT
-  volume =  REPLACE(vs.volume_mount_point, '\', '')
-	+ CASE WHEN LEN(vs.logical_volume_name) > 0
-		THEN ' (' + vs.logical_volume_name + ')'
-		ELSE '' END
-, total_bytes = vs.total_bytes
-, available_bytes = vs.available_bytes
-, used_bytes = vs.total_bytes - vs.available_bytes
-, used_percent = 100 * CAST(ROUND((vs.total_bytes - vs.available_bytes) * 1. / vs.total_bytes, 2) as decimal(5,2))
-INTO #volumestats
-FROM sys.master_files AS f
-CROSS APPLY sys.dm_os_volume_stats(f.database_id, f.file_id) vs
-
-DECLARE @DynamicPivotQuery AS NVARCHAR(MAX)
-DECLARE @ColumnName AS NVARCHAR(MAX), @ColumnName2 AS NVARCHAR(MAX)
-
-SELECT @ColumnName= ISNULL(@ColumnName + ',','') + QUOTENAME(volume)
-FROM (SELECT DISTINCT volume FROM #volumestats) AS bl
-
---Prepare the PIVOT query using the dynamic
-SET @DynamicPivotQuery = N'
-SELECT measurement = ''Volume total space (bytes)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''OS Volume space''
-, ' + @ColumnName + '  FROM
-(
-SELECT volume,  total_bytes
-FROM #volumestats
-) as V
-PIVOT(SUM(total_bytes) FOR volume IN (' + @ColumnName + ')) AS PVTTable
-
-UNION ALL
-
-SELECT measurement = ''Volume available space (bytes)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''OS Volume space''
-, ' + @ColumnName + '  FROM
-(
-SELECT volume,  available_bytes
-FROM #volumestats
-) as V
-PIVOT(SUM(available_bytes) FOR volume IN (' + @ColumnName + ')) AS PVTTable
-
-UNION ALL
-
-SELECT measurement = ''Volume used space (bytes)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''OS Volume space''
-, ' + @ColumnName + '  FROM
-(
-SELECT volume,  used_bytes
-FROM #volumestats
-) as V
-PIVOT(SUM(used_bytes) FOR volume IN (' + @ColumnName + ')) AS PVTTable
-
-UNION ALL
-
-SELECT measurement = ''Volume used space (%)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''OS Volume space''
-, ' + @ColumnName + '  FROM
-(
-SELECT volume,  used_percent
-FROM #volumestats
-) as V
-PIVOT(SUM(used_percent) FOR volume IN (' + @ColumnName + ')) AS PVTTable'
-
-EXEC sp_executesql @DynamicPivotQuery;
+IF (OBJECT_ID('sys.master_files', 'V') IS NOT NULL)
+	BEGIN
+		IF OBJECT_ID('tempdb..#volumestats') IS NOT NULL
+			DROP TABLE #volumestats;
+		SELECT DISTINCT
+		  volume =  REPLACE(vs.volume_mount_point, '\', '')
+			+ CASE WHEN LEN(vs.logical_volume_name) > 0
+				THEN ' (' + vs.logical_volume_name + ')'
+				ELSE '' END
+		, total_bytes = vs.total_bytes
+		, available_bytes = vs.available_bytes
+		, used_bytes = vs.total_bytes - vs.available_bytes
+		, used_percent = 100 * CAST(ROUND((vs.total_bytes - vs.available_bytes) * 1. / vs.total_bytes, 2) as decimal(5,2))
+		INTO #volumestats
+		FROM sys.master_files AS f
+		CROSS APPLY sys.dm_os_volume_stats(f.database_id, f.file_id) vs
+		DECLARE @DynamicPivotQuery AS NVARCHAR(MAX)
+		DECLARE @ColumnName AS NVARCHAR(MAX), @ColumnName2 AS NVARCHAR(MAX)
+		SELECT @ColumnName= ISNULL(@ColumnName + ',','') + QUOTENAME(volume)
+		FROM (SELECT DISTINCT volume FROM #volumestats) AS bl
+		--Prepare the PIVOT query using the dynamic
+		SET @DynamicPivotQuery = N'
+		SELECT measurement = ''Volume total space (bytes)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''OS Volume space''
+		, ' + @ColumnName + '  FROM
+		(
+		SELECT volume,  total_bytes
+		FROM #volumestats
+		) as V
+		PIVOT(SUM(total_bytes) FOR volume IN (' + @ColumnName + ')) AS PVTTable
+		UNION ALL
+		SELECT measurement = ''Volume available space (bytes)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''OS Volume space''
+		, ' + @ColumnName + '  FROM
+		(
+		SELECT volume,  available_bytes
+		FROM #volumestats
+		) as V
+		PIVOT(SUM(available_bytes) FOR volume IN (' + @ColumnName + ')) AS PVTTable
+		UNION ALL
+		SELECT measurement = ''Volume used space (bytes)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''OS Volume space''
+		, ' + @ColumnName + '  FROM
+		(
+		SELECT volume,  used_bytes
+		FROM #volumestats
+		) as V
+		PIVOT(SUM(used_bytes) FOR volume IN (' + @ColumnName + ')) AS PVTTable
+		UNION ALL
+		SELECT measurement = ''Volume used space (%)'', servername = REPLACE(@@SERVERNAME, ''\'', '':''), type = ''OS Volume space''
+		, ' + @ColumnName + '  FROM
+		(
+		SELECT volume,  used_percent
+		FROM #volumestats
+		) as V
+		PIVOT(SUM(used_percent) FOR volume IN (' + @ColumnName + ')) AS PVTTable'
+		EXEC sp_executesql @DynamicPivotQuery;
+	END
+ELSE
+	BEGIN
+		SELECT TOP 0 NULL
+	END
 `
