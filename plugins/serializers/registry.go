@@ -31,7 +31,7 @@ type Serializer interface {
 // Config is a struct that covers the data types needed for all serializer types,
 // and can be used to instantiate _any_ of the serializers.
 type Config struct {
-	// Dataformat can be one of: influx, graphite, or json
+	// Dataformat can be one of: influx, graphite, json or msgpack
 	DataFormat string
 
 	// Prefix to add to all measurements, only supports Graphite
