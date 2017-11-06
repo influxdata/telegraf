@@ -1,4 +1,4 @@
-# Varnish Input Plugin
+# Unbound Input Plugin
 
 This plugin gathers stats from [Unbound - a validating, recursive, and caching DNS resolver](https://www.unbound.net/)
 
@@ -6,11 +6,11 @@ This plugin gathers stats from [Unbound - a validating, recursive, and caching D
 
 ```toml
  # A plugin to collect stats from Unbound - a validating, recursive, and caching DNS resolver
- [[inputs.varnish]]
+ [[inputs.unbound]]
    ## If running as a restricted user you can prepend sudo for additional access:
    #use_sudo = false
 
-   ## The default location of the varnishstat binary can be overridden with:
+   ## The default location of the unbound-control binary can be overridden with:
    binary = "/usr/sbin/unbound-control"
 
    ## By default, telegraf gathers stats for 3 metric points.
@@ -156,7 +156,7 @@ telegraf : telegraf
 $ usermod -a -G unbound telegraf
 
 $ groups telegraf
-telegraf : telegraf varnish
+telegraf : telegraf unbound
 ```
 
 **Sudo privileges**:
