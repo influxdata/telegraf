@@ -33,7 +33,13 @@ type VSphere struct {
 	endpoints []Endpoint
 }
 
-type ResourceGetter func (context.Context, *view.ContainerView) (map[string]types.ManagedObjectReference, error)
+type objectRef struct {
+	name string
+	ref types.ManagedObjectReference
+	parentRef *types.ManagedObjectReference //Pointer because it must be nillable
+}
+
+type objectMap map[string]objectRef
 
 type InstanceMetrics map[string]map[string]interface{}
 
@@ -55,7 +61,7 @@ func (e *Endpoint) init(p *performance.Manager) error {
 }
 
 func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Context, alias string, acc telegraf.Accumulator,
-	getter ResourceGetter, root *view.ContainerView, interval int32) error {
+	objects objectMap, nameCache map[string]string, interval int32) error {
 
 	// Interval = -1 means collection for this metric was diabled, so don't even bother.
 	//
@@ -65,11 +71,12 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 
 	// Do we have new data yet?
 	//
+	now := time.Now()
 	nIntervals := int32(1)
 	latest, hasLatest := e.lastColl[alias]
-	if(hasLatest) {
+	if (hasLatest) {
 		elapsed := time.Now().Sub(latest).Seconds()
-		if  elapsed < float64(interval) {
+		if elapsed < float64(interval) {
 			// No new data would be available. We're outta here!
 			//
 			return nil;
@@ -79,31 +86,29 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 			nIntervals = e.Parent.MaxSamples
 		}
 	}
-
+	e.lastColl[alias] = now
 	log.Printf("D! Collecting %d intervals for %s", nIntervals, alias)
-
 	fullAlias := "vsphere." + alias
 
 	start := time.Now()
-	objects, err := getter(ctx, root)
-	if err != nil {
-		return err
-	}
 	log.Printf("D! Query for %s returned %d objects", alias, len(objects))
 	pqs := make([]types.PerfQuerySpec, 0, e.Parent.MaxQuery)
-	nameLookup := make(map[string]string)
 	total := 0;
-	for name, mor := range objects {
-		nameLookup[mor.Reference().Value] = name
-
+	for _, object := range objects {
 		pq := types.PerfQuerySpec{
-			Entity: mor,
+			Entity: object.ref,
 			MaxSample: nIntervals,
 			MetricId: nil,
 			IntervalId: interval,
 		}
+		if(interval > 20) {
+			startTime := now.Add(-time.Duration(interval) * time.Second)
+			pq.StartTime = &startTime
+			pq.EndTime = &now
+		}
 		if(e.Parent.MaxSamples > 1 && hasLatest) {
-			pq.StartTime = &start
+			pq.StartTime = &latest
+			pq.EndTime = &now
 		}
 		pqs = append(pqs, pq)
 		total++
@@ -130,14 +135,23 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 					name := v.Name
 					for idx, value := range v.Value {
 						f := map[string]interface{} { name: value }
-						tags := map[string]string{
-							"vcenter": e.Url.Host,
-							"source": nameLookup[moid],
-							"moid": moid}
-						if v.Instance != "" {
-							tags["instance"] = v.Instance
+						objectName := nameCache[moid]
+						parent := ""
+						parentRef := objects[moid].parentRef
+						//log.Printf("Parentref=%s", parentRef)
+						if parentRef != nil {
+							parent = nameCache[parentRef.Value]
 						}
-						acc.AddFields(fullAlias, f, tags, em.SampleInfo[idx].Timestamp)
+
+						t := map[string]string{
+							"vcenter": e.Url.Host,
+							"source": objectName,
+							"moid": moid,
+							"parent": parent}
+						if v.Instance != "" {
+							t["instance"] = v.Instance
+						}
+						acc.AddFields(fullAlias, f, t, em.SampleInfo[idx].Timestamp)
 					}
 				}
 			}
@@ -178,76 +192,100 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 	// Load cache if needed
 	e.init(p)
 
-	err = e.collectResourceType(p, ctx, "vm", acc, e.getVMs, v, e.Parent.VmInterval)
+	nameCache := make(map[string]string)
+
+	// Collect cluster metrics
+	//
+	clusterMap, err := e.getClusters(ctx, v);
+	if err != nil {
+		return err
+	}
+	for _, cluster := range clusterMap {
+		nameCache[cluster.ref.Reference().Value] = cluster.name
+	}
+	err = e.collectResourceType(p, ctx, "cluster", acc, clusterMap, nameCache, e.Parent.ClusterInterval)
 	if err != nil {
 		return err
 	}
 
-	err = e.collectResourceType(p, ctx, "host", acc, e.getHosts, v, e.Parent.HostInterval)
+	// Collect host metrics
+	//
+	hostMap, err := e.getHosts(ctx, v)
+	if err != nil {
+		return err
+	}
+	for _, host := range hostMap {
+		nameCache[host.ref.Reference().Value] = host.name
+	}
+	err = e.collectResourceType(p, ctx, "host", acc, hostMap, nameCache, e.Parent.HostInterval)
 	if err != nil {
 		return err
 	}
 
-	err = e.collectResourceType(p, ctx, "cluster", acc, e.getClusters, v, e.Parent.ClusterInterval)
-	if err != nil {
-		return err
+	// Collect vm metrics
+	//
+	vmMap, err := e.getVMs(ctx, v)
+	for _, vm := range vmMap {
+		nameCache[vm.ref.Reference().Value] = vm.name
 	}
-
-	err = e.collectResourceType(p, ctx, "datastore", acc, e.getDatastores, v, e.Parent.DatastoreInterval)
+	err = e.collectResourceType(p, ctx, "vm", acc, vmMap, nameCache, e.Parent.VmInterval)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (e *Endpoint) getVMs(ctx context.Context, root *view.ContainerView) (map[string]types.ManagedObjectReference, error) {
+func (e *Endpoint) getVMs(ctx context.Context, root *view.ContainerView) (objectMap, error) {
 	var resources []mo.VirtualMachine
-	err := root.Retrieve(ctx, []string{"VirtualMachine"}, []string{"summary"}, &resources)
+	err := root.Retrieve(ctx, []string{"VirtualMachine"}, []string{"summary", "runtime.host"}, &resources)
 	if err != nil {
 		return nil, err
 	}
-	m := make(map[string]types.ManagedObjectReference)
+	m := make(objectMap)
 	for _, r := range resources {
-		m[r.Summary.Config.Name] = r.ExtensibleManagedObject.Reference()
+		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
+			name: r.Summary.Config.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host }
 	}
 	return m, nil
 }
 
-func (e *Endpoint) getHosts(ctx context.Context, root *view.ContainerView) (map[string]types.ManagedObjectReference, error) {
+func (e *Endpoint) getHosts(ctx context.Context, root *view.ContainerView) (objectMap, error) {
 	var resources []mo.HostSystem
-	err := root.Retrieve(ctx, []string{"HostSystem"}, []string{"summary"}, &resources)
+	err := root.Retrieve(ctx, []string{"HostSystem"}, []string{"summary", "parent"}, &resources)
 	if err != nil {
 		return nil, err
 	}
-	m := make(map[string]types.ManagedObjectReference)
+	m := make(objectMap)
 	for _, r := range resources {
-		m[r.Summary.Config.Name] = r.ExtensibleManagedObject.Reference()
+		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
+			name: r.Summary.Config.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent }
 	}
 	return m, nil
 }
 
-func (e *Endpoint) getClusters(ctx context.Context, root *view.ContainerView) (map[string]types.ManagedObjectReference, error) {
+func (e *Endpoint) getClusters(ctx context.Context, root *view.ContainerView) (objectMap, error) {
 	var resources []mo.ClusterComputeResource
-	err := root.Retrieve(ctx, []string{"ClusterComputeResource"}, []string{"summary"}, &resources)
+	err := root.Retrieve(ctx, []string{"ClusterComputeResource"}, []string{"summary", "name", "parent"}, &resources)
 	if err != nil {
 		return nil, err
 	}
-	m := make(map[string]types.ManagedObjectReference)
+	m := make(objectMap)
 	for _, r := range resources {
-		m[r.Name] = r.ExtensibleManagedObject.Reference()
+		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent }
 	}
 	return m, nil
 }
 
-func (e *Endpoint) getDatastores(ctx context.Context, root *view.ContainerView) (map[string]types.ManagedObjectReference, error) {
+func (e *Endpoint) getDatastores(ctx context.Context, root *view.ContainerView) (objectMap, error) {
 	var resources []mo.Datastore
-	err := root.Retrieve(ctx, []string{"Datastore"}, []string{"summary"}, &resources)
+	err := root.Retrieve(ctx, []string{"Datastore"}, []string{"summary" }, &resources)
 	if err != nil {
 		return nil, err
 	}
-	m := make(map[string]types.ManagedObjectReference)
+	m := make(objectMap)
 	for _, r := range resources {
-		m[r.Summary.Name] = r.ExtensibleManagedObject.Reference()
+		m[r.Summary.Name] = objectRef{ ref:r.ExtensibleManagedObject.Reference(), parentRef: r.Parent }
 	}
 	return m, nil
 }
@@ -283,8 +321,10 @@ func (v *VSphere) Init()  {
 }
 
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
+	start := time.Now()
 	v.Init()
 	results := make(chan error)
+	defer close(results)
 	for _, ep := range v.endpoints {
 		go func(target Endpoint) {
 			results <- target.collect(acc)
@@ -298,6 +338,8 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 			finalErr = err
 		}
 	}
+	acc.AddCounter("telegraf.vsphere",
+		map[string]interface{}{ "gather.duration": time.Now().Sub(start).Seconds()}, nil, time.Now())
 	return finalErr
 }
 
