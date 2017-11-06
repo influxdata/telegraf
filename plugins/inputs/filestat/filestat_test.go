@@ -61,7 +61,7 @@ func TestGatherExplicitFiles(t *testing.T) {
 	require.True(t, acc.HasPoint("filestat", tags1, "exists", int64(1)))
 	require.True(t, acc.HasPoint("filestat", tags1, "md5_sum", "d41d8cd98f00b204e9800998ecf8427e"))
 
-  tags2 := map[string]string{
+	tags2 := map[string]string{
 		"file": dir + "log2.log",
 	}
 	require.True(t, acc.HasPoint("filestat", tags2, "size_bytes", int64(0)))
