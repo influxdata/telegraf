@@ -13,22 +13,21 @@ import (
 )
 
 func fakeUnboundStat(output string, useSudo bool) func(string, bool) (*bytes.Buffer, error) {
-  return func(string, bool) (*bytes.Buffer, error) {
-    return bytes.NewBuffer([]byte(output)), nil
-  }
+	return func(string, bool) (*bytes.Buffer, error) {
+		return bytes.NewBuffer([]byte(output)), nil
+	}
 }
 
 func TestGather(t *testing.T) {
 
-        acc := &testutil.Accumulator{}
+	acc := &testutil.Accumulator{}
 	v := &Unbound{
-          run:      fakeUnboundStat(smOutput, false),
-		Stats:    []string{"*"},
+		run:   fakeUnboundStat(smOutput, false),
+		Stats: []string{"*"},
 	}
 	v.Gather(acc)
 
 	acc.HasMeasurement("unbound")
-
 
 	for tag, fields := range parsedSmOutput {
 		acc.AssertContainsTaggedFields(t, "unbound", fields, map[string]string{
@@ -69,10 +68,10 @@ func TestFilterSomeStats(t *testing.T) {
 
 func TestFieldConfig(t *testing.T) {
 	expect := map[string]int{
-		"*":                103,
-		"":                 0, // default
-                "time.up":          1,
-                "unwanted.*": 2,
+		"*":          103,
+		"":           0, // default
+		"time.up":    1,
+		"unwanted.*": 2,
 	}
 
 	for fieldCfg, expected := range expect {
@@ -114,17 +113,17 @@ num.query.type.PTR=43097`
 
 var parsedSmOutput = map[string]map[string]interface{}{
 	"total": map[string]interface{}{
-          "num.queries":   uint64(11907596),
-          "num.cachehits": uint64(11489288),
+		"num.queries":   uint64(11907596),
+		"num.cachehits": uint64(11489288),
 	},
 	"time": map[string]interface{}{
-          "now":     float64(1509968734.735180),
-          "up":      float64(1472897.672099),
-          "elapsed": float64(1472897.672099),
+		"now":     float64(1509968734.735180),
+		"up":      float64(1472897.672099),
+		"elapsed": float64(1472897.672099),
 	},
 	"num": map[string]interface{}{
-          "query.type.A":   uint64(7062688),
-          "query.type.PTR": uint64(43097),
+		"query.type.A":   uint64(7062688),
+		"query.type.PTR": uint64(43097),
 	},
 }
 

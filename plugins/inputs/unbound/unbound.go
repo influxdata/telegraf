@@ -21,15 +21,15 @@ type runner func(cmdName string, UseSudo bool) (*bytes.Buffer, error)
 
 // Unbound is used to store configuration values
 type Unbound struct {
-	Stats        []string
-	Binary       string
-	UseSudo      bool
+	Stats   []string
+	Binary  string
+	UseSudo bool
 
 	filter filter.Filter
 	run    runner
 }
 
-var defaultStats = []string{"total.*", "num.*","time.up", "mem.*"}
+var defaultStats = []string{"total.*", "num.*", "time.up", "mem.*"}
 var defaultBinary = "/usr/sbin/unbound-control"
 
 var sampleConfig = `
@@ -47,7 +47,7 @@ var sampleConfig = `
 `
 
 func (s *Unbound) Description() string {
-  return "A plugin to collect stats from Unbound - a validating, recursive, and caching DNS resolver "
+	return "A plugin to collect stats from Unbound - a validating, recursive, and caching DNS resolver "
 }
 
 // SampleConfig displays configuration instructions
@@ -108,7 +108,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
 
-                cols := strings.Split(scanner.Text(),"=")
+		cols := strings.Split(scanner.Text(), "=")
 
 		stat := cols[0]
 		value := cols[1]
@@ -128,13 +128,13 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 		}
 
 		sectionMap[section][field], err = strconv.ParseUint(value, 10, 64)
-                if err != nil {
-                  sectionMap[section][field], err = strconv.ParseFloat(value, 64)
-                  if err != nil {
-                    acc.AddError(fmt.Errorf("Expected a numeric or a float value for %s = %v\n",
-                                            stat, value))
-                  }
-                }
+		if err != nil {
+			sectionMap[section][field], err = strconv.ParseFloat(value, 64)
+			if err != nil {
+				acc.AddError(fmt.Errorf("Expected a numeric or a float value for %s = %v\n",
+					stat, value))
+			}
+		}
 
 	}
 
@@ -154,10 +154,10 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("unbound", func() telegraf.Input {
 		return &Unbound{
-			run:          unboundRunner,
-			Stats:        defaultStats,
-			Binary:       defaultBinary,
-			UseSudo:      false,
+			run:     unboundRunner,
+			Stats:   defaultStats,
+			Binary:  defaultBinary,
+			UseSudo: false,
 		}
 	})
 }
