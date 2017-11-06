@@ -321,6 +321,7 @@ func (v *VSphere) Init()  {
 }
 
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
+	start := time.Now()
 	v.Init()
 	results := make(chan error)
 	defer close(results)
@@ -337,6 +338,8 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 			finalErr = err
 		}
 	}
+	acc.AddCounter("telegraf.vsphere",
+		map[string]interface{}{ "gather.duration": time.Now().Sub(start).Seconds()}, nil, time.Now())
 	return finalErr
 }
 
