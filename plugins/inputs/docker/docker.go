@@ -422,7 +422,11 @@ func gatherContainerStats(
 	total bool,
 	daemonOSType string,
 ) {
-	now := stat.Read
+	tm := stat.Read
+
+	if tm.Before(time.Unix(0, 0)) {
+		tm = time.Now()
+	}
 
 	memfields := map[string]interface{}{
 		"container_id": id,
@@ -482,7 +486,7 @@ func gatherContainerStats(
 		memfields["private_working_set"] = stat.MemoryStats.PrivateWorkingSet
 	}
 
-	acc.AddFields("docker_container_mem", memfields, tags, now)
+	acc.AddFields("docker_container_mem", memfields, tags, tm)
 
 	cpufields := map[string]interface{}{
 		"usage_total":                  stat.CPUStats.CPUUsage.TotalUsage,
@@ -507,7 +511,7 @@ func gatherContainerStats(
 
 	cputags := copyTags(tags)
 	cputags["cpu"] = "cpu-total"
-	acc.AddFields("docker_container_cpu", cpufields, cputags, now)
+	acc.AddFields("docker_container_cpu", cpufields, cputags, tm)
 
 	// If we have OnlineCPUs field, then use it to restrict stats gathering to only Online CPUs
 	// (https://github.com/moby/moby/commit/115f91d7575d6de6c7781a96a082f144fd17e400)
@@ -525,7 +529,7 @@ func gatherContainerStats(
 			"usage_total":  percpu,
 			"container_id": id,
 		}
-		acc.AddFields("docker_container_cpu", fields, percputags, now)
+		acc.AddFields("docker_container_cpu", fields, percputags, tm)
 	}
 
 	totalNetworkStatMap := make(map[string]interface{})
@@ -545,7 +549,7 @@ func gatherContainerStats(
 		if perDevice {
 			nettags := copyTags(tags)
 			nettags["network"] = network
-			acc.AddFields("docker_container_net", netfields, nettags, now)
+			acc.AddFields("docker_container_net", netfields, nettags, tm)
 		}
 		if total {
 			for field, value := range netfields {
@@ -578,17 +582,17 @@ func gatherContainerStats(
 		nettags := copyTags(tags)
 		nettags["network"] = "total"
 		totalNetworkStatMap["container_id"] = id
-		acc.AddFields("docker_container_net", totalNetworkStatMap, nettags, now)
+		acc.AddFields("docker_container_net", totalNetworkStatMap, nettags, tm)
 	}
 
-	gatherBlockIOMetrics(stat, acc, tags, now, id, perDevice, total)
+	gatherBlockIOMetrics(stat, acc, tags, tm, id, perDevice, total)
 }
 
 func gatherBlockIOMetrics(
 	stat *types.StatsJSON,
 	acc telegraf.Accumulator,
 	tags map[string]string,
-	now time.Time,
+	tm time.Time,
 	id string,
 	perDevice bool,
 	total bool,
@@ -659,7 +663,7 @@ func gatherBlockIOMetrics(
 		if perDevice {
 			iotags := copyTags(tags)
 			iotags["device"] = device
-			acc.AddFields("docker_container_blkio", fields, iotags, now)
+			acc.AddFields("docker_container_blkio", fields, iotags, tm)
 		}
 		if total {
 			for field, value := range fields {
@@ -690,7 +694,7 @@ func gatherBlockIOMetrics(
 		totalStatMap["container_id"] = id
 		iotags := copyTags(tags)
 		iotags["device"] = "total"
-		acc.AddFields("docker_container_blkio", totalStatMap, iotags, now)
+		acc.AddFields("docker_container_blkio", totalStatMap, iotags, tm)
 	}
 }
 
