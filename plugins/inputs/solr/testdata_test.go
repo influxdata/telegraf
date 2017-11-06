@@ -883,11 +883,11 @@ const mBeansMainResponse = `{
         "stats": {
           "cumulative_evictions": 0,
           "cumulative_inserts": 14,
-          "cumulative_hitratio": "0.79",
+          "cumulative_hitratio": 0,
           "cumulative_hits": 55,
           "lookups": 0,
           "hits": 0,
-          "hitratio": "0.00",
+          "hitratio": "0.01",
           "inserts": 0,
           "evictions": 0,
           "size": 0,
@@ -1810,12 +1810,12 @@ var solrUpdateHandlerExpected = map[string]interface{}{
 
 var solrCacheExpected = map[string]interface{}{
 	"cumulative_evictions": int64(0),
-	"cumulative_hitratio":  float64(0.79),
+	"cumulative_hitratio":  float64(0),
 	"cumulative_hits":      int64(55),
 	"cumulative_inserts":   int64(14),
 	"cumulative_lookups":   int64(69),
 	"evictions":            int64(0),
-	"hitratio":             float64(0),
+	"hitratio":             float64(0.01),
 	"hits":                 int64(0),
 	"inserts":              int64(0),
 	"lookups":              int64(0),

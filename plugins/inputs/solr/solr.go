@@ -120,22 +120,26 @@ type UpdateHandler struct {
 	} `json:"stats"`
 }
 
+// Hitratio is an helper interface
+// so we can later on convert it to float64
+type Hitratio interface{}
+
 // Cache is an exported type that
 // contains cache metrics
 type Cache struct {
 	Stats struct {
-		CumulativeEvictions int64   `json:"cumulative_evictions"`
-		CumulativeHitratio  float64 `json:"cumulative_hitratio,string"`
-		CumulativeHits      int64   `json:"cumulative_hits"`
-		CumulativeInserts   int64   `json:"cumulative_inserts"`
-		CumulativeLookups   int64   `json:"cumulative_lookups"`
-		Evictions           int64   `json:"evictions"`
-		Hitratio            float64 `json:"hitratio,string"`
-		Hits                int64   `json:"hits"`
-		Inserts             int64   `json:"inserts"`
-		Lookups             int64   `json:"lookups"`
-		Size                int64   `json:"size"`
-		WarmupTime          int64   `json:"warmupTime"`
+		CumulativeEvictions int64    `json:"cumulative_evictions"`
+		CumulativeHitratio  Hitratio `json:"cumulative_hitratio"`
+		CumulativeHits      int64    `json:"cumulative_hits"`
+		CumulativeInserts   int64    `json:"cumulative_inserts"`
+		CumulativeLookups   int64    `json:"cumulative_lookups"`
+		Evictions           int64    `json:"evictions"`
+		Hitratio            Hitratio `json:"hitratio"`
+		Hits                int64    `json:"hits"`
+		Inserts             int64    `json:"inserts"`
+		Lookups             int64    `json:"lookups"`
+		Size                int64    `json:"size"`
+		WarmupTime          int64    `json:"warmupTime"`
 	} `json:"stats"`
 }
 
@@ -345,22 +349,49 @@ func addUpdateHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansD
 	return nil
 }
 
+// Get float64 from interface
+func getFloat(unk interface{}) (float64, error) {
+	switch i := unk.(type) {
+	case float64:
+		return i, nil
+	case float32:
+		return float64(i), nil
+	case int64:
+		return float64(i), nil
+	case int32:
+		return float64(i), nil
+	case int:
+		return float64(i), nil
+	case uint64:
+		return float64(i), nil
+	case uint32:
+		return float64(i), nil
+	case uint:
+		return float64(i), nil
+	case string:
+		return strconv.ParseFloat(i, 64)
+	default:
+		return float64(0), nil
+	}
+}
+
 // Add cache metrics section to accumulator
 func addCacheMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, time time.Time) error {
 	var cacheMetrics map[string]Cache
-
 	if err := json.Unmarshal(mBeansData.SolrMbeans[7], &cacheMetrics); err != nil {
 		return err
 	}
 	for name, metrics := range cacheMetrics {
+		cumulativeHits, _ := getFloat(metrics.Stats.CumulativeHitratio)
+		hitratio, _ := getFloat(metrics.Stats.Hitratio)
 		coreFields := map[string]interface{}{
 			"cumulative_evictions": metrics.Stats.CumulativeEvictions,
-			"cumulative_hitratio":  metrics.Stats.CumulativeHitratio,
+			"cumulative_hitratio":  cumulativeHits,
 			"cumulative_hits":      metrics.Stats.CumulativeHits,
 			"cumulative_inserts":   metrics.Stats.CumulativeInserts,
 			"cumulative_lookups":   metrics.Stats.CumulativeLookups,
 			"evictions":            metrics.Stats.Evictions,
-			"hitratio":             metrics.Stats.Hitratio,
+			"hitratio":             hitratio,
 			"hits":                 metrics.Stats.Hits,
 			"inserts":              metrics.Stats.Inserts,
 			"lookups":              metrics.Stats.Lookups,
