@@ -55,9 +55,6 @@ var fUsage = flag.String("usage", "",
 var fService = flag.String("service", "",
 	"operate on the service")
 
-// Telegraf version, populated linker.
-//   ie, -ldflags "-X main.version=`git describe --always --tags`"
-
 var (
 	nextVersion = "1.5.0"
 	version     string

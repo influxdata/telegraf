@@ -92,7 +92,7 @@ func (c *CloudWatch) SampleConfig() string {
   ## Collection Delay (required - must account for metrics availability via CloudWatch API)
   delay = "5m"
 
-  ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid
+  ## Recommended: use metric 'interval' that is a multiple of 'period' to avoid
   ## gaps or overlap in pulled data
   interval = "5m"
 

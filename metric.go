@@ -13,6 +13,8 @@ const (
 	Counter
 	Gauge
 	Untyped
+	Summary
+	Histogram
 )
 
 type Metric interface {

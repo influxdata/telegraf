@@ -86,7 +86,7 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 				} else {
 					t = time.Now()
 				}
-				metric, err := metric.New(metricName, tags, fields, t)
+				metric, err := metric.New(metricName, tags, fields, t, valueType(mf.GetType()))
 				if err == nil {
 					metrics = append(metrics, metric)
 				}
@@ -95,6 +95,21 @@ func Parse(buf []byte, header http.Header) ([]telegraf.Metric, error) {
 	}
 
 	return metrics, err
+}
+
+func valueType(mt dto.MetricType) telegraf.ValueType {
+	switch mt {
+	case dto.MetricType_COUNTER:
+		return telegraf.Counter
+	case dto.MetricType_GAUGE:
+		return telegraf.Gauge
+	case dto.MetricType_SUMMARY:
+		return telegraf.Summary
+	case dto.MetricType_HISTOGRAM:
+		return telegraf.Histogram
+	default:
+		return telegraf.Untyped
+	}
 }
 
 // Get Quantiles from summary metric
@@ -134,11 +149,11 @@ func getNameAndValue(m *dto.Metric) map[string]interface{} {
 			fields["gauge"] = float64(m.GetGauge().GetValue())
 		}
 	} else if m.Counter != nil {
-		if !math.IsNaN(m.GetGauge().GetValue()) {
+		if !math.IsNaN(m.GetCounter().GetValue()) {
 			fields["counter"] = float64(m.GetCounter().GetValue())
 		}
 	} else if m.Untyped != nil {
-		if !math.IsNaN(m.GetGauge().GetValue()) {
+		if !math.IsNaN(m.GetUntyped().GetValue()) {
 			fields["value"] = float64(m.GetUntyped().GetValue())
 		}
 	}

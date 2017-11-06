@@ -126,7 +126,7 @@ type AgentConfig struct {
 
 	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
-	// compatability
+	// compatibility
 	UTC bool `toml:"utc"`
 
 	// Debug is the option for running in debug mode
@@ -683,7 +683,7 @@ func (c *Config) LoadConfig(path string) error {
 }
 
 // trimBOM trims the Byte-Order-Marks from the beginning of the file.
-// this is for Windows compatability only.
+// this is for Windows compatibility only.
 // see https://github.com/influxdata/telegraf/issues/1378
 func trimBOM(f []byte) []byte {
 	return bytes.TrimPrefix(f, []byte("\xef\xbb\xbf"))
