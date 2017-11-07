@@ -81,7 +81,7 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 	var sql []string
 
 	pk = append(pk, quoteIdent("time"))
-	columns = append(columns, quoteIdent("time")+" timestamptz")
+	columns = append(columns, quoteIdent("time")+" timestamp")
 
 	for column, _ := range metric.Tags() {
 		if contains(p.IgnoredTags, column) {
