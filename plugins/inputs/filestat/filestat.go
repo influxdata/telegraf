@@ -86,6 +86,7 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 					fileName)
 			} else {
 				fields["size_bytes"] = fileInfo.Size()
+				fields["modification_time"] = fileInfo.ModTime().UnixNano()
 			}
 
 			if f.Md5 {
