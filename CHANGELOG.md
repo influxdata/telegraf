@@ -52,6 +52,7 @@
 - [#3398](https://github.com/influxdata/telegraf/issues/3398): Add instance name option to varnish plugin.
 - [#3406](https://github.com/influxdata/telegraf/pull/3406):  Add support for SSL settings to ElasticSearch output plugin.
 - [#3315](https://github.com/influxdata/telegraf/pull/3315): Add Teamspeak 3 input plugin.
+- [#3305](https://github.com/influxdata/telegraf/pull/3305): Add modification_time field to filestat input plugin.
 
 ### Bugfixes
 
