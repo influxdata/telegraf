@@ -5,6 +5,7 @@
 - [jolokia2](./plugins/inputs/jolokia2/README.md) - Thanks to @dylanmei
 - [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
 - [smart](./plugins/inputs/smart/README.md) - Thanks to @rickard-von-essen
+- [teamspeak](./plugins/inputs/teamspeak/README.md) - Thanks to @p4ddy1
 - [wavefront](./plugins/outputs/wavefront/README.md) - Thanks to @puckpuck
 
 ### Release Notes
@@ -50,6 +51,7 @@
 - [#3333](https://github.com/influxdata/telegraf/issues/3333): Perform DNS lookup before ping and report result.
 - [#3398](https://github.com/influxdata/telegraf/issues/3398): Add instance name option to varnish plugin.
 - [#3406](https://github.com/influxdata/telegraf/pull/3406):  Add support for SSL settings to ElasticSearch output plugin.
+- [#3315](https://github.com/influxdata/telegraf/pull/3315): Add Teamspeak 3 input plugin.
 
 ### Bugfixes
 
@@ -61,6 +63,7 @@
 ## v1.4.4 [unreleased]
 
 - [#3401](https://github.com/influxdata/telegraf/pull/3401): Use schema specified in mqtt_consumer input.
+- [#3419](https://github.com/influxdata/telegraf/issues/3419): Redact datadog API key in log output.
 
 ## v1.4.3 [2017-10-25]
 

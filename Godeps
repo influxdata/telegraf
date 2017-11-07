@@ -40,6 +40,8 @@ github.com/kballard/go-shellquote d8ec1a69a250a17bb0e419c386eac1f3711dc142
 github.com/matttproud/golang_protobuf_extensions c12348ce28de40eed0136aa2b644d0ee0650e56c
 github.com/Microsoft/go-winio ce2922f643c8fd76b46cadc7f404a06282678b34
 github.com/miekg/dns 99f84ae56e75126dd77e5de4fae2ea034a468ca1
+github.com/mitchellh/mapstructure d0303fe809921458f417bcf828397a65db30a7e4
+github.com/multiplay/go-ts3 07477f49b8dfa3ada231afc7b7b17617d42afe8e
 github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
 github.com/nats-io/go-nats ea9585611a4ab58a205b9b125ebd74c389a6b898
 github.com/nats-io/nats ea9585611a4ab58a205b9b125ebd74c389a6b898
