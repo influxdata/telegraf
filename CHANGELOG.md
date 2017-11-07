@@ -63,6 +63,7 @@
 ## v1.4.4 [unreleased]
 
 - [#3401](https://github.com/influxdata/telegraf/pull/3401): Use schema specified in mqtt_consumer input.
+- [#3419](https://github.com/influxdata/telegraf/issues/3419): Redact datadog API key in log output.
 
 ## v1.4.3 [2017-10-25]
 
