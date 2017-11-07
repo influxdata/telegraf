@@ -88,9 +88,12 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 			continue
 		}
 		if p.TagsAsForeignkeys {
-			pk = append(pk, quoteIdent(column+"_id"))
-			columns = append(columns, fmt.Sprintf("%s int8", quoteIdent(column+"_id")))
-			sql = append(sql, fmt.Sprintf("CREATE TABLE %s(%s serial primary key,%s text unique)", quoteIdent(metric.Name()+"_"+column), quoteIdent(column+"_id"), quoteIdent(column)))
+			key := quoteIdent(column + "_id")
+			table := quoteIdent(metric.Name() + "_" + column)
+
+			pk = append(pk, key)
+			columns = append(columns, fmt.Sprintf("%s int8", key))
+			sql = append(sql, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s(%s serial primary key,%s text unique)", table, key, quoteIdent(column)))
 		} else {
 			pk = append(pk, quoteIdent(column))
 			columns = append(columns, fmt.Sprintf("%s text", quoteIdent(column)))
@@ -112,20 +115,16 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 	return strings.Join(sql, ";")
 }
 
-func (p *Postgresql) generateInsert(tablename string, columns []string, values []interface{}) (string, []interface{}) {
+func (p *Postgresql) generateInsert(tablename string, columns []string) string {
 
-	var placeholder []string
-	for i := 1; i <= len(values); i++ {
-		placeholder = append(placeholder, fmt.Sprintf("$%d", i))
-	}
-
-	var quoted []string
-	for _, column := range columns {
+	var placeholder, quoted []string
+	for i, column := range columns {
+		placeholder = append(placeholder, fmt.Sprintf("$%d", i+1))
 		quoted = append(quoted, quoteIdent(column))
 	}
 
 	sql := fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", quoteIdent(tablename), strings.Join(quoted, ","), strings.Join(placeholder, ","))
-	return sql, values
+	return sql
 }
 
 func (p *Postgresql) tableExists(tableName string) bool {
@@ -159,7 +158,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 		var columns []string
 		var values []interface{}
 
-		columns = append(columns, quoteIdent("time"))
+		columns = append(columns, "time")
 		values = append(values, metric.Time())
 
 		for column, value := range metric.Tags() {
@@ -180,20 +179,20 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 					}
 				}
 
-				columns = append(columns, quoteIdent(column+"_id"))
+				columns = append(columns, column+"_id")
 				values = append(values, value_id)
 			} else {
-				columns = append(columns, quoteIdent(column))
+				columns = append(columns, column)
 				values = append(values, value)
 			}
 		}
 
 		for column, value := range metric.Fields() {
-			columns = append(columns, quoteIdent(column))
+			columns = append(columns, column)
 			values = append(values, value)
 		}
 
-		sql, values := p.generateInsert(tablename, columns, values)
+		sql := p.generateInsert(tablename, columns)
 		_, err := p.db.Exec(sql, values...)
 		if err != nil {
 			fmt.Println("Error during insert", err)
