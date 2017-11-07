@@ -4,6 +4,7 @@
 - [#3419](https://github.com/influxdata/telegraf/issues/3419): Redact datadog API key in log output.
 - [#3311](https://github.com/influxdata/telegraf/issues/3311): Fix error getting pids in netstat input.
 - [#3339](https://github.com/influxdata/telegraf/issues/3339): Support HOST_VAR envvar to locate /var in system input.
+- [#3383](https://github.com/influxdata/telegraf/issues/3383): Use current time if docker container read time is zero value.
 
 ## v1.4.3 [2017-10-25]
 
