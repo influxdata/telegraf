@@ -33,20 +33,19 @@ func TestPostgresqlCreateStatement(t *testing.T) {
 
 func TestPostgresqlInsertStatement(t *testing.T) {
 	p := Postgresql{}
-	timestamp := time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC)
 
-	sql, _ := p.generateInsert("m", []string{"time", "f"}, []interface{}{timestamp, 3.1})
+	sql := p.generateInsert("m", []string{"time", "f"})
 	assert.Equal(t, `INSERT INTO "m"("time","f") VALUES($1,$2)`, sql)
 
-	sql, _ = p.generateInsert("m", []string{"time", "i"}, []interface{}{timestamp, 3})
+	sql = p.generateInsert("m", []string{"time", "i"})
 	assert.Equal(t, `INSERT INTO "m"("time","i") VALUES($1,$2)`, sql)
 
-	sql, _ = p.generateInsert("m", []string{"time", "f", "i"}, []interface{}{timestamp, 3.1, 3})
+	sql = p.generateInsert("m", []string{"time", "f", "i"})
 	assert.Equal(t, `INSERT INTO "m"("time","f","i") VALUES($1,$2,$3)`, sql)
 
-	sql, _ = p.generateInsert("m", []string{"time", "k", "i"}, []interface{}{timestamp, "v", 3})
+	sql = p.generateInsert("m", []string{"time", "k", "i"})
 	assert.Equal(t, `INSERT INTO "m"("time","k","i") VALUES($1,$2,$3)`, sql)
 
-	sql, _ = p.generateInsert("m", []string{"time", "k1", "k2", "i"}, []interface{}{timestamp, "v1", "v2", 3})
+	sql = p.generateInsert("m", []string{"time", "k1", "k2", "i"})
 	assert.Equal(t, `INSERT INTO "m"("time","k1","k2","i") VALUES($1,$2,$3,$4)`, sql)
 }
