@@ -350,14 +350,15 @@ func addUpdateHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansD
 }
 
 // Get float64 from interface
-func getFloat(unk interface{}) (float64, error) {
+func getFloat(unk interface{}) float64 {
 	switch i := unk.(type) {
 	case float64:
-		return i, nil
+		return i
 	case string:
-		return strconv.ParseFloat(i, 64)
+		f, _ := strconv.ParseFloat(i, 64)
+		return f
 	default:
-		return float64(0), nil
+		return float64(0)
 	}
 }
 
@@ -368,8 +369,8 @@ func addCacheMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBe
 		return err
 	}
 	for name, metrics := range cacheMetrics {
-		cumulativeHits, _ := getFloat(metrics.Stats.CumulativeHitratio)
-		hitratio, _ := getFloat(metrics.Stats.Hitratio)
+		cumulativeHits := getFloat(metrics.Stats.CumulativeHitratio)
+		hitratio := getFloat(metrics.Stats.Hitratio)
 		coreFields := map[string]interface{}{
 			"cumulative_evictions": metrics.Stats.CumulativeEvictions,
 			"cumulative_hitratio":  cumulativeHits,
