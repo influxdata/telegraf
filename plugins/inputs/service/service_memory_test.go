@@ -4,16 +4,36 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/shirou/gopsutil/process"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGather(t *testing.T) {
+	var mps MockPs
+	var err error
+	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
 
-	sm := MemoryStats{ps: &servicePs{}}
-	sm.ProcessNames = []string{"coreaudiod"}
+	memInfo := &process.MemoryInfoStat{
+		RSS:  123,
+		VMS:  456,
+		Swap: 789,
+	}
 
-	err := sm.Gather(&acc)
+	mps.On("MemInfo").Return(memInfo, nil)
 
+	err = (&MemoryStats{ps: &mps, ProcessNames: []string{"foobar"}}).Gather(&acc)
 	require.NoError(t, err)
+
+	memFields := map[string]interface{}{
+		"rss":  uint64(123),
+		"vms":  uint64(456),
+		"swap": uint64(789),
+	}
+
+	tags := map[string]string {
+		"name": "foobar",
+	}
+
+	acc.AssertContainsTaggedFields(t, "service_mem", memFields, tags)
 }

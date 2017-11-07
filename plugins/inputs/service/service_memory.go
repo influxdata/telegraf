@@ -27,32 +27,29 @@ func (_ *MemoryStats) SampleConfig() string {
 func (s *MemoryStats) Gather(acc telegraf.Accumulator) error {
 
 	for _, processName := range s.ProcessNames {
-		p, err := s.ps.Process(processName)
-		if err != nil {
-			return err
-		}
-
-		percent, err := p.MemoryPercent()
+		memInfo, err := s.ps.MemInfo(processName)
 		if err != nil {
 			return err
 		}
 
 		fields := map[string]interface{}{
-			"percent": percent,
+			"rss":  memInfo.RSS,
+			"vms":  memInfo.VMS,
+			"swap": memInfo.Swap,
 		}
 
 		tags := map[string]string{
 			"name": processName,
 		}
 
-		acc.AddGauge("service_memory", fields, tags)
+		acc.AddGauge("service_mem", fields, tags)
 	}
 
 	return nil
 }
 
 func init() {
-	inputs.Add("service_memory", func() telegraf.Input {
+	inputs.Add("service_mem", func() telegraf.Input {
 		return &MemoryStats{ps: &servicePs{}}
 	})
 }

@@ -13,12 +13,12 @@ import (
 )
 
 type PS interface {
-	Process(processName string) (*process.Process, error)
+	MemInfo(processName string) (*process.MemoryInfoStat, error)
 }
 
 type servicePs struct{}
 
-func (s *servicePs) Process(processName string) (*process.Process, error) {
+func (s *servicePs) MemInfo(processName string) (*process.MemoryInfoStat, error) {
 	pid, err := getPidof(processName)
 	if err != nil {
 		return nil, fmt.Errorf("error getting process id for %s: %s", processName, err)
@@ -33,7 +33,12 @@ func (s *servicePs) Process(processName string) (*process.Process, error) {
 		return nil, err
 	}
 
-	return process.NewProcess(int32(pidInt))
+	p, err := process.NewProcess(int32(pidInt))
+	if err != nil {
+		return nil, err
+	}
+
+	return p.MemoryInfo()
 }
 
 func getPidof(processName string) (string, error) {
