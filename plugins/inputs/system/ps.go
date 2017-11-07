@@ -85,6 +85,11 @@ func (s *systemPS) DiskUsage(
 		fstypeExcludeSet[filter] = true
 	}
 
+	// Autofs mounts indicate a potential mount, the partition will also be
+	// listed with the actual filesystem when mounted.  Ignore the autofs
+	// partition to avoid triggering a mount.
+	fstypeExcludeSet["autofs"] = true
+
 	var usage []*disk.UsageStat
 	var partitions []*disk.PartitionStat
 
