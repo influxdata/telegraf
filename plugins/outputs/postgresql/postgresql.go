@@ -111,7 +111,13 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(column), datatype))
 	}
 
-	sql = append(sql, fmt.Sprintf("CREATE TABLE %[1]s(%[2]s,PRIMARY KEY(%[3]s))", quoteIdent(metric.Name()), strings.Join(columns, ","), strings.Join(pk, ",")))
+	template := "CREATE TABLE {TABLE}({COLUMNS},PRIMARY KEY({PK_COLUMNS}))"
+
+	query := strings.Replace(template, "{TABLE}", quoteIdent(metric.Name()), -1)
+	query = strings.Replace(query, "{COLUMNS}", strings.Join(columns, ","), -1)
+	query = strings.Replace(query, "{PK_COLUMNS}", strings.Join(pk, ","), -1)
+
+	sql = append(sql, query)
 	return strings.Join(sql, ";")
 }
 
