@@ -17,6 +17,7 @@ type Postgresql struct {
 	Address           string
 	IgnoredTags       []string
 	TagsAsForeignkeys bool
+	TableTemplate     string
 	Tables            map[string]bool
 }
 
@@ -111,9 +112,7 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(column), datatype))
 	}
 
-	template := "CREATE TABLE {TABLE}({COLUMNS},PRIMARY KEY({PK_COLUMNS}))"
-
-	query := strings.Replace(template, "{TABLE}", quoteIdent(metric.Name()), -1)
+	query := strings.Replace(p.TableTemplate, "{TABLE}", quoteIdent(metric.Name()), -1)
 	query = strings.Replace(query, "{COLUMNS}", strings.Join(columns, ","), -1)
 	query = strings.Replace(query, "{PK_COLUMNS}", strings.Join(pk, ","), -1)
 
@@ -209,5 +208,13 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("postgresql", func() telegraf.Output { return &Postgresql{} })
+	outputs.Add("postgresql", func() telegraf.Output { return newPostgresql() })
+}
+
+func newPostgresql() *Postgresql {
+	p := Postgresql{}
+	if p.TableTemplate == "" {
+		p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS},PRIMARY KEY({PK_COLUMNS}))"
+	}
+	return &p
 }

@@ -11,7 +11,7 @@ import (
 )
 
 func TestPostgresqlCreateStatement(t *testing.T) {
-	p := Postgresql{}
+	p := newPostgresql()
 	timestamp := time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC)
 
 	var m telegraf.Metric
@@ -27,7 +27,7 @@ func TestPostgresqlCreateStatement(t *testing.T) {
 }
 
 func TestPostgresqlInsertStatement(t *testing.T) {
-	p := Postgresql{}
+	p := newPostgresql()
 
 	sql := p.generateInsert("m", []string{"time", "f"})
 	assert.Equal(t, `INSERT INTO "m"("time","f") VALUES($1,$2)`, sql)
