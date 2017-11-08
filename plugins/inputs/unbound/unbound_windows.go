@@ -1,3 +1,0 @@
-// +build windows
-
-package unbound
