@@ -13,135 +13,89 @@ This plugin gathers stats from [Unbound - a validating, recursive, and caching D
    ## The default location of the unbound-control binary can be overridden with:
    binary = "/usr/sbin/unbound-control"
 
-   ## By default, telegraf gathers stats for 3 metric points.
-   ## Setting stats will override the defaults shown below.
-   ## stats may also be set to ["all"], which will collect all stats
+   # The default timeout of 1000ms can be overriden with (in milliseconds):
+   #timeout = 1000
+
+  ## By default, telegraf gather stats for 4 metric points.
+  ## Setting stats will override the defaults shown below.
+  ## Glob matching can be used, ie, stats = ["total.*"]
+  ## stats may also be set to ["*"], which will collect all stats
+  ## except histogram.* statistics that will never be collected.
    stats = ["total.*", "num.*","time.up", "mem.*"]
 ```
 
 ### Measurements & Fields:
 
-This is the full list of stats provided by unbound. Stats will be grouped by their prefix (eg thread0,
-total, etc). In the output, the prefix will be used as a tag, and removed from field names. See
-https://www.unbound.net/documentation/unbound-control.html for details.
+This is the full list of stats provided by unbound-control and potentially collected by telegram
+depending of your unbound configuration. Histogram related statistics will never be collected,
+extended statistics can also be imported ("extended-statistics: yes" in unbound configuration).
+In the output, the dots in the unbound-control stat name are replaced by underscores(see
+https://www.unbound.net/documentation/unbound-control.html for details).
 
 - unbound
-    thread0.num.queries
-    thread0.num.cachehits
-    thread0.num.cachemiss
-    thread0.num.prefetch
-    thread0.num.recursivereplies
-    thread0.requestlist.avg
-    thread0.requestlist.max
-    thread0.requestlist.overwritten
-    thread0.requestlist.exceeded
-    thread0.requestlist.current.all
-    thread0.requestlist.current.user
-    thread0.recursion.time.avg
-    thread0.recursion.time.median
-    total.num.queries
-    total.num.cachehits
-    total.num.cachemiss
-    total.num.prefetch
-    total.num.recursivereplies
-    total.requestlist.avg
-    total.requestlist.max
-    total.requestlist.overwritten
-    total.requestlist.exceeded
-    total.requestlist.current.all
-    total.requestlist.current.user
-    total.recursion.time.avg
-    total.recursion.time.median
-    time.now
-    time.up
-    time.elapsed
-    mem.total.sbrk
-    mem.cache.rrset
-    mem.cache.message
-    mem.mod.iterator
-    mem.mod.validator
-    histogram.000000.000000.to.000000.000001
-    histogram.000000.000001.to.000000.000002
-    histogram.000000.000002.to.000000.000004
-    histogram.000000.000004.to.000000.000008
-    histogram.000000.000008.to.000000.000016
-    histogram.000000.000016.to.000000.000032
-    histogram.000000.000032.to.000000.000064
-    histogram.000000.000064.to.000000.000128
-    histogram.000000.000128.to.000000.000256
-    histogram.000000.000256.to.000000.000512
-    histogram.000000.000512.to.000000.001024
-    histogram.000000.001024.to.000000.002048
-    histogram.000000.002048.to.000000.004096
-    histogram.000000.004096.to.000000.008192
-    histogram.000000.008192.to.000000.016384
-    histogram.000000.016384.to.000000.032768
-    histogram.000000.032768.to.000000.065536
-    histogram.000000.065536.to.000000.131072
-    histogram.000000.131072.to.000000.262144
-    histogram.000000.262144.to.000000.524288
-    histogram.000000.524288.to.000001.000000
-    histogram.000001.000000.to.000002.000000
-    histogram.000002.000000.to.000004.000000
-    histogram.000004.000000.to.000008.000000
-    histogram.000008.000000.to.000016.000000
-    histogram.000016.000000.to.000032.000000
-    histogram.000032.000000.to.000064.000000
-    histogram.000064.000000.to.000128.000000
-    histogram.000128.000000.to.000256.000000
-    histogram.000256.000000.to.000512.000000
-    histogram.000512.000000.to.001024.000000
-    histogram.001024.000000.to.002048.000000
-    histogram.002048.000000.to.004096.000000
-    histogram.004096.000000.to.008192.000000
-    histogram.008192.000000.to.016384.000000
-    histogram.016384.000000.to.032768.000000
-    histogram.032768.000000.to.065536.000000
-    histogram.065536.000000.to.131072.000000
-    histogram.131072.000000.to.262144.000000
-    histogram.262144.000000.to.524288.000000
-    num.query.type.A
-    num.query.type.PTR
-    num.query.type.TXT
-    num.query.type.AAAA
-    num.query.type.SRV
-    num.query.type.ANY
-    num.query.class.IN
-    num.query.opcode.QUERY
-    num.query.tcp
-    num.query.ipv6
-    num.query.flags.QR
-    num.query.flags.AA
-    num.query.flags.TC
-    num.query.flags.RD
-    num.query.flags.RA
-    num.query.flags.Z
-    num.query.flags.AD
-    num.query.flags.CD
-    num.query.edns.present
-    num.query.edns.DO
-    num.answer.rcode.NOERROR
-    num.answer.rcode.SERVFAIL
-    num.answer.rcode.NXDOMAIN
-    num.answer.rcode.nodata
-    num.answer.secure
-    num.answer.bogus
-    num.rrset.bogus
-    unwanted.queries
-    unwanted.replies
-
-### Tags:
-
-As indicated above, the  prefix of a unbound stat will be used as it's 'section' tag. So section tag may have one of
-the following values:
-- section:
-      - thread0
-      - total
-      - time
-      - mem
-      - histogram
-      - num
-      - unwanted
+    thread0_num_queries
+    thread0_num_cachehits
+    thread0_num_cachemiss
+    thread0_num_prefetch
+    thread0_num_recursivereplies
+    thread0_requestlist_avg
+    thread0_requestlist_max
+    thread0_requestlist_overwritten
+    thread0_requestlist_exceeded
+    thread0_requestlist_current_all
+    thread0_requestlist_current_user
+    thread0_recursion_time_avg
+    thread0_recursion_time_median
+    total_num_queries
+    total_num_cachehits
+    total_num_cachemiss
+    total_num_prefetch
+    total_num_recursivereplies
+    total_requestlist_avg
+    total_requestlist_max
+    total_requestlist_overwritten
+    total_requestlist_exceeded
+    total_requestlist_current_all
+    total_requestlist_current_user
+    total_recursion_time_avg
+    total_recursion_time_median
+    time_now
+    time_up
+    time_elapsed
+    mem_total_sbrk
+    mem_cache_rrset
+    mem_cache_message
+    mem_mod_iterator
+    mem_mod_validator
+    num_query_type_A
+    num_query_type_PTR
+    num_query_type_TXT
+    num_query_type_AAAA
+    num_query_type_SRV
+    num_query_type_ANY
+    num_query_class_IN
+    num_query_opcode_QUERY
+    num_query_tcp
+    num_query_ipv6
+    num_query_flags_QR
+    num_query_flags_AA
+    num_query_flags_TC
+    num_query_flags_RD
+    num_query_flags_RA
+    num_query_flags_Z
+    num_query_flags_AD
+    num_query_flags_CD
+    num_query_edns_present
+    num_query_edns_DO
+    num_answer_rcode_NOERROR
+    num_answer_rcode_SERVFAIL
+    num_answer_rcode_NXDOMAIN
+    num_answer_rcode_nodata
+    num_answer_secure
+    num_answer_bogus
+    num_rrset_bogus
+    unwanted_queries
+    unwanted_replies
 
 ### Permissions:
 
@@ -180,7 +134,6 @@ Please use the solution you see as most appropriate.
 ```
  telegraf --config etc/telegraf.conf --input-filter unbound --test
 * Plugin: inputs.unbound, Collection 1
-> unbound,section=total,host=laptop-aromeyer num.cachemiss=0,requestlist.current.all=0,num.cachehits=0,requestlist.overwritten=0,requestlist.max=0,num.recursivereplies=0,requestlist.avg=0,recursion.time.avg=0,recursion.time.median=0,num.prefetch=0,requestlist.exceeded=0,requestlist.current.user=0,tcpusage=0,num.queries=0 1509977403000000000
-> unbound,section=time,host=laptop-aromeyer up=5794.844261,elapsed=12.484727,now=1509977402.617432 1509977403000000000
+> unbound,host=localhost total_num_cachehits=0,total_num_prefetch=0,total_requestlist_avg=0,total_requestlist_max=0,total_recursion_time_median=0,total_num_queries=0,total_requestlist_overwritten=0,total_requestlist_current_all=0,time_up=159185.583967,total_num_recursivereplies=0,total_requestlist_exceeded=0,total_requestlist_current_user=0,total_recursion_time_avg=0,total_tcpusage=0,total_num_cachemiss=0 1510130793000000000
 
 ```

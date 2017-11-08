@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func fakeUnboundStat(output string, useSudo bool) func(string, bool) (*bytes.Buffer, error) {
-	return func(string, bool) (*bytes.Buffer, error) {
+func UnboundControl(output string, Timeout int, useSudo bool) func(string, int, bool) (*bytes.Buffer, error) {
+	return func(string, int, bool) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -22,68 +22,83 @@ func TestGather(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 	v := &Unbound{
-		run:   fakeUnboundStat(smOutput, false),
+		run:   UnboundControl(smOutput, 1000, false),
 		Stats: []string{"*"},
 	}
 	v.Gather(acc)
 
-	acc.HasMeasurement("unbound")
+	assert.True(t, acc.HasMeasurement("unbound"))
 
-	for tag, fields := range parsedSmOutput {
-		acc.AssertContainsTaggedFields(t, "unbound", fields, map[string]string{
-			"section": tag,
-		})
-	}
+	//         Manual validation
+	//         assert.Equal(t, acc.NFields(), len(parsedSmOutput))
+	//         for field, value := range parsedSmOutput {
+	//           t.Logf("field: %s - value: %f", field, value)
+	//           assert.True(t, acc.HasFloatField("unbound", field) )
+	//           acc_value, _ := acc.FloatField("unbound", field)
+	//           assert.Equal(t,acc_value, value)
+	//         }
+
+	acc.AssertContainsFields(t, "unbound", parsedSmOutput)
 }
 
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Unbound{
-		run:   fakeUnboundStat(fullOutput, true),
+		run:   UnboundControl(fullOutput, 1000, true),
 		Stats: []string{"*"},
 	}
 	err := v.Gather(acc)
 
 	assert.NoError(t, err)
-	acc.HasMeasurement("unbound")
-	flat := flatten(acc.Metrics)
-	assert.Len(t, acc.Metrics, 7)
-	assert.Equal(t, 103, len(flat))
+
+	assert.True(t, acc.HasMeasurement("unbound"))
+
+	assert.Len(t, acc.Metrics, 1)
+	assert.Equal(t, acc.NFields(), 63)
 }
 
 func TestFilterSomeStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Unbound{
-		run:   fakeUnboundStat(fullOutput, false),
-		Stats: []string{"total.*", "time.*"},
+		run:   UnboundControl(fullOutput, 1000, false),
+		Stats: []string{"total.*", "time.*", "num.query.type.A", "num.query.type.PTR"},
 	}
 	err := v.Gather(acc)
 
 	assert.NoError(t, err)
-	acc.HasMeasurement("unbound")
-	flat := flatten(acc.Metrics)
-	assert.Len(t, acc.Metrics, 2)
-	assert.Equal(t, 16, len(flat))
+	assert.True(t, acc.HasMeasurement("unbound"))
+	assert.Equal(t, acc.NMetrics(), uint64(1))
+
+	assert.Equal(t, acc.NFields(), 18)
+	acc.AssertContainsFields(t, "unbound", parsedFSSOutput)
 }
 
 func TestFieldConfig(t *testing.T) {
 	expect := map[string]int{
-		"*":          103,
-		"":           0, // default
-		"time.up":    1,
-		"unwanted.*": 2,
+		"*":           63,
+		"":            0,
+		"time.up":     1,
+		"unwanted.*":  2,
+		"histogram.*": 0,
 	}
 
 	for fieldCfg, expected := range expect {
 		acc := &testutil.Accumulator{}
 		v := &Unbound{
-			run:   fakeUnboundStat(fullOutput, true),
+			run:   UnboundControl(fullOutput, 1000, true),
 			Stats: strings.Split(fieldCfg, ","),
 		}
 		err := v.Gather(acc)
 
 		assert.NoError(t, err)
-		acc.HasMeasurement("unbound")
+
+		// If nothing to collect measurement doesn't exists
+		if fieldCfg == "" || fieldCfg == "histogram.*" {
+			assert.False(t, acc.HasMeasurement("unbound"))
+		} else {
+			assert.True(t, acc.HasMeasurement("unbound"))
+		}
+
 		flat := flatten(acc.Metrics)
 		assert.Equal(t, expected, len(flat))
 	}
@@ -111,20 +126,35 @@ time.elapsed=1472897.672099
 num.query.type.A=7062688
 num.query.type.PTR=43097`
 
-var parsedSmOutput = map[string]map[string]interface{}{
-	"total": map[string]interface{}{
-		"num.queries":   uint64(11907596),
-		"num.cachehits": uint64(11489288),
-	},
-	"time": map[string]interface{}{
-		"now":     float64(1509968734.735180),
-		"up":      float64(1472897.672099),
-		"elapsed": float64(1472897.672099),
-	},
-	"num": map[string]interface{}{
-		"query.type.A":   uint64(7062688),
-		"query.type.PTR": uint64(43097),
-	},
+var parsedSmOutput = map[string]interface{}{
+	"total_num_queries":   float64(11907596),
+	"total_num_cachehits": float64(11489288),
+	"time_now":            float64(1509968734.735180),
+	"time_up":             float64(1472897.672099),
+	"time_elapsed":        float64(1472897.672099),
+	"num_query_type_A":    float64(7062688),
+	"num_query_type_PTR":  float64(43097),
+}
+
+var parsedFSSOutput = map[string]interface{}{
+	"total_num_queries":              float64(11907596),
+	"total_num_cachehits":            float64(11489288),
+	"total_num_cachemiss":            float64(418308),
+	"total_num_prefetch":             float64(0),
+	"total_num_recursivereplies":     float64(418308),
+	"total_requestlist_avg":          float64(0.400229),
+	"total_requestlist_max":          float64(11),
+	"total_requestlist_overwritten":  float64(0),
+	"total_requestlist_exceeded":     float64(0),
+	"total_requestlist_current_all":  float64(0),
+	"total_requestlist_current_user": float64(0),
+	"total_recursion_time_avg":       float64(0.015020),
+	"total_recursion_time_median":    float64(0.00292343),
+	"time_now":                       float64(1509968734.735180),
+	"time_up":                        float64(1472897.672099),
+	"time_elapsed":                   float64(1472897.672099),
+	"num_query_type_A":               float64(7062688),
+	"num_query_type_PTR":             float64(43097),
 }
 
 var fullOutput = `thread0.num.queries=11907596

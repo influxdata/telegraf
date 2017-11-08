@@ -17,12 +17,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, UseSudo bool) (*bytes.Buffer, error)
+type runner func(cmdName string, Timeout int, UseSudo bool) (*bytes.Buffer, error)
 
 // Unbound is used to store configuration values
 type Unbound struct {
 	Stats   []string
 	Binary  string
+	Timeout int
 	UseSudo bool
 
 	filter filter.Filter
@@ -31,6 +32,7 @@ type Unbound struct {
 
 var defaultStats = []string{"total.*", "num.*", "time.up", "mem.*"}
 var defaultBinary = "/usr/sbin/unbound-control"
+var defaultTimeout = 1000
 
 var sampleConfig = `
   ## If running as a restricted user you can prepend sudo for additional access:
@@ -39,10 +41,14 @@ var sampleConfig = `
   ## The default location of the unbound-control binary can be overridden with:
   binary = "/usr/sbin/unbound-control"
 
-  ## By default, telegraf gather stats for 3 metric points.
+  # The default timeout of 1000ms can be overriden with (in milliseconds):
+  timeout = 1000
+
+  ## By default, telegraf gather stats for 4 metric points.
   ## Setting stats will override the defaults shown below.
   ## Glob matching can be used, ie, stats = ["total.*"]
   ## stats may also be set to ["*"], which will collect all stats
+  ## except histogram.* statistics that will never be collected.
   stats = ["total.*", "num.*","time.up", "mem.*"]
 `
 
@@ -56,8 +62,8 @@ func (s *Unbound) SampleConfig() string {
 }
 
 // Shell out to unbound_stat and return the output
-func unboundRunner(cmdName string, UseSudo bool) (*bytes.Buffer, error) {
-	cmdArgs := []string{"stats"}
+func unboundRunner(cmdName string, Timeout int, UseSudo bool) (*bytes.Buffer, error) {
+	cmdArgs := []string{"stats_noreset"}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
 
@@ -68,7 +74,7 @@ func unboundRunner(cmdName string, UseSudo bool) (*bytes.Buffer, error) {
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, time.Millisecond*200)
+	err := internal.RunTimeout(cmd, time.Duration(int(time.Millisecond)*Timeout))
 	if err != nil {
 		return &out, fmt.Errorf("error running unbound-control: %s", err)
 	}
@@ -76,19 +82,17 @@ func unboundRunner(cmdName string, UseSudo bool) (*bytes.Buffer, error) {
 	return &out, nil
 }
 
-// Gather collects the configured stats from unbound_stat and adds them to the
+// Gather collects the configured stats from unbound-control and adds them to the
 // Accumulator
 //
-// The prefix of each stat (eg MAIN, MEMPOOL, LCK, etc) will be used as a
-// 'section' tag and all stats that share that prefix will be reported as fields
-// with that tag
+// All the dots in stat name will replaced by underscores. Histogram statistics will not be collected.
 func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 	if s.filter == nil {
 		var err error
 		if len(s.Stats) == 0 {
 			s.filter, err = filter.Compile(defaultStats)
 		} else {
-			// legacy support, change "all" -> "*":
+			// change "all" -> "*":
 			if s.Stats[0] == "all" {
 				s.Stats[0] = "*"
 			}
@@ -98,55 +102,48 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
+	// Always exclude histrogram statistics
+	stat_excluded := []string{"histogram.*"}
+	filter_excluded, err := filter.Compile(stat_excluded)
+	if err != nil {
+		return err
+	}
 
-	out, err := s.run(s.Binary, s.UseSudo)
+	out, err := s.run(s.Binary, s.Timeout, s.UseSudo)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}
 
-	sectionMap := make(map[string]map[string]interface{})
+	// Process values
+	fields := make(map[string]interface{})
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
 
 		cols := strings.Split(scanner.Text(), "=")
 
+		// Check split correctness
+		if len(cols) != 2 {
+			continue
+		}
+
 		stat := cols[0]
 		value := cols[1]
 
-		if s.filter != nil && !s.filter.Match(stat) {
+		// Filter value
+		if s.filter != nil && (!s.filter.Match(stat) || filter_excluded.Match(stat)) {
 			continue
 		}
 
-		parts := strings.SplitN(stat, ".", 2)
+		field := strings.Replace(stat, ".", "_", -1)
 
-		section := parts[0]
-		field := parts[1]
-
-		// Init the section if necessary
-		if _, ok := sectionMap[section]; !ok {
-			sectionMap[section] = make(map[string]interface{})
-		}
-
-		sectionMap[section][field], err = strconv.ParseUint(value, 10, 64)
+		fields[field], err = strconv.ParseFloat(value, 64)
 		if err != nil {
-			sectionMap[section][field], err = strconv.ParseFloat(value, 64)
-			if err != nil {
-				acc.AddError(fmt.Errorf("Expected a numeric or a float value for %s = %v\n",
-					stat, value))
-			}
+			acc.AddError(fmt.Errorf("Expected a numerical value for %s = %v\n",
+				stat, value))
 		}
-
 	}
 
-	for section, fields := range sectionMap {
-		tags := map[string]string{
-			"section": section,
-		}
-		if len(fields) == 0 {
-			continue
-		}
-		acc.AddFields("unbound", fields, tags)
-	}
+	acc.AddFields("unbound", fields, nil)
 
 	return nil
 }
@@ -157,6 +154,7 @@ func init() {
 			run:     unboundRunner,
 			Stats:   defaultStats,
 			Binary:  defaultBinary,
+			Timeout: defaultTimeout,
 			UseSudo: false,
 		}
 	})
