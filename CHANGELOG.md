@@ -2,6 +2,7 @@
 
 ### New Plugins
 - [basicstats](./plugins/aggregators/basicstats/README.md) - Thanks to @toni-moreno
+- [cratedb](./plugins/outputs/wavefront/README.md) - Thanks to @felixge
 - [jolokia2](./plugins/inputs/jolokia2/README.md) - Thanks to @dylanmei
 - [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
 - [smart](./plugins/inputs/smart/README.md) - Thanks to @rickard-von-essen
@@ -55,6 +56,7 @@
 - [#3315](https://github.com/influxdata/telegraf/pull/3315): Add Teamspeak 3 input plugin.
 - [#3305](https://github.com/influxdata/telegraf/pull/3305): Add modification_time field to filestat input plugin.
 - [#2019](https://github.com/influxdata/telegraf/pull/2019): Add Solr input plugin.
+- [#3210](https://github.com/influxdata/telegraf/pull/3210): Add CrateDB output plugin.
 
 ### Bugfixes
 
