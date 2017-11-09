@@ -71,10 +71,10 @@ func (n *NetResponse) TCPGather() (tags map[string]string, fields map[string]int
 	if err != nil {
 		if e, ok := err.(net.Error); ok && e.Timeout() {
 			tags["result_type"] = "timeout"
-			fields["result_type"] = 1
+			fields["success"] = 1
 		} else {
 			tags["result_type"] = "connection_failed"
-			fields["result_type"] = 1
+			fields["success"] = 1
 		}
 		return tags, fields
 	}
@@ -101,24 +101,24 @@ func (n *NetResponse) TCPGather() (tags map[string]string, fields map[string]int
 		if err != nil {
 			fields["string_found"] = false
 			tags["result_type"] = "read_failed"
-			fields["result_type"] = 1
+			fields["success"] = 1
 		} else {
 			// Looking for string in answer
 			RegEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
 			find := RegEx.FindString(string(data))
 			if find != "" {
-				fields["result_type"] = 0
+				fields["success"] = 0
 				tags["result_type"] = "success"
 				fields["string_found"] = true
 			} else {
 				tags["result_type"] = "string_mismatch"
-				fields["result_type"] = 1
+				fields["success"] = 1
 				fields["string_found"] = false
 			}
 		}
 	} else {
 		tags["result_type"] = "success"
-		fields["result_type"] = 0
+		fields["success"] = 0
 	}
 	fields["response_time"] = responseTime
 	return tags, fields
@@ -141,7 +141,7 @@ func (n *NetResponse) UDPGather() (tags map[string]string, fields map[string]int
 	// Handle error
 	if err != nil {
 		tags["result_type"] = "connection_failed"
-		fields["result_type"] = 1
+		fields["success"] = 1
 		return tags, fields
 	}
 	defer conn.Close()
@@ -159,7 +159,7 @@ func (n *NetResponse) UDPGather() (tags map[string]string, fields map[string]int
 	// Handle error
 	if err != nil {
 		tags["result_type"] = "read_failed"
-		fields["result_type"] = 1
+		fields["success"] = 1
 		return tags, fields
 	}
 
@@ -168,11 +168,11 @@ func (n *NetResponse) UDPGather() (tags map[string]string, fields map[string]int
 	find := RegEx.FindString(string(buf))
 	if find != "" {
 		tags["result_type"] = "success"
-		fields["result_type"] = 0
+		fields["success"] = 0
 		fields["string_found"] = true
 	} else {
 		tags["result_type"] = "string_mismatch"
-		fields["result_type"] = 1
+		fields["success"] = 1
 		fields["string_found"] = false
 	}
 

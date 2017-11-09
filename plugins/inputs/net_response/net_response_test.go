@@ -39,7 +39,7 @@ func TestTCPError(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
-			"result_type": 1,
+			"success": 1,
 		},
 		map[string]string{
 			"server":      "",
@@ -78,7 +78,7 @@ func TestTCPOK1(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
-			"result_type":   0,
+			"success":       0,
 			"string_found":  true,
 			"response_time": 1.0,
 		},
@@ -120,7 +120,7 @@ func TestTCPOK2(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
-			"result_type":   1,
+			"success":       1,
 			"string_found":  false,
 			"response_time": 1.0,
 		},
@@ -154,7 +154,7 @@ func TestUDPrror(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
-			"result_type":   1,
+			"success":       1,
 			"response_time": 1.0,
 		},
 		map[string]string{
@@ -194,7 +194,7 @@ func TestUDPOK1(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
-			"result_type":   0,
+			"success":       0,
 			"string_found":  true,
 			"response_time": 1.0,
 		},
