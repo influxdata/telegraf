@@ -15,7 +15,6 @@ ifdef VERSION
 	LDFLAGS += -X main.version=$(VERSION)
 endif
 
-
 all:
 	$(MAKE) deps
 	$(MAKE) telegraf
@@ -50,6 +49,7 @@ test-all: lint
 
 package:
 	./scripts/build.py --package --platform=all --arch=all
+
 clean:
 	-rm -f telegraf
 	-rm -f telegraf.exe
