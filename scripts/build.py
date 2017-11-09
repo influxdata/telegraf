@@ -646,7 +646,9 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                             package_build_root,
                             current_location)
                         if package_type == "rpm":
-                            fpm_command += "--depends coreutils --rpm-posttrans {}".format(POSTINST_SCRIPT)
+                            fpm_command += "--rpm-os {} --depends coreutils --rpm-posttrans {}".format(args.platform, POSTINST_SCRIPT)
+                            logging.info(fpm_command)
+
                         out = run(fpm_command, shell=True)
                         matches = re.search(':path=>"(.*)"', out)
                         outfile = None
