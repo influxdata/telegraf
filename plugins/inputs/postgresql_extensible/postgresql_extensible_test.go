@@ -53,11 +53,11 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 		"temp_files",
 		"temp_bytes",
 		"deadlocks",
+		"numbackends",
+		"datid",
 	}
 
-	int32Metrics := []string{
-		"numbackends",
-	}
+	int32Metrics := []string{}
 
 	floatMetrics := []string{
 		"blk_read_time",
@@ -66,7 +66,6 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 
 	stringMetrics := []string{
 		"datname",
-		"datid",
 	}
 
 	metricsCounted := 0
@@ -175,11 +174,11 @@ func TestPostgresqlFieldOutput(t *testing.T) {
 		"temp_files",
 		"temp_bytes",
 		"deadlocks",
+		"numbackends",
+		"datid",
 	}
 
-	int32Metrics := []string{
-		"numbackends",
-	}
+	int32Metrics := []string{}
 
 	floatMetrics := []string{
 		"blk_read_time",
@@ -188,7 +187,6 @@ func TestPostgresqlFieldOutput(t *testing.T) {
 
 	stringMetrics := []string{
 		"datname",
-		"datid",
 	}
 
 	for _, field := range intMetrics {
