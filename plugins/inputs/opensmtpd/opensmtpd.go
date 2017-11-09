@@ -44,11 +44,10 @@ var sampleConfig = `
   # The default timeout of 1000ms can be overriden with (in milliseconds):
   timeout = 1000
 
-  ## By default, telegraf gather stats for 4 metric points.
+  ## By default, telegraf gather stats for all numerical metric points.
   ## Setting stats will override the defaults shown below.
-  ## Glob matching can be used, ie, stats = ["mda.*"]
-  ## stats may also be set to ["*"], which will collect all stats.
-  stats = ["mda.*","scheduler.*","uptime", "smtp.*"]
+  ## Glob matching can be used, ie, stats = ["mda.*", "mta.*"]
+  stats = ["*"]
 `
 
 func (s *Opensmtpd) Description() string {
