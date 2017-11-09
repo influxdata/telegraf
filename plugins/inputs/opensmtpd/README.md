@@ -28,23 +28,42 @@ This is the full list of stats provided by smtpctl and potentially collected by 
 depending of your smtpctl configuration.
 
 - smtpctl
-    control_session=2
-    mda_envelope=0
-    mda_pending=0
-    mda_running=0
-    mda_user=0
-    queue_evpcache_load_hit=2
-    queue_evpcache_size=1
-    scheduler_delivery_ok=1
-    scheduler_envelope=0
-    scheduler_envelope_incoming=1
-    scheduler_envelope_inflight=0
-    scheduler_ramqueue_envelope=1
-    scheduler_ramqueue_message=1
-    scheduler_ramqueue_update=1
-    smtp_session=1
-    smtp_session_local=2
-    uptime=21
+    bounce_envelope
+    bounce_message
+    bounce_session
+    control_session
+    mda_envelope
+    mda_pending
+    mda_running
+    mda_user
+    mta_connector
+    mta_domain
+    mta_envelope
+    mta_host
+    mta_relay
+    mta_route
+    mta_session
+    mta_source
+    mta_task
+    mta_task_running
+    queue_bounce
+    queue_evpcache_load_hit
+    queue_evpcache_size
+    queue_evpcache_update_hit
+    scheduler_delivery_ok
+    scheduler_delivery_permfail
+    scheduler_delivery_tempfail
+    scheduler_envelope
+    scheduler_envelope_expired
+    scheduler_envelope_incoming
+    scheduler_envelope_inflight
+    scheduler_ramqueue_envelope
+    scheduler_ramqueue_message
+    scheduler_ramqueue_update
+    smtp_session
+    smtp_session_inet4
+    smtp_session_local
+    uptime
 
 ### Permissions:
 
@@ -81,8 +100,8 @@ Please use the solution you see as most appropriate.
 ### Example Output:
 
 ```
- telegraf --config etc/telegraf.conf --input-filter smtpctl --test
-* Plugin: inputs.smtpctl, Collection 1
-> smtpctl,host=localhost total_num_cachehits=0,total_num_prefetch=0,total_requestlist_avg=0,total_requestlist_max=0,total_recursion_time_median=0,total_num_queries=0,total_requestlist_overwritten=0,total_requestlist_current_all=0,time_up=159185.583967,total_num_recursivereplies=0,total_requestlist_exceeded=0,total_requestlist_current_user=0,total_recursion_time_avg=0,total_tcpusage=0,total_num_cachemiss=0 1510130793000000000
+ telegraf --config etc/telegraf.conf --input-filter opensmtpd --test
+* Plugin: inputs.opensmtpd, Collection 1
+> opensmtpd,host=localhost scheduler_delivery_tempfail=822,mta_host=10,mta_task_running=4,queue_bounce=13017,scheduler_delivery_permfail=51022,mta_relay=7,queue_evpcache_size=2,scheduler_envelope_expired=26,bounce_message=0,mta_domain=7,queue_evpcache_update_hit=848,smtp_session_local=12294,bounce_envelope=0,queue_evpcache_load_hit=4389703,scheduler_ramqueue_update=0,mta_route=3,scheduler_delivery_ok=2149489,smtp_session_inet4=2131997,control_session=1,scheduler_envelope_incoming=0,uptime=10346728,scheduler_ramqueue_envelope=2,smtp_session=0,bounce_session=0,mta_envelope=2,mta_session=6,mta_task=2,scheduler_ramqueue_message=2,mta_connector=7,mta_source=1,scheduler_envelope=2,scheduler_envelope_inflight=2 1510220300000000000
 
 ```
