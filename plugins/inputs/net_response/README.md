@@ -59,7 +59,7 @@ It can also check response text.
 
 - net_response
     - response_time (float, seconds)
-    - result_type (string) # success, timeout, connection_failed, read_failed, string_mismatch
+    - result_type (int) # success 0, failure 1
     - [**DEPRECATED**] string_found (boolean)
 
 ### Tags:
@@ -68,16 +68,17 @@ It can also check response text.
     - server
     - port
     - protocol
+    - result_type (string) # success, timeout, connection_failed, read_failed, string_mismatch
 
 ### Example Output:
 
 ```
 $ ./telegraf --config telegraf.conf --input-filter net_response --test
-net_response,server=influxdata.com,port=8080,protocol=tcp,host=localhost result_type="timeout" 1499310361000000000
-net_response,server=influxdata.com,port=443,protocol=tcp,host=localhost result_type="success",response_time=0.088703864 1499310361000000000
-net_response,protocol=tcp,host=localhost,server=this.domain.does.not.exist,port=443 result_type="connection_failed" 1499310361000000000
-net_response,protocol=udp,host=localhost,server=influxdata.com,port=8080 result_type="read_failed" 1499310362000000000
-net_response,port=31338,protocol=udp,host=localhost,server=localhost result_type="string_mismatch",string_found=false,response_time=0.00242682 1499310362000000000
-net_response,protocol=udp,host=localhost,server=localhost,port=31338 response_time=0.001128598,result_type="success",string_found=true 1499310362000000000
-net_response,server=this.domain.does.not.exist,port=443,protocol=udp,host=localhost result_type="connection_failed" 1499310362000000000
+net_response,server=influxdata.com,port=8080,protocol=tcp,host=localhost,result_type="timeout" result_type=1i, 1499310361000000000
+net_response,server=influxdata.com,port=443,protocol=tcp,host=localhost,result_type="success", result_type=0i,response_time=0.088703864 1499310361000000000
+net_response,protocol=tcp,host=localhost,server=this.domain.does.not.exist,port=443,result_type="connection_failed" result_type=1i, 1499310361000000000
+net_response,protocol=udp,host=localhost,server=influxdata.com,port=8080,result_type="read_failed" result_type=1i, 1499310362000000000
+net_response,port=31338,protocol=udp,host=localhost,server=localhost,result_type="string_mismatch", result_type=1i,string_found=false,response_time=0.00242682 1499310362000000000
+net_response,protocol=udp,host=localhost,server=localhost,port=31338,result_type="success" result_type=0i,response_time=0.001128598,string_found=true 1499310362000000000
+net_response,server=this.domain.does.not.exist,port=443,protocol=udp,host=localhost,result_type="connection_failed" result_type=1i, 1499310362000000000
 ```

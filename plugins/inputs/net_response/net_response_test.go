@@ -39,12 +39,13 @@ func TestTCPError(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
-			"result_type": "connection_failed",
+			"result_type": 1,
 		},
 		map[string]string{
-			"server":   "",
-			"port":     "9999",
-			"protocol": "tcp",
+			"server":      "",
+			"port":        "9999",
+			"protocol":    "tcp",
+			"result_type": "connection_failed",
 		},
 	)
 }
@@ -77,13 +78,14 @@ func TestTCPOK1(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
-			"result_type":   "success",
+			"result_type":   0,
 			"string_found":  true,
 			"response_time": 1.0,
 		},
 		map[string]string{"server": "127.0.0.1",
-			"port":     "2004",
-			"protocol": "tcp",
+			"port":        "2004",
+			"protocol":    "tcp",
+			"result_type": "success",
 		},
 	)
 	// Waiting TCPserver
@@ -118,13 +120,14 @@ func TestTCPOK2(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
-			"result_type":   "string_mismatch",
+			"result_type":   1,
 			"string_found":  false,
 			"response_time": 1.0,
 		},
 		map[string]string{"server": "127.0.0.1",
-			"port":     "2004",
-			"protocol": "tcp",
+			"port":        "2004",
+			"protocol":    "tcp",
+			"result_type": "string_mismatch",
 		},
 	)
 	// Waiting TCPserver
@@ -151,13 +154,14 @@ func TestUDPrror(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
-			"result_type":   "read_failed",
+			"result_type":   1,
 			"response_time": 1.0,
 		},
 		map[string]string{
-			"server":   "",
-			"port":     "9999",
-			"protocol": "udp",
+			"server":      "",
+			"port":        "9999",
+			"protocol":    "udp",
+			"result_type": "read_failed",
 		},
 	)
 }
@@ -190,13 +194,14 @@ func TestUDPOK1(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
-			"result_type":   "success",
+			"result_type":   0,
 			"string_found":  true,
 			"response_time": 1.0,
 		},
 		map[string]string{"server": "127.0.0.1",
-			"port":     "2004",
-			"protocol": "udp",
+			"port":        "2004",
+			"protocol":    "udp",
+			"result_type": "success",
 		},
 	)
 	// Waiting TCPserver
