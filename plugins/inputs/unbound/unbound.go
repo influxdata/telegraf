@@ -17,13 +17,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout int, UseSudo bool) (*bytes.Buffer, error)
+type runner func(cmdName string, Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error)
 
 // Unbound is used to store configuration values
 type Unbound struct {
 	Stats   []string
 	Binary  string
-	Timeout int
+	Timeout internal.Duration
 	UseSudo bool
 
 	filter filter.Filter
@@ -32,7 +32,7 @@ type Unbound struct {
 
 var defaultStats = []string{"total.*", "num.*", "time.up", "mem.*"}
 var defaultBinary = "/usr/sbin/unbound-control"
-var defaultTimeout = 1000
+var defaultTimeout = internal.Duration{Duration: time.Second}
 
 var sampleConfig = `
   ## If running as a restricted user you can prepend sudo for additional access:
@@ -41,8 +41,8 @@ var sampleConfig = `
   ## The default location of the unbound-control binary can be overridden with:
   binary = "/usr/sbin/unbound-control"
 
-  # The default timeout of 1000ms can be overriden with (in milliseconds):
-  timeout = 1000
+  # The default timeout of 1s can be overriden with:
+  timeout = "1s"
 
   ## By default, telegraf gather stats for 4 metric points.
   ## Setting stats will override the defaults shown below.
@@ -62,7 +62,7 @@ func (s *Unbound) SampleConfig() string {
 }
 
 // Shell out to unbound_stat and return the output
-func unboundRunner(cmdName string, Timeout int, UseSudo bool) (*bytes.Buffer, error) {
+func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
@@ -74,7 +74,7 @@ func unboundRunner(cmdName string, Timeout int, UseSudo bool) (*bytes.Buffer, er
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, time.Duration(int(time.Millisecond)*Timeout))
+	err := internal.RunTimeout(cmd, Timeout.Duration)
 	if err != nil {
 		return &out, fmt.Errorf("error running unbound-control: %s", err)
 	}

@@ -7,13 +7,17 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
-func UnboundControl(output string, Timeout int, useSudo bool) func(string, int, bool) (*bytes.Buffer, error) {
-	return func(string, int, bool) (*bytes.Buffer, error) {
+var TestTimeout = internal.Duration{Duration: time.Second}
+
+func UnboundControl(output string, Timeout internal.Duration, useSudo bool) func(string, internal.Duration, bool) (*bytes.Buffer, error) {
+	return func(string, internal.Duration, bool) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -22,7 +26,7 @@ func TestGather(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 	v := &Unbound{
-		run:   UnboundControl(smOutput, 1000, false),
+		run:   UnboundControl(smOutput, TestTimeout, false),
 		Stats: []string{"*"},
 	}
 	v.Gather(acc)
@@ -44,7 +48,7 @@ func TestGather(t *testing.T) {
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Unbound{
-		run:   UnboundControl(fullOutput, 1000, true),
+		run:   UnboundControl(fullOutput, TestTimeout, true),
 		Stats: []string{"*"},
 	}
 	err := v.Gather(acc)
@@ -60,7 +64,7 @@ func TestParseFullOutput(t *testing.T) {
 func TestFilterSomeStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Unbound{
-		run:   UnboundControl(fullOutput, 1000, false),
+		run:   UnboundControl(fullOutput, TestTimeout, false),
 		Stats: []string{"total.*", "time.*", "num.query.type.A", "num.query.type.PTR"},
 	}
 	err := v.Gather(acc)
@@ -85,7 +89,7 @@ func TestFieldConfig(t *testing.T) {
 	for fieldCfg, expected := range expect {
 		acc := &testutil.Accumulator{}
 		v := &Unbound{
-			run:   UnboundControl(fullOutput, 1000, true),
+			run:   UnboundControl(fullOutput, TestTimeout, true),
 			Stats: strings.Split(fieldCfg, ","),
 		}
 		err := v.Gather(acc)
