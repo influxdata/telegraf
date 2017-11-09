@@ -13,8 +13,8 @@ This plugin gathers stats from [OpenSMTPD - a FREE implementation of the server-
    ## The default location of the smtpctl binary can be overridden with:
    binary = "/usr/sbin/smtpctl"
 
-   # The default timeout of 1000ms can be overriden with (in milliseconds):
-   #timeout = 1000
+   # The default timeout of 1s can be overriden with:
+   #timeout = "1s"
 
   ## By default, telegraf gather stats for 4 metric points.
   ## Setting stats will override the defaults shown below.

@@ -7,13 +7,17 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 )
 
-func SmtpCTL(output string, Timeout int, useSudo bool) func(string, int, bool) (*bytes.Buffer, error) {
-	return func(string, int, bool) (*bytes.Buffer, error) {
+var TestTimeout = internal.Duration{Duration: time.Second}
+
+func SmtpCTL(output string, Timeout internal.Duration, useSudo bool) func(string, internal.Duration, bool) (*bytes.Buffer, error) {
+	return func(string, internal.Duration, bool) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -22,7 +26,7 @@ func TestGather(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 	v := &Opensmtpd{
-		run:   SmtpCTL(smOutput, 1000, false),
+		run:   SmtpCTL(smOutput, TestTimeout, false),
 		Stats: []string{"*"},
 	}
 	v.Gather(acc)
@@ -44,7 +48,7 @@ func TestGather(t *testing.T) {
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Opensmtpd{
-		run:   SmtpCTL(fullOutput, 1000, true),
+		run:   SmtpCTL(fullOutput, TestTimeout, true),
 		Stats: []string{"*"},
 	}
 	err := v.Gather(acc)
@@ -60,8 +64,8 @@ func TestParseFullOutput(t *testing.T) {
 func TestFilterSomeStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Opensmtpd{
-		run:   SmtpCTL(fullOutput, 1000, false),
-		Stats: []string{"mda.*","scheduler.*","uptime", "smtp.*"},
+		run:   SmtpCTL(fullOutput, TestTimeout, false),
+		Stats: []string{"mda.*", "scheduler.*", "uptime", "smtp.*"},
 	}
 	err := v.Gather(acc)
 
@@ -77,7 +81,7 @@ func TestFieldConfig(t *testing.T) {
 	expect := map[string]int{
 		"*":            36,
 		"":             0,
-		"uptime":         1,
+		"uptime":       1,
 		"smtp.*":       3,
 		"uptime.human": 0,
 	}
@@ -85,7 +89,7 @@ func TestFieldConfig(t *testing.T) {
 	for fieldCfg, expected := range expect {
 		acc := &testutil.Accumulator{}
 		v := &Opensmtpd{
-			run:   SmtpCTL(fullOutput, 1000, true),
+			run:   SmtpCTL(fullOutput, TestTimeout, true),
 			Stats: strings.Split(fieldCfg, ","),
 		}
 		err := v.Gather(acc)
@@ -138,44 +142,44 @@ uptime=21
 uptime.human=21s`
 
 var parsedSmOutput = map[string]interface{}{
-        "control_session": float64(2),
-        "mda_envelope": float64(0),
-        "mda_pending": float64(0),
-        "mda_running": float64(0),
-        "mda_user": float64(0),
-        "queue_evpcache_load_hit": float64(2),
-        "queue_evpcache_size": float64(1),
-        "scheduler_delivery_ok": float64(1),
-        "scheduler_envelope": float64(0),
-        "scheduler_envelope_incoming": float64(1),
-        "scheduler_envelope_inflight": float64(0),
-        "scheduler_ramqueue_envelope": float64(1),
-        "scheduler_ramqueue_message": float64(1),
-        "scheduler_ramqueue_update": float64(1),
-        "smtp_session": float64(1),
-        "smtp_session_local": float64(2),
-        "uptime": float64(21),
+	"control_session":             float64(2),
+	"mda_envelope":                float64(0),
+	"mda_pending":                 float64(0),
+	"mda_running":                 float64(0),
+	"mda_user":                    float64(0),
+	"queue_evpcache_load_hit":     float64(2),
+	"queue_evpcache_size":         float64(1),
+	"scheduler_delivery_ok":       float64(1),
+	"scheduler_envelope":          float64(0),
+	"scheduler_envelope_incoming": float64(1),
+	"scheduler_envelope_inflight": float64(0),
+	"scheduler_ramqueue_envelope": float64(1),
+	"scheduler_ramqueue_message":  float64(1),
+	"scheduler_ramqueue_update":   float64(1),
+	"smtp_session":                float64(1),
+	"smtp_session_local":          float64(2),
+	"uptime":                      float64(21),
 }
 
 var parsedFSSOutput = map[string]interface{}{
-        "mda_envelope": float64(0),
-        "mda_pending": float64(0),
-        "mda_running": float64(0),
-        "mda_user": float64(0),
-        "scheduler_delivery_ok": float64(1922951),
-        "scheduler_delivery_permfail": float64(45967),
-        "scheduler_delivery_tempfail": float64(493),
-        "scheduler_envelope": float64(0),
-        "scheduler_envelope_expired": float64(17),
-        "scheduler_envelope_incoming": float64(0),
-        "scheduler_envelope_inflight": float64(0),
-        "scheduler_ramqueue_envelope": float64(0),
-        "scheduler_ramqueue_message": float64(0),
-        "scheduler_ramqueue_update": float64(0),
-        "smtp_session": float64(0),
-        "smtp_session_inet4": float64(1903412),
-        "smtp_session_local": float64(10827),
-        "uptime": float64(9253995),
+	"mda_envelope":                float64(0),
+	"mda_pending":                 float64(0),
+	"mda_running":                 float64(0),
+	"mda_user":                    float64(0),
+	"scheduler_delivery_ok":       float64(1922951),
+	"scheduler_delivery_permfail": float64(45967),
+	"scheduler_delivery_tempfail": float64(493),
+	"scheduler_envelope":          float64(0),
+	"scheduler_envelope_expired":  float64(17),
+	"scheduler_envelope_incoming": float64(0),
+	"scheduler_envelope_inflight": float64(0),
+	"scheduler_ramqueue_envelope": float64(0),
+	"scheduler_ramqueue_message":  float64(0),
+	"scheduler_ramqueue_update":   float64(0),
+	"smtp_session":                float64(0),
+	"smtp_session_inet4":          float64(1903412),
+	"smtp_session_local":          float64(10827),
+	"uptime":                      float64(9253995),
 }
 
 var fullOutput = `bounce.envelope=0

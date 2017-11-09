@@ -17,13 +17,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout int, UseSudo bool) (*bytes.Buffer, error)
+type runner func(cmdName string, Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error)
 
 // Opensmtpd is used to store configuration values
 type Opensmtpd struct {
 	Stats   []string
 	Binary  string
-	Timeout int
+	Timeout internal.Duration
 	UseSudo bool
 
 	filter filter.Filter
@@ -32,7 +32,7 @@ type Opensmtpd struct {
 
 var defaultStats = []string{"mda.*", "scheduler.*", "uptime", "smtp.*"}
 var defaultBinary = "/usr/sbin/smtpctl"
-var defaultTimeout = 1000
+var defaultTimeout = internal.Duration{Duration: time.Second}
 
 var sampleConfig = `
   ## If running as a restricted user you can prepend sudo for additional access:
@@ -61,7 +61,7 @@ func (s *Opensmtpd) SampleConfig() string {
 }
 
 // Shell out to opensmtpd_stat and return the output
-func opensmtpdRunner(cmdName string, Timeout int, UseSudo bool) (*bytes.Buffer, error) {
+func opensmtpdRunner(cmdName string, Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error) {
 	cmdArgs := []string{"show", "stats"}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
@@ -73,7 +73,7 @@ func opensmtpdRunner(cmdName string, Timeout int, UseSudo bool) (*bytes.Buffer, 
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, time.Duration(int(time.Millisecond)*Timeout))
+	err := internal.RunTimeout(cmd, Timeout.Duration)
 	if err != nil {
 		return &out, fmt.Errorf("error running smtpctl: %s", err)
 	}
@@ -101,7 +101,7 @@ func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-	// Always exclude histrogram statistics
+	// Always exclude uptime.human statistics
 	stat_excluded := []string{"uptime.human"}
 	filter_excluded, err := filter.Compile(stat_excluded)
 	if err != nil {
