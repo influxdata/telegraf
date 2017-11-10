@@ -1,6 +1,7 @@
 Handle items that do not have any of the group keys
 Honor the drop_non_top flag
 Honor the position_field option
+Fix casing
 
 DONE
 Apply processor only to the selected metrics
