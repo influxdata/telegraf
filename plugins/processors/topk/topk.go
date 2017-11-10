@@ -234,7 +234,7 @@ func (t *TopK) get_aggregation_function(agg_operation string) func([]telegraf.Me
 			no_measurements_found := true // Canary to check if no field with values was found, so we can return nil
 			for k, _ := range(avg){
 				if (avg_counters[k] == 0) {
-					avg[k] = 0 // FIX. We have no way of knowing if a bucket was ever touched
+					avg[k] = 0
 					continue
 				}
 				avg[k] = avg[k] / avg_counters[k]
@@ -245,9 +245,31 @@ func (t *TopK) get_aggregation_function(agg_operation string) func([]telegraf.Me
 				return nil
 			}
 			return avg
+	}
+
+	case "sum":
+	return func(ms []telegraf.Metric, fields []string) map[string]float64 {
+		sum := make(map[string]float64)
+		// Compute the sums of the selected fields over all the measurements collected for this metric
+		for _, m := range ms {
+			for _, field := range(fields){
+				field_val, ok := m.Fields()[field]
+				if ! ok {
+					continue // Skip if this metric doesn't have this field set
+					}
+					val, ok := convert(field_val)
+					if ! ok {
+						panic(fmt.Sprintf("Cannot convert value '%s' from metric '%s' with tags '%s'",
+							m.Fields()[field], m.Name(), m.Tags()))
+					}
+					sum[field] += val
+				}
+			}
+			return sum
 		}
 
 	default:
-	panic(fmt.Sprintf("Unknown aggregation function '%s'", t.Aggregation))
+		panic(fmt.Sprintf("Unknown aggregation function '%s'", t.Aggregation))
 	}
 }
+
