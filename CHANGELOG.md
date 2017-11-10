@@ -57,6 +57,7 @@
 - [#3305](https://github.com/influxdata/telegraf/pull/3305): Add modification_time field to filestat input plugin.
 - [#2019](https://github.com/influxdata/telegraf/pull/2019): Add Solr input plugin.
 - [#3210](https://github.com/influxdata/telegraf/pull/3210): Add CrateDB output plugin.
+- [#3458](https://github.com/influxdata/telegraf/pull/3458): Update CI configs to Go 1.9.2
 
 ### Bugfixes
 
