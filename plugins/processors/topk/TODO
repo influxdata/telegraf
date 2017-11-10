@@ -1,10 +1,9 @@
-Aggregate data over time
-Honor the drop_non_matching flag
+Handle items that do not have any of the group keys
 Honor the drop_non_top flag
 Honor the position_field option
-Honor the aggregation_field option
-Add an options to revert the topk to bottomk
 
 DONE
 Apply processor only to the selected metrics
 Apply processor only to the metrics with the selected tags
+Add an options to revert the topk to bottomk
+Honor the aggregation_field option
