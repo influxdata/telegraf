@@ -70,8 +70,7 @@ It can also check response text.
     - server
     - port
     - protocol
-    - result_type (string) # success, timeout, connection_failed, read_failed, string_mismatch
-    - result_text # This will contain the text from the now deprecated result_type
+    - result_text (string) # This will contain the text from the now deprecated result_type
 
 ### Example Output:
 
