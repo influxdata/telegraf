@@ -97,7 +97,7 @@ func sort_metrics(metrics []MetricAggregation, field string, reverse bool){
 	if reverse {
 		sort.Sort(aggs)
 	} else {
-		sort.Reverse(aggs)
+		sort.Sort(sort.Reverse(aggs))
 	}
 }
 
@@ -223,7 +223,6 @@ func (t *TopK) get_aggregation_function(agg_operation string) func([]telegraf.Me
 					}
 					val, ok := convert(field_val)
 					if ! ok {
-						fmt.Println(m)
 						panic(fmt.Sprintf("Cannot convert value '%s' from metric '%s' with tags '%s'",
 							m.Fields()[field], m.Name(), m.Tags()))
 					}
@@ -249,6 +248,6 @@ func (t *TopK) get_aggregation_function(agg_operation string) func([]telegraf.Me
 		}
 
 	default:
-		panic(fmt.Sprintf("Unknown aggregation function '%s'", t.Aggregation))
+	panic(fmt.Sprintf("Unknown aggregation function '%s'", t.Aggregation))
 	}
 }
