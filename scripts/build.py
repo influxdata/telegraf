@@ -2,6 +2,7 @@
 
 import sys
 import os
+import platform
 import subprocess
 import time
 from datetime import datetime
@@ -91,7 +92,7 @@ supported_builds = {
 
 supported_packages = {
     "linux": [ "deb", "rpm", "tar" ],
-    "windows": [ "zip" ],
+    "windows": [ "zip", "msi" ],
     "freebsd": [ "tar" ]
 }
 
@@ -172,16 +173,16 @@ def run_tests(race, parallel, timeout, no_vet):
 #### All Telegraf-specific content above this line
 ################
 
-def run(command, allow_failure=False, shell=False):
+def run(command, allow_failure=False, shell=False, env=os.environ.copy()):
     """Run shell command (convenience wrapper around subprocess).
     """
     out = None
     logging.debug("{}".format(command))
     try:
         if shell:
-            out = subprocess.check_output(command, stderr=subprocess.STDOUT, shell=shell)
+            out = subprocess.check_output(command, stderr=subprocess.STDOUT, shell=shell, env=env)
         else:
-            out = subprocess.check_output(command.split(), stderr=subprocess.STDOUT)
+            out = subprocess.check_output(command.split(), stderr=subprocess.STDOUT, env=env)
         out = out.decode('utf-8').strip()
         # logging.debug("Command output: {}".format(out))
     except subprocess.CalledProcessError as e:
@@ -275,7 +276,7 @@ def local_changes():
 def get_system_arch():
     """Retrieve current system architecture.
     """
-    arch = os.uname()[4]
+    arch = platform.machine()
     if arch == "x86_64":
         arch = "amd64"
     elif arch == "386":
@@ -290,10 +291,7 @@ def get_system_arch():
 def get_system_platform():
     """Retrieve current system platform.
     """
-    if sys.platform.startswith("linux"):
-        return "linux"
-    else:
-        return sys.platform
+    return platform.system().lower()
 
 def get_go_version():
     """Retrieve version information for Go.
@@ -313,6 +311,7 @@ def check_path_for(b):
     for path in os.environ["PATH"].split(os.pathsep):
         path = path.strip('"')
         full_path = os.path.join(path, b)
+        full_path = "{}.exe".format(full_path) if get_system_platform() == "windows" else full_path;
         if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
             return full_path
 
@@ -442,14 +441,14 @@ def build(version=None,
     tmp_build_dir = create_temp_dir()
     for target, path in targets.items():
         logging.info("Building target: {}".format(target))
-        build_command = ""
+        env = os.environ.copy()
 
         # Handle static binary output
         if static is True or "static_" in arch:
             if "static_" in arch:
                 static = True
                 arch = arch.replace("static_", "")
-            build_command += "CGO_ENABLED=0 "
+            env["CGO_ENABLED"] = "0"
 
         # Handle variations in architecture output
         if arch == "i386" or arch == "i686":
@@ -458,23 +457,24 @@ def build(version=None,
             arch = "arm64"
         elif "arm" in arch:
             arch = "arm"
-        build_command += "GOOS={} GOARCH={} ".format(platform, arch)
+        env["GOOS"] = platform
+        env["GOARCH"] = arch
 
         if "arm" in arch:
             if arch == "armel":
-                build_command += "GOARM=5 "
+                env["GOARM"] = "5"
             elif arch == "armhf" or arch == "arm":
-                build_command += "GOARM=6 "
+                env["GOARM"] = "6"
             elif arch == "arm64":
                 # TODO(rossmcdonald) - Verify this is the correct setting for arm64
-                build_command += "GOARM=7 "
+                env["GOARM"] = "7"
             else:
                 logging.error("Invalid ARM architecture specified: {}".format(arch))
                 logging.error("Please specify either 'armel', 'armhf', or 'arm64'.")
                 return False
         if platform == 'windows':
             target = target + '.exe'
-        build_command += "go build -o {} ".format(os.path.join(outdir, target))
+        build_command = "go build -o {} ".format(os.path.join(outdir, target))
         if race:
             build_command += "-race "
         if len(tags) > 0:
@@ -493,7 +493,7 @@ def build(version=None,
             build_command += " -a -installsuffix cgo "
         build_command += path
         start_time = datetime.utcnow()
-        run(build_command, shell=True)
+        run(build_command, shell=True, env=env)
         end_time = datetime.utcnow()
         logging.info("Time taken: {}s".format((end_time - start_time).total_seconds()))
     return True
@@ -623,15 +623,48 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                             run("mv {}.tar.gz {}".format(os.path.join(package_build_root, name), current_location), shell=True)
                             outfile = os.path.join(current_location, name + ".tar.gz")
                             outfiles.append(outfile)
+                            pass
                         elif package_type == 'zip':
-                            zip_command = "cd {} && zip -r {}.zip ./*".format(package_build_root, name)
-                            run(zip_command, shell=True)
-                            run("mv {}.zip {}".format(os.path.join(package_build_root, name), current_location), shell=True)
-                            outfile = os.path.join(current_location, name + ".zip")
+                            import zipfile
+                            outfile = os.path.join(current_location, "telegraf-{}_{}_{}.zip".format(next_version, platform, arch))
+                            
+                            with zipfile.ZipFile(outfile, 'w') as zf:
+                                t = os.path.join(current_location, 'telegraf.exe')
+                                zf.write(t, arcname='telegraf\\telegraf.exe')
+                                zf.write('etc\\telegraf_windows.conf', arcname='telegraf\\telegraf.conf')
                             outfiles.append(outfile)
+                    elif package_type == 'msi':
+                        if arch == "i386":
+                            tmpArch = "x86"
+                        else:
+                            tmpArch = "x64"
+                        candle_cmd = "C:\\wix\\candle.exe -nologo -dversion={} -dbuilddir={} -drootdir={} -ext WixUtilExtension -ext WixUIExtension -arch {} -o {}\\telegraf.wxiobj pkg\\msi\\telegraf.wxs".format(
+                            next_version,
+                            os.path.join(os.getcwd(), current_location),
+                            os.getcwd(),
+                            tmpArch,
+                            os.path.join(os.getcwd(), current_location)
+                        )
+                        run(candle_cmd, shell=True)
+                        
+                        msifile = "{}\\telegraf-{}-{}.msi".format(
+                            os.path.join(os.getcwd(), current_location),
+                            next_version,
+                            arch,
+                        )
+                        
+                        light_cmd = "C:\\wix\\light.exe -nologo -cultures:en-us -ext WixUtilExtension -ext WixUIExtension -o {} {}\\telegraf.wxiobj".format(
+                            msifile,
+                            os.path.join(os.getcwd(), current_location)
+                        )
+                        outfiles.append(msifile)
+                        run(light_cmd, shell=True)
                     elif package_type not in ['zip', 'tar'] and static or "static_" in arch:
                         logging.info("Skipping package type '{}' for static builds.".format(package_type))
                     else:
+                        if not check_path_for("fpm"):
+                            logging.error("FPM ruby gem required for packaging. Stopping.")
+                            raise Exception("FPM ruby gem required for packaging. Stopping.")
                         if package_type == 'rpm' and release and '~' in package_version:
                             package_version, suffix = package_version.split('~', 1)
                             # The ~ indicatees that this is a prerelease so we give it a leading 0.
@@ -756,9 +789,6 @@ def main(args):
 
     # Build packages
     if args.package:
-        if not check_path_for("fpm"):
-            logging.error("FPM ruby gem required for packaging. Stopping.")
-            return 1
         packages = package(build_output,
                            args.name,
                            args.version,

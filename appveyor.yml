@@ -13,20 +13,23 @@ platform: x64
 install:
   - IF NOT EXIST "C:\Cache" mkdir C:\Cache
   - IF NOT EXIST "C:\Cache\go1.8.1.msi" curl -o "C:\Cache\go1.8.1.msi" https://storage.googleapis.com/golang/go1.8.1.windows-amd64.msi
+  - IF NOT EXIST "C:\Cache\wix311-binaries.zip" curl -L -o "C:\Cache\wix311-binaries.zip" https://github.com/wixtoolset/wix3/releases/download/wix311rtm/wix311-binaries.zip
   - IF NOT EXIST "C:\Cache\gnuwin32-bin.zip" curl -o "C:\Cache\gnuwin32-bin.zip" https://dl.influxdata.com/telegraf/ci/make-3.81-bin.zip
   - IF NOT EXIST "C:\Cache\gnuwin32-dep.zip" curl -o "C:\Cache\gnuwin32-dep.zip" https://dl.influxdata.com/telegraf/ci/make-3.81-dep.zip
   - IF EXIST "C:\Go" rmdir /S /Q C:\Go
   - msiexec.exe /i "C:\Cache\go1.8.1.msi" /quiet
+  - 7z x "C:\Cache\wix311-binaries.zip" -oC:\wix -y
   - 7z x "C:\Cache\gnuwin32-bin.zip" -oC:\GnuWin32 -y
   - 7z x "C:\Cache\gnuwin32-dep.zip" -oC:\GnuWin32 -y
   - go version
   - go env
 
 build_script:
-  - cmd: C:\GnuWin32\bin\make
+  - cmd: C:\GnuWin32\bin\make package-windows
 
 test_script:
   - cmd: C:\GnuWin32\bin\make test-windows
 
 artifacts:
-  - path: telegraf.exe
+  - path: '**\telegraf*.msi'
+  - path: '**\telegraf*.zip'
