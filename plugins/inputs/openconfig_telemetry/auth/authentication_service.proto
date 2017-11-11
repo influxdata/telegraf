@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package authentication;
+
+// The Login service definition.
+service Login {
+  rpc LoginCheck (LoginRequest) returns (LoginReply) {}
+}
+
+// The request message containing the user's name, password and client id
+message LoginRequest {
+  string user_name = 1;
+  string password   = 2;
+  string client_id = 3;
+}
+
+/* The response message containing the result of login attempt.
+ * result value of true indicates success and false indicates
+ * failure
+ */ 
+message LoginReply {
+  bool result = 1;
+}

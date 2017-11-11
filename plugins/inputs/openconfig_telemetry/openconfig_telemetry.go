@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/openconfig_telemetry/auth"
 	"github.com/influxdata/telegraf/plugins/inputs/openconfig_telemetry/oc"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"golang.org/x/net/context"
@@ -20,6 +21,9 @@ import (
 
 type OpenConfigTelemetry struct {
 	Server          string
+	Username        string
+	Password        string
+	ClientId        string
 	Sensors         []string
 	SampleFrequency uint32
 	CertFile        string
@@ -35,7 +39,15 @@ type OpenConfigTelemetry struct {
 }
 
 var sampleConfig = `
+  ## Device address to collect telemetry from
   server = "localhost:1883"
+
+  ## Authentication details. Username and password are must if device expects 
+  ## authentication. Client ID must be unique when connecting from multiple instances 
+  ## of telegraf to the same device
+  username = "user"
+  password = "pass"
+  clientId = "telegraf"
 
   ## Frequency to get data in milliseconds
   sampleFrequency = 1000
@@ -133,10 +145,25 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 		log.Fatalf("E! Failed to connect: %v", err)
 	}
 
-	c := telemetry.NewOpenConfigTelemetryClient(m.grpcClientConn)
 	if m.Debug {
 		log.Printf("I! Opened a new gRPC session to %s on port %s", grpc_server, grpc_port)
 	}
+
+	// If username, password and clientId are provided, authenticate user before subscribing for data
+	if m.Username != "" && m.Password != "" && m.ClientId != "" {
+		lc := authentication.NewLoginClient(m.grpcClientConn)
+		loginReply, loginErr := lc.LoginCheck(context.Background(), &authentication.LoginRequest{UserName: m.Username, Password: m.Password, ClientId: m.ClientId})
+		if loginErr != nil {
+			log.Fatalf("E! Could not initiate login check: %v", err)
+		}
+
+		// Check if the user is authenticated. Bail if auth error
+		if !loginReply.Result {
+			log.Fatalf("E! Failed to authenticate the user")
+		}
+	}
+
+	c := telemetry.NewOpenConfigTelemetryClient(m.grpcClientConn)
 
 	for _, sensor := range m.Sensors {
 		go func(sensor string, acc telegraf.Accumulator) {
