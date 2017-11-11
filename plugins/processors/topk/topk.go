@@ -5,6 +5,7 @@ import (
 	"time"
 	"regexp"
 	"fmt"
+	"math"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
@@ -256,17 +257,84 @@ func (t *TopK) get_aggregation_function(agg_operation string) func([]telegraf.Me
 				field_val, ok := m.Fields()[field]
 				if ! ok {
 					continue // Skip if this metric doesn't have this field set
-					}
-					val, ok := convert(field_val)
-					if ! ok {
-						panic(fmt.Sprintf("Cannot convert value '%s' from metric '%s' with tags '%s'",
-							m.Fields()[field], m.Name(), m.Tags()))
-					}
-					sum[field] += val
+				}
+				val, ok := convert(field_val)
+				if ! ok {
+					panic(fmt.Sprintf("Cannot convert value '%s' from metric '%s' with tags '%s'",
+			      				   m.Fields()[field], m.Name(), m.Tags()))
+				}
+				sum[field] += val
+			}
+		}
+		return sum
+	}
+
+        case "min":
+	return func(ms []telegraf.Metric, fields []string) map[string]float64 {
+		mins := make(map[string]float64)
+		// Compute the minimum value of each of the selected fields
+		for _, m := range ms {
+			for _, field := range(fields){
+				field_val, ok := m.Fields()[field]
+				if ! ok {
+					continue // Skip if this metric doesn't have this field set
+				}
+
+				// Convert field to a float64
+				val, ok := convert(field_val)
+				if ! ok {
+					panic(fmt.Sprintf("Cannot convert value '%s' from metric '%s' with tags '%s'",
+						m.Fields()[field], m.Name(), m.Tags()))
+				}
+				
+				// If this field has not been set, set it to the maximum float64
+				_, ok = mins[field]
+				if ! ok {
+					mins[field] = math.MaxFloat64
+				}
+
+				// Check if we've found a new minimum
+				if mins[field] > val {
+					mins[field] = val
 				}
 			}
-			return sum
 		}
+		return mins
+	}
+
+        case "max":
+	return func(ms []telegraf.Metric, fields []string) map[string]float64 {
+		maxs := make(map[string]float64)
+		// Compute the minimum value of each of the selected fields
+		for _, m := range ms {
+			for _, field := range(fields){
+				field_val, ok := m.Fields()[field]
+				if ! ok {
+					continue // Skip if this metric doesn't have this field set
+	      		        }
+
+			        // Convert field to a float64
+			        val, ok := convert(field_val)
+			        if ! ok {
+				        panic(fmt.Sprintf("Cannot convert value '%s' from metric '%s' with tags '%s'",
+					                   m.Fields()[field], m.Name(), m.Tags()))
+			        }
+			
+			        // If this field has not been set, set it to the maximum float64
+			        _, ok = maxs[field]
+			        if ! ok {
+				        maxs[field] = -math.MaxFloat64
+			        }
+
+              			// Check if we've found a new minimum
+			        if maxs[field] < val {
+				        maxs[field] = val
+			        }
+			}
+		}
+		return maxs
+	}
+
 
 	default:
 		panic(fmt.Sprintf("Unknown aggregation function '%s'", t.Aggregation))
