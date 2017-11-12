@@ -124,7 +124,7 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		for _, metricPoint := range buildMetrics(m, w) {
 			metricLine := formatMetricPoint(metricPoint, w)
-			//log.Printf("D! Output [wavefront] %s", metricLine)
+			log.Printf("D! Output [wavefront] %s", metricLine)
 			_, err := connection.Write([]byte(metricLine))
 			if err != nil {
 				return fmt.Errorf("Wavefront: TCP writing error %s", err.Error())
@@ -261,6 +261,8 @@ func formatMetricPoint(metricPoint *MetricPoint, w *Wavefront) string {
 		buffer.WriteString(tagValueReplacer.Replace(v))
 		buffer.WriteString("\"")
 	}
+
+	buffer.WriteString("\n")
 
 	return buffer.String()
 }

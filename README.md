@@ -5,8 +5,7 @@ and writing metrics.
 
 Design goals are to have a minimal memory footprint with a plugin system so
 that developers in the community can easily add support for collecting metrics
-from well known services (like Hadoop, Postgres, or Redis) and third party
-APIs (like Mailchimp, AWS CloudWatch, or Google Analytics).
+from local or remote services.
 
 Telegraf is plugin-driven and has the concept of 4 distinct plugins:
 
@@ -193,9 +192,12 @@ configuration options.
 * [riak](./plugins/inputs/riak)
 * [salesforce](./plugins/inputs/salesforce)
 * [sensors](./plugins/inputs/sensors)
+* [smart](./plugins/inputs/smart)
 * [snmp](./plugins/inputs/snmp)
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
+* [solr](./plugins/inputs/solr)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
+* [teamspeak](./plugins/inputs/teamspeak)
 * [tomcat](./plugins/inputs/tomcat)
 * [twemproxy](./plugins/inputs/twemproxy)
 * [varnish](./plugins/inputs/varnish)
@@ -254,6 +256,7 @@ formats may be used with input plugins supporting the `data_format` option:
 
 ## Aggregator Plugins
 
+* [basicstats](./plugins/aggregators/basicstats)
 * [minmax](./plugins/aggregators/minmax)
 * [histogram](./plugins/aggregators/histogram)
 
@@ -264,6 +267,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [amqp](./plugins/outputs/amqp) (rabbitmq)
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
+* [cratedb](./plugins/outputs/cratedb)
 * [datadog](./plugins/outputs/datadog)
 * [discard](./plugins/outputs/discard)
 * [elasticsearch](./plugins/outputs/elasticsearch)

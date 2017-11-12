@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -14,26 +15,19 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type DockerLabelFilter struct {
-	labelInclude filter.Filter
-	labelExclude filter.Filter
-}
-
-type DockerContainerFilter struct {
-	containerInclude filter.Filter
-	containerExclude filter.Filter
-}
-
 // Docker object
 type Docker struct {
 	Endpoint       string
 	ContainerNames []string
+
+	GatherServices bool `toml:"gather_services"`
 
 	Timeout        internal.Duration
 	PerDevice      bool     `toml:"perdevice"`
@@ -41,11 +35,9 @@ type Docker struct {
 	TagEnvironment []string `toml:"tag_env"`
 	LabelInclude   []string `toml:"docker_label_include"`
 	LabelExclude   []string `toml:"docker_label_exclude"`
-	LabelFilter    DockerLabelFilter
 
 	ContainerInclude []string `toml:"container_name_include"`
 	ContainerExclude []string `toml:"container_name_exclude"`
-	ContainerFilter  DockerContainerFilter
 
 	SSLCA              string `toml:"ssl_ca"`
 	SSLCert            string `toml:"ssl_cert"`
@@ -55,10 +47,12 @@ type Docker struct {
 	newEnvClient func() (Client, error)
 	newClient    func(string, *tls.Config) (Client, error)
 
-	client         Client
-	httpClient     *http.Client
-	engine_host    string
-	filtersCreated bool
+	client          Client
+	httpClient      *http.Client
+	engine_host     string
+	filtersCreated  bool
+	labelFilter     filter.Filter
+	containerFilter filter.Filter
 }
 
 // KB, MB, GB, TB, PB...human friendly
@@ -81,6 +75,9 @@ var sampleConfig = `
   ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
+
+  ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
+  gather_services = false
 
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
@@ -160,6 +157,13 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		acc.AddError(err)
 	}
 
+	if d.GatherServices {
+		err := d.gatherSwarmInfo(acc)
+		if err != nil {
+			acc.AddError(err)
+		}
+	}
+
 	// List containers
 	opts := types.ContainerListOptions{}
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
@@ -183,6 +187,75 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		}(container)
 	}
 	wg.Wait()
+
+	return nil
+}
+
+func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
+
+	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	defer cancel()
+	services, err := d.client.ServiceList(ctx, types.ServiceListOptions{})
+	if err != nil {
+		return err
+	}
+
+	if len(services) > 0 {
+
+		tasks, err := d.client.TaskList(ctx, types.TaskListOptions{})
+		if err != nil {
+			return err
+		}
+
+		nodes, err := d.client.NodeList(ctx, types.NodeListOptions{})
+		if err != nil {
+			return err
+		}
+
+		running := map[string]int{}
+		tasksNoShutdown := map[string]int{}
+
+		activeNodes := make(map[string]struct{})
+		for _, n := range nodes {
+			if n.Status.State != swarm.NodeStateDown {
+				activeNodes[n.ID] = struct{}{}
+			}
+		}
+
+		for _, task := range tasks {
+			if task.DesiredState != swarm.TaskStateShutdown {
+				tasksNoShutdown[task.ServiceID]++
+			}
+
+			if task.Status.State == swarm.TaskStateRunning {
+				running[task.ServiceID]++
+			}
+		}
+
+		for _, service := range services {
+			tags := map[string]string{}
+			fields := make(map[string]interface{})
+			now := time.Now()
+			tags["service_id"] = service.ID
+			tags["service_name"] = service.Spec.Name
+			if service.Spec.Mode.Replicated != nil && service.Spec.Mode.Replicated.Replicas != nil {
+				tags["service_mode"] = "replicated"
+				fields["tasks_running"] = running[service.ID]
+				fields["tasks_desired"] = *service.Spec.Mode.Replicated.Replicas
+			} else if service.Spec.Mode.Global != nil {
+				tags["service_mode"] = "global"
+				fields["tasks_running"] = running[service.ID]
+				fields["tasks_desired"] = tasksNoShutdown[service.ID]
+			} else {
+				log.Printf("E! Unknow Replicas Mode")
+			}
+			// Add metrics
+			acc.AddFields("docker_swarm",
+				fields,
+				tags,
+				now)
+		}
+	}
 
 	return nil
 }
@@ -291,12 +364,8 @@ func (d *Docker) gatherContainer(
 		"container_version": imageVersion,
 	}
 
-	if len(d.ContainerInclude) > 0 || len(d.ContainerExclude) > 0 {
-		if len(d.ContainerInclude) == 0 || !d.ContainerFilter.containerInclude.Match(cname) {
-			if len(d.ContainerExclude) == 0 || d.ContainerFilter.containerExclude.Match(cname) {
-				return nil
-			}
-		}
+	if !d.containerFilter.Match(cname) {
+		return nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
@@ -317,10 +386,8 @@ func (d *Docker) gatherContainer(
 
 	// Add labels to tags
 	for k, label := range container.Labels {
-		if len(d.LabelInclude) == 0 || d.LabelFilter.labelInclude.Match(k) {
-			if len(d.LabelExclude) == 0 || !d.LabelFilter.labelExclude.Match(k) {
-				tags[k] = label
-			}
+		if d.labelFilter.Match(k) {
+			tags[k] = label
 		}
 	}
 
@@ -355,7 +422,11 @@ func gatherContainerStats(
 	total bool,
 	daemonOSType string,
 ) {
-	now := stat.Read
+	tm := stat.Read
+
+	if tm.Before(time.Unix(0, 0)) {
+		tm = time.Now()
+	}
 
 	memfields := map[string]interface{}{
 		"container_id": id,
@@ -415,7 +486,7 @@ func gatherContainerStats(
 		memfields["private_working_set"] = stat.MemoryStats.PrivateWorkingSet
 	}
 
-	acc.AddFields("docker_container_mem", memfields, tags, now)
+	acc.AddFields("docker_container_mem", memfields, tags, tm)
 
 	cpufields := map[string]interface{}{
 		"usage_total":                  stat.CPUStats.CPUUsage.TotalUsage,
@@ -440,7 +511,7 @@ func gatherContainerStats(
 
 	cputags := copyTags(tags)
 	cputags["cpu"] = "cpu-total"
-	acc.AddFields("docker_container_cpu", cpufields, cputags, now)
+	acc.AddFields("docker_container_cpu", cpufields, cputags, tm)
 
 	// If we have OnlineCPUs field, then use it to restrict stats gathering to only Online CPUs
 	// (https://github.com/moby/moby/commit/115f91d7575d6de6c7781a96a082f144fd17e400)
@@ -458,7 +529,7 @@ func gatherContainerStats(
 			"usage_total":  percpu,
 			"container_id": id,
 		}
-		acc.AddFields("docker_container_cpu", fields, percputags, now)
+		acc.AddFields("docker_container_cpu", fields, percputags, tm)
 	}
 
 	totalNetworkStatMap := make(map[string]interface{})
@@ -478,7 +549,7 @@ func gatherContainerStats(
 		if perDevice {
 			nettags := copyTags(tags)
 			nettags["network"] = network
-			acc.AddFields("docker_container_net", netfields, nettags, now)
+			acc.AddFields("docker_container_net", netfields, nettags, tm)
 		}
 		if total {
 			for field, value := range netfields {
@@ -511,17 +582,17 @@ func gatherContainerStats(
 		nettags := copyTags(tags)
 		nettags["network"] = "total"
 		totalNetworkStatMap["container_id"] = id
-		acc.AddFields("docker_container_net", totalNetworkStatMap, nettags, now)
+		acc.AddFields("docker_container_net", totalNetworkStatMap, nettags, tm)
 	}
 
-	gatherBlockIOMetrics(stat, acc, tags, now, id, perDevice, total)
+	gatherBlockIOMetrics(stat, acc, tags, tm, id, perDevice, total)
 }
 
 func gatherBlockIOMetrics(
 	stat *types.StatsJSON,
 	acc telegraf.Accumulator,
 	tags map[string]string,
-	now time.Time,
+	tm time.Time,
 	id string,
 	perDevice bool,
 	total bool,
@@ -592,7 +663,7 @@ func gatherBlockIOMetrics(
 		if perDevice {
 			iotags := copyTags(tags)
 			iotags["device"] = device
-			acc.AddFields("docker_container_blkio", fields, iotags, now)
+			acc.AddFields("docker_container_blkio", fields, iotags, tm)
 		}
 		if total {
 			for field, value := range fields {
@@ -623,7 +694,7 @@ func gatherBlockIOMetrics(
 		totalStatMap["container_id"] = id
 		iotags := copyTags(tags)
 		iotags["device"] = "total"
-		acc.AddFields("docker_container_blkio", totalStatMap, iotags, now)
+		acc.AddFields("docker_container_blkio", totalStatMap, iotags, tm)
 	}
 }
 
@@ -666,46 +737,25 @@ func parseSize(sizeStr string) (int64, error) {
 }
 
 func (d *Docker) createContainerFilters() error {
+	// Backwards compatibility for deprecated `container_names` parameter.
 	if len(d.ContainerNames) > 0 {
 		d.ContainerInclude = append(d.ContainerInclude, d.ContainerNames...)
 	}
 
-	if len(d.ContainerInclude) != 0 {
-		var err error
-		d.ContainerFilter.containerInclude, err = filter.Compile(d.ContainerInclude)
-		if err != nil {
-			return err
-		}
+	filter, err := filter.NewIncludeExcludeFilter(d.ContainerInclude, d.ContainerExclude)
+	if err != nil {
+		return err
 	}
-
-	if len(d.ContainerExclude) != 0 {
-		var err error
-		d.ContainerFilter.containerExclude, err = filter.Compile(d.ContainerExclude)
-		if err != nil {
-			return err
-		}
-	}
-
+	d.containerFilter = filter
 	return nil
 }
 
 func (d *Docker) createLabelFilters() error {
-	if len(d.LabelInclude) != 0 {
-		var err error
-		d.LabelFilter.labelInclude, err = filter.Compile(d.LabelInclude)
-		if err != nil {
-			return err
-		}
+	filter, err := filter.NewIncludeExcludeFilter(d.LabelInclude, d.LabelExclude)
+	if err != nil {
+		return err
 	}
-
-	if len(d.LabelExclude) != 0 {
-		var err error
-		d.LabelFilter.labelExclude, err = filter.Compile(d.LabelExclude)
-		if err != nil {
-			return err
-		}
-	}
-
+	d.labelFilter = filter
 	return nil
 }
 

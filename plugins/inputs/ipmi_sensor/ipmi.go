@@ -35,7 +35,7 @@ var sampleConfig = `
   ##
   # servers = ["USERID:PASSW0RD@lan(192.168.1.1)"]
 
-  ## Recomended: use metric 'interval' that is a multiple of 'timeout' to avoid
+  ## Recommended: use metric 'interval' that is a multiple of 'timeout' to avoid
   ## gaps or overlap in pulled data
   interval = "30s"
 

@@ -110,66 +110,8 @@ func TestHTTPClient_Write(t *testing.T) {
 	client, err := NewHTTP(config, wp)
 	defer client.Close()
 	assert.NoError(t, err)
-	n, err := client.Write([]byte("cpu value=99\n"))
-	assert.Equal(t, 13, n)
-	assert.NoError(t, err)
 
-	_, err = client.WriteStream(bytes.NewReader([]byte("cpu value=99\n")), 13)
-	assert.NoError(t, err)
-}
-
-func TestHTTPClient_WriteParamsOverride(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/write":
-			// test that database is set properly
-			if r.FormValue("db") != "override" {
-				w.WriteHeader(http.StatusTeapot)
-				w.Header().Set("Content-Type", "application/json")
-				fmt.Fprintln(w, `{"results":[{}],"error":"wrong db name"}`)
-			}
-
-			// Validate the request body:
-			buf := make([]byte, 100)
-			n, _ := r.Body.Read(buf)
-			expected := "cpu value=99"
-			got := string(buf[0 : n-1])
-			if expected != got {
-				w.WriteHeader(http.StatusTeapot)
-				w.Header().Set("Content-Type", "application/json")
-				msg := fmt.Sprintf(`{"results":[{}],"error":"expected [%s], got [%s]"}`, expected, got)
-				fmt.Fprintln(w, msg)
-			}
-
-			w.WriteHeader(http.StatusNoContent)
-			w.Header().Set("Content-Type", "application/json")
-		case "/query":
-			w.WriteHeader(http.StatusOK)
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintln(w, `{"results":[{}]}`)
-		}
-	}))
-	defer ts.Close()
-
-	config := HTTPConfig{
-		URL: ts.URL,
-	}
-	defaultWP := WriteParams{
-		Database: "test",
-	}
-	client, err := NewHTTP(config, defaultWP)
-	defer client.Close()
-	assert.NoError(t, err)
-
-	// test that WriteWithParams overrides the default write params
-	wp := WriteParams{
-		Database: "override",
-	}
-	n, err := client.WriteWithParams([]byte("cpu value=99\n"), wp)
-	assert.Equal(t, 13, n)
-	assert.NoError(t, err)
-
-	_, err = client.WriteStreamWithParams(bytes.NewReader([]byte("cpu value=99\n")), 13, wp)
+	err = client.WriteStream(bytes.NewReader([]byte("cpu value=99\n")))
 	assert.NoError(t, err)
 }
 
@@ -197,23 +139,7 @@ func TestHTTPClient_Write_Errors(t *testing.T) {
 	assert.NoError(t, err)
 
 	lp := []byte("cpu value=99\n")
-	n, err := client.Write(lp)
-	assert.Equal(t, 0, n)
-	assert.Error(t, err)
-
-	n, err = client.WriteStream(bytes.NewReader(lp), 13)
-	assert.Equal(t, 0, n)
-	assert.Error(t, err)
-
-	wp := WriteParams{
-		Database: "override",
-	}
-	n, err = client.WriteWithParams(lp, wp)
-	assert.Equal(t, 0, n)
-	assert.Error(t, err)
-
-	n, err = client.WriteStreamWithParams(bytes.NewReader(lp), 13, wp)
-	assert.Equal(t, 0, n)
+	err = client.WriteStream(bytes.NewReader(lp))
 	assert.Error(t, err)
 }
 
@@ -404,8 +330,6 @@ func TestHTTPClient_PathPrefix(t *testing.T) {
 	assert.NoError(t, err)
 	err = client.Query("CREATE DATABASE test")
 	assert.NoError(t, err)
-	_, err = client.Write([]byte("cpu value=99\n"))
-	assert.NoError(t, err)
-	_, err = client.WriteStream(bytes.NewReader([]byte("cpu value=99\n")), 13)
+	err = client.WriteStream(bytes.NewReader([]byte("cpu value=99\n")))
 	assert.NoError(t, err)
 }

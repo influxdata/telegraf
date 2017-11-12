@@ -63,7 +63,7 @@ exit_if_fail go test -race ./...
 # Simple Integration Tests
 #   check that one test cpu & mem output work
 tmpdir=$(mktemp -d)
-./telegraf -sample-config > $tmpdir/config.toml
+./telegraf config > $tmpdir/config.toml
 exit_if_fail ./telegraf -config $tmpdir/config.toml \
     -test -input-filter cpu:mem
 

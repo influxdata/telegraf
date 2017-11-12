@@ -17,6 +17,10 @@ This plugin gathers stats from [Varnish HTTP Cache](https://varnish-cache.org/)
    ## Setting stats will override the defaults shown below.
    ## stats may also be set to ["all"], which will collect all stats
    stats = ["MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"]
+
+   ## Optional name for the varnish instance (or working directory) to query
+   ## Usually appened after -n in varnish cli
+   #name = instanceName
 ```
 
 ### Measurements & Fields:
