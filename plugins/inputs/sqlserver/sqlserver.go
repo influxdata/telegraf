@@ -260,12 +260,16 @@ WHERE	(
 			'Connection Memory (KB)',
 			'Lock Memory (KB)',
 			'Memory broker clerk size',
-			'Page life expectancy')
+			'Page life expectancy',
+			'Log File(s) Size (KB)',
+            'Log File(s) Used Size (KB)',
+			'Data File(s) Size (KB)',
+			'Transactions/sec',
+			'Write Transactions/sec'
+		)
 		) OR (
 			instance_name IN ('_Total','Column store object pool')
 			AND counter_name IN (
-				'Transactions/sec',
-				'Write Transactions/sec',
 				'Log Flushes/sec',
 				'Log Flush Wait Time',
 				'Lock Timeouts/sec',
@@ -893,24 +897,31 @@ waiting_tasks_count DESC
 OPTION (RECOMPILE);
 `
 
-const sqlAzureDB string = `SELECT TOP(1)
-'sqlserver_azurestats' AS [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [server],
-avg_cpu_percent,
-avg_data_io_percent,
-avg_log_write_percent,
-avg_memory_usage_percent,
-xtp_storage_percent,
-max_worker_percent,
-max_session_percent,
-dtu_limit,
-avg_login_rate_percent,
-end_time 
-FROM
-sys.dm_db_resource_stats WITH (NOLOCK) 
-ORDER BY
-end_time DESC
-OPTION (RECOMPILE);`
+const sqlAzureDB string = `IF OBJECT_ID('sys.dm_db_resource_stats') IS NOT NULL
+BEGIN
+    SELECT TOP(1)
+        'sqlserver_azurestats' AS [measurement],
+        REPLACE(@@SERVERNAME,'\',':') AS [server],
+        avg_cpu_percent,
+        avg_data_io_percent,
+        avg_log_write_percent,
+        avg_memory_usage_percent,
+        xtp_storage_percent,
+        max_worker_percent,
+        max_session_percent,
+        dtu_limit,
+        avg_login_rate_percent,
+        end_time 
+    FROM
+        sys.dm_db_resource_stats WITH (NOLOCK) 
+    ORDER BY
+        end_time DESC
+    OPTION (RECOMPILE)
+END
+ELSE
+BEGIN
+    RAISERROR('This does not seem to be an AzureDB instance. Set "azureDB = false" in your telegraf configuration.',16,1)
+END`
 
 // Queries V1
 
