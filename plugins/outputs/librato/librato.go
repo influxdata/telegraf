@@ -80,6 +80,9 @@ func (l *Librato) Connect() error {
 			"api_user and api_token are required fields for librato output")
 	}
 	l.client = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
 		Timeout: l.Timeout.Duration,
 	}
 	return nil

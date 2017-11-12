@@ -2,7 +2,6 @@ package net_response
 
 import (
 	"net"
-	"regexp"
 	"sync"
 	"testing"
 	"time"
@@ -36,8 +35,18 @@ func TestTCPError(t *testing.T) {
 	}
 	// Error
 	err1 := c.Gather(&acc)
-	require.Error(t, err1)
-	assert.Contains(t, err1.Error(), "getsockopt: connection refused")
+	require.NoError(t, err1)
+	acc.AssertContainsTaggedFields(t,
+		"net_response",
+		map[string]interface{}{
+			"result_type": "connection_failed",
+		},
+		map[string]string{
+			"server":   "",
+			"port":     "9999",
+			"protocol": "tcp",
+		},
+	)
 }
 
 func TestTCPOK1(t *testing.T) {
@@ -68,6 +77,7 @@ func TestTCPOK1(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
+			"result_type":   "success",
 			"string_found":  true,
 			"response_time": 1.0,
 		},
@@ -108,6 +118,7 @@ func TestTCPOK2(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
+			"result_type":   "string_mismatch",
 			"string_found":  false,
 			"response_time": 1.0,
 		},
@@ -129,10 +140,26 @@ func TestUDPrror(t *testing.T) {
 		Expect:   "test",
 		Protocol: "udp",
 	}
-	// Error
+	// Gather
 	err1 := c.Gather(&acc)
-	require.Error(t, err1)
-	assert.Regexp(t, regexp.MustCompile(`read udp 127.0.0.1:[0-9]*->127.0.0.1:9999: recvfrom: connection refused`), err1.Error())
+	// Override response time
+	for _, p := range acc.Metrics {
+		p.Fields["response_time"] = 1.0
+	}
+	// Error
+	require.NoError(t, err1)
+	acc.AssertContainsTaggedFields(t,
+		"net_response",
+		map[string]interface{}{
+			"result_type":   "read_failed",
+			"response_time": 1.0,
+		},
+		map[string]string{
+			"server":   "",
+			"port":     "9999",
+			"protocol": "udp",
+		},
+	)
 }
 
 func TestUDPOK1(t *testing.T) {
@@ -163,6 +190,7 @@ func TestUDPOK1(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
+			"result_type":   "success",
 			"string_found":  true,
 			"response_time": 1.0,
 		},

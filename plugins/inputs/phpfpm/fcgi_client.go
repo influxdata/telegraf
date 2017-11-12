@@ -59,7 +59,7 @@ func (client *conn) Request(
 	rec := &record{}
 	var err1 error
 
-	// recive untill EOF or FCGI_END_REQUEST
+	// recive until EOF or FCGI_END_REQUEST
 READ_LOOP:
 	for {
 		err1 = rec.read(client.rwc)

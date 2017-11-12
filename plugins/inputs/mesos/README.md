@@ -243,7 +243,7 @@ Mesos slave metric groups
 
 ### Example Output:
 ```
-$ telegraf -config ~/mesos.conf -input-filter mesos -test
+$ telegraf --config ~/mesos.conf --input-filter mesos --test
 * Plugin: mesos, Collection 1
 mesos,role=master,state=leader,host=172.17.8.102,server=172.17.8.101
 allocator/event_queue_dispatches=0,master/cpus_percent=0,

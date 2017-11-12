@@ -4,10 +4,13 @@ import (
 	"io"
 	"log"
 	"os"
+	"regexp"
 	"time"
 
 	"github.com/influxdata/wlog"
 )
+
+var prefixRegex = regexp.MustCompile("^[DIWE]!")
 
 // newTelegrafWriter returns a logging-wrapped writer.
 func newTelegrafWriter(w io.Writer) io.Writer {
@@ -21,7 +24,13 @@ type telegrafLog struct {
 }
 
 func (t *telegrafLog) Write(b []byte) (n int, err error) {
-	return t.writer.Write(append([]byte(time.Now().UTC().Format(time.RFC3339)+" "), b...))
+	var line []byte
+	if !prefixRegex.Match(b) {
+		line = append([]byte(time.Now().UTC().Format(time.RFC3339)+" I! "), b...)
+	} else {
+		line = append([]byte(time.Now().UTC().Format(time.RFC3339)+" "), b...)
+	}
+	return t.writer.Write(line)
 }
 
 // SetupLogging configures the logging output.

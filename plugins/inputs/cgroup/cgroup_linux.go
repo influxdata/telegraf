@@ -22,10 +22,11 @@ func (g *CGroup) Gather(acc telegraf.Accumulator) error {
 
 	for dir := range list {
 		if dir.err != nil {
-			return dir.err
+			acc.AddError(dir.err)
+			continue
 		}
 		if err := g.gatherDir(dir.path, acc); err != nil {
-			return err
+			acc.AddError(err)
 		}
 	}
 
@@ -224,7 +225,7 @@ var fileFormats = [...]fileFormat{
 }
 
 func numberOrString(s string) interface{} {
-	i, err := strconv.Atoi(s)
+	i, err := strconv.ParseInt(s, 10, 64)
 	if err == nil {
 		return i
 	}

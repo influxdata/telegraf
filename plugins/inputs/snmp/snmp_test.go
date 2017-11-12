@@ -120,7 +120,7 @@ func TestSampleConfig(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(t, s, *conf.Inputs.Snmp[0])
+	assert.Equal(t, &s, conf.Inputs.Snmp[0])
 }
 
 func TestFieldInit(t *testing.T) {
@@ -251,13 +251,16 @@ func TestSnmpInit_noTranslate(t *testing.T) {
 
 func TestGetSNMPConnection_v2(t *testing.T) {
 	s := &Snmp{
+		Agents:    []string{"1.2.3.4:567", "1.2.3.4"},
 		Timeout:   internal.Duration{Duration: 3 * time.Second},
 		Retries:   4,
 		Version:   2,
 		Community: "foo",
 	}
+	err := s.init()
+	require.NoError(t, err)
 
-	gsc, err := s.getConnection("1.2.3.4:567")
+	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
 	gs := gsc.(gosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
@@ -265,7 +268,7 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 	assert.Equal(t, gosnmp.Version2c, gs.Version)
 	assert.Equal(t, "foo", gs.Community)
 
-	gsc, err = s.getConnection("1.2.3.4")
+	gsc, err = s.getConnection(1)
 	require.NoError(t, err)
 	gs = gsc.(gosnmpWrapper)
 	assert.Equal(t, "1.2.3.4", gs.Target)
@@ -274,6 +277,7 @@ func TestGetSNMPConnection_v2(t *testing.T) {
 
 func TestGetSNMPConnection_v3(t *testing.T) {
 	s := &Snmp{
+		Agents:         []string{"1.2.3.4"},
 		Version:        3,
 		MaxRepetitions: 20,
 		ContextName:    "mycontext",
@@ -287,8 +291,10 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 		EngineBoots:    1,
 		EngineTime:     2,
 	}
+	err := s.init()
+	require.NoError(t, err)
 
-	gsc, err := s.getConnection("1.2.3.4")
+	gsc, err := s.getConnection(0)
 	require.NoError(t, err)
 	gs := gsc.(gosnmpWrapper)
 	assert.Equal(t, gs.Version, gosnmp.Version3)
@@ -308,15 +314,22 @@ func TestGetSNMPConnection_v3(t *testing.T) {
 }
 
 func TestGetSNMPConnection_caching(t *testing.T) {
-	s := &Snmp{}
-	gs1, err := s.getConnection("1.2.3.4")
+	s := &Snmp{
+		Agents: []string{"1.2.3.4", "1.2.3.5", "1.2.3.5"},
+	}
+	err := s.init()
 	require.NoError(t, err)
-	gs2, err := s.getConnection("1.2.3.4")
+	gs1, err := s.getConnection(0)
 	require.NoError(t, err)
-	gs3, err := s.getConnection("1.2.3.5")
+	gs2, err := s.getConnection(0)
+	require.NoError(t, err)
+	gs3, err := s.getConnection(1)
+	require.NoError(t, err)
+	gs4, err := s.getConnection(2)
 	require.NoError(t, err)
 	assert.True(t, gs1 == gs2)
 	assert.False(t, gs2 == gs3)
+	assert.False(t, gs3 == gs4)
 }
 
 func TestGosnmpWrapper_walk_retry(t *testing.T) {
@@ -413,7 +426,8 @@ func TestGosnmpWrapper_get_retry(t *testing.T) {
 
 func TestTableBuild_walk(t *testing.T) {
 	tbl := Table{
-		Name: "mytable",
+		Name:       "mytable",
+		IndexAsTag: true,
 		Fields: []Field{
 			{
 				Name:  "myfield1",
@@ -442,7 +456,10 @@ func TestTableBuild_walk(t *testing.T) {
 
 	assert.Equal(t, tb.Name, "mytable")
 	rtr1 := RTableRow{
-		Tags: map[string]string{"myfield1": "foo"},
+		Tags: map[string]string{
+			"myfield1": "foo",
+			"index":    "0",
+		},
 		Fields: map[string]interface{}{
 			"myfield2": 1,
 			"myfield3": float64(0.123),
@@ -450,16 +467,38 @@ func TestTableBuild_walk(t *testing.T) {
 		},
 	}
 	rtr2 := RTableRow{
-		Tags: map[string]string{"myfield1": "bar"},
+		Tags: map[string]string{
+			"myfield1": "bar",
+			"index":    "1",
+		},
 		Fields: map[string]interface{}{
 			"myfield2": 2,
 			"myfield3": float64(0.456),
 			"myfield4": 22,
 		},
 	}
-	assert.Len(t, tb.Rows, 2)
+	rtr3 := RTableRow{
+		Tags: map[string]string{
+			"index": "2",
+		},
+		Fields: map[string]interface{}{
+			"myfield2": 0,
+			"myfield3": float64(0.0),
+		},
+	}
+	rtr4 := RTableRow{
+		Tags: map[string]string{
+			"index": "3",
+		},
+		Fields: map[string]interface{}{
+			"myfield3": float64(9.999),
+		},
+	}
+	assert.Len(t, tb.Rows, 4)
 	assert.Contains(t, tb.Rows, rtr1)
 	assert.Contains(t, tb.Rows, rtr2)
+	assert.Contains(t, tb.Rows, rtr3)
+	assert.Contains(t, tb.Rows, rtr4)
 }
 
 func TestTableBuild_noWalk(t *testing.T) {
@@ -534,11 +573,11 @@ func TestGather(t *testing.T) {
 			},
 		},
 
-		connectionCache: map[string]snmpConnection{
-			"TestGather": tsc,
+		connectionCache: []snmpConnection{
+			tsc,
 		},
+		initialized: true,
 	}
-
 	acc := &testutil.Accumulator{}
 
 	tstart := time.Now()
@@ -581,9 +620,10 @@ func TestGather_host(t *testing.T) {
 			},
 		},
 
-		connectionCache: map[string]snmpConnection{
-			"TestGather": tsc,
+		connectionCache: []snmpConnection{
+			tsc,
 		},
+		initialized: true,
 	}
 
 	acc := &testutil.Accumulator{}

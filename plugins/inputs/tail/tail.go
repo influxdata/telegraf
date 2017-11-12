@@ -1,11 +1,13 @@
+// +build !solaris
+
 package tail
 
 import (
 	"fmt"
-	"log"
+	"strings"
 	"sync"
 
-	"github.com/hpcloud/tail"
+	"github.com/influxdata/tail"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
@@ -13,10 +15,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
+const (
+	defaultWatchMethod = "inotify"
+)
+
 type Tail struct {
 	Files         []string
 	FromBeginning bool
 	Pipe          bool
+	WatchMethod   string
 
 	tailers []*tail.Tail
 	parser  parsers.Parser
@@ -48,8 +55,11 @@ const sampleConfig = `
   ## Whether file is a named pipe
   pipe = false
 
+  ## Method used to watch for file updates.  Can be either "inotify" or "poll".
+  # watch_method = "inotify"
+
   ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
@@ -81,12 +91,16 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 		}
 	}
 
-	var errS string
+	var poll bool
+	if t.WatchMethod == "poll" {
+		poll = true
+	}
+
 	// Create a "tailer" for each file
 	for _, filepath := range t.Files {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
-			log.Printf("E! Error Glob %s failed to compile, %s", filepath, err)
+			t.acc.AddError(fmt.Errorf("E! Error Glob %s failed to compile, %s", filepath, err))
 		}
 		for file, _ := range g.Match() {
 			tailer, err := tail.TailFile(file,
@@ -95,10 +109,12 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 					Follow:    true,
 					Location:  seek,
 					MustExist: true,
+					Poll:      poll,
 					Pipe:      t.Pipe,
+					Logger:    tail.DiscardingLogger,
 				})
 			if err != nil {
-				errS += err.Error() + " "
+				acc.AddError(err)
 				continue
 			}
 			// create a goroutine for each "tailer"
@@ -108,9 +124,6 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 		}
 	}
 
-	if errS != "" {
-		return fmt.Errorf(errS)
-	}
 	return nil
 }
 
@@ -124,21 +137,24 @@ func (t *Tail) receiver(tailer *tail.Tail) {
 	var line *tail.Line
 	for line = range tailer.Lines {
 		if line.Err != nil {
-			log.Printf("E! Error tailing file %s, Error: %s\n",
-				tailer.Filename, err)
+			t.acc.AddError(fmt.Errorf("E! Error tailing file %s, Error: %s\n",
+				tailer.Filename, err))
 			continue
 		}
-		m, err = t.parser.ParseLine(line.Text)
+		// Fix up files with Windows line endings.
+		text := strings.TrimRight(line.Text, "\r")
+
+		m, err = t.parser.ParseLine(text)
 		if err == nil {
 			t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 		} else {
-			log.Printf("E! Malformed log line in %s: [%s], Error: %s\n",
-				tailer.Filename, line.Text, err)
+			t.acc.AddError(fmt.Errorf("E! Malformed log line in %s: [%s], Error: %s\n",
+				tailer.Filename, line.Text, err))
 		}
 	}
 	if err := tailer.Err(); err != nil {
-		log.Printf("E! Error tailing file %s, Error: %s\n",
-			tailer.Filename, err)
+		t.acc.AddError(fmt.Errorf("E! Error tailing file %s, Error: %s\n",
+			tailer.Filename, err))
 	}
 }
 
@@ -146,12 +162,12 @@ func (t *Tail) Stop() {
 	t.Lock()
 	defer t.Unlock()
 
-	for _, t := range t.tailers {
-		err := t.Stop()
+	for _, tailer := range t.tailers {
+		err := tailer.Stop()
 		if err != nil {
-			log.Printf("E! Error stopping tail on file %s\n", t.Filename)
+			t.acc.AddError(fmt.Errorf("E! Error stopping tail on file %s\n", tailer.Filename))
 		}
-		t.Cleanup()
+		tailer.Cleanup()
 	}
 	t.wg.Wait()
 }

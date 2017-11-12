@@ -135,7 +135,7 @@ type Snmp struct {
 	Name   string
 	Fields []Field `toml:"field"`
 
-	connectionCache map[string]snmpConnection
+	connectionCache []snmpConnection
 	initialized     bool
 }
 
@@ -143,6 +143,8 @@ func (s *Snmp) init() error {
 	if s.initialized {
 		return nil
 	}
+
+	s.connectionCache = make([]snmpConnection, len(s.Agents))
 
 	for i := range s.Tables {
 		if err := s.Tables[i].init(); err != nil {
@@ -167,6 +169,9 @@ type Table struct {
 
 	// Which tags to inherit from the top-level config.
 	InheritTags []string
+
+	// Adds each row's table index as a tag.
+	IndexAsTag bool
 
 	// Fields is the tags and values to look up.
 	Fields []Field `toml:"field"`
@@ -311,6 +316,7 @@ func Errorf(err error, msg string, format ...interface{}) error {
 func init() {
 	inputs.Add("snmp", func() telegraf.Input {
 		return &Snmp{
+			Name:           "snmp",
 			Retries:        3,
 			MaxRepetitions: 10,
 			Timeout:        internal.Duration{Duration: 5 * time.Second},
@@ -338,30 +344,36 @@ func (s *Snmp) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	for _, agent := range s.Agents {
-		gs, err := s.getConnection(agent)
-		if err != nil {
-			acc.AddError(Errorf(err, "agent %s", agent))
-			continue
-		}
-
-		// First is the top-level fields. We treat the fields as table prefixes with an empty index.
-		t := Table{
-			Name:   s.Name,
-			Fields: s.Fields,
-		}
-		topTags := map[string]string{}
-		if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
-			acc.AddError(Errorf(err, "agent %s", agent))
-		}
-
-		// Now is the real tables.
-		for _, t := range s.Tables {
-			if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
-				acc.AddError(Errorf(err, "agent %s: gathering table %s", agent, t.Name))
+	var wg sync.WaitGroup
+	for i, agent := range s.Agents {
+		wg.Add(1)
+		go func(i int, agent string) {
+			defer wg.Done()
+			gs, err := s.getConnection(i)
+			if err != nil {
+				acc.AddError(Errorf(err, "agent %s", agent))
+				return
 			}
-		}
+
+			// First is the top-level fields. We treat the fields as table prefixes with an empty index.
+			t := Table{
+				Name:   s.Name,
+				Fields: s.Fields,
+			}
+			topTags := map[string]string{}
+			if err := s.gatherTable(acc, gs, t, topTags, false); err != nil {
+				acc.AddError(Errorf(err, "agent %s", agent))
+			}
+
+			// Now is the real tables.
+			for _, t := range s.Tables {
+				if err := s.gatherTable(acc, gs, t, topTags, true); err != nil {
+					acc.AddError(Errorf(err, "agent %s: gathering table %s", agent, t.Name))
+				}
+			}
+		}(i, agent)
 	}
+	wg.Wait()
 
 	return nil
 }
@@ -433,9 +445,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				if err != nil {
 					return nil, Errorf(err, "converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name)
 				}
-				if fvs, ok := fv.(string); !ok || fvs != "" {
-					ifv[""] = fv
-				}
+				ifv[""] = fv
 			}
 		} else {
 			err := gs.Walk(oid, func(ent gosnmp.SnmpPDU) error {
@@ -456,9 +466,7 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 				if err != nil {
 					return Errorf(err, "converting %q (OID %s) for field %s", ent.Value, ent.Name, f.Name)
 				}
-				if fvs, ok := fv.(string); !ok || fvs != "" {
-					ifv[idx] = fv
-				}
+				ifv[idx] = fv
 				return nil
 			})
 			if err != nil {
@@ -468,22 +476,31 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 			}
 		}
 
-		for i, v := range ifv {
-			rtr, ok := rows[i]
+		for idx, v := range ifv {
+			rtr, ok := rows[idx]
 			if !ok {
 				rtr = RTableRow{}
 				rtr.Tags = map[string]string{}
 				rtr.Fields = map[string]interface{}{}
-				rows[i] = rtr
+				rows[idx] = rtr
 			}
-			if f.IsTag {
-				if vs, ok := v.(string); ok {
-					rtr.Tags[f.Name] = vs
-				} else {
-					rtr.Tags[f.Name] = fmt.Sprintf("%v", v)
+			if t.IndexAsTag && idx != "" {
+				if idx[0] == '.' {
+					idx = idx[1:]
 				}
-			} else {
-				rtr.Fields[f.Name] = v
+				rtr.Tags["index"] = idx
+			}
+			// don't add an empty string
+			if vs, ok := v.(string); !ok || vs != "" {
+				if f.IsTag {
+					if ok {
+						rtr.Tags[f.Name] = vs
+					} else {
+						rtr.Tags[f.Name] = fmt.Sprintf("%v", v)
+					}
+				} else {
+					rtr.Fields[f.Name] = v
+				}
 			}
 		}
 	}
@@ -494,10 +511,6 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 		Rows: make([]RTableRow, 0, len(rows)),
 	}
 	for _, r := range rows {
-		if len(r.Tags) < tagCount {
-			// don't add rows which are missing tags, as without tags you can't filter
-			continue
-		}
 		rt.Rows = append(rt.Rows, r)
 	}
 	return &rt, nil
@@ -563,16 +576,18 @@ func (gsw gosnmpWrapper) Get(oids []string) (*gosnmp.SnmpPacket, error) {
 }
 
 // getConnection creates a snmpConnection (*gosnmp.GoSNMP) object and caches the
-// result using `agent` as the cache key.
-func (s *Snmp) getConnection(agent string) (snmpConnection, error) {
-	if s.connectionCache == nil {
-		s.connectionCache = map[string]snmpConnection{}
-	}
-	if gs, ok := s.connectionCache[agent]; ok {
+// result using `agentIndex` as the cache key.  This is done to allow multiple
+// connections to a single address.  It is an error to use a connection in
+// more than one goroutine.
+func (s *Snmp) getConnection(idx int) (snmpConnection, error) {
+	if gs := s.connectionCache[idx]; gs != nil {
 		return gs, nil
 	}
 
+	agent := s.Agents[idx]
+
 	gs := gosnmpWrapper{&gosnmp.GoSNMP{}}
+	s.connectionCache[idx] = gs
 
 	host, portStr, err := net.SplitHostPort(agent)
 	if err != nil {
@@ -672,7 +687,6 @@ func (s *Snmp) getConnection(agent string) (snmpConnection, error) {
 		return nil, Errorf(err, "setting up connection")
 	}
 
-	s.connectionCache[agent] = gs
 	return gs, nil
 }
 

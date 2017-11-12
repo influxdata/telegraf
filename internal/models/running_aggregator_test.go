@@ -24,7 +24,7 @@ func TestAdd(t *testing.T) {
 	})
 	assert.NoError(t, ra.Config.Filter.Compile())
 	acc := testutil.Accumulator{}
-	go ra.Run(&acc, make(chan struct{}))
+	go ra.Run(&acc, time.Now(), make(chan struct{}))
 
 	m := ra.MakeMetric(
 		"RITest",
@@ -55,7 +55,7 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 	})
 	assert.NoError(t, ra.Config.Filter.Compile())
 	acc := testutil.Accumulator{}
-	go ra.Run(&acc, make(chan struct{}))
+	go ra.Run(&acc, time.Now(), make(chan struct{}))
 
 	// metric before current period
 	m := ra.MakeMetric(
@@ -113,7 +113,7 @@ func TestAddAndPushOnePeriod(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ra.Run(&acc, shutdown)
+		ra.Run(&acc, time.Now(), shutdown)
 	}()
 
 	m := ra.MakeMetric(

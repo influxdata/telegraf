@@ -3,6 +3,7 @@ package models
 import (
 	"log"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -77,7 +78,27 @@ func makemetric(
 		}
 	}
 
+	for k, v := range tags {
+		if strings.HasSuffix(k, `\`) {
+			log.Printf("D! Measurement [%s] tag [%s] "+
+				"ends with a backslash, skipping", measurement, k)
+			delete(tags, k)
+			continue
+		} else if strings.HasSuffix(v, `\`) {
+			log.Printf("D! Measurement [%s] tag [%s] has a value "+
+				"ending with a backslash, skipping", measurement, k)
+			delete(tags, k)
+			continue
+		}
+	}
+
 	for k, v := range fields {
+		if strings.HasSuffix(k, `\`) {
+			log.Printf("D! Measurement [%s] field [%s] "+
+				"ends with a backslash, skipping", measurement, k)
+			delete(fields, k)
+			continue
+		}
 		// Validate uint64 and float64 fields
 		// convert all int & uint types to int64
 		switch val := v.(type) {
@@ -128,6 +149,8 @@ func makemetric(
 				delete(fields, k)
 				continue
 			}
+		case string:
+			fields[k] = v
 		default:
 			fields[k] = v
 		}

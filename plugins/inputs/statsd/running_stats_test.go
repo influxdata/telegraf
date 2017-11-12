@@ -23,11 +23,17 @@ func TestRunningStats_Single(t *testing.T) {
 	if rs.Lower() != 10.1 {
 		t.Errorf("Expected %v, got %v", 10.1, rs.Lower())
 	}
+	if rs.Percentile(100) != 10.1 {
+		t.Errorf("Expected %v, got %v", 10.1, rs.Percentile(100))
+	}
 	if rs.Percentile(90) != 10.1 {
 		t.Errorf("Expected %v, got %v", 10.1, rs.Percentile(90))
 	}
 	if rs.Percentile(50) != 10.1 {
 		t.Errorf("Expected %v, got %v", 10.1, rs.Percentile(50))
+	}
+	if rs.Percentile(0) != 10.1 {
+		t.Errorf("Expected %v, got %v", 10.1, rs.Percentile(0))
 	}
 	if rs.Count() != 1 {
 		t.Errorf("Expected %v, got %v", 1, rs.Count())
@@ -58,11 +64,17 @@ func TestRunningStats_Duplicate(t *testing.T) {
 	if rs.Lower() != 10.1 {
 		t.Errorf("Expected %v, got %v", 10.1, rs.Lower())
 	}
+	if rs.Percentile(100) != 10.1 {
+		t.Errorf("Expected %v, got %v", 10.1, rs.Percentile(100))
+	}
 	if rs.Percentile(90) != 10.1 {
 		t.Errorf("Expected %v, got %v", 10.1, rs.Percentile(90))
 	}
 	if rs.Percentile(50) != 10.1 {
 		t.Errorf("Expected %v, got %v", 10.1, rs.Percentile(50))
+	}
+	if rs.Percentile(0) != 10.1 {
+		t.Errorf("Expected %v, got %v", 10.1, rs.Percentile(0))
 	}
 	if rs.Count() != 4 {
 		t.Errorf("Expected %v, got %v", 4, rs.Count())
@@ -93,11 +105,17 @@ func TestRunningStats(t *testing.T) {
 	if rs.Lower() != 5 {
 		t.Errorf("Expected %v, got %v", 5, rs.Lower())
 	}
+	if rs.Percentile(100) != 45 {
+		t.Errorf("Expected %v, got %v", 45, rs.Percentile(100))
+	}
 	if rs.Percentile(90) != 32 {
 		t.Errorf("Expected %v, got %v", 32, rs.Percentile(90))
 	}
 	if rs.Percentile(50) != 11 {
 		t.Errorf("Expected %v, got %v", 11, rs.Percentile(50))
+	}
+	if rs.Percentile(0) != 5 {
+		t.Errorf("Expected %v, got %v", 5, rs.Percentile(0))
 	}
 	if rs.Count() != 16 {
 		t.Errorf("Expected %v, got %v", 4, rs.Count())

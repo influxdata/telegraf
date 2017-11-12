@@ -24,7 +24,7 @@ func TestGathering(t *testing.T) {
 	}
 	var acc testutil.Accumulator
 
-	err := dnsConfig.Gather(&acc)
+	err := acc.GatherError(dnsConfig.Gather)
 	assert.NoError(t, err)
 	metric, ok := acc.Get("dns_query")
 	require.True(t, ok)
@@ -44,7 +44,7 @@ func TestGatheringMxRecord(t *testing.T) {
 	var acc testutil.Accumulator
 	dnsConfig.RecordType = "MX"
 
-	err := dnsConfig.Gather(&acc)
+	err := acc.GatherError(dnsConfig.Gather)
 	assert.NoError(t, err)
 	metric, ok := acc.Get("dns_query")
 	require.True(t, ok)
@@ -70,7 +70,7 @@ func TestGatheringRootDomain(t *testing.T) {
 	}
 	fields := map[string]interface{}{}
 
-	err := dnsConfig.Gather(&acc)
+	err := acc.GatherError(dnsConfig.Gather)
 	assert.NoError(t, err)
 	metric, ok := acc.Get("dns_query")
 	require.True(t, ok)
@@ -96,7 +96,7 @@ func TestMetricContainsServerAndDomainAndRecordTypeTags(t *testing.T) {
 	}
 	fields := map[string]interface{}{}
 
-	err := dnsConfig.Gather(&acc)
+	err := acc.GatherError(dnsConfig.Gather)
 	assert.NoError(t, err)
 	metric, ok := acc.Get("dns_query")
 	require.True(t, ok)
@@ -121,7 +121,7 @@ func TestGatheringTimeout(t *testing.T) {
 
 	channel := make(chan error, 1)
 	go func() {
-		channel <- dnsConfig.Gather(&acc)
+		channel <- acc.GatherError(dnsConfig.Gather)
 	}()
 	select {
 	case res := <-channel:

@@ -10,9 +10,10 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	//"github.com/stretchr/testify/require"
 )
 
 func TestCleanTags(t *testing.T) {
@@ -29,8 +30,16 @@ func TestCleanTags(t *testing.T) {
 			map[string]string{"aaa": "bbb"},
 		},
 		{
-			map[string]string{"Sp%ci@l Chars": "g$t repl#ced"},
-			map[string]string{"Sp-ci-l_Chars": "g-t_repl-ced"},
+			map[string]string{"Sp%ci@l Chars[": "g$t repl#ce)d"},
+			map[string]string{"Sp-ci-l_Chars_": "g-t_repl-ce_d"},
+		},
+		{
+			map[string]string{"μnicodε_letters": "okαy"},
+			map[string]string{"μnicodε_letters": "okαy"},
+		},
+		{
+			map[string]string{"n☺": "emojies☠"},
+			map[string]string{"n_": "emojies_"},
 		},
 		{
 			map[string]string{},
@@ -72,6 +81,47 @@ func TestBuildTagsTelnet(t *testing.T) {
 		if !reflect.DeepEqual(tags, tt.outTags) {
 			t.Errorf("\nexpected %+v\ngot %+v\n", tt.outTags, tags)
 		}
+	}
+}
+
+func TestSanitize(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    string
+		expected string
+	}{
+		{
+			name:     "Ascii letters and numbers allowed",
+			value:    "ascii 123",
+			expected: "ascii_123",
+		},
+		{
+			name:     "Allowed punct",
+			value:    "-_./",
+			expected: "-_./",
+		},
+		{
+			name:     "Special conversions to hyphen",
+			value:    "@*%#$!",
+			expected: "-----_",
+		},
+		{
+			name:     "Unicode Letters allowed",
+			value:    "μnicodε_letters",
+			expected: "μnicodε_letters",
+		},
+		{
+			name:     "Other Unicode not allowed",
+			value:    "“☢”",
+			expected: "___",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := sanitize(tt.value)
+			require.Equal(t, tt.expected, actual)
+		})
 	}
 }
 
@@ -133,7 +183,7 @@ func BenchmarkHttpSend(b *testing.B) {
 // 	err = o.Write(testutil.MockMetrics())
 // 	require.NoError(t, err)
 
-// 	// Verify postive and negative test cases of writing data
+// 	// Verify positive and negative test cases of writing data
 // 	metrics := testutil.MockMetrics()
 // 	metrics = append(metrics, testutil.TestMetric(float64(1.0),
 // 		"justametric.float"))

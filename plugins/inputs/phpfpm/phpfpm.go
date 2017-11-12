@@ -80,19 +80,17 @@ func (g *phpfpm) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 
-	var outerr error
-
 	for _, serv := range g.Urls {
 		wg.Add(1)
 		go func(serv string) {
 			defer wg.Done()
-			outerr = g.gatherServer(serv, acc)
+			acc.AddError(g.gatherServer(serv, acc))
 		}(serv)
 	}
 
 	wg.Wait()
 
-	return outerr
+	return nil
 }
 
 // Request status page to get stat raw data and import it

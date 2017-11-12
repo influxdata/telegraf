@@ -12,14 +12,13 @@ type Connection struct {
 	Hostname  string
 	Username  string
 	Password  string
-	Path      string
 	Port      int
 	Interface string
 }
 
 func NewConnection(server string) *Connection {
 	conn := &Connection{}
-	inx1 := strings.Index(server, "@")
+	inx1 := strings.LastIndex(server, "@")
 	inx2 := strings.Index(server, "(")
 	inx3 := strings.Index(server, ")")
 
