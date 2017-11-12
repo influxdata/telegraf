@@ -81,6 +81,7 @@ golang.org/x/crypto dc137beb6cce2043eb6b5f223ab8bf51c32459f4
 golang.org/x/net f2499483f923065a842d38eb4c7f1927e6fc6e6d
 golang.org/x/sys 739734461d1c916b6c72a63d7efda2b27edb369f
 golang.org/x/text 506f9d5c962f284575e88337e7d9296d27e729d3
+google.golang.org/grpc 54222d50cc54928f54ebb47ad55797858e0a0268
 gopkg.in/asn1-ber.v1 4e86f4367175e39f69d9358a5f17b4dda270378d
 gopkg.in/fatih/pool.v2 6e328e67893eb46323ad06f0e92cb9536babbabc
 gopkg.in/fsnotify.v1 a8a77c9133d2d6fd8334f3260d06f60e8d80a5fb
