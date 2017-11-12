@@ -78,7 +78,7 @@ func initQueries(version int, azureDB bool) {
 	// Decide if we want to run version 1 or version 2 queries
 	if version == 2 {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCountersV2, ResultByRow: true}
-		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorizedV2, ResultByRow: true}
+		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorizedV2, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -315,7 +315,7 @@ WHERE	(
 SELECT  'sqlserver_performance' AS [measurement],
         pc.object_name AS [object],
         pc.counter_name AS [counter],
-		CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE pc.instance_name END AS [instance],
+		CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
         CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value * 1.0) / (pc1.cntr_value * 1.0) * 100 ELSE pc.cntr_value END AS [value],
         CASE 
             WHEN pc.cntr_type = 272696576 THEN 'rate'
