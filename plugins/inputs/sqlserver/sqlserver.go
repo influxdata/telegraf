@@ -16,6 +16,7 @@ import (
 type SQLServer struct {
 	Servers      []string
 	QueryVersion int
+	AzureDB      bool
 }
 
 // Query struct
@@ -66,12 +67,18 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func initQueries(v int) {
+func initQueries(version int, azureDB bool) {
 	queries = make(MapQuery)
-	if v == 2 {
+
+	// If this is an AzureDB instance, grab some extra metrics
+	if azureDB {
+		queries["AzureDB"] = Query{Script: sqlAzureDB, ResultByRow: true}
+	}
+
+	// Decide if we want to run version 1 or version 2 queries
+	if version == 2 {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCountersV2, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorizedV2, ResultByRow: true}
-		queries["AzureDB"] = Query{Script: sqlAzureDB, ResultByRow: true}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -84,13 +91,15 @@ func initQueries(v int) {
 		queries["VolumeSpace"] = Query{Script: sqlVolumeSpace, ResultByRow: false}
 		queries["PerformanceMetrics"] = Query{Script: sqlPerformanceMetrics, ResultByRow: false}
 	}
+
+	// Set a flag so we know that queries have already been initialized
 	isInitialized = true
 }
 
 // Gather collect data from SQL Server
 func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	if !isInitialized {
-		initQueries(s.QueryVersion)
+		initQueries(s.QueryVersion, s.AzureDB)
 	}
 
 	if len(s.Servers) == 0 {
