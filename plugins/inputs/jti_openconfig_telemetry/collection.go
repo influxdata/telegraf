@@ -1,4 +1,4 @@
-package openconfig_telemetry
+package jti_openconfig_telemetry
 
 import "sort"
 

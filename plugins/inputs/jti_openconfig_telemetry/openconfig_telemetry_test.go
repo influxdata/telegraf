@@ -1,4 +1,4 @@
-package openconfig_telemetry
+package jti_openconfig_telemetry
 
 import (
 	"log"
@@ -10,7 +10,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	"github.com/influxdata/telegraf/plugins/inputs/openconfig_telemetry/oc"
+	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )

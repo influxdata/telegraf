@@ -1,4 +1,4 @@
-package openconfig_telemetry
+package jti_openconfig_telemetry
 
 import (
 	"io"
@@ -11,8 +11,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/openconfig_telemetry/auth"
-	"github.com/influxdata/telegraf/plugins/inputs/openconfig_telemetry/oc"
+	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
+	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -79,7 +79,7 @@ func (m *OpenConfigTelemetry) SampleConfig() string {
 }
 
 func (m *OpenConfigTelemetry) Description() string {
-	return "Read OpenConfig Telemetry from listed sensors"
+	return "Read JTI OpenConfig Telemetry from listed sensors"
 }
 
 func (m *OpenConfigTelemetry) SetParser(parser parsers.Parser) {
@@ -118,7 +118,7 @@ func spitTagsNPath(xmlpath string) (string, map[string]string) {
 }
 
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
-	log.Print("I! Started OpenConfig Telemetry plugin\n")
+	log.Print("I! Started JTI OpenConfig Telemetry plugin\n")
 
 	m.Lock()
 	defer m.Unlock()
@@ -318,7 +318,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("openconfig_telemetry", func() telegraf.Input {
+	inputs.Add("jti_openconfig_telemetry", func() telegraf.Input {
 		return &OpenConfigTelemetry{}
 	})
 }
