@@ -92,10 +92,16 @@ func TestOpenConfigTelemetryData(t *testing.T) {
 	tags := map[string]string{
 		"device":       "127.0.0.1",
 		"/sensor/@tag": "tagValue",
+		"_system_id":   "",
+		"_path":        "/sensor",
 	}
 
 	fields := map[string]interface{}{
-		"/sensor/intKey": int64(10),
+		"/sensor/intKey":   int64(10),
+		"_sequence":        uint64(0),
+		"_timestamp":       uint64(0),
+		"_component_id":    uint32(0),
+		"_subcomponent_id": uint32(0),
 	}
 
 	// Give sometime for gRPC channel to be established
@@ -111,11 +117,17 @@ func TestOpenConfigTelemetryDataWithPrefix(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{
-		"device": "127.0.0.1",
+		"device":     "127.0.0.1",
+		"_system_id": "",
+		"_path":      "/sensor_with_prefix",
 	}
 
 	fields := map[string]interface{}{
 		"/sensor/prefix/intKey": int64(10),
+		"_sequence":             uint64(0),
+		"_timestamp":            uint64(0),
+		"_component_id":         uint32(0),
+		"_subcomponent_id":      uint32(0),
 	}
 
 	// Give sometime for gRPC channel to be established
@@ -133,18 +145,30 @@ func TestOpenConfigTelemetryDataWithMultipleTags(t *testing.T) {
 	tags1 := map[string]string{
 		"/sensor/prefix/tagKey/@tag": "tagValue",
 		"device":                     "127.0.0.1",
+		"_system_id":                 "",
+		"_path":                      "/sensor_with_multiple_tags",
 	}
 
 	fields1 := map[string]interface{}{
 		"/sensor/prefix/tagKey/boolKey": false,
+		"_sequence":                     uint64(0),
+		"_timestamp":                    uint64(0),
+		"_component_id":                 uint32(0),
+		"_subcomponent_id":              uint32(0),
 	}
 
 	tags2 := map[string]string{
-		"device": "127.0.0.1",
+		"device":     "127.0.0.1",
+		"_system_id": "",
+		"_path":      "/sensor_with_multiple_tags",
 	}
 
 	fields2 := map[string]interface{}{
 		"/sensor/prefix/intKey": int64(10),
+		"_sequence":             uint64(0),
+		"_timestamp":            uint64(0),
+		"_component_id":         uint32(0),
+		"_subcomponent_id":      uint32(0),
 	}
 
 	// Give sometime for gRPC channel to be established
@@ -163,10 +187,16 @@ func TestOpenConfigTelemetryDataWithStringValues(t *testing.T) {
 	tags := map[string]string{
 		"/sensor/prefix/strKey/@tag": "tagValue",
 		"device":                     "127.0.0.1",
+		"_system_id":                 "",
+		"_path":                      "/sensor_with_string_values",
 	}
 
 	fields := map[string]interface{}{
-		"/sensor/prefix/strKey/strValue": int64(10),
+		"/sensor/prefix/strKey/strValue": "10",
+		"_sequence":                      uint64(0),
+		"_timestamp":                     uint64(0),
+		"_component_id":                  uint32(0),
+		"_subcomponent_id":               uint32(0),
 	}
 
 	// Give sometime for gRPC channel to be established
