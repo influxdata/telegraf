@@ -416,7 +416,7 @@ func scanFields(buf []byte, i int) (int, []byte, error) {
 	}
 
 	if quotes != 0 && quotes != 2 {
-		return i, buf[start:i], makeError("unescaped/ublanaced quotes", buf, i)
+		return i, buf[start:i], makeError("unbalanced quotes", buf, i)
 	}
 
 	// check that all field sections had key and values (e.g. prevent "a=1,b"
