@@ -6,11 +6,11 @@ The procstat plugin can be used to monitor system resource usage by an
 individual process using their /proc data.
 
 Processes can be specified either by pid file, by executable name, by command
-line pattern matching, or by username (in this order or priority. Procstat
-plugin will use `pgrep` when executable name is provided to obtain the pid.
-Procstat plugin will transmit IO, memory, cpu, file descriptor related
-measurements for every process specified. A prefix can be set to isolate
-individual process specific measurements.
+line pattern matching, by username, by systemd unit name, or by cgroup name/path
+(in this order or priority). Procstat plugin will use `pgrep` when executable
+name is provided to obtain the pid. Procstat plugin will transmit IO, memory,
+cpu, file descriptor related measurements for every process specified. A prefix
+can be set to isolate individual process specific measurements.
 
 The plugin will tag processes according to how they are specified in the configuration. If a pid file is used, a "pidfile" tag will be generated.
 On the other hand, if an executable is used an "exe" tag will be generated. Possible tag names:
@@ -19,6 +19,8 @@ On the other hand, if an executable is used an "exe" tag will be generated. Poss
 * exe
 * pattern
 * user
+* systemd_unit
+* cgroup
 
 Additionally the plugin will tag processes by their PID (pid_tag = true in the config) and their process name:
 
