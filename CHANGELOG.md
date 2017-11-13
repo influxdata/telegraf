@@ -66,6 +66,7 @@
 - [#3319](https://github.com/influxdata/telegraf/issues/3319): Fix cloudwatch output requires unneeded permissions.
 - [#3351](https://github.com/influxdata/telegraf/issues/3351): Fix prometheus passthrough for existing value types.
 - [#3430](https://github.com/influxdata/telegraf/issues/3430): Always ignore autofs filesystems in disk input.
+- [#3326](https://github.com/influxdata/telegraf/issues/3326): Fail metrics parsing on unescaped quotes.
 
 ## v1.4.4 [2017-11-08]
 
