@@ -57,6 +57,7 @@
 - [#3305](https://github.com/influxdata/telegraf/pull/3305): Add modification_time field to filestat input plugin.
 - [#2019](https://github.com/influxdata/telegraf/pull/2019): Add Solr input plugin.
 - [#3210](https://github.com/influxdata/telegraf/pull/3210): Add CrateDB output plugin.
+- [#3459](https://github.com/influxdata/telegraf/pull/3459): Add systemd unit pid and cgroup matching to procstat.
 
 ### Bugfixes
 

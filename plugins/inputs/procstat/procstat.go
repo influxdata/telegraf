@@ -49,8 +49,8 @@ var sampleConfig = `
   # user = "nginx"
   ## Systemd unit name
   # systemd_unit = "nginx.service"
-	## CGroup name or path
-	# cgroup = "systemd/system.slice/nginx.service"
+  ## CGroup name or path
+  # cgroup = "systemd/system.slice/nginx.service"
 
   ## override for process_name
   ## This is optional; default is sourced from /proc/<pid>/status
