@@ -1,41 +1,42 @@
 package vsphere
 
 import (
+	"context"
 	"github.com/influxdata/telegraf"
-	"github.com/vmware/govmomi/vim25/soap"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/vmware/govmomi"
+	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vim25/mo"
-	"context"
-	"github.com/vmware/govmomi/performance"
+	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"time"
 	"log"
 	"net/url"
+	"time"
 )
 
 type Endpoint struct {
-	Parent *VSphere
-	Url *url.URL
+	Parent    *VSphere
+	Url       *url.URL
 	intervals []int32
-	lastColl map[string]time.Time
+	lastColl  map[string]time.Time
 }
 
 type VSphere struct {
-	Vcenters []string
-	VmInterval int32
-	HostInterval int32
-	ClusterInterval int32
-	DatastoreInterval int32
-	MaxSamples int32
-	MaxQuery int32
-	endpoints []Endpoint
+	Vcenters          []string
+	VmInterval        internal.Duration
+	HostInterval      internal.Duration
+	ClusterInterval   internal.Duration
+	DatastoreInterval internal.Duration
+	MaxSamples        int32
+	MaxQuery          int32
+	endpoints         []Endpoint
 }
 
 type objectRef struct {
-	name string
-	ref types.ManagedObjectReference
+	name      string
+	ref       types.ManagedObjectReference
 	parentRef *types.ManagedObjectReference //Pointer because it must be nillable
 }
 
@@ -61,11 +62,12 @@ func (e *Endpoint) init(p *performance.Manager) error {
 }
 
 func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Context, alias string, acc telegraf.Accumulator,
-	objects objectMap, nameCache map[string]string, interval int32) error {
+	objects objectMap, nameCache map[string]string, intervalDuration internal.Duration) error {
 
-	// Interval = -1 means collection for this metric was diabled, so don't even bother.
+	// Interval = 0 means collection for this metric was diabled, so don't even bother.
 	//
-	if interval == -1 {
+	interval := int32(intervalDuration.Duration.Seconds())
+	if interval == 0 {
 		return nil
 	}
 
@@ -74,12 +76,12 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 	now := time.Now()
 	nIntervals := int32(1)
 	latest, hasLatest := e.lastColl[alias]
-	if (hasLatest) {
+	if hasLatest {
 		elapsed := time.Now().Sub(latest).Seconds()
 		if elapsed < float64(interval) {
 			// No new data would be available. We're outta here!
 			//
-			return nil;
+			return nil
 		}
 		nIntervals := int32(elapsed / (float64(interval)))
 		if nIntervals > e.Parent.MaxSamples {
@@ -93,20 +95,20 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 	start := time.Now()
 	log.Printf("D! Query for %s returned %d objects", alias, len(objects))
 	pqs := make([]types.PerfQuerySpec, 0, e.Parent.MaxQuery)
-	total := 0;
+	total := 0
 	for _, object := range objects {
 		pq := types.PerfQuerySpec{
-			Entity: object.ref,
-			MaxSample: nIntervals,
-			MetricId: nil,
+			Entity:     object.ref,
+			MaxSample:  nIntervals,
+			MetricId:   nil,
 			IntervalId: interval,
 		}
-		if(interval > 20) {
+		if interval > 20 {
 			startTime := now.Add(-time.Duration(interval) * time.Second)
 			pq.StartTime = &startTime
 			pq.EndTime = &now
 		}
-		if(e.Parent.MaxSamples > 1 && hasLatest) {
+		if e.Parent.MaxSamples > 1 && hasLatest {
 			pq.StartTime = &latest
 			pq.EndTime = &now
 		}
@@ -115,7 +117,7 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 
 		// Filled up a chunk or at end of data? Run a query with the collected objects
 		//
-		if len(pqs) >= int(e.Parent.MaxQuery) || total == len(objects)  {
+		if len(pqs) >= int(e.Parent.MaxQuery) || total == len(objects) {
 			log.Printf("D! Querying %d objects of type %s for %s. Total processed: %d. Total objects %d\n", len(pqs), alias, e.Url.Host, total, len(objects))
 			metrics, err := p.Query(ctx, pqs)
 			if err != nil {
@@ -134,20 +136,19 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 				for _, v := range em.Value {
 					name := v.Name
 					for idx, value := range v.Value {
-						f := map[string]interface{} { name: value }
+						f := map[string]interface{}{name: value}
 						objectName := nameCache[moid]
 						parent := ""
 						parentRef := objects[moid].parentRef
-						//log.Printf("Parentref=%s", parentRef)
 						if parentRef != nil {
 							parent = nameCache[parentRef.Value]
 						}
 
 						t := map[string]string{
-							"vcenter": e.Url.Host,
-							"source": objectName,
-							"moid": moid,
-							"parent": parent}
+							"vcenter":  e.Url.Host,
+							"hostname": objectName,
+							"moid":     moid,
+							"parent":   parent}
 						if v.Instance != "" {
 							t["instance"] = v.Instance
 						}
@@ -159,7 +160,6 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 		}
 	}
 
-
 	log.Printf("D! Collection of %s took %v\n", alias, time.Now().Sub(start))
 	return nil
 }
@@ -167,14 +167,14 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 	c, err := govmomi.NewClient(ctx, e.Url, true)
-	if(err != nil) {
+	if err != nil {
 		return err
 	}
 
 	defer c.Logout(ctx)
 
 	m := view.NewManager(c.Client)
-	v, err := m.CreateContainerView(ctx, c.ServiceContent.RootFolder, []string{ }, true)
+	v, err := m.CreateContainerView(ctx, c.ServiceContent.RootFolder, []string{}, true)
 	if err != nil {
 		return err
 	}
@@ -183,6 +183,7 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 
 	p := performance.NewManager(c.Client)
 
+	//TODO:
 	// This causes strange error messages in the vCenter console. Possibly due to a bug in
 	// govmomi. We're commenting it out for now. Should be benign since the logout should
 	// destroy all resources anyway.
@@ -196,7 +197,7 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 
 	// Collect cluster metrics
 	//
-	clusterMap, err := e.getClusters(ctx, v);
+	clusterMap, err := e.getClusters(ctx, v)
 	if err != nil {
 		return err
 	}
@@ -244,7 +245,7 @@ func (e *Endpoint) getVMs(ctx context.Context, root *view.ContainerView) (object
 	m := make(objectMap)
 	for _, r := range resources {
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Summary.Config.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host }
+			name: r.Summary.Config.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host}
 	}
 	return m, nil
 }
@@ -258,7 +259,7 @@ func (e *Endpoint) getHosts(ctx context.Context, root *view.ContainerView) (obje
 	m := make(objectMap)
 	for _, r := range resources {
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Summary.Config.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent }
+			name: r.Summary.Config.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
 	}
 	return m, nil
 }
@@ -272,20 +273,20 @@ func (e *Endpoint) getClusters(ctx context.Context, root *view.ContainerView) (o
 	m := make(objectMap)
 	for _, r := range resources {
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent }
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
 	}
 	return m, nil
 }
 
 func (e *Endpoint) getDatastores(ctx context.Context, root *view.ContainerView) (objectMap, error) {
 	var resources []mo.Datastore
-	err := root.Retrieve(ctx, []string{"Datastore"}, []string{"summary" }, &resources)
+	err := root.Retrieve(ctx, []string{"Datastore"}, []string{"summary"}, &resources)
 	if err != nil {
 		return nil, err
 	}
 	m := make(objectMap)
 	for _, r := range resources {
-		m[r.Summary.Name] = objectRef{ ref:r.ExtensibleManagedObject.Reference(), parentRef: r.Parent }
+		m[r.Summary.Name] = objectRef{ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
 	}
 	return m, nil
 }
@@ -303,26 +304,31 @@ func (v *VSphere) Description() string {
 	return "Read metrics from VMware vCenter"
 }
 
-func (v *VSphere) Init()  {
+func (v *VSphere) vSphereInit() {
 	if v.endpoints != nil {
 		return
 	}
+
 	v.endpoints = make([]Endpoint, len(v.Vcenters))
 	for i, rawUrl := range v.Vcenters {
-		u, err := soap.ParseURL(rawUrl);
-		if(err != nil) {
+		u, err := soap.ParseURL(rawUrl)
+		if err != nil {
 			log.Printf("E! Can't parse URL %s\n", rawUrl)
 		}
 		v.endpoints[i] = Endpoint{
-			Url: u,
-			Parent: v,
-			lastColl: make(map[string]time.Time)}
+			Url:      u,
+			Parent:   v,
+			lastColl: make(map[string]time.Time),
+		}
 	}
 }
 
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
+
+	v.vSphereInit()
+
 	start := time.Now()
-	v.Init()
+
 	results := make(chan error)
 	defer close(results)
 	for _, ep := range v.endpoints {
@@ -330,32 +336,32 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 			results <- target.collect(acc)
 		}(ep)
 	}
+
 	var finalErr error = nil
 	for range v.endpoints {
-		err := <- results
+		err := <-results
 		if err != nil {
 			log.Println("E!", err)
 			finalErr = err
 		}
 	}
-	acc.AddCounter("telegraf.vsphere",
-		map[string]interface{}{ "gather.duration": time.Now().Sub(start).Seconds()}, nil, time.Now())
+
+	// Add another counter to show how long it took to gather all the metrics on this cycle (can be used to tune # of vCenters and collection intervals per telegraf agent)
+	acc.AddCounter("vsphere", map[string]interface{}{"gather.duration": time.Now().Sub(start).Seconds()}, nil, time.Now())
+
 	return finalErr
 }
 
 func init() {
 	inputs.Add("vsphere", func() telegraf.Input {
 		return &VSphere{
-			Vcenters: []string {},
-			VmInterval: 20,
-			HostInterval: 20,
-			ClusterInterval: 300,
-			DatastoreInterval: 300,
-			MaxSamples: 10,
-			MaxQuery: 64,
+			Vcenters:          []string{},
+			VmInterval:        internal.Duration{Duration: time.Second * 150},
+			HostInterval:      internal.Duration{Duration: time.Second * 150},
+			ClusterInterval:   internal.Duration{Duration: time.Second * 300},
+			DatastoreInterval: internal.Duration{Duration: time.Second * 300},
+			MaxSamples:        10,
+			MaxQuery:          64,
 		}
 	})
 }
-
-
-
