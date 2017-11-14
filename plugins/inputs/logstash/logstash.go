@@ -91,12 +91,7 @@ func (l *Logstash) SampleConfig() string { return sampleConfig }
 //createHttpClient create clients to access API
 func (l *Logstash) createHTTPClient() (*http.Client, error) {
 
-	tr := &http.Transport{
-		ResponseHeaderTimeout: time.Duration(3 * time.Second),
-	}
-
 	client := &http.Client{
-		Transport: tr,
 		Timeout:   time.Duration(4 * time.Second),
 	}
 
