@@ -323,7 +323,11 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, metr
 
 		endTag := strings.Index(indexName, "}")
 
-		if endTag >= 0 {
+		if endTag < 0 {
+
+			startTag = -1
+
+		} else {
 
 			tagName := indexName[startTag+2 : endTag]
 			found := false
@@ -346,12 +350,9 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, metr
 				indexName = tagReplacer.Replace(indexName)
 
 			}
-		} else {
-			startTag = -1
+
+			startTag = strings.Index(indexName, "${")
 		}
-
-		startTag = strings.Index(indexName, "${")
-
 	}
 
 	return indexName
