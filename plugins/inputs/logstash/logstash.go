@@ -27,24 +27,15 @@ type Logstash struct {
 	client      *http.Client
 }
 
-// CommonData provides struct shared between all API calls
-type CommonData struct {
-	Host        string `json:"host"`
-	Version     string `json:"version"`
-	HTTPAddress string `json:"http_address"`
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-}
-
 // JVMStats data structure
 type JVMStats struct {
-	CommonData CommonData
+	ID          string `json:"id"`
 	JVM        interface{} `json:"jvm"`
 }
 
 //ProcessStats data structure
 type ProcessStats struct {
-	CommonData CommonData
+	ID          string `json:"id"`
 	Process    interface{} `json:"process"`
 }
 
@@ -87,7 +78,7 @@ type Pipeline struct {
 
 //PipelineStats data structure
 type PipelineStats struct {
-	CommonData CommonData
+	ID          string `json:"id"`
 	Pipeline   Pipeline `json:"pipeline"`
 }
 
@@ -140,7 +131,7 @@ func (l *Logstash) gatherJVMStats(url string, acc telegraf.Accumulator) error {
 	}
 
 	tags := map[string]string{
-		"node_id": JVMStats.CommonData.ID,
+		"node_id": JVMStats.ID,
 	}
 
 	stats := map[string]interface{}{
@@ -168,7 +159,7 @@ func (l *Logstash) gatherProcessStats(url string, acc telegraf.Accumulator) erro
 	}
 
 	tags := map[string]string{
-		"node_id": ProcessStats.CommonData.ID,
+		"node_id": ProcessStats.ID,
 	}
 
 	stats := map[string]interface{}{
@@ -196,7 +187,7 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 	}
 
 	tags := map[string]string{
-		"node_id": PipelineStats.CommonData.ID,
+		"node_id": PipelineStats.ID,
 	}
 
 	stats := map[string]interface{}{
