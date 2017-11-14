@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -249,15 +250,21 @@ func (l *Logstash) Gather(acc telegraf.Accumulator) error {
 		l.client = client
 	}
 
-	if err := l.gatherJVMStats(l.LogstashURL+jvmStats, acc); err != nil {
+	url, err := url.Parse(l.LogstashURL+jvmStats)
+	if err != nil { return err}
+	if err := l.gatherJVMStats(url.String(), acc); err != nil {
 		return err
 	}
 
-	if err := l.gatherProcessStats(l.LogstashURL+processStats, acc); err != nil {
+	url, err = url.Parse(l.LogstashURL+processStats)
+	if err != nil { return err}
+	if err := l.gatherProcessStats(url.String(), acc); err != nil {
 		return err
 	}
 
-	if err := l.gatherPipelineStats(l.LogstashURL+pipelineStats, acc); err != nil {
+	url, err = url.Parse(l.LogstashURL+pipelineStats)
+	if err != nil { return err}
+	if err := l.gatherPipelineStats(url.String(), acc); err != nil {
 		return err
 	}
 
