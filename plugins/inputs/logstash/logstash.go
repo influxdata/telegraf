@@ -16,14 +16,14 @@ const sampleConfig = `
   ## This plugin reads metrics exposed by Logstash Monitoring API.
   #
   # logstashURL = "http://localhost:9600"
-  logstashURL = "http://localhost:9600"
+  URL = "http://localhost:9600"
 `
 const jvmStats = "/_node/stats/jvm"
 const processStats = "/_node/stats/process"
 const pipelineStats = "/_node/stats/pipeline"
 
 type Logstash struct {
-	LogstashURL string
+	URL string
 	client      *http.Client
 }
 
@@ -241,21 +241,21 @@ func (l *Logstash) Gather(acc telegraf.Accumulator) error {
 		l.client = client
 	}
 
-	url, err := url.Parse(l.LogstashURL+jvmStats)
+	jvm_url, err := url.Parse(l.URL+jvmStats)
 	if err != nil { return err}
-	if err := l.gatherJVMStats(url.String(), acc); err != nil {
+	if err := l.gatherJVMStats(jvm_url.String(), acc); err != nil {
 		return err
 	}
 
-	url, err = url.Parse(l.LogstashURL+processStats)
+	process_url, err := url.Parse(l.URL+processStats)
 	if err != nil { return err}
-	if err := l.gatherProcessStats(url.String(), acc); err != nil {
+	if err := l.gatherProcessStats(process_url.String(), acc); err != nil {
 		return err
 	}
 
-	url, err = url.Parse(l.LogstashURL+pipelineStats)
+	pipeline_url, err := url.Parse(l.URL+pipelineStats)
 	if err != nil { return err}
-	if err := l.gatherPipelineStats(url.String(), acc); err != nil {
+	if err := l.gatherPipelineStats(pipeline_url.String(), acc); err != nil {
 		return err
 	}
 
