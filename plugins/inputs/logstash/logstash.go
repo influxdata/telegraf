@@ -22,46 +22,39 @@ const jvmStats = "/_node/stats/jvm"
 const processStats = "/_node/stats/process"
 const pipelineStats = "/_node/stats/pipeline"
 
-// Logstash Plugin Struct
 type Logstash struct {
 	LogstashURL string
 	client      *http.Client
 }
 
-// JVMStats data structure
 type JVMStats struct {
-	ID          string `json:"id"`
+	ID         string      `json:"id"`
 	JVM        interface{} `json:"jvm"`
 }
 
-//ProcessStats data structure
 type ProcessStats struct {
-	ID          string `json:"id"`
+	ID         string      `json:"id"`
 	Process    interface{} `json:"process"`
 }
 
-//PluginEvents data structure
 type PluginEvents struct {
 	DurationInMillis float64 `json:"duration_in_millis"`
 	In               float64 `json:"in"`
 	Out              float64 `json:"out"`
 }
 
-//Plugin data structure
 type Plugin struct {
 	ID     string       `json:"id"`
 	Events PluginEvents `json:"events"`
 	Name   string       `json:"name"`
 }
 
-//PipelinePlugins data structure
 type PipelinePlugins struct {
 	Inputs  []Plugin `json:"inputs"`
 	Filters []Plugin `json:"filters"`
 	Outputs []Plugin `json:"outputs"`
 }
 
-//PipelineQueue data structure
 type PipelineQueue struct {
 	Events   float64     `json:"events"`
 	Qtype    string      `json:"type"`
@@ -69,7 +62,6 @@ type PipelineQueue struct {
 	Data     interface{} `json:"data"`
 }
 
-//Pipeline data structure
 type Pipeline struct {
 	Events  interface{}     `json:"events"`
 	Plugins PipelinePlugins `json:"plugins"`
@@ -77,9 +69,8 @@ type Pipeline struct {
 	Queue   PipelineQueue   `json:"queue"`
 }
 
-//PipelineStats data structure
 type PipelineStats struct {
-	ID          string `json:"id"`
+	ID         string   `json:"id"`
 	Pipeline   Pipeline `json:"pipeline"`
 }
 
