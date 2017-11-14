@@ -250,17 +250,14 @@ func (l *Logstash) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if err := l.gatherJVMStats(l.LogstashURL+jvmStats, acc); err != nil {
-		err = fmt.Errorf("Can't gather JVM Stats from: " + l.LogstashURL + jvmStats)
 		return err
 	}
 
 	if err := l.gatherProcessStats(l.LogstashURL+processStats, acc); err != nil {
-		err = fmt.Errorf("Can't gather Process Stats from: " + l.LogstashURL + processStats)
 		return err
 	}
 
 	if err := l.gatherPipelineStats(l.LogstashURL+pipelineStats, acc); err != nil {
-		err = fmt.Errorf("Can't gather Pipeline Stats from: " + l.LogstashURL + pipelineStats)
 		return err
 	}
 
