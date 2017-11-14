@@ -224,7 +224,7 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 			"in":                 plugin.Events.In,
 			"out":                plugin.Events.Out,
 		}
-		acc.AddFields("logstash_plugin_input_"+plugin.Name, fields, tags, now)
+		acc.AddFields("logstash_plugins,plugin="+plugin.Name+",type=input", fields, tags, now)
 	}
 
 	// Filters Plugins
@@ -236,7 +236,7 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 			"in":                 plugin.Events.In,
 			"out":                plugin.Events.Out,
 		}
-		acc.AddFields("logstash_plugin_filter_"+plugin.Name, fields, tags, now)
+		acc.AddFields("logstash_plugins,plugin="+plugin.Name+",type=filter", fields, tags, now)
 	}
 
 	// Output Plugins
@@ -248,7 +248,7 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 			"in":                 plugin.Events.In,
 			"out":                plugin.Events.Out,
 		}
-		acc.AddFields("logstash_plugin_output_"+plugin.Name, fields, tags, now)
+		acc.AddFields("logstash_plugins,plugin="+plugin.Name+",type=output", fields, tags, now)
 	}
 
 	return nil
