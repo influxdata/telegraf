@@ -83,48 +83,75 @@ func TestTemplateManagement(t *testing.T) {
 }
 
 func TestGetIndexName(t *testing.T) {
-	e := &Elasticsearch{}
+	e := &Elasticsearch{
+		DefaultTagValue: "none",
+	}
 
 	var tests = []struct {
 		EventTime time.Time
+		Tags      map[string]string
 		IndexName string
 		Expected  string
 	}{
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
 			"indexname",
 			"indexname",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
 			"indexname-%Y",
 			"indexname-2014",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
 			"indexname-%Y-%m",
 			"indexname-2014-12",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
 			"indexname-%Y-%m-%d",
 			"indexname-2014-12-01",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
 			"indexname-%Y-%m-%d-%H",
 			"indexname-2014-12-01-23",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
 			"indexname-%y-%m",
 			"indexname-14-12",
 		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
+			"indexname-${tag1}-%y-%m",
+			"indexname-value1-14-12",
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
+			"indexname-${tag1}-${tag2}-%y-%m",
+			"indexname-value1-value2-14-12",
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
+			"indexname-${tag1}-${tag2}-${tag3}-%y-%m",
+			"indexname-value1-value2-none-14-12",
+		},
 	}
 	for _, test := range tests {
-		indexName := e.GetIndexName(test.IndexName, test.EventTime)
+		indexName := e.GetIndexName(test.IndexName, test.EventTime, test.Tags)
 		if indexName != test.Expected {
-			t.Errorf("Expected indexname %s, got %s\n", indexName, test.Expected)
+			t.Errorf("Expected indexname %s, got %s\n", test.Expected, indexName)
 		}
 	}
 }

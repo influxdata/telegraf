@@ -3,20 +3,22 @@ package elasticsearch
 import (
 	"context"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/outputs"
-	"gopkg.in/olivere/elastic.v5"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/outputs"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 type Elasticsearch struct {
 	URLs                []string `toml:"urls"`
 	IndexName           string
+	DefaultTagValue     string
 	Username            string
 	Password            string
 	EnableSniffer       bool
@@ -58,6 +60,11 @@ var sampleConfig = `
   # %m - month (01..12)
   # %d - day of month (e.g., 01)
   # %H - hour (00..23)
+  ## Additionally, you can specify a tag name using the notation ${tag_name} 
+  ## which will be used as part of the index name. If the tag does not exist, 
+  ## the default tag value will be used.
+  # index_name = "telegraf-${host}-%Y.%m.%d"
+  # default_tag_value = "none"
   index_name = "telegraf-%Y.%m.%d" # required.
 
   ## Optional SSL Config
@@ -165,7 +172,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
-		indexName := a.GetIndexName(a.IndexName, metric.Time())
+		indexName := a.GetIndexName(a.IndexName, metric.Time(), metric.Tags())
 
 		m := make(map[string]interface{})
 
@@ -216,6 +223,10 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 
 	if strings.Contains(a.IndexName, "%") {
 		templatePattern = a.IndexName[0:strings.Index(a.IndexName, "%")] + "*"
+	}
+
+	if strings.Contains(a.IndexName, "$") {
+		templatePattern = templatePattern[0:strings.Index(templatePattern, "$")] + "*"
 	}
 
 	if (a.OverwriteTemplate) || (!templateExists) {
@@ -293,7 +304,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	return nil
 }
 
-func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time) string {
+func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, metricTags map[string]string) string {
 	if strings.Contains(indexName, "%") {
 		var dateReplacer = strings.NewReplacer(
 			"%Y", eventTime.UTC().Format("2006"),
@@ -304,6 +315,43 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time) stri
 		)
 
 		indexName = dateReplacer.Replace(indexName)
+	}
+
+	startTag := strings.Index(indexName, "${")
+
+	for startTag >= 0 {
+
+		endTag := strings.Index(indexName, "}")
+
+		if endTag >= 0 {
+
+			tagName := indexName[startTag+2 : endTag]
+			found := false
+
+			for k := range metricTags {
+				if k == tagName {
+					found = true
+					var tagReplacer = strings.NewReplacer(
+						"${"+tagName+"}", metricTags[k],
+					)
+					indexName = tagReplacer.Replace(indexName)
+				}
+			}
+
+			if found != true {
+				log.Printf("D! Tag %s not found, using '%s' instead\n", tagName, a.DefaultTagValue)
+				var tagReplacer = strings.NewReplacer(
+					"${"+tagName+"}", a.DefaultTagValue,
+				)
+				indexName = tagReplacer.Replace(indexName)
+
+			}
+		} else {
+			startTag = -1
+		}
+
+		startTag = strings.Index(indexName, "${")
+
 	}
 
 	return indexName
