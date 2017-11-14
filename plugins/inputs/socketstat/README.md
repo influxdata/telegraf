@@ -17,7 +17,7 @@ The ss command does not require specific privileges.
 - socketstat
     - state (string)
     - proto (string)
-    - If ss provides it (depends on the version):
+    - For tcp, if ss provides it (depends on the version):
         - bytes_acked (integer, bytes)
         - bytes_received (integer, bytes)
         - segs_out (integer, count)
