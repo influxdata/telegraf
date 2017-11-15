@@ -60,10 +60,10 @@ var sampleConfig = `
   # %m - month (01..12)
   # %d - day of month (e.g., 01)
   # %H - hour (00..23)
-  ## Additionally, you can specify a tag name using the notation ${tag_name} 
+  ## Additionally, you can specify a tag name using the notation {{tag_name}} 
   ## which will be used as part of the index name. If the tag does not exist, 
   ## the default tag value will be used.
-  # index_name = "telegraf-${host}-%Y.%m.%d"
+  # index_name = "telegraf-{{host}}-%Y.%m.%d"
   # default_tag_value = "none"
   index_name = "telegraf-%Y.%m.%d" # required.
 
@@ -317,11 +317,11 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, metr
 		indexName = dateReplacer.Replace(indexName)
 	}
 
-	startTag := strings.Index(indexName, "${")
+	startTag := strings.Index(indexName, "{{")
 
 	for startTag >= 0 {
 
-		endTag := strings.Index(indexName, "}")
+		endTag := strings.Index(indexName, "}}")
 
 		if endTag < 0 {
 
@@ -330,28 +330,29 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, metr
 		} else {
 
 			tagName := indexName[startTag+2 : endTag]
+			tagNameTrim := strings.TrimSpace(tagName)
 			found := false
 
 			for k := range metricTags {
-				if k == tagName {
+				if k == tagNameTrim {
 					found = true
 					var tagReplacer = strings.NewReplacer(
-						"${"+tagName+"}", metricTags[k],
+						"{{"+tagName+"}}", metricTags[k],
 					)
 					indexName = tagReplacer.Replace(indexName)
 				}
 			}
 
 			if found != true {
-				log.Printf("D! Tag %s not found, using '%s' instead\n", tagName, a.DefaultTagValue)
+				log.Printf("D! Tag %s not found, using '%s' instead\n", tagNameTrim, a.DefaultTagValue)
 				var tagReplacer = strings.NewReplacer(
-					"${"+tagName+"}", a.DefaultTagValue,
+					"{{"+tagName+"}}", a.DefaultTagValue,
 				)
 				indexName = tagReplacer.Replace(indexName)
 
 			}
 
-			startTag = strings.Index(indexName, "${")
+			startTag = strings.Index(indexName, "{{")
 		}
 	}
 

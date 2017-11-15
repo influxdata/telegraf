@@ -132,26 +132,26 @@ func TestGetIndexName(t *testing.T) {
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
-			"indexname-${tag1}-%y-%m",
+			"indexname-{{tag1}}-%y-%m",
 			"indexname-value1-14-12",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
-			"indexname-${tag1}-${tag2}-%y-%m",
+			"indexname-{{tag1}}-{{tag2}}-%y-%m",
 			"indexname-value1-value2-14-12",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
-			"indexname-${tag1}-${tag2}-${tag3}-%y-%m",
+			"indexname-{{tag1}}-{{ tag2 }}-{{tag3}}-%y-%m",
 			"indexname-value1-value2-none-14-12",
 		},
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
-			"indexname-${tag1}-${tag2}-${tag3-%y-%m",
-			"indexname-value1-value2-${tag3-14-12",
+			"indexname-{{tag1}}-{{tag2}}-{{tag3}-%y-%m",
+			"indexname-value1-value2-{{tag3}-14-12",
 		},
 	}
 	for _, test := range tests {
