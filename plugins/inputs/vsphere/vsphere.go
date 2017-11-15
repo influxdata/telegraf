@@ -32,15 +32,15 @@ type Endpoint struct {
 }
 
 type VSphere struct {
-	Vcenters                []string
-	VmInterval              internal.Duration
-	HostInterval            internal.Duration
-	ClusterInterval         internal.Duration
-	DatastoreInterval       internal.Duration
-	ObjectDiscoveryInterval internal.Duration
-	MaxSamples              int32
-	MaxQuery                int32
-	endpoints               []Endpoint
+	Vcenters                     []string
+	VmSamplingInterval           internal.Duration
+	HostSamplingInterval         internal.Duration
+	ClusterSamplingInterval      internal.Duration
+	DatastoreSamplingInterval    internal.Duration
+	ObjDiscoverySamplingInterval internal.Duration
+	MaxSamples                   int32
+	MaxQuery                     int32
+	endpoints                    []Endpoint
 }
 
 type objectRef struct {
@@ -262,17 +262,17 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 	defer conn.Close()
 
 	ctx := context.Background()
-	err = e.collectResourceType(conn.Perf, ctx, "cluster", acc, e.clusterMap, e.nameCache, e.Parent.ClusterInterval)
+	err = e.collectResourceType(conn.Perf, ctx, "cluster", acc, e.clusterMap, e.nameCache, e.Parent.ClusterSamplingInterval)
 	if err != nil {
 		return err
 	}
 
-	err = e.collectResourceType(conn.Perf, ctx, "host", acc, e.hostMap, e.nameCache, e.Parent.HostInterval)
+	err = e.collectResourceType(conn.Perf, ctx, "host", acc, e.hostMap, e.nameCache, e.Parent.HostSamplingInterval)
 	if err != nil {
 		return err
 	}
 
-	err = e.collectResourceType(conn.Perf, ctx, "vm", acc, e.vmMap, e.nameCache, e.Parent.VmInterval)
+	err = e.collectResourceType(conn.Perf, ctx, "vm", acc, e.vmMap, e.nameCache, e.Parent.VmSamplingInterval)
 	if err != nil {
 		return err
 	}
@@ -368,40 +368,35 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 
 	start := time.Now()
 
-	results := make(chan error)
-	defer close(results)
+	var wg sync.WaitGroup
+
 	for _, ep := range v.endpoints {
+		wg.Add(1)
 		go func(target Endpoint) {
-			results <- target.collect(acc)
+			defer wg.Done()
+			acc.AddError(target.collect(acc))
 		}(ep)
 	}
 
-	var finalErr error = nil
-	for range v.endpoints {
-		err := <-results
-		if err != nil {
-			log.Println("E!", err)
-			finalErr = err
-		}
-	}
+	wg.Wait()
 
 	// Add another counter to show how long it took to gather all the metrics on this cycle (can be used to tune # of vCenters and collection intervals per telegraf agent)
 	acc.AddCounter("vsphere", map[string]interface{}{"gather.duration": time.Now().Sub(start).Seconds()}, nil, time.Now())
 
-	return finalErr
+	return nil
 }
 
 func init() {
 	inputs.Add("vsphere", func() telegraf.Input {
 		return &VSphere{
-			Vcenters:                []string{},
-			VmInterval:              internal.Duration{Duration: time.Second * 20},
-			HostInterval:            internal.Duration{Duration: time.Second * 20},
-			ClusterInterval:         internal.Duration{Duration: time.Second * 300},
-			DatastoreInterval:       internal.Duration{Duration: time.Second * 300},
-			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
-			MaxSamples:              10,
-			MaxQuery:                64,
+			Vcenters:                     []string{},
+			VmSamplingInterval:           internal.Duration{Duration: time.Second * 20},
+			HostSamplingInterval:         internal.Duration{Duration: time.Second * 20},
+			ClusterSamplingInterval:      internal.Duration{Duration: time.Second * 300},
+			DatastoreSamplingInterval:    internal.Duration{Duration: time.Second * 300},
+			ObjDiscoverySamplingInterval: internal.Duration{Duration: time.Second * 300},
+			MaxSamples:                   10,
+			MaxQuery:                     64,
 		}
 	})
 }
