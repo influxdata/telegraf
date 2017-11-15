@@ -20,17 +20,16 @@ import (
 type objectMap map[string]objectRef
 
 type Endpoint struct {
-	Parent       *VSphere
-	Url          *url.URL
-	intervals    []int32
-	lastColl     map[string]time.Time
-	hostMap      objectMap
-	vmMap        objectMap
-	clusterMap   objectMap
-	datastoreMap objectMap
-	nameCache    map[string]string
-	bgObjectDisc bool
-	collectMux   sync.RWMutex
+	Parent          *VSphere
+	Url             *url.URL
+	lastColl        map[string]time.Time
+	hostMap         objectMap
+	vmMap           objectMap
+	clusterMap      objectMap
+	datastoreMap    objectMap
+	nameCache       map[string]string
+	discoveryTicker *time.Ticker
+	collectMux      sync.RWMutex
 }
 
 type VSphere struct {
@@ -77,16 +76,24 @@ func (e *Endpoint) init() error {
 		return err
 	}
 	defer conn.Close()
-	// Load interval table
+
+	// Start background discovery if requested
 	//
-	ctx := context.Background()
-	list, err := conn.Perf.HistoricalInterval(ctx)
-	if err != nil {
-		return err
-	}
-	e.intervals = make([]int32, len(list))
-	for k, i := range list {
-		e.intervals[k] = i.SamplingPeriod
+	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() > 0 {
+		e.discoveryTicker = time.NewTicker(e.Parent.ObjectDiscoveryInterval.Duration)
+		go func() {
+			for _ = range e.discoveryTicker.C {
+				err := e.discover()
+				if err != nil {
+					log.Printf("E! Error in discovery")
+					log.Println(err)
+				}
+			}
+		}()
+
+		// Run an initial disovery.
+		//
+		e.discover()
 	}
 	return nil
 }
@@ -150,11 +157,16 @@ func (e *Endpoint) discover() error {
 	e.vmMap = vmMap
 	e.hostMap = hostMap
 	e.clusterMap = clusterMap
+
+	log.Printf("D! Discovered %d objects\n", len(e.nameCache))
+
 	return nil
 }
 
 func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Context, alias string, acc telegraf.Accumulator,
 	objects objectMap, nameCache map[string]string, intervalDuration internal.Duration, isRealTime bool) error {
+
+		p.
 
 	// Object maps may change, so we need to hold the collect lock
 	//
@@ -277,9 +289,11 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 }
 
 func (e *Endpoint) collect(acc telegraf.Accumulator) error {
-	err := e.discover()
-	if err != nil {
-		return err
+	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() == 0 {
+		err := e.discover()
+		if err != nil {
+			return err
+		}
 	}
 
 	conn, err := NewConnection(e.Url)
@@ -309,7 +323,6 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
