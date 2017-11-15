@@ -4,14 +4,16 @@ import (
 	"bytes"
 	"crypto/md5"
 	"crypto/rand"
-	"encoding/json"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,20 +24,20 @@ import (
 )
 
 const (
-        GET_HOSTS = 0
-		GET_SERVERS = 1
-		GET_DB_STAT = 2
-		GET_JVM_STAT = 3
-		GET_DEPLOYMENTS = 4
-		GET_DEPLOYMENT_STAT = 5
-		GET_WEB_STAT = 6
-		GET_JMS_QUEUE_STAT = 7
-		GET_JMS_TOPIC_STAT = 8
+	GET_HOSTS           = 0
+	GET_SERVERS         = 1
+	GET_DB_STAT         = 2
+	GET_JVM_STAT        = 3
+	GET_DEPLOYMENTS     = 4
+	GET_DEPLOYMENT_STAT = 5
+	GET_WEB_STAT        = 6
+	GET_JMS_QUEUE_STAT  = 7
+	GET_JMS_TOPIC_STAT  = 8
 )
 
 type KeyVal struct {
-    Key string
-    Val interface{}
+	Key string
+	Val interface{}
 }
 
 // Define an ordered map
@@ -43,46 +45,45 @@ type OrderedMap []KeyVal
 
 // Implement the json.Marshaler interface
 func (omap OrderedMap) MarshalJSON() ([]byte, error) {
-    var buf bytes.Buffer
+	var buf bytes.Buffer
 
-    buf.WriteString("{")
-    for i, kv := range omap {
-        if i != 0 {
-            buf.WriteString(",")
-        }
-        // marshal key
-        key, err := json.Marshal(kv.Key)
-        if err != nil {
-            return nil, err
-        }
-        buf.Write(key)
-        buf.WriteString(":")
-        // marshal value
-        val, err := json.Marshal(kv.Val)
-        if err != nil {
-            return nil, err
-        }
-        buf.Write(val)
-    }
+	buf.WriteString("{")
+	for i, kv := range omap {
+		if i != 0 {
+			buf.WriteString(",")
+		}
+		// marshal key
+		key, err := json.Marshal(kv.Key)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(key)
+		buf.WriteString(":")
+		// marshal value
+		val, err := json.Marshal(kv.Val)
+		if err != nil {
+			return nil, err
+		}
+		buf.Write(val)
+	}
 
-    buf.WriteString("}")
-    return buf.Bytes(), nil
+	buf.WriteString("}")
+	return buf.Bytes(), nil
 }
 
-
 type HostResponse struct {
-	Outcome string `json:"outcome"`
-	Result []string `json:"result"`
+	Outcome string   `json:"outcome"`
+	Result  []string `json:"result"`
 }
 
 type DatasourceResponse struct {
-	Outcome string `json:"outcome"`
-	Result DatabaseMetrics `json:"result"`
+	Outcome string          `json:"outcome"`
+	Result  DatabaseMetrics `json:"result"`
 }
 
 type JMSResponse struct {
-	Outcome string `json:"outcome"`
-	Result map[string]interface{} `json:"result"`
+	Outcome string                 `json:"outcome"`
+	Result  map[string]interface{} `json:"result"`
 }
 
 type JMSMetrics struct {
@@ -91,13 +92,13 @@ type JMSMetrics struct {
 }
 
 type DatabaseMetrics struct {
-	DataSource  map[string]DataSourceMetrics `json:"data-source"`
-	XaDataSource  map[string]DataSourceMetrics `json:"xa-data-source"`
+	DataSource   map[string]DataSourceMetrics `json:"data-source"`
+	XaDataSource map[string]DataSourceMetrics `json:"xa-data-source"`
 }
 
 type DataSourceMetrics struct {
-	JndiName string `json:"jndi-name"`
-	Statistics  DBStatistics `json:"statistics"`
+	JndiName   string       `json:"jndi-name"`
+	Statistics DBStatistics `json:"statistics"`
 }
 
 type DBStatistics struct {
@@ -105,20 +106,19 @@ type DBStatistics struct {
 }
 
 type DBPoolStatistics struct {
-	ActiveCount string `json:"ActiveCount"`
+	ActiveCount    string `json:"ActiveCount"`
 	AvailableCount string `json:"AvailableCount"`
-	InUseCount string `json:"InUseCount"`
-	
+	InUseCount     string `json:"InUseCount"`
 }
 
 type JVMResponse struct {
-	Outcome string `json:"outcome"`
-	Result JVMMetrics `json:"result"`
+	Outcome string     `json:"outcome"`
+	Result  JVMMetrics `json:"result"`
 }
 
 type WebResponse struct {
-	Outcome string `json:"outcome"`
-	Result map[string]interface{} `json:"result"`
+	Outcome string                 `json:"outcome"`
+	Result  map[string]interface{} `json:"result"`
 }
 
 type JVMMetrics struct {
@@ -126,24 +126,24 @@ type JVMMetrics struct {
 }
 
 type DeploymentResponse struct {
-	Outcome string `json:"outcome"`
-	Result DeploymentMetrics `json:"result"`
+	Outcome string            `json:"outcome"`
+	Result  DeploymentMetrics `json:"result"`
 }
 
 type DeploymentMetrics struct {
-	Name string `json:"name"`
-	RuntimeName string `json:"runtime-name"`
-	Status string `json:"status"`
+	Name          string                 `json:"name"`
+	RuntimeName   string                 `json:"runtime-name"`
+	Status        string                 `json:"status"`
 	Subdeployment map[string]interface{} `json:"subdeployment"`
 }
 
 type WebMetrics struct {
-	ActiveSessions string `json:"active-sessions"`
-	ContextRoot string `json:"context-root"`
-	ExpiredSessions string `json:"expired-sessions"`
-	MaxActiveSessions string `json:"max-active-sessions"`
-	SessionsCreated string `json:"sessions-created"`
-	Servlet map[string]interface{} `json:"servlet"`
+	ActiveSessions    string                 `json:"active-sessions"`
+	ContextRoot       string                 `json:"context-root"`
+	ExpiredSessions   string                 `json:"expired-sessions"`
+	MaxActiveSessions string                 `json:"max-active-sessions"`
+	SessionsCreated   string                 `json:"sessions-created"`
+	Servlet           map[string]interface{} `json:"servlet"`
 }
 
 type Metric struct {
@@ -154,15 +154,18 @@ type Metric struct {
 }
 
 type JBoss struct {
-	Servers  []string
-	Metrics  []string
+	Servers []string
+	Metrics []string
+
 	Username string
 	Password string
+
+	ExecAsDomain bool `toml:"exec_as_domain"`
 
 	Authorization string
 
 	ResponseTimeout internal.Duration
-	
+
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
 	// Path to host cert file
@@ -172,7 +175,7 @@ type JBoss struct {
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
 
-    client HTTPClient
+	client HTTPClient
 }
 
 type HTTPClient interface {
@@ -215,17 +218,28 @@ var sampleConfig = `
   servers = [
     "http://[jboss-server-ip]:9090/management",
   ]
+	## Execution Mode
+	exec_as_domain = false
   ## Username and password
   username = ""
   password = ""
-  authrization = basic|digest
-  
+	## authorization mode could be "basic" or "digest"
+  authorization = "digest"
+
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
   # ssl_key = "/etc/telegraf/key.pem"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+	## Metric selection
+	metrics =[
+		"jvm",
+		"web_con",
+		"deployment",
+		"database",
+		"jms",
+	]
 `
 
 // SampleConfig returns a sample configuration block
@@ -240,98 +254,98 @@ func (m *JBoss) Description() string {
 
 func (h *JBoss) checkAuth(host string, uri string) error {
 	url := h.Servers[0]
-	
-    method := "POST"
-    req, err := http.NewRequest(method, url, nil)
-    req.Header.Set("Content-Type", "application/json")
-    client := &http.Client{}
-    resp, err := client.Do(req)
-    if err != nil {
-        panic(err)
-    }
-    defer resp.Body.Close()
-    if resp.StatusCode != http.StatusUnauthorized {
-        fmt.Printf("Recieved status code '%v' auth skipped\n", resp.StatusCode)
-        return nil
-    }
-    digestParts := digestParts(resp)
-    digestParts["uri"] = uri
-    digestParts["method"] = method
-    digestParts["username"] = h.Username
-    digestParts["password"] = h.Password
+
+	method := "POST"
+	req, err := http.NewRequest(method, url, nil)
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		log.Printf("Recieved status code '%v' auth skipped\n", resp.StatusCode)
+		return nil
+	}
+	digestParts := digestParts(resp)
+	digestParts["uri"] = uri
+	digestParts["method"] = method
+	digestParts["username"] = h.Username
+	digestParts["password"] = h.Password
 	postData := []byte("{\"address\":[\"\"],\"child-type\":\"host\",\"json.pretty\":1,\"operation\":\"read-children-names\"}")
-    req, err = http.NewRequest(method, url, bytes.NewBuffer(postData))
+	req, err = http.NewRequest(method, url, bytes.NewBuffer(postData))
 	h.Authorization = getDigestAuthrization2(digestParts)
-    req.Header.Set("Authorization", h.Authorization)
-    req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", h.Authorization)
+	req.Header.Set("Content-Type", "application/json")
 
-    resp, err = client.Do(req)
-    if err != nil {
-        panic(err)
-    }
-    defer resp.Body.Close()
-    fmt.Printf("response code: %d \n", resp.StatusCode)
+	resp, err = client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	log.Printf("D! JBoss HTTP response code: %d \n", resp.StatusCode)
 
-    if resp.StatusCode != http.StatusOK {
-        body, err := ioutil.ReadAll(resp.Body)
-        if err != nil {
-            panic(err)
-        }
-        fmt.Printf("response body: %s \n", string(body))
-        return nil
-    }
-    return nil
+	if resp.StatusCode != http.StatusOK {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("D! JBoss HTTP response body: %s \n", string(body))
+		return nil
+	}
+	return nil
 }
 
 func digestParts(resp *http.Response) map[string]string {
-    result := map[string]string{}
-    if len(resp.Header["Www-Authenticate"]) > 0 {
-//        wantedHeaders := []string{"nonce", "realm", "qop"}
-        wantedHeaders := []string{"nonce", "realm"}
-        responseHeaders := strings.Split(resp.Header["Www-Authenticate"][0], ",")
-        for _, r := range responseHeaders {
-            for _, w := range wantedHeaders {
-                if strings.Contains(r, w) {
-                    result[w] = strings.Split(r, `"`)[1]
-                }
-            }
-        }
-    }
-    return result
+	result := map[string]string{}
+	if len(resp.Header["Www-Authenticate"]) > 0 {
+		//        wantedHeaders := []string{"nonce", "realm", "qop"}
+		wantedHeaders := []string{"nonce", "realm"}
+		responseHeaders := strings.Split(resp.Header["Www-Authenticate"][0], ",")
+		for _, r := range responseHeaders {
+			for _, w := range wantedHeaders {
+				if strings.Contains(r, w) {
+					result[w] = strings.Split(r, `"`)[1]
+				}
+			}
+		}
+	}
+	return result
 }
 
 func getMD5(text string) string {
-    hasher := md5.New()
-    hasher.Write([]byte(text))
-    return hex.EncodeToString(hasher.Sum(nil))
+	hasher := md5.New()
+	hasher.Write([]byte(text))
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 func getCnonce() string {
-    b := make([]byte, 8)
-    io.ReadFull(rand.Reader, b)
-    return fmt.Sprintf("%x", b)[:16]
+	b := make([]byte, 8)
+	io.ReadFull(rand.Reader, b)
+	return fmt.Sprintf("%x", b)[:16]
 }
 
 func getDigestAuthrization(digestParts map[string]string) string {
-    d := digestParts
-    ha1 := getMD5(d["username"] + ":" + d["realm"] + ":" + d["password"])
-    ha2 := getMD5(d["method"] + ":" + d["uri"])
-    nonceCount := 00000001
-    cnonce := getCnonce()
-    response := getMD5(fmt.Sprintf("%s:%s:%v:%s:%s:%s", ha1, d["nonce"], nonceCount, cnonce, d["qop"], ha2))
-    authorization := fmt.Sprintf(`Digest username="%s", realm="%s", nonce="%s", uri="%s", cnonce="%s", nc="%v", qop="%s", response="%s"`,
-        d["username"], d["realm"], d["nonce"], d["uri"], cnonce, nonceCount, d["qop"], response)
-    return authorization
+	d := digestParts
+	ha1 := getMD5(d["username"] + ":" + d["realm"] + ":" + d["password"])
+	ha2 := getMD5(d["method"] + ":" + d["uri"])
+	nonceCount := 00000001
+	cnonce := getCnonce()
+	response := getMD5(fmt.Sprintf("%s:%s:%v:%s:%s:%s", ha1, d["nonce"], nonceCount, cnonce, d["qop"], ha2))
+	authorization := fmt.Sprintf(`Digest username="%s", realm="%s", nonce="%s", uri="%s", cnonce="%s", nc="%v", qop="%s", response="%s"`,
+		d["username"], d["realm"], d["nonce"], d["uri"], cnonce, nonceCount, d["qop"], response)
+	return authorization
 }
 
 func getDigestAuthrization2(digestParts map[string]string) string {
-    d := digestParts
-    ha1 := getMD5(d["username"] + ":" + d["realm"] + ":" + d["password"])
-    ha2 := getMD5(d["method"] + ":" + d["uri"])
-    response := getMD5(fmt.Sprintf("%s:%s:%s", ha1, d["nonce"], ha2))
-    authorization := fmt.Sprintf(`Digest username="%s", realm="%s", nonce="%s", uri="%s", response="%s"`,
-        d["username"], d["realm"], d["nonce"], d["uri"], response)
-    return authorization
+	d := digestParts
+	ha1 := getMD5(d["username"] + ":" + d["realm"] + ":" + d["password"])
+	ha2 := getMD5(d["method"] + ":" + d["uri"])
+	response := getMD5(fmt.Sprintf("%s:%s:%s", ha1, d["nonce"], ha2))
+	authorization := fmt.Sprintf(`Digest username="%s", realm="%s", nonce="%s", uri="%s", response="%s"`,
+		d["username"], d["realm"], d["nonce"], d["uri"], response)
+	return authorization
 }
 
 // Gathers data for all servers.
@@ -365,26 +379,36 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(server string) {
 			defer wg.Done()
-			bodyContent, err := h.prepareRequest(GET_HOSTS, nil);
-			if err != nil {
-				errorChannel <- err
-			}
+			//default as standalone server
+			hosts := HostResponse{Outcome: "", Result: []string{"standalone"}}
+			log.Printf("I! JBoss Plugin Working as Domain: %t\n", h.ExecAsDomain)
+			if h.ExecAsDomain {
+				bodyContent, err := h.prepareRequest(GET_HOSTS, nil)
+				if err != nil {
+					errorChannel <- err
+				}
 
-			out, err := h.doRequest(server, bodyContent)
+				out, err := h.doRequest(server, bodyContent)
 
-			if err != nil {
-				fmt.Printf("Error handling response: %s\n", err)
-				errorChannel <- err
-			} else {
-			// Unmarshal json
-				hosts := HostResponse{}
+				log.Printf("D! JBoss API Req err: %s", err)
+				log.Printf("D! JBoss API Req out: %s", out)
+
+				if err != nil {
+					log.Printf("E! JBoss Error handling response 1: %s\n", err)
+					log.Printf("E! JBoss server:%s bodyContent %s\n", server, bodyContent)
+					errorChannel <- err
+					return
+				}
+				// Unmarshal json
+
 				if err = json.Unmarshal(out, &hosts); err != nil {
 					errorChannel <- errors.New("Error decoding JSON response")
 				}
-// 				fmt.Println(hosts)
-				//oneH := []string{hosts.Result[0],hosts.Result[1]}
-				h.getServersOnHost(acc, server, hosts.Result)
+				log.Printf("D! JBoss HOSTS %s", hosts)
 			}
+
+			h.getServersOnHost(acc, server, hosts.Result)
+
 		}(server)
 	}
 
@@ -403,7 +427,6 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 	return errors.New(strings.Join(errorStrings, "\n"))
 }
 
-
 // Gathers data from a particular host
 // Parameters:
 //     acc      : The telegraf Accumulator to use
@@ -420,63 +443,62 @@ func (h *JBoss) getServersOnHost(
 ) error {
 	var wg sync.WaitGroup
 
-	for _, host := range hosts {
-		fields := make(map[string]interface{})
-		fields["name"] = host
-		tags := map[string]string{
-			"type":   "host",
-		}
-	
-		acc.AddFields("jboss_domain", fields, tags)
-	}
-	
 	errorChannel := make(chan error, len(hosts))
 
 	for _, host := range hosts {
 		wg.Add(1)
 		go func(host string) {
 			defer wg.Done()
-			// fmt.Printf("Get Servers from host %s\n", host)
-//			adr := make(map[string]interface{})
-//			adr["host"] = host
-			adr :=  OrderedMap{
-				{"host",  host},
-			}
-//			adr := []string{"host\":" + host }
-			//adr := []string{"host=" + host}
-			bodyContent, err := h.prepareRequest(GET_SERVERS, adr);
-			if err != nil {
-				errorChannel <- err
-			}
+			log.Printf("I! Get Servers from host: %s\n", host)
 
-			out, err := h.doRequest(serverURL, bodyContent)
+			servers := HostResponse{Outcome: "", Result: []string{"standalone"}}
 
-			if err != nil {
-				fmt.Printf("Error handling response: %s\n", err)
-				errorChannel <- err
-			} else {
-				servers := HostResponse{}
+			if h.ExecAsDomain {
+				//get servers
+				adr := OrderedMap{
+					{"host", host},
+				}
+
+				bodyContent, err := h.prepareRequest(GET_SERVERS, adr)
+				if err != nil {
+					errorChannel <- err
+				}
+
+				out, err := h.doRequest(serverURL, bodyContent)
+
+				log.Printf("D! JBoss API Req err: %s", err)
+				log.Printf("D! JBoss API Req out: %s", out)
+
+				if err != nil {
+					log.Printf("E! JBoss Error handling response 2: %s\n", err)
+					errorChannel <- err
+					return
+				}
+
 				if err = json.Unmarshal(out, &servers); err != nil {
 					errorChannel <- errors.New("Error decoding JSON response")
 				}
-//				fmt.Println(servers)
-				for _, server := range servers.Result {
-					fields := make(map[string]interface{})
-					fields["name"] = server
-					tags := map[string]string{
-						"host":   host,
-						"type":   "server",
+			}
+
+			for _, server := range servers.Result {
+				log.Printf("I! JBoss Plugin Processing Servers from host:[ %s ] : Server [ %s ]\n", host, server)
+				for _, v := range h.Metrics {
+					switch v {
+					case "jvm":
+						h.getJVMStatistics(acc, serverURL, host, server)
+					case "web_con":
+						h.getWebStatistics(acc, serverURL, host, server, "ajp")
+						h.getWebStatistics(acc, serverURL, host, server, "http")
+					case "deployment":
+						h.getServerDeploymentStatistics(acc, serverURL, host, server)
+					case "database":
+						h.getDatasourceStatistics(acc, serverURL, host, server)
+					case "jms":
+						h.getJMSStatistics(acc, serverURL, host, server, GET_JMS_QUEUE_STAT)
+						h.getJMSStatistics(acc, serverURL, host, server, GET_JMS_TOPIC_STAT)
+					default:
+						log.Printf("E! Jboss doesn't exist the metric set %s\n", v)
 					}
-	
-					acc.AddFields("jboss_domain", fields, tags)
-					
-					h.getWebStatistics(acc, serverURL, host, server, "ajp")
-					h.getWebStatistics(acc, serverURL, host, server, "http")
-					h.getDatasourceStatistics(acc, serverURL, host, server)
-					h.getJMSStatistics(acc, serverURL, host, server, GET_JMS_QUEUE_STAT)
-					h.getJMSStatistics(acc, serverURL, host, server, GET_JMS_TOPIC_STAT)
-					h.getJVMStatistics(acc, serverURL, host, server)
-					h.getServerDeploymentStatistics(acc, serverURL, host, server)
 				}
 			}
 		}(host)
@@ -484,7 +506,7 @@ func (h *JBoss) getServersOnHost(
 
 	wg.Wait()
 	close(errorChannel)
-	
+
 	// Get all errors and return them as one giant error
 	errorStrings := []string{}
 	for err := range errorChannel {
@@ -514,25 +536,30 @@ func (h *JBoss) getWebStatistics(
 	serverName string,
 	connector string,
 ) error {
-	//fmt.Printf("getDatasourceStatistics %s %s\n", host, serverName)
-	
-	//adr := make(map[string]interface{})
-	adr := OrderedMap{
-		{"host", host},
-		{"server", serverName},
-		{"subsystem", "web"},
-		{"connector", connector},
+	adr := OrderedMap{}
+	if h.ExecAsDomain {
+		adr = OrderedMap{
+			{"host", host},
+			{"server", serverName},
+			{"subsystem", "web"},
+			{"connector", connector},
+		}
+	} else {
+		adr = OrderedMap{
+			{"subsystem", "web"},
+			{"connector", connector},
+		}
 	}
-	//adr["host"] = host
-	//adr["server"] = serverName
-	//adr["subsystem"] = "datasources"
-	 
-	bodyContent, err := h.prepareRequest(GET_WEB_STAT, adr);
+
+	bodyContent, err := h.prepareRequest(GET_WEB_STAT, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
 
 	out, err := h.doRequest(serverURL, bodyContent)
+
+	log.Printf("D! JBoss API Req err: %s", err)
+	log.Printf("D! JBoss API Req out: %s", out)
 
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
@@ -541,7 +568,6 @@ func (h *JBoss) getWebStatistics(
 		if err = json.Unmarshal(out, &server); err != nil {
 			return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
 		}
-		fmt.Println(server)
 
 		fields := make(map[string]interface{})
 		for key, value := range server.Result {
@@ -554,22 +580,26 @@ func (h *JBoss) getWebStatistics(
 					case float64:
 						fields[key] = value.(float64)
 					case string:
-						fmt.Errorf("Error decoding Float value: %s = %s\n", key, value.(string))
+						f, err := strconv.ParseFloat(value.(string), 64)
+						if err != nil {
+							log.Printf("E! JBoss Error decoding Float  from string : %s = %s\n", key, value.(string))
+						} else {
+							fields[key] = f
+						}
 					}
 				}
 			}
 		}
 		tags := map[string]string{
-			"host":   host,
-			"server": serverName,
-			"type":   connector,
+			"jboss_host":   host,
+			"jboss_server": serverName,
+			"type":         connector,
 		}
-		acc.AddFields("jboss_web", fields, tags)
+		acc.AddFields("jboss_web_con", fields, tags)
 	}
-	
+
 	return nil
 }
-
 
 // Gathers database data from a particular host
 // Parameters:
@@ -587,24 +617,28 @@ func (h *JBoss) getDatasourceStatistics(
 	host string,
 	serverName string,
 ) error {
-	//fmt.Printf("getDatasourceStatistics %s %s\n", host, serverName)
-	
-	//adr := make(map[string]interface{})
-	adr := OrderedMap{
-		{"host", host},
-		{"server", serverName},
-		{"subsystem", "datasources"},
+	adr := OrderedMap{}
+	if h.ExecAsDomain {
+		adr = OrderedMap{
+			{"host", host},
+			{"server", serverName},
+			{"subsystem", "datasources"},
+		}
+	} else {
+		adr = OrderedMap{
+			{"subsystem", "datasources"},
+		}
 	}
-	//adr["host"] = host
-	//adr["server"] = serverName
-	//adr["subsystem"] = "datasources"
-	 
-	bodyContent, err := h.prepareRequest(GET_DB_STAT, adr);
+
+	bodyContent, err := h.prepareRequest(GET_DB_STAT, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
 
 	out, err := h.doRequest(serverURL, bodyContent)
+
+	log.Printf("D! JBoss API Req err: %s", err)
+	log.Printf("D! JBoss API Req out: %s", out)
 
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
@@ -613,37 +647,33 @@ func (h *JBoss) getDatasourceStatistics(
 		if err = json.Unmarshal(out, &server); err != nil {
 			return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
 		}
-//		fmt.Println(server)
 
-	
 		for database, value := range server.Result.DataSource {
 			fields := make(map[string]interface{})
-			fields["InUseCount"] = value.Statistics.Pool.InUseCount
-			fields["ActiveCount"] = value.Statistics.Pool.ActiveCount
-			fields["AvailableCount"] = value.Statistics.Pool.AvailableCount
+			fields["in-use-count"], _ = strconv.ParseInt(value.Statistics.Pool.InUseCount, 10, 64)
+			fields["active-count"], _ = strconv.ParseInt(value.Statistics.Pool.ActiveCount, 10, 64)
+			fields["available-count"], _ = strconv.ParseInt(value.Statistics.Pool.AvailableCount, 10, 64)
 			tags := map[string]string{
-				"host":   host,
-				"server": serverName,
-				"name":   database,
-				"type":   "datasource",
+				"jboss_host":   host,
+				"jboss_server": serverName,
+				"name":         database,
 			}
 			acc.AddFields("jboss_database", fields, tags)
 		}
 		for database, value := range server.Result.XaDataSource {
 			fields := make(map[string]interface{})
-			fields["InUseCount"] = value.Statistics.Pool.InUseCount
-			fields["ActiveCount"] = value.Statistics.Pool.ActiveCount
-			fields["AvailableCount"] = value.Statistics.Pool.AvailableCount
+			fields["in-use-count"], _ = strconv.ParseInt(value.Statistics.Pool.InUseCount, 10, 64)
+			fields["active-count"], _ = strconv.ParseInt(value.Statistics.Pool.ActiveCount, 10, 64)
+			fields["available-count"], _ = strconv.ParseInt(value.Statistics.Pool.AvailableCount, 10, 64)
 			tags := map[string]string{
-				"host":   host,
-				"server": serverName,
-				"name":   database,
-				"type":   "datasource",
+				"jboss_host":   host,
+				"jboss_server": serverName,
+				"name":         database,
 			}
 			acc.AddFields("jboss_database", fields, tags)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -665,15 +695,24 @@ func (h *JBoss) getJMSStatistics(
 	opType int,
 ) error {
 	//fmt.Printf("getDatasourceStatistics %s %s\n", host, serverName)
-	
-	adr := OrderedMap{
-		{"host", host},
-		{"server", serverName},
-		{"subsystem", "messaging"},
-		{"hornetq-server", "default"},
+
+	adr := OrderedMap{}
+
+	if h.ExecAsDomain {
+		adr = OrderedMap{
+			{"host", host},
+			{"server", serverName},
+			{"subsystem", "messaging"},
+			{"hornetq-server", "default"},
+		}
+	} else {
+		adr = OrderedMap{
+			{"subsystem", "messaging"},
+			{"hornetq-server", "default"},
+		}
 	}
-	 
-	bodyContent, err := h.prepareRequest(opType, adr);
+
+	bodyContent, err := h.prepareRequest(opType, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
@@ -682,8 +721,8 @@ func (h *JBoss) getJMSStatistics(
 
 	out, err := h.doRequest(serverURL, bodyContent)
 
-//	fmt.Println("err: %s", err)
-//	fmt.Println("out: %s", out)
+	log.Printf("D! JBoss API Req err: %s", err)
+	log.Printf("D! JBoss API Req out: %s", out)
 
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
@@ -694,9 +733,7 @@ func (h *JBoss) getJMSStatistics(
 		}
 		fmt.Println("server:")
 		fmt.Println(jmsresponse)
-		
 
-	
 		for jmsQueue, value := range jmsresponse.Result {
 			fields := make(map[string]interface{})
 			v := value.(map[string]interface{})
@@ -708,17 +745,17 @@ func (h *JBoss) getJMSStatistics(
 				fields["subscription-count"] = v["subscription-count"]
 			}
 			tags := map[string]string{
-				"host":   host,
-				"server": serverName,
-				"name":   jmsQueue,
-				"type":   "jms",
+				"jboss_host":   host,
+				"jboss_server": serverName,
+				"name":         jmsQueue,
 			}
 			acc.AddFields("jboss_jms", fields, tags)
 		}
 	}
-		
+
 	return nil
 }
+
 // Gathers JVM data from a particular host
 // Parameters:
 //     acc      : The telegraf Accumulator to use
@@ -735,21 +772,29 @@ func (h *JBoss) getJVMStatistics(
 	host string,
 	serverName string,
 ) error {
-	adr := OrderedMap{
-        {"host",  host},
-        {"server", serverName},
-		{"core-service", "platform-mbean"},
-    }
+	adr := OrderedMap{}
+	if h.ExecAsDomain {
+		adr = OrderedMap{
+			{"host", host},
+			{"server", serverName},
+			{"core-service", "platform-mbean"},
+		}
+	} else {
+		adr = OrderedMap{
+			{"core-service", "platform-mbean"},
+		}
+	}
 
-	bodyContent, err := h.prepareRequest(GET_JVM_STAT, adr);
+	bodyContent, err := h.prepareRequest(GET_JVM_STAT, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
 
 	out, err := h.doRequest(serverURL, bodyContent)
 
-//	fmt.Println("out: %s\n", out)
-	
+	log.Printf("D! JBoss API Req err: %s", err)
+	log.Printf("D! JBoss API Req out: %s", out)
+
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	} else {
@@ -757,43 +802,42 @@ func (h *JBoss) getJVMStatistics(
 		if err = json.Unmarshal(out, &server); err != nil {
 			return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
 		}
-//		fmt.Println(server)
 
-	
 		for typeName, value := range server.Result.Type {
+
 			fields := make(map[string]interface{})
-			if typeName == "threading" {
+
+			switch typeName {
+			case "threading":
 				t := value.(map[string]interface{})
-				fields["thread-count"]  = t["thread-count"]
-				fields["peak-thread-count"]  = t["peak-thread-count"]
-				fields["daemon-thread-count"]  = t["daemon-thread-count"]
-			} else if  typeName == "memory" {
+				fields["thread-count"] = t["thread-count"]
+				fields["peak-thread-count"] = t["peak-thread-count"]
+				fields["daemon-thread-count"] = t["daemon-thread-count"]
+			case "memory":
 				mem := value.(map[string]interface{})
 				heap := mem["heap-memory-usage"].(map[string]interface{})
 				nonHeap := mem["non-heap-memory-usage"].(map[string]interface{})
 				h.flatten(heap, fields, "heap")
 				h.flatten(nonHeap, fields, "nonheap")
-			} else if typeName == "garbage-collector" {
+			case "garbage-collector":
 				gc := value.(map[string]interface{})
 				gc_name := gc["name"].(map[string]interface{})
-				Scavenge := gc_name["PS_Scavenge"].(map[string]interface{})
-				MarkSweep := gc_name["PS_MarkSweep"].(map[string]interface{})
-				fields["scavenge-count"] = Scavenge["collection-count"]
-				fields["scavenge-time"] = Scavenge["collection-time"]
-				fields["marksweep-count"] = MarkSweep["collection-count"]
-				fields["marksweep-time"] = MarkSweep["collection-time"]
+				for gc_type, gc_val := range gc_name {
+					object := gc_val.(map[string]interface{})
+					fields[gc_type+"_count"] = object["collection-count"]
+					fields[gc_type+"_time"] = object["collection-time"]
+				}
 			}
+
 			tags := map[string]string{
-				"host":   host,
-				"server": serverName,
-				"name":   typeName,
-				"type":   "jvm",
+				"jboss_host":   host,
+				"jboss_server": serverName,
 			}
 			acc.AddFields("jboss_jvm", fields, tags)
 		}
-		
+
 	}
-	
+
 	return nil
 }
 
@@ -814,68 +858,65 @@ func (h *JBoss) getServerDeploymentStatistics(
 	serverName string,
 ) error {
 	var wg sync.WaitGroup
-	adr := OrderedMap{
-        {"host",  host},
-        {"server", serverName},
-    }
+	adr := OrderedMap{}
 
-	bodyContent, err := h.prepareRequest(GET_DEPLOYMENTS, adr);
+	if h.ExecAsDomain {
+		adr = OrderedMap{
+			{"host", host},
+			{"server", serverName},
+		}
+	}
+
+	bodyContent, err := h.prepareRequest(GET_DEPLOYMENTS, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
 
 	out, err := h.doRequest(serverURL, bodyContent)
 
-//	fmt.Println("out: %s\n", out)
-	
+	log.Printf("D! JBoss API Req err: %s", err)
+	log.Printf("D! JBoss API Req out: %s", out)
+
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
-	} 
-	
+	}
+
 	deployments := HostResponse{}
 	if err = json.Unmarshal(out, &deployments); err != nil {
 		return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
 	}
-//		fmt.Println(server)
 
-	for _, value := range deployments.Result {
-		fields := make(map[string]interface{})
-		fields["name"] = value
-		tags := map[string]string{
-			"host":   host,
-			"server": serverName,
-			"type":   "deployment",
-			}
-	
-			acc.AddFields("jboss_domain", fields, tags)
-	}
-	
 	errorChannel := make(chan error, len(deployments.Result))
 
 	for _, deployment := range deployments.Result {
 		wg.Add(1)
 		go func(deployment string) {
 			defer wg.Done()
-			// fmt.Printf("Get Servers from host %s\n", host)
-//			adr := make(map[string]interface{})
-//			adr["host"] = host
-			adr2 := OrderedMap{
-				{"host",  host},
-				{"server", serverName},
-				{"deployment", deployment},
+			adr2 := OrderedMap{}
+			if h.ExecAsDomain {
+				adr2 = OrderedMap{
+					{"host", host},
+					{"server", serverName},
+					{"deployment", deployment},
+				}
+			} else {
+				adr2 = OrderedMap{
+					{"deployment", deployment},
+				}
 			}
-			
-//			adr := []string{"host\":" + host }
-			//adr := []string{"host=" + host}
-			bodyContent, err := h.prepareRequest(GET_DEPLOYMENT_STAT, adr2);
+
+			bodyContent, err := h.prepareRequest(GET_DEPLOYMENT_STAT, adr2)
 			if err != nil {
 				errorChannel <- err
 			}
 
 			out, err := h.doRequest(serverURL, bodyContent)
 
+			log.Printf("D! JBoss API Req err: %s", err)
+			log.Printf("D! JBoss API Req out: %s", out)
+
 			if err != nil {
-				fmt.Printf("Error handling response: %s\n", err)
+				log.Printf("E! JBoss Error handling response 3: %s\n", err)
 				errorChannel <- err
 			} else {
 				deployment := DeploymentResponse{}
@@ -883,18 +924,14 @@ func (h *JBoss) getServerDeploymentStatistics(
 					errorChannel <- errors.New("Error decoding JSON response")
 				}
 
-	//			fmt.Println(deployment)
-				
 				for typeName, value := range deployment.Result.Subdeployment {
 					fields := make(map[string]interface{})
-//					fmt.Println(typeName)
+
 					t := value.(map[string]interface{})
 					subsystem := t["subsystem"].(map[string]interface{})
-//					fmt.Println(t["subsystem"])
-					
+
 					if value, ok := subsystem["ejb3"]; ok {
-//						fmt.Println("EJB data" + serverName)
-//						fmt.Println(value)
+
 						ejb := value.(map[string]interface{})
 						t := ejb["stateless-session-bean"]
 						if t != nil {
@@ -902,45 +939,42 @@ func (h *JBoss) getServerDeploymentStatistics(
 
 							for stateless, ejbVal := range statelessList {
 								ejbRuntime := ejbVal.(map[string]interface{})
-								fields["invocations"]  = ejbRuntime["invocations"]
-								fields["peak-concurrent-invocations"]  = ejbRuntime["peak-concurrent-invocations"]
-								fields["pool-available-count"]  = ejbRuntime["pool-available-count"]
-								fields["pool-create-count"]  = ejbRuntime["pool-create-count"]
-								fields["pool-current-size"]  = ejbRuntime["pool-current-size"]
-								fields["pool-max-size"]  = ejbRuntime["pool-max-size"]
-								fields["pool-remove-count"]  = ejbRuntime["pool-remove-count"]
-								fields["wait-time"]  = ejbRuntime["wait-time"]
+								fields["invocations"] = ejbRuntime["invocations"]
+								fields["peak-concurrent-invocations"] = ejbRuntime["peak-concurrent-invocations"]
+								fields["pool-available-count"] = ejbRuntime["pool-available-count"]
+								fields["pool-create-count"] = ejbRuntime["pool-create-count"]
+								fields["pool-current-size"] = ejbRuntime["pool-current-size"]
+								fields["pool-max-size"] = ejbRuntime["pool-max-size"]
+								fields["pool-remove-count"] = ejbRuntime["pool-remove-count"]
+								fields["wait-time"] = ejbRuntime["wait-time"]
 								tags := map[string]string{
-									"host":   host,
-									"server": serverName,
-									"name":   typeName,
-									"ejb": stateless,
-									"system": deployment.Result.RuntimeName,
-									"type":   "deployment",
+									"jboss_host":   host,
+									"jboss_server": serverName,
+									"name":         typeName,
+									"ejb":          stateless,
+									"system":       deployment.Result.RuntimeName,
 								}
 								acc.AddFields("jboss_ejb", fields, tags)
 							}
 						}
 					}
-					
+
 					if webValue, ok := subsystem["web"]; ok {
-//						fmt.Println("WEB data")
-//						fmt.Println(webValue)
+
 						t2 := webValue.(map[string]interface{})
 						contextRoot := t2["context-root"].(string)
-						fields["active-sessions"]  = t2["active-sessions"]
-						fields["expired-sessions"]  = t2["expired-sessions"]
-						fields["max-active-sessions"]  = t2["max-active-sessions"]
-						fields["sessions-created"]  = t2["sessions-created"]
+						fields["active-sessions"] = t2["active-sessions"]
+						fields["expired-sessions"] = t2["expired-sessions"]
+						fields["max-active-sessions"] = t2["max-active-sessions"]
+						fields["sessions-created"] = t2["sessions-created"]
 						tags := map[string]string{
-							"host":   host,
-							"server": serverName,
-							"name":   typeName,
+							"jboss_host":   host,
+							"jboss_server": serverName,
+							"name":         typeName,
 							"context-root": contextRoot,
-							"system": deployment.Result.RuntimeName,
-							"type":   "deployment",
+							"system":       deployment.Result.RuntimeName,
 						}
-						acc.AddFields("jboss_web", fields, tags)
+						acc.AddFields("jboss_web_app", fields, tags)
 					}
 				}
 			}
@@ -989,7 +1023,7 @@ func (h *JBoss) flatten(item map[string]interface{}, fields map[string]interface
 //func (j *JBoss) prepareRequest(optype int, adress map[string]interface{}) (map[string]interface{}, error) {
 func (j *JBoss) prepareRequest(optype int, adress OrderedMap) (map[string]interface{}, error) {
 	bodyContent := make(map[string]interface{})
-	
+
 	// Create bodyContent
 	switch optype {
 	case GET_HOSTS:
@@ -1009,7 +1043,7 @@ func (j *JBoss) prepareRequest(optype int, adress OrderedMap) (map[string]interf
 		bodyContent["recursive-depth"] = 2
 		bodyContent["address"] = adress
 		bodyContent["json.pretty"] = 1
-	case GET_JVM_STAT:	
+	case GET_JVM_STAT:
 		bodyContent["operation"] = "read-resource"
 		bodyContent["include-runtime"] = "true"
 		bodyContent["recursive"] = "true"
@@ -1061,7 +1095,7 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 	method := "POST"
 
 	// Debug JSON request
-	fmt.Printf("Req: %s\n", requestBody)
+	log.Printf("D! Req: %s\n", requestBody)
 
 	req, err := http.NewRequest(method, serverUrl.String(), bytes.NewBuffer(requestBody))
 	if err != nil {
@@ -1069,7 +1103,6 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	
 	if j.Authorization == "basic" {
 		if j.Username != "" || j.Password != "" {
 			serverUrl.User = url.UserPassword(j.Username, j.Password)
@@ -1078,20 +1111,21 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 
 	resp, err := j.client.MakeRequest(req)
 	if err != nil {
+		log.Printf("D! HTTP REQ:%#+v", req)
+		log.Printf("D! HTTP RESP:%#+v", resp)
 		return nil, err
 	}
 	defer resp.Body.Close()
-	
+
 	// Process response
-	
+
 	if resp.StatusCode == http.StatusUnauthorized {
-//		fmt.Printf("Do digest\n")
 		digestParts := digestParts(resp)
 		digestParts["uri"] = serverUrl.RequestURI()
 		digestParts["method"] = method
 		digestParts["username"] = j.Username
 		digestParts["password"] = j.Password
-		
+
 		req, err = http.NewRequest(method, serverUrl.String(), bytes.NewBuffer(requestBody))
 		if err != nil {
 			return nil, err
@@ -1106,7 +1140,10 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 		}
 		defer resp.Body.Close()
 	}
-	 
+
+	log.Printf("D! JBoss API Req HTTP REQ:%#+v", req)
+	log.Printf("D! JBoss API Req HTTP RESP:%#+v", resp)
+
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
 			req.RequestURI,
@@ -1117,19 +1154,17 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 		return nil, err
 	}
 
-
 	//req, err := http.NewRequest("POST", serverUrl.String(), bytes.NewBuffer(requestBody))
 
-	
 	// read body
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Printf("Error: %s", err)
+		log.Printf("E! JBoss Error: %s", err)
 		return nil, err
 	}
 
 	// Debug response
-	fmt.Printf("body: %s\n", body)
+	//log.Printf("D! body: %s\n", body)
 
 	return []byte(body), nil
 }
@@ -1141,4 +1176,3 @@ func init() {
 		}
 	})
 }
-
