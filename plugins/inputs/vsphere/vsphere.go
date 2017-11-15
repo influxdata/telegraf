@@ -12,6 +12,7 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 	"log"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -26,21 +27,21 @@ type Endpoint struct {
 	hostMap      objectMap
 	vmMap        objectMap
 	clusterMap   objectMap
+	datastoreMap objectMap
 	nameCache    map[string]string
 	bgObjectDisc bool
 	collectMux   sync.RWMutex
 }
 
 type VSphere struct {
-	Vcenters                     []string
-	VmSamplingInterval           internal.Duration
-	HostSamplingInterval         internal.Duration
-	ClusterSamplingInterval      internal.Duration
-	DatastoreSamplingInterval    internal.Duration
-	ObjDiscoverySamplingInterval internal.Duration
-	MaxSamples                   int32
-	MaxQuery                     int32
-	endpoints                    []Endpoint
+	Vcenters                []string
+	VmSamplingPeriod        internal.Duration
+	HostSamplingPeriod      internal.Duration
+	ClusterSamplingPeriod   internal.Duration
+	DatastoreSamplingPeriod internal.Duration
+	ObjectDiscoveryInterval internal.Duration
+	ObjectsPerQuery         int32
+	endpoints               []Endpoint
 }
 
 type objectRef struct {
@@ -55,14 +56,16 @@ func NewEndpoint(parent *VSphere, url *url.URL) Endpoint {
 	hostMap := make(objectMap)
 	vmMap := make(objectMap)
 	clusterMap := make(objectMap)
+	datastoreMap := make(objectMap)
 	e := Endpoint{
-		Url:        url,
-		Parent:     parent,
-		lastColl:   make(map[string]time.Time),
-		hostMap:    hostMap,
-		vmMap:      vmMap,
-		clusterMap: clusterMap,
-		nameCache:  make(map[string]string),
+		Url:          url,
+		Parent:       parent,
+		lastColl:     make(map[string]time.Time),
+		hostMap:      hostMap,
+		vmMap:        vmMap,
+		clusterMap:   clusterMap,
+		datastoreMap: datastoreMap,
+		nameCache:    make(map[string]string),
 	}
 	e.init()
 	return e
@@ -122,8 +125,19 @@ func (e *Endpoint) discover() error {
 	// Discover VMs
 	//
 	vmMap, err := e.getVMs(ctx, conn.Root)
+	if err != nil {
+		return err
+	}
 	for _, vm := range vmMap {
 		nameCache[vm.ref.Reference().Value] = vm.name
+	}
+
+	datastoreMap, err := e.getDatastores(ctx, conn.Root)
+	if err != nil {
+		return err
+	}
+	for _, datastore := range datastoreMap {
+		nameCache[datastore.ref.Reference().Value] = datastore.name
 	}
 
 	// Atomically swap maps
@@ -132,6 +146,7 @@ func (e *Endpoint) discover() error {
 	defer e.collectMux.Unlock()
 
 	e.nameCache = nameCache
+	e.datastoreMap = datastoreMap
 	e.vmMap = vmMap
 	e.hostMap = hostMap
 	e.clusterMap = clusterMap
@@ -139,7 +154,7 @@ func (e *Endpoint) discover() error {
 }
 
 func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Context, alias string, acc telegraf.Accumulator,
-	objects objectMap, nameCache map[string]string, intervalDuration internal.Duration) error {
+	objects objectMap, nameCache map[string]string, intervalDuration internal.Duration, isRealTime bool) error {
 
 	// Object maps may change, so we need to hold the collect lock
 	//
@@ -152,12 +167,11 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 	if interval <= 0 {
 		return nil
 	}
-	log.Printf("D! Resource type: %s, Interval is %d", alias, interval)
+	log.Printf("D! Resource type: %s, sampling interval is: %d", alias, interval)
 
 	// Do we have new data yet?
 	//
 	now := time.Now()
-	nIntervals := int32(1)
 	latest, hasLatest := e.lastColl[alias]
 	if hasLatest {
 		elapsed := time.Now().Sub(latest).Seconds()
@@ -166,41 +180,35 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 			//
 			return nil
 		}
-		nIntervals := int32(elapsed / (float64(interval)))
-		if nIntervals > e.Parent.MaxSamples {
-			nIntervals = e.Parent.MaxSamples
-		}
 	}
 	e.lastColl[alias] = now
-	log.Printf("D! Collecting %d intervals for %s", nIntervals, alias)
+	log.Printf("D! Collecting for %s", alias)
 	fullAlias := "vsphere." + alias
 
 	start := time.Now()
 	log.Printf("D! Query for %s returned %d objects", alias, len(objects))
-	pqs := make([]types.PerfQuerySpec, 0, e.Parent.MaxQuery)
+	pqs := make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
 	total := 0
 	for _, object := range objects {
 		pq := types.PerfQuerySpec{
 			Entity:     object.ref,
-			MaxSample:  nIntervals,
+			MaxSample:  1,
 			MetricId:   nil,
 			IntervalId: interval,
 		}
-		if interval > 20 {
+
+		if !isRealTime {
 			startTime := now.Add(-time.Duration(interval) * time.Second)
 			pq.StartTime = &startTime
 			pq.EndTime = &now
 		}
-		if e.Parent.MaxSamples > 1 && hasLatest {
-			pq.StartTime = &latest
-			pq.EndTime = &now
-		}
+
 		pqs = append(pqs, pq)
 		total++
 
 		// Filled up a chunk or at end of data? Run a query with the collected objects
 		//
-		if len(pqs) >= int(e.Parent.MaxQuery) || total == len(objects) {
+		if len(pqs) >= int(e.Parent.ObjectsPerQuery) || total == len(objects) {
 			log.Printf("D! Querying %d objects of type %s for %s. Total processed: %d. Total objects %d\n", len(pqs), alias, e.Url.Host, total, len(objects))
 			metrics, err := p.Query(ctx, pqs)
 			if err != nil {
@@ -233,14 +241,34 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 							"hostname": objectName,
 							"moid":     moid,
 							"parent":   parent}
+
 						if v.Instance != "" {
-							t["instance"] = v.Instance
+							if strings.HasPrefix(name, "cpu.") {
+								t["cpu"] = v.Instance
+							} else if strings.HasPrefix(name, "net.") {
+								t["interface"] = v.Instance
+							} else if strings.HasPrefix(name, "sys.resource") {
+								t["resource"] = v.Instance
+							} else if strings.HasPrefix(name, "disk.") || strings.HasPrefix(name, "virtualDisk.") {
+								t["disk"] = v.Instance
+							} else if strings.HasPrefix(name, "datastore.") {
+								t["datastore"] = v.Instance
+							} else if strings.HasPrefix(name, "storagePath.") {
+								t["path"] = v.Instance
+							} else if strings.HasPrefix(name, "storageAdapter.") {
+								t["adapter"] = v.Instance
+							} else if strings.HasPrefix(name, "vflashModule.") {
+								t["module"] = v.Instance
+							} else {
+								// default to instance
+								t["instance"] = v.Instance
+							}
 						}
 						acc.AddFields(fullAlias, f, t, em.SampleInfo[idx].Timestamp)
 					}
 				}
 			}
-			pqs = make([]types.PerfQuerySpec, 0, e.Parent.MaxQuery)
+			pqs = make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
 		}
 	}
 
@@ -262,20 +290,26 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 	defer conn.Close()
 
 	ctx := context.Background()
-	err = e.collectResourceType(conn.Perf, ctx, "cluster", acc, e.clusterMap, e.nameCache, e.Parent.ClusterSamplingInterval)
+	err = e.collectResourceType(conn.Perf, ctx, "cluster", acc, e.clusterMap, e.nameCache, e.Parent.ClusterSamplingPeriod, false)
 	if err != nil {
 		return err
 	}
 
-	err = e.collectResourceType(conn.Perf, ctx, "host", acc, e.hostMap, e.nameCache, e.Parent.HostSamplingInterval)
+	err = e.collectResourceType(conn.Perf, ctx, "host", acc, e.hostMap, e.nameCache, e.Parent.HostSamplingPeriod, true)
 	if err != nil {
 		return err
 	}
 
-	err = e.collectResourceType(conn.Perf, ctx, "vm", acc, e.vmMap, e.nameCache, e.Parent.VmSamplingInterval)
+	err = e.collectResourceType(conn.Perf, ctx, "vm", acc, e.vmMap, e.nameCache, e.Parent.VmSamplingPeriod, true)
 	if err != nil {
 		return err
 	}
+
+	err = e.collectResourceType(conn.Perf, ctx, "datastore", acc, e.datastoreMap, e.nameCache, e.Parent.DatastoreSamplingPeriod, false)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -389,14 +423,13 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("vsphere", func() telegraf.Input {
 		return &VSphere{
-			Vcenters:                     []string{},
-			VmSamplingInterval:           internal.Duration{Duration: time.Second * 20},
-			HostSamplingInterval:         internal.Duration{Duration: time.Second * 20},
-			ClusterSamplingInterval:      internal.Duration{Duration: time.Second * 300},
-			DatastoreSamplingInterval:    internal.Duration{Duration: time.Second * 300},
-			ObjDiscoverySamplingInterval: internal.Duration{Duration: time.Second * 300},
-			MaxSamples:                   10,
-			MaxQuery:                     64,
+			Vcenters:                []string{},
+			VmSamplingPeriod:        internal.Duration{Duration: time.Second * 20},
+			HostSamplingPeriod:      internal.Duration{Duration: time.Second * 20},
+			ClusterSamplingPeriod:   internal.Duration{Duration: time.Second * 300},
+			DatastoreSamplingPeriod: internal.Duration{Duration: time.Second * 300},
+			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
+			ObjectsPerQuery:         500,
 		}
 	})
 }
