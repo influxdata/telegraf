@@ -5,7 +5,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vim25/mo"
@@ -13,25 +12,35 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 	"log"
 	"net/url"
+	"sync"
 	"time"
 )
 
+type objectMap map[string]objectRef
+
 type Endpoint struct {
-	Parent    *VSphere
-	Url       *url.URL
-	intervals []int32
-	lastColl  map[string]time.Time
+	Parent       *VSphere
+	Url          *url.URL
+	intervals    []int32
+	lastColl     map[string]time.Time
+	hostMap      objectMap
+	vmMap        objectMap
+	clusterMap   objectMap
+	nameCache    map[string]string
+	bgObjectDisc bool
+	collectMux   sync.RWMutex
 }
 
 type VSphere struct {
-	Vcenters          []string
-	VmInterval        internal.Duration
-	HostInterval      internal.Duration
-	ClusterInterval   internal.Duration
-	DatastoreInterval internal.Duration
-	MaxSamples        int32
-	MaxQuery          int32
-	endpoints         []Endpoint
+	Vcenters                []string
+	VmInterval              internal.Duration
+	HostInterval            internal.Duration
+	ClusterInterval         internal.Duration
+	DatastoreInterval       internal.Duration
+	ObjectDiscoveryInterval internal.Duration
+	MaxSamples              int32
+	MaxQuery                int32
+	endpoints               []Endpoint
 }
 
 type objectRef struct {
@@ -40,36 +49,110 @@ type objectRef struct {
 	parentRef *types.ManagedObjectReference //Pointer because it must be nillable
 }
 
-type objectMap map[string]objectRef
-
 type InstanceMetrics map[string]map[string]interface{}
 
-func (e *Endpoint) init(p *performance.Manager) error {
-	if e.intervals == nil {
-		// Load interval table
-		//
-		ctx := context.Background()
-		list, err := p.HistoricalInterval(ctx)
-		if err != nil {
-			return err
-		}
-		e.intervals = make([]int32, len(list))
-		for k, i := range list {
-			e.intervals[k] = i.SamplingPeriod
-		}
+func NewEndpoint(parent *VSphere, url *url.URL) Endpoint {
+	hostMap := make(objectMap)
+	vmMap := make(objectMap)
+	clusterMap := make(objectMap)
+	e := Endpoint{
+		Url:        url,
+		Parent:     parent,
+		lastColl:   make(map[string]time.Time),
+		hostMap:    hostMap,
+		vmMap:      vmMap,
+		clusterMap: clusterMap,
+		nameCache:  make(map[string]string),
 	}
+	e.init()
+	return e
+}
+
+func (e *Endpoint) init() error {
+	conn, err := NewConnection(e.Url)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	// Load interval table
+	//
+	ctx := context.Background()
+	list, err := conn.Perf.HistoricalInterval(ctx)
+	if err != nil {
+		return err
+	}
+	e.intervals = make([]int32, len(list))
+	for k, i := range list {
+		e.intervals[k] = i.SamplingPeriod
+	}
+	return nil
+}
+
+func (e *Endpoint) discover() error {
+	conn, err := NewConnection(e.Url)
+	if err != nil {
+		return err
+	}
+
+	defer conn.Close()
+
+	nameCache := make(map[string]string)
+
+	// Discover clusters
+	//
+	ctx := context.Background()
+	clusterMap, err := e.getClusters(ctx, conn.Root)
+	if err != nil {
+		return err
+	}
+	for _, cluster := range clusterMap {
+		nameCache[cluster.ref.Reference().Value] = cluster.name
+	}
+
+	// Discover hosts
+	//
+	hostMap, err := e.getHosts(ctx, conn.Root)
+	if err != nil {
+		return err
+	}
+	for _, host := range hostMap {
+		nameCache[host.ref.Reference().Value] = host.name
+	}
+
+	// Discover VMs
+	//
+	vmMap, err := e.getVMs(ctx, conn.Root)
+	for _, vm := range vmMap {
+		nameCache[vm.ref.Reference().Value] = vm.name
+	}
+
+	// Atomically swap maps
+	//
+	e.collectMux.Lock()
+	defer e.collectMux.Unlock()
+
+	e.nameCache = nameCache
+	e.vmMap = vmMap
+	e.hostMap = hostMap
+	e.clusterMap = clusterMap
 	return nil
 }
 
 func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Context, alias string, acc telegraf.Accumulator,
 	objects objectMap, nameCache map[string]string, intervalDuration internal.Duration) error {
 
+	// Object maps may change, so we need to hold the collect lock
+	//
+	e.collectMux.RLock()
+	defer e.collectMux.RUnlock()
+
 	// Interval = 0 means collection for this metric was diabled, so don't even bother.
 	//
 	interval := int32(intervalDuration.Duration.Seconds())
-	if interval == 0 {
+	if interval <= 0 {
 		return nil
 	}
+	log.Printf("D! Resource type: %s, Interval is %d", alias, interval)
 
 	// Do we have new data yet?
 	//
@@ -121,6 +204,7 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 			log.Printf("D! Querying %d objects of type %s for %s. Total processed: %d. Total objects %d\n", len(pqs), alias, e.Url.Host, total, len(objects))
 			metrics, err := p.Query(ctx, pqs)
 			if err != nil {
+				log.Printf("E! Error processing resource type %s", alias)
 				return err
 			}
 
@@ -165,71 +249,30 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 }
 
 func (e *Endpoint) collect(acc telegraf.Accumulator) error {
+	err := e.discover()
+	if err != nil {
+		return err
+	}
+
+	conn, err := NewConnection(e.Url)
+	if err != nil {
+		return err
+	}
+
+	defer conn.Close()
+
 	ctx := context.Background()
-	c, err := govmomi.NewClient(ctx, e.Url, true)
+	err = e.collectResourceType(conn.Perf, ctx, "cluster", acc, e.clusterMap, e.nameCache, e.Parent.ClusterInterval)
 	if err != nil {
 		return err
 	}
 
-	defer c.Logout(ctx)
-
-	m := view.NewManager(c.Client)
-	v, err := m.CreateContainerView(ctx, c.ServiceContent.RootFolder, []string{}, true)
+	err = e.collectResourceType(conn.Perf, ctx, "host", acc, e.hostMap, e.nameCache, e.Parent.HostInterval)
 	if err != nil {
 		return err
 	}
 
-	defer v.Destroy(ctx)
-
-	p := performance.NewManager(c.Client)
-
-	//TODO:
-	// This causes strange error messages in the vCenter console. Possibly due to a bug in
-	// govmomi. We're commenting it out for now. Should be benign since the logout should
-	// destroy all resources anyway.
-	//
-	//defer p.Destroy(ctx)
-
-	// Load cache if needed
-	e.init(p)
-
-	nameCache := make(map[string]string)
-
-	// Collect cluster metrics
-	//
-	clusterMap, err := e.getClusters(ctx, v)
-	if err != nil {
-		return err
-	}
-	for _, cluster := range clusterMap {
-		nameCache[cluster.ref.Reference().Value] = cluster.name
-	}
-	err = e.collectResourceType(p, ctx, "cluster", acc, clusterMap, nameCache, e.Parent.ClusterInterval)
-	if err != nil {
-		return err
-	}
-
-	// Collect host metrics
-	//
-	hostMap, err := e.getHosts(ctx, v)
-	if err != nil {
-		return err
-	}
-	for _, host := range hostMap {
-		nameCache[host.ref.Reference().Value] = host.name
-	}
-	err = e.collectResourceType(p, ctx, "host", acc, hostMap, nameCache, e.Parent.HostInterval)
-	if err != nil {
-		return err
-	}
-
-	// Collect vm metrics
-	//
-	vmMap, err := e.getVMs(ctx, v)
-	for _, vm := range vmMap {
-		nameCache[vm.ref.Reference().Value] = vm.name
-	}
-	err = e.collectResourceType(p, ctx, "vm", acc, vmMap, nameCache, e.Parent.VmInterval)
+	err = e.collectResourceType(conn.Perf, ctx, "vm", acc, e.vmMap, e.nameCache, e.Parent.VmInterval)
 	if err != nil {
 		return err
 	}
@@ -315,11 +358,7 @@ func (v *VSphere) vSphereInit() {
 		if err != nil {
 			log.Printf("E! Can't parse URL %s\n", rawUrl)
 		}
-		v.endpoints[i] = Endpoint{
-			Url:      u,
-			Parent:   v,
-			lastColl: make(map[string]time.Time),
-		}
+		v.endpoints[i] = NewEndpoint(v, u)
 	}
 }
 
@@ -355,13 +394,14 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("vsphere", func() telegraf.Input {
 		return &VSphere{
-			Vcenters:          []string{},
-			VmInterval:        internal.Duration{Duration: time.Second * 150},
-			HostInterval:      internal.Duration{Duration: time.Second * 150},
-			ClusterInterval:   internal.Duration{Duration: time.Second * 300},
-			DatastoreInterval: internal.Duration{Duration: time.Second * 300},
-			MaxSamples:        10,
-			MaxQuery:          64,
+			Vcenters:                []string{},
+			VmInterval:              internal.Duration{Duration: time.Second * 20},
+			HostInterval:            internal.Duration{Duration: time.Second * 20},
+			ClusterInterval:         internal.Duration{Duration: time.Second * 300},
+			DatastoreInterval:       internal.Duration{Duration: time.Second * 300},
+			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
+			MaxSamples:              10,
+			MaxQuery:                64,
 		}
 	})
 }
