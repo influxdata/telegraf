@@ -38,6 +38,10 @@ func TestConnectAndWrite(t *testing.T) {
 }
 
 func TestTemplateManagementEmptyTemplate(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
 	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
 
 	ctx := context.Background()
@@ -80,6 +84,26 @@ func TestTemplateManagement(t *testing.T) {
 
 	err = e.manageTemplate(ctx)
 	require.NoError(t, err)
+}
+
+func TestTemplateInvalidIndexPattern(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	urls := []string{"http://" + testutil.GetLocalHost() + ":9200"}
+
+	e := &Elasticsearch{
+		URLs:              urls,
+		IndexName:         "{{host}}-%Y.%m.%d",
+		Timeout:           internal.Duration{Duration: time.Second * 5},
+		ManageTemplate:    true,
+		TemplateName:      "telegraf",
+		OverwriteTemplate: true,
+	}
+
+	err := e.Connect()
+	require.Error(t, err)
 }
 
 func TestGetIndexName(t *testing.T) {

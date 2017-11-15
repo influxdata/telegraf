@@ -39,7 +39,7 @@ var sampleConfig = `
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
   urls = [ "http://node1.es.example.com:9200" ] # required.
-  ## Elasticsearch client timeout, defaults to "5s" if not set. 
+  ## Elasticsearch client timeout, defaults to "5s" if not set.
   timeout = "5s"
   ## Set to true to ask Elasticsearch a list of all cluster nodes,
   ## thus it is not necessary to list all nodes in the urls config option.
@@ -60,8 +60,8 @@ var sampleConfig = `
   # %m - month (01..12)
   # %d - day of month (e.g., 01)
   # %H - hour (00..23)
-  ## Additionally, you can specify a tag name using the notation {{tag_name}} 
-  ## which will be used as part of the index name. If the tag does not exist, 
+  ## Additionally, you can specify a tag name using the notation {{tag_name}}
+  ## which will be used as part of the index name. If the tag does not exist,
   ## the default tag value will be used.
   # index_name = "telegraf-{{host}}-%Y.%m.%d"
   # default_tag_value = "none"
@@ -219,17 +219,21 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 		return fmt.Errorf("Elasticsearch template check failed, template name: %s, error: %s", a.TemplateName, errExists)
 	}
 
-	templatePattern := a.IndexName + "*"
+	templatePattern := a.IndexName
 
-	if strings.Contains(a.IndexName, "%") {
-		templatePattern = a.IndexName[0:strings.Index(a.IndexName, "%")] + "*"
+	if strings.Contains(templatePattern, "%") {
+		templatePattern = templatePattern[0:strings.Index(templatePattern, "%")]
 	}
 
-	if strings.Contains(a.IndexName, "$") {
-		templatePattern = templatePattern[0:strings.Index(templatePattern, "$")] + "*"
+	if strings.Contains(templatePattern, "{{") {
+		templatePattern = templatePattern[0:strings.Index(templatePattern, "{{")]
 	}
 
-	if (a.OverwriteTemplate) || (!templateExists) {
+	if templatePattern == "" {
+		return fmt.Errorf("Template cannot be created for dynamic index names without an index prefix")
+	}
+
+	if (a.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {
 		// Create or update the template
 		tmpl := fmt.Sprintf(`
 			{
@@ -287,7 +291,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 						]
 					}
 				}
-			}`, templatePattern)
+			}`, templatePattern+"*")
 		_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(tmpl).Do(ctx)
 
 		if errCreateTemplate != nil {
