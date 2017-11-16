@@ -19,6 +19,7 @@ type Elasticsearch struct {
 	URLs                []string `toml:"urls"`
 	IndexName           string
 	DefaultTagValue     string
+	TagKeys             []string
 	Username            string
 	Password            string
 	EnableSniffer       bool
@@ -157,6 +158,8 @@ func (a *Elasticsearch) Connect() error {
 		}
 	}
 
+	a.IndexName, a.TagKeys = a.GetTagKeys(a.IndexName)
+
 	return nil
 }
 
@@ -172,7 +175,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
-		indexName := a.GetIndexName(a.IndexName, metric.Time(), metric.Tags())
+		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.TagKeys, metric.Tags())
 
 		m := make(map[string]interface{})
 
@@ -308,7 +311,35 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	return nil
 }
 
-func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, metricTags map[string]string) string {
+func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
+
+	var tagKeys []string
+	startTag := strings.Index(indexName, "{{")
+
+	for startTag >= 0 {
+		endTag := strings.Index(indexName, "}}")
+
+		if endTag < 0 {
+			startTag = -1
+
+		} else {
+			tagName := indexName[startTag+2 : endTag]
+
+			var tagReplacer = strings.NewReplacer(
+				"{{"+tagName+"}}", "%s",
+			)
+
+			indexName = tagReplacer.Replace(indexName)
+			tagKeys = append(tagKeys, (strings.TrimSpace(tagName)))
+
+			startTag = strings.Index(indexName, "{{")
+		}
+	}
+
+	return indexName, tagKeys
+}
+
+func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
 	if strings.Contains(indexName, "%") {
 		var dateReplacer = strings.NewReplacer(
 			"%Y", eventTime.UTC().Format("2006"),
@@ -321,46 +352,18 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, metr
 		indexName = dateReplacer.Replace(indexName)
 	}
 
-	startTag := strings.Index(indexName, "{{")
+	tagValues := []interface{}{}
 
-	for startTag >= 0 {
-
-		endTag := strings.Index(indexName, "}}")
-
-		if endTag < 0 {
-
-			startTag = -1
-
+	for _, key := range tagKeys {
+		if value, ok := metricTags[key]; ok {
+			tagValues = append(tagValues, value)
 		} else {
-
-			tagName := indexName[startTag+2 : endTag]
-			tagNameTrim := strings.TrimSpace(tagName)
-			found := false
-
-			for k := range metricTags {
-				if k == tagNameTrim {
-					found = true
-					var tagReplacer = strings.NewReplacer(
-						"{{"+tagName+"}}", metricTags[k],
-					)
-					indexName = tagReplacer.Replace(indexName)
-				}
-			}
-
-			if found != true {
-				log.Printf("D! Tag %s not found, using '%s' instead\n", tagNameTrim, a.DefaultTagValue)
-				var tagReplacer = strings.NewReplacer(
-					"{{"+tagName+"}}", a.DefaultTagValue,
-				)
-				indexName = tagReplacer.Replace(indexName)
-
-			}
-
-			startTag = strings.Index(indexName, "{{")
+			log.Printf("D! Tag %s not found, using '%s' instead\n", key, a.DefaultTagValue)
+			tagValues = append(tagValues, a.DefaultTagValue)
 		}
 	}
 
-	return indexName
+	return fmt.Sprintf(indexName, tagValues...)
 
 }
 
