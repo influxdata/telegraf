@@ -2,7 +2,6 @@ package particle
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"time"
 
