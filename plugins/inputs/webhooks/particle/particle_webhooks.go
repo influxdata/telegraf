@@ -50,7 +50,7 @@ func (rb *ParticleWebhook) eventHandler(w http.ResponseWriter, r *http.Request) 
 	defer r.Body.Close()
 	e := newEvent()
 	if err := json.NewDecoder(r.Body).Decode(e); err != nil {
-		log.Println(err)
+		rb.acc.AddError(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -58,7 +58,6 @@ func (rb *ParticleWebhook) eventHandler(w http.ResponseWriter, r *http.Request) 
 	pTime, err := e.Time()
 	if err != nil {
 		pTime = time.Now()
-		log.Printf("error parsing particle event time: %s. Using telegraf host time instead: %s", e.PublishedAt, pTime)
 	}
 
 	rb.acc.AddFields(e.Name, e.Data.Fields, e.Data.Tags, pTime)
