@@ -17,9 +17,11 @@ const measurement = "pf"
 const pfctlCommand = "pfctl"
 
 type PF struct {
-	UseSudo    bool
-	StateTable StateTable
-	infoFunc   func() (string, error)
+	PfctlCommand string
+	PfctlArgs    []string
+	UseSudo      bool
+	StateTable   []*Entry
+	infoFunc     func() (string, error)
 }
 
 func (pf *PF) Description() string {
@@ -38,6 +40,14 @@ func (pf *PF) SampleConfig() string {
 
 // Gather is the entrypoint for the plugin.
 func (pf *PF) Gather(acc telegraf.Accumulator) error {
+	if pf.PfctlCommand == "" {
+		var err error
+		if pf.PfctlCommand, pf.PfctlArgs, err = pf.buildPfctlCmd(); err != nil {
+			acc.AddError(fmt.Errorf("Can't construct pfctl commandline: %s", err))
+			return nil
+		}
+	}
+
 	o, err := pf.infoFunc()
 	if err != nil {
 		acc.AddError(err)
@@ -125,11 +135,8 @@ func (pf *PF) parseStateTable(lines []string, acc telegraf.Accumulator) error {
 }
 
 func (pf *PF) callPfctl() (string, error) {
-	c, err := pf.buildPfctlCmd()
-	if err != nil {
-		return "", fmt.Errorf("Can't construct commandline: %s", err)
-	}
-	out, oerr := c.Output()
+	cmd := execCommand(pf.PfctlCommand, pf.PfctlArgs...)
+	out, oerr := cmd.Output()
 	if oerr != nil {
 		return string(out), fmt.Errorf("error running %s: %s: %s", pfctlCommand, oerr, oerr.(*exec.ExitError).Stderr)
 	}
@@ -139,21 +146,20 @@ func (pf *PF) callPfctl() (string, error) {
 var execLookPath = exec.LookPath
 var execCommand = exec.Command
 
-func (pf *PF) buildPfctlCmd() (*exec.Cmd, error) {
+func (pf *PF) buildPfctlCmd() (string, []string, error) {
 	cmd, err := execLookPath(pfctlCommand)
 	if err != nil {
-		return nil, fmt.Errorf("can't locate %s: %v", pfctlCommand, err)
+		return "", nil, fmt.Errorf("can't locate %s: %v", pfctlCommand, err)
 	}
 	args := []string{"-s", "info"}
 	if pf.UseSudo {
 		args = append([]string{cmd}, args...)
 		cmd, err = execLookPath("sudo")
 		if err != nil {
-			return nil, fmt.Errorf("can't locate sudo: %v", err)
+			return "", nil, fmt.Errorf("can't locate sudo: %v", err)
 		}
 	}
-	c := execCommand(cmd, args...)
-	return c, nil
+	return cmd, args, nil
 }
 
 type StateTable struct {

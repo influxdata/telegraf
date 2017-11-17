@@ -2,7 +2,6 @@ package pf
 
 import (
 	"log"
-	"os/exec"
 	"reflect"
 	"strconv"
 	"testing"
@@ -13,15 +12,6 @@ import (
 type measurementResult struct {
 	tags   map[string]string
 	fields map[string]interface{}
-}
-
-func fakeexecFunc(i int, t *testing.T, desiredCmd string, desiredArgs ...string) func(string, ...string) *exec.Cmd {
-	return func(cmd string, args ...string) *exec.Cmd {
-		if cmd != desiredCmd || !reflect.DeepEqual(args, desiredArgs) {
-			t.Errorf("%d: not invoked correctly! %s - %#v vs %s - %#v", i, cmd, args, desiredCmd, desiredArgs)
-		}
-		return nil
-	}
 }
 
 func TestPfctlInvocation(t *testing.T) {
@@ -50,10 +40,12 @@ func TestPfctlInvocation(t *testing.T) {
 		execLookPath = func(cmd string) (string, error) { return "fake" + cmd, nil }
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			log.Printf("running #%d\n", i)
-			execCommand = fakeexecFunc(i, t, tt.cmd, tt.args...)
-			_, err := tt.config.buildPfctlCmd()
+			cmd, args, err := tt.config.buildPfctlCmd()
 			if err != nil {
 				t.Fatalf("error when running buildPfctlCmd: %s", err)
+			}
+			if tt.cmd != cmd || !reflect.DeepEqual(tt.args, args) {
+				t.Errorf("%d: expected %s - %#v got %s - %#v", tt.cmd, tt.args, cmd, args)
 			}
 		})
 	}
