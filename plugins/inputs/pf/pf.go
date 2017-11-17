@@ -138,7 +138,11 @@ func (pf *PF) callPfctl() (string, error) {
 	cmd := execCommand(pf.PfctlCommand, pf.PfctlArgs...)
 	out, oerr := cmd.Output()
 	if oerr != nil {
-		return string(out), fmt.Errorf("error running %s: %s: %s", pfctlCommand, oerr, oerr.(*exec.ExitError).Stderr)
+		ee, ok := oerr.(*exec.ExitError)
+		if !ok {
+			return string(out), fmt.Errorf("error running %s: %s: (unable to get stderr)", pfctlCommand, oerr)
+		}
+		return string(out), fmt.Errorf("error running %s: %s: %s", pfctlCommand, oerr, ee.Stderr)
 	}
 	return string(out), oerr
 }
