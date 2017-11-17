@@ -6,7 +6,6 @@ import (
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/view"
 	"net/url"
-	"sync"
 )
 
 type Connection struct {

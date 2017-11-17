@@ -17,6 +17,21 @@ import (
 	"time"
 )
 
+type VSphere struct {
+	Vcenters                []string
+	GatherClusters 		 	bool
+	GatherHosts				bool
+	GatherVms				bool
+	GatherDatastores		bool
+	ObjectsPerQuery         int32
+	VmSamplingPeriod        internal.Duration
+	HostSamplingPeriod      internal.Duration
+	ClusterSamplingPeriod   internal.Duration
+	DatastoreSamplingPeriod internal.Duration
+	ObjectDiscoveryInterval internal.Duration
+	endpoints               []Endpoint
+}
+
 type objectMap map[string]objectRef
 
 type Endpoint struct {
@@ -30,17 +45,6 @@ type Endpoint struct {
 	nameCache       map[string]string
 	discoveryTicker *time.Ticker
 	collectMux      sync.RWMutex
-}
-
-type VSphere struct {
-	Vcenters                []string
-	VmSamplingPeriod        internal.Duration
-	HostSamplingPeriod      internal.Duration
-	ClusterSamplingPeriod   internal.Duration
-	DatastoreSamplingPeriod internal.Duration
-	ObjectDiscoveryInterval internal.Duration
-	ObjectsPerQuery         int32
-	endpoints               []Endpoint
 }
 
 type objectRef struct {
@@ -82,16 +86,15 @@ func (e *Endpoint) init() error {
 	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() > 0 {
 		e.discoveryTicker = time.NewTicker(e.Parent.ObjectDiscoveryInterval.Duration)
 		go func() {
-			for _ = range e.discoveryTicker.C {
+			for range e.discoveryTicker.C {
 				err := e.discover()
 				if err != nil {
-					log.Printf("E! Error in discovery")
-					log.Println(err)
+					log.Printf("E! Error in discovery %v", err)
 				}
 			}
 		}()
 
-		// Run an initial disovery.
+		// Run an initial discovery.
 		//
 		e.discover()
 	}
@@ -105,46 +108,60 @@ func (e *Endpoint) discover() error {
 	}
 
 	defer conn.Close()
+	ctx := context.Background()
 
 	nameCache := make(map[string]string)
+	clusterMap := e.clusterMap
+	hostMap := e.hostMap
+	vmMap := e.vmMap
+	datastoreMap := e.datastoreMap
 
 	// Discover clusters
 	//
-	ctx := context.Background()
-	clusterMap, err := e.getClusters(ctx, conn.Root)
-	if err != nil {
-		return err
-	}
-	for _, cluster := range clusterMap {
-		nameCache[cluster.ref.Reference().Value] = cluster.name
+	if e.Parent.GatherClusters {
+		clusterMap, err = e.getClusters(ctx, conn.Root)
+		if err != nil {
+			return err
+		}
+		for _, cluster := range clusterMap {
+			nameCache[cluster.ref.Reference().Value] = cluster.name
+		}
 	}
 
 	// Discover hosts
 	//
-	hostMap, err := e.getHosts(ctx, conn.Root)
-	if err != nil {
-		return err
-	}
-	for _, host := range hostMap {
-		nameCache[host.ref.Reference().Value] = host.name
+	if e.Parent.GatherHosts {
+		hostMap, err = e.getHosts(ctx, conn.Root)
+		if err != nil {
+			return err
+		}
+		for _, host := range hostMap {
+			nameCache[host.ref.Reference().Value] = host.name
+		}
 	}
 
 	// Discover VMs
 	//
-	vmMap, err := e.getVMs(ctx, conn.Root)
-	if err != nil {
-		return err
-	}
-	for _, vm := range vmMap {
-		nameCache[vm.ref.Reference().Value] = vm.name
+	if e.Parent.GatherVms {
+		vmMap, err = e.getVMs(ctx, conn.Root)
+		if err != nil {
+			return err
+		}
+		for _, vm := range vmMap {
+			nameCache[vm.ref.Reference().Value] = vm.name
+		}
 	}
 
-	datastoreMap, err := e.getDatastores(ctx, conn.Root)
-	if err != nil {
-		return err
-	}
-	for _, datastore := range datastoreMap {
-		nameCache[datastore.ref.Reference().Value] = datastore.name
+	// Discover Datastores
+	//
+	if e.Parent.GatherDatastores {
+		datastoreMap, err = e.getDatastores(ctx, conn.Root)
+		if err != nil {
+			return err
+		}
+		for _, datastore := range datastoreMap {
+			nameCache[datastore.ref.Reference().Value] = datastore.name
+		}
 	}
 
 	// Atomically swap maps
@@ -165,8 +182,6 @@ func (e *Endpoint) discover() error {
 
 func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Context, alias string, acc telegraf.Accumulator,
 	objects objectMap, nameCache map[string]string, intervalDuration internal.Duration, isRealTime bool) error {
-
-		p.
 
 	// Object maps may change, so we need to hold the collect lock
 	//
@@ -302,27 +317,36 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 	}
 
 	defer conn.Close()
-
 	ctx := context.Background()
-	err = e.collectResourceType(conn.Perf, ctx, "cluster", acc, e.clusterMap, e.nameCache, e.Parent.ClusterSamplingPeriod, false)
-	if err != nil {
-		return err
+
+	if e.Parent.GatherClusters {
+		err = e.collectResourceType(conn.Perf, ctx, "cluster", acc, e.clusterMap, e.nameCache, e.Parent.ClusterSamplingPeriod, false)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = e.collectResourceType(conn.Perf, ctx, "host", acc, e.hostMap, e.nameCache, e.Parent.HostSamplingPeriod, true)
-	if err != nil {
-		return err
+	if e.Parent.GatherHosts {
+		err = e.collectResourceType(conn.Perf, ctx, "host", acc, e.hostMap, e.nameCache, e.Parent.HostSamplingPeriod, true)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = e.collectResourceType(conn.Perf, ctx, "vm", acc, e.vmMap, e.nameCache, e.Parent.VmSamplingPeriod, true)
-	if err != nil {
-		return err
+	if e.Parent.GatherVms {
+		err = e.collectResourceType(conn.Perf, ctx, "vm", acc, e.vmMap, e.nameCache, e.Parent.VmSamplingPeriod, true)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = e.collectResourceType(conn.Perf, ctx, "datastore", acc, e.datastoreMap, e.nameCache, e.Parent.DatastoreSamplingPeriod, false)
-	if err != nil {
-		return err
+	if e.Parent.GatherDatastores {
+		err = e.collectResourceType(conn.Perf, ctx, "datastore", acc, e.datastoreMap, e.nameCache, e.Parent.DatastoreSamplingPeriod, false)
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 
@@ -437,12 +461,19 @@ func init() {
 	inputs.Add("vsphere", func() telegraf.Input {
 		return &VSphere{
 			Vcenters:                []string{},
-			VmSamplingPeriod:        internal.Duration{Duration: time.Second * 20},
-			HostSamplingPeriod:      internal.Duration{Duration: time.Second * 20},
-			ClusterSamplingPeriod:   internal.Duration{Duration: time.Second * 300},
-			DatastoreSamplingPeriod: internal.Duration{Duration: time.Second * 300},
-			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
+
+			GatherClusters:			 true,
+			GatherHosts:			 true,
+			GatherVms:			     true,
+			GatherDatastores:		 true,
+
 			ObjectsPerQuery:         500,
+			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
+
+			ClusterSamplingPeriod:   internal.Duration{Duration: time.Second * 300},
+			HostSamplingPeriod:      internal.Duration{Duration: time.Second * 20},
+			VmSamplingPeriod:        internal.Duration{Duration: time.Second * 20},
+			DatastoreSamplingPeriod: internal.Duration{Duration: time.Second * 300},
 		}
 	})
 }
