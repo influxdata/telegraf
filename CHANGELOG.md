@@ -5,6 +5,7 @@
 - [cratedb](./plugins/outputs/wavefront/README.md) - Thanks to @felixge
 - [jolokia2](./plugins/inputs/jolokia2/README.md) - Thanks to @dylanmei
 - [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
+- [particle](./plugins/inputs/webhooks/particle/README.md) - Thanks to @davidgs
 - [smart](./plugins/inputs/smart/README.md) - Thanks to @rickard-von-essen
 - [solr](./plugins/inputs/solr/README.md) - Thanks to @ljagiello
 - [teamspeak](./plugins/inputs/teamspeak/README.md) - Thanks to @p4ddy1
@@ -58,6 +59,7 @@
 - [#2019](https://github.com/influxdata/telegraf/pull/2019): Add Solr input plugin.
 - [#3210](https://github.com/influxdata/telegraf/pull/3210): Add CrateDB output plugin.
 - [#3459](https://github.com/influxdata/telegraf/pull/3459): Add systemd unit pid and cgroup matching to procstat.
+- [#3477](https://github.com/influxdata/telegraf/pull/3477): Add Particle Webhook Plugin.
 
 ### Bugfixes
 

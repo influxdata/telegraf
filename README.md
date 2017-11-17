@@ -236,8 +236,9 @@ Telegraf can also collect metrics via the following service plugins:
   * [filestack](./plugins/inputs/webhooks/filestack)
   * [github](./plugins/inputs/webhooks/github)
   * [mandrill](./plugins/inputs/webhooks/mandrill)
-  * [rollbar](./plugins/inputs/webhooks/rollbar)
   * [papertrail](./plugins/inputs/webhooks/papertrail)
+  * [particle](./plugins/inputs/webhooks/particle)
+  * [rollbar](./plugins/inputs/webhooks/rollbar)
 * [zipkin](./plugins/inputs/zipkin)
 
 Telegraf is able to parse the following input data formats into metrics, these
