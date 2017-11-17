@@ -1,12 +1,12 @@
 # PF Plugin
 
-The pf plugin gathers counters from the FreeBSD/OpenBSD pf firewall.
+The pf plugin gathers information from the FreeBSD/OpenBSD pf firewall. Currently it can retrive information about the state table: the number of current entries in the table, and counters for the number of searches, inserts, and removals to the table.
 
-The pfstat command requires read access to the device file /dev/pf. You have several options to grant telegraf to run pfctl:
+The pf plugin retrives this information by invoking the `pfstat` command. The `pfstat` command requires read access to the device file `/dev/pf`. You have several options to permit telegraf to run `pfctl`:
 
 * Run telegraf as root. This is strongly discouraged.
-* Change the ownership and permissions for /dev/pf such that the user telegraf runs at can read the /dev/pf device file. This is probably not that good of an idea either,
-* Configure sudo to grant telegraf to run pfctl as root. This is the most restrictive option, but require sudo setup.
+* Change the ownership and permissions for /dev/pf such that the user telegraf runs at can read the /dev/pf device file. This is probably not that good of an idea either.
+* Configure sudo to grant telegraf to run `pfctl` as root. This is the most restrictive option, but require sudo setup.
 
 ### Using sudo
 
@@ -28,6 +28,9 @@ telegraf ALL=(root) NOPASSWD: /sbin/pfctl -s info
 
 - pf
     - entries (integer, count)
+    - searches (integer, count)
+    - inserts (integer, count)
+    - removals (integer, count)
 
 ### Example Output:
 
@@ -61,5 +64,5 @@ Counters
 ```
 > ./telegraf --config telegraf.conf --input-filter pf --test
 * Plugin: inputs.pf, Collection 1
-> pf,host=columbia entries=2i 1507492593000000000
+> pf,host=columbia entries=3i,searches=2668i,inserts=12i,removals=9i 1510941775000000000
 ```
