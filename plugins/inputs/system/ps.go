@@ -1,6 +1,7 @@
 package system
 
 import (
+	"log"
 	"os"
 
 	"github.com/influxdata/telegraf"
@@ -26,7 +27,6 @@ type PS interface {
 type PSDiskDeps interface {
 	Partitions(all bool) ([]disk.PartitionStat, error)
 	OSGetenv(key string) string
-	OSStat(name string) (os.FileInfo, error)
 	PSDiskUsage(path string) (*disk.UsageStat, error)
 }
 
@@ -111,11 +111,9 @@ func (s *systemPS) DiskUsage(
 		}
 
 		mountpoint := s.OSGetenv("HOST_MOUNT_PREFIX") + p.Mountpoint
-		if _, err := s.OSStat(mountpoint); err != nil {
-			continue
-		}
 		du, err := s.PSDiskUsage(mountpoint)
 		if err != nil {
+			log.Printf("D! error getting disk usage: %s: %v", mountpoint, du)
 			continue
 		}
 		du.Path = p.Mountpoint
@@ -162,10 +160,6 @@ func (s *systemPSDisk) Partitions(all bool) ([]disk.PartitionStat, error) {
 
 func (s *systemPSDisk) OSGetenv(key string) string {
 	return os.Getenv(key)
-}
-
-func (s *systemPSDisk) OSStat(name string) (os.FileInfo, error) {
-	return os.Stat(name)
 }
 
 func (s *systemPSDisk) PSDiskUsage(path string) (*disk.UsageStat, error) {
