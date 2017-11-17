@@ -2,6 +2,7 @@ package vsphere
 
 import (
 	"context"
+	"github.com/gobwas/glob"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -19,16 +20,24 @@ import (
 
 type VSphere struct {
 	Vcenters                []string
-	GatherClusters 		 	bool
-	GatherHosts				bool
-	GatherVms				bool
-	GatherDatastores		bool
+	GatherClusters          bool
+	GatherHosts             bool
+	GatherVms               bool
+	GatherDatastores        bool
 	ObjectsPerQuery         int32
 	VmSamplingPeriod        internal.Duration
 	HostSamplingPeriod      internal.Duration
 	ClusterSamplingPeriod   internal.Duration
 	DatastoreSamplingPeriod internal.Duration
 	ObjectDiscoveryInterval internal.Duration
+	VmMetrics               []string
+	HostMetrics             []string
+	ClusterMetrics          []string
+	DatastoreMetrics        []string
+	vmMetricIds             []types.PerfMetricId
+	hostMetricIds           []types.PerfMetricId
+	clusterMetricIds        []types.PerfMetricId
+	datastoreMetricIds      []types.PerfMetricId
 	endpoints               []Endpoint
 }
 
@@ -81,6 +90,30 @@ func (e *Endpoint) init() error {
 	}
 	defer conn.Close()
 
+	// Load metric IDs if specified
+	//
+	ctx := context.Background()
+	metricMap, err := conn.Perf.CounterInfoByName(ctx)
+	if err != nil {
+		return err
+	}
+	e.Parent.vmMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.VmMetrics)
+	if err != nil {
+		return err
+	}
+	e.Parent.hostMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.HostMetrics)
+	if err != nil {
+		return err
+	}
+	e.Parent.clusterMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.ClusterMetrics)
+	if err != nil {
+		return err
+	}
+	e.Parent.datastoreMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.DatastoreMetrics)
+	if err != nil {
+		return err
+	}
+
 	// Start background discovery if requested
 	//
 	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() > 0 {
@@ -99,6 +132,44 @@ func (e *Endpoint) init() error {
 		e.discover()
 	}
 	return nil
+}
+
+func resolveMetricWildcards(metricMap map[string]*types.PerfCounterInfo, wildcards []string) ([]types.PerfMetricId, error) {
+	// Nothing specified assumes we're looking at everything
+	//
+	if wildcards == nil {
+		return nil, nil
+	}
+	tmpMap := make(map[string]types.PerfMetricId)
+	for _, pattern := range wildcards {
+		exclude := false
+		if pattern[0] == '!' {
+			pattern = pattern[1:]
+			exclude = true
+		}
+		p, err := glob.Compile(pattern)
+		if err != nil {
+			return nil, err
+		}
+		for name, info := range metricMap {
+			if p.Match(name) {
+				if exclude {
+					delete(tmpMap, name)
+					log.Printf("D! excluded %s", name)
+				} else {
+					tmpMap[name] = types.PerfMetricId{CounterId: info.Key}
+					log.Printf("D! included %s", name)
+				}
+			}
+		}
+	}
+	result := make([]types.PerfMetricId, len(tmpMap))
+	idx := 0
+	for _, id := range tmpMap {
+		result[idx] = id
+		idx++
+	}
+	return result, nil
 }
 
 func (e *Endpoint) discover() error {
@@ -181,7 +252,7 @@ func (e *Endpoint) discover() error {
 }
 
 func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Context, alias string, acc telegraf.Accumulator,
-	objects objectMap, nameCache map[string]string, intervalDuration internal.Duration, isRealTime bool) error {
+	objects objectMap, nameCache map[string]string, intervalDuration internal.Duration, isRealTime bool, metricIds []types.PerfMetricId) error {
 
 	// Object maps may change, so we need to hold the collect lock
 	//
@@ -220,7 +291,7 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 		pq := types.PerfQuerySpec{
 			Entity:     object.ref,
 			MaxSample:  1,
-			MetricId:   nil,
+			MetricId:   metricIds,
 			IntervalId: interval,
 		}
 
@@ -320,28 +391,32 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 
 	if e.Parent.GatherClusters {
-		err = e.collectResourceType(conn.Perf, ctx, "cluster", acc, e.clusterMap, e.nameCache, e.Parent.ClusterSamplingPeriod, false)
+		err = e.collectResourceType(conn.Perf, ctx, "cluster", acc, e.clusterMap, e.nameCache,
+			e.Parent.ClusterSamplingPeriod, false, e.Parent.clusterMetricIds)
 		if err != nil {
 			return err
 		}
 	}
 
 	if e.Parent.GatherHosts {
-		err = e.collectResourceType(conn.Perf, ctx, "host", acc, e.hostMap, e.nameCache, e.Parent.HostSamplingPeriod, true)
+		err = e.collectResourceType(conn.Perf, ctx, "host", acc, e.hostMap, e.nameCache,
+			e.Parent.HostSamplingPeriod, true, e.Parent.hostMetricIds)
 		if err != nil {
 			return err
 		}
 	}
 
 	if e.Parent.GatherVms {
-		err = e.collectResourceType(conn.Perf, ctx, "vm", acc, e.vmMap, e.nameCache, e.Parent.VmSamplingPeriod, true)
+		err = e.collectResourceType(conn.Perf, ctx, "vm", acc, e.vmMap, e.nameCache, e.Parent.VmSamplingPeriod,
+			true, e.Parent.vmMetricIds)
 		if err != nil {
 			return err
 		}
 	}
 
 	if e.Parent.GatherDatastores {
-		err = e.collectResourceType(conn.Perf, ctx, "datastore", acc, e.datastoreMap, e.nameCache, e.Parent.DatastoreSamplingPeriod, false)
+		err = e.collectResourceType(conn.Perf, ctx, "datastore", acc, e.datastoreMap, e.nameCache,
+			e.Parent.DatastoreSamplingPeriod, false, e.Parent.datastoreMetricIds)
 		if err != nil {
 			return err
 		}
@@ -419,6 +494,7 @@ func (v *VSphere) Description() string {
 }
 
 func (v *VSphere) vSphereInit() {
+	log.Printf("v.endpoints: %s", v.endpoints)
 	if v.endpoints != nil {
 		return
 	}
@@ -460,20 +536,25 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("vsphere", func() telegraf.Input {
 		return &VSphere{
-			Vcenters:                []string{},
+			Vcenters: []string{},
 
-			GatherClusters:			 true,
-			GatherHosts:			 true,
-			GatherVms:			     true,
-			GatherDatastores:		 true,
+			GatherClusters:   true,
+			GatherHosts:      true,
+			GatherVms:        true,
+			GatherDatastores: true,
 
-			ObjectsPerQuery:         500,
+			ObjectsPerQuery: 500,
+
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
-
 			ClusterSamplingPeriod:   internal.Duration{Duration: time.Second * 300},
 			HostSamplingPeriod:      internal.Duration{Duration: time.Second * 20},
 			VmSamplingPeriod:        internal.Duration{Duration: time.Second * 20},
 			DatastoreSamplingPeriod: internal.Duration{Duration: time.Second * 300},
+
+			HostMetrics:      nil,
+			VmMetrics:        nil,
+			ClusterMetrics:   nil,
+			DatastoreMetrics: nil,
 		}
 	})
 }
