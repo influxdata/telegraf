@@ -60,6 +60,7 @@
 - [#3210](https://github.com/influxdata/telegraf/pull/3210): Add CrateDB output plugin.
 - [#3459](https://github.com/influxdata/telegraf/pull/3459): Add systemd unit pid and cgroup matching to procstat.
 - [#3477](https://github.com/influxdata/telegraf/pull/3477): Add Particle Webhook Plugin.
+- [#3471](https://github.com/influxdata/telegraf/pull/3471): Use MAX() instead of SUM() for latency measurements in sqlserver.
 
 ### Bugfixes
 
