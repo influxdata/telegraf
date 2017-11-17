@@ -1,3 +1,0 @@
-// +build !freebsd
-
-package pf
