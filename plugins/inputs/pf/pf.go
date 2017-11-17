@@ -1,10 +1,9 @@
 package pf
 
 import (
-	"errors"
+	"bufio"
 	"fmt"
 	"os/exec"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -66,70 +65,88 @@ func errMissingData(tag string) error {
 	return fmt.Errorf("struct data for tag \"%s\" not found in %s output", tag, pfctlCommand)
 }
 
-var stateTableHeaderRE = regexp.MustCompile("^State Table")
+type pfctlOutputStanza struct {
+	HeaderRE  *regexp.Regexp
+	ParseFunc func([]string, telegraf.Accumulator) error
+	Found     bool
+}
+
+var pfctlOutputStanzas = []*pfctlOutputStanza{
+	&pfctlOutputStanza{
+		HeaderRE:  regexp.MustCompile("^State Table"),
+		ParseFunc: parseStateTable,
+	},
+}
+
 var anyTableHeaderRE = regexp.MustCompile("^[A-Z]")
 
 func (pf *PF) parsePfctlOutput(pfoutput string, acc telegraf.Accumulator) error {
-	lines := strings.Split(pfoutput, "\n")
-	stateTableFound := false
-	for i, line := range lines {
-		if stateTableHeaderRE.MatchString(line) {
-			endline := len(lines)
-			for j, el := range lines[i+1:] {
-				if anyTableHeaderRE.MatchString(el) {
-					endline = j + i + 1
-					break
+	scanner := bufio.NewScanner(strings.NewReader(pfoutput))
+	for scanner.Scan() {
+		line := scanner.Text()
+		for _, s := range pfctlOutputStanzas {
+			if s.HeaderRE.MatchString(line) {
+				var stanzaLines []string
+				scanner.Scan()
+				line = scanner.Text()
+				for !anyTableHeaderRE.MatchString(line) {
+					stanzaLines = append(stanzaLines, line)
+					scanner.Scan()
+					line = scanner.Text()
 				}
+				if perr := s.ParseFunc(stanzaLines, acc); perr != nil {
+					return perr
+				}
+				s.Found = true
 			}
-			if perr := pf.parseStateTable(lines[i+1:endline], acc); perr != nil {
-				return perr
-			}
-			stateTableFound = true
 		}
 	}
-	if !stateTableFound {
-		return errParseHeader
+	for _, s := range pfctlOutputStanzas {
+		if !s.Found {
+			return errParseHeader
+		}
 	}
 	return nil
 }
 
+type Entry struct {
+	Field      string
+	PfctlTitle string
+	Value      int64
+}
+
+var StateTable = []*Entry{
+	&Entry{"entries", "current entries", -1},
+	&Entry{"searches", "searches", -1},
+	&Entry{"inserts", "inserts", -1},
+	&Entry{"removals", "removals", -1},
+}
+
 var stateTableRE = regexp.MustCompile(`^  (.*?)\s+(\d+)`)
 
-func (pf *PF) parseStateTable(lines []string, acc telegraf.Accumulator) error {
-	st := StateTable{}
-	tags, err := st.getTags()
-	if err != nil {
-		return fmt.Errorf("Can't retrieve struct tags: %v", err)
-	}
-	fMap := make(map[string]bool)
-	for i := 0; i < len(tags); i++ {
-		fMap[tags[i]] = false
-	}
-
+func parseStateTable(lines []string, acc telegraf.Accumulator) error {
 	for _, v := range lines {
 		entries := stateTableRE.FindStringSubmatch(v)
 		if entries != nil {
-			fs, err := st.setByTag(entries[1], entries[2])
-			if err != nil {
-				return errors.New("can't set statetable field from tag")
+			for _, f := range StateTable {
+				if f.PfctlTitle == entries[1] {
+					var err error
+					if f.Value, err = strconv.ParseInt(entries[2], 10, 64); err != nil {
+						return err
+					}
+				}
 			}
-			if fs {
-				fMap[entries[1]] = true
-			}
-		}
-	}
-
-	for k, v := range fMap {
-		if !v {
-			return errMissingData(k)
 		}
 	}
 
 	fields := make(map[string]interface{})
-	fields["entries"] = st.CurrentEntries
-	fields["searches"] = st.Searches
-	fields["inserts"] = st.Inserts
-	fields["removals"] = st.Removals
+	for _, v := range StateTable {
+		if v.Value == -1 {
+			return errMissingData(v.PfctlTitle)
+		}
+		fields[v.Field] = v.Value
+	}
+
 	acc.AddFields(measurement, fields, make(map[string]string))
 	return nil
 }
@@ -164,46 +181,6 @@ func (pf *PF) buildPfctlCmd() (string, []string, error) {
 		}
 	}
 	return cmd, args, nil
-}
-
-type StateTable struct {
-	CurrentEntries uint32 `pfctl:"current entries"`
-	Searches       uint64 `pfctl:"searches"`
-	Inserts        uint64 `pfctl:"inserts"`
-	Removals       uint64 `pfctl:"removals"`
-}
-
-func (pf *StateTable) getTags() ([]string, error) {
-	tags := []string{}
-	structVal := reflect.ValueOf(pf).Elem()
-	for i := 0; i < structVal.NumField(); i++ {
-		tags = append(tags, structVal.Type().Field(i).Tag.Get(pfctlCommand))
-	}
-	return tags, nil
-}
-
-// setByTag sets val for a struct field given the tag. returns false if tag not found.
-func (pf *StateTable) setByTag(tag string, val string) (bool, error) {
-	structVal := reflect.ValueOf(pf).Elem()
-
-	for i := 0; i < structVal.NumField(); i++ {
-		tagField := structVal.Type().Field(i).Tag.Get(pfctlCommand)
-		if tagField == tag {
-			valueField := structVal.Field(i)
-			switch valueField.Type().Kind() {
-			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-				iVal, err := strconv.ParseUint(val, 10, 64)
-				if err != nil {
-					return false, fmt.Errorf("Error parsing \"%s\" into uint: %s", val, err)
-				}
-				valueField.SetUint(iVal)
-				return true, nil
-			default:
-				return false, fmt.Errorf("unhandled struct type %s", valueField.Type())
-			}
-		}
-	}
-	return false, nil
 }
 
 func init() {

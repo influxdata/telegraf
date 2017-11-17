@@ -45,7 +45,7 @@ func TestPfctlInvocation(t *testing.T) {
 				t.Fatalf("error when running buildPfctlCmd: %s", err)
 			}
 			if tt.cmd != cmd || !reflect.DeepEqual(tt.args, args) {
-				t.Errorf("%d: expected %s - %#v got %s - %#v", tt.cmd, tt.args, cmd, args)
+				t.Errorf("%d: expected %s - %#v got %s - %#v", i, tt.cmd, tt.args, cmd, args)
 			}
 		})
 	}
@@ -152,10 +152,10 @@ Counters
 			measurements: []measurementResult{
 				measurementResult{
 					fields: map[string]interface{}{
-						"entries":  uint32(2),
-						"searches": uint64(11325),
-						"inserts":  uint64(5),
-						"removals": uint64(3)},
+						"entries":  int64(2),
+						"searches": int64(11325),
+						"inserts":  int64(5),
+						"removals": int64(3)},
 					tags: map[string]string{},
 				},
 			},
@@ -197,10 +197,10 @@ Counters
 			measurements: []measurementResult{
 				measurementResult{
 					fields: map[string]interface{}{
-						"entries":  uint32(649),
-						"searches": uint64(18421725761),
-						"inserts":  uint64(156762508),
-						"removals": uint64(156761859)},
+						"entries":  int64(649),
+						"searches": int64(18421725761),
+						"inserts":  int64(156762508),
+						"removals": int64(156761859)},
 					tags: map[string]string{},
 				},
 			},
