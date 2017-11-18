@@ -113,7 +113,7 @@ func (s *systemPS) DiskUsage(
 		mountpoint := s.OSGetenv("HOST_MOUNT_PREFIX") + p.Mountpoint
 		du, err := s.PSDiskUsage(mountpoint)
 		if err != nil {
-			log.Printf("D! error getting disk usage: %s: %v", mountpoint, du)
+			log.Printf("D! error getting disk usage: %s: %v", mountpoint, err)
 			continue
 		}
 		du.Path = p.Mountpoint
