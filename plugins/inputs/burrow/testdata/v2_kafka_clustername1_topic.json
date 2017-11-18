@@ -1,0 +1,15 @@
+{
+  "error": false,
+  "message": "broker topic list returned",
+  "topics": [
+    "topicA",
+    "topicB"
+  ],
+  "request": {
+    "uri": "/v2/kafka/clustername1/topic",
+    "host": "responding.host.example.com",
+    "cluster": "clustername1",
+    "group": "",
+    "topic": ""
+  }
+}

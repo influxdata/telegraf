@@ -1,0 +1,15 @@
+{
+  "error": false,
+  "message": "cluster list returned",
+  "clusters": [
+    "clustername1",
+    "clustername2"
+  ],
+  "request": {
+    "uri": "/v2/kafka",
+    "host": "responding.host.example.com",
+    "cluster": "",
+    "group": "",
+    "topic": ""
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "error": false,
+  "message": "consumer group status returned",
+  "status": {
+    "cluster": "clustername1",
+    "group": "group2",
+    "status": "WARN",
+    "complete": true,
+    "maxlag": {
+      "topic": "topicB",
+      "partition": 0,
+      "status": "OK",
+      "start": {
+        "offset": 823889,
+        "timestamp": 1432423256002,
+        "lag": 20
+      },
+      "end": {
+        "offset": 824743,
+        "timestamp": 1432423796003,
+        "lag": 25
+      }
+    },
+    "partitions": [
+      {
+        "topic": "topicB",
+        "partition": 0,
+        "status": "OK",
+        "start": {
+          "offset": 823890,
+          "timestamp": 1432423256002,
+          "lag": 1
+        },
+        "end": {
+          "offset": 824745,
+          "timestamp": 1432423796003,
+          "lag": 42
+        }
+      }
+    ]
+  },
+  "request": {
+    "uri": "/v2/kafka/clustername1/consumer/group2/status",
+    "host": "responding.host.example.com",
+    "cluster": "clustername1",
+    "group": "group2",
+    "topic": ""
+  }
+}

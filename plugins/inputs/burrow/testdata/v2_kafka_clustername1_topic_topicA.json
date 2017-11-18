@@ -1,0 +1,16 @@
+{
+  "error": false,
+  "message": "broker topic offsets returned",
+  "offsets": [
+    1000000,
+    1000001,
+    1000002
+  ],
+  "request": {
+    "uri": "/v2/kafka/clustername1/topic/topicA",
+    "host": "responding.host.example.com",
+    "cluster": "clustername1",
+    "group": "",
+    "topic": "topicA"
+  }
+}

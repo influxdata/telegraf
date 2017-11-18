@@ -1,0 +1,15 @@
+{
+  "error": false,
+  "message": "consumer list returned",
+  "consumers": [
+    "group1",
+    "group2"
+  ],
+  "request": {
+    "uri": "/v2/kafka/clustername1/consumer",
+    "host": "responding.host.example.com",
+    "cluster": "clustername1",
+    "group": "",
+    "topic": ""
+  }
+}
