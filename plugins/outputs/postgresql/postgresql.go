@@ -75,6 +75,8 @@ var sampleConfig = `
   ## Store tags as foreign keys in the metrics table. Default is false.
   # tags_as_foreignkeys = false
 
+  ## Template to use for generating tables
+  # table_template = "CREATE TABLE {TABLE}({COLUMNS},PRIMARY KEY({PK_COLUMNS}))"
 `
 
 func (p *Postgresql) SampleConfig() string { return sampleConfig }
@@ -117,8 +119,9 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 	}
 
 	query := strings.Replace(p.TableTemplate, "{TABLE}", quoteIdent(metric.Name()), -1)
+	query = strings.Replace(query, "{TABLELITERAL}", quoteLiteral(metric.Name()), -1)
 	query = strings.Replace(query, "{COLUMNS}", strings.Join(columns, ","), -1)
-	query = strings.Replace(query, "{PK_COLUMNS}", strings.Join(pk, ","), -1)
+	query = strings.Replace(query, "{KEY_COLUMNS}", strings.Join(pk, ","), -1)
 
 	sql = append(sql, query)
 	return strings.Join(sql, ";")
@@ -218,7 +221,7 @@ func init() {
 func newPostgresql() *Postgresql {
 	p := Postgresql{}
 	if p.TableTemplate == "" {
-		p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS},PRIMARY KEY({PK_COLUMNS}))"
+		p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS},PRIMARY KEY({KEY_COLUMNS}))"
 	}
 	return &p
 }
