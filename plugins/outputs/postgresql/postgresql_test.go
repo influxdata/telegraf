@@ -10,6 +10,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestPostgresqlQuote(t *testing.T) {
+	assert.Equal(t, `"foo"`, quoteIdent("foo"))
+	assert.Equal(t, `"fo'o"`, quoteIdent("fo'o"))
+	assert.Equal(t, `"fo""o"`, quoteIdent("fo\"o"))
+
+	assert.Equal(t, "'foo'", quoteLiteral("foo"))
+	assert.Equal(t, "'fo''o'", quoteLiteral("fo'o"))
+	assert.Equal(t, "'fo\"o'", quoteLiteral("fo\"o"))
+}
+
 func TestPostgresqlCreateStatement(t *testing.T) {
 	p := newPostgresql()
 	timestamp := time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC)
