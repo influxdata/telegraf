@@ -74,6 +74,7 @@ func (s *systemPS) DiskUsage(
 	if err != nil {
 		return nil, nil, err
 	}
+	log.Printf("D! partitions found: %v", parts)
 
 	// Make a "set" out of the filter slice
 	mountPointFilterSet := make(map[string]bool)
@@ -95,11 +96,13 @@ func (s *systemPS) DiskUsage(
 
 	for i := range parts {
 		p := parts[i]
+		log.Printf("D! getting usage for: %v", p)
 
 		if len(mountPointFilter) > 0 {
 			// If the mount point is not a member of the filter set,
 			// don't gather info on it.
 			if _, ok := mountPointFilterSet[p.Mountpoint]; !ok {
+				log.Printf("D! filesystem mountpoint excluded: %s", p.Mountpoint)
 				continue
 			}
 		}
@@ -107,6 +110,7 @@ func (s *systemPS) DiskUsage(
 		// If the mount point is a member of the exclude set,
 		// don't gather info on it.
 		if _, ok := fstypeExcludeSet[p.Fstype]; ok {
+			log.Printf("D! filesystem type excluded: %s: %v", p.Mountpoint, p.Fstype)
 			continue
 		}
 
