@@ -49,6 +49,10 @@ func quoteIdent(name string) string {
 	return pgx.Identifier{name}.Sanitize()
 }
 
+func quoteLiteral(name string) string {
+	return "'" + strings.Replace(name, "'", "''", -1) + "'"
+}
+
 var sampleConfig = `
   ## specify address via a url matching:
   ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
