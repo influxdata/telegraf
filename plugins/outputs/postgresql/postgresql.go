@@ -76,7 +76,7 @@ var sampleConfig = `
   # tags_as_foreignkeys = false
 
   ## Template to use for generating tables
-  # table_template = "CREATE TABLE {TABLE}({COLUMNS},PRIMARY KEY({KEY_COLUMNS}))"
+  # table_template = "CREATE TABLE {TABLE}({COLUMNS})"
 `
 
 func (p *Postgresql) SampleConfig() string { return sampleConfig }
@@ -184,6 +184,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 				query := fmt.Sprintf("SELECT %s FROM %s WHERE %s=$1", quoteIdent(column+"_id"), quoteIdent(tablename+"_"+column), quoteIdent(column))
 				err := p.db.QueryRow(query, value).Scan(&value_id)
 				if err != nil {
+					println(err)
 					query := fmt.Sprintf("INSERT INTO %s(%s) VALUES($1) RETURNING %s", quoteIdent(tablename+"_"+column), quoteIdent(column), quoteIdent(column+"_id"))
 					err := p.db.QueryRow(query, value).Scan(&value_id)
 					if err != nil {
@@ -221,7 +222,7 @@ func init() {
 func newPostgresql() *Postgresql {
 	p := Postgresql{}
 	if p.TableTemplate == "" {
-		p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS},PRIMARY KEY({KEY_COLUMNS}))"
+		p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS})"
 	}
 	return &p
 }
