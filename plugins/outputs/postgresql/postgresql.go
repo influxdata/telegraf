@@ -76,7 +76,7 @@ var sampleConfig = `
   # tags_as_foreignkeys = false
 
   ## Template to use for generating tables
-  # table_template = "CREATE TABLE {TABLE}({COLUMNS},PRIMARY KEY({PK_COLUMNS}))"
+  # table_template = "CREATE TABLE {TABLE}({COLUMNS},PRIMARY KEY({KEY_COLUMNS}))"
 `
 
 func (p *Postgresql) SampleConfig() string { return sampleConfig }
