@@ -34,26 +34,26 @@ type VSphere struct {
 	HostMetrics             []string
 	ClusterMetrics          []string
 	DatastoreMetrics        []string
-	vmMetricIds             []types.PerfMetricId
-	hostMetricIds           []types.PerfMetricId
-	clusterMetricIds        []types.PerfMetricId
-	datastoreMetricIds      []types.PerfMetricId
 	endpoints               []Endpoint
 }
 
 type objectMap map[string]objectRef
 
 type Endpoint struct {
-	Parent          *VSphere
-	Url             *url.URL
-	lastColl        map[string]time.Time
-	hostMap         objectMap
-	vmMap           objectMap
-	clusterMap      objectMap
-	datastoreMap    objectMap
-	nameCache       map[string]string
-	discoveryTicker *time.Ticker
-	collectMux      sync.RWMutex
+	Parent             *VSphere
+	Url                *url.URL
+	lastColl           map[string]time.Time
+	hostMap            objectMap
+	vmMap              objectMap
+	clusterMap         objectMap
+	datastoreMap       objectMap
+	nameCache          map[string]string
+	vmMetricIds        []types.PerfMetricId
+	hostMetricIds      []types.PerfMetricId
+	clusterMetricIds   []types.PerfMetricId
+	datastoreMetricIds []types.PerfMetricId
+	discoveryTicker    *time.Ticker
+	collectMux         sync.RWMutex
 }
 
 type objectRef struct {
@@ -97,19 +97,19 @@ func (e *Endpoint) init() error {
 	if err != nil {
 		return err
 	}
-	e.Parent.vmMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.VmMetrics)
+	e.vmMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.VmMetrics)
 	if err != nil {
 		return err
 	}
-	e.Parent.hostMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.HostMetrics)
+	e.hostMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.HostMetrics)
 	if err != nil {
 		return err
 	}
-	e.Parent.clusterMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.ClusterMetrics)
+	e.clusterMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.ClusterMetrics)
 	if err != nil {
 		return err
 	}
-	e.Parent.datastoreMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.DatastoreMetrics)
+	e.datastoreMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.DatastoreMetrics)
 	if err != nil {
 		return err
 	}
@@ -392,7 +392,7 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 
 	if e.Parent.GatherClusters {
 		err = e.collectResourceType(conn.Perf, ctx, "cluster", acc, e.clusterMap, e.nameCache,
-			e.Parent.ClusterSamplingPeriod, false, e.Parent.clusterMetricIds)
+			e.Parent.ClusterSamplingPeriod, false, e.clusterMetricIds)
 		if err != nil {
 			return err
 		}
@@ -400,7 +400,7 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 
 	if e.Parent.GatherHosts {
 		err = e.collectResourceType(conn.Perf, ctx, "host", acc, e.hostMap, e.nameCache,
-			e.Parent.HostSamplingPeriod, true, e.Parent.hostMetricIds)
+			e.Parent.HostSamplingPeriod, true, e.hostMetricIds)
 		if err != nil {
 			return err
 		}
@@ -408,7 +408,7 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 
 	if e.Parent.GatherVms {
 		err = e.collectResourceType(conn.Perf, ctx, "vm", acc, e.vmMap, e.nameCache, e.Parent.VmSamplingPeriod,
-			true, e.Parent.vmMetricIds)
+			true, e.vmMetricIds)
 		if err != nil {
 			return err
 		}
@@ -416,7 +416,7 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 
 	if e.Parent.GatherDatastores {
 		err = e.collectResourceType(conn.Perf, ctx, "datastore", acc, e.datastoreMap, e.nameCache,
-			e.Parent.DatastoreSamplingPeriod, false, e.Parent.datastoreMetricIds)
+			e.Parent.DatastoreSamplingPeriod, false, e.datastoreMetricIds)
 		if err != nil {
 			return err
 		}

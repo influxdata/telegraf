@@ -21,7 +21,6 @@ func NewConnection(url *url.URL) (*Connection, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	m := view.NewManager(c.Client)
 	v, err := m.CreateContainerView(ctx, c.ServiceContent.RootFolder, []string{}, true)
 	if err != nil {
