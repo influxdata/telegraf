@@ -8,19 +8,24 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
 
 ```toml
 [[inputs.bond]]
-  ## Sets bonding directory path
-  ## If not specified, then default is:
-  bond_path = "/proc/net/bonding"
+  ## Sets 'proc' directory path
+  ## If not specified, then default is /proc
+  # host_proc = "/proc"
+
+  ## Sets 'bonding' directory relative path
+  ## If not specified, then default is /net/bonding
+  # bond_path = "/net/bonding"
 
   ## By default, telegraf gather stats for all bond interfaces
   ## Setting interfaces will restrict the stats to the specified
   ## bond interfaces.
-  bond_interfaces = ["bond0"]
+  # bond_interfaces = ["bond0"]
 ```
 
 ### Measurements & Fields:
 
 - bond
+  - active_slave (for active-backup mode)
   - status
 
 - bond_slave
@@ -30,6 +35,9 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
 ### Description:
 
 ```
+active_slave
+  Currently active slave interface for active-backup mode.
+
 status
   Status of bond interface or bonds's slave interface (down = 0, up = 1).
 
@@ -52,9 +60,13 @@ Configuration:
 
 ```
 [[inputs.bond]]
-  ## Sets bonding directory path
-  ## If not specified, then default is:
-  bond_path = "/proc/net/bonding"
+  ## Sets 'proc' directory path
+  ## If not specified, then default is /proc
+  host_proc = "/proc"
+
+  ## Sets 'bonding' directory relative path
+  ## If not specified, then default is /net/bonding
+  bond_path = "/net/bonding"
 
   ## By default, telegraf gather stats for all bond interfaces
   ## Setting interfaces will restrict the stats to the specified
@@ -72,7 +84,7 @@ Output:
 
 ```
 * Plugin: inputs.bond, Collection 1
-> bond,bond=bond1,host=local status=1i 1509704525000000000
+> bond,bond=bond1,host=local active_slave="eth0",status=1i 1509704525000000000
 > bond_slave,bond=bond1,interface=eth0,host=local status=1i,failures=0i 1509704525000000000
 > bond_slave,host=local,bond=bond1,interface=eth1 status=1i,failures=0i 1509704525000000000
 > bond,bond=bond0,host=isvetlov-mac.local status=1i 1509704525000000000

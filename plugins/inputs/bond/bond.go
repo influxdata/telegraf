@@ -1,8 +1,10 @@
 package bond
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -11,25 +13,37 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// default bond directory path
+// default file paths
 const (
-	BOND_PATH = "/proc/net/bonding"
+	defaultBondPath = "/net/bonding"
+	defaultHostProc = "/proc"
+)
+
+// env variable names
+const (
+	envBonding = "PROC_NET_BONDING"
+	envProc    = "HOST_PROC"
 )
 
 type Bond struct {
+	HostProc       string   `toml:"host_proc"`
 	BondPath       string   `toml:"bond_path"`
 	BondInterfaces []string `toml:"bond_interfaces"`
 }
 
 var sampleConfig = `
-  ## Sets bonding directory path
-  ## If not specified, then default is:
-  bond_path = "/proc/net/bonding"
+	## Sets 'proc' directory path
+	## If not specified, then default is /proc
+	# host_proc = "/proc"
+
+  ## Sets 'bonding' directory relative path
+  ## If not specified, then default is /net/bonding
+  # bond_path = "/net/bonding"
 
   ## By default, telegraf gather stats for all bond interfaces
   ## Setting interfaces will restrict the stats to the specified
   ## bond interfaces.
-  bond_interfaces = ["bond0"]
+  # bond_interfaces = ["bond0"]
 `
 
 func (bond *Bond) Description() string {
@@ -41,22 +55,24 @@ func (bond *Bond) SampleConfig() string {
 }
 
 func (bond *Bond) Gather(acc telegraf.Accumulator) error {
-	// load path, get default value if config value and env variables are empty;
+	// load paths, get default value if config value and env variables are empty
+	bond.loadPaths()
 	// list bond interfaces from bonding directory or gather all interfaces.
-	err := bond.listInterfaces()
+	bondNames, err := bond.listInterfaces()
 	if err != nil {
 		return err
 	}
-	for _, bondName := range bond.BondInterfaces {
-		file, err := ioutil.ReadFile(bond.BondPath + "/" + bondName)
+	for _, bondName := range bondNames {
+		bondAbsPath := bond.HostProc + bond.BondPath + "/" + bondName
+		file, err := ioutil.ReadFile(bondAbsPath)
 		if err != nil {
-			acc.AddError(fmt.Errorf("E! error due inspecting '%s' interface: %v", bondName, err))
+			acc.AddError(fmt.Errorf("error inspecting '%s' interface: %v", bondAbsPath, err))
 			continue
 		}
 		rawFile := strings.TrimSpace(string(file))
 		err = bond.gatherBondInterface(bondName, rawFile, acc)
 		if err != nil {
-			acc.AddError(fmt.Errorf("E! error due inspecting '%s' interface: %v", bondName, err))
+			acc.AddError(fmt.Errorf("error inspecting '%s' interface: %v", bondName, err))
 		}
 	}
 	return nil
@@ -87,15 +103,19 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 		"bond": bondName,
 	}
 
-	lines := strings.Split(rawFile, "\n")
-	for _, line := range lines {
+	scanner := bufio.NewScanner(strings.NewReader(rawFile))
+	for scanner.Scan() {
+		line := scanner.Text()
 		stats := strings.Split(line, ":")
 		if len(stats) < 2 {
 			continue
 		}
-		name := strings.ToLower(strings.Replace(strings.TrimSpace(stats[0]), " ", "_", -1))
+		name := strings.TrimSpace(stats[0])
 		value := strings.TrimSpace(stats[1])
-		if strings.Contains(name, "mii_status") {
+		if strings.Contains(name, "Currently Active Slave") {
+			fields["active_slave"] = value
+		}
+		if strings.Contains(name, "MII Status") {
 			fields["status"] = 0
 			if value == "up" {
 				fields["status"] = 1
@@ -104,31 +124,35 @@ func (bond *Bond) gatherBondPart(bondName string, rawFile string, acc telegraf.A
 			return nil
 		}
 	}
-	return fmt.Errorf("E! Couldn't find status info for '%s' ", bondName)
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	return fmt.Errorf("Couldn't find status info for '%s' ", bondName)
 }
 
 func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.Accumulator) error {
 	var slave string
 	var status int
 
-	lines := strings.Split(rawFile, "\n")
-	for _, line := range lines {
+	scanner := bufio.NewScanner(strings.NewReader(rawFile))
+	for scanner.Scan() {
+		line := scanner.Text()
 		stats := strings.Split(line, ":")
 		if len(stats) < 2 {
 			continue
 		}
-		name := strings.ToLower(strings.Replace(strings.TrimSpace(stats[0]), " ", "_", -1))
+		name := strings.TrimSpace(stats[0])
 		value := strings.TrimSpace(stats[1])
-		if strings.Contains(name, "slave_interface") {
+		if strings.Contains(name, "Slave Interface") {
 			slave = value
 		}
-		if strings.Contains(name, "mii_status") {
+		if strings.Contains(name, "MII Status") {
 			status = 0
 			if value == "up" {
 				status = 1
 			}
 		}
-		if strings.Contains(name, "link_failure_count") {
+		if strings.Contains(name, "Link Failure Count") {
 			count, err := strconv.Atoi(value)
 			if err != nil {
 				return err
@@ -144,25 +168,47 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 			acc.AddFields("bond_slave", fields, tags)
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (bond *Bond) listInterfaces() error {
-	if bond.BondPath == "" {
-		bond.BondPath = BOND_PATH
+// loadPaths can be used to read paths firstly from config
+// if it is empty then try read from env variables
+func (bond *Bond) loadPaths() {
+	if bond.HostProc == "" {
+		bond.HostProc = proc(envProc, defaultHostProc)
 	}
-	if len(bond.BondInterfaces) == 0 {
-		paths, err := filepath.Glob(bond.BondPath + "/*")
+	if bond.BondPath == "" {
+		bond.BondPath = proc(envBonding, defaultBondPath)
+	}
+}
+
+// proc can be used to read file paths from env
+func proc(env, path string) string {
+	// try to read full file path
+	if p := os.Getenv(env); p != "" {
+		return p
+	}
+	// return default path
+	return path
+}
+
+func (bond *Bond) listInterfaces() ([]string, error) {
+	var interfaces []string
+	if len(bond.BondInterfaces) > 0 {
+		interfaces = bond.BondInterfaces
+	} else {
+		paths, err := filepath.Glob(bond.HostProc + bond.BondPath + "/*")
 		if err != nil {
-			return err
+			return nil, err
 		}
-		var interfaces []string
 		for _, p := range paths {
 			interfaces = append(interfaces, filepath.Base(p))
 		}
-		bond.BondInterfaces = interfaces
 	}
-	return nil
+	return interfaces, nil
 }
 
 func init() {
