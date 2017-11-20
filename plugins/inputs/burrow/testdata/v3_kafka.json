@@ -1,0 +1,11 @@
+{
+  "error": false,
+  "message": "cluster list returned",
+  "clusters": [
+    "clustername1"
+  ],
+  "request": {
+    "url": "/v3/kafka",
+    "host": "example.com"
+  }
+}

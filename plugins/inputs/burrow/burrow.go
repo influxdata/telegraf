@@ -1,103 +1,121 @@
 package burrow
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/gobwas/glob"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const configSample = `
-  ## Burrow endpoints in format "sheme://[user:password@]host:port"
-  ## e.g.
-  ##   servers = ["http://localhost:8080"]
-  ##   servers = ["https://example.com:8000"]
-  ##   servers = ["http://user:pass@example.com:8000"]
-  ##
-  servers = [ "http://127.0.0.1:8000" ]
+const (
+	defaultBurrowPrefix          = "/v3/kafka"
+	defaultConcurrentConnections = 20
+	defaultResponseTimeout       = time.Second * 5
+	defaultServer                = "http://localhost:8000"
+)
 
-  ## Prefix all HTTP API requests.
-  #api_prefix = "/v2/kafka"
+const configSample = `
+  ## Burrow API endpoints in format "schema://host:port".
+  ## Default is "http://localhost:8000".
+  servers = ["http://localhost:8000"]
+
+  ## Override Burrow API prefix.
+  ## Useful when Burrow is behind reverse-proxy.
+  # api_prefix = "/v3/kafka"
 
   ## Maximum time to receive response.
-  #timeout = "5s"
+  # response_timeout = "5s"
 
-  ## Optional, gather info only about specific clusters.
-  ## Default is gather all.
-  #clusters = ["clustername1"]
+  ## Limit per-server concurrent connections.
+  ## Useful in case of large number of topics or consumer groups.
+  # concurrent_connections = 20
 
-  ## Optional, gather stats only about specific groups.
-  ## Default is gather all.
-  #groups = ["group1"]
+  ## Filter out clusters by providing list of glob patterns.
+  ## Default is no filtering.
+  # clusters = []
 
-  ## Optional, gather info only about specific topics.
-  ## Default is gather all
-  #topics = ["topicA"]
+  ## Filter out consumer groups by providing list of glob patterns.
+  ## Default is no filtering.
+  # groups = []
 
-  ## Concurrent connections limit (per server), default is 4.
-  #max_concurrent_connections = 10
-
-  ## Internal working queue adjustments (per measurement, per server), default is 4.
-  #worker_queue_length = 5
+  ## Filter out topics by providing list of glob patterns.
+  ## Default is no filtering.
+  # topics = []
 
   ## Credentials for basic HTTP authentication.
-  #username = ""
-  #password = ""
+  # username = ""
+  # password = ""
 
   ## Optional SSL config
-  #ssl_ca = "/etc/telegraf/ca.pem"
-  #ssl_cert = "/etc/telegraf/cert.pem"
-  #ssl_key = "/etc/telegraf/key.pem"
-
-  ## Use SSL but skip chain & host verification
-  #insecure_skip_verify = false
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  # insecure_skip_verify = false
 `
 
 type (
-	// burrow plugin
 	burrow struct {
-		Servers []string
+		tls.ClientConfig
 
-		Username string
-		Password string
-		Timeout  internal.Duration
+		Servers               []string
+		Username              string
+		Password              string
+		ResponseTimeout       internal.Duration
+		ConcurrentConnections int
 
 		APIPrefix string `toml:"api_prefix"`
+		Clusters  []string
+		Groups    []string
+		Topics    []string
 
-		Clusters []string
-		Groups   []string
-		Topics   []string
-
-		MaxConcurrentConnections int `toml:"max_concurrent_connections"`
-		WorkerQueueLength        int `toml:"worker_queue_length"`
-
-		// Path to CA file
-		SSLCA string `toml:"ssl_ca"`
-		// Path to host cert file
-		SSLCert string `toml:"ssl_cert"`
-		// Path to cert key file
-		SSLKey string `toml:"ssl_key"`
-		// Use SSL but skip chain & host verification
-		InsecureSkipVerify bool
+		client    *http.Client
+		gClusters []glob.Glob
+		gGroups   []glob.Glob
+		gTopics   []glob.Glob
 	}
 
-	// function prototype for worker spawning helper
-	resolverFn func(api apiClient, res apiResponse, uri string)
-)
+	// response
+	apiResponse struct {
+		Clusters []string          `json:"clusters"`
+		Groups   []string          `json:"consumers"`
+		Topics   []string          `json:"topics"`
+		Offsets  []int64           `json:"offsets"`
+		Status   apiStatusResponse `json:"status"`
+	}
 
-var (
-	statusMapping = map[string]int{
-		"OK":        1,
-		"NOT_FOUND": 2,
-		"WARN":      3,
-		"ERR":       4,
-		"STOP":      5,
-		"STALL":     6,
+	// response: status field
+	apiStatusResponse struct {
+		Partitions     []apiStatusResponseLag `json:"partitions"`
+		Status         string                 `json:"status"`
+		PartitionCount int                    `json:"partition_count"`
+		Maxlag         *apiStatusResponseLag  `json:"maxlag"`
+		TotalLag       int64                  `json:"totallag"`
+	}
+
+	// response: lag field
+	apiStatusResponseLag struct {
+		Topic      string                   `json:"topic"`
+		Partition  int32                    `json:"partition"`
+		Status     string                   `json:"status"`
+		Start      apiStatusResponseLagItem `json:"start"`
+		End        apiStatusResponseLagItem `json:"end"`
+		CurrentLag int64                    `json:"current_lag"`
+	}
+
+	// response: lag field item
+	apiStatusResponseLagItem struct {
+		Offset    int64 `json:"offset"`
+		Timestamp int64 `json:"timestamp"`
+		Lag       int64 `json:"lag"`
 	}
 )
 
@@ -115,165 +133,314 @@ func (b *burrow) Description() string {
 	return "Collect Kafka topics and consumers status from Burrow HTTP API."
 }
 
-// Gather Burrow stats
 func (b *burrow) Gather(acc telegraf.Accumulator) error {
-	var workers sync.WaitGroup
+	var wg sync.WaitGroup
 
-	errorChan := b.getErrorChannel(acc)
-	for _, addr := range b.Servers {
-		c, err := b.getClient(acc, addr, errorChan)
-		if err != nil {
-			errorChan <- err
-			continue
-		}
-
-		endpointChan := make(chan string)
-		workers.Add(2) // will spawn two workers
-
-		go withAPICall(c, endpointChan, nil, func(api apiClient, res apiResponse, endpoint string) {
-			clusters := whitelistSlice(res.Clusters, api.limitClusters)
-
-			go gatherTopicStats(api, clusters, &workers)
-			go gatherGroupStats(api, clusters, &workers)
-		})
-
-		endpointChan <- c.apiPrefix
-		close(endpointChan)
+	if len(b.Servers) == 0 {
+		b.Servers = []string{defaultServer}
 	}
 
-	workers.Wait()
-	close(errorChan)
+	if b.client == nil {
+		b.setDefaults()
+		if err := b.compileGlobs(); err != nil {
+			return err
+		}
+		c, err := b.createClient()
+		if err != nil {
+			return err
+		}
+		b.client = c
+	}
 
+	for _, addr := range b.Servers {
+		u, err := url.Parse(addr)
+		if err != nil {
+			acc.AddError(fmt.Errorf("unable to parse address '%s': %s", addr, err))
+			continue
+		}
+		if u.Path == "" {
+			u.Path = b.APIPrefix
+		}
+
+		wg.Add(1)
+		go func(u *url.URL) {
+			defer wg.Done()
+			acc.AddError(b.gatherServer(u, acc))
+		}(u)
+	}
+
+	wg.Wait()
 	return nil
 }
 
-// Error collector / register
-func (b *burrow) getErrorChannel(acc telegraf.Accumulator) chan error {
-	errorChan := make(chan error)
-	go func(acc telegraf.Accumulator) {
-		for {
-			err := <-errorChan
+func (b *burrow) setDefaults() {
+	if b.APIPrefix == "" {
+		b.APIPrefix = defaultBurrowPrefix
+	}
+	if b.ConcurrentConnections < 1 {
+		b.ConcurrentConnections = defaultConcurrentConnections
+	}
+	if b.ResponseTimeout.Duration < time.Second {
+		b.ResponseTimeout = internal.Duration{
+			Duration: defaultResponseTimeout,
+		}
+	}
+}
+
+func (b *burrow) compileGlobs() error {
+	var err error
+
+	// compile glob patterns
+	b.gClusters, err = makeGlobs(b.Clusters)
+	if err != nil {
+		return err
+	}
+	b.gGroups, err = makeGlobs(b.Groups)
+	if err != nil {
+		return err
+	}
+	b.gTopics, err = makeGlobs(b.Topics)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *burrow) createClient() (*http.Client, error) {
+	tlsCfg, err := b.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: b.ResponseTimeout.Duration,
+	}
+
+	return client, nil
+}
+
+func (b *burrow) getResponse(u *url.URL) (*apiResponse, error) {
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if b.Username != "" {
+		req.SetBasicAuth(b.Username, b.Password)
+	}
+
+	res, err := b.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("wrong response: %d", res.StatusCode)
+	}
+
+	ares := &apiResponse{}
+	dec := json.NewDecoder(res.Body)
+
+	return ares, dec.Decode(ares)
+}
+
+func (b *burrow) gatherServer(src *url.URL, acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
+
+	r, err := b.getResponse(src)
+	if err != nil {
+		return err
+	}
+
+	guard := make(chan struct{}, b.ConcurrentConnections)
+	for _, cluster := range r.Clusters {
+		if !isAllowed(cluster, b.gClusters) {
+			continue
+		}
+
+		wg.Add(1)
+		go func(cluster string) {
+			defer wg.Done()
+
+			// fetch topic list
+			// endpoint: <api_prefix>/(cluster)/topic
+			ut := extendUrlPath(src, cluster, "topic")
+			b.gatherTopics(guard, ut, cluster, acc)
+		}(cluster)
+
+		wg.Add(1)
+		go func(cluster string) {
+			defer wg.Done()
+
+			// fetch consumer group list
+			// endpoint: <api_prefix>/(cluster)/consumer
+			uc := extendUrlPath(src, cluster, "consumer")
+			b.gatherGroups(guard, uc, cluster, acc)
+		}(cluster)
+	}
+
+	wg.Wait()
+	return nil
+}
+
+func (b *burrow) gatherTopics(guard chan struct{}, src *url.URL, cluster string, acc telegraf.Accumulator) {
+	var wg sync.WaitGroup
+
+	r, err := b.getResponse(src)
+	if err != nil {
+		acc.AddError(err)
+		return
+	}
+
+	for _, topic := range r.Topics {
+		if !isAllowed(topic, b.gTopics) {
+			continue
+		}
+
+		guard <- struct{}{}
+		wg.Add(1)
+
+		go func(topic string) {
+			defer func() {
+				<-guard
+				wg.Done()
+			}()
+
+			// fetch topic offsets
+			// endpoint: <api_prefix>/<cluster>/topic/<topic>
+			tu := extendUrlPath(src, topic)
+			tr, err := b.getResponse(tu)
 			if err != nil {
 				acc.AddError(err)
-			} else {
-				break
+				return
 			}
-		}
-	}(acc)
 
-	return errorChan
+			b.genTopicMetrics(tr, cluster, topic, acc)
+		}(topic)
+	}
+
+	wg.Wait()
 }
 
-// API client construction
-func (b *burrow) getClient(acc telegraf.Accumulator, addr string, errorChan chan<- error) (apiClient, error) {
-	var c apiClient
+func (b *burrow) genTopicMetrics(r *apiResponse, cluster, topic string, acc telegraf.Accumulator) {
+	for i, offset := range r.Offsets {
+		tags := map[string]string{
+			"cluster":   cluster,
+			"topic":     topic,
+			"partition": strconv.Itoa(i),
+		}
 
-	u, err := url.Parse(addr)
-	if err != nil {
-		return c, err
-	}
-
-	// override global credentials (if endpoint contains auth credentials)
-	requestUser := b.Username
-	requestPass := b.Password
-	if u.User != nil {
-		requestUser = u.User.Username()
-		requestPass, _ = u.User.Password()
-	}
-
-	// enable SSL configuration (if provided by configuration)
-	tlsCfg, err := internal.GetTLSConfig(b.SSLCert, b.SSLKey, b.SSLCA, b.InsecureSkipVerify)
-	if err != nil {
-		return c, err
-	}
-
-	if b.APIPrefix == "" {
-		b.APIPrefix = "/v2/kafka"
-	}
-
-	if b.MaxConcurrentConnections < 1 {
-		b.MaxConcurrentConnections = 10
-	}
-
-	if b.WorkerQueueLength < 1 {
-		b.WorkerQueueLength = 5
-	}
-
-	if b.Timeout.Duration < time.Second {
-		b.Timeout.Duration = time.Second * 5
-	}
-
-	c = apiClient{
-		client: http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: tlsCfg,
+		acc.AddFields(
+			"burrow_topic",
+			map[string]interface{}{
+				"offset": offset,
 			},
-			Timeout: b.Timeout.Duration,
-		},
-
-		acc:       acc,
-		apiPrefix: b.APIPrefix,
-		baseURL:   fmt.Sprintf("%s://%s", u.Scheme, u.Host),
-
-		limitClusters: b.Clusters,
-		limitGroups:   b.Groups,
-		limitTopics:   b.Topics,
-
-		guardChan:   make(chan bool, b.MaxConcurrentConnections),
-		errorChan:   errorChan,
-		workerCount: b.WorkerQueueLength,
-
-		requestUser: requestUser,
-		requestPass: requestPass,
+			tags,
+		)
 	}
-
-	return c, nil
 }
 
-func remapStatus(src string) int {
-	if status, ok := statusMapping[src]; ok {
-		return status
+func (b *burrow) gatherGroups(guard chan struct{}, src *url.URL, cluster string, acc telegraf.Accumulator) {
+	var wg sync.WaitGroup
+
+	r, err := b.getResponse(src)
+	if err != nil {
+		acc.AddError(err)
+		return
 	}
 
-	return 0
-}
+	for _, group := range r.Groups {
+		if !isAllowed(group, b.gGroups) {
+			continue
+		}
 
-// whitelist function
-func whitelistSlice(src, items []string) []string {
-	var result []string
+		guard <- struct{}{}
+		wg.Add(1)
 
-	if len(items) == 0 {
-		return src
-	}
+		go func(group string) {
+			defer func() {
+				<-guard
+				wg.Done()
+			}()
 
-	for _, w := range items {
-		for _, s := range src {
-			if w == s {
-				result = append(result, s)
-				break
+			// fetch consumer group status
+			// endpoint: <api_prefix>/<cluster>/consumer/<group>/lag
+			gl := extendUrlPath(src, group, "lag")
+			gr, err := b.getResponse(gl)
+			if err != nil {
+				acc.AddError(err)
+				return
 			}
+
+			b.genGroupStatusMetrics(gr, cluster, group, acc)
+			b.genGroupLagMetrics(gr, cluster, group, acc)
+		}(group)
+	}
+
+	wg.Wait()
+}
+
+func (b *burrow) genGroupStatusMetrics(r *apiResponse, cluster, group string, acc telegraf.Accumulator) {
+	partitionCount := r.Status.PartitionCount
+	if partitionCount == 0 {
+		partitionCount = len(r.Status.Partitions)
+	}
+
+	// get max timestamp and offset from partitions list
+	offset := int64(0)
+	timestamp := int64(0)
+	for _, partition := range r.Status.Partitions {
+		if partition.End.Offset > offset {
+			offset = partition.End.Offset
+		}
+		if partition.End.Timestamp > timestamp {
+			timestamp = partition.End.Timestamp
 		}
 	}
 
-	return result
+	lag := int64(0)
+	if r.Status.Maxlag != nil {
+		lag = r.Status.Maxlag.CurrentLag
+	}
+
+	acc.AddFields(
+		"burrow_group",
+		map[string]interface{}{
+			"status":          r.Status.Status,
+			"status_code":     remapStatus(r.Status.Status),
+			"partition_count": partitionCount,
+			"total_lag":       r.Status.TotalLag,
+			"lag":             lag,
+			"offset":          offset,
+			"timestamp":       timestamp,
+		},
+		map[string]string{
+			"cluster": cluster,
+			"group":   group,
+		},
+	)
 }
 
-// worker spawn helper function
-func withAPICall(api apiClient, producer <-chan string, done chan<- bool, resolver resolverFn) {
-	for {
-		uri := <-producer
-		if uri == "" {
-			break
-		}
-
-		res, err := api.call(uri)
-		if err != nil {
-			api.errorChan <- err
-		}
-
-		resolver(api, res, uri)
-		if done != nil {
-			done <- true
-		}
+func (b *burrow) genGroupLagMetrics(r *apiResponse, cluster, group string, acc telegraf.Accumulator) {
+	for _, partition := range r.Status.Partitions {
+		acc.AddFields(
+			"burrow_partition",
+			map[string]interface{}{
+				"status":      partition.Status,
+				"status_code": remapStatus(partition.Status),
+				"lag":         partition.CurrentLag,
+				"offset":      partition.End.Offset,
+				"timestamp":   partition.End.Timestamp,
+			},
+			map[string]string{
+				"cluster":   cluster,
+				"group":     group,
+				"topic":     partition.Topic,
+				"partition": strconv.FormatInt(int64(partition.Partition), 10),
+			},
+		)
 	}
 }
