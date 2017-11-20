@@ -5,6 +5,7 @@
 - [cratedb](./plugins/outputs/wavefront/README.md) - Thanks to @felixge
 - [jolokia2](./plugins/inputs/jolokia2/README.md) - Thanks to @dylanmei
 - [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
+- [opensmtpd](./plugins/inputs/opensmtpd/README.md) - Thanks to @aromeyer
 - [particle](./plugins/inputs/webhooks/particle/README.md) - Thanks to @davidgs
 - [smart](./plugins/inputs/smart/README.md) - Thanks to @rickard-von-essen
 - [solr](./plugins/inputs/solr/README.md) - Thanks to @ljagiello
@@ -64,6 +65,7 @@
 - [#3471](https://github.com/influxdata/telegraf/pull/3471): Use MAX() instead of SUM() for latency measurements in sqlserver.
 - [#3490](https://github.com/influxdata/telegraf/pull/3490): Add index by week number to Elasticsearch output.
 - [#3434](https://github.com/influxdata/telegraf/pull/3434): Add unbound input plugin.
+- [#3449](https://github.com/influxdata/telegraf/pull/3449): Add opensmtpd input plugin.
 
 ### Bugfixes
 
