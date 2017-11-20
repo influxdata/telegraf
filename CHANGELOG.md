@@ -9,6 +9,7 @@
 - [smart](./plugins/inputs/smart/README.md) - Thanks to @rickard-von-essen
 - [solr](./plugins/inputs/solr/README.md) - Thanks to @ljagiello
 - [teamspeak](./plugins/inputs/teamspeak/README.md) - Thanks to @p4ddy1
+- [unbound](./plugins/inputs/unbound/README.md) - Thanks to @aromeyer
 - [wavefront](./plugins/outputs/wavefront/README.md) - Thanks to @puckpuck
 
 ### Release Notes
@@ -62,6 +63,7 @@
 - [#3477](https://github.com/influxdata/telegraf/pull/3477): Add Particle Webhook Plugin.
 - [#3471](https://github.com/influxdata/telegraf/pull/3471): Use MAX() instead of SUM() for latency measurements in sqlserver.
 - [#3490](https://github.com/influxdata/telegraf/pull/3490): Add index by week number to Elasticsearch output.
+- [#3434](https://github.com/influxdata/telegraf/pull/3434): Add unbound input plugin.
 
 ### Bugfixes
 
