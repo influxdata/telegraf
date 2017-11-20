@@ -1,5 +1,3 @@
-// +build !windows
-
 package unbound
 
 import (
@@ -21,7 +19,6 @@ type runner func(cmdName string, Timeout internal.Duration, UseSudo bool) (*byte
 
 // Unbound is used to store configuration values
 type Unbound struct {
-	Stats   []string
 	Binary  string
 	Timeout internal.Duration
 	UseSudo bool
@@ -30,7 +27,6 @@ type Unbound struct {
 	run    runner
 }
 
-var defaultStats = []string{"total.*", "num.*", "time.up", "mem.*"}
 var defaultBinary = "/usr/sbin/unbound-control"
 var defaultTimeout = internal.Duration{Duration: time.Second}
 
@@ -41,15 +37,11 @@ var sampleConfig = `
   ## The default location of the unbound-control binary can be overridden with:
   binary = "/usr/sbin/unbound-control"
 
-  # The default timeout of 1s can be overriden with:
+  ## The default timeout of 1s can be overriden with:
   timeout = "1s"
 
-  ## By default, telegraf gather stats for 4 metric points.
-  ## Setting stats will override the defaults shown below.
-  ## Glob matching can be used, ie, stats = ["total.*"]
-  ## stats may also be set to ["*"], which will collect all stats
-  ## except histogram.* statistics that will never be collected.
-  stats = ["total.*", "num.*","time.up", "mem.*"]
+  ## Use the builtin fielddrop/fieldpass telegraf filters in order to keep/remove specific fields
+  fieldpass = ["total_*", "num_*","time_up", "mem_*"]
 `
 
 func (s *Unbound) Description() string {
@@ -82,26 +74,11 @@ func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool) (*by
 	return &out, nil
 }
 
-// Gather collects the configured stats from unbound-control and adds them to the
-// Accumulator
+// Gather collects stats from unbound-control and adds them to the Accumulator
 //
 // All the dots in stat name will replaced by underscores. Histogram statistics will not be collected.
 func (s *Unbound) Gather(acc telegraf.Accumulator) error {
-	if s.filter == nil {
-		var err error
-		if len(s.Stats) == 0 {
-			s.filter, err = filter.Compile(defaultStats)
-		} else {
-			// change "all" -> "*":
-			if s.Stats[0] == "all" {
-				s.Stats[0] = "*"
-			}
-			s.filter, err = filter.Compile(s.Stats)
-		}
-		if err != nil {
-			return err
-		}
-	}
+
 	// Always exclude histrogram statistics
 	stat_excluded := []string{"histogram.*"}
 	filter_excluded, err := filter.Compile(stat_excluded)
@@ -130,7 +107,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 		value := cols[1]
 
 		// Filter value
-		if s.filter != nil && (!s.filter.Match(stat) || filter_excluded.Match(stat)) {
+		if filter_excluded.Match(stat) {
 			continue
 		}
 
@@ -152,7 +129,6 @@ func init() {
 	inputs.Add("unbound", func() telegraf.Input {
 		return &Unbound{
 			run:     unboundRunner,
-			Stats:   defaultStats,
 			Binary:  defaultBinary,
 			Timeout: defaultTimeout,
 			UseSudo: false,

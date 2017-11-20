@@ -1,11 +1,7 @@
-// +build !windows
-
 package unbound
 
 import (
 	"bytes"
-	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -22,34 +18,10 @@ func UnboundControl(output string, Timeout internal.Duration, useSudo bool) func
 	}
 }
 
-func TestGather(t *testing.T) {
-
-	acc := &testutil.Accumulator{}
-	v := &Unbound{
-		run:   UnboundControl(smOutput, TestTimeout, false),
-		Stats: []string{"*"},
-	}
-	v.Gather(acc)
-
-	assert.True(t, acc.HasMeasurement("unbound"))
-
-	//         Manual validation
-	//         assert.Equal(t, acc.NFields(), len(parsedSmOutput))
-	//         for field, value := range parsedSmOutput {
-	//           t.Logf("field: %s - value: %f", field, value)
-	//           assert.True(t, acc.HasFloatField("unbound", field) )
-	//           acc_value, _ := acc.FloatField("unbound", field)
-	//           assert.Equal(t,acc_value, value)
-	//         }
-
-	acc.AssertContainsFields(t, "unbound", parsedSmOutput)
-}
-
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Unbound{
-		run:   UnboundControl(fullOutput, TestTimeout, true),
-		Stats: []string{"*"},
+		run: UnboundControl(fullOutput, TestTimeout, true),
 	}
 	err := v.Gather(acc)
 
@@ -59,106 +31,74 @@ func TestParseFullOutput(t *testing.T) {
 
 	assert.Len(t, acc.Metrics, 1)
 	assert.Equal(t, acc.NFields(), 63)
+
+	acc.AssertContainsFields(t, "unbound", parsedFullOutput)
 }
 
-func TestFilterSomeStats(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	v := &Unbound{
-		run:   UnboundControl(fullOutput, TestTimeout, false),
-		Stats: []string{"total.*", "time.*", "num.query.type.A", "num.query.type.PTR"},
-	}
-	err := v.Gather(acc)
-
-	assert.NoError(t, err)
-	assert.True(t, acc.HasMeasurement("unbound"))
-	assert.Equal(t, acc.NMetrics(), uint64(1))
-
-	assert.Equal(t, acc.NFields(), 18)
-	acc.AssertContainsFields(t, "unbound", parsedFSSOutput)
-}
-
-func TestFieldConfig(t *testing.T) {
-	expect := map[string]int{
-		"*":           63,
-		"":            0,
-		"time.up":     1,
-		"unwanted.*":  2,
-		"histogram.*": 0,
-	}
-
-	for fieldCfg, expected := range expect {
-		acc := &testutil.Accumulator{}
-		v := &Unbound{
-			run:   UnboundControl(fullOutput, TestTimeout, true),
-			Stats: strings.Split(fieldCfg, ","),
-		}
-		err := v.Gather(acc)
-
-		assert.NoError(t, err)
-
-		// If nothing to collect measurement doesn't exists
-		if fieldCfg == "" || fieldCfg == "histogram.*" {
-			assert.False(t, acc.HasMeasurement("unbound"))
-		} else {
-			assert.True(t, acc.HasMeasurement("unbound"))
-		}
-
-		flat := flatten(acc.Metrics)
-		assert.Equal(t, expected, len(flat))
-	}
-}
-
-func flatten(metrics []*testutil.Metric) map[string]interface{} {
-	flat := map[string]interface{}{}
-	for _, m := range metrics {
-		buf := &bytes.Buffer{}
-		for k, v := range m.Tags {
-			buf.WriteString(fmt.Sprintf("%s=%s", k, v))
-		}
-		for k, v := range m.Fields {
-			flat[fmt.Sprintf("%s %s", buf.String(), k)] = v
-		}
-	}
-	return flat
-}
-
-var smOutput = `total.num.queries=11907596
-total.num.cachehits=11489288
-time.now=1509968734.735180
-time.up=1472897.672099
-time.elapsed=1472897.672099
-num.query.type.A=7062688
-num.query.type.PTR=43097`
-
-var parsedSmOutput = map[string]interface{}{
-	"total_num_queries":   float64(11907596),
-	"total_num_cachehits": float64(11489288),
-	"time_now":            float64(1509968734.735180),
-	"time_up":             float64(1472897.672099),
-	"time_elapsed":        float64(1472897.672099),
-	"num_query_type_A":    float64(7062688),
-	"num_query_type_PTR":  float64(43097),
-}
-
-var parsedFSSOutput = map[string]interface{}{
-	"total_num_queries":              float64(11907596),
-	"total_num_cachehits":            float64(11489288),
-	"total_num_cachemiss":            float64(418308),
-	"total_num_prefetch":             float64(0),
-	"total_num_recursivereplies":     float64(418308),
-	"total_requestlist_avg":          float64(0.400229),
-	"total_requestlist_max":          float64(11),
-	"total_requestlist_overwritten":  float64(0),
-	"total_requestlist_exceeded":     float64(0),
-	"total_requestlist_current_all":  float64(0),
-	"total_requestlist_current_user": float64(0),
-	"total_recursion_time_avg":       float64(0.015020),
-	"total_recursion_time_median":    float64(0.00292343),
-	"time_now":                       float64(1509968734.735180),
-	"time_up":                        float64(1472897.672099),
-	"time_elapsed":                   float64(1472897.672099),
-	"num_query_type_A":               float64(7062688),
-	"num_query_type_PTR":             float64(43097),
+var parsedFullOutput = map[string]interface{}{
+	"thread0_num_queries":              float64(11907596),
+	"thread0_num_cachehits":            float64(11489288),
+	"thread0_num_cachemiss":            float64(418308),
+	"thread0_num_prefetch":             float64(0),
+	"thread0_num_recursivereplies":     float64(418308),
+	"thread0_requestlist_avg":          float64(0.400229),
+	"thread0_requestlist_max":          float64(11),
+	"thread0_requestlist_overwritten":  float64(0),
+	"thread0_requestlist_exceeded":     float64(0),
+	"thread0_requestlist_current_all":  float64(0),
+	"thread0_requestlist_current_user": float64(0),
+	"thread0_recursion_time_avg":       float64(0.015020),
+	"thread0_recursion_time_median":    float64(0.00292343),
+	"total_num_queries":                float64(11907596),
+	"total_num_cachehits":              float64(11489288),
+	"total_num_cachemiss":              float64(418308),
+	"total_num_prefetch":               float64(0),
+	"total_num_recursivereplies":       float64(418308),
+	"total_requestlist_avg":            float64(0.400229),
+	"total_requestlist_max":            float64(11),
+	"total_requestlist_overwritten":    float64(0),
+	"total_requestlist_exceeded":       float64(0),
+	"total_requestlist_current_all":    float64(0),
+	"total_requestlist_current_user":   float64(0),
+	"total_recursion_time_avg":         float64(0.015020),
+	"total_recursion_time_median":      float64(0.00292343),
+	"time_now":                         float64(1509968734.735180),
+	"time_up":                          float64(1472897.672099),
+	"time_elapsed":                     float64(1472897.672099),
+	"mem_total_sbrk":                   float64(7462912),
+	"mem_cache_rrset":                  float64(285056),
+	"mem_cache_message":                float64(320000),
+	"mem_mod_iterator":                 float64(16532),
+	"mem_mod_validator":                float64(112097),
+	"num_query_type_A":                 float64(7062688),
+	"num_query_type_PTR":               float64(43097),
+	"num_query_type_TXT":               float64(2998),
+	"num_query_type_AAAA":              float64(4499711),
+	"num_query_type_SRV":               float64(5691),
+	"num_query_type_ANY":               float64(293411),
+	"num_query_class_IN":               float64(11907596),
+	"num_query_opcode_QUERY":           float64(11907596),
+	"num_query_tcp":                    float64(293411),
+	"num_query_ipv6":                   float64(0),
+	"num_query_flags_QR":               float64(0),
+	"num_query_flags_AA":               float64(0),
+	"num_query_flags_TC":               float64(0),
+	"num_query_flags_RD":               float64(11907596),
+	"num_query_flags_RA":               float64(0),
+	"num_query_flags_Z":                float64(0),
+	"num_query_flags_AD":               float64(1),
+	"num_query_flags_CD":               float64(0),
+	"num_query_edns_present":           float64(6202),
+	"num_query_edns_DO":                float64(6201),
+	"num_answer_rcode_NOERROR":         float64(11857463),
+	"num_answer_rcode_SERVFAIL":        float64(17),
+	"num_answer_rcode_NXDOMAIN":        float64(50116),
+	"num_answer_rcode_nodata":          float64(3914360),
+	"num_answer_secure":                float64(44289),
+	"num_answer_bogus":                 float64(1),
+	"num_rrset_bogus":                  float64(0),
+	"unwanted_queries":                 float64(0),
+	"unwanted_replies":                 float64(0),
 }
 
 var fullOutput = `thread0.num.queries=11907596

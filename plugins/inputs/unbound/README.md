@@ -13,15 +13,11 @@ This plugin gathers stats from [Unbound - a validating, recursive, and caching D
    ## The default location of the unbound-control binary can be overridden with:
    binary = "/usr/sbin/unbound-control"
 
-   # The default timeout of 1s can be overriden with:
+   ## The default timeout of 1s can be overriden with:
    #timeout = "1s"
 
-  ## By default, telegraf gather stats for 4 metric points.
-  ## Setting stats will override the defaults shown below.
-  ## Glob matching can be used, ie, stats = ["total.*"]
-  ## stats may also be set to ["*"], which will collect all stats
-  ## except histogram.* statistics that will never be collected.
-  stats = ["total.*", "num.*","time.up", "mem.*"]
+   ## Use the builtin fielddrop/fieldpass telegraf filters in order to keep only specific fields
+   fieldpass = ["total_*", "num_*","time_up", "mem_*"]
 ```
 
 ### Measurements & Fields:
