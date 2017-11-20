@@ -173,6 +173,11 @@ This plugin will format the events in the following way:
   # %d - day of month (e.g., 01)
   # %H - hour (00..23)
   # %V - week of the year (ISO week) (01..53)
+  ## Additionally, you can specify a tag name using the notation {{tag_name}}
+  ## which will be used as part of the index name. If the tag does not exist,
+  ## the default tag value will be used.
+  # index_name = "telegraf-{{host}}-%Y.%m.%d"
+  # default_tag_value = "none"
   index_name = "telegraf-%Y.%m.%d" # required.
 
   ## Optional SSL Config
@@ -202,7 +207,9 @@ This plugin will format the events in the following way:
   %m - month (01..12)
   %d - day of month (e.g., 01)
   %H - hour (00..23)
+  %V - week of the year (ISO week) (01..53)
 ```
+Additionally, you can specify dynamic index names by using tags with the notation ```{{tag_name}}```. This will store the metrics with different tag values in different indices. If the tag does not exist in a particular metric, the `default_tag_value` will be used instead.
 
 ### Optional parameters:
 
