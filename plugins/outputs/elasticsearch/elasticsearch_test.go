@@ -120,27 +120,27 @@ func TestGetTagKeys(t *testing.T) {
 		{
 			"indexname",
 			"indexname",
-			[]string(nil),
+			[]string{},
 		}, {
 			"indexname-%Y",
 			"indexname-%Y",
-			[]string(nil),
+			[]string{},
 		}, {
 			"indexname-%Y-%m",
 			"indexname-%Y-%m",
-			[]string(nil),
+			[]string{},
 		}, {
 			"indexname-%Y-%m-%d",
 			"indexname-%Y-%m-%d",
-			[]string(nil),
+			[]string{},
 		}, {
 			"indexname-%Y-%m-%d-%H",
 			"indexname-%Y-%m-%d-%H",
-			[]string(nil),
+			[]string{},
 		}, {
 			"indexname-%y-%m",
 			"indexname-%y-%m",
-			[]string(nil),
+			[]string{},
 		}, {
 			"indexname-{{tag1}}-%y-%m",
 			"indexname-%s-%y-%m",

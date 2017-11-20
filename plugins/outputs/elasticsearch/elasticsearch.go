@@ -313,7 +313,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 
 func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
 
-	var tagKeys []string
+	tagKeys := []string{}
 	startTag := strings.Index(indexName, "{{")
 
 	for startTag >= 0 {
@@ -358,7 +358,7 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 		if value, ok := metricTags[key]; ok {
 			tagValues = append(tagValues, value)
 		} else {
-			log.Printf("D! Tag %s not found, using '%s' instead\n", key, a.DefaultTagValue)
+			log.Printf("D! Tag '%s' not found, using '%s' on index name instead\n", key, a.DefaultTagValue)
 			tagValues = append(tagValues, a.DefaultTagValue)
 		}
 	}
