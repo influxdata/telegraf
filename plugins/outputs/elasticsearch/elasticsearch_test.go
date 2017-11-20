@@ -120,6 +120,11 @@ func TestGetIndexName(t *testing.T) {
 			"indexname-%y-%m",
 			"indexname-14-12",
 		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			"indexname-%Y-%V",
+			"indexname-2014-49",
+		},
 	}
 	for _, test := range tests {
 		indexName := e.GetIndexName(test.IndexName, test.EventTime)

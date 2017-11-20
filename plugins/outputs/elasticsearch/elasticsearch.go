@@ -3,15 +3,16 @@ package elasticsearch
 import (
 	"context"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/outputs"
-	"gopkg.in/olivere/elastic.v5"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/outputs"
+	"gopkg.in/olivere/elastic.v5"
 )
 
 type Elasticsearch struct {
@@ -58,6 +59,7 @@ var sampleConfig = `
   # %m - month (01..12)
   # %d - day of month (e.g., 01)
   # %H - hour (00..23)
+  # %V - week of the year (ISO week) (01..53)
   index_name = "telegraf-%Y.%m.%d" # required.
 
   ## Optional SSL Config
@@ -301,6 +303,7 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time) stri
 			"%m", eventTime.UTC().Format("01"),
 			"%d", eventTime.UTC().Format("02"),
 			"%H", eventTime.UTC().Format("15"),
+			"%V", getISOWeek(eventTime.UTC()),
 		)
 
 		indexName = dateReplacer.Replace(indexName)
@@ -308,6 +311,11 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time) stri
 
 	return indexName
 
+}
+
+func getISOWeek(eventTime time.Time) string {
+	_, week := eventTime.ISOWeek()
+	return strconv.Itoa(week)
 }
 
 func (a *Elasticsearch) SampleConfig() string {
