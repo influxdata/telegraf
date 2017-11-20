@@ -1,5 +1,3 @@
-// +build !windows
-
 package opensmtpd
 
 import (
@@ -21,7 +19,6 @@ type runner func(cmdName string, Timeout internal.Duration, UseSudo bool) (*byte
 
 // Opensmtpd is used to store configuration values
 type Opensmtpd struct {
-	Stats   []string
 	Binary  string
 	Timeout internal.Duration
 	UseSudo bool
@@ -30,7 +27,6 @@ type Opensmtpd struct {
 	run    runner
 }
 
-var defaultStats = []string{"mda.*", "scheduler.*", "uptime", "smtp.*"}
 var defaultBinary = "/usr/sbin/smtpctl"
 var defaultTimeout = internal.Duration{Duration: time.Second}
 
@@ -41,13 +37,8 @@ var sampleConfig = `
   ## The default location of the smtpctl binary can be overridden with:
   binary = "/usr/sbin/smtpctl"
 
-  # The default timeout of 1000ms can be overriden with (in milliseconds):
+  ## The default timeout of 1000ms can be overriden with (in milliseconds):
   timeout = 1000
-
-  ## By default, telegraf gather stats for all numerical metric points.
-  ## Setting stats will override the defaults shown below.
-  ## Glob matching can be used, ie, stats = ["mda.*", "mta.*"]
-  stats = ["*"]
 `
 
 func (s *Opensmtpd) Description() string {
@@ -85,21 +76,6 @@ func opensmtpdRunner(cmdName string, Timeout internal.Duration, UseSudo bool) (*
 //
 // All the dots in stat name will replaced by underscores. Histogram statistics will not be collected.
 func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
-	if s.filter == nil {
-		var err error
-		if len(s.Stats) == 0 {
-			s.filter, err = filter.Compile(defaultStats)
-		} else {
-			// change "all" -> "*":
-			if s.Stats[0] == "all" {
-				s.Stats[0] = "*"
-			}
-			s.filter, err = filter.Compile(s.Stats)
-		}
-		if err != nil {
-			return err
-		}
-	}
 	// Always exclude uptime.human statistics
 	stat_excluded := []string{"uptime.human"}
 	filter_excluded, err := filter.Compile(stat_excluded)
@@ -128,7 +104,7 @@ func (s *Opensmtpd) Gather(acc telegraf.Accumulator) error {
 		value := cols[1]
 
 		// Filter value
-		if s.filter != nil && (!s.filter.Match(stat) || filter_excluded.Match(stat)) {
+		if filter_excluded.Match(stat) {
 			continue
 		}
 
@@ -150,7 +126,6 @@ func init() {
 	inputs.Add("opensmtpd", func() telegraf.Input {
 		return &Opensmtpd{
 			run:     opensmtpdRunner,
-			Stats:   defaultStats,
 			Binary:  defaultBinary,
 			Timeout: defaultTimeout,
 			UseSudo: false,

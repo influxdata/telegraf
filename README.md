@@ -176,6 +176,7 @@ configuration options.
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
 * [openldap](./plugins/inputs/openldap)
+* [opensmtpd](./plugins/inputs/opensmtpd)
 * [phpfpm](./plugins/inputs/phpfpm)
 * [phusion passenger](./plugins/inputs/passenger)
 * [ping](./plugins/inputs/ping)

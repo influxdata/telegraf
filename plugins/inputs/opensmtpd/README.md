@@ -15,11 +15,6 @@ This plugin gathers stats from [OpenSMTPD - a FREE implementation of the server-
 
    # The default timeout of 1s can be overriden with:
    #timeout = "1s"
-
-   ## By default, telegraf gather stats for all numerical metric points.
-   ## Setting stats will override the defaults shown below.
-   ## Glob matching can be used, ie, stats = ["mda.*", "mta.*"]
-   stats = ["*"]
 ```
 
 ### Measurements & Fields:

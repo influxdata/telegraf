@@ -1,11 +1,7 @@
-// +build !windows
-
 package opensmtpd
 
 import (
 	"bytes"
-	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -22,50 +18,10 @@ func SmtpCTL(output string, Timeout internal.Duration, useSudo bool) func(string
 	}
 }
 
-func TestGather(t *testing.T) {
-
-	acc := &testutil.Accumulator{}
-	v := &Opensmtpd{
-		run:   SmtpCTL(smOutput, TestTimeout, false),
-		Stats: []string{"*"},
-	}
-	v.Gather(acc)
-
-	assert.True(t, acc.HasMeasurement("opensmtpd"))
-
-	//         Manual validation
-	//         assert.Equal(t, acc.NFields(), len(parsedSmOutput))
-	//         for field, value := range parsedSmOutput {
-	//           t.Logf("field: %s - value: %f", field, value)
-	//           assert.True(t, acc.HasFloatField("opensmtpd", field) )
-	//           acc_value, _ := acc.FloatField("opensmtpd", field)
-	//           assert.Equal(t,acc_value, value)
-	//         }
-
-	acc.AssertContainsFields(t, "opensmtpd", parsedSmOutput)
-}
-
-func TestParseFullOutput(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	v := &Opensmtpd{
-		run:   SmtpCTL(fullOutput, TestTimeout, true),
-		Stats: []string{"*"},
-	}
-	err := v.Gather(acc)
-
-	assert.NoError(t, err)
-
-	assert.True(t, acc.HasMeasurement("opensmtpd"))
-
-	assert.Len(t, acc.Metrics, 1)
-	assert.Equal(t, acc.NFields(), 36)
-}
-
 func TestFilterSomeStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Opensmtpd{
-		run:   SmtpCTL(fullOutput, TestTimeout, false),
-		Stats: []string{"mda.*", "scheduler.*", "uptime", "smtp.*"},
+		run: SmtpCTL(fullOutput, TestTimeout, false),
 	}
 	err := v.Gather(acc)
 
@@ -73,99 +29,33 @@ func TestFilterSomeStats(t *testing.T) {
 	assert.True(t, acc.HasMeasurement("opensmtpd"))
 	assert.Equal(t, acc.NMetrics(), uint64(1))
 
-	assert.Equal(t, acc.NFields(), 18)
-	acc.AssertContainsFields(t, "opensmtpd", parsedFSSOutput)
+	assert.Equal(t, acc.NFields(), 36)
+	acc.AssertContainsFields(t, "opensmtpd", parsedFullOutput)
 }
 
-func TestFieldConfig(t *testing.T) {
-	expect := map[string]int{
-		"*":            36,
-		"":             0,
-		"uptime":       1,
-		"smtp.*":       3,
-		"uptime.human": 0,
-	}
-
-	for fieldCfg, expected := range expect {
-		acc := &testutil.Accumulator{}
-		v := &Opensmtpd{
-			run:   SmtpCTL(fullOutput, TestTimeout, true),
-			Stats: strings.Split(fieldCfg, ","),
-		}
-		err := v.Gather(acc)
-
-		assert.NoError(t, err)
-
-		// If nothing to collect measurement doesn't exists
-		if fieldCfg == "" || fieldCfg == "uptime.human" {
-			assert.False(t, acc.HasMeasurement("opensmtpd"))
-		} else {
-			assert.True(t, acc.HasMeasurement("opensmtpd"))
-		}
-
-		flat := flatten(acc.Metrics)
-		assert.Equal(t, expected, len(flat))
-	}
-}
-
-func flatten(metrics []*testutil.Metric) map[string]interface{} {
-	flat := map[string]interface{}{}
-	for _, m := range metrics {
-		buf := &bytes.Buffer{}
-		for k, v := range m.Tags {
-			buf.WriteString(fmt.Sprintf("%s=%s", k, v))
-		}
-		for k, v := range m.Fields {
-			flat[fmt.Sprintf("%s %s", buf.String(), k)] = v
-		}
-	}
-	return flat
-}
-
-var smOutput = `control.session=2
-mda.envelope=0
-mda.pending=0
-mda.running=0
-mda.user=0
-queue.evpcache.load.hit=2
-queue.evpcache.size=1
-scheduler.delivery.ok=1
-scheduler.envelope=0
-scheduler.envelope.incoming=1
-scheduler.envelope.inflight=0
-scheduler.ramqueue.envelope=1
-scheduler.ramqueue.message=1
-scheduler.ramqueue.update=1
-smtp.session=1
-smtp.session.local=2
-uptime=21
-uptime.human=21s`
-
-var parsedSmOutput = map[string]interface{}{
-	"control_session":             float64(2),
+var parsedFullOutput = map[string]interface{}{
+	"bounce_envelope":             float64(0),
+	"bounce_message":              float64(0),
+	"bounce_session":              float64(0),
+	"control_session":             float64(1),
 	"mda_envelope":                float64(0),
 	"mda_pending":                 float64(0),
 	"mda_running":                 float64(0),
 	"mda_user":                    float64(0),
-	"queue_evpcache_load_hit":     float64(2),
-	"queue_evpcache_size":         float64(1),
-	"scheduler_delivery_ok":       float64(1),
-	"scheduler_envelope":          float64(0),
-	"scheduler_envelope_incoming": float64(1),
-	"scheduler_envelope_inflight": float64(0),
-	"scheduler_ramqueue_envelope": float64(1),
-	"scheduler_ramqueue_message":  float64(1),
-	"scheduler_ramqueue_update":   float64(1),
-	"smtp_session":                float64(1),
-	"smtp_session_local":          float64(2),
-	"uptime":                      float64(21),
-}
-
-var parsedFSSOutput = map[string]interface{}{
-	"mda_envelope":                float64(0),
-	"mda_pending":                 float64(0),
-	"mda_running":                 float64(0),
-	"mda_user":                    float64(0),
+	"mta_connector":               float64(1),
+	"mta_domain":                  float64(1),
+	"mta_envelope":                float64(0),
+	"mta_host":                    float64(6),
+	"mta_relay":                   float64(1),
+	"mta_route":                   float64(1),
+	"mta_session":                 float64(1),
+	"mta_source":                  float64(1),
+	"mta_task":                    float64(0),
+	"mta_task_running":            float64(5),
+	"queue_bounce":                float64(11495),
+	"queue_evpcache_load_hit":     float64(3927539),
+	"queue_evpcache_size":         float64(0),
+	"queue_evpcache_update_hit":   float64(508),
 	"scheduler_delivery_ok":       float64(1922951),
 	"scheduler_delivery_permfail": float64(45967),
 	"scheduler_delivery_tempfail": float64(493),
