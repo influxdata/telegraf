@@ -71,6 +71,7 @@
 - [#3430](https://github.com/influxdata/telegraf/issues/3430): Always ignore autofs filesystems in disk input.
 - [#3326](https://github.com/influxdata/telegraf/issues/3326): Fail metrics parsing on unescaped quotes.
 - [#3473](https://github.com/influxdata/telegraf/pull/3473): Whitelist allowed char classes for graphite output.
+- [#3488](https://github.com/influxdata/telegraf/pull/3488): Use hexadecimal ids and lowercase names in zipkin input.
 
 ## v1.4.4 [2017-11-08]
 
