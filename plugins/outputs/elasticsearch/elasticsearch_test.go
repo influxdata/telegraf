@@ -224,6 +224,13 @@ func TestGetIndexName(t *testing.T) {
 		{
 			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
 			map[string]string{"tag1": "value1", "tag2": "value2"},
+			[]string{},
+			"indexname-%Y-%V",
+			"indexname-2014-49",
+		},
+		{
+			time.Date(2014, 12, 01, 23, 30, 00, 00, time.UTC),
+			map[string]string{"tag1": "value1", "tag2": "value2"},
 			[]string{"tag1"},
 			"indexname-%s-%y-%m",
 			"indexname-value1-14-12",

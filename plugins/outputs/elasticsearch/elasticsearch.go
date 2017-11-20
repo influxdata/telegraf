@@ -61,6 +61,7 @@ var sampleConfig = `
   # %m - month (01..12)
   # %d - day of month (e.g., 01)
   # %H - hour (00..23)
+  # %V - week of the year (ISO week) (01..53)
   ## Additionally, you can specify a tag name using the notation {{tag_name}}
   ## which will be used as part of the index name. If the tag does not exist,
   ## the default tag value will be used.
@@ -347,6 +348,7 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 			"%m", eventTime.UTC().Format("01"),
 			"%d", eventTime.UTC().Format("02"),
 			"%H", eventTime.UTC().Format("15"),
+			"%V", getISOWeek(eventTime.UTC()),
 		)
 
 		indexName = dateReplacer.Replace(indexName)
@@ -365,6 +367,11 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagK
 
 	return fmt.Sprintf(indexName, tagValues...)
 
+}
+
+func getISOWeek(eventTime time.Time) string {
+	_, week := eventTime.ISOWeek()
+	return strconv.Itoa(week)
 }
 
 func (a *Elasticsearch) SampleConfig() string {

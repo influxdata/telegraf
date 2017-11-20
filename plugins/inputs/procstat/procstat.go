@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -297,9 +298,12 @@ func (p *Procstat) findPids() ([]PID, map[string]string, error) {
 	return pids, tags, err
 }
 
+// execCommand is so tests can mock out exec.Command usage.
+var execCommand = exec.Command
+
 func (p *Procstat) systemdUnitPIDs() ([]PID, error) {
 	var pids []PID
-	cmd := exec.Command("systemctl", "show", p.SystemdUnit)
+	cmd := execCommand("systemctl", "show", p.SystemdUnit)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
@@ -331,7 +335,7 @@ func (p *Procstat) cgroupPIDs() ([]PID, error) {
 	if procsPath[0] != '/' {
 		procsPath = "/sys/fs/cgroup/" + procsPath
 	}
-	procsPath = procsPath + "/cgroup.procs"
+	procsPath = filepath.Join(procsPath, "cgroup.procs")
 	out, err := ioutil.ReadFile(procsPath)
 	if err != nil {
 		return nil, err
