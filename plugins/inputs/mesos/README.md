@@ -10,6 +10,8 @@ For more information, please check the [Mesos Observability Metrics](http://meso
 [[inputs.mesos]]
   ## Timeout, in ms.
   timeout = 100
+  ## Enable Slave Monitor/Statics API
+  SlaveMonitorStatics = true
   ## A list of Mesos masters.
   masters = ["localhost:5050"]
   ## Master metrics groups to be collected, by default, all enabled.
