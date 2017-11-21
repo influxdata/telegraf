@@ -391,12 +391,13 @@ func (d *Docker) gatherContainer(
 		}
 	}
 
+	info, err := d.client.ContainerInspect(ctx, container.ID)
+	if err != nil {
+		return fmt.Errorf("Error inspecting docker container: %s", err.Error())
+	}
+
 	// Add whitelisted environment variables to tags
 	if len(d.TagEnvironment) > 0 {
-		info, err := d.client.ContainerInspect(ctx, container.ID)
-		if err != nil {
-			return fmt.Errorf("Error inspecting docker container: %s", err.Error())
-		}
 		for _, envvar := range info.Config.Env {
 			for _, configvar := range d.TagEnvironment {
 				dock_env := strings.SplitN(envvar, "=", 2)
@@ -406,6 +407,14 @@ func (d *Docker) gatherContainer(
 				}
 			}
 		}
+	}
+
+	if info.State.Health != nil {
+		healthfields := map[string]interface{}{
+			"health_status":  info.State.Health.Status,
+			"failing_streak": info.ContainerJSONBase.State.Health.FailingStreak,
+		}
+		acc.AddFields("docker_container_health", healthfields, tags, time.Now())
 	}
 
 	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total, daemonOSType)
