@@ -24,12 +24,12 @@ const (
 )
 
 type Mesos struct {
-	Timeout    int
-	Masters    []string
-	MasterCols []string `toml:"master_collections"`
-	Slaves     []string
-	SlaveCols  []string `toml:"slave_collections"`
-	//SlaveTasks bool
+	Timeout             int
+	Masters             []string
+	MasterCols          []string `toml:"master_collections"`
+	Slaves              []string
+	SlaveCols           []string `toml:"slave_collections"`
+	SlaveMonitorStatics bool
 }
 
 var allMetrics = map[Role][]string{
@@ -40,6 +40,8 @@ var allMetrics = map[Role][]string{
 var sampleConfig = `
   ## Timeout, in ms.
   timeout = 100
+  ## Enable Slave Monitor Statics
+  SlaveMonitorStatics = true
   ## A list of Mesos masters.
   masters = ["localhost:5050"]
   ## Master metrics groups to be collected, by default, all enabled.
@@ -63,7 +65,7 @@ var sampleConfig = `
   #   "system",
   #   "executors",
   #   "tasks",
-  #   "messages",
+  #   "messages",  
   # ]
 `
 
@@ -115,16 +117,16 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 			return
 		}(v)
 
-		// if !m.SlaveTasks {
-		// 	continue
-		// }
+		if !m.SlaveMonitorStatics {
+			continue
+		}
 
-		// wg.Add(1)
-		// go func(c string) {
-		// 	acc.AddError(m.gatherSlaveTaskMetrics(c, ":5051", acc))
-		// 	wg.Done()
-		// 	return
-		// }(v)
+		wg.Add(1)
+		go func(c string) {
+			acc.AddError(m.gatherSlaveTaskMetrics(c, ":5051", acc))
+			wg.Done()
+			return
+		}(v)
 	}
 
 	wg.Wait()
@@ -367,7 +369,7 @@ func getMetrics(role Role, group string) []string {
 	ret, ok := m[group]
 
 	if !ok {
-		log.Printf("I! [mesos] Unknown %s metrics group: %s\n", role, group)
+		log.Printf("I! [mesos] Unkown %s metrics group: %s\n", role, group)
 		return []string{}
 	}
 
@@ -406,6 +408,7 @@ var client = &http.Client{
 type TaskStats struct {
 	ExecutorID  string                 `json:"executor_id"`
 	FrameworkID string                 `json:"framework_id"`
+	Source      string                 `json:"source"`
 	Statistics  map[string]interface{} `json:"statistics"`
 }
 
@@ -441,7 +444,7 @@ func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc t
 	}
 
 	for _, task := range metrics {
-		tags["framework_id"] = task.FrameworkID
+		tags["executor_id"] = task.ExecutorID
 
 		jf := jsonparser.JSONFlattener{}
 		err = jf.FlattenJSON("", task.Statistics)
@@ -450,10 +453,9 @@ func (m *Mesos) gatherSlaveTaskMetrics(address string, defaultPort string, acc t
 			return err
 		}
 
+		jf.Fields["framework_id"] = task.FrameworkID
 		timestamp := time.Unix(int64(jf.Fields["timestamp"].(float64)), 0)
-		jf.Fields["executor_id"] = task.ExecutorID
-
-		acc.AddFields("mesos_tasks", jf.Fields, tags, timestamp)
+		acc.AddFields("mesos_monitor_statics", jf.Fields, tags, timestamp)
 	}
 
 	return nil
