@@ -66,6 +66,7 @@
 - [#3490](https://github.com/influxdata/telegraf/pull/3490): Add index by week number to Elasticsearch output.
 - [#3434](https://github.com/influxdata/telegraf/pull/3434): Add unbound input plugin.
 - [#3449](https://github.com/influxdata/telegraf/pull/3449): Add opensmtpd input plugin.
+- [#3470](https://github.com/influxdata/telegraf/pull/3470): Add support for tags in the index name in elasticsearch output.
 
 ### Bugfixes
 
