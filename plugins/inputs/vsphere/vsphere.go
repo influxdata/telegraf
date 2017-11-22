@@ -338,7 +338,8 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 							"vcenter":  e.Url.Host,
 							"hostname": objectName,
 							"moid":     moid,
-							"parent":   parent}
+							"parent":   parent,
+						}
 
 						if v.Instance != "" {
 							if strings.HasPrefix(name, "cpu.") {
@@ -381,6 +382,8 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 
 	start := time.Now()
 
+	// If discovery interval is disabled (0), discover on each collection cycle
+	//
 	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() == 0 {
 		err := e.discover()
 		if err != nil {
@@ -428,7 +431,9 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 		}
 	}
 
-	acc.AddCounter("vsphere", map[string]interface{}{"gather.duration": time.Now().Sub(start).Seconds()}, map[string]string{"vcenter": e.Url.Host}, time.Now())
+	// Add gauge to show how long it took to gather all the metrics on this cycle for a specific vcenter/endpoint
+	//
+	acc.AddGauge("vsphere", map[string]interface{}{"gather.duration": time.Now().Sub(start).Seconds()}, map[string]string{"vcenter": e.Url.Host}, time.Now())
 
 	return nil
 }
@@ -550,8 +555,9 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 
-	// Add another counter to show how long it took to gather all the metrics on this cycle (can be used to tune # of vCenters and collection intervals per telegraf agent)
-	acc.AddCounter("vsphere", map[string]interface{}{"gather.duration": time.Now().Sub(start).Seconds()}, nil, time.Now())
+	// Add gauge to show how long it took to gather all the metrics on this cycle
+	//
+	acc.AddGauge("vsphere", map[string]interface{}{"gather.duration": time.Now().Sub(start).Seconds()}, nil, time.Now())
 
 	return nil
 }

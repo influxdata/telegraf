@@ -1,6 +1,6 @@
 # VMware vSphere Input Plugin
 
-The VMware vSphere plugin uses the vSphere API to gather metrics from multiple vCenters.
+The VMware vSphere plugin uses the vSphere API to gather metrics from multiple vCenter servers.
  
 * Clusters
 * Hosts
@@ -58,7 +58,7 @@ style wildcards (*, ?). Any item can be negated with an exclamation mark (!) as 
 checked against every item in the list that applies, meaning you can include multiple metrics with the first item, and
 negate selectively within that list on a subsequent item.
 
-This configuration will only include all metrics under the host category that start with `cpu.*` but will not include
+A configuration to include all metrics under the host category that start with `cpu.*` but will not include
 `cpu.idle.summation`.
 
 ```
@@ -68,10 +68,10 @@ This configuration will only include all metrics under the host category that st
 
 ### Sampling Periods
 
-The plugin is called using the standard interval property.  To maintain optimal performance, metrics for a given category
+The plugin is called using the standard interval property. To maintain optimal performance, metrics for a given category
 will only be gathered, if that category's sampling period has passed since the last gather. Cluster and Datastore metrics 
-have significantly longer sampling periods by default (300s vs 20s).  The *_sampling_period properties should only be
-changed if you have changed these default settings within vCenter server.  
+have significantly longer sampling periods by default (300s vs 20s). The *_sampling_period properties should only be changed if you have changed these default 
+settings within vCenter server.  
 
 
 ## Measurements &amp; Fields
