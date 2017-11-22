@@ -40,6 +40,7 @@ func (c *Connection) Close() {
 	ctx := context.Background()
 	if c.Views != nil {
 		c.Views.Destroy(ctx)
+
 	}
 	if c.Client != nil {
 		c.Client.Logout(ctx)

@@ -343,25 +343,28 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 						if v.Instance != "" {
 							if strings.HasPrefix(name, "cpu.") {
 								t["cpu"] = v.Instance
-							} else if strings.HasPrefix(name, "net.") {
-								t["interface"] = v.Instance
-							} else if strings.HasPrefix(name, "sys.resource") {
-								t["resource"] = v.Instance
-							} else if strings.HasPrefix(name, "disk.") || strings.HasPrefix(name, "virtualDisk.") {
-								t["disk"] = v.Instance
 							} else if strings.HasPrefix(name, "datastore.") {
 								t["datastore"] = v.Instance
-							} else if strings.HasPrefix(name, "storagePath.") {
-								t["path"] = v.Instance
+							} else if strings.HasPrefix(name, "disk.") {
+								t["disk"] = cleanDiskTag(v.Instance)
+							} else if strings.HasPrefix(name, "net.") {
+								t["interface"] = v.Instance
 							} else if strings.HasPrefix(name, "storageAdapter.") {
 								t["adapter"] = v.Instance
+							} else if strings.HasPrefix(name, "storagePath.") {
+								t["path"] = v.Instance
+							} else if strings.HasPrefix(name, "sys.resource") {
+								t["resource"] = v.Instance
 							} else if strings.HasPrefix(name, "vflashModule.") {
 								t["module"] = v.Instance
+							} else if strings.HasPrefix(name, "virtualDisk.") {
+								t["disk"] = v.Instance
 							} else {
 								// default to instance
 								t["instance"] = v.Instance
 							}
 						}
+
 						acc.AddFields(fullAlias, f, t, em.SampleInfo[idx].Timestamp)
 					}
 				}
@@ -375,6 +378,9 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 }
 
 func (e *Endpoint) collect(acc telegraf.Accumulator) error {
+
+	start := time.Now()
+
 	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() == 0 {
 		err := e.discover()
 		if err != nil {
@@ -407,8 +413,8 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 	}
 
 	if e.Parent.GatherVms {
-		err = e.collectResourceType(conn.Perf, ctx, "vm", acc, e.vmMap, e.nameCache, e.Parent.VmSamplingPeriod,
-			true, e.vmMetricIds)
+		err = e.collectResourceType(conn.Perf, ctx, "vm", acc, e.vmMap, e.nameCache,
+			e.Parent.VmSamplingPeriod, true, e.vmMetricIds)
 		if err != nil {
 			return err
 		}
@@ -421,6 +427,8 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
+
+	acc.AddCounter("vsphere", map[string]interface{}{"gather.duration": time.Now().Sub(start).Seconds()}, map[string]string{"vcenter": e.Url.Host}, time.Now())
 
 	return nil
 }
@@ -475,9 +483,25 @@ func (e *Endpoint) getDatastores(ctx context.Context, root *view.ContainerView) 
 	}
 	m := make(objectMap)
 	for _, r := range resources {
-		m[r.Summary.Name] = objectRef{ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
+		m[r.Summary.Name] = objectRef{
+			name: r.Summary.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
 	}
 	return m, nil
+}
+
+func cleanDiskTag(disk string) string {
+	if strings.HasPrefix(disk, "<") {
+		i := strings.Index(disk, ">")
+		if i > -1 {
+			s1 := disk[1:i]
+			s2 := disk[i+1:]
+			if s1 == s2 {
+				return s1
+			}
+		}
+	}
+
+	return disk
 }
 
 var sampleConfig = `
@@ -494,7 +518,6 @@ func (v *VSphere) Description() string {
 }
 
 func (v *VSphere) vSphereInit() {
-	log.Printf("v.endpoints: %s", v.endpoints)
 	if v.endpoints != nil {
 		return
 	}
@@ -551,9 +574,9 @@ func init() {
 			VmSamplingPeriod:        internal.Duration{Duration: time.Second * 20},
 			DatastoreSamplingPeriod: internal.Duration{Duration: time.Second * 300},
 
+			ClusterMetrics:   nil,
 			HostMetrics:      nil,
 			VmMetrics:        nil,
-			ClusterMetrics:   nil,
 			DatastoreMetrics: nil,
 		}
 	})
