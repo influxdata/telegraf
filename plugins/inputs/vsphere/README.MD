@@ -40,13 +40,13 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
   # objects_per_query = 500
   
   ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
-  # object_discover_interval = 300s
+  # object_discovery_interval = "300s"
     
   ## Optional for configurations with customized sampling periods in vcenter
-  # cluster_sampling_period = 300s
-  # host_sampling_period = 20s
-  # vm_sampling_period = 20s
-  # datastore_sampling_period = 300s
+  # cluster_sampling_period = "300s"
+  # host_sampling_period = "20s"
+  # vm_sampling_period = "20s"
+  # datastore_sampling_period = "300s"
 ```
 
 ### Metrics Selection

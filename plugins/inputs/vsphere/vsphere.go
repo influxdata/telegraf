@@ -527,14 +527,23 @@ func (v *VSphere) vSphereInit() {
 		return
 	}
 
+	var wg sync.WaitGroup
+
 	v.endpoints = make([]Endpoint, len(v.Vcenters))
 	for i, rawUrl := range v.Vcenters {
 		u, err := soap.ParseURL(rawUrl)
 		if err != nil {
 			log.Printf("E! Can't parse URL %s\n", rawUrl)
 		}
-		v.endpoints[i] = NewEndpoint(v, u)
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			v.endpoints[i] = NewEndpoint(v, u)
+		}()
 	}
+
+	wg.Wait()
 }
 
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
@@ -547,10 +556,10 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 
 	for _, ep := range v.endpoints {
 		wg.Add(1)
-		go func(target Endpoint) {
+		go func() {
 			defer wg.Done()
-			acc.AddError(target.collect(acc))
-		}(ep)
+			acc.AddError(ep.collect(acc))
+		}()
 	}
 
 	wg.Wait()
