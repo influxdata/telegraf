@@ -100,6 +100,9 @@ NsFlcGACj+/TvacFYlA6N2nyFeokzoqLX28Ddxdh2erXqJ4hYIhT1ik9tkLggs2z
 1T1084BquCuO6lIcOwJBALX4xChoMUF9k0IxSQzlz//seQYDkQNsE7y9IgAOXkzp
 RaR4pzgPbnKj7atG+2dBnffWfE+1Mcy0INDAO6WxPg0=
 -----END RSA PRIVATE KEY-----`
+
+	basicUsername = "test-username-please-ignore"
+	basicPassword = "super-secure-password!"
 )
 
 var (
@@ -116,6 +119,13 @@ func newTestHTTPListener() *HTTPListener {
 	listener := &HTTPListener{
 		ServiceAddress: ":0",
 	}
+	return listener
+}
+
+func newTestHTTPAuthListener() *HTTPListener {
+	listener := newTestHTTPListener()
+	listener.BasicUsername = basicUsername
+	listener.BasicPassword = basicPassword
 	return listener
 }
 
@@ -236,6 +246,24 @@ func TestWriteHTTPSWithClientAuth(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
+}
+
+func TestWriteHTTPBasicAuth(t *testing.T) {
+	listener := newTestHTTPAuthListener()
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	client := &http.Client{}
+
+	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", "db=mydb"), bytes.NewBuffer([]byte(testMsg)))
+	require.NoError(t, err)
+	req.SetBasicAuth(basicUsername, basicPassword)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.EqualValues(t, http.StatusNoContent, resp.StatusCode)
 }
 
 func TestWriteHTTP(t *testing.T) {
