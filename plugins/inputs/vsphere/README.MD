@@ -68,7 +68,7 @@ This configuration will only include all metrics under the host category that st
 
 ### Sampling Periods
 
-The plugin is called using the standard interval period.  To maintain optimal performance, metrics for a given category
+The plugin is called using the standard interval property.  To maintain optimal performance, metrics for a given category
 will only be gathered, if that category's sampling period has passed since the last gather. Cluster and Datastore metrics 
 have significantly longer sampling periods by default (300s vs 20s).  The *_sampling_period properties should only be
 changed if you have changed these default settings within vCenter server.  
