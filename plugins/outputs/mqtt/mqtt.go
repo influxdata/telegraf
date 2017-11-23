@@ -2,6 +2,7 @@ package mqtt
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -40,6 +41,12 @@ var sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
+
+  ## Optional filters config
+  ## topic and message regexp filters
+  ## empty array as value accept all topics or messages
+  # topic_filters = []
+  # message_filters = []
 `
 
 type MQTT struct {
@@ -60,6 +67,11 @@ type MQTT struct {
 	SSLKey string `toml:"ssl_key"`
 	// Use SSL but skip chain & host verification
 	InsecureSkipVerify bool
+
+	TopicFilters     []string `toml:"topic_filters"`
+	TopicFiltersRE   []*regexp.Regexp
+	MessageFilters   []string `toml:"message_filters"`
+	MessageFiltersRE []*regexp.Regexp
 
 	client paho.Client
 	opts   *paho.ClientOptions
@@ -85,6 +97,13 @@ func (m *MQTT) Connect() error {
 	m.client = paho.NewClient(m.opts)
 	if token := m.client.Connect(); token.Wait() && token.Error() != nil {
 		return token.Error()
+	}
+
+	for _, i := range m.TopicFilters {
+		m.TopicFiltersRE = append(m.TopicFiltersRE, regexp.MustCompile(i))
+	}
+	for _, i := range m.MessageFilters {
+		m.MessageFiltersRE = append(m.MessageFiltersRE, regexp.MustCompile(i))
 	}
 
 	return nil
@@ -132,15 +151,19 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		t = append(t, metric.Name())
 		topic := strings.Join(t, "/")
 
-		buf, err := m.serializer.Serialize(metric)
-		if err != nil {
-			return fmt.Errorf("MQTT Could not serialize metric: %s",
-				metric.String())
-		}
+		if (m.checkFilter(topic, m.TopicFiltersRE)) {
+			buf, err := m.serializer.Serialize(metric)
+			if err != nil {
+				return fmt.Errorf("MQTT Could not serialize metric: %s",
+					metric.String())
+			}
 
-		err = m.publish(topic, buf)
-		if err != nil {
-			return fmt.Errorf("Could not write to MQTT server, %s", err)
+			if (m.checkFilter(string(buf[:]), m.MessageFiltersRE)) {
+				err = m.publish(topic, buf)
+				if err != nil {
+					return fmt.Errorf("Could not write to MQTT server, %s", err)
+				}
+			}
 		}
 	}
 
@@ -196,6 +219,21 @@ func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	}
 	opts.SetAutoReconnect(true)
 	return opts, nil
+}
+
+func (m *MQTT) checkFilter(topic string, filtersRE []*regexp.Regexp) bool {
+	res := len(filtersRE) == 0
+
+	if !res {
+		for _, i := range filtersRE {
+			if i.MatchString(topic) {
+				res = true
+				break
+			}
+		}
+	}
+
+	return res
 }
 
 func init() {
