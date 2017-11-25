@@ -41,6 +41,9 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
   
   ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
   # object_discovery_interval = "300s"
+  
+  ## timeout applies to any of the connection request made to vcenter
+  # timeout = "20s"
     
   ## Optional for configurations with customized sampling periods in vcenter
   # cluster_sampling_period = "300s"
