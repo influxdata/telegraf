@@ -15,8 +15,9 @@ import (
 // SQLServer struct
 type SQLServer struct {
 	Servers      []string
-	QueryVersion int
-	AzureDB      bool
+	QueryVersion int      `toml:"query_version"`
+	AzureDB      bool     `toml:"azuredb"`
+	ExcludeQuery []string `toml:"exclude_query"`
 }
 
 // Query struct
@@ -50,7 +51,11 @@ var sampleConfig = `
   ## Optional parameter, setting this to two will use a new version
   ## of the collection queries that break compatibility with the original
   ## dashboards. 
-  # queryVersion = 2
+  # query_version = 2
+  ## If you are using AzureDB, setting this to True will gather resource utilization metrics
+  # azuredb = False
+  ## If you would like to exclude some of the metrics queries, list them here
+  # exclude_query = [ 'PerformanceCounters','WaitStatsCatagorized' ]
 `
 
 // SampleConfig return the sample configuration
@@ -67,16 +72,16 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func initQueries(version int, azureDB bool) {
+func initQueries(s *SQLServer) {
 	queries = make(MapQuery)
 
 	// If this is an AzureDB instance, grab some extra metrics
-	if azureDB {
+	if s.AzureDB {
 		queries["AzureDB"] = Query{Script: sqlAzureDB, ResultByRow: true}
 	}
 
 	// Decide if we want to run version 1 or version 2 queries
-	if version == 2 {
+	if s.QueryVersion == 2 {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCountersV2, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorizedV2, ResultByRow: false}
 	} else {
@@ -92,6 +97,10 @@ func initQueries(version int, azureDB bool) {
 		queries["PerformanceMetrics"] = Query{Script: sqlPerformanceMetrics, ResultByRow: false}
 	}
 
+	for _, query := range s.ExcludeQuery {
+		delete(queries, query)
+	}
+
 	// Set a flag so we know that queries have already been initialized
 	isInitialized = true
 }
@@ -99,7 +108,7 @@ func initQueries(version int, azureDB bool) {
 // Gather collect data from SQL Server
 func (s *SQLServer) Gather(acc telegraf.Accumulator) error {
 	if !isInitialized {
-		initQueries(s.QueryVersion, s.AzureDB)
+		initQueries(s)
 	}
 
 	if len(s.Servers) == 0 {
