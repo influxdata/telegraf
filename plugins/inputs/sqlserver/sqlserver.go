@@ -84,7 +84,7 @@ func initQueries(s *SQLServer) {
 	if s.QueryVersion == 2 {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCountersV2, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorizedV2, ResultByRow: false}
-		queries["DatabaseIO"] = Query{Script: sqlDatabaseIO, ResultByRow: false}
+		queries["DatabaseIO"] = Query{Script: sqlDatabaseIOV2, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -226,7 +226,7 @@ func init() {
 }
 
 // Queries - V2
-const sqlDatabaseIO = `SELECT
+const sqlDatabaseIOV2 = `SELECT
 	'sqlserver_database_io' As [measurement],
 	REPLACE(@@SERVERNAME,'\',':') AS [server],
 	DB_NAME([vfs].[database_id]) [database_name],
