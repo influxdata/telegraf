@@ -6,6 +6,7 @@ import (
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/view"
 	"net/url"
+	"github.com/influxdata/telegraf/internal"
 )
 
 type Connection struct {
@@ -15,9 +16,10 @@ type Connection struct {
 	Perf   *performance.Manager
 }
 
-func NewConnection(url *url.URL) (*Connection, error) {
+func NewConnection(url *url.URL, timeout internal.Duration) (*Connection, error) {
 	ctx := context.Background()
 	c, err := govmomi.NewClient(ctx, url, true)
+	c.Timeout = timeout.Duration
 	if err != nil {
 		return nil, err
 	}
