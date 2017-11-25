@@ -84,6 +84,7 @@ func initQueries(s *SQLServer) {
 	if s.QueryVersion == 2 {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCountersV2, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorizedV2, ResultByRow: false}
+		queries["DatabaseIO"] = Query{Script: sqlDatabaseIO, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -225,6 +226,45 @@ func init() {
 }
 
 // Queries - V2
+const sqlDatabaseIO = `SELECT
+	'sqlserver_database_io' As [measurement],
+	REPLACE(@@SERVERNAME,'\',':') AS [server],
+	DB_NAME([vfs].[database_id]) [database_name],
+	--virtual file latency
+	CASE 
+		WHEN SUM([num_of_reads]) = 0 THEN 0 
+		ELSE (SUM(CAST([io_stall_read_ms] AS numeric(6,3)))/SUM([num_of_reads])) 
+	END [read_latency_ms],
+	CASE 
+		WHEN SUM([io_stall_write_ms]) = 0 THEN 0 
+		ELSE (SUM(CAST([io_stall_write_ms] AS numeric(6,3)))/SUM([num_of_writes])) 
+	END [write_latency_ms],
+	CASE 
+		WHEN (SUM([num_of_reads]) = 0 AND SUM([num_of_writes]) = 0) THEN 0 
+		ELSE (SUM(CAST([io_stall] AS numeric(6,3)))/(SUM([num_of_reads] + [num_of_writes]))) 
+	END [io_latency_ms],
+	--avg bytes per IOP
+	CASE 
+		WHEN SUM([num_of_reads]) = 0 THEN 0 
+		ELSE (SUM([num_of_bytes_read])/SUM([num_of_reads])) 
+	END [avg_bytes_per_read],
+	CASE 
+		WHEN SUM([io_stall_write_ms]) = 0 THEN 0 
+		ELSE (SUM([num_of_bytes_written])/SUM([num_of_writes])) 
+	END [avg_bytes_per_write],
+	CASE 
+		WHEN (SUM([num_of_reads]) = 0 AND SUM([num_of_writes]) = 0) THEN 0 
+		ELSE (SUM([num_of_bytes_read] + [num_of_bytes_written])/SUM([num_of_reads] + [num_of_writes])) 
+	END [avg_bytes_per_io],
+	SUM([vfs].[size_on_disk_bytes])/1024/1024. [size_on_disk_MB]
+FROM	[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
+		INNER JOIN [sys].[master_files] [mf] 
+			ON [vfs].[database_id] = [mf].[database_id] 
+			AND [vfs].[file_id] = [mf].[file_id]
+GROUP BY
+	DB_NAME([vfs].[database_id]);
+`
+
 const sqlPerformanceCountersV2 string = `DECLARE @PCounters TABLE
 (
 	object_name nvarchar(128),
@@ -326,6 +366,7 @@ WHERE	(
 		)
 
 SELECT  'sqlserver_performance' AS [measurement],
+		REPLACE(@@SERVERNAME,'\',':') AS [server]
         pc.object_name AS [object],
         pc.counter_name AS [counter],
 		CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
