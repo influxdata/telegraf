@@ -481,6 +481,114 @@ func TestJolokia2_FieldRenaming(t *testing.T) {
 	})
 }
 
+func TestJolokia2_MetricMbeanMatching(t *testing.T) {
+	config := `
+	[jolokia2_agent]
+		urls = ["%s"]
+
+	[[jolokia2_agent.metric]]
+		name = "mbean_name_and_object_keys"
+		mbean = "test1:foo=bar,fizz=buzz"
+
+	[[jolokia2_agent.metric]]
+		name = "mbean_name_and_unordered_object_keys"
+		mbean = "test2:fizz=buzz,foo=bar"
+
+	[[jolokia2_agent.metric]]
+		name = "mbean_name_and_attributes"
+		mbean = "test3"
+		paths = ["foo", "bar"]
+
+	[[jolokia2_agent.metric]]
+		name = "mbean_name_and_attribute_with_paths"
+		mbean = "test4"
+		paths = ["flavor/chocolate", "flavor/strawberry"]
+	`
+
+	response := `[{
+		"request": {
+			"mbean": "test1:foo=bar,fizz=buzz",
+			"type": "read"
+		},
+		"value": 123,
+		"status": 200
+	}, {
+		"request": {
+			"mbean": "test2:foo=bar,fizz=buzz",
+			"type": "read"
+		},
+		"value": 123,
+		"status": 200
+	}, {
+		"request": {
+			"mbean": "test3",
+			"attribute": "foo",
+			"type": "read"
+		},
+		"value": 123,
+		"status": 200
+	}, {
+		"request": {
+			"mbean": "test3",
+			"attribute": "bar",
+			"type": "read"
+		},
+		"value": 456,
+		"status": 200
+	}, {
+		"request": {
+			"mbean": "test4",
+			"attribute": "flavor",
+			"path": "chocolate",
+			"type": "read"
+		},
+		"value": 123,
+		"status": 200
+	}, {
+		"request": {
+			"mbean": "test4",
+			"attribute": "flavor",
+			"path": "strawberry",
+			"type": "read"
+		},
+		"value": 456,
+		"status": 200
+	}]`
+
+	server := setupServer(http.StatusOK, response)
+	defer server.Close()
+	plugin := setupPlugin(t, fmt.Sprintf(config, server.URL))
+
+	var acc testutil.Accumulator
+	assert.NoError(t, plugin.Gather(&acc))
+
+	acc.AssertContainsTaggedFields(t, "mbean_name_and_object_keys", map[string]interface{}{
+		"value": 123.0,
+	}, map[string]string{
+		"jolokia_agent_url": server.URL,
+	})
+
+	acc.AssertContainsTaggedFields(t, "mbean_name_and_unordered_object_keys", map[string]interface{}{
+		"value": 123.0,
+	}, map[string]string{
+		"jolokia_agent_url": server.URL,
+	})
+
+	acc.AssertContainsTaggedFields(t, "mbean_name_and_attributes", map[string]interface{}{
+		"foo": 123.0,
+		"bar": 456.0,
+	}, map[string]string{
+		"jolokia_agent_url": server.URL,
+	})
+
+	acc.AssertContainsTaggedFields(t, "mbean_name_and_attribute_with_paths", map[string]interface{}{
+		"flavor.chocolate":  123.0,
+		"flavor.strawberry": 456.0,
+	}, map[string]string{
+		"jolokia_agent_url": server.URL,
+	})
+}
+
 func TestJolokia2_MetricCompaction(t *testing.T) {
 	config := `
 	[jolokia2_agent]
