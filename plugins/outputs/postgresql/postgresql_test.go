@@ -26,18 +26,30 @@ func TestPostgresqlCreateStatement(t *testing.T) {
 
 	var m telegraf.Metric
 	m, _ = metric.New("m", nil, map[string]interface{}{"f": float64(3.14)}, timestamp)
-	assert.Equal(t, `CREATE TABLE "m"("time" timestamp,"f" float8)`, p.generateCreateTable(m))
-
-	m, _ = metric.New("m", nil, map[string]interface{}{"i": int(3)}, timestamp)
-	assert.Equal(t, `CREATE TABLE "m"("time" timestamp,"i" int8)`, p.generateCreateTable(m))
+	assert.Equal(t, `CREATE TABLE "m"(time timestamp,fields jsonb)`, p.generateCreateTable(m))
 
 	m, _ = metric.New("m", map[string]string{"k": "v"}, map[string]interface{}{"i": int(3)}, timestamp)
-	assert.Equal(t, `CREATE TABLE "m"("time" timestamp,"k" text,"i" int8)`, p.generateCreateTable(m))
+	assert.Equal(t, `CREATE TABLE "m"(time timestamp,tags jsonb,fields jsonb)`, p.generateCreateTable(m))
+
+	p.TagsAsJsonb = false
+	p.FieldsAsJsonb = false
+
+	m, _ = metric.New("m", nil, map[string]interface{}{"f": float64(3.14)}, timestamp)
+	assert.Equal(t, `CREATE TABLE "m"(time timestamp,"f" float8)`, p.generateCreateTable(m))
+
+	m, _ = metric.New("m", nil, map[string]interface{}{"i": int(3)}, timestamp)
+	assert.Equal(t, `CREATE TABLE "m"(time timestamp,"i" int8)`, p.generateCreateTable(m))
+
+	m, _ = metric.New("m", map[string]string{"k": "v"}, map[string]interface{}{"i": int(3)}, timestamp)
+	assert.Equal(t, `CREATE TABLE "m"(time timestamp,"k" text,"i" int8)`, p.generateCreateTable(m))
 
 }
 
 func TestPostgresqlInsertStatement(t *testing.T) {
 	p := newPostgresql()
+
+	p.TagsAsJsonb = false
+	p.FieldsAsJsonb = false
 
 	sql := p.generateInsert("m", []string{"time", "f"})
 	assert.Equal(t, `INSERT INTO "m"("time","f") VALUES($1,$2)`, sql)
