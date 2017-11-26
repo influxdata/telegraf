@@ -21,6 +21,7 @@ type objectMap map[string]objectRef
 type Endpoint struct {
 	Parent             *VSphere
 	Url                *url.URL
+	connection         *Connection
 	lastColl           map[string]time.Time
 	hostMap            objectMap
 	vmMap              objectMap
@@ -32,6 +33,7 @@ type Endpoint struct {
 	clusterMetricIds   []types.PerfMetricId
 	datastoreMetricIds []types.PerfMetricId
 	discoveryTicker    *time.Ticker
+	connectionMux      sync.Mutex
 	collectMux         sync.RWMutex
 }
 
@@ -63,11 +65,10 @@ func NewEndpoint(parent *VSphere, url *url.URL) Endpoint {
 }
 
 func (e *Endpoint) init() error {
-	conn, err := NewConnection(e.Url, e.Parent.Timeout)
+	conn, err := e.getConnection()
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
 	// Load metric IDs if specified
 	//
@@ -78,7 +79,7 @@ func (e *Endpoint) init() error {
 	}
 	e.vmMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.VmMetrics)
 	if err != nil {
-		return err
+    	return err
 	}
 	e.hostMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.HostMetrics)
 	if err != nil {
@@ -101,7 +102,7 @@ func (e *Endpoint) init() error {
 			for range e.discoveryTicker.C {
 				err := e.discover()
 				if err != nil {
-					log.Printf("E! Error in discovery %v", err)
+					log.Printf("E! Error in discovery for %s: %v", e.Url.Host, err)
 				}
 			}
 		}()
@@ -111,6 +112,23 @@ func (e *Endpoint) init() error {
 		e.discover()
 	}
 	return nil
+}
+
+func (e *Endpoint) getConnection() (*Connection, error) {
+	log.Printf("getConnection() %s\n", e.Url.Host)
+	if e.connection == nil {
+		e.connectionMux.Lock()
+		defer e.connectionMux.Unlock()
+		if e.connection == nil {
+			log.Printf("getConnection() - creating new %s\n", e.Url.Host)
+			conn, err := NewConnection(e.Url, e.Parent.Timeout)
+			if err != nil {
+				return nil, err
+			}
+			e.connection = conn
+		}
+	}
+	return e.connection, nil
 }
 
 func resolveMetricWildcards(metricMap map[string]*types.PerfCounterInfo, wildcards []string) ([]types.PerfMetricId, error) {
@@ -152,12 +170,11 @@ func resolveMetricWildcards(metricMap map[string]*types.PerfCounterInfo, wildcar
 }
 
 func (e *Endpoint) discover() error {
-	conn, err := NewConnection(e.Url, e.Parent.Timeout)
+	conn, err := e.getConnection()
 	if err != nil {
 		return err
 	}
 
-	defer conn.Close()
 	ctx := context.Background()
 
 	nameCache := make(map[string]string)
@@ -289,7 +306,7 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 			log.Printf("D! Querying %d objects of type %s for %s. Total processed: %d. Total objects %d\n", len(pqs), alias, e.Url.Host, total, len(objects))
 			metrics, err := p.Query(ctx, pqs)
 			if err != nil {
-				log.Printf("E! Error processing resource type %s", alias)
+				log.Printf("E! Error processing resource type %s on %s", alias, e.Url.Host)
 				return err
 			}
 
@@ -370,12 +387,11 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 		}
 	}
 
-	conn, err := NewConnection(e.Url, e.Parent.Timeout)
+	conn, err := e.getConnection()
 	if err != nil {
 		return err
 	}
 
-	defer conn.Close()
 	ctx := context.Background()
 
 	if e.Parent.GatherClusters {
