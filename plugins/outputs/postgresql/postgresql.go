@@ -2,6 +2,7 @@ package postgresql
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -17,6 +18,8 @@ type Postgresql struct {
 	Address           string
 	IgnoredTags       []string
 	TagsAsForeignkeys bool
+	TagsAsJsonb       bool
+	FieldsAsJsonb     bool
 	TableTemplate     string
 	Tables            map[string]bool
 }
@@ -88,34 +91,44 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 	var sql []string
 
 	pk = append(pk, quoteIdent("time"))
-	columns = append(columns, quoteIdent("time")+" timestamp")
+	columns = append(columns, "time timestamp")
 
-	for column, _ := range metric.Tags() {
-		if contains(p.IgnoredTags, column) {
-			continue
+	if p.TagsAsJsonb {
+		if len(metric.Tags()) > 0 {
+			columns = append(columns, "tags jsonb")
 		}
-		if p.TagsAsForeignkeys {
-			key := quoteIdent(column + "_id")
-			table := quoteIdent(metric.Name() + "_" + column)
+	} else {
+		for column, _ := range metric.Tags() {
+			if contains(p.IgnoredTags, column) {
+				continue
+			}
+			if p.TagsAsForeignkeys {
+				key := quoteIdent(column + "_id")
+				table := quoteIdent(metric.Name() + "_" + column)
 
-			pk = append(pk, key)
-			columns = append(columns, fmt.Sprintf("%s int8", key))
-			sql = append(sql, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s(%s serial primary key,%s text unique)", table, key, quoteIdent(column)))
-		} else {
-			pk = append(pk, quoteIdent(column))
-			columns = append(columns, fmt.Sprintf("%s text", quoteIdent(column)))
+				pk = append(pk, key)
+				columns = append(columns, fmt.Sprintf("%s int8", key))
+				sql = append(sql, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s(%s serial primary key,%s text unique)", table, key, quoteIdent(column)))
+			} else {
+				pk = append(pk, quoteIdent(column))
+				columns = append(columns, fmt.Sprintf("%s text", quoteIdent(column)))
+			}
 		}
 	}
 
-	var datatype string
-	for column, v := range metric.Fields() {
-		switch v.(type) {
-		case int64:
-			datatype = "int8"
-		case float64:
-			datatype = "float8"
+	if p.FieldsAsJsonb {
+		columns = append(columns, "fields jsonb")
+	} else {
+		var datatype string
+		for column, v := range metric.Fields() {
+			switch v.(type) {
+			case int64:
+				datatype = "int8"
+			case float64:
+				datatype = "float8"
+			}
+			columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(column), datatype))
 		}
-		columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(column), datatype))
 	}
 
 	query := strings.Replace(p.TableTemplate, "{TABLE}", quoteIdent(metric.Name()), -1)
@@ -169,40 +182,75 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 
 		var columns []string
 		var values []interface{}
+		var js map[string]interface{}
 
 		columns = append(columns, "time")
 		values = append(values, metric.Time())
 
-		for column, value := range metric.Tags() {
-			if contains(p.IgnoredTags, column) {
-				continue
+		if p.TagsAsJsonb {
+			js = make(map[string]interface{})
+			for column, value := range metric.Tags() {
+				if contains(p.IgnoredTags, column) {
+					continue
+				}
+				js[column] = value
 			}
 
-			if p.TagsAsForeignkeys {
-				var value_id int
-
-				query := fmt.Sprintf("SELECT %s FROM %s WHERE %s=$1", quoteIdent(column+"_id"), quoteIdent(tablename+"_"+column), quoteIdent(column))
-				err := p.db.QueryRow(query, value).Scan(&value_id)
+			if len(js) > 0 {
+				d, err := json.Marshal(js)
 				if err != nil {
-					println(err)
-					query := fmt.Sprintf("INSERT INTO %s(%s) VALUES($1) RETURNING %s", quoteIdent(tablename+"_"+column), quoteIdent(column), quoteIdent(column+"_id"))
-					err := p.db.QueryRow(query, value).Scan(&value_id)
-					if err != nil {
-						return err
-					}
+					return err
 				}
 
-				columns = append(columns, column+"_id")
-				values = append(values, value_id)
-			} else {
-				columns = append(columns, column)
-				values = append(values, value)
+				columns = append(columns, "tags")
+				values = append(values, d)
+			}
+		} else {
+			for column, value := range metric.Tags() {
+				if contains(p.IgnoredTags, column) {
+					continue
+				}
+				if p.TagsAsForeignkeys {
+					var value_id int
+
+					query := fmt.Sprintf("SELECT %s FROM %s WHERE %s=$1", quoteIdent(column+"_id"), quoteIdent(tablename+"_"+column), quoteIdent(column))
+					err := p.db.QueryRow(query, value).Scan(&value_id)
+					if err != nil {
+						log.Printf("W! Foreign key reference not found %s: %v", tablename, err)
+						query := fmt.Sprintf("INSERT INTO %s(%s) VALUES($1) RETURNING %s", quoteIdent(tablename+"_"+column), quoteIdent(column), quoteIdent(column+"_id"))
+						err := p.db.QueryRow(query, value).Scan(&value_id)
+						if err != nil {
+							return err
+						}
+					}
+
+					columns = append(columns, column+"_id")
+					values = append(values, value_id)
+				} else {
+					columns = append(columns, column)
+					values = append(values, value)
+				}
 			}
 		}
 
-		for column, value := range metric.Fields() {
-			columns = append(columns, column)
-			values = append(values, value)
+		if p.FieldsAsJsonb {
+			js = make(map[string]interface{})
+			for column, value := range metric.Fields() {
+				js[column] = value
+			}
+
+			d, err := json.Marshal(js)
+			if err != nil {
+				return err
+			}
+
+			columns = append(columns, "fields")
+			values = append(values, d)
+		} else {
+			for column, value := range metric.Fields() {
+				columns = append(columns, column)
+				values = append(values, value)
+			}
 		}
 
 		sql := p.generateInsert(tablename, columns)
@@ -220,9 +268,9 @@ func init() {
 }
 
 func newPostgresql() *Postgresql {
-	p := Postgresql{}
-	if p.TableTemplate == "" {
-		p.TableTemplate = "CREATE TABLE {TABLE}({COLUMNS})"
+	return &Postgresql{
+		TableTemplate: "CREATE TABLE {TABLE}({COLUMNS})",
+		TagsAsJsonb:   true,
+		FieldsAsJsonb: true,
 	}
-	return &p
 }
