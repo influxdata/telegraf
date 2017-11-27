@@ -69,6 +69,7 @@ following works:
 - github.com/prometheus/client_model [APACHE](https://github.com/prometheus/client_model/blob/master/LICENSE)
 - github.com/prometheus/common [APACHE](https://github.com/prometheus/common/blob/master/LICENSE)
 - github.com/prometheus/procfs [APACHE](https://github.com/prometheus/procfs/blob/master/LICENSE)
+- github.com/rancherio/go-rancher [APACHE](https://github.com/rancher/go-rancher/blob/master/LICENSE)
 - github.com/rcrowley/go-metrics [BSD](https://github.com/rcrowley/go-metrics/blob/master/LICENSE)
 - github.com/samuel/go-zookeeper [BSD](https://github.com/samuel/go-zookeeper/blob/master/LICENSE)
 - github.com/satori/go.uuid [MIT](https://github.com/satori/go.uuid/blob/master/LICENSE)
