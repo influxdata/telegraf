@@ -72,6 +72,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/puppetagent"
 	_ "github.com/influxdata/telegraf/plugins/inputs/rabbitmq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/raindrops"
+	_ "github.com/influxdata/telegraf/plugins/inputs/rancher"
 	_ "github.com/influxdata/telegraf/plugins/inputs/redis"
 	_ "github.com/influxdata/telegraf/plugins/inputs/rethinkdb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/riak"
