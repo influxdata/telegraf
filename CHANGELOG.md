@@ -80,7 +80,15 @@
 - [#3488](https://github.com/influxdata/telegraf/pull/3488): Use hexadecimal ids and lowercase names in zipkin input.
 - [#3263](https://github.com/influxdata/telegraf/issues/3263): Fix snmp-tools output parsing with Windows EOLs.
 
+## v1.4.5 [unreleased]
+
+### Bugfixes
+
+- [#3500](https://github.com/influxdata/telegraf/issues/3500): Fix global variable collection when using interval_slow option in mysql input.
+
 ## v1.4.4 [2017-11-08]
+
+### Bugfixes
 
 - [#3401](https://github.com/influxdata/telegraf/pull/3401): Use schema specified in mqtt_consumer input.
 - [#3419](https://github.com/influxdata/telegraf/issues/3419): Redact datadog API key in log output.
