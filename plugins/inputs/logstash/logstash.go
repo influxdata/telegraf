@@ -38,9 +38,10 @@ type ProcessStats struct {
 }
 
 type PluginEvents struct {
-	DurationInMillis float64 `json:"duration_in_millis"`
-	In               float64 `json:"in"`
-	Out              float64 `json:"out"`
+	QueuePushDurationInMmillis float64 `json:queue_push_duration_in_millis`
+	DurationInMillis           float64 `json:"duration_in_millis"`
+	In                         float64 `json:"in"`
+	Out                        float64 `json:"out"`
 }
 
 type Plugin struct {
@@ -194,9 +195,10 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 	for _, plugin := range PipelineStats.Pipeline.Plugins.Inputs {
 		//plugin := &plugin
 		fields := map[string]interface{}{
-			"duration_in_millis": plugin.Events.DurationInMillis,
-			"in":                 plugin.Events.In,
-			"out":                plugin.Events.Out,
+	                "queue_push_duration_in_millis": plugin.Events.QueuePushDurationInMmillis,
+			"duration_in_millis":            plugin.Events.DurationInMillis,
+			"in":                            plugin.Events.In,
+			"out":                           plugin.Events.Out,
 		}
 		tags := map[string]string{
 			"plugin": plugin.Name,
