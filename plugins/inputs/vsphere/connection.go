@@ -2,11 +2,11 @@ package vsphere
 
 import (
 	"context"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/view"
 	"net/url"
-	"github.com/influxdata/telegraf/internal"
 )
 
 type Connection struct {
@@ -19,10 +19,10 @@ type Connection struct {
 func NewConnection(url *url.URL, timeout internal.Duration) (*Connection, error) {
 	ctx := context.Background()
 	c, err := govmomi.NewClient(ctx, url, true)
-	c.Timeout = timeout.Duration
 	if err != nil {
 		return nil, err
 	}
+	c.Timeout = timeout.Duration
 	m := view.NewManager(c.Client)
 	v, err := m.CreateContainerView(ctx, c.ServiceContent.RootFolder, []string{}, true)
 	if err != nil {
