@@ -1,6 +1,7 @@
 package twitter
 
 import (
+	"context"
 	"net/url"
 	"strings"
 	"sync"
@@ -22,8 +23,10 @@ type Twitter struct {
 	AccessTokenSecret string
 	KeywordsToTrack   string
 
-	wg   *sync.WaitGroup
-	done chan struct{}
+	api    *anaconda.TwitterApi
+	wg     *sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // Description - returns a description of the plugin
@@ -52,36 +55,37 @@ func (s *Twitter) Gather(acc telegraf.Accumulator) error {
 func (s *Twitter) Start(acc telegraf.Accumulator) error {
 	anaconda.SetConsumerKey(s.ConsumerKey)
 	anaconda.SetConsumerSecret(s.ConsumerSecret)
-	api := anaconda.NewTwitterApi(s.AccessToken, s.AccessTokenSecret)
+	s.api = anaconda.NewTwitterApi(s.AccessToken, s.AccessTokenSecret)
 
-	s.done = make(chan struct{})
+	// Store the cancel function so we can call it on Stop
+	s.ctx, s.cancel = context.WithCancel(context.Background())
 	s.wg = &sync.WaitGroup{}
 	s.wg.Add(1)
-	go s.fetchTweets(api, acc)
+	go s.fetchTweets(acc)
 
 	return nil
 }
 
 // Stop - Called once when stopping the plugin
 func (s *Twitter) Stop() {
-	// This will tell our processTweets function to return
-	close(s.done)
+	s.cancel()
 	s.wg.Wait()
 	return
 }
 
-func (s *Twitter) fetchTweets(api *anaconda.TwitterApi, acc telegraf.Accumulator) {
+func (s *Twitter) fetchTweets(acc telegraf.Accumulator) {
 	defer s.wg.Done()
 	// We will use this a little later for finding keywords in tweets
 	keywordsList := strings.Split(s.KeywordsToTrack, ",")
 	// Setting the keywords we want to track
 	v := url.Values{}
 	v.Set("track", s.KeywordsToTrack)
-	stream := api.PublicStreamFilter(v)
+	stream := s.api.PublicStreamFilter(v)
 	for item := range stream.C {
 		select {
-		// Listen for a message on the done channel letting us know it's time to stop
-		case <-s.done:
+		// Listen for the call to cancel so we know it's time to stop
+		case <-s.ctx.Done():
+			stream.Stop()
 			return
 		default:
 			switch tweet := item.(type) {
