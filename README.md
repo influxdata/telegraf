@@ -180,6 +180,7 @@ configuration options.
 * [phpfpm](./plugins/inputs/phpfpm)
 * [phusion passenger](./plugins/inputs/passenger)
 * [ping](./plugins/inputs/ping)
+* [postfix](./plugins/inputs/postfix)
 * [postgresql](./plugins/inputs/postgresql)
 * [postgresql_extensible](./plugins/inputs/postgresql_extensible)
 * [powerdns](./plugins/inputs/powerdns)
