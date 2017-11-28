@@ -16,7 +16,6 @@ import (
 type Postgresql struct {
 	db                *sql.DB
 	Address           string
-	IgnoredTags       []string
 	TagsAsForeignkeys bool
 	TagsAsJsonb       bool
 	FieldsAsJsonb     bool
@@ -72,14 +71,18 @@ var sampleConfig = `
   ##
   address = "host=localhost user=postgres sslmode=verify-full"
 
-  ## A list of tags to exclude from storing. If not specified, all tags are stored.
-  # ignored_tags = ["foo", "bar"]
-
   ## Store tags as foreign keys in the metrics table. Default is false.
   # tags_as_foreignkeys = false
 
   ## Template to use for generating tables
   # table_template = "CREATE TABLE {TABLE}({COLUMNS})"
+
+  ## Use jsonb datatype for tags
+  # tags_as_jsonb = true
+
+  ## Use jsonb datatype for fields
+  # fields_as_jsonb = true
+
 `
 
 func (p *Postgresql) SampleConfig() string { return sampleConfig }
@@ -99,9 +102,6 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 		}
 	} else {
 		for column, _ := range metric.Tags() {
-			if contains(p.IgnoredTags, column) {
-				continue
-			}
 			if p.TagsAsForeignkeys {
 				key := quoteIdent(column + "_id")
 				table := quoteIdent(metric.Name() + "_" + column)
@@ -190,9 +190,6 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 		if p.TagsAsJsonb {
 			js = make(map[string]interface{})
 			for column, value := range metric.Tags() {
-				if contains(p.IgnoredTags, column) {
-					continue
-				}
 				js[column] = value
 			}
 
@@ -207,9 +204,6 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 			}
 		} else {
 			for column, value := range metric.Tags() {
-				if contains(p.IgnoredTags, column) {
-					continue
-				}
 				if p.TagsAsForeignkeys {
 					var value_id int
 
