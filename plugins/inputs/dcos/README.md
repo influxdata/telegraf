@@ -155,14 +155,14 @@ for details on interprete field interpretation.
     - container_id
     - task_name
   - fields:
-  	- cpus_limit (float)
-  	- cpus_system_time (float)
-  	- cpus_throttled_time (float)
-  	- cpus_user_time (float)
-  	- disk_limit_bytes (int)
-  	- disk_used_bytes (int)
-  	- mem_limit_bytes (int)
-  	- mem_total_bytes (int)
+    - cpus_limit (float)
+    - cpus_system_time (float)
+    - cpus_throttled_time (float)
+    - cpus_user_time (float)
+    - disk_limit_bytes (int)
+    - disk_used_bytes (int)
+    - mem_limit_bytes (int)
+    - mem_total_bytes (int)
     - net_rx_bytes (int)
     - net_rx_dropped (float)
     - net_rx_errors (float)
@@ -179,7 +179,7 @@ for details on interprete field interpretation.
     - container_id
     - task_name
   - fields:
-  	- fields are application specific
+    - fields are application specific
 
 ### Example Output:
 
