@@ -15,7 +15,6 @@ ifdef VERSION
 	LDFLAGS += -X main.version=$(VERSION)
 endif
 
-
 all:
 	$(MAKE) deps
 	$(MAKE) telegraf
@@ -50,6 +49,7 @@ test-all: lint
 
 package:
 	./scripts/build.py --package --platform=all --arch=all
+
 clean:
 	-rm -f telegraf
 	-rm -f telegraf.exe
@@ -86,6 +86,12 @@ docker-run:
 		-e SLAPD_CONFIG_ROOTPW="secret" \
 		-p "389:389" -p "636:636" \
 		-d cobaugh/openldap-alpine
+	docker run --name cratedb \
+		-p "6543:5432" \
+		-d crate crate \
+		-Cnetwork.host=0.0.0.0 \
+		-Ctransport.host=localhost \
+		-Clicense.enterprise=false
 
 # Run docker containers necessary for integration tests; skipping services provided
 # by CircleCI
@@ -110,12 +116,18 @@ docker-run-circle:
 		-e SLAPD_CONFIG_ROOTPW="secret" \
 		-p "389:389" -p "636:636" \
 		-d cobaugh/openldap-alpine
+	docker run --name cratedb \
+		-p "6543:5432" \
+		-d crate crate \
+		-Cnetwork.host=0.0.0.0 \
+		-Ctransport.host=localhost \
+		-Clicense.enterprise=false
 
 docker-kill:
 	-docker kill aerospike elasticsearch kafka memcached mqtt mysql nats nsq \
-		openldap postgres rabbitmq redis riemann zookeeper
+		openldap postgres rabbitmq redis riemann zookeeper cratedb
 	-docker rm aerospike elasticsearch kafka memcached mqtt mysql nats nsq \
-		openldap postgres rabbitmq redis riemann zookeeper
+		openldap postgres rabbitmq redis riemann zookeeper cratedb
 
 .PHONY: deps telegraf telegraf.exe install test test-windows lint test-all \
 	package clean docker-run docker-run-circle docker-kill docker-image

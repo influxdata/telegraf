@@ -12,11 +12,11 @@ platform: x64
 
 install:
   - IF NOT EXIST "C:\Cache" mkdir C:\Cache
-  - IF NOT EXIST "C:\Cache\go1.8.1.msi" curl -o "C:\Cache\go1.8.1.msi" https://storage.googleapis.com/golang/go1.8.1.windows-amd64.msi
+  - IF NOT EXIST "C:\Cache\go1.9.2.msi" curl -o "C:\Cache\go1.9.2.msi" https://storage.googleapis.com/golang/go1.9.2.windows-amd64.msi
   - IF NOT EXIST "C:\Cache\gnuwin32-bin.zip" curl -o "C:\Cache\gnuwin32-bin.zip" https://dl.influxdata.com/telegraf/ci/make-3.81-bin.zip
   - IF NOT EXIST "C:\Cache\gnuwin32-dep.zip" curl -o "C:\Cache\gnuwin32-dep.zip" https://dl.influxdata.com/telegraf/ci/make-3.81-dep.zip
   - IF EXIST "C:\Go" rmdir /S /Q C:\Go
-  - msiexec.exe /i "C:\Cache\go1.8.1.msi" /quiet
+  - msiexec.exe /i "C:\Cache\go1.9.2.msi" /quiet
   - 7z x "C:\Cache\gnuwin32-bin.zip" -oC:\GnuWin32 -y
   - 7z x "C:\Cache\gnuwin32-dep.zip" -oC:\GnuWin32 -y
   - go version

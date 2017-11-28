@@ -32,7 +32,7 @@ github.com/hashicorp/consul 63d2fc68239b996096a1c55a0d4b400ea4c2583f
 github.com/influxdata/tail a395bf99fe07c233f41fba0735fa2b13b58588ea
 github.com/influxdata/toml 5d1d907f22ead1cd47adde17ceec5bda9cacaf8f
 github.com/influxdata/wlog 7c63b0a71ef8300adc255344d275e10e5c3a71ec
-github.com/jackc/pgx b84338d7d62598f75859b2b146d830b22f1b9ec8
+github.com/jackc/pgx 63f58fd32edb5684b9e9f4cfaac847c6b42b3917
 github.com/jmespath/go-jmespath bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
 github.com/kardianos/osext c2c54e542fb797ad986b31721e1baedf214ca413
 github.com/kardianos/service 6d3a0ee7d3425d9d835debc51a0ca1ffa28f4893
@@ -62,7 +62,7 @@ github.com/prometheus/procfs 1878d9fbb537119d24b21ca07effd591627cd160
 github.com/rcrowley/go-metrics 1f30fe9094a513ce4c700b9a54458bbb0c96996c
 github.com/samuel/go-zookeeper 1d7be4effb13d2d908342d349d71a284a7542693
 github.com/satori/go.uuid 5bf94b69c6b68ee1b541973bb8e1144db23a194b
-github.com/shirou/gopsutil a452de7c734a0fa0f16d2e5725b0fa5934d9fbec
+github.com/shirou/gopsutil 48fc5612898a1213aa5d6a0fb2d4f7b968e898fb
 github.com/shirou/w32 3c9377fc6748f222729a8270fe2775d149a249ad
 github.com/Shopify/sarama c01858abb625b73a3af51d0798e4ad42c8147093
 github.com/Sirupsen/logrus 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
