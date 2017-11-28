@@ -27,7 +27,6 @@ github.com/go-ole/go-ole be49f7c07711fcb603cff39e1de7c67926dc0ba7
 github.com/google/go-cmp f94e52cad91c65a63acc1e75d4be223ea22e99bc
 github.com/gorilla/mux 392c28fe23e1c45ddba891b0320b3b5df220beea
 github.com/go-sql-driver/mysql 2e00b5cd70399450106cec6431c2e2ce3cae5034
-github.com/gobwas/glob bea32b9cd2d6f55753d94a28e959b13f0244797a
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/hashicorp/consul 63d2fc68239b996096a1c55a0d4b400ea4c2583f
 github.com/influxdata/tail a395bf99fe07c233f41fba0735fa2b13b58588ea
