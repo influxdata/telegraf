@@ -11,8 +11,8 @@ import (
 )
 
 type NetIOStats struct {
-	filter   filter.Filter
-	ps       PS
+	filter filter.Filter
+	ps     PS
 
 	skipChecks bool
 	Interfaces []string
