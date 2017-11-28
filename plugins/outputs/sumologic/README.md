@@ -12,9 +12,6 @@ via http.
    prefix = "sumo-telegraf"
    ## Graphite output template
    template = "host.tags.measurement.field"
-   ## SumoLogic API key
-   AccessKey = "<YOUR Sumo Logic AccessKey>" # required.
-   AccessId = "<YOUR Sumo Logic AccessId>" # required.
    ## Connection timeout.
    # timeout = "5s"
    ## SumoLogic Collector Url

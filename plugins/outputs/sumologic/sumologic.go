@@ -14,8 +14,6 @@ import (
 type SumoLogic struct {
 	Prefix       string
 	Template     string
-	AccessKey    string
-	AccessId     string
 	Timeout      internal.Duration
 	CollectorUrl string
 	client       *http.Client
@@ -26,9 +24,6 @@ var sampleConfig = `
   prefix = ""
   ## Sumo Logic output template
   template = "host.tags.measurement.field"
-  ## SumoLogic API key
-  AccessKey = "my-secret-key" # required.
-  AccessId = "my-secret-Id" # required.
   ## Connection timeout.
   # timeout = "5s"
   ## SumoLogic Collector Url
@@ -36,9 +31,6 @@ var sampleConfig = `
 `
 
 func (s *SumoLogic) Connect() error {
-	if s.AccessKey == "" || s.AccessId == "" {
-		return fmt.Errorf("SumoLogic accessId and accessKey is a required field for sumologic output")
-	}
 
 	if s.CollectorUrl == "" {
 		return fmt.Errorf("SumoLogic collector url is a required field for sumologic output")
@@ -110,7 +102,6 @@ func (s *SumoLogic) Write(metrics []telegraf.Metric) error {
 	if err != nil {
 		return fmt.Errorf("Error creating the HTTP request: %s\n", err.Error())
 	}
-	req.SetBasicAuth(s.AccessId, s.AccessKey)
 	response, err := s.client.Do(req)
 
 	if err != nil {

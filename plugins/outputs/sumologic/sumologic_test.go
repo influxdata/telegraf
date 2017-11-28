@@ -16,8 +16,6 @@ import (
 func TestSumoLogicWriteError(t *testing.T) {
 	s := SumoLogic{
 		Prefix:       "my.prefix",
-		AccessKey:    "my_access_key",
-		AccessId:     "my_access_id",
 		CollectorUrl: "http://localhost:8080",
 	}
 	// Init metrics
@@ -38,37 +36,9 @@ func TestSumoLogicWriteError(t *testing.T) {
 	assert.Contains(t, err2.Error(), "error posting metrics to sumologic server")
 }
 
-func TestSumoLogicAccessIdError(t *testing.T) {
-	s := SumoLogic{
-		Prefix:       "my.prefix",
-		AccessKey:    "my_access_key",
-		CollectorUrl: "http://localhost:8080",
-	}
-
-	// Error
-	err1 := s.Connect()
-	require.Error(t, err1)
-	assert.Equal(t, "SumoLogic accessId and accessKey is a required field for sumologic output", err1.Error())
-}
-
-func TestSumoLogicAccessKeyError(t *testing.T) {
-	s := SumoLogic{
-		Prefix:       "my.prefix",
-		AccessId:     "my_access_id",
-		CollectorUrl: "http://localhost:8080",
-	}
-
-	// Error
-	err1 := s.Connect()
-	require.Error(t, err1)
-	assert.Equal(t, "SumoLogic accessId and accessKey is a required field for sumologic output", err1.Error())
-}
-
 func TestSumoLogicOK(t *testing.T) {
 	s := SumoLogic{
 		Prefix:       "my.prefix",
-		AccessId:     "my_access_id",
-		AccessKey:    "my_access_key",
 		CollectorUrl: "http://localhost:8080",
 	}
 
@@ -100,8 +70,6 @@ func TestSumoLogicOK(t *testing.T) {
 func TestBadStatusCode(t *testing.T) {
 	s := SumoLogic{
 		Prefix:       "my.prefix",
-		AccessId:     "my_access_id",
-		AccessKey:    "my_access_key",
 		CollectorUrl: "http://localhost:8080",
 	}
 
