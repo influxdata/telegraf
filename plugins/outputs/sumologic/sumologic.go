@@ -69,6 +69,7 @@ func prepareHttpRequest(params requestParameters) (*http.Request, error) {
 		return req, fmt.Errorf("Error creating the HTTP request: %s", err.Error())
 	}
 	req.Header.Add("Content-Type", "application/vnd.sumologic.graphite")
+	req.Header.Add("X-Sumo-Client", "telegraf")
 
 	if req.Header.Get("User-Agent") == "" {
 		req.Header.Add("User-Agent", "Mozilla/5.0 (compatible; Sumo/1.0; +https://sumologic.com)")
