@@ -13,21 +13,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// default file paths
-const (
-	defaultBondPath = "/net/bonding"
-	defaultHostProc = "/proc"
-)
+// default host proc path
+const defaultHostProc = "/proc"
 
-// env variable names
-const (
-	envBonding = "PROC_NET_BONDING"
-	envProc    = "HOST_PROC"
-)
+// env host proc variable name
+const envProc = "HOST_PROC"
 
 type Bond struct {
 	HostProc       string   `toml:"host_proc"`
-	BondPath       string   `toml:"bond_path"`
 	BondInterfaces []string `toml:"bond_interfaces"`
 }
 
@@ -35,10 +28,6 @@ var sampleConfig = `
 	## Sets 'proc' directory path
 	## If not specified, then default is /proc
 	# host_proc = "/proc"
-
-  ## Sets 'bonding' directory relative path
-  ## If not specified, then default is /net/bonding
-  # bond_path = "/net/bonding"
 
   ## By default, telegraf gather stats for all bond interfaces
   ## Setting interfaces will restrict the stats to the specified
@@ -55,15 +44,15 @@ func (bond *Bond) SampleConfig() string {
 }
 
 func (bond *Bond) Gather(acc telegraf.Accumulator) error {
-	// load paths, get default value if config value and env variables are empty
-	bond.loadPaths()
+	// load proc path, get default value if config value and env variable are empty
+	bond.loadPath()
 	// list bond interfaces from bonding directory or gather all interfaces.
 	bondNames, err := bond.listInterfaces()
 	if err != nil {
 		return err
 	}
 	for _, bondName := range bondNames {
-		bondAbsPath := bond.HostProc + bond.BondPath + "/" + bondName
+		bondAbsPath := bond.HostProc + "/net/bonding/" + bondName
 		file, err := ioutil.ReadFile(bondAbsPath)
 		if err != nil {
 			acc.AddError(fmt.Errorf("error inspecting '%s' interface: %v", bondAbsPath, err))
@@ -174,14 +163,11 @@ func (bond *Bond) gatherSlavePart(bondName string, rawFile string, acc telegraf.
 	return nil
 }
 
-// loadPaths can be used to read paths firstly from config
-// if it is empty then try read from env variables
-func (bond *Bond) loadPaths() {
+// loadPath can be used to read path firstly from config
+// if it is empty then try read from env variable
+func (bond *Bond) loadPath() {
 	if bond.HostProc == "" {
 		bond.HostProc = proc(envProc, defaultHostProc)
-	}
-	if bond.BondPath == "" {
-		bond.BondPath = proc(envBonding, defaultBondPath)
 	}
 }
 
@@ -200,7 +186,7 @@ func (bond *Bond) listInterfaces() ([]string, error) {
 	if len(bond.BondInterfaces) > 0 {
 		interfaces = bond.BondInterfaces
 	} else {
-		paths, err := filepath.Glob(bond.HostProc + bond.BondPath + "/*")
+		paths, err := filepath.Glob(bond.HostProc + "/net/bonding/*")
 		if err != nil {
 			return nil, err
 		}

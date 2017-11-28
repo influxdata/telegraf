@@ -12,10 +12,6 @@ The plugin collects these metrics from `/proc/net/bonding/*` files.
   ## If not specified, then default is /proc
   # host_proc = "/proc"
 
-  ## Sets 'bonding' directory relative path
-  ## If not specified, then default is /net/bonding
-  # bond_path = "/net/bonding"
-
   ## By default, telegraf gather stats for all bond interfaces
   ## Setting interfaces will restrict the stats to the specified
   ## bond interfaces.
@@ -63,10 +59,6 @@ Configuration:
   ## Sets 'proc' directory path
   ## If not specified, then default is /proc
   host_proc = "/proc"
-
-  ## Sets 'bonding' directory relative path
-  ## If not specified, then default is /net/bonding
-  bond_path = "/net/bonding"
 
   ## By default, telegraf gather stats for all bond interfaces
   ## Setting interfaces will restrict the stats to the specified
