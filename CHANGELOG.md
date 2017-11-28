@@ -2,6 +2,7 @@
 
 ### New Plugins
 - [basicstats](./plugins/aggregators/basicstats/README.md) - Thanks to @toni-moreno
+- [bond](./plugins/inputs/bond/README.md) - Thanks to @ildarsv
 - [cratedb](./plugins/outputs/wavefront/README.md) - Thanks to @felixge
 - [jolokia2](./plugins/inputs/jolokia2/README.md) - Thanks to @dylanmei
 - [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
@@ -69,6 +70,7 @@
 - [#3449](https://github.com/influxdata/telegraf/pull/3449): Add opensmtpd input plugin.
 - [#3470](https://github.com/influxdata/telegraf/pull/3470): Add support for tags in the index name in elasticsearch output.
 - [#2553](https://github.com/influxdata/telegraf/pull/2553): Add postfix input plugin.
+- [#3424](https://github.com/influxdata/telegraf/pull/3424): Add bond input plugin.
 
 ### Bugfixes
 
