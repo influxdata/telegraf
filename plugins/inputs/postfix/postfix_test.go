@@ -5,7 +5,6 @@ import (
 	"os"
 	"path"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +25,6 @@ func TestGather(t *testing.T) {
 
 	require.NoError(t, ioutil.WriteFile(path.Join(td, "active", "01"), []byte("abc"), 0644))
 	require.NoError(t, ioutil.WriteFile(path.Join(td, "active", "02"), []byte("defg"), 0644))
-	require.NoError(t, os.Chtimes(path.Join(td, "active", "02"), time.Now(), time.Now().Add(-time.Hour)))
 	require.NoError(t, ioutil.WriteFile(path.Join(td, "hold", "01"), []byte("abc"), 0644))
 	require.NoError(t, ioutil.WriteFile(path.Join(td, "incoming", "01"), []byte("abcd"), 0644))
 	require.NoError(t, ioutil.WriteFile(path.Join(td, "deferred", "0", "01"), []byte("abc"), 0644))
@@ -46,7 +44,7 @@ func TestGather(t *testing.T) {
 
 	assert.Equal(t, int64(2), metrics["active"].Fields["length"])
 	assert.Equal(t, int64(7), metrics["active"].Fields["size"])
-	assert.InDelta(t, int64(time.Hour/time.Second), metrics["active"].Fields["age"], 10)
+	assert.InDelta(t, 0, metrics["active"].Fields["age"], 10)
 
 	assert.Equal(t, int64(1), metrics["hold"].Fields["length"])
 	assert.Equal(t, int64(3), metrics["hold"].Fields["size"])

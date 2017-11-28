@@ -45,15 +45,23 @@ func qScan(path string) (int64, int64, int64, error) {
 	for _, finfo := range finfos {
 		length++
 		size += finfo.Size()
-		if oldest.IsZero() || finfo.ModTime().Before(oldest) {
-			oldest = finfo.ModTime()
+
+		ctime := statCTime(finfo.Sys())
+		if ctime.IsZero() {
+			continue
+		}
+		if oldest.IsZero() || ctime.Before(oldest) {
+			oldest = ctime
 		}
 	}
-	var age time.Duration
+	var age int64
 	if !oldest.IsZero() {
-		age = time.Now().Sub(oldest) / time.Second
+		age = int64(time.Now().Sub(oldest) / time.Second)
+	} else if len(finfos) != 0 {
+		// system doesn't support ctime
+		age = -1
 	}
-	return length, size, int64(age), nil
+	return length, size, age, nil
 }
 
 type Postfix struct {
@@ -75,11 +83,15 @@ func (p *Postfix) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("error scanning queue %s: %s", q, err))
 			continue
 		}
-		fields := map[string]interface{}{"length": length, "size": size, "age": age}
+		fields := map[string]interface{}{"length": length, "size": size}
+		if age != -1 {
+			fields["age"] = age
+		}
 		acc.AddFields("postfix_queue", fields, map[string]string{"queue": q})
 	}
 
-	var dLength, dSize, dAge int64
+	var dLength, dSize int64
+	dAge := int64(-1)
 	for _, q := range []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"} {
 		length, size, age, err := qScan(path.Join(p.QueueDirectory, "deferred", q))
 		if err != nil {
@@ -96,7 +108,10 @@ func (p *Postfix) Gather(acc telegraf.Accumulator) error {
 			dAge = age
 		}
 	}
-	fields := map[string]interface{}{"length": dLength, "size": dSize, "age": dAge}
+	fields := map[string]interface{}{"length": dLength, "size": dSize}
+	if dAge != -1 {
+		fields["age"] = dAge
+	}
 	acc.AddFields("postfix_queue", fields, map[string]string{"queue": "deferred"})
 
 	return nil
