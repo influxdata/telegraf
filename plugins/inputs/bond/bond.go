@@ -25,9 +25,9 @@ type Bond struct {
 }
 
 var sampleConfig = `
-	## Sets 'proc' directory path
-	## If not specified, then default is /proc
-	# host_proc = "/proc"
+  ## Sets 'proc' directory path
+  ## If not specified, then default is /proc
+  # host_proc = "/proc"
 
   ## By default, telegraf gather stats for all bond interfaces
   ## Setting interfaces will restrict the stats to the specified
