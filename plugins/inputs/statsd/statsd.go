@@ -488,7 +488,8 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	}
 
 	// Extract bucket name from individual metric bits
-	bucketName, bits := bits[0], bits[1:]
+    bucketName := strings.Join(bits[:len(bits)-1], ":")  // join all but the last split
+    bits = bits[len(bits)-1]  // only the last split
 
 	// Add a metric for each bit available
 	for _, bit := range bits {
