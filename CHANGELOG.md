@@ -79,6 +79,8 @@
 - [#3473](https://github.com/influxdata/telegraf/pull/3473): Whitelist allowed char classes for graphite output.
 - [#3488](https://github.com/influxdata/telegraf/pull/3488): Use hexadecimal ids and lowercase names in zipkin input.
 - [#3263](https://github.com/influxdata/telegraf/issues/3263): Fix snmp-tools output parsing with Windows EOLs.
+- [#3447](https://github.com/influxdata/telegraf/issues/3447): Add shadow-utils dependency to rpm package.
+- [#3448](https://github.com/influxdata/telegraf/issues/3448): Use deb-systemd-invoke to restart service.
 
 ## v1.4.5 [unreleased]
 
