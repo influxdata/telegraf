@@ -7,6 +7,7 @@
 - [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
 - [opensmtpd](./plugins/inputs/opensmtpd/README.md) - Thanks to @aromeyer
 - [particle](./plugins/inputs/webhooks/particle/README.md) - Thanks to @davidgs
+- [postfix](./plugins/inputs/postfix/README.md) - Thanks to @phemmer
 - [smart](./plugins/inputs/smart/README.md) - Thanks to @rickard-von-essen
 - [solr](./plugins/inputs/solr/README.md) - Thanks to @ljagiello
 - [teamspeak](./plugins/inputs/teamspeak/README.md) - Thanks to @p4ddy1
@@ -67,6 +68,7 @@
 - [#3434](https://github.com/influxdata/telegraf/pull/3434): Add unbound input plugin.
 - [#3449](https://github.com/influxdata/telegraf/pull/3449): Add opensmtpd input plugin.
 - [#3470](https://github.com/influxdata/telegraf/pull/3470): Add support for tags in the index name in elasticsearch output.
+- [#2553](https://github.com/influxdata/telegraf/pull/2553): Add postfix input plugin.
 
 ### Bugfixes
 
