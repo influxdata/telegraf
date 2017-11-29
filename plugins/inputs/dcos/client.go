@@ -221,40 +221,30 @@ func (c *client) GetContainers(ctx context.Context, node string) ([]Container, e
 	return containers, nil
 }
 
-func (c *client) GetNodeMetrics(ctx context.Context, node string) (*Metrics, error) {
+func (c *client) getMetrics(ctx context.Context, url string) (*Metrics, error) {
 	metrics := &Metrics{}
 
-	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/node", node)
-	err := c.doGet(ctx, c.url(path), metrics)
+	err := c.doGet(ctx, url, metrics)
 	if err != nil {
 		return nil, err
 	}
 
 	return metrics, nil
+}
+
+func (c *client) GetNodeMetrics(ctx context.Context, node string) (*Metrics, error) {
+	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/node", node)
+	return c.getMetrics(ctx, c.url(path))
 }
 
 func (c *client) GetContainerMetrics(ctx context.Context, node, container string) (*Metrics, error) {
-	metrics := &Metrics{}
-
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/containers/%s", node, container)
-	err := c.doGet(ctx, c.url(path), metrics)
-	if err != nil {
-		return nil, err
-	}
-
-	return metrics, nil
+	return c.getMetrics(ctx, c.url(path))
 }
 
 func (c *client) GetAppMetrics(ctx context.Context, node, container string) (*Metrics, error) {
-	metrics := &Metrics{}
-
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/containers/%s/app", node, container)
-	err := c.doGet(ctx, c.url(path), metrics)
-	if err != nil {
-		return nil, err
-	}
-
-	return metrics, nil
+	return c.getMetrics(ctx, c.url(path))
 }
 
 func createGetRequest(url string, token string) (*http.Request, error) {
