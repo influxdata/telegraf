@@ -10,7 +10,7 @@ your database.
 
 - Use [measurement filtering](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#measurement-filtering) liberally to exclude unneeded metrics as well as the node, container, and app inclue/exclude options.
 - Write to a database with an appropriate [retention policy](https://docs.influxdata.com/influxdb/v1.3/concepts/glossary/#retention-policy-rp).
-- Limit the number of series allowed in your database.
+- Limit the number of series allowed in your database using the `max-series-per-database` and `max-values-per-tag` settings.
 - Consider enabling the [TSI](https://docs.influxdata.com/influxdb/v1.3/about_the_project/releasenotes-changelog/#release-notes-8) engine.
 - Monitor your [series cardinality](https://docs.influxdata.com/influxdb/v1.3/troubleshooting/frequently-asked-questions/#how-can-i-query-for-series-cardinality).
 
