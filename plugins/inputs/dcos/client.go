@@ -289,28 +289,28 @@ func (c *client) doGet(ctx context.Context, url string, v interface{}) error {
 		<-c.semaphore
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		resp.Body.Close()
+		<-c.semaphore
+	}()
 
 	// Clear invalid token if unauthorized
-	if resp.StatusCode == 401 {
+	if resp.StatusCode == http.StatusUnauthorized {
 		c.token = ""
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		<-c.semaphore
 		return &APIError{
 			StatusCode: resp.StatusCode,
 			Title:      resp.Status,
 		}
 	}
 
-	if resp.StatusCode == 204 {
-		<-c.semaphore
+	if resp.StatusCode == http.StatusNoContent {
 		return nil
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(v)
-	<-c.semaphore
 	return err
 }
 
