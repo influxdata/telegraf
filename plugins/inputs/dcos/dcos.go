@@ -240,6 +240,10 @@ func (d *DCOS) createPoints(acc telegraf.Accumulator, m *Metrics) []*point {
 			fieldKey = fieldKey + "_bytes"
 		}
 
+		if strings.HasPrefix(fieldKey, "dcos_metrics_module_") {
+			fieldKey = strings.TrimPrefix(fieldKey, "dcos_metrics_module_")
+		}
+
 		tagset := make([]string, 0, len(tags))
 		for k, v := range tags {
 			tagset = append(tagset, k+"="+v)
@@ -302,15 +306,7 @@ func (d *DCOS) addMetrics(acc telegraf.Accumulator, cluster, mname string, m *Me
 			tags[k] = v
 		}
 
-		fields := make(map[string]interface{})
-		for k, v := range p.fields {
-			if strings.HasPrefix(k, "dcos_metrics_module_") {
-				k = strings.TrimPrefix(k, "dcos_metrics_module_")
-			}
-			fields[k] = v
-		}
-
-		acc.AddFields(mname, fields, tags, tm)
+		acc.AddFields(mname, p.fields, tags, tm)
 	}
 }
 
