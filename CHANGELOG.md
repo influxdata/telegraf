@@ -4,6 +4,7 @@
 - [basicstats](./plugins/aggregators/basicstats/README.md) - Thanks to @toni-moreno
 - [bond](./plugins/inputs/bond/README.md) - Thanks to @ildarsv
 - [cratedb](./plugins/outputs/wavefront/README.md) - Thanks to @felixge
+- [dcos](./plugins/inputs/dcos/README.md) - Thanks to @influxdata
 - [jolokia2](./plugins/inputs/jolokia2/README.md) - Thanks to @dylanmei
 - [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
 - [opensmtpd](./plugins/inputs/opensmtpd/README.md) - Thanks to @aromeyer
@@ -72,6 +73,7 @@
 - [#2553](https://github.com/influxdata/telegraf/pull/2553): Add postfix input plugin.
 - [#3424](https://github.com/influxdata/telegraf/pull/3424): Add bond input plugin.
 - [#3518](https://github.com/influxdata/telegraf/pull/3518): Add slab to mem plugin.
+- [#3519](https://github.com/influxdata/telegraf/pull/3519): Add input plugin for DC/OS.
 
 ### Bugfixes
 

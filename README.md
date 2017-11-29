@@ -138,6 +138,7 @@ configuration options.
 * [conntrack](./plugins/inputs/conntrack)
 * [couchbase](./plugins/inputs/couchbase)
 * [couchdb](./plugins/inputs/couchdb)
+* [DC/OS](./plugins/inputs/dcos)
 * [disque](./plugins/inputs/disque)
 * [dmcache](./plugins/inputs/dmcache)
 * [dns query time](./plugins/inputs/dns_query)
