@@ -3,31 +3,20 @@ package dcos
 import (
 	"bytes"
 	"context"
-	"crypto/rsa"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
-	"unicode/utf8"
 
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
-const (
-	// How long to stayed logged in for
-	loginDuration = 65 * time.Minute
-
-	// How long before expiration to renew token
-	relogDuration = 5 * time.Minute
-)
-
 type Client interface {
-	Token() string
-	EnsureAuth(ctx context.Context) error
+	SetToken(token string)
+
+	Login(ctx context.Context, sa *ServiceAccount) (*AuthToken, error)
 	GetSummary(ctx context.Context) (*Summary, error)
 	GetContainers(ctx context.Context, node string) ([]string, error)
 	GetNodeMetrics(ctx context.Context, node string) (*Metrics, error)
@@ -35,17 +24,12 @@ type Client interface {
 	GetAppMetrics(ctx context.Context, node, container string) (*Metrics, error)
 }
 
-type Credentials struct {
-	Username   string
-	PrivateKey *rsa.PrivateKey
-	TokenFile  string
-}
-
 type APIError struct {
 	StatusCode  int
 	Title       string
 	Description string
 }
+
 type Login struct {
 	Token       string
 	Title       string
@@ -77,7 +61,7 @@ type client struct {
 	clusterURL  *url.URL
 	httpClient  *http.Client
 	credentials *Credentials
-	token       *authToken
+	token       string
 	semaphore   chan struct{}
 }
 
@@ -86,7 +70,7 @@ type claims struct {
 	jwt.StandardClaims
 }
 
-type authToken struct {
+type AuthToken struct {
 	text   string
 	expire time.Time
 }
@@ -100,7 +84,6 @@ func (e APIError) Error() string {
 
 func NewClient(
 	clusterURL *url.URL,
-	creds *Credentials,
 	timeout time.Duration,
 	maxConns int,
 	tlsConfig *tls.Config,
@@ -115,47 +98,66 @@ func NewClient(
 	semaphore := make(chan struct{}, maxConns)
 
 	c := &client{
-		clusterURL:  clusterURL,
-		httpClient:  httpClient,
-		credentials: creds,
-		semaphore:   semaphore,
+		clusterURL: clusterURL,
+		httpClient: httpClient,
+		semaphore:  semaphore,
 	}
 	return c
 }
 
-func (c *client) Token() string {
-	if c.token == nil {
-		return ""
-	}
-	return c.token.text
+func (c *client) SetToken(token string) {
+	c.token = token
 }
 
-func (c *client) EnsureAuth(ctx context.Context) error {
-	if c.credentials == nil {
-		return nil
+func (c *client) Login(ctx context.Context, sa *ServiceAccount) (*AuthToken, error) {
+	token, err := c.createLoginToken(sa)
+	if err != nil {
+		return nil, err
 	}
 
-	if c.credentials.TokenFile != "" {
-		tf := c.credentials.TokenFile
-		tokenData, err := ioutil.ReadFile(tf)
-		if err != nil {
-			return fmt.Errorf("Error opening token_file %q: %s", tf, err)
-		}
-		if !utf8.Valid(tokenData) {
-			return fmt.Errorf("Token file does not contain utf-8 encoded text: %s", tf)
-		}
-		token := strings.TrimSpace(string(tokenData))
-		c.token = &authToken{text: token}
+	exp := time.Now().Add(loginDuration)
+
+	body := map[string]interface{}{
+		"uid":   sa.AccountID,
+		"exp":   exp.Unix(),
+		"token": token,
 	}
 
-	if c.token == nil || c.token.expire.Add(relogDuration).After(time.Now()) {
-		token, err := c.login(ctx)
-		if err != nil {
-			return err
-		}
-		c.token = token
+	octets, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+
+	req, err := http.NewRequest("POST", c.url("/acs/api/v1/auth/login"), bytes.NewBuffer(octets))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	req = req.WithContext(ctx)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	login := Login{}
+	dec := json.NewDecoder(resp.Body)
+	err = dec.Decode(&login)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 || login.Token == "" {
+		return nil, &APIError{resp.StatusCode, login.Title, login.Description}
+	}
+
+	authToken := &AuthToken{
+		text:   login.Token,
+		expire: exp,
+	}
+
+	return authToken, err
 }
 
 func (c *client) GetSummary(ctx context.Context) (*Summary, error) {
@@ -231,7 +233,7 @@ func createGetRequest(url string, token string) (*http.Request, error) {
 }
 
 func (c *client) doGet(ctx context.Context, url string, v interface{}) error {
-	req, err := createGetRequest(url, c.Token())
+	req, err := createGetRequest(url, c.token)
 	if err != nil {
 		return err
 	}
@@ -252,7 +254,7 @@ func (c *client) doGet(ctx context.Context, url string, v interface{}) error {
 
 	// Clear invalid token if unauthorized
 	if resp.StatusCode == 401 {
-		c.token = nil
+		c.token = ""
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -272,69 +274,19 @@ func (c *client) doGet(ctx context.Context, url string, v interface{}) error {
 	<-c.semaphore
 	return err
 }
+
 func (c *client) url(path string) string {
-	c.clusterURL.Path = path
-	return c.clusterURL.String()
+	url := c.clusterURL
+	url.Path = path
+	return url.String()
 }
 
-func (c *client) login(ctx context.Context) (*authToken, error) {
-	token, err := c.createLoginToken()
-	if err != nil {
-		return nil, err
-	}
-
-	exp := time.Now().Add(loginDuration)
-
-	body := map[string]interface{}{
-		"uid":   c.credentials.Username,
-		"exp":   exp.Unix(),
-		"token": token,
-	}
-
-	octets, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", c.url("/acs/api/v1/auth/login"), bytes.NewBuffer(octets))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("Content-Type", "application/json")
-
-	req = req.WithContext(ctx)
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	login := Login{}
-	dec := json.NewDecoder(resp.Body)
-	err = dec.Decode(&login)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != 200 || login.Token == "" {
-		return nil, &APIError{resp.StatusCode, login.Title, login.Description}
-	}
-
-	authToken := &authToken{
-		text:   login.Token,
-		expire: exp,
-	}
-
-	return authToken, err
-}
-
-func (c *client) createLoginToken() (string, error) {
+func (c *client) createLoginToken(sa *ServiceAccount) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims{
-		Uid: c.credentials.Username,
+		Uid: sa.AccountID,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: 0,
 		},
 	})
-	ss, err := token.SignedString(c.credentials.PrivateKey)
-	return ss, err
+	return token.SignedString(sa.PrivateKey)
 }

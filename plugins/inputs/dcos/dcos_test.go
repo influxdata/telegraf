@@ -10,8 +10,8 @@ import (
 )
 
 type mockClient struct {
-	TokenF               func() string
-	EnsureAuthF          func(ctx context.Context) error
+	SetTokenF            func(token string)
+	LoginF               func(ctx context.Context, sa *ServiceAccount) (*AuthToken, error)
 	GetSummaryF          func(ctx context.Context) (*Summary, error)
 	GetContainersF       func(ctx context.Context, node string) ([]string, error)
 	GetNodeMetricsF      func(ctx context.Context, node string) (*Metrics, error)
@@ -19,12 +19,12 @@ type mockClient struct {
 	GetAppMetricsF       func(ctx context.Context, node, container string) (*Metrics, error)
 }
 
-func (c *mockClient) Token() string {
-	return c.TokenF()
+func (c *mockClient) SetToken(token string) {
+	c.SetTokenF(token)
 }
 
-func (c *mockClient) EnsureAuth(ctx context.Context) error {
-	return c.EnsureAuthF(ctx)
+func (c *mockClient) Login(ctx context.Context, sa *ServiceAccount) (*AuthToken, error) {
+	return c.LoginF(ctx, sa)
 }
 
 func (c *mockClient) GetSummary(ctx context.Context) (*Summary, error) {
@@ -362,9 +362,7 @@ func TestGatherFilterNode(t *testing.T) {
 		{
 			name: "cluster without nodes has no metrics",
 			client: &mockClient{
-				EnsureAuthF: func(ctx context.Context) error {
-					return nil
-				},
+				SetTokenF: func(token string) {},
 				GetSummaryF: func(ctx context.Context) (*Summary, error) {
 					return &Summary{
 						Cluster: "a",
@@ -382,9 +380,7 @@ func TestGatherFilterNode(t *testing.T) {
 			name:        "node include",
 			nodeInclude: []string{"x"},
 			client: &mockClient{
-				EnsureAuthF: func(ctx context.Context) error {
-					return nil
-				},
+				SetTokenF: func(token string) {},
 				GetSummaryF: func(ctx context.Context) (*Summary, error) {
 					return &Summary{
 						Cluster: "a",

@@ -63,6 +63,7 @@ type DCOS struct {
 	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
 
 	client Client
+	creds  Credentials
 
 	initialized     bool
 	nodeFilter      filter.Filter
@@ -102,7 +103,7 @@ var sampleConfig = `
   # app_exclude = []
 
   ## Maximum concurrent connections to the cluster.
-  # max_connections = 1
+  # max_connections = 10
   ## Maximum time to receive a response from cluster.
   # response_timeout = "20s"
 
@@ -123,28 +124,18 @@ func (d *DCOS) SampleConfig() string {
 }
 
 func (d *DCOS) Gather(acc telegraf.Accumulator) error {
-	if !d.initialized {
-		err := d.createFilters()
-		if err != nil {
-			return err
-		}
-
-		d.initialized = true
-	}
-
-	if d.client == nil {
-		client, err := d.createClient()
-		if err != nil {
-			return err
-		}
-		d.client = client
-	}
-
-	ctx := context.Background()
-	err := d.client.EnsureAuth(ctx)
+	err := d.init()
 	if err != nil {
 		return err
 	}
+
+	ctx := context.Background()
+
+	token, err := d.creds.Token(ctx, d.client)
+	if err != nil {
+		return err
+	}
+	d.client.SetToken(token)
 
 	summary, err := d.client.GetSummary(ctx)
 	if err != nil {
@@ -335,15 +326,57 @@ func (d *DCOS) addAppMetrics(acc telegraf.Accumulator, cluster string, m *Metric
 	d.addMetrics(acc, cluster, "dcos_app", m, appDimensions)
 }
 
-func (d *DCOS) createClient() (*client, error) {
+func (d *DCOS) init() error {
+	if !d.initialized {
+		err := d.createFilters()
+		if err != nil {
+			return err
+		}
+
+		if d.client == nil {
+			client, err := d.createClient()
+			if err != nil {
+				return err
+			}
+			d.client = client
+		}
+
+		if d.creds == nil {
+			creds, err := d.createCredentials()
+			if err != nil {
+				return err
+			}
+			d.creds = creds
+		}
+
+		d.initialized = true
+	}
+	return nil
+}
+
+func (d *DCOS) createClient() (Client, error) {
 	tlsCfg, err := internal.GetTLSConfig(
 		d.SSLCert, d.SSLKey, d.SSLCA, d.InsecureSkipVerify)
 	if err != nil {
 		return nil, err
 	}
 
-	var creds *Credentials
+	url, err := url.Parse(d.ClusterURL)
+	if err != nil {
+		return nil, err
+	}
 
+	client := NewClient(
+		url,
+		d.ResponseTimeout.Duration,
+		d.MaxConnections,
+		tlsCfg,
+	)
+
+	return client, nil
+}
+
+func (d *DCOS) createCredentials() (Credentials, error) {
 	if d.ServiceAccountID != "" && d.ServiceAccountPrivateKey != "" {
 		bs, err := ioutil.ReadFile(d.ServiceAccountPrivateKey)
 		if err != nil {
@@ -355,24 +388,20 @@ func (d *DCOS) createClient() (*client, error) {
 			return nil, err
 		}
 
-		creds = &Credentials{d.ServiceAccountID, privateKey, ""}
+		creds := &ServiceAccount{
+			AccountID:  d.ServiceAccountID,
+			PrivateKey: privateKey,
+		}
+		return creds, nil
 	} else if d.TokenFile != "" {
-		creds = &Credentials{"", nil, d.TokenFile}
+		creds := &TokenCreds{
+			Path: d.TokenFile,
+		}
+		return creds, nil
+	} else {
+		creds := &NullCreds{}
+		return creds, nil
 	}
-
-	url, err := url.Parse(d.ClusterURL)
-	if err != nil {
-		return nil, err
-	}
-
-	client := NewClient(
-		url,
-		creds,
-		d.ResponseTimeout.Duration,
-		d.MaxConnections,
-		tlsCfg,
-	)
-	return client, nil
 }
 
 func (d *DCOS) createFilters() error {

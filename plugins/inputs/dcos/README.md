@@ -43,7 +43,7 @@ your database.
   # app_exclude = []
 
   ## Maximum concurrent connections to the cluster.
-  # max_connections = 1
+  # max_connections = 10
   ## Maximum time to receive a response from cluster.
   # response_timeout = "20s"
 

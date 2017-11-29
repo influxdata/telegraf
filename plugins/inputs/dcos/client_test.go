@@ -30,7 +30,7 @@ P0a+YZUeHNRqT2pPN9lMTAZGGi3CtcF2XScbLNEBeXge
 -----END RSA PRIVATE KEY-----`
 )
 
-func TestEnsureAuth(t *testing.T) {
+func TestLogin(t *testing.T) {
 	var tests = []struct {
 		name          string
 		responseCode  int
@@ -68,16 +68,24 @@ func TestEnsureAuth(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := context.Background()
-			client := NewClient(u, &Credentials{"sa", key, ""}, defaultResponseTimeout, 1, nil)
-			err = client.EnsureAuth(ctx)
+			sa := &ServiceAccount{
+				AccountID:  "telegraf",
+				PrivateKey: key,
+			}
+			client := NewClient(u, defaultResponseTimeout, 1, nil)
+			auth, err := client.Login(ctx, sa)
 
-			require.Equal(t, tt.expectedToken, client.Token())
 			require.Equal(t, tt.expectedError, err)
+
+			if tt.expectedToken != "" {
+				require.Equal(t, tt.expectedToken, auth.text)
+			} else {
+				require.Nil(t, auth)
+			}
 
 			ts.Close()
 		})
 	}
-
 }
 
 func TestGetSummary(t *testing.T) {
@@ -129,7 +137,7 @@ func TestGetSummary(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := context.Background()
-			client := NewClient(u, nil, defaultResponseTimeout, 1, nil)
+			client := NewClient(u, defaultResponseTimeout, 1, nil)
 			summary, err := client.GetSummary(ctx)
 
 			require.Equal(t, tt.expectedError, err)
@@ -170,7 +178,7 @@ func TestGetNodeMetrics(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := context.Background()
-			client := NewClient(u, nil, defaultResponseTimeout, 1, nil)
+			client := NewClient(u, defaultResponseTimeout, 1, nil)
 			m, err := client.GetNodeMetrics(ctx, "foo")
 
 			require.Equal(t, tt.expectedError, err)
@@ -211,7 +219,7 @@ func TestGetContainerMetrics(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := context.Background()
-			client := NewClient(u, nil, defaultResponseTimeout, 1, nil)
+			client := NewClient(u, defaultResponseTimeout, 1, nil)
 			m, err := client.GetContainerMetrics(ctx, "foo", "bar")
 
 			require.Equal(t, tt.expectedError, err)
