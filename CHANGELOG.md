@@ -71,6 +71,7 @@
 - [#3470](https://github.com/influxdata/telegraf/pull/3470): Add support for tags in the index name in elasticsearch output.
 - [#2553](https://github.com/influxdata/telegraf/pull/2553): Add postfix input plugin.
 - [#3424](https://github.com/influxdata/telegraf/pull/3424): Add bond input plugin.
+- [#3518](https://github.com/influxdata/telegraf/pull/3518): Add slab to mem plugin.
 
 ### Bugfixes
 
