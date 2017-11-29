@@ -74,6 +74,7 @@
 - [#3424](https://github.com/influxdata/telegraf/pull/3424): Add bond input plugin.
 - [#3518](https://github.com/influxdata/telegraf/pull/3518): Add slab to mem plugin.
 - [#3519](https://github.com/influxdata/telegraf/pull/3519): Add input plugin for DC/OS.
+- [#3140](https://github.com/influxdata/telegraf/pull/3140): Add support for glob patterns in net input plugin.
 
 ### Bugfixes
 
