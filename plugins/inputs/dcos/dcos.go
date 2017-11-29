@@ -240,7 +240,7 @@ func (d *DCOS) createPoints(acc telegraf.Accumulator, m *Metrics) []*point {
 			fieldKey = fieldKey + "_bytes"
 		}
 
-		tagset := []string{}
+		tagset := make([]string, 0, len(tags))
 		for k, v := range tags {
 			tagset = append(tagset, k+"="+v)
 		}
@@ -265,7 +265,7 @@ func (d *DCOS) createPoints(acc telegraf.Accumulator, m *Metrics) []*point {
 		}
 	}
 
-	results := []*point{}
+	results := make([]*point, 0, len(points))
 	for _, p := range points {
 		for k, v := range m.Dimensions {
 			switch v := v.(type) {
