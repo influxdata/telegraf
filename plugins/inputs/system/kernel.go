@@ -41,7 +41,6 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	//Assigning entropyData variable the output of ReadFile
 	entropyData, err := ioutil.ReadFile(k.entropyStatFile)
 	if err != nil {
 		return err
