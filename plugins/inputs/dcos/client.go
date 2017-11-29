@@ -314,7 +314,8 @@ func (c *client) createLoginToken(sa *ServiceAccount) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims{
 		UID: sa.AccountID,
 		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: 0,
+			// How long we have to login with this token
+			ExpiresAt: int64(5 * time.Minute / time.Second),
 		},
 	})
 	return token.SignedString(sa.PrivateKey)
