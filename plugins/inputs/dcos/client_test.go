@@ -78,7 +78,7 @@ func TestLogin(t *testing.T) {
 			require.Equal(t, tt.expectedError, err)
 
 			if tt.expectedToken != "" {
-				require.Equal(t, tt.expectedToken, auth.text)
+				require.Equal(t, tt.expectedToken, auth.Text)
 			} else {
 				require.Nil(t, auth)
 			}

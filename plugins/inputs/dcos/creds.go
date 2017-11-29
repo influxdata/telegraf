@@ -40,11 +40,11 @@ func (c *ServiceAccount) Token(ctx context.Context, client Client) (string, erro
 		return "", err
 	}
 	c.auth = auth
-	return auth.text, nil
+	return auth.Text, nil
 }
 
 func (c *ServiceAccount) IsExpired() bool {
-	return c.auth.text != "" || c.auth.expire.Add(relogDuration).After(time.Now())
+	return c.auth.Text != "" || c.auth.Expire.Add(relogDuration).After(time.Now())
 }
 
 func (c *TokenCreds) Token(ctx context.Context, client Client) (string, error) {

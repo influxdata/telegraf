@@ -64,10 +64,10 @@ type Container struct {
 }
 
 type DataPoint struct {
-	Name  string
-	Tags  map[string]string
-	Unit  string
-	Value float64
+	Name  string            `json:"name"`
+	Tags  map[string]string `json:"tags"`
+	Unit  string            `json:"unit"`
+	Value float64           `json:"value"`
 }
 
 type Metrics struct {
@@ -76,8 +76,8 @@ type Metrics struct {
 }
 
 type AuthToken struct {
-	text   string
-	expire time.Time
+	Text   string
+	Expire time.Time
 }
 
 type ClusterClient struct {
@@ -168,8 +168,8 @@ func (c *ClusterClient) Login(ctx context.Context, sa *ServiceAccount) (*AuthTok
 		}
 
 		token := &AuthToken{
-			text:   auth.Token,
-			expire: exp,
+			Text:   auth.Token,
+			Expire: exp,
 		}
 		return token, nil
 	}
