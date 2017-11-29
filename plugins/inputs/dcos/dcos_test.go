@@ -13,7 +13,7 @@ type mockClient struct {
 	SetTokenF            func(token string)
 	LoginF               func(ctx context.Context, sa *ServiceAccount) (*AuthToken, error)
 	GetSummaryF          func(ctx context.Context) (*Summary, error)
-	GetContainersF       func(ctx context.Context, node string) ([]string, error)
+	GetContainersF       func(ctx context.Context, node string) ([]Container, error)
 	GetNodeMetricsF      func(ctx context.Context, node string) (*Metrics, error)
 	GetContainerMetricsF func(ctx context.Context, node, container string) (*Metrics, error)
 	GetAppMetricsF       func(ctx context.Context, node, container string) (*Metrics, error)
@@ -31,7 +31,7 @@ func (c *mockClient) GetSummary(ctx context.Context) (*Summary, error) {
 	return c.GetSummaryF(ctx)
 }
 
-func (c *mockClient) GetContainers(ctx context.Context, node string) ([]string, error) {
+func (c *mockClient) GetContainers(ctx context.Context, node string) ([]Container, error) {
 	return c.GetContainersF(ctx, node)
 }
 
@@ -390,8 +390,8 @@ func TestGatherFilterNode(t *testing.T) {
 						},
 					}, nil
 				},
-				GetContainersF: func(ctx context.Context, node string) ([]string, error) {
-					return []string{}, nil
+				GetContainersF: func(ctx context.Context, node string) ([]Container, error) {
+					return []Container{}, nil
 				},
 				GetNodeMetricsF: func(ctx context.Context, node string) (*Metrics, error) {
 					return &Metrics{

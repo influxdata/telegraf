@@ -185,7 +185,7 @@ func (d *DCOS) GatherContainers(ctx context.Context, acc telegraf.Accumulator, c
 
 	var wg sync.WaitGroup
 	for _, container := range containers {
-		if d.containerFilter.Match(container) {
+		if d.containerFilter.Match(container.ID) {
 			wg.Add(1)
 			go func(container string) {
 				defer wg.Done()
@@ -198,10 +198,10 @@ func (d *DCOS) GatherContainers(ctx context.Context, acc telegraf.Accumulator, c
 					return
 				}
 				d.addContainerMetrics(acc, cluster, m)
-			}(container)
+			}(container.ID)
 		}
 
-		if d.appFilter.Match(container) {
+		if d.appFilter.Match(container.ID) {
 			wg.Add(1)
 			go func(container string) {
 				defer wg.Done()
@@ -214,7 +214,7 @@ func (d *DCOS) GatherContainers(ctx context.Context, acc telegraf.Accumulator, c
 					return
 				}
 				d.addAppMetrics(acc, cluster, m)
-			}(container)
+			}(container.ID)
 		}
 	}
 	wg.Wait()

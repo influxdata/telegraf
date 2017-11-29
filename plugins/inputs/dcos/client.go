@@ -23,7 +23,7 @@ type Client interface {
 
 	Login(ctx context.Context, sa *ServiceAccount) (*AuthToken, error)
 	GetSummary(ctx context.Context) (*Summary, error)
-	GetContainers(ctx context.Context, node string) ([]string, error)
+	GetContainers(ctx context.Context, node string) ([]Container, error)
 	GetNodeMetrics(ctx context.Context, node string) (*Metrics, error)
 	GetContainerMetrics(ctx context.Context, node, container string) (*Metrics, error)
 	GetAppMetrics(ctx context.Context, node, container string) (*Metrics, error)
@@ -57,6 +57,10 @@ type Slave struct {
 type Summary struct {
 	Cluster string
 	Slaves  []Slave
+}
+
+type Container struct {
+	ID string
 }
 
 type DataPoint struct {
@@ -199,13 +203,19 @@ func (c *client) GetSummary(ctx context.Context) (*Summary, error) {
 	return summary, nil
 }
 
-func (c *client) GetContainers(ctx context.Context, node string) ([]string, error) {
-	containers := []string{}
+func (c *client) GetContainers(ctx context.Context, node string) ([]Container, error) {
+	list := []string{}
 
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/containers", node)
-	err := c.doGet(ctx, c.url(path), &containers)
+	err := c.doGet(ctx, c.url(path), &list)
 	if err != nil {
 		return nil, err
+	}
+
+	containers := make([]Container, 0, len(list))
+	for _, c := range list {
+		containers = append(containers, Container{ID: c})
+
 	}
 
 	return containers, nil
