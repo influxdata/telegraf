@@ -13,6 +13,11 @@ import (
 	jwt "github.com/dgrijalva/jwt-go"
 )
 
+const (
+	// How long to stayed logged in for
+	loginDuration = 65 * time.Minute
+)
+
 type Client interface {
 	SetToken(token string)
 
@@ -31,9 +36,18 @@ type APIError struct {
 }
 
 type Login struct {
-	Token       string
-	Title       string
-	Description string
+	UID   string `json:"uid"`
+	Exp   int64  `json:"exp"`
+	Token string `json:"token"`
+}
+
+type LoginError struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
+type LoginAuth struct {
+	Token string `json:"token"`
 }
 
 type Slave struct {
@@ -66,7 +80,7 @@ type client struct {
 }
 
 type claims struct {
-	Uid string `json:"uid"`
+	UID string `json:"uid"`
 	jwt.StandardClaims
 }
 
@@ -117,10 +131,10 @@ func (c *client) Login(ctx context.Context, sa *ServiceAccount) (*AuthToken, err
 
 	exp := time.Now().Add(loginDuration)
 
-	body := map[string]interface{}{
-		"uid":   sa.AccountID,
-		"exp":   exp.Unix(),
-		"token": token,
+	body := &Login{
+		UID:   sa.AccountID,
+		Exp:   exp.Unix(),
+		Token: token,
 	}
 
 	octets, err := json.Marshal(body)
@@ -141,23 +155,38 @@ func (c *client) Login(ctx context.Context, sa *ServiceAccount) (*AuthToken, err
 	}
 	defer resp.Body.Close()
 
-	login := Login{}
+	if resp.StatusCode == http.StatusOK {
+		auth := &LoginAuth{}
+		dec := json.NewDecoder(resp.Body)
+		err = dec.Decode(auth)
+		if err != nil {
+			return nil, err
+		}
+
+		token := &AuthToken{
+			text:   auth.Token,
+			expire: exp,
+		}
+		return token, nil
+	}
+
+	loginError := &LoginError{}
 	dec := json.NewDecoder(resp.Body)
-	err = dec.Decode(&login)
+	err = dec.Decode(loginError)
 	if err != nil {
+		err := &APIError{
+			StatusCode: resp.StatusCode,
+			Title:      resp.Status,
+		}
 		return nil, err
 	}
 
-	if resp.StatusCode != 200 || login.Token == "" {
-		return nil, &APIError{resp.StatusCode, login.Title, login.Description}
+	err = &APIError{
+		StatusCode:  resp.StatusCode,
+		Title:       loginError.Title,
+		Description: loginError.Description,
 	}
-
-	authToken := &AuthToken{
-		text:   login.Token,
-		expire: exp,
-	}
-
-	return authToken, err
+	return nil, err
 }
 
 func (c *client) GetSummary(ctx context.Context) (*Summary, error) {
@@ -283,7 +312,7 @@ func (c *client) url(path string) string {
 
 func (c *client) createLoginToken(sa *ServiceAccount) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims{
-		Uid: sa.AccountID,
+		UID: sa.AccountID,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: 0,
 		},

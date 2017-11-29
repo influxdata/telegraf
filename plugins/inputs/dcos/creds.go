@@ -11,9 +11,6 @@ import (
 )
 
 const (
-	// How long to stayed logged in for
-	loginDuration = 65 * time.Minute
-
 	// How long before expiration to renew token
 	relogDuration = 5 * time.Minute
 )
