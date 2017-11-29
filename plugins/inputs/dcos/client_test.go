@@ -72,7 +72,7 @@ func TestLogin(t *testing.T) {
 				AccountID:  "telegraf",
 				PrivateKey: key,
 			}
-			client := NewClient(u, defaultResponseTimeout, 1, nil)
+			client := NewClusterClient(u, defaultResponseTimeout, 1, nil)
 			auth, err := client.Login(ctx, sa)
 
 			require.Equal(t, tt.expectedError, err)
@@ -137,7 +137,7 @@ func TestGetSummary(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := context.Background()
-			client := NewClient(u, defaultResponseTimeout, 1, nil)
+			client := NewClusterClient(u, defaultResponseTimeout, 1, nil)
 			summary, err := client.GetSummary(ctx)
 
 			require.Equal(t, tt.expectedError, err)
@@ -178,7 +178,7 @@ func TestGetNodeMetrics(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := context.Background()
-			client := NewClient(u, defaultResponseTimeout, 1, nil)
+			client := NewClusterClient(u, defaultResponseTimeout, 1, nil)
 			m, err := client.GetNodeMetrics(ctx, "foo")
 
 			require.Equal(t, tt.expectedError, err)
@@ -219,7 +219,7 @@ func TestGetContainerMetrics(t *testing.T) {
 			require.NoError(t, err)
 
 			ctx := context.Background()
-			client := NewClient(u, defaultResponseTimeout, 1, nil)
+			client := NewClusterClient(u, defaultResponseTimeout, 1, nil)
 			m, err := client.GetContainerMetrics(ctx, "foo", "bar")
 
 			require.Equal(t, tt.expectedError, err)

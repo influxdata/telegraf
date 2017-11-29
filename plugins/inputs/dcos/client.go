@@ -75,7 +75,12 @@ type Metrics struct {
 	Dimensions map[string]interface{}
 }
 
-type client struct {
+type AuthToken struct {
+	text   string
+	expire time.Time
+}
+
+type ClusterClient struct {
 	clusterURL  *url.URL
 	httpClient  *http.Client
 	credentials *Credentials
@@ -88,11 +93,6 @@ type claims struct {
 	jwt.StandardClaims
 }
 
-type AuthToken struct {
-	text   string
-	expire time.Time
-}
-
 func (e APIError) Error() string {
 	if e.Description != "" {
 		return fmt.Sprintf("%s: %s", e.Title, e.Description)
@@ -100,12 +100,12 @@ func (e APIError) Error() string {
 	return e.Title
 }
 
-func NewClient(
+func NewClusterClient(
 	clusterURL *url.URL,
 	timeout time.Duration,
 	maxConns int,
 	tlsConfig *tls.Config,
-) *client {
+) *ClusterClient {
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			MaxIdleConns:    maxConns,
@@ -115,7 +115,7 @@ func NewClient(
 	}
 	semaphore := make(chan struct{}, maxConns)
 
-	c := &client{
+	c := &ClusterClient{
 		clusterURL: clusterURL,
 		httpClient: httpClient,
 		semaphore:  semaphore,
@@ -123,11 +123,11 @@ func NewClient(
 	return c
 }
 
-func (c *client) SetToken(token string) {
+func (c *ClusterClient) SetToken(token string) {
 	c.token = token
 }
 
-func (c *client) Login(ctx context.Context, sa *ServiceAccount) (*AuthToken, error) {
+func (c *ClusterClient) Login(ctx context.Context, sa *ServiceAccount) (*AuthToken, error) {
 	token, err := c.createLoginToken(sa)
 	if err != nil {
 		return nil, err
@@ -193,7 +193,7 @@ func (c *client) Login(ctx context.Context, sa *ServiceAccount) (*AuthToken, err
 	return nil, err
 }
 
-func (c *client) GetSummary(ctx context.Context) (*Summary, error) {
+func (c *ClusterClient) GetSummary(ctx context.Context) (*Summary, error) {
 	summary := &Summary{}
 	err := c.doGet(ctx, c.url("/mesos/master/state-summary"), summary)
 	if err != nil {
@@ -203,7 +203,7 @@ func (c *client) GetSummary(ctx context.Context) (*Summary, error) {
 	return summary, nil
 }
 
-func (c *client) GetContainers(ctx context.Context, node string) ([]Container, error) {
+func (c *ClusterClient) GetContainers(ctx context.Context, node string) ([]Container, error) {
 	list := []string{}
 
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/containers", node)
@@ -221,7 +221,7 @@ func (c *client) GetContainers(ctx context.Context, node string) ([]Container, e
 	return containers, nil
 }
 
-func (c *client) getMetrics(ctx context.Context, url string) (*Metrics, error) {
+func (c *ClusterClient) getMetrics(ctx context.Context, url string) (*Metrics, error) {
 	metrics := &Metrics{}
 
 	err := c.doGet(ctx, url, metrics)
@@ -232,17 +232,17 @@ func (c *client) getMetrics(ctx context.Context, url string) (*Metrics, error) {
 	return metrics, nil
 }
 
-func (c *client) GetNodeMetrics(ctx context.Context, node string) (*Metrics, error) {
+func (c *ClusterClient) GetNodeMetrics(ctx context.Context, node string) (*Metrics, error) {
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/node", node)
 	return c.getMetrics(ctx, c.url(path))
 }
 
-func (c *client) GetContainerMetrics(ctx context.Context, node, container string) (*Metrics, error) {
+func (c *ClusterClient) GetContainerMetrics(ctx context.Context, node, container string) (*Metrics, error) {
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/containers/%s", node, container)
 	return c.getMetrics(ctx, c.url(path))
 }
 
-func (c *client) GetAppMetrics(ctx context.Context, node, container string) (*Metrics, error) {
+func (c *ClusterClient) GetAppMetrics(ctx context.Context, node, container string) (*Metrics, error) {
 	path := fmt.Sprintf("/system/v1/agent/%s/metrics/v0/containers/%s/app", node, container)
 	return c.getMetrics(ctx, c.url(path))
 }
@@ -261,7 +261,7 @@ func createGetRequest(url string, token string) (*http.Request, error) {
 	return req, nil
 }
 
-func (c *client) doGet(ctx context.Context, url string, v interface{}) error {
+func (c *ClusterClient) doGet(ctx context.Context, url string, v interface{}) error {
 	req, err := createGetRequest(url, c.token)
 	if err != nil {
 		return err
@@ -304,13 +304,13 @@ func (c *client) doGet(ctx context.Context, url string, v interface{}) error {
 	return err
 }
 
-func (c *client) url(path string) string {
+func (c *ClusterClient) url(path string) string {
 	url := c.clusterURL
 	url.Path = path
 	return url.String()
 }
 
-func (c *client) createLoginToken(sa *ServiceAccount) (string, error) {
+func (c *ClusterClient) createLoginToken(sa *ServiceAccount) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims{
 		UID: sa.AccountID,
 		StandardClaims: jwt.StandardClaims{

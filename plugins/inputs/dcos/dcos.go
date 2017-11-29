@@ -362,7 +362,7 @@ func (d *DCOS) createClient() (Client, error) {
 		return nil, err
 	}
 
-	client := NewClient(
+	client := NewClusterClient(
 		url,
 		d.ResponseTimeout.Duration,
 		d.MaxConnections,
