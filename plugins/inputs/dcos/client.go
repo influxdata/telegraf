@@ -18,6 +18,7 @@ const (
 	loginDuration = 65 * time.Minute
 )
 
+// Client is an interface for communicating with the DC/OS API.
 type Client interface {
 	SetToken(token string)
 
@@ -35,30 +36,36 @@ type APIError struct {
 	Description string
 }
 
+// Login is request data for logging in.
 type Login struct {
 	UID   string `json:"uid"`
 	Exp   int64  `json:"exp"`
 	Token string `json:"token"`
 }
 
+// LoginError is the response when login fails.
 type LoginError struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 }
 
+// LoginAuth is the response to a successful login.
 type LoginAuth struct {
 	Token string `json:"token"`
 }
 
+// Slave is a node in the cluster.
 type Slave struct {
 	ID string `json:"id"`
 }
 
+// Summary provides high level cluster wide information.
 type Summary struct {
 	Cluster string
 	Slaves  []Slave
 }
 
+// Container is a container on a node.
 type Container struct {
 	ID string
 }
@@ -70,16 +77,19 @@ type DataPoint struct {
 	Value float64           `json:"value"`
 }
 
+// Metrics are the DCOS metrics
 type Metrics struct {
-	Datapoints []DataPoint
-	Dimensions map[string]interface{}
+	Datapoints []DataPoint            `json:"datapoints"`
+	Dimensions map[string]interface{} `json:"dimensions"`
 }
 
+// AuthToken is the authentication token.
 type AuthToken struct {
 	Text   string
 	Expire time.Time
 }
 
+// ClusterClient is a Client that uses the cluster URL.
 type ClusterClient struct {
 	clusterURL  *url.URL
 	httpClient  *http.Client
