@@ -217,7 +217,7 @@ var outputStdoutStatsExpected = map[string]interface{}{
 }
 
 var logstashTest = &Logstash{
-	LogstashURL: "http://localhost:9600",
+	URL: "http://localhost:9600",
 }
 
 var (
@@ -231,9 +231,9 @@ func Test_gatherPipelineStats(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		fmt.Fprintf(w, "%s", string(pipelineJSON))
 	}))
-	requestURL, err := url.Parse(logstashTest.LogstashURL)
+	requestURL, err := url.Parse(logstashTest.URL)
 	if err != nil {
-		t.Logf("Can't connect to: %s", logstashTest.LogstashURL)
+		t.Logf("Can't connect to: %s", logstashTest.URL)
 	}
 	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
 	fakeServer.Start()
@@ -248,7 +248,7 @@ func Test_gatherPipelineStats(t *testing.T) {
 		logstashTest.client = client
 	}
 
-	if err := logstashTest.gatherPipelineStats(logstashTest.LogstashURL+pipelineStats, &accPipelineStats); err != nil {
+	if err := logstashTest.gatherPipelineStats(logstashTest.URL+pipelineStats, &accPipelineStats); err != nil {
 		t.Logf("Can't gather Pipeline stats")
 	}
 
@@ -260,86 +260,6 @@ func Test_gatherPipelineStats(t *testing.T) {
 		t.Errorf("acc.HasMeasurement: expected logstash_plugin_output_stdout")
 	}
 
-	return
-}
-
-func Test_gatherProcessStats(t *testing.T) {
-	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "%s", string(processJSON))
-	}))
-	requestURL, err := url.Parse(logstashTest.LogstashURL)
-	if err != nil {
-		t.Logf("Can't connect to: %s", logstashTest.LogstashURL)
-	}
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
-	fakeServer.Start()
-	defer fakeServer.Close()
-
-	if logstashTest.client == nil {
-		client, err := logstashTest.createHTTPClient()
-
-		if err != nil {
-			t.Logf("Can't createHttpClient")
-		}
-		logstashTest.client = client
-	}
-
-	if err := logstashTest.gatherProcessStats(logstashTest.LogstashURL+processStats, &accProcessStats); err != nil {
-		t.Logf("Can't gather JVM stats")
-	}
-
-	if !accProcessStats.HasMeasurement("logstash_process") {
-		t.Errorf("acc.HasMeasurement: expected logstash_process")
-	}
-
-	return
-}
-
-func Test_gatherJVMStats(t *testing.T) {
-	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "%s", string(jvmJSON))
-	}))
-	requestURL, err := url.Parse(logstashTest.LogstashURL)
-	if err != nil {
-		t.Logf("Can't connect to: %s", logstashTest.LogstashURL)
-	}
-	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
-	fakeServer.Start()
-	defer fakeServer.Close()
-
-	if logstashTest.client == nil {
-		client, err := logstashTest.createHTTPClient()
-
-		if err != nil {
-			t.Logf("Can't createHttpClient")
-		}
-		logstashTest.client = client
-	}
-
-	if err := logstashTest.gatherJVMStats(logstashTest.LogstashURL+jvmStats, &accJVMStats); err != nil {
-		t.Logf("Can't gather JVM stats")
-	}
-
-	if !accJVMStats.HasMeasurement("logstash_jvm") {
-		t.Errorf("acc.HasMeasurement: expected logstash_jvm")
-	}
-
-	return
-}
-
-func Test_Gather(t *testing.T) {
-
-	Test_gatherJVMStats(t)
-	Test_gatherPipelineStats(t)
-	Test_gatherProcessStats(t)
-
-	//Tests for processStats
-	assert.Equal(t, accProcessStats.NFields(), processStatsCount)
-	accProcessStats.AssertContainsFields(t, "logstash_process", processStatsExpected)
-
-	//Tests for pipelineStats
 	assert.Equal(t, accPipelineStats.NFields(), pipelineStatsCount)
 
 	accPipelineStats.AssertContainsFields(t,
@@ -354,11 +274,73 @@ func Test_Gather(t *testing.T) {
 		"logstash_plugin_output_stdout",
 		outputStdoutStatsExpected)
 
-	//Test for jvmStats
+}
+
+func Test_gatherProcessStats(t *testing.T) {
+	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "%s", string(processJSON))
+	}))
+	requestURL, err := url.Parse(logstashTest.URL)
+	if err != nil {
+		t.Logf("Can't connect to: %s", logstashTest.URL)
+	}
+	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Start()
+	defer fakeServer.Close()
+
+	if logstashTest.client == nil {
+		client, err := logstashTest.createHTTPClient()
+
+		if err != nil {
+			t.Logf("Can't createHttpClient")
+		}
+		logstashTest.client = client
+	}
+
+	if err := logstashTest.gatherProcessStats(logstashTest.URL+processStats, &accProcessStats); err != nil {
+		t.Logf("Can't gather JVM stats")
+	}
+
+	if !accProcessStats.HasMeasurement("logstash_process") {
+		t.Errorf("acc.HasMeasurement: expected logstash_process")
+	}
+
+	assert.Equal(t, accProcessStats.NFields(), processStatsCount)
+	accProcessStats.AssertContainsFields(t, "logstash_process", processStatsExpected)
+}
+
+func Test_gatherJVMStats(t *testing.T) {
+	fakeServer := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprintf(w, "%s", string(jvmJSON))
+	}))
+	requestURL, err := url.Parse(logstashTest.URL)
+	if err != nil {
+		t.Logf("Can't connect to: %s", logstashTest.URL)
+	}
+	fakeServer.Listener, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", requestURL.Hostname(), requestURL.Port()))
+	fakeServer.Start()
+	defer fakeServer.Close()
+
+	if logstashTest.client == nil {
+		client, err := logstashTest.createHTTPClient()
+
+		if err != nil {
+			t.Logf("Can't createHttpClient")
+		}
+		logstashTest.client = client
+	}
+
+	if err := logstashTest.gatherJVMStats(logstashTest.URL+jvmStats, &accJVMStats); err != nil {
+		t.Logf("Can't gather JVM stats")
+	}
+
+	if !accJVMStats.HasMeasurement("logstash_jvm") {
+		t.Errorf("acc.HasMeasurement: expected logstash_jvm")
+	}
+
 	assert.Equal(t, accJVMStats.NFields(), jvmStatsCount)
 	accJVMStats.AssertContainsFields(t, "logstash_jvm", jvmStatsExpected)
-
-	if testing.Short() {
-		t.Skip("Skipping Gather function test")
-	}
 }
+
