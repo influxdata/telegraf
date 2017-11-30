@@ -1,6 +1,7 @@
 package system
 
 import (
+	"log"
 	"os"
 
 	"github.com/influxdata/telegraf"
@@ -26,7 +27,6 @@ type PS interface {
 type PSDiskDeps interface {
 	Partitions(all bool) ([]disk.PartitionStat, error)
 	OSGetenv(key string) string
-	OSStat(name string) (os.FileInfo, error)
 	PSDiskUsage(path string) (*disk.UsageStat, error)
 }
 
@@ -74,6 +74,7 @@ func (s *systemPS) DiskUsage(
 	if err != nil {
 		return nil, nil, err
 	}
+	log.Printf("D! partitions found: %v", parts)
 
 	// Make a "set" out of the filter slice
 	mountPointFilterSet := make(map[string]bool)
@@ -95,11 +96,13 @@ func (s *systemPS) DiskUsage(
 
 	for i := range parts {
 		p := parts[i]
+		log.Printf("D! getting usage for: %v", p)
 
 		if len(mountPointFilter) > 0 {
 			// If the mount point is not a member of the filter set,
 			// don't gather info on it.
 			if _, ok := mountPointFilterSet[p.Mountpoint]; !ok {
+				log.Printf("D! filesystem mountpoint excluded: %s", p.Mountpoint)
 				continue
 			}
 		}
@@ -107,15 +110,14 @@ func (s *systemPS) DiskUsage(
 		// If the mount point is a member of the exclude set,
 		// don't gather info on it.
 		if _, ok := fstypeExcludeSet[p.Fstype]; ok {
+			log.Printf("D! filesystem type excluded: %s: %v", p.Mountpoint, p.Fstype)
 			continue
 		}
 
 		mountpoint := s.OSGetenv("HOST_MOUNT_PREFIX") + p.Mountpoint
-		if _, err := s.OSStat(mountpoint); err != nil {
-			continue
-		}
 		du, err := s.PSDiskUsage(mountpoint)
 		if err != nil {
+			log.Printf("D! error getting disk usage: %s: %v", mountpoint, err)
 			continue
 		}
 		du.Path = p.Mountpoint
@@ -162,10 +164,6 @@ func (s *systemPSDisk) Partitions(all bool) ([]disk.PartitionStat, error) {
 
 func (s *systemPSDisk) OSGetenv(key string) string {
 	return os.Getenv(key)
-}
-
-func (s *systemPSDisk) OSStat(name string) (os.FileInfo, error) {
-	return os.Stat(name)
 }
 
 func (s *systemPSDisk) PSDiskUsage(path string) (*disk.UsageStat, error) {

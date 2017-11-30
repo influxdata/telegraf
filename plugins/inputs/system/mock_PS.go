@@ -1,8 +1,6 @@
 package system
 
 import (
-	"os"
-
 	"github.com/stretchr/testify/mock"
 
 	"github.com/shirou/gopsutil/cpu"
@@ -121,15 +119,6 @@ func (m *mockDiskUsage) Partitions(all bool) ([]disk.PartitionStat, error) {
 func (m *mockDiskUsage) OSGetenv(key string) string {
 	ret := m.Called(key)
 	return ret.Get(0).(string)
-}
-
-func (m *mockDiskUsage) OSStat(name string) (os.FileInfo, error) {
-	ret := m.Called(name)
-
-	r0 := ret.Get(0).(os.FileInfo)
-	r1 := ret.Error(1)
-
-	return r0, r1
 }
 
 func (m *mockDiskUsage) PSDiskUsage(path string) (*disk.UsageStat, error) {

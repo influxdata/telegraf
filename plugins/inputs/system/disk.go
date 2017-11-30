@@ -52,6 +52,7 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 	for i, du := range disks {
 		if du.Total == 0 {
 			// Skip dummy filesystem (procfs, cgroupfs, ...)
+			log.Printf("D! skipping dummy filesystem: %s", du.Path)
 			continue
 		}
 		mountOpts := parseOptions(partitions[i].Opts)
