@@ -9,6 +9,7 @@
 - [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
 - [opensmtpd](./plugins/inputs/opensmtpd/README.md) - Thanks to @aromeyer
 - [particle](./plugins/inputs/webhooks/particle/README.md) - Thanks to @davidgs
+- [pf](./plugins/inputs/pf/README.md) Thanks to @nferch
 - [postfix](./plugins/inputs/postfix/README.md) - Thanks to @phemmer
 - [smart](./plugins/inputs/smart/README.md) - Thanks to @rickard-von-essen
 - [solr](./plugins/inputs/solr/README.md) - Thanks to @ljagiello
@@ -75,6 +76,7 @@
 - [#3518](https://github.com/influxdata/telegraf/pull/3518): Add slab to mem plugin.
 - [#3519](https://github.com/influxdata/telegraf/pull/3519): Add input plugin for DC/OS.
 - [#3140](https://github.com/influxdata/telegraf/pull/3140): Add support for glob patterns in net input plugin.
+- [#3405](https://github.com/influxdata/telegraf/pull/3405): Add input plugin for OpenBSD/FreeBSD pf.
 
 ### Bugfixes
 
