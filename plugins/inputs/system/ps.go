@@ -85,6 +85,10 @@ func (s *systemPS) DiskUsage(
 	for _, filter := range fstypeExclude {
 		fstypeExcludeSet[filter] = true
 	}
+	paths := make(map[string]bool)
+	for _, part := range parts {
+		paths[part.Mountpoint] = true
+	}
 
 	// Autofs mounts indicate a potential mount, the partition will also be
 	// listed with the actual filesystem when mounted.  Ignore the autofs
@@ -106,20 +110,20 @@ func (s *systemPS) DiskUsage(
 			}
 		}
 
-		// If there's a host mount prefix, exclude other paths
-		if len(hostMountPrefix) > 0 && !strings.HasPrefix(p.Mountpoint, hostMountPrefix) {
-			continue
-		}
-
 		// If the mount point is a member of the exclude set,
 		// don't gather info on it.
 		if _, ok := fstypeExcludeSet[p.Fstype]; ok {
 			continue
 		}
 
-		if _, err := s.OSStat(p.Mountpoint); err != nil {
+		// If there's a host mount prefix, exclude any paths which conflict
+		// with the prefix.
+		if len(hostMountPrefix) > 0 &&
+			!strings.HasPrefix(p.Mountpoint, hostMountPrefix) &&
+			paths[hostMountPrefix+p.Mountpoint] {
 			continue
 		}
+
 		du, err := s.PSDiskUsage(p.Mountpoint)
 		if err != nil {
 			continue
