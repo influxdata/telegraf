@@ -38,10 +38,10 @@ type ProcessStats struct {
 }
 
 type PluginEvents struct {
-	QueuePushDurationInMillis  float64 `json:"queue_push_duration_in_millis"`
-	DurationInMillis           float64 `json:"duration_in_millis"`
-	In                         float64 `json:"in"`
-	Out                        float64 `json:"out"`
+	QueuePushDurationInMillis float64 `json:"queue_push_duration_in_millis"`
+	DurationInMillis          float64 `json:"duration_in_millis"`
+	In                        float64 `json:"in"`
+	Out                       float64 `json:"out"`
 }
 
 type Plugin struct {
