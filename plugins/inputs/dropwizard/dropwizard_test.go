@@ -22,7 +22,7 @@ func TestDecodeGaugeIntValueJSON(t *testing.T) {
 	}
 
 	memoryUsedGauge := metrics.Gauges["jvm.memory.total.used"]
-	
+
 	if memoryUsedGauge.Value.Type != dropwizard.IntType {
 		t.Error("Memory gauge value was not an int.")
 	}
@@ -43,7 +43,7 @@ func TestDecodeGaugeFloatValueJSON(t *testing.T) {
 	}
 
 	memoryUsedGauge := metrics.Gauges["gauge.float.example"]
-	
+
 	if memoryUsedGauge.Value.Type != dropwizard.FloatType {
 		t.Error("Memory gauge value was not an float.")
 	}
@@ -64,7 +64,7 @@ func TestDecodeGaugeStringValueJSON(t *testing.T) {
 	}
 
 	memoryUsedGauge := metrics.Gauges["io.dropwizard.jetty.MutableServletContextHandler.percent-4xx-15m"]
-	
+
 	if memoryUsedGauge.Value.Type != dropwizard.StringType {
 		t.Error("Gauge value was an int. Expected string.")
 	}
@@ -85,7 +85,7 @@ func TestDecodeFloatsInTimersJSON(t *testing.T) {
 	}
 
 	connectionsTimer := metrics.Timers["org.eclipse.jetty.server.HttpConnectionFactory.8081.connections"]
-	
+
 	if connectionsTimer.Mean != 50.13867439111584 {
 		t.Errorf("Connections timer mean was incorrect, got: %.2f, want: 50.13867439111584.", connectionsTimer.Mean)
 	}
@@ -114,52 +114,52 @@ func TestBasic(t *testing.T) {
 		"value": int64(77233584),
 	}
 	acc.AssertContainsFields(t, "jvm.memory.total.used", fields)
-	
+
 	fields = map[string]interface{}{
 		"count": int64(0),
 	}
 	acc.AssertContainsFields(t, "io.dropwizard.jetty.MutableServletContextHandler.active-dispatches", fields)
 
 	fields = map[string]interface{}{
-		"count": int64(3),
-		"max" : int64(0),
-		"mean" : float64(0.0),
-		"min" : int64(0),
-		"p50" : float64(0.0),
-		"p75" : float64(0.0),
-		"p95" : float64(0.0),
-		"p98" : float64(0.0),
-		"p99" : float64(0.0),
-		"p999" : float64(0.0),
-		"stddev" : float64(0.0),
+		"count":  int64(3),
+		"max":    int64(0),
+		"mean":   float64(0.0),
+		"min":    int64(0),
+		"p50":    float64(0.0),
+		"p75":    float64(0.0),
+		"p95":    float64(0.0),
+		"p98":    float64(0.0),
+		"p99":    float64(0.0),
+		"p999":   float64(0.0),
+		"stddev": float64(0.0),
 	}
 	acc.AssertContainsFields(t, "histogram.example", fields)
 
 	fields = map[string]interface{}{
-		"count": int64(0),
-		"m15_rate" : float64(0.0),
-		"m1_rate" : float64(0.0),
-		"m5_rate" : float64(0.0),
-		"mean_rate" : float64(0.0),
+		"count":     int64(0),
+		"m15_rate":  float64(0.0),
+		"m1_rate":   float64(0.0),
+		"m5_rate":   float64(0.0),
+		"mean_rate": float64(0.0),
 	}
 	acc.AssertContainsFields(t, "ch.qos.logback.core.Appender.error", fields)
 
 	fields = map[string]interface{}{
-		"count": int64(2),
-		"max" : float64(82.058711464),
-		"mean" : float64(50.13867439111584),
-		"min" : float64(50.099579601),
-		"p50" : float64(50.099579601),
-		"p75" : float64(50.099579601),
-		"p95" : float64(50.099579601),
-		"p98" : float64(50.099579601),
-		"p99" : float64(50.099579601),
-		"p999" : float64(82.058711464),
-		"stddev" : float64(1.1170976456220436),
-		"m15_rate" : float64(0.0017641182197863407),
-		"m1_rate" : float64(0.01354432563862594),
-		"m5_rate" : float64(0.003922747115045747),
-		"mean_rate" : float64(0.003482175245668154),
+		"count":     int64(2),
+		"max":       float64(82.058711464),
+		"mean":      float64(50.13867439111584),
+		"min":       float64(50.099579601),
+		"p50":       float64(50.099579601),
+		"p75":       float64(50.099579601),
+		"p95":       float64(50.099579601),
+		"p98":       float64(50.099579601),
+		"p99":       float64(50.099579601),
+		"p999":      float64(82.058711464),
+		"stddev":    float64(1.1170976456220436),
+		"m15_rate":  float64(0.0017641182197863407),
+		"m1_rate":   float64(0.01354432563862594),
+		"m5_rate":   float64(0.003922747115045747),
+		"mean_rate": float64(0.003482175245668154),
 	}
 	acc.AssertContainsFields(t, "org.eclipse.jetty.server.HttpConnectionFactory.8081.connections", fields)
 }
@@ -175,7 +175,7 @@ func TestSkippingIdleMetrics(t *testing.T) {
 	defer fakeServer.Close()
 
 	plugin := &dropwizard.Dropwizard{
-		URLs: []string{fakeServer.URL + "/endpoint"},
+		URLs:            []string{fakeServer.URL + "/endpoint"},
 		SkipIdleMetrics: true,
 	}
 
@@ -202,7 +202,7 @@ func TestFloatFormatting(t *testing.T) {
 	if f != 82.06 {
 		t.Errorf("Formatted float was incorrect, got: %.9f, want: 82.06.", f)
 	}
-}	
+}
 
 const oneMetricPerTypeJSON = `
 {

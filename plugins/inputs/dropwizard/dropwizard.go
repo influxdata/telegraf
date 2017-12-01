@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-	
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -136,39 +136,39 @@ func (d *Dropwizard) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// Gauge values can be of different types 
+// Gauge values can be of different types
 
 type gaugeValueType int
 
 const (
-        IntType gaugeValueType = iota
-        FloatType
-        StringType
+	IntType gaugeValueType = iota
+	FloatType
+	StringType
 )
 
 type gaugeValue struct {
-	IntValue int64
-	FloatValue float64
+	IntValue    int64
+	FloatValue  float64
 	StringValue string
-	Type gaugeValueType
+	Type        gaugeValueType
 }
 
 func (gv *gaugeValue) UnmarshalJSON(b []byte) error {
 	jsonString := string(b)
 	if intValue, err := strconv.ParseInt(jsonString, 10, 64); err == nil {
-		*gv = gaugeValue{ 
+		*gv = gaugeValue{
 			IntValue: intValue,
-			Type: IntType,
+			Type:     IntType,
 		}
 	} else if floatValue, err := strconv.ParseFloat(jsonString, 64); err == nil {
-		*gv = gaugeValue{ 
+		*gv = gaugeValue{
 			FloatValue: floatValue,
-			Type: FloatType,
+			Type:       FloatType,
 		}
 	} else {
-		*gv = gaugeValue{ 
+		*gv = gaugeValue{
 			StringValue: strings.Trim(jsonString, "\""),
-			Type: StringType,
+			Type:        StringType,
 		}
 	}
 
@@ -186,29 +186,29 @@ type counter struct {
 func (c *counter) UnmarshalJSON(b []byte) error {
 	jsonString := string(b)
 	if intValue, err := strconv.ParseInt(jsonString, 10, 64); err == nil {
-		*c = counter{ 
+		*c = counter{
 			Count: intValue,
 		}
-	} 
+	}
 	return nil
 }
 
 type histogram struct {
 	Counter counter `json:"count"`
-	Max    int64   `json:"max"`
-	Mean   float64 `json:"mean"`
-	Min    int64   `json:"min"`
-	P50    float64 `json:"p50"`
-	P75    float64 `json:"p75"`
-	P95    float64 `json:"p95"`
-	P98    float64 `json:"p98"`
-	P99    float64 `json:"p99"`
-	P999   float64 `json:"p999"`
-	Stddev float64 `json:"stddev"`
+	Max     int64   `json:"max"`
+	Mean    float64 `json:"mean"`
+	Min     int64   `json:"min"`
+	P50     float64 `json:"p50"`
+	P75     float64 `json:"p75"`
+	P95     float64 `json:"p95"`
+	P98     float64 `json:"p98"`
+	P99     float64 `json:"p99"`
+	P999    float64 `json:"p999"`
+	Stddev  float64 `json:"stddev"`
 }
 
 type meter struct {
-	Counter counter  `json:"count"`
+	Counter  counter `json:"count"`
 	M15Rate  float64 `json:"m15_rate"`
 	M1Rate   float64 `json:"m1_rate"`
 	M5Rate   float64 `json:"m5_rate"`
@@ -217,7 +217,7 @@ type meter struct {
 }
 
 type timer struct {
-	Counter	      counter `json:"count"`
+	Counter       counter `json:"count"`
 	Max           float64 `json:"max"`
 	Mean          float64 `json:"mean"`
 	Min           float64 `json:"min"`
@@ -280,12 +280,12 @@ func (d *Dropwizard) gatherURL(
 	for name, g := range metrics.Gauges {
 		if g.Value.Type == IntType {
 			acc.AddGauge(name,
-				map[string]interface{}{ "value": g.Value.IntValue },
+				map[string]interface{}{"value": g.Value.IntValue},
 				tags,
 				now)
 		} else if g.Value.Type == FloatType {
 			acc.AddGauge(name,
-				map[string]interface{}{ "value": d.FormatFloat(g.Value.FloatValue) },
+				map[string]interface{}{"value": d.FormatFloat(g.Value.FloatValue)},
 				tags,
 				now)
 		}
@@ -297,7 +297,7 @@ func (d *Dropwizard) gatherURL(
 		}
 
 		acc.AddCounter(name,
-			map[string]interface{}{ "count": c.Count },
+			map[string]interface{}{"count": c.Count},
 			tags,
 			now)
 	}
@@ -308,17 +308,17 @@ func (d *Dropwizard) gatherURL(
 		}
 
 		acc.AddHistogram(name,
-			map[string]interface{}{ 
-				"count": h.Counter.Count,
-				"max": h.Max,
-				"mean": d.FormatFloat(h.Mean),
-				"min": h.Min,
-				"p50": d.FormatFloat(h.P50),
-				"p75": d.FormatFloat(h.P75),
-				"p95": d.FormatFloat(h.P95),
-				"p98": d.FormatFloat(h.P98),
-				"p99": d.FormatFloat(h.P99),
-				"p999": d.FormatFloat(h.P999),
+			map[string]interface{}{
+				"count":  h.Counter.Count,
+				"max":    h.Max,
+				"mean":   d.FormatFloat(h.Mean),
+				"min":    h.Min,
+				"p50":    d.FormatFloat(h.P50),
+				"p75":    d.FormatFloat(h.P75),
+				"p95":    d.FormatFloat(h.P95),
+				"p98":    d.FormatFloat(h.P98),
+				"p99":    d.FormatFloat(h.P99),
+				"p999":   d.FormatFloat(h.P999),
 				"stddev": h.Stddev,
 			},
 			tags,
@@ -332,11 +332,11 @@ func (d *Dropwizard) gatherURL(
 		}
 
 		acc.AddHistogram(name,
-			map[string]interface{}{ 
-				"count": m.Counter.Count,
-				"m15_rate": d.FormatFloat(m.M15Rate),
-				"m1_rate": d.FormatFloat(m.M1Rate),
-				"m5_rate": d.FormatFloat(m.M5Rate),
+			map[string]interface{}{
+				"count":     m.Counter.Count,
+				"m15_rate":  d.FormatFloat(m.M15Rate),
+				"m1_rate":   d.FormatFloat(m.M1Rate),
+				"m5_rate":   d.FormatFloat(m.M5Rate),
 				"mean_rate": d.FormatFloat(m.MeanRate),
 			},
 			tags,
@@ -350,21 +350,21 @@ func (d *Dropwizard) gatherURL(
 		}
 
 		acc.AddFields(name,
-			map[string]interface{}{ 
-				"count": t.Counter.Count,
-				"max": d.FormatFloat(t.Max),
-				"mean": d.FormatFloat(t.Mean),
-				"min": d.FormatFloat(t.Min),
-				"p50": d.FormatFloat(t.P50),
-				"p75": d.FormatFloat(t.P75),
-				"p95": d.FormatFloat(t.P95),
-				"p98": d.FormatFloat(t.P98),
-				"p99": d.FormatFloat(t.P99),
-				"p999": d.FormatFloat(t.P999),
-				"stddev": d.FormatFloat(t.Stddev),
-				"m15_rate": d.FormatFloat(t.M15Rate),
-				"m1_rate": d.FormatFloat(t.M1Rate),
-				"m5_rate": d.FormatFloat(t.M5Rate),
+			map[string]interface{}{
+				"count":     t.Counter.Count,
+				"max":       d.FormatFloat(t.Max),
+				"mean":      d.FormatFloat(t.Mean),
+				"min":       d.FormatFloat(t.Min),
+				"p50":       d.FormatFloat(t.P50),
+				"p75":       d.FormatFloat(t.P75),
+				"p95":       d.FormatFloat(t.P95),
+				"p98":       d.FormatFloat(t.P98),
+				"p99":       d.FormatFloat(t.P99),
+				"p999":      d.FormatFloat(t.P999),
+				"stddev":    d.FormatFloat(t.Stddev),
+				"m15_rate":  d.FormatFloat(t.M15Rate),
+				"m1_rate":   d.FormatFloat(t.M1Rate),
+				"m5_rate":   d.FormatFloat(t.M5Rate),
 				"mean_rate": d.FormatFloat(t.MeanRate),
 			},
 			tags,
@@ -377,7 +377,7 @@ func (d *Dropwizard) gatherURL(
 func init() {
 	inputs.Add("dropwizard", func() telegraf.Input {
 		return &Dropwizard{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout:          internal.Duration{Duration: time.Second * 5},
 			FloatFieldFormat: "%.2f",
 		}
 	})
@@ -409,7 +409,7 @@ func (d *Dropwizard) canSkipMetric(name string, c *counter) bool {
 			if val == c.Count {
 				return true
 			}
-		} 
+		}
 		d.previousCountValues[name] = c.Count
 	}
 
