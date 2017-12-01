@@ -93,7 +93,7 @@
 - [#3447](https://github.com/influxdata/telegraf/issues/3447): Add shadow-utils dependency to rpm package.
 - [#3448](https://github.com/influxdata/telegraf/issues/3448): Use deb-systemd-invoke to restart service.
 
-## v1.4.5 [unreleased]
+## v1.4.5 [2017-12-01]
 
 ### Bugfixes
 
