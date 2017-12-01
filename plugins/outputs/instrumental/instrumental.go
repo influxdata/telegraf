@@ -11,7 +11,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
@@ -93,8 +92,6 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 
 	var points []string
 	var metricType string
-	var toSerialize telegraf.Metric
-	var newTags map[string]string
 
 	for _, m := range metrics {
 		// Pull the metric_type out of the metric's tags. We don't want the type
@@ -108,18 +105,10 @@ func (i *Instrumental) Write(metrics []telegraf.Metric) error {
 		//
 		//  increment some_prefix.host.tag1.tag2.tag3.counter.field value timestamp
 		//
-		newTags = m.Tags()
-		metricType = newTags["metric_type"]
-		delete(newTags, "metric_type")
+		metricType = m.Tags()["metric_type"]
+		m.RemoveTag("metric_type")
 
-		toSerialize, _ = metric.New(
-			m.Name(),
-			newTags,
-			m.Fields(),
-			m.Time(),
-		)
-
-		buf, err := s.Serialize(toSerialize)
+		buf, err := s.Serialize(m)
 		if err != nil {
 			log.Printf("E! Error serializing a metric to Instrumental: %s", err)
 		}

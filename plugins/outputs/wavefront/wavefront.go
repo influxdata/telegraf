@@ -9,9 +9,10 @@ import (
 	"strconv"
 	"strings"
 
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"time"
 )
 
 type Wavefront struct {
@@ -159,7 +160,7 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricPoint {
 
 		metric := &MetricPoint{
 			Metric:    name,
-			Timestamp: m.UnixNano() / 1000000000,
+			Timestamp: m.Time().Unix(),
 		}
 
 		metricValue, buildError := buildValue(value, metric.Metric, w)

@@ -96,4 +96,7 @@ docker-image:
 	cp build/telegraf*$(COMMIT)*.deb .
 	docker build -f scripts/dev.docker --build-arg "package=telegraf*$(COMMIT)*.deb" -t "telegraf-dev:$(COMMIT)" .
 
+plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
+	ragel -Z -G2 $^ -o $@
+
 .PHONY: deps telegraf install test test-windows lint vet test-all package clean docker-image fmtcheck

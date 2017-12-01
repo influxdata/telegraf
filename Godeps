@@ -72,8 +72,8 @@ github.com/Sirupsen/logrus 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
 github.com/soniah/gosnmp 5ad50dc75ab389f8a1c9f8a67d3a1cd85f67ed15
 github.com/StackExchange/wmi f3e2bae1e0cb5aef83e319133eabfee30013a4a5
 github.com/streadway/amqp 63795daa9a446c920826655f26ba31c81c860fd6
-github.com/stretchr/objx 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
-github.com/stretchr/testify 4d4bfba8f1d1027c4fdbe371823030df51419987
+github.com/stretchr/objx facf9a85c22f48d2f52f2380e4efce1768749a89
+github.com/stretchr/testify 12b6f73e6084dad08a7c6e575284b177ecafbc71
 github.com/tidwall/gjson 0623bd8fbdbf97cc62b98d15108832851a658e59
 github.com/tidwall/match 173748da739a410c5b0b813b956f89ff94730b4c
 github.com/vjeantet/grok d73e972b60935c7fec0b4ffbc904ed39ecaf7efe
