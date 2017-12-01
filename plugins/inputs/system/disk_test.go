@@ -62,8 +62,6 @@ func TestDiskUsage(t *testing.T) {
 
 	mps.On("Partitions", true).Return(psAll, nil)
 	mps.On("OSGetenv", "HOST_MOUNT_PREFIX").Return("")
-	mps.On("OSStat", "/").Return(MockFileInfo{}, nil)
-	mps.On("OSStat", "/home").Return(MockFileInfo{}, nil)
 	mps.On("PSDiskUsage", "/").Return(&duAll[0], nil)
 	mps.On("PSDiskUsage", "/home").Return(&duAll[1], nil)
 
