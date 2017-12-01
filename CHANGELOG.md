@@ -77,6 +77,7 @@
 - [#3519](https://github.com/influxdata/telegraf/pull/3519): Add input plugin for DC/OS.
 - [#3140](https://github.com/influxdata/telegraf/pull/3140): Add support for glob patterns in net input plugin.
 - [#3405](https://github.com/influxdata/telegraf/pull/3405): Add input plugin for OpenBSD/FreeBSD pf.
+- [#3528](https://github.com/influxdata/telegraf/pull/3528): Add option to amqp output to publish persistent messages.
 
 ### Bugfixes
 
