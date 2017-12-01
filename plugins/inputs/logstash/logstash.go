@@ -23,18 +23,18 @@ const processStats = "/_node/stats/process"
 const pipelineStats = "/_node/stats/pipeline"
 
 type Logstash struct {
-	URL string
-	client      *http.Client
+	URL    string
+	client *http.Client
 }
 
 type JVMStats struct {
-	ID         string      `json:"id"`
-	JVM        interface{} `json:"jvm"`
+	ID  string      `json:"id"`
+	JVM interface{} `json:"jvm"`
 }
 
 type ProcessStats struct {
-	ID         string      `json:"id"`
-	Process    interface{} `json:"process"`
+	ID      string      `json:"id"`
+	Process interface{} `json:"process"`
 }
 
 type PluginEvents struct {
@@ -71,8 +71,8 @@ type Pipeline struct {
 }
 
 type PipelineStats struct {
-	ID         string   `json:"id"`
-	Pipeline   Pipeline `json:"pipeline"`
+	ID       string   `json:"id"`
+	Pipeline Pipeline `json:"pipeline"`
 }
 
 //Description returns short info about plugin
@@ -85,7 +85,7 @@ func (l *Logstash) SampleConfig() string { return sampleConfig }
 func (l *Logstash) createHTTPClient() (*http.Client, error) {
 
 	client := &http.Client{
-		Timeout:   time.Duration(4 * time.Second),
+		Timeout: time.Duration(4 * time.Second),
 	}
 
 	return client, nil
@@ -195,14 +195,14 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 	for _, plugin := range PipelineStats.Pipeline.Plugins.Inputs {
 		//plugin := &plugin
 		fields := map[string]interface{}{
-	                "queue_push_duration_in_millis": plugin.Events.QueuePushDurationInMmillis,
+			"queue_push_duration_in_millis": plugin.Events.QueuePushDurationInMmillis,
 			"duration_in_millis":            plugin.Events.DurationInMillis,
 			"in":                            plugin.Events.In,
 			"out":                           plugin.Events.Out,
 		}
 		tags := map[string]string{
 			"plugin": plugin.Name,
-			"type"  : "input",
+			"type":   "input",
 		}
 		acc.AddFields("logstash_plugins", fields, tags)
 	}
@@ -217,7 +217,7 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 		}
 		tags := map[string]string{
 			"plugin": plugin.Name,
-			"type"  : "filter",
+			"type":   "filter",
 		}
 		acc.AddFields("logstash_plugins", fields, tags)
 	}
@@ -232,7 +232,7 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 		}
 		tags := map[string]string{
 			"plugin": plugin.Name,
-			"type"  : "output",
+			"type":   "output",
 		}
 		acc.AddFields("logstash_plugins", fields, tags)
 	}
@@ -252,20 +252,26 @@ func (l *Logstash) Gather(acc telegraf.Accumulator) error {
 		l.client = client
 	}
 
-	jvm_url, err := url.Parse(l.URL+jvmStats)
-	if err != nil { return err}
+	jvm_url, err := url.Parse(l.URL + jvmStats)
+	if err != nil {
+		return err
+	}
 	if err := l.gatherJVMStats(jvm_url.String(), acc); err != nil {
 		return err
 	}
 
-	process_url, err := url.Parse(l.URL+processStats)
-	if err != nil { return err}
+	process_url, err := url.Parse(l.URL + processStats)
+	if err != nil {
+		return err
+	}
 	if err := l.gatherProcessStats(process_url.String(), acc); err != nil {
 		return err
 	}
 
-	pipeline_url, err := url.Parse(l.URL+pipelineStats)
-	if err != nil { return err}
+	pipeline_url, err := url.Parse(l.URL + pipelineStats)
+	if err != nil {
+		return err
+	}
 	if err := l.gatherPipelineStats(pipeline_url.String(), acc); err != nil {
 		return err
 	}

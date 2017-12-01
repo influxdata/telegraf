@@ -343,4 +343,3 @@ func Test_gatherJVMStats(t *testing.T) {
 	assert.Equal(t, accJVMStats.NFields(), jvmStatsCount)
 	accJVMStats.AssertContainsFields(t, "logstash_jvm", jvmStatsExpected)
 }
-
