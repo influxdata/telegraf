@@ -144,6 +144,7 @@ configuration options.
 * [dns query time](./plugins/inputs/dns_query)
 * [docker](./plugins/inputs/docker)
 * [dovecot](./plugins/inputs/dovecot)
+* [dropwizard](./plugins/inputs/dropwizard)
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [fail2ban](./plugins/inputs/fail2ban)
