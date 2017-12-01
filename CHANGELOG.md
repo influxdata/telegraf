@@ -4,6 +4,7 @@
 
 - [#3500](https://github.com/influxdata/telegraf/issues/3500): Fix global variable collection when using interval_slow option in mysql input.
 - [#3486](https://github.com/influxdata/telegraf/issues/3486): Fix error getting net connections info in netstat input.
+- [#3529](https://github.com/influxdata/telegraf/issues/3529): Fix HOST_MOUNT_PREFIX in docker with disk input.
 
 ## v1.4.4 [2017-11-08]
 
