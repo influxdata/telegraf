@@ -6,7 +6,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/vmware/govmomi/vim25/soap"
 	"log"
-	"net/url"
 	"sync"
 	"time"
 )
@@ -27,12 +26,7 @@ type VSphere struct {
 	ObjectDiscoveryInterval internal.Duration
 	Timeout                 internal.Duration
 
-	VmSamplingPeriod        internal.Duration
-	HostSamplingPeriod      internal.Duration
-	ClusterSamplingPeriod   internal.Duration
-	DatastoreSamplingPeriod internal.Duration
-
-	endpoints []Endpoint
+	endpoints               []*Endpoint
 }
 
 var sampleConfig = `
@@ -48,51 +42,37 @@ func (v *VSphere) Description() string {
 	return "Read metrics from VMware vCenter"
 }
 
-func (v *VSphere) vSphereInit() {
+func (v *VSphere) checkEndpoints() {
 	if v.endpoints != nil {
 		return
 	}
 
-	var wg sync.WaitGroup
-
-	v.endpoints = make([]Endpoint, len(v.Vcenters))
+	v.endpoints = make([]*Endpoint, len(v.Vcenters))
 	for i, rawUrl := range v.Vcenters {
 		u, err := soap.ParseURL(rawUrl)
 		if err != nil {
 			log.Printf("E! Can't parse URL %s\n", rawUrl)
 		}
 
-		wg.Add(1)
-		go func(url *url.URL, j int) {
-			defer wg.Done()
-			v.endpoints[j] = NewEndpoint(v, url)
-		}(u, i)
+		v.endpoints[i] = NewEndpoint(v, u)
 	}
-
-	wg.Wait()
 }
 
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 
-	v.vSphereInit()
-
-	start := time.Now()
+	v.checkEndpoints()
 
 	var wg sync.WaitGroup
 
 	for _, ep := range v.endpoints {
 		wg.Add(1)
-		go func(endpoint Endpoint) {
+		go func(endpoint *Endpoint) {
 			defer wg.Done()
 			acc.AddError(endpoint.collect(acc))
 		}(ep)
 	}
 
 	wg.Wait()
-
-	// Add gauge to show how long it took to gather all the metrics on this cycle
-	//
-	acc.AddGauge("vsphere", map[string]interface{}{"gather.duration": time.Now().Sub(start).Seconds()}, nil, time.Now())
 
 	return nil
 }
@@ -114,11 +94,6 @@ func init() {
 			ObjectsPerQuery:         500,
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 			Timeout:                 internal.Duration{Duration: time.Second * 20},
-
-			ClusterSamplingPeriod:   internal.Duration{Duration: time.Second * 300},
-			HostSamplingPeriod:      internal.Duration{Duration: time.Second * 20},
-			VmSamplingPeriod:        internal.Duration{Duration: time.Second * 20},
-			DatastoreSamplingPeriod: internal.Duration{Duration: time.Second * 300},
 		}
 	})
 }

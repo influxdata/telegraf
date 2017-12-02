@@ -9,14 +9,14 @@ import (
 	"net/url"
 )
 
-type Connection struct {
+type Client struct {
 	Client *govmomi.Client
 	Views  *view.Manager
 	Root   *view.ContainerView
 	Perf   *performance.Manager
 }
 
-func NewConnection(url *url.URL, timeout internal.Duration) (*Connection, error) {
+func NewClient(url *url.URL, timeout internal.Duration) (*Client, error) {
 	ctx := context.Background()
 	c, err := govmomi.NewClient(ctx, url, true)
 	if err != nil {
@@ -30,7 +30,7 @@ func NewConnection(url *url.URL, timeout internal.Duration) (*Connection, error)
 	}
 	p := performance.NewManager(c.Client)
 
-	return &Connection{
+	return &Client{
 		Client: c,
 		Views:  m,
 		Root:   v,
@@ -38,7 +38,7 @@ func NewConnection(url *url.URL, timeout internal.Duration) (*Connection, error)
 	}, nil
 }
 
-func (c *Connection) Close() {
+func (c *Client) Close() {
 	ctx := context.Background()
 	if c.Views != nil {
 		c.Views.Destroy(ctx)

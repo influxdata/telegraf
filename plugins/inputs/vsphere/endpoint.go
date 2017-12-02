@@ -4,8 +4,6 @@ import (
 	"context"
 	"github.com/gobwas/glob"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
@@ -16,26 +14,29 @@ import (
 	"time"
 )
 
-type objectMap map[string]objectRef
-
 type Endpoint struct {
 	Parent             *VSphere
 	Url                *url.URL
-	connection         *Connection
-	lastColl           map[string]time.Time
-	hostMap            objectMap
-	vmMap              objectMap
-	clusterMap         objectMap
-	datastoreMap       objectMap
+	client             *Client
+	lastColls          map[string]time.Time
 	nameCache          map[string]string
-	vmMetricIds        []types.PerfMetricId
-	hostMetricIds      []types.PerfMetricId
-	clusterMetricIds   []types.PerfMetricId
-	datastoreMetricIds []types.PerfMetricId
+	resources          map[string]resource
 	discoveryTicker    *time.Ticker
-	connectionMux      sync.Mutex
-	collectMux         sync.RWMutex
+	clientMux          *sync.Mutex
+	collectMux         *sync.RWMutex
+	initialized        bool
 }
+
+type resource struct {
+	enabled bool
+	realTime bool
+	sampling int32
+	objects objectMap
+	metricIds []types.PerfMetricId
+	wildcards []string
+}
+
+type objectMap map[string]objectRef
 
 type objectRef struct {
 	name      string
@@ -43,60 +44,46 @@ type objectRef struct {
 	parentRef *types.ManagedObjectReference //Pointer because it must be nillable
 }
 
-type InstanceMetrics map[string]map[string]interface{}
-
-func NewEndpoint(parent *VSphere, url *url.URL) Endpoint {
-	hostMap := make(objectMap)
-	vmMap := make(objectMap)
-	clusterMap := make(objectMap)
-	datastoreMap := make(objectMap)
+func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 	e := Endpoint{
 		Url:          url,
 		Parent:       parent,
-		lastColl:     make(map[string]time.Time),
-		hostMap:      hostMap,
-		vmMap:        vmMap,
-		clusterMap:   clusterMap,
-		datastoreMap: datastoreMap,
+		lastColls:    make(map[string]time.Time),
 		nameCache:    make(map[string]string),
+		clientMux:    &sync.Mutex{},
+		collectMux:   &sync.RWMutex{},
+		initialized:  false,
 	}
-	e.init()
-	return e
+
+	e.resources = map[string]resource{
+		"cluster": {enabled: parent.GatherClusters, realTime: false, sampling: 300, objects: make(objectMap), wildcards: parent.ClusterMetrics},
+		"host": {enabled: parent.GatherHosts, realTime: true, sampling: 20, objects: make(objectMap), wildcards: parent.HostMetrics},
+		"vm": {enabled: parent.GatherVms, realTime: true, sampling: 20, objects: make(objectMap), wildcards: parent.VmMetrics},
+		"datastore": {enabled: parent.GatherDatastores, realTime: false, sampling: 300, objects: make(objectMap), wildcards: parent.DatastoreMetrics},
+	}
+
+	return &e
 }
 
 func (e *Endpoint) init() error {
-	conn, err := e.getConnection()
+
+	err := e.setupMetricIds()
 	if err != nil {
+		log.Printf("E! Error in metric setup for %s: %v", e.Url.Host, err)
 		return err
 	}
 
-	// Load metric IDs if specified
-	//
-	ctx := context.Background()
-	metricMap, err := conn.Perf.CounterInfoByName(ctx)
-	if err != nil {
-		return err
-	}
-	e.vmMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.VmMetrics)
-	if err != nil {
-    	return err
-	}
-	e.hostMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.HostMetrics)
-	if err != nil {
-		return err
-	}
-	e.clusterMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.ClusterMetrics)
-	if err != nil {
-		return err
-	}
-	e.datastoreMetricIds, err = resolveMetricWildcards(metricMap, e.Parent.DatastoreMetrics)
-	if err != nil {
-		return err
-	}
-
-	// Start background discovery if requested
-	//
 	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() > 0 {
+		// Run an initial discovery.
+		//
+		err = e.discover()
+		if err != nil {
+			log.Printf("E! Error in initial discovery for %s: %v", e.Url.Host, err)
+			return err
+		}
+
+		// Create discovery ticker
+		//
 		e.discoveryTicker = time.NewTicker(e.Parent.ObjectDiscoveryInterval.Duration)
 		go func() {
 			for range e.discoveryTicker.C {
@@ -106,29 +93,32 @@ func (e *Endpoint) init() error {
 				}
 			}
 		}()
-
-		// Run an initial discovery.
-		//
-		e.discover()
 	}
+
+	e.initialized = true
 	return nil
 }
 
-func (e *Endpoint) getConnection() (*Connection, error) {
-	log.Printf("getConnection() %s\n", e.Url.Host)
-	if e.connection == nil {
-		e.connectionMux.Lock()
-		defer e.connectionMux.Unlock()
-		if e.connection == nil {
-			log.Printf("getConnection() - creating new %s\n", e.Url.Host)
-			conn, err := NewConnection(e.Url, e.Parent.Timeout)
-			if err != nil {
-				return nil, err
-			}
-			e.connection = conn
+func (e *Endpoint) setupMetricIds() error {
+	conn, err := e.getConnection()
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+
+	metricMap, err := conn.Perf.CounterInfoByName(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, res := range e.resources {
+		res.metricIds, err = resolveMetricWildcards(metricMap, res.wildcards)
+		if err != nil {
+			return err
 		}
 	}
-	return e.connection, nil
+
+	return nil
 }
 
 func resolveMetricWildcards(metricMap map[string]*types.PerfCounterInfo, wildcards []string) ([]types.PerfMetricId, error) {
@@ -170,85 +160,164 @@ func resolveMetricWildcards(metricMap map[string]*types.PerfCounterInfo, wildcar
 }
 
 func (e *Endpoint) discover() error {
+	log.Printf("I! Discover new objects for %s", e.Url.Host)
+
 	conn, err := e.getConnection()
 	if err != nil {
 		return err
 	}
 
-	ctx := context.Background()
-
 	nameCache := make(map[string]string)
-	clusterMap := e.clusterMap
-	hostMap := e.hostMap
-	vmMap := e.vmMap
-	datastoreMap := e.datastoreMap
+	resources := e.resources
 
-	// Discover clusters
-	//
-	if e.Parent.GatherClusters {
-		clusterMap, err = e.getClusters(ctx, conn.Root)
-		if err != nil {
-			return err
-		}
-		for _, cluster := range clusterMap {
-			nameCache[cluster.ref.Reference().Value] = cluster.name
-		}
-	}
+	for k, res := range resources {
+		if res.enabled {
+			var objects objectMap
+			switch k {
+			case "cluster":
+				objects, err = e.getClusters(conn.Root)
+			case "host":
+				objects, err = e.getHosts(conn.Root)
+			case "vm":
+				objects, err = e.getVMs(conn.Root)
+			case "datastore":
+				objects, err = e.getDatastores(conn.Root)
+			}
+			if err != nil {
+				return err
+			}
 
-	// Discover hosts
-	//
-	if e.Parent.GatherHosts {
-		hostMap, err = e.getHosts(ctx, conn.Root)
-		if err != nil {
-			return err
-		}
-		for _, host := range hostMap {
-			nameCache[host.ref.Reference().Value] = host.name
-		}
-	}
-
-	// Discover VMs
-	//
-	if e.Parent.GatherVms {
-		vmMap, err = e.getVMs(ctx, conn.Root)
-		if err != nil {
-			return err
-		}
-		for _, vm := range vmMap {
-			nameCache[vm.ref.Reference().Value] = vm.name
-		}
-	}
-
-	// Discover Datastores
-	//
-	if e.Parent.GatherDatastores {
-		datastoreMap, err = e.getDatastores(ctx, conn.Root)
-		if err != nil {
-			return err
-		}
-		for _, datastore := range datastoreMap {
-			nameCache[datastore.ref.Reference().Value] = datastore.name
+			for _, obj := range res.objects {
+				nameCache[obj.ref.Reference().Value] = obj.name
+			}
+			res.objects = objects
+			resources[k] = res
 		}
 	}
 
 	// Atomically swap maps
 	//
+	if e.collectMux == nil {
+		e.collectMux = &sync.RWMutex{}
+	}
 	e.collectMux.Lock()
 	defer e.collectMux.Unlock()
 
 	e.nameCache = nameCache
-	e.datastoreMap = datastoreMap
-	e.vmMap = vmMap
-	e.hostMap = hostMap
-	e.clusterMap = clusterMap
+	e.resources = resources
 
 	log.Printf("D! Discovered %d objects\n", len(e.nameCache))
 
 	return nil
 }
 
-func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Context, alias string, acc telegraf.Accumulator,
-	objects objectMap, nameCache map[string]string, intervalDuration internal.Duration, isRealTime bool, metricIds []types.PerfMetricId) error {
+func (e *Endpoint) getClusters(root *view.ContainerView) (objectMap, error) {
+	var resources []mo.ClusterComputeResource
+	err := root.Retrieve(context.Background(), []string{"ClusterComputeResource"}, []string{"summary", "name", "parent"}, &resources)
+	if err != nil {
+		e.checkConnection()
+		return nil, err
+	}
+	m := make(objectMap)
+	for _, r := range resources {
+		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
+	}
+	return m, nil
+}
+
+func (e *Endpoint) getHosts(root *view.ContainerView) (objectMap, error) {
+	var resources []mo.HostSystem
+	err := root.Retrieve(context.Background(), []string{"HostSystem"}, []string{"summary", "parent"}, &resources)
+	if err != nil {
+		e.checkConnection()
+		return nil, err
+	}
+	m := make(objectMap)
+	for _, r := range resources {
+		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
+			name: r.Summary.Config.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
+	}
+	return m, nil
+}
+
+func (e *Endpoint) getVMs(root *view.ContainerView) (objectMap, error) {
+	var resources []mo.VirtualMachine
+	err := root.Retrieve(context.Background(), []string{"VirtualMachine"}, []string{"summary", "runtime.host"}, &resources)
+	if err != nil {
+		e.checkConnection()
+		return nil, err
+	}
+	m := make(objectMap)
+	for _, r := range resources {
+		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
+			name: r.Summary.Config.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host}
+	}
+	return m, nil
+}
+
+func (e *Endpoint) getDatastores(root *view.ContainerView) (objectMap, error) {
+	var resources []mo.Datastore
+	err := root.Retrieve(context.Background(), []string{"Datastore"}, []string{"summary"}, &resources)
+	if err != nil {
+		e.checkConnection()
+		return nil, err
+	}
+	m := make(objectMap)
+	for _, r := range resources {
+		m[r.Summary.Name] = objectRef{
+			name: r.Summary.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
+	}
+	return m, nil
+}
+
+func (e *Endpoint) collect(acc telegraf.Accumulator) error {
+
+	var err error
+	if !e.initialized {
+		err := e.init()
+		if err != nil {
+			return err
+		}
+	}
+
+	// If discovery interval is disabled (0), discover on each collection cycle
+	//
+	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() == 0 {
+		err = e.discover()
+		if err != nil {
+			log.Printf("E! Error in discovery prior to collect for %s: %v", e.Url.Host, err)
+			return err
+		}
+	}
+
+	for k, res := range e.resources {
+		if res.enabled {
+			count, duration, err := e.collectResource(k, acc)
+			if err != nil {
+				return err
+			}
+
+			acc.AddGauge("vsphere",
+				map[string]interface{}{"gather.count": count, "gather.duration": duration},
+				map[string]string{"vcenter": e.Url.Host, "type": k},
+				time.Now())
+		}
+	}
+
+	return nil
+}
+
+func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator) (int, float64, error) {
+
+	sampling := e.resources[resourceType].sampling
+	realTime := e.resources[resourceType].realTime
+
+	conn, err := e.getConnection()
+	if err != nil {
+		return 0, 0, err
+	}
+	ctx := context.Background()
 
 	// Object maps may change, so we need to hold the collect lock
 	//
@@ -256,43 +325,40 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 	defer e.collectMux.RUnlock()
 
 	// Interval = 0 means collection for this metric was diabled, so don't even bother.
-	//
-	interval := int32(intervalDuration.Duration.Seconds())
-	if interval <= 0 {
-		return nil
-	}
-	log.Printf("D! Resource type: %s, sampling interval is: %d", alias, interval)
+	log.Printf("D! Resource type: %s, sampling period is: %d", resourceType, sampling)
 
 	// Do we have new data yet?
 	//
 	now := time.Now()
-	latest, hasLatest := e.lastColl[alias]
+	latest, hasLatest := e.lastColls[resourceType]
 	if hasLatest {
 		elapsed := time.Now().Sub(latest).Seconds()
-		if elapsed < float64(interval) {
+		if elapsed < float64(sampling) {
 			// No new data would be available. We're outta here!
 			//
-			return nil
+			return 0, 0, nil
 		}
 	}
-	e.lastColl[alias] = now
-	log.Printf("D! Collecting for %s", alias)
-	fullAlias := "vsphere." + alias
+	e.lastColls[resourceType] = now
 
+	objects := e.resources[resourceType].objects
+	log.Printf("D! Collecting data metrics for %d objects of type %s for %s", len(objects), resourceType, e.Url.Host)
+
+	measurementName := "vsphere." + resourceType
+	count := 0
 	start := time.Now()
-	log.Printf("D! Query for %s returned %d objects", alias, len(objects))
 	pqs := make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
 	total := 0
 	for _, object := range objects {
 		pq := types.PerfQuerySpec{
 			Entity:     object.ref,
 			MaxSample:  1,
-			MetricId:   metricIds,
-			IntervalId: interval,
+			MetricId:   e.resources[resourceType].metricIds,
+			IntervalId: sampling,
 		}
 
-		if !isRealTime {
-			startTime := now.Add(-time.Duration(interval) * time.Second)
+		if !realTime {
+			startTime := now.Add(-time.Duration(sampling) * time.Second)
 			pq.StartTime = &startTime
 			pq.EndTime = &now
 		}
@@ -303,16 +369,18 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 		// Filled up a chunk or at end of data? Run a query with the collected objects
 		//
 		if len(pqs) >= int(e.Parent.ObjectsPerQuery) || total == len(objects) {
-			log.Printf("D! Querying %d objects of type %s for %s. Total processed: %d. Total objects %d\n", len(pqs), alias, e.Url.Host, total, len(objects))
-			metrics, err := p.Query(ctx, pqs)
+			log.Printf("D! Querying %d objects of type %s for %s. Total processed: %d. Total objects %d\n", len(pqs), resourceType, e.Url.Host, total, len(objects))
+			metrics, err := conn.Perf.Query(ctx, pqs)
 			if err != nil {
-				log.Printf("E! Error processing resource type %s on %s", alias, e.Url.Host)
-				return err
+				log.Printf("E! Error querying metrics for %s on %s", resourceType, e.Url.Host)
+				e.checkConnection()
+				return count, time.Now().Sub(start).Seconds(), err
 			}
 
-			ems, err := p.ToMetricSeries(ctx, metrics)
+			ems, err := conn.Perf.ToMetricSeries(ctx, metrics)
 			if err != nil {
-				return err
+				e.checkConnection()
+				return count, time.Now().Sub(start).Seconds(), err
 			}
 
 			// Iterate through result and fields list
@@ -323,11 +391,11 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 					name := v.Name
 					for idx, value := range v.Value {
 						f := map[string]interface{}{name: value}
-						objectName := nameCache[moid]
+						objectName := e.nameCache[moid]
 						parent := ""
 						parentRef := objects[moid].parentRef
 						if parentRef != nil {
-							parent = nameCache[parentRef.Value]
+							parent = e.nameCache[parentRef.Value]
 						}
 
 						t := map[string]string{
@@ -362,7 +430,8 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 							}
 						}
 
-						acc.AddFields(fullAlias, f, t, em.SampleInfo[idx].Timestamp)
+						acc.AddFields(measurementName, f, t, em.SampleInfo[idx].Timestamp)
+						count++
 					}
 				}
 			}
@@ -370,124 +439,8 @@ func (e *Endpoint) collectResourceType(p *performance.Manager, ctx context.Conte
 		}
 	}
 
-	log.Printf("D! Collection of %s took %v\n", alias, time.Now().Sub(start))
-	return nil
-}
-
-func (e *Endpoint) collect(acc telegraf.Accumulator) error {
-
-	start := time.Now()
-
-	// If discovery interval is disabled (0), discover on each collection cycle
-	//
-	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() == 0 {
-		err := e.discover()
-		if err != nil {
-			return err
-		}
-	}
-
-	conn, err := e.getConnection()
-	if err != nil {
-		return err
-	}
-
-	ctx := context.Background()
-
-	if e.Parent.GatherClusters {
-		err = e.collectResourceType(conn.Perf, ctx, "cluster", acc, e.clusterMap, e.nameCache,
-			e.Parent.ClusterSamplingPeriod, false, e.clusterMetricIds)
-		if err != nil {
-			return err
-		}
-	}
-
-	if e.Parent.GatherHosts {
-		err = e.collectResourceType(conn.Perf, ctx, "host", acc, e.hostMap, e.nameCache,
-			e.Parent.HostSamplingPeriod, true, e.hostMetricIds)
-		if err != nil {
-			return err
-		}
-	}
-
-	if e.Parent.GatherVms {
-		err = e.collectResourceType(conn.Perf, ctx, "vm", acc, e.vmMap, e.nameCache,
-			e.Parent.VmSamplingPeriod, true, e.vmMetricIds)
-		if err != nil {
-			return err
-		}
-	}
-
-	if e.Parent.GatherDatastores {
-		err = e.collectResourceType(conn.Perf, ctx, "datastore", acc, e.datastoreMap, e.nameCache,
-			e.Parent.DatastoreSamplingPeriod, false, e.datastoreMetricIds)
-		if err != nil {
-			return err
-		}
-	}
-
-
-	// Add gauge to show how long it took to gather all the metrics on this cycle for a specific vcenter/endpoint
-	//
-	acc.AddGauge("vsphere", map[string]interface{}{"gather.duration": time.Now().Sub(start).Seconds()}, map[string]string{"vcenter": e.Url.Host}, time.Now())
-
-	return nil
-}
-
-func (e *Endpoint) getVMs(ctx context.Context, root *view.ContainerView) (objectMap, error) {
-	var resources []mo.VirtualMachine
-	err := root.Retrieve(ctx, []string{"VirtualMachine"}, []string{"summary", "runtime.host"}, &resources)
-	if err != nil {
-		return nil, err
-	}
-	m := make(objectMap)
-	for _, r := range resources {
-		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Summary.Config.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host}
-	}
-	return m, nil
-}
-
-func (e *Endpoint) getHosts(ctx context.Context, root *view.ContainerView) (objectMap, error) {
-	var resources []mo.HostSystem
-	err := root.Retrieve(ctx, []string{"HostSystem"}, []string{"summary", "parent"}, &resources)
-	if err != nil {
-		return nil, err
-	}
-	m := make(objectMap)
-	for _, r := range resources {
-		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Summary.Config.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
-	}
-	return m, nil
-}
-
-func (e *Endpoint) getClusters(ctx context.Context, root *view.ContainerView) (objectMap, error) {
-	var resources []mo.ClusterComputeResource
-	err := root.Retrieve(ctx, []string{"ClusterComputeResource"}, []string{"summary", "name", "parent"}, &resources)
-	if err != nil {
-		return nil, err
-	}
-	m := make(objectMap)
-	for _, r := range resources {
-		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
-	}
-	return m, nil
-}
-
-func (e *Endpoint) getDatastores(ctx context.Context, root *view.ContainerView) (objectMap, error) {
-	var resources []mo.Datastore
-	err := root.Retrieve(ctx, []string{"Datastore"}, []string{"summary"}, &resources)
-	if err != nil {
-		return nil, err
-	}
-	m := make(objectMap)
-	for _, r := range resources {
-		m[r.Summary.Name] = objectRef{
-			name: r.Summary.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
-	}
-	return m, nil
+	log.Printf("D! Collection of %s took %v\n", resourceType, time.Now().Sub(start))
+	return count, time.Now().Sub(start).Seconds(), nil
 }
 
 func cleanDiskTag(disk string) string {
@@ -504,3 +457,30 @@ func cleanDiskTag(disk string) string {
 
 	return disk
 }
+
+func (e *Endpoint) getConnection() (*Client, error) {
+	if e.client == nil {
+		e.clientMux.Lock()
+		defer e.clientMux.Unlock()
+		if e.client == nil {
+			log.Printf("D! Creating new vCenter client for: %s\n", e.Url.Host)
+			conn, err := NewClient(e.Url, e.Parent.Timeout)
+			if err != nil {
+				return nil, err
+			}
+			e.client = conn
+		}
+	}
+	return e.client, nil
+}
+
+func (e *Endpoint) checkConnection() {
+	if e.client != nil {
+		active, err := e.client.Client.SessionManager.SessionIsActive(context.Background())
+		if !active || err != nil {
+			log.Printf("I! vCenter session no longer active, reseting client: %s", e.Url.Host)
+			e.client = nil
+		}
+	}
+}
+

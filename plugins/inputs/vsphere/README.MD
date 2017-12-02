@@ -22,19 +22,19 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
   
   ## gather metrics from Clusters (default: true)
   # gather_clusters = true
-  # cluster_metrics = ["*"]
+  # cluster_metrics = []
   
   ## gather metrics from Hosts (default: true)
   # gather_hosts = true
-  # host_metrics = ["*"]
+  # host_metrics = []
   
   ## gather metrics from VMs (default: true)
   # gather_vms = true
-  # vm_metrics = ["*"]
+  # vm_metrics = []
   
   ## gather metrics from Data stores (default: true)
   # gather_datastores = true
-  # datastore_metrics = ["*"]
+  # datastore_metrics = []
   
   ## number of objects to retreive per query (default: 500)
   # objects_per_query = 500
@@ -44,12 +44,6 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
   
   ## timeout applies to any of the connection request made to vcenter
   # timeout = "20s"
-    
-  ## Optional for configurations with customized sampling periods in vcenter
-  # cluster_sampling_period = "300s"
-  # host_sampling_period = "20s"
-  # vm_sampling_period = "20s"
-  # datastore_sampling_period = "300s"
 ```
 
 ### Metrics Selection
@@ -68,14 +62,6 @@ A configuration to include all metrics under the host category that start with `
   host_metrics = ["cpu.*", "!cpu.idle.summation"]
 
 ``` 
-
-### Sampling Periods
-
-The plugin is called using the standard interval property. To maintain optimal performance, metrics for a given category
-will only be gathered, if that category's sampling period has passed since the last gather. Cluster and Datastore metrics 
-have significantly longer sampling periods by default (300s vs 20s). The *_sampling_period properties should only be changed if you have changed these default 
-settings within vCenter server.  
-
 
 ## Measurements &amp; Fields
 
