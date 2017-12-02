@@ -160,7 +160,7 @@ func resolveMetricWildcards(metricMap map[string]*types.PerfCounterInfo, wildcar
 }
 
 func (e *Endpoint) discover() error {
-	log.Printf("I! Discover new objects for %s", e.Url.Host)
+	log.Printf("D! Discover new objects for %s", e.Url.Host)
 
 	conn, err := e.getConnection()
 	if err != nil {
