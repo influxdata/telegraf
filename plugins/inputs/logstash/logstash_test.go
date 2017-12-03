@@ -264,7 +264,7 @@ func Test_gatherProcessStats(t *testing.T) {
 	}
 
 	if err := logstashTest.gatherProcessStats(logstashTest.URL+processStats, &accProcessStats); err != nil {
-		t.Logf("Can't gather JVM stats")
+		t.Logf("Can't gather Process stats")
 	}
 
 	accProcessStats.AssertContainsFields(
