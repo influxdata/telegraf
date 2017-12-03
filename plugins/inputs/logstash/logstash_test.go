@@ -9,10 +9,8 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
-const processStatsCount = 9
 const processJSON = `
 {
   "host" : "f7a354acc27f",
@@ -39,20 +37,6 @@ const processJSON = `
   }
 }
 `
-
-var processStatsExpected = map[string]interface{}{
-	"peak_open_file_descriptors": 100.0,
-	"max_file_descriptors":       1.048576e+06,
-	"mem_total_virtual_in_bytes": 4.809506816e+09,
-	"cpu_total_in_millis":        1.5526e+11,
-	"cpu_percent":                3.0,
-	"cpu_load_average_5m":        0.61,
-	"open_file_descriptors":      89.0,
-	"cpu_load_average_1m":        0.49,
-	"cpu_load_average_15m":       0.54,
-}
-
-const jvmStatsCount = 28
 const jvmJSON = `
 {
   "host" : "f7a354acc27f",
@@ -113,38 +97,6 @@ const jvmJSON = `
 }
 `
 
-var jvmStatsExpected = map[string]interface{}{
-	"mem_pools_young_max_in_bytes":                  5.5836672e+08,
-	"mem_pools_young_committed_in_bytes":            1.43261696e+08,
-	"mem_heap_committed_in_bytes":                   5.1904512e+08,
-	"threads_count":                                 29.0,
-	"mem_pools_old_peak_used_in_bytes":              1.27900864e+08,
-	"mem_pools_old_peak_max_in_bytes":               7.2482816e+08,
-	"mem_heap_used_percent":                         16.0,
-	"gc_collectors_young_collection_time_in_millis": 3235.0,
-	"mem_pools_survivor_committed_in_bytes":         1.7825792e+07,
-	"mem_pools_young_used_in_bytes":                 7.6049384e+07,
-	"mem_non_heap_committed_in_bytes":               2.91487744e+08,
-	"mem_pools_survivor_peak_max_in_bytes":          3.4865152e+07,
-	"mem_pools_young_peak_max_in_bytes":             2.7918336e+08,
-	"uptime_in_millis":                              4.803461e+06,
-	"mem_pools_survivor_peak_used_in_bytes":         8.912896e+06,
-	"mem_pools_survivor_max_in_bytes":               6.9730304e+07,
-	"gc_collectors_old_collection_count":            2.0,
-	"mem_pools_survivor_used_in_bytes":              9.419672e+06,
-	"mem_pools_old_used_in_bytes":                   2.55801728e+08,
-	"mem_pools_old_max_in_bytes":                    1.44965632e+09,
-	"mem_pools_young_peak_used_in_bytes":            7.1630848e+07,
-	"mem_heap_used_in_bytes":                        3.41270784e+08,
-	"mem_heap_max_in_bytes":                         2.077753344e+09,
-	"gc_collectors_young_collection_count":          616.0,
-	"threads_peak_count":                            31.0,
-	"mem_pools_old_committed_in_bytes":              3.57957632e+08,
-	"gc_collectors_old_collection_time_in_millis":   114.0,
-	"mem_non_heap_used_in_bytes":                    2.68905936e+08,
-}
-
-const pipelineStatsCount = 10
 const pipelineJSON = `
 {
   "host" : "f7a354acc27f",
@@ -160,7 +112,14 @@ const pipelineJSON = `
       "out" : 1269
     },
     "plugins" : {
-      "inputs" : [ ],
+      "inputs" : [ {
+        "id" : "a35197a509596954e905e38521bae12b1498b17d-1",
+        "events" : {
+          "out" : 2,
+          "queue_push_duration_in_millis" : 32
+        },
+        "name" : "beats"
+      } ],
       "filters" : [ ],
       "outputs" : [ {
         "id" : "582d5c2becb582a053e1e9a6bcc11d49b69a6dfd-3",
@@ -194,27 +153,6 @@ const pipelineJSON = `
   }
 }
 `
-
-var eventsStatsExpected = map[string]interface{}{
-	"duration_in_millis": 1151.0,
-	"in":                 1269.0,
-	"filtered":           1269.0,
-	"out":                1269.0,
-}
-
-var outputS3StatsExpected = map[string]interface{}{
-	"name":               "s3",
-	"duration_in_millis": 228.0,
-	"in":                 1269.0,
-	"out":                1269.0,
-}
-
-var outputStdoutStatsExpected = map[string]interface{}{
-	"in":                 1269.0,
-	"out":                1269.0,
-	"name":               "stdout",
-	"duration_in_millis": 360.0,
-}
 
 var logstashTest = &Logstash{
 	URL: "http://localhost:9600",
@@ -252,28 +190,55 @@ func Test_gatherPipelineStats(t *testing.T) {
 		t.Logf("Can't gather Pipeline stats")
 	}
 
-	if !accPipelineStats.HasMeasurement("logstash_events") {
-		t.Errorf("acc.HasMeasurement: expected logstash_events")
-	}
-
-	if !accPipelineStats.HasMeasurement("logstash_plugins") {
-		t.Errorf("acc.HasMeasurement: expected logstash_plugins")
-	}
-
-	assert.Equal(t, accPipelineStats.NFields(), pipelineStatsCount)
-
-	accPipelineStats.AssertContainsFields(t,
+	accPipelineStats.AssertContainsFields(
+		t,
 		"logstash_events",
-		eventsStatsExpected)
+		map[string]interface{}{
+			"duration_in_millis": float64(1151.0),
+			"in":                 float64(1269.0),
+			"filtered":           float64(1269.0),
+			"out":                float64(1269.0),
+		})
 
-	//accPipelineStats.AssertContainsFields(t,
-	//	"logstash_plugin_output_s3",
-	//	outputS3StatsExpected)
+	accPipelineStats.AssertContainsTaggedFields(
+		t,
+		"logstash_plugins",
+		map[string]interface{}{
+			"queue_push_duration_in_millis": float64(32.0),
+			"duration_in_millis":            float64(0.0),
+			"in":                            float64(0.0),
+			"out":                           float64(2.0),
+		},
+		map[string]string{
+			"plugin": string("beats"),
+			"type":   string("input"),
+		})
 
-	//accPipelineStats.AssertContainsFields(t,
-	//	"logstash_plugin_output_stdout",
-	//	outputStdoutStatsExpected)
+	accPipelineStats.AssertContainsTaggedFields(
+		t,
+		"logstash_plugins",
+		map[string]interface{}{
+			"duration_in_millis": float64(360.0),
+			"in":                 float64(1269.0),
+			"out":                float64(1269.0),
+		},
+		map[string]string{
+			"plugin": string("stdout"),
+			"type":   string("output"),
+		})
 
+	accPipelineStats.AssertContainsTaggedFields(
+		t,
+		"logstash_plugins",
+		map[string]interface{}{
+			"duration_in_millis": float64(228.0),
+			"in":                 float64(1269.0),
+			"out":                float64(1269.0),
+		},
+		map[string]string{
+			"plugin": string("s3"),
+			"type":   string("output"),
+		})
 }
 
 func Test_gatherProcessStats(t *testing.T) {
@@ -302,12 +267,20 @@ func Test_gatherProcessStats(t *testing.T) {
 		t.Logf("Can't gather JVM stats")
 	}
 
-	if !accProcessStats.HasMeasurement("logstash_process") {
-		t.Errorf("acc.HasMeasurement: expected logstash_process")
-	}
-
-	assert.Equal(t, accProcessStats.NFields(), processStatsCount)
-	accProcessStats.AssertContainsFields(t, "logstash_process", processStatsExpected)
+	accProcessStats.AssertContainsFields(
+		t,
+		"logstash_process",
+		map[string]interface{}{
+			"open_file_descriptors":      float64(89.0),
+			"max_file_descriptors":       float64(1.048576e+06),
+			"cpu_percent":                float64(3.0),
+			"cpu_load_average_5m":        float64(0.61),
+			"cpu_load_average_15m":       float64(0.54),
+			"mem_total_virtual_in_bytes": float64(4.809506816e+09),
+			"cpu_total_in_millis":        float64(1.5526e+11),
+			"cpu_load_average_1m":        float64(0.49),
+			"peak_open_file_descriptors": float64(100.0),
+		})
 }
 
 func Test_gatherJVMStats(t *testing.T) {
@@ -336,10 +309,37 @@ func Test_gatherJVMStats(t *testing.T) {
 		t.Logf("Can't gather JVM stats")
 	}
 
-	if !accJVMStats.HasMeasurement("logstash_jvm") {
-		t.Errorf("acc.HasMeasurement: expected logstash_jvm")
-	}
-
-	assert.Equal(t, accJVMStats.NFields(), jvmStatsCount)
-	accJVMStats.AssertContainsFields(t, "logstash_jvm", jvmStatsExpected)
+	accJVMStats.AssertContainsFields(
+		t,
+		"logstash_jvm",
+		map[string]interface{}{
+			"mem_pools_young_max_in_bytes":                  float64(5.5836672e+08),
+			"mem_pools_young_committed_in_bytes":            float64(1.43261696e+08),
+			"mem_heap_committed_in_bytes":                   float64(5.1904512e+08),
+			"threads_count":                                 float64(29.0),
+			"mem_pools_old_peak_used_in_bytes":              float64(1.27900864e+08),
+			"mem_pools_old_peak_max_in_bytes":               float64(7.2482816e+08),
+			"mem_heap_used_percent":                         float64(16.0),
+			"gc_collectors_young_collection_time_in_millis": float64(3235.0),
+			"mem_pools_survivor_committed_in_bytes":         float64(1.7825792e+07),
+			"mem_pools_young_used_in_bytes":                 float64(7.6049384e+07),
+			"mem_non_heap_committed_in_bytes":               float64(2.91487744e+08),
+			"mem_pools_survivor_peak_max_in_bytes":          float64(3.4865152e+07),
+			"mem_pools_young_peak_max_in_bytes":             float64(2.7918336e+08),
+			"uptime_in_millis":                              float64(4.803461e+06),
+			"mem_pools_survivor_peak_used_in_bytes":         float64(8.912896e+06),
+			"mem_pools_survivor_max_in_bytes":               float64(6.9730304e+07),
+			"gc_collectors_old_collection_count":            float64(2.0),
+			"mem_pools_survivor_used_in_bytes":              float64(9.419672e+06),
+			"mem_pools_old_used_in_bytes":                   float64(2.55801728e+08),
+			"mem_pools_old_max_in_bytes":                    float64(1.44965632e+09),
+			"mem_pools_young_peak_used_in_bytes":            float64(7.1630848e+07),
+			"mem_heap_used_in_bytes":                        float64(3.41270784e+08),
+			"mem_heap_max_in_bytes":                         float64(2.077753344e+09),
+			"gc_collectors_young_collection_count":          float64(616.0),
+			"threads_peak_count":                            float64(31.0),
+			"mem_pools_old_committed_in_bytes":              float64(3.57957632e+08),
+			"gc_collectors_old_collection_time_in_millis":   float64(114.0),
+			"mem_non_heap_used_in_bytes":                    float64(2.68905936e+08),
+		})
 }
