@@ -28,6 +28,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/docker"
 	_ "github.com/influxdata/telegraf/plugins/inputs/dovecot"
 	_ "github.com/influxdata/telegraf/plugins/inputs/elasticsearch"
+	_ "github.com/influxdata/telegraf/plugins/inputs/elasticsearch_query"
 	_ "github.com/influxdata/telegraf/plugins/inputs/exec"
 	_ "github.com/influxdata/telegraf/plugins/inputs/fail2ban"
 	_ "github.com/influxdata/telegraf/plugins/inputs/fibaro"

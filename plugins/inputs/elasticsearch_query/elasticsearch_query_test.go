@@ -17,13 +17,14 @@ import (
 	elastic "gopkg.in/olivere/elastic.v5"
 )
 
+var testindex = "test-elasticsearch_query-" + strconv.Itoa(int(time.Now().Unix()))
+
 func TestElasticsearchQuery(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
 
 	var acc testutil.Accumulator
-	var testindex = "test-elasticsearch_query-" + strconv.Itoa(int(time.Now().Unix()))
 
 	type nginxlog struct {
 		IPaddress   string    `json:"IP"`
@@ -224,7 +225,7 @@ func TestElasticsearchQuery_getMetricFields(t *testing.T) {
 			args{
 				context.Background(),
 				Aggregation{
-					Index:        "testquery",
+					Index:        testindex,
 					MetricFields: []string{"URI", "http_version", "method", "response", "size"},
 				},
 			},
