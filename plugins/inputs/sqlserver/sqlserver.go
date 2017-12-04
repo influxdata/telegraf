@@ -14,7 +14,7 @@ import (
 
 // SQLServer struct
 type SQLServer struct {
-	Servers      []string
+	Servers      []string `toml:"servers"`
 	QueryVersion int      `toml:"query_version"`
 	AzureDB      bool     `toml:"azuredb"`
 	ExcludeQuery []string `toml:"exclude_query"`
@@ -85,6 +85,7 @@ func initQueries(s *SQLServer) {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCountersV2, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorizedV2, ResultByRow: false}
 		queries["DatabaseIO"] = Query{Script: sqlDatabaseIOV2, ResultByRow: false}
+		queries["DatabaseProperties"] = Query{Script: sqlDatabasePropertiesV2, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -226,43 +227,31 @@ func init() {
 }
 
 // Queries - V2
-const sqlDatabaseIOV2 = `SELECT
+const sqlDatabaseIOV2 = `
+SELECT
 	'sqlserver_database_io' As [measurement],
 	REPLACE(@@SERVERNAME,'\',':') AS [server],
 	DB_NAME([vfs].[database_id]) [database_name],
-	--virtual file latency
-	CASE 
-		WHEN SUM([num_of_reads]) = 0 THEN 0 
-		ELSE (SUM(CAST([io_stall_read_ms] AS numeric(6,3)))/SUM([num_of_reads])) 
-	END [read_latency_ms],
-	CASE 
-		WHEN SUM([io_stall_write_ms]) = 0 THEN 0 
-		ELSE (SUM(CAST([io_stall_write_ms] AS numeric(6,3)))/SUM([num_of_writes])) 
-	END [write_latency_ms],
-	CASE 
-		WHEN (SUM([num_of_reads]) = 0 AND SUM([num_of_writes]) = 0) THEN 0 
-		ELSE (SUM(CAST([io_stall] AS numeric(6,3)))/(SUM([num_of_reads] + [num_of_writes]))) 
-	END [io_latency_ms],
-	--avg bytes per IOP
-	CASE 
-		WHEN SUM([num_of_reads]) = 0 THEN 0 
-		ELSE (SUM([num_of_bytes_read])/SUM([num_of_reads])) 
-	END [avg_bytes_per_read],
-	CASE 
-		WHEN SUM([io_stall_write_ms]) = 0 THEN 0 
-		ELSE (SUM([num_of_bytes_written])/SUM([num_of_writes])) 
-	END [avg_bytes_per_write],
-	CASE 
-		WHEN (SUM([num_of_reads]) = 0 AND SUM([num_of_writes]) = 0) THEN 0 
-		ELSE (SUM([num_of_bytes_read] + [num_of_bytes_written])/SUM([num_of_reads] + [num_of_writes])) 
-	END [avg_bytes_per_io],
-	SUM([vfs].[size_on_disk_bytes])/1024/1024. [size_on_disk_MB]
+	vfs.io_stall_read_ms AS read_latency_ms,
+	vfs.num_of_reads AS reads,
+	vfs.num_of_bytes_read AS read_bytes,
+	vfs.io_stall_write_ms AS write_latency_ms,
+	vfs.num_of_writes AS writes,
+	vfs.num_of_bytes_written AS write_bytes
 FROM	[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
 		INNER JOIN [sys].[master_files] [mf] 
 			ON [vfs].[database_id] = [mf].[database_id] 
-			AND [vfs].[file_id] = [mf].[file_id]
-GROUP BY
-	DB_NAME([vfs].[database_id]);
+			AND [vfs].[file_id] = [mf].[file_id];
+`
+
+const sqlDatabasePropertiesV2 = `SELECT	name AS [database_name],
+		'sqlserver_database_properties' As [measurement],
+		REPLACE(@@SERVERNAME,'\',':') AS [server],
+		state_desc AS [state],
+		user_access_desc AS [access_mode],
+		recovery_model_desc AS [recovery_model],
+		compatibility_level
+FROM	sys.databases;
 `
 
 const sqlPerformanceCountersV2 string = `DECLARE @PCounters TABLE
@@ -275,14 +264,14 @@ const sqlPerformanceCountersV2 string = `DECLARE @PCounters TABLE
 	Primary Key(object_name, counter_name, instance_name)
 );
 
-INSERT @PCounters
-SELECT  DISTINCT
-        RTrim(spi.object_name) object_name,
-        RTrim(spi.counter_name) counter_name,
-        RTrim(spi.instance_name) instance_name,
-        spi.cntr_value,
-        spi.cntr_type
-FROM    sys.dm_os_performance_counters AS spi
+INSERT	INTO @PCounters
+SELECT	DISTINCT
+		RTrim(spi.object_name) object_name,
+		RTrim(spi.counter_name) counter_name,
+		RTrim(spi.instance_name) instance_name,
+		spi.cntr_value,
+		spi.cntr_type
+FROM	sys.dm_os_performance_counters AS spi
 WHERE	(
 		counter_name IN (
 			'SQL Compilations/sec',
@@ -311,7 +300,7 @@ WHERE	(
 			'Memory broker clerk size',
 			'Page life expectancy',
 			'Log File(s) Size (KB)',
-            'Log File(s) Used Size (KB)',
+			'Log File(s) Used Size (KB)',
 			'Data File(s) Size (KB)',
 			'Transactions/sec',
 			'Write Transactions/sec'
@@ -365,25 +354,25 @@ WHERE	(
 			)
 		)
 
-SELECT  'sqlserver_performance' AS [measurement],
-		REPLACE(@@SERVERNAME,'\',':') AS [server]
-        pc.object_name AS [object],
-        pc.counter_name AS [counter],
+SELECT	'sqlserver_performance' AS [measurement],
+		REPLACE(@@SERVERNAME,'\',':') AS [server],
+		pc.object_name AS [object],
+		pc.counter_name AS [counter],
 		CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
-        CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value * 1.0) / (pc1.cntr_value * 1.0) * 100 ELSE pc.cntr_value END AS [value],
-        CASE 
-            WHEN pc.cntr_type = 272696576 THEN 'rate'
-            WHEN pc.cntr_type IN (65792,537003264) THEN 'raw'
-            ELSE 'unknown'
-        END AS c_type
-FROM    @PCounters AS pc
-        LEFT OUTER JOIN @PCounters AS pc1
-            ON (
-                pc.counter_name = REPLACE(pc1.counter_name,' base','')
-                OR pc.counter_name = REPLACE(pc1.counter_name,' base',' (ms)')
-            )
-            AND pc.object_name = pc1.object_name
-            AND pc.instance_name = pc1.instance_name
+		CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value * 1.0) / (pc1.cntr_value * 1.0) * 100 ELSE pc.cntr_value END AS [value],
+		CASE 
+			WHEN pc.cntr_type = 272696576 THEN 'rate'
+			WHEN pc.cntr_type IN (65792,537003264) THEN 'raw'
+			ELSE 'unknown'
+		END AS c_type
+FROM	@PCounters AS pc
+		LEFT OUTER JOIN @PCounters AS pc1
+			ON (
+				pc.counter_name = REPLACE(pc1.counter_name,' base','')
+				OR pc.counter_name = REPLACE(pc1.counter_name,' base',' (ms)')
+			)
+			AND pc.object_name = pc1.object_name
+			AND pc.instance_name = pc1.instance_name
 			AND pc1.counter_name LIKE '%base'
 WHERE	pc.counter_name NOT LIKE '% base'
 `
@@ -949,28 +938,28 @@ OPTION (RECOMPILE);
 
 const sqlAzureDB string = `IF OBJECT_ID('sys.dm_db_resource_stats') IS NOT NULL
 BEGIN
-    SELECT TOP(1)
-        'sqlserver_azurestats' AS [measurement],
-        REPLACE(@@SERVERNAME,'\',':') AS [server],
-        avg_cpu_percent,
-        avg_data_io_percent,
-        avg_log_write_percent,
-        avg_memory_usage_percent,
-        xtp_storage_percent,
-        max_worker_percent,
-        max_session_percent,
-        dtu_limit,
-        avg_login_rate_percent,
-        end_time 
-    FROM
-        sys.dm_db_resource_stats WITH (NOLOCK) 
-    ORDER BY
-        end_time DESC
-    OPTION (RECOMPILE)
+	SELECT TOP(1)
+		'sqlserver_azurestats' AS [measurement],
+		REPLACE(@@SERVERNAME,'\',':') AS [server],
+		avg_cpu_percent,
+		avg_data_io_percent,
+		avg_log_write_percent,
+		avg_memory_usage_percent,
+		xtp_storage_percent,
+		max_worker_percent,
+		max_session_percent,
+		dtu_limit,
+		avg_login_rate_percent,
+		end_time 
+	FROM
+		sys.dm_db_resource_stats WITH (NOLOCK) 
+	ORDER BY
+		end_time DESC
+	OPTION (RECOMPILE)
 END
 ELSE
 BEGIN
-    RAISERROR('This does not seem to be an AzureDB instance. Set "azureDB = false" in your telegraf configuration.',16,1)
+	RAISERROR('This does not seem to be an AzureDB instance. Set "azureDB = false" in your telegraf configuration.',16,1)
 END`
 
 // Queries V1
