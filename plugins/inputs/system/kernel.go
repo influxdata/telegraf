@@ -54,7 +54,7 @@ func (k *Kernel) Gather(acc telegraf.Accumulator) error {
 
 	fields := make(map[string]interface{})
 
-	fields["entropy_available"] = int64(entropyValue)
+	fields["entropy_avail"] = int64(entropyValue)
 
 	dataFields := bytes.Fields(data)
 	for i, field := range dataFields {
