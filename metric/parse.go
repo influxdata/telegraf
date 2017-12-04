@@ -326,7 +326,9 @@ func scanTagsValue(buf []byte, i int) (int, int, error) {
 func scanFields(buf []byte, i int) (int, []byte, error) {
 	start := skipWhitespace(buf, i)
 	i = start
-	quoted := false
+
+	// track how many '"" we've seen since last '='
+	quotes := 0
 
 	// tracks how many '=' we've seen
 	equals := 0
@@ -350,13 +352,17 @@ func scanFields(buf []byte, i int) (int, []byte, error) {
 		// Only quote values in the field value since quotes are not significant
 		// in the field key
 		if buf[i] == '"' && equals > commas {
-			quoted = !quoted
 			i++
+			quotes++
+			if quotes > 2 {
+				break
+			}
 			continue
 		}
 
 		// If we see an =, ensure that there is at least on char before and after it
-		if buf[i] == '=' && !quoted {
+		if buf[i] == '=' && quotes != 1 {
+			quotes = 0
 			equals++
 
 			// check for "... =123" but allow "a\ =123"
@@ -398,18 +404,18 @@ func scanFields(buf []byte, i int) (int, []byte, error) {
 			}
 		}
 
-		if buf[i] == ',' && !quoted {
+		if buf[i] == ',' && quotes != 1 {
 			commas++
 		}
 
 		// reached end of block?
-		if buf[i] == ' ' && !quoted {
+		if buf[i] == ' ' && quotes != 1 {
 			break
 		}
 		i++
 	}
 
-	if quoted {
+	if quotes != 0 && quotes != 2 {
 		return i, buf[start:i], makeError("unbalanced quotes", buf, i)
 	}
 
