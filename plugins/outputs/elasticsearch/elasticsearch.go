@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +18,8 @@ import (
 type Elasticsearch struct {
 	URLs                []string `toml:"urls"`
 	IndexName           string
+	DefaultTagValue     string
+	TagKeys             []string
 	Username            string
 	Password            string
 	EnableSniffer       bool
@@ -25,6 +28,10 @@ type Elasticsearch struct {
 	ManageTemplate      bool
 	TemplateName        string
 	OverwriteTemplate   bool
+	SSLCA               string `toml:"ssl_ca"`   // Path to CA file
+	SSLCert             string `toml:"ssl_cert"` // Path to host cert file
+	SSLKey              string `toml:"ssl_key"`  // Path to cert key file
+	InsecureSkipVerify  bool   // Use SSL but skip chain & host verification
 	Client              *elastic.Client
 }
 
@@ -33,7 +40,7 @@ var sampleConfig = `
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
   urls = [ "http://node1.es.example.com:9200" ] # required.
-  ## Elasticsearch client timeout, defaults to "5s" if not set. 
+  ## Elasticsearch client timeout, defaults to "5s" if not set.
   timeout = "5s"
   ## Set to true to ask Elasticsearch a list of all cluster nodes,
   ## thus it is not necessary to list all nodes in the urls config option.
@@ -54,7 +61,20 @@ var sampleConfig = `
   # %m - month (01..12)
   # %d - day of month (e.g., 01)
   # %H - hour (00..23)
+  # %V - week of the year (ISO week) (01..53)
+  ## Additionally, you can specify a tag name using the notation {{tag_name}}
+  ## which will be used as part of the index name. If the tag does not exist,
+  ## the default tag value will be used.
+  # index_name = "telegraf-{{host}}-%Y.%m.%d"
+  # default_tag_value = "none"
   index_name = "telegraf-%Y.%m.%d" # required.
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 
   ## Template Config
   ## Set to true if you want telegraf to manage its index template.
@@ -76,7 +96,21 @@ func (a *Elasticsearch) Connect() error {
 
 	var clientOptions []elastic.ClientOptionFunc
 
+	tlsCfg, err := internal.GetTLSConfig(a.SSLCert, a.SSLKey, a.SSLCA, a.InsecureSkipVerify)
+	if err != nil {
+		return err
+	}
+	tr := &http.Transport{
+		TLSClientConfig: tlsCfg,
+	}
+
+	httpclient := &http.Client{
+		Transport: tr,
+		Timeout:   a.Timeout.Duration,
+	}
+
 	clientOptions = append(clientOptions,
+		elastic.SetHttpClient(httpclient),
 		elastic.SetSniff(a.EnableSniffer),
 		elastic.SetURL(a.URLs...),
 		elastic.SetHealthcheckInterval(a.HealthCheckInterval.Duration),
@@ -125,6 +159,8 @@ func (a *Elasticsearch) Connect() error {
 		}
 	}
 
+	a.IndexName, a.TagKeys = a.GetTagKeys(a.IndexName)
+
 	return nil
 }
 
@@ -140,7 +176,7 @@ func (a *Elasticsearch) Write(metrics []telegraf.Metric) error {
 
 		// index name has to be re-evaluated each time for telegraf
 		// to send the metric to the correct time-based index
-		indexName := a.GetIndexName(a.IndexName, metric.Time())
+		indexName := a.GetIndexName(a.IndexName, metric.Time(), a.TagKeys, metric.Tags())
 
 		m := make(map[string]interface{})
 
@@ -187,13 +223,21 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 		return fmt.Errorf("Elasticsearch template check failed, template name: %s, error: %s", a.TemplateName, errExists)
 	}
 
-	templatePattern := a.IndexName + "*"
+	templatePattern := a.IndexName
 
-	if strings.Contains(a.IndexName, "%") {
-		templatePattern = a.IndexName[0:strings.Index(a.IndexName, "%")] + "*"
+	if strings.Contains(templatePattern, "%") {
+		templatePattern = templatePattern[0:strings.Index(templatePattern, "%")]
 	}
 
-	if (a.OverwriteTemplate) || (!templateExists) {
+	if strings.Contains(templatePattern, "{{") {
+		templatePattern = templatePattern[0:strings.Index(templatePattern, "{{")]
+	}
+
+	if templatePattern == "" {
+		return fmt.Errorf("Template cannot be created for dynamic index names without an index prefix")
+	}
+
+	if (a.OverwriteTemplate) || (!templateExists) || (templatePattern != "") {
 		// Create or update the template
 		tmpl := fmt.Sprintf(`
 			{
@@ -251,7 +295,7 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 						]
 					}
 				}
-			}`, templatePattern)
+			}`, templatePattern+"*")
 		_, errCreateTemplate := a.Client.IndexPutTemplate(a.TemplateName).BodyString(tmpl).Do(ctx)
 
 		if errCreateTemplate != nil {
@@ -268,7 +312,35 @@ func (a *Elasticsearch) manageTemplate(ctx context.Context) error {
 	return nil
 }
 
-func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time) string {
+func (a *Elasticsearch) GetTagKeys(indexName string) (string, []string) {
+
+	tagKeys := []string{}
+	startTag := strings.Index(indexName, "{{")
+
+	for startTag >= 0 {
+		endTag := strings.Index(indexName, "}}")
+
+		if endTag < 0 {
+			startTag = -1
+
+		} else {
+			tagName := indexName[startTag+2 : endTag]
+
+			var tagReplacer = strings.NewReplacer(
+				"{{"+tagName+"}}", "%s",
+			)
+
+			indexName = tagReplacer.Replace(indexName)
+			tagKeys = append(tagKeys, (strings.TrimSpace(tagName)))
+
+			startTag = strings.Index(indexName, "{{")
+		}
+	}
+
+	return indexName, tagKeys
+}
+
+func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time, tagKeys []string, metricTags map[string]string) string {
 	if strings.Contains(indexName, "%") {
 		var dateReplacer = strings.NewReplacer(
 			"%Y", eventTime.UTC().Format("2006"),
@@ -276,13 +348,30 @@ func (a *Elasticsearch) GetIndexName(indexName string, eventTime time.Time) stri
 			"%m", eventTime.UTC().Format("01"),
 			"%d", eventTime.UTC().Format("02"),
 			"%H", eventTime.UTC().Format("15"),
+			"%V", getISOWeek(eventTime.UTC()),
 		)
 
 		indexName = dateReplacer.Replace(indexName)
 	}
 
-	return indexName
+	tagValues := []interface{}{}
 
+	for _, key := range tagKeys {
+		if value, ok := metricTags[key]; ok {
+			tagValues = append(tagValues, value)
+		} else {
+			log.Printf("D! Tag '%s' not found, using '%s' on index name instead\n", key, a.DefaultTagValue)
+			tagValues = append(tagValues, a.DefaultTagValue)
+		}
+	}
+
+	return fmt.Sprintf(indexName, tagValues...)
+
+}
+
+func getISOWeek(eventTime time.Time) string {
+	_, week := eventTime.ISOWeek()
+	return strconv.Itoa(week)
 }
 
 func (a *Elasticsearch) SampleConfig() string {

@@ -158,6 +158,7 @@ func TestPingGather(t *testing.T) {
 		"average_response_ms":   43.628,
 		"maximum_response_ms":   51.806,
 		"standard_deviation_ms": 5.325,
+		"result_code":           0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 
@@ -198,6 +199,7 @@ func TestLossyPingGather(t *testing.T) {
 		"average_response_ms":   44.033,
 		"maximum_response_ms":   51.806,
 		"standard_deviation_ms": 5.325,
+		"result_code":           0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
@@ -211,7 +213,8 @@ Request timeout for icmp_seq 0
 `
 
 func mockErrorHostPinger(timeout float64, args ...string) (string, error) {
-	return errorPingOutput, errors.New("No packets received")
+	// This error will not trigger correct error paths
+	return errorPingOutput, nil
 }
 
 // Test that Gather works on a ping with no transmitted packets, even though the
@@ -229,6 +232,7 @@ func TestBadPingGather(t *testing.T) {
 		"packets_transmitted": 2,
 		"packets_received":    0,
 		"percent_packet_loss": 100.0,
+		"result_code":         0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }

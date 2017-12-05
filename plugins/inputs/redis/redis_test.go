@@ -118,6 +118,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"cmdstat_setexusec":              int64(6917848),
 		"cmdstat_setnxcalls":             int64(12),
 		"cmdstat_setnxusec":              int64(53),
+		"redis_version":                  "2.8.9",
 	}
 
 	// We have to test rdb_last_save_time_offset manually because the value is based on the time when gathered

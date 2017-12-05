@@ -296,7 +296,7 @@ func (c *Cassandra) Gather(acc telegraf.Accumulator) error {
 				continue
 			}
 			if out["status"] != 200.0 {
-				acc.AddError(fmt.Errorf("URL returned with status %v\n", out["status"]))
+				acc.AddError(fmt.Errorf("URL returned with status %v - %s\n", out["status"], requestUrl))
 				continue
 			}
 			m.addTagsFields(out)

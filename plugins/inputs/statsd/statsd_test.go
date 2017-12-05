@@ -1,19 +1,41 @@
 package statsd
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"net"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+const (
+	testMsg = "test.tcp.msg:100|c"
+)
+
+func newTestTcpListener() (*Statsd, chan *bytes.Buffer) {
+	in := make(chan *bytes.Buffer, 1500)
+	listener := &Statsd{
+		Protocol:               "tcp",
+		ServiceAddress:         ":8125",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      250,
+		in:                     in,
+		done:                   make(chan struct{}),
+	}
+	return listener, in
+}
 
 func NewTestStatsd() *Statsd {
 	s := Statsd{}
 
 	// Make data structures
 	s.done = make(chan struct{})
-	s.in = make(chan []byte, s.AllowedPendingMessages)
+	s.in = make(chan *bytes.Buffer, s.AllowedPendingMessages)
 	s.gauges = make(map[string]cachedgauge)
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
@@ -22,6 +44,146 @@ func NewTestStatsd() *Statsd {
 	s.MetricSeparator = "_"
 
 	return &s
+}
+
+// Test that MaxTCPConections is respected
+func TestConcurrentConns(t *testing.T) {
+	listener := Statsd{
+		Protocol:               "tcp",
+		ServiceAddress:         ":8125",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      2,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	time.Sleep(time.Millisecond * 25)
+	_, err := net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+	_, err = net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+
+	// Connection over the limit:
+	conn, err := net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+	net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+	_, err = conn.Write([]byte(testMsg))
+	assert.NoError(t, err)
+	time.Sleep(time.Millisecond * 10)
+	assert.Zero(t, acc.NFields())
+}
+
+// Test that MaxTCPConections is respected when max==1
+func TestConcurrentConns1(t *testing.T) {
+	listener := Statsd{
+		Protocol:               "tcp",
+		ServiceAddress:         ":8125",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      1,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	time.Sleep(time.Millisecond * 25)
+	_, err := net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+
+	// Connection over the limit:
+	conn, err := net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+	net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+	_, err = conn.Write([]byte(testMsg))
+	assert.NoError(t, err)
+	time.Sleep(time.Millisecond * 10)
+	assert.Zero(t, acc.NFields())
+}
+
+// Test that MaxTCPConections is respected
+func TestCloseConcurrentConns(t *testing.T) {
+	listener := Statsd{
+		Protocol:               "tcp",
+		ServiceAddress:         ":8125",
+		AllowedPendingMessages: 10000,
+		MaxTCPConnections:      2,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+
+	time.Sleep(time.Millisecond * 25)
+	_, err := net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+	_, err = net.Dial("tcp", "127.0.0.1:8125")
+	assert.NoError(t, err)
+
+	listener.Stop()
+}
+
+// benchmark how long it takes to accept & process 100,000 metrics:
+func BenchmarkUDP(b *testing.B) {
+	listener := Statsd{
+		Protocol:               "udp",
+		ServiceAddress:         ":8125",
+		AllowedPendingMessages: 250000,
+	}
+	acc := &testutil.Accumulator{Discard: true}
+
+	// send multiple messages to socket
+	for n := 0; n < b.N; n++ {
+		err := listener.Start(acc)
+		if err != nil {
+			panic(err)
+		}
+
+		time.Sleep(time.Millisecond * 25)
+		conn, err := net.Dial("udp", "127.0.0.1:8125")
+		if err != nil {
+			panic(err)
+		}
+		for i := 0; i < 250000; i++ {
+			fmt.Fprintf(conn, testMsg)
+		}
+		// wait for 250,000 metrics to get added to accumulator
+		time.Sleep(time.Millisecond)
+		listener.Stop()
+	}
+}
+
+// benchmark how long it takes to accept & process 100,000 metrics:
+func BenchmarkTCP(b *testing.B) {
+	listener := Statsd{
+		Protocol:               "tcp",
+		ServiceAddress:         ":8125",
+		AllowedPendingMessages: 250000,
+		MaxTCPConnections:      250,
+	}
+	acc := &testutil.Accumulator{Discard: true}
+
+	// send multiple messages to socket
+	for n := 0; n < b.N; n++ {
+		err := listener.Start(acc)
+		if err != nil {
+			panic(err)
+		}
+
+		time.Sleep(time.Millisecond * 25)
+		conn, err := net.Dial("tcp", "127.0.0.1:8125")
+		if err != nil {
+			panic(err)
+		}
+		for i := 0; i < 250000; i++ {
+			fmt.Fprintf(conn, testMsg)
+		}
+		// wait for 250,000 metrics to get added to accumulator
+		time.Sleep(time.Millisecond)
+		listener.Stop()
+	}
 }
 
 // Valid lines should be parsed and their values should be cached
@@ -276,6 +438,7 @@ func TestParse_Timings(t *testing.T) {
 		"lower":         float64(1),
 		"mean":          float64(3),
 		"stddev":        float64(4),
+		"sum":           float64(15),
 		"upper":         float64(11),
 	}
 
@@ -929,7 +1092,7 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 		// plus the last bit of value 1
 		// which adds up to 12 individual datapoints to be cached
 		if cachedtiming.fields[defaultFieldName].n != 12 {
-			t.Errorf("Expected 11 additions, got %d", cachedtiming.fields[defaultFieldName].n)
+			t.Errorf("Expected 12 additions, got %d", cachedtiming.fields[defaultFieldName].n)
 		}
 
 		if cachedtiming.fields[defaultFieldName].upper != 1 {
@@ -1023,6 +1186,7 @@ func TestParse_Timings_MultipleFieldsWithTemplate(t *testing.T) {
 		"success_lower":         float64(1),
 		"success_mean":          float64(3),
 		"success_stddev":        float64(4),
+		"success_sum":           float64(15),
 		"success_upper":         float64(11),
 
 		"error_90_percentile": float64(22),
@@ -1030,6 +1194,7 @@ func TestParse_Timings_MultipleFieldsWithTemplate(t *testing.T) {
 		"error_lower":         float64(2),
 		"error_mean":          float64(6),
 		"error_stddev":        float64(8),
+		"error_sum":           float64(30),
 		"error_upper":         float64(22),
 	}
 
@@ -1072,6 +1237,7 @@ func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
 		"lower":         float64(1),
 		"mean":          float64(3),
 		"stddev":        float64(4),
+		"sum":           float64(15),
 		"upper":         float64(11),
 	}
 	expectedError := map[string]interface{}{
@@ -1080,6 +1246,7 @@ func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
 		"lower":         float64(2),
 		"mean":          float64(6),
 		"stddev":        float64(8),
+		"sum":           float64(30),
 		"upper":         float64(22),
 	}
 

@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/ioutil"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -180,7 +181,7 @@ func TestMetricReader_SplitWithExactLengthSplit(t *testing.T) {
 	}
 }
 
-// Regresssion test for when a metric requires to be split and one of the
+// Regression test for when a metric requires to be split and one of the
 // split metrics is larger than the buffer.
 //
 // Previously the metric index would be set incorrectly causing a panic.
@@ -217,7 +218,7 @@ func TestMetricReader_SplitOverflowOversized(t *testing.T) {
 	}
 }
 
-// Regresssion test for when a split metric exactly fits in the buffer.
+// Regression test for when a split metric exactly fits in the buffer.
 //
 // Previously the metric would be overflow split when not required.
 func TestMetricReader_SplitOverflowUneeded(t *testing.T) {
@@ -617,6 +618,83 @@ func TestMetricReader_SplitMetricChangingBuffer2(t *testing.T) {
 		re := regexp.MustCompile(test.expRegex)
 		assert.True(t, re.MatchString(string(test.buf[0:n])), string(test.buf[0:n]))
 		assert.Equal(t, test.err, err, test.expRegex)
+	}
+}
+
+func TestReader_Read(t *testing.T) {
+	epoch := time.Unix(0, 0)
+
+	type args struct {
+		name   string
+		tags   map[string]string
+		fields map[string]interface{}
+		t      time.Time
+		mType  []telegraf.ValueType
+	}
+	tests := []struct {
+		name     string
+		args     args
+		expected []byte
+	}{
+		{
+			name: "escape backslashes in string field",
+			args: args{
+				name:   "cpu",
+				tags:   map[string]string{},
+				fields: map[string]interface{}{"value": `test\`},
+				t:      epoch,
+			},
+			expected: []byte(`cpu value="test\\" 0`),
+		},
+		{
+			name: "escape quote in string field",
+			args: args{
+				name:   "cpu",
+				tags:   map[string]string{},
+				fields: map[string]interface{}{"value": `test"`},
+				t:      epoch,
+			},
+			expected: []byte(`cpu value="test\"" 0`),
+		},
+		{
+			name: "escape quote and backslash in string field",
+			args: args{
+				name:   "cpu",
+				tags:   map[string]string{},
+				fields: map[string]interface{}{"value": `test\"`},
+				t:      epoch,
+			},
+			expected: []byte(`cpu value="test\\\"" 0`),
+		},
+		{
+			name: "escape multiple backslash in string field",
+			args: args{
+				name:   "cpu",
+				tags:   map[string]string{},
+				fields: map[string]interface{}{"value": `test\\`},
+				t:      epoch,
+			},
+			expected: []byte(`cpu value="test\\\\" 0`),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			buf := make([]byte, 512)
+			m, err := New(tt.args.name, tt.args.tags, tt.args.fields, tt.args.t, tt.args.mType...)
+			require.NoError(t, err)
+
+			r := NewReader([]telegraf.Metric{m})
+			num, err := r.Read(buf)
+			if err != io.EOF {
+				require.NoError(t, err)
+			}
+			line := string(buf[:num])
+			// This is done so that we can use raw strings in the test spec
+			noeol := strings.TrimRight(line, "\n")
+			require.Equal(t, string(tt.expected), noeol)
+			require.Equal(t, len(tt.expected)+1, num)
+		})
 	}
 }
 

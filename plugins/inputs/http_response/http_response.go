@@ -47,25 +47,26 @@ func (h *HTTPResponse) Description() string {
 
 var sampleConfig = `
   ## Server address (default http://localhost)
-  address = "http://github.com"
+  # address = "http://localhost"
+
   ## Set response_timeout (default 5 seconds)
-  response_timeout = "5s"
+  # response_timeout = "5s"
+
   ## HTTP Request Method
-  method = "GET"
+  # method = "GET"
+
   ## Whether to follow redirects from the server (defaults to false)
-  follow_redirects = true
-  ## HTTP Request Headers (all values must be strings)
-  # [inputs.http_response.headers]
-  #   Host = "github.com"
+  # follow_redirects = false
+
   ## Optional HTTP Request Body
   # body = '''
   # {'fake':'data'}
   # '''
 
   ## Optional substring or regex match in body of the response
-  ## response_string_match = "\"service_status\": \"up\""
-  ## response_string_match = "ok"
-  ## response_string_match = "\".*_status\".?:.?\"up\""
+  # response_string_match = "\"service_status\": \"up\""
+  # response_string_match = "ok"
+  # response_string_match = "\".*_status\".?:.?\"up\""
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -73,6 +74,10 @@ var sampleConfig = `
   # ssl_key = "/etc/telegraf/key.pem"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## HTTP Request Headers (all values must be strings)
+  # [inputs.http_response.headers]
+  #   Host = "github.com"
 `
 
 // SampleConfig returns the plugin SampleConfig
@@ -93,6 +98,7 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 	}
 	client := &http.Client{
 		Transport: &http.Transport{
+			Proxy:             http.ProxyFromEnvironment,
 			DisableKeepAlives: true,
 			TLSClientConfig:   tlsCfg,
 		},

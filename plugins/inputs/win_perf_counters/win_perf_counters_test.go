@@ -12,7 +12,6 @@ import (
 )
 
 func TestWinPerfcountersConfigGet1(t *testing.T) {
-	validmetrics := itemList{}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 1)
@@ -39,14 +38,13 @@ func TestWinPerfcountersConfigGet1(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, TestName: "ConfigGet1", Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
 
-	err := m.ParseConfig(&validmetrics)
+	err := m.ParseConfig()
 	require.NoError(t, err)
 }
 
 func TestWinPerfcountersConfigGet2(t *testing.T) {
-	metrics := itemList{}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 1)
@@ -73,26 +71,27 @@ func TestWinPerfcountersConfigGet2(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, TestName: "ConfigGet2", Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
 
-	err := m.ParseConfig(&metrics)
+	err := m.ParseConfig()
 	require.NoError(t, err)
 
-	if len(metrics.items) == 1 {
+	var parsedItems = m.GetParsedItemsForTesting()
+
+	if len(parsedItems) == 1 {
 		require.NoError(t, nil)
-	} else if len(metrics.items) == 0 {
-		var errorstring1 string = "No results returned from the query: " + string(len(metrics.items))
+	} else if len(parsedItems) == 0 {
+		var errorstring1 string = "No results returned from the query: " + string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
-	} else if len(metrics.items) > 1 {
-		var errorstring1 string = "Too many results returned from the query: " + string(len(metrics.items))
+	} else if len(parsedItems) > 1 {
+		var errorstring1 string = "Too many results returned from the query: " + string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
 }
 
 func TestWinPerfcountersConfigGet3(t *testing.T) {
-	metrics := itemList{}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 2)
@@ -120,28 +119,29 @@ func TestWinPerfcountersConfigGet3(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, TestName: "ConfigGet3", Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
 
-	err := m.ParseConfig(&metrics)
+	err := m.ParseConfig()
 	require.NoError(t, err)
 
-	if len(metrics.items) == 2 {
-		require.NoError(t, nil)
-	} else if len(metrics.items) < 2 {
+	var parsedItems = m.GetParsedItemsForTesting()
 
-		var errorstring1 string = "Too few results returned from the query. " + string(len(metrics.items))
+	if len(parsedItems) == 2 {
+		require.NoError(t, nil)
+	} else if len(parsedItems) < 2 {
+
+		var errorstring1 string = "Too few results returned from the query. " + string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
-	} else if len(metrics.items) > 2 {
+	} else if len(parsedItems) > 2 {
 
-		var errorstring1 string = "Too many results returned from the query: " + string(len(metrics.items))
+		var errorstring1 string = "Too many results returned from the query: " + string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
 }
 
 func TestWinPerfcountersConfigGet4(t *testing.T) {
-	metrics := itemList{}
 
 	var instances = make([]string, 2)
 	var counters = make([]string, 1)
@@ -149,7 +149,7 @@ func TestWinPerfcountersConfigGet4(t *testing.T) {
 
 	objectname := "Processor Information"
 	instances[0] = "_Total"
-	instances[1] = "0"
+	instances[1] = "0,1"
 	counters[0] = "% Processor Time"
 
 	var measurement string = "test"
@@ -169,28 +169,29 @@ func TestWinPerfcountersConfigGet4(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, TestName: "ConfigGet4", Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
 
-	err := m.ParseConfig(&metrics)
+	err := m.ParseConfig()
 	require.NoError(t, err)
 
-	if len(metrics.items) == 2 {
-		require.NoError(t, nil)
-	} else if len(metrics.items) < 2 {
+	var parsedItems = m.GetParsedItemsForTesting()
 
-		var errorstring1 string = "Too few results returned from the query: " + string(len(metrics.items))
+	if len(parsedItems) == 2 {
+		require.NoError(t, nil)
+	} else if len(parsedItems) < 2 {
+
+		var errorstring1 string = "Too few results returned from the query: " + string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
-	} else if len(metrics.items) > 2 {
+	} else if len(parsedItems) > 2 {
 
-		var errorstring1 string = "Too many results returned from the query: " + string(len(metrics.items))
+		var errorstring1 string = "Too many results returned from the query: " + string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
 }
 
 func TestWinPerfcountersConfigGet5(t *testing.T) {
-	metrics := itemList{}
 
 	var instances = make([]string, 2)
 	var counters = make([]string, 2)
@@ -198,7 +199,7 @@ func TestWinPerfcountersConfigGet5(t *testing.T) {
 
 	objectname := "Processor Information"
 	instances[0] = "_Total"
-	instances[1] = "0"
+	instances[1] = "0,1"
 	counters[0] = "% Processor Time"
 	counters[1] = "% Idle Time"
 
@@ -219,28 +220,29 @@ func TestWinPerfcountersConfigGet5(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, TestName: "ConfigGet5", Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
 
-	err := m.ParseConfig(&metrics)
+	err := m.ParseConfig()
 	require.NoError(t, err)
 
-	if len(metrics.items) == 4 {
+	var parsedItems = m.GetParsedItemsForTesting()
+
+	if len(parsedItems) == 4 {
 		require.NoError(t, nil)
-	} else if len(metrics.items) < 4 {
+	} else if len(parsedItems) < 4 {
 		var errorstring1 string = "Too few results returned from the query: " +
-			string(len(metrics.items))
+			string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
-	} else if len(metrics.items) > 4 {
+	} else if len(parsedItems) > 4 {
 		var errorstring1 string = "Too many results returned from the query: " +
-			string(len(metrics.items))
+			string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
 }
 
 func TestWinPerfcountersConfigGet6(t *testing.T) {
-	validmetrics := itemList{}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 1)
@@ -267,14 +269,13 @@ func TestWinPerfcountersConfigGet6(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, TestName: "ConfigGet6", Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
 
-	err := m.ParseConfig(&validmetrics)
+	err := m.ParseConfig()
 	require.NoError(t, err)
 }
 
 func TestWinPerfcountersConfigGet7(t *testing.T) {
-	metrics := itemList{}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 3)
@@ -303,28 +304,29 @@ func TestWinPerfcountersConfigGet7(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, TestName: "ConfigGet7", Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
 
-	err := m.ParseConfig(&metrics)
+	err := m.ParseConfig()
 	require.NoError(t, err)
 
-	if len(metrics.items) == 2 {
+	var parsedItems = m.GetParsedItemsForTesting()
+
+	if len(parsedItems) == 2 {
 		require.NoError(t, nil)
-	} else if len(metrics.items) < 2 {
+	} else if len(parsedItems) < 2 {
 		var errorstring1 string = "Too few results returned from the query: " +
-			string(len(metrics.items))
+			string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
-	} else if len(metrics.items) > 2 {
+	} else if len(parsedItems) > 2 {
 		var errorstring1 string = "Too many results returned from the query: " +
-			string(len(metrics.items))
+			string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
 }
 
 func TestWinPerfcountersConfigError1(t *testing.T) {
-	metrics := itemList{}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 1)
@@ -351,14 +353,13 @@ func TestWinPerfcountersConfigError1(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, TestName: "ConfigError1", Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
 
-	err := m.ParseConfig(&metrics)
+	err := m.ParseConfig()
 	require.Error(t, err)
 }
 
 func TestWinPerfcountersConfigError2(t *testing.T) {
-	metrics := itemList{}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 1)
@@ -385,14 +386,13 @@ func TestWinPerfcountersConfigError2(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, TestName: "ConfigError2", Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
 
-	err := m.ParseConfig(&metrics)
+	err := m.ParseConfig()
 	require.Error(t, err)
 }
 
 func TestWinPerfcountersConfigError3(t *testing.T) {
-	metrics := itemList{}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 1)
@@ -419,9 +419,9 @@ func TestWinPerfcountersConfigError3(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, TestName: "ConfigError3", Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
 
-	err := m.ParseConfig(&metrics)
+	err := m.ParseConfig()
 	require.Error(t, err)
 }
 
@@ -434,6 +434,8 @@ func TestWinPerfcountersCollect1(t *testing.T) {
 	objectname := "Processor Information"
 	instances[0] = "_Total"
 	counters[0] = "Parking Status"
+
+	var expectedCounter string = "Parking_Status"
 
 	var measurement string = "test"
 	var warnonmissing bool = false
@@ -452,7 +454,7 @@ func TestWinPerfcountersCollect1(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, TestName: "Collect1", Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)
@@ -465,7 +467,7 @@ func TestWinPerfcountersCollect1(t *testing.T) {
 		"objectname": objectname,
 	}
 	fields := map[string]interface{}{
-		counters[0]: float32(0),
+		expectedCounter: float32(0),
 	}
 	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
 
@@ -481,6 +483,8 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 	instances[1] = "0,0"
 	counters[0] = "Performance Limit Flags"
 
+	var expectedCounter string = "Performance_Limit_Flags"
+
 	var measurement string = "test"
 	var warnonmissing bool = false
 	var failonmissing bool = true
@@ -498,7 +502,7 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, TestName: "Collect2", Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)
@@ -511,7 +515,7 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 		"objectname": objectname,
 	}
 	fields := map[string]interface{}{
-		counters[0]: float32(0),
+		expectedCounter: float32(0),
 	}
 
 	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
@@ -520,7 +524,7 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 		"objectname": objectname,
 	}
 	fields = map[string]interface{}{
-		counters[0]: float32(0),
+		expectedCounter: float32(0),
 	}
 	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
 

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/metric"
 )
@@ -162,6 +163,58 @@ func TestSerializeValueField2(t *testing.T) {
 	expS := []string{
 		fmt.Sprintf("localhost.cpu0.us-west-2.cpu 91.5 %d", now.Unix()),
 	}
+	assert.Equal(t, expS, mS)
+}
+
+func TestSerializeValueString(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"host":       "localhost",
+		"cpu":        "cpu0",
+		"datacenter": "us-west-2",
+	}
+	fields := map[string]interface{}{
+		"value": "asdasd",
+	}
+	m, err := metric.New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := GraphiteSerializer{
+		Template: "host.field.tags.measurement",
+	}
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
+	assert.NoError(t, err)
+	assert.Equal(t, "", mS[0])
+}
+
+func TestSerializeValueBoolean(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"host":       "localhost",
+		"cpu":        "cpu0",
+		"datacenter": "us-west-2",
+	}
+	fields := map[string]interface{}{
+		"enabled":  true,
+		"disabled": false,
+	}
+	m, err := metric.New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s := GraphiteSerializer{
+		Template: "host.field.tags.measurement",
+	}
+	buf, _ := s.Serialize(m)
+	mS := strings.Split(strings.TrimSpace(string(buf)), "\n")
+	assert.NoError(t, err)
+
+	expS := []string{
+		fmt.Sprintf("localhost.enabled.cpu0.us-west-2.cpu 1 %d", now.Unix()),
+		fmt.Sprintf("localhost.disabled.cpu0.us-west-2.cpu 0 %d", now.Unix()),
+	}
+	sort.Strings(mS)
+	sort.Strings(expS)
 	assert.Equal(t, expS, mS)
 }
 
@@ -415,4 +468,96 @@ func TestTemplate6(t *testing.T) {
 
 	expS := "localhost.cpu0.us-west-2.cpu.FIELDNAME"
 	assert.Equal(t, expS, mS)
+}
+
+func TestClean(t *testing.T) {
+	now := time.Unix(1234567890, 0)
+	tests := []struct {
+		name        string
+		metric_name string
+		tags        map[string]string
+		fields      map[string]interface{}
+		expected    string
+	}{
+		{
+			"Base metric",
+			"cpu",
+			map[string]string{"host": "localhost"},
+			map[string]interface{}{"usage_busy": float64(8.5)},
+			"localhost.cpu.usage_busy 8.5 1234567890\n",
+		},
+		{
+			"Dot and whitespace in tags",
+			"cpu",
+			map[string]string{"host": "localhost", "label.dot and space": "value with.dot"},
+			map[string]interface{}{"usage_busy": float64(8.5)},
+			"localhost.value_with_dot.cpu.usage_busy 8.5 1234567890\n",
+		},
+		{
+			"Field with space",
+			"system",
+			map[string]string{"host": "localhost"},
+			map[string]interface{}{"uptime_format": "20 days, 23:26"},
+			"", // yes nothing. graphite don't serialize string fields
+		},
+		{
+			"Allowed punct",
+			"cpu",
+			map[string]string{"host": "localhost", "tag": "-_:="},
+			map[string]interface{}{"usage_busy": float64(10)},
+			"localhost.-_:=.cpu.usage_busy 10 1234567890\n",
+		},
+		{
+			"Special conversions to hyphen",
+			"cpu",
+			map[string]string{"host": "localhost", "tag": "/@*"},
+			map[string]interface{}{"usage_busy": float64(10)},
+			"localhost.---.cpu.usage_busy 10 1234567890\n",
+		},
+		{
+			"Special drop chars",
+			"cpu",
+			map[string]string{"host": "localhost", "tag": `\no slash`},
+			map[string]interface{}{"usage_busy": float64(10)},
+			"localhost.no_slash.cpu.usage_busy 10 1234567890\n",
+		},
+		{
+			"Empty tag & value field",
+			"cpu",
+			map[string]string{"host": "localhost"},
+			map[string]interface{}{"value": float64(10)},
+			"localhost.cpu 10 1234567890\n",
+		},
+		{
+			"Unicode Letters allowed",
+			"cpu",
+			map[string]string{"host": "localhost", "tag": "μnicodε_letters"},
+			map[string]interface{}{"value": float64(10)},
+			"localhost.μnicodε_letters.cpu 10 1234567890\n",
+		},
+		{
+			"Other Unicode not allowed",
+			"cpu",
+			map[string]string{"host": "localhost", "tag": "“☢”"},
+			map[string]interface{}{"value": float64(10)},
+			"localhost.___.cpu 10 1234567890\n",
+		},
+		{
+			"Newline in tags",
+			"cpu",
+			map[string]string{"host": "localhost", "label": "some\nthing\nwith\nnewline"},
+			map[string]interface{}{"usage_busy": float64(8.5)},
+			"localhost.some_thing_with_newline.cpu.usage_busy 8.5 1234567890\n",
+		},
+	}
+
+	s := GraphiteSerializer{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, err := metric.New(tt.metric_name, tt.tags, tt.fields, now)
+			assert.NoError(t, err)
+			actual, _ := s.Serialize(m)
+			require.Equal(t, tt.expected, string(actual))
+		})
+	}
 }

@@ -51,16 +51,15 @@ var fAggregatorFilters = flag.String("aggregator-filter", "",
 var fProcessorFilters = flag.String("processor-filter", "",
 	"filter the processors to enable, separator is :")
 var fUsage = flag.String("usage", "",
-	"print usage for a plugin, ie, 'telegraf -usage mysql'")
+	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 var fService = flag.String("service", "",
 	"operate on the service")
 
-// Telegraf version, populated linker.
-//   ie, -ldflags "-X main.version=`git describe --always --tags`"
 var (
-	version string
-	commit  string
-	branch  string
+	nextVersion = "1.6.0"
+	version     string
+	commit      string
+	branch      string
 )
 
 func init() {
@@ -81,8 +80,8 @@ Usage:
 
 The commands & flags are:
 
-  config             print out full sample configuration to stdout
-  version            print the version to stdout
+  config              print out full sample configuration to stdout
+  version             print the version to stdout
 
   --config <file>     configuration file to load
   --test              gather metrics once, print them to stdout, and exit
@@ -103,7 +102,7 @@ Examples:
   telegraf --input-filter cpu --output-filter influxdb config
 
   # run a single telegraf collection, outputing metrics to stdout
-  telegraf --config telegraf.conf -test
+  telegraf --config telegraf.conf --test
 
   # run telegraf with all plugins defined in config file
   telegraf --config telegraf.conf
@@ -151,6 +150,16 @@ func reloadLoop(
 			log.Fatalf("E! Error: no inputs found, did you provide a valid config file?")
 		}
 
+		if int64(c.Agent.Interval.Duration) <= 0 {
+			log.Fatalf("E! Agent interval must be positive, found %s",
+				c.Agent.Interval.Duration)
+		}
+
+		if int64(c.Agent.FlushInterval.Duration) <= 0 {
+			log.Fatalf("E! Agent flush_interval must be positive; found %s",
+				c.Agent.Interval.Duration)
+		}
+
 		ag, err := agent.NewAgent(c)
 		if err != nil {
 			log.Fatal("E! " + err.Error())
@@ -196,7 +205,7 @@ func reloadLoop(
 			}
 		}()
 
-		log.Printf("I! Starting Telegraf (version %s)\n", version)
+		log.Printf("I! Starting Telegraf %s\n", displayVersion())
 		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
 		log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
 		log.Printf("I! Tags enabled: %s", c.ListTags())
@@ -254,6 +263,13 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
+func displayVersion() string {
+	if version == "" {
+		return fmt.Sprintf("v%s~%s", nextVersion, commit)
+	}
+	return "v" + version
+}
+
 func main() {
 	flag.Usage = func() { usageExit(0) }
 	flag.Parse()
@@ -295,7 +311,7 @@ func main() {
 	if len(args) > 0 {
 		switch args[0] {
 		case "version":
-			fmt.Printf("Telegraf v%s (git: %s %s)\n", version, branch, commit)
+			fmt.Printf("Telegraf %s (git: %s %s)\n", displayVersion(), branch, commit)
 			return
 		case "config":
 			config.PrintSampleConfig(
@@ -323,7 +339,7 @@ func main() {
 		}
 		return
 	case *fVersion:
-		fmt.Printf("Telegraf v%s (git: %s %s)\n", version, branch, commit)
+		fmt.Printf("Telegraf %s (git: %s %s)\n", displayVersion(), branch, commit)
 		return
 	case *fSampleConfig:
 		config.PrintSampleConfig(

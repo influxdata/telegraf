@@ -1,11 +1,13 @@
 // +build windows
+
 package ping
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 // Windows ping format ( should support multilanguage ?)
@@ -80,6 +82,7 @@ func TestPingGather(t *testing.T) {
 		"average_response_ms": 50.0,
 		"minimum_response_ms": 50.0,
 		"maximum_response_ms": 52.0,
+		"result_code":         0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 
@@ -120,6 +123,7 @@ func TestBadPingGather(t *testing.T) {
 		"reply_received":      0,
 		"percent_packet_loss": 100.0,
 		"percent_reply_loss":  100.0,
+		"result_code":         0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
@@ -166,6 +170,7 @@ func TestLossyPingGather(t *testing.T) {
 		"average_response_ms": 115.0,
 		"minimum_response_ms": 114.0,
 		"maximum_response_ms": 119.0,
+		"result_code":         0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
@@ -268,6 +273,7 @@ func TestUnreachablePingGather(t *testing.T) {
 		"reply_received":      0,
 		"percent_packet_loss": 75.0,
 		"percent_reply_loss":  100.0,
+		"result_code":         0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 
@@ -314,6 +320,7 @@ func TestTTLExpiredPingGather(t *testing.T) {
 		"reply_received":      0,
 		"percent_packet_loss": 75.0,
 		"percent_reply_loss":  100.0,
+		"result_code":         0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 

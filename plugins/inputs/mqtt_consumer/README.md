@@ -10,9 +10,13 @@ The plugin expects messages in the
 ```toml
 # Read metrics from MQTT topic(s)
 [[inputs.mqtt_consumer]]
-  servers = ["localhost:1883"]
+  ## MQTT broker URLs to be used. The format should be scheme://host:port,
+  ## schema can be tcp, ssl, or ws.
+  servers = ["tcp://localhost:1883"]
   ## MQTT QoS, must be 0, 1, or 2
   qos = 0
+  ## Connection timeout for initial connection in seconds
+  connection_timeout = "30s"
 
   ## Topics to subscribe to
   topics = [
