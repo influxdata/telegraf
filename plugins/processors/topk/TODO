@@ -1,6 +1,3 @@
-Handle items that do not have any of the group keys
-Honor the drop_non_top flag
-Honor the position_field option
 Fix casing
 
 DONE
@@ -8,3 +5,4 @@ Apply processor only to the selected metrics
 Apply processor only to the metrics with the selected tags
 Add an options to revert the topk to bottomk
 Honor the aggregation_field option
+Handle items that do not have any of the group keys
