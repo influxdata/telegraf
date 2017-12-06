@@ -771,6 +771,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		for i, col := range cols {
 			// skip unparsable values
 			if value, ok := parseValue(*vals[i].(*sql.RawBytes)); ok {
+				col = strings.ToLower(col)
 				fields["slave_"+col] = value
 			}
 		}
