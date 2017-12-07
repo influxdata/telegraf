@@ -6,8 +6,8 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
-var metric1, _ = metric.New(
-	"first_metric_name",
+var metric11, _ = metric.New(
+	"1one",
 	map[string]string{"tag_name": "tag_value1"},
 	map[string]interface{}{
 		"a": float64(15.3),
@@ -16,8 +16,8 @@ var metric1, _ = metric.New(
 	time.Now(),
 )
 
-var metric2, _ = metric.New(
-	"first_metric_name",
+var metric12, _ = metric.New(
+	"1two",
 	map[string]string{"tag_name": "tag_value1"},
 	map[string]interface{}{
 		"a": float64(40),
@@ -25,8 +25,8 @@ var metric2, _ = metric.New(
 	time.Now(),
 )
 
-var metric3, _ = metric.New(
-	"first_metric_name",
+var metric13, _ = metric.New(
+	"1three",
 	map[string]string{"tag_name": "tag_value1"},
 	map[string]interface{}{
 		"a": float64(0.3),
@@ -35,8 +35,8 @@ var metric3, _ = metric.New(
 	time.Now(),
 )
 
-var metric4, _ = metric.New(
-	"first_metric_name",
+var metric14, _ = metric.New(
+	"1four",
 	map[string]string{"tag_name": "tag_value1"},
 	map[string]interface{}{
 		"a": float64(24.12),
@@ -45,8 +45,8 @@ var metric4, _ = metric.New(
 	time.Now(),
 )
 
-var metric5, _ = metric.New(
-	"first_metric_name",
+var metric15, _ = metric.New(
+	"1five",
 	map[string]string{"tag_name": "tag_value1"},
 	map[string]interface{}{
 		"a": float64(50.8),
@@ -56,4 +56,4 @@ var metric5, _ = metric.New(
 	time.Now(),
 )
 
-var MetricsSet1 = [5]telegraf.Metric{metric1, metric2, metric3, metric4, metric5}
+var MetricsSet1 = []telegraf.Metric{metric11, metric12, metric13, metric14, metric15}
