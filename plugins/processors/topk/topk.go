@@ -29,9 +29,9 @@ type TopK struct {
 	last_aggregation time.Time
 }
 
-func NewTopK() telegraf.Processor{
+func NewTopK() TopK {
 	// Create object
-	topk := &TopK{}
+	topk := TopK{}
 
 	// Setup defaults
 	topk.Period = 10
@@ -48,6 +48,11 @@ func NewTopK() telegraf.Processor{
 	topk.Reset()
 
 	return topk
+}
+
+func NewTopKProcessor() telegraf.Processor{
+	topk := NewTopK()
+	return &topk
 }
 
 var sampleConfig = `
@@ -203,7 +208,7 @@ func convert(in interface{}) (float64, bool) {
 
 func init() {
 	processors.Add("topk", func() telegraf.Processor {
-		return NewTopK()
+		return NewTopKProcessor()
 	})
 }
 
