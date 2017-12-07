@@ -46,6 +46,17 @@ or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/curre
   # insecure_skip_verify = false
 ```
 
+### Status mappings
+
+When reporting health (green/yellow/red), additional field `status_code`
+is reported. Field contains mapping from status:string to status_code:int
+with following rules:
+
+* `green` - 1
+* `yellow` - 2
+* `red` - 3
+* `unknown` - 0
+
 ### Measurements & Fields:
 
 field data circuit breaker measurement names:

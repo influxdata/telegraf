@@ -16,7 +16,15 @@ import (
 )
 
 // mask for masking username/password from error messages
-var mask = regexp.MustCompile(`https?:\/\/\S+:\S+@`)
+var (
+	mask     = regexp.MustCompile(`https?:\/\/\S+:\S+@`)
+	mappings = map[string]int{
+		"green":  1,
+		"yellow": 2,
+		"red":    3,
+	}
+	mappingsMutex sync.RWMutex
+)
 
 // Nodestats are always generated, so simply define a constant for these endpoints
 const statsPath = "/_nodes/stats"
@@ -141,6 +149,18 @@ func NewElasticsearch() *Elasticsearch {
 		HttpTimeout:        internal.Duration{Duration: time.Second * 5},
 		ClusterHealthLevel: "indices",
 	}
+}
+
+// perform status mapping
+func mapHealthStatusToCode(s string) int {
+	mappingsMutex.RLock()
+	defer mappingsMutex.RUnlock()
+
+	if code, ok := mappings[strings.ToLower(s)]; ok {
+		return code
+	}
+
+	return 0
 }
 
 // SampleConfig returns sample configuration for this plugin.
@@ -311,6 +331,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 	measurementTime := time.Now()
 	clusterFields := map[string]interface{}{
 		"status":                healthStats.Status,
+		"status_code":           mapHealthStatusToCode(healthStats.Status),
 		"timed_out":             healthStats.TimedOut,
 		"number_of_nodes":       healthStats.NumberOfNodes,
 		"number_of_data_nodes":  healthStats.NumberOfDataNodes,
@@ -330,6 +351,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 	for name, health := range healthStats.Indices {
 		indexFields := map[string]interface{}{
 			"status":                health.Status,
+			"status_code":           mapHealthStatusToCode(health.Status),
 			"number_of_shards":      health.NumberOfShards,
 			"number_of_replicas":    health.NumberOfReplicas,
 			"active_primary_shards": health.ActivePrimaryShards,
