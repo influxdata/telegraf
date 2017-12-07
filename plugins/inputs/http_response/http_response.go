@@ -98,6 +98,7 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 	}
 	client := &http.Client{
 		Transport: &http.Transport{
+			Proxy:             http.ProxyFromEnvironment,
 			DisableKeepAlives: true,
 			TLSClientConfig:   tlsCfg,
 		},

@@ -5,12 +5,23 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+)
+
+var (
+	allowedChars = regexp.MustCompile(`[^a-zA-Z0-9-_./\p{L}]`)
+	hypenChars   = strings.NewReplacer(
+		"@", "-",
+		"*", "-",
+		`%`, "-",
+		"#", "-",
+		"$", "-")
 )
 
 type OpenTSDB struct {
@@ -25,9 +36,6 @@ type OpenTSDB struct {
 
 	IgnoreField string
 }
-
-var sanitizedChars = strings.NewReplacer("@", "-", "*", "-", " ", "_",
-	`%`, "-", "#", "-", "$", "-", ":", "_")
 
 var sampleConfig = `
   ## prefix for metrics keys
@@ -131,9 +139,9 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 
 			var metricName string
 			if fieldName != o.IgnoreField {
-				metricName = sanitizedChars.Replace(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName))
+				metricName = sanitize(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName))
 			} else {
-				metricName = sanitizedChars.Replace(fmt.Sprintf("%s%s", o.Prefix, m.Name()))
+				metricName = sanitize(fmt.Sprintf("%s%s", o.Prefix, m.Name()))
 			}
 
 			metric := &HttpMetric{
@@ -188,9 +196,9 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 
 			var metricName string
 			if fieldName != o.IgnoreField {
-				metricName = sanitizedChars.Replace(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName))
+				metricName = sanitize(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName))
 			} else {
-				metricName = sanitizedChars.Replace(fmt.Sprintf("%s%s", o.Prefix, m.Name()))
+				metricName = sanitize(fmt.Sprintf("%s%s", o.Prefix, m.Name()))
 			}
 
 			messageLine := fmt.Sprintf("put %s %v %s %s\n",
@@ -210,7 +218,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 func cleanTags(tags map[string]string) map[string]string {
 	tagSet := make(map[string]string, len(tags))
 	for k, v := range tags {
-		tagSet[sanitizedChars.Replace(k)] = sanitizedChars.Replace(v)
+		tagSet[sanitize(k)] = sanitize(v)
 	}
 	return tagSet
 }
@@ -252,6 +260,13 @@ func (o *OpenTSDB) Description() string {
 
 func (o *OpenTSDB) Close() error {
 	return nil
+}
+
+func sanitize(value string) string {
+	// Apply special hypenation rules to preserve backwards compatibility
+	value = hypenChars.Replace(value)
+	// Replace any remaining illegal chars
+	return allowedChars.ReplaceAllLiteralString(value, "_")
 }
 
 func init() {

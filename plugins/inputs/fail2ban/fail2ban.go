@@ -1,5 +1,3 @@
-// +build linux
-
 package fail2ban
 
 import (
@@ -8,9 +6,10 @@ import (
 	"os/exec"
 	"strings"
 
+	"strconv"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"strconv"
 )
 
 var (
@@ -23,10 +22,7 @@ type Fail2ban struct {
 }
 
 var sampleConfig = `
-  ## fail2ban-client require root access.
-  ## Setting 'use_sudo' to true will make use of sudo to run fail2ban-client.
-  ## Users must configure sudo to allow telegraf user to run fail2ban-client with no password.
-  ## This plugin run only "fail2ban-client status".
+  ## Use sudo to run fail2ban-client
   use_sudo = false
 `
 
