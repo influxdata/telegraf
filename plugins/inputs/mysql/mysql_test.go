@@ -127,26 +127,75 @@ func TestMysqlDNSAddTimeout(t *testing.T) {
 		}
 	}
 }
-
-func TestParseValue(t *testing.T) {
+func TestIsInt(t *testing.T) {
 	testCases := []struct {
-		rawByte   sql.RawBytes
-		value     float64
-		boolValue bool
+		rawByte sql.RawBytes
+		output  bool
 	}{
-		{sql.RawBytes("Yes"), 1, true},
-		{sql.RawBytes("No"), 0, false},
-		{sql.RawBytes("ON"), 1, true},
-		{sql.RawBytes("OFF"), 0, false},
-		{sql.RawBytes("ABC"), 0, false},
+		{sql.RawBytes("123"), true},
+		{sql.RawBytes("abc"), false},
+		{sql.RawBytes("10.1"), false},
 	}
 	for _, cases := range testCases {
-		if value, ok := parseValue(cases.rawByte); value != cases.value && ok != cases.boolValue {
-			t.Errorf("want %d with %t, got %d with %t", int(cases.value), cases.boolValue, int(value), ok)
+		if got := isInt(cases.rawByte); got != cases.output {
+			t.Errorf("for %s wanted %t, got %t", string(cases.rawByte), cases.output, got)
+		}
+	}
+}
+func TestIsString(t *testing.T) {
+	testCases := []struct {
+		rawByte sql.RawBytes
+		output  bool
+	}{
+		{sql.RawBytes("123"), false},
+		{sql.RawBytes("abc"), true},
+		{sql.RawBytes("10.1"), false},
+	}
+	for _, cases := range testCases {
+		if got := isString(cases.rawByte); got != cases.output {
+			t.Errorf("for %s wanted %t, got %t", string(cases.rawByte), cases.output, got)
 		}
 	}
 }
 
+func TestIsFloat(t *testing.T) {
+	testCases := []struct {
+		rawByte sql.RawBytes
+		output  bool
+	}{
+		{sql.RawBytes("123"), false},
+		{sql.RawBytes("abc"), false},
+		{sql.RawBytes("10.1"), true},
+	}
+	for _, cases := range testCases {
+		if got := isFloat(cases.rawByte); got != cases.output {
+			t.Errorf("for %s wanted %t, got %t", string(cases.rawByte), cases.output, got)
+		}
+	}
+}
+
+func TestIsParseValue(t *testing.T) {
+	testCases := []struct {
+		rawByte sql.RawBytes
+		output  interface{}
+		err     bool
+	}{
+		{sql.RawBytes("123"), 123, true},
+		{sql.RawBytes("abc"), "abc", true},
+		{sql.RawBytes("10.1"), 10.1, true},
+		{sql.RawBytes("ON"), 1, true},
+		{sql.RawBytes("OFF"), 0, true},
+		{sql.RawBytes("NO"), 0, true},
+		{sql.RawBytes("YES"), 1, true},
+		{sql.RawBytes("No"), 0, true},
+		{sql.RawBytes("Yes"), 1, true},
+	}
+	for _, cases := range testCases {
+		if got, _ := parseValue(cases.rawByte); got != cases.output {
+			t.Errorf("for %s wanted %t, got %t", string(cases.rawByte), cases.output, got)
+		}
+	}
+}
 func TestNewNamespace(t *testing.T) {
 	testCases := []struct {
 		words     []string
