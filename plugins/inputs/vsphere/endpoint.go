@@ -100,13 +100,13 @@ func (e *Endpoint) init() error {
 }
 
 func (e *Endpoint) setupMetricIds() error {
-	conn, err := e.getConnection()
+	client, err := e.getClient()
 	if err != nil {
 		return err
 	}
 	ctx := context.Background()
 
-	metricMap, err := conn.Perf.CounterInfoByName(ctx)
+	metricMap, err := client.Perf.CounterInfoByName(ctx)
 	if err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ func resolveMetricWildcards(metricMap map[string]*types.PerfCounterInfo, wildcar
 func (e *Endpoint) discover() error {
 	log.Printf("D! Discover new objects for %s", e.Url.Host)
 
-	conn, err := e.getConnection()
+	client, err := e.getClient()
 	if err != nil {
 		return err
 	}
@@ -175,13 +175,13 @@ func (e *Endpoint) discover() error {
 			var objects objectMap
 			switch k {
 			case "cluster":
-				objects, err = e.getClusters(conn.Root)
+				objects, err = e.getClusters(client.Root)
 			case "host":
-				objects, err = e.getHosts(conn.Root)
+				objects, err = e.getHosts(client.Root)
 			case "vm":
-				objects, err = e.getVMs(conn.Root)
+				objects, err = e.getVMs(client.Root)
 			case "datastore":
-				objects, err = e.getDatastores(conn.Root)
+				objects, err = e.getDatastores(client.Root)
 			}
 			if err != nil {
 				return err
@@ -215,7 +215,7 @@ func (e *Endpoint) getClusters(root *view.ContainerView) (objectMap, error) {
 	var resources []mo.ClusterComputeResource
 	err := root.Retrieve(context.Background(), []string{"ClusterComputeResource"}, []string{"summary", "name", "parent"}, &resources)
 	if err != nil {
-		e.checkConnection()
+		e.checkClient()
 		return nil, err
 	}
 	m := make(objectMap)
@@ -230,7 +230,7 @@ func (e *Endpoint) getHosts(root *view.ContainerView) (objectMap, error) {
 	var resources []mo.HostSystem
 	err := root.Retrieve(context.Background(), []string{"HostSystem"}, []string{"summary", "parent"}, &resources)
 	if err != nil {
-		e.checkConnection()
+		e.checkClient()
 		return nil, err
 	}
 	m := make(objectMap)
@@ -245,7 +245,7 @@ func (e *Endpoint) getVMs(root *view.ContainerView) (objectMap, error) {
 	var resources []mo.VirtualMachine
 	err := root.Retrieve(context.Background(), []string{"VirtualMachine"}, []string{"summary", "runtime.host"}, &resources)
 	if err != nil {
-		e.checkConnection()
+		e.checkClient()
 		return nil, err
 	}
 	m := make(objectMap)
@@ -260,7 +260,7 @@ func (e *Endpoint) getDatastores(root *view.ContainerView) (objectMap, error) {
 	var resources []mo.Datastore
 	err := root.Retrieve(context.Background(), []string{"Datastore"}, []string{"summary"}, &resources)
 	if err != nil {
-		e.checkConnection()
+		e.checkClient()
 		return nil, err
 	}
 	m := make(objectMap)
@@ -311,19 +311,6 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator) (int, float64, error) {
 
 	sampling := e.resources[resourceType].sampling
-	realTime := e.resources[resourceType].realTime
-
-	conn, err := e.getConnection()
-	if err != nil {
-		return 0, 0, err
-	}
-	ctx := context.Background()
-
-	// Object maps may change, so we need to hold the collect lock
-	//
-	e.collectMux.RLock()
-	defer e.collectMux.RUnlock()
-
 	// Interval = 0 means collection for this metric was diabled, so don't even bother.
 	log.Printf("D! Resource type: %s, sampling period is: %d", resourceType, sampling)
 
@@ -344,6 +331,18 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 	objects := e.resources[resourceType].objects
 	log.Printf("D! Collecting data metrics for %d objects of type %s for %s", len(objects), resourceType, e.Url.Host)
 
+
+	client, err := e.getClient()
+	if err != nil {
+		return 0, 0, err
+	}
+	ctx := context.Background()
+
+	// Object maps may change, so we need to hold the collect lock
+	//
+	e.collectMux.RLock()
+	defer e.collectMux.RUnlock()
+
 	measurementName := "vsphere." + resourceType
 	count := 0
 	start := time.Now()
@@ -357,6 +356,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 			IntervalId: sampling,
 		}
 
+		realTime := e.resources[resourceType].realTime
 		if !realTime {
 			startTime := now.Add(-time.Duration(sampling) * time.Second)
 			pq.StartTime = &startTime
@@ -370,16 +370,16 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 		//
 		if len(pqs) >= int(e.Parent.ObjectsPerQuery) || total == len(objects) {
 			log.Printf("D! Querying %d objects of type %s for %s. Total processed: %d. Total objects %d\n", len(pqs), resourceType, e.Url.Host, total, len(objects))
-			metrics, err := conn.Perf.Query(ctx, pqs)
+			metrics, err := client.Perf.Query(ctx, pqs)
 			if err != nil {
 				log.Printf("E! Error querying metrics for %s on %s", resourceType, e.Url.Host)
-				e.checkConnection()
+				e.checkClient()
 				return count, time.Now().Sub(start).Seconds(), err
 			}
 
-			ems, err := conn.Perf.ToMetricSeries(ctx, metrics)
+			ems, err := client.Perf.ToMetricSeries(ctx, metrics)
 			if err != nil {
-				e.checkConnection()
+				e.checkClient()
 				return count, time.Now().Sub(start).Seconds(), err
 			}
 
@@ -458,23 +458,23 @@ func cleanDiskTag(disk string) string {
 	return disk
 }
 
-func (e *Endpoint) getConnection() (*Client, error) {
+func (e *Endpoint) getClient() (*Client, error) {
 	if e.client == nil {
 		e.clientMux.Lock()
 		defer e.clientMux.Unlock()
 		if e.client == nil {
 			log.Printf("D! Creating new vCenter client for: %s\n", e.Url.Host)
-			conn, err := NewClient(e.Url, e.Parent.Timeout)
+			client, err := NewClient(e.Url, e.Parent)
 			if err != nil {
 				return nil, err
 			}
-			e.client = conn
+			e.client = client
 		}
 	}
 	return e.client, nil
 }
 
-func (e *Endpoint) checkConnection() {
+func (e *Endpoint) checkClient() {
 	if e.client != nil {
 		active, err := e.client.Client.SessionManager.SessionIsActive(context.Background())
 		if !active || err != nil {

@@ -7,6 +7,7 @@ import (
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/view"
 	"net/url"
+	"log"
 )
 
 type Client struct {
@@ -16,18 +17,37 @@ type Client struct {
 	Perf   *performance.Manager
 }
 
-func NewClient(url *url.URL, timeout internal.Duration) (*Client, error) {
-	ctx := context.Background()
-	c, err := govmomi.NewClient(ctx, url, true)
+func NewClient(url *url.URL, vs *VSphere) (*Client, error) {
+
+	tlsCfg, err := internal.GetTLSConfig(vs.SSLCert, vs.SSLKey, vs.SSLCA, vs.InsecureSkipVerify)
 	if err != nil {
 		return nil, err
 	}
-	c.Timeout = timeout.Duration
+
+	ctx := context.Background()
+
+	var c *govmomi.Client
+	if tlsCfg != nil && len(tlsCfg.Certificates) > 0 {
+		//TODO: remove this log output before final release
+		log.Printf("Creating client with Certificate: %s", url.Host)
+		c, err = govmomi.NewClientWithCertificate(ctx, url, vs.InsecureSkipVerify, tlsCfg.Certificates[0])
+	} else {
+		//TODO: remove this log output before final release
+		log.Printf("Creating client: %s", url.Host)
+		c, err = govmomi.NewClient(ctx, url, vs.InsecureSkipVerify)
+	}
+	if err != nil {
+		return nil, err
+	}
+	c.Timeout = vs.Timeout.Duration
+
 	m := view.NewManager(c.Client)
+
 	v, err := m.CreateContainerView(ctx, c.ServiceContent.RootFolder, []string{}, true)
 	if err != nil {
 		return nil, err
 	}
+
 	p := performance.NewManager(c.Client)
 
 	return &Client{

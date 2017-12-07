@@ -36,14 +36,21 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
   # gather_datastores = true
   # datastore_metrics = []
   
-  ## number of objects to retreive per query (default: 500)
-  # objects_per_query = 500
+  ## number of objects to retreive per query. set to 64 for vCenter 5.5 and 6.0 (default: 256)
+  # objects_per_query = 256
   
   ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
   # object_discovery_interval = "300s"
   
   ## timeout applies to any of the connection request made to vcenter
   # timeout = "20s"
+  
+  ## Optional SSL Config
+  # ssl_ca = /path/to/cafile
+  # ssl_cert = /path/to/certfile
+  # ssl_key = /path/to/keyfile
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false  
 ```
 
 ### Metrics Selection
@@ -62,6 +69,12 @@ A configuration to include all metrics under the host category that start with `
   host_metrics = ["cpu.*", "!cpu.idle.summation"]
 
 ``` 
+
+### Objects Per Query
+
+Default settings for vCenter 6.5 and above is 256. Prior versions of vCenter have this set to 64. A vCenter adminitrator
+can change this setting, which should be reflected in this plugin. See this [VMware KB article](https://kb.vmware.com/s/article/2107096)
+for more information.
 
 ## Measurements &amp; Fields
 

@@ -26,7 +26,16 @@ type VSphere struct {
 	ObjectDiscoveryInterval internal.Duration
 	Timeout                 internal.Duration
 
-	endpoints               []*Endpoint
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
+
+	endpoints []*Endpoint
 }
 
 var sampleConfig = `
@@ -91,7 +100,7 @@ func init() {
 			GatherDatastores: true,
 			DatastoreMetrics: nil,
 
-			ObjectsPerQuery:         500,
+			ObjectsPerQuery:         256,
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 			Timeout:                 internal.Duration{Duration: time.Second * 20},
 		}
