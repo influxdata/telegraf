@@ -1,3 +1,8 @@
+## v1.6 [unreleased]
+
+### Features
+- [3551](https://github.com/influxdata/telegraf/pull/3551): Add health status mapping from string to int in elasticsearch input.
+
 ## v1.5 [unreleased]
 
 ### New Plugins
