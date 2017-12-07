@@ -16,15 +16,7 @@ import (
 )
 
 // mask for masking username/password from error messages
-var (
-	mask     = regexp.MustCompile(`https?:\/\/\S+:\S+@`)
-	mappings = map[string]int{
-		"green":  1,
-		"yellow": 2,
-		"red":    3,
-	}
-	mappingsMutex sync.RWMutex
-)
+var mask = regexp.MustCompile(`https?:\/\/\S+:\S+@`)
 
 // Nodestats are always generated, so simply define a constant for these endpoints
 const statsPath = "/_nodes/stats"
@@ -153,13 +145,14 @@ func NewElasticsearch() *Elasticsearch {
 
 // perform status mapping
 func mapHealthStatusToCode(s string) int {
-	mappingsMutex.RLock()
-	defer mappingsMutex.RUnlock()
-
-	if code, ok := mappings[strings.ToLower(s)]; ok {
-		return code
+	switch strings.ToLower(s) {
+	case "green":
+		return 1
+	case "yellow":
+		return 2
+	case "red":
+		return 3
 	}
-
 	return 0
 }
 
