@@ -177,13 +177,13 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		}
 
 		// Get the top K metrics for each field and add them to the return value
+		added_keys := make(map[string]bool)
 		for _, field := range(t.Fields) {
 			// Sort the aggregations
 			sort_metrics(aggregations, field, t.Bottomk)
 
 			// Create a one dimentional list with the top K metrics of each key
-			added_keys := make(map[string]bool)
-			for _, ag := range aggregations[0:min(t.K, len(aggregations))] {
+			for i, ag := range aggregations[0:min(t.K, len(aggregations))] {
 				_, ok := added_keys[ag.groupbykey]
 				if ! ok { // Check that we haven't already added these metrics
 					ret = append(ret, t.cache[ag.groupbykey]...)
