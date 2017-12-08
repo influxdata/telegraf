@@ -1,0 +1,149 @@
+{
+	"version": 0,
+	"dependencies": [
+		{
+			"importpath": "github.com/glycerine/rbtree",
+			"repository": "https://github.com/glycerine/rbtree",
+			"vcs": "git",
+			"revision": "cd7940bb26b149ce2faf398e7c63fff01aa7b394",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/gorilla/context",
+			"repository": "https://github.com/gorilla/context",
+			"vcs": "git",
+			"revision": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/gorilla/mux",
+			"repository": "https://github.com/gorilla/mux",
+			"vcs": "git",
+			"revision": "a659b61323b075cb38ad03aa43749e52eb4948e0",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/influxdata/influxdb/models",
+			"repository": "https://github.com/influxdata/influxdb",
+			"vcs": "git",
+			"revision": "ee4d04de4eb177b0beccd6d7f3a9c2eb31882db0",
+			"branch": "master",
+			"path": "/models",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/influxdata/influxdb/pkg/escape",
+			"repository": "https://github.com/influxdata/influxdb",
+			"vcs": "git",
+			"revision": "ee4d04de4eb177b0beccd6d7f3a9c2eb31882db0",
+			"branch": "master",
+			"path": "pkg/escape",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/influxdb/influxdb/client",
+			"repository": "https://github.com/influxdb/influxdb",
+			"vcs": "git",
+			"revision": "ee4d04de4eb177b0beccd6d7f3a9c2eb31882db0",
+			"branch": "master",
+			"path": "/client",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/jessevdk/go-flags",
+			"repository": "https://github.com/jessevdk/go-flags",
+			"vcs": "git",
+			"revision": "0648c820cd4e564706597268ae2d2c7d9e6900c6",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/kentik/common/cmetrics/httptsdb",
+			"repository": "https://github.com/kentik/common",
+			"vcs": "git",
+			"revision": "ef8ed24a7666370d9fa056846a595e88a9448b96",
+			"branch": "master",
+			"path": "/cmetrics/httptsdb",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/kentik/go-metrics",
+			"repository": "https://github.com/kentik/go-metrics",
+			"vcs": "git",
+			"revision": "133333a1daf7461404453fb4d4b6aa22159fc4d7",
+			"branch": "merge-upstream",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/rcrowley/go-metrics",
+			"repository": "https://github.com/rcrowley/go-metrics",
+			"vcs": "git",
+			"revision": "ab2277b1c5d15c3cba104e9cbddbdfc622df5ad8",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/robfig/cron",
+			"repository": "https://github.com/robfig/cron",
+			"vcs": "git",
+			"revision": "9585fd555638e77bba25f25db5c44b41f264aeb7",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/stathat/go",
+			"repository": "https://github.com/stathat/go",
+			"vcs": "git",
+			"revision": "74669b9f388d9d788c97399a0824adbfee78400e",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/stretchr/testify/assert",
+			"repository": "https://github.com/stretchr/testify",
+			"vcs": "git",
+			"revision": "976c720a22c8eb4eb6a0b4348ad85ad12491a506",
+			"branch": "master",
+			"path": "/assert",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/stretchr/testify/vendor/github.com/davecgh/go-spew/spew",
+			"repository": "https://github.com/stretchr/testify",
+			"vcs": "git",
+			"revision": "976c720a22c8eb4eb6a0b4348ad85ad12491a506",
+			"branch": "master",
+			"path": "vendor/github.com/davecgh/go-spew/spew",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/stretchr/testify/vendor/github.com/pmezard/go-difflib/difflib",
+			"repository": "https://github.com/stretchr/testify",
+			"vcs": "git",
+			"revision": "976c720a22c8eb4eb6a0b4348ad85ad12491a506",
+			"branch": "master",
+			"path": "vendor/github.com/pmezard/go-difflib/difflib",
+			"notests": true
+		},
+		{
+			"importpath": "golang.org/x/net/context",
+			"repository": "https://go.googlesource.com/net",
+			"vcs": "git",
+			"revision": "c46f265c325130a7a6c7b27db8c6fe14b64f1a68",
+			"branch": "master",
+			"path": "/context",
+			"notests": true
+		},
+		{
+			"importpath": "zombiezen.com/go/capnproto2",
+			"repository": "https://github.com/zombiezen/go-capnproto2",
+			"vcs": "git",
+			"revision": "e255c9f719103c5329bc65aac0adcf12137b7424",
+			"branch": "master",
+			"notests": true
+		}
+	]
+}
