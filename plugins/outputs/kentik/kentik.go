@@ -134,6 +134,10 @@ func (o *Kentik) WriteHttp(metrics []telegraf.Metric) error {
 
 			flow := ToFlow(o.customIds, metric)
 			o.client.Send(flow)
+
+			if o.Debug {
+				metric.Print()
+			}
 		}
 	}
 
