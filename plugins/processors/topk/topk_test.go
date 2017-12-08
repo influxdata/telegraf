@@ -32,89 +32,42 @@ func equalSets(l1 []telegraf.Metric, l2 []telegraf.Metric) bool {
 	return subSet(l1, l2) && subSet(l2, l1)
 }
 
-// Smoke avg
-func TestTopkAvgSmokeTest(t *testing.T) {
+// Smoke tests
+func TestTopkSmokeTest(t *testing.T) {
 	var topk TopK
 	topk = NewTopK()
 	topk.Period = 1
 	topk.Fields = []string{"a"}
 	topk.GroupBy = []string{"tag_name"}
 
-	period := time.Second * time.Duration(topk.Period)
-	time.Sleep(period)
+	aggregators := []string{"avg", "sum", "max", "min"}
 
-	ret := topk.Apply(MetricsSet1...)
-	answer := MetricsSet1
+	for _,ag := range(aggregators) {
+		topk.Aggregation = ag
 
-	if ! equalSets(ret, answer) {
-		t.Error("\nExpected metrics:\n", answer, "\nReturned metrics:\n", ret)
+		// Sleep for `period`, otherwise the processor will only
+		// cache the metrics, but it will not process them
+		period := time.Second * time.Duration(topk.Period)
+		time.Sleep(period)
+
+		// Run the processor
+		ret := topk.Apply(MetricsSet1...)
+		answer := MetricsSet1 //The answer is equal to the original set for these particual scenarios
+
+		// The returned set mut be equal to the answer set
+		if ! equalSets(ret, answer) {
+			t.Error("\nExpected metrics for aggregator ", ag, ":\n",
+				answer, "\nReturned metrics:\n", ret)
+		}
+
+		topk.Reset()
 	}
 }
 
-// Smoke sum
-func TestTopkSumSmokeTest(t *testing.T) {
-	var topk TopK
-	topk = NewTopK()
-	topk.Period = 1
-	topk.Aggregation = "sum"
-	topk.Fields = []string{"a"}
-	topk.GroupBy = []string{"tag_name"}
-
-	period := time.Second * time.Duration(topk.Period)
-	time.Sleep(period)
-
-	ret := topk.Apply(MetricsSet1...)
-	answer := MetricsSet1
-
-	if ! equalSets(ret, answer) {
-		t.Error("\nExpected metrics:\n", answer, "\nReturned metrics:\n", ret)
-	}
-}
-
-// Smoke max
-func TestTopkMaxSmokeTest(t *testing.T) {
-	var topk TopK
-	topk = NewTopK()
-	topk.Period = 1
-	topk.Aggregation = "max"
-	topk.Fields = []string{"a"}
-	topk.GroupBy = []string{"tag_name"}
-
-	period := time.Second * time.Duration(topk.Period)
-	time.Sleep(period)
-
-	ret := topk.Apply(MetricsSet1...)
-	answer := MetricsSet1
-
-	if ! equalSets(ret, answer) {
-		t.Error("\nExpected metrics:\n", answer, "\nReturned metrics:\n", ret)
-	}
-}
-
-// Smoke min
-func TestTopkMinSmokeTest(t *testing.T) {
-	var topk TopK
-	topk = NewTopK()
-	topk.Period = 1
-	topk.Aggregation = "min"
-	topk.Fields = []string{"a"}
-	topk.GroupBy = []string{"tag_name"}
-
-	period := time.Second * time.Duration(topk.Period)
-	time.Sleep(period)
-
-	ret := topk.Apply(MetricsSet1...)
-	answer := MetricsSet1
-
-	if ! equalSets(ret, answer) {
-		t.Error("\nExpected metrics:\n", answer, "\nReturned metrics:\n", ret)
-	}
-}
-
-// AggregationField + avg
-// AggregationField + sum
-// AggregationField + max
-// AggregationField + min
+// AggregationField + Avg aggregator
+// AggregationField + Sum aggregator
+// AggregationField + Max aggregator
+// AggregationField + Min aggregator
 
 // GroupBy
 // GroupBy + Fields
