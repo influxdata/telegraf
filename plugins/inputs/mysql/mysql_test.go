@@ -127,71 +127,23 @@ func TestMysqlDNSAddTimeout(t *testing.T) {
 		}
 	}
 }
-func TestIsInt(t *testing.T) {
-	testCases := []struct {
-		rawByte sql.RawBytes
-		output  bool
-	}{
-		{sql.RawBytes("123"), true},
-		{sql.RawBytes("abc"), false},
-		{sql.RawBytes("10.1"), false},
-	}
-	for _, cases := range testCases {
-		if got := isInt(cases.rawByte); got != cases.output {
-			t.Errorf("for %s wanted %t, got %t", string(cases.rawByte), cases.output, got)
-		}
-	}
-}
-func TestIsString(t *testing.T) {
-	testCases := []struct {
-		rawByte sql.RawBytes
-		output  bool
-	}{
-		{sql.RawBytes("123"), false},
-		{sql.RawBytes("abc"), true},
-		{sql.RawBytes("10.1"), false},
-	}
-	for _, cases := range testCases {
-		if got := isString(cases.rawByte); got != cases.output {
-			t.Errorf("for %s wanted %t, got %t", string(cases.rawByte), cases.output, got)
-		}
-	}
-}
-
-func TestIsFloat(t *testing.T) {
-	testCases := []struct {
-		rawByte sql.RawBytes
-		output  bool
-	}{
-		{sql.RawBytes("123"), false},
-		{sql.RawBytes("abc"), false},
-		{sql.RawBytes("10.1"), true},
-	}
-	for _, cases := range testCases {
-		if got := isFloat(cases.rawByte); got != cases.output {
-			t.Errorf("for %s wanted %t, got %t", string(cases.rawByte), cases.output, got)
-		}
-	}
-}
-
 func TestIsParseValue(t *testing.T) {
 	testCases := []struct {
 		rawByte sql.RawBytes
 		output  interface{}
-		err     bool
 	}{
-		{sql.RawBytes("123"), 123, true},
-		{sql.RawBytes("abc"), "abc", true},
-		{sql.RawBytes("10.1"), 10.1, true},
-		{sql.RawBytes("ON"), 1, true},
-		{sql.RawBytes("OFF"), 0, true},
-		{sql.RawBytes("NO"), 0, true},
-		{sql.RawBytes("YES"), 1, true},
-		{sql.RawBytes("No"), 0, true},
-		{sql.RawBytes("Yes"), 1, true},
+		{sql.RawBytes("123"), int64(123)},
+		{sql.RawBytes("abc"), "abc"},
+		{sql.RawBytes("10.1"), 10.1},
+		{sql.RawBytes("ON"), 1},
+		{sql.RawBytes("OFF"), 0},
+		{sql.RawBytes("NO"), 0},
+		{sql.RawBytes("YES"), 1},
+		{sql.RawBytes("No"), 0},
+		{sql.RawBytes("Yes"), 1},
 	}
 	for _, cases := range testCases {
-		if got, _ := parseValue(cases.rawByte); got != cases.output {
+		if got := parseValue(cases.rawByte); got != cases.output {
 			t.Errorf("for %s wanted %t, got %t", string(cases.rawByte), cases.output, got)
 		}
 	}

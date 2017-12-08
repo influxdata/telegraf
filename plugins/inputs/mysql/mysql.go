@@ -541,10 +541,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 			fields[key] = string(val)
 			tags[key] = string(val)
 		}
-		// parse value, if it is numeric then save, otherwise ignore
-		if influxVal, ok := parseValue(val); ok {
-			fields[key] = influxVal
-		}
+		fields[key] = parseValue(val)
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
 			acc.AddFields("mysql_variables", fields, tags)
@@ -593,11 +590,8 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		}
 		// range over columns, and try to parse values
 		for i, col := range cols {
-			// skip unparsable values
 			col = strings.ToLower(col)
-			if value, ok := parseValue(*vals[i].(*sql.RawBytes)); ok {
-				fields["slave_"+col] = value
-			}
+			fields["slave_"+col] = parseValue(*vals[i].(*sql.RawBytes))
 		}
 		acc.AddFields("mysql", fields, tags)
 	}
@@ -652,23 +646,21 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 	}
 	defer rows.Close()
 
-	var key string
-	var val sql.RawBytes
-
 	// parse the DSN and save host name as a tag
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 	for rows.Next() {
+		var key string
+		var val sql.RawBytes
+
 		if err = rows.Scan(&key, &val); err != nil {
 			return err
 		}
 
 		key = strings.ToLower(key)
 
-		if influxVal, ok := parseValue(val); ok {
-			fields[key] = influxVal
-		}
+		fields[key] = parseValue(val)
 
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
@@ -1062,10 +1054,8 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumu
 			return err
 		}
 		key = strings.ToLower(key)
-		// parse value, if it is numeric then save, otherwise ignore
-		if influxVal, ok := parseValue(val); ok {
-			fields[key] = influxVal
-		}
+		fields[key] = parseValue(val)
+
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
 			acc.AddFields("mysql_innodb", fields, tags)
@@ -1466,53 +1456,23 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 }
 
 // parseValue can be used to convert values such as "ON","OFF","Yes","No" to 0,1
-func parseValue(value sql.RawBytes) (interface{}, bool) {
-	if bytes.Compare(value, []byte("YES")) == 0 || bytes.Compare(value, []byte("ON")) == 0 || bytes.Compare(value, []byte("Yes")) == 0 {
-		return 1, true
+func parseValue(value sql.RawBytes) interface{} {
+	if bytes.EqualFold(value, []byte("YES")) || bytes.Compare(value, []byte("ON")) == 0 {
+		return 1
 	}
 
-	if bytes.Compare(value, []byte("NO")) == 0 || bytes.Compare(value, []byte("OFF")) == 0 || bytes.Compare(value, []byte("No")) == 0 {
-		return 0, true
+	if bytes.EqualFold(value, []byte("NO")) || bytes.Compare(value, []byte("OFF")) == 0 {
+		return 0
 	}
 
-	if isInt(value) {
-		val, _ := strconv.Atoi(string(value))
-		return val, true
+	if val, err := strconv.ParseInt(string(value), 10, 64); err == nil {
+		return val
+	}
+	if val, err := strconv.ParseFloat(string(value), 64); err == nil {
+		return val
 	}
 
-	if isFloat(value) {
-		val, _ := strconv.ParseFloat(string(value), 64)
-		return val, true
-	}
-
-	if isString(value) {
-		return string(value), true
-	}
-	return nil, false
-}
-
-func isInt(value sql.RawBytes) bool {
-	if _, err := strconv.Atoi(string(value)); err == nil {
-		return true
-	}
-	return false
-}
-
-func isFloat(value sql.RawBytes) bool {
-	if _, err := strconv.ParseFloat(string(value), 64); err == nil {
-		if isInt(value) == true {
-			return false
-		}
-		return true
-	}
-	return false
-}
-
-func isString(value sql.RawBytes) bool {
-	if isInt(value) || isFloat(value) {
-		return false
-	}
-	return true
+	return string(value)
 }
 
 // findThreadState can be used to find thread state by command and plain state
