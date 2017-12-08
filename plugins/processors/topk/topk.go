@@ -18,6 +18,7 @@ type TopK struct {
 	Aggregation        string
 	GroupBy            []string `toml:"group_by"`
 	GroupByMetricName  bool `toml:"group_by_metric_name"`
+	DropNoGroup        bool `toml:"drop_no_group"`
         Bottomk            bool
 	DropNonTop         bool `toml:"drop_non_top"`
 	PositionField      string `toml:"position_field"`
@@ -40,6 +41,7 @@ func NewTopK() TopK {
 	topk.Aggregation = "avg"
 	topk.GroupBy = nil
 	topk.GroupByMetricName = false
+	topk.DropNoGroup = true
 	topk.DropNonTop = true
 	topk.PositionField = ""
 	topk.AggregationField = ""
@@ -129,7 +131,7 @@ func (t *TopK) generate_groupby_key(m telegraf.Metric) string {
 		groupkey += tag + "=" + m.Tags()[tag] + "&"
 	}
 
-	if groupkey == "" {
+	if groupkey == "" && ! t.DropNoGroup {
 		groupkey = "<<default_groupby_key>>"
 	}
 
@@ -139,6 +141,11 @@ func (t *TopK) generate_groupby_key(m telegraf.Metric) string {
 func (t *TopK) group_by(m telegraf.Metric) {
 	// Generate the metric group key
 	groupkey := t.generate_groupby_key(m)
+
+	// If the groupkey is empty, it means we are supposed to drop this metric
+	if groupkey == "" {
+		return
+	}
 
 	// Initialize the key with an empty list if necessary
 	if _, ok := t.cache[groupkey]; !ok {
@@ -190,7 +197,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	return []telegraf.Metric{}
 }
 
-func min(a, b int) int   {
+func min(a, b int) int {
 	if a > b { return b }
 	return a
 }
