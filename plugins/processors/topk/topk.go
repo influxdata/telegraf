@@ -128,7 +128,10 @@ func (t *TopK) generate_groupby_key(m telegraf.Metric) string {
 		groupkey += m.Name() + "&"
 	}
 	for _, tag := range(t.GroupBy) {
-		groupkey += tag + "=" + m.Tags()[tag] + "&"
+		tag_value, ok = m.Tags()[tag]
+		if ok {
+			groupkey += tag + "=" + tag_value + "&"
+		}
 	}
 
 	if groupkey == "" && ! t.DropNoGroup {
