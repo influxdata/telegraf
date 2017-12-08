@@ -38,8 +38,9 @@ type Kentik struct {
 
 	IgnoreField string
 
-	client    *libkflow.Sender
-	customIds map[string]uint32
+	client          *libkflow.Sender
+	customIdStrings map[string]uint32
+	customIdInts    map[string]uint32
 }
 
 var sampleConfig = `
@@ -72,6 +73,9 @@ func (o *Kentik) Connect() error {
 	if o.FlowDest != "" {
 		config.SetFlow(o.FlowDest)
 	}
+	if o.Debug {
+		config.SetVerbose(1)
+	}
 
 	errors := make(chan error, 0)
 	client, err := libkflow.NewSenderWithDeviceID(o.DeviceID, errors, config)
@@ -81,10 +85,17 @@ func (o *Kentik) Connect() error {
 	go o.handleErrors(errors)
 	o.client = client
 
-	o.customIds = map[string]uint32{}
+	o.customIdStrings = map[string]uint32{}
+	o.customIdInts = map[string]uint32{}
 	for _, c := range client.Device.Customs {
-		o.customIds[c.Name] = uint32(c.ID)
+		if c.Type == "string" {
+			o.customIdStrings[c.Name] = uint32(c.ID)
+		} else {
+			o.customIdInts[c.Name] = uint32(c.ID)
+		}
 	}
+
+	log.Printf("Kentik, connected using %s. %d custom strs found, %d ints", o.Email, len(o.customIdStrings), len(o.customIdInts))
 
 	return nil
 }
@@ -132,7 +143,7 @@ func (o *Kentik) WriteHttp(metrics []telegraf.Metric) error {
 				Value:     bval,
 			}
 
-			flow := ToFlow(o.customIds, metric)
+			flow := ToFlow(o.customIdStrings, o.customIdInts, metric)
 			o.client.Send(flow)
 
 			if o.Debug {
