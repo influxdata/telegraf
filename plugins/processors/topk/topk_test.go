@@ -32,6 +32,24 @@ func equalSets(l1 []telegraf.Metric, l2 []telegraf.Metric) bool {
 	return subSet(l1, l2) && subSet(l2, l1)
 }
 
+func runAndCompare(topk TopK, metrics []telegraf.Metric, answer []telegraf.Metric, test_id string, t *testing.T) {
+	// Sleep for `period`, otherwise the processor will only
+	// cache the metrics, but it will not process them
+	period := time.Second * time.Duration(topk.Period)
+	time.Sleep(period)
+
+	// Run the processor
+	ret := topk.Apply(metrics...)
+
+	// The returned set mut be equal to the answer set
+	if ! equalSets(ret, answer) {
+		t.Error("\nExpected metrics for ", test_id, ":\n",
+			answer, "\nReturned metrics:\n", ret)
+	}
+
+	topk.Reset()
+}
+
 // Smoke tests
 func TestTopkSmokeTest(t *testing.T) {
 	var topk TopK
@@ -45,22 +63,8 @@ func TestTopkSmokeTest(t *testing.T) {
 	for _,ag := range(aggregators) {
 		topk.Aggregation = ag
 
-		// Sleep for `period`, otherwise the processor will only
-		// cache the metrics, but it will not process them
-		period := time.Second * time.Duration(topk.Period)
-		time.Sleep(period)
-
-		// Run the processor
-		ret := topk.Apply(MetricsSet1...)
-		answer := MetricsSet1 //The answer is equal to the original set for these particual scenarios
-
-		// The returned set mut be equal to the answer set
-		if ! equalSets(ret, answer) {
-			t.Error("\nExpected metrics for aggregator ", ag, ":\n",
-				answer, "\nReturned metrics:\n", ret)
-		}
-
-		topk.Reset()
+		//The answer is equal to the original set for these particual scenarios
+		runAndCompare(topk, MetricsSet1, MetricsSet1, "SmokeAggregator_"+ag, t)
 	}
 }
 
