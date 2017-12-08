@@ -63,7 +63,6 @@ func (pg Pgrep) Pattern(pattern string) (pids []PID, err error) {
 			// it means you don't have the permissions to see the process
 		}
 		if regx.MatchString(path) {
-			fmt.Println("PROC PATH: ", path)
 			pids = append(pids, PID(p.Pid()))
 		}
 	}
