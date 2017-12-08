@@ -3,6 +3,7 @@ package smart
 import (
 	"fmt"
 	"os/exec"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -178,13 +179,13 @@ func exitStatus(err error) (int, error) {
 	return 0, err
 }
 
-func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, path, nockeck, device string, wg *sync.WaitGroup) {
+func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, smartctl, nockeck, device string, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
 	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nockeck, "--format=brief"}
 	args = append(args, strings.Split(device, " ")...)
-	cmd := sudo(usesudo, path, args...)
+	cmd := sudo(usesudo, smartctl, args...)
 	out, e := internal.CombinedOutputTimeout(cmd, time.Second*5)
 	outStr := string(out)
 
@@ -196,7 +197,8 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, path, nockec
 	}
 
 	device_tags := map[string]string{}
-	device_tags["device"] = strings.Split(device, " ")[0]
+	device_node := strings.Split(device, " ")[0]
+	device_tags["device"] = path.Base(device_node)
 	device_fields := make(map[string]interface{})
 	device_fields["exit_status"] = exitStatus
 
@@ -240,7 +242,8 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, path, nockec
 				tags := map[string]string{}
 				fields := make(map[string]interface{})
 
-				tags["device"] = strings.Split(device, " ")[0]
+				device_node := strings.Split(device, " ")[0]
+				tags["device"] = path.Base(device_node)
 
 				if serial, ok := device_tags["serial_no"]; ok {
 					tags["serial_no"] = serial

@@ -89,7 +89,7 @@ func TestGatherAttributes(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"device":    "/dev/ada0",
+				"device":    "ada0",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
 				"id":        "1",
@@ -107,7 +107,7 @@ func TestGatherAttributes(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"device":    "/dev/ada0",
+				"device":    "ada0",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
 				"id":        "5",
@@ -125,7 +125,7 @@ func TestGatherAttributes(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"device":    "/dev/ada0",
+				"device":    "ada0",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
 				"id":        "9",
@@ -143,7 +143,7 @@ func TestGatherAttributes(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"device":    "/dev/ada0",
+				"device":    "ada0",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
 				"id":        "12",
@@ -161,7 +161,7 @@ func TestGatherAttributes(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"device":    "/dev/ada0",
+				"device":    "ada0",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
 				"id":        "169",
@@ -179,7 +179,7 @@ func TestGatherAttributes(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"device":    "/dev/ada0",
+				"device":    "ada0",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
 				"id":        "173",
@@ -197,7 +197,7 @@ func TestGatherAttributes(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"device":    "/dev/ada0",
+				"device":    "ada0",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
 				"id":        "190",
@@ -215,7 +215,7 @@ func TestGatherAttributes(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"device":    "/dev/ada0",
+				"device":    "ada0",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
 				"id":        "192",
@@ -233,7 +233,7 @@ func TestGatherAttributes(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"device":    "/dev/ada0",
+				"device":    "ada0",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
 				"id":        "194",
@@ -251,7 +251,7 @@ func TestGatherAttributes(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"device":    "/dev/ada0",
+				"device":    "ada0",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
 				"id":        "197",
@@ -269,7 +269,7 @@ func TestGatherAttributes(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"device":    "/dev/ada0",
+				"device":    "ada0",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
 				"id":        "199",
@@ -287,7 +287,7 @@ func TestGatherAttributes(t *testing.T) {
 				"exit_status": int(0),
 			},
 			map[string]string{
-				"device":    "/dev/ada0",
+				"device":    "ada0",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
 				"id":        "240",
@@ -317,7 +317,7 @@ func TestGatherAttributes(t *testing.T) {
 				"udma_crc_errors": int64(0),
 			},
 			map[string]string{
-				"device":    "/dev/ada0",
+				"device":    "ada0",
 				"model":     "APPLE SSD SM256E",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
@@ -363,7 +363,7 @@ func TestGatherNoAttributes(t *testing.T) {
 				"udma_crc_errors": int64(0),
 			},
 			map[string]string{
-				"device":    "/dev/ada0",
+				"device":    "ada0",
 				"model":     "APPLE SSD SM256E",
 				"serial_no": "S0X5NZBC422720",
 				"wwn":       "5002538043584d30",
