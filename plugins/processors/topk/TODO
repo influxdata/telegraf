@@ -1,8 +1,10 @@
+Honor the dropnontop setting
 Fix casing
 
 DONE
+Honor the aggregationfield setting
+Honor the positionfield setting
 Apply processor only to the selected metrics
 Apply processor only to the metrics with the selected tags
 Add an options to revert the topk to bottomk
-Honor the aggregation_field option
 Handle items that do not have any of the group keys
