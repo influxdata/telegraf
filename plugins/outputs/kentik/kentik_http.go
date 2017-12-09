@@ -1,6 +1,7 @@
 package kentik
 
 import (
+	"hash/crc32"
 	"log"
 	"strconv"
 
@@ -8,8 +9,9 @@ import (
 )
 
 const (
-	METRIC_NAME   = "metric_name"
-	METRIC_PREFIX = "c_"
+	METRIC_NAME     = "metric_name"
+	METRIC_PREFIX   = "c_"
+	MAX_PORT_NUMBER = 16000
 )
 
 type KentikMetric struct {
@@ -28,10 +30,11 @@ func ToFlow(customStrings map[string]uint32, customInts map[string]uint32, met *
 		OutPkts:       0,
 		InputPort:     1,
 		OutputPort:    1,
-		L4DstPort:     32000,
 		Protocol:      16, // use this number for metrics.
 		SampleRate:    1,
 		SampleAdj:     true,
+		L4SrcPort:     2,
+		L4DstPort:     3,
 		Customs:       []flow.Custom{},
 	}
 
@@ -58,6 +61,13 @@ func ToFlow(customStrings map[string]uint32, customInts map[string]uint32, met *
 				U32:  uint32(intv),
 			})
 
+		}
+
+		// Hack to be able to do uniques on host
+		if n == "host" {
+			prtVal := crc32.ChecksumIEEE([]byte(v)) % MAX_PORT_NUMBER
+			in.L4SrcPort = prtVal
+			in.L4DstPort = prtVal
 		}
 	}
 
