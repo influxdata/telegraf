@@ -300,7 +300,7 @@ func (t *TopK) get_aggregation_function(agg_operation string) func([]telegraf.Me
 			}
 
 			// Check if we've found a new maximum
-			if agg[field] > val {
+			if agg[field] < val {
 				agg[field] = val
 			}
 		}
