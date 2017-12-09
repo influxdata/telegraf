@@ -135,7 +135,7 @@ func (m *Smart) scan() ([]string, error) {
 
 	devices := []string{}
 	for _, line := range strings.Split(string(out), "\n") {
-		dev := strings.Split(line, "#")
+		dev := strings.Split(line, " ")
 		if len(dev) > 1 && !excludedDev(m.Excludes, strings.TrimSpace(dev[0])) {
 			devices = append(devices, strings.TrimSpace(dev[0]))
 		}
