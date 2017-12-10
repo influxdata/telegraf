@@ -72,7 +72,7 @@ A configuration to include all metrics under the host category that start with `
 
 ### Objects Per Query
 
-Default settings for vCenter 6.5 and above is 256. Prior versions of vCenter have this set to 64. A vCenter adminitrator
+Default settings for vCenter 6.5 and above is 256. Prior versions of vCenter have this set to 64. A vCenter administrator
 can change this setting, which should be reflected in this plugin. See this [VMware KB article](https://kb.vmware.com/s/article/2107096)
 for more information.
 
