@@ -41,7 +41,7 @@ type HTTP struct {
 var sampleConfig = `
   ## One or more URLs from which to read formatted metrics
   urls = [
-    "http://localhost:2015/simple.json"
+    "http://localhost/metrics"
   ]
 
   ## Optional HTTP Basic Auth Credentials
@@ -55,13 +55,13 @@ var sampleConfig = `
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## http request & header timeout
-  ## defaults to 5s if not set
-  timeout = "10s"
+  # timeout = "5s"
 
-  ## Mandatory data_format
-  ## See available options at https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "json"
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  # data_format = "influx"
 `
 
 // SampleConfig returns the default configuration of the Input
@@ -85,8 +85,7 @@ func (h *HTTP) Gather(acc telegraf.Accumulator) error {
 		}
 		h.client = &http.Client{
 			Transport: &http.Transport{
-				ResponseHeaderTimeout: h.Timeout.Duration,
-				TLSClientConfig:       tlsCfg,
+				TLSClientConfig: tlsCfg,
 			},
 			Timeout: h.Timeout.Duration,
 		}

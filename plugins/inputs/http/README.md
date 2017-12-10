@@ -1,8 +1,8 @@
 # HTTP Input Plugin
 
-The HTTP input plugin gathers formatted metrics from one or more HTTP(S) endpoints. 
-It requires `data_format` to be specified so it can use the corresponding Parser to convert the returned payload into measurements, fields and tags.
-See [DATA_FORMATS_INPUT.md](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md) for the list of supported formats.
+The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The metrics need to be formatted in one of the supported data formats.  Each data format has its own unique set of configuration options, read more about them here:
+  https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+
 
 ### Configuration:
 
@@ -14,7 +14,7 @@ generate it using `telegraf --usage http`.
 [[inputs.http]]
   ## One or more URLs from which to read formatted metrics
   urls = [
-    "http://localhost:2015/simple.json"
+    "http://localhost/metrics"
   ]
 
   ## Optional HTTP Basic Auth Credentials
@@ -28,13 +28,13 @@ generate it using `telegraf --usage http`.
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## http request & header timeout
-  ## defaults to 5s if not set
-  timeout = "10s"
+  # timeout = "5s"
 
-  ## Mandatory data_format
-  ## See available options at https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "json"
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  # data_format = "influx"
 ```
 
 ### Metrics:
