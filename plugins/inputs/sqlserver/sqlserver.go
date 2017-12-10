@@ -85,7 +85,7 @@ func initQueries(s *SQLServer) {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCountersV2, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorizedV2, ResultByRow: false}
 		queries["DatabaseIO"] = Query{Script: sqlDatabaseIOV2, ResultByRow: false}
-		queries["DatabaseProperties"] = Query{Script: sqlDatabasePropertiesV2, ResultByRow: false}
+		queries["ServerProperties"] = Query{Script: sqlServerPropertiesV2, ResultByRow: false}
 		queries["MemoryClerk"] = Query{Script: sqlMemoryClerkV2, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
@@ -228,10 +228,13 @@ func init() {
 }
 
 // Queries - V2
-// Thanks Bob Ward and the folks at Stack Overflow for putting most of this online
+// Thanks Bob Ward (http://aka.ms/bobwardms)
+// and the folks at Stack Overflow (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
+// for putting most of the memory clerk definitions online!
 const sqlMemoryClerkV2 = `SELECT	
 'sqlserver_memory_clerks' As [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [server],
+REPLACE(@@SERVERNAME,'\',':') AS [instance],
+SERVERPROPERTY('ServerName') AS [server]
 ISNULL(clerk_names.name,mc.type) AS clerk_type,
 SUM(mc.pages_kb) AS size_kb
 FROM
@@ -322,13 +325,15 @@ LEFT OUTER JOIN ( VALUES
 ) AS clerk_names(system_name,name)
 ON mc.type = clerk_names.system_name
 GROUP BY ISNULL(clerk_names.name,mc.type)
-HAVING SUM(pages_kb) >= 1024;
+HAVING SUM(pages_kb) >= 1024
+OPTION( RECOMPILE );
 `
 
 const sqlDatabaseIOV2 = `
 SELECT
 	'sqlserver_database_io' As [measurement],
-	REPLACE(@@SERVERNAME,'\',':') AS [server],
+	REPLACE(@@SERVERNAME,'\',':') AS [instance],
+	SERVERPROPERTY('ServerName') AS [server],
 	DB_NAME([vfs].[database_id]) [database_name],
 	vfs.io_stall_read_ms AS read_latency_ms,
 	vfs.num_of_reads AS reads,
@@ -339,17 +344,33 @@ SELECT
 FROM	[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
 		INNER JOIN [sys].[master_files] [mf] 
 			ON [vfs].[database_id] = [mf].[database_id] 
-			AND [vfs].[file_id] = [mf].[file_id];
+			AND [vfs].[file_id] = [mf].[file_id]
+OPTION( RECOMPILE );
 `
 
-const sqlDatabasePropertiesV2 = `SELECT	name AS [database_name],
-		'sqlserver_database_properties' As [measurement],
-		REPLACE(@@SERVERNAME,'\',':') AS [server],
-		state_desc AS [state],
-		user_access_desc AS [access_mode],
-		recovery_model_desc AS [recovery_model],
-		compatibility_level
-FROM	sys.databases;
+const sqlServerPropertiesV2 = `SELECT
+'sqlserver_server_properties' As [measurement],
+REPLACE(@@SERVERNAME,'\',':') AS [instance],
+SERVERPROPERTY('ServerName') AS [server],
+SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS db_online,
+SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS db_restoring,
+SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
+SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS db_recoveryPending,
+SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
+SUM( CASE WHEN state = 10 THEN 1 ELSE 0 END ) AS db_offline,
+MAX( sinfo.CpuCount ) AS cpu_count,
+MAX( sinfo.ServerMemory ) AS server_memory,
+MAX( sinfo.UpTime ) AS uptime,
+SERVERPROPERTY('ProductVersion') AS sql_version
+FROM	sys.databases
+CROSS APPLY (
+	SELECT	cpu_count AS CpuCount,
+			physical_memory_kb AS ServerMemory,
+			DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) AS UpTime
+	FROM	sys.dm_os_sys_info
+) AS sinfo
+WHERE	database_id > 4
+OPTION( RECOMPILE );
 `
 
 const sqlPerformanceCountersV2 string = `DECLARE @PCounters TABLE
@@ -389,13 +410,6 @@ WHERE	(
 			'Readahead Pages/sec',
 			'Lazy Writes/sec',
 			'Checkpoint Pages/sec',
-			'Database Cache Memory (KB)',
-			'Log Pool Memory (KB)',
-			'Optimizer Memory (KB)',
-			'SQL Cache Memory (KB)',
-			'Connection Memory (KB)',
-			'Lock Memory (KB)',
-			'Memory broker clerk size',
 			'Page life expectancy',
 			'Log File(s) Size (KB)',
 			'Log File(s) Used Size (KB)',
@@ -459,7 +473,8 @@ WHERE	(
 		)
 
 SELECT	'sqlserver_performance' AS [measurement],
-		REPLACE(@@SERVERNAME,'\',':') AS [server],
+		REPLACE(@@SERVERNAME,'\',':') AS [instance],
+		SERVERPROPERTY('ServerName') AS [server],
 		pc.object_name AS [object],
 		pc.counter_name AS [counter],
 		CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
@@ -479,11 +494,13 @@ FROM	@PCounters AS pc
 			AND pc.instance_name = pc1.instance_name
 			AND pc1.counter_name LIKE '%base'
 WHERE	pc.counter_name NOT LIKE '% base'
+OPTION( RECOMPILE );
 `
 
 const sqlWaitStatsCategorizedV2 string = `SELECT
 'sqlserver_waitstats' AS [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [server],
+REPLACE(@@SERVERNAME,'\',':') AS [instance],
+SERVERPROPERTY('ServerName') AS [server],
 ws.wait_type,
 wait_time_ms,
 wait_time_ms - signal_wait_time_ms AS [resource_wait_ms],
@@ -1044,7 +1061,8 @@ const sqlAzureDB string = `IF OBJECT_ID('sys.dm_db_resource_stats') IS NOT NULL
 BEGIN
 	SELECT TOP(1)
 		'sqlserver_azurestats' AS [measurement],
-		REPLACE(@@SERVERNAME,'\',':') AS [server],
+		REPLACE(@@SERVERNAME,'\',':') AS [instance],
+		SERVERPROPERTY('ServerName') AS [server],
 		avg_cpu_percent,
 		avg_data_io_percent,
 		avg_log_write_percent,
@@ -1067,7 +1085,6 @@ BEGIN
 END`
 
 // Queries V1
-
 const sqlPerformanceMetrics string = `SET NOCOUNT ON;
 SET ARITHABORT ON;
 SET QUOTED_IDENTIFIER ON;
