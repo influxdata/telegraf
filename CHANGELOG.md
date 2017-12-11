@@ -2,6 +2,7 @@
 
 ### Features
 - [3551](https://github.com/influxdata/telegraf/pull/3551): Add health status mapping from string to int in elasticsearch input.
+- [3530](https://github.com/influxdata/telegraf/pull/3530): Support I (idle) process state on procfs+Linux.
 
 ## v1.5 [unreleased]
 
