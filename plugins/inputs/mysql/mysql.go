@@ -1424,23 +1424,17 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 			tags["schema"] = tableSchema
 			tags["table"] = tableName
 
-			acc.AddFields(newNamespace("info_schema", "table_rows"),
-				map[string]interface{}{"value": tableRows}, tags)
+			acc.AddFields("mysql_table_schema",
+				map[string]interface{}{"rows": tableRows}, tags)
 
-			dlTags := copyTags(tags)
-			dlTags["component"] = "data_length"
-			acc.AddFields(newNamespace("info_schema", "table_size", "data_length"),
-				map[string]interface{}{"value": dataLength}, dlTags)
+			acc.AddFields("mysql_table_schema",
+				map[string]interface{}{"data_length": dataLength}, tags)
 
-			ilTags := copyTags(tags)
-			ilTags["component"] = "index_length"
-			acc.AddFields(newNamespace("info_schema", "table_size", "index_length"),
-				map[string]interface{}{"value": indexLength}, ilTags)
+			acc.AddFields("mysql_table_schema",
+				map[string]interface{}{"index_length": indexLength}, tags)
 
-			dfTags := copyTags(tags)
-			dfTags["component"] = "data_free"
-			acc.AddFields(newNamespace("info_schema", "table_size", "data_free"),
-				map[string]interface{}{"value": dataFree}, dfTags)
+			acc.AddFields("mysql_table_schema",
+				map[string]interface{}{"data_free": dataFree}, tags)
 
 			versionTags := copyTags(tags)
 			versionTags["type"] = tableType
@@ -1448,8 +1442,8 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 			versionTags["row_format"] = rowFormat
 			versionTags["create_options"] = createOptions
 
-			acc.AddFields(newNamespace("info_schema", "table_version"),
-				map[string]interface{}{"value": version}, versionTags)
+			acc.AddFields("mysql_table_schema",
+				map[string]interface{}{"table_version": version}, versionTags)
 		}
 	}
 	return nil
