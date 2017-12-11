@@ -37,7 +37,7 @@ func NewTopK() TopK {
 	// Setup defaults
 	topk.Period = 10
 	topk.K = 10
-	topk.Fields = nil
+	topk.Fields = []string{"value"}
 	topk.Aggregation = "avg"
 	topk.GroupBy = nil
 	topk.GroupByMetricName = false
