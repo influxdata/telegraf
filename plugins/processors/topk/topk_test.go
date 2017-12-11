@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 	"reflect"
+	"strconv"
 
 	"github.com/influxdata/telegraf"
 )
@@ -59,7 +60,7 @@ func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metr
 }
 
 // Smoke tests
-func TestTopkSmokeTest(t *testing.T) {
+func TestTopkAggregatorsSmokeTests(t *testing.T) {
 	var topk TopK
 	topk = NewTopK()
 	topk.Period = 1
@@ -129,6 +130,20 @@ func TestTopkMinAggregationField(t *testing.T) {
 }
 
 // GroupBy
+func TestTopkGroupby(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 3
+	topk.Aggregation = "sum"
+	topk.AggregationField = "sumag"
+	topk.GroupBy = []string{"tag1", "tag3"}
+
+	for i, testset := range([] []telegraf.Metric{GroupBy0Ans}) {
+		runAndCompare(&topk, deepCopy(MetricsSet2), testset, "GroupBy test "+strconv.Itoa(i), t)
+	}
+}
+
 // GroupBy + Fields
 // GroupBy metric name
 // GroupBy + GroupBy metric name
