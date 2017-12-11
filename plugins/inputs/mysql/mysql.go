@@ -814,7 +814,7 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 	for s, c := range stateCounts {
 		fields[newNamespace("threads", s)] = c
 	}
-	acc.AddFields("mysql_info_schema", fields, tags)
+	acc.AddFields("mysql_process_list", fields, tags)
 	return nil
 }
 
@@ -1027,7 +1027,7 @@ func (m *Mysql) gatherInfoSchemaAutoIncStatuses(db *sql.DB, serv string, acc tel
 		fields["auto_increment_column"] = incValue
 		fields["auto_increment_column_max"] = maxInt
 
-		acc.AddFields("mysql_info_schema", fields, tags)
+		acc.AddFields("mysql_table_schema", fields, tags)
 	}
 	return nil
 }
@@ -1442,7 +1442,7 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 			versionTags["row_format"] = rowFormat
 			versionTags["create_options"] = createOptions
 
-			acc.AddFields("mysql_table_schema",
+			acc.AddFields("mysql_table_schema_version",
 				map[string]interface{}{"table_version": version}, versionTags)
 		}
 	}
