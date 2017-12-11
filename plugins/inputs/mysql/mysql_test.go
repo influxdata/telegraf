@@ -141,6 +141,7 @@ func TestIsParseValue(t *testing.T) {
 		{sql.RawBytes("YES"), 1},
 		{sql.RawBytes("No"), 0},
 		{sql.RawBytes("Yes"), 1},
+		{sql.RawBytes(""), nil},
 	}
 	for _, cases := range testCases {
 		if got := parseValue(cases.rawByte); got != cases.output {

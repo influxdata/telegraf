@@ -1472,7 +1472,10 @@ func parseValue(value sql.RawBytes) interface{} {
 		return val
 	}
 
-	return string(value)
+	if len(string(value)) > 0 {
+		return string(value)
+	}
+	return nil
 }
 
 // findThreadState can be used to find thread state by command and plain state
