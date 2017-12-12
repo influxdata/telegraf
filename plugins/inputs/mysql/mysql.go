@@ -541,7 +541,9 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 			fields[key] = string(val)
 			tags[key] = string(val)
 		}
-		fields[key] = parseValue(val)
+		if value, ok := parseValue(val); ok {
+			fields[key] = value
+		}
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
 			acc.AddFields("mysql_variables", fields, tags)
@@ -591,7 +593,9 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		// range over columns, and try to parse values
 		for i, col := range cols {
 			col = strings.ToLower(col)
-			fields["slave_"+col] = parseValue(*vals[i].(*sql.RawBytes))
+			if value, ok := parseValue(*vals[i].(*sql.RawBytes)); ok {
+				fields["slave_"+col] = value
+			}
 		}
 		acc.AddFields("mysql", fields, tags)
 	}
@@ -660,7 +664,9 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 
 		key = strings.ToLower(key)
 
-		fields[key] = parseValue(val)
+		if value, ok := parseValue(val); ok {
+			fields[key] = value
+		}
 
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
@@ -1042,20 +1048,20 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumu
 	}
 	defer rows.Close()
 
-	var key string
-	var val sql.RawBytes
-
 	// parse DSN and save server tag
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 	for rows.Next() {
+		var key string
+		var val sql.RawBytes
 		if err := rows.Scan(&key, &val); err != nil {
 			return err
 		}
 		key = strings.ToLower(key)
-		fields[key] = parseValue(val)
-
+		if value, ok := parseValue(val); ok {
+			fields[key] = value
+		}
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
 			acc.AddFields("mysql_innodb", fields, tags)
@@ -1450,26 +1456,26 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 }
 
 // parseValue can be used to convert values such as "ON","OFF","Yes","No" to 0,1
-func parseValue(value sql.RawBytes) interface{} {
+func parseValue(value sql.RawBytes) (interface{}, bool) {
 	if bytes.EqualFold(value, []byte("YES")) || bytes.Compare(value, []byte("ON")) == 0 {
-		return 1
+		return 1, true
 	}
 
 	if bytes.EqualFold(value, []byte("NO")) || bytes.Compare(value, []byte("OFF")) == 0 {
-		return 0
+		return 0, true
 	}
 
 	if val, err := strconv.ParseInt(string(value), 10, 64); err == nil {
-		return val
+		return val, true
 	}
 	if val, err := strconv.ParseFloat(string(value), 64); err == nil {
-		return val
+		return val, true
 	}
 
 	if len(string(value)) > 0 {
-		return string(value)
+		return string(value), true
 	}
-	return nil
+	return nil, false
 }
 
 // findThreadState can be used to find thread state by command and plain state
