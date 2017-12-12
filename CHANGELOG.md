@@ -1,8 +1,24 @@
 ## v1.6 [unreleased]
 
+### Release Notes
+
+- The `mysql` input plugin has been updated to convert values to the
+  correct data type.  This may cause a `field type error` when inserting into
+  InfluxDB due the change of types.  It is recommended to drop the `mysql`,
+  `mysql_variables`, and `mysql_innodb`:
+  ```
+  DROP MEASUREMENT mysql
+  DROP MEASUREMENT mysql_variables
+  DROP MEASUREMENT mysql_innodb
+  ```
+
 ### Features
 - [3551](https://github.com/influxdata/telegraf/pull/3551): Add health status mapping from string to int in elasticsearch input.
 - [3530](https://github.com/influxdata/telegraf/pull/3530): Support I (idle) process state on procfs+Linux.
+
+### Bugfixes
+
+- [1896](https://github.com/influxdata/telegraf/issues/1896): Fix various mysql data type conversions.
 
 ## v1.5 [unreleased]
 
