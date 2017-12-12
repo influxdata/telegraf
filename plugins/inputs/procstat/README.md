@@ -47,6 +47,8 @@ Windows fuzzy matching:
 
 ```
 
+### Linux
+
 ```
 [[inputs.procstat]]
   exe = "influxd"
