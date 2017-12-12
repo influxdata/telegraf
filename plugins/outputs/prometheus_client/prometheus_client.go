@@ -96,6 +96,7 @@ var sampleConfig = `
   string_as_label = true
 `
 
+<<<<<<< HEAD
 func (p *PrometheusClient) basicAuth(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if p.BasicUsername != "" && p.BasicPassword != "" {
@@ -114,6 +115,8 @@ func (p *PrometheusClient) basicAuth(h http.Handler) http.Handler {
 	})
 }
 
+=======
+>>>>>>> Fix separation of multiple prometheus_client outputs (#3570)
 func (p *PrometheusClient) Start() error {
 	defaultCollectors := map[string]bool{
 		"gocollector": true,
@@ -146,8 +149,13 @@ func (p *PrometheusClient) Start() error {
 	}
 
 	mux := http.NewServeMux()
+<<<<<<< HEAD
 	mux.Handle(p.Path, p.basicAuth(promhttp.HandlerFor(
 		registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})))
+=======
+	mux.Handle(p.Path, promhttp.HandlerFor(
+		registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}))
+>>>>>>> Fix separation of multiple prometheus_client outputs (#3570)
 
 	p.server = &http.Server{
 		Addr:    p.Listen,
