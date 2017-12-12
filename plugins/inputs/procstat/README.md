@@ -22,6 +22,16 @@ On the other hand, if an executable is used an "exe" tag will be generated. Poss
 * systemd_unit
 * cgroup
 
+[Windows]
+On windows we only support exe and pattern. Both of these are implemented using WMI queries. exe is on the Name field and pattern is on the CommandLine field.
+
+Example WMI Qurries:
+
+* exe  ```WHERE CommandLine LIKE $pattern ```
+* pattern ```WHERE Name LIKE $pattern ```
+
+this allows you to do fuzzy matching but only [support WMI query patterns](https://msdn.microsoft.com/en-us/library/aa392263(v=vs.85).aspx).
+
 Additionally the plugin will tag processes by their PID (pid_tag = true in the config) and their process name:
 
 * pid
