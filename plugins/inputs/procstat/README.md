@@ -31,16 +31,21 @@ Additionally the plugin will tag processes by their PID (pid_tag = true in the c
 ### Windows
 On windows we only support exe and pattern. Both of these are implemented using WMI queries. exe is on the Name field and pattern is on the CommandLine field.
 
-Example WMI Qurries:
-
-* exe  ```WHERE CommandLine LIKE $pattern ```
-* pattern ```WHERE Name LIKE $pattern ```
+Windows Support:
+* exe  (WMI Name)
+* pattern (WMI CommandLine)
 
 this allows you to do fuzzy matching but only what is supported by [WMI query patterns](https://msdn.microsoft.com/en-us/library/aa392263(v=vs.85).aspx).
 
-
-
 Example:
+
+Windows fuzzy matching:
+```[[inputs.procstat]]
+  exe = "%influx%"
+  process_name="influxd"
+  prefix = "influxd"
+
+```
 
 ```
 [[inputs.procstat]]
@@ -60,7 +65,6 @@ The above configuration would result in output like:
 
 # Measurements
 Note: prefix can be set by the user, per process.
-
 
 Threads related measurement names:
 - procstat_[prefix_]num_threads value=5
