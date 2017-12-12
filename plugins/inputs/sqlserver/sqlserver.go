@@ -244,8 +244,8 @@ func init() {
 // for putting most of the memory clerk definitions online!
 const sqlMemoryClerkV2 = `SELECT	
 'sqlserver_memory_clerks' As [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [instance],
-SERVERPROPERTY('ServerName') AS [server]
+REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+SERVERPROPERTY('ServerName') AS [host],
 ISNULL(clerk_names.name,mc.type) AS clerk_type,
 SUM(mc.pages_kb) AS size_kb
 FROM
@@ -343,8 +343,8 @@ OPTION( RECOMPILE );
 const sqlDatabaseIOV2 = `
 SELECT
 	'sqlserver_database_io' As [measurement],
-	REPLACE(@@SERVERNAME,'\',':') AS [instance],
-	SERVERPROPERTY('ServerName') AS [server],
+	REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+	SERVERPROPERTY('ServerName') AS [host],
 	DB_NAME([vfs].[database_id]) [database_name],
 	vfs.io_stall_read_ms AS read_latency_ms,
 	vfs.num_of_reads AS reads,
@@ -361,8 +361,8 @@ OPTION( RECOMPILE );
 
 const sqlServerPropertiesV2 = `SELECT
 'sqlserver_server_properties' As [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [instance],
-SERVERPROPERTY('ServerName') AS [server],
+REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+SERVERPROPERTY('ServerName') AS [host],
 SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS db_online,
 SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS db_restoring,
 SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
@@ -484,8 +484,8 @@ WHERE	(
 		)
 
 SELECT	'sqlserver_performance' AS [measurement],
-		REPLACE(@@SERVERNAME,'\',':') AS [instance],
-		SERVERPROPERTY('ServerName') AS [server],
+		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+		SERVERPROPERTY('ServerName') AS [host],
 		pc.object_name AS [object],
 		pc.counter_name AS [counter],
 		CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
@@ -510,8 +510,8 @@ OPTION( RECOMPILE );
 
 const sqlWaitStatsCategorizedV2 string = `SELECT
 'sqlserver_waitstats' AS [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [instance],
-SERVERPROPERTY('ServerName') AS [server],
+REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+SERVERPROPERTY('ServerName') AS [host],
 ws.wait_type,
 wait_time_ms,
 wait_time_ms - signal_wait_time_ms AS [resource_wait_ms],
@@ -1072,8 +1072,8 @@ const sqlAzureDB string = `IF OBJECT_ID('sys.dm_db_resource_stats') IS NOT NULL
 BEGIN
 	SELECT TOP(1)
 		'sqlserver_azurestats' AS [measurement],
-		REPLACE(@@SERVERNAME,'\',':') AS [instance],
-		SERVERPROPERTY('ServerName') AS [server],
+		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+		SERVERPROPERTY('ServerName') AS [host],
 		avg_cpu_percent,
 		avg_data_io_percent,
 		avg_log_write_percent,
