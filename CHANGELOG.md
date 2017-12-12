@@ -99,6 +99,7 @@
 - [#3447](https://github.com/influxdata/telegraf/issues/3447): Add shadow-utils dependency to rpm package.
 - [#3448](https://github.com/influxdata/telegraf/issues/3448): Use deb-systemd-invoke to restart service.
 - [#3553](https://github.com/influxdata/telegraf/issues/3553): Fix kafka_consumer outside range of offsets error.
+- [#3568](https://github.com/influxdata/telegraf/issues/3568): Fix separation of multiple prometheus_client outputs.
 
 ## v1.4.5 [2017-12-01]
 
