@@ -38,24 +38,35 @@ var isInitialized = false
 var defaultServer = "Server=.;app name=telegraf;log=1;"
 
 var sampleConfig = `
-  ## Specify instances to monitor with a list of connection strings.
-  ## All connection parameters are optional.
-  ## By default, the host is localhost, listening on default port, TCP 1433.
-  ##   for Windows, the user is the currently running AD user (SSO).
-  ##   See https://github.com/denisenkom/go-mssqldb for detailed connection
-  ##   parameters.
-  # servers = [
-  #  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
-  # ]
-  #
-  ## Optional parameter, setting this to two will use a new version
-  ## of the collection queries that break compatibility with the original
-  ## dashboards. 
-  # query_version = 2
-  ## If you are using AzureDB, setting this to True will gather resource utilization metrics
-  # azuredb = False
-  ## If you would like to exclude some of the metrics queries, list them here
-  # exclude_query = [ 'PerformanceCounters','WaitStatsCatagorized' ]
+## Specify instances to monitor with a list of connection strings.
+## All connection parameters are optional.
+## By default, the host is localhost, listening on default port, TCP 1433.
+##   for Windows, the user is the currently running AD user (SSO).
+##   See https://github.com/denisenkom/go-mssqldb for detailed connection
+##   parameters.
+# servers = [
+#  "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;app name=telegraf;log=1;",
+# ]
+#
+## Optional parameter, setting this to 2 will use a new version
+## of the collection queries that break compatibility with the original
+## dashboards. 
+# query_version = 2
+## If you are using AzureDB, setting this to True will gather resource utilization metrics
+# azuredb = False
+## If you would like to exclude some of the metrics queries, list them here
+## Possible choices:
+## - PerformanceCounters
+## - WaitStatsCategorized
+## - DatabaseIO
+## - DatabaseProperties
+## - CPUHistory
+## - DatabaseSize
+## - DatabaseStats
+## - MemoryClerk
+## - VolumeSpace
+## - PerformanceMetrics
+# exclude_query = [ 'PerformanceCounters','WaitStatsCatagorized' ]
 `
 
 // SampleConfig return the sample configuration
