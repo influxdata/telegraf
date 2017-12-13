@@ -13,12 +13,11 @@
   ```
 
 ### Features
-- [3551](https://github.com/influxdata/telegraf/pull/3551): Add health status mapping from string to int in elasticsearch input.
-- [3530](https://github.com/influxdata/telegraf/pull/3530): Support I (idle) process state on procfs+Linux.
+- [#3551](https://github.com/influxdata/telegraf/pull/3551): Add health status mapping from string to int in elasticsearch input.
 
 ### Bugfixes
 
-- [1896](https://github.com/influxdata/telegraf/issues/1896): Fix various mysql data type conversions.
+- [#1896](https://github.com/influxdata/telegraf/issues/1896): Fix various mysql data type conversions.
 
 ## v1.5 [unreleased]
 
@@ -100,6 +99,7 @@
 - [#3140](https://github.com/influxdata/telegraf/pull/3140): Add support for glob patterns in net input plugin.
 - [#3405](https://github.com/influxdata/telegraf/pull/3405): Add input plugin for OpenBSD/FreeBSD pf.
 - [#3528](https://github.com/influxdata/telegraf/pull/3528): Add option to amqp output to publish persistent messages.
+- [#3530](https://github.com/influxdata/telegraf/pull/3530): Support I (idle) process state on procfs+Linux.
 
 ### Bugfixes
 
