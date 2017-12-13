@@ -189,7 +189,7 @@ func parseStats(names []string) *configuredStats {
 			parsed.stdev = true
 
 		default:
-			log.Printf("W! Unrecognized basic stat '[%s]', ignoring", name)
+			log.Printf("W! Unrecognized basic stat '%s', ignoring", name)
 		}
 	}
 
