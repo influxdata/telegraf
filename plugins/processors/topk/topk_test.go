@@ -59,6 +59,12 @@ func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metr
 	}
 }
 
+// This functions runs at the start of the tests and setups the answer metrics test to their correct values
+func TestSetup(t *testing.T){
+	setupTestSet1()
+	setupTestSet2()
+}
+
 // Smoke tests
 func TestTopkAggregatorsSmokeTests(t *testing.T) {
 	var topk TopK
