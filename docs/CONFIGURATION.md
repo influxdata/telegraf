@@ -125,7 +125,7 @@ aggregator and will not get sent to the output plugins.
 * **name_suffix**: Specifies a suffix to attach to the measurement name.
 * **tags**: A map of tags to apply to a specific input's measurements.
 
-The [measurement filtering](#measurement-filtering) parameters be used to
+The [measurement filtering](#measurement-filtering) parameters can be used to
 limit what metrics are handled by the aggregator.  Excluded metrics are passed
 downstream to the next aggregator.
 
@@ -136,7 +136,7 @@ The following config parameters are available for all processors:
 * **order**: This is the order in which the processor(s) get executed. If this
 is not specified then processor execution order will be random.
 
-The [measurement filtering](#measurement-filtering) can parameters may be used
+The [measurement filtering](#measurement-filtering) parameters can be used
 to limit what metrics are handled by the processor.  Excluded metrics are
 passed downstream to the next processor.
 
