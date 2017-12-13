@@ -24,7 +24,7 @@ func getPools(kstatPath string) []poolInfo {
 
 	for _, poolDir := range poolsDirs {
 		poolDirSplit := strings.Split(poolDir, "/")
-		pool := poolDirSplit[len(poolDirSplit) - 2]
+		pool := poolDirSplit[len(poolDirSplit)-2]
 		pools = append(pools, poolInfo{name: pool, ioFilename: poolDir})
 	}
 
@@ -122,7 +122,7 @@ func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 			if metric == "zil" || metric == "dmu_tx" || metric == "dnodestats" {
 				key = rawData[0]
 			}
-			rawValue := rawData[len(rawData) - 1]
+			rawValue := rawData[len(rawData)-1]
 			value, _ := strconv.ParseInt(rawValue, 10, 64)
 			fields[key] = value
 		}
