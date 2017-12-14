@@ -3,6 +3,7 @@ package kentik
 import (
 	"fmt"
 	"log"
+	"net"
 	"regexp"
 	"strings"
 
@@ -24,6 +25,7 @@ var (
 const (
 	PLUGIN_NAME    = "telegraph"
 	PLUGIN_VERSION = "1.0.0"
+	DEFAULT_CIDR   = "10.0.0.0/8"
 )
 
 type Kentik struct {
@@ -33,6 +35,7 @@ type Kentik struct {
 	Token    string
 	DeviceID int
 	FlowDest string
+	Cidr     string
 
 	Debug bool
 
@@ -62,6 +65,9 @@ var sampleConfig = `
   ## Debug true - Prints Kentik communication
   debug = false
 
+  ## IPRange to use
+  cidr = "10.0.0.0/8"
+
   ## IgnoreField "" - If fieldName matches this, don't add the field name to the metric passed to TSDB.
   ignoreField = ""
 `
@@ -78,10 +84,62 @@ func (o *Kentik) Connect() error {
 	}
 
 	errors := make(chan error, 0)
-	client, err := libkflow.NewSenderWithDeviceID(o.DeviceID, errors, config)
-	if err != nil {
-		return fmt.Errorf("Cannot start client: %v", err)
+	var client *libkflow.Sender
+	var err error
+
+	if o.DeviceID != 0 {
+		client, err = libkflow.NewSenderWithDeviceID(o.DeviceID, errors, config)
+		if err != nil {
+			return fmt.Errorf("Cannot start client: %v", err)
+		}
+	} else {
+		if o.Cidr == "" {
+			o.Cidr = DEFAULT_CIDR
+		}
+		_, ipr, err := net.ParseCIDR(o.Cidr)
+		if err != nil {
+			return fmt.Errorf("Invalid CIDR: %s %v", o.Cidr, err)
+		}
+
+		// Try to find device based on ip
+		ifaces, err := net.Interfaces()
+		if err != nil {
+			return fmt.Errorf("Cannot find client ip address: %v", err)
+		}
+
+	outer:
+		for _, i := range ifaces {
+			addrs, err := i.Addrs()
+			if err != nil {
+				return fmt.Errorf("Cannot find client ip address from if: %v", err)
+			}
+
+			// handle err
+			for _, addr := range addrs {
+				var ip net.IP
+				switch v := addr.(type) {
+				case *net.IPNet:
+					ip = v.IP
+				case *net.IPAddr:
+					ip = v.IP
+				}
+				if ipr.Contains(ip) {
+					client, err = libkflow.NewSenderWithDeviceIP(ip, errors, config)
+					if err != nil {
+						return fmt.Errorf("Cannot start client: %v", err)
+					} else {
+						log.Printf("Kentik, Using IP %s", ip)
+					}
+					break outer
+				}
+			}
+		}
 	}
+
+	if client == nil {
+		return fmt.Errorf("No DeviceID found")
+	}
+
 	go o.handleErrors(errors)
 	o.client = client
 
