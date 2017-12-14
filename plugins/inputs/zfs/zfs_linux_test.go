@@ -121,6 +121,22 @@ delegations                     4    0
 hits                            4    0
 misses                          4    0
 `
+const zilContents = `7 1 0x01 13 624 8816177008 1273221813798477
+name                            type data
+zil_commit_count                4    726210
+zil_commit_writer_count         4    725963
+zil_itx_count                   4    1601362
+zil_itx_indirect_count          4    414878
+zil_itx_indirect_bytes          4    22705275500
+zil_itx_copied_count            4    2
+zil_itx_copied_bytes            4    2860
+zil_itx_needcopy_count          4    1106323
+zil_itx_needcopy_bytes          4    6092469356
+zil_itx_metaslab_normal_count   4    0
+zil_itx_metaslab_normal_bytes   4    0
+zil_itx_metaslab_slog_count     4    574922
+zil_itx_metaslab_slog_bytes     4    6500515552
+`
 const pool_ioContents = `11 3 0x00 1 80 2225326830828 32953476980628
 nread    nwritten reads    writes   wtime    wlentime wupdate  rtime    rlentime rupdate  wcnt     rcnt
 1884160  6450688  22       978      272187126 2850519036 2263669418655 424226814 2850519036 2263669871823 0        0
@@ -184,6 +200,9 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	err = ioutil.WriteFile(testKstatPath+"/vdev_cache_stats", []byte(vdev_cache_statsContents), 0644)
+	require.NoError(t, err)
+
+	err = ioutil.WriteFile(testKstatPath+"/zil", []byte(zilContents), 0644)
 	require.NoError(t, err)
 
 	intMetrics := getKstatMetricsAll()
@@ -328,20 +347,33 @@ func getKstatMetricsArcOnly() map[string]interface{} {
 
 func getKstatMetricsAll() map[string]interface{} {
 	otherMetrics := map[string]interface{}{
-		"zfetchstats_hits":              int64(7812959060),
-		"zfetchstats_misses":            int64(4154484207),
-		"zfetchstats_colinear_hits":     int64(1366368),
-		"zfetchstats_colinear_misses":   int64(4153117839),
-		"zfetchstats_stride_hits":       int64(7309776732),
-		"zfetchstats_stride_misses":     int64(222766182),
-		"zfetchstats_reclaim_successes": int64(107788388),
-		"zfetchstats_reclaim_failures":  int64(4045329451),
-		"zfetchstats_streams_resets":    int64(20989756),
-		"zfetchstats_streams_noresets":  int64(503182328),
-		"zfetchstats_bogus_streams":     int64(0),
-		"vdev_cache_stats_delegations":  int64(0),
-		"vdev_cache_stats_hits":         int64(0),
-		"vdev_cache_stats_misses":       int64(0),
+		"zfetchstats_hits":                  int64(7812959060),
+		"zfetchstats_misses":                int64(4154484207),
+		"zfetchstats_colinear_hits":         int64(1366368),
+		"zfetchstats_colinear_misses":       int64(4153117839),
+		"zfetchstats_stride_hits":           int64(7309776732),
+		"zfetchstats_stride_misses":         int64(222766182),
+		"zfetchstats_reclaim_successes":     int64(107788388),
+		"zfetchstats_reclaim_failures":      int64(4045329451),
+		"zfetchstats_streams_resets":        int64(20989756),
+		"zfetchstats_streams_noresets":      int64(503182328),
+		"zfetchstats_bogus_streams":         int64(0),
+		"vdev_cache_stats_delegations":      int64(0),
+		"vdev_cache_stats_hits":             int64(0),
+		"vdev_cache_stats_misses":           int64(0),
+		"zil_zil_commit_count":              int64(726210),
+		"zil_zil_commit_writer_count":       int64(725963),
+		"zil_zil_itx_count":                 int64(1601362),
+		"zil_zil_itx_indirect_count":        int64(414878),
+		"zil_zil_itx_indirect_bytes":        int64(22705275500),
+		"zil_zil_itx_copied_count":          int64(2),
+		"zil_zil_itx_copied_bytes":          int64(2860),
+		"zil_zil_itx_needcopy_count":        int64(1106323),
+		"zil_zil_itx_needcopy_bytes":        int64(6092469356),
+		"zil_zil_itx_metaslab_normal_count": int64(0),
+		"zil_zil_itx_metaslab_normal_bytes": int64(0),
+		"zil_zil_itx_metaslab_slog_count":   int64(574922),
+		"zil_zil_itx_metaslab_slog_bytes":   int64(6500515552),
 	}
 	arcMetrics := getKstatMetricsArcOnly()
 	for k, v := range otherMetrics {

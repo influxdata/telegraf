@@ -80,7 +80,7 @@ func gatherPoolStats(pool poolInfo, acc telegraf.Accumulator) error {
 func (z *Zfs) Gather(acc telegraf.Accumulator) error {
 	kstatMetrics := z.KstatMetrics
 	if len(kstatMetrics) == 0 {
-		kstatMetrics = []string{"arcstats", "zfetchstats", "vdev_cache_stats"}
+		kstatMetrics = []string{"arcstats", "zfetchstats", "vdev_cache_stats", "zil"}
 	}
 
 	kstatPath := z.KstatPath
