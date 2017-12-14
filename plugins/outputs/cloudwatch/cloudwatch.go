@@ -84,7 +84,6 @@ func (c *CloudWatch) Connect() error {
 	}
 
 	c.svc = cloudwatch.New(configProvider)
-
 	return nil
 }
 
