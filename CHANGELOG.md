@@ -20,7 +20,7 @@
 
 - [#1896](https://github.com/influxdata/telegraf/issues/1896): Fix various mysql data type conversions.
 
-## v1.5 [unreleased]
+## v1.5 [2017-12-14]
 
 ### New Plugins
 - [basicstats](./plugins/aggregators/basicstats/README.md) - Thanks to @toni-moreno
