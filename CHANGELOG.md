@@ -1,4 +1,4 @@
-## v1.5 [unreleased]
+## v1.5 [2017-12-14]
 
 ### New Plugins
 - [basicstats](./plugins/aggregators/basicstats/README.md) - Thanks to @toni-moreno
