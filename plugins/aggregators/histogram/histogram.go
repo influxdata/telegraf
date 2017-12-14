@@ -12,14 +12,16 @@ import (
 const bucketTag = "le"
 
 // bucketInf is the right bucket border for infinite values
-const bucketInf = "+Inf"
+var bucketInf = "+Inf"
 
 // HistogramAggregator is aggregator with histogram configs and particular histograms for defined metrics
 type HistogramAggregator struct {
 	Configs []config `toml:"config"`
 
-	buckets bucketsByMetrics
-	cache   map[uint64]metricHistogramCollection
+	bucketInf  string `toml:"bucketInf"`
+	checkedInf bool
+	buckets    bucketsByMetrics
+	cache      map[uint64]metricHistogramCollection
 }
 
 // config is the config, which contains name, field of metric and histogram buckets.
@@ -71,6 +73,9 @@ var sampleConfig = `
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
   drop_original = false
+
+  #   ## Name of positiveInfinity tag
+  #   bucketInf = "+Inf"
 
   ## Example config that aggregates all fields of the metric.
   # [[aggregators.histogram.config]]
@@ -162,6 +167,14 @@ func (h *HistogramAggregator) groupFieldsByBuckets(
 	tags map[string]string,
 	counts []int64,
 ) {
+	// Hack because I don't know when config values are present
+	if !h.checkedInf {
+		h.checkedInf = true
+		if h.bucketInf != "" {
+			bucketInf = h.bucketInf
+		}
+	}
+
 	count := int64(0)
 	for index, bucket := range h.getBuckets(name, field) {
 		count += counts[index]
