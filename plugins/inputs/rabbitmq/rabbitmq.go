@@ -268,17 +268,22 @@ func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
 		tags["name"] = r.Name
 	}
 	fields := map[string]interface{}{
-		"messages":           overview.QueueTotals.Messages,
-		"messages_ready":     overview.QueueTotals.MessagesReady,
-		"messages_unacked":   overview.QueueTotals.MessagesUnacknowledged,
-		"channels":           overview.ObjectTotals.Channels,
-		"connections":        overview.ObjectTotals.Connections,
-		"consumers":          overview.ObjectTotals.Consumers,
-		"exchanges":          overview.ObjectTotals.Exchanges,
-		"queues":             overview.ObjectTotals.Queues,
-		"messages_acked":     overview.MessageStats.Ack,
-		"messages_delivered": overview.MessageStats.Deliver,
-		"messages_published": overview.MessageStats.Publish,
+		"messages":                    overview.QueueTotals.Messages,
+		"messages_ready":              overview.QueueTotals.MessagesReady,
+		"messages_unacked":            overview.QueueTotals.MessagesUnacknowledged,
+		"channels":                    overview.ObjectTotals.Channels,
+		"connections":                 overview.ObjectTotals.Connections,
+		"consumers":                   overview.ObjectTotals.Consumers,
+		"exchanges":                   overview.ObjectTotals.Exchanges,
+		"queues":                      overview.ObjectTotals.Queues,
+		"messages_acked":              overview.MessageStats.Ack,
+		"messages_acked_rate":         overview.MessageStats.AckDetails.Rate,
+		"messages_delivered":          overview.MessageStats.Deliver,
+		"messages_delivered_rate":     overview.MessageStats.DeliverDetails.Rate,
+		"messages_delivered_get":      overview.MessageStats.DeliverGet,
+		"messages_delivered_get_rate": overview.MessageStats.DeliverGetDetails.Rate,
+		"messages_published":          overview.MessageStats.Publish,
+		"messages_published_rate":     overview.MessageStats.PublishDetails.Rate,
 	}
 	acc.AddFields("rabbitmq_overview", fields, tags)
 }
