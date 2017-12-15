@@ -26,6 +26,7 @@ type HTTPResponse struct {
 	Headers             map[string]string
 	FollowRedirects     bool
 	ResponseStringMatch string
+    Proxy               string
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -48,6 +49,9 @@ func (h *HTTPResponse) Description() string {
 var sampleConfig = `
   ## Server address (default http://localhost)
   # address = "http://localhost"
+
+  ## Set proxy (telegraf uses the system wide proxy settings if proxy is not set)
+  # proxy = "http://localhost:8888"
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
@@ -88,6 +92,22 @@ func (h *HTTPResponse) SampleConfig() string {
 // ErrRedirectAttempted indicates that a redirect occurred
 var ErrRedirectAttempted = errors.New("redirect")
 
+// Set the proxy. A configured proxy overwrites the system wide proxy.
+func getProxyFunc (proxy string) func(*http.Request) (*url.URL, error) {
+    if proxy == "" {
+        return http.ProxyFromEnvironment
+    }
+    proxyURL, err := url.Parse(proxy)
+    if err != nil {
+        return func (_ *http.Request) (*url.URL, error) {
+            return nil, errors.New("bad proxy: " + err.Error())
+        }
+    }
+        return func (r *http.Request) (*url.URL, error) {
+            return proxyURL, nil
+        }
+}
+
 // CreateHttpClient creates an http client which will timeout at the specified
 // timeout period and can follow redirects if specified
 func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
@@ -98,7 +118,7 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 	}
 	client := &http.Client{
 		Transport: &http.Transport{
-			Proxy:             http.ProxyFromEnvironment,
+            Proxy:             getProxyFunc(h.Proxy),
 			DisableKeepAlives: true,
 			TLSClientConfig:   tlsCfg,
 		},
