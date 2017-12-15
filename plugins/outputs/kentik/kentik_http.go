@@ -10,6 +10,7 @@ import (
 
 const (
 	METRIC_NAME     = "metric_name"
+	METRIC_LATENCY  = "appl_latency_ms"
 	METRIC_PREFIX   = "c_"
 	MAX_PORT_NUMBER = 16000
 )
@@ -43,6 +44,15 @@ func ToFlow(customStrings map[string]uint32, customInts map[string]uint32, met *
 			ID:   cid,
 			Type: flow.Str,
 			Str:  met.Metric,
+		})
+	}
+
+	// Also write value to appl_latency_ms, because this graphs better
+	if cid, ok := customInts[METRIC_LATENCY]; ok {
+		in.Customs = append(in.Customs, flow.Custom{
+			ID:   cid,
+			Type: flow.U32,
+			U32:  uint32(met.Value),
 		})
 	}
 
