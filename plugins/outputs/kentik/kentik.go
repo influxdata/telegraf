@@ -41,6 +41,7 @@ type Kentik struct {
 
 	IgnoreField string
 
+	sendingIP       net.IP
 	client          *libkflow.Sender
 	customIdStrings map[string]uint32
 	customIdInts    map[string]uint32
@@ -124,6 +125,7 @@ func (o *Kentik) Connect() error {
 					ip = v.IP
 				}
 				if ipr.Contains(ip) {
+					o.sendingIP = ip
 					client, err = libkflow.NewSenderWithDeviceIP(ip, errors, config)
 					if err != nil {
 						return fmt.Errorf("Cannot start client: %v", err)
@@ -201,7 +203,7 @@ func (o *Kentik) WriteHttp(metrics []telegraf.Metric) error {
 				Value:     bval,
 			}
 
-			flow := ToFlow(o.customIdStrings, o.customIdInts, metric)
+			flow := ToFlow(o.customIdStrings, o.customIdInts, metric, o.sendingIP)
 			o.client.Send(flow)
 
 			if o.Debug {

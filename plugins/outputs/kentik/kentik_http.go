@@ -1,8 +1,10 @@
 package kentik
 
 import (
+	"encoding/binary"
 	"hash/crc32"
 	"log"
+	"net"
 	"strconv"
 
 	"github.com/kentik/libkflow/flow"
@@ -22,7 +24,7 @@ type KentikMetric struct {
 	Tags      map[string]string `json:"tags"`
 }
 
-func ToFlow(customStrings map[string]uint32, customInts map[string]uint32, met *KentikMetric) *flow.Flow {
+func ToFlow(customStrings map[string]uint32, customInts map[string]uint32, met *KentikMetric, srcIP net.IP) *flow.Flow {
 	in := flow.Flow{
 		TimestampNano: met.Timestamp,
 		InBytes:       1,
@@ -37,6 +39,15 @@ func ToFlow(customStrings map[string]uint32, customInts map[string]uint32, met *
 		L4SrcPort:     2,
 		L4DstPort:     3,
 		Customs:       []flow.Custom{},
+	}
+
+	if srcIP != nil {
+		v4, v6 := PackIP(srcIP)
+		if v6 != nil {
+			in.Ipv6SrcAddr = v6
+		} else {
+			in.Ipv4SrcAddr = v4
+		}
 	}
 
 	if cid, ok := customStrings[METRIC_PREFIX+METRIC_NAME]; ok {
@@ -86,4 +97,13 @@ func ToFlow(customStrings map[string]uint32, customInts map[string]uint32, met *
 
 func (met *KentikMetric) Print() {
 	log.Printf("Kentik: %s %d %d %v", met.Metric, met.Value, met.Timestamp, met.Tags)
+}
+
+func PackIP(ipr net.IP) (uint32, []byte) {
+	if v4 := ipr.To4(); v4 != nil {
+		ipv4 := binary.BigEndian.Uint32(ipr.To4())
+		return ipv4, nil
+	} else {
+		return 0, ipr.To16()
+	}
 }
