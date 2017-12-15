@@ -128,7 +128,8 @@ func (o *Kentik) Connect() error {
 					o.sendingIP = ip
 					client, err = libkflow.NewSenderWithDeviceIP(ip, errors, config)
 					if err != nil {
-						return fmt.Errorf("Cannot start client: %v", err)
+						log.Printf("Kentik: No Device found for this IP, turning off, %s", ip)
+						return nil
 					} else {
 						log.Printf("Kentik, Using IP %s", ip)
 					}
