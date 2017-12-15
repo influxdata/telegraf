@@ -94,7 +94,7 @@ func (o *Kentik) Connect() error {
 			return fmt.Errorf("Cannot start client: %v", err)
 		}
 	} else {
-		if o.Cidr == "" {
+		if strings.TrimSpace(o.Cidr) == "" {
 			o.Cidr = DEFAULT_CIDR
 		}
 		_, ipr, err := net.ParseCIDR(o.Cidr)

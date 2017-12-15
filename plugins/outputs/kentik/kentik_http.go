@@ -12,7 +12,7 @@ import (
 
 const (
 	METRIC_NAME     = "metric_name"
-	METRIC_LATENCY  = "appl_latency_ms"
+	METRIC_LATENCY  = "APPL_LATENCY_MS"
 	METRIC_PREFIX   = "c_"
 	MAX_PORT_NUMBER = 16000
 )
