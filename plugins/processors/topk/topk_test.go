@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 	"reflect"
-	"strconv"
 
 	"github.com/influxdata/telegraf"
 )
@@ -136,7 +135,7 @@ func TestTopkMinAggregationField(t *testing.T) {
 }
 
 // GroupBy
-func TestTopkGroupby(t *testing.T) {
+func TestTopkGroupby1(t *testing.T) {
 	var topk TopK
 	topk = NewTopK()
 	topk.Period = 1
@@ -144,10 +143,36 @@ func TestTopkGroupby(t *testing.T) {
 	topk.Aggregation = "sum"
 	topk.AggregationField = "sumag"
 	topk.GroupBy = []string{"tag1", "tag3"}
-
-	for i, testset := range([] []telegraf.Metric{GroupBy0Ans}) {
-		runAndCompare(&topk, deepCopy(MetricsSet2), testset, "GroupBy test "+strconv.Itoa(i), t)
-	}
+	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy1Ans, "GroupBy test 1", t)
+}
+func TestTopkGroupby2(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 1
+	topk.Aggregation = "avg"
+	topk.AggregationField = "avg"
+	topk.GroupBy = []string{"tag1"}
+	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy2Ans, "GroupBy test 2", t)
+}
+func TestTopkGroupby3(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 1
+	topk.Aggregation = "min"
+	topk.AggregationField = "minaggfield"
+	topk.GroupBy = []string{"tag4"}
+	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy3Ans, "GroupBy test 3", t)
+}
+func TestTopkGroupby4(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 1
+	topk.Aggregation = "min"
+	topk.GroupBy = []string{"tag9"} //This is a nonexistent tag in this test set
+	runAndCompare(&topk, deepCopy(MetricsSet2), []telegraf.Metric{}, "GroupBy test 4", t)
 }
 
 // GroupBy + Fields
