@@ -9,9 +9,11 @@ import (
 var metric21, _ = metric.New(
 	"metric1",
 	map[string]string{
+		"id": "1",
 		"tag1": "ONE",
 		"tag2": "FIVE",
 		"tag3": "SIX",
+		"tag4": "EIGHT",
 	},
 	map[string]interface{}{
 		"value": float64(31.31),
@@ -24,9 +26,11 @@ var metric21, _ = metric.New(
 var metric22, _ = metric.New(
 	"metric1",
 	map[string]string{
+		"id": "2",
 		"tag1": "TWO",
 		"tag2": "FOUR",
 		"tag3": "THREE",
+		"tag4": "EIGHT",
 		
 	},
 	map[string]interface{}{
@@ -39,6 +43,7 @@ var metric22, _ = metric.New(
 var metric23, _ = metric.New(
 	"metric1",
 	map[string]string{
+		"id": "3",
 		"tag1": "TWO",
 		"tag2": "FOUR",
 		"tag3": "SIX",
@@ -54,6 +59,7 @@ var metric23, _ = metric.New(
 var metric24, _ = metric.New(
 	"metric2",
 	map[string]string{
+		"id": "4",
 		"tag1": "ONE",
 		"tag2": "FIVE",
 		"tag3": "THREE",
@@ -69,9 +75,11 @@ var metric24, _ = metric.New(
 var metric25, _ = metric.New(
 	"metric2",
 	map[string]string{
+		"id": "5",
 		"tag1": "TWO",
 		"tag2": "FOUR",
 		"tag3": "SEVEN",
+		"tag4": "NINE",
 	},
 	map[string]interface{}{
 		"value": float64(87.92),
@@ -84,9 +92,11 @@ var metric25, _ = metric.New(
 var metric26, _ = metric.New(
 	"metric2",
 	map[string]string{
+		"id": "6",
 		"tag1": "TWO",
 		"tag2": "FIVE",
 		"tag3": "SEVEN",
+		"tag4": "NINE",
 	},
 	map[string]interface{}{
 		"value": float64(75.3),
@@ -99,15 +109,34 @@ var metric26, _ = metric.New(
 var MetricsSet2 = []telegraf.Metric{metric21, metric22, metric23, metric24, metric25, metric26}
 
 
+// Groupby tests
 var ans23groupby1 = metric23.Copy()
 var ans24groupby1 = metric24.Copy()
 var ans25groupby1 = metric25.Copy()
 var ans26groupby1 = metric26.Copy()
-var GroupBy0Ans = []telegraf.Metric{ans23groupby1, ans24groupby1, ans25groupby1, ans26groupby1}
+var GroupBy1Ans = []telegraf.Metric{ans23groupby1, ans24groupby1, ans25groupby1, ans26groupby1}
+
+var ans22groupby2 = metric22.Copy()
+var ans23groupby2 = metric23.Copy()
+var ans25groupby2 = metric25.Copy()
+var ans26groupby2 = metric26.Copy()
+var GroupBy2Ans = []telegraf.Metric{ans22groupby2, ans23groupby2, ans25groupby2, ans26groupby2}
+
+var ans25groupby3 = metric25.Copy()
+var ans26groupby3 = metric26.Copy()
+var GroupBy3Ans = []telegraf.Metric{ans25groupby3, ans26groupby3}
 
 func setupTestSet2(){
 	ans23groupby1.AddField("sumag_value", float64(74.18))
 	ans24groupby1.AddField("sumag_value", float64(72))
 	ans25groupby1.AddField("sumag_value", float64(163.22))
 	ans26groupby1.AddField("sumag_value", float64(163.22))
+
+	ans22groupby2.AddField("avg_value", float64(74.20750000000001))
+	ans23groupby2.AddField("avg_value", float64(74.20750000000001))
+	ans25groupby2.AddField("avg_value", float64(74.20750000000001))
+	ans26groupby2.AddField("avg_value", float64(74.20750000000001))
+
+	ans25groupby3.AddField("minaggfield_value", float64(75.3))
+	ans26groupby3.AddField("minaggfield_value", float64(75.3))
 }
