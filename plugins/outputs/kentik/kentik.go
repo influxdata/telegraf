@@ -139,7 +139,8 @@ func (o *Kentik) Connect() error {
 	}
 
 	if client == nil {
-		return fmt.Errorf("No DeviceID found")
+		log.Printf("Kentik: No DeviceID found, turning off")
+		return nil
 	}
 
 	go o.handleErrors(errors)
@@ -171,6 +172,10 @@ func (o *Kentik) handleErrors(errors chan error) {
 
 func (o *Kentik) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
+		return nil
+	}
+
+	if o.client == nil {
 		return nil
 	}
 
