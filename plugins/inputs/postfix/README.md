@@ -13,6 +13,23 @@ For each of the active, hold, incoming, maildrop, and deferred queues (http://ww
   # queue_directory = "/var/spool/postfix"
 ```
 
+#### Permissions:
+
+Telegraf will need read access to the files in the queue directory.  You may
+need to alter the permissions of this directory to provide access to the
+telegraf user.
+
+Unix permissions:
+```sh
+$ sudo chgrp -R telegraf /var/spool/postfix
+$ sudo chmod -R g+rX /var/spool/postfix
+```
+
+Posix ACL:
+```sh
+$ sudo setfacl -R -m u:telegraf:r /var/spool/postfix
+```
+
 ### Measurements & Fields:
 
 - postfix_queue
