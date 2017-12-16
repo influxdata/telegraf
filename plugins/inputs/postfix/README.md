@@ -22,12 +22,12 @@ telegraf user.
 Unix permissions:
 ```sh
 $ sudo chgrp -R telegraf /var/spool/postfix
-$ sudo chmod -R g+rX /var/spool/postfix
+$ sudo chmod -R g+rXs /var/spool/postfix
 ```
 
 Posix ACL:
 ```sh
-$ sudo setfacl -R -m u:telegraf:r /var/spool/postfix
+$ sudo setfacl -R -m u:telegraf:rX /var/spool/postfix
 ```
 
 ### Measurements & Fields:
