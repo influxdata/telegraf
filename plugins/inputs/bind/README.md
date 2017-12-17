@@ -11,8 +11,8 @@ default (and only) XML format in BIND 9.10+.
 
 ### JSON Statistics Channel
 
-JSON statistics schema version 1 (BIND 9.10+) is supported. As of writing, most distros do not
-currently enable support for JSON statistics in their BIND packages.
+JSON statistics schema version 1 (BIND 9.10+) is supported. As of writing, some distros still do
+not enable support for JSON statistics in their BIND packages.
 
 ### Configuration:
 
@@ -50,14 +50,14 @@ for more information.
 - bind_counter
   - value
 - bind_memory
-  - TotalUse
-  - InUse
-  - BlockSize
-  - ContextSize
-  - Lost
+  - total_use
+  - in_use
+  - block_size
+  - context_size
+  - lost
 - bind_memory_context
-  - Total
-  - InUse
+  - total
+  - in_use
 
 ### Tags:
 
@@ -81,8 +81,6 @@ SELECT derivative(mean("value"), 5m) FROM bind_counter \
 WHERE "url" = 'localhost:8053' AND "type" = 'qtype' AND time > now() - 1h \
 GROUP BY time(5m), "type", "name"
 ```
-
-### Example Output:
 
 ```
 name: bind_counter
