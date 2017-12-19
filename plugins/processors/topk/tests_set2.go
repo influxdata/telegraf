@@ -126,6 +126,18 @@ var ans25groupby3 = metric25.Copy()
 var ans26groupby3 = metric26.Copy()
 var GroupBy3Ans = []telegraf.Metric{ans25groupby3, ans26groupby3}
 
+
+// Groupby + Field tests
+var ans21groupby4 = metric21.Copy()
+var ans22groupby4 = metric22.Copy()
+var ans23groupby4 = metric23.Copy()
+var ans24groupby4 = metric24.Copy()
+var ans25groupby4 = metric25.Copy()
+var ans26groupby4 = metric26.Copy()
+var GroupBy4Ans = []telegraf.Metric{ans21groupby4, ans22groupby4, ans23groupby4,
+	ans24groupby4, ans25groupby4, ans26groupby4}
+
+
 func setupTestSet2(){
 	ans23groupby1.AddField("sumag_value", float64(74.18))
 	ans24groupby1.AddField("sumag_value", float64(72))
@@ -139,4 +151,12 @@ func setupTestSet2(){
 
 	ans25groupby3.AddField("minaggfield_value", float64(75.3))
 	ans26groupby3.AddField("minaggfield_value", float64(75.3))
+
+	ans21groupby4.AddField("avg_A", float64(95.36))
+	ans22groupby4.AddField("avg_A", float64(39.01))
+	ans23groupby4.AddField("avg_A", float64(39.01))
+	ans24groupby4.AddField("avg_A", float64(95.36))
+	ans25groupby4.AddField("avg_A", float64(39.01))
+	ans26groupby4.AddField("avg_A", float64(29.45))
+
 }
