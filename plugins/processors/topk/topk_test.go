@@ -175,6 +175,7 @@ func TestTopkGroupby4(t *testing.T) {
 	runAndCompare(&topk, deepCopy(MetricsSet2), []telegraf.Metric{}, "GroupBy test 4", t)
 }
 
+
 // GroupBy + Fields
 func TestTopkGroupbyFields1(t *testing.T) {
 	var topk TopK
@@ -183,12 +184,112 @@ func TestTopkGroupbyFields1(t *testing.T) {
 	topk.K = 2
 	topk.Aggregation = "avg"
 	topk.AggregationField = "avg"
-	topk.GroupBy = []string{"tag1", "tag2"} //This is a nonexistent tag in this test set
+	topk.GroupBy = []string{"tag1", "tag2"}
+	topk.Fields = []string{"A"}
 	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy4Ans, "GroupBy Fields test 1", t)
 }
 
+func TestTopkGroupbyFields2(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 2
+	topk.Aggregation = "sum"
+	topk.AggregationField = "sum"
+	topk.GroupBy = []string{"tag1", "tag3"}
+	topk.Fields = []string{"B", "C"}
+	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy5Ans, "GroupBy Fields test 2", t)
+}
+
 // GroupBy metric name
-// GroupBy + GroupBy metric name
+func TestTopkGroupbyMetricName1(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 1
+	topk.Aggregation = "sum"
+	topk.AggregationField = "sigma"
+	topk.GroupByMetricName = true
+	runAndCompare(&topk, deepCopy(MetricsSet2), GroupByMetric1Ans, "GroupBy by metric name test 1", t)
+}
+
+func TestTopkGroupbyMetricName2(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 2
+	topk.Aggregation = "sum"
+	topk.AggregationField = "SUM"
+	topk.GroupByMetricName = true
+	topk.GroupBy = []string{"tag1", "tag2"}
+	topk.Fields = []string{"A", "value"}
+	runAndCompare(&topk, deepCopy(MetricsSet2), GroupByMetric2Ans, "GroupBy by metric name test 2", t)
+}
+
 // DropNoGroup
+func TestTopkDropNoGroupFalse(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 1
+	topk.Aggregation = "sum"
+	topk.GroupBy = []string{"tag5"}
+	topk.DropNoGroup = false
+	runAndCompare(&topk, deepCopy(MetricsSet2), DropNoGroupFalseAns, "DropNoGroup False test", t)
+}
+
 // DropNonTop=false + PositionField
+func TestTopkDontDropBottom(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 3
+	topk.Aggregation = "sum"
+	topk.AggregationField = "sumag"
+	topk.GroupBy = []string{"tag1", "tag3"}
+	topk.DropNonTop = false
+	topk.PositionField = "aggpos"
+	runAndCompare(&topk, deepCopy(MetricsSet2), DontDropBottomAns, "DontDropBottom test", t)
+}
+
+
 // BottomK
+func TestTopkBottomk(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 3
+	topk.Aggregation = "sum"
+	topk.AggregationField = "sum"
+	topk.GroupBy = []string{"tag1", "tag3"}
+	topk.Bottomk = true
+	runAndCompare(&topk, deepCopy(MetricsSet2), BottomkAns, "Bottom k test", t)
+}
+
+
+// No drops
+func TestTopkNodrops1(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 3
+	topk.Aggregation = "sum"
+	topk.AggregationField = "sumag"
+	topk.PositionField = "aggpos"
+	topk.GroupBy = []string{"tag1", "tag3"}
+	topk.DropNonTop = false
+	topk.DropNoGroup = false
+	runAndCompare(&topk, deepCopy(MetricsSet2), NoDropsAns1, "NoDrops test 1", t)
+}
+
+func TestTopkNodrops2(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 3
+	topk.Aggregation = "sum"
+	topk.GroupBy = []string{"tag1", "tag3"}
+	topk.DropNonTop = false
+	topk.DropNoGroup = false
+	runAndCompare(&topk, deepCopy(MetricsSet2), MetricsSet2, "NoDrops test 2", t)
+}
