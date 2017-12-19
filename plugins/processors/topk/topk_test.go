@@ -176,6 +176,17 @@ func TestTopkGroupby4(t *testing.T) {
 }
 
 // GroupBy + Fields
+func TestTopkGroupbyFields1(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 2
+	topk.Aggregation = "avg"
+	topk.AggregationField = "avg"
+	topk.GroupBy = []string{"tag1", "tag2"} //This is a nonexistent tag in this test set
+	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy4Ans, "GroupBy Fields test 1", t)
+}
+
 // GroupBy metric name
 // GroupBy + GroupBy metric name
 // DropNoGroup
