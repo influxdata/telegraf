@@ -1,7 +1,9 @@
-Honor the dropnontop setting
+Add option to append the groupbykey
+Add option to drop metrics that do now have set the aggregation field
 Fix casing
 
 DONE
+Honor the dropnontop setting
 Honor the aggregationfield setting
 Honor the positionfield setting
 Apply processor only to the selected metrics
