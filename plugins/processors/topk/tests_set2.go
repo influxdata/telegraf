@@ -185,7 +185,7 @@ var ans23nodrops1 = metric23.Copy()
 var ans24nodrops1 = metric24.Copy()
 var ans25nodrops1 = metric25.Copy()
 var ans26nodrops1 = metric26.Copy()
-var NoDropsAns1 = []telegraf.Metric{ans22nodrops1, ans23nodrops1, ans25nodrops1, ans26nodrops1}
+var NoDropsAns1 = []telegraf.Metric{ans21nodrops1, ans22nodrops1, ans23nodrops1, ans24nodrops1, ans25nodrops1, ans26nodrops1}
 
 func setupTestSet2(){
 	ans23groupby1.AddField("sumag_value", float64(74.18))
