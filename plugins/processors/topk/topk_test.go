@@ -266,6 +266,21 @@ func TestTopkBottomk(t *testing.T) {
 }
 
 
+// GroupByKeyTag
+func TestTopkGroupByKeyTag(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 3
+	topk.Aggregation = "sum"
+	topk.GroupBy = []string{"tag1", "tag3"}
+	topk.GroupByTag = "gbt"
+	topk.DropNonTop = false
+	topk.DropNoGroup = false
+	runAndCompare(&topk, deepCopy(MetricsSet2), GroupByKeyTagAns, "GroupByKeyTag test", t)
+}
+
+
 // No drops
 func TestTopkNodrops1(t *testing.T) {
 	var topk TopK
@@ -291,4 +306,16 @@ func TestTopkNodrops2(t *testing.T) {
 	topk.DropNonTop = false
 	topk.DropNoGroup = false
 	runAndCompare(&topk, deepCopy(MetricsSet2), MetricsSet2, "NoDrops test 2", t)
+}
+
+
+// Simple topk
+func TestTopkSimpleTopk(t *testing.T) {
+	var topk TopK
+	topk = NewTopK()
+	topk.Period = 1
+	topk.K = 3
+	topk.Aggregation = "sum"
+	topk.DropNoGroup = false
+	runAndCompare(&topk, deepCopy(MetricsSet2), SimpleTopkAns, "SimpleTopk test", t)
 }

@@ -178,6 +178,15 @@ var ans22bottomk = metric22.Copy()
 var ans24bottomk = metric24.Copy()
 var BottomkAns = []telegraf.Metric{ans21bottomk, ans22bottomk, ans24bottomk}
 
+// GroupByKeyTag
+var ans21groupbykeytag = metric21.Copy()
+var ans22groupbykeytag = metric22.Copy()
+var ans23groupbykeytag = metric23.Copy()
+var ans24groupbykeytag = metric24.Copy()
+var ans25groupbykeytag = metric25.Copy()
+var ans26groupbykeytag = metric26.Copy()
+var GroupByKeyTagAns = []telegraf.Metric{ans21groupbykeytag, ans22groupbykeytag, ans23groupbykeytag, ans24groupbykeytag, ans25groupbykeytag, ans26groupbykeytag}
+
 // No drops
 var ans21nodrops1 = metric21.Copy()
 var ans22nodrops1 = metric22.Copy()
@@ -186,6 +195,12 @@ var ans24nodrops1 = metric24.Copy()
 var ans25nodrops1 = metric25.Copy()
 var ans26nodrops1 = metric26.Copy()
 var NoDropsAns1 = []telegraf.Metric{ans21nodrops1, ans22nodrops1, ans23nodrops1, ans24nodrops1, ans25nodrops1, ans26nodrops1}
+
+// No drops
+var ans23simpletopk = metric21.Copy()
+var ans25simpletopk = metric22.Copy()
+var ans26simpletopk = metric23.Copy()
+var SimpleTopkAns = []telegraf.Metric{ans23simpletopk, ans25simpletopk, ans26simpletopk}
 
 func setupTestSet2(){
 	ans23groupby1.AddField("sumag_value", float64(74.18))
@@ -230,6 +245,15 @@ func setupTestSet2(){
 	ans25dontdropbot.AddField("aggpos_value", 1)
 	ans26dontdropbot.AddField("sumag_value", float64(163.22))
 	ans26dontdropbot.AddField("aggpos_value", 1)
+
+	ans23groupbykeytag.AddField("sumag_value", float64(74.18))
+	ans23groupbykeytag.AddTag("gbt", "")
+	ans24groupbykeytag.AddField("sumag_value", float64(72))
+	ans24groupbykeytag.AddTag("gbt", "")
+	ans25groupbykeytag.AddField("sumag_value", float64(163.22))
+	ans25groupbykeytag.AddTag("gbt", "")
+	ans26groupbykeytag.AddField("sumag_value", float64(163.22))
+	ans26groupbykeytag.AddTag("gbt", "")
 
 	ans23nodrops1.AddField("sumag_value", float64(74.18))
 	ans23nodrops1.AddField("aggpos_value", 2)
