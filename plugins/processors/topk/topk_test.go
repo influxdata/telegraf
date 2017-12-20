@@ -260,7 +260,6 @@ func TestTopkBottomk(t *testing.T) {
 	topk.Period = 1
 	topk.K = 3
 	topk.Aggregation = "sum"
-	topk.AggregationField = "sum"
 	topk.GroupBy = []string{"tag1", "tag3"}
 	topk.Bottomk = true
 	runAndCompare(&topk, deepCopy(MetricsSet2), BottomkAns, "Bottom k test", t)
