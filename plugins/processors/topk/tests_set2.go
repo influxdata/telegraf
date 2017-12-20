@@ -173,11 +173,10 @@ var ans26dontdropbot = metric26.Copy()
 var DontDropBottomAns = []telegraf.Metric{ans21dontdropbot, ans22dontdropbot, ans23dontdropbot, ans24dontdropbot, ans25dontdropbot, ans26dontdropbot}
 
 // Bottomk
-var ans23bottomk = metric23.Copy()
+var ans21bottomk = metric21.Copy()
+var ans22bottomk = metric22.Copy()
 var ans24bottomk = metric24.Copy()
-var ans25bottomk = metric25.Copy()
-var ans26bottomk = metric26.Copy()
-var BottomkAns = []telegraf.Metric{ans26bottomk, ans25bottomk, ans24bottomk, ans23bottomk}
+var BottomkAns = []telegraf.Metric{ans21bottomk, ans22bottomk, ans24bottomk}
 
 // No drops
 var ans21nodrops1 = metric21.Copy()
