@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"fmt"
 	"math"
+	"strconv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
@@ -19,6 +20,7 @@ type TopK struct {
 	GroupBy            []string `toml:"group_by"`
 	GroupByMetricName  bool `toml:"group_by_metric_name"`
 	GroupByTag         string `toml:"group_by_tag"`
+	SimpleTopk         bool `toml:"simple_topk"`
 	DropNoGroup        bool `toml:"drop_no_group"`
         Bottomk            bool
 	DropNonTop         bool `toml:"drop_non_top"`
@@ -43,6 +45,7 @@ func NewTopK() TopK {
 	topk.GroupBy = nil
 	topk.GroupByMetricName = false
 	topk.GroupByTag = ""
+	topk.SimpleTopk = false
 	topk.DropNoGroup = true
 	topk.DropNonTop = true
 	topk.PositionField = ""
@@ -126,6 +129,11 @@ func (t *TopK) Description() string {
 
 func (t *TopK) generate_groupby_key(m telegraf.Metric) string {
 	groupkey := ""
+
+	if t.SimpleTopk {
+		return strconv.FormatUint(m.HashID(), 16)
+	}
+
 	if t.GroupByMetricName {
 		groupkey += m.Name() + "&"
 	}
@@ -221,6 +229,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				_, ok := added_keys[ag.groupbykey]
 				if ! ok {
 					ret = append(ret, t.cache[ag.groupbykey]...)
+					added_keys[ag.groupbykey] = true
 				}
 			}
 		}

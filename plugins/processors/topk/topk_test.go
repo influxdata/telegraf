@@ -316,6 +316,6 @@ func TestTopkSimpleTopk(t *testing.T) {
 	topk.Period = 1
 	topk.K = 3
 	topk.Aggregation = "sum"
-	topk.DropNoGroup = false
+	topk.SimpleTopk = true
 	runAndCompare(&topk, deepCopy(MetricsSet2), SimpleTopkAns, "SimpleTopk test", t)
 }
