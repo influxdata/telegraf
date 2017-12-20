@@ -1,9 +1,9 @@
-Add option to append the groupbykey
 Add option to drop metrics that do now have set the aggregation field
 Add test for simple topk
 Fix casing
 
 DONE
+Add option to append the groupbykey
 Honor the dropnontop setting
 Honor the aggregationfield setting
 Honor the positionfield setting

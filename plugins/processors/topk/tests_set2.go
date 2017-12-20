@@ -246,14 +246,10 @@ func setupTestSet2(){
 	ans26dontdropbot.AddField("sumag_value", float64(163.22))
 	ans26dontdropbot.AddField("aggpos_value", 1)
 
-	ans23groupbykeytag.AddField("sumag_value", float64(74.18))
-	ans23groupbykeytag.AddTag("gbt", "")
-	ans24groupbykeytag.AddField("sumag_value", float64(72))
-	ans24groupbykeytag.AddTag("gbt", "")
-	ans25groupbykeytag.AddField("sumag_value", float64(163.22))
-	ans25groupbykeytag.AddTag("gbt", "")
-	ans26groupbykeytag.AddField("sumag_value", float64(163.22))
-	ans26groupbykeytag.AddTag("gbt", "")
+	ans23groupbykeytag.AddTag("gbt", "tag1=TWO&tag3=SIX&")
+	ans24groupbykeytag.AddTag("gbt", "tag1=ONE&tag3=THREE&")
+	ans25groupbykeytag.AddTag("gbt", "tag1=TWO&tag3=SEVEN&")
+	ans26groupbykeytag.AddTag("gbt", "tag1=TWO&tag3=SEVEN&")
 
 	ans23nodrops1.AddField("sumag_value", float64(74.18))
 	ans23nodrops1.AddField("aggpos_value", 2)
