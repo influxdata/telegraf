@@ -143,15 +143,15 @@ var ans26groupby5 = metric26.Copy()
 var GroupBy5Ans = []telegraf.Metric{ans21groupby5, ans23groupby5, ans25groupby5, ans26groupby5}
 
 
-// Groupby Metric name tests
+// Groupby Metric
 var ans24groupbymetric1 = metric24.Copy()
 var ans25groupbymetric1 = metric25.Copy()
 var ans26groupbymetric1 = metric26.Copy()
 var GroupByMetric1Ans = []telegraf.Metric{ans24groupbymetric1, ans25groupbymetric1, ans26groupbymetric1}
 
-var ans21groupbymetric2 = metric24.Copy()
-var ans22groupbymetric2 = metric25.Copy()
-var ans23groupbymetric2 = metric26.Copy()
+var ans21groupbymetric2 = metric21.Copy()
+var ans22groupbymetric2 = metric22.Copy()
+var ans23groupbymetric2 = metric23.Copy()
 var ans25groupbymetric2 = metric25.Copy()
 var GroupByMetric2Ans = []telegraf.Metric{ans21groupbymetric2, ans22groupbymetric2, ans23groupbymetric2, ans25groupbymetric2}
 
@@ -212,16 +212,15 @@ func setupTestSet2(){
 	ans25groupby5.AddField("sum_C", float64(49.96))
 	ans26groupby5.AddField("sum_C", float64(49.96))
 
-	ans24groupbymetric1.AddField("sigma_value", float64(235.22))
-	ans25groupbymetric1.AddField("sigma_value", float64(235.22))
-	ans26groupbymetric1.AddField("sigma_value", float64(235.22))
+	ans24groupbymetric1.AddField("sigma_value", float64(235.22000000000003))
+	ans25groupbymetric1.AddField("sigma_value", float64(235.22000000000003))
+	ans26groupbymetric1.AddField("sigma_value", float64(235.22000000000003))
 
-	ans21groupbymetric2.AddField("SUM_value", float64(31.31))
 	ans21groupbymetric2.AddField("SUM_A", float64(95.36))
-	ans22groupbymetric2.AddField("SUM_value", float64(133.61))
 	ans22groupbymetric2.AddField("SUM_A", float64(78.02))
-	ans23groupbymetric2.AddField("SUM_value", float64(133.61))
+	ans22groupbymetric2.AddField("SUM_value", float64(133.61))
 	ans23groupbymetric2.AddField("SUM_A", float64(78.02))
+	ans23groupbymetric2.AddField("SUM_value", float64(133.61))
 	ans25groupbymetric2.AddField("SUM_value", float64(87.92))
 
 	ans21dontdropbot.AddField("sumag_value", float64(31.31))
