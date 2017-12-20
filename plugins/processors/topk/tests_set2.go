@@ -197,9 +197,9 @@ var ans26nodrops1 = metric26.Copy()
 var NoDropsAns1 = []telegraf.Metric{ans21nodrops1, ans22nodrops1, ans23nodrops1, ans24nodrops1, ans25nodrops1, ans26nodrops1}
 
 // No drops
-var ans23simpletopk = metric21.Copy()
-var ans25simpletopk = metric22.Copy()
-var ans26simpletopk = metric23.Copy()
+var ans23simpletopk = metric23.Copy()
+var ans25simpletopk = metric25.Copy()
+var ans26simpletopk = metric26.Copy()
 var SimpleTopkAns = []telegraf.Metric{ans23simpletopk, ans25simpletopk, ans26simpletopk}
 
 func setupTestSet2(){
@@ -259,4 +259,8 @@ func setupTestSet2(){
 	ans25nodrops1.AddField("aggpos_value", 1)
 	ans26nodrops1.AddField("sumag_value", float64(163.22))
 	ans26nodrops1.AddField("aggpos_value", 1)
+
+	ans23simpletopk.HashID()
+	ans25simpletopk.HashID()
+	ans26simpletopk.HashID()
 }
