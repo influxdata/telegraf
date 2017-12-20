@@ -1,4 +1,5 @@
 Add option to drop metrics that do now have set the aggregation field
+Add setting for simple topk
 Add test for simple topk
 Fix casing
 
