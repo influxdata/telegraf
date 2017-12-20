@@ -196,7 +196,7 @@ var ans25nodrops1 = metric25.Copy()
 var ans26nodrops1 = metric26.Copy()
 var NoDropsAns1 = []telegraf.Metric{ans21nodrops1, ans22nodrops1, ans23nodrops1, ans24nodrops1, ans25nodrops1, ans26nodrops1}
 
-// No drops
+// Simple topk
 var ans23simpletopk = metric23.Copy()
 var ans25simpletopk = metric25.Copy()
 var ans26simpletopk = metric26.Copy()
