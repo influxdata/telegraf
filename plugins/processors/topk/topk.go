@@ -195,7 +195,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 							m.AddField(agg_field+"_"+field, ag.values[field])
 						}
 						if pos_field != "" {
-							m.AddField(pos_field+"_"+field, i)
+							m.AddField(pos_field+"_"+field, i+1) //+1 to it starts from 1
 						}
 					}
 				}
