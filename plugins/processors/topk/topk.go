@@ -209,6 +209,16 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			}
 		}
 
+		//Lastly, if we were instructed to not drop the bottom metrics, append them as is to the output
+		if ! t.DropNonTop {
+			for _, ag := range aggregations {
+				_, ok := added_keys[ag.groupbykey]
+				if ! ok {
+					ret = append(ret, t.cache[ag.groupbykey]...)
+				}
+			}
+		}
+
 		t.Reset()
 
 		return ret
