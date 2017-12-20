@@ -191,7 +191,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				// Check whether of not we need to add fields of tags to the selected metrics
 				if agg_field != "" || pos_field != "" {
 					for _, m := range(t.cache[ag.groupbykey]) {
-						if agg_field != "" {
+						if agg_field != "" && m.HasField(field){
 							m.AddField(agg_field+"_"+field, ag.values[field])
 						}
 						if pos_field != "" {

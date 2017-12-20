@@ -134,16 +134,13 @@ var ans22groupby4 = metric22.Copy()
 var ans23groupby4 = metric23.Copy()
 var ans24groupby4 = metric24.Copy()
 var ans25groupby4 = metric25.Copy()
-var ans26groupby4 = metric26.Copy()
-var GroupBy4Ans = []telegraf.Metric{ans21groupby4, ans22groupby4, ans23groupby4, ans24groupby4, ans25groupby4, ans26groupby4}
+var GroupBy4Ans = []telegraf.Metric{ans21groupby4, ans22groupby4, ans23groupby4, ans24groupby4, ans25groupby4}
 
 var ans21groupby5 = metric21.Copy()
-var ans22groupby5 = metric22.Copy()
 var ans23groupby5 = metric23.Copy()
-var ans24groupby5 = metric24.Copy()
 var ans25groupby5 = metric25.Copy()
 var ans26groupby5 = metric26.Copy()
-var GroupBy5Ans = []telegraf.Metric{ans21groupby5, ans22groupby5, ans23groupby5, ans24groupby5, ans25groupby5, ans26groupby5}
+var GroupBy5Ans = []telegraf.Metric{ans21groupby5, ans23groupby5, ans25groupby5, ans26groupby5}
 
 
 // Groupby Metric name tests
@@ -208,9 +205,6 @@ func setupTestSet2(){
 	ans21groupby4.AddField("avg_A", float64(95.36))
 	ans22groupby4.AddField("avg_A", float64(39.01))
 	ans23groupby4.AddField("avg_A", float64(39.01))
-	ans24groupby4.AddField("avg_A", float64(95.36))
-	ans25groupby4.AddField("avg_A", float64(39.01))
-	ans26groupby4.AddField("avg_A", float64(29.45))
 
 	ans21groupby5.AddField("sum_C", float64(72.41))
 	ans23groupby5.AddField("sum_B", float64(60.96))
