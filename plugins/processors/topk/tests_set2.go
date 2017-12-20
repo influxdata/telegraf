@@ -156,16 +156,16 @@ var ans25groupbymetric2 = metric25.Copy()
 var GroupByMetric2Ans = []telegraf.Metric{ans21groupbymetric2, ans22groupbymetric2, ans23groupbymetric2, ans25groupbymetric2}
 
 // DropNoGroup
-var ans21dropnogroup = metric24.Copy()
-var ans22dropnogroup = metric25.Copy()
-var ans24dropnogroup = metric26.Copy()
+var ans21dropnogroup = metric21.Copy()
+var ans22dropnogroup = metric22.Copy()
+var ans24dropnogroup = metric24.Copy()
 var ans25dropnogroup = metric25.Copy()
-var ans26dropnogroup = metric25.Copy()
+var ans26dropnogroup = metric26.Copy()
 var DropNoGroupFalseAns = []telegraf.Metric{ans21dropnogroup, ans22dropnogroup, ans24dropnogroup, ans25dropnogroup, ans26dropnogroup}
 
 // DropNonTop=false + PositionField
-var ans21dontdropbot = metric23.Copy()
-var ans22dontdropbot = metric23.Copy()
+var ans21dontdropbot = metric21.Copy()
+var ans22dontdropbot = metric22.Copy()
 var ans23dontdropbot = metric23.Copy()
 var ans24dontdropbot = metric24.Copy()
 var ans25dontdropbot = metric25.Copy()
@@ -180,10 +180,10 @@ var ans26bottomk = metric26.Copy()
 var BottomkAns = []telegraf.Metric{ans26bottomk, ans25bottomk, ans24bottomk, ans23bottomk}
 
 // No drops
-var ans21nodrops1 = metric22.Copy()
+var ans21nodrops1 = metric21.Copy()
 var ans22nodrops1 = metric22.Copy()
 var ans23nodrops1 = metric23.Copy()
-var ans24nodrops1 = metric22.Copy()
+var ans24nodrops1 = metric24.Copy()
 var ans25nodrops1 = metric25.Copy()
 var ans26nodrops1 = metric26.Copy()
 var NoDropsAns1 = []telegraf.Metric{ans22nodrops1, ans23nodrops1, ans25nodrops1, ans26nodrops1}
