@@ -4,10 +4,8 @@ package procstat
 
 import (
 	"fmt"
-	GOPS "github.com/keybase/go-ps"
 	"io/ioutil"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -40,36 +38,18 @@ func (pg *Pgrep) PidFile(path string) ([]PID, error) {
 	return pids, nil
 }
 
-func (pg Pgrep) Pattern(pattern string) (pids []PID, err error) {
-	pids = make([]PID, 0, 0)
-	procs, err := GOPS.Processes()
-	if err != nil {
-		return pids, err
-	}
-
-	regx, err := regexp.Compile(pattern)
-	if err != nil {
-		return pids, err
-	}
-	for _, p := range procs {
-		path, err := p.Path()
-		if err != nil {
-			// ignore errors, when this fails
-			// it means you don't have the permissions to see the process
-		}
-		if regx.MatchString(path) {
-			pids = append(pids, PID(p.Pid()))
-		}
-	}
-	return pids, nil
-}
-
-func (pg Pgrep) FullPattern(pattern string) ([]PID, error) {
-	return pg.Pattern(pattern)
+func (pg *Pgrep) Pattern(pattern string) ([]PID, error) {
+	args := []string{pattern}
+	return find(pg.path, args)
 }
 
 func (pg *Pgrep) Uid(user string) ([]PID, error) {
 	args := []string{"-u", user}
+	return find(pg.path, args)
+}
+
+func (pg *Pgrep) FullPattern(pattern string) ([]PID, error) {
+	args := []string{"-f", pattern}
 	return find(pg.path, args)
 }
 
