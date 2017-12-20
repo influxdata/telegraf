@@ -223,8 +223,6 @@ func setupTestSet2(){
 	ans23groupbymetric2.AddField("SUM_value", float64(133.61))
 	ans25groupbymetric2.AddField("SUM_value", float64(87.92))
 
-	ans21dontdropbot.AddField("sumag_value", float64(31.31))
-	ans22dontdropbot.AddField("sumag_value", float64(59.43))
 	ans23dontdropbot.AddField("sumag_value", float64(74.18))
 	ans23dontdropbot.AddField("aggpos_value", 2)
 	ans24dontdropbot.AddField("sumag_value", float64(72))
