@@ -18,6 +18,7 @@ type TopK struct {
 	Aggregation        string
 	GroupBy            []string `toml:"group_by"`
 	GroupByMetricName  bool `toml:"group_by_metric_name"`
+	GroupByTag         string `toml:"group_by_tag"`
 	DropNoGroup        bool `toml:"drop_no_group"`
         Bottomk            bool
 	DropNonTop         bool `toml:"drop_non_top"`
@@ -41,6 +42,7 @@ func NewTopK() TopK {
 	topk.Aggregation = "avg"
 	topk.GroupBy = nil
 	topk.GroupByMetricName = false
+	topk.GroupByTag = ""
 	topk.DropNoGroup = true
 	topk.DropNonTop = true
 	topk.PositionField = ""
@@ -180,6 +182,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		added_keys := make(map[string]bool)
 		agg_field := t.AggregationField
 		pos_field := t.PositionField
+		group_tag := t.GroupByTag
 		for _, field := range(t.Fields) {
 
 			// Sort the aggregations
@@ -189,13 +192,16 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			for i, ag := range aggregations[0:min(t.K, len(aggregations))] {
 
 				// Check whether of not we need to add fields of tags to the selected metrics
-				if agg_field != "" || pos_field != "" {
+				if agg_field != "" || pos_field != "" || group_tag != "" {
 					for _, m := range(t.cache[ag.groupbykey]) {
 						if agg_field != "" && m.HasField(field){
 							m.AddField(agg_field+"_"+field, ag.values[field])
 						}
 						if pos_field != "" {
 							m.AddField(pos_field+"_"+field, i+1) //+1 to it starts from 1
+						}
+						if group_tag != "" {
+							m.AddTag(group_tag, ag.groupbykey) //+1 to it starts from 1
 						}
 					}
 				}
