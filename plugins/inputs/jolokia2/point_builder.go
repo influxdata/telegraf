@@ -2,6 +2,7 @@ package jolokia2
 
 import (
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -156,6 +157,25 @@ func (pb *pointBuilder) formatFieldName(attribute, path string) string {
 // for every value it discovers.
 func (pb *pointBuilder) fillFields(name string, value interface{}, fieldMap map[string]interface{}) {
 	if valueMap, ok := value.(map[string]interface{}); ok {
+		// support for javax.management.j2ee.statistics.Statistic attributes
+		if val, ok := valueMap["statistics"]; ok {
+			for _, e := range val.([]interface{}) {
+				stats := e.(map[string]interface{})
+				// only gather metrics defined by java interfaces
+				validInfo := []string{"count", "current", "lowWaterMark", "highWaterMark", "upperBound", "lowerBound", "maxTime", "minTime", "totalTime"}
+				validStats := make(map[string]interface{})
+				for k, v := range stats {
+					if contains(validInfo, k) {
+						validStats[k] = v.(float64)
+					}
+				}
+				log.Println("D! stats:", stats)
+				log.Println("D! validStats:", validStats)
+				pb.fillFields(stats["name"].(string), validStats, fieldMap)
+			}
+			return
+		}
+
 		// keep going until we get to something that is not a map
 		for key, innerValue := range valueMap {
 			var innerName string
@@ -268,4 +288,13 @@ func makeSubstitutionList(mbean string) []string {
 	}
 
 	return subs
+}
+
+func contains(arr []string, str string) bool {
+	for _, a := range arr {
+		if a == str {
+			return true
+		}
+	}
+	return false
 }

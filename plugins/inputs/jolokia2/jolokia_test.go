@@ -36,7 +36,12 @@ func TestJolokia2_ScalarValues(t *testing.T) {
 	[[jolokia2_agent.metric]]
 		name     = "scalar_with_key_pattern"
 		mbean    = "scalar_with_key_pattern:test=*"
-		tag_keys = ["test"]`
+		tag_keys = ["test"]
+
+	[[jolokia2_agent.metric]]
+		name     = "statistics"
+		mbean    = "statistics:test=*"
+		tag_keys = ["stats"]`
 
 	response := `[{
 		"request": {
@@ -62,7 +67,7 @@ func TestJolokia2_ScalarValues(t *testing.T) {
 		},
 		"value": 789,
 		"status": 200
-	  }, {
+		}, {
 		"request": {
 			"mbean": "scalar_with_key_pattern:test=*",
 			"type": "read"
@@ -72,6 +77,44 @@ func TestJolokia2_ScalarValues(t *testing.T) {
 			"scalar_with_key_pattern:test=bar": 456
 		},
 		"status": 200
+		}, {
+		"request": {
+			"mbean": "statistics:test=*",
+			"type": "read"
+		},
+		"value": {
+			"stats": {
+			"zWSImpl": {},
+			"statisticNames": [
+				"RequestCount",
+				"ServiceTime"
+				],
+			"wSImpl": {},
+			"statistics": [{
+					"unit": "N/A",
+					"lastSampleTime": 1513728044862,
+					"name": "RequestCount",
+					"count": 123,
+					"description": "The total number of requests that a servlet processed.",
+					"wSImpl": {},
+					"startTime": 1513728025100
+					},
+					{
+					"maxTime": 1064,
+					"unit": "MILLISECOND",
+					"lastSampleTime": 1513728045388,
+					"minTime": 526,
+					"totalTime": 1590,
+					"name": "ServiceTime",
+					"count": 2,
+					"description": "The average response time,in milliseconds, in which a servlet request is finished.",
+					"wSImpl": {},
+					"startTime": 1513728025100
+					}
+					]
+		}
+	},
+		"status": 200
 	  }]`
 
 	server := setupServer(http.StatusOK, response)
@@ -80,6 +123,16 @@ func TestJolokia2_ScalarValues(t *testing.T) {
 
 	var acc testutil.Accumulator
 	assert.NoError(t, plugin.Gather(&acc))
+
+	acc.AssertContainsTaggedFields(t, "statistics", map[string]interface{}{
+		"RequestCount.count":    123.0,
+		"ServiceTime.count":     2.0,
+		"ServiceTime.maxTime":   1064.0,
+		"ServiceTime.minTime":   526.0,
+		"ServiceTime.totalTime": 1590.0,
+	}, map[string]string{
+		"jolokia_agent_url": server.URL,
+	})
 
 	acc.AssertContainsTaggedFields(t, "scalar_without_attribute", map[string]interface{}{
 		"value": 123.0,
