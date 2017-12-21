@@ -40,7 +40,7 @@ type innerOutput interface {
 
 // Connect implements telegraf.Output
 func (k *KairosDB) Connect() error {
-	if err := k.initInnerOutput() ; err != nil {
+	if err := k.initInnerOutput(); err != nil {
 		return err
 	}
 	k.innerOutput.Connect()
