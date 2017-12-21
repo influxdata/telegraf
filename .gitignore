@@ -2,3 +2,8 @@
 /telegraf
 /telegraf.exe
 /telegraf.gz
+.idea
+*~
+*#
+output/*
+telegraf.exe
