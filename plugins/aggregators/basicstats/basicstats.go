@@ -1,6 +1,7 @@
 package basicstats
 
 import (
+	"log"
 	"math"
 
 	"github.com/influxdata/telegraf"
@@ -8,10 +9,22 @@ import (
 )
 
 type BasicStats struct {
-	cache map[uint64]aggregate
+	Stats []string `toml:"stats"`
+
+	cache       map[uint64]aggregate
+	statsConfig *configuredStats
 }
 
-func NewBasicStats() telegraf.Aggregator {
+type configuredStats struct {
+	count    bool
+	min      bool
+	max      bool
+	mean     bool
+	variance bool
+	stdev    bool
+}
+
+func NewBasicStats() *BasicStats {
 	mm := &BasicStats{}
 	mm.Reset()
 	return mm
@@ -114,23 +127,101 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 }
 
 func (m *BasicStats) Push(acc telegraf.Accumulator) {
+
+	config := getConfiguredStats(m)
+
 	for _, aggregate := range m.cache {
 		fields := map[string]interface{}{}
 		for k, v := range aggregate.fields {
-			fields[k+"_count"] = v.count
-			fields[k+"_min"] = v.min
-			fields[k+"_max"] = v.max
-			fields[k+"_mean"] = v.mean
+
+			if config.count {
+				fields[k+"_count"] = v.count
+			}
+			if config.min {
+				fields[k+"_min"] = v.min
+			}
+			if config.max {
+				fields[k+"_max"] = v.max
+			}
+			if config.mean {
+				fields[k+"_mean"] = v.mean
+			}
+
 			//v.count always >=1
 			if v.count > 1 {
 				variance := v.M2 / (v.count - 1)
-				fields[k+"_s2"] = variance
-				fields[k+"_stdev"] = math.Sqrt(variance)
+
+				if config.variance {
+					fields[k+"_s2"] = variance
+				}
+				if config.stdev {
+					fields[k+"_stdev"] = math.Sqrt(variance)
+				}
 			}
 			//if count == 1 StdDev = infinite => so I won't send data
 		}
-		acc.AddFields(aggregate.name, fields, aggregate.tags)
+
+		if len(fields) > 0 {
+			acc.AddFields(aggregate.name, fields, aggregate.tags)
+		}
 	}
+}
+
+func parseStats(names []string) *configuredStats {
+
+	parsed := &configuredStats{}
+
+	for _, name := range names {
+
+		switch name {
+
+		case "count":
+			parsed.count = true
+		case "min":
+			parsed.min = true
+		case "max":
+			parsed.max = true
+		case "mean":
+			parsed.mean = true
+		case "s2":
+			parsed.variance = true
+		case "stdev":
+			parsed.stdev = true
+
+		default:
+			log.Printf("W! Unrecognized basic stat '%s', ignoring", name)
+		}
+	}
+
+	return parsed
+}
+
+func defaultStats() *configuredStats {
+
+	defaults := &configuredStats{}
+
+	defaults.count = true
+	defaults.min = true
+	defaults.max = true
+	defaults.mean = true
+	defaults.variance = true
+	defaults.stdev = true
+
+	return defaults
+}
+
+func getConfiguredStats(m *BasicStats) *configuredStats {
+
+	if m.statsConfig == nil {
+
+		if m.Stats == nil {
+			m.statsConfig = defaultStats()
+		} else {
+			m.statsConfig = parseStats(m.Stats)
+		}
+	}
+
+	return m.statsConfig
 }
 
 func (m *BasicStats) Reset() {

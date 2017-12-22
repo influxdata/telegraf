@@ -52,6 +52,7 @@ For additional details reference the [RabbitMQ Management HTTP Stats](https://cd
   - messages (int, messages)
   - messages_acked (int, messages)
   - messages_delivered (int, messages)
+  - messages_delivered_get (int, messages)
   - messages_published (int, messages)
   - messages_ready (int, messages)
   - messages_unacked (int, messages)
@@ -115,6 +116,12 @@ For additional details reference the [RabbitMQ Management HTTP Stats](https://cd
 
 ### Sample Queries:
 
+Message rates for the entire node can be calculated from total message counts. For instance, to get the rate of messages published per minute, use this query:
+
+```
+SELECT NON_NEGATIVE_DERIVATIVE(LAST("messages_published"), 1m) AS messages_published_rate
+FROM rabbitmq_overview WHERE time > now() - 10m GROUP BY time(1m)
+```
 
 ### Example Output:
 

@@ -46,7 +46,9 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 		"n_cpus":  runtime.NumCPU(),
 	}, nil)
 	acc.AddCounter("system", map[string]interface{}{
-		"uptime":        hostinfo.Uptime,
+		"uptime": hostinfo.Uptime,
+	}, nil)
+	acc.AddFields("system", map[string]interface{}{
 		"uptime_format": format_uptime(hostinfo.Uptime),
 	}, nil)
 
