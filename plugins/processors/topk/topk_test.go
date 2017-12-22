@@ -41,7 +41,7 @@ func equalSets(l1 []telegraf.Metric, l2 []telegraf.Metric) bool {
 	return subSet(l1, l2) && subSet(l2, l1)
 }
 
-func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metric, test_id string, t *testing.T) {
+func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metric, testID string, t *testing.T) {
 	// Sleep for `period`, otherwise the processor will only
 	// cache the metrics, but it will not process them
 	period := time.Second * time.Duration(topk.Period)
@@ -53,7 +53,7 @@ func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metr
 
 	// The returned set mut be equal to the answer set
 	if ! equalSets(ret, answer) {
-		t.Error("\nExpected metrics for", test_id, ":\n",
+		t.Error("\nExpected metrics for", testID, ":\n",
 			answer, "\nReturned metrics:\n", ret)
 	}
 }
@@ -262,7 +262,7 @@ func TestTopkBottomk(t *testing.T) {
 	topk.Aggregation = "sum"
 	topk.GroupBy = []string{"tag1", "tag3"}
 	topk.Bottomk = true
-	runAndCompare(&topk, deepCopy(MetricsSet2), BottomkAns, "Bottom k test", t)
+	runAndCompare(&topk, deepCopy(MetricsSet2), BottomKAns, "Bottom k test", t)
 }
 
 
@@ -317,5 +317,5 @@ func TestTopkSimpleTopk(t *testing.T) {
 	topk.K = 3
 	topk.Aggregation = "sum"
 	topk.SimpleTopk = true
-	runAndCompare(&topk, deepCopy(MetricsSet2), SimpleTopkAns, "SimpleTopk test", t)
+	runAndCompare(&topk, deepCopy(MetricsSet2), SimpleTopKAns, "SimpleTopk test", t)
 }
