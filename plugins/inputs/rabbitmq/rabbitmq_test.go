@@ -481,8 +481,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 			rsp = sampleNodesResponse
 		case "/api/queues":
 			rsp = sampleQueuesResponse
-        case "/api/exchanges":
-            rsp = sampleExchangesResponse
+		case "/api/exchanges":
+			rsp = sampleExchangesResponse
 		default:
 			panic("Cannot handle request")
 		}
@@ -540,12 +540,12 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 
 	assert.True(t, acc.HasMeasurement("rabbitmq_queue"))
 
-    exchangeIntMetrics := []string{
-        "messages_publish_in",
-        "messages_publish_out",
-    }
+	exchangeIntMetrics := []string{
+		"messages_publish_in",
+		"messages_publish_out",
+	}
 
-    for _, metric := range exchangeIntMetrics {
-        assert.True(t, acc.HasInt64Field("rabbitmq_exchange", metric))
-    }
+	for _, metric := range exchangeIntMetrics {
+		assert.True(t, acc.HasInt64Field("rabbitmq_exchange", metric))
+	}
 }

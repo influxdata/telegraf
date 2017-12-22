@@ -50,7 +50,7 @@ type RabbitMQ struct {
 
 	Nodes     []string
 	Queues    []string
-    Exchanges []string
+	Exchanges []string
 
 	Client *http.Client
 }
@@ -79,8 +79,8 @@ type MessageStats struct {
 	PublishDetails    Details `json:"publish_details"`
 	Redeliver         int64
 	RedeliverDetails  Details `json:"redeliver_details"`
-    PublishIn         int64   `json:"publish_in"`
-    PublishOut        int64   `json:"publish_out"`
+	PublishIn         int64   `json:"publish_in"`
+	PublishOut        int64   `json:"publish_out"`
 }
 
 // ObjectTotals ...
@@ -137,12 +137,12 @@ type Node struct {
 }
 
 type Exchange struct {
-    Name         string
-    MessageStats `json:"message_stats"`
-    Internal     bool
-    Vhost        string
-    Durable      bool
-    AutoDelete   bool `json:"auto_delete"`
+	Name         string
+	MessageStats `json:"message_stats"`
+	Internal     bool
+	Vhost        string
+	Durable      bool
+	AutoDelete   bool `json:"auto_delete"`
 }
 
 // gatherFunc ...
@@ -407,7 +407,7 @@ func gatherExchanges(r *RabbitMQ, acc telegraf.Accumulator) {
 			"url":         r.URL,
 			"exchange":    exchange.Name,
 			"vhost":       exchange.Vhost,
-            "internal":    strconv.FormatBool(exchange.Internal),
+			"internal":    strconv.FormatBool(exchange.Internal),
 			"durable":     strconv.FormatBool(exchange.Durable),
 			"auto_delete": strconv.FormatBool(exchange.AutoDelete),
 		}
@@ -452,17 +452,17 @@ func (r *RabbitMQ) shouldGatherQueue(queue Queue) bool {
 }
 
 func (r *RabbitMQ) shouldGatherExchange(exchange Exchange) bool {
-    if len(r.Exchanges) == 0 {
-        return true
-    }
+	if len(r.Exchanges) == 0 {
+		return true
+	}
 
-    for _, name := range r.Exchanges {
-        if name == exchange.Name {
-            return true
-        }
-    }
+	for _, name := range r.Exchanges {
+		if name == exchange.Name {
+			return true
+		}
+	}
 
-    return false
+	return false
 }
 
 func init() {
