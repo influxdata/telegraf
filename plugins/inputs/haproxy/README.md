@@ -58,8 +58,8 @@ When using socket names, wildcard expansion is supported so plugin can gather
 stats from multiple sockets at once.
 
 To use HTTP Basic Auth add the username and password in the userinfo section
-of the URL: `http://user:password@1.2.3.4/haproxy?stats`.  The credentials sent via the
-`Authorization` header and not using the request URL.
+of the URL: `http://user:password@1.2.3.4/haproxy?stats`.  The credentials are
+sent via the `Authorization` header and not using the request URL.
 
 
 #### keep_field_names
