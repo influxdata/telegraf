@@ -325,7 +325,7 @@ func (c *ClusterClient) createLoginToken(sa *ServiceAccount) (string, error) {
 		UID: sa.AccountID,
 		StandardClaims: jwt.StandardClaims{
 			// How long we have to login with this token
-			ExpiresAt: int64(5 * time.Minute / time.Second),
+			ExpiresAt: time.Now().Add(5 * time.Minute).Unix(),
 		},
 	})
 	return token.SignedString(sa.PrivateKey)
