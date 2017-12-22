@@ -340,26 +340,36 @@ HAVING SUM(pages_kb) >= 1024
 OPTION( RECOMPILE );
 `
 
-const sqlDatabaseIOV2 = `
-SELECT
-	'sqlserver_database_io' As [measurement],
-	REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-	SERVERPROPERTY('ServerName') AS [host],
-	DB_NAME([vfs].[database_id]) [database_name],
-	vfs.io_stall_read_ms AS read_latency_ms,
-	vfs.num_of_reads AS reads,
-	vfs.num_of_bytes_read AS read_bytes,
-	vfs.io_stall_write_ms AS write_latency_ms,
-	vfs.num_of_writes AS writes,
-	vfs.num_of_bytes_written AS write_bytes
-FROM	[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
-		INNER JOIN [sys].[master_files] [mf] 
-			ON [vfs].[database_id] = [mf].[database_id] 
-			AND [vfs].[file_id] = [mf].[file_id]
+const sqlDatabaseIOV2 = `SELECT
+'sqlserver_database_io' As [measurement],
+REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+SERVERPROPERTY('ServerName') AS [host],
+DB_NAME([vfs].[database_id]) [database_name],
+vfs.io_stall_read_ms AS read_latency_ms,
+vfs.num_of_reads AS reads,
+vfs.num_of_bytes_read AS read_bytes,
+vfs.io_stall_write_ms AS write_latency_ms,
+vfs.num_of_writes AS writes,
+vfs.num_of_bytes_written AS write_bytes,
+CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'ROWS' END AS file_type
+FROM
+[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
 OPTION( RECOMPILE );
 `
 
-const sqlServerPropertiesV2 = `SELECT
+const sqlServerPropertiesV2 = `DECLARE @sys_info TABLE (
+	cpu_count INT,
+	server_memory INT,
+	uptime INT
+)
+
+IF OBJECT_ID('master.sys.dm_os_sys_info') IS NOT NULL
+BEGIN
+	INSERT INTO @sys_info ( cpu_count, server_memory, uptime )
+	EXEC('SELECT cpu_count, physical_memory_kb, DATEDIFF(MINUTE,sqlserver_start_time,GETDATE())	FROM sys.dm_os_sys_info')
+END
+
+SELECT
 'sqlserver_server_properties' As [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 SERVERPROPERTY('ServerName') AS [host],
@@ -369,16 +379,14 @@ SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
 SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS db_recoveryPending,
 SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
 SUM( CASE WHEN state = 10 THEN 1 ELSE 0 END ) AS db_offline,
-MAX( sinfo.CpuCount ) AS cpu_count,
-MAX( sinfo.ServerMemory ) AS server_memory,
-MAX( sinfo.UpTime ) AS uptime,
+MAX( sinfo.cpu_count ) AS cpu_count,
+MAX( sinfo.server_memory ) AS server_memory,
+MAX( sinfo.uptime ) AS uptime,
 SERVERPROPERTY('ProductVersion') AS sql_version
 FROM	sys.databases
 CROSS APPLY (
-	SELECT	cpu_count AS CpuCount,
-			physical_memory_kb AS ServerMemory,
-			DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) AS UpTime
-	FROM	sys.dm_os_sys_info
+	SELECT	*
+	FROM	@sys_info
 ) AS sinfo
 WHERE	database_id > 4
 OPTION( RECOMPILE );
