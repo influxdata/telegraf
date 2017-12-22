@@ -111,156 +111,156 @@ var MetricsSet2 = []telegraf.Metric{metric21, metric22, metric23, metric24, metr
 
 
 // Groupby tests
-var ans23groupby1 = metric23.Copy()
-var ans24groupby1 = metric24.Copy()
-var ans25groupby1 = metric25.Copy()
-var ans26groupby1 = metric26.Copy()
-var GroupBy1Ans = []telegraf.Metric{ans23groupby1, ans24groupby1, ans25groupby1, ans26groupby1}
+var ans23GroupBy1 = metric23.Copy()
+var ans24GroupBy1 = metric24.Copy()
+var ans25GroupBy1 = metric25.Copy()
+var ans26GroupBy1 = metric26.Copy()
+var GroupBy1Ans = []telegraf.Metric{ans23GroupBy1, ans24GroupBy1, ans25GroupBy1, ans26GroupBy1}
 
-var ans22groupby2 = metric22.Copy()
-var ans23groupby2 = metric23.Copy()
-var ans25groupby2 = metric25.Copy()
-var ans26groupby2 = metric26.Copy()
-var GroupBy2Ans = []telegraf.Metric{ans22groupby2, ans23groupby2, ans25groupby2, ans26groupby2}
+var ans22GroupBy2 = metric22.Copy()
+var ans23GroupBy2 = metric23.Copy()
+var ans25GroupBy2 = metric25.Copy()
+var ans26GroupBy2 = metric26.Copy()
+var GroupBy2Ans = []telegraf.Metric{ans22GroupBy2, ans23GroupBy2, ans25GroupBy2, ans26GroupBy2}
 
-var ans25groupby3 = metric25.Copy()
-var ans26groupby3 = metric26.Copy()
-var GroupBy3Ans = []telegraf.Metric{ans25groupby3, ans26groupby3}
-
-
-// Groupby + Field tests
-var ans21groupby4 = metric21.Copy()
-var ans22groupby4 = metric22.Copy()
-var ans23groupby4 = metric23.Copy()
-var ans24groupby4 = metric24.Copy()
-var ans25groupby4 = metric25.Copy()
-var GroupBy4Ans = []telegraf.Metric{ans21groupby4, ans22groupby4, ans23groupby4, ans24groupby4, ans25groupby4}
-
-var ans21groupby5 = metric21.Copy()
-var ans23groupby5 = metric23.Copy()
-var ans25groupby5 = metric25.Copy()
-var ans26groupby5 = metric26.Copy()
-var GroupBy5Ans = []telegraf.Metric{ans21groupby5, ans23groupby5, ans25groupby5, ans26groupby5}
+var ans25GroupBy3 = metric25.Copy()
+var ans26GroupBy3 = metric26.Copy()
+var GroupBy3Ans = []telegraf.Metric{ans25GroupBy3, ans26GroupBy3}
 
 
-// Groupby Metric
-var ans24groupbymetric1 = metric24.Copy()
-var ans25groupbymetric1 = metric25.Copy()
-var ans26groupbymetric1 = metric26.Copy()
-var GroupByMetric1Ans = []telegraf.Metric{ans24groupbymetric1, ans25groupbymetric1, ans26groupbymetric1}
+// GroupBy + Field tests
+var ans21GroupBy4 = metric21.Copy()
+var ans22GroupBy4 = metric22.Copy()
+var ans23GroupBy4 = metric23.Copy()
+var ans24GroupBy4 = metric24.Copy()
+var ans25GroupBy4 = metric25.Copy()
+var GroupBy4Ans = []telegraf.Metric{ans21GroupBy4, ans22GroupBy4, ans23GroupBy4, ans24GroupBy4, ans25GroupBy4}
 
-var ans21groupbymetric2 = metric21.Copy()
-var ans22groupbymetric2 = metric22.Copy()
-var ans23groupbymetric2 = metric23.Copy()
-var ans25groupbymetric2 = metric25.Copy()
-var GroupByMetric2Ans = []telegraf.Metric{ans21groupbymetric2, ans22groupbymetric2, ans23groupbymetric2, ans25groupbymetric2}
+var ans21GroupBy5 = metric21.Copy()
+var ans23GroupBy5 = metric23.Copy()
+var ans25GroupBy5 = metric25.Copy()
+var ans26GroupBy5 = metric26.Copy()
+var GroupBy5Ans = []telegraf.Metric{ans21GroupBy5, ans23GroupBy5, ans25GroupBy5, ans26GroupBy5}
+
+
+// GroupBy Metric
+var ans24GroupByMetric1 = metric24.Copy()
+var ans25GroupByMetric1 = metric25.Copy()
+var ans26GroupByMetric1 = metric26.Copy()
+var GroupByMetric1Ans = []telegraf.Metric{ans24GroupByMetric1, ans25GroupByMetric1, ans26GroupByMetric1}
+
+var ans21GroupByMetric2 = metric21.Copy()
+var ans22GroupByMetric2 = metric22.Copy()
+var ans23GroupByMetric2 = metric23.Copy()
+var ans25GroupByMetric2 = metric25.Copy()
+var GroupByMetric2Ans = []telegraf.Metric{ans21GroupByMetric2, ans22GroupByMetric2, ans23GroupByMetric2, ans25GroupByMetric2}
 
 // DropNoGroup
-var ans21dropnogroup = metric21.Copy()
-var ans22dropnogroup = metric22.Copy()
-var ans24dropnogroup = metric24.Copy()
-var ans25dropnogroup = metric25.Copy()
-var ans26dropnogroup = metric26.Copy()
-var DropNoGroupFalseAns = []telegraf.Metric{ans21dropnogroup, ans22dropnogroup, ans24dropnogroup, ans25dropnogroup, ans26dropnogroup}
+var ans21DropNoGroup = metric21.Copy()
+var ans22DropNoGroup = metric22.Copy()
+var ans24DropNoGroup = metric24.Copy()
+var ans25DropNoGroup = metric25.Copy()
+var ans26DropNoGroup = metric26.Copy()
+var DropNoGroupFalseAns = []telegraf.Metric{ans21DropNoGroup, ans22DropNoGroup, ans24DropNoGroup, ans25DropNoGroup, ans26DropNoGroup}
 
 // DropNonTop=false + PositionField
-var ans21dontdropbot = metric21.Copy()
-var ans22dontdropbot = metric22.Copy()
-var ans23dontdropbot = metric23.Copy()
-var ans24dontdropbot = metric24.Copy()
-var ans25dontdropbot = metric25.Copy()
-var ans26dontdropbot = metric26.Copy()
-var DontDropBottomAns = []telegraf.Metric{ans21dontdropbot, ans22dontdropbot, ans23dontdropbot, ans24dontdropbot, ans25dontdropbot, ans26dontdropbot}
+var ans21DontDropBot = metric21.Copy()
+var ans22DontDropBot = metric22.Copy()
+var ans23DontDropBot = metric23.Copy()
+var ans24DontDropBot = metric24.Copy()
+var ans25DontDropBot = metric25.Copy()
+var ans26DontDropBot = metric26.Copy()
+var DontDropBottomAns = []telegraf.Metric{ans21DontDropBot, ans22DontDropBot, ans23DontDropBot, ans24DontDropBot, ans25DontDropBot, ans26DontDropBot}
 
-// Bottomk
-var ans21bottomk = metric21.Copy()
-var ans22bottomk = metric22.Copy()
-var ans24bottomk = metric24.Copy()
-var BottomkAns = []telegraf.Metric{ans21bottomk, ans22bottomk, ans24bottomk}
+// BottomK
+var ans21BottomK = metric21.Copy()
+var ans22BottomK = metric22.Copy()
+var ans24BottomK = metric24.Copy()
+var BottomKAns = []telegraf.Metric{ans21BottomK, ans22BottomK, ans24BottomK}
 
 // GroupByKeyTag
-var ans21groupbykeytag = metric21.Copy()
-var ans22groupbykeytag = metric22.Copy()
-var ans23groupbykeytag = metric23.Copy()
-var ans24groupbykeytag = metric24.Copy()
-var ans25groupbykeytag = metric25.Copy()
-var ans26groupbykeytag = metric26.Copy()
-var GroupByKeyTagAns = []telegraf.Metric{ans21groupbykeytag, ans22groupbykeytag, ans23groupbykeytag, ans24groupbykeytag, ans25groupbykeytag, ans26groupbykeytag}
+var ans21GroupByKeyTag = metric21.Copy()
+var ans22GroupByKeyTag = metric22.Copy()
+var ans23GroupByKeyTag = metric23.Copy()
+var ans24GroupByKeyTag = metric24.Copy()
+var ans25GroupByKeyTag = metric25.Copy()
+var ans26GroupByKeyTag = metric26.Copy()
+var GroupByKeyTagAns = []telegraf.Metric{ans21GroupByKeyTag, ans22GroupByKeyTag, ans23GroupByKeyTag, ans24GroupByKeyTag, ans25GroupByKeyTag, ans26GroupByKeyTag}
 
 // No drops
-var ans21nodrops1 = metric21.Copy()
-var ans22nodrops1 = metric22.Copy()
-var ans23nodrops1 = metric23.Copy()
-var ans24nodrops1 = metric24.Copy()
-var ans25nodrops1 = metric25.Copy()
-var ans26nodrops1 = metric26.Copy()
-var NoDropsAns1 = []telegraf.Metric{ans21nodrops1, ans22nodrops1, ans23nodrops1, ans24nodrops1, ans25nodrops1, ans26nodrops1}
+var ans21NoDrops1 = metric21.Copy()
+var ans22NoDrops1 = metric22.Copy()
+var ans23NoDrops1 = metric23.Copy()
+var ans24NoDrops1 = metric24.Copy()
+var ans25NoDrops1 = metric25.Copy()
+var ans26NoDrops1 = metric26.Copy()
+var NoDropsAns1 = []telegraf.Metric{ans21NoDrops1, ans22NoDrops1, ans23NoDrops1, ans24NoDrops1, ans25NoDrops1, ans26NoDrops1}
 
 // Simple topk
-var ans23simpletopk = metric23.Copy()
-var ans25simpletopk = metric25.Copy()
-var ans26simpletopk = metric26.Copy()
-var SimpleTopkAns = []telegraf.Metric{ans23simpletopk, ans25simpletopk, ans26simpletopk}
+var ans23SimpleTopK = metric23.Copy()
+var ans25SimpleTopK = metric25.Copy()
+var ans26SimpleTopK = metric26.Copy()
+var SimpleTopKAns = []telegraf.Metric{ans23SimpleTopK, ans25SimpleTopK, ans26SimpleTopK}
 
 func setupTestSet2(){
-	ans23groupby1.AddField("sumag_value", float64(74.18))
-	ans24groupby1.AddField("sumag_value", float64(72))
-	ans25groupby1.AddField("sumag_value", float64(163.22))
-	ans26groupby1.AddField("sumag_value", float64(163.22))
+	ans23GroupBy1.AddField("sumag_value", float64(74.18))
+	ans24GroupBy1.AddField("sumag_value", float64(72))
+	ans25GroupBy1.AddField("sumag_value", float64(163.22))
+	ans26GroupBy1.AddField("sumag_value", float64(163.22))
 
-	ans22groupby2.AddField("avg_value", float64(74.20750000000001))
-	ans23groupby2.AddField("avg_value", float64(74.20750000000001))
-	ans25groupby2.AddField("avg_value", float64(74.20750000000001))
-	ans26groupby2.AddField("avg_value", float64(74.20750000000001))
+	ans22GroupBy2.AddField("avg_value", float64(74.20750000000001))
+	ans23GroupBy2.AddField("avg_value", float64(74.20750000000001))
+	ans25GroupBy2.AddField("avg_value", float64(74.20750000000001))
+	ans26GroupBy2.AddField("avg_value", float64(74.20750000000001))
 
-	ans25groupby3.AddField("minaggfield_value", float64(75.3))
-	ans26groupby3.AddField("minaggfield_value", float64(75.3))
+	ans25GroupBy3.AddField("minaggfield_value", float64(75.3))
+	ans26GroupBy3.AddField("minaggfield_value", float64(75.3))
 
-	ans21groupby4.AddField("avg_A", float64(95.36))
-	ans22groupby4.AddField("avg_A", float64(39.01))
-	ans23groupby4.AddField("avg_A", float64(39.01))
+	ans21GroupBy4.AddField("avg_A", float64(95.36))
+	ans22GroupBy4.AddField("avg_A", float64(39.01))
+	ans23GroupBy4.AddField("avg_A", float64(39.01))
 
-	ans21groupby5.AddField("sum_C", float64(72.41))
-	ans23groupby5.AddField("sum_B", float64(60.96))
-	ans25groupby5.AddField("sum_B", float64(81.55))
-	ans25groupby5.AddField("sum_C", float64(49.96))
-	ans26groupby5.AddField("sum_C", float64(49.96))
+	ans21GroupBy5.AddField("sum_C", float64(72.41))
+	ans23GroupBy5.AddField("sum_B", float64(60.96))
+	ans25GroupBy5.AddField("sum_B", float64(81.55))
+	ans25GroupBy5.AddField("sum_C", float64(49.96))
+	ans26GroupBy5.AddField("sum_C", float64(49.96))
 
-	ans24groupbymetric1.AddField("sigma_value", float64(235.22000000000003))
-	ans25groupbymetric1.AddField("sigma_value", float64(235.22000000000003))
-	ans26groupbymetric1.AddField("sigma_value", float64(235.22000000000003))
+	ans24GroupByMetric1.AddField("sigma_value", float64(235.22000000000003))
+	ans25GroupByMetric1.AddField("sigma_value", float64(235.22000000000003))
+	ans26GroupByMetric1.AddField("sigma_value", float64(235.22000000000003))
 
-	ans21groupbymetric2.AddField("SUM_A", float64(95.36))
-	ans22groupbymetric2.AddField("SUM_A", float64(78.02))
-	ans22groupbymetric2.AddField("SUM_value", float64(133.61))
-	ans23groupbymetric2.AddField("SUM_A", float64(78.02))
-	ans23groupbymetric2.AddField("SUM_value", float64(133.61))
-	ans25groupbymetric2.AddField("SUM_value", float64(87.92))
+	ans21GroupByMetric2.AddField("SUM_A", float64(95.36))
+	ans22GroupByMetric2.AddField("SUM_A", float64(78.02))
+	ans22GroupByMetric2.AddField("SUM_value", float64(133.61))
+	ans23GroupByMetric2.AddField("SUM_A", float64(78.02))
+	ans23GroupByMetric2.AddField("SUM_value", float64(133.61))
+	ans25GroupByMetric2.AddField("SUM_value", float64(87.92))
 
-	ans23dontdropbot.AddField("sumag_value", float64(74.18))
-	ans23dontdropbot.AddField("aggpos_value", 2)
-	ans24dontdropbot.AddField("sumag_value", float64(72))
-	ans24dontdropbot.AddField("aggpos_value", 3)
-	ans25dontdropbot.AddField("sumag_value", float64(163.22))
-	ans25dontdropbot.AddField("aggpos_value", 1)
-	ans26dontdropbot.AddField("sumag_value", float64(163.22))
-	ans26dontdropbot.AddField("aggpos_value", 1)
+	ans23DontDropBot.AddField("sumag_value", float64(74.18))
+	ans23DontDropBot.AddField("aggpos_value", 2)
+	ans24DontDropBot.AddField("sumag_value", float64(72))
+	ans24DontDropBot.AddField("aggpos_value", 3)
+	ans25DontDropBot.AddField("sumag_value", float64(163.22))
+	ans25DontDropBot.AddField("aggpos_value", 1)
+	ans26DontDropBot.AddField("sumag_value", float64(163.22))
+	ans26DontDropBot.AddField("aggpos_value", 1)
 
-	ans23groupbykeytag.AddTag("gbt", "tag1=TWO&tag3=SIX&")
-	ans24groupbykeytag.AddTag("gbt", "tag1=ONE&tag3=THREE&")
-	ans25groupbykeytag.AddTag("gbt", "tag1=TWO&tag3=SEVEN&")
-	ans26groupbykeytag.AddTag("gbt", "tag1=TWO&tag3=SEVEN&")
+	ans23GroupByKeyTag.AddTag("gbt", "tag1=TWO&tag3=SIX&")
+	ans24GroupByKeyTag.AddTag("gbt", "tag1=ONE&tag3=THREE&")
+	ans25GroupByKeyTag.AddTag("gbt", "tag1=TWO&tag3=SEVEN&")
+	ans26GroupByKeyTag.AddTag("gbt", "tag1=TWO&tag3=SEVEN&")
 
-	ans23nodrops1.AddField("sumag_value", float64(74.18))
-	ans23nodrops1.AddField("aggpos_value", 2)
-	ans24nodrops1.AddField("sumag_value", float64(72))
-	ans24nodrops1.AddField("aggpos_value", 3)
-	ans25nodrops1.AddField("sumag_value", float64(163.22))
-	ans25nodrops1.AddField("aggpos_value", 1)
-	ans26nodrops1.AddField("sumag_value", float64(163.22))
-	ans26nodrops1.AddField("aggpos_value", 1)
+	ans23NoDrops1.AddField("sumag_value", float64(74.18))
+	ans23NoDrops1.AddField("aggpos_value", 2)
+	ans24NoDrops1.AddField("sumag_value", float64(72))
+	ans24NoDrops1.AddField("aggpos_value", 3)
+	ans25NoDrops1.AddField("sumag_value", float64(163.22))
+	ans25NoDrops1.AddField("aggpos_value", 1)
+	ans26NoDrops1.AddField("sumag_value", float64(163.22))
+	ans26NoDrops1.AddField("aggpos_value", 1)
 
-	ans23simpletopk.HashID()
-	ans25simpletopk.HashID()
-	ans26simpletopk.HashID()
+	ans23SimpleTopK.HashID()
+	ans25SimpleTopK.HashID()
+	ans26SimpleTopK.HashID()
 }
