@@ -13,7 +13,7 @@ import (
 func TestGather_RealPattern(t *testing.T) {
 	pg, err := NewNativeFinder()
 	require.NoError(t, err)
-	pids, err := pg.Pattern(`procstat.test.exe`)
+	pids, err := pg.Pattern(`%procstat%`)
 	require.NoError(t, err)
 	fmt.Println(pids)
 	assert.Equal(t, len(pids) > 0, true)
@@ -33,7 +33,7 @@ func TestGather_RealUser(t *testing.T) {
 	require.NoError(t, err)
 	pg, err := NewNativeFinder()
 	require.NoError(t, err)
-	pids, err := pg.Uid(fmt.Sprint(user.Username))
+	pids, err := pg.Uid(user.Username)
 	require.NoError(t, err)
 	fmt.Println(pids)
 	assert.Equal(t, len(pids) > 0, true)

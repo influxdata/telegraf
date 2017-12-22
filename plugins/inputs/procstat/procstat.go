@@ -22,6 +22,7 @@ var (
 type PID int32
 
 type Procstat struct {
+	PidFinder   string `toml:"pid_finder"`
 	PidFile     string `toml:"pid_file"`
 	Exe         string
 	Pattern     string
@@ -32,13 +33,19 @@ type Procstat struct {
 	CGroup      string `toml:"cgroup"`
 	PidTag      bool
 
-	pidFinder       PIDFinder
+	finder PIDFinder
+
 	createPIDFinder func() (PIDFinder, error)
 	procs           map[PID]Process
 	createProcess   func(PID) (Process, error)
 }
 
 var sampleConfig = `
+  ## pidFinder can be pgrep or native
+  ## pgrep tries to exec pgrep
+  ## native will work on all platforms, unix systems will use regexp. 
+  ## Windows will use WMI calls with like queries
+  pid_finder = native
   ## Must specify one of: pid_file, exe, or pattern
   ## PID file to monitor process
   pid_file = "/var/run/nginx.pid"
@@ -74,7 +81,17 @@ func (_ *Procstat) Description() string {
 
 func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	if p.createPIDFinder == nil {
-		p.createPIDFinder = defaultPIDFinder
+		fmt.Println("PIDFINDER: ", p.PidFinder)
+		switch p.PidFinder {
+		case "native":
+			fmt.Println("pid finder is now native")
+			p.createPIDFinder = NewNativeFinder
+		case "pgrep":
+			p.createPIDFinder = NewPgrep
+		default:
+			p.createPIDFinder = defaultPIDFinder
+		}
+
 	}
 	if p.createProcess == nil {
 		p.createProcess = defaultProcess
@@ -252,14 +269,15 @@ func (p *Procstat) updateProcesses(prevInfo map[PID]Process) (map[PID]Process, e
 
 // Create and return PIDGatherer lazily
 func (p *Procstat) getPIDFinder() (PIDFinder, error) {
-	if p.pidFinder == nil {
+
+	if p.finder == nil {
 		f, err := p.createPIDFinder()
 		if err != nil {
 			return nil, err
 		}
-		p.pidFinder = f
+		p.finder = f
 	}
-	return p.pidFinder, nil
+	return p.finder, nil
 }
 
 // Get matching PIDs and their initial tags

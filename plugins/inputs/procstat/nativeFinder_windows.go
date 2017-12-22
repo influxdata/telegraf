@@ -57,7 +57,6 @@ func getWin32ProcsByVariable(variable string, qType queryType, value string, tim
 	var dst []process.Win32_Process
 	var query string
 	query = fmt.Sprint("WHERE ", variable, " ", qType, " \"", value, "\"")
-	fmt.Println("Query: ", query)
 	q := wmi.CreateQuery(&dst, query)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
