@@ -2,30 +2,56 @@
 
 package procstat
 
+import (
+	"regexp"
+
+	"github.com/shirou/gopsutil/process"
+)
+
 func (pg *NativeFinder) Pattern(pattern string) ([]PID, error) {
-	var pids []pid
-	procs, err := GetWin32ProcsByName(pattern, Timeout)
+	var pids []PID
+	regxPattern, err := regexp.Compile(pattern)
+	if err != nil {
+		return pids, err
+	}
+	procs, err := process.Processes()
 	if err != nil {
 		return pids, err
 	}
 	for _, p := range procs {
-		pids = append(pids, PID(p.ProcessID))
+		name, err := p.Exe()
+		if err != nil {
+			//skip, this can be caused by the pid no longer existing
+			//or you having no permissions to access it
+			continue
+		}
+		if regxPattern.MatchString(name) {
+			pids = append(pids, PID(p.Pid))
+		}
 	}
-	return pids, nil
+	return pids, err
 }
 
 func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
-	var pids []pid
-	procs, err := GetWin32ProcsByCmdLine(pattern, Timeout)
+	var pids []PID
+	regxPattern, err := regexp.Compile(pattern)
+	if err != nil {
+		return pids, err
+	}
+	procs, err := process.Processes()
 	if err != nil {
 		return pids, err
 	}
 	for _, p := range procs {
-		pids = append(pids, PID(p.ProcessID))
+		cmd, err := p.Cmdline()
+		if err != nil {
+			//skip, this can be caused by the pid no longer existing
+			//or you having no permissions to access it
+			continue
+		}
+		if regxPattern.MatchString(cmd) {
+			pids = append(pids, PID(p.Pid))
+		}
 	}
-	return pids, nil
-}
-
-func (pg *NativeFinder) Uid(user string) ([]PID, error) {
-	return nil, ErrorNotImplemented
+	return pids, err
 }
