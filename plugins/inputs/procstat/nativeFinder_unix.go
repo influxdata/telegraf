@@ -8,6 +8,7 @@ import (
 	"github.com/shirou/gopsutil/process"
 )
 
+//Pattern matches on the process name
 func (pg *NativeFinder) Pattern(pattern string) ([]PID, error) {
 	var pids []PID
 	regxPattern, err := regexp.Compile(pattern)
@@ -32,6 +33,7 @@ func (pg *NativeFinder) Pattern(pattern string) ([]PID, error) {
 	return pids, err
 }
 
+//FullPattern matches on the command line when the proccess was executed
 func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 	var pids []PID
 	regxPattern, err := regexp.Compile(pattern)
