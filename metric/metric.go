@@ -513,14 +513,14 @@ func (m *metric) Copy() telegraf.Metric {
 
 func duplicateMetric(m *metric) telegraf.Metric {
 	out := metric{
-		name:   make([]byte, len(m.name)),
-		tags:   make([]byte, len(m.tags)),
-		fields: make([]byte, len(m.fields)),
-		t:      make([]byte, len(m.t)),
-		mType:  m.mType,
+		name:      make([]byte, len(m.name)),
+		tags:      make([]byte, len(m.tags)),
+		fields:    make([]byte, len(m.fields)),
+		t:         make([]byte, len(m.t)),
+		mType:     m.mType,
 		aggregate: m.aggregate,
-		hashID: m.hashID,
-		nsec: m.nsec,
+		hashID:    m.hashID,
+		nsec:      m.nsec,
 	}
 	copy(out.name, m.name)
 	copy(out.tags, m.tags)

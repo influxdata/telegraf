@@ -1,15 +1,15 @@
 package topk
 
 import (
-	"time"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"time"
 )
 
 var metric21, _ = metric.New(
 	"metric1",
 	map[string]string{
-		"id": "1",
+		"id":   "1",
 		"tag1": "ONE",
 		"tag2": "FIVE",
 		"tag3": "SIX",
@@ -17,8 +17,8 @@ var metric21, _ = metric.New(
 	},
 	map[string]interface{}{
 		"value": float64(31.31),
-		"A": float64(95.36),
-		"C": float64(72.41),
+		"A":     float64(95.36),
+		"C":     float64(72.41),
 	},
 	time.Now(),
 )
@@ -26,16 +26,15 @@ var metric21, _ = metric.New(
 var metric22, _ = metric.New(
 	"metric1",
 	map[string]string{
-		"id": "2",
+		"id":   "2",
 		"tag1": "TWO",
 		"tag2": "FOUR",
 		"tag3": "THREE",
 		"tag4": "EIGHT",
-		
 	},
 	map[string]interface{}{
 		"value": float64(59.43),
-		"A": float64(0.6),
+		"A":     float64(0.6),
 	},
 	time.Now(),
 )
@@ -43,7 +42,7 @@ var metric22, _ = metric.New(
 var metric23, _ = metric.New(
 	"metric1",
 	map[string]string{
-		"id": "3",
+		"id":   "3",
 		"tag1": "TWO",
 		"tag2": "FOUR",
 		"tag3": "SIX",
@@ -51,8 +50,8 @@ var metric23, _ = metric.New(
 	},
 	map[string]interface{}{
 		"value": float64(74.18),
-		"A": float64(77.42),
-		"B": float64(60.96),
+		"A":     float64(77.42),
+		"B":     float64(60.96),
 	},
 	time.Now(),
 )
@@ -60,15 +59,15 @@ var metric23, _ = metric.New(
 var metric24, _ = metric.New(
 	"metric2",
 	map[string]string{
-		"id": "4",
+		"id":   "4",
 		"tag1": "ONE",
 		"tag2": "FIVE",
 		"tag3": "THREE",
 	},
 	map[string]interface{}{
 		"value": float64(72),
-		"B": float64(22.1),
-		"C": float64(30.8),
+		"B":     float64(22.1),
+		"C":     float64(30.8),
 	},
 	time.Now(),
 )
@@ -76,7 +75,7 @@ var metric24, _ = metric.New(
 var metric25, _ = metric.New(
 	"metric2",
 	map[string]string{
-		"id": "5",
+		"id":   "5",
 		"tag1": "TWO",
 		"tag2": "FOUR",
 		"tag3": "SEVEN",
@@ -84,8 +83,8 @@ var metric25, _ = metric.New(
 	},
 	map[string]interface{}{
 		"value": float64(87.92),
-		"B": float64(81.55),
-		"C": float64(45.1),
+		"B":     float64(81.55),
+		"C":     float64(45.1),
 	},
 	time.Now(),
 )
@@ -93,7 +92,7 @@ var metric25, _ = metric.New(
 var metric26, _ = metric.New(
 	"metric2",
 	map[string]string{
-		"id": "6",
+		"id":   "6",
 		"tag1": "TWO",
 		"tag2": "FIVE",
 		"tag3": "SEVEN",
@@ -101,14 +100,13 @@ var metric26, _ = metric.New(
 	},
 	map[string]interface{}{
 		"value": float64(75.3),
-		"A": float64(29.45),
-		"C": float64(4.86),
+		"A":     float64(29.45),
+		"C":     float64(4.86),
 	},
 	time.Now(),
 )
 
 var MetricsSet2 = []telegraf.Metric{metric21, metric22, metric23, metric24, metric25, metric26}
-
 
 // Groupby tests
 var ans23GroupBy1 = metric23.Copy()
@@ -127,7 +125,6 @@ var ans25GroupBy3 = metric25.Copy()
 var ans26GroupBy3 = metric26.Copy()
 var GroupBy3Ans = []telegraf.Metric{ans25GroupBy3, ans26GroupBy3}
 
-
 // GroupBy + Field tests
 var ans21GroupBy4 = metric21.Copy()
 var ans22GroupBy4 = metric22.Copy()
@@ -141,7 +138,6 @@ var ans23GroupBy5 = metric23.Copy()
 var ans25GroupBy5 = metric25.Copy()
 var ans26GroupBy5 = metric26.Copy()
 var GroupBy5Ans = []telegraf.Metric{ans21GroupBy5, ans23GroupBy5, ans25GroupBy5, ans26GroupBy5}
-
 
 // GroupBy Metric
 var ans24GroupByMetric1 = metric24.Copy()
@@ -202,7 +198,7 @@ var ans25SimpleTopK = metric25.Copy()
 var ans26SimpleTopK = metric26.Copy()
 var SimpleTopKAns = []telegraf.Metric{ans23SimpleTopK, ans25SimpleTopK, ans26SimpleTopK}
 
-func setupTestSet2(){
+func setupTestSet2() {
 	ans23GroupBy1.AddField("sumag_value", float64(74.18))
 	ans24GroupBy1.AddField("sumag_value", float64(72))
 	ans25GroupBy1.AddField("sumag_value", float64(163.22))
