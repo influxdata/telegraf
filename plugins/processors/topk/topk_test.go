@@ -1,16 +1,16 @@
 package topk
 
 import (
+	"reflect"
 	"testing"
 	"time"
-	"reflect"
 
 	"github.com/influxdata/telegraf"
 )
 
 func deepCopy(a []telegraf.Metric) []telegraf.Metric {
 	ret := make([]telegraf.Metric, 0, len(a))
-	for _, m := range(a) {
+	for _, m := range a {
 		ret = append(ret, m.Copy())
 	}
 
@@ -18,7 +18,7 @@ func deepCopy(a []telegraf.Metric) []telegraf.Metric {
 }
 
 func belongs(m telegraf.Metric, ms []telegraf.Metric) bool {
-	for _, i := range(ms){
+	for _, i := range ms {
 		if reflect.DeepEqual(i, m) {
 			return true
 		}
@@ -28,8 +28,8 @@ func belongs(m telegraf.Metric, ms []telegraf.Metric) bool {
 
 func subSet(a []telegraf.Metric, b []telegraf.Metric) bool {
 	subset := true
-	for _, m := range(a){
-		if ! belongs(m, b) {
+	for _, m := range a {
+		if !belongs(m, b) {
 			subset = false
 			break
 		}
@@ -52,14 +52,14 @@ func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metr
 	topk.Reset()
 
 	// The returned set mut be equal to the answer set
-	if ! equalSets(ret, answer) {
+	if !equalSets(ret, answer) {
 		t.Error("\nExpected metrics for", testID, ":\n",
 			answer, "\nReturned metrics:\n", ret)
 	}
 }
 
 // This functions runs at the start of the tests and setups the answer metrics test to their correct values
-func TestSetup(t *testing.T){
+func TestSetup(t *testing.T) {
 	setupTestSet1()
 	setupTestSet2()
 }
@@ -74,7 +74,7 @@ func TestTopkAggregatorsSmokeTests(t *testing.T) {
 
 	aggregators := []string{"avg", "sum", "max", "min"}
 
-	for _,ag := range(aggregators) {
+	for _, ag := range aggregators {
 		topk.Aggregation = ag
 
 		//The answer is equal to the original set for these particual scenarios
@@ -175,7 +175,6 @@ func TestTopkGroupby4(t *testing.T) {
 	runAndCompare(&topk, deepCopy(MetricsSet2), []telegraf.Metric{}, "GroupBy test 4", t)
 }
 
-
 // GroupBy + Fields
 func TestTopkGroupbyFields1(t *testing.T) {
 	var topk TopK
@@ -252,7 +251,6 @@ func TestTopkDontDropBottom(t *testing.T) {
 	runAndCompare(&topk, deepCopy(MetricsSet2), DontDropBottomAns, "DontDropBottom test", t)
 }
 
-
 // BottomK
 func TestTopkBottomk(t *testing.T) {
 	var topk TopK
@@ -264,7 +262,6 @@ func TestTopkBottomk(t *testing.T) {
 	topk.Bottomk = true
 	runAndCompare(&topk, deepCopy(MetricsSet2), BottomKAns, "Bottom k test", t)
 }
-
 
 // GroupByKeyTag
 func TestTopkGroupByKeyTag(t *testing.T) {
@@ -279,7 +276,6 @@ func TestTopkGroupByKeyTag(t *testing.T) {
 	topk.DropNoGroup = false
 	runAndCompare(&topk, deepCopy(MetricsSet2), GroupByKeyTagAns, "GroupByKeyTag test", t)
 }
-
 
 // No drops
 func TestTopkNodrops1(t *testing.T) {
@@ -307,7 +303,6 @@ func TestTopkNodrops2(t *testing.T) {
 	topk.DropNoGroup = false
 	runAndCompare(&topk, deepCopy(MetricsSet2), MetricsSet2, "NoDrops test 2", t)
 }
-
 
 // Simple topk
 func TestTopkSimpleTopk(t *testing.T) {

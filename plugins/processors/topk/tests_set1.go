@@ -1,9 +1,9 @@
 package topk
 
 import (
-	"time"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"time"
 )
 
 var metric11, _ = metric.New(
@@ -86,7 +86,7 @@ var ansMin14 = metric14.Copy()
 var ansMin15 = metric15.Copy()
 var MinAggregationFieldAns = []telegraf.Metric{ansMin11, ansMin12, ansMin13, ansMin14, ansMin15}
 
-func setupTestSet1(){
+func setupTestSet1() {
 	// Expected answer for the TopkAvgAggretationField test
 	ansAvg11.AddField("avgag_a", float64(28.044))
 	ansAvg12.AddField("avgag_a", float64(28.044))
