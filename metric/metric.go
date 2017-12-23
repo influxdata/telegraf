@@ -271,7 +271,7 @@ func (m *metric) Split(maxSize int) []telegraf.Metric {
 		if i >= len(m.fields) {
 			// hit the end of the field byte slice
 			if len(fields) > 0 {
-				out = append(out, duplicateMetric(m))
+				out = append(out, duplicateMetricWith(m, nil, nil, fields, nil))
 			}
 			break
 		}
@@ -291,7 +291,7 @@ func (m *metric) Split(maxSize int) []telegraf.Metric {
 			// selected field anyways. This means that the given maxSize is too
 			// small for a single field to fit.
 			if len(fields) > 0 {
-				out = append(out, duplicateMetric(m))
+				out = append(out, duplicateMetricWith(m, nil, nil, fields, nil))
 			}
 
 			fields = make([]byte, 0, maxSize)
@@ -508,24 +508,51 @@ func (m *metric) RemoveField(key string) error {
 }
 
 func (m *metric) Copy() telegraf.Metric {
-	return duplicateMetric(m)
+	return duplicateMetricWith(m, nil, nil, nil, nil)
 }
 
-func duplicateMetric(m *metric) telegraf.Metric {
+func duplicateMetricWith(m *metric, name, tags, fields, t []byte) telegraf.Metric {
+	var newName, newTags, newFields, newT []byte
+
+	if name != nil {
+		newName = name
+	} else {
+		newName = m.name
+	}
+
+	if tags != nil {
+		newTags = tags
+	} else {
+		newTags = m.tags
+	}
+
+	if fields != nil {
+		newFields = fields
+	} else {
+		newFields = m.fields
+	}
+
+	if t != nil {
+		newT = t
+	} else {
+		newT = m.t
+	}
+
 	out := metric{
-		name:      make([]byte, len(m.name)),
-		tags:      make([]byte, len(m.tags)),
-		fields:    make([]byte, len(m.fields)),
-		t:         make([]byte, len(m.t)),
+		name:      make([]byte, len(newName)),
+		tags:      make([]byte, len(newTags)),
+		fields:    make([]byte, len(newFields)),
+		t:         make([]byte, len(newT)),
 		mType:     m.mType,
 		aggregate: m.aggregate,
 		hashID:    m.hashID,
 		nsec:      m.nsec,
 	}
-	copy(out.name, m.name)
-	copy(out.tags, m.tags)
-	copy(out.fields, m.fields)
-	copy(out.t, m.t)
+
+	copy(out.name, newName)
+	copy(out.tags, newTags)
+	copy(out.fields, newFields)
+	copy(out.t, newT)
 	return &out
 }
 
