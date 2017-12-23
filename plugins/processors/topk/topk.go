@@ -42,7 +42,7 @@ func NewTopK() TopK {
 	topk.K = 10
 	topk.Fields = []string{"value"}
 	topk.Aggregation = "avg"
-	topk.GroupBy = []
+	topk.GroupBy = []string{}
 	topk.GroupByMetricName = false
 	topk.GroupByTag = ""
 	topk.SimpleTopk = false
