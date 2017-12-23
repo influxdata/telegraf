@@ -1,7 +1,6 @@
+DONE
 Fix casing
 Fix documentation
-
-DONE
 Add setting for simple topk
 Add test for simple topk
 Add option to append the groupbykey
