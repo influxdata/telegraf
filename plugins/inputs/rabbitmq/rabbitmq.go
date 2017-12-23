@@ -139,6 +139,7 @@ type Node struct {
 type Exchange struct {
 	Name         string
 	MessageStats `json:"message_stats"`
+	Type         string
 	Internal     bool
 	Vhost        string
 	Durable      bool
@@ -406,6 +407,7 @@ func gatherExchanges(r *RabbitMQ, acc telegraf.Accumulator) {
 		tags := map[string]string{
 			"url":         r.URL,
 			"exchange":    exchange.Name,
+			"type":        exchange.Type,
 			"vhost":       exchange.Vhost,
 			"internal":    strconv.FormatBool(exchange.Internal),
 			"durable":     strconv.FormatBool(exchange.Durable),
