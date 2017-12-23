@@ -20,13 +20,13 @@ import (
 // HTTPResponse struct
 type HTTPResponse struct {
 	Address             string
+    Proxy               string
 	Body                string
 	Method              string
 	ResponseTimeout     internal.Duration
 	Headers             map[string]string
 	FollowRedirects     bool
 	ResponseStringMatch string
-    Proxy               string
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
