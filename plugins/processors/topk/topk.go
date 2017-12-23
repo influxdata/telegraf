@@ -15,15 +15,15 @@ import (
 type TopK struct {
 	Period             int
 	K                  int
-	Fields             []string
-	Aggregation        string
 	GroupBy            []string `toml:"group_by"`
 	GroupByMetricName  bool `toml:"group_by_metric_name"`
-	GroupByTag         string `toml:"group_by_tag"`
+	Fields             []string
+	Aggregation        string
+        Bottomk            bool
 	SimpleTopk         bool `toml:"simple_topk"`
 	DropNoGroup        bool `toml:"drop_no_group"`
-        Bottomk            bool
 	DropNonTop         bool `toml:"drop_non_top"`
+	GroupByTag         string `toml:"group_by_tag"`
 	PositionField      string `toml:"position_field"`
 	AggregationField   string `toml:"aggregation_field"`
 
@@ -42,7 +42,7 @@ func NewTopK() TopK {
 	topk.K = 10
 	topk.Fields = []string{"value"}
 	topk.Aggregation = "avg"
-	topk.GroupBy = nil
+	topk.GroupBy = []
 	topk.GroupByMetricName = false
 	topk.GroupByTag = ""
 	topk.SimpleTopk = false
@@ -64,17 +64,43 @@ func NewTopKProcessor() telegraf.Processor{
 
 var sampleConfig = `
 [[processors.topk]]
-  metric = "cpu"               # Which metric to filter. No default. Mandatory
   period = 10                  # How many seconds between aggregations. Default: 10
   k = 10                       # How many top metrics to return. Default: 10
-  field = "user"               # Over which field is the aggregation done. Default: "value"
-  tags = ["node-1", "east"]    # List of tags regexes to match against. Default: "*"
-  aggregation = "avg"          # What aggregation to use over time. Default: "avg". Options: sum, avg, min, max
-  revert_tag_match = false     # Whether or not to invert the tag match
-  drop_non_matching = false    # Whether or not to drop all non matching measurements (for the selected metric only). Default: False
-  drop_non_top = true          # Whether or not to drop measurements that do not reach the top k: Default: True
-  position_field = "telegraf_topk_position"       # Field to add to the top k measurements, with their position as value. Default: "" (deactivated)
-  aggregation_field = "telegraf_topk_aggregation" # Field with the value of the computed aggregation. Default: "" (deactivated)
+
+  # Metrics are grouped based on their tags and name. The plugin aggregates the selected fields of
+  # these groups of metrics and sorts the groups based these aggregations
+  group_by = ["process_name"]  # Over which tags should the aggregation be done. Default: []
+  group_by_metric_name = false # Wheter or not to also group by metric name. Default: false
+
+  # The plugin can aggregate over several fields. If more than one field is specified, an aggregation is calculated per group per field
+  # The plugin returns a metric if it is in a group in the top k groups ordered by any of the aggregations of the selected fields
+  # This effectively means that more than K metrics may be returned. If you need to return only the top k metrics regardless of grouping, use the simple_topk setting
+  fields = ["memory_rss"]      # Over which fields are the top k are calculated. Default: ["value"]
+  aggregation = "avg"          # What aggregation to use. Default: "avg". Options: sum, avg, min, max
+
+  bottomk = false              # Instead of the top k largest metrics, return the bottom k lowest metrics. Default: false
+  simple_topk = false          # If true, this will override any GroupBy options and assign each metric its own individual group. Default: false
+  drop_no_group = true         # Drop any metrics that do fit in any group (due to nonexistent tags). Default: true
+  drop_non_top = true          # Drop the metrics that do not make the cut for the top k. Default: true
+
+  group_by_tag = ""            # The plugin assigns each metric a GroupBy tag generated from its name and tags.
+                               # If this setting is different than "" the plugin will add a tag (which name will be the value of
+                               # this setting) to each metric with the value of the calculated GroupBy tag.
+                               # Useful for debugging. Default: ""
+
+  position_field = ""          # This settings provides a way to know the position of each metric in the top k.
+                               # If set to a value different than "", then a field (which name will be prefixed with the value of this setting) will be
+                               # added to each every metric for each field over which an aggregation was made.
+                               # This field will contain the ranking of the group that the metric belonged to. When aggregating
+                               # over several fields, several fields will be added (one for each field over which an aggregation was calculated).
+                               # Useful for debugging. Default: ""
+
+  aggregation_field = ""       # This setting provies a way know the what values the plugin is generating when aggregating the fields
+                               # If set to a value different than "", then a field (which name will be prefixed with the value of this setting) will be added
+                               # to each metric which was part of a field aggregation.
+                               # The value of the added field will be the value of the result of the aggregation operation for that metric's group. When aggregating
+                               # over several fields, several fields will be added (one for each field over which an aggregation was calculated).
+                               # Useful for debugging.Default: ""
 `
 
 type MetricAggregation struct {
