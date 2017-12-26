@@ -5,6 +5,7 @@ package procstat
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/StackExchange/wmi"
@@ -26,17 +27,42 @@ const (
 	notEqual = queryType("!=")
 )
 
-//Pattern matches the process name on windows and will find a pattern using a WMI like query
+// //Pattern matches the process name on windows and will find a pattern using a WMI like query
+// func (pg *NativeFinder) Pattern(pattern string) ([]PID, error) {
+// 	var pids []PID
+// 	procs, err := getWin32ProcsByVariable("Name", like, pattern, Timeout)
+// 	if err != nil {
+// 		return pids, err
+// 	}
+// 	for _, p := range procs {
+// 		pids = append(pids, PID(p.ProcessID))
+// 	}
+// 	return pids, nil
+// }
+
+//Pattern matches on the process name
 func (pg *NativeFinder) Pattern(pattern string) ([]PID, error) {
 	var pids []PID
-	procs, err := getWin32ProcsByVariable("Name", like, pattern, Timeout)
+	regxPattern, err := regexp.Compile(pattern)
+	if err != nil {
+		return pids, err
+	}
+	procs, err := process.Processes()
 	if err != nil {
 		return pids, err
 	}
 	for _, p := range procs {
-		pids = append(pids, PID(p.ProcessID))
+		name, err := p.Name()
+		if err != nil {
+			//skip, this can be caused by the pid no longer existing
+			//or you having no permissions to access it
+			continue
+		}
+		if regxPattern.MatchString(name) {
+			pids = append(pids, PID(p.Pid))
+		}
 	}
-	return pids, nil
+	return pids, err
 }
 
 //FullPattern matches the cmdLine on windows and will find a pattern using a WMI like query
