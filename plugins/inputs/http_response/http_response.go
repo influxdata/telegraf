@@ -20,7 +20,7 @@ import (
 // HTTPResponse struct
 type HTTPResponse struct {
 	Address             string
-    Proxy               string
+	Proxy               string
 	Body                string
 	Method              string
 	ResponseTimeout     internal.Duration
@@ -93,19 +93,19 @@ func (h *HTTPResponse) SampleConfig() string {
 var ErrRedirectAttempted = errors.New("redirect")
 
 // Set the proxy. A configured proxy overwrites the system wide proxy.
-func getProxyFunc (proxy string) func(*http.Request) (*url.URL, error) {
-    if proxy == "" {
-        return http.ProxyFromEnvironment
-    }
-    proxyURL, err := url.Parse(proxy)
-    if err != nil {
-        return func (_ *http.Request) (*url.URL, error) {
-            return nil, errors.New("bad proxy: " + err.Error())
-        }
-    }
-        return func (r *http.Request) (*url.URL, error) {
-            return proxyURL, nil
-        }
+func getProxyFunc(proxy string) func(*http.Request) (*url.URL, error) {
+	if proxy == "" {
+		return http.ProxyFromEnvironment
+	}
+	proxyURL, err := url.Parse(proxy)
+	if err != nil {
+		return func(_ *http.Request) (*url.URL, error) {
+			return nil, errors.New("bad proxy: " + err.Error())
+		}
+	}
+	return func(r *http.Request) (*url.URL, error) {
+		return proxyURL, nil
+	}
 }
 
 // CreateHttpClient creates an http client which will timeout at the specified
@@ -118,7 +118,7 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 	}
 	client := &http.Client{
 		Transport: &http.Transport{
-            Proxy:             getProxyFunc(h.Proxy),
+			Proxy:             getProxyFunc(h.Proxy),
 			DisableKeepAlives: true,
 			TLSClientConfig:   tlsCfg,
 		},
