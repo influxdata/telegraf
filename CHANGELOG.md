@@ -259,6 +259,7 @@
 - [#3725](https://github.com/influxdata/telegraf/issues/3725): Exclude master_replid fields from redis input.
 
 ## v1.5.1 [2018-01-10]
+## v1.5.1 [unreleased]
 
 ### Bugfixes
 
