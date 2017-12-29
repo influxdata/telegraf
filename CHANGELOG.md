@@ -27,6 +27,7 @@
 ### Bugfixes
 
 - [#3624](https://github.com/influxdata/telegraf/pull/3624): Fix name error in jolokia2_agent sample config.
+- [#3625](https://github.com/influxdata/telegraf/pull/3625): Fix DC/OS login expiration time.
 
 ## v1.5 [2017-12-14]
 
