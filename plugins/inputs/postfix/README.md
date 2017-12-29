@@ -16,18 +16,20 @@ For each of the active, hold, incoming, maildrop, and deferred queues (http://ww
 #### Permissions:
 
 Telegraf will need read access to the files in the queue directory.  You may
-need to alter the permissions of this directory to provide access to the
+need to alter the permissions of these directories to provide access to the
 telegraf user.
 
 Unix permissions:
 ```sh
-$ sudo chgrp -R telegraf /var/spool/postfix
-$ sudo chmod -R g+rXs /var/spool/postfix
+$ sudo chgrp -R telegraf /var/spool/postfix/{active,hold,incoming,deferred}
+$ sudo chmod -R g+rXs /var/spool/postfix/{active,hold,incoming,deferred}
+$ sudo usermod -a -G postdrop telegraf
+$ sudo chmod g+r /var/spool/postfix/maildrop
 ```
 
 Posix ACL:
 ```sh
-$ sudo setfacl -R -m u:telegraf:rX /var/spool/postfix
+$ sudo setfacl -R -m u:telegraf:rX /var/spool/postfix/{active,hold,incoming,deferred,maildrop}
 ```
 
 ### Measurements & Fields:
