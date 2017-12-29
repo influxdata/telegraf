@@ -1,3 +1,9 @@
+## v1.5.1 [unreleased]
+
+### Bugfixes
+
+- [#3624](https://github.com/influxdata/telegraf/pull/3624): Fix name error in jolokia2_agent sample config.
+
 ## v1.5 [2017-12-14]
 
 ### New Plugins
