@@ -15,9 +15,8 @@ The ss command does not require specific privileges.
 ### Measurements & Fields:
 
 - socketstat
-    - state (string)
-    - proto (string)
-    - For tcp, if ss provides it (depends on the version):
+    - state (string) (tcp, dccp and sctp)
+    - If ss provides it (depends on the protocol and ss version):
         - bytes_acked (integer, bytes)
         - bytes_received (integer, bytes)
         - segs_out (integer, count)
@@ -28,11 +27,12 @@ The ss command does not require specific privileges.
 ### Tags:
 
 - All measurements have the following tags:
+    - proto
+    - state (tcp, dccp and sctp)
     - local_addr
     - local_port
     - remote_addr
     - remote_port
-    - state
  
 ### Example Output:
 
@@ -46,11 +46,11 @@ tcp   ESTAB      0      0          192.168.1.21:53896                  1.2.3.4:4
 ```
 
 ```$ ./telegraf --config telegraf.conf --input-filter socketstat --test
-socketstat,proto=tcp,local_addr=192.168.1.21,local_port=53896i,remote_addr=1.2.3.4,remote_port=443i state=ESTAB,bytes_acked=2155i,bytes_received=3873216i,segs_out=218i,segs_in=2742i,data_segs_out=17i,data_segs_in=2730i
+socketstat,proto=tcp,local_addr=192.168.1.21,local_port=53896,remote_addr=1.2.3.4,remote_port=443 state=ESTAB,bytes_acked=2155i,bytes_received=3873216i,segs_out=218i,segs_in=2742i,data_segs_out=17i,data_segs_in=2730i
 ```
 
 #### older ss version
 
 tcp   ESTAB      0      0                                                  192.168.1.21:38776                                           1.2.3.4:18080  uid:100 ino:378042749 sk:ffff880257013100 <->
 	 ts sack cubic wscale:7,7 rto:284 rtt:84.5/8 ato:40 mss:1448 cwnd:5 ssthresh:3 send 685.4Kbps retrans:0/4 rcv_rtt:88 rcv_space:29200
-socketstat,proto=tcp,local_addr=192.168.1.21,local_port=38776i,remote_addr=1.2.3.4,remote_port=18080i,state=ESTAB
+socketstat,proto=tcp,local_addr=192.168.1.21,local_port=38776,remote_addr=1.2.3.4,remote_port=18080,state=ESTAB
