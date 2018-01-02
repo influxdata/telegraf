@@ -32,6 +32,7 @@ func GetCPUInfo() (info map[string]string) {
 			"host_logical_cpus":  strconv.Itoa(logicalCPU),
 		}
 	} else {
+		info = map[string]string{}
 		log.Println("E! Input [signalfx-metadata] ", err)
 	}
 	return
@@ -50,6 +51,7 @@ func GetKernelInfo() (info map[string]string) {
 			GetLinuxVersion(info)
 		}
 	} else {
+		info = map[string]string{}
 		log.Println("E! Input [signalfx-metadata] ", err)
 	}
 	return
@@ -83,9 +85,10 @@ func GetLinuxVersion(info map[string]string) {
 
 // GetMemory - adds information about the host memory to the supplied map
 func GetMemory() (info map[string]string) {
+	info = map[string]string{}
 	mem, err := mem.VirtualMemory()
 	if err == nil {
-		info = map[string]string{"host_mem_total": strconv.FormatUint(mem.Total/1024, 10)}
+		info["host_mem_total"] = strconv.FormatUint(mem.Total/1024, 10)
 	}
 	return
 }

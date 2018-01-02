@@ -56,7 +56,7 @@ func (s *SFXMeta) sendNotifications(acc telegraf.Accumulator) {
 		GetMemory,
 		s.aws.GetAWSInfo,
 	}
-	for _, f := range infoFunctions {
+	for _, funct := range infoFunctions {
 		go func(f func() map[string]string) {
 			i := f()
 			// Emit the properties
@@ -65,7 +65,7 @@ func (s *SFXMeta) sendNotifications(acc telegraf.Accumulator) {
 					log.Println("E! Input [signalfx-metadata] ", err)
 				}
 			}
-		}(f)
+		}(funct)
 	}
 	if err := emitProperty(acc, "host_metadata_version", pluginVersion); err != nil {
 		log.Println("E! Input [signalfx-metadata] ", err)
