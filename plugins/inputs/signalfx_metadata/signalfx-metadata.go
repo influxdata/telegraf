@@ -50,29 +50,37 @@ func (s *SFXMeta) SampleConfig() string {
 }
 
 func (s *SFXMeta) sendNotifications(acc telegraf.Accumulator) {
-	var info = make(map[string]string)
-	GetCPUInfo(info)
-	GetKernelInfo(info)
-	s.aws.GetAWSInfo(info)
-	GetMemory(info)
-	info["host_metadata_version"] = pluginVersion
-	// info["host_telegraf_version"] = s.getTelegrafVersion()
-
-	// Emit the properties
-	for prop, value := range info {
-		if err := emitProperty(acc, prop, value); err != nil {
-			log.Println("E! Input [signalfx-metadata] ", err)
-		}
+	var infoFunctions = []func() map[string]string{
+		GetCPUInfo,
+		GetKernelInfo,
+		GetMemory,
+		s.aws.GetAWSInfo,
+	}
+	for _, f := range infoFunctions {
+		go func(f func() map[string]string) {
+			i := f()
+			// Emit the properties
+			for prop, value := range i {
+				if err := emitProperty(acc, prop, value); err != nil {
+					log.Println("E! Input [signalfx-metadata] ", err)
+				}
+			}
+		}(f)
+	}
+	if err := emitProperty(acc, "host_metadata_version", pluginVersion); err != nil {
+		log.Println("E! Input [signalfx-metadata] ", err)
 	}
 }
 
 // Gather - read method for SignalFx metadata plugin
 func (s *SFXMeta) Gather(acc telegraf.Accumulator) error {
 
-	top, err := s.processInfo.GetTop()
-	if err == nil {
-		emitTop(acc, string(top), pluginVersion)
-	}
+	go func() {
+		top, err := s.processInfo.GetTop()
+		if err == nil {
+			emitTop(acc, string(top), pluginVersion)
+		}
+	}()
 
 	if s.nextMetadataSend == 0 {
 		dither := s.nextMetadataSendInterval[0]
@@ -94,11 +102,6 @@ func (s *SFXMeta) Gather(acc telegraf.Accumulator) error {
 	}
 
 	return nil
-}
-
-func (s *SFXMeta) getTelegrafVersion() string {
-	var response string
-	return response
 }
 
 func init() {
