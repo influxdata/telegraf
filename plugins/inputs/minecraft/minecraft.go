@@ -47,7 +47,7 @@ func (s *Minecraft) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather uses the RCON protocal to collect player and
+// Gather uses the RCON protocol to collect player and
 // scoreboard stats from a minecraft server.
 //var hasClient bool = false
 func (s *Minecraft) Gather(acc telegraf.Accumulator) error {

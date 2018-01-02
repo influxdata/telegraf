@@ -2,6 +2,7 @@ package statsd
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"log"
@@ -65,7 +66,7 @@ type Statsd struct {
 
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string
-	// This flag enables parsing of tags in the dogstatsd extention to the
+	// This flag enables parsing of tags in the dogstatsd extension to the
 	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
 	ParseDataDogTags bool
 
@@ -89,7 +90,7 @@ type Statsd struct {
 	malformed int
 
 	// Channel for all incoming statsd packets
-	in   chan []byte
+	in   chan *bytes.Buffer
 	done chan struct{}
 
 	// Cache gauges, counters & sets so they can be aggregated as they arrive
@@ -121,6 +122,9 @@ type Statsd struct {
 	TotalConnections   selfstat.Stat
 	PacketsRecv        selfstat.Stat
 	BytesRecv          selfstat.Stat
+
+	// A pool of byte slices to handle parsing
+	bufPool sync.Pool
 }
 
 // One statsd metric, form is <bucket>:<value>|<mtype>|@<samplerate>
@@ -167,7 +171,7 @@ func (_ *Statsd) Description() string {
 }
 
 const sampleConfig = `
-  ## Protocol, must be "tcp" or "udp" (default=udp)
+  ## Protocol, must be "tcp", "udp", "udp4" or "udp6" (default=udp)
   protocol = "udp"
 
   ## MaxTCPConnection - applicable when protocol is set to tcp (default=250)
@@ -235,6 +239,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 			}
 			fields[prefix+"mean"] = stats.Mean()
 			fields[prefix+"stddev"] = stats.Stddev()
+			fields[prefix+"sum"] = stats.Sum()
 			fields[prefix+"upper"] = stats.Upper()
 			fields[prefix+"lower"] = stats.Lower()
 			fields[prefix+"count"] = stats.Count()
@@ -251,14 +256,14 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, metric := range s.gauges {
-		acc.AddFields(metric.name, metric.fields, metric.tags, now)
+		acc.AddGauge(metric.name, metric.fields, metric.tags, now)
 	}
 	if s.DeleteGauges {
 		s.gauges = make(map[string]cachedgauge)
 	}
 
 	for _, metric := range s.counters {
-		acc.AddFields(metric.name, metric.fields, metric.tags, now)
+		acc.AddCounter(metric.name, metric.fields, metric.tags, now)
 	}
 	if s.DeleteCounters {
 		s.counters = make(map[string]cachedcounter)
@@ -280,9 +285,6 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 
 func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	// Make data structures
-	s.done = make(chan struct{})
-	s.in = make(chan []byte, s.AllowedPendingMessages)
-
 	s.gauges = make(map[string]cachedgauge)
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
@@ -301,10 +303,15 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	s.PacketsRecv = selfstat.Register("statsd", "tcp_packets_received", tags)
 	s.BytesRecv = selfstat.Register("statsd", "tcp_bytes_received", tags)
 
-	s.in = make(chan []byte, s.AllowedPendingMessages)
+	s.in = make(chan *bytes.Buffer, s.AllowedPendingMessages)
 	s.done = make(chan struct{})
 	s.accept = make(chan bool, s.MaxTCPConnections)
 	s.conns = make(map[string]*net.TCPConn)
+	s.bufPool = sync.Pool{
+		New: func() interface{} {
+			return new(bytes.Buffer)
+		},
+	}
 	for i := 0; i < s.MaxTCPConnections; i++ {
 		s.accept <- true
 	}
@@ -320,10 +327,9 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 
 	s.wg.Add(2)
 	// Start the UDP listener
-	switch s.Protocol {
-	case "udp":
+	if s.isUDP() {
 		go s.udpListen()
-	case "tcp":
+	} else {
 		go s.tcpListen()
 	}
 	// Start the line parser
@@ -375,8 +381,8 @@ func (s *Statsd) tcpListen() error {
 func (s *Statsd) udpListen() error {
 	defer s.wg.Done()
 	var err error
-	address, _ := net.ResolveUDPAddr("udp", s.ServiceAddress)
-	s.UDPlistener, err = net.ListenUDP("udp", address)
+	address, _ := net.ResolveUDPAddr(s.Protocol, s.ServiceAddress)
+	s.UDPlistener, err = net.ListenUDP(s.Protocol, address)
 	if err != nil {
 		log.Fatalf("ERROR: ListenUDP - %s", err)
 	}
@@ -393,11 +399,12 @@ func (s *Statsd) udpListen() error {
 				log.Printf("E! Error READ: %s\n", err.Error())
 				continue
 			}
-			bufCopy := make([]byte, n)
-			copy(bufCopy, buf[:n])
+			b := s.bufPool.Get().(*bytes.Buffer)
+			b.Reset()
+			b.Write(buf[:n])
 
 			select {
-			case s.in <- bufCopy:
+			case s.in <- b:
 			default:
 				s.drops++
 				if s.drops == 1 || s.AllowedPendingMessages == 0 || s.drops%s.AllowedPendingMessages == 0 {
@@ -413,13 +420,13 @@ func (s *Statsd) udpListen() error {
 // single statsd metric into a struct.
 func (s *Statsd) parser() error {
 	defer s.wg.Done()
-	var packet []byte
 	for {
 		select {
 		case <-s.done:
 			return nil
-		case packet = <-s.in:
-			lines := strings.Split(string(packet), "\n")
+		case buf := <-s.in:
+			lines := strings.Split(buf.String(), "\n")
+			s.bufPool.Put(buf)
 			for _, line := range lines {
 				line = strings.TrimSpace(line)
 				if line != "" {
@@ -773,12 +780,14 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 			}
 			s.BytesRecv.Incr(int64(n))
 			s.PacketsRecv.Incr(1)
-			bufCopy := make([]byte, n+1)
-			copy(bufCopy, scanner.Bytes())
-			bufCopy[n] = '\n'
+
+			b := s.bufPool.Get().(*bytes.Buffer)
+			b.Reset()
+			b.Write(scanner.Bytes())
+			b.WriteByte('\n')
 
 			select {
-			case s.in <- bufCopy:
+			case s.in <- b:
 			default:
 				s.drops++
 				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {
@@ -813,13 +822,11 @@ func (s *Statsd) remember(id string, conn *net.TCPConn) {
 
 func (s *Statsd) Stop() {
 	s.Lock()
-	defer s.Unlock()
 	log.Println("I! Stopping the statsd service")
 	close(s.done)
-	switch s.Protocol {
-	case "udp":
+	if s.isUDP() {
 		s.UDPlistener.Close()
-	case "tcp":
+	} else {
 		s.TCPlistener.Close()
 		// Close all open TCP connections
 		//  - get all conns from the s.conns map and put into slice
@@ -834,12 +841,20 @@ func (s *Statsd) Stop() {
 		for _, conn := range conns {
 			conn.Close()
 		}
-	default:
-		s.UDPlistener.Close()
 	}
+	s.Unlock()
+
 	s.wg.Wait()
+
+	s.Lock()
 	close(s.in)
 	log.Println("I! Stopped Statsd listener service on ", s.ServiceAddress)
+	s.Unlock()
+}
+
+// IsUDP returns true if the protocol is UDP, false otherwise.
+func (s *Statsd) isUDP() bool {
+	return strings.HasPrefix(s.Protocol, "udp")
 }
 
 func init() {

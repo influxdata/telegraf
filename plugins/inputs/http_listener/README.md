@@ -8,6 +8,10 @@ The `/write` endpoint supports the `precision` query parameter and can be set to
 
 When chaining Telegraf instances using this plugin, CREATE DATABASE requests receive a 200 OK response with message body `{"results":[]}` but they are not relayed. The output configuration of the Telegraf instance which ultimately submits data to InfluxDB determines the destination database.
 
+Enable TLS by specifying the file names of a service TLS certificate and key.
+
+Enable mutually authenticated TLS and authorize client connections by signing certificate authority by including a list of allowed CA certificate file names in ````tls_allowed_cacerts````.
+
 See: [Telegraf Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#influx).
 
 **Example:**
@@ -28,4 +32,11 @@ This is a sample configuration for the plugin.
   ## timeouts
   read_timeout = "10s"
   write_timeout = "10s"
+
+  ## HTTPS
+  tls_cert= "/etc/telegraf/cert.pem"
+  tls_key = "/etc/telegraf/key.pem"
+
+  ## MTLS
+  tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 ```

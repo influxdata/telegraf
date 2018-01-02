@@ -18,11 +18,11 @@ const (
 	sampleConfig = `
   ## This plugin reads information exposed by fluentd (using /api/plugins.json endpoint).
   ##
-  ## Endpoint: 
+  ## Endpoint:
   ## - only one URI is allowed
   ## - https is not supported
   endpoint = "http://localhost:24220/api/plugins.json"
-  	
+
   ## Define which plugins have to be excluded (based on "type" field - e.g. monitor_agent)
   exclude = [
 	  "monitor_agent",
@@ -148,15 +148,15 @@ func (h *Fluentd) Gather(acc telegraf.Accumulator) error {
 			}
 
 			if p.BufferQueueLength != nil {
-				tmpFields["buffer_queue_length"] = p.BufferQueueLength
+				tmpFields["buffer_queue_length"] = *p.BufferQueueLength
 
 			}
 			if p.RetryCount != nil {
-				tmpFields["retry_count"] = p.RetryCount
+				tmpFields["retry_count"] = *p.RetryCount
 			}
 
 			if p.BufferTotalQueuedSize != nil {
-				tmpFields["buffer_total_queued_size"] = p.BufferTotalQueuedSize
+				tmpFields["buffer_total_queued_size"] = *p.BufferTotalQueuedSize
 			}
 
 			if !((p.BufferQueueLength == nil) && (p.RetryCount == nil) && (p.BufferTotalQueuedSize == nil)) {

@@ -70,22 +70,8 @@ func (c *CloudWatch) Connect() error {
 		Token:     c.Token,
 	}
 	configProvider := credentialConfig.Credentials()
-
-	svc := cloudwatch.New(configProvider)
-
-	params := &cloudwatch.ListMetricsInput{
-		Namespace: aws.String(c.Namespace),
-	}
-
-	_, err := svc.ListMetrics(params) // Try a read-only call to test connection.
-
-	if err != nil {
-		log.Printf("E! cloudwatch: Error in ListMetrics API call : %+v \n", err.Error())
-	}
-
-	c.svc = svc
-
-	return err
+	c.svc = cloudwatch.New(configProvider)
+	return nil
 }
 
 func (c *CloudWatch) Close() error {

@@ -588,17 +588,12 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 	// Global Variables may be gathered less often
 	if len(m.IntervalSlow) > 0 {
-		if uint32(time.Since(lastT).Seconds()) > scanIntervalSlow {
+		if uint32(time.Since(lastT).Seconds()) >= scanIntervalSlow {
 			err = m.gatherGlobalVariables(db, serv, acc)
 			if err != nil {
 				return err
 			}
 			lastT = time.Now()
-		} else {
-			err = m.gatherGlobalVariables(db, serv, acc)
-			if err != nil {
-				return err
-			}
 		}
 	}
 

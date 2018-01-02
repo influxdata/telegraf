@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -48,5 +49,57 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	assert.True(t, acc.HasFloatField("go_goroutines", "gauge"))
 	assert.True(t, acc.HasFloatField("test_metric", "value"))
 	assert.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
+	assert.False(t, acc.HasTag("test_metric", "address"))
+	assert.True(t, acc.TagValue("test_metric", "url") == ts.URL)
+}
 
+func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, sampleTextFormat)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		KubernetesServices: []string{ts.URL},
+	}
+	u, _ := url.Parse(ts.URL)
+	tsAddress := u.Hostname()
+
+	var acc testutil.Accumulator
+
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
+	assert.True(t, acc.HasFloatField("go_gc_duration_seconds", "count"))
+	assert.True(t, acc.HasFloatField("go_goroutines", "gauge"))
+	assert.True(t, acc.HasFloatField("test_metric", "value"))
+	assert.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
+	assert.True(t, acc.TagValue("test_metric", "address") == tsAddress)
+	assert.True(t, acc.TagValue("test_metric", "url") == ts.URL)
+}
+
+func TestPrometheusGeneratesMetricsAlthoughFirstDNSFails(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, sampleTextFormat)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		Urls:               []string{ts.URL},
+		KubernetesServices: []string{"http://random.telegraf.local:88/metrics"},
+	}
+
+	var acc testutil.Accumulator
+
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
+	assert.True(t, acc.HasFloatField("go_gc_duration_seconds", "count"))
+	assert.True(t, acc.HasFloatField("go_goroutines", "gauge"))
+	assert.True(t, acc.HasFloatField("test_metric", "value"))
+	assert.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 }

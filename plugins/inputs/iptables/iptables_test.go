@@ -81,7 +81,7 @@ func TestIptables_Gather(t *testing.T) {
 		                K     4520 RETURN     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0
             `},
 		},
-		{ // 8 - Multiple rows, multipe chains => no error
+		{ // 8 - Multiple rows, multiple chains => no error
 			table:  "filter",
 			chains: []string{"INPUT", "FORWARD"},
 			values: []string{
@@ -154,68 +154,85 @@ func TestIptables_Gather(t *testing.T) {
 			tags:   []map[string]string{},
 			fields: [][]map[string]interface{}{},
 		},
+		{ // 11 - all target and ports
+			table:  "all_recv",
+			chains: []string{"accountfwd"},
+			values: []string{
+				`Chain accountfwd (1 references)
+						pkts bytes target prot opt in   out source    destination
+						 123   456        all  --  eth0 *   0.0.0.0/0 0.0.0.0/0   /* all_recv */
+		               `},
+			tags: []map[string]string{
+				map[string]string{"table": "all_recv", "chain": "accountfwd", "ruleid": "all_recv"},
+			},
+			fields: [][]map[string]interface{}{
+				{map[string]interface{}{"pkts": uint64(123), "bytes": uint64(456)}},
+			},
+		},
 	}
 
 	for i, tt := range tests {
-		i++
-		ipt := &Iptables{
-			Table:  tt.table,
-			Chains: tt.chains,
-			lister: func(table, chain string) (string, error) {
-				if len(tt.values) > 0 {
-					v := tt.values[0]
-					tt.values = tt.values[1:]
-					return v, nil
-				}
-				return "", nil
-			},
-		}
-		acc := new(testutil.Accumulator)
-		err := acc.GatherError(ipt.Gather)
-		if !reflect.DeepEqual(tt.err, err) {
-			t.Errorf("%d: expected error '%#v' got '%#v'", i, tt.err, err)
-		}
-		if tt.table == "" {
-			n := acc.NFields()
-			if n != 0 {
-				t.Errorf("%d: expected 0 fields if empty table got %d", i, n)
+		t.Run(tt.table, func(t *testing.T) {
+			i++
+			ipt := &Iptables{
+				Table:  tt.table,
+				Chains: tt.chains,
+				lister: func(table, chain string) (string, error) {
+					if len(tt.values) > 0 {
+						v := tt.values[0]
+						tt.values = tt.values[1:]
+						return v, nil
+					}
+					return "", nil
+				},
 			}
-			continue
-		}
-		if len(tt.chains) == 0 {
-			n := acc.NFields()
-			if n != 0 {
-				t.Errorf("%d: expected 0 fields if empty chains got %d", i, n)
+			acc := new(testutil.Accumulator)
+			err := acc.GatherError(ipt.Gather)
+			if !reflect.DeepEqual(tt.err, err) {
+				t.Errorf("%d: expected error '%#v' got '%#v'", i, tt.err, err)
 			}
-			continue
-		}
-		if len(tt.tags) == 0 {
-			n := acc.NFields()
-			if n != 0 {
-				t.Errorf("%d: expected 0 values got %d", i, n)
+			if tt.table == "" {
+				n := acc.NFields()
+				if n != 0 {
+					t.Errorf("%d: expected 0 fields if empty table got %d", i, n)
+				}
+				return
 			}
-			continue
-		}
-		n := 0
-		for j, tags := range tt.tags {
-			for k, fields := range tt.fields[j] {
-				if len(acc.Metrics) < n+1 {
-					t.Errorf("%d: expected at least %d values got %d", i, n+1, len(acc.Metrics))
-					break
+			if len(tt.chains) == 0 {
+				n := acc.NFields()
+				if n != 0 {
+					t.Errorf("%d: expected 0 fields if empty chains got %d", i, n)
 				}
-				m := acc.Metrics[n]
-				if !reflect.DeepEqual(m.Measurement, measurement) {
-					t.Errorf("%d %d %d: expected measurement '%#v' got '%#v'\n", i, j, k, measurement, m.Measurement)
-				}
-				if !reflect.DeepEqual(m.Tags, tags) {
-					t.Errorf("%d %d %d: expected tags\n%#v got\n%#v\n", i, j, k, tags, m.Tags)
-				}
-				if !reflect.DeepEqual(m.Fields, fields) {
-					t.Errorf("%d %d %d: expected fields\n%#v got\n%#v\n", i, j, k, fields, m.Fields)
-				}
-				n++
+				return
 			}
-		}
+			if len(tt.tags) == 0 {
+				n := acc.NFields()
+				if n != 0 {
+					t.Errorf("%d: expected 0 values got %d", i, n)
+				}
+				return
+			}
+			n := 0
+			for j, tags := range tt.tags {
+				for k, fields := range tt.fields[j] {
+					if len(acc.Metrics) < n+1 {
+						t.Errorf("%d: expected at least %d values got %d", i, n+1, len(acc.Metrics))
+						break
+					}
+					m := acc.Metrics[n]
+					if !reflect.DeepEqual(m.Measurement, measurement) {
+						t.Errorf("%d %d %d: expected measurement '%#v' got '%#v'\n", i, j, k, measurement, m.Measurement)
+					}
+					if !reflect.DeepEqual(m.Tags, tags) {
+						t.Errorf("%d %d %d: expected tags\n%#v got\n%#v\n", i, j, k, tags, m.Tags)
+					}
+					if !reflect.DeepEqual(m.Fields, fields) {
+						t.Errorf("%d %d %d: expected fields\n%#v got\n%#v\n", i, j, k, fields, m.Fields)
+					}
+					n++
+				}
+			}
+		})
 	}
 }
 

@@ -22,7 +22,7 @@ var (
 
 // InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
-	// URL is only for backwards compatability
+	// URL is only for backwards compatibility
 	URL              string
 	URLs             []string `toml:"urls"`
 	Username         string
@@ -53,14 +53,12 @@ type InfluxDB struct {
 }
 
 var sampleConfig = `
-  ## The HTTP or UDP URL for your InfluxDB instance.  Each item should be
-  ## of the form:
-  ##   scheme "://" host [ ":" port]
+  ## The full HTTP or UDP URL for your InfluxDB instance.
   ##
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
-  # urls = ["udp://localhost:8089"] # UDP endpoint example
-  urls = ["http://localhost:8086"] # required
+  # urls = ["udp://127.0.0.1:8089"] # UDP endpoint example
+  urls = ["http://127.0.0.1:8086"] # required
   ## The target database for metrics (telegraf will create it if not exists).
   database = "telegraf" # required
 
@@ -102,7 +100,7 @@ func (i *InfluxDB) Connect() error {
 	var urls []string
 	urls = append(urls, i.URLs...)
 
-	// Backward-compatability with single Influx URL config files
+	// Backward-compatibility with single Influx URL config files
 	// This could eventually be removed in favor of specifying the urls as a list
 	if i.URL != "" {
 		urls = append(urls, i.URL)
@@ -185,12 +183,6 @@ func (i *InfluxDB) Description() string {
 // Write will choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
 func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
-
-	bufsize := 0
-	for _, m := range metrics {
-		bufsize += m.Len()
-	}
-
 	r := metric.NewReader(metrics)
 
 	// This will get set to nil if a successful write occurs
@@ -198,7 +190,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 
 	p := rand.Perm(len(i.clients))
 	for _, n := range p {
-		if _, e := i.clients[n].WriteStream(r, bufsize); e != nil {
+		if e := i.clients[n].WriteStream(r); e != nil {
 			// If the database was not found, try to recreate it:
 			if strings.Contains(e.Error(), "database not found") {
 				errc := i.clients[n].Query(fmt.Sprintf(`CREATE DATABASE "%s"`, qiReplacer.Replace(i.Database)))

@@ -76,6 +76,28 @@ func (ac *accumulator) AddCounter(
 	}
 }
 
+func (ac *accumulator) AddSummary(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Summary, ac.getTime(t)); m != nil {
+		ac.metrics <- m
+	}
+}
+
+func (ac *accumulator) AddHistogram(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Histogram, ac.getTime(t)); m != nil {
+		ac.metrics <- m
+	}
+}
+
 // AddError passes a runtime error to the accumulator.
 // The error will be tagged with the plugin name and written to the log.
 func (ac *accumulator) AddError(err error) {

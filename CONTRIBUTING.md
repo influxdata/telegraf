@@ -65,7 +65,7 @@ See below for a quick example.
 * Input Plugins must be added to the
 `./plugins/inputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
-plugin can be configured. This is include in `telegraf -sample-config`.
+plugin can be configured. This is include in `telegraf config`.
 * The `Description` function should say in one line what this plugin does.
 
 Let's say you've written a plugin that emits metrics about processes on the
@@ -196,7 +196,7 @@ See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
 `./plugins/outputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
-output can be configured. This is include in `telegraf -sample-config`.
+output can be configured. This is include in `telegraf config`.
 * The `Description` function should say in one line what this output does.
 
 ### Output Example
@@ -300,7 +300,7 @@ See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
 `github.com/influxdata/telegraf/plugins/processors/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
-processor can be configured. This is include in `telegraf -sample-config`.
+processor can be configured. This is include in the output of `telegraf config`.
 * The `Description` function should say in one line what this processor does.
 
 ### Processor Example
@@ -357,7 +357,7 @@ See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
 `github.com/influxdata/telegraf/plugins/aggregators/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
-aggregator can be configured. This is include in `telegraf -sample-config`.
+aggregator can be configured. This is include in `telegraf config`.
 * The `Description` function should say in one line what this aggregator does.
 * The Aggregator plugin will need to keep caches of metrics that have passed
 through it. This should be done using the builtin `HashID()` function of each
@@ -470,29 +470,28 @@ func init() {
 
 ## Unit Tests
 
+Before opening a pull request you should run the linter checks and
+the short tests.
+
+### Execute linter
+
+execute `make lint`
+
 ### Execute short tests
 
-execute `make test-short`
+execute `make test`
 
-### Execute long tests
+### Execute integration tests
 
-As Telegraf collects metrics from several third-party services it becomes a
-difficult task to mock each service as some of them have complicated protocols
-which would take some time to replicate.
+Running the integration tests requires several docker containers to be
+running.  You can start the containers with:
+```
+make docker-run
+```
 
-To overcome this situation we've decided to use docker containers to provide a
-fast and reproducible environment to test those services which require it.
-For other situations
-(i.e: https://github.com/influxdata/telegraf/blob/master/plugins/inputs/redis/redis_test.go)
-a simple mock will suffice.
+And run the full test suite with:
+```
+make test-all
+```
 
-To execute Telegraf tests follow these simple steps:
-
-- Install docker following [these](https://docs.docker.com/installation/)
-instructions
-- execute `make test`
-
-### Unit test troubleshooting
-
-Try cleaning up your test environment by executing `make docker-kill` and
-re-running
+Use `make docker-kill` to stop the containers.

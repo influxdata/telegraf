@@ -31,7 +31,7 @@ func TestNewMetric(t *testing.T) {
 	assert.Equal(t, tags, m.Tags())
 	assert.Equal(t, fields, m.Fields())
 	assert.Equal(t, "cpu", m.Name())
-	assert.Equal(t, now, m.Time())
+	assert.Equal(t, now.UnixNano(), m.Time().UnixNano())
 	assert.Equal(t, now.UnixNano(), m.UnixNano())
 }
 
@@ -414,7 +414,7 @@ func TestNewGaugeMetric(t *testing.T) {
 	assert.Equal(t, tags, m.Tags())
 	assert.Equal(t, fields, m.Fields())
 	assert.Equal(t, "cpu", m.Name())
-	assert.Equal(t, now, m.Time())
+	assert.Equal(t, now.UnixNano(), m.Time().UnixNano())
 	assert.Equal(t, now.UnixNano(), m.UnixNano())
 }
 
@@ -436,7 +436,7 @@ func TestNewCounterMetric(t *testing.T) {
 	assert.Equal(t, tags, m.Tags())
 	assert.Equal(t, fields, m.Fields())
 	assert.Equal(t, "cpu", m.Name())
-	assert.Equal(t, now, m.Time())
+	assert.Equal(t, now.UnixNano(), m.Time().UnixNano())
 	assert.Equal(t, now.UnixNano(), m.UnixNano())
 }
 
