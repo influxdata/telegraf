@@ -72,7 +72,7 @@ type MessageStats struct {
 	AckDetails        Details `json:"ack_details"`
 	Deliver           int64
 	DeliverDetails    Details `json:"deliver_details"`
-	DeliverGet        int64
+	DeliverGet        int64   `json:"deliver_get"`
 	DeliverGetDetails Details `json:"deliver_get_details"`
 	Publish           int64
 	PublishDetails    Details `json:"publish_details"`
