@@ -27,6 +27,7 @@ For a more complete explanation of the difference between *used* and
   	- used (int)
   	- available_percent (float)
   	- used_percent (float)
+  	- wired (int)
 
 ### Example Output:
 ```
