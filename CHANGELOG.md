@@ -17,6 +17,7 @@
 - [#3551](https://github.com/influxdata/telegraf/pull/3551): Add health status mapping from string to int in elasticsearch input.
 - [#3580](https://github.com/influxdata/telegraf/pull/3580): Add control over which stats to gather in basicstats aggregator.
 - [#3596](https://github.com/influxdata/telegraf/pull/3596): Add messages_delivered_get to rabbitmq input.
+- [#3632](https://github.com/influxdata/telegraf/pull/3632): Add wired field to mem input.
 
 ### Bugfixes
 
