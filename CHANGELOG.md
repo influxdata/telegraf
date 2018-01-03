@@ -6,6 +6,7 @@
 - [#3625](https://github.com/influxdata/telegraf/pull/3625): Fix DC/OS login expiration time.
 - [#3593](https://github.com/influxdata/telegraf/pull/3593): Set Content-Type charset in influxdb output and allow it be overridden.
 - [#3594](https://github.com/influxdata/telegraf/pull/3594): Document permissions setup for postfix input.
+- [#3633](https://github.com/influxdata/telegraf/pull/3633): Fix deliver_get field in rabbitmq input.
 
 ## v1.5 [2017-12-14]
 
