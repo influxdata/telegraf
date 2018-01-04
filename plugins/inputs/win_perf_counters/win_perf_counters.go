@@ -34,9 +34,9 @@ var sampleConfig = `
     ObjectName = "Processor"
     Instances = ["*"]
     Counters = [
-      "%% Idle Time", "%% Interrupt Time",
-      "%% Privileged Time", "%% User Time",
-      "%% Processor Time"
+      "% Idle Time", "% Interrupt Time",
+      "% Privileged Time", "% User Time",
+      "% Processor Time"
     ]
     Measurement = "win_cpu"
     # Set to true to include _Total instance when querying for all (*).
@@ -49,8 +49,8 @@ var sampleConfig = `
     ObjectName = "LogicalDisk"
     Instances = ["*"]
     Counters = [
-      "%% Idle Time", "%% Disk Time","%% Disk Read Time",
-      "%% Disk Write Time", "%% User Time", "Current Disk Queue Length"
+      "% Idle Time", "% Disk Time","% Disk Read Time",
+      "% Disk Write Time", "% User Time", "Current Disk Queue Length"
     ]
     Measurement = "win_disk"
 
@@ -67,10 +67,55 @@ var sampleConfig = `
     Counters = [
       "Available Bytes", "Cache Faults/sec", "Demand Zero Faults/sec",
       "Page Faults/sec", "Pages/sec", "Transition Faults/sec",
-      "Pool Nonpaged Bytes", "Pool Paged Bytes"
+      "Pool Nonpaged Bytes", "Pool Paged Bytes", "Pages Input/sec"
+    ]
+    Instances = ["------"] # Use 6 x - to remove the Instance bit from the query.
+	Measurement = "win_mem"
+
+	[[inputs.win_perf_counters.object]]
+    # Example query where the Instance portion must be removed to get data back,
+    # such as from the Memory object.
+    ObjectName = "Memory"
+    Counters = [
+      "Pages Input/sec"
     ]
     Instances = ["------"] # Use 6 x - to remove the Instance bit from the counterPath.
     Measurement = "win_mem"
+
+  [[inputs.win_perf_counters.object]]
+    # Physical disk times and queues
+    ObjectName = "PhysicalDisk"
+    Instances = ["*"]
+    Counters = [
+      "Avg. Disk sec/Read", "Avg. Disk sec/Transfer", "Avg. Disk sec/Write"
+    ]
+    IncludeTotal = true
+    Measurement = "win_physical_disk"
+
+  [[inputs.win_perf_counters.object]]
+    # Logical disk times and queues
+    ObjectName = "LogicalDisk"
+    Instances = ["*"]
+    Counters = [
+      "Disk Transfers/sec", "Disk Reads/sec", "Disk Writes/sec",
+      "Disk Read Bytes/sec", "Disk Write Bytes/sec",
+      "Free Megabytes", "% Free Space",
+    ]
+    IncludeTotal = true
+    Measurement = "win_logical_disk"
+
+  [[inputs.win_perf_counters.object]]
+    # Logical disk times and queues
+    ObjectName = "Network Interface"
+    Instances = ["*"]
+    Counters = [
+      "Bytes Total/sec", "Bytes Received/sec", "Bytes Sent/sec",
+      "Current Bandwidth", "Packets Received/sec", "Packets Sent/sec",
+      "Packets Received Errors", "Packets Outbound Errors", "Packets Received Discarded",
+      "Packets Outbound Discarded"
+    ]
+    IncludeTotal = true
+    Measurement = "win_network_interface"
 `
 
 type Win_PerfCounters struct {
