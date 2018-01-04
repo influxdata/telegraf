@@ -40,6 +40,10 @@ type Parser struct {
 
 	// an optional map of default tags to use for metrics
 	DefaultTags map[string]string
+
+	// templating similar to graphite
+	Separator string
+	Templates []string
 }
 
 // Parse parses the input bytes to an array of metrics
