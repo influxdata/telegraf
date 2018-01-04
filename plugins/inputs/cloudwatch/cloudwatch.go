@@ -1,10 +1,15 @@
 package cloudwatch
 
 import (
+	"context"
 	"fmt"
+	"net"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/sync/semaphore"
 
 	"github.com/aws/aws-sdk-go/aws"
 
@@ -15,6 +20,10 @@ import (
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/plugins/inputs"
+)
+
+const (
+	maxConns = 10
 )
 
 type (
@@ -188,6 +197,9 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 
 	now := time.Now()
 
+	ctx := context.TODO()
+	sem := semaphore.NewWeighted(maxConns)
+
 	// limit concurrency or we can easily exhaust user connection limit
 	// see cloudwatch API request limits:
 	// http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
@@ -197,9 +209,11 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	wg.Add(len(metrics))
 	for _, m := range metrics {
 		<-lmtr.C
+		sem.Acquire(ctx, 1)
 		go func(inm *cloudwatch.Metric) {
 			defer wg.Done()
 			acc.AddError(c.gatherMetric(acc, inm, now))
+			sem.Release(1)
 		}(m)
 	}
 	wg.Wait()
@@ -209,7 +223,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("cloudwatch", func() telegraf.Input {
-		ttl, _ := time.ParseDuration("1hr")
+		ttl, _ := time.ParseDuration("1h")
 		return &CloudWatch{
 			CacheTTL:  internal.Duration{Duration: ttl},
 			RateLimit: 200,
@@ -232,7 +246,24 @@ func (c *CloudWatch) initializeCloudWatch() error {
 	}
 	configProvider := credentialConfig.Credentials()
 
-	c.client = cloudwatch.New(configProvider)
+	config := &aws.Config{
+		HTTPClient: &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				DialContext: (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: 30 * time.Second,
+					DualStack: true,
+				}).DialContext,
+				MaxIdleConns:          maxConns,
+				MaxIdleConnsPerHost:   maxConns,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+			},
+		},
+	}
+	c.client = cloudwatch.New(configProvider, config)
 	return nil
 }
 
