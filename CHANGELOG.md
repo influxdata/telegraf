@@ -18,6 +18,7 @@
 - [#3580](https://github.com/influxdata/telegraf/pull/3580): Add control over which stats to gather in basicstats aggregator.
 - [#3596](https://github.com/influxdata/telegraf/pull/3596): Add messages_delivered_get to rabbitmq input.
 - [#3632](https://github.com/influxdata/telegraf/pull/3632): Add wired field to mem input.
+- [#3619](https://github.com/influxdata/telegraf/pull/3619): Add support for gathering exchange metrics to the rabbitmq input.
 
 ### Bugfixes
 
