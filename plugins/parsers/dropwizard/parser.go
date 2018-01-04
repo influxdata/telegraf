@@ -178,7 +178,7 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 				}
 			default: // ignore
 			}
-			metricsBuffer.WriteString(fmt.Sprintf("%s.%s ", metricType, dwmName))
+			metricsBuffer.WriteString(fmt.Sprintf("%s,metric_type=%s ", dwmName, metricType))
 			metricsBuffer.WriteString(strings.Join(fields, ","))
 			metricsBuffer.WriteString("\n")
 		}

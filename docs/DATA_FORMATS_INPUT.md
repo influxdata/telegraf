@@ -552,11 +552,11 @@ A typical JSON of a dropwizard metric registry:
 Would get translated into 4 different measurements:
 
 ```
-counter.measurement,tag1=green count=1
-meter.measurement count=1,m15_rate=1.0,m1_rate=1.0,m5_rate=1.0,mean_rate=1.0
-gauge.measurement value=1
-histogram.measurement count=1,max=1.0,mean=1.0,min=1.0,p50=1.0,p75=1.0,p95=1.0,p98=1.0,p99=1.0,p999=1.0
-timer.measurement count=1,max=1.0,mean=1.0,min=1.0,p50=1.0,p75=1.0,p95=1.0,p98=1.0,p99=1.0,p999=1.0,stddev=1.0,m15_rate=1.0,m1_rate=1.0,m5_rate=1.0,mean_rate=1.0
+measurement,metric_type=counter,tag1=green count=1
+measurement,metric_type=meter count=1,m15_rate=1.0,m1_rate=1.0,m5_rate=1.0,mean_rate=1.0
+measurement,metric_type=gauge value=1
+measurement,metric_type=histogram count=1,max=1.0,mean=1.0,min=1.0,p50=1.0,p75=1.0,p95=1.0,p98=1.0,p99=1.0,p999=1.0
+measurement,metric_type=timer count=1,max=1.0,mean=1.0,min=1.0,p50=1.0,p75=1.0,p95=1.0,p98=1.0,p99=1.0,p999=1.0,stddev=1.0,m15_rate=1.0,m1_rate=1.0,m5_rate=1.0,mean_rate=1.0
 ```
 
 You may also parse a dropwizard registry from any JSON document which contains a dropwizard registry in some field. 
@@ -585,7 +585,7 @@ Eg. to parse the following JSON document:
 and translate it into:
 
 ```
-counter.measurement,tag1=green,tag2=yellow count=1 1487766783662000000
+measurement,metric_type=counter,tag1=green,tag2=yellow count=1 1487766783662000000
 ```
 
 you simply need to use the following additional configuration properties:

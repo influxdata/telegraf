@@ -4,8 +4,9 @@ import (
 	"testing"
 
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // validEmptyJSON is a valid dropwizard json document, but without any metrics
@@ -51,11 +52,11 @@ func TestParseValidCounterJSON(t *testing.T) {
 	metrics, err := parser.Parse([]byte(validCounterJSON))
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	assert.Equal(t, "counter.measurement", metrics[0].Name())
+	assert.Equal(t, "measurement", metrics[0].Name())
 	assert.Equal(t, map[string]interface{}{
 		"count": float64(1),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+	assert.Equal(t, map[string]string{"metric_type": "counter"}, metrics[0].Tags())
 }
 
 // validEmbeddedCounterJSON is a valid json document containing separate fields for dropwizard metrics, tags and time override.
@@ -92,11 +93,11 @@ func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 	metrics, err := parser.Parse([]byte(validEmbeddedCounterJSON))
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	assert.Equal(t, "counter.measurement", metrics[0].Name())
+	assert.Equal(t, "measurement", metrics[0].Name())
 	assert.Equal(t, map[string]interface{}{
 		"count": float64(1),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{"tag1": "green", "tag2": "yellow"}, metrics[0].Tags())
+	assert.Equal(t, map[string]string{"metric_type": "counter", "tag1": "green", "tag2": "yellow"}, metrics[0].Tags())
 	assert.True(t, metricTime.Equal(metrics[0].Time()), fmt.Sprintf("%s should be equal to %s", metrics[0].Time(), metricTime))
 
 	// now test json tags through TagPathsMap
@@ -107,11 +108,11 @@ func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 	}
 	metrics2, err2 := parser2.Parse([]byte(validEmbeddedCounterJSON))
 	assert.NoError(t, err2)
-	assert.Equal(t, map[string]string{"tag1": "green"}, metrics2[0].Tags())
+	assert.Equal(t, map[string]string{"metric_type": "counter", "tag1": "green"}, metrics2[0].Tags())
 }
 
-// validMeterJSON is a valid dropwizard json document containing two meters, with the second meter containing one tag
-const validMeterJSON = `
+// validMeterJSON1 is a valid dropwizard json document containing one meter
+const validMeterJSON1 = `
 {
 	"version": 		"3.0.0",
 	"counters" : 	{},
@@ -123,7 +124,38 @@ const validMeterJSON = `
 			"m5_rate" : 1.0,
 			"mean_rate" : 1.0,
 			"units" : "events/second"
-		},
+		}
+	},
+	"gauges" : 		{},
+	"histograms" : 	{},
+	"timers" : 		{}
+}
+`
+
+func TestParseValidMeterJSON1(t *testing.T) {
+	parser := Parser{}
+
+	metrics, err := parser.Parse([]byte(validMeterJSON1))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+	assert.Equal(t, "measurement1", metrics[0].Name())
+	assert.Equal(t, map[string]interface{}{
+		"count":     float64(1),
+		"m15_rate":  float64(1),
+		"m1_rate":   float64(1),
+		"m5_rate":   float64(1),
+		"mean_rate": float64(1),
+	}, metrics[0].Fields())
+
+	assert.Equal(t, map[string]string{"metric_type": "meter"}, metrics[0].Tags())
+}
+
+// validMeterJSON2 is a valid dropwizard json document containing one meter with one tag
+const validMeterJSON2 = `
+{
+	"version": 		"3.0.0",
+	"counters" : 	{},
+	"meters" : 		{ 
 		"measurement2,key=value" : {
 			"count" : 2,
 			"m15_rate" : 2.0,
@@ -139,30 +171,21 @@ const validMeterJSON = `
 }
 `
 
-func TestParseValidMeterJSON(t *testing.T) {
+func TestParseValidMeterJSON2(t *testing.T) {
 	parser := Parser{}
 
-	metrics, err := parser.Parse([]byte(validMeterJSON))
+	metrics, err := parser.Parse([]byte(validMeterJSON2))
 	assert.NoError(t, err)
-	assert.Len(t, metrics, 2)
-	assert.Equal(t, "meter.measurement1", metrics[0].Name())
-	assert.Equal(t, "meter.measurement2", metrics[1].Name())
-	assert.Equal(t, map[string]interface{}{
-		"count":     float64(1),
-		"m15_rate":  float64(1),
-		"m1_rate":   float64(1),
-		"m5_rate":   float64(1),
-		"mean_rate": float64(1),
-	}, metrics[0].Fields())
+	assert.Len(t, metrics, 1)
+	assert.Equal(t, "measurement2", metrics[0].Name())
 	assert.Equal(t, map[string]interface{}{
 		"count":     float64(2),
 		"m15_rate":  float64(2),
 		"m1_rate":   float64(2),
 		"m5_rate":   float64(2),
 		"mean_rate": float64(2),
-	}, metrics[1].Fields())
-	assert.Equal(t, map[string]string{}, metrics[0].Tags())
-	assert.Equal(t, map[string]string{"key": "value"}, metrics[1].Tags())
+	}, metrics[0].Fields())
+	assert.Equal(t, map[string]string{"metric_type": "meter", "key": "value"}, metrics[0].Tags())
 }
 
 // validGaugeJSON is a valid dropwizard json document containing one gauge
@@ -187,11 +210,11 @@ func TestParseValidGaugeJSON(t *testing.T) {
 	metrics, err := parser.Parse([]byte(validGaugeJSON))
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	assert.Equal(t, "gauge.measurement", metrics[0].Name())
+	assert.Equal(t, "measurement", metrics[0].Name())
 	assert.Equal(t, map[string]interface{}{
 		"value": float64(0),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+	assert.Equal(t, map[string]string{"metric_type": "gauge"}, metrics[0].Tags())
 }
 
 // validHistogramJSON is a valid dropwizard json document containing one histogram
@@ -226,7 +249,7 @@ func TestParseValidHistogramJSON(t *testing.T) {
 	metrics, err := parser.Parse([]byte(validHistogramJSON))
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	assert.Equal(t, "histogram.measurement", metrics[0].Name())
+	assert.Equal(t, "measurement", metrics[0].Name())
 	assert.Equal(t, map[string]interface{}{
 		"count":  float64(1),
 		"max":    float64(2),
@@ -240,7 +263,7 @@ func TestParseValidHistogramJSON(t *testing.T) {
 		"p999":   float64(10),
 		"stddev": float64(11),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+	assert.Equal(t, map[string]string{"metric_type": "histogram"}, metrics[0].Tags())
 }
 
 // validTimerJSON is a valid dropwizard json document containing one timer
@@ -281,7 +304,7 @@ func TestParseValidTimerJSON(t *testing.T) {
 	metrics, err := parser.Parse([]byte(validTimerJSON))
 	assert.NoError(t, err)
 	assert.Len(t, metrics, 1)
-	assert.Equal(t, "timer.measurement", metrics[0].Name())
+	assert.Equal(t, "measurement", metrics[0].Name())
 	assert.Equal(t, map[string]interface{}{
 		"count":     float64(1),
 		"max":       float64(2),
@@ -299,7 +322,7 @@ func TestParseValidTimerJSON(t *testing.T) {
 		"m5_rate":   float64(14),
 		"mean_rate": float64(15),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+	assert.Equal(t, map[string]string{"metric_type": "timer"}, metrics[0].Tags())
 }
 
 // validAllJSON is a valid dropwizard json document containing one metric of each type
@@ -338,7 +361,7 @@ func TestTagParsingProblems(t *testing.T) {
 	metrics1, err1 := parser1.Parse([]byte(validEmbeddedCounterJSON))
 	assert.NoError(t, err1)
 	assert.Len(t, metrics1, 1)
-	assert.Equal(t, map[string]string{}, metrics1[0].Tags())
+	assert.Equal(t, map[string]string{"metric_type": "counter"}, metrics1[0].Tags())
 
 	// giving a wrong TagsPath falls back to TagPathsMap
 	parser2 := Parser{
@@ -349,5 +372,5 @@ func TestTagParsingProblems(t *testing.T) {
 	metrics2, err2 := parser2.Parse([]byte(validEmbeddedCounterJSON))
 	assert.NoError(t, err2)
 	assert.Len(t, metrics2, 1)
-	assert.Equal(t, map[string]string{"tag1": "green"}, metrics2[0].Tags())
+	assert.Equal(t, map[string]string{"metric_type": "counter", "tag1": "green"}, metrics2[0].Tags())
 }
