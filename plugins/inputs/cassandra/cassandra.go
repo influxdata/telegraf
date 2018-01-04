@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
 	"net/http"
