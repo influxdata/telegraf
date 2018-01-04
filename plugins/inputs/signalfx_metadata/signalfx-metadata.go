@@ -3,6 +3,7 @@ package signalfxMetadata
 import (
 	"log"
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -56,7 +57,9 @@ func (s *SFXMeta) sendNotifications(acc telegraf.Accumulator) {
 		GetMemory,
 		s.aws.GetAWSInfo,
 	}
+	wg := &sync.WaitGroup{}
 	for _, funct := range infoFunctions {
+		wg.Add(1)
 		go func(f func() map[string]string) {
 			i := f()
 			// Emit the properties
@@ -65,21 +68,25 @@ func (s *SFXMeta) sendNotifications(acc telegraf.Accumulator) {
 					log.Println("E! Input [signalfx-metadata] ", err)
 				}
 			}
+			wg.Done()
 		}(funct)
 	}
 	if err := emitProperty(acc, "host_metadata_version", pluginVersion); err != nil {
 		log.Println("E! Input [signalfx-metadata] ", err)
 	}
+	wg.Wait()
 }
 
 // Gather - read method for SignalFx metadata plugin
 func (s *SFXMeta) Gather(acc telegraf.Accumulator) error {
-
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
 		top, err := s.processInfo.GetTop()
 		if err == nil {
 			emitTop(acc, string(top), pluginVersion)
 		}
+		wg.Done()
 	}()
 
 	if s.nextMetadataSend == 0 {
@@ -100,7 +107,7 @@ func (s *SFXMeta) Gather(acc telegraf.Accumulator) error {
 			s.nextMetadataSend = time.Now().Add(time.Duration(s.nextMetadataSendInterval[0]) * time.Second).Unix()
 		}
 	}
-
+	wg.Wait()
 	return nil
 }
 
