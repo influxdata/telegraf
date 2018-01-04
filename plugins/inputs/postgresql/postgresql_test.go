@@ -51,7 +51,6 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 		"checkpoints_req",
 		"checkpoints_timed",
 		"maxwritten_clean",
-		"datid",
 		"numbackends",
 	}
 
@@ -66,6 +65,7 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 
 	stringMetrics := []string{
 		"datname",
+		"datid",
 	}
 
 	metricsCounted := 0
