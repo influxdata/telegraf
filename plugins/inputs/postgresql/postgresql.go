@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	// register in driver.
@@ -205,7 +206,15 @@ func (p *Postgresql) accRow(row scanner, acc telegraf.Accumulator) error {
 	for col, val := range columnMap {
 		_, ignore := ignoredColumns[col]
 		if !ignore {
-			fields[col] = *val
+			if col == "datid" {
+				// Convert column to a string for backwards compatibility with
+				// Telegraf <1.5
+				if val, ok := (*val).(int64); ok {
+					fields[col] = strconv.FormatInt(val, 10)
+				}
+			} else {
+				fields[col] = *val
+			}
 		}
 	}
 	acc.AddFields("postgresql", fields, tags)
