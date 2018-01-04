@@ -108,7 +108,8 @@ func NewParser(config *Config) (Parser, error) {
 			config.CollectdSecurityLevel, config.CollectdTypesDB)
 	case "dropwizard":
 		parser, err = NewDropwizardParser(config.DropwizardMetricRegistryPath,
-			config.DropwizardTimePath, config.DropwizardTimeFormat, config.DropwizardTagsPath, config.DropwizardTagPathsMap, config.DefaultTags)
+			config.DropwizardTimePath, config.DropwizardTimeFormat, config.DropwizardTagsPath, config.DropwizardTagPathsMap, config.DefaultTags,
+			config.Separator, config.Templates)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -171,6 +172,9 @@ func NewDropwizardParser(
 	tagsPath string,
 	tagPathsMap map[string]string,
 	defaultTags map[string]string,
+	separator string,
+	templates []string,
+
 ) (Parser, error) {
 	parser := &dropwizard.Parser{
 		MetricRegistryPath: metricRegistryPath,
@@ -179,6 +183,10 @@ func NewDropwizardParser(
 		TagsPath:           tagsPath,
 		TagPathsMap:        tagPathsMap,
 		DefaultTags:        defaultTags,
+		Separator:          separator,
+		Templates:          templates,
 	}
-	return parser, nil
+	err := parser.InitTemplating()
+
+	return parser, err
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/templating"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/tidwall/gjson"
 )
@@ -41,9 +42,11 @@ type Parser struct {
 	// an optional map of default tags to use for metrics
 	DefaultTags map[string]string
 
-	// templating similar to graphite
+	// templating configuration
 	Separator string
 	Templates []string
+
+	templateEngine *templating.Engine
 }
 
 // Parse parses the input bytes to an array of metrics
@@ -89,6 +92,17 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}
 
 	return metrics, nil
+}
+
+// InitTemplating initializes the templating support
+func (p *Parser) InitTemplating() error {
+	if len(p.Templates) > 0 {
+		defaultTemplate, _ := templating.NewDefaultTemplateWithPattern("measurement*")
+		templateEngine, err := templating.NewEngine(p.Separator, defaultTemplate, p.Templates)
+		p.templateEngine = templateEngine
+		return err
+	}
+	return nil
 }
 
 // ParseLine is not supported by the dropwizard format
@@ -170,19 +184,38 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 	case map[string]interface{}:
 		var metricsBuffer bytes.Buffer
 		for dwmName, dwmFields := range dwmsTyped {
+			measurementName := dwmName
+			tags := make(map[string]string)
+			fieldPrefix := ""
+			if p.templateEngine != nil {
+				measurementName, tags, fieldPrefix, _ = p.templateEngine.Apply(dwmName)
+				if len(fieldPrefix) > 0 {
+					fieldPrefix = fmt.Sprintf("%s%s", fieldPrefix, p.Separator)
+				}
+			}
+			tags["metric_type"] = metricType
+
+			measurementWithTags := measurementName
+			for tagName, tagValue := range tags {
+				tagKeyValue := fmt.Sprintf("%s=%s", tagName, tagValue)
+				measurementWithTags = fmt.Sprintf("%s,%s", measurementWithTags, tagKeyValue)
+			}
+
 			fields := make([]string, 0)
 			switch t := dwmFields.(type) {
 			case map[string]interface{}: // json object
 				for fieldName, fieldValue := range t {
+
 					switch v := fieldValue.(type) {
 					case float64:
-						fields = append(fields, fmt.Sprintf("%s=%f", fieldName, v))
+						fields = append(fields, fmt.Sprintf("%s%s=%f", fieldPrefix, fieldName, v))
 					default: // ignore
 					}
 				}
 			default: // ignore
 			}
-			metricsBuffer.WriteString(fmt.Sprintf("%s,metric_type=%s ", dwmName, metricType))
+
+			metricsBuffer.WriteString(fmt.Sprintf("%s,metric_type=%s ", measurementWithTags, metricType))
 			metricsBuffer.WriteString(strings.Join(fields, ","))
 			metricsBuffer.WriteString("\n")
 		}
@@ -195,4 +228,12 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 		return metrics
 	}
 
+}
+
+func arraymap(vs []string, f func(string) string) []string {
+	vsm := make([]string, len(vs))
+	for i, v := range vs {
+		vsm[i] = f(v)
+	}
+	return vsm
 }

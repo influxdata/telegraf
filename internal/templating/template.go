@@ -15,7 +15,7 @@ type Template struct {
 }
 
 // apply extracts the template fields from the given line and returns the measurement
-// name and tags
+// name, tags and field name
 func (t *Template) Apply(line string, joiner string) (string, map[string]string, string, error) {
 	fields := strings.Split(line, t.separator)
 	var (

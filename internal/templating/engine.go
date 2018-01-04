@@ -18,7 +18,7 @@ type Engine struct {
 }
 
 // Apply extracts the template fields from the given line and returns the measurement
-// name and tags
+// name, tags and field name
 func (e *Engine) Apply(line string) (string, map[string]string, string, error) {
 	return e.matcher.match(line).Apply(line, e.joiner)
 }

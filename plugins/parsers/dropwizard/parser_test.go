@@ -3,6 +3,8 @@ package dropwizard
 import (
 	"testing"
 
+	"github.com/influxdata/telegraf"
+
 	"fmt"
 	"time"
 
@@ -373,4 +375,111 @@ func TestTagParsingProblems(t *testing.T) {
 	assert.NoError(t, err2)
 	assert.Len(t, metrics2, 1)
 	assert.Equal(t, map[string]string{"metric_type": "counter", "tag1": "green"}, metrics2[0].Tags())
+}
+
+// sampleTemplateJSON is a sample json document containing metrics to be tested against the templating engine.
+const sampleTemplateJSON = `
+{
+	"version": 		"3.0.0",
+	"counters" :	{},
+	"meters" :		{},
+	"gauges" :		{
+		"vm.memory.heap.committed" 		: { "value" : 1 },
+		"vm.memory.heap.init" 			: { "value" : 2 },
+		"vm.memory.heap.max" 			: { "value" : 3 },
+		"vm.memory.heap.usage" 			: { "value" : 4 },
+		"vm.memory.heap.used" 			: { "value" : 5 },
+		"vm.memory.non-heap.committed" 	: { "value" : 6 },
+		"vm.memory.non-heap.init" 		: { "value" : 7 },
+		"vm.memory.non-heap.max" 		: { "value" : 8 },
+		"vm.memory.non-heap.usage" 		: { "value" : 9 },
+		"vm.memory.non-heap.used" 		: { "value" : 10 }
+	},
+	"histograms" :	{
+		"jenkins.job.building.duration" : {
+			"count" : 1,
+			"max" : 2,
+			"mean" : 3,
+			"min" : 4,
+			"p50" : 5,
+			"p75" : 6,
+			"p95" : 7,
+			"p98" : 8,
+			"p99" : 9,
+			"p999" : 10,
+			"stddev" : 11
+		}
+	},
+	"timers" :		{}
+}
+`
+
+func TestParseSampleTemplateJSON(t *testing.T) {
+	parser := Parser{
+		Separator: "_",
+		Templates: []string{
+			"jenkins.* measurement.metric.metric.field",
+			"vm.* measurement.measurement.pool.field",
+		},
+	}
+	parser.InitTemplating()
+
+	metrics, err := parser.Parse([]byte(sampleTemplateJSON))
+	assert.NoError(t, err)
+
+	assert.Len(t, metrics, 11)
+
+	jenkinsMetric := search(metrics, "jenkins", nil, "")
+	assert.NotNil(t, jenkinsMetric, "the metrics should contain a jenkins measurement")
+	assert.Equal(t, map[string]interface{}{
+		"duration_count":  float64(1),
+		"duration_max":    float64(2),
+		"duration_mean":   float64(3),
+		"duration_min":    float64(4),
+		"duration_p50":    float64(5),
+		"duration_p75":    float64(6),
+		"duration_p95":    float64(7),
+		"duration_p98":    float64(8),
+		"duration_p99":    float64(9),
+		"duration_p999":   float64(10),
+		"duration_stddev": float64(11),
+	}, jenkinsMetric.Fields())
+	assert.Equal(t, map[string]string{"metric_type": "histogram", "metric": "job_building"}, jenkinsMetric.Tags())
+
+	vmMemoryHeapCommitted := search(metrics, "vm_memory", map[string]string{"pool": "heap"}, "committed_value")
+	assert.NotNil(t, vmMemoryHeapCommitted)
+	assert.Equal(t, map[string]interface{}{
+		"committed_value": float64(1),
+	}, vmMemoryHeapCommitted.Fields())
+	assert.Equal(t, map[string]string{"metric_type": "gauge", "pool": "heap"}, vmMemoryHeapCommitted.Tags())
+
+	vmMemoryNonHeapCommitted := search(metrics, "vm_memory", map[string]string{"pool": "non-heap"}, "committed_value")
+	assert.NotNil(t, vmMemoryNonHeapCommitted)
+	assert.Equal(t, map[string]interface{}{
+		"committed_value": float64(6),
+	}, vmMemoryNonHeapCommitted.Fields())
+	assert.Equal(t, map[string]string{"metric_type": "gauge", "pool": "non-heap"}, vmMemoryNonHeapCommitted.Tags())
+}
+
+func search(metrics []telegraf.Metric, name string, tags map[string]string, fieldName string) telegraf.Metric {
+	for _, v := range metrics {
+		if v.Name() == name && containsAll(v.Tags(), tags) {
+			if len(fieldName) == 0 {
+				return v
+			}
+			if _, ok := v.Fields()[fieldName]; ok {
+				return v
+			}
+		}
+	}
+	return nil
+}
+
+func containsAll(t1 map[string]string, t2 map[string]string) bool {
+	for k, v := range t2 {
+		if foundValue, ok := t1[k]; !ok || v != foundValue {
+			return false
+		}
+	}
+	return true
 }
