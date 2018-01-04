@@ -14,10 +14,12 @@ type Connection struct {
 	Password  string
 	Port      int
 	Interface string
+	Privilege string
 }
 
-func NewConnection(server string) *Connection {
+func NewConnection(server string, privilege string) *Connection {
 	conn := &Connection{}
+	conn.Privilege = privilege
 	inx1 := strings.LastIndex(server, "@")
 	inx2 := strings.Index(server, "(")
 	inx3 := strings.Index(server, ")")
@@ -59,7 +61,9 @@ func (t *Connection) options() []string {
 	if t.Port != 0 {
 		options = append(options, "-p", strconv.Itoa(t.Port))
 	}
-
+	if t.Privilege != "" {
+		options = append(options, "-L", t.Privilege)
+	}
 	return options
 }
 

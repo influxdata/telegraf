@@ -17,15 +17,19 @@ var (
 )
 
 type Ipmi struct {
-	Path    string
-	Servers []string
-	Timeout internal.Duration
+	Path      string
+	Privilege string
+	Servers   []string
+	Timeout   internal.Duration
 }
 
 var sampleConfig = `
   ## optionally specify the path to the ipmitool executable
   # path = "/usr/bin/ipmitool"
-  #
+  ##
+  ## optionally force session privilege level. Can be CALLBACK, USER, OPERATOR, ADMINISTRATOR
+  # privilege = "ADMINISTRATOR"
+  ##
   ## optionally specify one or more servers via a url matching
   ##  [username[:password]@][protocol[(address)]]
   ##  e.g.
@@ -77,13 +81,11 @@ func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
 func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 	opts := make([]string, 0)
 	hostname := ""
-
 	if server != "" {
-		conn := NewConnection(server)
+		conn := NewConnection(server, m.Privilege)
 		hostname = conn.Hostname
 		opts = conn.options()
 	}
-
 	opts = append(opts, "sdr")
 	cmd := execCommand(m.Path, opts...)
 	out, err := internal.CombinedOutputTimeout(cmd, m.Timeout.Duration)
