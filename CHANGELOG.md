@@ -7,6 +7,7 @@
 - [#3593](https://github.com/influxdata/telegraf/pull/3593): Set Content-Type charset in influxdb output and allow it be overridden.
 - [#3594](https://github.com/influxdata/telegraf/pull/3594): Document permissions setup for postfix input.
 - [#3633](https://github.com/influxdata/telegraf/pull/3633): Fix deliver_get field in rabbitmq input.
+- [#3607](https://github.com/influxdata/telegraf/issues/3607): Escape environment variables during config toml parsing.
 
 ## v1.5 [2017-12-14]
 
