@@ -5,13 +5,14 @@ package win_perf_counters
 import (
 	"errors"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"log"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 var sampleConfig = `
@@ -105,7 +106,17 @@ var sampleConfig = `
     Measurement = "win_logical_disk"
 
   [[inputs.win_perf_counters.object]]
-    # Logical disk times and queues
+    # Paging File
+    ObjectName = "Paging File"
+    Instances = ["*"]
+    Counters = [
+		"% Usage", "% Usage Peak"
+    ]
+    IncludeTotal = true
+    Measurement = "win_paging_file"
+
+  [[inputs.win_perf_counters.object]]
+    # Network Interface
     ObjectName = "Network Interface"
     Instances = ["*"]
     Counters = [
