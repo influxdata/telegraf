@@ -64,16 +64,6 @@ var sampleConfig = `
     Instances = ["------"] # Use 6 x - to remove the Instance bit from the query.
 	Measurement = "win_mem"
 
-	[[inputs.win_perf_counters.object]]
-    # Example query where the Instance portion must be removed to get data back,
-    # such as from the Memory object.
-    ObjectName = "Memory"
-    Counters = [
-      "Pages Input/sec"
-    ]
-    Instances = ["------"] # Use 6 x - to remove the Instance bit from the query.
-    Measurement = "win_mem"
-
   [[inputs.win_perf_counters.object]]
     # Physical disk times and queues
     ObjectName = "PhysicalDisk"
@@ -97,7 +87,17 @@ var sampleConfig = `
     Measurement = "win_logical_disk"
 
   [[inputs.win_perf_counters.object]]
-    # Logical disk times and queues
+    # Paging File
+    ObjectName = "Paging File"
+    Instances = ["*"]
+    Counters = [
+		"% Usage", "% Usage Peak"
+    ]
+    IncludeTotal = true
+    Measurement = "win_paging_file"
+
+  [[inputs.win_perf_counters.object]]
+    # Network Interface
     ObjectName = "Network Interface"
     Instances = ["*"]
     Counters = [
