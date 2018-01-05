@@ -22,7 +22,10 @@ ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
 [[inputs.ipmi_sensor]]
   ## optionally specify the path to the ipmitool executable
   # path = "/usr/bin/ipmitool"
-  #
+  ##
+  ## optionally force session privilege level. Can be CALLBACK, USER, OPERATOR, ADMINISTRATOR
+  # privilege = "ADMINISTRATOR"
+  ##
   ## optionally specify one or more servers via a url matching
   ##  [username[:password]@][protocol[(address)]]
   ##  e.g.
