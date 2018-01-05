@@ -22,6 +22,7 @@ func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 		Query:     q,
 	}
 	var acc testutil.Accumulator
+	p.Start(&acc)
 
 	require.NoError(t, acc.GatherError(p.Gather))
 	return &acc
