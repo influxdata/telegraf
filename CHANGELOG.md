@@ -66,6 +66,11 @@
   plugin is deprecated and will be removed in a future release.  Users of this
   plugin are encouraged to update to the new `jolokia2` plugin.
 
+- In the `postgresql` and `postgresql_extensible` plugins, the type of the oid
+  data type has changed from string to integer.  It is recommended to drop
+  affected fields until a new shard is started. For details on how to
+  workaround this issue please see [#3622](https://github.com/influxdata/telegraf/issues/3622).
+
 ### Features
 
 - [#3170](https://github.com/influxdata/telegraf/pull/3170): Add support for sharding based on metric name.
