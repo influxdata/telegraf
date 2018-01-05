@@ -122,6 +122,24 @@ func (a *Accumulator) AddMetrics(metrics []telegraf.Metric) {
 	}
 }
 
+func (a *Accumulator) AddSummary(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	timestamp ...time.Time,
+) {
+	a.AddFields(measurement, fields, tags, timestamp...)
+}
+
+func (a *Accumulator) AddHistogram(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	timestamp ...time.Time,
+) {
+	a.AddFields(measurement, fields, tags, timestamp...)
+}
+
 // AddError appends the given error to Accumulator.Errors.
 func (a *Accumulator) AddError(err error) {
 	if err == nil {
@@ -295,6 +313,31 @@ func (a *Accumulator) AssertContainsFields(
 	}
 	msg := fmt.Sprintf("unknown measurement %s", measurement)
 	assert.Fail(t, msg)
+}
+
+func (a *Accumulator) HasPoint(
+	measurement string,
+	tags map[string]string,
+	fieldKey string,
+	fieldValue interface{},
+) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement != measurement {
+			continue
+		}
+
+		if !reflect.DeepEqual(tags, p.Tags) {
+			continue
+		}
+
+		v, ok := p.Fields[fieldKey]
+		if ok && reflect.DeepEqual(v, fieldValue) {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement string) {

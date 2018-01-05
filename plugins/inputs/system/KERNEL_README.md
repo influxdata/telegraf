@@ -4,11 +4,17 @@ This plugin is only available on Linux.
 
 The kernel plugin gathers info about the kernel that doesn't fit into other
 plugins. In general, it is the statistics available in `/proc/stat` that are
-not covered by other plugins.
+not covered by other plugins as well as the value of `/proc/sys/kernel/random/entropy_avail`
 
 The metrics are documented in `man proc` under the `/proc/stat` section.
+The metrics are documented in `man 4 random` under the `/proc/stat` section.
 
 ```
+
+
+/proc/sys/kernel/random/entropy_avail
+Contains the value of available entropy
+
 /proc/stat
 kernel/system statistics. Varies with architecture. Common entries include:
 
@@ -50,6 +56,7 @@ Number of forks since boot.
     - disk_pages_out (integer, `page (1)`)
     - interrupts (integer, `intr`)
     - processes_forked (integer, `processes`)
+    - entropy_avail (integer, `entropy_available`)
 
 ### Tags:
 
@@ -60,5 +67,5 @@ None
 ```
 $ telegraf --config ~/ws/telegraf.conf --input-filter kernel --test
 * Plugin: kernel, Collection 1
-> kernel boot_time=1457505775i,context_switches=2626618i,disk_pages_in=5741i,disk_pages_out=1808i,interrupts=1472736i,processes_forked=10673i 1457613402960879816
+> kernel entropy_available=2469i,boot_time=1457505775i,context_switches=2626618i,disk_pages_in=5741i,disk_pages_out=1808i,interrupts=1472736i,processes_forked=10673i 1457613402960879816
 ```

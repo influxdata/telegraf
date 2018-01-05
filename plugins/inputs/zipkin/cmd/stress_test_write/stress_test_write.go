@@ -38,11 +38,11 @@ var (
 const usage = `./stress_test_write -batch_size=<batch_size> -max_backlog=<max_span_buffer_backlog> -batch_interval=<batch_interval_in_seconds> -span_count<number_of_spans_to_write> -zipkin_host=<zipkin_service_hostname>`
 
 func init() {
-	flag.IntVar(&BatchSize, "batch_size", 10000, usage)
-	flag.IntVar(&MaxBackLog, "max_backlog", 100000, usage)
-	flag.IntVar(&BatchTimeInterval, "batch_interval", 1, usage)
-	flag.IntVar(&SpanCount, "span_count", 100000, usage)
-	flag.StringVar(&ZipkinServerHost, "zipkin_host", "localhost", usage)
+	flag.IntVar(&BatchSize, "batch_size", 10000, "")
+	flag.IntVar(&MaxBackLog, "max_backlog", 100000, "")
+	flag.IntVar(&BatchTimeInterval, "batch_interval", 1, "")
+	flag.IntVar(&SpanCount, "span_count", 100000, "")
+	flag.StringVar(&ZipkinServerHost, "zipkin_host", "localhost", "")
 }
 
 func main() {
@@ -59,7 +59,7 @@ func main() {
 	}
 
 	tracer, err := zipkin.NewTracer(
-		zipkin.NewRecorder(collector, false, "127.0.0.1:0", "trivial"))
+		zipkin.NewRecorder(collector, false, "127.0.0.1:0", "Trivial"))
 
 	if err != nil {
 		log.Fatalf("Error: %v\n", err)

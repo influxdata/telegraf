@@ -1,7 +1,11 @@
 package procstat
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -24,6 +28,8 @@ type Procstat struct {
 	Prefix      string
 	ProcessName string
 	User        string
+	SystemdUnit string
+	CGroup      string `toml:"cgroup"`
 	PidTag      bool
 
 	pidFinder       PIDFinder
@@ -42,6 +48,10 @@ var sampleConfig = `
   # pattern = "nginx"
   ## user as argument for pgrep (ie, pgrep -u <user>)
   # user = "nginx"
+  ## Systemd unit name
+  # systemd_unit = "nginx.service"
+  ## CGroup name or path
+  # cgroup = "systemd/system.slice/nginx.service"
 
   ## override for process_name
   ## This is optional; default is sourced from /proc/<pid>/status
@@ -275,11 +285,73 @@ func (p *Procstat) findPids() ([]PID, map[string]string, error) {
 	} else if p.User != "" {
 		pids, err = f.Uid(p.User)
 		tags = map[string]string{"user": p.User}
+	} else if p.SystemdUnit != "" {
+		pids, err = p.systemdUnitPIDs()
+		tags = map[string]string{"systemd_unit": p.SystemdUnit}
+	} else if p.CGroup != "" {
+		pids, err = p.cgroupPIDs()
+		tags = map[string]string{"cgroup": p.CGroup}
 	} else {
 		err = fmt.Errorf("Either exe, pid_file, user, or pattern has to be specified")
 	}
 
 	return pids, tags, err
+}
+
+// execCommand is so tests can mock out exec.Command usage.
+var execCommand = exec.Command
+
+func (p *Procstat) systemdUnitPIDs() ([]PID, error) {
+	var pids []PID
+	cmd := execCommand("systemctl", "show", p.SystemdUnit)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	for _, line := range bytes.Split(out, []byte{'\n'}) {
+		kv := bytes.SplitN(line, []byte{'='}, 2)
+		if len(kv) != 2 {
+			continue
+		}
+		if !bytes.Equal(kv[0], []byte("MainPID")) {
+			continue
+		}
+		if len(kv[1]) == 0 {
+			return nil, nil
+		}
+		pid, err := strconv.Atoi(string(kv[1]))
+		if err != nil {
+			return nil, fmt.Errorf("invalid pid '%s'", kv[1])
+		}
+		pids = append(pids, PID(pid))
+	}
+	return pids, nil
+}
+
+func (p *Procstat) cgroupPIDs() ([]PID, error) {
+	var pids []PID
+
+	procsPath := p.CGroup
+	if procsPath[0] != '/' {
+		procsPath = "/sys/fs/cgroup/" + procsPath
+	}
+	procsPath = filepath.Join(procsPath, "cgroup.procs")
+	out, err := ioutil.ReadFile(procsPath)
+	if err != nil {
+		return nil, err
+	}
+	for _, pidBS := range bytes.Split(out, []byte{'\n'}) {
+		if len(pidBS) == 0 {
+			continue
+		}
+		pid, err := strconv.Atoi(string(pidBS))
+		if err != nil {
+			return nil, fmt.Errorf("invalid pid '%s'", pidBS)
+		}
+		pids = append(pids, PID(pid))
+	}
+
+	return pids, nil
 }
 
 func init() {

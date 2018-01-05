@@ -385,6 +385,77 @@ func TestParseEpoch(t *testing.T) {
 	assert.Equal(t, time.Unix(1466004605, 0), metricA.Time())
 }
 
+func TestParseEpochDecimal(t *testing.T) {
+	var tests = []struct {
+		name    string
+		line    string
+		noMatch bool
+		err     error
+		tags    map[string]string
+		fields  map[string]interface{}
+		time    time.Time
+	}{
+		{
+			name: "ns precision",
+			line: "1466004605.359052000 value=42",
+			tags: map[string]string{},
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+			time: time.Unix(0, 1466004605359052000),
+		},
+		{
+			name: "ms precision",
+			line: "1466004605.359 value=42",
+			tags: map[string]string{},
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+			time: time.Unix(0, 1466004605359000000),
+		},
+		{
+			name: "second precision",
+			line: "1466004605 value=42",
+			tags: map[string]string{},
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+			time: time.Unix(0, 1466004605000000000),
+		},
+		{
+			name: "sub ns precision",
+			line: "1466004605.123456789123 value=42",
+			tags: map[string]string{},
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+			time: time.Unix(0, 1466004605123456789),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := &Parser{
+				Patterns: []string{"%{NUMBER:ts:ts-epoch} value=%{NUMBER:value:int}"},
+			}
+			assert.NoError(t, parser.Compile())
+			m, err := parser.ParseLine(tt.line)
+
+			if tt.noMatch {
+				require.Nil(t, m)
+				require.Nil(t, err)
+				return
+			}
+
+			require.Equal(t, tt.err, err)
+
+			require.NotNil(t, m)
+			require.Equal(t, tt.tags, m.Tags())
+			require.Equal(t, tt.fields, m.Fields())
+			require.Equal(t, tt.time, m.Time())
+		})
+	}
+}
+
 func TestParseEpochErrors(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{MYAPP}"},

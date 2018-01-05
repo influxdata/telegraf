@@ -15,6 +15,9 @@ import (
 	"github.com/eclipse/paho.mqtt.golang"
 )
 
+// 30 Seconds is the default used by paho.mqtt.golang
+var defaultConnectionTimeout = internal.Duration{Duration: 30 * time.Second}
+
 type MQTTConsumer struct {
 	Servers           []string
 	Topics            []string
@@ -53,11 +56,14 @@ type MQTTConsumer struct {
 }
 
 var sampleConfig = `
-  servers = ["localhost:1883"]
+  ## MQTT broker URLs to be used. The format should be scheme://host:port,
+  ## schema can be tcp, ssl, or ws.
+  servers = ["tcp://localhost:1883"]
+
   ## MQTT QoS, must be 0, 1, or 2
   qos = 0
   ## Connection timeout for initial connection in seconds
-  connection_timeout = 30
+  connection_timeout = "30s"
 
   ## Topics to subscribe to
   topics = [
@@ -118,8 +124,8 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("MQTT Consumer, invalid QoS value: %d", m.QoS)
 	}
 
-	if int(m.ConnectionTimeout.Duration) <= 0 {
-		return fmt.Errorf("MQTT Consumer, invalid connection_timeout value: %d", m.ConnectionTimeout)
+	if m.ConnectionTimeout.Duration < 1*time.Second {
+		return fmt.Errorf("MQTT Consumer, invalid connection_timeout value: %s", m.ConnectionTimeout.Duration)
 	}
 
 	opts, err := m.createOpts()
@@ -236,9 +242,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		return nil, err
 	}
 
-	scheme := "tcp"
 	if tlsCfg != nil {
-		scheme = "ssl"
 		opts.SetTLSConfig(tlsCfg)
 	}
 
@@ -254,8 +258,17 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	if len(m.Servers) == 0 {
 		return opts, fmt.Errorf("could not get host infomations")
 	}
-	for _, host := range m.Servers {
-		server := fmt.Sprintf("%s://%s", scheme, host)
+
+	for _, server := range m.Servers {
+		// Preserve support for host:port style servers; deprecated in Telegraf 1.4.4
+		if !strings.Contains(server, "://") {
+			log.Printf("W! mqtt_consumer server %q should be updated to use `scheme://host:port` format", server)
+			if tlsCfg == nil {
+				server = "tcp://" + server
+			} else {
+				server = "ssl://" + server
+			}
+		}
 
 		opts.AddBroker(server)
 	}
@@ -270,6 +283,8 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 
 func init() {
 	inputs.Add("mqtt_consumer", func() telegraf.Input {
-		return &MQTTConsumer{}
+		return &MQTTConsumer{
+			ConnectionTimeout: defaultConnectionTimeout,
+		}
 	})
 }

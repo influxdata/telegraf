@@ -16,7 +16,7 @@ import (
 )
 
 type Graphite struct {
-	// URL is only for backwards compatability
+	// URL is only for backwards compatibility
 	Servers  []string
 	Prefix   string
 	Template string

@@ -2,10 +2,11 @@ package sqlserver
 
 import (
 	"database/sql"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 
 	// go-mssqldb initialization
 	_ "github.com/zensqlmonitor/go-mssqldb"
@@ -244,10 +245,10 @@ UNION ALL
 SELECT 'Average pending disk IO', AveragePendingDiskIOCount = (SELECT AVG(pending_disk_io_count) FROM sys.dm_os_schedulers WITH (NOLOCK) WHERE scheduler_id < 255 )
 UNION ALL
 SELECT 'Buffer pool rate (bytes/sec)', BufferPoolRate = (1.0*cntr_value * 8 * 1024) /
-	(SELECT 1.0*cntr_value FROM sys.dm_os_performance_counters  WHERE object_name like '%Buffer Manager%' AND lower(counter_name) = 'Page life expectancy')
+	(SELECT 1.0*cntr_value FROM sys.dm_os_performance_counters  WHERE object_name like '%Buffer Manager%' AND counter_name = 'Page life expectancy')
 FROM sys.dm_os_performance_counters
 WHERE object_name like '%Buffer Manager%'
-AND counter_name = 'database pages'
+AND counter_name = 'Database pages'
 UNION ALL
 SELECT 'Memory grant pending', MemoryGrantPending = cntr_value
 FROM sys.dm_os_performance_counters
@@ -538,7 +539,7 @@ SELECT DatabaseName,  ReadLatency
 FROM #baseline
 WHERE datafile_type = ''LOG''
 ) as V
-PIVOT(SUM(ReadLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
+PIVOT(MAX(ReadLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
 
 UNION ALL
 
@@ -549,7 +550,7 @@ SELECT DatabaseName,  WriteLatency
 FROM #baseline
 WHERE datafile_type = ''LOG''
 ) as V
-PIVOT(SUM(WriteLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
+PIVOT(MAX(WriteLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
 
 UNION ALL
 
@@ -560,7 +561,7 @@ SELECT DatabaseName,  ReadLatency
 FROM #baseline
 WHERE datafile_type = ''ROWS''
 ) as V
-PIVOT(SUM(ReadLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
+PIVOT(MAX(ReadLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
 
 UNION ALL
 
@@ -571,7 +572,7 @@ SELECT DatabaseName,  WriteLatency
 FROM #baseline
 WHERE datafile_type = ''ROWS''
 ) as V
-PIVOT(SUM(WriteLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
+PIVOT(MAX(WriteLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
 
 UNION ALL
 
@@ -1436,16 +1437,16 @@ SELECT
 , type = 'Wait stats'
 ---- values
 , [I/O] = SUM([I/O])
-, [Latch] = SUM([Latch])
-, [Lock] = SUM([Lock])
-, [Network] = SUM([Network])
-, [Service broker] = SUM([Service broker])
-, [Memory] = SUM([Memory])
-, [Buffer] = SUM([Buffer])
+, [Latch] = SUM([LATCH])
+, [Lock] = SUM([LOCK])
+, [Network] = SUM([NETWORK])
+, [Service broker] = SUM([SERVICE BROKER])
+, [Memory] = SUM([MEMORY])
+, [Buffer] = SUM([BUFFER])
 , [CLR] = SUM([CLR])
 , [SQLOS] = SUM([SQLOS])
-, [XEvent] = SUM([XEvent])
-, [Other] = SUM([Other])
+, [XEvent] = SUM([XEVENT])
+, [Other] = SUM([OTHER])
 , [Total] = SUM([I/O]+[LATCH]+[LOCK]+[NETWORK]+[SERVICE BROKER]+[MEMORY]+[BUFFER]+[CLR]+[XEVENT]+[SQLOS]+[OTHER])
 FROM
 (
@@ -1479,16 +1480,16 @@ SELECT
 , type = 'Wait stats'
 ---- values
 , [I/O] = SUM([I/O])
-, [Latch] = SUM([Latch])
-, [Lock] = SUM([Lock])
-, [Network] = SUM([Network])
-, [Service broker] = SUM([Service broker])
-, [Memory] = SUM([Memory])
-, [Buffer] = SUM([Buffer])
+, [Latch] = SUM([LATCH])
+, [Lock] = SUM([LOCK])
+, [Network] = SUM([NETWORK])
+, [Service broker] = SUM([SERVICE BROKER])
+, [Memory] = SUM([MEMORY])
+, [Buffer] = SUM([BUFFER])
 , [CLR] = SUM([CLR])
 , [SQLOS] = SUM([SQLOS])
-, [XEvent] = SUM([XEvent])
-, [Other] = SUM([Other])
+, [XEvent] = SUM([XEVENT])
+, [Other] = SUM([OTHER])
 , [Total] = SUM([I/O]+[LATCH]+[LOCK]+[NETWORK]+[SERVICE BROKER]+[MEMORY]+[BUFFER]+[CLR]+[XEVENT]+[SQLOS]+[OTHER])
 FROM
 (

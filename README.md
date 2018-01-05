@@ -5,8 +5,7 @@ and writing metrics.
 
 Design goals are to have a minimal memory footprint with a plugin system so
 that developers in the community can easily add support for collecting metrics
-from well known services (like Hadoop, Postgres, or Redis) and third party
-APIs (like Mailchimp, AWS CloudWatch, or Google Analytics).
+from local or remote services.
 
 Telegraf is plugin-driven and has the concept of 4 distinct plugins:
 
@@ -130,6 +129,7 @@ configuration options.
 * [apache](./plugins/inputs/apache)
 * [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
+* [bond](./plugins/inputs/bond)
 * [cassandra](./plugins/inputs/cassandra)
 * [ceph](./plugins/inputs/ceph)
 * [cgroup](./plugins/inputs/cgroup)
@@ -138,6 +138,7 @@ configuration options.
 * [conntrack](./plugins/inputs/conntrack)
 * [couchbase](./plugins/inputs/couchbase)
 * [couchdb](./plugins/inputs/couchdb)
+* [DC/OS](./plugins/inputs/dcos)
 * [disque](./plugins/inputs/disque)
 * [dmcache](./plugins/inputs/dmcache)
 * [dns query time](./plugins/inputs/dns_query)
@@ -158,7 +159,8 @@ configuration options.
 * [interrupts](./plugins/inputs/interrupts)
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
 * [iptables](./plugins/inputs/iptables)
-* [jolokia](./plugins/inputs/jolokia)
+* [jolokia](./plugins/inputs/jolokia) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
+* [jolokia2](./plugins/inputs/jolokia2)
 * [kapacitor](./plugins/inputs/kapacitor)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
@@ -176,11 +178,14 @@ configuration options.
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
 * [openldap](./plugins/inputs/openldap)
+* [opensmtpd](./plugins/inputs/opensmtpd)
+* [pf](./plugins/inputs/pf)
 * [phpfpm](./plugins/inputs/phpfpm)
 * [phusion passenger](./plugins/inputs/passenger)
 * [ping](./plugins/inputs/ping)
-* [postgresql](./plugins/inputs/postgresql)
+* [postfix](./plugins/inputs/postfix)
 * [postgresql_extensible](./plugins/inputs/postgresql_extensible)
+* [postgresql](./plugins/inputs/postgresql)
 * [powerdns](./plugins/inputs/powerdns)
 * [procstat](./plugins/inputs/procstat)
 * [prometheus](./plugins/inputs/prometheus) (can be used for [Caddy server](./plugins/inputs/prometheus/README.md#usage-for-caddy-http-server))
@@ -192,11 +197,15 @@ configuration options.
 * [riak](./plugins/inputs/riak)
 * [salesforce](./plugins/inputs/salesforce)
 * [sensors](./plugins/inputs/sensors)
+* [smart](./plugins/inputs/smart)
 * [snmp](./plugins/inputs/snmp)
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
+* [solr](./plugins/inputs/solr)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
+* [teamspeak](./plugins/inputs/teamspeak)
 * [tomcat](./plugins/inputs/tomcat)
 * [twemproxy](./plugins/inputs/twemproxy)
+* [unbound](./plugins/input/unbound)
 * [varnish](./plugins/inputs/varnish)
 * [zfs](./plugins/inputs/zfs)
 * [zookeeper](./plugins/inputs/zookeeper)
@@ -233,8 +242,9 @@ Telegraf can also collect metrics via the following service plugins:
   * [filestack](./plugins/inputs/webhooks/filestack)
   * [github](./plugins/inputs/webhooks/github)
   * [mandrill](./plugins/inputs/webhooks/mandrill)
-  * [rollbar](./plugins/inputs/webhooks/rollbar)
   * [papertrail](./plugins/inputs/webhooks/papertrail)
+  * [particle](./plugins/inputs/webhooks/particle)
+  * [rollbar](./plugins/inputs/webhooks/rollbar)
 * [zipkin](./plugins/inputs/zipkin)
 
 Telegraf is able to parse the following input data formats into metrics, these
@@ -253,6 +263,7 @@ formats may be used with input plugins supporting the `data_format` option:
 
 ## Aggregator Plugins
 
+* [basicstats](./plugins/aggregators/basicstats)
 * [minmax](./plugins/aggregators/minmax)
 * [histogram](./plugins/aggregators/histogram)
 
@@ -263,6 +274,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [amqp](./plugins/outputs/amqp) (rabbitmq)
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
+* [cratedb](./plugins/outputs/cratedb)
 * [datadog](./plugins/outputs/datadog)
 * [discard](./plugins/outputs/discard)
 * [elasticsearch](./plugins/outputs/elasticsearch)
@@ -282,3 +294,4 @@ formats may be used with input plugins supporting the `data_format` option:
 * [socket_writer](./plugins/outputs/socket_writer)
 * [tcp](./plugins/outputs/socket_writer)
 * [udp](./plugins/outputs/socket_writer)
+* [wavefront](./plugins/outputs/wavefront)
