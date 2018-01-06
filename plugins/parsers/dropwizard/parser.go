@@ -54,7 +54,10 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	metrics := make([]telegraf.Metric, 0)
 
-	metricTime := p.parseTime(buf)
+	metricTime, err := p.parseTime(buf)
+	if err != nil {
+		return nil, err
+	}
 	dwr, err := p.unmarshalMetrics(buf)
 	if err != nil {
 		return nil, err
@@ -128,7 +131,7 @@ func (p *Parser) readTags(buf []byte) map[string]string {
 		var tags map[string]string
 		err := json.Unmarshal(tagsBytes, &tags)
 		if err != nil {
-			log.Printf("W! failed to parse tags from json path '%s': %s\n", p.TagsPath, err)
+			log.Printf("W! failed to parse tags from JSON path '%s': %s\n", p.TagsPath, err)
 		} else if len(tags) > 0 {
 			return tags
 		}
@@ -141,19 +144,26 @@ func (p *Parser) readTags(buf []byte) map[string]string {
 	return tags
 }
 
-func (p *Parser) parseTime(buf []byte) time.Time {
+func (p *Parser) parseTime(buf []byte) (time.Time, error) {
 
 	if p.TimePath != "" {
 		timeFormat := p.TimeFormat
 		if timeFormat == "" {
 			timeFormat = time.RFC3339
 		}
-		time, err := time.Parse(timeFormat, gjson.GetBytes(buf, p.TimePath).String())
-		if err == nil {
-			return time.UTC()
+		timeString := gjson.GetBytes(buf, p.TimePath).String()
+		if timeString == "" {
+			err := fmt.Errorf("time not found in JSON path %s", p.TimePath)
+			return time.Now().UTC(), err
 		}
+		t, err := time.Parse(timeFormat, timeString)
+		if err != nil {
+			err = fmt.Errorf("time %s cannot be parsed with format %s, %s", timeString, timeFormat, err)
+			return time.Now().UTC(), err
+		}
+		return t.UTC(), nil
 	}
-	return time.Now().UTC()
+	return time.Now().UTC(), nil
 }
 
 func (p *Parser) unmarshalMetrics(buf []byte) (map[string]interface{}, error) {
@@ -165,6 +175,10 @@ func (p *Parser) unmarshalMetrics(buf []byte) (map[string]interface{}, error) {
 			registryBytes = buf[regResult.Index : regResult.Index+len(regResult.Raw)]
 		} else {
 			registryBytes = []byte(regResult.Raw)
+		}
+		if len(registryBytes) == 0 {
+			err := fmt.Errorf("metric registry not found in JSON path %s", p.MetricRegistryPath)
+			return nil, err
 		}
 	} else {
 		registryBytes = buf
