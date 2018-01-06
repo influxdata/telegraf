@@ -63,6 +63,10 @@
   `use_random_partitionkey` options has been deprecated in favor of the
   `partition` subtable.  This allows for more flexible methods to set the
   partition key such as by metric name or by tag.
+- `postgresql` plugins will now default to using a persistent connection to the database.
+  `Important` In environments TCP connections are terminated when idle for periods shorter than 15 minutes
+  and the collection interval is longer than the termination period then max_lifetime
+  should be set to be less than the collection interval to pervent errors when collecting metrics.
 
 - With the release of the new improved `jolokia2` input, the legacy `jolokia`
   plugin is deprecated and will be removed in a future release.  Users of this
