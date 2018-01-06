@@ -43,7 +43,7 @@
 ### New Plugins
 - [basicstats](./plugins/aggregators/basicstats/README.md) - Thanks to @toni-moreno
 - [bond](./plugins/inputs/bond/README.md) - Thanks to @ildarsv
-- [cratedb](./plugins/outputs/wavefront/README.md) - Thanks to @felixge
+- [cratedb](./plugins/outputs/cratedb/README.md) - Thanks to @felixge
 - [dcos](./plugins/inputs/dcos/README.md) - Thanks to @influxdata
 - [jolokia2](./plugins/inputs/jolokia2/README.md) - Thanks to @dylanmei
 - [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
