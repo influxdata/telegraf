@@ -21,6 +21,7 @@
 - [#3619](https://github.com/influxdata/telegraf/pull/3619): Add support for gathering exchange metrics to the rabbitmq input.
 - [#3565](https://github.com/influxdata/telegraf/pull/3565): Add support for additional metrics on Linux in zfs input.
 - [#3524](https://github.com/influxdata/telegraf/pull/3524): Add available_entropy field to kernel input plugin.
+- [#3643](https://github.com/influxdata/telegraf/pull/3643): Add user privilege level setting to IPMI sensors.
 
 ### Bugfixes
 
