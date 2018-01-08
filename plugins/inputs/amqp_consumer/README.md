@@ -17,12 +17,8 @@ The following defaults are known to work with RabbitMQ:
 [[inputs.amqp_consumer]]
   ## AMQP url
   url = "amqp://localhost:5672/influxdb"
-  ## AMQP exchange
-  exchange = "telegraf"
   ## AMQP queue name
   queue = "telegraf"
-  ## Binding Key
-  binding_key = "#"
 
   ## Controls how many messages the server will try to keep on the network
   ## for consumers before receiving delivery acks.
