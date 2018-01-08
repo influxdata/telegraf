@@ -41,7 +41,7 @@ var sampleConfig = `
     ]
     Measurement = "win_cpu"
     # Set to true to include _Total instance when querying for all (*).
-    # IncludeTotal=false
+    IncludeTotal = true
     # Print out when the performance counter is missing from object, counter or instance.
     # WarnOnMissing = false
 
@@ -71,7 +71,7 @@ var sampleConfig = `
       "Pool Nonpaged Bytes", "Pool Paged Bytes", "Pages Input/sec"
     ]
     Instances = ["------"] # Use 6 x - to remove the Instance bit from the query.
-	Measurement = "win_mem"
+    Measurement = "win_mem"
 
 	[[inputs.win_perf_counters.object]]
     # Example query where the Instance portion must be removed to get data back,
