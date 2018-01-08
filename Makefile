@@ -20,8 +20,8 @@ all:
 	$(MAKE) telegraf
 
 deps:
-	go get github.com/sparrc/gdm
-	gdm restore
+	go get -u github.com/golang/dep/cmd/dep
+	dep ensure
 
 telegraf:
 	go build -i -o $(TELEGRAF) -ldflags "$(LDFLAGS)" ./cmd/telegraf/telegraf.go
