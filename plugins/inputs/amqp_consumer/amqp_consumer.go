@@ -187,12 +187,12 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 
 	msgs, err := ch.Consume(
 		a.Queue, // queue
-		"",     // consumer
-		false,  // auto-ack
-		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
-		nil,    // arguments
+		"",      // consumer
+		false,   // auto-ack
+		false,   // exclusive
+		false,   // no-local
+		false,   // no-wait
+		nil,     // arguments
 	)
 	if err != nil {
 		return nil, fmt.Errorf("Failed establishing connection to queue: %s", err)
