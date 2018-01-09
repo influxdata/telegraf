@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// Socketstat is a telegraf plugin to gather indicators from established connections, using iproute2's  ssi command.
+// Socketstat is a telegraf plugin to gather indicators from established connections, using iproute2's  `ss` command.
 type Socketstat struct {
 	SocketProto []string
 	lister      socketLister
@@ -24,7 +24,7 @@ const measurement = "socketstat"
 
 // Description returns a short description of the plugin
 func (ss *Socketstat) Description() string {
-	return "Gather indicators from established connections, using iproute2's  ssi command."
+	return "Gather indicators from established connections, using iproute2's  `ss` command."
 }
 
 // SampleConfig returns sample configuration options
@@ -32,7 +32,7 @@ func (ss *Socketstat) SampleConfig() string {
 	return `
   ## ss can display information about tcp, udp, raw, unix, packet, dccp and sctp sockets
   ## Specify here the types you want to gather
-  socket_proto = [ "tcp", "udp", "raw" ]
+  socket_proto = [ "tcp", "udp" ]
 `
 }
 
@@ -64,10 +64,14 @@ func (ss *Socketstat) socketList(proto string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	// Add needed args
 	cmdName := ssPath
 	var args []string
 	args = append(args, "-in")
 	args = append(args, "--"+proto)
+
+	// Run ss, retrun the output as a string
 	c := exec.Command(cmdName, args...)
 	out, err := c.Output()
 	return string(out), err
@@ -84,6 +88,10 @@ func (ss *Socketstat) parseAndGather(data, proto string, acc telegraf.Accumulato
 	}
 	tags := map[string]string{}
 	fields := make(map[string]interface{})
+	// ss output can have blank lines, and/or socket basic info lines and more advanced
+	// statistics lines, in turns.
+	// We're using the flushData variable to determine if we should add a new measurement
+	// or postpone it to a later line
 	flushData := false
 	for _, line := range lines[1:] {
 		words := strings.Fields(line)
@@ -96,6 +104,8 @@ func (ss *Socketstat) parseAndGather(data, proto string, acc telegraf.Accumulato
 				acc.AddFields(measurement, fields, tags)
 				flushData = false
 			}
+			// Delegate the real parsing to getTagsAndState, which manages various
+			// formats depending on the protocol
 			tags, fields = getTagsAndState(proto, words)
 			flushData = true
 		} else {
