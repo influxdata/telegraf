@@ -52,7 +52,7 @@ func TestLoadWirelessTable(t *testing.T) {
 	}
 	// make sure we got the same number of headers back we expect.
 	if len(got.Headers) != len(headers) {
-		t.Fatal("want %+v, got %+v", headers, got.Headers)
+		t.Fatalf("want %+v, got %+v", headers, got.Headers)
 	}
 	// create the data map
 	for z := 0; z < len(got.Data[0]); z++ {
@@ -61,13 +61,13 @@ func TestLoadWirelessTable(t *testing.T) {
 	// verify the data map
 	for key := range parsed {
 		if parsed[key] != entries[key] {
-			t.Fatal("want %+v, got %+v", parsed[key], entries[key])
+			t.Fatalf("want %+v, got %+v", parsed[key], entries[key])
 		}
 	}
 	// verify the tag map
 	for key := range tags {
 		if test_tags[key] != tags[key] {
-			t.Fatal("want %+v, got %+v", test_tags[key], tags[key])
+			t.Fatalf("want %+v, got %+v", test_tags[key], tags[key])
 		}
 	}
 }
