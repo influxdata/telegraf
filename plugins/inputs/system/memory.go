@@ -32,6 +32,8 @@ func (s *MemStats) Gather(acc telegraf.Accumulator) error {
 		"buffered":          vm.Buffers,
 		"active":            vm.Active,
 		"inactive":          vm.Inactive,
+		"wired":             vm.Wired,
+		"slab":              vm.Slab,
 		"used_percent":      100 * float64(vm.Used) / float64(vm.Total),
 		"available_percent": 100 * float64(vm.Available) / float64(vm.Total),
 	}

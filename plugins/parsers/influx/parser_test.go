@@ -241,6 +241,17 @@ func TestParseInvalidInflux(t *testing.T) {
 
 }
 
+func BenchmarkSingle(b *testing.B) {
+	parser := InfluxParser{}
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err := parser.Parse([]byte("cpu value=42\n"))
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
 func BenchmarkParse(b *testing.B) {
 	var err error
 	parser := InfluxParser{}

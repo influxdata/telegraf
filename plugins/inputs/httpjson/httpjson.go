@@ -100,6 +100,13 @@ var sampleConfig = `
   #   "my_tag_2"
   # ]
 
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
+
   ## HTTP parameters (all values must be strings).  For "GET" requests, data
   ## will be included in the query.  For "POST" requests, data will be included
   ## in the request body as "x-www-form-urlencoded".
@@ -111,13 +118,6 @@ var sampleConfig = `
   # [inputs.httpjson.headers]
   #   X-Auth-Token = "my-xauth-token"
   #   apiVersion = "v1"
-
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
-  # insecure_skip_verify = false
 `
 
 func (h *HttpJson) SampleConfig() string {

@@ -20,9 +20,11 @@ Additionally, the behavior of resolving the `mount_points` can be configured by 
 When present, this variable is prepended to the mountpoints discovered by the plugin before retrieving stats.
 The prefix is stripped from the reported `path` in the measurement.
 This settings is useful when running `telegraf` inside a docker container to report host machine metrics.
-In this case, the host's root volume should be mounted into the container and the `HOST_MOUNT_PREFIX` and `HOST_ETC` environment variables set.
+In this case, the host's root volume should be mounted into the container and the `HOST_MOUNT_PREFIX` and `HOST_PROC` environment variables set.
 
-`docker run -v /:/hostfs:ro -e HOST_MOUNT_PREFIX=/hostfs -e HOST_ETC=/hostfs/etc telegraf`
+```
+docker run -v /:/hostfs:ro -e HOST_MOUNT_PREFIX=/hostfs -e HOST_PROC=/hostfs/proc telegraf
+```
 
 ### Measurements & Fields:
 

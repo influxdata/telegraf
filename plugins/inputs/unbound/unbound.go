@@ -45,7 +45,7 @@ var sampleConfig = `
 `
 
 func (s *Unbound) Description() string {
-	return "A plugin to collect stats from Unbound - a validating, recursive, and caching DNS resolver "
+	return "A plugin to collect stats from Unbound - a validating, recursive, and caching DNS resolver"
 }
 
 // SampleConfig displays configuration instructions

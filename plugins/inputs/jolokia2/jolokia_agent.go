@@ -46,7 +46,7 @@ func (ja *JolokiaAgent) SampleConfig() string {
   # insecure_skip_verify = false
 
   ## Add metrics to read
-  [[inputs.jolokia2.metric]]
+  [[inputs.jolokia2_agent.metric]]
     name  = "java_runtime"
     mbean = "java.lang:type=Runtime"
     paths = ["Uptime"]
