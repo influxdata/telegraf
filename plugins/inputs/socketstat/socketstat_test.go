@@ -3,19 +3,19 @@
 package socketstat
 
 import (
-        "errors"
-        "reflect"
-        "testing"
+	"errors"
+	"reflect"
+	"testing"
 
-        "github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/telegraf/testutil"
 	"strings"
 )
 
 func TestSocketstat_Gather(t *testing.T) {
 	tests := []struct {
-		proto []string
+		proto  []string
 		values []string
-		tags []map[string]string
+		tags   []map[string]string
 		fields [][]map[string]interface{}
 		err    error
 	}{
@@ -110,18 +110,18 @@ ESTAB      0      0                127.0.0.1:7778                         127.0.
 					m := acc.Metrics[n]
 					if !reflect.DeepEqual(m.Measurement, measurement) {
 						t.Errorf("%d %d %d: expected measurement '%#v' got '%#v'\n", i, j, k, measurement, m.Measurement)
-                                        }
-                                        if !reflect.DeepEqual(m.Tags, tags) {
-                                                t.Errorf("%d %d %d: expected tags\n%#v got\n%#v\n", i, j, k, tags, m.Tags)
-                                        }
-                                        if !reflect.DeepEqual(m.Fields, fields) {
-                                                t.Errorf("%d %d %d: expected fields\n%#v got\n%#v\n", i, j, k, fields, m.Fields)
-                                        }
-                                        n++
-                                }
-                        }
-                })
-        }
+					}
+					if !reflect.DeepEqual(m.Tags, tags) {
+						t.Errorf("%d %d %d: expected tags\n%#v got\n%#v\n", i, j, k, tags, m.Tags)
+					}
+					if !reflect.DeepEqual(m.Fields, fields) {
+						t.Errorf("%d %d %d: expected fields\n%#v got\n%#v\n", i, j, k, fields, m.Fields)
+					}
+					n++
+				}
+			}
+		})
+	}
 }
 
 func TestSocketstat_Gather_listerError(t *testing.T) {
@@ -133,8 +133,8 @@ func TestSocketstat_Gather_listerError(t *testing.T) {
 		},
 	}
 	acc := new(testutil.Accumulator)
-        err := acc.GatherError(ss.Gather)
-        if !reflect.DeepEqual(err, errFoo) {
-                t.Errorf("Expected error %#v got\n%#v\n", errFoo, err)
-        }
+	err := acc.GatherError(ss.Gather)
+	if !reflect.DeepEqual(err, errFoo) {
+		t.Errorf("Expected error %#v got\n%#v\n", errFoo, err)
+	}
 }
