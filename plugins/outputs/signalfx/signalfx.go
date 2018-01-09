@@ -16,6 +16,7 @@ import (
 /*SignalFx plugin context*/
 type SignalFx struct {
 	APIToken           string
+	BatchSize          int
 	DatapointIngestURL string
 	EventIngestURL     string
 	Exclude            []string
@@ -27,6 +28,9 @@ type SignalFx struct {
 var sampleConfig = `
     ## SignalFx API Token
     APIToken = "my-secret-key" # required.
+
+	## BatchSize
+	BatchSize = 1000
 
     ## Ingest URL
     DatapointIngestURL = "https://ingest.signalfx.com/v2/datapoint"
@@ -46,6 +50,7 @@ var sampleConfig = `
 func NewSignalFx() *SignalFx {
 	return &SignalFx{
 		APIToken:           "",
+		BatchSize:          1000,
 		DatapointIngestURL: "https://ingest.signalfx.com/v2/datapoint",
 		EventIngestURL:     "https://ingest.signalfx.com/v2/event",
 		Exclude:            []string{""},
@@ -71,6 +76,7 @@ func (s *SignalFx) Connect() error {
 	s.client.DatapointEndpoint = s.DatapointIngestURL
 	s.client.EventEndpoint = s.EventIngestURL
 	s.ctx = context.Background()
+	log.Printf("I! Output [signalfx] batch size is %d\n", s.BatchSize)
 	return nil
 }
 
@@ -268,13 +274,27 @@ func (s *SignalFx) shouldSkipMetric(metricName string, metricTypeString string, 
 	return false
 }
 
+func (s *SignalFx) emitDatapoints(datapoints []*datapoint.Datapoint) {
+	err := s.client.AddDatapoints(s.ctx, datapoints)
+	if err != nil {
+		log.Println("E! Output [signalfx] ", err)
+	}
+}
+
+func (s *SignalFx) emitEvents(events []*event.Event) {
+	err := s.client.AddEvents(s.ctx, events)
+	if err != nil {
+		log.Println("E! Output [signalfx] ", err)
+	}
+}
+
 /*Write call back for writing metrics*/
 func (s *SignalFx) Write(metrics []telegraf.Metric) error {
+	var datapoints = make([]*datapoint.Datapoint, 0, s.BatchSize)
+	var events = make([]*event.Event, 0, s.BatchSize)
+	var err error
 	for _, metric := range metrics {
-		var datapoints = []*datapoint.Datapoint{}
-		var events = []*event.Event{}
 		var timestamp = metric.Time()
-		var err error
 		var metricType datapoint.MetricType
 		var metricTypeString string
 
@@ -299,19 +319,23 @@ func (s *SignalFx) Write(metrics []telegraf.Metric) error {
 
 			// Get the metric value as a datapoint value
 			if metricValue, err = getMetricValue(metric, field); err == nil {
-				var datapoint = datapoint.New(metricName,
+				var dp = datapoint.New(metricName,
 					metricDims,
 					metricValue.(datapoint.Value),
 					metricType,
 					timestamp)
 
 				// log metric
-				log.Println("D! Output [signalfx] ", datapoint.String())
+				log.Println("D! Output [signalfx] ", dp.String())
 
 				// Add metric as a datapoint
-				datapoints = append(datapoints, datapoint)
-			} else {
+				datapoints = append(datapoints, dp)
 
+				if len(datapoints) == s.BatchSize {
+					s.emitDatapoints(datapoints)
+					datapoints = datapoints[:0]
+				}
+			} else {
 				// Skip if it's not an sfx metric and it's not included
 				if _, isSFX := metric.Tags()["sf_metric"]; !isSFX && !s.isIncluded(metricName) {
 					continue
@@ -319,27 +343,28 @@ func (s *SignalFx) Write(metrics []telegraf.Metric) error {
 
 				// We've already type checked field, so set property with value
 				metricProps["message"] = metric.Fields()[field]
-				var event = event.NewWithProperties(metricName,
+				var ev = event.NewWithProperties(metricName,
 					event.AGENT,
 					metricDims,
 					metricProps,
 					timestamp)
 
 				// log event
-				log.Println("D! Output [signalfx] ", event.String())
+				log.Println("D! Output [signalfx] ", ev.String())
 
 				// Add event
-				events = append(events, event)
+				events = append(events, ev)
+
+				if len(events) == s.BatchSize {
+					s.emitEvents(events)
+					events = events[:0]
+				}
 			}
 		}
-		err = s.client.AddDatapoints(s.ctx, datapoints)
-		if err != nil {
-			log.Println("E! Output [signalfx] ", err)
-		}
-		err = s.client.AddEvents(s.ctx, events)
-		if err != nil {
-			log.Println("E! Output [signalfx] ", err)
-		}
+		s.emitDatapoints(datapoints)
+		datapoints = datapoints[:0]
+		s.emitEvents(events)
+		events = events[:0]
 	}
 	return nil
 }
