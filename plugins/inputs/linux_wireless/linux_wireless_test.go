@@ -61,13 +61,13 @@ func TestLoadWirelessTable(t *testing.T) {
 	// verify the data map
 	for key := range parsed {
 		if parsed[key] != entries[key] {
-			t.Fatal("want %+v, got %+v\n", parsed[key], entries[key])
+			t.Fatal("want %+v, got %+v", parsed[key], entries[key])
 		}
 	}
 	// verify the tag map
 	for key := range tags {
 		if test_tags[key] != tags[key] {
-			t.Fatal("want %+v, got %+v\n", test_tags[key], tags[key])
+			t.Fatal("want %+v, got %+v", test_tags[key], tags[key])
 		}
 	}
 }
