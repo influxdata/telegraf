@@ -12,10 +12,9 @@
   DROP MEASUREMENT mysql_innodb
   ```
 
-- `postgresql` plugins will now default to using a persistent connection to the database.
-  `Important` In environments TCP connections are terminated when idle for periods shorter than 15 minutes
-  and the collection interval is longer than the termination period then max_lifetime
-  should be set to be less than the collection interval to pervent errors when collecting metrics.
+- The `postgresql` plugins now defaults to using a persistent connection to the database.
+  In environments where TCP connections are terminated the `max_lifetime`
+  setting should be set less than the collection `interval` to prevent errors.
 
 ### Features
 
