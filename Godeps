@@ -69,7 +69,7 @@ github.com/Shopify/sarama 3b1b38866a79f06deddf0487d5c27ba0697ccd65
 github.com/Sirupsen/logrus 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
 github.com/signalfx/com_signalfx_metrics_protobuf c2cf2ea6c74f6ca217767bc69e002f7a721c50df
 github.com/signalfx/gohistogram 1ccfd2ff508314074672f4450a917011a2060408
-github.com/signalfx/golib 18f12a260c4e6a0c93d4f37ecca95679c48a25d7
+github.com/signalfx/golib  v1.1.0
 github.com/soniah/gosnmp 5ad50dc75ab389f8a1c9f8a67d3a1cd85f67ed15
 github.com/StackExchange/wmi f3e2bae1e0cb5aef83e319133eabfee30013a4a5
 github.com/streadway/amqp 63795daa9a446c920826655f26ba31c81c860fd6
