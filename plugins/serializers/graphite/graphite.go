@@ -2,6 +2,7 @@ package graphite
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -11,8 +12,18 @@ import (
 const DEFAULT_TEMPLATE = "host.tags.measurement.field"
 
 var (
-	fieldDeleter   = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
-	sanitizedChars = strings.NewReplacer("/", "-", "@", "-", "*", "-", " ", "_", "..", ".", `\`, "", ")", "_", "(", "_")
+	allowedChars = regexp.MustCompile(`[^a-zA-Z0-9-:._=\p{L}]`)
+	hypenChars   = strings.NewReplacer(
+		"/", "-",
+		"@", "-",
+		"*", "-",
+	)
+	dropChars = strings.NewReplacer(
+		`\`, "",
+		"..", ".",
+	)
+
+	fieldDeleter = strings.NewReplacer(".FIELDNAME", "", "FIELDNAME.", "")
 )
 
 type GraphiteSerializer struct {
@@ -44,7 +55,7 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 		}
 		metricString := fmt.Sprintf("%s %#v %d\n",
 			// insert "field" section of template
-			sanitizedChars.Replace(InsertField(bucket, fieldName)),
+			sanitize(InsertField(bucket, fieldName)),
 			value,
 			timestamp)
 		point := []byte(metricString)
@@ -122,7 +133,7 @@ func InsertField(bucket, fieldName string) string {
 	if fieldName == "value" {
 		return fieldDeleter.Replace(bucket)
 	}
-	return strings.Replace(bucket, "FIELDNAME", fieldName, 1)
+	return strings.Replace(bucket, "FIELDNAME", strings.Replace(fieldName, ".", "_", -1), 1)
 }
 
 func buildTags(tags map[string]string) string {
@@ -142,4 +153,13 @@ func buildTags(tags map[string]string) string {
 		}
 	}
 	return tag_str
+}
+
+func sanitize(value string) string {
+	// Apply special hypenation rules to preserve backwards compatibility
+	value = hypenChars.Replace(value)
+	// Apply rule to drop some chars to preserve backwards compatibility
+	value = dropChars.Replace(value)
+	// Replace any remaining illegal chars
+	return allowedChars.ReplaceAllLiteralString(value, "_")
 }

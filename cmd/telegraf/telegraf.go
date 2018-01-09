@@ -55,11 +55,8 @@ var fUsage = flag.String("usage", "",
 var fService = flag.String("service", "",
 	"operate on the service")
 
-// Telegraf version, populated linker.
-//   ie, -ldflags "-X main.version=`git describe --always --tags`"
-
 var (
-	nextVersion = "1.4.0"
+	nextVersion = "1.5.0"
 	version     string
 	commit      string
 	branch      string
@@ -268,7 +265,7 @@ func (p *program) Stop(s service.Service) error {
 
 func displayVersion() string {
 	if version == "" {
-		return fmt.Sprintf("v%s~pre%s", nextVersion, commit)
+		return fmt.Sprintf("v%s~%s", nextVersion, commit)
 	}
 	return "v" + version
 }

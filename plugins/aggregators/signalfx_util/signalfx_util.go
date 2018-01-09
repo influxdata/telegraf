@@ -373,6 +373,7 @@ type TotalDevice struct {
 type DiskTotalUtilization struct {
 	UtilizationBase
 	devices map[string]*TotalDevice
+	host    string
 }
 
 // DiskTotalUtilization.read -
@@ -409,6 +410,7 @@ func (u *DiskTotalUtilization) read(acc telegraf.Accumulator) {
 		tags["plugin_instance"] = "utilization"
 		fields["summary_utilization"] = 1.0 * float64(used) / float64(total) * 100
 		tags["sf_prefix"] = "disk"
+		tags["host"] = u.host
 		acc.AddGauge("signalfx-metadata", fields, tags, time.Now())
 	}
 }
@@ -432,12 +434,18 @@ func (u *DiskTotalUtilization) addMetric(metric telegraf.Metric) {
 		}
 		u.devices[metric.Tags()["device"]] = device
 	}
+	if u.host == "" {
+		if metric.HasTag("host") {
+			u.host = metric.Tags()["host"]
+		}
+	}
 }
 
 // newDiskTotalUtilization -
 func newDiskTotalUtilization() *DiskTotalUtilization {
 	var d = new(DiskTotalUtilization)
 	d.devices = make(map[string]*TotalDevice)
+	d.host = ""
 	d.reset()
 	return d
 }

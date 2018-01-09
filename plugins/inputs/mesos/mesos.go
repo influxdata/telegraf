@@ -367,7 +367,7 @@ func getMetrics(role Role, group string) []string {
 	ret, ok := m[group]
 
 	if !ok {
-		log.Printf("I! [mesos] Unkown %s metrics group: %s\n", role, group)
+		log.Printf("I! [mesos] Unknown %s metrics group: %s\n", role, group)
 		return []string{}
 	}
 

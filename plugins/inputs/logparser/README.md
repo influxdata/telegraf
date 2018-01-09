@@ -15,11 +15,14 @@ regex patterns.
   ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
   ##   /var/log/apache.log -> only tail the apache log file
   files = ["/var/log/apache/access.log"]
-  
+
   ## Read files that currently exist from the beginning. Files that are created
   ## while telegraf is running (and that match the "files" globs) will always
   ## be read from the beginning.
   from_beginning = false
+
+  ## Method used to watch for file updates.  Can be either "inotify" or "poll".
+  # watch_method = "inotify"
 
   ## Parse logstash-style "grok" patterns:
   ##   Telegraf built-in parsing patterns: https://goo.gl/dkay10
@@ -34,15 +37,15 @@ regex patterns.
 
     ## Name of the outputted measurement name.
     measurement = "apache_access_log"
-    
+
     ## Full path(s) to custom pattern files.
     custom_pattern_files = []
-    
+
     ## Custom patterns can also be defined here. Put one pattern per line.
     custom_patterns = '''
     '''
 
-    ## Timezone allows you to provide an override for timestamps that 
+    ## Timezone allows you to provide an override for timestamps that
     ## don't already include an offset
     ## e.g. 04/06/2016 12:41:45 data one two 5.43µs
     ##
@@ -97,7 +100,7 @@ current time.
   - ts-rfc3339       ("2006-01-02T15:04:05Z07:00")
   - ts-rfc3339nano   ("2006-01-02T15:04:05.999999999Z07:00")
   - ts-httpd         ("02/Jan/2006:15:04:05 -0700")
-  - ts-epoch         (seconds since unix epoch)
+  - ts-epoch         (seconds since unix epoch, may contain decimal)
   - ts-epochnano     (nanoseconds since unix epoch)
   - ts-"CUSTOM"
 
@@ -127,6 +130,19 @@ This example input and config parses a file using a custom timestamp conversion:
     patterns = ['%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02 15:04:05"} value=%{NUMBER:value:int}']
 ```
 
+This example input and config parses a file using a timestamp in unix time:
+
+```
+1466004605 value=42
+1466004605.123456789 value=42
+```
+
+```toml
+[[inputs.logparser]]
+  [inputs.logparser.grok]
+    patterns = ['%{NUMBER:timestamp:ts-epoch} value=%{NUMBER:value:int}']
+```
+
 This example parses a file using a built-in conversion and a custom pattern:
 
 ```
@@ -145,7 +161,7 @@ Wed Apr 12 13:10:34 PST 2017 value=42
 For cases where the timestamp itself is without offset, the `timezone` config var is available
 to denote an offset. By default (with `timezone` either omit, blank or set to `"UTC"`), the times
 are processed as if in the UTC timezone. If specified as `timezone = "Local"`, the timestamp
-will be processed based on the current machine timezone configuration. Lastly, if using a 
+will be processed based on the current machine timezone configuration. Lastly, if using a
 timezone from the list of Unix [timezones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), the logparser grok will attempt to offset
 the timestamp accordingly. See test cases for more detailed examples.
 

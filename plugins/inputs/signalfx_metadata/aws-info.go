@@ -22,7 +22,8 @@ type AWSInfo struct {
 }
 
 // GetAWSInfo - adds aws metadata to the supplied map
-func (s *AWSInfo) GetAWSInfo(info map[string]string) {
+func (s *AWSInfo) GetAWSInfo() (info map[string]string) {
+	info = map[string]string{}
 	if identity, err := requestAWSInfo(); err == nil {
 		processAWSInfo(info, identity)
 		s.aws = true
@@ -38,6 +39,7 @@ func (s *AWSInfo) GetAWSInfo(info map[string]string) {
 	} else {
 		log.Println("I! not an aws box")
 	}
+	return
 }
 
 func buildAWSUniqueID(info map[string]string) (string, bool) {

@@ -5,7 +5,7 @@
 ```toml
 # Statsd Server
 [[inputs.statsd]]
-  ## Protocol, must be "tcp" or "udp" (default=udp)
+  ## Protocol, must be "tcp", "udp4", "udp6" or "udp" (default=udp)
   protocol = "udp"
 
   ## MaxTCPConnection - applicable when protocol is set to tcp (default=250)
@@ -143,6 +143,8 @@ metric type:
         for that stat during that interval.
         - `statsd_<name>_stddev`: The stddev is the sample standard deviation
         of all values statsd saw for that stat during that interval.
+        - `statsd_<name>_sum`: The sum is the sample sum of all values statsd saw
+        for that stat during that interval.
         - `statsd_<name>_count`: The count is the number of timings statsd saw
         for that stat during that interval. It is not averaged.
         - `statsd_<name>_percentile_<P>` The `Pth` percentile is a value x such

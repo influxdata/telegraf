@@ -122,12 +122,6 @@ func Test_parse(t *testing.T) {
 }
 
 func Test_Gather(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping Gather function test")
-	}
-
-	t.Log("Testing Gather function")
-
 	t.Logf("Start HTTP mock (%s) with sampleJSON", fluentdTest.Endpoint)
 
 	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -157,13 +151,13 @@ func Test_Gather(t *testing.T) {
 	assert.Equal(t, expectedOutput[0].PluginID, acc.Metrics[0].Tags["plugin_id"])
 	assert.Equal(t, expectedOutput[0].PluginType, acc.Metrics[0].Tags["plugin_type"])
 	assert.Equal(t, expectedOutput[0].PluginCategory, acc.Metrics[0].Tags["plugin_category"])
-	assert.Equal(t, expectedOutput[0].RetryCount, acc.Metrics[0].Fields["retry_count"])
+	assert.Equal(t, *expectedOutput[0].RetryCount, acc.Metrics[0].Fields["retry_count"])
 
 	assert.Equal(t, expectedOutput[1].PluginID, acc.Metrics[1].Tags["plugin_id"])
 	assert.Equal(t, expectedOutput[1].PluginType, acc.Metrics[1].Tags["plugin_type"])
 	assert.Equal(t, expectedOutput[1].PluginCategory, acc.Metrics[1].Tags["plugin_category"])
-	assert.Equal(t, expectedOutput[1].RetryCount, acc.Metrics[1].Fields["retry_count"])
-	assert.Equal(t, expectedOutput[1].BufferQueueLength, acc.Metrics[1].Fields["buffer_queue_length"])
-	assert.Equal(t, expectedOutput[1].BufferTotalQueuedSize, acc.Metrics[1].Fields["buffer_total_queued_size"])
+	assert.Equal(t, *expectedOutput[1].RetryCount, acc.Metrics[1].Fields["retry_count"])
+	assert.Equal(t, *expectedOutput[1].BufferQueueLength, acc.Metrics[1].Fields["buffer_queue_length"])
+	assert.Equal(t, *expectedOutput[1].BufferTotalQueuedSize, acc.Metrics[1].Fields["buffer_total_queued_size"])
 
 }

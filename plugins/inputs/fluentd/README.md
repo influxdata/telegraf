@@ -22,11 +22,11 @@ example configuratio with `@id` parameter for http plugin:
 [[inputs.fluentd]]
   ## This plugin reads information exposed by fluentd (using /api/plugins.json endpoint).
   ##
-  ## Endpoint: 
+  ## Endpoint:
   ## - only one URI is allowed
   ## - https is not supported
   endpoint = "http://localhost:24220/api/plugins.json"
-  
+
   ## Define which plugins have to be excluded (based on "type" field - e.g. monitor_agent)
   exclude = [
 	  "monitor_agent",

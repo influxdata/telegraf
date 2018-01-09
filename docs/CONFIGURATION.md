@@ -24,11 +24,17 @@ Environment variables can be used anywhere in the config file, simply prepend
 them with $. For strings the variable must be within quotes (ie, "$STR_VAR"),
 for numbers and booleans they should be plain (ie, $INT_VAR, $BOOL_VAR)
 
+When using the `.deb` or `.rpm` packages, you can define environment variables
+in the `/etc/default/telegraf` file.
+
 ## Configuration file locations
 
 The location of the configuration file can be set via the `--config` command
-line flag. Telegraf will also pick up all files matching the pattern `*.conf` if
-the `-config-directory` command line flag is used.
+line flag.
+
+When the `--config-directory` command line flag is used files ending with
+`.conf` in the specified directory will also be included in the Telegraf
+configuration.
 
 On most systems, the default locations are `/etc/telegraf/telegraf.conf` for
 the main configuration file and `/etc/telegraf/telegraf.d` for the directory of
@@ -92,9 +98,13 @@ you can configure that here.
 * **name_suffix**: Specifies a suffix to attach to the measurement name.
 * **tags**: A map of tags to apply to a specific input's measurements.
 
+The [measurement filtering](#measurement-filtering) parameters can be used to
+limit what metrics are emitted from the input plugin.
+
 ## Output Configuration
 
-There are no generic configuration options available for all outputs.
+The [measurement filtering](#measurement-filtering) parameters can be used to
+limit what metrics are emitted from the output plugin.
 
 ## Aggregator Configuration
 
@@ -115,12 +125,20 @@ aggregator and will not get sent to the output plugins.
 * **name_suffix**: Specifies a suffix to attach to the measurement name.
 * **tags**: A map of tags to apply to a specific input's measurements.
 
+The [measurement filtering](#measurement-filtering) parameters be used to
+limit what metrics are handled by the aggregator.  Excluded metrics are passed
+downstream to the next aggregator.
+
 ## Processor Configuration
 
 The following config parameters are available for all processors:
 
 * **order**: This is the order in which the processor(s) get executed. If this
 is not specified then processor execution order will be random.
+
+The [measurement filtering](#measurement-filtering) can parameters may be used
+to limit what metrics are handled by the processor.  Excluded metrics are
+passed downstream to the next processor.
 
 #### Measurement Filtering
 
@@ -370,4 +388,16 @@ to the system load metrics due to the `namepass` parameter.
 
 [[outputs.file]]
   files = ["stdout"]
+```
+
+#### Processor Configuration Examples:
+
+Print only the metrics with `cpu` as the measurement name, all metrics are
+passed to the output:
+```toml
+[[processors.printer]]
+  namepass = "cpu"
+
+[[outputs.file]]
+  files = ["/tmp/metrics.out"]
 ```

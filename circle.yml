@@ -1,11 +1,14 @@
 machine:
-  go:
-    version: 1.8.1
   services:
     - docker
     - memcached
     - redis
     - rabbitmq-server
+  post:
+    - sudo rm -rf /usr/local/go
+    - wget https://storage.googleapis.com/golang/go1.9.2.linux-amd64.tar.gz
+    - sudo tar -C /usr/local -xzf go1.9.2.linux-amd64.tar.gz
+    - go version
 
 dependencies:
   override:

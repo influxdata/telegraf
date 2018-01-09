@@ -28,13 +28,13 @@ func TestDiskUsage(t *testing.T) {
 			Device:     "/dev/sda",
 			Mountpoint: "/",
 			Fstype:     "ext4",
-			Opts:       "",
+			Opts:       "ro,noatime,nodiratime",
 		},
 		{
 			Device:     "/dev/sdb",
 			Mountpoint: "/home",
 			Fstype:     "ext4",
-			Opts:       "",
+			Opts:       "rw,noatime,nodiratime,errors=remount-ro",
 		},
 	}
 	duAll := []disk.UsageStat{
@@ -62,8 +62,6 @@ func TestDiskUsage(t *testing.T) {
 
 	mps.On("Partitions", true).Return(psAll, nil)
 	mps.On("OSGetenv", "HOST_MOUNT_PREFIX").Return("")
-	mps.On("OSStat", "/").Return(MockFileInfo{}, nil)
-	mps.On("OSStat", "/home").Return(MockFileInfo{}, nil)
 	mps.On("PSDiskUsage", "/").Return(&duAll[0], nil)
 	mps.On("PSDiskUsage", "/home").Return(&duAll[1], nil)
 
@@ -78,11 +76,13 @@ func TestDiskUsage(t *testing.T) {
 		"path":   "/",
 		"fstype": "ext4",
 		"device": "sda",
+		"mode":   "ro",
 	}
 	tags2 := map[string]string{
 		"path":   "/home",
 		"fstype": "ext4",
 		"device": "sdb",
+		"mode":   "rw",
 	}
 
 	fields1 := map[string]interface{}{
@@ -163,13 +163,13 @@ func TestDiskStats(t *testing.T) {
 			Device:     "/dev/sda",
 			Mountpoint: "/",
 			Fstype:     "ext4",
-			Opts:       "",
+			Opts:       "ro,noatime,nodiratime",
 		},
 		{
 			Device:     "/dev/sdb",
 			Mountpoint: "/home",
 			Fstype:     "ext4",
-			Opts:       "",
+			Opts:       "rw,noatime,nodiratime,errors=remount-ro",
 		},
 	}
 
@@ -178,7 +178,7 @@ func TestDiskStats(t *testing.T) {
 			Device:     "/dev/sda",
 			Mountpoint: "/",
 			Fstype:     "ext4",
-			Opts:       "",
+			Opts:       "ro,noatime,nodiratime",
 		},
 	}
 
@@ -197,11 +197,13 @@ func TestDiskStats(t *testing.T) {
 		"path":   "/",
 		"fstype": "ext4",
 		"device": "sda",
+		"mode":   "ro",
 	}
 	tags2 := map[string]string{
 		"path":   "/home",
 		"fstype": "ext4",
 		"device": "sdb",
+		"mode":   "rw",
 	}
 
 	fields1 := map[string]interface{}{

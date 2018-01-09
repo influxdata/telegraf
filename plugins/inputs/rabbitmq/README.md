@@ -33,9 +33,13 @@ For additional details reference the [RabbitMQ Management HTTP Stats](https://cd
   ## Includes connection time, any redirects, and reading the response body.
   # client_timeout = "4s"
 
-  ## A list of nodes to pull metrics about. If not specified, metrics for
-  ## all nodes are gathered.
+  ## A list of nodes to gather as the rabbitmq_node measurement. If not
+  ## specified, metrics for all nodes are gathered.
   # nodes = ["rabbit@node1", "rabbit@node2"]
+
+  ## A list of queues to gather as the rabbitmq_queue measurement. If not
+  ## specified, metrics for all queues are gathered.
+  # queues = ["telegraf"]
 ```
 
 ### Measurements & Fields:

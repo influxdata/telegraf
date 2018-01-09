@@ -1,6 +1,7 @@
 package httpjson
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -13,6 +14,10 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+)
+
+var (
+	utf8BOM = []byte("\xef\xbb\xbf")
 )
 
 // HttpJson struct
@@ -170,7 +175,6 @@ func (h *HttpJson) gatherServer(
 	serverURL string,
 ) error {
 	resp, responseTime, err := h.sendRequest(serverURL)
-
 	if err != nil {
 		return err
 	}
@@ -266,6 +270,7 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 	if err != nil {
 		return string(body), responseTime, err
 	}
+	body = bytes.TrimPrefix(body, utf8BOM)
 
 	// Process response
 	if resp.StatusCode != http.StatusOK {

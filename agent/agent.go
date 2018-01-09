@@ -252,7 +252,7 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric, ag
 	// the flusher will flush after metrics are collected.
 	time.Sleep(time.Millisecond * 300)
 
-	// create an output metric channel and a gorouting that continously passes
+	// create an output metric channel and a gorouting that continuously passes
 	// each metric onto the output plugins & aggregators.
 	outMetricC := make(chan telegraf.Metric, 100)
 	var wg sync.WaitGroup

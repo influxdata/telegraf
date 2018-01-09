@@ -526,14 +526,14 @@ func Test_span_SpanID(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "converts known id correctly",
+			name: "validates known id correctly",
 			ID:   "b26412d1ac16767d",
-			want: "12854419928166856317",
+			want: "b26412d1ac16767d",
 		},
 		{
-			name: "converts hex string correctly",
+			name: "validates hex string correctly",
 			ID:   "deadbeef",
-			want: "3735928559",
+			want: "deadbeef",
 		},
 		{
 			name:    "errors when string isn't hex",
@@ -576,9 +576,9 @@ func Test_span_Parent(t *testing.T) {
 			want:     "",
 		},
 		{
-			name:     "converts hex string correctly",
+			name:     "validates hex string correctly",
 			ParentID: "deadbeef",
-			want:     "3735928559",
+			want:     "deadbeef",
 		},
 		{
 			name:     "errors when string isn't hex",
@@ -890,9 +890,9 @@ func TestIDFromString(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Convert hex string id",
+			name: "validates hex string id",
 			s:    "6b221d5bc9e6496c",
-			want: "7719764991332993388",
+			want: "6b221d5bc9e6496c",
 		},
 		{
 			name:    "error : id too long",

@@ -74,7 +74,7 @@ elif [[ -f /etc/debian_version ]]; then
     # Debian/Ubuntu logic
     if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
         install_systemd /lib/systemd/system/telegraf.service
-        systemctl restart telegraf || echo "WARNING: systemd not running."
+        deb-systemd-invoke restart telegraf.service || echo "WARNING: systemd not running."
     else
         # Assuming SysVinit
         install_init
