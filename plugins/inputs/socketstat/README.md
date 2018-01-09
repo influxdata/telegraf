@@ -1,22 +1,23 @@
 # SocketStat plugin
 
-The socketstat plugin gathers indicators from established connections, using iproute2's ss command.
+The socketstat plugin gathers indicators from established connections, using iproute2's `ss` command.
 
 The ss command does not require specific privileges.
 
 ### Configuration
 
 ```toml
+[[inputs.socketstat]]
   ## ss can display information about tcp, udp, raw, unix, packet, dccp and sctp sockets
   ## Specify here the types you want to gather
-  socket_types = [ "tcp", "udp", "raw" ]
+  socket_types = [ "tcp", "udp" ]
 ```
 
 ### Measurements & Fields:
 
 - socketstat
     - state (string) (tcp, dccp and sctp)
-    - If ss provides it (depends on the protocol and ss version):
+    - If ss provides it (it depends on the protocol and ss version):
         - bytes_acked (integer, bytes)
         - bytes_received (integer, bytes)
         - segs_out (integer, count)
@@ -39,18 +40,23 @@ The ss command does not require specific privileges.
 #### recent ss version
 
 ```
-$ ss -ein
-Netid  State      Recv-Q Send-Q Local Address:Port               Peer Address:Port              
-tcp   ESTAB      0      0          192.168.1.21:53896                  1.2.3.4:443                 timer:(keepalive,40sec,0) uid:1000 ino:88276 sk:1c1 <->
-	 ts sack cubic wscale:9,7 rto:208 rtt:6.367/1.849 ato:40 mss:1448 cwnd:10 bytes_acked:2155 bytes_received:3873216 segs_out:218 segs_in:2742 data_segs_out:17 data_segs_in:2730 send 18.2Mbps lastsnd:411100 lastrcv:411084 lastack:4252 pacing_rate 36.4Mbps rcv_rtt:8.451 rcv_space:359117 minrtt:4.004
-```
+$ ss -in --tcp
+State      Recv-Q Send-Q Local Address:Port               Peer Address:Port
+ESTAB      0      0      127.0.0.1:53692              127.0.0.1:7778
+	 cubic wscale:7,7 rto:224 rtt:21.55/14.181 ato:40 mss:25600 cwnd:10 bytes_acked:34525 bytes_received:2663883 segs_out:2331 segs_in:2136 data_segs_out:654 data_segs_in:1680 send 95.0Mbps lastsnd:15112 lastrcv:15084 lastack:15084 pacing_rate 190.1Mbps rcv_rtt:93.021 rcv_space:60281 minrtt:0.028
 
-```$ ./telegraf --config telegraf.conf --input-filter socketstat --test
-socketstat,proto=tcp,local_addr=192.168.1.21,local_port=53896,remote_addr=1.2.3.4,remote_port=443 state=ESTAB,bytes_acked=2155i,bytes_received=3873216i,segs_out=218i,segs_in=2742i,data_segs_out=17i,data_segs_in=2730i
+./telegraf --config telegraf.conf --input-filter socketstat --test
+> socketstat,proto=tcp,local_addr=127.0.0.1,local_port=53692,remote_addr=127.0.0.1,remote_port=7778,host=mymachine bytes_acked=34525i,segs_out=2331i,data_segs_out=654i,data_segs_in=1680i,send_q=0i,recv_q=0i,bytes_received=2663883i,segs_in=2136i,state="ESTAB" 1515496754000000000
 ```
 
 #### older ss version
 
-tcp   ESTAB      0      0                                                  192.168.1.21:38776                                           1.2.3.4:18080  uid:100 ino:378042749 sk:ffff880257013100 <->
-	 ts sack cubic wscale:7,7 rto:284 rtt:84.5/8 ato:40 mss:1448 cwnd:5 ssthresh:3 send 685.4Kbps retrans:0/4 rcv_rtt:88 rcv_space:29200
-socketstat,proto=tcp,local_addr=192.168.1.21,local_port=38776,remote_addr=1.2.3.4,remote_port=18080,state=ESTAB
+```
+$ ss -in --tcp
+State       Recv-Q Send-Q                           Local Address:Port                             Peer Address:Port
+ESTAB      0      0                                                  192.168.1.21:38776                                           1.2.3.4:18080
+	 cubic wscale:7,7 rto:284 rtt:84.5/8 ato:40 cwnd:5 ssthresh:3 send 685.4Kbps rcv_rtt:88 rcv_space:29200
+
+./telegraf --config telegraf.conf --input-filter socketstat --test
+socketstat,proto=tcp,local_addr=1.2.3.4,local_port=18080,remote_addr=192.168.1.21,remote_port=38776,state=ESTAB
+```
