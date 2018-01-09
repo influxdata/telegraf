@@ -115,15 +115,132 @@ streams_resets                  4    20989756
 streams_noresets                4    503182328
 bogus_streams                   4    0
 `
-const vdev_cache_statsContents = `7 1 0x01 3 144 23617323692 12081684236238879
-name                            type data
-delegations                     4    0
-hits                            4    0
-misses                          4    0
-`
 const pool_ioContents = `11 3 0x00 1 80 2225326830828 32953476980628
 nread    nwritten reads    writes   wtime    wlentime wupdate  rtime    rlentime rupdate  wcnt     rcnt
 1884160  6450688  22       978      272187126 2850519036 2263669418655 424226814 2850519036 2263669871823 0        0
+`
+const zilContents = `7 1 0x01 14 672 34118481334 437444452158445
+name                            type data
+zil_commit_count                4    77
+zil_commit_writer_count         4    77
+zil_itx_count                   4    1
+zil_itx_indirect_count          4    2
+zil_itx_indirect_bytes          4    3
+zil_itx_copied_count            4    4
+zil_itx_copied_bytes            4    5
+zil_itx_needcopy_count          4    6
+zil_itx_needcopy_bytes          4    7
+zil_itx_metaslab_normal_count   4    8
+zil_itx_metaslab_normal_bytes   4    9
+zil_itx_metaslab_slog_count     4    10
+zil_itx_metaslab_slog_bytes     4    11
+`
+const fmContents = `0 1 0x01 4 192 34087340971 437562103532892
+name                            type data
+erpt-dropped                    4    101
+erpt-set-failed                 4    202
+fmri-set-failed                 4    303
+payload-set-failed              4    404
+`
+const dmu_txContents = `5 1 0x01 11 528 34103260832 437683925071438
+name                            type data
+dmu_tx_assigned                 4    39321636
+dmu_tx_delay                    4    111
+dmu_tx_error                    4    222
+dmu_tx_suspended                4    333
+dmu_tx_group                    4    444
+dmu_tx_memory_reserve           4    555
+dmu_tx_memory_reclaim           4    666
+dmu_tx_dirty_throttle           4    777
+dmu_tx_dirty_delay              4    888
+dmu_tx_dirty_over_max           4    999
+dmu_tx_quota                    4    101010
+`
+
+const abdstatsContents = `7 1 0x01 21 1008 25476602923533 29223577332204
+name                            type data
+struct_size                     4    33840
+linear_cnt                      4    834
+linear_data_size                4    989696
+scatter_cnt                     4    12
+scatter_data_size               4    187904
+scatter_chunk_waste             4    4608
+scatter_order_0                 4    1
+scatter_order_1                 4    21
+scatter_order_2                 4    11
+scatter_order_3                 4    33
+scatter_order_4                 4    44
+scatter_order_5                 4    76
+scatter_order_6                 4    489
+scatter_order_7                 4    237483
+scatter_order_8                 4    233
+scatter_order_9                 4    4411
+scatter_order_10                4    1023
+scatter_page_multi_chunk        4    32122
+scatter_page_multi_zone         4    9930
+scatter_page_alloc_retry        4    99311
+scatter_sg_table_retry          4    99221
+`
+
+const dbufcachestatsContents = `
+15 1 0x01 11 2992 6257505590736 8516276189184
+name                            type data
+size                            4    242688
+size_max                        4    338944
+max_bytes                       4    62834368
+lowater_bytes                   4    56550932
+hiwater_bytes                   4    69117804
+total_evicts                    4    0
+hash_collisions                 4    0
+hash_elements                   4    31
+hash_elements_max               4    32
+hash_chains                     4    0
+hash_chain_max                  4    0
+`
+
+const dnodestatsContents = `
+10 1 0x01 28 7616 6257498525011 8671911551753
+name                            type data
+dnode_hold_dbuf_hold            4    0
+dnode_hold_dbuf_read            4    0
+dnode_hold_alloc_hits           4    1460
+dnode_hold_alloc_misses         4    0
+dnode_hold_alloc_interior       4    0
+dnode_hold_alloc_lock_retry     4    0
+dnode_hold_alloc_lock_misses    4    0
+dnode_hold_alloc_type_none      4    0
+dnode_hold_free_hits            4    2
+dnode_hold_free_misses          4    0
+dnode_hold_free_lock_misses     4    0
+dnode_hold_free_lock_retry      4    0
+dnode_hold_free_overflow        4    0
+dnode_hold_free_refcount        4    0
+dnode_hold_free_txg             4    0
+dnode_allocate                  4    2
+dnode_reallocate                4    0
+dnode_buf_evict                 4    6
+dnode_alloc_next_chunk          4    1
+dnode_alloc_race                4    0
+dnode_alloc_next_block          4    0
+dnode_move_invalid              4    0
+dnode_move_recheck1             4    0
+dnode_move_recheck2             4    0
+dnode_move_special              4    0
+dnode_move_handle               4    0
+dnode_move_rwlock               4    0
+dnode_move_active               4    0
+`
+
+const vdevmirrorcachestatsContents = `
+18 1 0x01 7 1904 6257505684227 9638257816287
+name                            type data
+rotating_linear                 4    0
+rotating_offset                 4    0
+rotating_seek                   4    0
+non_rotating_linear             4    0
+non_rotating_seek               4    0
+preferred_found                 4    0
+preferred_not_found             4    43
 `
 
 var testKstatPath = os.TempDir() + "/telegraf/proc/spl/kstat/zfs"
@@ -183,7 +300,16 @@ func TestZfsGeneratesMetrics(t *testing.T) {
 	err = ioutil.WriteFile(testKstatPath+"/zfetchstats", []byte(zfetchstatsContents), 0644)
 	require.NoError(t, err)
 
-	err = ioutil.WriteFile(testKstatPath+"/vdev_cache_stats", []byte(vdev_cache_statsContents), 0644)
+	err = ioutil.WriteFile(testKstatPath+"/zil", []byte(zilContents), 0644)
+	require.NoError(t, err)
+
+	err = ioutil.WriteFile(testKstatPath+"/fm", []byte(fmContents), 0644)
+	require.NoError(t, err)
+
+	err = ioutil.WriteFile(testKstatPath+"/dmu_tx", []byte(dmu_txContents), 0644)
+	require.NoError(t, err)
+
+	err = ioutil.WriteFile(testKstatPath+"/abdstats", []byte(abdstatsContents), 0644)
 	require.NoError(t, err)
 
 	intMetrics := getKstatMetricsAll()
@@ -328,20 +454,66 @@ func getKstatMetricsArcOnly() map[string]interface{} {
 
 func getKstatMetricsAll() map[string]interface{} {
 	otherMetrics := map[string]interface{}{
-		"zfetchstats_hits":              int64(7812959060),
-		"zfetchstats_misses":            int64(4154484207),
-		"zfetchstats_colinear_hits":     int64(1366368),
-		"zfetchstats_colinear_misses":   int64(4153117839),
-		"zfetchstats_stride_hits":       int64(7309776732),
-		"zfetchstats_stride_misses":     int64(222766182),
-		"zfetchstats_reclaim_successes": int64(107788388),
-		"zfetchstats_reclaim_failures":  int64(4045329451),
-		"zfetchstats_streams_resets":    int64(20989756),
-		"zfetchstats_streams_noresets":  int64(503182328),
-		"zfetchstats_bogus_streams":     int64(0),
-		"vdev_cache_stats_delegations":  int64(0),
-		"vdev_cache_stats_hits":         int64(0),
-		"vdev_cache_stats_misses":       int64(0),
+		"zfetchstats_hits":                  int64(7812959060),
+		"zfetchstats_misses":                int64(4154484207),
+		"zfetchstats_colinear_hits":         int64(1366368),
+		"zfetchstats_colinear_misses":       int64(4153117839),
+		"zfetchstats_stride_hits":           int64(7309776732),
+		"zfetchstats_stride_misses":         int64(222766182),
+		"zfetchstats_reclaim_successes":     int64(107788388),
+		"zfetchstats_reclaim_failures":      int64(4045329451),
+		"zfetchstats_streams_resets":        int64(20989756),
+		"zfetchstats_streams_noresets":      int64(503182328),
+		"zfetchstats_bogus_streams":         int64(0),
+		"zil_commit_count":                  int64(77),
+		"zil_commit_writer_count":           int64(77),
+		"zil_itx_count":                     int64(1),
+		"zil_itx_indirect_count":            int64(2),
+		"zil_itx_indirect_bytes":            int64(3),
+		"zil_itx_copied_count":              int64(4),
+		"zil_itx_copied_bytes":              int64(5),
+		"zil_itx_needcopy_count":            int64(6),
+		"zil_itx_needcopy_bytes":            int64(7),
+		"zil_itx_metaslab_normal_count":     int64(8),
+		"zil_itx_metaslab_normal_bytes":     int64(9),
+		"zil_itx_metaslab_slog_count":       int64(10),
+		"zil_itx_metaslab_slog_bytes":       int64(11),
+		"fm_erpt-dropped":                   int64(101),
+		"fm_erpt-set-failed":                int64(202),
+		"fm_fmri-set-failed":                int64(303),
+		"fm_payload-set-failed":             int64(404),
+		"dmu_tx_assigned":                   int64(39321636),
+		"dmu_tx_delay":                      int64(111),
+		"dmu_tx_error":                      int64(222),
+		"dmu_tx_suspended":                  int64(333),
+		"dmu_tx_group":                      int64(444),
+		"dmu_tx_memory_reserve":             int64(555),
+		"dmu_tx_memory_reclaim":             int64(666),
+		"dmu_tx_dirty_throttle":             int64(777),
+		"dmu_tx_dirty_delay":                int64(888),
+		"dmu_tx_dirty_over_max":             int64(999),
+		"dmu_tx_quota":                      int64(101010),
+		"abdstats_struct_size":              int64(33840),
+		"abdstats_linear_cnt":               int64(834),
+		"abdstats_linear_data_size":         int64(989696),
+		"abdstats_scatter_cnt":              int64(12),
+		"abdstats_scatter_data_size":        int64(187904),
+		"abdstats_scatter_chunk_waste":      int64(4608),
+		"abdstats_scatter_order_0":          int64(1),
+		"abdstats_scatter_order_1":          int64(21),
+		"abdstats_scatter_order_2":          int64(11),
+		"abdstats_scatter_order_3":          int64(33),
+		"abdstats_scatter_order_4":          int64(44),
+		"abdstats_scatter_order_5":          int64(76),
+		"abdstats_scatter_order_6":          int64(489),
+		"abdstats_scatter_order_7":          int64(237483),
+		"abdstats_scatter_order_8":          int64(233),
+		"abdstats_scatter_order_9":          int64(4411),
+		"abdstats_scatter_order_10":         int64(1023),
+		"abdstats_scatter_page_multi_chunk": int64(32122),
+		"abdstats_scatter_page_multi_zone":  int64(9930),
+		"abdstats_scatter_page_alloc_retry": int64(99311),
+		"abdstats_scatter_sg_table_retry":   int64(99221),
 	}
 	arcMetrics := getKstatMetricsArcOnly()
 	for k, v := range otherMetrics {
