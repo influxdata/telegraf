@@ -53,7 +53,7 @@ func (ns *Wireless) Gather(acc telegraf.Accumulator) error {
 	// collect wireless data
 	wg := new(sync.WaitGroup)
 	wg.Add(3)
-	wireless, err := exe_cmd("/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -I", wg)
+	wireless, err := exe_cmd(CMD, wg)
 	if err != nil {
 		return err
 	}
