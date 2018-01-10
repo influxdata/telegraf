@@ -22,6 +22,8 @@ func NewProcessInfo(bufferSize int, numWorkers int) *ProcessInfo {
 	var s = &ProcessInfo{
 		processes: make(map[int32]*process.Process),
 		processIn: make(chan *workerInProcess, bufferSize),
+		bufferSize: bufferSize,
+		numWorkers: numWorkers,
 	}
 
 	for i := 0; i < numWorkers; i++ {
@@ -35,6 +37,8 @@ func NewProcessInfo(bufferSize int, numWorkers int) *ProcessInfo {
 type ProcessInfo struct {
 	processes map[int32]*process.Process
 	processIn chan *workerInProcess
+	bufferSize int
+	numWorkers int
 }
 
 // GetTop - returns a map of process information
@@ -47,7 +51,7 @@ func (s *ProcessInfo) GetTop() (response string, err error) {
 	if err == nil {
 		var pidList = make(map[int32]bool, len(pids))
 		var top = make(map[string][]interface{}, len(pids))
-		var output = make(chan *workerOutProcess, 500)
+		var output = make(chan *workerOutProcess, s.bufferSize)
 
 		// Add missing processes to process list
 		for _, pid := range pids {
