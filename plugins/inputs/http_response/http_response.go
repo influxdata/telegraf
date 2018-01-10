@@ -50,8 +50,8 @@ var sampleConfig = `
   ## Server address (default http://localhost)
   # address = "http://localhost"
 
-  ## Set proxy (telegraf uses the system wide proxy settings if proxy is not set)
-  # proxy = "http://localhost:8888"
+  ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
+  # http_proxy = "http://localhost:8888"
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
@@ -93,11 +93,11 @@ func (h *HTTPResponse) SampleConfig() string {
 var ErrRedirectAttempted = errors.New("redirect")
 
 // Set the proxy. A configured proxy overwrites the system wide proxy.
-func getProxyFunc(proxy string) func(*http.Request) (*url.URL, error) {
-	if proxy == "" {
+func getProxyFunc(http_proxy string) func(*http.Request) (*url.URL, error) {
+	if http_proxy == "" {
 		return http.ProxyFromEnvironment
 	}
-	proxyURL, err := url.Parse(proxy)
+	proxyURL, err := url.Parse(http_proxy)
 	if err != nil {
 		return func(_ *http.Request) (*url.URL, error) {
 			return nil, errors.New("bad proxy: " + err.Error())
