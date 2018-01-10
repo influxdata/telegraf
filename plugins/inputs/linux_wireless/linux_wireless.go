@@ -54,7 +54,6 @@ func (ns *Wireless) SampleConfig() string {
 func (ns *Wireless) Gather(acc telegraf.Accumulator) error {
 	// load paths, get from env if config values are empty
 	ns.loadPath()
-
 	// collect wireless data
 	wireless, err := ioutil.ReadFile(ns.ProcNetWireless)
 	if err != nil {
@@ -93,7 +92,6 @@ func loadWirelessTable(table []byte, dumpZeros bool) (WirelessData, error) {
 	var value int64
 	var err error
 	myLines := strings.Split(string(table), "\n")
-
 	// split on '|' and trim the spaces
 	h1 := strings.Split(myLines[0], "|")
 	h2 := strings.Split(myLines[1], "|")
@@ -160,7 +158,6 @@ func loadWirelessTable(table []byte, dumpZeros bool) (WirelessData, error) {
 	wd.Tags = tags
 	wd.Data = data
 	return wd, nil
-
 }
 
 // loadPath can be used to read path firstly from config
