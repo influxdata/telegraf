@@ -29,8 +29,8 @@ var sampleConfig = `
     ## SignalFx API Token
     APIToken = "my-secret-key" # required.
 
-	## BatchSize
-	BatchSize = 1000
+    ## BatchSize
+    BatchSize = 1000
 
     ## Ingest URL
     DatapointIngestURL = "https://ingest.signalfx.com/v2/datapoint"
