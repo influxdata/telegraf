@@ -33,7 +33,7 @@
 
 - [#1896](https://github.com/influxdata/telegraf/issues/1896): Fix various mysql data type conversions.
 
-## v1.5.1 [unreleased]
+## v1.5.1 [2017-01-10]
 
 ### Bugfixes
 
