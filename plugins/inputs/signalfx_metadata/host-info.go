@@ -93,12 +93,10 @@ func GetMemory() (info map[string]string) {
 	return
 }
 
-func getStringFromFile(pattern string, path string) (string, error) {
+func getStringFromFile(pattern string, path string) (response string, err error) {
 	var file []byte
 	var match [][]byte
-	var err error
 	var reg = regexp.MustCompile(pattern)
-	var response string
 
 	if file, err = ioutil.ReadFile(path); err == nil {
 		match = reg.FindSubmatch(file)

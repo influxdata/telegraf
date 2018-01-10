@@ -42,9 +42,7 @@ func (s *AWSInfo) GetAWSInfo() (info map[string]string) {
 	return
 }
 
-func buildAWSUniqueID(info map[string]string) (string, bool) {
-	var awsUniqueID string
-	var awsSet = false
+func buildAWSUniqueID(info map[string]string) (awsUniqueID string, awsSet bool) {
 	if id, ok := info["aws_instance_id"]; ok {
 		if region, ok := info["aws_region"]; ok {
 			if account, ok := info["aws_account_id"]; ok {
@@ -53,7 +51,7 @@ func buildAWSUniqueID(info map[string]string) (string, bool) {
 			}
 		}
 	}
-	return awsUniqueID, awsSet
+	return
 }
 
 func processAWSInfo(info map[string]string, identity map[string]interface{}) {
@@ -75,12 +73,10 @@ func processAWSInfo(info map[string]string, identity map[string]interface{}) {
 	}
 }
 
-func requestAWSInfo() (map[string]interface{}, error) {
+func requestAWSInfo() (identity map[string]interface{}, err error) {
 	var url = "http://169.254.169.254/latest/dynamic/instance-identity/document"
-	var identity map[string]interface{}
 	var httpClient = &http.Client{Timeout: 200 * time.Millisecond}
 	var raw []byte
-	var err error
 	var res *http.Response
 
 	// make the request
@@ -93,5 +89,5 @@ func requestAWSInfo() (map[string]interface{}, error) {
 		// parse the json response
 		err = json.Unmarshal(raw, &identity)
 	}
-	return identity, err
+	return
 }
