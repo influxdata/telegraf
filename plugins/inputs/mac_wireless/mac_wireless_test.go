@@ -34,8 +34,19 @@ lastAssocStatus: 0
 		"lastAssocStatus": int64(0),
 		"MCS":             int64(15),
 	}
+
+	tags := map[string]string{
+		"state":       "running",
+		"op_mode":     "station",
+		"802.11_auth": "open",
+		"link_auth":   "wpa2-psk",
+		"BSSID":       "5c:99:99:99:9:99",
+		"SSID":        "Foo_Bar",
+		"interface":   "airport",
+	}
+
 	// load the table from the input.
-	got, err := loadWirelessTable([]byte(input), false)
+	got, got_tags, err := loadWirelessTable([]byte(input), false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,5 +57,11 @@ lastAssocStatus: 0
 		if parsed[key].(int64) != got[key].(int64) {
 			t.Fatalf("want %+v, got %+v", parsed[key], got[key])
 		}
+	}
+	for key := range tags {
+		if tags[key] != got_tags[key] {
+			t.Fatalf("want %+v, got %+v", tags[key], got_tags[key])
+		}
+
 	}
 }

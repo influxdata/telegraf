@@ -65,26 +65,29 @@ func (ns *Wireless) Gather(acc telegraf.Accumulator) error {
 }
 
 func (ns *Wireless) gatherWireless(data []byte, acc telegraf.Accumulator) error {
-	metrics, err := loadWirelessTable(data, ns.DumpZeros)
+	metrics, tags, err := loadWirelessTable(data, ns.DumpZeros)
 	if err != nil {
 		return err
-	}
-	tags := map[string]string{
-		"name": "airport",
 	}
 	acc.AddFields("wireless", metrics, tags)
 	return nil
 }
 
-func loadWirelessTable(table []byte, dumpZeros bool) (map[string]interface{}, error) {
+func loadWirelessTable(table []byte, dumpZeros bool) (map[string]interface{}, map[string]string, error) {
 	metrics := map[string]interface{}{}
+	tags := map[string]string{}
 	myLines := strings.Split(string(table), "\n")
 	for x := 0; x < len(myLines)-1; x++ {
-		f := strings.Split(myLines[x], ":")
+		f := strings.SplitN(myLines[x], ":", 2)
 		f[0] = strings.Trim(f[0], " ")
 		f[1] = strings.Trim(f[1], " ")
+		if f[0] == "BSSID" {
+			tags[strings.Replace(strings.Trim(f[0], " "), " ", "_", -1)] = strings.Replace(strings.Trim(string(f[1]), " "), " ", "_", -1)
+			continue
+		}
 		n, err := strconv.ParseInt(strings.Trim(f[1], " "), 10, 64)
 		if err != nil {
+			tags[strings.Replace(strings.Trim(f[0], " "), " ", "_", -1)] = strings.Replace(strings.Trim(f[1], " "), " ", "_", -1)
 			continue
 		}
 		if n == 0 {
@@ -95,7 +98,8 @@ func loadWirelessTable(table []byte, dumpZeros bool) (map[string]interface{}, er
 		metrics[strings.Trim(f[0], " ")] = n
 
 	}
-	return metrics, nil
+	tags["interface"] = "airport"
+	return metrics, tags, nil
 
 }
 
