@@ -1,10 +1,12 @@
-## v1.5.0.sfx0 [2018-01-08]
+## v1.5.1.sfx0 [2018-01-12]
 
 ### Release Notes
 
-- Rebase with upstream v1.5.0 release
+- Rebase with upstream v1.5.1 release
 - Fixed bug in SignalFx Utilization plugin where disk.summary_utilization was reported with out a hostname
 - Distribute SignalFx metadata and process info collection across multiple go routines
+- Batch metric output to SignalFx
+
 ## v1.5.1 [2017-01-10]
 
 ### Bugfixes
