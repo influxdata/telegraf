@@ -40,6 +40,11 @@ var (
 
 	// envVarRe is a regex to find environment variables in the config file
 	envVarRe = regexp.MustCompile(`\$\w+`)
+
+	envVarEscaper = strings.NewReplacer(
+		`"`, `\"`,
+		`\`, `\\`,
+	)
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -689,6 +694,11 @@ func trimBOM(f []byte) []byte {
 	return bytes.TrimPrefix(f, []byte("\xef\xbb\xbf"))
 }
 
+// escapeEnv escapes a value for inserting into a TOML string.
+func escapeEnv(value string) string {
+	return envVarEscaper.Replace(value)
+}
+
 // parseFile loads a TOML configuration from a provided path and
 // returns the AST produced from the TOML parser. When loading the file, it
 // will find environment variables and replace them.
@@ -702,8 +712,9 @@ func parseFile(fpath string) (*ast.Table, error) {
 
 	env_vars := envVarRe.FindAll(contents, -1)
 	for _, env_var := range env_vars {
-		env_val := os.Getenv(strings.TrimPrefix(string(env_var), "$"))
-		if env_val != "" {
+		env_val, ok := os.LookupEnv(strings.TrimPrefix(string(env_var), "$"))
+		if ok {
+			env_val = escapeEnv(env_val)
 			contents = bytes.Replace(contents, env_var, []byte(env_val), 1)
 		}
 	}

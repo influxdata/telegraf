@@ -1,10 +1,22 @@
-## v1.5.0.sfx0 [2018-01-08]
+## v1.5.1.sfx0 [2018-01-12]
 
 ### Release Notes
 
-- Rebase with upstream v1.5.0 release
+- Rebase with upstream v1.5.1 release
 - Fixed bug in SignalFx Utilization plugin where disk.summary_utilization was reported with out a hostname
 - Distribute SignalFx metadata and process info collection across multiple go routines
+- Batch metric output to SignalFx
+
+## v1.5.1 [2017-01-10]
+
+### Bugfixes
+
+- [#3624](https://github.com/influxdata/telegraf/pull/3624): Fix name error in jolokia2_agent sample config.
+- [#3625](https://github.com/influxdata/telegraf/pull/3625): Fix DC/OS login expiration time.
+- [#3593](https://github.com/influxdata/telegraf/pull/3593): Set Content-Type charset in influxdb output and allow it be overridden.
+- [#3594](https://github.com/influxdata/telegraf/pull/3594): Document permissions setup for postfix input.
+- [#3633](https://github.com/influxdata/telegraf/pull/3633): Fix deliver_get field in rabbitmq input.
+- [#3607](https://github.com/influxdata/telegraf/issues/3607): Escape environment variables during config toml parsing.
 
 ## v1.5 [2017-12-14]
 
