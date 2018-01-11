@@ -104,5 +104,5 @@ func getStringFromFile(pattern string, path string) (response string, err error)
 			response = string(match[1])
 		}
 	}
-	return response, err
+	return
 }
