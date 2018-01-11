@@ -20,8 +20,8 @@ const numColumns = 11
 // NewProcessInfo - returns a new ProcessInfo instance
 func NewProcessInfo(bufferSize int, numWorkers int) *ProcessInfo {
 	var s = &ProcessInfo{
-		processes: make(map[int32]*process.Process),
-		processIn: make(chan *workerInProcess, bufferSize),
+		processes:  make(map[int32]*process.Process),
+		processIn:  make(chan *workerInProcess, bufferSize),
 		bufferSize: bufferSize,
 		numWorkers: numWorkers,
 	}
@@ -35,8 +35,8 @@ func NewProcessInfo(bufferSize int, numWorkers int) *ProcessInfo {
 
 // ProcessInfo - list of processes
 type ProcessInfo struct {
-	processes map[int32]*process.Process
-	processIn chan *workerInProcess
+	processes  map[int32]*process.Process
+	processIn  chan *workerInProcess
 	bufferSize int
 	numWorkers int
 }
@@ -157,6 +157,7 @@ func newWorkerProcess(in chan *workerInProcess) {
 	}()
 }
 
+// GetProcessInfo returns the top styled process list encoded in base64 and compressed
 func (s *ProcessInfo) GetProcessInfo(proc *process.Process) []interface{} {
 	return []interface{}{
 		getProcessUsername(proc),
