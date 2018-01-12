@@ -114,7 +114,7 @@ var (
 
 func newTestHTTPListener() *HTTPListener {
 	listener := &HTTPListener{
-		ServiceAddress: ":0",
+		ServiceAddress: "localhost:0",
 	}
 	return listener
 }
@@ -155,7 +155,7 @@ func newTestHTTPSListener() *HTTPListener {
 	})
 
 	listener := &HTTPListener{
-		ServiceAddress:    ":0",
+		ServiceAddress:    "localhost:0",
 		TlsAllowedCacerts: allowedCAFiles,
 		TlsCert:           serviceCertFile,
 		TlsKey:            serviceKeyFile,
@@ -309,7 +309,7 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 
 func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
 	listener := &HTTPListener{
-		ServiceAddress: ":0",
+		ServiceAddress: "localhost:0",
 		MaxLineSize:    128 * 1000,
 	}
 
@@ -326,7 +326,7 @@ func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
 
 func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	listener := &HTTPListener{
-		ServiceAddress: ":0",
+		ServiceAddress: "localhost:0",
 		MaxBodySize:    4096,
 	}
 
@@ -342,7 +342,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 
 func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 	listener := &HTTPListener{
-		ServiceAddress: ":0",
+		ServiceAddress: "localhost:0",
 		MaxLineSize:    70,
 	}
 
@@ -368,7 +368,7 @@ func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 
 func TestWriteHTTPLargeLinesSkipped(t *testing.T) {
 	listener := &HTTPListener{
-		ServiceAddress: ":0",
+		ServiceAddress: "localhost:0",
 		MaxLineSize:    100,
 	}
 
