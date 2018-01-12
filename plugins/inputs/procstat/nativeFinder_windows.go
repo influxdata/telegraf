@@ -64,7 +64,7 @@ func getWin32ProcsByVariable(variable string, qType queryType, value string, tim
 	var dst []process.Win32_Process
 	var query string
 	// should look like "WHERE CommandLine LIKE "procstat"
-	query = fmt.Sprintf("WHERE %s %s \"%s\"", variable, qType, value)
+	query = fmt.Sprintf("WHERE %s %s '%s'", variable, qType, value)
 	q := wmi.CreateQuery(&dst, query)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
