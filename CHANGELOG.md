@@ -260,6 +260,13 @@
 
 ## v1.5.1 [2018-01-10]
 ## v1.5.1 [unreleased]
+## v1.5.1.sfx1 [2018-01-16]
+
+### Release Notes
+
+- Minor bug fix to correctly batch metrics in SignalFx output plugin
+- Minor enhancement to ensure SignalFx metadata plugin has at least 1 go routine to gather process list information
+
 ## v1.5.1.sfx0 [2018-01-12]
 
 ### Release Notes
