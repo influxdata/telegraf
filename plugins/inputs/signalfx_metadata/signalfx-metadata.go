@@ -16,6 +16,7 @@ const pluginVersion = "0.0.30"
 var sampleConfig = `
   ## SignalFx metadata plugin reports metadata properties for the host
   ## Process List Collection Settings
+  ## number of go routines used to collect the process list (must be 1 or greater)
   # NumberOfGoRoutines = 3
   ## The buffer size should be greater than or equal to the length of all 
   ## processes on the host
