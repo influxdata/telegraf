@@ -1,5 +1,3 @@
-// +build windows
-
 package procstat
 
 import (
@@ -15,10 +13,6 @@ import (
 //Timeout is the timeout used when making wmi calls
 var Timeout = 5 * time.Second
 
-func init() {
-	wmi.DefaultClient.AllowMissingFields = true
-}
-
 type queryType string
 
 const (
@@ -26,19 +20,6 @@ const (
 	equals   = queryType("=")
 	notEqual = queryType("!=")
 )
-
-// //Pattern matches the process name on windows and will find a pattern using a WMI like query
-// func (pg *NativeFinder) Pattern(pattern string) ([]PID, error) {
-// 	var pids []PID
-// 	procs, err := getWin32ProcsByVariable("Name", like, pattern, Timeout)
-// 	if err != nil {
-// 		return pids, err
-// 	}
-// 	for _, p := range procs {
-// 		pids = append(pids, PID(p.ProcessID))
-// 	}
-// 	return pids, nil
-// }
 
 //Pattern matches on the process name
 func (pg *NativeFinder) Pattern(pattern string) ([]PID, error) {
@@ -82,7 +63,8 @@ func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 func getWin32ProcsByVariable(variable string, qType queryType, value string, timeout time.Duration) ([]process.Win32_Process, error) {
 	var dst []process.Win32_Process
 	var query string
-	query = fmt.Sprint("WHERE ", variable, " ", qType, " \"", value, "\"")
+	// should look like "WHERE CommandLine LIKE "procstat"
+	query = fmt.Sprintf("WHERE %s %s \"%s\"", variable, qType, value)
 	q := wmi.CreateQuery(&dst, query)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()

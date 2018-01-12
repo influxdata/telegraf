@@ -45,7 +45,7 @@ var sampleConfig = `
   ## pgrep tries to exec pgrep
   ## native will work on all platforms, unix systems will use regexp. 
   ## Windows will use WMI calls with like queries
-  pid_finder = native
+  pid_finder = "native"
   ## Must specify one of: pid_file, exe, or pattern
   ## PID file to monitor process
   pid_file = "/var/run/nginx.pid"
@@ -81,10 +81,8 @@ func (_ *Procstat) Description() string {
 
 func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	if p.createPIDFinder == nil {
-		fmt.Println("PIDFINDER: ", p.PidFinder)
 		switch p.PidFinder {
 		case "native":
-			fmt.Println("pid finder is now native")
 			p.createPIDFinder = NewNativeFinder
 		case "pgrep":
 			p.createPIDFinder = NewPgrep
