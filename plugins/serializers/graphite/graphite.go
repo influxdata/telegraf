@@ -55,7 +55,11 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 		}
 		metricString := fmt.Sprintf("%s %#v %d\n",
 			// insert "field" section of template
+<<<<<<< HEAD
 			sanitize(InsertField(bucket, fieldName)),
+=======
+			sanitizedChars.Replace(InsertField(bucket, fieldName)),
+>>>>>>> master
 			value,
 			timestamp)
 		point := []byte(metricString)
