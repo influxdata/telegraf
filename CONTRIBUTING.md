@@ -460,6 +460,21 @@ func init() {
 Before opening a pull request you should run the linter checks and
 the short tests.
 
+**Mac OSX Notes**
+
+On Mac OSX, tests can hang (https://github.com/influxdata/telegraf/issues/3158),
+so a workaround is to run tests from within a docker container:
+
+```bash
+docker run -it -v $(pwd):/go/src/github.com/influxdata/telegraf golang
+```
+
+You can now run the following inside of that container.
+
+### Install Dependencies
+
+execute `make deps`
+
 ### Execute linter
 
 execute `make lint`
