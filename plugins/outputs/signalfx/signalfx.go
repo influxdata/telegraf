@@ -331,7 +331,7 @@ func (s *SignalFx) Write(metrics []telegraf.Metric) error {
 				// Add metric as a datapoint
 				datapoints = append(datapoints, dp)
 
-				if len(datapoints) == s.BatchSize {
+				if len(datapoints) >= s.BatchSize {
 					s.emitDatapoints(datapoints)
 					datapoints = datapoints[:0]
 				}
@@ -355,7 +355,7 @@ func (s *SignalFx) Write(metrics []telegraf.Metric) error {
 				// Add event
 				events = append(events, ev)
 
-				if len(events) == s.BatchSize {
+				if len(events) >= s.BatchSize {
 					s.emitEvents(events)
 					events = events[:0]
 				}
