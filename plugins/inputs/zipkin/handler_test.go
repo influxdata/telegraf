@@ -52,11 +52,7 @@ func TestSpanHandler(t *testing.T) {
 
 	got := mockRecorder.Data
 
-<<<<<<< HEAD
 	parentID := strconv.FormatInt(22964302721410078, 16)
-=======
-	parentID := strconv.FormatInt(22964302721410078, 10)
->>>>>>> master
 	want := trace.Trace{
 		{
 			Name:        "Child",

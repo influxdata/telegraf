@@ -48,7 +48,6 @@ func (c *MockClient) ContainerInspect(
 	return c.ContainerInspectF(ctx, containerID)
 }
 
-<<<<<<< HEAD
 func (c *MockClient) ServiceList(
 	ctx context.Context,
 	options types.ServiceListOptions,
@@ -70,8 +69,6 @@ func (c *MockClient) NodeList(
 	return c.NodeListF(ctx, options)
 }
 
-=======
->>>>>>> master
 var baseClient = MockClient{
 	InfoF: func(context.Context) (types.Info, error) {
 		return info, nil
@@ -85,7 +82,6 @@ var baseClient = MockClient{
 	ContainerInspectF: func(context.Context, string) (types.ContainerJSON, error) {
 		return containerInspect, nil
 	},
-<<<<<<< HEAD
 	ServiceListF: func(context.Context, types.ServiceListOptions) ([]swarm.Service, error) {
 		return ServiceList, nil
 	},
@@ -95,8 +91,6 @@ var baseClient = MockClient{
 	NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
 		return NodeList, nil
 	},
-=======
->>>>>>> master
 }
 
 func newClient(host string, tlsConfig *tls.Config) (Client, error) {

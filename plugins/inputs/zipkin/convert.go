@@ -1,11 +1,8 @@
 package zipkin
 
 import (
-<<<<<<< HEAD
 	"strings"
 
-=======
->>>>>>> master
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/trace"
 )
@@ -77,7 +74,6 @@ func (l *LineProtocolConverter) Record(t trace.Trace) error {
 func (l *LineProtocolConverter) Error(err error) {
 	l.acc.AddError(err)
 }
-<<<<<<< HEAD
 
 // formatName formats name and service name
 // Zipkin forces span and service names to be lowercase:
@@ -85,5 +81,3 @@ func (l *LineProtocolConverter) Error(err error) {
 func formatName(name string) string {
 	return strings.ToLower(name)
 }
-=======
->>>>>>> master

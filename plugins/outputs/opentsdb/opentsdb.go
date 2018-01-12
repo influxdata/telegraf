@@ -22,10 +22,7 @@ var (
 		`%`, "-",
 		"#", "-",
 		"$", "-")
-<<<<<<< HEAD
 	defaultSeperator = "_"
-=======
->>>>>>> master
 )
 
 type OpenTSDB struct {
@@ -38,12 +35,9 @@ type OpenTSDB struct {
 
 	Debug bool
 
-<<<<<<< HEAD
 	Separator string
 }
 
-=======
->>>>>>> master
 var sampleConfig = `
   ## prefix for metrics keys
   prefix = "my.specific.prefix."
@@ -145,12 +139,8 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 			}
 
 			metric := &HttpMetric{
-<<<<<<< HEAD
 				Metric: sanitize(fmt.Sprintf("%s%s%s%s",
 					o.Prefix, m.Name(), o.Separator, fieldName)),
-=======
-				Metric:    sanitize(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName)),
->>>>>>> master
 				Tags:      tags,
 				Timestamp: now,
 				Value:     value,
@@ -200,11 +190,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 			}
 
 			messageLine := fmt.Sprintf("put %s %v %s %s\n",
-<<<<<<< HEAD
 				sanitize(fmt.Sprintf("%s%s%s%s", o.Prefix, m.Name(), o.Separator, fieldName)),
-=======
-				sanitize(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName)),
->>>>>>> master
 				now, metricValue, tags)
 
 			_, err := connection.Write([]byte(messageLine))

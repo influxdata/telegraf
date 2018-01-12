@@ -232,15 +232,9 @@ func TestZipkinPlugin(t *testing.T) {
 				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
-<<<<<<< HEAD
 						"id":           "b26412d1ac16767d",
 						"name":         "http:/hi2",
 						"parent_id":    "7312f822d43d0fd8",
-=======
-						"id":           "12854419928166856317",
-						"name":         "http:/hi2",
-						"parent_id":    "8291962692415852504",
->>>>>>> master
 						"service_name": "test",
 						"trace_id":     "7312f822d43d0fd8",
 					},
@@ -253,15 +247,9 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"annotation":    "sr",
 						"endpoint_host": "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":            "b26412d1ac16767d",
 						"name":          "http:/hi2",
 						"parent_id":     "7312f822d43d0fd8",
-=======
-						"id":            "12854419928166856317",
-						"name":          "http:/hi2",
-						"parent_id":     "8291962692415852504",
->>>>>>> master
 						"service_name":  "test",
 						"trace_id":      "7312f822d43d0fd8",
 					},
@@ -275,15 +263,9 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"annotation":    "ss",
 						"endpoint_host": "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":            "b26412d1ac16767d",
 						"name":          "http:/hi2",
 						"parent_id":     "7312f822d43d0fd8",
-=======
-						"id":            "12854419928166856317",
-						"name":          "http:/hi2",
-						"parent_id":     "8291962692415852504",
->>>>>>> master
 						"service_name":  "test",
 						"trace_id":      "7312f822d43d0fd8",
 					},
@@ -298,15 +280,9 @@ func TestZipkinPlugin(t *testing.T) {
 						"annotation":     "Demo2Application",
 						"annotation_key": "mvc.controller.class",
 						"endpoint_host":  "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":             "b26412d1ac16767d",
 						"name":           "http:/hi2",
 						"parent_id":      "7312f822d43d0fd8",
-=======
-						"id":             "12854419928166856317",
-						"name":           "http:/hi2",
-						"parent_id":      "8291962692415852504",
->>>>>>> master
 						"service_name":   "test",
 						"trace_id":       "7312f822d43d0fd8",
 					},
@@ -321,15 +297,9 @@ func TestZipkinPlugin(t *testing.T) {
 						"annotation":     "hi2",
 						"annotation_key": "mvc.controller.method",
 						"endpoint_host":  "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":             "b26412d1ac16767d",
 						"name":           "http:/hi2",
 						"parent_id":      "7312f822d43d0fd8",
-=======
-						"id":             "12854419928166856317",
-						"name":           "http:/hi2",
-						"parent_id":      "8291962692415852504",
->>>>>>> master
 						"service_name":   "test",
 						"trace_id":       "7312f822d43d0fd8",
 					},
@@ -344,15 +314,9 @@ func TestZipkinPlugin(t *testing.T) {
 						"annotation":     "192.168.0.8:test:8010",
 						"annotation_key": "spring.instance_id",
 						"endpoint_host":  "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":             "b26412d1ac16767d",
 						"name":           "http:/hi2",
 						"parent_id":      "7312f822d43d0fd8",
-=======
-						"id":             "12854419928166856317",
-						"name":           "http:/hi2",
-						"parent_id":      "8291962692415852504",
->>>>>>> master
 						"service_name":   "test",
 						"trace_id":       "7312f822d43d0fd8",
 					},
@@ -364,15 +328,9 @@ func TestZipkinPlugin(t *testing.T) {
 				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
-<<<<<<< HEAD
 						"id":           "b26412d1ac16767d",
 						"name":         "http:/hi2",
 						"parent_id":    "7312f822d43d0fd8",
-=======
-						"id":           "12854419928166856317",
-						"name":         "http:/hi2",
-						"parent_id":    "8291962692415852504",
->>>>>>> master
 						"service_name": "test",
 						"trace_id":     "7312f822d43d0fd8",
 					},
@@ -386,15 +344,9 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"annotation":    "cs",
 						"endpoint_host": "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":            "b26412d1ac16767d",
 						"name":          "http:/hi2",
 						"parent_id":     "7312f822d43d0fd8",
-=======
-						"id":            "12854419928166856317",
-						"name":          "http:/hi2",
-						"parent_id":     "8291962692415852504",
->>>>>>> master
 						"service_name":  "test",
 						"trace_id":      "7312f822d43d0fd8",
 					},
@@ -408,15 +360,9 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"annotation":    "cr",
 						"endpoint_host": "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":            "b26412d1ac16767d",
 						"name":          "http:/hi2",
 						"parent_id":     "7312f822d43d0fd8",
-=======
-						"id":            "12854419928166856317",
-						"name":          "http:/hi2",
-						"parent_id":     "8291962692415852504",
->>>>>>> master
 						"service_name":  "test",
 						"trace_id":      "7312f822d43d0fd8",
 					},
@@ -431,15 +377,9 @@ func TestZipkinPlugin(t *testing.T) {
 						"annotation":     "localhost",
 						"annotation_key": "http.host",
 						"endpoint_host":  "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":             "b26412d1ac16767d",
 						"name":           "http:/hi2",
 						"parent_id":      "7312f822d43d0fd8",
-=======
-						"id":             "12854419928166856317",
-						"name":           "http:/hi2",
-						"parent_id":      "8291962692415852504",
->>>>>>> master
 						"service_name":   "test",
 						"trace_id":       "7312f822d43d0fd8",
 					},
@@ -454,15 +394,9 @@ func TestZipkinPlugin(t *testing.T) {
 						"annotation":     "GET",
 						"annotation_key": "http.method",
 						"endpoint_host":  "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":             "b26412d1ac16767d",
 						"name":           "http:/hi2",
 						"parent_id":      "7312f822d43d0fd8",
-=======
-						"id":             "12854419928166856317",
-						"name":           "http:/hi2",
-						"parent_id":      "8291962692415852504",
->>>>>>> master
 						"service_name":   "test",
 						"trace_id":       "7312f822d43d0fd8",
 					},
@@ -477,15 +411,9 @@ func TestZipkinPlugin(t *testing.T) {
 						"annotation":     "/hi2",
 						"annotation_key": "http.path",
 						"endpoint_host":  "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":             "b26412d1ac16767d",
 						"name":           "http:/hi2",
 						"parent_id":      "7312f822d43d0fd8",
-=======
-						"id":             "12854419928166856317",
-						"name":           "http:/hi2",
-						"parent_id":      "8291962692415852504",
->>>>>>> master
 						"service_name":   "test",
 						"trace_id":       "7312f822d43d0fd8",
 					},
@@ -500,15 +428,9 @@ func TestZipkinPlugin(t *testing.T) {
 						"annotation":     "http://localhost:8010/hi2",
 						"annotation_key": "http.url",
 						"endpoint_host":  "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":             "b26412d1ac16767d",
 						"name":           "http:/hi2",
 						"parent_id":      "7312f822d43d0fd8",
-=======
-						"id":             "12854419928166856317",
-						"name":           "http:/hi2",
-						"parent_id":      "8291962692415852504",
->>>>>>> master
 						"service_name":   "test",
 						"trace_id":       "7312f822d43d0fd8",
 					},
@@ -523,15 +445,9 @@ func TestZipkinPlugin(t *testing.T) {
 						"annotation":     "192.168.0.8:test:8010",
 						"annotation_key": "spring.instance_id",
 						"endpoint_host":  "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":             "b26412d1ac16767d",
 						"name":           "http:/hi2",
 						"parent_id":      "7312f822d43d0fd8",
-=======
-						"id":             "12854419928166856317",
-						"name":           "http:/hi2",
-						"parent_id":      "8291962692415852504",
->>>>>>> master
 						"service_name":   "test",
 						"trace_id":       "7312f822d43d0fd8",
 					},
@@ -543,15 +459,9 @@ func TestZipkinPlugin(t *testing.T) {
 				{
 					Measurement: "zipkin",
 					Tags: map[string]string{
-<<<<<<< HEAD
 						"id":           "7312f822d43d0fd8",
 						"name":         "http:/hi",
 						"parent_id":    "7312f822d43d0fd8",
-=======
-						"id":           "8291962692415852504",
-						"name":         "http:/hi",
-						"parent_id":    "8291962692415852504",
->>>>>>> master
 						"service_name": "test",
 						"trace_id":     "7312f822d43d0fd8",
 					},
@@ -565,15 +475,9 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"annotation":    "sr",
 						"endpoint_host": "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":            "7312f822d43d0fd8",
 						"name":          "http:/hi",
 						"parent_id":     "7312f822d43d0fd8",
-=======
-						"id":            "8291962692415852504",
-						"name":          "http:/hi",
-						"parent_id":     "8291962692415852504",
->>>>>>> master
 						"service_name":  "test",
 						"trace_id":      "7312f822d43d0fd8",
 					},
@@ -587,15 +491,9 @@ func TestZipkinPlugin(t *testing.T) {
 					Tags: map[string]string{
 						"annotation":    "ss",
 						"endpoint_host": "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":            "7312f822d43d0fd8",
 						"name":          "http:/hi",
 						"parent_id":     "7312f822d43d0fd8",
-=======
-						"id":            "8291962692415852504",
-						"name":          "http:/hi",
-						"parent_id":     "8291962692415852504",
->>>>>>> master
 						"service_name":  "test",
 						"trace_id":      "7312f822d43d0fd8",
 					},
@@ -610,15 +508,9 @@ func TestZipkinPlugin(t *testing.T) {
 						"annotation":     "Demo2Application",
 						"annotation_key": "mvc.controller.class",
 						"endpoint_host":  "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":             "7312f822d43d0fd8",
 						"name":           "http:/hi",
 						"parent_id":      "7312f822d43d0fd8",
-=======
-						"id":             "8291962692415852504",
-						"name":           "http:/hi",
-						"parent_id":      "8291962692415852504",
->>>>>>> master
 						"service_name":   "test",
 						"trace_id":       "7312f822d43d0fd8",
 					},
@@ -633,15 +525,9 @@ func TestZipkinPlugin(t *testing.T) {
 						"annotation":     "hi",
 						"annotation_key": "mvc.controller.method",
 						"endpoint_host":  "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":             "7312f822d43d0fd8",
 						"name":           "http:/hi",
 						"parent_id":      "7312f822d43d0fd8",
-=======
-						"id":             "8291962692415852504",
-						"name":           "http:/hi",
-						"parent_id":      "8291962692415852504",
->>>>>>> master
 						"service_name":   "test",
 						"trace_id":       "7312f822d43d0fd8",
 					},
@@ -656,15 +542,9 @@ func TestZipkinPlugin(t *testing.T) {
 						"annotation":     "192.168.0.8:test:8010",
 						"annotation_key": "spring.instance_id",
 						"endpoint_host":  "192.168.0.8:8010",
-<<<<<<< HEAD
 						"id":             "7312f822d43d0fd8",
 						"name":           "http:/hi",
 						"parent_id":      "7312f822d43d0fd8",
-=======
-						"id":             "8291962692415852504",
-						"name":           "http:/hi",
-						"parent_id":      "8291962692415852504",
->>>>>>> master
 						"service_name":   "test",
 						"trace_id":       "7312f822d43d0fd8",
 					},

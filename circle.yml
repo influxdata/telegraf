@@ -1,12 +1,4 @@
 machine:
-<<<<<<< HEAD
-=======
-  go:
-    version: 1.8.1
-  environment:
-    CIRCLE_RELEASE_USER: "orangesys"
-    CIRCLE_RELEASE_REPO: "telegraf-output-orangesys"
->>>>>>> master
   services:
     - docker
     - memcached

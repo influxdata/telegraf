@@ -239,11 +239,7 @@ func TraceIDFromString(s string) (string, error) {
 	return fmt.Sprintf("%x%016x", hi, lo), nil
 }
 
-<<<<<<< HEAD
 // IDFromString validates the ID and returns it in hexadecimal format.
-=======
-// IDFromString creates a decimal id from a hexadecimal string
->>>>>>> master
 func IDFromString(s string) (string, error) {
 	if len(s) > 16 {
 		return "", fmt.Errorf("ID cannot be longer than 16 hex characters: %s", s)
@@ -252,9 +248,5 @@ func IDFromString(s string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-<<<<<<< HEAD
 	return strconv.FormatUint(id, 16), nil
-=======
-	return strconv.FormatUint(id, 10), nil
->>>>>>> master
 }
