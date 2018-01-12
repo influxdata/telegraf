@@ -361,11 +361,9 @@ func (s *SignalFx) Write(metrics []telegraf.Metric) error {
 				}
 			}
 		}
-		s.emitDatapoints(datapoints)
-		datapoints = datapoints[:0]
-		s.emitEvents(events)
-		events = events[:0]
 	}
+	s.emitDatapoints(datapoints)
+	s.emitEvents(events)
 	return nil
 }
 
