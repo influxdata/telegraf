@@ -224,11 +224,7 @@ func TestCPUTimesDecrease(t *testing.T) {
 	err := cs.Gather(&acc)
 	require.NoError(t, err)
 
-<<<<<<< HEAD
 	// Computed values are checked with delta > 0 because of floating point arithmatic
-=======
-	// Computed values are checked with delta > 0 becasue of floating point arithmatic
->>>>>>> master
 	// imprecision
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_user", 18, 0, cputags)
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_idle", 80, 0, cputags)
