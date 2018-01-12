@@ -481,7 +481,7 @@ var containerInspect = types.ContainerJSON{
 		State: &types.ContainerState{
 			Health: &types.Health{
 				FailingStreak: 1,
-				Status: "Unhealthy",
+				Status:        "Unhealthy",
 			},
 		},
 	},
