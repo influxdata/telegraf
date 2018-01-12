@@ -220,9 +220,11 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 			case map[string]interface{}: // json object
 				for fieldName, fieldValue := range t {
 
-					switch v := fieldValue.(type) {
+					switch fieldValue.(type) {
 					case float64:
-						fields = append(fields, fmt.Sprintf("%s%s=%f", fieldPrefix, fieldName, v))
+						fields = append(fields, fmt.Sprintf("%s%s=%f", fieldPrefix, fieldName, fieldValue))
+					case string:
+						fields = append(fields, fmt.Sprintf("%s%s=\"%s\"", fieldPrefix, fieldName, fieldValue))
 					default: // ignore
 					}
 				}
