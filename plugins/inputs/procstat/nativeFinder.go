@@ -56,6 +56,7 @@ func getPidsByUser(username string) ([]PID, error) {
 		if err != nil {
 			//skip, this can happen if we don't have permissions or
 			//the pid no longer exists
+			continue
 		}
 		if user == username {
 			dst = append(dst, PID(p.Pid))
