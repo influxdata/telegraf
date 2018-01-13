@@ -28,6 +28,7 @@
 - [#3643](https://github.com/influxdata/telegraf/pull/3643): Add user privilege level setting to IPMI sensors.
 - [#2701](https://github.com/influxdata/telegraf/pull/2701): Use persistent connection to postgresql database.
 - [#2846](https://github.com/influxdata/telegraf/pull/2846): Add support for dropwizard input format.
+- [#3666](https://github.com/influxdata/telegraf/pull/3666): Add container health metrics to docker input.
 
 ### Bugfixes
 
