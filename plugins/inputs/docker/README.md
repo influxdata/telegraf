@@ -199,6 +199,9 @@ based on the availability of per-cpu stats on your system.
     - network
 - docker_container_blkio specific:
     - device
+- docker_container_health specific:
+    - health_status
+    - failing_streak
 - docker_swarm specific:
     - service_id
     - service_name
