@@ -4,6 +4,7 @@ set -ex
 
 VERSION=${CIRCLE_TAG##*v}
 BUILD_DIR=$HOME/telegraf-build
+CIRCLE_RELEASE_REPO="telegraf-output-orangesys"
 
 # Executes the given statement, and exits if the command returns a non-zero code.
 function exit_if_fail {
