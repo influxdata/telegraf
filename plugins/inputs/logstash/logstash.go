@@ -196,7 +196,7 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 
 	// Input Plugins
 	for _, plugin := range PipelineStats.Pipeline.Plugins.Inputs {
-		//plugin := &plugin
+
 		fields := map[string]interface{}{
 			"queue_push_duration_in_millis": plugin.Events.QueuePushDurationInMillis,
 			"duration_in_millis":            plugin.Events.DurationInMillis,
@@ -212,7 +212,7 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 
 	// Filters Plugins
 	for _, plugin := range PipelineStats.Pipeline.Plugins.Filters {
-		//plugin := &plugin
+
 		fields := map[string]interface{}{
 			"duration_in_millis": plugin.Events.DurationInMillis,
 			"in":                 plugin.Events.In,
@@ -227,7 +227,7 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 
 	// Output Plugins
 	for _, plugin := range PipelineStats.Pipeline.Plugins.Outputs {
-		//plugin := &plugin
+
 		fields := map[string]interface{}{
 			"duration_in_millis": plugin.Events.DurationInMillis,
 			"in":                 plugin.Events.In,
