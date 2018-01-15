@@ -9,18 +9,23 @@ import (
 	"encoding/json"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	gnatsd "github.com/nats-io/gnatsd/server"
 )
 
 type Nats struct {
-	Server string
+	Server          string
+	ResponseTimeout internal.Duration
 }
 
 var sampleConfig = `
-  ## The address of the monitoring end-point of the NATS server
+  ## The address of the monitoring endpoint of the NATS server
   server = "http://localhost:1337"
+
+  ## Maximum time to receive response
+  # response_timeout = "5s"
 `
 
 func (n *Nats) SampleConfig() string {
@@ -32,10 +37,10 @@ func (n *Nats) Description() string {
 }
 
 func (n *Nats) Gather(acc telegraf.Accumulator) error {
-	theServer := fmt.Sprintf("%s/varz", n.Server)
+	url := fmt.Sprintf("%s/varz", n.Server)
 
-	/* download the page we are intereted in */
-	resp, err := http.Get(theServer)
+	client := n.createHTTPClient()
+	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}
@@ -46,8 +51,7 @@ func (n *Nats) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	var stats = new(gnatsd.Varz)
-
+	stats := new(gnatsd.Varz)
 	err = json.Unmarshal([]byte(bytes), &stats)
 	if err != nil {
 		return err
@@ -68,6 +72,16 @@ func (n *Nats) Gather(acc telegraf.Accumulator) error {
 		}, nil, time.Now())
 
 	return nil
+}
+
+func (n *Nats) createHTTPClient() *http.Client {
+	timeout := n.ResponseTimeout.Duration
+	if timeout == time.Duration(0) {
+		timeout = 5 * time.Second
+	}
+	return &http.Client{
+		Timeout: timeout,
+	}
 }
 
 func init() {
