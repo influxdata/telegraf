@@ -8,8 +8,8 @@ This plugin reads metrics exposed by [Logstash Monitoring API](https://www.elast
   ## This plugin reads metrics exposed by Logstash Monitoring API.
   # https://www.elastic.co/guide/en/logstash/current/monitoring.html
   #
-  # logstashURL = "http://localhost:9600"
-  logstashURL = "http://localhost:9600"
+  # url = "http://localhost:9600"
+  url = "http://localhost:9600"
 ```
 
 ### Measurements & Fields:
