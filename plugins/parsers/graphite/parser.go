@@ -86,8 +86,11 @@ func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 		// Trim the buffer, even though there should be no padding
 		line := strings.TrimSpace(string(buf))
-		metric, err := p.ParseLine(line)
+		if line == "" {
+			continue
+		}
 
+		metric, err := p.ParseLine(line)
 		if err == nil {
 			metrics = append(metrics, metric)
 		} else {
