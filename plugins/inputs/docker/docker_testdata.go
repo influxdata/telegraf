@@ -477,4 +477,12 @@ var containerInspect = types.ContainerJSON{
 			"PATH=/bin:/sbin",
 		},
 	},
+	ContainerJSONBase: &types.ContainerJSONBase{
+		State: &types.ContainerState{
+			Health: &types.Health{
+				FailingStreak: 1,
+				Status:        "Unhealthy",
+			},
+		},
+	},
 }
