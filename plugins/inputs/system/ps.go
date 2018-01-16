@@ -2,6 +2,7 @@ package system
 
 import (
 	"os"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -84,9 +85,19 @@ func (s *systemPS) DiskUsage(
 	for _, filter := range fstypeExclude {
 		fstypeExcludeSet[filter] = true
 	}
+	paths := make(map[string]bool)
+	for _, part := range parts {
+		paths[part.Mountpoint] = true
+	}
+
+	// Autofs mounts indicate a potential mount, the partition will also be
+	// listed with the actual filesystem when mounted.  Ignore the autofs
+	// partition to avoid triggering a mount.
+	fstypeExcludeSet["autofs"] = true
 
 	var usage []*disk.UsageStat
 	var partitions []*disk.PartitionStat
+	hostMountPrefix := s.OSGetenv("HOST_MOUNT_PREFIX")
 
 	for i := range parts {
 		p := parts[i]
@@ -105,15 +116,20 @@ func (s *systemPS) DiskUsage(
 			continue
 		}
 
-		mountpoint := s.OSGetenv("HOST_MOUNT_PREFIX") + p.Mountpoint
-		if _, err := s.OSStat(mountpoint); err != nil {
+		// If there's a host mount prefix, exclude any paths which conflict
+		// with the prefix.
+		if len(hostMountPrefix) > 0 &&
+			!strings.HasPrefix(p.Mountpoint, hostMountPrefix) &&
+			paths[hostMountPrefix+p.Mountpoint] {
 			continue
 		}
-		du, err := s.PSDiskUsage(mountpoint)
+
+		du, err := s.PSDiskUsage(p.Mountpoint)
 		if err != nil {
 			continue
 		}
-		du.Path = p.Mountpoint
+
+		du.Path = strings.TrimPrefix(p.Mountpoint, hostMountPrefix)
 		du.Fstype = p.Fstype
 		usage = append(usage, du)
 		partitions = append(partitions, &p)

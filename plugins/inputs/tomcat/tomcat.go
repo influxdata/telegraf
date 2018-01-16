@@ -165,7 +165,7 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 	for _, c := range status.TomcatConnectors {
 		name, err := strconv.Unquote(c.Name)
 		if err != nil {
-			return fmt.Errorf("Unable to unquote name '%s': %s", c.Name, err)
+			name = c.Name
 		}
 
 		tccTags := map[string]string{

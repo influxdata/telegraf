@@ -40,6 +40,11 @@ var (
 
 	// envVarRe is a regex to find environment variables in the config file
 	envVarRe = regexp.MustCompile(`\$\w+`)
+
+	envVarEscaper = strings.NewReplacer(
+		`"`, `\"`,
+		`\`, `\\`,
+	)
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -126,7 +131,7 @@ type AgentConfig struct {
 
 	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
-	// compatability
+	// compatibility
 	UTC bool `toml:"utc"`
 
 	// Debug is the option for running in debug mode
@@ -683,10 +688,15 @@ func (c *Config) LoadConfig(path string) error {
 }
 
 // trimBOM trims the Byte-Order-Marks from the beginning of the file.
-// this is for Windows compatability only.
+// this is for Windows compatibility only.
 // see https://github.com/influxdata/telegraf/issues/1378
 func trimBOM(f []byte) []byte {
 	return bytes.TrimPrefix(f, []byte("\xef\xbb\xbf"))
+}
+
+// escapeEnv escapes a value for inserting into a TOML string.
+func escapeEnv(value string) string {
+	return envVarEscaper.Replace(value)
 }
 
 // parseFile loads a TOML configuration from a provided path and
@@ -702,8 +712,9 @@ func parseFile(fpath string) (*ast.Table, error) {
 
 	env_vars := envVarRe.FindAll(contents, -1)
 	for _, env_var := range env_vars {
-		env_val := os.Getenv(strings.TrimPrefix(string(env_var), "$"))
-		if env_val != "" {
+		env_val, ok := os.LookupEnv(strings.TrimPrefix(string(env_var), "$"))
+		if ok {
+			env_val = escapeEnv(env_val)
 			contents = bytes.Replace(contents, env_var, []byte(env_val), 1)
 		}
 	}
@@ -1261,6 +1272,47 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["dropwizard_metric_registry_path"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DropwizardMetricRegistryPath = str.Value
+			}
+		}
+	}
+	if node, ok := tbl.Fields["dropwizard_time_path"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DropwizardTimePath = str.Value
+			}
+		}
+	}
+	if node, ok := tbl.Fields["dropwizard_time_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DropwizardTimeFormat = str.Value
+			}
+		}
+	}
+	if node, ok := tbl.Fields["dropwizard_tags_path"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DropwizardTagsPath = str.Value
+			}
+		}
+	}
+	c.DropwizardTagPathsMap = make(map[string]string)
+	if node, ok := tbl.Fields["dropwizard_tag_paths"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					if str, ok := kv.Value.(*ast.String); ok {
+						c.DropwizardTagPathsMap[name] = str.Value
+					}
+				}
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1271,6 +1323,11 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "collectd_auth_file")
 	delete(tbl.Fields, "collectd_security_level")
 	delete(tbl.Fields, "collectd_typesdb")
+	delete(tbl.Fields, "dropwizard_metric_registry_path")
+	delete(tbl.Fields, "dropwizard_time_path")
+	delete(tbl.Fields, "dropwizard_time_format")
+	delete(tbl.Fields, "dropwizard_tags_path")
+	delete(tbl.Fields, "dropwizard_tag_paths")
 
 	return parsers.NewParser(c)
 }

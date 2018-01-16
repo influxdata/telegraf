@@ -101,11 +101,13 @@ func (w *Wavefront) Connect() error {
 	uri := fmt.Sprintf("%s:%d", w.Host, w.Port)
 	_, err := net.ResolveTCPAddr("tcp", uri)
 	if err != nil {
-		return fmt.Errorf("Wavefront: TCP address cannot be resolved %s", err.Error())
+		log.Printf("Wavefront: TCP address cannot be resolved %s", err.Error())
+		return nil
 	}
 	connection, err := net.Dial("tcp", uri)
 	if err != nil {
-		return fmt.Errorf("Wavefront: TCP connect fail %s", err.Error())
+		log.Printf("Wavefront: TCP connect fail %s", err.Error())
+		return nil
 	}
 	defer connection.Close()
 	return nil

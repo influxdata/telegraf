@@ -22,7 +22,7 @@ var (
 
 // InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
-	// URL is only for backwards compatability
+	// URL is only for backwards compatibility
 	URL              string
 	URLs             []string `toml:"urls"`
 	Username         string
@@ -100,7 +100,7 @@ func (i *InfluxDB) Connect() error {
 	var urls []string
 	urls = append(urls, i.URLs...)
 
-	// Backward-compatability with single Influx URL config files
+	// Backward-compatibility with single Influx URL config files
 	// This could eventually be removed in favor of specifying the urls as a list
 	if i.URL != "" {
 		urls = append(urls, i.URL)

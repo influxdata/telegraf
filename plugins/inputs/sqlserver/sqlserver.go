@@ -539,7 +539,7 @@ SELECT DatabaseName,  ReadLatency
 FROM #baseline
 WHERE datafile_type = ''LOG''
 ) as V
-PIVOT(SUM(ReadLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
+PIVOT(MAX(ReadLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
 
 UNION ALL
 
@@ -550,7 +550,7 @@ SELECT DatabaseName,  WriteLatency
 FROM #baseline
 WHERE datafile_type = ''LOG''
 ) as V
-PIVOT(SUM(WriteLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
+PIVOT(MAX(WriteLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
 
 UNION ALL
 
@@ -561,7 +561,7 @@ SELECT DatabaseName,  ReadLatency
 FROM #baseline
 WHERE datafile_type = ''ROWS''
 ) as V
-PIVOT(SUM(ReadLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
+PIVOT(MAX(ReadLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
 
 UNION ALL
 
@@ -572,7 +572,7 @@ SELECT DatabaseName,  WriteLatency
 FROM #baseline
 WHERE datafile_type = ''ROWS''
 ) as V
-PIVOT(SUM(WriteLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
+PIVOT(MAX(WriteLatency) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
 
 UNION ALL
 
