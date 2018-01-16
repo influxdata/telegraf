@@ -245,6 +245,7 @@
 - [#3851](https://github.com/influxdata/telegraf/issues/3851): Add output of stderr in case of error to exec log message.
 
 ## v1.5.2 [2018-01-30]
+## v1.5.2 [unreleased]
 
 ### Bugfixes
 
