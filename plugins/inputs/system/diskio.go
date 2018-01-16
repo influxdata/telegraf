@@ -4,13 +4,16 @@ import (
 	"fmt"
 	"log"
 	"regexp"
-	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type DiskIOStats struct {
+var (
+	varRegex = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
+)
+
+type DiskIO struct {
 	ps PS
 
 	Devices          []string
@@ -21,11 +24,11 @@ type DiskIOStats struct {
 	infoCache map[string]diskInfoCache
 }
 
-func (_ *DiskIOStats) Description() string {
+func (_ *DiskIO) Description() string {
 	return "Read metrics about disk IO by device"
 }
 
-var diskIoSampleConfig = `
+var diskIOsampleConfig = `
   ## By default, telegraf will gather stats for all devices including
   ## disk partitions.
   ## Setting devices will restrict the stats to the specified devices.
@@ -51,11 +54,11 @@ var diskIoSampleConfig = `
   # name_templates = ["$ID_FS_LABEL","$DM_VG_NAME/$DM_LV_NAME"]
 `
 
-func (_ *DiskIOStats) SampleConfig() string {
-	return diskIoSampleConfig
+func (_ *DiskIO) SampleConfig() string {
+	return diskIOsampleConfig
 }
 
-func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
+func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 	diskio, err := s.ps.DiskIO(s.Devices)
 	if err != nil {
 		return fmt.Errorf("error getting disk io info: %s", err)
@@ -92,9 +95,7 @@ func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-var varRegex = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
-
-func (s *DiskIOStats) diskName(devName string) string {
+func (s *DiskIO) diskName(devName string) string {
 	if len(s.NameTemplates) == 0 {
 		return devName
 	}
@@ -127,7 +128,7 @@ func (s *DiskIOStats) diskName(devName string) string {
 	return devName
 }
 
-func (s *DiskIOStats) diskTags(devName string) map[string]string {
+func (s *DiskIO) diskTags(devName string) map[string]string {
 	if len(s.DeviceTags) == 0 {
 		return nil
 	}
@@ -151,6 +152,6 @@ func (s *DiskIOStats) diskTags(devName string) map[string]string {
 func init() {
 	ps := newSystemPS()
 	inputs.Add("diskio", func() telegraf.Input {
-		return &DiskIOStats{ps: ps, SkipSerialNumber: true}
+		return &DiskIO{ps: ps, SkipSerialNumber: true}
 	})
 }
