@@ -439,8 +439,11 @@ WHERE	(
 			'Temp Tables Creation Rate',
 			'Temp Tables For Destruction',
 			'Free Space in tempdb (KB)',
-			'Version Store Size (KB)'
-
+			'Version Store Size (KB)',
+			'Memory Grants Pending',
+			'Free list stalls/sec',
+			'Buffer cache hit ratio',
+			'Buffer cache hit ratio base'
 		)
 		) OR (
 			instance_name IN ('_Total','Column store object pool')
