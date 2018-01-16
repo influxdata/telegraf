@@ -1,9 +1,10 @@
 package nats
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"path"
 	"time"
 
 	"encoding/json"
@@ -37,10 +38,14 @@ func (n *Nats) Description() string {
 }
 
 func (n *Nats) Gather(acc telegraf.Accumulator) error {
-	url := fmt.Sprintf("%s/varz", n.Server)
+	url, err := url.Parse(n.Server)
+	if err != nil {
+		return err
+	}
+	url.Path = path.Join(url.Path, "varz")
 
 	client := n.createHTTPClient()
-	resp, err := client.Get(url)
+	resp, err := client.Get(url.String())
 	if err != nil {
 		return err
 	}
