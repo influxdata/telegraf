@@ -78,7 +78,9 @@ func (n *Nats) Gather(acc telegraf.Accumulator) error {
 			"slow_consumers":    stats.SlowConsumers,
 			"routes":            stats.Routes,
 			"remotes":           stats.Remotes,
-		}, nil, time.Now())
+		},
+		map[string]string{"server": n.Server},
+		time.Now())
 
 	return nil
 }

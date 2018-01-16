@@ -90,7 +90,10 @@ func TestMetricsCorrect(t *testing.T) {
 		"routes":            int(1),
 		"remotes":           int(2),
 	}
-	acc.AssertContainsFields(t, "nats_varz", fields)
+	tags := map[string]string{
+		"nats_server": srv.URL,
+	}
+	acc.AssertContainsTaggedFields(t, "nats_varz", fields, tags)
 }
 
 func newTestNatsServer() *httptest.Server {
