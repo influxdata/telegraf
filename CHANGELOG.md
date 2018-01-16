@@ -34,6 +34,12 @@
 
 - [#1896](https://github.com/influxdata/telegraf/issues/1896): Fix various mysql data type conversions.
 
+## v1.5.2 [unreleased]
+
+### Bugfixes
+
+- [#3684](https://github.com/influxdata/telegraf/pull/3684): Ignore empty lines in Graphite plaintext.
+
 ## v1.5.1 [2017-01-10]
 
 ### Bugfixes
