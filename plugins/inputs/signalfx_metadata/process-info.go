@@ -25,8 +25,11 @@ func NewProcessInfo(bufferSize int, numWorkers int) *ProcessInfo {
 		bufferSize: bufferSize,
 		numWorkers: numWorkers,
 	}
-
-	for i := 0; i < numWorkers; i++ {
+	// ensure that the number of workers is always 1
+	if s.numWorkers < 1 {
+		s.numWorkers = 1
+	}
+	for i := 0; i < s.numWorkers; i++ {
 		newWorkerProcess(s.processIn)
 	}
 
