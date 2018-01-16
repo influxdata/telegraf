@@ -75,12 +75,10 @@ func TestMetricsCorrect(t *testing.T) {
 	err := n.Gather(&acc)
 	require.NoError(t, err)
 
-	/*
-			 * we get the measurement, and override it, this is neccessary
-		         * because we can't "equal" the uptime value reliably, as it is
-			 * calculated via Time.Now() and the Start value in Varz
-	*/
-	s, f := acc.Get("nats")
+	// we get the measurement, and override it, this is neccessary
+	// because we can't "equal" the uptime value reliably, as it is
+	// calculated via Time.Now() and the Start value in Varz
+	s, f := acc.Get("nats_varz")
 	assert.Equal(t, true, f, "nats measurement must be found")
 
 	fields := make(map[string]interface{})
@@ -95,7 +93,7 @@ func TestMetricsCorrect(t *testing.T) {
 	fields["mem"] = int64(15581184)
 	fields["subscriptions"] = uint32(1)
 
-	acc.AssertContainsFields(t, "nats", fields)
+	acc.AssertContainsFields(t, "nats_varz", fields)
 }
 
 func newTestNatsServer() *httptest.Server {

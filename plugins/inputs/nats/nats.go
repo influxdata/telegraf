@@ -62,7 +62,7 @@ func (n *Nats) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	acc.AddFields("nats",
+	acc.AddFields("nats_varz",
 		map[string]interface{}{
 			"in_msgs":           stats.InMsgs,
 			"out_msgs":          stats.OutMsgs,
