@@ -66,14 +66,18 @@ func (n *Nats) Gather(acc telegraf.Accumulator) error {
 		map[string]interface{}{
 			"in_msgs":           stats.InMsgs,
 			"out_msgs":          stats.OutMsgs,
-			"uptime":            time.Since(stats.Start).Seconds(),
+			"in_bytes":          stats.InBytes,
+			"out_bytes":         stats.OutBytes,
+			"uptime":            stats.Now.Sub(stats.Start).Nanoseconds(),
+			"cores":             stats.Cores,
+			"cpu":               stats.CPU,
+			"mem":               stats.Mem,
 			"connections":       stats.Connections,
 			"total_connections": stats.TotalConnections,
-			"in_bytes":          stats.InBytes,
-			"cpu_usage":         stats.CPU,
-			"out_bytes":         stats.OutBytes,
-			"mem":               stats.Mem,
 			"subscriptions":     stats.Subscriptions,
+			"slow_consumers":    stats.SlowConsumers,
+			"routes":            stats.Routes,
+			"remotes":           stats.Remotes,
 		}, nil, time.Now())
 
 	return nil

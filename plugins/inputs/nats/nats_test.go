@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,16 +43,16 @@ var sampleVarz = `
   "mem": 15581184,
   "cores": 48,
   "cpu": 9,
-  "connections": 2,
+  "connections": 5,
   "total_connections": 109,
-  "routes": 0,
-  "remotes": 0,
+  "routes": 1,
+  "remotes": 2,
   "in_msgs": 74148556,
   "out_msgs": 68863261,
   "in_bytes": 946267004717,
   "out_bytes": 948110960598,
-  "slow_consumers": 0,
-  "subscriptions": 1,
+  "slow_consumers": 2,
+  "subscriptions": 4,
   "http_req_stats": {
     "/": 1,
     "/connz": 100847,
@@ -75,24 +74,22 @@ func TestMetricsCorrect(t *testing.T) {
 	err := n.Gather(&acc)
 	require.NoError(t, err)
 
-	// we get the measurement, and override it, this is neccessary
-	// because we can't "equal" the uptime value reliably, as it is
-	// calculated via Time.Now() and the Start value in Varz
-	s, f := acc.Get("nats_varz")
-	assert.Equal(t, true, f, "nats measurement must be found")
-
-	fields := make(map[string]interface{})
-	fields["uptime"] = s.Fields["uptime"]
-	fields["in_msgs"] = int64(74148556)
-	fields["out_msgs"] = int64(68863261)
-	fields["connections"] = int(2)
-	fields["total_connections"] = uint64(109)
-	fields["in_bytes"] = int64(946267004717)
-	fields["out_bytes"] = int64(948110960598)
-	fields["cpu_usage"] = float64(9)
-	fields["mem"] = int64(15581184)
-	fields["subscriptions"] = uint32(1)
-
+	fields := map[string]interface{}{
+		"in_msgs":           int64(74148556),
+		"out_msgs":          int64(68863261),
+		"in_bytes":          int64(946267004717),
+		"out_bytes":         int64(948110960598),
+		"uptime":            int64(4748742536880600609),
+		"cores":             48,
+		"cpu":               float64(9),
+		"mem":               int64(15581184),
+		"connections":       int(5),
+		"total_connections": uint64(109),
+		"subscriptions":     uint32(4),
+		"slow_consumers":    int64(2),
+		"routes":            int(1),
+		"remotes":           int(2),
+	}
 	acc.AssertContainsFields(t, "nats_varz", fields)
 }
 
