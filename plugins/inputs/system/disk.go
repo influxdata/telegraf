@@ -23,12 +23,11 @@ func (_ *DiskStats) Description() string {
 }
 
 var diskSampleConfig = `
-  ## By default, telegraf gather stats for all mountpoints.
-  ## Setting mountpoints will restrict the stats to the specified mountpoints.
+  ## By default stats will be gathered for all mount points.
+  ## Set mount_points will restrict the stats to only the specified mount points.
   # mount_points = ["/"]
 
-  ## Ignore some mountpoints by filesystem type. For example (dev)tmpfs (usually
-  ## present on /run, /var/run, /dev/shm or /dev).
+  ## Ignore mount points by filesystem type.
   ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
 `
 
