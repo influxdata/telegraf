@@ -2,6 +2,7 @@ package models
 
 import (
 	"time"
+	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
@@ -11,10 +12,12 @@ type RunningAggregator struct {
 	a      telegraf.Aggregator
 	Config *AggregatorConfig
 
-	metrics chan telegraf.Metric
+	metrics     chan telegraf.Metric
+	nextMetrics []telegraf.Metric
 
-	periodStart time.Time
-	periodEnd   time.Time
+	periodStart   time.Time
+	periodEnd     time.Time
+	nextPeriodEnd time.Time
 }
 
 func NewRunningAggregator(
@@ -136,6 +139,7 @@ func (r *RunningAggregator) Run(
 	r.periodStart = now.Truncate(time.Second)
 	truncation := now.Sub(r.periodStart)
 	r.periodEnd = r.periodStart.Add(r.Config.Period)
+	r.nextPeriodEnd = r.periodEnd.Add(r.Config.Period)
 	time.Sleep(r.Config.Delay)
 	periodT := time.NewTicker(r.Config.Period)
 	defer periodT.Stop()
@@ -150,17 +154,30 @@ func (r *RunningAggregator) Run(
 			return
 		case m := <-r.metrics:
 			if m.Time().Before(r.periodStart) ||
-				m.Time().After(r.periodEnd.Add(truncation).Add(r.Config.Delay)) {
-				// the metric is outside the current aggregation period, so
+				m.Time().After(r.nextPeriodEnd.Add(truncation).Add(r.Config.Delay)) {
+				// the metric is outside the current and next aggregation period, so
 				// skip it.
+				log.Println("D! The metric is outside of the current and next aggregationperiod, skipping")
 				continue
 			}
+
+			if m.Time().After(r.periodEnd.Add(truncation).Add(r.Config.Delay)) {
+				// the metric is in the next aggregation period, will process next period
+				r.nextMetrics = append(r.nextMetrics, m)
+				continue
+			}
+
 			r.add(m)
 		case <-periodT.C:
 			r.periodStart = r.periodEnd
 			r.periodEnd = r.periodStart.Add(r.Config.Period)
+			r.nextPeriodEnd = r.periodEnd.Add(r.Config.Period)
 			r.push(acc)
 			r.reset()
+			for _, m := range r.nextMetrics {
+				r.add(m)
+			}
+			r.nextMetrics = nil
 		}
 	}
 }
