@@ -75,7 +75,16 @@ var sampleConfig = `
   # tags_as_foreignkeys = false
 
   ## Template to use for generating tables
+  ## Available Variables: 
+  ##   {TABLE} - tablename as identifier
+  ##   {TABLELITERAL} - tablename as string literal
+  ##   {COLUMNS} - column definitions
+  ##   {KEY_COLUMNS} - comma-separated list of key columns (time + tags)
+
+  ## Default template
   # table_template = "CREATE TABLE {TABLE}({COLUMNS})"
+  ## Example for timescale
+  # table_template = "CREATE TABLE {TABLE}({COLUMNS}); SELECT create_hypertable({TABLELITERAL},'time',chunk_time_interval := '1 week'::interval);"
 
   ## Use jsonb datatype for tags
   # tags_as_jsonb = true
