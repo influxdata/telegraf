@@ -1,8 +1,8 @@
 package models
 
 import (
-	"time"
 	"log"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
