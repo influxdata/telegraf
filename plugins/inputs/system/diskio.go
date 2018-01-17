@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -21,7 +23,9 @@ type DiskIO struct {
 	NameTemplates    []string
 	SkipSerialNumber bool
 
-	infoCache map[string]diskInfoCache
+	infoCache    map[string]diskInfoCache
+	deviceFilter filter.Filter
+	initialized  bool
 }
 
 func (_ *DiskIO) Description() string {
@@ -32,7 +36,7 @@ var diskIOsampleConfig = `
   ## By default, telegraf will gather stats for all devices including
   ## disk partitions.
   ## Setting devices will restrict the stats to the specified devices.
-  # devices = ["sda", "sdb"]
+  # devices = ["sda", "sdb", "vd*"]
   ## Uncomment the following line if you need disk serial numbers.
   # skip_serial_number = false
   #
@@ -58,13 +62,48 @@ func (_ *DiskIO) SampleConfig() string {
 	return diskIOsampleConfig
 }
 
+// hasMeta reports whether s contains any special glob characters.
+func hasMeta(s string) bool {
+	return strings.IndexAny(s, "*?[") >= 0
+}
+
+func (s *DiskIO) init() error {
+	for _, device := range s.Devices {
+		if hasMeta(device) {
+			filter, err := filter.Compile(s.Devices)
+			if err != nil {
+				return fmt.Errorf("error compiling device pattern: %v", err)
+			}
+			s.deviceFilter = filter
+		}
+	}
+	s.initialized = true
+	return nil
+}
+
 func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
-	diskio, err := s.ps.DiskIO(s.Devices)
+	if !s.initialized {
+		err := s.init()
+		if err != nil {
+			return err
+		}
+	}
+
+	devices := []string{}
+	if s.deviceFilter == nil {
+		devices = s.Devices
+	}
+
+	diskio, err := s.ps.DiskIO(devices)
 	if err != nil {
 		return fmt.Errorf("error getting disk io info: %s", err)
 	}
 
 	for _, io := range diskio {
+		if s.deviceFilter != nil && !s.deviceFilter.Match(io.Name) {
+			continue
+		}
+
 		tags := map[string]string{}
 		tags["name"] = s.diskName(io.Name)
 		for t, v := range s.diskTags(io.Name) {
