@@ -32,6 +32,20 @@ The diskio input plugin gathers metrics about disk traffic and timing.
   # name_templates = ["$ID_FS_LABEL","$DM_VG_NAME/$DM_LV_NAME"]
 ```
 
+#### Docker container
+
+To monitor the Docker engine host from within a container you will need to
+mount the host's filesystem into the container and set the `HOST_PROC`
+environment variable to the location of the `/proc` filesystem.  Additionally,
+it is required to use privileged mode to provide access to `/dev`.
+
+If you are using the `device_tags` or `name_templates` options, you will need
+to bind mount `/run/udev` into the container.
+
+```
+docker run --privileged -v /:/hostfs:ro -v /run/udev:/run/udev:ro -e HOST_PROC=/hostfs/proc telegraf
+```
+
 ### Metrics:
 
 - diskio
