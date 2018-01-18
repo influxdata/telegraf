@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal/templating"
 	"github.com/influxdata/telegraf/metric"
 
 	"github.com/stretchr/testify/assert"
@@ -119,7 +118,7 @@ func TestTemplateApply(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		tmpl, err := templating.NewDefaultTemplateWithPattern(test.template)
+		tmpl, err := NewTemplate(test.template, nil, DefaultSeparator)
 		if errstr(err) != test.err {
 			t.Fatalf("err does not match.  expected %v, got %v", test.err, err)
 		}
@@ -128,7 +127,7 @@ func TestTemplateApply(t *testing.T) {
 			continue
 		}
 
-		measurement, tags, _, _ := tmpl.Apply(test.input, DefaultSeparator)
+		measurement, tags, _, _ := tmpl.Apply(test.input)
 		if measurement != test.measurement {
 			t.Fatalf("name parse failer.  expected %v, got %v", test.measurement, measurement)
 		}

@@ -23,7 +23,6 @@ func TestNewConnection(t *testing.T) {
 				Username:  "USERID",
 				Password:  "PASSW0RD",
 				Interface: "lan",
-				Privilege: "USER",
 			},
 		},
 		{
@@ -33,12 +32,11 @@ func TestNewConnection(t *testing.T) {
 				Username:  "USERID",
 				Password:  "PASS:!@#$%^&*(234)_+W0RD",
 				Interface: "lan",
-				Privilege: "USER",
 			},
 		},
 	}
 
 	for _, v := range testData {
-		assert.Equal(t, v.con, NewConnection(v.addr, "USER"))
+		assert.Equal(t, v.con, NewConnection(v.addr))
 	}
 }

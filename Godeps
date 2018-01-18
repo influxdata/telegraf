@@ -27,7 +27,6 @@ github.com/golang/snappy 7db9049039a047d955fe8c19b83c8ff5abd765c7
 github.com/go-ole/go-ole be49f7c07711fcb603cff39e1de7c67926dc0ba7
 github.com/google/go-cmp f94e52cad91c65a63acc1e75d4be223ea22e99bc
 github.com/gorilla/mux 392c28fe23e1c45ddba891b0320b3b5df220beea
-github.com/go-redis/redis 73b70592cdaa9e6abdfcfbf97b4a90d80728c836
 github.com/go-sql-driver/mysql 2e00b5cd70399450106cec6431c2e2ce3cae5034
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/hashicorp/consul 63d2fc68239b996096a1c55a0d4b400ea4c2583f
@@ -73,8 +72,6 @@ github.com/StackExchange/wmi f3e2bae1e0cb5aef83e319133eabfee30013a4a5
 github.com/streadway/amqp 63795daa9a446c920826655f26ba31c81c860fd6
 github.com/stretchr/objx 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 github.com/stretchr/testify 4d4bfba8f1d1027c4fdbe371823030df51419987
-github.com/tidwall/gjson 0623bd8fbdbf97cc62b98d15108832851a658e59
-github.com/tidwall/match 173748da739a410c5b0b813b956f89ff94730b4c
 github.com/vjeantet/grok d73e972b60935c7fec0b4ffbc904ed39ecaf7efe
 github.com/wvanbergen/kafka bc265fedb9ff5b5c5d3c0fdcef4a819b3523d3ee
 github.com/wvanbergen/kazoo-go 968957352185472eacb69215fa3dbfcfdbac1096
