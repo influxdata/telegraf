@@ -246,9 +246,6 @@ func addAdminCoresStatusToAcc(acc telegraf.Accumulator, adminCoreStatus *AdminCo
 // Add core metrics section to accumulator
 func addCoreMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, time time.Time) error {
 	var coreMetrics map[string]Core
-	if len(mBeansData.SolrMbeans) < 2 {
-		return fmt.Errorf("no core metric data to unmarshall")
-	}
 	if err := json.Unmarshal(mBeansData.SolrMbeans[1], &coreMetrics); err != nil {
 		return err
 	}
@@ -277,14 +274,9 @@ func addCoreMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBea
 func addQueryHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, time time.Time) error {
 	var queryMetrics map[string]QueryHandler
 
-	if len(mBeansData.SolrMbeans) < 4 {
-		return fmt.Errorf("no query handler metric data to unmarshall")
-	}
-
 	if err := json.Unmarshal(mBeansData.SolrMbeans[3], &queryMetrics); err != nil {
 		return err
 	}
-
 	for name, metrics := range queryMetrics {
 		coreFields := map[string]interface{}{
 			"15min_rate_reqs_per_second": metrics.Stats.One5minRateReqsPerSecond,
@@ -318,9 +310,6 @@ func addQueryHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansDa
 func addUpdateHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, time time.Time) error {
 	var updateMetrics map[string]UpdateHandler
 
-	if len(mBeansData.SolrMbeans) < 6 {
-		return fmt.Errorf("no update handler metric data to unmarshall")
-	}
 	if err := json.Unmarshal(mBeansData.SolrMbeans[5], &updateMetrics); err != nil {
 		return err
 	}
@@ -375,9 +364,6 @@ func getFloat(unk interface{}) float64 {
 
 // Add cache metrics section to accumulator
 func addCacheMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBeansData, time time.Time) error {
-	if len(mBeansData.SolrMbeans) < 8 {
-		return fmt.Errorf("no cache metric data to unmarshall")
-	}
 	var cacheMetrics map[string]Cache
 	if err := json.Unmarshal(mBeansData.SolrMbeans[7], &cacheMetrics); err != nil {
 		return err

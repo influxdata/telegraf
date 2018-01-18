@@ -42,7 +42,7 @@ func TestDiskInfo(t *testing.T) {
 	clean := setupNullDisk(t)
 	defer clean()
 
-	s := &DiskIO{}
+	s := &DiskIOStats{}
 	di, err := s.diskInfo("null")
 	require.NoError(t, err)
 	assert.Equal(t, "myval1", di["MY_PARAM_1"])
@@ -81,7 +81,7 @@ func TestDiskIOStats_diskName(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		s := DiskIO{
+		s := DiskIOStats{
 			NameTemplates: tc.templates,
 		}
 		assert.Equal(t, tc.expected, s.diskName("null"), "Templates: %#v", tc.templates)
@@ -93,7 +93,7 @@ func TestDiskIOStats_diskName(t *testing.T) {
 func TestDiskIOStats_diskTags(t *testing.T) {
 	defer setupNullDisk(t)()
 
-	s := &DiskIO{
+	s := &DiskIOStats{
 		DeviceTags: []string{"MY_PARAM_2"},
 	}
 	dt := s.diskTags("null")

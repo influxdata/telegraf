@@ -48,9 +48,8 @@ type RabbitMQ struct {
 	ResponseHeaderTimeout internal.Duration `toml:"header_timeout"`
 	ClientTimeout         internal.Duration `toml:"client_timeout"`
 
-	Nodes     []string
-	Queues    []string
-	Exchanges []string
+	Nodes  []string
+	Queues []string
 
 	Client *http.Client
 }
@@ -73,14 +72,12 @@ type MessageStats struct {
 	AckDetails        Details `json:"ack_details"`
 	Deliver           int64
 	DeliverDetails    Details `json:"deliver_details"`
-	DeliverGet        int64   `json:"deliver_get"`
+	DeliverGet        int64
 	DeliverGetDetails Details `json:"deliver_get_details"`
 	Publish           int64
 	PublishDetails    Details `json:"publish_details"`
 	Redeliver         int64
 	RedeliverDetails  Details `json:"redeliver_details"`
-	PublishIn         int64   `json:"publish_in"`
-	PublishOut        int64   `json:"publish_out"`
 }
 
 // ObjectTotals ...
@@ -136,20 +133,10 @@ type Node struct {
 	SocketsUsed   int64 `json:"sockets_used"`
 }
 
-type Exchange struct {
-	Name         string
-	MessageStats `json:"message_stats"`
-	Type         string
-	Internal     bool
-	Vhost        string
-	Durable      bool
-	AutoDelete   bool `json:"auto_delete"`
-}
-
 // gatherFunc ...
 type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator)
 
-var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues, gatherExchanges}
+var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues}
 
 var sampleConfig = `
   ## Management Plugin url. (default: http://localhost:15672)
@@ -184,10 +171,6 @@ var sampleConfig = `
   ## A list of queues to gather as the rabbitmq_queue measurement. If not
   ## specified, metrics for all queues are gathered.
   # queues = ["telegraf"]
-
-  ## A list of exchanges to gather as the rabbitmq_exchange measurement. If not
-  ## specified, metrics for all exchanges are gathered. 
-  # exchanges = ["telegraf"]
 `
 
 // SampleConfig ...
@@ -391,40 +374,6 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 	}
 }
 
-func gatherExchanges(r *RabbitMQ, acc telegraf.Accumulator) {
-	// Gather information about exchanges
-	exchanges := make([]Exchange, 0)
-	err := r.requestJSON("/api/exchanges", &exchanges)
-	if err != nil {
-		acc.AddError(err)
-		return
-	}
-
-	for _, exchange := range exchanges {
-		if !r.shouldGatherExchange(exchange) {
-			continue
-		}
-		tags := map[string]string{
-			"url":         r.URL,
-			"exchange":    exchange.Name,
-			"type":        exchange.Type,
-			"vhost":       exchange.Vhost,
-			"internal":    strconv.FormatBool(exchange.Internal),
-			"durable":     strconv.FormatBool(exchange.Durable),
-			"auto_delete": strconv.FormatBool(exchange.AutoDelete),
-		}
-
-		acc.AddFields(
-			"rabbitmq_exchange",
-			map[string]interface{}{
-				"messages_publish_in":  exchange.MessageStats.PublishIn,
-				"messages_publish_out": exchange.MessageStats.PublishOut,
-			},
-			tags,
-		)
-	}
-}
-
 func (r *RabbitMQ) shouldGatherNode(node Node) bool {
 	if len(r.Nodes) == 0 {
 		return true
@@ -446,20 +395,6 @@ func (r *RabbitMQ) shouldGatherQueue(queue Queue) bool {
 
 	for _, name := range r.Queues {
 		if name == queue.Name {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (r *RabbitMQ) shouldGatherExchange(exchange Exchange) bool {
-	if len(r.Exchanges) == 0 {
-		return true
-	}
-
-	for _, name := range r.Exchanges {
-		if name == exchange.Name {
 			return true
 		}
 	}
