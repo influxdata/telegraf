@@ -15,18 +15,19 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	}
 
 	p := &Postgresql{
-		Service: Service{
-			Address: fmt.Sprintf(
-				"host=%s user=postgres sslmode=disable",
-				testutil.GetLocalHost(),
-			),
-		},
+		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+			testutil.GetLocalHost()),
 		Databases: []string{"postgres"},
 	}
 
 	var acc testutil.Accumulator
-	require.NoError(t, p.Start(&acc))
-	require.NoError(t, p.Gather(&acc))
+	err := p.Gather(&acc)
+	require.NoError(t, err)
+
+	availableColumns := make(map[string]bool)
+	for _, col := range p.AllColumns {
+		availableColumns[col] = true
+	}
 
 	intMetrics := []string{
 		"xact_commit",
@@ -70,27 +71,39 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	metricsCounted := 0
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasInt64Field("postgresql", metric))
-		metricsCounted++
+		_, ok := availableColumns[metric]
+		if ok {
+			assert.True(t, acc.HasInt64Field("postgresql", metric))
+			metricsCounted++
+		}
 	}
 
 	for _, metric := range int32Metrics {
-		assert.True(t, acc.HasInt32Field("postgresql", metric))
-		metricsCounted++
+		_, ok := availableColumns[metric]
+		if ok {
+			assert.True(t, acc.HasInt32Field("postgresql", metric))
+			metricsCounted++
+		}
 	}
 
 	for _, metric := range floatMetrics {
-		assert.True(t, acc.HasFloatField("postgresql", metric))
-		metricsCounted++
+		_, ok := availableColumns[metric]
+		if ok {
+			assert.True(t, acc.HasFloatField("postgresql", metric))
+			metricsCounted++
+		}
 	}
 
 	for _, metric := range stringMetrics {
-		assert.True(t, acc.HasStringField("postgresql", metric))
-		metricsCounted++
+		_, ok := availableColumns[metric]
+		if ok {
+			assert.True(t, acc.HasStringField("postgresql", metric))
+			metricsCounted++
+		}
 	}
 
 	assert.True(t, metricsCounted > 0)
-	assert.Equal(t, len(floatMetrics)+len(intMetrics)+len(int32Metrics)+len(stringMetrics), metricsCounted)
+	assert.Equal(t, len(availableColumns)-len(p.IgnoredColumns()), metricsCounted)
 }
 
 func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
@@ -99,19 +112,15 @@ func TestPostgresqlTagsMetricsWithDatabaseName(t *testing.T) {
 	}
 
 	p := &Postgresql{
-		Service: Service{
-			Address: fmt.Sprintf(
-				"host=%s user=postgres sslmode=disable",
-				testutil.GetLocalHost(),
-			),
-		},
+		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+			testutil.GetLocalHost()),
 		Databases: []string{"postgres"},
 	}
 
 	var acc testutil.Accumulator
 
-	require.NoError(t, p.Start(&acc))
-	require.NoError(t, p.Gather(&acc))
+	err := p.Gather(&acc)
+	require.NoError(t, err)
 
 	point, ok := acc.Get("postgresql")
 	require.True(t, ok)
@@ -125,18 +134,14 @@ func TestPostgresqlDefaultsToAllDatabases(t *testing.T) {
 	}
 
 	p := &Postgresql{
-		Service: Service{
-			Address: fmt.Sprintf(
-				"host=%s user=postgres sslmode=disable",
-				testutil.GetLocalHost(),
-			),
-		},
+		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+			testutil.GetLocalHost()),
 	}
 
 	var acc testutil.Accumulator
 
-	require.NoError(t, p.Start(&acc))
-	require.NoError(t, p.Gather(&acc))
+	err := p.Gather(&acc)
+	require.NoError(t, err)
 
 	var found bool
 
@@ -158,17 +163,14 @@ func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
 	}
 
 	p := &Postgresql{
-		Service: Service{
-			Address: fmt.Sprintf(
-				"host=%s user=postgres sslmode=disable",
-				testutil.GetLocalHost(),
-			),
-		},
+		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+			testutil.GetLocalHost()),
 	}
 
 	var acc testutil.Accumulator
-	require.NoError(t, p.Start(&acc))
-	require.NoError(t, p.Gather(&acc))
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
 
 	for col := range p.IgnoredColumns() {
 		assert.False(t, acc.HasMeasurement(col))
@@ -181,19 +183,15 @@ func TestPostgresqlDatabaseWhitelistTest(t *testing.T) {
 	}
 
 	p := &Postgresql{
-		Service: Service{
-			Address: fmt.Sprintf(
-				"host=%s user=postgres sslmode=disable",
-				testutil.GetLocalHost(),
-			),
-		},
+		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+			testutil.GetLocalHost()),
 		Databases: []string{"template0"},
 	}
 
 	var acc testutil.Accumulator
 
-	require.NoError(t, p.Start(&acc))
-	require.NoError(t, p.Gather(&acc))
+	err := p.Gather(&acc)
+	require.NoError(t, err)
 
 	var foundTemplate0 = false
 	var foundTemplate1 = false
@@ -221,18 +219,15 @@ func TestPostgresqlDatabaseBlacklistTest(t *testing.T) {
 	}
 
 	p := &Postgresql{
-		Service: Service{
-			Address: fmt.Sprintf(
-				"host=%s user=postgres sslmode=disable",
-				testutil.GetLocalHost(),
-			),
-		},
+		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
+			testutil.GetLocalHost()),
 		IgnoredDatabases: []string{"template0"},
 	}
 
 	var acc testutil.Accumulator
-	require.NoError(t, p.Start(&acc))
-	require.NoError(t, p.Gather(&acc))
+
+	err := p.Gather(&acc)
+	require.NoError(t, err)
 
 	var foundTemplate0 = false
 	var foundTemplate1 = false

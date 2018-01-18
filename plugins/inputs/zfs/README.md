@@ -13,12 +13,8 @@ from `sysctl` and `zpool` on FreeBSD.
   # kstatPath = "/proc/spl/kstat/zfs"
 
   ## By default, telegraf gather all zfs stats
-  ## Override the stats list using the kstatMetrics array:
-  ## For FreeBSD, the default is:
+  ## If not specified, then default is:
   # kstatMetrics = ["arcstats", "zfetchstats", "vdev_cache_stats"]
-  ## For Linux, the default is:
-  # kstatMetrics = ["abdstats", "arcstats", "dnodestats", "dbufcachestats",
-  #     "dmu_tx", "fm", "vdev_mirror_stats", "zfetchstats", "zil"]
 
   ## By default, don't gather zpool stats
   # poolMetrics = false
@@ -26,8 +22,8 @@ from `sysctl` and `zpool` on FreeBSD.
 
 ### Measurements & Fields:
 
-By default this plugin collects metrics about ZFS internals and pool.
-These metrics are either counters or measure sizes
+By default this plugin collects metrics about **Arc**, **Zfetch**, and
+**Vdev cache**. All these metrics are either counters or measure sizes
 in bytes. These metrics will be in the `zfs` measurement with the field
 names listed bellow.
 
@@ -37,7 +33,7 @@ each pool.
 - zfs
     With fields listed bellow.
 
-#### ARC Stats (FreeBSD and Linux)
+#### Arc Stats
 
 - arcstats_allocated (FreeBSD only)
 - arcstats_anon_evict_data (Linux only)
@@ -157,7 +153,7 @@ each pool.
 - arcstats_size
 - arcstats_sync_wait_for_async (FreeBSD only)
 
-#### Zfetch Stats (FreeBSD and Linux)
+#### Zfetch Stats
 
 - zfetchstats_bogus_streams (Linux only)
 - zfetchstats_colinear_hits (Linux only)
@@ -172,7 +168,7 @@ each pool.
 - zfetchstats_stride_hits (Linux only)
 - zfetchstats_stride_misses (Linux only)
 
-#### Vdev Cache Stats (FreeBSD)
+#### Vdev Cache Stats
 
 - vdev_cache_stats_delegations
 - vdev_cache_stats_hits
@@ -180,21 +176,21 @@ each pool.
 
 #### Pool Metrics (optional)
 
-On Linux (reference: kstat accumulated time and queue length statistics):
+On Linux:
 
 - zfs_pool
-    - nread (integer, bytes)
-    - nwritten (integer, bytes)
-    - reads (integer, count)
-    - writes (integer, count)
-    - wtime (integer, nanoseconds) 
-    - wlentime (integer, queuelength * nanoseconds)
-    - wupdate (integer, timestamp)
-    - rtime (integer, nanoseconds)
-    - rlentime (integer, queuelength * nanoseconds)
-    - rupdate (integer, timestamp)
-    - wcnt (integer, count)
-    - rcnt (integer, count)
+    - nread (integer, )
+    - nwritten (integer, )
+    - reads (integer, )
+    - writes (integer, )
+    - wtime (integer, )
+    - wlentime (integer, )
+    - wupdate (integer, )
+    - rtime (integer, )
+    - rlentime (integer, )
+    - rupdate (integer, )
+    - wcnt (integer, )
+    - rcnt (integer, )
 
 On FreeBSD:
 
@@ -228,7 +224,7 @@ $ ./telegraf --config telegraf.conf --input-filter zfs --test
 
 A short description for some of the metrics.
 
-#### ARC Stats
+#### Arc Stats
 
 `arcstats_hits` Total amount of cache hits in the arc.
 
@@ -287,43 +283,12 @@ A short description for some of the metrics.
 
 `zfetchstats_hits` Counts the number of cache hits, to items which are in the cache because of the prefetcher.
 
-`zfetchstats_misses` Counts the number of prefetch cache misses.
-
 `zfetchstats_colinear_hits` Counts the number of cache hits, to items which are in the cache because of the prefetcher (prefetched linear reads)
 
 `zfetchstats_stride_hits` Counts the number of cache hits, to items which are in the cache because of the prefetcher (prefetched stride reads)
 
-#### Vdev Cache Stats (FreeBSD only)
-note: the vdev cache is deprecated in some ZFS implementations
+#### Vdev Cache Stats
 
 `vdev_cache_stats_hits` Hits to the vdev (device level) cache.
 
 `vdev_cache_stats_misses` Misses to the vdev (device level) cache.
-
-#### ABD Stats (Linux Only)
-ABD is a linear/scatter dual typed buffer for ARC
-
-`abdstats_linear_cnt` number of linear ABDs which are currently allocated
-
-`abdstats_linear_data_size` amount of data stored in all linear ABDs
-
-`abdstats_scatter_cnt` number of scatter ABDs which are currently allocated
-
-`abdstats_scatter_data_size` amount of data stored in all scatter ABDs
-
-#### DMU Stats (Linux Only)
-
-`dmu_tx_dirty_throttle` counts when writes are throttled due to the amount of dirty data growing too large
-
-`dmu_tx_memory_reclaim` counts when memory is low and throttling activity
-
-`dmu_tx_memory_reserve` counts when memory footprint of the txg exceeds the ARC size
-
-#### Fault Management Ereport errors (Linux Only)
-
-`fm_erpt-dropped` counts when an error report cannot be created (eg available memory is too low)
-
-#### ZIL (Linux Only)
-note: ZIL measurements are system-wide, neither per-pool nor per-dataset
-
-`zil_commit_count` counts when ZFS transactions are committed to a ZIL
