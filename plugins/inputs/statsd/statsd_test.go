@@ -21,7 +21,7 @@ func newTestTcpListener() (*Statsd, chan *bytes.Buffer) {
 	in := make(chan *bytes.Buffer, 1500)
 	listener := &Statsd{
 		Protocol:               "tcp",
-		ServiceAddress:         ":8125",
+		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      250,
 		in:                     in,
@@ -50,7 +50,7 @@ func NewTestStatsd() *Statsd {
 func TestConcurrentConns(t *testing.T) {
 	listener := Statsd{
 		Protocol:               "tcp",
-		ServiceAddress:         ":8125",
+		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
 	}
@@ -80,7 +80,7 @@ func TestConcurrentConns(t *testing.T) {
 func TestConcurrentConns1(t *testing.T) {
 	listener := Statsd{
 		Protocol:               "tcp",
-		ServiceAddress:         ":8125",
+		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      1,
 	}
@@ -108,7 +108,7 @@ func TestConcurrentConns1(t *testing.T) {
 func TestCloseConcurrentConns(t *testing.T) {
 	listener := Statsd{
 		Protocol:               "tcp",
-		ServiceAddress:         ":8125",
+		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
 	}
@@ -129,7 +129,7 @@ func TestCloseConcurrentConns(t *testing.T) {
 func BenchmarkUDP(b *testing.B) {
 	listener := Statsd{
 		Protocol:               "udp",
-		ServiceAddress:         ":8125",
+		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 250000,
 	}
 	acc := &testutil.Accumulator{Discard: true}
@@ -159,7 +159,7 @@ func BenchmarkUDP(b *testing.B) {
 func BenchmarkTCP(b *testing.B) {
 	listener := Statsd{
 		Protocol:               "tcp",
-		ServiceAddress:         ":8125",
+		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 250000,
 		MaxTCPConnections:      250,
 	}
