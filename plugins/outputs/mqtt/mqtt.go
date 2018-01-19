@@ -153,7 +153,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 
 func (m *MQTT) publish(topic string, body []byte) error {
 	token := m.client.Publish(topic, byte(m.QoS), false, body)
-	token.Wait()
+	token.WaitTimeout(m.Timeout.Duration)
 	if token.Error() != nil {
 		return token.Error()
 	}
