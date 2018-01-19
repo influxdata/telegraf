@@ -492,7 +492,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	r := &RabbitMQ{
-		URL: ts.URL,
+		URL:          ts.URL,
+		GatherQueues: true,
 	}
 
 	var acc testutil.Accumulator
