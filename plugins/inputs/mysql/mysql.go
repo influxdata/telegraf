@@ -147,7 +147,7 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 
 	tlsConfig, err := internal.GetTLSConfig(m.SSLCert, m.SSLKey, m.SSLCA, false)
 	if err != nil {
-		log.Printf("E! MySQL Error registering TLS config: %s", err)
+		return fmt.Errorf("registering TLS config: %s", err)
 	}
 
 	if tlsConfig != nil {
