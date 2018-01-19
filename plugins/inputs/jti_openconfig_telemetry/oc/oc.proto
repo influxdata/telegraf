@@ -120,6 +120,13 @@ message Path {
     // If sample-frequency is set to 0, then the network device
     // must emit an update upon every datum change.
     uint32 sample_frequency                                 = 5;
+
+    // EOM needed for each walk cycle of this path?
+    //   For periodic sensor, applicable for each complete reap
+    //   For event sensor, applicable when initial dump is over 
+    //     (same as EOS)
+    // This feature is not implemented currently.
+    bool need_eom                                           = 6;
 }
 
 // Configure subscription request additional features.
@@ -129,6 +136,9 @@ message SubscriptionAdditionalConfig {
 
     // limit the time the stream remains open
     int32 limit_time_seconds                                = 2;
+
+    // EOS needed for this subscription?
+    bool need_eos                                           = 3;
 }
 
 // Reply to inline subscription for data at the specified path is done in
@@ -180,6 +190,16 @@ message OpenConfigData {
 
     // List of key-value pairs
     repeated KeyValue kv                                    = 7;
+
+    // For delete. If filled, it indicates delete
+    repeated Delete delete                                  = 8;
+
+    // If filled, it indicates end of marker for the
+    // respective path in the list.
+    repeated Eom eom                                        = 9; 
+
+    // If filled, it indicates end of sync for complete subscription
+    bool sync_response                                      = 10;
 }
 
 // Simple Key-value, where value could be one of scalar types
@@ -197,6 +217,16 @@ message KeyValue {
         string str_value                                    = 10;
         bytes  bytes_value                                  = 11;
     }
+}
+
+// Message indicating delete for a particular path
+message Delete {
+    string path                                             = 1;
+}
+
+// Message indicating EOM for a particular path
+message Eom {
+    string path                                             = 1; 
 }
 
 // Message sent for a telemetry subscription cancellation request
