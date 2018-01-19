@@ -287,12 +287,12 @@ func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
 		return
 	}
 
-	var cluster_nodes, running_nodes int64 = 0, 0
+	var clustering_listeners, amqp_listeners int64 = 0, 0
 	for _, listener := range overview.Listeners {
 		if listener.Protocol == "clustering" {
-			cluster_nodes++
+			clustering_listeners++
 		} else if listener.Protocol == "amqp" {
-			running_nodes++
+			amqp_listeners++
 		}
 	}
 
@@ -313,8 +313,8 @@ func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
 		"messages_delivered":     overview.MessageStats.Deliver,
 		"messages_delivered_get": overview.MessageStats.DeliverGet,
 		"messages_published":     overview.MessageStats.Publish,
-		"cluster_nodes":          cluster_nodes,
-		"running_nodes":          running_nodes,
+		"clustering_listeners":   clustering_listeners,
+		"amqp_listeners":         amqp_listeners,
 	}
 	acc.AddFields("rabbitmq_overview", fields, tags)
 }

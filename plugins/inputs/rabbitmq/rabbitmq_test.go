@@ -532,8 +532,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"consumers",
 		"exchanges",
 		"queues",
-		"cluster_nodes",
-		"running_nodes",
+		"clustering_listeners",
+		"amqp_listeners",
 	}
 
 	for _, metric := range intMetrics {
