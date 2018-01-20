@@ -3,8 +3,8 @@ package stan
 import (
 	"fmt"
 
-	nats_client "github.com/nats-io/go-nats"
-	stan_client "github.com/nats-io/go-nats-streaming"
+	nats "github.com/nats-io/go-nats"
+	stan "github.com/nats-io/go-nats-streaming"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
-type STAN struct {
+type Stan struct {
 	// NATS Streaming Cluster ID
 	ClusterID string `toml:"cluster_id"`
 
@@ -35,9 +35,9 @@ type STAN struct {
 	// Path to cert key file
 	SSLKey string `toml:"ssl_key"`
 	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	InsecureSkipVerify bool `toml:"insecure_skip_verify"`
 
-	conn       stan_client.Conn
+	conn       stan.Conn
 	serializer serializers.Serializer
 }
 
@@ -68,14 +68,14 @@ var sampleConfig = `
   data_format = "influx"
 `
 
-func (n *STAN) SetSerializer(serializer serializers.Serializer) {
+func (n *Stan) SetSerializer(serializer serializers.Serializer) {
 	n.serializer = serializer
 }
 
-func (n *STAN) Connect() error {
+func (n *Stan) Connect() error {
 	var err error
 
-	natsOpts := nats_client.DefaultOptions
+	natsOpts := nats.DefaultOptions
 
 	// override max reconnection tries
 	natsOpts.MaxReconnect = -1
@@ -90,8 +90,7 @@ func (n *STAN) Connect() error {
 	}
 
 	// override TLS, if it was specified
-	tlsConfig, err := internal.GetTLSConfig(
-		n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
+	tlsConfig, err := internal.GetTLSConfig(n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
 	if err != nil {
 		return err
 	}
@@ -108,25 +107,24 @@ func (n *STAN) Connect() error {
 	}
 
 	// try and connect to the NATS Streaming cluster
-	n.conn, err = stan_client.Connect(n.ClusterID, n.ClientID, stan_client.NatsConn(natsConn))
+	n.conn, err = stan.Connect(n.ClusterID, n.ClientID, stan.NatsConn(natsConn))
 
 	return err
 }
 
-func (n *STAN) Close() error {
-	n.conn.Close()
-	return nil
+func (n *Stan) Close() error {
+	return n.conn.Close()
 }
 
-func (n *STAN) SampleConfig() string {
+func (n *Stan) SampleConfig() string {
 	return sampleConfig
 }
 
-func (n *STAN) Description() string {
+func (n *Stan) Description() string {
 	return "Send telegraf measurements to NATS Streaming"
 }
 
-func (n *STAN) Write(metrics []telegraf.Metric) error {
+func (n *Stan) Write(metrics []telegraf.Metric) error {
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -142,11 +140,12 @@ func (n *STAN) Write(metrics []telegraf.Metric) error {
 			return fmt.Errorf("FAILED to send NATS Streaming message: %s", err)
 		}
 	}
+	
 	return nil
 }
 
 func init() {
 	outputs.Add("stan", func() telegraf.Output {
-		return &STAN{}
+		return &Stan{}
 	})
 }

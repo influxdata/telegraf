@@ -15,7 +15,7 @@ func TestConnectAndWrite(t *testing.T) {
 
 	server := []string{"nats://" + testutil.GetLocalHost() + ":4222"}
 	s, _ := serializers.NewInfluxSerializer()
-	n := &STAN{
+	n := &Stan{
 		Servers:    server,
 		ClusterID:  "test-cluster",
 		ClientID:   "telegraf-test-client",
