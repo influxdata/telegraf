@@ -140,7 +140,7 @@ func (n *Stan) Write(metrics []telegraf.Metric) error {
 			return fmt.Errorf("FAILED to send NATS Streaming message: %s", err)
 		}
 	}
-	
+
 	return nil
 }
 
