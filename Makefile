@@ -81,6 +81,7 @@ docker-run:
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d stealthly/docker-riemann
 	docker run --name nats -p "4222:4222" -d nats
+	docker run --name nats-streaming --link nats -d nats-streaming -ns nats://nats:4222
 	docker run --name openldap \
 		-e SLAPD_CONFIG_ROOTDN="cn=manager,cn=config" \
 		-e SLAPD_CONFIG_ROOTPW="secret" \
@@ -111,6 +112,7 @@ docker-run-circle:
 	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
 	docker run --name riemann -p "5555:5555" -d stealthly/docker-riemann
 	docker run --name nats -p "4222:4222" -d nats
+	docker run --name nats-streaming --link nats -d nats-streaming -ns nats://nats:4222
 	docker run --name openldap \
 		-e SLAPD_CONFIG_ROOTDN="cn=manager,cn=config" \
 		-e SLAPD_CONFIG_ROOTPW="secret" \
@@ -119,9 +121,9 @@ docker-run-circle:
 
 docker-kill:
 	-docker kill aerospike elasticsearch kafka memcached mqtt mysql nats nsq \
-		openldap postgres rabbitmq redis riemann zookeeper cratedb
+		nats-streaming openldap postgres rabbitmq redis riemann zookeeper cratedb
 	-docker rm aerospike elasticsearch kafka memcached mqtt mysql nats nsq \
-		openldap postgres rabbitmq redis riemann zookeeper cratedb
+		nats-streaming openldap postgres rabbitmq redis riemann zookeeper cratedb
 
 .PHONY: deps telegraf telegraf.exe install test test-windows lint test-all \
 	package clean docker-run docker-run-circle docker-kill docker-image
