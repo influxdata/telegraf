@@ -207,6 +207,11 @@ func gatherInfoOutput(
 			}
 		}
 
+		// drop section when name contain "replid"
+		if strings.Contains(section, "replid"){
+			continue
+		}
+
 		if name == "mem_allocator" {
 			continue
 		}
@@ -249,7 +254,6 @@ func gatherInfoOutput(
 		}
 
 		// Treat it as a string
-
 		if name == "role" {
 			tags["replication_role"] = val
 			continue
