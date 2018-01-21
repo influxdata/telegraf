@@ -19,6 +19,8 @@ import (
 type Nats struct {
 	Server          string
 	ResponseTimeout internal.Duration
+
+	client *http.Client
 }
 
 var sampleConfig = `
@@ -44,8 +46,10 @@ func (n *Nats) Gather(acc telegraf.Accumulator) error {
 	}
 	url.Path = path.Join(url.Path, "varz")
 
-	client := n.createHTTPClient()
-	resp, err := client.Get(url.String())
+	if n.client == nil {
+		n.client = n.createHTTPClient()
+	}
+	resp, err := n.client.Get(url.String())
 	if err != nil {
 		return err
 	}
@@ -86,12 +90,16 @@ func (n *Nats) Gather(acc telegraf.Accumulator) error {
 }
 
 func (n *Nats) createHTTPClient() *http.Client {
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+	}
 	timeout := n.ResponseTimeout.Duration
 	if timeout == time.Duration(0) {
 		timeout = 5 * time.Second
 	}
 	return &http.Client{
-		Timeout: timeout,
+		Transport: transport,
+		Timeout:   timeout,
 	}
 }
 
