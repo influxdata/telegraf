@@ -10,6 +10,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -17,7 +18,7 @@ import (
 
 var cfg = &OpenConfigTelemetry{
 	Server:          "127.0.0.1:50051",
-	SampleFrequency: 2000,
+	SampleFrequency: internal.Duration{Duration: time.Second * 2},
 }
 
 var data = &telemetry.OpenConfigData{
@@ -206,10 +207,12 @@ func TestOpenConfigTelemetryDataWithStringValues(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	lis, err := net.Listen("tcp", "127.0.0.1:50051")
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
+
+	cfg.Server = lis.Addr().String()
 
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)

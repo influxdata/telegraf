@@ -1,6 +1,7 @@
 package jti_openconfig_telemetry
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"regexp"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
@@ -21,21 +23,17 @@ import (
 
 type OpenConfigTelemetry struct {
 	Server          string
+	Sensors         []string
 	Username        string
 	Password        string
-	ClientId        string
-	Sensors         []string
-	SampleFrequency uint32
-	CertFile        string
-	Debug           bool
-	StrAsTags       bool
+	ClientID        string            `toml:"client_id"`
+	SampleFrequency internal.Duration `toml:"sample_frequency"`
+	SSLCert         string            `toml:"ssl_cert"`
+	StrAsTags       bool              `toml:"str_as_tags"`
 
-	parser parsers.Parser
-	sync.Mutex
-
-	// keep the accumulator internally:
-	acc            telegraf.Accumulator
+	parser         parsers.Parser
 	grpcClientConn *grpc.ClientConn
+	wg             *sync.WaitGroup
 }
 
 var sampleConfig = `
@@ -47,10 +45,10 @@ var sampleConfig = `
   ## of telegraf to the same device
   username = "user"
   password = "pass"
-  clientId = "telegraf"
+  client_id = "telegraf"
 
-  ## Frequency to get data in milliseconds
-  sampleFrequency = 1000
+  ## Frequency to get data
+  sample_frequency = "1000ms"
 
   ## Sensors to subscribe for
   ## A identifier for each sensor can be provided in path by separating with space
@@ -63,12 +61,21 @@ var sampleConfig = `
    "collection /components/ /lldp",
   ]
 
+  ## We allow specifying sensor group level reporting rate. To do this, specify the 
+  ## reporting rate in milliseconds at the beginning of sensor paths / collection 
+  ## name. For entries without reporting rate, we use configured sample frequency
+  sensors = [
+   "1000 customReporting /interfaces /lldp",
+   "2000 collection /components",
+   "/interfaces",
+  ]
+
   ## x509 Certificate to use with TLS connection. If it is not provided, an insecure 
   ## channel will be opened with server
-  certFile = "/path/to/x509_cert_file"
+  ssl_cert = "/etc/telegraf/cert.pem"
 
   ## To treat all string values as tags, set this to true
-  strAsTags = false
+  str_as_tags = false
 `
 
 func (m *OpenConfigTelemetry) SampleConfig() string {
@@ -88,9 +95,8 @@ func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
 }
 
 func (m *OpenConfigTelemetry) Stop() {
-	m.Lock()
-	defer m.Unlock()
 	m.grpcClientConn.Close()
+	m.wg.Wait()
 }
 
 // Takes in XML path with predicates and returns list of tags+values along with a final XML path without predicates
@@ -115,62 +121,60 @@ func spitTagsNPath(xmlpath string) (string, map[string]string) {
 }
 
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
-	log.Print("I! Started JTI OpenConfig Telemetry plugin\n")
-
-	m.Lock()
-	defer m.Unlock()
-
-	m.acc = acc
+	log.Print("D! Started JTI OpenConfig Telemetry plugin\n")
 
 	// Extract device name / IP
 	s := strings.Split(m.Server, ":")
 	grpc_server, grpc_port := s[0], s[1]
 
 	var err error
+	var wg sync.WaitGroup
+	m.wg = &wg
 
 	// If a certificate is provided, open a secure channel. Else open insecure one
-	if m.CertFile != "" {
-		creds, err := credentials.NewClientTLSFromFile(m.CertFile, "")
+	if m.SSLCert != "" {
+		creds, err := credentials.NewClientTLSFromFile(m.SSLCert, "")
 		if err != nil {
-			log.Fatalf("E! Failed to read certificate: %v", err)
+			return fmt.Errorf("E! Failed to read certificate: %v", err)
 		}
 		m.grpcClientConn, err = grpc.Dial(m.Server, grpc.WithTransportCredentials(creds))
 	} else {
 		m.grpcClientConn, err = grpc.Dial(m.Server, grpc.WithInsecure())
 	}
 	if err != nil {
-		log.Fatalf("E! Failed to connect: %v", err)
+		return fmt.Errorf("E! Failed to connect: %v", err)
 	}
 
-	if m.Debug {
-		log.Printf("I! Opened a new gRPC session to %s on port %s", grpc_server, grpc_port)
-	}
+	log.Printf("D! Opened a new gRPC session to %s on port %s", grpc_server, grpc_port)
 
 	// If username, password and clientId are provided, authenticate user before subscribing for data
-	if m.Username != "" && m.Password != "" && m.ClientId != "" {
+	if m.Username != "" && m.Password != "" && m.ClientID != "" {
 		lc := authentication.NewLoginClient(m.grpcClientConn)
-		loginReply, loginErr := lc.LoginCheck(context.Background(), &authentication.LoginRequest{UserName: m.Username, Password: m.Password, ClientId: m.ClientId})
+		loginReply, loginErr := lc.LoginCheck(context.Background(), &authentication.LoginRequest{UserName: m.Username, Password: m.Password, ClientId: m.ClientID})
 		if loginErr != nil {
-			log.Fatalf("E! Could not initiate login check: %v", err)
+			return fmt.Errorf("E! Could not initiate login check: %v", err)
 		}
 
 		// Check if the user is authenticated. Bail if auth error
 		if !loginReply.Result {
-			log.Fatalf("E! Failed to authenticate the user")
+			return fmt.Errorf("E! Failed to authenticate the user")
 		}
 	}
 
 	c := telemetry.NewOpenConfigTelemetryClient(m.grpcClientConn)
 
 	for _, sensor := range m.Sensors {
+		wg.Add(1)
 		go func(sensor string, acc telegraf.Accumulator) {
+			defer wg.Done()
+
 			spathSplit := strings.SplitN(sensor, " ", -1)
 			var sensorName string
 			var pathlist []*telemetry.Path
 			customReportingRate := false
 			var reportingRate uint64
 
-			reportingRate = uint64(m.SampleFrequency)
+			reportingRate = uint64(m.SampleFrequency.Duration.Nanoseconds() / int64(time.Millisecond))
 
 			if len(spathSplit) > 1 {
 				for i, path := range spathSplit {
@@ -182,7 +186,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 						if err == nil {
 							customReportingRate = true
 						} else {
-							reportingRate = uint64(m.SampleFrequency)
+							reportingRate = uint64(m.SampleFrequency.Duration.Nanoseconds() / int64(time.Millisecond))
 							// If the first word is not an integer and starts with /, we treat it as both sensor and a measurement name
 							if strings.HasPrefix(sensorName, "/") {
 								pathlist = append(pathlist, &telemetry.Path{Path: path, SampleFrequency: uint32(reportingRate)})
@@ -206,7 +210,8 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			stream, err := c.TelemetrySubscribe(context.Background(),
 				&telemetry.SubscriptionRequest{PathList: pathlist})
 			if err != nil {
-				log.Fatalf("E! Could not subscribe: %v", err)
+				acc.AddError(fmt.Errorf("E! Could not subscribe: %v", err))
+				return
 			}
 			for {
 				r, err := stream.Recv()
@@ -214,7 +219,8 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 					break
 				}
 				if err != nil {
-					log.Fatalf("E! Failed to read: %v", err)
+					acc.AddError(fmt.Errorf("E! Failed to read: %v", err))
+					return
 				}
 
 				log.Printf("D! Received: %v", r)
@@ -223,7 +229,8 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 				tags := make(map[string]string)
 
 				if err != nil {
-					log.Fatalln("E! Error: %v", err)
+					acc.AddError(fmt.Errorf("E! Error: %v", err))
+					return
 				}
 
 				// Use empty prefix. We will update this when we iterate over key-value pairs
@@ -290,9 +297,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 				}
 
 				// Print final data collection
-				if m.Debug {
-					log.Printf("I! Available collection is: %v", dgroups)
-				}
+				log.Printf("D! Available collection is: %v", dgroups)
 
 				tnow := time.Now()
 				// Iterate through data groups and add them
