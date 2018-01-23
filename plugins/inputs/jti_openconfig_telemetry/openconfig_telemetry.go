@@ -67,9 +67,6 @@ var sampleConfig = `
   ## channel will be opened with server
   certFile = "/path/to/x509_cert_file"
 
-  ## To see data being received from gRPC server, set debug to true
-  debug = true
-
   ## To treat all string values as tags, set this to true
   strAsTags = false
 `
@@ -220,10 +217,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 					log.Fatalf("E! Failed to read: %v", err)
 				}
 
-				// Print incoming data as info if debug is set
-				if m.Debug {
-					log.Printf("I! Received: %v", r)
-				}
+				log.Printf("D! Received: %v", r)
 
 				// Create a point and add to batch
 				tags := make(map[string]string)
