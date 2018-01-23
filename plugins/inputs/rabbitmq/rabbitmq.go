@@ -48,8 +48,6 @@ type RabbitMQ struct {
 	ResponseHeaderTimeout internal.Duration `toml:"header_timeout"`
 	ClientTimeout         internal.Duration `toml:"client_timeout"`
 
-	GatherQueues bool
-
 	Nodes     []string
 	Queues    []string
 	Exchanges []string
@@ -151,7 +149,7 @@ type Exchange struct {
 // gatherFunc ...
 type gatherFunc func(r *RabbitMQ, acc telegraf.Accumulator)
 
-var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherExchanges}
+var gatherFunctions = []gatherFunc{gatherOverview, gatherNodes, gatherQueues, gatherExchanges}
 
 var sampleConfig = `
   ## Management Plugin url. (default: http://localhost:15672)
@@ -179,9 +177,6 @@ var sampleConfig = `
   ## Includes connection time, any redirects, and reading the response body.
   # client_timeout = "4s"
 
-  ## Whether to gather queues metrics.
-  # gather_queues = true
-
   ## A list of nodes to gather as the rabbitmq_node measurement. If not
   ## specified, metrics for all nodes are gathered.
   # nodes = ["rabbit@node1", "rabbit@node2"]
@@ -191,7 +186,7 @@ var sampleConfig = `
   # queues = ["telegraf"]
 
   ## A list of exchanges to gather as the rabbitmq_exchange measurement. If not
-  ## specified, metrics for all exchanges are gathered.
+  ## specified, metrics for all exchanges are gathered. 
   # exchanges = ["telegraf"]
 `
 
@@ -230,13 +225,6 @@ func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			gf(r, acc)
 		}(f)
-	}
-	if r.GatherQueues {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			gatherQueues(r, acc)
-		}()
 	}
 	wg.Wait()
 
@@ -484,7 +472,6 @@ func init() {
 		return &RabbitMQ{
 			ResponseHeaderTimeout: internal.Duration{Duration: DefaultResponseHeaderTimeout * time.Second},
 			ClientTimeout:         internal.Duration{Duration: DefaultClientTimeout * time.Second},
-			GatherQueues:          true,
 		}
 	})
 }
