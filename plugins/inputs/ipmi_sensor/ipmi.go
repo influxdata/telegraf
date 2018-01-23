@@ -3,6 +3,7 @@ package ipmi_sensor
 import (
 	"fmt"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,10 +19,11 @@ var (
 )
 
 type Ipmi struct {
-	Path      string
-	Privilege string
-	Servers   []string
-	Timeout   internal.Duration
+	Path          string
+	Privilege     string
+	Servers       []string
+	Timeout       internal.Duration
+	SchemaVersion int
 }
 
 var sampleConfig = `
@@ -46,6 +48,9 @@ var sampleConfig = `
 
   ## Timeout for the ipmitool command to complete
   timeout = "20s"
+
+  ## Schema Version: (Optional, defaults to version 1)
+  schemaVersion = 2
 `
 
 func (m *Ipmi) SampleConfig() string {
@@ -93,23 +98,33 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 		opts = conn.options()
 	}
 	opts = append(opts, "sdr")
+	if m.SchemaVersion == 2 {
+		opts = append(opts, "elist")
+	}
 	cmd := execCommand(m.Path, opts...)
 	out, err := internal.CombinedOutputTimeout(cmd, m.Timeout.Duration)
 	if err != nil {
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
+	if m.SchemaVersion == 2 {
+		return parseV2(acc, hostname, string(out))
+	} else {
+		return parseV1(acc, hostname, string(out))
+	}
+}
 
+func parseV1(acc telegraf.Accumulator, hostname string, cmdOut string) error {
 	// each line will look something like
 	// Planar VBAT      | 3.05 Volts        | ok
-	lines := strings.Split(string(out), "\n")
+	lines := strings.Split(cmdOut, "\n")
 	for i := 0; i < len(lines); i++ {
-		vals := strings.Split(lines[i], "|")
-		if len(vals) != 3 {
+		ipmi_fields := strings.Split(lines[i], "|")
+		if len(ipmi_fields) != 3 {
 			continue
 		}
 
 		tags := map[string]string{
-			"name": transform(vals[0]),
+			"name": transform(ipmi_fields[0]),
 		}
 
 		// tag the server is we have one
@@ -118,13 +133,13 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 		}
 
 		fields := make(map[string]interface{})
-		if strings.EqualFold("ok", trim(vals[2])) {
+		if strings.EqualFold("ok", trim(ipmi_fields[2])) {
 			fields["status"] = 1
 		} else {
 			fields["status"] = 0
 		}
 
-		val1 := trim(vals[1])
+		val1 := trim(ipmi_fields[1])
 
 		if strings.Index(val1, " ") > 0 {
 			// split middle column into value and unit
@@ -141,6 +156,67 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 	}
 
 	return nil
+}
+
+func parseV2(acc telegraf.Accumulator, hostname string, cmdOut string) error {
+	// each line will look something like
+	// CMOS Battery     | 65h | ok  |  7.1 |
+	// Temp             | 0Eh | ok  |  3.1 | 55 degrees C
+	// Drive 0          | A0h | ok  |  7.1 | Drive Present
+	lines := strings.Split(cmdOut, "\n")
+	for i := 0; i < len(lines); i++ {
+		ipmi_fields := strings.Split(lines[i], "|")
+		if len(ipmi_fields) != 5 {
+			continue
+		}
+
+		tags := map[string]string{
+			"name": transform(ipmi_fields[0]),
+		}
+
+		// tag the server is we have one
+		if hostname != "" {
+			tags["server"] = hostname
+		}
+		tags["entity_id"] = transform(ipmi_fields[3])
+		tags["status_code"] = trim(ipmi_fields[2])
+
+		fields := make(map[string]interface{})
+		result := ExtractFieldsFromRegex(`^(?P<analogValue>[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`, trim(ipmi_fields[4]))
+		// This is an analog value with a unit
+		if result["analogValue"] != "" && len(result["analogUnit"]) >= 1 {
+			fields["value"] = Atofloat(result["analogValue"])
+			// Some implementations add an extra status to their analog units
+			unitResults := ExtractFieldsFromRegex(`^(?P<realAnalogUnit>[^,]+)(?:,\s*(?P<statusDesc>.*))?`, result["analogUnit"])
+			tags["unit"] = transform(unitResults["realAnalogUnit"])
+			if unitResults["statusDesc"] != "" {
+				tags["status_desc"] = transform(unitResults["statusDesc"])
+			}
+		} else {
+			// This is a status value
+			fields["value"] = 0.0
+			// Extended status descriptions aren't required, in which case for consistency re-use the status code
+			if result["status"] != "" {
+				tags["status_desc"] = transform(result["status"])
+			} else {
+				tags["status_desc"] = transform(ipmi_fields[2])
+			}
+		}
+
+		acc.AddFields("ipmi_sensor", fields, tags, time.Now())
+	}
+
+	return nil
+}
+
+func ExtractFieldsFromRegex(regex string, input string) map[string]string {
+	re := regexp.MustCompile(regex)
+	submatches := re.FindStringSubmatch(input)
+	results := make(map[string]string)
+	for i, name := range re.SubexpNames() {
+		results[name] = submatches[i]
+	}
+	return results
 }
 
 func Atofloat(val string) float64 {
