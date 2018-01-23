@@ -16,7 +16,7 @@ type diskInfoCache struct {
 
 var udevPath = "/run/udev/data"
 
-func (s *DiskIOStats) diskInfo(devName string) (map[string]string, error) {
+func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	var err error
 	var stat unix.Stat_t
 
