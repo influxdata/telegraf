@@ -36,12 +36,15 @@ telegraf ALL=(root) NOPASSWD: /sbin/ipset save
 ```toml
   [[inputs.ipset]]
     ## By default, we only show sets which have already matched at least 1 packet.
-    ## set show_all_sets = true to gather them all.
-    show_all_sets = false
+    ## set include_unmatched_sets = true to gather them all.
+    include_unmatched_sets = false
     ## Adjust your sudo settings appropriately if using this option ("sudo ipset save")
     ## You can avoid using sudo or root, by setting appropriate privileges for
     ## the telegraf.service systemd service.
     use_sudo = false
+    ## The default timeout of 1s for ss execution can be overridden here:
+    # timeout = "1s"
+
 ```
 
 ### Example Output
