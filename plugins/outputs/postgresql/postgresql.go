@@ -13,8 +13,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-var tag_table_suffix = "_tag"
-
 type Postgresql struct {
 	db                *sql.DB
 	Address           string
@@ -22,6 +20,7 @@ type Postgresql struct {
 	TagsAsJsonb       bool
 	FieldsAsJsonb     bool
 	TableTemplate     string
+	TagTableSuffix    string
 	Tables            map[string]bool
 }
 
@@ -124,7 +123,7 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 					tag_columndefs = append(tag_columndefs, fmt.Sprintf("%s text", quoteIdent(column)))
 				}
 			}
-			table := quoteIdent(metric.Name() + "_tag")
+			table := quoteIdent(metric.Name() + p.TagTableSuffix)
 			sql = append(sql, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s(tag_id serial primary key,%s,UNIQUE(%s))", table, strings.Join(tag_columndefs, ","), strings.Join(tag_columns, ",")))
 		} else {
 			// tags in measurement table
@@ -243,12 +242,12 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 				for i, column := range where_columns {
 					where_parts = append(where_parts, fmt.Sprintf("%s = $%d", quoteIdent(column), i+1))
 				}
-				query := fmt.Sprintf("SELECT tag_id FROM %s WHERE %s", quoteIdent(tablename+"_tag"), strings.Join(where_parts, " AND "))
+				query := fmt.Sprintf("SELECT tag_id FROM %s WHERE %s", quoteIdent(tablename+p.TagTableSuffix), strings.Join(where_parts, " AND "))
 
 				err := p.db.QueryRow(query, where_values...).Scan(&tag_id)
 				if err != nil {
 					log.Printf("I! Foreign key reference not found %s: %v", tablename, err)
-					query := p.generateInsert(tablename+"_tag", where_columns) + " RETURNING tag_id"
+					query := p.generateInsert(tablename+p.TagTableSuffix, where_columns) + " RETURNING tag_id"
 					err := p.db.QueryRow(query, where_values...).Scan(&tag_id)
 					if err != nil {
 						return err
@@ -319,8 +318,9 @@ func init() {
 
 func newPostgresql() *Postgresql {
 	return &Postgresql{
-		TableTemplate: "CREATE TABLE {TABLE}({COLUMNS})",
-		TagsAsJsonb:   true,
-		FieldsAsJsonb: true,
+		TableTemplate:  "CREATE TABLE {TABLE}({COLUMNS})",
+		TagsAsJsonb:    true,
+		TagTableSuffix: "_tag",
+		FieldsAsJsonb:  true,
 	}
 }
