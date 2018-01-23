@@ -537,6 +537,24 @@ func (a *Accumulator) Int64Field(measurement string, field string) (int64, bool)
 	return 0, false
 }
 
+// Uint64Field returns the int64 value of the given measurement and field or false.
+func (a *Accumulator) Uint64Field(measurement string, field string) (uint64, bool) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					v, ok := value.(uint64)
+					return v, ok
+				}
+			}
+		}
+	}
+
+	return 0, false
+}
+
 // Int32Field returns the int32 value of the given measurement and field or false.
 func (a *Accumulator) Int32Field(measurement string, field string) (int32, bool) {
 	a.Lock()
