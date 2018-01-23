@@ -13,6 +13,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+var tag_table_suffix = "_tag"
+
 type Postgresql struct {
 	db                *sql.DB
 	Address           string
@@ -105,22 +107,34 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 	pk = append(pk, quoteIdent("time"))
 	columns = append(columns, "time timestamp")
 
-	if p.TagsAsJsonb {
-		if len(metric.Tags()) > 0 {
-			columns = append(columns, "tags jsonb")
-		}
-	} else {
-		for column, _ := range metric.Tags() {
-			if p.TagsAsForeignkeys {
-				key := quoteIdent(column + "_id")
-				table := quoteIdent(metric.Name() + "_" + column)
+	// handle tags if necessary
+	if len(metric.Tags()) > 0 {
+		if p.TagsAsForeignkeys {
+			// tags in separate table
+			var tag_columns []string
+			var tag_columndefs []string
+			columns = append(columns, "tag_id int")
 
-				pk = append(pk, key)
-				columns = append(columns, fmt.Sprintf("%s int8", key))
-				sql = append(sql, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s(%s serial primary key,%s text unique)", table, key, quoteIdent(column)))
+			if p.TagsAsJsonb {
+				tag_columns = append(tag_columns, "tags")
+				tag_columndefs = append(tag_columndefs, "tags jsonb")
 			} else {
-				pk = append(pk, quoteIdent(column))
-				columns = append(columns, fmt.Sprintf("%s text", quoteIdent(column)))
+				for column, _ := range metric.Tags() {
+					tag_columns = append(tag_columns, quoteIdent(column))
+					tag_columndefs = append(tag_columndefs, fmt.Sprintf("%s text", quoteIdent(column)))
+				}
+			}
+			table := quoteIdent(metric.Name() + "_tag")
+			sql = append(sql, fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s(tag_id serial primary key,%s,UNIQUE(%s))", table, strings.Join(tag_columndefs, ","), strings.Join(tag_columns, ",")))
+		} else {
+			// tags in measurement table
+			if p.TagsAsJsonb {
+				columns = append(columns, "tags jsonb")
+			} else {
+				for column, _ := range metric.Tags() {
+					pk = append(pk, quoteIdent(column))
+					columns = append(columns, fmt.Sprintf("%s text", quoteIdent(column)))
+				}
 			}
 		}
 	}
@@ -196,42 +210,75 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 		columns = append(columns, "time")
 		values = append(values, metric.Time())
 
-		if p.TagsAsJsonb {
-			js = make(map[string]interface{})
-			for column, value := range metric.Tags() {
-				js[column] = value
-			}
+		if len(metric.Tags()) > 0 {
+			if p.TagsAsForeignkeys {
+				// tags in separate table
+				var tag_id int
+				var where_columns []string
+				var where_values []interface{}
 
-			if len(js) > 0 {
-				d, err := json.Marshal(js)
-				if err != nil {
-					return err
-				}
+				if p.TagsAsJsonb {
+					js = make(map[string]interface{})
+					for column, value := range metric.Tags() {
+						js[column] = value
+					}
 
-				columns = append(columns, "tags")
-				values = append(values, d)
-			}
-		} else {
-			for column, value := range metric.Tags() {
-				if p.TagsAsForeignkeys {
-					var value_id int
-
-					query := fmt.Sprintf("SELECT %s FROM %s WHERE %s=$1", quoteIdent(column+"_id"), quoteIdent(tablename+"_"+column), quoteIdent(column))
-					err := p.db.QueryRow(query, value).Scan(&value_id)
-					if err != nil {
-						log.Printf("W! Foreign key reference not found %s: %v", tablename, err)
-						query := fmt.Sprintf("INSERT INTO %s(%s) VALUES($1) RETURNING %s", quoteIdent(tablename+"_"+column), quoteIdent(column), quoteIdent(column+"_id"))
-						err := p.db.QueryRow(query, value).Scan(&value_id)
+					if len(js) > 0 {
+						d, err := json.Marshal(js)
 						if err != nil {
 							return err
 						}
+
+						where_columns = append(where_columns, "tags")
+						where_values = append(where_values, d)
+					}
+				} else {
+					for column, value := range metric.Tags() {
+						where_columns = append(where_columns, column)
+						where_values = append(where_values, value)
+					}
+				}
+
+				var where_parts []string
+				for i, column := range where_columns {
+					where_parts = append(where_parts, fmt.Sprintf("%s = $%d", quoteIdent(column), i+1))
+				}
+				query := fmt.Sprintf("SELECT tag_id FROM %s WHERE %s", quoteIdent(tablename+"_tag"), strings.Join(where_parts, " AND "))
+
+				err := p.db.QueryRow(query, where_values...).Scan(&tag_id)
+				if err != nil {
+					log.Printf("I! Foreign key reference not found %s: %v", tablename, err)
+					query := p.generateInsert(tablename+"_tag", where_columns) + " RETURNING tag_id"
+					err := p.db.QueryRow(query, where_values...).Scan(&tag_id)
+					if err != nil {
+						return err
+					}
+				}
+
+				columns = append(columns, "tag_id")
+				values = append(values, tag_id)
+			} else {
+				// tags in measurement table
+				if p.TagsAsJsonb {
+					js = make(map[string]interface{})
+					for column, value := range metric.Tags() {
+						js[column] = value
 					}
 
-					columns = append(columns, column+"_id")
-					values = append(values, value_id)
+					if len(js) > 0 {
+						d, err := json.Marshal(js)
+						if err != nil {
+							return err
+						}
+
+						columns = append(columns, "tags")
+						values = append(values, d)
+					}
 				} else {
-					columns = append(columns, column)
-					values = append(values, value)
+					for column, value := range metric.Tags() {
+						columns = append(columns, column)
+						values = append(values, value)
+					}
 				}
 			}
 		}
