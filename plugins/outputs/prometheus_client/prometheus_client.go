@@ -149,8 +149,7 @@ func (p *PrometheusClient) Start() error {
 
 	mux := http.NewServeMux()
 	mux.Handle(p.Path, p.basicAuth(promhttp.HandlerFor(
-		prometheus.DefaultGatherer,
-		promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})))
+		registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})))
 
 	if p.TLS {
 		p.server = &http.Server{
