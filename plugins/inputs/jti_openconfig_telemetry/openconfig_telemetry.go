@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -62,11 +61,11 @@ var sampleConfig = `
   ]
 
   ## We allow specifying sensor group level reporting rate. To do this, specify the 
-  ## reporting rate in milliseconds at the beginning of sensor paths / collection 
+  ## reporting rate in Durati0on at the beginning of sensor paths / collection 
   ## name. For entries without reporting rate, we use configured sample frequency
   sensors = [
-   "1000 customReporting /interfaces /lldp",
-   "2000 collection /components",
+   "1000ms customReporting /interfaces /lldp",
+   "2000ms collection /components",
    "/interfaces",
   ]
 
@@ -136,8 +135,12 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 	grpc_server, grpc_port := s[0], s[1]
 
 	var err error
+
 	var wg sync.WaitGroup
 	m.wg = &wg
+
+	var reportingRate uint32
+	reportingRate = uint32(m.SampleFrequency.Duration.Nanoseconds() / int64(time.Millisecond))
 
 	// If a certificate is provided, open a secure channel. Else open insecure one
 	if m.SSLCert != "" {
@@ -175,48 +178,59 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 
 	for _, sensor := range m.Sensors {
 		wg.Add(1)
-		go func(sensor string, acc telegraf.Accumulator) {
+		go func(sensor string, reportingRate uint32, acc telegraf.Accumulator) {
 			defer wg.Done()
 
 			spathSplit := strings.SplitN(sensor, " ", -1)
-			var sensorName string
+			var slistStart int
+			var measurementName string
 			var pathlist []*telemetry.Path
-			customReportingRate := false
-			var reportingRate uint64
 
-			reportingRate = uint64(m.SampleFrequency.Duration.Nanoseconds() / int64(time.Millisecond))
-
-			if len(spathSplit) > 1 {
-				for i, path := range spathSplit {
-					// We allow custom reporting rate per sensor by specifying rate in milliseconds
-					// followed by measurement name or sensor path
-					if i == 0 {
-						sensorName = path
-						reportingRate, err = strconv.ParseUint(path, 10, 32)
-						if err == nil {
-							customReportingRate = true
-						} else {
-							reportingRate = uint64(m.SampleFrequency.Duration.Nanoseconds() / int64(time.Millisecond))
-							// If the first word is not an integer and starts with /, we treat it as both sensor and a measurement name
-							if strings.HasPrefix(sensorName, "/") {
-								pathlist = append(pathlist, &telemetry.Path{Path: path, SampleFrequency: uint32(reportingRate)})
-							}
-						}
-					} else if customReportingRate && i == 1 {
-						// If our first word is reporting rate for this list of sensors, we treat second word as measurement name and if it has /
-						// we treat it as another sensor to be monitored
-						sensorName = path
-						if strings.HasPrefix(path, "/") {
-							pathlist = append(pathlist, &telemetry.Path{Path: path, SampleFrequency: uint32(reportingRate)})
-						}
-					} else {
-						pathlist = append(pathlist, &telemetry.Path{Path: path, SampleFrequency: uint32(reportingRate)})
-					}
-				}
+			// Extract measurement name and custom reporting rate if specified. Custom 
+			// reporting rate will be specified at the beginning of sensor list, 
+			// followed by measurement name like "1000ms interfaces /interfaces" 
+			// where 1000ms is the custom reporting rate and interfaces is the 
+			// measurement name. If 1000ms is not given, we use global reporting rate 
+			// from sample_frequency. if measurement name is not given, we use first 
+			// sensor name as the measurement name. If first or the word after custom 
+			// reporting rate doesn't start with /, we treat it as measurement name 
+			// and exclude it from list of sensors to subscribe
+			duration, err := time.ParseDuration(spathSplit[0])
+			if err == nil {
+				reportingRate = uint32(duration.Nanoseconds() / int64(time.Millisecond))
+				slistStart = 1
 			} else {
-				sensorName = sensor
-				pathlist = append(pathlist, &telemetry.Path{Path: sensor, SampleFrequency: uint32(reportingRate)})
+				slistStart = 0
 			}
+
+			if len(spathSplit) <= slistStart {
+				acc.AddError(fmt.Errorf("E! No sensors are specified"))
+				return
+			}
+
+			// Word after custom reporting rate is treated as measurement name
+			measurementName = spathSplit[slistStart]
+
+			// If our word after custom reporting rate doesn't start with /, we treat 
+			// it as measurement name. Else we treat it as sensor
+			if !strings.HasPrefix(measurementName, "/") {
+				slistStart += 1
+			}
+
+			if len(spathSplit) <= slistStart {
+				acc.AddError(fmt.Errorf("E! No valid sensors are specified"))
+				return
+			}
+
+			// List of sensors in this line
+			spathSplit = spathSplit[slistStart:]
+
+			// Iterate over our sensors and create pathlist to subscribe
+			for _, path := range spathSplit {
+				pathlist = append(pathlist, &telemetry.Path{Path: path,
+					SampleFrequency: reportingRate})
+			}
+
 			stream, err := c.TelemetrySubscribe(context.Background(),
 				&telemetry.SubscriptionRequest{PathList: pathlist})
 			if err != nil {
@@ -313,13 +327,13 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 				// Iterate through data groups and add them
 				for _, group := range dgroups {
 					if len(group.tags) == 0 {
-						acc.AddFields(sensorName, group.data, tags, tnow)
+						acc.AddFields(measurementName, group.data, tags, tnow)
 					} else {
-						acc.AddFields(sensorName, group.data, group.tags, tnow)
+						acc.AddFields(measurementName, group.data, group.tags, tnow)
 					}
 				}
 			}
-		}(sensor, acc)
+		}(sensor, reportingRate, acc)
 
 	}
 
