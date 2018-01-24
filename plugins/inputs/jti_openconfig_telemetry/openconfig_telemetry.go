@@ -127,6 +127,72 @@ func spitTagsNPath(xmlpath string) (string, map[string]string) {
 	return xmlpath, tags
 }
 
+// Takes in a OC response, extracts tag information from keys and returns a 
+// list of groups with unique sets of tags+values
+func extractData(r *telemetry.OpenConfigData, grpc_server string, strAsTags bool) []DataGroup {
+	// Use empty prefix. We will update this when we iterate over key-value pairs
+	prefix := ""
+
+	dgroups := []DataGroup{}
+
+	for _, v := range r.Kv {
+		kv := make(map[string]interface{})
+
+		if v.Key == "__prefix__" {
+			prefix = v.GetStrValue()
+			continue
+		}
+
+		// Also, lets use prefix if there is one
+		xmlpath, finaltags := spitTagsNPath(prefix + v.Key)
+		finaltags["device"] = grpc_server
+
+		switch v.Value.(type) {
+		case *telemetry.KeyValue_StrValue:
+			// If StrAsTags is set, we treat all string values as tags
+			if strAsTags {
+				finaltags[xmlpath] = v.GetStrValue()
+			} else {
+				kv[xmlpath] = v.GetStrValue()
+			}
+			break
+		case *telemetry.KeyValue_DoubleValue:
+			kv[xmlpath] = v.GetDoubleValue()
+			break
+		case *telemetry.KeyValue_IntValue:
+			kv[xmlpath] = v.GetIntValue()
+			break
+		case *telemetry.KeyValue_UintValue:
+			kv[xmlpath] = v.GetUintValue()
+			break
+		case *telemetry.KeyValue_SintValue:
+			kv[xmlpath] = v.GetSintValue()
+			break
+		case *telemetry.KeyValue_BoolValue:
+			kv[xmlpath] = v.GetBoolValue()
+			break
+		case *telemetry.KeyValue_BytesValue:
+			kv[xmlpath] = v.GetBytesValue()
+			break
+		}
+
+		// Insert other tags from message
+		finaltags["_system_id"] = r.SystemId
+		finaltags["_path"] = r.Path
+
+		// Insert derived key and value
+		dgroups = CollectionByKeys(dgroups).Insert(finaltags, kv)
+
+		// Insert data from message header
+		dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_sequence": r.SequenceNumber})
+		dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_timestamp": r.Timestamp})
+		dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_component_id": r.ComponentId})
+		dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_subcomponent_id": r.SubComponentId})
+	}
+
+	return dgroups
+}
+
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 	log.Print("D! Started JTI OpenConfig Telemetry plugin\n")
 
@@ -252,73 +318,10 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 				// Create a point and add to batch
 				tags := make(map[string]string)
 
-				if err != nil {
-					acc.AddError(fmt.Errorf("E! Error: %v", err))
-					return
-				}
-
-				// Use empty prefix. We will update this when we iterate over key-value pairs
-				prefix := ""
-
 				// Insert additional tags
 				tags["device"] = grpc_server
 
-				dgroups := []DataGroup{}
-
-				for _, v := range r.Kv {
-					kv := make(map[string]interface{})
-
-					if v.Key == "__prefix__" {
-						prefix = v.GetStrValue()
-						continue
-					}
-
-					// Also, lets use prefix if there is one
-					xmlpath, finaltags := spitTagsNPath(prefix + v.Key)
-					finaltags["device"] = grpc_server
-
-					switch v.Value.(type) {
-					case *telemetry.KeyValue_StrValue:
-						// If StrAsTags is set, we treat all string values as tags
-						if m.StrAsTags {
-							finaltags[xmlpath] = v.GetStrValue()
-						} else {
-							kv[xmlpath] = v.GetStrValue()
-						}
-						break
-					case *telemetry.KeyValue_DoubleValue:
-						kv[xmlpath] = v.GetDoubleValue()
-						break
-					case *telemetry.KeyValue_IntValue:
-						kv[xmlpath] = v.GetIntValue()
-						break
-					case *telemetry.KeyValue_UintValue:
-						kv[xmlpath] = v.GetUintValue()
-						break
-					case *telemetry.KeyValue_SintValue:
-						kv[xmlpath] = v.GetSintValue()
-						break
-					case *telemetry.KeyValue_BoolValue:
-						kv[xmlpath] = v.GetBoolValue()
-						break
-					case *telemetry.KeyValue_BytesValue:
-						kv[xmlpath] = v.GetBytesValue()
-						break
-					}
-
-					// Insert other tags from message
-					finaltags["_system_id"] = r.SystemId
-					finaltags["_path"] = r.Path
-
-					// Insert derived key and value
-					dgroups = CollectionByKeys(dgroups).Insert(finaltags, kv)
-
-					// Insert data from message header
-					dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_sequence": r.SequenceNumber})
-					dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_timestamp": r.Timestamp})
-					dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_component_id": r.ComponentId})
-					dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_subcomponent_id": r.SubComponentId})
-				}
+				dgroups:= extractData(r, grpc_server, m.StrAsTags);
 
 				// Print final data collection
 				log.Printf("D! Available collection is: %v", dgroups)
