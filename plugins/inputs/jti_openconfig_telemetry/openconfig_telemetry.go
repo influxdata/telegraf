@@ -184,10 +184,14 @@ func extractData(r *telemetry.OpenConfigData, grpc_server string, strAsTags bool
 		dgroups = CollectionByKeys(dgroups).Insert(finaltags, kv)
 
 		// Insert data from message header
-		dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_sequence": r.SequenceNumber})
-		dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_timestamp": r.Timestamp})
-		dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_component_id": r.ComponentId})
-		dgroups = CollectionByKeys(dgroups).Insert(finaltags, map[string]interface{}{"_subcomponent_id": r.SubComponentId})
+		dgroups = CollectionByKeys(dgroups).Insert(finaltags,
+			map[string]interface{}{"_sequence": r.SequenceNumber})
+		dgroups = CollectionByKeys(dgroups).Insert(finaltags,
+			map[string]interface{}{"_timestamp": r.Timestamp})
+		dgroups = CollectionByKeys(dgroups).Insert(finaltags,
+			map[string]interface{}{"_component_id": r.ComponentId})
+		dgroups = CollectionByKeys(dgroups).Insert(finaltags,
+			map[string]interface{}{"_subcomponent_id": r.SubComponentId})
 	}
 
 	return dgroups
@@ -224,12 +228,13 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 
 	log.Printf("D! Opened a new gRPC session to %s on port %s", grpc_server, grpc_port)
 
-	// If username, password and clientId are provided, authenticate user before subscribing for data
+	// If username, password and clientId are provided, authenticate user before subscribing
+	// for data
 	if m.Username != "" && m.Password != "" && m.ClientID != "" {
 		lc := authentication.NewLoginClient(m.grpcClientConn)
 		loginReply, loginErr := lc.LoginCheck(context.Background(),
-			&authentication.LoginRequest{UserName: m.Username, Password: m.Password,
-				ClientId: m.ClientID})
+			&authentication.LoginRequest{UserName: m.Username,
+				Password: m.Password, ClientId: m.ClientID})
 		if loginErr != nil {
 			return fmt.Errorf("E! Could not initiate login check: %v", err)
 		}
