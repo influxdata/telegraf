@@ -99,20 +99,28 @@ func (m *OpenConfigTelemetry) Stop() {
 	m.wg.Wait()
 }
 
-// Takes in XML path with predicates and returns list of tags+values along with a final XML path without predicates
+// Takes in XML path with predicates and returns list of tags+values along with a final
+// XML path without predicates. If /events/event[id=2]/attributes[key='message']/value
+// is given input, this function will emit /events/event/attributes/value as xmlpath and
+// { /events/event/@id=2, /events/event/attributes/@key='message' } as tags
 func spitTagsNPath(xmlpath string) (string, map[string]string) {
-	re := regexp.MustCompile("\\/([^\\/]*)\\[([A-Za-z0-9\\-\\/]*)\\=([^\\[]*)\\]")
+	re := regexp.MustCompile("\\/([^\\/]*)\\[([A-Za-z0-9\\-\\/]*\\=[^\\[]*)\\]")
 	subs := re.FindAllStringSubmatch(xmlpath, -1)
 	tags := make(map[string]string)
 
 	// Given XML path, this will spit out final path without predicates
 	if len(subs) > 0 {
 		for _, sub := range subs {
-			tagKey := strings.Split(xmlpath, sub[0])[0]
-			tagKey += "/" + strings.TrimSpace(sub[1]) + "/@" + strings.TrimSpace(sub[2])
-			tagValue := strings.Replace(sub[3], "'", "", -1)
+			tagKey := strings.Split(xmlpath, sub[0])[0] + "/" + strings.TrimSpace(sub[1]) + "/@"
 
-			tags[tagKey] = tagValue
+			// If we have multiple keys in give path like /events/event[id=2 and type=3]/,
+			// we must emit multiple tags
+			for _, kv := range strings.Split(sub[2], " and ") {
+				key := tagKey + strings.TrimSpace(strings.Split(kv, "=")[0])
+				tagValue := strings.Replace(strings.Split(kv, "=")[1], "'", "", -1)
+				tags[key] = tagValue
+			}
+
 			xmlpath = strings.Replace(xmlpath, sub[0], "/"+strings.TrimSpace(sub[1]), 1)
 		}
 	}
