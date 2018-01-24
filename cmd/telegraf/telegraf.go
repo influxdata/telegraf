@@ -56,7 +56,7 @@ var fService = flag.String("service", "",
 	"operate on the service")
 
 var (
-	nextVersion = "1.5.0"
+	nextVersion = "1.6.0"
 	version     string
 	commit      string
 	branch      string

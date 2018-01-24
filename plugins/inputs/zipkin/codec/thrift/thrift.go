@@ -199,5 +199,5 @@ func (s *span) Duration() time.Duration {
 }
 
 func formatID(id int64) string {
-	return strconv.FormatInt(id, 10)
+	return strconv.FormatInt(id, 16)
 }

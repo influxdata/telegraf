@@ -4,6 +4,8 @@ This plugin gathers metrics from OpenLDAP's cn=Monitor backend.
 
 ### Configuration:
 
+To use this plugin you must enable the [monitoring](https://www.openldap.org/devel/admin/monitoringslapd.html) backend.
+
 ```toml
 [[inputs.openldap]]
   host = "localhost"

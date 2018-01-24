@@ -129,6 +129,7 @@ configuration options.
 * [apache](./plugins/inputs/apache)
 * [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
+* [bond](./plugins/inputs/bond)
 * [cassandra](./plugins/inputs/cassandra)
 * [ceph](./plugins/inputs/ceph)
 * [cgroup](./plugins/inputs/cgroup)
@@ -137,6 +138,7 @@ configuration options.
 * [conntrack](./plugins/inputs/conntrack)
 * [couchbase](./plugins/inputs/couchbase)
 * [couchdb](./plugins/inputs/couchdb)
+* [DC/OS](./plugins/inputs/dcos)
 * [disque](./plugins/inputs/disque)
 * [dmcache](./plugins/inputs/dmcache)
 * [dns query time](./plugins/inputs/dns_query)
@@ -176,11 +178,14 @@ configuration options.
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
 * [openldap](./plugins/inputs/openldap)
+* [opensmtpd](./plugins/inputs/opensmtpd)
+* [pf](./plugins/inputs/pf)
 * [phpfpm](./plugins/inputs/phpfpm)
 * [phusion passenger](./plugins/inputs/passenger)
 * [ping](./plugins/inputs/ping)
-* [postgresql](./plugins/inputs/postgresql)
+* [postfix](./plugins/inputs/postfix)
 * [postgresql_extensible](./plugins/inputs/postgresql_extensible)
+* [postgresql](./plugins/inputs/postgresql)
 * [powerdns](./plugins/inputs/powerdns)
 * [procstat](./plugins/inputs/procstat)
 * [prometheus](./plugins/inputs/prometheus) (can be used for [Caddy server](./plugins/inputs/prometheus/README.md#usage-for-caddy-http-server))
@@ -200,6 +205,7 @@ configuration options.
 * [teamspeak](./plugins/inputs/teamspeak)
 * [tomcat](./plugins/inputs/tomcat)
 * [twemproxy](./plugins/inputs/twemproxy)
+* [unbound](./plugins/input/unbound)
 * [varnish](./plugins/inputs/varnish)
 * [zfs](./plugins/inputs/zfs)
 * [zookeeper](./plugins/inputs/zookeeper)
@@ -236,8 +242,9 @@ Telegraf can also collect metrics via the following service plugins:
   * [filestack](./plugins/inputs/webhooks/filestack)
   * [github](./plugins/inputs/webhooks/github)
   * [mandrill](./plugins/inputs/webhooks/mandrill)
-  * [rollbar](./plugins/inputs/webhooks/rollbar)
   * [papertrail](./plugins/inputs/webhooks/papertrail)
+  * [particle](./plugins/inputs/webhooks/particle)
+  * [rollbar](./plugins/inputs/webhooks/rollbar)
 * [zipkin](./plugins/inputs/zipkin)
 
 Telegraf is able to parse the following input data formats into metrics, these
@@ -249,6 +256,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [Value](./docs/DATA_FORMATS_INPUT.md#value)
 * [Nagios](./docs/DATA_FORMATS_INPUT.md#nagios)
 * [Collectd](./docs/DATA_FORMATS_INPUT.md#collectd)
+* [Dropwizard](./docs/DATA_FORMATS_INPUT.md#dropwizard)
 
 ## Processor Plugins
 

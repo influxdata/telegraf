@@ -81,7 +81,7 @@ func TestGraphiteOK(t *testing.T) {
 	err2 := g.Write(metrics)
 	require.NoError(t, err2)
 
-	// Waiting TCPserver
+	// Waiting TCPserver, should reconnect and resend
 	wg.Wait()
 	t.Log("Finished Waiting for first data")
 	var wg2 sync.WaitGroup
@@ -89,10 +89,8 @@ func TestGraphiteOK(t *testing.T) {
 	wg2.Add(1)
 	TCPServer2(t, &wg2)
 	//Write but expect an error, but reconnect
-	g.Write(metrics2)
 	err3 := g.Write(metrics2)
-	t.Log("Finished writing second data, it should have failed")
-	//Actually write the new metrics
+	t.Log("Finished writing second data, it should have reconnected automatically")
 
 	require.NoError(t, err3)
 	t.Log("Finished writing third data")
