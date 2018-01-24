@@ -44,6 +44,11 @@ For additional details reference the [RabbitMQ Management HTTP Stats](https://cd
   ## A list of exchanges to gather as the rabbitmq_exchange measurement. If not
   ## specified, metrics for all exchanges are gathered.
   # exchanges = ["telegraf"]
+
+  ## Queues to include and exclude. Globs accepted.
+  ## Note that an empty array for both will include all queues
+  # queue_name_include = []
+  # queue_name_exclude = []
 ```
 
 ### Measurements & Fields:
