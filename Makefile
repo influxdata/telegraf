@@ -1,7 +1,7 @@
 PREFIX := /usr/local
 VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
-COMMIT := $(shell git rev-parse --short HEAD)
+
 ifdef GOBIN
 PATH := $(GOBIN):$(PATH)
 else
@@ -18,6 +18,16 @@ endif
 all:
 	$(MAKE) deps
 	$(MAKE) telegraf
+
+ci-integration:
+	$(MAKE) deps
+	$(MAKE) docker-run-circle
+	go test --race ./...
+
+ci-unit:
+	$(MAKE) deps
+	$(MAKE) lint
+	$(MAKE) test
 
 deps:
 	go get github.com/sparrc/gdm

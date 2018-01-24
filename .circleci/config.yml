@@ -1,14 +1,27 @@
+---
+defaults: &defaults
+  docker:
+    - image: 'circleci/golang:1.9.2'
+  working_directory: '/go/src/github.com/influxdata/telegraf'
 version: 2
 jobs:
   build:
-    docker:
-      - image: circleci/golang:1.8.3
-    working_directory: /go/src/github.com/influxdata/telegraf
+    <<: *defaults
     steps:
-      - checkout
+      - 'checkout'
+      - run: 'make ci-unit'
+  integration:
+    <<: *defaults
+    steps:
+      - 'checkout'
       - setup_remote_docker:
           reuseable: true
-      - run: make docker-run
-      - run: make prepare
-      - run: make vet
-      - run: go test -race ./...
+      - run: 'make ci-integration'
+workflows:
+  version: 2
+  test_and_release:
+    jobs:
+      - 'build'
+      - integration:
+          requires:
+            - 'build'
