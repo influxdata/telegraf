@@ -158,7 +158,9 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 	// If username, password and clientId are provided, authenticate user before subscribing for data
 	if m.Username != "" && m.Password != "" && m.ClientID != "" {
 		lc := authentication.NewLoginClient(m.grpcClientConn)
-		loginReply, loginErr := lc.LoginCheck(context.Background(), &authentication.LoginRequest{UserName: m.Username, Password: m.Password, ClientId: m.ClientID})
+		loginReply, loginErr := lc.LoginCheck(context.Background(),
+			&authentication.LoginRequest{UserName: m.Username, Password: m.Password,
+				ClientId: m.ClientID})
 		if loginErr != nil {
 			return fmt.Errorf("E! Could not initiate login check: %v", err)
 		}
