@@ -33,7 +33,7 @@ cpu_load_short,host=server06 value=12.0 1422568543702900257
 func newTestTcpListener() (*TcpListener, chan []byte) {
 	in := make(chan []byte, 1500)
 	listener := &TcpListener{
-		ServiceAddress:         ":8194",
+		ServiceAddress:         "localhost:8194",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      250,
 		in:                     in,
@@ -45,7 +45,7 @@ func newTestTcpListener() (*TcpListener, chan []byte) {
 // benchmark how long it takes to accept & process 100,000 metrics:
 func BenchmarkTCP(b *testing.B) {
 	listener := TcpListener{
-		ServiceAddress:         ":8198",
+		ServiceAddress:         "localhost:8198",
 		AllowedPendingMessages: 100000,
 		MaxTCPConnections:      250,
 	}
@@ -76,7 +76,7 @@ func BenchmarkTCP(b *testing.B) {
 
 func TestHighTrafficTCP(t *testing.T) {
 	listener := TcpListener{
-		ServiceAddress:         ":8199",
+		ServiceAddress:         "localhost:8199",
 		AllowedPendingMessages: 100000,
 		MaxTCPConnections:      250,
 	}
@@ -103,7 +103,7 @@ func TestHighTrafficTCP(t *testing.T) {
 
 func TestConnectTCP(t *testing.T) {
 	listener := TcpListener{
-		ServiceAddress:         ":8194",
+		ServiceAddress:         "localhost:8194",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      250,
 	}
@@ -140,7 +140,7 @@ func TestConnectTCP(t *testing.T) {
 // Test that MaxTCPConections is respected
 func TestConcurrentConns(t *testing.T) {
 	listener := TcpListener{
-		ServiceAddress:         ":8195",
+		ServiceAddress:         "localhost:8195",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
 	}
@@ -175,7 +175,7 @@ func TestConcurrentConns(t *testing.T) {
 // Test that MaxTCPConections is respected when max==1
 func TestConcurrentConns1(t *testing.T) {
 	listener := TcpListener{
-		ServiceAddress:         ":8196",
+		ServiceAddress:         "localhost:8196",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      1,
 	}
@@ -208,7 +208,7 @@ func TestConcurrentConns1(t *testing.T) {
 // Test that MaxTCPConections is respected
 func TestCloseConcurrentConns(t *testing.T) {
 	listener := TcpListener{
-		ServiceAddress:         ":8195",
+		ServiceAddress:         "localhost:8195",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
 	}

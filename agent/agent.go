@@ -308,7 +308,13 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric, ag
 					metrics = processor.Apply(metrics...)
 				}
 				for _, m := range metrics {
-					outMetricC <- m
+					for i, o := range a.Config.Outputs {
+						if i == len(a.Config.Outputs)-1 {
+							o.AddMetric(m)
+						} else {
+							o.AddMetric(m.Copy())
+						}
+					}
 				}
 			}
 		}
@@ -364,8 +370,6 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	metricC := make(chan telegraf.Metric, 100)
 	aggC := make(chan telegraf.Metric, 100)
 
-	now := time.Now()
-
 	// Start all ServicePlugins
 	for _, input := range a.Config.Inputs {
 		input.SetDefaultTags(a.Config.Tags)
@@ -406,7 +410,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 			acc := NewAccumulator(agg, aggC)
 			acc.SetPrecision(a.Config.Agent.Precision.Duration,
 				a.Config.Agent.Interval.Duration)
-			agg.Run(acc, now, shutdown)
+			agg.Run(acc, shutdown)
 		}(aggregator)
 	}
 

@@ -79,18 +79,27 @@ var sampleConfig = `
 `
 
 func (p *PrometheusClient) Start() error {
-	prometheus.Register(p)
-
+	defaultCollectors := map[string]bool{
+		"gocollector": true,
+		"process":     true,
+	}
 	for _, collector := range p.CollectorsExclude {
+		delete(defaultCollectors, collector)
+	}
+
+	registry := prometheus.NewRegistry()
+	for collector, _ := range defaultCollectors {
 		switch collector {
 		case "gocollector":
-			prometheus.Unregister(prometheus.NewGoCollector())
+			registry.Register(prometheus.NewGoCollector())
 		case "process":
-			prometheus.Unregister(prometheus.NewProcessCollector(os.Getpid(), ""))
+			registry.Register(prometheus.NewProcessCollector(os.Getpid(), ""))
 		default:
 			return fmt.Errorf("unrecognized collector %s", collector)
 		}
 	}
+
+	registry.Register(p)
 
 	if p.Listen == "" {
 		p.Listen = "localhost:9273"
@@ -102,8 +111,7 @@ func (p *PrometheusClient) Start() error {
 
 	mux := http.NewServeMux()
 	mux.Handle(p.Path, promhttp.HandlerFor(
-		prometheus.DefaultGatherer,
-		promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}))
+		registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}))
 
 	p.server = &http.Server{
 		Addr:    p.Listen,

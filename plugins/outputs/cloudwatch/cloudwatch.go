@@ -74,9 +74,9 @@ func (c *CloudWatch) Connect() error {
 
 	stsService := sts.New(configProvider)
 
-	params := &sts.GetSessionTokenInput{}
+	params := &sts.GetCallerIdentityInput{}
 
-	_, err := stsService.GetSessionToken(params)
+	_, err := stsService.GetCallerIdentity(params)
 
 	if err != nil {
 		log.Printf("E! cloudwatch: Cannot use credentials to connect to AWS : %+v \n", err.Error())
