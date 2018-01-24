@@ -2,6 +2,7 @@ package prometheus_client
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
@@ -53,6 +54,12 @@ type MetricFamily struct {
 
 type PrometheusClient struct {
 	Listen             string
+	TLS                bool              `toml:"tls"`
+	TLSCrt             string            `toml:"tls_crt"`
+	TLSKey             string            `toml:"tls_key"`
+	BasicAuth          bool              `toml:"basic_auth"`
+	Username           string            `toml:"username"`
+	Password           string            `toml:"password"`
 	ExpirationInterval internal.Duration `toml:"expiration_interval"`
 	Path               string            `toml:"path"`
 	CollectorsExclude  []string          `toml:"collectors_exclude"`
@@ -70,6 +77,16 @@ var sampleConfig = `
   ## Address to listen on
   # listen = ":9273"
 
+  ## Use TLS
+  # tls = true
+  tls_crt = "/etc/ssl/telegraf.crt"
+  tls_key = "/etc/ssl/telegraf.key"
+
+  ## Use http basic authentication
+  # basic_auth = true
+  username = "Foo"
+  password = "Bar"
+
   ## Interval to expire metrics and not deliver to prometheus, 0 == no expiration
   # expiration_interval = "60s"
 
@@ -77,6 +94,27 @@ var sampleConfig = `
   ## If unset, both are enabled.
   collectors_exclude = ["gocollector", "process"]
 `
+
+func (p *PrometheusClient) basicAuth(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if p.BasicAuth {
+			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+
+			username, password, ok := r.BasicAuth()
+			if !ok {
+				http.Error(w, "Not authorized", 401)
+				return
+			}
+
+			if username != p.Username || password != p.Password {
+				http.Error(w, "Not authorized", 401)
+				return
+			}
+		}
+
+		h.ServeHTTP(w, r)
+	})
+}
 
 func (p *PrometheusClient) Start() error {
 	defaultCollectors := map[string]bool{
@@ -110,22 +148,47 @@ func (p *PrometheusClient) Start() error {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle(p.Path, promhttp.HandlerFor(
-		registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}))
+	mux.Handle(p.Path, p.basicAuth(promhttp.HandlerFor(
+		prometheus.DefaultGatherer,
+		promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})))
 
-	p.server = &http.Server{
-		Addr:    p.Listen,
-		Handler: mux,
+	if p.TLS {
+		p.server = &http.Server{
+			Addr:    p.Listen,
+			Handler: mux,
+			TLSConfig: &tls.Config{
+				MinVersion:               tls.VersionTLS12,
+				PreferServerCipherSuites: true,
+				CipherSuites: []uint16{
+					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				},
+			},
+		}
+
+		go func() {
+			if err := p.server.ListenAndServeTLS(p.TLSCrt, p.TLSKey); err != nil {
+				if err != http.ErrServerClosed {
+					log.Printf("E! Error creating prometheus tls secured metric endpoint, err: %s\n",
+						err.Error())
+				}
+			}
+		}()
+	} else {
+		p.server = &http.Server{
+			Addr:    p.Listen,
+			Handler: mux,
+		}
+
+		go func() {
+			if err := p.server.ListenAndServe(); err != nil {
+				if err != http.ErrServerClosed {
+					log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
+						err.Error())
+				}
+			}
+		}()
 	}
 
-	go func() {
-		if err := p.server.ListenAndServe(); err != nil {
-			if err != http.ErrServerClosed {
-				log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
-					err.Error())
-			}
-		}
-	}()
 	return nil
 }
 
