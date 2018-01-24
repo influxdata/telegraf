@@ -127,7 +127,7 @@ func spitTagsNPath(xmlpath string) (string, map[string]string) {
 	return xmlpath, tags
 }
 
-// Takes in a OC response, extracts tag information from keys and returns a 
+// Takes in a OC response, extracts tag information from keys and returns a
 // list of groups with unique sets of tags+values
 func extractData(r *telemetry.OpenConfigData, grpc_server string, strAsTags bool) []DataGroup {
 	// Use empty prefix. We will update this when we iterate over key-value pairs
@@ -252,14 +252,14 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			var measurementName string
 			var pathlist []*telemetry.Path
 
-			// Extract measurement name and custom reporting rate if specified. Custom 
-			// reporting rate will be specified at the beginning of sensor list, 
-			// followed by measurement name like "1000ms interfaces /interfaces" 
-			// where 1000ms is the custom reporting rate and interfaces is the 
-			// measurement name. If 1000ms is not given, we use global reporting rate 
-			// from sample_frequency. if measurement name is not given, we use first 
-			// sensor name as the measurement name. If first or the word after custom 
-			// reporting rate doesn't start with /, we treat it as measurement name 
+			// Extract measurement name and custom reporting rate if specified. Custom
+			// reporting rate will be specified at the beginning of sensor list,
+			// followed by measurement name like "1000ms interfaces /interfaces"
+			// where 1000ms is the custom reporting rate and interfaces is the
+			// measurement name. If 1000ms is not given, we use global reporting rate
+			// from sample_frequency. if measurement name is not given, we use first
+			// sensor name as the measurement name. If first or the word after custom
+			// reporting rate doesn't start with /, we treat it as measurement name
 			// and exclude it from list of sensors to subscribe
 			duration, err := time.ParseDuration(spathSplit[0])
 			if err == nil {
@@ -277,7 +277,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			// Word after custom reporting rate is treated as measurement name
 			measurementName = spathSplit[slistStart]
 
-			// If our word after custom reporting rate doesn't start with /, we treat 
+			// If our word after custom reporting rate doesn't start with /, we treat
 			// it as measurement name. Else we treat it as sensor
 			if !strings.HasPrefix(measurementName, "/") {
 				slistStart += 1
@@ -321,7 +321,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 				// Insert additional tags
 				tags["device"] = grpc_server
 
-				dgroups:= extractData(r, grpc_server, m.StrAsTags);
+				dgroups := extractData(r, grpc_server, m.StrAsTags)
 
 				// Print final data collection
 				log.Printf("D! Available collection is: %v", dgroups)
