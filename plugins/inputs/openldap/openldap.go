@@ -166,17 +166,17 @@ func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumul
 // Convert a DN to metric name, eg cn=Read,cn=Waiters,cn=Monitor becomes waiters_read
 // Assumes the last part of the DN is cn=Monitor and we want to drop it
 func dnToMetric(dn string) string {
-        var metricParts []string
+	var metricParts []string
 
-        dn = strings.Trim(dn, " ")
-        dn = strings.Replace(dn, " ", "_", -1)
-        dn = strings.Replace(dn, "cn=", "", -1)
-        dn = strings.ToLower(dn)
-        metricParts = strings.Split(dn, ",")
-        for i, j := 0, len(metricParts)-1; i < j; i, j = i+1, j-1 {
-                metricParts[i], metricParts[j] = metricParts[j], metricParts[i]
-        }
-        return strings.Join(metricParts[1:], "_")
+	dn = strings.Trim(dn, " ")
+	dn = strings.Replace(dn, " ", "_", -1)
+	dn = strings.Replace(dn, "cn=", "", -1)
+	dn = strings.ToLower(dn)
+	metricParts = strings.Split(dn, ",")
+	for i, j := 0, len(metricParts)-1; i < j; i, j = i+1, j-1 {
+		metricParts[i], metricParts[j] = metricParts[j], metricParts[i]
+	}
+	return strings.Join(metricParts[1:], "_")
 }
 
 func init() {
