@@ -44,6 +44,9 @@ var (
 )
 
 func TestRunTimeout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping test due to random failures.")
+	}
 	if sleepbin == "" {
 		t.Skip("'sleep' binary not available on OS, skipping.")
 	}
