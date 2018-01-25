@@ -30,6 +30,7 @@
 - [#2846](https://github.com/influxdata/telegraf/pull/2846): Add support for dropwizard input format.
 - [#3666](https://github.com/influxdata/telegraf/pull/3666): Add container health metrics to docker input.
 - [#3687](https://github.com/influxdata/telegraf/pull/3687): Add support for using globs in devices list of diskio input plugin.
+- [#2754](https://github.com/influxdata/telegraf/pull/2754): Allow running as console application on Windows.
 
 ### Bugfixes
 
@@ -465,7 +466,6 @@ be deprecated eventually.
 
 ### Bugfixes
 
-- [#2754](https://github.com/influxdata/telegraf/pull/2754): allow running as console application on Windows
 - [#2633](https://github.com/influxdata/telegraf/pull/2633): ipmi_sensor: allow @ symbol in password
 - [#2077](https://github.com/influxdata/telegraf/issues/2077): SQL Server Input - Arithmetic overflow error converting numeric to data type int.
 - [#2262](https://github.com/influxdata/telegraf/issues/2262): Flush jitter can inhibit metric collection.
