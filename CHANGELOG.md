@@ -46,6 +46,7 @@
 - [#3629](https://github.com/influxdata/telegraf/issues/3629): Fix a potential deadlock when using aggregators.
 - [#3697](https://github.com/influxdata/telegraf/issues/3697): Limit wait time for writes in mqtt output.
 - [#3698](https://github.com/influxdata/telegraf/issues/3698): Revert change in graphite output where dot in field key was replaced by underscore.
+- [#3710](https://github.com/influxdata/telegraf/issues/3710): Add timeout to wavefront output write.
 
 ## v1.5.1 [2017-01-10]
 
