@@ -43,10 +43,11 @@ const sampleConfig string = `
 `
 
 var searchBase = "cn=Monitor"
-var searchFilter = "(|(objectClass=monitorCounterObject)(objectClass=monitorOperation))"
-var searchAttrs = []string{"monitorCounter", "monitorOpInitiated", "monitorOpCompleted"}
+var searchFilter = "(|(objectClass=monitorCounterObject)(objectClass=monitorOperation)(objectClass=monitoredObject))"
+var searchAttrs = []string{"monitorCounter", "monitorOpInitiated", "monitorOpCompleted", "monitoredInfo"}
 var attrTranslate = map[string]string{
 	"monitorCounter":     "",
+	"monitoredInfo":      "",
 	"monitorOpInitiated": "_initiated",
 	"monitorOpCompleted": "_completed",
 }
