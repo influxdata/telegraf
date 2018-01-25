@@ -464,20 +464,6 @@ func (r *RabbitMQ) shouldGatherNode(node Node) bool {
 	return false
 }
 
-func (r *RabbitMQ) shouldGatherExchange(exchange Exchange) bool {
-	if len(r.Exchanges) == 0 {
-		return true
-	}
-
-	for _, name := range r.Exchanges {
-		if name == exchange.Name {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (r *RabbitMQ) createQueueFilter() error {
 	// Backwards compatibility for deprecated `queues` parameter.
 	if len(r.Queues) > 0 {
@@ -497,6 +483,20 @@ func (r *RabbitMQ) createQueueFilter() error {
 	}
 
 	return nil
+}
+
+func (r *RabbitMQ) shouldGatherExchange(exchange Exchange) bool {
+	if len(r.Exchanges) == 0 {
+		return true
+	}
+
+	for _, name := range r.Exchanges {
+		if name == exchange.Name {
+			return true
+		}
+	}
+
+	return false
 }
 
 func init() {
