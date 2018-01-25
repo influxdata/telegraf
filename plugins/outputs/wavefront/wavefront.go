@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"time"
 )
 
 type Wavefront struct {
@@ -103,13 +104,11 @@ func (w *Wavefront) Connect() error {
 	uri := fmt.Sprintf("%s:%d", w.Host, w.Port)
 	_, err := net.ResolveTCPAddr("tcp", uri)
 	if err != nil {
-		log.Printf("Wavefront: TCP address cannot be resolved %s", err.Error())
-		return nil
+		return fmt.Errorf("Wavefront: TCP address cannot be resolved %s", err.Error())
 	}
 	connection, err := net.Dial("tcp", uri)
 	if err != nil {
-		log.Printf("Wavefront: TCP connect fail %s", err.Error())
-		return nil
+		return fmt.Errorf("Wavefront: TCP connect fail %s", err.Error())
 	}
 	defer connection.Close()
 	return nil
