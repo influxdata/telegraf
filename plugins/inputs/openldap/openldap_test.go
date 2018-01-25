@@ -146,5 +146,5 @@ func commonTests(t *testing.T, o *Openldap, acc *testutil.Accumulator) {
 	assert.True(t, acc.HasMeasurement("openldap"), "Has a measurement called 'openldap'")
 	assert.Equal(t, o.Host, acc.TagValue("openldap", "server"), "Has a tag value of server=o.Host")
 	assert.Equal(t, strconv.Itoa(o.Port), acc.TagValue("openldap", "port"), "Has a tag value of port=o.Port")
-	assert.True(t, acc.HasInt64Field("openldap", "total_connections"), "Has an integer field called total_connections")
+	assert.True(t, acc.HasInt64Field("openldap", "connections_total"), "Has an integer field called connections_total")
 }
