@@ -59,43 +59,76 @@ func New() *TopK {
 
 var sampleConfig = `
 [[processors.topk]]
-  period = 10                  # How many seconds between aggregations. Default: 10
-  k = 10                       # How many top metrics to return. Default: 10
+  ## How many seconds between aggregations
+  # period = 10
 
-  # Metrics are grouped based on their tags and name. The plugin aggregates the selected fields of
-  # these groups of metrics and sorts the groups based these aggregations
-  group_by = ["process_name"]  # Over which tags should the aggregation be done. Default: []
-  group_by_metric_name = false # Wheter or not to also group by metric name. Default: false
+  ## How many top metrics to return
+  # k = 10
 
-  # The plugin can aggregate over several fields. If more than one field is specified, an aggregation is calculated per group per field
-  # The plugin returns a metric if it is in a group in the top k groups ordered by any of the aggregations of the selected fields
-  # This effectively means that more than K metrics may be returned. If you need to return only the top k metrics regardless of grouping, use the simple_topk setting
-  fields = ["memory_rss"]      # Over which fields are the top k are calculated. Default: ["value"]
-  aggregation = "avg"          # What aggregation to use. Default: "avg". Options: sum, avg, min, max
+  ## Metrics are grouped based on their tags and name. The plugin aggregates
+  ## the selected fields of these groups of metrics and sorts the groups based
+  ## these aggregations
 
-  bottomk = false              # Instead of the top k largest metrics, return the bottom k lowest metrics. Default: false
-  simple_topk = false          # If true, this will override any GroupBy options and assign each metric its own individual group. Default: false
-  drop_no_group = true         # Drop any metrics that do fit in any group (due to nonexistent tags). Default: true
-  drop_non_top = true          # Drop the metrics that do not make the cut for the top k. Default: true
+  ## Over which tags should the aggregation be done. If non are specified, no
+  ## aggregation will be done, resulting in all metrics being dropped
+  # group_by = []
 
-  group_by_tag = ""            # The plugin assigns each metric a GroupBy tag generated from its name and tags.
-                               # If this setting is different than "" the plugin will add a tag (which name will be the value of
-                               # this setting) to each metric with the value of the calculated GroupBy tag.
-                               # Useful for debugging. Default: ""
+  ## Wheter or not to also group by metric name
+  # group_by_metric_name = false
 
-  position_field = ""          # This settings provides a way to know the position of each metric in the top k.
-                               # If set to a value different than "", then a field (which name will be prefixed with the value of this setting) will be
-                               # added to each every metric for each field over which an aggregation was made.
-                               # This field will contain the ranking of the group that the metric belonged to. When aggregating
-                               # over several fields, several fields will be added (one for each field over which an aggregation was calculated).
-                               # Useful for debugging. Default: ""
+  ## The plugin can aggregate over several fields. If more than one field is
+  ## specified, an aggregation is calculated per group per field.
 
-  aggregation_field = ""       # This setting provies a way know the what values the plugin is generating when aggregating the fields
-                               # If set to a value different than "", then a field (which name will be prefixed with the value of this setting) will be added
-                               # to each metric which was part of a field aggregation.
-                               # The value of the added field will be the value of the result of the aggregation operation for that metric's group. When aggregating
-                               # over several fields, several fields will be added (one for each field over which an aggregation was calculated).
-                               # Useful for debugging.Default: ""
+  ## The plugin returns a metric if it's in a group in the top k groups,
+  ## ordered by any of the aggregations of the selected fields
+
+  ## This effectively means that more than K metrics may be returned. If you
+  ## need to return only the top k metrics regardless of grouping, use the simple_topk setting
+
+
+  ## Over which fields are the top k are calculated
+  # fields = ["value"]
+
+  ## What aggregation to use. Options: sum, avg, min, max
+  # aggregation = "avg"
+
+  ## Instead of the top k largest metrics, return the bottom k lowest metrics
+  # bottomk = false
+
+  ## If true, this will override any GroupBy options and assign each metric
+  ## its own individual group. Default: false
+  # simple_topk = false
+
+  ## Drop any metrics that do fit in any group (due to nonexistent tags)
+  # drop_no_group = true
+
+  ## Drop the metrics that do not make the cut for the top k
+  # drop_non_top = true          
+
+  ## The plugin assigns each metric a GroupBy tag generated from its name and
+  ## tags. If this setting is different than "" the plugin will add a
+  ## tag (which name will be the value of this setting) to each metric with
+  ## the value of the calculated GroupBy tag. Useful for debugging
+  # group_by_tag = ""          
+
+  ## This settings provides a way to know the position of each metric in
+  ## the top k. If set to a value different than "", then a field (which name
+  ## will be prefixed with the value of this setting) will be added to each
+  ## every metric for each field over which an aggregation was made. This
+  ## field will contain the ranking of the group that the metric
+  ## belonged to. When aggregating over several fields, several fields will
+  ## be added (one for each field over which the aggregation was calculated)
+  # position_field = ""        
+
+  ## This setting provies a way know the what values the plugin is generating
+  ## when aggregating the fields. If set to a value different than "", then a
+  ## field (which name will be prefixed with the value of this setting) will
+  ## be added to each metric which was part of a field aggregation. The value
+  ## of the added field will be the value of the result of the aggregation
+  ## operation for that metric's group. When aggregating over several fields,
+  ## several fields will be added (one for each field over which the
+  ## aggregation was calculated).
+  # aggregation_field = ""
 `
 
 type MetricAggregation struct {
