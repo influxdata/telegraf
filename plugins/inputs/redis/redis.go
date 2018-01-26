@@ -208,7 +208,7 @@ func gatherInfoOutput(
 		}
 
 		// drop section when name contain "replid"
-		if strings.Contains(section, "replid"){
+		if strings.Contains(section, "replid") {
 			continue
 		}
 
