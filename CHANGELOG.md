@@ -31,6 +31,7 @@
 - [#3666](https://github.com/influxdata/telegraf/pull/3666): Add container health metrics to docker input.
 - [#3687](https://github.com/influxdata/telegraf/pull/3687): Add support for using globs in devices list of diskio input plugin.
 - [#2754](https://github.com/influxdata/telegraf/pull/2754): Allow running as console application on Windows.
+- [#3703](https://github.com/influxdata/telegraf/pull/3703): Add listener counts and node running status to rabbitmq input.
 
 ### Bugfixes
 
