@@ -58,12 +58,12 @@ var metric15, _ = metric.New(
 
 var MetricsSet1 = []telegraf.Metric{metric11, metric12, metric13, metric14, metric15}
 
-var ansAvg11 = metric11.Copy()
-var ansAvg12 = metric12.Copy()
-var ansAvg13 = metric13.Copy()
-var ansAvg14 = metric14.Copy()
-var ansAvg15 = metric15.Copy()
-var AvgAggregationFieldAns = []telegraf.Metric{ansAvg11, ansAvg12, ansAvg13, ansAvg14, ansAvg15}
+var ansMean11 = metric11.Copy()
+var ansMean12 = metric12.Copy()
+var ansMean13 = metric13.Copy()
+var ansMean14 = metric14.Copy()
+var ansMean15 = metric15.Copy()
+var MeanAggregationFieldAns = []telegraf.Metric{ansMean11, ansMean12, ansMean13, ansMean14, ansMean15}
 
 var ansSum11 = metric11.Copy()
 var ansSum12 = metric12.Copy()
@@ -87,12 +87,12 @@ var ansMin15 = metric15.Copy()
 var MinAggregationFieldAns = []telegraf.Metric{ansMin11, ansMin12, ansMin13, ansMin14, ansMin15}
 
 func setupTestSet1() {
-	// Expected answer for the TopkAvgAggretationField test
-	ansAvg11.AddField("avgag_a", float64(28.044))
-	ansAvg12.AddField("avgag_a", float64(28.044))
-	ansAvg13.AddField("avgag_a", float64(28.044))
-	ansAvg14.AddField("avgag_a", float64(28.044))
-	ansAvg15.AddField("avgag_a", float64(28.044))
+	// Expected answer for the TopkMeanAggretationField test
+	ansMean11.AddField("meanag_a", float64(28.044))
+	ansMean12.AddField("meanag_a", float64(28.044))
+	ansMean13.AddField("meanag_a", float64(28.044))
+	ansMean14.AddField("meanag_a", float64(28.044))
+	ansMean15.AddField("meanag_a", float64(28.044))
 
 	// Expected answer for the TopkSumAggretationField test
 	ansSum11.AddField("sumag_a", float64(140.22))
