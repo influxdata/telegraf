@@ -235,7 +235,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	if elapsed >= time.Second*time.Duration(t.Period) {
 		// Generate aggregations list using the selected fields
 		aggregations := make([]MetricAggregation, 0, 100)
-		var aggregator func([]telegraf.Metric, []string) map[string]float64 = t.getAggregationFunction(t.Aggregation)
+		aggregator := t.getAggregationFunction(t.Aggregation)
 		for k, ms := range t.cache {
 			aggregations = append(aggregations, MetricAggregation{groupbykey: k, values: aggregator(ms, t.Fields)})
 		}
