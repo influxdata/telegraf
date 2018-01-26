@@ -58,7 +58,6 @@ func New() *TopK {
 }
 
 var sampleConfig = `
-[[processors.topk]]
   ## How many seconds between aggregations
   # period = 10
 
