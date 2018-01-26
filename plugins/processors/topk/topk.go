@@ -23,7 +23,7 @@ type TopK struct {
 	SimpleTopk        bool   `toml:"simple_topk"`
 	DropNoGroup       bool   `toml:"drop_no_group"`
 	DropNonTop        bool   `toml:"drop_non_top"`
-	GroupByTag        string `toml:"group_by_tag"`
+	AddGroupByTag     string `toml:"add_groupby_tag"`
 	PositionField     string `toml:"position_field"`
 	AggregationField  string `toml:"aggregation_field"`
 
@@ -44,7 +44,7 @@ func New() *TopK {
 	topk.Aggregation = "avg"
 	topk.GroupBy = []string{}
 	topk.GroupByMetricName = false
-	topk.GroupByTag = ""
+	topk.AddGroupByTag = ""
 	topk.SimpleTopk = false
 	topk.DropNoGroup = true
 	topk.DropNonTop = true
@@ -244,7 +244,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		addedKeys := make(map[string]bool)
 		aggField := t.AggregationField
 		posField := t.PositionField
-		groupTag := t.GroupByTag
+		groupTag := t.AddGroupByTag
 		for _, field := range t.Fields {
 
 			// Sort the aggregations

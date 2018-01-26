@@ -271,7 +271,7 @@ func TestTopkGroupByKeyTag(t *testing.T) {
 	topk.K = 3
 	topk.Aggregation = "sum"
 	topk.GroupBy = []string{"tag1", "tag3"}
-	topk.GroupByTag = "gbt"
+	topk.AddGroupByTag = "gbt"
 	topk.DropNonTop = false
 	topk.DropNoGroup = false
 	runAndCompare(&topk, deepCopy(MetricsSet2), GroupByKeyTagAns, "GroupByKeyTag test", t)
