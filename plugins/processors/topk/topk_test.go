@@ -72,7 +72,7 @@ func TestTopkAggregatorsSmokeTests(t *testing.T) {
 	topk.Fields = []string{"a"}
 	topk.GroupBy = []string{"tag_name"}
 
-	aggregators := []string{"avg", "sum", "max", "min"}
+	aggregators := []string{"mean", "sum", "max", "min"}
 
 	for _, ag := range aggregators {
 		topk.Aggregation = ag
@@ -82,17 +82,17 @@ func TestTopkAggregatorsSmokeTests(t *testing.T) {
 	}
 }
 
-// AggregationField + Avg aggregator
-func TestTopkAvgAggregationField(t *testing.T) {
+// AggregationField + Mean aggregator
+func TestTopkMeanAggregationField(t *testing.T) {
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
-	topk.Aggregation = "avg"
-	topk.AggregationField = "avgag"
+	topk.Aggregation = "mean"
+	topk.AggregationField = "meanag"
 	topk.Fields = []string{"a"}
 	topk.GroupBy = []string{"tag_name"}
 
-	runAndCompare(&topk, deepCopy(MetricsSet1), AvgAggregationFieldAns, "AvgAggregationField test", t)
+	runAndCompare(&topk, deepCopy(MetricsSet1), MeanAggregationFieldAns, "MeanAggregationField test", t)
 }
 
 // AggregationField + Sum aggregator
@@ -150,8 +150,8 @@ func TestTopkGroupby2(t *testing.T) {
 	topk = *New()
 	topk.Period = 1
 	topk.K = 1
-	topk.Aggregation = "avg"
-	topk.AggregationField = "avg"
+	topk.Aggregation = "mean"
+	topk.AggregationField = "mean"
 	topk.GroupBy = []string{"tag1"}
 	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy2Ans, "GroupBy test 2", t)
 }
@@ -181,8 +181,8 @@ func TestTopkGroupbyFields1(t *testing.T) {
 	topk = *New()
 	topk.Period = 1
 	topk.K = 2
-	topk.Aggregation = "avg"
-	topk.AggregationField = "avg"
+	topk.Aggregation = "mean"
+	topk.AggregationField = "mean"
 	topk.GroupBy = []string{"tag1", "tag2"}
 	topk.Fields = []string{"A"}
 	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy4Ans, "GroupBy Fields test 1", t)

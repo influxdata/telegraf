@@ -204,17 +204,17 @@ func setupTestSet2() {
 	ans25GroupBy1.AddField("sumag_value", float64(163.22))
 	ans26GroupBy1.AddField("sumag_value", float64(163.22))
 
-	ans22GroupBy2.AddField("avg_value", float64(74.20750000000001))
-	ans23GroupBy2.AddField("avg_value", float64(74.20750000000001))
-	ans25GroupBy2.AddField("avg_value", float64(74.20750000000001))
-	ans26GroupBy2.AddField("avg_value", float64(74.20750000000001))
+	ans22GroupBy2.AddField("mean_value", float64(74.20750000000001))
+	ans23GroupBy2.AddField("mean_value", float64(74.20750000000001))
+	ans25GroupBy2.AddField("mean_value", float64(74.20750000000001))
+	ans26GroupBy2.AddField("mean_value", float64(74.20750000000001))
 
 	ans25GroupBy3.AddField("minaggfield_value", float64(75.3))
 	ans26GroupBy3.AddField("minaggfield_value", float64(75.3))
 
-	ans21GroupBy4.AddField("avg_A", float64(95.36))
-	ans22GroupBy4.AddField("avg_A", float64(39.01))
-	ans23GroupBy4.AddField("avg_A", float64(39.01))
+	ans21GroupBy4.AddField("mean_A", float64(95.36))
+	ans22GroupBy4.AddField("mean_A", float64(39.01))
+	ans23GroupBy4.AddField("mean_A", float64(39.01))
 
 	ans21GroupBy5.AddField("sum_C", float64(72.41))
 	ans23GroupBy5.AddField("sum_B", float64(60.96))

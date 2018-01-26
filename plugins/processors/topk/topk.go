@@ -41,7 +41,7 @@ func New() *TopK {
 	topk.Period = 10
 	topk.K = 10
 	topk.Fields = []string{"value"}
-	topk.Aggregation = "avg"
+	topk.Aggregation = "mean"
 	topk.GroupBy = []string{}
 	topk.GroupByMetricName = false
 	topk.AddGroupByTag = ""
@@ -89,8 +89,8 @@ var sampleConfig = `
   ## Over which fields are the top k are calculated
   # fields = ["value"]
 
-  ## What aggregation to use. Options: sum, avg, min, max
-  # aggregation = "avg"
+  ## What aggregation to use. Options: sum, mean, min, max
+  # aggregation = "mean"
 
   ## Instead of the top k largest metrics, return the bottom k lowest metrics
   # bottomk = false
@@ -381,10 +381,10 @@ func (t *TopK) getAggregationFunction(aggOperation string) func([]telegraf.Metri
 			return aggregator(ms, fields, max)
 		}
 
-	case "avg":
+	case "mean":
 		return func(ms []telegraf.Metric, fields []string) map[string]float64 {
-			avg := make(map[string]float64)
-			avgCounters := make(map[string]float64)
+			mean := make(map[string]float64)
+			meanCounters := make(map[string]float64)
 			// Compute the sums of the selected fields over all the measurements collected for this metric
 			for _, m := range ms {
 				for _, field := range fields {
@@ -397,25 +397,25 @@ func (t *TopK) getAggregationFunction(aggOperation string) func([]telegraf.Metri
 						panic(fmt.Sprintf("Cannot convert value '%s' from metric '%s' with tags '%s'",
 							m.Fields()[field], m.Name(), m.Tags()))
 					}
-					avg[field] += val
-					avgCounters[field] += 1
+					mean[field] += val
+					meanCounters[field] += 1
 				}
 			}
 			// Divide by the number of recorded measurements collected for every field
 			noMeasurementsFound := true // Canary to check if no field with values was found, so we can return nil
-			for k, _ := range avg {
-				if avgCounters[k] == 0 {
-					avg[k] = 0
+			for k, _ := range mean {
+				if meanCounters[k] == 0 {
+					mean[k] = 0
 					continue
 				}
-				avg[k] = avg[k] / avgCounters[k]
+				mean[k] = mean[k] / meanCounters[k]
 				noMeasurementsFound = noMeasurementsFound && false
 			}
 
 			if noMeasurementsFound {
 				return nil
 			}
-			return avg
+			return mean
 		}
 
 	default:
