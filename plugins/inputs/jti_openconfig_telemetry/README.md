@@ -8,36 +8,45 @@ This plugin reads Juniper Networks implementation of OpenConfig telemetry data f
 ```toml
 # Subscribe and receive OpenConfig Telemetry data using JTI
 [[inputs.jti_openconfig_telemetry]]
-  server = ["localhost:1883"]
+  ## Device address to collect telemetry from
+  server = "localhost:1883"
 
-  ## Frequency to get data in milliseconds
-  sampleFrequency = 2000
+  ## Authentication details. Username and password are must if device expects
+  ## authentication. Client ID must be unique when connecting from multiple instances
+  ## of telegraf to the same device
+  username = "user"
+  password = "pass"
+  client_id = "telegraf"
+
+  ## Frequency to get data
+  sample_frequency = "1000ms"
 
   ## Sensors to subscribe for
   ## A identifier for each sensor can be provided in path by separating with space
-  ## Else sensor path will be used as identifier. If a integer is provided before 
-  ## sensor path, it will be used as reporting rate for that sensor instead of global
-  ## reporting rate
+  ## Else sensor path will be used as identifier
+  ## When identifier is used, we can provide a list of space separated sensors.
+  ## A single subscription will be created with all these sensors and data will
+  ## be saved to measurement with this identifier name
   sensors = [
    "/interfaces/",
    "collection /components/ /lldp",
   ]
 
-  ## Login credentials to be used with LoginCheck to authenticate session. Will try 
-  ## to skip authentication if this is not provided
-  username = "user"
-  password = "pass"
-  clientId = "telegraf"
+  ## We allow specifying sensor group level reporting rate. To do this, specify the
+  ## reporting rate in Durati0on at the beginning of sensor paths / collection
+  ## name. For entries without reporting rate, we use configured sample frequency
+  sensors = [
+   "1000ms customReporting /interfaces /lldp",
+   "2000ms collection /components",
+   "/interfaces",
+  ]
 
   ## x509 Certificate to use with TLS connection. If it is not provided, an insecure
   ## channel will be opened with server
-  certFile = "/path/to/x509_cert_file"
-
-  ## Option to debug incoming protobuf encoded data
-  debug = true
+  ssl_cert = "/etc/telegraf/cert.pem"
 
   ## To treat all string values as tags, set this to true
-  strAsTags = false
+  str_as_tags = false
 ```
 
 ### Tags:
