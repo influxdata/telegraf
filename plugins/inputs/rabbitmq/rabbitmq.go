@@ -60,6 +60,12 @@ type OverviewResponse struct {
 	MessageStats *MessageStats `json:"message_stats"`
 	ObjectTotals *ObjectTotals `json:"object_totals"`
 	QueueTotals  *QueueTotals  `json:"queue_totals"`
+	Listeners    []Listeners   `json:"listeners"`
+}
+
+// Listeners ...
+type Listeners struct {
+	Protocol string `json:"protocol"`
 }
 
 // Details ...
@@ -134,6 +140,7 @@ type Node struct {
 	RunQueue      int64 `json:"run_queue"`
 	SocketsTotal  int64 `json:"sockets_total"`
 	SocketsUsed   int64 `json:"sockets_used"`
+	Running       bool  `json:"running"`
 }
 
 type Exchange struct {
@@ -186,7 +193,7 @@ var sampleConfig = `
   # queues = ["telegraf"]
 
   ## A list of exchanges to gather as the rabbitmq_exchange measurement. If not
-  ## specified, metrics for all exchanges are gathered. 
+  ## specified, metrics for all exchanges are gathered.
   # exchanges = ["telegraf"]
 `
 
@@ -275,9 +282,18 @@ func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
 		return
 	}
 
-	if overview.QueueTotals == nil || overview.ObjectTotals == nil || overview.MessageStats == nil {
+	if overview.QueueTotals == nil || overview.ObjectTotals == nil || overview.MessageStats == nil || overview.Listeners == nil {
 		acc.AddError(fmt.Errorf("Wrong answer from rabbitmq. Probably auth issue"))
 		return
+	}
+
+	var clustering_listeners, amqp_listeners int64 = 0, 0
+	for _, listener := range overview.Listeners {
+		if listener.Protocol == "clustering" {
+			clustering_listeners++
+		} else if listener.Protocol == "amqp" {
+			amqp_listeners++
+		}
 	}
 
 	tags := map[string]string{"url": r.URL}
@@ -297,6 +313,8 @@ func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
 		"messages_delivered":     overview.MessageStats.Deliver,
 		"messages_delivered_get": overview.MessageStats.DeliverGet,
 		"messages_published":     overview.MessageStats.Publish,
+		"clustering_listeners":   clustering_listeners,
+		"amqp_listeners":         amqp_listeners,
 	}
 	acc.AddFields("rabbitmq_overview", fields, tags)
 }
@@ -319,6 +337,11 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 		tags := map[string]string{"url": r.URL}
 		tags["node"] = node.Name
 
+		var running int64 = 0
+		if node.Running {
+			running = 1
+		}
+
 		fields := map[string]interface{}{
 			"disk_free":       node.DiskFree,
 			"disk_free_limit": node.DiskFreeLimit,
@@ -331,6 +354,7 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 			"run_queue":       node.RunQueue,
 			"sockets_total":   node.SocketsTotal,
 			"sockets_used":    node.SocketsUsed,
+			"running":         running,
 		}
 		acc.AddFields("rabbitmq_node", fields, tags, now)
 	}
