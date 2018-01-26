@@ -198,8 +198,6 @@ func extractData(r *telemetry.OpenConfigData, grpc_server string, strAsTags bool
 }
 
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
-	log.Print("D! Started JTI OpenConfig Telemetry plugin\n")
-
 	// Extract device name / IP
 	s := strings.Split(m.Server, ":")
 	grpc_server, grpc_port := s[0], s[1]
