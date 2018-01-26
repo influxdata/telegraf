@@ -260,10 +260,10 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 							m.AddField(aggField+"_"+field, ag.values[field])
 						}
 						if posField != "" {
-							m.AddField(posField+"_"+field, i+1) //+1 to it starts from 1
+							m.AddField(posField+"_"+field, i+1)
 						}
 						if groupTag != "" {
-							m.AddTag(groupTag, ag.groupbykey) //+1 to it starts from 1
+							m.AddTag(groupTag, ag.groupbykey)
 						}
 					}
 				}
