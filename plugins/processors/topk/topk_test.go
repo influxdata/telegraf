@@ -67,7 +67,7 @@ func TestSetup(t *testing.T) {
 // Smoke tests
 func TestTopkAggregatorsSmokeTests(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.Fields = []string{"a"}
 	topk.GroupBy = []string{"tag_name"}
@@ -85,7 +85,7 @@ func TestTopkAggregatorsSmokeTests(t *testing.T) {
 // AggregationField + Avg aggregator
 func TestTopkAvgAggregationField(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.Aggregation = "avg"
 	topk.AggregationField = "avgag"
@@ -98,7 +98,7 @@ func TestTopkAvgAggregationField(t *testing.T) {
 // AggregationField + Sum aggregator
 func TestTopkSumAggregationField(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.Aggregation = "sum"
 	topk.AggregationField = "sumag"
@@ -111,7 +111,7 @@ func TestTopkSumAggregationField(t *testing.T) {
 // AggregationField + Max aggregator
 func TestTopkMaxAggregationField(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.Aggregation = "max"
 	topk.AggregationField = "maxag"
@@ -124,7 +124,7 @@ func TestTopkMaxAggregationField(t *testing.T) {
 // AggregationField + Min aggregator
 func TestTopkMinAggregationField(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.Aggregation = "min"
 	topk.AggregationField = "minag"
@@ -137,7 +137,7 @@ func TestTopkMinAggregationField(t *testing.T) {
 // GroupBy
 func TestTopkGroupby1(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 3
 	topk.Aggregation = "sum"
@@ -147,7 +147,7 @@ func TestTopkGroupby1(t *testing.T) {
 }
 func TestTopkGroupby2(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 1
 	topk.Aggregation = "avg"
@@ -157,7 +157,7 @@ func TestTopkGroupby2(t *testing.T) {
 }
 func TestTopkGroupby3(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 1
 	topk.Aggregation = "min"
@@ -167,7 +167,7 @@ func TestTopkGroupby3(t *testing.T) {
 }
 func TestTopkGroupby4(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 1
 	topk.Aggregation = "min"
@@ -178,7 +178,7 @@ func TestTopkGroupby4(t *testing.T) {
 // GroupBy + Fields
 func TestTopkGroupbyFields1(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 2
 	topk.Aggregation = "avg"
@@ -190,7 +190,7 @@ func TestTopkGroupbyFields1(t *testing.T) {
 
 func TestTopkGroupbyFields2(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 2
 	topk.Aggregation = "sum"
@@ -203,7 +203,7 @@ func TestTopkGroupbyFields2(t *testing.T) {
 // GroupBy metric name
 func TestTopkGroupbyMetricName1(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 1
 	topk.Aggregation = "sum"
@@ -214,7 +214,7 @@ func TestTopkGroupbyMetricName1(t *testing.T) {
 
 func TestTopkGroupbyMetricName2(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 2
 	topk.Aggregation = "sum"
@@ -228,7 +228,7 @@ func TestTopkGroupbyMetricName2(t *testing.T) {
 // DropNoGroup
 func TestTopkDropNoGroupFalse(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 1
 	topk.Aggregation = "sum"
@@ -240,7 +240,7 @@ func TestTopkDropNoGroupFalse(t *testing.T) {
 // DropNonTop=false + PositionField
 func TestTopkDontDropBottom(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 3
 	topk.Aggregation = "sum"
@@ -254,7 +254,7 @@ func TestTopkDontDropBottom(t *testing.T) {
 // BottomK
 func TestTopkBottomk(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 3
 	topk.Aggregation = "sum"
@@ -266,7 +266,7 @@ func TestTopkBottomk(t *testing.T) {
 // GroupByKeyTag
 func TestTopkGroupByKeyTag(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 3
 	topk.Aggregation = "sum"
@@ -280,7 +280,7 @@ func TestTopkGroupByKeyTag(t *testing.T) {
 // No drops
 func TestTopkNodrops1(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 3
 	topk.Aggregation = "sum"
@@ -294,7 +294,7 @@ func TestTopkNodrops1(t *testing.T) {
 
 func TestTopkNodrops2(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 3
 	topk.Aggregation = "sum"
@@ -307,7 +307,7 @@ func TestTopkNodrops2(t *testing.T) {
 // Simple topk
 func TestTopkSimpleTopk(t *testing.T) {
 	var topk TopK
-	topk = NewTopK()
+	topk = *New()
 	topk.Period = 1
 	topk.K = 3
 	topk.Aggregation = "sum"

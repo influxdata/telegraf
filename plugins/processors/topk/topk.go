@@ -33,7 +33,7 @@ type TopK struct {
 	lastAggregation time.Time
 }
 
-func NewTopK() TopK {
+func New() *TopK {
 	// Create object
 	topk := TopK{}
 
@@ -54,11 +54,6 @@ func NewTopK() TopK {
 	// Initialize cache
 	topk.Reset()
 
-	return topk
-}
-
-func NewTopKProcessor() telegraf.Processor {
-	topk := NewTopK()
 	return &topk
 }
 
@@ -288,7 +283,7 @@ func convert(in interface{}) (float64, bool) {
 
 func init() {
 	processors.Add("topk", func() telegraf.Processor {
-		return NewTopKProcessor()
+		return New()
 	})
 }
 
