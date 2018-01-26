@@ -314,12 +314,6 @@ func convert(in interface{}) (float64, bool) {
 	}
 }
 
-func init() {
-	processors.Add("topk", func() telegraf.Processor {
-		return New()
-	})
-}
-
 // Here we have the function that generates the aggregation functions
 func (t *TopK) getAggregationFunction(aggOperation string) func([]telegraf.Metric, []string) map[string]float64 {
 
@@ -427,4 +421,10 @@ func (t *TopK) getAggregationFunction(aggOperation string) func([]telegraf.Metri
 	default:
 		panic(fmt.Sprintf("Unknown aggregation function '%s'", t.Aggregation))
 	}
+}
+
+func init() {
+	processors.Add("topk", func() telegraf.Processor {
+		return New()
+	})
 }
