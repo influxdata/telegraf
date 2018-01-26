@@ -16,6 +16,9 @@
   In environments where TCP connections are terminated the `max_lifetime`
   setting should be set less than the collection `interval` to prevent errors.
 
+### New Plugins
+- [nats](./plugins/inputs/nats/README.md) - Thanks to @mjs & @levex
+
 ### Features
 
 - [#3551](https://github.com/influxdata/telegraf/pull/3551): Add health status mapping from string to int in elasticsearch input.
@@ -32,6 +35,7 @@
 - [#3687](https://github.com/influxdata/telegraf/pull/3687): Add support for using globs in devices list of diskio input plugin.
 - [#2754](https://github.com/influxdata/telegraf/pull/2754): Allow running as console application on Windows.
 - [#3703](https://github.com/influxdata/telegraf/pull/3703): Add listener counts and node running status to rabbitmq input.
+- [#3674](https://github.com/influxdata/telegraf/pull/3674): Add NATS Monitoring Input Plugin.
 
 ### Bugfixes
 
