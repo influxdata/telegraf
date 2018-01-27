@@ -181,6 +181,14 @@ func (t *TopK) Description() string {
 }
 
 func (t *TopK) generateGroupByKey(m telegraf.Metric) string {
+	// Create the filter.Filter objects if they have not been created
+	if t.tagsGlobs == nil {
+		t.tagsGlobs, _ = filter.Compile(t.GroupBy)
+	}
+	if t.metricGlob == nil {
+		t.metricGlob, _ = filter.Compile([]string{m.Name()})
+	}
+
 	groupkey := ""
 
 	if t.SimpleTopk {
