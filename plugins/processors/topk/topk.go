@@ -190,10 +190,18 @@ func (t *TopK) generateGroupByKey(m telegraf.Metric) string {
 	if t.GroupByMetricName {
 		groupkey += m.Name() + "&"
 	}
-	for _, tag := range t.GroupBy {
-		tagValue, ok := m.Tags()[tag]
-		if ok {
+
+	// If no tags to aggregate over were give, we aggregate over all tags
+	if len(t.GroupBy) == 0 {
+		for tag, tagValue := range m.Tags() {
 			groupkey += tag + "=" + tagValue + "&"
+		}
+	} else {
+		for _, tag := range t.GroupBy {
+			tagValue, ok := m.Tags()[tag]
+			if ok {
+				groupkey += tag + "=" + tagValue + "&"
+			}
 		}
 	}
 
