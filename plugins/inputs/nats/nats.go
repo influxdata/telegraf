@@ -25,7 +25,7 @@ type Nats struct {
 
 var sampleConfig = `
   ## The address of the monitoring endpoint of the NATS server
-  server = "http://localhost:1337"
+  server = "http://localhost:8222"
 
   ## Maximum time to receive response
   # response_timeout = "5s"
