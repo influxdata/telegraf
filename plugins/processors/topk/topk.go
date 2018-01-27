@@ -24,7 +24,7 @@ type TopK struct {
 	DropNoGroup       bool   `toml:"drop_no_group"`
 	DropNonTop        bool   `toml:"drop_non_top"`
 	AddGroupByTag     string `toml:"add_groupby_tag"`
-	PositionField     string `toml:"position_field"`
+	RankField         string `toml:"rank_field"`
 	AggregationField  string `toml:"aggregation_field"`
 
 	cache           map[string][]telegraf.Metric
@@ -48,7 +48,7 @@ func New() *TopK {
 	topk.SimpleTopk = false
 	topk.DropNoGroup = true
 	topk.DropNonTop = true
-	topk.PositionField = ""
+	topk.RankField = ""
 	topk.AggregationField = ""
 
 	// Initialize cache
@@ -117,7 +117,7 @@ var sampleConfig = `
   ## field will contain the ranking of the group that the metric
   ## belonged to. When aggregating over several fields, several fields will
   ## be added (one for each field over which the aggregation was calculated)
-  # position_field = ""        
+  # rank_field = ""        
 
   ## This setting provies a way know the what values the plugin is generating
   ## when aggregating the fields. If set to a value different than "", then a
@@ -242,7 +242,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		// Get the top K metrics for each field and add them to the return value
 		addedKeys := make(map[string]bool)
 		aggField := t.AggregationField
-		posField := t.PositionField
+		rankField := t.RankField
 		groupTag := t.AddGroupByTag
 		for _, field := range t.Fields {
 
@@ -253,13 +253,13 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			for i, ag := range aggregations[0:min(t.K, len(aggregations))] {
 
 				// Check whether of not we need to add fields of tags to the selected metrics
-				if aggField != "" || posField != "" || groupTag != "" {
+				if aggField != "" || rankField != "" || groupTag != "" {
 					for _, m := range t.cache[ag.groupbykey] {
 						if aggField != "" && m.HasField(field) {
 							m.AddField(aggField+"_"+field, ag.values[field])
 						}
-						if posField != "" {
-							m.AddField(posField+"_"+field, i+1)
+						if rankField != "" {
+							m.AddField(rankField+"_"+field, i+1)
 						}
 						if groupTag != "" {
 							m.AddTag(groupTag, ag.groupbykey)

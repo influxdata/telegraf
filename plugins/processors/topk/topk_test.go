@@ -237,7 +237,7 @@ func TestTopkDropNoGroupFalse(t *testing.T) {
 	runAndCompare(&topk, deepCopy(MetricsSet2), DropNoGroupFalseAns, "DropNoGroup False test", t)
 }
 
-// DropNonTop=false + PositionField
+// DropNonTop=false + RankField
 func TestTopkDontDropBottom(t *testing.T) {
 	var topk TopK
 	topk = *New()
@@ -247,7 +247,7 @@ func TestTopkDontDropBottom(t *testing.T) {
 	topk.AggregationField = "sumag"
 	topk.GroupBy = []string{"tag1", "tag3"}
 	topk.DropNonTop = false
-	topk.PositionField = "aggpos"
+	topk.RankField = "aggpos"
 	runAndCompare(&topk, deepCopy(MetricsSet2), DontDropBottomAns, "DontDropBottom test", t)
 }
 
@@ -285,7 +285,7 @@ func TestTopkNodrops1(t *testing.T) {
 	topk.K = 3
 	topk.Aggregation = "sum"
 	topk.AggregationField = "sumag"
-	topk.PositionField = "aggpos"
+	topk.RankField = "aggpos"
 	topk.GroupBy = []string{"tag1", "tag3"}
 	topk.DropNonTop = false
 	topk.DropNoGroup = false
