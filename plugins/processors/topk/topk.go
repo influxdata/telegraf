@@ -3,13 +3,13 @@ package topk
 import (
 	"fmt"
 	"math"
-	"regexp"
 	"sort"
 	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"github.com/influxdata/telegraf/filter"
 )
 
 type TopK struct {
@@ -28,8 +28,8 @@ type TopK struct {
 	AggregationField  string `toml:"aggregation_field"`
 
 	cache           map[string][]telegraf.Metric
-	metricRegex     *regexp.Regexp
-	tagsRegexes     map[string]*regexp.Regexp
+	metricGlob      filter.Filter
+	tagsGlobs       filter.Filter
 	lastAggregation time.Time
 }
 
