@@ -127,6 +127,7 @@ func TestGather(t *testing.T) {
 	}
 
 	err = acc.GatherError(i.Gather)
+	require.NoError(t, err)
 
 	var testsWithoutServer = []struct {
 		fields map[string]interface{}
@@ -429,6 +430,7 @@ func TestGatherV2(t *testing.T) {
 	}
 
 	err = acc.GatherError(i.Gather)
+	require.NoError(t, err)
 
 	var testsWithoutServer = []struct {
 		fields map[string]interface{}
@@ -545,6 +547,7 @@ func TestHelperProcessV2(t *testing.T) {
 		return
 	}
 
+	// Curated list of use cases instead of full dumps
 	mockData := `SEL              | 72h | ns  |  7.1 | No Reading
 Intrusion        | 73h | ok  |  7.1 |
 Fan1             | 30h | ok  |  7.1 | 5040 RPM

@@ -18,6 +18,7 @@ var (
 	execCommand = exec.Command // execCommand is used to mock commands in tests.
 )
 
+// Ipmi stores the configuration values for the ipmi_sensor input plugin
 type Ipmi struct {
 	Path          string
 	Privilege     string
@@ -53,14 +54,17 @@ var sampleConfig = `
   schemaVersion = 2
 `
 
+// SampleConfig returns the documentation about the sample configuration
 func (m *Ipmi) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description returns a basic description for the plugin functions
 func (m *Ipmi) Description() string {
 	return "Read metrics from the bare metal servers via IPMI"
 }
 
+// Gather is the main execution function for the plugin
 func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
 	if len(m.Path) == 0 {
 		return fmt.Errorf("ipmitool not found: verify that ipmitool is installed and that ipmitool is in your PATH")
@@ -108,9 +112,8 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 	}
 	if m.SchemaVersion == 2 {
 		return parseV2(acc, hostname, string(out))
-	} else {
-		return parseV1(acc, hostname, string(out))
 	}
+	return parseV1(acc, hostname, string(out))
 }
 
 func parseV1(acc telegraf.Accumulator, hostname string, cmdOut string) error {
@@ -118,13 +121,13 @@ func parseV1(acc telegraf.Accumulator, hostname string, cmdOut string) error {
 	// Planar VBAT      | 3.05 Volts        | ok
 	lines := strings.Split(cmdOut, "\n")
 	for i := 0; i < len(lines); i++ {
-		ipmi_fields := strings.Split(lines[i], "|")
-		if len(ipmi_fields) != 3 {
+		ipmiFields := strings.Split(lines[i], "|")
+		if len(ipmiFields) != 3 {
 			continue
 		}
 
 		tags := map[string]string{
-			"name": transform(ipmi_fields[0]),
+			"name": transform(ipmiFields[0]),
 		}
 
 		// tag the server is we have one
@@ -133,18 +136,18 @@ func parseV1(acc telegraf.Accumulator, hostname string, cmdOut string) error {
 		}
 
 		fields := make(map[string]interface{})
-		if strings.EqualFold("ok", trim(ipmi_fields[2])) {
+		if strings.EqualFold("ok", trim(ipmiFields[2])) {
 			fields["status"] = 1
 		} else {
 			fields["status"] = 0
 		}
 
-		val1 := trim(ipmi_fields[1])
+		val1 := trim(ipmiFields[1])
 
 		if strings.Index(val1, " ") > 0 {
 			// split middle column into value and unit
 			valunit := strings.SplitN(val1, " ", 2)
-			fields["value"] = Atofloat(valunit[0])
+			fields["value"] = aToFloat(valunit[0])
 			if len(valunit) > 1 {
 				tags["unit"] = transform(valunit[1])
 			}
@@ -165,29 +168,29 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut string) error {
 	// Drive 0          | A0h | ok  |  7.1 | Drive Present
 	lines := strings.Split(cmdOut, "\n")
 	for i := 0; i < len(lines); i++ {
-		ipmi_fields := strings.Split(lines[i], "|")
-		if len(ipmi_fields) != 5 {
+		ipmiFields := strings.Split(lines[i], "|")
+		if len(ipmiFields) != 5 {
 			continue
 		}
 
 		tags := map[string]string{
-			"name": transform(ipmi_fields[0]),
+			"name": transform(ipmiFields[0]),
 		}
 
 		// tag the server is we have one
 		if hostname != "" {
 			tags["server"] = hostname
 		}
-		tags["entity_id"] = transform(ipmi_fields[3])
-		tags["status_code"] = trim(ipmi_fields[2])
+		tags["entity_id"] = transform(ipmiFields[3])
+		tags["status_code"] = trim(ipmiFields[2])
 
 		fields := make(map[string]interface{})
-		result := ExtractFieldsFromRegex(`^(?P<analogValue>[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`, trim(ipmi_fields[4]))
+		result := extractFieldsFromRegex(`^(?P<analogValue>[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`, trim(ipmiFields[4]))
 		// This is an analog value with a unit
 		if result["analogValue"] != "" && len(result["analogUnit"]) >= 1 {
-			fields["value"] = Atofloat(result["analogValue"])
+			fields["value"] = aToFloat(result["analogValue"])
 			// Some implementations add an extra status to their analog units
-			unitResults := ExtractFieldsFromRegex(`^(?P<realAnalogUnit>[^,]+)(?:,\s*(?P<statusDesc>.*))?`, result["analogUnit"])
+			unitResults := extractFieldsFromRegex(`^(?P<realAnalogUnit>[^,]+)(?:,\s*(?P<statusDesc>.*))?`, result["analogUnit"])
 			tags["unit"] = transform(unitResults["realAnalogUnit"])
 			if unitResults["statusDesc"] != "" {
 				tags["status_desc"] = transform(unitResults["statusDesc"])
@@ -199,7 +202,7 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut string) error {
 			if result["status"] != "" {
 				tags["status_desc"] = transform(result["status"])
 			} else {
-				tags["status_desc"] = transform(ipmi_fields[2])
+				tags["status_desc"] = transform(ipmiFields[2])
 			}
 		}
 
@@ -209,7 +212,8 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut string) error {
 	return nil
 }
 
-func ExtractFieldsFromRegex(regex string, input string) map[string]string {
+// extractFieldsFromRegex consumes a regex with named capture groups and returns a kvp map of strings with the results
+func extractFieldsFromRegex(regex string, input string) map[string]string {
 	re := regexp.MustCompile(regex)
 	submatches := re.FindStringSubmatch(input)
 	results := make(map[string]string)
@@ -219,13 +223,13 @@ func ExtractFieldsFromRegex(regex string, input string) map[string]string {
 	return results
 }
 
-func Atofloat(val string) float64 {
+// aToFloat converts string representations of numbers to float64 values
+func aToFloat(val string) float64 {
 	f, err := strconv.ParseFloat(val, 64)
 	if err != nil {
 		return 0.0
-	} else {
-		return f
 	}
+	return f
 }
 
 func trim(s string) string {
