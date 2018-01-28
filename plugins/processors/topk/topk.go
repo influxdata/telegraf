@@ -28,7 +28,6 @@ type TopK struct {
 	AggregationField  string `toml:"aggregation_field"`
 
 	cache           map[string][]telegraf.Metric
-	metricGlob      filter.Filter
 	tagsGlobs       filter.Filter
 	lastAggregation time.Time
 }
@@ -184,9 +183,6 @@ func (t *TopK) generateGroupByKey(m telegraf.Metric) string {
 	// Create the filter.Filter objects if they have not been created
 	if t.tagsGlobs == nil {
 		t.tagsGlobs, _ = filter.Compile(t.GroupBy)
-	}
-	if t.metricGlob == nil {
-		t.metricGlob, _ = filter.Compile([]string{m.Name()})
 	}
 
 	groupkey := ""
