@@ -121,13 +121,13 @@ func parseV1(acc telegraf.Accumulator, hostname string, cmdOut string) error {
 	// Planar VBAT      | 3.05 Volts        | ok
 	lines := strings.Split(cmdOut, "\n")
 	for i := 0; i < len(lines); i++ {
-		ipmiFields := strings.Split(lines[i], "|")
+		ipmiFields := extractFieldsFromRegex(`^(?P<name>[^|]*)\|(?P<description>[^|]*)\|(?P<status_code>.*)`, lines[i])
 		if len(ipmiFields) != 3 {
 			continue
 		}
 
 		tags := map[string]string{
-			"name": transform(ipmiFields[0]),
+			"name": transform(ipmiFields["name"]),
 		}
 
 		// tag the server is we have one
@@ -136,17 +136,15 @@ func parseV1(acc telegraf.Accumulator, hostname string, cmdOut string) error {
 		}
 
 		fields := make(map[string]interface{})
-		if strings.EqualFold("ok", trim(ipmiFields[2])) {
+		if strings.EqualFold("ok", trim(ipmiFields["status_code"])) {
 			fields["status"] = 1
 		} else {
 			fields["status"] = 0
 		}
 
-		val1 := trim(ipmiFields[1])
-
-		if strings.Index(val1, " ") > 0 {
+		if strings.Index(ipmiFields["description"], " ") > 0 {
 			// split middle column into value and unit
-			valunit := strings.SplitN(val1, " ", 2)
+			valunit := strings.SplitN(ipmiFields["description"], " ", 2)
 			fields["value"] = aToFloat(valunit[0])
 			if len(valunit) > 1 {
 				tags["unit"] = transform(valunit[1])
@@ -168,29 +166,28 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut string) error {
 	// Drive 0          | A0h | ok  |  7.1 | Drive Present
 	lines := strings.Split(cmdOut, "\n")
 	for i := 0; i < len(lines); i++ {
-		ipmiFields := strings.Split(lines[i], "|")
-		if len(ipmiFields) != 5 {
+		ipmiFields := extractFieldsFromRegex(`^(?P<name>[^|]*)\|[^|]+\|(?P<status_code>[^|]*)\|(?P<entity_id>[^|]*)\|(?:(?P<description>[^|]+))?`, lines[i])
+		if len(ipmiFields) < 3 || len(ipmiFields) > 4 {
 			continue
 		}
 
 		tags := map[string]string{
-			"name": transform(ipmiFields[0]),
+			"name": transform(ipmiFields["name"]),
 		}
 
 		// tag the server is we have one
 		if hostname != "" {
 			tags["server"] = hostname
 		}
-		tags["entity_id"] = transform(ipmiFields[3])
-		tags["status_code"] = trim(ipmiFields[2])
-
+		tags["entity_id"] = transform(ipmiFields["entity_id"])
+		tags["status_code"] = trim(ipmiFields["status_code"])
 		fields := make(map[string]interface{})
-		result := extractFieldsFromRegex(`^(?P<analogValue>[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`, trim(ipmiFields[4]))
+		descriptionResults := extractFieldsFromRegex(`^(?P<analogValue>[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`, trim(ipmiFields["description"]))
 		// This is an analog value with a unit
-		if result["analogValue"] != "" && len(result["analogUnit"]) >= 1 {
-			fields["value"] = aToFloat(result["analogValue"])
+		if descriptionResults["analogValue"] != "" && len(descriptionResults["analogUnit"]) >= 1 {
+			fields["value"] = aToFloat(descriptionResults["analogValue"])
 			// Some implementations add an extra status to their analog units
-			unitResults := extractFieldsFromRegex(`^(?P<realAnalogUnit>[^,]+)(?:,\s*(?P<statusDesc>.*))?`, result["analogUnit"])
+			unitResults := extractFieldsFromRegex(`^(?P<realAnalogUnit>[^,]+)(?:,\s*(?P<statusDesc>.*))?`, descriptionResults["analogUnit"])
 			tags["unit"] = transform(unitResults["realAnalogUnit"])
 			if unitResults["statusDesc"] != "" {
 				tags["status_desc"] = transform(unitResults["statusDesc"])
@@ -199,10 +196,10 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut string) error {
 			// This is a status value
 			fields["value"] = 0.0
 			// Extended status descriptions aren't required, in which case for consistency re-use the status code
-			if result["status"] != "" {
-				tags["status_desc"] = transform(result["status"])
+			if descriptionResults["status"] != "" {
+				tags["status_desc"] = transform(descriptionResults["status"])
 			} else {
-				tags["status_desc"] = transform(ipmiFields[2])
+				tags["status_desc"] = transform(ipmiFields["status_code"])
 			}
 		}
 
@@ -218,7 +215,9 @@ func extractFieldsFromRegex(regex string, input string) map[string]string {
 	submatches := re.FindStringSubmatch(input)
 	results := make(map[string]string)
 	for i, name := range re.SubexpNames() {
-		results[name] = submatches[i]
+		if name != input && name != "" && input != "" {
+			results[name] = trim(submatches[i])
+		}
 	}
 	return results
 }
