@@ -41,8 +41,8 @@ func New() *TopK {
 	topk.K = 10
 	topk.Fields = []string{"value"}
 	topk.Aggregation = "mean"
-	topk.GroupBy = []string{}
-	topk.GroupByMetricName = false
+	topk.GroupBy = []string{"*"}
+	topk.GroupByMetricName = true
 	topk.AddGroupByTag = ""
 	topk.SimpleTopk = false
 	topk.DropNoGroup = true
