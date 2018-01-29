@@ -73,7 +73,8 @@ func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Serv
 
 		// Unbound control requires an IP address, and we want to be nice to the user
 		resolver := net.Resolver{}
-		ctx, _ := context.WithTimeout(context.Background(), Timeout.Duration)
+		ctx, lookUpCancel := context.WithTimeout(context.Background(), Timeout.Duration)
+		defer lookUpCancel()
 		serverIps, err := resolver.LookupIPAddr(ctx, host)
 		if err != nil {
 			return nil, fmt.Errorf("error looking up ip for server: %s: %s", Server, err)
