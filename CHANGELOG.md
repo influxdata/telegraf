@@ -17,6 +17,7 @@
   setting should be set less than the collection `interval` to prevent errors.
 
 ### New Plugins
+
 - [nats](./plugins/inputs/nats/README.md) - Thanks to @mjs & @levex
 
 ### Features
@@ -36,6 +37,7 @@
 - [#2754](https://github.com/influxdata/telegraf/pull/2754): Allow running as console application on Windows.
 - [#3703](https://github.com/influxdata/telegraf/pull/3703): Add listener counts and node running status to rabbitmq input.
 - [#3674](https://github.com/influxdata/telegraf/pull/3674): Add NATS Monitoring Input Plugin.
+- [#3702](https://github.com/influxdata/telegraf/pull/3702): Add ability to select which queues will be gathered in rabbitmq input.
 
 ### Bugfixes
 
