@@ -67,9 +67,9 @@ var sampleConfig = `
   ## the selected fields of these groups of metrics and sorts the groups based
   ## these aggregations
 
-  ## Over which tags should the aggregation be done. If non are specified, no
-  ## aggregation will be done, resulting in all metrics being dropped
-  # group_by = []
+  ## Over which tags should the aggregation be done. If set to n empty list is
+  ## no aggregation over tags is done
+  # group_by = ['*']
 
   ## Wheter or not to also group by metric name
   # group_by_metric_name = false
