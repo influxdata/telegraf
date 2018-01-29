@@ -3,6 +3,7 @@ package unbound
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"net"
 	"os/exec"
@@ -45,9 +46,9 @@ var sampleConfig = `
   ## Use the builtin fielddrop/fieldpass telegraf filters in order to keep/remove specific fields
   fieldpass = ["total_*", "num_*","time_up", "mem_*"]
   
-  ## IP of server to connect to, read from unbound conf default, optionally '@port'
+  ## IP of server to connect to, read from unbound conf default, optionally ':port'
   ## Will lookup IP if given a hostname
-  server = "127.0.0.1@8953"
+  server = "127.0.0.1:8953"
 `
 
 func (s *Unbound) Description() string {
@@ -64,12 +65,28 @@ func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Serv
 	cmdArgs := []string{"stats_noreset"}
 
 	if Server != "" {
+		host, port, err := net.SplitHostPort(Server)
+		if err != nil { // No port was specified
+			host = Server
+			port = ""
+		}
+
 		// Unbound control requires an IP address, and we want to be nice to the user
-		serverIp, err := net.LookupIP(Server)
+		resolver := net.Resolver{}
+		ctx, _ := context.WithTimeout(context.Background(), Timeout.Duration)
+		serverIps, err := resolver.LookupIPAddr(ctx, host)
 		if err != nil {
 			return nil, fmt.Errorf("error looking up ip for server: %s: %s", Server, err)
 		}
-		cmdArgs = append(cmdArgs, "-s", serverIp[0].String())
+		if len(serverIps) == 0 {
+			return nil, fmt.Errorf("error no ip for server: %s: %s", Server, err)
+		}
+		server := serverIps[0].IP.String()
+		if port != "" {
+			server = server + "@" + port
+		}
+
+		cmdArgs = append(cmdArgs, "-s", server)
 	}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
