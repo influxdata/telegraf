@@ -20,8 +20,9 @@ If only the very top k metrics are needed, regardless of grouping, the simple_to
   ## the selected fields of these groups of metrics and sorts the groups based
   ## these aggregations
 
-  ## Over which tags should the aggregation be done. If set to n empty list is
-  ## no aggregation over tags is done
+  ## Over which tags should the aggregation be done. Globs can be specified, in
+  ## which case any tag matching the glob will aggregated over. If set to an
+  ## empty list is no aggregation over tags is done
   # group_by = ['*']
 
   ## Wheter or not to also group by metric name

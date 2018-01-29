@@ -1,9 +1,9 @@
-Use filters to allow glob matching of tags in group by
 Clarify tests
 Allow selecting over which fields aggregation and rank info is added, and let the user select the suffix
-Make the settings that add tags and field, add suffixes instead of prefixes
+Make the settings that add tags and field add suffixes instead of prefixes
 Research sort.SliceStable
 Don't panic
 Handle error when compiling tags globs
 
 DONE
+Use filters to allow glob matching of tags in group by
