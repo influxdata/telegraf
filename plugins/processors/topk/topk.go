@@ -181,12 +181,12 @@ func (t *TopK) Description() string {
 
 func (t *TopK) generateGroupByKey(m telegraf.Metric) string {
 	// Create the filter.Filter objects if they have not been created
-	if t.tagsGlobs == nil {
-		// If no tags to aggregate over were give, we aggregate over all tags
-		if len(t.GroupBy) == 0 {
-			t.GroupBy = []string{"*"}
+	if t.tagsGlobs == nil && len(t.GroupBy) > 0 {
+		var err error
+		t.tagsGlobs, err = filter.Compile(t.GroupBy)
+		if err != nil {
+			panic(fmt.Sprintf("Could not complile tags globs: %s", t.GroupBy))
 		}
-		t.tagsGlobs, _ = filter.Compile(t.GroupBy)
 	}
 
 	groupkey := ""
@@ -199,9 +199,11 @@ func (t *TopK) generateGroupByKey(m telegraf.Metric) string {
 		groupkey += m.Name() + "&"
 	}
 
-	for tag, value := range m.Tags() {
-		if t.tagsGlobs.Match(tag) {
-			groupkey += tag + "=" + value + "&"
+	if len(t.GroupBy) > 0 {
+		for tag, value := range m.Tags() {
+			if t.tagsGlobs.Match(tag) {
+				groupkey += tag + "=" + value + "&"
+			}
 		}
 	}
 

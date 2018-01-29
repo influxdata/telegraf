@@ -4,5 +4,6 @@ Allow selecting over which fields aggregation and rank info is added, and let th
 Make the settings that add tags and field, add suffixes instead of prefixes
 Research sort.SliceStable
 Don't panic
+Handle error when compiling tags globs
 
 DONE
