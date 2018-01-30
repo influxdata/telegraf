@@ -9,20 +9,20 @@ jobs:
     <<: *defaults
     steps:
       - 'checkout'
-      - 'setup_remote_docker'
-      - run: 'make ci-unit'
-  integration:
+      - run: 'make ci-test'
+  release:
     <<: *defaults
     steps:
       - 'checkout'
-      - setup_remote_docker:
-          reuseable: true
-      - run: 'make ci-integration'
+      - run: './scripts/release.sh'
+      - store_artifacts:
+          path: './artifacts'
+          destination: '.'
 workflows:
   version: 2
   test_and_release:
     jobs:
       - 'build'
-      - integration:
+      - 'release':
           requires:
             - 'build'
