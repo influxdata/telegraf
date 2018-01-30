@@ -11,7 +11,6 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
   listen = ":9273"
 
   # Use TLS
-  tls = true
   tls_cert = "/etc/ssl/telegraf.crt"
   tls_key = "/etc/ssl/telegraf.key"
 

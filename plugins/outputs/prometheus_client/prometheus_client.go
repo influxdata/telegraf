@@ -54,7 +54,6 @@ type MetricFamily struct {
 
 type PrometheusClient struct {
 	Listen             string
-	TLS                bool              `toml:"tls"`
 	TLSCert            string            `toml:"tls_cert"`
 	TLSKey             string            `toml:"tls_key"`
 	BasicAuth          bool              `toml:"basic_auth"`
@@ -78,9 +77,8 @@ var sampleConfig = `
   # listen = ":9273"
 
   ## Use TLS
-  # tls = true
-  tls_cert = "/etc/ssl/telegraf.crt"
-  tls_key = "/etc/ssl/telegraf.key"
+  #tls_cert = "/etc/ssl/telegraf.crt"
+  #tls_key = "/etc/ssl/telegraf.key"
 
   ## Use http basic authentication
   # basic_auth = true
@@ -94,6 +92,20 @@ var sampleConfig = `
   ## If unset, both are enabled.
   collectors_exclude = ["gocollector", "process"]
 `
+
+func (p *PrometheusClient) getTLSConfig() *tls.Config {
+	if p.TLSCert != "" && p.TLSKey != "" {
+		return &tls.Config{
+			MinVersion:               tls.VersionTLS12,
+			PreferServerCipherSuites: true,
+			CipherSuites: []uint16{
+				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			},
+		}
+	}
+
+	return nil
+}
 
 func (p *PrometheusClient) basicAuth(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -151,42 +163,24 @@ func (p *PrometheusClient) Start() error {
 	mux.Handle(p.Path, p.basicAuth(promhttp.HandlerFor(
 		registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})))
 
-	if p.TLS {
-		p.server = &http.Server{
-			Addr:    p.Listen,
-			Handler: mux,
-			TLSConfig: &tls.Config{
-				MinVersion:               tls.VersionTLS12,
-				PreferServerCipherSuites: true,
-				CipherSuites: []uint16{
-					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				},
-			},
-		}
-
-		go func() {
-			if err := p.server.ListenAndServeTLS(p.TLSCert, p.TLSKey); err != nil {
-				if err != http.ErrServerClosed {
-					log.Printf("E! Error creating prometheus tls secured metric endpoint, err: %s\n",
-						err.Error())
-				}
-			}
-		}()
-	} else {
-		p.server = &http.Server{
-			Addr:    p.Listen,
-			Handler: mux,
-		}
-
-		go func() {
-			if err := p.server.ListenAndServe(); err != nil {
-				if err != http.ErrServerClosed {
-					log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
-						err.Error())
-				}
-			}
-		}()
+	p.server = &http.Server{
+		Addr:      p.Listen,
+		Handler:   mux,
+		TLSConfig: p.getTLSConfig(),
 	}
+
+	go func() {
+		var err error
+		if p.server.TLSConfig != nil {
+			err = p.server.ListenAndServeTLS(p.TLSCert, p.TLSKey)
+		} else {
+			err = p.server.ListenAndServe()
+		}
+		if err != nil && err != http.ErrServerClosed {
+			log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
+				err.Error())
+		}
+	}()
 
 	return nil
 }
