@@ -20,11 +20,23 @@ func NewNativeFinder() (PIDFinder, error) {
 
 //Uid will return all pids for the given user
 func (pg *NativeFinder) Uid(user string) ([]PID, error) {
-	pids, err := getPidsByUser(user)
+	var dst []PID
+	procs, err := process.Processes()
 	if err != nil {
-		return pids, err
+		return dst, err
 	}
-	return pids, nil
+	for _, p := range procs {
+		username, err := p.Username()
+		if err != nil {
+			//skip, this can happen if we don't have permissions or
+			//the pid no longer exists
+			continue
+		}
+		if username == user {
+			dst = append(dst, PID(p.Pid))
+		}
+	}
+	return dst, nil
 }
 
 //PidFile returns the pid from the pid file given.
@@ -42,25 +54,4 @@ func (pg *NativeFinder) PidFile(path string) ([]PID, error) {
 	pids = append(pids, PID(pid))
 	return pids, nil
 
-}
-
-//getPidsByUser ...
-func getPidsByUser(username string) ([]PID, error) {
-	var dst []PID
-	procs, err := process.Processes()
-	if err != nil {
-		return dst, err
-	}
-	for _, p := range procs {
-		user, err := p.Username()
-		if err != nil {
-			//skip, this can happen if we don't have permissions or
-			//the pid no longer exists
-			continue
-		}
-		if user == username {
-			dst = append(dst, PID(p.Pid))
-		}
-	}
-	return dst, nil
 }

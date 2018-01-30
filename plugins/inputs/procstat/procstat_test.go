@@ -352,7 +352,7 @@ func TestGather_systemdUnitPIDs(t *testing.T) {
 func TestGather_cgroupPIDs(t *testing.T) {
 	//no cgroups in windows
 	if runtime.GOOS == "windows" {
-		t.SkipNow()
+		t.Skip("no cgroups in windows")
 	}
 	td, err := ioutil.TempDir("", "")
 	require.NoError(t, err)
