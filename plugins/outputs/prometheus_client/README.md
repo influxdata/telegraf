@@ -15,9 +15,8 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
   tls_key = "/etc/ssl/telegraf.key"
 
   # Use http basic authentication
-  basic_auth = true
-  username = "Foo"
-  password = "Bar"
+  basic_username = "Foo"
+  basic_password = "Bar"
 
   # Path to publish the metrics on, defaults to /metrics
   path = "/metrics"   

@@ -2,6 +2,7 @@ package prometheus_client
 
 import (
 	"context"
+	"crypto/subtle"
 	"crypto/tls"
 	"fmt"
 	"log"
@@ -56,9 +57,8 @@ type PrometheusClient struct {
 	Listen             string
 	TLSCert            string            `toml:"tls_cert"`
 	TLSKey             string            `toml:"tls_key"`
-	BasicAuth          bool              `toml:"basic_auth"`
-	Username           string            `toml:"username"`
-	Password           string            `toml:"password"`
+	BasicUsername      string            `toml:"basic_username"`
+	BasicPassword      string            `toml:"basic_password"`
 	ExpirationInterval internal.Duration `toml:"expiration_interval"`
 	Path               string            `toml:"path"`
 	CollectorsExclude  []string          `toml:"collectors_exclude"`
@@ -81,9 +81,8 @@ var sampleConfig = `
   #tls_key = "/etc/ssl/telegraf.key"
 
   ## Use http basic authentication
-  # basic_auth = true
-  username = "Foo"
-  password = "Bar"
+  #basic_username = "Foo"
+  #basic_password = "Bar"
 
   ## Interval to expire metrics and not deliver to prometheus, 0 == no expiration
   # expiration_interval = "60s"
@@ -109,16 +108,13 @@ func (p *PrometheusClient) getTLSConfig() *tls.Config {
 
 func (p *PrometheusClient) basicAuth(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if p.BasicAuth {
+		if p.BasicUsername != "" && p.BasicPassword != "" {
 			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
 
 			username, password, ok := r.BasicAuth()
-			if !ok {
-				http.Error(w, "Not authorized", 401)
-				return
-			}
-
-			if username != p.Username || password != p.Password {
+			if !ok ||
+				subtle.ConstantTimeCompare([]byte(username), []byte(p.BasicUsername)) != 1 ||
+				subtle.ConstantTimeCompare([]byte(password), []byte(p.BasicPassword)) != 1 {
 				http.Error(w, "Not authorized", 401)
 				return
 			}
