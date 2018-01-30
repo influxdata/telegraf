@@ -41,7 +41,7 @@ func (ipset *Ipset) SampleConfig() string {
   include_unmatched_sets = false
   ## Adjust your sudo settings appropriately if using this option ("sudo ipset save")
   use_sudo = false
-  ## The default timeout of 1s for ss execution can be overridden here:
+  ## The default timeout of 1s for ipset execution can be overridden here:
   # timeout = "1s"
 `
 }

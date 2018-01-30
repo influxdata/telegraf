@@ -42,7 +42,7 @@ telegraf ALL=(root) NOPASSWD: /sbin/ipset save
     ## You can avoid using sudo or root, by setting appropriate privileges for
     ## the telegraf.service systemd service.
     use_sudo = false
-    ## The default timeout of 1s for ss execution can be overridden here:
+    ## The default timeout of 1s for ipset execution can be overridden here:
     # timeout = "1s"
 
 ```
