@@ -55,7 +55,7 @@ type MetricFamily struct {
 type PrometheusClient struct {
 	Listen             string
 	TLS                bool              `toml:"tls"`
-	TLSCrt             string            `toml:"tls_crt"`
+	TLSCert            string            `toml:"tls_cert"`
 	TLSKey             string            `toml:"tls_key"`
 	BasicAuth          bool              `toml:"basic_auth"`
 	Username           string            `toml:"username"`
@@ -79,7 +79,7 @@ var sampleConfig = `
 
   ## Use TLS
   # tls = true
-  tls_crt = "/etc/ssl/telegraf.crt"
+  tls_cert = "/etc/ssl/telegraf.crt"
   tls_key = "/etc/ssl/telegraf.key"
 
   ## Use http basic authentication
@@ -165,7 +165,7 @@ func (p *PrometheusClient) Start() error {
 		}
 
 		go func() {
-			if err := p.server.ListenAndServeTLS(p.TLSCrt, p.TLSKey); err != nil {
+			if err := p.server.ListenAndServeTLS(p.TLSCert, p.TLSKey); err != nil {
 				if err != http.ErrServerClosed {
 					log.Printf("E! Error creating prometheus tls secured metric endpoint, err: %s\n",
 						err.Error())

@@ -12,7 +12,7 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
 
   # Use TLS
   tls = true
-  tls_crt = "/etc/ssl/telegraf.crt"
+  tls_cert = "/etc/ssl/telegraf.crt"
   tls_key = "/etc/ssl/telegraf.key"
 
   # Use http basic authentication
