@@ -1,5 +1,6 @@
 collectd.org 2ce144541b8903101fb8f1483cc0497a68798122
 github.com/aerospike/aerospike-client-go 95e1ad7791bdbca44707fedbb29be42024900d9c
+github.com/rancherio/go-rancher 52e2f489534007ae843065468c5a1920d542afa4
 github.com/amir/raidman c74861fe6a7bb8ede0a010ce4485bdbb4fc4c985
 github.com/apache/thrift 4aaa92ece8503a6da9bc6701604f69acf2b99d07
 github.com/aws/aws-sdk-go c861d27d0304a79f727e9a8a4e2ac1e74602fdc0
@@ -94,3 +95,4 @@ gopkg.in/mgo.v2 3f83fa5005286a7fe593b055f0d7771a7dce4655
 gopkg.in/olivere/elastic.v5 3113f9b9ad37509fe5f8a0e5e91c96fdc4435e26
 gopkg.in/tomb.v1 dd632973f1e7218eb1089048e0798ec9ae7dceb8
 gopkg.in/yaml.v2 4c78c975fe7c825c6d1466c42be594d1d6f3aba6
+
