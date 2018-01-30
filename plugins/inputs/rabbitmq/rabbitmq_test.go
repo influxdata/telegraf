@@ -51,7 +51,25 @@ const sampleOverviewResponse = `
         "messages_unacknowledged_details": {
             "rate": 0.0
         }
-    }
+    },
+    "listeners": [
+        {
+            "name": "rabbit@node-a",
+            "protocol": "amqp"
+        },
+        {
+            "name": "rabbit@node-b",
+            "protocol": "amqp"
+        },
+        {
+            "name": "rabbit@node-a",
+            "protocol": "clustering"
+        },
+        {
+            "name": "rabbit@node-b",
+            "protocol": "clustering"
+        }
+    ]
 }
 `
 
@@ -514,6 +532,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"consumers",
 		"exchanges",
 		"queues",
+		"clustering_listeners",
+		"amqp_listeners",
 	}
 
 	for _, metric := range intMetrics {
@@ -532,6 +552,7 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"run_queue",
 		"sockets_total",
 		"sockets_used",
+		"running",
 	}
 
 	for _, metric := range nodeIntMetrics {
