@@ -106,7 +106,7 @@ the cluster.  For more information on this technique reference
 ### Metrics:
 
 Please consult the [Metrics Reference](https://docs.mesosphere.com/1.10/metrics/reference/)
-for details on interprete field interpretation.
+for details about field interpretation.
 
 - dcos_node
   - tags:

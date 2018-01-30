@@ -171,6 +171,7 @@ configuration options.
 * [minecraft](./plugins/inputs/minecraft)
 * [mongodb](./plugins/inputs/mongodb)
 * [mysql](./plugins/inputs/mysql)
+* [nats](./plugins/inputs/nats)
 * [net_response](./plugins/inputs/net_response)
 * [nginx](./plugins/inputs/nginx)
 * [nginx_plus](./plugins/inputs/nginx_plus)
@@ -256,6 +257,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [Value](./docs/DATA_FORMATS_INPUT.md#value)
 * [Nagios](./docs/DATA_FORMATS_INPUT.md#nagios)
 * [Collectd](./docs/DATA_FORMATS_INPUT.md#collectd)
+* [Dropwizard](./docs/DATA_FORMATS_INPUT.md#dropwizard)
 
 ## Processor Plugins
 

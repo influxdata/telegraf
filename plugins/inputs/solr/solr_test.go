@@ -60,3 +60,44 @@ func createMockServer() *httptest.Server {
 		}
 	}))
 }
+
+func TestNoCoreDataHandling(t *testing.T) {
+	ts := createMockNoCoreDataServer()
+	solr := NewSolr()
+	solr.Servers = []string{ts.URL}
+	var acc testutil.Accumulator
+	require.NoError(t, solr.Gather(&acc))
+
+	acc.AssertContainsTaggedFields(t, "solr_admin",
+		solrAdminMainCoreStatusExpected,
+		map[string]string{"core": "main"})
+
+	acc.AssertContainsTaggedFields(t, "solr_admin",
+		solrAdminCore1StatusExpected,
+		map[string]string{"core": "core1"})
+
+	acc.AssertDoesNotContainMeasurement(t, "solr_core")
+	acc.AssertDoesNotContainMeasurement(t, "solr_queryhandler")
+	acc.AssertDoesNotContainMeasurement(t, "solr_updatehandler")
+	acc.AssertDoesNotContainMeasurement(t, "solr_handler")
+
+}
+
+func createMockNoCoreDataServer() *httptest.Server {
+	var nodata string
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/solr/admin/cores") {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, statusResponse)
+		} else if strings.Contains(r.URL.Path, "solr/main/admin") {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, nodata)
+		} else if strings.Contains(r.URL.Path, "solr/core1/admin") {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, nodata)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintln(w, "nope")
+		}
+	}))
+}
