@@ -10,6 +10,7 @@
 - [#3697](https://github.com/influxdata/telegraf/issues/3697): Limit wait time for writes in mqtt output.
 - [#3698](https://github.com/influxdata/telegraf/issues/3698): Revert change in graphite output where dot in field key was replaced by underscore.
 - [#3710](https://github.com/influxdata/telegraf/issues/3710): Add timeout to wavefront output write.
+- [#3725](https://github.com/influxdata/telegraf/issues/3725): Exclude master_replid fields from redis input.
 
 ## v1.5.1 [2017-01-10]
 
