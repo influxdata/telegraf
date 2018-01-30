@@ -207,6 +207,10 @@ func gatherInfoOutput(
 			}
 		}
 
+		if strings.HasPrefix(name, "master_replid") {
+			continue
+		}
+
 		if name == "mem_allocator" {
 			continue
 		}
