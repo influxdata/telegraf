@@ -143,7 +143,7 @@ func (a *Agent) gatherer(
 func gatherWithTimeout(
 	shutdown chan struct{},
 	input *models.RunningInput,
-	acc *accumulator,
+	acc telegraf.Accumulator,
 	timeout time.Duration,
 ) {
 	ticker := time.NewTicker(timeout)
