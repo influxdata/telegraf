@@ -34,7 +34,7 @@ type Ping struct {
 	// Ping timeout, in seconds. 0 means no timeout (ping -W <TIMEOUT>)
 	Timeout float64
 
-	// Interface to send ping from (ping -I <INTERFACE>)
+	// Interface or source address to send ping from (ping -I/-S <INTERFACE/SRC_ADDR>)
 	Interface string
 
 	// URLs to ping
@@ -60,7 +60,8 @@ const sampleConfig = `
   # ping_interval = 1.0
   ## per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
   # timeout = 1.0
-  ## interface to send ping from (ping -I <INTERFACE>)
+  ## interface or source address to send ping from (ping -I <INTERFACE/SRC_ADDR>)
+  ## on Darwin and Freebsd only source address possible: (ping -S <SRC_ADDR>)
   # interface = ""
 `
 
@@ -179,7 +180,15 @@ func (p *Ping) args(url string) []string {
 		}
 	}
 	if p.Interface != "" {
-		args = append(args, "-I", p.Interface)
+		switch runtime.GOOS {
+		case "linux":
+			args = append(args, "-I", p.Interface)
+		case "freebsd", "darwin":
+			args = append(args, "-S", p.Interface)
+		default:
+			// Not sure the best option here, just assume GNU ping?
+			args = append(args, "-I", p.Interface)
+		}
 	}
 	args = append(args, url)
 	return args
