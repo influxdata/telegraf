@@ -44,7 +44,7 @@
 
 - [#1896](https://github.com/influxdata/telegraf/issues/1896): Fix various mysql data type conversions.
 
-## v1.5.2 [unreleased]
+## v1.5.2 [2018-01-30]
 
 ### Bugfixes
 
@@ -58,7 +58,7 @@
 - [#3710](https://github.com/influxdata/telegraf/issues/3710): Add timeout to wavefront output write.
 - [#3725](https://github.com/influxdata/telegraf/issues/3725): Exclude master_replid fields from redis input.
 
-## v1.5.1 [2017-01-10]
+## v1.5.1 [2018-01-10]
 
 ### Bugfixes
 
