@@ -233,6 +233,7 @@
 - [#4004](https://github.com/influxdata/telegraf/issues/4004): Allow grok pattern to contain newlines.
 
 ## v1.5.3 [2018-03-14]
+## v1.5.3 [unreleased]
 
 ### Bugfixes
 
@@ -246,6 +247,7 @@
 
 ## v1.5.2 [2018-01-30]
 ## v1.5.2 [unreleased]
+
 ## v1.5.2 [2018-01-30]
 
 ### Bugfixes
