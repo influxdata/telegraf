@@ -8,14 +8,14 @@ The math processor plugin applies the function to all or selected fields.
 ## Example config that processe all fields of the metric.
 # [[processor.math]]
 #   ## Math function
-# 	function = "abs"
+#   function = "abs"
 #   ## The name of metric.
 #   measurement_name = "cpu"
 
 ## Example config that processe only specific fields of the metric.
 # [[processor.math]]
-#	## Math function
-#	function = "abs"
+#   ## Math function
+#   function = "abs"
 #   ## The name of metric.
 #   measurement_name = "diskio"
 #   ## The concrete fields of metric
