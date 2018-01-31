@@ -1,3 +1,9 @@
+## v1.5.3 [unreleased]
+
+### Bugfixes
+
+- [#3729](https://github.com/influxdata/telegraf/issues/3729): Set path to / if HOST_MOUNT_PREFIX matches full path.
+
 ## v1.5.2 [2018-01-30]
 
 ### Bugfixes
