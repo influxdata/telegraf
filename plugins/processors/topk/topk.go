@@ -201,10 +201,14 @@ func (t *TopK) generateGroupByKey(m telegraf.Metric) string {
 	}
 
 	if len(t.GroupBy) > 0 {
+		groupDict := make(map[string]string)
 		for tag, value := range m.Tags() {
 			if t.tagsGlobs.Match(tag) {
-				groupkey += tag + "=" + value + "&"
+				groupDict[tag] = value
 			}
+		}
+		for tag, value := range groupDict {
+			groupkey += tag + "=" + value + "&"
 		}
 	}
 
