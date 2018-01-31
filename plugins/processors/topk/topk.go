@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 	"time"
+	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
@@ -180,21 +181,22 @@ func (t *TopK) Description() string {
 	return "Print all metrics that pass through this filter."
 }
 
-func (t *TopK) generateGroupByKey(m telegraf.Metric) string {
+func (t *TopK) generateGroupByKey(m telegraf.Metric) (string, error) {
+	if t.SimpleTopk {
+		return strconv.FormatUint(m.HashID(), 16), nil
+	}
+
 	// Create the filter.Filter objects if they have not been created
 	if t.tagsGlobs == nil && len(t.GroupBy) > 0 {
 		var err error
 		t.tagsGlobs, err = filter.Compile(t.GroupBy)
 		if err != nil {
-			panic(fmt.Sprintf("Could not complile tags globs: %s", t.GroupBy))
+			log.Printf("Could not complile tags globs: %s", t.GroupBy)
+			return "", err
 		}
 	}
 
 	groupkey := ""
-
-	if t.SimpleTopk {
-		return strconv.FormatUint(m.HashID(), 16)
-	}
 
 	if t.GroupByMetricName {
 		groupkey += m.Name() + "&"
@@ -216,12 +218,18 @@ func (t *TopK) generateGroupByKey(m telegraf.Metric) string {
 		groupkey = "<<default_groupby_key>>"
 	}
 
-	return groupkey
+	return groupkey, nil
 }
 
 func (t *TopK) groupBy(m telegraf.Metric) {
 	// Generate the metric group key
-	groupkey := t.generateGroupByKey(m)
+	groupkey, err := t.generateGroupByKey(m)
+	if err != nil {
+		// If we could not generate the groupkey, fail hard
+		// by dropping this and all subsequent metrics
+		log.Print(err)
+		return
+	}
 
 	// If the groupkey is empty, it means we are supposed to drop this metric
 	if groupkey == "" {
@@ -249,7 +257,13 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	if elapsed >= time.Second*time.Duration(t.Period) {
 		// Generate aggregations list using the selected fields
 		aggregations := make([]MetricAggregation, 0, 100)
-		aggregator := t.getAggregationFunction(t.Aggregation)
+		aggregator, err := t.getAggregationFunction(t.Aggregation)
+		if err != nil {
+			// If we could not generate the aggregation 
+			// function, fail hard by dropping all metrics
+			log.Print(err)
+			return []telegraf.Metric{}
+		}
 		for k, ms := range t.cache {
 			aggregations = append(aggregations, MetricAggregation{groupbykey: k, values: aggregator(ms, t.Fields)})
 		}
@@ -329,7 +343,7 @@ func convert(in interface{}) (float64, bool) {
 }
 
 // Here we have the function that generates the aggregation functions
-func (t *TopK) getAggregationFunction(aggOperation string) func([]telegraf.Metric, []string) map[string]float64 {
+func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metric, []string) map[string]float64, error) {
 
 	// This is a function aggregates a set of metrics using a given aggregation function
 	var aggregator = func(ms []telegraf.Metric, fields []string, f func(map[string]float64, float64, string)) map[string]float64 {
@@ -343,8 +357,9 @@ func (t *TopK) getAggregationFunction(aggOperation string) func([]telegraf.Metri
 				}
 				val, ok := convert(fieldVal)
 				if !ok {
-					panic(fmt.Sprintf("Cannot convert value '%s' from metric '%s' with tags '%s'",
-						m.Fields()[field], m.Name(), m.Tags()))
+					log.Printf("Cannot convert value '%s' from metric '%s' with tags '%s'",
+						m.Fields()[field], m.Name(), m.Tags())
+					continue 
 				}
 				f(agg, val, field)
 			}
@@ -359,7 +374,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) func([]telegraf.Metri
 				agg[field] += val
 			}
 			return aggregator(ms, fields, sum)
-		}
+		}, nil
 
 	case "min":
 		return func(ms []telegraf.Metric, fields []string) map[string]float64 {
@@ -376,7 +391,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) func([]telegraf.Metri
 				}
 			}
 			return aggregator(ms, fields, min)
-		}
+		}, nil
 
 	case "max":
 		return func(ms []telegraf.Metric, fields []string) map[string]float64 {
@@ -393,7 +408,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) func([]telegraf.Metri
 				}
 			}
 			return aggregator(ms, fields, max)
-		}
+		}, nil
 
 	case "mean":
 		return func(ms []telegraf.Metric, fields []string) map[string]float64 {
@@ -408,8 +423,9 @@ func (t *TopK) getAggregationFunction(aggOperation string) func([]telegraf.Metri
 					}
 					val, ok := convert(fieldVal)
 					if !ok {
-						panic(fmt.Sprintf("Cannot convert value '%s' from metric '%s' with tags '%s'",
-							m.Fields()[field], m.Name(), m.Tags()))
+						log.Printf("Cannot convert value '%s' from metric '%s' with tags '%s'",
+							m.Fields()[field], m.Name(), m.Tags())
+						continue
 					}
 					mean[field] += val
 					meanCounters[field] += 1
@@ -430,10 +446,10 @@ func (t *TopK) getAggregationFunction(aggOperation string) func([]telegraf.Metri
 				return nil
 			}
 			return mean
-		}
+		}, nil
 
 	default:
-		panic(fmt.Sprintf("Unknown aggregation function '%s'", t.Aggregation))
+		return nil, fmt.Errorf("Unknown aggregation function '%s'. No metrics will be processed", t.Aggregation)
 	}
 }
 
