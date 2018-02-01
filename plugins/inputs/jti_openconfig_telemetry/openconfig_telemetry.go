@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"regexp"
 	"strings"
 	"sync"
@@ -123,7 +124,7 @@ func spitTagsNPath(xmlpath string) (string, map[string]string) {
 
 // Takes in a OC response, extracts tag information from keys and returns a
 // list of groups with unique sets of tags+values
-func extractData(r *telemetry.OpenConfigData, grpc_server string, strAsTags bool) []DataGroup {
+func extractData(r *telemetry.OpenConfigData, grpcServer string, strAsTags bool) []DataGroup {
 	// Use empty prefix. We will update this when we iterate over key-value pairs
 	prefix := ""
 
@@ -139,7 +140,7 @@ func extractData(r *telemetry.OpenConfigData, grpc_server string, strAsTags bool
 
 		// Also, lets use prefix if there is one
 		xmlpath, finaltags := spitTagsNPath(prefix + v.Key)
-		finaltags["device"] = grpc_server
+		finaltags["device"] = grpcServer
 
 		switch v.Value.(type) {
 		case *telemetry.KeyValue_StrValue:
@@ -193,10 +194,10 @@ func extractData(r *telemetry.OpenConfigData, grpc_server string, strAsTags bool
 
 func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 	// Extract device name / IP
-	s := strings.Split(m.Server, ":")
-	grpc_server, grpc_port := s[0], s[1]
-
-	var err error
+	grpcServer, grpcPort, err := net.SplitHostPort(m.Server)
+	if err != nil {
+		return fmt.Errorf("E! Invalid server address: %v", err)
+	}
 
 	var wg sync.WaitGroup
 	m.wg = &wg
@@ -218,7 +219,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("E! Failed to connect: %v", err)
 	}
 
-	log.Printf("D! Opened a new gRPC session to %s on port %s", grpc_server, grpc_port)
+	log.Printf("D! Opened a new gRPC session to %s on port %s", grpcServer, grpcPort)
 
 	// If username, password and clientId are provided, authenticate user before subscribing
 	// for data
@@ -316,9 +317,9 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 				tags := make(map[string]string)
 
 				// Insert additional tags
-				tags["device"] = grpc_server
+				tags["device"] = grpcServer
 
-				dgroups := extractData(r, grpc_server, m.StrAsTags)
+				dgroups := extractData(r, grpcServer, m.StrAsTags)
 
 				// Print final data collection
 				log.Printf("D! Available collection is: %v", dgroups)
