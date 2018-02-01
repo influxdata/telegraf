@@ -1,0 +1,4 @@
+[submodule "plugins/outputs/orangesys"]
+	path = plugins/outputs/orangesys
+	url = https://github.com/orangesys/telegraf-output-orangesys.git
+	branch = master

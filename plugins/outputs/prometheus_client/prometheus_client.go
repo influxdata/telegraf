@@ -68,7 +68,7 @@ type PrometheusClient struct {
 
 var sampleConfig = `
   ## Address to listen on
-  # listen = ":9273"
+  # listen = ":9126"
 
   ## Interval to expire metrics and not deliver to prometheus, 0 == no expiration
   # expiration_interval = "60s"
@@ -102,7 +102,7 @@ func (p *PrometheusClient) Start() error {
 	registry.Register(p)
 
 	if p.Listen == "" {
-		p.Listen = "localhost:9273"
+		p.Listen = "localhost:9126"
 	}
 
 	if p.Path == "" {
@@ -118,14 +118,7 @@ func (p *PrometheusClient) Start() error {
 		Handler: mux,
 	}
 
-	go func() {
-		if err := p.server.ListenAndServe(); err != nil {
-			if err != http.ErrServerClosed {
-				log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
-					err.Error())
-			}
-		}
-	}()
+	go p.server.ListenAndServe()
 	return nil
 }
 

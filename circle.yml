@@ -14,6 +14,17 @@ dependencies:
   override:
     - docker info
 
+checkout:
+  post:
+    - git submodule sync --recursive
+    - git submodule update --recursive --init
+
 test:
   override:
-    - bash scripts/circle-test.sh
+    - bash scripts/orangesys-telegraf.sh
+
+deployment:
+  release:
+    tag: /v[0-9]+(\.[0-9]+)*/
+    commands:
+      - bash scripts/github-release.sh
