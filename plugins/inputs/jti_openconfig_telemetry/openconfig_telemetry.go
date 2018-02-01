@@ -202,8 +202,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 	m.wg = &wg
 
-	var reportingRate uint32
-	reportingRate = uint32(m.SampleFrequency.Duration.Nanoseconds() / int64(time.Millisecond))
+	reportingRate := uint32(m.SampleFrequency.Duration / time.Millisecond)
 
 	// If a certificate is provided, open a secure channel. Else open insecure one
 	if m.SSLCert != "" {
@@ -259,7 +258,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			duration, err := time.ParseDuration(spathSplit[0])
 			var slistStart int
 			if err == nil {
-				reportingRate = uint32(duration.Nanoseconds() / int64(time.Millisecond))
+				reportingRate = uint32(duration / time.Millisecond)
 				slistStart = 1
 			} else {
 				slistStart = 0
