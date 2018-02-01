@@ -256,35 +256,29 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			// reporting rate doesn't start with /, we treat it as measurement name
 			// and exclude it from list of sensors to subscribe
 			duration, err := time.ParseDuration(spathSplit[0])
-			var slistStart int
 			if err == nil {
 				reportingRate = uint32(duration / time.Millisecond)
-				slistStart = 1
-			} else {
-				slistStart = 0
+				spathSplit = spathSplit[1:]
 			}
 
-			if len(spathSplit) <= slistStart {
+			if len(spathSplit) == 0 {
 				acc.AddError(fmt.Errorf("E! No sensors are specified"))
 				return
 			}
 
 			// Word after custom reporting rate is treated as measurement name
-			measurementName := spathSplit[slistStart]
+			measurementName := spathSplit[0]
 
 			// If our word after custom reporting rate doesn't start with /, we treat
 			// it as measurement name. Else we treat it as sensor
 			if !strings.HasPrefix(measurementName, "/") {
-				slistStart += 1
+				spathSplit = spathSplit[1:]
 			}
 
-			if len(spathSplit) <= slistStart {
+			if len(spathSplit) == 0 {
 				acc.AddError(fmt.Errorf("E! No valid sensors are specified"))
 				return
 			}
-
-			// List of sensors in this line
-			spathSplit = spathSplit[slistStart:]
 
 			// Iterate over our sensors and create pathlist to subscribe
 			var pathlist []*telemetry.Path
