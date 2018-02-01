@@ -16,6 +16,11 @@
   In environments where TCP connections are terminated the `max_lifetime`
   setting should be set less than the collection `interval` to prevent errors.
 
+- The `sqlserver` input plugin has a new query and data model that can be enabled
+  by setting `query_version = 2`.  It is encouraged to migrate to the new
+  model when possible as the old version is deprectated and will be removed in
+  a future version.
+
 ### New Plugins
 
 - [ipset](./plugins/inputs/ipset/README.md) - Thanks to @sajoupa
@@ -42,6 +47,7 @@
 - [#3726](https://github.com/influxdata/telegraf/pull/3726): Add support for setting bsd source address to the ping input.
 - [#3346](https://github.com/influxdata/telegraf/pull/3346): Add Ipset input plugin.
 - [#3719](https://github.com/influxdata/telegraf/pull/3719): Add TLS and HTTP basic auth to prometheus_client output.
+- [#3618](https://github.com/influxdata/telegraf/pull/3618): Add new sqlserver output data model.
 
 ### Bugfixes
 
