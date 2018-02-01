@@ -20,7 +20,7 @@ install:
 
 build_script:
   - cmd: go get github.com/sparrc/gdm
-  - cmd: gdm restore
+  - cmd: C:\gopath\bin\gdm restore
   - cmd: go build -i -o telegraf.exe ./cmd/telegraf/telegraf.go
 
 test_script:
