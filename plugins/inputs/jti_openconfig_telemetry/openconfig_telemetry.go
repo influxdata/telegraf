@@ -246,9 +246,6 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			defer wg.Done()
 
 			spathSplit := strings.Fields(sensor)
-			var slistStart int
-			var measurementName string
-			var pathlist []*telemetry.Path
 
 			// Extract measurement name and custom reporting rate if specified. Custom
 			// reporting rate will be specified at the beginning of sensor list,
@@ -260,6 +257,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			// reporting rate doesn't start with /, we treat it as measurement name
 			// and exclude it from list of sensors to subscribe
 			duration, err := time.ParseDuration(spathSplit[0])
+			var slistStart int
 			if err == nil {
 				reportingRate = uint32(duration.Nanoseconds() / int64(time.Millisecond))
 				slistStart = 1
@@ -273,7 +271,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			}
 
 			// Word after custom reporting rate is treated as measurement name
-			measurementName = spathSplit[slistStart]
+			measurementName := spathSplit[slistStart]
 
 			// If our word after custom reporting rate doesn't start with /, we treat
 			// it as measurement name. Else we treat it as sensor
@@ -290,6 +288,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 			spathSplit = spathSplit[slistStart:]
 
 			// Iterate over our sensors and create pathlist to subscribe
+			var pathlist []*telemetry.Path
 			for _, path := range spathSplit {
 				pathlist = append(pathlist, &telemetry.Path{Path: path,
 					SampleFrequency: reportingRate})
