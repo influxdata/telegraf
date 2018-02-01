@@ -245,7 +245,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 		go func(sensor string, reportingRate uint32, acc telegraf.Accumulator) {
 			defer wg.Done()
 
-			spathSplit := strings.SplitN(sensor, " ", -1)
+			spathSplit := strings.Fields(sensor)
 			var slistStart int
 			var measurementName string
 			var pathlist []*telemetry.Path
