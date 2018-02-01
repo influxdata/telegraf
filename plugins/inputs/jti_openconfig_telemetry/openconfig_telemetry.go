@@ -171,8 +171,8 @@ func extractData(r *telemetry.OpenConfigData, grpc_server string, strAsTags bool
 		}
 
 		// Insert other tags from message
-		finaltags["_system_id"] = r.SystemId
-		finaltags["_path"] = r.Path
+		finaltags["system_id"] = r.SystemId
+		finaltags["path"] = r.Path
 
 		// Insert derived key and value
 		dgroups = CollectionByKeys(dgroups).Insert(finaltags, kv)
