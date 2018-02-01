@@ -115,51 +115,9 @@ func (m *MongoDB) getMongoServer(url *url.URL) *Server {
 
 func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 	if server.Session == nil {
-		var dialAddrs []string
-		if server.Url.User != nil {
-			dialAddrs = []string{server.Url.String()}
-		} else {
-			dialAddrs = []string{server.Url.Host}
-		}
-		dialInfo, err := mgo.ParseURL(dialAddrs[0])
+		dialInfo, err := m.parseConnectionString(server)
 		if err != nil {
-			return fmt.Errorf("Unable to parse URL (%s), %s\n",
-				dialAddrs[0], err.Error())
-		}
-		dialInfo.Direct = true
-		dialInfo.Timeout = 5 * time.Second
-
-		var tlsConfig *tls.Config
-
-		if m.Ssl.Enabled {
-			// Deprecated SSL config
-			tlsConfig = &tls.Config{}
-			if len(m.Ssl.CaCerts) > 0 {
-				roots := x509.NewCertPool()
-				for _, caCert := range m.Ssl.CaCerts {
-					ok := roots.AppendCertsFromPEM([]byte(caCert))
-					if !ok {
-						return fmt.Errorf("failed to parse root certificate")
-					}
-				}
-				tlsConfig.RootCAs = roots
-			} else {
-				tlsConfig.InsecureSkipVerify = true
-			}
-		} else {
-			tlsConfig, err = internal.GetTLSConfig(
-				m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
-		}
-
-		// If configured to use TLS, add a dial function
-		if tlsConfig != nil {
-			dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
-				conn, err := tls.Dial("tcp", addr.String(), tlsConfig)
-				if err != nil {
-					fmt.Printf("error in Dial, %s\n", err.Error())
-				}
-				return conn, err
-			}
+			return err
 		}
 
 		sess, err := mgo.DialWithInfo(dialInfo)
@@ -169,6 +127,61 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 		server.Session = sess
 	}
 	return server.gatherData(acc, m.GatherPerdbStats)
+}
+
+func (m *MongoDB) parseConnectionString(server *Server) (*mgo.DialInfo, error) {
+	if server.Url == nil {
+		return nil, fmt.Errorf("Unable to connect to MongoDB because connection string was not set.")
+	}
+	var dialAddrs []string
+	if server.Url.User != nil {
+		dialAddrs = []string{server.Url.String()}
+	} else {
+		dialAddrs = []string{server.Url.Host}
+	}
+	dialInfo, err := mgo.ParseURL(dialAddrs[0])
+	if err != nil {
+		return nil, fmt.Errorf("Unable to parse URL (%s), %s\n", dialAddrs[0], err.Error())
+	}
+	if dialInfo.Database == "" {
+		dialInfo.Database = "admin"
+	}
+	dialInfo.Direct = true
+	dialInfo.Timeout = 5 * time.Second
+
+	var tlsConfig *tls.Config
+
+	if m.Ssl.Enabled {
+		// Deprecated SSL config
+		tlsConfig = &tls.Config{}
+		if len(m.Ssl.CaCerts) > 0 {
+			roots := x509.NewCertPool()
+			for _, caCert := range m.Ssl.CaCerts {
+				ok := roots.AppendCertsFromPEM([]byte(caCert))
+				if !ok {
+					return nil, fmt.Errorf("failed to parse root certificate")
+				}
+			}
+			tlsConfig.RootCAs = roots
+		} else {
+			tlsConfig.InsecureSkipVerify = true
+		}
+	} else {
+		tlsConfig, err = internal.GetTLSConfig(
+			m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
+	}
+
+	// If configured to use TLS, add a dial function
+	if tlsConfig != nil {
+		dialInfo.DialServer = func(addr *mgo.ServerAddr) (net.Conn, error) {
+			conn, err := tls.Dial("tcp", addr.String(), tlsConfig)
+			if err != nil {
+				fmt.Printf("error in Dial, %s\n", err.Error())
+			}
+			return conn, err
+		}
+	}
+	return dialInfo, nil
 }
 
 func init() {

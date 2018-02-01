@@ -21,7 +21,9 @@
 ```
 This connection uri may be different based on your environment and mongodb
 setup. If the user doesn't have the required privilege to execute serverStatus
-command the you will get this error on telegraf
+command the you will get this error on telegraf.
+
+The connection string format that Telegraf supports is documented [here](https://docs.mongodb.com/manual/reference/connection-string/).
 
 ```
 Error in input [mongodb]: not authorized on admin to execute command { serverStatus: 1, recordStats: 0 }
