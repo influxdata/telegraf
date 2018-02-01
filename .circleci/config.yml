@@ -8,21 +8,40 @@ jobs:
   build:
     <<: *defaults
     steps:
-      - 'checkout'
+      - checkout
       - run: 'make ci-test'
   release:
     <<: *defaults
     steps:
-      - 'checkout'
+      - checkout
+      - run: './scripts/release.sh'
+      - store_artifacts:
+          path: './artifacts'
+          destination: '.'
+  nightly:
+    <<: *defaults
+    steps:
+      - checkout
       - run: './scripts/release.sh'
       - store_artifacts:
           path: './artifacts'
           destination: '.'
 workflows:
   version: 2
-  test_and_release:
+  build_and_release:
     jobs:
       - 'build'
       - 'release':
           requires:
             - 'build'
+  nightly:
+    jobs:
+      - 'build'
+      - 'nightly'
+    triggers:
+      - schedule:
+        cron: "0 0 * * *"
+        filters:
+          branches:
+            only:
+              - master
