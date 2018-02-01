@@ -41,6 +41,7 @@
 - [#3702](https://github.com/influxdata/telegraf/pull/3702): Add ability to select which queues will be gathered in rabbitmq input.
 - [#3726](https://github.com/influxdata/telegraf/pull/3726): Add support for setting bsd source address to the ping input.
 - [#3346](https://github.com/influxdata/telegraf/pull/3346): Add Ipset input plugin.
+- [#3719](https://github.com/influxdata/telegraf/pull/3719): Add TLS and HTTP basic auth to prometheus_client output.
 
 ### Bugfixes
 
