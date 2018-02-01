@@ -3,7 +3,6 @@ package prometheus_client
 import (
 	"context"
 	"crypto/subtle"
-	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
@@ -92,20 +91,6 @@ var sampleConfig = `
   collectors_exclude = ["gocollector", "process"]
 `
 
-func (p *PrometheusClient) getTLSConfig() *tls.Config {
-	if p.TLSCert != "" && p.TLSKey != "" {
-		return &tls.Config{
-			MinVersion:               tls.VersionTLS12,
-			PreferServerCipherSuites: true,
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			},
-		}
-	}
-
-	return nil
-}
-
 func (p *PrometheusClient) basicAuth(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if p.BasicUsername != "" && p.BasicPassword != "" {
@@ -160,14 +145,13 @@ func (p *PrometheusClient) Start() error {
 		registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})))
 
 	p.server = &http.Server{
-		Addr:      p.Listen,
-		Handler:   mux,
-		TLSConfig: p.getTLSConfig(),
+		Addr:    p.Listen,
+		Handler: mux,
 	}
 
 	go func() {
 		var err error
-		if p.server.TLSConfig != nil {
+		if p.TLSCert != "" && p.TLSKey != "" {
 			err = p.server.ListenAndServeTLS(p.TLSCert, p.TLSKey)
 		} else {
 			err = p.server.ListenAndServe()
