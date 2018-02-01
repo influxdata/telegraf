@@ -1,5 +1,4 @@
 #!/bin/bash
-set -u
 
 ARTIFACT_DIR='artifacts'
 run()
@@ -16,6 +15,7 @@ run()
 }
 
 run make
+run mkdir -p ${ARTIFACT_DIR}
 run gzip telegraf -c > "$ARTIFACT_DIR/telegraf.gz"
 # RPM is used to build packages for Enterprise Linux hosts.
 # Boto is used to upload packages to S3.
@@ -35,5 +35,4 @@ elif [ -n "${PACKAGE}" ]; then
     fi
 fi
 
-run mkdir -p ${ARTIFACT_DIR}
 run mv build $ARTIFACT_DIR
