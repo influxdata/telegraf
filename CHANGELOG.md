@@ -1,4 +1,18 @@
-## v1.5.1 [2017-01-10]
+## v1.5.2 [2018-01-30]
+
+### Bugfixes
+
+- [#3684](https://github.com/influxdata/telegraf/pull/3684): Ignore empty lines in Graphite plaintext.
+- [#3604](https://github.com/influxdata/telegraf/issues/3604): Fix index out of bounds error in solr input plugin.
+- [#3680](https://github.com/influxdata/telegraf/pull/3680): Reconnect before sending graphite metrics if disconnected.
+- [#3693](https://github.com/influxdata/telegraf/pull/3693): Align aggregator period with internal ticker to avoid skipping metrics.
+- [#3629](https://github.com/influxdata/telegraf/issues/3629): Fix a potential deadlock when using aggregators.
+- [#3697](https://github.com/influxdata/telegraf/issues/3697): Limit wait time for writes in mqtt output.
+- [#3698](https://github.com/influxdata/telegraf/issues/3698): Revert change in graphite output where dot in field key was replaced by underscore.
+- [#3710](https://github.com/influxdata/telegraf/issues/3710): Add timeout to wavefront output write.
+- [#3725](https://github.com/influxdata/telegraf/issues/3725): Exclude master_replid fields from redis input.
+
+## v1.5.1 [2018-01-10]
 
 ### Bugfixes
 
