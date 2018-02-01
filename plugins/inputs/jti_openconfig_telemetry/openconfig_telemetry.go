@@ -14,7 +14,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth"
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
-	"github.com/influxdata/telegraf/plugins/parsers"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -30,7 +29,6 @@ type OpenConfigTelemetry struct {
 	SSLCert         string            `toml:"ssl_cert"`
 	StrAsTags       bool              `toml:"str_as_tags"`
 
-	parser         parsers.Parser
 	grpcClientConn *grpc.ClientConn
 	wg             *sync.WaitGroup
 }
@@ -83,10 +81,6 @@ func (m *OpenConfigTelemetry) SampleConfig() string {
 
 func (m *OpenConfigTelemetry) Description() string {
 	return "Read JTI OpenConfig Telemetry from listed sensors"
-}
-
-func (m *OpenConfigTelemetry) SetParser(parser parsers.Parser) {
-	m.parser = parser
 }
 
 func (m *OpenConfigTelemetry) Gather(acc telegraf.Accumulator) error {
