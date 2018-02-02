@@ -164,6 +164,7 @@ configuration options.
 * [jolokia2](./plugins/inputs/jolokia2)
 * [kapacitor](./plugins/inputs/kapacitor)
 * [kubernetes](./plugins/inputs/kubernetes)
+* [ldap_response](./plugins/inputs/ldap_response)
 * [leofs](./plugins/inputs/leofs)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
