@@ -26,9 +26,11 @@ This is the full list of stats provided by unbound-control and potentially colle
 depending of your unbound configuration. Histogram related statistics will never be collected,
 extended statistics can also be imported ("extended-statistics: yes" in unbound configuration).
 In the output, the dots in the unbound-control stat name are replaced by underscores(see
-https://www.unbound.net/documentation/unbound-control.html for details).
+[https://www.unbound.net/documentation/unbound-control.html]() for details).
 
 - unbound
+
+```
     thread0_num_queries
     thread0_num_cachehits
     thread0_num_cachemiss
@@ -92,6 +94,20 @@ https://www.unbound.net/documentation/unbound-control.html for details).
     num_rrset_bogus
     unwanted_queries
     unwanted_replies
+```
+
+### Collection Behavior:
+
+Referencing the unbound configuration documentation, [https://www.unbound.net/documentation/unbound.conf.html](), two settings
+should be useful in setting up your instance of Unbound for statistics collection by telegraf.
+
+  `statistics-interval: 0`
+
+  `statistics-cumulative: no`
+
+Setting the interval to 0 disables output of stats to the unbound log since this plugin collects them via unbound-control. Setting
+the cumulative setting to no means that telegraf is collecting fresh stats reset on every call to unbound-control, making them
+easily plottable to something like Influxdb.
 
 ### Permissions:
 
