@@ -45,6 +45,10 @@ This plugin reads Juniper Networks implementation of OpenConfig telemetry data f
   ## channel will be opened with server
   ssl_cert = "/etc/telegraf/cert.pem"
 
+  ## Delay between retry attempts of failed RPC calls or streams. Defaults to 1000ms.
+  ## Failed streams/calls will not be retried if 0 is provided
+  retry_delay = "1000ms"
+
   ## To treat all string values as tags, set this to true
   str_as_tags = false
 ```

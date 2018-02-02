@@ -2,7 +2,6 @@ package jti_openconfig_telemetry
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"regexp"
@@ -17,7 +16,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
 )
 
 type OpenConfigTelemetry struct {
@@ -29,6 +30,7 @@ type OpenConfigTelemetry struct {
 	SampleFrequency internal.Duration `toml:"sample_frequency"`
 	SSLCert         string            `toml:"ssl_cert"`
 	StrAsTags       bool              `toml:"str_as_tags"`
+	RetryDelay      internal.Duration `toml:"retry_delay"`
 
 	grpcClientConn *grpc.ClientConn
 	wg             *sync.WaitGroup
@@ -71,6 +73,10 @@ var sampleConfig = `
   ## x509 Certificate to use with TLS connection. If it is not provided, an insecure 
   ## channel will be opened with server
   ssl_cert = "/etc/telegraf/cert.pem"
+
+  ## Delay between retry attempts of failed RPC calls or streams. Defaults to 1000ms.
+  ## Failed streams/calls will not be retried if 0 is provided
+  retry_delay = "1000ms"
 
   ## To treat all string values as tags, set this to true
   str_as_tags = false
@@ -222,9 +228,10 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 
 	// If username, password and clientId are provided, authenticate user before subscribing
 	// for data
+	ctx := context.Background()
 	if m.Username != "" && m.Password != "" && m.ClientID != "" {
 		lc := authentication.NewLoginClient(m.grpcClientConn)
-		loginReply, loginErr := lc.LoginCheck(context.Background(),
+		loginReply, loginErr := lc.LoginCheck(ctx,
 			&authentication.LoginRequest{UserName: m.Username,
 				Password: m.Password, ClientId: m.ClientID})
 		if loginErr != nil {
@@ -241,7 +248,8 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 
 	for _, sensor := range m.Sensors {
 		wg.Add(1)
-		go func(sensor string, reportingRate uint32, acc telegraf.Accumulator) {
+		go func(ctx context.Context, sensor string, reportingRate uint32,
+			acc telegraf.Accumulator) {
 			defer wg.Done()
 
 			spathSplit := strings.Fields(sensor)
@@ -287,46 +295,60 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 					SampleFrequency: reportingRate})
 			}
 
-			stream, err := c.TelemetrySubscribe(context.Background(),
-				&telemetry.SubscriptionRequest{PathList: pathlist})
-			if err != nil {
-				acc.AddError(fmt.Errorf("E! Could not subscribe: %v", err))
-				return
-			}
 			for {
-				r, err := stream.Recv()
-				if err == io.EOF {
-					break
-				}
+				stream, err := c.TelemetrySubscribe(ctx,
+					&telemetry.SubscriptionRequest{PathList: pathlist})
 				if err != nil {
-					acc.AddError(fmt.Errorf("E! Failed to read: %v", err))
-					return
-				}
-
-				log.Printf("D! Received: %v", r)
-
-				// Create a point and add to batch
-				tags := make(map[string]string)
-
-				// Insert additional tags
-				tags["device"] = grpcServer
-
-				dgroups := extractData(r, grpcServer, m.StrAsTags)
-
-				// Print final data collection
-				log.Printf("D! Available collection is: %v", dgroups)
-
-				tnow := time.Now()
-				// Iterate through data groups and add them
-				for _, group := range dgroups {
-					if len(group.tags) == 0 {
-						acc.AddFields(measurementName, group.data, tags, tnow)
+					rpcStatus, _ := status.FromError(err)
+					// If service is currently unavailable and may come back later, retry
+					if rpcStatus.Code() != codes.Unavailable {
+						acc.AddError(fmt.Errorf("E! Could not subscribe: %v", err))
+						return
 					} else {
-						acc.AddFields(measurementName, group.data, group.tags, tnow)
+						// Retry with delay. If delay is not provided, use default
+						if m.RetryDelay.Duration > 0 {
+							log.Printf("D! Retrying with timeout %v", m.RetryDelay.Duration)
+							time.Sleep(m.RetryDelay.Duration)
+							continue
+						} else {
+							return
+						}
+					}
+				}
+				for {
+					r, err := stream.Recv()
+					if err != nil {
+						// If we encounter error in the stream, break so we can retry
+						// the connection
+						acc.AddError(fmt.Errorf("E! Failed to read: %v", err))
+						break
+					}
+
+					log.Printf("D! Received: %v", r)
+
+					// Create a point and add to batch
+					tags := make(map[string]string)
+
+					// Insert additional tags
+					tags["device"] = grpcServer
+
+					dgroups := extractData(r, grpcServer, m.StrAsTags)
+
+					// Print final data collection
+					log.Printf("D! Available collection is: %v", dgroups)
+
+					tnow := time.Now()
+					// Iterate through data groups and add them
+					for _, group := range dgroups {
+						if len(group.tags) == 0 {
+							acc.AddFields(measurementName, group.data, tags, tnow)
+						} else {
+							acc.AddFields(measurementName, group.data, group.tags, tnow)
+						}
 					}
 				}
 			}
-		}(sensor, reportingRate, acc)
+		}(ctx, sensor, reportingRate, acc)
 
 	}
 
@@ -335,6 +357,8 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("jti_openconfig_telemetry", func() telegraf.Input {
-		return &OpenConfigTelemetry{}
+		return &OpenConfigTelemetry{
+			RetryDelay: internal.Duration{Duration: time.Second},
+		}
 	})
 }
