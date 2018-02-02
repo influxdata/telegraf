@@ -1,26 +1,32 @@
-// +build linux
-
 package socketstat
 
 import (
+	"bufio"
+	"bytes"
+	"fmt"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Socketstat is a telegraf plugin to gather indicators from established connections, using iproute2's  `ss` command.
 type Socketstat struct {
-	SocketProto []string
 	lister      socketLister
+	SocketProto []string
+	Timeout	    internal.Duration
 }
 
-type socketLister func(proto string) (string, error)
+type socketLister func(proto string, Timeout internal.Duration) (*bytes.Buffer, error)
 
 const measurement = "socketstat"
+
+var defaultTimeout = internal.Duration{Duration: time.Second}
 
 // Description returns a short description of the plugin
 func (ss *Socketstat) Description() string {
@@ -33,6 +39,8 @@ func (ss *Socketstat) SampleConfig() string {
   ## ss can display information about tcp, udp, raw, unix, packet, dccp and sctp sockets
   ## Specify here the types you want to gather
   socket_proto = [ "tcp", "udp" ]
+  ## The default timeout of 1s for ss execution can be overridden here:
+  # timeout = "1s"
 `
 }
 
@@ -44,12 +52,12 @@ func (ss *Socketstat) Gather(acc telegraf.Accumulator) error {
 	// best effort : we continue through the protocols even if an error is encountered,
 	// but we keep track of the last error.
 	for _, proto := range ss.SocketProto {
-		data, e := ss.lister(proto)
+		out, e := ss.lister(proto, ss.Timeout)
 		if e != nil {
 			acc.AddError(e)
 			continue
 		}
-		e = ss.parseAndGather(data, proto, acc)
+		e = ss.parseAndGather(out, proto, acc)
 		if e != nil {
 			acc.AddError(e)
 			continue
@@ -58,7 +66,7 @@ func (ss *Socketstat) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (ss *Socketstat) socketList(proto string) (string, error) {
+func (ss *Socketstat) socketList(proto string, Timeout internal.Duration) (*bytes.Buffer, error) {
 	// Check that ss is installed
 	ssPath, err := exec.LookPath("ss")
 	if err != nil {
@@ -71,33 +79,42 @@ func (ss *Socketstat) socketList(proto string) (string, error) {
 	args = append(args, "-in")
 	args = append(args, "--"+proto)
 
-	// Run ss, retrun the output as a string
-	c := exec.Command(cmdName, args...)
-	out, err := c.Output()
-	return string(out), err
+	// Run ss, return the output as bytes.Buffer
+	cmd := exec.Command(cmdName, args...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err = internal.RunTimeout(cmd, Timeout.Duration)
+	if err != nil {
+		return &out, fmt.Errorf("error running ss -in --%s: ", err)
+	}
+	return &out, nil
 }
 
 var validFields = "(bytes_acked|bytes_received|segs_out|segs_in|data_segs_in|data_segs_out)"
 var validValues = regexp.MustCompile("^" + validFields + ":[0-9]+$")
 var beginsWithBlank = regexp.MustCompile("^\\s+.*$")
 
-func (ss *Socketstat) parseAndGather(data, proto string, acc telegraf.Accumulator) error {
-	lines := strings.Split(data, "\n")
-	if len(lines) < 2 {
-		return nil
-	}
+func (ss *Socketstat) parseAndGather(data bytes.Buffer, proto string, acc telegraf.Accumulator) error {
+	scanner := bufio.NewScanner(data)
 	tags := map[string]string{}
 	fields := make(map[string]interface{})
+
 	// ss output can have blank lines, and/or socket basic info lines and more advanced
 	// statistics lines, in turns.
 	// We're using the flushData variable to determine if we should add a new measurement
 	// or postpone it to a later line
+
+	// The first line is only headers
+	scanner.Scan()
+
 	flushData := false
-	for _, line := range lines[1:] {
-		words := strings.Fields(line)
+	for scanner.Scan() {
+		line := scanner.Text()
 		if line == "" {
 			continue
 		}
+		words := strings.Fields(line)
+
 		var err error
 		if !beginsWithBlank.MatchString(line) {
 			if flushData {
@@ -163,8 +180,9 @@ func getTagsAndState(proto string, words []string) (map[string]string, map[strin
 
 func init() {
 	inputs.Add("socketstat", func() telegraf.Input {
-		ss := new(Socketstat)
-		ss.lister = ss.socketList
-		return ss
+		return &Socketstat{
+			lister: socketList,
+			Timeout: defaultTimeout,
+		}
 	})
 }
