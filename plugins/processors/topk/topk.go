@@ -285,10 +285,10 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				if aggField != "" || rankField != "" || groupTag != "" {
 					for _, m := range t.cache[ag.groupbykey] {
 						if aggField != "" && m.HasField(field) {
-							m.AddField(aggField+"_"+field, ag.values[field])
+							m.AddField(field+"_"+aggField, ag.values[field])
 						}
 						if rankField != "" {
-							m.AddField(rankField+"_"+field, i+1)
+							m.AddField(field+"_"+rankField, i+1)
 						}
 						if groupTag != "" {
 							m.AddTag(groupTag, ag.groupbykey)
