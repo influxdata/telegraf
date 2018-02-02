@@ -146,35 +146,21 @@ type MetricAggregation struct {
 	values     map[string]float64
 }
 
-type Aggregations struct {
-	metrics []MetricAggregation
-	field   string
-}
-
-func (ags Aggregations) Len() int {
-	return len(ags.metrics)
-}
-
-func (ags Aggregations) Less(i, j int) bool {
-	iv := ags.metrics[i].values[ags.field]
-	jv := ags.metrics[j].values[ags.field]
-	if iv < jv {
-		return true
-	} else {
-		return false
-	}
-}
-
-func (ags Aggregations) Swap(i, j int) {
-	ags.metrics[i], ags.metrics[j] = ags.metrics[j], ags.metrics[i]
-}
-
 func sortMetrics(metrics []MetricAggregation, field string, reverse bool) {
-	aggs := Aggregations{metrics: metrics, field: field}
+	less := func(i, j int) bool {
+		iv := metrics[i].values[field]
+		jv := metrics[j].values[field]
+		if iv < jv {
+			return true
+		} else {
+			return false
+		}		
+	}
+
 	if reverse {
-		sort.Sort(aggs)
+		sort.SliceStable(metrics, less)
 	} else {
-		sort.Sort(sort.Reverse(aggs))
+		sort.SliceStable(metrics, func(i, j int) bool {return !less(i,j)})
 	}
 }
 
