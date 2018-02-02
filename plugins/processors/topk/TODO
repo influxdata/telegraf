@@ -1,5 +1,4 @@
 Clarify tests
-Research sort.SliceStable
 
 DONE
 Make the settings that add tags and field add suffixes instead of prefixes
@@ -7,3 +6,4 @@ Allow selecting over which fields aggregation and rank info is added, and let th
 Use filters to allow glob matching of tags in group by
 Don't panic
 Handle error when compiling tags globs
+Research sort.SliceStable
