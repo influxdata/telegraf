@@ -20,7 +20,7 @@ const acceptHeader = `application/vnd.google.protobuf;proto=io.prometheus.client
 
 type Prometheus struct {
 	// An array of urls to scrape metrics from.
-	URLs []string
+	URLs []string `toml:"urls"`
 
 	// An array of Kubernetes services to scrape metrics from.
 	KubernetesServices []string
