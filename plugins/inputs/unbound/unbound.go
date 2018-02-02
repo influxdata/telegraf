@@ -55,7 +55,7 @@ func (s *Unbound) SampleConfig() string {
 
 // Shell out to unbound_stat and return the output
 func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error) {
-	cmdArgs := []string{"stats_noreset"}
+	cmdArgs := []string{"stats"}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
 
