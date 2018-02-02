@@ -14,23 +14,27 @@ import (
 )
 
 type TopK struct {
-	Period            int
-	K                 int
-	GroupBy           []string `toml:"group_by"`
-	GroupByMetricName bool     `toml:"group_by_metric_name"`
-	Fields            []string
-	Aggregation       string
-	Bottomk           bool
-	SimpleTopk        bool   `toml:"simple_topk"`
-	DropNoGroup       bool   `toml:"drop_no_group"`
-	DropNonTop        bool   `toml:"drop_non_top"`
-	AddGroupByTag     string `toml:"add_groupby_tag"`
-	RankField         string `toml:"rank_field"`
-	AggregationField  string `toml:"aggregation_field"`
+	Period                int
+	K                     int
+	GroupBy               []string `toml:"group_by"`
+	GroupByMetricName     bool     `toml:"group_by_metric_name"`
+	Fields                []string
+	Aggregation           string
+	Bottomk               bool
+	SimpleTopk            bool     `toml:"simple_topk"`
+	DropNoGroup           bool     `toml:"drop_no_group"`
+	DropNonTop            bool     `toml:"drop_non_top"`
+	AddGroupByTag         string   `toml:"add_groupby_tag"`
+	AddRankField          []string `toml:"add_rank_field"`
+	RankFieldSuffix       string   `toml:"rank_field_suffix"`
+	AddAggregateField     []string `toml:"add_aggregate_field"`
+	AggregateFieldSuffix  string   `toml:"aggregate_field_suffix"`
 
-	cache           map[string][]telegraf.Metric
-	tagsGlobs       filter.Filter
-	lastAggregation time.Time
+	cache             map[string][]telegraf.Metric
+	tagsGlobs         filter.Filter
+	rankFieldSet      map[string]bool
+	aggFieldSet       map[string]bool
+	lastAggregation   time.Time
 }
 
 func New() *TopK {
@@ -48,8 +52,10 @@ func New() *TopK {
 	topk.SimpleTopk = false
 	topk.DropNoGroup = true
 	topk.DropNonTop = true
-	topk.RankField = ""
-	topk.AggregationField = ""
+	topk.AddRankField = []string{""}
+	topk.RankFieldSuffix = "_rank"
+	topk.AddAggregateField = []string{""}
+	topk.AggregateFieldSuffix = "_aggregate"
 
 	// Initialize cache
 	topk.Reset()
@@ -246,6 +252,21 @@ func (t *TopK) groupBy(m telegraf.Metric) {
 }
 
 func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	// Init any internal datastructures that are not initialized yet
+	if t.rankFieldSet == nil {
+		t.rankFieldSet = make(map[string]bool)
+		for _, f := range t.AddRankField {
+			t.rankFieldSet[f] = true
+		}
+	}
+	if t.aggFieldSet == nil {
+		t.aggFieldSet = make(map[string]bool)
+		for _, f := range t.AddAggregateField {
+			t.aggFieldSet[f] = true
+		}
+	}
+
+
 	// Add the metrics received to our internal cache
 	var ret []telegraf.Metric = make([]telegraf.Metric, 0, 0)
 	for _, m := range in {
@@ -270,8 +291,8 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 		// Get the top K metrics for each field and add them to the return value
 		addedKeys := make(map[string]bool)
-		aggField := t.AggregationField
-		rankField := t.RankField
+		aggFieldSuffix := t.AggregateFieldSuffix
+		rankFieldSuffix := t.RankFieldSuffix
 		groupTag := t.AddGroupByTag
 		for _, field := range t.Fields {
 
@@ -282,14 +303,22 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			for i, ag := range aggregations[0:min(t.K, len(aggregations))] {
 
 				// Check whether of not we need to add fields of tags to the selected metrics
-				if aggField != "" || rankField != "" || groupTag != "" {
+				if len(t.aggFieldSet) != 0 || len(t.rankFieldSet) != 0 || groupTag != "" {
 					for _, m := range t.cache[ag.groupbykey] {
-						if aggField != "" && m.HasField(field) {
-							m.AddField(field+"_"+aggField, ag.values[field])
+
+						// Add the aggregation final value if requested
+						_, addAggField := t.aggFieldSet[field]
+						if addAggField && m.HasField(field) {
+							m.AddField(field+aggFieldSuffix, ag.values[field])
 						}
-						if rankField != "" {
-							m.AddField(field+"_"+rankField, i+1)
+
+						// Add the rank relative to the current field if requested
+						_, addRankField := t.rankFieldSet[field]
+						if addRankField && m.HasField(field) {
+							m.AddField(field+rankFieldSuffix, i+1)
 						}
+
+						// Add the generated groupby key if requested
 						if groupTag != "" {
 							m.AddTag(groupTag, ag.groupbykey)
 						}
