@@ -41,12 +41,6 @@ type Procstat struct {
 }
 
 var sampleConfig = `
-  ## pidFinder can be pgrep or native
-  ## pgrep tries to exec pgrep
-  ## native will work on all platforms, unix systems will use regexp. 
-  ## Windows will use WMI calls with like queries
-  pid_finder = "native"
-  ## Must specify one of: pid_file, exe, or pattern
   ## PID file to monitor process
   pid_file = "/var/run/nginx.pid"
   ## executable name (ie, pgrep <exe>)
@@ -63,12 +57,20 @@ var sampleConfig = `
   ## override for process_name
   ## This is optional; default is sourced from /proc/<pid>/status
   # process_name = "bar"
+
   ## Field name prefix
-  prefix = ""
-  ## comment this out if you want raw cpu_time stats
-  fielddrop = ["cpu_time_*"]
-  ## This is optional; moves pid into a tag instead of a field
-  pid_tag = false
+  # prefix = ""
+
+  ## Add PID as a tag instead of a field; useful to differentiate between
+  ## processes whose tags are otherwise the same.  Can create a large number
+  ## of series, use judiciously.
+  # pid_tag = false
+
+  ## Method to use when finding process IDs.  Can be one of 'pgrep', or
+  ## 'native'.  The pgrep finder calls the pgrep executable in the PATH while
+  ## the native finder performs the search directly in a manor dependent on the
+  ## platform.  Default is 'pgrep'
+  # pid_finder = "pgrep"
 `
 
 func (_ *Procstat) SampleConfig() string {
@@ -308,7 +310,7 @@ func (p *Procstat) findPids() ([]PID, map[string]string, error) {
 		pids, err = p.cgroupPIDs()
 		tags = map[string]string{"cgroup": p.CGroup}
 	} else {
-		err = fmt.Errorf("Either exe, pid_file, user, or pattern has to be specified")
+		err = fmt.Errorf("Either exe, pid_file, user, pattern, systemd_unit, or cgroup must be specified")
 	}
 
 	return pids, tags, err
