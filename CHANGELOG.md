@@ -48,6 +48,7 @@
 - [#3346](https://github.com/influxdata/telegraf/pull/3346): Add Ipset input plugin.
 - [#3719](https://github.com/influxdata/telegraf/pull/3719): Add TLS and HTTP basic auth to prometheus_client output.
 - [#3618](https://github.com/influxdata/telegraf/pull/3618): Add new sqlserver output data model.
+- [#3559](https://github.com/influxdata/telegraf/pull/3559): Add native Go method for finding pids to procstat.
 
 ### Bugfixes
 
