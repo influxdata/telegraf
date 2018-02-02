@@ -2,7 +2,7 @@ PREFIX := /usr/local
 VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 COMMIT := $(shell git rev-parse --short HEAD)
-GOFILES ?= $(shell find . -name '*.go')
+GOFILES ?= $(shell git ls-files '*.go')
 GOFMT ?= $(shell gofmt -l $(GOFILES))
 
 ifdef GOBIN
