@@ -37,7 +37,9 @@ workflows:
   nightly:
     jobs:
       - 'build'
-      - 'nightly'
+      - 'nightly':
+          requires:
+            - 'build'
     triggers:
       - schedule:
           cron: "0 0 * * *"
