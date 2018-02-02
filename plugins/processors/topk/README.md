@@ -41,8 +41,8 @@ If only the very top k metrics are needed, regardless of grouping, the simple_to
   ## Over which fields are the top k are calculated
   # fields = ["value"]
 
-  ## What aggregation to use. Options: sum, avg, min, max
-  # aggregation = "avg"
+  ## What aggregation to use. Options: sum, mean, min, max
+  # aggregation = "mean"
 
   ## Instead of the top k largest metrics, return the bottom k lowest metrics
   # bottomk = false
@@ -63,24 +63,28 @@ If only the very top k metrics are needed, regardless of grouping, the simple_to
   ## the value of the calculated GroupBy tag. Useful for debugging
   # group_by_tag = ""
 
-  ## This settings provides a way to know the position of each metric in
-  ## the top k. If set to a value different than "", then a field (which name
-  ## will be prefixed with the value of this setting) will be added to each
-  ## every metric for each field over which an aggregation was made. This
-  ## field will contain the ranking of the group that the metric
-  ## belonged to. When aggregating over several fields, several fields will
-  ## be added (one for each field over which the aggregation was calculated)
-  # position_field = ""
+  ## These settings provide a way to know the position of each metric in
+  ## the top k. The 'add_rank_field' setting allows to specify for which
+  ## fields the position is required. If the list is non empty, then a field
+  ## will be added to each every metric for each field present in the
+  ## 'add_rank_field'. This field will contain the ranking of the group that
+  ## the metric belonged to when aggregated over that field.
+  ## The name of the field will be set to the name of the aggregation field,
+  ## suffixed by the value of the 'rank_field_suffix' setting
+  # add_rank_field = []
+  # rank_field_suffix = "_rank"
 
-  ## This setting provies a way know the what values the plugin is generating
-  ## when aggregating the fields. If set to a value different than "", then a
-  ## field (which name will be prefixed with the value of this setting) will
-  ## be added to each metric which was part of a field aggregation. The value
-  ## of the added field will be the value of the result of the aggregation
-  ## operation for that metric's group. When aggregating over several fields,
-  ## several fields will be added (one for each field over which the
-  ## aggregation was calculated).
-  # aggregation_field = ""
+  ## These settings provide a way to know what values the plugin is generating
+  ## when aggregating metrics. The 'add_agregate_field' setting allows to
+  ## specify for which fields the final aggregation value is required. If the
+  ## list is non empty, then a field will be added to each every metric for
+  ## each field present in the 'add_aggregate_field'. This field will contain
+  ## the computed aggregation for the group that the metric belonged to when
+  ## aggregated over that field.
+  ## The name of the field will be set to the name of the aggregation field,
+  ## suffixed by the value of the 'aggregate_field_suffix' setting
+  # add_aggregate_field = []
+  # aggregate_field_suffix = "_rank"
 ```
 
 ### Tags:
