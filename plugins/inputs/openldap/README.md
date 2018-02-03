@@ -25,6 +25,10 @@ To use this plugin you must enable the [monitoring](https://www.openldap.org/dev
   # dn/password to bind with. If bind_dn is empty, an anonymous bind is performed.
   bind_dn = ""
   bind_password = ""
+  
+  # reverse metric names so they sort more naturally
+  # Defaults to false if unset, but is set to true when generating a new config
+  reverse_metric_names = true
 ```
 
 ### Measurements & Fields:
@@ -33,7 +37,7 @@ All **monitorCounter**, **monitoredInfo**, **monitorOpInitiated**, and **monitor
 
 ```(|(objectClass=monitorCounterObject)(objectClass=monitorOperation)(objectClass=monitoredObject))```
 
-Metric names are based on their reversed entry DN with cn=Monitor dropped.
+Metric names are based on their entry DN with the cn=Monitor base removed. If `reverse_metric_names` is not set, metrics are based on their DN. If `reverse_metric_names` is set to `true`, the names are reversed. This is recommended as it allows the names to sort more naturally.
 
 Metrics for the **monitorOp*** attributes have **_initiated** and **_completed** added to the base name as appropriate.
 
