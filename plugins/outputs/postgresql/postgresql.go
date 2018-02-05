@@ -148,6 +148,11 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 				datatype = "int8"
 			case float64:
 				datatype = "float8"
+			case string:
+				datatype = "text"
+			default:
+				datatype = "text"
+				log.Printf("E! Unknown column datatype %s: %v", column, v)
 			}
 			columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(column), datatype))
 		}
@@ -246,7 +251,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 
 				err := p.db.QueryRow(query, where_values...).Scan(&tag_id)
 				if err != nil {
-					log.Printf("I! Foreign key reference not found %s: %v", tablename, err)
+					// log.Printf("I! Foreign key reference not found %s: %v", tablename, err)
 					query := p.generateInsert(tablename+p.TagTableSuffix, where_columns) + " RETURNING tag_id"
 					err := p.db.QueryRow(query, where_values...).Scan(&tag_id)
 					if err != nil {
