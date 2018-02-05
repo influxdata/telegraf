@@ -67,7 +67,7 @@ Measurement names are based on the Metric Family and tags are created for each
 label.  The value is added to a field named based on the metric type.
 
 All metrics receive the `url` tag indicating the related URL specified in the
-Telegraf configuration.  If using Kubernetes service discovery the `address`
+Telegraf configuration. If using Kubernetes service discovery the `address`
 tag is also added indicating the discovered ip address.
 
 ### Example Output:
