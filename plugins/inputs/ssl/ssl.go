@@ -22,10 +22,12 @@ type Server struct {
 }
 
 var sampleConfig  = `
+  ## Server to check
   [[inputs.ssl.servers]]
     domain = "google.com"
     port = 443
     timeout = 5
+  ## Server to check
   [[inputs.ssl.servers]]
     domain = "github.com"
     port = 443
