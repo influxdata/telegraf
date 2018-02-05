@@ -18,8 +18,14 @@
 
 - The `sqlserver` input plugin has a new query and data model that can be enabled
   by setting `query_version = 2`.  It is encouraged to migrate to the new
-  model when possible as the old version is deprectated and will be removed in
+  model when possible as the old version is deprecated and will be removed in
   a future version.
+
+- An option has been added to the `openldap` input plugin that reverses metric
+  name to improve grouping.  This change is enabled when `reverse_metric_names = true`
+  is set.  It is encouraged to enable this option when possible as the old
+  ordering is deprecated.
+
 
 ### New Plugins
 
@@ -49,6 +55,7 @@
 - [#3719](https://github.com/influxdata/telegraf/pull/3719): Add TLS and HTTP basic auth to prometheus_client output.
 - [#3618](https://github.com/influxdata/telegraf/pull/3618): Add new sqlserver output data model.
 - [#3559](https://github.com/influxdata/telegraf/pull/3559): Add native Go method for finding pids to procstat.
+- [#3722](https://github.com/influxdata/telegraf/pull/3722): Add additional metrics and reverse metric names option to openldap.
 
 ### Bugfixes
 
