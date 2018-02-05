@@ -17,7 +17,7 @@ import (
 )
 
 var cfg = &OpenConfigTelemetry{
-	Server:          "127.0.0.1:50051",
+	Servers:         []string{"127.0.0.1:50051"},
 	SampleFrequency: internal.Duration{Duration: time.Second * 2},
 }
 
@@ -93,8 +93,8 @@ func TestOpenConfigTelemetryData(t *testing.T) {
 	tags := map[string]string{
 		"device":       "127.0.0.1",
 		"/sensor/@tag": "tagValue",
-		"_system_id":   "",
-		"_path":        "/sensor",
+		"system_id":    "",
+		"path":         "/sensor",
 	}
 
 	fields := map[string]interface{}{
@@ -118,9 +118,9 @@ func TestOpenConfigTelemetryDataWithPrefix(t *testing.T) {
 	require.NoError(t, err)
 
 	tags := map[string]string{
-		"device":     "127.0.0.1",
-		"_system_id": "",
-		"_path":      "/sensor_with_prefix",
+		"device":    "127.0.0.1",
+		"system_id": "",
+		"path":      "/sensor_with_prefix",
 	}
 
 	fields := map[string]interface{}{
@@ -146,8 +146,8 @@ func TestOpenConfigTelemetryDataWithMultipleTags(t *testing.T) {
 	tags1 := map[string]string{
 		"/sensor/prefix/tagKey/@tag": "tagValue",
 		"device":                     "127.0.0.1",
-		"_system_id":                 "",
-		"_path":                      "/sensor_with_multiple_tags",
+		"system_id":                  "",
+		"path":                       "/sensor_with_multiple_tags",
 	}
 
 	fields1 := map[string]interface{}{
@@ -159,9 +159,9 @@ func TestOpenConfigTelemetryDataWithMultipleTags(t *testing.T) {
 	}
 
 	tags2 := map[string]string{
-		"device":     "127.0.0.1",
-		"_system_id": "",
-		"_path":      "/sensor_with_multiple_tags",
+		"device":    "127.0.0.1",
+		"system_id": "",
+		"path":      "/sensor_with_multiple_tags",
 	}
 
 	fields2 := map[string]interface{}{
@@ -188,8 +188,8 @@ func TestOpenConfigTelemetryDataWithStringValues(t *testing.T) {
 	tags := map[string]string{
 		"/sensor/prefix/strKey/@tag": "tagValue",
 		"device":                     "127.0.0.1",
-		"_system_id":                 "",
-		"_path":                      "/sensor_with_string_values",
+		"system_id":                  "",
+		"path":                       "/sensor_with_string_values",
 	}
 
 	fields := map[string]interface{}{
@@ -212,7 +212,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	cfg.Server = lis.Addr().String()
+	cfg.Servers = []string{lis.Addr().String()}
 
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)

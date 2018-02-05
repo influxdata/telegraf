@@ -8,8 +8,8 @@ This plugin reads Juniper Networks implementation of OpenConfig telemetry data f
 ```toml
 # Subscribe and receive OpenConfig Telemetry data using JTI
 [[inputs.jti_openconfig_telemetry]]
-  ## Device address to collect telemetry from
-  server = "localhost:1883"
+  ## List of device addresses to collect telemetry from
+  servers = ["localhost:1883"]
 
   ## Authentication details. Username and password are must if device expects
   ## authentication. Client ID must be unique when connecting from multiple instances
@@ -33,7 +33,7 @@ This plugin reads Juniper Networks implementation of OpenConfig telemetry data f
   ]
 
   ## We allow specifying sensor group level reporting rate. To do this, specify the
-  ## reporting rate in Durati0on at the beginning of sensor paths / collection
+  ## reporting rate in Duration at the beginning of sensor paths / collection
   ## name. For entries without reporting rate, we use configured sample frequency
   sensors = [
    "1000ms customReporting /interfaces /lldp",
