@@ -56,6 +56,23 @@ func quoteLiteral(name string) string {
 	return "'" + strings.Replace(name, "'", "''", -1) + "'"
 }
 
+func deriveDatatype(value interface{}) string {
+	var datatype string
+
+	switch value.(type) {
+	case int64:
+		datatype = "int8"
+	case float64:
+		datatype = "float8"
+	case string:
+		datatype = "text"
+	default:
+		datatype = "text"
+		log.Printf("E! Unknown datatype %v", value)
+	}
+	return datatype
+}
+
 var sampleConfig = `
   ## specify address via a url matching:
   ##   postgres://[pqgotest[:password]]@localhost[/dbname]\
@@ -143,17 +160,7 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 	} else {
 		var datatype string
 		for column, v := range metric.Fields() {
-			switch v.(type) {
-			case int64:
-				datatype = "int8"
-			case float64:
-				datatype = "float8"
-			case string:
-				datatype = "text"
-			default:
-				datatype = "text"
-				log.Printf("E! Unknown column datatype %s: %v", column, v)
-			}
+			datatype = deriveDatatype(v)
 			columns = append(columns, fmt.Sprintf("%s %s", quoteIdent(column), datatype))
 		}
 	}
@@ -310,7 +317,42 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 		sql := p.generateInsert(tablename, columns)
 		_, err := p.db.Exec(sql, values...)
 		if err != nil {
-			fmt.Println("Error during insert", err)
+			// check if insert error was caused by column mismatch
+			if p.FieldsAsJsonb == false {
+				log.Printf("E! Error during insert: %v", err)
+				var quoted_columns []string
+				for _, column := range columns {
+					quoted_columns = append(quoted_columns, quoteLiteral(column))
+				}
+				query := "SELECT c FROM unnest(array[%s]) AS c WHERE NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE column_name=c AND table_schema=$1 AND table_name=$2)"
+				query = fmt.Sprintf(query, strings.Join(quoted_columns, ","))
+				result, err := p.db.Query(query, "public", tablename)
+				defer result.Close()
+				if err != nil {
+					return err
+				}
+				// some columns are missing
+
+				var column, datatype string
+				for result.Next() {
+					err := result.Scan(&column)
+					if err != nil {
+						log.Println(err)
+					}
+					for i, name := range columns {
+						if name == column {
+							datatype = deriveDatatype(values[i])
+						}
+					}
+					query := "ALTER TABLE %s.%s ADD COLUMN %s %s;"
+					_, err = p.db.Exec(fmt.Sprintf(query, quoteIdent("public"), quoteIdent(tablename), quoteIdent(column), datatype))
+					if err != nil {
+						return err
+						log.Println(err)
+					}
+				}
+			}
+
 			return err
 		}
 	}
