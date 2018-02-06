@@ -63,28 +63,28 @@ var ansMean12 = metric12.Copy()
 var ansMean13 = metric13.Copy()
 var ansMean14 = metric14.Copy()
 var ansMean15 = metric15.Copy()
-var MeanAggregationFieldAns = []telegraf.Metric{ansMean11, ansMean12, ansMean13, ansMean14, ansMean15}
+var MeanAddAggregateFieldAns = []telegraf.Metric{ansMean11, ansMean12, ansMean13, ansMean14, ansMean15}
 
 var ansSum11 = metric11.Copy()
 var ansSum12 = metric12.Copy()
 var ansSum13 = metric13.Copy()
 var ansSum14 = metric14.Copy()
 var ansSum15 = metric15.Copy()
-var SumAggregationFieldAns = []telegraf.Metric{ansSum11, ansSum12, ansSum13, ansSum14, ansSum15}
+var SumAddAggregateFieldAns = []telegraf.Metric{ansSum11, ansSum12, ansSum13, ansSum14, ansSum15}
 
 var ansMax11 = metric11.Copy()
 var ansMax12 = metric12.Copy()
 var ansMax13 = metric13.Copy()
 var ansMax14 = metric14.Copy()
 var ansMax15 = metric15.Copy()
-var MaxAggregationFieldAns = []telegraf.Metric{ansMax11, ansMax12, ansMax13, ansMax14, ansMax15}
+var MaxAddAggregateFieldAns = []telegraf.Metric{ansMax11, ansMax12, ansMax13, ansMax14, ansMax15}
 
 var ansMin11 = metric11.Copy()
 var ansMin12 = metric12.Copy()
 var ansMin13 = metric13.Copy()
 var ansMin14 = metric14.Copy()
 var ansMin15 = metric15.Copy()
-var MinAggregationFieldAns = []telegraf.Metric{ansMin11, ansMin12, ansMin13, ansMin14, ansMin15}
+var MinAddAggregateFieldAns = []telegraf.Metric{ansMin11, ansMin12, ansMin13, ansMin14, ansMin15}
 
 func setupTestSet1() {
 	// Expected answer for the TopkMeanAggretationField test
