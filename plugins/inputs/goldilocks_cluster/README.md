@@ -2,6 +2,9 @@
 
 This plugin gathers the statistic data from Goldilocks Cluster server. All metrics are configurable, and you can add/modify/remove metrics for Goldilocks statistics data via config file, without recompiling. 
 
+## Prerequisites 
+UnixODBC ( http://www.unixodbc.org ) is required. (above version 2.3.1 ) 
+
 ## Configuration of Goldilocks plugin 
 
 The configuration of Goldilocks plugin is consist of two parts. One is for the connection informations to Goldilocks server and the other is for defining metrics. 
