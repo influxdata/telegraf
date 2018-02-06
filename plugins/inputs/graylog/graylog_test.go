@@ -157,7 +157,7 @@ func TestNormalResponse(t *testing.T) {
 
 	for _, service := range graylog {
 		var acc testutil.Accumulator
-		err := service.Gather(&acc)
+		err := acc.GatherError(service.Gather)
 		require.NoError(t, err)
 		for k, v := range expectedFields {
 			acc.AssertContainsTaggedFields(t, k, v, validTags[k])
@@ -170,9 +170,9 @@ func TestHttpJson500(t *testing.T) {
 	graylog := genMockGrayLog(validJSON, 500)
 
 	var acc testutil.Accumulator
-	err := graylog[0].Gather(&acc)
+	err := acc.GatherError(graylog[0].Gather)
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, 0, acc.NFields())
 }
 
@@ -181,9 +181,9 @@ func TestHttpJsonBadJson(t *testing.T) {
 	graylog := genMockGrayLog(invalidJSON, 200)
 
 	var acc testutil.Accumulator
-	err := graylog[0].Gather(&acc)
+	err := acc.GatherError(graylog[0].Gather)
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, 0, acc.NFields())
 }
 
@@ -192,8 +192,8 @@ func TestHttpJsonEmptyResponse(t *testing.T) {
 	graylog := genMockGrayLog(empty, 200)
 
 	var acc testutil.Accumulator
-	err := graylog[0].Gather(&acc)
+	err := acc.GatherError(graylog[0].Gather)
 
-	assert.NotNil(t, err)
+	assert.Error(t, err)
 	assert.Equal(t, 0, acc.NFields())
 }

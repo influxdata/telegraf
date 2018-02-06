@@ -43,13 +43,11 @@ func (z *Zookeeper) Description() string {
 // Gather reads stats from all configured servers accumulates stats
 func (z *Zookeeper) Gather(acc telegraf.Accumulator) error {
 	if len(z.Servers) == 0 {
-		return nil
+		z.Servers = []string{":2181"}
 	}
 
 	for _, serverAddress := range z.Servers {
-		if err := z.gatherServer(serverAddress, acc); err != nil {
-			return err
-		}
+		acc.AddError(z.gatherServer(serverAddress, acc))
 	}
 	return nil
 }

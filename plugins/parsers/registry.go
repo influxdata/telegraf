@@ -5,6 +5,8 @@ import (
 
 	"github.com/influxdata/telegraf"
 
+	"github.com/influxdata/telegraf/plugins/parsers/collectd"
+	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
@@ -53,11 +55,34 @@ type Config struct {
 	// MetricName applies to JSON & value. This will be the name of the measurement.
 	MetricName string
 
+	// Authentication file for collectd
+	CollectdAuthFile string
+	// One of none (default), sign, or encrypt
+	CollectdSecurityLevel string
+	// Dataset specification for collectd
+	CollectdTypesDB []string
+
 	// DataType only applies to value, this will be the type to parse value to
 	DataType string
 
 	// DefaultTags are the default tags that will be added to all parsed metrics.
 	DefaultTags map[string]string
+
+	// an optional json path containing the metric registry object
+	// if left empty, the whole json object is parsed as a metric registry
+	DropwizardMetricRegistryPath string
+	// an optional json path containing the default time of the metrics
+	// if left empty, the processing time is used
+	DropwizardTimePath string
+	// time format to use for parsing the time field
+	// defaults to time.RFC3339
+	DropwizardTimeFormat string
+	// an optional json path pointing to a json object with tag key/value pairs
+	// takes precedence over DropwizardTagPathsMap
+	DropwizardTagsPath string
+	// an optional map containing tag names as keys and json paths to retrieve the tag values from as values
+	// used if TagsPath is empty or doesn't return any tags
+	DropwizardTagPathsMap map[string]string
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -78,6 +103,13 @@ func NewParser(config *Config) (Parser, error) {
 	case "graphite":
 		parser, err = NewGraphiteParser(config.Separator,
 			config.Templates, config.DefaultTags)
+	case "collectd":
+		parser, err = NewCollectdParser(config.CollectdAuthFile,
+			config.CollectdSecurityLevel, config.CollectdTypesDB)
+	case "dropwizard":
+		parser, err = NewDropwizardParser(config.DropwizardMetricRegistryPath,
+			config.DropwizardTimePath, config.DropwizardTimeFormat, config.DropwizardTagsPath, config.DropwizardTagPathsMap, config.DefaultTags,
+			config.Separator, config.Templates)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -123,4 +155,38 @@ func NewValueParser(
 		DataType:    dataType,
 		DefaultTags: defaultTags,
 	}, nil
+}
+
+func NewCollectdParser(
+	authFile string,
+	securityLevel string,
+	typesDB []string,
+) (Parser, error) {
+	return collectd.NewCollectdParser(authFile, securityLevel, typesDB)
+}
+
+func NewDropwizardParser(
+	metricRegistryPath string,
+	timePath string,
+	timeFormat string,
+	tagsPath string,
+	tagPathsMap map[string]string,
+	defaultTags map[string]string,
+	separator string,
+	templates []string,
+
+) (Parser, error) {
+	parser := &dropwizard.Parser{
+		MetricRegistryPath: metricRegistryPath,
+		TimePath:           timePath,
+		TimeFormat:         timeFormat,
+		TagsPath:           tagsPath,
+		TagPathsMap:        tagPathsMap,
+		DefaultTags:        defaultTags,
+		Separator:          separator,
+		Templates:          templates,
+	}
+	err := parser.InitTemplating()
+
+	return parser, err
 }

@@ -1,6 +1,9 @@
 package github
 
 import (
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
 	"log"
@@ -11,8 +14,9 @@ import (
 )
 
 type GithubWebhook struct {
-	Path string
-	acc  telegraf.Accumulator
+	Path   string
+	Secret string
+	acc    telegraf.Accumulator
 }
 
 func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
@@ -23,20 +27,28 @@ func (gh *GithubWebhook) Register(router *mux.Router, acc telegraf.Accumulator) 
 
 func (gh *GithubWebhook) eventHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	eventType := r.Header["X-Github-Event"][0]
+	eventType := r.Header.Get("X-Github-Event")
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	if gh.Secret != "" && !checkSignature(gh.Secret, data, r.Header.Get("X-Hub-Signature")) {
+		log.Printf("E! Fail to check the github webhook signature\n")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	e, err := NewEvent(data, eventType)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-
-	p := e.NewMetric()
-	gh.acc.AddFields("github_webhooks", p.Fields(), p.Tags(), p.Time())
+	if e != nil {
+		p := e.NewMetric()
+		gh.acc.AddFields("github_webhooks", p.Fields(), p.Tags(), p.Time())
+	}
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -84,6 +96,8 @@ func NewEvent(data []byte, name string) (Event, error) {
 		return generateEvent(data, &MembershipEvent{})
 	case "page_build":
 		return generateEvent(data, &PageBuildEvent{})
+	case "ping":
+		return nil, nil
 	case "public":
 		return generateEvent(data, &PublicEvent{})
 	case "pull_request":
@@ -104,4 +118,15 @@ func NewEvent(data []byte, name string) (Event, error) {
 		return generateEvent(data, &WatchEvent{})
 	}
 	return nil, &newEventError{"Not a recognized event type"}
+}
+
+func checkSignature(secret string, data []byte, signature string) bool {
+	return hmac.Equal([]byte(signature), []byte(generateSignature(secret, data)))
+}
+
+func generateSignature(secret string, data []byte) string {
+	mac := hmac.New(sha1.New, []byte(secret))
+	mac.Write(data)
+	result := mac.Sum(nil)
+	return "sha1=" + hex.EncodeToString(result)
 }

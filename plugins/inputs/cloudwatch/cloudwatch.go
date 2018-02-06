@@ -13,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -82,7 +81,7 @@ func (c *CloudWatch) SampleConfig() string {
 
   # The minimum period for Cloudwatch metrics is 1 minute (60s). However not all
   # metrics are made available to the 1 minute period. Some are collected at
-  # 3 minute and 5 minutes intervals. See https://aws.amazon.com/cloudwatch/faqs/#monitoring.
+  # 3 minute, 5 minute, or larger intervals. See https://aws.amazon.com/cloudwatch/faqs/#monitoring.
   # Note that if a period is configured that is smaller than the minimum for a
   # particular metric, that metric will not be returned by the Cloudwatch API
   # and will not be collected by Telegraf.
@@ -93,7 +92,7 @@ func (c *CloudWatch) SampleConfig() string {
   ## Collection Delay (required - must account for metrics availability via CloudWatch API)
   delay = "5m"
 
-  ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid
+  ## Recommended: use metric 'interval' that is a multiple of 'period' to avoid
   ## gaps or overlap in pulled data
   interval = "5m"
 
@@ -105,9 +104,10 @@ func (c *CloudWatch) SampleConfig() string {
   namespace = "AWS/ELB"
 
   ## Maximum requests per second. Note that the global default AWS rate limit is
-  ## 10 reqs/sec, so if you define multiple namespaces, these should add up to a
-  ## maximum of 10. Optional - default value is 10.
-  ratelimit = 10
+  ## 400 reqs/sec, so if you define multiple namespaces, these should add up to a
+  ## maximum of 400. Optional - default value is 200.
+  ## See http://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_limits.html
+  ratelimit = 200
 
   ## Metrics to Pull (optional)
   ## Defaults to all Metrics in Namespace if nothing is provided
@@ -185,8 +185,6 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	metricCount := len(metrics)
-	errChan := errchan.New(metricCount)
 
 	now := time.Now()
 
@@ -201,12 +199,12 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 		<-lmtr.C
 		go func(inm *cloudwatch.Metric) {
 			defer wg.Done()
-			c.gatherMetric(acc, inm, now, errChan.C)
+			acc.AddError(c.gatherMetric(acc, inm, now))
 		}(m)
 	}
 	wg.Wait()
 
-	return errChan.Error()
+	return nil
 }
 
 func init() {
@@ -214,7 +212,7 @@ func init() {
 		ttl, _ := time.ParseDuration("1hr")
 		return &CloudWatch{
 			CacheTTL:  internal.Duration{Duration: ttl},
-			RateLimit: 10,
+			RateLimit: 200,
 		}
 	})
 }
@@ -284,13 +282,11 @@ func (c *CloudWatch) gatherMetric(
 	acc telegraf.Accumulator,
 	metric *cloudwatch.Metric,
 	now time.Time,
-	errChan chan error,
-) {
+) error {
 	params := c.getStatisticsInput(metric, now)
 	resp, err := c.client.GetMetricStatistics(params)
 	if err != nil {
-		errChan <- err
-		return
+		return err
 	}
 
 	for _, point := range resp.Datapoints {
@@ -325,7 +321,7 @@ func (c *CloudWatch) gatherMetric(
 		acc.AddFields(formatMeasurement(c.Namespace), fields, tags, *point.Timestamp)
 	}
 
-	errChan <- nil
+	return nil
 }
 
 /*

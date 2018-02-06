@@ -5,12 +5,24 @@ import (
 	"log"
 	"net"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+)
+
+var (
+	allowedChars = regexp.MustCompile(`[^a-zA-Z0-9-_./\p{L}]`)
+	hypenChars   = strings.NewReplacer(
+		"@", "-",
+		"*", "-",
+		`%`, "-",
+		"#", "-",
+		"$", "-")
+	defaultSeperator = "_"
 )
 
 type OpenTSDB struct {
@@ -22,10 +34,9 @@ type OpenTSDB struct {
 	HttpBatchSize int
 
 	Debug bool
-}
 
-var sanitizedChars = strings.NewReplacer("@", "-", "*", "-", " ", "_",
-	`%`, "-", "#", "-", "$", "-", ":", "_")
+	Separator string
+}
 
 var sampleConfig = `
   ## prefix for metrics keys
@@ -45,6 +56,9 @@ var sampleConfig = `
 
   ## Debug true - Prints OpenTSDB communication
   debug = false
+
+  ## Separator separates measurement name from field
+  separator = "_"
 `
 
 func ToLineFormat(tags map[string]string) string {
@@ -59,6 +73,9 @@ func ToLineFormat(tags map[string]string) string {
 }
 
 func (o *OpenTSDB) Connect() error {
+	if !strings.HasPrefix(o.Host, "http") && !strings.HasPrefix(o.Host, "tcp") {
+		o.Host = "tcp://" + o.Host
+	}
 	// Test Connection to OpenTSDB Server
 	u, err := url.Parse(o.Host)
 	if err != nil {
@@ -68,11 +85,11 @@ func (o *OpenTSDB) Connect() error {
 	uri := fmt.Sprintf("%s:%d", u.Host, o.Port)
 	tcpAddr, err := net.ResolveTCPAddr("tcp", uri)
 	if err != nil {
-		return fmt.Errorf("OpenTSDB: TCP address cannot be resolved")
+		return fmt.Errorf("OpenTSDB TCP address cannot be resolved: %s", err)
 	}
 	connection, err := net.DialTCP("tcp", nil, tcpAddr)
 	if err != nil {
-		return fmt.Errorf("OpenTSDB: Telnet connect fail")
+		return fmt.Errorf("OpenTSDB Telnet connect fail: %s", err)
 	}
 	defer connection.Close()
 	return nil
@@ -122,8 +139,8 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 			}
 
 			metric := &HttpMetric{
-				Metric: sanitizedChars.Replace(fmt.Sprintf("%s%s_%s",
-					o.Prefix, m.Name(), fieldName)),
+				Metric: sanitize(fmt.Sprintf("%s%s%s%s",
+					o.Prefix, m.Name(), o.Separator, fieldName)),
 				Tags:      tags,
 				Timestamp: now,
 				Value:     value,
@@ -157,6 +174,15 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 		tags := ToLineFormat(cleanTags(m.Tags()))
 
 		for fieldName, value := range m.Fields() {
+			switch value.(type) {
+			case int64:
+			case uint64:
+			case float64:
+			default:
+				log.Printf("D! OpenTSDB does not support metric value: [%s] of type [%T].\n", value, value)
+				continue
+			}
+
 			metricValue, buildError := buildValue(value)
 			if buildError != nil {
 				log.Printf("E! OpenTSDB: %s\n", buildError.Error())
@@ -164,7 +190,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 			}
 
 			messageLine := fmt.Sprintf("put %s %v %s %s\n",
-				sanitizedChars.Replace(fmt.Sprintf("%s%s_%s", o.Prefix, m.Name(), fieldName)),
+				sanitize(fmt.Sprintf("%s%s%s%s", o.Prefix, m.Name(), o.Separator, fieldName)),
 				now, metricValue, tags)
 
 			_, err := connection.Write([]byte(messageLine))
@@ -180,7 +206,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 func cleanTags(tags map[string]string) map[string]string {
 	tagSet := make(map[string]string, len(tags))
 	for k, v := range tags {
-		tagSet[sanitizedChars.Replace(k)] = sanitizedChars.Replace(v)
+		tagSet[sanitize(k)] = sanitize(v)
 	}
 	return tagSet
 }
@@ -224,8 +250,17 @@ func (o *OpenTSDB) Close() error {
 	return nil
 }
 
+func sanitize(value string) string {
+	// Apply special hypenation rules to preserve backwards compatibility
+	value = hypenChars.Replace(value)
+	// Replace any remaining illegal chars
+	return allowedChars.ReplaceAllLiteralString(value, "_")
+}
+
 func init() {
 	outputs.Add("opentsdb", func() telegraf.Output {
-		return &OpenTSDB{}
+		return &OpenTSDB{
+			Separator: defaultSeperator,
+		}
 	})
 }

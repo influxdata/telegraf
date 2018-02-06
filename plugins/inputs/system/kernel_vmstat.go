@@ -41,7 +41,7 @@ func (k *KernelVmstat) Gather(acc telegraf.Accumulator) error {
 		// We only want the even number index as that contain the stat name.
 		if i%2 == 0 {
 			// Convert the stat value into an integer.
-			m, err := strconv.Atoi(string(dataFields[i+1]))
+			m, err := strconv.ParseInt(string(dataFields[i+1]), 10, 64)
 			if err != nil {
 				return err
 			}

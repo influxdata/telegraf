@@ -3,7 +3,7 @@
 This is a Telegraf service plugin that start an http server and register multiple webhook listeners.
 
 ```sh
-$ telegraf -sample-config -input-filter webhooks -output-filter influxdb > config.conf.new
+$ telegraf config -input-filter webhooks -output-filter influxdb > config.conf.new
 ```
 
 Change the config file to point to the InfluxDB server you are using and adjust the settings to match your environment. Once that is complete:
@@ -19,6 +19,9 @@ $ sudo service telegraf start
 - [Github](github/)
 - [Mandrill](mandrill/)
 - [Rollbar](rollbar/)
+- [Papertrail](papertrail/)
+- [Particle](particle/)
+
 
 ## Adding new webhooks plugin
 

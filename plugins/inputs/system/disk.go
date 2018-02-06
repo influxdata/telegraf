@@ -23,13 +23,12 @@ func (_ *DiskStats) Description() string {
 }
 
 var diskSampleConfig = `
-  ## By default, telegraf gather stats for all mountpoints.
-  ## Setting mountpoints will restrict the stats to the specified mountpoints.
+  ## By default stats will be gathered for all mount points.
+  ## Set mount_points will restrict the stats to only the specified mount points.
   # mount_points = ["/"]
 
-  ## Ignore some mountpoints by filesystem type. For example (dev)tmpfs (usually
-  ## present on /run, /var/run, /dev/shm or /dev).
-  ignore_fs = ["tmpfs", "devtmpfs"]
+  ## Ignore mount points by filesystem type.
+  ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
 `
 
 func (_ *DiskStats) SampleConfig() string {
@@ -52,10 +51,12 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			// Skip dummy filesystem (procfs, cgroupfs, ...)
 			continue
 		}
+		mountOpts := parseOptions(partitions[i].Opts)
 		tags := map[string]string{
 			"path":   du.Path,
 			"device": strings.Replace(partitions[i].Device, "/dev/", "", -1),
 			"fstype": du.Fstype,
+			"mode":   mountOpts.Mode(),
 		}
 		var used_percent float64
 		if du.Used+du.Free > 0 {
@@ -78,82 +79,34 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-type DiskIOStats struct {
-	ps PS
+type MountOptions []string
 
-	Devices          []string
-	SkipSerialNumber bool
+func (opts MountOptions) Mode() string {
+	if opts.exists("rw") {
+		return "rw"
+	} else if opts.exists("ro") {
+		return "ro"
+	} else {
+		return "unknown"
+	}
 }
 
-func (_ *DiskIOStats) Description() string {
-	return "Read metrics about disk IO by device"
+func (opts MountOptions) exists(opt string) bool {
+	for _, o := range opts {
+		if o == opt {
+			return true
+		}
+	}
+	return false
 }
 
-var diskIoSampleConfig = `
-  ## By default, telegraf will gather stats for all devices including
-  ## disk partitions.
-  ## Setting devices will restrict the stats to the specified devices.
-  # devices = ["sda", "sdb"]
-  ## Uncomment the following line if you need disk serial numbers.
-  # skip_serial_number = false
-`
-
-func (_ *DiskIOStats) SampleConfig() string {
-	return diskIoSampleConfig
-}
-
-func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
-	diskio, err := s.ps.DiskIO()
-	if err != nil {
-		return fmt.Errorf("error getting disk io info: %s", err)
-	}
-
-	var restrictDevices bool
-	devices := make(map[string]bool)
-	if len(s.Devices) != 0 {
-		restrictDevices = true
-		for _, dev := range s.Devices {
-			devices[dev] = true
-		}
-	}
-
-	for _, io := range diskio {
-		_, member := devices[io.Name]
-		if restrictDevices && !member {
-			continue
-		}
-		tags := map[string]string{}
-		tags["name"] = io.Name
-		if !s.SkipSerialNumber {
-			if len(io.SerialNumber) != 0 {
-				tags["serial"] = io.SerialNumber
-			} else {
-				tags["serial"] = "unknown"
-			}
-		}
-
-		fields := map[string]interface{}{
-			"reads":            io.ReadCount,
-			"writes":           io.WriteCount,
-			"read_bytes":       io.ReadBytes,
-			"write_bytes":      io.WriteBytes,
-			"read_time":        io.ReadTime,
-			"write_time":       io.WriteTime,
-			"io_time":          io.IoTime,
-			"iops_in_progress": io.IopsInProgress,
-		}
-		acc.AddCounter("diskio", fields, tags)
-	}
-
-	return nil
+func parseOptions(opts string) MountOptions {
+	return strings.Split(opts, ",")
 }
 
 func init() {
+	ps := newSystemPS()
 	inputs.Add("disk", func() telegraf.Input {
-		return &DiskStats{ps: &systemPS{}}
-	})
-
-	inputs.Add("diskio", func() telegraf.Input {
-		return &DiskIOStats{ps: &systemPS{}, SkipSerialNumber: true}
+		return &DiskStats{ps: ps}
 	})
 }
