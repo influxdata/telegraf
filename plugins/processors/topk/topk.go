@@ -199,10 +199,18 @@ func (t *TopK) generateGroupByKey(m telegraf.Metric) (string, error) {
 	}
 
 	if len(t.GroupBy) > 0 {
-		for tag, value := range m.Tags() {
+		tags := m.Tags()
+		keys := make([]string, 0, len(tags))
+		for tag, value := range tags {
 			if t.tagsGlobs.Match(tag) {
-				groupkey += tag + "=" + value + "&"
+				keys = append(keys, tag + "=" + value + "&")
 			}
+		}
+		// Sorting the selected tags is necessary because dictionaries
+		// do not ensure any specific or deterministic ordering
+		sort.SliceStable(keys, func (i, j int) bool {return keys[i] < keys[j]})
+		for _, str := range keys {
+			groupkey += str
 		}
 	}
 
