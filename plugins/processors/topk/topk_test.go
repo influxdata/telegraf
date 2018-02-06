@@ -82,56 +82,60 @@ func TestTopkAggregatorsSmokeTests(t *testing.T) {
 	}
 }
 
-// AggregationField + Mean aggregator
-func TestTopkMeanAggregationField(t *testing.T) {
+// AddAggregateField + Mean aggregator
+func TestTopkMeanAddAggregateField(t *testing.T) {
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
 	topk.Aggregation = "mean"
-	topk.AggregationField = "meanag"
+	topk.AggregateFieldSuffix = "meanag"
+	topk.AddAggregateField = []string{"a"}
 	topk.Fields = []string{"a"}
 	topk.GroupBy = []string{"tag_name"}
 
-	runAndCompare(&topk, deepCopy(MetricsSet1), MeanAggregationFieldAns, "MeanAggregationField test", t)
+	runAndCompare(&topk, deepCopy(MetricsSet1), MeanAddAggregateFieldAns, "MeanAddAggregateField test", t)
 }
 
-// AggregationField + Sum aggregator
-func TestTopkSumAggregationField(t *testing.T) {
+// AddAggregateField + Sum aggregator
+func TestTopkSumAddAggregateField(t *testing.T) {
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
 	topk.Aggregation = "sum"
-	topk.AggregationField = "sumag"
+	topk.AggregateFieldSuffix = "sumag"
+	topk.AddAggregateField = []string{"a"}
 	topk.Fields = []string{"a"}
 	topk.GroupBy = []string{"tag_name"}
 
-	runAndCompare(&topk, deepCopy(MetricsSet1), SumAggregationFieldAns, "SumAggregationField test", t)
+	runAndCompare(&topk, deepCopy(MetricsSet1), SumAddAggregateFieldAns, "SumAddAggregateField test", t)
 }
 
-// AggregationField + Max aggregator
-func TestTopkMaxAggregationField(t *testing.T) {
+// AddAggregateField + Max aggregator
+func TestTopkMaxAddAggregateField(t *testing.T) {
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
 	topk.Aggregation = "max"
-	topk.AggregationField = "maxag"
+	topk.AggregateFieldSuffix = "maxag"
+	topk.AddAggregateField = []string{"a"}
 	topk.Fields = []string{"a"}
 	topk.GroupBy = []string{"tag_name"}
 
-	runAndCompare(&topk, deepCopy(MetricsSet1), MaxAggregationFieldAns, "MaxAggregationField test", t)
+	runAndCompare(&topk, deepCopy(MetricsSet1), MaxAddAggregateFieldAns, "MaxAddAggregateField test", t)
 }
 
-// AggregationField + Min aggregator
-func TestTopkMinAggregationField(t *testing.T) {
+// AddAggregateField + Min aggregator
+func TestTopkMinAddAggregateField(t *testing.T) {
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
 	topk.Aggregation = "min"
-	topk.AggregationField = "minag"
+	topk.AggregateFieldSuffix = "minag"
+	topk.AddAggregateField = []string{"a"}
 	topk.Fields = []string{"a"}
 	topk.GroupBy = []string{"tag_name"}
 
-	runAndCompare(&topk, deepCopy(MetricsSet1), MinAggregationFieldAns, "MinAggregationField test", t)
+	runAndCompare(&topk, deepCopy(MetricsSet1), MinAddAggregateFieldAns, "MinAddAggregateField test", t)
 }
 
 // GroupBy
@@ -141,7 +145,8 @@ func TestTopkGroupby1(t *testing.T) {
 	topk.Period = 1
 	topk.K = 3
 	topk.Aggregation = "sum"
-	topk.AggregationField = "sumag"
+	topk.AggregateFieldSuffix = "sumag"
+	topk.AddAggregateField = []string{"value"}
 	topk.GroupBy = []string{"tag1", "tag3"}
 	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy1Ans, "GroupBy test 1", t)
 }
@@ -151,7 +156,8 @@ func TestTopkGroupby2(t *testing.T) {
 	topk.Period = 1
 	topk.K = 1
 	topk.Aggregation = "mean"
-	topk.AggregationField = "mean"
+	topk.AggregateFieldSuffix = "mean"
+	topk.AddAggregateField = []string{"value"}
 	topk.GroupBy = []string{"tag1"}
 	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy2Ans, "GroupBy test 2", t)
 }
@@ -161,7 +167,8 @@ func TestTopkGroupby3(t *testing.T) {
 	topk.Period = 1
 	topk.K = 1
 	topk.Aggregation = "min"
-	topk.AggregationField = "minaggfield"
+	topk.AggregateFieldSuffix = "minagfield"
+	topk.AddAggregateField = []string{"value"}
 	topk.GroupBy = []string{"tag4"}
 	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy3Ans, "GroupBy test 3", t)
 }
@@ -182,7 +189,8 @@ func TestTopkGroupbyFields1(t *testing.T) {
 	topk.Period = 1
 	topk.K = 2
 	topk.Aggregation = "mean"
-	topk.AggregationField = "mean"
+	topk.AggregateFieldSuffix = "mean"
+	topk.AddAggregateField = []string{"A"}
 	topk.GroupBy = []string{"tag1", "tag2"}
 	topk.Fields = []string{"A"}
 	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy4Ans, "GroupBy Fields test 1", t)
@@ -194,7 +202,8 @@ func TestTopkGroupbyFields2(t *testing.T) {
 	topk.Period = 1
 	topk.K = 2
 	topk.Aggregation = "sum"
-	topk.AggregationField = "sum"
+	topk.AggregateFieldSuffix = "sum"
+	topk.AddAggregateField = []string{"B", "C"}
 	topk.GroupBy = []string{"tag1", "tag3"}
 	topk.Fields = []string{"B", "C"}
 	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy5Ans, "GroupBy Fields test 2", t)
@@ -207,7 +216,8 @@ func TestTopkGroupbyMetricName1(t *testing.T) {
 	topk.Period = 1
 	topk.K = 1
 	topk.Aggregation = "sum"
-	topk.AggregationField = "sigma"
+	topk.AggregateFieldSuffix = "sigma"
+	topk.AddAggregateField = []string{"value"}
 	topk.GroupByMetricName = true
 	runAndCompare(&topk, deepCopy(MetricsSet2), GroupByMetric1Ans, "GroupBy by metric name test 1", t)
 }
@@ -218,7 +228,8 @@ func TestTopkGroupbyMetricName2(t *testing.T) {
 	topk.Period = 1
 	topk.K = 2
 	topk.Aggregation = "sum"
-	topk.AggregationField = "SUM"
+	topk.AggregateFieldSuffix = "SUM"
+	topk.AddAggregateField = []string{"A", "value"}
 	topk.GroupByMetricName = true
 	topk.GroupBy = []string{"tag1", "tag2"}
 	topk.Fields = []string{"A", "value"}
@@ -244,10 +255,12 @@ func TestTopkDontDropBottom(t *testing.T) {
 	topk.Period = 1
 	topk.K = 3
 	topk.Aggregation = "sum"
-	topk.AggregationField = "sumag"
+	topk.AggregateFieldSuffix = "sumag"
+	topk.AddAggregateField = []string{"value"}
 	topk.GroupBy = []string{"tag1", "tag3"}
 	topk.DropNonTop = false
-	topk.RankField = "aggpos"
+	topk.RankFieldSuffix = "aggpos"
+	topk.AddRankField = []string{"value"}
 	runAndCompare(&topk, deepCopy(MetricsSet2), DontDropBottomAns, "DontDropBottom test", t)
 }
 
@@ -284,8 +297,8 @@ func TestTopkNodrops1(t *testing.T) {
 	topk.Period = 1
 	topk.K = 3
 	topk.Aggregation = "sum"
-	topk.AggregationField = "sumag"
-	topk.RankField = "aggpos"
+	topk.AddAggregateField = []string{"value"}
+	topk.AddRankField = []string{"value"}
 	topk.GroupBy = []string{"tag1", "tag3"}
 	topk.DropNonTop = false
 	topk.DropNoGroup = false
