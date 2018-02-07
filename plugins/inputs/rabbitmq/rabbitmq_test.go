@@ -51,7 +51,25 @@ const sampleOverviewResponse = `
         "messages_unacknowledged_details": {
             "rate": 0.0
         }
-    }
+    },
+    "listeners": [
+        {
+            "name": "rabbit@node-a",
+            "protocol": "amqp"
+        },
+        {
+            "name": "rabbit@node-b",
+            "protocol": "amqp"
+        },
+        {
+            "name": "rabbit@node-a",
+            "protocol": "clustering"
+        },
+        {
+            "name": "rabbit@node-b",
+            "protocol": "clustering"
+        }
+    ]
 }
 `
 
@@ -374,6 +392,102 @@ const sampleQueuesResponse = `
 ]
 `
 
+const sampleExchangesResponse = `
+[
+  {
+    "arguments": { },
+    "internal": false,
+    "auto_delete": false,
+    "durable": true,
+    "type": "direct",
+    "vhost": "\/",
+    "name": ""
+  },
+  {
+    "message_stats": {
+      "publish_in_details": {
+        "rate": 0
+      },
+      "publish_in": 2,
+      "publish_out_details": {
+        "rate": 0
+      },
+      "publish_out": 1
+    },
+    "arguments": { },
+    "internal": false,
+    "auto_delete": false,
+    "durable": true,
+    "type": "fanout",
+    "vhost": "\/",
+    "name": "telegraf"
+  },
+  {
+    "arguments": { },
+    "internal": false,
+    "auto_delete": false,
+    "durable": true,
+    "type": "direct",
+    "vhost": "\/",
+    "name": "amq.direct"
+  },
+  {
+    "arguments": { },
+    "internal": false,
+    "auto_delete": false,
+    "durable": true,
+    "type": "fanout",
+    "vhost": "\/",
+    "name": "amq.fanout"
+  },
+  {
+    "arguments": { },
+    "internal": false,
+    "auto_delete": false,
+    "durable": true,
+    "type": "headers",
+    "vhost": "\/",
+    "name": "amq.headers"
+  },
+  {
+    "arguments": { },
+    "internal": false,
+    "auto_delete": false,
+    "durable": true,
+    "type": "headers",
+    "vhost": "\/",
+    "name": "amq.match"
+  },
+  {
+    "arguments": { },
+    "internal": true,
+    "auto_delete": false,
+    "durable": true,
+    "type": "topic",
+    "vhost": "\/",
+    "name": "amq.rabbitmq.log"
+  },
+  {
+    "arguments": { },
+    "internal": true,
+    "auto_delete": false,
+    "durable": true,
+    "type": "topic",
+    "vhost": "\/",
+    "name": "amq.rabbitmq.trace"
+  },
+  {
+    "arguments": { },
+    "internal": false,
+    "auto_delete": false,
+    "durable": true,
+    "type": "topic",
+    "vhost": "\/",
+    "name": "amq.topic"
+  }
+]
+`
+
 func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var rsp string
@@ -385,6 +499,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 			rsp = sampleNodesResponse
 		case "/api/queues":
 			rsp = sampleQueuesResponse
+		case "/api/exchanges":
+			rsp = sampleExchangesResponse
 		default:
 			panic("Cannot handle request")
 		}
@@ -399,7 +515,7 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := r.Gather(&acc)
+	err := acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	intMetrics := []string{
@@ -416,10 +532,12 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"consumers",
 		"exchanges",
 		"queues",
+		"clustering_listeners",
+		"amqp_listeners",
 	}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("rabbitmq_overview", metric))
+		assert.True(t, acc.HasInt64Field("rabbitmq_overview", metric))
 	}
 
 	nodeIntMetrics := []string{
@@ -434,11 +552,21 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"run_queue",
 		"sockets_total",
 		"sockets_used",
+		"running",
 	}
 
 	for _, metric := range nodeIntMetrics {
-		assert.True(t, acc.HasIntField("rabbitmq_node", metric))
+		assert.True(t, acc.HasInt64Field("rabbitmq_node", metric))
 	}
 
 	assert.True(t, acc.HasMeasurement("rabbitmq_queue"))
+
+	exchangeIntMetrics := []string{
+		"messages_publish_in",
+		"messages_publish_out",
+	}
+
+	for _, metric := range exchangeIntMetrics {
+		assert.True(t, acc.HasInt64Field("rabbitmq_exchange", metric))
+	}
 }

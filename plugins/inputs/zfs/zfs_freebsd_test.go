@@ -22,6 +22,15 @@ func mock_zpool() ([]string, error) {
 	return zpool_output, nil
 }
 
+// $ zpool list -Hp
+var zpool_output_unavail = []string{
+	"temp2	-	-	-	-	-	-	-	UNAVAIL	-",
+}
+
+func mock_zpool_unavail() ([]string, error) {
+	return zpool_output_unavail, nil
+}
+
 // sysctl -q kstat.zfs.misc.arcstats
 
 // sysctl -q kstat.zfs.misc.vdev_cache_stats
@@ -82,6 +91,41 @@ func TestZfsPoolMetrics(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
 }
 
+func TestZfsPoolMetrics_unavail(t *testing.T) {
+
+	var acc testutil.Accumulator
+
+	z := &Zfs{
+		KstatMetrics: []string{"vdev_cache_stats"},
+		sysctl:       mock_sysctl,
+		zpool:        mock_zpool_unavail,
+	}
+	err := z.Gather(&acc)
+	require.NoError(t, err)
+
+	require.False(t, acc.HasMeasurement("zfs_pool"))
+	acc.Metrics = nil
+
+	z = &Zfs{
+		KstatMetrics: []string{"vdev_cache_stats"},
+		PoolMetrics:  true,
+		sysctl:       mock_sysctl,
+		zpool:        mock_zpool_unavail,
+	}
+	err = z.Gather(&acc)
+	require.NoError(t, err)
+
+	//one pool, UNAVAIL
+	tags := map[string]string{
+		"pool":   "temp2",
+		"health": "UNAVAIL",
+	}
+
+	poolMetrics := getTemp2PoolMetrics()
+
+	acc.AssertContainsTaggedFields(t, "zfs_pool", poolMetrics, tags)
+}
+
 func TestZfsGeneratesMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 
@@ -125,6 +169,12 @@ func getFreeNasBootPoolMetrics() map[string]interface{} {
 		"free":          int64(28579464704),
 		"size":          int64(30601641984),
 		"fragmentation": int64(0),
+	}
+}
+
+func getTemp2PoolMetrics() map[string]interface{} {
+	return map[string]interface{}{
+		"size": int64(0),
 	}
 }
 

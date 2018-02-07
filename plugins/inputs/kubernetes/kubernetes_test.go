@@ -22,7 +22,7 @@ func TestKubernetesStats(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err := k.Gather(&acc)
+	err := acc.GatherError(k.Gather)
 	require.NoError(t, err)
 
 	fields := map[string]interface{}{
@@ -89,6 +89,29 @@ func TestKubernetesStats(t *testing.T) {
 		"container_name": "foocontainer",
 		"namespace":      "foons",
 		"pod_name":       "foopod",
+	}
+	acc.AssertContainsTaggedFields(t, "kubernetes_pod_container", fields, tags)
+
+	fields = map[string]interface{}{
+		"cpu_usage_nanocores":        int64(846503),
+		"cpu_usage_core_nanoseconds": int64(56507553554),
+		"memory_usage_bytes":         int64(0),
+		"memory_working_set_bytes":   int64(0),
+		"memory_rss_bytes":           int64(0),
+		"memory_page_faults":         int64(0),
+		"memory_major_page_faults":   int64(0),
+		"rootfs_available_bytes":     int64(0),
+		"rootfs_capacity_bytes":      int64(0),
+		"rootfs_used_bytes":          int64(0),
+		"logsfs_avaialble_bytes":     int64(0),
+		"logsfs_capacity_bytes":      int64(0),
+		"logsfs_used_bytes":          int64(0),
+	}
+	tags = map[string]string{
+		"node_name":      "node1",
+		"container_name": "stopped-container",
+		"namespace":      "foons",
+		"pod_name":       "stopped-pod",
 	}
 	acc.AssertContainsTaggedFields(t, "kubernetes_pod_container", fields, tags)
 
@@ -282,6 +305,25 @@ var response = `
       "capacityBytes": 7903961088,
       "usedBytes": 8192,
       "name": "volume4"
+     }
+    ]
+   },
+   {
+    "podRef": {
+     "name": "stopped-pod",
+     "namespace": "foons",
+     "uid": "da7c1865-d67d-4688-b679-c485ed44b2aa"
+    },
+    "startTime": null,
+    "containers": [
+     {
+      "name": "stopped-container",
+      "startTime": "2016-09-26T18:46:43Z",
+      "cpu": {
+       "time": "2016-09-27T16:57:32Z",
+       "usageNanoCores": 846503,
+       "usageCoreNanoSeconds": 56507553554
+      }
      }
     ]
    }

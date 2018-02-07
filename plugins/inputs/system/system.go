@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"runtime"
+	"strings"
 
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/load"
@@ -23,7 +24,7 @@ func (_ *SystemStats) SampleConfig() string { return "" }
 
 func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 	loadavg, err := load.Avg()
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "not implemented") {
 		return err
 	}
 
@@ -45,7 +46,9 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 		"n_cpus":  runtime.NumCPU(),
 	}, nil)
 	acc.AddCounter("system", map[string]interface{}{
-		"uptime":        hostinfo.Uptime,
+		"uptime": hostinfo.Uptime,
+	}, nil)
+	acc.AddFields("system", map[string]interface{}{
 		"uptime_format": format_uptime(hostinfo.Uptime),
 	}, nil)
 

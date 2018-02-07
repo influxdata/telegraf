@@ -1,12 +1,16 @@
 package udp_listener
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
+	"os"
+	"runtime"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -50,22 +54,27 @@ func TestHighTrafficUDP(t *testing.T) {
 	err := listener.Start(acc)
 	require.NoError(t, err)
 
-	time.Sleep(time.Millisecond * 25)
 	conn, err := net.Dial("udp", "127.0.0.1:8126")
 	require.NoError(t, err)
+	mlen := int64(len(testMsgs))
+	var sent int64
 	for i := 0; i < 20000; i++ {
-		// arbitrary, just to give the OS buffer some slack handling the
-		// packet storm.
-		time.Sleep(time.Microsecond)
-		fmt.Fprintf(conn, testMsgs)
+		for sent > listener.BytesRecv.Get()+32000 {
+			// more than 32kb sitting in OS buffer, let it drain
+			runtime.Gosched()
+		}
+		conn.Write([]byte(testMsgs))
+		sent += mlen
 	}
-	time.Sleep(time.Millisecond)
+	for sent > listener.BytesRecv.Get() {
+		runtime.Gosched()
+	}
+	for len(listener.in) > 0 {
+		runtime.Gosched()
+	}
 	listener.Stop()
 
-	// this is not an exact science, since UDP packets can easily get lost or
-	// dropped, but assume that the OS will be able to
-	// handle at least 90% of the sent UDP packets.
-	assert.InDelta(t, 100000, len(acc.Metrics), 10000)
+	assert.Equal(t, uint64(100000), acc.NMetrics())
 }
 
 func TestConnectUDP(t *testing.T) {
@@ -79,13 +88,12 @@ func TestConnectUDP(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
 	conn, err := net.Dial("udp", "127.0.0.1:8127")
 	require.NoError(t, err)
 
 	// send single message to socket
 	fmt.Fprintf(conn, testMsg)
-	time.Sleep(time.Millisecond * 15)
+	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
 		map[string]string{"host": "server01"},
@@ -93,7 +101,7 @@ func TestConnectUDP(t *testing.T) {
 
 	// send multiple messages to socket
 	fmt.Fprintf(conn, testMsgs)
-	time.Sleep(time.Millisecond * 15)
+	acc.Wait(6)
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
 	for _, hostTag := range hostTags {
@@ -118,13 +126,9 @@ func TestRunParser(t *testing.T) {
 	go listener.udpParser()
 
 	in <- testmsg
-	time.Sleep(time.Millisecond * 25)
 	listener.Gather(&acc)
 
-	if a := acc.NFields(); a != 1 {
-		t.Errorf("got %v, expected %v", a, 1)
-	}
-
+	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
 		map[string]interface{}{"value": float64(12)},
 		map[string]string{"host": "server01"},
@@ -144,11 +148,16 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	listener.wg.Add(1)
 	go listener.udpParser()
 
+	buf := bytes.NewBuffer(nil)
+	log.SetOutput(buf)
+	defer log.SetOutput(os.Stderr)
 	in <- testmsg
-	time.Sleep(time.Millisecond * 25)
 
-	if a := acc.NFields(); a != 0 {
-		t.Errorf("got %v, expected %v", a, 0)
+	scnr := bufio.NewScanner(buf)
+	for scnr.Scan() {
+		if strings.Contains(scnr.Text(), fmt.Sprintf(malformedwarn, 1)) {
+			break
+		}
 	}
 }
 
@@ -166,9 +175,9 @@ func TestRunParserGraphiteMsg(t *testing.T) {
 	go listener.udpParser()
 
 	in <- testmsg
-	time.Sleep(time.Millisecond * 25)
 	listener.Gather(&acc)
 
+	acc.Wait(1)
 	acc.AssertContainsFields(t, "cpu_load_graphite",
 		map[string]interface{}{"value": float64(12)})
 }
@@ -187,9 +196,9 @@ func TestRunParserJSONMsg(t *testing.T) {
 	go listener.udpParser()
 
 	in <- testmsg
-	time.Sleep(time.Millisecond * 25)
 	listener.Gather(&acc)
 
+	acc.Wait(1)
 	acc.AssertContainsFields(t, "udp_json_test",
 		map[string]interface{}{
 			"a":   float64(5),
