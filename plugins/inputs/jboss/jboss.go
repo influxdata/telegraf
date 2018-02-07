@@ -819,6 +819,15 @@ func (h *JBoss) getJVMStatistics(
 				nonHeap := mem["non-heap-memory-usage"].(map[string]interface{})
 				h.flatten(heap, fields, "heap")
 				h.flatten(nonHeap, fields, "nonheap")
+			case "memory-pool":
+				data := value.(map[string]interface{})
+				name := data["name"].(map[string]interface{})
+				for poolName, poolArea := range name {
+				    log.Printf("D! PoolName: %s %s", poolName, poolArea)
+				    poolData := poolArea.(map[string]interface{})
+					usage := poolData["usage"].(map[string]interface{})
+					h.flatten(usage, fields, poolName)
+				}
 			case "garbage-collector":
 				gc := value.(map[string]interface{})
 				gc_name := gc["name"].(map[string]interface{})
@@ -994,6 +1003,21 @@ func (h *JBoss) getServerDeploymentStatistics(
 		return nil
 	}
 	return errors.New(strings.Join(errorStrings, "\n"))
+}
+
+// Read memory-pool to produce field name and field value
+// Parameters:
+//    pool: Memmory-pool map to read
+//    fields: Map to store generated fields.
+//    name: Name of the memory-pool area
+// Returns:
+//    void
+func (h *JBoss) readMemoryPool(pool map[string]interface{}, fields map[string]interface{}, name string) {
+
+	poolArea := pool[name].(map[string]interface{})
+	usage := poolArea["usage"].(map[string]interface{})
+	
+	h.flatten(usage, fields, name)
 }
 
 // Flatten JSON hierarchy to produce field name and field value
