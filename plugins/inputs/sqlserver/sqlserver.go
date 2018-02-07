@@ -390,7 +390,6 @@ CROSS APPLY (
 	SELECT	*
 	FROM	@sys_info
 ) AS sinfo
-WHERE	database_id > 4
 OPTION( RECOMPILE );
 `
 
@@ -445,7 +444,8 @@ WHERE	(
 			'Memory Grants Pending',
 			'Free list stalls/sec',
 			'Buffer cache hit ratio',
-			'Buffer cache hit ratio base'
+			'Buffer cache hit ratio base',
+			'Backup/Restore Throughput/sec'
 		)
 		) OR (
 			instance_name IN ('_Total','Column store object pool')
@@ -494,6 +494,9 @@ WHERE	(
 				'Requests completed/sec',
 				'Blocked tasks'
 			)
+		) OR object_name IN (
+			'SQLServer:User Settable',
+			'SQLServer:SQL Errors'
 		)
 
 SELECT	'sqlserver_performance' AS [measurement],
