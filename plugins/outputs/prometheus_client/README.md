@@ -23,4 +23,11 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
 
   # Expiration interval for each metric. 0 == no expiration
   expiration_interval = "60s"
+
+  # Enable labels in prometheus output for all string fields. (Default: true)
+  string_to_label = true
+
+  # Enable labels in prometheus output for certain string fields.
+  # Won't work when string_to_label is set to false.
+  string_to_label_names = []
 ```

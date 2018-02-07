@@ -61,8 +61,9 @@ type PrometheusClient struct {
 	ExpirationInterval internal.Duration `toml:"expiration_interval"`
 	Path               string            `toml:"path"`
 	CollectorsExclude  []string          `toml:"collectors_exclude"`
-
-	server *http.Server
+	StringToLabel      bool              `toml:"string_to_label"`
+	StringToLabelNames []string          `toml:"string_to_label_names"`
+	server             *http.Server
 
 	sync.Mutex
 	// fam is the non-expired MetricFamily by Prometheus metric name.
@@ -89,6 +90,13 @@ var sampleConfig = `
   ## Collectors to enable, valid entries are "gocollector" and "process".
   ## If unset, both are enabled.
   collectors_exclude = ["gocollector", "process"]
+
+  # Enable labels in prometheus output for all string fields. (Default: true)
+  string_to_label = true
+
+  # Enable labels in prometheus output for certain string fields.
+  # Won't work when string_to_label is set to false.
+  string_to_label_names = []
 `
 
 func (p *PrometheusClient) basicAuth(h http.Handler) http.Handler {
@@ -265,6 +273,16 @@ func sanitize(value string) string {
 	return invalidNameCharRE.ReplaceAllString(value, "_")
 }
 
+// Checks if string is present in the array
+func contains(arr []string, str string) bool {
+	for _, a := range arr {
+		if a == str {
+			return true
+		}
+	}
+	return false
+}
+
 func getPromValueType(tt telegraf.ValueType) prometheus.ValueType {
 	switch tt {
 	case telegraf.Counter:
@@ -326,11 +344,15 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 		}
 
 		// Prometheus doesn't have a string value type, so convert string
-		// fields to labels.
-		for fn, fv := range point.Fields() {
-			switch fv := fv.(type) {
-			case string:
-				labels[sanitize(fn)] = fv
+		// fields to labels if enabled.
+		if p.StringToLabel {
+			for fn, fv := range point.Fields() {
+				switch fv := fv.(type) {
+				case string:
+					if len(p.StringToLabelNames) == 0 || contains(p.StringToLabelNames, fn) {
+						labels[sanitize(fn)] = fv
+					}
+				}
 			}
 		}
 
