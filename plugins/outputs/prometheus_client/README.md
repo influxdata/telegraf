@@ -29,5 +29,5 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
 
   # Enable labels in prometheus output for certain string fields.
   # Won't work when string_to_label is set to false.
-  StringToLabelList = []
+  string_to_label_names = []
 ```

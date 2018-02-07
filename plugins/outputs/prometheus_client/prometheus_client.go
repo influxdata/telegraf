@@ -62,7 +62,7 @@ type PrometheusClient struct {
 	Path               string            `toml:"path"`
 	CollectorsExclude  []string          `toml:"collectors_exclude"`
 	StringToLabel      bool              `toml:"string_to_label"`
-	StringToLabelList  []string          `toml:"string_to_label_list"`
+	StringToLabelNames []string          `toml:"string_to_label_names"`
 	server             *http.Server
 
 	sync.Mutex
@@ -96,7 +96,7 @@ var sampleConfig = `
 
   # Enable labels in prometheus output for certain string fields.
   # Won't work when string_to_label is set to false.
-  StringToLabelList = []
+  string_to_label_names = []
 `
 
 func (p *PrometheusClient) basicAuth(h http.Handler) http.Handler {
@@ -349,7 +349,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			for fn, fv := range point.Fields() {
 				switch fv := fv.(type) {
 				case string:
-					if len(p.StringToLabelList) == 0 || contains(p.StringToLabelList, fn) {
+					if len(p.StringToLabelNames) == 0 || contains(p.StringToLabelNames, fn) {
 						labels[sanitize(fn)] = fv
 					}
 				}
