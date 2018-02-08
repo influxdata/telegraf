@@ -127,7 +127,7 @@ func (s *GCPStackdriver) Gather(acc telegraf.Accumulator) error {
 
 	timeSeriesRequests, err := s.generatetimeSeriesConfs()
 	if err != nil {
-		log.Printf("Failed to get metrics", err)
+		log.Printf("Failed to get metrics: %s\n", err)
 		return err
 	}
 
@@ -342,8 +342,6 @@ func (s *GCPStackdriver) scrapeAllTimeSeries(
 func (s *GCPStackdriver) scrapeTimeSeries(acc telegraf.Accumulator,
 	tsConf timeSeriesConf) error {
 
-	log.Printf("Scraping %s\n", tsConf)
-
 	tsReq := tsConf.listTimeSeriesRequest
 	measurement := tsConf.measurement
 	fieldPrefix := tsConf.fieldPrefix
@@ -355,7 +353,7 @@ func (s *GCPStackdriver) scrapeTimeSeries(acc telegraf.Accumulator,
 			break
 		}
 		if tsErr != nil {
-			log.Printf("Request %s failure: %s", tsReq, tsErr)
+			log.Printf("Request %s failure: %s\n", tsReq.String(), tsErr)
 			return tsErr
 		}
 
