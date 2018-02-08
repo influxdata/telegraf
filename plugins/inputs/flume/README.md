@@ -3,12 +3,8 @@
 The example plugin gathers metrics about Flume.
 
 ### Configuration:
-
-This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage <plugin-name>`.
-
 ```toml
-# specify server via a url matching
+# Read metrics from one client
 [[inputs.flume]]
   server = "http://localhost:6666/metrics
 ```
@@ -19,7 +15,6 @@ The plugin gathers the results of the flume monitor http server and processes js
 
 ```json
 {
-    ...
     "SINK.k1": {
         "BatchCompleteCount": "13918",
         "BatchEmptyCount": "755",
@@ -46,7 +41,6 @@ The plugin gathers the results of the flume monitor http server and processes js
         "StopTime": "0",
         "Type": "SINK"
     },
-    ...
 }
 ```
 
