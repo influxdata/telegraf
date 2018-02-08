@@ -1,3 +1,4 @@
+cloud.google.com/go b1067c1d21b537cf0970ff61d3f28dbb9e595c78
 collectd.org 2ce144541b8903101fb8f1483cc0497a68798122
 github.com/aerospike/aerospike-client-go 95e1ad7791bdbca44707fedbb29be42024900d9c
 github.com/amir/raidman c74861fe6a7bb8ede0a010ce4485bdbb4fc4c985
@@ -26,6 +27,7 @@ github.com/golang/protobuf 8ee79997227bf9b34611aee7946ae64735e6fd93
 github.com/golang/snappy 7db9049039a047d955fe8c19b83c8ff5abd765c7
 github.com/go-ole/go-ole be49f7c07711fcb603cff39e1de7c67926dc0ba7
 github.com/google/go-cmp f94e52cad91c65a63acc1e75d4be223ea22e99bc
+github.com/googleapis/gax-go 317e0006254c44a0ac427cc52a0e083ff0b9622f
 github.com/gorilla/mux 392c28fe23e1c45ddba891b0320b3b5df220beea
 github.com/go-redis/redis 73b70592cdaa9e6abdfcfbf97b4a90d80728c836
 github.com/go-sql-driver/mysql 2e00b5cd70399450106cec6431c2e2ce3cae5034
@@ -82,9 +84,13 @@ github.com/wvanbergen/kazoo-go 968957352185472eacb69215fa3dbfcfdbac1096
 github.com/yuin/gopher-lua 66c871e454fcf10251c61bf8eff02d0978cae75a
 github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363
 golang.org/x/crypto dc137beb6cce2043eb6b5f223ab8bf51c32459f4
-golang.org/x/net f2499483f923065a842d38eb4c7f1927e6fc6e6d
+golang.org/x/net 5ccada7d0a7ba9aeb5d3aca8d3501b4c2a509fec
+golang.org/x/oauth2 b28fcf2b08a19742b43084fb40ab78ac6c3d8067
 golang.org/x/sys 739734461d1c916b6c72a63d7efda2b27edb369f
 golang.org/x/text 506f9d5c962f284575e88337e7d9296d27e729d3
+google.golang.org/api 7dc07103be9d5b55a2e32492100a6c83bd68a028
+google.golang.org/genproto a8101f21cf983e773d0c1133ebc5424792003214
+google.golang.org/grpc b71aced4a2a1ee80a1cbbd26b85a57623790d7f4
 gopkg.in/asn1-ber.v1 4e86f4367175e39f69d9358a5f17b4dda270378d
 gopkg.in/fatih/pool.v2 6e328e67893eb46323ad06f0e92cb9536babbabc
 gopkg.in/fsnotify.v1 a8a77c9133d2d6fd8334f3260d06f60e8d80a5fb
