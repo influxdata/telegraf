@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -100,9 +101,21 @@ func (m *Mesos) Description() string {
 	return "Telegraf plugin for gathering metrics from N Mesos masters"
 }
 
-func parseURL(s string) (*url.URL, error) {
+func parseURL(s string, role Role) (*url.URL, error) {
 	if !strings.HasPrefix(s, "http://") && !strings.HasPrefix(s, "https://") {
-		s = "http://" + s
+		host, port, err := net.SplitHostPort(s)
+		// no port specified
+		if err != nil {
+			host = s
+			switch role {
+			case MASTER:
+				port = "5050"
+			case SLAVE:
+				port = "5051"
+			}
+		}
+
+		s = "http://" + host + ":" + port
 		log.Printf("W! [inputs.mesos] Using %q as connection URL; please update your configuration to use an URL", s)
 	}
 
@@ -127,33 +140,23 @@ func (m *Mesos) initialize() error {
 
 	m.masterURLs = make([]*url.URL, 0, len(m.Masters))
 	for _, master := range m.Masters {
-		u, err := parseURL(master)
+		u, err := parseURL(master, MASTER)
 		if err != nil {
 			return err
 		}
 
 		u.RawQuery = rawQuery
-
-		if u.Port() == "" {
-			u.Host = u.Host + ":5050"
-		}
-
 		m.masterURLs = append(m.masterURLs, u)
 	}
 
 	m.slaveURLs = make([]*url.URL, 0, len(m.Slaves))
 	for _, slave := range m.Slaves {
-		u, err := parseURL(slave)
+		u, err := parseURL(slave, SLAVE)
 		if err != nil {
 			return err
 		}
 
 		u.RawQuery = rawQuery
-
-		if u.Port() == "" {
-			u.Host = u.Host + ":5051"
-		}
-
 		m.slaveURLs = append(m.slaveURLs, u)
 	}
 
