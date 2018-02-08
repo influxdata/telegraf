@@ -56,6 +56,7 @@
 - [#3618](https://github.com/influxdata/telegraf/pull/3618): Add new sqlserver output data model.
 - [#3559](https://github.com/influxdata/telegraf/pull/3559): Add native Go method for finding pids to procstat.
 - [#3722](https://github.com/influxdata/telegraf/pull/3722): Add additional metrics and reverse metric names option to openldap.
+- [#3769](https://github.com/influxdata/telegraf/pull/3769): Add TLS support to the mesos input plugin.
 
 ### Bugfixes
 
