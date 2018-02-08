@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+//Flume config
 type Flume struct {
 	Server string
 }
