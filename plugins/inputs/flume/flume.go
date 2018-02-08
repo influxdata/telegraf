@@ -7,7 +7,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"log"
 )
 
 type Flume struct {
@@ -45,20 +44,20 @@ func (f *Flume) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	for k, v := range metrics {
+	for c, mm := range metrics {
 
-		tags := map[string]string{"instance": k}
+		tags := map[string]string{"component": c}
 
-		c := map[string]interface{}{}
+		metric := map[string]interface{}{}
 
-		err := json.Unmarshal([]byte(v), &c)
+		err := json.Unmarshal([]byte(mm), &metric)
 		if err != nil {
 			return err
 		}
 
 		fields := map[string]interface{}{}
-		for kk, vv := range c {
-			fields[kk] = vv
+		for n, value := range metric {
+			fields[n] = value
 		}
 		acc.AddFields("flume", fields, tags)
 
