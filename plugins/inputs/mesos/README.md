@@ -11,7 +11,7 @@ For more information, please check the [Mesos Observability Metrics](http://meso
   ## Timeout, in ms.
   timeout = 100
   ## A list of Mesos masters.
-  masters = ["localhost:5050"]
+  masters = ["http://localhost:5050"]
   ## Master metrics groups to be collected, by default, all enabled.
   master_collections = [
     "resources",
@@ -242,7 +242,8 @@ Mesos slave metric groups
 ### Tags:
 
 - All master/slave measurements have the following tags:
-    - server
+    - server (network location of server: `host:port`)
+    - url (URL origin of server: `scheme://host:port`)
     - role (master/slave)
 
 - All master measurements have the extra tags:

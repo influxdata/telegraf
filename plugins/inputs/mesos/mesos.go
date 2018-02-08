@@ -57,7 +57,7 @@ var sampleConfig = `
   ## Timeout, in ms.
   timeout = 100
   ## A list of Mesos masters.
-  masters = ["localhost:5050"]
+  masters = ["http://localhost:5050"]
   ## Master metrics groups to be collected, by default, all enabled.
   master_collections = [
     "resources",
@@ -502,7 +502,8 @@ func (m *Mesos) gatherSlaveTaskMetrics(u *url.URL, acc telegraf.Accumulator) err
 	var metrics []TaskStats
 
 	tags := map[string]string{
-		"server": u.Host,
+		"server": u.Hostname(),
+		"url":    urlTag(u),
 	}
 
 	resp, err := m.client.Get(withPath(u, "/monitor/statistics").String())
@@ -541,8 +542,17 @@ func (m *Mesos) gatherSlaveTaskMetrics(u *url.URL, acc telegraf.Accumulator) err
 }
 
 func withPath(u *url.URL, path string) *url.URL {
-	u.Path = path
-	return u
+	c := *u
+	c.Path = path
+	return &c
+}
+
+func urlTag(u *url.URL) string {
+	c := *u
+	c.Path = ""
+	c.User = nil
+	c.RawQuery = ""
+	return c.String()
 }
 
 // This should not belong to the object
@@ -550,7 +560,8 @@ func (m *Mesos) gatherMainMetrics(u *url.URL, role Role, acc telegraf.Accumulato
 	var jsonOut map[string]interface{}
 
 	tags := map[string]string{
-		"server": u.Host,
+		"server": u.Hostname(),
+		"url":    urlTag(u),
 		"role":   string(role),
 	}
 
