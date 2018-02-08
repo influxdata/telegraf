@@ -494,6 +494,18 @@ WHERE	(
 				'Requests completed/sec',
 				'Blocked tasks'
 			)
+		) OR (
+			object_name = 'SQLServer:Resource Pool Stats'
+			AND counter_name IN (
+				'Active memory grant amount (KB)',
+				'Disk Read Bytes/sec',
+				'Disk Read IO Throttled/sec',
+				'Disk Read IO/sec',
+				'Disk Write Bytes/sec',
+				'Disk Write IO Throttled/sec',
+				'Disk Write IO/sec',
+				'Used memory (KB)'
+			)
 		) OR object_name IN (
 			'SQLServer:User Settable',
 			'SQLServer:SQL Errors'
