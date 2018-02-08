@@ -26,6 +26,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/fail2ban"
 	_ "github.com/influxdata/telegraf/plugins/inputs/filestat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/fluentd"
+	_ "github.com/influxdata/telegraf/plugins/inputs/flume"
 	_ "github.com/influxdata/telegraf/plugins/inputs/graylog"
 	_ "github.com/influxdata/telegraf/plugins/inputs/haproxy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/hddtemp"
