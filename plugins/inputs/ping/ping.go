@@ -129,16 +129,16 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			fields["packets_transmitted"] = trans
 			fields["packets_received"] = rec
 			fields["percent_packet_loss"] = loss
-			if min > 0 {
+			if min >= 0 {
 				fields["minimum_response_ms"] = min
 			}
-			if avg > 0 {
+			if avg >= 0 {
 				fields["average_response_ms"] = avg
 			}
-			if max > 0 {
+			if max >= 0 {
 				fields["maximum_response_ms"] = max
 			}
-			if stddev > 0 {
+			if stddev >= 0 {
 				fields["standard_deviation_ms"] = stddev
 			}
 			acc.AddFields("ping", fields, tags)
@@ -207,7 +207,7 @@ func (p *Ping) args(url string) []string {
 // It returns (<transmitted packets>, <received packets>, <average response>)
 func processPingOutput(out string) (int, int, float64, float64, float64, float64, error) {
 	var trans, recv int
-	var min, avg, max, stddev float64
+	var min, avg, max, stddev float64 = -1.0, -1.0, -1.0, -1.0
 	// Set this error to nil if we find a 'transmitted' line
 	err := errors.New("Fatal error processing ping output")
 	lines := strings.Split(out, "\n")
