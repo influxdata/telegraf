@@ -201,13 +201,13 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			fields["packets_received"] = receivePacket
 			fields["percent_packet_loss"] = lossPackets
 			fields["percent_reply_loss"] = lossReply
-			if avg > 0 {
+			if avg >= 0 {
 				fields["average_response_ms"] = float64(avg)
 			}
-			if min > 0 {
+			if min >= 0 {
 				fields["minimum_response_ms"] = float64(min)
 			}
-			if max > 0 {
+			if max >= 0 {
 				fields["maximum_response_ms"] = float64(max)
 			}
 			acc.AddFields("ping", fields, tags)
