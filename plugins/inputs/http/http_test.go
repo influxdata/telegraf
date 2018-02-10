@@ -21,8 +21,10 @@ func TestHTTPwithJSONFormat(t *testing.T) {
 	}))
 	defer fakeServer.Close()
 
+	url := fakeServer.URL + "/endpoint"
 	plugin := &plugin.HTTP{
-		URLs: []string{fakeServer.URL + "/endpoint"},
+		URLs:   []string{url},
+		TagURL: true,
 	}
 	metricName := "metricName"
 	p, _ := parsers.NewJSONParser(metricName, nil, nil)
@@ -33,11 +35,12 @@ func TestHTTPwithJSONFormat(t *testing.T) {
 
 	require.Len(t, acc.Metrics, 1)
 
-	// basic check to see if we got the right field and value
+	// basic check to see if we got the right field, value and tag
 	var metric = acc.Metrics[0]
 	require.Equal(t, metric.Measurement, metricName)
 	require.Len(t, acc.Metrics[0].Fields, 1)
 	require.Equal(t, acc.Metrics[0].Fields["a"], 1.2)
+	require.Equal(t, acc.Metrics[0].Tags["url"], url)
 }
 
 const simpleJSON = `

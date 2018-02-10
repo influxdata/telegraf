@@ -20,6 +20,9 @@ type HTTP struct {
 	Username string
 	Password string
 
+	// Option to add "url" tag to each metric
+	TagURL bool `toml:"tag_url"`
+
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
 	// Path to host cert file
@@ -47,6 +50,9 @@ var sampleConfig = `
   ## Optional HTTP Basic Auth Credentials
   # username = "username"
   # password = "pa$$word"
+
+  ## Tag all metrics with the url
+  # tag_url = true
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -149,6 +155,9 @@ func (h *HTTP) gatherURL(
 	}
 
 	for _, metric := range metrics {
+		if h.TagURL {
+			metric.AddTag("url", url)
+		}
 		acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
 	}
 
