@@ -43,6 +43,73 @@ func TestHTTPwithJSONFormat(t *testing.T) {
 	require.Equal(t, acc.Metrics[0].Tags["url"], url)
 }
 
+func TestHTTPHeaders(t *testing.T) {
+	header := "X-Special-Header"
+	headerValue := "Special-Value"
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/endpoint" {
+			if r.Header.Get(header) == headerValue {
+				_, _ = w.Write([]byte(simpleJSON))
+			} else {
+				w.WriteHeader(http.StatusForbidden)
+			}
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer fakeServer.Close()
+
+	url := fakeServer.URL + "/endpoint"
+	plugin := &plugin.HTTP{
+		URLs:    []string{url},
+		Headers: map[string]string{header: headerValue},
+	}
+	metricName := "metricName"
+	p, _ := parsers.NewJSONParser(metricName, nil, nil)
+	plugin.SetParser(p)
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(plugin.Gather))
+}
+
+func TestInvalidStatusCode(t *testing.T) {
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer fakeServer.Close()
+
+	url := fakeServer.URL + "/endpoint"
+	plugin := &plugin.HTTP{
+		URLs: []string{url},
+	}
+
+	metricName := "metricName"
+	p, _ := parsers.NewJSONParser(metricName, nil, nil)
+	plugin.SetParser(p)
+
+	var acc testutil.Accumulator
+	require.Error(t, acc.GatherError(plugin.Gather))
+}
+
+func TestParserNotSet(t *testing.T) {
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/endpoint" {
+			_, _ = w.Write([]byte(simpleJSON))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer fakeServer.Close()
+
+	url := fakeServer.URL + "/endpoint"
+	plugin := &plugin.HTTP{
+		URLs: []string{url},
+	}
+
+	var acc testutil.Accumulator
+	require.Error(t, acc.GatherError(plugin.Gather))
+}
+
 const simpleJSON = `
 {
     "a": 1.2

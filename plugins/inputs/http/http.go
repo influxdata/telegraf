@@ -1,9 +1,11 @@
 package http
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,6 +17,8 @@ import (
 
 type HTTP struct {
 	URLs []string `toml:"urls"`
+
+	Headers map[string]string
 
 	// HTTP Basic Auth Credentials
 	Username string
@@ -46,6 +50,9 @@ var sampleConfig = `
   urls = [
     "http://localhost/metrics"
   ]
+
+  ## Optional HTTP headers
+  # headers = {"X-Special-Header" = "Special-Value"}
 
   ## Optional HTTP Basic Auth Credentials
   # username = "username"
@@ -134,6 +141,14 @@ func (h *HTTP) gatherURL(
 		return err
 	}
 
+	for k, v := range h.Headers {
+		if strings.ToLower(k) == "host" {
+			request.Host = v
+		} else {
+			request.Header.Add(k, v)
+		}
+	}
+
 	if h.Username != "" {
 		request.SetBasicAuth(h.Username, h.Password)
 	}
@@ -144,9 +159,21 @@ func (h *HTTP) gatherURL(
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Received status code %d (%s), expected %d (%s)",
+			resp.StatusCode,
+			http.StatusText(resp.StatusCode),
+			http.StatusOK,
+			http.StatusText(http.StatusOK))
+	}
+
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
+	}
+
+	if h.parser == nil {
+		return errors.New("Parser is not set")
 	}
 
 	metrics, err := h.parser.Parse(b)
