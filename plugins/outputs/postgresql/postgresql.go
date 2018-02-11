@@ -348,7 +348,6 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 					_, err = p.db.Exec(fmt.Sprintf(query, quoteIdent("public"), quoteIdent(tablename), quoteIdent(column), datatype))
 					if err != nil {
 						return err
-						log.Println(err)
 					}
 				}
 			}
