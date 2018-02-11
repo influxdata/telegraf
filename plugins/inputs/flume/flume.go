@@ -18,7 +18,14 @@ import (
 type Flume struct {
 	// Flume merics servers
 	Servers []string
-
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to client cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
 	// HTTP client
 	client *http.Client
 	// Response timeout
@@ -31,19 +38,36 @@ func (f *Flume) Description() string {
 
 func (f *Flume) SampleConfig() string {
 	return `
-  ## specify servers via a url matching:
-  ##
-  server = "http://localhost:6666/metrics"
+  # specify servers via a url matching:
+  #
+  servers = ["http://localhost:6666/metrics"]
+
+  # TLS/SSL configuration
+  ssl_ca = "/etc/telegraf/ca.pem"
+  ssl_cert = "/etc/telegraf/cert.cer"
+  ssl_key = "/etc/telegraf/key.key"
+  insecure_skip_verify = false
+  # HTTP response timeout (default: 5s)
+  response_timeout = "5s"
 `
 }
 
 func (f *Flume) createHTTPClient() (*http.Client, error) {
+
+	tlsCfg, err := internal.GetTLSConfig(
+		f.SSLCert, f.SSLKey, f.SSLCA, f.InsecureSkipVerify)
+	if err != nil {
+		return nil, err
+	}
 
 	if f.ResponseTimeout.Duration < time.Second {
 		f.ResponseTimeout.Duration = time.Second * 5
 	}
 
 	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
 		Timeout: f.ResponseTimeout.Duration,
 	}
 
