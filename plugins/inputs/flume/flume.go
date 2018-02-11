@@ -5,13 +5,24 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"fmt"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"net/url"
+	"sync"
+	"time"
 )
 
 //Flume config
 type Flume struct {
-	Server string
+	// Flume merics servers
+	Servers []string
+
+	// HTTP client
+	client *http.Client
+	// Response timeout
+	ResponseTimeout internal.Duration
 }
 
 func (f *Flume) Description() string {
@@ -26,46 +37,91 @@ func (f *Flume) SampleConfig() string {
 `
 }
 
-func (f *Flume) Gather(acc telegraf.Accumulator) error {
+func (f *Flume) createHTTPClient() (*http.Client, error) {
 
-	url := f.Server
-
-	req, _ := http.NewRequest("GET", url, nil)
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
+	if f.ResponseTimeout.Duration < time.Second {
+		f.ResponseTimeout.Duration = time.Second * 5
 	}
-	defer res.Body.Close()
+
+	client := &http.Client{
+		Timeout: f.ResponseTimeout.Duration,
+	}
+
+	return client, nil
+}
+
+func (f *Flume) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
+	resp, err := f.client.Get(addr.String())
+	if err != nil {
+		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("%s returned HTTP status %s", addr.String(), resp.Status)
+	}
 
 	var metrics map[string]json.RawMessage
 
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := ioutil.ReadAll(resp.Body)
 	err = json.Unmarshal(body, &metrics)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s returned unmarshalable body %s", addr.String(), err)
 	}
 
-	for c, mm := range metrics {
+	for c, metricJSON := range metrics {
 
-		tags := map[string]string{"component": c}
+		tags := map[string]string{"component": c, "server": addr.String()}
 
 		metric := map[string]interface{}{}
 
-		err := json.Unmarshal([]byte(mm), &metric)
+		err := json.Unmarshal([]byte(metricJSON), &metric)
 		if err != nil {
 			return err
 		}
 
 		fields := map[string]interface{}{}
-		for n, value := range metric {
-			fields[n] = value
+		for m, value := range metric {
+			fields[m] = value
 		}
-		acc.AddFields("flume", fields, tags)
+		acc.AddFields("flume"+"_"+fields["Type"].(string), fields, tags)
 
 	}
 
 	return nil
 }
+
+func (f *Flume) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
+
+	// Create an HTTP client that is re-used for each
+	// collection interval
+	if f.client == nil {
+		client, err := f.createHTTPClient()
+		if err != nil {
+			return err
+		}
+		f.client = client
+	}
+
+	for _, u := range f.Servers {
+		addr, err := url.Parse(u)
+		if err != nil {
+			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			continue
+		}
+
+		wg.Add(1)
+		go func(addr *url.URL) {
+			defer wg.Done()
+			acc.AddError(f.gatherURL(addr, acc))
+		}(addr)
+	}
+
+	wg.Wait()
+	return nil
+
+}
+
 func init() {
 	inputs.Add("flume", func() telegraf.Input { return &Flume{} })
 }
