@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
 )
 
@@ -64,9 +65,8 @@ JoiUjTAZegW1RkST3tB1an9zO0EcPvo/1yU7wKaMuNwmauPlltBdpaTwojeUBiFr
 AoQUXWIiFBoFfpNVcvUgHyGGc1hv7TX8Eh8KGo2+VuPzxnFuRrbbYCs=
 -----END RSA PRIVATE KEY-----`
 
-func getTestPrefix(testN int) string {
-	return fmt.Sprintf("Test [%d]: ", testN)
-}
+// Make sure SSLCert implements telegraf.Input
+var _ telegraf.Input = &SSLCert{}
 
 func TestGatherRemote(t *testing.T) {
 	if testing.Short() {
@@ -77,51 +77,54 @@ func TestGatherRemote(t *testing.T) {
 		server  string
 		timeout time.Duration
 		close   bool
+		unset   bool
 		error   bool
 	}{
-		{server: ":99999", timeout: 0, close: false, error: true},
-		{server: "", timeout: 5, close: false, error: false},
-		{server: "", timeout: 0, close: true, error: true},
+		{server: ":99999", timeout: 0, close: false, unset: false, error: true},
+		{server: "", timeout: 5, close: false, unset: false, error: false},
+		{server: "", timeout: 5, close: false, unset: true, error: true},
+		{server: "", timeout: 0, close: true, unset: false, error: true},
 	}
-
-	pair, err := tls.X509KeyPair([]byte(testCert), []byte(testKey))
-	if err != nil {
-		t.Error(err)
-	}
-
-	config := &tls.Config{
-		Certificates: []tls.Certificate{pair},
-	}
-
-	ln, err := tls.Listen("tcp", ":0", config)
-	if err != nil {
-		t.Error(err)
-	}
-	defer ln.Close()
-
-	go func() {
-		sconn, err := ln.Accept()
-		if err != nil {
-			return
-		}
-
-		serverConfig := config.Clone()
-
-		srv := tls.Server(sconn, serverConfig)
-		if err := srv.Handshake(); err != nil {
-			return
-		}
-	}()
 
 	for i, test := range tests {
+		pair, err := tls.X509KeyPair([]byte(testCert), []byte(testKey))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		config := &tls.Config{
+			Certificates: []tls.Certificate{pair},
+		}
+
+		ln, err := tls.Listen("tcp", ":0", config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer ln.Close()
+
+		go func() {
+			sconn, err := ln.Accept()
+			if err != nil {
+				return
+			}
+
+			serverConfig := config.Clone()
+
+			srv := tls.Server(sconn, serverConfig)
+			if err := srv.Handshake(); err != nil {
+				return
+			}
+		}()
+
 		if test.server == "" {
 			test.server = ln.Addr().String()
 		}
 
 		sc := SSLCert{
-			Servers:   []string{test.server},
-			Timeout:   test.timeout,
-			CloseConn: test.close,
+			Servers:    []string{test.server},
+			Timeout:    test.timeout,
+			CloseConn:  test.close,
+			UnsetCerts: test.unset,
 		}
 
 		error := false
@@ -155,22 +158,22 @@ func TestGatherLocal(t *testing.T) {
 	for i, test := range tests {
 		f, err := ioutil.TempFile("", "ssl_cert")
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 
 		_, err = f.Write([]byte(test.content))
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 
 		err = f.Chmod(test.mode)
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 
 		err = f.Close()
 		if err != nil {
-			t.Error(err)
+			t.Fatal(err)
 		}
 
 		defer os.Remove(f.Name())

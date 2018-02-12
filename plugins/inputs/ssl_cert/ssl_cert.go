@@ -24,24 +24,28 @@ const sampleConfig = `
 `
 const description = "Reads metrics from a SSL certificate"
 
+// SSLCert holds the configuration of the plugin.
 type SSLCert struct {
 	Servers []string      `toml:"servers"`
 	Files   []string      `toml:"files"`
 	Timeout time.Duration `toml:"timeout"`
 
 	// For tests
-	CloseConn bool
+	CloseConn  bool
+	UnsetCerts bool
 }
 
+// Description returns description of the plugin.
 func (sc *SSLCert) Description() string {
 	return description
 }
 
+// SampleConfig returns configuration sample for the plugin.
 func (sc *SSLCert) SampleConfig() string {
 	return sampleConfig
 }
 
-func getRemoteCert(server string, timeout time.Duration, closeConn bool) (*x509.Certificate, error) {
+func getRemoteCert(server string, timeout time.Duration, closeConn bool, unsetCerts bool) (*x509.Certificate, error) {
 	tlsCfg := &tls.Config{
 		InsecureSkipVerify: true,
 	}
@@ -66,8 +70,12 @@ func getRemoteCert(server string, timeout time.Duration, closeConn bool) (*x509.
 
 	certs := conn.ConnectionState().PeerCertificates
 
+	if unsetCerts {
+		certs = nil
+	}
+
 	if certs == nil || len(certs) < 1 {
-		return nil, errors.New("Couldn't get remote certificate.")
+		return nil, errors.New("couldn't get remote certificate")
 	}
 
 	return certs[0], nil
@@ -81,7 +89,7 @@ func getLocalCert(filename string) (*x509.Certificate, error) {
 
 	block, _ := pem.Decode(content)
 	if block == nil {
-		return nil, errors.New("Failed to parse certificate PEM.")
+		return nil, errors.New("failed to parse certificate PEM")
 	}
 
 	cert, err := x509.ParseCertificate(block.Bytes)
@@ -108,13 +116,14 @@ func getMetrics(cert *x509.Certificate, now time.Time) map[string]interface{} {
 	return metrics
 }
 
+// Gather adds metrics into the accumulator.
 func (sc *SSLCert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	for _, server := range sc.Servers {
-		cert, err := getRemoteCert(server, sc.Timeout*time.Second, sc.CloseConn)
+		cert, err := getRemoteCert(server, sc.Timeout*time.Second, sc.CloseConn, sc.UnsetCerts)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Cannot get remote SSL cert: %s", err))
+			return fmt.Errorf("cannot get remote SSL cert '%s': %s", server, err)
 		}
 
 		tags := map[string]string{
@@ -129,7 +138,7 @@ func (sc *SSLCert) Gather(acc telegraf.Accumulator) error {
 	for _, file := range sc.Files {
 		cert, err := getLocalCert(file)
 		if err != nil {
-			return errors.New(fmt.Sprintf("Cannot get local SSL cert: %s", err))
+			return fmt.Errorf("cannot get local SSL cert '%s': %s", file, err)
 		}
 
 		tags := map[string]string{
