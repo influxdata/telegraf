@@ -20,10 +20,13 @@ var sampleChecks = []*api.HealthCheck{
 	},
 }
 
-func TestGatherHealtCheck(t *testing.T) {
+func TestGatherHealthCheck(t *testing.T) {
 	expectedFields := map[string]interface{}{
 		"check_name": "foo.health",
 		"status":     "passing",
+		"passing":    1,
+		"critical":   0,
+		"warning":    0,
 		"service_id": "foo.123",
 	}
 

@@ -6,12 +6,10 @@ import (
 	"hash/fnv"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
-
-	// TODO remove
-	"github.com/influxdata/influxdb/client/v2"
 )
 
 const MaxInt = int(^uint(0) >> 1)
@@ -23,11 +21,14 @@ func New(
 	t time.Time,
 	mType ...telegraf.ValueType,
 ) (telegraf.Metric, error) {
-	if len(fields) == 0 {
-		return nil, fmt.Errorf("Metric cannot be made without any fields")
-	}
 	if len(name) == 0 {
-		return nil, fmt.Errorf("Metric cannot be made with an empty name")
+		return nil, fmt.Errorf("missing measurement name")
+	}
+	if len(fields) == 0 {
+		return nil, fmt.Errorf("%s: must have one or more fields", name)
+	}
+	if strings.HasSuffix(name, `\`) {
+		return nil, fmt.Errorf("%s: measurement name cannot end with a backslash", name)
 	}
 
 	var thisType telegraf.ValueType
@@ -47,13 +48,25 @@ func New(
 	// pre-allocate exact size of the tags slice
 	taglen := 0
 	for k, v := range tags {
-		// TODO check that length of tag key & value are > 0
+		if strings.HasSuffix(k, `\`) {
+			return nil, fmt.Errorf("%s: tag key cannot end with a backslash: %s", name, k)
+		}
+		if strings.HasSuffix(v, `\`) {
+			return nil, fmt.Errorf("%s: tag value cannot end with a backslash: %s", name, v)
+		}
+
+		if len(k) == 0 || len(v) == 0 {
+			continue
+		}
 		taglen += 2 + len(escape(k, "tagkey")) + len(escape(v, "tagval"))
 	}
 	m.tags = make([]byte, taglen)
 
 	i := 0
 	for k, v := range tags {
+		if len(k) == 0 || len(v) == 0 {
+			continue
+		}
 		m.tags[i] = ','
 		i++
 		i += copy(m.tags[i:], escape(k, "tagkey"))
@@ -65,6 +78,10 @@ func New(
 	// pre-allocate capacity of the fields slice
 	fieldlen := 0
 	for k, _ := range fields {
+		if strings.HasSuffix(k, `\`) {
+			return nil, fmt.Errorf("%s: field key cannot end with a backslash: %s", name, k)
+		}
+
 		// 10 bytes is completely arbitrary, but will at least prevent some
 		// amount of allocations. There's a small possibility this will create
 		// slightly more allocations for a metric that has many short fields.
@@ -85,8 +102,31 @@ func New(
 }
 
 // indexUnescapedByte finds the index of the first byte equal to b in buf that
-// is not escaped. Returns -1 if not found.
+// is not escaped.  Does not allow the escape char to be escaped. Returns -1 if
+// not found.
 func indexUnescapedByte(buf []byte, b byte) int {
+	var keyi int
+	for {
+		i := bytes.IndexByte(buf[keyi:], b)
+		if i == -1 {
+			return -1
+		} else if i == 0 {
+			break
+		}
+		keyi += i
+		if buf[keyi-1] != '\\' {
+			break
+		} else {
+			keyi++
+		}
+	}
+	return keyi
+}
+
+// indexUnescapedByteBackslashEscaping finds the index of the first byte equal
+// to b in buf that is not escaped.  Allows for the escape char `\` to be
+// escaped.  Returns -1 if not found.
+func indexUnescapedByteBackslashEscaping(buf []byte, b byte) int {
 	var keyi int
 	for {
 		i := bytes.IndexByte(buf[keyi:], b)
@@ -137,11 +177,6 @@ type metric struct {
 	nsec   int64
 }
 
-func (m *metric) Point() *client.Point {
-	c, _ := client.NewPoint(m.Name(), m.Tags(), m.Fields(), m.Time())
-	return c
-}
-
 func (m *metric) String() string {
 	return string(m.name) + string(m.tags) + " " + string(m.fields) + " " + string(m.t) + "\n"
 }
@@ -178,8 +213,50 @@ func (m *metric) Serialize() []byte {
 	return tmp
 }
 
+func (m *metric) SerializeTo(dst []byte) int {
+	i := 0
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.name)
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.tags)
+	if i >= len(dst) {
+		return i
+	}
+
+	dst[i] = ' '
+	i++
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.fields)
+	if i >= len(dst) {
+		return i
+	}
+
+	dst[i] = ' '
+	i++
+	if i >= len(dst) {
+		return i
+	}
+
+	i += copy(dst[i:], m.t)
+	if i >= len(dst) {
+		return i
+	}
+	dst[i] = '\n'
+
+	return i + 1
+}
+
 func (m *metric) Split(maxSize int) []telegraf.Metric {
-	if m.Len() < maxSize {
+	if m.Len() <= maxSize {
 		return []telegraf.Metric{m}
 	}
 	var out []telegraf.Metric
@@ -209,7 +286,7 @@ func (m *metric) Split(maxSize int) []telegraf.Metric {
 
 		// if true, then we need to create a metric _not_ including the currently
 		// selected field
-		if len(m.fields[i:j])+len(fields)+constant > maxSize {
+		if len(m.fields[i:j])+len(fields)+constant >= maxSize {
 			// if false, then we'll create a metric including the currently
 			// selected field anyways. This means that the given maxSize is too
 			// small for a single field to fit.
@@ -247,7 +324,7 @@ func (m *metric) Fields() map[string]interface{} {
 		// end index of field value
 		var i3 int
 		if m.fields[i:][i2] == '"' {
-			i3 = indexUnescapedByte(m.fields[i:][i2+1:], '"')
+			i3 = indexUnescapedByteBackslashEscaping(m.fields[i:][i2+1:], '"')
 			if i3 == -1 {
 				i3 = len(m.fields[i:])
 			}
@@ -263,7 +340,7 @@ func (m *metric) Fields() map[string]interface{} {
 		case '"':
 			// string field
 			fieldMap[unescape(string(m.fields[i:][0:i1]), "fieldkey")] = unescape(string(m.fields[i:][i2+1:i3-1]), "fieldval")
-		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			// number field
 			switch m.fields[i:][i3-1] {
 			case 'i':

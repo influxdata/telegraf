@@ -7,9 +7,33 @@
 ```toml
 # SampleConfig
 [[inputs.haproxy]]
-  servers = ["http://1.2.3.4/haproxy?stats", "/var/run/haproxy*.sock"]
+  ## An array of address to gather stats about. Specify an ip on hostname
+  ## with optional port. ie localhost, 10.10.3.33:1936, etc.
+  ## Make sure you specify the complete path to the stats endpoint
+  ## including the protocol, ie http://10.10.3.33:1936/haproxy?stats
+
+  ## If no servers are specified, then default to 127.0.0.1:1936/haproxy?stats
+  servers = ["http://myhaproxy.com:1936/haproxy?stats"]
+
+  ## You can also use local socket with standard wildcard globbing.
+  ## Server address not starting with 'http' will be treated as a possible
+  ## socket, so both examples below are valid.
+  # servers = ["socket:/run/haproxy/admin.sock", "/run/haproxy/*.sock"]
+
+  ## By default, some of the fields are renamed from what haproxy calls them.
+  ## Setting this option to true results in the plugin keeping the original
+  ## field names.
+  # keep_field_names = true
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
+#### `servers`
 Server addresses need to explicitly start with 'http' if you wish to use HAproxy status page. Otherwise, address will be assumed to be an UNIX socket and protocol (if present) will be discarded.
 
 For basic authentication you need to add username and password in the URL: `http://user:password@1.2.3.4/haproxy?stats`.
@@ -26,9 +50,12 @@ When using socket names, wildcard expansion is supported so plugin can gather st
 
 If no servers are specified, then the default address of `http://127.0.0.1:1936/haproxy?stats` will be used.
 
+#### `keep_field_names`
+By default, some of the fields are renamed from what haproxy calls them. Setting the `keep_field_names` parameter to `true` will result in the plugin keeping the original field names.
+
 ### Measurements & Fields:
 
-Plugin will gather measurements outlined in [HAproxy CSV format documentation](https://cbonte.github.io/haproxy-dconv/1.5/configuration.html#9.1).
+Plugin will gather measurements outlined in [HAproxy CSV format documentation](https://cbonte.github.io/haproxy-dconv/1.7/management.html#9.1).
 
 ### Tags:
 

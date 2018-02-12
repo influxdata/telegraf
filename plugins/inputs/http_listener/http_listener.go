@@ -3,7 +3,10 @@ package http_listener
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/tls"
+	"crypto/x509"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -35,6 +38,11 @@ type HTTPListener struct {
 	WriteTimeout   internal.Duration
 	MaxBodySize    int64
 	MaxLineSize    int
+	Port           int
+
+	TlsAllowedCacerts []string
+	TlsCert           string
+	TlsKey            string
 
 	mu sync.Mutex
 	wg sync.WaitGroup
@@ -74,6 +82,14 @@ const sampleConfig = `
   ## Maximum line size allowed to be sent in bytes.
   ## 0 means to use the default of 65536 bytes (64 kibibytes)
   max_line_size = 0
+
+  ## Set one or more allowed client CA certificate file names to 
+  ## enable mutually authenticated TLS connections
+  tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+
+  ## Add service certificate and key
+  tls_cert = "/etc/telegraf/cert.pem"
+  tls_key = "/etc/telegraf/key.pem"
 `
 
 func (h *HTTPListener) SampleConfig() string {
@@ -116,19 +132,43 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 		h.MaxLineSize = DEFAULT_MAX_LINE_SIZE
 	}
 
+	if h.ReadTimeout.Duration < time.Second {
+		h.ReadTimeout.Duration = time.Second * 10
+	}
+	if h.WriteTimeout.Duration < time.Second {
+		h.WriteTimeout.Duration = time.Second * 10
+	}
+
 	h.acc = acc
 	h.pool = NewPool(200, h.MaxLineSize)
 
-	var listener, err = net.Listen("tcp", h.ServiceAddress)
+	tlsConf := h.getTLSConfig()
+
+	server := &http.Server{
+		Addr:         h.ServiceAddress,
+		Handler:      h,
+		ReadTimeout:  h.ReadTimeout.Duration,
+		WriteTimeout: h.WriteTimeout.Duration,
+		TLSConfig:    tlsConf,
+	}
+
+	var err error
+	var listener net.Listener
+	if tlsConf != nil {
+		listener, err = tls.Listen("tcp", h.ServiceAddress, tlsConf)
+	} else {
+		listener, err = net.Listen("tcp", h.ServiceAddress)
+	}
 	if err != nil {
 		return err
 	}
 	h.listener = listener
+	h.Port = listener.Addr().(*net.TCPAddr).Port
 
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
-		h.httpListen()
+		server.Serve(h.listener)
 	}()
 
 	log.Printf("I! Started HTTP listener service on %s\n", h.ServiceAddress)
@@ -145,27 +185,6 @@ func (h *HTTPListener) Stop() {
 	h.wg.Wait()
 
 	log.Println("I! Stopped HTTP listener service on ", h.ServiceAddress)
-}
-
-// httpListen sets up an http.Server and calls server.Serve.
-// like server.Serve, httpListen will always return a non-nil error, for this
-// reason, the error returned should probably be ignored.
-// see https://golang.org/pkg/net/http/#Server.Serve
-func (h *HTTPListener) httpListen() error {
-	if h.ReadTimeout.Duration < time.Second {
-		h.ReadTimeout.Duration = time.Second * 10
-	}
-	if h.WriteTimeout.Duration < time.Second {
-		h.WriteTimeout.Duration = time.Second * 10
-	}
-
-	var server = http.Server{
-		Handler:      h,
-		ReadTimeout:  h.ReadTimeout.Duration,
-		WriteTimeout: h.WriteTimeout.Duration,
-	}
-
-	return server.Serve(h.listener)
 }
 
 func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -205,10 +224,12 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 	now := time.Now()
 
+	precision := req.URL.Query().Get("precision")
+
 	// Handle gzip request bodies
 	body := req.Body
-	var err error
 	if req.Header.Get("Content-Encoding") == "gzip" {
+		var err error
 		body, err = gzip.NewReader(req.Body)
 		defer body.Close()
 		if err != nil {
@@ -261,7 +282,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 		if err == io.ErrUnexpectedEOF {
 			// finished reading the request body
-			if err := h.parse(buf[:n+bufStart], now); err != nil {
+			if err := h.parse(buf[:n+bufStart], now, precision); err != nil {
 				log.Println("E! " + err.Error())
 				return400 = true
 			}
@@ -286,7 +307,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			bufStart = 0
 			continue
 		}
-		if err := h.parse(buf[:i+1], now); err != nil {
+		if err := h.parse(buf[:i+1], now, precision); err != nil {
 			log.Println("E! " + err.Error())
 			return400 = true
 		}
@@ -299,8 +320,8 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *HTTPListener) parse(b []byte, t time.Time) error {
-	metrics, err := h.parser.ParseWithDefaultTime(b, t)
+func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
+	metrics, err := h.parser.ParseWithDefaultTimePrecision(b, t, precision)
 
 	for _, m := range metrics {
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
@@ -321,6 +342,38 @@ func badRequest(res http.ResponseWriter) {
 	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.WriteHeader(http.StatusBadRequest)
 	res.Write([]byte(`{"error":"http: bad request"}`))
+}
+
+func (h *HTTPListener) getTLSConfig() *tls.Config {
+	tlsConf := &tls.Config{
+		InsecureSkipVerify: false,
+		Renegotiation:      tls.RenegotiateNever,
+	}
+
+	if len(h.TlsCert) == 0 || len(h.TlsKey) == 0 {
+		return nil
+	}
+
+	cert, err := tls.LoadX509KeyPair(h.TlsCert, h.TlsKey)
+	if err != nil {
+		return nil
+	}
+	tlsConf.Certificates = []tls.Certificate{cert}
+
+	if h.TlsAllowedCacerts != nil {
+		tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
+		clientPool := x509.NewCertPool()
+		for _, ca := range h.TlsAllowedCacerts {
+			c, err := ioutil.ReadFile(ca)
+			if err != nil {
+				continue
+			}
+			clientPool.AppendCertsFromPEM(c)
+		}
+		tlsConf.ClientCAs = clientPool
+	}
+
+	return tlsConf
 }
 
 func init() {
