@@ -44,27 +44,28 @@ func (s *Ssl) Description() string {
 
 func (s *Ssl) Gather(acc telegraf.Accumulator) error  {
 	for _, server := range s.Servers {
-		certs, err := getServerCertsChain(server.Domain, server.Port, server.Timeout)
-		if err != nil {
-			acc.AddError(err)
-		}
-		cert := certs[0]
+		h := getServerAddress(server.Domain, server.Port)
 		timeNow := time.Now()
 		timeToExp := int64(0)
-
-		if cert.NotAfter.UnixNano() < timeNow.UnixNano() {
-			acc.AddError(errors.New("cert has expired"))
-		} else {
-			timeToExp = int64(cert.NotAfter.Sub(timeNow))
-		}
-		if !isStringInSlice(server.Domain, cert.DNSNames) {
-			acc.AddError(errors.New("cert and domain mismatch"))
-		}
 		fields := make(map[string]interface{})
 		tags := make(map[string]string)
+		certs, err := getServerCertsChain(server.Domain, server.Port, server.Timeout)
 
+		if err != nil {
+			acc.AddError(err)
+		} else {
+			cert := certs[0]
+			if cert.NotAfter.UnixNano() < timeNow.UnixNano() {
+				acc.AddError(errors.New("[" + h + "] cert has expired"))
+			} else {
+				timeToExp = int64(cert.NotAfter.Sub(timeNow))
+			}
+			if !isStringInSlice(server.Domain, cert.DNSNames) {
+				acc.AddError(errors.New("[" + h + "] cert and domain mismatch"))
+				timeToExp = int64(0)
+			}
+		}
 		fields["time_to_expiration"] = timeToExp
-
 		tags["domain"] = server.Domain
 		tags["port"] = strconv.FormatInt(int64(server.Port), 10)
 
@@ -74,10 +75,10 @@ func (s *Ssl) Gather(acc telegraf.Accumulator) error  {
 }
 
 func getServerCertsChain(d string, p int, t int) ([]*x509.Certificate, error) {
-	h := d + ":" + strconv.FormatInt(int64(p), 10)
+	h := getServerAddress(d, p)
 	ipConn, err := net.DialTimeout("tcp", h, time.Duration(t) * time.Second)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("[" + h + "] " + err.Error())
 	}
 	defer ipConn.Close()
 
@@ -86,13 +87,17 @@ func getServerCertsChain(d string, p int, t int) ([]*x509.Certificate, error) {
 
 	err = tlsConn.Handshake()
 	if err != nil {
-		return nil, err
+		return nil, errors.New("[" + h + "] " + err.Error())
 	}
 	certs := tlsConn.ConnectionState().PeerCertificates
 	if certs == nil || len(certs) < 1 {
-		return nil, errors.New("cert receive error")
+		return nil, errors.New("[" + h + "] cert receive error")
 	}
 	return certs, nil
+}
+
+func getServerAddress(d string, p int) string {
+	return d + ":" + strconv.FormatInt(int64(p), 10)
 }
 
 func isStringInSlice(n string, s []string) bool {
