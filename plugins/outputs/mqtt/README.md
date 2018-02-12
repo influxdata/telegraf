@@ -52,5 +52,3 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
 * `ssl_key`: SSL key
 * `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
 * `data_format`: [About Telegraf data formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)
-* `topic_suffix`: Which, if any, method of calculating `kafka` topic suffix to use.
-For examples, please refer to sample configuration.
