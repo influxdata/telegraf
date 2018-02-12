@@ -5,7 +5,7 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
 ```
 [[outputs.mqtt]]
   ## URLs of mqtt brokers
-  brokers = ["localhost:1883"]
+  servers = ["localhost:1883"]
   
   ## topic for producer messages
   topic = "telegraf"
