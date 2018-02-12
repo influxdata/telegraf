@@ -22,6 +22,7 @@ func setUnixTime(client *PrometheusClient, sec int64) {
 func NewClient() *PrometheusClient {
 	return &PrometheusClient{
 		ExpirationInterval: internal.Duration{Duration: time.Second * 60},
+		StringAsLabel:      true,
 		fam:                make(map[string]*MetricFamily),
 		now:                time.Now,
 	}
@@ -467,10 +468,10 @@ func TestDoNotWrite_StringFields(t *testing.T) {
 	var metrics = []telegraf.Metric{p1, p2}
 
 	client := &PrometheusClient{
-		ExpirationInterval:   internal.Duration{Duration: time.Second * 60},
-		DisableStringToLabel: true,
-		fam:                  make(map[string]*MetricFamily),
-		now:                  time.Now,
+		ExpirationInterval: internal.Duration{Duration: time.Second * 60},
+		StringAsLabel:      false,
+		fam:                make(map[string]*MetricFamily),
+		now:                time.Now,
 	}
 
 	err = client.Write(metrics)

@@ -53,17 +53,17 @@ type MetricFamily struct {
 }
 
 type PrometheusClient struct {
-	Listen               string
-	TLSCert              string            `toml:"tls_cert"`
-	TLSKey               string            `toml:"tls_key"`
-	BasicUsername        string            `toml:"basic_username"`
-	BasicPassword        string            `toml:"basic_password"`
-	ExpirationInterval   internal.Duration `toml:"expiration_interval"`
-	Path                 string            `toml:"path"`
-	CollectorsExclude    []string          `toml:"collectors_exclude"`
-	DisableStringToLabel bool              `toml:"disable_string_to_label"`
-	StringToLabelNames   []string          `toml:"string_to_label_names"`
-	server               *http.Server
+	Listen             string
+	TLSCert            string            `toml:"tls_cert"`
+	TLSKey             string            `toml:"tls_key"`
+	BasicUsername      string            `toml:"basic_username"`
+	BasicPassword      string            `toml:"basic_password"`
+	ExpirationInterval internal.Duration `toml:"expiration_interval"`
+	Path               string            `toml:"path"`
+	CollectorsExclude  []string          `toml:"collectors_exclude"`
+	StringAsLabel      bool              `toml:"string_as_label"`
+
+	server *http.Server
 
 	sync.Mutex
 	// fam is the non-expired MetricFamily by Prometheus metric name.
@@ -91,12 +91,9 @@ var sampleConfig = `
   ## If unset, both are enabled.
   collectors_exclude = ["gocollector", "process"]
 
-  # Disable labels in prometheus output for all string fields. (Default: false)
-  # disable_string_to_label = false
-
-  # Enable labels in prometheus output for certain string fields.
-  # Won't work when disable_string_to_label is set to true.
-  # string_to_label_names = []
+  # Send string metrics as Prometheus labels.
+  # Unless set to false all string metrics will be sent as labels.
+  string_as_label = true
 `
 
 func (p *PrometheusClient) basicAuth(h http.Handler) http.Handler {
@@ -273,16 +270,6 @@ func sanitize(value string) string {
 	return invalidNameCharRE.ReplaceAllString(value, "_")
 }
 
-// Checks if string is present in the array
-func contains(arr []string, str string) bool {
-	for _, a := range arr {
-		if a == str {
-			return true
-		}
-	}
-	return false
-}
-
 func getPromValueType(tt telegraf.ValueType) prometheus.ValueType {
 	switch tt {
 	case telegraf.Counter:
@@ -345,13 +332,11 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 
 		// Prometheus doesn't have a string value type, so convert string
 		// fields to labels if enabled.
-		if !p.DisableStringToLabel {
+		if p.StringAsLabel {
 			for fn, fv := range point.Fields() {
 				switch fv := fv.(type) {
 				case string:
-					if len(p.StringToLabelNames) == 0 || contains(p.StringToLabelNames, fn) {
-						labels[sanitize(fn)] = fv
-					}
+					labels[sanitize(fn)] = fv
 				}
 			}
 		}
@@ -487,6 +472,7 @@ func init() {
 	outputs.Add("prometheus_client", func() telegraf.Output {
 		return &PrometheusClient{
 			ExpirationInterval: internal.Duration{Duration: time.Second * 60},
+			StringAsLabel:      true,
 			fam:                make(map[string]*MetricFamily),
 			now:                time.Now,
 		}
