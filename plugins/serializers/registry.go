@@ -1,6 +1,9 @@
 package serializers
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/influxdata/telegraf"
 
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
@@ -27,7 +30,7 @@ type Serializer interface {
 // Config is a struct that covers the data types needed for all serializer types,
 // and can be used to instantiate _any_ of the serializers.
 type Config struct {
-	// Dataformat can be one of: influx, graphite
+	// Dataformat can be one of: influx, graphite, or json
 	DataFormat string
 
 	// Prefix to add to all measurements, only supports Graphite
@@ -36,6 +39,9 @@ type Config struct {
 	// Template for converting telegraf metrics into Graphite
 	// only supports Graphite
 	Template string
+
+	// Timestamp units to use for JSON formatted output
+	TimestampUnits time.Duration
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -48,13 +54,15 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template)
 	case "json":
-		serializer, err = NewJsonSerializer()
+		serializer, err = NewJsonSerializer(config.TimestampUnits)
+	default:
+		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
 	return serializer, err
 }
 
-func NewJsonSerializer() (Serializer, error) {
-	return &json.JsonSerializer{}, nil
+func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
+	return &json.JsonSerializer{TimestampUnits: timestampUnits}, nil
 }
 
 func NewInfluxSerializer() (Serializer, error) {

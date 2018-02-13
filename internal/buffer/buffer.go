@@ -45,9 +45,11 @@ func (b *Buffer) Add(metrics ...telegraf.Metric) {
 		select {
 		case b.buf <- metrics[i]:
 		default:
+			b.mu.Lock()
 			MetricsDropped.Incr(1)
 			<-b.buf
 			b.buf <- metrics[i]
+			b.mu.Unlock()
 		}
 	}
 }

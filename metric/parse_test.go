@@ -44,6 +44,9 @@ cpu,host=foo,datacenter=us-east idle=99,busy=1i,b=true,s="string"
 cpu,host=foo,datacenter=us-east idle=99,busy=1i,b=true,s="string"
 `
 
+const negMetrics = `weather,host=local temp=-99i,temp_float=-99.4 1465839830100400200
+`
+
 // some metrics are invalid
 const someInvalid = `cpu,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
 cpu,host=foo,datacenter=us-east usage_idle=99,usage_busy=1
@@ -83,6 +86,26 @@ func TestParse(t *testing.T) {
 		assert.True(t, m.Time().After(start))
 		assert.True(t, m.Time().Equal(firstTime))
 	}
+}
+
+func TestParseNegNumbers(t *testing.T) {
+	metrics, err := Parse([]byte(negMetrics))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 1)
+
+	assert.Equal(t,
+		map[string]interface{}{
+			"temp":       int64(-99),
+			"temp_float": float64(-99.4),
+		},
+		metrics[0].Fields(),
+	)
+	assert.Equal(t,
+		map[string]string{
+			"host": "local",
+		},
+		metrics[0].Tags(),
+	)
 }
 
 func TestParseErrors(t *testing.T) {
@@ -338,6 +361,41 @@ func TestParseNegativeTimestamps(t *testing.T) {
 		metrics, err := Parse([]byte(tt + "\n"))
 		assert.NoError(t, err, tt)
 		assert.True(t, metrics[0].Time().Equal(time.Unix(0, -1257894000000000000)))
+	}
+}
+
+func TestParsePrecision(t *testing.T) {
+	for _, tt := range []struct {
+		line      string
+		precision string
+		expected  int64
+	}{
+		{"test v=42 1491847420", "s", 1491847420000000000},
+		{"test v=42 1491847420123", "ms", 1491847420123000000},
+		{"test v=42 1491847420123456", "u", 1491847420123456000},
+		{"test v=42 1491847420123456789", "ns", 1491847420123456789},
+
+		{"test v=42 1491847420123456789", "1s", 1491847420123456789},
+		{"test v=42 1491847420123456789", "asdf", 1491847420123456789},
+	} {
+		metrics, err := ParseWithDefaultTimePrecision(
+			[]byte(tt.line+"\n"), time.Now(), tt.precision)
+		assert.NoError(t, err)
+		assert.Equal(t, tt.expected, metrics[0].UnixNano())
+	}
+}
+
+func TestParsePrecisionUnsetTime(t *testing.T) {
+	for _, tt := range []struct {
+		line      string
+		precision string
+	}{
+		{"test v=42", "s"},
+		{"test v=42", "ns"},
+	} {
+		_, err := ParseWithDefaultTimePrecision(
+			[]byte(tt.line+"\n"), time.Now(), tt.precision)
+		assert.NoError(t, err)
 	}
 }
 

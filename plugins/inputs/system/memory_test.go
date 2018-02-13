@@ -21,13 +21,11 @@ func TestMemStats(t *testing.T) {
 		Free:      1235,
 		Active:    8134,
 		Inactive:  1124,
+		Slab:      1234,
 		// Buffers:     771,
 		// Cached:      4312,
 		// Wired:       134,
 		// Shared:      2142,
-		Dirty:        1234,
-		Writeback:    11223344,
-		WritebackTmp: 998877,
 	}
 
 	mps.On("VMStat").Return(vms, nil)
@@ -53,13 +51,11 @@ func TestMemStats(t *testing.T) {
 		"available_percent": float64(7600) / float64(12400) * 100,
 		"used_percent":      float64(5000) / float64(12400) * 100,
 		"free":              uint64(1235),
-		"active":            uint64(8134),
-		"inactive":          uint64(1124),
 		"cached":            uint64(0),
 		"buffered":          uint64(0),
-		"dirty":             uint64(1234),
-		"writeback":         uint64(11223344),
-		"writebackTmp":      uint64(998877),
+		"active":            uint64(8134),
+		"inactive":          uint64(1124),
+		"slab":              uint64(1234),
 	}
 	acc.AssertContainsTaggedFields(t, "mem", memfields, make(map[string]string))
 

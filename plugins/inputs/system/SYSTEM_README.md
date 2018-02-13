@@ -30,9 +30,10 @@ None
 ### Example Output:
 
 ```
-$ telegraf -config ~/ws/telegraf.conf -input-filter system -test
+$ telegraf --config ~/ws/telegraf.conf --input-filter system --test
 * Plugin: system, Collection 1
 * Plugin: inputs.system, Collection 1
 > system,host=tyrion load1=3.72,load5=2.4,load15=2.1,n_users=3i,n_cpus=4i 1483964144000000000
-> system,host=tyrion uptime=1249632i,uptime_format="14 days, 11:07" 1483964144000000000
+> system,host=tyrion uptime=1249632i 1483964144000000000
+> system,host=tyrion uptime_format="14 days, 11:07" 1483964144000000000
 ```

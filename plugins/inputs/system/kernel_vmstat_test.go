@@ -48,7 +48,7 @@ func TestFullVmStatProcFile(t *testing.T) {
 		"nr_isolated_anon":              int64(0),
 		"nr_isolated_file":              int64(0),
 		"nr_shmem":                      int64(541689),
-		"numa_hit":                      int64(5113399878),
+		"numa_hit":                      int64(6690743595),
 		"numa_miss":                     int64(0),
 		"numa_foreign":                  int64(0),
 		"numa_interleave":               int64(35793),
@@ -200,7 +200,7 @@ nr_writeback_temp 0
 nr_isolated_anon 0
 nr_isolated_file 0
 nr_shmem 541689
-numa_hit 5113399878
+numa_hit 6690743595
 numa_miss 0
 numa_foreign 0
 numa_interleave 35793

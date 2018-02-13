@@ -84,6 +84,16 @@ func TestParseValidJSON(t *testing.T) {
 		"b_c": float64(6),
 	}, metrics[0].Fields())
 	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+
+	// Test that whitespace only will parse as an empty list of metrics
+	metrics, err = parser.Parse([]byte("\n\t"))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 0)
+
+	// Test that an empty string will parse as an empty list of metrics
+	metrics, err = parser.Parse([]byte(""))
+	assert.NoError(t, err)
+	assert.Len(t, metrics, 0)
 }
 
 func TestParseLineValidJSON(t *testing.T) {

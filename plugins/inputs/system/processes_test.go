@@ -20,10 +20,10 @@ func TestProcesses(t *testing.T) {
 	err := processes.Gather(&acc)
 	require.NoError(t, err)
 
-	assert.True(t, acc.HasIntField("processes", "running"))
-	assert.True(t, acc.HasIntField("processes", "sleeping"))
-	assert.True(t, acc.HasIntField("processes", "stopped"))
-	assert.True(t, acc.HasIntField("processes", "total"))
+	assert.True(t, acc.HasInt64Field("processes", "running"))
+	assert.True(t, acc.HasInt64Field("processes", "sleeping"))
+	assert.True(t, acc.HasInt64Field("processes", "stopped"))
+	assert.True(t, acc.HasInt64Field("processes", "total"))
 	total, ok := acc.Get("processes")
 	require.True(t, ok)
 	assert.True(t, total.Fields["total"].(int64) > 0)
@@ -44,7 +44,8 @@ func TestFromPS(t *testing.T) {
 	fields["zombies"] = int64(1)
 	fields["running"] = int64(4)
 	fields["sleeping"] = int64(34)
-	fields["total"] = int64(43)
+	fields["idle"] = int64(2)
+	fields["total"] = int64(45)
 
 	acc.AssertContainsTaggedFields(t, "processes", fields, map[string]string{})
 }
@@ -172,6 +173,8 @@ U
 Z
 D
 S+
+I
+I
 `
 
 const testProcStat = `10 (rcuob/0) %s 2 0 0 0 -1 2129984 0 0 0 0 0 0 0 0 20 0 %s 0 11 0 0 18446744073709551615 0 0 0 0 0 0 0 2147483647 0 18446744073709551615 0 0 17 0 0 0 0 0 0 0 0 0 0 0 0 0 0
