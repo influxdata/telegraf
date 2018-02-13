@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,6 +17,9 @@ type MockClient struct {
 	ContainerListF    func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
 	ContainerStatsF   func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error)
 	ContainerInspectF func(ctx context.Context, containerID string) (types.ContainerJSON, error)
+	ServiceListF      func(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
+	TaskListF         func(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
+	NodeListF         func(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
 }
 
 func (c *MockClient) Info(ctx context.Context) (types.Info, error) {
@@ -44,21 +48,53 @@ func (c *MockClient) ContainerInspect(
 	return c.ContainerInspectF(ctx, containerID)
 }
 
+func (c *MockClient) ServiceList(
+	ctx context.Context,
+	options types.ServiceListOptions,
+) ([]swarm.Service, error) {
+	return c.ServiceListF(ctx, options)
+}
+
+func (c *MockClient) TaskList(
+	ctx context.Context,
+	options types.TaskListOptions,
+) ([]swarm.Task, error) {
+	return c.TaskListF(ctx, options)
+}
+
+func (c *MockClient) NodeList(
+	ctx context.Context,
+	options types.NodeListOptions,
+) ([]swarm.Node, error) {
+	return c.NodeListF(ctx, options)
+}
+
+var baseClient = MockClient{
+	InfoF: func(context.Context) (types.Info, error) {
+		return info, nil
+	},
+	ContainerListF: func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+		return containerList, nil
+	},
+	ContainerStatsF: func(context.Context, string, bool) (types.ContainerStats, error) {
+		return containerStats(), nil
+	},
+	ContainerInspectF: func(context.Context, string) (types.ContainerJSON, error) {
+		return containerInspect, nil
+	},
+	ServiceListF: func(context.Context, types.ServiceListOptions) ([]swarm.Service, error) {
+		return ServiceList, nil
+	},
+	TaskListF: func(context.Context, types.TaskListOptions) ([]swarm.Task, error) {
+		return TaskList, nil
+	},
+	NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
+		return NodeList, nil
+	},
+}
+
 func newClient(host string, tlsConfig *tls.Config) (Client, error) {
-	return &MockClient{
-		InfoF: func(context.Context) (types.Info, error) {
-			return info, nil
-		},
-		ContainerListF: func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
-			return containerList, nil
-		},
-		ContainerStatsF: func(context.Context, string, bool) (types.ContainerStats, error) {
-			return containerStats(), nil
-		},
-		ContainerInspectF: func(context.Context, string) (types.ContainerJSON, error) {
-			return containerInspect, nil
-		},
-	}, nil
+	return &baseClient, nil
 }
 
 func TestDockerGatherContainerStats(t *testing.T) {
@@ -227,6 +263,15 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 				ContainerInspectF: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
 					return containerInspect, nil
 				},
+				ServiceListF: func(context.Context, types.ServiceListOptions) ([]swarm.Service, error) {
+					return ServiceList, nil
+				},
+				TaskListF: func(context.Context, types.TaskListOptions) ([]swarm.Task, error) {
+					return TaskList, nil
+				},
+				NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
+					return NodeList, nil
+				},
 			}, nil
 		},
 	}
@@ -234,82 +279,291 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestDockerGatherLabels(t *testing.T) {
-	var gatherLabelsTests = []struct {
-		include     []string
-		exclude     []string
-		expected    []string
-		notexpected []string
+func TestContainerLabels(t *testing.T) {
+	var tests = []struct {
+		name      string
+		container types.Container
+		include   []string
+		exclude   []string
+		expected  map[string]string
 	}{
-		{[]string{}, []string{}, []string{"label1", "label2"}, []string{}},
-		{[]string{"*"}, []string{}, []string{"label1", "label2"}, []string{}},
-		{[]string{"lab*"}, []string{}, []string{"label1", "label2"}, []string{}},
-		{[]string{"label1"}, []string{}, []string{"label1"}, []string{"label2"}},
-		{[]string{"label1*"}, []string{}, []string{"label1"}, []string{"label2"}},
-		{[]string{}, []string{"*"}, []string{}, []string{"label1", "label2"}},
-		{[]string{}, []string{"lab*"}, []string{}, []string{"label1", "label2"}},
-		{[]string{}, []string{"label1"}, []string{"label2"}, []string{"label1"}},
-		{[]string{"*"}, []string{"*"}, []string{}, []string{"label1", "label2"}},
+		{
+			name: "Nil filters matches all",
+			container: types.Container{
+				Labels: map[string]string{
+					"a": "x",
+				},
+			},
+			include: nil,
+			exclude: nil,
+			expected: map[string]string{
+				"a": "x",
+			},
+		},
+		{
+			name: "Empty filters matches all",
+			container: types.Container{
+				Labels: map[string]string{
+					"a": "x",
+				},
+			},
+			include: []string{},
+			exclude: []string{},
+			expected: map[string]string{
+				"a": "x",
+			},
+		},
+		{
+			name: "Must match include",
+			container: types.Container{
+				Labels: map[string]string{
+					"a": "x",
+					"b": "y",
+				},
+			},
+			include: []string{"a"},
+			exclude: []string{},
+			expected: map[string]string{
+				"a": "x",
+			},
+		},
+		{
+			name: "Must not match exclude",
+			container: types.Container{
+				Labels: map[string]string{
+					"a": "x",
+					"b": "y",
+				},
+			},
+			include: []string{},
+			exclude: []string{"b"},
+			expected: map[string]string{
+				"a": "x",
+			},
+		},
+		{
+			name: "Include Glob",
+			container: types.Container{
+				Labels: map[string]string{
+					"aa": "x",
+					"ab": "y",
+					"bb": "z",
+				},
+			},
+			include: []string{"a*"},
+			exclude: []string{},
+			expected: map[string]string{
+				"aa": "x",
+				"ab": "y",
+			},
+		},
+		{
+			name: "Exclude Glob",
+			container: types.Container{
+				Labels: map[string]string{
+					"aa": "x",
+					"ab": "y",
+					"bb": "z",
+				},
+			},
+			include: []string{},
+			exclude: []string{"a*"},
+			expected: map[string]string{
+				"bb": "z",
+			},
+		},
+		{
+			name: "Excluded Includes",
+			container: types.Container{
+				Labels: map[string]string{
+					"aa": "x",
+					"ab": "y",
+					"bb": "z",
+				},
+			},
+			include: []string{"a*"},
+			exclude: []string{"*b"},
+			expected: map[string]string{
+				"aa": "x",
+			},
+		},
 	}
-
-	for _, tt := range gatherLabelsTests {
-		t.Run("", func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
-			d := Docker{
-				newClient: newClient,
+
+			newClientFunc := func(host string, tlsConfig *tls.Config) (Client, error) {
+				client := baseClient
+				client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+					return []types.Container{tt.container}, nil
+				}
+				return &client, nil
 			}
 
-			for _, label := range tt.include {
-				d.LabelInclude = append(d.LabelInclude, label)
-			}
-			for _, label := range tt.exclude {
-				d.LabelExclude = append(d.LabelExclude, label)
+			d := Docker{
+				newClient:    newClientFunc,
+				LabelInclude: tt.include,
+				LabelExclude: tt.exclude,
 			}
 
 			err := d.Gather(&acc)
 			require.NoError(t, err)
 
-			for _, label := range tt.expected {
-				if !acc.HasTag("docker_container_cpu", label) {
-					t.Errorf("Didn't get expected label of %s.  Test was:  Include: %s  Exclude %s",
-						label, tt.include, tt.exclude)
+			// Grab tags from a container metric
+			var actual map[string]string
+			for _, metric := range acc.Metrics {
+				if metric.Measurement == "docker_container_cpu" {
+					actual = metric.Tags
 				}
 			}
 
-			for _, label := range tt.notexpected {
-				if acc.HasTag("docker_container_cpu", label) {
-					t.Errorf("Got unexpected label of %s.  Test was:  Include: %s  Exclude %s",
-						label, tt.include, tt.exclude)
-				}
+			for k, v := range tt.expected {
+				require.Equal(t, v, actual[k])
 			}
 		})
 	}
 }
 
 func TestContainerNames(t *testing.T) {
-	var gatherContainerNames = []struct {
-		include     []string
-		exclude     []string
-		expected    []string
-		notexpected []string
+	var tests = []struct {
+		name       string
+		containers [][]string
+		include    []string
+		exclude    []string
+		expected   []string
 	}{
-		{[]string{}, []string{}, []string{"etcd", "etcd2"}, []string{}},
-		{[]string{"*"}, []string{}, []string{"etcd", "etcd2"}, []string{}},
-		{[]string{"etc*"}, []string{}, []string{"etcd", "etcd2"}, []string{}},
-		{[]string{"etcd"}, []string{}, []string{"etcd"}, []string{"etcd2"}},
-		{[]string{"etcd2*"}, []string{}, []string{"etcd2"}, []string{"etcd"}},
-		{[]string{}, []string{"etc*"}, []string{}, []string{"etcd", "etcd2"}},
-		{[]string{}, []string{"etcd"}, []string{"etcd2"}, []string{"etcd"}},
-		{[]string{"*"}, []string{"*"}, []string{"etcd", "etcd2"}, []string{}},
-		{[]string{}, []string{"*"}, []string{""}, []string{"etcd", "etcd2"}},
+		{
+			name: "Nil filters matches all",
+			containers: [][]string{
+				{"/etcd"},
+				{"/etcd2"},
+			},
+			include:  nil,
+			exclude:  nil,
+			expected: []string{"etcd", "etcd2"},
+		},
+		{
+			name: "Empty filters matches all",
+			containers: [][]string{
+				{"/etcd"},
+				{"/etcd2"},
+			},
+			include:  []string{},
+			exclude:  []string{},
+			expected: []string{"etcd", "etcd2"},
+		},
+		{
+			name: "Match all containers",
+			containers: [][]string{
+				{"/etcd"},
+				{"/etcd2"},
+			},
+			include:  []string{"*"},
+			exclude:  []string{},
+			expected: []string{"etcd", "etcd2"},
+		},
+		{
+			name: "Include prefix match",
+			containers: [][]string{
+				{"/etcd"},
+				{"/etcd2"},
+			},
+			include:  []string{"etc*"},
+			exclude:  []string{},
+			expected: []string{"etcd", "etcd2"},
+		},
+		{
+			name: "Exact match",
+			containers: [][]string{
+				{"/etcd"},
+				{"/etcd2"},
+			},
+			include:  []string{"etcd"},
+			exclude:  []string{},
+			expected: []string{"etcd"},
+		},
+		{
+			name: "Star matches zero length",
+			containers: [][]string{
+				{"/etcd"},
+				{"/etcd2"},
+			},
+			include:  []string{"etcd2*"},
+			exclude:  []string{},
+			expected: []string{"etcd2"},
+		},
+		{
+			name: "Exclude matches all",
+			containers: [][]string{
+				{"/etcd"},
+				{"/etcd2"},
+			},
+			include:  []string{},
+			exclude:  []string{"etc*"},
+			expected: []string{},
+		},
+		{
+			name: "Exclude single",
+			containers: [][]string{
+				{"/etcd"},
+				{"/etcd2"},
+			},
+			include:  []string{},
+			exclude:  []string{"etcd"},
+			expected: []string{"etcd2"},
+		},
+		{
+			name: "Exclude all",
+			containers: [][]string{
+				{"/etcd"},
+				{"/etcd2"},
+			},
+			include:  []string{"*"},
+			exclude:  []string{"*"},
+			expected: []string{},
+		},
+		{
+			name: "Exclude item matching include",
+			containers: [][]string{
+				{"acme"},
+				{"foo"},
+				{"acme-test"},
+			},
+			include:  []string{"acme*"},
+			exclude:  []string{"*test*"},
+			expected: []string{"acme"},
+		},
+		{
+			name: "Exclude item no wildcards",
+			containers: [][]string{
+				{"acme"},
+				{"acme-test"},
+			},
+			include:  []string{"acme*"},
+			exclude:  []string{"test"},
+			expected: []string{"acme", "acme-test"},
+		},
 	}
-
-	for _, tt := range gatherContainerNames {
-		t.Run("", func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			var acc testutil.Accumulator
 
+			newClientFunc := func(host string, tlsConfig *tls.Config) (Client, error) {
+				client := baseClient
+				client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+					var containers []types.Container
+					for _, names := range tt.containers {
+						containers = append(containers, types.Container{
+							Names: names,
+						})
+					}
+					return containers, nil
+				}
+				return &client, nil
+			}
+
 			d := Docker{
-				newClient:        newClient,
+				newClient:        newClientFunc,
 				ContainerInclude: tt.include,
 				ContainerExclude: tt.exclude,
 			}
@@ -317,39 +571,21 @@ func TestContainerNames(t *testing.T) {
 			err := d.Gather(&acc)
 			require.NoError(t, err)
 
+			// Set of expected names
+			var expected = make(map[string]bool)
+			for _, v := range tt.expected {
+				expected[v] = true
+			}
+
+			// Set of actual names
+			var actual = make(map[string]bool)
 			for _, metric := range acc.Metrics {
-				if metric.Measurement == "docker_container_cpu" {
-					if val, ok := metric.Tags["container_name"]; ok {
-						var found bool = false
-						for _, cname := range tt.expected {
-							if val == cname {
-								found = true
-								break
-							}
-						}
-						if !found {
-							t.Errorf("Got unexpected container of %s. Test was -> Include: %s, Exclude: %s", val, tt.include, tt.exclude)
-						}
-					}
+				if name, ok := metric.Tags["container_name"]; ok {
+					actual[name] = true
 				}
 			}
 
-			for _, metric := range acc.Metrics {
-				if metric.Measurement == "docker_container_cpu" {
-					if val, ok := metric.Tags["container_name"]; ok {
-						var found bool = false
-						for _, cname := range tt.notexpected {
-							if val == cname {
-								found = true
-								break
-							}
-						}
-						if found {
-							t.Errorf("Got unexpected container of %s. Test was -> Include: %s, Exclude: %s", val, tt.include, tt.exclude)
-						}
-					}
-				}
-			}
+			require.Equal(t, expected, actual)
 		})
 	}
 }
@@ -433,6 +669,45 @@ func TestDockerGatherInfo(t *testing.T) {
 			"ENVVAR7":           "ENVVAR8=ENVVAR9",
 			"label1":            "test_value_1",
 			"label2":            "test_value_2",
+		},
+	)
+}
+
+func TestDockerGatherSwarmInfo(t *testing.T) {
+	var acc testutil.Accumulator
+	d := Docker{
+		newClient: newClient,
+	}
+
+	err := acc.GatherError(d.Gather)
+	require.NoError(t, err)
+
+	d.gatherSwarmInfo(&acc)
+
+	// test docker_container_net measurement
+	acc.AssertContainsTaggedFields(t,
+		"docker_swarm",
+		map[string]interface{}{
+			"tasks_running": int(2),
+			"tasks_desired": uint64(2),
+		},
+		map[string]string{
+			"service_id":   "qolkls9g5iasdiuihcyz9rnx2",
+			"service_name": "test1",
+			"service_mode": "replicated",
+		},
+	)
+
+	acc.AssertContainsTaggedFields(t,
+		"docker_swarm",
+		map[string]interface{}{
+			"tasks_running": int(1),
+			"tasks_desired": int(1),
+		},
+		map[string]string{
+			"service_id":   "qolkls9g5iasdiuihcyz9rn3",
+			"service_name": "test2",
+			"service_mode": "global",
 		},
 	)
 }

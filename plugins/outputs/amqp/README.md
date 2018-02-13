@@ -29,6 +29,9 @@ For an introduction to AMQP see:
   ## Telegraf tag to use as a routing key
   ##  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
+  ## Delivery Mode controls if a published message is persistent
+  ## Valid options are "transient" and "persistent". default: "transient"
+  # delivery_mode = "transient"
 
   ## InfluxDB retention policy
   # retention_policy = "default"

@@ -4,6 +4,7 @@ package ping
 
 import (
 	"errors"
+	"net"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -158,16 +159,27 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(u string) {
 			defer wg.Done()
+
+			tags := map[string]string{"url": u}
+			fields := map[string]interface{}{"result_code": 0}
+
+			_, err := net.LookupHost(u)
+			if err != nil {
+				errorChannel <- err
+				fields["result_code"] = 1
+				acc.AddFields("ping", fields, tags)
+				return
+			}
+
 			args := p.args(u)
 			totalTimeout := p.timeout() * float64(p.Count)
 			out, err := p.pingHost(totalTimeout, args...)
 			// ping host return exitcode != 0 also when there was no response from host
-			// but command was execute succesfully
+			// but command was execute successfully
 			if err != nil {
 				// Combine go err + stderr output
 				pendingError = errors.New(strings.TrimSpace(out) + ", " + err.Error())
 			}
-			tags := map[string]string{"url": u}
 			trans, recReply, receivePacket, avg, min, max, err := processPingOutput(out)
 			if err != nil {
 				// fatal error
@@ -175,24 +187,20 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 					errorChannel <- pendingError
 				}
 				errorChannel <- err
-				fields := map[string]interface{}{
-					"errors": 100.0,
-				}
 
+				fields["errors"] = 100.0
 				acc.AddFields("ping", fields, tags)
-
 				return
 			}
 			// Calculate packet loss percentage
 			lossReply := float64(trans-recReply) / float64(trans) * 100.0
 			lossPackets := float64(trans-receivePacket) / float64(trans) * 100.0
-			fields := map[string]interface{}{
-				"packets_transmitted": trans,
-				"reply_received":      recReply,
-				"packets_received":    receivePacket,
-				"percent_packet_loss": lossPackets,
-				"percent_reply_loss":  lossReply,
-			}
+
+			fields["packets_transmitted"] = trans
+			fields["reply_received"] = recReply
+			fields["packets_received"] = receivePacket
+			fields["percent_packet_loss"] = lossPackets
+			fields["percent_reply_loss"] = lossReply
 			if avg > 0 {
 				fields["average_response_ms"] = float64(avg)
 			}

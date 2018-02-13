@@ -37,7 +37,7 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Urls: []string{ts.URL},
+		URLs: []string{ts.URL},
 	}
 
 	var acc testutil.Accumulator
@@ -89,7 +89,7 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFails(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Urls:               []string{ts.URL},
+		URLs:               []string{ts.URL},
 		KubernetesServices: []string{"http://random.telegraf.local:88/metrics"},
 	}
 

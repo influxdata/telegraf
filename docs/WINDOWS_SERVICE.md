@@ -38,7 +38,7 @@ Telegraf can manage its own service through the --service flag:
 | `telegraf.exe --service stop`      | Stop the telegraf service     |
 
 
-Trobleshooting  common error #1067
+Troubleshooting  common error #1067
 
 When installing as service in Windows, always double check to specify full path of the config file, otherwise windows service will fail to start
 

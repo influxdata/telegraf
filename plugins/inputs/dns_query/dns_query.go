@@ -17,7 +17,7 @@ type DnsQuery struct {
 	// Domains or subdomains to query
 	Domains []string
 
-	// Network protocl name
+	// Network protocol name
 	Network string
 
 	// Server to query

@@ -40,6 +40,15 @@ For additional details reference the [RabbitMQ Management HTTP Stats](https://cd
   ## A list of queues to gather as the rabbitmq_queue measurement. If not
   ## specified, metrics for all queues are gathered.
   # queues = ["telegraf"]
+
+  ## A list of exchanges to gather as the rabbitmq_exchange measurement. If not
+  ## specified, metrics for all exchanges are gathered.
+  # exchanges = ["telegraf"]
+
+  ## Queues to include and exclude. Globs accepted.
+  ## Note that an empty array for both will include all queues
+  # queue_name_include = []
+  # queue_name_exclude = []
 ```
 
 ### Measurements & Fields:
@@ -52,10 +61,13 @@ For additional details reference the [RabbitMQ Management HTTP Stats](https://cd
   - messages (int, messages)
   - messages_acked (int, messages)
   - messages_delivered (int, messages)
+  - messages_delivered_get (int, messages)
   - messages_published (int, messages)
   - messages_ready (int, messages)
   - messages_unacked (int, messages)
   - queues (int, queues)
+  - clustering_listeners (int, cluster nodes)
+  - amqp_listeners (int, amqp nodes up)
 
 - rabbitmq_node
   - disk_free (int, bytes)
@@ -69,6 +81,7 @@ For additional details reference the [RabbitMQ Management HTTP Stats](https://cd
   - run_queue (int, erlang processes)
   - sockets_total (int, sockets)
   - sockets_used (int, sockets)
+  - running (int, node up)
 
 - rabbitmq_queue
   - consumer_utilisation (float, percent)
@@ -94,6 +107,10 @@ For additional details reference the [RabbitMQ Management HTTP Stats](https://cd
   - messages_redeliver_rate (float, messages per second)
   - messages_unack (integer, count)
 
+- rabbitmq_exchange
+  - messages_publish_in (int, count)
+  - messages_publish_out (int, count)
+
 ### Tags:
 
 - All measurements have the following tags:
@@ -113,13 +130,29 @@ For additional details reference the [RabbitMQ Management HTTP Stats](https://cd
   - durable
   - auto_delete
 
+- rabbitmq_exchange
+  - url
+  - exchange
+  - type
+  - vhost
+  - internal
+  - durable
+  - auto_delete
+
 ### Sample Queries:
 
+Message rates for the entire node can be calculated from total message counts. For instance, to get the rate of messages published per minute, use this query:
+
+```
+SELECT NON_NEGATIVE_DERIVATIVE(LAST("messages_published"), 1m) AS messages_published_rate
+FROM rabbitmq_overview WHERE time > now() - 10m GROUP BY time(1m)
+```
 
 ### Example Output:
 
 ```
 rabbitmq_queue,url=http://amqp.example.org:15672,queue=telegraf,vhost=influxdb,node=rabbit@amqp.example.org,durable=true,auto_delete=false,host=amqp.example.org messages_deliver_get=0i,messages_publish=329i,messages_publish_rate=0.2,messages_redeliver_rate=0,message_bytes_ready=0i,message_bytes_unacked=0i,messages_deliver=329i,messages_unack=0i,consumers=1i,idle_since="",messages=0i,messages_deliver_rate=0.2,messages_deliver_get_rate=0.2,messages_redeliver=0i,memory=43032i,message_bytes_ram=0i,messages_ack=329i,messages_ready=0i,messages_ack_rate=0.2,consumer_utilisation=1,message_bytes=0i,message_bytes_persist=0i 1493684035000000000
-rabbitmq_overview,url=http://amqp.example.org:15672,host=amqp.example.org channels=2i,consumers=1i,exchanges=17i,messages_acked=329i,messages=0i,messages_ready=0i,messages_unacked=0i,connections=2i,queues=1i,messages_delivered=329i,messages_published=329i 1493684035000000000
-rabbitmq_node,url=http://amqp.example.org:15672,node=rabbit@amqp.example.org,host=amqp.example.org fd_total=1024i,fd_used=32i,mem_limit=8363329126i,sockets_total=829i,disk_free=8175935488i,disk_free_limit=50000000i,mem_used=58771080i,proc_total=1048576i,proc_used=267i,run_queue=0i,sockets_used=2i 149368403500000000
+rabbitmq_overview,url=http://amqp.example.org:15672,host=amqp.example.org channels=2i,consumers=1i,exchanges=17i,messages_acked=329i,messages=0i,messages_ready=0i,messages_unacked=0i,connections=2i,queues=1i,messages_delivered=329i,messages_published=329i,clustering_listeners=2i,amqp_listeners=1i 1493684035000000000
+rabbitmq_node,url=http://amqp.example.org:15672,node=rabbit@amqp.example.org,host=amqp.example.org fd_total=1024i,fd_used=32i,mem_limit=8363329126i,sockets_total=829i,disk_free=8175935488i,disk_free_limit=50000000i,mem_used=58771080i,proc_total=1048576i,proc_used=267i,run_queue=0i,sockets_used=2i,running=1i 149368403500000000
+rabbitmq_exchange,url=http://amqp.example.org:15672,exchange=telegraf,type=fanout,vhost=influxdb,internal=false,durable=true,auto_delete=false,host=amqp.example.org messages_publish_in=2i,messages_publish_out=1i 149368403500000000
 ```
