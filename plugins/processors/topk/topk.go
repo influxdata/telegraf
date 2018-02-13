@@ -2,39 +2,39 @@ package topk
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"sort"
 	"strconv"
 	"time"
-	"log"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/filter"
+	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 type TopK struct {
-	Period                int
-	K                     int
-	GroupBy               []string `toml:"group_by"`
-	GroupByMetricName     bool     `toml:"group_by_metric_name"`
-	Fields                []string
-	Aggregation           string
-	Bottomk               bool
-	SimpleTopk            bool     `toml:"simple_topk"`
-	DropNoGroup           bool     `toml:"drop_no_group"`
-	DropNonTop            bool     `toml:"drop_non_top"`
-	AddGroupByTag         string   `toml:"add_groupby_tag"`
-	AddRankField          []string `toml:"add_rank_field"`
-	RankFieldSuffix       string   `toml:"rank_field_suffix"`
-	AddAggregateField     []string `toml:"add_aggregate_field"`
-	AggregateFieldSuffix  string   `toml:"aggregate_field_suffix"`
+	Period               int
+	K                    int
+	GroupBy              []string `toml:"group_by"`
+	GroupByMetricName    bool     `toml:"group_by_metric_name"`
+	Fields               []string
+	Aggregation          string
+	Bottomk              bool
+	SimpleTopk           bool     `toml:"simple_topk"`
+	DropNoGroup          bool     `toml:"drop_no_group"`
+	DropNonTop           bool     `toml:"drop_non_top"`
+	AddGroupByTag        string   `toml:"add_groupby_tag"`
+	AddRankField         []string `toml:"add_rank_field"`
+	RankFieldSuffix      string   `toml:"rank_field_suffix"`
+	AddAggregateField    []string `toml:"add_aggregate_field"`
+	AggregateFieldSuffix string   `toml:"aggregate_field_suffix"`
 
-	cache             map[string][]telegraf.Metric
-	tagsGlobs         filter.Filter
-	rankFieldSet      map[string]bool
-	aggFieldSet       map[string]bool
-	lastAggregation   time.Time
+	cache           map[string][]telegraf.Metric
+	tagsGlobs       filter.Filter
+	rankFieldSet    map[string]bool
+	aggFieldSet     map[string]bool
+	lastAggregation time.Time
 }
 
 func New() *TopK {
@@ -154,13 +154,13 @@ func sortMetrics(metrics []MetricAggregation, field string, reverse bool) {
 			return true
 		} else {
 			return false
-		}		
+		}
 	}
 
 	if reverse {
 		sort.SliceStable(metrics, less)
 	} else {
-		sort.SliceStable(metrics, func(i, j int) bool {return !less(i,j)})
+		sort.SliceStable(metrics, func(i, j int) bool { return !less(i, j) })
 	}
 }
 
@@ -203,12 +203,12 @@ func (t *TopK) generateGroupByKey(m telegraf.Metric) (string, error) {
 		keys := make([]string, 0, len(tags))
 		for tag, value := range tags {
 			if t.tagsGlobs.Match(tag) {
-				keys = append(keys, tag + "=" + value + "&")
+				keys = append(keys, tag+"="+value+"&")
 			}
 		}
 		// Sorting the selected tags is necessary because dictionaries
 		// do not ensure any specific or deterministic ordering
-		sort.SliceStable(keys, func (i, j int) bool {return keys[i] < keys[j]})
+		sort.SliceStable(keys, func(i, j int) bool { return keys[i] < keys[j] })
 		for _, str := range keys {
 			groupkey += str
 		}
@@ -260,7 +260,6 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		}
 	}
 
-
 	// Add the metrics received to our internal cache
 	var ret []telegraf.Metric = make([]telegraf.Metric, 0, 0)
 	for _, m := range in {
@@ -274,7 +273,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		aggregations := make([]MetricAggregation, 0, 100)
 		aggregator, err := t.getAggregationFunction(t.Aggregation)
 		if err != nil {
-			// If we could not generate the aggregation 
+			// If we could not generate the aggregation
 			// function, fail hard by dropping all metrics
 			log.Print(err)
 			return []telegraf.Metric{}
@@ -382,7 +381,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 				if !ok {
 					log.Printf("Cannot convert value '%s' from metric '%s' with tags '%s'",
 						m.Fields()[field], m.Name(), m.Tags())
-					continue 
+					continue
 				}
 				f(agg, val, field)
 			}
