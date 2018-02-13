@@ -3,38 +3,42 @@
 package socketstat
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
-	"strings"
 )
 
 func TestSocketstat_Gather(t *testing.T) {
 	tests := []struct {
+		name   string
 		proto  []string
-		values []string
+		value  string
 		tags   []map[string]string
 		fields [][]map[string]interface{}
 		err    error
 	}{
-		{ // 1 - tcp - no sockets => no results
-			proto: []string{"tcp"},
-			values: []string{
-				`State      Recv-Q Send-Q       Local Address:Port                      Peer Address:Port
+		{
+			name:   "tcp - no sockets => no results"
+			proto:  []string{"tcp"},
+			values: `State      Recv-Q Send-Q       Local Address:Port                      Peer Address:Port
 				`},
 		},
-		{ // 2 - udp - no sockets => no results
-			proto: []string{"udp"},
-			values: []string{
-				`Recv-Q Send-Q            Local Address:Port                           Peer Address:Port
+		{
+			name:   "udp - no sockets => no results"
+			proto:  []string{"udp"},
+			values: `Recv-Q Send-Q            Local Address:Port                           Peer Address:Port
 				`},
 		},
-		{ // 3 - tcp and udp sockets captured
-			proto: []string{"tcp", "udp"},
-			values: []string{
-				`State      Recv-Q Send-Q       Local Address:Port                      Peer Address:Port
+		{
+			name:   "tcp and udp sockets captured"
+			proto:  []string{"tcp", "udp"},
+			values: `State      Recv-Q Send-Q       Local Address:Port                      Peer Address:Port
 ESTAB      0      0             192.168.1.21:6514                      192.168.1.21:443
 	cubic wscale:7,7 rto:204 rtt:0.057/0.033 ato:40 mss:22976 cwnd:10 bytes_acked:1126 bytes_received:532644751 segs_out:211249 segs_in:211254 data_segs_out:2 data_segs_in:211251 send 32247.0Mbps lastsnd:299082764 lastrcv:5248 lastack:5252 rcv_rtt:3.532 rcv_space:186557 minrtt:0.047
 ESTAB      0      0            192.168.122.1:55194                    192.168.122.1:6514
