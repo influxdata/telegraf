@@ -20,18 +20,18 @@ func TestSocketstat_Gather(t *testing.T) {
 		err    error
 	}{
 		{
-			name:   "tcp - no sockets => no results",
-			proto:  []string{"tcp"},
+			name:  "tcp - no sockets => no results",
+			proto: []string{"tcp"},
 			value: `State      Recv-Q Send-Q       Local Address:Port                      Peer Address:Port`,
 		},
 		{
-			name:   "udp - no sockets => no results",
-			proto:  []string{"udp"},
+			name:  "udp - no sockets => no results",
+			proto: []string{"udp"},
 			value: `Recv-Q Send-Q            Local Address:Port                           Peer Address:Port`,
 		},
 		{
-			name:   "tcp sockets captured",
-			proto:  []string{"tcp"},
+			name:  "tcp sockets captured",
+			proto: []string{"tcp"},
 			value: `State      Recv-Q Send-Q       Local Address:Port                      Peer Address:Port
 ESTAB      0      0             192.168.1.21:6514                      192.168.1.21:443
 	cubic wscale:7,7 rto:204 rtt:0.057/0.033 ato:40 mss:22976 cwnd:10 bytes_acked:1126 bytes_received:532644751 segs_out:211249 segs_in:211254 data_segs_out:2 data_segs_in:211251 send 32247.0Mbps lastsnd:299082764 lastrcv:5248 lastack:5252 rcv_rtt:3.532 rcv_space:186557 minrtt:0.047
@@ -51,8 +51,8 @@ ESTAB      0      0                127.0.0.1:7778                         127.0.
 			},
 		},
 		{
-			name:   "udp packets captured",
-			proto:  []string{"udp"},
+			name:  "udp packets captured",
+			proto: []string{"udp"},
 			value: `Recv-Q Send-Q                   Local Address:Port                                  Peer Address:Port
 0      0                         10.10.0.4:33149                                 10.10.0.5:53
 
@@ -63,7 +63,7 @@ ESTAB      0      0                127.0.0.1:7778                         127.0.
 				map[string]string{"proto": "udp", "local_addr": "10.10.0.4", "local_port": "33149", "remote_addr": "10.10.0.5", "remote_port": "53"},
 				map[string]string{"proto": "udp", "local_addr": "10.10.0.4", "local_port": "54276", "remote_addr": "10.10.0.6", "remote_port": "53"},
 				map[string]string{"proto": "udp", "local_addr": "10.10.0.4", "local_port": "38312", "remote_addr": "10.10.0.7", "remote_port": "53"},
-				},
+			},
 			fields: [][]map[string]interface{}{
 				{map[string]interface{}{"recv_q": uint64(0), "send_q": uint64(0)}},
 				{map[string]interface{}{"recv_q": uint64(0), "send_q": uint64(0)}},
@@ -78,7 +78,7 @@ ESTAB      0      0                127.0.0.1:7778                         127.0.
 			ss := &Socketstat{
 				SocketProto: tt.proto,
 				lister: func(proto string, Timeout internal.Duration) (*bytes.Buffer, error) {
-						return bytes.NewBufferString(tt.value), nil
+					return bytes.NewBufferString(tt.value), nil
 				},
 			}
 			acc := new(testutil.Accumulator)

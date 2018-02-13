@@ -19,7 +19,7 @@ import (
 type Socketstat struct {
 	lister      socketLister
 	SocketProto []string
-	Timeout	    internal.Duration
+	Timeout     internal.Duration
 }
 
 type socketLister func(proto string, Timeout internal.Duration) (*bytes.Buffer, error)
@@ -181,7 +181,7 @@ func getTagsAndState(proto string, words []string) (map[string]string, map[strin
 func init() {
 	inputs.Add("socketstat", func() telegraf.Input {
 		return &Socketstat{
-			lister: socketList,
+			lister:  socketList,
 			Timeout: defaultTimeout,
 		}
 	})
