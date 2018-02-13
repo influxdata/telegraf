@@ -66,11 +66,11 @@ func (ss *Socketstat) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (ss *Socketstat) socketList(proto string, Timeout internal.Duration) (*bytes.Buffer, error) {
+func socketList(proto string, Timeout internal.Duration) (*bytes.Buffer, error) {
 	// Check that ss is installed
 	ssPath, err := exec.LookPath("ss")
 	if err != nil {
-		return "", err
+		return new(bytes.Buffer), err
 	}
 
 	// Add needed args
@@ -94,7 +94,7 @@ var validFields = "(bytes_acked|bytes_received|segs_out|segs_in|data_segs_in|dat
 var validValues = regexp.MustCompile("^" + validFields + ":[0-9]+$")
 var beginsWithBlank = regexp.MustCompile("^\\s+.*$")
 
-func (ss *Socketstat) parseAndGather(data bytes.Buffer, proto string, acc telegraf.Accumulator) error {
+func (ss *Socketstat) parseAndGather(data *bytes.Buffer, proto string, acc telegraf.Accumulator) error {
 	scanner := bufio.NewScanner(data)
 	tags := map[string]string{}
 	fields := make(map[string]interface{})
