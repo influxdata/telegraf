@@ -14,6 +14,9 @@ import (
 	"github.com/tidwall/gjson"
 )
 
+var fieldEscaper = strings.NewReplacer("\\", "\\\\", "\"", "\\\"")
+var keyEscaper = strings.NewReplacer(" ", "\\ ", ",", "\\,", "=", "\\=")
+
 // Parser parses json inputs containing dropwizard metrics,
 // either top-level or embedded inside a json field.
 // This parser is using gjon for retrieving paths within the json file.
@@ -211,7 +214,7 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 
 			measurementWithTags := measurementName
 			for tagName, tagValue := range tags {
-				tagKeyValue := fmt.Sprintf("%s=%s", tagName, tagValue)
+				tagKeyValue := fmt.Sprintf("%s=%s", keyEscaper.Replace(tagName), keyEscaper.Replace(tagValue))
 				measurementWithTags = fmt.Sprintf("%s,%s", measurementWithTags, tagKeyValue)
 			}
 
@@ -219,10 +222,14 @@ func (p *Parser) readDWMetrics(metricType string, dwms interface{}, metrics []te
 			switch t := dwmFields.(type) {
 			case map[string]interface{}: // json object
 				for fieldName, fieldValue := range t {
-
+					key := keyEscaper.Replace(fieldPrefix + fieldName)
 					switch v := fieldValue.(type) {
 					case float64:
-						fields = append(fields, fmt.Sprintf("%s%s=%f", fieldPrefix, fieldName, v))
+						fields = append(fields, fmt.Sprintf("%s=%f", key, v))
+					case string:
+						fields = append(fields, fmt.Sprintf("%s=\"%s\"", key, fieldEscaper.Replace(v)))
+					case bool:
+						fields = append(fields, fmt.Sprintf("%s=%t", key, v))
 					default: // ignore
 					}
 				}

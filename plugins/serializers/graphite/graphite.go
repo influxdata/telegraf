@@ -133,7 +133,7 @@ func InsertField(bucket, fieldName string) string {
 	if fieldName == "value" {
 		return fieldDeleter.Replace(bucket)
 	}
-	return strings.Replace(bucket, "FIELDNAME", strings.Replace(fieldName, ".", "_", -1), 1)
+	return strings.Replace(bucket, "FIELDNAME", fieldName, 1)
 }
 
 func buildTags(tags map[string]string) string {

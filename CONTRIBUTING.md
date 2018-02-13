@@ -79,7 +79,10 @@ func (s *Simple) Description() string {
 }
 
 func (s *Simple) SampleConfig() string {
-    return "ok = true # indicate if everything is fine"
+    return `
+  ## Indicate if everything is fine
+  ok = true
+`
 }
 
 func (s *Simple) Gather(acc telegraf.Accumulator) error {
@@ -207,7 +210,9 @@ func (s *Simple) Description() string {
 }
 
 func (s *Simple) SampleConfig() string {
-    return "url = localhost"
+    return `
+  ok = true
+`
 }
 
 func (s *Simple) Connect() error {

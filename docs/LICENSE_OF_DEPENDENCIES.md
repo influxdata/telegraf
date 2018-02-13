@@ -54,6 +54,7 @@ following works:
 - github.com/miekg/dns [BSD](https://github.com/miekg/dns/blob/master/LICENSE)
 - github.com/naoina/go-stringutil [MIT](https://github.com/naoina/go-stringutil/blob/master/LICENSE)
 - github.com/naoina/toml [MIT](https://github.com/naoina/toml/blob/master/LICENSE)
+- github.com/nats-io/gnatsd [MIT](https://github.com/nats-io/gnatsd/blob/master/LICENSE)
 - github.com/nats-io/go-nats [MIT](https://github.com/nats-io/go-nats/blob/master/LICENSE)
 - github.com/nats-io/nats [MIT](https://github.com/nats-io/nats/blob/master/LICENSE)
 - github.com/nats-io/nuid [MIT](https://github.com/nats-io/nuid/blob/master/LICENSE)

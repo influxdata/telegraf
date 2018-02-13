@@ -67,7 +67,8 @@ const validEmbeddedCounterJSON = `
 	"time" : "2017-02-22T14:33:03.662+02:00",
 	"tags" : {
 		"tag1" : "green",
-		"tag2" : "yellow"
+		"tag2" : "yellow",
+		"tag3 space,comma=equals" : "red ,="
 	},
 	"metrics" : {
 		"counters" : 	{ 
@@ -99,7 +100,12 @@ func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{
 		"count": float64(1),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{"metric_type": "counter", "tag1": "green", "tag2": "yellow"}, metrics[0].Tags())
+	assert.Equal(t, map[string]string{
+		"metric_type": "counter",
+		"tag1":        "green",
+		"tag2":        "yellow",
+		"tag3 space,comma=equals": "red ,=",
+	}, metrics[0].Tags())
 	assert.True(t, metricTime.Equal(metrics[0].Time()), fmt.Sprintf("%s should be equal to %s", metrics[0].Time(), metricTime))
 
 	// now test json tags through TagPathsMap
@@ -147,6 +153,7 @@ func TestParseValidMeterJSON1(t *testing.T) {
 		"m1_rate":   float64(1),
 		"m5_rate":   float64(1),
 		"mean_rate": float64(1),
+		"units":     "events/second",
 	}, metrics[0].Fields())
 
 	assert.Equal(t, map[string]string{"metric_type": "meter"}, metrics[0].Tags())
@@ -186,6 +193,7 @@ func TestParseValidMeterJSON2(t *testing.T) {
 		"m1_rate":   float64(2),
 		"m5_rate":   float64(2),
 		"mean_rate": float64(2),
+		"units":     "events/second",
 	}, metrics[0].Fields())
 	assert.Equal(t, map[string]string{"metric_type": "meter", "key": "value"}, metrics[0].Tags())
 }
@@ -198,7 +206,7 @@ const validGaugeJSON = `
 	"meters" : 		{},
 	"gauges" : 		{
 		"measurement" : {
-			"value" : 0
+			"value" : true
 		}
 	},
 	"histograms" : 	{},
@@ -214,7 +222,7 @@ func TestParseValidGaugeJSON(t *testing.T) {
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "measurement", metrics[0].Name())
 	assert.Equal(t, map[string]interface{}{
-		"value": float64(0),
+		"value": true,
 	}, metrics[0].Fields())
 	assert.Equal(t, map[string]string{"metric_type": "gauge"}, metrics[0].Tags())
 }
@@ -308,21 +316,23 @@ func TestParseValidTimerJSON(t *testing.T) {
 	assert.Len(t, metrics, 1)
 	assert.Equal(t, "measurement", metrics[0].Name())
 	assert.Equal(t, map[string]interface{}{
-		"count":     float64(1),
-		"max":       float64(2),
-		"mean":      float64(3),
-		"min":       float64(4),
-		"p50":       float64(5),
-		"p75":       float64(6),
-		"p95":       float64(7),
-		"p98":       float64(8),
-		"p99":       float64(9),
-		"p999":      float64(10),
-		"stddev":    float64(11),
-		"m15_rate":  float64(12),
-		"m1_rate":   float64(13),
-		"m5_rate":   float64(14),
-		"mean_rate": float64(15),
+		"count":          float64(1),
+		"max":            float64(2),
+		"mean":           float64(3),
+		"min":            float64(4),
+		"p50":            float64(5),
+		"p75":            float64(6),
+		"p95":            float64(7),
+		"p98":            float64(8),
+		"p99":            float64(9),
+		"p999":           float64(10),
+		"stddev":         float64(11),
+		"m15_rate":       float64(12),
+		"m1_rate":        float64(13),
+		"m5_rate":        float64(14),
+		"mean_rate":      float64(15),
+		"duration_units": "seconds",
+		"rate_units":     "calls/second",
 	}, metrics[0].Fields())
 	assert.Equal(t, map[string]string{"metric_type": "timer"}, metrics[0].Tags())
 }
