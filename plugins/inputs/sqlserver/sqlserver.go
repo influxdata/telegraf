@@ -390,7 +390,6 @@ CROSS APPLY (
 	SELECT	*
 	FROM	@sys_info
 ) AS sinfo
-WHERE	database_id > 4
 OPTION( RECOMPILE );
 `
 
@@ -445,7 +444,10 @@ WHERE	(
 			'Memory Grants Pending',
 			'Free list stalls/sec',
 			'Buffer cache hit ratio',
-			'Buffer cache hit ratio base'
+			'Buffer cache hit ratio base',
+			'Backup/Restore Throughput/sec',
+			'Total Server Memory (KB)',
+			'Target Server Memory (KB)'
 		)
 		) OR (
 			instance_name IN ('_Total','Column store object pool')
@@ -494,6 +496,21 @@ WHERE	(
 				'Requests completed/sec',
 				'Blocked tasks'
 			)
+		) OR (
+			object_name = 'SQLServer:Resource Pool Stats'
+			AND counter_name IN (
+				'Active memory grant amount (KB)',
+				'Disk Read Bytes/sec',
+				'Disk Read IO Throttled/sec',
+				'Disk Read IO/sec',
+				'Disk Write Bytes/sec',
+				'Disk Write IO Throttled/sec',
+				'Disk Write IO/sec',
+				'Used memory (KB)'
+			)
+		) OR object_name IN (
+			'SQLServer:User Settable',
+			'SQLServer:SQL Errors'
 		)
 
 SELECT	'sqlserver_performance' AS [measurement],
@@ -502,12 +519,7 @@ SELECT	'sqlserver_performance' AS [measurement],
 		pc.object_name AS [object],
 		pc.counter_name AS [counter],
 		CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
-		CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value * 1.0) / (pc1.cntr_value * 1.0) * 100 ELSE pc.cntr_value END AS [value],
-		CASE 
-			WHEN pc.cntr_type = 272696576 THEN 'rate'
-			WHEN pc.cntr_type IN (65792,537003264) THEN 'raw'
-			ELSE 'unknown'
-		END AS c_type
+		CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value * 1.0) / (pc1.cntr_value * 1.0) * 100 ELSE pc.cntr_value END AS [value]
 FROM	@PCounters AS pc
 		LEFT OUTER JOIN @PCounters AS pc1
 			ON (

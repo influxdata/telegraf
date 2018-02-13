@@ -56,6 +56,7 @@
 - [#3618](https://github.com/influxdata/telegraf/pull/3618): Add new sqlserver output data model.
 - [#3559](https://github.com/influxdata/telegraf/pull/3559): Add native Go method for finding pids to procstat.
 - [#3722](https://github.com/influxdata/telegraf/pull/3722): Add additional metrics and reverse metric names option to openldap.
+- [#3769](https://github.com/influxdata/telegraf/pull/3769): Add TLS support to the mesos input plugin.
 
 ### Bugfixes
 
@@ -67,6 +68,7 @@
 
 - [#3729](https://github.com/influxdata/telegraf/issues/3729): Set path to / if HOST_MOUNT_PREFIX matches full path.
 - [#3739](https://github.com/influxdata/telegraf/issues/3739): Remove userinfo from url tag in prometheus input.
+- [#3778](https://github.com/influxdata/telegraf/issues/3778): Fix ping plugin not reporting zero durations.
 
 ## v1.5.2 [2018-01-30]
 
