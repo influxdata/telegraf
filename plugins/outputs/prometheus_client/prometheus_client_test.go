@@ -631,7 +631,7 @@ func setupPrometheus() (*PrometheusClient, *prometheus_input.Prometheus, error) 
 	time.Sleep(time.Millisecond * 200)
 
 	p := &prometheus_input.Prometheus{
-		Urls: []string{"http://localhost:9127/metrics"},
+		URLs: []string{"http://localhost:9127/metrics"},
 	}
 
 	return pTesting, p, nil

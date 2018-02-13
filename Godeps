@@ -16,7 +16,7 @@ github.com/docker/go-connections 990a1a1a70b0da4c4cb70e117971a4f0babfbf1a
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/go-xerial-snappy bb955e01b9346ac19dc29eb16586c90ded99a98c
 github.com/eapache/queue 44cc805cf13205b55f69e14bcb69867d1ae92f98
-github.com/eclipse/paho.mqtt.golang d4f545eb108a2d19f9b1a735689dbfb719bc21fb
+github.com/eclipse/paho.mqtt.golang aff15770515e3c57fc6109da73d42b0d46f7f483
 github.com/go-logfmt/logfmt 390ab7935ee28ec6b286364bba9b4dd6410cb3d5
 github.com/go-sql-driver/mysql 2e00b5cd70399450106cec6431c2e2ce3cae5034
 github.com/gobwas/glob bea32b9cd2d6f55753d94a28e959b13f0244797a

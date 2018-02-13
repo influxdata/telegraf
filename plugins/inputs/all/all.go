@@ -36,6 +36,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/internal"
 	_ "github.com/influxdata/telegraf/plugins/inputs/interrupts"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ipmi_sensor"
+	_ "github.com/influxdata/telegraf/plugins/inputs/ipset"
 	_ "github.com/influxdata/telegraf/plugins/inputs/iptables"
 	_ "github.com/influxdata/telegraf/plugins/inputs/jolokia"
 	_ "github.com/influxdata/telegraf/plugins/inputs/jolokia2"
