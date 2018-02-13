@@ -2,7 +2,7 @@
 
 The socketstat plugin gathers indicators from established connections, using iproute2's `ss` command.
 
-The ss command does not require specific privileges.
+The `ss` command does not require specific privileges.
 
 The output format will have a very high cardinality. It should either be stored by an engine which doesn't suffer from it, of with a short retention policy.
 
