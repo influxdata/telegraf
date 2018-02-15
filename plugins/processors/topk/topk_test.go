@@ -32,7 +32,10 @@ func tagList(tags ...tag) []tag {
 type metricChange struct {
 	newFields []field // Fieldsthat should be added to the metric
 	newTags   []tag   // Tags that should be added to the metric
-	runHash   bool    // Sometimes the metrics' HashID must be run so the deep comparison works
+
+	runHash   bool    // Sometimes the metrics' HashID must be run so reflect.DeepEqual works
+			  // This happens because telegraf.Metric mantains an internal cache of
+			  // its hash value that is set when HashID() is called for the first time
 }
 
 // Generate a new set of metrics from a set of changes. This is used to generate an answer which will be
