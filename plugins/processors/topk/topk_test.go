@@ -8,6 +8,66 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+type field struct {
+	key string
+	val interface{}
+}
+
+func fieldList(fields ...field) []field {
+	return fields
+}
+
+type tag struct {
+	key string
+	val string
+}
+
+func tagList(tags ...tag) []tag {
+	return tags
+}
+
+type metricChange struct {
+	newFields []field // Fieldsthat should be added to the metric
+	newTags   []tag // Tags that should be added to the metric
+	runHash bool // Sometimes the metrics' HashID must be run so the deep comparison works
+}
+
+func generateAns(input []telegraf.Metric, changeSet map[int]metricChange) []telegraf.Metric {
+	answer := []telegraf.Metric{}
+
+	// For every input metric, we check if there is a change we need to apply
+	for i, metric := range input {
+		change, ok := changeSet[i]
+		if ok {
+			// Deep copy the metric
+			newMetric := metric.Copy()
+
+			// Add new fields
+			if change.newFields != nil {
+				for _, p := range change.newFields {
+					newMetric.AddField(p.key, p.val)
+				}
+			}
+
+			// Add new tags
+			if change.newTags != nil {
+				for _, p := range change.newTags {
+					newMetric.AddTag(p.key, p.val)
+				}
+			}
+
+			// Run the hash function if required
+			if change.runHash {
+				newMetric.HashID()
+			}
+
+			answer = append(answer, newMetric)
+		}
+	}
+
+	return answer
+}
+
 func deepCopy(a []telegraf.Metric) []telegraf.Metric {
 	ret := make([]telegraf.Metric, 0, len(a))
 	for _, m := range a {
@@ -41,6 +101,7 @@ func equalSets(l1 []telegraf.Metric, l2 []telegraf.Metric) bool {
 	return subSet(l1, l2) && subSet(l2, l1)
 }
 
+
 func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metric, testID string, t *testing.T) {
 	// Sleep for `period`, otherwise the processor will only
 	// cache the metrics, but it will not process them
@@ -58,14 +119,10 @@ func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metr
 	}
 }
 
-// This functions runs at the start of the tests and setups the answer metrics test to their correct values
-func TestSetup(t *testing.T) {
-	setupTestSet1()
-	setupTestSet2()
-}
-
 // Smoke tests
 func TestTopkAggregatorsSmokeTests(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -74,16 +131,21 @@ func TestTopkAggregatorsSmokeTests(t *testing.T) {
 
 	aggregators := []string{"mean", "sum", "max", "min"}
 
+	//The answer is equal to the original set for these particual scenarios
+	input := MetricsSet1
+	answer := MetricsSet1
+
 	for _, ag := range aggregators {
 		topk.Aggregation = ag
 
-		//The answer is equal to the original set for these particual scenarios
-		runAndCompare(&topk, MetricsSet1, MetricsSet1, "SmokeAggregator_"+ag, t)
+		runAndCompare(&topk, input, answer, "SmokeAggregator_"+ag, t)
 	}
 }
 
 // AddAggregateField + Mean aggregator
 func TestTopkMeanAddAggregateField(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -94,11 +156,28 @@ func TestTopkMeanAddAggregateField(t *testing.T) {
 	topk.GroupBy = []string{"tag_name"}
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet1), MeanAddAggregateFieldAns, "MeanAddAggregateField test", t)
+	// Get the input
+	input := deepCopy(MetricsSet1)
+
+	// Generate the answer
+	chng := fieldList(field{"a_meanag", float64(28.044)})
+	changeSet := map[int]metricChange{
+		0: metricChange{newFields: chng},
+		1: metricChange{newFields: chng},
+		2: metricChange{newFields: chng},
+		3: metricChange{newFields: chng},
+		4: metricChange{newFields: chng},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "MeanAddAggregateField test", t)
 }
 
 // AddAggregateField + Sum aggregator
 func TestTopkSumAddAggregateField(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -109,11 +188,28 @@ func TestTopkSumAddAggregateField(t *testing.T) {
 	topk.GroupBy = []string{"tag_name"}
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet1), SumAddAggregateFieldAns, "SumAddAggregateField test", t)
+	// Get the input
+	input := deepCopy(MetricsSet1)
+
+	// Generate the answer
+	chng := fieldList(field{"a_sumag", float64(140.22)})
+	changeSet := map[int]metricChange{
+		0: metricChange{newFields: chng},
+		1: metricChange{newFields: chng},
+		2: metricChange{newFields: chng},
+		3: metricChange{newFields: chng},
+		4: metricChange{newFields: chng},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "SumAddAggregateField test", t)
 }
 
 // AddAggregateField + Max aggregator
 func TestTopkMaxAddAggregateField(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -124,11 +220,28 @@ func TestTopkMaxAddAggregateField(t *testing.T) {
 	topk.GroupBy = []string{"tag_name"}
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet1), MaxAddAggregateFieldAns, "MaxAddAggregateField test", t)
+	// Get the input
+	input := deepCopy(MetricsSet1)
+
+	// Generate the answer
+	chng := fieldList(field{"a_maxag", float64(50.5)})
+	changeSet := map[int]metricChange{
+		0: metricChange{newFields: chng},
+		1: metricChange{newFields: chng},
+		2: metricChange{newFields: chng},
+		3: metricChange{newFields: chng},
+		4: metricChange{newFields: chng},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "MaxAddAggregateField test", t)
 }
 
 // AddAggregateField + Min aggregator
 func TestTopkMinAddAggregateField(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -139,11 +252,28 @@ func TestTopkMinAddAggregateField(t *testing.T) {
 	topk.GroupBy = []string{"tag_name"}
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet1), MinAddAggregateFieldAns, "MinAddAggregateField test", t)
+	// Get the input
+	input := deepCopy(MetricsSet1)
+
+	// Generate the answer
+	chng := fieldList(field{"a_minag", float64(0.3)})
+	changeSet := map[int]metricChange{
+		0: metricChange{newFields: chng},
+		1: metricChange{newFields: chng},
+		2: metricChange{newFields: chng},
+		3: metricChange{newFields: chng},
+		4: metricChange{newFields: chng},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "MinAddAggregateField test", t)
 }
 
 // GroupBy
 func TestTopkGroupby1(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -154,9 +284,24 @@ func TestTopkGroupby1(t *testing.T) {
 	topk.GroupBy = []string{"tag1", "tag3"}
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy1Ans, "GroupBy test 1", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	changeSet := map[int]metricChange{
+		2: metricChange{newFields: fieldList(field{"value_sumag", float64(74.18)})},
+		3: metricChange{newFields: fieldList(field{"value_sumag", float64(72)})},
+		4: metricChange{newFields: fieldList(field{"value_sumag", float64(163.22)})},
+		5: metricChange{newFields: fieldList(field{"value_sumag", float64(163.22)})},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "GroupBy test 1", t)
 }
 func TestTopkGroupby2(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -167,9 +312,25 @@ func TestTopkGroupby2(t *testing.T) {
 	topk.GroupBy = []string{"tag1"}
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy2Ans, "GroupBy test 2", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	chng := fieldList(field{"value_mean", float64(74.20750000000001)})
+	changeSet := map[int]metricChange{
+		1: metricChange{newFields: chng},
+		2: metricChange{newFields: chng},
+		4: metricChange{newFields: chng},
+		5: metricChange{newFields: chng},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "GroupBy test 2", t)
 }
 func TestTopkGroupby3(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -180,22 +341,45 @@ func TestTopkGroupby3(t *testing.T) {
 	topk.GroupBy = []string{"tag4"}
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy3Ans, "GroupBy test 3", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	chng := fieldList(field{"value_minaggfield", float64(75.3)})
+	changeSet := map[int]metricChange{
+		4: metricChange{newFields: chng},
+		5: metricChange{newFields: chng},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "GroupBy test 3", t)
 }
 func TestTopkGroupby4(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
 	topk.K = 1
 	topk.Aggregation = "min"
-	topk.GroupBy = []string{"tag9"} //This is a nonexistent tag in this test set
+	topk.GroupBy = []string{"tag9"} // This is a nonexistent tag in this test set
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), []telegraf.Metric{}, "GroupBy test 4", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	answer := []telegraf.Metric{} // This test should drop all metrics
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "GroupBy test 4", t)
 }
 
 // GroupBy + Fields
 func TestTopkGroupbyFields1(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -207,10 +391,26 @@ func TestTopkGroupbyFields1(t *testing.T) {
 	topk.Fields = []string{"A"}
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy4Ans, "GroupBy Fields test 1", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	changeSet := map[int]metricChange{
+		0: metricChange{newFields: fieldList(field{"A_mean", float64(95.36)})},
+		1: metricChange{newFields: fieldList(field{"A_mean", float64(39.01)})},
+		2: metricChange{newFields: fieldList(field{"A_mean", float64(39.01)})},
+		3: metricChange{},
+		4: metricChange{},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "GroupBy Fields test 1", t)
 }
 
 func TestTopkGroupbyFields2(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -222,11 +422,26 @@ func TestTopkGroupbyFields2(t *testing.T) {
 	topk.Fields = []string{"B", "C"}
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), GroupBy5Ans, "GroupBy Fields test 2", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	changeSet := map[int]metricChange{
+		0: metricChange{newFields: fieldList(field{"C_sum", float64(72.41)})},
+		2: metricChange{newFields: fieldList(field{"B_sum", float64(60.96)})},
+		4: metricChange{newFields: fieldList(field{"B_sum", float64(81.55)}, field{"C_sum", float64(49.96)})},
+		5: metricChange{newFields: fieldList(field{"C_sum", float64(49.96)})},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "GroupBy Fields test 2", t)
 }
 
 // GroupBy metric name
 func TestTopkGroupbyMetricName1(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -236,10 +451,25 @@ func TestTopkGroupbyMetricName1(t *testing.T) {
 	topk.AddAggregateField = []string{"value"}
 	topk.GroupBy = []string{}
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), GroupByMetric1Ans, "GroupBy by metric name test 1", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	chng := fieldList(field{"value_sigma", float64(235.22000000000003)})
+	changeSet := map[int]metricChange{
+		3: metricChange{newFields: chng},
+		4: metricChange{newFields: chng},
+		5: metricChange{newFields: chng},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "GroupBy by metric name test 1", t)
 }
 
 func TestTopkGroupbyMetricName2(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -250,11 +480,26 @@ func TestTopkGroupbyMetricName2(t *testing.T) {
 	topk.GroupBy = []string{"tag1", "tag2"}
 	topk.Fields = []string{"A", "value"}
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), GroupByMetric2Ans, "GroupBy by metric name test 2", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	changeSet := map[int]metricChange{
+		0: metricChange{newFields: fieldList(field{"A_SUM", float64(95.36)})},
+		1: metricChange{newFields: fieldList(field{"A_SUM", float64(78.02)}, field{"value_SUM", float64(133.61)})},
+		2: metricChange{newFields: fieldList(field{"A_SUM", float64(78.02)}, field{"value_SUM", float64(133.61)})},
+		4: metricChange{newFields: fieldList(field{"value_SUM", float64(87.92)})},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "GroupBy by metric name test 2", t)
 }
 
 // DropNoGroup
 func TestTopkDropNoGroupFalse(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -264,11 +509,27 @@ func TestTopkDropNoGroupFalse(t *testing.T) {
 	topk.DropNoGroup = false
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), DropNoGroupFalseAns, "DropNoGroup False test", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	changeSet := map[int]metricChange{
+		0: metricChange{},
+		1: metricChange{},
+		3: metricChange{},
+		4: metricChange{},
+		5: metricChange{},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "DropNoGroup False test", t)
 }
 
 // DropNonTop=false + RankField
 func TestTopkDontDropBottom(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -282,11 +543,28 @@ func TestTopkDontDropBottom(t *testing.T) {
 	topk.AddRankField = []string{"value"}
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), DontDropBottomAns, "DontDropBottom test", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	changeSet := map[int]metricChange{
+		0: metricChange{},
+		1: metricChange{},
+		2: metricChange{newFields: fieldList(field{"value_sumag", float64(74.18)}, field{"value_aggpos", 2})},
+		3: metricChange{newFields: fieldList(field{"value_sumag", float64(72)}, field{"value_aggpos", 3})},
+		4: metricChange{newFields: fieldList(field{"value_sumag", float64(163.22)}, field{"value_aggpos", 1})},
+		5: metricChange{newFields: fieldList(field{"value_sumag", float64(163.22)}, field{"value_aggpos", 1})},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "DontDropBottom test", t)
 }
 
 // BottomK
 func TestTopkBottomk(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -296,11 +574,25 @@ func TestTopkBottomk(t *testing.T) {
 	topk.Bottomk = true
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), BottomKAns, "Bottom k test", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	changeSet := map[int]metricChange{
+		0: metricChange{},
+		1: metricChange{},
+		3: metricChange{},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "Bottom k test", t)
 }
 
 // GroupByKeyTag
 func TestTopkGroupByKeyTag(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -311,11 +603,28 @@ func TestTopkGroupByKeyTag(t *testing.T) {
 	topk.DropNonTop = false
 	topk.DropNoGroup = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), GroupByKeyTagAns, "GroupByKeyTag test", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	changeSet := map[int]metricChange{
+		0: metricChange{},
+		1: metricChange{},
+		2: metricChange{newTags: tagList(tag{"gbt", "metric1&tag1=TWO&tag3=SIX&"})},
+		3: metricChange{newTags: tagList(tag{"gbt", "metric2&tag1=ONE&tag3=THREE&"})},
+		4: metricChange{newTags: tagList(tag{"gbt", "metric2&tag1=TWO&tag3=SEVEN&"})},
+		5: metricChange{newTags: tagList(tag{"gbt", "metric2&tag1=TWO&tag3=SEVEN&"})},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "GroupByKeyTag test", t)
 }
 
 // No drops
 func TestTopkNodrops1(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -328,10 +637,27 @@ func TestTopkNodrops1(t *testing.T) {
 	topk.DropNoGroup = false
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), NoDropsAns1, "NoDrops test 1", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	changeSet := map[int]metricChange{
+		0: metricChange{},
+		1: metricChange{},
+		2: metricChange{newFields: fieldList(field{"value_aggregate", float64(74.18)}, field{"value_rank", 2})},
+		3: metricChange{newFields: fieldList(field{"value_aggregate", float64(72)}, field{"value_rank", 3})},
+		4: metricChange{newFields: fieldList(field{"value_aggregate", float64(163.22)}, field{"value_rank", 1})},
+		5: metricChange{newFields: fieldList(field{"value_aggregate", float64(163.22)}, field{"value_rank", 1})},
+	}
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "NoDrops test 1", t)
 }
 
 func TestTopkNodrops2(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -342,11 +668,20 @@ func TestTopkNodrops2(t *testing.T) {
 	topk.DropNoGroup = false
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), MetricsSet2, "NoDrops test 2", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	answer := deepCopy(MetricsSet2)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "NoDrops test 2", t)
 }
 
 // Simple topk
 func TestTopkSimpleTopk(t *testing.T) {
+
+	// Build the processor
 	var topk TopK
 	topk = *New()
 	topk.Period = 1
@@ -355,5 +690,18 @@ func TestTopkSimpleTopk(t *testing.T) {
 	topk.SimpleTopk = true
 	topk.GroupByMetricName = false
 
-	runAndCompare(&topk, deepCopy(MetricsSet2), SimpleTopKAns, "SimpleTopk test", t)
+	// Get the input
+	input := deepCopy(MetricsSet2)
+
+	// Generate the answer
+	changeSet := map[int]metricChange{
+		2: metricChange{runHash: true},
+		4: metricChange{runHash: true},
+		5: metricChange{runHash: true},
+	}
+	// Generate the answer
+	answer := generateAns(input, changeSet)
+
+	// Run the test
+	runAndCompare(&topk, input, answer, "SimpleTopk test", t)
 }
