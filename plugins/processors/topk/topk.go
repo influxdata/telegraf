@@ -70,27 +70,13 @@ var sampleConfig = `
   ## How many top metrics to return
   # k = 10
 
-  ## Metrics are grouped based on their tags and name. The plugin aggregates
-  ## the selected fields of these groups of metrics and sorts the groups based
-  ## these aggregations
-
   ## Over which tags should the aggregation be done. Globs can be specified, in
   ## which case any tag matching the glob will aggregated over. If set to an
   ## empty list is no aggregation over tags is done
   # group_by = ['*']
 
   ## Wheter or not to also group by metric name
-  # group_by_metric_name = false
-
-  ## The plugin can aggregate over several fields. If more than one field is
-  ## specified, an aggregation is calculated per group per field.
-
-  ## The plugin returns a metric if it's in a group in the top k groups,
-  ## ordered by any of the aggregations of the selected fields
-
-  ## This effectively means that more than K metrics may be returned. If you
-  ## need to return only the top k metrics regardless of grouping, use the simple_topk setting
-
+  # group_by_metric_name = true
 
   ## Over which fields are the top k are calculated
   # fields = ["value"]
@@ -115,7 +101,7 @@ var sampleConfig = `
   ## tags. If this setting is different than "" the plugin will add a
   ## tag (which name will be the value of this setting) to each metric with
   ## the value of the calculated GroupBy tag. Useful for debugging
-  # group_by_tag = ""          
+  # add_groupby_tag = ""          
 
   ## These settings provide a way to know the position of each metric in
   ## the top k. The 'add_rank_field' setting allows to specify for which
@@ -138,7 +124,7 @@ var sampleConfig = `
   ## The name of the field will be set to the name of the aggregation field,
   ## suffixed by the value of the 'aggregate_field_suffix' setting
   # add_aggregate_field = []
-  # aggregate_field_suffix = "_rank"
+  # aggregate_field_suffix = "_aggregate"
 `
 
 type MetricAggregation struct {

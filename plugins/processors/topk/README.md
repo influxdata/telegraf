@@ -26,7 +26,7 @@ If only the very top k metrics are needed, regardless of grouping, the simple_to
   # group_by = ['*']
 
   ## Wheter or not to also group by metric name
-  # group_by_metric_name = false
+  # group_by_metric_name = true
 
   ## The plugin can aggregate over several fields. If more than one field is
   ## specified, an aggregation is calculated per group per field.
