@@ -8,7 +8,7 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-// Key, value pair that represents a telegraf.Metric field
+// Key, value pair that represents a telegraf.Metric Field
 type field struct {
 	key string
 	val interface{}
@@ -18,7 +18,7 @@ func fieldList(fields ...field) []field {
 	return fields
 }
 
-// Key, value pair that represents a telegraf.Metric tags
+// Key, value pair that represents a telegraf.Metric Tag
 type tag struct {
 	key string
 	val string
