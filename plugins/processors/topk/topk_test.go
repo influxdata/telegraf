@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
+// Key, value pair that represents a telegraf.Metric field
 type field struct {
 	key string
 	val interface{}
@@ -17,6 +18,7 @@ func fieldList(fields ...field) []field {
 	return fields
 }
 
+// Key, value pair that represents a telegraf.Metric tags
 type tag struct {
 	key string
 	val string
@@ -26,16 +28,19 @@ func tagList(tags ...tag) []tag {
 	return tags
 }
 
+// Abstraction of a change in a single metric
 type metricChange struct {
 	newFields []field // Fieldsthat should be added to the metric
 	newTags   []tag   // Tags that should be added to the metric
 	runHash   bool    // Sometimes the metrics' HashID must be run so the deep comparison works
 }
 
+// Generate a new set of metrics from a set of changes
 func generateAns(input []telegraf.Metric, changeSet map[int]metricChange) []telegraf.Metric {
 	answer := []telegraf.Metric{}
 
 	// For every input metric, we check if there is a change we need to apply
+	// If there is no change for a given input metric, the metric is dropped
 	for i, metric := range input {
 		change, ok := changeSet[i]
 		if ok {
