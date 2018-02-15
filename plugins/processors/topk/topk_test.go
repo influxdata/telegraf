@@ -280,7 +280,7 @@ func TestTopkGroupby1(t *testing.T) {
 	topk.Aggregation = "sum"
 	topk.AggregateFieldSuffix = "_sumag"
 	topk.AddAggregateField = []string{"value"}
-	topk.GroupBy = []string{"tag1", "tag3"}
+	topk.GroupBy = []string{"tag[13]"}
 	topk.GroupByMetricName = false
 
 	// Get the input
@@ -476,7 +476,7 @@ func TestTopkGroupbyMetricName2(t *testing.T) {
 	topk.Aggregation = "sum"
 	topk.AggregateFieldSuffix = "_SUM"
 	topk.AddAggregateField = []string{"A", "value"}
-	topk.GroupBy = []string{"tag1", "tag2"}
+	topk.GroupBy = []string{"tag[12]"}
 	topk.Fields = []string{"A", "value"}
 
 	// Get the input
