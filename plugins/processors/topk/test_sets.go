@@ -59,10 +59,6 @@ var metric15, _ = metric.New(
 
 var MetricsSet1 = []telegraf.Metric{metric11, metric12, metric13, metric14, metric15}
 
-
-
-
-
 ///// Test set 2 /////
 var metric21, _ = metric.New(
 	"metric1",

@@ -28,8 +28,8 @@ func tagList(tags ...tag) []tag {
 
 type metricChange struct {
 	newFields []field // Fieldsthat should be added to the metric
-	newTags   []tag // Tags that should be added to the metric
-	runHash bool // Sometimes the metrics' HashID must be run so the deep comparison works
+	newTags   []tag   // Tags that should be added to the metric
+	runHash   bool    // Sometimes the metrics' HashID must be run so the deep comparison works
 }
 
 func generateAns(input []telegraf.Metric, changeSet map[int]metricChange) []telegraf.Metric {
@@ -100,7 +100,6 @@ func subSet(a []telegraf.Metric, b []telegraf.Metric) bool {
 func equalSets(l1 []telegraf.Metric, l2 []telegraf.Metric) bool {
 	return subSet(l1, l2) && subSet(l2, l1)
 }
-
 
 func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metric, testID string, t *testing.T) {
 	// Sleep for `period`, otherwise the processor will only
