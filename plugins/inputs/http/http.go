@@ -68,6 +68,7 @@ var sampleConfig = `
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"
 
   ## Data format to consume.

@@ -1,13 +1,9 @@
 # HTTP Input Plugin
 
-The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The metrics need to be formatted in one of the supported data formats.  Each data format has its own unique set of configuration options, read more about them here:
-  https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The endpoint should have metrics formatted in one of the supported [input data formats](../../../docs/DATA_FORMATS_INPUT.md).  Each data format has its own unique set of configuration options which can be added to the input configuration.
 
 
 ### Configuration:
-
-This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage http`.
 
 ```toml
 # Read formatted metrics from one or more HTTP endpoints
@@ -17,9 +13,15 @@ generate it using `telegraf --usage http`.
     "http://localhost/metrics"
   ]
 
+  ## Optional HTTP headers
+  # headers = {"X-Special-Header" = "Special-Value"}
+
   ## Optional HTTP Basic Auth Credentials
   # username = "username"
   # password = "pa$$word"
+
+  ## Tag all metrics with the url
+  # tag_url = true
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -28,6 +30,7 @@ generate it using `telegraf --usage http`.
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Amount of time allowed to complete the HTTP request
   # timeout = "5s"
 
   ## Data format to consume.
@@ -35,8 +38,15 @@ generate it using `telegraf --usage http`.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"
+
 ```
 
 ### Metrics:
 
-The metrics collected by this input plugin will depend on the configurated `data_format` and the payload returned by the HTTP endpoint(s).
+The metrics collected by this input plugin will depend on the configured `data_format` and the payload returned by the HTTP endpoint(s).
+
+The default values below are added if the input format does not specify a value:
+
+- http
+  - tags:
+    - url
