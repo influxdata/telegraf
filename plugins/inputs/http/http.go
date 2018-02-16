@@ -150,7 +150,7 @@ func (h *HTTP) gatherURL(
 		}
 	}
 
-	if h.Username != "" {
+	if h.Username != "" || h.Password != "" {
 		request.SetBasicAuth(h.Username, h.Password)
 	}
 
