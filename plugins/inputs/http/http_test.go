@@ -23,8 +23,7 @@ func TestHTTPwithJSONFormat(t *testing.T) {
 
 	url := fakeServer.URL + "/endpoint"
 	plugin := &plugin.HTTP{
-		URLs:   []string{url},
-		TagURL: true,
+		URLs: []string{url},
 	}
 	metricName := "metricName"
 	p, _ := parsers.NewJSONParser(metricName, nil, nil)

@@ -20,9 +20,6 @@ The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The 
   # username = "username"
   # password = "pa$$word"
 
-  ## Tag all metrics with the url
-  # tag_url = true
-
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
