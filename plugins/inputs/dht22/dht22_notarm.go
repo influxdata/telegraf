@@ -1,3 +1,3 @@
-// +build !linux,arm
+// +build !arm
 
 package dht22
