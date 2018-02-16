@@ -61,6 +61,7 @@ type PrometheusClient struct {
 	ExpirationInterval internal.Duration `toml:"expiration_interval"`
 	Path               string            `toml:"path"`
 	CollectorsExclude  []string          `toml:"collectors_exclude"`
+	StringAsLabel      bool              `toml:"string_as_label"`
 
 	server *http.Server
 
@@ -89,6 +90,10 @@ var sampleConfig = `
   ## Collectors to enable, valid entries are "gocollector" and "process".
   ## If unset, both are enabled.
   collectors_exclude = ["gocollector", "process"]
+
+  # Send string metrics as Prometheus labels.
+  # Unless set to false all string metrics will be sent as labels.
+  string_as_label = true
 `
 
 func (p *PrometheusClient) basicAuth(h http.Handler) http.Handler {
@@ -326,11 +331,13 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 		}
 
 		// Prometheus doesn't have a string value type, so convert string
-		// fields to labels.
-		for fn, fv := range point.Fields() {
-			switch fv := fv.(type) {
-			case string:
-				labels[sanitize(fn)] = fv
+		// fields to labels if enabled.
+		if p.StringAsLabel {
+			for fn, fv := range point.Fields() {
+				switch fv := fv.(type) {
+				case string:
+					labels[sanitize(fn)] = fv
+				}
 			}
 		}
 
@@ -465,6 +472,7 @@ func init() {
 	outputs.Add("prometheus_client", func() telegraf.Output {
 		return &PrometheusClient{
 			ExpirationInterval: internal.Duration{Duration: time.Second * 60},
+			StringAsLabel:      true,
 			fam:                make(map[string]*MetricFamily),
 			now:                time.Now,
 		}
