@@ -62,6 +62,7 @@
 - [#3722](https://github.com/influxdata/telegraf/pull/3722): Add additional metrics and reverse metric names option to openldap.
 - [#3769](https://github.com/influxdata/telegraf/pull/3769): Add TLS support to the mesos input plugin.
 - [#3546](https://github.com/influxdata/telegraf/pull/3546): Add http input plugin.
+- [#3781](https://github.com/influxdata/telegraf/pull/3781): Add keep alive support to the TCP mode of statsd.
 
 ### Bugfixes
 
