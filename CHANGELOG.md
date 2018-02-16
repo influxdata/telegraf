@@ -29,12 +29,15 @@
 - The `httpjson` is now deprecated, please migrate to the new `http` input.
 
 
-### New Plugins
-
+### New Inputs
 
 - [http](./plugins/inputs/http/README.md) - Thanks to @grange74
 - [ipset](./plugins/inputs/ipset/README.md) - Thanks to @sajoupa
 - [nats](./plugins/inputs/nats/README.md) - Thanks to @mjs & @levex
+
+### New Parsers
+
+- [dropwizard](./docs/DATA_FORMATS_INPUT.md#dropwizard) - Thanks to @atzoum
 
 ### Features
 
