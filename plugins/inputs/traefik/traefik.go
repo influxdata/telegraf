@@ -4,43 +4,42 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Traefik struct {
-	Server   string
-	Port     int
-	Instance string
+	Address                      string
+	ResponseTimeout              internal.Duration
+	IncludeStatusCodeMeasurement bool
+	lastRequestTiming            float64
 }
 
 type HealthCheck struct {
-	Pid                    int       `json:"pid"`
-	Uptime                 string    `json:"uptime"`
 	UptimeSec              float64   `json:"uptime_sec"`
-	Time                   string    `json:"time"`
-	Unixtime               int       `json:"unixtime"`
-	StatusCodeCount        struct{}  `json:"status_code_count"`
+	Unixtime               int64     `json:"unixtime"`
 	TotalStatusCodeCount   HttpCodes `json:"total_status_code_count"`
-	Count                  int       `json:"count"`
 	TotalCount             int       `json:"total_count"`
-	TotalResponseTime      string    `json:"total_response_time"`
 	TotalResponseTimeSec   float64   `json:"total_response_time_sec"`
-	AverageResponseTime    string    `json:"average_response_time"`
 	AverageResponseTimeSec float64   `json:"average_response_time_sec"`
 }
 
 type HttpCodes map[string]int
 
 var sampleConfig = `
-	## Required Traefik server address (default: "127.0.0.1")
-	# server = "127.0.0.1"
-	## Required Traefik port (default "8080")
-	# port = 8080
-	## Required Traefik instance name (default: "default")
-	# instance = "default"
-	`
+# Required Traefik server address, host and port (default: "127.0.0.1")
+address = "http://127.0.0.1:8080"
+
+# default is false. Setting to true can increase cardinality
+include_status_code_measurement = true
+
+# Additional tags
+[inputs.traefik.tags]
+  instance = "prod"
+`
 
 func (t *Traefik) Description() string {
 	return "Gather health check status from services registered in Traefik"
@@ -50,64 +49,90 @@ func (t *Traefik) SampleConfig() string {
 	return sampleConfig
 }
 
-func (t *Traefik) GatherHealthCheck(acc telegraf.Accumulator, check HealthCheck) {
-	records := make(map[string]interface{})
-	tags := make(map[string]string)
+func (t *Traefik) submitStatusCodeMeasurement(acc telegraf.Accumulator, check *HealthCheck, tags map[string]string, fields map[string]interface{}) error {
+	fields["total_count"] = check.TotalCount
+	fields["uptime_sec"] = check.UptimeSec
+	fields["unixtime"] = check.Unixtime
 
 	for key, value := range check.TotalStatusCodeCount {
-		records[key] = value
+		newTags := copyTags(tags)
+		newFields := copyFields(fields)
+		newTags["status_code"] = key
+		newFields["count"] = value
+		acc.AddFields("traefik_status_codes", newFields, newTags)
 	}
 
-	records["total_response_time_sec"] = check.TotalResponseTimeSec
-	records["average_response_time_sec"] = check.AverageResponseTimeSec
-	records["total_count"] = check.TotalCount
+	return nil
+}
 
-	tags["instance"] = t.Instance
+func copyFields(m map[string]interface{}) map[string]interface{} {
+	fields := make(map[string]interface{})
+	for k, v := range m {
+		fields[k] = v
+	}
+	return fields
+}
+func copyTags(m map[string]string) map[string]string {
+	tags := make(map[string]string)
+	for k, v := range m {
+		tags[k] = v
+	}
+	return tags
+}
 
-	acc.AddFields("traefik_healthchecks", records, tags)
+func (t *Traefik) submitPrimaryMeasurement(acc telegraf.Accumulator, check *HealthCheck, tags map[string]string, fields map[string]interface{}) error {
+	newTags := copyTags(tags)
+	newFields := copyFields(fields)
+
+	for key, value := range check.TotalStatusCodeCount {
+		newFields[fmt.Sprintf("status_code_%v", key)] = value
+	}
+
+	newFields["total_response_time_sec"] = check.TotalResponseTimeSec
+	newFields["average_response_time_sec"] = check.AverageResponseTimeSec
+	newFields["total_count"] = check.TotalCount
+	newFields["uptime_sec"] = check.UptimeSec
+	newFields["unixtime"] = check.Unixtime
+
+	acc.AddFields("traefik", newFields, newTags)
+	return nil
 }
 
 func (t *Traefik) Gather(acc telegraf.Accumulator) error {
-
-	if t.Server == "" {
-		t.Server = "127.0.0.1"
+	client := &http.Client{
+		Timeout: t.ResponseTimeout.Duration,
 	}
 
-	if t.Instance == "" {
-		t.Instance = "default"
-	}
-
-	if t.Port == 0 {
-		t.Port = 8080
-	}
-
-	client := &http.Client{}
-
-	url := fmt.Sprintf("http://%s:%d/health", t.Server, t.Port)
-
-	req, err := http.NewRequest("GET", url, nil)
-
+	req, err := http.NewRequest("GET", fmt.Sprintf("%v/health", t.Address), nil)
 	if err != nil {
 		return err
 	}
-
+	start := time.Now()
 	resp, err := client.Do(req)
-
 	if err != nil {
 		return err
 	}
-
 	defer resp.Body.Close()
 
-	check := HealthCheck{}
+	healthData := &HealthCheck{}
+	json.NewDecoder(resp.Body).Decode(&healthData)
+	t.lastRequestTiming = time.Since(start).Seconds()
 
-	json.NewDecoder(resp.Body).Decode(&check)
+	tags := map[string]string{"server": t.Address}
+	fields := map[string]interface{}{"health_response_time_sec": t.lastRequestTiming}
 
-	t.GatherHealthCheck(acc, check)
+	t.submitPrimaryMeasurement(acc, healthData, tags, fields)
+	if t.IncludeStatusCodeMeasurement {
+		t.submitStatusCodeMeasurement(acc, healthData, tags, fields)
+	}
 
 	return nil
 }
 
 func init() {
-	inputs.Add("traefik", func() telegraf.Input { return &Traefik{} })
+	inputs.Add("traefik", func() telegraf.Input {
+		return &Traefik{
+			Address: "127.0.0.1:8080",
+		}
+	})
 }
