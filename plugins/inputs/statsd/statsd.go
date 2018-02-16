@@ -113,6 +113,9 @@ type Statsd struct {
 
 	MaxTCPConnections int `toml:"max_tcp_connections"`
 
+	TCPKeepAlive       bool               `toml:"tcp_keep_alive"`
+	TCPKeepAlivePeriod *internal.Duration `toml:"tcp_keep_alive_period"`
+
 	graphiteParser *graphite.GraphiteParser
 
 	acc telegraf.Accumulator
@@ -176,6 +179,14 @@ const sampleConfig = `
 
   ## MaxTCPConnection - applicable when protocol is set to tcp (default=250)
   max_tcp_connections = 250
+
+  ## Enable TCP keep alive probes (default=false)
+  tcp_keep_alive = false
+
+  ## Specifies the keep-alive period for an active network connection.
+  ## Only applies to TCP sockets and will be ignored if tcp_keep_alive is false.
+  ## Defaults to the OS configuration.
+  # tcp_keep_alive_period = "2h"
 
   ## Address and port to host UDP listener on
   service_address = ":8125"
@@ -359,6 +370,18 @@ func (s *Statsd) tcpListen() error {
 			conn, err := s.TCPlistener.AcceptTCP()
 			if err != nil {
 				return err
+			}
+
+			if s.TCPKeepAlive {
+				if err = conn.SetKeepAlive(true); err != nil {
+					return err
+				}
+
+				if s.TCPKeepAlivePeriod != nil {
+					if err = conn.SetKeepAlivePeriod(s.TCPKeepAlivePeriod.Duration); err != nil {
+						return err
+					}
+				}
 			}
 
 			select {
@@ -863,6 +886,7 @@ func init() {
 			Protocol:               defaultProtocol,
 			ServiceAddress:         ":8125",
 			MaxTCPConnections:      250,
+			TCPKeepAlive:           false,
 			MetricSeparator:        "_",
 			AllowedPendingMessages: defaultAllowPendingMessage,
 			DeleteCounters:         true,
