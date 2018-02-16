@@ -22,6 +22,7 @@ type configuredStats struct {
 	mean     bool
 	variance bool
 	stdev    bool
+	sum      bool
 }
 
 func NewBasicStats() *BasicStats {
@@ -146,6 +147,9 @@ func (m *BasicStats) Push(acc telegraf.Accumulator) {
 			if config.mean {
 				fields[k+"_mean"] = v.mean
 			}
+			if config.sum {
+				fields[k+"_sum"] = (v.mean * v.count)
+			}
 
 			//v.count always >=1
 			if v.count > 1 {
@@ -187,6 +191,8 @@ func parseStats(names []string) *configuredStats {
 			parsed.variance = true
 		case "stdev":
 			parsed.stdev = true
+		case "sum":
+			parsed.sum = true
 
 		default:
 			log.Printf("W! Unrecognized basic stat '%s', ignoring", name)
@@ -206,6 +212,7 @@ func defaultStats() *configuredStats {
 	defaults.mean = true
 	defaults.variance = true
 	defaults.stdev = true
+	defaults.sum = false
 
 	return defaults
 }
