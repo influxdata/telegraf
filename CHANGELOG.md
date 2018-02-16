@@ -63,6 +63,7 @@
 - [#3769](https://github.com/influxdata/telegraf/pull/3769): Add TLS support to the mesos input plugin.
 - [#3546](https://github.com/influxdata/telegraf/pull/3546): Add http input plugin.
 - [#3781](https://github.com/influxdata/telegraf/pull/3781): Add keep alive support to the TCP mode of statsd.
+- [#3783](https://github.com/influxdata/telegraf/pull/3783): Support deadline in ping plugin.
 
 ### Bugfixes
 
