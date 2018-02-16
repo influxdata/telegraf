@@ -88,6 +88,10 @@ func (*HTTP) Description() string {
 // Gather takes in an accumulator and adds the metrics that the Input
 // gathers. This is called every "interval"
 func (h *HTTP) Gather(acc telegraf.Accumulator) error {
+	if h.parser == nil {
+		return errors.New("Parser is not set")
+	}
+
 	if h.client == nil {
 		tlsCfg, err := internal.GetTLSConfig(
 			h.SSLCert, h.SSLKey, h.SSLCA, h.InsecureSkipVerify)
@@ -168,10 +172,6 @@ func (h *HTTP) gatherURL(
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
-	}
-
-	if h.parser == nil {
-		return errors.New("Parser is not set")
 	}
 
 	metrics, err := h.parser.Parse(b)
