@@ -26,9 +26,13 @@
   is set.  It is encouraged to enable this option when possible as the old
   ordering is deprecated.
 
+- The `httpjson` is now deprecated, please migrate to the new `http` input.
+
 
 ### New Plugins
 
+
+- [http](./plugins/inputs/http/README.md) - Thanks to @grange74
 - [ipset](./plugins/inputs/ipset/README.md) - Thanks to @sajoupa
 - [nats](./plugins/inputs/nats/README.md) - Thanks to @mjs & @levex
 
@@ -57,6 +61,7 @@
 - [#3559](https://github.com/influxdata/telegraf/pull/3559): Add native Go method for finding pids to procstat.
 - [#3722](https://github.com/influxdata/telegraf/pull/3722): Add additional metrics and reverse metric names option to openldap.
 - [#3769](https://github.com/influxdata/telegraf/pull/3769): Add TLS support to the mesos input plugin.
+- [#3546](https://github.com/influxdata/telegraf/pull/3546): Add http input plugin.
 
 ### Bugfixes
 
