@@ -105,6 +105,7 @@ func (h *HTTP) Gather(acc telegraf.Accumulator) error {
 		h.client = &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: tlsCfg,
+				Proxy:           http.ProxyFromEnvironment,
 			},
 			Timeout: h.Timeout.Duration,
 		}
