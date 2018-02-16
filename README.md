@@ -239,6 +239,7 @@ Telegraf can also collect metrics via the following service plugins:
 * [socket_listener](./plugins/inputs/socket_listener)
 * [tail](./plugins/inputs/tail)
 * [tcp_listener](./plugins/inputs/socket_listener)
+* [traefik](./plugins/inputs/traefik)
 * [udp_listener](./plugins/inputs/socket_listener)
 * [webhooks](./plugins/inputs/webhooks)
   * [filestack](./plugins/inputs/webhooks/filestack)
