@@ -16,7 +16,8 @@ import (
 )
 
 type HTTP struct {
-	URLs []string `toml:"urls"`
+	URLs   []string `toml:"urls"`
+	Method string
 
 	Headers map[string]string
 
@@ -47,6 +48,9 @@ var sampleConfig = `
   urls = [
     "http://localhost/metrics"
   ]
+
+  ## HTTP method
+  # method = "GET"
 
   ## Optional HTTP headers
   # headers = {"X-Special-Header" = "Special-Value"}
@@ -138,7 +142,7 @@ func (h *HTTP) gatherURL(
 	acc telegraf.Accumulator,
 	url string,
 ) error {
-	request, err := http.NewRequest("GET", url, nil)
+	request, err := http.NewRequest(h.Method, url, nil)
 	if err != nil {
 		return err
 	}
@@ -193,6 +197,7 @@ func init() {
 	inputs.Add("http", func() telegraf.Input {
 		return &HTTP{
 			Timeout: internal.Duration{Duration: time.Second * 5},
+			Method:  "GET",
 		}
 	})
 }

@@ -90,6 +90,29 @@ func TestInvalidStatusCode(t *testing.T) {
 	require.Error(t, acc.GatherError(plugin.Gather))
 }
 
+func TestMethod(t *testing.T) {
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer fakeServer.Close()
+
+	plugin := &plugin.HTTP{
+		URLs:   []string{fakeServer.URL},
+		Method: "POST",
+	}
+
+	metricName := "metricName"
+	p, _ := parsers.NewJSONParser(metricName, nil, nil)
+	plugin.SetParser(p)
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(plugin.Gather))
+}
+
 func TestParserNotSet(t *testing.T) {
 	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/endpoint" {

@@ -13,6 +13,9 @@ The HTTP input plugin collects metrics from one or more HTTP(S) endpoints.  The 
     "http://localhost/metrics"
   ]
 
+  ## HTTP method
+  # method = "GET"
+
   ## Optional HTTP headers
   # headers = {"X-Special-Header" = "Special-Value"}
 
