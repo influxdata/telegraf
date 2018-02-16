@@ -2,6 +2,8 @@
 package firehose
 
 import (
+	"bytes"
+	"compress/gzip"
 	"log"
 	"time"
 
@@ -16,7 +18,7 @@ import (
 type (
 	errorEntry struct {
 		submitAttemptCount int64
-		batch              []*firehose.Record
+		batch              [][]byte // list of serialized metric strings
 	}
 )
 
@@ -30,18 +32,26 @@ type (
 		Filename  string `toml:"shared_credential_file"`
 		Token     string `toml:"token"`
 
-		DeliveryStreamName string `toml:"delivery_stream_name"`
-		Debug              bool   `toml:"debug"`
-		MaxSubmitAttempts  int64  `toml:"max_submit_attempts"`
+		DeliveryStreamName    string `toml:"delivery_stream_name"`
+		Debug                 bool   `toml:"debug"`
+		MaxSubmitAttempts     int64  `toml:"max_submit_attempts"`
+		EnableGzipCompression bool   `toml:"enable_gzip_compression"`
 
-		svc         firehoseiface.FirehoseAPI
-		errorBuffer []*errorEntry
+		svc             firehoseiface.FirehoseAPI
+		errorBuffer     []*errorEntry
+		totalErrorCount int64
 
 		serializer serializers.Serializer
 	}
 )
 
 var sampleConfig = `
+  ## Output to AWS Firehose.
+
+  ## NOTE: Keep in mind that firehose has a max batch size of 1MB.
+  ## Please set telegraf's metric_batch_size and/or flush_interval appropriately so that
+  ## this plugin does not try to push more than 1MB of metrics at a time.
+
   ## Amazon REGION of the AWS firehose endpoint.
   region = "us-east-2"
 
@@ -63,8 +73,17 @@ var sampleConfig = `
   ## Firehose StreamName must exist prior to starting telegraf.
   delivery_stream_name = "FirehoseName"
 
-  ## The maximum number of times to attempt resubmitting a single metric
+  ## The maximum number of times to attempt resubmitting a metric batch
   max_submit_attempts = 10
+
+  ## Whether or not to enable gzip compression. Compression rates are usually
+  ## as good as 90% space savings. However, the destination must decompress the data 
+  ## before it goes to influx.
+  ## The good news here, gzip it designed to be concat'ed together. We will compress 
+  ## all metrics received during a telegrate write and send them to firehose. Firehose will
+  ## then concat all this data together- but a single decompress will get all lines back in
+  ## a single pass.  All metric lines will have a newline character seperating them.
+  enable_gzip_compression = false
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
@@ -119,8 +138,50 @@ func (f *FirehoseOutput) SetSerializer(serializer serializers.Serializer) {
 
 // writeToFirehose uses the AWS GO SDK to write batched records to firehose and
 // queue the failed writes to the errorBuffer of f
-func writeToFirehose(f *FirehoseOutput, r []*firehose.Record, submitAttemptCount int64) {
+func writeToFirehose(f *FirehoseOutput, b [][]byte, submitAttemptCount int64) {
 	start := time.Now()
+	dataSize := 0 // track the size of the record in bytes
+	var values []byte
+
+	// take metrics and flatten into a record
+
+	if f.EnableGzipCompression == true {
+		var buf bytes.Buffer
+		zw := gzip.NewWriter(&buf)
+
+		for _, line := range b {
+			_, err := zw.Write(line)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		if err := zw.Close(); err != nil {
+			log.Fatal(err)
+		}
+
+		values = buf.Bytes()
+		dataSize = len(values)
+	} else {
+		for _, line := range b {
+			values = append(values, line...)
+			dataSize = dataSize + len(line)
+		}
+	}
+
+	// todo.. check that we are not exceeding the max record size of 1MB to firehose
+	// though.. we'd be really impressed if any single telegraf metric write is >1MB. That's a lot.
+	// for now, i've updated the docstring to ask that users adjust metric_batch_size and flush_interval
+	// if they run into this.  A proper solution here would need to predict and (if needed) move lines
+	// around to get as close to 1MB as possible.. the level of effort is high enough to postpone for now.
+
+	d := firehose.Record{
+		Data: values,
+	}
+
+	r := []*firehose.Record{}
+	r = append(r, &d)
+
 	batchInput := &firehose.PutRecordBatchInput{}
 	batchInput.SetDeliveryStreamName(f.DeliveryStreamName)
 	batchInput.SetRecords(r)
@@ -128,41 +189,25 @@ func writeToFirehose(f *FirehoseOutput, r []*firehose.Record, submitAttemptCount
 	// attempt to send data to firehose
 	resp, err := f.svc.PutRecordBatch(batchInput)
 
-	// if we had a total failure, log it and enqueue the request for next time
-	if err != nil {
+	// if we had a failure, log it and enqueue the request for next time
+	if (err != nil) || (*resp.FailedPutCount > 0) {
 		log.Printf("E! firehose: Unable to write to Firehose : %+v \n", err.Error())
-		newErrorEntry := errorEntry{submitAttemptCount: submitAttemptCount + 1, batch: r}
+		newErrorEntry := errorEntry{submitAttemptCount: submitAttemptCount + 1, batch: b}
 		f.errorBuffer = append(f.errorBuffer, &newErrorEntry)
+		f.totalErrorCount += 1
 		return
 	}
 	if f.Debug {
 		log.Printf("E! %+v \n", resp)
 	}
 
-	// if we have a partial failure- issue a warning and then enqueue only the messages that failed
-	if *resp.FailedPutCount > 0 {
-
-		errorMetrics := make([]*firehose.Record, *resp.FailedPutCount)
-		for index, entry := range resp.RequestResponses {
-			//log.Printf(*entry.ErrorCode)
-			if entry.ErrorCode != nil {
-				errorMetrics = append(errorMetrics, r[index])
-			}
-		}
-
-		newErrorEntry := errorEntry{submitAttemptCount: submitAttemptCount + 1, batch: errorMetrics}
-		log.Printf("W! firehose: failed to write %d out of %d Telegraf metrics in %+v. Queuing failed metrics for later retry.\n", len(errorMetrics), len(r), time.Since(start))
-		f.errorBuffer = append(f.errorBuffer, &newErrorEntry)
-	} else {
-		log.Printf("I! firehose: successfully sent %d Telegraf metrics in %+v\n", len(r), time.Since(start))
-	}
+	log.Printf("I! firehose: successfully sent %d metric batches in %+v. Total size: %d bytes.\n", len(r), time.Since(start), dataSize)
 
 }
 
 // Write function is responsible for first writing the batch entries held in
 // the errorBuffer of f and then writing metrics in batches of 500.
 func (f *FirehoseOutput) Write(metrics []telegraf.Metric) error {
-	var sz uint32
 
 	if len(metrics) == 0 {
 		return nil
@@ -171,47 +216,46 @@ func (f *FirehoseOutput) Write(metrics []telegraf.Metric) error {
 	// if we have any failures from last write, we will attempt them
 	// again here.  Note: we only try up to the max number of retry attempts
 	// as specified by the configuration file.
-	for i, entry := range f.errorBuffer {
+	// We'll loop over the errorBuffer and copy out the messages that need resending.
+	// We then clear the errorBuffer. We do it this way because we will be appending
+	// any future errors to the end, and we need to ensure messages are dropped if unneeded.
+	// push/pop of a slice it not completely efficient, so we figured an allocate/deallocate was better.
+	if len(f.errorBuffer) > 0 {
 		log.Printf("I! firehose: processing %d batches with previous errors queued for retry.", len(f.errorBuffer))
-		if entry.submitAttemptCount <= f.MaxSubmitAttempts {
-			log.Printf("I! firehose: -> resending failed metric batch %d of %d.\n", i+1, len(f.errorBuffer))
+		tempErrorBuffer := []*errorEntry{}
+
+		for i, entry := range f.errorBuffer {
+			if entry.submitAttemptCount <= f.MaxSubmitAttempts {
+				tempErrorBuffer = append(tempErrorBuffer, entry)
+			} else {
+				log.Printf("I! firehose: -> discarded failed metric batch %d of %d. Attempt #%d > MaxSubmitAttempts (%d).\n",
+					i+1, len(f.errorBuffer), entry.submitAttemptCount, f.MaxSubmitAttempts)
+			}
+		}
+
+		// clear the errorBuffer (as we're processing it now)
+		f.errorBuffer = []*errorEntry{}
+
+		// attempt resubmit
+		for i, entry := range tempErrorBuffer {
+			log.Printf("I! firehose: -> resending failed metric batch %d of %d.\n", i+1, len(tempErrorBuffer))
 			writeToFirehose(f, entry.batch, entry.submitAttemptCount)
-		} else {
-			log.Printf("I! firehose: -> discarded failed metric batch %d of %d. Attempt #%d > MaxSubmitAttempts (%d).\n", i+1, len(f.errorBuffer), entry.submitAttemptCount, f.MaxSubmitAttempts)
 		}
 		log.Printf("I! firehose: done resending previous batches")
 	}
 
-	r := []*firehose.Record{}
+	prepared_batch := make([][]byte, len(metrics))
 	for _, metric := range metrics {
-		sz++
 
 		values, err := f.serializer.Serialize(metric)
 		if err != nil {
 			return err
 		}
 
-		d := firehose.Record{
-			Data: values,
-		}
-		if f.Debug {
-			log.Println(d)
-			log.Println(metric)
-		}
-
-		r = append(r, &d)
-
-		if sz == 500 {
-			// Max Messages Per PutRecordRequest is 500
-			writeToFirehose(f, r, 0)
-			sz = 0
-			r = nil
-		}
-	}
-	if sz > 0 {
-		writeToFirehose(f, r, 0)
+		prepared_batch = append(prepared_batch, values)
 	}
 
+	writeToFirehose(f, prepared_batch, 0)
 	return nil
 }
 

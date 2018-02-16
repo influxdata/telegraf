@@ -1,8 +1,11 @@
 package firehose
 
 import (
+	"bytes"
+	"compress/gzip"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"testing"
 
@@ -35,6 +38,9 @@ type mockFirehose struct {
 
 	// reaction values
 	numOfPuts int64 // tracks the number of times PutRecordBatch was called
+
+	// data
+	putData [][]byte
 }
 
 // PutRecordBatch is an override of a function in the firehose package of the
@@ -67,7 +73,7 @@ func (m *mockFirehose) PutRecordBatch(input *firehose.PutRecordBatchInput) (outp
 	} else {
 		m.numOfPuts++
 
-		for index, _ := range input.Records {
+		for index, record := range input.Records {
 			recordID++
 			if int64(index) < m.numErrorsRemaining {
 				// inserting errors at first for specified error count
@@ -80,6 +86,7 @@ func (m *mockFirehose) PutRecordBatch(input *firehose.PutRecordBatchInput) (outp
 			} else {
 				idString := strconv.FormatInt(recordID, 10)
 				entry = firehose.PutRecordBatchResponseEntry{RecordId: &idString}
+				m.putData = append(m.putData, record.Data)
 			}
 			responses = append(responses, &entry)
 		}
@@ -117,13 +124,13 @@ func attachSerializer(t *testing.T, f *FirehoseOutput) (err error) {
 	return
 }
 
-// checkBuffer takes a quick look at how many firehose record errors were
+// checkErrorCount takes a quick look at how many firehose record errors were
 // handled by the code.  It will error out if the number of errors found
 // are not equal to the number of errors expected.
-func checkBuffer(t *testing.T, f *FirehoseOutput, numErrors int64) (err error) {
-	count := int64(len(f.errorBuffer))
+func checkErrorCount(t *testing.T, f *FirehoseOutput, numErrors int64) (err error) {
+	count := f.totalErrorCount
 	if count != numErrors {
-		err = errors.New(fmt.Sprintf("Got buffer length of %d, expected %d", count, numErrors))
+		err = errors.New(fmt.Sprintf("Got total error count of %d, expected %d", count, numErrors))
 		t.Fail()
 	}
 	return
@@ -139,7 +146,8 @@ func initFirehose(t *testing.T, m *mockFirehose) (f *FirehoseOutput) {
 }
 
 // TestWriteToFirehoseAllSuccess tests the case when no error is returned
-// from our mock AWS firehose function.
+// from our mock AWS firehose function. We also confirm the lines were
+// correctly formatted.
 func TestWriteToFirehoseAllSuccess(t *testing.T) {
 	m := &mockFirehose{
 		numErrorsRemaining: 0,
@@ -147,13 +155,58 @@ func TestWriteToFirehoseAllSuccess(t *testing.T) {
 	}
 	f := initFirehose(t, m)
 
-	generatedLines, err := generateLines(10)
+	generatedLines, err := generateLines(2)
+	if err != nil {
+		t.FailNow()
+	}
+
+	expectedData := "test1,tag1=value1 value=1 1257894000000000000\ntest1,tag1=value1 value=1 1257894000000000000\n"
+
+	err = f.Write(generatedLines)
+	assert.Equal(t, expectedData, string(m.putData[0]))
+	assert.Equal(t, int64(1), m.numOfPuts)
+}
+
+// TestWriteToFirehoseAllSuccessGzip tests the case when no error is returned
+// from our mock AWS firehose function. We also confirm the lines were
+// correctly formatted.
+func TestWriteToFirehoseAllSuccessGzip(t *testing.T) {
+	m := &mockFirehose{
+		numErrorsRemaining: 0,
+		t:                  t,
+	}
+	f := initFirehose(t, m)
+	f.EnableGzipCompression = true
+
+	generatedLines, err := generateLines(2)
 	if err != nil {
 		t.FailNow()
 	}
 
 	err = f.Write(generatedLines)
 	assert.Equal(t, int64(1), m.numOfPuts)
+
+	// decompress and validate string
+	var buf bytes.Buffer
+	buf.Write(m.putData[0])
+
+	zr, err := gzip.NewReader(&buf)
+	if err != nil {
+		t.Errorf("Non nil exit from gzip.NewReader()")
+		t.FailNow()
+	}
+
+	receivedData := make([]byte, 200)
+	size, err := zr.Read(receivedData)
+	if err == io.EOF {
+		receivedData = receivedData[:size]
+	} else if err != nil {
+		t.Errorf("Non nil exit from zr.Read()")
+		t.FailNow()
+	}
+
+	expectedData := "test1,tag1=value1 value=1 1257894000000000000\ntest1,tag1=value1 value=1 1257894000000000000\n"
+	assert.Equal(t, expectedData, string(receivedData))
 }
 
 // TestWriteToFirehoseAllSuccess tests the case when no error is returned
@@ -178,6 +231,8 @@ func TestWriteToFirehose500AllSuccess(t *testing.T) {
 // TestWriteToFirehoseAllSuccess tests the case when no error is returned
 // from our mock AWS firehose function when we send more metrics than
 // a single write to Firehose can accomodate.
+// This test aims at proving we no longer send one metric per record anymore.
+// sending 550 metrics will still result in one record sent to firehose.
 func TestWriteToFirehose550AllSuccess(t *testing.T) {
 	m := &mockFirehose{
 		numErrorsRemaining: 0,
@@ -191,14 +246,14 @@ func TestWriteToFirehose550AllSuccess(t *testing.T) {
 	}
 
 	err = f.Write(generatedLines)
-	assert.Equal(t, int64(2), m.numOfPuts)
+	assert.Equal(t, int64(1), m.numOfPuts)
 }
 
-// TestWriteToFirehoseOneSuccessOneError tests the case when we do see
+// TestWriteToFirehoseTotalFail tests the case when we do see
 // a total failure and are capable of retry
 func TestWriteToFirehoseTotalFail(t *testing.T) {
 	m := &mockFirehose{
-		numErrorsRemaining: 10,
+		numErrorsRemaining: 1,
 		t:                  t,
 	}
 	f := initFirehose(t, m)
@@ -221,6 +276,11 @@ func TestWriteToFirehoseTotalFail(t *testing.T) {
 	// and then 1 for the new data.
 	err = f.Write(generatedLines)
 	assert.Equal(t, int64(2), m.numOfPuts)
+
+	// do a third write. We should see only 1 addition put
+	// (3 in total) as the previous put succeed.
+	err = f.Write(generatedLines)
+	assert.Equal(t, int64(3), m.numOfPuts)
 }
 
 // TestWriteToFirehoseOneSuccessOneError tests the case when we do see
@@ -239,17 +299,17 @@ func TestWriteToFirehoseOneSuccessOneError(t *testing.T) {
 		t.FailNow()
 	}
 
-	// write attempt, should see one error, and that
+	// write attempt, should see one error (zero puts), and that
 	// single metric should be re-queued for submission
 	// upon next write
 	err = f.Write(generatedLines)
-	assert.Equal(t, int64(1), m.numOfPuts)
+	assert.Equal(t, int64(0), m.numOfPuts)
 
-	// do another write. We should see 3 puts. 1 for the
+	// do another write. We should see 2 puts. 0 for the
 	// original attempt, 1 for the retry of the earlier error,
 	// and then 1 for the new data.
 	err = f.Write(generatedLines)
-	assert.Equal(t, int64(3), m.numOfPuts)
+	assert.Equal(t, int64(2), m.numOfPuts)
 }
 
 // TestWriteToFirehoseOneSuccessOneErrorNoRetry tests the case when we do see
@@ -269,17 +329,17 @@ func TestWriteToFirehoseOneSuccessOneErrorNoRetry(t *testing.T) {
 		t.FailNow()
 	}
 
-	// write attempt, should see one error, and that
+	// write attempt, should see one error (zero puts), and that
 	// single metric should be re-queued for submission
 	// upon next write
 	err = f.Write(generatedLines)
-	assert.Equal(t, int64(1), m.numOfPuts)
+	assert.Equal(t, int64(0), m.numOfPuts)
 
-	// do another write. We should see 2 puts. 1 for the
+	// do another write. We should see 1 put. 0 for the
 	// original attempt, 0 for the retry of the earlier error (as it is discarded),
 	// and then 1 for the new data.
 	err = f.Write(generatedLines)
-	assert.Equal(t, int64(2), m.numOfPuts)
+	assert.Equal(t, int64(1), m.numOfPuts)
 }
 
 // TestWriteToFirehoseFullFailure tests the case when we simply cannot write to firehose

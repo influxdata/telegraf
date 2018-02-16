@@ -1,7 +1,8 @@
 ## Amazon Kinesis Firehose Output for Telegraf
 
-This is an experimental plugin that is still in the early stages of development. It will submit Points in batches up to 500
-in one Put request to Kinesis Firehose. This should reduce the number of API requests considerably.
+This plugin allows sending of metrics directly to an AWS firehose. It will aggregate all metrics
+into a single firehose record (separated by newlines). This plugin can also 
+gzip metrics prior to submission to firehose for additional cost savings.
 
 ## About Kinesis Firehose
 
@@ -42,8 +43,13 @@ The region is the Amazon region that you wish to connect to. Examples include bu
 The delivery_stream_name config variable is used by the plugin to ensure that data is sent to the correct Kinesis Firehose delivery stream. 
 It is important to note that the stream *MUST* be pre-configured for this plugin to function correctly.
 
+### enable_gzip_compression
+A boolean to indicate if you wish to gzip the data prior to submission to firehose. From our testing, this results in nearly 90% compression
+rates (leading to significant cost savings).  As you might expect, you'll need to ensure decompession happens somewhere in your metrics 
+pipeline if you take this approach. 
+
 ### max_submit_attempts
-The maximum number of times to attempt resubmitting a single metric, the sample config defautls to 10.
+The maximum number of times to attempt resubmitting a single metric, the sample config defaults to 10.
 
 ### data_format
 Each data format has its own unique set of configuration options, read
