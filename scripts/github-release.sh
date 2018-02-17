@@ -17,15 +17,6 @@ function exit_if_fail {
     fi
 }
 
-# Check that go fmt has been run.
-function check_go_fmt {
-    fmtcount=`git ls-files | grep '.go$' | grep -v Godep | xargs gofmt -l 2>&1 | wc -l`
-    if [ $fmtcount -gt 0 ]; then
-        echo "run 'go fmt ./...' to format your source code."
-        exit 1
-    fi
-}
-
 # Set up the build directory, and then GOPATH.
 #exit_if_fail mkdir $BUILD_DIR
 export GOPATH=$BUILD_DIR
@@ -40,15 +31,11 @@ echo "========================================"
 echo "\$HOME: $HOME"
 echo "\$GOPATH: $GOPATH"
 echo "\$CIRCLE_BRANCH: $CIRCLE_BRANCH"
+echo "\$CIRCLE_TAG: $CIRCLE_TAG"
 
-# Move the checked-out source to a better location
-#exit_if_fail mv $HOME/telegraf $GOPATH/src/github.com/influxdata
-# exit_if_fail cd $GOPATH/src/github.com/influxdata/telegraf
-
-sudo apt-get install -y rpm python-boto ruby ruby-dev autoconf libtool
+sudo apt-get install -y rpm python-boto ruby ruby-dev autoconf libtool rpm
 sudo gem instal fpm
 
-sudo apt-get install -y rpm
 unset GOGC
 ./scripts/build.py --release --package --platform=linux \
   --arch=amd64 --version=${VERSION}
