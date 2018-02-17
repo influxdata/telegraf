@@ -45,8 +45,8 @@ echo "\$CIRCLE_BRANCH: $CIRCLE_BRANCH"
 #exit_if_fail mv $HOME/telegraf $GOPATH/src/github.com/influxdata
 # exit_if_fail cd $GOPATH/src/github.com/influxdata/telegraf
 
-apt-get install -y rpm python-boto ruby ruby-dev autoconf libtool
-gem instal fpm
+sudo apt-get install -y rpm python-boto ruby ruby-dev autoconf libtool
+sudo gem instal fpm
 
 sudo apt-get install -y rpm
 unset GOGC
