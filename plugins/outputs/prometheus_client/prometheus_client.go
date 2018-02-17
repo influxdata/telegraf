@@ -74,7 +74,7 @@ type PrometheusClient struct {
 
 var sampleConfig = `
   ## Address to listen on
-  # listen = ":9126"
+  # listen = ":9273"
 
   ## Use TLS
   #tls_cert = "/etc/ssl/telegraf.crt"
@@ -138,7 +138,7 @@ func (p *PrometheusClient) Start() error {
 	registry.Register(p)
 
 	if p.Listen == "" {
-		p.Listen = "localhost:9126"
+		p.Listen = "localhost:9273"
 	}
 
 	if p.Path == "" {
