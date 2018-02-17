@@ -9,6 +9,9 @@ jobs:
     <<: *defaults
     steps:
       - checkout
+      - run: |
+          git submodule sync --recursive
+          git submodule update --recursive --init
       - run: 'make ci-test'
   release:
     <<: *defaults
@@ -31,19 +34,19 @@ workflows:
   build_and_release:
     jobs:
       - 'build'
-      - 'release':
-          requires:
-            - 'build'
-  nightly:
-    jobs:
-      - 'build'
-      - 'nightly':
-          requires:
-            - 'build'
-    triggers:
-      - schedule:
-          cron: "0 18 * * *"
-          filters:
-            branches:
-              only:
-                - master
+  #     - 'release':
+  #         requires:
+  #           - 'build'
+  # nightly:
+  #   jobs:
+  #     - 'build'
+  #     - 'nightly':
+  #         requires:
+  #           - 'build'
+  #   triggers:
+  #     - schedule:
+  #         cron: "0 18 * * *"
+  #         filters:
+  #           branches:
+  #             only:
+  #               - master
