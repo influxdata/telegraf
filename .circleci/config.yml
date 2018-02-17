@@ -17,7 +17,10 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run: './scripts/release.sh'
+      - run: |
+          git submodule sync --recursive
+          git submodule update --recursive --init      
+      - run: './scripts/github-release.sh'
       - store_artifacts:
           path: './artifacts'
           destination: '.'
@@ -34,9 +37,9 @@ workflows:
   build_and_release:
     jobs:
       - 'build'
-  #     - 'release':
-  #         requires:
-  #           - 'build'
+      - 'release':
+          requires:
+            - 'build'
   # nightly:
   #   jobs:
   #     - 'build'
