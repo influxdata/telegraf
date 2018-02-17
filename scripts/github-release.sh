@@ -4,6 +4,7 @@ set -ex
 VERSION=${CIRCLE_TAG##*v}
 CIRCLE_RELEASE_REPO="telegraf-output-orangesys"
 CIRCLE_RELEASE_USER="orangesys"
+ARTIFACT_DIR='artifacts'
 
 run()
 {
@@ -20,6 +21,7 @@ run()
 
 # Turning off GOGC speeds up build times
 export PATH=$GOPATH/bin:$PATH
+run mkdir -p ${ARTIFACT_DIR}
 
 # Dump some test config to the log.
 echo "Test configuration"
@@ -34,6 +36,8 @@ run sudo gem instal fpm
 
 run ./scripts/build.py --release --package --platform=linux \
   --arch=amd64 --version=${VERSION}
+run rm -f build/telegraf
+run mv build $ARTIFACT_DIR
 
 #intall github-release cmd
 go get github.com/aktau/github-release
@@ -55,8 +59,8 @@ upload_file() {
     --file $_FILE
 }
 
+cd $ARTIFACT_DIR/build
 
-
-for i in `ls build`; do
+for i in `ls`; do
   run upload_file $i
 done

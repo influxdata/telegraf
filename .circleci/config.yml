@@ -32,6 +32,9 @@ jobs:
             - v1-{{ .Branch }}-{{ checksum "Godeps" }}          
       - run: 'make deps'      
       - run: './scripts/github-release.sh'
+      - store_artifacts:
+          path: './artifacts'
+          destination: '.'      
       - save_cache:
           key: v1-{{ .Branch }}-{{ checksum "Godeps" }}
           paths:
