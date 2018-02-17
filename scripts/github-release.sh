@@ -4,7 +4,6 @@ set -ex
 VERSION=${CIRCLE_TAG##*v}
 CIRCLE_RELEASE_REPO="telegraf-output-orangesys"
 CIRCLE_RELEASE_USER="orangesys"
-ARTIFACT_DIR="artifacts"
 
 run()
 {
@@ -21,8 +20,6 @@ run()
 
 # Turning off GOGC speeds up build times
 export PATH=$GOPATH/bin:$PATH
-run mkdir -p ${ARTIFACT_DIR}
-run gzip telegraf -c > "$ARTIFACT_DIR/telegraf.gz"
 
 # Dump some test config to the log.
 echo "Test configuration"
