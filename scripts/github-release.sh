@@ -4,21 +4,26 @@ set -ex
 VERSION=${CIRCLE_TAG##*v}
 CIRCLE_RELEASE_REPO="telegraf-output-orangesys"
 CIRCLE_RELEASE_USER="orangesys"
+ARTIFACT_DIR="artifacts"
 
-# Executes the given statement, and exits if the command returns a non-zero code.
-function exit_if_fail {
-    command=$@
-    echo "Executing '$command'"
-    eval $command
-    rc=$?
-    if [ $rc -ne 0 ]; then
-        echo "'$command' returned $rc."
-        exit $rc
+run()
+{
+    "$@"
+    ret=$?
+    if [[ $ret -eq 0 ]]
+    then
+        echo "[INFO]  [ $@ ]"
+    else
+        echo "[ERROR] [ $@ ] returned $ret"
+        exit $ret
     fi
 }
 
 # Turning off GOGC speeds up build times
 export PATH=$GOPATH/bin:$PATH
+run make
+run mkdir -p ${ARTIFACT_DIR}
+run gzip telegraf -c > "$ARTIFACT_DIR/telegraf.gz"
 
 # Dump some test config to the log.
 echo "Test configuration"
@@ -28,10 +33,10 @@ echo "\$GOPATH: $GOPATH"
 echo "\$CIRCLE_BRANCH: $CIRCLE_BRANCH"
 echo "\$CIRCLE_TAG: $CIRCLE_TAG"
 
-sudo apt-get install -y rpm python-boto ruby ruby-dev autoconf libtool rpm
-sudo gem instal fpm
+run sudo apt-get install -y rpm python-boto ruby ruby-dev autoconf libtool rpm
+run sudo gem instal fpm
 
-./scripts/build.py --release --package --platform=linux \
+run ./scripts/build.py --release --package --platform=linux \
   --arch=amd64 --version=${VERSION}
 
 #intall github-release cmd
@@ -57,5 +62,5 @@ upload_file() {
 
 
 for i in `ls build`; do
-  upload_file $i
+  run upload_file $i
 done
