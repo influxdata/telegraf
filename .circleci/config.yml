@@ -9,12 +9,12 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - restore_cache:
-          keys: 
-            - v1-{{ .Branch }}-{{ checksum "Godeps" }}
       - run: |
           git submodule sync --recursive
           git submodule update --recursive --init
+      - restore_cache:
+          keys: 
+            - v1-{{ .Branch }}-{{ checksum "Godeps" }}          
       - run: 'make ci-test'
       - save_cache:
           key: v1-{{ .Branch }}-{{ checksum "Godeps" }}
@@ -27,8 +27,15 @@ jobs:
       - run: |
           git submodule sync --recursive
           git submodule update --recursive --init
+      - restore_cache:
+          keys: 
+            - v1-{{ .Branch }}-{{ checksum "Godeps" }}          
       - run: 'make deps'      
       - run: './scripts/github-release.sh'
+      - save_cache:
+          key: v1-{{ .Branch }}-{{ checksum "Godeps" }}
+          paths:
+            - "/go/pkg"      
 workflows:
   version: 2
   build_and_release:
