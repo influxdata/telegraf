@@ -33,8 +33,6 @@ sudo gem instal fpm
 
 ./scripts/build.py --release --package --platform=linux \
   --arch=amd64 --version=${VERSION}
-rm build/telegraf
-mv build $CIRCLE_ARTIFACTS
 
 #intall github-release cmd
 go get github.com/aktau/github-release
@@ -56,8 +54,8 @@ upload_file() {
     --file $_FILE
 }
 
-cd ${CIRCLE_ARTIFACTS}/build
 
-for i in `ls`; do
+
+for i in `ls build`; do
   upload_file $i
 done
