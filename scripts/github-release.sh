@@ -1,7 +1,7 @@
 #!/bin/bash
+set -ex
 
 VERSION=${CIRCLE_TAG##*v}
-BUILD_DIR=$HOME/telegraf-build
 CIRCLE_RELEASE_REPO="telegraf-output-orangesys"
 CIRCLE_RELEASE_USER="orangesys"
 
@@ -17,13 +17,8 @@ function exit_if_fail {
     fi
 }
 
-# Set up the build directory, and then GOPATH.
-#exit_if_fail mkdir $BUILD_DIR
-export GOPATH=$BUILD_DIR
 # Turning off GOGC speeds up build times
-export GOGC=off
 export PATH=$GOPATH/bin:$PATH
-#exit_if_fail mkdir -p $GOPATH/src/github.com/influxdata
 
 # Dump some test config to the log.
 echo "Test configuration"
@@ -36,7 +31,6 @@ echo "\$CIRCLE_TAG: $CIRCLE_TAG"
 sudo apt-get install -y rpm python-boto ruby ruby-dev autoconf libtool rpm
 sudo gem instal fpm
 
-unset GOGC
 ./scripts/build.py --release --package --platform=linux \
   --arch=amd64 --version=${VERSION}
 rm build/telegraf
