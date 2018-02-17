@@ -9,10 +9,17 @@ jobs:
     <<: *defaults
     steps:
       - checkout
+      - restore_cache:
+          keys: 
+            - v1-{{ .Branch }}-{{ checksum "Godeps" }}
       - run: |
           git submodule sync --recursive
           git submodule update --recursive --init
       - run: 'make ci-test'
+      - save_cache:
+          key: v1-{{ .Branch }}-{{ checksum "Godeps" }}
+          paths:
+            - "/go/pkg"      
   release:
     <<: *defaults
     steps:
