@@ -29,20 +29,16 @@ workflows:
   version: 2
   build_and_release:
     jobs:
-      - 'build'
+      - 'build':
+        filters:
+          tags:
+            only: /^v[0-9]+(\.[0-9]+)*(-.*)*/
       - 'release':
           requires:
             - 'build'
-  # nightly:
-  #   jobs:
-  #     - 'build'
-  #     - 'nightly':
-  #         requires:
-  #           - 'build'
-  #   triggers:
-  #     - schedule:
-  #         cron: "0 18 * * *"
-  #         filters:
-  #           branches:
-  #             only:
-  #               - master
+          filters:
+            tags:
+              only: /^v[0-9]+(\.[0-9]+)*(-.*)*/
+            branches:
+              ignore: /.*/
+
