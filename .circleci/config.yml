@@ -19,16 +19,9 @@ jobs:
       - checkout
       - run: |
           git submodule sync --recursive
-          git submodule update --recursive --init      
+          git submodule update --recursive --init
+      - run: 'make deps'      
       - run: './scripts/github-release.sh'
-      - store_artifacts:
-          path: './artifacts'
-          destination: '.'
-  nightly:
-    <<: *defaults
-    steps:
-      - checkout
-      - run: './scripts/release.sh'
       - store_artifacts:
           path: './artifacts'
           destination: '.'
