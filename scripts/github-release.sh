@@ -21,7 +21,6 @@ run()
 
 # Turning off GOGC speeds up build times
 export PATH=$GOPATH/bin:$PATH
-run make
 run mkdir -p ${ARTIFACT_DIR}
 run gzip telegraf -c > "$ARTIFACT_DIR/telegraf.gz"
 
