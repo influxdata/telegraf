@@ -4,22 +4,28 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func queryRunner(t *testing.T, q query) (*Postgresql, *testutil.Accumulator) {
+func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 	p := &Postgresql{
-		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
-			testutil.GetLocalHost()),
+		Service: postgresql.Service{
+			Address: fmt.Sprintf(
+				"host=%s user=postgres sslmode=disable",
+				testutil.GetLocalHost(),
+			),
+		},
 		Databases: []string{"postgres"},
 		Query:     q,
 	}
 	var acc testutil.Accumulator
+	p.Start(&acc)
 
 	require.NoError(t, acc.GatherError(p.Gather))
-	return p, &acc
+	return &acc
 }
 
 func TestPostgresqlGeneratesMetrics(t *testing.T) {
@@ -27,17 +33,12 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	p, acc := queryRunner(t, query{{
+	acc := queryRunner(t, query{{
 		Sqlquery:   "select * from pg_stat_database",
 		Version:    901,
 		Withdbname: false,
 		Tagvalue:   "",
 	}})
-
-	availableColumns := make(map[string]bool)
-	for _, col := range p.AllColumns {
-		availableColumns[col] = true
-	}
 
 	intMetrics := []string{
 		"xact_commit",
@@ -71,39 +72,27 @@ func TestPostgresqlGeneratesMetrics(t *testing.T) {
 	metricsCounted := 0
 
 	for _, metric := range intMetrics {
-		_, ok := availableColumns[metric]
-		if ok {
-			assert.True(t, acc.HasInt64Field("postgresql", metric))
-			metricsCounted++
-		}
+		assert.True(t, acc.HasInt64Field("postgresql", metric))
+		metricsCounted++
 	}
 
 	for _, metric := range int32Metrics {
-		_, ok := availableColumns[metric]
-		if ok {
-			assert.True(t, acc.HasInt32Field("postgresql", metric))
-			metricsCounted++
-		}
+		assert.True(t, acc.HasInt32Field("postgresql", metric))
+		metricsCounted++
 	}
 
 	for _, metric := range floatMetrics {
-		_, ok := availableColumns[metric]
-		if ok {
-			assert.True(t, acc.HasFloatField("postgresql", metric))
-			metricsCounted++
-		}
+		assert.True(t, acc.HasFloatField("postgresql", metric))
+		metricsCounted++
 	}
 
 	for _, metric := range stringMetrics {
-		_, ok := availableColumns[metric]
-		if ok {
-			assert.True(t, acc.HasStringField("postgresql", metric))
-			metricsCounted++
-		}
+		assert.True(t, acc.HasStringField("postgresql", metric))
+		metricsCounted++
 	}
 
 	assert.True(t, metricsCounted > 0)
-	assert.Equal(t, len(availableColumns)-len(p.IgnoredColumns()), metricsCounted)
+	assert.Equal(t, len(floatMetrics)+len(intMetrics)+len(int32Metrics)+len(stringMetrics), metricsCounted)
 }
 
 func TestPostgresqlQueryOutputTests(t *testing.T) {
@@ -137,7 +126,7 @@ func TestPostgresqlQueryOutputTests(t *testing.T) {
 	}
 
 	for q, assertions := range examples {
-		_, acc := queryRunner(t, query{{
+		acc := queryRunner(t, query{{
 			Sqlquery:   q,
 			Version:    901,
 			Withdbname: false,
@@ -153,7 +142,7 @@ func TestPostgresqlFieldOutput(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	_, acc := queryRunner(t, query{{
+	acc := queryRunner(t, query{{
 		Sqlquery:   "select * from pg_stat_database",
 		Version:    901,
 		Withdbname: false,
@@ -216,13 +205,18 @@ func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
 	}
 
 	p := &Postgresql{
-		Address: fmt.Sprintf("host=%s user=postgres sslmode=disable",
-			testutil.GetLocalHost()),
+		Service: postgresql.Service{
+			Address: fmt.Sprintf(
+				"host=%s user=postgres sslmode=disable",
+				testutil.GetLocalHost(),
+			),
+		},
 	}
 
 	var acc testutil.Accumulator
-	require.NoError(t, acc.GatherError(p.Gather))
 
+	require.NoError(t, p.Start(&acc))
+	require.NoError(t, acc.GatherError(p.Gather))
 	assert.NotEmpty(t, p.IgnoredColumns())
 	for col := range p.IgnoredColumns() {
 		assert.False(t, acc.HasMeasurement(col))

@@ -152,6 +152,7 @@ configuration options.
 * [graylog](./plugins/inputs/graylog)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
+* [http](./plugins/inputs/http) (generic HTTP plugin, supports using input data formats)
 * [http_response](./plugins/inputs/http_response)
 * [httpjson](./plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
 * [internal](./plugins/inputs/internal)
@@ -159,6 +160,7 @@ configuration options.
 * [interrupts](./plugins/inputs/interrupts)
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
 * [iptables](./plugins/inputs/iptables)
+* [ipset](./plugins/inputs/ipset)
 * [jolokia](./plugins/inputs/jolokia) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
 * [jolokia2](./plugins/inputs/jolokia2)
 * [kapacitor](./plugins/inputs/kapacitor)
@@ -171,6 +173,7 @@ configuration options.
 * [minecraft](./plugins/inputs/minecraft)
 * [mongodb](./plugins/inputs/mongodb)
 * [mysql](./plugins/inputs/mysql)
+* [nats](./plugins/inputs/nats)
 * [net_response](./plugins/inputs/net_response)
 * [nginx](./plugins/inputs/nginx)
 * [nginx_plus](./plugins/inputs/nginx_plus)
@@ -256,6 +259,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [Value](./docs/DATA_FORMATS_INPUT.md#value)
 * [Nagios](./docs/DATA_FORMATS_INPUT.md#nagios)
 * [Collectd](./docs/DATA_FORMATS_INPUT.md#collectd)
+* [Dropwizard](./docs/DATA_FORMATS_INPUT.md#dropwizard)
 
 ## Processor Plugins
 

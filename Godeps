@@ -16,7 +16,7 @@ github.com/docker/go-connections 990a1a1a70b0da4c4cb70e117971a4f0babfbf1a
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/go-xerial-snappy bb955e01b9346ac19dc29eb16586c90ded99a98c
 github.com/eapache/queue 44cc805cf13205b55f69e14bcb69867d1ae92f98
-github.com/eclipse/paho.mqtt.golang d4f545eb108a2d19f9b1a735689dbfb719bc21fb
+github.com/eclipse/paho.mqtt.golang aff15770515e3c57fc6109da73d42b0d46f7f483
 github.com/go-logfmt/logfmt 390ab7935ee28ec6b286364bba9b4dd6410cb3d5
 github.com/go-sql-driver/mysql 2e00b5cd70399450106cec6431c2e2ce3cae5034
 github.com/gobwas/glob bea32b9cd2d6f55753d94a28e959b13f0244797a
@@ -27,6 +27,7 @@ github.com/golang/snappy 7db9049039a047d955fe8c19b83c8ff5abd765c7
 github.com/go-ole/go-ole be49f7c07711fcb603cff39e1de7c67926dc0ba7
 github.com/google/go-cmp f94e52cad91c65a63acc1e75d4be223ea22e99bc
 github.com/gorilla/mux 392c28fe23e1c45ddba891b0320b3b5df220beea
+github.com/go-redis/redis 73b70592cdaa9e6abdfcfbf97b4a90d80728c836
 github.com/go-sql-driver/mysql 2e00b5cd70399450106cec6431c2e2ce3cae5034
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/hashicorp/consul 63d2fc68239b996096a1c55a0d4b400ea4c2583f
@@ -44,6 +45,7 @@ github.com/miekg/dns 99f84ae56e75126dd77e5de4fae2ea034a468ca1
 github.com/mitchellh/mapstructure d0303fe809921458f417bcf828397a65db30a7e4
 github.com/multiplay/go-ts3 07477f49b8dfa3ada231afc7b7b17617d42afe8e
 github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
+github.com/nats-io/gnatsd 393bbb7c031433e68707c8810fda0bfcfbe6ab9b
 github.com/nats-io/go-nats ea9585611a4ab58a205b9b125ebd74c389a6b898
 github.com/nats-io/nats ea9585611a4ab58a205b9b125ebd74c389a6b898
 github.com/nats-io/nuid 289cccf02c178dc782430d534e3c1f5b72af807f
@@ -72,6 +74,8 @@ github.com/StackExchange/wmi f3e2bae1e0cb5aef83e319133eabfee30013a4a5
 github.com/streadway/amqp 63795daa9a446c920826655f26ba31c81c860fd6
 github.com/stretchr/objx 1a9d0bb9f541897e62256577b352fdbc1fb4fd94
 github.com/stretchr/testify 4d4bfba8f1d1027c4fdbe371823030df51419987
+github.com/tidwall/gjson 0623bd8fbdbf97cc62b98d15108832851a658e59
+github.com/tidwall/match 173748da739a410c5b0b813b956f89ff94730b4c
 github.com/vjeantet/grok d73e972b60935c7fec0b4ffbc904ed39ecaf7efe
 github.com/wvanbergen/kafka bc265fedb9ff5b5c5d3c0fdcef4a819b3523d3ee
 github.com/wvanbergen/kazoo-go 968957352185472eacb69215fa3dbfcfdbac1096

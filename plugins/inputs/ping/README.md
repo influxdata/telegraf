@@ -17,7 +17,10 @@ urls = ["www.google.com"] # required
 # ping_interval = 1.0
 ## per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
 # timeout = 1.0
-## interface to send ping from (ping -I <INTERFACE>)
+## total-ping deadline, in s. 0 == no deadline (ping -w <DEADLINE>)
+# deadline = 10
+## interface or source address to send ping from (ping -I <INTERFACE/SRC_ADDR>)
+## on Darwin and Freebsd only source address possible: (ping -S <SRC_ADDR>)
 # interface = ""
 ```
 

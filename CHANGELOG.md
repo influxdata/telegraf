@@ -1,3 +1,86 @@
+## v1.6 [unreleased]
+
+### Release Notes
+
+- The `mysql` input plugin has been updated to convert values to the
+  correct data type.  This may cause a `field type error` when inserting into
+  InfluxDB due the change of types.  It is recommended to drop the `mysql`,
+  `mysql_variables`, and `mysql_innodb`:
+  ```
+  DROP MEASUREMENT mysql
+  DROP MEASUREMENT mysql_variables
+  DROP MEASUREMENT mysql_innodb
+  ```
+
+- The `postgresql` plugins now defaults to using a persistent connection to the database.
+  In environments where TCP connections are terminated the `max_lifetime`
+  setting should be set less than the collection `interval` to prevent errors.
+
+- The `sqlserver` input plugin has a new query and data model that can be enabled
+  by setting `query_version = 2`.  It is encouraged to migrate to the new
+  model when possible as the old version is deprecated and will be removed in
+  a future version.
+
+- An option has been added to the `openldap` input plugin that reverses metric
+  name to improve grouping.  This change is enabled when `reverse_metric_names = true`
+  is set.  It is encouraged to enable this option when possible as the old
+  ordering is deprecated.
+
+- The `httpjson` is now deprecated, please migrate to the new `http` input.
+
+
+### New Inputs
+
+- [http](./plugins/inputs/http/README.md) - Thanks to @grange74
+- [ipset](./plugins/inputs/ipset/README.md) - Thanks to @sajoupa
+- [nats](./plugins/inputs/nats/README.md) - Thanks to @mjs & @levex
+
+### New Parsers
+
+- [dropwizard](./docs/DATA_FORMATS_INPUT.md#dropwizard) - Thanks to @atzoum
+
+### Features
+
+- [#3551](https://github.com/influxdata/telegraf/pull/3551): Add health status mapping from string to int in elasticsearch input.
+- [#3580](https://github.com/influxdata/telegraf/pull/3580): Add control over which stats to gather in basicstats aggregator.
+- [#3596](https://github.com/influxdata/telegraf/pull/3596): Add messages_delivered_get to rabbitmq input.
+- [#3632](https://github.com/influxdata/telegraf/pull/3632): Add wired field to mem input.
+- [#3619](https://github.com/influxdata/telegraf/pull/3619): Add support for gathering exchange metrics to the rabbitmq input.
+- [#3565](https://github.com/influxdata/telegraf/pull/3565): Add support for additional metrics on Linux in zfs input.
+- [#3524](https://github.com/influxdata/telegraf/pull/3524): Add available_entropy field to kernel input plugin.
+- [#3643](https://github.com/influxdata/telegraf/pull/3643): Add user privilege level setting to IPMI sensors.
+- [#2701](https://github.com/influxdata/telegraf/pull/2701): Use persistent connection to postgresql database.
+- [#2846](https://github.com/influxdata/telegraf/pull/2846): Add support for dropwizard input format.
+- [#3666](https://github.com/influxdata/telegraf/pull/3666): Add container health metrics to docker input.
+- [#3687](https://github.com/influxdata/telegraf/pull/3687): Add support for using globs in devices list of diskio input plugin.
+- [#2754](https://github.com/influxdata/telegraf/pull/2754): Allow running as console application on Windows.
+- [#3703](https://github.com/influxdata/telegraf/pull/3703): Add listener counts and node running status to rabbitmq input.
+- [#3674](https://github.com/influxdata/telegraf/pull/3674): Add NATS Monitoring Input Plugin.
+- [#3702](https://github.com/influxdata/telegraf/pull/3702): Add ability to select which queues will be gathered in rabbitmq input.
+- [#3726](https://github.com/influxdata/telegraf/pull/3726): Add support for setting bsd source address to the ping input.
+- [#3346](https://github.com/influxdata/telegraf/pull/3346): Add Ipset input plugin.
+- [#3719](https://github.com/influxdata/telegraf/pull/3719): Add TLS and HTTP basic auth to prometheus_client output.
+- [#3618](https://github.com/influxdata/telegraf/pull/3618): Add new sqlserver output data model.
+- [#3559](https://github.com/influxdata/telegraf/pull/3559): Add native Go method for finding pids to procstat.
+- [#3722](https://github.com/influxdata/telegraf/pull/3722): Add additional metrics and reverse metric names option to openldap.
+- [#3769](https://github.com/influxdata/telegraf/pull/3769): Add TLS support to the mesos input plugin.
+- [#3546](https://github.com/influxdata/telegraf/pull/3546): Add http input plugin.
+- [#3781](https://github.com/influxdata/telegraf/pull/3781): Add keep alive support to the TCP mode of statsd.
+- [#3783](https://github.com/influxdata/telegraf/pull/3783): Support deadline in ping plugin.
+- [#3765](https://github.com/influxdata/telegraf/pull/3765): Add option to disable labels in prometheus output for string fields.
+
+### Bugfixes
+
+- [#1896](https://github.com/influxdata/telegraf/issues/1896): Fix various mysql data type conversions.
+
+## v1.5.3 [unreleased]
+
+### Bugfixes
+
+- [#3729](https://github.com/influxdata/telegraf/issues/3729): Set path to / if HOST_MOUNT_PREFIX matches full path.
+- [#3739](https://github.com/influxdata/telegraf/issues/3739): Remove userinfo from url tag in prometheus input.
+- [#3778](https://github.com/influxdata/telegraf/issues/3778): Fix ping plugin not reporting zero durations.
+
 ## v1.5.2 [2018-01-30]
 
 ### Bugfixes
@@ -28,7 +111,7 @@
 ### New Plugins
 - [basicstats](./plugins/aggregators/basicstats/README.md) - Thanks to @toni-moreno
 - [bond](./plugins/inputs/bond/README.md) - Thanks to @ildarsv
-- [cratedb](./plugins/outputs/wavefront/README.md) - Thanks to @felixge
+- [cratedb](./plugins/outputs/cratedb/README.md) - Thanks to @felixge
 - [dcos](./plugins/inputs/dcos/README.md) - Thanks to @influxdata
 - [jolokia2](./plugins/inputs/jolokia2/README.md) - Thanks to @dylanmei
 - [nginx_plus](./plugins/inputs/nginx_plus/README.md) - Thanks to @mplonka & @poblahblahblah
@@ -52,6 +135,11 @@
 - With the release of the new improved `jolokia2` input, the legacy `jolokia`
   plugin is deprecated and will be removed in a future release.  Users of this
   plugin are encouraged to update to the new `jolokia2` plugin.
+
+- In the `postgresql` and `postgresql_extensible` plugins, the type of the oid
+  data type has changed from string to integer.  It is recommended to drop
+  affected fields until a new shard is started. For details on how to
+  workaround this issue please see [#3622](https://github.com/influxdata/telegraf/issues/3622).
 
 ### Features
 

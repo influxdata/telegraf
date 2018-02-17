@@ -54,9 +54,10 @@ var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 var fService = flag.String("service", "",
 	"operate on the service")
+var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
 var (
-	nextVersion = "1.5.0"
+	nextVersion = "1.6.0"
 	version     string
 	commit      string
 	branch      string
@@ -358,7 +359,7 @@ func main() {
 		return
 	}
 
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" && !(*fRunAsConsole) {
 		svcConfig := &service.Config{
 			Name:        "telegraf",
 			DisplayName: "Telegraf Data Collector Service",

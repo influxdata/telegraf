@@ -1272,6 +1272,47 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["dropwizard_metric_registry_path"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DropwizardMetricRegistryPath = str.Value
+			}
+		}
+	}
+	if node, ok := tbl.Fields["dropwizard_time_path"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DropwizardTimePath = str.Value
+			}
+		}
+	}
+	if node, ok := tbl.Fields["dropwizard_time_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DropwizardTimeFormat = str.Value
+			}
+		}
+	}
+	if node, ok := tbl.Fields["dropwizard_tags_path"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DropwizardTagsPath = str.Value
+			}
+		}
+	}
+	c.DropwizardTagPathsMap = make(map[string]string)
+	if node, ok := tbl.Fields["dropwizard_tag_paths"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					if str, ok := kv.Value.(*ast.String); ok {
+						c.DropwizardTagPathsMap[name] = str.Value
+					}
+				}
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1282,6 +1323,11 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "collectd_auth_file")
 	delete(tbl.Fields, "collectd_security_level")
 	delete(tbl.Fields, "collectd_typesdb")
+	delete(tbl.Fields, "dropwizard_metric_registry_path")
+	delete(tbl.Fields, "dropwizard_time_path")
+	delete(tbl.Fields, "dropwizard_time_format")
+	delete(tbl.Fields, "dropwizard_tags_path")
+	delete(tbl.Fields, "dropwizard_tag_paths")
 
 	return parsers.NewParser(c)
 }
