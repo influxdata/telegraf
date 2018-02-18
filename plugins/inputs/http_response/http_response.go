@@ -151,7 +151,7 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 		fields["result_type"] = "connection_failed"
 
 		// If the error is a redirect we continue processing and log
-		// the HTTP response coce
+		// the HTTP response code
 		urlError, isUrlError := err.(*url.Error)
 		if ! h.FollowRedirects && isUrlError
 		&& urlError.Err == ErrRedirectAttempted {
