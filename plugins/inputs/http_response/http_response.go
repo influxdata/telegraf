@@ -138,19 +138,27 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 	start := time.Now()
 	resp, err := h.client.Do(request)
 
+	// If an error in returned, it means we are dealing with a network error
+	// HTTP error codes do not generate errors in the net/http library
 	if err != nil {
+		// Timeouts have their special type
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			fields["result_type"] = "timeout"
 			return fields, nil
 		}
+
+		// Any other error is considered a "connection_failed"
 		fields["result_type"] = "connection_failed"
-		if h.FollowRedirects {
-			return fields, nil
-		}
-		if urlError, ok := err.(*url.Error); ok &&
-			urlError.Err == ErrRedirectAttempted {
+
+		// If the error is a redirect we continue processing and log
+		// the HTTP response coce
+		urlError, isUrlError := err.(*url.Error)
+		if ! h.FollowRedirects && isUrlError
+		&& urlError.Err == ErrRedirectAttempted {
 			err = nil
 		} else {
+			// If the error isn't a timeout or a redirect stop
+			// processing the request
 			return fields, nil
 		}
 	}
