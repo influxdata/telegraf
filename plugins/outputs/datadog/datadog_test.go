@@ -152,6 +152,22 @@ func TestBuildPoint(t *testing.T) {
 			},
 			nil,
 		},
+		{
+			testutil.TestMetric(bool(true), "test7"),
+			Point{
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				1.0,
+			},
+			nil,
+		},
+		{
+			testutil.TestMetric(bool(false), "test8"),
+			Point{
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				0.0,
+			},
+			nil,
+		},
 	}
 	for _, tt := range tagtests {
 		pt, err := buildMetrics(tt.ptIn)
