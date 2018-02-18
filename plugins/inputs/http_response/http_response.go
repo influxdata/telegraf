@@ -19,13 +19,16 @@ import (
 
 // HTTPResponse struct
 type HTTPResponse struct {
-	Address             string
-	Body                string
-	Method              string
-	ResponseTimeout     internal.Duration
-	Headers             map[string]string
-	FollowRedirects     bool
-	ResponseStringMatch string
+	Address                      string
+	Body                         string
+	Method                       string
+	ResponseTimeout              internal.Duration
+	OverwriteNetworkErrorLatency bool
+	FixedNetworkErrorLatency     float64
+	LogNetworkErrorDuration      bool
+	Headers                      map[string]string
+	FollowRedirects              bool
+	ResponseStringMatch          string
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -137,10 +140,19 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 	// Start Timer
 	start := time.Now()
 	resp, err := h.client.Do(request)
+	response_time := time.Since(start).Seconds()
 
 	// If an error in returned, it means we are dealing with a network error
 	// HTTP error codes do not generate errors in the net/http library
 	if err != nil {
+		// Set response_time as this is a network error
+		if h.LogNetworkErrorDuration {
+			if h.OverwriteNetworkErrorLatency {
+				response_time = h.FixedNetworkErrorLatency
+			}
+			fields["response_time"] = response_time
+		}
+
 		// Timeouts have their special type
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			fields["result_type"] = "timeout"
@@ -153,8 +165,7 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 		// If the error is a redirect we continue processing and log
 		// the HTTP response code
 		urlError, isUrlError := err.(*url.Error)
-		if ! h.FollowRedirects && isUrlError
-		&& urlError.Err == ErrRedirectAttempted {
+		if !h.FollowRedirects && isUrlError && urlError.Err == ErrRedirectAttempted {
 			err = nil
 		} else {
 			// If the error isn't a timeout or a redirect stop
@@ -162,12 +173,16 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 			return fields, nil
 		}
 	}
+
+	if _, ok := fields["response_time"]; !ok {
+		fields["response_time"] = response_time
+	}
+
 	defer func() {
 		io.Copy(ioutil.Discard, resp.Body)
 		resp.Body.Close()
 	}()
 
-	fields["response_time"] = time.Since(start).Seconds()
 	fields["http_response_code"] = resp.StatusCode
 
 	// Check the response for a regex match.
