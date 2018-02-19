@@ -153,7 +153,7 @@ func gatherCommonTags(db *sql.DB) (map[string]string, error) {
 	return map[string]string{
 		"database_name": name,
 		"instance_name": instance_name,
-		"host_name":     host_name,
+		"db_host":       host_name,
 		"version":       version,
 		"instance_role": instance_role,
 	}, nil
