@@ -58,7 +58,7 @@ func (s *Ssl) Gather(acc telegraf.Accumulator) error  {
 			if cert.NotAfter.UnixNano() < timeNow.UnixNano() {
 				acc.AddError(errors.New("[" + h + "] cert has expired"))
 			} else {
-				timeToExp = int64(cert.NotAfter.Sub(timeNow))
+				timeToExp = int64(cert.NotAfter.Sub(timeNow) / time.Second)
 			}
 			if !isStringInSlice(server.Domain, cert.DNSNames) {
 				acc.AddError(errors.New("[" + h + "] cert and domain mismatch"))
