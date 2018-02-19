@@ -54,3 +54,27 @@ func TestOverwritesPresentTagValues(t *testing.T) {
 	assert.Equal(t, 1, len(tags), "Should only have one tag.")
 	assert.Equal(t, "from_config", value, "Value of Tag was not changed")
 }
+
+func TestOverridesName(t *testing.T) {
+	adder := TagAdder{NameOverride: "overridden"}
+
+	processed := adder.Apply(createTestMetric())
+
+	assert.Equal(t, "overridden", processed[0].Name(), "Name was not overridden")
+}
+
+func TestNamePrefix(t *testing.T) {
+	adder := TagAdder{NamePrefix: "Pre-"}
+
+	processed := adder.Apply(createTestMetric())
+
+	assert.Equal(t, "Pre-m1", processed[0].Name(), "Prefix was not applied")
+}
+
+func TestNameSuffix(t *testing.T) {
+	adder := TagAdder{NameSuffix: "-suff"}
+
+	processed := adder.Apply(createTestMetric())
+
+	assert.Equal(t, "m1-suff", processed[0].Name(), "Suffix was not applied")
+}

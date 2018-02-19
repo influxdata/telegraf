@@ -15,7 +15,10 @@ var sampleConfig = `
 `
 
 type TagAdder struct {
-	Add map[string]string
+	NameOverride string
+	NamePrefix   string
+	NameSuffix   string
+	Add          map[string]string
 }
 
 func (p *TagAdder) SampleConfig() string {
@@ -28,6 +31,15 @@ func (p *TagAdder) Description() string {
 
 func (a *TagAdder) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
+		if len(a.NameOverride) > 0 {
+			metric.SetName(a.NameOverride)
+		}
+		if len(a.NamePrefix) > 0 {
+			metric.SetPrefix(a.NamePrefix)
+		}
+		if len(a.NameSuffix) > 0 {
+			metric.SetSuffix(a.NameSuffix)
+		}
 		for key, value := range a.Add {
 			metric.AddTag(key, value)
 		}
