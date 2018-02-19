@@ -72,6 +72,7 @@
 ### Bugfixes
 
 - [#1896](https://github.com/influxdata/telegraf/issues/1896): Fix various mysql data type conversions.
+- [#3806](https://github.com/influxdata/telegraf/pull/3806): Fix memory leak in postgresql_extensible
 
 ## v1.5.3 [unreleased]
 

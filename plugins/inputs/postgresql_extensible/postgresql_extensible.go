@@ -126,6 +126,8 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		columns     []string
 	)
 
+	p.AllColumns = nil
+
 	// Retreiving the database version
 
 	query = `select substring(setting from 1 for 3) as version from pg_settings where name='server_version_num'`
