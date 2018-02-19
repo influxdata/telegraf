@@ -60,7 +60,7 @@ func (s *Ssl) Gather(acc telegraf.Accumulator) error  {
 			} else {
 				timeToExp = int64(cert.NotAfter.Sub(timeNow) / time.Second)
 			}
-			if !isStringInSlice(server.Domain, cert.DNSNames) {
+			if !isDomainInCertDnsNames(server.Domain, cert.DNSNames) {
 				acc.AddError(errors.New("[" + h + "] cert and domain mismatch"))
 				timeToExp = int64(0)
 			}
@@ -100,10 +100,19 @@ func getServerAddress(d string, p int) string {
 	return d + ":" + strconv.FormatInt(int64(p), 10)
 }
 
-func isStringInSlice(n string, s []string) bool {
-	for _, d := range s {
-		if n == d {
+func isDomainInCertDnsNames(domain string, certDnsNames []string) bool {
+	for _, d := range certDnsNames {
+		if domain == d {
 			return true
+		}
+		if d[:1] == "*" && len(domain) >= len(d[2:]) {
+			d = d[2:]
+			if domain == d {
+				return true
+			}
+			if domain[len(domain)-len(d)-1:] == "."+d {
+				return true
+			}
 		}
 	}
 	return false
