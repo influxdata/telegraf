@@ -10,7 +10,7 @@ var sampleConfig = `
 ## present in the metric passed through this filter.
 
 ## Tags to be added (all values must be strings)
-# [processors.tags.add]
+# [processors.tags.tags]
 #   additional_tag = "tag_value"
 `
 
@@ -18,7 +18,7 @@ type TagAdder struct {
 	NameOverride string
 	NamePrefix   string
 	NameSuffix   string
-	Add          map[string]string
+	Tags         map[string]string
 }
 
 func (p *TagAdder) SampleConfig() string {
@@ -40,7 +40,7 @@ func (a *TagAdder) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		if len(a.NameSuffix) > 0 {
 			metric.SetSuffix(a.NameSuffix)
 		}
-		for key, value := range a.Add {
+		for key, value := range a.Tags {
 			metric.AddTag(key, value)
 		}
 	}

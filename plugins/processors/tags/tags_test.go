@@ -34,7 +34,7 @@ func TestRetainsTags(t *testing.T) {
 }
 
 func TestAddTags(t *testing.T) {
-	adder := TagAdder{Add: map[string]string{"added_tag": "from_config", "another_tag": ""}}
+	adder := TagAdder{Tags: map[string]string{"added_tag": "from_config", "another_tag": ""}}
 
 	tags := calculateProcessedTags(adder, createTestMetric())
 
@@ -45,7 +45,7 @@ func TestAddTags(t *testing.T) {
 }
 
 func TestOverwritesPresentTagValues(t *testing.T) {
-	adder := TagAdder{Add: map[string]string{"metric_tag": "from_config"}}
+	adder := TagAdder{Tags: map[string]string{"metric_tag": "from_config"}}
 
 	tags := calculateProcessedTags(adder, createTestMetric())
 
