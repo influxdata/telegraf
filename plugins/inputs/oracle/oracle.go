@@ -33,9 +33,6 @@ type Connection struct {
 }
 
 var sampleConfig = `
-##
-## Database Connection
-##
 ## Username used to connect to Oracle.
 username = "telegraf"
 ## Password used to connect to Oracle.
@@ -51,9 +48,6 @@ pool_increment = 1
 ## Maximum amount of time a connection may be reused. Defaults to 0 or forever.
 max_lifetime = "0s"
 
-##
-## Metrics Collection
-##
 ## Collect instance state metrics from V$INSTANCE. Defaults to true.
 instance_state_metrics = true
 ## Collect system metrics from V$SYSMETRIC. Defaults to true.
