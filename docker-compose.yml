@@ -40,6 +40,10 @@ services:
     image: memcached
     ports: 
       - "11211:11211"
+  oracle:
+    image: sath89/oracle-12c
+    ports:
+      - 1521:1521
   postgres:
     image: postgres:alpine
     ports:

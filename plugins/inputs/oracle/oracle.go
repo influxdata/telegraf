@@ -426,7 +426,7 @@ func gatherWaitEventMetrics(db *sql.DB, acc telegraf.Accumulator) error {
 func sanitize(s string) string {
 	r := regexp.MustCompile("[^a-zA-Z0-9_]+")
 
-	s = strings.NewReplacer("I/O", "IO", "%", "percent").Replace(s)
+	s = strings.NewReplacer("I/O", "io", "%", "percent").Replace(s)
 	s = r.ReplaceAllString(s, "_")
 	s = strings.Trim(s, "_")
 
