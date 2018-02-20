@@ -8,7 +8,7 @@ import (
 	"net"
 	"crypto/tls"
 	"github.com/pkg/errors"
-	"strconv"
+	"strings"
 )
 
 type Ssl struct {
@@ -16,21 +16,18 @@ type Ssl struct {
 }
 
 type Server struct {
-	Domain string
-	Port int
+	Host string
 	Timeout int
 }
 
 var sampleConfig  = `
   ## Server to check
   [[inputs.ssl.servers]]
-    domain = "google.com"
-    port = 443
+    host = "google.com:443"
     timeout = 5
   ## Server to check
   [[inputs.ssl.servers]]
-    domain = "github.com"
-    port = 443
+    host = "github.com"
     timeout = 5
 `
 
@@ -44,12 +41,17 @@ func (s *Ssl) Description() string {
 
 func (s *Ssl) Gather(acc telegraf.Accumulator) error  {
 	for _, server := range s.Servers {
-		h := getServerAddress(server.Domain, server.Port)
+		slice := strings.Split(server.Host, ":")
+		domain, port := slice[0], "443"
+		if len(slice) > 1 {
+			port = slice[1]
+		}
+		h := getServerAddress(domain, port)
 		timeNow := time.Now()
 		timeToExp := int64(0)
 		fields := make(map[string]interface{})
 		tags := make(map[string]string)
-		certs, err := getServerCertsChain(server.Domain, server.Port, server.Timeout)
+		certs, err := getServerCertsChain(domain, port, server.Timeout)
 
 		if err != nil {
 			acc.AddError(err)
@@ -60,21 +62,21 @@ func (s *Ssl) Gather(acc telegraf.Accumulator) error  {
 			} else {
 				timeToExp = int64(cert.NotAfter.Sub(timeNow) / time.Second)
 			}
-			if !isDomainInCertDnsNames(server.Domain, cert.DNSNames) {
+			if !isDomainInCertDnsNames(domain, cert.DNSNames) {
 				acc.AddError(errors.New("[" + h + "] cert and domain mismatch"))
 				timeToExp = int64(0)
 			}
 		}
 		fields["time_to_expiration"] = timeToExp
-		tags["domain"] = server.Domain
-		tags["port"] = strconv.FormatInt(int64(server.Port), 10)
+		tags["domain"] = domain
+		tags["port"] = port
 
 		acc.AddFields("ssl", fields, tags)
 	}
 	return nil
 }
 
-func getServerCertsChain(d string, p int, t int) ([]*x509.Certificate, error) {
+func getServerCertsChain(d string, p string, t int) ([]*x509.Certificate, error) {
 	h := getServerAddress(d, p)
 	ipConn, err := net.DialTimeout("tcp", h, time.Duration(t) * time.Second)
 	if err != nil {
@@ -96,8 +98,8 @@ func getServerCertsChain(d string, p int, t int) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-func getServerAddress(d string, p int) string {
-	return d + ":" + strconv.FormatInt(int64(p), 10)
+func getServerAddress(d string, p string) string {
+	return d + ":" + p
 }
 
 func isDomainInCertDnsNames(domain string, certDnsNames []string) bool {
