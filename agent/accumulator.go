@@ -26,7 +26,7 @@ type MetricMaker interface {
 func NewAccumulator(
 	maker MetricMaker,
 	metrics chan telegraf.Metric,
-) *accumulator {
+) telegraf.Accumulator {
 	acc := accumulator{
 		maker:     maker,
 		metrics:   metrics,
@@ -72,6 +72,28 @@ func (ac *accumulator) AddCounter(
 	t ...time.Time,
 ) {
 	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Counter, ac.getTime(t)); m != nil {
+		ac.metrics <- m
+	}
+}
+
+func (ac *accumulator) AddSummary(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Summary, ac.getTime(t)); m != nil {
+		ac.metrics <- m
+	}
+}
+
+func (ac *accumulator) AddHistogram(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	t ...time.Time,
+) {
+	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Histogram, ac.getTime(t)); m != nil {
 		ac.metrics <- m
 	}
 }

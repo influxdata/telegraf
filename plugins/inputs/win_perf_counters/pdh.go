@@ -33,8 +33,11 @@
 package win_perf_counters
 
 import (
+	"fmt"
 	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 // Error codes
@@ -331,7 +334,7 @@ func PdhCollectQueryData(hQuery PDH_HQUERY) uint32 {
 func PdhGetFormattedCounterValueDouble(hCounter PDH_HCOUNTER, lpdwType *uint32, pValue *PDH_FMT_COUNTERVALUE_DOUBLE) uint32 {
 	ret, _, _ := pdh_GetFormattedCounterValue.Call(
 		uintptr(hCounter),
-		uintptr(PDH_FMT_DOUBLE),
+		uintptr(PDH_FMT_DOUBLE|PDH_FMT_NOCAP100),
 		uintptr(unsafe.Pointer(lpdwType)),
 		uintptr(unsafe.Pointer(pValue)))
 
@@ -344,7 +347,7 @@ func PdhGetFormattedCounterValueDouble(hCounter PDH_HCOUNTER, lpdwType *uint32, 
 //
 //	okPath := "\\Process(*)\\% Processor Time" // notice the wildcard * character
 //
-//	// ommitted all necessary stuff ...
+//	// omitted all necessary stuff ...
 //
 //	var bufSize uint32
 //	var bufCount uint32
@@ -378,7 +381,7 @@ func PdhGetFormattedCounterValueDouble(hCounter PDH_HCOUNTER, lpdwType *uint32, 
 func PdhGetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *PDH_FMT_COUNTERVALUE_ITEM_DOUBLE) uint32 {
 	ret, _, _ := pdh_GetFormattedCounterArrayW.Call(
 		uintptr(hCounter),
-		uintptr(PDH_FMT_DOUBLE),
+		uintptr(PDH_FMT_DOUBLE|PDH_FMT_NOCAP100),
 		uintptr(unsafe.Pointer(lpdwBufferSize)),
 		uintptr(unsafe.Pointer(lpdwBufferCount)),
 		uintptr(unsafe.Pointer(itemBuffer)))
@@ -416,4 +419,14 @@ func UTF16PtrToString(s *uint16) string {
 		return ""
 	}
 	return syscall.UTF16ToString((*[1 << 29]uint16)(unsafe.Pointer(s))[0:])
+}
+
+func PdhFormatError(msgId uint32) string {
+	var flags uint32 = windows.FORMAT_MESSAGE_FROM_HMODULE | windows.FORMAT_MESSAGE_ARGUMENT_ARRAY | windows.FORMAT_MESSAGE_IGNORE_INSERTS
+	buf := make([]uint16, 300)
+	_, err := windows.FormatMessage(flags, uintptr(libpdhDll.Handle), msgId, 0, buf, nil)
+	if err == nil {
+		return fmt.Sprintf("%s", UTF16PtrToString(&buf[0]))
+	}
+	return fmt.Sprintf("(pdhErr=%d) %s", msgId, err.Error())
 }

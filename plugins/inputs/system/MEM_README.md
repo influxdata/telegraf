@@ -1,44 +1,35 @@
-## Telegraf Plugin: MEM
+# Mem Input Plugin
 
-#### Description
+The mem plugin collects system memory metrics.
 
-The mem plugin collects memory metrics, defined as follows. For a more complete
-explanation of the difference between `used` and `actual_used` RAM, see
-[Linux ate my ram](http://www.linuxatemyram.com/).
+For a more complete explanation of the difference between *used* and
+*actual_used* RAM, see [Linux ate my ram](http://www.linuxatemyram.com/).
 
-- **total**: total physical memory available
-- **available**: the actual amount of available memory that can be given instantly
-to processes that request more memory in bytes; In linux kernel 3.14+, this
-is available natively in /proc/meminfo. In other platforms, this is calculated by
-summing different memory values depending on the platform
-(e.g. free + buffers + cached on Linux).
-It is supposed to be used to monitor actual memory usage in a cross platform fashion.
-- **available_percent**: Percent of memory available, `available / total * 100`
-- **used**: memory used, calculated differently depending on the platform and
-designed for informational purposes only.
-- **free**: memory not being used at all (zeroed) that is readily available; note
-that this doesn't reflect the actual memory available (use 'available' instead).
-- **used_percent**: the percentage usage calculated as `used / total * 100`
+### Configuration:
+```toml
+# Read metrics about memory usage
+[[inputs.mem]]
+  # no configuration
+```
 
-## Measurements:
-#### Raw Memory measurements:
+### Metrics:
 
-Meta:
-- units: bytes
-- tags: `nil`
+- mem
+  - fields:
+  	- active (int)
+  	- available (int)
+  	- buffered (int)
+  	- cached (int)
+  	- free (int)
+  	- inactive (int)
+  	- slab (int)
+  	- total (int)
+  	- used (int)
+  	- available_percent (float)
+  	- used_percent (float)
+  	- wired (int)
 
-Measurement names:
-- mem_total
-- mem_available
-- mem_used
-- mem_free
-
-#### Derived usage percentages:
-
-Meta:
-- units: percent (out of 100)
-- tags: `nil`
-
-Measurement names:
-- mem_used_percent
-- mem_available_percent
+### Example Output:
+```
+mem cached=7809495040i,inactive=6348988416i,total=20855394304i,available=11378946048i,buffered=927199232i,active=11292905472i,slab=1351340032i,used_percent=45.43883523785713,available_percent=54.56116476214287,used=9476448256i,free=1715331072i 1511894782000000000
+```

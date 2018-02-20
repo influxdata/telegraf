@@ -17,8 +17,8 @@ import (
 
 // Librato structure for configuration and client
 type Librato struct {
-	APIUser   string
-	APIToken  string
+	APIUser   string `toml:"api_user"`
+	APIToken  string `toml:"api_token"`
 	Debug     bool
 	SourceTag string // Deprecated, keeping for backward-compatibility
 	Timeout   internal.Duration
@@ -80,6 +80,9 @@ func (l *Librato) Connect() error {
 			"api_user and api_token are required fields for librato output")
 	}
 	l.client = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
 		Timeout: l.Timeout.Duration,
 	}
 	return nil

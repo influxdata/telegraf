@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -55,7 +56,11 @@ func (d *Datadog) Connect() error {
 	if d.Apikey == "" {
 		return fmt.Errorf("apikey is a required field for datadog output")
 	}
+
 	d.client = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
 		Timeout: d.Timeout.Duration,
 	}
 	return nil
@@ -96,6 +101,7 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 		}
 	}
 
+	redactedApiKey := "****************"
 	ts.Series = make([]*Metric, metricCounter)
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
@@ -104,13 +110,13 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	}
 	req, err := http.NewRequest("POST", d.authenticatedUrl(), bytes.NewBuffer(tsBytes))
 	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s\n", err.Error())
+		return fmt.Errorf("unable to create http.Request, %s\n", strings.Replace(err.Error(), d.Apikey, redactedApiKey, -1))
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := d.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error POSTing metrics, %s\n", err.Error())
+		return fmt.Errorf("error POSTing metrics, %s\n", strings.Replace(err.Error(), d.Apikey, redactedApiKey, -1))
 	}
 	defer resp.Body.Close()
 
