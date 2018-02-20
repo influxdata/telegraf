@@ -294,7 +294,7 @@ func gatherTablespaceMetrics(db *sql.DB, acc telegraf.Accumulator) error {
 		used_space      float64
 		tablespace_size float64
 		used_percent    float64
-		query           = "SELECT * FROM DBA_TABLESPACE_USAGE_METRICS"
+		query           = "SELECT TABLESPACE_NAME,USED_SPACE,TABLESPACE_SIZE,USED_PERCENT FROM DBA_TABLESPACE_USAGE_METRICS"
 	)
 
 	tags, err := gatherCommonTags(db)
