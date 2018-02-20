@@ -244,6 +244,7 @@ Metrics are generated dynamically based on the contents of [V$INSTANCE](https://
 
 #### oracle_wait_event
 **Tags:**
+- class
 - event
 
 **Fields:**
@@ -255,7 +256,6 @@ Metrics are generated dynamically based on the contents of [V$INSTANCE](https://
 
 #### oracle_wait_class
 **Tags:**
-- class
 - event
 
 **Fields:**
@@ -468,4 +468,5 @@ oracle_wait_event,database_name=XE,instance_name=xe,db_host=38e94136e66e,version
 oracle_wait_event,db_host=38e94136e66e,version=12.1.0.2.0,instance_role=PRIMARY_INSTANCE,event=gc_current_split,class=cluster,host=localhost,database_name=XE,instance_name=xe wait_count=0i,time_waited_fg=0,wait_count_fg=0,num_sess_waiting=0i,time_waited=0 1519083465000000000
 oracle_wait_event,database_name=XE,instance_name=xe,db_host=38e94136e66e,version=12.1.0.2.0,instance_role=PRIMARY_INSTANCE,event=gc_current_block_unknown,class=cluster,host=localhost num_sess_waiting=0i,time_waited=0,wait_count=0i,time_waited_fg=0,wait_count_fg=0 1519083465000000000
 oracle_wait_event,database_name=XE,instance_name=xe,db_host=38e94136e66e,version=12.1.0.2.0,instance_role=PRIMARY_INSTANCE,event=gc_cr_grant_2_way,class=cluster,host=localhost wait_count=0i,time_waited_fg=0,wait_count_fg=0,num_sess_waiting=0i,time_waited=0 1519083465000000000
+...
 ```

@@ -1,0 +1,6 @@
+average_waiter_count
+dbtime_in_wait
+time_waited
+wait_count
+time_waited_fg
+wait_count_fg

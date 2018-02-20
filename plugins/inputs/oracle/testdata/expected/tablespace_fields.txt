@@ -1,0 +1,3 @@
+used_space
+tablespace_size
+used_percent
