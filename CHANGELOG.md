@@ -247,6 +247,7 @@
 
 ## v1.5.2 [2018-01-30]
 ## v1.5.2 [unreleased]
+- [#3807](https://github.com/influxdata/telegraf/issues/3807): Fix memory leak in postgresql_extensible.
 
 ## v1.5.2 [2018-01-30]
 
