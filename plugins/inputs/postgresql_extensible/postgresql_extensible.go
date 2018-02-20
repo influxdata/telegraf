@@ -127,6 +127,8 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		meas_name   string
 	)
 
+	p.AllColumns = nil
+
 	if p.Address == "" || p.Address == "localhost" {
 		p.Address = localhost
 	}
