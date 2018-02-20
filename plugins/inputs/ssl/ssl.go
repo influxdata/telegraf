@@ -112,7 +112,8 @@ func isDomainInCertDnsNames(domain string, certDnsNames []string) bool {
 			if domain == d {
 				return true
 			}
-			if domain[len(domain)-len(d)-1:] == "."+d {
+			start := len(domain)-len(d)-1
+			if start >= 0 && domain[start:] == "."+d {
 				return true
 			}
 		}
