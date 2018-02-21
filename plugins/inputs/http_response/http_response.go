@@ -21,13 +21,13 @@ import (
 
 // HTTPResponse struct
 type HTTPResponse struct {
-	Address                      string
-	Body                         string
-	Method                       string
-	ResponseTimeout              internal.Duration
-	Headers                      map[string]string
-	FollowRedirects              bool
-	ResponseStringMatch          string
+	Address             string
+	Body                string
+	Method              string
+	ResponseTimeout     internal.Duration
+	Headers             map[string]string
+	FollowRedirects     bool
+	ResponseStringMatch string
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -121,6 +121,7 @@ func set_result(result_string string, fields *map[string]interface{}, tags *map[
 		"connection_failed":        1,
 		"timeout":                  2,
 		"response_string_mismatch": 3,
+		"body_read_error":          4,
 	}
 
 	(*tags)["result"] = result_string
@@ -196,21 +197,10 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 	// Check the response for a regex match.
 	if h.ResponseStringMatch != "" {
 
-		// Compile once and reuse
-		if h.compiledStringMatch == nil {
-			h.compiledStringMatch = regexp.MustCompile(h.ResponseStringMatch)
-			fmt.Println(2, err)
-			if err != nil {
-				log.Printf("E! Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
-				set_result("response_string_mismatch", &fields, &tags)
-				return fields, tags, nil
-			}
-		}
-
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Printf("E! Failed to read body of HTTP Response : %s", err)
-			set_result("response_string_mismatch", &fields, &tags)
+			set_result("body_read_error", &fields, &tags)
 			fields["response_string_match"] = 0
 			return fields, tags, nil
 		}
@@ -231,6 +221,16 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 
 // Gather gets all metric fields and tags and returns any errors it encounters
 func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
+	// Compile the body regex if it exist
+	if h.compiledStringMatch == nil {
+		var err error
+		h.compiledStringMatch, err = regexp.Compile(h.ResponseStringMatch)
+		if err != nil {
+			log.Printf("E! Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
+			return err
+		}
+	}
+
 	// Set default values
 	if h.ResponseTimeout.Duration < time.Second {
 		h.ResponseTimeout.Duration = time.Second * 5
@@ -249,6 +249,7 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	if addr.Scheme != "http" && addr.Scheme != "https" {
 		return errors.New("Only http and https are supported")
 	}
+
 	// Prepare data
 	var fields map[string]interface{}
 	var tags map[string]string
