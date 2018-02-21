@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -116,10 +117,24 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
+func set_result(result_string string, fields *map[string]interface{}, tags *map[string]string) {
+	result_codes := map[string]int{
+		"success":                  0,
+		"connection_failed":        1,
+		"timeout":                  2,
+		"response_string_mismatch": 3,
+	}
+
+	(*tags)["result"] = result_string
+	(*fields)["result_type"] = result_string
+	(*fields)["result_code"] = result_codes[result_string]
+}
+
 // HTTPGather gathers all fields and returns any errors it encounters
-func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
-	// Prepare fields
+func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, error) {
+	// Prepare fields and tags
 	fields := make(map[string]interface{})
+	tags := map[string]string{"server": h.Address, "method": h.Method}
 
 	var body io.Reader
 	if h.Body != "" {
@@ -127,7 +142,7 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 	}
 	request, err := http.NewRequest(h.Method, h.Address, body)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	for key, val := range h.Headers {
@@ -142,7 +157,7 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 	resp, err := h.client.Do(request)
 	response_time := time.Since(start).Seconds()
 
-	// If an error in returned, it means we are dealing with a network error
+	// If an error in returned, it means we are dealing with a network error, as
 	// HTTP error codes do not generate errors in the net/http library
 	if err != nil {
 		// Set response_time as this is a network error
@@ -155,22 +170,21 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 
 		// Timeouts have their special type
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			fields["result_type"] = "timeout"
-			return fields, nil
+			set_result("timeout", &fields, &tags)
+			return fields, tags, nil
 		}
 
 		// Any other error is considered a "connection_failed"
-		fields["result_type"] = "connection_failed"
+		set_result("connection_failed", &fields, &tags)
 
-		// If the error is a redirect we continue processing and log
-		// the HTTP response code
+		// If the error is a redirect we continue processing and log the HTTP code
 		urlError, isUrlError := err.(*url.Error)
 		if !h.FollowRedirects && isUrlError && urlError.Err == ErrRedirectAttempted {
 			err = nil
 		} else {
 			// If the error isn't a timeout or a redirect stop
 			// processing the request
-			return fields, nil
+			return fields, tags, nil
 		}
 	}
 
@@ -178,11 +192,15 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 		fields["response_time"] = response_time
 	}
 
+	// This function closes the response body, as
+	// required by the net/http library
 	defer func() {
 		io.Copy(ioutil.Discard, resp.Body)
 		resp.Body.Close()
 	}()
 
+	// Set log the HTTP response code
+	tags["status_code"] = strconv.Itoa(resp.StatusCode)
 	fields["http_response_code"] = resp.StatusCode
 
 	// Check the response for a regex match.
@@ -193,31 +211,31 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, error) {
 			h.compiledStringMatch = regexp.MustCompile(h.ResponseStringMatch)
 			if err != nil {
 				log.Printf("E! Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
-				fields["result_type"] = "response_string_mismatch"
-				return fields, nil
+				set_result("response_string_mismatch", &fields, &tags)
+				return fields, tags, nil
 			}
 		}
 
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			log.Printf("E! Failed to read body of HTTP Response : %s", err)
-			fields["result_type"] = "response_string_mismatch"
+			set_result("response_string_mismatch", &fields, &tags)
 			fields["response_string_match"] = 0
-			return fields, nil
+			return fields, tags, nil
 		}
 
 		if h.compiledStringMatch.Match(bodyBytes) {
-			fields["result_type"] = "success"
+			set_result("success", &fields, &tags)
 			fields["response_string_match"] = 1
 		} else {
-			fields["result_type"] = "response_string_mismatch"
+			set_result("response_string_mismatch", &fields, &tags)
 			fields["response_string_match"] = 0
 		}
 	} else {
-		fields["result_type"] = "success"
+		set_result("success", &fields, &tags)
 	}
 
-	return fields, nil
+	return fields, tags, nil
 }
 
 // Gather gets all metric fields and tags and returns any errors it encounters
@@ -241,8 +259,8 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		return errors.New("Only http and https are supported")
 	}
 	// Prepare data
-	tags := map[string]string{"server": h.Address, "method": h.Method}
 	var fields map[string]interface{}
+	var tags map[string]string
 
 	if h.client == nil {
 		client, err := h.createHttpClient()
@@ -253,10 +271,11 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// Gather data
-	fields, err = h.httpGather()
+	fields, tags, err = h.httpGather()
 	if err != nil {
 		return err
 	}
+
 	// Add metrics
 	acc.AddFields("http_response", fields, tags)
 	return nil
