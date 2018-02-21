@@ -2,7 +2,6 @@ package http_response
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -264,9 +263,6 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 
 	// Gather data
 	fields, tags, err = h.httpGather()
-	fmt.Println(fields)
-	fmt.Println(tags)
-	fmt.Println(err)
 	if err != nil {
 		return err
 	}
