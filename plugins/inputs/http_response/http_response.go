@@ -24,6 +24,7 @@ type HTTPResponse struct {
 	Body                string
 	Method              string
 	ResponseTimeout     internal.Duration
+	LogNetworkErrors    bool
 	Headers             map[string]string
 	FollowRedirects     bool
 	ResponseStringMatch string
@@ -117,10 +118,13 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 func set_result(result_string string, fields *map[string]interface{}, tags *map[string]string) {
 	result_codes := map[string]int{
 		"success":                  0,
-		"connection_failed":        1,
-		"timeout":                  2,
-		"response_string_mismatch": 3,
-		"body_read_error":          4,
+		"response_string_mismatch": 1,
+		"body_read_error":          2,
+		"timeout":                  3,
+		"connection_failed":        4,
+		"dns_error":                5,
+		"address_error":            6,
+		"unknown_network_error":    7,
 	}
 
 	(*tags)["result"] = result_string
@@ -129,9 +133,39 @@ func set_result(result_string string, fields *map[string]interface{}, tags *map[
 }
 
 func set_error(err error, fields *map[string]interface{}, tags *map[string]string) error {
-	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-		set_result("timeout", fields, tags)
-		return netErr
+	urlErr, isUrlErr := err.(*url.Error)
+	if !isUrlErr {
+		return nil
+	}
+
+	opErr, isNetErr := (urlErr.Err).(*net.OpError)
+	if isNetErr {
+		if opErr.Timeout() {
+			set_result("timeout", fields, tags)
+			return opErr
+		}
+
+		if dnsError, ok := (opErr.Err).(*net.DNSError); ok {
+			set_result("dns_error", fields, tags)
+			return dnsError
+		}
+
+		if networkError, ok := (opErr.Err).(*net.UnknownNetworkError); ok {
+			set_result("unknown_network_error", fields, tags)
+			return networkError
+		}
+
+		if addressError, ok := (opErr.Err).(*net.AddrError); ok {
+			set_result("address_error", fields, tags)
+			return addressError
+		}
+
+		// Parse error has to do with parsing of IP addresses, so we
+		// group it with address errors
+		if addressError, ok := (opErr.Err).(*net.ParseError); ok {
+			set_result("address_error", fields, tags)
+			return addressError
+		}
 	}
 
 	return nil
@@ -167,6 +201,11 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 	// If an error in returned, it means we are dealing with a network error, as
 	// HTTP error codes do not generate errors in the net/http library
 	if err != nil {
+		// Log error
+		if h.LogNetworkErrors {
+			log.Printf("E! Network error while polling %s: %s", h.Address, err.Error())
+		}
+
 		// Get error details
 		netErr := set_error(err, &fields, &tags)
 
