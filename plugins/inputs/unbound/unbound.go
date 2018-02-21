@@ -3,7 +3,9 @@ package unbound
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
+	"net"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -15,13 +17,14 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error)
+type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string) (*bytes.Buffer, error)
 
 // Unbound is used to store configuration values
 type Unbound struct {
 	Binary  string
 	Timeout internal.Duration
 	UseSudo bool
+	Server  string
 
 	filter filter.Filter
 	run    runner
@@ -42,6 +45,10 @@ var sampleConfig = `
 
   ## Use the builtin fielddrop/fieldpass telegraf filters in order to keep/remove specific fields
   fieldpass = ["total_*", "num_*","time_up", "mem_*"]
+  
+  ## IP of server to connect to, read from unbound conf default, optionally ':port'
+  ## Will lookup IP if given a hostname
+  server = "127.0.0.1:8953"
 `
 
 func (s *Unbound) Description() string {
@@ -54,8 +61,34 @@ func (s *Unbound) SampleConfig() string {
 }
 
 // Shell out to unbound_stat and return the output
-func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool) (*bytes.Buffer, error) {
+func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
+
+	if Server != "" {
+		host, port, err := net.SplitHostPort(Server)
+		if err != nil { // No port was specified
+			host = Server
+			port = ""
+		}
+
+		// Unbound control requires an IP address, and we want to be nice to the user
+		resolver := net.Resolver{}
+		ctx, lookUpCancel := context.WithTimeout(context.Background(), Timeout.Duration)
+		defer lookUpCancel()
+		serverIps, err := resolver.LookupIPAddr(ctx, host)
+		if err != nil {
+			return nil, fmt.Errorf("error looking up ip for server: %s: %s", Server, err)
+		}
+		if len(serverIps) == 0 {
+			return nil, fmt.Errorf("error no ip for server: %s: %s", Server, err)
+		}
+		server := serverIps[0].IP.String()
+		if port != "" {
+			server = server + "@" + port
+		}
+
+		cmdArgs = append(cmdArgs, "-s", server)
+	}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
 
@@ -86,7 +119,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	out, err := s.run(s.Binary, s.Timeout, s.UseSudo)
+	out, err := s.run(s.Binary, s.Timeout, s.UseSudo, s.Server)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}
@@ -132,6 +165,7 @@ func init() {
 			Binary:  defaultBinary,
 			Timeout: defaultTimeout,
 			UseSudo: false,
+			Server:  "",
 		}
 	})
 }
