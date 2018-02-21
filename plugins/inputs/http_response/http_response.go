@@ -2,6 +2,7 @@ package http_response
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -24,9 +25,6 @@ type HTTPResponse struct {
 	Body                         string
 	Method                       string
 	ResponseTimeout              internal.Duration
-	OverwriteNetworkErrorLatency bool
-	FixedNetworkErrorLatency     float64
-	LogNetworkErrorDuration      bool
 	Headers                      map[string]string
 	FollowRedirects              bool
 	ResponseStringMatch          string
@@ -160,14 +158,6 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 	// If an error in returned, it means we are dealing with a network error, as
 	// HTTP error codes do not generate errors in the net/http library
 	if err != nil {
-		// Set response_time as this is a network error
-		if h.LogNetworkErrorDuration {
-			if h.OverwriteNetworkErrorLatency {
-				response_time = h.FixedNetworkErrorLatency
-			}
-			fields["response_time"] = response_time
-		}
-
 		// Timeouts have their special type
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			set_result("timeout", &fields, &tags)
@@ -209,6 +199,7 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 		// Compile once and reuse
 		if h.compiledStringMatch == nil {
 			h.compiledStringMatch = regexp.MustCompile(h.ResponseStringMatch)
+			fmt.Println(2, err)
 			if err != nil {
 				log.Printf("E! Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
 				set_result("response_string_mismatch", &fields, &tags)
@@ -272,6 +263,9 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 
 	// Gather data
 	fields, tags, err = h.httpGather()
+	fmt.Println(fields)
+	fmt.Println(tags)
+	fmt.Println(err)
 	if err != nil {
 		return err
 	}
