@@ -69,6 +69,7 @@
 - [#3783](https://github.com/influxdata/telegraf/pull/3783): Support deadline in ping plugin.
 - [#3765](https://github.com/influxdata/telegraf/pull/3765): Add option to disable labels in prometheus output for string fields.
 - [#3808](https://github.com/influxdata/telegraf/pull/3808): Add shard server stats to the mongodb input plugin.
+- [#3713](https://github.com/influxdata/telegraf/pull/3713): Add server option to unbound plugin.
 
 ### Bugfixes
 
