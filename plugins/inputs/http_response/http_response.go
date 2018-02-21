@@ -128,6 +128,15 @@ func set_result(result_string string, fields *map[string]interface{}, tags *map[
 	(*fields)["result_code"] = result_codes[result_string]
 }
 
+func set_error(err error, fields *map[string]interface{}, tags *map[string]string) error {
+	if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+		set_result("timeout", fields, tags)
+		return netErr
+	}
+
+	return nil
+}
+
 // HTTPGather gathers all fields and returns any errors it encounters
 func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, error) {
 	// Prepare fields and tags
@@ -158,13 +167,15 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 	// If an error in returned, it means we are dealing with a network error, as
 	// HTTP error codes do not generate errors in the net/http library
 	if err != nil {
-		// Timeouts have their special type
-		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-			set_result("timeout", &fields, &tags)
+		// Get error details
+		netErr := set_error(err, &fields, &tags)
+
+		// If recognize the returnded error, get out
+		if netErr != nil {
 			return fields, tags, nil
 		}
 
-		// Any other error is considered a "connection_failed"
+		// Any error not recognized by `set_error` is considered a "connection_failed"
 		set_result("connection_failed", &fields, &tags)
 
 		// If the error is a redirect we continue processing and log the HTTP code
