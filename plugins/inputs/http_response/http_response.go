@@ -137,6 +137,11 @@ func set_result(result_string string, fields *map[string]interface{}, tags *map[
 }
 
 func set_error(err error, fields *map[string]interface{}, tags *map[string]string) error {
+	if timeoutError, ok := err.(net.Error); ok && timeoutError.Timeout() {
+		set_result("timeout", fields, tags)
+		return timeoutError
+	}
+
 	urlErr, isUrlErr := err.(*url.Error)
 	if !isUrlErr {
 		return nil
@@ -144,11 +149,6 @@ func set_error(err error, fields *map[string]interface{}, tags *map[string]strin
 
 	opErr, isNetErr := (urlErr.Err).(*net.OpError)
 	if isNetErr {
-		if opErr.Timeout() {
-			set_result("timeout", fields, tags)
-			return opErr
-		}
-
 		if dnsError, ok := (opErr.Err).(*net.DNSError); ok {
 			set_result("dns_error", fields, tags)
 			return dnsError
