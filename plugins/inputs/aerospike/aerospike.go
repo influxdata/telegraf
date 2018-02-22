@@ -7,17 +7,17 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
-
+	"time"	
+	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
 	as "github.com/aerospike/aerospike-client-go"
 )
 
 type Aerospike struct {
 	Servers []string
 }
+
 
 var sampleConfig = `
   ## Aerospike servers to connect to (with port)
@@ -85,17 +85,22 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 			if err == nil {
 				fields[strings.Replace(k, "-", "_", -1)] = val
 			} else {
-				log.Printf("I! skipping aerospike field %v with int64 overflow: %q", k, v)
+				log.Printf("%v  %q", k, v)
 			}
 		}
 		acc.AddFields("aerospike_node", fields, tags, time.Now())
+		//Finding the latency
+		latency, err := as.RequestNodeLatency(n)
+		if err != nil {
+			return err
+		}
+		fmt.Println(latency)
 
 		info, err := as.RequestNodeInfo(n, "namespaces")
 		if err != nil {
 			return err
 		}
 		namespaces := strings.Split(info["namespaces"], ";")
-
 		for _, namespace := range namespaces {
 			nTags := map[string]string{
 				"aerospike_host": hostport,
@@ -117,7 +122,15 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 				if err == nil {
 					nFields[strings.Replace(parts[0], "-", "_", -1)] = val
 				} else {
-					log.Printf("I! skipping aerospike field %v with int64 overflow: %q", parts[0], parts[1])
+					log.Printf("%v %q", parts[0], parts[1])
+				}
+			}
+			for k,v := range latency[namespace]{
+				val,err := parseValue(v)
+				if err == nil{
+					nFields[strings.Replace(k,">","",-1)] = val
+				}else{
+					log.Printf("I! skipping aerospike field %v with int64 overflow: %q", k, v)
 				}
 			}
 			acc.AddFields("aerospike_namespace", nFields, nTags, time.Now())
@@ -125,6 +138,7 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 	}
 	return nil
 }
+
 
 func parseValue(v string) (interface{}, error) {
 	if parsed, err := strconv.ParseInt(v, 10, 64); err == nil {
