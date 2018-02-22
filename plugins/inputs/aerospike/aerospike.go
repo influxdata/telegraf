@@ -94,7 +94,7 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 		if err != nil {
 			return err
 		}
-		fmt.Println(latency)
+		//fmt.Println(latency)
 
 		info, err := as.RequestNodeInfo(n, "namespaces")
 		if err != nil {
