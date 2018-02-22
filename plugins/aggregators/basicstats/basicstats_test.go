@@ -276,6 +276,58 @@ func TestBasicStatsWithOnlySum(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
 }
 
+// Verify that sum doesn't suffer from floating point errors.  Early
+// implementations of sum were calulated from mean and count, which
+// e.g. summed "1, 1, 5, 1" as "7.999999..." instead of 8.
+func TestBasicStatsWithOnlySumFloatingPointErrata(t *testing.T) {
+
+	var sum1, _ = metric.New("m1",
+		map[string]string{},
+		map[string]interface{}{
+			"a": int64(1),
+		},
+		time.Now(),
+	)
+	var sum2, _ = metric.New("m1",
+		map[string]string{},
+		map[string]interface{}{
+			"a": int64(1),
+		},
+		time.Now(),
+	)
+	var sum3, _ = metric.New("m1",
+		map[string]string{},
+		map[string]interface{}{
+			"a": int64(5),
+		},
+		time.Now(),
+	)
+	var sum4, _ = metric.New("m1",
+		map[string]string{},
+		map[string]interface{}{
+			"a": int64(1),
+		},
+		time.Now(),
+	)
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"sum"}
+
+	aggregator.Add(sum1)
+	aggregator.Add(sum2)
+	aggregator.Add(sum3)
+	aggregator.Add(sum4)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	expectedFields := map[string]interface{}{
+		"a_sum": float64(8),
+	}
+	expectedTags := map[string]string{}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
 // Test only aggregating variance
 func TestBasicStatsWithOnlyVariance(t *testing.T) {
 
