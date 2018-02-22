@@ -65,6 +65,10 @@ var sampleConfig = `
   # {'fake':'data'}
   # '''
 
+  # Log network errors in the Telegraf log
+  # Turned off by default to avoid filling the logs with exessive repetitive strings
+  # log_network_errors = false
+
   ## Optional substring or regex match in body of the response
   # response_string_match = "\"service_status\": \"up\""
   # response_string_match = "ok"
@@ -120,8 +124,8 @@ func set_result(result_string string, fields *map[string]interface{}, tags *map[
 		"success":                  0,
 		"response_string_mismatch": 1,
 		"body_read_error":          2,
-		"timeout":                  3,
-		"connection_failed":        4,
+		"connection_failed":        3,
+		"timeout":                  4,
 		"dns_error":                5,
 		"address_error":            6,
 		"unknown_network_error":    7,
