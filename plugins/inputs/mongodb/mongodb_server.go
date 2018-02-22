@@ -22,7 +22,10 @@ func (s *Server) getDefaultTags() map[string]string {
 	return tags
 }
 
-func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error {
+func (s *Server) gatherData(
+	acc telegraf.Accumulator,
+	gatherDbStats, gatherHostShardStats bool) error {
+
 	s.Session.SetMode(mgo.Eventual, true)
 	s.Session.SetSocketTimeout(0)
 	result_server := &ServerStatus{}
@@ -64,6 +67,12 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 	}, &resultShards)
 	if err != nil {
 		log.Println("E! Error getting database shard stats (" + err.Error() + ")")
+	}
+
+	// Nullify host data if unwanted. Could make a separate call,
+	// but better to keep number of transactions as low as possible
+	if !gatherHostShardStats {
+		resultShards.Hosts = map[string]ShardHostStatsData{}
 	}
 
 	result_db_stats := &DbStats{}
@@ -118,6 +127,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 		)
 		data.AddDefaultStats()
 		data.AddDbStats()
+		data.AddShardHostStats()
 		data.flush(acc)
 	}
 	return nil

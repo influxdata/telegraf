@@ -11,6 +11,7 @@
   ##   mongodb://10.10.3.33:18832,
   servers = ["mongodb://127.0.0.1:27017"]
   gather_perdb_stats = false
+  gather_shard_host_stats = false
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -69,3 +70,11 @@ creating another measurement called mongodb_db_stats and containing values:
  * indexes
  * index_size
  * ok
+
+If `gather_shard_host_stats` is set to `true`, it will also collect per-host shard stats exposed
+by `shardConnPoolStats` creating another measurement called `mongodb_shard_host_stats`
+containing the following values:
+ * in_use
+ * available
+ * created
+ * refreshing
