@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"	
-	"fmt"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	as "github.com/aerospike/aerospike-client-go"
@@ -85,16 +85,15 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 			if err == nil {
 				fields[strings.Replace(k, "-", "_", -1)] = val
 			} else {
-				log.Printf("%v  %q", k, v)
+				log.Printf("I! skipping aerospike field %v with int64 overflow: %q", k, v)
 			}
 		}
 		acc.AddFields("aerospike_node", fields, tags, time.Now())
-		//Finding the latency
+		//Finding the latency metrics
 		latency, err := as.RequestNodeLatency(n)
 		if err != nil {
 			return err
 		}
-		//fmt.Println(latency)
 
 		info, err := as.RequestNodeInfo(n, "namespaces")
 		if err != nil {
@@ -122,7 +121,7 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 				if err == nil {
 					nFields[strings.Replace(parts[0], "-", "_", -1)] = val
 				} else {
-					log.Printf("%v %q", parts[0], parts[1])
+					log.Printf("I! skipping aerospike field %v with int64 overflow: %q", parts[0], parts[1])
 				}
 			}
 			for k,v := range latency[namespace]{
@@ -147,6 +146,8 @@ func parseValue(v string) (interface{}, error) {
 		// int64 overflow, yet valid uint64
 		return nil, errors.New("Number is too large")
 	} else if parsed, err := strconv.ParseBool(v); err == nil {
+		return parsed, nil
+	} else if parsed, err := strconv.ParseFloat(v,64); err == nil {
 		return parsed, nil
 	} else {
 		return v, nil
