@@ -158,7 +158,7 @@ func TestHeaders(t *testing.T) {
 	err := h.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields := map[string]interface{}{ "http_response_code": http.StatusOK }
+	expectedFields := map[string]interface{}{"http_response_code": http.StatusOK}
 	checkOutput(t, acc, expectedFields, nil, nil, nil)
 }
 
@@ -182,7 +182,7 @@ func TestFields(t *testing.T) {
 	err := h.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields := map[string]interface{}{ "http_response_code": http.StatusOK, "result_type": "success"}
+	expectedFields := map[string]interface{}{"http_response_code": http.StatusOK, "result_type": "success"}
 	checkOutput(t, acc, expectedFields, nil, nil, nil)
 }
 
@@ -205,7 +205,7 @@ func TestRedirects(t *testing.T) {
 	err := h.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields := map[string]interface{}{ "http_response_code": http.StatusOK }
+	expectedFields := map[string]interface{}{"http_response_code": http.StatusOK}
 	checkOutput(t, acc, expectedFields, nil, nil, nil)
 
 	h = &HTTPResponse{
@@ -222,8 +222,8 @@ func TestRedirects(t *testing.T) {
 	err = h.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields = map[string]interface{}{ "result_type": "connection_failed" }
-	absentFields := []string{ "http_response_code" }
+	expectedFields = map[string]interface{}{"result_type": "connection_failed"}
+	absentFields := []string{"http_response_code"}
 	checkOutput(t, acc, expectedFields, nil, absentFields, nil)
 }
 
@@ -246,7 +246,7 @@ func TestMethod(t *testing.T) {
 	err := h.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields := map[string]interface{}{ "http_response_code": http.StatusOK }
+	expectedFields := map[string]interface{}{"http_response_code": http.StatusOK}
 	checkOutput(t, acc, expectedFields, nil, nil, nil)
 
 	h = &HTTPResponse{
@@ -263,7 +263,7 @@ func TestMethod(t *testing.T) {
 	err = h.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields = map[string]interface{}{ "http_response_code": http.StatusMethodNotAllowed }
+	expectedFields = map[string]interface{}{"http_response_code": http.StatusMethodNotAllowed}
 	checkOutput(t, acc, expectedFields, nil, nil, nil)
 
 	//check that lowercase methods work correctly
@@ -281,7 +281,7 @@ func TestMethod(t *testing.T) {
 	err = h.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields = map[string]interface{}{ "http_response_code": http.StatusMethodNotAllowed }
+	expectedFields = map[string]interface{}{"http_response_code": http.StatusMethodNotAllowed}
 	checkOutput(t, acc, expectedFields, nil, nil, nil)
 }
 
@@ -304,7 +304,7 @@ func TestBody(t *testing.T) {
 	err := h.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields := map[string]interface{}{ "http_response_code": http.StatusOK }
+	expectedFields := map[string]interface{}{"http_response_code": http.StatusOK}
 	checkOutput(t, acc, expectedFields, nil, nil, nil)
 
 	h = &HTTPResponse{
@@ -320,7 +320,7 @@ func TestBody(t *testing.T) {
 	err = h.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields = map[string]interface{}{ "http_response_code": http.StatusBadRequest }
+	expectedFields = map[string]interface{}{"http_response_code": http.StatusBadRequest}
 	checkOutput(t, acc, expectedFields, nil, nil, nil)
 }
 
@@ -344,7 +344,12 @@ func TestStringMatch(t *testing.T) {
 	err := h.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields := map[string]interface{}{ "http_response_code": http.StatusOK, "response_string_match": 1, "result_type": "success", "response_time": nil }
+	expectedFields := map[string]interface{}{
+		"http_response_code":    http.StatusOK,
+		"response_string_match": 1,
+		"result_type":           "success",
+		"response_time":         nil,
+	}
 	checkOutput(t, acc, expectedFields, nil, nil, nil)
 }
 
@@ -368,7 +373,12 @@ func TestStringMatchJson(t *testing.T) {
 	err := h.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields := map[string]interface{}{ "http_response_code": http.StatusOK, "response_string_match": 1, "result_type": "success", "response_time": nil }
+	expectedFields := map[string]interface{}{
+		"http_response_code":    http.StatusOK,
+		"response_string_match": 1,
+		"result_type":           "success",
+		"response_time":         nil,
+	}
 	checkOutput(t, acc, expectedFields, nil, nil, nil)
 }
 
@@ -393,7 +403,12 @@ func TestStringMatchFail(t *testing.T) {
 	err := h.Gather(&acc)
 	require.NoError(t, err)
 
-	expectedFields := map[string]interface{}{ "http_response_code": http.StatusOK, "response_string_match": 0, "result_type": "response_string_mismatch", "response_time": nil }
+	expectedFields := map[string]interface{}{
+		"http_response_code":    http.StatusOK,
+		"response_string_match": 0,
+		"result_type":           "response_string_mismatch",
+		"response_time":         nil,
+	}
 	checkOutput(t, acc, expectedFields, nil, nil, nil)
 }
 
@@ -446,4 +461,5 @@ func TestPluginErrors(t *testing.T) {
 	var acc testutil.Accumulator
 	err := h.Gather(&acc)
 	require.Error(t, err)
+	t.Fail()
 }
