@@ -34,6 +34,7 @@
 - [http](./plugins/inputs/http/README.md) - Thanks to @grange74
 - [ipset](./plugins/inputs/ipset/README.md) - Thanks to @sajoupa
 - [nats](./plugins/inputs/nats/README.md) - Thanks to @mjs & @levex
+- [spark](./plugins/inputs/spark/README.md) - Thanks to @ShubhamDX
 
 ### New Parsers
 
@@ -71,6 +72,7 @@
 - [#3808](https://github.com/influxdata/telegraf/pull/3808): Add shard server stats to the mongodb input plugin.
 - [#3713](https://github.com/influxdata/telegraf/pull/3713): Add server option to unbound plugin.
 - [#3804](https://github.com/influxdata/telegraf/pull/3804): Convert boolean metric values to float in datadog output.
+- [#1611](https://github.com/influxdata/telegraf/pull/1611): Adding Spark Plugin
 
 ### Bugfixes
 
