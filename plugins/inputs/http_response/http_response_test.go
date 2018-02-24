@@ -60,8 +60,8 @@ func checkFields(t *testing.T, fields map[string]interface{}, acc testutil.Accum
 
 // Receives a dictionary and with expected tags and their values. If a value is nil, it will only check
 // that the tag exists, but not its contents
-func checkTags(t *testing.T, tag map[string]interface{}, acc testutil.Accumulator) {
-	for key, tag := range tag {
+func checkTags(t *testing.T, tags map[string]interface{}, acc testutil.Accumulator) {
+	for key, tag := range tags {
 		switch v := tag.(type) {
 		case string:
 			ok := acc.HasTag("http_response", key)
@@ -119,10 +119,21 @@ func setUpTestMux() http.Handler {
 }
 
 func checkOutput(t *testing.T, acc testutil.Accumulator, presentFields map[string]interface{}, presentTags map[string]interface{}, absentFields []string, absentTags []string) {
-	checkFields(t, presentFields, acc)
-	checkTags(t, presentTags, acc)
-	checkAbsentFields(t, absentFields, acc)
-	checkAbsentTags(t, absentTags, acc)
+	if presentFields != nil {
+		checkFields(t, presentFields, acc)
+	}
+
+	if presentTags != nil {
+		checkTags(t, presentTags, acc)
+	}
+
+	if absentFields != nil {
+		checkAbsentFields(t, absentFields, acc)
+	}
+
+	if absentTags != nil {
+		checkAbsentTags(t, absentTags, acc)
+	}
 }
 
 func TestHeaders(t *testing.T) {
