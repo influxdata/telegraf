@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	gopsutilmem "github.com/shirou/gopsutil/mem"
 	"github.com/shirou/gopsutil/process"
 )
 
@@ -111,6 +114,108 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
+type statStat struct {
+	minflt                uint64
+	maxflt                uint64
+	delayacct_blkio_ticks uint64
+	state                 string
+}
+type additionalIOStat struct {
+	cancelled_write_bytes uint64
+}
+
+// this is taken from https://github.com/shirou/gopsutil/blob/v2.18.02/internal/common/common.go#L286
+// so that HostProc will work
+
+// GetEnv retrieves the environment variable key. If it does not exist it returns the default.
+func GetEnv(key string, dfault string, combineWith ...string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		value = dfault
+	}
+
+	switch len(combineWith) {
+	case 0:
+		return value
+	case 1:
+		return filepath.Join(value, combineWith[0])
+	default:
+		all := make([]string, len(combineWith)+1)
+		all[0] = value
+		copy(all[1:], combineWith)
+		return filepath.Join(all...)
+	}
+}
+
+func HostProc(combineWith ...string) string {
+	return GetEnv("HOST_PROC", "/proc", combineWith...)
+}
+
+func GetStatCounters(proc Process) (*statStat, error) {
+	pid := proc.PID()
+	contents, err := ioutil.ReadFile(HostProc(strconv.Itoa(int(pid)), "stat"))
+	if err != nil {
+		return nil, err
+	}
+	fields := strings.Split(string(contents), " ")
+	// fmt.Printf("%v", fields)
+	minflt, err := strconv.ParseUint(fields[9], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	maxflt, err := strconv.ParseUint(fields[11], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	delayacct_blkio_ticks, err := strconv.ParseUint(fields[41], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	state := fields[2]
+
+	stat := &statStat{
+		minflt:                minflt,
+		maxflt:                maxflt,
+		delayacct_blkio_ticks: delayacct_blkio_ticks,
+		state: state,
+	}
+	return stat, nil
+
+}
+
+func getAdditionalFromIO(proc Process) (*additionalIOStat, error) {
+	pid := proc.PID()
+
+	ioline, err := ioutil.ReadFile(HostProc(strconv.Itoa(int(pid)), "io"))
+	if err != nil {
+		return nil, err
+	}
+	lines := strings.Split(string(ioline), "\n")
+	ret := &additionalIOStat{}
+
+	for _, line := range lines {
+		field := strings.Fields(line)
+		if len(field) < 2 {
+			continue
+		}
+		t, err := strconv.ParseUint(field[1], 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		param := field[0]
+		if strings.HasSuffix(param, ":") {
+			param = param[:len(param)-1]
+		}
+		switch param {
+		case "cancelled_write_bytes":
+			ret.cancelled_write_bytes = t
+		}
+	}
+
+	return ret, nil
+}
+
 // Add metrics a single Process
 func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 	var prefix string
@@ -138,6 +243,25 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"num_threads"] = numThreads
 	}
 
+	createTime, err := proc.CreateTime()
+	if err == nil {
+		fields[prefix+"create_time"] = createTime
+	}
+
+	// uid gid: Real, effective, saved set, and filesystem UIDs (http://man7.org/linux/man-pages/man5/proc.5.html)
+	// so we are using real uid here
+	uids, err := proc.Uids()
+	if err == nil {
+		fields[prefix+"uid"] = uids[0]
+	}
+	gids, err := proc.Uids()
+	if err == nil {
+		fields[prefix+"gid"] = gids[0]
+	}
+	cmdline, err := proc.CmdlineSlice()
+	if err == nil {
+		fields[prefix+"cmdline"] = strings.Join(cmdline, " ")
+	}
 	fds, err := proc.NumFDs()
 	if err == nil {
 		fields[prefix+"num_fds"] = fds
@@ -149,12 +273,24 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"involuntary_context_switches"] = ctx.Involuntary
 	}
 
+	stat, err := GetStatCounters(proc)
+	if err == nil {
+		fields[prefix+"minor_faults"] = stat.minflt
+		fields[prefix+"major_faults"] = stat.maxflt
+		fields[prefix+"delayacct_blkio_ticks"] = stat.delayacct_blkio_ticks
+		fields[prefix+"state"] = stat.state
+	}
+
 	io, err := proc.IOCounters()
 	if err == nil {
 		fields[prefix+"read_count"] = io.ReadCount
 		fields[prefix+"write_count"] = io.WriteCount
 		fields[prefix+"read_bytes"] = io.ReadBytes
 		fields[prefix+"write_bytes"] = io.WriteBytes
+	}
+	additional_io, err := getAdditionalFromIO(proc)
+	if err == nil {
+		fields[prefix+"cancelled_write_bytes"] = additional_io.cancelled_write_bytes
 	}
 
 	cpu_time, err := proc.Times()
@@ -185,6 +321,47 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"memory_data"] = mem.Data
 		fields[prefix+"memory_stack"] = mem.Stack
 		fields[prefix+"memory_locked"] = mem.Locked
+	}
+
+	virtual, err := gopsutilmem.VirtualMemory()
+	if err == nil {
+		fields[prefix+"memory_used_percent"] = float64(mem.RSS) / float64(virtual.Total) * 100
+	}
+
+	// total nework traffic
+	net, err := proc.NetIOCounters(false)
+	if err == nil {
+		fields[prefix+"net_bytes_sent"] = net[0].BytesSent
+		fields[prefix+"net_bytes_recv"] = net[0].BytesRecv
+
+		fields[prefix+"net_packets_sent"] = net[0].PacketsSent
+		fields[prefix+"net_packets_recv"] = net[0].PacketsRecv
+
+		fields[prefix+"net_errors_in"] = net[0].Errin
+		fields[prefix+"net_errors_out"] = net[0].Errout
+	}
+	// per interface network traffic
+	net2, err := proc.NetIOCounters(true)
+	if err == nil {
+		for _, net_stat := range net2 {
+			fields_per_interface := map[string]interface{}{}
+			var newTags map[string]string
+			newTags = map[string]string{"interface": net_stat.Name}
+
+			for k, v := range proc.Tags() {
+				newTags[k] = v
+			}
+
+			fields_per_interface[prefix+"net_bytes_sent"] = net_stat.BytesSent
+			fields_per_interface[prefix+"net_bytes_recv"] = net_stat.BytesRecv
+
+			fields_per_interface[prefix+"net_packets_sent"] = net_stat.PacketsSent
+			fields_per_interface[prefix+"net_packets_recv"] = net_stat.PacketsRecv
+
+			fields_per_interface[prefix+"net_errors_in"] = net_stat.Errin
+			fields_per_interface[prefix+"net_errors_out"] = net_stat.Errout
+			acc.AddFields("procstat_net", fields_per_interface, newTags)
+		}
 	}
 
 	rlims, err := proc.RlimitUsage(true)
