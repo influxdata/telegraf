@@ -1,14 +1,14 @@
 package ssl
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"crypto/x509"
-	"time"
-	"net"
-	"crypto/tls"
 	"github.com/pkg/errors"
+	"net"
 	"strings"
+	"time"
 )
 
 type Ssl struct {
@@ -16,11 +16,11 @@ type Ssl struct {
 }
 
 type Server struct {
-	Host string
+	Host    string
 	Timeout int
 }
 
-var sampleConfig  = `
+var sampleConfig = `
   ## Server to check
   [[inputs.ssl.servers]]
     host = "google.com:443"
@@ -39,7 +39,7 @@ func (s *Ssl) Description() string {
 	return "Check expiration date and domains of ssl certificate"
 }
 
-func (s *Ssl) Gather(acc telegraf.Accumulator) error  {
+func (s *Ssl) Gather(acc telegraf.Accumulator) error {
 	for _, server := range s.Servers {
 		slice := strings.Split(server.Host, ":")
 		domain, port := slice[0], "443"
@@ -78,7 +78,7 @@ func (s *Ssl) Gather(acc telegraf.Accumulator) error  {
 
 func getServerCertsChain(d string, p string, t int) ([]*x509.Certificate, error) {
 	h := getServerAddress(d, p)
-	ipConn, err := net.DialTimeout("tcp", h, time.Duration(t) * time.Second)
+	ipConn, err := net.DialTimeout("tcp", h, time.Duration(t)*time.Second)
 	if err != nil {
 		return nil, errors.New("[" + h + "] " + err.Error())
 	}
@@ -112,7 +112,7 @@ func isDomainInCertDnsNames(domain string, certDnsNames []string) bool {
 			if domain == d {
 				return true
 			}
-			start := len(domain)-len(d)-1
+			start := len(domain) - len(d) - 1
 			if start >= 0 && domain[start:] == "."+d {
 				return true
 			}

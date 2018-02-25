@@ -1,10 +1,10 @@
 package ssl
 
 import (
-	"testing"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/assert"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestGathering(t *testing.T) {
@@ -13,15 +13,15 @@ func TestGathering(t *testing.T) {
 	}
 	var servers = []Server{
 		{
-			Host: "github.com:443",
+			Host:    "github.com:443",
 			Timeout: 5,
 		},
 		{
-			Host: "github.com",
+			Host:    "github.com",
 			Timeout: 5,
 		},
 	}
-	var sslConfig = Ssl {
+	var sslConfig = Ssl{
 		Servers: servers,
 	}
 	var acc testutil.Accumulator
