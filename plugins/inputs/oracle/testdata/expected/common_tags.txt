@@ -1,0 +1,5 @@
+database_name
+instance_name
+db_host
+version
+instance_role

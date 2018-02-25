@@ -1,0 +1,16 @@
+active_state_normal
+active_state_quiescing
+active_state_quiesced
+archiver_started
+archiver_stopped
+archiver_failed
+database_status_active
+database_status_suspended
+database_status_instance_recovery
+logins_allowed
+logins_restricted
+shutdown_pending
+status_started
+status_mounted
+status_open
+status_open_migrate

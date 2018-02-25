@@ -66,6 +66,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/ntpq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/openldap"
 	_ "github.com/influxdata/telegraf/plugins/inputs/opensmtpd"
+	_ "github.com/influxdata/telegraf/plugins/inputs/oracle"
 	_ "github.com/influxdata/telegraf/plugins/inputs/passenger"
 	_ "github.com/influxdata/telegraf/plugins/inputs/pf"
 	_ "github.com/influxdata/telegraf/plugins/inputs/phpfpm"
