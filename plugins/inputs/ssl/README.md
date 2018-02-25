@@ -7,13 +7,11 @@
 [[inputs.ssl]]
   ## Server to check
   [[inputs.ssl.servers]]
-    domain = "google.com"
-    port = 443
+    host = "google.com:443"
     timeout = 5
   ## Server to check
   [[inputs.ssl.servers]]
-    domain = "github.com"
-    port = 443
+    host = "github.com"
     timeout = 5
 ```
 
@@ -32,7 +30,7 @@ If ssl certificate is valid:
 
 ```
 * Plugin: inputs.ssl, Collection 1
-> ssl,domain=example.com,port=443,host=host time_to_expiration=5620833395015000i 1517213967000000000
+> ssl,domain=example.com,port=443,host=host time_to_expiration=3907728i 1517213967000000000
 ```
 
 If ssl certificate and domain mismatch:
