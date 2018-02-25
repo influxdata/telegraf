@@ -6,6 +6,7 @@
 - [#3739](https://github.com/influxdata/telegraf/issues/3739): Remove userinfo from url tag in prometheus input.
 - [#3778](https://github.com/influxdata/telegraf/issues/3778): Fix ping plugin not reporting zero durations.
 - [#3807](https://github.com/influxdata/telegraf/issues/3807): Fix memory leak in postgresql_extensible.
+- [#3697](https://github.com/influxdata/telegraf/issues/3697): Disable keepalive in mqtt output to prevent deadlock.
 
 ## v1.5.2 [2018-01-30]
 
