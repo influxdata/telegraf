@@ -75,8 +75,6 @@ This tag is used to expose network and plugin errors. HTTP errors are considered
 |connection_failed        | 3                       |Catch all for any network error not specifically handled by the plugin|
 |timeout                  | 4                       |The plugin timed out while awaiting the HTTP connection to complete|
 |dns_error                | 5                       |There was a DNS error while attempting to connect to the host|
-|address_error            | 6                       |There is a formatting error in the URL|
-|unknown_network_error    | 7                       |There was an error when trying to determine the destination network|
 
 NOTE: The error codes are derived from the error object returned by the `net/http` Go library, so the accuracy of the errors depends on the handling of error states by the `net/http` Go library. **If a more detailed error report is required use the `log_network_errors` setting.**
 
