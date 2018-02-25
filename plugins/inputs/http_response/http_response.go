@@ -127,8 +127,6 @@ func set_result(result_string string, fields *map[string]interface{}, tags *map[
 		"connection_failed":        3,
 		"timeout":                  4,
 		"dns_error":                5,
-		"address_error":            6,
-		"unknown_network_error":    7,
 	}
 
 	(*tags)["result"] = result_string
@@ -152,16 +150,6 @@ func set_error(err error, fields *map[string]interface{}, tags *map[string]strin
 		if dnsError, ok := (opErr.Err).(*net.DNSError); ok {
 			set_result("dns_error", fields, tags)
 			return dnsError
-		}
-
-		if networkError, ok := (opErr.Err).(*net.UnknownNetworkError); ok {
-			set_result("unknown_network_error", fields, tags)
-			return networkError
-		}
-
-		if addressError, ok := (opErr.Err).(*net.AddrError); ok {
-			set_result("address_error", fields, tags)
-			return addressError
 		}
 
 		// Parse error has to do with parsing of IP addresses, so we
