@@ -582,7 +582,7 @@ func TestPluginErrors(t *testing.T) {
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
 
-	// Bad regex test
+	// Bad regex test. Should return an error and return nothing
 	h := &HTTPResponse{
 		Address:             ts.URL + "/good",
 		Body:                "{ 'test': 'data'}",
@@ -598,4 +598,93 @@ func TestPluginErrors(t *testing.T) {
 	var acc testutil.Accumulator
 	err := h.Gather(&acc)
 	require.Error(t, err)
+
+	absentFields := []string{"http_response_code", "response_time", "response_string_match", "result_type", "result_code"}
+	absentTags := []string{"status_code", "result", "server", "method"}
+	checkOutput(t, acc, nil, nil, absentFields, absentTags)
+
+	// Attempt to read empty body test
+	h = &HTTPResponse{
+		Address:             ts.URL + "/redirect",
+		Body:                "",
+		Method:              "GET",
+		ResponseStringMatch: ".*",
+		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+		FollowRedirects: false,
+	}
+
+	acc = testutil.Accumulator{}
+	err = h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedFields := map[string]interface{}{
+		"http_response_code":    http.StatusMovedPermanently,
+		"response_string_match": 0,
+		"result_type":           "body_read_error",
+		"result_code":        2,
+		"response_time":         nil,
+	}
+	expectedTags := map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"status_code": "301",
+		"result":      "body_read_error",
+	}
+	checkOutput(t, acc, expectedFields, expectedTags, nil, nil)
+}
+
+func TestNetworkErrors(t *testing.T) {
+	// DNS error
+	h := &HTTPResponse{
+		Address:             "https://nonexistent.nonexistent", // Any non-resolvable URL works here
+		Body:                "",
+		Method:              "GET",
+		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+		FollowRedirects: false,
+		LogNetworkErrors: true,
+	}
+
+	var acc testutil.Accumulator
+	err := h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedFields := map[string]interface{}{
+		"result_type":           "dns_error",
+		"result_code":        5,
+	}
+	expectedTags := map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"result":      "dns_error",
+	}
+	absentFields := []string{"http_response_code", "response_time", "response_string_match"}
+	absentTags := []string{"status_code"}
+	checkOutput(t, acc, expectedFields, expectedTags, absentFields, absentTags)
+
+	// Connecton failed
+	h = &HTTPResponse{
+		Address:             "https://127.127.127.127", // Any non-routable IP works here
+		Body:                "",
+		Method:              "GET",
+		ResponseTimeout:     internal.Duration{Duration: time.Second * 20},
+		FollowRedirects: false,
+		LogNetworkErrors: true,
+	}
+
+	acc = testutil.Accumulator{}
+	err = h.Gather(&acc)
+	require.NoError(t, err)
+
+	expectedFields = map[string]interface{}{
+		"result_type":       "connection_failed",
+		"result_code":        3,
+	}
+	expectedTags = map[string]interface{}{
+		"server":      nil,
+		"method":      "GET",
+		"result":      "connection_failed",
+	}
+	absentFields = []string{"http_response_code", "response_time", "response_string_match"}
+	absentTags = []string{"status_code"}
+	checkOutput(t, acc, expectedFields, expectedTags, absentFields, absentTags)
 }
