@@ -49,6 +49,10 @@ and create a single measurement containing values e.g.
  * resident_megabytes
  * updates_per_sec
  * vsize_megabytes
+ * total_in_use
+ * total_available
+ * total_created
+ * total_refreshing
  * ttl_deletes_per_sec
  * ttl_passes_per_sec
  * repl_lag
