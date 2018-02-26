@@ -34,6 +34,9 @@ type Ping struct {
 	// Ping timeout, in seconds. 0 means no timeout (ping -W <TIMEOUT>)
 	Timeout float64
 
+	// Ping deadline, in seconds. 0 means no deadline. (ping -w <DEADLINE>)
+	Deadline int
+
 	// Interface or source address to send ping from (ping -I/-S <INTERFACE/SRC_ADDR>)
 	Interface string
 
@@ -60,6 +63,8 @@ const sampleConfig = `
   # ping_interval = 1.0
   ## per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
   # timeout = 1.0
+  ## total-ping deadline, in s. 0 == no deadline (ping -w <DEADLINE>)
+  # deadline = 10
   ## interface or source address to send ping from (ping -I <INTERFACE/SRC_ADDR>)
   ## on Darwin and Freebsd only source address possible: (ping -S <SRC_ADDR>)
   # interface = ""
@@ -179,6 +184,17 @@ func (p *Ping) args(url string) []string {
 			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', 1, 64))
 		}
 	}
+	if p.Deadline > 0 {
+		switch runtime.GOOS {
+		case "darwin":
+			args = append(args, "-t", strconv.Itoa(p.Deadline))
+		case "linux":
+			args = append(args, "-w", strconv.Itoa(p.Deadline))
+		default:
+			// Not sure the best option here, just assume GNU ping?
+			args = append(args, "-w", strconv.Itoa(p.Deadline))
+		}
+	}
 	if p.Interface != "" {
 		switch runtime.GOOS {
 		case "linux":
@@ -255,6 +271,7 @@ func init() {
 			PingInterval: 1.0,
 			Count:        1,
 			Timeout:      1.0,
+			Deadline:     10,
 		}
 	})
 }

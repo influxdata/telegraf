@@ -99,6 +99,27 @@ func TestAddWiredTigerStats(t *testing.T) {
 	}
 }
 
+func TestAddShardStats(t *testing.T) {
+	d := NewMongodbData(
+		&StatLine{
+			TotalInUse:      0,
+			TotalAvailable:  0,
+			TotalCreated:    0,
+			TotalRefreshing: 0,
+		},
+		tags,
+	)
+
+	var acc testutil.Accumulator
+
+	d.AddDefaultStats()
+	d.flush(&acc)
+
+	for key, _ := range DefaultShardStats {
+		assert.True(t, acc.HasInt64Field("mongodb", key))
+	}
+}
+
 func TestStateTag(t *testing.T) {
 	d := NewMongodbData(
 		&StatLine{
@@ -147,6 +168,10 @@ func TestStateTag(t *testing.T) {
 		"ttl_deletes_per_sec":   int64(0),
 		"ttl_passes_per_sec":    int64(0),
 		"jumbo_chunks":          int64(0),
+		"total_in_use":          int64(0),
+		"total_available":       int64(0),
+		"total_created":         int64(0),
+		"total_refreshing":      int64(0),
 	}
 	acc.AssertContainsTaggedFields(t, "mongodb", fields, stateTags)
 }

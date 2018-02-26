@@ -18,6 +18,10 @@ This plugin gathers stats from [Unbound - a validating, recursive, and caching D
 
    ## Use the builtin fielddrop/fieldpass telegraf filters in order to keep only specific fields
    fieldpass = ["total_*", "num_*","time_up", "mem_*"]
+
+   ## IP of server to connect to, read from unbound conf default, optionally ':port'
+   ## Will lookup IP if given a hostname
+   server = "127.0.0.1:8953"
 ```
 
 ### Measurements & Fields:

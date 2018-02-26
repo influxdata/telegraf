@@ -162,6 +162,7 @@ func (m *MQTT) publish(topic string, body []byte) error {
 
 func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	opts := paho.NewClientOptions()
+	opts.KeepAlive = 0 * time.Second
 
 	if m.Timeout.Duration < time.Second {
 		m.Timeout.Duration = 5 * time.Second
