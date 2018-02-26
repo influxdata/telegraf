@@ -23,6 +23,7 @@ func (s *JsonSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	m["fields"] = metric.Fields()
 	m["name"] = metric.Name()
 	m["timestamp"] = metric.UnixNano() / units_nanoseconds
+	m["type"] = metric.Type().String()
 	serialized, err := ejson.Marshal(m)
 	if err != nil {
 		return []byte{}, err

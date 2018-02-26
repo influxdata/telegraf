@@ -17,6 +17,20 @@ const (
 	Histogram
 )
 
+var (
+	ValueTypeToName = map[ValueType]string{
+		Counter:   "counter",
+		Gauge:     "gauge",
+		Untyped:   "untyped",
+		Summary:   "summary",
+		Histogram: "histogram",
+	}
+)
+
+func (v ValueType) String() string {
+	return ValueTypeToName[v]
+}
+
 type Metric interface {
 	// Serialize serializes the metric into a line-protocol byte buffer,
 	// including a newline at the end.
