@@ -68,7 +68,8 @@ var sampleConfig = `
   ## - MemoryClerk
   ## - VolumeSpace
   ## - PerformanceMetrics
-  # exclude_query = [ 'PerformanceCounters','WaitStatsCatagorized' ]
+  ## - WorkloadGroup
+  exclude_query = [ 'WorkloadGroup' ]
 `
 
 // SampleConfig return the sample configuration
@@ -100,6 +101,7 @@ func initQueries(s *SQLServer) {
 		queries["DatabaseIO"] = Query{Script: sqlDatabaseIOV2, ResultByRow: false}
 		queries["ServerProperties"] = Query{Script: sqlServerPropertiesV2, ResultByRow: false}
 		queries["MemoryClerk"] = Query{Script: sqlMemoryClerkV2, ResultByRow: false}
+		queries["WorkloadGroup"] = Query{Script: sqlWorkloadGroup, ResultByRow: false}
 	} else {
 		queries["PerformanceCounters"] = Query{Script: sqlPerformanceCounters, ResultByRow: true}
 		queries["WaitStatsCategorized"] = Query{Script: sqlWaitStatsCategorized, ResultByRow: false}
@@ -340,6 +342,26 @@ ON mc.type = clerk_names.system_name
 GROUP BY ISNULL(clerk_names.name,mc.type)
 HAVING SUM(pages_kb) >= 1024
 OPTION( RECOMPILE );
+`
+
+const sqlWorkloadGroup = `SELECT
+'sqlserver_workload_group' As [measurement],
+REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+SERVERPROPERTY('ServerName') AS [host],
+rgrp.name AS resource_pool,
+rgwg.name AS workload_group,
+rgwg.total_request_count,
+rgwg.total_queued_request_count,
+rgwg.total_cpu_limit_violation_count,
+rgwg.total_cpu_usage_ms,
+rgwg.total_cpu_usage_preemptive_ms,
+rgwg.total_lock_wait_count,
+rgwg.total_lock_wait_time_ms,
+rgwg.total_reduced_memgrant_count
+FROM sys.dm_resource_governor_workload_groups AS rgwg
+INNER JOIN sys.dm_resource_governor_resource_pools AS rgrp
+ON rgwg.pool_id = rgrp.pool_id
+OPTION(RECOMPILE);
 `
 
 const sqlDatabaseIOV2 = `SELECT
