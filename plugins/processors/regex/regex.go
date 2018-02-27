@@ -68,12 +68,12 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		}
 
 		for _, converter := range r.Fields {
-			if fieldValue, ok := metric.Fields()[converter.Key]; ok {
-				switch fieldValue := fieldValue.(type) {
+			if value, ok := metric.Fields()[converter.Key]; ok {
+				switch value := value.(type) {
 				case string:
 					metric.AddField(
 						getKey(converter),
-						getValue(converter, fieldValue),
+						getValue(converter, value),
 					)
 				}
 			}
