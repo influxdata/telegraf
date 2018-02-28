@@ -6,7 +6,7 @@ The example plugin gathers metrics about Flume.
 ```toml
 # Read metrics from one client
 [[inputs.flume]]
-  server = "http://localhost:6666/metrics
+  servers = ["http://localhost:6666/metrics]
 ```
 
 ### Metrics:
@@ -47,6 +47,7 @@ The plugin gathers the results of the flume monitor http server and processes js
 - flume
   - tags:
     - component
+    - server
   - fields:
     - AppendAcceptedCount
     - AppendBatchAcceptedCount
@@ -87,6 +88,6 @@ SELECT * FROM flume WHERE time > now() - 1h GROUP BY component
 ### Example Output:
 
 ```
-flume,instance=CHANNEL.c1,host=localhost EventPutSuccessCount="29879406",StartTime="1517214100648",ChannelSize="1242405",EventPutAttemptCount="29879406",EventTakeSuccessCount="28637001",ChannelFillPercentage="12.424050000000001",ChannelCapacity="10000000",StopTime="0",EventTakeAttemptCount="28641866",Type="CHANNEL" 1518069650000000000
-flume,instance=SINK.k1,host=localhost BatchUnderflowCount="766",ConnectionFailedCount="0",Type="SINK",EventDrainAttemptCount="14312319",BatchEmptyCount="755",StartTime="1517214100653",StopTime="0",ConnectionClosedCount="0",BatchCompleteCount="13918",ConnectionCreatedCount="1",EventDrainSuccessCount="14312319" 1518069650000000000
+flume_CHANNEL,server=http://localhost:8080/ping,host=MacBook-Pro.local,component=CHANNEL.c1 EventPutSuccessCount="29879406",ChannelCapacity="10000000",StopTime="0",Type="CHANNEL",EventPutAttemptCount="29879406",EventTakeSuccessCount="28637001",StartTime="1517214100648",ChannelFillPercentage="12.424050000000001",ChannelSize="1242405",EventTakeAttemptCount="28641866" 1518335280000000000
+flume_SINK,server=http://localhost:8080/ping,host=MacBook-Pro.local,component=SINK.k1 StopTime="0",Type="SINK",BatchCompleteCount="13918",BatchEmptyCount="755",ConnectionClosedCount="0",ConnectionCreatedCount="1",ConnectionFailedCount="0",EventDrainAttemptCount="14312319",StartTime="1517214100653",BatchUnderflowCount="766",EventDrainSuccessCount="14312319" 1518335280000000000
 ```
