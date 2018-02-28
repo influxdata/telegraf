@@ -56,11 +56,12 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 ### Metrics Selection
 
 vSphere metrics are available in 4 categories: Clusters, Hosts, VMs, and Datastores. Each category can be enabled
-independently, and for each category a list with wildcards can be applied to filter metrics. If the <category>_metrics 
-property is not specified all metrics will be included for the category. Items can be specified with standard glob
-style wildcards (*, ?). Any item can be negated with an exclamation mark (!) as the first character. Metrics will be
-checked against every item in the list that applies, meaning you can include multiple metrics with the first item, and
-negate selectively within that list on a subsequent item.
+independently, and for each category a list with wildcards can be applied to filter metrics. If the &lt;category&gt;_metrics 
+property is not specified all metrics will be included for the category. Metrics can be specified with standard glob
+style wildcards (*, ?). You can specify metrics to be negated, by using an exclamation mark (!) as the first character. 
+Metrics will be checked against every item in the list in order, meaning you can include multiple metrics with the first 
+item, and negate selectively within that list on a subsequent item. Negating metrics that have not been whitelisted in 
+a prior item of the list, has no effect.
 
 A configuration to include all metrics under the host category that start with `cpu.*` but will not include
 `cpu.idle.summation`.

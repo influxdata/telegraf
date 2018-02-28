@@ -15,25 +15,26 @@ import (
 )
 
 type Endpoint struct {
-	Parent             *VSphere
-	Url                *url.URL
-	client             *Client
-	lastColls          map[string]time.Time
-	nameCache          map[string]string
-	resources          map[string]resource
-	discoveryTicker    *time.Ticker
-	clientMux          *sync.Mutex
-	collectMux         *sync.RWMutex
-	initialized        bool
+	Parent          *VSphere
+	Url             *url.URL
+	client          *Client
+	lastColls       map[string]time.Time
+	nameCache       map[string]string
+	resources       map[string]resource
+	discoveryTicker *time.Ticker
+	clientMux       *sync.Mutex
+	collectMux      *sync.RWMutex
+	initialized     bool
 }
 
 type resource struct {
-	enabled bool
-	realTime bool
-	sampling int32
-	objects objectMap
-	metricIds []types.PerfMetricId
-	wildcards []string
+	enabled    bool
+	realTime   bool
+	sampling   int32
+	objects    objectMap
+	metricIds  []types.PerfMetricId
+	wildcards  []string
+	getObjects func(*view.ContainerView) (objectMap, error)
 }
 
 type objectMap map[string]objectRef
@@ -46,20 +47,48 @@ type objectRef struct {
 
 func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 	e := Endpoint{
-		Url:          url,
-		Parent:       parent,
-		lastColls:    make(map[string]time.Time),
-		nameCache:    make(map[string]string),
-		clientMux:    &sync.Mutex{},
-		collectMux:   &sync.RWMutex{},
-		initialized:  false,
+		Url:         url,
+		Parent:      parent,
+		lastColls:   make(map[string]time.Time),
+		nameCache:   make(map[string]string),
+		clientMux:   &sync.Mutex{},
+		collectMux:  &sync.RWMutex{},
+		initialized: false,
 	}
 
 	e.resources = map[string]resource{
-		"cluster": {enabled: parent.GatherClusters, realTime: false, sampling: 300, objects: make(objectMap), wildcards: parent.ClusterMetrics},
-		"host": {enabled: parent.GatherHosts, realTime: true, sampling: 20, objects: make(objectMap), wildcards: parent.HostMetrics},
-		"vm": {enabled: parent.GatherVms, realTime: true, sampling: 20, objects: make(objectMap), wildcards: parent.VmMetrics},
-		"datastore": {enabled: parent.GatherDatastores, realTime: false, sampling: 300, objects: make(objectMap), wildcards: parent.DatastoreMetrics},
+		"cluster": {
+			enabled:    parent.GatherClusters,
+			realTime:   false,
+			sampling:   300,
+			objects:    make(objectMap),
+			wildcards:  parent.ClusterMetrics,
+			getObjects: getClusters,
+		},
+		"host": {
+			enabled:    parent.GatherHosts,
+			realTime:   true,
+			sampling:   20,
+			objects:    make(objectMap),
+			wildcards:  parent.HostMetrics,
+			getObjects: getHosts,
+		},
+		"vm": {
+			enabled:    parent.GatherVms,
+			realTime:   true,
+			sampling:   20,
+			objects:    make(objectMap),
+			wildcards:  parent.VmMetrics,
+			getObjects: getVMs,
+		},
+		"datastore": {
+			enabled:    parent.GatherDatastores,
+			realTime:   false,
+			sampling:   300,
+			objects:    make(objectMap),
+			wildcards:  parent.DatastoreMetrics,
+			getObjects: getDatastores,
+		},
 	}
 
 	return &e
@@ -111,10 +140,13 @@ func (e *Endpoint) setupMetricIds() error {
 		return err
 	}
 
-	for _, res := range e.resources {
-		res.metricIds, err = resolveMetricWildcards(metricMap, res.wildcards)
-		if err != nil {
-			return err
+	for k, res := range e.resources {
+		if res.enabled {
+			res.metricIds, err = resolveMetricWildcards(metricMap, res.wildcards)
+			if err != nil {
+				return err
+			}
+			e.resources[k] = res
 		}
 	}
 
@@ -124,7 +156,7 @@ func (e *Endpoint) setupMetricIds() error {
 func resolveMetricWildcards(metricMap map[string]*types.PerfCounterInfo, wildcards []string) ([]types.PerfMetricId, error) {
 	// Nothing specified assumes we're looking at everything
 	//
-	if wildcards == nil {
+	if wildcards == nil || len(wildcards) == 0 {
 		return nil, nil
 	}
 	tmpMap := make(map[string]types.PerfMetricId)
@@ -170,24 +202,18 @@ func (e *Endpoint) discover() error {
 	nameCache := make(map[string]string)
 	resources := e.resources
 
+	// Populate resource objects, and endpoint name cache
+	//
 	for k, res := range resources {
 		if res.enabled {
 			var objects objectMap
-			switch k {
-			case "cluster":
-				objects, err = e.getClusters(client.Root)
-			case "host":
-				objects, err = e.getHosts(client.Root)
-			case "vm":
-				objects, err = e.getVMs(client.Root)
-			case "datastore":
-				objects, err = e.getDatastores(client.Root)
-			}
+			objects, err = res.getObjects(client.Root)
 			if err != nil {
+				e.checkClient()
 				return err
 			}
 
-			for _, obj := range res.objects {
+			for _, obj := range objects {
 				nameCache[obj.ref.Reference().Value] = obj.name
 			}
 			res.objects = objects
@@ -206,16 +232,15 @@ func (e *Endpoint) discover() error {
 	e.nameCache = nameCache
 	e.resources = resources
 
-	log.Printf("D! Discovered %d objects\n", len(e.nameCache))
+	log.Printf("D! Discovered %d objects for %s", len(nameCache), e.Url.Host)
 
 	return nil
 }
 
-func (e *Endpoint) getClusters(root *view.ContainerView) (objectMap, error) {
+func getClusters(root *view.ContainerView) (objectMap, error) {
 	var resources []mo.ClusterComputeResource
 	err := root.Retrieve(context.Background(), []string{"ClusterComputeResource"}, []string{"summary", "name", "parent"}, &resources)
 	if err != nil {
-		e.checkClient()
 		return nil, err
 	}
 	m := make(objectMap)
@@ -226,11 +251,10 @@ func (e *Endpoint) getClusters(root *view.ContainerView) (objectMap, error) {
 	return m, nil
 }
 
-func (e *Endpoint) getHosts(root *view.ContainerView) (objectMap, error) {
+func getHosts(root *view.ContainerView) (objectMap, error) {
 	var resources []mo.HostSystem
 	err := root.Retrieve(context.Background(), []string{"HostSystem"}, []string{"summary", "parent"}, &resources)
 	if err != nil {
-		e.checkClient()
 		return nil, err
 	}
 	m := make(objectMap)
@@ -241,11 +265,10 @@ func (e *Endpoint) getHosts(root *view.ContainerView) (objectMap, error) {
 	return m, nil
 }
 
-func (e *Endpoint) getVMs(root *view.ContainerView) (objectMap, error) {
+func getVMs(root *view.ContainerView) (objectMap, error) {
 	var resources []mo.VirtualMachine
 	err := root.Retrieve(context.Background(), []string{"VirtualMachine"}, []string{"summary", "runtime.host"}, &resources)
 	if err != nil {
-		e.checkClient()
 		return nil, err
 	}
 	m := make(objectMap)
@@ -256,11 +279,10 @@ func (e *Endpoint) getVMs(root *view.ContainerView) (objectMap, error) {
 	return m, nil
 }
 
-func (e *Endpoint) getDatastores(root *view.ContainerView) (objectMap, error) {
+func getDatastores(root *view.ContainerView) (objectMap, error) {
 	var resources []mo.Datastore
 	err := root.Retrieve(context.Background(), []string{"Datastore"}, []string{"summary"}, &resources)
 	if err != nil {
-		e.checkClient()
 		return nil, err
 	}
 	m := make(objectMap)
@@ -310,12 +332,9 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 
 func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator) (int, float64, error) {
 
-	sampling := e.resources[resourceType].sampling
-	// Interval = 0 means collection for this metric was diabled, so don't even bother.
-	log.Printf("D! Resource type: %s, sampling period is: %d", resourceType, sampling)
-
 	// Do we have new data yet?
 	//
+	sampling := e.resources[resourceType].sampling
 	now := time.Now()
 	latest, hasLatest := e.lastColls[resourceType]
 	if hasLatest {
@@ -323,14 +342,19 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 		if elapsed < float64(sampling) {
 			// No new data would be available. We're outta here!
 			//
+			log.Printf("D! Sampling period for %s of %d has not elapsed for %s", resourceType, sampling, e.Url.Host)
 			return 0, 0, nil
 		}
 	}
 	e.lastColls[resourceType] = now
 
+	metricIds := e.resources[resourceType].metricIds
 	objects := e.resources[resourceType].objects
-	log.Printf("D! Collecting data metrics for %d objects of type %s for %s", len(objects), resourceType, e.Url.Host)
-
+	if len(metricIds) == 0 {
+		log.Printf("D! Collecting all metrics for %d objects of type %s for %s", len(objects), resourceType, e.Url.Host)
+	} else {
+		log.Printf("D! Collecting %d metrics for %d objects of type %s for %s", len(metricIds), len(objects), resourceType, e.Url.Host)
+	}
 
 	client, err := e.getClient()
 	if err != nil {
@@ -352,13 +376,14 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 		pq := types.PerfQuerySpec{
 			Entity:     object.ref,
 			MaxSample:  1,
-			MetricId:   e.resources[resourceType].metricIds,
+			MetricId:   metricIds,
 			IntervalId: sampling,
 		}
 
 		realTime := e.resources[resourceType].realTime
 		if !realTime {
-			startTime := now.Add(-time.Duration(sampling) * time.Second)
+			var startTime = time.Time{}
+			startTime = now.Add(-time.Duration(sampling) * time.Second)
 			pq.StartTime = &startTime
 			pq.EndTime = &now
 		}
@@ -369,10 +394,10 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 		// Filled up a chunk or at end of data? Run a query with the collected objects
 		//
 		if len(pqs) >= int(e.Parent.ObjectsPerQuery) || total == len(objects) {
-			log.Printf("D! Querying %d objects of type %s for %s. Total processed: %d. Total objects %d\n", len(pqs), resourceType, e.Url.Host, total, len(objects))
+			log.Printf("D! Querying %d objects of type %s for %s. Object count: %d. Total objects %d", len(pqs), resourceType, e.Url.Host, total, len(objects))
 			metrics, err := client.Perf.Query(ctx, pqs)
 			if err != nil {
-				log.Printf("E! Error querying metrics for %s on %s", resourceType, e.Url.Host)
+				log.Printf("E! Error querying metrics of %s for %s", resourceType, e.Url.Host)
 				e.checkClient()
 				return count, time.Now().Sub(start).Seconds(), err
 			}
@@ -439,7 +464,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 		}
 	}
 
-	log.Printf("D! Collection of %s took %v\n", resourceType, time.Now().Sub(start))
+	log.Printf("D! Collection of %s for %s, took %v returning %d metrics", resourceType, e.Url.Host, time.Now().Sub(start), count)
 	return count, time.Now().Sub(start).Seconds(), nil
 }
 
@@ -463,7 +488,7 @@ func (e *Endpoint) getClient() (*Client, error) {
 		e.clientMux.Lock()
 		defer e.clientMux.Unlock()
 		if e.client == nil {
-			log.Printf("D! Creating new vCenter client for: %s\n", e.Url.Host)
+			log.Printf("D! Creating new vCenter client for: %s", e.Url.Host)
 			client, err := NewClient(e.Url, e.Parent)
 			if err != nil {
 				return nil, err
@@ -477,10 +502,13 @@ func (e *Endpoint) getClient() (*Client, error) {
 func (e *Endpoint) checkClient() {
 	if e.client != nil {
 		active, err := e.client.Client.SessionManager.SessionIsActive(context.Background())
-		if !active || err != nil {
-			log.Printf("I! vCenter session no longer active, reseting client: %s", e.Url.Host)
+		if err != nil {
+			log.Printf("E! SessionIsActive returned an error on %s: %v", e.Url.Host, err)
+			e.client = nil
+		}
+		if !active {
+			log.Printf("I! Session no longer active, reseting client: %s", e.Url.Host)
 			e.client = nil
 		}
 	}
 }
-
