@@ -1,15 +1,15 @@
 package flume
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
-	"encoding/json"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
-	"strings"
 )
 
 const flumeSampleResponse = `
@@ -100,12 +100,12 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 		panic(err)
 	}
 
-	for c, _ := range flumeSampleMap {
+	for component, _ := range flumeSampleMap {
 
-		tags := map[string]string{"component": c, "server": ts.URL + "/metrics"}
+		tags := map[string]string{"component": component, "server": ts.URL + "/metrics"}
 
-		component := strings.Split(c, ".")[0]
-		accFlume.AssertContainsTaggedFields(t, "flume_"+component, flumeSampleMap[c].(map[string]interface{}), tags)
+		componentType := strings.Split(component, ".")[0]
+		accFlume.AssertContainsTaggedFields(t, "flume_"+componentType, flumeSampleMap[component].(map[string]interface{}), tags)
 	}
 
 }
