@@ -1,4 +1,4 @@
-package tags
+package override
 
 import (
 	"testing"
@@ -18,15 +18,15 @@ func createTestMetric() telegraf.Metric {
 	return metric
 }
 
-func calculateProcessedTags(adder TagAdder, metric telegraf.Metric) map[string]string {
-	processed := adder.Apply(metric)
+func calculateProcessedTags(processor Override, metric telegraf.Metric) map[string]string {
+	processed := processor.Apply(metric)
 	return processed[0].Tags()
 }
 
 func TestRetainsTags(t *testing.T) {
-	adder := TagAdder{}
+	processor := Override{}
 
-	tags := calculateProcessedTags(adder, createTestMetric())
+	tags := calculateProcessedTags(processor, createTestMetric())
 
 	value, present := tags["metric_tag"]
 	assert.True(t, present, "Tag of metric was not present")
@@ -34,9 +34,9 @@ func TestRetainsTags(t *testing.T) {
 }
 
 func TestAddTags(t *testing.T) {
-	adder := TagAdder{Tags: map[string]string{"added_tag": "from_config", "another_tag": ""}}
+	processor := Override{Tags: map[string]string{"added_tag": "from_config", "another_tag": ""}}
 
-	tags := calculateProcessedTags(adder, createTestMetric())
+	tags := calculateProcessedTags(processor, createTestMetric())
 
 	value, present := tags["added_tag"]
 	assert.True(t, present, "Additional Tag of metric was not present")
@@ -45,9 +45,9 @@ func TestAddTags(t *testing.T) {
 }
 
 func TestOverwritesPresentTagValues(t *testing.T) {
-	adder := TagAdder{Tags: map[string]string{"metric_tag": "from_config"}}
+	processor := Override{Tags: map[string]string{"metric_tag": "from_config"}}
 
-	tags := calculateProcessedTags(adder, createTestMetric())
+	tags := calculateProcessedTags(processor, createTestMetric())
 
 	value, present := tags["metric_tag"]
 	assert.True(t, present, "Tag of metric was not present")
@@ -56,25 +56,25 @@ func TestOverwritesPresentTagValues(t *testing.T) {
 }
 
 func TestOverridesName(t *testing.T) {
-	adder := TagAdder{NameOverride: "overridden"}
+	processor := Override{NameOverride: "overridden"}
 
-	processed := adder.Apply(createTestMetric())
+	processed := processor.Apply(createTestMetric())
 
 	assert.Equal(t, "overridden", processed[0].Name(), "Name was not overridden")
 }
 
 func TestNamePrefix(t *testing.T) {
-	adder := TagAdder{NamePrefix: "Pre-"}
+	processor := Override{NamePrefix: "Pre-"}
 
-	processed := adder.Apply(createTestMetric())
+	processed := processor.Apply(createTestMetric())
 
 	assert.Equal(t, "Pre-m1", processed[0].Name(), "Prefix was not applied")
 }
 
 func TestNameSuffix(t *testing.T) {
-	adder := TagAdder{NameSuffix: "-suff"}
+	processor := Override{NameSuffix: "-suff"}
 
-	processed := adder.Apply(createTestMetric())
+	processed := processor.Apply(createTestMetric())
 
 	assert.Equal(t, "m1-suff", processed[0].Name(), "Suffix was not applied")
 }
