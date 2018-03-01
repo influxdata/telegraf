@@ -20,11 +20,9 @@ Data collected from telegraf is sent in the Request Body.
   http_headers = [ "Content-Type:application/json" ]
   ## With this HTTP status code, the http plugin checks that the HTTP request is completed normally.
   ## As a result, any status code that is not a specified status code is considered to be an error condition and processed.
-  expected_status_codes = [ 200, 204 ]
-  ## Configure response header timeout in seconds. Default : 3
-  response_header_timeout = 3
+  success_status_codes = [ 200, 201, 204 ]
   ## Configure dial timeout in seconds. Default : 3
-  dial_timeout = 3
+  timeout = 3
 
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read

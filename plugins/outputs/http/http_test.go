@@ -79,9 +79,9 @@ func TestWriteAllInputMetric(t *testing.T) {
 	metrics := []telegraf.Metric{m1, m2}
 
 	http := &Http{
-		URL:            server.URL,
-		HttpHeaders:    []string{"Content-Type:plain/text"},
-		ExpStatusCodes: []int{200, 204},
+		URL:                server.URL,
+		HttpHeaders:        []string{"Content-Type:plain/text"},
+		SuccessStatusCodes: []int{200, 204},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -105,9 +105,9 @@ func TestHttpWriteWithUnexpected404StatusCode(t *testing.T) {
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:            server.URL,
-		HttpHeaders:    []string{"Content-Type:application/json"},
-		ExpStatusCodes: []int{200},
+		URL:                server.URL,
+		HttpHeaders:        []string{"Content-Type:application/json"},
+		SuccessStatusCodes: []int{200},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -131,9 +131,9 @@ func TestHttpWriteWithExpected404StatusCode(t *testing.T) {
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:            server.URL,
-		HttpHeaders:    []string{"Content-Type:application/json"},
-		ExpStatusCodes: []int{200, 404},
+		URL:                server.URL,
+		HttpHeaders:        []string{"Content-Type:application/json"},
+		SuccessStatusCodes: []int{200, 404},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -154,9 +154,9 @@ func TestHttpWriteWithIncorrectServerPort(t *testing.T) {
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:            "http://127.0.0.1:56879/incorrect/url",
-		HttpHeaders:    []string{"Content-Type:application/json"},
-		ExpStatusCodes: []int{200},
+		URL:                "http://127.0.0.1:56879/incorrect/url",
+		HttpHeaders:        []string{"Content-Type:application/json"},
+		SuccessStatusCodes: []int{200},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -208,9 +208,9 @@ func TestMakeReqBody2(t *testing.T) {
 
 func TestImplementedInterfaceFunction(t *testing.T) {
 	http := &Http{
-		URL:            "http://127.0.0.1:56879/incorrect/url",
-		HttpHeaders:    []string{"Content-Type:application/json"},
-		ExpStatusCodes: []int{200},
+		URL:                "http://127.0.0.1:56879/incorrect/url",
+		HttpHeaders:        []string{"Content-Type:application/json"},
+		SuccessStatusCodes: []int{200},
 	}
 
 	assert.NotNil(t, http.SampleConfig())

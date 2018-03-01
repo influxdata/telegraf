@@ -7,7 +7,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -25,11 +24,9 @@ var sampleConfig = `
   http_headers = [ "Content-Type:application/json" ]
   ## With this HTTP status code, the http plugin checks that the HTTP request is completed normally.
   ## As a result, any status code that is not a specified status code is considered to be an error condition and processed.
-  expected_status_codes = [ 200, 204 ]
-  ## Configure response header timeout in seconds. Default : 3
-  response_header_timeout = 3
-  ## Configure dial timeout in seconds. Default : 3
-  dial_timeout = 3
+  success_status_codes = [ 200, 201, 204 ]
+  ## Configure http.Client.Timeout in seconds. Default : 3
+  timeout = 3
 
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
@@ -41,24 +38,22 @@ var sampleConfig = `
 const (
 	POST = "POST"
 
-	DEFAULT_RESPONSE_HEADER_TIMEOUT = 3
-	DEFAULT_DIAL_TIME_OUT           = 3
+	DEFAULT_TIME_OUT = 3
 )
 
 type Http struct {
 	// http required option
-	URL            string   `toml:"url"`
-	HttpHeaders    []string `toml:"http_headers"`
-	ExpStatusCodes []int    `toml:"expected_status_codes"`
+	URL                string   `toml:"url"`
+	HttpHeaders        []string `toml:"http_headers"`
+	SuccessStatusCodes []int    `toml:"success_status_codes"`
 
 	// Option with http default value
-	ResHeaderTimeout int `toml:"response_header_timeout"`
-	DialTimeOut      int `toml:"dial_timeout"`
+	Timeout int `toml:"timeout"`
 
 	client     http.Client
 	serializer serializers.Serializer
-	// expStatusCode that stores option values received with expected_status_codes
-	expStatusCode map[int]bool
+	// SuccessStatusCode that stores option values received with expected_status_codes
+	SuccessStatusCode map[int]bool
 }
 
 func (h *Http) SetSerializer(serializer serializers.Serializer) {
@@ -68,12 +63,7 @@ func (h *Http) SetSerializer(serializer serializers.Serializer) {
 // Connect to the Output
 func (h *Http) Connect() error {
 	h.client = http.Client{
-		Transport: &http.Transport{
-			Dial: (&net.Dialer{
-				Timeout: time.Duration(h.DialTimeOut) * time.Second,
-			}).Dial,
-			ResponseHeaderTimeout: time.Duration(h.ResHeaderTimeout) * time.Second,
-		},
+		Timeout: time.Duration(h.Timeout) * time.Second,
 	}
 
 	return nil
@@ -99,8 +89,8 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 	var mCount int
 	var reqBodyBuf []byte
 
-	for _, metric := range metrics {
-		buf, err := h.serializer.Serialize(metric)
+	for _, m := range metrics {
+		buf, err := h.serializer.Serialize(m)
 
 		if err != nil {
 			return fmt.Errorf("E! Error serializing some metrics: %s", err.Error())
@@ -131,41 +121,39 @@ func (h *Http) write(reqBody []byte) error {
 		req.Header.Set(keyAndValue[0], keyAndValue[1])
 	}
 
-	req.Close = true
+	resp, err := h.client.Do(req)
 
-	res, err := h.client.Do(req)
-
-	if err := h.isOk(res, err); err != nil {
+	if err := h.isOk(resp, err); err != nil {
 		return err
 	}
 
-	res.Body.Close()
+	defer resp.Body.Close()
 
 	return err
 }
 
-func (h *Http) isOk(res *http.Response, err error) error {
-	if res == nil || err != nil {
+func (h *Http) isOk(resp *http.Response, err error) error {
+	if resp == nil || err != nil {
 		return fmt.Errorf("E! %s request failed! %s.", h.URL, err.Error())
 	}
 
-	if !h.isExpStatusCode(res.StatusCode) {
-		return fmt.Errorf("E! %s response is unexpected status code : %d.", h.URL, res.StatusCode)
+	if !h.isExpStatusCode(resp.StatusCode) {
+		return fmt.Errorf("E! %s response is unexpected status code : %d.", h.URL, resp.StatusCode)
 	}
 
 	return nil
 }
 
 func (h *Http) isExpStatusCode(resStatusCode int) bool {
-	if h.expStatusCode == nil {
-		h.expStatusCode = make(map[int]bool)
+	if h.SuccessStatusCode == nil {
+		h.SuccessStatusCode = make(map[int]bool)
 
-		for _, expectedStatusCode := range h.ExpStatusCodes {
-			h.expStatusCode[expectedStatusCode] = true
+		for _, expectedStatusCode := range h.SuccessStatusCodes {
+			h.SuccessStatusCode[expectedStatusCode] = true
 		}
 	}
 
-	if h.expStatusCode[resStatusCode] {
+	if h.SuccessStatusCode[resStatusCode] {
 		return true
 	}
 
@@ -189,8 +177,7 @@ func makeReqBody(serializer serializers.Serializer, reqBodyBuf []byte, mCount in
 func init() {
 	outputs.Add("http", func() telegraf.Output {
 		return &Http{
-			ResHeaderTimeout: DEFAULT_RESPONSE_HEADER_TIMEOUT,
-			DialTimeOut:      DEFAULT_DIAL_TIME_OUT,
+			Timeout: DEFAULT_TIME_OUT,
 		}
 	})
 }
