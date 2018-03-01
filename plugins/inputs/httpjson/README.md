@@ -2,6 +2,8 @@
 
 The httpjson plugin collects data from HTTP URLs which respond with JSON.  It flattens the JSON and finds all numeric values, treating them as floats.
 
+Deprecated (1.6): use the [http](../http) input.
+
 ### Configuration:
 
 ```toml
@@ -32,6 +34,13 @@ The httpjson plugin collects data from HTTP URLs which respond with JSON.  It fl
   #   "my_tag_2"
   # ]
 
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
+
   ## HTTP Request Parameters (all values must be strings).  For "GET" requests, data
   ## will be included in the query.  For "POST" requests, data will be included
   ## in the request body as "x-www-form-urlencoded".
@@ -43,13 +52,6 @@ The httpjson plugin collects data from HTTP URLs which respond with JSON.  It fl
   # [inputs.httpjson.headers]
   #   X-Auth-Token = "my-xauth-token"
   #   apiVersion = "v1"
-
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
-  # insecure_skip_verify = false
 ```
 
 ### Measurements & Fields:

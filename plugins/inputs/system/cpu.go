@@ -11,17 +11,19 @@ import (
 
 type CPUStats struct {
 	ps        PS
-	lastStats []cpu.TimesStat
+	lastStats map[string]cpu.TimesStat
 
 	PerCPU         bool `toml:"percpu"`
 	TotalCPU       bool `toml:"totalcpu"`
 	CollectCPUTime bool `toml:"collect_cpu_time"`
+	ReportActive   bool `toml:"report_active"`
 }
 
 func NewCPUStats(ps PS) *CPUStats {
 	return &CPUStats{
 		ps:             ps,
 		CollectCPUTime: true,
+		ReportActive:   true,
 	}
 }
 
@@ -36,6 +38,8 @@ var sampleConfig = `
   totalcpu = true
   ## If true, collect raw CPU time metrics.
   collect_cpu_time = false
+  ## If true, compute and report the sum of all non-idle CPU states.
+  report_active = false
 `
 
 func (_ *CPUStats) SampleConfig() string {
@@ -49,12 +53,13 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 	}
 	now := time.Now()
 
-	for i, cts := range times {
+	for _, cts := range times {
 		tags := map[string]string{
 			"cpu": cts.CPU,
 		}
 
 		total := totalCpuTime(cts)
+		active := activeCpuTime(cts)
 
 		if s.CollectCPUTime {
 			// Add cpu time metrics
@@ -70,6 +75,9 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 				"time_guest":      cts.Guest,
 				"time_guest_nice": cts.GuestNice,
 			}
+			if s.ReportActive {
+				fieldsC["time_active"] = activeCpuTime(cts)
+			}
 			acc.AddCounter("cpu", fieldsC, tags, now)
 		}
 
@@ -78,18 +86,24 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 			// If it's the 1st gather, can't get CPU Usage stats yet
 			continue
 		}
-		lastCts := s.lastStats[i]
+
+		lastCts, ok := s.lastStats[cts.CPU]
+		if !ok {
+			continue
+		}
 		lastTotal := totalCpuTime(lastCts)
+		lastActive := activeCpuTime(lastCts)
 		totalDelta := total - lastTotal
 
 		if totalDelta < 0 {
-			s.lastStats = times
-			return fmt.Errorf("Error: current total CPU time is less than previous total CPU time")
+			err = fmt.Errorf("Error: current total CPU time is less than previous total CPU time")
+			break
 		}
 
 		if totalDelta == 0 {
 			continue
 		}
+
 		fieldsG := map[string]interface{}{
 			"usage_user":       100 * (cts.User - lastCts.User - (cts.Guest - lastCts.Guest)) / totalDelta,
 			"usage_system":     100 * (cts.System - lastCts.System) / totalDelta,
@@ -102,18 +116,29 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 			"usage_guest":      100 * (cts.Guest - lastCts.Guest) / totalDelta,
 			"usage_guest_nice": 100 * (cts.GuestNice - lastCts.GuestNice) / totalDelta,
 		}
+		if s.ReportActive {
+			fieldsG["usage_active"] = 100 * (active - lastActive) / totalDelta
+		}
 		acc.AddGauge("cpu", fieldsG, tags, now)
 	}
 
-	s.lastStats = times
+	s.lastStats = make(map[string]cpu.TimesStat)
+	for _, cts := range times {
+		s.lastStats[cts.CPU] = cts
+	}
 
-	return nil
+	return err
 }
 
 func totalCpuTime(t cpu.TimesStat) float64 {
 	total := t.User + t.System + t.Nice + t.Iowait + t.Irq + t.Softirq + t.Steal +
 		t.Idle
 	return total
+}
+
+func activeCpuTime(t cpu.TimesStat) float64 {
+	active := totalCpuTime(t) - t.Idle
+	return active
 }
 
 func init() {

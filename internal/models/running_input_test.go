@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMakeMetricNoFields(t *testing.T) {
@@ -330,6 +331,129 @@ func TestMakeMetricNameSuffix(t *testing.T) {
 		fmt.Sprintf("RITest_foobar value=101i %d\n", now.UnixNano()),
 		m.String(),
 	)
+}
+
+func TestMakeMetric_TrailingSlash(t *testing.T) {
+	now := time.Now()
+
+	tests := []struct {
+		name                string
+		measurement         string
+		fields              map[string]interface{}
+		tags                map[string]string
+		expectedNil         bool
+		expectedMeasurement string
+		expectedFields      map[string]interface{}
+		expectedTags        map[string]string
+	}{
+		{
+			name:        "Measurement cannot have trailing slash",
+			measurement: `cpu\`,
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+			tags:        map[string]string{},
+			expectedNil: true,
+		},
+		{
+			name:        "Field key with trailing slash dropped",
+			measurement: `cpu`,
+			fields: map[string]interface{}{
+				"value": int64(42),
+				`bad\`:  `xyzzy`,
+			},
+			tags:                map[string]string{},
+			expectedMeasurement: `cpu`,
+			expectedFields: map[string]interface{}{
+				"value": int64(42),
+			},
+			expectedTags: map[string]string{},
+		},
+		{
+			name:        "Field value with trailing slash okay",
+			measurement: `cpu`,
+			fields: map[string]interface{}{
+				"value": int64(42),
+				"ok":    `xyzzy\`,
+			},
+			tags:                map[string]string{},
+			expectedMeasurement: `cpu`,
+			expectedFields: map[string]interface{}{
+				"value": int64(42),
+				"ok":    `xyzzy\`,
+			},
+			expectedTags: map[string]string{},
+		},
+		{
+			name:        "Must have one field after dropped",
+			measurement: `cpu`,
+			fields: map[string]interface{}{
+				"bad": math.NaN(),
+			},
+			tags:        map[string]string{},
+			expectedNil: true,
+		},
+		{
+			name:        "Tag key with trailing slash dropped",
+			measurement: `cpu`,
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+			tags: map[string]string{
+				`host\`: "localhost",
+				"a":     "x",
+			},
+			expectedMeasurement: `cpu`,
+			expectedFields: map[string]interface{}{
+				"value": int64(42),
+			},
+			expectedTags: map[string]string{
+				"a": "x",
+			},
+		},
+		{
+			name:        "Tag value with trailing slash dropped",
+			measurement: `cpu`,
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+			tags: map[string]string{
+				`host`: `localhost\`,
+				"a":    "x",
+			},
+			expectedMeasurement: `cpu`,
+			expectedFields: map[string]interface{}{
+				"value": int64(42),
+			},
+			expectedTags: map[string]string{
+				"a": "x",
+			},
+		},
+	}
+
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Name: "TestRunningInput",
+	})
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m := ri.MakeMetric(
+				tc.measurement,
+				tc.fields,
+				tc.tags,
+				telegraf.Untyped,
+				now)
+
+			if tc.expectedNil {
+				require.Nil(t, m)
+			} else {
+				require.NotNil(t, m)
+				require.Equal(t, tc.expectedMeasurement, m.Name())
+				require.Equal(t, tc.expectedFields, m.Fields())
+				require.Equal(t, tc.expectedTags, m.Tags())
+			}
+		})
+	}
 }
 
 type testInput struct{}

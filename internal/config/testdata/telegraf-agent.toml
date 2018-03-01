@@ -143,18 +143,30 @@
 [[inputs.diskio]]
   # no configuration
 
-# read metrics from a Kafka topic
+# read metrics from a Kafka 0.9+ topic
 [[inputs.kafka_consumer]]
-  # topic(s) to consume
+  ## kafka brokers
+  brokers = ["localhost:9092"]
+  ## topic(s) to consume
+  topics = ["telegraf"]
+  ## the name of the consumer group
+  consumer_group = "telegraf_metrics_consumers"
+  ## Offset (must be either "oldest" or "newest")
+  offset = "oldest"
+
+# read metrics from a Kafka legacy topic
+[[inputs.kafka_consumer_legacy]]
+  ## topic(s) to consume
   topics = ["telegraf"]
   # an array of Zookeeper connection strings
   zookeeper_peers = ["localhost:2181"]
-  # the name of the consumer group
+  ## the name of the consumer group
   consumer_group = "telegraf_metrics_consumers"
   # Maximum number of points to buffer between collection intervals
   point_buffer = 100000
-  # Offset (must be either "oldest" or "newest")
+  ## Offset (must be either "oldest" or "newest")
   offset = "oldest"
+
 
 # Read metrics from a LeoFS Server via SNMP
 [[inputs.leofs]]

@@ -16,7 +16,7 @@ func Benchmark_ParseLine_CommonLogFormat(b *testing.B) {
 	p := &Parser{
 		Patterns: []string{"%{COMMON_LOG_FORMAT}"},
 	}
-	p.Compile()
+	_ = p.Compile()
 
 	var m telegraf.Metric
 	for n := 0; n < b.N; n++ {
@@ -29,7 +29,7 @@ func Benchmark_ParseLine_CombinedLogFormat(b *testing.B) {
 	p := &Parser{
 		Patterns: []string{"%{COMBINED_LOG_FORMAT}"},
 	}
-	p.Compile()
+	_ = p.Compile()
 
 	var m telegraf.Metric
 	for n := 0; n < b.N; n++ {
@@ -48,7 +48,7 @@ func Benchmark_ParseLine_CustomPattern(b *testing.B) {
 			TEST_LOG_A %{NUMBER:myfloat:float} %{RESPONSE_CODE} %{IPORHOST:clientip} %{RESPONSE_TIME}
 		`,
 	}
-	p.Compile()
+	_ = p.Compile()
 
 	var m telegraf.Metric
 	for n := 0; n < b.N; n++ {
@@ -385,6 +385,77 @@ func TestParseEpoch(t *testing.T) {
 	assert.Equal(t, time.Unix(1466004605, 0), metricA.Time())
 }
 
+func TestParseEpochDecimal(t *testing.T) {
+	var tests = []struct {
+		name    string
+		line    string
+		noMatch bool
+		err     error
+		tags    map[string]string
+		fields  map[string]interface{}
+		time    time.Time
+	}{
+		{
+			name: "ns precision",
+			line: "1466004605.359052000 value=42",
+			tags: map[string]string{},
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+			time: time.Unix(0, 1466004605359052000),
+		},
+		{
+			name: "ms precision",
+			line: "1466004605.359 value=42",
+			tags: map[string]string{},
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+			time: time.Unix(0, 1466004605359000000),
+		},
+		{
+			name: "second precision",
+			line: "1466004605 value=42",
+			tags: map[string]string{},
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+			time: time.Unix(0, 1466004605000000000),
+		},
+		{
+			name: "sub ns precision",
+			line: "1466004605.123456789123 value=42",
+			tags: map[string]string{},
+			fields: map[string]interface{}{
+				"value": int64(42),
+			},
+			time: time.Unix(0, 1466004605123456789),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := &Parser{
+				Patterns: []string{"%{NUMBER:ts:ts-epoch} value=%{NUMBER:value:int}"},
+			}
+			assert.NoError(t, parser.Compile())
+			m, err := parser.ParseLine(tt.line)
+
+			if tt.noMatch {
+				require.Nil(t, m)
+				require.Nil(t, err)
+				return
+			}
+
+			require.Equal(t, tt.err, err)
+
+			require.NotNil(t, m)
+			require.Equal(t, tt.tags, m.Tags())
+			require.Equal(t, tt.fields, m.Fields())
+			require.Equal(t, tt.time, m.Time())
+		})
+	}
+}
+
 func TestParseEpochErrors(t *testing.T) {
 	p := &Parser{
 		Patterns: []string{"%{MYAPP}"},
@@ -706,4 +777,184 @@ func TestShortPatternRegression(t *testing.T) {
 			"value": int64(42),
 		},
 		metric.Fields())
+}
+
+func TestTimezoneEmptyCompileFileAndParse(t *testing.T) {
+	p := &Parser{
+		Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
+		CustomPatternFiles: []string{"./testdata/test-patterns"},
+		Timezone:           "",
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"clientip":      "192.168.1.1",
+			"myfloat":       float64(1.25),
+			"response_time": int64(5432),
+			"myint":         int64(101),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
+	assert.Equal(t, int64(1465040505000000000), metricA.UnixNano())
+
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	require.NotNil(t, metricB)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"myfloat":    1.25,
+			"mystring":   "mystring",
+			"nomodifier": "nomodifier",
+		},
+		metricB.Fields())
+	assert.Equal(t, map[string]string{}, metricB.Tags())
+	assert.Equal(t, int64(1465044105000000000), metricB.UnixNano())
+}
+
+func TestTimezoneMalformedCompileFileAndParse(t *testing.T) {
+	p := &Parser{
+		Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
+		CustomPatternFiles: []string{"./testdata/test-patterns"},
+		Timezone:           "Something/Weird",
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"clientip":      "192.168.1.1",
+			"myfloat":       float64(1.25),
+			"response_time": int64(5432),
+			"myint":         int64(101),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
+	assert.Equal(t, int64(1465040505000000000), metricA.UnixNano())
+
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	require.NotNil(t, metricB)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"myfloat":    1.25,
+			"mystring":   "mystring",
+			"nomodifier": "nomodifier",
+		},
+		metricB.Fields())
+	assert.Equal(t, map[string]string{}, metricB.Tags())
+	assert.Equal(t, int64(1465044105000000000), metricB.UnixNano())
+}
+
+func TestTimezoneEuropeCompileFileAndParse(t *testing.T) {
+	p := &Parser{
+		Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
+		CustomPatternFiles: []string{"./testdata/test-patterns"},
+		Timezone:           "Europe/Berlin",
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"clientip":      "192.168.1.1",
+			"myfloat":       float64(1.25),
+			"response_time": int64(5432),
+			"myint":         int64(101),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
+	assert.Equal(t, int64(1465040505000000000), metricA.UnixNano())
+
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	require.NotNil(t, metricB)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"myfloat":    1.25,
+			"mystring":   "mystring",
+			"nomodifier": "nomodifier",
+		},
+		metricB.Fields())
+	assert.Equal(t, map[string]string{}, metricB.Tags())
+	assert.Equal(t, int64(1465036905000000000), metricB.UnixNano())
+}
+
+func TestTimezoneAmericasCompileFileAndParse(t *testing.T) {
+	p := &Parser{
+		Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
+		CustomPatternFiles: []string{"./testdata/test-patterns"},
+		Timezone:           "Canada/Eastern",
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"clientip":      "192.168.1.1",
+			"myfloat":       float64(1.25),
+			"response_time": int64(5432),
+			"myint":         int64(101),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
+	assert.Equal(t, int64(1465040505000000000), metricA.UnixNano())
+
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	require.NotNil(t, metricB)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"myfloat":    1.25,
+			"mystring":   "mystring",
+			"nomodifier": "nomodifier",
+		},
+		metricB.Fields())
+	assert.Equal(t, map[string]string{}, metricB.Tags())
+	assert.Equal(t, int64(1465058505000000000), metricB.UnixNano())
+}
+
+func TestTimezoneLocalCompileFileAndParse(t *testing.T) {
+	p := &Parser{
+		Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
+		CustomPatternFiles: []string{"./testdata/test-patterns"},
+		Timezone:           "Local",
+	}
+	assert.NoError(t, p.Compile())
+
+	metricA, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
+	require.NotNil(t, metricA)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"clientip":      "192.168.1.1",
+			"myfloat":       float64(1.25),
+			"response_time": int64(5432),
+			"myint":         int64(101),
+		},
+		metricA.Fields())
+	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
+	assert.Equal(t, int64(1465040505000000000), metricA.UnixNano())
+
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	require.NotNil(t, metricB)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		map[string]interface{}{
+			"myfloat":    1.25,
+			"mystring":   "mystring",
+			"nomodifier": "nomodifier",
+		},
+		metricB.Fields())
+	assert.Equal(t, map[string]string{}, metricB.Tags())
+	assert.Equal(t, time.Date(2016, time.June, 4, 12, 41, 45, 0, time.Local).UnixNano(), metricB.UnixNano())
 }

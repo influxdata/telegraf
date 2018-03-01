@@ -14,6 +14,11 @@ it requires access to execute `ps`.
   # no configuration
 ```
 
+Another possible configuration is to define an alternative path for resolving the /proc location.
+Using the environment variable `HOST_PROC` the plugin will retrieve process information from the specified location.
+
+`docker run -v /proc:/rootfs/proc:ro -e HOST_PROC=/rootfs/proc`
+
 ### Measurements & Fields:
 
 - processes
@@ -25,7 +30,7 @@ it requires access to execute `ps`.
     - zombie
     - dead
     - wait (freebsd only)
-    - idle (bsd only)
+    - idle (bsd and Linux 4+ only)
     - paging (linux only)
     - total_threads (linux only)
 
@@ -42,7 +47,7 @@ Linux  FreeBSD  Darwin  meaning
   Z       Z       Z     zombie
   X      none    none   dead
   T       T       T     stopped
- none     I       I     idle (sleeping for longer than about 20 seconds)
+  I       I       I     idle (sleeping for longer than about 20 seconds)
   D      D,L      U     blocked (waiting in uninterruptible sleep, or locked)
   W       W      none   paging (linux kernel < 2.6 only), wait (freebsd)
 ```

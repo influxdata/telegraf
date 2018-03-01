@@ -12,16 +12,39 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Nginx struct {
+	// List of status URLs
 	Urls []string
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to client cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
+	// HTTP client
+	client *http.Client
+	// Response timeout
+	ResponseTimeout internal.Duration
 }
 
 var sampleConfig = `
-  ## An array of Nginx stub_status URI to gather stats.
-  urls = ["http://localhost/status"]
+  # An array of Nginx stub_status URI to gather stats.
+  urls = ["http://localhost/server_status"]
+
+  # TLS/SSL configuration
+  ssl_ca = "/etc/telegraf/ca.pem"
+  ssl_cert = "/etc/telegraf/cert.cer"
+  ssl_key = "/etc/telegraf/key.key"
+  insecure_skip_verify = false
+
+  # HTTP response timeout (default: 5s)
+  response_timeout = "5s"
 `
 
 func (n *Nginx) SampleConfig() string {
@@ -35,10 +58,21 @@ func (n *Nginx) Description() string {
 func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
+	// Create an HTTP client that is re-used for each
+	// collection interval
+	if n.client == nil {
+		client, err := n.createHttpClient()
+		if err != nil {
+			return err
+		}
+		n.client = client
+	}
+
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
 			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+			continue
 		}
 
 		wg.Add(1)
@@ -52,17 +86,29 @@ func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-var tr = &http.Transport{
-	ResponseHeaderTimeout: time.Duration(3 * time.Second),
-}
+func (n *Nginx) createHttpClient() (*http.Client, error) {
+	tlsCfg, err := internal.GetTLSConfig(
+		n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
+	if err != nil {
+		return nil, err
+	}
 
-var client = &http.Client{
-	Transport: tr,
-	Timeout:   time.Duration(4 * time.Second),
+	if n.ResponseTimeout.Duration < time.Second {
+		n.ResponseTimeout.Duration = time.Second * 5
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: n.ResponseTimeout.Duration,
+	}
+
+	return client, nil
 }
 
 func (n *Nginx) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
-	resp, err := client.Get(addr.String())
+	resp, err := n.client.Get(addr.String())
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", addr.String(), err)
 	}

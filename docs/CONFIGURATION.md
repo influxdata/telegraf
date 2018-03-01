@@ -24,11 +24,17 @@ Environment variables can be used anywhere in the config file, simply prepend
 them with $. For strings the variable must be within quotes (ie, "$STR_VAR"),
 for numbers and booleans they should be plain (ie, $INT_VAR, $BOOL_VAR)
 
+When using the `.deb` or `.rpm` packages, you can define environment variables
+in the `/etc/default/telegraf` file.
+
 ## Configuration file locations
 
 The location of the configuration file can be set via the `--config` command
-line flag. Telegraf will also pick up all files matching the pattern `*.conf` if
-the `-config-directory` command line flag is used.
+line flag.
+
+When the `--config-directory` command line flag is used files ending with
+`.conf` in the specified directory will also be included in the Telegraf
+configuration.
 
 On most systems, the default locations are `/etc/telegraf/telegraf.conf` for
 the main configuration file and `/etc/telegraf/telegraf.d` for the directory of
@@ -66,10 +72,13 @@ interval. Maximum flush_interval will be flush_interval + flush_jitter
 This is primarily to avoid
 large write spikes for users running a large number of telegraf instances.
 ie, a jitter of 5s and flush_interval 10s means flushes will happen every 10-15s.
-* **precision**: By default, precision will be set to the same timestamp order
-as the collection interval, with the maximum being 1s. Precision will NOT
-be used for service inputs, such as logparser and statsd. Valid values are
-"ns", "us" (or "µs"), "ms", "s".
+* **precision**:
+   By default or when set to "0s", precision will be set to the same
+   timestamp order as the collection interval, with the maximum being 1s.
+   Precision will NOT be used for service inputs. It is up to each individual
+   service input to set the timestamp at the appropriate precision.
+   Valid time units are "ns", "us" (or "µs"), "ms", "s".
+
 * **logfile**: Specify the log file name. The empty string means to log to stderr.
 * **debug**: Run telegraf in debug mode.
 * **quiet**: Run telegraf in quiet mode (error messages only).
@@ -89,9 +98,13 @@ you can configure that here.
 * **name_suffix**: Specifies a suffix to attach to the measurement name.
 * **tags**: A map of tags to apply to a specific input's measurements.
 
+The [measurement filtering](#measurement-filtering) parameters can be used to
+limit what metrics are emitted from the input plugin.
+
 ## Output Configuration
 
-There are no generic configuration options available for all outputs.
+The [measurement filtering](#measurement-filtering) parameters can be used to
+limit what metrics are emitted from the output plugin.
 
 ## Aggregator Configuration
 
@@ -112,12 +125,20 @@ aggregator and will not get sent to the output plugins.
 * **name_suffix**: Specifies a suffix to attach to the measurement name.
 * **tags**: A map of tags to apply to a specific input's measurements.
 
+The [measurement filtering](#measurement-filtering) parameters can be used to
+limit what metrics are handled by the aggregator.  Excluded metrics are passed
+downstream to the next aggregator.
+
 ## Processor Configuration
 
 The following config parameters are available for all processors:
 
 * **order**: This is the order in which the processor(s) get executed. If this
 is not specified then processor execution order will be random.
+
+The [measurement filtering](#measurement-filtering) parameters can be used
+to limit what metrics are handled by the processor.  Excluded metrics are
+passed downstream to the next processor.
 
 #### Measurement Filtering
 
@@ -134,8 +155,9 @@ is tested on points after they have passed the `namepass` test.
 An array of glob pattern strings.  Only fields whose field key matches a
 pattern in this list are emitted.  Not available for outputs.
 * **fielddrop**:
-The inverse of `fieldpass`. Fields with a field key matching one of the
-patterns will be discarded from the point.  Not available for outputs.
+The inverse of `fieldpass`.  Fields with a field key matching one of the
+patterns will be discarded from the point.  This is tested on points after
+they have passed the `fieldpass` test.  Not available for outputs.
 * **tagpass**:
 A table mapping tag keys to arrays of glob pattern strings.  Only points
 that contain a tag key in the table and a tag value matching one of its
@@ -177,7 +199,6 @@ fields which begin with `time_`.
 [[outputs.influxdb]]
   url = "http://192.168.59.103:8086" # required.
   database = "telegraf" # required.
-  precision = "s"
 
 # INPUTS
 [[inputs.cpu]]
@@ -316,21 +337,18 @@ to avoid measurement collisions:
 [[outputs.influxdb]]
   urls = [ "http://localhost:8086" ]
   database = "telegraf"
-  precision = "s"
   # Drop all measurements that start with "aerospike"
   namedrop = ["aerospike*"]
 
 [[outputs.influxdb]]
   urls = [ "http://localhost:8086" ]
   database = "telegraf-aerospike-data"
-  precision = "s"
   # Only accept aerospike data:
   namepass = ["aerospike*"]
 
 [[outputs.influxdb]]
   urls = [ "http://localhost:8086" ]
   database = "telegraf-cpu0-data"
-  precision = "s"
   # Only store measurements where the tag "cpu" matches the value "cpu0"
   [outputs.influxdb.tagpass]
     cpu = ["cpu0"]
@@ -370,4 +388,16 @@ to the system load metrics due to the `namepass` parameter.
 
 [[outputs.file]]
   files = ["stdout"]
+```
+
+#### Processor Configuration Examples:
+
+Print only the metrics with `cpu` as the measurement name, all metrics are
+passed to the output:
+```toml
+[[processors.printer]]
+  namepass = "cpu"
+
+[[outputs.file]]
+  files = ["/tmp/metrics.out"]
 ```

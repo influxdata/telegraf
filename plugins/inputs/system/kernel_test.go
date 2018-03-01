@@ -14,10 +14,13 @@ import (
 
 func TestFullProcFile(t *testing.T) {
 	tmpfile := makeFakeStatFile([]byte(statFile_Full))
+	tmpfile2 := makeFakeStatFile([]byte(entropyStatFile_Full))
 	defer os.Remove(tmpfile)
+	defer os.Remove(tmpfile2)
 
 	k := Kernel{
-		statFile: tmpfile,
+		statFile:        tmpfile,
+		entropyStatFile: tmpfile2,
 	}
 
 	acc := testutil.Accumulator{}
@@ -31,16 +34,20 @@ func TestFullProcFile(t *testing.T) {
 		"disk_pages_out":   int64(1808),
 		"interrupts":       int64(1472736),
 		"processes_forked": int64(10673),
+		"entropy_avail":    int64(1024),
 	}
 	acc.AssertContainsFields(t, "kernel", fields)
 }
 
 func TestPartialProcFile(t *testing.T) {
 	tmpfile := makeFakeStatFile([]byte(statFile_Partial))
+	tmpfile2 := makeFakeStatFile([]byte(entropyStatFile_Partial))
 	defer os.Remove(tmpfile)
+	defer os.Remove(tmpfile2)
 
 	k := Kernel{
-		statFile: tmpfile,
+		statFile:        tmpfile,
+		entropyStatFile: tmpfile2,
 	}
 
 	acc := testutil.Accumulator{}
@@ -53,16 +60,20 @@ func TestPartialProcFile(t *testing.T) {
 		"disk_pages_in":    int64(5741),
 		"disk_pages_out":   int64(1808),
 		"interrupts":       int64(1472736),
+		"entropy_avail":    int64(1024),
 	}
 	acc.AssertContainsFields(t, "kernel", fields)
 }
 
 func TestInvalidProcFile1(t *testing.T) {
 	tmpfile := makeFakeStatFile([]byte(statFile_Invalid))
+	tmpfile2 := makeFakeStatFile([]byte(entropyStatFile_Invalid))
 	defer os.Remove(tmpfile)
+	defer os.Remove(tmpfile2)
 
 	k := Kernel{
-		statFile: tmpfile,
+		statFile:        tmpfile,
+		entropyStatFile: tmpfile2,
 	}
 
 	acc := testutil.Accumulator{}
@@ -108,6 +119,7 @@ procs_blocked 0
 softirq 1031662 0 649485 20946 111071 11620 0 1 0 994 237545
 page 5741 1808
 swap 1 0
+entropy_avail 1024
 `
 
 const statFile_Partial = `cpu  6796 252 5655 10444977 175 0 101 0 0 0
@@ -133,6 +145,7 @@ procs_blocked 0
 softirq 1031662 0 649485 20946 111071 11620 0 1 0 994 237545
 page 5741 1808
 swap 1 0
+entropy_avail 1024
 `
 
 // missing second page measurement
@@ -145,7 +158,14 @@ procs_running 2
 page 5741
 procs_blocked 0
 softirq 1031662 0 649485 20946 111071 11620 0 1 0 994 237545
+entropy_avail 1024 2048
 `
+
+const entropyStatFile_Full = `1024`
+
+const entropyStatFile_Partial = `1024`
+
+const entropyStatFile_Invalid = ``
 
 func makeFakeStatFile(content []byte) string {
 	tmpfile, err := ioutil.TempFile("", "kerneltest")

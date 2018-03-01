@@ -1,7 +1,5 @@
 build
-tivan
-.vagrant
 /telegraf
-.idea
+/telegraf.gz
 *~
 *#

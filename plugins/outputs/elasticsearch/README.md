@@ -172,7 +172,20 @@ This plugin will format the events in the following way:
   # %m - month (01..12)
   # %d - day of month (e.g., 01)
   # %H - hour (00..23)
+  # %V - week of the year (ISO week) (01..53)
+  ## Additionally, you can specify a tag name using the notation {{tag_name}}
+  ## which will be used as part of the index name. If the tag does not exist,
+  ## the default tag value will be used.
+  # index_name = "telegraf-{{host}}-%Y.%m.%d"
+  # default_tag_value = "none"
   index_name = "telegraf-%Y.%m.%d" # required.
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 
   ## Template Config
   ## Set to true if you want telegraf to manage its index template.
@@ -194,7 +207,9 @@ This plugin will format the events in the following way:
   %m - month (01..12)
   %d - day of month (e.g., 01)
   %H - hour (00..23)
+  %V - week of the year (ISO week) (01..53)
 ```
+Additionally, you can specify dynamic index names by using tags with the notation ```{{tag_name}}```. This will store the metrics with different tag values in different indices. If the tag does not exist in a particular metric, the `default_tag_value` will be used instead.
 
 ### Optional parameters:
 
@@ -213,6 +228,6 @@ Integer values collected that are bigger than 2^63 and smaller than 1e21 (or in 
 
 ```{"error":{"root_cause":[{"type":"mapper_parsing_exception","reason":"failed to parse"}],"type":"mapper_parsing_exception","reason":"failed to parse","caused_by":{"type":"illegal_state_exception","reason":"No matching token for number_type [BIG_INTEGER]"}},"status":400}```
 
-The correct field mapping will be created on the telegraf index as soon as a supported JSON value is received by Elasticsearch, and subsequent insertions will work because the field mapping will already exist. 
+The correct field mapping will be created on the telegraf index as soon as a supported JSON value is received by Elasticsearch, and subsequent insertions will work because the field mapping will already exist.
 
 This issue is caused by the way Elasticsearch tries to detect integer fields, and by how golang encodes numbers in JSON. There is no clear workaround for this at the moment.

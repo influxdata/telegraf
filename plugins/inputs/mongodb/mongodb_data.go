@@ -66,6 +66,13 @@ var DefaultClusterStats = map[string]string{
 	"jumbo_chunks": "JumboChunksCount",
 }
 
+var DefaultShardStats = map[string]string{
+	"total_in_use":     "TotalInUse",
+	"total_available":  "TotalAvailable",
+	"total_created":    "TotalCreated",
+	"total_refreshing": "TotalRefreshing",
+}
+
 var MmapStats = map[string]string{
 	"mapped_megabytes":     "Mapped",
 	"non-mapped_megabytes": "NonMapped",
@@ -75,6 +82,21 @@ var MmapStats = map[string]string{
 var WiredTigerStats = map[string]string{
 	"percent_cache_dirty": "CacheDirtyPercent",
 	"percent_cache_used":  "CacheUsedPercent",
+}
+
+var WiredTigerExtStats = map[string]string{
+	"wtcache_tracked_dirty_bytes":          "TrackedDirtyBytes",
+	"wtcache_current_bytes":                "CurrentCachedBytes",
+	"wtcache_max_bytes_configured":         "MaxBytesConfigured",
+	"wtcache_app_threads_page_read_count":  "AppThreadsPageReadCount",
+	"wtcache_app_threads_page_read_time":   "AppThreadsPageReadTime",
+	"wtcache_app_threads_page_write_count": "AppThreadsPageWriteCount",
+	"wtcache_bytes_written_from":           "BytesWrittenFrom",
+	"wtcache_bytes_read_into":              "BytesReadInto",
+	"wtcache_pages_evicted_by_app_thread":  "PagesEvictedByAppThread",
+	"wtcache_pages_queued_for_eviction":    "PagesQueuedForEviction",
+	"wtcache_server_evicting_pages":        "ServerEvictingPages",
+	"wtcache_worker_thread_evictingpages":  "WorkerThreadEvictingPages",
 }
 
 var DbDataStats = map[string]string{
@@ -112,6 +134,7 @@ func (d *MongodbData) AddDefaultStats() {
 		d.addStat(statLine, DefaultReplStats)
 	}
 	d.addStat(statLine, DefaultClusterStats)
+	d.addStat(statLine, DefaultShardStats)
 	if d.StatLine.StorageEngine == "mmapv1" {
 		d.addStat(statLine, MmapStats)
 	} else if d.StatLine.StorageEngine == "wiredTiger" {
@@ -121,13 +144,11 @@ func (d *MongodbData) AddDefaultStats() {
 			floatVal, _ := strconv.ParseFloat(percentVal, 64)
 			d.add(key, floatVal)
 		}
+		d.addStat(statLine, WiredTigerExtStats)
 	}
 }
 
-func (d *MongodbData) addStat(
-	statLine reflect.Value,
-	stats map[string]string,
-) {
+func (d *MongodbData) addStat(statLine reflect.Value, stats map[string]string) {
 	for key, value := range stats {
 		val := statLine.FieldByName(value).Interface()
 		d.add(key, val)
