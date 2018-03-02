@@ -42,6 +42,7 @@ const (
 	ENV_ROOT     = "PROC_ROOT"
 )
 
+// Wireless is used to store configuration values.
 type Wireless struct {
 	ProcNetWireless string `toml:"proc_net_wireless"`
 	DumpZeros       bool   `toml:"dump_zeros"`
@@ -56,14 +57,17 @@ var sampleConfig = `
   dump_zeros       = false
 `
 
+// Desciption returns information about the plugin.
 func (w *Wireless) Description() string {
 	return "Monitor wifi signal strength and quality"
 }
 
+// SampleConfig displays configuration instructions.
 func (w *Wireless) SampleConfig() string {
 	return sampleConfig
 }
 
+// Gather collects the wireless information.
 func (w *Wireless) Gather(acc telegraf.Accumulator) error {
 	// load paths, get from env if config values are empty
 	w.loadPaths()
