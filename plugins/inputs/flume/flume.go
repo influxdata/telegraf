@@ -3,21 +3,25 @@ package flume
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"sync"
-	"time"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"strings"
+	"sync"
+	"time"
 )
 
 //Flume config
 type Flume struct {
 	// Flume merics servers
 	Servers []string
+	// Measurement name
+	Name string
+	// List of selected metrics
+	Filters Filters
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
 	// Path to client cert file
@@ -32,6 +36,20 @@ type Flume struct {
 	ResponseTimeout internal.Duration
 }
 
+type Filters struct {
+	Source  []string `toml:"source"`
+	Channel []string `toml:"channel"`
+	Sink    []string `toml:"sink"`
+}
+
+type Metrics map[string]map[string]string
+
+const (
+	source  = "SOURCE"
+	channel = "CHANNEL"
+	sink    = "SINK"
+)
+
 func (f *Flume) Description() string {
 	return "Read metrics from one server"
 }
@@ -40,7 +58,9 @@ func (f *Flume) SampleConfig() string {
 	return `
   # specify servers via a url matching:
   #
-  servers = ["http://localhost:6666/metrics"]
+  servers = [
+	"http://localhost:6666/metrics"
+  ]
 
   # TLS/SSL configuration
   ssl_ca = "/etc/telegraf/ca.pem"
@@ -92,26 +112,73 @@ func (f *Flume) gatherURL(addr *url.URL, acc telegraf.Accumulator) error {
 		return fmt.Errorf("%s returned unmarshalable body %s", addr.String(), err)
 	}
 
-	for c, metricJSON := range metrics {
+	filtersMap := map[string][]string{
+		source:  f.Filters.Source,
+		channel: f.Filters.Channel,
+		sink:    f.Filters.Sink,
+	}
 
-		tags := map[string]string{"component": c, "server": addr.String()}
+	for keyName, metricJSON := range metrics {
+
+		// Measurement.
+		measurement := "flume"
+		if f.Name != "" {
+			measurement = measurement + "_" + f.Name
+		}
 
 		metric := map[string]interface{}{}
+		typeName := strings.SplitN(keyName, ".", 2)[0]
 
 		err := json.Unmarshal([]byte(metricJSON), &metric)
 		if err != nil {
 			return err
 		}
 
-		fields := map[string]interface{}{}
-		for m, value := range metric {
-			fields[m] = value
+		fields := make(map[string]interface{})
+		for key, value := range metric {
+			fields = filterFields(fields, filtersMap, typeName, key, value)
 		}
-		acc.AddFields("flume"+"_"+fields["Type"].(string), fields, tags)
+
+		keyNameArr := strings.SplitN(keyName, ".", 2)
+		tags := map[string]string{
+			"type":   keyNameArr[0],
+			"name":   keyNameArr[1],
+			"server": addr.String(),
+		}
+
+		acc.AddFields(measurement, fields, tags)
 
 	}
 
 	return nil
+}
+
+// Check if element in an array.
+func inArray(arr []string, str string) bool {
+	for _, elem := range arr {
+		if elem == str {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Filter metrics instead collecting all metrics as they come from flume.
+func filterFields(
+	fields map[string]interface{},
+	filters map[string][]string,
+	typeName string,
+	key string,
+	value interface{},
+) map[string]interface{} {
+	typeFiltersLen := len(filters[typeName])
+	isTypeFiltered := inArray(filters[typeName], key)
+	if (typeFiltersLen > 0 && isTypeFiltered) || typeFiltersLen == 0 {
+		fields[key] = value
+	}
+
+	return fields
 }
 
 func (f *Flume) Gather(acc telegraf.Accumulator) error {
