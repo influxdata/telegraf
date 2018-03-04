@@ -136,7 +136,7 @@ func (h *Http) write(reqBody []byte) error {
 		return err
 	}
 
-	return err
+	return nil
 }
 
 func (h *Http) isOk(resp *http.Response, err error) error {
