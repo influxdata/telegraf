@@ -22,7 +22,7 @@ var sampleConfig = `
   ## Content-Type is required http header in http plugin.
   ## so content-type of HTTP specification (plain/text, application/json, etc...) must be filled out.
   [outputs.http.headers]
-    "Content-Type" = "plain/text"
+    Content-Type = "plain/text"
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
