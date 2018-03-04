@@ -124,12 +124,11 @@ func (h *Http) write(reqBody []byte) error {
 	}
 
 	resp, err := h.client.Do(req)
+	defer resp.Body.Close()
 
 	if err := h.isOk(resp, err); err != nil {
 		return err
 	}
-
-	defer resp.Body.Close()
 
 	return err
 }
