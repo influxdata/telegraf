@@ -60,7 +60,7 @@ func (h *Http) SetSerializer(serializer serializers.Serializer) {
 func (h *Http) Connect() error {
 	h.client = http.Client{
 		Transport: &http.Transport{
-			Proxy:           http.ProxyFromEnvironment,
+			Proxy: http.ProxyFromEnvironment,
 		},
 		Timeout: time.Duration(h.Timeout) * time.Second,
 	}
