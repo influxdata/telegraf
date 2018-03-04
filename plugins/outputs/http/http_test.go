@@ -5,7 +5,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -81,7 +80,6 @@ func TestWriteAllInputMetric(t *testing.T) {
 	http := &Http{
 		URL:                server.URL,
 		HttpHeaders:        []string{"Content-Type:plain/text"},
-		SuccessStatusCodes: []int{200, 204},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -107,7 +105,6 @@ func TestHttpWriteWithUnexpected404StatusCode(t *testing.T) {
 	http := &Http{
 		URL:                server.URL,
 		HttpHeaders:        []string{"Content-Type:application/json"},
-		SuccessStatusCodes: []int{200},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -133,30 +130,6 @@ func TestHttpWriteWithExpected404StatusCode(t *testing.T) {
 	http := &Http{
 		URL:                server.URL,
 		HttpHeaders:        []string{"Content-Type:application/json"},
-		SuccessStatusCodes: []int{200, 404},
-	}
-
-	http.SetSerializer(&graphite.GraphiteSerializer{
-		Prefix:   "telegraf",
-		Template: "tags.measurement.field",
-	})
-
-	http.Connect()
-	err := http.Write(metrics)
-
-	assert.NoError(t, err)
-}
-
-func TestHttpWriteWithIncorrectServerPort(t *testing.T) {
-	now := time.Now()
-
-	m, _ := metric.New("cpu", cpuTags, cpuField, now)
-	metrics := []telegraf.Metric{m}
-
-	http := &Http{
-		URL:                "http://127.0.0.1:56879/incorrect/url",
-		HttpHeaders:        []string{"Content-Type:application/json"},
-		SuccessStatusCodes: []int{200},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -170,9 +143,32 @@ func TestHttpWriteWithIncorrectServerPort(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestMakeReqBody(t *testing.T) {
+func TestHttpWriteWithIncorrectServerPort(t *testing.T) {
+	now := time.Now()
+
+	m, _ := metric.New("cpu", cpuTags, cpuField, now)
+	metrics := []telegraf.Metric{m}
+
+	http := &Http{
+		URL:                "http://127.0.0.1:56879/incorrect/url",
+		HttpHeaders:        []string{"Content-Type:application/json"},
+	}
+
+	http.SetSerializer(&graphite.GraphiteSerializer{
+		Prefix:   "telegraf",
+		Template: "tags.measurement.field",
+	})
+
+	http.Connect()
+	err := http.Write(metrics)
+
+	assert.Error(t, err)
+}
+
+func TestMakeReqBody_IfSerializerIsJsonSerializerAndJsonContentType(t *testing.T) {
 	// given
-	m, _ := metric.New("cpu", cpuTags, cpuField, time.Now())
+	now := time.Now()
+	m, _ := metric.New("cpu", cpuTags, cpuField, now)
 
 	var reqBodyBuf []byte
 
@@ -181,36 +177,45 @@ func TestMakeReqBody(t *testing.T) {
 	reqBodyBuf = append(reqBodyBuf, serializedMetric...)
 
 	// when
-	reqBody, err := makeReqBody(&jsonSerializer, reqBodyBuf, 1)
+	reqBody, err := makeReqBody("application/json", reqBodyBuf, 1)
 
 	// then
+	assert.Equal(t, fmt.Sprintf("[{\"fields\":{\"usage_idle\":91.5},\"name\":\"cpu\",\"tags\":{\"cpu\":\"cpu0\",\"datacenter\":\"us-west-2\",\"host\":\"localhost\"},\"timestamp\":%d}\n]", now.Unix()), string(reqBody))
 	assert.NoError(t, err)
-	assert.NotEmpty(t, reqBody)
 }
 
-func TestMakeReqBody2(t *testing.T) {
+func TestMakeReqBody_IfContentTypeIsInvalid(t *testing.T) {
+	_, err := makeReqBody("plain/tex", nil, 1)
+
+	// then
+	assert.Equal(t, "E! HTTP plain/tex content-type is not supported!", err.Error())
+}
+
+func TestMakeReqBody_IfSerializerIsGraphiteSerializer(t *testing.T) {
 	// given
-	m, _ := metric.New("cpu", cpuTags, cpuField, time.Now())
+	now := time.Now()
+	m, _ := metric.New("cpu", cpuTags, cpuField, now)
 
 	var reqBodyBuf []byte
 
-	influxSerializer := influx.InfluxSerializer{}
-	serializedMetric, _ := influxSerializer.Serialize(m)
-	reqBodyBuf = append(reqBodyBuf, serializedMetric...)
+	graphiteSerializer := graphite.GraphiteSerializer{}
+	serializedMetric1, _ := graphiteSerializer.Serialize(m)
+	serializedMetric2, _ := graphiteSerializer.Serialize(m)
+	reqBodyBuf = append(reqBodyBuf, serializedMetric1...)
+	reqBodyBuf = append(reqBodyBuf, serializedMetric2...)
 
 	// when
-	reqBody, err := makeReqBody(&influxSerializer, reqBodyBuf, 1)
+	reqBody, err := makeReqBody("plain/text", reqBodyBuf, 1)
 
 	// then
+	assert.Equal(t, fmt.Sprintf("localhost.cpu0.us-west-2.cpu.usage_idle 91.5 %d\nlocalhost.cpu0.us-west-2.cpu.usage_idle 91.5 %d\n", now.Unix(), now.Unix()), string(reqBody))
 	assert.NoError(t, err)
-	assert.NotEmpty(t, reqBody)
 }
 
 func TestImplementedInterfaceFunction(t *testing.T) {
 	http := &Http{
-		URL:                "http://127.0.0.1:56879/incorrect/url",
-		HttpHeaders:        []string{"Content-Type:application/json"},
-		SuccessStatusCodes: []int{200},
+		URL:         "http://127.0.0.1:56879/incorrect/url",
+		HttpHeaders: []string{"Content-Type:application/json"},
 	}
 
 	assert.NotNil(t, http.SampleConfig())

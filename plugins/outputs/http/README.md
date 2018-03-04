@@ -17,10 +17,7 @@ Data collected from telegraf is sent in the Request Body.
   ## The value is written as a delimiter(:).
   ## Content-Type is required http header in http plugin.
   ## so content-type of HTTP specification (plain/text, application/json, etc...) must be filled out.
-  http_headers = [ "Content-Type:application/json" ]
-  ## With this HTTP status code, the http plugin checks that the HTTP request is completed normally.
-  ## As a result, any status code that is not a specified status code is considered to be an error condition and processed.
-  success_status_codes = [ 200, 201, 204 ]
+  http_headers = [ "Content-Type:plain/text" ]
   ## Configure dial timeout in seconds. Default : 3
   timeout = 3
 

@@ -6,7 +6,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"net/http"
 	"strings"
 	"time"
@@ -22,9 +21,6 @@ var sampleConfig = `
   ## Content-Type is required http header in http plugin.
   ## so content-type of HTTP specification (plain/text, application/json, etc...) must be filled out.
   http_headers = [ "Content-Type:application/json" ]
-  ## With this HTTP status code, the http plugin checks that the HTTP request is completed normally.
-  ## As a result, any status code that is not a specified status code is considered to be an error condition and processed.
-  success_status_codes = [ 200, 201, 204 ]
   ## Configure http.Client.Timeout in seconds. Default : 3
   timeout = 3
 
@@ -39,21 +35,22 @@ const (
 	POST = "POST"
 
 	DEFAULT_TIME_OUT = 3
+
+	CONTENT_TYPE     = "content-type"
+	APPLICATION_JSON = "application/json"
+	PLAIN_TEXT       = "plain/text"
 )
 
 type Http struct {
 	// http required option
-	URL                string   `toml:"url"`
-	HttpHeaders        []string `toml:"http_headers"`
-	SuccessStatusCodes []int    `toml:"success_status_codes"`
+	URL         string   `toml:"url"`
+	HttpHeaders []string `toml:"http_headers"`
 
 	// Option with http default value
 	Timeout int `toml:"timeout"`
 
 	client     http.Client
 	serializer serializers.Serializer
-	// SuccessStatusCode that stores option values received with expected_status_codes
-	SuccessStatusCode map[int]bool
 }
 
 func (h *Http) SetSerializer(serializer serializers.Serializer) {
@@ -100,7 +97,14 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 		mCount++
 	}
 
-	reqBody, err := makeReqBody(h.serializer, reqBodyBuf, mCount)
+	var contentType string
+	var err error
+
+	if contentType, err = getContentType(h.HttpHeaders); err != nil {
+		return err
+	}
+
+	reqBody, err := makeReqBody(contentType, reqBodyBuf, mCount)
 
 	if err != nil {
 		return fmt.Errorf("E! Error serialized metric is not assembled : %s", err.Error())
@@ -137,40 +141,42 @@ func (h *Http) isOk(resp *http.Response, err error) error {
 		return fmt.Errorf("E! %s request failed! %s.", h.URL, err.Error())
 	}
 
-	if !h.isExpStatusCode(resp.StatusCode) {
-		return fmt.Errorf("E! %s response is unexpected status code : %d.", h.URL, resp.StatusCode)
+	if resp.StatusCode < 200 || resp.StatusCode > 209 {
+		return fmt.Errorf("received bad status code, %d\n", resp.StatusCode)
 	}
 
 	return nil
 }
 
-func (h *Http) isExpStatusCode(resStatusCode int) bool {
-	if h.SuccessStatusCode == nil {
-		h.SuccessStatusCode = make(map[int]bool)
+func getContentType(httpHeaders []string) (string, error) {
+	var contentType string
 
-		for _, expectedStatusCode := range h.SuccessStatusCodes {
-			h.SuccessStatusCode[expectedStatusCode] = true
+	for _, httpHeader := range httpHeaders {
+		keyAndValue := strings.Split(httpHeader, ":")
+
+		if strings.ToLower(keyAndValue[0]) == CONTENT_TYPE {
+			contentType = strings.ToLower(keyAndValue[1])
+
+			return contentType, nil
 		}
 	}
 
-	if h.SuccessStatusCode[resStatusCode] {
-		return true
-	}
-
-	return false
+	return "", fmt.Errorf("E! httpHeader require content-type!")
 }
 
-// makeReqBody translates each serializer's converted metric into a request body.
-func makeReqBody(serializer serializers.Serializer, reqBodyBuf []byte, mCount int) ([]byte, error) {
-	switch serializer.(type) {
-	case *json.JsonSerializer:
+// makeReqBody translates each serializer's converted metric into a request body by HTTP content-type format.
+func makeReqBody(contentType string, reqBodyBuf []byte, mCount int) ([]byte, error) {
+	switch contentType {
+	case APPLICATION_JSON:
 		var arrayJsonObj []byte
 		arrayJsonObj = append(arrayJsonObj, []byte("[")...)
 		arrayJsonObj = append(arrayJsonObj, reqBodyBuf...)
 		arrayJsonObj = append(arrayJsonObj, []byte("]")...)
 		return bytes.Replace(arrayJsonObj, []byte("\n"), []byte(","), mCount-1), nil
-	default:
+	case PLAIN_TEXT:
 		return reqBodyBuf, nil
+	default:
+		return nil, fmt.Errorf("E! HTTP %s content-type is not supported!", contentType)
 	}
 }
 
