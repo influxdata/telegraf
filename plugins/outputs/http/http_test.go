@@ -78,8 +78,10 @@ func TestWriteAllInputMetric(t *testing.T) {
 	metrics := []telegraf.Metric{m1, m2}
 
 	http := &Http{
-		URL:         server.URL,
-		HttpHeaders: []string{"Content-Type:plain/text"},
+		URL: server.URL,
+		Headers: map[string]string{
+			"Content-Type": "plain/text",
+		},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -103,8 +105,10 @@ func TestHttpWriteWithUnexpected404StatusCode(t *testing.T) {
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:         server.URL,
-		HttpHeaders: []string{"Content-Type:application/json"},
+		URL: server.URL,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -128,8 +132,10 @@ func TestHttpWriteWithExpected404StatusCode(t *testing.T) {
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:         server.URL,
-		HttpHeaders: []string{"Content-Type:application/json"},
+		URL: server.URL,
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -150,8 +156,10 @@ func TestHttpWriteWithIncorrectServerPort(t *testing.T) {
 	metrics := []telegraf.Metric{m}
 
 	http := &Http{
-		URL:         "http://127.0.0.1:56879/incorrect/url",
-		HttpHeaders: []string{"Content-Type:application/json"},
+		URL: "http://127.0.0.1:56879/incorrect/url",
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 	}
 
 	http.SetSerializer(&graphite.GraphiteSerializer{
@@ -214,8 +222,10 @@ func TestMakeReqBody_IfSerializerIsGraphiteSerializer(t *testing.T) {
 
 func TestImplementedInterfaceFunction(t *testing.T) {
 	http := &Http{
-		URL:         "http://127.0.0.1:56879/incorrect/url",
-		HttpHeaders: []string{"Content-Type:application/json"},
+		URL: "http://127.0.0.1:56879/incorrect/url",
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+		},
 	}
 
 	assert.NotNil(t, http.SampleConfig())

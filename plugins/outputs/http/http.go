@@ -16,14 +16,13 @@ var sampleConfig = `
   ## Will be transmitted telegraf metrics to the HTTP Server using the below URL.
   ## Note that not support the HTTPS.
   url = "http://127.0.0.1:8080/metric"
+  ## Configure dial timeout in seconds. Default : 3
+  timeout = 3
   ## http_headers option can add a custom header to the request.
-  ## The value is written as a delimiter(:).
   ## Content-Type is required http header in http plugin.
   ## so content-type of HTTP specification (plain/text, application/json, etc...) must be filled out.
-  http_headers = [ "Content-Type:application/json" ]
-  ## Configure http.Client.Timeout in seconds. Default : 3
-  timeout = 3
-
+  [outputs.http.headers]
+    "Content-Type" = "plain/text"
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
@@ -43,8 +42,8 @@ const (
 
 type Http struct {
 	// http required option
-	URL         string   `toml:"url"`
-	HttpHeaders []string `toml:"http_headers"`
+	URL     string `toml:"url"`
+	Headers map[string]string
 
 	// Option with http default value
 	Timeout int `toml:"timeout"`
@@ -100,7 +99,7 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 	var contentType string
 	var err error
 
-	if contentType, err = getContentType(h.HttpHeaders); err != nil {
+	if contentType, err = getContentType(h.Headers); err != nil {
 		return err
 	}
 
@@ -120,9 +119,8 @@ func (h *Http) Write(metrics []telegraf.Metric) error {
 func (h *Http) write(reqBody []byte) error {
 	req, err := http.NewRequest(POST, h.URL, bytes.NewBuffer(reqBody))
 
-	for _, httpHeader := range h.HttpHeaders {
-		keyAndValue := strings.Split(httpHeader, ":")
-		req.Header.Set(keyAndValue[0], keyAndValue[1])
+	for k, v := range h.Headers {
+		req.Header.Set(k, v)
 	}
 
 	resp, err := h.client.Do(req)
@@ -148,14 +146,12 @@ func (h *Http) isOk(resp *http.Response, err error) error {
 	return nil
 }
 
-func getContentType(httpHeaders []string) (string, error) {
+func getContentType(headers map[string]string) (string, error) {
 	var contentType string
 
-	for _, httpHeader := range httpHeaders {
-		keyAndValue := strings.Split(httpHeader, ":")
-
-		if strings.ToLower(keyAndValue[0]) == CONTENT_TYPE {
-			contentType = strings.ToLower(keyAndValue[1])
+	for k, v := range headers {
+		if strings.ToLower(k) == CONTENT_TYPE {
+			contentType = strings.ToLower(v)
 
 			return contentType, nil
 		}
