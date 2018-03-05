@@ -71,6 +71,7 @@
 - [#3808](https://github.com/influxdata/telegraf/pull/3808): Add shard server stats to the mongodb input plugin.
 - [#3713](https://github.com/influxdata/telegraf/pull/3713): Add server option to unbound plugin.
 - [#3804](https://github.com/influxdata/telegraf/pull/3804): Convert boolean metric values to float in datadog output.
+- [#3799](https://github.com/influxdata/telegraf/pull/3799): Add Solr 3 compatibility.
 
 ### Bugfixes
 
