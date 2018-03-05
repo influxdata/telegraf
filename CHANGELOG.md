@@ -72,6 +72,7 @@
 - [#3713](https://github.com/influxdata/telegraf/pull/3713): Add server option to unbound plugin.
 - [#3804](https://github.com/influxdata/telegraf/pull/3804): Convert boolean metric values to float in datadog output.
 - [#3799](https://github.com/influxdata/telegraf/pull/3799): Add Solr 3 compatibility.
+- [#3797](https://github.com/influxdata/telegraf/pull/3797): Add sum stat to basicstats aggregator.
 
 ### Bugfixes
 
