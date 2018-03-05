@@ -113,9 +113,9 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 					// Combine go err + stderr output
 					out = strings.TrimSpace(out)
 					if len(out) > 0 {
-						acc.AddError(fmt.Errorf("%s, %s", out, err))
+						acc.AddError(fmt.Errorf("host %s: %s, %s", u, out, err))
 					} else {
-						acc.AddError(err)
+						acc.AddError(fmt.Errorf("host %s: %s", u, err))
 					}
 					acc.AddFields("ping", fields, tags)
 					return
