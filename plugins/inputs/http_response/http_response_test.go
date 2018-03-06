@@ -636,12 +636,11 @@ func TestPluginErrors(t *testing.T) {
 func TestNetworkErrors(t *testing.T) {
 	// DNS error
 	h := &HTTPResponse{
-		Address:          "https://nonexistent.nonexistent", // Any non-resolvable URL works here
-		Body:             "",
-		Method:           "GET",
-		ResponseTimeout:  internal.Duration{Duration: time.Second * 20},
-		FollowRedirects:  false,
-		LogNetworkErrors: true,
+		Address:         "https://nonexistent.nonexistent", // Any non-resolvable URL works here
+		Body:            "",
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		FollowRedirects: false,
 	}
 
 	var acc testutil.Accumulator
@@ -663,12 +662,11 @@ func TestNetworkErrors(t *testing.T) {
 
 	// Connecton failed
 	h = &HTTPResponse{
-		Address:          "https://127.127.127.127", // Any non-routable IP works here
-		Body:             "",
-		Method:           "GET",
-		ResponseTimeout:  internal.Duration{Duration: time.Second * 20},
-		FollowRedirects:  false,
-		LogNetworkErrors: true,
+		Address:         "https://127.127.127.127", // Any non-routable IP works here
+		Body:            "",
+		Method:          "GET",
+		ResponseTimeout: internal.Duration{Duration: time.Second * 20},
+		FollowRedirects: false,
 	}
 
 	acc = testutil.Accumulator{}
