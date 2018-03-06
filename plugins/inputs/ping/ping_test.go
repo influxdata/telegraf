@@ -268,3 +268,26 @@ func TestFatalPingGather(t *testing.T) {
 	assert.False(t, acc.HasMeasurement("maximum_response_ms"),
 		"Fatal ping should not have packet measurements")
 }
+
+func TestErrorWithHostNamePingGather(t *testing.T) {
+	params := []struct {
+		out   string
+		error error
+	}{
+		{"", errors.New("host www.amazon.com: So very bad")},
+		{"so bad", errors.New("host www.amazon.com: so bad, So very bad")},
+	}
+
+	for _, param := range params {
+		var acc testutil.Accumulator
+		p := Ping{
+			Urls: []string{"www.amazon.com"},
+			pingHost: func(timeout float64, args ...string) (string, error) {
+				return param.out, errors.New("So very bad")
+			},
+		}
+		acc.GatherError(p.Gather)
+		assert.True(t, len(acc.Errors) > 0)
+		assert.Contains(t, acc.Errors, param.error)
+	}
+}
