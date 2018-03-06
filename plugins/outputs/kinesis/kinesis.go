@@ -200,7 +200,7 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 		case "static":
 			return k.Partition.Key
 		case "random":
-			u := uuid.NewV4()
+			u, _ := uuid.NewV4()
 			return u.String()
 		case "measurement":
 			return metric.Name()
@@ -214,7 +214,7 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 		}
 	}
 	if k.RandomPartitionKey {
-		u := uuid.NewV4()
+		u, _ := uuid.NewV4()
 		return u.String()
 	}
 	return k.PartitionKey

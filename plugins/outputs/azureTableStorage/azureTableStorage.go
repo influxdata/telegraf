@@ -2,41 +2,46 @@ package azureTableStorage
 
 import (
 	"fmt"
-	"io"
-	"os"
+	"strconv"
 
+	storage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/influxdata/telegraf"
-	"github.com/Azure/azure-storage-go"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-// DefaultBaseURL is the domain name used for storage requests in the
-// public cloud when a default client is created.
-DefaultBaseURL = "core.windows.net"
-
-// DefaultAPIVersion is the Azure Storage API version string used when a
-// basic client is created.
-DefaultAPIVersion = "2016-05-31"
-
-defaultUseHTTPS      = true
-
+const (
+	EmptyPayload    storage.MetadataLevel = ""
+	NoMetadata      storage.MetadataLevel = "application/json;odata=nometadata"
+	MinimalMetadata storage.MetadataLevel = "application/json;odata=minimalmetadata"
+	FullMetadata    storage.MetadataLevel = "application/json;odata=fullmetadata"
+)
 
 type AzureTableStorage struct {
-	string AccountName 
-	string AccountKey
-	string ResourceId
-	string DeploymentId
-    TableServiceClient * table
+	AccountName  string
+	AccountKey   string
+	ResourceId   string
+	DeploymentId string
+	TableName    string
+	table        *storage.Table
 }
 
 // NewBasicClient constructs a Client with given storage service name and
 // key.
-func NewBasicClient(accountName, accountKey string) (Client, error) {
-	return NewClient(accountName, accountKey, DefaultBaseURL, DefaultAPIVersion, defaultUseHTTPS)
+func NewBasicClient(accountName, accountKey string) (storage.Client, error) {
+	// DefaultBaseURL is the domain name used for storage requests in the
+	// public cloud when a default client is created.
+	DefaultBaseURL := "core.windows.net"
+
+	// DefaultAPIVersion is the Azure Storage API version string used when a
+	// basic client is created.
+	DefaultAPIVersion := "2016-05-31"
+
+	defaultUseHTTPS := true
+	return storage.NewClient(accountName, accountKey, DefaultBaseURL, DefaultAPIVersion, defaultUseHTTPS)
 }
 
 // getBasicClient returns a test client from storage credentials in the env
-func getBasicClient(azureTableStorage) *Client {
+func getBasicClient(azureTableStorage *AzureTableStorage) *storage.Client {
 
 	name := azureTableStorage.AccountName
 	if name == "" {
@@ -46,11 +51,10 @@ func getBasicClient(azureTableStorage) *Client {
 	if key == "" {
 		key = "42WqyNltbP/S3rxbJizeelr4D35EUTU7en5QKgRotT6iWXZ7xtspB6j0/u5fs4kDaiheiIL8K9et0mdcBzcPig=="
 	}
-	cli, err := NewBasicClient(name, key)
-
+	cli, _ := NewBasicClient(name, key)
+	//fmt.Print(err.Error())
 	return &cli
 }
-
 
 var sampleConfig = `
   ## Files to write to, "stdout" is a specially handled file.
@@ -67,44 +71,47 @@ func (azureTableStorage *AzureTableStorage) Connect() error {
 	//create a new client with NewClient() it will retuen a client object
 	azureStorageClient := getBasicClient(azureTableStorage)
 	// GetTableService returns TableServiceClient
-	tableClient := azureStorageClient.GetTableService(azureTableStorage)
-    azureTableStorage.TableName := "Sample1"//getTableName()
+	tableClient := azureStorageClient.GetTableService()
+	azureTableStorage.TableName = "Sample1" //getTableName()
 	azureTableStorage.table = tableClient.GetTableReference(azureTableStorage.TableName)
-	er := azureStorage.table.Create(30, EmptyPayload, nil)
+	er := azureTableStorage.table.Create(30, EmptyPayload, nil)
 	if er != nil {
 		fmt.Println("the table ", azureTableStorage.TableName, " already exists.")
 	}
 	return nil
 }
 
-func (azureTableStorage *azureTableStorage) SampleConfig() string {
+func (azureTableStorage *AzureTableStorage) SampleConfig() string {
 	return sampleConfig
 }
 
-func (azureTableStorage *azureTableStorage) Description() string {
+func (azureTableStorage *AzureTableStorage) Description() string {
 	return "Send telegraf metrics to file(s)"
 }
 
-func (azureTableStorage *azureTableStorage) Write(metrics []telegraf.Metric) error {
+func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) error {
 	rowKey := ""
 	var entity *storage.Entity
 	var props map[string]interface{}
 	//TODO: generate partition key
-	partitionKey:="CPU_metrics"
+	partitionKey := "CPU_metrics"
 	// iterate over the list of metrics and create a new entity for each metrics and add to the table.
 	for i, _ := range metrics {
 		//TODO: generate row key
 		rowKey = strconv.Itoa(i)
 		//Get the reference of the entity by using Partition Key and row key. The combination needs to be unique for a new entity to be inserted.
-		entity = azureStorage.table.GetEntityReference(partitionKey, rowKey)
+		entity = azureTableStorage.table.GetEntityReference(partitionKey, rowKey)
 		// add the map of metrics key n value to the entity in the field Properties.
 		props = metrics[i].Fields()
+		props["DeploymentID"] = azureTableStorage.DeploymentId
 		entity.Properties = props
 		entity.Insert(FullMetadata, nil)
 	}
 	return nil
 }
-
+func (azureTableStorage *AzureTableStorage) Close() error {
+	return nil
+}
 func init() {
 	outputs.Add("azureTableStorage", func() telegraf.Output {
 		return &AzureTableStorage{}

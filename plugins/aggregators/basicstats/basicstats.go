@@ -2,7 +2,7 @@ package basicstats
 
 import (
 	"log"
-	"math"
+	//"math"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -17,12 +17,12 @@ type BasicStats struct {
 }
 
 type configuredStats struct {
-	count              bool
-	min                bool
-	max                bool
-	mean               bool
-//	variance           bool
-//	stdev              bool
+	count bool
+	min   bool
+	max   bool
+	mean  bool
+	//	variance           bool
+	//	stdev              bool
 	totalSum           bool
 	lastSample         bool
 	beginningTimestamp bool
@@ -46,11 +46,11 @@ type basicstats struct {
 	min   float64
 	max   float64
 	mean  float64
-//	M2    float64 //intermedia value for variance/stdev
-	totalSum float64
-	lastSample float64
-	beginningTimestamp int64
-	endTimestamp int64
+	//	M2    float64 //intermedia value for variance/stdev
+	totalSum           float64
+	lastSample         float64
+	beginningTimestamp time.Time
+	endTimestamp       time.Time
 }
 
 var sampleConfig = `
@@ -86,11 +86,11 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 					min:   fv,
 					max:   fv,
 					mean:  fv,
-					M2:    0.0,
-					totalSum: fv,
-					lastSample: fv,
-					beginningTimestamp: time.Unix(),
-					endTimestamp: time.Unix(),
+					//M2:    0.0,
+					totalSum:           fv,
+					lastSample:         fv,
+					beginningTimestamp: time.Now(),
+					endTimestamp:       time.Now(),
 				}
 			}
 		}
@@ -105,11 +105,11 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 						min:   fv,
 						max:   fv,
 						mean:  fv,
-					//	M2:    0.0,
-						totalSum: fv,
-						lastSample: fv,
-						beginningTimestamp: time.Unix(),
-						endTimestamp: time.Unix(),
+						//	M2:    0.0,
+						totalSum:           fv,
+						lastSample:         fv,
+						beginningTimestamp: time.Now(),
+						endTimestamp:       time.Now(),
 					}
 					continue
 				}
@@ -119,7 +119,6 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				//variable initialization
 				x := fv
 				mean := tmp.mean
-				M2 := tmp.M2
 				//counter compute
 				n := tmp.count + 1
 				tmp.count = n
@@ -128,8 +127,8 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				mean = mean + delta/n
 				tmp.mean = mean
 				//variance/stdev compute
-			//	M2 = M2 + delta*(x-mean)
-			//	tmp.M2 = M2
+				//	M2 = M2 + delta*(x-mean)
+				//	tmp.M2 = M2
 				//max/min compute
 				if fv < tmp.min {
 					tmp.min = fv
@@ -138,7 +137,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				}
 				tmp.totalSum = tmp.totalSum + fv
 				tmp.lastSample = fv
-				tmp.endTimestamp = time.Unix()
+				tmp.endTimestamp = time.Now()
 				//store final data
 				m.cache[id].fields[k] = tmp
 			}
@@ -168,18 +167,18 @@ func (m *BasicStats) Push(acc telegraf.Accumulator) {
 			}
 
 			//v.count always >=1
-		//	if v.count > 1 {
-		//		variance := v.M2 / (v.count - 1)
+			//	if v.count > 1 {
+			//		variance := v.M2 / (v.count - 1)
 
-		//		if config.variance {
-		//			fields[k+"_s2"] = variance
-		//		}
-		//		if config.stdev {
-		//			fields[k+"_stdev"] = math.Sqrt(variance)
-		//		}
-		//	}
+			//		if config.variance {
+			//			fields[k+"_s2"] = variance
+			//		}
+			//		if config.stdev {
+			//			fields[k+"_stdev"] = math.Sqrt(variance)
+			//		}
+			//	}
 			if config.lastSample {
-				fields["Last"] = v.lastSample				
+				fields["Last"] = v.lastSample
 			}
 			if config.beginningTimestamp {
 				fields["TIMESTAMP"] = v.beginningTimestamp
@@ -216,18 +215,18 @@ func parseStats(names []string) *configuredStats {
 			parsed.max = true
 		case "mean":
 			parsed.mean = true
-	//	case "s2":
-	//		parsed.variance = true
-	//	case "stdev":
-	//		parsed.stdev = true
+			//	case "s2":
+			//		parsed.variance = true
+			//	case "stdev":
+			//		parsed.stdev = true
 		case "totalSum":
-			parsed.totalSum = true	
+			parsed.totalSum = true
 		case "lastSample":
 			parsed.lastSample = true
 		case "beginningTimestamp":
 			parsed.beginningTimestamp = true
 		case "endTimestamp":
-			parsed.endTimestamp = true		
+			parsed.endTimestamp = true
 
 		default:
 			log.Printf("W! Unrecognized basic stat '%s', ignoring", name)
@@ -245,8 +244,8 @@ func defaultStats() *configuredStats {
 	defaults.min = true
 	defaults.max = true
 	defaults.mean = true
-//	defaults.variance = true
-//	defaults.stdev = true
+	//	defaults.variance = true
+	//	defaults.stdev = true
 	defaults.totalSum = true
 	defaults.lastSample = true
 	defaults.beginningTimestamp = true
