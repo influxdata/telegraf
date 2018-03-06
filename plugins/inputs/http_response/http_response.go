@@ -115,7 +115,7 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-func set_result(result_string string, fields *map[string]interface{}, tags *map[string]string) {
+func setResult(result_string string, fields map[string]interface{}, tags map[string]string) {
 	result_codes := map[string]int{
 		"success":                  0,
 		"response_string_mismatch": 1,
@@ -125,14 +125,14 @@ func set_result(result_string string, fields *map[string]interface{}, tags *map[
 		"dns_error":                5,
 	}
 
-	(*tags)["result"] = result_string
-	(*fields)["result_type"] = result_string
-	(*fields)["result_code"] = result_codes[result_string]
+	tags["result"] = result_string
+	fields["result_type"] = result_string
+	fields["result_code"] = result_codes[result_string]
 }
 
-func set_error(err error, fields *map[string]interface{}, tags *map[string]string) error {
+func setError(err error, fields map[string]interface{}, tags map[string]string) error {
 	if timeoutError, ok := err.(net.Error); ok && timeoutError.Timeout() {
-		set_result("timeout", fields, tags)
+		setResult("timeout", fields, tags)
 		return timeoutError
 	}
 
@@ -144,14 +144,14 @@ func set_error(err error, fields *map[string]interface{}, tags *map[string]strin
 	opErr, isNetErr := (urlErr.Err).(*net.OpError)
 	if isNetErr {
 		if dnsError, ok := (opErr.Err).(*net.DNSError); ok {
-			set_result("dns_error", fields, tags)
+			setResult("dns_error", fields, tags)
 			return dnsError
 		}
 
 		// Parse error has to do with parsing of IP addresses, so we
 		// group it with address errors
 		if addressError, ok := (opErr.Err).(*net.ParseError); ok {
-			set_result("address_error", fields, tags)
+			setResult("address_error", fields, tags)
 			return addressError
 		}
 	}
@@ -193,7 +193,7 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 		log.Printf("D! Network error while polling %s: %s", h.Address, err.Error())
 
 		// Get error details
-		netErr := set_error(err, &fields, &tags)
+		netErr := setError(err, fields, tags)
 
 		// If recognize the returnded error, get out
 		if netErr != nil {
@@ -201,7 +201,7 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 		}
 
 		// Any error not recognized by `set_error` is considered a "connection_failed"
-		set_result("connection_failed", &fields, &tags)
+		setResult("connection_failed", fields, tags)
 
 		// If the error is a redirect we continue processing and log the HTTP code
 		urlError, isUrlError := err.(*url.Error)
@@ -234,21 +234,21 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 
 		bodyBytes, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Printf("E! Failed to read body of HTTP Response : %s", err)
-			set_result("body_read_error", &fields, &tags)
+			log.Printf("D! Failed to read body of HTTP Response : %s", err)
+			setResult("body_read_error", fields, tags)
 			fields["response_string_match"] = 0
 			return fields, tags, nil
 		}
 
 		if h.compiledStringMatch.Match(bodyBytes) {
-			set_result("success", &fields, &tags)
+			setResult("success", fields, tags)
 			fields["response_string_match"] = 1
 		} else {
-			set_result("response_string_mismatch", &fields, &tags)
+			setResult("response_string_mismatch", fields, tags)
 			fields["response_string_match"] = 0
 		}
 	} else {
-		set_result("success", &fields, &tags)
+		setResult("success", fields, tags)
 	}
 
 	return fields, tags, nil
