@@ -77,5 +77,5 @@ NOTE: The error codes are derived from the error object returned by the `net/htt
 ### Example Output:
 
 ```
-http_response,method=GET,server=http://www.github.com,status_code="200",result="sucess" http_response_code=200i,response_time=6.223266528,result_type="sucess",result_code="0" 1459419354977857955
+http_response,method=GET,server=http://www.github.com,status_code="200",result="success" http_response_code=200i,response_time=6.223266528,result_type="sucess",result_code=0i 1459419354977857955
 ```
