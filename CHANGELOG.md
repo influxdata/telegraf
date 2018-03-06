@@ -73,6 +73,7 @@
 - [#3804](https://github.com/influxdata/telegraf/pull/3804): Convert boolean metric values to float in datadog output.
 - [#3799](https://github.com/influxdata/telegraf/pull/3799): Add Solr 3 compatibility.
 - [#3797](https://github.com/influxdata/telegraf/pull/3797): Add sum stat to basicstats aggregator.
+- [#3626](https://github.com/influxdata/telegraf/pull/3626): Add ability to override proxy from environment in http response.
 
 ### Bugfixes
 
