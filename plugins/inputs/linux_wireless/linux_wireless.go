@@ -127,28 +127,35 @@ func loadWirelessTable(table []byte, dumpZeros bool) (WirelessData, error) {
 	// now let's go through the data and save it for return.
 	// if we're dumping zeros, we will also dump the header for the
 	// zero data.
-	for x := 2; x < len(myLines); x++ {
+	for x := 2; x < len(myLines)-1; x++ {
 		data_count := 0
 		metrics := strings.Fields(myLines[x])
 		sub_data := make([]int64, len(metrics))
-		for z := 0; z < len(metrics)-1; z++ {
+		for z := 0; z < len(metrics)-2; z++ {
 			if strings.Index(metrics[z], ":") > 0 {
-				tags[x-2] = metrics[0]
+				tags[x-2] = metrics[z]
 			} else {
 				if metrics[z] == "0" {
-					if !dumpZeros {
-						// if we're dumping zeros, we dump the header that goes with it.
-						header_fields = append(header_fields[:x], header_fields[x+1:]...)
+					if dumpZeros {
 						continue
-					}
-				} else {
-					// clean up the string as they have extraneous characters in them
-					value, err = strconv.ParseInt(strings.Replace(metrics[z], ".", "", -1), 10, 64)
-					if err == nil {
-						sub_data[data_count] = value
-						data_count++
+						// if we're dumping zeros, we dump the header that goes with it.
+						//if x == len(header_fields) {
+						//	fmt.Println("Dump Zeros")
+						//} else {
+						//	header_fields = append(header_fields[:x], header_fields[x+1:]...)
+						//}
+
+						//continue
 					}
 				}
+
+				// clean up the string as they have extraneous characters in them
+				value, err = strconv.ParseInt(strings.Replace(metrics[z], ".", "", -1), 10, 64)
+				if err == nil {
+					sub_data[data_count] = value
+					data_count++
+				}
+
 			}
 		}
 		data[x-2] = sub_data
