@@ -143,16 +143,15 @@ func setError(err error, fields map[string]interface{}, tags map[string]string) 
 
 	opErr, isNetErr := (urlErr.Err).(*net.OpError)
 	if isNetErr {
-		if dnsError, ok := (opErr.Err).(*net.DNSError); ok {
+		switch e := (opErr.Err).(type) {
+		case (*net.DNSError):
 			setResult("dns_error", fields, tags)
-			return dnsError
-		}
-
-		// Parse error has to do with parsing of IP addresses, so we
-		// group it with address errors
-		if addressError, ok := (opErr.Err).(*net.ParseError); ok {
+			return e
+		case (*net.ParseError):
+			// Parse error has to do with parsing of IP addresses, so we
+			// group it with address errors
 			setResult("address_error", fields, tags)
-			return addressError
+			return e
 		}
 	}
 
