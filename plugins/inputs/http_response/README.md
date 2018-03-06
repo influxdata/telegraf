@@ -24,10 +24,6 @@ This input plugin will test HTTP/HTTPS connections.
   # {'fake':'data'}
   # '''
 
-  # Log network errors in the Telegraf log
-  # Turned off by default to avoid filling the logs with exessive repetitive strings
-  # log_network_errors = false
-
   ## Optional substring or regex match in body of the response
   # response_string_match = "\"service_status\": \"up\""
   # response_string_match = "ok"

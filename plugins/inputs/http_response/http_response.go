@@ -24,7 +24,6 @@ type HTTPResponse struct {
 	Body                string
 	Method              string
 	ResponseTimeout     internal.Duration
-	LogNetworkErrors    bool
 	Headers             map[string]string
 	FollowRedirects     bool
 	ResponseStringMatch string
@@ -64,10 +63,6 @@ var sampleConfig = `
   # body = '''
   # {'fake':'data'}
   # '''
-
-  # Log network errors in the Telegraf log
-  # Turned off by default to avoid filling the logs with exessive repetitive strings
-  # log_network_errors = false
 
   ## Optional substring or regex match in body of the response
   # response_string_match = "\"service_status\": \"up\""
@@ -194,9 +189,7 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 	// HTTP error codes do not generate errors in the net/http library
 	if err != nil {
 		// Log error
-		if h.LogNetworkErrors {
-			log.Printf("E! Network error while polling %s: %s", h.Address, err.Error())
-		}
+		log.Printf("D! Network error while polling %s: %s", h.Address, err.Error())
 
 		// Get error details
 		netErr := set_error(err, &fields, &tags)
