@@ -2,6 +2,7 @@ package http_response
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -260,8 +261,7 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 		var err error
 		h.compiledStringMatch, err = regexp.Compile(h.ResponseStringMatch)
 		if err != nil {
-			log.Printf("E! Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
-			return err
+			return fmt.Errorf("Failed to compile regular expression %s : %s", h.ResponseStringMatch, err)
 		}
 	}
 
