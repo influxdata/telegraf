@@ -2,6 +2,7 @@ package azureTableStorage
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 
 	storage "github.com/Azure/azure-sdk-for-go/storage"
@@ -72,7 +73,7 @@ func (azureTableStorage *AzureTableStorage) Connect() error {
 	azureStorageClient := getBasicClient(azureTableStorage)
 	// GetTableService returns TableServiceClient
 	tableClient := azureStorageClient.GetTableService()
-	azureTableStorage.TableName = "Sample1" //getTableName()
+	azureTableStorage.TableName = "Sample2" //getTableName()
 	azureTableStorage.table = tableClient.GetTableReference(azureTableStorage.TableName)
 	er := azureTableStorage.table.Create(30, EmptyPayload, nil)
 	if er != nil {
@@ -89,12 +90,16 @@ func (azureTableStorage *AzureTableStorage) Description() string {
 	return "Send telegraf metrics to file(s)"
 }
 
+func encode(decodedStr string) string {
+	
+}
+
 func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) error {
 	rowKey := ""
 	var entity *storage.Entity
 	var props map[string]interface{}
 	//TODO: generate partition key
-	partitionKey := "CPU_metrics"
+	partitionKey := encode(azureTableStorage.ResourceId)
 	// iterate over the list of metrics and create a new entity for each metrics and add to the table.
 	for i, _ := range metrics {
 		//TODO: generate row key
@@ -104,6 +109,7 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 		// add the map of metrics key n value to the entity in the field Properties.
 		props = metrics[i].Fields()
 		props["DeploymentID"] = azureTableStorage.DeploymentId
+		props["Host"], _ = os.Hostname()
 		entity.Properties = props
 		entity.Insert(FullMetadata, nil)
 	}
