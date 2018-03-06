@@ -74,6 +74,7 @@
 - [#3799](https://github.com/influxdata/telegraf/pull/3799): Add Solr 3 compatibility.
 - [#3797](https://github.com/influxdata/telegraf/pull/3797): Add sum stat to basicstats aggregator.
 - [#3626](https://github.com/influxdata/telegraf/pull/3626): Add ability to override proxy from environment in http response.
+- [#3853](https://github.com/influxdata/telegraf/pull/3853): Add host to ping timeout log message.
 
 ### Bugfixes
 
