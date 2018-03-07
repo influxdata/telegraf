@@ -35,6 +35,10 @@
 - [ipset](./plugins/inputs/ipset/README.md) - Thanks to @sajoupa
 - [nats](./plugins/inputs/nats/README.md) - Thanks to @mjs & @levex
 
+### New Processors
+
+- [override](./plugins/processors/override/README.md) - Thanks to @KarstenSchnitter
+
 ### New Parsers
 
 - [dropwizard](./docs/DATA_FORMATS_INPUT.md#dropwizard) - Thanks to @atzoum
@@ -75,6 +79,7 @@
 - [#3797](https://github.com/influxdata/telegraf/pull/3797): Add sum stat to basicstats aggregator.
 - [#3626](https://github.com/influxdata/telegraf/pull/3626): Add ability to override proxy from environment in http response.
 - [#3853](https://github.com/influxdata/telegraf/pull/3853): Add host to ping timeout log message.
+- [#3773](https://github.com/influxdata/telegraf/pull/3773): Add override processor.
 
 ### Bugfixes
 

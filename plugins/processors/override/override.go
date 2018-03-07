@@ -6,18 +6,14 @@ import (
 )
 
 var sampleConfig = `
-## NOTE This processor will override names, name prefixes, name suffixes and
-## values of tags, that are already present in the metric passed through this
-## filter.
+  ## All modifications on inputs and aggregators can be overridden:
+  # name_override = "new_name"
+  # name_prefix = "new_name_prefix"
+  # name_suffix = "new_name_suffix"
 
-## All modifications on inputs and aggregators can be overridden:
-# name_override = "new name"
-#	name_prefix = "new name_prefix"
-#	name_suffix = "new name_suffix"
-
-## Tags to be added (all values must be strings)
-# [processors.overide.tags]
-#   additional_tag = "tag_value"
+  ## Tags to be added (all values must be strings)
+  # [processors.override.tags]
+  #   additional_tag = "tag_value"
 `
 
 type Override struct {
@@ -32,7 +28,7 @@ func (p *Override) SampleConfig() string {
 }
 
 func (p *Override) Description() string {
-	return "Add all configured tags to all metrics that pass through this filter."
+	return "Apply metric modifications using override semantics."
 }
 
 func (p *Override) Apply(in ...telegraf.Metric) []telegraf.Metric {
