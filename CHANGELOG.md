@@ -94,6 +94,7 @@
 - [#3739](https://github.com/influxdata/telegraf/issues/3739): Remove userinfo from url tag in prometheus input.
 - [#3778](https://github.com/influxdata/telegraf/issues/3778): Fix ping plugin not reporting zero durations.
 - [#3697](https://github.com/influxdata/telegraf/issues/3697): Disable keepalive in mqtt output to prevent deadlock.
+- [#3786](https://github.com/influxdata/telegraf/pull/3786): Fix collation difference in sqlserver input.
 
 ## v1.5.2 [2018-01-30]
 
