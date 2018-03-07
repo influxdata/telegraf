@@ -137,11 +137,10 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 			}
 			if latencyMap, ok := latency[namespace]; ok {
 				for k, v := range latencyMap {
-					val, err := parseValue(v)
-					if err == nil {
-						nFields2[strings.Replace(k, ">", "", -1)] = val
+					if parsed, err := strconv.ParseFloat(v, 64); err == nil {
+						nFields2[strings.Replace(k, ">", "", -1)] = parsed
 					} else {
-						log.Printf("I! skipping aerospike field %v with int64 overflow: %q", k, v)
+						nFields2[strings.Replace(k, ">", "", -1)] = v
 					}
 				}
 				acc.AddFields("aerospike_latency", nFields2, nTags, time.Now())
@@ -202,8 +201,6 @@ func parseValue(v string) (interface{}, error) {
 		// int64 overflow, yet valid uint64
 		return nil, errors.New("Number is too large")
 	} else if parsed, err := strconv.ParseBool(v); err == nil {
-		return parsed, nil
-	} else if parsed, err := strconv.ParseFloat(v, 64); err == nil {
 		return parsed, nil
 	} else {
 		return v, nil
