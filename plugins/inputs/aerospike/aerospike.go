@@ -117,7 +117,10 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 			}
 			nTags["namespace"] = namespace
 			nFields := make(map[string]interface{})
+
 			nFields2 := make(map[string]interface{})
+
+
 			info, err := as.RequestNodeInfo(n, "namespace/"+namespace)
 			if err != nil {
 				continue
@@ -137,10 +140,11 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 			}
 			if latencyMap, ok := latency[namespace]; ok {
 				for k, v := range latencyMap {
+					k = strings.Replace(k, ">", "", -1)
 					if parsed, err := strconv.ParseFloat(v, 64); err == nil {
-						nFields2[strings.Replace(k, ">", "", -1)] = parsed
+						nFields2[k] = parsed
 					} else {
-						nFields2[strings.Replace(k, ">", "", -1)] = v
+						log.Printf("I! skipping aerospike field %v with float type error: %q", k, v)
 					}
 				}
 				acc.AddFields("aerospike_latency", nFields2, nTags, time.Now())
