@@ -1,7 +1,7 @@
 ---
 defaults: &defaults
   docker:
-    - image: 'circleci/golang:1.9.4'
+    - image: 'circleci/golang:1.10'
   working_directory: '/go/src/github.com/influxdata/telegraf'
 version: 2
 jobs:
