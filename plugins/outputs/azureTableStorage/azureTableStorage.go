@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
+	"unicode"
+	"unicode/utf16"
 
 	storage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/influxdata/telegraf"
@@ -90,8 +93,19 @@ func (azureTableStorage *AzureTableStorage) Description() string {
 	return "Send telegraf metrics to file(s)"
 }
 
-func encode(decodedStr string) string {
-	
+func encodeSpecialCharacterToUTF16(decodedStr string) string {
+	_pkey := ""
+	hex := ""
+	var replacer = strings.NewReplacer("[", ":", "]", "")
+	for _, c := range decodedStr {
+		if !unicode.IsLetter(c) && !unicode.IsDigit(c) {
+			hex = fmt.Sprintf("%04X", utf16.Encode([]rune(string(c))))
+			_pkey = _pkey + replacer.Replace(hex)
+		} else {
+			_pkey = _pkey + string(c)
+		}
+	}
+	return _pkey
 }
 
 func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) error {
@@ -99,7 +113,7 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 	var entity *storage.Entity
 	var props map[string]interface{}
 	//TODO: generate partition key
-	partitionKey := encode(azureTableStorage.ResourceId)
+	partitionKey := encodeSpecialCharacterToUTF16(azureTableStorage.ResourceId)
 	// iterate over the list of metrics and create a new entity for each metrics and add to the table.
 	for i, _ := range metrics {
 		//TODO: generate row key
