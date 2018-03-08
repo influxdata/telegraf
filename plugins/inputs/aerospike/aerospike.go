@@ -4,20 +4,25 @@ import (
 	"errors"
 	"log"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	as "github.com/aerospike/aerospike-client-go"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	as "github.com/aerospike/aerospike-client-go"
 )
 
 type Aerospike struct {
 	Servers []string
 }
+
+const (
+	_FIELD = 0
+	_VALUE = 1
+)
 
 var sampleConfig = `
   ## Aerospike servers to connect to (with port)
@@ -89,13 +94,22 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 			}
 		}
 		acc.AddFields("aerospike_node", fields, tags, time.Now())
+		//Finding the latency metrics
+		infoLatency, err := as.RequestNodeInfo(n, "latency:")
+		if err != nil {
+			return err
+		}
+
+		latency, err := parseNodeLatency(infoLatency)
+		if err != nil {
+			return err
+		}
 
 		info, err := as.RequestNodeInfo(n, "namespaces")
 		if err != nil {
 			return err
 		}
 		namespaces := strings.Split(info["namespaces"], ";")
-
 		for _, namespace := range namespaces {
 			nTags := map[string]string{
 				"aerospike_host": hostport,
@@ -103,6 +117,10 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 			}
 			nTags["namespace"] = namespace
 			nFields := make(map[string]interface{})
+
+			nFields2 := make(map[string]interface{})
+
+
 			info, err := as.RequestNodeInfo(n, "namespace/"+namespace)
 			if err != nil {
 				continue
@@ -120,10 +138,64 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 					log.Printf("I! skipping aerospike field %v with int64 overflow: %q", parts[0], parts[1])
 				}
 			}
+			if latencyMap, ok := latency[namespace]; ok {
+				for k, v := range latencyMap {
+					k = strings.Replace(k, ">", "", -1)
+					if parsed, err := strconv.ParseFloat(v, 64); err == nil {
+						nFields2[k] = parsed
+					} else {
+						log.Printf("I! skipping aerospike field %v with float type error: %q", k, v)
+					}
+				}
+				acc.AddFields("aerospike_latency", nFields2, nTags, time.Now())
+			}
 			acc.AddFields("aerospike_namespace", nFields, nTags, time.Now())
 		}
 	}
 	return nil
+}
+
+func parseNodeLatency(latencyMap map[string]string) (map[string]map[string]string, error) {
+	res := make(map[string]map[string]string)
+	v, exists := latencyMap["latency:"]
+	if !exists {
+		return res, nil
+	}
+	values := strings.Split(v, ";")
+	flag_type := _FIELD
+	var tmp_list []string
+	for _, value := range values {
+		if value == "error-no-data-yet-or-back-too-small" {
+			continue
+		}
+		kv := strings.Split(value, ",")
+		if flag_type == _FIELD {
+			tmp_list = kv
+			flag_type = _VALUE
+		} else {
+			tmp_map := make(map[string]string)
+			namespace := ""
+			operation := ""
+			for in, field := range tmp_list {
+				if in == 0 {
+					matched_string := regexp.MustCompile("{.+}").FindStringSubmatch(field)
+					namespace = strings.Trim(matched_string[0], "{}")
+					matched_string = regexp.MustCompile("-[a-zA-Z]+:").FindStringSubmatch(field)
+					operation = strings.Trim(matched_string[0], "-:")
+					continue
+				}
+				tmp_map[operation+"_"+field] = kv[in]
+			}
+			for k, v := range tmp_map {
+				if res[namespace] == nil {
+					res[namespace] = make(map[string]string)
+				}
+				res[namespace][k] = v
+			}
+			flag_type = _FIELD
+		}
+	}
+	return res, nil
 }
 
 func parseValue(v string) (interface{}, error) {

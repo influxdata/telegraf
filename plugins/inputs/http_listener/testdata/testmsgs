@@ -1,0 +1,6 @@
+cpu_load_short,host=server02 value=12.0 1422568543702900257
+cpu_load_short,host=server03 value=12.0 1422568543702900257
+cpu_load_short,host=server04 value=12.0 1422568543702900257
+cpu_load_short,host=server05 value=12.0 1422568543702900257
+cpu_load_short,host=server06 value=12.0 1422568543702900257
+
