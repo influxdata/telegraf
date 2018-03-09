@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf16"
 
@@ -19,6 +20,7 @@ const (
 	MinimalMetadata storage.MetadataLevel = "application/json;odata=minimalmetadata"
 	FullMetadata    storage.MetadataLevel = "application/json;odata=fullmetadata"
 )
+const layout = "02/01/2006 03:04:05 PM"
 
 type AzureTableStorage struct {
 	AccountName  string
@@ -93,11 +95,11 @@ func (azureTableStorage *AzureTableStorage) Description() string {
 	return "Send telegraf metrics to file(s)"
 }
 
-func encodeSpecialCharacterToUTF16(decodedStr string) string {
+func encodeSpecialCharacterToUTF16(resourceId string) string {
 	_pkey := ""
 	hex := ""
 	var replacer = strings.NewReplacer("[", ":", "]", "")
-	for _, c := range decodedStr {
+	for _, c := range resourceId {
 		if !unicode.IsLetter(c) && !unicode.IsDigit(c) {
 			hex = fmt.Sprintf("%04X", utf16.Encode([]rune(string(c))))
 			_pkey = _pkey + replacer.Replace(hex)
@@ -107,25 +109,54 @@ func encodeSpecialCharacterToUTF16(decodedStr string) string {
 	}
 	return _pkey
 }
+func getPrimaryKey(resourceId string) string {
+	return encodeSpecialCharacterToUTF16(resourceId)
+}
+
+func getUTCTicks_DescendingOrder(lastSampleTimestamp string) int64 {
+
+	currentTime := time.Now().UTC()
+	//maxValueDateTime := time.Date(9999, time.December, 31, 12, 59, 59, 59, time.UTC)
+	//Ticks is the number of 100 nanoseconds from zero value of date
+	maxValueDateTimeInTicks := int64(3155378975999999999)
+	zeroTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
+	diff := currentTime.Sub(zeroTime)
+	currentTimeInTicks := int64(diff.Nanoseconds()) / 100
+	UTCTicks_DescendincurrentTimeOrder := maxValueDateTimeInTicks - currentTimeInTicks
+	fmt.Println(UTCTicks_DescendincurrentTimeOrder)
+
+	return UTCTicks_DescendincurrentTimeOrder
+}
+
+func getRowKeyComponents(lastSampleTimestamp string, counterName string) (string, string) {
+
+	UTCTicks_DescendingOrder := getUTCTicks_DescendingOrder(lastSampleTimestamp)
+	UTCTicks_DescendingOrderStr := strconv.FormatInt(UTCTicks_DescendingOrder, 10)
+	encodedCounterName := encodeSpecialCharacterToUTF16(counterName)
+	return UTCTicks_DescendingOrderStr, encodedCounterName
+}
 
 func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) error {
-	rowKey := ""
 	var entity *storage.Entity
 	var props map[string]interface{}
-	//TODO: generate partition key
-	partitionKey := encodeSpecialCharacterToUTF16(azureTableStorage.ResourceId)
+	partitionKey := getPrimaryKey(azureTableStorage.ResourceId)
 	// iterate over the list of metrics and create a new entity for each metrics and add to the table.
 	for i, _ := range metrics {
-		//TODO: generate row key
-		rowKey = strconv.Itoa(i)
-		//Get the reference of the entity by using Partition Key and row key. The combination needs to be unique for a new entity to be inserted.
-		entity = azureTableStorage.table.GetEntityReference(partitionKey, rowKey)
-		// add the map of metrics key n value to the entity in the field Properties.
 		props = metrics[i].Fields()
-		props["DeploymentID"] = azureTableStorage.DeploymentId
+		UTCTicks_DescendingOrderStr, encodedCounterName := getRowKeyComponents(props["TIMESTAMP"].(string), props["CounterName"].(string))
+		props["DeploymentId"] = azureTableStorage.DeploymentId
 		props["Host"], _ = os.Hostname()
+
+		rowKey1 := UTCTicks_DescendingOrderStr + "_" + encodedCounterName
+		entity = azureTableStorage.table.GetEntityReference(partitionKey, rowKey1)
 		entity.Properties = props
 		entity.Insert(FullMetadata, nil)
+
+		rowKey2 := encodedCounterName + "_" + UTCTicks_DescendingOrderStr
+		entity = azureTableStorage.table.GetEntityReference(partitionKey, rowKey2)
+		entity.Properties = props
+		entity.Insert(FullMetadata, nil)
+
 	}
 	return nil
 }

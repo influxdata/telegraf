@@ -49,9 +49,11 @@ type basicstats struct {
 	//	M2    float64 //intermedia value for variance/stdev
 	totalSum           float64
 	lastSample         float64
-	beginningTimestamp int64
-	endTimestamp       int64
+	beginningTimestamp string
+	endTimestamp       string
 }
+
+const layout = "02/01/2006 03:04:05 PM"
 
 var sampleConfig = `
   ## General Aggregator Arguments:
@@ -89,8 +91,8 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 					//M2:    0.0,
 					totalSum:           fv,
 					lastSample:         fv,
-					beginningTimestamp: time.Now().Unix(),
-					endTimestamp:       time.Now().Unix(),
+					beginningTimestamp: time.Now().Format(layout),
+					endTimestamp:       time.Now().Format(layout),
 				}
 			}
 		}
@@ -108,8 +110,8 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 						//	M2:    0.0,
 						totalSum:           fv,
 						lastSample:         fv,
-						beginningTimestamp: time.Now().Unix(),
-						endTimestamp:       time.Now().Unix(),
+						beginningTimestamp: time.Now().Format(layout),
+						endTimestamp:       time.Now().Format(layout),
 					}
 					continue
 				}
@@ -137,7 +139,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				}
 				tmp.totalSum = tmp.totalSum + fv
 				tmp.lastSample = fv
-				tmp.endTimestamp = time.Now().Unix()
+				tmp.endTimestamp = time.Now().Format(layout)
 				//store final data
 				m.cache[id].fields[k] = tmp
 			}
