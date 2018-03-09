@@ -87,6 +87,7 @@
 - [#1896](https://github.com/influxdata/telegraf/issues/1896): Fix various mysql data type conversions.
 - [#3810](https://github.com/influxdata/telegraf/issues/3810): Fix metric buffer limit in internal plugin after reload.
 - [#3801](https://github.com/influxdata/telegraf/issues/3801): Fix panic in http_response on invalid regex.
+- [#3973](https://github.com/influxdata/telegraf/issues/3873): Fix socket_listener setting ReadBufferSize on tcp sockets.
 
 ## v1.5.3 [unreleased]
 
