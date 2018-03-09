@@ -1,6 +1,8 @@
 package socket_listener
 
 import (
+	"bytes"
+	"log"
 	"net"
 	"os"
 	"testing"
@@ -11,9 +13,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// testEmptyLog is a helper function to ensure no data is written to log.
+// Should be called at the start of the test, and returns a function which should run at the end.
+func testEmptyLog(t *testing.T) func() {
+	buf := bytes.NewBuffer(nil)
+	log.SetOutput(buf)
+
+	return func() {
+		log.SetOutput(os.Stderr)
+		assert.Empty(t, string(buf.Bytes()), "log not empty")
+	}
+}
+
 func TestSocketListener_tcp(t *testing.T) {
+	defer testEmptyLog(t)()
+
 	sl := newSocketListener()
 	sl.ServiceAddress = "tcp://127.0.0.1:0"
+	sl.ReadBufferSize = 1024
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
@@ -27,8 +44,11 @@ func TestSocketListener_tcp(t *testing.T) {
 }
 
 func TestSocketListener_udp(t *testing.T) {
+	defer testEmptyLog(t)()
+
 	sl := newSocketListener()
 	sl.ServiceAddress = "udp://127.0.0.1:0"
+	sl.ReadBufferSize = 1024
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
@@ -42,9 +62,12 @@ func TestSocketListener_udp(t *testing.T) {
 }
 
 func TestSocketListener_unix(t *testing.T) {
+	defer testEmptyLog(t)()
+
 	os.Create("/tmp/telegraf_test.sock")
 	sl := newSocketListener()
 	sl.ServiceAddress = "unix:///tmp/telegraf_test.sock"
+	sl.ReadBufferSize = 1024
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
@@ -58,9 +81,12 @@ func TestSocketListener_unix(t *testing.T) {
 }
 
 func TestSocketListener_unixgram(t *testing.T) {
+	defer testEmptyLog(t)()
+
 	os.Create("/tmp/telegraf_test.sock")
 	sl := newSocketListener()
 	sl.ServiceAddress = "unixgram:///tmp/telegraf_test.sock"
+	sl.ReadBufferSize = 1024
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
