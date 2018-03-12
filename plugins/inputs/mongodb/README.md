@@ -71,9 +71,8 @@ creating another measurement called mongodb_db_stats and containing values:
  * index_size
  * ok
 
-If `gather_shard_host_stats` is set to `true`, it will also collect per-host shard stats exposed
-by `shardConnPoolStats` creating another measurement called `mongodb_shard_host_stats`
-containing the following values:
+If multiple shard hosts are found via the `shardConnPoolStats` command, it will also collect per-host shard stats exposed
+by `shardConnPoolStats` creating another measurement called `mongodb_shard_host_stats`, containing the following values:
  * in_use
  * available
  * created
