@@ -23,12 +23,13 @@ const (
 const layout = "02/01/2006 03:04:05 PM"
 
 type AzureTableStorage struct {
-	AccountName  string
-	AccountKey   string
-	ResourceId   string
-	DeploymentId string
-	TableName    string
-	table        *storage.Table
+	AccountName                string
+	AccountKey                 string
+	ResourceId                 string
+	DeploymentId               string
+	TableName                  string
+	ScheduledAggregationPeriod string
+	table                      *storage.Table
 }
 
 // NewBasicClient constructs a Client with given storage service name and
@@ -73,12 +74,36 @@ var sampleConfig = `
   data_format = "influx"
 `
 
+func getTableDateSuffix() string {
+	//get number of seconds elapsed till now from 1 Jan 1970.
+	secondsElapsedTillNow := time.Now().Unix()
+
+	//get the number of seconds as multiple of number of seconds in 10 days
+	secondsIn10Day := int64(10 * 24 * 60 * 60)
+	secondsElapsedTillNowMulTiple10Day := secondsElapsedTillNow - (secondsElapsedTillNow % secondsIn10Day)
+
+	//get the date from the value of number of seconds obtained by above equation. This date
+	// will be the last day of the previous 10 day period.
+	suffixDate := time.Unix(secondsElapsedTillNowMulTiple10Day, 0)
+	suffixDateStr := suffixDate.Format("2006/01/02")
+	suffixDateStr = strings.Replace(suffixDateStr, "/", "", -1)
+
+	// the name of the table will have this date as its suffix.
+	return suffixDateStr
+}
+
+func getAzureTableName(azureTableStorage *AzureTableStorage) string {
+	tableName := "WADMetrics" + azureTableStorage.ScheduledAggregationPeriod + "P10DV25" + getTableDateSuffix()
+	return tableName
+}
+
 func (azureTableStorage *AzureTableStorage) Connect() error {
 	//create a new client with NewClient() it will retuen a client object
 	azureStorageClient := getBasicClient(azureTableStorage)
 	// GetTableService returns TableServiceClient
 	tableClient := azureStorageClient.GetTableService()
-	azureTableStorage.TableName = "Sample2" //getTableName()
+	//TODO: add logic for creating a new table every 10th day.
+	azureTableStorage.TableName = getAzureTableName(azureTableStorage)
 	azureTableStorage.table = tableClient.GetTableReference(azureTableStorage.TableName)
 	er := azureTableStorage.table.Create(30, EmptyPayload, nil)
 	if er != nil {

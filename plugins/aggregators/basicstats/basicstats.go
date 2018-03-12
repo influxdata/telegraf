@@ -11,7 +11,6 @@ import (
 
 type BasicStats struct {
 	Stats []string `toml:"stats"`
-
 	cache       map[uint64]aggregate
 	statsConfig *configuredStats
 }
