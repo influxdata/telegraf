@@ -17,7 +17,7 @@ import argparse
 ################
 
 # Packaging variables
-PACKAGE_NAME = "telegraf"
+PACKAGE_NAME = "maf"
 INSTALL_ROOT_DIR = "/usr/bin"
 LOG_DIR = "/var/log/telegraf"
 SCRIPT_DIR = "/usr/lib/telegraf/scripts"
@@ -103,12 +103,12 @@ next_version = '1.5.0'
 
 def print_banner():
     logging.info("""
- _____     _                       __
-/__   \\___| | ___  __ _ _ __ __ _ / _|
-  / /\\/ _ \\ |/ _ \\/ _` | '__/ _` | |_
- / / |  __/ |  __/ (_| | | | (_| |  _|
- \\/   \\___|_|\\___|\\__, |_|  \\__,_|_|
-                  |___/
+ __  __    _    _____ 
+|  \/  |  / \  |  ___|
+| |\/| | / _ \ | |_   
+| |  | |/ ___ \|  _|  
+|_|  |_/_/   \_\_|    
+    
  Build Script
 """)
 
