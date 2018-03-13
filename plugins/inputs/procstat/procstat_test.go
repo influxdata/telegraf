@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/net"
 	"github.com/shirou/gopsutil/process"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -102,6 +103,38 @@ func newTestProc(pid PID) (Process, error) {
 
 func (p *testProc) PID() PID {
 	return p.pid
+}
+
+func (p *testProc) CmdlineSlice() ([]string, error) {
+	return []string{}, nil
+}
+func (p *testProc) CreateTime() (int64, error) {
+	return 0, nil
+}
+func (p *testProc) Gids() ([]int32, error) {
+	return []int32{0}, nil
+}
+func (p *testProc) Uids() ([]int32, error) {
+	return []int32{0}, nil
+}
+
+func (p *testProc) NetIOCounters(pernic bool) ([]net.IOCountersStat, error) {
+	ret := make([]net.IOCountersStat, 0, 1)
+	nic := net.IOCountersStat{
+		Name:        "eth0",
+		BytesRecv:   0,
+		PacketsRecv: 1,
+		Errin:       2,
+		Dropin:      3,
+		Fifoin:      4,
+		BytesSent:   5,
+		PacketsSent: 6,
+		Errout:      7,
+		Dropout:     8,
+		Fifoout:     9,
+	}
+	ret = append(ret, nic)
+	return ret, nil
 }
 
 func (p *testProc) Tags() map[string]string {
