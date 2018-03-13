@@ -88,9 +88,7 @@ func (s *SignalFx) Close() error {
 }
 
 /*Determine and assign a datapoint metric type based on telegraf metric type*/
-func getMetricType(metric telegraf.Metric) (datapoint.MetricType, error) {
-	var err error
-	var metricType datapoint.MetricType
+func getMetricType(metric telegraf.Metric) (metricType datapoint.MetricType, err error) {
 	switch metric.Type() {
 	case telegraf.Counter:
 		metricType = datapoint.Counter
@@ -99,29 +97,35 @@ func getMetricType(metric telegraf.Metric) (datapoint.MetricType, error) {
 		}
 	case telegraf.Gauge:
 		metricType = datapoint.Gauge
-	case telegraf.Untyped:
-		// For untyped metrics, default to Gauge
+	case telegraf.Summary, telegraf.Histogram, telegraf.Untyped:
 		metricType = datapoint.Gauge
+		err = fmt.Errorf("histogram, summary, and untyped metrics will be sent as gauges")
 	default:
-		err = fmt.Errorf("unable to determine metric type")
+		metricType = datapoint.Gauge
+		err = fmt.Errorf("unrecognized metric type defaulting to gauge")
 	}
 	return metricType, err
 }
 
 /*Determine and assign a datapoint metric type based on telegraf metric type*/
-func getMetricTypeAsString(metric telegraf.Metric) (string, error) {
-	var err error
-	var metricType string
+func getMetricTypeAsString(metric telegraf.Metric) (metricType string, err error) {
 	switch metric.Type() {
 	case telegraf.Counter:
 		metricType = "counter"
 	case telegraf.Gauge:
 		metricType = "gauge"
+	case telegraf.Summary:
+		metricType = "summary"
+		err = fmt.Errorf("summary metrics will be sent as gauges")
+	case telegraf.Histogram:
+		metricType = "histogram"
+		err = fmt.Errorf("histogram metrics will be sent as gauges")
 	case telegraf.Untyped:
-		// For untyped metrics, default to Gauge
 		metricType = "untyped"
+		err = fmt.Errorf("untyped metrics will be sent as gauges")
 	default:
-		err = fmt.Errorf("unable to determine metric type")
+		metricType = "unrecognized"
+		err = fmt.Errorf("unrecognized metric type defaulting to gauge")
 	}
 	return metricType, err
 }
@@ -190,15 +194,18 @@ func getMetricValue(metric telegraf.Metric,
 	return metricValue, err
 }
 
-func parseMetricType(metric telegraf.Metric) (datapoint.MetricType, string, error) {
+func parseMetricType(metric telegraf.Metric) (metricType datapoint.MetricType, metricTypeString string) {
 	var err error
-	var metricType datapoint.MetricType
-	var metricTypeString string
 	// Parse the metric type
-	if metricType, err = getMetricType(metric); err == nil {
-		metricTypeString, err = getMetricTypeAsString(metric)
+	metricType, err = getMetricType(metric)
+	if err != nil {
+		log.Printf("D! Outputs [signalfx] getMetricType() %s {%s}\n", err, metric)
 	}
-	return metricType, metricTypeString, err
+	metricTypeString, err = getMetricTypeAsString(metric)
+	if err != nil {
+		log.Printf("D! Outputs [signalfx] getMetricTypeAsString()  %s {%s}\n", err, metric)
+	}
+	return metricType, metricTypeString
 }
 
 func getMetricName(metric telegraf.Metric, field string, dims map[string]string, props map[string]interface{}) string {
@@ -224,11 +231,11 @@ func getMetricName(metric telegraf.Metric, field string, dims map[string]string,
 }
 
 // Modify the dimensions of the metric according to the following rules
-func modifyDimensions(name string, metricType string, dims map[string]string, props map[string]interface{}) error {
+func modifyDimensions(name string, metricTypeString string, dims map[string]string, props map[string]interface{}) error {
 	var err error
 	// Add common dimensions
 	dims["agent"] = "telegraf"
-	dims["telegraf_type"] = metricType
+	dims["telegraf_type"] = metricTypeString
 
 	// If the plugin doesn't define a plugin name use metric.Name()
 	if _, in := dims["plugin"]; !in {
@@ -298,11 +305,7 @@ func (s *SignalFx) Write(metrics []telegraf.Metric) error {
 		var metricType datapoint.MetricType
 		var metricTypeString string
 
-		// Parse metric type information
-		if metricType, metricTypeString, err = parseMetricType(metric); err != nil {
-			log.Println("E! Output [signalfx] Unable to parse metric type for metric ", metric.String())
-			continue
-		}
+		metricType, metricTypeString = parseMetricType(metric)
 
 		for field := range metric.Fields() {
 			var metricValue datapoint.Value
