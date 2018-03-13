@@ -268,6 +268,12 @@
 
 ## v1.5.1 [2018-01-10]
 ## v1.5.1 [unreleased]
+## v1.5.1.sfx2 [2018-03-13]
+
+### Release Notes
+
+- Minor bug fix in SignalFx output plugin to default to metric type gauge when no metric type can be mapped
+
 ## v1.5.1.sfx1 [2018-01-16]
 
 ### Release Notes
