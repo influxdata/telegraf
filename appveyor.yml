@@ -1,3 +1,4 @@
+image: Previous Visual Studio 2015
 version: "{build}"
 
 cache:
