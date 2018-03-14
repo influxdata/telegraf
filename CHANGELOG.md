@@ -90,7 +90,7 @@
 - [#3801](https://github.com/influxdata/telegraf/issues/3801): Fix panic in http_response on invalid regex.
 - [#3973](https://github.com/influxdata/telegraf/issues/3873): Fix socket_listener setting ReadBufferSize on tcp sockets.
 
-## v1.5.3 [unreleased]
+## v1.5.3 [2018-03-14]
 
 ### Bugfixes
 
