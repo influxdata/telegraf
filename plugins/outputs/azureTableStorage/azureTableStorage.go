@@ -138,15 +138,15 @@ func getPrimaryKey(resourceId string) string {
 	return encodeSpecialCharacterToUTF16(resourceId)
 }
 
-func getUTCTicks_DescendingOrder(lastSampleTimestamp string) int64 {
+func getUTCTicks_DescendingOrder(lastSampleTimestamp string) uint64 {
 
-	currentTime := time.Now().UTC()
+	currentTime, _ := time.Parse(layout, lastSampleTimestamp)
 	//maxValueDateTime := time.Date(9999, time.December, 31, 12, 59, 59, 59, time.UTC)
 	//Ticks is the number of 100 nanoseconds from zero value of date
-	maxValueDateTimeInTicks := int64(3155378975999999999)
-	zeroTime := time.Date(1, time.January, 1, 0, 0, 0, 0, time.UTC)
-	diff := currentTime.Sub(zeroTime)
-	currentTimeInTicks := int64(diff.Nanoseconds()) / 100
+	maxValueDateTimeInTicks := uint64(3155378975999999999)
+	zeroTime := time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC)
+	diff := uint64(currentTime.Sub(zeroTime))
+	currentTimeInTicks := diff / 100
 	UTCTicks_DescendincurrentTimeOrder := maxValueDateTimeInTicks - currentTimeInTicks
 	fmt.Println(UTCTicks_DescendincurrentTimeOrder)
 
@@ -156,7 +156,7 @@ func getUTCTicks_DescendingOrder(lastSampleTimestamp string) int64 {
 func getRowKeyComponents(lastSampleTimestamp string, counterName string) (string, string) {
 
 	UTCTicks_DescendingOrder := getUTCTicks_DescendingOrder(lastSampleTimestamp)
-	UTCTicks_DescendingOrderStr := strconv.FormatInt(UTCTicks_DescendingOrder, 10)
+	UTCTicks_DescendingOrderStr := strconv.FormatInt(int64(UTCTicks_DescendingOrder), 10)
 	encodedCounterName := encodeSpecialCharacterToUTF16(counterName)
 	return UTCTicks_DescendingOrderStr, encodedCounterName
 }
