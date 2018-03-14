@@ -32,7 +32,7 @@ ci-test:
 deps:
 	go get -u github.com/golang/lint/golint
 	go get github.com/sparrc/gdm
-	gdm restore
+	gdm restore --parallel false
 
 telegraf:
 	go build -i -o $(TELEGRAF) -ldflags "$(LDFLAGS)" ./cmd/telegraf/telegraf.go
