@@ -251,6 +251,7 @@
 - [#3697](https://github.com/influxdata/telegraf/issues/3697): Disable keepalive in mqtt output to prevent deadlock.
 - [#3786](https://github.com/influxdata/telegraf/pull/3786): Fix collation difference in sqlserver input.
 - [#3871](https://github.com/influxdata/telegraf/pull/3871): Fix uptime metric in passenger input plugin.
+- [#3851](https://github.com/influxdata/telegraf/issues/3851): Add output of stderr in case of error to exec log message.
 
 ## v1.5.2 [2018-01-30]
 
