@@ -68,8 +68,7 @@ var sampleConfig = `
   ## - MemoryClerk
   ## - VolumeSpace
   ## - PerformanceMetrics
-  ## - WorkloadGroup
-  exclude_query = [ 'WorkloadGroup' ]
+  # exclude_query = [ 'DatabaseIO' ]
 `
 
 // SampleConfig return the sample configuration
@@ -249,7 +248,6 @@ func init() {
 const sqlMemoryClerkV2 = `SELECT	
 'sqlserver_memory_clerks' As [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-SERVERPROPERTY('ServerName') AS [host],
 ISNULL(clerk_names.name,mc.type) AS clerk_type,
 SUM(mc.pages_kb) AS size_kb
 FROM
@@ -344,26 +342,6 @@ HAVING SUM(pages_kb) >= 1024
 OPTION( RECOMPILE );
 `
 
-const sqlWorkloadGroup = `SELECT
-'sqlserver_workload_group' As [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-SERVERPROPERTY('ServerName') AS [host],
-rgrp.name AS resource_pool,
-rgwg.name AS workload_group,
-rgwg.total_request_count,
-rgwg.total_queued_request_count,
-rgwg.total_cpu_limit_violation_count,
-rgwg.total_cpu_usage_ms,
-rgwg.total_cpu_usage_preemptive_ms,
-rgwg.total_lock_wait_count,
-rgwg.total_lock_wait_time_ms,
-rgwg.total_reduced_memgrant_count
-FROM sys.dm_resource_governor_workload_groups AS rgwg
-INNER JOIN sys.dm_resource_governor_resource_pools AS rgrp
-ON rgwg.pool_id = rgrp.pool_id
-OPTION(RECOMPILE);
-`
-
 const sqlDatabaseIOV2 = `SELECT
 'sqlserver_database_io' As [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
@@ -396,7 +374,6 @@ END
 SELECT
 'sqlserver_server_properties' As [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-SERVERPROPERTY('ServerName') AS [host],
 SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS db_online,
 SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS db_restoring,
 SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
@@ -537,7 +514,6 @@ WHERE	(
 
 SELECT	'sqlserver_performance' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-		SERVERPROPERTY('ServerName') AS [host],
 		pc.object_name AS [object],
 		pc.counter_name AS [counter],
 		CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
@@ -552,13 +528,39 @@ FROM	@PCounters AS pc
 			AND pc.instance_name = pc1.instance_name
 			AND pc1.counter_name LIKE '%base'
 WHERE	pc.counter_name NOT LIKE '% base'
-OPTION( RECOMPILE );
+UNION ALL
+SELECT
+'sqlserver_performance' As [measurement],
+REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+'SQLServer:Workload Group Stats' AS object,
+counter,
+instance,
+vs.value
+FROM
+(
+    SELECT 
+    rgwg.name AS instance,
+    rgwg.total_request_count AS 'Request Count',
+    rgwg.total_queued_request_count AS 'Queued Request Count',
+    rgwg.total_cpu_limit_violation_count AS 'CPU Limit Violation Count',
+    rgwg.total_cpu_usage_ms AS 'CPU Usage (time)',
+    rgwg.total_cpu_usage_preemptive_ms AS 'Premptive CPU Usage (time)',
+    rgwg.total_lock_wait_count AS 'Lock Wait Count',
+    rgwg.total_lock_wait_time_ms AS 'Lock Wait Time',
+    rgwg.total_reduced_memgrant_count AS 'Reduced Memory Grant Count'
+    FROM sys.dm_resource_governor_workload_groups AS rgwg
+    INNER JOIN sys.dm_resource_governor_resource_pools AS rgrp
+    ON rgwg.pool_id = rgrp.pool_id
+) AS rg
+UNPIVOT (
+    value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], [Premptive CPU Usage (time)], [Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] )
+) AS vs
+OPTION(RECOMPILE);
 `
 
 const sqlWaitStatsCategorizedV2 string = `SELECT
 'sqlserver_waitstats' AS [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-SERVERPROPERTY('ServerName') AS [host],
 ws.wait_type,
 wait_time_ms,
 wait_time_ms - signal_wait_time_ms AS [resource_wait_ms],
@@ -1120,7 +1122,6 @@ BEGIN
 	SELECT TOP(1)
 		'sqlserver_azurestats' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-		SERVERPROPERTY('ServerName') AS [host],
 		avg_cpu_percent,
 		avg_data_io_percent,
 		avg_log_write_percent,
