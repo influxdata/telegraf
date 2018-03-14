@@ -81,6 +81,7 @@
 - [#3853](https://github.com/influxdata/telegraf/pull/3853): Add host to ping timeout log message.
 - [#3773](https://github.com/influxdata/telegraf/pull/3773): Add override processor.
 - [#3814](https://github.com/influxdata/telegraf/pull/3814): Add status_code and result tags and result_type field to http_response input.
+- [#3880](https://github.com/influxdata/telegraf/pull/3880): Added config flag to skip collection of network protocol metrics.
 
 ### Bugfixes
 
