@@ -78,6 +78,14 @@ services:
     ports:
       - "389:389"
       - "636:636"
+  services:
+    clickhouse:
+      image: yandex/clickhouse-server
+      ports:
+        - 127.0.0.1:8123:8123
+        - 127.0.0.1:9000:9000
+        - 127.0.0.1:9009:9009
+
   crate:
    image: crate/crate
    ports:
