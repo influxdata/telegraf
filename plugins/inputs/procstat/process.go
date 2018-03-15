@@ -5,15 +5,18 @@ import (
 	"time"
 
 	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/net"
 	"github.com/shirou/gopsutil/process"
 )
 
 type Process interface {
 	PID() PID
 	Tags() map[string]string
-
+	CmdlineSlice() ([]string, error)
+	CreateTime() (int64, error)
 	IOCounters() (*process.IOCountersStat, error)
 	MemoryInfo() (*process.MemoryInfoStat, error)
+	NetIOCounters(bool) ([]net.IOCountersStat, error)
 	Name() (string, error)
 	NumCtxSwitches() (*process.NumCtxSwitchesStat, error)
 	NumFDs() (int32, error)
@@ -21,6 +24,8 @@ type Process interface {
 	Percent(interval time.Duration) (float64, error)
 	Times() (*cpu.TimesStat, error)
 	RlimitUsage(bool) ([]process.RlimitStat, error)
+	Uids() ([]int32, error)
+	Gids() ([]int32, error)
 }
 
 type PIDFinder interface {

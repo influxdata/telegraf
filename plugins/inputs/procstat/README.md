@@ -74,6 +74,8 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - systemd_unit (when defined)
     - cgroup (when defined)
   - fields:
+    - cancelled_write_bytes (int)
+    - cmdline (string)
     - cpu_time (int)
     - cpu_time_guest (float)
     - cpu_time_guest_nice (float)
@@ -87,6 +89,8 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - cpu_time_system (float)
     - cpu_time_user (float)
     - cpu_usage (float)
+    - create_time (int)
+    - delayacct_blkio_ticks (int)
     - involuntary_context_switches (int)
     - memory_data (int)
     - memory_locked (int)
@@ -94,6 +98,15 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - memory_stack (int)
     - memory_swap (int)
     - memory_vms (int)
+    - memory_used_percent (float)
+    - minor_faults (int)
+    - major_faults (int)
+    - net_bytes_sent (int)
+    - net_bytes_recv (int)
+    - net_errors_in (int)
+    - net_errors_out (int)
+    - net_packets_sent (int)
+    - net_packets_recv (int)
     - nice_priority (int)
     - num_fds (int, *telegraf* may need to be ran as **root**)
     - num_threads (int)
@@ -124,9 +137,31 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - rlimit_signals_pending_hard (int)
     - rlimit_signals_pending_soft (int)
     - signals_pending (int)
+    - state (string)
+    - uid (int)
+    - gid (int)
     - voluntary_context_switches (int)
     - write_bytes (int, *telegraf* may need to be ran as **root**)
     - write_count (int, *telegraf* may need to be ran as **root**)
+- procstat_net
+  - tags:
+    - interface (string)
+    - pid (when `pid_tag` is true)
+    - process_name
+    - pidfile (when defined)
+    - exe (when defined)
+    - pattern (when defined)
+    - user (when selected)
+    - systemd_unit (when defined)
+    - cgroup (when defined)
+  fields:
+    - net_bytes_sent (int)
+    - net_bytes_recv (int)
+    - net_errors_in (int)
+    - net_errors_out (int)
+    - net_packets_sent (int)
+    - net_packets_recv (int)
+
 
 *NOTE: Resource limit > 2147483647 will be reported as 2147483647.*
 
