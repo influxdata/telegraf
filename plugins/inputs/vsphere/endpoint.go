@@ -334,26 +334,28 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 
 	// Do we have new data yet?
 	//
-	sampling := e.resources[resourceType].sampling
+	res := e.resources[resourceType]
 	now := time.Now()
 	latest, hasLatest := e.lastColls[resourceType]
 	if hasLatest {
 		elapsed := time.Now().Sub(latest).Seconds()
-		if elapsed < float64(sampling) {
+		if elapsed < float64(res.sampling) {
 			// No new data would be available. We're outta here!
 			//
-			log.Printf("D! Sampling period for %s of %d has not elapsed for %s", resourceType, sampling, e.Url.Host)
+			log.Printf("D! Sampling period for %s of %d has not elapsed for %s", resourceType, res.sampling, e.Url.Host)
 			return 0, 0, nil
 		}
 	}
-	e.lastColls[resourceType] = now
 
-	metricIds := e.resources[resourceType].metricIds
-	objects := e.resources[resourceType].objects
-	if len(metricIds) == 0 {
-		log.Printf("D! Collecting all metrics for %d objects of type %s for %s", len(objects), resourceType, e.Url.Host)
+	if !hasLatest {
+		latest = now.Add(-time.Duration(res.sampling) * time.Second)
+		e.lastColls[resourceType] = latest
+	}
+
+	if len(res.metricIds) == 0 {
+		log.Printf("D! Collecting all metrics for %d objects of type %s for %s", len(res.objects), resourceType, e.Url.Host)
 	} else {
-		log.Printf("D! Collecting %d metrics for %d objects of type %s for %s", len(metricIds), len(objects), resourceType, e.Url.Host)
+		log.Printf("D! Collecting %d metrics for %d objects of type %s for %s", len(res.metricIds), len(res.objects), resourceType, e.Url.Host)
 	}
 
 	client, err := e.getClient()
@@ -370,21 +372,19 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 	measurementName := "vsphere." + resourceType
 	count := 0
 	start := time.Now()
-	pqs := make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
 	total := 0
-	for _, object := range objects {
+	lastTS := latest
+	pqs := make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
+	for _, object := range res.objects {
 		pq := types.PerfQuerySpec{
 			Entity:     object.ref,
 			MaxSample:  1,
-			MetricId:   metricIds,
-			IntervalId: sampling,
+			MetricId:   res.metricIds,
+			IntervalId: res.sampling,
 		}
 
-		realTime := e.resources[resourceType].realTime
-		if !realTime {
-			var startTime = time.Time{}
-			startTime = now.Add(-time.Duration(sampling) * time.Second)
-			pq.StartTime = &startTime
+		if !res.realTime {
+			pq.StartTime = &latest
 			pq.EndTime = &now
 		}
 
@@ -393,8 +393,8 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 
 		// Filled up a chunk or at end of data? Run a query with the collected objects
 		//
-		if len(pqs) >= int(e.Parent.ObjectsPerQuery) || total == len(objects) {
-			log.Printf("D! Querying %d objects of type %s for %s. Object count: %d. Total objects %d", len(pqs), resourceType, e.Url.Host, total, len(objects))
+		if len(pqs) >= int(e.Parent.ObjectsPerQuery) || total == len(res.objects) {
+			log.Printf("D! Querying %d objects of type %s for %s. Object count: %d. Total objects %d", len(pqs), resourceType, e.Url.Host, total, len(res.objects))
 			metrics, err := client.Perf.Query(ctx, pqs)
 			if err != nil {
 				log.Printf("E! Error querying metrics of %s for %s", resourceType, e.Url.Host)
@@ -418,7 +418,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 						f := map[string]interface{}{name: value}
 						objectName := e.nameCache[moid]
 						parent := ""
-						parentRef := objects[moid].parentRef
+						parentRef := res.objects[moid].parentRef
 						if parentRef != nil {
 							parent = e.nameCache[parentRef.Value]
 						}
@@ -427,7 +427,15 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 							"vcenter":  e.Url.Host,
 							"hostname": objectName,
 							"moid":     moid,
-							"parent":   parent,
+							//"parent":   parent,
+						}
+						switch resourceType {
+						case "host":
+							t["cluster"] = parent
+							break
+						case "vm":
+							t["esxhost"] = parent
+							break
 						}
 
 						if v.Instance != "" {
@@ -455,13 +463,22 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 							}
 						}
 
-						acc.AddFields(measurementName, f, t, em.SampleInfo[idx].Timestamp)
+						ts := em.SampleInfo[idx].Timestamp
+						if ts.After(lastTS) {
+							lastTS = ts
+						}
+
+						acc.AddFields(measurementName, f, t, ts)
 						count++
 					}
 				}
 			}
 			pqs = make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
 		}
+	}
+
+	if count > 0 {
+		e.lastColls[resourceType] = lastTS
 	}
 
 	log.Printf("D! Collection of %s for %s, took %v returning %d metrics", resourceType, e.Url.Host, time.Now().Sub(start), count)
