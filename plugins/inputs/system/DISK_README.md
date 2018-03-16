@@ -17,6 +17,9 @@ https://en.wikipedia.org/wiki/Df_(Unix) for more details.
 
   ## Ignore mount points by filesystem type.
   ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
+  
+  ## Ignore some mountpoints by mount point. 
+  # ignore_mount_points = ["/dev", "/sys/fs/cgroup", "/dev/shm", "/run", "/run/lock", "/sys/fs/cgroup", "/proc/kcore", "/proc/timer_list", "/proc/timer_stats", "/proc/sched_debug"]
 ```
 
 #### Docker container

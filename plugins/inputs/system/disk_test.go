@@ -370,4 +370,10 @@ func TestDiskStats(t *testing.T) {
 	// / and /home
 	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home"}}).Gather(&acc)
 	assert.Equal(t, 2*expectedAllDiskMetrics+7, acc.NFields())
+
+	// We should see remain root diskpoints as MountPoints ignore /home.
+	// include / and ignore /home
+	err = (&DiskStats{ps: &mps, MountPoints: []string{"/", "/home"}, IgnoreMountPoints: []string{"/home"}}).Gather(&acc)
+	rootMetrics := 7
+	assert.Equal(t, 2*expectedAllDiskMetrics+7+rootMetrics, acc.NFields())
 }
