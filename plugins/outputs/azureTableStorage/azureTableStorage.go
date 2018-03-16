@@ -2,6 +2,7 @@ package azureTableStorage
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -22,14 +23,18 @@ const (
 )
 const layout = "02/01/2006 03:04:05 PM"
 
+type TableNameVsTableRef struct {
+	TableName string
+	TableRef  *storage.Table
+}
 type AzureTableStorage struct {
-	AccountName                string
-	AccountKey                 string
-	ResourceId                 string
-	DeploymentId               string
-	TableName                  string
-	ScheduledAggregationPeriod string
-	table                      *storage.Table
+	AccountName                 string
+	AccountKey                  string
+	ResourceId                  string
+	DeploymentId                string
+	Periods                     []string //this is the list of periods being configured for various aggregator instances.
+	PeriodVsTableNameVsTableRef map[string]TableNameVsTableRef
+	PrevTableNameSuffix         string
 }
 
 // NewBasicClient constructs a Client with given storage service name and
@@ -92,22 +97,59 @@ func getTableDateSuffix() string {
 	return suffixDateStr
 }
 
-func getAzureTableName(azureTableStorage *AzureTableStorage) string {
-	tableName := "WADMetrics" + azureTableStorage.ScheduledAggregationPeriod + "P10DV25" + getTableDateSuffix()
-	return tableName
+func getPeriodStr(period string) string {
+	var periodStr string
+	totalSeconds, _ := strconv.Atoi(strings.Trim(period, "s"))
+	hour := (int)(math.Floor(float64(totalSeconds) / 3600))
+	min := int(math.Floor(float64(totalSeconds-(hour*3600)) / 60))
+	sec := totalSeconds - (hour * 3600) - (min * 60)
+	periodStr = "PT"
+	if hour > 0 {
+		periodStr += strconv.Itoa(hour) + "H"
+	}
+	if min > 0 {
+		periodStr += strconv.Itoa(min) + "M"
+	}
+	if sec > 0 {
+		periodStr += strconv.Itoa(sec) + "S"
+	}
+	return periodStr
+}
+
+func getAzurePeriodVsTableNameVsTableRefMap(azureTableStorage *AzureTableStorage,
+	tableClient storage.TableServiceClient) map[string]TableNameVsTableRef {
+
+	PeriodVsTableNameVsTableRef := map[string]TableNameVsTableRef{}
+	//Empty the list of tables every 10th day as they become obsolete now.
+	tableNameSuffix := getTableDateSuffix()
+	if azureTableStorage.PrevTableNameSuffix != tableNameSuffix {
+		azureTableStorage.PeriodVsTableNameVsTableRef = map[string]TableNameVsTableRef{}
+	}
+
+	for _, period := range azureTableStorage.Periods {
+		periodStr := getPeriodStr(period)
+		tableName := "WADMetrics" + periodStr + "P10DV25" + tableNameSuffix
+		table := tableClient.GetTableReference(tableName)
+		TableNameVsTableRefObj := TableNameVsTableRef{TableName: tableName, TableRef: table}
+		PeriodVsTableNameVsTableRef[period] = TableNameVsTableRefObj
+	}
+	return PeriodVsTableNameVsTableRef
 }
 
 func (azureTableStorage *AzureTableStorage) Connect() error {
+
 	//create a new client with NewClient() it will retuen a client object
 	azureStorageClient := getBasicClient(azureTableStorage)
 	// GetTableService returns TableServiceClient
 	tableClient := azureStorageClient.GetTableService()
-	//TODO: add logic for creating a new table every 10th day.
-	azureTableStorage.TableName = getAzureTableName(azureTableStorage)
-	azureTableStorage.table = tableClient.GetTableReference(azureTableStorage.TableName)
-	er := azureTableStorage.table.Create(30, EmptyPayload, nil)
-	if er != nil {
-		fmt.Println("the table ", azureTableStorage.TableName, " already exists.")
+	//add logic for creating a new table every 10th day.
+	azureTableStorage.PeriodVsTableNameVsTableRef = getAzurePeriodVsTableNameVsTableRefMap(azureTableStorage, tableClient)
+	for _, tableVsTableRef := range azureTableStorage.PeriodVsTableNameVsTableRef {
+		er := tableVsTableRef.TableRef.Create(30, EmptyPayload, nil)
+		if er != nil {
+			fmt.Println("the table ", tableVsTableRef.TableName, " already exists.")
+
+		}
 	}
 	return nil
 }
@@ -172,13 +214,16 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 		props["DeploymentId"] = azureTableStorage.DeploymentId
 		props["Host"], _ = os.Hostname()
 
+		periodStr := metrics[i].Tags()["Period"]
+		table := azureTableStorage.PeriodVsTableNameVsTableRef[periodStr].TableRef
+
 		rowKey1 := UTCTicks_DescendingOrderStr + "_" + encodedCounterName
-		entity = azureTableStorage.table.GetEntityReference(partitionKey, rowKey1)
+		entity = table.GetEntityReference(partitionKey, rowKey1)
 		entity.Properties = props
 		entity.Insert(FullMetadata, nil)
 
 		rowKey2 := encodedCounterName + "_" + UTCTicks_DescendingOrderStr
-		entity = azureTableStorage.table.GetEntityReference(partitionKey, rowKey2)
+		entity = table.GetEntityReference(partitionKey, rowKey2)
 		entity.Properties = props
 		entity.Insert(FullMetadata, nil)
 

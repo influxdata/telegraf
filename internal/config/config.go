@@ -933,7 +933,7 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		}
 	}
 
-	delete(tbl.Fields, "period")
+	//delete(tbl.Fields, "period")
 	delete(tbl.Fields, "delay")
 	delete(tbl.Fields, "drop_original")
 	delete(tbl.Fields, "name_prefix")

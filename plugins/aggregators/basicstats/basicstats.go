@@ -10,9 +10,10 @@ import (
 )
 
 type BasicStats struct {
-	Stats []string `toml:"stats"`
+	Stats       []string `toml:"stats"`
 	cache       map[uint64]aggregate
 	statsConfig *configuredStats
+	Period      string
 }
 
 type configuredStats struct {
@@ -195,6 +196,7 @@ func (m *BasicStats) Push(acc telegraf.Accumulator) {
 		}
 
 		if len(fields) > 0 {
+			aggregate.tags["Period"] = m.Period
 			acc.AddFields(aggregate.name, fields, aggregate.tags)
 		}
 	}
