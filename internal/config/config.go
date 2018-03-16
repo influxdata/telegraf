@@ -205,7 +205,7 @@ var header = `# Telegraf Configuration
 # Configuration for telegraf agent
 [agent]
   ## Default data collection interval for all inputs
-  interval = "10s"
+  interval = "60s"
   ## Rounds collection interval to 'interval'
   ## ie, if interval="10s" then always collect on :00, :10, :20, etc.
   round_interval = true
@@ -229,7 +229,7 @@ var header = `# Telegraf Configuration
 
   ## Default flushing interval for all outputs. You shouldn't set this below
   ## interval. Maximum flush_interval will be flush_interval + flush_jitter
-  flush_interval = "10s"
+  flush_interval = "30s"
   ## Jitter the flush interval by a random amount. This is primarily to avoid
   ## large write spikes for users running a large number of telegraf instances.
   ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
@@ -246,11 +246,11 @@ var header = `# Telegraf Configuration
 
   ## Logging configuration:
   ## Run telegraf with debug log messages.
-  debug = false
+  debug = true
   ## Run telegraf in quiet mode (error log messages only).
   quiet = false
   ## Specify the log file name. The empty string means to log to stderr.
-  logfile = ""
+  logfile = "/var/log/telegraf/telegraf.log"
 
   ## Override default hostname, if empty use os.Hostname()
   hostname = ""
