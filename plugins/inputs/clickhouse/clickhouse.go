@@ -112,7 +112,7 @@ func (ch *ClickHouse) Start(telegraf.Accumulator) (err error) {
 }
 
 // Stop ClickHouse input service
-func (ch *ClickHouse) Stop(ClickHouse) {
+func (ch *ClickHouse) Stop() {
 	if ch.connect != nil {
 		ch.connect.Close()
 	}
@@ -149,3 +149,5 @@ var measurementMap = map[string]string{
 	"metrics":              systemMetricsSQL,
 	"asynchronous_metrics": systemAsyncMetricsSQL,
 }
+
+var _ telegraf.ServiceInput = &ClickHouse{}
