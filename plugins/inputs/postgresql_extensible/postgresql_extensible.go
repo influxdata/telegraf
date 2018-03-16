@@ -126,17 +126,6 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		columns     []string
 	)
 
-	p.AllColumns = nil
-
-	if p.Address == "" || p.Address == "localhost" {
-		p.Address = localhost
-	}
-
-	if db, err = sql.Open("pgx", p.Address); err != nil {
-		return err
-	}
-	defer db.Close()
-
 	// Retreiving the database version
 
 	query = `select substring(setting from 1 for 3) as version from pg_settings where name='server_version_num'`
