@@ -1,4 +1,8 @@
 collectd.org 2ce144541b8903101fb8f1483cc0497a68798122
+github.com/PuerkitoBio/purell fd18e053af8a4ff11039269006e8037ff374ce0e
+github.com/PuerkitoBio/urlesc de5bf2ad457846296e2031421a34e2568e304e35
+github.com/Shopify/sarama 3b1b38866a79f06deddf0487d5c27ba0697ccd65
+github.com/Sirupsen/logrus 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
 github.com/aerospike/aerospike-client-go 95e1ad7791bdbca44707fedbb29be42024900d9c
 github.com/amir/raidman c74861fe6a7bb8ede0a010ce4485bdbb4fc4c985
 github.com/apache/thrift 4aaa92ece8503a6da9bc6701604f69acf2b99d07
@@ -17,15 +21,22 @@ github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/go-xerial-snappy bb955e01b9346ac19dc29eb16586c90ded99a98c
 github.com/eapache/queue 44cc805cf13205b55f69e14bcb69867d1ae92f98
 github.com/eclipse/paho.mqtt.golang aff15770515e3c57fc6109da73d42b0d46f7f483
+github.com/emicklei/go-restful 2dd44038f0b95ae693b266c5f87593b5d2fdd78d
 github.com/go-logfmt/logfmt 390ab7935ee28ec6b286364bba9b4dd6410cb3d5
+github.com/go-openapi/jsonpointer 779f45308c19820f1a69e9a4cd965f496e0da10f
+github.com/go-openapi/jsonreference 36d33bfe519efae5632669801b180bf1a245da3b
+github.com/go-openapi/spec a4fa9574c7aa73b2fc54e251eb9524d0482bb592
+github.com/go-openapi/swag cf0bdb963811675a4d7e74901cefc7411a1df939
 github.com/go-sql-driver/mysql 2e00b5cd70399450106cec6431c2e2ce3cae5034
 github.com/gobwas/glob bea32b9cd2d6f55753d94a28e959b13f0244797a
 github.com/go-ini/ini 9144852efba7c4daf409943ee90767da62d55438
 github.com/gogo/protobuf 7b6c6391c4ff245962047fc1e2c6e08b1cdfa0e8
+github.com/golang/glog 23def4e6c14b4da8ac2ed8007337bc5eb5007998
 github.com/golang/protobuf 8ee79997227bf9b34611aee7946ae64735e6fd93
 github.com/golang/snappy 7db9049039a047d955fe8c19b83c8ff5abd765c7
 github.com/go-ole/go-ole be49f7c07711fcb603cff39e1de7c67926dc0ba7
 github.com/google/go-cmp f94e52cad91c65a63acc1e75d4be223ea22e99bc
+github.com/google/gofuzz 24818f796faf91cd76ec7bddd72458fbced7a6c1
 github.com/gorilla/mux 392c28fe23e1c45ddba891b0320b3b5df220beea
 github.com/go-redis/redis 73b70592cdaa9e6abdfcfbf97b4a90d80728c836
 github.com/go-sql-driver/mysql 2e00b5cd70399450106cec6431c2e2ce3cae5034
@@ -39,6 +50,7 @@ github.com/jmespath/go-jmespath bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
 github.com/kardianos/osext c2c54e542fb797ad986b31721e1baedf214ca413
 github.com/kardianos/service 6d3a0ee7d3425d9d835debc51a0ca1ffa28f4893
 github.com/kballard/go-shellquote d8ec1a69a250a17bb0e419c386eac1f3711dc142
+github.com/mailru/easyjson 5f62e4f3afa2f576dc86531b7df4d966b19ef8f8
 github.com/matttproud/golang_protobuf_extensions c12348ce28de40eed0136aa2b644d0ee0650e56c
 github.com/Microsoft/go-winio ce2922f643c8fd76b46cadc7f404a06282678b34
 github.com/miekg/dns 99f84ae56e75126dd77e5de4fae2ea034a468ca1
@@ -93,3 +105,7 @@ gopkg.in/mgo.v2 3f83fa5005286a7fe593b055f0d7771a7dce4655
 gopkg.in/olivere/elastic.v5 3113f9b9ad37509fe5f8a0e5e91c96fdc4435e26
 gopkg.in/tomb.v1 dd632973f1e7218eb1089048e0798ec9ae7dceb8
 gopkg.in/yaml.v2 4c78c975fe7c825c6d1466c42be594d1d6f3aba6
+k8s.io/api 5584376ceeffeb13a2e98b5e9f0e9dab37de4bab
+k8s.io/apimachinery 18a564baac720819100827c16fdebcadb05b2d0d
+k8s.io/client-go a3c9a30b35fc56f709f4428827b807c90af99fc3
+k8s.io/kube-openapi 39a7bf85c140f972372c2a0d1ee40adbf0c8bfe1
