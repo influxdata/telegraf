@@ -1,41 +1,48 @@
 # Telegraf Input Plugin: ClickHouse
 
-This [ClickHouse](https://github.com/yandex/ClickHouse) plugin provides metrics for your ClickHouse server.
+This plugin gathers the statistic data from [ClickHouse](https://github.com/yandex/ClickHouse)  server.
 
-### Configuration example:
+### Configuration
 ```
+# Read metrics from one or many ClickHouse servers
 [[inputs.clickhouse]]
-  dsn = "native://localhost:9000?username=user&password=qwerty"
+  dsn     = "native://localhost:9000?username=user&password=qwerty"
+  cluster = true # If a setting is "true" plugin tries to connect to all servers in the cluster (system.clusters)
+  ignored_clusters = ["test_shard_localhost"] ## ignored cluster names
 ```
 
 ### Metrics:
 - clickhouse_events
   - tags:
-    - server (ClickHouse server hostname)
-    - hostname (Telegraf agent hostname)
+    - hostname (ClickHouse server hostname)
+    - cluster (Name of the cluster [optional])
+    - shard_num (Shard number in the cluster [optional])
   - fields:
     - all rows from system.events
 
 - clickhouse_metrics
   - tags:
-    - server (ClickHouse server hostname)
-    - hostname (Telegraf agent hostname)
+    - hostname (ClickHouse server hostname)
+    - cluster (Name of the cluster [optional])
+    - shard_num (Shard number in the cluster [optional])
   - fields:
     - all rows from system.metrics
 
 - clickhouse_asynchronous_metrics
   - tags:
-    - server (ClickHouse server hostname)
-    - hostname (Telegraf agent hostname)
+    - hostname (ClickHouse server hostname)
+    - cluster (Name of the cluster [optional])
+    - shard_num (Shard number in the cluster [optional])
   - fields:
     - all rows from system.asynchronous_metrics
 
 - clickhouse_tables
   - tags:
-    - server (ClickHouse server hostname)
-    - hostname (Telegraf agent hostname)
+    - hostname (ClickHouse server hostname)
     - table
     - database
+    - cluster (Name of the cluster [optional])
+    - shard_num (Shard number in the cluster [optional])
   - fields:
     - bytes
     - parts

@@ -14,7 +14,9 @@ func TestClickHouseGeneratesMetrics(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 	ch := ClickHouse{
-		DSN: fmt.Sprintf("native://%s:9000", testutil.GetLocalHost()),
+		DSN:          fmt.Sprintf("native://%s:9000", testutil.GetLocalHost()),
+		connect:      &connect{},
+		clustersConn: make(map[string]*connect),
 	}
 	var acc testutil.Accumulator
 	{
