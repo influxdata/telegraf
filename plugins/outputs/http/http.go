@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"io/ioutil"
 )
 
 var sampleConfig = `
@@ -131,6 +132,7 @@ func (h *Http) write(reqBody []byte) error {
 		return err
 	}
 	defer resp.Body.Close()
+	_, err = ioutil.ReadAll(resp.Body)
 
 	if err := h.isOk(resp, err); err != nil {
 		return err
