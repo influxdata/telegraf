@@ -45,6 +45,25 @@ func (*ClickHouse) Description() string {
 	return "Read metrics from ClickHouse server"
 }
 
+// Start ClickHouse input service
+func (ch *ClickHouse) Start(telegraf.Accumulator) (err error) {
+	if ch.connect.DB, err = sql.Open("clickhouse", ch.DSN); err != nil {
+		return err
+	}
+	setConnLimits(ch.connect.DB)
+	return ch.connect.QueryRow("SELECT hostName()").Scan(&ch.connect.hostname)
+}
+
+// Stop ClickHouse input service
+func (ch *ClickHouse) Stop() {
+	if ch.connect != nil {
+		ch.connect.Close()
+	}
+	for _, conn := range ch.clustersConn {
+		conn.Close()
+	}
+}
+
 // Gather collect data from ClickHouse server
 func (ch *ClickHouse) Gather(acc telegraf.Accumulator) (err error) {
 	if !ch.Cluster {
@@ -89,20 +108,24 @@ func (ch *ClickHouse) gather(conn *connect, acc telegraf.Accumulator) (err error
 		if err := rows.Scan(&database, &table, &bytes, &parts, &rowsInTable); err != nil {
 			return err
 		}
+		tags := map[string]string{
+			"table":    table,
+			"database": database,
+			"hostname": conn.hostname,
+		}
+		if len(conn.cluster) != 0 {
+			tags["cluster"] = conn.cluster
+		}
+		if len(conn.shardNum) != 0 {
+			tags["shard_num"] = conn.shardNum
+		}
 		acc.AddFields("clickhouse_tables",
 			map[string]interface{}{
 				"bytes": bytes,
 				"parts": parts,
 				"rows":  rowsInTable,
 			},
-			map[string]string{
-				"table":     table,
-				"server":    conn.hostname,
-				"cluster":   conn.cluster,
-				"database":  database,
-				"hostname":  conn.hostname,
-				"shard_num": conn.shardNum,
-			},
+			tags,
 		)
 	}
 	return nil
@@ -118,7 +141,7 @@ func (ch *ClickHouse) conns(acc telegraf.Accumulator) ([]*connect, error) {
 			}
 			return false
 		}
-		rows, err = ch.connect.Query(systemClusterSQL)
+		rows, err = ch.connect.Query(systemClustersSQL)
 	)
 	if err != nil {
 		return nil, err
@@ -152,6 +175,7 @@ func (ch *ClickHouse) conns(acc telegraf.Accumulator) ([]*connect, error) {
 				acc.AddError(err)
 				continue
 			}
+			setConnLimits(conn)
 			ch.clustersConn[connID] = &connect{
 				DB:       conn,
 				cluster:  cluster,
@@ -182,32 +206,17 @@ func (ch *ClickHouse) processRows(measurement string, conn *connect, rows *sql.R
 		}
 		fields[key] = value
 	}
-	acc.AddFields("clickhouse_"+measurement, fields, map[string]string{
-		"cluster":   conn.cluster,
-		"hostname":  conn.hostname,
-		"shard_num": conn.shardNum,
-	})
+	tags := map[string]string{
+		"hostname": conn.hostname,
+	}
+	if len(conn.cluster) != 0 {
+		tags["cluster"] = conn.cluster
+	}
+	if len(conn.shardNum) != 0 {
+		tags["shard_num"] = conn.shardNum
+	}
+	acc.AddFields("clickhouse_"+measurement, fields, tags)
 	return nil
-}
-
-// Start ClickHouse input service
-func (ch *ClickHouse) Start(telegraf.Accumulator) (err error) {
-	if ch.connect.DB, err = sql.Open("clickhouse", ch.DSN); err != nil {
-		return err
-	}
-	{
-		ch.connect.SetMaxOpenConns(2)
-		ch.connect.SetMaxIdleConns(1)
-		ch.connect.SetConnMaxLifetime(20 * time.Second)
-	}
-	return ch.connect.QueryRow("SELECT hostName()").Scan(&ch.connect.hostname)
-}
-
-// Stop ClickHouse input service
-func (ch *ClickHouse) Stop() {
-	if ch.connect != nil {
-		ch.connect.Close()
-	}
 }
 
 func init() {
@@ -217,6 +226,12 @@ func init() {
 			clustersConn: make(map[string]*connect),
 		}
 	})
+}
+
+func setConnLimits(conn *sql.DB) {
+	conn.SetMaxOpenConns(2)
+	conn.SetMaxIdleConns(1)
+	conn.SetConnMaxLifetime(10 * time.Minute)
 }
 
 const (
@@ -237,7 +252,7 @@ const (
 		ORDER BY 
 			database, table
 	`
-	systemClusterSQL = `
+	systemClustersSQL = `
 		SELECT 
 			cluster,
 			shard_num,
