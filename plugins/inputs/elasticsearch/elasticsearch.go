@@ -105,7 +105,7 @@ const sampleConfig = `
 
   ## node_stats is a list of sub-stats that you want to have gathered. Valid options
   ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",
-  ## "breakers". Per default, all stats are gathered.
+  ## "breaker". Per default, all stats are gathered.
   # node_stats = ["jvm", "http"]
 
   ## Optional SSL Config
@@ -141,6 +141,19 @@ func NewElasticsearch() *Elasticsearch {
 		HttpTimeout:        internal.Duration{Duration: time.Second * 5},
 		ClusterHealthLevel: "indices",
 	}
+}
+
+// perform status mapping
+func mapHealthStatusToCode(s string) int {
+	switch strings.ToLower(s) {
+	case "green":
+		return 1
+	case "yellow":
+		return 2
+	case "red":
+		return 3
+	}
+	return 0
 }
 
 // SampleConfig returns sample configuration for this plugin.
@@ -311,6 +324,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 	measurementTime := time.Now()
 	clusterFields := map[string]interface{}{
 		"status":                healthStats.Status,
+		"status_code":           mapHealthStatusToCode(healthStats.Status),
 		"timed_out":             healthStats.TimedOut,
 		"number_of_nodes":       healthStats.NumberOfNodes,
 		"number_of_data_nodes":  healthStats.NumberOfDataNodes,
@@ -330,6 +344,7 @@ func (e *Elasticsearch) gatherClusterHealth(url string, acc telegraf.Accumulator
 	for name, health := range healthStats.Indices {
 		indexFields := map[string]interface{}{
 			"status":                health.Status,
+			"status_code":           mapHealthStatusToCode(health.Status),
 			"number_of_shards":      health.NumberOfShards,
 			"number_of_replicas":    health.NumberOfReplicas,
 			"active_primary_shards": health.ActivePrimaryShards,

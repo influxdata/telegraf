@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -96,10 +97,11 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 				metricCounter++
 			}
 		} else {
-			log.Printf("I! unable to build Metric for %s, skipping\n", m.Name())
+			log.Printf("I! unable to build Metric for %s due to error '%v', skipping\n", m.Name(), err)
 		}
 	}
 
+	redactedApiKey := "****************"
 	ts.Series = make([]*Metric, metricCounter)
 	copy(ts.Series, tempSeries[0:])
 	tsBytes, err := json.Marshal(ts)
@@ -108,13 +110,13 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 	}
 	req, err := http.NewRequest("POST", d.authenticatedUrl(), bytes.NewBuffer(tsBytes))
 	if err != nil {
-		return fmt.Errorf("unable to create http.Request, %s\n", err.Error())
+		return fmt.Errorf("unable to create http.Request, %s\n", strings.Replace(err.Error(), d.Apikey, redactedApiKey, -1))
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := d.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error POSTing metrics, %s\n", err.Error())
+		return fmt.Errorf("error POSTing metrics, %s\n", strings.Replace(err.Error(), d.Apikey, redactedApiKey, -1))
 	}
 	defer resp.Body.Close()
 
@@ -148,7 +150,7 @@ func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 		}
 		var p Point
 		if err := p.setValue(v); err != nil {
-			return ms, fmt.Errorf("unable to extract value from Fields, %s", err.Error())
+			return ms, fmt.Errorf("unable to extract value from Fields %v error %v", k, err.Error())
 		}
 		p[0] = float64(m.Time().Unix())
 		ms[k] = p
@@ -187,6 +189,11 @@ func (p *Point) setValue(v interface{}) error {
 		p[1] = float64(d)
 	case float64:
 		p[1] = float64(d)
+	case bool:
+		p[1] = float64(0)
+		if d {
+			p[1] = float64(1)
+		}
 	default:
 		return fmt.Errorf("undeterminable type")
 	}

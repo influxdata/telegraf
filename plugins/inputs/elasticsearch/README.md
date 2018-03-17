@@ -35,7 +35,7 @@ or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/curre
 
   ## node_stats is a list of sub-stats that you want to have gathered. Valid options
   ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",
-  ## "breakers". Per default, all stats are gathered.
+  ## "breaker". Per default, all stats are gathered.
   # node_stats = ["jvm", "http"]
 
   ## Optional SSL Config
@@ -45,6 +45,17 @@ or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/curre
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 ```
+
+### Status mappings
+
+When reporting health (green/yellow/red), additional field `status_code`
+is reported. Field contains mapping from status:string to status_code:int
+with following rules:
+
+* `green` - 1
+* `yellow` - 2
+* `red` - 3
+* `unknown` - 0
 
 ### Measurements & Fields:
 

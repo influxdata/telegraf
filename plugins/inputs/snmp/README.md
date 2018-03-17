@@ -85,7 +85,7 @@ Telegraf config:
 
   [[inputs.snmp.table]]
     oid = "TEST::testTable"
-    inherit_tags = "hostname"
+    inherit_tags = [ "hostname" ]
 ```
 
 Resulting output:

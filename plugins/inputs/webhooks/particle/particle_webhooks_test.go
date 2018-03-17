@@ -85,7 +85,7 @@ func NewItemJSON() string {
 	  "public": false,
 	  "productID": 1234,
 	  "name": "sensor",
-	  "influx_db": "mydata"
+	  "measurement": "mydata"
   }`
 }
 

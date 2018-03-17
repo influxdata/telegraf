@@ -115,15 +115,15 @@ func TestAddNoIntervalWithPrecision(t *testing.T) {
 		map[string]interface{}{"value": float64(101)},
 		map[string]string{"acc": "test"}, now)
 
-	testm := <-a.metrics
+	testm := <-metrics
 	actual := testm.String()
 	assert.Contains(t, actual, "acctest value=101")
 
-	testm = <-a.metrics
+	testm = <-metrics
 	actual = testm.String()
 	assert.Contains(t, actual, "acctest,acc=test value=101")
 
-	testm = <-a.metrics
+	testm = <-metrics
 	actual = testm.String()
 	assert.Equal(t,
 		fmt.Sprintf("acctest,acc=test value=101 %d\n", int64(1139572800000000000)),
@@ -147,15 +147,15 @@ func TestAddDisablePrecision(t *testing.T) {
 		map[string]interface{}{"value": float64(101)},
 		map[string]string{"acc": "test"}, now)
 
-	testm := <-a.metrics
+	testm := <-metrics
 	actual := testm.String()
 	assert.Contains(t, actual, "acctest value=101")
 
-	testm = <-a.metrics
+	testm = <-metrics
 	actual = testm.String()
 	assert.Contains(t, actual, "acctest,acc=test value=101")
 
-	testm = <-a.metrics
+	testm = <-metrics
 	actual = testm.String()
 	assert.Equal(t,
 		fmt.Sprintf("acctest,acc=test value=101 %d\n", int64(1139572800082912748)),
@@ -179,15 +179,15 @@ func TestAddNoPrecisionWithInterval(t *testing.T) {
 		map[string]interface{}{"value": float64(101)},
 		map[string]string{"acc": "test"}, now)
 
-	testm := <-a.metrics
+	testm := <-metrics
 	actual := testm.String()
 	assert.Contains(t, actual, "acctest value=101")
 
-	testm = <-a.metrics
+	testm = <-metrics
 	actual = testm.String()
 	assert.Contains(t, actual, "acctest,acc=test value=101")
 
-	testm = <-a.metrics
+	testm = <-metrics
 	actual = testm.String()
 	assert.Equal(t,
 		fmt.Sprintf("acctest,acc=test value=101 %d\n", int64(1139572800000000000)),
@@ -204,7 +204,7 @@ func TestDifferentPrecisions(t *testing.T) {
 	a.AddFields("acctest",
 		map[string]interface{}{"value": float64(101)},
 		map[string]string{"acc": "test"}, now)
-	testm := <-a.metrics
+	testm := <-metrics
 	actual := testm.String()
 	assert.Equal(t,
 		fmt.Sprintf("acctest,acc=test value=101 %d\n", int64(1139572800000000000)),
@@ -214,7 +214,7 @@ func TestDifferentPrecisions(t *testing.T) {
 	a.AddFields("acctest",
 		map[string]interface{}{"value": float64(101)},
 		map[string]string{"acc": "test"}, now)
-	testm = <-a.metrics
+	testm = <-metrics
 	actual = testm.String()
 	assert.Equal(t,
 		fmt.Sprintf("acctest,acc=test value=101 %d\n", int64(1139572800083000000)),
@@ -224,7 +224,7 @@ func TestDifferentPrecisions(t *testing.T) {
 	a.AddFields("acctest",
 		map[string]interface{}{"value": float64(101)},
 		map[string]string{"acc": "test"}, now)
-	testm = <-a.metrics
+	testm = <-metrics
 	actual = testm.String()
 	assert.Equal(t,
 		fmt.Sprintf("acctest,acc=test value=101 %d\n", int64(1139572800082913000)),
@@ -234,7 +234,7 @@ func TestDifferentPrecisions(t *testing.T) {
 	a.AddFields("acctest",
 		map[string]interface{}{"value": float64(101)},
 		map[string]string{"acc": "test"}, now)
-	testm = <-a.metrics
+	testm = <-metrics
 	actual = testm.String()
 	assert.Equal(t,
 		fmt.Sprintf("acctest,acc=test value=101 %d\n", int64(1139572800082912748)),

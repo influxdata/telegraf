@@ -6,14 +6,17 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type NetIOStats struct {
-	ps PS
+	filter filter.Filter
+	ps     PS
 
-	skipChecks bool
-	Interfaces []string
+	skipChecks          bool
+	IgnoreProtocolStats bool
+	Interfaces          []string
 }
 
 func (_ *NetIOStats) Description() string {
@@ -26,6 +29,12 @@ var netSampleConfig = `
   ## regardless of status.
   ##
   # interfaces = ["eth0"]
+  ##
+  ## On linux systems telegraf also collects protocol stats.
+  ## Setting ignore_protocol_stats to true will skip reporting of protocol metrics.
+  ##
+  # ignore_protocol_stats = false
+  ##
 `
 
 func (_ *NetIOStats) SampleConfig() string {
@@ -38,15 +47,18 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("error getting net io info: %s", err)
 	}
 
+	if s.filter == nil {
+		if s.filter, err = filter.Compile(s.Interfaces); err != nil {
+			return fmt.Errorf("error compiling filter: %s", err)
+		}
+	}
+
 	for _, io := range netio {
 		if len(s.Interfaces) != 0 {
 			var found bool
 
-			for _, name := range s.Interfaces {
-				if name == io.Name {
-					found = true
-					break
-				}
+			if s.filter.Match(io.Name) {
+				found = true
 			}
 
 			if !found {
@@ -86,19 +98,21 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 
 	// Get system wide stats for different network protocols
 	// (ignore these stats if the call fails)
-	netprotos, _ := s.ps.NetProto()
-	fields := make(map[string]interface{})
-	for _, proto := range netprotos {
-		for stat, value := range proto.Stats {
-			name := fmt.Sprintf("%s_%s", strings.ToLower(proto.Protocol),
-				strings.ToLower(stat))
-			fields[name] = value
+	if !s.IgnoreProtocolStats {
+		netprotos, _ := s.ps.NetProto()
+		fields := make(map[string]interface{})
+		for _, proto := range netprotos {
+			for stat, value := range proto.Stats {
+				name := fmt.Sprintf("%s_%s", strings.ToLower(proto.Protocol),
+					strings.ToLower(stat))
+				fields[name] = value
+			}
 		}
+		tags := map[string]string{
+			"interface": "all",
+		}
+		acc.AddFields("net", fields, tags)
 	}
-	tags := map[string]string{
-		"interface": "all",
-	}
-	acc.AddFields("net", fields, tags)
 
 	return nil
 }

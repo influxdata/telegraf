@@ -5,7 +5,7 @@ You should configure your Particle.io's Webhooks to point at the `webhooks` serv
 
 ```
 {
-    "influx_db": "your_measurement_name"
+    "measurement": "your_measurement_name"
 }
 ```
 

@@ -211,11 +211,12 @@ func (c *httpClient) makeRequest(uri string, body io.Reader) (*http.Request, err
 		return nil, err
 	}
 
+	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
+
 	for header, value := range c.config.HTTPHeaders {
 		req.Header.Set(header, value)
 	}
 
-	req.Header.Set("Content-Type", "text/plain")
 	req.Header.Set("User-Agent", c.config.UserAgent)
 	if c.config.Username != "" && c.config.Password != "" {
 		req.SetBasicAuth(c.config.Username, c.config.Password)

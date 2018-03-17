@@ -2,7 +2,6 @@ package particle
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"time"
 
@@ -15,7 +14,7 @@ type event struct {
 	Data        data   `json:"data"`
 	TTL         int    `json:"ttl"`
 	PublishedAt string `json:"published_at"`
-	Database    string `json:"influx_db"`
+	Database    string `json:"measurement"`
 }
 
 type data struct {
@@ -43,7 +42,6 @@ type ParticleWebhook struct {
 
 func (rb *ParticleWebhook) Register(router *mux.Router, acc telegraf.Accumulator) {
 	router.HandleFunc(rb.Path, rb.eventHandler).Methods("POST")
-	log.Printf("I! Started the webhooks_particle on %s\n", rb.Path)
 	rb.acc = acc
 }
 
@@ -51,7 +49,7 @@ func (rb *ParticleWebhook) eventHandler(w http.ResponseWriter, r *http.Request) 
 	defer r.Body.Close()
 	e := newEvent()
 	if err := json.NewDecoder(r.Body).Decode(e); err != nil {
-		log.Println(err)
+		rb.acc.AddError(err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -59,7 +57,6 @@ func (rb *ParticleWebhook) eventHandler(w http.ResponseWriter, r *http.Request) 
 	pTime, err := e.Time()
 	if err != nil {
 		pTime = time.Now()
-		log.Printf("error parsing particle event time: %s. Using telegraf host time instead: %s", e.PublishedAt, pTime)
 	}
 
 	rb.acc.AddFields(e.Name, e.Data.Fields, e.Data.Tags, pTime)
