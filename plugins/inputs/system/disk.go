@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"os"
 )
 
 type DiskStats struct {
@@ -16,6 +17,9 @@ type DiskStats struct {
 
 	MountPoints []string
 	IgnoreFS    []string `toml:"ignore_fs"`
+
+	IgnoreMountPoints []string `toml:"ignore_mount_points"`
+	ignoreMountPoints map[string]bool
 }
 
 func (_ *DiskStats) Description() string {
@@ -29,6 +33,10 @@ var diskSampleConfig = `
 
   ## Ignore mount points by filesystem type.
   ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
+  
+  ## Ignore some mountpoints by mount point. 
+  ## For example /sys/fs/cgroup
+  # ignore_mount_points = ["/dev", "/sys/fs/cgroup", "/dev/shm", "/run", "/run/lock", "/sys/fs/cgroup", "/proc/kcore", "/proc/timer_list", "/proc/timer_stats", "/proc/sched_debug"]
 `
 
 func (_ *DiskStats) SampleConfig() string {
@@ -39,6 +47,13 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 	// Legacy support:
 	if len(s.Mountpoints) != 0 {
 		s.MountPoints = s.Mountpoints
+	}
+	if s.ignoreMountPoints == nil {
+		s.ignoreMountPoints = make(map[string]bool)
+
+		for _, ignoreMountPoint := range s.IgnoreMountPoints {
+			s.ignoreMountPoints[os.Getenv("HOST_MOUNT_PREFIX")+ignoreMountPoint] = true
+		}
 	}
 
 	disks, partitions, err := s.ps.DiskUsage(s.MountPoints, s.IgnoreFS)
@@ -52,6 +67,11 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 		mountOpts := parseOptions(partitions[i].Opts)
+
+		if _, ok := s.ignoreMountPoints[du.Path]; ok {
+			continue
+		}
+
 		tags := map[string]string{
 			"path":   du.Path,
 			"device": strings.Replace(partitions[i].Device, "/dev/", "", -1),
@@ -107,6 +127,9 @@ func parseOptions(opts string) MountOptions {
 func init() {
 	ps := newSystemPS()
 	inputs.Add("disk", func() telegraf.Input {
-		return &DiskStats{ps: ps}
+		return &DiskStats{
+			ps:                ps,
+			IgnoreMountPoints: []string{},
+		}
 	})
 }
