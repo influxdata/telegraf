@@ -1,14 +1,22 @@
 # CouchDB Input Plugin
 ---
 
-The CouchDB plugin gathers metrics of CouchDB using [_stats](http://docs.couchdb.org/en/1.6.1/api/server/common.html?highlight=stats#get--_stats) endpoint.
+The CouchDB plugin gathers metrics of CouchDB using [_stats](http://docs.couchdb.org/en/2.1.1/api/server/common.html?highlight=stats#get--_stats) endpoint.
+
+It also can handle the database specific stats using the [db](http://docs.couchdb.org/en/2.1.1/api/database/common.html) endpoint
 
 ### Configuration:
 
 ```
-# Sample Config:
+# Sample Config (backwards compabitle or server only):
 [[inputs.couchdb]]
   hosts = ["http://localhost:5984/_stats"]
+```
+
+```
+# Sample Config for both server and db stats:
+[[inputs.couchdb]]
+  hosts = ["http://localhost:5984/_stats","http://localhost:5984/_all_dbs"]
 ```
 
 ### Measurements & Fields:
@@ -56,9 +64,18 @@ httpd statistics:
 - httpd_bulk_requests
 - httpd_view_reads
 
+statistics per database (will be tagged with the DB name) :
+- doc_count
+- doc_del_count
+- compact_running
+- file_size
+- external_size
+- active_size
+
 ### Tags:
 
 - server (url of the couchdb _stats endpoint)
+- db (for the db statistics)
 
 ### Example output:
 
