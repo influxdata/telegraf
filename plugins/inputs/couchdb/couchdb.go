@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"io/ioutil"
 	"net/http"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 )
@@ -22,7 +24,7 @@ type metaData struct {
 	Max         float64 `json:"max"`
 }
 
-type Stats struct {
+type ServerStats struct {
 	Couchdb struct {
 		AuthCacheMisses metaData `json:"auth_cache_misses"`
 		DatabaseWrites  metaData `json:"database_writes"`
@@ -74,20 +76,29 @@ func (*CouchDB) Description() string {
 
 func (*CouchDB) SampleConfig() string {
 	return `
-  ## Works with CouchDB stats endpoints out of the box
+  ## Works with CouchDB stats/all_dbs endpoints out of the box
+  ## You will get the stats that are associated with the endpoint
   ## Multiple HOSTs from which to read CouchDB stats:
-  hosts = ["http://localhost:8086/_stats"]
+  hosts = ["http://localhost:5984/_stats","http://localhost:5984/_all_dbs"]
 `
 }
 
 func (c *CouchDB) Gather(accumulator telegraf.Accumulator) error {
+
 	var wg sync.WaitGroup
 	for _, u := range c.HOSTs {
 		wg.Add(1)
 		go func(host string) {
 			defer wg.Done()
-			if err := c.fetchAndInsertData(accumulator, host); err != nil {
-				accumulator.AddError(fmt.Errorf("[host=%s]: %s", host, err))
+			if strings.HasSuffix(host, "_stats") {
+				if err := c.fetchAndInsertServerData(accumulator, host); err != nil {
+					accumulator.AddError(fmt.Errorf("[host=%s]: %s", host, err))
+				}
+			}
+			if strings.HasSuffix(host, "_all_dbs") {
+				if err := c.fetchAndInsertDbData(accumulator, host); err != nil {
+					accumulator.AddError(fmt.Errorf("[host=%s]: %s", host, err))
+				}
 			}
 		}(u)
 	}
@@ -106,15 +117,16 @@ var client = &http.Client{
 	Timeout:   time.Duration(4 * time.Second),
 }
 
-func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host string) error {
+func (c *CouchDB) fetchAndInsertServerData(accumulator telegraf.Accumulator, host string) error {
 
+	println("Fetch stats for " + host)
 	response, error := client.Get(host)
 	if error != nil {
 		return error
 	}
 	defer response.Body.Close()
 
-	var stats Stats
+	var stats ServerStats
 	decoder := json.NewDecoder(response.Body)
 	decoder.Decode(&stats)
 
@@ -164,6 +176,66 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 	}
 	accumulator.AddFields("couchdb", fields, tags)
 	return nil
+}
+
+func (c *CouchDB) fetchAndInsertDbData(accumulator telegraf.Accumulator, host string) error {
+
+	println("Fetch db info for " + host)
+	response, error := client.Get(host)
+	if error != nil {
+		return error
+	}
+	defer response.Body.Close()
+
+	var dbs []string
+
+	decoder := json.NewDecoder(response.Body)
+	decoder.Decode(&dbs)
+
+	for _, db := range dbs {
+
+		fields := map[string]interface{}{}
+
+		response, error := client.Get(strings.Replace(host, "_all_dbs", db, -1))
+		if error != nil {
+			return error
+		}
+		defer response.Body.Close()
+		bodyBytes, _ := ioutil.ReadAll(response.Body)
+		var dat map[string]interface{}
+		if err := json.Unmarshal(bodyBytes, &dat); err != nil {
+			return error
+		}
+		// see http://docs.couchdb.org/en/2.1.0/api/database/common.html for details. Deprecated fields are not mapped
+		fields["doc_count"] = dat["doc_count"]
+		fields["doc_del_count"] = dat["doc_del_count"]
+		fields["compact_running"] = translateBoolToCounter(dat["compact_running"] == "true")
+		sizes := dat["sizes"].(map[string]interface{})
+
+		fields["file_size"] = sizes["file"]
+		fields["external_size"] = sizes["external"]
+		fields["active_size"] = sizes["active"]
+		fields["compact_running"] = translateBoolToCounter(dat["compact_running"] == "true")
+
+		tags := map[string]string{
+			"server": host,
+			"db":     db,
+		}
+
+		//println("doccount for " + db)
+		//fmt.Println("%i", dat["doc_count"])
+		accumulator.AddFields("couchdb", fields, tags)
+	}
+
+	return nil
+}
+
+func translateBoolToCounter(v bool) int {
+	if v {
+		return 1
+	} else {
+		return 0
+	}
 }
 
 func (*CouchDB) MapCopy(dst, src interface{}) {
