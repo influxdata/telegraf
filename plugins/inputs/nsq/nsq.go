@@ -68,11 +68,15 @@ const (
 
 func init() {
 	inputs.Add("nsq", func() telegraf.Input {
-		return &NSQ{
-			httpClientOnce: &sync.Once{},
-			tlsConfigOnce:  &sync.Once{},
-		}
+		return New()
 	})
+}
+
+func New() *NSQ {
+	return &NSQ{
+		httpClientOnce: &sync.Once{},
+		tlsConfigOnce:  &sync.Once{},
+	}
 }
 
 func (n *NSQ) SampleConfig() string {
