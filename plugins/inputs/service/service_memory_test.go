@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"github.com/liquidm/telegraf/testutil"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/shirou/gopsutil/process"
 	"github.com/stretchr/testify/require"
 )

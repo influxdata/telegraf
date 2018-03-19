@@ -3,8 +3,8 @@ package service
 import (
 	"strconv"
 
-	"github.com/liquidm/telegraf"
-	"github.com/liquidm/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type MemoryStats struct {
