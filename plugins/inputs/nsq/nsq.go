@@ -23,6 +23,9 @@
 package nsq
 
 import (
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -38,12 +41,25 @@ import (
 
 // Might add Lookupd endpoints for cluster discovery
 type NSQ struct {
-	Endpoints []string
+	Endpoints      []string
+	TlsCert        string
+	TlsKey         string
+	TlsCacert      string
+	httpClient     *http.Client
+	httpClientOnce *sync.Once
+	tlsConfig      *tls.Config
+	tlsConfigOnce  *sync.Once
 }
 
 var sampleConfig = `
   ## An array of NSQD HTTP API endpoints
-  endpoints = ["http://localhost:4151"]
+  endpoints  = ["http://localhost:4151"]
+
+  ## Or using HTTPS endpoint
+  endpoints  = ["https://localhost:4152"]
+  tls_cert   = "/path/to/client-cert.pem"
+  tls_key    = "/path/to/client-key.pem"
+  tls_cacert = "/path/to/ca.pem"
 `
 
 const (
@@ -52,7 +68,10 @@ const (
 
 func init() {
 	inputs.Add("nsq", func() telegraf.Input {
-		return &NSQ{}
+		return &NSQ{
+			httpClientOnce: &sync.Once{},
+			tlsConfigOnce:  &sync.Once{},
+		}
 	})
 }
 
@@ -65,6 +84,15 @@ func (n *NSQ) Description() string {
 }
 
 func (n *NSQ) Gather(acc telegraf.Accumulator) error {
+	var err error
+
+	n.tlsConfigOnce.Do(func() {
+		n.tlsConfig, err = n.buildTLSConfig()
+	})
+	if err != nil {
+		return fmt.Errorf("fail to build tls config: %v", err)
+	}
+
 	var wg sync.WaitGroup
 	for _, e := range n.Endpoints {
 		wg.Add(1)
@@ -78,13 +106,46 @@ func (n *NSQ) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-var tr = &http.Transport{
-	ResponseHeaderTimeout: time.Duration(3 * time.Second),
+func (n *NSQ) buildTLSConfig() (*tls.Config, error) {
+	if n.TlsCert == "" || n.TlsKey == "" || n.TlsCacert == "" {
+		return nil, nil
+	}
+
+	caCertBytes, err := ioutil.ReadFile(n.TlsCacert)
+	if err != nil {
+		return nil, fmt.Errorf("fail to read CA cert file %v: %v", n.TlsCacert, err)
+	}
+
+	cert, err := tls.LoadX509KeyPair(n.TlsCert, n.TlsKey)
+	if err != nil {
+		return nil, fmt.Errorf("fail to load certificate %v: %v", n.TlsCert, err)
+	}
+
+	pool := x509.NewCertPool()
+	pool.AppendCertsFromPEM(caCertBytes)
+
+	config := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		ClientCAs:    pool,
+		RootCAs:      pool,
+	}
+
+	config.Rand = rand.Reader
+	return config, nil
 }
 
-var client = &http.Client{
-	Transport: tr,
-	Timeout:   time.Duration(4 * time.Second),
+func (n *NSQ) getHttpClient() *http.Client {
+	n.httpClientOnce.Do(func() {
+		tr := &http.Transport{
+			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			TLSClientConfig:       n.tlsConfig,
+		}
+		n.httpClient = &http.Client{
+			Transport: tr,
+			Timeout:   time.Duration(4 * time.Second),
+		}
+	})
+	return n.httpClient
 }
 
 func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
@@ -92,7 +153,7 @@ func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	r, err := client.Get(u.String())
+	r, err := n.getHttpClient().Get(u.String())
 	if err != nil {
 		return fmt.Errorf("Error while polling %s: %s", u.String(), err)
 	}
