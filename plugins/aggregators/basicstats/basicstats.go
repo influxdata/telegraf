@@ -2,31 +2,26 @@ package basicstats
 
 import (
 	"log"
-	//"math"
-	"time"
+	"math"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
 
 type BasicStats struct {
-	Stats       []string `toml:"stats"`
+	Stats []string `toml:"stats"`
+
 	cache       map[uint64]aggregate
 	statsConfig *configuredStats
-	Period      string
 }
 
 type configuredStats struct {
-	count bool
-	min   bool
-	max   bool
-	mean  bool
-	//	variance           bool
-	//	stdev              bool
-	totalSum           bool
-	lastSample         bool
-	beginningTimestamp bool
-	endTimestamp       bool
+	count    bool
+	min      bool
+	max      bool
+	mean     bool
+	variance bool
+	stdev    bool
 }
 
 func NewBasicStats() *BasicStats {
@@ -46,14 +41,8 @@ type basicstats struct {
 	min   float64
 	max   float64
 	mean  float64
-	//	M2    float64 //intermedia value for variance/stdev
-	totalSum           float64
-	lastSample         float64
-	beginningTimestamp string
-	endTimestamp       string
+	M2    float64 //intermedia value for variance/stdev
 }
-
-const layout = "02/01/2006 03:04:05 PM"
 
 var sampleConfig = `
   ## General Aggregator Arguments:
@@ -88,11 +77,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 					min:   fv,
 					max:   fv,
 					mean:  fv,
-					//M2:    0.0,
-					totalSum:           fv,
-					lastSample:         fv,
-					beginningTimestamp: time.Now().Format(layout),
-					endTimestamp:       time.Now().Format(layout),
+					M2:    0.0,
 				}
 			}
 		}
@@ -107,11 +92,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 						min:   fv,
 						max:   fv,
 						mean:  fv,
-						//	M2:    0.0,
-						totalSum:           fv,
-						lastSample:         fv,
-						beginningTimestamp: time.Now().Format(layout),
-						endTimestamp:       time.Now().Format(layout),
+						M2:    0.0,
 					}
 					continue
 				}
@@ -121,6 +102,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				//variable initialization
 				x := fv
 				mean := tmp.mean
+				M2 := tmp.M2
 				//counter compute
 				n := tmp.count + 1
 				tmp.count = n
@@ -129,17 +111,14 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				mean = mean + delta/n
 				tmp.mean = mean
 				//variance/stdev compute
-				//	M2 = M2 + delta*(x-mean)
-				//	tmp.M2 = M2
+				M2 = M2 + delta*(x-mean)
+				tmp.M2 = M2
 				//max/min compute
 				if fv < tmp.min {
 					tmp.min = fv
 				} else if fv > tmp.max {
 					tmp.max = fv
 				}
-				tmp.totalSum = tmp.totalSum + fv
-				tmp.lastSample = fv
-				tmp.endTimestamp = time.Now().Format(layout)
 				//store final data
 				m.cache[id].fields[k] = tmp
 			}
@@ -156,47 +135,33 @@ func (m *BasicStats) Push(acc telegraf.Accumulator) {
 		for k, v := range aggregate.fields {
 
 			if config.count {
-				fields["Count"] = v.count
+				fields[k+"_count"] = v.count
 			}
 			if config.min {
-				fields["Minimum"] = v.min
+				fields[k+"_min"] = v.min
 			}
 			if config.max {
-				fields["Maximum"] = v.max
+				fields[k+"_max"] = v.max
 			}
 			if config.mean {
-				fields["Average"] = v.mean
+				fields[k+"_mean"] = v.mean
 			}
 
 			//v.count always >=1
-			//	if v.count > 1 {
-			//		variance := v.M2 / (v.count - 1)
+			if v.count > 1 {
+				variance := v.M2 / (v.count - 1)
 
-			//		if config.variance {
-			//			fields[k+"_s2"] = variance
-			//		}
-			//		if config.stdev {
-			//			fields[k+"_stdev"] = math.Sqrt(variance)
-			//		}
-			//	}
-			if config.lastSample {
-				fields["Last"] = v.lastSample
+				if config.variance {
+					fields[k+"_s2"] = variance
+				}
+				if config.stdev {
+					fields[k+"_stdev"] = math.Sqrt(variance)
+				}
 			}
-			if config.beginningTimestamp {
-				fields["TIMESTAMP"] = v.beginningTimestamp
-			}
-			if config.totalSum {
-				fields["Total"] = v.totalSum
-			}
-			if config.endTimestamp {
-				fields["Timestamp"] = v.endTimestamp
-			}
-			fields["CounterName"] = k
 			//if count == 1 StdDev = infinite => so I won't send data
 		}
 
 		if len(fields) > 0 {
-			aggregate.tags["Period"] = m.Period
 			acc.AddFields(aggregate.name, fields, aggregate.tags)
 		}
 	}
@@ -218,18 +183,10 @@ func parseStats(names []string) *configuredStats {
 			parsed.max = true
 		case "mean":
 			parsed.mean = true
-			//	case "s2":
-			//		parsed.variance = true
-			//	case "stdev":
-			//		parsed.stdev = true
-		case "totalSum":
-			parsed.totalSum = true
-		case "lastSample":
-			parsed.lastSample = true
-		case "beginningTimestamp":
-			parsed.beginningTimestamp = true
-		case "endTimestamp":
-			parsed.endTimestamp = true
+		case "s2":
+			parsed.variance = true
+		case "stdev":
+			parsed.stdev = true
 
 		default:
 			log.Printf("W! Unrecognized basic stat '%s', ignoring", name)
@@ -247,12 +204,8 @@ func defaultStats() *configuredStats {
 	defaults.min = true
 	defaults.max = true
 	defaults.mean = true
-	//	defaults.variance = true
-	//	defaults.stdev = true
-	defaults.totalSum = true
-	defaults.lastSample = true
-	defaults.beginningTimestamp = true
-	defaults.endTimestamp = true
+	defaults.variance = true
+	defaults.stdev = true
 
 	return defaults
 }
