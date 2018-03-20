@@ -3,6 +3,7 @@ package azureTableStorage
 import (
 	"fmt"
 	"math"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"unicode/utf16"
 
 	storage "github.com/Azure/azure-sdk-for-go/storage"
+	azure "github.com/Azure/go-autorest/autorest/azure"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -24,111 +26,91 @@ const (
 const layout = "02/01/2006 03:04:05 PM"
 
 type TableNameVsTableRef struct {
-	TableName string
-	TableRef  *storage.Table
+	TableName string         //TableName: name of Azure Table
+	TableRef  *storage.Table //TableRef: reference of the Azure Table client object
 }
 type AzureTableStorage struct {
-	AccountName                 string
-	AccountKey                  string
-	ResourceId                  string
+	AccountName                 string //azure storage account name.
+	SasURL                      string //azure storage account key
+	SasToken                    string
+	ResourceId                  string //resource id for the VM or VMSS
 	DeploymentId                string
-	Periods                     []string //this is the list of periods being configured for various aggregator instances.
-	PeriodVsTableNameVsTableRef map[string]TableNameVsTableRef
+	Periods                     []string                       //this is the list of periods being configured for various aggregator instances.
+	PeriodVsTableNameVsTableRef map[string]TableNameVsTableRef //Map of transfer period of metrics vs table name and table client ref.
 	PrevTableNameSuffix         string
 }
 
-// NewBasicClient constructs a Client with given storage service name and
-// key.
-func NewBasicClient(accountName, accountKey string) (storage.Client, error) {
-	// DefaultBaseURL is the domain name used for storage requests in the
-	// public cloud when a default client is created.
-	DefaultBaseURL := "core.windows.net"
-
-	// DefaultAPIVersion is the Azure Storage API version string used when a
-	// basic client is created.
-	DefaultAPIVersion := "2016-05-31"
-
-	defaultUseHTTPS := true
-	return storage.NewClient(accountName, accountKey, DefaultBaseURL, DefaultAPIVersion, defaultUseHTTPS)
-}
-
-// getBasicClient returns a test client from storage credentials in the env
-func getBasicClient(azureTableStorage *AzureTableStorage) *storage.Client {
-
-	name := azureTableStorage.AccountName
-	if name == "" {
-		name = "ladextensionrgdiag526"
-	}
-	key := azureTableStorage.AccountKey
-	if key == "" {
-		key = "42WqyNltbP/S3rxbJizeelr4D35EUTU7en5QKgRotT6iWXZ7xtspB6j0/u5fs4kDaiheiIL8K9et0mdcBzcPig=="
-	}
-	cli, _ := NewBasicClient(name, key)
-	//fmt.Print(err.Error())
-	return &cli
-}
-
 var sampleConfig = `
-  ## Files to write to, "stdout" is a specially handled file.
-  files = ["stdout", "/tmp/metrics.out"]
+# Configuration for azureTableStorage output plugin to write metrics to azure table
+[[outputs.azureTableStorage]]
+ deploymentId = "deploymentId"
+ resourceId = "subscriptionId/resourceGroup/VMScaleset"
+ accountName = "ladextensionrgdiag526"
+ accountKey = "42WqyNltbP/S3rxbJizeelr4D35EUTU7en5QKgRotT6iWXZ7xtspB6j0/u5fs4kDaiheiIL8K9et0mdcBzcPig=="
+ periods = ["30s","60s"]
 
-  ## Data format to output.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "influx"
 `
 
+//New tables are required to be created every 10th Day. And date suffix changes in the new table name.
+//RETURNS: the date of the last day of the last 10 day interval.
 func getTableDateSuffix() string {
+
 	//get number of seconds elapsed till now from 1 Jan 1970.
 	secondsElapsedTillNow := time.Now().Unix()
 
 	//get the number of seconds as multiple of number of seconds in 10 days
 	secondsIn10Day := int64(10 * 24 * 60 * 60)
-	secondsElapsedTillNowMulTiple10Day := secondsElapsedTillNow - (secondsElapsedTillNow % secondsIn10Day)
+	secondsElapsedTillNow10DayMulTiple := secondsElapsedTillNow - (secondsElapsedTillNow % secondsIn10Day)
 
 	//get the date from the value of number of seconds obtained by above equation. This date
 	// will be the last day of the previous 10 day period.
-	suffixDate := time.Unix(secondsElapsedTillNowMulTiple10Day, 0)
-	suffixDateStr := suffixDate.Format("2006/01/02")
+	suffixDate := time.Unix(secondsElapsedTillNow10DayMulTiple, 0)
+	suffixDateStr := suffixDate.Format(DATE_SUFFIX_FORMAT)
 	suffixDateStr = strings.Replace(suffixDateStr, "/", "", -1)
 
 	// the name of the table will have this date as its suffix.
 	return suffixDateStr
 }
 
+//period is in the format "60s"
+//RETURNS: period in the format "PT1M"
 func getPeriodStr(period string) string {
+
 	var periodStr string
+
 	totalSeconds, _ := strconv.Atoi(strings.Trim(period, "s"))
 	hour := (int)(math.Floor(float64(totalSeconds) / 3600))
 	min := int(math.Floor(float64(totalSeconds-(hour*3600)) / 60))
 	sec := totalSeconds - (hour * 3600) - (min * 60)
-	periodStr = "PT"
+	periodStr = PT
 	if hour > 0 {
-		periodStr += strconv.Itoa(hour) + "H"
+		periodStr += strconv.Itoa(hour) + H
 	}
 	if min > 0 {
-		periodStr += strconv.Itoa(min) + "M"
+		periodStr += strconv.Itoa(min) + M
 	}
 	if sec > 0 {
-		periodStr += strconv.Itoa(sec) + "S"
+		periodStr += strconv.Itoa(sec) + S
 	}
 	return periodStr
 }
 
+//RETURNS:a map of <Period,{TableName, TableClientReference}>
 func getAzurePeriodVsTableNameVsTableRefMap(azureTableStorage *AzureTableStorage,
 	tableClient storage.TableServiceClient) map[string]TableNameVsTableRef {
 
 	PeriodVsTableNameVsTableRef := map[string]TableNameVsTableRef{}
+
 	//Empty the list of tables every 10th day as they become obsolete now.
 	tableNameSuffix := getTableDateSuffix()
 	if azureTableStorage.PrevTableNameSuffix != tableNameSuffix {
 		azureTableStorage.PeriodVsTableNameVsTableRef = map[string]TableNameVsTableRef{}
+		azureTableStorage.PrevTableNameSuffix = tableNameSuffix
 	}
 
 	for _, period := range azureTableStorage.Periods {
 		periodStr := getPeriodStr(period)
-		tableName := "WADMetrics" + periodStr + "P10DV25" + tableNameSuffix
+		tableName := WADMetrics + periodStr + P10DV25 + tableNameSuffix
 		table := tableClient.GetTableReference(tableName)
 		TableNameVsTableRefObj := TableNameVsTableRef{TableName: tableName, TableRef: table}
 		PeriodVsTableNameVsTableRef[period] = TableNameVsTableRefObj
@@ -137,13 +119,12 @@ func getAzurePeriodVsTableNameVsTableRefMap(azureTableStorage *AzureTableStorage
 }
 
 func (azureTableStorage *AzureTableStorage) Connect() error {
+	sasToken := url.Values{}
+	sasToken.Set("token", azureTableStorage.SasToken)
+	tableClient := storage.NewAccountSASClient(azureTableStorage.AccountName, sasToken, azure.PublicCloud).GetTableService()
+	azureTableStorage.PeriodVsTableNameVsTableRef =
+		getAzurePeriodVsTableNameVsTableRefMap(azureTableStorage, tableClient)
 
-	//create a new client with NewClient() it will retuen a client object
-	azureStorageClient := getBasicClient(azureTableStorage)
-	// GetTableService returns TableServiceClient
-	tableClient := azureStorageClient.GetTableService()
-	//add logic for creating a new table every 10th day.
-	azureTableStorage.PeriodVsTableNameVsTableRef = getAzurePeriodVsTableNameVsTableRefMap(azureTableStorage, tableClient)
 	for _, tableVsTableRef := range azureTableStorage.PeriodVsTableNameVsTableRef {
 		er := tableVsTableRef.TableRef.Create(30, EmptyPayload, nil)
 		if er != nil {
@@ -159,33 +140,41 @@ func (azureTableStorage *AzureTableStorage) SampleConfig() string {
 }
 
 func (azureTableStorage *AzureTableStorage) Description() string {
-	return "Send telegraf metrics to file(s)"
+	return "Sends telegraf metrics to azure storage tables"
 }
 
+//RETURNS: resourceId encoded by converting any letter other than alphanumerics to unicode as per UTF-16
 func encodeSpecialCharacterToUTF16(resourceId string) string {
-	_pkey := ""
+	encodedStr := ""
 	hex := ""
 	var replacer = strings.NewReplacer("[", ":", "]", "")
 	for _, c := range resourceId {
 		if !unicode.IsLetter(c) && !unicode.IsDigit(c) {
 			hex = fmt.Sprintf("%04X", utf16.Encode([]rune(string(c))))
-			_pkey = _pkey + replacer.Replace(hex)
+			encodedStr = encodedStr + replacer.Replace(hex)
 		} else {
-			_pkey = _pkey + string(c)
+			encodedStr = encodedStr + string(c)
 		}
 	}
-	return _pkey
+	return encodedStr
 }
+
+//RETURNS: primary key for the azure table.
 func getPrimaryKey(resourceId string) string {
 	return encodeSpecialCharacterToUTF16(resourceId)
 }
 
+//RETURNS: difference of max value that can be held by time and number of 100 ns in current time.
 func getUTCTicks_DescendingOrder(lastSampleTimestamp string) uint64 {
 
 	currentTime, _ := time.Parse(layout, lastSampleTimestamp)
 	//maxValueDateTime := time.Date(9999, time.December, 31, 12, 59, 59, 59, time.UTC)
 	//Ticks is the number of 100 nanoseconds from zero value of date
+	//this value is copied from mdsd code.
 	maxValueDateTimeInTicks := uint64(3155378975999999999)
+
+	//zero time is taken to be 1 Jan,1970 instead of 1 Jan, 1 to avoid integer overflow.
+	//The Sub() returns int64 and hence it can hold ony nanoseconds corresponding to 290yrs.
 	zeroTime := time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC)
 	diff := uint64(currentTime.Sub(zeroTime))
 	currentTimeInTicks := diff / 100
@@ -195,6 +184,7 @@ func getUTCTicks_DescendingOrder(lastSampleTimestamp string) uint64 {
 	return UTCTicks_DescendincurrentTimeOrder
 }
 
+//RETURNS: counter name being unicode encoded and decreasing time diff.
 func getRowKeyComponents(lastSampleTimestamp string, counterName string) (string, string) {
 
 	UTCTicks_DescendingOrder := getUTCTicks_DescendingOrder(lastSampleTimestamp)
@@ -207,16 +197,19 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 	var entity *storage.Entity
 	var props map[string]interface{}
 	partitionKey := getPrimaryKey(azureTableStorage.ResourceId)
+
 	// iterate over the list of metrics and create a new entity for each metrics and add to the table.
 	for i, _ := range metrics {
 		props = metrics[i].Fields()
-		UTCTicks_DescendingOrderStr, encodedCounterName := getRowKeyComponents(props["TIMESTAMP"].(string), props["CounterName"].(string))
-		props["DeploymentId"] = azureTableStorage.DeploymentId
-		props["Host"], _ = os.Hostname()
+		UTCTicks_DescendingOrderStr, encodedCounterName := getRowKeyComponents(props[TIMESTAMP].(string), props[CounterName].(string))
+		props[DeploymentId] = azureTableStorage.DeploymentId
+		props[Host], _ = os.Hostname()
 
-		periodStr := metrics[i].Tags()["Period"]
+		//period is the period which decides when to transfer the aggregated metrics.Its in format "60s"
+		periodStr := metrics[i].Tags()[Period]
 		table := azureTableStorage.PeriodVsTableNameVsTableRef[periodStr].TableRef
 
+		//two rows are written for each metric as Azure table has optimized prefix search only and no index.
 		rowKey1 := UTCTicks_DescendingOrderStr + "_" + encodedCounterName
 		entity = table.GetEntityReference(partitionKey, rowKey1)
 		entity.Properties = props
@@ -230,9 +223,11 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 	}
 	return nil
 }
+
 func (azureTableStorage *AzureTableStorage) Close() error {
 	return nil
 }
+
 func init() {
 	outputs.Add("azureTableStorage", func() telegraf.Output {
 		return &AzureTableStorage{}
