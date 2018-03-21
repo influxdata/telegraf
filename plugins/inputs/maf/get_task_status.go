@@ -13,7 +13,7 @@ import (
 	_ "github.com/denisenkom/go-mssqldb"
 )
 
-type Job struct {
+type Task struct {
 	Servers []string `toml:"servers"`
 	Status []string `toml:"status"`
 }
