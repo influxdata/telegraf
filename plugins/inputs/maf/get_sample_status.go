@@ -24,7 +24,7 @@ var sampleSampleConfig = `
     # servers = [
     #     "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;Database=sandbox;Workstation ID=<colo>;",
     # ]
-    ## [good, bad, pending, running, failure]
+    # status = ["good", "bad", "pending", "running", "failure"]
     # status = ["pending"]
 `
 func (_ *Sample) SampleConfig() string {
