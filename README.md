@@ -264,6 +264,7 @@ formats may be used with input plugins supporting the `data_format` option:
 ## Processor Plugins
 
 * [printer](./plugins/processors/printer)
+* [override](./plugins/processors/override)
 
 ## Aggregator Plugins
 

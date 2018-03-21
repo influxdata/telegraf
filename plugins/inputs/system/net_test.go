@@ -106,4 +106,10 @@ func TestNetStats(t *testing.T) {
 		"udp_socket":      1,
 	}
 	acc.AssertContainsTaggedFields(t, "netstat", fields3, make(map[string]string))
+
+	acc.Metrics = nil
+	err = (&NetIOStats{ps: &mps, IgnoreProtocolStats: true}).Gather(&acc)
+	require.NoError(t, err)
+
+	acc.AssertDoesNotContainsTaggedFields(t, "netstat", fields3, make(map[string]string))
 }
