@@ -23,7 +23,7 @@ SUBSYSTEM=="gpio", ACTION=="add", PROGRAM="/bin/sh -c 'chmod -R 777 /sys/devices
   ## Additionally calculate Vapor Pressure Deficit in Pa
   calcvpd = true
   ## divisor/multiplier for VPD (to transform to kPa
-  vpdmultiplier = 0.001
+  vpdmultiplier = 1
 ```
 
 ### Measurements & Fields:
