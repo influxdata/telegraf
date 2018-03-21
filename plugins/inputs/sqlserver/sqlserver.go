@@ -398,7 +398,10 @@ CROSS APPLY (
 OPTION( RECOMPILE );
 `
 
-const sqlPerformanceCountersV2 string = `DECLARE @PCounters TABLE
+const sqlPerformanceCountersV2 string = `DECLARE @DynamicPerf NVARCHAR(MAX) = ''
+
+SET @DynamicPerf += REPLACE('
+DECLARE @PCounters TABLE
 (
 	object_name nvarchar(128),
 	counter_name nvarchar(128),
@@ -418,127 +421,126 @@ SELECT	DISTINCT
 FROM	sys.dm_os_performance_counters AS spi
 WHERE	(
 		counter_name IN (
-			'SQL Compilations/sec',
-			'SQL Re-Compilations/sec',
-			'User Connections',
-			'Batch Requests/sec',
-			'Logouts/sec',
-			'Logins/sec',
-			'Processes blocked',
-			'Latch Waits/sec',
-			'Full Scans/sec',
-			'Index Searches/sec',
-			'Page Splits/sec',
-			'Page Lookups/sec',
-			'Page Reads/sec',
-			'Page Writes/sec',
-			'Readahead Pages/sec',
-			'Lazy Writes/sec',
-			'Checkpoint Pages/sec',
-			'Page life expectancy',
-			'Log File(s) Size (KB)',
-			'Log File(s) Used Size (KB)',
-			'Data File(s) Size (KB)',
-			'Transactions/sec',
-			'Write Transactions/sec',
-			'Active Temp Tables',
-			'Temp Tables Creation Rate',
-			'Temp Tables For Destruction',
-			'Free Space in tempdb (KB)',
-			'Version Store Size (KB)',
-			'Memory Grants Pending',
-			'Free list stalls/sec',
-			'Buffer cache hit ratio',
-			'Buffer cache hit ratio base',
-			'Backup/Restore Throughput/sec',
-			'Total Server Memory (KB)',
-			'Target Server Memory (KB)'
+			"SQL Compilations/sec",
+			"SQL Re-Compilations/sec",
+			"User Connections",
+			"Batch Requests/sec",
+			"Logouts/sec",
+			"Logins/sec",
+			"Processes blocked",
+			"Latch Waits/sec",
+			"Full Scans/sec",
+			"Index Searches/sec",
+			"Page Splits/sec",
+			"Page Lookups/sec",
+			"Page Reads/sec",
+			"Page Writes/sec",
+			"Readahead Pages/sec",
+			"Lazy Writes/sec",
+			"Checkpoint Pages/sec",
+			"Page life expectancy",
+			"Log File(s) Size (KB)",
+			"Log File(s) Used Size (KB)",
+			"Data File(s) Size (KB)",
+			"Transactions/sec",
+			"Write Transactions/sec",
+			"Active Temp Tables",
+			"Temp Tables Creation Rate",
+			"Temp Tables For Destruction",
+			"Free Space in tempdb (KB)",
+			"Version Store Size (KB)",
+			"Memory Grants Pending",
+			"Free list stalls/sec",
+			"Buffer cache hit ratio",
+			"Buffer cache hit ratio base",
+			"Backup/Restore Throughput/sec",
+			"Total Server Memory (KB)",
+			"Target Server Memory (KB)"
 		)
 		) OR (
-			instance_name IN ('_Total','Column store object pool')
+			instance_name IN ("_Total","Column store object pool")
 			AND counter_name IN (
-				'Log Flushes/sec',
-				'Log Flush Wait Time',
-				'Lock Timeouts/sec',
-				'Number of Deadlocks/sec',
-				'Lock Waits/sec',
-				'Latch Waits/sec',
-				'Memory broker clerk size',
-				'Log Bytes Flushed/sec',
-				'Bytes Sent to Replica/sec',
-				'Log Send Queue',
-				'Bytes Sent to Transport/sec',
-				'Sends to Replica/sec',
-				'Bytes Sent to Transport/sec',
-				'Sends to Transport/sec',
-				'Bytes Received from Replica/sec',
-				'Receives from Replica/sec',
-				'Flow Control Time (ms/sec)',
-				'Flow Control/sec',
-				'Resent Messages/sec',
-				'Redone Bytes/sec',
-				'XTP Memory Used (KB)'
+				"Log Flushes/sec",
+				"Log Flush Wait Time",
+				"Lock Timeouts/sec",
+				"Number of Deadlocks/sec",
+				"Lock Waits/sec",
+				"Latch Waits/sec",
+				"Memory broker clerk size",
+				"Log Bytes Flushed/sec",
+				"Bytes Sent to Replica/sec",
+				"Log Send Queue",
+				"Bytes Sent to Transport/sec",
+				"Sends to Replica/sec",
+				"Bytes Sent to Transport/sec",
+				"Sends to Transport/sec",
+				"Bytes Received from Replica/sec",
+				"Receives from Replica/sec",
+				"Flow Control Time (ms/sec)",
+				"Flow Control/sec",
+				"Resent Messages/sec",
+				"Redone Bytes/sec",
+				"XTP Memory Used (KB)"
 			) OR ( 
-				object_name = 'SQLServer:Database Replica'
-				AND counter_name IN (
-					'Log Bytes Received/sec',
-					'Log Apply Pending Queue',
-					'Redone Bytes/sec',
-					'Recovery Queue',
-					'Log Apply Ready Queue'
+				counter_name IN (
+					"Log Bytes Received/sec",
+					"Log Apply Pending Queue",
+					"Redone Bytes/sec",
+					"Recovery Queue",
+					"Log Apply Ready Queue"
 				)
-				AND instance_name = '_Total'
+				AND instance_name = "_Total"
 			)
 		) OR (
-			object_name = 'SQLServer:Database Replica'
-			AND counter_name IN ('Transaction Delay')
+			counter_name IN ("Transaction Delay")
 		) OR (
-			object_name = 'SQLServer:Workload Group Stats'
-			AND counter_name IN (
-				'CPU usage %',
-				'CPU usage % base',
-				'Queued requests',
-				'Requests completed/sec',
-				'Blocked tasks'
+			counter_name IN (
+				"CPU usage %",
+				"CPU usage % base",
+				"Queued requests",
+				"Requests completed/sec",
+				"Blocked tasks"
 			)
 		) OR (
-			object_name = 'SQLServer:Resource Pool Stats'
-			AND counter_name IN (
-				'Active memory grant amount (KB)',
-				'Disk Read Bytes/sec',
-				'Disk Read IO Throttled/sec',
-				'Disk Read IO/sec',
-				'Disk Write Bytes/sec',
-				'Disk Write IO Throttled/sec',
-				'Disk Write IO/sec',
-				'Used memory (KB)'
+			counter_name IN (
+				"Active memory grant amount (KB)",
+				"Disk Read Bytes/sec",
+				"Disk Read IO Throttled/sec",
+				"Disk Read IO/sec",
+				"Disk Write Bytes/sec",
+				"Disk Write IO Throttled/sec",
+				"Disk Write IO/sec",
+				"Used memory (KB)"
 			)
-		) OR object_name IN (
-			'SQLServer:User Settable',
-			'SQLServer:SQL Errors'
+		) OR  (
+			object_name LIKE "%User Settable%"
+			OR object_name LIKE "%SQL Errors%"
 		)
+'
+,'"','''')
 
-SELECT	'sqlserver_performance' AS [measurement],
-		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+SET @DynamicPerf += REPLACE('
+SELECT	"sqlserver_performance" AS [measurement],
+		REPLACE(@@SERVERNAME,"\",":") AS [sql_instance],
 		pc.object_name AS [object],
 		pc.counter_name AS [counter],
-		CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
+		CASE pc.instance_name WHEN "_Total" THEN "Total" ELSE ISNULL(pc.instance_name,"") END AS [instance],
 		CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value * 1.0) / (pc1.cntr_value * 1.0) * 100 ELSE pc.cntr_value END AS [value]
 FROM	@PCounters AS pc
 		LEFT OUTER JOIN @PCounters AS pc1
 			ON (
-				pc.counter_name = REPLACE(pc1.counter_name,' base','')
-				OR pc.counter_name = REPLACE(pc1.counter_name,' base',' (ms)')
+				pc.counter_name = REPLACE(pc1.counter_name," base","")
+				OR pc.counter_name = REPLACE(pc1.counter_name," base"," (ms)")
 			)
 			AND pc.object_name = pc1.object_name
 			AND pc.instance_name = pc1.instance_name
-			AND pc1.counter_name LIKE '%base'
-WHERE	pc.counter_name NOT LIKE '% base'
+			AND pc1.counter_name LIKE "%base"
+WHERE	pc.counter_name NOT LIKE "% base"
 UNION ALL
 SELECT
-'sqlserver_performance' As [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-'SQLServer:Workload Group Stats' AS object,
+"sqlserver_performance" As [measurement],
+REPLACE(@@SERVERNAME,"\",":") AS [sql_instance],
+"SQLServer:Workload Group Stats" AS object,
 counter,
 instance,
 vs.value
@@ -546,22 +548,25 @@ FROM
 (
     SELECT 
     rgwg.name AS instance,
-    rgwg.total_request_count AS 'Request Count',
-    rgwg.total_queued_request_count AS 'Queued Request Count',
-    rgwg.total_cpu_limit_violation_count AS 'CPU Limit Violation Count',
-    rgwg.total_cpu_usage_ms AS 'CPU Usage (time)',
-    rgwg.total_cpu_usage_preemptive_ms AS 'Premptive CPU Usage (time)',
-    rgwg.total_lock_wait_count AS 'Lock Wait Count',
-    rgwg.total_lock_wait_time_ms AS 'Lock Wait Time',
-    rgwg.total_reduced_memgrant_count AS 'Reduced Memory Grant Count'
+    rgwg.total_request_count AS "Request Count",
+    rgwg.total_queued_request_count AS "Queued Request Count",
+    rgwg.total_cpu_limit_violation_count AS "CPU Limit Violation Count",
+    rgwg.total_cpu_usage_ms AS "CPU Usage (time)",
+    ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN 'rgwg.total_cpu_usage_preemptive_ms AS "Premptive CPU Usage (time)",' ELSE '' END + '
+    rgwg.total_lock_wait_count AS "Lock Wait Count",
+    rgwg.total_lock_wait_time_ms AS "Lock Wait Time",
+    rgwg.total_reduced_memgrant_count AS "Reduced Memory Grant Count"
     FROM sys.dm_resource_governor_workload_groups AS rgwg
     INNER JOIN sys.dm_resource_governor_resource_pools AS rgrp
     ON rgwg.pool_id = rgrp.pool_id
 ) AS rg
 UNPIVOT (
-    value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], [Premptive CPU Usage (time)], [Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] )
+    value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN '[Premptive CPU Usage (time)], ' ELSE '' END + '[Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] )
 ) AS vs
-OPTION(RECOMPILE);
+OPTION(RECOMPILE);'
+,'"','''')
+
+EXEC(@DynamicPerf)
 `
 
 const sqlWaitStatsCategorizedV2 string = `SELECT
