@@ -121,11 +121,12 @@ func TestGatherRemote(t *testing.T) {
 		}
 
 		sc := SSLCert{
-			Servers:    []string{test.server},
-			Timeout:    test.timeout,
-			CloseConn:  test.close,
-			UnsetCerts: test.unset,
+			Servers: []string{test.server},
+			Timeout: test.timeout,
 		}
+
+		closeConn = test.close
+		unsetCerts = test.unset
 
 		error := false
 

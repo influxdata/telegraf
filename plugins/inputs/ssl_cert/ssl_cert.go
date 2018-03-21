@@ -29,11 +29,13 @@ type SSLCert struct {
 	Servers []string      `toml:"servers"`
 	Files   []string      `toml:"files"`
 	Timeout time.Duration `toml:"timeout"`
-
-	// For tests
-	CloseConn  bool
-	UnsetCerts bool
 }
+
+// For tests
+var (
+	closeConn  bool
+	unsetCerts bool
+)
 
 // Description returns description of the plugin.
 func (sc *SSLCert) Description() string {
@@ -45,7 +47,7 @@ func (sc *SSLCert) SampleConfig() string {
 	return sampleConfig
 }
 
-func getRemoteCert(server string, timeout time.Duration, closeConn bool, unsetCerts bool) (*x509.Certificate, error) {
+func getRemoteCert(server string, timeout time.Duration) (*x509.Certificate, error) {
 	tlsCfg := &tls.Config{
 		InsecureSkipVerify: true,
 	}
@@ -121,7 +123,7 @@ func (sc *SSLCert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
 	for _, server := range sc.Servers {
-		cert, err := getRemoteCert(server, sc.Timeout*time.Second, sc.CloseConn, sc.UnsetCerts)
+		cert, err := getRemoteCert(server, sc.Timeout*time.Second)
 		if err != nil {
 			return fmt.Errorf("cannot get remote SSL cert '%s': %s", server, err)
 		}
