@@ -22,7 +22,7 @@ SUBSYSTEM=="gpio", ACTION=="add", PROGRAM="/bin/sh -c 'chmod -R 777 /sys/devices
   retry = 10
   ## Additionally calculate Vapor Pressure Deficit in Pa
   calcvpd = true
-  ## divisor/multiplier for VPD (to transform to kPa
+  ## divisor/multiplier for VPD (to transform to kPa)
   vpdmultiplier = 1
 ```
 
@@ -38,7 +38,7 @@ SUBSYSTEM=="gpio", ACTION=="add", PROGRAM="/bin/sh -c 'chmod -R 777 /sys/devices
 
 #### Default
 ```
-$ telegraf --config telegraf.conf --input-filter hdt22 --test
+$ telegraf --config telegraf.conf --input-filter dht22 --test
 * Plugin: dht22, Collection 1
 > dht22,temperature=22.5,humidity=75.2,retries=3 1466751326000000000
 ```

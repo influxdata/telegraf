@@ -54,7 +54,7 @@ func (s *DHT) Gather(acc telegraf.Accumulator) error {
 		es := 0.6108 * math.Exp(17.27*temperature64/(temperature64+237.3))
 		ea := humidity64 / 100 * es
 
-		// this equation gives us a negative value, which while technically correct,
+		// this equation returns a negative value, which while technically correct,
 		// is invalid in this case because we are talking about a deficit.
 		vpd := (ea - es) * -1
 		fields["vpd"] = vpd * s.VpdMultiplier
