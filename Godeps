@@ -88,7 +88,6 @@ google.golang.org/genproto 11c7f9e547da6db876260ce49ea7536985904c9b
 google.golang.org/grpc de2209a968d48e8970546c8a710189f7461370f7
 gopkg.in/asn1-ber.v1 4e86f4367175e39f69d9358a5f17b4dda270378d
 gopkg.in/fatih/pool.v2 6e328e67893eb46323ad06f0e92cb9536babbabc
-gopkg.in/fsnotify.v1 a8a77c9133d2d6fd8334f3260d06f60e8d80a5fb
 gopkg.in/gorethink/gorethink.v3 7ab832f7b65573104a555d84a27992ae9ea1f659
 gopkg.in/ldap.v2 8168ee085ee43257585e50c6441aadf54ecb2c9f
 gopkg.in/mgo.v2 3f83fa5005286a7fe593b055f0d7771a7dce4655
