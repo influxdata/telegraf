@@ -1,6 +1,7 @@
 package linux_wireless
 
 import (
+	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
@@ -81,6 +82,7 @@ func (ns *Wireless) gatherWireless(data []byte, acc telegraf.Accumulator) error 
 		}
 		for z := 0; z < len(wirelessData.Data[x]); z++ {
 			entries[wirelessData.Headers[z]] = wirelessData.Data[x][z]
+			fmt.Println(entries[wirelessData.Headers[z]])
 		}
 		acc.AddFields("wireless", entries, tags)
 	}
@@ -116,12 +118,14 @@ func loadWirelessTable(table []byte, dumpZeros bool) (WirelessData, error) {
 				continue
 			}
 			header_fields[header_count] = strings.ToLower(strings.Replace(h1[y]+"_"+tmpStr[z], " ", "_", -1))
+			fmt.Println(header_fields[header_count])
 			header_count++
 		}
 	}
 	// last 2 are simple multi-line headers, so join them
 	for t := len(h1) - 2; t < len(h1); t++ {
 		header_fields[header_count] = strings.ToLower(h1[t] + "_" + h2[t])
+		fmt.Println(header_fields[header_count])
 		header_count++
 	}
 	// now let's go through the data and save it for return.
@@ -139,13 +143,13 @@ func loadWirelessTable(table []byte, dumpZeros bool) (WirelessData, error) {
 					if dumpZeros {
 						continue
 						// if we're dumping zeros, we dump the header that goes with it.
-						//if x == len(header_fields) {
-						//	fmt.Println("Dump Zeros")
-						//} else {
-						//	header_fields = append(header_fields[:x], header_fields[x+1:]...)
-						//}
+						if x == len(header_fields) {
+							fmt.Println("Dump Zeros")
+						} else {
+							header_fields = append(header_fields[:x], header_fields[x+1:]...)
+						}
 
-						//continue
+						continue
 					}
 				}
 

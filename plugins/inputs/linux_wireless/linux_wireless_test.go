@@ -1,6 +1,7 @@
 package linux_wireless
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -48,6 +49,7 @@ func TestLoadWirelessTable(t *testing.T) {
 		}
 		for z := 0; z < len(got.Data[x]); z++ {
 			entries[got.Headers[z]] = got.Data[x][z]
+			fmt.Println(entries[got.Headers[z]])
 		}
 	}
 	// make sure we got the same number of headers back we expect.
@@ -57,6 +59,7 @@ func TestLoadWirelessTable(t *testing.T) {
 	// create the data map
 	for z := 0; z < len(got.Data[0]); z++ {
 		entries[got.Headers[z]] = got.Data[0][z]
+		fmt.Println(entries[got.Headers[z]])
 	}
 	// verify the data map
 	for key := range parsed {
