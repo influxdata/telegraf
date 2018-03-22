@@ -17,6 +17,11 @@ This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/
   ## The target database for metrics; will be created as needed.
   # database = "telegraf"
 
+  ## If true, no CREATE DATABASE queries will be sent.  Set to true when using
+  ## Telegraf with a user without permissions to create databases or when the
+  ## database already exists.
+  # skip_database_creation = false
+
   ## Name of existing retention policy to write to.  Empty string writes to
   ## the default retention policy.
   # retention_policy = ""

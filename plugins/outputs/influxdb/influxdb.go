@@ -31,19 +31,20 @@ type Client interface {
 
 // InfluxDB struct is the primary data structure for the plugin
 type InfluxDB struct {
-	URL              string   // url deprecated in 0.1.9; use urls
-	URLs             []string `toml:"urls"`
-	Username         string
-	Password         string
-	Database         string
-	UserAgent        string
-	RetentionPolicy  string
-	WriteConsistency string
-	Timeout          internal.Duration
-	UDPPayload       int               `toml:"udp_payload"`
-	HTTPProxy        string            `toml:"http_proxy"`
-	HTTPHeaders      map[string]string `toml:"http_headers"`
-	ContentEncoding  string            `toml:"content_encoding"`
+	URL                  string   // url deprecated in 0.1.9; use urls
+	URLs                 []string `toml:"urls"`
+	Username             string
+	Password             string
+	Database             string
+	UserAgent            string
+	RetentionPolicy      string
+	WriteConsistency     string
+	Timeout              internal.Duration
+	UDPPayload           int               `toml:"udp_payload"`
+	HTTPProxy            string            `toml:"http_proxy"`
+	HTTPHeaders          map[string]string `toml:"http_headers"`
+	ContentEncoding      string            `toml:"content_encoding"`
+	SkipDatabaseCreation bool              `toml:"skip_database_creation"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -74,6 +75,11 @@ var sampleConfig = `
 
   ## The target database for metrics; will be created as needed.
   # database = "telegraf"
+
+  ## If true, no CREATE DATABASE queries will be sent.  Set to true when using
+  ## Telegraf with a user without permissions to create databases or when the
+  ## database already exists.
+  # skip_database_creation = false
 
   ## Name of existing retention policy to write to.  Empty string writes to
   ## the default retention policy.
@@ -194,11 +200,13 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 
 		switch apiError := err.(type) {
 		case APIError:
-			if apiError.Type == DatabaseNotFound {
-				err := client.CreateDatabase(ctx)
-				if err != nil {
-					log.Printf("E! [outputs.influxdb] when writing to [%s]: database %q not found and failed to recreate",
-						client.URL(), client.Database())
+			if !i.SkipDatabaseCreation {
+				if apiError.Type == DatabaseNotFound {
+					err := client.CreateDatabase(ctx)
+					if err != nil {
+						log.Printf("E! [outputs.influxdb] when writing to [%s]: database %q not found and failed to recreate",
+							client.URL(), client.Database())
+					}
 				}
 			}
 		}
@@ -252,16 +260,12 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 		return nil, fmt.Errorf("error creating HTTP client [%s]: %v", url, err)
 	}
 
-	err = c.CreateDatabase(ctx)
-	if err != nil {
-		if err, ok := err.(APIError); ok {
-			if err.StatusCode == 503 {
-				return c, nil
-			}
+	if !i.SkipDatabaseCreation {
+		err = c.CreateDatabase(ctx)
+		if err != nil {
+			log.Printf("W! [outputs.influxdb] when writing to [%s]: database %q creation failed: %v",
+				c.URL(), c.Database(), err)
 		}
-
-		log.Printf("W! [outputs.influxdb] when writing to [%s]: database %q creation failed: %v",
-			c.URL(), c.Database(), err)
 	}
 
 	return c, nil
