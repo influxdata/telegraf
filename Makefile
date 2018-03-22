@@ -3,7 +3,7 @@ VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 COMMIT := $(shell git rev-parse --short HEAD)
 GOFILES ?= $(shell git ls-files '*.go')
-GOFMT ?= $(shell gofmt -l $(GOFILES))
+GOFMT ?= $(shell gofmt -l $(filter-out plugins/parsers/influx/machine.go, $(GOFILES)))
 
 ifdef GOBIN
 PATH := $(GOBIN):$(PATH)
@@ -48,7 +48,7 @@ test:
 	go test -short ./...
 
 fmt:
-	@gofmt -w $(GOFILES)
+	@gofmt -w $(filter-out plugins/parsers/influx/machine.go, $(GOFILES))
 
 fmtcheck:
 	@echo '[INFO] running gofmt to identify incorrectly formatted code...'
