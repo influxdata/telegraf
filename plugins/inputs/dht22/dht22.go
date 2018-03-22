@@ -1,4 +1,5 @@
 // +build linux
+
 package dht22
 
 import (
