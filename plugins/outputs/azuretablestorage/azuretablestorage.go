@@ -50,20 +50,42 @@ var sampleConfig = `
 
 `
 
+type MdsdTime struct {
+	seconds      int64
+	microSeconds int64
+}
+
+func toFileTime(mdsdTime MdsdTime) int64 {
+	fileTime := (EpochDifference+mdsdTime.seconds)*TicksPerSecond + mdsdTime.microSeconds*10
+	return fileTime
+}
+
+func toMdsdTime(fileTime int64) MdsdTime {
+	mdsdTime := MdsdTime{0, 0}
+	mdsdTime.microSeconds = (fileTime % TicksPerSecond) / 10
+	mdsdTime.seconds = (fileTime / TicksPerSecond) - EpochDifference
+	return mdsdTime
+}
+
 //New tables are required to be created every 10th Day. And date suffix changes in the new table name.
 //RETURNS: the date of the last day of the last 10 day interval.
 func getTableDateSuffix() string {
 
 	//get number of seconds elapsed till now from 1 Jan 1970.
 	secondsElapsedTillNow := time.Now().Unix()
+	mdsdTime := MdsdTime{seconds: secondsElapsedTillNow, microSeconds: 0}
 
-	//get the number of seconds as multiple of number of seconds in 10 days
-	secondsIn10Day := int64(10 * 24 * 60 * 60)
-	secondsElapsedTillNow10DayMulTiple := secondsElapsedTillNow - (secondsElapsedTillNow % secondsIn10Day)
+	//fileTime gives the number of 100ns elapsed till mdsdTime since 1601-01-01
+	fileTime := toFileTime(mdsdTime)
 
-	//get the date from the value of number of seconds obtained by above equation. This date
-	// will be the last day of the previous 10 day period.
-	suffixDate := time.Unix(secondsElapsedTillNow10DayMulTiple, 0)
+	//The “ten day” rollover is the time at which FILETIME mod (number of seconds in 10 days) is zero
+	fileTime = fileTime - (fileTime % int64(10*24*60*60*TicksPerSecond))
+
+	//convert fileTime back to mdsd time.
+	mdsdTime = toMdsdTime(fileTime)
+
+	//get the date corresponding to the mdsdTime.
+	suffixDate := time.Unix(int64(mdsdTime.seconds), 0)
 	suffixDateStr := suffixDate.Format(DATE_SUFFIX_FORMAT)
 	suffixDateStr = strings.Replace(suffixDateStr, "/", "", -1)
 
@@ -128,9 +150,9 @@ func (azureTableStorage *AzureTableStorage) Connect() error {
 
 	for _, tableVsTableRef := range azureTableStorage.PeriodVsTableNameVsTableRef {
 		er := tableVsTableRef.TableRef.Create(30, FullMetadata, nil)
-		if strings.Contains(er.Error(), "TableAlreadyExists") {
+		if er != nil && strings.Contains(er.Error(), "TableAlreadyExists") {
 			fmt.Println("the table ", tableVsTableRef.TableName, " already exists.")
-		} else {
+		} else if er != nil {
 			return er
 		}
 	}
