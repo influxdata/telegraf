@@ -39,13 +39,12 @@ type AzureTableStorage struct {
 }
 
 var sampleConfig = `
-# Configuration for azuretablestorage output plugin to write metrics to azure table
 [[outputs.azuretablestorage]]
- deploymentId = "deploymentId"
- resourceId = "subscriptionId/resourceGroup/VMScaleset"
- accountName = "ladextensionrgdiag526"
- sasURL = "https://ladextensionrgdiag526.table.core.windows.net"
- sasToken="sv=2017-07-29&ss=bt&srt=sco&sp=rwdlacu&se=2019-03-20T19:34:18Z&st=2018-03-19T11:34:18Z&spr=https&sig=tw%2BfX8RJw%2FLd7%2Fv5K1w4b2bOJwBAPcqkUsFqBB7LllQ%3D"
+ deployment_id = "deploymentId"
+ resource_id = "subscriptionId/resourceGroup/VMScaleset"
+ account_name = "ladextensionrgdiag526"
+ sas_url = "https://ladextensionrgdiag526.table.core.windows.net"
+ sas_token="sv=2017-07-29&ss=bt&srt=sco&sp=rwdlacu&se=2019-03-20T19:34:18Z&st=2018-03-19T11:34:18Z&spr=https&sig=tw%2BfX8RJw%2FLd7%2Fv5K1w4b2bOJwBAPcqkUsFqBB7LllQ%3D"
  #periods is the list of period configured for each aggregator plugin
  periods = ["30s","60s"] 
 
