@@ -1,9 +1,8 @@
-package azureTableStorage
+package azuretablestorage
 
 import (
 	"fmt"
 	"math"
-	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -12,7 +11,6 @@ import (
 	"unicode/utf16"
 
 	storage "github.com/Azure/azure-sdk-for-go/storage"
-	azure "github.com/Azure/go-autorest/autorest/azure"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -31,7 +29,7 @@ type TableNameVsTableRef struct {
 }
 type AzureTableStorage struct {
 	AccountName                 string //azure storage account name.
-	SasURL                      string //azure storage account key
+	SasUrl                      string //endpoint for table service
 	SasToken                    string
 	ResourceId                  string //resource id for the VM or VMSS
 	DeploymentId                string
@@ -41,13 +39,15 @@ type AzureTableStorage struct {
 }
 
 var sampleConfig = `
-# Configuration for azureTableStorage output plugin to write metrics to azure table
-[[outputs.azureTableStorage]]
+# Configuration for azuretablestorage output plugin to write metrics to azure table
+[[outputs.azuretablestorage]]
  deploymentId = "deploymentId"
  resourceId = "subscriptionId/resourceGroup/VMScaleset"
  accountName = "ladextensionrgdiag526"
- accountKey = "42WqyNltbP/S3rxbJizeelr4D35EUTU7en5QKgRotT6iWXZ7xtspB6j0/u5fs4kDaiheiIL8K9et0mdcBzcPig=="
- periods = ["30s","60s"]
+ sasURL = "https://ladextensionrgdiag526.table.core.windows.net"
+ sasToken="sv=2017-07-29&ss=bt&srt=sco&sp=rwdlacu&se=2019-03-20T19:34:18Z&st=2018-03-19T11:34:18Z&spr=https&sig=tw%2BfX8RJw%2FLd7%2Fv5K1w4b2bOJwBAPcqkUsFqBB7LllQ%3D"
+ #periods is the list of period configured for each aggregator plugin
+ periods = ["30s","60s"] 
 
 `
 
@@ -99,7 +99,7 @@ func getPeriodStr(period string) string {
 func getAzurePeriodVsTableNameVsTableRefMap(azureTableStorage *AzureTableStorage,
 	tableClient storage.TableServiceClient) map[string]TableNameVsTableRef {
 
-	PeriodVsTableNameVsTableRef := map[string]TableNameVsTableRef{}
+	periodVsTableNameVsTableRef := map[string]TableNameVsTableRef{}
 
 	//Empty the list of tables every 10th day as they become obsolete now.
 	tableNameSuffix := getTableDateSuffix()
@@ -112,24 +112,27 @@ func getAzurePeriodVsTableNameVsTableRefMap(azureTableStorage *AzureTableStorage
 		periodStr := getPeriodStr(period)
 		tableName := WADMetrics + periodStr + P10DV25 + tableNameSuffix
 		table := tableClient.GetTableReference(tableName)
-		TableNameVsTableRefObj := TableNameVsTableRef{TableName: tableName, TableRef: table}
-		PeriodVsTableNameVsTableRef[period] = TableNameVsTableRefObj
+		tableNameVsTableRefObj := TableNameVsTableRef{TableName: tableName, TableRef: table}
+		periodVsTableNameVsTableRef[period] = tableNameVsTableRefObj
 	}
-	return PeriodVsTableNameVsTableRef
+	return periodVsTableNameVsTableRef
 }
 
 func (azureTableStorage *AzureTableStorage) Connect() error {
-	sasToken := url.Values{}
-	sasToken.Set("token", azureTableStorage.SasToken)
-	tableClient := storage.NewAccountSASClient(azureTableStorage.AccountName, sasToken, azure.PublicCloud).GetTableService()
+	client, er := storage.NewAccountSASClientFromEndpointToken(azureTableStorage.SasUrl, azureTableStorage.SasToken)
+	if er != nil {
+		return er
+	}
+	tableClient := client.GetTableService()
 	azureTableStorage.PeriodVsTableNameVsTableRef =
 		getAzurePeriodVsTableNameVsTableRefMap(azureTableStorage, tableClient)
 
 	for _, tableVsTableRef := range azureTableStorage.PeriodVsTableNameVsTableRef {
-		er := tableVsTableRef.TableRef.Create(30, EmptyPayload, nil)
-		if er != nil {
+		er := tableVsTableRef.TableRef.Create(30, FullMetadata, nil)
+		if strings.Contains(er.Error(), "TableAlreadyExists") {
 			fmt.Println("the table ", tableVsTableRef.TableName, " already exists.")
-
+		} else {
+			return er
 		}
 	}
 	return nil
@@ -229,7 +232,7 @@ func (azureTableStorage *AzureTableStorage) Close() error {
 }
 
 func init() {
-	outputs.Add("azureTableStorage", func() telegraf.Output {
+	outputs.Add("azuretablestorage", func() telegraf.Output {
 		return &AzureTableStorage{}
 	})
 }

@@ -17,7 +17,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/kinesis"
 	_ "github.com/influxdata/telegraf/plugins/outputs/librato"
 	//_ "github.com/influxdata/telegraf/plugins/outputs/mqtt"
-	_ "github.com/influxdata/telegraf/plugins/outputs/azureTableStorage"
+	_ "github.com/influxdata/telegraf/plugins/outputs/azuretablestorage"
 	_ "github.com/influxdata/telegraf/plugins/outputs/nats"
 	_ "github.com/influxdata/telegraf/plugins/outputs/nsq"
 	_ "github.com/influxdata/telegraf/plugins/outputs/opentsdb"

@@ -1,4 +1,4 @@
-package azureTableStorage
+package azuretablestorage
 
 //parts of table name
 const WADMetrics = "WADMetrics"

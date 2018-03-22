@@ -1,4 +1,4 @@
-package metricAggregates
+package metricaggregates
 
 import (
 	"log"
@@ -259,7 +259,7 @@ func convert(in interface{}) (float64, bool) {
 }
 
 func init() {
-	aggregators.Add("metricAggregates", func() telegraf.Aggregator {
+	aggregators.Add("metricaggregates", func() telegraf.Aggregator {
 		return NewMetricAggregates()
 	})
 }
