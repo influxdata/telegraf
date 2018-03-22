@@ -20,9 +20,9 @@ SUBSYSTEM=="gpio", ACTION=="add", PROGRAM="/bin/sh -c 'chmod -R 777 /sys/devices
   pin = 14
   ## how many times to retry for a good reading.
   retry = 10
-  ## Additionally calculate Vapor Pressure Deficit in Pa
+  ## Additionally calculate Vapor Pressure Deficit in kPa
   calcvpd = true
-  ## divisor/multiplier for VPD (to transform to kPa)
+  ## divisor/multiplier for VPD (1000 to transform to Pa)
   vpdmultiplier = 1
 ```
 

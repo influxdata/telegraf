@@ -1,5 +1,4 @@
 // +build linux
-
 package dht22
 
 import (
@@ -75,7 +74,7 @@ func init() {
 			14,
 			10,
 			true,
-			1000,
+			1.0,
 		}
 	})
 }
