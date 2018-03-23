@@ -70,6 +70,7 @@ var sampleConfig = `
   ##
   ## Multiple URLs can be specified for a single cluster, only ONE of the
   ## urls will be written to each interval.
+  # urls = ["unix:///var/run/influxdb.sock"]
   # urls = ["udp://127.0.0.1:8089"]
   # urls = ["http://127.0.0.1:8086"]
 
@@ -157,7 +158,7 @@ func (i *InfluxDB) Connect() error {
 			}
 
 			i.clients = append(i.clients, c)
-		case "http", "https":
+		case "http", "https", "unix":
 			c, err := i.httpClient(ctx, u, proxy)
 			if err != nil {
 				return err

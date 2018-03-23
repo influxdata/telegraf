@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"path"
@@ -164,14 +165,32 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 		config.Consistency)
 	queryURL := makeQueryURL(config.URL)
 
+	var transport *http.Transport
+	switch config.URL.Scheme {
+	case "http", "https":
+		transport = &http.Transport{
+			Proxy:           proxy,
+			TLSClientConfig: config.TLSConfig,
+		}
+	case "unix":
+		transport = &http.Transport{
+			Dial: func(_, _ string) (net.Conn, error) {
+				return net.DialTimeout(
+					config.URL.Scheme,
+					config.URL.Path,
+					defaultRequestTimeout,
+				)
+			},
+		}
+	default:
+		return nil, fmt.Errorf("unsupported scheme %q", config.URL.Scheme)
+	}
+
 	client := &httpClient{
 		serializer: serializer,
 		client: &http.Client{
-			Timeout: timeout,
-			Transport: &http.Transport{
-				Proxy:           proxy,
-				TLSClientConfig: config.TLSConfig,
-			},
+			Timeout:   timeout,
+			Transport: transport,
 		},
 		database:        database,
 		url:             config.URL,
@@ -392,13 +411,27 @@ func makeWriteURL(loc *url.URL, db, rp, consistency string) string {
 	}
 
 	u := *loc
-	u.Path = path.Join(u.Path, "write")
+	switch u.Scheme {
+	case "unix":
+		u.Scheme = "http"
+		u.Host = "127.0.0.1"
+		u.Path = "/write"
+	case "http":
+		u.Path = path.Join(u.Path, "write")
+	}
 	u.RawQuery = params.Encode()
 	return u.String()
 }
 
 func makeQueryURL(loc *url.URL) string {
 	u := *loc
-	u.Path = path.Join(u.Path, "query")
+	switch u.Scheme {
+	case "unix":
+		u.Scheme = "http"
+		u.Host = "127.0.0.1"
+		u.Path = "/query"
+	case "http":
+		u.Path = path.Join(u.Path, "query")
+	}
 	return u.String()
 }
