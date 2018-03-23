@@ -73,8 +73,8 @@ test-windows:
 # vet runs the Go source code static analysis tool `vet` to find
 # any common errors.
 vet:
-	@echo 'go vet $$(go list ./...)'
-	@go vet $$(go list ./...) ; if [ $$? -eq 1 ]; then \
+	@echo 'go vet $$(go list ./... | grep -v ./plugins/parsers/influx)'
+	@go vet $$(go list ./... | grep -v ./plugins/parsers/influx) ; if [ $$? -eq 1 ]; then \
 		echo ""; \
 		echo "go vet has found suspicious constructs. Please remediate any reported errors"; \
 		echo "to fix them before submitting code for review."; \
