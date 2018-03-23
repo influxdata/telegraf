@@ -89,6 +89,7 @@
 - [#3810](https://github.com/influxdata/telegraf/issues/3810): Fix metric buffer limit in internal plugin after reload.
 - [#3801](https://github.com/influxdata/telegraf/issues/3801): Fix panic in http_response on invalid regex.
 - [#3973](https://github.com/influxdata/telegraf/issues/3873): Fix socket_listener setting ReadBufferSize on tcp sockets.
+- [#1575](https://github.com/influxdata/telegraf/issues/1575): Add tag for target url to phpfpm input.
 
 ## v1.5.3 [2018-03-14]
 
