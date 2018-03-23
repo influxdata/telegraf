@@ -31,6 +31,9 @@ P0a+YZUeHNRqT2pPN9lMTAZGGi3CtcF2XScbLNEBeXge
 )
 
 func TestLogin(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
 	var tests = []struct {
 		name          string
 		responseCode  int
@@ -40,16 +43,21 @@ func TestLogin(t *testing.T) {
 	}{
 		{
 			name:          "Login successful",
-			responseCode:  200,
+			responseCode:  http.StatusOK,
 			responseBody:  `{"token": "XXX.YYY.ZZZ"}`,
 			expectedError: nil,
 			expectedToken: "XXX.YYY.ZZZ",
 		},
 		{
-			name:          "Unauthorized Error",
-			responseCode:  http.StatusUnauthorized,
-			responseBody:  `{"title": "x", "description": "y"}`,
-			expectedError: &APIError{http.StatusUnauthorized, "x", "y"},
+			name:         "Unauthorized Error",
+			responseCode: http.StatusUnauthorized,
+			responseBody: `{"title": "x", "description": "y"}`,
+			expectedError: &APIError{
+				URL:         ts.URL + "/acs/api/v1/auth/login",
+				StatusCode:  http.StatusUnauthorized,
+				Title:       "x",
+				Description: "y",
+			},
 			expectedToken: "",
 		},
 	}
@@ -59,11 +67,11 @@ func TestLogin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.responseCode)
 				fmt.Fprintln(w, tt.responseBody)
 			})
-			ts := httptest.NewServer(handler)
+
 			u, err := url.Parse(ts.URL)
 			require.NoError(t, err)
 
@@ -82,13 +90,14 @@ func TestLogin(t *testing.T) {
 			} else {
 				require.Nil(t, auth)
 			}
-
-			ts.Close()
 		})
 	}
 }
 
 func TestGetSummary(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
 	var tests = []struct {
 		name          string
 		responseCode  int
@@ -98,7 +107,7 @@ func TestGetSummary(t *testing.T) {
 	}{
 		{
 			name:          "No nodes",
-			responseCode:  200,
+			responseCode:  http.StatusOK,
 			responseBody:  `{"cluster": "a", "slaves": []}`,
 			expectedValue: &Summary{Cluster: "a", Slaves: []Slave{}},
 			expectedError: nil,
@@ -108,11 +117,15 @@ func TestGetSummary(t *testing.T) {
 			responseCode:  http.StatusUnauthorized,
 			responseBody:  `<html></html>`,
 			expectedValue: nil,
-			expectedError: &APIError{StatusCode: http.StatusUnauthorized, Title: "401 Unauthorized"},
+			expectedError: &APIError{
+				URL:        ts.URL + "/mesos/master/state-summary",
+				StatusCode: http.StatusUnauthorized,
+				Title:      "401 Unauthorized",
+			},
 		},
 		{
 			name:         "Has nodes",
-			responseCode: 200,
+			responseCode: http.StatusOK,
 			responseBody: `{"cluster": "a", "slaves": [{"id": "a"}, {"id": "b"}]}`,
 			expectedValue: &Summary{
 				Cluster: "a",
@@ -127,12 +140,12 @@ func TestGetSummary(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				// check the path
 				w.WriteHeader(tt.responseCode)
 				fmt.Fprintln(w, tt.responseBody)
 			})
-			ts := httptest.NewServer(handler)
+
 			u, err := url.Parse(ts.URL)
 			require.NoError(t, err)
 
@@ -142,14 +155,15 @@ func TestGetSummary(t *testing.T) {
 
 			require.Equal(t, tt.expectedError, err)
 			require.Equal(t, tt.expectedValue, summary)
-
-			ts.Close()
 		})
 	}
 
 }
 
 func TestGetNodeMetrics(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
 	var tests = []struct {
 		name          string
 		responseCode  int
@@ -159,7 +173,7 @@ func TestGetNodeMetrics(t *testing.T) {
 	}{
 		{
 			name:          "Empty Body",
-			responseCode:  200,
+			responseCode:  http.StatusOK,
 			responseBody:  `{}`,
 			expectedValue: &Metrics{},
 			expectedError: nil,
@@ -168,12 +182,12 @@ func TestGetNodeMetrics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				// check the path
 				w.WriteHeader(tt.responseCode)
 				fmt.Fprintln(w, tt.responseBody)
 			})
-			ts := httptest.NewServer(handler)
+
 			u, err := url.Parse(ts.URL)
 			require.NoError(t, err)
 
@@ -183,14 +197,15 @@ func TestGetNodeMetrics(t *testing.T) {
 
 			require.Equal(t, tt.expectedError, err)
 			require.Equal(t, tt.expectedValue, m)
-
-			ts.Close()
 		})
 	}
 
 }
 
 func TestGetContainerMetrics(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
 	var tests = []struct {
 		name          string
 		responseCode  int
@@ -199,8 +214,8 @@ func TestGetContainerMetrics(t *testing.T) {
 		expectedError error
 	}{
 		{
-			name:          "204 No Contents",
-			responseCode:  204,
+			name:          "204 No Content",
+			responseCode:  http.StatusNoContent,
 			responseBody:  ``,
 			expectedValue: &Metrics{},
 			expectedError: nil,
@@ -209,12 +224,12 @@ func TestGetContainerMetrics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				// check the path
 				w.WriteHeader(tt.responseCode)
 				fmt.Fprintln(w, tt.responseBody)
 			})
-			ts := httptest.NewServer(handler)
+
 			u, err := url.Parse(ts.URL)
 			require.NoError(t, err)
 
@@ -224,8 +239,6 @@ func TestGetContainerMetrics(t *testing.T) {
 
 			require.Equal(t, tt.expectedError, err)
 			require.Equal(t, tt.expectedValue, m)
-
-			ts.Close()
 		})
 	}
 
