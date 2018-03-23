@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -25,7 +26,8 @@ func TestSerializeMetricFloat(t *testing.T) {
 	var buf []byte
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
-	expS := []byte(fmt.Sprintf(`{"fields":{"usage_idle":91.5},"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
+	expS := []byte(fmt.Sprintf(`{"fields":{"usage_idle":91.5},"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d,"type":"%s"}`,
+		now.Unix(), telegraf.Untyped.String()) + "\n")
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -45,7 +47,8 @@ func TestSerializeMetricInt(t *testing.T) {
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`{"fields":{"usage_idle":90},"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
+	expS := []byte(fmt.Sprintf(`{"fields":{"usage_idle":90},"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d,"type":"%s"}`,
+		now.Unix(), telegraf.Untyped.String()) + "\n")
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -65,7 +68,8 @@ func TestSerializeMetricString(t *testing.T) {
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`{"fields":{"usage_idle":"foobar"},"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
+	expS := []byte(fmt.Sprintf(`{"fields":{"usage_idle":"foobar"},"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d,"type":"%s"}`,
+		now.Unix(), telegraf.Untyped.String()) + "\n")
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -86,7 +90,8 @@ func TestSerializeMultiFields(t *testing.T) {
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`{"fields":{"usage_idle":90,"usage_total":8559615},"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
+	expS := []byte(fmt.Sprintf(`{"fields":{"usage_idle":90,"usage_total":8559615},"name":"cpu","tags":{"cpu":"cpu0"},"timestamp":%d,"type":"%s"}`,
+		now.Unix(), telegraf.Untyped.String()) + "\n")
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -105,6 +110,59 @@ func TestSerializeMetricWithEscapes(t *testing.T) {
 	buf, err := s.Serialize(m)
 	assert.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`{"fields":{"U,age=Idle":90},"name":"My CPU","tags":{"cpu tag":"cpu0"},"timestamp":%d}`, now.Unix()) + "\n")
+	expS := []byte(fmt.Sprintf(`{"fields":{"U,age=Idle":90},"name":"My CPU","tags":{"cpu tag":"cpu0"},"timestamp":%d,"type":"%s"}`,
+		now.Unix(), telegraf.Untyped.String()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
+}
+
+func TestSerializeMetricIncludesType(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{}
+	fields := map[string]interface{}{"field1": float64(42)}
+	s := JsonSerializer{}
+
+	// untyped
+	m, err := metric.New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+	buf, err := s.Serialize(m)
+	assert.NoError(t, err)
+	expS := []byte(fmt.Sprintf(`{"fields":{"field1":42},"name":"cpu","tags":{},"timestamp":%d,"type":"%s"}`,
+		now.Unix(), telegraf.Untyped.String()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
+
+	// gauge
+	m, err = metric.New("cpu", tags, fields, now, telegraf.Gauge)
+	assert.NoError(t, err)
+	buf, err = s.Serialize(m)
+	assert.NoError(t, err)
+	expS = []byte(fmt.Sprintf(`{"fields":{"field1":42},"name":"cpu","tags":{},"timestamp":%d,"type":"%s"}`,
+		now.Unix(), telegraf.Gauge.String()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
+
+	// counter
+	m, err = metric.New("cpu", tags, fields, now, telegraf.Counter)
+	assert.NoError(t, err)
+	buf, err = s.Serialize(m)
+	assert.NoError(t, err)
+	expS = []byte(fmt.Sprintf(`{"fields":{"field1":42},"name":"cpu","tags":{},"timestamp":%d,"type":"%s"}`,
+		now.Unix(), telegraf.Counter.String()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
+
+	// summary
+	m, err = metric.New("cpu", tags, fields, now, telegraf.Summary)
+	assert.NoError(t, err)
+	buf, err = s.Serialize(m)
+	assert.NoError(t, err)
+	expS = []byte(fmt.Sprintf(`{"fields":{"field1":42},"name":"cpu","tags":{},"timestamp":%d,"type":"%s"}`,
+		now.Unix(), telegraf.Summary.String()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
+
+	// histogram
+	m, err = metric.New("cpu", tags, fields, now, telegraf.Histogram)
+	assert.NoError(t, err)
+	buf, err = s.Serialize(m)
+	assert.NoError(t, err)
+	expS = []byte(fmt.Sprintf(`{"fields":{"field1":42},"name":"cpu","tags":{},"timestamp":%d,"type":"%s"}`,
+		now.Unix(), telegraf.Histogram.String()) + "\n")
 	assert.Equal(t, string(expS), string(buf))
 }
