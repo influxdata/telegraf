@@ -229,32 +229,6 @@ func (m *metric) IsAggregate() bool {
 	return m.aggregate
 }
 
-func (m *metric) equal(o *metric) bool {
-	if m.name != o.name || m.tm != o.tm {
-		return false
-	}
-
-	if len(m.tags) != len(o.tags) || len(m.fields) != len(o.fields) {
-		return false
-	}
-
-	for i, tag := range m.tags {
-		if tag.Key != o.tags[i].Key || tag.Value != o.tags[i].Value {
-			return false
-		}
-	}
-
-	sort.Slice(m.fields, func(i, j int) bool { return m.fields[i].Key < m.fields[j].Key })
-	sort.Slice(o.fields, func(i, j int) bool { return o.fields[i].Key < o.fields[j].Key })
-
-	for i, field := range m.fields {
-		if field.Key != o.fields[i].Key || field.Value != o.fields[i].Value {
-			return false
-		}
-	}
-	return true
-}
-
 func (m *metric) HashID() uint64 {
 	h := fnv.New64a()
 	h.Write([]byte(m.name))
