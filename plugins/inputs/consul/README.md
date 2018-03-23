@@ -8,19 +8,28 @@ to query the data. It will not report the [telemetry](https://www.consul.io/docs
 ```
 # Gather health check statuses from services registered in Consul
 [[inputs.consul]]
-  ## Most of these values defaults to the one configured on a Consul's agent level.
-  ## Optional Consul server address (default: "")
-  # address = ""
-  ## Optional URI scheme for the Consul server (default: "")
-  # scheme = ""
-  ## Optional ACL token used in every request (default: "")
+  ## Consul server address
+  # address = "localhost"
+
+  ## URI scheme for the Consul server, one of "http", "https"
+  # scheme = "http"
+
+  ## ACL token used in every request
   # token = ""
-  ## Optional username used for request HTTP Basic Authentication (default: "")
+
+  ## HTTP Basic Authentication username and password.
   # username = ""
-  ## Optional password used for HTTP Basic Authentication (default: "")
   # password = ""
-  ## Optional data centre to query the health checks from (default: "")
+
+  ## Data centre to query the health checks from
   # datacentre = ""
+
+  ## SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## If false, skip chain & host verification
+  # insecure_skip_verify = true
 ```
 
 ## Measurements:
