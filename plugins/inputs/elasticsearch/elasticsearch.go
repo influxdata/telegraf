@@ -105,7 +105,7 @@ const sampleConfig = `
 
   ## node_stats is a list of sub-stats that you want to have gathered. Valid options
   ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",
-  ## "breakers". Per default, all stats are gathered.
+  ## "breaker". Per default, all stats are gathered.
   # node_stats = ["jvm", "http"]
 
   ## Optional SSL Config

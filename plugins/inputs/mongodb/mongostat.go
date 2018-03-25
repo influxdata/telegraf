@@ -34,6 +34,7 @@ type MongoStatus struct {
 	ReplSetStatus *ReplSetStatus
 	ClusterStatus *ClusterStatus
 	DbStats       *DbStats
+	ShardStats    *ShardStats
 }
 
 type ServerStatus struct {
@@ -114,6 +115,14 @@ type WiredTiger struct {
 	Transaction TransactionStats       `bson:"transaction"`
 	Concurrent  ConcurrentTransactions `bson:"concurrentTransactions"`
 	Cache       CacheStats             `bson:"cache"`
+}
+
+// ShardStats stores information from shardConnPoolStats.
+type ShardStats struct {
+	TotalInUse      int64 `bson:"totalInUse"`
+	TotalAvailable  int64 `bson:"totalAvailable"`
+	TotalCreated    int64 `bson:"totalCreated"`
+	TotalRefreshing int64 `bson:"totalRefreshing"`
 }
 
 type ConcurrentTransactions struct {
@@ -450,6 +459,9 @@ type StatLine struct {
 
 	// DB stats field
 	DbStatsLines []DbStatLine
+
+	// Shard stats
+	TotalInUse, TotalAvailable, TotalCreated, TotalRefreshing int64
 }
 
 type DbStatLine struct {
@@ -782,6 +794,13 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		}
 		returnVal.DbStatsLines = append(returnVal.DbStatsLines, *dbStatLine)
 	}
+
+	// Set shard stats
+	newShardStats := *newMongo.ShardStats
+	returnVal.TotalInUse = newShardStats.TotalInUse
+	returnVal.TotalAvailable = newShardStats.TotalAvailable
+	returnVal.TotalCreated = newShardStats.TotalCreated
+	returnVal.TotalRefreshing = newShardStats.TotalRefreshing
 
 	return returnVal
 }

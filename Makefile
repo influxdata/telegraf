@@ -2,6 +2,9 @@ PREFIX := /usr/local
 VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 COMMIT := $(shell git rev-parse --short HEAD)
+GOFILES ?= $(shell git ls-files '*.go')
+GOFMT ?= $(shell gofmt -l $(GOFILES))
+
 ifdef GOBIN
 PATH := $(GOBIN):$(PATH)
 else
@@ -16,10 +19,18 @@ ifdef VERSION
 endif
 
 all:
+	$(MAKE) fmtcheck
 	$(MAKE) deps
 	$(MAKE) telegraf
 
+ci-test:
+	$(MAKE) deps
+	$(MAKE) fmtcheck
+	$(MAKE) vet
+	$(MAKE) test
+
 deps:
+	go get -u github.com/golang/lint/golint
 	go get github.com/sparrc/gdm
 	gdm restore
 
@@ -36,92 +47,53 @@ install: telegraf
 test:
 	go test -short ./...
 
+fmt:
+	@gofmt -w $(GOFILES)
+
+fmtcheck:
+	@echo '[INFO] running gofmt to identify incorrectly formatted code...'
+	@if [ ! -z $(GOFMT) ]; then \
+		echo "[ERROR] gofmt has found errors in the following files:"  ; \
+		echo "$(GOFMT)" ; \
+		echo "" ;\
+		echo "Run make fmt to fix them." ; \
+		exit 1 ;\
+	fi
+	@echo '[INFO] done.'
+
+lint:
+	golint ./...
+
 test-windows:
 	go test ./plugins/inputs/ping/...
 	go test ./plugins/inputs/win_perf_counters/...
 	go test ./plugins/inputs/win_services/...
+	go test ./plugins/inputs/procstat/...
 
-lint:
-	go vet ./...
+# vet runs the Go source code static analysis tool `vet` to find
+# any common errors.
+vet:
+	@echo 'go vet $$(go list ./...)'
+	@go vet $$(go list ./...) ; if [ $$? -eq 1 ]; then \
+		echo ""; \
+		echo "go vet has found suspicious constructs. Please remediate any reported errors"; \
+		echo "to fix them before submitting code for review."; \
+		exit 1; \
+	fi
 
-test-all: lint
+test-all: vet
 	go test ./...
 
 package:
 	./scripts/build.py --package --platform=all --arch=all
 
 clean:
-	-rm -f telegraf
-	-rm -f telegraf.exe
+	rm -f telegraf
+	rm -f telegraf.exe
 
 docker-image:
 	./scripts/build.py --package --platform=linux --arch=amd64
 	cp build/telegraf*$(COMMIT)*.deb .
 	docker build -f scripts/dev.docker --build-arg "package=telegraf*$(COMMIT)*.deb" -t "telegraf-dev:$(COMMIT)" .
 
-# Run all docker containers necessary for integration tests
-docker-run:
-	docker run --name aerospike -p "3000:3000" -d aerospike/aerospike-server:3.9.0
-	docker run --name zookeeper -p "2181:2181" -d wurstmeister/zookeeper
-	docker run --name kafka \
-		--link zookeeper:zookeeper \
-		-e KAFKA_ADVERTISED_HOST_NAME=localhost \
-		-e KAFKA_ADVERTISED_PORT=9092 \
-		-e KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181 \
-		-e KAFKA_CREATE_TOPICS="test:1:1" \
-		-p "9092:9092" \
-		-d wurstmeister/kafka
-	docker run --name elasticsearch -p "9200:9200" -p "9300:9300" -d elasticsearch:5
-	docker run --name mysql -p "3306:3306" -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -d mysql
-	docker run --name memcached -p "11211:11211" -d memcached
-	docker run --name postgres -p "5432:5432" -d postgres
-	docker run --name rabbitmq -p "15672:15672" -p "5672:5672" -d rabbitmq:3-management
-	docker run --name redis -p "6379:6379" -d redis
-	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
-	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
-	docker run --name riemann -p "5555:5555" -d stealthly/docker-riemann
-	docker run --name nats -p "4222:4222" -d nats
-	docker run --name openldap \
-		-e SLAPD_CONFIG_ROOTDN="cn=manager,cn=config" \
-		-e SLAPD_CONFIG_ROOTPW="secret" \
-		-p "389:389" -p "636:636" \
-		-d cobaugh/openldap-alpine
-	docker run --name cratedb \
-		-p "6543:5432" \
-		-d crate:2.2 \
-		-Cnetwork.host=0.0.0.0 \
-		-Ctransport.host=localhost \
-		-Clicense.enterprise=false
-
-# Run docker containers necessary for integration tests; skipping services provided
-# by CircleCI
-docker-run-circle:
-	docker run --name aerospike -p "3000:3000" -d aerospike/aerospike-server:3.9.0
-	docker run --name zookeeper -p "2181:2181" -d wurstmeister/zookeeper
-	docker run --name kafka \
-		--link zookeeper:zookeeper \
-		-e KAFKA_ADVERTISED_HOST_NAME=localhost \
-		-e KAFKA_ADVERTISED_PORT=9092 \
-		-e KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181 \
-		-e KAFKA_CREATE_TOPICS="test:1:1" \
-		-p "9092:9092" \
-		-d wurstmeister/kafka
-	docker run --name elasticsearch -p "9200:9200" -p "9300:9300" -d elasticsearch:5
-	docker run --name nsq -p "4150:4150" -d nsqio/nsq /nsqd
-	docker run --name mqtt -p "1883:1883" -d ncarlier/mqtt
-	docker run --name riemann -p "5555:5555" -d stealthly/docker-riemann
-	docker run --name nats -p "4222:4222" -d nats
-	docker run --name openldap \
-		-e SLAPD_CONFIG_ROOTDN="cn=manager,cn=config" \
-		-e SLAPD_CONFIG_ROOTPW="secret" \
-		-p "389:389" -p "636:636" \
-		-d cobaugh/openldap-alpine
-
-docker-kill:
-	-docker kill aerospike elasticsearch kafka memcached mqtt mysql nats nsq \
-		openldap postgres rabbitmq redis riemann zookeeper cratedb
-	-docker rm aerospike elasticsearch kafka memcached mqtt mysql nats nsq \
-		openldap postgres rabbitmq redis riemann zookeeper cratedb
-
-.PHONY: deps telegraf telegraf.exe install test test-windows lint test-all \
-	package clean docker-run docker-run-circle docker-kill docker-image
+.PHONY: deps telegraf install test test-windows lint vet test-all package clean docker-image fmtcheck

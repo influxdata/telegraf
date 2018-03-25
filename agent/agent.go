@@ -143,7 +143,7 @@ func (a *Agent) gatherer(
 func gatherWithTimeout(
 	shutdown chan struct{},
 	input *models.RunningInput,
-	acc *accumulator,
+	acc telegraf.Accumulator,
 	timeout time.Duration,
 ) {
 	ticker := time.NewTicker(timeout)
@@ -308,7 +308,13 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric, ag
 					metrics = processor.Apply(metrics...)
 				}
 				for _, m := range metrics {
-					outMetricC <- m
+					for i, o := range a.Config.Outputs {
+						if i == len(a.Config.Outputs)-1 {
+							o.AddMetric(m)
+						} else {
+							o.AddMetric(m.Copy())
+						}
+					}
 				}
 			}
 		}

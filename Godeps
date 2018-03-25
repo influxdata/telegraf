@@ -16,7 +16,7 @@ github.com/docker/go-connections 990a1a1a70b0da4c4cb70e117971a4f0babfbf1a
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
 github.com/eapache/go-xerial-snappy bb955e01b9346ac19dc29eb16586c90ded99a98c
 github.com/eapache/queue 44cc805cf13205b55f69e14bcb69867d1ae92f98
-github.com/eclipse/paho.mqtt.golang d4f545eb108a2d19f9b1a735689dbfb719bc21fb
+github.com/eclipse/paho.mqtt.golang aff15770515e3c57fc6109da73d42b0d46f7f483
 github.com/go-logfmt/logfmt 390ab7935ee28ec6b286364bba9b4dd6410cb3d5
 github.com/go-sql-driver/mysql 2e00b5cd70399450106cec6431c2e2ce3cae5034
 github.com/gobwas/glob bea32b9cd2d6f55753d94a28e959b13f0244797a
@@ -45,6 +45,7 @@ github.com/miekg/dns 99f84ae56e75126dd77e5de4fae2ea034a468ca1
 github.com/mitchellh/mapstructure d0303fe809921458f417bcf828397a65db30a7e4
 github.com/multiplay/go-ts3 07477f49b8dfa3ada231afc7b7b17617d42afe8e
 github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
+github.com/nats-io/gnatsd 393bbb7c031433e68707c8810fda0bfcfbe6ab9b
 github.com/nats-io/go-nats ea9585611a4ab58a205b9b125ebd74c389a6b898
 github.com/nats-io/nats ea9585611a4ab58a205b9b125ebd74c389a6b898
 github.com/nats-io/nuid 289cccf02c178dc782430d534e3c1f5b72af807f
@@ -86,7 +87,6 @@ golang.org/x/sys 739734461d1c916b6c72a63d7efda2b27edb369f
 golang.org/x/text 506f9d5c962f284575e88337e7d9296d27e729d3
 gopkg.in/asn1-ber.v1 4e86f4367175e39f69d9358a5f17b4dda270378d
 gopkg.in/fatih/pool.v2 6e328e67893eb46323ad06f0e92cb9536babbabc
-gopkg.in/fsnotify.v1 a8a77c9133d2d6fd8334f3260d06f60e8d80a5fb
 gopkg.in/gorethink/gorethink.v3 7ab832f7b65573104a555d84a27992ae9ea1f659
 gopkg.in/ldap.v2 8168ee085ee43257585e50c6441aadf54ecb2c9f
 gopkg.in/mgo.v2 3f83fa5005286a7fe593b055f0d7771a7dce4655

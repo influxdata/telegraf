@@ -2,6 +2,8 @@
 
 The httpjson plugin collects data from HTTP URLs which respond with JSON.  It flattens the JSON and finds all numeric values, treating them as floats.
 
+Deprecated (1.6): use the [http](../http) input.
+
 ### Configuration:
 
 ```toml
