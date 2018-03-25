@@ -20,7 +20,7 @@ const sampleConfig = `
 `
 const jvmStats = "/_node/stats/jvm"
 const processStats = "/_node/stats/process"
-const pipelineStats = "/_node/stats/pipeline"
+const pipelineStats = "/_node/stats/pipelines"
 
 type Logstash struct {
 	URL    string
@@ -70,9 +70,14 @@ type Pipeline struct {
 	Queue   PipelineQueue   `json:"queue"`
 }
 
+type PipelineTopLevel struct {
+	Pipeline_Monitoring interface{} `json:".monitoring-logstash"`
+	Pipeline_Main       Pipeline    `json:"main"`
+}
+
 type PipelineStats struct {
-	ID       string   `json:"id"`
-	Pipeline Pipeline `json:"pipeline"`
+	ID        string           `json:"id"`
+	Pipelines PipelineTopLevel `json:"pipelines"`
 }
 
 //Description returns short info about plugin
@@ -180,7 +185,7 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 	}
 
 	stats := map[string]interface{}{
-		"events": PipelineStats.Pipeline.Events,
+		"events": PipelineStats.Pipelines.Pipeline_Main.Events,
 	}
 
 	// Events
@@ -193,9 +198,8 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 		}
 		acc.AddFields("logstash_"+p, f.Fields, tags)
 	}
-
 	// Input Plugins
-	for _, plugin := range PipelineStats.Pipeline.Plugins.Inputs {
+	for _, plugin := range PipelineStats.Pipelines.Pipeline_Main.Plugins.Inputs {
 
 		fields := map[string]interface{}{
 			"queue_push_duration_in_millis": plugin.Events.QueuePushDurationInMillis,
@@ -211,7 +215,7 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 	}
 
 	// Filters Plugins
-	for _, plugin := range PipelineStats.Pipeline.Plugins.Filters {
+	for _, plugin := range PipelineStats.Pipelines.Pipeline_Main.Plugins.Filters {
 
 		fields := map[string]interface{}{
 			"duration_in_millis": plugin.Events.DurationInMillis,
@@ -226,7 +230,7 @@ func (l *Logstash) gatherPipelineStats(url string, acc telegraf.Accumulator) err
 	}
 
 	// Output Plugins
-	for _, plugin := range PipelineStats.Pipeline.Plugins.Outputs {
+	for _, plugin := range PipelineStats.Pipelines.Pipeline_Main.Plugins.Outputs {
 
 		fields := map[string]interface{}{
 			"duration_in_millis": plugin.Events.DurationInMillis,

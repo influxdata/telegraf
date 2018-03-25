@@ -98,58 +98,77 @@ const jvmJSON = `
 `
 
 const pipelineJSON = `
+
 {
-  "host" : "f7a354acc27f",
-  "version" : "5.3.0",
+  "host" : "de22454128d2",
+  "version" : "6.1.1",
   "http_address" : "0.0.0.0:9600",
-  "id" : "a360d8cf-6289-429d-8419-6145e324b574",
-  "name" : "f7a354acc27f",
-  "pipeline" : {
-    "events" : {
-      "duration_in_millis" : 1151,
-      "in" : 1269,
-      "filtered" : 1269,
-      "out" : 1269
+  "id" : "e7bfb05c-ebd9-47b1-bc59-39e90ce98fcd",
+  "name" : "de22454128d2",
+  "pipelines" : {
+    ".monitoring-logstash" : {
+      "events" : null,
+      "plugins" : {
+        "inputs" : [ ],
+        "filters" : [ ],
+        "outputs" : [ ]
+      },
+      "reloads" : {
+        "last_error" : null,
+        "successes" : 0,
+        "last_success_timestamp" : null,
+        "last_failure_timestamp" : null,
+        "failures" : 0
+      },
+      "queue" : null
     },
-    "plugins" : {
-      "inputs" : [ {
-        "id" : "a35197a509596954e905e38521bae12b1498b17d-1",
-        "events" : {
-          "out" : 2,
-          "queue_push_duration_in_millis" : 32
-        },
-        "name" : "beats"
-      } ],
-      "filters" : [ ],
-      "outputs" : [ {
-        "id" : "582d5c2becb582a053e1e9a6bcc11d49b69a6dfd-3",
-        "events" : {
-          "duration_in_millis" : 228,
-          "in" : 1269,
-          "out" : 1269
-        },
-        "name" : "s3"
-      }, {
-        "id" : "582d5c2becb582a053e1e9a6bcc11d49b69a6dfd-2",
-        "events" : {
-          "duration_in_millis" : 360,
-          "in" : 1269,
-          "out" : 1269
-        },
-        "name" : "stdout"
-      } ]
-    },
-    "reloads" : {
-      "last_error" : null,
-      "successes" : 0,
-      "last_success_timestamp" : null,
-      "last_failure_timestamp" : null,
-      "failures" : 0
-    },
-    "queue" : {
-      "type" : "memory"
-    },
-    "id" : "main"
+    "main" : {
+      "events" : {
+        "duration_in_millis" : 1151,
+        "in" : 1269,
+        "out" : 1269,
+        "filtered" : 1269,
+        "queue_push_duration_in_millis" : 1324
+      },
+      "plugins" : {
+				"inputs" : [ {
+					"id" : "a35197a509596954e905e38521bae12b1498b17d-1",
+					"events" : {
+						"out" : 2,
+						"queue_push_duration_in_millis" : 32
+					},
+					"name" : "beats"
+				} ],
+				"filters" : [ ],
+				"outputs" : [ {
+					"id" : "582d5c2becb582a053e1e9a6bcc11d49b69a6dfd-3",
+					"events" : {
+						"duration_in_millis" : 228,
+						"in" : 1269,
+						"out" : 1269
+					},
+					"name" : "s3"
+				}, {
+					"id" : "582d5c2becb582a053e1e9a6bcc11d49b69a6dfd-2",
+					"events" : {
+						"duration_in_millis" : 360,
+						"in" : 1269,
+						"out" : 1269
+					},
+					"name" : "stdout"
+				} ]
+			},
+      "reloads" : {
+        "last_error" : null,
+        "successes" : 0,
+        "last_success_timestamp" : null,
+        "last_failure_timestamp" : null,
+        "failures" : 0
+      },
+      "queue" : {
+        "type" : "memory"
+      }
+    }
   }
 }
 `
@@ -194,10 +213,11 @@ func Test_gatherPipelineStats(t *testing.T) {
 		t,
 		"logstash_events",
 		map[string]interface{}{
-			"duration_in_millis": float64(1151.0),
-			"in":                 float64(1269.0),
-			"filtered":           float64(1269.0),
-			"out":                float64(1269.0),
+			"duration_in_millis":            float64(1151.0),
+			"queue_push_duration_in_millis": float64(1324.0),
+			"in":       float64(1269.0),
+			"filtered": float64(1269.0),
+			"out":      float64(1269.0),
 		})
 
 	accPipelineStats.AssertContainsTaggedFields(
