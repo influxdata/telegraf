@@ -7,8 +7,17 @@ This plugin writes to [Riemann](http://riemann.io/) via TCP or UDP.
 ```toml
 # Configuration for Riemann to send metrics to
 [[outputs.riemann]]
-  ## The full TCP or UDP URL of the Riemann server
+  ## The full TCP, UDP or TLS URL of the Riemann server
   url = "tcp://localhost:5555"
+
+  ## Certificate path for TLS connection
+  # cert_path = "cert.pem"
+
+  ## Key path for TLS connection
+  # key_path = "key.key"
+
+  ## Activate insecure TLS connection
+  # insecure = false
 
   ## Riemann event TTL, floating-point time in seconds.
   ## Defines how long that an event is considered valid for in Riemann

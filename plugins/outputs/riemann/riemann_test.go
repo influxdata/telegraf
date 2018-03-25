@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/amir/raidman"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/riemann/riemann-go-client"
 	"github.com/stretchr/testify/require"
 )
 
@@ -81,9 +81,9 @@ func TestMetricEvents(t *testing.T) {
 	require.Len(t, events, 1)
 
 	// is event as expected?
-	expectedEvent := &raidman.Event{
+	expectedEvent := riemanngo.Event{
 		Ttl:         20.0,
-		Time:        1257894000,
+		Time:        time.Unix(1257894000, 0),
 		Tags:        []string{"telegraf", "value1"},
 		Host:        "abc123",
 		State:       "",
@@ -109,9 +109,9 @@ func TestMetricEvents(t *testing.T) {
 	require.Equal(t, expectedEvent, events[0])
 
 	// second event
-	expectedEvent = &raidman.Event{
+	expectedEvent = riemanngo.Event{
 		Ttl:         20.0,
-		Time:        1351825200,
+		Time:        time.Unix(1351825200, 0),
 		Tags:        []string{"telegraf"},
 		Host:        "xyz987",
 		State:       "",
@@ -146,9 +146,9 @@ func TestStateEvents(t *testing.T) {
 	require.Len(t, events, 1)
 
 	// is event as expected?
-	expectedEvent := &raidman.Event{
+	expectedEvent := riemanngo.Event{
 		Ttl:         0,
-		Time:        1447106400,
+		Time:        time.Unix(1447106400, 0),
 		Tags:        nil,
 		Host:        "host",
 		State:       "running",
