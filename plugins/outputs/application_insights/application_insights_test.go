@@ -1,0 +1,502 @@
+package application_insights
+
+import (
+	"math"
+	"testing"
+	"time"
+
+	"github.com/Microsoft/ApplicationInsights-Go/appinsights"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/outputs/application_insights/mocks"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+)
+
+func TestOutputNotTrackingIfNoIkey(t *testing.T) {
+	assert := assert.New(t)
+
+	transmitter := new(mocks.TelemetryTransmitter)
+	transmitter.On("Close").Return(closed)
+
+	ai := ApplicationInsights{
+		Transmitter: transmitter,
+		// Very long timeout to ensure we do not rely on timeouts for closing the transmitter
+		Timeout: internal.Duration{Duration: time.Hour},
+	}
+
+	err := ai.Connect()
+	assert.NoError(err)
+
+	metrics := testutil.MockMetrics()
+	ai.Write(metrics)
+	transmitter.AssertNumberOfCalls(t, "Track", 0)
+
+	err = ai.Close()
+	assert.NoError(err)
+	transmitter.AssertCalled(t, "Close")
+}
+
+func TestOutputCloseTimesOut(t *testing.T) {
+	assert := assert.New(t)
+
+	transmitter := new(mocks.TelemetryTransmitter)
+	transmitter.On("Close").Return(unfinished)
+
+	ai := ApplicationInsights{
+		Transmitter: transmitter,
+		Timeout:     internal.Duration{Duration: time.Millisecond * 50},
+	}
+
+	err := ai.Close()
+	assert.NoError(err)
+	transmitter.AssertCalled(t, "Close")
+}
+
+func TestCloseRemovesDiagMsgListener(t *testing.T) {
+	assert := assert.New(t)
+
+	transmitter := new(mocks.TelemetryTransmitter)
+	transmitter.On("Close").Return(closed)
+
+	diagMsgListener := new(mocks.DiagnosticsMessageListener)
+	diagMsgListener.On("Remove")
+
+	diagMsgSubscriber := new(mocks.DiagnosticsMessageSubscriber)
+	diagMsgSubscriber.
+		On("Subscribe", mock.AnythingOfType("appinsights.DiagnosticsMessageHandler")).
+		Return(diagMsgListener)
+
+	ai := ApplicationInsights{
+		Transmitter:       transmitter,
+		Timeout:           internal.Duration{Duration: time.Hour},
+		DiagMsgSubscriber: diagMsgSubscriber,
+	}
+
+	err := ai.Connect()
+	assert.NoError(err)
+	diagMsgSubscriber.AssertCalled(t, "Subscribe", mock.AnythingOfType("appinsights.DiagnosticsMessageHandler"))
+
+	err = ai.Close()
+	assert.NoError(err)
+	transmitter.AssertCalled(t, "Close")
+	diagMsgListener.AssertCalled(t, "Remove")
+}
+
+func TestAggregateMetricCreated(t *testing.T) {
+	tests := []struct {
+		name       string
+		fields     map[string]interface{}
+		valueField string
+		countField string
+	}{
+		{"value and count", map[string]interface{}{"value": 16.5, "count": 23}, "value", "count"},
+		{"value and samples", map[string]interface{}{"value": 16.5, "samples": 23}, "value", "samples"},
+		{"sum and count", map[string]interface{}{"sum": 16.5, "count": 23}, "sum", "count"},
+		{"sum and samples", map[string]interface{}{"samples": 23, "sum": 16.5}, "sum", "samples"},
+		{
+			"with aggregates",
+			map[string]interface{}{
+				"value":  16.5,
+				"count":  23,
+				"min":    -2.1,
+				"max":    34,
+				"stddev": 3.4,
+			},
+			"value",
+			"count",
+		},
+		{
+			"some aggregates with invalid values",
+			map[string]interface{}{
+				"value": 16.5,
+				"count": 23,
+				"min":   "min",
+				"max":   []float64{3.4, 5.6},
+				"stddev": struct {
+					name  string
+					value float64
+				}{"delta", 7.0},
+			},
+			"value",
+			"count",
+		},
+	}
+
+	for _, tt := range tests {
+		tf := func(t *testing.T) {
+			assert := assert.New(t)
+			now := time.Now().UTC()
+
+			transmitter := new(mocks.TelemetryTransmitter)
+			transmitter.On("Track", mock.Anything)
+
+			m, err := metric.New(
+				"ShouldBeAggregateMetric",
+				nil, // tags
+				tt.fields,
+				now,
+			)
+			assert.NoError(err)
+
+			ai := ApplicationInsights{
+				Transmitter:        transmitter,
+				InstrumentationKey: "1234", // Fake, but necessary to enable tracking
+			}
+
+			err = ai.Connect()
+			assert.NoError(err)
+
+			mSet := []telegraf.Metric{m}
+			ai.Write(mSet)
+			transmitter.AssertNumberOfCalls(t, "Track", 1)
+			transmitter.AssertCalled(t, "Track", mock.AnythingOfType("*appinsights.AggregateMetricTelemetry"))
+			telemetry := transmitter.Calls[0].Arguments.Get(0).(*appinsights.AggregateMetricTelemetry)
+			verifyAggregateTelemetry(assert, m, tt.valueField, tt.countField, telemetry)
+		}
+
+		t.Run(tt.name, tf)
+	}
+}
+
+func TestSimpleMetricCreated(t *testing.T) {
+	tests := []struct {
+		name       string
+		fields     map[string]interface{}
+		valueField string
+	}{
+		{"value but no count", map[string]interface{}{"value": 16.5, "other": "bulba"}, "value"},
+		{"count but no value", map[string]interface{}{"v1": "v1Val", "count": 23}, "count"},
+		{"neither value nor count", map[string]interface{}{"v1": "alpha", "v2": 45.8}, "v2"},
+		{"value is of wrong type", map[string]interface{}{"value": "alpha", "count": 15}, "count"},
+		{"count is of wrong type", map[string]interface{}{"value": 23.77, "count": 7.5}, "value"},
+		{"count is out of range", map[string]interface{}{"value": -98.45E4, "count": math.MaxUint64 - uint64(20)}, "value"},
+	}
+
+	for _, tt := range tests {
+		tf := func(t *testing.T) {
+			assert := assert.New(t)
+			now := time.Now().UTC()
+
+			transmitter := new(mocks.TelemetryTransmitter)
+			transmitter.On("Track", mock.Anything)
+
+			m, err := metric.New(
+				"ShouldBeSimpleMetric",
+				nil, // tags
+				tt.fields,
+				now,
+			)
+			assert.NoError(err)
+
+			ai := ApplicationInsights{
+				Transmitter:        transmitter,
+				InstrumentationKey: "1234", // Fake, but necessary to enable tracking
+			}
+
+			err = ai.Connect()
+			assert.NoError(err)
+
+			mSet := []telegraf.Metric{m}
+			ai.Write(mSet)
+			transmitter.AssertNumberOfCalls(t, "Track", 1)
+			transmitter.AssertCalled(t, "Track", mock.AnythingOfType("*appinsights.MetricTelemetry"))
+			telemetry := transmitter.Calls[0].Arguments.Get(0).(*appinsights.MetricTelemetry)
+			verifySimpleTelemetry(assert, m, tt.valueField, telemetry)
+		}
+
+		t.Run(tt.name, tf)
+	}
+}
+
+func TestAdditionalFieldsBecomeSimpleTelemetryProperties(t *testing.T) {
+	tests := []struct {
+		name               string
+		fields             map[string]interface{}
+		valueField         string
+		expectedProperties map[string]string
+	}{
+		// If "value" field is present, it should be used as telemetry value,
+		// otherwise first field convertible to float64 should be used as telemetry value
+		{
+			"with value field",
+			map[string]interface{}{"first": 12.5, "value": 16.5, "other": 23},
+			"value",
+			map[string]string{"first": "12.5", "other": "23"},
+		},
+		{
+			"with no value field",
+			map[string]interface{}{"notthis": "bravo", "v1": 16.5},
+			"v1",
+			map[string]string{},
+		},
+	}
+
+	for _, tt := range tests {
+		tf := func(t *testing.T) {
+			assert := assert.New(t)
+			now := time.Now().UTC()
+
+			transmitter := new(mocks.TelemetryTransmitter)
+			transmitter.On("Track", mock.Anything)
+
+			m, err := metric.New(
+				"ShouldBeSimpleMetric",
+				nil, // tags
+				tt.fields,
+				now,
+			)
+			assert.NoError(err)
+
+			ai := ApplicationInsights{
+				Transmitter:        transmitter,
+				InstrumentationKey: "1234", // Fake, but necessary to enable tracking
+			}
+
+			err = ai.Connect()
+			assert.NoError(err)
+
+			mSet := []telegraf.Metric{m}
+			ai.Write(mSet)
+			transmitter.AssertNumberOfCalls(t, "Track", 1)
+			transmitter.AssertCalled(t, "Track", mock.AnythingOfType("*appinsights.MetricTelemetry"))
+			telemetry := transmitter.Calls[0].Arguments.Get(0).(*appinsights.MetricTelemetry)
+			verifySimpleTelemetry(assert, m, tt.valueField, telemetry)
+			assertMapContains(assert, tt.expectedProperties, telemetry.Properties)
+		}
+
+		t.Run(tt.name, tf)
+	}
+}
+
+func TestAdditionalFieldsBecomeAggregateTelemetryProperties(t *testing.T) {
+	tests := []struct {
+		name               string
+		fields             map[string]interface{}
+		expectedProperties map[string]string
+	}{
+		{
+			"many types",
+			map[string]interface{}{
+				"value":      16.5,
+				"count":      23,
+				"alpha":      "alpha",
+				"integer":    724,
+				"float":      -17.98,
+				"float_sci1": .12345E+4,
+				"float_sci2": -6.67428e-11,
+			},
+			map[string]string{
+				"integer":    "724",
+				"float":      "-17.98",
+				"float_sci1": "1234.5",
+				"float_sci2": "-6.67428e-11",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tf := func(t *testing.T) {
+			assert := assert.New(t)
+			now := time.Now().UTC()
+
+			transmitter := new(mocks.TelemetryTransmitter)
+			transmitter.On("Track", mock.Anything)
+
+			m, err := metric.New(
+				"ShouldBeAggregateMetric",
+				nil, // tags
+				tt.fields,
+				now,
+			)
+			assert.NoError(err)
+
+			ai := ApplicationInsights{
+				Transmitter:        transmitter,
+				InstrumentationKey: "1234", // Fake, but necessary to enable tracking
+			}
+
+			err = ai.Connect()
+			assert.NoError(err)
+
+			mSet := []telegraf.Metric{m}
+			ai.Write(mSet)
+			transmitter.AssertNumberOfCalls(t, "Track", 1)
+			transmitter.AssertCalled(t, "Track", mock.AnythingOfType("*appinsights.AggregateMetricTelemetry"))
+			telemetry := transmitter.Calls[0].Arguments.Get(0).(*appinsights.AggregateMetricTelemetry)
+			verifyAggregateTelemetry(assert, m, "value", "count", telemetry)
+			assertMapContains(assert, tt.expectedProperties, telemetry.Properties)
+		}
+
+		t.Run(tt.name, tf)
+	}
+}
+
+func TestMultipleFieldsResultInNoMetric(t *testing.T) {
+	assert := assert.New(t)
+	now := time.Now().UTC()
+
+	transmitter := new(mocks.TelemetryTransmitter)
+	transmitter.On("Track", mock.Anything)
+
+	// If the metric has multiple fields that are numbers, but no "value" field,
+	// we do not know which field should be considered the metric value for the purpose of
+	// converting the metric to AppInsights MetricTelemetry. The metric should just be dropped
+	// in this case
+	m, err := metric.New(
+		"ShouldNeverBeCreated",
+		nil, // tags
+		map[string]interface{}{"alpha": 0.7, "bravo": -3.5},
+		now,
+	)
+	assert.NoError(err)
+
+	ai := ApplicationInsights{
+		Transmitter:        transmitter,
+		InstrumentationKey: "1234", // Fake, but necessary to enable tracking
+	}
+
+	err = ai.Connect()
+	assert.NoError(err)
+
+	mSet := []telegraf.Metric{m}
+	ai.Write(mSet)
+	transmitter.AssertNotCalled(t, "Track", mock.Anything)
+}
+
+func TestNoNameConflictsWhenAddingProperties(t *testing.T) {
+	tests := []struct {
+		name       string
+		fields     map[string]interface{}
+		tags       map[string]string
+		valueField string
+
+		// Metric fields that should be converted to telemetry properties, with appropriate naming change
+		// to avoid clashes with existing tags
+		expectedAdditionalProperties map[string]string
+	}{
+		{
+			"value but no count",
+			map[string]interface{}{"value": 16.5, "alpha": 3.5, "bravo": 17},
+			map[string]string{"alpha": "a tag is not a field", "charlie": "charlie"},
+			"value",
+			map[string]string{"alpha_1": "3.5", "bravo": "17"},
+		},
+	}
+
+	for _, tt := range tests {
+		tf := func(t *testing.T) {
+			assert := assert.New(t)
+			now := time.Now().UTC()
+
+			transmitter := new(mocks.TelemetryTransmitter)
+			transmitter.On("Track", mock.Anything)
+
+			m, err := metric.New(
+				"ShouldBeSimpleMetric",
+				tt.tags,
+				tt.fields,
+				now,
+			)
+			assert.NoError(err)
+
+			ai := ApplicationInsights{
+				Transmitter:        transmitter,
+				InstrumentationKey: "1234", // Fake, but necessary to enable tracking
+			}
+
+			err = ai.Connect()
+			assert.NoError(err)
+
+			mSet := []telegraf.Metric{m}
+			ai.Write(mSet)
+			transmitter.AssertNumberOfCalls(t, "Track", 1)
+			transmitter.AssertCalled(t, "Track", mock.AnythingOfType("*appinsights.MetricTelemetry"))
+			telemetry := transmitter.Calls[0].Arguments.Get(0).(*appinsights.MetricTelemetry)
+
+			// Will verify that all original tags are present in telemetry.Properies map
+			verifySimpleTelemetry(assert, m, tt.valueField, telemetry)
+			assertMapContains(assert, tt.expectedAdditionalProperties, telemetry.Properties)
+		}
+
+		t.Run(tt.name, tf)
+	}
+}
+
+func closed() <-chan struct{} {
+	closed := make(chan struct{})
+	close(closed)
+	return closed
+}
+
+func unfinished() <-chan struct{} {
+	unfinished := make(chan struct{})
+	return unfinished
+}
+
+func verifyAggregateTelemetry(
+	assert *assert.Assertions,
+	metric telegraf.Metric,
+	valueField string,
+	countField string,
+	telemetry *appinsights.AggregateMetricTelemetry) {
+
+	verifyAggregateField := func(fieldName string, telemetryValue float64) {
+		metricRawFieldValue, found := metric.Fields()[fieldName]
+		if !found {
+			return
+		}
+
+		if _, err := toFloat64(metricRawFieldValue); err == nil {
+			assert.EqualValues(metricRawFieldValue, telemetryValue, "Telemetry property %s does not match the metric field", fieldName)
+		}
+	}
+	assert.Equal(metric.Name(), telemetry.Name, "Telemetry name should be the same as metric name")
+	assert.EqualValues(metric.Fields()[valueField], telemetry.Value, "Telemetry value does not match metric value field")
+	assert.EqualValues(metric.Fields()[countField], telemetry.Count, "Telemetry sample count does not mach metric sample count field")
+	verifyAggregateField("min", telemetry.Min)
+	verifyAggregateField("max", telemetry.Max)
+	verifyAggregateField("stdev", telemetry.StdDev)
+	verifyAggregateField("variance", telemetry.Variance)
+	assert.Equal(metric.Time(), telemetry.Timestamp, "Telemetry and metric timestamps do not match")
+	assertMapContains(assert, metric.Tags(), telemetry.Properties)
+}
+
+func verifySimpleTelemetry(
+	assert *assert.Assertions,
+	metric telegraf.Metric,
+	valueField string,
+	telemetry *appinsights.MetricTelemetry) {
+
+	assert.Equal(metric.Name(), telemetry.Name, "Telemetry name should be the same as metric name")
+	assert.EqualValues(metric.Fields()[valueField], telemetry.Value, "Telemetry value does not match metric value field")
+	assert.Equal(metric.Time(), telemetry.Timestamp, "Telemetry and metric timestamps do not match")
+	assertMapContains(assert, metric.Tags(), telemetry.Properties)
+}
+
+func keys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+
+	return keys
+}
+
+func assertMapContains(assert *assert.Assertions, expected, actual map[string]string) {
+	if expected == nil && actual == nil {
+		return
+	}
+
+	assert.NotNil(expected, "Maps not equal: expected is nil but actual is not")
+	assert.NotNil(actual, "Maps not equal: actual is nil but expected is not")
+
+	for k, v := range expected {
+		av, ok := actual[k]
+		assert.True(ok, "Actual map does not contain a value for key '%s'", k)
+		assert.Equal(v, av, "The expected value for key '%s' is '%s' but the actual value is '%s", k, v, av)
+	}
+}
