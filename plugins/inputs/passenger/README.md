@@ -21,7 +21,7 @@ manage your series cardinality:
 - Consider using the
   [Time Series Index](https://docs.influxdata.com/influxdb/latest/concepts/time-series-index/).
 - Monitor your databases
-  [series cardinality](https://docs.influxdata.com/influxdb/latest/troubleshooting/frequently-asked-questions/#how-can-i-query-for-series-cardinality).
+  [series cardinality](https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality).
 
 ### Configuration
 
