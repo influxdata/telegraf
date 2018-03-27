@@ -205,10 +205,12 @@ func (m *metric) RemoveField(key string) {
 
 func (m *metric) Copy() telegraf.Metric {
 	m2 := &metric{
-		name:   m.name,
-		tags:   make([]*telegraf.Tag, len(m.tags)),
-		fields: make([]*telegraf.Field, len(m.fields)),
-		tm:     m.tm,
+		name:      m.name,
+		tags:      make([]*telegraf.Tag, len(m.tags)),
+		fields:    make([]*telegraf.Field, len(m.fields)),
+		tm:        m.tm,
+		tp:        m.tp,
+		aggregate: m.aggregate,
 	}
 
 	for i, tag := range m.tags {

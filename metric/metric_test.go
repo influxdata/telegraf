@@ -1,7 +1,6 @@
 package metric
 
 import (
-	"sort"
 	"testing"
 	"time"
 
@@ -9,32 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func MetricEqual(lhs *metric, rhs *metric) bool {
-	if lhs.name != rhs.name || lhs.tm != rhs.tm {
-		return false
-	}
-
-	if len(lhs.tags) != len(rhs.tags) || len(lhs.fields) != len(rhs.fields) {
-		return false
-	}
-
-	for i, tag := range lhs.tags {
-		if tag.Key != rhs.tags[i].Key || tag.Value != rhs.tags[i].Value {
-			return false
-		}
-	}
-
-	sort.Slice(lhs.fields, func(i, j int) bool { return lhs.fields[i].Key < lhs.fields[j].Key })
-	sort.Slice(rhs.fields, func(i, j int) bool { return rhs.fields[i].Key < rhs.fields[j].Key })
-
-	for i, field := range lhs.fields {
-		if field.Key != rhs.fields[i].Key || field.Value != rhs.fields[i].Value {
-			return false
-		}
-	}
-	return true
-}
 
 func TestNewMetric(t *testing.T) {
 	now := time.Now()
@@ -220,12 +193,12 @@ func TestEquals(t *testing.T) {
 	require.NoError(t, err)
 
 	lhs := m1.(*metric)
-	require.True(t, MetricEqual(lhs, m2.(*metric)))
+	require.Equal(t, lhs, m2)
 
 	m3 := m2.Copy()
-	require.True(t, MetricEqual(lhs, m3.(*metric)))
+	require.Equal(t, lhs, m3)
 	m3.AddTag("a", "x")
-	require.False(t, MetricEqual(lhs, m3.(*metric)))
+	require.NotEqual(t, lhs, m3)
 }
 
 func TestHashID(t *testing.T) {
@@ -327,4 +300,11 @@ func TestValueType(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, telegraf.Gauge, m.Type())
+}
+
+func TestCopyAggreate(t *testing.T) {
+	m1 := baseMetric()
+	m1.SetAggregate(true)
+	m2 := m1.Copy()
+	assert.True(t, m2.IsAggregate())
 }
