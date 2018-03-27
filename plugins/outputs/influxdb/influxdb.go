@@ -109,7 +109,8 @@ var sampleConfig = `
   ## Additional HTTP headers
   # http_headers = {"X-Special-Header" = "Special-Value"}
 
-  ## HTTP Content-Encoding for write request body, one of "gzip" or "identity".
+  ## HTTP Content-Encoding for write request body, can be set to "gzip" to
+  ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
 `
 
