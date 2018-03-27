@@ -41,8 +41,7 @@ manage your series cardinality:
 
 #### Permissions:
 
-This plugin requires that the `passenger-status` command can be ran by
-Telegraf, which in most cases runs as the `telegraf` users.
+Telegraf must have permission to execute the `passenger-status` command.  On most systems, Telegraf runs as the `telegraf` user.
 
 ### Metrics:
 
