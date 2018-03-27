@@ -82,7 +82,7 @@ func TestConnectUDPConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, "udp://localhost:8086", actual.URL.String())
-	require.Equal(t, 42, actual.MaxPacketSize)
+	require.Equal(t, 42, actual.MaxPayloadSize)
 	require.NotNil(t, actual.Serializer)
 }
 

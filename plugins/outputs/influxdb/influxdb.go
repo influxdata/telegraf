@@ -210,9 +210,9 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 
 func (i *InfluxDB) udpClient(url *url.URL) (Client, error) {
 	config := &UDPConfig{
-		URL:           url,
-		MaxPacketSize: i.UDPPayload,
-		Serializer:    i.serializer,
+		URL:            url,
+		MaxPayloadSize: i.UDPPayload,
+		Serializer:     i.serializer,
 	}
 
 	c, err := i.CreateUDPClientF(config)

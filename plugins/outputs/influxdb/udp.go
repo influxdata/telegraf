@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	// DefaultMaxPacketSize is the largest UDP packet that will be sent
-	DefaultMaxPacketSize = 512
+	// DefaultMaxPayloadSize is the maximum length of the UDP data payload
+	DefaultMaxPayloadSize = 512
 )
 
 type Dialer interface {
@@ -26,10 +26,10 @@ type Conn interface {
 }
 
 type UDPConfig struct {
-	MaxPacketSize int
-	URL           *url.URL
-	Serializer    serializers.Serializer
-	Dialer        Dialer
+	MaxPayloadSize int
+	URL            *url.URL
+	Serializer     serializers.Serializer
+	Dialer         Dialer
 }
 
 func NewUDPClient(config *UDPConfig) (*udpClient, error) {
@@ -37,15 +37,15 @@ func NewUDPClient(config *UDPConfig) (*udpClient, error) {
 		return nil, ErrMissingURL
 	}
 
-	size := config.MaxPacketSize
+	size := config.MaxPayloadSize
 	if size == 0 {
-		size = DefaultMaxPacketSize
+		size = DefaultMaxPayloadSize
 	}
 
 	serializer := config.Serializer
 	if serializer == nil {
 		s := influx.NewSerializer()
-		s.SetMaxLineBytes(config.MaxPacketSize)
+		s.SetMaxLineBytes(config.MaxPayloadSize)
 		serializer = s
 	}
 
