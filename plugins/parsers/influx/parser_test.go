@@ -257,7 +257,7 @@ var ptests = []struct {
 		err: nil,
 	},
 	{
-		name:  "field int overflow",
+		name:  "field int overflow dropped",
 		input: []byte("cpu value=9223372036854775808i"),
 		metrics: []telegraf.Metric{
 			Metric(
@@ -272,7 +272,7 @@ var ptests = []struct {
 		err: nil,
 	},
 	{
-		name:  "field int maximum",
+		name:  "field int max value",
 		input: []byte("cpu value=9223372036854775807i"),
 		metrics: []telegraf.Metric{
 			Metric(
@@ -306,7 +306,7 @@ var ptests = []struct {
 		err: nil,
 	},
 	{
-		name:  "field uint int overflow",
+		name:  "field uint overflow dropped",
 		input: []byte("cpu value=18446744073709551616u"),
 		metrics: []telegraf.Metric{
 			Metric(
@@ -321,7 +321,7 @@ var ptests = []struct {
 		err: nil,
 	},
 	{
-		name:  "field uint maximum",
+		name:  "field uint max value",
 		input: []byte("cpu value=18446744073709551615u"),
 		metrics: []telegraf.Metric{
 			Metric(
