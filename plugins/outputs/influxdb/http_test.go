@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path"
 	"strings"
 	"testing"
 	"time"
@@ -555,4 +558,81 @@ func TestHTTP_WriteContentEncodingGzip(t *testing.T) {
 	require.NoError(t, err)
 	err = client.Write(ctx, metrics)
 	require.NoError(t, err)
+}
+
+func TestHTTP_UnixSocket(t *testing.T) {
+	tmpdir, err := ioutil.TempDir("", "telegraf-test")
+	if err != nil {
+		require.NoError(t, err)
+	}
+	defer os.RemoveAll(tmpdir)
+
+	sock := path.Join(tmpdir, "test.sock")
+	listener, err := net.Listen("unix", sock)
+	require.NoError(t, err)
+
+	ts := httptest.NewUnstartedServer(http.NotFoundHandler())
+	ts.Listener = listener
+	ts.Start()
+	defer ts.Close()
+
+	x, _ := url.Parse("unix://" + sock)
+	fmt.Println(x)
+
+	successResponse := []byte(`{"results": [{"statement_id": 0}]}`)
+
+	tests := []struct {
+		name             string
+		config           *influxdb.HTTPConfig
+		database         string
+		queryHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
+		writeHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
+		errFunc          func(t *testing.T, err error)
+	}{
+		{
+			name: "success",
+			config: &influxdb.HTTPConfig{
+				URL:      &url.URL{Scheme: "unix", Path: sock},
+				Database: "xyzzy",
+			},
+			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, `CREATE DATABASE "xyzzy"`, r.FormValue("q"))
+				w.WriteHeader(http.StatusOK)
+				w.Write(successResponse)
+			},
+			writeHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusNoContent)
+				w.Write(successResponse)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/query":
+					tt.queryHandlerFunc(t, w, r)
+					return
+				case "/write":
+					tt.queryHandlerFunc(t, w, r)
+					return
+				default:
+					w.WriteHeader(http.StatusNotFound)
+					return
+				}
+			})
+
+			ctx := context.Background()
+
+			client, err := influxdb.NewHTTPClient(tt.config)
+			require.NoError(t, err)
+			err = client.CreateDatabase(ctx)
+			if tt.errFunc != nil {
+				tt.errFunc(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
 }
