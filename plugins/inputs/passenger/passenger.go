@@ -212,7 +212,6 @@ func importMetric(stat []byte, acc telegraf.Accumulator) error {
 					"group_name":       group.Name,
 					"app_root":         group.AppRoot,
 					"supergroup_name":  sg.Name,
-					"pid":              fmt.Sprintf("%d", process.Pid),
 					"code_revision":    process.Code_revision,
 					"life_status":      process.Life_status,
 					"process_group_id": process.Process_group_id,
@@ -234,6 +233,7 @@ func importMetric(stat []byte, acc telegraf.Accumulator) error {
 					"swap":                  process.Swap,
 					"real_memory":           process.Real_memory,
 					"vmsize":                process.Vmsize,
+					"pid":                   fmt.Sprintf("%d", process.Pid),
 				}
 				acc.AddFields("passenger_process", fields, tags)
 			}
