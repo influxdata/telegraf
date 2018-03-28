@@ -205,16 +205,17 @@ func (e *Endpoint) discover() error {
 	// Populate resource objects, and endpoint name cache
 	//
 	for k, res := range resources {
-		if res.enabled {
-			var objects objectMap
-			objects, err = res.getObjects(client.Root)
+		// Need to do this for all resource types even if they are not enabled (but datastore)
+		//
+		if res.enabled || k != "datastore" {
+			objects, err := res.getObjects(client.Root)
 			if err != nil {
 				e.checkClient()
 				return err
 			}
 
 			for _, obj := range objects {
-				nameCache[obj.ref.Reference().Value] = obj.name
+				nameCache[obj.ref.Value] = obj.name
 			}
 			res.objects = objects
 			resources[k] = res
@@ -239,7 +240,7 @@ func (e *Endpoint) discover() error {
 
 func getClusters(root *view.ContainerView) (objectMap, error) {
 	var resources []mo.ClusterComputeResource
-	err := root.Retrieve(context.Background(), []string{"ClusterComputeResource"}, []string{"summary", "name", "parent"}, &resources)
+	err := root.Retrieve(context.Background(), []string{"ClusterComputeResource"}, []string{"name", "parent"}, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -253,42 +254,42 @@ func getClusters(root *view.ContainerView) (objectMap, error) {
 
 func getHosts(root *view.ContainerView) (objectMap, error) {
 	var resources []mo.HostSystem
-	err := root.Retrieve(context.Background(), []string{"HostSystem"}, []string{"summary", "parent"}, &resources)
+	err := root.Retrieve(context.Background(), []string{"HostSystem"}, []string{"name", "parent"}, &resources)
 	if err != nil {
 		return nil, err
 	}
 	m := make(objectMap)
 	for _, r := range resources {
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Summary.Config.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
 	}
 	return m, nil
 }
 
 func getVMs(root *view.ContainerView) (objectMap, error) {
 	var resources []mo.VirtualMachine
-	err := root.Retrieve(context.Background(), []string{"VirtualMachine"}, []string{"summary", "runtime.host"}, &resources)
+	err := root.Retrieve(context.Background(), []string{"VirtualMachine"}, []string{"name", "runtime.host"}, &resources)
 	if err != nil {
 		return nil, err
 	}
 	m := make(objectMap)
 	for _, r := range resources {
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Summary.Config.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host}
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host}
 	}
 	return m, nil
 }
 
 func getDatastores(root *view.ContainerView) (objectMap, error) {
 	var resources []mo.Datastore
-	err := root.Retrieve(context.Background(), []string{"Datastore"}, []string{"summary"}, &resources)
+	err := root.Retrieve(context.Background(), []string{"Datastore"}, []string{"name", "parent"}, &resources)
 	if err != nil {
 		return nil, err
 	}
 	m := make(objectMap)
 	for _, r := range resources {
 		m[r.Summary.Name] = objectRef{
-			name: r.Summary.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
 	}
 	return m, nil
 }
@@ -415,27 +416,34 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 				for _, v := range em.Value {
 					name := v.Name
 					for idx, value := range v.Value {
-						f := map[string]interface{}{name: value}
-						objectName := e.nameCache[moid]
-						parent := ""
-						parentRef := res.objects[moid].parentRef
-						if parentRef != nil {
-							parent = e.nameCache[parentRef.Value]
-						}
 
+						objectName := e.nameCache[moid]
 						t := map[string]string{
 							"vcenter":  e.Url.Host,
 							"hostname": objectName,
 							"moid":     moid,
-							//"parent":   parent,
 						}
-						switch resourceType {
-						case "host":
-							t["cluster"] = parent
-							break
-						case "vm":
-							t["esxhost"] = parent
-							break
+
+						objectRef, ok := res.objects[moid]
+						if ok {
+							parent := e.nameCache[objectRef.parentRef.Value]
+							switch resourceType {
+							case "host":
+								t["cluster"] = parent
+								break
+
+							case "vm":
+								t["esxhost"] = parent
+								hostRes := e.resources["host"]
+								hostRef, ok := hostRes.objects[objectRef.parentRef.Value]
+								if ok {
+									cluster, ok := e.nameCache[hostRef.parentRef.Value]
+									if ok {
+										t["cluster"] = cluster
+									}
+								}
+								break
+							}
 						}
 
 						if v.Instance != "" {
@@ -468,6 +476,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 							lastTS = ts
 						}
 
+						f := map[string]interface{}{name: value}
 						acc.AddFields(measurementName, f, t, ts)
 						count++
 					}
