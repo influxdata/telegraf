@@ -4,6 +4,7 @@ BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 COMMIT := $(shell git rev-parse --short HEAD)
 GOFILES ?= $(shell git ls-files '*.go')
 GOFMT ?= $(shell gofmt -l $(filter-out plugins/parsers/influx/machine.go, $(GOFILES)))
+BUILDFLAGS ?= 
 
 ifdef GOBIN
 PATH := $(GOBIN):$(PATH)
@@ -35,7 +36,7 @@ deps:
 	gdm restore
 
 telegraf:
-	go build -i -o $(TELEGRAF) -ldflags "$(LDFLAGS)" ./cmd/telegraf/telegraf.go
+	go build -i -o $(TELEGRAF) -ldflags "$(LDFLAGS)" $(BUILDFLAGS) ./cmd/telegraf/telegraf.go
 
 go-install:
 	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
@@ -60,6 +61,9 @@ fmtcheck:
 		exit 1 ;\
 	fi
 	@echo '[INFO] done.'
+
+uint64:
+	BUILDFLAGS="-tags uint64" $(MAKE) all
 
 lint:
 	golint ./...
@@ -99,4 +103,4 @@ docker-image:
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
 
-.PHONY: deps telegraf install test test-windows lint vet test-all package clean docker-image fmtcheck
+.PHONY: deps telegraf install test test-windows lint vet test-all package clean docker-image fmtcheck uint64

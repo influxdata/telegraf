@@ -237,6 +237,8 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 
 func appendFieldValue(buf []byte, value interface{}) ([]byte, error) {
 	switch v := value.(type) {
+	case uint64:
+		return appendUintField(buf, v), nil
 	case int64:
 		return appendIntField(buf, v), nil
 	case float64:
@@ -255,6 +257,10 @@ func appendFieldValue(buf []byte, value interface{}) ([]byte, error) {
 		return appendBoolField(buf, v), nil
 	}
 	return buf, ErrInvalidFieldType
+}
+
+func appendUintField(buf []byte, value uint64) []byte {
+	return append(strconv.AppendUint(buf, value, 10), 'u')
 }
 
 func appendIntField(buf []byte, value int64) []byte {

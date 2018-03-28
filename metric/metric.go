@@ -11,6 +11,16 @@ import (
 
 const MaxInt = int(^uint(0) >> 1)
 
+// enableUint64Support will enable uint64 support if set to true.
+var enableUint64Support = false
+
+// EnableUintSupport manually enables uint support for convertValue.
+// This function will be removed in the future and only exists for unit tests during the
+// transition.
+func EnableUintSupport() {
+	enableUint64Support = true
+}
+
 type metric struct {
 	name   string
 	tags   []*telegraf.Tag
@@ -265,11 +275,14 @@ func convertField(v interface{}) interface{} {
 			return int64(MaxInt)
 		}
 	case uint64:
-		if v <= uint64(MaxInt) {
-			return int64(v)
-		} else {
-			return int64(MaxInt)
+		if enableUint64Support == false {
+			if v <= uint64(MaxInt) {
+				return int64(v)
+			} else {
+				return int64(MaxInt)
+			}
 		}
+		return uint64(v)
 	case []byte:
 		return string(v)
 	case int32:

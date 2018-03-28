@@ -16,6 +16,12 @@ func Metric(v telegraf.Metric, err error) telegraf.Metric {
 	return v
 }
 
+const (
+	Uint64Overflow uint64 = 9223372036854775808
+	Uint64Max      uint64 = 18446744073709551615
+	Uint64Test     uint64 = 42
+)
+
 var DefaultTime = func() time.Time {
 	return time.Unix(42, 0)
 }
@@ -249,6 +255,57 @@ var ptests = []struct {
 					map[string]string{},
 					map[string]interface{}{
 						"value": 42,
+					},
+					time.Unix(42, 0),
+				),
+			),
+		},
+		err: nil,
+	},
+	{
+		name:  "field uint",
+		input: []byte("cpu value=42u"),
+		metrics: []telegraf.Metric{
+			Metric(
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"value": Uint64Test,
+					},
+					time.Unix(42, 0),
+				),
+			),
+		},
+		err: nil,
+	},
+	{
+		name:  "field uint int overflow",
+		input: []byte("cpu value=9223372036854775808u"),
+		metrics: []telegraf.Metric{
+			Metric(
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"value": Uint64Overflow,
+					},
+					time.Unix(42, 0),
+				),
+			),
+		},
+		err: nil,
+	},
+	{
+		name:  "field uint maximum",
+		input: []byte("cpu value=18446744073709551615u"),
+		metrics: []telegraf.Metric{
+			Metric(
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"value": Uint64Max,
 					},
 					time.Unix(42, 0),
 				),

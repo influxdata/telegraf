@@ -43,6 +43,18 @@ func (h *TestingHandler) AddInt(key []byte, value []byte) {
 	h.results = append(h.results, fieldkey, fieldvalue)
 }
 
+func (h *TestingHandler) AddUint(key []byte, value []byte) {
+	fieldkey := Result{
+		Name:  FieldKey,
+		Value: key,
+	}
+	fieldvalue := Result{
+		Name:  FieldUint,
+		Value: value,
+	}
+	h.results = append(h.results, fieldkey, fieldvalue)
+}
+
 func (h *TestingHandler) AddFloat(key []byte, value []byte) {
 	fieldkey := Result{
 		Name:  FieldKey,
@@ -111,6 +123,9 @@ func (h *BenchmarkingHandler) AddTag(key []byte, value []byte) {
 }
 
 func (h *BenchmarkingHandler) AddInt(key []byte, value []byte) {
+}
+
+func (h *BenchmarkingHandler) AddUint(key []byte, value []byte) {
 }
 
 func (h *BenchmarkingHandler) AddFloat(key []byte, value []byte) {
