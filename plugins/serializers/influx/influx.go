@@ -262,7 +262,7 @@ func appendIntField(buf []byte, value int64) []byte {
 }
 
 func appendFloatField(buf []byte, value float64) []byte {
-	return strconv.AppendFloat(buf, value, 'g', -1, 64)
+	return strconv.AppendFloat(buf, value, 'f', -1, 64)
 }
 
 func appendBoolField(buf []byte, value bool) []byte {
