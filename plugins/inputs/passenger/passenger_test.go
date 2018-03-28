@@ -112,7 +112,6 @@ func TestPassengerGenerateMetric(t *testing.T) {
 		"app_root":         "/var/app/current",
 		"group_name":       "/var/app/current/public",
 		"supergroup_name":  "/var/app/current/public",
-		"pid":              "11553",
 		"code_revision":    "899ac7f",
 		"life_status":      "ALIVE",
 		"process_group_id": "13608",
@@ -134,6 +133,7 @@ func TestPassengerGenerateMetric(t *testing.T) {
 		"swap":                  int64(0),
 		"real_memory":           int64(314900),
 		"vmsize":                int64(1563580),
+		"pid":                   "11553",
 	}
 	acc.AssertContainsTaggedFields(t, "passenger_process", fields, tags)
 }
