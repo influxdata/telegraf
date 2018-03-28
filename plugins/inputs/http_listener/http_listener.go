@@ -53,9 +53,10 @@ type HTTPListener struct {
 
 	listener net.Listener
 
-	parser influx.InfluxParser
-	acc    telegraf.Accumulator
-	pool   *pool
+	handler *influx.MetricHandler
+	parser  *influx.Parser
+	acc     telegraf.Accumulator
+	pool    *pool
 
 	BytesRecv       selfstat.Stat
 	RequestsServed  selfstat.Stat
@@ -175,6 +176,9 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 	}
 	h.listener = listener
 	h.Port = listener.Addr().(*net.TCPAddr).Port
+
+	h.handler = influx.NewMetricHandler()
+	h.parser = influx.NewParser(h.handler)
 
 	h.wg.Add(1)
 	go func() {
@@ -336,7 +340,11 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
-	metrics, err := h.parser.ParseWithDefaultTimePrecision(b, t, precision)
+	h.handler.SetPrecision(getPrecisionMultiplier(precision))
+	metrics, err := h.parser.Parse(b)
+	if err != nil {
+		return err
+	}
 
 	for _, m := range metrics {
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
@@ -406,6 +414,23 @@ func (h *HTTPListener) AuthenticateIfSet(handler http.HandlerFunc, res http.Resp
 	} else {
 		handler(res, req)
 	}
+}
+
+func getPrecisionMultiplier(precision string) time.Duration {
+	d := time.Nanosecond
+	switch precision {
+	case "u":
+		d = time.Microsecond
+	case "ms":
+		d = time.Millisecond
+	case "s":
+		d = time.Second
+	case "m":
+		d = time.Minute
+	case "h":
+		d = time.Hour
+	}
+	return d
 }
 
 func init() {

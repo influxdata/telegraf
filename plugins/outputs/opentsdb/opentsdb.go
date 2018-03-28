@@ -125,7 +125,7 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 	}
 
 	for _, m := range metrics {
-		now := m.UnixNano() / 1000000000
+		now := m.Time().UnixNano() / 1000000000
 		tags := cleanTags(m.Tags())
 
 		for fieldName, value := range m.Fields() {
@@ -170,7 +170,7 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 	defer connection.Close()
 
 	for _, m := range metrics {
-		now := m.UnixNano() / 1000000000
+		now := m.Time().UnixNano() / 1000000000
 		tags := ToLineFormat(cleanTags(m.Tags()))
 
 		for fieldName, value := range m.Fields() {
