@@ -84,6 +84,8 @@
 - [#3880](https://github.com/influxdata/telegraf/pull/3880): Added config flag to skip collection of network protocol metrics.
 - [#3927](https://github.com/influxdata/telegraf/pull/3927): Add TLS support to kapacitor input.
 - [#3496](https://github.com/influxdata/telegraf/pull/3496): Add HTTP basic auth support to the http_listener input.
+- [#3452](https://github.com/influxdata/telegraf/issues/3452): Tags in output InfluxDB Line Protocol are now sorted.
+- [#3631](https://github.com/influxdata/telegraf/issues/3631): InfluxDB Line Protocol parser now accepts DOS line endings.
 
 ### Bugfixes
 
@@ -93,6 +95,7 @@
 - [#3973](https://github.com/influxdata/telegraf/issues/3873): Fix socket_listener setting ReadBufferSize on tcp sockets.
 - [#1575](https://github.com/influxdata/telegraf/issues/1575): Add tag for target url to phpfpm input.
 - [#3868](https://github.com/influxdata/telegraf/issues/3868): Fix cannot unmarshal object error in DC/OS input.
+- [#3648](https://github.com/influxdata/telegraf/issues/3648): Fix InfluxDB output not able to reconnect when server address changes.
 
 ## v1.5.3 [2018-03-14]
 
