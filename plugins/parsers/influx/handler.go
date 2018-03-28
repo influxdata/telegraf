@@ -54,6 +54,16 @@ func (h *MetricHandler) AddInt(key []byte, value []byte) {
 	h.builder.AddField(fk, fv)
 }
 
+func (h *MetricHandler) AddUint(key []byte, value []byte) {
+	fk := unescape(key)
+	fv, err := parseUintBytes(bytes.TrimSuffix(value, []byte("u")), 10, 64)
+	if err != nil {
+		log.Errorf("E! Received unparseable uint value: %q", value)
+		return
+	}
+	h.builder.AddField(fk, fv)
+}
+
 func (h *MetricHandler) AddFloat(key []byte, value []byte) {
 	fk := unescape(key)
 	fv, err := parseFloatBytes(value, 64)

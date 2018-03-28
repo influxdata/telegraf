@@ -89,6 +89,10 @@ action integer {
 	m.handler.AddInt(key, m.text())
 }
 
+action unsigned {
+	m.handler.AddUint(key, m.text())
+}
+
 action float {
 	m.handler.AddFloat(key, m.text())
 }
@@ -114,6 +118,9 @@ non_zero_digit =
 integer =
 	'-'? ( digit | ( non_zero_digit digit* ) );
 
+unsigned =
+	( digit | ( non_zero_digit digit* ) );
+
 number =
 	( integer ( '.' digit* )? ) | ( '.' digit* );
 
@@ -135,6 +142,9 @@ fieldfloat =
 fieldinteger =
 	(integer 'i') >begin %integer;
 
+fieldunsigned = 
+	(unsigned 'u') >begin %unsigned;
+
 false =
 	"false" | "FALSE" | "False" | "F" | "f";
 
@@ -153,7 +163,7 @@ fieldstring =
 fieldstringquoted =
 	'"' fieldstring '"';
 
-fieldvalue = fieldinteger | fieldfloat | fieldstringquoted | fieldbool;
+fieldvalue = fieldinteger | fieldunsigned | fieldfloat | fieldstringquoted | fieldbool;
 
 field =
 	fieldkey '=' fieldvalue;

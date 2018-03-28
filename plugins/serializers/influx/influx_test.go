@@ -11,11 +11,19 @@ import (
 )
 
 func MustMetric(v telegraf.Metric, err error) telegraf.Metric {
+	// Force uint support to be enabled for testing.
+	metric.EnableUintSupport()
 	if err != nil {
 		panic(err)
 	}
 	return v
 }
+
+const (
+	Uint64Overflow uint64 = 9223372036854775808
+	Uint64Max      uint64 = 18446744073709551615
+	Uint64Test     uint64 = 42
+)
 
 var tests = []struct {
 	name     string
@@ -127,6 +135,48 @@ var tests = []struct {
 			),
 		),
 		output: []byte("cpu value=42i 0\n"),
+	},
+	{
+		name: "uint field",
+		input: MustMetric(
+			metric.New(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": Uint64Test,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("cpu value=42u 0\n"),
+	},
+	{
+		name: "uint field int64 overflow",
+		input: MustMetric(
+			metric.New(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": Uint64Overflow,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("cpu value=9223372036854775808u 0\n"),
+	},
+	{
+		name: "uint field uint64 max",
+		input: MustMetric(
+			metric.New(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": Uint64Max,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("cpu value=18446744073709551615u 0\n"),
 	},
 	{
 		name: "bool field",
