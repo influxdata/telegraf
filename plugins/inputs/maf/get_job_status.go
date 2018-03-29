@@ -18,22 +18,21 @@ type Job struct {
 	Status []string `toml:"status"`
 }
 
-type Result struct {
+type JobResult struct {
 	Number uint32  `toml:"number"`
 	AnalyzeType string  `toml:"analyze_type"`
 }
 
 var jobSampleConfig = `
-    interval = "300s"
+    # interval = "300s"
     ## check the number fo jobs for specify status.
     # servers = [
     #     "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;Database=sandbox;Workstation ID=<colo>;",
     # ]
-    # 
+    ## default all status. 
     # status = ["success", "pending", "running", "failure"]
-    # status = ["pending"]
     ## analyze_type
-    ## [lastline, Office prefilter, PE signature prefilter, reversinglab, SMASH, SonicSandbox, static, virustotal, varay]
+    # analyze_type = ["lastline", "Office prefilter", "PE signature prefilter", "reversinglab", "SMASH", "SonicSandbox", "static", "virustotal", "varay"]
 `
 
 func (_ *Job) SampleConfig() string {
@@ -93,9 +92,9 @@ func (_ *Job) gatherJobs(server string, status string, acc telegraf.Accumulator)
 	}
 	defer rows.Close()
 
-	var rowsData []*Result
+	var rowsData []*JobResult
 	for rows.Next() {
-		var row = new(Result)
+		var row = new(JobResult)
 		rows.Scan(&row.Number, &row.AnalyzeType)
 		rowsData = append(rowsData, row)
 	}

@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"sync"
 	"strings"
+	"regexp"
+	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -15,60 +17,58 @@ import (
 
 type Task struct {
 	Servers []string `toml:"servers"`
-	Status []string `toml:"status"`
+	GroupBy []string `toml:"groupby"`
 }
 
-type Result struct {
+type TaskResult struct {
 	Number uint32  `toml:"number"`
-	AnalyzeType string  `toml:"analyze_type"`
+	GroupBy string  `toml:"group_by"`
 }
 
-var jobSampleConfig = `
+var taskSampleConfig = `
     interval = "300s"
     ## check the number fo jobs for specify status.
     # servers = [
     #     "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;Database=sandbox;Workstation ID=<colo>;",
     # ]
     # 
-    # status = ["success", "pending", "running", "failure"]
-    # status = ["pending"]
-    ## analyze_type
-    ## [lastline, Office prefilter, PE signature prefilter, reversinglab, SMASH, SonicSandbox, static, virustotal, varay]
+    ## Group by
+    # groupby = ["utm_serial_number", "task_type", "session_type, submit_method"]
 `
 
-func (_ *Job) SampleConfig() string {
-	return jobSampleConfig
+func (_ *Task) SampleConfig() string {
+	return taskSampleConfig
 }
 
-func (_ *Job) Description() string {
-	return "MAF: check job number with specify status."
+func (_ *Task) Description() string {
+	return "MAF: check task number with specify column."
 }
 
-func (j *Job) Gather(acc telegraf.Accumulator) error {
-	if len(j.Servers) == 0 {
-		j.Servers = []string{"Server=.;Port=1433;Database=master;app name=maf;log=1;Workstation ID=localhost"}
+func (t *Task) Gather(acc telegraf.Accumulator) error {
+	if len(t.Servers) == 0 {
+		t.Servers = []string{"Server=.;Port=1433;Database=master;app name=maf;log=1;Workstation ID=localhost"}
 	}
-	if len(j.Status) == 0 {
-		j.Status = []string{"pending"}
+	if len(t.GroupBy) == 0 {
+		t.GroupBy = []string{"task_type"}
 	}
 
 	var wg sync.WaitGroup
 
-	for _, server := range j.Servers {
-		for _, status := range j.Status {
+	for _, server := range t.Servers {
+		for _, groupby := range t.GroupBy {
 			wg.Add(1)
 
-			go func(server string, status string) {
+			go func(server string, groupby string) {
 				wg.Done()
-				acc.AddError(j.gatherJobs(server, status, acc))
-			}(server, status)
+				acc.AddError(t.gatherTask(server, groupby, acc))
+			}(server, groupby)
 		}
 	}
 	wg.Wait()
 	return nil
 }
 
-func (_ *Job) gatherJobs(server string, status string, acc telegraf.Accumulator) error {
+func (_ *Task) gatherTask(server string, groupby string, acc telegraf.Accumulator) error {
 	workstation := strings.Split(strings.Split(server, ";")[5], "=")[1]
 
 	conn, err := sql.Open("mssql", server)
@@ -81,33 +81,52 @@ func (_ *Job) gatherJobs(server string, status string, acc telegraf.Accumulator)
 		return err
 	}
 
-	stmt, err := conn.Prepare(`SELECT count(*) as number, analyze_type FROM jobs WHERE status=? GROUP BY analyze_type`)
+	var sql string
+	var columnName string
+	var measurement string
+	if match, _ := regexp.MatchString(".*,.*",  groupby); match {
+		groupSlice := strings.Split(groupby, ",")
+		newGroupSlice := make([]string, 0)
+		for _, group := range groupSlice {
+			newGroupSlice = append(newGroupSlice, group)
+		}
+		sql = fmt.Sprintf(`SELECT top 10 count(*) as number, %s + '_' + %s as method from tasks group by %s order by number desc`,
+			newGroupSlice[0], newGroupSlice[1], groupby)
+		columnName = "method"
+		measurement = "maf_task_methods"
+	} else {
+		sql = fmt.Sprintf(`SELECT top 10 count(*) as number, %s FROM tasks GROUP BY %s order by number desc`,
+			groupby, groupby)
+		columnName = groupby
+		measurement = fmt.Sprintf("maf_task_%s", columnName)
+	}
+
+	stmt, err := conn.Prepare(sql)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(status)
+	rows, err := stmt.Query()
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 
-	var rowsData []*Result
+	var rowsData []*TaskResult
 	for rows.Next() {
-		var row = new(Result)
-		rows.Scan(&row.Number, &row.AnalyzeType)
+		var row = new(TaskResult)
+		rows.Scan(&row.Number, &row.GroupBy)
 		rowsData = append(rowsData, row)
 	}
 
 	for _, oneRow := range rowsData {
-		acc.AddFields("maf_job_status",
+		acc.AddFields(measurement,
 			map[string]interface{}{
 				"number": oneRow.Number,
 			},
 			map[string]string{
-				"status": status,
-				"analyze_type": oneRow.AnalyzeType,
+				columnName: oneRow.GroupBy,
 				"server": workstation,
 			},
 		)
@@ -117,7 +136,7 @@ func (_ *Job) gatherJobs(server string, status string, acc telegraf.Accumulator)
 }
 
 func init() {
-	inputs.Add("maf_job_status", func() telegraf.Input {
-		return &Job{}
+	inputs.Add("maf_task_status", func() telegraf.Input {
+		return &Task{}
 	})
 }

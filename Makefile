@@ -85,10 +85,10 @@ test-all: vet
 	go test ./...
 
 package:
-	./scripts/build.py --package --platform=linux --arch=amd64 --clean --version=1.6.0 --iteration=1
+	./scripts/build.py --package --platform=linux --arch=amd64 --clean --version=1.6.0 --iteration=1 --no-get --debug
 
 win-package:
-	./scripts/build.py --package --platform=windows --arch=amd64 --clean --version=1.6.0 --iteration=1
+	./scripts/build.py --package --platform=windows --arch=amd64 --clean --version=1.6.0 --iteration=1 --no-get
 
 clean:
 	rm -f telegraf
