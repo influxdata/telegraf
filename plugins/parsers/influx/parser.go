@@ -15,18 +15,6 @@ var (
 	ErrNoMetric = errors.New("no metric in line")
 )
 
-type Handler interface {
-	SetMeasurement(name []byte)
-	AddTag(key []byte, value []byte)
-	AddInt(key []byte, value []byte)
-	AddUint(key []byte, value []byte)
-	AddFloat(key []byte, value []byte)
-	AddString(key []byte, value []byte)
-	AddBool(key []byte, value []byte)
-	SetTimestamp(tm []byte)
-	Reset()
-}
-
 type ParseError struct {
 	Offset int
 	msg    string
