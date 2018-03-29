@@ -95,8 +95,8 @@ var sampleConfig = `
 
   ## Container states to include and exclude. Globs accepted.
   ## When empty only containers in the "running" state will be captured.
-  container_state_include = []
-  container_state_exclude = []
+  # container_state_include = []
+  # container_state_exclude = []
 
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
