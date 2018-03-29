@@ -76,7 +76,6 @@ Telegraf must have permission to execute the `passenger-status` command.  On mos
     - group_name
     - app_root
     - supergroup_name
-    - pid
     - code_revision
     - life_status
     - process_group_id
@@ -97,6 +96,7 @@ Telegraf must have permission to execute the `passenger-status` command.  On mos
     - swap
     - real_memory
     - vmsize
+    - pid
 
 ### Example Output:
 ```
