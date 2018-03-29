@@ -22,6 +22,7 @@ func setUnixTime(client *PrometheusClient, sec int64) {
 func NewClient() *PrometheusClient {
 	return &PrometheusClient{
 		ExpirationInterval: internal.Duration{Duration: time.Second * 60},
+		StringAsLabel:      true,
 		fam:                make(map[string]*MetricFamily),
 		now:                time.Now,
 	}
@@ -450,6 +451,40 @@ func TestWrite_StringFields(t *testing.T) {
 	require.False(t, ok)
 }
 
+func TestDoNotWrite_StringFields(t *testing.T) {
+	now := time.Now()
+	p1, err := metric.New(
+		"foo",
+		make(map[string]string),
+		map[string]interface{}{"value": 1.0, "status": "good"},
+		now,
+		telegraf.Counter)
+	p2, err := metric.New(
+		"bar",
+		make(map[string]string),
+		map[string]interface{}{"status": "needs numeric field"},
+		now,
+		telegraf.Gauge)
+	var metrics = []telegraf.Metric{p1, p2}
+
+	client := &PrometheusClient{
+		ExpirationInterval: internal.Duration{Duration: time.Second * 60},
+		StringAsLabel:      false,
+		fam:                make(map[string]*MetricFamily),
+		now:                time.Now,
+	}
+
+	err = client.Write(metrics)
+	require.NoError(t, err)
+
+	fam, ok := client.fam["foo"]
+	require.True(t, ok)
+	require.Equal(t, 0, fam.LabelSet["status"])
+
+	fam, ok = client.fam["bar"]
+	require.False(t, ok)
+}
+
 func TestExpire(t *testing.T) {
 	client := NewClient()
 
@@ -631,7 +666,7 @@ func setupPrometheus() (*PrometheusClient, *prometheus_input.Prometheus, error) 
 	time.Sleep(time.Millisecond * 200)
 
 	p := &prometheus_input.Prometheus{
-		Urls: []string{"http://localhost:9127/metrics"},
+		URLs: []string{"http://localhost:9127/metrics"},
 	}
 
 	return pTesting, p, nil
