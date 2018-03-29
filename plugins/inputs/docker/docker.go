@@ -26,7 +26,7 @@ import (
 // Docker object
 type Docker struct {
 	Endpoint       string
-	ContainerNames []string
+	ContainerNames []string // deprecated in 1.4; use container_name_include
 
 	GatherServices bool `toml:"gather_services"`
 
