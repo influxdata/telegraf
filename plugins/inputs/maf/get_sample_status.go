@@ -18,14 +18,21 @@ type Sample struct {
 	Status []string `toml:"status"`
 }
 
+type SampleResult struct {
+	Number uint32  `toml:"number"`
+	TaskType string  `toml:"task_type"`
+}
+
 var sampleSampleConfig = `
-    interval = "300s"
+    # interval = "300s"
     ## check the number fo samples for specify status.
     # servers = [
     #     "Server=192.168.1.10;Port=1433;User Id=<user>;Password=<pw>;Database=sandbox;Workstation ID=<colo>;",
     # ]
+    ## Default all status.
     # status = ["good", "bad", "pending", "running", "failure"]
-    # status = ["pending"]
+    ## Task type, except "NULL"
+    # task_type = ["apk", "archive", "jar", "msi_x32", "office", "pdf", "pe_x32", "pe_x64", "script", "unknown"]
 `
 func (_ *Sample) SampleConfig() string {
 	return sampleSampleConfig
@@ -72,27 +79,37 @@ func (_ *Sample) gatherSamples(server string, status string, acc telegraf.Accumu
 		return err
 	}
 
-	stmt, err := conn.Prepare(`select count(*) as number from samples where status=?`)
+	stmt, err := conn.Prepare(`select count(*) as number, task_type from samples where status=? group by task_type`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	var number uint32
-	if err := stmt.QueryRow(status).Scan(&number); err != nil {
+	rows, err := stmt.Query(status)
+	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
-	acc.AddFields("maf_sample_status",
-		map[string]interface{}{
-		    "number": number,
-		},
-		map[string]string{
-			"status": status,
-			"server" : workstation,
-		},
-	)
+	var rowsData []*SampleResult
+	for rows.Next() {
+		var row = new(SampleResult)
+		rows.Scan(&row.Number, &row.TaskType)
+		rowsData = append(rowsData, row)
+	}
 
+	for _, oneRow := range rowsData {
+		acc.AddFields("maf_sample_status",
+			map[string]interface{}{
+				"number": oneRow.Number,
+			},
+			map[string]string{
+				"status": status,
+				"task_type": oneRow.TaskType,
+				"server": workstation,
+			},
+		)
+	}
 	return nil
 }
 

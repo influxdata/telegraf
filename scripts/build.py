@@ -17,7 +17,7 @@ import argparse
 ################
 
 # Packaging variables
-PACKAGE_NAME = "maf"
+PACKAGE_NAME = "maf-agent"
 INSTALL_ROOT_DIR = "/usr/bin"
 LOG_DIR = "/var/log/telegraf"
 SCRIPT_DIR = "/usr/lib/telegraf/scripts"
@@ -103,12 +103,12 @@ next_version = '1.6.0'
 
 def print_banner():
     logging.info("""
- __  __    _    _____ 
-|  \/  |  / \  |  ___|
-| |\/| | / _ \ | |_   
-| |  | |/ ___ \|  _|  
-|_|  |_/_/   \_\_|    
-    
+ __  __    _    _____      _    ____ _____ _   _ _____ 
+|  \/  |  / \  |  ___|    / \  / ___| ____| \ | |_   _|
+| |\/| | / _ \ | |_      / _ \| |  _|  _| |  \| | | |  
+| |  | |/ ___ \|  _|    / ___ \ |_| | |___| |\  | | |  
+|_|  |_/_/   \_\_|     /_/   \_\____|_____|_| \_| |_|  
+                                                       
  Build Script
 """)
 
@@ -587,7 +587,7 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                     else:
                         package_arch = arch
                     if not version:
-                        package_version = "{}~{}".format(next_version, get_current_commit(short=True))
+                        package_version = "{}".format(next_version)
                         package_iteration = "0"
                     package_build_root = build_root
                     current_location = build_output[platform][arch]
@@ -636,13 +636,14 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                             package_version, suffix = package_version.split('~', 1)
                             # The ~ indicatees that this is a prerelease so we give it a leading 0.
                             package_iteration = "0.%s" % suffix
-                        fpm_command = "fpm {} --name {} -a {} -t {} --version {} --iteration {} -C {} -p {} ".format(
+                        # fpm_command = "fpm {} --name {} -a {} -t {} --version {} --iteration {} -C {} -p {} ".format(
+                        fpm_command = "fpm {} --name {} -a {} -t {} --version {} -C {} -p {} ".format(
                             fpm_common_args,
                             name,
                             package_arch,
                             package_type,
                             package_version,
-                            package_iteration,
+                            # package_iteration,
                             package_build_root,
                             current_location)
                         if package_type == "rpm":
