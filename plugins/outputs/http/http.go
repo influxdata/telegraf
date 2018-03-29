@@ -6,10 +6,10 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
-	"io/ioutil"
 )
 
 var sampleConfig = `
