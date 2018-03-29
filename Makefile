@@ -3,7 +3,8 @@ VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 COMMIT := $(shell git rev-parse --short HEAD)
 GOFILES ?= $(shell git ls-files '*.go')
-GOFMT ?= $(shell gofmt -l $(GOFILES))
+GOFMT ?= $(shell gofmt -l $(filter-out plugins/parsers/influx/machine.go, $(GOFILES)))
+BUILDFLAGS ?= 
 
 ifdef GOBIN
 PATH := $(GOBIN):$(PATH)
@@ -35,7 +36,7 @@ deps:
 	gdm restore
 
 telegraf:
-	go build -i -o $(TELEGRAF) -ldflags "$(LDFLAGS)" ./cmd/telegraf/telegraf.go
+	go build -i -o $(TELEGRAF) -ldflags "$(LDFLAGS)" $(BUILDFLAGS) ./cmd/telegraf/telegraf.go
 
 go-install:
 	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
@@ -48,7 +49,7 @@ test:
 	go test -short ./...
 
 fmt:
-	@gofmt -w $(GOFILES)
+	@gofmt -w $(filter-out plugins/parsers/influx/machine.go, $(GOFILES))
 
 fmtcheck:
 	@echo '[INFO] running gofmt to identify incorrectly formatted code...'
@@ -60,6 +61,9 @@ fmtcheck:
 		exit 1 ;\
 	fi
 	@echo '[INFO] done.'
+
+uint64:
+	BUILDFLAGS="-tags uint64" $(MAKE) all
 
 lint:
 	golint ./...
@@ -73,8 +77,8 @@ test-windows:
 # vet runs the Go source code static analysis tool `vet` to find
 # any common errors.
 vet:
-	@echo 'go vet $$(go list ./...)'
-	@go vet $$(go list ./...) ; if [ $$? -eq 1 ]; then \
+	@echo 'go vet $$(go list ./... | grep -v ./plugins/parsers/influx)'
+	@go vet $$(go list ./... | grep -v ./plugins/parsers/influx) ; if [ $$? -eq 1 ]; then \
 		echo ""; \
 		echo "go vet has found suspicious constructs. Please remediate any reported errors"; \
 		echo "to fix them before submitting code for review."; \
@@ -96,4 +100,7 @@ docker-image:
 	cp build/telegraf*$(COMMIT)*.deb .
 	docker build -f scripts/dev.docker --build-arg "package=telegraf*$(COMMIT)*.deb" -t "telegraf-dev:$(COMMIT)" .
 
-.PHONY: deps telegraf install test test-windows lint vet test-all package clean docker-image fmtcheck
+plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
+	ragel -Z -G2 $^ -o $@
+
+.PHONY: deps telegraf install test test-windows lint vet test-all package clean docker-image fmtcheck uint64

@@ -187,9 +187,7 @@ func (l *Librato) buildGauges(m telegraf.Metric) ([]*Gauge, error) {
 
 	gauges := []*Gauge{}
 	if m.Time().Unix() == 0 {
-		return gauges, fmt.Errorf(
-			"Measure time must not be zero\n <%s> \n",
-			m.String())
+		return gauges, fmt.Errorf("time was zero %s", m.Name())
 	}
 	metricSource := graphite.InsertField(
 		graphite.SerializeBucketName("", m.Tags(), l.Template, ""),

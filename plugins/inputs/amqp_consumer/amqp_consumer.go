@@ -145,23 +145,25 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 	go a.process(msgs, acc)
 
 	go func() {
-		err := <-a.conn.NotifyClose(make(chan *amqp.Error))
-		if err == nil {
-			return
-		}
-
-		log.Printf("I! AMQP consumer connection closed: %s; trying to reconnect", err)
 		for {
-			msgs, err := a.connect(amqpConf)
-			if err != nil {
-				log.Printf("E! AMQP connection failed: %s", err)
-				time.Sleep(10 * time.Second)
-				continue
+			err := <-a.conn.NotifyClose(make(chan *amqp.Error))
+			if err == nil {
+				break
 			}
 
-			a.wg.Add(1)
-			go a.process(msgs, acc)
-			break
+			log.Printf("I! AMQP consumer connection closed: %s; trying to reconnect", err)
+			for {
+				msgs, err := a.connect(amqpConf)
+				if err != nil {
+					log.Printf("E! AMQP connection failed: %s", err)
+					time.Sleep(10 * time.Second)
+					continue
+				}
+
+				a.wg.Add(1)
+				go a.process(msgs, acc)
+				break
+			}
 		}
 	}()
 

@@ -31,6 +31,7 @@ type Client interface {
 }
 
 type APIError struct {
+	URL         string
 	StatusCode  int
 	Title       string
 	Description string
@@ -105,9 +106,9 @@ type claims struct {
 
 func (e APIError) Error() string {
 	if e.Description != "" {
-		return fmt.Sprintf("%s: %s", e.Title, e.Description)
+		return fmt.Sprintf("[%s] %s: %s", e.URL, e.Title, e.Description)
 	}
-	return e.Title
+	return fmt.Sprintf("[%s] %s", e.URL, e.Title)
 }
 
 func NewClusterClient(
@@ -156,7 +157,8 @@ func (c *ClusterClient) Login(ctx context.Context, sa *ServiceAccount) (*AuthTok
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", c.url("/acs/api/v1/auth/login"), bytes.NewBuffer(octets))
+	loc := c.url("/acs/api/v1/auth/login")
+	req, err := http.NewRequest("POST", loc, bytes.NewBuffer(octets))
 	if err != nil {
 		return nil, err
 	}
@@ -189,6 +191,7 @@ func (c *ClusterClient) Login(ctx context.Context, sa *ServiceAccount) (*AuthTok
 	err = dec.Decode(loginError)
 	if err != nil {
 		err := &APIError{
+			URL:        loc,
 			StatusCode: resp.StatusCode,
 			Title:      resp.Status,
 		}
@@ -196,6 +199,7 @@ func (c *ClusterClient) Login(ctx context.Context, sa *ServiceAccount) (*AuthTok
 	}
 
 	err = &APIError{
+		URL:         loc,
 		StatusCode:  resp.StatusCode,
 		Title:       loginError.Title,
 		Description: loginError.Description,
@@ -301,6 +305,7 @@ func (c *ClusterClient) doGet(ctx context.Context, url string, v interface{}) er
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return &APIError{
+			URL:        url,
 			StatusCode: resp.StatusCode,
 			Title:      resp.Status,
 		}
@@ -315,7 +320,7 @@ func (c *ClusterClient) doGet(ctx context.Context, url string, v interface{}) er
 }
 
 func (c *ClusterClient) url(path string) string {
-	url := c.clusterURL
+	url := *c.clusterURL
 	url.Path = path
 	return url.String()
 }

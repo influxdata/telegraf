@@ -82,6 +82,12 @@
 - [#3773](https://github.com/influxdata/telegraf/pull/3773): Add override processor.
 - [#3814](https://github.com/influxdata/telegraf/pull/3814): Add status_code and result tags and result_type field to http_response input.
 - [#3880](https://github.com/influxdata/telegraf/pull/3880): Added config flag to skip collection of network protocol metrics.
+- [#3927](https://github.com/influxdata/telegraf/pull/3927): Add TLS support to kapacitor input.
+- [#3496](https://github.com/influxdata/telegraf/pull/3496): Add HTTP basic auth support to the http_listener input.
+- [#3452](https://github.com/influxdata/telegraf/issues/3452): Tags in output InfluxDB Line Protocol are now sorted.
+- [#3631](https://github.com/influxdata/telegraf/issues/3631): InfluxDB Line Protocol parser now accepts DOS line endings.
+- [#2496](https://github.com/influxdata/telegraf/issues/2496): An option has been added to skip database creation in the InfluxDB output.
+- [#3366](https://github.com/influxdata/telegraf/issues/3366): Add support for connecting to InfluxDB over a unix domain socket.
 
 ### Bugfixes
 
@@ -89,6 +95,9 @@
 - [#3810](https://github.com/influxdata/telegraf/issues/3810): Fix metric buffer limit in internal plugin after reload.
 - [#3801](https://github.com/influxdata/telegraf/issues/3801): Fix panic in http_response on invalid regex.
 - [#3973](https://github.com/influxdata/telegraf/issues/3873): Fix socket_listener setting ReadBufferSize on tcp sockets.
+- [#1575](https://github.com/influxdata/telegraf/issues/1575): Add tag for target url to phpfpm input.
+- [#3868](https://github.com/influxdata/telegraf/issues/3868): Fix cannot unmarshal object error in DC/OS input.
+- [#3648](https://github.com/influxdata/telegraf/issues/3648): Fix InfluxDB output not able to reconnect when server address changes.
 
 ## v1.5.3 [2018-03-14]
 
