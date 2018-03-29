@@ -102,7 +102,8 @@ type HTTPConfig struct {
 	RetentionPolicy string
 	Consistency     string
 
-	Serializer *influx.Serializer
+	InfluxUintSupport bool `toml:"influx_uint_support"`
+	Serializer        *influx.Serializer
 }
 
 type httpClient struct {

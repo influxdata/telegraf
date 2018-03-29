@@ -20,6 +20,12 @@ const (
 	SortFields
 )
 
+type FieldTypeSupport int
+
+const (
+	UintSupport FieldTypeSupport = 1 << iota
+)
+
 var (
 	ErrNeedMoreSpace    = errors.New("need more space")
 	ErrInvalidName      = errors.New("invalid name")
@@ -32,9 +38,10 @@ var (
 
 // Serializer is a serializer for line protocol.
 type Serializer struct {
-	maxLineBytes   int
-	bytesWritten   int
-	fieldSortOrder FieldSortOrder
+	maxLineBytes     int
+	bytesWritten     int
+	fieldSortOrder   FieldSortOrder
+	fieldTypeSupport FieldTypeSupport
 
 	buf    bytes.Buffer
 	header []byte
@@ -59,6 +66,10 @@ func (s *Serializer) SetMaxLineBytes(bytes int) {
 
 func (s *Serializer) SetFieldSortOrder(order FieldSortOrder) {
 	s.fieldSortOrder = order
+}
+
+func (s *Serializer) SetFieldTypeSupport(typeSupport FieldTypeSupport) {
+	s.fieldTypeSupport = typeSupport
 }
 
 // Serialize writes the telegraf.Metric to a byte slice.  May produce multiple
@@ -142,7 +153,7 @@ func (s *Serializer) buildFieldPair(key string, value interface{}) error {
 
 	s.pair = append(s.pair, key...)
 	s.pair = append(s.pair, '=')
-	pair, err := appendFieldValue(s.pair, value)
+	pair, err := s.appendFieldValue(s.pair, value)
 	if err != nil {
 		return err
 	}
@@ -235,10 +246,18 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 
 }
 
-func appendFieldValue(buf []byte, value interface{}) ([]byte, error) {
+func (s *Serializer) appendFieldValue(buf []byte, value interface{}) ([]byte, error) {
 	switch v := value.(type) {
 	case uint64:
-		return appendUintField(buf, v), nil
+		if s.fieldTypeSupport&UintSupport != 0 {
+			return appendUintField(buf, v), nil
+		} else {
+			if v <= uint64(MaxInt) {
+				return appendIntField(buf, int64(v)), nil
+			} else {
+				return appendIntField(buf, int64(MaxInt)), nil
+			}
+		}
 	case int64:
 		return appendIntField(buf, v), nil
 	case float64:

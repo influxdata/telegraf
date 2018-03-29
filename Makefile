@@ -36,7 +36,7 @@ deps:
 	gdm restore
 
 telegraf:
-	go build -i -o $(TELEGRAF) -ldflags "$(LDFLAGS)" $(BUILDFLAGS) ./cmd/telegraf/telegraf.go
+	go build -i -o $(TELEGRAF) -ldflags "$(LDFLAGS)" ./cmd/telegraf/telegraf.go
 
 go-install:
 	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
@@ -61,9 +61,6 @@ fmtcheck:
 		exit 1 ;\
 	fi
 	@echo '[INFO] done.'
-
-uint64:
-	BUILDFLAGS="-tags uint64" $(MAKE) all
 
 lint:
 	golint ./...
