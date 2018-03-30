@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"crypto/tls"
+	"sort"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -710,4 +711,86 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 			"service_mode": "global",
 		},
 	)
+}
+
+func TestContainerStateFilter(t *testing.T) {
+	var tests = []struct {
+		name     string
+		include  []string
+		exclude  []string
+		expected map[string][]string
+	}{
+		{
+			name: "default",
+			expected: map[string][]string{
+				"status": []string{"running"},
+			},
+		},
+		{
+			name:    "include running",
+			include: []string{"running"},
+			expected: map[string][]string{
+				"status": []string{"running"},
+			},
+		},
+		{
+			name:    "include glob",
+			include: []string{"r*"},
+			expected: map[string][]string{
+				"status": []string{"restarting", "running", "removing"},
+			},
+		},
+		{
+			name:    "include all",
+			include: []string{"*"},
+			expected: map[string][]string{
+				"status": []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"},
+			},
+		},
+		{
+			name:    "exclude all",
+			exclude: []string{"*"},
+			expected: map[string][]string{
+				"status": []string{},
+			},
+		},
+		{
+			name:    "exclude all",
+			include: []string{"*"},
+			exclude: []string{"exited"},
+			expected: map[string][]string{
+				"status": []string{"created", "restarting", "running", "removing", "paused", "dead"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+
+			newClientFunc := func(host string, tlsConfig *tls.Config) (Client, error) {
+				client := baseClient
+				client.ContainerListF = func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+					for k, v := range tt.expected {
+						actual := options.Filters.Get(k)
+						sort.Strings(actual)
+						sort.Strings(v)
+						require.Equal(t, v, actual)
+					}
+
+					return nil, nil
+				}
+				return &client, nil
+			}
+
+			d := Docker{
+				newClient:             newClientFunc,
+				ContainerStateInclude: tt.include,
+				ContainerStateExclude: tt.exclude,
+			}
+
+			err := d.Gather(&acc)
+			require.NoError(t, err)
+		})
+	}
 }
