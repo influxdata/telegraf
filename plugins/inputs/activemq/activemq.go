@@ -8,6 +8,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"strings"
 )
 
 type ActiveMQ struct {
@@ -76,17 +77,17 @@ const (
 )
 
 var sampleConfig = `
-	## Required ActiveMQ Endpoint
-	# server = "192.168.50.10"
-	## Required ActiveMQ port
-	# port = 8161
-	## Required username used for request HTTP Basic Authentication
-	# username = "admin"
-	## Required password used for HTTP Basic Authentication
-	# password = "admin"
-	## Required ActiveMQ webadmin root path
-	# webadmin = "admin"
-	`
+  ## Required ActiveMQ Endpoint
+  # server = "192.168.50.10"
+  ## Required ActiveMQ port
+  # port = 8161
+  ## Required username used for request HTTP Basic Authentication
+  # username = "admin"
+  ## Required password used for HTTP Basic Authentication
+  # password = "admin"
+  ## Required ActiveMQ webadmin root path
+  # webadmin = "admin"
+  `
 
 func (a *ActiveMQ) Description() string {
 	return "Gather ActiveMQ metrics"
@@ -98,25 +99,20 @@ func (a *ActiveMQ) SampleConfig() string {
 
 func (a *ActiveMQ) GetMetrics(keyword string) ([]byte, error) {
 	client := &http.Client{}
-
 	url := fmt.Sprintf("http://%s:%d/%s/xml/%s.jsp", a.Server, a.Port, a.Webadmin, keyword)
 
 	req, err := http.NewRequest("GET", url, nil)
-
 	if err != nil {
 		return nil, err
 	}
 
 	req.SetBasicAuth(a.Username, a.Password)
-
 	resp, err := client.Do(req)
-
 	if err != nil {
 		return nil, err
 	}
 
 	defer resp.Body.Close()
-
 	return ioutil.ReadAll(resp.Body)
 }
 
@@ -125,7 +121,7 @@ func (a *ActiveMQ) GatherQueuesMetrics(acc telegraf.Accumulator, queues Queues) 
 		records := make(map[string]interface{})
 		tags := make(map[string]string)
 
-		tags["name"] = queue.Name
+		tags["name"] = strings.TrimSpace(queue.Name)
 
 		records["size"] = queue.Stats.Size
 		records["consumer_count"] = queue.Stats.ConsumerCount
@@ -176,39 +172,28 @@ func (a *ActiveMQ) GatherSubscribersMetrics(acc telegraf.Accumulator, subscriber
 
 func (a *ActiveMQ) Gather(acc telegraf.Accumulator) error {
 	dataQueues, err := a.GetMetrics(QUEUES_STATS)
-
 	queues := Queues{}
-
 	err = xml.Unmarshal(dataQueues, &queues)
-
 	if err != nil {
 		return err
 	}
 
 	dataTopics, err := a.GetMetrics(TOPICS_STATS)
-
 	topics := Topics{}
-
 	err = xml.Unmarshal(dataTopics, &topics)
-
 	if err != nil {
 		return err
 	}
 
 	dataSubscribers, err := a.GetMetrics(SUBSCRIBERS_STATS)
-
 	subscribers := Subscribers{}
-
 	err = xml.Unmarshal(dataSubscribers, &subscribers)
-
 	if err != nil {
 		return err
 	}
 
 	a.GatherQueuesMetrics(acc, queues)
-
 	a.GatherTopicsMetrics(acc, topics)
-
 	a.GatherSubscribersMetrics(acc, subscribers)
 
 	return nil
