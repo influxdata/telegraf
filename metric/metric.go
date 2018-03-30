@@ -247,11 +247,7 @@ func convertField(v interface{}) interface{} {
 	case int64:
 		return v
 	case string:
-		if v == "" {
-			return nil
-		} else {
-			return v
-		}
+		return v
 	case bool:
 		return v
 	case int:
