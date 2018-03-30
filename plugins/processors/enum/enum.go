@@ -4,7 +4,6 @@ import (
 	"strconv"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
@@ -45,55 +44,24 @@ func (mapper *EnumMapper) Description() string {
 }
 
 func (mapper *EnumMapper) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	out := make([]telegraf.Metric, 0, len(in))
-	for _, source := range in {
-		target, error := mapper.applyMappings(source)
-		if error == nil {
-			out = append(out, target)
-		} else {
-			out = append(out, source)
-		}
+	for i := 0; i < len(in); i++ {
+		in[i] = mapper.applyMappings(in[i])
 	}
-	return out
+	return in
 }
 
-func (mapper *EnumMapper) applyMappings(source telegraf.Metric) (telegraf.Metric, error) {
-	if fields, changed := mapper.applyFieldMappings(source.Fields()); changed == true {
-		return metric.New(
-			source.Name(),
-			source.Tags(),
-			fields,
-			source.Time(),
-			source.Type())
-	} else {
-		return source, nil
-	}
-}
-
-func (mapper *EnumMapper) applyFieldMappings(in map[string]interface{}) (map[string]interface{}, bool) {
-	out := make(map[string]interface{}, len(in))
-	changed := false
-	for key, value := range in {
-		var isMapped bool
-		out[key], isMapped = mapper.determineMappedValue(key, value)
-		changed = changed || isMapped
-	}
-	return out, changed
-}
-
-func (mapper *EnumMapper) determineMappedValue(key string, value interface{}) (interface{}, bool) {
-	adjustedValue := adjustBoolValue(value)
-	if _, isString := adjustedValue.(string); isString == false {
-		return value, false
-	}
+func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric {
 	for _, mapping := range mapper.Fields {
-		if mapping.Key == key {
-			if mappedValue, isMappedValuePresent := mapping.ValueMappings[adjustedValue.(string)]; isMappedValuePresent == true {
-				return mappedValue, true
+		if originalValue, isPresent := metric.GetField(mapping.Key); isPresent == true {
+			if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString == true {
+				if mappedValue, isMappedValuePresent := mapping.ValueMappings[adjustedValue]; isMappedValuePresent == true {
+					metric.RemoveField(mapping.Key)
+					metric.AddField(mapping.Key, mappedValue)
+				}
 			}
 		}
 	}
-	return value, false
+	return metric
 }
 
 func adjustBoolValue(in interface{}) interface{} {
