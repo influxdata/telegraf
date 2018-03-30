@@ -351,7 +351,6 @@ EXEC(@SQL)
 const sqlDatabaseIOV2 = `SELECT
 'sqlserver_database_io' As [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-SERVERPROPERTY('ServerName') AS [host],
 DB_NAME([vfs].[database_id]) [database_name],
 vfs.io_stall_read_ms AS read_latency_ms,
 vfs.num_of_reads AS reads,
