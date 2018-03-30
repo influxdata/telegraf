@@ -33,6 +33,8 @@ const (
 	DEFAULT_MAX_LINE_SIZE = 64 * 1024
 )
 
+type TimeFunc func() time.Time
+
 type HTTPListener struct {
 	ServiceAddress string
 	ReadTimeout    internal.Duration
@@ -47,6 +49,8 @@ type HTTPListener struct {
 
 	BasicUsername string
 	BasicPassword string
+
+	TimeFunc
 
 	mu sync.Mutex
 	wg sync.WaitGroup
@@ -241,7 +245,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		tooLarge(res)
 		return
 	}
-	now := time.Now()
+	now := h.TimeFunc()
 
 	precision := req.URL.Query().Get("precision")
 
@@ -340,7 +344,8 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
-	h.handler.SetPrecision(getPrecisionMultiplier(precision))
+	h.handler.SetTimePrecision(getPrecisionMultiplier(precision))
+	h.handler.SetTimeFunc(func() time.Time { return t })
 	metrics, err := h.parser.Parse(b)
 	if err != nil {
 		return err
@@ -437,6 +442,7 @@ func init() {
 	inputs.Add("http_listener", func() telegraf.Input {
 		return &HTTPListener{
 			ServiceAddress: ":8186",
+			TimeFunc:       time.Now,
 		}
 	})
 }

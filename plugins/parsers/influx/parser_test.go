@@ -21,10 +21,12 @@ var DefaultTime = func() time.Time {
 }
 
 var ptests = []struct {
-	name    string
-	input   []byte
-	metrics []telegraf.Metric
-	err     error
+	name      string
+	input     []byte
+	timeFunc  func() time.Time
+	precision time.Duration
+	metrics   []telegraf.Metric
+	err       error
 }{
 	{
 		name:  "minimal",
@@ -406,7 +408,7 @@ var ptests = []struct {
 		err: nil,
 	},
 	{
-		name:  "default timestamp",
+		name:  "no timestamp",
 		input: []byte("cpu value=42"),
 		metrics: []telegraf.Metric{
 			Metric(
@@ -417,6 +419,47 @@ var ptests = []struct {
 						"value": 42.0,
 					},
 					time.Unix(42, 0),
+				),
+			),
+		},
+		err: nil,
+	},
+	{
+		name:  "no timestamp full precision",
+		input: []byte("cpu value=42"),
+		timeFunc: func() time.Time {
+			return time.Unix(42, 123456789)
+		},
+		metrics: []telegraf.Metric{
+			Metric(
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(42, 123456789),
+				),
+			),
+		},
+		err: nil,
+	},
+	{
+		name:  "no timestamp partial precision",
+		input: []byte("cpu value=42"),
+		timeFunc: func() time.Time {
+			return time.Unix(42, 123456789)
+		},
+		precision: 1 * time.Millisecond,
+		metrics: []telegraf.Metric{
+			Metric(
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(42, 123000000),
 				),
 			),
 		},
@@ -538,6 +581,12 @@ func TestParser(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			handler := NewMetricHandler()
 			handler.SetTimeFunc(DefaultTime)
+			if tt.timeFunc != nil {
+				handler.SetTimeFunc(tt.timeFunc)
+			}
+			if tt.precision > 0 {
+				handler.SetTimePrecision(tt.precision)
+			}
 			parser := NewParser(handler)
 
 			metrics, err := parser.Parse(tt.input)
