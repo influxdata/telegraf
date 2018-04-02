@@ -20,15 +20,8 @@ ifdef VERSION
 endif
 
 all:
-	$(MAKE) fmtcheck
 	$(MAKE) deps
 	$(MAKE) telegraf
-
-ci-test:
-	$(MAKE) deps
-	$(MAKE) fmtcheck
-	$(MAKE) vet
-	$(MAKE) test
 
 deps:
 	go get -u github.com/golang/lint/golint
@@ -62,9 +55,6 @@ fmtcheck:
 	fi
 	@echo '[INFO] done.'
 
-lint:
-	golint ./...
-
 test-windows:
 	go test ./plugins/inputs/ping/...
 	go test ./plugins/inputs/win_perf_counters/...
@@ -82,7 +72,10 @@ vet:
 		exit 1; \
 	fi
 
-test-all: vet
+test-ci: fmtcheck vet
+	go test -short./...
+
+test-all: fmtcheck vet
 	go test ./...
 
 package:

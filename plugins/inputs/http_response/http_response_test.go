@@ -16,7 +16,7 @@ import (
 )
 
 // Receives a list with fields that are expected to be absent
-func checkAbsentFields(t *testing.T, fields []string, acc testutil.Accumulator) {
+func checkAbsentFields(t *testing.T, fields []string, acc *testutil.Accumulator) {
 	for _, field := range fields {
 		ok := acc.HasField("http_response", field)
 		require.False(t, ok)
@@ -24,7 +24,7 @@ func checkAbsentFields(t *testing.T, fields []string, acc testutil.Accumulator) 
 }
 
 // Receives a list with tags that are expected to be absent
-func checkAbsentTags(t *testing.T, tags []string, acc testutil.Accumulator) {
+func checkAbsentTags(t *testing.T, tags []string, acc *testutil.Accumulator) {
 	for _, tag := range tags {
 		ok := acc.HasTag("http_response", tag)
 		require.False(t, ok)
@@ -33,7 +33,7 @@ func checkAbsentTags(t *testing.T, tags []string, acc testutil.Accumulator) {
 
 // Receives a dictionary and with expected fields and their values. If a value is nil, it will only check
 // that the field exists, but not its contents
-func checkFields(t *testing.T, fields map[string]interface{}, acc testutil.Accumulator) {
+func checkFields(t *testing.T, fields map[string]interface{}, acc *testutil.Accumulator) {
 	for key, field := range fields {
 		switch v := field.(type) {
 		case int:
@@ -60,7 +60,7 @@ func checkFields(t *testing.T, fields map[string]interface{}, acc testutil.Accum
 
 // Receives a dictionary and with expected tags and their values. If a value is nil, it will only check
 // that the tag exists, but not its contents
-func checkTags(t *testing.T, tags map[string]interface{}, acc testutil.Accumulator) {
+func checkTags(t *testing.T, tags map[string]interface{}, acc *testutil.Accumulator) {
 	for key, tag := range tags {
 		switch v := tag.(type) {
 		case string:
@@ -118,7 +118,7 @@ func setUpTestMux() http.Handler {
 	return mux
 }
 
-func checkOutput(t *testing.T, acc testutil.Accumulator, presentFields map[string]interface{}, presentTags map[string]interface{}, absentFields []string, absentTags []string) {
+func checkOutput(t *testing.T, acc *testutil.Accumulator, presentFields map[string]interface{}, presentTags map[string]interface{}, absentFields []string, absentTags []string) {
 	if presentFields != nil {
 		checkFields(t, presentFields, acc)
 	}
@@ -171,7 +171,7 @@ func TestHeaders(t *testing.T) {
 		"result":      "success",
 	}
 	absentFields := []string{"response_string_match"}
-	checkOutput(t, acc, expectedFields, expectedTags, absentFields, nil)
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 }
 
 func TestFields(t *testing.T) {
@@ -207,7 +207,7 @@ func TestFields(t *testing.T) {
 		"result":      "success",
 	}
 	absentFields := []string{"response_string_match"}
-	checkOutput(t, acc, expectedFields, expectedTags, absentFields, nil)
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 }
 
 func TestRedirects(t *testing.T) {
@@ -242,7 +242,7 @@ func TestRedirects(t *testing.T) {
 		"result":      "success",
 	}
 	absentFields := []string{"response_string_match"}
-	checkOutput(t, acc, expectedFields, expectedTags, absentFields, nil)
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 
 	h = &HTTPResponse{
 		Address:         ts.URL + "/badredirect",
@@ -269,10 +269,10 @@ func TestRedirects(t *testing.T) {
 	}
 	absentFields = []string{"http_response_code", "response_time", "response_string_match"}
 	absentTags := []string{"status_code"}
-	checkOutput(t, acc, expectedFields, expectedTags, nil, nil)
+	checkOutput(t, &acc, expectedFields, expectedTags, nil, nil)
 
 	expectedFields = map[string]interface{}{"result_type": "connection_failed"}
-	checkOutput(t, acc, expectedFields, expectedTags, absentFields, absentTags)
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, absentTags)
 }
 
 func TestMethod(t *testing.T) {
@@ -307,7 +307,7 @@ func TestMethod(t *testing.T) {
 		"result":      "success",
 	}
 	absentFields := []string{"response_string_match"}
-	checkOutput(t, acc, expectedFields, expectedTags, absentFields, nil)
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 
 	h = &HTTPResponse{
 		Address:         ts.URL + "/mustbepostmethod",
@@ -336,7 +336,7 @@ func TestMethod(t *testing.T) {
 		"result":      "success",
 	}
 	absentFields = []string{"response_string_match"}
-	checkOutput(t, acc, expectedFields, expectedTags, absentFields, nil)
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 
 	//check that lowercase methods work correctly
 	h = &HTTPResponse{
@@ -366,7 +366,7 @@ func TestMethod(t *testing.T) {
 		"result":      "success",
 	}
 	absentFields = []string{"response_string_match"}
-	checkOutput(t, acc, expectedFields, expectedTags, absentFields, nil)
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 }
 
 func TestBody(t *testing.T) {
@@ -401,7 +401,7 @@ func TestBody(t *testing.T) {
 		"result":      "success",
 	}
 	absentFields := []string{"response_string_match"}
-	checkOutput(t, acc, expectedFields, expectedTags, absentFields, nil)
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 
 	h = &HTTPResponse{
 		Address:         ts.URL + "/musthaveabody",
@@ -428,7 +428,7 @@ func TestBody(t *testing.T) {
 		"result":      "success",
 	}
 	absentFields = []string{"response_string_match"}
-	checkOutput(t, acc, expectedFields, expectedTags, absentFields, nil)
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, nil)
 }
 
 func TestStringMatch(t *testing.T) {
@@ -464,7 +464,7 @@ func TestStringMatch(t *testing.T) {
 		"status_code": "200",
 		"result":      "success",
 	}
-	checkOutput(t, acc, expectedFields, expectedTags, nil, nil)
+	checkOutput(t, &acc, expectedFields, expectedTags, nil, nil)
 }
 
 func TestStringMatchJson(t *testing.T) {
@@ -500,7 +500,7 @@ func TestStringMatchJson(t *testing.T) {
 		"status_code": "200",
 		"result":      "success",
 	}
-	checkOutput(t, acc, expectedFields, expectedTags, nil, nil)
+	checkOutput(t, &acc, expectedFields, expectedTags, nil, nil)
 }
 
 func TestStringMatchFail(t *testing.T) {
@@ -537,7 +537,7 @@ func TestStringMatchFail(t *testing.T) {
 		"status_code": "200",
 		"result":      "response_string_mismatch",
 	}
-	checkOutput(t, acc, expectedFields, expectedTags, nil, nil)
+	checkOutput(t, &acc, expectedFields, expectedTags, nil, nil)
 }
 
 func TestTimeout(t *testing.T) {
@@ -574,7 +574,7 @@ func TestTimeout(t *testing.T) {
 	}
 	absentFields := []string{"http_response_code", "response_time", "response_string_match"}
 	absentTags := []string{"status_code"}
-	checkOutput(t, acc, expectedFields, expectedTags, absentFields, absentTags)
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, absentTags)
 }
 
 func TestPluginErrors(t *testing.T) {
@@ -601,7 +601,7 @@ func TestPluginErrors(t *testing.T) {
 
 	absentFields := []string{"http_response_code", "response_time", "response_string_match", "result_type", "result_code"}
 	absentTags := []string{"status_code", "result", "server", "method"}
-	checkOutput(t, acc, nil, nil, absentFields, absentTags)
+	checkOutput(t, &acc, nil, nil, absentFields, absentTags)
 
 	// Attempt to read empty body test
 	h = &HTTPResponse{
@@ -630,7 +630,7 @@ func TestPluginErrors(t *testing.T) {
 		"status_code": "301",
 		"result":      "body_read_error",
 	}
-	checkOutput(t, acc, expectedFields, expectedTags, nil, nil)
+	checkOutput(t, &acc, expectedFields, expectedTags, nil, nil)
 }
 
 func TestNetworkErrors(t *testing.T) {
@@ -658,7 +658,7 @@ func TestNetworkErrors(t *testing.T) {
 	}
 	absentFields := []string{"http_response_code", "response_time", "response_string_match"}
 	absentTags := []string{"status_code"}
-	checkOutput(t, acc, expectedFields, expectedTags, absentFields, absentTags)
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, absentTags)
 
 	// Connecton failed
 	h = &HTTPResponse{
@@ -684,5 +684,5 @@ func TestNetworkErrors(t *testing.T) {
 	}
 	absentFields = []string{"http_response_code", "response_time", "response_string_match"}
 	absentTags = []string{"status_code"}
-	checkOutput(t, acc, expectedFields, expectedTags, absentFields, absentTags)
+	checkOutput(t, &acc, expectedFields, expectedTags, absentFields, absentTags)
 }
