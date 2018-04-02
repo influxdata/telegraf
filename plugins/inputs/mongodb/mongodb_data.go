@@ -60,6 +60,7 @@ var DefaultReplStats = map[string]string{
 	"member_status":         "NodeType",
 	"state":                 "NodeState",
 	"repl_lag":              "ReplLag",
+	"repl_oplog_window_s":   "OplogTimeDiff",
 }
 
 var DefaultClusterStats = map[string]string{
