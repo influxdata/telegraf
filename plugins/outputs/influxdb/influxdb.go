@@ -210,7 +210,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 		}
 
 		switch apiError := err.(type) {
-		case APIError:
+		case *APIError:
 			if !i.SkipDatabaseCreation {
 				if apiError.Type == DatabaseNotFound {
 					err := client.CreateDatabase(ctx)
