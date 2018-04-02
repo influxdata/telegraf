@@ -2,6 +2,7 @@ package azuretablestorage
 
 import (
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"strconv"
@@ -28,8 +29,7 @@ type TableNameVsTableRef struct {
 	TableRef  *storage.Table //TableRef: reference of the Azure Table client object
 }
 type AzureTableStorage struct {
-	AccountName                 string //azure storage account name.
-	SasUrl                      string //endpoint for table service
+	AccountName                 string //azure storage account name
 	SasToken                    string
 	ResourceId                  string //resource id for the VM or VMSS
 	DeploymentId                string
@@ -56,14 +56,14 @@ type MdsdTime struct {
 }
 
 func toFileTime(mdsdTime MdsdTime) int64 {
-	fileTime := (EpochDifference+mdsdTime.seconds)*TicksPerSecond + mdsdTime.microSeconds*10
+	fileTime := (EPOCH_DIFFERENCE+mdsdTime.seconds)*TICKS_PER_SECOND + mdsdTime.microSeconds*10
 	return fileTime
 }
 
 func toMdsdTime(fileTime int64) MdsdTime {
 	mdsdTime := MdsdTime{0, 0}
-	mdsdTime.microSeconds = (fileTime % TicksPerSecond) / 10
-	mdsdTime.seconds = (fileTime / TicksPerSecond) - EpochDifference
+	mdsdTime.microSeconds = (fileTime % TICKS_PER_SECOND) / 10
+	mdsdTime.seconds = (fileTime / TICKS_PER_SECOND) - EPOCH_DIFFERENCE
 	return mdsdTime
 }
 
@@ -79,7 +79,7 @@ func getTableDateSuffix() string {
 	fileTime := toFileTime(mdsdTime)
 
 	//The “ten day” rollover is the time at which FILETIME mod (number of seconds in 10 days) is zero
-	fileTime = fileTime - (fileTime % int64(10*24*60*60*TicksPerSecond))
+	fileTime = fileTime - (fileTime % int64(10*24*60*60*TICKS_PER_SECOND))
 
 	//convert fileTime back to mdsd time.
 	mdsdTime = toMdsdTime(fileTime)
@@ -131,7 +131,7 @@ func getAzurePeriodVsTableNameVsTableRefMap(azureTableStorage *AzureTableStorage
 
 	for _, period := range azureTableStorage.Periods {
 		periodStr := getPeriodStr(period)
-		tableName := WADMetrics + periodStr + P10DV25 + tableNameSuffix
+		tableName := WAD_METRICS + periodStr + P10DV25 + tableNameSuffix
 		table := tableClient.GetTableReference(tableName)
 		tableNameVsTableRefObj := TableNameVsTableRef{TableName: tableName, TableRef: table}
 		periodVsTableNameVsTableRef[period] = tableNameVsTableRefObj
@@ -140,7 +140,8 @@ func getAzurePeriodVsTableNameVsTableRefMap(azureTableStorage *AzureTableStorage
 }
 
 func (azureTableStorage *AzureTableStorage) Connect() error {
-	client, er := storage.NewAccountSASClientFromEndpointToken(azureTableStorage.SasUrl, azureTableStorage.SasToken)
+	sasUrl := "https://" + azureTableStorage.AccountName + ".table.core.windows.net"
+	client, er := storage.NewAccountSASClientFromEndpointToken(sasUrl, azureTableStorage.SasToken)
 	if er != nil {
 		return er
 	}
@@ -151,7 +152,7 @@ func (azureTableStorage *AzureTableStorage) Connect() error {
 	for _, tableVsTableRef := range azureTableStorage.PeriodVsTableNameVsTableRef {
 		er := tableVsTableRef.TableRef.Create(30, FullMetadata, nil)
 		if er != nil && strings.Contains(er.Error(), "TableAlreadyExists") {
-			fmt.Println("the table ", tableVsTableRef.TableName, " already exists.")
+			log.Printf("the table ", tableVsTableRef.TableName, " already exists.")
 		} else if er != nil {
 			return er
 		}
@@ -189,10 +190,14 @@ func getPrimaryKey(resourceId string) string {
 }
 
 //RETURNS: difference of max value that can be held by time and number of 100 ns in current time.
-func getUTCTicks_DescendingOrder(lastSampleTimestamp string) uint64 {
+func getUTCTicks_DescendingOrder(lastSampleTimestamp string) (uint64, error) {
 
-	currentTime, _ := time.Parse(layout, lastSampleTimestamp)
-	//maxValueDateTime := time.Date(9999, time.December, 31, 12, 59, 59, 59, time.UTC)
+	currentTime, err := time.Parse(layout, lastSampleTimestamp)
+	if err != nil {
+		log.Printf(err.Error())
+		return 0, err
+	}
+	//maxValureDateTime := time.Date(9999, time.December, 31, 12, 59, 59, 59, time.UTC)
 	//Ticks is the number of 100 nanoseconds from zero value of date
 	//this value is copied from mdsd code.
 	maxValueDateTimeInTicks := uint64(3155378975999999999)
@@ -203,18 +208,20 @@ func getUTCTicks_DescendingOrder(lastSampleTimestamp string) uint64 {
 	diff := uint64(currentTime.Sub(zeroTime))
 	currentTimeInTicks := diff / 100
 	UTCTicks_DescendincurrentTimeOrder := maxValueDateTimeInTicks - currentTimeInTicks
-	fmt.Println(UTCTicks_DescendincurrentTimeOrder)
 
-	return UTCTicks_DescendincurrentTimeOrder
+	return UTCTicks_DescendincurrentTimeOrder, nil
 }
 
 //RETURNS: counter name being unicode encoded and decreasing time diff.
-func getRowKeyComponents(lastSampleTimestamp string, counterName string) (string, string) {
+func getRowKeyComponents(lastSampleTimestamp string, counterName string) (string, string, error) {
 
-	UTCTicks_DescendingOrder := getUTCTicks_DescendingOrder(lastSampleTimestamp)
+	UTCTicks_DescendingOrder, err := getUTCTicks_DescendingOrder(lastSampleTimestamp)
+	if err != nil {
+		return "", "", err
+	}
 	UTCTicks_DescendingOrderStr := strconv.FormatInt(int64(UTCTicks_DescendingOrder), 10)
 	encodedCounterName := encodeSpecialCharacterToUTF16(counterName)
-	return UTCTicks_DescendingOrderStr, encodedCounterName
+	return UTCTicks_DescendingOrderStr, encodedCounterName, nil
 }
 
 func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) error {
@@ -225,12 +232,19 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 	// iterate over the list of metrics and create a new entity for each metrics and add to the table.
 	for i, _ := range metrics {
 		props = metrics[i].Fields()
-		UTCTicks_DescendingOrderStr, encodedCounterName := getRowKeyComponents(props[TIMESTAMP].(string), props[CounterName].(string))
-		props[DeploymentId] = azureTableStorage.DeploymentId
-		props[Host], _ = os.Hostname()
-
+		UTCTicks_DescendingOrderStr, encodedCounterName, er := getRowKeyComponents(props[TIMESTAMP].(string), props[COUNTER_NAME].(string))
+		if er != nil {
+			return er
+		}
+		props[DEPLOYMENT_ID] = azureTableStorage.DeploymentId
+		var err error
+		props[HOST], err = os.Hostname()
+		if err != nil {
+			log.Printf(err.Error())
+			return err
+		}
 		//period is the period which decides when to transfer the aggregated metrics.Its in format "60s"
-		periodStr := metrics[i].Tags()[Period]
+		periodStr := metrics[i].Tags()[PERIOD]
 		table := azureTableStorage.PeriodVsTableNameVsTableRef[periodStr].TableRef
 
 		//two rows are written for each metric as Azure table has optimized prefix search only and no index.

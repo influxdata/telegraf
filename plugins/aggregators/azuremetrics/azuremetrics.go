@@ -1,4 +1,4 @@
-package metricaggregates
+package azuremetrics
 
 import (
 	"log"
@@ -8,7 +8,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
 
-type MetricAggregates struct {
+type AzureMetrics struct {
 	Stats       []string `toml:"stats"`
 	cache       map[uint64]aggregate
 	statsConfig *configuredStats
@@ -26,19 +26,19 @@ type configuredStats struct {
 	endTimestamp       bool
 }
 
-func NewMetricAggregates() *MetricAggregates {
-	mm := &MetricAggregates{}
+func NewAzureMetrics() *AzureMetrics {
+	mm := &AzureMetrics{}
 	mm.Reset()
 	return mm
 }
 
 type aggregate struct {
-	fields map[string]metricAggregates
+	fields map[string]azureMetrics
 	name   string
 	tags   map[string]string
 }
 
-type metricAggregates struct {
+type azureMetrics struct {
 	count              float64
 	min                float64
 	max                float64
@@ -60,26 +60,26 @@ var sampleConfig = `
   drop_original = false
 `
 
-func (m *MetricAggregates) SampleConfig() string {
+func (m *AzureMetrics) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *MetricAggregates) Description() string {
+func (m *AzureMetrics) Description() string {
 	return "Keep the aggregate metricAggregates of each metric passing through."
 }
 
-func (m *MetricAggregates) Add(in telegraf.Metric) {
+func (m *AzureMetrics) Add(in telegraf.Metric) {
 	id := in.HashID()
 	if _, ok := m.cache[id]; !ok {
 		// hit an uncached metric, create caches for first time:
 		a := aggregate{
 			name:   in.Name(),
 			tags:   in.Tags(),
-			fields: make(map[string]metricAggregates),
+			fields: make(map[string]azureMetrics),
 		}
 		for k, v := range in.Fields() {
 			if fv, ok := convert(v); ok {
-				a.fields[k] = metricAggregates{
+				a.fields[k] = azureMetrics{
 					count:              1,
 					min:                fv,
 					max:                fv,
@@ -97,7 +97,7 @@ func (m *MetricAggregates) Add(in telegraf.Metric) {
 			if fv, ok := convert(v); ok {
 				if _, ok := m.cache[id].fields[k]; !ok {
 					// hit an uncached field of a cached metric
-					m.cache[id].fields[k] = metricAggregates{
+					m.cache[id].fields[k] = azureMetrics{
 						count:              1,
 						min:                fv,
 						max:                fv,
@@ -138,7 +138,7 @@ func (m *MetricAggregates) Add(in telegraf.Metric) {
 	}
 }
 
-func (m *MetricAggregates) Push(acc telegraf.Accumulator) {
+func (m *AzureMetrics) Push(acc telegraf.Accumulator) {
 
 	config := getConfiguredStats(m)
 
@@ -229,7 +229,7 @@ func defaultStats() *configuredStats {
 	return defaults
 }
 
-func getConfiguredStats(m *MetricAggregates) *configuredStats {
+func getConfiguredStats(m *AzureMetrics) *configuredStats {
 
 	if m.statsConfig == nil {
 
@@ -243,7 +243,7 @@ func getConfiguredStats(m *MetricAggregates) *configuredStats {
 	return m.statsConfig
 }
 
-func (m *MetricAggregates) Reset() {
+func (m *AzureMetrics) Reset() {
 	m.cache = make(map[uint64]aggregate)
 }
 
@@ -259,7 +259,7 @@ func convert(in interface{}) (float64, bool) {
 }
 
 func init() {
-	aggregators.Add("metricaggregates", func() telegraf.Aggregator {
-		return NewMetricAggregates()
+	aggregators.Add("azuremetrics", func() telegraf.Aggregator {
+		return NewAzureMetrics()
 	})
 }

@@ -1,4 +1,4 @@
-package metricaggregates
+package azuremetrics
 
 import "testing"
 
