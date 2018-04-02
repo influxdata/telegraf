@@ -57,7 +57,7 @@ var fService = flag.String("service", "",
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
 var (
-	nextVersion = "1.6.0"
+	nextVersion = "1.7.0"
 	version     string
 	commit      string
 	branch      string
