@@ -103,6 +103,7 @@
 - [#1575](https://github.com/influxdata/telegraf/issues/1575): Add tag for target url to phpfpm input.
 - [#3868](https://github.com/influxdata/telegraf/issues/3868): Fix cannot unmarshal object error in DC/OS input.
 - [#3648](https://github.com/influxdata/telegraf/issues/3648): Fix InfluxDB output not able to reconnect when server address changes.
+- [#3960](https://github.com/influxdata/telegraf/issues/3960): Fix parsing of dos line endings in the smart input.
 
 ## v1.5.3 [2018-03-14]
 
