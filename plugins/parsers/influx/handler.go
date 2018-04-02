@@ -26,8 +26,9 @@ func (h *MetricHandler) SetTimeFunc(f metric.TimeFunc) {
 	h.builder.TimeFunc = f
 }
 
-func (h *MetricHandler) SetPrecision(factor time.Duration) {
-	h.precision = factor
+func (h *MetricHandler) SetTimePrecision(precision time.Duration) {
+	h.builder.TimePrecision = precision
+	h.precision = precision
 }
 
 func (h *MetricHandler) Metric() (telegraf.Metric, error) {
