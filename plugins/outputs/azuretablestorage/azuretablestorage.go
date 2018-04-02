@@ -152,7 +152,7 @@ func (azureTableStorage *AzureTableStorage) Connect() error {
 	for _, tableVsTableRef := range azureTableStorage.PeriodVsTableNameVsTableRef {
 		er := tableVsTableRef.TableRef.Create(30, FullMetadata, nil)
 		if er != nil && strings.Contains(er.Error(), "TableAlreadyExists") {
-			log.Printf("the table ", tableVsTableRef.TableName, " already exists.")
+			log.Println("the table ", tableVsTableRef.TableName, " already exists.")
 		} else if er != nil {
 			return er
 		}
@@ -194,7 +194,7 @@ func getUTCTicks_DescendingOrder(lastSampleTimestamp string) (uint64, error) {
 
 	currentTime, err := time.Parse(layout, lastSampleTimestamp)
 	if err != nil {
-		log.Printf(err.Error())
+		log.Println(err.Error())
 		return 0, err
 	}
 	//maxValureDateTime := time.Date(9999, time.December, 31, 12, 59, 59, 59, time.UTC)
@@ -240,7 +240,7 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 		var err error
 		props[HOST], err = os.Hostname()
 		if err != nil {
-			log.Printf(err.Error())
+			log.Println(err.Error())
 			return err
 		}
 		//period is the period which decides when to transfer the aggregated metrics.Its in format "60s"
