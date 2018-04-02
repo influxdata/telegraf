@@ -1,4 +1,4 @@
-# MySQL Input plugin
+# MySQL Input Plugin
 
 This plugin gathers the statistic data from MySQL server
 
@@ -18,9 +18,9 @@ This plugin gathers the statistic data from MySQL server
 * File events statistics
 * Table schema statistics
 
-## Configuration
+### Configuration
 
-```
+```toml
 # Read metrics from one or many mysql servers
 [[inputs.mysql]]
   ## specify servers via a url matching:
@@ -81,14 +81,97 @@ This plugin gathers the statistic data from MySQL server
   #
   ## Some queries we may want to run less often (such as SHOW GLOBAL VARIABLES)
   interval_slow                             = "30m"
-  
+
   ## Optional SSL Config (will be used if tls=custom parameter specified in server uri)
   ssl_ca = "/etc/telegraf/ca.pem"
   ssl_cert = "/etc/telegraf/cert.pem"
   ssl_key = "/etc/telegraf/key.pem"
 ```
 
-## Measurements & Fields
+#### Metric Version
+
+When `metric_version = 2`, a variety of field type issues are corrected as well
+as naming inconsistencies.  If you have existing data on the original version
+enabling this feature will cause a `field type error` when inserted into
+InfluxDB due to the change of types.  For this reason, you should keep the
+`metric_version` unset until you are ready to migrate to the new format.
+
+If preserving your old data is not required you may wish to drop conflicting
+measurements:
+```
+DROP SERIES from mysql
+DROP SERIES from mysql_variables
+DROP SERIES from mysql_innodb
+```
+
+Otherwise, migration can be performed using the following steps:
+
+1. Duplicate your `mysql` plugin configuration and add a `name_suffix` and
+`metric_version = 2`, this will result in collection using both the old and new
+style concurrently:
+   ```toml
+   [[inputs.mysql]]
+     servers = ["tcp(127.0.0.1:3306)/"]
+
+   [[inputs.mysql]]
+     name_override = "_2"
+     metric_version = 2
+
+     servers = ["tcp(127.0.0.1:3306)/"]
+   ```
+
+2. Upgrade all affected Telegraf clients to version >=1.6.
+
+   New measurements will be created with the `name_suffix`, for example::
+   - `mysql_v2`
+   - `mysql_variables_v2`
+
+3. Update charts, alerts, and other supporting code to the new format.
+4. You can now remove the old `mysql` plugin configuration and remove old
+   measurements.
+
+If you wish to remove the `name_suffix` you may use Kapacitor to copy the
+historical data to the default name.  Do this only after retiring the old
+measurement name.
+
+1. Use the techinique described above to write to multiple locations:
+   ```toml
+   [[inputs.mysql]]
+     servers = ["tcp(127.0.0.1:3306)/"]
+     metric_version = 2
+
+   [[inputs.mysql]]
+     name_override = "_2"
+     metric_version = 2
+
+     servers = ["tcp(127.0.0.1:3306)/"]
+   ```
+2. Create a TICKScript to copy the historical data:
+   ```
+   dbrp "telegraf"."autogen"
+
+   batch
+       |query('''
+           SELECT * FROM "telegraf"."autogen"."mysql_v2"
+       ''')
+           .period(5m)
+           .every(5m)
+           |influxDBOut()
+                   .database('telegraf')
+                   .retentionPolicy('autogen')
+                   .measurement('mysql')
+   ```
+3. Define a task for your script:
+   ```sh
+   kapacitor define copy-measurement -tick copy-measurement.task
+   ```
+4. Run the task over the data you would like to migrate:
+   ```sh
+   kapacitor replay-live batch -start 2018-03-30T20:00:00Z -stop 2018-04-01T12:00:00Z -rec-time -task copy-measurement
+   ```
+5. Verify copied data and repeat for other measurements.
+
+### Metrics:
 * Global statuses - all numeric and boolean values of `SHOW GLOBAL STATUSES`
 * Global variables - all numeric and boolean values of `SHOW GLOBAL VARIABLES`
 * Slave status - metrics from `SHOW SLAVE STATUS` the metrics are gathered when
