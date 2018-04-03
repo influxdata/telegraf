@@ -542,7 +542,7 @@ REPLACE(@@SERVERNAME,"\",":") AS [sql_instance],
 "SQLServer:Workload Group Stats" AS object,
 counter,
 instance,
-vs.value
+CAST(vs.value AS NUMERIC(38,38)) AS value
 FROM
 (
     SELECT 
