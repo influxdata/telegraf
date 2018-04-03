@@ -1,7 +1,6 @@
 package linux_wireless
 
 import (
-	//"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
