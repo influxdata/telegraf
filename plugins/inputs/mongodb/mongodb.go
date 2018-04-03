@@ -45,7 +45,9 @@ var sampleConfig = `
   ##   mongodb://user:auth_key@10.10.3.30:27017,
   ##   mongodb://10.10.3.33:18832,
   servers = ["mongodb://127.0.0.1:27017"]
-  gather_perdb_stats = false
+
+  ## When true, collect per database stats
+  # gather_perdb_stats = false
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
