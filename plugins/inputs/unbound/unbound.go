@@ -165,7 +165,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 			// split the that
 			statTokens := strings.Split(stat, ".")
 			// set the thread identifier
-			threadID := strings.TrimLeft(statTokens[0], "thread")
+			threadID := strings.TrimPrefix(statTokens[0], "thread")
 			// create new stat slice without the thread identifier (first token)
 			statNewTokens := statTokens[1:]
 			// re-define stat
