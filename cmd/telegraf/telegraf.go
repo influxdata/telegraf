@@ -365,7 +365,7 @@ func main() {
 			DisplayName: "Telegraf Data Collector Service",
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",
-			Arguments: []string{"-config", "C:\\Program Files\\Telegraf\\telegraf.conf"},
+			Arguments: []string{"--config", "C:\\Program Files\\Telegraf\\telegraf.conf"},
 		}
 
 		prg := &program{
@@ -378,14 +378,14 @@ func main() {
 		if err != nil {
 			log.Fatal("E! " + err.Error())
 		}
-		// Handle the -service flag here to prevent any issues with tooling that
+		// Handle the --service flag here to prevent any issues with tooling that
 		// may not have an interactive session, e.g. installing from Ansible.
 		if *fService != "" {
 			if *fConfig != "" {
-				(*svcConfig).Arguments = []string{"-config", *fConfig}
+				(*svcConfig).Arguments = []string{"--config", *fConfig}
 			}
 			if *fConfigDirectory != "" {
-				(*svcConfig).Arguments = append((*svcConfig).Arguments, "-config-directory", *fConfigDirectory)
+				(*svcConfig).Arguments = append((*svcConfig).Arguments, "--config-directory", *fConfigDirectory)
 			}
 			err := service.Control(s, *fService)
 			if err != nil {
