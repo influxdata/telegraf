@@ -21,10 +21,20 @@
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 ```
-This connection uri may be different based on your environment and mongodb
-setup. If the user doesn't have the required privilege to execute serverStatus
-command the you will get this error on telegraf
 
+#### Permissions:
+
+If your MongoDB instance has access control enabled you will need to connect
+as a user with sufficient rights.
+
+With MongoDB 3.4 and higher, the `clusterMonitor` role can be used.  In
+version 3.2 you may also need these additional permissions:
+```
+> db.grantRolesToUser("user", [{role: "read", actions: "find", db: "local"}])
+```
+
+If the user is missing required privileges you may see an error in the
+Telegraf logs similar to:
 ```
 Error in input [mongodb]: not authorized on admin to execute command { serverStatus: 1, recordStats: 0 }
 ```
