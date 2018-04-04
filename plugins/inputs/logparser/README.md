@@ -89,8 +89,8 @@ current time.
   - drop     (drops the field completely)
 - Timestamp modifiers:
   - ts               (This will auto-learn the timestamp format)
-  - ts-ansic         ("Mon Jan \_2 15:04:05 2006")
-  - ts-unix          ("Mon Jan \_2 15:04:05 MST 2006")
+  - ts-ansic         ("Mon Jan _2 15:04:05 2006")
+  - ts-unix          ("Mon Jan _2 15:04:05 MST 2006")
   - ts-ruby          ("Mon Jan 02 15:04:05 -0700 2006")
   - ts-rfc822        ("02 Jan 06 15:04 MST")
   - ts-rfc822z       ("02 Jan 06 15:04 -0700")
