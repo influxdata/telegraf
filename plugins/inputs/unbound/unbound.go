@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string) (*bytes.Buffer, error)
+type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool) (*bytes.Buffer, error)
 
 // Unbound is used to store configuration values
 type Unbound struct {
@@ -68,7 +68,7 @@ func (s *Unbound) SampleConfig() string {
 }
 
 // Shell out to unbound_stat and return the output
-func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string) (*bytes.Buffer, error) {
+func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
 
 	if Server != "" {
@@ -126,7 +126,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	out, err := s.run(s.Binary, s.Timeout, s.UseSudo, s.Server)
+	out, err := s.run(s.Binary, s.Timeout, s.UseSudo, s.Server, s.ThreadAsTag)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}
@@ -166,10 +166,13 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 			statTokens := strings.Split(stat, ".")
 			// set the thread identifier
 			threadID := strings.TrimPrefix(statTokens[0], "thread")
-			// create new stat slice without the thread identifier (first token)
-			statNewTokens := statTokens[1:]
+			// create new slice without the thread identifier (skip first token)
+			threadTokens := statTokens[1:]
 			// re-define stat
-			field := strings.Join(statNewTokens[:], "_")
+			field := strings.Join(threadTokens[:], "_")
+			if fieldsThreads[threadID] == nil {
+				fieldsThreads[threadID] = make(map[string]interface{})
+			}
 			fieldsThreads[threadID][field] = fieldValue
 		} else {
 			field := strings.Replace(stat, ".", "_", -1)
