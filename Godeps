@@ -70,7 +70,7 @@ github.com/shirou/gopsutil fc04d2dd9a512906a2604242b35275179e250eda
 github.com/shirou/w32 3c9377fc6748f222729a8270fe2775d149a249ad
 github.com/Shopify/sarama 3b1b38866a79f06deddf0487d5c27ba0697ccd65
 github.com/Sirupsen/logrus 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
-github.com/soniah/gosnmp c7c51f48ff7b9e858316e2f599691c5fb66ac7e3
+github.com/soniah/gosnmp f15472a4cd6f6ea7929e4c7d9f163c49f059924f
 github.com/StackExchange/wmi f3e2bae1e0cb5aef83e319133eabfee30013a4a5
 github.com/streadway/amqp 63795daa9a446c920826655f26ba31c81c860fd6
 github.com/stretchr/objx facf9a85c22f48d2f52f2380e4efce1768749a89
