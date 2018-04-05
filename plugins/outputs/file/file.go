@@ -97,7 +97,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 		}
 		_, err = f.writer.Write(b)
 		if err != nil {
-			return fmt.Errorf("failed to write message: %s, %s", metric.Serialize(), err)
+			return fmt.Errorf("failed to write message: %s, %s", b, err)
 		}
 	}
 	return nil

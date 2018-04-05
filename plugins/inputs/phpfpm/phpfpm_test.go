@@ -40,6 +40,7 @@ func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
 
 	tags := map[string]string{
 		"pool": "www",
+		"url":  ts.URL,
 	}
 
 	fields := map[string]interface{}{
@@ -80,6 +81,7 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 
 	tags := map[string]string{
 		"pool": "www",
+		"url":  r.Urls[0],
 	}
 
 	fields := map[string]interface{}{
@@ -124,6 +126,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 
 	tags := map[string]string{
 		"pool": "www",
+		"url":  r.Urls[0],
 	}
 
 	fields := map[string]interface{}{
@@ -168,6 +171,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 
 	tags := map[string]string{
 		"pool": "www",
+		"url":  r.Urls[0],
 	}
 
 	fields := map[string]interface{}{

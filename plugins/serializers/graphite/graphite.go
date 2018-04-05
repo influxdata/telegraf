@@ -35,7 +35,7 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	out := []byte{}
 
 	// Convert UnixNano to Unix timestamps
-	timestamp := metric.UnixNano() / 1000000000
+	timestamp := metric.Time().UnixNano() / 1000000000
 
 	bucket := SerializeBucketName(metric.Name(), metric.Tags(), s.Template, s.Prefix)
 	if bucket == "" {

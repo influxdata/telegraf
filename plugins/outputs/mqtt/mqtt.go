@@ -138,8 +138,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 
 		buf, err := m.serializer.Serialize(metric)
 		if err != nil {
-			return fmt.Errorf("MQTT Could not serialize metric: %s",
-				metric.String())
+			return err
 		}
 
 		err = m.publish(topic, buf)

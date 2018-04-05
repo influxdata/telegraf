@@ -135,7 +135,7 @@ func (d *MongodbData) AddDefaultStats() {
 	}
 	d.addStat(statLine, DefaultClusterStats)
 	d.addStat(statLine, DefaultShardStats)
-	if d.StatLine.StorageEngine == "mmapv1" {
+	if d.StatLine.StorageEngine == "mmapv1" || d.StatLine.StorageEngine == "rocksdb" {
 		d.addStat(statLine, MmapStats)
 	} else if d.StatLine.StorageEngine == "wiredTiger" {
 		for key, value := range WiredTigerStats {
