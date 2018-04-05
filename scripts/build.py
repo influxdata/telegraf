@@ -95,7 +95,7 @@ supported_packages = {
     "freebsd": [ "tar" ]
 }
 
-next_version = '1.5.0'
+next_version = '1.6.0'
 
 ################
 #### Telegraf Functions
