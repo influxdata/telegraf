@@ -159,12 +159,18 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 		serializer = influx.NewSerializer()
 	}
 
-	writeURL := makeWriteURL(
+	writeURL, err := makeWriteURL(
 		config.URL,
 		database,
 		config.RetentionPolicy,
 		config.Consistency)
-	queryURL := makeQueryURL(config.URL)
+	if err != nil {
+		return nil, err
+	}
+	queryURL, err := makeQueryURL(config.URL)
+	if err != nil {
+		return nil, err
+	}
 
 	var transport *http.Transport
 	switch config.URL.Scheme {
@@ -399,7 +405,7 @@ func (c *httpClient) addHeaders(req *http.Request) {
 	}
 }
 
-func makeWriteURL(loc *url.URL, db, rp, consistency string) string {
+func makeWriteURL(loc *url.URL, db, rp, consistency string) (string, error) {
 	params := url.Values{}
 	params.Set("db", db)
 
@@ -417,24 +423,26 @@ func makeWriteURL(loc *url.URL, db, rp, consistency string) string {
 		u.Scheme = "http"
 		u.Host = "127.0.0.1"
 		u.Path = "/write"
-	case "http":
-	case "https":
+	case "http", "https":
 		u.Path = path.Join(u.Path, "write")
+	default:
+		return "", fmt.Errorf("unsupported scheme: %q", loc.Scheme)
 	}
 	u.RawQuery = params.Encode()
-	return u.String()
+	return u.String(), nil
 }
 
-func makeQueryURL(loc *url.URL) string {
+func makeQueryURL(loc *url.URL) (string, error) {
 	u := *loc
 	switch u.Scheme {
 	case "unix":
 		u.Scheme = "http"
 		u.Host = "127.0.0.1"
 		u.Path = "/query"
-	case "http":
-	case "https":
+	case "http", "https":
 		u.Path = path.Join(u.Path, "query")
+	default:
+		return "", fmt.Errorf("unsupported scheme: %q", loc.Scheme)
 	}
-	return u.String()
+	return u.String(), nil
 }
