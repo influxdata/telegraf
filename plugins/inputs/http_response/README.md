@@ -10,6 +10,9 @@ This input plugin checks HTTP/HTTPS connections.
   ## Server address (default http://localhost)
   # address = "http://localhost"
 
+  ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
+  # http_proxy = "http://localhost:8888"
+
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
 

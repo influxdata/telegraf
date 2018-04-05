@@ -271,11 +271,9 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric, ag
 				// if dropOriginal is set to true, then we will only send this
 				// metric to the aggregators, not the outputs.
 				var dropOriginal bool
-				if !m.IsAggregate() {
-					for _, agg := range a.Config.Aggregators {
-						if ok := agg.Add(m.Copy()); ok {
-							dropOriginal = true
-						}
+				for _, agg := range a.Config.Aggregators {
+					if ok := agg.Add(m.Copy()); ok {
+						dropOriginal = true
 					}
 				}
 				if !dropOriginal {
