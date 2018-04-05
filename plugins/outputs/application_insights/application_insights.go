@@ -363,7 +363,7 @@ func toInt(value interface{}) (int, error) {
 				return 0, fmt.Errorf("Value [%d] out of range of 32-bit integers", v)
 			}
 		} else {
-			if v > math.MaxInt64 {
+			if uint64(v) > math.MaxInt64 {
 				return 0, fmt.Errorf("Value [%d] out of range of 64-bit integers", v)
 			}
 		}
