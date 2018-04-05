@@ -418,6 +418,7 @@ func makeWriteURL(loc *url.URL, db, rp, consistency string) string {
 		u.Host = "127.0.0.1"
 		u.Path = "/write"
 	case "http":
+	case "https":
 		u.Path = path.Join(u.Path, "write")
 	}
 	u.RawQuery = params.Encode()
@@ -432,6 +433,7 @@ func makeQueryURL(loc *url.URL) string {
 		u.Host = "127.0.0.1"
 		u.Path = "/query"
 	case "http":
+	case "https":
 		u.Path = path.Join(u.Path, "query")
 	}
 	return u.String()
