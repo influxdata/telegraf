@@ -56,6 +56,7 @@ and create a single measurement containing values e.g.
  * ttl_deletes_per_sec
  * ttl_passes_per_sec
  * repl_lag
+ * repl_oplog_window_s
  * jumbo_chunks (only if mongos or mongo config)
 
 If gather_db_stats is set to true, it will also collect per database stats exposed by db.stats()
