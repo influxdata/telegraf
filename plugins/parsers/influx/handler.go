@@ -26,8 +26,9 @@ func (h *MetricHandler) SetTimeFunc(f metric.TimeFunc) {
 	h.builder.TimeFunc = f
 }
 
-func (h *MetricHandler) SetPrecision(factor time.Duration) {
-	h.precision = factor
+func (h *MetricHandler) SetTimePrecision(precision time.Duration) {
+	h.builder.TimePrecision = precision
+	h.precision = precision
 }
 
 func (h *MetricHandler) Metric() (telegraf.Metric, error) {
@@ -48,7 +49,7 @@ func (h *MetricHandler) AddInt(key []byte, value []byte) {
 	fk := unescape(key)
 	fv, err := parseIntBytes(bytes.TrimSuffix(value, []byte("i")), 10, 64)
 	if err != nil {
-		log.Errorf("E! Received unparseable int value: %q", value)
+		log.Errorf("E! Received unparseable int value: %q: %v", value, err)
 		return
 	}
 	h.builder.AddField(fk, fv)
@@ -58,7 +59,7 @@ func (h *MetricHandler) AddUint(key []byte, value []byte) {
 	fk := unescape(key)
 	fv, err := parseUintBytes(bytes.TrimSuffix(value, []byte("u")), 10, 64)
 	if err != nil {
-		log.Errorf("E! Received unparseable uint value: %q", value)
+		log.Errorf("E! Received unparseable uint value: %q: %v", value, err)
 		return
 	}
 	h.builder.AddField(fk, fv)
@@ -68,7 +69,7 @@ func (h *MetricHandler) AddFloat(key []byte, value []byte) {
 	fk := unescape(key)
 	fv, err := parseFloatBytes(value, 64)
 	if err != nil {
-		log.Errorf("E! Received unparseable float value: %q", value)
+		log.Errorf("E! Received unparseable float value: %q: %v", value, err)
 		return
 	}
 	h.builder.AddField(fk, fv)
@@ -84,7 +85,7 @@ func (h *MetricHandler) AddBool(key []byte, value []byte) {
 	fk := unescape(key)
 	fv, err := parseBoolBytes(value)
 	if err != nil {
-		log.Errorf("E! Received unparseable boolean value: %q", value)
+		log.Errorf("E! Received unparseable boolean value: %q: %v", value, err)
 		return
 	}
 	h.builder.AddField(fk, fv)
@@ -93,7 +94,7 @@ func (h *MetricHandler) AddBool(key []byte, value []byte) {
 func (h *MetricHandler) SetTimestamp(tm []byte) {
 	v, err := parseIntBytes(tm, 10, 64)
 	if err != nil {
-		log.Errorf("E! Received unparseable timestamp: %q", tm)
+		log.Errorf("E! Received unparseable timestamp: %q: %v", tm, err)
 		return
 	}
 	ns := v * int64(h.precision)

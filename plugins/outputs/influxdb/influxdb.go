@@ -45,6 +45,7 @@ type InfluxDB struct {
 	HTTPHeaders          map[string]string `toml:"http_headers"`
 	ContentEncoding      string            `toml:"content_encoding"`
 	SkipDatabaseCreation bool              `toml:"skip_database_creation"`
+	InfluxUintSupport    bool              `toml:"influx_uint_support"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -119,6 +120,12 @@ var sampleConfig = `
   ## HTTP Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "identity"
+
+  ## When true, Telegraf will output unsigned integers as unsigned values,
+  ## i.e.: "42u".  You will need a version of InfluxDB supporting unsigned
+  ## integer values.  Enabling this option will result in field type errors if
+  ## existing data has been written.
+  # influx_uint_support = false
 `
 
 func (i *InfluxDB) Connect() error {
@@ -135,6 +142,9 @@ func (i *InfluxDB) Connect() error {
 	}
 
 	i.serializer = influx.NewSerializer()
+	if i.InfluxUintSupport {
+		i.serializer.SetFieldTypeSupport(influx.UintSupport)
+	}
 
 	for _, u := range urls {
 		u, err := url.Parse(u)
@@ -200,7 +210,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 		}
 
 		switch apiError := err.(type) {
-		case APIError:
+		case *APIError:
 			if !i.SkipDatabaseCreation {
 				if apiError.Type == DatabaseNotFound {
 					err := client.CreateDatabase(ctx)

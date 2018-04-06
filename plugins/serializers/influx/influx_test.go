@@ -11,26 +11,19 @@ import (
 )
 
 func MustMetric(v telegraf.Metric, err error) telegraf.Metric {
-	// Force uint support to be enabled for testing.
-	metric.EnableUintSupport()
 	if err != nil {
 		panic(err)
 	}
 	return v
 }
 
-const (
-	Uint64Overflow uint64 = 9223372036854775808
-	Uint64Max      uint64 = 18446744073709551615
-	Uint64Test     uint64 = 42
-)
-
 var tests = []struct {
-	name     string
-	maxBytes int
-	input    telegraf.Metric
-	output   []byte
-	err      error
+	name        string
+	maxBytes    int
+	typeSupport FieldTypeSupport
+	input       telegraf.Metric
+	output      []byte
+	err         error
 }{
 	{
 		name: "minimal",
@@ -143,40 +136,56 @@ var tests = []struct {
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
-					"value": Uint64Test,
+					"value": uint64(42),
 				},
 				time.Unix(0, 0),
 			),
 		),
-		output: []byte("cpu value=42u 0\n"),
+		output:      []byte("cpu value=42u 0\n"),
+		typeSupport: UintSupport,
 	},
 	{
-		name: "uint field int64 overflow",
+		name: "uint field max value",
 		input: MustMetric(
 			metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
-					"value": Uint64Overflow,
+					"value": uint64(18446744073709551615),
 				},
 				time.Unix(0, 0),
 			),
 		),
-		output: []byte("cpu value=9223372036854775808u 0\n"),
+		output:      []byte("cpu value=18446744073709551615u 0\n"),
+		typeSupport: UintSupport,
 	},
 	{
-		name: "uint field uint64 max",
+		name: "uint field no uint support",
 		input: MustMetric(
 			metric.New(
 				"cpu",
 				map[string]string{},
 				map[string]interface{}{
-					"value": Uint64Max,
+					"value": uint64(42),
 				},
 				time.Unix(0, 0),
 			),
 		),
-		output: []byte("cpu value=18446744073709551615u 0\n"),
+		output: []byte("cpu value=42i 0\n"),
+	},
+	{
+		name: "uint field no uint support overflow",
+		input: MustMetric(
+			metric.New(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": uint64(18446744073709551615),
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("cpu value=9223372036854775807i 0\n"),
 	},
 	{
 		name: "bool field",
@@ -358,6 +367,7 @@ func TestSerializer(t *testing.T) {
 			serializer := NewSerializer()
 			serializer.SetMaxLineBytes(tt.maxBytes)
 			serializer.SetFieldSortOrder(SortFields)
+			serializer.SetFieldTypeSupport(tt.typeSupport)
 			output, err := serializer.Serialize(tt.input)
 			require.Equal(t, tt.err, err)
 			require.Equal(t, string(tt.output), string(output))
@@ -370,6 +380,7 @@ func BenchmarkSerializer(b *testing.B) {
 		b.Run(tt.name, func(b *testing.B) {
 			serializer := NewSerializer()
 			serializer.SetMaxLineBytes(tt.maxBytes)
+			serializer.SetFieldTypeSupport(tt.typeSupport)
 			for n := 0; n < b.N; n++ {
 				output, err := serializer.Serialize(tt.input)
 				_ = err

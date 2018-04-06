@@ -31,6 +31,17 @@ const LineProtocol_en_align int = 188
 
 //line plugins/parsers/influx/machine.go.rl:227
 
+type Handler interface {
+	SetMeasurement(name []byte)
+	AddTag(key []byte, value []byte)
+	AddInt(key []byte, value []byte)
+	AddUint(key []byte, value []byte)
+	AddFloat(key []byte, value []byte)
+	AddString(key []byte, value []byte)
+	AddBool(key []byte, value []byte)
+	SetTimestamp(tm []byte)
+}
+
 type machine struct {
 	data       []byte
 	cs         int
@@ -46,22 +57,22 @@ func NewMachine(handler Handler) *machine {
 	}
 
 	
-//line plugins/parsers/influx/machine.go.rl:243
+//line plugins/parsers/influx/machine.go.rl:254
 	
-//line plugins/parsers/influx/machine.go.rl:244
+//line plugins/parsers/influx/machine.go.rl:255
 	
-//line plugins/parsers/influx/machine.go.rl:245
+//line plugins/parsers/influx/machine.go.rl:256
 	
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:257
 	
-//line plugins/parsers/influx/machine.go.rl:247
+//line plugins/parsers/influx/machine.go.rl:258
 	
-//line plugins/parsers/influx/machine.go:60
+//line plugins/parsers/influx/machine.go:71
 	{
 	 m.cs = LineProtocol_start
 	}
 
-//line plugins/parsers/influx/machine.go.rl:248
+//line plugins/parsers/influx/machine.go.rl:259
 
 	return m
 }
@@ -75,12 +86,12 @@ func (m *machine) SetData(data []byte) {
 	m.err = nil
 
 	
-//line plugins/parsers/influx/machine.go:79
+//line plugins/parsers/influx/machine.go:90
 	{
 	 m.cs = LineProtocol_start
 	}
 
-//line plugins/parsers/influx/machine.go.rl:261
+//line plugins/parsers/influx/machine.go.rl:272
 	m.cs = LineProtocol_en_align
 }
 
@@ -97,7 +108,7 @@ func (m *machine) ParseLine() bool {
 	var yield bool
 
 	
-//line plugins/parsers/influx/machine.go:101
+//line plugins/parsers/influx/machine.go:112
 	{
 	if ( m.p) == ( m.pe) {
 		goto _test_eof
@@ -2478,7 +2489,7 @@ tr0:
 			goto _test_eof2
 		}
 	st_case_2:
-//line plugins/parsers/influx/machine.go:2482
+//line plugins/parsers/influx/machine.go:2493
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr5
@@ -2514,7 +2525,7 @@ tr58:
 			goto _test_eof3
 		}
 	st_case_3:
-//line plugins/parsers/influx/machine.go:2518
+//line plugins/parsers/influx/machine.go:2529
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr5
@@ -2546,7 +2557,7 @@ tr9:
 			goto _test_eof4
 		}
 	st_case_4:
-//line plugins/parsers/influx/machine.go:2550
+//line plugins/parsers/influx/machine.go:2561
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr5
@@ -2750,7 +2761,7 @@ tr210:
 	{( m.p)++; goto _out }
 
 	goto _again
-//line plugins/parsers/influx/machine.go:2754
+//line plugins/parsers/influx/machine.go:2765
 st_case_0:
 	st0:
 		 m.cs = 0
@@ -2766,7 +2777,7 @@ tr14:
 			goto _test_eof5
 		}
 	st_case_5:
-//line plugins/parsers/influx/machine.go:2770
+//line plugins/parsers/influx/machine.go:2781
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st6
@@ -2812,7 +2823,7 @@ tr25:
 			goto _test_eof7
 		}
 	st_case_7:
-//line plugins/parsers/influx/machine.go:2816
+//line plugins/parsers/influx/machine.go:2827
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto tr29
@@ -2841,7 +2852,7 @@ tr29:
 			goto _test_eof191
 		}
 	st_case_191:
-//line plugins/parsers/influx/machine.go:2845
+//line plugins/parsers/influx/machine.go:2856
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -2885,7 +2896,7 @@ tr369:
 			goto _test_eof192
 		}
 	st_case_192:
-//line plugins/parsers/influx/machine.go:2889
+//line plugins/parsers/influx/machine.go:2900
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -2984,7 +2995,7 @@ tr370:
 			goto _test_eof193
 		}
 	st_case_193:
-//line plugins/parsers/influx/machine.go:2988
+//line plugins/parsers/influx/machine.go:2999
 		goto tr1
 tr332:
 //line plugins/parsers/influx/machine.go.rl:18
@@ -2997,7 +3008,7 @@ tr332:
 			goto _test_eof8
 		}
 	st_case_8:
-//line plugins/parsers/influx/machine.go:3001
+//line plugins/parsers/influx/machine.go:3012
 		if 48 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 57 {
 			goto st194
 		}
@@ -3013,7 +3024,7 @@ tr333:
 			goto _test_eof194
 		}
 	st_case_194:
-//line plugins/parsers/influx/machine.go:3017
+//line plugins/parsers/influx/machine.go:3028
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr335
@@ -3042,7 +3053,7 @@ tr334:
 			goto _test_eof195
 		}
 	st_case_195:
-//line plugins/parsers/influx/machine.go:3046
+//line plugins/parsers/influx/machine.go:3057
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -3475,7 +3486,7 @@ tr371:
 			goto _test_eof9
 		}
 	st_case_9:
-//line plugins/parsers/influx/machine.go:3479
+//line plugins/parsers/influx/machine.go:3490
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr5
@@ -3506,7 +3517,7 @@ tr12:
 			goto _test_eof10
 		}
 	st_case_10:
-//line plugins/parsers/influx/machine.go:3510
+//line plugins/parsers/influx/machine.go:3521
 		switch {
 		case ( m.data)[( m.p)] > 10:
 			if 12 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 13 {
@@ -3527,7 +3538,7 @@ tr27:
 			goto _test_eof11
 		}
 	st_case_11:
-//line plugins/parsers/influx/machine.go:3531
+//line plugins/parsers/influx/machine.go:3542
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st7
@@ -3546,7 +3557,7 @@ tr17:
 			goto _test_eof12
 		}
 	st_case_12:
-//line plugins/parsers/influx/machine.go:3550
+//line plugins/parsers/influx/machine.go:3561
 		if ( m.data)[( m.p)] == 48 {
 			goto st214
 		}
@@ -3592,7 +3603,7 @@ tr18:
 			goto _test_eof215
 		}
 	st_case_215:
-//line plugins/parsers/influx/machine.go:3596
+//line plugins/parsers/influx/machine.go:3607
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr356
@@ -3728,7 +3739,7 @@ tr19:
 			goto _test_eof219
 		}
 	st_case_219:
-//line plugins/parsers/influx/machine.go:3732
+//line plugins/parsers/influx/machine.go:3743
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr356
@@ -3783,7 +3794,7 @@ tr20:
 			goto _test_eof221
 		}
 	st_case_221:
-//line plugins/parsers/influx/machine.go:3787
+//line plugins/parsers/influx/machine.go:3798
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr356
@@ -3824,7 +3835,7 @@ tr21:
 			goto _test_eof222
 		}
 	st_case_222:
-//line plugins/parsers/influx/machine.go:3828
+//line plugins/parsers/influx/machine.go:3839
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr370
@@ -3927,7 +3938,7 @@ tr22:
 			goto _test_eof224
 		}
 	st_case_224:
-//line plugins/parsers/influx/machine.go:3931
+//line plugins/parsers/influx/machine.go:3942
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr370
@@ -3975,7 +3986,7 @@ tr23:
 			goto _test_eof225
 		}
 	st_case_225:
-//line plugins/parsers/influx/machine.go:3979
+//line plugins/parsers/influx/machine.go:3990
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr370
@@ -4003,7 +4014,7 @@ tr24:
 			goto _test_eof226
 		}
 	st_case_226:
-//line plugins/parsers/influx/machine.go:4007
+//line plugins/parsers/influx/machine.go:4018
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr370
@@ -4031,7 +4042,7 @@ tr11:
 			goto _test_eof23
 		}
 	st_case_23:
-//line plugins/parsers/influx/machine.go:4035
+//line plugins/parsers/influx/machine.go:4046
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr5
@@ -4063,7 +4074,7 @@ tr6:
 			goto _test_eof24
 		}
 	st_case_24:
-//line plugins/parsers/influx/machine.go:4067
+//line plugins/parsers/influx/machine.go:4078
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr5
@@ -4095,7 +4106,7 @@ tr42:
 			goto _test_eof25
 		}
 	st_case_25:
-//line plugins/parsers/influx/machine.go:4099
+//line plugins/parsers/influx/machine.go:4110
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr5
@@ -4137,7 +4148,7 @@ tr43:
 			goto _test_eof26
 		}
 	st_case_26:
-//line plugins/parsers/influx/machine.go:4141
+//line plugins/parsers/influx/machine.go:4152
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr5
@@ -4175,7 +4186,7 @@ tr61:
 			goto _test_eof27
 		}
 	st_case_27:
-//line plugins/parsers/influx/machine.go:4179
+//line plugins/parsers/influx/machine.go:4190
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr50
@@ -4206,7 +4217,7 @@ tr49:
 			goto _test_eof28
 		}
 	st_case_28:
-//line plugins/parsers/influx/machine.go:4210
+//line plugins/parsers/influx/machine.go:4221
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr50
@@ -4237,7 +4248,7 @@ tr53:
 			goto _test_eof29
 		}
 	st_case_29:
-//line plugins/parsers/influx/machine.go:4241
+//line plugins/parsers/influx/machine.go:4252
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr50
@@ -4268,7 +4279,7 @@ tr55:
 			goto _test_eof30
 		}
 	st_case_30:
-//line plugins/parsers/influx/machine.go:4272
+//line plugins/parsers/influx/machine.go:4283
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr59
@@ -4300,7 +4311,7 @@ tr60:
 			goto _test_eof31
 		}
 	st_case_31:
-//line plugins/parsers/influx/machine.go:4304
+//line plugins/parsers/influx/machine.go:4315
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr59
@@ -4332,7 +4343,7 @@ tr63:
 			goto _test_eof32
 		}
 	st_case_32:
-//line plugins/parsers/influx/machine.go:4336
+//line plugins/parsers/influx/machine.go:4347
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr59
@@ -4374,7 +4385,7 @@ tr64:
 			goto _test_eof33
 		}
 	st_case_33:
-//line plugins/parsers/influx/machine.go:4378
+//line plugins/parsers/influx/machine.go:4389
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr59
@@ -4406,7 +4417,7 @@ tr65:
 			goto _test_eof34
 		}
 	st_case_34:
-//line plugins/parsers/influx/machine.go:4410
+//line plugins/parsers/influx/machine.go:4421
 		switch {
 		case ( m.data)[( m.p)] > 10:
 			if 12 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 13 {
@@ -4427,7 +4438,7 @@ tr56:
 			goto _test_eof35
 		}
 	st_case_35:
-//line plugins/parsers/influx/machine.go:4431
+//line plugins/parsers/influx/machine.go:4442
 		switch {
 		case ( m.data)[( m.p)] > 10:
 			if 12 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 13 {
@@ -4448,7 +4459,7 @@ tr51:
 			goto _test_eof36
 		}
 	st_case_36:
-//line plugins/parsers/influx/machine.go:4452
+//line plugins/parsers/influx/machine.go:4463
 		switch {
 		case ( m.data)[( m.p)] > 10:
 			if 12 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 13 {
@@ -4469,7 +4480,7 @@ tr47:
 			goto _test_eof37
 		}
 	st_case_37:
-//line plugins/parsers/influx/machine.go:4473
+//line plugins/parsers/influx/machine.go:4484
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr5
@@ -4545,7 +4556,7 @@ tr78:
 			goto _test_eof39
 		}
 	st_case_39:
-//line plugins/parsers/influx/machine.go:4549
+//line plugins/parsers/influx/machine.go:4560
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -4593,7 +4604,7 @@ tr229:
 			goto _test_eof40
 		}
 	st_case_40:
-//line plugins/parsers/influx/machine.go:4597
+//line plugins/parsers/influx/machine.go:4608
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -4627,7 +4638,7 @@ tr90:
 			goto _test_eof41
 		}
 	st_case_41:
-//line plugins/parsers/influx/machine.go:4631
+//line plugins/parsers/influx/machine.go:4642
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -4680,7 +4691,7 @@ tr112:
 			goto _test_eof227
 		}
 	st_case_227:
-//line plugins/parsers/influx/machine.go:4684
+//line plugins/parsers/influx/machine.go:4695
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -4744,7 +4755,7 @@ tr377:
 			goto _test_eof42
 		}
 	st_case_42:
-//line plugins/parsers/influx/machine.go:4748
+//line plugins/parsers/influx/machine.go:4759
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr99
@@ -4779,7 +4790,7 @@ tr378:
 			goto _test_eof229
 		}
 	st_case_229:
-//line plugins/parsers/influx/machine.go:4783
+//line plugins/parsers/influx/machine.go:4794
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr335
@@ -4816,7 +4827,7 @@ tr379:
 			goto _test_eof230
 		}
 	st_case_230:
-//line plugins/parsers/influx/machine.go:4820
+//line plugins/parsers/influx/machine.go:4831
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -5383,7 +5394,7 @@ tr97:
 			goto _test_eof43
 		}
 	st_case_43:
-//line plugins/parsers/influx/machine.go:5387
+//line plugins/parsers/influx/machine.go:5398
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto tr101
@@ -5419,7 +5430,7 @@ tr101:
 			goto _test_eof249
 		}
 	st_case_249:
-//line plugins/parsers/influx/machine.go:5423
+//line plugins/parsers/influx/machine.go:5434
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr400
@@ -5473,7 +5484,7 @@ tr442:
 			goto _test_eof250
 		}
 	st_case_250:
-//line plugins/parsers/influx/machine.go:5477
+//line plugins/parsers/influx/machine.go:5488
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -5589,7 +5600,7 @@ tr400:
 			goto _test_eof251
 		}
 	st_case_251:
-//line plugins/parsers/influx/machine.go:5593
+//line plugins/parsers/influx/machine.go:5604
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto tr29
@@ -5608,7 +5619,7 @@ tr404:
 			goto _test_eof44
 		}
 	st_case_44:
-//line plugins/parsers/influx/machine.go:5612
+//line plugins/parsers/influx/machine.go:5623
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto tr29
@@ -5630,7 +5641,7 @@ tr405:
 			goto _test_eof252
 		}
 	st_case_252:
-//line plugins/parsers/influx/machine.go:5634
+//line plugins/parsers/influx/machine.go:5645
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr407
@@ -5663,7 +5674,7 @@ tr406:
 			goto _test_eof253
 		}
 	st_case_253:
-//line plugins/parsers/influx/machine.go:5667
+//line plugins/parsers/influx/machine.go:5678
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -6178,7 +6189,7 @@ tr457:
 			goto _test_eof45
 		}
 	st_case_45:
-//line plugins/parsers/influx/machine.go:6182
+//line plugins/parsers/influx/machine.go:6193
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -6211,7 +6222,7 @@ tr111:
 			goto _test_eof46
 		}
 	st_case_46:
-//line plugins/parsers/influx/machine.go:6215
+//line plugins/parsers/influx/machine.go:6226
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -6244,7 +6255,7 @@ tr115:
 			goto _test_eof47
 		}
 	st_case_47:
-//line plugins/parsers/influx/machine.go:6248
+//line plugins/parsers/influx/machine.go:6259
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto tr117
@@ -6280,7 +6291,7 @@ tr117:
 			goto _test_eof272
 		}
 	st_case_272:
-//line plugins/parsers/influx/machine.go:6284
+//line plugins/parsers/influx/machine.go:6295
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr400
@@ -6334,7 +6345,7 @@ tr444:
 			goto _test_eof48
 		}
 	st_case_48:
-//line plugins/parsers/influx/machine.go:6338
+//line plugins/parsers/influx/machine.go:6349
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -6367,7 +6378,7 @@ tr118:
 			goto _test_eof49
 		}
 	st_case_49:
-//line plugins/parsers/influx/machine.go:6371
+//line plugins/parsers/influx/machine.go:6382
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -6400,7 +6411,7 @@ tr121:
 			goto _test_eof50
 		}
 	st_case_50:
-//line plugins/parsers/influx/machine.go:6404
+//line plugins/parsers/influx/machine.go:6415
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto tr117
@@ -6436,7 +6447,7 @@ tr123:
 			goto _test_eof51
 		}
 	st_case_51:
-//line plugins/parsers/influx/machine.go:6440
+//line plugins/parsers/influx/machine.go:6451
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto tr29
@@ -6491,7 +6502,7 @@ tr124:
 			goto _test_eof274
 		}
 	st_case_274:
-//line plugins/parsers/influx/machine.go:6495
+//line plugins/parsers/influx/machine.go:6506
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -6549,7 +6560,7 @@ tr133:
 			goto _test_eof275
 		}
 	st_case_275:
-//line plugins/parsers/influx/machine.go:6553
+//line plugins/parsers/influx/machine.go:6564
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -6682,7 +6693,7 @@ tr125:
 			goto _test_eof279
 		}
 	st_case_279:
-//line plugins/parsers/influx/machine.go:6686
+//line plugins/parsers/influx/machine.go:6697
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -6745,7 +6756,7 @@ tr126:
 			goto _test_eof281
 		}
 	st_case_281:
-//line plugins/parsers/influx/machine.go:6749
+//line plugins/parsers/influx/machine.go:6760
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -6790,7 +6801,7 @@ tr127:
 			goto _test_eof282
 		}
 	st_case_282:
-//line plugins/parsers/influx/machine.go:6794
+//line plugins/parsers/influx/machine.go:6805
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -6931,7 +6942,7 @@ tr128:
 			goto _test_eof284
 		}
 	st_case_284:
-//line plugins/parsers/influx/machine.go:6935
+//line plugins/parsers/influx/machine.go:6946
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -6993,7 +7004,7 @@ tr129:
 			goto _test_eof285
 		}
 	st_case_285:
-//line plugins/parsers/influx/machine.go:6997
+//line plugins/parsers/influx/machine.go:7008
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -7025,7 +7036,7 @@ tr130:
 			goto _test_eof286
 		}
 	st_case_286:
-//line plugins/parsers/influx/machine.go:7029
+//line plugins/parsers/influx/machine.go:7040
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -7057,7 +7068,7 @@ tr119:
 			goto _test_eof62
 		}
 	st_case_62:
-//line plugins/parsers/influx/machine.go:7061
+//line plugins/parsers/influx/machine.go:7072
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st49
@@ -7084,7 +7095,7 @@ tr102:
 			goto _test_eof63
 		}
 	st_case_63:
-//line plugins/parsers/influx/machine.go:7088
+//line plugins/parsers/influx/machine.go:7099
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto tr29
@@ -7139,7 +7150,7 @@ tr103:
 			goto _test_eof288
 		}
 	st_case_288:
-//line plugins/parsers/influx/machine.go:7143
+//line plugins/parsers/influx/machine.go:7154
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -7299,7 +7310,7 @@ tr104:
 			goto _test_eof292
 		}
 	st_case_292:
-//line plugins/parsers/influx/machine.go:7303
+//line plugins/parsers/influx/machine.go:7314
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -7362,7 +7373,7 @@ tr105:
 			goto _test_eof294
 		}
 	st_case_294:
-//line plugins/parsers/influx/machine.go:7366
+//line plugins/parsers/influx/machine.go:7377
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -7407,7 +7418,7 @@ tr106:
 			goto _test_eof295
 		}
 	st_case_295:
-//line plugins/parsers/influx/machine.go:7411
+//line plugins/parsers/influx/machine.go:7422
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -7548,7 +7559,7 @@ tr107:
 			goto _test_eof297
 		}
 	st_case_297:
-//line plugins/parsers/influx/machine.go:7552
+//line plugins/parsers/influx/machine.go:7563
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -7610,7 +7621,7 @@ tr108:
 			goto _test_eof298
 		}
 	st_case_298:
-//line plugins/parsers/influx/machine.go:7614
+//line plugins/parsers/influx/machine.go:7625
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -7642,7 +7653,7 @@ tr109:
 			goto _test_eof299
 		}
 	st_case_299:
-//line plugins/parsers/influx/machine.go:7646
+//line plugins/parsers/influx/machine.go:7657
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -7674,7 +7685,7 @@ tr113:
 			goto _test_eof74
 		}
 	st_case_74:
-//line plugins/parsers/influx/machine.go:7678
+//line plugins/parsers/influx/machine.go:7689
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st46
@@ -7701,7 +7712,7 @@ tr94:
 			goto _test_eof75
 		}
 	st_case_75:
-//line plugins/parsers/influx/machine.go:7705
+//line plugins/parsers/influx/machine.go:7716
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st41
@@ -7728,7 +7739,7 @@ tr92:
 			goto _test_eof76
 		}
 	st_case_76:
-//line plugins/parsers/influx/machine.go:7732
+//line plugins/parsers/influx/machine.go:7743
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -7772,7 +7783,7 @@ tr80:
 			goto _test_eof77
 		}
 	st_case_77:
-//line plugins/parsers/influx/machine.go:7776
+//line plugins/parsers/influx/machine.go:7787
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -7806,7 +7817,7 @@ tr150:
 			goto _test_eof78
 		}
 	st_case_78:
-//line plugins/parsers/influx/machine.go:7810
+//line plugins/parsers/influx/machine.go:7821
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -7850,7 +7861,7 @@ tr151:
 			goto _test_eof79
 		}
 	st_case_79:
-//line plugins/parsers/influx/machine.go:7854
+//line plugins/parsers/influx/machine.go:7865
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -7894,7 +7905,7 @@ tr156:
 			goto _test_eof300
 		}
 	st_case_300:
-//line plugins/parsers/influx/machine.go:7898
+//line plugins/parsers/influx/machine.go:7909
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -8012,7 +8023,7 @@ tr804:
 			goto _test_eof301
 		}
 	st_case_301:
-//line plugins/parsers/influx/machine.go:8016
+//line plugins/parsers/influx/machine.go:8027
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -8051,7 +8062,7 @@ tr466:
 			goto _test_eof302
 		}
 	st_case_302:
-//line plugins/parsers/influx/machine.go:8055
+//line plugins/parsers/influx/machine.go:8066
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -8100,7 +8111,7 @@ tr467:
 			goto _test_eof303
 		}
 	st_case_303:
-//line plugins/parsers/influx/machine.go:8104
+//line plugins/parsers/influx/machine.go:8115
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -8139,7 +8150,7 @@ tr468:
 			goto _test_eof80
 		}
 	st_case_80:
-//line plugins/parsers/influx/machine.go:8143
+//line plugins/parsers/influx/machine.go:8154
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr99
@@ -8176,7 +8187,7 @@ tr469:
 			goto _test_eof304
 		}
 	st_case_304:
-//line plugins/parsers/influx/machine.go:8180
+//line plugins/parsers/influx/machine.go:8191
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr335
@@ -8239,7 +8250,7 @@ tr500:
 			goto _test_eof305
 		}
 	st_case_305:
-//line plugins/parsers/influx/machine.go:8243
+//line plugins/parsers/influx/machine.go:8254
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -8271,7 +8282,7 @@ tr474:
 			goto _test_eof306
 		}
 	st_case_306:
-//line plugins/parsers/influx/machine.go:8275
+//line plugins/parsers/influx/machine.go:8286
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -8317,7 +8328,7 @@ tr471:
 			goto _test_eof307
 		}
 	st_case_307:
-//line plugins/parsers/influx/machine.go:8321
+//line plugins/parsers/influx/machine.go:8332
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -8349,7 +8360,7 @@ tr44:
 			goto _test_eof81
 		}
 	st_case_81:
-//line plugins/parsers/influx/machine.go:8353
+//line plugins/parsers/influx/machine.go:8364
 		switch {
 		case ( m.data)[( m.p)] > 10:
 			if 12 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 13 {
@@ -8991,7 +9002,7 @@ tr806:
 			goto _test_eof82
 		}
 	st_case_82:
-//line plugins/parsers/influx/machine.go:8995
+//line plugins/parsers/influx/machine.go:9006
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr59
@@ -9022,7 +9033,7 @@ tr160:
 			goto _test_eof83
 		}
 	st_case_83:
-//line plugins/parsers/influx/machine.go:9026
+//line plugins/parsers/influx/machine.go:9037
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr59
@@ -9057,7 +9068,7 @@ tr163:
 			goto _test_eof84
 		}
 	st_case_84:
-//line plugins/parsers/influx/machine.go:9061
+//line plugins/parsers/influx/machine.go:9072
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr59
@@ -9108,7 +9119,7 @@ tr165:
 			goto _test_eof85
 		}
 	st_case_85:
-//line plugins/parsers/influx/machine.go:9112
+//line plugins/parsers/influx/machine.go:9123
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr25
@@ -9142,7 +9153,7 @@ tr174:
 			goto _test_eof86
 		}
 	st_case_86:
-//line plugins/parsers/influx/machine.go:9146
+//line plugins/parsers/influx/machine.go:9157
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -9186,7 +9197,7 @@ tr175:
 			goto _test_eof87
 		}
 	st_case_87:
-//line plugins/parsers/influx/machine.go:9190
+//line plugins/parsers/influx/machine.go:9201
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -9220,7 +9231,7 @@ tr186:
 			goto _test_eof88
 		}
 	st_case_88:
-//line plugins/parsers/influx/machine.go:9224
+//line plugins/parsers/influx/machine.go:9235
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -9253,7 +9264,7 @@ tr191:
 			goto _test_eof89
 		}
 	st_case_89:
-//line plugins/parsers/influx/machine.go:9257
+//line plugins/parsers/influx/machine.go:9268
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto tr101
@@ -9289,7 +9300,7 @@ tr189:
 			goto _test_eof90
 		}
 	st_case_90:
-//line plugins/parsers/influx/machine.go:9293
+//line plugins/parsers/influx/machine.go:9304
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st88
@@ -9316,7 +9327,7 @@ tr188:
 			goto _test_eof91
 		}
 	st_case_91:
-//line plugins/parsers/influx/machine.go:9320
+//line plugins/parsers/influx/machine.go:9331
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -9360,7 +9371,7 @@ tr176:
 			goto _test_eof92
 		}
 	st_case_92:
-//line plugins/parsers/influx/machine.go:9364
+//line plugins/parsers/influx/machine.go:9375
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -9394,7 +9405,7 @@ tr193:
 			goto _test_eof93
 		}
 	st_case_93:
-//line plugins/parsers/influx/machine.go:9398
+//line plugins/parsers/influx/machine.go:9409
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -9438,7 +9449,7 @@ tr194:
 			goto _test_eof94
 		}
 	st_case_94:
-//line plugins/parsers/influx/machine.go:9442
+//line plugins/parsers/influx/machine.go:9453
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -9482,7 +9493,7 @@ tr199:
 			goto _test_eof326
 		}
 	st_case_326:
-//line plugins/parsers/influx/machine.go:9486
+//line plugins/parsers/influx/machine.go:9497
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -9524,7 +9535,7 @@ tr497:
 			goto _test_eof327
 		}
 	st_case_327:
-//line plugins/parsers/influx/machine.go:9528
+//line plugins/parsers/influx/machine.go:9539
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -9563,7 +9574,7 @@ tr498:
 			goto _test_eof95
 		}
 	st_case_95:
-//line plugins/parsers/influx/machine.go:9567
+//line plugins/parsers/influx/machine.go:9578
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr201
@@ -9600,7 +9611,7 @@ tr499:
 			goto _test_eof328
 		}
 	st_case_328:
-//line plugins/parsers/influx/machine.go:9604
+//line plugins/parsers/influx/machine.go:9615
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr335
@@ -9651,7 +9662,7 @@ tr501:
 			goto _test_eof329
 		}
 	st_case_329:
-//line plugins/parsers/influx/machine.go:9655
+//line plugins/parsers/influx/machine.go:9666
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -10228,7 +10239,7 @@ tr178:
 			goto _test_eof96
 		}
 	st_case_96:
-//line plugins/parsers/influx/machine.go:10232
+//line plugins/parsers/influx/machine.go:10243
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -10261,7 +10272,7 @@ tr203:
 			goto _test_eof97
 		}
 	st_case_97:
-//line plugins/parsers/influx/machine.go:10265
+//line plugins/parsers/influx/machine.go:10276
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -10304,7 +10315,7 @@ tr207:
 			goto _test_eof348
 		}
 	st_case_348:
-//line plugins/parsers/influx/machine.go:10308
+//line plugins/parsers/influx/machine.go:10319
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -10368,7 +10379,7 @@ tr523:
 			goto _test_eof98
 		}
 	st_case_98:
-//line plugins/parsers/influx/machine.go:10372
+//line plugins/parsers/influx/machine.go:10383
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr210
@@ -10403,7 +10414,7 @@ tr524:
 			goto _test_eof350
 		}
 	st_case_350:
-//line plugins/parsers/influx/machine.go:10407
+//line plugins/parsers/influx/machine.go:10418
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr335
@@ -10440,7 +10451,7 @@ tr525:
 			goto _test_eof351
 		}
 	st_case_351:
-//line plugins/parsers/influx/machine.go:10444
+//line plugins/parsers/influx/machine.go:10455
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -11007,7 +11018,7 @@ tr208:
 			goto _test_eof99
 		}
 	st_case_99:
-//line plugins/parsers/influx/machine.go:11011
+//line plugins/parsers/influx/machine.go:11022
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -11050,7 +11061,7 @@ tr183:
 			goto _test_eof370
 		}
 	st_case_370:
-//line plugins/parsers/influx/machine.go:11054
+//line plugins/parsers/influx/machine.go:11065
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -11122,7 +11133,7 @@ tr561:
 			goto _test_eof371
 		}
 	st_case_371:
-//line plugins/parsers/influx/machine.go:11126
+//line plugins/parsers/influx/machine.go:11137
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -11161,7 +11172,7 @@ tr179:
 			goto _test_eof100
 		}
 	st_case_100:
-//line plugins/parsers/influx/machine.go:11165
+//line plugins/parsers/influx/machine.go:11176
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st86
@@ -11188,7 +11199,7 @@ tr205:
 			goto _test_eof101
 		}
 	st_case_101:
-//line plugins/parsers/influx/machine.go:11192
+//line plugins/parsers/influx/machine.go:11203
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st97
@@ -11215,7 +11226,7 @@ tr196:
 			goto _test_eof102
 		}
 	st_case_102:
-//line plugins/parsers/influx/machine.go:11219
+//line plugins/parsers/influx/machine.go:11230
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st93
@@ -11242,7 +11253,7 @@ tr166:
 			goto _test_eof103
 		}
 	st_case_103:
-//line plugins/parsers/influx/machine.go:11246
+//line plugins/parsers/influx/machine.go:11257
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr59
@@ -11314,7 +11325,7 @@ tr167:
 			goto _test_eof373
 		}
 	st_case_373:
-//line plugins/parsers/influx/machine.go:11318
+//line plugins/parsers/influx/machine.go:11329
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr356
@@ -11514,7 +11525,7 @@ tr168:
 			goto _test_eof377
 		}
 	st_case_377:
-//line plugins/parsers/influx/machine.go:11518
+//line plugins/parsers/influx/machine.go:11529
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr356
@@ -11581,7 +11592,7 @@ tr169:
 			goto _test_eof379
 		}
 	st_case_379:
-//line plugins/parsers/influx/machine.go:11585
+//line plugins/parsers/influx/machine.go:11596
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr356
@@ -11628,7 +11639,7 @@ tr170:
 			goto _test_eof380
 		}
 	st_case_380:
-//line plugins/parsers/influx/machine.go:11632
+//line plugins/parsers/influx/machine.go:11643
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr370
@@ -11851,7 +11862,7 @@ tr171:
 			goto _test_eof382
 		}
 	st_case_382:
-//line plugins/parsers/influx/machine.go:11855
+//line plugins/parsers/influx/machine.go:11866
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr370
@@ -11941,7 +11952,7 @@ tr172:
 			goto _test_eof383
 		}
 	st_case_383:
-//line plugins/parsers/influx/machine.go:11945
+//line plugins/parsers/influx/machine.go:11956
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr370
@@ -11975,7 +11986,7 @@ tr173:
 			goto _test_eof384
 		}
 	st_case_384:
-//line plugins/parsers/influx/machine.go:11979
+//line plugins/parsers/influx/machine.go:11990
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr370
@@ -12009,7 +12020,7 @@ tr161:
 			goto _test_eof114
 		}
 	st_case_114:
-//line plugins/parsers/influx/machine.go:12013
+//line plugins/parsers/influx/machine.go:12024
 		switch {
 		case ( m.data)[( m.p)] > 10:
 			if 12 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 13 {
@@ -12046,7 +12057,7 @@ tr231:
 			goto _test_eof115
 		}
 	st_case_115:
-//line plugins/parsers/influx/machine.go:12050
+//line plugins/parsers/influx/machine.go:12061
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -12079,7 +12090,7 @@ tr221:
 			goto _test_eof116
 		}
 	st_case_116:
-//line plugins/parsers/influx/machine.go:12083
+//line plugins/parsers/influx/machine.go:12094
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -12112,7 +12123,7 @@ tr224:
 			goto _test_eof117
 		}
 	st_case_117:
-//line plugins/parsers/influx/machine.go:12116
+//line plugins/parsers/influx/machine.go:12127
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -12145,7 +12156,7 @@ tr226:
 			goto _test_eof118
 		}
 	st_case_118:
-//line plugins/parsers/influx/machine.go:12149
+//line plugins/parsers/influx/machine.go:12160
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -12179,7 +12190,7 @@ tr230:
 			goto _test_eof119
 		}
 	st_case_119:
-//line plugins/parsers/influx/machine.go:12183
+//line plugins/parsers/influx/machine.go:12194
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -12213,7 +12224,7 @@ tr233:
 			goto _test_eof120
 		}
 	st_case_120:
-//line plugins/parsers/influx/machine.go:12217
+//line plugins/parsers/influx/machine.go:12228
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -12257,7 +12268,7 @@ tr234:
 			goto _test_eof121
 		}
 	st_case_121:
-//line plugins/parsers/influx/machine.go:12261
+//line plugins/parsers/influx/machine.go:12272
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -12291,7 +12302,7 @@ tr235:
 			goto _test_eof122
 		}
 	st_case_122:
-//line plugins/parsers/influx/machine.go:12295
+//line plugins/parsers/influx/machine.go:12306
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st120
@@ -12318,7 +12329,7 @@ tr227:
 			goto _test_eof123
 		}
 	st_case_123:
-//line plugins/parsers/influx/machine.go:12322
+//line plugins/parsers/influx/machine.go:12333
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st118
@@ -12345,7 +12356,7 @@ tr222:
 			goto _test_eof124
 		}
 	st_case_124:
-//line plugins/parsers/influx/machine.go:12349
+//line plugins/parsers/influx/machine.go:12360
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st116
@@ -12372,7 +12383,7 @@ tr157:
 			goto _test_eof125
 		}
 	st_case_125:
-//line plugins/parsers/influx/machine.go:12376
+//line plugins/parsers/influx/machine.go:12387
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -12423,7 +12434,7 @@ tr239:
 			goto _test_eof385
 		}
 	st_case_385:
-//line plugins/parsers/influx/machine.go:12427
+//line plugins/parsers/influx/machine.go:12438
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr400
@@ -12551,7 +12562,7 @@ tr786:
 			goto _test_eof386
 		}
 	st_case_386:
-//line plugins/parsers/influx/machine.go:12555
+//line plugins/parsers/influx/machine.go:12566
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -12592,7 +12603,7 @@ tr571:
 			goto _test_eof387
 		}
 	st_case_387:
-//line plugins/parsers/influx/machine.go:12596
+//line plugins/parsers/influx/machine.go:12607
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -12633,7 +12644,7 @@ tr572:
 			goto _test_eof126
 		}
 	st_case_126:
-//line plugins/parsers/influx/machine.go:12637
+//line plugins/parsers/influx/machine.go:12648
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -12670,7 +12681,7 @@ tr573:
 			goto _test_eof388
 		}
 	st_case_388:
-//line plugins/parsers/influx/machine.go:12674
+//line plugins/parsers/influx/machine.go:12685
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr407
@@ -12709,7 +12720,7 @@ tr574:
 			goto _test_eof389
 		}
 	st_case_389:
-//line plugins/parsers/influx/machine.go:12713
+//line plugins/parsers/influx/machine.go:12724
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -13358,7 +13369,7 @@ tr787:
 			goto _test_eof408
 		}
 	st_case_408:
-//line plugins/parsers/influx/machine.go:13362
+//line plugins/parsers/influx/machine.go:13373
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -13403,7 +13414,7 @@ tr595:
 			goto _test_eof409
 		}
 	st_case_409:
-//line plugins/parsers/influx/machine.go:13407
+//line plugins/parsers/influx/machine.go:13418
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -13444,7 +13455,7 @@ tr596:
 			goto _test_eof127
 		}
 	st_case_127:
-//line plugins/parsers/influx/machine.go:13448
+//line plugins/parsers/influx/machine.go:13459
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -13483,7 +13494,7 @@ tr597:
 			goto _test_eof410
 		}
 	st_case_410:
-//line plugins/parsers/influx/machine.go:13487
+//line plugins/parsers/influx/machine.go:13498
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr407
@@ -13548,7 +13559,7 @@ tr732:
 			goto _test_eof411
 		}
 	st_case_411:
-//line plugins/parsers/influx/machine.go:13552
+//line plugins/parsers/influx/machine.go:13563
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -13582,7 +13593,7 @@ tr602:
 			goto _test_eof412
 		}
 	st_case_412:
-//line plugins/parsers/influx/machine.go:13586
+//line plugins/parsers/influx/machine.go:13597
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -13630,7 +13641,7 @@ tr599:
 			goto _test_eof413
 		}
 	st_case_413:
-//line plugins/parsers/influx/machine.go:13634
+//line plugins/parsers/influx/machine.go:13645
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -13664,7 +13675,7 @@ tr153:
 			goto _test_eof128
 		}
 	st_case_128:
-//line plugins/parsers/influx/machine.go:13668
+//line plugins/parsers/influx/machine.go:13679
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st78
@@ -14272,7 +14283,7 @@ tr87:
 			goto _test_eof432
 		}
 	st_case_432:
-//line plugins/parsers/influx/machine.go:14276
+//line plugins/parsers/influx/machine.go:14287
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -14342,7 +14353,7 @@ tr805:
 			goto _test_eof433
 		}
 	st_case_433:
-//line plugins/parsers/influx/machine.go:14346
+//line plugins/parsers/influx/machine.go:14357
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -14381,7 +14392,7 @@ tr2:
 			goto _test_eof129
 		}
 	st_case_129:
-//line plugins/parsers/influx/machine.go:14385
+//line plugins/parsers/influx/machine.go:14396
 		switch {
 		case ( m.data)[( m.p)] > 10:
 			if 12 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 13 {
@@ -14486,7 +14497,7 @@ tr788:
 			goto _test_eof130
 		}
 	st_case_130:
-//line plugins/parsers/influx/machine.go:14490
+//line plugins/parsers/influx/machine.go:14501
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -14519,7 +14530,7 @@ tr250:
 			goto _test_eof131
 		}
 	st_case_131:
-//line plugins/parsers/influx/machine.go:14523
+//line plugins/parsers/influx/machine.go:14534
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -14562,7 +14573,7 @@ tr254:
 			goto _test_eof434
 		}
 	st_case_434:
-//line plugins/parsers/influx/machine.go:14566
+//line plugins/parsers/influx/machine.go:14577
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -14626,7 +14637,7 @@ tr624:
 			goto _test_eof132
 		}
 	st_case_132:
-//line plugins/parsers/influx/machine.go:14630
+//line plugins/parsers/influx/machine.go:14641
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr201
@@ -14661,7 +14672,7 @@ tr625:
 			goto _test_eof436
 		}
 	st_case_436:
-//line plugins/parsers/influx/machine.go:14665
+//line plugins/parsers/influx/machine.go:14676
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr335
@@ -14698,7 +14709,7 @@ tr626:
 			goto _test_eof437
 		}
 	st_case_437:
-//line plugins/parsers/influx/machine.go:14702
+//line plugins/parsers/influx/machine.go:14713
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -15269,7 +15280,7 @@ tr255:
 			goto _test_eof133
 		}
 	st_case_133:
-//line plugins/parsers/influx/machine.go:15273
+//line plugins/parsers/influx/machine.go:15284
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -15324,7 +15335,7 @@ tr258:
 			goto _test_eof456
 		}
 	st_case_456:
-//line plugins/parsers/influx/machine.go:15328
+//line plugins/parsers/influx/machine.go:15339
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr400
@@ -15408,7 +15419,7 @@ tr715:
 			goto _test_eof457
 		}
 	st_case_457:
-//line plugins/parsers/influx/machine.go:15412
+//line plugins/parsers/influx/machine.go:15423
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -15449,7 +15460,7 @@ tr650:
 			goto _test_eof458
 		}
 	st_case_458:
-//line plugins/parsers/influx/machine.go:15453
+//line plugins/parsers/influx/machine.go:15464
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -15490,7 +15501,7 @@ tr651:
 			goto _test_eof134
 		}
 	st_case_134:
-//line plugins/parsers/influx/machine.go:15494
+//line plugins/parsers/influx/machine.go:15505
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -15527,7 +15538,7 @@ tr652:
 			goto _test_eof459
 		}
 	st_case_459:
-//line plugins/parsers/influx/machine.go:15531
+//line plugins/parsers/influx/machine.go:15542
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr407
@@ -15566,7 +15577,7 @@ tr653:
 			goto _test_eof460
 		}
 	st_case_460:
-//line plugins/parsers/influx/machine.go:15570
+//line plugins/parsers/influx/machine.go:15581
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -16215,7 +16226,7 @@ tr716:
 			goto _test_eof479
 		}
 	st_case_479:
-//line plugins/parsers/influx/machine.go:16219
+//line plugins/parsers/influx/machine.go:16230
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -16260,7 +16271,7 @@ tr674:
 			goto _test_eof480
 		}
 	st_case_480:
-//line plugins/parsers/influx/machine.go:16264
+//line plugins/parsers/influx/machine.go:16275
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -16301,7 +16312,7 @@ tr675:
 			goto _test_eof135
 		}
 	st_case_135:
-//line plugins/parsers/influx/machine.go:16305
+//line plugins/parsers/influx/machine.go:16316
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -16340,7 +16351,7 @@ tr676:
 			goto _test_eof481
 		}
 	st_case_481:
-//line plugins/parsers/influx/machine.go:16344
+//line plugins/parsers/influx/machine.go:16355
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr407
@@ -16389,7 +16400,7 @@ tr677:
 			goto _test_eof482
 		}
 	st_case_482:
-//line plugins/parsers/influx/machine.go:16393
+//line plugins/parsers/influx/machine.go:16404
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -16423,7 +16434,7 @@ tr681:
 			goto _test_eof483
 		}
 	st_case_483:
-//line plugins/parsers/influx/machine.go:16427
+//line plugins/parsers/influx/machine.go:16438
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -16471,7 +16482,7 @@ tr678:
 			goto _test_eof484
 		}
 	st_case_484:
-//line plugins/parsers/influx/machine.go:16475
+//line plugins/parsers/influx/machine.go:16486
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -17120,7 +17131,7 @@ tr717:
 			goto _test_eof136
 		}
 	st_case_136:
-//line plugins/parsers/influx/machine.go:17124
+//line plugins/parsers/influx/machine.go:17135
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -17153,7 +17164,7 @@ tr269:
 			goto _test_eof137
 		}
 	st_case_137:
-//line plugins/parsers/influx/machine.go:17157
+//line plugins/parsers/influx/machine.go:17168
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -17190,7 +17201,7 @@ tr272:
 			goto _test_eof138
 		}
 	st_case_138:
-//line plugins/parsers/influx/machine.go:17194
+//line plugins/parsers/influx/machine.go:17205
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto st7
@@ -17241,7 +17252,7 @@ tr274:
 			goto _test_eof139
 		}
 	st_case_139:
-//line plugins/parsers/influx/machine.go:17245
+//line plugins/parsers/influx/machine.go:17256
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -17317,7 +17328,7 @@ tr275:
 			goto _test_eof504
 		}
 	st_case_504:
-//line plugins/parsers/influx/machine.go:17321
+//line plugins/parsers/influx/machine.go:17332
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -17396,7 +17407,7 @@ tr284:
 			goto _test_eof505
 		}
 	st_case_505:
-//line plugins/parsers/influx/machine.go:17400
+//line plugins/parsers/influx/machine.go:17411
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -17564,7 +17575,7 @@ tr276:
 			goto _test_eof509
 		}
 	st_case_509:
-//line plugins/parsers/influx/machine.go:17568
+//line plugins/parsers/influx/machine.go:17579
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -17635,7 +17646,7 @@ tr277:
 			goto _test_eof511
 		}
 	st_case_511:
-//line plugins/parsers/influx/machine.go:17639
+//line plugins/parsers/influx/machine.go:17650
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -17684,7 +17695,7 @@ tr278:
 			goto _test_eof512
 		}
 	st_case_512:
-//line plugins/parsers/influx/machine.go:17688
+//line plugins/parsers/influx/machine.go:17699
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -17923,7 +17934,7 @@ tr279:
 			goto _test_eof514
 		}
 	st_case_514:
-//line plugins/parsers/influx/machine.go:17927
+//line plugins/parsers/influx/machine.go:17938
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -18019,7 +18030,7 @@ tr280:
 			goto _test_eof515
 		}
 	st_case_515:
-//line plugins/parsers/influx/machine.go:18023
+//line plugins/parsers/influx/machine.go:18034
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -18055,7 +18066,7 @@ tr281:
 			goto _test_eof516
 		}
 	st_case_516:
-//line plugins/parsers/influx/machine.go:18059
+//line plugins/parsers/influx/machine.go:18070
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -18091,7 +18102,7 @@ tr270:
 			goto _test_eof150
 		}
 	st_case_150:
-//line plugins/parsers/influx/machine.go:18095
+//line plugins/parsers/influx/machine.go:18106
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st137
@@ -18118,7 +18129,7 @@ tr259:
 			goto _test_eof151
 		}
 	st_case_151:
-//line plugins/parsers/influx/machine.go:18122
+//line plugins/parsers/influx/machine.go:18133
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -18228,7 +18239,7 @@ tr763:
 			goto _test_eof518
 		}
 	st_case_518:
-//line plugins/parsers/influx/machine.go:18232
+//line plugins/parsers/influx/machine.go:18243
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -18273,7 +18284,7 @@ tr729:
 			goto _test_eof519
 		}
 	st_case_519:
-//line plugins/parsers/influx/machine.go:18277
+//line plugins/parsers/influx/machine.go:18288
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -18314,7 +18325,7 @@ tr730:
 			goto _test_eof152
 		}
 	st_case_152:
-//line plugins/parsers/influx/machine.go:18318
+//line plugins/parsers/influx/machine.go:18329
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -18353,7 +18364,7 @@ tr731:
 			goto _test_eof520
 		}
 	st_case_520:
-//line plugins/parsers/influx/machine.go:18357
+//line plugins/parsers/influx/machine.go:18368
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr407
@@ -18406,7 +18417,7 @@ tr733:
 			goto _test_eof521
 		}
 	st_case_521:
-//line plugins/parsers/influx/machine.go:18410
+//line plugins/parsers/influx/machine.go:18421
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr403
@@ -19011,7 +19022,7 @@ tr260:
 			goto _test_eof540
 		}
 	st_case_540:
-//line plugins/parsers/influx/machine.go:19015
+//line plugins/parsers/influx/machine.go:19026
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -19221,7 +19232,7 @@ tr261:
 			goto _test_eof544
 		}
 	st_case_544:
-//line plugins/parsers/influx/machine.go:19225
+//line plugins/parsers/influx/machine.go:19236
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -19292,7 +19303,7 @@ tr262:
 			goto _test_eof546
 		}
 	st_case_546:
-//line plugins/parsers/influx/machine.go:19296
+//line plugins/parsers/influx/machine.go:19307
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -19341,7 +19352,7 @@ tr263:
 			goto _test_eof547
 		}
 	st_case_547:
-//line plugins/parsers/influx/machine.go:19345
+//line plugins/parsers/influx/machine.go:19356
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -19580,7 +19591,7 @@ tr264:
 			goto _test_eof549
 		}
 	st_case_549:
-//line plugins/parsers/influx/machine.go:19584
+//line plugins/parsers/influx/machine.go:19595
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -19676,7 +19687,7 @@ tr265:
 			goto _test_eof550
 		}
 	st_case_550:
-//line plugins/parsers/influx/machine.go:19680
+//line plugins/parsers/influx/machine.go:19691
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -19712,7 +19723,7 @@ tr266:
 			goto _test_eof551
 		}
 	st_case_551:
-//line plugins/parsers/influx/machine.go:19716
+//line plugins/parsers/influx/machine.go:19727
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -19748,7 +19759,7 @@ tr252:
 			goto _test_eof163
 		}
 	st_case_163:
-//line plugins/parsers/influx/machine.go:19752
+//line plugins/parsers/influx/machine.go:19763
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st131
@@ -19775,7 +19786,7 @@ tr83:
 			goto _test_eof164
 		}
 	st_case_164:
-//line plugins/parsers/influx/machine.go:19779
+//line plugins/parsers/influx/machine.go:19790
 		switch ( m.data)[( m.p)] {
 		case 34:
 			goto st39
@@ -19802,7 +19813,7 @@ tr240:
 			goto _test_eof165
 		}
 	st_case_165:
-//line plugins/parsers/influx/machine.go:19806
+//line plugins/parsers/influx/machine.go:19817
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st7
@@ -19874,7 +19885,7 @@ tr241:
 			goto _test_eof553
 		}
 	st_case_553:
-//line plugins/parsers/influx/machine.go:19878
+//line plugins/parsers/influx/machine.go:19889
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -19949,7 +19960,7 @@ tr304:
 			goto _test_eof554
 		}
 	st_case_554:
-//line plugins/parsers/influx/machine.go:19953
+//line plugins/parsers/influx/machine.go:19964
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr330
@@ -20135,7 +20146,7 @@ tr242:
 			goto _test_eof559
 		}
 	st_case_559:
-//line plugins/parsers/influx/machine.go:20139
+//line plugins/parsers/influx/machine.go:20150
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -20202,7 +20213,7 @@ tr243:
 			goto _test_eof561
 		}
 	st_case_561:
-//line plugins/parsers/influx/machine.go:20206
+//line plugins/parsers/influx/machine.go:20217
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr429
@@ -20249,7 +20260,7 @@ tr244:
 			goto _test_eof562
 		}
 	st_case_562:
-//line plugins/parsers/influx/machine.go:20253
+//line plugins/parsers/influx/machine.go:20264
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -20472,7 +20483,7 @@ tr245:
 			goto _test_eof564
 		}
 	st_case_564:
-//line plugins/parsers/influx/machine.go:20476
+//line plugins/parsers/influx/machine.go:20487
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -20562,7 +20573,7 @@ tr246:
 			goto _test_eof565
 		}
 	st_case_565:
-//line plugins/parsers/influx/machine.go:20566
+//line plugins/parsers/influx/machine.go:20577
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -20596,7 +20607,7 @@ tr247:
 			goto _test_eof566
 		}
 	st_case_566:
-//line plugins/parsers/influx/machine.go:20600
+//line plugins/parsers/influx/machine.go:20611
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr443
@@ -20630,7 +20641,7 @@ tr70:
 			goto _test_eof176
 		}
 	st_case_176:
-//line plugins/parsers/influx/machine.go:20634
+//line plugins/parsers/influx/machine.go:20645
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr5
@@ -20698,7 +20709,7 @@ tr71:
 			goto _test_eof568
 		}
 	st_case_568:
-//line plugins/parsers/influx/machine.go:20702
+//line plugins/parsers/influx/machine.go:20713
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr356
@@ -20858,7 +20869,7 @@ tr72:
 			goto _test_eof571
 		}
 	st_case_571:
-//line plugins/parsers/influx/machine.go:20862
+//line plugins/parsers/influx/machine.go:20873
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr356
@@ -20921,7 +20932,7 @@ tr73:
 			goto _test_eof573
 		}
 	st_case_573:
-//line plugins/parsers/influx/machine.go:20925
+//line plugins/parsers/influx/machine.go:20936
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr356
@@ -20966,7 +20977,7 @@ tr74:
 			goto _test_eof574
 		}
 	st_case_574:
-//line plugins/parsers/influx/machine.go:20970
+//line plugins/parsers/influx/machine.go:20981
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr370
@@ -21173,7 +21184,7 @@ tr75:
 			goto _test_eof576
 		}
 	st_case_576:
-//line plugins/parsers/influx/machine.go:21177
+//line plugins/parsers/influx/machine.go:21188
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr370
@@ -21257,7 +21268,7 @@ tr76:
 			goto _test_eof577
 		}
 	st_case_577:
-//line plugins/parsers/influx/machine.go:21261
+//line plugins/parsers/influx/machine.go:21272
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr370
@@ -21289,7 +21300,7 @@ tr77:
 			goto _test_eof578
 		}
 	st_case_578:
-//line plugins/parsers/influx/machine.go:21293
+//line plugins/parsers/influx/machine.go:21304
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto tr370
@@ -21333,7 +21344,7 @@ tr322:
 			goto _test_eof579
 		}
 	st_case_579:
-//line plugins/parsers/influx/machine.go:21337
+//line plugins/parsers/influx/machine.go:21348
 		goto st0
 	st188:
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -21369,7 +21380,7 @@ tr323:
 			goto _test_eof580
 		}
 	st_case_580:
-//line plugins/parsers/influx/machine.go:21373
+//line plugins/parsers/influx/machine.go:21384
 		goto st0
 tr325:
 //line plugins/parsers/influx/machine.go.rl:63
@@ -21384,7 +21395,7 @@ tr325:
 			goto _test_eof581
 		}
 	st_case_581:
-//line plugins/parsers/influx/machine.go:21388
+//line plugins/parsers/influx/machine.go:21399
 		switch ( m.data)[( m.p)] {
 		case 11:
 			goto tr325
@@ -22243,14 +22254,14 @@ tr325:
 	 m.cs = 187;
 	{( m.p)++;  m.cs = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go:22247
+//line plugins/parsers/influx/machine.go:22258
 		}
 	}
 
 	_out: {}
 	}
 
-//line plugins/parsers/influx/machine.go.rl:277
+//line plugins/parsers/influx/machine.go.rl:288
 
 	// Even if there was an error, return true. On the next call to this
 	// function we will attempt to scan to the next line of input and recover.

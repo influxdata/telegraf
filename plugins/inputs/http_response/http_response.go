@@ -22,7 +22,7 @@ import (
 // HTTPResponse struct
 type HTTPResponse struct {
 	Address             string
-	Proxy               string
+	HTTPProxy           string `toml:"http_proxy"`
 	Body                string
 	Method              string
 	ResponseTimeout     internal.Duration
@@ -120,7 +120,7 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 	}
 	client := &http.Client{
 		Transport: &http.Transport{
-			Proxy:             getProxyFunc(h.Proxy),
+			Proxy:             getProxyFunc(h.HTTPProxy),
 			DisableKeepAlives: true,
 			TLSClientConfig:   tlsCfg,
 		},

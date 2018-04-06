@@ -3,6 +3,7 @@ package influx
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/influxdata/telegraf"
 )
@@ -14,18 +15,6 @@ const (
 var (
 	ErrNoMetric = errors.New("no metric in line")
 )
-
-type Handler interface {
-	SetMeasurement(name []byte)
-	AddTag(key []byte, value []byte)
-	AddInt(key []byte, value []byte)
-	AddUint(key []byte, value []byte)
-	AddFloat(key []byte, value []byte)
-	AddString(key []byte, value []byte)
-	AddBool(key []byte, value []byte)
-	SetTimestamp(tm []byte)
-	Reset()
-}
 
 type ParseError struct {
 	Offset int
@@ -44,6 +33,7 @@ func (e *ParseError) Error() string {
 type Parser struct {
 	DefaultTags map[string]string
 
+	sync.Mutex
 	*machine
 	handler *MetricHandler
 }
@@ -56,6 +46,8 @@ func NewParser(handler *MetricHandler) *Parser {
 }
 
 func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
+	p.Lock()
+	defer p.Unlock()
 	metrics := make([]telegraf.Metric, 0)
 	p.machine.SetData(input)
 

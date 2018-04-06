@@ -40,6 +40,9 @@ type Config struct {
 	// than unsorted fields; influx format only
 	InfluxSortFields bool
 
+	// Support unsigned integer output; influx format only
+	InfluxUintSupport bool
+
 	// Prefix to add to all measurements, only supports Graphite
 	Prefix string
 
@@ -77,9 +80,16 @@ func NewInfluxSerializerConfig(config *Config) (Serializer, error) {
 	if config.InfluxSortFields {
 		sort = influx.SortFields
 	}
+
+	var typeSupport influx.FieldTypeSupport
+	if config.InfluxUintSupport {
+		typeSupport = typeSupport + influx.UintSupport
+	}
+
 	s := influx.NewSerializer()
 	s.SetMaxLineBytes(config.InfluxMaxLineBytes)
 	s.SetFieldSortOrder(sort)
+	s.SetFieldTypeSupport(typeSupport)
 	return s, nil
 }
 
