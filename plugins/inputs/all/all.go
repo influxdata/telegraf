@@ -76,6 +76,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/powerdns"
 	_ "github.com/influxdata/telegraf/plugins/inputs/procstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/prometheus"
+	_ "github.com/influxdata/telegraf/plugins/inputs/proxysql"
 	_ "github.com/influxdata/telegraf/plugins/inputs/puppetagent"
 	_ "github.com/influxdata/telegraf/plugins/inputs/rabbitmq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/raindrops"

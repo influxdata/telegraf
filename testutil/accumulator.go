@@ -254,12 +254,15 @@ func (a *Accumulator) WaitError(n int) {
 	a.Unlock()
 }
 
+// AssertContainsTaggedFields loops through the stored metrics, combining fields for the same
+// measurement to be compared against the given fields (and tags)
 func (a *Accumulator) AssertContainsTaggedFields(
 	t *testing.T,
 	measurement string,
 	fields map[string]interface{},
 	tags map[string]string,
 ) {
+	foundFields := map[string]interface{}{}
 	a.Lock()
 	defer a.Unlock()
 	for _, p := range a.Metrics {
@@ -268,9 +271,14 @@ func (a *Accumulator) AssertContainsTaggedFields(
 		}
 
 		if p.Measurement == measurement {
-			assert.Equal(t, fields, p.Fields)
-			return
+			for k, v := range p.Fields {
+				foundFields[k] = v
+			}
 		}
+	}
+	if len(foundFields) > 0 {
+		assert.Equal(t, fields, foundFields)
+		return
 	}
 	msg := fmt.Sprintf("unknown measurement %s with tags %v", measurement, tags)
 	assert.Fail(t, msg)
