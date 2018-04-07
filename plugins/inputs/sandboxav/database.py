@@ -166,16 +166,6 @@ class JobCounter(Measurement):
 
 counters = [SNCounter(endtimestr), MethodCounter(endtimestr), TypeCounter(endtimestr), ColoCounter(endtimestr), JobCounter(endtimestr)]
 allsamples = {}
-        sql = "select sha256, task_type, file_size, status, create_date" \
-              " from samples WITH (NOLOCK) where create_date>%d and create_date<=%d"%(starttime, endtime)
-
-        sql = "select sample_sha256, utm_serial_number, session_begin, session_type + '_' + submit_method method" \
-              " from tasks WITH (NOLOCK) where session_begin>%d and session_begin<=%d"%(starttime, endtime)
-
-        sql = "select sample_sha256, analyze_feature, status, analyze_result, create_time, start_time, finish_time" \
-              " from jobs WITH (NOLOCK) where create_time>%d and create_time<=%d"%(starttime, endtime)
-
-
     for row in samples["data"]:
         v = dict(zip(samples["schema"], row))
         if v['file_size'] != 'None':

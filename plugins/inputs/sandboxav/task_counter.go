@@ -1,4 +1,4 @@
-package maf
+package sandboxav
 
 import (
 	"database/sql"
@@ -93,12 +93,12 @@ func (_ *Task) gatherTask(server string, groupby string, acc telegraf.Accumulato
 		sql = fmt.Sprintf(`SELECT top 10 count(*) as number, %s + '_' + %s as method from tasks group by %s order by number desc`,
 			newGroupSlice[0], newGroupSlice[1], groupby)
 		columnName = "method"
-		measurement = "maf_task_methods"
+		measurement = "task_methods"
 	} else {
 		sql = fmt.Sprintf(`SELECT top 10 count(*) as number, %s FROM tasks GROUP BY %s order by number desc`,
 			groupby, groupby)
 		columnName = groupby
-		measurement = fmt.Sprintf("maf_task_%s", columnName)
+		measurement = fmt.Sprintf("task_%s", columnName)
 	}
 
 	stmt, err := conn.Prepare(sql)
@@ -136,7 +136,7 @@ func (_ *Task) gatherTask(server string, groupby string, acc telegraf.Accumulato
 }
 
 func init() {
-	inputs.Add("maf_task_status", func() telegraf.Input {
+	inputs.Add("task_counter", func() telegraf.Input {
 		return &Task{}
 	})
 }

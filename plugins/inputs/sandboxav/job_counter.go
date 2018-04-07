@@ -1,4 +1,4 @@
-package maf
+package sandboxav
 
 import (
 	"database/sql"
@@ -19,7 +19,7 @@ type Job struct {
 }
 
 type JobResult struct {
-	Number uint32  `toml:"number"`
+	Number uint64  `toml:"number"`
 	AnalyzeType string  `toml:"analyze_type"`
 }
 
@@ -100,7 +100,7 @@ func (_ *Job) gatherJobs(server string, status string, acc telegraf.Accumulator)
 	}
 
 	for _, oneRow := range rowsData {
-		acc.AddFields("maf_job_status",
+		acc.AddFields("job_counter",
 			map[string]interface{}{
 				"number": oneRow.Number,
 			},
@@ -116,7 +116,7 @@ func (_ *Job) gatherJobs(server string, status string, acc telegraf.Accumulator)
 }
 
 func init() {
-	inputs.Add("maf_job_status", func() telegraf.Input {
+	inputs.Add("job_counter", func() telegraf.Input {
 		return &Job{}
 	})
 }

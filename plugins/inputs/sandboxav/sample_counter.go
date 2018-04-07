@@ -1,4 +1,4 @@
-package maf
+package sandboxav
 
 import (
 	"database/sql"
@@ -99,7 +99,7 @@ func (_ *Sample) gatherSamples(server string, status string, acc telegraf.Accumu
 	}
 
 	for _, oneRow := range rowsData {
-		acc.AddFields("maf_sample_status",
+		acc.AddFields("sample_counter",
 			map[string]interface{}{
 				"number": oneRow.Number,
 			},
@@ -114,7 +114,7 @@ func (_ *Sample) gatherSamples(server string, status string, acc telegraf.Accumu
 }
 
 func init() {
-	inputs.Add("maf_sample_status", func() telegraf.Input {
+	inputs.Add("sample_counter", func() telegraf.Input {
 		return &Sample{}
 	})
 }
