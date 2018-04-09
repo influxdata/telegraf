@@ -26,6 +26,8 @@ type streamSocketListener struct {
 	net.Listener
 	*SocketListener
 
+	sockType string
+
 	connections    map[string]net.Conn
 	connectionsMtx sync.Mutex
 }
@@ -40,6 +42,14 @@ func (ssl *streamSocketListener) listen() {
 				ssl.AddError(err)
 			}
 			break
+		}
+
+		if ssl.ReadBufferSize > 0 {
+			if srb, ok := c.(setReadBufferer); ok {
+				srb.SetReadBuffer(ssl.ReadBufferSize)
+			} else {
+				log.Printf("W! Unable to set read buffer on a %s socket", ssl.sockType)
+			}
 		}
 
 		ssl.connectionsMtx.Lock()
@@ -237,17 +247,10 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		if sl.ReadBufferSize > 0 {
-			if srb, ok := l.(setReadBufferer); ok {
-				srb.SetReadBuffer(sl.ReadBufferSize)
-			} else {
-				log.Printf("W! Unable to set read buffer on a %s socket", spl[0])
-			}
-		}
-
 		ssl := &streamSocketListener{
 			Listener:       l,
 			SocketListener: sl,
+			sockType:       spl[0],
 		}
 
 		sl.Closer = ssl

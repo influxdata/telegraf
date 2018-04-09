@@ -326,6 +326,10 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		}
 	}
 
+	if len(fields) == 0 {
+		return nil, fmt.Errorf("logparser_grok: must have one or more fields")
+	}
+
 	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))
 }
 
