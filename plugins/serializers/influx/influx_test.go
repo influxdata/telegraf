@@ -262,6 +262,50 @@ var tests = []struct {
 		output: []byte("cpu abc=123i 1519194109000000042\ncpu def=456i 1519194109000000042\n"),
 	},
 	{
+		name: "name newline",
+		input: MustMetric(
+			metric.New(
+				"c\npu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("c\\npu value=42i 0\n"),
+	},
+	{
+		name: "tag newline",
+		input: MustMetric(
+			metric.New(
+				"cpu",
+				map[string]string{
+					"host": "x\ny",
+				},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("cpu,host=x\\ny value=42i 0\n"),
+	},
+	{
+		name: "string newline",
+		input: MustMetric(
+			metric.New(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": "x\ny",
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("cpu value=\"x\\ny\" 0\n"),
+	},
+	{
 		name:     "need more space",
 		maxBytes: 32,
 		input: MustMetric(
