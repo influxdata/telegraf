@@ -142,7 +142,7 @@ fieldfloat =
 fieldinteger =
 	(integer 'i') >begin %integer;
 
-fieldunsigned = 
+fieldunsigned =
 	(unsigned 'u') >begin %unsigned;
 
 false =
@@ -155,7 +155,7 @@ fieldbool =
 	(true | false) >begin %bool;
 
 fieldstringchar =
-	[^\\"] | '\\' [\\"];
+	[^\n\f\r\\"] | '\\' [\\"];
 
 fieldstring =
 	fieldstringchar* >begin %string;
