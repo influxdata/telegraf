@@ -35,7 +35,7 @@ server (RMS of difference of multiple time samples, milliseconds);
 
 ### Measurements & Fields:
 
-- ntpq
+- ntpq (Detail about all NTP peers)
     - delay (float, milliseconds)
     - jitter (float, milliseconds)
     - offset (float, milliseconds)
@@ -43,13 +43,24 @@ server (RMS of difference of multiple time samples, milliseconds);
     - reach (int)
     - when (int, seconds)
 
+- ntpq_aggregated (Aggregated values from valid NTP peers : *,#,o,+)
+    - delay (float, milliseconds)
+    - jitter (float, milliseconds)
+    - offset (float, milliseconds)
+    - poll (float, seconds)
+    - reach (float)
+    - when (float, seconds)
+
 ### Tags:
 
-- All measurements have the following tags:
+- Measurement ntpq have the following tags:
     - refid
     - remote
     - type
     - stratum
+
+- Measurement ntpq_aggregated have the following tags:
+    - function : mean, min, max
 
 ### Example Output:
 

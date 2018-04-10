@@ -428,6 +428,62 @@ func TestFailedNTPQ(t *testing.T) {
 	assert.Error(t, acc.GatherError(n.Gather))
 }
 
+func TestAggregatedNTPQ(t *testing.T) {
+	resetVars()
+	tt := tester{
+		ret: []byte(aggregatedNTPQ),
+		err: nil,
+	}
+	n := &NTPQ{
+		runQ: tt.runqTest,
+	}
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, acc.GatherError(n.Gather))
+
+	fields_mean := map[string]interface{}{
+		"when":       float64(894.3333333333333),
+		"poll":       float64(1024),
+		"reach":      float64(377),
+		"delay":      float64(2.246),
+		"offset":     float64(-0.3076666666666667),
+		"jitter":     float64(0.7639999999999999),
+		"validpeers": float64(3),
+	}
+	tags_mean := map[string]string{
+		"function": "mean",
+	}
+	acc.AssertContainsTaggedFields(t, "ntpq_aggregated", fields_mean, tags_mean)
+
+	fields_min := map[string]interface{}{
+		"when":       float64(870),
+		"poll":       float64(1024),
+		"reach":      float64(377),
+		"delay":      float64(0.849),
+		"offset":     float64(-1.264),
+		"jitter":     float64(0.297),
+		"validpeers": float64(3),
+	}
+	tags_min := map[string]string{
+		"function": "min",
+	}
+	acc.AssertContainsTaggedFields(t, "ntpq_aggregated", fields_min, tags_min)
+
+	fields_max := map[string]interface{}{
+		"when":       float64(908),
+		"poll":       float64(1024),
+		"reach":      float64(377),
+		"delay":      float64(3.2),
+		"offset":     float64(1.559),
+		"jitter":     float64(1.547),
+		"validpeers": float64(3),
+	}
+	tags_max := map[string]string{
+		"function": "max",
+	}
+	acc.AssertContainsTaggedFields(t, "ntpq_aggregated", fields_max, tags_max)
+}
+
 type tester struct {
 	ret []byte
 	err error
@@ -534,4 +590,12 @@ var multiParserNTPQ = `     remote           refid      st t when poll reach   d
 +37.58.57.238 (domain) 192.53.103.103   2 u   10 1024  377    1.748    0.373   0.101
 +37.58.57.238 ( 192.53.103.103			2 u   10 1024  377    1.748    0.373   0.101
 -SHM(1)          .GPS.                          1 u   121 128  377    0.000   10.105   2.012
+`
+
+var aggregatedNTPQ = `     remote           refid      st t when poll reach   delay   offset  jitter
+==============================================================================
++93.107.252.81   193.120.142.71   2 u  905 1024  377    3.200   -1.218   0.448
+*193.1.219.116   .PPS.            1 u  870 1024  377    2.689    1.559   1.547
++34.242.217.31   89.101.218.6     2 u  908 1024  377    0.849   -1.264   0.297
+-52.17.30.119    89.101.218.6     2 u  866 1024  377    1.243   -1.621   0.422
 `
