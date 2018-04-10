@@ -108,10 +108,11 @@ CUSTOM time layouts must be within quotes and be the representation of the
 "reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`
 See https://golang.org/pkg/time/#Parse for more details.
 
-Telegraf has many of its own
-[built-in patterns](./grok/patterns/influx-patterns),
-as well as supporting
+Telegraf has many of its own [built-in patterns](./grok/patterns/influx-patterns),
+as well as support for most of
 [logstash's builtin patterns](https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns).
+_Golang regular expressions do not support lookahead or lookbehind.
+logstash patterns that depend on these are not supported._
 
 If you need help building patterns to match your logs,
 you will find the https://grokdebug.herokuapp.com application quite useful!

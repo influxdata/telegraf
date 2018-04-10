@@ -35,6 +35,7 @@ type MongoStatus struct {
 	ClusterStatus *ClusterStatus
 	DbStats       *DbStats
 	ShardStats    *ShardStats
+	OplogStats    *OplogStats
 }
 
 type ServerStatus struct {
@@ -100,6 +101,11 @@ type ClusterStatus struct {
 type ReplSetStatus struct {
 	Members []ReplSetMember `bson:"members"`
 	MyState int64           `bson:"myState"`
+}
+
+// OplogStatus stores information from getReplicationInfo
+type OplogStats struct {
+	TimeDiff int64
 }
 
 // ReplSetMember stores information related to a replica set member
@@ -442,6 +448,7 @@ type StatLine struct {
 	// Replicated Opcounter fields
 	InsertR, QueryR, UpdateR, DeleteR, GetMoreR, CommandR int64
 	ReplLag                                               int64
+	OplogTimeDiff                                         int64
 	Flushes                                               int64
 	Mapped, Virtual, Resident, NonMapped                  int64
 	Faults                                                int64
@@ -772,6 +779,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 
 	newClusterStat := *newMongo.ClusterStatus
 	returnVal.JumboChunksCount = newClusterStat.JumboChunksCount
+	returnVal.OplogTimeDiff = newMongo.OplogStats.TimeDiff
 
 	newDbStats := *newMongo.DbStats
 	for _, db := range newDbStats.Dbs {
