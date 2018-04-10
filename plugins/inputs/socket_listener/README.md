@@ -25,6 +25,9 @@ This is a sample configuration for the plugin.
   # service_address = "unix:///tmp/telegraf.sock"
   # service_address = "unixgram:///tmp/telegraf.sock"
 
+  ## File mode for unix sockets
+  # file_mode = "777"
+
   ## Maximum number of concurrent connections.
   ## Only applies to stream sockets (e.g. TCP).
   ## 0 (default) is unlimited.
