@@ -44,7 +44,7 @@ fmt:
 
 fmtcheck:
 	@echo '[INFO] running gofmt to identify incorrectly formatted code...'
-	@if [ ! -z $(GOFMT) ]; then \
+	@if [ ! -z "$(GOFMT)" ]; then \
 		echo "[ERROR] gofmt has found errors in the following files:"  ; \
 		echo "$(GOFMT)" ; \
 		echo "" ;\
