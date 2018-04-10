@@ -1155,6 +1155,22 @@ var tests = []struct {
 		},
 	},
 	{
+		name:  "invalid newline in string field",
+		input: []byte("cpu value=\"4\n2\""),
+		results: []Result{
+			Result{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			Result{
+				err: ErrFieldParse,
+			},
+			Result{
+				err: ErrFieldParse,
+			},
+		},
+	},
+	{
 		name:  "invalid field value",
 		input: []byte(`cpu value=howdy`),
 		results: []Result{

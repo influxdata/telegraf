@@ -12,8 +12,6 @@ else
 PATH := $(subst :,/bin:,$(GOPATH))/bin:$(PATH)
 endif
 
-TELEGRAF := telegraf$(shell go tool dist env | grep -q 'GOOS=.windows.' && echo .exe)
-
 LDFLAGS := $(LDFLAGS) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)
 ifdef VERSION
 	LDFLAGS += -X main.version=$(VERSION)
@@ -29,7 +27,7 @@ deps:
 	gdm restore
 
 telegraf:
-	go build -i -o $(TELEGRAF) -ldflags "$(LDFLAGS)" ./cmd/telegraf/telegraf.go
+	go build -i -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 go-install:
 	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
@@ -60,6 +58,7 @@ test-windows:
 	go test ./plugins/inputs/win_perf_counters/...
 	go test ./plugins/inputs/win_services/...
 	go test ./plugins/inputs/procstat/...
+	go test ./plugins/inputs/ntpq/...
 
 # vet runs the Go source code static analysis tool `vet` to find
 # any common errors.
