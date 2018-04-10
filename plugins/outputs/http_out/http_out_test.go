@@ -22,14 +22,20 @@ func TestHttpOut(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
+			fmt.Printf("reqBody = %+v\n", reqBody)
 		}),
 	)
 
 	c := serializers.Config{DataFormat: "json"}
 	s, _ := serializers.NewSerializer(&c)
+	data := map[string]string{
+		"data1": "data1",
+		"data2": "data2",
+	}
 	h := HttpOut{
 		Name:       "http_out",
 		Server:     ts.URL,
+		Data:       data,
 		serializer: s,
 	}
 

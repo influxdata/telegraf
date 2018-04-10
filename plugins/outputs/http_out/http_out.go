@@ -21,11 +21,9 @@ import (
 type HttpOut struct {
 	Name       string
 	Server     string
-	Method     string
-	Parameters string
+	Data       map[string]string
 	Headers    map[string]string
 	serializer serializers.Serializer
-	request    *http.Request
 }
 
 type Metric struct {
@@ -44,10 +42,12 @@ func (h *HttpOut) SampleConfig() string {
   [[outputs.http_out]]
     name = "http_out_test"
     server = "http://localhost:3000"
-    method = "POST"
 
     [outputs.http_out.headers]
       Content-Type = "application/json;charset=UTF-8"
+
+    [outputs.http_out.data]
+      data1 = "data1"
 `
 }
 
@@ -72,6 +72,16 @@ func (h *HttpOut) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
+	if h.Server == "" {
+		return fmt.Errorf("You need to setup a server")
+	}
+
+	// Prepare URL
+	requestURL, err := url.Parse(h.Server)
+	if err != nil {
+		return fmt.Errorf("Invalid server URL \"%s\"", h.Server)
+	}
+
 	// Collect metrics
 	var Metrics []Metric
 	for _, metric := range metrics {
@@ -92,43 +102,19 @@ func (h *HttpOut) Write(metrics []telegraf.Metric) error {
 		}
 
 		Metrics = append(Metrics, m)
-		// // Send request
-		// client := http.Client{}
-		// resp, err := client.Do(h.request)
-		// if err != nil {
-		// fmt.Errorf("Cannot make HTTP request: %+v", err)
-		// }
-	}
-
-	// defer resp.Body.Close()
-
-	// for _, metric := range metrics {
-	// h.makeRequest(metric)
-	// fmt.Printf("metric = %+v\n", metric)
-	// b, err := h.serializer.Serialize(metric)
-	// if err != nil {
-	// fmt.Errorf("failed to serialized message %s", err)
-	// }
-
-	// fmt.Printf("DataFormat = %+v\n", string(b))
-
-	// }
-	// h.DebugToFile(metrics)
-
-	if h.Server == "" {
-		return fmt.Errorf("You need to setup a server")
-	}
-
-	// Prepare URL
-	requestURL, err := url.Parse(h.Server)
-
-	if err != nil {
-		return fmt.Errorf("Invalid server URL \"%s\"", h.Server)
 	}
 
 	// Setup request body to send metrics data
-	var jsonReq struct{ Metrics []Metric }
+	var jsonReq struct {
+		Metrics []Metric          `json:"metrics"`
+		Data    map[string]string `json:"data"`
+	}
 	jsonReq.Metrics = Metrics
+	if len(h.Data) > 0 {
+		jsonReq.Data = h.Data
+	}
+
+	// Encode request body
 	reqBody, err := json.Marshal(jsonReq)
 
 	// Initialize HTTP(s) request
