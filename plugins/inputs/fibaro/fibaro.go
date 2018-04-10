@@ -7,28 +7,36 @@ import (
 	"strconv"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/httpjson"
 )
 
 const sampleConfig = `
   ## Required Fibaro controller address/hostname.
-  ## Note: connection is done over http/80 as Fibaro did not implement https.
-  server = "<controller>"
+  ## Note: at the time of writing this plugin, Fibaro only implemented http - no https available
+  url = "http://<controller>:80"
+
   ## Required credentials to access the API (http://<controller/api/<component>)
   username = "<username>"
   password = "<password>"
+
+  ## Amount of time allowed to complete the HTTP request
+  # timeout = "5s"
 `
 
 const description = "Read devices value(s) from a Fibaro controller"
 
 // Fibaro contains connection information
 type Fibaro struct {
-	Server   string
+	URL string
+
+	// HTTP Basic Auth Credentials
 	Username string
 	Password string
 
-	client httpjson.HTTPClient
+	Timeout internal.Duration
+
+	client *http.Client
 }
 
 // LinkRoomsSections links rooms to sections
@@ -72,7 +80,7 @@ func (f *Fibaro) SampleConfig() string { return sampleConfig }
 
 // getJSON connects, authenticates and reads JSON payload returned by Fibaro box
 func (f *Fibaro) getJSON(path string, dataStruct interface{}) error {
-	var requestURL = "http://" + f.Server + path
+	var requestURL = f.URL + path
 
 	req, err := http.NewRequest("GET", requestURL, nil)
 	if err != nil {
@@ -80,7 +88,7 @@ func (f *Fibaro) getJSON(path string, dataStruct interface{}) error {
 	}
 
 	req.SetBasicAuth(f.Username, f.Password)
-	resp, err := f.client.MakeRequest(req)
+	resp, err := f.client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -109,8 +117,13 @@ func (f *Fibaro) getJSON(path string, dataStruct interface{}) error {
 // Gather fetches all required information to output metrics
 func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 
-	if f.client.HTTPClient() == nil {
-		f.client.SetHTTPClient(&http.Client{})
+	if f.client == nil {
+		f.client = &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+			},
+			Timeout: f.Timeout.Duration,
+		}
 	}
 
 	var tmpSections []Sections
@@ -141,11 +154,19 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 
 	for _, device := range devices {
 		// skip device in some cases
-		if device.RoomID == 0 || device.Enabled == false || device.Properties.Dead == "true" || device.Type == "com.fibaro.zwaveDevice" {
+		if device.RoomID == 0 ||
+			device.Enabled == false ||
+			device.Properties.Dead == "true" ||
+			device.Type == "com.fibaro.zwaveDevice" {
 			continue
 		}
 
-		tags := map[string]string{"section": sections[rooms[device.RoomID].SectionID], "room": rooms[device.RoomID].Name, "name": device.Name, "type": device.Type}
+		tags := map[string]string{
+			"section": sections[rooms[device.RoomID].SectionID],
+			"room":    rooms[device.RoomID].Name,
+			"name":    device.Name,
+			"type":    device.Type,
+		}
 		fields := make(map[string]interface{})
 
 		if device.Properties.Value != nil {
@@ -176,8 +197,6 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("fibaro", func() telegraf.Input {
-		return &Fibaro{
-			client: &httpjson.RealHTTPClient{},
-		}
+		return &Fibaro{}
 	})
 }

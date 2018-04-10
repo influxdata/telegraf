@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 
-	"github.com/influxdata/telegraf/plugins/inputs/httpjson"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -136,20 +134,15 @@ func TestUnauthorized(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	u, err := url.Parse(ts.URL)
-	if err != nil {
-		require.NoError(t, err)
-	}
-
 	a := Fibaro{
-		Server:   u.Host,
+		URL:      ts.URL,
 		Username: "user",
 		Password: "pass",
-		client:   &httpjson.RealHTTPClient{},
+		client:   &http.Client{},
 	}
 
 	var acc testutil.Accumulator
-	err = acc.GatherError(a.Gather)
+	err := acc.GatherError(a.Gather)
 	require.Error(t, err)
 }
 
@@ -170,20 +163,15 @@ func TestJSONSuccess(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	u, err := url.Parse(ts.URL)
-	if err != nil {
-		require.NoError(t, err)
-	}
-
 	a := Fibaro{
-		Server:   u.Host,
+		URL:      ts.URL,
 		Username: "user",
 		Password: "pass",
-		client:   &httpjson.RealHTTPClient{},
+		client:   &http.Client{},
 	}
 
 	var acc testutil.Accumulator
-	err = acc.GatherError(a.Gather)
+	err := acc.GatherError(a.Gather)
 	require.NoError(t, err)
 
 	// Gather should add 5 metrics
