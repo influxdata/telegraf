@@ -137,15 +137,12 @@ func TestConnectHTTPConfig(t *testing.T) {
 }
 
 func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
-	var createDatabaseCalled bool
-
 	output := influxdb.InfluxDB{
 		URLs: []string{"http://localhost:8086"},
 
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			return &MockClient{
 				CreateDatabaseF: func(ctx context.Context) error {
-					createDatabaseCalled = true
 					return nil
 				},
 				WriteF: func(ctx context.Context, metrics []telegraf.Metric) error {
@@ -178,7 +175,6 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 	require.NoError(t, err)
 	metrics := []telegraf.Metric{m}
 
-	createDatabaseCalled = false
 	err = output.Write(metrics)
 	// We only have one URL, so we expect an error
 	require.Error(t, err)
