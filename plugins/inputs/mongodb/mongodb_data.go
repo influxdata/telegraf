@@ -204,9 +204,9 @@ func (d *MongodbData) flush(acc telegraf.Accumulator) {
 		db.Fields = make(map[string]interface{})
 	}
 	for _, host := range d.ShardHostData {
-		d.Tags["shard_host_name"] = host.Name
+		d.Tags["hostname"] = host.Name
 		acc.AddFields(
-			"mongodb_shard_host_stats",
+			"mongodb_shard_stats",
 			host.Fields,
 			d.Tags,
 			d.StatLine.Time,

@@ -146,10 +146,10 @@ func TestAddShardHostStats(t *testing.T) {
 	var hostsFound []string
 	for host, _ := range hostStatLines {
 		for key, _ := range ShardHostStats {
-			assert.True(t, acc.HasInt64Field("mongodb_shard_host_stats", key))
+			assert.True(t, acc.HasInt64Field("mongodb_shard_stats", key))
 		}
 
-		assert.True(t, acc.HasTag("mongodb_shard_host_stats", "shard_host_name"))
+		assert.True(t, acc.HasTag("mongodb_shard_stats", "hostname"))
 		hostsFound = append(hostsFound, host)
 	}
 
