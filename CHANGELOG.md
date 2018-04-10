@@ -1,3 +1,8 @@
+## v1.7 [unreleased]
+### Features
+
+- [#3964](https://github.com/influxdata/telegraf/pull/3964): Add repl_oplog_window_sec metric to mongodb input.
+
 ## v1.6 [unreleased]
 
 ### Release Notes
@@ -105,6 +110,8 @@
 - [#3648](https://github.com/influxdata/telegraf/issues/3648): Fix InfluxDB output not able to reconnect when server address changes.
 - [#3957](https://github.com/influxdata/telegraf/issues/3957): Fix parsing of dos line endings in the smart input.
 - [#3754](https://github.com/influxdata/telegraf/issues/3754): Fix precision truncation when no timestamp included.
+- [#3655](https://github.com/influxdata/telegraf/issues/3655): Fix SNMPv3 connection with Cisco ASA 5515 in snmp input.
+- [#3981](https://github.com/influxdata/telegraf/pull/3981): Export all vars defined in /etc/default/telegraf.
 
 ## v1.5.3 [2018-03-14]
 
