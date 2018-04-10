@@ -958,3 +958,15 @@ func TestTimezoneLocalCompileFileAndParse(t *testing.T) {
 	assert.Equal(t, map[string]string{}, metricB.Tags())
 	assert.Equal(t, time.Date(2016, time.June, 4, 12, 41, 45, 0, time.Local).UnixNano(), metricB.Time().UnixNano())
 }
+
+func TestNewlineInPatterns(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{`
+			%{SYSLOGTIMESTAMP:timestamp}
+		`},
+	}
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("Apr 10 05:11:57")
+	require.NoError(t, err)
+	require.NotNil(t, m)
+}
