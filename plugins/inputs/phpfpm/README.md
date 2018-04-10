@@ -24,7 +24,7 @@ Get phpfpm stats using either HTTP status page or fpm socket.
   ##       "fcgi://10.0.0.12:9000/status"
   ##       "cgi://10.0.10.12:9001/status"
   ##
-  ## Example of multiple gathering from local socket and remove host
+  ## Example of multiple gathering from local socket and remote host
   ## urls = ["http://192.168.1.20/status", "/tmp/fpm.sock"]
   urls = ["http://localhost/status"]
 ```

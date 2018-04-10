@@ -33,6 +33,9 @@ InfluxDB-formatted endpoints. See below for more information.
 
 ### Measurements & Fields
 
+**Note:** The measurements and fields are dynamically built from the InfluxDB source,
+and may vary between versions.
+
 - influxdb
   - n_shards
 - influxdb_database
