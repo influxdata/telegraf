@@ -85,7 +85,7 @@ Telegraf config:
 
   [[inputs.snmp.table]]
     oid = "TEST::testTable"
-    inherit_tags = "hostname"
+    inherit_tags = [ "hostname" ]
 ```
 
 Resulting output:
@@ -167,6 +167,9 @@ If not specified, it defaults to the value of `oid`.  If `oid` is numeric, an at
 
 * `inherit_tags`:
 Which tags to inherit from the top-level config and to use in the output of this table's measurement.
+
+* `index_as_tag`:
+Adds each row's index within the table as a tag.  
 
 ### MIB lookups
 If the plugin is configured such that it needs to perform lookups from the MIB, it will use the net-snmp utilities `snmptranslate` and `snmptable`.

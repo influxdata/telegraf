@@ -30,14 +30,25 @@ This is a sample configuration for the plugin.
   ## 0 (default) is unlimited.
   # max_connections = 1024
 
+  ## Read timeout.
+  ## Only applies to stream sockets (e.g. TCP).
+  ## 0 (default) is unlimited.
+  # read_timeout = "30s"
+
   ## Maximum socket buffer size in bytes.
   ## For stream sockets, once the buffer fills up, the sender will start backing up.
   ## For datagram sockets, once the buffer fills up, metrics will start dropping.
   ## Defaults to the OS default.
   # read_buffer_size = 65535
 
+  ## Period between keep alive probes.
+  ## Only applies to TCP sockets.
+  ## 0 disables keep alive probes.
+  ## Defaults to the OS configuration.
+  # keep_alive_period = "5m"
+
   ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   # data_format = "influx"

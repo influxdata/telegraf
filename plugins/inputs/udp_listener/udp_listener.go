@@ -1,6 +1,7 @@
 package udp_listener
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"sync"
@@ -107,8 +108,9 @@ func (u *UdpListener) Start(acc telegraf.Accumulator) error {
 	u.in = make(chan []byte, u.AllowedPendingMessages)
 	u.done = make(chan struct{})
 
-	u.wg.Add(2)
-	go u.udpListen()
+	u.udpListen()
+
+	u.wg.Add(1)
 	go u.udpParser()
 
 	log.Printf("I! Started UDP listener service on %s (ReadBuffer: %d)\n", u.ServiceAddress, u.UDPBufferSize)
@@ -126,32 +128,37 @@ func (u *UdpListener) Stop() {
 }
 
 func (u *UdpListener) udpListen() error {
-	defer u.wg.Done()
 	var err error
 
 	address, _ := net.ResolveUDPAddr("udp", u.ServiceAddress)
 	u.listener, err = net.ListenUDP("udp", address)
 
 	if err != nil {
-		log.Fatalf("E! Error: ListenUDP - %s", err)
+		return fmt.Errorf("E! Error: ListenUDP - %s", err)
 	}
 
 	log.Println("I! UDP server listening on: ", u.listener.LocalAddr().String())
 
-	buf := make([]byte, UDP_MAX_PACKET_SIZE)
-
 	if u.UDPBufferSize > 0 {
 		err = u.listener.SetReadBuffer(u.UDPBufferSize) // if we want to move away from OS default
 		if err != nil {
-			log.Printf("E! Failed to set UDP read buffer to %d: %s", u.UDPBufferSize, err)
-			return err
+			return fmt.Errorf("E! Failed to set UDP read buffer to %d: %s", u.UDPBufferSize, err)
 		}
 	}
 
+	u.wg.Add(1)
+	go u.udpListenLoop()
+	return nil
+}
+
+func (u *UdpListener) udpListenLoop() {
+	defer u.wg.Done()
+
+	buf := make([]byte, UDP_MAX_PACKET_SIZE)
 	for {
 		select {
 		case <-u.done:
-			return nil
+			return
 		default:
 			u.listener.SetReadDeadline(time.Now().Add(time.Second))
 

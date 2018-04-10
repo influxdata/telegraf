@@ -5,7 +5,9 @@ import (
 	"os"
 	"os/exec"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -13,20 +15,22 @@ import (
 
 func TestGather(t *testing.T) {
 	i := &Ipmi{
-		Servers: []string{"USERID:PASSW0RD@lan(192.168.1.1)"},
-		path:    "ipmitool",
+		Servers:   []string{"USERID:PASSW0RD@lan(192.168.1.1)"},
+		Path:      "ipmitool",
+		Privilege: "USER",
+		Timeout:   internal.Duration{Duration: time.Second * 5},
 	}
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommand
 	var acc testutil.Accumulator
 
-	err := i.Gather(&acc)
+	err := acc.GatherError(i.Gather)
 
 	require.NoError(t, err)
 
 	assert.Equal(t, acc.NFields(), 266, "non-numeric measurements should be ignored")
 
-	conn := NewConnection(i.Servers[0])
+	conn := NewConnection(i.Servers[0], i.Privilege)
 	assert.Equal(t, "USERID", conn.Username)
 	assert.Equal(t, "lan", conn.Interface)
 
@@ -118,10 +122,11 @@ func TestGather(t *testing.T) {
 	}
 
 	i = &Ipmi{
-		path: "ipmitool",
+		Path:    "ipmitool",
+		Timeout: internal.Duration{Duration: time.Second * 5},
 	}
 
-	err = i.Gather(&acc)
+	err = acc.GatherError(i.Gather)
 
 	var testsWithoutServer = []struct {
 		fields map[string]interface{}

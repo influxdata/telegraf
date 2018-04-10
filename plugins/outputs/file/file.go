@@ -24,7 +24,7 @@ var sampleConfig = `
   files = ["stdout", "/tmp/metrics.out"]
 
   ## Data format to output.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
@@ -44,7 +44,6 @@ func (f *File) Connect() error {
 	for _, file := range f.Files {
 		if file == "stdout" {
 			writers = append(writers, os.Stdout)
-			f.closers = append(f.closers, os.Stdout)
 		} else {
 			var of *os.File
 			var err error
@@ -98,7 +97,7 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 		}
 		_, err = f.writer.Write(b)
 		if err != nil {
-			return fmt.Errorf("failed to write message: %s, %s", metric.Serialize(), err)
+			return fmt.Errorf("failed to write message: %s, %s", b, err)
 		}
 	}
 	return nil

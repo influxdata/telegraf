@@ -1,15 +1,17 @@
+// +build !solaris
+
 package logparser
 
 import (
 	"fmt"
 	"log"
 	"reflect"
+	"strings"
 	"sync"
 
-	"github.com/hpcloud/tail"
+	"github.com/influxdata/tail"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
@@ -17,17 +19,29 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/logparser/grok"
 )
 
+const (
+	defaultWatchMethod = "inotify"
+)
+
+// LogParser in the primary interface for the plugin
 type LogParser interface {
 	ParseLine(line string) (telegraf.Metric, error)
 	Compile() error
 }
 
+type logEntry struct {
+	path string
+	line string
+}
+
+// LogParserPlugin is the primary struct to implement the interface for logparser plugin
 type LogParserPlugin struct {
 	Files         []string
 	FromBeginning bool
+	WatchMethod   string
 
 	tailers map[string]*tail.Tail
-	lines   chan string
+	lines   chan logEntry
 	done    chan struct{}
 	wg      sync.WaitGroup
 	acc     telegraf.Accumulator
@@ -46,10 +60,14 @@ const sampleConfig = `
   ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
   ##   /var/log/apache.log -> only tail the apache log file
   files = ["/var/log/apache/access.log"]
+
   ## Read files that currently exist from the beginning. Files that are created
   ## while telegraf is running (and that match the "files" globs) will always
   ## be read from the beginning.
   from_beginning = false
+
+  ## Method used to watch for file updates.  Can be either "inotify" or "poll".
+  # watch_method = "inotify"
 
   ## Parse logstash-style "grok" patterns:
   ##   Telegraf built-in parsing patterns: https://goo.gl/dkay10
@@ -61,23 +79,40 @@ const sampleConfig = `
     ##   %{COMMON_LOG_FORMAT}   (plain apache & nginx access logs)
     ##   %{COMBINED_LOG_FORMAT} (access logs + referrer & agent)
     patterns = ["%{COMBINED_LOG_FORMAT}"]
+
     ## Name of the outputted measurement name.
     measurement = "apache_access_log"
+
     ## Full path(s) to custom pattern files.
     custom_pattern_files = []
+
     ## Custom patterns can also be defined here. Put one pattern per line.
     custom_patterns = '''
+
+    ## Timezone allows you to provide an override for timestamps that
+    ## don't already include an offset
+    ## e.g. 04/06/2016 12:41:45 data one two 5.43µs
+    ##
+    ## Default: "" which renders UTC
+    ## Options are as follows:
+    ##   1. Local             -- interpret based on machine localtime
+    ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+    ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
+    timezone = "Canada/Eastern"
     '''
 `
 
+// SampleConfig returns the sample configuration for the plugin
 func (l *LogParserPlugin) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description returns the human readable description for the plugin
 func (l *LogParserPlugin) Description() string {
 	return "Stream and parse log file(s)."
 }
 
+// Gather is the primary function to collect the metrics for the plugin
 func (l *LogParserPlugin) Gather(acc telegraf.Accumulator) error {
 	l.Lock()
 	defer l.Unlock()
@@ -86,12 +121,13 @@ func (l *LogParserPlugin) Gather(acc telegraf.Accumulator) error {
 	return l.tailNewfiles(true)
 }
 
+// Start kicks off collection of stats for the plugin
 func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.Lock()
 	defer l.Unlock()
 
 	l.acc = acc
-	l.lines = make(chan string, 1000)
+	l.lines = make(chan logEntry, 1000)
 	l.done = make(chan struct{})
 	l.tailers = make(map[string]*tail.Tail)
 
@@ -114,18 +150,14 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	}
 
 	if len(l.parsers) == 0 {
-		return fmt.Errorf("ERROR: logparser input plugin: no parser defined.")
+		return fmt.Errorf("logparser input plugin: no parser defined")
 	}
 
 	// compile log parser patterns:
-	errChan := errchan.New(len(l.parsers))
 	for _, parser := range l.parsers {
 		if err := parser.Compile(); err != nil {
-			errChan.C <- err
+			return err
 		}
-	}
-	if err := errChan.Error(); err != nil {
-		return err
 	}
 
 	l.wg.Add(1)
@@ -143,7 +175,10 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 		seek.Offset = 0
 	}
 
-	errChan := errchan.New(len(l.Files))
+	var poll bool
+	if l.WatchMethod == "poll" {
+		poll = true
+	}
 
 	// Create a "tailer" for each file
 	for _, filepath := range l.Files {
@@ -153,9 +188,8 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 			continue
 		}
 		files := g.Match()
-		errChan = errchan.New(len(files))
 
-		for file, _ := range files {
+		for file := range files {
 			if _, ok := l.tailers[file]; ok {
 				// we're already tailing this file
 				continue
@@ -167,8 +201,13 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 					Follow:    true,
 					Location:  &seek,
 					MustExist: true,
+					Poll:      poll,
+					Logger:    tail.DiscardingLogger,
 				})
-			errChan.C <- err
+			if err != nil {
+				l.acc.AddError(err)
+				continue
+			}
 
 			// create a goroutine for each "tailer"
 			l.wg.Add(1)
@@ -177,7 +216,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 		}
 	}
 
-	return errChan.Error()
+	return nil
 }
 
 // receiver is launched as a goroutine to continuously watch a tailed logfile
@@ -194,9 +233,17 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 			continue
 		}
 
+		// Fix up files with Windows line endings.
+		text := strings.TrimRight(line.Text, "\r")
+
+		entry := logEntry{
+			path: tailer.Filename,
+			line: text,
+		}
+
 		select {
 		case <-l.done:
-		case l.lines <- line.Text:
+		case l.lines <- entry:
 		}
 	}
 }
@@ -209,28 +256,32 @@ func (l *LogParserPlugin) parser() {
 
 	var m telegraf.Metric
 	var err error
-	var line string
+	var entry logEntry
 	for {
 		select {
 		case <-l.done:
 			return
-		case line = <-l.lines:
-			if line == "" || line == "\n" {
+		case entry = <-l.lines:
+			if entry.line == "" || entry.line == "\n" {
 				continue
 			}
 		}
-
 		for _, parser := range l.parsers {
-			m, err = parser.ParseLine(line)
+			m, err = parser.ParseLine(entry.line)
 			if err == nil {
 				if m != nil {
-					l.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+					tags := m.Tags()
+					tags["path"] = entry.path
+					l.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
 				}
+			} else {
+				log.Println("E! Error parsing log line: " + err.Error())
 			}
 		}
 	}
 }
 
+// Stop will end the metrics collection process on file tailers
 func (l *LogParserPlugin) Stop() {
 	l.Lock()
 	defer l.Unlock()
@@ -248,6 +299,8 @@ func (l *LogParserPlugin) Stop() {
 
 func init() {
 	inputs.Add("logparser", func() telegraf.Input {
-		return &LogParserPlugin{}
+		return &LogParserPlugin{
+			WatchMethod: defaultWatchMethod,
+		}
 	})
 }

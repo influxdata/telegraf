@@ -35,11 +35,12 @@ func TestPhpFpmGeneratesMetrics_From_Http(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := r.Gather(&acc)
+	err := acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{
 		"pool": "www",
+		"url":  ts.URL,
 	}
 
 	fields := map[string]interface{}{
@@ -62,7 +63,7 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 	// Let OS find an available port
 	tcp, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		t.Fatal("Cannot initalize test server")
+		t.Fatal("Cannot initialize test server")
 	}
 	defer tcp.Close()
 
@@ -75,11 +76,12 @@ func TestPhpFpmGeneratesMetrics_From_Fcgi(t *testing.T) {
 	}
 
 	var acc testutil.Accumulator
-	err = r.Gather(&acc)
+	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{
 		"pool": "www",
+		"url":  r.Urls[0],
 	}
 
 	fields := map[string]interface{}{
@@ -106,7 +108,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
 	tcp, err := net.Listen("unix", fmt.Sprintf("/tmp/test-fpm%d.sock", randomNumber))
 	if err != nil {
-		t.Fatal("Cannot initalize server on port ")
+		t.Fatal("Cannot initialize server on port ")
 	}
 
 	defer tcp.Close()
@@ -119,11 +121,12 @@ func TestPhpFpmGeneratesMetrics_From_Socket(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err = r.Gather(&acc)
+	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{
 		"pool": "www",
+		"url":  r.Urls[0],
 	}
 
 	fields := map[string]interface{}{
@@ -150,7 +153,7 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
 	tcp, err := net.Listen("unix", fmt.Sprintf("/tmp/test-fpm%d.sock", randomNumber))
 	if err != nil {
-		t.Fatal("Cannot initalize server on port ")
+		t.Fatal("Cannot initialize server on port ")
 	}
 
 	defer tcp.Close()
@@ -163,11 +166,12 @@ func TestPhpFpmGeneratesMetrics_From_Socket_Custom_Status_Path(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err = r.Gather(&acc)
+	err = acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	tags := map[string]string{
 		"pool": "www",
+		"url":  r.Urls[0],
 	}
 
 	fields := map[string]interface{}{
@@ -193,7 +197,7 @@ func TestPhpFpmDefaultGetFromLocalhost(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := r.Gather(&acc)
+	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "127.0.0.1/status")
 }
@@ -205,7 +209,7 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Fpm_Status_Is_Not_Responding(t 
 
 	var acc testutil.Accumulator
 
-	err := r.Gather(&acc)
+	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), `Unable to connect to phpfpm status page 'http://aninvalidone': Get http://aninvalidone: dial tcp: lookup aninvalidone`)
 }
@@ -217,7 +221,7 @@ func TestPhpFpmGeneratesMetrics_Throw_Error_When_Socket_Path_Is_Invalid(t *testi
 
 	var acc testutil.Accumulator
 
-	err := r.Gather(&acc)
+	err := acc.GatherError(r.Gather)
 	require.Error(t, err)
 	assert.Equal(t, `Socket doesn't exist  '/tmp/invalid.sock': stat /tmp/invalid.sock: no such file or directory`, err.Error())
 

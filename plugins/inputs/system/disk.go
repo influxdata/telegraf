@@ -2,7 +2,6 @@ package system
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -24,12 +23,11 @@ func (_ *DiskStats) Description() string {
 }
 
 var diskSampleConfig = `
-  ## By default, telegraf gather stats for all mountpoints.
-  ## Setting mountpoints will restrict the stats to the specified mountpoints.
+  ## By default stats will be gathered for all mount points.
+  ## Set mount_points will restrict the stats to only the specified mount points.
   # mount_points = ["/"]
 
-  ## Ignore some mountpoints by filesystem type. For example (dev)tmpfs (usually
-  ## present on /run, /var/run, /dev/shm or /dev).
+  ## Ignore mount points by filesystem type.
   ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
 `
 
@@ -53,10 +51,12 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 			// Skip dummy filesystem (procfs, cgroupfs, ...)
 			continue
 		}
+		mountOpts := parseOptions(partitions[i].Opts)
 		tags := map[string]string{
 			"path":   du.Path,
 			"device": strings.Replace(partitions[i].Device, "/dev/", "", -1),
 			"fstype": du.Fstype,
+			"mode":   mountOpts.Mode(),
 		}
 		var used_percent float64
 		if du.Used+du.Free > 0 {
@@ -79,164 +79,34 @@ func (s *DiskStats) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-type DiskIOStats struct {
-	ps PS
+type MountOptions []string
 
-	Devices          []string
-	DeviceTags       []string
-	NameTemplates    []string
-	SkipSerialNumber bool
-
-	infoCache map[string]diskInfoCache
+func (opts MountOptions) Mode() string {
+	if opts.exists("rw") {
+		return "rw"
+	} else if opts.exists("ro") {
+		return "ro"
+	} else {
+		return "unknown"
+	}
 }
 
-func (_ *DiskIOStats) Description() string {
-	return "Read metrics about disk IO by device"
+func (opts MountOptions) exists(opt string) bool {
+	for _, o := range opts {
+		if o == opt {
+			return true
+		}
+	}
+	return false
 }
 
-var diskIoSampleConfig = `
-  ## By default, telegraf will gather stats for all devices including
-  ## disk partitions.
-  ## Setting devices will restrict the stats to the specified devices.
-  # devices = ["sda", "sdb"]
-  ## Uncomment the following line if you need disk serial numbers.
-  # skip_serial_number = false
-  #
-  ## On systems which support it, device metadata can be added in the form of
-  ## tags.
-  ## Currently only Linux is supported via udev properties. You can view
-  ## available properties for a device by running:
-  ## 'udevadm info -q property -n /dev/sda'
-  # device_tags = ["ID_FS_TYPE", "ID_FS_USAGE"]
-  #
-  ## Using the same metadata source as device_tags, you can also customize the
-  ## name of the device via templates.
-  ## The 'name_templates' parameter is a list of templates to try and apply to
-  ## the device. The template may contain variables in the form of '$PROPERTY' or
-  ## '${PROPERTY}'. The first template which does not contain any variables not
-  ## present for the device is used as the device name tag.
-  ## The typical use case is for LVM volumes, to get the VG/LV name instead of
-  ## the near-meaningless DM-0 name.
-  # name_templates = ["$ID_FS_LABEL","$DM_VG_NAME/$DM_LV_NAME"]
-`
-
-func (_ *DiskIOStats) SampleConfig() string {
-	return diskIoSampleConfig
-}
-
-func (s *DiskIOStats) Gather(acc telegraf.Accumulator) error {
-	diskio, err := s.ps.DiskIO()
-	if err != nil {
-		return fmt.Errorf("error getting disk io info: %s", err)
-	}
-
-	var restrictDevices bool
-	devices := make(map[string]bool)
-	if len(s.Devices) != 0 {
-		restrictDevices = true
-		for _, dev := range s.Devices {
-			devices[dev] = true
-		}
-	}
-
-	for _, io := range diskio {
-		_, member := devices[io.Name]
-		if restrictDevices && !member {
-			continue
-		}
-		tags := map[string]string{}
-		tags["name"] = s.diskName(io.Name)
-		for t, v := range s.diskTags(io.Name) {
-			tags[t] = v
-		}
-		if !s.SkipSerialNumber {
-			if len(io.SerialNumber) != 0 {
-				tags["serial"] = io.SerialNumber
-			} else {
-				tags["serial"] = "unknown"
-			}
-		}
-
-		fields := map[string]interface{}{
-			"reads":            io.ReadCount,
-			"writes":           io.WriteCount,
-			"read_bytes":       io.ReadBytes,
-			"write_bytes":      io.WriteBytes,
-			"read_time":        io.ReadTime,
-			"write_time":       io.WriteTime,
-			"io_time":          io.IoTime,
-			"iops_in_progress": io.IopsInProgress,
-		}
-		acc.AddCounter("diskio", fields, tags)
-	}
-
-	return nil
-}
-
-var varRegex = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
-
-func (s *DiskIOStats) diskName(devName string) string {
-	di, err := s.diskInfo(devName)
-	if err != nil {
-		// discard error :-(
-		// We can't return error because it's non-fatal to the Gather().
-		// And we have no logger, so we can't log it.
-		return devName
-	}
-	if di == nil {
-		return devName
-	}
-
-	for _, nt := range s.NameTemplates {
-		miss := false
-		name := varRegex.ReplaceAllStringFunc(nt, func(sub string) string {
-			sub = sub[1:] // strip leading '$'
-			if sub[0] == '{' {
-				sub = sub[1 : len(sub)-1] // strip leading & trailing '{' '}'
-			}
-			if v, ok := di[sub]; ok {
-				return v
-			}
-			miss = true
-			return ""
-		})
-
-		if !miss {
-			return name
-		}
-	}
-
-	return devName
-}
-
-func (s *DiskIOStats) diskTags(devName string) map[string]string {
-	di, err := s.diskInfo(devName)
-	if err != nil {
-		// discard error :-(
-		// We can't return error because it's non-fatal to the Gather().
-		// And we have no logger, so we can't log it.
-		return nil
-	}
-	if di == nil {
-		return nil
-	}
-
-	tags := map[string]string{}
-	for _, dt := range s.DeviceTags {
-		if v, ok := di[dt]; ok {
-			tags[dt] = v
-		}
-	}
-
-	return tags
+func parseOptions(opts string) MountOptions {
+	return strings.Split(opts, ",")
 }
 
 func init() {
+	ps := newSystemPS()
 	inputs.Add("disk", func() telegraf.Input {
-		return &DiskStats{ps: &systemPS{}}
-	})
-
-	inputs.Add("diskio", func() telegraf.Input {
-		return &DiskIOStats{ps: &systemPS{}, SkipSerialNumber: true}
+		return &DiskStats{ps: ps}
 	})
 }

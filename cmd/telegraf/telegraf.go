@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
+	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
 	"os/signal"
 	"runtime"
@@ -24,6 +26,8 @@ import (
 
 var fDebug = flag.Bool("debug", false,
 	"turn on debug logging")
+var pprofAddr = flag.String("pprof-addr", "",
+	"pprof address to listen on, not activate pprof if empty")
 var fQuiet = flag.Bool("quiet", false,
 	"run in quiet mode")
 var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
@@ -47,16 +51,16 @@ var fAggregatorFilters = flag.String("aggregator-filter", "",
 var fProcessorFilters = flag.String("processor-filter", "",
 	"filter the processors to enable, separator is :")
 var fUsage = flag.String("usage", "",
-	"print usage for a plugin, ie, 'telegraf -usage mysql'")
+	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 var fService = flag.String("service", "",
 	"operate on the service")
+var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
-// Telegraf version, populated linker.
-//   ie, -ldflags "-X main.version=`git describe --always --tags`"
 var (
-	version string
-	commit  string
-	branch  string
+	nextVersion = "1.7.0"
+	version     string
+	commit      string
+	branch      string
 )
 
 func init() {
@@ -77,8 +81,8 @@ Usage:
 
 The commands & flags are:
 
-  config             print out full sample configuration to stdout
-  version            print the version to stdout
+  config              print out full sample configuration to stdout
+  version             print the version to stdout
 
   --config <file>     configuration file to load
   --test              gather metrics once, print them to stdout, and exit
@@ -87,6 +91,7 @@ The commands & flags are:
   --output-filter     filter the output plugins to enable, separator is :
   --usage             print usage for a plugin, ie, 'telegraf --usage mysql'
   --debug             print metrics as they're generated to stdout
+  --pprof-addr        pprof address to listen on, format: localhost:6060 or :6060
   --quiet             run in quiet mode
 
 Examples:
@@ -98,13 +103,16 @@ Examples:
   telegraf --input-filter cpu --output-filter influxdb config
 
   # run a single telegraf collection, outputing metrics to stdout
-  telegraf --config telegraf.conf -test
+  telegraf --config telegraf.conf --test
 
   # run telegraf with all plugins defined in config file
   telegraf --config telegraf.conf
 
   # run telegraf, enabling the cpu & memory input, and influxdb output plugins
   telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
+
+  # run telegraf with pprof
+  telegraf --config telegraf.conf --pprof-addr localhost:6060
 `
 
 var stop chan struct{}
@@ -136,11 +144,21 @@ func reloadLoop(
 				log.Fatal("E! " + err.Error())
 			}
 		}
-		if len(c.Outputs) == 0 {
+		if !*fTest && len(c.Outputs) == 0 {
 			log.Fatalf("E! Error: no outputs found, did you provide a valid config file?")
 		}
 		if len(c.Inputs) == 0 {
 			log.Fatalf("E! Error: no inputs found, did you provide a valid config file?")
+		}
+
+		if int64(c.Agent.Interval.Duration) <= 0 {
+			log.Fatalf("E! Agent interval must be positive, found %s",
+				c.Agent.Interval.Duration)
+		}
+
+		if int64(c.Agent.FlushInterval.Duration) <= 0 {
+			log.Fatalf("E! Agent flush_interval must be positive; found %s",
+				c.Agent.Interval.Duration)
 		}
 
 		ag, err := agent.NewAgent(c)
@@ -188,7 +206,7 @@ func reloadLoop(
 			}
 		}()
 
-		log.Printf("I! Starting Telegraf (version %s)\n", version)
+		log.Printf("I! Starting Telegraf %s\n", displayVersion())
 		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
 		log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
 		log.Printf("I! Tags enabled: %s", c.ListTags())
@@ -246,6 +264,13 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
+func displayVersion() string {
+	if version == "" {
+		return fmt.Sprintf("v%s~%s", nextVersion, commit)
+	}
+	return "v" + version
+}
+
 func main() {
 	flag.Usage = func() { usageExit(0) }
 	flag.Parse()
@@ -267,10 +292,27 @@ func main() {
 		processorFilters = strings.Split(":"+strings.TrimSpace(*fProcessorFilters)+":", ":")
 	}
 
+	if *pprofAddr != "" {
+		go func() {
+			pprofHostPort := *pprofAddr
+			parts := strings.Split(pprofHostPort, ":")
+			if len(parts) == 2 && parts[0] == "" {
+				pprofHostPort = fmt.Sprintf("localhost:%s", parts[1])
+			}
+			pprofHostPort = "http://" + pprofHostPort + "/debug/pprof"
+
+			log.Printf("I! Starting pprof HTTP server at: %s", pprofHostPort)
+
+			if err := http.ListenAndServe(*pprofAddr, nil); err != nil {
+				log.Fatal("E! " + err.Error())
+			}
+		}()
+	}
+
 	if len(args) > 0 {
 		switch args[0] {
 		case "version":
-			fmt.Printf("Telegraf v%s (git: %s %s)\n", version, branch, commit)
+			fmt.Printf("Telegraf %s (git: %s %s)\n", displayVersion(), branch, commit)
 			return
 		case "config":
 			config.PrintSampleConfig(
@@ -298,7 +340,7 @@ func main() {
 		}
 		return
 	case *fVersion:
-		fmt.Printf("Telegraf v%s (git: %s %s)\n", version, branch, commit)
+		fmt.Printf("Telegraf %s (git: %s %s)\n", displayVersion(), branch, commit)
 		return
 	case *fSampleConfig:
 		config.PrintSampleConfig(
@@ -317,13 +359,13 @@ func main() {
 		return
 	}
 
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" && !(*fRunAsConsole) {
 		svcConfig := &service.Config{
 			Name:        "telegraf",
 			DisplayName: "Telegraf Data Collector Service",
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",
-			Arguments: []string{"-config", "C:\\Program Files\\Telegraf\\telegraf.conf"},
+			Arguments: []string{"--config", "C:\\Program Files\\Telegraf\\telegraf.conf"},
 		}
 
 		prg := &program{
@@ -336,14 +378,14 @@ func main() {
 		if err != nil {
 			log.Fatal("E! " + err.Error())
 		}
-		// Handle the -service flag here to prevent any issues with tooling that
+		// Handle the --service flag here to prevent any issues with tooling that
 		// may not have an interactive session, e.g. installing from Ansible.
 		if *fService != "" {
 			if *fConfig != "" {
-				(*svcConfig).Arguments = []string{"-config", *fConfig}
+				(*svcConfig).Arguments = []string{"--config", *fConfig}
 			}
 			if *fConfigDirectory != "" {
-				(*svcConfig).Arguments = append((*svcConfig).Arguments, "-config-directory", *fConfigDirectory)
+				(*svcConfig).Arguments = append((*svcConfig).Arguments, "--config-directory", *fConfigDirectory)
 			}
 			err := service.Control(s, *fService)
 			if err != nil {

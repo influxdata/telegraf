@@ -1,7 +1,6 @@
 package models
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -165,69 +164,6 @@ func TestAddDropOriginal(t *testing.T) {
 		time.Now(),
 	)
 	assert.False(t, ra.Add(m2))
-}
-
-// make an untyped, counter, & gauge metric
-func TestMakeMetricA(t *testing.T) {
-	now := time.Now()
-	ra := NewRunningAggregator(&TestAggregator{}, &AggregatorConfig{
-		Name: "TestRunningAggregator",
-	})
-	assert.Equal(t, "aggregators.TestRunningAggregator", ra.Name())
-
-	m := ra.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
-		map[string]string{},
-		telegraf.Untyped,
-		now,
-	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
-		m.String(),
-	)
-	assert.Equal(
-		t,
-		m.Type(),
-		telegraf.Untyped,
-	)
-
-	m = ra.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
-		map[string]string{},
-		telegraf.Counter,
-		now,
-	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
-		m.String(),
-	)
-	assert.Equal(
-		t,
-		m.Type(),
-		telegraf.Counter,
-	)
-
-	m = ra.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
-		map[string]string{},
-		telegraf.Gauge,
-		now,
-	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
-		m.String(),
-	)
-	assert.Equal(
-		t,
-		m.Type(),
-		telegraf.Gauge,
-	)
 }
 
 type TestAggregator struct {

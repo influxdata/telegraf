@@ -28,6 +28,18 @@ type Accumulator interface {
 		tags map[string]string,
 		t ...time.Time)
 
+	// AddSummary is the same as AddFields, but will add the metric as a "Summary" type
+	AddSummary(measurement string,
+		fields map[string]interface{},
+		tags map[string]string,
+		t ...time.Time)
+
+	// AddHistogram is the same as AddFields, but will add the metric as a "Histogram" type
+	AddHistogram(measurement string,
+		fields map[string]interface{},
+		tags map[string]string,
+		t ...time.Time)
+
 	SetPrecision(precision, interval time.Duration)
 
 	AddError(err error)

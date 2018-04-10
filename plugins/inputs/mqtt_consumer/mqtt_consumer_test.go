@@ -2,7 +2,6 @@ package mqtt_consumer
 
 import (
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -23,11 +22,13 @@ const (
 func newTestMQTTConsumer() (*MQTTConsumer, chan mqtt.Message) {
 	in := make(chan mqtt.Message, 100)
 	n := &MQTTConsumer{
-		Topics:  []string{"telegraf"},
-		Servers: []string{"localhost:1883"},
-		in:      in,
-		done:    make(chan struct{}),
+		Topics:    []string{"telegraf"},
+		Servers:   []string{"localhost:1883"},
+		in:        in,
+		done:      make(chan struct{}),
+		connected: true,
 	}
+
 	return n, in
 }
 
@@ -86,7 +87,7 @@ func TestRunParser(t *testing.T) {
 	n.parser, _ = parsers.NewInfluxParser()
 	go n.receiver()
 	in <- mqttMsg(testMsgNeg)
-	time.Sleep(time.Millisecond * 250)
+	acc.Wait(1)
 
 	if a := acc.NFields(); a != 1 {
 		t.Errorf("got %v, expected %v", a, 1)
@@ -102,7 +103,7 @@ func TestRunParserNegativeNumber(t *testing.T) {
 	n.parser, _ = parsers.NewInfluxParser()
 	go n.receiver()
 	in <- mqttMsg(testMsg)
-	time.Sleep(time.Millisecond * 25)
+	acc.Wait(1)
 
 	if a := acc.NFields(); a != 1 {
 		t.Errorf("got %v, expected %v", a, 1)
@@ -119,11 +120,12 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	n.parser, _ = parsers.NewInfluxParser()
 	go n.receiver()
 	in <- mqttMsg(invalidMsg)
-	time.Sleep(time.Millisecond * 25)
+	acc.WaitError(1)
 
 	if a := acc.NFields(); a != 0 {
 		t.Errorf("got %v, expected %v", a, 0)
 	}
+	assert.Contains(t, acc.Errors[0].Error(), "MQTT Parse Error")
 }
 
 // Test that the parser parses line format messages into metrics
@@ -131,12 +133,13 @@ func TestRunParserAndGather(t *testing.T) {
 	n, in := newTestMQTTConsumer()
 	acc := testutil.Accumulator{}
 	n.acc = &acc
+
 	defer close(n.done)
 
 	n.parser, _ = parsers.NewInfluxParser()
 	go n.receiver()
 	in <- mqttMsg(testMsg)
-	time.Sleep(time.Millisecond * 25)
+	acc.Wait(1)
 
 	n.Gather(&acc)
 
@@ -154,9 +157,9 @@ func TestRunParserAndGatherGraphite(t *testing.T) {
 	n.parser, _ = parsers.NewGraphiteParser("_", []string{}, nil)
 	go n.receiver()
 	in <- mqttMsg(testMsgGraphite)
-	time.Sleep(time.Millisecond * 25)
 
 	n.Gather(&acc)
+	acc.Wait(1)
 
 	acc.AssertContainsFields(t, "cpu_load_short_graphite",
 		map[string]interface{}{"value": float64(23422)})
@@ -172,9 +175,10 @@ func TestRunParserAndGatherJSON(t *testing.T) {
 	n.parser, _ = parsers.NewJSONParser("nats_json_test", []string{}, nil)
 	go n.receiver()
 	in <- mqttMsg(testMsgJSON)
-	time.Sleep(time.Millisecond * 25)
 
 	n.Gather(&acc)
+
+	acc.Wait(1)
 
 	acc.AssertContainsFields(t, "nats_json_test",
 		map[string]interface{}{

@@ -7,6 +7,16 @@
 [[inputs.nginx]]
   ## An array of Nginx stub_status URI to gather stats.
   urls = ["http://localhost/server_status"]
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
+
+  ## HTTP response timeout (default: 5s)
+  response_timeout = "5s"
 ```
 
 ### Measurements & Fields:
@@ -37,7 +47,7 @@ Using this configuration:
 
 When run with:
 ```
-./telegraf -config telegraf.conf -input-filter nginx -test
+./telegraf --config telegraf.conf --input-filter nginx --test
 ```
 
 It produces:

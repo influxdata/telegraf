@@ -39,6 +39,11 @@ metrics as they pass through Telegraf:
 
 Both Aggregators and Processors analyze metrics as they pass through Telegraf.
 
+Use [measurement filtering](CONFIGURATION.md#measurement-filtering)
+to control which metrics are passed through a processor or aggregator.  If a
+metric is filtered out the metric bypasses the plugin and is passed downstream
+to the next plugin.
+
 **Processor** plugins process metrics as they pass through and immediately emit
 results based on the values they process. For example, this could be printing
 all metrics or adding a tag to all metrics that pass through.
