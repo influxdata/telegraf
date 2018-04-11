@@ -2,6 +2,7 @@
 ### Features
 
 - [#3964](https://github.com/influxdata/telegraf/pull/3964): Add repl_oplog_window_sec metric to mongodb input.
+- [#3819](https://github.com/influxdata/telegraf/pull/3819): Add per-host shard metrics in mongodb input.
 
 ## v1.6 [unreleased]
 
