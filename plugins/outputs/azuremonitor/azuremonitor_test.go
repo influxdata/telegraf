@@ -68,9 +68,12 @@ func TestPostData(t *testing.T) {
 
 	metrics := getMockMetrics()
 	t.Logf("mock metrics are %+v\n", metrics)
-	metricsList, err := azmon.flattenMetrics(metrics)
+	// metricsList, err := azmon.add(&metrics[0])
+	for _, m := range metrics {
+		azmon.add(m)
+	}
 
-	jsonBytes, err := json.Marshal(&metricsList[0])
+	jsonBytes, err := json.Marshal(azmon.cache)
 	t.Logf("json content is:\n----------\n%s\n----------\n", string(jsonBytes))
 
 	req, err := azmon.postData(&jsonBytes)
