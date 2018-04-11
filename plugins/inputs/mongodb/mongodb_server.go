@@ -156,6 +156,7 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 		)
 		data.AddDefaultStats()
 		data.AddDbStats()
+		data.AddShardHostStats()
 		data.flush(acc)
 	}
 	return nil

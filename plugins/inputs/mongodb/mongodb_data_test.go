@@ -120,6 +120,42 @@ func TestAddShardStats(t *testing.T) {
 	}
 }
 
+func TestAddShardHostStats(t *testing.T) {
+	expectedHosts := []string{"hostA", "hostB"}
+	hostStatLines := map[string]ShardHostStatLine{}
+	for _, host := range expectedHosts {
+		hostStatLines[host] = ShardHostStatLine{
+			InUse:      0,
+			Available:  0,
+			Created:    0,
+			Refreshing: 0,
+		}
+	}
+
+	d := NewMongodbData(
+		&StatLine{
+			ShardHostStatsLines: hostStatLines,
+		},
+		map[string]string{}, // Use empty tags, so we don't break existing tests
+	)
+
+	var acc testutil.Accumulator
+	d.AddShardHostStats()
+	d.flush(&acc)
+
+	var hostsFound []string
+	for host, _ := range hostStatLines {
+		for key, _ := range ShardHostStats {
+			assert.True(t, acc.HasInt64Field("mongodb_shard_stats", key))
+		}
+
+		assert.True(t, acc.HasTag("mongodb_shard_stats", "hostname"))
+		hostsFound = append(hostsFound, host)
+	}
+
+	assert.Equal(t, hostsFound, expectedHosts)
+}
+
 func TestStateTag(t *testing.T) {
 	d := NewMongodbData(
 		&StatLine{
