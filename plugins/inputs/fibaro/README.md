@@ -1,8 +1,7 @@
 # Fibaro Input Plugin
 
-The Fibaro plugin makes HTTP calls to the Fibaro controller API to gather values of hooked devices.  
+The Fibaro plugin makes HTTP calls to the Fibaro controller API to gather values of hooked devices.
 Those values could be true (1) or false (0) for switches, percentage for dimmers, temperature, etc.
-
 
 ### Configuration:
 
@@ -21,19 +20,18 @@ Those values could be true (1) or false (0) for switches, percentage for dimmers
   # timeout = "5s"
 ```
 
+### Metrics:
 
-### Tags:
+- fibaro
+  - tags:
+    - section (section name)
+    - room (room name)
+    - name (device name)
+    - type (device type)
+  - fields:
+    - value (float)
+    - value2 (float, when available from device)
 
-	section: section's name
-	room: room's name
-	name: device's name
-	type: device's type
-
-
-### Fields:
-
-	value float
-	value2 float (when available from device)
 
 ### Example Output:
 
