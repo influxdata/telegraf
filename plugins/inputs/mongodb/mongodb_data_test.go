@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"sort"
 	"testing"
 	"time"
 
@@ -152,7 +153,8 @@ func TestAddShardHostStats(t *testing.T) {
 		assert.True(t, acc.HasTag("mongodb_shard_stats", "hostname"))
 		hostsFound = append(hostsFound, host)
 	}
-
+	sort.Strings(hostsFound)
+	sort.Strings(expectedHosts)
 	assert.Equal(t, hostsFound, expectedHosts)
 }
 
