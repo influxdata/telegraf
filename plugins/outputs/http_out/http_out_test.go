@@ -2,8 +2,6 @@ package http_out
 
 import (
 	"encoding/json"
-	// "fmt"
-	// "github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 	"net/http"
 	"net/http/httptest"
@@ -14,15 +12,18 @@ func TestHttpOutOK(t *testing.T) {
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json;charset=UTF-8")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status": "OK"}`))
 
-			var reqBody map[string]interface{}
+			var reqBody struct {
+				Metrics []Metric
+				Data    map[string]string
+			}
 			err := json.NewDecoder(r.Body).Decode(&reqBody)
 			if err != nil {
 				panic(err)
 			}
-			// fmt.Printf("reqBody = %+v\n", reqBody)
+
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"status": "OK"}`))
 		}),
 	)
 
@@ -35,8 +36,6 @@ func TestHttpOutOK(t *testing.T) {
 		Server: ts.URL,
 		Data:   data,
 	}
-
-	h.Connect()
 
 	h.Write(testutil.MockMetrics())
 }

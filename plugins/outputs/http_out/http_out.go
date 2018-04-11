@@ -1,20 +1,14 @@
 package http_out
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	// "github.com/influxdata/telegraf/plugins/serializers"
-	// "github.com/influxdata/telegraf/plugins/serializers/influx"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	// "strings"
-	"encoding/json"
-	// "io"
-	"io/ioutil"
-	// "io"
-	"bytes"
-	// "os"
 	"time"
 )
 
