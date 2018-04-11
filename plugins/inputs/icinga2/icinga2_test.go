@@ -1,14 +1,13 @@
 package icinga2
 
 import (
-        "fmt"
-        "net/http"
-        "net/http/httptest"
-        "testing"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
 
-        "github.com/influxdata/telegraf/testutil"
-        "github.com/stretchr/testify/require"
-
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 var icingaStatus = `
@@ -396,61 +395,60 @@ var icingaStatus = `
 `
 
 func TestIcinga2Status(t *testing.T) {
-        ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        w.WriteHeader(http.StatusOK)
-        fmt.Fprintln(w, icingaStatus)
-    }))
-    defer ts.Close()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintln(w, icingaStatus)
+	}))
+	defer ts.Close()
 
-     i := &Icinga2{
-                URL: ts.URL,
-        }
+	i := &Icinga2{
+		URL: ts.URL,
+	}
 
-    var acc testutil.Accumulator
-    err := acc.GatherError(i.Gather)
-    require.NoError(t, err)
+	var acc testutil.Accumulator
+	err := acc.GatherError(i.Gather)
+	require.NoError(t, err)
 
-
-    fields := map[string]interface{}{
-"ActiveHostChecks":      float64(0.016666666666666666),
-"ActiveHostChecks15Min":         float64(15.0),
-"ActiveHostChecks1Min":  float64(1.0),
-"ActiveHostChecks5Min":  float64(5.0),
-"ActiveServiceChecks":   float64(0.18333333333333332),
-"ActiveServiceChecks15Min":      float64(163.0),
-"ActiveServiceChecks1Min":       float64(11.0),
-"ActiveServiceChecks5Min":       float64(54.0),
-"AvgExecutionTime":      float64(1.6000514897433193),
-"AvgLatency":    float64(0.0008189678192138672),
-"MaxExecutionTime":      float64(10.00667691230774),
-"MaxLatency":    float64(0.0016567707061767578),
-"MinExecutionTime":      float64(0.00045609474182128906),
-"MinLatency":    float64(0.000164031982421875),
-"NumHostsAcknowledged":  float64(0.0),
-"NumHostsDown":  float64(0.0),
-"NumHostsFlapping":      float64(0.0),
-"NumHostsInDowntime":    float64(0.0),
-"NumHostsPending":       float64(0.0),
-"NumHostsUnreachable":   float64(0.0),
-"NumHostsUp":    float64(1.0),
-"NumServicesAcknowledged":       float64(0.0),
-"NumServicesCritical":   float64(2.0),
-"NumServicesFlapping":   float64(0.0),
-"NumServicesInDowntime":         float64(0.0),
-"NumServicesOk":         float64(7.0),
-"NumServicesPending":    float64(0.0),
-"NumServicesUnknown":    float64(0.0),
-"NumServicesUnreachable":        float64(0.0),
-"NumServicesWarning":    float64(2.0),
-"PassiveHostChecks":     float64(0.0),
-"PassiveHostChecks15Min":        float64(0.0),
-"PassiveHostChecks1Min":         float64(0.0),
-"PassiveHostChecks5Min":         float64(0.0),
-"PassiveServiceChecks":  float64(0.0),
-"PassiveServiceChecks15Min":     float64(0.0),
-"PassiveServiceChecks1Min":      float64(0.0),
-"PassiveServiceChecks5Min":      float64(0.0),
-"Uptime":        float64(1031466.8390378952),
-    }
-    acc.AssertContainsFields(t, "icinga2", fields)
+	fields := map[string]interface{}{
+		"ActiveHostChecks":          float64(0.016666666666666666),
+		"ActiveHostChecks15Min":     float64(15.0),
+		"ActiveHostChecks1Min":      float64(1.0),
+		"ActiveHostChecks5Min":      float64(5.0),
+		"ActiveServiceChecks":       float64(0.18333333333333332),
+		"ActiveServiceChecks15Min":  float64(163.0),
+		"ActiveServiceChecks1Min":   float64(11.0),
+		"ActiveServiceChecks5Min":   float64(54.0),
+		"AvgExecutionTime":          float64(1.6000514897433193),
+		"AvgLatency":                float64(0.0008189678192138672),
+		"MaxExecutionTime":          float64(10.00667691230774),
+		"MaxLatency":                float64(0.0016567707061767578),
+		"MinExecutionTime":          float64(0.00045609474182128906),
+		"MinLatency":                float64(0.000164031982421875),
+		"NumHostsAcknowledged":      float64(0.0),
+		"NumHostsDown":              float64(0.0),
+		"NumHostsFlapping":          float64(0.0),
+		"NumHostsInDowntime":        float64(0.0),
+		"NumHostsPending":           float64(0.0),
+		"NumHostsUnreachable":       float64(0.0),
+		"NumHostsUp":                float64(1.0),
+		"NumServicesAcknowledged":   float64(0.0),
+		"NumServicesCritical":       float64(2.0),
+		"NumServicesFlapping":       float64(0.0),
+		"NumServicesInDowntime":     float64(0.0),
+		"NumServicesOk":             float64(7.0),
+		"NumServicesPending":        float64(0.0),
+		"NumServicesUnknown":        float64(0.0),
+		"NumServicesUnreachable":    float64(0.0),
+		"NumServicesWarning":        float64(2.0),
+		"PassiveHostChecks":         float64(0.0),
+		"PassiveHostChecks15Min":    float64(0.0),
+		"PassiveHostChecks1Min":     float64(0.0),
+		"PassiveHostChecks5Min":     float64(0.0),
+		"PassiveServiceChecks":      float64(0.0),
+		"PassiveServiceChecks15Min": float64(0.0),
+		"PassiveServiceChecks1Min":  float64(0.0),
+		"PassiveServiceChecks5Min":  float64(0.0),
+		"Uptime":                    float64(1031466.8390378952),
+	}
+	acc.AssertContainsFields(t, "icinga2", fields)
 }

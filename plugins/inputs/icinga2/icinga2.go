@@ -16,27 +16,27 @@ import (
 
 // Icinga2 represents the config object for the plugin
 type Icinga2 struct {
-    URL string
+	URL string
 
-    // Bearer Token authorization file path
-    BearerToken string `toml:"bearer_token"`
+	// Bearer Token authorization file path
+	BearerToken string `toml:"bearer_token"`
 
-    // Path to CA file
-    SSLCA string `toml:"ssl_ca"`
-    // Path to host cert file
-    SSLCert string `toml:"ssl_cert"`
-    // Path to cert key file
-    SSLKey string `toml:"ssl_key"`
-    // Use SSL but skip chain & host verification
-    InsecureSkipVerify bool
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
 
-    // HTTP Timeout specified as a string - 3s, 1m, 1h
-    ResponseTimeout internal.Duration
+	// HTTP Timeout specified as a string - 3s, 1m, 1h
+	ResponseTimeout internal.Duration
 
-    Username string
-    Password string
+	Username string
+	Password string
 
-    RoundTripper http.RoundTripper
+	RoundTripper http.RoundTripper
 }
 
 var sampleConfig = `
@@ -108,8 +108,8 @@ func (i *Icinga2) gatherSummary(baseURL string, acc telegraf.Accumulator) error 
 	var token []byte
 	var resp *http.Response
 
-    //DEBUG fmt.Println(i.Username, i.Password)
-    req.SetBasicAuth(i.Username, i.Password)
+	//DEBUG fmt.Println(i.Username, i.Password)
+	req.SetBasicAuth(i.Username, i.Password)
 
 	tlsCfg, err := internal.GetTLSConfig(i.SSLCert, i.SSLKey, i.SSLCA, i.InsecureSkipVerify)
 	if err != nil {
@@ -136,16 +136,14 @@ func (i *Icinga2) gatherSummary(baseURL string, acc telegraf.Accumulator) error 
 		req.Header.Set("Authorization", "Bearer "+string(token))
 	}
 
-    
 	resp, err = i.RoundTripper.RoundTrip(req)
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", url, err)
 	}
 
-
-    bodyText, err := ioutil.ReadAll(resp.Body)
-    /*DEBUG s := string(bodyText)
-     fmt.Println(s) */
+	bodyText, err := ioutil.ReadAll(resp.Body)
+	/*DEBUG s := string(bodyText)
+	  fmt.Println(s) */
 
 	defer resp.Body.Close()
 
@@ -153,15 +151,14 @@ func (i *Icinga2) gatherSummary(baseURL string, acc telegraf.Accumulator) error 
 		return fmt.Errorf("%s returned HTTP status %s", url, resp.Status)
 	}
 
-    summaryMetrics := &SummaryMetrics{}
-    //err = json.NewDecoder(resp.Body).Decode(summaryMetrics)
-    err = (json.Unmarshal(bodyText, summaryMetrics))
-    if err != nil {
-        fmt.Printf(`Error parsing response: %s`, err)
-    } 
+	summaryMetrics := &SummaryMetrics{}
+	//err = json.NewDecoder(resp.Body).Decode(summaryMetrics)
+	err = (json.Unmarshal(bodyText, summaryMetrics))
+	if err != nil {
+		fmt.Printf(`Error parsing response: %s`, err)
+	}
 
-    //DEBUG fmt.Println(len(summaryMetrics.RawResult))
-
+	//DEBUG fmt.Println(len(summaryMetrics.RawResult))
 
 	buildCIBStatusMetrics(summaryMetrics, acc)
 	//buildNodeMetrics(summaryMetrics, acc)
@@ -171,21 +168,20 @@ func (i *Icinga2) gatherSummary(baseURL string, acc telegraf.Accumulator) error 
 
 func buildCIBStatusMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumulator) {
 
-    summaryMetrics.Cib= &CIB{}
-    err := json.Unmarshal(summaryMetrics.RawResult[1], summaryMetrics.Cib)
-    if err != nil {
-        fmt.Printf(`Error parsing response: %s`, err)
-    }     
+	summaryMetrics.Cib = &CIB{}
+	err := json.Unmarshal(summaryMetrics.RawResult[1], summaryMetrics.Cib)
+	if err != nil {
+		fmt.Printf(`Error parsing response: %s`, err)
+	}
 
-
-    if err != nil {
-        fmt.Printf(`Error parsing response: %s`, err)
-    } else {
-        tags := map[string]string{
-                "node_name": "bbicinga",
-        }
-        fields := make(map[string]interface{})
-        fields["ActiveHostChecks"] = summaryMetrics.Cib.Status.ActiveHostChecks
+	if err != nil {
+		fmt.Printf(`Error parsing response: %s`, err)
+	} else {
+		tags := map[string]string{
+			"node_name": "bbicinga",
+		}
+		fields := make(map[string]interface{})
+		fields["ActiveHostChecks"] = summaryMetrics.Cib.Status.ActiveHostChecks
 		fields["ActiveHostChecks"] = summaryMetrics.Cib.Status.ActiveHostChecks
 		fields["ActiveHostChecks15Min"] = summaryMetrics.Cib.Status.ActiveHostChecks15Min
 		fields["ActiveHostChecks1Min"] = summaryMetrics.Cib.Status.ActiveHostChecks1Min
@@ -226,9 +222,8 @@ func buildCIBStatusMetrics(summaryMetrics *SummaryMetrics, acc telegraf.Accumula
 		fields["PassiveServiceChecks5Min"] = summaryMetrics.Cib.Status.PassiveServiceChecks5Min
 		fields["Uptime"] = summaryMetrics.Cib.Status.Uptime
 
-        //DEBUG fmt.Println(fields["ActiveHostChecks"])
+		//DEBUG fmt.Println(fields["ActiveHostChecks"])
 
-        acc.AddFields("icinga2", fields, tags)
-    }
+		acc.AddFields("icinga2", fields, tags)
+	}
 }
-
