@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	// "github.com/influxdata/telegraf/plugins/serializers"
 	// "github.com/influxdata/telegraf/plugins/serializers/influx"
 	"net/http"
 	"net/url"
@@ -14,16 +14,15 @@ import (
 	"io/ioutil"
 	// "io"
 	"bytes"
-	"os"
+	// "os"
 	"time"
 )
 
 type HttpOut struct {
-	Name       string
-	Server     string
-	Data       map[string]string
-	Headers    map[string]string
-	serializer serializers.Serializer
+	Name    string
+	Server  string
+	Data    map[string]string
+	Headers map[string]string
 }
 
 type Metric struct {
@@ -47,12 +46,8 @@ func (h *HttpOut) SampleConfig() string {
       Content-Type = "application/json;charset=UTF-8"
 
     [outputs.http_out.data]
-      data1 = "data1"
+      token = "YourDataToken"
 `
-}
-
-func (h *HttpOut) SetSerializer(serializer serializers.Serializer) {
-	h.serializer = serializer
 }
 
 // Connect to the Output
@@ -148,77 +143,8 @@ func (h *HttpOut) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-// func (h *HttpOut) makeRequest(metric telegraf.Metric) error {
-// if h.Server == "" {
-// return fmt.Errorf("You need to setup a server")
-// }
-
-// // Prepare URL
-// requestURL, err := url.Parse(h.Server)
-
-// if err != nil {
-// return fmt.Errorf("Invalid server URL \"%s\"", h.Server)
-// }
-
-// // reqBody := bytes.NewBufferString(metric)
-// reqBody := influx.NewReader(metrics, h.serializer)
-// req, err := http.NewRequest("POST", requestURL.String(), reqBody)
-// if err != nil {
-// fmt.Errorf("Cannot setup HTTP request: %s", err)
-// }
-
-// // Add headers parameters
-// for k, v := range h.Headers {
-// req.Header.Add(k, v)
-// }
-
-// client := http.Client{}
-// resp, err := client.Do(req)
-
-// defer resp.Body.Close()
-
-// // var parsedBody HostData
-// // resBody, err := ioutil.ReadAll(res.Body)
-
-// // err = json.Unmarshal([]byte(resBody), &parsedBody)
-// // if err != nil {
-// // fmt.Errorf("Cannot parse response body: %s", err)
-// // }
-
-// return nil
-// }
-
-func (h *HttpOut) DebugToFile(metrics []telegraf.Metric) error {
-	if len(metrics) == 0 {
-		return nil
-	}
-
-	f, err := os.OpenFile("/Users/opanmustopah/test-go.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-
-	defer f.Close()
-
-	for _, metric := range metrics {
-		d, err := h.serializer.Serialize(metric)
-		if _, err = f.Write(d); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func IsError(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
-
 func init() {
 	outputs.Add("http_out", func() telegraf.Output {
-		return &HttpOut{
-			Method: "POST",
-		}
+		return &HttpOut{}
 	})
 }

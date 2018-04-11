@@ -2,15 +2,15 @@ package http_out
 
 import (
 	"encoding/json"
-	"fmt"
-	"github.com/influxdata/telegraf/plugins/serializers"
+	// "fmt"
+	// "github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-func TestHttpOut(t *testing.T) {
+func TestHttpOutOK(t *testing.T) {
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json;charset=UTF-8")
@@ -22,21 +22,18 @@ func TestHttpOut(t *testing.T) {
 			if err != nil {
 				panic(err)
 			}
-			fmt.Printf("reqBody = %+v\n", reqBody)
+			// fmt.Printf("reqBody = %+v\n", reqBody)
 		}),
 	)
 
-	c := serializers.Config{DataFormat: "json"}
-	s, _ := serializers.NewSerializer(&c)
 	data := map[string]string{
 		"data1": "data1",
 		"data2": "data2",
 	}
 	h := HttpOut{
-		Name:       "http_out",
-		Server:     ts.URL,
-		Data:       data,
-		serializer: s,
+		Name:   "http_out",
+		Server: ts.URL,
+		Data:   data,
 	}
 
 	h.Connect()
