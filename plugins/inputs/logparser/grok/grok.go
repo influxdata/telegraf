@@ -132,6 +132,7 @@ func (p *Parser) Compile() error {
 	// "custom patterns"
 	p.namedPatterns = make([]string, 0, len(p.Patterns))
 	for i, pattern := range p.Patterns {
+		pattern = strings.TrimSpace(pattern)
 		if pattern == "" {
 			continue
 		}
