@@ -4,94 +4,120 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/goller/telegraf/metric"
 	"github.com/influxdata/go-syslog/rfc5424"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 // Parser wraps rfc5424 syslog parser in an interface for telegraf
 type Parser struct {
 	DefaultTags map[string]string
+	Name        string
 	p           *rfc5424.Parser
+	now         func() time.Time
 }
 
 // NewParser returns a parser conforming to the telegraf Parser interface
-func NewParser() *Parser {
+func NewParser(opts ...ParserOpt) *Parser {
 	return &Parser{
-		p: rfc5424.NewParser(),
+		Name: "syslog",
+		p:    rfc5424.NewParser(),
+		now:  time.Now,
 	}
 }
 
-// Parse what does this do?
-func (s *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	msg, err := s.p.Parse(buf)
-	if err != nil {
-		return nil, err
+// ParserOpt sets options for the syslog parser
+type ParserOpt func(p *Parser) *Parser
+
+// WithName sets the metric output name to name
+func WithName(name string) ParserOpt {
+	return func(p *Parser) *Parser {
+		p.Name = name
+		return p
 	}
-	// TODO: translate syslog message to telegraf metrics
+}
 
-	// name
-
-	// tm
-	tm := time.Now()
-	if msg.Timestamp != nil {
-		tm := *msg.Timestamp
-	}
-
-	// TAG
-	tags := map[string]string{
-		"level":    msg.SeverityLevel(),
+func (s *Parser) tags(msg *rfc5424.SyslogMessage) map[string]string {
+	ts := map[string]string{
+		"severity": msg.SeverityLevel(),
 		"facility": msg.FacilityMessage(),
 	}
 
 	if msg.Hostname != nil {
-		tags["hostname"] = *msg.Hostname
+		ts["hostname"] = *msg.Hostname
 	}
 
 	if msg.Appname != nil {
-		tags["appname"] = *msg.Appname
+		ts["appname"] = *msg.Appname
 	}
 
-	// Fields
-	fields := map[string]interface{}{
-		"version": msg.Version,
+	for k, v := range s.DefaultTags {
+		ts[k] = v
+	}
+	return ts
+}
+
+func (s *Parser) fields(msg *rfc5424.SyslogMessage) map[string]interface{} {
+	flds := map[string]interface{}{
+		"version": int(msg.Version),
 	}
 
 	if msg.ProcID != nil {
-		fields["procid"] = *msg.ProcID
+		flds["procid"] = *msg.ProcID
 	}
 
 	if msg.MsgID != nil {
-		fields["msgid"] = *msg.MsgID
+		flds["msgid"] = *msg.MsgID
 	}
 
 	if msg.Message != nil {
-		fields["message"] = *msg.Message
+		flds["message"] = *msg.Message
 	}
 
 	if msg.StructuredData != nil {
 		for sdid, sdparams := range *msg.StructuredData {
 			if len(sdparams) == 0 {
 				// TODO: should this just be a bool?
-				fields[sdid] = false
+				flds[sdid] = false
 				continue
 			}
 			for name, value := range sdparams {
 				// space is not allowed by the grammar within SDID
-				fields[sdid+" "+name] = value
+				flds[sdid+" "+name] = value
 			}
 		}
 	}
 
-	// TODO: what should this name be?
-	name := ""
-	// TODO: what should we do with the default tags?
-	// TODO: should these tags be after parsing? before?
-	for k, v := range s.DefaultTags {
-		tags[k] = v
+	return flds
+}
+
+func (s *Parser) tm(msg *rfc5424.SyslogMessage) time.Time {
+	t := s.now()
+	if msg.Timestamp != nil {
+		t = *msg.Timestamp
 	}
+	return t
+}
+
+// Parse converts a single syslog message of bytes into a single telegraf metric
+func (s *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	msg, err := s.p.Parse(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := metric.New(
+		s.Name,
+		s.tags(msg),
+		s.fields(msg),
+		s.tm(msg),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	return []telegraf.Metric{
-		metric.New(name, tags, fields, tm),
+		m,
 	}, nil
 }
 
