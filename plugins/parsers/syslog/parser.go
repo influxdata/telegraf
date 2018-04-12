@@ -19,11 +19,15 @@ type Parser struct {
 
 // NewParser returns a parser conforming to the telegraf Parser interface
 func NewParser(opts ...ParserOpt) *Parser {
-	return &Parser{
+	p := &Parser{
 		Name: "syslog",
 		p:    rfc5424.NewParser(),
 		now:  time.Now,
 	}
+	for _, opt := range opts {
+		p = opt(p)
+	}
+	return p
 }
 
 // ParserOpt sets options for the syslog parser
