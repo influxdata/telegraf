@@ -46,7 +46,7 @@ instrumentationKey = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
 ## ContextTagSources dictionary instructs the Application Insights plugin to set Application Insights context tags
 ## using metric properties. In this dictionary keys are names of metric properties, values are Application Insights context tags to set using the corresponding metric property.
 ## For example:
-# [contextTagSources]
+# [outputs.application_insights.contextTagSources]
 # kubernetes_container_name = "ai.cloud.role"
 # kubernetes_pod_name = "ai.cloud.roleInstance"
 ## will set the ai.cloud.role context tag to the value of kubernetes_container_name property (if present), 
