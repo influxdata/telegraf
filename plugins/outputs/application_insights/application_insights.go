@@ -43,14 +43,15 @@ instrumentationKey = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
 ## Determines whether diagnostic logging (for Application Insights endpoint traffic) is enabled. Default is false.
 # enableDiagnosticLogging = "true"
 
-## ContextTagSources dictionary instructs the Application Insights plugin to set Application Insights context tags
-## using metric properties. In this dictionary keys are names of metric properties, values are Application Insights context tags to set using the corresponding metric property.
+## ContextTagSources dictionary instructs the Application Insights plugin to set Application Insights context tags using metric properties.
+## In this dictionary keys are names of metric properties, values are Application Insights context tags to set using the corresponding metric property.
 ## For example:
 # [outputs.application_insights.contextTagSources]
 # kubernetes_container_name = "ai.cloud.role"
 # kubernetes_pod_name = "ai.cloud.roleInstance"
 ## will set the ai.cloud.role context tag to the value of kubernetes_container_name property (if present), 
 ## and the ai.cloud.roleInstance context tag to the value of kubernetes_pod_name property.
+## For list of all context tag keys see https://github.com/Microsoft/ApplicationInsights-Go/blob/master/appinsights/contracts/contexttagkeys.go
 `
 	is32Bit        bool
 	is32BitChecked bool
@@ -65,10 +66,6 @@ func (a *ApplicationInsights) Description() string {
 }
 
 func (a *ApplicationInsights) Connect() error {
-	if a.Timeout.Duration == 0 {
-		a.Timeout = internal.Duration{Duration: time.Second * 5}
-	}
-
 	if a.transmitter == nil && a.InstrumentationKey != "" {
 		a.transmitter = NewAppinsightsTransmitter(a.InstrumentationKey)
 	}
@@ -122,6 +119,7 @@ func (a *ApplicationInsights) Close() error {
 func init() {
 	outputs.Add("application_insights", func() telegraf.Output {
 		return &ApplicationInsights{
+			Timeout:           internal.Duration{Duration: time.Second * 5},
 			diagMsgSubscriber: appinsightsDiagnosticsMessageSubscriber{},
 			// It is very common to set Cloud.RoleName and Cloud.RoleInstance context properties, hence initial capacity of two
 			ContextTagSources: make(map[string]string, 2),
