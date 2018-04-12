@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	constants "github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/aggregators"
 )
 
@@ -147,34 +148,34 @@ func (m *AzureMetrics) Push(acc telegraf.Accumulator) {
 		for k, v := range aggregate.fields {
 
 			if config.count {
-				fields["Count"] = v.count
+				fields[constants.SAMPLE_COUNT] = v.count
 			}
 			if config.min {
-				fields["Minimum"] = v.min
+				fields[constants.MIN_SAMPLE] = v.min
 			}
 			if config.max {
-				fields["Maximum"] = v.max
+				fields[constants.MAX_SAMPLE] = v.max
 			}
 			if config.mean {
-				fields["Average"] = v.mean
+				fields[constants.MEAN] = v.mean
 			}
 			if config.lastSample {
-				fields["Last"] = v.lastSample
+				fields[constants.LAST_SAMPLE] = v.lastSample
 			}
 			if config.beginningTimestamp {
-				fields["TIMESTAMP"] = v.beginningTimestamp
+				fields[constants.BEGIN_TIMESTAMP] = v.beginningTimestamp
 			}
 			if config.totalSum {
-				fields["Total"] = v.totalSum
+				fields[constants.TOTAL] = v.totalSum
 			}
 			if config.endTimestamp {
-				fields["Timestamp"] = v.endTimestamp
+				fields[constants.END_TIMESTAMP] = v.endTimestamp
 			}
-			fields["CounterName"] = k
+			fields[constants.COUNTER_NAME] = k
 		}
 
 		if len(fields) > 0 {
-			aggregate.tags["Period"] = m.Period
+			aggregate.tags[constants.PERIOD] = m.Period
 			acc.AddFields(aggregate.name, fields, aggregate.tags)
 		}
 	}

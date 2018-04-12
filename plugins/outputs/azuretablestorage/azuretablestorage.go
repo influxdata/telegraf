@@ -13,6 +13,7 @@ import (
 
 	storage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/influxdata/telegraf"
+	constants "github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
@@ -56,14 +57,14 @@ type MdsdTime struct {
 }
 
 func toFileTime(mdsdTime MdsdTime) int64 {
-	fileTime := (EPOCH_DIFFERENCE+mdsdTime.seconds)*TICKS_PER_SECOND + mdsdTime.microSeconds*10
+	fileTime := (constants.EPOCH_DIFFERENCE+mdsdTime.seconds)*constants.TICKS_PER_SECOND + mdsdTime.microSeconds*10
 	return fileTime
 }
 
 func toMdsdTime(fileTime int64) MdsdTime {
 	mdsdTime := MdsdTime{0, 0}
-	mdsdTime.microSeconds = (fileTime % TICKS_PER_SECOND) / 10
-	mdsdTime.seconds = (fileTime / TICKS_PER_SECOND) - EPOCH_DIFFERENCE
+	mdsdTime.microSeconds = (fileTime % constants.TICKS_PER_SECOND) / 10
+	mdsdTime.seconds = (fileTime / constants.TICKS_PER_SECOND) - constants.EPOCH_DIFFERENCE
 	return mdsdTime
 }
 
@@ -79,14 +80,14 @@ func getTableDateSuffix() string {
 	fileTime := toFileTime(mdsdTime)
 
 	//The “ten day” rollover is the time at which FILETIME mod (number of seconds in 10 days) is zero
-	fileTime = fileTime - (fileTime % int64(10*24*60*60*TICKS_PER_SECOND))
+	fileTime = fileTime - (fileTime % int64(10*24*60*60*constants.TICKS_PER_SECOND))
 
 	//convert fileTime back to mdsd time.
 	mdsdTime = toMdsdTime(fileTime)
 
 	//get the date corresponding to the mdsdTime.
 	suffixDate := time.Unix(int64(mdsdTime.seconds), 0)
-	suffixDateStr := suffixDate.Format(DATE_SUFFIX_FORMAT)
+	suffixDateStr := suffixDate.Format(constants.DATE_SUFFIX_FORMAT)
 	suffixDateStr = strings.Replace(suffixDateStr, "/", "", -1)
 
 	// the name of the table will have this date as its suffix.
@@ -103,15 +104,15 @@ func getPeriodStr(period string) string {
 	hour := (int)(math.Floor(float64(totalSeconds) / 3600))
 	min := int(math.Floor(float64(totalSeconds-(hour*3600)) / 60))
 	sec := totalSeconds - (hour * 3600) - (min * 60)
-	periodStr = PT
+	periodStr = constants.PT
 	if hour > 0 {
-		periodStr += strconv.Itoa(hour) + H
+		periodStr += strconv.Itoa(hour) + constants.H
 	}
 	if min > 0 {
-		periodStr += strconv.Itoa(min) + M
+		periodStr += strconv.Itoa(min) + constants.M
 	}
 	if sec > 0 {
-		periodStr += strconv.Itoa(sec) + S
+		periodStr += strconv.Itoa(sec) + constants.S
 	}
 	return periodStr
 }
@@ -131,7 +132,7 @@ func getAzurePeriodVsTableNameVsTableRefMap(azureTableStorage *AzureTableStorage
 
 	for _, period := range azureTableStorage.Periods {
 		periodStr := getPeriodStr(period)
-		tableName := WAD_METRICS + periodStr + P10DV25 + tableNameSuffix
+		tableName := constants.WAD_METRICS + periodStr + constants.P10DV25 + tableNameSuffix
 		table := tableClient.GetTableReference(tableName)
 		tableNameVsTableRefObj := TableNameVsTableRef{TableName: tableName, TableRef: table}
 		periodVsTableNameVsTableRef[period] = tableNameVsTableRefObj
@@ -232,19 +233,22 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 	// iterate over the list of metrics and create a new entity for each metrics and add to the table.
 	for i, _ := range metrics {
 		props = metrics[i].Fields()
-		UTCTicks_DescendingOrderStr, encodedCounterName, er := getRowKeyComponents(props[TIMESTAMP].(string), props[COUNTER_NAME].(string))
+		UTCTicks_DescendingOrderStr, encodedCounterName, er := getRowKeyComponents(props[constants.END_TIMESTAMP].(string), props[constants.COUNTER_NAME].(string))
 		if er != nil {
 			return er
 		}
-		props[DEPLOYMENT_ID] = azureTableStorage.DeploymentId
+		props[constants.DEPLOYMENT_ID] = azureTableStorage.DeploymentId
 		var err error
-		props[HOST], err = os.Hostname()
+		props[constants.HOST], err = os.Hostname()
 		if err != nil {
 			log.Println(err.Error())
 			return err
 		}
-		//period is the period which decides when to transfer the aggregated metrics.Its in format "60s"
-		periodStr := metrics[i].Tags()[PERIOD]
+		//period decides when to transfer the aggregated metrics.Its in format "60s"
+		tags := metrics[i].Tags()
+		props[constants.COUNTER_NAME] = tags[constants.INPUT_PLUGIN] + "_" + props[constants.COUNTER_NAME].(string)
+
+		periodStr := tags[constants.PERIOD]
 		table := azureTableStorage.PeriodVsTableNameVsTableRef[periodStr].TableRef
 
 		//two rows are written for each metric as Azure table has optimized prefix search only and no index.
