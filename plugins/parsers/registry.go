@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
+	"github.com/influxdata/telegraf/plugins/parsers/syslog"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 )
 
@@ -110,6 +111,8 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewDropwizardParser(config.DropwizardMetricRegistryPath,
 			config.DropwizardTimePath, config.DropwizardTimeFormat, config.DropwizardTagsPath, config.DropwizardTagPathsMap, config.DefaultTags,
 			config.Separator, config.Templates)
+	case "syslog":
+		parser = NewSyslogParser(config.MetricName)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -190,4 +193,14 @@ func NewDropwizardParser(
 	err := parser.InitTemplating()
 
 	return parser, err
+}
+
+// NewSyslogParser returns a parser to parse syslog entries.
+// metricName is optional
+func NewSyslogParser(metricName string) Parser {
+	opts := []syslog.ParserOpt{}
+	if metricName != "" {
+		opts = append(opts, syslog.WithName(metricName))
+	}
+	return syslog.NewParser(opts...)
 }
