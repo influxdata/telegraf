@@ -232,9 +232,12 @@ func (m *metric) IsAggregate() bool {
 func (m *metric) HashID() uint64 {
 	h := fnv.New64a()
 	h.Write([]byte(m.name))
+	h.Write([]byte("\n"))
 	for _, tag := range m.tags {
 		h.Write([]byte(tag.Key))
+		h.Write([]byte("\n"))
 		h.Write([]byte(tag.Value))
+		h.Write([]byte("\n"))
 	}
 	return h.Sum64()
 }
