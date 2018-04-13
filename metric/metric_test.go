@@ -267,6 +267,32 @@ func TestHashID_Consistency(t *testing.T) {
 	assert.Equal(t, m2.HashID(), m3.HashID())
 }
 
+func TestHashID_Delimiting(t *testing.T) {
+	m1, _ := New(
+		"cpu",
+		map[string]string{
+			"a": "x",
+			"b": "y",
+			"c": "z",
+		},
+		map[string]interface{}{
+			"value": float64(1),
+		},
+		time.Now(),
+	)
+	m2, _ := New(
+		"cpu",
+		map[string]string{
+			"a": "xbycz",
+		},
+		map[string]interface{}{
+			"value": float64(1),
+		},
+		time.Now(),
+	)
+	assert.NotEqual(t, m1.HashID(), m2.HashID())
+}
+
 func TestSetName(t *testing.T) {
 	m := baseMetric()
 	m.SetName("foo")
