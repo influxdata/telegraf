@@ -32,15 +32,21 @@ func (h *HttpOut) Description() string {
 
 func (h *HttpOut) SampleConfig() string {
 	return `
-  [[outputs.http_out]]
-    name = "http_out_test"
-    server = "http://localhost:3000"
+  ## Setup your HttpOut service name
+  # name = "your_http_out_service_name"
 
-    [outputs.http_out.headers]
-      Content-Type = "application/json;charset=UTF-8"
+  ## Set the target server. The URL must be a valid HTTP(s) URL
+  # server = "http://localhost:3000"
 
-    [outputs.http_out.data]
-      token = "YourDataToken"
+  ## Setup additional data you want to sent along with the metrics data
+  ## All value must be string
+  # [outputs.http_out.data]
+  #   authToken = "12345"
+
+  ## Setup additional headers for the HTTP(s) request
+  ## All value must be string
+  # [outputs.http_out.headers]
+  #   Content-Type = "application/json;charset=UTF-8"
 `
 }
 
