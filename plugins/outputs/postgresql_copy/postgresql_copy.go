@@ -2,17 +2,18 @@ package postgresql_copy
 
 import (
 	"database/sql"
-
-	"github.com/lib/pq"
+	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/lib/pq"
 )
 
 type PostgresqlCopy struct {
-	db      *sql.DB
-	Address string
-	Columns map[string][]string
+	db                *sql.DB
+	Address           string
+	Columns           map[string][]string
+	IgnoreInserErrors bool
 }
 
 func (p *PostgresqlCopy) Connect() error {
@@ -21,7 +22,6 @@ func (p *PostgresqlCopy) Connect() error {
 		return err
 	}
 	p.db = db
-	p.Columns = make(map[string][]string)
 	return nil
 }
 
@@ -38,15 +38,26 @@ var sampleConfig = `
 func (p *PostgresqlCopy) SampleConfig() string { return sampleConfig }
 func (p *PostgresqlCopy) Description() string  { return "Send metrics to Postgres using Copy" }
 
-func (p *PostgresqlCopy) buildColumns(table string, metric telegraf.Metric) {
-	if len(p.Columns[table]) != 0 {
-		return
+func (p *PostgresqlCopy) buildColumns(metrics []telegraf.Metric) {
+	table_columns := make(map[string]map[string]bool)
+	for _, metric := range metrics {
+		table := metric.Name()
+		if table_columns[table] == nil {
+			table_columns[table] = map[string]bool{}
+		}
+		for key, _ := range metric.Fields() {
+			table_columns[table][key] = true
+		}
+		for key, _ := range metric.Tags() {
+			table_columns[table][key] = true
+		}
 	}
-	for key, _ := range metric.Fields() {
-		p.Columns[table] = append(p.Columns[table], key)
-	}
-	for key, _ := range metric.Tags() {
-		p.Columns[table] = append(p.Columns[table], key)
+
+	p.Columns = make(map[string][]string)
+	for table, columns := range table_columns {
+		for column := range columns {
+			p.Columns[table] = append(p.Columns[table], column)
+		}
 	}
 }
 
@@ -64,10 +75,10 @@ func buildValues(metric telegraf.Metric, columns []string) []interface{} {
 }
 
 func (p *PostgresqlCopy) Write(metrics []telegraf.Metric) error {
+	p.buildColumns(metrics)
 	tables := make(map[string][][]interface{})
 	for _, metric := range metrics {
 		table := metric.Name()
-		p.buildColumns(table, metric)
 		tables[table] = append(tables[table], buildValues(metric, p.Columns[table]))
 	}
 
@@ -80,12 +91,21 @@ func (p *PostgresqlCopy) Write(metrics []telegraf.Metric) error {
 			continue
 		}
 		columns := append(p.Columns[table], "time")
-		stmt, _ := txn.Prepare(pq.CopyIn(table, columns...))
+		stmt, err := txn.Prepare(pq.CopyIn(table, columns...))
+		if err != nil {
+			return err
+		}
 		for _, value := range values {
 			_, err = stmt.Exec(value...)
-			if err != nil {
-				return err
+			if err == nil {
+				continue
 			}
+
+			if p.IgnoreInserErrors {
+				log.Printf("E! Could not insert into %s: %s", table, values)
+				continue
+			}
+			return err
 		}
 		_, err = stmt.Exec()
 		if err != nil {
@@ -93,10 +113,7 @@ func (p *PostgresqlCopy) Write(metrics []telegraf.Metric) error {
 		}
 	}
 	err = txn.Commit()
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func init() {

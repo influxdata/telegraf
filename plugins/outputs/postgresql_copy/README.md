@@ -10,4 +10,5 @@ Obs: Currently, you should create your PostgreSQL tables first
 # Send metrics to PostgreSQL using CopyIn
 [[outputs.postgresql_copy]]
   address = "postgres://USER:PWD@HOST:PORT/DATABASE?sslmode=disable"
+  ignore_inser_errors = false
 ```
