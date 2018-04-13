@@ -13,6 +13,7 @@ import (
 type Parser struct {
 	DefaultTags map[string]string
 	Name        string
+	BestEffort  bool
 	p           *rfc5424.Parser
 	now         func() time.Time
 }
@@ -41,10 +42,23 @@ func WithName(name string) ParserOpt {
 	}
 }
 
+// WithBestEffort tries to recover as much of the syslog message as possible
+// when the message has been truncated.
+func WithBestEffort() ParserOpt {
+	return func(p *Parser) *Parser {
+		p.BestEffort = true
+		return p
+	}
+}
+
 func (s *Parser) tags(msg *rfc5424.SyslogMessage) map[string]string {
-	ts := map[string]string{
-		"severity": msg.SeverityLevel(),
-		"facility": msg.FacilityMessage(),
+	ts := map[string]string{}
+	if lvl := msg.SeverityLevel(); lvl != nil {
+		ts["severity"] = *lvl
+	}
+
+	if f := msg.FacilityMessage(); f != nil {
+		ts["facility"] = *f
 	}
 
 	if msg.Hostname != nil {
@@ -105,7 +119,7 @@ func (s *Parser) tm(msg *rfc5424.SyslogMessage) time.Time {
 
 // Parse converts a single syslog message of bytes into a single telegraf metric
 func (s *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	msg, err := s.p.Parse(buf)
+	msg, err := s.p.Parse(buf, &s.BestEffort)
 	if err != nil {
 		return nil, err
 	}
