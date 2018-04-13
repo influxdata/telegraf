@@ -1,4 +1,4 @@
-package http_out
+package httpjson
 
 import (
 	"encoding/json"
@@ -29,25 +29,9 @@ func Server(h func(http.ResponseWriter, *http.Request)) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(h))
 }
 
-func TestHttpOutOK(t *testing.T) {
-	ts := Server(defaultHandler(t))
-
-	data := map[string]string{
-		"data1": "data1",
-		"data2": "data2",
-	}
-	h := HttpOut{
-		Name:   "http_out",
-		Server: ts.URL,
-		Data:   data,
-	}
-
-	h.Write(testutil.MockMetrics())
-}
-
 func TestNotSetupServer(t *testing.T) {
-	h := HttpOut{
-		Name: "http_out",
+	h := Httpjson{
+		Name: "httpjson",
 	}
 
 	err := h.Write(testutil.MockMetrics())
@@ -55,14 +39,13 @@ func TestNotSetupServer(t *testing.T) {
 }
 
 func TestInvalidServer(t *testing.T) {
-	ts := Server(defaultHandler(t))
-	h := HttpOut{
-		Name:   "http_out",
-		Server: ts.URL,
+	h := Httpjson{
+		Name:   "httpjson",
+		Server: "http/invalid_server",
 	}
 
 	err := h.Write(testutil.MockMetrics())
-	assert.NoError(t, err)
+	assert.Error(t, err)
 }
 
 func TestSetupData(t *testing.T) {
@@ -88,8 +71,8 @@ func TestSetupData(t *testing.T) {
 		"secret":   "12345",
 		"username": "Username",
 	}
-	h := HttpOut{
-		Name:   "http_out",
+	h := Httpjson{
+		Name:   "httpjson",
 		Server: ts.URL,
 		Data:   data,
 	}
@@ -111,8 +94,8 @@ func TestSetupHeaders(t *testing.T) {
 	headers := map[string]string{
 		"Api-Version": "v1.0",
 	}
-	h := HttpOut{
-		Name:    "http_out",
+	h := Httpjson{
+		Name:    "httpjson",
 		Server:  ts.URL,
 		Headers: headers,
 	}

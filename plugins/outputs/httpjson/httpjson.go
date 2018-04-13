@@ -1,4 +1,4 @@
-package http_out
+package httpjson
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-type HttpOut struct {
+type Httpjson struct {
 	Name    string
 	Server  string
 	Data    map[string]string
@@ -26,42 +26,42 @@ type Metric struct {
 	Time   int64                  `json:"time"`
 }
 
-func (h *HttpOut) Description() string {
+func (h *Httpjson) Description() string {
 	return `Send telegraf metric through HTTP(s) request`
 }
 
-func (h *HttpOut) SampleConfig() string {
+func (h *Httpjson) SampleConfig() string {
 	return `
-  ## Setup your HttpOut service name
-  # name = "your_http_out_service_name"
+  ## Setup your HTTP Json service name
+  # name = "your_httpjson_service_name"
 
   ## Set the target server. The URL must be a valid HTTP(s) URL
   # server = "http://localhost:3000"
 
   ## Setup additional data you want to sent along with the metrics data
   ## All value must be string
-  # [outputs.http_out.data]
+  # [outputs.httpjson.data]
   #   authToken = "12345"
 
   ## Setup additional headers for the HTTP(s) request
   ## All value must be string
-  # [outputs.http_out.headers]
+  # [outputs.httpjson.headers]
   #   Content-Type = "application/json;charset=UTF-8"
 `
 }
 
 // Connect to the Output
-func (h *HttpOut) Connect() error {
+func (h *Httpjson) Connect() error {
 	return nil
 }
 
 // Close any connections to the Output
-func (h *HttpOut) Close() error {
+func (h *Httpjson) Close() error {
 	return nil
 }
 
 // Write takes in group of points to be written to the Output
-func (h *HttpOut) Write(metrics []telegraf.Metric) error {
+func (h *Httpjson) Write(metrics []telegraf.Metric) error {
 	// Don't make any request if metrics empty
 	if len(metrics) == 0 {
 		return nil
@@ -72,7 +72,7 @@ func (h *HttpOut) Write(metrics []telegraf.Metric) error {
 	}
 
 	// Prepare URL
-	requestURL, err := url.Parse(h.Server)
+	requestURL, err := url.ParseRequestURI(h.Server)
 	if err != nil {
 		return fmt.Errorf("Invalid server URL \"%s\"", h.Server)
 	}
@@ -144,7 +144,7 @@ func (h *HttpOut) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("http_out", func() telegraf.Output {
-		return &HttpOut{}
+	outputs.Add("httpjson", func() telegraf.Output {
+		return &Httpjson{}
 	})
 }
