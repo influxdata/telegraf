@@ -4,7 +4,7 @@ This output plugin allow you to write metrics to custom storage through JSON API
 
 ### Request format example:
 
-Your API will expect to get this format
+Your API will expect to get request body with this format
 
 ```json
 {
