@@ -120,7 +120,7 @@ func (s *Parser) tm(msg *rfc5424.SyslogMessage) time.Time {
 // Parse converts a single syslog message of bytes into a single telegraf metric
 func (s *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	msg, err := s.p.Parse(buf, &s.BestEffort)
-	if (err != nil && s.BestEffort == false) || (s.bestEffort == true && msg == nil) {
+	if (err != nil && s.BestEffort == false) || (s.BestEffort == true && msg == nil) {
 		return nil, err
 	}
 
