@@ -48,7 +48,7 @@ func TestParser_tags(t *testing.T) {
 				"host": "localhost",
 			},
 			msg: &rfc5424.SyslogMessage{
-				Priority: 0,
+				Priority: uintPtr(0),
 			},
 			want: map[string]string{
 				"facility": "kernel messages",
@@ -59,7 +59,7 @@ func TestParser_tags(t *testing.T) {
 		{
 			name: "hostname/appname should be tags",
 			msg: &rfc5424.SyslogMessage{
-				Priority: 14,
+				Priority: uintPtr(14),
 				Hostname: strPtr("scylla.eng.utah.edu"),
 				Appname:  strPtr("x11"),
 			},
@@ -76,7 +76,7 @@ func TestParser_tags(t *testing.T) {
 			s := &Parser{
 				DefaultTags: tt.DefaultTags,
 			}
-			tt.msg.SetPriority(tt.msg.Priority)
+			tt.msg.SetPriority(*tt.msg.Priority)
 			if got := s.tags(tt.msg); !cmp.Equal(tt.want, got) {
 				t.Errorf("Parser.tags() = got(-)/want(+) %s", cmp.Diff(tt.want, got))
 			}
@@ -193,19 +193,6 @@ func TestParser_tm(t *testing.T) {
 	}
 }
 
-func strPtr(s string) *string {
-	return &s
-}
-
-func timePtr(tm time.Time) *time.Time {
-	return &tm
-}
-
-func timeParse(layout, value string) time.Time {
-	t, _ := time.Parse(layout, value)
-	return t
-}
-
 func TestParser_ParseLine(t *testing.T) {
 	type fields struct {
 		DefaultTags map[string]string
@@ -284,4 +271,21 @@ func TestParser_ParseLine(t *testing.T) {
 			}
 		})
 	}
+}
+
+func uintPtr(i uint8) *uint8 {
+	return &i
+}
+
+func strPtr(s string) *string {
+	return &s
+}
+
+func timePtr(tm time.Time) *time.Time {
+	return &tm
+}
+
+func timeParse(layout, value string) time.Time {
+	t, _ := time.Parse(layout, value)
+	return t
 }
