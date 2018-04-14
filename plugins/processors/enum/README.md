@@ -11,7 +11,7 @@ Configuration using table syntax:
 `toml
 # Configure a status mapping for field 'status'
 [[processors.enum.fields]]
-  key = "status"
+  source = "status"
   [processors.enum.fields.value_mappings]
     green = 0
     yellow = 1
@@ -22,6 +22,6 @@ Configuration using inline syntax:
 `toml
 # Configure a status mapping for field 'status'
 [[processors.enum.fields]]
-  key = "status"
+  source = "status"
   value_mappings = {green = 0, yellow = 1, red = 2 }
 `

@@ -14,8 +14,8 @@ var sampleConfig = `
 ## Fields to be considered
 # [[processors.enum.fields]]
 #
-# Name of the field
-#   key = "name"
+# Name of the field source field to map
+#   source = "name"
 #
 # Value Mapping Table
 #   [processors.enum.value_mappings]
@@ -31,7 +31,7 @@ type EnumMapper struct {
 }
 
 type Mapping struct {
-	Key           string
+	Source        string
 	ValueMappings map[string]interface{}
 }
 
@@ -52,11 +52,11 @@ func (mapper *EnumMapper) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric {
 	for _, mapping := range mapper.Fields {
-		if originalValue, isPresent := metric.GetField(mapping.Key); isPresent == true {
+		if originalValue, isPresent := metric.GetField(mapping.Source); isPresent == true {
 			if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString == true {
 				if mappedValue, isMappedValuePresent := mapping.ValueMappings[adjustedValue]; isMappedValuePresent == true {
-					metric.RemoveField(mapping.Key)
-					metric.AddField(mapping.Key, mappedValue)
+					metric.RemoveField(mapping.Source)
+					metric.AddField(mapping.Source, mappedValue)
 				}
 			}
 		}

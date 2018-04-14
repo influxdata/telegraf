@@ -49,7 +49,7 @@ func TestRetainsMetric(t *testing.T) {
 }
 
 func TestMapsSingleStringValue(t *testing.T) {
-	mapper := EnumMapper{Fields: []Mapping{{Key: "string_value", ValueMappings: map[string]interface{}{"test": int64(1)}}}}
+	mapper := EnumMapper{Fields: []Mapping{{Source: "string_value", ValueMappings: map[string]interface{}{"test": int64(1)}}}}
 
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
@@ -57,7 +57,7 @@ func TestMapsSingleStringValue(t *testing.T) {
 }
 
 func TestNoFailureOnMappingsOnNonStringValuedFields(t *testing.T) {
-	mapper := EnumMapper{Fields: []Mapping{{Key: "int_value", ValueMappings: map[string]interface{}{"13i": int64(7)}}}}
+	mapper := EnumMapper{Fields: []Mapping{{Source: "int_value", ValueMappings: map[string]interface{}{"13i": int64(7)}}}}
 
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
@@ -65,7 +65,7 @@ func TestNoFailureOnMappingsOnNonStringValuedFields(t *testing.T) {
 }
 
 func TestMapSingleBoolValue(t *testing.T) {
-	mapper := EnumMapper{Fields: []Mapping{{Key: "true_value", ValueMappings: map[string]interface{}{"true": int64(1)}}}}
+	mapper := EnumMapper{Fields: []Mapping{{Source: "true_value", ValueMappings: map[string]interface{}{"true": int64(1)}}}}
 
 	fields := calculateProcessedValues(mapper, createTestMetric())
 
