@@ -71,3 +71,27 @@ func TestMapSingleBoolValue(t *testing.T) {
 
 	assertFieldValue(t, 1, "true_value", fields)
 }
+
+func TestMapsToDefaultValueOnUnknownSourceValue(t *testing.T) {
+	mapper := EnumMapper{Fields: []Mapping{{Source: "string_value", Default: int64(42), ValueMappings: map[string]interface{}{"other": int64(1)}}}}
+
+	fields := calculateProcessedValues(mapper, createTestMetric())
+
+	assertFieldValue(t, 42, "string_value", fields)
+}
+
+func TestDoNotMapToDefaultValueKnownSourceValue(t *testing.T) {
+	mapper := EnumMapper{Fields: []Mapping{{Source: "string_value", Default: int64(42), ValueMappings: map[string]interface{}{"test": int64(1)}}}}
+
+	fields := calculateProcessedValues(mapper, createTestMetric())
+
+	assertFieldValue(t, 1, "string_value", fields)
+}
+
+func TestNoMappingWithoutDefaultOrDefinedMappingValue(t *testing.T) {
+	mapper := EnumMapper{Fields: []Mapping{{Source: "string_value", ValueMappings: map[string]interface{}{"other": int64(1)}}}}
+
+	fields := calculateProcessedValues(mapper, createTestMetric())
+
+	assertFieldValue(t, "test", "string_value", fields)
+}

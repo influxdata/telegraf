@@ -17,6 +17,10 @@ var sampleConfig = `
 # Name of the field source field to map
 #   source = "name"
 #
+# Optional default value to be used for all values not contained in the mapping
+# table. Only applied when configured.
+#   default = 0
+#
 # Value Mapping Table
 #   [processors.enum.value_mappings]
 #     value1 = 1
@@ -32,6 +36,7 @@ type EnumMapper struct {
 
 type Mapping struct {
 	Source        string
+	Default       interface{}
 	ValueMappings map[string]interface{}
 }
 
@@ -54,7 +59,7 @@ func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric 
 	for _, mapping := range mapper.Fields {
 		if originalValue, isPresent := metric.GetField(mapping.Source); isPresent == true {
 			if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString == true {
-				if mappedValue, isMappedValuePresent := mapping.ValueMappings[adjustedValue]; isMappedValuePresent == true {
+				if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent == true {
 					metric.RemoveField(mapping.Source)
 					metric.AddField(mapping.Source, mappedValue)
 				}
@@ -69,6 +74,16 @@ func adjustBoolValue(in interface{}) interface{} {
 		return strconv.FormatBool(mappedBool)
 	}
 	return in
+}
+
+func (mapping *Mapping) mapValue(original string) (interface{}, bool) {
+	if mapped, found := mapping.ValueMappings[original]; found == true {
+		return mapped, true
+	}
+	if mapping.Default != nil {
+		return mapping.Default, true
+	}
+	return original, false
 }
 
 func init() {
