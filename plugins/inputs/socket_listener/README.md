@@ -41,8 +41,8 @@ This is a sample configuration for the plugin.
   # ssl_key = "/etc/telegraf/key.pem"
   ## Enable and require client certificate authentication.
   # ssl_client_auth = false
-  ## CA used to verify client certificates.
-  # ssl_ca = "/etc/telegraf/ca.pem"
+  ## CAs used to verify client certificates.
+  # ssl_ca = ["/etc/telegraf/ca.pem"]
 
   ## Maximum socket buffer size in bytes.
   ## For stream sockets, once the buffer fills up, the sender will start backing up.

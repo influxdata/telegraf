@@ -112,10 +112,19 @@ func RandomString(n int) string {
 	return string(bytes)
 }
 
-// GetTLSConfig gets a tls.Config object from the given certs, key, and CA files.
-// you must give the full path to the files.
-// If all files are blank and InsecureSkipVerify=false, returns a nil pointer.
+// Deprecated - use GetClientTLSConfig or GetServerTLSConfig instead.
 func GetTLSConfig(
+	SSLCert, SSLKey, SSLCA string,
+	InsecureSkipVerify bool,
+) (*tls.Config, error) {
+	return GetClientTLSConfig(SSLCert, SSLKey, SSLCA, InsecureSkipVerify)
+}
+
+// GetClientTLSConfig gets a tls.Config object from the given certs, key, and CA files
+// for use with a client.
+// The full path to each file must be provided.
+// Returns a nil pointer if all files are blank and InsecureSkipVerify=false.
+func GetClientTLSConfig(
 	SSLCert, SSLKey, SSLCA string,
 	InsecureSkipVerify bool,
 ) (*tls.Config, error) {
@@ -152,6 +161,53 @@ func GetTLSConfig(
 	}
 
 	// will be nil by default if nothing is provided
+	return t, nil
+}
+
+// GetServerTLSConfig gets a tls.Config object from the given certs, key, and one or more CA files
+// for use with a server.
+// The full path to each file must be provided.
+// Returns a nil pointer if all files are blank.
+func GetServerTLSConfig(
+	SSLCert, SSLKey string,
+	SSLCA []string,
+	SSLClientAuth bool,
+) (*tls.Config, error) {
+	if SSLCert == "" && SSLKey == "" && len(SSLCA) == 0 {
+		return nil, nil
+	}
+
+	t := &tls.Config{}
+
+	if len(SSLCA) != 0 {
+		caCertPool := x509.NewCertPool()
+		for _, cert := range SSLCA {
+			c, err := ioutil.ReadFile(cert)
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf("Could not load TLS CA: %s",
+					err))
+			}
+			caCertPool.AppendCertsFromPEM(c)
+		}
+		t.ClientCAs = caCertPool
+	}
+
+	if SSLCert != "" && SSLKey != "" {
+		cert, err := tls.LoadX509KeyPair(SSLCert, SSLKey)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf(
+				"Could not load TLS client key/certificate from %s:%s: %s",
+				SSLKey, SSLCert, err))
+		}
+
+		t.Certificates = []tls.Certificate{cert}
+		t.BuildNameToCertificate()
+	}
+
+	if SSLClientAuth {
+		t.ClientAuth = tls.RequireAndVerifyClientCert
+	}
+
 	return t, nil
 }
 

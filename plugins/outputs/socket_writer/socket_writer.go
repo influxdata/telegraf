@@ -80,7 +80,7 @@ func (sw *SocketWriter) Connect() error {
 		return fmt.Errorf("invalid address: %s", sw.Address)
 	}
 
-	tlsCfg, err := internal.GetTLSConfig(sw.SSLCert, sw.SSLKey, sw.SSLCA, sw.InsecureSkipVerify)
+	tlsCfg, err := internal.GetClientTLSConfig(sw.SSLCert, sw.SSLKey, sw.SSLCA, sw.InsecureSkipVerify)
 	if err != nil {
 		return err
 	}
