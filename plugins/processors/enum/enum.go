@@ -17,6 +17,10 @@ var sampleConfig = `
 # Name of the field source field to map
 #   source = "name"
 #
+# Optional destination field to be used for the mapped value. Source field is
+# used, when no explicit destination is configured.
+#   destination = "mapped"
+#
 # Optional default value to be used for all values not contained in the mapping
 # table. Only applied when configured.
 #   default = 0
@@ -36,6 +40,7 @@ type EnumMapper struct {
 
 type Mapping struct {
 	Source        string
+	Destination   string
 	Default       interface{}
 	ValueMappings map[string]interface{}
 }
@@ -60,8 +65,7 @@ func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric 
 		if originalValue, isPresent := metric.GetField(mapping.Source); isPresent == true {
 			if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString == true {
 				if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent == true {
-					metric.RemoveField(mapping.Source)
-					metric.AddField(mapping.Source, mappedValue)
+					writeField(metric, mapping.getDestination(), mappedValue)
 				}
 			}
 		}
@@ -84,6 +88,20 @@ func (mapping *Mapping) mapValue(original string) (interface{}, bool) {
 		return mapping.Default, true
 	}
 	return original, false
+}
+
+func (mapping *Mapping) getDestination() string {
+	if mapping.Destination != "" {
+		return mapping.Destination
+	}
+	return mapping.Source
+}
+
+func writeField(metric telegraf.Metric, name string, value interface{}) {
+	if metric.HasField(name) {
+		metric.RemoveField(name)
+	}
+	metric.AddField(name, value)
 }
 
 func init() {

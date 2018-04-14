@@ -95,3 +95,12 @@ func TestNoMappingWithoutDefaultOrDefinedMappingValue(t *testing.T) {
 
 	assertFieldValue(t, "test", "string_value", fields)
 }
+
+func TestWritesToDestination(t *testing.T) {
+	mapper := EnumMapper{Fields: []Mapping{{Source: "string_value", Destination: "string_code", ValueMappings: map[string]interface{}{"test": int64(1)}}}}
+
+	fields := calculateProcessedValues(mapper, createTestMetric())
+
+	assertFieldValue(t, "test", "string_value", fields)
+	assertFieldValue(t, 1, "string_code", fields)
+}
