@@ -12,6 +12,7 @@ import (
 
 	"time"
 
+	"crypto/tls"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -163,6 +164,10 @@ type SocketListener struct {
 	MaxConnections  int
 	ReadBufferSize  int
 	ReadTimeout     *internal.Duration
+	SSLCA           string
+	SSLCert         string
+	SSLKey          string
+	SSLClientAuth   bool
 	KeepAlivePeriod *internal.Duration
 
 	parsers.Parser
@@ -197,6 +202,13 @@ func (sl *SocketListener) SampleConfig() string {
   ## Only applies to stream sockets (e.g. TCP).
   ## 0 (default) is unlimited.
   # read_timeout = "30s"
+
+  ## Optional SSL configuration.
+  ## Only applies to stream sockets (e.g. TCP).
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  # ssl_client_auth = true
 
   ## Maximum socket buffer size in bytes.
   ## For stream sockets, once the buffer fills up, the sender will start backing up.
@@ -242,7 +254,25 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 
 	switch spl[0] {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
-		l, err := net.Listen(spl[0], spl[1])
+		var (
+			err error
+			l   net.Listener
+		)
+
+		tlsCfg, err := internal.GetTLSConfig(sl.SSLCert, sl.SSLKey, sl.SSLCA, false)
+		if err != nil {
+			return nil
+		}
+
+		if tlsCfg == nil {
+			l, err = net.Listen(spl[0], spl[1])
+		} else {
+			if sl.SSLClientAuth {
+				tlsCfg.ClientAuth = tls.RequireAndVerifyClientCert
+				tlsCfg.ClientCAs = tlsCfg.RootCAs
+			}
+			l, err = tls.Listen(spl[0], spl[1], tlsCfg)
+		}
 		if err != nil {
 			return err
 		}
