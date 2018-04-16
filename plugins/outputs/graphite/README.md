@@ -19,6 +19,8 @@ via raw TCP.
   template = "host.tags.measurement.field"
   ## timeout in seconds for the write connection to graphite
   timeout = 2
+  ## close connect every time, when data was sent
+  close_connect = false
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -30,10 +32,11 @@ via raw TCP.
 
 Parameters:
 
-    Servers  []string
-    Prefix   string
-    Timeout  int
-    Template string
+    Servers      []string
+    Prefix       string
+    Timeout      int
+    CloseConnect bool
+    Template     string
 
     // Path to CA file
     SSLCA string

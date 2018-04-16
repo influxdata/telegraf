@@ -17,11 +17,12 @@ import (
 
 type Graphite struct {
 	// URL is only for backwards compatibility
-	Servers  []string
-	Prefix   string
-	Template string
-	Timeout  int
-	conns    []net.Conn
+	Servers      []string
+	Prefix       string
+	Template     string
+	Timeout      int
+	CloseConnect bool
+	conns        []net.Conn
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -48,6 +49,8 @@ var sampleConfig = `
   template = "host.tags.measurement.field"
   ## timeout in seconds for the write connection to graphite
   timeout = 2
+  ## close connect every time, when data was sent
+  close_connect = false
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -155,6 +158,9 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 		batch = append(batch, buf...)
 	}
 
+	if g.CloseConnect {
+		g.Connect()
+	}
 	err = g.send(batch)
 
 	// try to reconnect and retry to send
@@ -164,6 +170,9 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 		err = g.send(batch)
 	}
 
+	if g.CloseConnect {
+		g.Close()
+	}
 	return err
 }
 
