@@ -80,11 +80,15 @@ func (smi *NvidiaSMI) getResult(gpuID int) (map[string]string, map[string]interf
 	met := strings.Split(string(ret), ", ")
 	for i, m := range metricNames {
 		if m[1] == "tag" {
-			tags[m[0]] = met[i]
+			tags[m[0]] = strings.TrimSuffix(met[i], "\n")
 			continue
 		}
+		out, err := strconv.ParseInt(met[i], 10, 64)
+		if err != nil {
+			return tags, fields, err
+		}
 
-		fields[m[0]] = fmt.Sprintf("%si", met[i])
+		fields[m[0]] = out
 	}
 
 	return tags, fields, nil
@@ -114,7 +118,7 @@ func (smi *NvidiaSMI) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("simple", func() telegraf.Input {
+	inputs.Add("nvidia_smi", func() telegraf.Input {
 		return &NvidiaSMI{
 			BinPath: "/usr/bin/nvidia-smi",
 			metrics: metrics,
