@@ -141,7 +141,7 @@ func TestParser_fields(t *testing.T) {
 			},
 			want: map[string]interface{}{
 				"version": 1,
-				"id1":     false,
+				"id1":     true,
 			},
 		},
 	}
@@ -236,7 +236,7 @@ func TestParser_ParseLine(t *testing.T) {
 				},
 				fields: map[string]interface{}{
 					"version": int64(1),
-					"sdid":    false,
+					"sdid":    true,
 					"procid":  "10391",
 					"message": "some_message",
 				},
