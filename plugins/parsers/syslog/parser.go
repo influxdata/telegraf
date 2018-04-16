@@ -95,12 +95,12 @@ func (s *Parser) fields(msg *rfc5424.SyslogMessage) map[string]interface{} {
 	if msg.StructuredData != nil {
 		for sdid, sdparams := range *msg.StructuredData {
 			if len(sdparams) == 0 {
-				// TODO: should this just be a bool?
-				flds[sdid] = false
+				// When SD-ID does not have params we indicate its presence with a bool
+				flds[sdid] = true
 				continue
 			}
 			for name, value := range sdparams {
-				// space is not allowed by the grammar within SDID
+				// Using whitespace as separator since it is not allowed by the grammar within SDID
 				flds[sdid+" "+name] = value
 			}
 		}
@@ -120,6 +120,11 @@ func (s *Parser) tm(msg *rfc5424.SyslogMessage) time.Time {
 // Parse converts a single syslog message of bytes into a single telegraf metric
 func (s *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	msg, err := s.p.Parse(buf, &s.BestEffort)
+	// In best effort mode the parser returns
+	// minimally and partially valid messages
+	// also when it detects an error.
+	// So there is an error only when parser does not return any message.
+	// In standard mode, the parser returns a message without error or a nil message with error.
 	if (err != nil && s.BestEffort == false) || (s.BestEffort == true && msg == nil) {
 		return nil, err
 	}
@@ -139,7 +144,7 @@ func (s *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	}, nil
 }
 
-// ParseLine will translate a single syslog line into a telegraf.Metric
+// ParseLine will translate a single syslog line into a single telegraf.Metric
 func (s *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := s.Parse([]byte(line))
 	if err != nil {
