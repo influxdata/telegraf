@@ -31,7 +31,7 @@ github.com/go-redis/redis 73b70592cdaa9e6abdfcfbf97b4a90d80728c836
 github.com/go-sql-driver/mysql 2e00b5cd70399450106cec6431c2e2ce3cae5034
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/hashicorp/consul 63d2fc68239b996096a1c55a0d4b400ea4c2583f
-github.com/influxdata/go-syslog 5f3e6f5aca982afcdf4e3dac781105c1387bd05a
+github.com/influxdata/go-syslog 3b5cb54a818c82787d48859b584539bbe5a3af40
 github.com/influxdata/tail c43482518d410361b6c383d7aebce33d0471d7bc
 github.com/influxdata/toml 5d1d907f22ead1cd47adde17ceec5bda9cacaf8f
 github.com/influxdata/wlog 7c63b0a71ef8300adc255344d275e10e5c3a71ec
