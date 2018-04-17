@@ -6,8 +6,10 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -33,65 +35,61 @@ var (
 // NvidiaSMI holds the methods for this plugin
 type NvidiaSMI struct {
 	BinPath string
+	Timeout time.Duration
 
 	metrics string
 }
 
 // Description returns the description of the NvidiaSMI plugin
 func (smi *NvidiaSMI) Description() string {
-	return ""
+	return "Pulls statistics from nvidia GPUs attached to the host"
 }
 
 // SampleConfig returns the sample configuration for the NvidiaSMI plugin
 func (smi *NvidiaSMI) SampleConfig() string {
 	return `
-## Path to nvidia-smi
-bin_path = /usr/bin/nvidia-smi
+## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
+# bin_path = /usr/bin/nvidia-smi
+
+## Optional: timeout for GPU polling
+# timeout = 5s
 `
 }
 
-func (smi *NvidiaSMI) getGPUCount() (int, error) {
-	opts := []string{"--format=noheader,nounits,csv", "--query-gpu=count", "--id=0"}
-	ret, err := exec.Command(smi.BinPath, opts...).CombinedOutput()
+func (smi *NvidiaSMI) pollSMI() (string, error) {
+	// Construct and execute metrics query
+	opts := []string{"--format=noheader,nounits,csv", fmt.Sprintf("--query-gpu=%s", smi.metrics)}
+	ret, err := internal.CombinedOutputTimeout(exec.Command(smi.BinPath, opts...), smi.Timeout)
 	if err != nil {
-		return 0, err
+		return "", err
 	}
-
-	retS := strings.TrimSuffix(string(ret), "\n")
-	retI, errI := strconv.Atoi(retS)
-	if errI != nil {
-		return 0, err
-	}
-	return retI, nil
+	return string(ret), nil
 }
 
-func (smi *NvidiaSMI) getResult(gpuID int) (map[string]string, map[string]interface{}, error) {
-	tags := make(map[string]string, 0)
-	fields := make(map[string]interface{}, 0)
-
-	// Construct and execute metrics query
-	opts := []string{"--format=noheader,nounits,csv", fmt.Sprintf("--query-gpu=%s", smi.metrics), fmt.Sprintf("--id=%d", gpuID)}
-	ret, err := exec.Command(smi.BinPath, opts...).CombinedOutput()
-	if err != nil {
-		return tags, fields, err
-	}
+func gatherNvidiaSMI(ret string, acc telegraf.Accumulator) error {
 
 	// Format the metrics into tags and fields
-	met := strings.Split(string(ret), ", ")
-	for i, m := range metricNames {
-		if m[1] == "tag" {
-			tags[m[0]] = strings.TrimSuffix(met[i], "\n")
-			continue
-		}
-		out, err := strconv.ParseInt(met[i], 10, 64)
-		if err != nil {
-			return tags, fields, err
-		}
+	lines := strings.Split(string(ret), "\n")
+	for _, line := range lines {
+		tags := make(map[string]string, 0)
+		fields := make(map[string]interface{}, 0)
+		met := strings.Split(line, ", ")
+		for i, m := range metricNames {
+			if m[1] == "tag" {
+				tags[m[0]] = strings.TrimSpace(met[i])
+				continue
+			}
+			out, err := strconv.ParseInt(met[i], 10, 64)
+			if err != nil {
+				return err
+			}
 
-		fields[m[0]] = out
+			fields[m[0]] = out
+		}
+		acc.AddFields(measurement, fields, tags)
 	}
 
-	return tags, fields, nil
+	return nil
 }
 
 // Gather implements the telegraf interface
@@ -101,17 +99,14 @@ func (smi *NvidiaSMI) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("nvidia-smi binary not at path %s, cannot gather GPU data", smi.BinPath)
 	}
 
-	gpuCount, err := smi.getGPUCount()
+	data, err := smi.pollSMI()
 	if err != nil {
 		return err
 	}
 
-	for i := 0; i < gpuCount; i++ {
-		tags, fields, err := smi.getResult(i)
-		if err != nil {
-			return fmt.Errorf("Error getting GPU stats: %s", err)
-		}
-		acc.AddFields(measurement, fields, tags)
+	err = gatherNvidiaSMI(data, acc)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -121,6 +116,7 @@ func init() {
 	inputs.Add("nvidia_smi", func() telegraf.Input {
 		return &NvidiaSMI{
 			BinPath: "/usr/bin/nvidia-smi",
+			Timeout: 5 * time.Second,
 			metrics: metrics,
 		}
 	})
