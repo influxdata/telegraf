@@ -44,11 +44,11 @@ instrumentationKey = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
 # enableDiagnosticLogging = "true"
 
 ## ContextTagSources dictionary instructs the Application Insights plugin to set Application Insights context tags using metric properties.
-## In this dictionary keys are names of metric properties, values are Application Insights context tags to set using the corresponding metric property.
+## In this dictionary keys are Application Insights context tags to set, and values are names of metric properties to use as source of data.
 ## For example:
 # [outputs.application_insights.contextTagSources]
-# kubernetes_container_name = "ai.cloud.role"
-# kubernetes_pod_name = "ai.cloud.roleInstance"
+# "ai.cloud.role" = "kubernetes_container_name"
+# "ai.cloud.roleInstance" = "kubernetes_pod_name"
 ## will set the ai.cloud.role context tag to the value of kubernetes_container_name property (if present), 
 ## and the ai.cloud.roleInstance context tag to the value of kubernetes_pod_name property.
 ## For list of all context tag keys see https://github.com/Microsoft/ApplicationInsights-Go/blob/master/appinsights/contracts/contexttagkeys.go
@@ -238,13 +238,10 @@ func (a *ApplicationInsights) createTelemetryForUnusedFields(metric telegraf.Met
 }
 
 func (a *ApplicationInsights) addContextTags(metric telegraf.Metric, telemetry appinsights.Telemetry) {
-	for tagSourceName, contextTagName := range a.ContextTagSources {
-		contextTagValue, found := metric.GetTag(tagSourceName)
-		if !found {
-			continue
+	for contextTagName, tagSourceName := range a.ContextTagSources {
+		if contextTagValue, found := metric.GetTag(tagSourceName); found {
+			telemetry.ContextTags()[contextTagName] = contextTagValue
 		}
-
-		telemetry.ContextTags()[contextTagName] = contextTagValue
 	}
 }
 

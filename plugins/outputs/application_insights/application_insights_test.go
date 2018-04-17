@@ -315,9 +315,9 @@ func TestContextTagsSetOnSimpleTelemetry(t *testing.T) {
 		transmitter:        transmitter,
 		InstrumentationKey: "1234", // Fake, but necessary to enable tracking
 		ContextTagSources: map[string]string{
-			"kubernetes_container_name": "ai.cloud.role",
-			"kubernetes_pod_name":       "ai.cloud.roleInstance",
-			"nonexistent":               "ai.user.id",
+			"ai.cloud.role":         "kubernetes_container_name",
+			"ai.cloud.roleInstance": "kubernetes_pod_name",
+			"ai.user.id":            "nonexistent",
 		},
 	}
 
@@ -352,9 +352,9 @@ func TestContextTagsSetOnAggregateTelemetry(t *testing.T) {
 		transmitter:        transmitter,
 		InstrumentationKey: "1234", // Fake, but necessary to enable tracking
 		ContextTagSources: map[string]string{
-			"kubernetes_container_name": "ai.cloud.role",
-			"kubernetes_pod_name":       "ai.cloud.roleInstance",
-			"nonexistent":               "ai.user.id",
+			"ai.cloud.role":         "kubernetes_container_name",
+			"ai.cloud.roleInstance": "kubernetes_pod_name",
+			"ai.user.id":            "nonexistent",
 		},
 	}
 
