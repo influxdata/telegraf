@@ -2,12 +2,14 @@ package socket_listener
 
 import (
 	"bytes"
+	"crypto/tls"
 	"log"
 	"net"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,6 +25,28 @@ func testEmptyLog(t *testing.T) func() {
 		log.SetOutput(os.Stderr)
 		assert.Empty(t, string(buf.Bytes()), "log not empty")
 	}
+}
+
+func TestSocketListener_tls(t *testing.T) {
+	defer testEmptyLog(t)()
+
+	sl := newSocketListener()
+	sl.ServiceAddress = "tcp://127.0.0.1:0"
+	sl.TLSCert = "testdata/server.pem"
+	sl.TLSKey = "testdata/server.key"
+
+	acc := &testutil.Accumulator{}
+	err := sl.Start(acc)
+	require.NoError(t, err)
+	defer sl.Stop()
+
+	tlsCfg, err := internal.GetTLSConfig("testdata/client.pem", "testdata/client.key", "testdata/ca.pem", true)
+	require.NoError(t, err)
+
+	secureClient, err := tls.Dial("tcp", sl.Closer.(net.Listener).Addr().String(), tlsCfg)
+	require.NoError(t, err)
+
+	testSocketListener(t, sl, secureClient)
 }
 
 func TestSocketListener_tcp(t *testing.T) {
