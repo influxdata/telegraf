@@ -1,0 +1,30 @@
+machine:
+  services:
+    - docker
+    - memcached
+    - redis
+    - rabbitmq-server
+  post:
+    - sudo rm -rf /usr/local/go
+    - wget https://storage.googleapis.com/golang/go1.9.4.linux-amd64.tar.gz
+    - sudo tar -C /usr/local -xzf go1.9.4.linux-amd64.tar.gz
+    - go version
+
+dependencies:
+  override:
+    - docker info
+
+checkout:
+  post:
+    - git submodule sync --recursive
+    - git submodule update --recursive --init
+
+test:
+  override:
+    - bash scripts/orangesys-telegraf.sh
+
+deployment:
+  release:
+    tag: /v[0-9]+(\.[0-9]+)*/
+    commands:
+      - bash scripts/github-release.sh

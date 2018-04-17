@@ -126,6 +126,9 @@ the configuration to execute that.
 ### Output
 
 ```
+> smart_attribute,serial_no=S1K5NYCD964433,wwn=5002538655584d30,id=199,name=UDMA_CRC_Error_Count,flags=-O-RC-,fail=-,host=mbpro.local,device=rdisk0 threshold=0i,raw_value=0i,exit_status=0i,value=200i,worst=200i 1502536854000000000
+> smart_attribute,device=rdisk0,serial_no=S1K5NYCD964433,wwn=5002538655584d30,id=240,name=Unknown_SSD_Attribute,flags=-O---K,fail=-,host=mbpro.local exit_status=0i,value=100i,worst=100i,threshold=0i,raw_value=0i 1502536854000000000
+> smart_device,enabled=Enabled,host=mbpro.local,device=rdisk0,model=APPLE\ SSD\ SM0512F,serial_no=S1K5NYCD964433,wwn=5002538655584d30,capacity=500277790720 udma_crc_errors=0i,exit_status=0i,health_ok=true,read_error_rate=0i,temp_c=40i 1502536854000000000
 smart_device,enabled=Enabled,host=mbpro.local,device=rdisk0,model=APPLE\ SSD\ SM0512F,serial_no=S1K5NYCD964433,wwn=5002538655584d30,capacity=500277790720 udma_crc_errors=0i,exit_status=0i,health_ok=true,read_error_rate=0i,temp_c=40i 1502536854000000000
 smart_attribute,serial_no=S1K5NYCD964433,wwn=5002538655584d30,id=199,name=UDMA_CRC_Error_Count,flags=-O-RC-,fail=-,host=mbpro.local,device=rdisk0 threshold=0i,raw_value=0i,exit_status=0i,value=200i,worst=200i 1502536854000000000
 smart_attribute,device=rdisk0,serial_no=S1K5NYCD964433,wwn=5002538655584d30,id=240,name=Unknown_SSD_Attribute,flags=-O---K,fail=-,host=mbpro.local exit_status=0i,value=100i,worst=100i,threshold=0i,raw_value=0i 1502536854000000000
