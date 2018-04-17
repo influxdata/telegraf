@@ -181,19 +181,24 @@ based on the availability of per-cpu stats on your system.
 - docker (memory_total)
     - unit=bytes
     - engine_host
+    - server_version
 - docker (pool_blocksize)
     - unit=bytes
     - engine_host
+    - server_version
 - docker_data
     - unit=bytes
     - engine_host
+    - server_version
 - docker_metadata
     - unit=bytes
     - engine_host
+    - server_version
 
 #### Docker Container tags
 - Tags on all containers:
     - engine_host
+    - server_version
     - container_image
     - container_name
     - container_version
