@@ -181,6 +181,7 @@ configuration options.
 * [nsq](./plugins/inputs/nsq)
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
+* [nvidia_smi](./plugins/inputs/nvidia_smi)
 * [openldap](./plugins/inputs/openldap)
 * [opensmtpd](./plugins/inputs/opensmtpd)
 * [pf](./plugins/inputs/pf)
