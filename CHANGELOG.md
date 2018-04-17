@@ -120,6 +120,10 @@
 - [#4062](https://github.com/influxdata/telegraf/pull/4062): Add server argument as first argument in unbound input.
 - [#4063](https://github.com/influxdata/telegraf/issues/4063): Fix handling of floats with multiple leading zeroes.
 - [#4064](https://github.com/influxdata/telegraf/issues/4064): Return errors in mongodb SSL/TLS configuration.
+## v1.6.1 [unreleased]
+
+### Bugfixes
+- [#3835](https://github.com/influxdata/telegraf/pull/3835): Report mem input fields as gauges instead counters.
 
 ## v1.6 [2018-04-16]
 
