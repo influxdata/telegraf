@@ -160,14 +160,14 @@ func (psl *packetSocketListener) listen() {
 }
 
 type SocketListener struct {
-	ServiceAddress    string
-	MaxConnections    int
-	ReadBufferSize    int
-	ReadTimeout       *internal.Duration
-	TLSAllowedCACerts []string
-	TLSCert           string
-	TLSKey            string
-	KeepAlivePeriod   *internal.Duration
+	ServiceAddress    string             `toml:"service_address"`
+	MaxConnections    int                `toml:"max_connections"`
+	ReadBufferSize    int                `toml:"read_buffer_size"`
+	ReadTimeout       *internal.Duration `toml:"read_timeout"`
+	TLSAllowedCACerts []string           `toml:"tls_allowed_cacerts"`
+	TLSCert           string             `toml:"tls_cert"`
+	TLSKey            string             `toml:"tls_key"`
+	KeepAlivePeriod   *internal.Duration `toml:"keep_alive_period"`
 
 	parsers.Parser
 	telegraf.Accumulator
