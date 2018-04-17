@@ -160,15 +160,14 @@ func (psl *packetSocketListener) listen() {
 }
 
 type SocketListener struct {
-	ServiceAddress  string
-	MaxConnections  int
-	ReadBufferSize  int
-	ReadTimeout     *internal.Duration
-	SSLCA           []string
-	SSLCert         string
-	SSLKey          string
-	SSLClientAuth   bool
-	KeepAlivePeriod *internal.Duration
+	ServiceAddress    string
+	MaxConnections    int
+	ReadBufferSize    int
+	ReadTimeout       *internal.Duration
+	TLSAllowedCACerts []string
+	TLSCert           string
+	TLSKey            string
+	KeepAlivePeriod   *internal.Duration
 
 	parsers.Parser
 	telegraf.Accumulator
@@ -203,14 +202,12 @@ func (sl *SocketListener) SampleConfig() string {
   ## 0 (default) is unlimited.
   # read_timeout = "30s"
 
-  ## Optional SSL configuration.
+  ## Optional TLS configuration.
   ## Only applies to stream sockets (e.g. TCP).
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Enable and require client certificate authentication.
-  # ssl_client_auth = false
-  ## CAs used to verify client certificates.
-  # ssl_ca = ["/etc/telegraf/ca.pem"]
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key  = "/etc/telegraf/key.pem"
+  ## Enables client authentication if set.
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
   ## Maximum socket buffer size in bytes.
   ## For stream sockets, once the buffer fills up, the sender will start backing up.
@@ -261,7 +258,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			l   net.Listener
 		)
 
-		tlsCfg, err := internal.GetServerTLSConfig(sl.SSLCert, sl.SSLKey, sl.SSLCA, sl.SSLClientAuth)
+		tlsCfg, err := internal.GetServerTLSConfig(sl.TLSCert, sl.TLSKey, sl.TLSAllowedCACerts)
 		if err != nil {
 			return nil
 		}
