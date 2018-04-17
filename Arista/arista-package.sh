@@ -41,7 +41,7 @@ set -e
 # Include "-dirty" on the end if there are any uncommitted changes.
 #
 # Replace hyphens with underscores; RPM uses them to separate version/release.
-git_ver=$(git describe --dirty --match "v[0-9]*" 2>/dev/null || echo "v0-`git rev-list --count HEAD`-g`git describe --dirty --always`")
+git_ver=$(git describe --dirty --match "v[0-9]*-ar" 2>/dev/null || echo "v0-`git rev-list --count HEAD`-g`git describe --dirty --always`")
 version=$(echo "$git_ver" | sed -e "s/^v//" -e "s/-/_/g")
 echo "Version, $version"
 
