@@ -27,7 +27,7 @@ func testEmptyLog(t *testing.T) func() {
 	}
 }
 
-func TestSocketListener_tls(t *testing.T) {
+func TestSocketListener_tcp_tls(t *testing.T) {
 	defer testEmptyLog(t)()
 
 	sl := newSocketListener()
@@ -45,6 +45,29 @@ func TestSocketListener_tls(t *testing.T) {
 	require.NoError(t, err)
 
 	secureClient, err := tls.Dial("tcp", sl.Closer.(net.Listener).Addr().String(), tlsCfg)
+	require.NoError(t, err)
+
+	testSocketListener(t, sl, secureClient)
+}
+
+func TestSocketListener_unix_tls(t *testing.T) {
+	defer testEmptyLog(t)()
+
+	sl := newSocketListener()
+	sl.ServiceAddress = "unix:///tmp/telegraf_test.sock"
+	sl.TLSCert = "testdata/server.pem"
+	sl.TLSKey = "testdata/server.key"
+	sl.TLSAllowedCACerts = []string{"testdata/ca.pem"}
+
+	acc := &testutil.Accumulator{}
+	err := sl.Start(acc)
+	require.NoError(t, err)
+	defer sl.Stop()
+
+	tlsCfg, err := internal.GetTLSConfig("testdata/client.pem", "testdata/client.key", "testdata/ca.pem", true)
+	require.NoError(t, err)
+
+	secureClient, err := tls.Dial("unix", "/tmp/telegraf_test.sock", tlsCfg)
 	require.NoError(t, err)
 
 	testSocketListener(t, sl, secureClient)
