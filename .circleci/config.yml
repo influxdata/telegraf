@@ -33,7 +33,7 @@ jobs:
       - run: 'make deps'
       - run: 'make test-ci'
   release:
-    <<: [ *defaults, *go-1_9 ]
+    <<: [ *defaults, *go-1_10 ]
     steps:
       - checkout
       - run: './scripts/release.sh'
@@ -41,7 +41,7 @@ jobs:
           path: './artifacts'
           destination: '.'
   nightly:
-    <<: [ *defaults, *go-1_9 ]
+    <<: [ *defaults, *go-1_10 ]
     steps:
       - checkout
       - run: './scripts/release.sh'
@@ -58,13 +58,17 @@ workflows:
       - 'test-go-1.10'
       - 'release':
           requires:
+            - 'test-go-1.8'
             - 'test-go-1.9'
+            - 'test-go-1.10'
   nightly:
     jobs:
       - 'test-go-1.9'
       - 'nightly':
           requires:
+            - 'test-go-1.8'
             - 'test-go-1.9'
+            - 'test-go-1.10'
     triggers:
       - schedule:
           cron: "0 18 * * *"
