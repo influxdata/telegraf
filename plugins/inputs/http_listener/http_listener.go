@@ -3,6 +3,7 @@ package http_listener
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
 	"io"
@@ -32,6 +33,8 @@ const (
 	DEFAULT_MAX_LINE_SIZE = 64 * 1024
 )
 
+type TimeFunc func() time.Time
+
 type HTTPListener struct {
 	ServiceAddress string
 	ReadTimeout    internal.Duration
@@ -44,14 +47,20 @@ type HTTPListener struct {
 	TlsCert           string
 	TlsKey            string
 
+	BasicUsername string
+	BasicPassword string
+
+	TimeFunc
+
 	mu sync.Mutex
 	wg sync.WaitGroup
 
 	listener net.Listener
 
-	parser influx.InfluxParser
-	acc    telegraf.Accumulator
-	pool   *pool
+	handler *influx.MetricHandler
+	parser  *influx.Parser
+	acc     telegraf.Accumulator
+	pool    *pool
 
 	BytesRecv       selfstat.Stat
 	RequestsServed  selfstat.Stat
@@ -64,6 +73,7 @@ type HTTPListener struct {
 	PingsRecv       selfstat.Stat
 	NotFoundsServed selfstat.Stat
 	BuffersCreated  selfstat.Stat
+	AuthFailures    selfstat.Stat
 }
 
 const sampleConfig = `
@@ -90,6 +100,11 @@ const sampleConfig = `
   ## Add service certificate and key
   tls_cert = "/etc/telegraf/cert.pem"
   tls_key = "/etc/telegraf/key.pem"
+
+  ## Optional username and password to accept for HTTP basic authentication.
+  ## You probably want to make sure you have TLS configured above for this.
+  # basic_username = "foobar"
+  # basic_password = "barfoo"
 `
 
 func (h *HTTPListener) SampleConfig() string {
@@ -124,6 +139,7 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 	h.PingsRecv = selfstat.Register("http_listener", "pings_received", tags)
 	h.NotFoundsServed = selfstat.Register("http_listener", "not_founds_served", tags)
 	h.BuffersCreated = selfstat.Register("http_listener", "buffers_created", tags)
+	h.AuthFailures = selfstat.Register("http_listener", "auth_failures", tags)
 
 	if h.MaxBodySize == 0 {
 		h.MaxBodySize = DEFAULT_MAX_BODY_SIZE
@@ -165,6 +181,9 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 	h.listener = listener
 	h.Port = listener.Addr().(*net.TCPAddr).Port
 
+	h.handler = influx.NewMetricHandler()
+	h.parser = influx.NewParser(h.handler)
+
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
@@ -194,25 +213,29 @@ func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	case "/write":
 		h.WritesRecv.Incr(1)
 		defer h.WritesServed.Incr(1)
-		h.serveWrite(res, req)
+		h.AuthenticateIfSet(h.serveWrite, res, req)
 	case "/query":
 		h.QueriesRecv.Incr(1)
 		defer h.QueriesServed.Incr(1)
 		// Deliver a dummy response to the query endpoint, as some InfluxDB
 		// clients test endpoint availability with a query
-		res.Header().Set("Content-Type", "application/json")
-		res.Header().Set("X-Influxdb-Version", "1.0")
-		res.WriteHeader(http.StatusOK)
-		res.Write([]byte("{\"results\":[]}"))
+		h.AuthenticateIfSet(func(res http.ResponseWriter, req *http.Request) {
+			res.Header().Set("Content-Type", "application/json")
+			res.Header().Set("X-Influxdb-Version", "1.0")
+			res.WriteHeader(http.StatusOK)
+			res.Write([]byte("{\"results\":[]}"))
+		}, res, req)
 	case "/ping":
 		h.PingsRecv.Incr(1)
 		defer h.PingsServed.Incr(1)
 		// respond to ping requests
-		res.WriteHeader(http.StatusNoContent)
+		h.AuthenticateIfSet(func(res http.ResponseWriter, req *http.Request) {
+			res.WriteHeader(http.StatusNoContent)
+		}, res, req)
 	default:
 		defer h.NotFoundsServed.Incr(1)
 		// Don't know how to respond to calls to other endpoints
-		http.NotFound(res, req)
+		h.AuthenticateIfSet(http.NotFound, res, req)
 	}
 }
 
@@ -222,7 +245,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		tooLarge(res)
 		return
 	}
-	now := time.Now()
+	now := h.TimeFunc()
 
 	precision := req.URL.Query().Get("precision")
 
@@ -321,7 +344,12 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
-	metrics, err := h.parser.ParseWithDefaultTimePrecision(b, t, precision)
+	h.handler.SetTimePrecision(getPrecisionMultiplier(precision))
+	h.handler.SetTimeFunc(func() time.Time { return t })
+	metrics, err := h.parser.Parse(b)
+	if err != nil {
+		return err
+	}
 
 	for _, m := range metrics {
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
@@ -376,10 +404,45 @@ func (h *HTTPListener) getTLSConfig() *tls.Config {
 	return tlsConf
 }
 
+func (h *HTTPListener) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
+	if h.BasicUsername != "" && h.BasicPassword != "" {
+		reqUsername, reqPassword, ok := req.BasicAuth()
+		if !ok ||
+			subtle.ConstantTimeCompare([]byte(reqUsername), []byte(h.BasicUsername)) != 1 ||
+			subtle.ConstantTimeCompare([]byte(reqPassword), []byte(h.BasicPassword)) != 1 {
+
+			h.AuthFailures.Incr(1)
+			http.Error(res, "Unauthorized.", http.StatusUnauthorized)
+			return
+		}
+		handler(res, req)
+	} else {
+		handler(res, req)
+	}
+}
+
+func getPrecisionMultiplier(precision string) time.Duration {
+	d := time.Nanosecond
+	switch precision {
+	case "u":
+		d = time.Microsecond
+	case "ms":
+		d = time.Millisecond
+	case "s":
+		d = time.Second
+	case "m":
+		d = time.Minute
+	case "h":
+		d = time.Hour
+	}
+	return d
+}
+
 func init() {
 	inputs.Add("http_listener", func() telegraf.Input {
 		return &HTTPListener{
 			ServiceAddress: ":8186",
+			TimeFunc:       time.Now,
 		}
 	})
 }

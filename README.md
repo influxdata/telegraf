@@ -147,6 +147,7 @@ configuration options.
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [fail2ban](./plugins/inputs/fail2ban)
+* [fibaro](./plugins/inputs/fibaro)
 * [filestat](./plugins/inputs/filestat)
 * [fluentd](./plugins/inputs/fluentd)
 * [graylog](./plugins/inputs/graylog)

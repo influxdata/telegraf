@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -40,6 +41,7 @@ type Mysql struct {
 	SSLCA                               string   `toml:"ssl_ca"`
 	SSLCert                             string   `toml:"ssl_cert"`
 	SSLKey                              string   `toml:"ssl_key"`
+	MetricVersion                       int      `toml:"metric_version"`
 }
 
 var sampleConfig = `
@@ -52,6 +54,20 @@ var sampleConfig = `
   #
   ## If no servers are specified, then localhost is used as the host.
   servers = ["tcp(127.0.0.1:3306)/"]
+
+  ## Selects the metric output format.
+  ##
+  ## This option exists to maintain backwards compatibility, if you have
+  ## existing metrics do not set or change this value until you are ready to
+  ## migrate to the new format.
+  ##
+  ## If you do not have existing metrics from this plugin set to the latest
+  ## version.
+  ##
+  ## Telegraf >=1.6: metric_version = 2
+  ##           <1.6: metric_version = 1 (or unset)
+  metric_version = 2
+
   ## the limits for metrics form perf_events_statements
   perf_events_statements_digest_text_limit  = 120
   perf_events_statements_limit              = 250
@@ -541,7 +557,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 			fields[key] = string(val)
 			tags[key] = string(val)
 		}
-		if value, ok := parseValue(val); ok {
+		if value, ok := m.parseValue(val); ok {
 			fields[key] = value
 		}
 		// Send 20 fields at a time
@@ -593,7 +609,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		// range over columns, and try to parse values
 		for i, col := range cols {
 			col = strings.ToLower(col)
-			if value, ok := parseValue(*vals[i].(*sql.RawBytes)); ok {
+			if value, ok := m.parseValue(*vals[i].(*sql.RawBytes)); ok {
 				fields["slave_"+col] = value
 			}
 		}
@@ -662,10 +678,75 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 			return err
 		}
 
-		key = strings.ToLower(key)
+		if m.MetricVersion < 2 {
+			var found bool
+			for _, mapped := range v1.Mappings {
+				if strings.HasPrefix(key, mapped.OnServer) {
+					// convert numeric values to integer
+					i, _ := strconv.Atoi(string(val))
+					fields[mapped.InExport+key[len(mapped.OnServer):]] = i
+					found = true
+				}
+			}
+			// Send 20 fields at a time
+			if len(fields) >= 20 {
+				acc.AddFields("mysql", fields, tags)
+				fields = make(map[string]interface{})
+			}
+			if found {
+				continue
+			}
 
-		if value, ok := parseValue(val); ok {
-			fields[key] = value
+			// search for specific values
+			switch key {
+			case "Queries":
+				i, err := strconv.ParseInt(string(val), 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+				} else {
+					fields["queries"] = i
+				}
+			case "Questions":
+				i, err := strconv.ParseInt(string(val), 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+				} else {
+					fields["questions"] = i
+				}
+			case "Slow_queries":
+				i, err := strconv.ParseInt(string(val), 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+				} else {
+					fields["slow_queries"] = i
+				}
+			case "Connections":
+				i, err := strconv.ParseInt(string(val), 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+				} else {
+					fields["connections"] = i
+				}
+			case "Syncs":
+				i, err := strconv.ParseInt(string(val), 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+				} else {
+					fields["syncs"] = i
+				}
+			case "Uptime":
+				i, err := strconv.ParseInt(string(val), 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+				} else {
+					fields["uptime"] = i
+				}
+			}
+		} else {
+			key = strings.ToLower(key)
+			if value, ok := m.parseValue(val); ok {
+				fields[key] = value
+			}
 		}
 
 		// Send 20 fields at a time
@@ -820,7 +901,11 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 	for s, c := range stateCounts {
 		fields[newNamespace("threads", s)] = c
 	}
-	acc.AddFields("mysql_process_list", fields, tags)
+	if m.MetricVersion < 2 {
+		acc.AddFields("mysql_info_schema", fields, tags)
+	} else {
+		acc.AddFields("mysql_process_list", fields, tags)
+	}
 	return nil
 }
 
@@ -1033,7 +1118,11 @@ func (m *Mysql) gatherInfoSchemaAutoIncStatuses(db *sql.DB, serv string, acc tel
 		fields["auto_increment_column"] = incValue
 		fields["auto_increment_column_max"] = maxInt
 
-		acc.AddFields("mysql_table_schema", fields, tags)
+		if m.MetricVersion < 2 {
+			acc.AddFields("mysql_info_schema", fields, tags)
+		} else {
+			acc.AddFields("mysql_table_schema", fields, tags)
+		}
 	}
 	return nil
 }
@@ -1059,7 +1148,7 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumu
 			return err
 		}
 		key = strings.ToLower(key)
-		if value, ok := parseValue(val); ok {
+		if value, ok := m.parseValue(val); ok {
 			fields[key] = value
 		}
 		// Send 20 fields at a time
@@ -1430,17 +1519,37 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 			tags["schema"] = tableSchema
 			tags["table"] = tableName
 
-			acc.AddFields("mysql_table_schema",
-				map[string]interface{}{"rows": tableRows}, tags)
+			if m.MetricVersion < 2 {
+				acc.AddFields(newNamespace("info_schema", "table_rows"),
+					map[string]interface{}{"value": tableRows}, tags)
 
-			acc.AddFields("mysql_table_schema",
-				map[string]interface{}{"data_length": dataLength}, tags)
+				dlTags := copyTags(tags)
+				dlTags["component"] = "data_length"
+				acc.AddFields(newNamespace("info_schema", "table_size", "data_length"),
+					map[string]interface{}{"value": dataLength}, dlTags)
 
-			acc.AddFields("mysql_table_schema",
-				map[string]interface{}{"index_length": indexLength}, tags)
+				ilTags := copyTags(tags)
+				ilTags["component"] = "index_length"
+				acc.AddFields(newNamespace("info_schema", "table_size", "index_length"),
+					map[string]interface{}{"value": indexLength}, ilTags)
 
-			acc.AddFields("mysql_table_schema",
-				map[string]interface{}{"data_free": dataFree}, tags)
+				dfTags := copyTags(tags)
+				dfTags["component"] = "data_free"
+				acc.AddFields(newNamespace("info_schema", "table_size", "data_free"),
+					map[string]interface{}{"value": dataFree}, dfTags)
+			} else {
+				acc.AddFields("mysql_table_schema",
+					map[string]interface{}{"rows": tableRows}, tags)
+
+				acc.AddFields("mysql_table_schema",
+					map[string]interface{}{"data_length": dataLength}, tags)
+
+				acc.AddFields("mysql_table_schema",
+					map[string]interface{}{"index_length": indexLength}, tags)
+
+				acc.AddFields("mysql_table_schema",
+					map[string]interface{}{"data_free": dataFree}, tags)
+			}
 
 			versionTags := copyTags(tags)
 			versionTags["type"] = tableType
@@ -1448,11 +1557,24 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 			versionTags["row_format"] = rowFormat
 			versionTags["create_options"] = createOptions
 
-			acc.AddFields("mysql_table_schema_version",
-				map[string]interface{}{"table_version": version}, versionTags)
+			if m.MetricVersion < 2 {
+				acc.AddFields(newNamespace("info_schema", "table_version"),
+					map[string]interface{}{"value": version}, versionTags)
+			} else {
+				acc.AddFields("mysql_table_schema_version",
+					map[string]interface{}{"table_version": version}, versionTags)
+			}
 		}
 	}
 	return nil
+}
+
+func (m *Mysql) parseValue(value sql.RawBytes) (interface{}, bool) {
+	if m.MetricVersion < 2 {
+		return v1.ParseValue(value)
+	} else {
+		return parseValue(value)
+	}
 }
 
 // parseValue can be used to convert values such as "ON","OFF","Yes","No" to 0,1

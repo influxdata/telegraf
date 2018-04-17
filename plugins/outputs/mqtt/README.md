@@ -2,38 +2,36 @@
 
 This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt Producer.
 
-```
+```toml
 [[outputs.mqtt]]
   ## URLs of mqtt brokers
   servers = ["localhost:1883"]
-  
+
   ## topic for producer messages
-  topic = "telegraf"
-  
+  topic_prefix = "telegraf"
+
   ## QoS policy for messages
   qos = 2
-  
+
   ## username and password to connect MQTT server.
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
-   
+
   ## client ID, if not set a random ID is generated
   # client_id = ""
-    
+
   ## Timeout for write operations. default: 5s
   # timeout = "5s"
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
   # ssl_key = "/etc/telegraf/key.pem"
-  
+
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
-  
+
   ## Data format to output.
   data_format = "influx"
-
-
 ```
 
 ### Required parameters:

@@ -35,6 +35,7 @@ type MongoStatus struct {
 	ClusterStatus *ClusterStatus
 	DbStats       *DbStats
 	ShardStats    *ShardStats
+	OplogStats    *OplogStats
 }
 
 type ServerStatus struct {
@@ -102,6 +103,11 @@ type ReplSetStatus struct {
 	MyState int64           `bson:"myState"`
 }
 
+// OplogStatus stores information from getReplicationInfo
+type OplogStats struct {
+	TimeDiff int64
+}
+
 // ReplSetMember stores information related to a replica set member
 type ReplSetMember struct {
 	Name       string    `bson:"name"`
@@ -119,10 +125,25 @@ type WiredTiger struct {
 
 // ShardStats stores information from shardConnPoolStats.
 type ShardStats struct {
+	ShardStatsData `bson:",inline"`
+	Hosts          map[string]ShardHostStatsData `bson:"hosts"`
+}
+
+// ShardStatsData is the total Shard Stats from shardConnPoolStats database command.
+type ShardStatsData struct {
 	TotalInUse      int64 `bson:"totalInUse"`
 	TotalAvailable  int64 `bson:"totalAvailable"`
 	TotalCreated    int64 `bson:"totalCreated"`
 	TotalRefreshing int64 `bson:"totalRefreshing"`
+}
+
+// ShardHostStatsData is the host-specific stats
+// from shardConnPoolStats database command.
+type ShardHostStatsData struct {
+	InUse      int64 `bson:"inUse"`
+	Available  int64 `bson:"available"`
+	Created    int64 `bson:"created"`
+	Refreshing int64 `bson:"refreshing"`
 }
 
 type ConcurrentTransactions struct {
@@ -442,6 +463,7 @@ type StatLine struct {
 	// Replicated Opcounter fields
 	InsertR, QueryR, UpdateR, DeleteR, GetMoreR, CommandR int64
 	ReplLag                                               int64
+	OplogTimeDiff                                         int64
 	Flushes                                               int64
 	Mapped, Virtual, Resident, NonMapped                  int64
 	Faults                                                int64
@@ -462,6 +484,9 @@ type StatLine struct {
 
 	// Shard stats
 	TotalInUse, TotalAvailable, TotalCreated, TotalRefreshing int64
+
+	// Shard Hosts stats field
+	ShardHostStatsLines map[string]ShardHostStatLine
 }
 
 type DbStatLine struct {
@@ -475,6 +500,13 @@ type DbStatLine struct {
 	Indexes     int64
 	IndexSize   int64
 	Ok          int64
+}
+
+type ShardHostStatLine struct {
+	InUse      int64
+	Available  int64
+	Created    int64
+	Refreshing int64
 }
 
 func parseLocks(stat ServerStatus) map[string]LockUsage {
@@ -772,6 +804,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 
 	newClusterStat := *newMongo.ClusterStatus
 	returnVal.JumboChunksCount = newClusterStat.JumboChunksCount
+	returnVal.OplogTimeDiff = newMongo.OplogStats.TimeDiff
 
 	newDbStats := *newMongo.DbStats
 	for _, db := range newDbStats.Dbs {
@@ -801,6 +834,17 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 	returnVal.TotalAvailable = newShardStats.TotalAvailable
 	returnVal.TotalCreated = newShardStats.TotalCreated
 	returnVal.TotalRefreshing = newShardStats.TotalRefreshing
+	returnVal.ShardHostStatsLines = map[string]ShardHostStatLine{}
+	for host, stats := range newShardStats.Hosts {
+		shardStatLine := &ShardHostStatLine{
+			InUse:      stats.InUse,
+			Available:  stats.Available,
+			Created:    stats.Created,
+			Refreshing: stats.Refreshing,
+		}
+
+		returnVal.ShardHostStatsLines[host] = *shardStatLine
+	}
 
 	return returnVal
 }

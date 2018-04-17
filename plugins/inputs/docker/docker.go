@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -25,7 +26,7 @@ import (
 // Docker object
 type Docker struct {
 	Endpoint       string
-	ContainerNames []string
+	ContainerNames []string // deprecated in 1.4; use container_name_include
 
 	GatherServices bool `toml:"gather_services"`
 
@@ -38,6 +39,9 @@ type Docker struct {
 
 	ContainerInclude []string `toml:"container_name_include"`
 	ContainerExclude []string `toml:"container_name_exclude"`
+
+	ContainerStateInclude []string `toml:"container_state_include"`
+	ContainerStateExclude []string `toml:"container_state_exclude"`
 
 	SSLCA              string `toml:"ssl_ca"`
 	SSLCert            string `toml:"ssl_cert"`
@@ -53,6 +57,7 @@ type Docker struct {
 	filtersCreated  bool
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
+	stateFilter     filter.Filter
 }
 
 // KB, MB, GB, TB, PB...human friendly
@@ -67,7 +72,8 @@ const (
 )
 
 var (
-	sizeRegex = regexp.MustCompile(`^(\d+(\.\d+)*) ?([kKmMgGtTpP])?[bB]?$`)
+	sizeRegex       = regexp.MustCompile(`^(\d+(\.\d+)*) ?([kKmMgGtTpP])?[bB]?$`)
+	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
 )
 
 var sampleConfig = `
@@ -86,6 +92,11 @@ var sampleConfig = `
   ## Note that an empty array for both will include all containers
   container_name_include = []
   container_name_exclude = []
+
+  ## Container states to include and exclude. Globs accepted.
+  ## When empty only containers in the "running" state will be captured.
+  # container_state_include = []
+  # container_state_exclude = []
 
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
@@ -148,6 +159,10 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
+		err = d.createContainerStateFilters()
+		if err != nil {
+			return err
+		}
 		d.filtersCreated = true
 	}
 
@@ -164,8 +179,22 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
+	filterArgs := filters.NewArgs()
+	for _, state := range containerStates {
+		if d.stateFilter.Match(state) {
+			filterArgs.Add("status", state)
+		}
+	}
+
+	// All container states were excluded
+	if filterArgs.Len() == 0 {
+		return nil
+	}
+
 	// List containers
-	opts := types.ContainerListOptions{}
+	opts := types.ContainerListOptions{
+		Filters: filterArgs,
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
 	containers, err := d.client.ContainerList(ctx, opts)
@@ -765,6 +794,18 @@ func (d *Docker) createLabelFilters() error {
 		return err
 	}
 	d.labelFilter = filter
+	return nil
+}
+
+func (d *Docker) createContainerStateFilters() error {
+	if len(d.ContainerStateInclude) == 0 && len(d.ContainerStateExclude) == 0 {
+		d.ContainerStateInclude = []string{"running"}
+	}
+	filter, err := filter.NewIncludeExcludeFilter(d.ContainerStateInclude, d.ContainerStateExclude)
+	if err != nil {
+		return err
+	}
+	d.stateFilter = filter
 	return nil
 }
 

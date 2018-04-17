@@ -151,6 +151,16 @@ func TestWrite_Counters(t *testing.T) {
 			metricName: "foo_other",
 			valueType:  telegraf.Counter,
 		},
+		{
+			name: "uint64 fields are output",
+			args: args{
+				measurement: "foo",
+				fields:      map[string]interface{}{"value": uint64(42)},
+				valueType:   telegraf.Counter,
+			},
+			metricName: "foo",
+			valueType:  telegraf.Counter,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -238,6 +248,16 @@ func TestWrite_Gauge(t *testing.T) {
 			},
 			metricName: "foo_other",
 			valueType:  telegraf.Gauge,
+		},
+		{
+			name: "uint64 fields are output",
+			args: args{
+				measurement: "foo",
+				fields:      map[string]interface{}{"value": uint64(42)},
+				valueType:   telegraf.Counter,
+			},
+			metricName: "foo",
+			valueType:  telegraf.Counter,
 		},
 	}
 	for _, tt := range tests {

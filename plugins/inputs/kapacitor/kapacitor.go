@@ -21,6 +21,15 @@ type Kapacitor struct {
 
 	Timeout internal.Duration
 
+	// Path to CA file
+	SSLCA string `toml:"ssl_ca"`
+	// Path to host cert file
+	SSLCert string `toml:"ssl_cert"`
+	// Path to cert key file
+	SSLKey string `toml:"ssl_key"`
+	// Use SSL but skip chain & host verification
+	InsecureSkipVerify bool
+
 	client *http.Client
 }
 
@@ -38,12 +47,23 @@ func (*Kapacitor) SampleConfig() string {
 
   ## Time limit for http requests
   timeout = "5s"
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 }
 
 func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
 	if k.client == nil {
-		k.client = &http.Client{Timeout: k.Timeout.Duration}
+		client, err := k.createHttpClient()
+		if err != nil {
+			return err
+		}
+		k.client = client
 	}
 
 	var wg sync.WaitGroup
@@ -59,6 +79,23 @@ func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 	return nil
+}
+
+func (k *Kapacitor) createHttpClient() (*http.Client, error) {
+	tlsCfg, err := internal.GetTLSConfig(
+		k.SSLCert, k.SSLKey, k.SSLCA, k.InsecureSkipVerify)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: k.Timeout.Duration,
+	}
+
+	return client, nil
 }
 
 type object struct {
