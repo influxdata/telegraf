@@ -141,8 +141,8 @@ OID to get. May be a numeric or textual OID.
 * `oid_index_suffix`:
 The OID sub-identifier to strip off so that the index can be matched against other fields in the table.
 
-* `oid_strip_index_components`:
-For variable OID sub-identifiers, this will strip the specified number of MIB components from the end of the OID so the index can be matched against other fields in the table.
+* `oid_index_length`:
+Specifies the length of the index after the supplied table OID (in OID path segments). Truncates the index after this point to remove non-fixed value or length index suffixes.
 
 * `name`:
 Output field/tag name.

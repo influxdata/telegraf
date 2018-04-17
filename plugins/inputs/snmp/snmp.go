@@ -237,8 +237,8 @@ type Field struct {
 	Oid string
 	// OidIndexSuffix is the trailing sub-identifier on a table record OID that will be stripped off to get the record's index.
 	OidIndexSuffix string
-	// OidIndexStripComponents is an alternative to OidIndexSuffix to strip variable trailing components. It is an integer of how many trailing OID sections to strip.
-	OidIndexStripComponents int
+	// OidIndexLength specifies the length of the index in OID path segments. It can be used to remove sub-identifiers that vary in content or length.
+	OidIndexLength int
 	// IsTag controls whether this OID is output as a tag or a value.
 	IsTag bool
 	// Conversion controls any type conversion that is done on the value.
@@ -464,10 +464,17 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 					}
 					idx = idx[:len(idx)-len(f.OidIndexSuffix)]
 				}
-				if f.OidIndexStripComponents != 0 {
-					for i := 0; i < f.OidIndexStripComponents; i++ {
-						idx = idx[:strings.LastIndexByte(idx, '.')]
-					}
+				if f.OidIndexLength != 0 {
+					i := f.OidIndexLength + 1 // leading separator
+					idx = strings.Map(func(r rune) rune {
+						if r == '.' {
+							i -= 1
+						}
+						if i < 1 {
+							return -1
+						}
+						return r
+					}, idx)
 				}
 
 				fv, err := fieldConvert(f.Conversion, ent.Value)

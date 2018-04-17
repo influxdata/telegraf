@@ -454,9 +454,9 @@ func TestTableBuild_walk(t *testing.T) {
 				OidIndexSuffix: ".9.9",
 			},
 			{
-				Name: "myfield5",
-				Oid:  ".1.0.0.2.1.5",
-				OidIndexStripComponents: 2,
+				Name:           "myfield5",
+				Oid:            ".1.0.0.2.1.5",
+				OidIndexLength: 1,
 			},
 		},
 	}
