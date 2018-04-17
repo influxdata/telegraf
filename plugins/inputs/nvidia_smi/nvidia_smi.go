@@ -56,42 +56,6 @@ func (smi *NvidiaSMI) SampleConfig() string {
 `
 }
 
-func (smi *NvidiaSMI) pollSMI() (string, error) {
-	// Construct and execute metrics query
-	opts := []string{"--format=noheader,nounits,csv", fmt.Sprintf("--query-gpu=%s", smi.metrics)}
-	ret, err := internal.CombinedOutputTimeout(exec.Command(smi.BinPath, opts...), smi.Timeout)
-	if err != nil {
-		return "", err
-	}
-	return string(ret), nil
-}
-
-func gatherNvidiaSMI(ret string, acc telegraf.Accumulator) error {
-
-	// Format the metrics into tags and fields
-	lines := strings.Split(string(ret), "\n")
-	for _, line := range lines {
-		tags := make(map[string]string, 0)
-		fields := make(map[string]interface{}, 0)
-		met := strings.Split(line, ", ")
-		for i, m := range metricNames {
-			if m[1] == "tag" {
-				tags[m[0]] = strings.TrimSpace(met[i])
-				continue
-			}
-			out, err := strconv.ParseInt(met[i], 10, 64)
-			if err != nil {
-				return err
-			}
-
-			fields[m[0]] = out
-		}
-		acc.AddFields(measurement, fields, tags)
-	}
-
-	return nil
-}
-
 // Gather implements the telegraf interface
 func (smi *NvidiaSMI) Gather(acc telegraf.Accumulator) error {
 
@@ -120,4 +84,60 @@ func init() {
 			metrics: metrics,
 		}
 	})
+}
+
+func (smi *NvidiaSMI) pollSMI() (string, error) {
+	// Construct and execute metrics query
+	opts := []string{"--format=noheader,nounits,csv", fmt.Sprintf("--query-gpu=%s", smi.metrics)}
+	ret, err := internal.CombinedOutputTimeout(exec.Command(smi.BinPath, opts...), smi.Timeout)
+	if err != nil {
+		return "", err
+	}
+	return string(ret), nil
+}
+
+func gatherNvidiaSMI(ret string, acc telegraf.Accumulator) error {
+	// First split the lines up and handle each one
+	lines := strings.Split(string(ret), "\n")
+	for _, line := range lines {
+		tags, fields, err := parseLine(line)
+		if err != nil && err.Error() != "EOF" {
+			return err
+		}
+		acc.AddFields(measurement, fields, tags)
+	}
+	return nil
+}
+
+func parseLine(line string) (map[string]string, map[string]interface{}, error) {
+	tags := make(map[string]string, 0)
+	fields := make(map[string]interface{}, 0)
+
+	// Next split up the comma delimited metrics
+	met := strings.Split(line, ",")
+
+	// Make sure there are as many metrics in the line as there were queried.
+	if len(met) == len(metricNames) {
+		for i, m := range metricNames {
+
+			// First handle the tags
+			if m[1] == "tag" {
+				tags[m[0]] = strings.TrimSpace(met[i])
+				continue
+			}
+
+			// Then parse the integers out of the fields
+			out, err := strconv.ParseInt(strings.TrimSpace(met[i]), 10, 64)
+			if err != nil {
+				return tags, fields, err
+			}
+			fields[m[0]] = out
+		}
+
+		// Return the tags and fields
+		return tags, fields, nil
+	}
+
+	// If the line is empty return an emptyline error
+	return tags, fields, fmt.Errorf("EOF")
 }
