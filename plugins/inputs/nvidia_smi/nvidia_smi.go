@@ -1,6 +1,7 @@
 package nvidia_smi
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
@@ -98,14 +99,19 @@ func (smi *NvidiaSMI) pollSMI() (string, error) {
 
 func gatherNvidiaSMI(ret string, acc telegraf.Accumulator) error {
 	// First split the lines up and handle each one
-	lines := strings.Split(string(ret), "\n")
-	for _, line := range lines {
-		tags, fields, err := parseLine(line)
-		if err != nil && err.Error() != "EOF" {
+	scanner := bufio.NewScanner(strings.NewReader(ret))
+	for scanner.Scan() {
+		tags, fields, err := parseLine(scanner.Text())
+		if err != nil {
 			return err
 		}
 		acc.AddFields(measurement, fields, tags)
 	}
+
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("Error scanning text %s", ret)
+	}
+
 	return nil
 }
 
@@ -139,5 +145,5 @@ func parseLine(line string) (map[string]string, map[string]interface{}, error) {
 	}
 
 	// If the line is empty return an emptyline error
-	return tags, fields, fmt.Errorf("EOF")
+	return tags, fields, fmt.Errorf("Different number of metrics returned (%d) than expeced (%d)", len(met), len(metricNames))
 }

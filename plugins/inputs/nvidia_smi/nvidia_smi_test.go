@@ -21,7 +21,7 @@ func TestParseLineStandard(t *testing.T) {
 func TestParseLineEmptyLine(t *testing.T) {
 	line := "\n"
 	_, _, err := parseLine(line)
-	if err.Error() != "EOF" {
+	if err == nil {
 		t.Fail()
 	}
 }
