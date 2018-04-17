@@ -11,6 +11,11 @@
 - [#3819](https://github.com/influxdata/telegraf/pull/3819): Add per-host shard metrics in mongodb input.
 - [#3999](https://github.com/influxdata/telegraf/pull/3999): Skip files with leading `..` in config directory.
 
+## v1.6.1 [unreleased]
+
+### Bugfixes
+- [#3835](https://github.com/influxdata/telegraf/issues/3835): Report mem input fields as gauges instead counters.
+
 ## v1.6 [2018-04-16]
 
 ### Release Notes
