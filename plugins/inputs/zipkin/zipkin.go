@@ -99,7 +99,7 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	}
 
 	addr := ":" + strconv.Itoa(z.Port)
-	ln, err := net.Listen(Network, addr)
+	ln, err := net.Listen(DefaultNetwork, addr)
 	if err != nil {
 		return err
 	}
