@@ -162,17 +162,17 @@ func GetTLSConfig(
 // Returns a nil pointer if all files are blank.
 func GetServerTLSConfig(
 	TLSCert, TLSKey string,
-	TLSAllowedCerts []string,
+	TLSAllowedCACerts []string,
 ) (*tls.Config, error) {
-	if TLSCert == "" && TLSKey == "" && len(TLSAllowedCerts) == 0 {
+	if TLSCert == "" && TLSKey == "" && len(TLSAllowedCACerts) == 0 {
 		return nil, nil
 	}
 
 	t := &tls.Config{}
 
-	if len(TLSAllowedCerts) != 0 {
+	if len(TLSAllowedCACerts) != 0 {
 		caCertPool := x509.NewCertPool()
-		for _, cert := range TLSAllowedCerts {
+		for _, cert := range TLSAllowedCACerts {
 			c, err := ioutil.ReadFile(cert)
 			if err != nil {
 				return nil, errors.New(fmt.Sprintf("Could not load TLS CA: %s",
@@ -193,8 +193,9 @@ func GetServerTLSConfig(
 		}
 
 		t.Certificates = []tls.Certificate{cert}
-		t.BuildNameToCertificate()
 	}
+
+	t.BuildNameToCertificate()
 
 	return t, nil
 }

@@ -34,6 +34,7 @@ func TestSocketListener_tls(t *testing.T) {
 	sl.ServiceAddress = "tcp://127.0.0.1:0"
 	sl.TLSCert = "testdata/server.pem"
 	sl.TLSKey = "testdata/server.key"
+	sl.TLSAllowedCACerts = []string{"testdata/ca.pem"}
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)

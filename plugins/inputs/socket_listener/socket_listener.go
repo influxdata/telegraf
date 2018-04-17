@@ -123,9 +123,9 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	}
 
 	if err := scnr.Err(); err != nil {
-		if err, ok := err.(net.Error); ok && err.Timeout() {
+		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			log.Printf("D! Timeout in plugin [input.socket_listener]: %s", err)
-		} else if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+		} else if netErr != nil && !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 			ssl.AddError(err)
 		}
 	}
