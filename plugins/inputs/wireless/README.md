@@ -10,9 +10,6 @@ The wireless plugin gathers metrics about wireless link quality by reading the `
   ## file paths for proc files. If empty default paths will be used:
   ##    /proc/net/wireless
   proc_net_wireless = "/proc/net/wireless"
-
-  ## dump metrics with 0 values too
-  dump_zeros       = false
 ```
 
 ### Metrics:
@@ -21,16 +18,16 @@ The wireless plugin gathers metrics about wireless link quality by reading the `
   - tags:
     - interface (wireless interface)
   - fields:
-    - status (int64) - Its current state. This is a device dependent information
-    - link (int64, percentage) - general quality of the reception
-    - level (int64, dBm) - signal strength at the receiver
-    - noise (int64, dBm) - silence level (no packet) at the receiver
-    - nwid (int64, packets) - number of discarded packets due to invalid network id
-    - crypt (int64, packets) - number of packet unable to decrypt
-    - frag (int64, packets) - fragmented packets
-    - retry (int64, packets) - cumulative retry counts
-    - misc (int64, packets) - dropped for un-specified reason
-    - missed_beacon (int64, packets) - missed beacon packets
+    - status (int64, gauge) - Its current state. This is a device dependent information
+    - link (int64, percentage, gauge) - general quality of the reception
+    - level (int64, dBm, gauge) - signal strength at the receiver
+    - noise (int64, dBm, gauge) - silence level (no packet) at the receiver
+    - nwid (int64, packets, counter) - number of discarded packets due to invalid network id
+    - crypt (int64, packets, counter) - number of packet unable to decrypt
+    - frag (int64, packets, counter) - fragmented packets
+    - retry (int64, packets, counter) - cumulative retry counts
+    - misc (int64, packets, counter) - dropped for un-specified reason
+    - missed_beacon (int64, packets, counter) - missed beacon packets
 
 ### Example Output:
 
