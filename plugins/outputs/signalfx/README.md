@@ -7,7 +7,7 @@
     ## Ingest URL
     DatapointIngestURL = "https://ingest.signalfx.com/v2/datapoint"
     EventIngestURL = "https://ingest.signalfx.com/v2/event"
-    
+
     ## Exclude metrics by metric name
     Exclude = ["plugin.metric_name", "plugin2.metric_name"]
 

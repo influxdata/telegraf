@@ -16,6 +16,8 @@ const pluginVersion = "0.0.30"
 var sampleConfig = `
   ## SignalFx metadata plugin reports metadata properties for the host
   ## Process List Collection Settings
+  ## boolean indicating whether to emit proccess list information
+  # ProcessInfo = true
   ## number of go routines used to collect the process list (must be 1 or greater)
   # NumberOfGoRoutines = 3
   ## The buffer size should be greater than or equal to the length of all 
@@ -29,6 +31,7 @@ func NewSFXMeta() *SFXMeta {
 	return &SFXMeta{
 		BufferSize:         10000,
 		NumberOfGoRoutines: 3,
+		ProcessInfo:        true,
 		nextMetadataSend:   0,
 		nextMetadataSendInterval: []int64{
 			r.Int63n(60),
@@ -43,6 +46,7 @@ func NewSFXMeta() *SFXMeta {
 type SFXMeta struct {
 	BufferSize               int
 	NumberOfGoRoutines       int
+	ProcessInfo              bool
 	nextMetadataSend         int64
 	nextMetadataSendInterval []int64
 	aws                      *AWSInfo
@@ -88,18 +92,21 @@ func (s *SFXMeta) sendNotifications(acc telegraf.Accumulator) {
 
 // Gather - read method for SignalFx metadata plugin
 func (s *SFXMeta) Gather(acc telegraf.Accumulator) error {
-	if s.processInfo == nil {
+	if s.processInfo == nil && s.ProcessInfo {
 		s.processInfo = NewProcessInfo(s.BufferSize, s.NumberOfGoRoutines)
 	}
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		top, err := s.processInfo.GetTop()
-		if err == nil {
-			emitTop(acc, top, pluginVersion)
-		}
-		wg.Done()
-	}()
+	if s.ProcessInfo {
+		log.Println("D! Input [signalfx-metadata] collecting process info")
+		wg.Add(1)
+		go func() {
+			top, err := s.processInfo.GetTop()
+			if err == nil {
+				emitTop(acc, top, pluginVersion)
+			}
+			wg.Done()
+		}()
+	}
 
 	if s.nextMetadataSend == 0 {
 		dither := s.nextMetadataSendInterval[0]

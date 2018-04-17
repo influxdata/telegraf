@@ -6,12 +6,13 @@ import (
 	"log"
 	"reflect"
 
+	"sync"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/signalfx/golib/datapoint"
 	"github.com/signalfx/golib/event"
 	"github.com/signalfx/golib/sfxclient"
-	"sync"
 )
 
 /*SignalFx plugin context*/
@@ -41,7 +42,7 @@ var sampleConfig = `
     ## Ingest URL
     DatapointIngestURL = "https://ingest.signalfx.com/v2/datapoint"
     EventIngestURL = "https://ingest.signalfx.com/v2/event"
-    
+
     ## Exclude metrics by metric name
     Exclude = ["plugin.metric_name", ""]
 
@@ -86,19 +87,24 @@ func (s *SignalFx) Connect() error {
 	s.ctx = context.Background()
 	s.dps = make(chan *datapoint.Datapoint, s.ChannelSize)
 	s.evts = make(chan *event.Event, s.ChannelSize)
-	go s.emitDatapoints()
-	go s.emitEvents()
 	s.wg.Add(2)
+	go func() {
+		s.emitDatapoints()
+		s.wg.Done()
+	}()
+	go func() {
+		s.emitEvents()
+		s.wg.Done()
+	}()
 	log.Printf("I! Output [signalfx] batch size is %d\n", s.BatchSize)
 	return nil
 }
 
 /*Close closes the connection to SignalFx*/
 func (s *SignalFx) Close() error {
-	s.ctx.Done()
-	s.client = nil
-	close(s.done)
-	s.wg.Wait()
+	close(s.done)  // drain the input channels
+	s.wg.Wait()    // wait for the input channels to be drained
+	s.client = nil // destroy the client
 	return nil
 }
 
@@ -311,10 +317,9 @@ func (s *SignalFx) emitDatapoints() {
 }
 
 func (s *SignalFx) fillAndSendDatapoints(buf []*datapoint.Datapoint) {
+outer:
 	for {
 		select {
-		case <-s.done:
-			return
 		case dp := <-s.dps:
 			buf = append(buf, dp)
 			if len(buf) >= s.BatchSize {
@@ -324,12 +329,12 @@ func (s *SignalFx) fillAndSendDatapoints(buf []*datapoint.Datapoint) {
 				buf = buf[:0]
 			}
 		default:
-			if len(buf) > 0 {
-				if err := s.client.AddDatapoints(s.ctx, buf); err != nil {
-					log.Println("E! Output [signalfx] ", err)
-				}
-			}
-			return
+			break outer
+		}
+	}
+	if len(buf) > 0 {
+		if err := s.client.AddDatapoints(s.ctx, buf); err != nil {
+			log.Println("E! Output [signalfx] ", err)
 		}
 	}
 }
@@ -349,10 +354,9 @@ func (s *SignalFx) emitEvents() {
 }
 
 func (s *SignalFx) fillAndSendEvents(buf []*event.Event) {
+outer:
 	for {
 		select {
-		case <-s.done:
-			return
 		case e := <-s.evts:
 			buf = append(buf, e)
 			if len(buf) >= s.BatchSize {
@@ -362,16 +366,17 @@ func (s *SignalFx) fillAndSendEvents(buf []*event.Event) {
 				buf = buf[:0]
 			}
 		default:
-			if len(buf) > 0 {
-				if err := s.client.AddEvents(s.ctx, buf); err != nil {
-					log.Println("E! Output [signalfx] ", err)
-				}
-			}
-			return
+			break outer
+		}
+	}
+	if len(buf) > 0 {
+		if err := s.client.AddEvents(s.ctx, buf); err != nil {
+			log.Println("E! Output [signalfx] ", err)
 		}
 	}
 }
 
+// GetObjects - converts telegraf metrics to signalfx datapoints and events, and pushes them on to the supplied channels
 func (s *SignalFx) GetObjects(metrics []telegraf.Metric, dps chan *datapoint.Datapoint, evts chan *event.Event) {
 	for _, metric := range metrics {
 		var timestamp = metric.Time()
@@ -427,7 +432,6 @@ func (s *SignalFx) GetObjects(metrics []telegraf.Metric, dps chan *datapoint.Dat
 			}
 		}
 	}
-	return
 }
 
 /*Write call back for writing metrics*/

@@ -55,10 +55,10 @@ exit_if_fail make
 
 # Run the tests
 exit_if_fail go vet ./...
-exit_if_fail make docker-run-circle
+# exit_if_fail make docker-run-circle
 # Sleep for OpenTSDB leadership election, aerospike cluster, etc.
 exit_if_fail sleep 60
-exit_if_fail go test -race ./...
+exit_if_fail go test -race $(go list ./... | grep -v redis | grep -v memcached | grep -v mysql | grep -v postgresql | grep -v postgresql_extensible | grep -v aerospike | grep -v outputs/kafka | grep -v kafka_consumer | grep -v mqtt | grep -v nats | grep -v nsq | grep -v openldap | grep -v zookeeper | grep -v elasticsearch | grep -v riemann_legacy)
 
 # Simple Integration Tests
 #   check that one test cpu & mem output work
