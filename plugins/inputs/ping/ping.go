@@ -271,7 +271,7 @@ func init() {
 	inputs.Add("ping", func() telegraf.Input {
 		return &Ping{
 			pingHost:     hostPinger,
-			PingInterval: 0.0,
+			PingInterval: 1.0,
 			Count:        1,
 			Timeout:      1.0,
 			Deadline:     10,
