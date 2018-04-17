@@ -129,7 +129,6 @@ fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-Red
 # Perforce-Config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-perforce.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
-echo fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-Perforce" etc lib || cleanup_exit 1
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-Perforce" etc lib || cleanup_exit 1
 
 # Swift-Config
