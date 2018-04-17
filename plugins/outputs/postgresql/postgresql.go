@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 
 	"github.com/jackc/pgx"
@@ -95,7 +96,7 @@ var sampleConfig = `
   # tags_as_foreignkeys = false
 
   ## Template to use for generating tables
-  ## Available Variables: 
+  ## Available Variables:
   ##   {TABLE} - tablename as identifier
   ##   {TABLELITERAL} - tablename as string literal
   ##   {COLUMNS} - column definitions
@@ -203,6 +204,11 @@ func (p *Postgresql) tableExists(tableName string) bool {
 }
 
 func (p *Postgresql) Write(metrics []telegraf.Metric) error {
+	batches := make(map[string][]interface{})
+	params := make(map[string][]string)
+	colmap := make(map[string][]string)
+	tabmap := make(map[string]string)
+
 	for _, metric := range metrics {
 		tablename := metric.Name()
 
@@ -288,9 +294,15 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 						values = append(values, d)
 					}
 				} else {
-					for column, value := range metric.Tags() {
+					var keys []string
+					fields := metric.Tags()
+					for column := range fields {
+						keys = append(keys, column)
+					}
+					sort.Strings(keys)
+					for _, column := range keys {
 						columns = append(columns, column)
-						values = append(values, value)
+						values = append(values, fields[column])
 					}
 				}
 			}
@@ -310,18 +322,44 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 			columns = append(columns, "fields")
 			values = append(values, d)
 		} else {
-			for column, value := range metric.Fields() {
+			var keys []string
+			fields := metric.Fields()
+			for column := range fields {
+				keys = append(keys, column)
+			}
+			sort.Strings(keys)
+			for _, column := range keys {
 				columns = append(columns, column)
-				values = append(values, value)
+				values = append(values, fields[column])
 			}
 		}
 
-		sql := p.generateInsert(tablename, columns)
+		var table_and_cols string;
+		var placeholder, quoted_columns []string;
+		for _, column := range columns {
+			quoted_columns = append(quoted_columns, quoteIdent(column))
+		}
+		table_and_cols = fmt.Sprintf("%s(%s)", quoteIdent(tablename), strings.Join(quoted_columns, ","))
+		batches[table_and_cols] = append(batches[table_and_cols], values...)
+		for i, _ := range columns {
+			i += len(params[table_and_cols]) * len(columns)
+			placeholder = append(placeholder, fmt.Sprintf("$%d", i + 1))
+		}
+		params[table_and_cols] = append(params[table_and_cols], strings.Join(placeholder, ","))
+		colmap[table_and_cols] = columns
+		tabmap[table_and_cols] = tablename
+	}
+
+	for table_and_cols, values := range batches {
+		// log.Printf("Writing %d metrics into %s", len(params[table_and_cols]), table_and_cols)
+		sql := fmt.Sprintf("INSERT INTO %s VALUES (%s)", table_and_cols, strings.Join(params[table_and_cols], "),("))
 		_, err := p.db.Exec(sql, values...)
 		if err != nil {
 			// check if insert error was caused by column mismatch
 			if p.FieldsAsJsonb == false {
 				log.Printf("E! Error during insert: %v", err)
+				tablename := tabmap[table_and_cols]
+				columns := colmap[table_and_cols]
 				var quoted_columns []string
 				for _, column := range columns {
 					quoted_columns = append(quoted_columns, quoteLiteral(column))
