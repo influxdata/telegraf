@@ -6,7 +6,7 @@ import (
 	nats_client "github.com/nats-io/nats"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -19,15 +19,7 @@ type NATS struct {
 	Password string
 	// NATS subject to publish metrics to
 	Subject string
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	conn       *nats_client.Conn
 	serializer serializers.Serializer
@@ -79,8 +71,7 @@ func (n *NATS) Connect() error {
 	}
 
 	// override TLS, if it was specified
-	tlsConfig, err := internal.GetTLSConfig(
-		n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
+	tlsConfig, err := tls.NewClientTLSConfig(n.ClientConfig)
 	if err != nil {
 		return err
 	}

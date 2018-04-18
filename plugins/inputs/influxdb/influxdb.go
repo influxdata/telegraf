@@ -10,21 +10,14 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type InfluxDB struct {
-	URLs []string `toml:"urls"`
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
-
+	URLs    []string `toml:"urls"`
 	Timeout internal.Duration
+	tls.ClientConfig
 
 	client *http.Client
 }
@@ -63,8 +56,7 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if i.client == nil {
-		tlsCfg, err := internal.GetTLSConfig(
-			i.SSLCert, i.SSLKey, i.SSLCA, i.InsecureSkipVerify)
+		tlsCfg, err := tls.NewClientTLSConfig(i.ClientConfig)
 		if err != nil {
 			return err
 		}

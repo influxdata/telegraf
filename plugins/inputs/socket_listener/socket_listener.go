@@ -16,8 +16,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/config"
-	ttls "github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -168,7 +167,7 @@ type SocketListener struct {
 	ReadBufferSize  int                `toml:"read_buffer_size"`
 	ReadTimeout     *internal.Duration `toml:"read_timeout"`
 	KeepAlivePeriod *internal.Duration `toml:"keep_alive_period"`
-	config.ServerTLSConfig
+	tlsint.ServerConfig
 
 	parsers.Parser
 	telegraf.Accumulator
@@ -259,7 +258,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			l   net.Listener
 		)
 
-		tlsCfg, err := ttls.NewServerConfig(sl.ServerTLSConfig)
+		tlsCfg, err := tlsint.NewServerTLSConfig(sl.ServerConfig)
 		if err != nil {
 			return nil
 		}

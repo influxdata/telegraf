@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -16,15 +16,7 @@ type Consul struct {
 	Username   string
 	Password   string
 	Datacentre string
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	// client used to connect to Consul agnet
 	client *api.Client
@@ -89,9 +81,7 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 		}
 	}
 
-	tlsCfg, err := internal.GetTLSConfig(
-		c.SSLCert, c.SSLKey, c.SSLCA, c.InsecureSkipVerify)
-
+	tlsCfg, err := tls.NewClientTLSConfig(c.ClientConfig)
 	if err != nil {
 		return nil, err
 	}

@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -21,14 +22,7 @@ type Apache struct {
 	Username        string
 	Password        string
 	ResponseTimeout internal.Duration
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	client *http.Client
 }
@@ -98,8 +92,7 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 }
 
 func (n *Apache) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := internal.GetTLSConfig(
-		n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
+	tlsCfg, err := tls.NewClientTLSConfig(n.ClientConfig)
 	if err != nil {
 		return nil, err
 	}

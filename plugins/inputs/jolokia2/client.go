@@ -10,7 +10,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 )
 
 type Client struct {
@@ -20,15 +20,11 @@ type Client struct {
 }
 
 type ClientConfig struct {
-	ResponseTimeout    time.Duration
-	Username           string
-	Password           string
-	SSLCA              string
-	SSLCert            string
-	SSLKey             string
-	InsecureSkipVerify bool
-
-	ProxyConfig *ProxyConfig
+	ResponseTimeout time.Duration
+	Username        string
+	Password        string
+	ProxyConfig     *ProxyConfig
+	tls.ClientConfig
 }
 
 type ProxyConfig struct {
@@ -100,8 +96,7 @@ type jolokiaResponse struct {
 }
 
 func NewClient(url string, config *ClientConfig) (*Client, error) {
-	tlsConfig, err := internal.GetTLSConfig(
-		config.SSLCert, config.SSLKey, config.SSLCA, config.InsecureSkipVerify)
+	tlsConfig, err := tls.NewClientTLSConfig(config.ClientConfig)
 	if err != nil {
 		return nil, err
 	}

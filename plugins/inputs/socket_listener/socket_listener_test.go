@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,7 +41,14 @@ func TestSocketListener_tcp_tls(t *testing.T) {
 	require.NoError(t, err)
 	defer sl.Stop()
 
-	tlsCfg, err := internal.GetTLSConfig("testdata/client.pem", "testdata/client.key", "testdata/ca.pem", true)
+	tlsCfg, err := tlsint.NewClientTLSConfig(
+		tlsint.ClientConfig{
+			TLSCA:              "testdata/ca.pem",
+			TLSCert:            "testdata/client.pem",
+			TLSKey:             "testdata/client.key",
+			InsecureSkipVerify: true,
+		},
+	)
 	require.NoError(t, err)
 
 	secureClient, err := tls.Dial("tcp", sl.Closer.(net.Listener).Addr().String(), tlsCfg)
@@ -64,7 +71,14 @@ func TestSocketListener_unix_tls(t *testing.T) {
 	require.NoError(t, err)
 	defer sl.Stop()
 
-	tlsCfg, err := internal.GetTLSConfig("testdata/client.pem", "testdata/client.key", "testdata/ca.pem", true)
+	tlsCfg, err := tlsint.NewClientTLSConfig(
+		tlsint.ClientConfig{
+			TLSCA:              "testdata/ca.pem",
+			TLSCert:            "testdata/client.pem",
+			TLSKey:             "testdata/client.key",
+			InsecureSkipVerify: true,
+		},
+	)
 	require.NoError(t, err)
 
 	secureClient, err := tls.Dial("unix", "/tmp/telegraf_test.sock", tlsCfg)

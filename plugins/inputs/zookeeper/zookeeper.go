@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -21,11 +22,9 @@ type Zookeeper struct {
 	Servers []string
 	Timeout internal.Duration
 
-	EnableSSL          bool   `toml:"enable_ssl"`
-	SSLCA              string `toml:"ssl_ca"`
-	SSLCert            string `toml:"ssl_cert"`
-	SSLKey             string `toml:"ssl_key"`
-	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
+	EnableTLS bool `toml:"enable_tls"`
+	EnableSSL bool `toml:"enable_ssl"` // deprecated in 1.7; use enable_tls
+	tlsint.ClientConfig
 
 	initialized bool
 	tlsConfig   *tls.Config
@@ -65,7 +64,7 @@ func (z *Zookeeper) Description() string {
 
 func (z *Zookeeper) dial(ctx context.Context, addr string) (net.Conn, error) {
 	var dialer net.Dialer
-	if z.EnableSSL {
+	if z.EnableTLS || z.EnableSSL {
 		deadline, ok := ctx.Deadline()
 		if ok {
 			dialer.Deadline = deadline
@@ -81,8 +80,7 @@ func (z *Zookeeper) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 
 	if !z.initialized {
-		tlsConfig, err := internal.GetTLSConfig(
-			z.SSLCert, z.SSLKey, z.SSLCA, z.InsecureSkipVerify)
+		tlsConfig, err := tlsint.NewClientTLSConfig(z.ClientConfig)
 		if err != nil {
 			return err
 		}

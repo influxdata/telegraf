@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"gopkg.in/mgo.v2"
 )
@@ -22,15 +22,7 @@ type MongoDB struct {
 	Ssl              Ssl
 	mongos           map[string]*Server
 	GatherPerdbStats bool
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tlsint.ClientConfig
 }
 
 type Ssl struct {
@@ -149,8 +141,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 				tlsConfig.InsecureSkipVerify = true
 			}
 		} else {
-			tlsConfig, err = internal.GetTLSConfig(
-				m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
+			tlsConfig, err = tlsint.NewClientTLSConfig(m.ClientConfig)
 			if err != nil {
 				return err
 			}

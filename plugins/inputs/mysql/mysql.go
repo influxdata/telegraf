@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
 
@@ -38,10 +38,8 @@ type Mysql struct {
 	GatherFileEventsStats               bool     `toml:"gather_file_events_stats"`
 	GatherPerfEventsStatements          bool     `toml:"gather_perf_events_statements"`
 	IntervalSlow                        string   `toml:"interval_slow"`
-	SSLCA                               string   `toml:"ssl_ca"`
-	SSLCert                             string   `toml:"ssl_cert"`
-	SSLKey                              string   `toml:"ssl_key"`
 	MetricVersion                       int      `toml:"metric_version"`
+	tls.ClientConfig
 }
 
 var sampleConfig = `
@@ -119,9 +117,11 @@ var sampleConfig = `
   interval_slow                   = "30m"
 
   ## Optional SSL Config (will be used if tls=custom parameter specified in server uri)
-  ssl_ca = "/etc/telegraf/ca.pem"
-  ssl_cert = "/etc/telegraf/cert.pem"
-  ssl_key = "/etc/telegraf/key.pem"
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 var defaultTimeout = time.Second * time.Duration(5)
@@ -161,7 +161,7 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 		m.InitMysql()
 	}
 
-	tlsConfig, err := internal.GetTLSConfig(m.SSLCert, m.SSLKey, m.SSLCA, false)
+	tlsConfig, err := tls.NewClientTLSConfig(m.ClientConfig)
 	if err != nil {
 		return fmt.Errorf("registering TLS config: %s", err)
 	}

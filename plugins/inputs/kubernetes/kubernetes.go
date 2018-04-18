@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -21,17 +22,10 @@ type Kubernetes struct {
 	// Bearer Token authorization file path
 	BearerToken string `toml:"bearer_token"`
 
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
-
 	// HTTP Timeout specified as a string - 3s, 1m, 1h
 	ResponseTimeout internal.Duration
+
+	tls.ClientConfig
 
 	RoundTripper http.RoundTripper
 }
@@ -101,7 +95,7 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 	var token []byte
 	var resp *http.Response
 
-	tlsCfg, err := internal.GetTLSConfig(k.SSLCert, k.SSLKey, k.SSLCA, k.InsecureSkipVerify)
+	tlsCfg, err := tls.NewClientTLSConfig(k.ClientConfig)
 	if err != nil {
 		return err
 	}

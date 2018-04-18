@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/tls"
 )
 
 type JolokiaProxy struct {
@@ -16,13 +17,10 @@ type JolokiaProxy struct {
 	DefaultTargetUsername string
 	Targets               []JolokiaProxyTargetConfig `toml:"target"`
 
-	Username           string
-	Password           string
-	SSLCA              string `toml:"ssl_ca"`
-	SSLCert            string `toml:"ssl_cert"`
-	SSLKey             string `toml:"ssl_key"`
-	InsecureSkipVerify bool
-	ResponseTimeout    time.Duration `toml:"response_timeout"`
+	Username        string
+	Password        string
+	ResponseTimeout time.Duration `toml:"response_timeout"`
+	tls.ClientConfig
 
 	Metrics  []MetricConfig `toml:"metric"`
 	client   *Client
@@ -117,13 +115,10 @@ func (jp *JolokiaProxy) createClient() (*Client, error) {
 	}
 
 	return NewClient(jp.URL, &ClientConfig{
-		Username:           jp.Username,
-		Password:           jp.Password,
-		ResponseTimeout:    jp.ResponseTimeout,
-		SSLCA:              jp.SSLCA,
-		SSLCert:            jp.SSLCert,
-		SSLKey:             jp.SSLKey,
-		InsecureSkipVerify: jp.InsecureSkipVerify,
-		ProxyConfig:        proxyConfig,
+		Username:        jp.Username,
+		Password:        jp.Password,
+		ResponseTimeout: jp.ResponseTimeout,
+		ClientConfig:    jp.ClientConfig,
+		ProxyConfig:     proxyConfig,
 	})
 }

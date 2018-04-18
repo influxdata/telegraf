@@ -11,6 +11,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -37,14 +38,7 @@ type RabbitMQ struct {
 	Name     string
 	Username string
 	Password string
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	ResponseHeaderTimeout internal.Duration `toml:"header_timeout"`
 	ClientTimeout         internal.Duration `toml:"client_timeout"`
@@ -223,8 +217,7 @@ func (r *RabbitMQ) Description() string {
 // Gather ...
 func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	if r.Client == nil {
-		tlsCfg, err := internal.GetTLSConfig(
-			r.SSLCert, r.SSLKey, r.SSLCA, r.InsecureSkipVerify)
+		tlsCfg, err := tls.NewClientTLSConfig(r.ClientConfig)
 		if err != nil {
 			return err
 		}

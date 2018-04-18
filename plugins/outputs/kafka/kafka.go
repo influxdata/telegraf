@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 
@@ -44,15 +44,7 @@ type (
 		// TLS certificate authority
 		CA string
 
-		// Path to CA file
-		SSLCA string `toml:"ssl_ca"`
-		// Path to host cert file
-		SSLCert string `toml:"ssl_cert"`
-		// Path to cert key file
-		SSLKey string `toml:"ssl_key"`
-
-		// Skip SSL verification
-		InsecureSkipVerify bool
+		tlsint.ClientConfig
 
 		// SASL Username
 		SASLUsername string `toml:"sasl_username"`
@@ -206,8 +198,7 @@ func (k *Kafka) Connect() error {
 		k.SSLKey = k.Key
 	}
 
-	tlsConfig, err := internal.GetTLSConfig(
-		k.SSLCert, k.SSLKey, k.SSLCA, k.InsecureSkipVerify)
+	tlsConfig, err := tlsint.NewClientTLSConfig(k.ClientConfig)
 	if err != nil {
 		return err
 	}

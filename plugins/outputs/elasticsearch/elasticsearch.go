@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"gopkg.in/olivere/elastic.v5"
 )
@@ -28,11 +29,9 @@ type Elasticsearch struct {
 	ManageTemplate      bool
 	TemplateName        string
 	OverwriteTemplate   bool
-	SSLCA               string `toml:"ssl_ca"`   // Path to CA file
-	SSLCert             string `toml:"ssl_cert"` // Path to host cert file
-	SSLKey              string `toml:"ssl_key"`  // Path to cert key file
-	InsecureSkipVerify  bool   // Use SSL but skip chain & host verification
-	Client              *elastic.Client
+	tls.ClientConfig
+
+	Client *elastic.Client
 }
 
 var sampleConfig = `
@@ -96,7 +95,7 @@ func (a *Elasticsearch) Connect() error {
 
 	var clientOptions []elastic.ClientOptionFunc
 
-	tlsCfg, err := internal.GetTLSConfig(a.SSLCert, a.SSLKey, a.SSLCA, a.InsecureSkipVerify)
+	tlsCfg, err := tls.NewClientTLSConfig(a.ClientConfig)
 	if err != nil {
 		return err
 	}

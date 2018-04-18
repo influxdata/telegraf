@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -43,10 +44,7 @@ type Docker struct {
 	ContainerStateInclude []string `toml:"container_state_include"`
 	ContainerStateExclude []string `toml:"container_state_exclude"`
 
-	SSLCA              string `toml:"ssl_ca"`
-	SSLCert            string `toml:"ssl_cert"`
-	SSLKey             string `toml:"ssl_key"`
-	InsecureSkipVerify bool
+	tlsint.ClientConfig
 
 	newEnvClient func() (Client, error)
 	newClient    func(string, *tls.Config) (Client, error)
@@ -136,8 +134,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		if d.Endpoint == "ENV" {
 			c, err = d.newEnvClient()
 		} else {
-			tlsConfig, err := internal.GetTLSConfig(
-				d.SSLCert, d.SSLKey, d.SSLCA, d.InsecureSkipVerify)
+			tlsConfig, err := tlsint.NewClientTLSConfig(d.ClientConfig)
 			if err != nil {
 				return err
 			}

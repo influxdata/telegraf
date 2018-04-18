@@ -10,7 +10,7 @@ import (
 	"github.com/streadway/amqp"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -31,14 +31,7 @@ type AMQPConsumer struct {
 
 	// AMQP Auth method
 	AuthMethod string
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	parser parsers.Parser
 	conn   *amqp.Connection
@@ -108,8 +101,7 @@ func (a *AMQPConsumer) Gather(_ telegraf.Accumulator) error {
 
 func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 	// make new tls config
-	tls, err := internal.GetTLSConfig(
-		a.SSLCert, a.SSLKey, a.SSLCA, a.InsecureSkipVerify)
+	tls, err := tls.NewClientTLSConfig(a.ClientConfig)
 	if err != nil {
 		return nil, err
 	}

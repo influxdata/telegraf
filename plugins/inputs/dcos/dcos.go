@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -56,11 +57,7 @@ type DCOS struct {
 
 	MaxConnections  int
 	ResponseTimeout internal.Duration
-
-	SSLCA              string `toml:"ssl_ca"`
-	SSLCert            string `toml:"ssl_cert"`
-	SSLKey             string `toml:"ssl_key"`
-	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
+	tls.ClientConfig
 
 	client Client
 	creds  Credentials
@@ -351,8 +348,7 @@ func (d *DCOS) init() error {
 }
 
 func (d *DCOS) createClient() (Client, error) {
-	tlsCfg, err := internal.GetTLSConfig(
-		d.SSLCert, d.SSLKey, d.SSLCA, d.InsecureSkipVerify)
+	tlsCfg, err := tls.NewClientTLSConfig(d.ClientConfig)
 	if err != nil {
 		return nil, err
 	}

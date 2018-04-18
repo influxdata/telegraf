@@ -4,11 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/rand"
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
@@ -110,94 +106,6 @@ func RandomString(n int) string {
 		bytes[i] = alphanum[b%byte(len(alphanum))]
 	}
 	return string(bytes)
-}
-
-// GetTLSConfig gets a tls.Config object from the given certs, key, and CA files
-// for use with a client.
-// The full path to each file must be provided.
-// Returns a nil pointer if all files are blank and InsecureSkipVerify=false.
-func GetTLSConfig(
-	SSLCert, SSLKey, SSLCA string,
-	InsecureSkipVerify bool,
-) (*tls.Config, error) {
-	if SSLCert == "" && SSLKey == "" && SSLCA == "" && !InsecureSkipVerify {
-		return nil, nil
-	}
-
-	t := &tls.Config{
-		InsecureSkipVerify: InsecureSkipVerify,
-	}
-
-	if SSLCA != "" {
-		caCert, err := ioutil.ReadFile(SSLCA)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf("Could not load TLS CA: %s",
-				err))
-		}
-
-		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(caCert)
-		t.RootCAs = caCertPool
-	}
-
-	if SSLCert != "" && SSLKey != "" {
-		cert, err := tls.LoadX509KeyPair(SSLCert, SSLKey)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf(
-				"Could not load TLS client key/certificate from %s:%s: %s",
-				SSLKey, SSLCert, err))
-		}
-
-		t.Certificates = []tls.Certificate{cert}
-		t.BuildNameToCertificate()
-	}
-
-	// will be nil by default if nothing is provided
-	return t, nil
-}
-
-// GetServerTLSConfig gets a tls.Config object from the given certs, key, and one or more CA files
-// for use with a server.
-// The full path to each file must be provided.
-// Returns a nil pointer if all files are blank.
-func GetServerTLSConfig(
-	TLSCert, TLSKey string,
-	TLSAllowedCACerts []string,
-) (*tls.Config, error) {
-	if TLSCert == "" && TLSKey == "" && len(TLSAllowedCACerts) == 0 {
-		return nil, nil
-	}
-
-	t := &tls.Config{}
-
-	if len(TLSAllowedCACerts) != 0 {
-		caCertPool := x509.NewCertPool()
-		for _, cert := range TLSAllowedCACerts {
-			c, err := ioutil.ReadFile(cert)
-			if err != nil {
-				return nil, errors.New(fmt.Sprintf("Could not load TLS CA: %s",
-					err))
-			}
-			caCertPool.AppendCertsFromPEM(c)
-		}
-		t.ClientCAs = caCertPool
-		t.ClientAuth = tls.RequireAndVerifyClientCert
-	}
-
-	if TLSCert != "" && TLSKey != "" {
-		cert, err := tls.LoadX509KeyPair(TLSCert, TLSKey)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf(
-				"Could not load TLS client key/certificate from %s:%s: %s",
-				TLSKey, TLSCert, err))
-		}
-
-		t.Certificates = []tls.Certificate{cert}
-	}
-
-	t.BuildNameToCertificate()
-
-	return t, nil
 }
 
 // SnakeCase converts the given string to snake case following the Golang format:

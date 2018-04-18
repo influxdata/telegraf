@@ -5,13 +5,31 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
-
-	"github.com/influxdata/telegraf/internal/config"
 )
 
-func NewClientConfig(config config.ClientTLSConfig) (*tls.Config, error) {
-	if len(config.TLSCACerts) == 0 && config.SSLCA != "" {
-		config.TLSCACerts = append(config.TLSCACerts, config.SSLCA)
+// ClientConfig represents the standard client TLS config.
+type ClientConfig struct {
+	TLSCA              string `toml:"tls_ca"`
+	TLSCert            string `toml:"tls_cert"`
+	TLSKey             string `toml:"tls_key"`
+	InsecureSkipVerify bool   `toml:"insecure_skip_verify"`
+
+	// Deprecated in 1.7; use TLS variables above
+	SSLCA   string `toml:"ssl_ca"`
+	SSLCert string `toml:"ssl_cert"`
+	SSLKey  string `toml:"ssl_ca"`
+}
+
+// ServerConfig represents the standard server TLS config.
+type ServerConfig struct {
+	TLSCert           string   `toml:"tls_cert"`
+	TLSKey            string   `toml:"tls_key"`
+	TLSAllowedCACerts []string `toml:"tls_allowed_cacerts"`
+}
+
+func NewClientTLSConfig(config ClientConfig) (*tls.Config, error) {
+	if config.TLSCA == "" && config.SSLCA != "" {
+		config.TLSCA = config.SSLCA
 	}
 	if config.TLSCert == "" && config.SSLCert != "" {
 		config.TLSCert = config.SSLCert
@@ -24,7 +42,7 @@ func NewClientConfig(config config.ClientTLSConfig) (*tls.Config, error) {
 	// want TLS, this will require using another option to determine.  In the
 	// case of an HTTP plugin, you could use `https`.  Other plugins may need
 	// a dedicated option.
-	if len(config.TLSCACerts) == 0 && config.TLSKey == "" && config.TLSCert == "" && !config.InsecureSkipVerify {
+	if config.TLSCA == "" && config.TLSKey == "" && config.TLSCert == "" && !config.InsecureSkipVerify {
 		return nil, nil
 	}
 
@@ -32,8 +50,8 @@ func NewClientConfig(config config.ClientTLSConfig) (*tls.Config, error) {
 		InsecureSkipVerify: config.InsecureSkipVerify,
 	}
 
-	if len(config.TLSCACerts) > 0 {
-		pool, err := makeCertPool(config.TLSCACerts)
+	if config.TLSCA != "" {
+		pool, err := makeCertPool([]string{config.TLSCA})
 		if err != nil {
 			return nil, err
 		}
@@ -54,7 +72,7 @@ func NewClientConfig(config config.ClientTLSConfig) (*tls.Config, error) {
 // for use with a server.
 // The full path to each file must be provided.
 // Returns a nil pointer if all files are blank.
-func NewServerConfig(config config.ServerTLSConfig) (*tls.Config, error) {
+func NewServerTLSConfig(config ServerConfig) (*tls.Config, error) {
 	if config.TLSCert == "" && config.TLSKey == "" && len(config.TLSAllowedCACerts) == 0 {
 		return nil, nil
 	}
@@ -80,18 +98,18 @@ func NewServerConfig(config config.ServerTLSConfig) (*tls.Config, error) {
 	return tlsConfig, nil
 }
 
-func makeCertPool(certs []string) (*x509.CertPool, error) {
+func makeCertPool(certFiles []string) (*x509.CertPool, error) {
 	pool := x509.NewCertPool()
-	for _, cert := range certs {
-		pem, err := ioutil.ReadFile(cert)
+	for _, certFile := range certFiles {
+		pem, err := ioutil.ReadFile(certFile)
 		if err != nil {
 			return nil, fmt.Errorf(
-				"could not read certificate %q: %v", cert, err)
+				"could not read certificate %q: %v", certFile, err)
 		}
 		ok := pool.AppendCertsFromPEM(pem)
 		if !ok {
 			return nil, fmt.Errorf(
-				"could not parse any PEM certificates %q: %v", cert, err)
+				"could not parse any PEM certificates %q: %v", certFile, err)
 		}
 	}
 	return pool, nil

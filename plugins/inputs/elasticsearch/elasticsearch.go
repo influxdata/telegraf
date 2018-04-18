@@ -3,16 +3,18 @@ package elasticsearch
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 // mask for masking username/password from error messages
@@ -119,17 +121,15 @@ const sampleConfig = `
 // Elasticsearch is a plugin to read stats from one or many Elasticsearch
 // servers.
 type Elasticsearch struct {
-	Local                   bool
-	Servers                 []string
-	HttpTimeout             internal.Duration
-	ClusterHealth           bool
-	ClusterHealthLevel      string
-	ClusterStats            bool
-	NodeStats               []string
-	SSLCA                   string `toml:"ssl_ca"`   // Path to CA file
-	SSLCert                 string `toml:"ssl_cert"` // Path to host cert file
-	SSLKey                  string `toml:"ssl_key"`  // Path to cert key file
-	InsecureSkipVerify      bool   // Use SSL but skip chain & host verification
+	Local              bool
+	Servers            []string
+	HttpTimeout        internal.Duration
+	ClusterHealth      bool
+	ClusterHealthLevel string
+	ClusterStats       bool
+	NodeStats          []string
+	tls.ClientConfig
+
 	client                  *http.Client
 	catMasterResponseTokens []string
 	isMaster                bool
@@ -227,7 +227,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 }
 
 func (e *Elasticsearch) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := internal.GetTLSConfig(e.SSLCert, e.SSLKey, e.SSLCA, e.InsecureSkipVerify)
+	tlsCfg, err := tls.NewClientTLSConfig(e.ClientConfig)
 	if err != nil {
 		return nil, err
 	}

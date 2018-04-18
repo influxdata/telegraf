@@ -14,27 +14,18 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 //CSV format: https://cbonte.github.io/haproxy-dconv/1.5/configuration.html#9.1
 
 type haproxy struct {
-	Servers []string
+	Servers        []string
+	KeepFieldNames bool
+	tls.ClientConfig
 
 	client *http.Client
-
-	KeepFieldNames bool
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
 }
 
 var sampleConfig = `
@@ -144,8 +135,7 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	}
 
 	if g.client == nil {
-		tlsCfg, err := internal.GetTLSConfig(
-			g.SSLCert, g.SSLKey, g.SSLCA, g.InsecureSkipVerify)
+		tlsCfg, err := tls.NewClientTLSConfig(g.ClientConfig)
 		if err != nil {
 			return err
 		}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -63,11 +64,7 @@ type Tomcat struct {
 	Username string
 	Password string
 	Timeout  internal.Duration
-
-	SSLCA              string `toml:"ssl_ca"`
-	SSLCert            string `toml:"ssl_cert"`
-	SSLKey             string `toml:"ssl_key"`
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	client  *http.Client
 	request *http.Request
@@ -191,8 +188,7 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 }
 
 func (s *Tomcat) createHttpClient() (*http.Client, error) {
-	tlsConfig, err := internal.GetTLSConfig(
-		s.SSLCert, s.SSLKey, s.SSLCA, s.InsecureSkipVerify)
+	tlsConfig, err := tls.NewClientTLSConfig(s.ClientConfig)
 	if err != nil {
 		return nil, err
 	}

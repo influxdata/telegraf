@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 
@@ -43,14 +44,7 @@ type AMQP struct {
 	// Valid options are "transient" and "persistent". default: "transient"
 	DeliveryMode string
 
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	sync.Mutex
 	c *client
@@ -137,8 +131,7 @@ func (q *AMQP) Connect() error {
 
 	var connection *amqp.Connection
 	// make new tls config
-	tls, err := internal.GetTLSConfig(
-		q.SSLCert, q.SSLKey, q.SSLCA, q.InsecureSkipVerify)
+	tls, err := tls.NewClientTLSConfig(q.ClientConfig)
 	if err != nil {
 		return err
 	}

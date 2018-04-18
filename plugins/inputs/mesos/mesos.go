@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
@@ -33,15 +33,7 @@ type Mesos struct {
 	Slaves     []string
 	SlaveCols  []string `toml:"slave_collections"`
 	//SlaveTasks bool
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	initialized bool
 	client      *http.Client
@@ -216,8 +208,7 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 }
 
 func (m *Mesos) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := internal.GetTLSConfig(
-		m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
+	tlsCfg, err := tls.NewClientTLSConfig(m.ClientConfig)
 	if err != nil {
 		return nil, err
 	}

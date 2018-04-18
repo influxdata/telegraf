@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -22,18 +22,7 @@ type Graphite struct {
 	Template string
 	Timeout  int
 	conns    []net.Conn
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Skip SSL verification
-	InsecureSkipVerify bool
-
-	// tls config
-	tlsConfig *tls.Config
+	tlsint.ClientConfig
 }
 
 var sampleConfig = `
@@ -67,9 +56,7 @@ func (g *Graphite) Connect() error {
 	}
 
 	// Set tls config
-	var err error
-	g.tlsConfig, err = internal.GetTLSConfig(
-		g.SSLCert, g.SSLKey, g.SSLCA, g.InsecureSkipVerify)
+	tlsConfig, err := tlsint.NewClientTLSConfig(g.ClientConfig)
 	if err != nil {
 		return err
 	}
@@ -82,8 +69,8 @@ func (g *Graphite) Connect() error {
 
 		// Get secure connection if tls config is set
 		var conn net.Conn
-		if g.tlsConfig != nil {
-			conn, err = tls.DialWithDialer(&d, "tcp", server, g.tlsConfig)
+		if tlsConfig != nil {
+			conn, err = tls.DialWithDialer(&d, "tcp", server, tlsConfig)
 		} else {
 			conn, err = d.Dial("tcp", server)
 		}
