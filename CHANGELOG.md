@@ -16,7 +16,9 @@
 ## v1.6.1 [unreleased]
 
 ### Bugfixes
+
 - [#3835](https://github.com/influxdata/telegraf/issues/3835): Report mem input fields as gauges instead counters.
+- [#4030](https://github.com/influxdata/telegraf/issues/4030): Fix graphite outputs unsigned integers in wrong format.
 
 ## v1.6 [2018-04-16]
 
