@@ -73,6 +73,7 @@ var sampleConfig = `
 type Win_PerfCounters struct {
 	PrintValid      bool
 	PreVistaSupport bool
+	UseWinTimestamp bool
 	Object          []perfobject
 
 	configParsed bool
@@ -142,18 +143,16 @@ func (m *Win_PerfCounters) SampleConfig() string {
 func (m *Win_PerfCounters) ParseConfig() error {
 	var query string
 
+	if m.UseWinTimestamp {
+		PdhUseWinTimestamps()
+	}
+
 	if len(m.Object) > 0 {
 		for _, PerfObject := range m.Object {
 			for _, counter := range PerfObject.Counters {
 				for _, instance := range PerfObject.Instances {
 					objectname := PerfObject.ObjectName
 					nodename := PerfObject.NodeName
-
-					// ret := PdhConnectMachine(nodename)
-					// fmt.Println("connect ret", ret)
-					// if ret != ERROR_SUCCESS {
-					// 	fmt.Println("connect failed")
-					// }
 
 					if instance == "------" {
 						query = "\\\\" + nodename + "\\" + objectname + "\\" + counter
@@ -209,18 +208,24 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range m.itemCache {
 		// collect
-		//ret, timestamp := PdhCollectQueryDataWithTime(metric.handle)
-		ret := PdhCollectQueryData(metric.handle)
+		var ret uint32 = 0
+		var timestamp time.Time
+
+		if m.UseWinTimestamp {
+			ret, timestamp = PdhCollectQueryDataWithTime(metric.handle)
+		} else {
+			timestamp = time.Now()
+			ret = PdhCollectQueryData(metric.handle)
+		}
+
 		if ret == ERROR_SUCCESS {
-			ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize,
-				&bufCount, &emptyBuf[0]) // uses null ptr here according to MSDN.
+			ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize, &bufCount, &emptyBuf[0]) // uses null ptr here according to MSDN.
 			if ret == PDH_MORE_DATA {
 				filledBuf := make([]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE, bufCount*size)
 				if len(filledBuf) == 0 {
 					continue
 				}
-				ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle,
-					&bufSize, &bufCount, &filledBuf[0])
+				ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize, &bufCount, &filledBuf[0])
 				for i := 0; i < int(bufCount); i++ {
 					c := filledBuf[i]
 					var s string = UTF16PtrToString(c.SzName)
@@ -261,7 +266,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 							measurement = "win_perf_counters"
 						}
 
-						acc.AddFields(measurement, fields, tags, time.Now())
+						acc.AddFields(measurement, fields, tags, timestamp)
 					}
 				}
 
