@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/influxdata/telegraf"
@@ -20,9 +21,10 @@ var sampleConfig = `
   ## agent, it will not be gathered.
   ## Settings:
   # PrintValid = false # Print All matching performance counters
-
+  
   [[inputs.win_perf_counters.object]]
-    # Processor usage, alternative to native, reports on a per core.
+	# Processor usage, alternative to native, reports on a per core.
+	NodeName = "localhost"
     ObjectName = "Processor"
     Instances = ["*"]
     Counters = [
@@ -37,7 +39,8 @@ var sampleConfig = `
     # WarnOnMissing = false
 
   [[inputs.win_perf_counters.object]]
-    # Disk times and queues
+	# Disk times and queues
+	NodeName = "localhost"
     ObjectName = "LogicalDisk"
     Instances = ["*"]
     Counters = [
@@ -47,6 +50,7 @@ var sampleConfig = `
     Measurement = "win_disk"
 
   [[inputs.win_perf_counters.object]]
+  	NodeName = "localhost"
     ObjectName = "System"
     Counters = ["Context Switches/sec","System Calls/sec"]
     Instances = ["------"]
@@ -54,7 +58,8 @@ var sampleConfig = `
 
   [[inputs.win_perf_counters.object]]
     # Example query where the Instance portion must be removed to get data back,
-    # such as from the Memory object.
+	# such as from the Memory object.
+	NodeName = "localhost"
     ObjectName = "Memory"
     Counters = [
       "Available Bytes", "Cache Faults/sec", "Demand Zero Faults/sec",
@@ -79,6 +84,7 @@ type perfobject struct {
 	Counters      []string
 	Instances     []string
 	Measurement   string
+	NodeName      string
 	WarnOnMissing bool
 	FailOnMissing bool
 	IncludeTotal  bool
@@ -90,6 +96,7 @@ type item struct {
 	counter       string
 	instance      string
 	measurement   string
+	nodename      string
 	include_total bool
 	handle        PDH_HQUERY
 	counterHandle PDH_HCOUNTER
@@ -99,7 +106,7 @@ var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 	" ", "_", "%", "Percent", `\`, "")
 
 func (m *Win_PerfCounters) AddItem(query string, objectName string, counter string, instance string,
-	measurement string, include_total bool) error {
+	measurement string, nodename string, include_total bool) error {
 
 	var handle PDH_HQUERY
 	var counterHandle PDH_HCOUNTER
@@ -117,7 +124,7 @@ func (m *Win_PerfCounters) AddItem(query string, objectName string, counter stri
 		return errors.New(PdhFormatError(ret))
 	}
 
-	newItem := &item{query, objectName, counter, instance, measurement,
+	newItem := &item{query, objectName, counter, instance, measurement, nodename,
 		include_total, handle, counterHandle}
 	m.itemCache = append(m.itemCache, newItem)
 
@@ -140,15 +147,22 @@ func (m *Win_PerfCounters) ParseConfig() error {
 			for _, counter := range PerfObject.Counters {
 				for _, instance := range PerfObject.Instances {
 					objectname := PerfObject.ObjectName
+					nodename := PerfObject.NodeName
+
+					// ret := PdhConnectMachine(nodename)
+					// fmt.Println("connect ret", ret)
+					// if ret != ERROR_SUCCESS {
+					// 	fmt.Println("connect failed")
+					// }
 
 					if instance == "------" {
-						query = "\\" + objectname + "\\" + counter
+						query = "\\\\" + nodename + "\\" + objectname + "\\" + counter
 					} else {
-						query = "\\" + objectname + "(" + instance + ")\\" + counter
+						query = "\\\\" + nodename + "\\" + objectname + "(" + instance + ")\\" + counter
 					}
 
 					err := m.AddItem(query, objectname, counter, instance,
-						PerfObject.Measurement, PerfObject.IncludeTotal)
+						PerfObject.Measurement, PerfObject.NodeName, PerfObject.IncludeTotal)
 
 					if err == nil {
 						if m.PrintValid {
@@ -195,6 +209,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range m.itemCache {
 		// collect
+		//ret, timestamp := PdhCollectQueryDataWithTime(metric.handle)
 		ret := PdhCollectQueryData(metric.handle)
 		if ret == ERROR_SUCCESS {
 			ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize,
@@ -236,6 +251,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 						if s != "" {
 							tags["instance"] = s
 						}
+						tags["node"] = metric.nodename
 						tags["objectname"] = metric.objectName
 						fields[sanitizedChars.Replace(metric.counter)] =
 							float32(c.FmtValue.DoubleValue)
@@ -244,7 +260,8 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 						if measurement == "" {
 							measurement = "win_perf_counters"
 						}
-						acc.AddFields(measurement, fields, tags)
+
+						acc.AddFields(measurement, fields, tags, time.Now())
 					}
 				}
 

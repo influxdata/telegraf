@@ -42,12 +42,22 @@ import (
 
 // Error codes
 const (
-	ERROR_SUCCESS          = 0
-	ERROR_INVALID_FUNCTION = 1
+	ERROR_SUCCESS                 = 0
+	ERROR_FAILURE                 = 1
+	ERROR_INVALID_FUNCTION        = 1
+	EPOCH_DIFFERENCE_MICROS int64 = 11644473600000000
 )
 
 type (
 	HANDLE uintptr
+)
+
+type (
+	LPCTSTR uintptr
+)
+
+type (
+	LONGLONG int64
 )
 
 // PDH error codes, which can be returned by all Pdh* functions. Taken from mingw-w64 pdhmsg.h
@@ -156,6 +166,14 @@ const (
 	PERF_DETAIL_STANDARD = 0x0000FFFF
 )
 
+const (
+	errnoERROR_IO_PENDING = 997
+)
+
+var (
+	errERROR_IO_PENDING error = syscall.Errno(errnoERROR_IO_PENDING)
+)
+
 type (
 	PDH_HQUERY   HANDLE // query handle
 	PDH_HCOUNTER HANDLE // counter handle
@@ -164,12 +182,14 @@ type (
 // Union specialization for double values
 type PDH_FMT_COUNTERVALUE_DOUBLE struct {
 	CStatus     uint32
+	padding     uint32 // TODO: could well be broken on amd64
 	DoubleValue float64
 }
 
 // Union specialization for 64 bit integer values
 type PDH_FMT_COUNTERVALUE_LARGE struct {
 	CStatus    uint32
+	padding    uint32 // TODO: could well be broken on amd64
 	LargeValue int64
 }
 
@@ -182,50 +202,91 @@ type PDH_FMT_COUNTERVALUE_LONG struct {
 
 // Union specialization for double values, used by PdhGetFormattedCounterArrayDouble()
 type PDH_FMT_COUNTERVALUE_ITEM_DOUBLE struct {
-	SzName   *uint16 // pointer to a string
+	SzName   *uint16
+	padding  uint32 // TODO: could well be broken on amd64
 	FmtValue PDH_FMT_COUNTERVALUE_DOUBLE
 }
 
 // Union specialization for 'large' values, used by PdhGetFormattedCounterArrayLarge()
 type PDH_FMT_COUNTERVALUE_ITEM_LARGE struct {
 	SzName   *uint16 // pointer to a string
+	padding  uint32  // TODO: could well be broken on amd64
 	FmtValue PDH_FMT_COUNTERVALUE_LARGE
 }
 
 // Union specialization for long values, used by PdhGetFormattedCounterArrayLong()
 type PDH_FMT_COUNTERVALUE_ITEM_LONG struct {
 	SzName   *uint16 // pointer to a string
+	padding  uint32  // TODO: could well be broken on amd64
 	FmtValue PDH_FMT_COUNTERVALUE_LONG
+}
+
+type SYSTEMTIME struct {
+	wYear         uint16
+	wMonth        uint16
+	wDayOfWeek    uint16
+	wDay          uint16
+	wHour         uint16
+	wMinute       uint16
+	wSecond       uint16
+	wMilliseconds uint16
+}
+
+type FILETIME struct {
+	dwLowDateTime  uint32
+	dwHighDateTime uint32
 }
 
 var (
 	// Library
 	libpdhDll *syscall.DLL
+	libkrnDll *syscall.DLL
 
 	// Functions
-	pdh_AddCounterW               *syscall.Proc
-	pdh_AddEnglishCounterW        *syscall.Proc
-	pdh_CloseQuery                *syscall.Proc
-	pdh_CollectQueryData          *syscall.Proc
+	pdh_ConnectMachine     *syscall.Proc
+	pdh_AddCounterW        *syscall.Proc
+	pdh_AddEnglishCounterW *syscall.Proc
+	pdh_CloseQuery         *syscall.Proc
+	pdh_CollectQueryData   *syscall.Proc
+	//pdh_CollectQueryDataWithTime  *syscall.Proc
 	pdh_GetFormattedCounterValue  *syscall.Proc
 	pdh_GetFormattedCounterArrayW *syscall.Proc
 	pdh_OpenQuery                 *syscall.Proc
 	pdh_ValidatePathW             *syscall.Proc
+
+	krn_FileTimeToSystemTime    *syscall.Proc
+	krn_FileTimeToLocalFileTime *syscall.Proc
+	krn_LocalFileTimeToFileTime *syscall.Proc
+	krn_WideCharToMultiByte     *syscall.Proc
 )
 
 func init() {
 	// Library
 	libpdhDll = syscall.MustLoadDLL("pdh.dll")
+	libkrnDll = syscall.MustLoadDLL("Kernel32.dll")
 
 	// Functions
+	pdh_ConnectMachine = libpdhDll.MustFindProc("PdhConnectMachineW")
 	pdh_AddCounterW = libpdhDll.MustFindProc("PdhAddCounterW")
 	pdh_AddEnglishCounterW, _ = libpdhDll.FindProc("PdhAddEnglishCounterW") // XXX: only supported on versions > Vista.
 	pdh_CloseQuery = libpdhDll.MustFindProc("PdhCloseQuery")
 	pdh_CollectQueryData = libpdhDll.MustFindProc("PdhCollectQueryData")
+	//pdh_CollectQueryDataWithTime = libpdhDll.MustFindProc("PdhCollectQueryDataWithTime")
 	pdh_GetFormattedCounterValue = libpdhDll.MustFindProc("PdhGetFormattedCounterValue")
 	pdh_GetFormattedCounterArrayW = libpdhDll.MustFindProc("PdhGetFormattedCounterArrayW")
 	pdh_OpenQuery = libpdhDll.MustFindProc("PdhOpenQuery")
 	pdh_ValidatePathW = libpdhDll.MustFindProc("PdhValidatePathW")
+
+	krn_FileTimeToSystemTime = libkrnDll.MustFindProc("FileTimeToSystemTime")
+	krn_FileTimeToLocalFileTime = libkrnDll.MustFindProc("FileTimeToLocalFileTime")
+	krn_LocalFileTimeToFileTime = libkrnDll.MustFindProc("LocalFileTimeToFileTime")
+	krn_WideCharToMultiByte = libkrnDll.MustFindProc("WideCharToMultiByte")
+}
+
+func PdhConnectMachine(szMachineName string) uint32 {
+	ptxt, _ := syscall.UTF16PtrFromString(szMachineName)
+	ret, _, _ := pdh_ConnectMachine.Call(uintptr(unsafe.Pointer(ptxt)))
+	return uint32(ret)
 }
 
 // Adds the specified counter to the query. This is the internationalized version. Preferably, use the
@@ -329,6 +390,36 @@ func PdhCollectQueryData(hQuery PDH_HQUERY) uint32 {
 	return uint32(ret)
 }
 
+// Comment
+//
+// func PdhCollectQueryDataWithTime(hQuery PDH_HQUERY) (uint32, time.Time) {
+// 	var localFileTime FILETIME
+// 	ret, _, _ := pdh_CollectQueryDataWithTime.Call(uintptr(hQuery), uintptr(unsafe.Pointer(&localFileTime)))
+
+// 	if ret == ERROR_SUCCESS {
+// 		var utcFileTime FILETIME
+// 		ret, _, _ := krn_LocalFileTimeToFileTime.Call(
+// 			uintptr(unsafe.Pointer(&localFileTime)),
+// 			uintptr(unsafe.Pointer(&utcFileTime)))
+
+// 		if ret == 0 {
+// 			return uint32(ERROR_FAILURE), time.Now()
+// 		}
+
+// 		// First convert 100-ns intervals to microseconds, then adjust for the
+// 		// epoch difference
+// 		var totalMicroSeconds int64
+// 		totalMicroSeconds = ((int64(utcFileTime.dwHighDateTime) << 32) | int64(utcFileTime.dwLowDateTime)) / 10
+// 		totalMicroSeconds -= EPOCH_DIFFERENCE_MICROS
+
+// 		retTime := time.Unix(0, totalMicroSeconds*1000)
+
+// 		return uint32(ERROR_SUCCESS), retTime
+// 	}
+
+// 	return uint32(ret), time.Now()
+// }
+
 // Formats the given hCounter using a 'double'. The result is set into the specialized union struct pValue.
 // This function does not directly translate to a Windows counterpart due to union specialization tricks.
 func PdhGetFormattedCounterValueDouble(hCounter PDH_HCOUNTER, lpdwType *uint32, pValue *PDH_FMT_COUNTERVALUE_DOUBLE) uint32 {
@@ -414,11 +505,66 @@ func PdhValidatePath(path string) uint32 {
 	return uint32(ret)
 }
 
+func errnoErr(e syscall.Errno) error {
+	switch e {
+	case 0:
+		return nil
+	case errnoERROR_IO_PENDING:
+		return errERROR_IO_PENDING
+	}
+	// TODO: add more here, after collecting data on the common
+	// error values see on Windows. (perhaps when running
+	// all.bat?)
+	return e
+}
+
+func WideCharToMultiByte(codePage uint32, dwFlags uint32, wchar *uint16, nwchar int32, str *byte, nstr int32) (nwrite int32, err error) {
+	r0, _, e1 := krn_WideCharToMultiByte.Call(
+		uintptr(codePage),
+		uintptr(dwFlags),
+		uintptr(unsafe.Pointer(str)),
+		uintptr(nstr),
+		uintptr(unsafe.Pointer(wchar)),
+		uintptr(nwchar),
+	)
+
+	nwrite = int32(r0)
+	if nwrite == 0 {
+		if e1 != nil {
+			err = errnoErr(e1.(syscall.Errno))
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+
+	return nwrite, err
+}
+
 func UTF16PtrToString(s *uint16) string {
 	if s == nil {
 		return ""
 	}
-	return syscall.UTF16ToString((*[1 << 29]uint16)(unsafe.Pointer(s))[0:])
+
+	//	var outStr [1 << 29]byte
+
+	// cc, err := WideCharToMultiByte(65001, 0, s, -1, nil, 0)
+
+	// if err != nil {
+	// 	fmt.Println("CONVERSION ERROR: ", err)
+	// }
+
+	// fmt.Println("Length bytes: ", cc)
+
+	// n, err := WideCharToMultiByte(65001, 0, s, 1<<29, &outStr[0], 1<<29)
+
+	// if err != nil {
+	// 	fmt.Println("CONVERSION ERROR: ", err)
+	// }
+
+	// fmt.Println("Converted bytes: ", n)
+
+	//return syscall.UTF16ToString((*[1 << 29]uint16)(unsafe.Pointer(s))[0:])
+	return syscall.UTF16ToString((*[20]uint16)(unsafe.Pointer(s))[:])
 }
 
 func PdhFormatError(msgId uint32) string {
