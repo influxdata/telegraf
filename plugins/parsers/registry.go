@@ -112,7 +112,8 @@ func NewParser(config *Config) (Parser, error) {
 			config.DropwizardTimePath, config.DropwizardTimeFormat, config.DropwizardTagsPath, config.DropwizardTagPathsMap, config.DefaultTags,
 			config.Separator, config.Templates)
 	case "syslog":
-		parser = NewSyslogParser(config.MetricName)
+		// Always in best effort mode
+		parser, err = NewSyslogParser(config.MetricName, true)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -196,11 +197,14 @@ func NewDropwizardParser(
 }
 
 // NewSyslogParser returns a parser to parse syslog entries.
-// metricName is optional
-func NewSyslogParser(metricName string) Parser {
+// The parameter `metricName` is optional.
+func NewSyslogParser(metricName string, bestEffort bool) (Parser, error) {
 	opts := []syslog.ParserOpt{}
 	if metricName != "" {
 		opts = append(opts, syslog.WithName(metricName))
 	}
-	return syslog.NewParser(opts...)
+	if bestEffort {
+		opts = append(opts, syslog.WithBestEffort())
+	}
+	return syslog.NewParser(opts...), nil
 }
