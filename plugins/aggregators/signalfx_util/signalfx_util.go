@@ -184,7 +184,7 @@ type Total struct {
 	outField       string
 	pluginInstance string
 	pluginName     string
-	total          int64
+	total          uint64
 }
 
 func (t *Total) addMetric(metric telegraf.Metric) {
@@ -229,8 +229,8 @@ func (t *Total) read(acc telegraf.Accumulator) {
 					}
 
 					// Add to the received and sent total
-					var in = t.overflowDiff(m.Fields()[t.inField].(int64), p.Fields()[t.inField].(int64))
-					var out = t.overflowDiff(m.Fields()[t.outField].(int64), p.Fields()[t.outField].(int64))
+					var in = t.overflowDiff(m.Fields()[t.inField].(uint64), p.Fields()[t.inField].(uint64))
+					var out = t.overflowDiff(m.Fields()[t.outField].(uint64), p.Fields()[t.outField].(uint64))
 					t.total = t.overflowAdd(in, t.total)
 					t.total = t.overflowAdd(out, t.total)
 
@@ -287,8 +287,8 @@ func (t *Total) getMax() int {
 	return max
 }
 
-func (t *Total) overflowDiff(current int64, previous int64) int64 {
-	var response int64
+func (t *Total) overflowDiff(current uint64, previous uint64) uint64 {
+	var response uint64
 	if current < previous {
 		var partialDelta = math.MaxInt64 - previous
 		response = current + partialDelta
@@ -298,9 +298,9 @@ func (t *Total) overflowDiff(current int64, previous int64) int64 {
 	return response
 }
 
-func (t *Total) overflowAdd(current int64, previous int64) int64 {
-	var response int64
-	var available = math.MaxInt64 - previous
+func (t *Total) overflowAdd(current uint64, previous uint64) uint64 {
+	var response uint64
+	var available = math.MaxUint64 - previous
 
 	if available >= current {
 		response = previous + current
@@ -331,7 +331,7 @@ func newDiskTotal() *DiskTotal {
 	d.devices = make(map[string][]telegraf.Metric)
 	d.skipped = make(map[string]bool)
 	d.previous = make(map[string]telegraf.Metric)
-	d.total = int64(0)
+	d.total = uint64(0)
 	d.instanceTag = "name"
 	d.inField = "reads"
 	d.outField = "writes"
@@ -352,7 +352,7 @@ func newNetworkTotal() *NetworkTotal {
 	n.devices = make(map[string][]telegraf.Metric)
 	n.skipped = make(map[string]bool)
 	n.previous = make(map[string]telegraf.Metric)
-	n.total = int64(0)
+	n.total = uint64(0)
 	n.instanceTag = "interface"
 	n.inField = "bytes_recv"
 	n.outField = "bytes_sent"
@@ -380,8 +380,8 @@ type DiskTotalUtilization struct {
 func (u *DiskTotalUtilization) read(acc telegraf.Accumulator) {
 	log.Println("D! Aggregator [signalfx_util] Reading out metrics from DiskTotalUtilization")
 
-	var total int64
-	var used int64
+	var total uint64
+	var used uint64
 
 	total = 0
 	used = 0
@@ -389,8 +389,8 @@ func (u *DiskTotalUtilization) read(acc telegraf.Accumulator) {
 	for key, device := range u.devices {
 
 		if len(device.total) > 0 && len(device.used) > 0 {
-			total += device.total[len(device.total)-1].Fields()["total"].(int64)
-			used += device.used[len(device.total)-1].Fields()["used"].(int64)
+			total += device.total[len(device.total)-1].Fields()["total"].(uint64)
+			used += device.used[len(device.total)-1].Fields()["used"].(uint64)
 			device.skipped = false
 			// reset the total and used arrays for the given device
 			device.total = make([]telegraf.Metric, 0)
