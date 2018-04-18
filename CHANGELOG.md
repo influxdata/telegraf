@@ -11,6 +11,7 @@
 - [#3819](https://github.com/influxdata/telegraf/pull/3819): Add per-host shard metrics in mongodb input.
 - [#3999](https://github.com/influxdata/telegraf/pull/3999): Skip files with leading `..` in config directory.
 - [#4021](https://github.com/influxdata/telegraf/pull/4021): Add TLS support to socket_writer and socket_listener plugins.
+- [#4025](https://github.com/influxdata/telegraf/pull/4025): Add snmp input option to strip non fixed length index suffixes.
 
 ## v1.6.1 [unreleased]
 
