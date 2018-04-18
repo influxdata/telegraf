@@ -1,4 +1,4 @@
-package signalfxMetadata
+package signalfxmetadata
 
 import (
 	// "reflect"

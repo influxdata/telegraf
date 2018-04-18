@@ -1,4 +1,4 @@
-package signalFxUtil
+package signalfxutil
 
 import (
 	"log"
