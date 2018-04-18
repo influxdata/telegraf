@@ -218,6 +218,22 @@ func TestSerializeValueBoolean(t *testing.T) {
 	assert.Equal(t, expS, mS)
 }
 
+func TestSerializeValueUnsigned(t *testing.T) {
+	now := time.Unix(0, 0)
+	tags := map[string]string{}
+	fields := map[string]interface{}{
+		"free": uint64(42),
+	}
+	m, err := metric.New("mem", tags, fields, now)
+	require.NoError(t, err)
+
+	s := GraphiteSerializer{}
+	buf, err := s.Serialize(m)
+	require.NoError(t, err)
+
+	require.Equal(t, buf, []byte(".mem.free 42 0\n"))
+}
+
 // test that fields with spaces get fixed.
 func TestSerializeFieldWithSpaces(t *testing.T) {
 	now := time.Now()

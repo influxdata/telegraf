@@ -2,8 +2,10 @@ package graphite
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -43,25 +45,47 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	}
 
 	for fieldName, value := range metric.Fields() {
-		switch v := value.(type) {
-		case string:
+		fieldValue := formatValue(value)
+		if fieldValue == "" {
 			continue
-		case bool:
-			if v {
-				value = 1
-			} else {
-				value = 0
-			}
 		}
-		metricString := fmt.Sprintf("%s %#v %d\n",
+		metricString := fmt.Sprintf("%s %s %d\n",
 			// insert "field" section of template
 			sanitize(InsertField(bucket, fieldName)),
-			value,
+			fieldValue,
 			timestamp)
 		point := []byte(metricString)
 		out = append(out, point...)
 	}
 	return out, nil
+}
+
+func formatValue(value interface{}) string {
+	switch v := value.(type) {
+	case string:
+		return ""
+	case bool:
+		if v {
+			return "1"
+		} else {
+			return "0"
+		}
+	case uint64:
+		return strconv.FormatUint(v, 10)
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case float64:
+		if math.IsNaN(v) {
+			return ""
+		}
+
+		if math.IsInf(v, 0) {
+			return ""
+		}
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	}
+
+	return ""
 }
 
 // SerializeBucketName will take the given measurement name and tags and
