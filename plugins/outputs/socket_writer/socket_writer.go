@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"crypto/tls"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -70,11 +71,6 @@ func (sw *SocketWriter) SetSerializer(s serializers.Serializer) {
 }
 
 func (sw *SocketWriter) Connect() error {
-	var (
-		c   net.Conn
-		err error
-	)
-
 	spl := strings.SplitN(sw.Address, "://", 2)
 	if len(spl) != 2 {
 		return fmt.Errorf("invalid address: %s", sw.Address)
@@ -85,6 +81,7 @@ func (sw *SocketWriter) Connect() error {
 		return err
 	}
 
+	var c net.Conn
 	if tlsCfg == nil {
 		c, err = net.Dial(spl[0], spl[1])
 	} else {

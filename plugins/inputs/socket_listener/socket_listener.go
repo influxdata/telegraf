@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"crypto/tls"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -336,14 +337,6 @@ func (uc unixCloser) Close() error {
 	err := uc.closer.Close()
 	os.Remove(uc.path) // ignore error
 	return err
-}
-
-func (uc unixCloser) Accept() (net.Conn, error) {
-	return uc.closer.(net.Listener).Accept()
-}
-
-func (uc unixCloser) Addr() net.Addr {
-	return uc.closer.(net.Listener).Addr()
 }
 
 func init() {
