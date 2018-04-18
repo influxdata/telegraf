@@ -101,7 +101,7 @@ func (s *Parser) fields(msg *rfc5424.SyslogMessage) map[string]interface{} {
 			}
 			for name, value := range sdparams {
 				// Using whitespace as separator since it is not allowed by the grammar within SDID
-				flds[sdid+" "+name] = value
+				flds[sdid+`\ `+name] = value
 			}
 		}
 	}
