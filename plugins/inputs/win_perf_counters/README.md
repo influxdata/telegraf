@@ -38,6 +38,12 @@ It is recommended NOT to use this on OSes starting with Vista and newer because 
 Example for Windows Server 2003, this would be set to true:
 `PreVistaSupport=true`
 
+#### UseWinTimestamps
+
+Bool, if set to `true` will request a timestamp along with the PerfCounter data. 
+
+Note: This call may not be supported on all versions of windows. If you receive an error, set this value to false to disable the feature, and searching for this call entirely.
+
 ### Object
 
 See Entry below.
