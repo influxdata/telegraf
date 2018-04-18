@@ -10,17 +10,16 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/config"
+	ttls "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
 type SocketWriter struct {
-	Address            string
-	KeepAlivePeriod    *internal.Duration
-	SSLCA              string
-	SSLCert            string
-	SSLKey             string
-	InsecureSkipVerify bool
+	Address         string
+	KeepAlivePeriod *internal.Duration
+	config.ClientTLSConfig
 
 	serializers.Serializer
 
@@ -76,7 +75,7 @@ func (sw *SocketWriter) Connect() error {
 		return fmt.Errorf("invalid address: %s", sw.Address)
 	}
 
-	tlsCfg, err := internal.GetTLSConfig(sw.SSLCert, sw.SSLKey, sw.SSLCA, sw.InsecureSkipVerify)
+	tlsCfg, err := ttls.NewClientConfig(sw.ClientTLSConfig)
 	if err != nil {
 		return err
 	}
