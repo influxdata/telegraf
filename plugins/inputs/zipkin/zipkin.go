@@ -29,6 +29,11 @@ const (
 	DefaultShutdownTimeout = 5
 )
 
+var (
+	// DefaultNetwork is the network to listen on; use only in tests.
+	DefaultNetwork = "tcp"
+)
+
 // Recorder represents a type which can record zipkin trace data as well as
 // any accompanying errors, and process that data.
 type Recorder interface {
@@ -94,7 +99,7 @@ func (z *Zipkin) Start(acc telegraf.Accumulator) error {
 	}
 
 	addr := ":" + strconv.Itoa(z.Port)
-	ln, err := net.Listen("tcp", addr)
+	ln, err := net.Listen(DefaultNetwork, addr)
 	if err != nil {
 		return err
 	}
