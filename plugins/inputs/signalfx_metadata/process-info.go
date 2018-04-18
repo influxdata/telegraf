@@ -15,8 +15,6 @@ import (
 	"github.com/shirou/gopsutil/process"
 )
 
-const numColumns = 11
-
 // NewProcessInfo - returns a new ProcessInfo instance
 func NewProcessInfo(bufferSize int, numWorkers int) *ProcessInfo {
 	var s = &ProcessInfo{
