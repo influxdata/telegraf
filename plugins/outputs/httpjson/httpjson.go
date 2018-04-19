@@ -123,6 +123,8 @@ func (h *Httpjson) Write(metrics []telegraf.Metric) error {
 		req.Header.Add(k, v)
 	}
 
+	req.Header.Add("Content-Type", "application/json;charset=UTF-8")
+
 	// Send HTTP(s) request
 	client := http.Client{}
 	resp, err := client.Do(req)

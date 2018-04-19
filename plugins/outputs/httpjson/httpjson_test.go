@@ -85,6 +85,7 @@ func TestSetupHeaders(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json;charset=UTF-8")
 
 		assert.Equal(t, r.Header.Get("Api-Version"), "v1.0")
+		assert.Equal(t, r.Header.Get("Content-Type"), "application/json;charset=UTF-8")
 
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status": "OK"}`))
