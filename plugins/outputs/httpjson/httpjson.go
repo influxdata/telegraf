@@ -68,7 +68,7 @@ func (h *Httpjson) Write(metrics []telegraf.Metric) error {
 	}
 
 	if h.Server == "" {
-		return fmt.Errorf("You need to setup a server")
+		return fmt.Errorf("You need to setup server")
 	}
 
 	// Prepare URL
@@ -132,12 +132,12 @@ func (h *Httpjson) Write(metrics []telegraf.Metric) error {
 	var parsedBody map[string]interface{}
 	resBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Errorf("Cannot real response body: %s", err)
+		return fmt.Errorf("Cannot read response body: %s", err)
 	}
 
 	err = json.Unmarshal([]byte(resBody), &parsedBody)
 	if err != nil {
-		fmt.Errorf("Cannot parse response body: %s", err)
+		return fmt.Errorf("Cannot parse response body: %s", err)
 	}
 
 	return nil

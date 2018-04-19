@@ -10,15 +10,15 @@ Your API will expect to get request body with this format
 {
   "metrics": [
     {
-      "name": "measurement", // Measurement
-      "fields": "value=0.64", // Fields value
-      "tags": "tag1=tag1, tag2=tag2", // Tag keys
-      "time": "10000020" // Time will be UNIX timestampt format
+      "name": "measurement",
+      "fields": "value=0.64",
+      "tags": "tag1=tag1, tag2=tag2",
+      "time": "10000020"
     },
     ...
   ],
   "data": {
-    "data": "your additional data"
+    "additional_data": "your additional data"
   }
 }
 
