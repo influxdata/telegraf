@@ -172,6 +172,7 @@ type SocketListener struct {
 	parsers.Parser
 	telegraf.Accumulator
 	io.Closer
+	tlsConfig *tls.Config
 }
 
 func (sl *SocketListener) Description() string {
@@ -238,6 +239,14 @@ func (sl *SocketListener) SetParser(parser parsers.Parser) {
 }
 
 func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
+	if sl.tlsConfig == nil {
+		tlsConfig, err := tlsint.NewServerTLSConfig(sl.ServerConfig)
+		if err != nil {
+			return err
+		}
+		sl.tlsConfig = tlsConfig
+	}
+
 	sl.Accumulator = acc
 	spl := strings.SplitN(sl.ServiceAddress, "://", 2)
 	if len(spl) != 2 {
@@ -258,15 +267,10 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			l   net.Listener
 		)
 
-		tlsCfg, err := tlsint.NewServerTLSConfig(sl.ServerConfig)
-		if err != nil {
-			return nil
-		}
-
-		if tlsCfg == nil {
+		if sl.tlsConfig == nil {
 			l, err = net.Listen(spl[0], spl[1])
 		} else {
-			l, err = tls.Listen(spl[0], spl[1], tlsCfg)
+			l, err = tls.Listen(spl[0], spl[1], sl.tlsConfig)
 		}
 		if err != nil {
 			return err

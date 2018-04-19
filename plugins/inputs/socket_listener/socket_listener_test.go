@@ -32,23 +32,16 @@ func TestSocketListener_tcp_tls(t *testing.T) {
 
 	sl := newSocketListener()
 	sl.ServiceAddress = "tcp://127.0.0.1:0"
-	sl.TLSCert = "testdata/server.pem"
-	sl.TLSKey = "testdata/server.key"
-	sl.TLSAllowedCACerts = []string{"testdata/ca.pem"}
+	tlsConfig, err := tlsint.NewTestingTLSServerConfig("../../../internal/tls/pki")
+	require.NoError(t, err)
+	sl.tlsConfig = tlsConfig
 
 	acc := &testutil.Accumulator{}
-	err := sl.Start(acc)
+	err = sl.Start(acc)
 	require.NoError(t, err)
 	defer sl.Stop()
 
-	tlsCfg, err := tlsint.NewClientTLSConfig(
-		tlsint.ClientConfig{
-			TLSCA:              "testdata/ca.pem",
-			TLSCert:            "testdata/client.pem",
-			TLSKey:             "testdata/client.key",
-			InsecureSkipVerify: true,
-		},
-	)
+	tlsCfg, err := tlsint.NewTestingTLSClientConfig("../../../internal/tls/pki")
 	require.NoError(t, err)
 
 	secureClient, err := tls.Dial("tcp", sl.Closer.(net.Listener).Addr().String(), tlsCfg)
@@ -62,23 +55,17 @@ func TestSocketListener_unix_tls(t *testing.T) {
 
 	sl := newSocketListener()
 	sl.ServiceAddress = "unix:///tmp/telegraf_test.sock"
-	sl.TLSCert = "testdata/server.pem"
-	sl.TLSKey = "testdata/server.key"
-	sl.TLSAllowedCACerts = []string{"testdata/ca.pem"}
+	tlsConfig, err := tlsint.NewTestingTLSServerConfig("../../../internal/tls/pki")
+	require.NoError(t, err)
+	sl.tlsConfig = tlsConfig
 
 	acc := &testutil.Accumulator{}
-	err := sl.Start(acc)
+	err = sl.Start(acc)
 	require.NoError(t, err)
 	defer sl.Stop()
 
-	tlsCfg, err := tlsint.NewClientTLSConfig(
-		tlsint.ClientConfig{
-			TLSCA:              "testdata/ca.pem",
-			TLSCert:            "testdata/client.pem",
-			TLSKey:             "testdata/client.key",
-			InsecureSkipVerify: true,
-		},
-	)
+	tlsCfg, err := tlsint.NewTestingTLSClientConfig("../../../internal/tls/pki")
+	tlsCfg.InsecureSkipVerify = true
 	require.NoError(t, err)
 
 	secureClient, err := tls.Dial("unix", "/tmp/telegraf_test.sock", tlsCfg)

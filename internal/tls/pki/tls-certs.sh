@@ -46,21 +46,29 @@ keyUsage = keyCertSign, cRLSign
 [ client_ca_extensions ]
 basicConstraints = CA:false
 keyUsage = digitalSignature
+subjectAltName = @client_alt_names
 extendedKeyUsage = 1.3.6.1.5.5.7.3.2
+
+[ client_alt_names ]
+IP.1 = 127.0.0.1
 
 [ server_ca_extensions ]
 basicConstraints = CA:false
-keyUsage = keyEncipherment
+subjectAltName = @server_alt_names
+keyUsage = keyEncipherment, digitalSignature
 extendedKeyUsage = 1.3.6.1.5.5.7.3.1
+
+[ server_alt_names ]
+IP.1 = 127.0.0.1
 EOF
-openssl req -x509 -config ./openssl.conf -days 3650 -newkey rsa:1024 -out ./certs/cacert.pem -keyout ./private/cakey.pem -subj "/CN=Telegraf CA/" -nodes &&
+openssl req -x509 -config ./openssl.conf -days 3650 -newkey rsa:1024 -out ./certs/cacert.pem -keyout ./private/cakey.pem -subj "/CN=Telegraf Test CA/" -nodes &&
 
 # Create server keypair
 openssl genrsa -out ./private/serverkey.pem 1024 &&
-openssl req -new -key ./private/serverkey.pem -out ./certs/servercsr.pem -outform PEM -subj "/CN=localhost/O=server/" &&
+openssl req -new -key ./private/serverkey.pem -out ./certs/servercsr.pem -outform PEM -subj "/CN=server.localdomain/O=server/" &&
 openssl ca -config ./openssl.conf -in ./certs/servercsr.pem -out ./certs/servercert.pem -notext -batch -extensions server_ca_extensions &&
 
 # Create client keypair
 openssl genrsa -out ./private/clientkey.pem 1024 &&
-openssl req -new -key ./private/clientkey.pem -out ./certs/clientcsr.pem -outform PEM -subj "/CN=telegraf/O=client/" &&
+openssl req -new -key ./private/clientkey.pem -out ./certs/clientcsr.pem -outform PEM -subj "/CN=client.localdomain/O=client/" &&
 openssl ca -config ./openssl.conf -in ./certs/clientcsr.pem -out ./certs/clientcert.pem -notext -batch -extensions client_ca_extensions
