@@ -6,6 +6,7 @@
 - [#3835](https://github.com/influxdata/telegraf/issues/3835): Report mem input fields as gauges instead counters.
 - [#4030](https://github.com/influxdata/telegraf/issues/4030): Fix graphite outputs unsigned integers in wrong format.
 - [#4043](https://github.com/influxdata/telegraf/issues/4043): Report available fields if utmp is unreadable.
+- [#4039](https://github.com/influxdata/telegraf/issues/4039): Fix potential "no fields" error writing to outputs.
 
 ## v1.6 [2018-04-16]
 
