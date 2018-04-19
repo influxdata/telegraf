@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type JolokiaClient interface {
@@ -60,7 +61,8 @@ func newCassandraMetric(host string, metric string,
 func addValuesAsFields(values map[string]interface{}, fields map[string]interface{},
 	mname string) {
 	for k, v := range values {
-		if v != nil {
+		switch v.(type) {
+		case int64, float64, string, bool:
 			fields[mname+"_"+k] = v
 		}
 	}
@@ -117,7 +119,7 @@ func (j javaMetric) addTagsFields(out map[string]interface{}) {
 		switch t := values.(type) {
 		case map[string]interface{}:
 			addValuesAsFields(values.(map[string]interface{}), fields, attribute)
-		case interface{}:
+		case int64, float64, string, bool:
 			fields[attribute] = t
 		}
 		j.acc.AddFields(tokens["class"]+tokens["type"], fields, tags)
