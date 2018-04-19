@@ -199,7 +199,7 @@ func NewDropwizardParser(
 // The parameter `metricName` is optional.
 func NewSyslogParser(metricName string) (Parser, error) {
 	opts := []syslog.ParserOpt{
-		syslog.WithBestEffort() // Always in best effort mode
+		syslog.WithBestEffort(), // Always in best effort mode
 	}
 
 	if metricName != "" {
