@@ -1,6 +1,7 @@
 package azuretablestorage
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -15,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	constants "github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	overflow "github.com/johncgriffin/overflow"
 )
 
 const (
@@ -37,17 +39,18 @@ type AzureTableStorage struct {
 	Periods                     []string                       //this is the list of periods being configured for various aggregator instances.
 	PeriodVsTableNameVsTableRef map[string]TableNameVsTableRef //Map of transfer period of metrics vs table name and table client ref.
 	PrevTableNameSuffix         string
+	TableStorageEndPointSuffix  string
 }
 
 var sampleConfig = `
 [[outputs.azuretablestorage]]
- deployment_id = "deploymentId"
- resource_id = "subscriptionId/resourceGroup/VMScaleset"
- account_name = "ladextensionrgdiag526"
- sas_url = "https://ladextensionrgdiag526.table.core.windows.net"
- sas_token="sv=2017-07-29&ss=bt&srt=sco&sp=rwdlacu&se=2019-03-20T19:34:18Z&st=2018-03-19T11:34:18Z&spr=https&sig=tw%2BfX8RJw%2FLd7%2Fv5K1w4b2bOJwBAPcqkUsFqBB7LllQ%3D"
- #periods is the list of period configured for each aggregator plugin
- periods = ["30s","60s"] 
+deployment_id = ""
+resource_id = ""
+account_name = ""
+sas_token=""
+#periods is the list of period configured for each aggregator plugin
+periods = ["30s","60s"] 
+tableStorageEndPointSuffix = ".table.core.windows.net"
 
 `
 
@@ -56,12 +59,35 @@ type MdsdTime struct {
 	microSeconds int64
 }
 
-func toFileTime(mdsdTime MdsdTime) int64 {
-	fileTime := (constants.EPOCH_DIFFERENCE+mdsdTime.seconds)*constants.TICKS_PER_SECOND + mdsdTime.microSeconds*10
-	return fileTime
+func (azureTableStorage *AzureTableStorage) toFileTime(mdsdTime MdsdTime) (int64, error) {
+	//check for int64 overflow
+	fileTimeSeconds, ok := overflow.Add64(constants.EPOCH_DIFFERENCE, mdsdTime.seconds)
+	if ok == false {
+		erMsg := "integer64 overflow while computing fileTime"
+		log.Print(erMsg)
+		err := errors.New(erMsg)
+		return int64(0), err
+	}
+
+	fileTimeTickPerSecond, ok := overflow.Mul64(fileTimeSeconds, constants.TICKS_PER_SECOND)
+	if ok == false {
+		erMsg := "integer64 overflow while computing fileTime"
+		log.Print(erMsg)
+		err := errors.New(erMsg)
+		return int64(0), err
+	}
+	fileTime, ok := overflow.Add64(fileTimeTickPerSecond, mdsdTime.microSeconds*10)
+	if ok == false {
+		erMsg := "integer64 overflow while computing fileTime"
+		log.Print(erMsg)
+		err := errors.New(erMsg)
+		return int64(0), err
+	}
+
+	return fileTime, nil
 }
 
-func toMdsdTime(fileTime int64) MdsdTime {
+func (azureTableStorage *AzureTableStorage) toMdsdTime(fileTime int64) MdsdTime {
 	mdsdTime := MdsdTime{0, 0}
 	mdsdTime.microSeconds = (fileTime % constants.TICKS_PER_SECOND) / 10
 	mdsdTime.seconds = (fileTime / constants.TICKS_PER_SECOND) - constants.EPOCH_DIFFERENCE
@@ -69,21 +95,32 @@ func toMdsdTime(fileTime int64) MdsdTime {
 }
 
 //New tables are required to be created every 10th Day. And date suffix changes in the new table name.
+//to maintain backward compatibilty of azure table schema with LAD 3.0 conversion of mdsd time to filetime and back is required.
+//secondsElapsedTillNow: number of seconds elapsed till now from 1 Jan 1970.
 //RETURNS: the date of the last day of the last 10 day interval.
-func getTableDateSuffix() string {
+func (azureTableStorage *AzureTableStorage) getTableDateSuffix(secondsElapsedTillNow int64) (string, error) {
 
-	//get number of seconds elapsed till now from 1 Jan 1970.
-	secondsElapsedTillNow := time.Now().Unix()
+	if secondsElapsedTillNow < 0 {
+		erMsg := "Invalid time passed to getTableDateSuffix()"
+		log.Print(erMsg)
+		err := errors.New(erMsg)
+		return "", err
+	}
+
 	mdsdTime := MdsdTime{seconds: secondsElapsedTillNow, microSeconds: 0}
 
 	//fileTime gives the number of 100ns elapsed till mdsdTime since 1601-01-01
-	fileTime := toFileTime(mdsdTime)
-
+	fileTime, er := azureTableStorage.toFileTime(mdsdTime)
+	if er != nil {
+		log.Print("Error occurred while converting mdsdtime to filetime mdsdTime = " + strconv.FormatInt(mdsdTime.seconds, 10) +
+			":" + strconv.FormatInt(mdsdTime.microSeconds, 10))
+		return "", er
+	}
 	//The “ten day” rollover is the time at which FILETIME mod (number of seconds in 10 days) is zero
 	fileTime = fileTime - (fileTime % int64(10*24*60*60*constants.TICKS_PER_SECOND))
 
 	//convert fileTime back to mdsd time.
-	mdsdTime = toMdsdTime(fileTime)
+	mdsdTime = azureTableStorage.toMdsdTime(fileTime)
 
 	//get the date corresponding to the mdsdTime.
 	suffixDate := time.Unix(int64(mdsdTime.seconds), 0)
@@ -91,16 +128,23 @@ func getTableDateSuffix() string {
 	suffixDateStr = strings.Replace(suffixDateStr, "/", "", -1)
 
 	// the name of the table will have this date as its suffix.
-	return suffixDateStr
+	return suffixDateStr, nil
 }
 
 //period is in the format "60s"
 //RETURNS: period in the format "PT1M"
-func getPeriodStr(period string) string {
+func (azureTableStorage *AzureTableStorage) getPeriodStr(period string) (string, error) {
 
 	var periodStr string
 
-	totalSeconds, _ := strconv.Atoi(strings.Trim(period, "s"))
+	totalSeconds, err := strconv.Atoi(strings.Trim(period, "s"))
+
+	if err != nil {
+		log.Println("Period is not in the format of '60s'")
+		log.Print(err)
+		return "", err
+	}
+
 	hour := (int)(math.Floor(float64(totalSeconds) / 3600))
 	min := int(math.Floor(float64(totalSeconds-(hour*3600)) / 60))
 	sec := totalSeconds - (hour * 3600) - (min * 60)
@@ -114,41 +158,60 @@ func getPeriodStr(period string) string {
 	if sec > 0 {
 		periodStr += strconv.Itoa(sec) + constants.S
 	}
-	return periodStr
+	return periodStr, nil
 }
 
 //RETURNS:a map of <Period,{TableName, TableClientReference}>
-func getAzurePeriodVsTableNameVsTableRefMap(azureTableStorage *AzureTableStorage,
-	tableClient storage.TableServiceClient) map[string]TableNameVsTableRef {
+func (azureTableStorage *AzureTableStorage) getAzurePeriodVsTableNameVsTableRefMap(secondsElapsedTillNow int64,
+	tableClient storage.TableServiceClient) (map[string]TableNameVsTableRef, error) {
 
 	periodVsTableNameVsTableRef := map[string]TableNameVsTableRef{}
 
-	//Empty the list of tables every 10th day as they become obsolete now.
-	tableNameSuffix := getTableDateSuffix()
+	tableNameSuffix, err := azureTableStorage.getTableDateSuffix(secondsElapsedTillNow)
+	if err != nil {
+		log.Println("Error while constructing suffix for azure table name")
+		return periodVsTableNameVsTableRef, err
+	}
+	//Empty the map of tables every 10th day as they become obsolete now.
 	if azureTableStorage.PrevTableNameSuffix != tableNameSuffix {
 		azureTableStorage.PeriodVsTableNameVsTableRef = map[string]TableNameVsTableRef{}
 		azureTableStorage.PrevTableNameSuffix = tableNameSuffix
 	}
 
 	for _, period := range azureTableStorage.Periods {
-		periodStr := getPeriodStr(period)
+		periodStr, err := azureTableStorage.getPeriodStr(period)
+		if err != nil {
+			log.Println("Error while parsing acheduled transfer period for metrics to the table: " + period)
+			return periodVsTableNameVsTableRef, err
+		}
 		tableName := constants.WAD_METRICS + periodStr + constants.P10DV25 + tableNameSuffix
 		table := tableClient.GetTableReference(tableName)
 		tableNameVsTableRefObj := TableNameVsTableRef{TableName: tableName, TableRef: table}
 		periodVsTableNameVsTableRef[period] = tableNameVsTableRefObj
 	}
-	return periodVsTableNameVsTableRef
+	return periodVsTableNameVsTableRef, nil
 }
 
 func (azureTableStorage *AzureTableStorage) Connect() error {
-	sasUrl := "https://" + azureTableStorage.AccountName + ".table.core.windows.net"
+
+	sasUrl := "https://" + azureTableStorage.AccountName + azureTableStorage.TableStorageEndPointSuffix
 	client, er := storage.NewAccountSASClientFromEndpointToken(sasUrl, azureTableStorage.SasToken)
+
 	if er != nil {
+		log.Println("Error in getting table storage client ")
 		return er
 	}
+	//secondsElapsedTillNow: number of seconds elapsed till now from 1 Jan 1970.
+	secondsElapsedTillNow := time.Now().Unix()
+
 	tableClient := client.GetTableService()
-	azureTableStorage.PeriodVsTableNameVsTableRef =
-		getAzurePeriodVsTableNameVsTableRefMap(azureTableStorage, tableClient)
+	azureTableStorage.PeriodVsTableNameVsTableRef, er =
+		azureTableStorage.getAzurePeriodVsTableNameVsTableRefMap(secondsElapsedTillNow, tableClient)
+
+	if er != nil {
+		log.Println("Error while constructing map of <period , <tableName, tableClient>>")
+		return er
+	}
 
 	for _, tableVsTableRef := range azureTableStorage.PeriodVsTableNameVsTableRef {
 		er := tableVsTableRef.TableRef.Create(30, FullMetadata, nil)
@@ -166,11 +229,11 @@ func (azureTableStorage *AzureTableStorage) SampleConfig() string {
 }
 
 func (azureTableStorage *AzureTableStorage) Description() string {
-	return "Sends telegraf metrics to azure storage tables"
+	return "Sends metrics collected by input plugin to azure storage tables"
 }
 
 //RETURNS: resourceId encoded by converting any letter other than alphanumerics to unicode as per UTF-16
-func encodeSpecialCharacterToUTF16(resourceId string) string {
+func (azureTableStorage *AzureTableStorage) encodeSpecialCharacterToUTF16(resourceId string) string {
 	encodedStr := ""
 	hex := ""
 	var replacer = strings.NewReplacer("[", ":", "]", "")
@@ -186,16 +249,17 @@ func encodeSpecialCharacterToUTF16(resourceId string) string {
 }
 
 //RETURNS: primary key for the azure table.
-func getPrimaryKey(resourceId string) string {
-	return encodeSpecialCharacterToUTF16(resourceId)
+func (azureTableStorage *AzureTableStorage) getPrimaryKey(resourceId string) string {
+	return azureTableStorage.encodeSpecialCharacterToUTF16(resourceId)
 }
 
 //RETURNS: difference of max value that can be held by time and number of 100 ns in current time.
-func getUTCTicks_DescendingOrder(lastSampleTimestamp string) (uint64, error) {
+func (azureTableStorage *AzureTableStorage) getUTCTicks_DescendingOrder(lastSampleTimestamp string) (uint64, error) {
 
 	currentTime, err := time.Parse(layout, lastSampleTimestamp)
 	if err != nil {
-		log.Println(err.Error())
+		log.Println("Error while parsing timestamp " + lastSampleTimestamp + "in the layout " + layout)
+		log.Print(err)
 		return 0, err
 	}
 	//maxValureDateTime := time.Date(9999, time.December, 31, 12, 59, 59, 59, time.UTC)
@@ -214,26 +278,27 @@ func getUTCTicks_DescendingOrder(lastSampleTimestamp string) (uint64, error) {
 }
 
 //RETURNS: counter name being unicode encoded and decreasing time diff.
-func getRowKeyComponents(lastSampleTimestamp string, counterName string) (string, string, error) {
+func (azureTableStorage *AzureTableStorage) getRowKeyComponents(lastSampleTimestamp string, counterName string) (string, string, error) {
 
-	UTCTicks_DescendingOrder, err := getUTCTicks_DescendingOrder(lastSampleTimestamp)
+	UTCTicks_DescendingOrder, err := azureTableStorage.getUTCTicks_DescendingOrder(lastSampleTimestamp)
 	if err != nil {
+		log.Println("Error while computing UTCTicks_DescendingOrder")
 		return "", "", err
 	}
 	UTCTicks_DescendingOrderStr := strconv.FormatInt(int64(UTCTicks_DescendingOrder), 10)
-	encodedCounterName := encodeSpecialCharacterToUTF16(counterName)
+	encodedCounterName := azureTableStorage.encodeSpecialCharacterToUTF16(counterName)
 	return UTCTicks_DescendingOrderStr, encodedCounterName, nil
 }
 
 func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) error {
 	var entity *storage.Entity
 	var props map[string]interface{}
-	partitionKey := getPrimaryKey(azureTableStorage.ResourceId)
+	partitionKey := azureTableStorage.getPrimaryKey(azureTableStorage.ResourceId)
 
 	// iterate over the list of metrics and create a new entity for each metrics and add to the table.
 	for i, _ := range metrics {
 		props = metrics[i].Fields()
-		UTCTicks_DescendingOrderStr, encodedCounterName, er := getRowKeyComponents(props[constants.END_TIMESTAMP].(string), props[constants.COUNTER_NAME].(string))
+		UTCTicks_DescendingOrderStr, encodedCounterName, er := azureTableStorage.getRowKeyComponents(props[constants.END_TIMESTAMP].(string), props[constants.COUNTER_NAME].(string))
 		if er != nil {
 			return er
 		}
@@ -241,7 +306,8 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 		var err error
 		props[constants.HOST], err = os.Hostname()
 		if err != nil {
-			log.Println(err.Error())
+			log.Println("Error while getting hostname from os")
+			log.Print(err)
 			return err
 		}
 		//period decides when to transfer the aggregated metrics.Its in format "60s"
