@@ -10,10 +10,10 @@ import (
 )
 
 type PostgresqlCopy struct {
-	db                *sql.DB
-	Address           string
-	Columns           map[string][]string
-	IgnoreInserErrors bool
+	db                 *sql.DB
+	Address            string
+	Columns            map[string][]string
+	IgnoreInsertErrors bool
 }
 
 func (p *PostgresqlCopy) Connect() error {
@@ -101,18 +101,29 @@ func (p *PostgresqlCopy) Write(metrics []telegraf.Metric) error {
 				continue
 			}
 
-			if p.IgnoreInserErrors {
+			if p.IgnoreInsertErrors {
 				log.Printf("E! Could not insert into %s: %s", table, values)
 				continue
 			}
 			return err
 		}
 		_, err = stmt.Exec()
-		if err != nil {
-			return err
+		if err == nil {
+			continue
+		}
+		if p.IgnoreInsertErrors {
+			log.Printf("E! Error in stmt execute %s", err)
+			continue
 		}
 	}
 	err = txn.Commit()
+	if err == nil {
+		return nil
+	}
+	if p.IgnoreInsertErrors {
+		log.Printf("E! Error in commit %s", err)
+		return nil
+	}
 	return err
 }
 
