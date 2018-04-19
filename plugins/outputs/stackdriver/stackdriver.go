@@ -3,6 +3,7 @@ package stackdriver
 import (
 	"context"
 	"fmt"
+	"log"
 	"path"
 
 	"github.com/influxdata/telegraf"
@@ -23,6 +24,13 @@ type GCPStackdriver struct {
 
 	client *monitoring.MetricClient
 }
+
+const (
+	// StartTime for cumulative metrics.
+	StartTime = int64(1)
+	// MaxInt is the max int64 value.
+	MaxInt = int(^uint(0) >> 1)
+)
 
 var sampleConfig = `
   # GCP Project
@@ -57,55 +65,38 @@ func (s *GCPStackdriver) Connect() error {
 	return nil
 }
 
-// Write writes the metrics to Google Cloud Stackdriver.
+// Write the metrics to Google Cloud Stackdriver.
 func (s *GCPStackdriver) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 
 	for _, m := range metrics {
-		// Writes time series data
 		for k, v := range m.Fields() {
-			var value *monitoringpb.TypedValue
-
-			switch vt := v.(type) {
-			case float64:
-				value = &monitoringpb.TypedValue{
-					Value: &monitoringpb.TypedValue_DoubleValue{
-						DoubleValue: v.(float64),
-					},
-				}
-			case int64:
-				value = &monitoringpb.TypedValue{
-					Value: &monitoringpb.TypedValue_Int64Value{
-						Int64Value: v.(int64),
-					},
-				}
-			case bool:
-				value = &monitoringpb.TypedValue{
-					Value: &monitoringpb.TypedValue_BoolValue{
-						BoolValue: v.(bool),
-					},
-				}
-			case string:
-				value = &monitoringpb.TypedValue{
-					Value: &monitoringpb.TypedValue_StringValue{
-						StringValue: v.(string),
-					},
-				}
-			default:
-				return fmt.Errorf("Unsupported type %T", vt)
+			value, err := getStackdriverTypedValue(v)
+			if err != nil {
+				log.Printf("E! Error writing to output [stackdriver]: %s", err)
+				continue
 			}
 
-			// Prepares an individual data point
+			metricKind, err := getStackdriverMetricKind(telegraf.Histogram)
+			if err != nil {
+				log.Printf("E! Error writing to output [stackdriver]: %s", err)
+				continue
+			}
+
+			timeInterval, err := getStackdriverTimeInterval(metricKind, StartTime, m.Time().Unix())
+			if err != nil {
+				log.Printf("E! Error writing to output [stackdriver]: %s", err)
+				continue
+			}
+
+			// Prepare an individual data point.
 			dataPoint := &monitoringpb.Point{
-				Interval: &monitoringpb.TimeInterval{
-					EndTime: &googlepb.Timestamp{
-						Seconds: m.Time().Unix(),
-					},
-				},
-				Value: value,
+				Interval: timeInterval,
+				Value:    value,
 			}
 
-			if err := s.client.CreateTimeSeries(ctx, &monitoringpb.CreateTimeSeriesRequest{
+			// Prepare time series.
+			timeSeries := &monitoringpb.CreateTimeSeriesRequest{
 				Name: monitoring.MetricProjectPath(s.Project),
 				TimeSeries: []*monitoringpb.TimeSeries{
 					{
@@ -113,6 +104,7 @@ func (s *GCPStackdriver) Write(metrics []telegraf.Metric) error {
 							Type:   path.Join("custom.googleapis.com", s.Namespace, m.Name(), k),
 							Labels: m.Tags(),
 						},
+						MetricKind: metricKind,
 						Resource: &monitoredrespb.MonitoredResource{
 							Type: "global",
 							Labels: map[string]string{
@@ -123,14 +115,99 @@ func (s *GCPStackdriver) Write(metrics []telegraf.Metric) error {
 							dataPoint,
 						},
 					},
-				},
-			}); err != nil {
-				return err
+				}}
+
+			// Create the time series in Stackdriver.
+			err = s.client.CreateTimeSeries(ctx, timeSeries)
+			if err != nil {
+				log.Printf("E! Error writing to output [stackdriver]: %s", err)
+				continue
 			}
 		}
 	}
 
 	return nil
+}
+
+func getStackdriverTimeInterval(
+	m metricpb.MetricDescriptor_MetricKind,
+	start int64,
+	end int64,
+) (*monitoringpb.TimeInterval, error) {
+	switch m {
+	case metricpb.MetricDescriptor_GAUGE:
+		return &monitoringpb.TimeInterval{
+			EndTime: &googlepb.Timestamp{
+				Seconds: end,
+			},
+		}, nil
+	case metricpb.MetricDescriptor_CUMULATIVE:
+		return &monitoringpb.TimeInterval{
+			StartTime: &googlepb.Timestamp{
+				Seconds: start,
+			},
+			EndTime: &googlepb.Timestamp{
+				Seconds: end,
+			},
+		}, nil
+	case metricpb.MetricDescriptor_DELTA, metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED:
+		fallthrough
+	default:
+		return nil, fmt.Errorf("Unsupported metric kind %T", m)
+	}
+}
+
+func getStackdriverMetricKind(vt telegraf.ValueType) (metricpb.MetricDescriptor_MetricKind, error) {
+	switch vt {
+	case telegraf.Untyped:
+		return metricpb.MetricDescriptor_GAUGE, nil
+	case telegraf.Gauge:
+		return metricpb.MetricDescriptor_GAUGE, nil
+	case telegraf.Counter:
+		return metricpb.MetricDescriptor_CUMULATIVE, nil
+	case telegraf.Histogram, telegraf.Summary:
+		fallthrough
+	default:
+		return metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED, fmt.Errorf("unsupported telegraf value type")
+	}
+}
+
+func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, error) {
+	switch v := value.(type) {
+	case uint64:
+		if v <= uint64(MaxInt) {
+			return &monitoringpb.TypedValue{
+				Value: &monitoringpb.TypedValue_Int64Value{
+					Int64Value: int64(v),
+				},
+			}, nil
+		}
+		return &monitoringpb.TypedValue{
+			Value: &monitoringpb.TypedValue_Int64Value{
+				Int64Value: int64(MaxInt),
+			},
+		}, nil
+	case int64:
+		return &monitoringpb.TypedValue{
+			Value: &monitoringpb.TypedValue_Int64Value{
+				Int64Value: int64(v),
+			},
+		}, nil
+	case float64:
+		return &monitoringpb.TypedValue{
+			Value: &monitoringpb.TypedValue_DoubleValue{
+				DoubleValue: float64(v),
+			},
+		}, nil
+	case bool:
+		return &monitoringpb.TypedValue{
+			Value: &monitoringpb.TypedValue_BoolValue{
+				BoolValue: bool(v),
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("the value type \"%T\" is not supported for custom metrics", v)
+	}
 }
 
 // Close will terminate the session to the backend, returning error if an issue arises.
