@@ -21,15 +21,6 @@ TMP_BIN_DIR=./rpm_bin
 TMP_CONFIG_DIR=./rpm_config
 CONFIG_FILES_DIR=./ConfigFiles
 
-LINUX_CONFIG_FILES_VER=1.9
-REDIS_CONFIG_FILES_VER=1.9
-PERFORCE_CONFIG_FILES_VER=1.9
-SWIFT_CONFIG_FILES_VER=1.9
-QUBIT_SCYLLA_CONFIG_FILES_VER=2.1
-QUBIT_SCYLLA_DEV_CONFIG_FILES_VER=1.4
-QUBIT_WORKER_CONFIG_FILES_VER=1.9
-QUBIT_SPIN_CONFIG_FILES_VER=1.9
-
 CONFIG_FILES_ITER=17
 BIN_RPM_ITER=3
 
@@ -40,10 +31,19 @@ VENDOR=Influxdata
 
 set -e
 
-# Get version from tag closest to HEAD
-# this is based on the upstream telegraf version
-# BIN_RPM_ITER accounts for any updates to telegraf that we do in our repo
-version=$(git describe --tags --abbrev=0 | sed 's/^v//' )
+# It's common practice to use a 'v' prefix on tags, but the prefix should be
+# removed when making the RPM version string.
+#
+# Use "git describe" as the basic RPM version data.  If there are no tags
+# yet, simulate a v0 tag on the initial/empty repo and a "git describe"-like
+# tag (eg v0-12-gdeadbee) so there's a legitimate, upgradeable RPM version.
+#
+# Include "-dirty" on the end if there are any uncommitted changes.
+#
+# Replace hyphens with underscores; RPM uses them to separate version/release.
+git_ver=$(git describe --dirty --match "v[0-9]*-ar" 2>/dev/null || echo "v0-`git rev-list --count HEAD`-g`git describe --dirty --always`")
+version=$(echo "$git_ver" | sed -e "s/^v//" -e "s/-/_/g")
+echo "Version, $version"
 
 # Build and install the latest code
 echo "Building and Installing telegraf"
@@ -97,6 +97,8 @@ CONFIG_FPM_ARGS="\
 --config-files /etc/telegraf/ \
 --after-install ./post_install_config.sh \
 --after-remove ./post_uninstall_config.sh \
+-v $version \
+--iteration $CONFIG_FILES_ITER \
 $COMMON_FPM_ARGS"
 
 # Create directory structure for config files
@@ -117,43 +119,43 @@ mkdir -p $TMP_CONFIG_DIR/etc/telegraf/telegraf.d
 # Linux-Config
 rm -f $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-linux.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
-fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$LINUX_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Linux" etc lib || cleanup_exit 1
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-Linux" etc lib || cleanup_exit 1
 
 # Redis-Config
 rm -f $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-redis.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
-fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$REDIS_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Redis" etc lib || cleanup_exit 1
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-Redis" etc lib || cleanup_exit 1
 
 # Perforce-Config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-perforce.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
-fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$PERFORCE_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Perforce" etc lib || cleanup_exit 1
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-Perforce" etc lib || cleanup_exit 1
 
 # Swift-Config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-swift.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
-fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$SWIFT_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-Swift" etc lib || cleanup_exit 1
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-Swift" etc lib || cleanup_exit 1
 
 # QUBIT Scylla config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-qubit-scylla.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
-fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$QUBIT_SCYLLA_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-qubit-scylla" etc lib || cleanup_exit 1
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-qubit-scylla" etc lib || cleanup_exit 1
 
 # QUBIT Scylla dev config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-qubit-scylla-dev.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
-fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$QUBIT_SCYLLA_DEV_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-qubit-scylla-dev" etc lib || cleanup_exit 1
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-qubit-scylla-dev" etc lib || cleanup_exit 1
 
 
 # QUBIT Worker config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-qubit-worker.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
-fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$QUBIT_WORKER_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-qubit-worker" etc lib || cleanup_exit 1
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-qubit-worker" etc lib || cleanup_exit 1
 
 # QUBIT Spin config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-qubit-spin.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
-fpm -s dir -t rpm $CONFIG_FPM_ARGS --iteration "$CONFIG_FILES_ITER" -v "$QUBIT_SPIN_CONFIG_FILES_VER" --description "$DESCRIPTION" -n "telegraf-qubit-spin" etc lib || cleanup_exit 1
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-qubit-spin" etc lib || cleanup_exit 1
 
 
 mv ./*.rpm RPMS
