@@ -111,6 +111,34 @@ func TestReader(t *testing.T) {
 			},
 			expected: []byte("cpu value=42 0\n"),
 		},
+		{
+			name:         "last metric failed regression",
+			maxLineBytes: 4096,
+			bufferSize:   15,
+			input: []telegraf.Metric{
+				MustMetric(
+					metric.New(
+						"cpu",
+						map[string]string{},
+						map[string]interface{}{
+							"value": 42.0,
+						},
+						time.Unix(0, 0),
+					),
+				),
+				MustMetric(
+					metric.New(
+						"",
+						map[string]string{},
+						map[string]interface{}{
+							"value": 42.0,
+						},
+						time.Unix(0, 0),
+					),
+				),
+			},
+			expected: []byte("cpu value=42 0\n"),
+		},
 	}
 
 	for _, tt := range tests {
