@@ -102,7 +102,7 @@ configuration options.
 
 ## Input Plugins
 
-* [signalfx-metadata](./plugins/inputs/signalfx_metadata)
+* [signalfx-metadata](./plugins/inputs/signalfxmetadata)
 * [aerospike](./plugins/inputs/aerospike)
 * [amqp_consumer](./plugins/inputs/amqp_consumer) (rabbitmq)
 * [apache](./plugins/inputs/apache)
@@ -258,6 +258,7 @@ formats may be used with input plugins supporting the `data_format` option:
 
 ## Aggregator Plugins
 
+* [signalfx_util](./plugins/aggregators/signalfxutil)
 * [basicstats](./plugins/aggregators/basicstats)
 * [signalfx_util](./plugins/aggregators/signalfx_util)
 * [minmax](./plugins/aggregators/minmax)
