@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-const MaxInt = int(^uint(0) >> 1)
+const MaxInt64 = int64(^uint64(0) >> 1)
 
 type FieldSortOrder int
 
@@ -270,10 +270,10 @@ func (s *Serializer) appendFieldValue(buf []byte, value interface{}) ([]byte, er
 		if s.fieldTypeSupport&UintSupport != 0 {
 			return appendUintField(buf, v), nil
 		} else {
-			if v <= uint64(MaxInt) {
+			if v <= uint64(MaxInt64) {
 				return appendIntField(buf, int64(v)), nil
 			} else {
-				return appendIntField(buf, int64(MaxInt)), nil
+				return appendIntField(buf, int64(MaxInt64)), nil
 			}
 		}
 	case int64:
