@@ -50,7 +50,7 @@ type SFXMeta struct {
 	nextMetadataSend         int64
 	nextMetadataSendInterval []int64
 	aws                      *AWSInfo
-	processInfo              *ProcessInfo
+	processes                *ProcessInfo
 }
 
 // Description - Description of the SignalFx metadata plugin
@@ -92,15 +92,15 @@ func (s *SFXMeta) sendNotifications(acc telegraf.Accumulator) {
 
 // Gather - read method for SignalFx metadata plugin
 func (s *SFXMeta) Gather(acc telegraf.Accumulator) error {
-	if s.processInfo == nil && s.ProcessInfo {
-		s.processInfo = NewProcessInfo(s.BufferSize, s.NumberOfGoRoutines)
+	if s.processes == nil && s.ProcessInfo {
+		s.processes = NewProcessInfo(s.BufferSize, s.NumberOfGoRoutines)
 	}
 	wg := sync.WaitGroup{}
 	if s.ProcessInfo {
 		log.Println("D! Input [signalfx-metadata] collecting process info")
 		wg.Add(1)
 		go func() {
-			top, err := s.processInfo.GetTop()
+			top, err := s.processes.GetTop()
 			if err == nil {
 				emitTop(acc, top, pluginVersion)
 			}
