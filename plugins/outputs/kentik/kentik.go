@@ -185,7 +185,7 @@ func (o *Kentik) Write(metrics []telegraf.Metric) error {
 
 func (o *Kentik) WriteHttp(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
-		now := m.UnixNano() / 1000000000
+		now := m.Time().UnixNano() / 1000000000
 		tags := cleanTags(m.Tags())
 
 		for fieldName, value := range m.Fields() {
