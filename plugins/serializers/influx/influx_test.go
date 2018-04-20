@@ -130,6 +130,20 @@ var tests = []struct {
 		output: []byte("cpu value=42i 0\n"),
 	},
 	{
+		name: "integer field 64-bit",
+		input: MustMetric(
+			metric.New(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": int64(123456789012345),
+				},
+				time.Unix(0, 0),
+			),
+		),
+		output: []byte("cpu value=123456789012345i 0\n"),
+	},
+	{
 		name: "uint field",
 		input: MustMetric(
 			metric.New(
