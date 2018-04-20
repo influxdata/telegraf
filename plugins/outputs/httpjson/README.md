@@ -12,7 +12,7 @@ Your API will expect to get request body with this format
     {
       "name": "measurement",
       "fields": "value=0.64",
-      "tags": "tag1=tag1, tag2=tag2",
+      "tags": "tag1=tag1,tag2=tag2",
       "time": "10000020"
     },
     ...

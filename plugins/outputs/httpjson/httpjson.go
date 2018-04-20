@@ -20,10 +20,10 @@ type Httpjson struct {
 }
 
 type Metric struct {
-	Name   string                 `json:"name"`
-	Fields map[string]interface{} `json:"fields"`
-	Tags   map[string]string      `json:"tags"`
-	Time   int64                  `json:"time"`
+	Name   string `json:"name"`
+	Fields string `json:"fields"`
+	Tags   string `json:"tags"`
+	Time   int64  `json:"time"`
 }
 
 func (h *Httpjson) Description() string {
@@ -89,10 +89,34 @@ func (h *Httpjson) Write(metrics []telegraf.Metric) error {
 			unitsNanoseconds = 1000000000
 		}
 
+		var fields, tags bytes.Buffer
+		var index int
+
+		// Construct fields metric into string
+		for k, v := range metric.Fields() {
+			if index == 0 {
+				fields.WriteString(fmt.Sprintf("%s=%v", k, v))
+			} else {
+				fields.WriteString(fmt.Sprintf(",%s=%v", k, v))
+			}
+			index++
+		}
+
+		// Construct tags metric into string
+		index = 0
+		for k, v := range metric.Tags() {
+			if index == 0 {
+				tags.WriteString(fmt.Sprintf("%s=%v", k, v))
+			} else {
+				tags.WriteString(fmt.Sprintf(",%s=%v", k, v))
+			}
+			index++
+		}
+
 		m := Metric{
 			Name:   metric.Name(),
-			Tags:   metric.Tags(),
-			Fields: metric.Fields(),
+			Tags:   tags.String(),
+			Fields: fields.String(),
 			Time:   metric.Time().UnixNano() / unitsNanoseconds,
 		}
 
@@ -123,7 +147,7 @@ func (h *Httpjson) Write(metrics []telegraf.Metric) error {
 		req.Header.Add(k, v)
 	}
 
-	req.Header.Add("Content-Type", "application/json;charset=UTF-8")
+	req.Header.Set("Content-Type", "application/json;charset=UTF-8")
 
 	// Send HTTP(s) request
 	client := http.Client{}
