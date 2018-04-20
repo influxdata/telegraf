@@ -127,6 +127,11 @@
 
 - [#3835](https://github.com/influxdata/telegraf/issues/3835): Report mem input fields as gauges instead counters.
 - [#4030](https://github.com/influxdata/telegraf/issues/4030): Fix graphite outputs unsigned integers in wrong format.
+## v1.6.0-sfx0 [2018-04-16]
+
+### Release Notes
+
+- SignalFx Packaging for Telegraf 1.6.0
 
 ## v1.6 [2018-04-16]
 
