@@ -1,5 +1,12 @@
 ## v1.7 [unreleased]
 
+### Release Notes
+
+- The `cassandra` input plugin has been deprecated in favor of the `jolokia2`
+  input plugin which is much more configurable and more performant.  There is
+  an [example configuration](./plugins/inputs/jolokia2/examples) to help you
+  get started.
+
 ### New Inputs
 
 - [fibaro](./plugins/inputs/fibaro/README.md) - Contributed by @dynek

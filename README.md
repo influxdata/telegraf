@@ -5,7 +5,7 @@ and writing metrics.
 
 Design goals are to have a minimal memory footprint with a plugin system so
 that developers in the community can easily add support for collecting metrics
-from local or remote services.
+.  For an example configuration referencet from local or remote services.
 
 Telegraf is plugin-driven and has the concept of 4 distinct plugins:
 
@@ -130,7 +130,7 @@ configuration options.
 * [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
 * [bond](./plugins/inputs/bond)
-* [cassandra](./plugins/inputs/cassandra)
+* [cassandra](./plugins/inputs/cassandra) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
 * [ceph](./plugins/inputs/ceph)
 * [cgroup](./plugins/inputs/cgroup)
 * [chrony](./plugins/inputs/chrony)
@@ -163,7 +163,7 @@ configuration options.
 * [iptables](./plugins/inputs/iptables)
 * [ipset](./plugins/inputs/ipset)
 * [jolokia](./plugins/inputs/jolokia) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
-* [jolokia2](./plugins/inputs/jolokia2)
+* [jolokia2](./plugins/inputs/jolokia2) (java, cassandra, kafka)
 * [kapacitor](./plugins/inputs/kapacitor)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
