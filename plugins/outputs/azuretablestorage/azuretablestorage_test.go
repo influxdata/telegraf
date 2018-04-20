@@ -25,6 +25,9 @@ func getNumOfSeconds() int64 {
 func getMicroSeconds() int64 {
 	return int64(0)
 }
+func getFileTime() int64 {
+	return int64(131685894020000000)
+}
 
 //Test conversion of mdsdtime to filetime
 func TestToFileTime(t *testing.T) {
@@ -36,7 +39,7 @@ func TestToFileTime(t *testing.T) {
 	mdsdTime := MdsdTime{numOfSeconds, numOfMicroSeconds}
 
 	actualFileTime, er := azureTableStorageObj.toFileTime(mdsdTime)
-	expectedFileTime := int64(131685894020000000)
+	expectedFileTime := getFileTime()
 	assert.Nil(t, er)
 	assert.Equal(t, expectedFileTime, actualFileTime)
 
@@ -49,11 +52,11 @@ func TestToFileTime(t *testing.T) {
 func TestToMdsdTime(t *testing.T) {
 	azureTableStorageObj := getAzureTableStorageObj()
 
-	fileTime := int64(131685894020000000)
+	fileTime := getFileTime()
 	actualMdsdTime := azureTableStorageObj.toMdsdTime(fileTime)
 
 	numOfSeconds := getNumOfSeconds()
-	numOfMicroSeconds := int64(0)
+	numOfMicroSeconds := getMicroSeconds()
 	expectedMdsdTime := MdsdTime{seconds: numOfSeconds, microSeconds: numOfMicroSeconds}
 
 	assert.Equal(t, expectedMdsdTime, actualMdsdTime)
