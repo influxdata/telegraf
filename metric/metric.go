@@ -123,6 +123,7 @@ func (m *metric) AddTag(key, value string) {
 
 		if key == tag.Key {
 			tag.Value = value
+			return
 		}
 
 		m.tags = append(m.tags, nil)
