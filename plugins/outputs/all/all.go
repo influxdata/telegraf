@@ -4,6 +4,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/amon"
 	_ "github.com/influxdata/telegraf/plugins/outputs/amqp"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch"
+	_ "github.com/influxdata/telegraf/plugins/outputs/cratedb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/datadog"
 	_ "github.com/influxdata/telegraf/plugins/outputs/discard"
 	_ "github.com/influxdata/telegraf/plugins/outputs/elasticsearch"
@@ -13,7 +14,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/instrumental"
 	_ "github.com/influxdata/telegraf/plugins/outputs/kafka"
-	_ "github.com/influxdata/telegraf/plugins/outputs/kentik"
 	_ "github.com/influxdata/telegraf/plugins/outputs/kinesis"
 	_ "github.com/influxdata/telegraf/plugins/outputs/librato"
 	_ "github.com/influxdata/telegraf/plugins/outputs/mqtt"
@@ -24,4 +24,5 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann_legacy"
 	_ "github.com/influxdata/telegraf/plugins/outputs/socket_writer"
+	_ "github.com/influxdata/telegraf/plugins/outputs/wavefront"
 )

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -14,6 +15,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
@@ -23,7 +26,9 @@ import (
 // Docker object
 type Docker struct {
 	Endpoint       string
-	ContainerNames []string
+	ContainerNames []string // deprecated in 1.4; use container_name_include
+
+	GatherServices bool `toml:"gather_services"`
 
 	Timeout        internal.Duration
 	PerDevice      bool     `toml:"perdevice"`
@@ -34,6 +39,9 @@ type Docker struct {
 
 	ContainerInclude []string `toml:"container_name_include"`
 	ContainerExclude []string `toml:"container_name_exclude"`
+
+	ContainerStateInclude []string `toml:"container_state_include"`
+	ContainerStateExclude []string `toml:"container_state_exclude"`
 
 	SSLCA              string `toml:"ssl_ca"`
 	SSLCert            string `toml:"ssl_cert"`
@@ -49,6 +57,7 @@ type Docker struct {
 	filtersCreated  bool
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
+	stateFilter     filter.Filter
 }
 
 // KB, MB, GB, TB, PB...human friendly
@@ -63,7 +72,8 @@ const (
 )
 
 var (
-	sizeRegex = regexp.MustCompile(`^(\d+(\.\d+)*) ?([kKmMgGtTpP])?[bB]?$`)
+	sizeRegex       = regexp.MustCompile(`^(\d+(\.\d+)*) ?([kKmMgGtTpP])?[bB]?$`)
+	containerStates = []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"}
 )
 
 var sampleConfig = `
@@ -72,6 +82,9 @@ var sampleConfig = `
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
 
+  ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
+  gather_services = false
+
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
 
@@ -79,6 +92,11 @@ var sampleConfig = `
   ## Note that an empty array for both will include all containers
   container_name_include = []
   container_name_exclude = []
+
+  ## Container states to include and exclude. Globs accepted.
+  ## When empty only containers in the "running" state will be captured.
+  # container_state_include = []
+  # container_state_exclude = []
 
   ## Timeout for docker list, info, and stats commands
   timeout = "5s"
@@ -141,6 +159,10 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
+		err = d.createContainerStateFilters()
+		if err != nil {
+			return err
+		}
 		d.filtersCreated = true
 	}
 
@@ -150,8 +172,29 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		acc.AddError(err)
 	}
 
+	if d.GatherServices {
+		err := d.gatherSwarmInfo(acc)
+		if err != nil {
+			acc.AddError(err)
+		}
+	}
+
+	filterArgs := filters.NewArgs()
+	for _, state := range containerStates {
+		if d.stateFilter.Match(state) {
+			filterArgs.Add("status", state)
+		}
+	}
+
+	// All container states were excluded
+	if filterArgs.Len() == 0 {
+		return nil
+	}
+
 	// List containers
-	opts := types.ContainerListOptions{}
+	opts := types.ContainerListOptions{
+		Filters: filterArgs,
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
 	containers, err := d.client.ContainerList(ctx, opts)
@@ -173,6 +216,75 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		}(container)
 	}
 	wg.Wait()
+
+	return nil
+}
+
+func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
+
+	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
+	defer cancel()
+	services, err := d.client.ServiceList(ctx, types.ServiceListOptions{})
+	if err != nil {
+		return err
+	}
+
+	if len(services) > 0 {
+
+		tasks, err := d.client.TaskList(ctx, types.TaskListOptions{})
+		if err != nil {
+			return err
+		}
+
+		nodes, err := d.client.NodeList(ctx, types.NodeListOptions{})
+		if err != nil {
+			return err
+		}
+
+		running := map[string]int{}
+		tasksNoShutdown := map[string]int{}
+
+		activeNodes := make(map[string]struct{})
+		for _, n := range nodes {
+			if n.Status.State != swarm.NodeStateDown {
+				activeNodes[n.ID] = struct{}{}
+			}
+		}
+
+		for _, task := range tasks {
+			if task.DesiredState != swarm.TaskStateShutdown {
+				tasksNoShutdown[task.ServiceID]++
+			}
+
+			if task.Status.State == swarm.TaskStateRunning {
+				running[task.ServiceID]++
+			}
+		}
+
+		for _, service := range services {
+			tags := map[string]string{}
+			fields := make(map[string]interface{})
+			now := time.Now()
+			tags["service_id"] = service.ID
+			tags["service_name"] = service.Spec.Name
+			if service.Spec.Mode.Replicated != nil && service.Spec.Mode.Replicated.Replicas != nil {
+				tags["service_mode"] = "replicated"
+				fields["tasks_running"] = running[service.ID]
+				fields["tasks_desired"] = *service.Spec.Mode.Replicated.Replicas
+			} else if service.Spec.Mode.Global != nil {
+				tags["service_mode"] = "global"
+				fields["tasks_running"] = running[service.ID]
+				fields["tasks_desired"] = tasksNoShutdown[service.ID]
+			} else {
+				log.Printf("E! Unknow Replicas Mode")
+			}
+			// Add metrics
+			acc.AddFields("docker_swarm",
+				fields,
+				tags,
+				now)
+		}
+	}
 
 	return nil
 }
@@ -308,12 +420,13 @@ func (d *Docker) gatherContainer(
 		}
 	}
 
+	info, err := d.client.ContainerInspect(ctx, container.ID)
+	if err != nil {
+		return fmt.Errorf("Error inspecting docker container: %s", err.Error())
+	}
+
 	// Add whitelisted environment variables to tags
 	if len(d.TagEnvironment) > 0 {
-		info, err := d.client.ContainerInspect(ctx, container.ID)
-		if err != nil {
-			return fmt.Errorf("Error inspecting docker container: %s", err.Error())
-		}
 		for _, envvar := range info.Config.Env {
 			for _, configvar := range d.TagEnvironment {
 				dock_env := strings.SplitN(envvar, "=", 2)
@@ -323,6 +436,14 @@ func (d *Docker) gatherContainer(
 				}
 			}
 		}
+	}
+
+	if info.State.Health != nil {
+		healthfields := map[string]interface{}{
+			"health_status":  info.State.Health.Status,
+			"failing_streak": info.ContainerJSONBase.State.Health.FailingStreak,
+		}
+		acc.AddFields("docker_container_health", healthfields, tags, time.Now())
 	}
 
 	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total, daemonOSType)
@@ -673,6 +794,18 @@ func (d *Docker) createLabelFilters() error {
 		return err
 	}
 	d.labelFilter = filter
+	return nil
+}
+
+func (d *Docker) createContainerStateFilters() error {
+	if len(d.ContainerStateInclude) == 0 && len(d.ContainerStateExclude) == 0 {
+		d.ContainerStateInclude = []string{"running"}
+	}
+	filter, err := filter.NewIncludeExcludeFilter(d.ContainerStateInclude, d.ContainerStateExclude)
+	if err != nil {
+		return err
+	}
+	d.stateFilter = filter
 	return nil
 }
 

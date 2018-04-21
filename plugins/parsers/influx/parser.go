@@ -1,64 +1,105 @@
 package influx
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
-	"time"
+	"sync"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
 )
 
-// InfluxParser is an object for Parsing incoming metrics.
-type InfluxParser struct {
-	// DefaultTags will be added to every parsed metric
-	DefaultTags map[string]string
+const (
+	maxErrorBufferSize = 1024
+)
+
+var (
+	ErrNoMetric = errors.New("no metric in line")
+)
+
+type ParseError struct {
+	Offset int
+	msg    string
+	buf    string
 }
 
-func (p *InfluxParser) ParseWithDefaultTimePrecision(buf []byte, t time.Time, precision string) ([]telegraf.Metric, error) {
-	if !bytes.HasSuffix(buf, []byte("\n")) {
-		buf = append(buf, '\n')
+func (e *ParseError) Error() string {
+	buffer := e.buf
+	if len(buffer) > maxErrorBufferSize {
+		buffer = buffer[:maxErrorBufferSize] + "..."
 	}
-	// parse even if the buffer begins with a newline
-	buf = bytes.TrimPrefix(buf, []byte("\n"))
-	metrics, err := metric.ParseWithDefaultTimePrecision(buf, t, precision)
-	if len(p.DefaultTags) > 0 {
-		for _, m := range metrics {
-			for k, v := range p.DefaultTags {
-				// only set the default tag if it doesn't already exist:
-				if !m.HasTag(k) {
-					m.AddTag(k, v)
-				}
+	return fmt.Sprintf("metric parse error: %s at offset %d: %q", e.msg, e.Offset, buffer)
+}
+
+type Parser struct {
+	DefaultTags map[string]string
+
+	sync.Mutex
+	*machine
+	handler *MetricHandler
+}
+
+func NewParser(handler *MetricHandler) *Parser {
+	return &Parser{
+		machine: NewMachine(handler),
+		handler: handler,
+	}
+}
+
+func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
+	p.Lock()
+	defer p.Unlock()
+	metrics := make([]telegraf.Metric, 0)
+	p.machine.SetData(input)
+
+	for p.machine.ParseLine() {
+		err := p.machine.Err()
+		if err != nil {
+			return nil, &ParseError{
+				Offset: p.machine.Position(),
+				msg:    err.Error(),
+				buf:    string(input),
 			}
 		}
+
+		metric, err := p.handler.Metric()
+		if err != nil {
+			return nil, err
+		}
+		p.handler.Reset()
+		metrics = append(metrics, metric)
 	}
-	return metrics, err
+
+	p.applyDefaultTags(metrics)
+	return metrics, nil
 }
 
-// Parse returns a slice of Metrics from a text representation of a
-// metric (in line-protocol format)
-// with each metric separated by newlines. If any metrics fail to parse,
-// a non-nil error will be returned in addition to the metrics that parsed
-// successfully.
-func (p *InfluxParser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	return p.ParseWithDefaultTimePrecision(buf, time.Now(), "")
-}
-
-func (p *InfluxParser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	metrics, err := p.Parse([]byte(line + "\n"))
-
 	if err != nil {
 		return nil, err
 	}
 
 	if len(metrics) < 1 {
-		return nil, fmt.Errorf(
-			"Can not parse the line: %s, for data format: influx ", line)
+		return nil, ErrNoMetric
 	}
 
 	return metrics[0], nil
 }
 
-func (p *InfluxParser) SetDefaultTags(tags map[string]string) {
+func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
+}
+
+func (p *Parser) applyDefaultTags(metrics []telegraf.Metric) {
+	if len(p.DefaultTags) == 0 {
+		return
+	}
+
+	for _, m := range metrics {
+		for k, v := range p.DefaultTags {
+			if !m.HasTag(k) {
+				m.AddTag(k, v)
+			}
+		}
+	}
 }

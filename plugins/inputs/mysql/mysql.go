@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/mysql/v1"
 
 	"github.com/go-sql-driver/mysql"
 )
@@ -40,6 +41,7 @@ type Mysql struct {
 	SSLCA                               string   `toml:"ssl_ca"`
 	SSLCert                             string   `toml:"ssl_cert"`
 	SSLKey                              string   `toml:"ssl_key"`
+	MetricVersion                       int      `toml:"metric_version"`
 }
 
 var sampleConfig = `
@@ -52,6 +54,20 @@ var sampleConfig = `
   #
   ## If no servers are specified, then localhost is used as the host.
   servers = ["tcp(127.0.0.1:3306)/"]
+
+  ## Selects the metric output format.
+  ##
+  ## This option exists to maintain backwards compatibility, if you have
+  ## existing metrics do not set or change this value until you are ready to
+  ## migrate to the new format.
+  ##
+  ## If you do not have existing metrics from this plugin set to the latest
+  ## version.
+  ##
+  ## Telegraf >=1.6: metric_version = 2
+  ##           <1.6: metric_version = 1 (or unset)
+  metric_version = 2
+
   ## the limits for metrics form perf_events_statements
   perf_events_statements_digest_text_limit  = 120
   perf_events_statements_limit              = 250
@@ -147,7 +163,7 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 
 	tlsConfig, err := internal.GetTLSConfig(m.SSLCert, m.SSLKey, m.SSLCA, false)
 	if err != nil {
-		log.Printf("E! MySQL Error registering TLS config: %s", err)
+		return fmt.Errorf("registering TLS config: %s", err)
 	}
 
 	if tlsConfig != nil {
@@ -167,182 +183,6 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 	return nil
-}
-
-type mapping struct {
-	onServer string
-	inExport string
-}
-
-var mappings = []*mapping{
-	{
-		onServer: "Aborted_",
-		inExport: "aborted_",
-	},
-	{
-		onServer: "Bytes_",
-		inExport: "bytes_",
-	},
-	{
-		onServer: "Com_",
-		inExport: "commands_",
-	},
-	{
-		onServer: "Created_",
-		inExport: "created_",
-	},
-	{
-		onServer: "Handler_",
-		inExport: "handler_",
-	},
-	{
-		onServer: "Innodb_",
-		inExport: "innodb_",
-	},
-	{
-		onServer: "Key_",
-		inExport: "key_",
-	},
-	{
-		onServer: "Open_",
-		inExport: "open_",
-	},
-	{
-		onServer: "Opened_",
-		inExport: "opened_",
-	},
-	{
-		onServer: "Qcache_",
-		inExport: "qcache_",
-	},
-	{
-		onServer: "Table_",
-		inExport: "table_",
-	},
-	{
-		onServer: "Tokudb_",
-		inExport: "tokudb_",
-	},
-	{
-		onServer: "Threads_",
-		inExport: "threads_",
-	},
-	{
-		onServer: "Access_",
-		inExport: "access_",
-	},
-	{
-		onServer: "Aria__",
-		inExport: "aria_",
-	},
-	{
-		onServer: "Binlog__",
-		inExport: "binlog_",
-	},
-	{
-		onServer: "Busy_",
-		inExport: "busy_",
-	},
-	{
-		onServer: "Connection_",
-		inExport: "connection_",
-	},
-	{
-		onServer: "Delayed_",
-		inExport: "delayed_",
-	},
-	{
-		onServer: "Empty_",
-		inExport: "empty_",
-	},
-	{
-		onServer: "Executed_",
-		inExport: "executed_",
-	},
-	{
-		onServer: "Executed_",
-		inExport: "executed_",
-	},
-	{
-		onServer: "Feature_",
-		inExport: "feature_",
-	},
-	{
-		onServer: "Flush_",
-		inExport: "flush_",
-	},
-	{
-		onServer: "Last_",
-		inExport: "last_",
-	},
-	{
-		onServer: "Master_",
-		inExport: "master_",
-	},
-	{
-		onServer: "Max_",
-		inExport: "max_",
-	},
-	{
-		onServer: "Memory_",
-		inExport: "memory_",
-	},
-	{
-		onServer: "Not_",
-		inExport: "not_",
-	},
-	{
-		onServer: "Performance_",
-		inExport: "performance_",
-	},
-	{
-		onServer: "Prepared_",
-		inExport: "prepared_",
-	},
-	{
-		onServer: "Rows_",
-		inExport: "rows_",
-	},
-	{
-		onServer: "Rpl_",
-		inExport: "rpl_",
-	},
-	{
-		onServer: "Select_",
-		inExport: "select_",
-	},
-	{
-		onServer: "Slave_",
-		inExport: "slave_",
-	},
-	{
-		onServer: "Slow_",
-		inExport: "slow_",
-	},
-	{
-		onServer: "Sort_",
-		inExport: "sort_",
-	},
-	{
-		onServer: "Subquery_",
-		inExport: "subquery_",
-	},
-	{
-		onServer: "Tc_",
-		inExport: "tc_",
-	},
-	{
-		onServer: "Threadpool_",
-		inExport: "threadpool_",
-	},
-	{
-		onServer: "wsrep_",
-		inExport: "wsrep_",
-	},
-	{
-		onServer: "Uptime_",
-		inExport: "uptime_",
-	},
 }
 
 var (
@@ -588,17 +428,12 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 
 	// Global Variables may be gathered less often
 	if len(m.IntervalSlow) > 0 {
-		if uint32(time.Since(lastT).Seconds()) > scanIntervalSlow {
+		if uint32(time.Since(lastT).Seconds()) >= scanIntervalSlow {
 			err = m.gatherGlobalVariables(db, serv, acc)
 			if err != nil {
 				return err
 			}
 			lastT = time.Now()
-		} else {
-			err = m.gatherGlobalVariables(db, serv, acc)
-			if err != nil {
-				return err
-			}
 		}
 	}
 
@@ -722,9 +557,8 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 			fields[key] = string(val)
 			tags[key] = string(val)
 		}
-		// parse value, if it is numeric then save, otherwise ignore
-		if floatVal, ok := parseValue(val); ok {
-			fields[key] = floatVal
+		if value, ok := m.parseValue(val); ok {
+			fields[key] = value
 		}
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
@@ -774,8 +608,8 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		}
 		// range over columns, and try to parse values
 		for i, col := range cols {
-			// skip unparsable values
-			if value, ok := parseValue(*vals[i].(*sql.RawBytes)); ok {
+			col = strings.ToLower(col)
+			if value, ok := m.parseValue(*vals[i].(*sql.RawBytes)); ok {
 				fields["slave_"+col] = value
 			}
 		}
@@ -825,97 +659,100 @@ func (m *Mysql) gatherBinaryLogs(db *sql.DB, serv string, acc telegraf.Accumulat
 // the mappings of actual names and names of each status to be exported
 // to output is provided on mappings variable
 func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
-	// If user forgot the '/', add it
-	if strings.HasSuffix(serv, ")") {
-		serv = serv + "/"
-	} else if serv == "localhost" {
-		serv = ""
-	}
-
 	// run query
 	rows, err := db.Query(globalStatusQuery)
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	// parse the DSN and save host name as a tag
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 	for rows.Next() {
-		var name string
-		var val interface{}
+		var key string
+		var val sql.RawBytes
 
-		err = rows.Scan(&name, &val)
-		if err != nil {
+		if err = rows.Scan(&key, &val); err != nil {
 			return err
 		}
 
-		var found bool
+		if m.MetricVersion < 2 {
+			var found bool
+			for _, mapped := range v1.Mappings {
+				if strings.HasPrefix(key, mapped.OnServer) {
+					// convert numeric values to integer
+					i, _ := strconv.Atoi(string(val))
+					fields[mapped.InExport+key[len(mapped.OnServer):]] = i
+					found = true
+				}
+			}
+			// Send 20 fields at a time
+			if len(fields) >= 20 {
+				acc.AddFields("mysql", fields, tags)
+				fields = make(map[string]interface{})
+			}
+			if found {
+				continue
+			}
 
-		// iterate over mappings and gather metrics that is provided on mapping
-		for _, mapped := range mappings {
-			if strings.HasPrefix(name, mapped.onServer) {
-				// convert numeric values to integer
-				i, _ := strconv.Atoi(string(val.([]byte)))
-				fields[mapped.inExport+name[len(mapped.onServer):]] = i
-				found = true
+			// search for specific values
+			switch key {
+			case "Queries":
+				i, err := strconv.ParseInt(string(val), 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+				} else {
+					fields["queries"] = i
+				}
+			case "Questions":
+				i, err := strconv.ParseInt(string(val), 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+				} else {
+					fields["questions"] = i
+				}
+			case "Slow_queries":
+				i, err := strconv.ParseInt(string(val), 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+				} else {
+					fields["slow_queries"] = i
+				}
+			case "Connections":
+				i, err := strconv.ParseInt(string(val), 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+				} else {
+					fields["connections"] = i
+				}
+			case "Syncs":
+				i, err := strconv.ParseInt(string(val), 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+				} else {
+					fields["syncs"] = i
+				}
+			case "Uptime":
+				i, err := strconv.ParseInt(string(val), 10, 64)
+				if err != nil {
+					acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", key, err))
+				} else {
+					fields["uptime"] = i
+				}
+			}
+		} else {
+			key = strings.ToLower(key)
+			if value, ok := m.parseValue(val); ok {
+				fields[key] = value
 			}
 		}
+
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
 			acc.AddFields("mysql", fields, tags)
 			fields = make(map[string]interface{})
-		}
-
-		if found {
-			continue
-		}
-
-		// search for specific values
-		switch name {
-		case "Queries":
-			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
-			if err != nil {
-				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
-			} else {
-				fields["queries"] = i
-			}
-		case "Questions":
-			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
-			if err != nil {
-				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
-			} else {
-				fields["questions"] = i
-			}
-		case "Slow_queries":
-			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
-			if err != nil {
-				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
-			} else {
-				fields["slow_queries"] = i
-			}
-		case "Connections":
-			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
-			if err != nil {
-				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
-			} else {
-				fields["connections"] = i
-			}
-		case "Syncs":
-			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
-			if err != nil {
-				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
-			} else {
-				fields["syncs"] = i
-			}
-		case "Uptime":
-			i, err := strconv.ParseInt(string(val.([]byte)), 10, 64)
-			if err != nil {
-				acc.AddError(fmt.Errorf("E! Error mysql: parsing %s int value (%s)", name, err))
-			} else {
-				fields["uptime"] = i
-			}
 		}
 	}
 	// Send any remaining fields
@@ -1064,7 +901,11 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 	for s, c := range stateCounts {
 		fields[newNamespace("threads", s)] = c
 	}
-	acc.AddFields("mysql_info_schema", fields, tags)
+	if m.MetricVersion < 2 {
+		acc.AddFields("mysql_info_schema", fields, tags)
+	} else {
+		acc.AddFields("mysql_process_list", fields, tags)
+	}
 	return nil
 }
 
@@ -1277,7 +1118,11 @@ func (m *Mysql) gatherInfoSchemaAutoIncStatuses(db *sql.DB, serv string, acc tel
 		fields["auto_increment_column"] = incValue
 		fields["auto_increment_column_max"] = maxInt
 
-		acc.AddFields("mysql_info_schema", fields, tags)
+		if m.MetricVersion < 2 {
+			acc.AddFields("mysql_info_schema", fields, tags)
+		} else {
+			acc.AddFields("mysql_table_schema", fields, tags)
+		}
 	}
 	return nil
 }
@@ -1292,21 +1137,19 @@ func (m *Mysql) gatherInnoDBMetrics(db *sql.DB, serv string, acc telegraf.Accumu
 	}
 	defer rows.Close()
 
-	var key string
-	var val sql.RawBytes
-
 	// parse DSN and save server tag
 	servtag := getDSNTag(serv)
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 	for rows.Next() {
+		var key string
+		var val sql.RawBytes
 		if err := rows.Scan(&key, &val); err != nil {
 			return err
 		}
 		key = strings.ToLower(key)
-		// parse value, if it is numeric then save, otherwise ignore
-		if floatVal, ok := parseValue(val); ok {
-			fields[key] = floatVal
+		if value, ok := m.parseValue(val); ok {
+			fields[key] = value
 		}
 		// Send 20 fields at a time
 		if len(fields) >= 20 {
@@ -1676,23 +1519,37 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 			tags["schema"] = tableSchema
 			tags["table"] = tableName
 
-			acc.AddFields(newNamespace("info_schema", "table_rows"),
-				map[string]interface{}{"value": tableRows}, tags)
+			if m.MetricVersion < 2 {
+				acc.AddFields(newNamespace("info_schema", "table_rows"),
+					map[string]interface{}{"value": tableRows}, tags)
 
-			dlTags := copyTags(tags)
-			dlTags["component"] = "data_length"
-			acc.AddFields(newNamespace("info_schema", "table_size", "data_length"),
-				map[string]interface{}{"value": dataLength}, dlTags)
+				dlTags := copyTags(tags)
+				dlTags["component"] = "data_length"
+				acc.AddFields(newNamespace("info_schema", "table_size", "data_length"),
+					map[string]interface{}{"value": dataLength}, dlTags)
 
-			ilTags := copyTags(tags)
-			ilTags["component"] = "index_length"
-			acc.AddFields(newNamespace("info_schema", "table_size", "index_length"),
-				map[string]interface{}{"value": indexLength}, ilTags)
+				ilTags := copyTags(tags)
+				ilTags["component"] = "index_length"
+				acc.AddFields(newNamespace("info_schema", "table_size", "index_length"),
+					map[string]interface{}{"value": indexLength}, ilTags)
 
-			dfTags := copyTags(tags)
-			dfTags["component"] = "data_free"
-			acc.AddFields(newNamespace("info_schema", "table_size", "data_free"),
-				map[string]interface{}{"value": dataFree}, dfTags)
+				dfTags := copyTags(tags)
+				dfTags["component"] = "data_free"
+				acc.AddFields(newNamespace("info_schema", "table_size", "data_free"),
+					map[string]interface{}{"value": dataFree}, dfTags)
+			} else {
+				acc.AddFields("mysql_table_schema",
+					map[string]interface{}{"rows": tableRows}, tags)
+
+				acc.AddFields("mysql_table_schema",
+					map[string]interface{}{"data_length": dataLength}, tags)
+
+				acc.AddFields("mysql_table_schema",
+					map[string]interface{}{"index_length": indexLength}, tags)
+
+				acc.AddFields("mysql_table_schema",
+					map[string]interface{}{"data_free": dataFree}, tags)
+			}
 
 			versionTags := copyTags(tags)
 			versionTags["type"] = tableType
@@ -1700,24 +1557,47 @@ func (m *Mysql) gatherTableSchema(db *sql.DB, serv string, acc telegraf.Accumula
 			versionTags["row_format"] = rowFormat
 			versionTags["create_options"] = createOptions
 
-			acc.AddFields(newNamespace("info_schema", "table_version"),
-				map[string]interface{}{"value": version}, versionTags)
+			if m.MetricVersion < 2 {
+				acc.AddFields(newNamespace("info_schema", "table_version"),
+					map[string]interface{}{"value": version}, versionTags)
+			} else {
+				acc.AddFields("mysql_table_schema_version",
+					map[string]interface{}{"table_version": version}, versionTags)
+			}
 		}
 	}
 	return nil
 }
 
+func (m *Mysql) parseValue(value sql.RawBytes) (interface{}, bool) {
+	if m.MetricVersion < 2 {
+		return v1.ParseValue(value)
+	} else {
+		return parseValue(value)
+	}
+}
+
 // parseValue can be used to convert values such as "ON","OFF","Yes","No" to 0,1
-func parseValue(value sql.RawBytes) (float64, bool) {
-	if bytes.Compare(value, []byte("Yes")) == 0 || bytes.Compare(value, []byte("ON")) == 0 {
+func parseValue(value sql.RawBytes) (interface{}, bool) {
+	if bytes.EqualFold(value, []byte("YES")) || bytes.Compare(value, []byte("ON")) == 0 {
 		return 1, true
 	}
 
-	if bytes.Compare(value, []byte("No")) == 0 || bytes.Compare(value, []byte("OFF")) == 0 {
+	if bytes.EqualFold(value, []byte("NO")) || bytes.Compare(value, []byte("OFF")) == 0 {
 		return 0, true
 	}
-	n, err := strconv.ParseFloat(string(value), 64)
-	return n, err == nil
+
+	if val, err := strconv.ParseInt(string(value), 10, 64); err == nil {
+		return val, true
+	}
+	if val, err := strconv.ParseFloat(string(value), 64); err == nil {
+		return val, true
+	}
+
+	if len(string(value)) > 0 {
+		return string(value), true
+	}
+	return nil, false
 }
 
 // findThreadState can be used to find thread state by command and plain state

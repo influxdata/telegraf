@@ -104,12 +104,20 @@ func TestArgs(t *testing.T) {
 	case "darwin":
 		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
 			"12000.0", "www.google.com"}
-	case "freebsd":
-		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-t",
-			"12.0", "www.google.com"}
 	default:
 		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
 			"12.0", "www.google.com"}
+	}
+
+	p.Deadline = 24
+	actual = p.args("www.google.com")
+	switch runtime.GOOS {
+	case "darwin":
+		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
+			"12000.0", "-t", "24", "www.google.com"}
+	default:
+		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
+			"12.0", "-w", "24", "www.google.com"}
 	}
 
 	sort.Strings(actual)
@@ -122,13 +130,10 @@ func TestArgs(t *testing.T) {
 	switch runtime.GOOS {
 	case "darwin":
 		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
-			"12000.0", "-i", "1.2", "www.google.com"}
-	case "freebsd":
-		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-t",
-			"12.0", "-i", "1.2", "www.google.com"}
+			"12000.0", "-t", "24", "-i", "1.2", "www.google.com"}
 	default:
 		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
-			"12.0", "-i", "1.2", "www.google.com"}
+			"12.0", "-w", "24", "-i", "1.2", "www.google.com"}
 	}
 	sort.Strings(actual)
 	sort.Strings(expected)
@@ -158,6 +163,7 @@ func TestPingGather(t *testing.T) {
 		"average_response_ms":   43.628,
 		"maximum_response_ms":   51.806,
 		"standard_deviation_ms": 5.325,
+		"result_code":           0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 
@@ -198,6 +204,7 @@ func TestLossyPingGather(t *testing.T) {
 		"average_response_ms":   44.033,
 		"maximum_response_ms":   51.806,
 		"standard_deviation_ms": 5.325,
+		"result_code":           0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
@@ -230,6 +237,7 @@ func TestBadPingGather(t *testing.T) {
 		"packets_transmitted": 2,
 		"packets_received":    0,
 		"percent_packet_loss": 100.0,
+		"result_code":         0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
@@ -259,4 +267,27 @@ func TestFatalPingGather(t *testing.T) {
 		"Fatal ping should not have packet measurements")
 	assert.False(t, acc.HasMeasurement("maximum_response_ms"),
 		"Fatal ping should not have packet measurements")
+}
+
+func TestErrorWithHostNamePingGather(t *testing.T) {
+	params := []struct {
+		out   string
+		error error
+	}{
+		{"", errors.New("host www.amazon.com: So very bad")},
+		{"so bad", errors.New("host www.amazon.com: so bad, So very bad")},
+	}
+
+	for _, param := range params {
+		var acc testutil.Accumulator
+		p := Ping{
+			Urls: []string{"www.amazon.com"},
+			pingHost: func(timeout float64, args ...string) (string, error) {
+				return param.out, errors.New("So very bad")
+			},
+		}
+		acc.GatherError(p.Gather)
+		assert.True(t, len(acc.Errors) > 0)
+		assert.Contains(t, acc.Errors, param.error)
+	}
 }

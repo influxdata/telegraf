@@ -1,8 +1,7 @@
 # System Input Plugin
 
 The system plugin gathers general stats on system load, uptime,
-and number of users logged in. It is basically equivalent
-to the unix `uptime` command.
+and number of users logged in. It is similar to the unix `uptime` command.
 
 ### Configuration:
 
@@ -11,28 +10,27 @@ to the unix `uptime` command.
 [[inputs.system]]
   # no configuration
 ```
+#### Permissions:
 
-### Measurements & Fields:
+The `n_users` field requires read access to `/var/run/utmp`, and may require
+the `telegraf` user to be added to the `utmp` group on some systems.
+
+### Metrics:
 
 - system
-    - load1 (float)
-    - load15 (float)
-    - load5 (float)
-    - n_users (integer)
-    - n_cpus (integer)
-    - uptime (integer, seconds)
-    - uptime_format (string)
-
-### Tags:
-
-None
+  - fields:
+	- load1 (float)
+	- load15 (float)
+	- load5 (float)
+	- n_users (integer)
+	- n_cpus (integer)
+	- uptime (integer, seconds)
+	- uptime_format (string)
 
 ### Example Output:
 
 ```
-$ telegraf --config ~/ws/telegraf.conf --input-filter system --test
-* Plugin: system, Collection 1
-* Plugin: inputs.system, Collection 1
-> system,host=tyrion load1=3.72,load5=2.4,load15=2.1,n_users=3i,n_cpus=4i 1483964144000000000
-> system,host=tyrion uptime=1249632i,uptime_format="14 days, 11:07" 1483964144000000000
+system,host=tyrion load1=3.72,load5=2.4,load15=2.1,n_users=3i,n_cpus=4i 1483964144000000000
+system,host=tyrion uptime=1249632i 1483964144000000000
+system,host=tyrion uptime_format="14 days, 11:07" 1483964144000000000
 ```

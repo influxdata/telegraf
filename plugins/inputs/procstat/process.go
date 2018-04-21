@@ -20,6 +20,14 @@ type Process interface {
 	NumThreads() (int32, error)
 	Percent(interval time.Duration) (float64, error)
 	Times() (*cpu.TimesStat, error)
+	RlimitUsage(bool) ([]process.RlimitStat, error)
+}
+
+type PIDFinder interface {
+	PidFile(path string) ([]PID, error)
+	Pattern(pattern string) ([]PID, error)
+	Uid(user string) ([]PID, error)
+	FullPattern(path string) ([]PID, error)
 }
 
 type Proc struct {

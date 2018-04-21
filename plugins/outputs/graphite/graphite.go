@@ -16,7 +16,7 @@ import (
 )
 
 type Graphite struct {
-	// URL is only for backwards compatability
+	// URL is only for backwards compatibility
 	Servers  []string
 	Prefix   string
 	Template string
@@ -155,8 +155,22 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 		batch = append(batch, buf...)
 	}
 
+	err = g.send(batch)
+
+	// try to reconnect and retry to send
+	if err != nil {
+		log.Println("E! Graphite: Reconnecting and retrying: ")
+		g.Connect()
+		err = g.send(batch)
+	}
+
+	return err
+}
+
+func (g *Graphite) send(batch []byte) error {
 	// This will get set to nil if a successful write occurs
-	err = errors.New("Could not write to any Graphite server in cluster\n")
+	err := errors.New("Could not write to any Graphite server in cluster\n")
+
 	// Send data to a random server
 	p := rand.Perm(len(g.conns))
 	for _, n := range p {
@@ -167,6 +181,8 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 		if _, e := g.conns[n].Write(batch); e != nil {
 			// Error
 			log.Println("E! Graphite Error: " + e.Error())
+			// Close explicitely
+			g.conns[n].Close()
 			// Let's try the next one
 		} else {
 			// Success
@@ -174,11 +190,7 @@ func (g *Graphite) Write(metrics []telegraf.Metric) error {
 			break
 		}
 	}
-	// try to reconnect
-	if err != nil {
-		log.Println("E! Reconnecting: ")
-		g.Connect()
-	}
+
 	return err
 }
 

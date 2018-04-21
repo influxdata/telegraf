@@ -284,7 +284,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ```
 
 
-### .NET Montioring
+### .NET Monitoring
 ```
   [[inputs.win_perf_counters.object]]
     # .NET CLR Exceptions, in this case for IIS only

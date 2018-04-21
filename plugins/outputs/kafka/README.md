@@ -8,6 +8,34 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   brokers = ["localhost:9092"]
   ## Kafka topic for producer messages
   topic = "telegraf"
+
+  ## Optional topic suffix configuration.
+  ## If the section is omitted, no suffix is used.
+  ## Following topic suffix methods are supported:
+  ##   measurement - suffix equals to separator + measurement's name
+  ##   tags        - suffix equals to separator + specified tags' values
+  ##                 interleaved with separator
+
+  ## Suffix equals to "_" + measurement's name
+  # [outputs.kafka.topic_suffix]
+  #   method = "measurement"
+  #   separator = "_"
+
+  ## Suffix equals to "__" + measurement's "foo" tag value.
+  ##   If there's no such a tag, suffix equals to an empty string
+  # [outputs.kafka.topic_suffix]
+  #   method = "tags"
+  #   keys = ["foo"]
+  #   separator = "__"
+
+  ## Suffix equals to "_" + measurement's "foo" and "bar"
+  ##   tag values, separated by "_". If there is no such tags,
+  ##   their values treated as empty strings.
+  # [outputs.kafka.topic_suffix]
+  #   method = "tags"
+  #   keys = ["foo", "bar"]
+  #   separator = "_"
+
   ## Telegraf tag to use as a routing key
   ##  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
@@ -57,10 +85,9 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
 * `brokers`: List of strings, this is for speaking to a cluster of `kafka` brokers. On each flush interval, Telegraf will randomly choose one of the urls to write to. Each URL should just include host and port e.g. -> `["{host}:{port}","{host2}:{port2}"]`
 * `topic`: The `kafka` topic to publish to.
 
-
 ### Optional parameters:
 
-* `routing_tag`:  if this tag exists, its value will be used as the routing key
+* `routing_tag`: If this tag exists, its value will be used as the routing key
 * `compression_codec`: What level of compression to use: `0` -> no compression, `1` -> gzip compression, `2` -> snappy compression
 * `required_acks`: a setting for how may `acks` required from the `kafka` broker cluster.
 * `max_retry`: Max number of times to retry failed write
@@ -69,3 +96,5 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
 * `ssl_key`: SSL key
 * `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
 * `data_format`: [About Telegraf data formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)
+* `topic_suffix`: Which, if any, method of calculating `kafka` topic suffix to use.
+For examples, please refer to sample configuration.

@@ -132,6 +132,7 @@ func (p *Parser) Compile() error {
 	// "custom patterns"
 	p.namedPatterns = make([]string, 0, len(p.Patterns))
 	for i, pattern := range p.Patterns {
+		pattern = strings.TrimSpace(pattern)
 		if pattern == "" {
 			continue
 		}
@@ -253,12 +254,30 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		case STRING:
 			fields[k] = strings.Trim(v, `"`)
 		case EPOCH:
-			iv, err := strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				log.Printf("E! Error parsing %s to int: %s", v, err)
-			} else {
-				timestamp = time.Unix(iv, 0)
+			parts := strings.SplitN(v, ".", 2)
+			if len(parts) == 0 {
+				log.Printf("E! Error parsing %s to timestamp: %s", v, err)
+				break
 			}
+
+			sec, err := strconv.ParseInt(parts[0], 10, 64)
+			if err != nil {
+				log.Printf("E! Error parsing %s to timestamp: %s", v, err)
+				break
+			}
+			ts := time.Unix(sec, 0)
+
+			if len(parts) == 2 {
+				padded := fmt.Sprintf("%-9s", parts[1])
+				nsString := strings.Replace(padded[:9], " ", "0", -1)
+				nanosec, err := strconv.ParseInt(nsString, 10, 64)
+				if err != nil {
+					log.Printf("E! Error parsing %s to timestamp: %s", v, err)
+					break
+				}
+				ts = ts.Add(time.Duration(nanosec) * time.Nanosecond)
+			}
+			timestamp = ts
 		case EPOCH_NANO:
 			iv, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
@@ -306,6 +325,10 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				log.Printf("E! Error parsing %s to time layout [%s]: %s", v, t, err)
 			}
 		}
+	}
+
+	if len(fields) == 0 {
+		return nil, fmt.Errorf("logparser_grok: must have one or more fields")
 	}
 
 	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))

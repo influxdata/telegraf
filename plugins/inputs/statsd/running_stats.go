@@ -24,8 +24,10 @@ type RunningStats struct {
 	perc      []float64
 	PercLimit int
 
-	upper float64
+	sum float64
+
 	lower float64
+	upper float64
 
 	// cache if we have sorted the list so that we never re-sort a sorted list,
 	// which can have very bad performance.
@@ -50,6 +52,9 @@ func (rs *RunningStats) AddValue(v float64) {
 	rs.n += 1
 	rs.ex += v - rs.k
 	rs.ex2 += (v - rs.k) * (v - rs.k)
+
+	// add to running sum
+	rs.sum += v
 
 	// track upper and lower bounds
 	if v > rs.upper {
@@ -76,6 +81,10 @@ func (rs *RunningStats) Variance() float64 {
 
 func (rs *RunningStats) Stddev() float64 {
 	return math.Sqrt(rs.Variance())
+}
+
+func (rs *RunningStats) Sum() float64 {
+	return rs.sum
 }
 
 func (rs *RunningStats) Upper() float64 {

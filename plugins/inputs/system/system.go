@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
 
@@ -28,25 +29,31 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	fields := map[string]interface{}{
+		"load1":  loadavg.Load1,
+		"load5":  loadavg.Load5,
+		"load15": loadavg.Load15,
+		"n_cpus": runtime.NumCPU(),
+	}
+
+	users, err := host.Users()
+	if err == nil {
+		fields["n_users"] = len(users)
+	} else if !os.IsPermission(err) {
+		return err
+	}
+
+	acc.AddGauge("system", fields, nil)
+
 	hostinfo, err := host.Info()
 	if err != nil {
 		return err
 	}
 
-	users, err := host.Users()
-	if err != nil {
-		return err
-	}
-
-	acc.AddGauge("system", map[string]interface{}{
-		"load1":   loadavg.Load1,
-		"load5":   loadavg.Load5,
-		"load15":  loadavg.Load15,
-		"n_users": len(users),
-		"n_cpus":  runtime.NumCPU(),
-	}, nil)
 	acc.AddCounter("system", map[string]interface{}{
-		"uptime":        hostinfo.Uptime,
+		"uptime": hostinfo.Uptime,
+	}, nil)
+	acc.AddFields("system", map[string]interface{}{
 		"uptime_format": format_uptime(hostinfo.Uptime),
 	}, nil)
 

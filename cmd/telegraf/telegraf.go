@@ -54,12 +54,10 @@ var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 var fService = flag.String("service", "",
 	"operate on the service")
-
-// Telegraf version, populated linker.
-//   ie, -ldflags "-X main.version=`git describe --always --tags`"
+var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
 var (
-	nextVersion = "1.5.0"
+	nextVersion = "1.6.0"
 	version     string
 	commit      string
 	branch      string
@@ -268,7 +266,7 @@ func (p *program) Stop(s service.Service) error {
 
 func displayVersion() string {
 	if version == "" {
-		return fmt.Sprintf("v%s~pre%s", nextVersion, commit)
+		return fmt.Sprintf("v%s~%s", nextVersion, commit)
 	}
 	return "v" + version
 }
@@ -361,7 +359,7 @@ func main() {
 		return
 	}
 
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == "windows" && !(*fRunAsConsole) {
 		svcConfig := &service.Config{
 			Name:        "telegraf",
 			DisplayName: "Telegraf Data Collector Service",
