@@ -163,8 +163,7 @@ func (t *TopK) generateGroupByKey(m telegraf.Metric) (string, error) {
 		var err error
 		t.tagsGlobs, err = filter.Compile(t.GroupBy)
 		if err != nil {
-			log.Printf("Could not complile tags globs: %s", t.GroupBy)
-			return "", err
+			return "", fmt.Errorf("could not compile pattern: %v %v", t.GroupBy, err)
 		}
 	}
 
@@ -195,7 +194,7 @@ func (t *TopK) groupBy(m telegraf.Metric) {
 	if err != nil {
 		// If we could not generate the groupkey, fail hard
 		// by dropping this and all subsequent metrics
-		log.Print(err)
+		log.Print("E! [processors.topk]: could not generate group key: %v", err)
 		return
 	}
 
