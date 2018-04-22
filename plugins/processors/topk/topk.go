@@ -224,7 +224,6 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	}
 
 	// Add the metrics received to our internal cache
-	var ret []telegraf.Metric = make([]telegraf.Metric, 0, 0)
 	for _, m := range in {
 		t.groupBy(m)
 	}
@@ -232,78 +231,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	// If enough time has passed
 	elapsed := time.Since(t.lastAggregation)
 	if elapsed >= time.Second*time.Duration(t.Period) {
-		// Generate aggregations list using the selected fields
-		aggregations := make([]MetricAggregation, 0, 100)
-		aggregator, err := t.getAggregationFunction(t.Aggregation)
-		if err != nil {
-			// If we could not generate the aggregation
-			// function, fail hard by dropping all metrics
-			log.Print(err)
-			return []telegraf.Metric{}
-		}
-		for k, ms := range t.cache {
-			aggregations = append(aggregations, MetricAggregation{groupbykey: k, values: aggregator(ms, t.Fields)})
-		}
-
-		// Get the top K metrics for each field and add them to the return value
-		addedKeys := make(map[string]bool)
-		aggFieldSuffix := t.AggregateFieldSuffix
-		rankFieldSuffix := t.RankFieldSuffix
-		groupTag := t.AddGroupByTag
-		for _, field := range t.Fields {
-
-			// Sort the aggregations
-			sortMetrics(aggregations, field, t.Bottomk)
-
-			// Create a one dimentional list with the top K metrics of each key
-			for i, ag := range aggregations[0:min(t.K, len(aggregations))] {
-
-				// Check whether of not we need to add fields of tags to the selected metrics
-				if len(t.aggFieldSet) != 0 || len(t.rankFieldSet) != 0 || groupTag != "" {
-					for _, m := range t.cache[ag.groupbykey] {
-
-						// Add the aggregation final value if requested
-						_, addAggField := t.aggFieldSet[field]
-						if addAggField && m.HasField(field) {
-							m.AddField(field+aggFieldSuffix, ag.values[field])
-						}
-
-						// Add the rank relative to the current field if requested
-						_, addRankField := t.rankFieldSet[field]
-						if addRankField && m.HasField(field) {
-							m.AddField(field+rankFieldSuffix, i+1)
-						}
-
-						// Add the generated groupby key if requested
-						if groupTag != "" {
-							m.AddTag(groupTag, ag.groupbykey)
-						}
-					}
-				}
-
-				// Add metrics if we have not already appended them to the return value
-				_, ok := addedKeys[ag.groupbykey]
-				if !ok {
-					ret = append(ret, t.cache[ag.groupbykey]...)
-					addedKeys[ag.groupbykey] = true
-				}
-			}
-		}
-
-		//Lastly, if we were instructed to not drop the bottom metrics, append them as is to the output
-		if !t.DropNonTop {
-			for _, ag := range aggregations {
-				_, ok := addedKeys[ag.groupbykey]
-				if !ok {
-					ret = append(ret, t.cache[ag.groupbykey]...)
-					addedKeys[ag.groupbykey] = true
-				}
-			}
-		}
-
-		t.Reset()
-
-		return ret
+		return push()
 	}
 
 	return []telegraf.Metric{}
@@ -327,7 +255,86 @@ func convert(in interface{}) (float64, bool) {
 	}
 }
 
-// Here we have the function that generates the aggregation functions
+func (t *TopK) push() []telegraf.Metric {
+	// Generate aggregations list using the selected fields
+	aggregations := make([]MetricAggregation, 0, 100)
+	aggregator, err := t.getAggregationFunction(t.Aggregation)
+	if err != nil {
+		// If we could not generate the aggregation
+		// function, fail hard by dropping all metrics
+		log.Print(err)
+		return []telegraf.Metric{}
+	}
+	for k, ms := range t.cache {
+		aggregations = append(aggregations, MetricAggregation{groupbykey: k, values: aggregator(ms, t.Fields)})
+	}
+
+	// The return value that will hold the returned metrics
+	var ret []telegraf.Metric = make([]telegraf.Metric, 0, 0)
+
+	// Get the top K metrics for each field and add them to the return value
+	addedKeys := make(map[string]bool)
+	aggFieldSuffix := t.AggregateFieldSuffix
+	rankFieldSuffix := t.RankFieldSuffix
+	groupTag := t.AddGroupByTag
+	for _, field := range t.Fields {
+
+		// Sort the aggregations
+		sortMetrics(aggregations, field, t.Bottomk)
+
+		// Create a one dimentional list with the top K metrics of each key
+		for i, ag := range aggregations[0:min(t.K, len(aggregations))] {
+
+			// Check whether of not we need to add fields of tags to the selected metrics
+			if len(t.aggFieldSet) != 0 || len(t.rankFieldSet) != 0 || groupTag != "" {
+				for _, m := range t.cache[ag.groupbykey] {
+
+					// Add the aggregation final value if requested
+					_, addAggField := t.aggFieldSet[field]
+					if addAggField && m.HasField(field) {
+						m.AddField(field+aggFieldSuffix, ag.values[field])
+					}
+
+					// Add the rank relative to the current field if requested
+					_, addRankField := t.rankFieldSet[field]
+					if addRankField && m.HasField(field) {
+						m.AddField(field+rankFieldSuffix, i+1)
+					}
+
+					// Add the generated groupby key if requested
+					if groupTag != "" {
+						m.AddTag(groupTag, ag.groupbykey)
+					}
+				}
+			}
+
+			// Add metrics if we have not already appended them to the return value
+			_, ok := addedKeys[ag.groupbykey]
+			if !ok {
+				ret = append(ret, t.cache[ag.groupbykey]...)
+				addedKeys[ag.groupbykey] = true
+			}
+		}
+	}
+
+	//Lastly, if we were instructed to not drop the bottom metrics, append them as is to the output
+	if !t.DropNonTop {
+		for _, ag := range aggregations {
+			_, ok := addedKeys[ag.groupbykey]
+			if !ok {
+				ret = append(ret, t.cache[ag.groupbykey]...)
+				addedKeys[ag.groupbykey] = true
+			}
+		}
+	}
+
+	t.Reset()
+
+	return ret
+}
+
+
+// Function that generates the aggregation functions
 func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metric, []string) map[string]float64, error) {
 
 	// This is a function aggregates a set of metrics using a given aggregation function
