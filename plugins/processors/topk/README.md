@@ -25,9 +25,6 @@ If only the very top k metrics are needed, regardless of grouping, the simple_to
   ## empty list is no aggregation over tags is done
   # group_by = ['*']
 
-  ## Wheter or not to also group by metric name
-  # group_by_metric_name = true
-
   ## The plugin can aggregate over several fields. If more than one field is
   ## specified, an aggregation is calculated per group per field.
 
@@ -61,7 +58,7 @@ If only the very top k metrics are needed, regardless of grouping, the simple_to
   ## tags. If this setting is different than "" the plugin will add a
   ## tag (which name will be the value of this setting) to each metric with
   ## the value of the calculated GroupBy tag. Useful for debugging
-  # group_by_tag = ""
+  # add_groupby_tag = ""
 
   ## These settings provide a way to know the position of each metric in
   ## the top k. The 'add_rank_field' setting allows to specify for which
@@ -71,7 +68,7 @@ If only the very top k metrics are needed, regardless of grouping, the simple_to
   ## the metric belonged to when aggregated over that field.
   ## The name of the field will be set to the name of the aggregation field,
   ## suffixed by the value of the 'rank_field_suffix' setting
-  # add_rank_field = []
+  # add_rank_fields = []
   # rank_field_suffix = "_rank"
 
   ## These settings provide a way to know what values the plugin is generating
@@ -83,7 +80,7 @@ If only the very top k metrics are needed, regardless of grouping, the simple_to
   ## aggregated over that field.
   ## The name of the field will be set to the name of the aggregation field,
   ## suffixed by the value of the 'aggregate_field_suffix' setting
-  # add_aggregate_field = []
+  # add_aggregate_fields = []
   # aggregate_field_suffix = "_rank"
 ```
 
