@@ -17,12 +17,10 @@ type TopK struct {
 	Period               int
 	K                    int
 	GroupBy              []string `toml:"group_by"`
-	GroupByMetricName    bool     `toml:"group_by_metric_name"`
 	Fields               []string
 	Aggregation          string
 	Bottomk              bool
 	SimpleTopk           bool     `toml:"simple_topk"`
-	DropNoGroup          bool     `toml:"drop_no_group"`
 	DropNonTop           bool     `toml:"drop_non_top"`
 	AddGroupByTag        string   `toml:"add_groupby_tag"`
 	AddRankField         []string `toml:"add_rank_field"`
@@ -47,10 +45,8 @@ func New() *TopK {
 	topk.Fields = []string{"value"}
 	topk.Aggregation = "mean"
 	topk.GroupBy = []string{"*"}
-	topk.GroupByMetricName = true
 	topk.AddGroupByTag = ""
 	topk.SimpleTopk = false
-	topk.DropNoGroup = true
 	topk.DropNonTop = true
 	topk.AddRankField = []string{""}
 	topk.RankFieldSuffix = "_rank"
@@ -75,9 +71,6 @@ var sampleConfig = `
   ## empty list is no aggregation over tags is done
   # group_by = ['*']
 
-  ## Wheter or not to also group by metric name
-  # group_by_metric_name = true
-
   ## Over which fields are the top k are calculated
   # fields = ["value"]
 
@@ -90,9 +83,6 @@ var sampleConfig = `
   ## If true, this will override any GroupBy options and assign each metric
   ## its own individual group. Default: false
   # simple_topk = false
-
-  ## Drop any metrics that do fit in any group (due to nonexistent tags)
-  # drop_no_group = true
 
   ## Drop the metrics that do not make the cut for the top k
   # drop_non_top = true          
@@ -178,11 +168,7 @@ func (t *TopK) generateGroupByKey(m telegraf.Metric) (string, error) {
 		}
 	}
 
-	groupkey := ""
-
-	if t.GroupByMetricName {
-		groupkey += m.Name() + "&"
-	}
+	groupkey := m.Name() + "&"
 
 	if len(t.GroupBy) > 0 {
 		tags := m.Tags()
@@ -200,10 +186,6 @@ func (t *TopK) generateGroupByKey(m telegraf.Metric) (string, error) {
 		}
 	}
 
-	if groupkey == "" && !t.DropNoGroup {
-		groupkey = "<<default_groupby_key>>"
-	}
-
 	return groupkey, nil
 }
 
@@ -214,11 +196,6 @@ func (t *TopK) groupBy(m telegraf.Metric) {
 		// If we could not generate the groupkey, fail hard
 		// by dropping this and all subsequent metrics
 		log.Print(err)
-		return
-	}
-
-	// If the groupkey is empty, it means we are supposed to drop this metric
-	if groupkey == "" {
 		return
 	}
 
