@@ -86,9 +86,9 @@ If only the very top k metrics are needed, regardless of grouping, the simple_to
 
 ### Tags:
 
-This processor does not add tags by default. But the setting `group_by_tag` will add a tag if set to anything other than ""
+This processor does not add tags by default. But the setting `add_groupby_tag` will add a tag if set to anything other than ""
 
 
 ### Fields:
 
-This processor does not add fields by default. But the settings `position_field` and `aggregation_field` will add one or several fields if set to anything other than ""
+This processor does not add fields by default. But the settings `add_rank_fields` and `add_aggregation_fields` will add one or several fields if set to anything other than ""
