@@ -264,7 +264,7 @@ func (t *TopK) push() []telegraf.Metric {
 	if err != nil {
 		// If we could not generate the aggregation
 		// function, fail hard by dropping all metrics
-		log.Print(err)
+		log.Print("E! [processors.topk]: %v", err)
 		return []telegraf.Metric{}
 	}
 	for k, ms := range t.cache {
