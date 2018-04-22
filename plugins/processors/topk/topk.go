@@ -23,9 +23,9 @@ type TopK struct {
 	SimpleTopk           bool     `toml:"simple_topk"`
 	DropNonTop           bool     `toml:"drop_non_top"`
 	AddGroupByTag        string   `toml:"add_groupby_tag"`
-	AddRankField         []string `toml:"add_rank_field"`
+	AddRankFields        []string `toml:"add_rank_fields"`
 	RankFieldSuffix      string   `toml:"rank_field_suffix"`
-	AddAggregateField    []string `toml:"add_aggregate_field"`
+	AddAggregateFields   []string `toml:"add_aggregate_fields"`
 	AggregateFieldSuffix string   `toml:"aggregate_field_suffix"`
 
 	cache           map[string][]telegraf.Metric
@@ -48,9 +48,9 @@ func New() *TopK {
 	topk.AddGroupByTag = ""
 	topk.SimpleTopk = false
 	topk.DropNonTop = true
-	topk.AddRankField = []string{""}
+	topk.AddRankFields = []string{""}
 	topk.RankFieldSuffix = "_rank"
-	topk.AddAggregateField = []string{""}
+	topk.AddAggregateFields = []string{""}
 	topk.AggregateFieldSuffix = "_aggregate"
 
 	// Initialize cache
@@ -101,7 +101,7 @@ var sampleConfig = `
   ## the metric belonged to when aggregated over that field.
   ## The name of the field will be set to the name of the aggregation field,
   ## suffixed by the value of the 'rank_field_suffix' setting
-  # add_rank_field = []
+  # add_rank_fields = []
   # rank_field_suffix = "_rank"
 
   ## These settings provide a way to know what values the plugin is generating
@@ -113,7 +113,7 @@ var sampleConfig = `
   ## aggregated over that field.
   ## The name of the field will be set to the name of the aggregation field,
   ## suffixed by the value of the 'aggregate_field_suffix' setting
-  # add_aggregate_field = []
+  # add_aggregate_fields = []
   # aggregate_field_suffix = "_aggregate"
 `
 
@@ -212,13 +212,13 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	// Init any internal datastructures that are not initialized yet
 	if t.rankFieldSet == nil {
 		t.rankFieldSet = make(map[string]bool)
-		for _, f := range t.AddRankField {
+		for _, f := range t.AddRankFields {
 			t.rankFieldSet[f] = true
 		}
 	}
 	if t.aggFieldSet == nil {
 		t.aggFieldSet = make(map[string]bool)
-		for _, f := range t.AddAggregateField {
+		for _, f := range t.AddAggregateFields {
 			t.aggFieldSet[f] = true
 		}
 	}
