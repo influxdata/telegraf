@@ -206,6 +206,11 @@ func (t *TopK) groupBy(m telegraf.Metric) {
 
 	// Append the metric to the corresponding key list
 	t.cache[groupkey] = append(t.cache[groupkey], m)
+
+	// Add the generated groupby key tag to the metric if requested
+	if t.AddGroupTag != "" {
+		m.AddTag(t.AddGroupTag, groupkey)
+	}
 }
 
 func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
@@ -301,11 +306,6 @@ func (t *TopK) push() []telegraf.Metric {
 					_, addRankField := t.rankFieldSet[field]
 					if addRankField && m.HasField(field) {
 						m.AddField(field+rankFieldSuffix, i+1)
-					}
-
-					// Add the generated groupby key if requested
-					if groupTag != "" {
-						m.AddTag(groupTag, ag.groupbykey)
 					}
 				}
 			}
