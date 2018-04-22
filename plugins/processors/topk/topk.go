@@ -11,10 +11,11 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"github.com/influxdata/telegraf/internal"
 )
 
 type TopK struct {
-	Period               int
+	Period               internal.Duration
 	K                    int
 	GroupBy              []string `toml:"group_by"`
 	Fields               []string
@@ -40,7 +41,7 @@ func New() *TopK {
 	topk := TopK{}
 
 	// Setup defaults
-	topk.Period = 10
+	topk.Period = internal.Duration{Duration: time.Second*time.Duration(10)}
 	topk.K = 10
 	topk.Fields = []string{"value"}
 	topk.Aggregation = "mean"
@@ -229,7 +230,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 	// If enough time has passed
 	elapsed := time.Since(t.lastAggregation)
-	if elapsed >= time.Second*time.Duration(t.Period) {
+	if elapsed >= t.Period.Duration {
 		return push()
 	}
 
