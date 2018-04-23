@@ -149,6 +149,9 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 		} else {
 			tlsConfig, err = internal.GetTLSConfig(
 				m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
+			if err != nil {
+				return err
+			}
 		}
 
 		// If configured to use TLS, add a dial function
