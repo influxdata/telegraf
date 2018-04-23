@@ -122,7 +122,7 @@ unsigned =
 	( digit | ( non_zero_digit digit* ) );
 
 number =
-	( integer ( '.' digit* )? ) | ( '.' digit* );
+	'-'? (digit+ ('.' digit*)? | '.' digit+);
 
 scientific =
 	number 'e'i ["\-+"]? digit+;
