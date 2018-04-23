@@ -82,6 +82,15 @@ The LeoFS plugin gathers metrics of LeoGateway, LeoManager, and LeoStorage using
 - mq_mdcr_num_of_msg_req_comp_metadata
 - mq_mdcr_num_of_msg_req_sync_obj
 
+Note: The following items are available since LeoFS v1.4.0:
+
+- mq_num_of_msg_recovery_node
+- mq_num_of_msg_deletion_dir
+- mq_num_of_msg_async_deletion_dir
+- mq_num_of_msg_req_deletion_dir
+- mq_mdcr_num_of_msg_req_comp_metadata
+- mq_mdcr_num_of_msg_req_sync_obj
+
 #### Data Compaction
 
 - comp_state
@@ -90,6 +99,8 @@ The LeoFS plugin gathers metrics of LeoGateway, LeoManager, and LeoStorage using
 - comp_num_of_pending_targets
 - comp_num_of_ongoing_targets
 - comp_num_of_out_of_targets
+
+Note: The all items are available since LeoFS v1.4.0.
 
 ### Statistics specific to the internals of LeoGateway
 #### Erlang VM
