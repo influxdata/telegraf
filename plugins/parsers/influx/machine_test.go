@@ -518,6 +518,55 @@ var tests = []struct {
 		},
 	},
 	{
+		name:  "float without integer digits negative",
+		input: []byte("cpu value=-.42"),
+		results: []Result{
+			Result{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			Result{
+				Name:  FieldKey,
+				Value: []byte("value"),
+			},
+			Result{
+				Name:  FieldFloat,
+				Value: []byte("-.42"),
+			},
+		},
+	},
+	{
+		name:  "float with multiple leading 0",
+		input: []byte("cpu value=00.42"),
+		results: []Result{
+			Result{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			Result{
+				Name:  FieldKey,
+				Value: []byte("value"),
+			},
+			Result{
+				Name:  FieldFloat,
+				Value: []byte("00.42"),
+			},
+		},
+	},
+	{
+		name:  "invalid float with only dot",
+		input: []byte("cpu value=."),
+		results: []Result{
+			Result{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			Result{
+				err: ErrFieldParse,
+			},
+		},
+	},
+	{
 		name:  "multiple fields",
 		input: []byte("cpu x=42,y=42"),
 		results: []Result{
