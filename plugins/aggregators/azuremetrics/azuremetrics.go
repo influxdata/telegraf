@@ -175,8 +175,9 @@ func (m *AzureMetrics) Push(acc telegraf.Accumulator) {
 		}
 
 		if len(fields) > 0 {
-			aggregate.tags[constants.PERIOD] = m.Period
-			acc.AddFields(aggregate.name, fields, aggregate.tags)
+			tags := aggregate.tags
+			tags[constants.PERIOD] = m.Period
+			acc.AddFields(aggregate.name, fields, tags)
 		}
 	}
 }
