@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	version        string
+	version        = "1.24"
 	defaultHeaders = map[string]string{"User-Agent": "engine-api-cli-1.0"}
 )
 

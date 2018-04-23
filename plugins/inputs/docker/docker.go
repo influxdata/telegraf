@@ -54,6 +54,7 @@ type Docker struct {
 	client          Client
 	httpClient      *http.Client
 	engine_host     string
+	serverVersion   string
 	filtersCreated  bool
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
@@ -301,7 +302,14 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
+
 	d.engine_host = info.Name
+	d.serverVersion = info.ServerVersion
+
+	tags := map[string]string{
+		"engine_host":    d.engine_host,
+		"server_version": d.serverVersion,
+	}
 
 	fields := map[string]interface{}{
 		"n_cpus":                  info.NCPU,
@@ -315,15 +323,13 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 		"n_listener_events":       info.NEventsListener,
 	}
 	// Add metrics
-	acc.AddFields("docker",
-		fields,
-		map[string]string{"engine_host": d.engine_host},
-		now)
+	acc.AddFields("docker", fields, tags, now)
 	acc.AddFields("docker",
 		map[string]interface{}{"memory_total": info.MemTotal},
-		map[string]string{"unit": "bytes", "engine_host": d.engine_host},
+		tags,
 		now)
 	// Get storage metrics
+	tags["unit"] = "bytes"
 	for _, rawData := range info.DriverStatus {
 		// Try to convert string to int (bytes)
 		value, err := parseSize(rawData[1])
@@ -335,7 +341,7 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 			// pool blocksize
 			acc.AddFields("docker",
 				map[string]interface{}{"pool_blocksize": value},
-				map[string]string{"unit": "bytes", "engine_host": d.engine_host},
+				tags,
 				now)
 		} else if strings.HasPrefix(name, "data_space_") {
 			// data space
@@ -348,16 +354,10 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 		}
 	}
 	if len(dataFields) > 0 {
-		acc.AddFields("docker_data",
-			dataFields,
-			map[string]string{"unit": "bytes", "engine_host": d.engine_host},
-			now)
+		acc.AddFields("docker_data", dataFields, tags, now)
 	}
 	if len(metadataFields) > 0 {
-		acc.AddFields("docker_metadata",
-			metadataFields,
-			map[string]string{"unit": "bytes", "engine_host": d.engine_host},
-			now)
+		acc.AddFields("docker_metadata", metadataFields, tags, now)
 	}
 	return nil
 }
@@ -388,6 +388,7 @@ func (d *Docker) gatherContainer(
 
 	tags := map[string]string{
 		"engine_host":       d.engine_host,
+		"server_version":    d.serverVersion,
 		"container_name":    cname,
 		"container_image":   imageName,
 		"container_version": imageVersion,
