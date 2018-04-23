@@ -31,6 +31,13 @@
 
 - [http](./plugins/outputs/http/README.md) - Contributed by @Dark0096
 - [application_insights](./plugins/outputs/application_insights/README.md): Contribute by @karolz-ms
+## v1.6.1 [unreleased]
+## v1.7 [unreleased]
+
+### New Inputs
+
+- [fibaro](./plugins/inputs/fibaro/README.md) - Contributed by @dynek
+- [nvidia_smi](./plugins/inputs/nvidia_smi/README.md) - Contributed by @jackzampolin
 
 ### Features
 
