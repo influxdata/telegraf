@@ -19,6 +19,11 @@
 - [#3999](https://github.com/influxdata/telegraf/pull/3999): Skip files with leading `..` in config directory.
 - [#4021](https://github.com/influxdata/telegraf/pull/4021): Add TLS support to socket_writer and socket_listener plugins.
 - [#4025](https://github.com/influxdata/telegraf/pull/4025): Add snmp input option to strip non fixed length index suffixes.
+- [#4035](https://github.com/influxdata/telegraf/pull/4035): Add server version tag to docker input.
+
+### Bugfixes
+
+- [#4018](https://github.com/influxdata/telegraf/pull/4018): Write to working file outputs if any files are not writeable.
 
 ## v1.6.1 [2018-04-23]
 
