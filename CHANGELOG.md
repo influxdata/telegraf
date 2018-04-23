@@ -13,7 +13,7 @@
 - [#4021](https://github.com/influxdata/telegraf/pull/4021): Add TLS support to socket_writer and socket_listener plugins.
 - [#4025](https://github.com/influxdata/telegraf/pull/4025): Add snmp input option to strip non fixed length index suffixes.
 
-## v1.6.1 [unreleased]
+## v1.6.1 [2018-04-23]
 
 ### Bugfixes
 
@@ -24,6 +24,9 @@
 - [#4037](https://github.com/influxdata/telegraf/issues/4037): Fix uptime reporting in system input when ran inside docker.
 - [#3750](https://github.com/influxdata/telegraf/issues/3750): Fix mem input "cannot allocate memory" error on FreeBSD based systems.
 - [#4056](https://github.com/influxdata/telegraf/pull/4056): Fix duplicate tags when overriding an existing tag.
+- [#4062](https://github.com/influxdata/telegraf/pull/4062): Add server argument as first argument in unbound input.
+- [#4063](https://github.com/influxdata/telegraf/issues/4063): Fix handling of floats with multiple leading zeroes.
+- [#4064](https://github.com/influxdata/telegraf/issues/4064): Return errors in mongodb SSL/TLS configuration.
 
 ## v1.6 [2018-04-16]
 
