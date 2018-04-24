@@ -52,8 +52,7 @@ GO
   ## - DatabaseStats
   ## - MemoryClerk
   ## - VolumeSpace
-  ## - PerformanceMetrics
-  # exclude_query = [ 'PerformanceCounters','WaitStatsCatagorized' ]
+  exclude_query = [ 'DatabaseIO' ]
 ```
 
 ### Metrics:
@@ -89,10 +88,46 @@ The new (version 2) metrics provide:
   - *Log activity*: Log bytes flushed/sec, Log flushes/sec, Log Flush Wait Time
   - *Memory*: PLE, Page reads/sec, Page writes/sec, + more
   - *TempDB*: Free space, Version store usage, Active temp tables, temp table creation rate, + more
-  - *Resource Governor*: CPU Usage, Requests/sec, Queued Requests, and Blocked tasks per workload group
+  - *Resource Governor*: CPU Usage, Requests/sec, Queued Requests, and Blocked tasks per workload group + more
 - *Server properties*: Number of databases in all possible states (online, offline, suspect, etc.), cpu count, physical memory, SQL Server service uptime, and SQL Server version
 - *Wait stats*: Wait time in ms, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the sasme categories used in Query Store.
 
+The following metrics can be used directly, with no delta calculations:
+ - SQLServer:Buffer Manager\Buffer cache hit ratio
+ - SQLServer:Buffer Manager\Page life expectancy
+ - SQLServer:Buffer Node\Page life expectancy
+ - SQLServer:Database Replica\Log Apply Pending Queue
+ - SQLServer:Database Replica\Log Apply Ready Queue
+ - SQLServer:Database Replica\Log Send Queue
+ - SQLServer:Database Replica\Recovery Queue
+ - SQLServer:Databases\Data File(s) Size (KB)
+ - SQLServer:Databases\Log File(s) Size (KB)
+ - SQLServer:Databases\Log File(s) Used Size (KB)
+ - SQLServer:Databases\XTP Memory Used (KB)
+ - SQLServer:General Statistics\Active Temp Tables
+ - SQLServer:General Statistics\Processes blocked
+ - SQLServer:General Statistics\Temp Tables For Destruction
+ - SQLServer:General Statistics\User Connections
+ - SQLServer:Memory Broker Clerks\Memory broker clerk size
+ - SQLServer:Memory Manager\Memory Grants Pending
+ - SQLServer:Memory Manager\Target Server Memory (KB)
+ - SQLServer:Memory Manager\Total Server Memory (KB)
+ - SQLServer:Resource Pool Stats\Active memory grant amount (KB)
+ - SQLServer:Resource Pool Stats\Disk Read Bytes/sec
+ - SQLServer:Resource Pool Stats\Disk Read IO Throttled/sec
+ - SQLServer:Resource Pool Stats\Disk Read IO/sec
+ - SQLServer:Resource Pool Stats\Disk Write Bytes/sec
+ - SQLServer:Resource Pool Stats\Disk Write IO Throttled/sec
+ - SQLServer:Resource Pool Stats\Disk Write IO/sec
+ - SQLServer:Resource Pool Stats\Used memory (KB)
+ - SQLServer:Transactions\Free Space in tempdb (KB)
+ - SQLServer:Transactions\Version Store Size (KB)
+ - SQLServer:User Settable\Query
+ - SQLServer:Workload Group Stats\Blocked tasks
+ - SQLServer:Workload Group Stats\CPU usage %
+ - SQLServer:Workload Group Stats\Queued requests
+ - SQLServer:Workload Group Stats\Requests completed/sec
+
 Version 2 queries have the following tags:
-- `host`: Physical host name
 - `sql_instance`: Physical host and instance name (hostname:instance)
+

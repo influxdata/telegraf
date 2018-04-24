@@ -112,9 +112,10 @@ func RandomString(n int) string {
 	return string(bytes)
 }
 
-// GetTLSConfig gets a tls.Config object from the given certs, key, and CA files.
-// you must give the full path to the files.
-// If all files are blank and InsecureSkipVerify=false, returns a nil pointer.
+// GetTLSConfig gets a tls.Config object from the given certs, key, and CA files
+// for use with a client.
+// The full path to each file must be provided.
+// Returns a nil pointer if all files are blank and InsecureSkipVerify=false.
 func GetTLSConfig(
 	SSLCert, SSLKey, SSLCA string,
 	InsecureSkipVerify bool,
@@ -152,6 +153,50 @@ func GetTLSConfig(
 	}
 
 	// will be nil by default if nothing is provided
+	return t, nil
+}
+
+// GetServerTLSConfig gets a tls.Config object from the given certs, key, and one or more CA files
+// for use with a server.
+// The full path to each file must be provided.
+// Returns a nil pointer if all files are blank.
+func GetServerTLSConfig(
+	TLSCert, TLSKey string,
+	TLSAllowedCACerts []string,
+) (*tls.Config, error) {
+	if TLSCert == "" && TLSKey == "" && len(TLSAllowedCACerts) == 0 {
+		return nil, nil
+	}
+
+	t := &tls.Config{}
+
+	if len(TLSAllowedCACerts) != 0 {
+		caCertPool := x509.NewCertPool()
+		for _, cert := range TLSAllowedCACerts {
+			c, err := ioutil.ReadFile(cert)
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf("Could not load TLS CA: %s",
+					err))
+			}
+			caCertPool.AppendCertsFromPEM(c)
+		}
+		t.ClientCAs = caCertPool
+		t.ClientAuth = tls.RequireAndVerifyClientCert
+	}
+
+	if TLSCert != "" && TLSKey != "" {
+		cert, err := tls.LoadX509KeyPair(TLSCert, TLSKey)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf(
+				"Could not load TLS client key/certificate from %s:%s: %s",
+				TLSKey, TLSCert, err))
+		}
+
+		t.Certificates = []tls.Certificate{cert}
+	}
+
+	t.BuildNameToCertificate()
+
 	return t, nil
 }
 

@@ -14,6 +14,13 @@ The Kapacitor plugin will collect metrics from the given Kapacitor instances.
 
   ## Time limit for http requests
   timeout = "5s"
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 ```
 
 ### Measurements & Fields

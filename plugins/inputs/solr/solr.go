@@ -3,6 +3,7 @@ package solr
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -78,22 +79,7 @@ type Core struct {
 // QueryHandler is an exported type that
 // contains query handler metrics
 type QueryHandler struct {
-	Stats struct {
-		One5minRateReqsPerSecond float64 `json:"15minRateReqsPerSecond"`
-		FiveMinRateReqsPerSecond float64 `json:"5minRateReqsPerSecond"`
-		Seven5thPcRequestTime    float64 `json:"75thPcRequestTime"`
-		Nine5thPcRequestTime     float64 `json:"95thPcRequestTime"`
-		Nine99thPcRequestTime    float64 `json:"999thPcRequestTime"`
-		Nine9thPcRequestTime     float64 `json:"99thPcRequestTime"`
-		AvgRequestsPerSecond     float64 `json:"avgRequestsPerSecond"`
-		AvgTimePerRequest        float64 `json:"avgTimePerRequest"`
-		Errors                   int64   `json:"errors"`
-		HandlerStart             int64   `json:"handlerStart"`
-		MedianRequestTime        float64 `json:"medianRequestTime"`
-		Requests                 int64   `json:"requests"`
-		Timeouts                 int64   `json:"timeouts"`
-		TotalTime                float64 `json:"totalTime"`
-	} `json:"stats"`
+	Stats interface{} `json:"stats"`
 }
 
 // UpdateHandler is an exported type that
@@ -286,22 +272,22 @@ func addQueryHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansDa
 	}
 
 	for name, metrics := range queryMetrics {
-		coreFields := map[string]interface{}{
-			"15min_rate_reqs_per_second": metrics.Stats.One5minRateReqsPerSecond,
-			"5min_rate_reqs_per_second":  metrics.Stats.FiveMinRateReqsPerSecond,
-			"75th_pc_request_time":       metrics.Stats.Seven5thPcRequestTime,
-			"95th_pc_request_time":       metrics.Stats.Nine5thPcRequestTime,
-			"999th_pc_request_time":      metrics.Stats.Nine99thPcRequestTime,
-			"99th_pc_request_time":       metrics.Stats.Nine9thPcRequestTime,
-			"avg_requests_per_second":    metrics.Stats.AvgRequestsPerSecond,
-			"avg_time_per_request":       metrics.Stats.AvgTimePerRequest,
-			"errors":                     metrics.Stats.Errors,
-			"handler_start":              metrics.Stats.HandlerStart,
-			"median_request_time":        metrics.Stats.MedianRequestTime,
-			"requests":                   metrics.Stats.Requests,
-			"timeouts":                   metrics.Stats.Timeouts,
-			"total_time":                 metrics.Stats.TotalTime,
+		var coreFields map[string]interface{}
+
+		if metrics.Stats == nil {
+			continue
 		}
+
+		switch v := metrics.Stats.(type) {
+		case []interface{}:
+			m := convertArrayToMap(v)
+			coreFields = convertQueryHandlerMap(m)
+		case map[string]interface{}:
+			coreFields = convertQueryHandlerMap(v)
+		default:
+			continue
+		}
+
 		acc.AddFields(
 			"solr_queryhandler",
 			coreFields,
@@ -310,8 +296,42 @@ func addQueryHandlerMetricsToAcc(acc telegraf.Accumulator, core string, mBeansDa
 				"handler": name},
 			time,
 		)
+
 	}
 	return nil
+}
+
+func convertArrayToMap(values []interface{}) map[string]interface{} {
+	var key string
+	result := make(map[string]interface{})
+	for i, item := range values {
+		if i%2 == 0 {
+			key = fmt.Sprintf("%v", item)
+		} else {
+			result[key] = item
+		}
+	}
+
+	return result
+}
+
+func convertQueryHandlerMap(value map[string]interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		"15min_rate_reqs_per_second": getFloat(value["15minRateReqsPerSecond"]),
+		"5min_rate_reqs_per_second":  getFloat(value["5minRateReqsPerSecond"]),
+		"75th_pc_request_time":       getFloat(value["75thPcRequestTime"]),
+		"95th_pc_request_time":       getFloat(value["95thPcRequestTime"]),
+		"99th_pc_request_time":       getFloat(value["99thPcRequestTime"]),
+		"999th_pc_request_time":      getFloat(value["999thPcRequestTime"]),
+		"avg_requests_per_second":    getFloat(value["avgRequestsPerSecond"]),
+		"avg_time_per_request":       getFloat(value["avgTimePerRequest"]),
+		"errors":                     getInt(value["errors"]),
+		"handler_start":              getInt(value["handlerStart"]),
+		"median_request_time":        getFloat(value["medianRequestTime"]),
+		"requests":                   getInt(value["requests"]),
+		"timeouts":                   getInt(value["timeouts"]),
+		"total_time":                 getFloat(value["totalTime"]),
+	}
 }
 
 // Add update metrics section to accumulator
@@ -366,10 +386,31 @@ func getFloat(unk interface{}) float64 {
 	case float64:
 		return i
 	case string:
-		f, _ := strconv.ParseFloat(i, 64)
+		f, err := strconv.ParseFloat(i, 64)
+		if err != nil || math.IsNaN(f) {
+			return float64(0)
+		}
 		return f
 	default:
 		return float64(0)
+	}
+}
+
+// Get int64 from interface
+func getInt(unk interface{}) int64 {
+	switch i := unk.(type) {
+	case int64:
+		return i
+	case float64:
+		return int64(i)
+	case string:
+		v, err := strconv.ParseInt(i, 10, 64)
+		if err != nil {
+			return int64(0)
+		}
+		return v
+	default:
+		return int64(0)
 	}
 }
 

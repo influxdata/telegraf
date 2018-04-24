@@ -9,10 +9,11 @@ import (
 )
 
 type MongodbData struct {
-	StatLine *StatLine
-	Fields   map[string]interface{}
-	Tags     map[string]string
-	DbData   []DbData
+	StatLine      *StatLine
+	Fields        map[string]interface{}
+	Tags          map[string]string
+	DbData        []DbData
+	ShardHostData []DbData
 }
 
 type DbData struct {
@@ -60,10 +61,25 @@ var DefaultReplStats = map[string]string{
 	"member_status":         "NodeType",
 	"state":                 "NodeState",
 	"repl_lag":              "ReplLag",
+	"repl_oplog_window_sec": "OplogTimeDiff",
 }
 
 var DefaultClusterStats = map[string]string{
 	"jumbo_chunks": "JumboChunksCount",
+}
+
+var DefaultShardStats = map[string]string{
+	"total_in_use":     "TotalInUse",
+	"total_available":  "TotalAvailable",
+	"total_created":    "TotalCreated",
+	"total_refreshing": "TotalRefreshing",
+}
+
+var ShardHostStats = map[string]string{
+	"in_use":     "InUse",
+	"available":  "Available",
+	"created":    "Created",
+	"refreshing": "Refreshing",
 }
 
 var MmapStats = map[string]string{
@@ -120,6 +136,22 @@ func (d *MongodbData) AddDbStats() {
 	}
 }
 
+func (d *MongodbData) AddShardHostStats() {
+	for host, hostStat := range d.StatLine.ShardHostStatsLines {
+		hostStatLine := reflect.ValueOf(&hostStat).Elem()
+		newDbData := &DbData{
+			Name:   host,
+			Fields: make(map[string]interface{}),
+		}
+		newDbData.Fields["type"] = "shard_host_stat"
+		for k, v := range ShardHostStats {
+			val := hostStatLine.FieldByName(v).Interface()
+			newDbData.Fields[k] = val
+		}
+		d.ShardHostData = append(d.ShardHostData, *newDbData)
+	}
+}
+
 func (d *MongodbData) AddDefaultStats() {
 	statLine := reflect.ValueOf(d.StatLine).Elem()
 	d.addStat(statLine, DefaultStats)
@@ -127,7 +159,8 @@ func (d *MongodbData) AddDefaultStats() {
 		d.addStat(statLine, DefaultReplStats)
 	}
 	d.addStat(statLine, DefaultClusterStats)
-	if d.StatLine.StorageEngine == "mmapv1" {
+	d.addStat(statLine, DefaultShardStats)
+	if d.StatLine.StorageEngine == "mmapv1" || d.StatLine.StorageEngine == "rocksdb" {
 		d.addStat(statLine, MmapStats)
 	} else if d.StatLine.StorageEngine == "wiredTiger" {
 		for key, value := range WiredTigerStats {
@@ -169,5 +202,15 @@ func (d *MongodbData) flush(acc telegraf.Accumulator) {
 			d.StatLine.Time,
 		)
 		db.Fields = make(map[string]interface{})
+	}
+	for _, host := range d.ShardHostData {
+		d.Tags["hostname"] = host.Name
+		acc.AddFields(
+			"mongodb_shard_stats",
+			host.Fields,
+			d.Tags,
+			d.StatLine.Time,
+		)
+		host.Fields = make(map[string]interface{})
 	}
 }

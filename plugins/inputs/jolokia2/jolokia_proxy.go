@@ -56,13 +56,13 @@ func (jp *JolokiaProxy) SampleConfig() string {
   ## Add proxy targets to query
   # default_target_username = ""
   # default_target_password = ""
-  [[inputs.jolokia_proxy.target]]
+  [[inputs.jolokia2_proxy.target]]
     url = "service:jmx:rmi:///jndi/rmi://targethost:9999/jmxrmi"
-	# username = ""
-	# password = ""
+    # username = ""
+    # password = ""
 
   ## Add metrics to read
-  [[inputs.jolokia_proxy.metric]]
+  [[inputs.jolokia2_proxy.metric]]
     name  = "java_runtime"
     mbean = "java.lang:type=Runtime"
     paths = ["Uptime"]

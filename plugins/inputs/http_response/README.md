@@ -1,6 +1,6 @@
-# Example Input Plugin
+# HTTP Response Input Plugin
 
-This input plugin will test HTTP/HTTPS connections.
+This input plugin checks HTTP/HTTPS connections.
 
 ### Configuration:
 
@@ -9,6 +9,9 @@ This input plugin will test HTTP/HTTPS connections.
 [[inputs.http_response]]
   ## Server address (default http://localhost)
   # address = "http://localhost"
+
+  ## Set http_proxy (telegraf uses the system wide proxy settings if it's is not set)
+  # http_proxy = "http://localhost:8888"
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
@@ -41,21 +44,38 @@ This input plugin will test HTTP/HTTPS connections.
   #   Host = "github.com"
 ```
 
-### Measurements & Fields:
+### Metrics:
 
 - http_response
+  - tags:
+    - server (target URL)
+    - method (request method)
+    - status_code (response status code)
+    - result ([see below](#result--result_code))
+  - fields:
     - response_time (float, seconds)
-    - http_response_code (int) #The code received
-	- result_type (string) # success, timeout, response_string_mismatch, connection_failed
+    - http_response_code (int, response status code)
+	- result_type (string, deprecated in 1.6: use `result` tag and `result_code` field)
+    - result_code (int, [see below](#result--result_code))
 
-### Tags:
+#### `result` / `result_code`
 
-- All measurements have the following tags:
-    - server
-    - method
+Upon finishing polling the target server, the plugin registers the result of the operation in the `result` tag, and adds a numeric field called `result_code` corresponding with that tag value.
+
+This tag is used to expose network and plugin errors. HTTP errors are considered a successful connection.
+
+|Tag value                |Corresponding field value|Description|
+--------------------------|-------------------------|-----------|
+|success                  | 0                       |The HTTP request completed, even if the HTTP code represents an error|
+|response_string_mismatch | 1                       |The option `response_string_match` was used, and the body of the response didn't match the regex|
+|body_read_error          | 2                       |The option `response_string_match` was used, but the plugin wans't able to read the body of the response. Responses with empty bodies (like 3xx, HEAD, etc) will trigger this error|
+|connection_failed        | 3                       |Catch all for any network error not specifically handled by the plugin|
+|timeout                  | 4                       |The plugin timed out while awaiting the HTTP connection to complete|
+|dns_error                | 5                       |There was a DNS error while attempting to connect to the host|
+
 
 ### Example Output:
 
 ```
-http_response,method=GET,server=http://www.github.com http_response_code=200i,response_time=6.223266528 1459419354977857955
+http_response,method=GET,server=http://www.github.com,status_code=200,result=success http_response_code=200i,response_time=6.223266528,result_type="success",result_code=0i 1459419354977857955
 ```

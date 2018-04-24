@@ -2,7 +2,9 @@
 
 The [Jolokia](http://jolokia.org) _agent_ and _proxy_ input plugins collect JMX metrics from an HTTP endpoint using Jolokia's [JSON-over-HTTP protocol](https://jolokia.org/reference/html/protocol.html).
 
-## Jolokia Agent Configuration
+### Configuration:
+
+#### Jolokia Agent Configuration
 
 The `jolokia2_agent` input plugin reads JMX metrics from one or more [Jolokia agent](https://jolokia.org/agent/jvm.html) REST endpoints.
 
@@ -32,7 +34,7 @@ Optionally, specify SSL options for communicating with agents:
     paths = ["Uptime"]
 ```
 
-## Jolokia Proxy Configuration
+#### Jolokia Proxy Configuration
 
 The `jolokia2_proxy` input plugin reads JMX metrics from one or more _targets_ by interacting with a [Jolokia proxy](https://jolokia.org/features/proxy.html) REST endpoint.
 
@@ -77,7 +79,7 @@ Optionally, specify SSL options for communicating with proxies:
     paths = ["Uptime"]
 ```
 
-## Jolokia Metric Configuration
+#### Jolokia Metric Configuration
 
 Each `metric` declaration generates a Jolokia request to fetch telemetry from a JMX MBean.
 
@@ -167,3 +169,11 @@ Both `jolokia2_agent` and `jolokia2_proxy` plugins support default configuration
 | `default_field_separator` | `.`           | A character to use to join Mbean attributes when creating fields. |
 | `default_field_prefix`    | _None_        | A string to prepend to the field names produced by all `metric` declarations. |
 | `default_tag_prefix`      | _None_        | A string to prepend to the tag names produced by all `metric` declarations. |
+
+### Example Configurations:
+
+- [Java JVM](/influxdata/telegraf/blob/master/plugins/inputs/jolokia2/examples/java.conf)
+- [Kafka](/influxdata/telegraf/blob/master/plugins/inputs/jolokia2/examples/kafka.conf)
+- [Cassandra](/influxdata/telegraf/blob/master/plugins/inputs/jolokia2/examples/cassandra.conf)
+
+Please help improve this list and contribute new configuration files by opening an issue or pull request.

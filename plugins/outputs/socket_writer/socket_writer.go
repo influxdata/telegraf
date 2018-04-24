@@ -6,6 +6,8 @@ import (
 	"net"
 	"strings"
 
+	"crypto/tls"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
@@ -13,8 +15,12 @@ import (
 )
 
 type SocketWriter struct {
-	Address         string
-	KeepAlivePeriod *internal.Duration
+	Address            string
+	KeepAlivePeriod    *internal.Duration
+	SSLCA              string
+	SSLCert            string
+	SSLKey             string
+	InsecureSkipVerify bool
 
 	serializers.Serializer
 
@@ -38,6 +44,13 @@ func (sw *SocketWriter) SampleConfig() string {
   # address = "udp6://127.0.0.1:8094"
   # address = "unix:///tmp/telegraf.sock"
   # address = "unixgram:///tmp/telegraf.sock"
+
+  ## Optional SSL Config
+  # ssl_ca = "/etc/telegraf/ca.pem"
+  # ssl_cert = "/etc/telegraf/cert.pem"
+  # ssl_key = "/etc/telegraf/key.pem"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 
   ## Period between keep alive probes.
   ## Only applies to TCP sockets.
@@ -63,7 +76,17 @@ func (sw *SocketWriter) Connect() error {
 		return fmt.Errorf("invalid address: %s", sw.Address)
 	}
 
-	c, err := net.Dial(spl[0], spl[1])
+	tlsCfg, err := internal.GetTLSConfig(sw.SSLCert, sw.SSLKey, sw.SSLCA, sw.InsecureSkipVerify)
+	if err != nil {
+		return err
+	}
+
+	var c net.Conn
+	if tlsCfg == nil {
+		c, err = net.Dial(spl[0], spl[1])
+	} else {
+		c, err = tls.Dial(spl[0], spl[1], tlsCfg)
+	}
 	if err != nil {
 		return err
 	}

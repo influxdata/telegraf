@@ -33,6 +33,16 @@ type Config struct {
 	// Dataformat can be one of: influx, graphite, or json
 	DataFormat string
 
+	// Maximum line length in bytes; influx format only
+	InfluxMaxLineBytes int
+
+	// Sort field keys, set to true only when debugging as it less performant
+	// than unsorted fields; influx format only
+	InfluxSortFields bool
+
+	// Support unsigned integer output; influx format only
+	InfluxUintSupport bool
+
 	// Prefix to add to all measurements, only supports Graphite
 	Prefix string
 
@@ -50,7 +60,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	var serializer Serializer
 	switch config.DataFormat {
 	case "influx":
-		serializer, err = NewInfluxSerializer()
+		serializer, err = NewInfluxSerializerConfig(config)
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template)
 	case "json":
@@ -65,8 +75,26 @@ func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return &json.JsonSerializer{TimestampUnits: timestampUnits}, nil
 }
 
+func NewInfluxSerializerConfig(config *Config) (Serializer, error) {
+	var sort influx.FieldSortOrder
+	if config.InfluxSortFields {
+		sort = influx.SortFields
+	}
+
+	var typeSupport influx.FieldTypeSupport
+	if config.InfluxUintSupport {
+		typeSupport = typeSupport + influx.UintSupport
+	}
+
+	s := influx.NewSerializer()
+	s.SetMaxLineBytes(config.InfluxMaxLineBytes)
+	s.SetFieldSortOrder(sort)
+	s.SetFieldTypeSupport(typeSupport)
+	return s, nil
+}
+
 func NewInfluxSerializer() (Serializer, error) {
-	return &influx.InfluxSerializer{}, nil
+	return influx.NewSerializer(), nil
 }
 
 func NewGraphiteSerializer(prefix, template string) (Serializer, error) {

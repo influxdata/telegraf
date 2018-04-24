@@ -138,8 +138,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 
 		buf, err := m.serializer.Serialize(metric)
 		if err != nil {
-			return fmt.Errorf("MQTT Could not serialize metric: %s",
-				metric.String())
+			return err
 		}
 
 		err = m.publish(topic, buf)
@@ -162,6 +161,7 @@ func (m *MQTT) publish(topic string, body []byte) error {
 
 func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	opts := paho.NewClientOptions()
+	opts.KeepAlive = 0 * time.Second
 
 	if m.Timeout.Duration < time.Second {
 		m.Timeout.Duration = 5 * time.Second
