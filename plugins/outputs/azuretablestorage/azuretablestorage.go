@@ -298,10 +298,6 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 	// iterate over the list of metrics and create a new entity for each metrics and add to the table.
 	for i, _ := range metrics {
 		props = metrics[i].Fields()
-		UTCTicks_DescendingOrderStr, encodedCounterName, er := azureTableStorage.getRowKeyComponents(props[constants.END_TIMESTAMP].(string), props[constants.COUNTER_NAME].(string))
-		if er != nil {
-			return er
-		}
 		props[constants.DEPLOYMENT_ID] = azureTableStorage.DeploymentId
 		var err error
 		props[constants.HOST], err = os.Hostname()
@@ -312,7 +308,12 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 		}
 		//period decides when to transfer the aggregated metrics.Its in format "60s"
 		tags := metrics[i].Tags()
-		props[constants.COUNTER_NAME] = tags[constants.INPUT_PLUGIN] + "_" + props[constants.COUNTER_NAME].(string)
+		props[constants.COUNTER_NAME] = tags[constants.INPUT_PLUGIN] + "/" + props[constants.COUNTER_NAME].(string)
+
+		UTCTicks_DescendingOrderStr, encodedCounterName, er := azureTableStorage.getRowKeyComponents(props[constants.END_TIMESTAMP].(string), props[constants.COUNTER_NAME].(string))
+		if er != nil {
+			return er
+		}
 
 		periodStr := tags[constants.PERIOD]
 		table := azureTableStorage.PeriodVsTableNameVsTableRef[periodStr].TableRef

@@ -10,6 +10,7 @@ import (
 )
 
 type AzureMetrics struct {
+	//stats is not yet functional in azuremetrics plugin
 	Stats       []string `toml:"stats"`
 	cache       map[uint64]aggregate
 	statsConfig *configuredStats
@@ -144,9 +145,10 @@ func (m *AzureMetrics) Push(acc telegraf.Accumulator) {
 	config := getConfiguredStats(m)
 
 	for _, aggregate := range m.cache {
-		fields := map[string]interface{}{}
-		for k, v := range aggregate.fields {
 
+		for k, v := range aggregate.fields {
+			//we are treating each field in the measurement as a measurement itself, with its own fields and tags
+			fields := map[string]interface{}{}
 			if config.count {
 				fields[constants.SAMPLE_COUNT] = v.count
 			}
@@ -172,12 +174,9 @@ func (m *AzureMetrics) Push(acc telegraf.Accumulator) {
 				fields[constants.END_TIMESTAMP] = v.endTimestamp
 			}
 			fields[constants.COUNTER_NAME] = k
-		}
-
-		if len(fields) > 0 {
 			tags := aggregate.tags
 			tags[constants.PERIOD] = m.Period
-			acc.AddFields(aggregate.name, fields, tags)
+			acc.AddFields(k, fields, tags)
 		}
 	}
 }
