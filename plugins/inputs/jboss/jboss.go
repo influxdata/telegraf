@@ -33,6 +33,7 @@ const (
 	GET_WEB_STAT        = 6
 	GET_JMS_QUEUE_STAT  = 7
 	GET_JMS_TOPIC_STAT  = 8
+	GET_TRANSACTION_STAT  = 9
 )
 
 type KeyVal struct {
@@ -84,6 +85,11 @@ type DatasourceResponse struct {
 type JMSResponse struct {
 	Outcome string                 `json:"outcome"`
 	Result  map[string]interface{} `json:"result"`
+}
+
+type TransactionResponse struct {
+	Outcome string                 `json:"outcome"`
+    Result  map[string]interface{} `json:"result"`
 }
 
 type JMSMetrics struct {
@@ -381,7 +387,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 			defer wg.Done()
 			//default as standalone server
 			hosts := HostResponse{Outcome: "", Result: []string{"standalone"}}
-			log.Printf("I! JBoss Plugin Working as Domain: %t\n", h.ExecAsDomain)
+			log.Printf("D! JBoss Plugin Working as Domain: %t\n", h.ExecAsDomain)
 			if h.ExecAsDomain {
 				bodyContent, err := h.prepareRequest(GET_HOSTS, nil)
 				if err != nil {
@@ -449,7 +455,7 @@ func (h *JBoss) getServersOnHost(
 		wg.Add(1)
 		go func(host string) {
 			defer wg.Done()
-			log.Printf("I! Get Servers from host: %s\n", host)
+			log.Printf("D! Get Servers from host: %s\n", host)
 
 			servers := HostResponse{Outcome: "", Result: []string{"standalone"}}
 
@@ -481,7 +487,7 @@ func (h *JBoss) getServersOnHost(
 			}
 
 			for _, server := range servers.Result {
-				log.Printf("I! JBoss Plugin Processing Servers from host:[ %s ] : Server [ %s ]\n", host, server)
+				log.Printf("D! JBoss Plugin Processing Servers from host:[ %s ] : Server [ %s ]\n", host, server)
 				for _, v := range h.Metrics {
 					switch v {
 					case "jvm":
@@ -496,6 +502,8 @@ func (h *JBoss) getServersOnHost(
 					case "jms":
 						h.getJMSStatistics(acc, serverURL, host, server, GET_JMS_QUEUE_STAT)
 						h.getJMSStatistics(acc, serverURL, host, server, GET_JMS_TOPIC_STAT)
+					case "transaction":	
+						h.getTransactionStatistics(acc, serverURL, host, server)
 					default:
 						log.Printf("E! Jboss doesn't exist the metric set %s\n", v)
 					}
@@ -677,6 +685,74 @@ func (h *JBoss) getDatasourceStatistics(
 	return nil
 }
 
+// Gathers Transaction data from a particular host
+// Parameters:
+//     acc      : The telegraf Accumulator to use
+//     serverURL: endpoint to send request to
+//     host     : the host being queried
+//     server   : the server being queried
+//
+// Returns:
+//     error: Any error that may have occurred
+
+func (h *JBoss) getTransactionStatistics(
+	acc telegraf.Accumulator,
+	serverURL string,
+	host string,
+	serverName string,
+) error {
+	//fmt.Printf("getTransactionStatistics %s %s\n", host, serverName)
+
+	adr := OrderedMap{}
+	
+	if h.ExecAsDomain {
+		adr = OrderedMap{
+			{"host", host},
+			{"server", serverName},
+			{"subsystem", "transactions"},
+		}
+	} else {
+		adr = OrderedMap{
+			{"subsystem", "transactions"},
+		}
+	}
+
+	bodyContent, err := h.prepareRequest(GET_TRANSACTION_STAT, adr)
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+	}
+
+	out, err := h.doRequest(serverURL, bodyContent)
+
+	log.Printf("D! JBoss API Req err: %s", err)
+	log.Printf("D! JBoss API Req out: %s", out)
+	
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+	} else {
+		server := TransactionResponse{}
+		if err = json.Unmarshal(out, &server); err != nil {
+			return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
+		}
+
+		fields := make(map[string]interface{})
+		for key, value := range server.Result {
+			if strings.Contains(key, "number-of") {
+				fields[key], _ = strconv.ParseInt(value.(string), 10, 64)
+			}
+		}
+		tags := map[string]string{
+			"jboss_host":   host,
+			"jboss_server": serverName,
+		}
+		
+		acc.AddFields("jboss_transaction", fields, tags)
+	}
+
+	return nil
+	
+}
+	
 // Gathers JMS data from a particular host
 // Parameters:
 //     acc      : The telegraf Accumulator to use
@@ -1102,6 +1178,12 @@ func (j *JBoss) prepareRequest(optype int, adress OrderedMap) (map[string]interf
 		bodyContent["child-type"] = "jms-topic"
 		bodyContent["include-runtime"] = "true"
 		bodyContent["recursive-depth"] = 2
+		bodyContent["address"] = adress
+		bodyContent["json.pretty"] = 1
+	case GET_TRANSACTION_STAT:
+		bodyContent["operation"] = "read-resource"
+		bodyContent["include-runtime"] = "true"
+		bodyContent["recursive-depth"] = 0
 		bodyContent["address"] = adress
 		bodyContent["json.pretty"] = 1
 	}
