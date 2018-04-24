@@ -89,7 +89,7 @@ workflows:
       - 'test-go-1.9':
           requires:
             - 'deps'
-      - 'test-go-1.9':
+      - 'test-go-1.10':
           requires:
             - 'deps'
       - 'nightly':
@@ -99,7 +99,7 @@ workflows:
             - 'test-go-1.10'
     triggers:
       - schedule:
-          cron: "0 18 * * *"
+          cron: "0 7 * * *"
           filters:
             branches:
               only:
