@@ -172,8 +172,8 @@ Both `jolokia2_agent` and `jolokia2_proxy` plugins support default configuration
 
 ### Example Configurations:
 
-- [Java JVM](/influxdata/telegraf/blob/master/plugins/inputs/jolokia2/examples/java.conf)
-- [Kafka](/influxdata/telegraf/blob/master/plugins/inputs/jolokia2/examples/kafka.conf)
-- [Cassandra](/influxdata/telegraf/blob/master/plugins/inputs/jolokia2/examples/cassandra.conf)
+- [Java JVM](/plugins/inputs/jolokia2/examples/java.conf)
+- [Kafka](/plugins/inputs/jolokia2/examples/kafka.conf)
+- [Cassandra](/plugins/inputs/jolokia2/examples/cassandra.conf)
 
 Please help improve this list and contribute new configuration files by opening an issue or pull request.
