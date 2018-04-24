@@ -22,7 +22,10 @@ all:
 	$(MAKE) telegraf
 
 deps:
-	go get -u github.com/golang/lint/golint
+	mkdir -p $(GOPATH)/src/golang.org/x 
+	rm -rf $(GOPATH)/src/golang.org/x/lint
+	git clone --depth=1 https://github.com/golang/lint.git $(GOPATH)/src/golang.org/x/lint 
+	go get -u golang.org/x/lint/golint
 	go get github.com/sparrc/gdm
 	gdm restore
 
