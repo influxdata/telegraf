@@ -72,9 +72,9 @@ The LeoFS plugin gathers metrics of LeoGateway, LeoManager, and LeoStorage using
 
 #### Total Number of MQ Messages
 
-- mq_num_of_msg_replication
-- mq_num_of_msg_sync_vnode
-- mq_num_of_msg_rebalance
+- num_of_replication_messages,
+- num_of_sync-vnode_messages,
+- num_of_rebalance_messages,
 - mq_num_of_msg_recovery_node
 - mq_num_of_msg_deletion_dir
 - mq_num_of_msg_async_deletion_dir
@@ -175,48 +175,48 @@ $ ./telegraf --config ./plugins/inputs/leofs/leo_manager.conf --input-filter leo
 #### LeoStorage
 
 ```bash
-$ telegraf --config leo_storage.conf --input-filter leofs --test
-> leofs, host=node07, node=storage_0@127.0.0.1
-  allocated_memory=67567616,
-  allocated_memory_5min=64105507,
+$ ./telegraf --config ./plugins/inputs/leofs/leo_storage.conf --input-filter leofs --test
+> leofs,host=storage_0,node=storage_0@127.0.0.1
+  allocated_memory=63504384,
+  allocated_memory_5min=0,
   comp_last_end_datetime=0,
   comp_last_start_datetime=0,
   comp_num_of_ongoing_targets=0,
   comp_num_of_out_of_targets=0,
   comp_num_of_pending_targets=8,
   comp_state=0,
-  ets_memory_usage=4063944,
-  ets_memory_usage_5min=3924194,
+  ets_memory_usage=3877824,
+  ets_memory_usage_5min=0,
   mq_mdcr_num_of_msg_req_comp_metadata=0,
   mq_mdcr_num_of_msg_req_sync_obj=0,
   mq_num_of_msg_async_deletion_dir=0,
   mq_num_of_msg_deletion_dir=0,
-  mq_num_of_msg_rebalance=0,
   mq_num_of_msg_recovery_node=0,
-  mq_num_of_msg_replication=0,
   mq_num_of_msg_req_deletion_dir=0,
-  mq_num_of_msg_sync_vnode=0,
-  num_of_active_objects=0,
+  num_of_active_objects=70,
   num_of_deletes=0,
   num_of_deletes_5min=0,
   num_of_processes=577,
-  num_of_processes_5min=577,
-  num_of_reads=0,
+  num_of_processes_5min=0,
+  num_of_reads=1,
   num_of_reads_5min=0,
-  num_of_writes=0,
+  num_of_rebalance_messages=0,
+  num_of_replication_messages=0,
+  num_of_sync-vnode_messages=0,
+  num_of_writes=70,
   num_of_writes_5min=0,
-  processes_memory_usage=19423508,
-  processes_memory_usage_5min=19815577,
-  system_memory_usage=25963952,
-  system_memory_usage_5min=25761030,
-  total_memory_usage=45384800,
-  total_memory_usage_5min=45574374,
-  total_objects=0,
-  total_size=0,
-  total_size_of_active_objects=0,
-  used_allocated_memory=64,
-  used_allocated_memory_5min=67
-  1524105239000000000
+  processes_memory_usage=20029464,
+  processes_memory_usage_5min=0,
+  system_memory_usage=25900472,
+  system_memory_usage_5min=0,
+  total_memory_usage=45920987,
+  total_memory_usage_5min=0,
+  total_objects=70,
+  total_size=2,
+  total_size_of_active_objects=2,
+  used_allocated_memory=69,
+  used_allocated_memory_5min=0
+  1524529826000000000
 ```
 
 #### LeoGateway
