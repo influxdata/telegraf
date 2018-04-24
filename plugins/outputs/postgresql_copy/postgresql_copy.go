@@ -90,11 +90,18 @@ func (p *PostgresqlCopy) Write(metrics []telegraf.Metric) error {
 		if len(values) == 0 {
 			continue
 		}
+
 		columns := append(p.Columns[table], "time")
 		stmt, err := txn.Prepare(pq.CopyIn(table, columns...))
 		if err != nil {
-			return err
+			if p.IgnoreInsertErrors == false {
+				log.Printf("E! Error in stmt execute %s", err)
+				continue
+			} else {
+				return err
+			}
 		}
+
 		for _, value := range values {
 			_, err = stmt.Exec(value...)
 			if err == nil {
