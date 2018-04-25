@@ -84,10 +84,11 @@ var sampleConfig = `
   # skip_database_creation = false
 
   ## Name of existing retention policy to write to.  Empty string writes to
-  ## the default retention policy.
+  ## the default retention policy.  Only takes effect when using HTTP.
   # retention_policy = ""
 
-  ## Write consistency (clusters only), can be: "any", "one", "quorum", "all"
+  ## Write consistency (clusters only), can be: "any", "one", "quorum", "all".
+  ## Only takes effect when using HTTP.
   # write_consistency = "any"
 
   ## Timeout for HTTP messages.
@@ -103,7 +104,7 @@ var sampleConfig = `
   ## UDP payload size is the maximum packet size to send.
   # udp_payload = 512
 
-  ## Optional SSL Config
+  ## Optional SSL Config for use on HTTP connections.
   # ssl_ca = "/etc/telegraf/ca.pem"
   # ssl_cert = "/etc/telegraf/cert.pem"
   # ssl_key = "/etc/telegraf/key.pem"
