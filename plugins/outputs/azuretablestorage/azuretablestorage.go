@@ -50,7 +50,7 @@ account_name = ""
 sas_token=""
 #periods is the list of period configured for each aggregator plugin
 periods = ["30s","60s"] 
-tableStorageEndPointSuffix = ".table.core.windows.net"
+table_storage_end_point_suffix = ".table.core.windows.net"
 
 `
 
@@ -101,7 +101,7 @@ func (azureTableStorage *AzureTableStorage) toMdsdTime(fileTime int64) MdsdTime 
 func (azureTableStorage *AzureTableStorage) getTableDateSuffix(secondsElapsedTillNow int64) (string, error) {
 
 	if secondsElapsedTillNow < 0 {
-		erMsg := "Invalid time passed to getTableDateSuffix()"
+		erMsg := "Invalid time passed to getTableDateSuffix(): "
 		log.Print(erMsg)
 		err := errors.New(erMsg)
 		return "", err
