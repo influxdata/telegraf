@@ -93,11 +93,11 @@ type perfobject struct {
 
 type item struct {
 	query         string
+	computer      string
 	objectName    string
 	counter       string
 	instance      string
 	measurement   string
-	nodename      string
 	include_total bool
 	handle        PDH_HQUERY
 	counterHandle PDH_HCOUNTER
@@ -106,8 +106,8 @@ type item struct {
 var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 	" ", "_", "%", "Percent", `\`, "")
 
-func (m *Win_PerfCounters) AddItem(query string, objectName string, counter string, instance string,
-	measurement string, nodename string, include_total bool) error {
+func (m *Win_PerfCounters) AddItem(query string, computer string, objectName string, counter string, instance string,
+	measurement string, include_total bool) error {
 
 	var handle PDH_HQUERY
 	var counterHandle PDH_HCOUNTER
@@ -125,7 +125,7 @@ func (m *Win_PerfCounters) AddItem(query string, objectName string, counter stri
 		return errors.New(PdhFormatError(ret))
 	}
 
-	newItem := &item{query, objectName, counter, instance, measurement, nodename,
+	newItem := &item{query, computer, objectName, counter, instance, measurement,
 		include_total, handle, counterHandle}
 	m.itemCache = append(m.itemCache, newItem)
 
@@ -159,8 +159,8 @@ func (m *Win_PerfCounters) ParseConfig() error {
 						query = computer + "\\" + objectname + "(" + instance + ")\\" + counter
 					}
 
-					err := m.AddItem(query, objectname, counter, instance,
-						PerfObject.Measurement, PerfObject.Computer, PerfObject.IncludeTotal)
+					err := m.AddItem(query, computer, objectname, counter, instance,
+						PerfObject.Measurement, PerfObject.IncludeTotal)
 
 					if err == nil {
 						if m.PrintValid {
@@ -257,7 +257,11 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 						if s != "" {
 							tags["instance"] = s
 						}
-						tags["node"] = metric.nodename
+
+						if len(metric.computer) > 0 {
+							tags["computer"] = metric.computer
+						}
+
 						tags["objectname"] = metric.objectName
 						fields[sanitizedChars.Replace(metric.counter)] =
 							float32(c.FmtValue.DoubleValue)
