@@ -56,10 +56,10 @@ beneath the main win_perf_counters entry, `[[inputs.win_perf_counters]]`.
 
 Following this is 3 required key/value pairs and the three optional parameters and their usage.
 
-#### NodeName
+#### Computer
 **Required**
 
-NodeName specifies the node to connect to for querying the performance counters. While "localhost" will work to retrieve data from a local host, it is recommended
+Computer specifies the computer to connect to for querying the performance counters. While "localhost" will work to retrieve data from a local host, it is recommended
 to use the actual machine name as the data will be tagged with a "Node" tag with the value of this parameter as the value.
 
 Important: If you are requesting data from a remote node you must do the following:
