@@ -29,6 +29,8 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	time := acc.GetTime(nil)
+
 	fields := map[string]interface{}{
 		"load1":  loadavg.Load1,
 		"load5":  loadavg.Load5,
@@ -43,7 +45,7 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	acc.AddGauge("system", fields, nil)
+	acc.AddGauge("system", fields, nil, time)
 
 	hostinfo, err := host.Info()
 	if err != nil {
@@ -52,10 +54,10 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 
 	acc.AddCounter("system", map[string]interface{}{
 		"uptime": hostinfo.Uptime,
-	}, nil)
+	}, nil, time)
 	acc.AddFields("system", map[string]interface{}{
 		"uptime_format": format_uptime(hostinfo.Uptime),
-	}, nil)
+	}, nil, time)
 
 	return nil
 }

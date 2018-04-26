@@ -49,7 +49,7 @@ func (ac *accumulator) AddFields(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Untyped, ac.getTime(t)); m != nil {
+	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Untyped, ac.GetTime(t)); m != nil {
 		ac.metrics <- m
 	}
 }
@@ -60,7 +60,7 @@ func (ac *accumulator) AddGauge(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Gauge, ac.getTime(t)); m != nil {
+	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Gauge, ac.GetTime(t)); m != nil {
 		ac.metrics <- m
 	}
 }
@@ -71,7 +71,7 @@ func (ac *accumulator) AddCounter(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Counter, ac.getTime(t)); m != nil {
+	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Counter, ac.GetTime(t)); m != nil {
 		ac.metrics <- m
 	}
 }
@@ -82,7 +82,7 @@ func (ac *accumulator) AddSummary(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Summary, ac.getTime(t)); m != nil {
+	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Summary, ac.GetTime(t)); m != nil {
 		ac.metrics <- m
 	}
 }
@@ -93,7 +93,7 @@ func (ac *accumulator) AddHistogram(
 	tags map[string]string,
 	t ...time.Time,
 ) {
-	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Histogram, ac.getTime(t)); m != nil {
+	if m := ac.maker.MakeMetric(measurement, fields, tags, telegraf.Histogram, ac.GetTime(t)); m != nil {
 		ac.metrics <- m
 	}
 }
@@ -130,7 +130,7 @@ func (ac *accumulator) SetPrecision(precision, interval time.Duration) {
 	}
 }
 
-func (ac accumulator) getTime(t []time.Time) time.Time {
+func (ac *accumulator) GetTime(t []time.Time) time.Time {
 	var timestamp time.Time
 	if len(t) > 0 {
 		timestamp = t[0]
