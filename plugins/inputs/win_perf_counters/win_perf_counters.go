@@ -225,8 +225,8 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				if len(filledBuf) == 0 {
 					continue
 				}
-				ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize,
-					&bufCount, &filledBuf[0])
+				ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle,
+					&bufSize, &bufCount, &filledBuf[0])
 				for i := 0; i < int(bufCount); i++ {
 					c := filledBuf[i]
 					var s string = UTF16PtrToString(c.SzName)
