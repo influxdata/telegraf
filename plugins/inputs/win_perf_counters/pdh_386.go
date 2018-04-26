@@ -55,20 +55,20 @@ type PDH_FMT_COUNTERVALUE_LONG struct {
 
 type PDH_FMT_COUNTERVALUE_ITEM_DOUBLE struct {
 	SzName   *uint16
-	padding  uint32 // TODO: could well be broken on amd64
+	padding  [4]byte
 	FmtValue PDH_FMT_COUNTERVALUE_DOUBLE
 }
 
 // Union specialization for 'large' values, used by PdhGetFormattedCounterArrayLarge()
 type PDH_FMT_COUNTERVALUE_ITEM_LARGE struct {
 	SzName   *uint16 // pointer to a string
-	padding  uint32  // TODO: could well be broken on amd64
+	padding  [4]byte
 	FmtValue PDH_FMT_COUNTERVALUE_LARGE
 }
 
 // Union specialization for long values, used by PdhGetFormattedCounterArrayLong()
 type PDH_FMT_COUNTERVALUE_ITEM_LONG struct {
 	SzName   *uint16 // pointer to a string
-	padding  uint32  // TODO: could well be broken on amd64
+	padding  [4]byte
 	FmtValue PDH_FMT_COUNTERVALUE_LONG
 }

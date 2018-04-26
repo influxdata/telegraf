@@ -24,7 +24,7 @@ var sampleConfig = `
   
   [[inputs.win_perf_counters.object]]
 	# Processor usage, alternative to native, reports on a per core.
-	NodeName = "localhost"
+    Computer = "localhost"
     ObjectName = "Processor"
     Instances = ["*"]
     Counters = [
@@ -40,7 +40,7 @@ var sampleConfig = `
 
   [[inputs.win_perf_counters.object]]
 	# Disk times and queues
-	NodeName = "localhost"
+    Computer = "localhost"
     ObjectName = "LogicalDisk"
     Instances = ["*"]
     Counters = [
@@ -50,7 +50,7 @@ var sampleConfig = `
     Measurement = "win_disk"
 
   [[inputs.win_perf_counters.object]]
-  	NodeName = "localhost"
+    Computer = "localhost"
     ObjectName = "System"
     Counters = ["Context Switches/sec","System Calls/sec"]
     Instances = ["------"]
@@ -59,7 +59,7 @@ var sampleConfig = `
   [[inputs.win_perf_counters.object]]
     # Example query where the Instance portion must be removed to get data back,
 	# such as from the Memory object.
-	NodeName = "localhost"
+    Computer = "localhost"
     ObjectName = "Memory"
     Counters = [
       "Available Bytes", "Cache Faults/sec", "Demand Zero Faults/sec",
@@ -71,21 +71,21 @@ var sampleConfig = `
 `
 
 type Win_PerfCounters struct {
-	PrintValid      bool
-	PreVistaSupport bool
-	UseWinTimestamp bool
-	Object          []perfobject
+	PrintValid         bool
+	PreVistaSupport    bool
+	UsePerfCounterTime bool
+	Object             []perfobject
 
 	configParsed bool
 	itemCache    []*item
 }
 
 type perfobject struct {
+	Computer      string
 	ObjectName    string
 	Counters      []string
 	Instances     []string
 	Measurement   string
-	NodeName      string
 	WarnOnMissing bool
 	FailOnMissing bool
 	IncludeTotal  bool
@@ -143,25 +143,24 @@ func (m *Win_PerfCounters) SampleConfig() string {
 func (m *Win_PerfCounters) ParseConfig() error {
 	var query string
 
-	if m.UseWinTimestamp {
-		PdhUseWinTimestamps()
-	}
-
 	if len(m.Object) > 0 {
 		for _, PerfObject := range m.Object {
 			for _, counter := range PerfObject.Counters {
 				for _, instance := range PerfObject.Instances {
+					computer := ""
+					if len(PerfObject.Computer) > 0 {
+						computer = "\\\\" + PerfObject.Computer
+					}
 					objectname := PerfObject.ObjectName
-					nodename := PerfObject.NodeName
 
 					if instance == "------" {
-						query = "\\\\" + nodename + "\\" + objectname + "\\" + counter
+						query = computer + "\\" + objectname + "\\" + counter
 					} else {
-						query = "\\\\" + nodename + "\\" + objectname + "(" + instance + ")\\" + counter
+						query = computer + "\\" + objectname + "(" + instance + ")\\" + counter
 					}
 
 					err := m.AddItem(query, objectname, counter, instance,
-						PerfObject.Measurement, PerfObject.NodeName, PerfObject.IncludeTotal)
+						PerfObject.Measurement, PerfObject.Computer, PerfObject.IncludeTotal)
 
 					if err == nil {
 						if m.PrintValid {
@@ -208,10 +207,10 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range m.itemCache {
 		// collect
-		var ret uint32 = 0
+		var ret uint32
 		var timestamp time.Time
 
-		if m.UseWinTimestamp {
+		if m.UsePerfCounterTime {
 			ret, timestamp = PdhCollectQueryDataWithTime(metric.handle)
 		} else {
 			timestamp = time.Now()
@@ -219,13 +218,15 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		}
 
 		if ret == ERROR_SUCCESS {
-			ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize, &bufCount, &emptyBuf[0]) // uses null ptr here according to MSDN.
+			ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize,
+				&bufCount, &emptyBuf[0]) // uses null ptr here according to MSDN.
 			if ret == PDH_MORE_DATA {
 				filledBuf := make([]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE, bufCount*size)
 				if len(filledBuf) == 0 {
 					continue
 				}
-				ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize, &bufCount, &filledBuf[0])
+				ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize,
+					&bufCount, &filledBuf[0])
 				for i := 0; i < int(bufCount); i++ {
 					c := filledBuf[i]
 					var s string = UTF16PtrToString(c.SzName)

@@ -326,6 +326,55 @@ func TestWinPerfcountersConfigGet7(t *testing.T) {
 	}
 }
 
+func TestWinPerfcountersConfigGet8(t *testing.T) {
+
+	var instances = make([]string, 1)
+	var counters = make([]string, 1)
+	var perfobjects = make([]perfobject, 1)
+
+	computer := "localhost"
+	objectname := "Processor Information"
+	instances[0] = "_Total"
+	counters[0] = "% Processor Time"
+
+	var measurement string = "test"
+	var warnonmissing bool = false
+	var failonmissing bool = true
+	var includetotal bool = false
+
+	PerfObject := perfobject{
+		Computer:      computer,
+		ObjectName:    objectname,
+		Instances:     instances,
+		Counters:      counters,
+		Measurement:   measurement,
+		WarnOnMissing: warnonmissing,
+		FailOnMissing: failonmissing,
+		IncludeTotal:  includetotal,
+	}
+
+	perfobjects[0] = PerfObject
+
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
+
+	err := m.ParseConfig()
+	require.NoError(t, err)
+
+	var parsedItems = m.GetParsedItemsForTesting()
+
+	if len(parsedItems) == 1 {
+		require.NoError(t, nil)
+	} else if len(parsedItems) == 0 {
+		var errorstring1 string = "No results returned from the query: " + string(len(parsedItems))
+		err2 := errors.New(errorstring1)
+		require.NoError(t, err2)
+	} else if len(parsedItems) > 1 {
+		var errorstring1 string = "Too many results returned from the query: " + string(len(parsedItems))
+		err2 := errors.New(errorstring1)
+		require.NoError(t, err2)
+	}
+}
+
 func TestWinPerfcountersConfigError1(t *testing.T) {
 
 	var instances = make([]string, 1)

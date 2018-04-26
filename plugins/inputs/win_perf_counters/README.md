@@ -38,7 +38,7 @@ It is recommended NOT to use this on OSes starting with Vista and newer because 
 Example for Windows Server 2003, this would be set to true:
 `PreVistaSupport=true`
 
-#### UseWinTimestamps
+#### UsePerfCounterTime
 
 Bool, if set to `true` will request a timestamp along with the PerfCounter data. 
 
@@ -55,6 +55,16 @@ This must follow before other plugins configuration,
 beneath the main win_perf_counters entry, `[[inputs.win_perf_counters]]`.
 
 Following this is 3 required key/value pairs and the three optional parameters and their usage.
+
+#### NodeName
+**Required**
+
+NodeName specifies the node to connect to for querying the performance counters. While "localhost" will work to retrieve data from a local host, it is recommended
+to use the actual machine name as the data will be tagged with a "Node" tag with the value of this parameter as the value.
+
+Important: If you are requesting data from a remote node you must do the following:
+1. Log into that node and ensure the user telegraf is running under is added to the "Performance Monitor Users" group.
+2. Change the user telegraf is running under to be running as that user. You can use the account "NT AUTHORITY\NETWORK_SERVICE
 
 #### ObjectName
 **Required**
@@ -134,6 +144,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
   [[inputs.win_perf_counters.object]]
     # Processor usage, alternative to native, reports on a per core.
+    NodeName = "localhost"
     ObjectName = "Processor"
     Instances = ["*"]
     Counters = ["% Idle Time", "% Interrupt Time", "% Privileged Time", "% User Time", "% Processor Time"]
@@ -142,6 +153,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
   [[inputs.win_perf_counters.object]]
     # Disk times and queues
+    NodeName = "localhost"
     ObjectName = "LogicalDisk"
     Instances = ["*"]
     Counters = ["% Idle Time", "% Disk Time","% Disk Read Time", "% Disk Write Time", "% User Time", "Current Disk Queue Length"]
@@ -149,6 +161,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
     #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
 
   [[inputs.win_perf_counters.object]]
+    NodeName = "localhost"
     ObjectName = "System"
     Counters = ["Context Switches/sec","System Calls/sec", "Processor Queue Length"]
     Instances = ["------"]
@@ -157,6 +170,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
   [[inputs.win_perf_counters.object]]
     # Example query where the Instance portion must be removed to get data back, such as from the Memory object.
+    NodeName = "localhost"
     ObjectName = "Memory"
     Counters = ["Available Bytes","Cache Faults/sec","Demand Zero Faults/sec","Page Faults/sec","Pages/sec","Transition Faults/sec","Pool Nonpaged Bytes","Pool Paged Bytes"]
     Instances = ["------"] # Use 6 x - to remove the Instance bit from the query.
@@ -166,6 +180,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
   [[inputs.win_perf_counters.object]]
     # more counters for the Network Interface Object can be found at
     # https://msdn.microsoft.com/en-us/library/ms803962.aspx
+    NodeName = "localhost"
     ObjectName = "Network Interface"
     Counters = ["Bytes Received/sec","Bytes Sent/sec","Packets Received/sec","Packets Sent/sec"]
     Instances = ["*"] # Use 6 x - to remove the Instance bit from the query.
@@ -176,6 +191,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ### Active Directory Domain Controller
 ```
   [[inputs.win_perf_counters.object]]
+    NodeName = "localhost"
     ObjectName = "DirectoryServices"
     Instances = ["*"]
     Counters = ["Base Searches/sec","Database adds/sec","Database deletes/sec","Database modifys/sec","Database recycles/sec","LDAP Client Sessions","LDAP Searches/sec","LDAP Writes/sec"]
@@ -184,6 +200,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
     #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
 
   [[inputs.win_perf_counters.object]]
+    NodeName = "localhost"
     ObjectName = "Security System-Wide Statistics"
     Instances = ["*"]
     Counters = ["NTLM Authentications","Kerberos Authentications","Digest Authentications"]
@@ -191,6 +208,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
     #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
 
   [[inputs.win_perf_counters.object]]
+    NodeName = "localhost"
     ObjectName = "Database"
     Instances = ["*"]
     Counters = ["Database Cache % Hit","Database Cache Page Fault Stalls/sec","Database Cache Page Faults/sec","Database Cache Size"]
@@ -202,6 +220,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ```
   [[inputs.win_perf_counters.object]]
     # AD, DFS N, Useful if the server hosts a DFS Namespace or is a Domain Controller
+    NodeName = "localhost"
     ObjectName = "DFS Namespace Service Referrals"
     Instances = ["*"]
     Counters = ["Requests Processed","Requests Failed","Avg. Response Time"]
@@ -215,6 +234,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ```
   [[inputs.win_perf_counters.object]]
     # AD, DFS R, Useful if the server hosts a DFS Replication folder or is a Domain Controller
+    NodeName = "localhost"
     ObjectName = "DFS Replication Service Volumes"
     Instances = ["*"]
     Counters = ["Data Lookups","Database Commits"]
@@ -227,6 +247,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ### DNS Server + Domain Controllers
 ```
   [[inputs.win_perf_counters.object]]
+    NodeName = "localhost"
     ObjectName = "DNS"
     Counters = ["Dynamic Update Received","Dynamic Update Rejected","Recursive Queries","Recursive Queries Failure","Secure Update Failure","Secure Update Received","TCP Query Received","TCP Response Sent","UDP Query Received","UDP Response Sent","Total Query Received","Total Response Sent"]
     Instances = ["------"]
@@ -238,6 +259,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ```
   [[inputs.win_perf_counters.object]]
     # HTTP Service request queues in the Kernel before being handed over to User Mode.
+    NodeName = "localhost"
     ObjectName = "HTTP Service Request Queues"
     Instances = ["*"]
     Counters = ["CurrentQueueSize","RejectedRequests"]
@@ -246,6 +268,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
   [[inputs.win_perf_counters.object]]
     # IIS, ASP.NET Applications
+    NodeName = "localhost"
     ObjectName = "ASP.NET Applications"
     Counters = ["Cache Total Entries","Cache Total Hit Ratio","Cache Total Turnover Rate","Output Cache Entries","Output Cache Hits","Output Cache Hit Ratio","Output Cache Turnover Rate","Compilations Total","Errors Total/Sec","Pipeline Instance Count","Requests Executing","Requests in Application Queue","Requests/Sec"]
     Instances = ["*"]
@@ -254,6 +277,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
   [[inputs.win_perf_counters.object]]
     # IIS, ASP.NET
+    NodeName = "localhost"
     ObjectName = "ASP.NET"
     Counters = ["Application Restarts","Request Wait Time","Requests Current","Requests Queued","Requests Rejected"]
     Instances = ["*"]
@@ -262,6 +286,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
   [[inputs.win_perf_counters.object]]
     # IIS, Web Service
+    NodeName = "localhost"
     ObjectName = "Web Service"
     Counters = ["Get Requests/sec","Post Requests/sec","Connection Attempts/sec","Current Connections","ISAPI Extension Requests/sec"]
     Instances = ["*"]
@@ -270,6 +295,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
   [[inputs.win_perf_counters.object]]
     # Web Service Cache / IIS
+    NodeName = "localhost"
     ObjectName = "Web Service Cache"
     Counters = ["URI Cache Hits %","Kernel: URI Cache Hits %","File Cache Hits %"]
     Instances = ["*"]
@@ -282,6 +308,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ```
   [[inputs.win_perf_counters.object]]
     # Process metrics, in this case for IIS only
+    NodeName = "localhost"
     ObjectName = "Process"
     Counters = ["% Processor Time","Handle Count","Private Bytes","Thread Count","Virtual Bytes","Working Set"]
     Instances = ["w3wp"]
@@ -294,6 +321,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ```
   [[inputs.win_perf_counters.object]]
     # .NET CLR Exceptions, in this case for IIS only
+    NodeName = "localhost"
     ObjectName = ".NET CLR Exceptions"
     Counters = ["# of Exceps Thrown / sec"]
     Instances = ["w3wp"]
@@ -302,6 +330,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
   [[inputs.win_perf_counters.object]]
     # .NET CLR Jit, in this case for IIS only
+    NodeName = "localhost"
     ObjectName = ".NET CLR Jit"
     Counters = ["% Time in Jit","IL Bytes Jitted / sec"]
     Instances = ["w3wp"]
@@ -310,6 +339,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
   [[inputs.win_perf_counters.object]]
     # .NET CLR Loading, in this case for IIS only
+    NodeName = "localhost"
     ObjectName = ".NET CLR Loading"
     Counters = ["% Time Loading"]
     Instances = ["w3wp"]
@@ -318,6 +348,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
   [[inputs.win_perf_counters.object]]
     # .NET CLR LocksAndThreads, in this case for IIS only
+    NodeName = "localhost"
     ObjectName = ".NET CLR LocksAndThreads"
     Counters = ["# of current logical Threads","# of current physical Threads","# of current recognized threads","# of total recognized threads","Queue Length / sec","Total # of Contentions","Current Queue Length"]
     Instances = ["w3wp"]
@@ -326,6 +357,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
   [[inputs.win_perf_counters.object]]
     # .NET CLR Memory, in this case for IIS only
+    NodeName = "localhost"
     ObjectName = ".NET CLR Memory"
     Counters = ["% Time in GC","# Bytes in all Heaps","# Gen 0 Collections","# Gen 1 Collections","# Gen 2 Collections","# Induced GC","Allocated Bytes/sec","Finalization Survivors","Gen 0 heap size","Gen 1 heap size","Gen 2 heap size","Large Object Heap size","# of Pinned Objects"]
     Instances = ["w3wp"]
@@ -334,6 +366,7 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 
   [[inputs.win_perf_counters.object]]
     # .NET CLR Security, in this case for IIS only
+    NodeName = "localhost"
     ObjectName = ".NET CLR Security"
     Counters = ["% Time in RT checks","Stack Walk Depth","Total Runtime Checks"]
     Instances = ["w3wp"]
