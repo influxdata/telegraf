@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/load"
@@ -43,7 +44,8 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	acc.AddGauge("system", fields, nil)
+	now := time.Now()
+	acc.AddGauge("system", fields, nil, now)
 
 	hostinfo, err := host.Info()
 	if err != nil {
@@ -52,10 +54,10 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 
 	acc.AddCounter("system", map[string]interface{}{
 		"uptime": hostinfo.Uptime,
-	}, nil)
+	}, nil, now)
 	acc.AddFields("system", map[string]interface{}{
 		"uptime_format": format_uptime(hostinfo.Uptime),
-	}, nil)
+	}, nil, now)
 
 	return nil
 }
