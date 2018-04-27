@@ -137,7 +137,7 @@ func TestGetTime(t *testing.T) {
 	assert.InDelta(t, 0, time.Now().Sub(t0), 1e9, "returns current timestamp")
 
 	a.SetPrecision(0, time.Nanosecond)
-	t1 := time.Unix(42, 99)
+	t1 := time.Unix(42,99)
 	t2 := a.GetTime([]time.Time{t1})
 	assert.Equal(t, t1, t2, "passthru given timestamp")
 }
