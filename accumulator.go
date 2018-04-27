@@ -41,7 +41,6 @@ type Accumulator interface {
 		t ...time.Time)
 
 	SetPrecision(precision, interval time.Duration)
-	GetTime(t []time.Time) time.Time
 
 	AddError(err error)
 }

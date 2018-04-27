@@ -164,10 +164,6 @@ func (a *Accumulator) SetPrecision(precision, interval time.Duration) {
 	return
 }
 
-func (a *Accumulator) GetTime(t []time.Time) time.Time {
-	return time.Now()
-}
-
 func (a *Accumulator) DisablePrecision() {
 	return
 }
