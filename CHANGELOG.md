@@ -104,6 +104,7 @@
 - [#4176](https://github.com/influxdata/telegraf/pull/4176): Fix waitgroup deadlock if url is incorrect in apache input.
 
 ## v1.6.2 [2018-05-08]
+## v1.6.2 [unreleased]
 
 ### Bugfixes
 
