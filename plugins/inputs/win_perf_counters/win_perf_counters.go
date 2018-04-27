@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"unsafe"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/metric"
 )
 
 var sampleConfig = `
@@ -90,7 +90,6 @@ type item struct {
 	counter       string
 	instance      string
 	measurement   string
-	include_total bool
 	handle        PDH_HQUERY
 	counterHandle PDH_HCOUNTER
 }
@@ -99,7 +98,7 @@ var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 	" ", "_", "%", "Percent", `\`, "")
 
 func (m *Win_PerfCounters) AddItem(query string, objectName string, counter string, instance string,
-	measurement string, include_total bool) error {
+	measurement string) error {
 
 	var handle PDH_HQUERY
 	var counterHandle PDH_HCOUNTER
@@ -117,8 +116,14 @@ func (m *Win_PerfCounters) AddItem(query string, objectName string, counter stri
 		return errors.New(PdhFormatError(ret))
 	}
 
-	newItem := &item{query, objectName, counter, instance, measurement,
-		include_total, handle, counterHandle}
+	sanitized_measurement := sanitizedChars.Replace(measurement)
+	if sanitized_measurement == "" {
+		sanitized_measurement = "win_perf_counters"
+	}
+
+	sanitized_counter := sanitizedChars.Replace(counter)
+
+	newItem := &item{query, objectName, sanitized_counter, instance, sanitized_measurement, handle, counterHandle}
 	m.itemCache = append(m.itemCache, newItem)
 
 	return nil
@@ -132,34 +137,96 @@ func (m *Win_PerfCounters) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *Win_PerfCounters) ParseConfig() error {
-	var query string
+func expandCounterQuery(query string) ([]string, error) {
+	var bufSize uint32
+	var buf []uint16
+	ret := PdhExpandWildCardPath(query, nil, &bufSize)
+	for ret == PDH_MORE_DATA {
+		buf = make([]uint16, bufSize)
+		ret = PdhExpandWildCardPath(query, &buf[0], &bufSize)
+	}
+	if ret == ERROR_SUCCESS {
+		return UTF16ToStringArray(buf), nil
+	}
+	return nil, fmt.Errorf("Failed to expand query: '%s', err(%d)", query, ret)
+}
 
+func formatCounterQuery(objectname string, instance string, counter string) ([]string, error) {
+	if instance == "------" {
+		return []string{"\\" + objectname + "\\" + counter}, nil
+	}
+	if counter == "*" || strings.Contains(instance, "*"){
+		return expandCounterQuery("\\" + objectname + "(" + instance + ")\\" + counter)
+	}
+
+	return []string{"\\" + objectname + "(" + instance + ")\\" + counter}, nil
+}
+
+func extractInstanceFromQuery(query string) (string, error) {
+	left_paren_idx := strings.Index(query, "(")
+	right_paren_idx := strings.Index(query, ")")
+
+	if left_paren_idx == -1 || right_paren_idx == -1 {
+		return "", errors.New("Could not extract instance name from: " + query)
+	}
+
+	return query[left_paren_idx+1:right_paren_idx], nil
+}
+
+func extractCounterFromQuery(query string) (string, error) {
+	last_slash_idx := strings.LastIndex(query, "\\")
+
+	if last_slash_idx == -1 {
+		return "", errors.New("Could not extract counter name from: " + query)
+	}
+
+	return query[last_slash_idx:], nil
+}
+
+func (m *Win_PerfCounters) ParseConfig() error {
 	if len(m.Object) > 0 {
 		for _, PerfObject := range m.Object {
 			for _, counter := range PerfObject.Counters {
 				for _, instance := range PerfObject.Instances {
+					var err error
+					var expandedQueries []string
+
 					objectname := PerfObject.ObjectName
+					expandedQueries, err = formatCounterQuery(objectname, instance, counter)
 
-					if instance == "------" {
-						query = "\\" + objectname + "\\" + counter
-					} else {
-						query = "\\" + objectname + "(" + instance + ")\\" + counter
-					}
-
-					err := m.AddItem(query, objectname, counter, instance,
-						PerfObject.Measurement, PerfObject.IncludeTotal)
-
-					if err == nil {
-						if m.PrintValid {
-							fmt.Printf("Valid: %s\n", query)
+					for _, expandedQuery := range expandedQueries {
+						var extracted_counter string
+						extracted_counter, err = extractCounterFromQuery(expandedQuery)
+						if err != nil {
+							fmt.Printf(err.Error())
+							continue
 						}
-					} else {
-						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							fmt.Printf("Invalid query: '%s'. Error: %s", query, err.Error())
+
+						if instance == "------" {
+							err = m.AddItem(expandedQuery, objectname, extracted_counter, instance, PerfObject.Measurement)
+						} else {
+							var extracted_instance string
+							extracted_instance, err = extractInstanceFromQuery(expandedQuery)
+							if err != nil {
+								fmt.Printf(err.Error())
+								continue
+							}
+
+							if extracted_instance == "_Total" && !PerfObject.IncludeTotal {
+								continue
+							}
+
+							err = m.AddItem(expandedQuery, objectname, extracted_counter, extracted_instance, PerfObject.Measurement)
 						}
-						if PerfObject.FailOnMissing {
-							return err
+
+						if err == nil {
+							if m.PrintValid {
+								fmt.Printf("Valid: %s\n", expandedQuery)
+							}
+						} else {
+							if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
+								fmt.Printf("Invalid query: '%s'. Error: %s", expandedQuery, err.Error())
+							}
 						}
 					}
 				}
@@ -187,72 +254,22 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	var bufSize uint32
-	var bufCount uint32
-	var size uint32 = uint32(unsafe.Sizeof(PDH_FMT_COUNTERVALUE_ITEM_DOUBLE{}))
-	var emptyBuf [1]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE // need at least 1 addressable null ptr.
+	var emptyBuf [1]uint32 // need at least 1 addressable null ptr.
+	var counterValue PDH_FMT_COUNTERVALUE_DOUBLE
 
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range m.itemCache {
 		// collect
 		ret := PdhCollectQueryData(metric.handle)
 		if ret == ERROR_SUCCESS {
-			ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize,
-				&bufCount, &emptyBuf[0]) // uses null ptr here according to MSDN.
-			if ret == PDH_MORE_DATA {
-				filledBuf := make([]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE, bufCount*size)
-				if len(filledBuf) == 0 {
-					continue
-				}
-				ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle,
-					&bufSize, &bufCount, &filledBuf[0])
-				for i := 0; i < int(bufCount); i++ {
-					c := filledBuf[i]
-					var s string = UTF16PtrToString(c.SzName)
-
-					var add bool
-
-					if metric.include_total {
-						// If IncludeTotal is set, include all.
-						add = true
-					} else if metric.instance == "*" && !strings.Contains(s, "_Total") {
-						// Catch if set to * and that it is not a '*_Total*' instance.
-						add = true
-					} else if metric.instance == s {
-						// Catch if we set it to total or some form of it
-						add = true
-					} else if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, s) {
-						// If you are using a multiple instance identifier such as "w3wp#1"
-						// phd.dll returns only the first 2 characters of the identifier.
-						add = true
-						s = metric.instance
-					} else if metric.instance == "------" {
-						add = true
-					}
-
-					if add {
-						fields := make(map[string]interface{})
-						tags := make(map[string]string)
-						if s != "" {
-							tags["instance"] = s
-						}
-						tags["objectname"] = metric.objectName
-						fields[sanitizedChars.Replace(metric.counter)] =
-							float32(c.FmtValue.DoubleValue)
-
-						measurement := sanitizedChars.Replace(metric.measurement)
-						if measurement == "" {
-							measurement = "win_perf_counters"
-						}
-						acc.AddFields(measurement, fields, tags)
-					}
-				}
-
-				filledBuf = nil
-				// Need to at least set bufSize to zero, because if not, the function will not
-				// return PDH_MORE_DATA and will not set the bufSize.
-				bufCount = 0
-				bufSize = 0
+			ret = PdhGetFormattedCounterValueDouble(metric.counterHandle, &emptyBuf[0], &counterValue)
+			if ret == ERROR_SUCCESS {
+				fields := make(map[string]interface{})
+				tags := make(map[string]string)
+				tags["instance"] = metric.instance
+				tags["objectname"] = metric.objectName
+				fields[metric.counter] = float32(counterValue.DoubleValue)
+				acc.AddFields(metric.measurement, fields, tags)
 			}
 		}
 	}
