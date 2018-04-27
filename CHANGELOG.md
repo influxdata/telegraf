@@ -1,3 +1,9 @@
+## v1.6.2 [unreleased]
+
+### Bugfixes
+
+- [#4078](https://github.com/influxdata/telegraf/pull/4078): Use same timestamp for fields in system input.
+
 ## v1.6.1 [2018-04-23]
 
 ### Bugfixes
