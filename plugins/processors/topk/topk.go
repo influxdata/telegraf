@@ -21,7 +21,6 @@ type TopK struct {
 	Fields               []string
 	Aggregation          string
 	Bottomk              bool
-	SimpleTopk           bool     `toml:"simple_topk"`
 	DropNonTop           bool     `toml:"drop_non_top"`
 	AddGroupByTag        string   `toml:"add_groupby_tag"`
 	AddRankFields        []string `toml:"add_rank_fields"`
@@ -47,7 +46,6 @@ func New() *TopK {
 	topk.Aggregation = "mean"
 	topk.GroupBy = []string{"*"}
 	topk.AddGroupByTag = ""
-	topk.SimpleTopk = false
 	topk.DropNonTop = true
 	topk.AddRankFields = []string{""}
 	topk.RankFieldSuffix = "_rank"
@@ -80,10 +78,6 @@ var sampleConfig = `
 
   ## Instead of the top k largest metrics, return the bottom k lowest metrics
   # bottomk = false
-
-  ## If true, this will override any GroupBy options and assign each metric
-  ## its own individual group. Default: false
-  # simple_topk = false
 
   ## Drop the metrics that do not make the cut for the top k
   # drop_non_top = true          
@@ -155,10 +149,6 @@ func (t *TopK) Description() string {
 }
 
 func (t *TopK) generateGroupByKey(m telegraf.Metric) (string, error) {
-	if t.SimpleTopk {
-		return strconv.FormatUint(m.HashID(), 16), nil
-	}
-
 	// Create the filter.Filter objects if they have not been created
 	if t.tagsGlobs == nil && len(t.GroupBy) > 0 {
 		var err error
