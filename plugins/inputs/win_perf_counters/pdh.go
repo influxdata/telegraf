@@ -35,6 +35,7 @@ package win_perf_counters
 import (
 	"fmt"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -42,12 +43,22 @@ import (
 
 // Error codes
 const (
-	ERROR_SUCCESS          = 0
-	ERROR_INVALID_FUNCTION = 1
+	ERROR_SUCCESS                 = 0
+	ERROR_FAILURE                 = 1
+	ERROR_INVALID_FUNCTION        = 1
+	EPOCH_DIFFERENCE_MICROS int64 = 11644473600000000
 )
 
 type (
 	HANDLE uintptr
+)
+
+type (
+	LPCTSTR uintptr
+)
+
+type (
+	LONGLONG int64
 )
 
 // PDH error codes, which can be returned by all Pdh* functions. Taken from mingw-w64 pdhmsg.h
@@ -156,57 +167,30 @@ const (
 	PERF_DETAIL_STANDARD = 0x0000FFFF
 )
 
+const (
+	errnoERROR_IO_PENDING = 997
+)
+
+var (
+	errERROR_IO_PENDING error = syscall.Errno(errnoERROR_IO_PENDING)
+)
+
 type (
 	PDH_HQUERY   HANDLE // query handle
 	PDH_HCOUNTER HANDLE // counter handle
 )
-
-// Union specialization for double values
-type PDH_FMT_COUNTERVALUE_DOUBLE struct {
-	CStatus     uint32
-	DoubleValue float64
-}
-
-// Union specialization for 64 bit integer values
-type PDH_FMT_COUNTERVALUE_LARGE struct {
-	CStatus    uint32
-	LargeValue int64
-}
-
-// Union specialization for long values
-type PDH_FMT_COUNTERVALUE_LONG struct {
-	CStatus   uint32
-	LongValue int32
-	padding   [4]byte
-}
-
-// Union specialization for double values, used by PdhGetFormattedCounterArrayDouble()
-type PDH_FMT_COUNTERVALUE_ITEM_DOUBLE struct {
-	SzName   *uint16 // pointer to a string
-	FmtValue PDH_FMT_COUNTERVALUE_DOUBLE
-}
-
-// Union specialization for 'large' values, used by PdhGetFormattedCounterArrayLarge()
-type PDH_FMT_COUNTERVALUE_ITEM_LARGE struct {
-	SzName   *uint16 // pointer to a string
-	FmtValue PDH_FMT_COUNTERVALUE_LARGE
-}
-
-// Union specialization for long values, used by PdhGetFormattedCounterArrayLong()
-type PDH_FMT_COUNTERVALUE_ITEM_LONG struct {
-	SzName   *uint16 // pointer to a string
-	FmtValue PDH_FMT_COUNTERVALUE_LONG
-}
 
 var (
 	// Library
 	libpdhDll *syscall.DLL
 
 	// Functions
+	pdh_ConnectMachine            *syscall.Proc
 	pdh_AddCounterW               *syscall.Proc
 	pdh_AddEnglishCounterW        *syscall.Proc
 	pdh_CloseQuery                *syscall.Proc
 	pdh_CollectQueryData          *syscall.Proc
+	pdh_CollectQueryDataWithTime  *syscall.Proc
 	pdh_GetFormattedCounterValue  *syscall.Proc
 	pdh_GetFormattedCounterArrayW *syscall.Proc
 	pdh_OpenQuery                 *syscall.Proc
@@ -222,6 +206,9 @@ func init() {
 	pdh_AddEnglishCounterW, _ = libpdhDll.FindProc("PdhAddEnglishCounterW") // XXX: only supported on versions > Vista.
 	pdh_CloseQuery = libpdhDll.MustFindProc("PdhCloseQuery")
 	pdh_CollectQueryData = libpdhDll.MustFindProc("PdhCollectQueryData")
+	// Not supported on Windows XP for sure. May be other versions of windows.
+	pdh_CollectQueryDataWithTime, _ = libpdhDll.FindProc("PdhCollectQueryDataWithTime")
+
 	pdh_GetFormattedCounterValue = libpdhDll.MustFindProc("PdhGetFormattedCounterValue")
 	pdh_GetFormattedCounterArrayW = libpdhDll.MustFindProc("PdhGetFormattedCounterArrayW")
 	pdh_OpenQuery = libpdhDll.MustFindProc("PdhOpenQuery")
@@ -329,6 +316,37 @@ func PdhCollectQueryData(hQuery PDH_HQUERY) uint32 {
 	return uint32(ret)
 }
 
+// Queries data from perfmon, retrieving the device/windows timestamp from the node it was collected on.
+// Converts the filetime structure to a GO time class and returns the native time.
+//
+func PdhCollectQueryDataWithTime(hQuery PDH_HQUERY) (uint32, time.Time) {
+	var localFileTime FILETIME
+	ret, _, _ := pdh_CollectQueryDataWithTime.Call(uintptr(hQuery), uintptr(unsafe.Pointer(&localFileTime)))
+
+	if ret == ERROR_SUCCESS {
+		var utcFileTime FILETIME
+		ret, _, _ := krn_LocalFileTimeToFileTime.Call(
+			uintptr(unsafe.Pointer(&localFileTime)),
+			uintptr(unsafe.Pointer(&utcFileTime)))
+
+		if ret == 0 {
+			return uint32(ERROR_FAILURE), time.Now()
+		}
+
+		// First convert 100-ns intervals to microseconds, then adjust for the
+		// epoch difference
+		var totalMicroSeconds int64
+		totalMicroSeconds = ((int64(utcFileTime.dwHighDateTime) << 32) | int64(utcFileTime.dwLowDateTime)) / 10
+		totalMicroSeconds -= EPOCH_DIFFERENCE_MICROS
+
+		retTime := time.Unix(0, totalMicroSeconds*1000)
+
+		return uint32(ERROR_SUCCESS), retTime
+	}
+
+	return uint32(ret), time.Now()
+}
+
 // Formats the given hCounter using a 'double'. The result is set into the specialized union struct pValue.
 // This function does not directly translate to a Windows counterpart due to union specialization tricks.
 func PdhGetFormattedCounterValueDouble(hCounter PDH_HCOUNTER, lpdwType *uint32, pValue *PDH_FMT_COUNTERVALUE_DOUBLE) uint32 {
@@ -414,11 +432,25 @@ func PdhValidatePath(path string) uint32 {
 	return uint32(ret)
 }
 
+func errnoErr(e syscall.Errno) error {
+	switch e {
+	case 0:
+		return nil
+	case errnoERROR_IO_PENDING:
+		return errERROR_IO_PENDING
+	}
+	// TODO: add more here, after collecting data on the common
+	// error values see on Windows. (perhaps when running
+	// all.bat?)
+	return e
+}
+
 func UTF16PtrToString(s *uint16) string {
 	if s == nil {
 		return ""
 	}
-	return syscall.UTF16ToString((*[1 << 29]uint16)(unsafe.Pointer(s))[0:])
+
+	return syscall.UTF16ToString((*[20]uint16)(unsafe.Pointer(s))[:])
 }
 
 func PdhFormatError(msgId uint32) string {
