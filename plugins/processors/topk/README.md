@@ -4,8 +4,6 @@ The TopK processor plugin is a filter designed to get the top series over a peri
 
 This plugin groups the metrics based on their name and tags, then generates aggregates values across each group base on fields selected by the user. It then sorts these groups based on these aggregations and returns any metric that belongs to a group in the top k (sorted by any of the aggregations). This means that when calculating the top k, more than k metrics may be returned.
 
-If only the very top k metrics are needed, regardless of grouping, the simple_topk setting will force each metric into its own individual group
-
 ### Configuration:
 
 ```toml
@@ -31,9 +29,7 @@ If only the very top k metrics are needed, regardless of grouping, the simple_to
   ## The plugin returns a metric if it's in a group in the top k groups,
   ## ordered by any of the aggregations of the selected fields
 
-  ## This effectively means that more than K metrics may be returned. If you
-  ## need to return only the top k metrics regardless of grouping, use the simple_topk setting
-
+  ## This effectively means that more than K metrics may be returned.
 
   ## Over which fields are the top k are calculated
   # fields = ["value"]
@@ -43,10 +39,6 @@ If only the very top k metrics are needed, regardless of grouping, the simple_to
 
   ## Instead of the top k largest metrics, return the bottom k lowest metrics
   # bottomk = false
-
-  ## If true, this will override any GroupBy options and assign each metric
-  ## its own individual group. Default: false
-  # simple_topk = false
 
   ## Drop any metrics that do fit in any group (due to nonexistent tags)
   # drop_no_group = true
