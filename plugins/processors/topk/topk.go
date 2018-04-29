@@ -24,9 +24,7 @@ type TopK struct {
 	DropNonTop           bool     `toml:"drop_non_top"`
 	AddGroupByTag        string   `toml:"add_groupby_tag"`
 	AddRankFields        []string `toml:"add_rank_fields"`
-	RankFieldSuffix      string   `toml:"rank_field_suffix"`
 	AddAggregateFields   []string `toml:"add_aggregate_fields"`
-	AggregateFieldSuffix string   `toml:"aggregate_field_suffix"`
 
 	cache           map[string][]telegraf.Metric
 	tagsGlobs       filter.Filter
@@ -48,9 +46,7 @@ func New() *TopK {
 	topk.AddGroupByTag = ""
 	topk.DropNonTop = true
 	topk.AddRankFields = []string{""}
-	topk.RankFieldSuffix = "_rank"
 	topk.AddAggregateFields = []string{""}
-	topk.AggregateFieldSuffix = "_aggregate"
 
 	// Initialize cache
 	topk.Reset()
@@ -91,25 +87,23 @@ var sampleConfig = `
   ## These settings provide a way to know the position of each metric in
   ## the top k. The 'add_rank_field' setting allows to specify for which
   ## fields the position is required. If the list is non empty, then a field
-  ## will be added to each every metric for each field present in the 
-  ## 'add_rank_field'. This field will contain the ranking of the group that
+  ## will be added to each and every metric for each string present in this 
+  ## setting. This field will contain the ranking of the group that
   ## the metric belonged to when aggregated over that field.
   ## The name of the field will be set to the name of the aggregation field,
-  ## suffixed by the value of the 'rank_field_suffix' setting
+  ## suffixed with the string '_topk_rank'
   # add_rank_fields = []
-  # rank_field_suffix = "_rank"
 
   ## These settings provide a way to know what values the plugin is generating
   ## when aggregating metrics. The 'add_agregate_field' setting allows to
   ## specify for which fields the final aggregation value is required. If the
   ## list is non empty, then a field will be added to each every metric for
-  ## each field present in the 'add_aggregate_field'. This field will contain
+  ## each field present in this setting. This field will contain
   ## the computed aggregation for the group that the metric belonged to when
   ## aggregated over that field.
   ## The name of the field will be set to the name of the aggregation field,
-  ## suffixed by the value of the 'aggregate_field_suffix' setting
+  ## suffixed with the string '_topk_aggregate'
   # add_aggregate_fields = []
-  # aggregate_field_suffix = "_aggregate"
 `
 
 type MetricAggregation struct {
@@ -271,8 +265,6 @@ func (t *TopK) push() []telegraf.Metric {
 
 	// Get the top K metrics for each field and add them to the return value
 	addedKeys := make(map[string]bool)
-	aggFieldSuffix := t.AggregateFieldSuffix
-	rankFieldSuffix := t.RankFieldSuffix
 	groupTag := t.AddGroupByTag
 	for _, field := range t.Fields {
 
@@ -289,13 +281,13 @@ func (t *TopK) push() []telegraf.Metric {
 					// Add the aggregation final value if requested
 					_, addAggField := t.aggFieldSet[field]
 					if addAggField && m.HasField(field) {
-						m.AddField(field+aggFieldSuffix, ag.values[field])
+						m.AddField(field+"_topk_aggregate", ag.values[field])
 					}
 
 					// Add the rank relative to the current field if requested
 					_, addRankField := t.rankFieldSet[field]
 					if addRankField && m.HasField(field) {
-						m.AddField(field+rankFieldSuffix, i+1)
+						m.AddField(field+"_topk_rank", i+1)
 					}
 				}
 			}
