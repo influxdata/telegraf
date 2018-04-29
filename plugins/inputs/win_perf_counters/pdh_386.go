@@ -35,14 +35,14 @@ package win_perf_counters
 // Union specialization for double values
 type PDH_FMT_COUNTERVALUE_DOUBLE struct {
 	CStatus     uint32
-	padding     uint32 // TODO: could well be broken on amd64
+	padding     [4]byte
 	DoubleValue float64
 }
 
 // Union specialization for 64 bit integer values
 type PDH_FMT_COUNTERVALUE_LARGE struct {
 	CStatus    uint32
-	padding    uint32 // TODO: could well be broken on amd64
+	padding    [4]byte
 	LargeValue int64
 }
 

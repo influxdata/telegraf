@@ -202,7 +202,6 @@ func init() {
 	libpdhDll = syscall.MustLoadDLL("pdh.dll")
 
 	// Functions
-	pdh_ConnectMachine = libpdhDll.MustFindProc("PdhConnectMachineW")
 	pdh_AddCounterW = libpdhDll.MustFindProc("PdhAddCounterW")
 	pdh_AddEnglishCounterW, _ = libpdhDll.FindProc("PdhAddEnglishCounterW") // XXX: only supported on versions > Vista.
 	pdh_CloseQuery = libpdhDll.MustFindProc("PdhCloseQuery")
@@ -214,19 +213,6 @@ func init() {
 	pdh_GetFormattedCounterArrayW = libpdhDll.MustFindProc("PdhGetFormattedCounterArrayW")
 	pdh_OpenQuery = libpdhDll.MustFindProc("PdhOpenQuery")
 	pdh_ValidatePathW = libpdhDll.MustFindProc("PdhValidatePathW")
-}
-
-// Connects to the specified machine
-//
-// Originally used to connect to a computer for querying performnce counter data, but was unnecessary, and
-// actually slower to query the data using the call. Still a useful call for the future?
-//
-// Currently unused. But may be useful in the future?
-//
-func PdhConnectMachine(szMachineName string) uint32 {
-	ptxt, _ := syscall.UTF16PtrFromString(szMachineName)
-	ret, _, _ := pdh_ConnectMachine.Call(uintptr(unsafe.Pointer(ptxt)))
-	return uint32(ret)
 }
 
 // Adds the specified counter to the query. This is the internationalized version. Preferably, use the
