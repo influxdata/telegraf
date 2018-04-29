@@ -5,7 +5,6 @@ import (
 	"log"
 	"math"
 	"sort"
-	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -192,8 +191,8 @@ func (t *TopK) groupBy(m telegraf.Metric) {
 	t.cache[groupkey] = append(t.cache[groupkey], m)
 
 	// Add the generated groupby key tag to the metric if requested
-	if t.AddGroupTag != "" {
-		m.AddTag(t.AddGroupTag, groupkey)
+	if t.AddGroupByTag != "" {
+		m.AddTag(t.AddGroupByTag, groupkey)
 	}
 }
 
@@ -220,7 +219,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	// If enough time has passed
 	elapsed := time.Since(t.lastAggregation)
 	if elapsed >= t.Period.Duration {
-		return push()
+		return t.push()
 	}
 
 	return []telegraf.Metric{}
