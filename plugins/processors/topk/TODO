@@ -1,9 +1,0 @@
-Clarify tests
-
-DONE
-Make the settings that add tags and field add suffixes instead of prefixes
-Allow selecting over which fields aggregation and rank info is added, and let the user select the suffix
-Use filters to allow glob matching of tags in group by
-Don't panic
-Handle error when compiling tags globs
-Research sort.SliceStable
