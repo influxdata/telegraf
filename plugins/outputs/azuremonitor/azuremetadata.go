@@ -59,8 +59,8 @@ type VirtualMachineMetadata struct {
 	} `json:"network"`
 }
 
-// MsiToken is the managed service identity token
-type MsiToken struct {
+// msiToken is the managed service identity token
+type msiToken struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	ExpiresIn    string `json:"expires_in"`
@@ -74,7 +74,7 @@ type MsiToken struct {
 	raw       string
 }
 
-func (m *MsiToken) parseTimes() {
+func (m *msiToken) parseTimes() {
 	val, err := strconv.ParseInt(m.ExpiresOn, 10, 64)
 	if err == nil {
 		m.expiresAt = time.Unix(val, 0)
@@ -87,23 +87,23 @@ func (m *MsiToken) parseTimes() {
 }
 
 // ExpiresAt is the time at which the token expires
-func (m *MsiToken) ExpiresAt() time.Time {
+func (m *msiToken) ExpiresAt() time.Time {
 	return m.expiresAt
 }
 
 // ExpiresInDuration returns the duration until the token expires
-func (m *MsiToken) ExpiresInDuration() time.Duration {
+func (m *msiToken) ExpiresInDuration() time.Duration {
 	expiresDuration := m.expiresAt.Sub(time.Now().UTC())
 	return expiresDuration
 }
 
 // NotBeforeTime returns the time at which the token becomes valid
-func (m *MsiToken) NotBeforeTime() time.Time {
+func (m *msiToken) NotBeforeTime() time.Time {
 	return m.notBefore
 }
 
 // GetMsiToken retrieves a managed service identity token from the specified port on the local VM
-func (s *AzureInstanceMetadata) GetMsiToken(clientID string, resourceID string) (*MsiToken, error) {
+func (s *AzureInstanceMetadata) getMsiToken(clientID string, resourceID string) (*msiToken, error) {
 	// Acquire an MSI token.  Documented at:
 	// https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/how-to-use-vm-token
 	//
@@ -159,7 +159,7 @@ func (s *AzureInstanceMetadata) GetMsiToken(clientID string, resourceID string) 
 			resp.StatusCode, resp.Status, reply)
 	}
 
-	var token MsiToken
+	var token msiToken
 	if err := json.Unmarshal(reply, &token); err != nil {
 		return nil, err
 	}

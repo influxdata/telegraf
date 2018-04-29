@@ -30,7 +30,7 @@ func TestGetTOKEN(t *testing.T) {
 	azureMetadata := &AzureInstanceMetadata{}
 
 	resourceID := "https://ingestion.monitor.azure.com/"
-	token, err := azureMetadata.GetMsiToken("", resourceID)
+	token, err := azureMetadata.getMsiToken("", resourceID)
 
 	require.NoError(t, err)
 	require.NotEmpty(t, token.AccessToken)
