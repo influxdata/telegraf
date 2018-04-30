@@ -18,7 +18,7 @@ in Prometheus format.
   # prometheus.io/scrape: Enable scraping for this service
   # prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
   # prometheus.io/port: If port is not 9102 use this annotation
-  # kubernetes_scraping = true
+  # monitor_kubernetes_pods = true
 
   ## Use bearer token for authorization
   # bearer_token = /path/to/bearer/token
