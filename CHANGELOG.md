@@ -22,6 +22,7 @@
 - [#4035](https://github.com/influxdata/telegraf/pull/4035): Add server version tag to docker input.
 - [#4044](https://github.com/influxdata/telegraf/pull/4044): Add support for LeoFS 1.4 to leofs input.
 - [#4068](https://github.com/influxdata/telegraf/pull/4068): Add parameter to force the interval of gather for sysstat.
+- [#3877](https://github.com/influxdata/telegraf/pull/3877): Support busybox ping in the ping input.
 
 ### Bugfixes
 
