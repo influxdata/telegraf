@@ -111,6 +111,14 @@ for more information.
 	- Disk: Capacity, provisioned, used  
 	
 ## Tags
+- all metrics
+	- vcenter (vcenter url)
+- all host metrics
+	- cluster (vcenter cluster)
+- all vm metrics
+	- cluster (vcenter cluster)
+	- esxhost (name of ESXi host)
+	- guest (guest operating system id)
 - cpu stats for Host and VM
 	- cpu (cpu core - not all CPU fields will have this tag)
 - datastore stats for Host and VM
