@@ -499,7 +499,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 
 func cleanGuestId(id string) string {
 	if strings.HasSuffix(id, "Guest") {
-		return id[:len(id) - 5]
+		return id[:len(id)-5]
 	}
 
 	return id

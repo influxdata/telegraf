@@ -1,26 +1,26 @@
 package vsphere
 
 import (
-	"github.com/vmware/govmomi/simulator"
 	"crypto/tls"
-	"testing"
 	"fmt"
-	"time"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"github.com/vmware/govmomi/simulator"
+	"testing"
+	"time"
 )
 
 func defaultVSphere() *VSphere {
 	return &VSphere{
-		GatherClusters:   true,
-		ClusterMetrics:   nil,
-		GatherHosts:      true,
-		HostMetrics:      nil,
-		GatherVms:        true,
-		VmMetrics:        nil,
-		GatherDatastores: true,
-		DatastoreMetrics: nil,
+		GatherClusters:     true,
+		ClusterMetrics:     nil,
+		GatherHosts:        true,
+		HostMetrics:        nil,
+		GatherVms:          true,
+		VmMetrics:          nil,
+		GatherDatastores:   true,
+		DatastoreMetrics:   nil,
 		InsecureSkipVerify: true,
 
 		ObjectsPerQuery:         256,

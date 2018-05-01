@@ -6,8 +6,8 @@ import (
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/view"
-	"net/url"
 	"log"
+	"net/url"
 )
 
 type Client struct {
