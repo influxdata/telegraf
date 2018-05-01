@@ -43,6 +43,7 @@ type objectRef struct {
 	name      string
 	ref       types.ManagedObjectReference
 	parentRef *types.ManagedObjectReference //Pointer because it must be nillable
+	guest     string
 }
 
 func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
@@ -268,14 +269,14 @@ func getHosts(root *view.ContainerView) (objectMap, error) {
 
 func getVMs(root *view.ContainerView) (objectMap, error) {
 	var resources []mo.VirtualMachine
-	err := root.Retrieve(context.Background(), []string{"VirtualMachine"}, []string{"name", "runtime.host"}, &resources)
+	err := root.Retrieve(context.Background(), []string{"VirtualMachine"}, []string{"name", "runtime.host", "config.guestId"}, &resources)
 	if err != nil {
 		return nil, err
 	}
 	m := make(objectMap)
 	for _, r := range resources {
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host}
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host, guest: cleanGuestId(r.Config.GuestId)}
 	}
 	return m, nil
 }
@@ -398,6 +399,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 			log.Printf("D! Querying %d objects of type %s for %s. Object count: %d. Total objects %d", len(pqs), resourceType, e.Url.Host, total, len(res.objects))
 			metrics, err := client.Perf.Query(ctx, pqs)
 			if err != nil {
+				//TODO: Check the error and attempt to handle gracefully. (ie: object no longer exists)
 				log.Printf("E! Error querying metrics of %s for %s", resourceType, e.Url.Host)
 				e.checkClient()
 				return count, time.Now().Sub(start).Seconds(), err
@@ -433,6 +435,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 								break
 
 							case "vm":
+								t["guest"] = objectRef.guest
 								t["esxhost"] = parent
 								hostRes := e.resources["host"]
 								hostRef, ok := hostRes.objects[objectRef.parentRef.Value]
@@ -492,6 +495,14 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 
 	log.Printf("D! Collection of %s for %s, took %v returning %d metrics", resourceType, e.Url.Host, time.Now().Sub(start), count)
 	return count, time.Now().Sub(start).Seconds(), nil
+}
+
+func cleanGuestId(id string) string {
+	if strings.HasSuffix(id, "Guest") {
+		return id[:len(id) - 5]
+	}
+
+	return id
 }
 
 func cleanDiskTag(disk string) string {
