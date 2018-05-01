@@ -26,6 +26,7 @@
 ### Bugfixes
 
 - [#4018](https://github.com/influxdata/telegraf/pull/4018): Write to working file outputs if any files are not writeable.
+- [#4036](https://github.com/influxdata/telegraf/pull/4036): Add all win_perf_counters fields for a series in a single metric.
 
 ## v1.6.2 [unreleased]
 
