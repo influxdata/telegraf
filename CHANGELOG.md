@@ -10,6 +10,7 @@
 ### New Inputs
 
 - [fibaro](./plugins/inputs/fibaro/README.md) - Contributed by @dynek
+- [mcrouter](./plugins/inputs/mcrouter/README.md) - Contributed by @cthayer
 - [nvidia_smi](./plugins/inputs/nvidia_smi/README.md) - Contributed by @jackzampolin
 
 ### Features
@@ -23,6 +24,7 @@
 - [#4044](https://github.com/influxdata/telegraf/pull/4044): Add support for LeoFS 1.4 to leofs input.
 - [#4068](https://github.com/influxdata/telegraf/pull/4068): Add parameter to force the interval of gather for sysstat.
 - [#3877](https://github.com/influxdata/telegraf/pull/3877): Support busybox ping in the ping input.
+- [#4077](https://github.com/influxdata/telegraf/pull/4077): Add input plugin for McRouter.
 
 ### Bugfixes
 

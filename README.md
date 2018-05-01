@@ -169,6 +169,7 @@ configuration options.
 * [leofs](./plugins/inputs/leofs)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
+* [mcrouter](./plugins/inputs/mcrouter)
 * [memcached](./plugins/inputs/memcached)
 * [mesos](./plugins/inputs/mesos)
 * [minecraft](./plugins/inputs/minecraft)
