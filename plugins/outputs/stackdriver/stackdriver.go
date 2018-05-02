@@ -77,7 +77,7 @@ func (s *GCPStackdriver) Write(metrics []telegraf.Metric) error {
 				continue
 			}
 
-			metricKind, err := getStackdriverMetricKind(telegraf.Histogram)
+			metricKind, err := getStackdriverMetricKind(m.Type())
 			if err != nil {
 				log.Printf("E! Error writing to output [stackdriver]: %s", err)
 				continue
