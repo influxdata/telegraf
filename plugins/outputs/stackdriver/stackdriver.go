@@ -212,7 +212,7 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 
 // Close will terminate the session to the backend, returning error if an issue arises.
 func (s *GCPStackdriver) Close() error {
-	return nil
+	return s.client.Close()
 }
 
 // SampleConfig returns the formatted sample configuration for the plugin.
