@@ -9,20 +9,20 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
-	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 type TopK struct {
-	Period               internal.Duration
-	K                    int
-	GroupBy              []string `toml:"group_by"`
-	Fields               []string
-	Aggregation          string
-	Bottomk              bool
-	AddGroupByTag        string   `toml:"add_groupby_tag"`
-	AddRankFields        []string `toml:"add_rank_fields"`
-	AddAggregateFields   []string `toml:"add_aggregate_fields"`
+	Period             internal.Duration
+	K                  int
+	GroupBy            []string `toml:"group_by"`
+	Fields             []string
+	Aggregation        string
+	Bottomk            bool
+	AddGroupByTag      string   `toml:"add_groupby_tag"`
+	AddRankFields      []string `toml:"add_rank_fields"`
+	AddAggregateFields []string `toml:"add_aggregate_fields"`
 
 	cache           map[string][]telegraf.Metric
 	tagsGlobs       filter.Filter
@@ -36,7 +36,7 @@ func New() *TopK {
 	topk := TopK{}
 
 	// Setup defaults
-	topk.Period = internal.Duration{Duration: time.Second*time.Duration(10)}
+	topk.Period = internal.Duration{Duration: time.Second * time.Duration(10)}
 	topk.K = 10
 	topk.Fields = []string{"value"}
 	topk.Aggregation = "mean"
@@ -217,7 +217,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				break
 			}
 		}
-		if ! hasField {
+		if !hasField {
 			continue
 		}
 
@@ -313,7 +313,6 @@ func (t *TopK) push() []telegraf.Metric {
 
 	return ret
 }
-
 
 // Function that generates the aggregation functions
 func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metric, []string) map[string]float64, error) {

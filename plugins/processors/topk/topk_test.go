@@ -118,7 +118,7 @@ func equalSets(l1 []telegraf.Metric, l2 []telegraf.Metric) bool {
 }
 
 func createDuration(t int) internal.Duration {
-	return internal.Duration{Duration: time.Second*time.Duration(t)}
+	return internal.Duration{Duration: time.Second * time.Duration(t)}
 }
 
 func runAndCompare(topk *TopK, metrics []telegraf.Metric, answer []telegraf.Metric, testID string, t *testing.T) {
