@@ -8,7 +8,7 @@ import (
 
 ///// Test set 1 /////
 var metric11, _ = metric.New(
-	"1one",
+	"m1",
 	map[string]string{"tag_name": "tag_value1"},
 	map[string]interface{}{
 		"a": float64(15.3),
@@ -18,7 +18,7 @@ var metric11, _ = metric.New(
 )
 
 var metric12, _ = metric.New(
-	"1two",
+	"m1",
 	map[string]string{"tag_name": "tag_value1"},
 	map[string]interface{}{
 		"a": float64(50),
@@ -27,7 +27,7 @@ var metric12, _ = metric.New(
 )
 
 var metric13, _ = metric.New(
-	"1three",
+	"m1",
 	map[string]string{"tag_name": "tag_value1"},
 	map[string]interface{}{
 		"a": float64(0.3),
@@ -37,7 +37,7 @@ var metric13, _ = metric.New(
 )
 
 var metric14, _ = metric.New(
-	"1four",
+	"m1",
 	map[string]string{"tag_name": "tag_value1"},
 	map[string]interface{}{
 		"a": float64(24.12),
@@ -47,7 +47,7 @@ var metric14, _ = metric.New(
 )
 
 var metric15, _ = metric.New(
-	"1five",
+	"m1",
 	map[string]string{"tag_name": "tag_value1"},
 	map[string]interface{}{
 		"a": float64(50.5),
