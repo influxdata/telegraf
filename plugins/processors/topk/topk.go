@@ -208,6 +208,20 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 	// Add the metrics received to our internal cache
 	for _, m := range in {
+
+		// Check if the metric has any of the fields over wich we are aggregating
+		hasField := false
+		for _, f := range t.Fields {
+			if m.HasField(f) {
+				hasField = true
+				break
+			}
+		}
+		if ! hasField {
+			continue
+		}
+
+		// Add the metric to the internal cache
 		t.groupBy(m)
 	}
 
