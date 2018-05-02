@@ -136,9 +136,9 @@ func (a *ApplicationInsights) createTelemetry(metric telegraf.Metric) []appinsig
 	}
 
 	fields := metric.Fields()
-	if len(fields) == 1 {
+	if len(fields) == 1 && metric.FieldList()[0].Key == "value" {
 		// Just use metric name as the telemetry name
-		telemetry := a.createSimpleMetricTelemetry(metric, metric.FieldList()[0].Key, false)
+		telemetry := a.createSimpleMetricTelemetry(metric, "value", false)
 		if telemetry != nil {
 			return []appinsights.Telemetry{telemetry}
 		} else {

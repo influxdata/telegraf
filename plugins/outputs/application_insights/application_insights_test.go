@@ -185,7 +185,8 @@ func TestSimpleMetricCreated(t *testing.T) {
 		primaryMetricValueField     string
 		additionalMetricValueFields []string
 	}{
-		{"just a single field", map[string]interface{}{"value": 16.5}, "value", nil},
+		{"just a single value field", map[string]interface{}{"value": 16.5}, "value", nil},
+		{"single field not named value", map[string]interface{}{"first": 32.9}, "first", nil},
 		{"value but no count", map[string]interface{}{"value": 16.5, "other": "bulba"}, "", []string{"value"}},
 		{"count but no value", map[string]interface{}{"v1": "v1Val", "count": 23}, "", []string{"count"}},
 		{"neither value nor count", map[string]interface{}{"v1": "alpha", "v2": 45.8}, "", []string{"v2"}},
@@ -233,7 +234,14 @@ func TestSimpleMetricCreated(t *testing.T) {
 				var pMetricTelemetry *appinsights.MetricTelemetry
 				assert.IsType(pMetricTelemetry, transmitter.Calls[0].Arguments.Get(0), "First created telemetry should be simple MetricTelemetry")
 				metricTelemetry := transmitter.Calls[0].Arguments.Get(0).(*appinsights.MetricTelemetry)
-				verifySimpleTelemetry(assert, m, tt.primaryMetricValueField, m.Name(), metricTelemetry)
+
+				var expectedTelemetryName string
+				if tt.primaryMetricValueField == "value" {
+					expectedTelemetryName = m.Name()
+				} else {
+					expectedTelemetryName = m.Name() + "_" + tt.primaryMetricValueField
+				}
+				verifySimpleTelemetry(assert, m, tt.primaryMetricValueField, expectedTelemetryName, metricTelemetry)
 			}
 
 			verifyAdditionalTelemetry(assert, m, transmitter, tt.additionalMetricValueFields, metricName)
