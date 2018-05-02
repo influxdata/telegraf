@@ -11,12 +11,11 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/application_insights/mocks"
-	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
-func TestOutputNotTrackingIfNoIkey(t *testing.T) {
+func TestConnectFailsIfNoIkey(t *testing.T) {
 	assert := assert.New(t)
 
 	transmitter := new(mocks.Transmitter)
@@ -29,15 +28,7 @@ func TestOutputNotTrackingIfNoIkey(t *testing.T) {
 	}
 
 	err := ai.Connect()
-	assert.NoError(err)
-
-	metrics := testutil.MockMetrics()
-	ai.Write(metrics)
-	transmitter.AssertNumberOfCalls(t, "Track", 0)
-
-	err = ai.Close()
-	assert.NoError(err)
-	transmitter.AssertCalled(t, "Close")
+	assert.Error(err)
 }
 
 func TestOutputCloseTimesOut(t *testing.T) {
@@ -75,6 +66,7 @@ func TestCloseRemovesDiagMsgListener(t *testing.T) {
 		Timeout:                 internal.Duration{Duration: time.Hour},
 		EnableDiagnosticLogging: true,
 		diagMsgSubscriber:       diagMsgSubscriber,
+		InstrumentationKey:      "1234", // Fake, but necessary to enable tracking
 	}
 
 	err := ai.Connect()

@@ -73,12 +73,12 @@ func (a *ApplicationInsights) Description() string {
 }
 
 func (a *ApplicationInsights) Connect() error {
+	if a.InstrumentationKey == "" {
+		return fmt.Errorf("Instrumentation key is required")
+	}
+
 	if a.transmitter == nil {
-		if a.InstrumentationKey != "" {
-			a.transmitter = NewTransmitter(a.InstrumentationKey)
-		} else {
-			logOutputMsg(Warning, "Instrumentation key is empty; no metrics will be sent to Application Insights")
-		}
+		a.transmitter = NewTransmitter(a.InstrumentationKey)
 	}
 
 	if a.EnableDiagnosticLogging && a.diagMsgSubscriber != nil {
@@ -92,10 +92,6 @@ func (a *ApplicationInsights) Connect() error {
 }
 
 func (a *ApplicationInsights) Write(metrics []telegraf.Metric) error {
-	if a.transmitter == nil || a.InstrumentationKey == "" {
-		return nil
-	}
-
 	for _, metric := range metrics {
 		allMetricTelemetry := a.createTelemetry(metric)
 		for _, telemetry := range allMetricTelemetry {
