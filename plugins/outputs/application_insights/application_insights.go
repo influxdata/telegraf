@@ -153,8 +153,7 @@ func (a *ApplicationInsights) createTelemetry(metric telegraf.Metric) []appinsig
 }
 
 func (a *ApplicationInsights) createSimpleMetricTelemetry(metric telegraf.Metric, fieldName string, useFieldNameInTelemetryName bool) *appinsights.MetricTelemetry {
-	var telemetryValue float64
-	err := setFloat64TelemetryProperty(&telemetryValue, []string{fieldName}, metric, nil)
+	telemetryValue, err := getFloat64TelemetryPropertyValue([]string{fieldName}, metric, nil)
 	if err != nil {
 		return nil
 	}
@@ -173,19 +172,16 @@ func (a *ApplicationInsights) createSimpleMetricTelemetry(metric telegraf.Metric
 }
 
 func (a *ApplicationInsights) createAggregateMetricTelemetry(metric telegraf.Metric) (*appinsights.AggregateMetricTelemetry, []string) {
-	var telemetryValue float64
-	var telemetryCount int
 	usedFields := make([]string, 0, 6) // We will use up to 6 fields
-	var err error
 
 	// Get the sum of all individual measurements(mandatory property)
-	err = setFloat64TelemetryProperty(&telemetryValue, []string{"sum", "value"}, metric, &usedFields)
+	telemetryValue, err := getFloat64TelemetryPropertyValue([]string{"sum", "value"}, metric, &usedFields)
 	if err != nil {
 		return nil, nil
 	}
 
 	// Get the count of measurements (mandatory property)
-	err = setIntTelemetryProperty(&telemetryCount, []string{"count", "samples"}, metric, &usedFields)
+	telemetryCount, err := getIntTelemetryPropertyValue([]string{"count", "samples"}, metric, &usedFields)
 	if err != nil {
 		return nil, nil
 	}
@@ -200,10 +196,10 @@ func (a *ApplicationInsights) createAggregateMetricTelemetry(metric telegraf.Met
 	// We attempt to set min, max, variance and stddev fields but do not really care if they are not present--
 	// they are not essential for aggregate metric.
 	// By convention AppInsights prefers stddev over variance, so to be consistent, we test for stddev after testing for variance.
-	setFloat64TelemetryProperty(&(telemetry.Min), []string{"min"}, metric, &usedFields)
-	setFloat64TelemetryProperty(&(telemetry.Max), []string{"max"}, metric, &usedFields)
-	setFloat64TelemetryProperty(&(telemetry.Variance), []string{"variance"}, metric, &usedFields)
-	setFloat64TelemetryProperty(&(telemetry.StdDev), []string{"stddev"}, metric, &usedFields)
+	telemetry.Min, _ = getFloat64TelemetryPropertyValue([]string{"min"}, metric, &usedFields)
+	telemetry.Max, _ = getFloat64TelemetryPropertyValue([]string{"max"}, metric, &usedFields)
+	telemetry.Variance, _ = getFloat64TelemetryPropertyValue([]string{"variance"}, metric, &usedFields)
+	telemetry.StdDev, _ = getFloat64TelemetryPropertyValue([]string{"stddev"}, metric, &usedFields)
 
 	return telemetry, usedFields
 }
@@ -234,11 +230,10 @@ func (a *ApplicationInsights) addContextTags(metric telegraf.Metric, telemetry a
 	}
 }
 
-func setFloat64TelemetryProperty(
-	telemetryProperty *float64,
+func getFloat64TelemetryPropertyValue(
 	candidateFields []string,
 	metric telegraf.Metric,
-	usedFields *[]string) error {
+	usedFields *[]string) (float64, error) {
 
 	for _, fieldName := range candidateFields {
 		fieldValue, found := metric.GetField(fieldName)
@@ -251,23 +246,20 @@ func setFloat64TelemetryProperty(
 			continue
 		}
 
-		*telemetryProperty = metricValue
-
 		if usedFields != nil {
 			*usedFields = append(*usedFields, fieldName)
 		}
 
-		return nil
+		return metricValue, nil
 	}
 
-	return fmt.Errorf("No field from the candidate list was found in the metric")
+	return 0.0, fmt.Errorf("No field from the candidate list was found in the metric")
 }
 
-func setIntTelemetryProperty(
-	telemetryProperty *int,
+func getIntTelemetryPropertyValue(
 	candidateFields []string,
 	metric telegraf.Metric,
-	usedFields *[]string) error {
+	usedFields *[]string) (int, error) {
 
 	for _, fieldName := range candidateFields {
 		fieldValue, found := metric.GetField(fieldName)
@@ -280,16 +272,14 @@ func setIntTelemetryProperty(
 			continue
 		}
 
-		*telemetryProperty = metricValue
-
 		if usedFields != nil {
 			*usedFields = append(*usedFields, fieldName)
 		}
 
-		return nil
+		return metricValue, nil
 	}
 
-	return fmt.Errorf("No field from the candidate list was found in the metric")
+	return 0, fmt.Errorf("No field from the candidate list was found in the metric")
 }
 
 func contains(set []string, val string) bool {
