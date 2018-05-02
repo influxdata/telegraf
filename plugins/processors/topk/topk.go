@@ -20,7 +20,6 @@ type TopK struct {
 	Fields               []string
 	Aggregation          string
 	Bottomk              bool
-	DropNonTop           bool     `toml:"drop_non_top"`
 	AddGroupByTag        string   `toml:"add_groupby_tag"`
 	AddRankFields        []string `toml:"add_rank_fields"`
 	AddAggregateFields   []string `toml:"add_aggregate_fields"`
@@ -43,7 +42,6 @@ func New() *TopK {
 	topk.Aggregation = "mean"
 	topk.GroupBy = []string{"*"}
 	topk.AddGroupByTag = ""
-	topk.DropNonTop = true
 	topk.AddRankFields = []string{""}
 	topk.AddAggregateFields = []string{""}
 
@@ -73,9 +71,6 @@ var sampleConfig = `
 
   ## Instead of the top k largest metrics, return the bottom k lowest metrics
   # bottomk = false
-
-  ## Drop the metrics that do not make the cut for the top k
-  # drop_non_top = true          
 
   ## The plugin assigns each metric a GroupBy tag generated from its name and
   ## tags. If this setting is different than "" the plugin will add a
@@ -292,17 +287,6 @@ func (t *TopK) push() []telegraf.Metric {
 			}
 
 			// Add metrics if we have not already appended them to the return value
-			_, ok := addedKeys[ag.groupbykey]
-			if !ok {
-				ret = append(ret, t.cache[ag.groupbykey]...)
-				addedKeys[ag.groupbykey] = true
-			}
-		}
-	}
-
-	//Lastly, if we were instructed to not drop the bottom metrics, append them as is to the output
-	if !t.DropNonTop {
-		for _, ag := range aggregations {
 			_, ok := addedKeys[ag.groupbykey]
 			if !ok {
 				ret = append(ret, t.cache[ag.groupbykey]...)

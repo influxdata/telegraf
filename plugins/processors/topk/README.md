@@ -36,9 +36,6 @@ Note that depending on the amount of metrics on each computed bucket, more than 
   ## Instead of the top k largest metrics, return the bottom k lowest metrics
   # bottomk = false
 
-  ## Drop the metrics that do not make the cut for the top k
-  # drop_non_top = true
-
   ## The plugin assigns each metric a GroupBy tag generated from its name and
   ## tags. If this setting is different than "" the plugin will add a
   ## tag (which name will be the value of this setting) to each metric with
