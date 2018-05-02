@@ -19,7 +19,7 @@ import (
 func TestOutputNotTrackingIfNoIkey(t *testing.T) {
 	assert := assert.New(t)
 
-	transmitter := new(mocks.TelemetryTransmitter)
+	transmitter := new(mocks.Transmitter)
 	transmitter.On("Close").Return(closed)
 
 	ai := ApplicationInsights{
@@ -43,7 +43,7 @@ func TestOutputNotTrackingIfNoIkey(t *testing.T) {
 func TestOutputCloseTimesOut(t *testing.T) {
 	assert := assert.New(t)
 
-	transmitter := new(mocks.TelemetryTransmitter)
+	transmitter := new(mocks.Transmitter)
 	transmitter.On("Close").Return(unfinished)
 
 	ai := ApplicationInsights{
@@ -59,7 +59,7 @@ func TestOutputCloseTimesOut(t *testing.T) {
 func TestCloseRemovesDiagMsgListener(t *testing.T) {
 	assert := assert.New(t)
 
-	transmitter := new(mocks.TelemetryTransmitter)
+	transmitter := new(mocks.Transmitter)
 	transmitter.On("Close").Return(closed)
 
 	diagMsgListener := new(mocks.DiagnosticsMessageListener)
@@ -143,7 +143,7 @@ func TestAggregateMetricCreated(t *testing.T) {
 			assert := assert.New(t)
 			now := time.Now().UTC()
 
-			transmitter := new(mocks.TelemetryTransmitter)
+			transmitter := new(mocks.Transmitter)
 			transmitter.On("Track", mock.Anything)
 			metricName := "ShouldBeAggregateMetric"
 
@@ -167,8 +167,8 @@ func TestAggregateMetricCreated(t *testing.T) {
 			ai.Write(mSet)
 			transmitter.AssertNumberOfCalls(t, "Track", 1+len(tt.additionalMetricValueFields))
 			var pAggregateTelemetry *appinsights.AggregateMetricTelemetry
-			assert.IsType(pAggregateTelemetry, transmitter.Calls[0].Arguments.Get(0), "First created telemetry should be AggregateMetricTelemetry")
-			aggregateTelemetry := transmitter.Calls[0].Arguments.Get(0).(*appinsights.AggregateMetricTelemetry)
+			assert.IsType(pAggregateTelemetry, transmitter.Calls[len(transmitter.Calls)-1].Arguments.Get(0), "Expected last telemetry to be AggregateMetricTelemetry")
+			aggregateTelemetry := transmitter.Calls[len(transmitter.Calls)-1].Arguments.Get(0).(*appinsights.AggregateMetricTelemetry)
 			verifyAggregateTelemetry(assert, m, tt.valueField, tt.countField, aggregateTelemetry)
 
 			verifyAdditionalTelemetry(assert, m, transmitter, tt.additionalMetricValueFields, metricName)
@@ -200,7 +200,7 @@ func TestSimpleMetricCreated(t *testing.T) {
 			assert := assert.New(t)
 			now := time.Now().UTC()
 
-			transmitter := new(mocks.TelemetryTransmitter)
+			transmitter := new(mocks.Transmitter)
 			transmitter.On("Track", mock.Anything)
 			metricName := "ShouldBeSimpleMetric"
 
@@ -263,7 +263,7 @@ func TestTagsAppliedToTelemetry(t *testing.T) {
 			assert := assert.New(t)
 			now := time.Now().UTC()
 
-			transmitter := new(mocks.TelemetryTransmitter)
+			transmitter := new(mocks.Transmitter)
 			transmitter.On("Track", mock.Anything)
 			metricName := "ShouldBeSimpleMetric"
 
@@ -300,7 +300,7 @@ func TestContextTagsSetOnSimpleTelemetry(t *testing.T) {
 	assert := assert.New(t)
 	now := time.Now().UTC()
 
-	transmitter := new(mocks.TelemetryTransmitter)
+	transmitter := new(mocks.Transmitter)
 	transmitter.On("Track", mock.Anything)
 
 	m, err := metric.New(
@@ -337,7 +337,7 @@ func TestContextTagsSetOnAggregateTelemetry(t *testing.T) {
 	assert := assert.New(t)
 	now := time.Now().UTC()
 
-	transmitter := new(mocks.TelemetryTransmitter)
+	transmitter := new(mocks.Transmitter)
 	transmitter.On("Track", mock.Anything)
 
 	m, err := metric.New(
@@ -427,7 +427,7 @@ func verifySimpleTelemetry(
 func verifyAdditionalTelemetry(
 	assert *assert.Assertions,
 	metric telegraf.Metric,
-	transmitter *mocks.TelemetryTransmitter,
+	transmitter *mocks.Transmitter,
 	additionalMetricValueFields []string,
 	telemetryNamePrefix string,
 ) {
@@ -441,7 +441,7 @@ func verifyAdditionalTelemetry(
 	}
 }
 
-func findTransmittedTelemetry(transmitter *mocks.TelemetryTransmitter, telemetryName string) *appinsights.MetricTelemetry {
+func findTransmittedTelemetry(transmitter *mocks.Transmitter, telemetryName string) *appinsights.MetricTelemetry {
 	for _, call := range transmitter.Calls {
 		telemetry, isMetricTelemetry := call.Arguments.Get(0).(*appinsights.MetricTelemetry)
 		if isMetricTelemetry && telemetry.Name == telemetryName {
