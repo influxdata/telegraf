@@ -4,9 +4,11 @@ Documentation=https://github.com/influxdata/telegraf
 After=network.target
 
 [Service]
+Environment=CONFIG=/etc/telegraf/telegraf.conf
+Environment=CONFDIR=/etc/telegraf/telegraf.d
 EnvironmentFile=-/etc/default/telegraf
 User=telegraf
-ExecStart=/usr/bin/telegraf -config /etc/telegraf/telegraf.conf -config-directory /etc/telegraf/telegraf.d $TELEGRAF_OPTS
+ExecStart=/usr/bin/telegraf -config $CONFIG -config-directory $CONFDIR $TELEGRAF_OPTS
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartForceExitStatus=SIGPIPE

@@ -22,10 +22,16 @@
 
 # Command-line options that can be set in /etc/default/telegraf.  These will override
 # any config file values.
+CONFIG=/etc/telegraf/telegraf.conf
+CONFDIR=/etc/telegraf/telegraf.d
+
+PIDFILE=/var/run/telegraf/telegraf.pid
+
 TELEGRAF_OPTS=
 
 USER=telegraf
 GROUP=telegraf
+
 
 if [ -r /lib/lsb/init-functions ]; then
     source /lib/lsb/init-functions
@@ -66,11 +72,11 @@ function pidofproc() {
 
     local pidfile=`cat $2`
 
-    if [ "x$pidfile" == "x" ]; then
+    if [ "x$PIDFILE" == "x" ]; then
         return 1
     fi
 
-    if ps --pid "$pidfile" | grep -q $(basename $3); then
+    if ps --pid "$PIDFILE" | grep -q $(basename $3); then
         return 0
     fi
 
@@ -101,18 +107,13 @@ name=telegraf
 # Daemon name, where is the actual executable
 daemon=/usr/bin/telegraf
 
-# pid file for the daemon
-pidfile=/var/run/telegraf/telegraf.pid
-piddir=`dirname $pidfile`
+# pid directory for the daemon
+piddir=`dirname $PIDFILE`
 
 if [ ! -d "$piddir" ]; then
     mkdir -p $piddir
     chown $USER:$GROUP $piddir
 fi
-
-# Configuration file
-config=/etc/telegraf/telegraf.conf
-confdir=/etc/telegraf/telegraf.d
 
 # If the daemon is not there, then exit.
 [ -x $daemon ] || exit 5
@@ -120,8 +121,8 @@ confdir=/etc/telegraf/telegraf.d
 case $1 in
     start)
         # Checked the PID file exists and check the actual status of process
-        if [ -e $pidfile ]; then
-            pidofproc -p $pidfile $daemon > /dev/null 2>&1 && status="0" || status="$?"
+        if [ -e $PIDFILE ]; then
+            pidofproc -p $PIDFILE $daemon > /dev/null 2>&1 && status="0" || status="$?"
             # If the status is SUCCESS then don't need to start again.
             if [ "x$status" = "x0" ]; then
                 log_failure_msg "$name process is running"
@@ -138,21 +139,21 @@ case $1 in
 
         log_success_msg "Starting the process" "$name"
         if command -v startproc >/dev/null; then
-            startproc -u "$USER" -g "$GROUP" -p "$pidfile" -q -- "$daemon" -pidfile "$pidfile" -config "$config" -config-directory "$confdir" $TELEGRAF_OPTS
+            startproc -u "$USER" -g "$GROUP" -p "$PIDFILE" -q -- "$daemon" -pidfile "$PIDFILE" -config "$CONFIG" -config-directory "$CONFDIR" $TELEGRAF_OPTS
         elif which start-stop-daemon > /dev/null 2>&1; then
-            start-stop-daemon --chuid $USER:$GROUP --start --quiet --pidfile $pidfile --exec $daemon -- -pidfile $pidfile -config $config -config-directory $confdir $TELEGRAF_OPTS >>$STDOUT 2>>$STDERR &
+            start-stop-daemon --chuid $USER:$GROUP --start --quiet --pidfile $PIDFILE --exec $daemon -- -pidfile $PIDFILE -config $CONFIG -config-directory $CONFDIR $TELEGRAF_OPTS >>$STDOUT 2>>$STDERR &
         else
-            su -s /bin/sh -c "nohup $daemon -pidfile $pidfile -config $config -config-directory $confdir $TELEGRAF_OPTS >>$STDOUT 2>>$STDERR &" $USER
+            su -s /bin/sh -c "nohup $daemon -pidfile $PIDFILE -config $CONFIG -config-directory $CONFDIR $TELEGRAF_OPTS >>$STDOUT 2>>$STDERR &" $USER
         fi
         log_success_msg "$name process was started"
         ;;
 
     stop)
         # Stop the daemon.
-        if [ -e $pidfile ]; then
-            pidofproc -p $pidfile $daemon > /dev/null 2>&1 && status="0" || status="$?"
+        if [ -e $PIDFILE ]; then
+            pidofproc -p $PIDFILE $daemon > /dev/null 2>&1 && status="0" || status="$?"
             if [ "$status" = 0 ]; then
-                if killproc -p $pidfile SIGTERM && /bin/rm -rf $pidfile; then
+                if killproc -p $PIDFILE SIGTERM && /bin/rm -rf $PIDFILE; then
                     log_success_msg "$name process was stopped"
                 else
                     log_failure_msg "$name failed to stop service"
@@ -165,10 +166,10 @@ case $1 in
 
     reload)
         # Reload the daemon.
-        if [ -e $pidfile ]; then
-            pidofproc -p $pidfile $daemon > /dev/null 2>&1 && status="0" || status="$?"
+        if [ -e $PIDFILE ]; then
+            pidofproc -p $PIDFILE $daemon > /dev/null 2>&1 && status="0" || status="$?"
             if [ "$status" = 0 ]; then
-                if killproc -p $pidfile SIGHUP; then
+                if killproc -p $PIDFILE SIGHUP; then
                     log_success_msg "$name process was reloaded"
                 else
                     log_failure_msg "$name failed to reload service"
@@ -186,8 +187,8 @@ case $1 in
 
     status)
         # Check the status of the process.
-        if [ -e $pidfile ]; then
-            if pidofproc -p $pidfile $daemon > /dev/null; then
+        if [ -e $PIDFILE ]; then
+            if pidofproc -p $PIDFILE $daemon > /dev/null; then
                 log_success_msg "$name Process is running"
                 exit 0
             else
