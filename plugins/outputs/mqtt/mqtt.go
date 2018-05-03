@@ -47,15 +47,15 @@ var sampleConfig = `
 `
 
 type MQTT struct {
-	Servers     []string `toml:"servers"`
-	Username    string
-	Password    string
-	Database    string
-	Timeout     internal.Duration
-	TopicPrefix string
-	QoS         int    `toml:"qos"`
-	ClientID    string `toml:"client_id"`
-	BatchMessage bool	`toml:"batch"`
+	Servers      []string `toml:"servers"`
+	Username     string
+	Password     string
+	Database     string
+	Timeout      internal.Duration
+	TopicPrefix  string
+	QoS          int    `toml:"qos"`
+	ClientID     string `toml:"client_id"`
+	BatchMessage bool   `toml:"batch"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -144,7 +144,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 
-		if (m.BatchMessage) {
+		if m.BatchMessage {
 			metricsmap[topic] = append(metricsmap[topic], buf...)
 		} else {
 			err = m.publish(topic, buf)
