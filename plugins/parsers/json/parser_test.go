@@ -428,3 +428,15 @@ func TestParseArrayWithTagKeys(t *testing.T) {
 		"othertag": "baz",
 	}, metrics[1].Tags())
 }
+
+var jsonBOM = []byte("\xef\xbb\xbf[{\"value\":17}]")
+
+func TestHttpJsonBOM(t *testing.T) {
+	parser := JSONParser{
+		MetricName: "json_test",
+	}
+
+	// Most basic vanilla test
+	_, err := parser.Parse(jsonBOM)
+	assert.NoError(t, err)
+}
