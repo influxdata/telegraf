@@ -173,7 +173,7 @@ func (t *TopK) groupBy(m telegraf.Metric) {
 	if err != nil {
 		// If we could not generate the groupkey, fail hard
 		// by dropping this and all subsequent metrics
-		log.Print("E! [processors.topk]: could not generate group key: %v", err)
+		log.Printf("E! [processors.topk]: could not generate group key: %v", err)
 		return
 	}
 
@@ -261,7 +261,7 @@ func (t *TopK) push() []telegraf.Metric {
 	if err != nil {
 		// If we could not generate the aggregation
 		// function, fail hard by dropping all metrics
-		log.Print("E! [processors.topk]: %v", err)
+		log.Printf("E! [processors.topk]: %v", err)
 		return []telegraf.Metric{}
 	}
 	for k, ms := range t.cache {
