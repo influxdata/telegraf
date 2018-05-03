@@ -30,6 +30,9 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Batch messages sent on a topic in a flush interval
+  # batch = false
+
   ## Data format to output.
   data_format = "influx"
 ```
@@ -49,4 +52,5 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
 * `ssl_cert`: SSL CERT
 * `ssl_key`: SSL key
 * `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
+* `batch`: Batch messages sent on a topic within a flush interval (default: false)
 * `data_format`: [About Telegraf data formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)
