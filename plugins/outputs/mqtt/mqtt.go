@@ -55,6 +55,7 @@ type MQTT struct {
 	TopicPrefix string
 	QoS         int    `toml:"qos"`
 	ClientID    string `toml:"client_id"`
+	BatchMessage bool	`toml:"batch"`
 
 	// Path to CA file
 	SSLCA string `toml:"ssl_ca"`
@@ -124,6 +125,8 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		hostname = ""
 	}
 
+	metricsmap := make(map[string][]byte)
+
 	for _, metric := range metrics {
 		var t []string
 		if m.TopicPrefix != "" {
@@ -141,7 +144,18 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 
-		err = m.publish(topic, buf)
+		if (m.BatchMessage) {
+			metricsmap[topic] = append(metricsmap[topic], buf...)
+		} else {
+			err = m.publish(topic, buf)
+			if err != nil {
+				return fmt.Errorf("Could not write to MQTT server, %s", err)
+			}
+		}
+	}
+
+	for key := range metricsmap {
+		err := m.publish(key, metricsmap[key])
 		if err != nil {
 			return fmt.Errorf("Could not write to MQTT server, %s", err)
 		}
