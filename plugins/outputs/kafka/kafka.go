@@ -36,7 +36,7 @@ type (
 		// MaxRetry Tag
 		MaxRetry int
 
-		// Legacy SSL config options
+		// Legacy TLS config options
 		// TLS client certificate
 		Certificate string
 		// TLS client key
@@ -127,11 +127,11 @@ var sampleConfig = `
   ## until the next flush.
   # max_retry = 3
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Optional SASL Config
@@ -193,9 +193,9 @@ func (k *Kafka) Connect() error {
 
 	// Legacy support ssl config
 	if k.Certificate != "" {
-		k.SSLCert = k.Certificate
-		k.SSLCA = k.CA
-		k.SSLKey = k.Key
+		k.TLSCert = k.Certificate
+		k.TLSCA = k.CA
+		k.TLSKey = k.Key
 	}
 
 	tlsConfig, err := k.ClientConfig.TLSConfig()

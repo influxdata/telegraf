@@ -41,11 +41,11 @@ var sampleConfig = `
   ## When true, collect per database stats
   # gather_perdb_stats = false
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
 
@@ -126,7 +126,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 		var tlsConfig *tls.Config
 
 		if m.Ssl.Enabled {
-			// Deprecated SSL config
+			// Deprecated TLS config
 			tlsConfig = &tls.Config{}
 			if len(m.Ssl.CaCerts) > 0 {
 				roots := x509.NewCertPool()

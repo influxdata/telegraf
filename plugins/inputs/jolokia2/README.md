@@ -18,14 +18,14 @@ The `jolokia2_agent` input plugin reads JMX metrics from one or more [Jolokia ag
     paths = ["Uptime"]
 ```
 
-Optionally, specify SSL options for communicating with agents:
+Optionally, specify TLS options for communicating with agents:
 
 ```toml
 [[inputs.jolokia2_agent]]
   urls = ["https://agent:8080/jolokia"]
-  ssl_ca   = "/var/private/ca.pem"
-  ssl_cert = "/var/private/client.pem"
-  ssl_key  = "/var/private/client-key.pem"
+  tls_ca   = "/var/private/ca.pem"
+  tls_cert = "/var/private/client.pem"
+  tls_key  = "/var/private/client-key.pem"
   #insecure_skip_verify = false
 
   [[inputs.jolokia2_agent.metric]]
@@ -55,15 +55,15 @@ The `jolokia2_proxy` input plugin reads JMX metrics from one or more _targets_ b
     paths = ["Uptime"]
 ```
 
-Optionally, specify SSL options for communicating with proxies:
+Optionally, specify TLS options for communicating with proxies:
 
 ```toml
 [[inputs.jolokia2_proxy]]
   url = "https://proxy:8080/jolokia"
 
-  ssl_ca   = "/var/private/ca.pem"
-  ssl_cert = "/var/private/client.pem"
-  ssl_key  = "/var/private/client-key.pem"
+  tls_ca   = "/var/private/ca.pem"
+  tls_cert = "/var/private/client.pem"
+  tls_key  = "/var/private/client-key.pem"
   #insecure_skip_verify = false
 
   #default_target_username = ""

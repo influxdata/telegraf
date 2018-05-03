@@ -18,11 +18,11 @@ The zookeeper plugin collects variables outputted from the 'mntr' command
   ## Timeout for metric collections from all servers.  Minimum timeout is "1s".
   # timeout = "5s"
 
-  ## Optional SSL Config
+  ## Optional TLS Config
   # enable_ssl = true
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
   ## If false, skip chain & host verification
   # insecure_skip_verify = true
 ```

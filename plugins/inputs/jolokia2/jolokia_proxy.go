@@ -45,10 +45,10 @@ func (jp *JolokiaProxy) SampleConfig() string {
   # password = ""
   # response_timeout = "5s"
 
-  ## Optional SSL config
-  # ssl_ca   = "/var/private/ca.pem"
-  # ssl_cert = "/var/private/client.pem"
-  # ssl_key  = "/var/private/client-key.pem"
+  ## Optional TLS config
+  # tls_ca   = "/var/private/ca.pem"
+  # tls_cert = "/var/private/client.pem"
+  # tls_key  = "/var/private/client-key.pem"
   # insecure_skip_verify = false
 
   ## Add proxy targets to query

@@ -30,10 +30,11 @@ var sampleConfig = `
   # An array of Nginx stub_status URI to gather stats.
   urls = ["http://localhost/server_status"]
 
-  # TLS/SSL configuration
-  ssl_ca = "/etc/telegraf/ca.pem"
-  ssl_cert = "/etc/telegraf/cert.cer"
-  ssl_key = "/etc/telegraf/key.key"
+  ## Optional TLS Config
+  tls_ca = "/etc/telegraf/ca.pem"
+  tls_cert = "/etc/telegraf/cert.cer"
+  tls_key = "/etc/telegraf/key.key"
+  ## Use TLS but skip chain & host verification
   insecure_skip_verify = false
 
   # HTTP response timeout (default: 5s)
