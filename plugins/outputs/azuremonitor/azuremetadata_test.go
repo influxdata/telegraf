@@ -8,7 +8,7 @@ import (
 )
 
 func TestGetMetadata(t *testing.T) {
-	azureMetadata := &AzureInstanceMetadata{}
+	azureMetadata := &AzureMonitor{}
 	metadata, err := azureMetadata.GetInstanceMetadata()
 
 	require.NoError(t, err)
@@ -27,7 +27,7 @@ func TestGetMetadata(t *testing.T) {
 }
 
 func TestGetTOKEN(t *testing.T) {
-	azureMetadata := &AzureInstanceMetadata{}
+	azureMetadata := &AzureMonitor{}
 
 	resourceID := "https://ingestion.monitor.azure.com/"
 	token, err := azureMetadata.getMsiToken("", resourceID)

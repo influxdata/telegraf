@@ -2,24 +2,30 @@ package azuremonitor
 
 import (
 	"bytes"
-	"crypto/tls"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
+	"regexp"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
+var _ telegraf.AggregatingOutput = (*AzureMonitor)(nil)
+var _ telegraf.Output = (*AzureMonitor)(nil)
+
 // AzureMonitor allows publishing of metrics to the Azure Monitor custom metrics service
 type AzureMonitor struct {
+	useMsi              bool              `toml:"use_managed_service_identity"`
 	ResourceID          string            `toml:"resource_id"`
 	Region              string            `toml:"region"`
 	Timeout             internal.Duration `toml:"Timeout"`
@@ -29,52 +35,28 @@ type AzureMonitor struct {
 	AzureClientSecret   string            `toml:"azure_client_secret"`
 	StringAsDimension   bool              `toml:"string_as_dimension"`
 
-	useMsi           bool `toml:"use_managed_service_identity"`
-	metadataService  *AzureInstanceMetadata
-	instanceMetadata *VirtualMachineMetadata
-	msiToken         *msiToken
-	msiResource      string
-	bearerToken      string
-	expiryWatermark  time.Duration
-
+	url string
+	msiToken    *msiToken
 	oauthConfig *adal.OAuthConfig
 	adalToken   adal.OAuthTokenProvider
 
 	client *http.Client
 
-	cache       map[string]*azureMonitorMetric
-	period      time.Duration
-	delay       time.Duration
-	periodStart time.Time
-	periodEnd   time.Time
-
-	metrics  chan telegraf.Metric
-	shutdown chan struct{}
+	cache map[time.Time]map[uint64]*aggregate
 }
 
-type azureMonitorMetric struct {
-	Time time.Time         `json:"time"`
-	Data *azureMonitorData `json:"data"`
+type aggregate struct {
+	telegraf.Metric
+	updated bool
 }
 
-type azureMonitorData struct {
-	BaseData *azureMonitorBaseData `json:"baseData"`
-}
+const (
+	defaultRegion string = "eastus"
 
-type azureMonitorBaseData struct {
-	Metric         string                `json:"metric"`
-	Namespace      string                `json:"namespace"`
-	DimensionNames []string              `json:"dimNames"`
-	Series         []*azureMonitorSeries `json:"series"`
-}
+	defaultMSIResource string = "https://monitoring.azure.com/"
 
-type azureMonitorSeries struct {
-	DimensionValues []string `json:"dimValues"`
-	Min             float64  `json:"min"`
-	Max             float64  `json:"max"`
-	Sum             float64  `json:"sum"`
-	Count           float64  `json:"count"`
-}
+	urlTemplate string = "https://%s.monitoring.azure.com%s/metrics"
+)
 
 var sampleConfig = `
   ## The resource ID against which metric will be logged.  If not
@@ -105,15 +87,24 @@ var sampleConfig = `
   #azure_client_secret = ""
 `
 
-const (
-	defaultRegion = "eastus"
+// Description provides a description of the plugin
+func (a *AzureMonitor) Description() string {
+	return "Configuration for sending aggregate metrics to Azure Monitor"
+}
 
-	defaultMSIResource = "https://monitoring.azure.com/"
-)
+// SampleConfig provides a sample configuration for the plugin
+func (a *AzureMonitor) SampleConfig() string {
+	return sampleConfig
+}
 
 // Connect initializes the plugin and validates connectivity
 func (a *AzureMonitor) Connect() error {
-	// Set defaults
+	a.client = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
+		Timeout: a.Timeout.Duration,
+	}
 
 	// If no direct AD values provided, fall back to MSI
 	if a.AzureSubscriptionID == "" && a.AzureTenantID == "" && a.AzureClientID == "" && a.AzureClientSecret == "" {
@@ -131,13 +122,8 @@ func (a *AzureMonitor) Connect() error {
 		a.oauthConfig = oauthConfig
 	}
 
-	a.metadataService = &AzureInstanceMetadata{}
-
-	// For the metrics API the MSI resource has to be https://ingestion.monitor.azure.com
-	a.msiResource = "https://monitoring.azure.com/"
-
 	// Validate the resource identifier
-	metadata, err := a.metadataService.GetInstanceMetadata()
+	metadata, err := a.GetInstanceMetadata()
 	if err != nil {
 		return fmt.Errorf("No resource id specified, and Azure Instance metadata service not available.  If not running on an Azure VM, provide a value for resourceId")
 	}
@@ -147,248 +133,242 @@ func (a *AzureMonitor) Connect() error {
 		a.Region = metadata.Compute.Location
 	}
 
+	a.url := fmt.Sprintf(urlTemplate, a.Region, a.ResourceID)
+
 	// Validate credentials
 	err = a.validateCredentials()
 	if err != nil {
 		return err
 	}
 
-	a.reset()
-	go a.run()
+	a.Reset()
 
 	return nil
 }
 
 func (a *AzureMonitor) validateCredentials() error {
-	// Use managed service identity
 	if a.useMsi {
 		// Check expiry on the token
-		if a.msiToken != nil {
-			expiryDuration := a.msiToken.ExpiresInDuration()
-			if expiryDuration > a.expiryWatermark {
-				return nil
-			}
-
-			// Token is about to expire
-			log.Printf("Bearer token expiring in %s; acquiring new token\n", expiryDuration.String())
-			a.msiToken = nil
-		}
-
-		// No token, acquire an MSI token
-		if a.msiToken == nil {
-			msiToken, err := a.metadataService.getMsiToken(a.AzureClientID, a.msiResource)
+		if a.msiToken == nil || a.msiToken.ExpiresInDuration() < time.Minute {
+			msiToken, err := a.getMsiToken(a.AzureClientID, defaultMSIResource)
 			if err != nil {
 				return err
 			}
-			log.Printf("Bearer token acquired; expiring in %s\n", msiToken.ExpiresInDuration().String())
 			a.msiToken = msiToken
-			a.bearerToken = msiToken.AccessToken
 		}
-		// Otherwise directory acquire a token
-	} else {
-		adToken, err := adal.NewServicePrincipalToken(
-			*(a.oauthConfig), a.AzureClientID, a.AzureClientSecret,
-			azure.PublicCloud.ActiveDirectoryEndpoint)
-		if err != nil {
-			return fmt.Errorf("Could not acquire ADAL token: %s", err)
-		}
-		a.adalToken = adToken
+		return nil
 	}
 
+	adToken, err := adal.NewServicePrincipalToken(
+		*(a.oauthConfig), a.AzureClientID, a.AzureClientSecret,
+		azure.PublicCloud.ActiveDirectoryEndpoint)
+	if err != nil {
+		return fmt.Errorf("Could not acquire ADAL token: %s", err)
+	}
+	a.adalToken = adToken
 	return nil
-}
-
-// Description provides a description of the plugin
-func (a *AzureMonitor) Description() string {
-	return "Configuration for sending aggregate metrics to Azure Monitor"
-}
-
-// SampleConfig provides a sample configuration for the plugin
-func (a *AzureMonitor) SampleConfig() string {
-	return sampleConfig
 }
 
 // Close shuts down an any active connections
 func (a *AzureMonitor) Close() error {
-	// Close connection to the URL here
-	close(a.shutdown)
+	a.client = nil
 	return nil
+}
+
+type azureMonitorMetric struct {
+	Time time.Time         `json:"time"`
+	Data *azureMonitorData `json:"data"`
+}
+
+type azureMonitorData struct {
+	BaseData *azureMonitorBaseData `json:"baseData"`
+}
+
+type azureMonitorBaseData struct {
+	Metric         string                `json:"metric"`
+	Namespace      string                `json:"namespace"`
+	DimensionNames []string              `json:"dimNames"`
+	Series         []*azureMonitorSeries `json:"series"`
+}
+
+type azureMonitorSeries struct {
+	DimensionValues []string `json:"dimValues"`
+	Min             float64  `json:"min"`
+	Max             float64  `json:"max"`
+	Sum             float64  `json:"sum"`
+	Count           int64    `json:"count"`
 }
 
 // Write writes metrics to the remote endpoint
 func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
-	// Assemble basic stats on incoming metrics
-	for _, metric := range metrics {
-		select {
-		case a.metrics <- metric:
-		default:
-			log.Printf("metrics buffer is full")
+	azmetrics := make(map[uint64]*azureMonitorMetric, len(metrics))
+	for _, m := range metrics {
+		id := hashIDWithTagKeysOnly(m)
+		if azm, ok := azmetrics[id]; !ok {
+			azmetrics[id] = translate(m)
+		} else {
+			azmetrics[id].Data.BaseData.Series = append(
+				azm.Data.BaseData.Series,
+				translate(m).Data.BaseData.Series...,
+			)
 		}
+	}
+
+	var body []byte
+	for _, m := range azmetrics {
+		// Azure Monitor accepts new batches of points in new-line delimited
+		// JSON, following RFC 4288 (see https://github.com/ndjson/ndjson-spec).
+		jsonBytes, err := json.Marshal(&m)
+		if err != nil {
+			return err
+		}
+		body = append(body, jsonBytes...)
+		body = append(body, '\n')
+	}
+
+	if err := a.validateCredentials(); err != nil {
+		return fmt.Errorf("Error authenticating: %v", err)
+	}
+
+	req, err := http.NewRequest("POST", a.url, bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+a.msiToken.AccessToken)
+	req.Header.Set("Content-Type", "application/x-ndjson")
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
+		reply, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			reply = nil
+		}
+		return fmt.Errorf("Post Error. HTTP response code:%d message:%s reply:\n%s",
+			resp.StatusCode, resp.Status, reply)
 	}
 
 	return nil
 }
 
-func (a *AzureMonitor) run() {
-	// The start of the period is truncated to the nearest minute.
-	//
-	// Every metric then gets it's timestamp checked and is dropped if it
-	// is not within:
-	//
-	//   start < t < end + truncation + delay
-	//
-	// So if we start at now = 00:00.2 with a 10s period and 0.3s delay:
-	//   now = 00:00.2
-	//   start = 00:00
-	//   truncation = 00:00.2
-	//   end = 00:10
-	// 1st interval: 00:00 - 00:10.5
-	// 2nd interval: 00:10 - 00:20.5
-	// etc.
-	//
-	now := time.Now()
-	a.periodStart = now.Truncate(time.Minute)
-	truncation := now.Sub(a.periodStart)
-	a.periodEnd = a.periodStart.Add(a.period)
-	time.Sleep(a.delay)
-	periodT := time.NewTicker(a.period)
-	defer periodT.Stop()
-
-	for {
-		select {
-		case <-a.shutdown:
-			if len(a.metrics) > 0 {
-				// wait until metrics are flushed before exiting
-				continue
-			}
-			return
-		case m := <-a.metrics:
-			if m.Time().Before(a.periodStart) ||
-				m.Time().After(a.periodEnd.Add(truncation).Add(a.delay)) {
-				// the metric is outside the current aggregation period, so
-				// skip it.
-				continue
-			}
-			a.add(m)
-		case <-periodT.C:
-			a.periodStart = a.periodEnd
-			a.periodEnd = a.periodStart.Add(a.period)
-			a.push()
-			a.reset()
-		}
+func hashIDWithTagKeysOnly(m telegraf.Metric) uint64 {
+	h := fnv.New64a()
+	h.Write([]byte(m.Name()))
+	h.Write([]byte("\n"))
+	for _, tag := range m.TagList() {
+		h.Write([]byte(tag.Key))
+		h.Write([]byte("\n"))
 	}
+	b := make([]byte, binary.MaxVarintLen64)
+	n := binary.PutUvarint(b, uint64(m.Time().UnixNano()))
+	h.Write(b[:n])
+	h.Write([]byte("\n"))
+	return h.Sum64()
 }
 
-func (a *AzureMonitor) reset() {
-	a.cache = make(map[string]*azureMonitorMetric)
-}
-
-func (a *AzureMonitor) add(metric telegraf.Metric) {
+func translate(m telegraf.Metric) *azureMonitorMetric {
 	var dimensionNames []string
 	var dimensionValues []string
-	for i, tag := range metric.TagList() {
+	for i, tag := range m.TagList() {
 		// Azure custom metrics service supports up to 10 dimensions
 		if i > 10 {
+			log.Printf("W! [outputs.azuremonitor] metric [%s] exceeds 10 dimensions", m.Name())
 			continue
 		}
 		dimensionNames = append(dimensionNames, tag.Key)
 		dimensionValues = append(dimensionValues, tag.Value)
 	}
 
-	// Azure Monitoe does not support string value types, so convert string
-	// fields to dimensions if enabled.
+	min, _ := m.GetField("min")
+	max, _ := m.GetField("max")
+	sum, _ := m.GetField("sum")
+	count, _ := m.GetField("count")
+	return &azureMonitorMetric{
+		Time: m.Time(),
+		Data: &azureMonitorData{
+			BaseData: &azureMonitorBaseData{
+				Metric:         m.Name(),
+				Namespace:      "default",
+				DimensionNames: dimensionNames,
+				Series: []*azureMonitorSeries{
+					&azureMonitorSeries{
+						DimensionValues: dimensionValues,
+						Min:             min.(float64),
+						Max:             max.(float64),
+						Sum:             sum.(float64),
+						Count:           count.(int64),
+					},
+				},
+			},
+		},
+	}
+}
+
+// Add will append a metric to the output aggregate
+func (a *AzureMonitor) Add(m telegraf.Metric) {
+	// Azure Monitor only supports aggregates 30 minutes into the past
+	// and 4 minutes into the future. Future metrics are dropped when pushed.
+	t := m.Time()
+	tbucket := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
+	if tbucket.Before(time.Now().Add(-time.Minute * 30)) {
+		log.Printf("W! attempted to aggregate metric over 30 minutes old: %v, %v", t, tbucket)
+		return
+	}
+
+	// Azure Monitor doesn't have a string value type, so convert string
+	// fields to dimensions (a.k.a. tags) if enabled.
 	if a.StringAsDimension {
-		for _, f := range metric.FieldList() {
-			switch fv := f.Value.(type) {
-			case string:
-				dimensionNames = append(dimensionNames, f.Key)
-				dimensionValues = append(dimensionValues, fv)
-				metric.RemoveField(f.Key)
+		for fk, fv := range m.Fields() {
+			if v, ok := fv.(string); ok {
+				m.AddTag(fk, v)
 			}
 		}
 	}
 
-	for _, f := range metric.FieldList() {
-		name := metric.Name() + "_" + f.Key
+	for _, f := range m.FieldList() {
 		fv, ok := convert(f.Value)
 		if !ok {
-			log.Printf("unable to convert field %s (type %T) to float type: %v", f.Key, fv, fv)
 			continue
 		}
 
-		if azm, ok := a.cache[name]; !ok {
-			// hit an uncached metric, create it for first time
-			a.cache[name] = &azureMonitorMetric{
-				Time: metric.Time(),
-				Data: &azureMonitorData{
-					BaseData: &azureMonitorBaseData{
-						Metric:         name,
-						Namespace:      "default",
-						DimensionNames: dimensionNames,
-						Series: []*azureMonitorSeries{
-							newAzureMonitorSeries(dimensionValues, fv),
-						},
-					},
-				},
-			}
-		} else {
-			tmp, i, ok := azm.findSeries(dimensionValues)
-			if !ok {
-				// add series new series (should be rare)
-				n := append(azm.Data.BaseData.Series, newAzureMonitorSeries(dimensionValues, fv))
-				a.cache[name].Data.BaseData.Series = n
-				continue
-			}
+		// Azure Monitor does not support fields so the field
+		// name is appended to the metric name.
+		name := m.Name() + "_" + sanitize(f.Key)
+		id := hashIDWithField(m.HashID(), f.Key)
 
-			//counter compute
-			n := tmp.Count + 1
-			tmp.Count = n
-			//max/min compute
-			if fv < tmp.Min {
-				tmp.Min = fv
-			} else if fv > tmp.Max {
-				tmp.Max = fv
-			}
-			//sum compute
-			tmp.Sum += fv
-			//store final data
-			a.cache[name].Data.BaseData.Series[i] = tmp
+		_, ok = a.cache[tbucket]
+		if !ok {
+			// Time bucket does not exist and needs to be created.
+			a.cache[tbucket] = make(map[uint64]*aggregate)
 		}
-	}
-}
 
-func (m *azureMonitorMetric) findSeries(dv []string) (*azureMonitorSeries, int, bool) {
-	if len(m.Data.BaseData.DimensionNames) != len(dv) {
-		return nil, 0, false
-	}
-	for i := range m.Data.BaseData.Series {
-		if m.Data.BaseData.Series[i].equal(dv) {
-			return m.Data.BaseData.Series[i], i, true
+		nf := make(map[string]interface{}, 4)
+		nf["min"] = fv
+		nf["max"] = fv
+		nf["sum"] = fv
+		nf["count"] = 1
+		// Fetch existing aggregate
+		agg, ok := a.cache[tbucket][id]
+		if ok {
+			aggfields := agg.Fields()
+			if fv > aggfields["min"].(float64) {
+				nf["min"] = aggfields["min"]
+			}
+			if fv < aggfields["max"].(float64) {
+				nf["max"] = aggfields["max"]
+			}
+			nf["sum"] = fv + aggfields["sum"].(float64)
+			nf["count"] = aggfields["count"].(int64) + 1
 		}
-	}
-	return nil, 0, false
-}
 
-func newAzureMonitorSeries(dv []string, fv float64) *azureMonitorSeries {
-	return &azureMonitorSeries{
-		DimensionValues: append([]string{}, dv...),
-		Min:             fv,
-		Max:             fv,
-		Sum:             fv,
-		Count:           1,
+		na, _ := metric.New(name, m.Tags(), nf, tbucket)
+		a.cache[tbucket][id] = &aggregate{na, true}
 	}
-}
-
-func (s *azureMonitorSeries) equal(dv []string) bool {
-	if len(s.DimensionValues) != len(dv) {
-		return false
-	}
-	for i := range dv {
-		if dv[i] != s.DimensionValues[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func convert(in interface{}) (float64, bool) {
@@ -403,90 +383,70 @@ func convert(in interface{}) (float64, bool) {
 		if v {
 			return 1, true
 		}
-		return 1, true
-	case string:
-		f, err := strconv.ParseFloat(v, 64)
-		if err != nil {
-			return 0, false
-		}
-		return f, true
+		return 0, true
 	default:
 		return 0, false
 	}
 }
 
-func (a *AzureMonitor) push() {
-	var body []byte
-	for _, metric := range a.cache {
-		jsonBytes, err := json.Marshal(&metric)
-		if err != nil {
-			log.Printf("Error marshalling metrics %s", err)
-			return
-		}
-		body = append(body, jsonBytes...)
-		body = append(body, '\n')
-	}
+var invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 
-	_, err := a.postData(&body)
-	if err != nil {
-		log.Printf("Error publishing aggregate metrics %s", err)
-	}
-	return
+func sanitize(value string) string {
+	return invalidNameCharRE.ReplaceAllString(value, "_")
 }
 
-func (a *AzureMonitor) postData(msg *[]byte) (*http.Request, error) {
-	if err := a.validateCredentials(); err != nil {
-		return nil, fmt.Errorf("Error authenticating: %v", err)
-	}
+func hashIDWithField(id uint64, fk string) uint64 {
+	h := fnv.New64a()
+	b := make([]byte, binary.MaxVarintLen64)
+	n := binary.PutUvarint(b, id)
+	h.Write(b[:n])
+	h.Write([]byte("\n"))
+	h.Write([]byte(fk))
+	h.Write([]byte("\n"))
+	return h.Sum64()
+}
 
-	metricsEndpoint := fmt.Sprintf("https://%s.monitoring.azure.com%s/metrics",
-		a.Region, a.ResourceID)
-
-	req, err := http.NewRequest("POST", metricsEndpoint, bytes.NewBuffer(*msg))
-	if err != nil {
-		log.Printf("Error creating HTTP request")
-		return nil, err
-	}
-
-	req.Header.Set("Authorization", "Bearer "+a.bearerToken)
-	req.Header.Set("Content-Type", "application/x-ndjson")
-
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := http.Client{
-		Transport: tr,
-		Timeout:   a.Timeout.Duration,
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return req, err
-	}
-
-	defer resp.Body.Close()
-	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
-		var reply []byte
-		reply, err = ioutil.ReadAll(resp.Body)
-
-		if err != nil {
-			reply = nil
+// Push sends metrics to the output metric buffer
+func (a *AzureMonitor) Push() []telegraf.Metric {
+	var metrics []telegraf.Metric
+	for tbucket, aggs := range a.cache {
+		// Do not send metrics early
+		if tbucket.After(time.Now().Add(-time.Minute)) {
+			continue
 		}
-		return req, fmt.Errorf("Post Error. HTTP response code:%d message:%s reply:\n%s",
-			resp.StatusCode, resp.Status, reply)
+		for _, agg := range aggs {
+			// Only send aggregates that have had an update since
+			// the last push.
+			if !agg.updated {
+				continue
+			}
+			metrics = append(metrics, agg.Metric)
+		}
 	}
-	return req, nil
+	return metrics
+}
+
+// Reset clears the cache of aggregate metrics
+func (a *AzureMonitor) Reset() {
+	for tbucket := range a.cache {
+		// Remove aggregates older than 30 minutes
+		if tbucket.Before(time.Now().Add(-time.Minute * 30)) {
+			delete(a.cache, tbucket)
+			continue
+		}
+		for id := range a.cache[tbucket] {
+			a.cache[tbucket][id].updated = false
+		}
+	}
 }
 
 func init() {
 	outputs.Add("azuremonitor", func() telegraf.Output {
 		return &AzureMonitor{
-			StringAsDimension: true,
+			StringAsDimension: false,
 			Timeout:           internal.Duration{Duration: time.Second * 5},
 			Region:            defaultRegion,
-			period:            time.Minute,
-			delay:             time.Second * 5,
-			metrics:           make(chan telegraf.Metric, 100),
-			shutdown:          make(chan struct{}),
+			cache:             make(map[time.Time]map[uint64]*aggregate, 36),
 		}
 	})
 }

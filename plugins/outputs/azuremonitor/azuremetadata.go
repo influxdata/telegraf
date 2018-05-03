@@ -8,13 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"time"
-
-	"github.com/prometheus/common/log"
 )
-
-// AzureInstanceMetadata is the proxy for accessing the instance metadata service on an Azure VM
-type AzureInstanceMetadata struct {
-}
 
 // VirtualMachineMetadata contains information about a VM from the metadata service
 type VirtualMachineMetadata struct {
@@ -103,7 +97,7 @@ func (m *msiToken) NotBeforeTime() time.Time {
 }
 
 // GetMsiToken retrieves a managed service identity token from the specified port on the local VM
-func (s *AzureInstanceMetadata) getMsiToken(clientID string, resourceID string) (*msiToken, error) {
+func (a *AzureMonitor) getMsiToken(clientID string, resourceID string) (*msiToken, error) {
 	// Acquire an MSI token.  Documented at:
 	// https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/how-to-use-vm-token
 	//
@@ -137,16 +131,10 @@ func (s *AzureInstanceMetadata) getMsiToken(clientID string, resourceID string) 
 	}
 	req.Header.Add("Metadata", "true")
 
-	// Create the HTTP client and call the token service
-	client := http.Client{
-		Timeout: 15 * time.Second,
-	}
-	resp, err := client.Do(req)
+	resp, err := a.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-
-	// Complete reading the body
 	defer resp.Body.Close()
 
 	reply, err := ioutil.ReadAll(resp.Body)
@@ -174,22 +162,17 @@ const (
 )
 
 // GetInstanceMetadata retrieves metadata about the current Azure VM
-func (s *AzureInstanceMetadata) GetInstanceMetadata() (*VirtualMachineMetadata, error) {
+func (a *AzureMonitor) GetInstanceMetadata() (*VirtualMachineMetadata, error) {
 	req, err := http.NewRequest("GET", vmInstanceMetadataURL, nil)
 	if err != nil {
-		log.Errorf("Error creating HTTP request")
-		return nil, err
+		return nil, fmt.Errorf("Error creating HTTP request")
 	}
 	req.Header.Set("Metadata", "true")
-	client := http.Client{
-		Timeout: 15 * time.Second,
-	}
 
-	resp, err := client.Do(req)
+	resp, err := a.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
-
 	defer resp.Body.Close()
 
 	reply, err := ioutil.ReadAll(resp.Body)
