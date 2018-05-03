@@ -188,7 +188,7 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 }
 
 func (s *Tomcat) createHttpClient() (*http.Client, error) {
-	tlsConfig, err := tls.NewClientTLSConfig(s.ClientConfig)
+	tlsConfig, err := s.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

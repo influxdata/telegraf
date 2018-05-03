@@ -227,7 +227,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 }
 
 func (e *Elasticsearch) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := tls.NewClientTLSConfig(e.ClientConfig)
+	tlsCfg, err := e.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

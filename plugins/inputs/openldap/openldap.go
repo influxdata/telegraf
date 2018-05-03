@@ -86,11 +86,10 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 	if o.Ssl != "" {
 		// build tls config
 		clientTLSConfig := tls.ClientConfig{
-			// TLSCACerts:         o.TLSCACerts,
 			SSLCA:              o.SslCa,
 			InsecureSkipVerify: o.InsecureSkipVerify,
 		}
-		tlsConfig, err := tls.NewClientTLSConfig(clientTLSConfig)
+		tlsConfig, err := clientTLSConfig.TLSConfig()
 		if err != nil {
 			acc.AddError(err)
 			return nil

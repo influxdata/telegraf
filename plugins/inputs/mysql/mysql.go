@@ -161,7 +161,7 @@ func (m *Mysql) Gather(acc telegraf.Accumulator) error {
 		m.InitMysql()
 	}
 
-	tlsConfig, err := tls.NewClientTLSConfig(m.ClientConfig)
+	tlsConfig, err := m.ClientConfig.TLSConfig()
 	if err != nil {
 		return fmt.Errorf("registering TLS config: %s", err)
 	}

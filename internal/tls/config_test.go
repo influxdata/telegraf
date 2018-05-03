@@ -7,8 +7,11 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
+
+var pki = testutil.NewPKI("../../testutil/pki")
 
 func TestClientConfig(t *testing.T) {
 	tests := []struct {
@@ -25,17 +28,17 @@ func TestClientConfig(t *testing.T) {
 		{
 			name: "success",
 			client: tls.ClientConfig{
-				TLSCA:   "./pki/cacert.pem",
-				TLSCert: "./pki/clientcert.pem",
-				TLSKey:  "./pki/clientkey.pem",
+				TLSCA:   pki.CACertPath(),
+				TLSCert: pki.ClientCertPath(),
+				TLSKey:  pki.ClientKeyPath(),
 			},
 		},
 		{
 			name: "invalid ca",
 			client: tls.ClientConfig{
-				TLSCA:   "./pki/invalid.pem",
-				TLSCert: "./pki/clientcert.pem",
-				TLSKey:  "./pki/clientkey.pem",
+				TLSCA:   pki.ClientKeyPath(),
+				TLSCert: pki.ClientCertPath(),
+				TLSKey:  pki.ClientKeyPath(),
 			},
 			expNil: true,
 			expErr: true,
@@ -43,55 +46,60 @@ func TestClientConfig(t *testing.T) {
 		{
 			name: "missing ca is okay",
 			client: tls.ClientConfig{
-				TLSCert: "./pki/clientcert.pem",
-				TLSKey:  "./pki/clientkey.pem",
+				TLSCert: pki.ClientCertPath(),
+				TLSKey:  pki.ClientKeyPath(),
 			},
 		},
 		{
 			name: "invalid cert",
 			client: tls.ClientConfig{
-				TLSCA:   "./pki/cacert.pem",
-				TLSCert: "./pki/invalid.pem",
-				TLSKey:  "./pki/clientkey.pem",
+				TLSCA:   pki.CACertPath(),
+				TLSCert: pki.ClientKeyPath(),
+				TLSKey:  pki.ClientKeyPath(),
 			},
 			expNil: true,
 			expErr: true,
 		},
 		{
-			name: "missing cert",
+			name: "missing cert skips client keypair",
 			client: tls.ClientConfig{
-				TLSCA:  "./pki/cacert.pem",
-				TLSKey: "./pki/clientkey.pem",
+				TLSCA:  pki.CACertPath(),
+				TLSKey: pki.ClientKeyPath(),
 			},
-			expNil: true,
-			expErr: true,
+			expNil: false,
+			expErr: false,
 		},
 		{
-			name: "missing key",
+			name: "missing key skips client keypair",
 			client: tls.ClientConfig{
-				TLSCA:   "./pki/cacert.pem",
-				TLSCert: "./pki/clientcert.pem",
+				TLSCA:   pki.CACertPath(),
+				TLSCert: pki.ClientCertPath(),
 			},
-			expNil: true,
-			expErr: true,
+			expNil: false,
+			expErr: false,
 		},
 		{
-			name: "ssl option names",
+			name: "support deprecated ssl field names",
 			client: tls.ClientConfig{
-				SSLCA:   "./pki/cacert.pem",
-				SSLCert: "./pki/clientcert.pem",
-				SSLKey:  "./pki/clientkey.pem",
+				SSLCA:   pki.CACertPath(),
+				SSLCert: pki.ClientCertPath(),
+				SSLKey:  pki.ClientKeyPath(),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tlsConfig, err := tls.NewClientTLSConfig(tt.client)
+			tlsConfig, err := tt.client.TLSConfig()
 			if !tt.expNil {
 				require.NotNil(t, tlsConfig)
+			} else {
+				require.Nil(t, tlsConfig)
 			}
+
 			if !tt.expErr {
 				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
 			}
 		})
 	}
@@ -112,17 +120,17 @@ func TestServerConfig(t *testing.T) {
 		{
 			name: "success",
 			server: tls.ServerConfig{
-				TLSCert:           "./pki/servercert.pem",
-				TLSKey:            "./pki/serverkey.pem",
-				TLSAllowedCACerts: []string{"./pki/cacert.pem"},
+				TLSCert:           pki.ServerCertPath(),
+				TLSKey:            pki.ServerKeyPath(),
+				TLSAllowedCACerts: []string{pki.CACertPath()},
 			},
 		},
 		{
 			name: "invalid ca",
 			server: tls.ServerConfig{
-				TLSCert:           "./pki/servercert.pem",
-				TLSKey:            "./pki/serverkey.pem",
-				TLSAllowedCACerts: []string{"./pki/invalid.pem"},
+				TLSCert:           pki.ServerCertPath(),
+				TLSKey:            pki.ServerKeyPath(),
+				TLSAllowedCACerts: []string{pki.ServerKeyPath()},
 			},
 			expNil: true,
 			expErr: true,
@@ -130,8 +138,8 @@ func TestServerConfig(t *testing.T) {
 		{
 			name: "missing allowed ca is okay",
 			server: tls.ServerConfig{
-				TLSCert: "./pki/servercert.pem",
-				TLSKey:  "./pki/serverkey.pem",
+				TLSCert: pki.ServerCertPath(),
+				TLSKey:  pki.ServerKeyPath(),
 			},
 			expNil: true,
 			expErr: true,
@@ -139,9 +147,9 @@ func TestServerConfig(t *testing.T) {
 		{
 			name: "invalid cert",
 			server: tls.ServerConfig{
-				TLSCert:           "./pki/invalid.pem",
-				TLSKey:            "./pki/serverkey.pem",
-				TLSAllowedCACerts: []string{"./testdata/cacert.pem"},
+				TLSCert:           pki.ServerKeyPath(),
+				TLSKey:            pki.ServerKeyPath(),
+				TLSAllowedCACerts: []string{pki.CACertPath()},
 			},
 			expNil: true,
 			expErr: true,
@@ -149,8 +157,8 @@ func TestServerConfig(t *testing.T) {
 		{
 			name: "missing cert",
 			server: tls.ServerConfig{
-				TLSKey:            "./pki/serverkey.pem",
-				TLSAllowedCACerts: []string{"./pki/cacert.pem"},
+				TLSKey:            pki.ServerKeyPath(),
+				TLSAllowedCACerts: []string{pki.CACertPath()},
 			},
 			expNil: true,
 			expErr: true,
@@ -158,8 +166,8 @@ func TestServerConfig(t *testing.T) {
 		{
 			name: "missing key",
 			server: tls.ServerConfig{
-				TLSCert:           "./pki/servercert.pem",
-				TLSAllowedCACerts: []string{"./pki/cacert.pem"},
+				TLSCert:           pki.ServerCertPath(),
+				TLSAllowedCACerts: []string{pki.CACertPath()},
 			},
 			expNil: true,
 			expErr: true,
@@ -167,7 +175,7 @@ func TestServerConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tlsConfig, err := tls.NewServerTLSConfig(tt.server)
+			tlsConfig, err := tt.server.TLSConfig()
 			if !tt.expNil {
 				require.NotNil(t, tlsConfig)
 			}
@@ -180,18 +188,18 @@ func TestServerConfig(t *testing.T) {
 
 func TestConnect(t *testing.T) {
 	clientConfig := tls.ClientConfig{
-		TLSCA:   "./pki/cacert.pem",
-		TLSCert: "./pki/clientcert.pem",
-		TLSKey:  "./pki/clientkey.pem",
+		TLSCA:   pki.CACertPath(),
+		TLSCert: pki.ClientCertPath(),
+		TLSKey:  pki.ClientKeyPath(),
 	}
 
 	serverConfig := tls.ServerConfig{
-		TLSAllowedCACerts: []string{"./pki/cacert.pem"},
-		TLSCert:           "./pki/servercert.pem",
-		TLSKey:            "./pki/serverkey.pem",
+		TLSCert:           pki.ServerCertPath(),
+		TLSKey:            pki.ServerKeyPath(),
+		TLSAllowedCACerts: []string{pki.CACertPath()},
 	}
 
-	serverTLSConfig, err := tls.NewServerTLSConfig(serverConfig)
+	serverTLSConfig, err := serverConfig.TLSConfig()
 	require.NoError(t, err)
 
 	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -202,7 +210,7 @@ func TestConnect(t *testing.T) {
 	ts.StartTLS()
 	defer ts.Close()
 
-	clientTLSConfig, err := tls.NewClientTLSConfig(clientConfig)
+	clientTLSConfig, err := clientConfig.TLSConfig()
 	require.NoError(t, err)
 
 	client := http.Client{

@@ -81,7 +81,7 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 		}
 	}
 
-	tlsCfg, err := tls.NewClientTLSConfig(c.ClientConfig)
+	tlsCfg, err := c.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

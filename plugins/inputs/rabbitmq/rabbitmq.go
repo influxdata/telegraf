@@ -217,7 +217,7 @@ func (r *RabbitMQ) Description() string {
 // Gather ...
 func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	if r.Client == nil {
-		tlsCfg, err := tls.NewClientTLSConfig(r.ClientConfig)
+		tlsCfg, err := r.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
 		}

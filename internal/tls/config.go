@@ -27,39 +27,43 @@ type ServerConfig struct {
 	TLSAllowedCACerts []string `toml:"tls_allowed_cacerts"`
 }
 
-func NewClientTLSConfig(config ClientConfig) (*tls.Config, error) {
-	if config.TLSCA == "" && config.SSLCA != "" {
-		config.TLSCA = config.SSLCA
+// TLSConfig returns a tls.Config, may be nil without error if TLS is not
+// configured.
+func (c *ClientConfig) TLSConfig() (*tls.Config, error) {
+	// Support deprecated variable names
+	if c.TLSCA == "" && c.SSLCA != "" {
+		c.TLSCA = c.SSLCA
 	}
-	if config.TLSCert == "" && config.SSLCert != "" {
-		config.TLSCert = config.SSLCert
+	if c.TLSCert == "" && c.SSLCert != "" {
+		c.TLSCert = c.SSLCert
 	}
-	if config.TLSKey == "" && config.SSLKey != "" {
-		config.TLSKey = config.SSLKey
+	if c.TLSKey == "" && c.SSLKey != "" {
+		c.TLSKey = c.SSLKey
 	}
 
 	// TODO: return default tls.Config; plugins should not call if they don't
 	// want TLS, this will require using another option to determine.  In the
 	// case of an HTTP plugin, you could use `https`.  Other plugins may need
-	// a dedicated option.
-	if config.TLSCA == "" && config.TLSKey == "" && config.TLSCert == "" && !config.InsecureSkipVerify {
+	// the dedicated option `TLSEnable`.
+	if c.TLSCA == "" && c.TLSKey == "" && c.TLSCert == "" && !c.InsecureSkipVerify {
 		return nil, nil
 	}
 
 	tlsConfig := &tls.Config{
-		InsecureSkipVerify: config.InsecureSkipVerify,
+		InsecureSkipVerify: c.InsecureSkipVerify,
+		Renegotiation:      tls.RenegotiateNever,
 	}
 
-	if config.TLSCA != "" {
-		pool, err := makeCertPool([]string{config.TLSCA})
+	if c.TLSCA != "" {
+		pool, err := makeCertPool([]string{c.TLSCA})
 		if err != nil {
 			return nil, err
 		}
 		tlsConfig.RootCAs = pool
 	}
 
-	if config.TLSCert != "" && config.TLSKey != "" {
-		err := loadCertificate(tlsConfig, config.TLSCert, config.TLSKey)
+	if c.TLSCert != "" && c.TLSKey != "" {
+		err := loadCertificate(tlsConfig, c.TLSCert, c.TLSKey)
 		if err != nil {
 			return nil, err
 		}
@@ -68,19 +72,17 @@ func NewClientTLSConfig(config ClientConfig) (*tls.Config, error) {
 	return tlsConfig, nil
 }
 
-// GetServerTLSConfig gets a tls.Config object from the given certs, key, and one or more CA files
-// for use with a server.
-// The full path to each file must be provided.
-// Returns a nil pointer if all files are blank.
-func NewServerTLSConfig(config ServerConfig) (*tls.Config, error) {
-	if config.TLSCert == "" && config.TLSKey == "" && len(config.TLSAllowedCACerts) == 0 {
+// TLSConfig returns a tls.Config, may be nil without error if TLS is not
+// configured.
+func (c *ServerConfig) TLSConfig() (*tls.Config, error) {
+	if c.TLSCert == "" && c.TLSKey == "" && len(c.TLSAllowedCACerts) == 0 {
 		return nil, nil
 	}
 
 	tlsConfig := &tls.Config{}
 
-	if len(config.TLSAllowedCACerts) != 0 {
-		pool, err := makeCertPool(config.TLSAllowedCACerts)
+	if len(c.TLSAllowedCACerts) != 0 {
+		pool, err := makeCertPool(c.TLSAllowedCACerts)
 		if err != nil {
 			return nil, err
 		}
@@ -88,8 +90,8 @@ func NewServerTLSConfig(config ServerConfig) (*tls.Config, error) {
 		tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 	}
 
-	if config.TLSCert != "" && config.TLSKey != "" {
-		err := loadCertificate(tlsConfig, config.TLSCert, config.TLSKey)
+	if c.TLSCert != "" && c.TLSKey != "" {
+		err := loadCertificate(tlsConfig, c.TLSCert, c.TLSKey)
 		if err != nil {
 			return nil, err
 		}

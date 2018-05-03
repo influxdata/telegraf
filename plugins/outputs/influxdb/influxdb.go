@@ -238,7 +238,7 @@ func (i *InfluxDB) udpClient(url *url.URL) (Client, error) {
 }
 
 func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL) (Client, error) {
-	tlsConfig, err := tls.NewClientTLSConfig(i.ClientConfig)
+	tlsConfig, err := i.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

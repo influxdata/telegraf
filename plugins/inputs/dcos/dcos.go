@@ -348,7 +348,7 @@ func (d *DCOS) init() error {
 }
 
 func (d *DCOS) createClient() (Client, error) {
-	tlsCfg, err := tls.NewClientTLSConfig(d.ClientConfig)
+	tlsCfg, err := d.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

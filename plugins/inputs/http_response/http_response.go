@@ -106,7 +106,7 @@ func getProxyFunc(http_proxy string) func(*http.Request) (*url.URL, error) {
 // CreateHttpClient creates an http client which will timeout at the specified
 // timeout period and can follow redirects if specified
 func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := tls.NewClientTLSConfig(h.ClientConfig)
+	tlsCfg, err := h.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

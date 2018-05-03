@@ -80,7 +80,7 @@ func (z *Zookeeper) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 
 	if !z.initialized {
-		tlsConfig, err := tlsint.NewClientTLSConfig(z.ClientConfig)
+		tlsConfig, err := z.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
 		}

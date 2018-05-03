@@ -101,7 +101,7 @@ func (a *AMQPConsumer) Gather(_ telegraf.Accumulator) error {
 
 func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 	// make new tls config
-	tls, err := tls.NewClientTLSConfig(a.ClientConfig)
+	tls, err := a.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

@@ -208,7 +208,7 @@ func (m *Mesos) Gather(acc telegraf.Accumulator) error {
 }
 
 func (m *Mesos) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := tls.NewClientTLSConfig(m.ClientConfig)
+	tlsCfg, err := m.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

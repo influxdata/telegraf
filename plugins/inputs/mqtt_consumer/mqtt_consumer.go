@@ -229,7 +229,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		opts.SetClientID(m.ClientID)
 	}
 
-	tlsCfg, err := tls.NewClientTLSConfig(m.ClientConfig)
+	tlsCfg, err := m.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

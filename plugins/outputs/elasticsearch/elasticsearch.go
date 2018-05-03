@@ -95,7 +95,7 @@ func (a *Elasticsearch) Connect() error {
 
 	var clientOptions []elastic.ClientOptionFunc
 
-	tlsCfg, err := tls.NewClientTLSConfig(a.ClientConfig)
+	tlsCfg, err := a.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}

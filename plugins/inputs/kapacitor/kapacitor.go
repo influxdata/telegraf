@@ -74,7 +74,7 @@ func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
 }
 
 func (k *Kapacitor) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := tls.NewClientTLSConfig(k.ClientConfig)
+	tlsCfg, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

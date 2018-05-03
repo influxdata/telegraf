@@ -124,7 +124,7 @@ func (h *GrayLog) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
 	if h.client.HTTPClient() == nil {
-		tlsCfg, err := tls.NewClientTLSConfig(h.ClientConfig)
+		tlsCfg, err := h.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
 		}

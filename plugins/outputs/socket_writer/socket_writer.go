@@ -74,7 +74,7 @@ func (sw *SocketWriter) Connect() error {
 		return fmt.Errorf("invalid address: %s", sw.Address)
 	}
 
-	tlsCfg, err := tlsint.NewClientTLSConfig(sw.ClientConfig)
+	tlsCfg, err := sw.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}

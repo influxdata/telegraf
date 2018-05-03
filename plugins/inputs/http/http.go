@@ -90,7 +90,7 @@ func (h *HTTP) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if h.client == nil {
-		tlsCfg, err := tls.NewClientTLSConfig(h.ClientConfig)
+		tlsCfg, err := h.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
 		}

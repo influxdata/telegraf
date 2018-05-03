@@ -56,7 +56,7 @@ func (g *Graphite) Connect() error {
 	}
 
 	// Set tls config
-	tlsConfig, err := tlsint.NewClientTLSConfig(g.ClientConfig)
+	tlsConfig, err := g.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}

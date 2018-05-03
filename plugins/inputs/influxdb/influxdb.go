@@ -56,7 +56,7 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if i.client == nil {
-		tlsCfg, err := tls.NewClientTLSConfig(i.ClientConfig)
+		tlsCfg, err := i.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
 		}

@@ -135,7 +135,7 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 	}
 
 	if g.client == nil {
-		tlsCfg, err := tls.NewClientTLSConfig(g.ClientConfig)
+		tlsCfg, err := g.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
 		}

@@ -161,7 +161,7 @@ var client = &http.Client{
 }
 
 func (p *Prometheus) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := tls.NewClientTLSConfig(p.ClientConfig)
+	tlsCfg, err := p.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

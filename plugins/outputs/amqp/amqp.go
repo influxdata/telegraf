@@ -131,7 +131,7 @@ func (q *AMQP) Connect() error {
 
 	var connection *amqp.Connection
 	// make new tls config
-	tls, err := tls.NewClientTLSConfig(q.ClientConfig)
+	tls, err := q.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}

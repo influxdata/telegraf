@@ -80,7 +80,7 @@ func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 }
 
 func (n *Nginx) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := tls.NewClientTLSConfig(n.ClientConfig)
+	tlsCfg, err := n.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

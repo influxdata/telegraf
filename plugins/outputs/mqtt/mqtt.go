@@ -167,7 +167,7 @@ func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 		opts.SetClientID("Telegraf-Output-" + internal.RandomString(5))
 	}
 
-	tlsCfg, err := tls.NewClientTLSConfig(m.ClientConfig)
+	tlsCfg, err := m.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

@@ -50,6 +50,7 @@ subjectAltName = @client_alt_names
 extendedKeyUsage = 1.3.6.1.5.5.7.3.2
 
 [ client_alt_names ]
+DNS.1 = localhost
 IP.1 = 127.0.0.1
 
 [ server_ca_extensions ]
@@ -59,6 +60,7 @@ keyUsage = keyEncipherment, digitalSignature
 extendedKeyUsage = 1.3.6.1.5.5.7.3.1
 
 [ server_alt_names ]
+DNS.1 = localhost
 IP.1 = 127.0.0.1
 EOF
 openssl req -x509 -config ./openssl.conf -days 3650 -newkey rsa:1024 -out ./certs/cacert.pem -keyout ./private/cakey.pem -subj "/CN=Telegraf Test CA/" -nodes &&

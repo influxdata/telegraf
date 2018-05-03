@@ -109,7 +109,7 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 	config := cluster.NewConfig()
 	config.Consumer.Return.Errors = true
 
-	tlsConfig, err := tls.NewClientTLSConfig(k.ClientConfig)
+	tlsConfig, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}

@@ -141,7 +141,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 				tlsConfig.InsecureSkipVerify = true
 			}
 		} else {
-			tlsConfig, err = tlsint.NewClientTLSConfig(m.ClientConfig)
+			tlsConfig, err = m.ClientConfig.TLSConfig()
 			if err != nil {
 				return err
 			}

@@ -198,7 +198,7 @@ func (k *Kafka) Connect() error {
 		k.SSLKey = k.Key
 	}
 
-	tlsConfig, err := tlsint.NewClientTLSConfig(k.ClientConfig)
+	tlsConfig, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}

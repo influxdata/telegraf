@@ -134,7 +134,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		if d.Endpoint == "ENV" {
 			c, err = d.newEnvClient()
 		} else {
-			tlsConfig, err := tlsint.NewClientTLSConfig(d.ClientConfig)
+			tlsConfig, err := d.ClientConfig.TLSConfig()
 			if err != nil {
 				return err
 			}

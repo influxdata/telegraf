@@ -96,7 +96,7 @@ type jolokiaResponse struct {
 }
 
 func NewClient(url string, config *ClientConfig) (*Client, error) {
-	tlsConfig, err := tls.NewClientTLSConfig(config.ClientConfig)
+	tlsConfig, err := config.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

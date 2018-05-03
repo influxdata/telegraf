@@ -71,7 +71,7 @@ func (n *NATS) Connect() error {
 	}
 
 	// override TLS, if it was specified
-	tlsConfig, err := tls.NewClientTLSConfig(n.ClientConfig)
+	tlsConfig, err := n.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}

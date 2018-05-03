@@ -95,7 +95,7 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 	var token []byte
 	var resp *http.Response
 
-	tlsCfg, err := tls.NewClientTLSConfig(k.ClientConfig)
+	tlsCfg, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}
