@@ -113,7 +113,7 @@ var sampleConfig = `
   ##  0 : No compression
   ##  1 : Gzip compression
   ##  2 : Snappy compression
-  compression_codec = 0
+  # compression_codec = 0
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many
   ##  replica acknowledgements it must see before responding
@@ -129,10 +129,11 @@ var sampleConfig = `
   ##       received the data. This option provides the best durability, we
   ##       guarantee that no messages will be lost as long as at least one in
   ##       sync replica remains.
-  required_acks = -1
+  # required_acks = -1
 
-  ##  The total number of times to retry sending a message
-  max_retry = 3
+  ## The maximum number of times to retry sending a metric before failing
+  ## until the next flush.
+  # max_retry = 3
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -149,7 +150,7 @@ var sampleConfig = `
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "influx"
+  # data_format = "influx"
 `
 
 func ValidateTopicSuffixMethod(method string) error {
