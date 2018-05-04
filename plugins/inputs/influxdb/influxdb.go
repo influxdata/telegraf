@@ -10,21 +10,14 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type InfluxDB struct {
-	URLs []string `toml:"urls"`
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
-
+	URLs    []string `toml:"urls"`
 	Timeout internal.Duration
+	tls.ClientConfig
 
 	client *http.Client
 }
@@ -45,11 +38,11 @@ func (*InfluxDB) SampleConfig() string {
     "http://localhost:8086/debug/vars"
   ]
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## http request & header timeout
@@ -63,8 +56,7 @@ func (i *InfluxDB) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if i.client == nil {
-		tlsCfg, err := internal.GetTLSConfig(
-			i.SSLCert, i.SSLKey, i.SSLCA, i.InsecureSkipVerify)
+		tlsCfg, err := i.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
 		}

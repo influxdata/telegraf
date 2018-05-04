@@ -16,6 +16,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -161,14 +162,12 @@ func (psl *packetSocketListener) listen() {
 }
 
 type SocketListener struct {
-	ServiceAddress    string             `toml:"service_address"`
-	MaxConnections    int                `toml:"max_connections"`
-	ReadBufferSize    int                `toml:"read_buffer_size"`
-	ReadTimeout       *internal.Duration `toml:"read_timeout"`
-	TLSAllowedCACerts []string           `toml:"tls_allowed_cacerts"`
-	TLSCert           string             `toml:"tls_cert"`
-	TLSKey            string             `toml:"tls_key"`
-	KeepAlivePeriod   *internal.Duration `toml:"keep_alive_period"`
+	ServiceAddress  string             `toml:"service_address"`
+	MaxConnections  int                `toml:"max_connections"`
+	ReadBufferSize  int                `toml:"read_buffer_size"`
+	ReadTimeout     *internal.Duration `toml:"read_timeout"`
+	KeepAlivePeriod *internal.Duration `toml:"keep_alive_period"`
+	tlsint.ServerConfig
 
 	parsers.Parser
 	telegraf.Accumulator
@@ -259,7 +258,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			l   net.Listener
 		)
 
-		tlsCfg, err := internal.GetServerTLSConfig(sl.TLSCert, sl.TLSKey, sl.TLSAllowedCACerts)
+		tlsCfg, err := sl.ServerConfig.TLSConfig()
 		if err != nil {
 			return nil
 		}
