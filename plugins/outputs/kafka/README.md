@@ -103,6 +103,11 @@ received from the broker before notification of failure is displayed.  When
 this option greater than `0` can reduce latency and duplicate messages in the
 case of transient errors, but may also increase the load on the broker during
 periods of downtime.
+This option controls the retries before notification of failure is displayed
+per message when no acknowledgement is received from the broker.  When this
+option is greater than `0` it can reduce message latency and duplicate
+messages in the case of transient errors, but may also increase the load on
+the broker during periods of downtime.
 
 The option is similar to the
 [retries](https://kafka.apache.org/documentation/#producerconfigs) Producer
