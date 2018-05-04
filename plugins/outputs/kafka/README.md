@@ -97,3 +97,15 @@ can increase during downtime.
 The option is similar to the
 [retries](https://kafka.apache.org/documentation/#producerconfigs) Producer
 option in the Java Kafka Producer.
+
+This option controls the number of retries per message no acknowledgement is
+received from the broker before notification of failure is displayed.  When
+this option greater than `0` can reduce latency and duplicate messages in the
+case of transient errors, but may also increase the load on the broker during
+periods of downtime.
+
+The option is similar to the
+[retries](https://kafka.apache.org/documentation/#producerconfigs) Producer
+option in the Java Kafka Producer.
+
+
