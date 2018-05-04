@@ -112,5 +112,3 @@ the broker during periods of downtime.
 The option is similar to the
 [retries](https://kafka.apache.org/documentation/#producerconfigs) Producer
 option in the Java Kafka Producer.
-
-
