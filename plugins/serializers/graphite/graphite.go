@@ -1,6 +1,7 @@
 package graphite
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"regexp"
@@ -58,6 +59,21 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 		out = append(out, point...)
 	}
 	return out, nil
+}
+
+func (s *GraphiteSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+	var batch bytes.Buffer
+	for _, m := range metrics {
+		buf, err := s.Serialize(m)
+		if err != nil {
+			return nil, err
+		}
+		_, err = batch.Write(buf)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return batch.Bytes(), nil
 }
 
 func formatValue(value interface{}) string {

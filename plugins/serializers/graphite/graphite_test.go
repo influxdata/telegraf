@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -573,6 +574,35 @@ func TestClean(t *testing.T) {
 			m, err := metric.New(tt.metric_name, tt.tags, tt.fields, now)
 			assert.NoError(t, err)
 			actual, _ := s.Serialize(m)
+			require.Equal(t, tt.expected, string(actual))
+		})
+	}
+}
+
+func TestSerializeBatch(t *testing.T) {
+	now := time.Unix(1234567890, 0)
+	tests := []struct {
+		name        string
+		metric_name string
+		tags        map[string]string
+		fields      map[string]interface{}
+		expected    string
+	}{
+		{
+			"Base metric",
+			"cpu",
+			map[string]string{"host": "localhost"},
+			map[string]interface{}{"usage_busy": float64(8.5)},
+			"localhost.cpu.usage_busy 8.5 1234567890\nlocalhost.cpu.usage_busy 8.5 1234567890\n",
+		},
+	}
+
+	s := GraphiteSerializer{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m, err := metric.New(tt.metric_name, tt.tags, tt.fields, now)
+			assert.NoError(t, err)
+			actual, _ := s.SerializeBatch([]telegraf.Metric{m, m})
 			require.Equal(t, tt.expected, string(actual))
 		})
 	}
