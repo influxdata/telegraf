@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/influxdata/telegraf/agent"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/logger"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
@@ -192,7 +193,7 @@ func reloadLoop(
 }
 
 func usageExit(rc int) {
-	fmt.Println(usage)
+	fmt.Println(internal.Usage)
 	os.Exit(rc)
 }
 
