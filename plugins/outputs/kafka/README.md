@@ -97,16 +97,3 @@ the broker during periods of downtime.
 The option is similar to the
 [retries](https://kafka.apache.org/documentation/#producerconfigs) Producer
 option in the Java Kafka Producer.
-
-
-* `routing_tag`: If this tag exists, its value will be used as the routing key
-* `compression_codec`: What level of compression to use: `0` -> no compression, `1` -> gzip compression, `2` -> snappy compression
-* `required_acks`: a setting for how may `acks` required from the `kafka` broker cluster.
-* `max_retry`: Max number of times to retry failed write
-* `tls_ca`: TLS CA
-* `tls_cert`: TLS CERT
-* `tls_key`: TLS key
-* `insecure_skip_verify`: Use TLS but skip chain & host verification (default: false)
-* `data_format`: [About Telegraf data formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)
-* `topic_suffix`: Which, if any, method of calculating `kafka` topic suffix to use.
-For examples, please refer to sample configuration.
