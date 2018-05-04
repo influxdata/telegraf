@@ -83,7 +83,7 @@ func (a *ApplicationInsights) Connect() error {
 
 	if a.EnableDiagnosticLogging && a.diagMsgSubscriber != nil {
 		a.diagMsgListener = a.diagMsgSubscriber.Subscribe(func(msg string) error {
-			logOutputMsg("%s", msg)
+			logOutputMsg(Info, "%s", msg)
 			return nil
 		})
 	}
