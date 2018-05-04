@@ -608,7 +608,9 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		}
 		// range over columns, and try to parse values
 		for i, col := range cols {
-			col = strings.ToLower(col)
+			if m.MetricVersion >= 2 {
+				col = strings.ToLower(col)
+			}
 			if value, ok := m.parseValue(*vals[i].(*sql.RawBytes)); ok {
 				fields["slave_"+col] = value
 			}
