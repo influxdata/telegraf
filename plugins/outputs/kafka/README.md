@@ -1,8 +1,9 @@
-# Kafka Producer Output Plugin
+# Kafka Output Plugin
 
 This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.html) acting a Kafka Producer.
 
-```
+### Configuration:
+```toml
 [[outputs.kafka]]
   ## URLs of kafka brokers
   brokers = ["localhost:9092"]
@@ -45,7 +46,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ##  0 : No compression
   ##  1 : Gzip compression
   ##  2 : Snappy compression
-  compression_codec = 0
+  # compression_codec = 0
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many
   ##  replica acknowledgements it must see before responding
@@ -61,10 +62,11 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ##       received the data. This option provides the best durability, we
   ##       guarantee that no messages will be lost as long as at least one in
   ##       sync replica remains.
-  required_acks = -1
+  # required_acks = -1
 
-  ##  The total number of times to retry sending a message
-  max_retry = 3
+  ## The maximum number of times to retry sending a metric before failing
+  ## until the next flush.
+  # max_retry = 3
 
   ## Optional SSL Config
   # ssl_ca = "/etc/telegraf/ca.pem"
@@ -77,24 +79,23 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   # sasl_username = "kafka"
   # sasl_password = "secret"
 
-  data_format = "influx"
+  ## Data format to output.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  # data_format = "influx"
 ```
 
-### Required parameters:
+#### `max_retry`
 
-* `brokers`: List of strings, this is for speaking to a cluster of `kafka` brokers. On each flush interval, Telegraf will randomly choose one of the urls to write to. Each URL should just include host and port e.g. -> `["{host}:{port}","{host2}:{port2}"]`
-* `topic`: The `kafka` topic to publish to.
+This option controls the number of retries per message no acknowledgement is
+received from the broker before notification of failure is displayed.  When
+this option greater than `0` can reduce latency and duplicate messages in the
+case of transient errors, but may also increase the load on the broker during
+periods of downtime.
 
-### Optional parameters:
+The option is similar to the
+[retries](https://kafka.apache.org/documentation/#producerconfigs) Producer
+option in the Java Kafka Producer.
 
-* `routing_tag`: If this tag exists, its value will be used as the routing key
-* `compression_codec`: What level of compression to use: `0` -> no compression, `1` -> gzip compression, `2` -> snappy compression
-* `required_acks`: a setting for how may `acks` required from the `kafka` broker cluster.
-* `max_retry`: Max number of times to retry failed write
-* `ssl_ca`: SSL CA
-* `ssl_cert`: SSL CERT
-* `ssl_key`: SSL key
-* `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
-* `data_format`: [About Telegraf data formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)
-* `topic_suffix`: Which, if any, method of calculating `kafka` topic suffix to use.
-For examples, please refer to sample configuration.
+
