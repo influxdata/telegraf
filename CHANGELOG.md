@@ -7,6 +7,10 @@
   an [example configuration](./plugins/inputs/jolokia2/examples) to help you
   get started.
 
+- For plugins supporting TLS, you can now specify the certificate and keys
+  using `tls_ca`, `tls_cert`, `tls_key`.  These options behave the same as
+  the, now deprecated, `ssl` forms.
+
 ### New Inputs
 
 - [fibaro](./plugins/inputs/fibaro/README.md) - Contributed by @dynek

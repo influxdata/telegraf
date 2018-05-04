@@ -9,11 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+var pki = testutil.NewPKI("../../../testutil/pki")
 
 // testEmptyLog is a helper function to ensure no data is written to log.
 // Should be called at the start of the test, and returns a function which should run at the end.
@@ -32,16 +33,14 @@ func TestSocketListener_tcp_tls(t *testing.T) {
 
 	sl := newSocketListener()
 	sl.ServiceAddress = "tcp://127.0.0.1:0"
-	sl.TLSCert = "testdata/server.pem"
-	sl.TLSKey = "testdata/server.key"
-	sl.TLSAllowedCACerts = []string{"testdata/ca.pem"}
+	sl.ServerConfig = *pki.TLSServerConfig()
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
 	require.NoError(t, err)
 	defer sl.Stop()
 
-	tlsCfg, err := internal.GetTLSConfig("testdata/client.pem", "testdata/client.key", "testdata/ca.pem", true)
+	tlsCfg, err := pki.TLSClientConfig().TLSConfig()
 	require.NoError(t, err)
 
 	secureClient, err := tls.Dial("tcp", sl.Closer.(net.Listener).Addr().String(), tlsCfg)
@@ -55,16 +54,15 @@ func TestSocketListener_unix_tls(t *testing.T) {
 
 	sl := newSocketListener()
 	sl.ServiceAddress = "unix:///tmp/telegraf_test.sock"
-	sl.TLSCert = "testdata/server.pem"
-	sl.TLSKey = "testdata/server.key"
-	sl.TLSAllowedCACerts = []string{"testdata/ca.pem"}
+	sl.ServerConfig = *pki.TLSServerConfig()
 
 	acc := &testutil.Accumulator{}
 	err := sl.Start(acc)
 	require.NoError(t, err)
 	defer sl.Stop()
 
-	tlsCfg, err := internal.GetTLSConfig("testdata/client.pem", "testdata/client.key", "testdata/ca.pem", true)
+	tlsCfg, err := pki.TLSClientConfig().TLSConfig()
+	tlsCfg.InsecureSkipVerify = true
 	require.NoError(t, err)
 
 	secureClient, err := tls.Dial("unix", "/tmp/telegraf_test.sock", tlsCfg)

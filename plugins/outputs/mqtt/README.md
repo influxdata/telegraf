@@ -22,12 +22,12 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
 
   ## Timeout for write operations. default: 5s
   # timeout = "5s"
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
 
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Batch messages sent on a topic in a flush interval
@@ -53,4 +53,8 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
 * `ssl_key`: SSL key
 * `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
 * `batch`: Batch messages sent on a topic within a flush interval (default: false)
+* `tls_ca`: TLS CA
+* `tls_cert`: TLS CERT
+* `tls_key`: TLS key
+* `insecure_skip_verify`: Use TLS but skip chain & host verification (default: false)
 * `data_format`: [About Telegraf data formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md)
