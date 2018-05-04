@@ -114,7 +114,7 @@ style concurrently:
      servers = ["tcp(127.0.0.1:3306)/"]
 
    [[inputs.mysql]]
-     name_override = "_2"
+     name_suffix = "_v2"
      metric_version = 2
 
      servers = ["tcp(127.0.0.1:3306)/"]
@@ -141,7 +141,7 @@ measurement name.
      metric_version = 2
 
    [[inputs.mysql]]
-     name_override = "_2"
+     name_suffix = "_v2"
      metric_version = 2
 
      servers = ["tcp(127.0.0.1:3306)/"]
