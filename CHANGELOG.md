@@ -17,6 +17,10 @@
 - [mcrouter](./plugins/inputs/mcrouter/README.md) - Contributed by @cthayer
 - [nvidia_smi](./plugins/inputs/nvidia_smi/README.md) - Contributed by @jackzampolin
 
+### New Processors
+
+- [topk](./plugins/processors/topk/README.md) - Contributed by @mirath
+
 ### Features
 
 - [#3964](https://github.com/influxdata/telegraf/pull/3964): Add repl_oplog_window_sec metric to mongodb input.
@@ -29,6 +33,7 @@
 - [#4068](https://github.com/influxdata/telegraf/pull/4068): Add parameter to force the interval of gather for sysstat.
 - [#3877](https://github.com/influxdata/telegraf/pull/3877): Support busybox ping in the ping input.
 - [#4077](https://github.com/influxdata/telegraf/pull/4077): Add input plugin for McRouter.
+- [#4096](https://github.com/influxdata/telegraf/pull/4096): Add topk processor plugin.
 
 ### Bugfixes
 
