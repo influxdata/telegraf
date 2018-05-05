@@ -4,6 +4,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/couchdb"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -314,7 +315,98 @@ func TestBasic(t *testing.T) {
 	plugin := &couchdb.CouchDB{
 		HOSTs: []string{fakeServer.URL + "/_stats"},
 	}
-
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(plugin.Gather))
+	require.Equal(t, 2, int(acc.Metrics[0].Fields["httpd_request_methods_get_max"].(float64)))
+	require.True(t, math.Abs(0.707-acc.Metrics[0].Fields["httpd_request_methods_get_stddev"].(float64)) < 0.000001)
+}
+
+func TestDbStats(t *testing.T) {
+	all_dbs := `
+[
+"db_1",
+"db_2"
+]
+
+`
+	db1 := `
+{
+"db_name": "db_1",
+"update_seq": "2-g1AAAAEzeJzLYWBg4MhgTmHgzcvPy09JdcjLz8gvLskBCjMlMiTJ____PyuRAYeCJAUgmWQPVsOIS40DSE08fjUJIDX1eO3KYwGSDA1ACqhsPiF1CyDq9hNSdwCi7j4hdQ8g6kDuywIAikJi-A",
+"sizes": {
+"file": 42176,
+"external": 8,
+"active": 584
+},
+"purge_seq": 0,
+"other": {
+"data_size": 8
+},
+"doc_del_count": 0,
+"doc_count": 2,
+"disk_size": 42176,
+"disk_format_version": 6,
+"data_size": 584,
+"compact_running": false,
+"cluster": {
+"q": 8,
+"n": 1,
+"w": 1,
+"r": 1
+},
+"instance_start_time": "0"
+}
+`
+	db2 := `
+{
+"db_name": "db_2",
+"update_seq": "1-g1AAAAEzeJzLYWBg4MhgTmHgzcvPy09JdcjLz8gvLskBCjMlMiTJ____PyuRAYeCJAUgmWQPVsOIS40DSE08fnMSQGrq8arJYwGSDA1ACqhsPiF1CyDq9hNSdwCi7j4hdQ8g6kDuywIAiXxi9w",
+"sizes": {
+"file": 38048,
+"external": 4,
+"active": 292
+},
+"purge_seq": 0,
+"other": {
+"data_size": 4
+},
+"doc_del_count": 0,
+"doc_count": 1,
+"disk_size": 38048,
+"disk_format_version": 6,
+"data_size": 292,
+"compact_running": false,
+"cluster": {
+"q": 8,
+"n": 1,
+"w": 1,
+"r": 1
+},
+"instance_start_time": "0"
+}
+`
+	fakeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/_all_dbs" {
+			_, _ = w.Write([]byte(all_dbs))
+		} else if r.URL.Path == "/db_1" {
+			_, _ = w.Write([]byte(db1))
+		} else if r.URL.Path == "/db_2" {
+			_, _ = w.Write([]byte(db2))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer fakeServer.Close()
+
+	plugin := &couchdb.CouchDB{
+		HOSTs: []string{fakeServer.URL + "/_all_dbs"},
+	}
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(plugin.Gather))
+
+	require.Equal(t, 2, int(acc.Metrics[0].Fields["doc_count"].(float64)))
+	require.Equal(t, 42176, int(acc.Metrics[0].Fields["file_size"].(float64)))
+
+	require.Equal(t, 1, int(acc.Metrics[1].Fields["doc_count"].(float64)))
+	require.Equal(t, 38048, int(acc.Metrics[1].Fields["file_size"].(float64)))
 }

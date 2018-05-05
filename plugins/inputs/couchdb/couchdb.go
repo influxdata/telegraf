@@ -119,7 +119,6 @@ var client = &http.Client{
 
 func (c *CouchDB) fetchAndInsertServerData(accumulator telegraf.Accumulator, host string) error {
 
-	println("Fetch stats for " + host)
 	response, error := client.Get(host)
 	if error != nil {
 		return error
@@ -180,7 +179,6 @@ func (c *CouchDB) fetchAndInsertServerData(accumulator telegraf.Accumulator, hos
 
 func (c *CouchDB) fetchAndInsertDbData(accumulator telegraf.Accumulator, host string) error {
 
-	println("Fetch db info for " + host)
 	response, error := client.Get(host)
 	if error != nil {
 		return error
@@ -222,8 +220,6 @@ func (c *CouchDB) fetchAndInsertDbData(accumulator telegraf.Accumulator, host st
 			"db":     db,
 		}
 
-		//println("doccount for " + db)
-		//fmt.Println("%i", dat["doc_count"])
 		accumulator.AddFields("couchdb", fields, tags)
 	}
 
