@@ -5,6 +5,7 @@
 - [#4078](https://github.com/influxdata/telegraf/pull/4078): Use same timestamp for fields in system input.
 - [#4091](https://github.com/influxdata/telegraf/pull/4091): Fix handling of uint64 in datadog output.
 - [#4099](https://github.com/influxdata/telegraf/pull/4099): Ignore UTF8 BOM in JSON parser.
+- [#4104](https://github.com/influxdata/telegraf/issues/4104): Fix case for slave metrics in mysql input.
 
 ## v1.6.1 [2018-04-23]
 
