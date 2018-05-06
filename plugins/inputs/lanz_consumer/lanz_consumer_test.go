@@ -1,7 +1,6 @@
 package lanz_consumer
 
 import (
-	"fmt"
 	pb "github.com/aristanetworks/goarista/lanz/proto"
 	"github.com/golang/protobuf/proto"
 	"github.com/influxdata/telegraf/testutil"
@@ -70,6 +69,7 @@ func TestLanzConsumerGeneratesMetrics(t *testing.T) {
 	go c2.receiver()
 
 	c1.in <- testProtoBufCongestionRecord1
+	acc.Wait(1)
 
 	vals1 := map[string]interface{}{
 		"timestamp":     int64(100000000000000),
@@ -90,7 +90,9 @@ func TestLanzConsumerGeneratesMetrics(t *testing.T) {
 
 	acc.AssertContainsTaggedFields(t, "congestionRecord", vals1, tags1)
 
+	acc.ClearMetrics()
 	c2.in <- testProtoBufCongestionRecord2
+	acc.Wait(1)
 
 	vals2 := map[string]interface{}{
 		"timestamp":     int64(200000000000000),
@@ -109,7 +111,7 @@ func TestLanzConsumerGeneratesMetrics(t *testing.T) {
 		"host":               "switch02.int.example.com:50001",
 	}
 
-	fmt.Println(len(acc.Metrics))
+	acc.AssertContainsFields(t, "congestionRecord", vals2)
 	acc.AssertContainsTaggedFields(t, "congestionRecord", vals2, tags2)
 
 	c1.done <- true
