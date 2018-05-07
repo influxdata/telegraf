@@ -35,7 +35,7 @@ type AzureMonitor struct {
 	AzureClientSecret   string            `toml:"azure_client_secret"`
 	StringAsDimension   bool              `toml:"string_as_dimension"`
 
-	url string
+	url         string
 	msiToken    *msiToken
 	oauthConfig *adal.OAuthConfig
 	adalToken   adal.OAuthTokenProvider
@@ -51,11 +51,12 @@ type aggregate struct {
 }
 
 const (
-	defaultRegion string = "eastus"
-
-	defaultMSIResource string = "https://monitoring.azure.com/"
-
-	urlTemplate string = "https://%s.monitoring.azure.com%s/metrics"
+	defaultRegion          string = "eastus"
+	defaultMSIResource     string = "https://monitoring.azure.com/"
+	urlTemplate            string = "https://%s.monitoring.azure.com%s/metrics"
+	resourceIDTemplate     string = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s"
+	vmInstanceMetadataURL  string = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
+	msiInstanceMetadataURL string = "http://169.254.169.254/metadata/identity/oauth2/token"
 )
 
 var sampleConfig = `
@@ -63,7 +64,7 @@ var sampleConfig = `
   ## specified, the plugin will attempt to retrieve the resource ID
   ## of the VM via the instance metadata service (optional if running 
   ## on an Azure VM with MSI)
-  #resource_id = "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Compute/virtualMachines/<vm-name>"
+  #resource_id = "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
   ## Azure region to publish metrics against.  Defaults to eastus.
   ## Leave blank to automatically query the region via MSI.
   #region = "useast"
@@ -110,35 +111,27 @@ func (a *AzureMonitor) Connect() error {
 	if a.AzureSubscriptionID == "" && a.AzureTenantID == "" && a.AzureClientID == "" && a.AzureClientSecret == "" {
 		a.useMsi = true
 	} else if a.AzureSubscriptionID == "" || a.AzureTenantID == "" || a.AzureClientID == "" || a.AzureClientSecret == "" {
-		return fmt.Errorf("Must provide values for azureSubscription, azureTenant, azureClient and azureClientSecret, or leave all blank to default to MSI")
+		return fmt.Errorf("E! Must provide values for azure_subscription, azure_tenant, azure_client and azure_client_secret, or leave all blank to default to MSI")
 	}
 
 	if !a.useMsi {
 		// If using direct AD authentication create the AD access client
 		oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, a.AzureTenantID)
 		if err != nil {
-			return fmt.Errorf("Could not initialize AD client: %s", err)
+			return fmt.Errorf("E! Could not initialize AD client: %s", err)
 		}
 		a.oauthConfig = oauthConfig
 	}
 
-	// Validate the resource identifier
-	metadata, err := a.GetInstanceMetadata()
-	if err != nil {
-		return fmt.Errorf("No resource id specified, and Azure Instance metadata service not available.  If not running on an Azure VM, provide a value for resourceId")
-	}
-	a.ResourceID = metadata.AzureResourceID
-
-	if a.Region == "" {
-		a.Region = metadata.Compute.Location
+	// Pull region and resource identifier
+	err := a.GetInstanceMetadata()
+	if err != nil && a.ResourceID == "" && a.Region == "" {
+		return fmt.Errorf("E! No resource id specified, and Azure Instance metadata service not available.  If not running on an Azure VM, provide a value for resource_id")
 	}
 
-	a.url := fmt.Sprintf(urlTemplate, a.Region, a.ResourceID)
-
-	// Validate credentials
 	err = a.validateCredentials()
 	if err != nil {
-		return err
+		return fmt.Errorf("E! Unable to fetch authentication credentials: %v", err)
 	}
 
 	a.Reset()
@@ -149,8 +142,8 @@ func (a *AzureMonitor) Connect() error {
 func (a *AzureMonitor) validateCredentials() error {
 	if a.useMsi {
 		// Check expiry on the token
-		if a.msiToken == nil || a.msiToken.ExpiresInDuration() < time.Minute {
-			msiToken, err := a.getMsiToken(a.AzureClientID, defaultMSIResource)
+		if a.msiToken == nil || a.msiToken.expiresInDuration() < time.Minute {
+			msiToken, err := a.getMsiToken(a.AzureClientID)
 			if err != nil {
 				return err
 			}
@@ -227,7 +220,7 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 	}
 
 	if err := a.validateCredentials(); err != nil {
-		return fmt.Errorf("Error authenticating: %v", err)
+		return fmt.Errorf("E! Unable to fetch authentication credentials: %v", err)
 	}
 
 	req, err := http.NewRequest("POST", a.url, bytes.NewBuffer(body))
@@ -249,7 +242,7 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 		if err != nil {
 			reply = nil
 		}
-		return fmt.Errorf("Post Error. HTTP response code:%d message:%s reply:\n%s",
+		return fmt.Errorf("E! Get Error. %d HTTP response: %s response body: %s",
 			resp.StatusCode, resp.Status, reply)
 	}
 

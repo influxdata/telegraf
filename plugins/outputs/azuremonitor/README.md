@@ -49,7 +49,7 @@ The resourceId used for Azure Monitor metrics.
 ## specified, the plugin will attempt to retrieve the resource ID
 ## of the VM via the instance metadata service (optional if running 
 ## on an Azure VM with MSI)
-#resourceId = "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Compute/virtualMachines/<vm-name>"
+#resource_id = "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
 ## Azure region to publish metrics against.  Defaults to eastus.
 ## Leave blank to automatically query the region via MSI.
 #region = "useast"

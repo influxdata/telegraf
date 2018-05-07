@@ -80,24 +80,14 @@ func (m *msiToken) parseTimes() {
 	}
 }
 
-// ExpiresAt is the time at which the token expires
-func (m *msiToken) ExpiresAt() time.Time {
-	return m.expiresAt
-}
-
 // ExpiresInDuration returns the duration until the token expires
-func (m *msiToken) ExpiresInDuration() time.Duration {
+func (m *msiToken) expiresInDuration() time.Duration {
 	expiresDuration := m.expiresAt.Sub(time.Now().UTC())
 	return expiresDuration
 }
 
-// NotBeforeTime returns the time at which the token becomes valid
-func (m *msiToken) NotBeforeTime() time.Time {
-	return m.notBefore
-}
-
 // GetMsiToken retrieves a managed service identity token from the specified port on the local VM
-func (a *AzureMonitor) getMsiToken(clientID string, resourceID string) (*msiToken, error) {
+func (a *AzureMonitor) getMsiToken(clientID string) (*msiToken, error) {
 	// Acquire an MSI token.  Documented at:
 	// https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/how-to-use-vm-token
 	//
@@ -110,13 +100,9 @@ func (a *AzureMonitor) getMsiToken(clientID string, resourceID string) (*msiToke
 		return nil, err
 	}
 
-	// Resource ID defaults to https://management.azure.com
-	if resourceID == "" {
-		resourceID = "https://management.azure.com"
-	}
-
 	msiParameters := url.Values{}
-	msiParameters.Add("resource", resourceID)
+	// Resource ID defaults to https://management.azure.com
+	msiParameters.Add("resource", defaultMSIResource)
 	msiParameters.Add("api-version", "2018-02-01")
 
 	// Client id is optional
@@ -143,7 +129,7 @@ func (a *AzureMonitor) getMsiToken(clientID string, resourceID string) (*msiToke
 	}
 
 	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
-		return nil, fmt.Errorf("Post Error. HTTP response code:%d message:%s, content: %s",
+		return nil, fmt.Errorf("E! Get Error. %d HTTP response: %s response body: %s",
 			resp.StatusCode, resp.Status, reply)
 	}
 
@@ -156,41 +142,45 @@ func (a *AzureMonitor) getMsiToken(clientID string, resourceID string) (*msiToke
 	return &token, nil
 }
 
-const (
-	vmInstanceMetadataURL  = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
-	msiInstanceMetadataURL = "http://169.254.169.254/metadata/identity/oauth2/token"
-)
-
 // GetInstanceMetadata retrieves metadata about the current Azure VM
-func (a *AzureMonitor) GetInstanceMetadata() (*VirtualMachineMetadata, error) {
+func (a *AzureMonitor) GetInstanceMetadata() error {
 	req, err := http.NewRequest("GET", vmInstanceMetadataURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("Error creating HTTP request")
+		return fmt.Errorf("Error creating HTTP request")
 	}
 	req.Header.Set("Metadata", "true")
 
 	resp, err := a.client.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 
 	reply, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
-		return nil, fmt.Errorf("Post Error. HTTP response code:%d message:%s reply:\n%s",
+		return fmt.Errorf("Post Error. HTTP response code:%d message:%s reply:\n%s",
 			resp.StatusCode, resp.Status, reply)
 	}
 
 	var metadata VirtualMachineMetadata
 	if err := json.Unmarshal(reply, &metadata); err != nil {
-		return nil, err
+		return err
 	}
-	metadata.AzureResourceID = fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s",
-		metadata.Compute.SubscriptionID, metadata.Compute.ResourceGroupName, metadata.Compute.Name)
 
-	return &metadata, nil
+	if a.ResourceID == "" {
+		a.ResourceID = fmt.Sprintf(resourceIDTemplate,
+			metadata.Compute.SubscriptionID, metadata.Compute.ResourceGroupName, metadata.Compute.Name)
+	}
+
+	if a.Region == "" {
+		a.Region = metadata.Compute.Location
+	}
+
+	a.url = fmt.Sprintf(urlTemplate, a.Region, a.ResourceID)
+
+	return nil
 }
