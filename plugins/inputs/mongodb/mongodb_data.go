@@ -49,6 +49,10 @@ var DefaultStats = map[string]string{
 	"open_connections":    "NumConnections",
 	"ttl_deletes_per_sec": "DeletedDocuments",
 	"ttl_passes_per_sec":  "Passes",
+	"cursor_timed_out":    "TimedOutC",
+	"cursor_no_timeout":   "NoTimeoutC",
+	"cursor_pinned":       "PinnedC",
+	"cursor_total":        "TotalC",
 }
 
 var DefaultReplStats = map[string]string{
