@@ -289,13 +289,27 @@ type OpcountStats struct {
 
 // MetricsStats stores information related to metrics
 type MetricsStats struct {
-	TTL *TTLStats `bson:"ttl"`
+	TTL    *TTLStats    `bson:"ttl"`
+	Cursor *CursorStats `bson:"cursor"`
 }
 
 // TTLStats stores information related to documents with a ttl index.
 type TTLStats struct {
 	DeletedDocuments int64 `bson:"deletedDocuments"`
 	Passes           int64 `bson:"passes"`
+}
+
+// CursorStats stores information related to cursor metrics.
+type CursorStats struct {
+	TimedOut int64            `bson:"timedOut"`
+	Open     *OpenCursorStats `bson:"open"`
+}
+
+// OpenCursorStats stores information related to open cursor metrics
+type OpenCursorStats struct {
+	NoTimeout int64 `bson:"noTimeout"`
+	Pinned    int64 `bson:"pinned"`
+	Total     int64 `bson:"total"`
 }
 
 // ReadWriteLockTimes stores time spent holding read/write locks.
@@ -438,6 +452,10 @@ type StatLine struct {
 
 	// TTL fields
 	Passes, DeletedDocuments int64
+
+	// Cursor fields
+	TimedOutC                   int64
+	NoTimeoutC, PinnedC, TotalC int64
 
 	// Collection locks (3.0 mmap only)
 	CollectionLocks *CollectionLockStatus
@@ -582,9 +600,19 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.Command = diff(newStat.Opcounters.Command, oldStat.Opcounters.Command, sampleSecs)
 	}
 
-	if newStat.Metrics != nil && newStat.Metrics.TTL != nil && oldStat.Metrics != nil && oldStat.Metrics.TTL != nil {
-		returnVal.Passes = diff(newStat.Metrics.TTL.Passes, oldStat.Metrics.TTL.Passes, sampleSecs)
-		returnVal.DeletedDocuments = diff(newStat.Metrics.TTL.DeletedDocuments, oldStat.Metrics.TTL.DeletedDocuments, sampleSecs)
+	if newStat.Metrics != nil && oldStat.Metrics != nil {
+		if newStat.Metrics.TTL != nil && oldStat.Metrics.TTL != nil {
+			returnVal.Passes = diff(newStat.Metrics.TTL.Passes, oldStat.Metrics.TTL.Passes, sampleSecs)
+			returnVal.DeletedDocuments = diff(newStat.Metrics.TTL.DeletedDocuments, oldStat.Metrics.TTL.DeletedDocuments, sampleSecs)
+		}
+		if newStat.Metrics.Cursor != nil && oldStat.Metrics.Cursor != nil {
+			returnVal.TimedOutC = diff(newStat.Metrics.Cursor.TimedOut, oldStat.Metrics.Cursor.TimedOut, sampleSecs)
+			if newStat.Metrics.Cursor.Open != nil && oldStat.Metrics.Cursor.Open != nil {
+				returnVal.NoTimeoutC = diff(newStat.Metrics.Cursor.Open.NoTimeout, oldStat.Metrics.Cursor.Open.NoTimeout, sampleSecs)
+				returnVal.PinnedC = diff(newStat.Metrics.Cursor.Open.Pinned, oldStat.Metrics.Cursor.Open.Pinned, sampleSecs)
+				returnVal.TotalC = diff(newStat.Metrics.Cursor.Open.Total, oldStat.Metrics.Cursor.Open.Total, sampleSecs)
+			}
+		}
 	}
 
 	if newStat.OpcountersRepl != nil && oldStat.OpcountersRepl != nil {
