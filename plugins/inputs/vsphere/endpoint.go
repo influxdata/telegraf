@@ -275,8 +275,16 @@ func getVMs(root *view.ContainerView) (objectMap, error) {
 	}
 	m := make(objectMap)
 	for _, r := range resources {
+		var guest string
+		// Sometimes Config is unknown and returns a nil pointer
+		//
+		if r.Config != nil {
+			guest = cleanGuestId(r.Config.GuestId)
+		} else {
+			guest = "unknown"
+		}
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host, guest: cleanGuestId(r.Config.GuestId)}
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host, guest: guest}
 	}
 	return m, nil
 }
