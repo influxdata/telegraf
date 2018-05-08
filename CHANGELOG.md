@@ -35,6 +35,7 @@
 - [#4077](https://github.com/influxdata/telegraf/pull/4077): Add input plugin for McRouter.
 - [#4096](https://github.com/influxdata/telegraf/pull/4096): Add topk processor plugin.
 - [#4114](https://github.com/influxdata/telegraf/pull/4114): Add cursor metrics to mongodb input.
+- [#3455](https://github.com/influxdata/telegraf/pull/3455): Add tag/integer pair for result to net_response.
 
 ### Bugfixes
 
