@@ -13,6 +13,16 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+type ResultType uint64
+
+const (
+	Success          ResultType = 0
+	Timeout                     = 1
+	ConnectionFailed            = 2
+	ReadFailed                  = 3
+	StringMismatch              = 4
+)
+
 // NetResponse struct
 type NetResponse struct {
 	Address     string
@@ -23,7 +33,7 @@ type NetResponse struct {
 	Protocol    string
 }
 
-var description = "TCP or UDP 'ping' given url and collect response time in seconds"
+var description = "Collect response time of a TCP or UDP connection"
 
 // Description will return a short string to explain what the plugin does.
 func (*NetResponse) Description() string {
@@ -37,11 +47,12 @@ var sampleConfig = `
   protocol = "tcp"
   ## Server address (default localhost)
   address = "localhost:80"
+
   ## Set timeout
-  timeout = "1s"
+  # timeout = "1s"
 
   ## Set read timeout (only used if expecting a response)
-  read_timeout = "1s"
+  # read_timeout = "1s"
 
   ## The following options are required for UDP checks. For TCP, they are
   ## optional. The plugin will send the given string to the server and then
@@ -50,6 +61,9 @@ var sampleConfig = `
   # send = "ssh"
   ## expected string in answer
   # expect = "ssh"
+
+  ## Uncomment to remove deprecated fields
+  # fieldexclude = ["result_type", "string_found"]
 `
 
 // SampleConfig will return a complete configuration example with details about each field.
@@ -72,13 +86,9 @@ func (n *NetResponse) TCPGather() (tags map[string]string, fields map[string]int
 	// Handle error
 	if err != nil {
 		if e, ok := err.(net.Error); ok && e.Timeout() {
-			tags["result_text"] = "timeout"
-			fields["result_code"] = 1
-			fields["result_type"] = "timeout"
+			setResult(Timeout, fields, tags, n.Expect)
 		} else {
-			tags["result_text"] = "connection_failed"
-			fields["result_code"] = 1
-			fields["result_type"] = "connection_failed"
+			setResult(ConnectionFailed, fields, tags, n.Expect)
 		}
 		return tags, fields
 	}
@@ -103,31 +113,19 @@ func (n *NetResponse) TCPGather() (tags map[string]string, fields map[string]int
 		responseTime = time.Since(start).Seconds()
 		// Handle error
 		if err != nil {
-			tags["result_text"] = "read_failed"
-			fields["result_code"] = 1
-			fields["string_found"] = false
-			tags["result_type"] = "read_failed"
-			fields["success"] = 1
+			setResult(ReadFailed, fields, tags, n.Expect)
 		} else {
 			// Looking for string in answer
 			RegEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
 			find := RegEx.FindString(string(data))
 			if find != "" {
-				tags["result_text"] = "success"
-				fields["result_code"] = 0
-				fields["result_type"] = "success"
-				fields["string_found"] = true
+				setResult(Success, fields, tags, n.Expect)
 			} else {
-				tags["result_text"] = "string_mismatch"
-				fields["result_code"] = 1
-				fields["result_type"] = "string_mismatch"
-				fields["string_found"] = false
+				setResult(StringMismatch, fields, tags, n.Expect)
 			}
 		}
 	} else {
-		tags["result_text"] = "success"
-		fields["result_code"] = 0
-		fields["result_type"] = "success"
+		setResult(Success, fields, tags, n.Expect)
 	}
 	fields["response_time"] = responseTime
 	return tags, fields
@@ -148,9 +146,7 @@ func (n *NetResponse) UDPGather() (tags map[string]string, fields map[string]int
 	conn, err := net.DialUDP("udp", LocalAddr, udpAddr)
 	// Handle error
 	if err != nil {
-		tags["result_text"] = "connection_failed"
-		fields["result_code"] = 1
-		fields["result_type"] = "connection_failed"
+		setResult(ConnectionFailed, fields, tags, n.Expect)
 		return tags, fields
 	}
 	defer conn.Close()
@@ -167,9 +163,7 @@ func (n *NetResponse) UDPGather() (tags map[string]string, fields map[string]int
 	responseTime := time.Since(start).Seconds()
 	// Handle error
 	if err != nil {
-		tags["result_text"] = "read_failed"
-		fields["result_code"] = 1
-		fields["result_type"] = "read_failed"
+		setResult(ReadFailed, fields, tags, n.Expect)
 		return tags, fields
 	}
 
@@ -177,15 +171,9 @@ func (n *NetResponse) UDPGather() (tags map[string]string, fields map[string]int
 	RegEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
 	find := RegEx.FindString(string(buf))
 	if find != "" {
-		tags["result_text"] = "success"
-		fields["result_code"] = 0
-		fields["result_type"] = "success"
-		fields["string_found"] = true
+		setResult(Success, fields, tags, n.Expect)
 	} else {
-		tags["result_text"] = "string_mismatch"
-		fields["result_code"] = 1
-		fields["result_type"] = "string_mismatch"
-		fields["string_found"] = false
+		setResult(StringMismatch, fields, tags, n.Expect)
 	}
 
 	fields["response_time"] = responseTime
@@ -246,6 +234,33 @@ func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 	// Add metrics
 	acc.AddFields("net_response", fields, tags)
 	return nil
+}
+
+func setResult(result ResultType, fields map[string]interface{}, tags map[string]string, expect string) {
+	var tag string
+	switch result {
+	case Success:
+		tag = "success"
+	case Timeout:
+		tag = "timeout"
+	case ConnectionFailed:
+		tag = "connection_failed"
+	case ReadFailed:
+		tag = "read_failed"
+	case StringMismatch:
+		tag = "string_mismatch"
+	}
+
+	tags["result"] = tag
+	fields["result_code"] = uint64(result)
+
+	// deprecated in 1.7; use result tag
+	fields["result_type"] = tag
+
+	// deprecated in 1.4; use result tag
+	if expect != "" {
+		fields["string_found"] = result == Success
+	}
 }
 
 func init() {
