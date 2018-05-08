@@ -114,8 +114,8 @@ func Test_escapeValue(t *testing.T) {
 		{int64(123), `123`},
 		{uint64(123), `123`},
 		{uint64(MaxInt64) + 1, `9223372036854775807`},
-		{true, `1`},
-		{false, `0`},
+		{true, `true`},
+		{false, `false`},
 		// float types
 		{float64(123.456), `123.456`},
 		// time.Time

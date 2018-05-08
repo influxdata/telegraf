@@ -130,10 +130,7 @@ func escapeValue(val interface{}) (string, error) {
 			return strconv.FormatInt(MaxInt64, 10), nil
 		}
 	case bool:
-		if t {
-			return "1", nil
-		}
-		return "0", nil
+		return strconv.FormatBool(t), nil
 	case time.Time:
 		// see https://crate.io/docs/crate/reference/sql/data_types.html#timestamp
 		return escapeValue(t.Format("2006-01-02T15:04:05.999-0700"))
