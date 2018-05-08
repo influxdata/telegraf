@@ -17,6 +17,7 @@ var sampleChecks = []*api.HealthCheck{
 		Output:      "OK",
 		ServiceID:   "foo.123",
 		ServiceName: "foo",
+		ServiceTags: []string{"bar", "baz"},
 	},
 }
 
@@ -34,6 +35,8 @@ func TestGatherHealthCheck(t *testing.T) {
 		"node":         "localhost",
 		"service_name": "foo",
 		"check_id":     "foo.health123",
+		"bar":          "bar",
+		"baz":          "baz",
 	}
 
 	var acc testutil.Accumulator
