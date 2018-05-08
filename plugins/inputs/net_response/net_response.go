@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// NetResponses struct
+// NetResponse struct
 type NetResponse struct {
 	Address     string
 	Timeout     internal.Duration
@@ -23,8 +23,11 @@ type NetResponse struct {
 	Protocol    string
 }
 
-func (_ *NetResponse) Description() string {
-	return "TCP or UDP 'ping' given url and collect response time in seconds"
+var description = "TCP or UDP 'ping' given url and collect response time in seconds"
+
+// Description will return a short string to explain what the plugin does.
+func (*NetResponse) Description() string {
+	return description
 }
 
 var sampleConfig = `
@@ -49,13 +52,17 @@ var sampleConfig = `
   # expect = "ssh"
 `
 
-func (_ *NetResponse) SampleConfig() string {
+// SampleConfig will return a complete configuration example with details about each field.
+func (*NetResponse) SampleConfig() string {
 	return sampleConfig
 }
 
-func (n *NetResponse) TcpGather() (map[string]interface{}, error) {
-	// Prepare fields
-	fields := make(map[string]interface{})
+// TCPGather will execute if there are TCP tests defined in the configuration.
+// It will return a map[string]interface{} for fields and a map[string]string for tags
+func (n *NetResponse) TCPGather() (tags map[string]string, fields map[string]interface{}) {
+	// Prepare returns
+	tags = make(map[string]string)
+	fields = make(map[string]interface{})
 	// Start Timer
 	start := time.Now()
 	// Connecting
@@ -65,11 +72,15 @@ func (n *NetResponse) TcpGather() (map[string]interface{}, error) {
 	// Handle error
 	if err != nil {
 		if e, ok := err.(net.Error); ok && e.Timeout() {
+			tags["result_text"] = "timeout"
+			fields["result_code"] = 1
 			fields["result_type"] = "timeout"
 		} else {
+			tags["result_text"] = "connection_failed"
+			fields["result_code"] = 1
 			fields["result_type"] = "connection_failed"
 		}
-		return fields, nil
+		return tags, fields
 	}
 	defer conn.Close()
 	// Send string if needed
@@ -92,30 +103,42 @@ func (n *NetResponse) TcpGather() (map[string]interface{}, error) {
 		responseTime = time.Since(start).Seconds()
 		// Handle error
 		if err != nil {
+			tags["result_text"] = "read_failed"
+			fields["result_code"] = 1
 			fields["string_found"] = false
-			fields["result_type"] = "read_failed"
+			tags["result_type"] = "read_failed"
+			fields["success"] = 1
 		} else {
 			// Looking for string in answer
 			RegEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
 			find := RegEx.FindString(string(data))
 			if find != "" {
+				tags["result_text"] = "success"
+				fields["result_code"] = 0
 				fields["result_type"] = "success"
 				fields["string_found"] = true
 			} else {
+				tags["result_text"] = "string_mismatch"
+				fields["result_code"] = 1
 				fields["result_type"] = "string_mismatch"
 				fields["string_found"] = false
 			}
 		}
 	} else {
+		tags["result_text"] = "success"
+		fields["result_code"] = 0
 		fields["result_type"] = "success"
 	}
 	fields["response_time"] = responseTime
-	return fields, nil
+	return tags, fields
 }
 
-func (n *NetResponse) UdpGather() (map[string]interface{}, error) {
-	// Prepare fields
-	fields := make(map[string]interface{})
+// UDPGather will execute if there are UDP tests defined in the configuration.
+// It will return a map[string]interface{} for fields and a map[string]string for tags
+func (n *NetResponse) UDPGather() (tags map[string]string, fields map[string]interface{}) {
+	// Prepare returns
+	tags = make(map[string]string)
+	fields = make(map[string]interface{})
 	// Start Timer
 	start := time.Now()
 	// Resolving
@@ -125,8 +148,10 @@ func (n *NetResponse) UdpGather() (map[string]interface{}, error) {
 	conn, err := net.DialUDP("udp", LocalAddr, udpAddr)
 	// Handle error
 	if err != nil {
+		tags["result_text"] = "connection_failed"
+		fields["result_code"] = 1
 		fields["result_type"] = "connection_failed"
-		return fields, nil
+		return tags, fields
 	}
 	defer conn.Close()
 	// Send string
@@ -142,24 +167,35 @@ func (n *NetResponse) UdpGather() (map[string]interface{}, error) {
 	responseTime := time.Since(start).Seconds()
 	// Handle error
 	if err != nil {
+		tags["result_text"] = "read_failed"
+		fields["result_code"] = 1
 		fields["result_type"] = "read_failed"
-		return fields, nil
-	} else {
-		// Looking for string in answer
-		RegEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
-		find := RegEx.FindString(string(buf))
-		if find != "" {
-			fields["result_type"] = "success"
-			fields["string_found"] = true
-		} else {
-			fields["result_type"] = "string_mismatch"
-			fields["string_found"] = false
-		}
+		return tags, fields
 	}
+
+	// Looking for string in answer
+	RegEx := regexp.MustCompile(`.*` + n.Expect + `.*`)
+	find := RegEx.FindString(string(buf))
+	if find != "" {
+		tags["result_text"] = "success"
+		fields["result_code"] = 0
+		fields["result_type"] = "success"
+		fields["string_found"] = true
+	} else {
+		tags["result_text"] = "string_mismatch"
+		fields["result_code"] = 1
+		fields["result_type"] = "string_mismatch"
+		fields["string_found"] = false
+	}
+
 	fields["response_time"] = responseTime
-	return fields, nil
+
+	return tags, fields
 }
 
+// Gather is called by telegraf when the plugin is executed on its interval.
+// It will call either UDPGather or TCPGather based on the configuration and
+// also fill an Accumulator that is supplied.
 func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 	// Set default values
 	if n.Timeout.Duration == 0 {
@@ -189,18 +225,23 @@ func (n *NetResponse) Gather(acc telegraf.Accumulator) error {
 	// Prepare data
 	tags := map[string]string{"server": host, "port": port}
 	var fields map[string]interface{}
+	var returnTags map[string]string
 	// Gather data
 	if n.Protocol == "tcp" {
-		fields, err = n.TcpGather()
+		returnTags, fields = n.TCPGather()
 		tags["protocol"] = "tcp"
 	} else if n.Protocol == "udp" {
-		fields, err = n.UdpGather()
+		returnTags, fields = n.UDPGather()
 		tags["protocol"] = "udp"
 	} else {
 		return errors.New("Bad protocol")
 	}
-	if err != nil {
-		return err
+	for key, value := range returnTags {
+		tags[key] = value
+	}
+	// Merge the tags
+	for k, v := range returnTags {
+		tags[k] = v
 	}
 	// Add metrics
 	acc.AddFields("net_response", fields, tags)
