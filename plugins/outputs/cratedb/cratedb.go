@@ -121,6 +121,9 @@ func escapeValue(val interface{}) (string, error) {
 	case int64, float64:
 		return fmt.Sprint(t), nil
 	case uint64:
+		// The long type is the largest integer type in CrateDB and is the
+		// size of a signed int64.  If our value is too large send the largest
+		// possible value.
 		if t <= uint64(MaxInt64) {
 			return strconv.FormatInt(int64(t), 10), nil
 		} else {
