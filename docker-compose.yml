@@ -79,15 +79,15 @@ services:
       - "389:389"
       - "636:636"
   crate:
-   image: crate/crate
-   ports:
-    - "4200:4200"
-    - "4230:4230"
-   command:
-    - crate
-    - -Cnetwork.host=0.0.0.0
-    - -Ctransport.host=localhost
-    - -Clicense.enterprise=false
-   environment:
-    - CRATE_HEAP_SIZE=128m
-    - JAVA_OPTS='-Xms256m -Xmx256m'
+    image: crate/crate
+    ports:
+      - "4200:4200"
+      - "4230:4230"
+      - "5432:5432"
+    command:
+      - crate
+      - -Cnetwork.host=0.0.0.0
+      - -Ctransport.host=localhost
+      - -Clicense.enterprise=false
+    environment:
+      - CRATE_HEAP_SIZE=128m
