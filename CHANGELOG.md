@@ -1,4 +1,4 @@
-## v1.6.2 [unreleased]
+## v1.6.2 [2018-05-08]
 
 ### Bugfixes
 
@@ -6,6 +6,7 @@
 - [#4091](https://github.com/influxdata/telegraf/pull/4091): Fix handling of uint64 in datadog output.
 - [#4099](https://github.com/influxdata/telegraf/pull/4099): Ignore UTF8 BOM in JSON parser.
 - [#4104](https://github.com/influxdata/telegraf/issues/4104): Fix case for slave metrics in mysql input.
+- [#4110](https://github.com/influxdata/telegraf/issues/4110): Fix uint support in cratedb output.
 
 ## v1.6.1 [2018-04-23]
 
