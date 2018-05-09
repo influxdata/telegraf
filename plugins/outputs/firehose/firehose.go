@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/firehose"
 	"github.com/aws/aws-sdk-go/service/firehose/firehoseiface"
 	"github.com/influxdata/telegraf"
@@ -190,19 +191,20 @@ func writeToFirehose(f *FirehoseOutput, b [][]byte, submitAttemptCount int64) {
 	resp, err := f.svc.PutRecordBatch(batchInput)
 
 	// if we had a failure, log it and enqueue the request for next time
-	if (err != nil) || (*resp.FailedPutCount > 0) {
-		log.Printf("E! firehose: Unable to write to Firehose : %+v \n", err.Error())
+	if (aws.Int64Value(resp.FailedPutCount) > 0) || (err != nil) {
+		if err != nil {
+			log.Printf("E! firehose: Unable to write to Firehose : %+v \n", err.Error())
+		}
+		// Log the RequestResponse if there were any failed Puts (in the batch Put)
+		if aws.Int64Value(resp.FailedPutCount) > 0 {
+			log.Printf("E! firehose: One or more Put operations failed : %+v \n", resp)
+		}
 		newErrorEntry := errorEntry{submitAttemptCount: submitAttemptCount + 1, batch: b}
 		f.errorBuffer = append(f.errorBuffer, &newErrorEntry)
 		f.totalErrorCount += 1
 		return
 	}
-	if f.Debug {
-		log.Printf("E! %+v \n", resp)
-	}
-
 	log.Printf("I! firehose: successfully sent %d metric batches in %+v. Total size: %d bytes.\n", len(r), time.Since(start), dataSize)
-
 }
 
 // Write function is responsible for first writing the batch entries held in
