@@ -57,7 +57,7 @@ type MQTT struct {
 	QoS         int    `toml:"qos"`
 	ClientID    string `toml:"client_id"`
 	tls.ClientConfig
-	BatchMessage bool   `toml:"batch"`
+  BatchMessage bool   `toml:"batch"`
 
 	client paho.Client
 	opts   *paho.ClientOptions

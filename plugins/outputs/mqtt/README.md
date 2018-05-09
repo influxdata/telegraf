@@ -48,11 +48,6 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
 * `password`: The password to connect MQTT server.
 * `client_id`: The unique client id to connect MQTT server. If this paramater is not set then a random ID is generated.
 * `timeout`: Timeout for write operations. default: 5s
-* `ssl_ca`: SSL CA
-* `ssl_cert`: SSL CERT
-* `ssl_key`: SSL key
-* `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
-* `batch`: Batch messages sent on a topic within a flush interval (default: false)
 * `tls_ca`: TLS CA
 * `tls_cert`: TLS CERT
 * `tls_key`: TLS key
