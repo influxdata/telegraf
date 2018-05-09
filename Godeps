@@ -1,5 +1,5 @@
 collectd.org 2ce144541b8903101fb8f1483cc0497a68798122
-github.com/aerospike/aerospike-client-go 95e1ad7791bdbca44707fedbb29be42024900d9c
+github.com/aerospike/aerospike-client-go 9701404f4c60a6ea256595d24bf318f721a7e8b8
 github.com/amir/raidman c74861fe6a7bb8ede0a010ce4485bdbb4fc4c985
 github.com/apache/thrift 4aaa92ece8503a6da9bc6701604f69acf2b99d07
 github.com/aws/aws-sdk-go c861d27d0304a79f727e9a8a4e2ac1e74602fdc0
