@@ -1,4 +1,5 @@
 ## v1.7 [2018-06-12]
+## v1.7 [unreleased]
 
 ### Release Notes
 
@@ -38,6 +39,14 @@
 
 - [fibaro](./plugins/inputs/fibaro/README.md) - Contributed by @dynek
 - [nvidia_smi](./plugins/inputs/nvidia_smi/README.md) - Contributed by @jackzampolin
+
+- [fibaro](./plugins/inputs/fibaro/README.md) - Contributed by @dynek
+- [mcrouter](./plugins/inputs/mcrouter/README.md) - Contributed by @cthayer
+- [nvidia_smi](./plugins/inputs/nvidia_smi/README.md) - Contributed by @jackzampolin
+
+### New Processors
+
+- [topk](./plugins/processors/topk/README.md) - Contributed by @mirath
 
 ### Features
 
@@ -105,6 +114,13 @@
 
 ## v1.6.2 [2018-05-08]
 ## v1.6.2 [unreleased]
+
+## v1.6.3 [unreleased]
+
+### Bugfixes
+
+- [4127](https://github.com/influxdata/telegraf/issues/4127): Fix intermittent panic in aerospike input.
+
 ## v1.6.2 [2018-05-08]
 
 ### Bugfixes
