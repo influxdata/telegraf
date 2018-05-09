@@ -45,6 +45,15 @@ var sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
+
+  ## Batch messages in a topic
+  ## batch = false
+  ## Flag to determine if messages sent in a topic in a flush interval,
+  ## need to be batched into one message.
+  ## batch = true, batches the messages in a topic to one messages
+  ## batch = false, default behaviour
+  # batch = false
+
 `
 
 type MQTT struct {
@@ -57,7 +66,7 @@ type MQTT struct {
 	QoS         int    `toml:"qos"`
 	ClientID    string `toml:"client_id"`
 	tls.ClientConfig
-  BatchMessage bool   `toml:"batch"`
+  	BatchMessage bool   `toml:"batch"`
 
 	client paho.Client
 	opts   *paho.ClientOptions
@@ -131,8 +140,13 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 
 		t = append(t, metric.Name())
 		topic := strings.Join(t, "/")
-
-		buf, err := m.serializer.Serialize(metric)
+		
+		if m.BatchMessage {
+			buf, err := m.serializer.SerializeBatch(metric)
+		}else{
+			buf, err := m.serializer.Serialize(metric)
+		}
+		
 		if err != nil {
 			return err
 		}
