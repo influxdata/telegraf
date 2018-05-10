@@ -142,7 +142,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		topic := strings.Join(t, "/")
 
 		buf, err := m.serializer.Serialize(metric)
-		
+
 		if err != nil {
 			return err
 		}
