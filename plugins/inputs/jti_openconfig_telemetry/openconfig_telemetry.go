@@ -106,7 +106,7 @@ func (m *OpenConfigTelemetry) Stop() {
 // XML path without predicates. If /events/event[id=2]/attributes[key='message']/value
 // is given input, this function will emit /events/event/attributes/value as xmlpath and
 // { /events/event/@id=2, /events/event/attributes/@key='message' } as tags
-func spitTagsNPath(xmlpath string) (string, map[string]string) {
+func SpitTagsNPath(xmlpath string) (string, map[string]string) {
 	re := regexp.MustCompile("\\/([^\\/]*)\\[([A-Za-z0-9\\-\\/]*\\=[^\\[]*)\\]")
 	subs := re.FindAllStringSubmatch(xmlpath, -1)
 	tags := make(map[string]string)
@@ -148,7 +148,7 @@ func (m *OpenConfigTelemetry) extractData(r *telemetry.OpenConfigData, grpcServe
 		}
 
 		// Also, lets use prefix if there is one
-		xmlpath, finaltags := spitTagsNPath(prefix + v.Key)
+		xmlpath, finaltags := SpitTagsNPath(prefix + v.Key)
 		finaltags["device"] = grpcServer
 
 		switch v.Value.(type) {
