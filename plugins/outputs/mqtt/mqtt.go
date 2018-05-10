@@ -66,7 +66,7 @@ type MQTT struct {
 	QoS         int    `toml:"qos"`
 	ClientID    string `toml:"client_id"`
 	tls.ClientConfig
-  	BatchMessage bool   `toml:"batch"`
+	BatchMessage bool `toml:"batch"`
 
 	client paho.Client
 	opts   *paho.ClientOptions
@@ -140,12 +140,8 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 
 		t = append(t, metric.Name())
 		topic := strings.Join(t, "/")
-		
-		if m.BatchMessage {
-			buf, err := m.serializer.SerializeBatch(metric)
-		}else{
-			buf, err := m.serializer.Serialize(metric)
-		}
+
+		buf, err := m.serializer.Serialize(metric)
 		
 		if err != nil {
 			return err
