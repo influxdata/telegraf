@@ -1,0 +1,106 @@
+---
+defaults:
+  defaults: &defaults
+    working_directory: '/go/src/github.com/influxdata/telegraf'
+  go-1_8: &go-1_8
+    docker:
+      - image: 'circleci/golang:1.8.7'
+  go-1_9: &go-1_9
+    docker:
+      - image: 'circleci/golang:1.9.5'
+  go-1_10: &go-1_10
+    docker:
+      - image: 'circleci/golang:1.10.1'
+
+version: 2
+jobs:
+  deps:
+    <<: [ *defaults, *go-1_10 ]
+    steps:
+      - checkout
+      - run: 'make deps'
+      - persist_to_workspace:
+          root: '/go/src'
+          paths:
+            - '*'
+  test-go-1.8:
+    <<: [ *defaults, *go-1_8 ]
+    steps:
+      - attach_workspace:
+          at: '/go/src'
+      - run: 'make test-ci'
+  test-go-1.9:
+    <<: [ *defaults, *go-1_9 ]
+    steps:
+      - attach_workspace:
+          at: '/go/src'
+      - run: 'make test-ci'
+  test-go-1.10:
+    <<: [ *defaults, *go-1_10 ]
+    steps:
+      - attach_workspace:
+          at: '/go/src'
+      - run: 'make test-ci'
+      - run: 'GOARCH=386 make test-ci'
+  release:
+    <<: [ *defaults, *go-1_10 ]
+    steps:
+      - attach_workspace:
+          at: '/go/src'
+      - run: './scripts/release.sh'
+      - store_artifacts:
+          path: './artifacts'
+          destination: '.'
+  nightly:
+    <<: [ *defaults, *go-1_10 ]
+    steps:
+      - attach_workspace:
+          at: '/go/src'
+      - run: './scripts/release.sh'
+      - store_artifacts:
+          path: './artifacts'
+          destination: '.'
+
+workflows:
+  version: 2
+  build_and_release:
+    jobs:
+      - 'deps'
+      - 'test-go-1.8':
+          requires:
+            - 'deps'
+      - 'test-go-1.9':
+          requires:
+            - 'deps'
+      - 'test-go-1.10':
+          requires:
+            - 'deps'
+      - 'release':
+          requires:
+            - 'test-go-1.8'
+            - 'test-go-1.9'
+            - 'test-go-1.10'
+  nightly:
+    jobs:
+      - 'deps'
+      - 'test-go-1.8':
+          requires:
+            - 'deps'
+      - 'test-go-1.9':
+          requires:
+            - 'deps'
+      - 'test-go-1.10':
+          requires:
+            - 'deps'
+      - 'nightly':
+          requires:
+            - 'test-go-1.8'
+            - 'test-go-1.9'
+            - 'test-go-1.10'
+    triggers:
+      - schedule:
+          cron: "0 7 * * *"
+          filters:
+            branches:
+              only:
+                - master

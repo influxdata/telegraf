@@ -3,16 +3,18 @@ package elasticsearch
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	jsonparser "github.com/influxdata/telegraf/plugins/parsers/json"
 )
 
 // mask for masking username/password from error messages
@@ -105,31 +107,29 @@ const sampleConfig = `
 
   ## node_stats is a list of sub-stats that you want to have gathered. Valid options
   ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",
-  ## "breakers". Per default, all stats are gathered.
+  ## "breaker". Per default, all stats are gathered.
   # node_stats = ["jvm", "http"]
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
 
 // Elasticsearch is a plugin to read stats from one or many Elasticsearch
 // servers.
 type Elasticsearch struct {
-	Local                   bool
-	Servers                 []string
-	HttpTimeout             internal.Duration
-	ClusterHealth           bool
-	ClusterHealthLevel      string
-	ClusterStats            bool
-	NodeStats               []string
-	SSLCA                   string `toml:"ssl_ca"`   // Path to CA file
-	SSLCert                 string `toml:"ssl_cert"` // Path to host cert file
-	SSLKey                  string `toml:"ssl_key"`  // Path to cert key file
-	InsecureSkipVerify      bool   // Use SSL but skip chain & host verification
+	Local              bool
+	Servers            []string
+	HttpTimeout        internal.Duration
+	ClusterHealth      bool
+	ClusterHealthLevel string
+	ClusterStats       bool
+	NodeStats          []string
+	tls.ClientConfig
+
 	client                  *http.Client
 	catMasterResponseTokens []string
 	isMaster                bool
@@ -227,7 +227,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 }
 
 func (e *Elasticsearch) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := internal.GetTLSConfig(e.SSLCert, e.SSLKey, e.SSLCA, e.InsecureSkipVerify)
+	tlsCfg, err := e.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

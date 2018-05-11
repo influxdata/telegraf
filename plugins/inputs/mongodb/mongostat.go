@@ -34,6 +34,8 @@ type MongoStatus struct {
 	ReplSetStatus *ReplSetStatus
 	ClusterStatus *ClusterStatus
 	DbStats       *DbStats
+	ShardStats    *ShardStats
+	OplogStats    *OplogStats
 }
 
 type ServerStatus struct {
@@ -101,6 +103,11 @@ type ReplSetStatus struct {
 	MyState int64           `bson:"myState"`
 }
 
+// OplogStatus stores information from getReplicationInfo
+type OplogStats struct {
+	TimeDiff int64
+}
+
 // ReplSetMember stores information related to a replica set member
 type ReplSetMember struct {
 	Name       string    `bson:"name"`
@@ -114,6 +121,29 @@ type WiredTiger struct {
 	Transaction TransactionStats       `bson:"transaction"`
 	Concurrent  ConcurrentTransactions `bson:"concurrentTransactions"`
 	Cache       CacheStats             `bson:"cache"`
+}
+
+// ShardStats stores information from shardConnPoolStats.
+type ShardStats struct {
+	ShardStatsData `bson:",inline"`
+	Hosts          map[string]ShardHostStatsData `bson:"hosts"`
+}
+
+// ShardStatsData is the total Shard Stats from shardConnPoolStats database command.
+type ShardStatsData struct {
+	TotalInUse      int64 `bson:"totalInUse"`
+	TotalAvailable  int64 `bson:"totalAvailable"`
+	TotalCreated    int64 `bson:"totalCreated"`
+	TotalRefreshing int64 `bson:"totalRefreshing"`
+}
+
+// ShardHostStatsData is the host-specific stats
+// from shardConnPoolStats database command.
+type ShardHostStatsData struct {
+	InUse      int64 `bson:"inUse"`
+	Available  int64 `bson:"available"`
+	Created    int64 `bson:"created"`
+	Refreshing int64 `bson:"refreshing"`
 }
 
 type ConcurrentTransactions struct {
@@ -259,13 +289,27 @@ type OpcountStats struct {
 
 // MetricsStats stores information related to metrics
 type MetricsStats struct {
-	TTL *TTLStats `bson:"ttl"`
+	TTL    *TTLStats    `bson:"ttl"`
+	Cursor *CursorStats `bson:"cursor"`
 }
 
 // TTLStats stores information related to documents with a ttl index.
 type TTLStats struct {
 	DeletedDocuments int64 `bson:"deletedDocuments"`
 	Passes           int64 `bson:"passes"`
+}
+
+// CursorStats stores information related to cursor metrics.
+type CursorStats struct {
+	TimedOut int64            `bson:"timedOut"`
+	Open     *OpenCursorStats `bson:"open"`
+}
+
+// OpenCursorStats stores information related to open cursor metrics
+type OpenCursorStats struct {
+	NoTimeout int64 `bson:"noTimeout"`
+	Pinned    int64 `bson:"pinned"`
+	Total     int64 `bson:"total"`
 }
 
 // ReadWriteLockTimes stores time spent holding read/write locks.
@@ -409,6 +453,10 @@ type StatLine struct {
 	// TTL fields
 	Passes, DeletedDocuments int64
 
+	// Cursor fields
+	TimedOutC                   int64
+	NoTimeoutC, PinnedC, TotalC int64
+
 	// Collection locks (3.0 mmap only)
 	CollectionLocks *CollectionLockStatus
 
@@ -433,6 +481,7 @@ type StatLine struct {
 	// Replicated Opcounter fields
 	InsertR, QueryR, UpdateR, DeleteR, GetMoreR, CommandR int64
 	ReplLag                                               int64
+	OplogTimeDiff                                         int64
 	Flushes                                               int64
 	Mapped, Virtual, Resident, NonMapped                  int64
 	Faults                                                int64
@@ -450,6 +499,12 @@ type StatLine struct {
 
 	// DB stats field
 	DbStatsLines []DbStatLine
+
+	// Shard stats
+	TotalInUse, TotalAvailable, TotalCreated, TotalRefreshing int64
+
+	// Shard Hosts stats field
+	ShardHostStatsLines map[string]ShardHostStatLine
 }
 
 type DbStatLine struct {
@@ -463,6 +518,13 @@ type DbStatLine struct {
 	Indexes     int64
 	IndexSize   int64
 	Ok          int64
+}
+
+type ShardHostStatLine struct {
+	InUse      int64
+	Available  int64
+	Created    int64
+	Refreshing int64
 }
 
 func parseLocks(stat ServerStatus) map[string]LockUsage {
@@ -538,9 +600,19 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.Command = diff(newStat.Opcounters.Command, oldStat.Opcounters.Command, sampleSecs)
 	}
 
-	if newStat.Metrics != nil && newStat.Metrics.TTL != nil && oldStat.Metrics != nil && oldStat.Metrics.TTL != nil {
-		returnVal.Passes = diff(newStat.Metrics.TTL.Passes, oldStat.Metrics.TTL.Passes, sampleSecs)
-		returnVal.DeletedDocuments = diff(newStat.Metrics.TTL.DeletedDocuments, oldStat.Metrics.TTL.DeletedDocuments, sampleSecs)
+	if newStat.Metrics != nil && oldStat.Metrics != nil {
+		if newStat.Metrics.TTL != nil && oldStat.Metrics.TTL != nil {
+			returnVal.Passes = diff(newStat.Metrics.TTL.Passes, oldStat.Metrics.TTL.Passes, sampleSecs)
+			returnVal.DeletedDocuments = diff(newStat.Metrics.TTL.DeletedDocuments, oldStat.Metrics.TTL.DeletedDocuments, sampleSecs)
+		}
+		if newStat.Metrics.Cursor != nil && oldStat.Metrics.Cursor != nil {
+			returnVal.TimedOutC = diff(newStat.Metrics.Cursor.TimedOut, oldStat.Metrics.Cursor.TimedOut, sampleSecs)
+			if newStat.Metrics.Cursor.Open != nil && oldStat.Metrics.Cursor.Open != nil {
+				returnVal.NoTimeoutC = diff(newStat.Metrics.Cursor.Open.NoTimeout, oldStat.Metrics.Cursor.Open.NoTimeout, sampleSecs)
+				returnVal.PinnedC = diff(newStat.Metrics.Cursor.Open.Pinned, oldStat.Metrics.Cursor.Open.Pinned, sampleSecs)
+				returnVal.TotalC = diff(newStat.Metrics.Cursor.Open.Total, oldStat.Metrics.Cursor.Open.Total, sampleSecs)
+			}
+		}
 	}
 
 	if newStat.OpcountersRepl != nil && oldStat.OpcountersRepl != nil {
@@ -760,6 +832,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 
 	newClusterStat := *newMongo.ClusterStatus
 	returnVal.JumboChunksCount = newClusterStat.JumboChunksCount
+	returnVal.OplogTimeDiff = newMongo.OplogStats.TimeDiff
 
 	newDbStats := *newMongo.DbStats
 	for _, db := range newDbStats.Dbs {
@@ -781,6 +854,24 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 			Ok:          dbStatsData.Ok,
 		}
 		returnVal.DbStatsLines = append(returnVal.DbStatsLines, *dbStatLine)
+	}
+
+	// Set shard stats
+	newShardStats := *newMongo.ShardStats
+	returnVal.TotalInUse = newShardStats.TotalInUse
+	returnVal.TotalAvailable = newShardStats.TotalAvailable
+	returnVal.TotalCreated = newShardStats.TotalCreated
+	returnVal.TotalRefreshing = newShardStats.TotalRefreshing
+	returnVal.ShardHostStatsLines = map[string]ShardHostStatLine{}
+	for host, stats := range newShardStats.Hosts {
+		shardStatLine := &ShardHostStatLine{
+			InUse:      stats.InUse,
+			Available:  stats.Available,
+			Created:    stats.Created,
+			Refreshing: stats.Refreshing,
+		}
+
+		returnVal.ShardHostStatsLines[host] = *shardStatLine
 	}
 
 	return returnVal

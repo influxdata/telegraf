@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -36,14 +38,7 @@ type RabbitMQ struct {
 	Name     string
 	Username string
 	Password string
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	ResponseHeaderTimeout internal.Duration `toml:"header_timeout"`
 	ClientTimeout         internal.Duration `toml:"client_timeout"`
@@ -52,7 +47,14 @@ type RabbitMQ struct {
 	Queues    []string
 	Exchanges []string
 
+	QueueInclude []string `toml:"queue_name_include"`
+	QueueExclude []string `toml:"queue_name_exclude"`
+
 	Client *http.Client
+
+	filterCreated     bool
+	excludeEveryQueue bool
+	queueFilter       filter.Filter
 }
 
 // OverviewResponse ...
@@ -60,6 +62,12 @@ type OverviewResponse struct {
 	MessageStats *MessageStats `json:"message_stats"`
 	ObjectTotals *ObjectTotals `json:"object_totals"`
 	QueueTotals  *QueueTotals  `json:"queue_totals"`
+	Listeners    []Listeners   `json:"listeners"`
+}
+
+// Listeners ...
+type Listeners struct {
+	Protocol string `json:"protocol"`
 }
 
 // Details ...
@@ -134,6 +142,7 @@ type Node struct {
 	RunQueue      int64 `json:"run_queue"`
 	SocketsTotal  int64 `json:"sockets_total"`
 	SocketsUsed   int64 `json:"sockets_used"`
+	Running       bool  `json:"running"`
 }
 
 type Exchange struct {
@@ -160,11 +169,11 @@ var sampleConfig = `
   # username = "guest"
   # password = "guest"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Optional request timeouts
@@ -186,8 +195,13 @@ var sampleConfig = `
   # queues = ["telegraf"]
 
   ## A list of exchanges to gather as the rabbitmq_exchange measurement. If not
-  ## specified, metrics for all exchanges are gathered. 
+  ## specified, metrics for all exchanges are gathered.
   # exchanges = ["telegraf"]
+
+  ## Queues to include and exclude. Globs accepted.
+  ## Note that an empty array for both will include all queues
+  queue_name_include = []
+  queue_name_exclude = []
 `
 
 // SampleConfig ...
@@ -203,8 +217,7 @@ func (r *RabbitMQ) Description() string {
 // Gather ...
 func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 	if r.Client == nil {
-		tlsCfg, err := internal.GetTLSConfig(
-			r.SSLCert, r.SSLKey, r.SSLCA, r.InsecureSkipVerify)
+		tlsCfg, err := r.ClientConfig.TLSConfig()
 		if err != nil {
 			return err
 		}
@@ -216,6 +229,15 @@ func (r *RabbitMQ) Gather(acc telegraf.Accumulator) error {
 			Transport: tr,
 			Timeout:   r.ClientTimeout.Duration,
 		}
+	}
+
+	// Create queue filter if not already created
+	if !r.filterCreated {
+		err := r.createQueueFilter()
+		if err != nil {
+			return err
+		}
+		r.filterCreated = true
 	}
 
 	var wg sync.WaitGroup
@@ -275,9 +297,18 @@ func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
 		return
 	}
 
-	if overview.QueueTotals == nil || overview.ObjectTotals == nil || overview.MessageStats == nil {
+	if overview.QueueTotals == nil || overview.ObjectTotals == nil || overview.MessageStats == nil || overview.Listeners == nil {
 		acc.AddError(fmt.Errorf("Wrong answer from rabbitmq. Probably auth issue"))
 		return
+	}
+
+	var clustering_listeners, amqp_listeners int64 = 0, 0
+	for _, listener := range overview.Listeners {
+		if listener.Protocol == "clustering" {
+			clustering_listeners++
+		} else if listener.Protocol == "amqp" {
+			amqp_listeners++
+		}
 	}
 
 	tags := map[string]string{"url": r.URL}
@@ -297,6 +328,8 @@ func gatherOverview(r *RabbitMQ, acc telegraf.Accumulator) {
 		"messages_delivered":     overview.MessageStats.Deliver,
 		"messages_delivered_get": overview.MessageStats.DeliverGet,
 		"messages_published":     overview.MessageStats.Publish,
+		"clustering_listeners":   clustering_listeners,
+		"amqp_listeners":         amqp_listeners,
 	}
 	acc.AddFields("rabbitmq_overview", fields, tags)
 }
@@ -319,6 +352,11 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 		tags := map[string]string{"url": r.URL}
 		tags["node"] = node.Name
 
+		var running int64 = 0
+		if node.Running {
+			running = 1
+		}
+
 		fields := map[string]interface{}{
 			"disk_free":       node.DiskFree,
 			"disk_free_limit": node.DiskFreeLimit,
@@ -331,12 +369,16 @@ func gatherNodes(r *RabbitMQ, acc telegraf.Accumulator) {
 			"run_queue":       node.RunQueue,
 			"sockets_total":   node.SocketsTotal,
 			"sockets_used":    node.SocketsUsed,
+			"running":         running,
 		}
 		acc.AddFields("rabbitmq_node", fields, tags, now)
 	}
 }
 
 func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
+	if r.excludeEveryQueue {
+		return
+	}
 	// Gather information about queues
 	queues := make([]Queue, 0)
 	err := r.requestJSON("/api/queues", &queues)
@@ -346,7 +388,7 @@ func gatherQueues(r *RabbitMQ, acc telegraf.Accumulator) {
 	}
 
 	for _, queue := range queues {
-		if !r.shouldGatherQueue(queue) {
+		if !r.queueFilter.Match(queue.Name) {
 			continue
 		}
 		tags := map[string]string{
@@ -439,18 +481,25 @@ func (r *RabbitMQ) shouldGatherNode(node Node) bool {
 	return false
 }
 
-func (r *RabbitMQ) shouldGatherQueue(queue Queue) bool {
-	if len(r.Queues) == 0 {
-		return true
+func (r *RabbitMQ) createQueueFilter() error {
+	// Backwards compatibility for deprecated `queues` parameter.
+	if len(r.Queues) > 0 {
+		r.QueueInclude = append(r.QueueInclude, r.Queues...)
 	}
 
-	for _, name := range r.Queues {
-		if name == queue.Name {
-			return true
+	filter, err := filter.NewIncludeExcludeFilter(r.QueueInclude, r.QueueExclude)
+	if err != nil {
+		return err
+	}
+	r.queueFilter = filter
+
+	for _, q := range r.QueueExclude {
+		if q == "*" {
+			r.excludeEveryQueue = true
 		}
 	}
 
-	return false
+	return nil
 }
 
 func (r *RabbitMQ) shouldGatherExchange(exchange Exchange) bool {

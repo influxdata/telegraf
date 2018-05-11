@@ -79,7 +79,10 @@ func (s *Simple) Description() string {
 }
 
 func (s *Simple) SampleConfig() string {
-    return "ok = true # indicate if everything is fine"
+    return `
+  ## Indicate if everything is fine
+  ok = true
+`
 }
 
 func (s *Simple) Gather(acc telegraf.Accumulator) error {
@@ -167,7 +170,7 @@ and `Stop()` methods.
 ### Service Plugin Guidelines
 
 * Same as the `Plugin` guidelines, except that they must conform to the
-`inputs.ServiceInput` interface.
+[`telegraf.ServiceInput`](https://godoc.org/github.com/influxdata/telegraf#ServiceInput) interface.
 
 ## Output Plugins
 
@@ -207,7 +210,9 @@ func (s *Simple) Description() string {
 }
 
 func (s *Simple) SampleConfig() string {
-    return "url = localhost"
+    return `
+  ok = true
+`
 }
 
 func (s *Simple) Connect() error {

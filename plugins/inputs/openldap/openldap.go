@@ -8,7 +8,7 @@ import (
 	"gopkg.in/ldap.v2"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -20,6 +20,7 @@ type Openldap struct {
 	SslCa              string
 	BindDn             string
 	BindPassword       string
+	ReverseMetricNames bool
 }
 
 const sampleConfig string = `
@@ -35,18 +36,23 @@ const sampleConfig string = `
   insecure_skip_verify = false
 
   # Path to PEM-encoded Root certificate to use to verify server certificate
-  ssl_ca = "/etc/ssl/certs.pem"
+  tls_ca = "/etc/ssl/certs.pem"
 
   # dn/password to bind with. If bind_dn is empty, an anonymous bind is performed.
   bind_dn = ""
   bind_password = ""
+
+  # Reverse metric names so they sort more naturally. Recommended.
+  # This defaults to false if unset, but is set to true when generating a new config
+  reverse_metric_names = true
 `
 
 var searchBase = "cn=Monitor"
-var searchFilter = "(|(objectClass=monitorCounterObject)(objectClass=monitorOperation))"
-var searchAttrs = []string{"monitorCounter", "monitorOpInitiated", "monitorOpCompleted"}
+var searchFilter = "(|(objectClass=monitorCounterObject)(objectClass=monitorOperation)(objectClass=monitoredObject))"
+var searchAttrs = []string{"monitorCounter", "monitorOpInitiated", "monitorOpCompleted", "monitoredInfo"}
 var attrTranslate = map[string]string{
 	"monitorCounter":     "",
+	"monitoredInfo":      "",
 	"monitorOpInitiated": "_initiated",
 	"monitorOpCompleted": "_completed",
 }
@@ -69,6 +75,7 @@ func NewOpenldap() *Openldap {
 		SslCa:              "",
 		BindDn:             "",
 		BindPassword:       "",
+		ReverseMetricNames: false,
 	}
 }
 
@@ -78,7 +85,11 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 	var l *ldap.Conn
 	if o.Ssl != "" {
 		// build tls config
-		tlsConfig, err := internal.GetTLSConfig("", "", o.SslCa, o.InsecureSkipVerify)
+		clientTLSConfig := tls.ClientConfig{
+			SSLCA:              o.SslCa,
+			InsecureSkipVerify: o.InsecureSkipVerify,
+		}
+		tlsConfig, err := clientTLSConfig.TLSConfig()
 		if err != nil {
 			acc.AddError(err)
 			return nil
@@ -149,7 +160,7 @@ func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumul
 		"port":   strconv.Itoa(o.Port),
 	}
 	for _, entry := range sr.Entries {
-		metricName := dnToMetric(entry.DN, searchBase)
+		metricName := dnToMetric(entry.DN, o)
 		for _, attr := range entry.Attributes {
 			if len(attr.Values[0]) >= 1 {
 				if v, err := strconv.ParseInt(attr.Values[0], 10, 64); err == nil {
@@ -162,15 +173,30 @@ func gatherSearchResult(sr *ldap.SearchResult, o *Openldap, acc telegraf.Accumul
 	return
 }
 
-// Convert a DN to metric name, eg cn=Read,cn=Waiters,cn=Monitor to read_waiters
-func dnToMetric(dn, searchBase string) string {
-	metricName := strings.Trim(dn, " ")
-	metricName = strings.Replace(metricName, " ", "_", -1)
-	metricName = strings.ToLower(metricName)
-	metricName = strings.TrimPrefix(metricName, "cn=")
-	metricName = strings.Replace(metricName, strings.ToLower(searchBase), "", -1)
-	metricName = strings.Replace(metricName, "cn=", "_", -1)
-	return strings.Replace(metricName, ",", "", -1)
+// Convert a DN to metric name, eg cn=Read,cn=Waiters,cn=Monitor becomes waiters_read
+// Assumes the last part of the DN is cn=Monitor and we want to drop it
+func dnToMetric(dn string, o *Openldap) string {
+	if o.ReverseMetricNames {
+		var metricParts []string
+
+		dn = strings.Trim(dn, " ")
+		dn = strings.Replace(dn, " ", "_", -1)
+		dn = strings.Replace(dn, "cn=", "", -1)
+		dn = strings.ToLower(dn)
+		metricParts = strings.Split(dn, ",")
+		for i, j := 0, len(metricParts)-1; i < j; i, j = i+1, j-1 {
+			metricParts[i], metricParts[j] = metricParts[j], metricParts[i]
+		}
+		return strings.Join(metricParts[1:], "_")
+	} else {
+		metricName := strings.Trim(dn, " ")
+		metricName = strings.Replace(metricName, " ", "_", -1)
+		metricName = strings.ToLower(metricName)
+		metricName = strings.TrimPrefix(metricName, "cn=")
+		metricName = strings.Replace(metricName, strings.ToLower("cn=Monitor"), "", -1)
+		metricName = strings.Replace(metricName, "cn=", "_", -1)
+		return strings.Replace(metricName, ",", "", -1)
+	}
 }
 
 func init() {

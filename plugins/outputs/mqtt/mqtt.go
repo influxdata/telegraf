@@ -8,6 +8,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 
@@ -32,11 +33,11 @@ var sampleConfig = `
   ## client ID, if not set a random ID is generated
   # client_id = ""
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Data format to output.
@@ -55,15 +56,7 @@ type MQTT struct {
 	TopicPrefix string
 	QoS         int    `toml:"qos"`
 	ClientID    string `toml:"client_id"`
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	client paho.Client
 	opts   *paho.ClientOptions
@@ -138,8 +131,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 
 		buf, err := m.serializer.Serialize(metric)
 		if err != nil {
-			return fmt.Errorf("MQTT Could not serialize metric: %s",
-				metric.String())
+			return err
 		}
 
 		err = m.publish(topic, buf)
@@ -162,6 +154,7 @@ func (m *MQTT) publish(topic string, body []byte) error {
 
 func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	opts := paho.NewClientOptions()
+	opts.KeepAlive = 0 * time.Second
 
 	if m.Timeout.Duration < time.Second {
 		m.Timeout.Duration = 5 * time.Second
@@ -174,8 +167,7 @@ func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 		opts.SetClientID("Telegraf-Output-" + internal.RandomString(5))
 	}
 
-	tlsCfg, err := internal.GetTLSConfig(
-		m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
+	tlsCfg, err := m.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
