@@ -37,7 +37,10 @@ type OpenConfigTelemetry struct {
 	wg              *sync.WaitGroup
 }
 
-var sampleConfig = `
+var (
+	// Regex to match and extract data points from path value in received key
+	keyPathRegex = regexp.MustCompile("\\/([^\\/]*)\\[([A-Za-z0-9\\-\\/]*\\=[^\\[]*)\\]")
+	sampleConfig = `
   ## List of device addresses to collect telemetry from
   servers = ["localhost:1883"]
 
@@ -82,6 +85,7 @@ var sampleConfig = `
   ## To treat all string values as tags, set this to true
   str_as_tags = false
 `
+)
 
 func (m *OpenConfigTelemetry) SampleConfig() string {
 	return sampleConfig
@@ -106,9 +110,8 @@ func (m *OpenConfigTelemetry) Stop() {
 // XML path without predicates. If /events/event[id=2]/attributes[key='message']/value
 // is given input, this function will emit /events/event/attributes/value as xmlpath and
 // { /events/event/@id=2, /events/event/attributes/@key='message' } as tags
-func SpitTagsNPath(xmlpath string) (string, map[string]string) {
-	re := regexp.MustCompile("\\/([^\\/]*)\\[([A-Za-z0-9\\-\\/]*\\=[^\\[]*)\\]")
-	subs := re.FindAllStringSubmatch(xmlpath, -1)
+func spitTagsNPath(xmlpath string) (string, map[string]string) {
+	subs := keyPathRegex.FindAllStringSubmatch(xmlpath, -1)
 	tags := make(map[string]string)
 
 	// Given XML path, this will spit out final path without predicates
@@ -148,7 +151,7 @@ func (m *OpenConfigTelemetry) extractData(r *telemetry.OpenConfigData, grpcServe
 		}
 
 		// Also, lets use prefix if there is one
-		xmlpath, finaltags := SpitTagsNPath(prefix + v.Key)
+		xmlpath, finaltags := spitTagsNPath(prefix + v.Key)
 		finaltags["device"] = grpcServer
 
 		switch v.Value.(type) {
