@@ -48,6 +48,8 @@
 ### Bugfixes
 
 - [4127](https://github.com/influxdata/telegraf/issues/4127): Fix intermittent panic in aerospike input.
+- [4130](https://github.com/influxdata/telegraf/issues/4130): Fix connection leak in jolokia2_agent
+- [4136](https://github.com/influxdata/telegraf/pull/4130): Fix jolokia2 timeout parsing.
 
 ## v1.6.2 [2018-05-08]
 
