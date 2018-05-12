@@ -192,6 +192,14 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	var size uint32 = uint32(unsafe.Sizeof(PDH_FMT_COUNTERVALUE_ITEM_DOUBLE{}))
 	var emptyBuf [1]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE // need at least 1 addressable null ptr.
 
+	type InstanceGrouping struct {
+		name       string
+		instance   string
+		objectname string
+	}
+
+	var collectFields = make(map[InstanceGrouping]map[string]interface{})
+
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range m.itemCache {
 		// collect
@@ -231,20 +239,22 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 					}
 
 					if add {
-						fields := make(map[string]interface{})
 						tags := make(map[string]string)
 						if s != "" {
 							tags["instance"] = s
 						}
 						tags["objectname"] = metric.objectName
-						fields[sanitizedChars.Replace(metric.counter)] =
-							float32(c.FmtValue.DoubleValue)
 
 						measurement := sanitizedChars.Replace(metric.measurement)
 						if measurement == "" {
 							measurement = "win_perf_counters"
 						}
-						acc.AddFields(measurement, fields, tags)
+						var instance = InstanceGrouping{measurement, s, metric.objectName}
+
+						if collectFields[instance] == nil {
+							collectFields[instance] = make(map[string]interface{})
+						}
+						collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(c.FmtValue.DoubleValue)
 					}
 				}
 
@@ -255,6 +265,14 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				bufSize = 0
 			}
 		}
+	}
+
+	for instance, fields := range collectFields {
+		var tags = map[string]string{
+			"instance":   instance.instance,
+			"objectname": instance.objectname,
+		}
+		acc.AddFields(instance.name, fields, tags)
 	}
 
 	return nil

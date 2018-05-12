@@ -82,10 +82,10 @@ This plugin gathers the statistic data from MySQL server
   ## Some queries we may want to run less often (such as SHOW GLOBAL VARIABLES)
   interval_slow                             = "30m"
 
-  ## Optional SSL Config (will be used if tls=custom parameter specified in server uri)
-  ssl_ca = "/etc/telegraf/ca.pem"
-  ssl_cert = "/etc/telegraf/cert.pem"
-  ssl_key = "/etc/telegraf/key.pem"
+  ## Optional TLS Config (will be used if tls=custom parameter specified in server uri)
+  tls_ca = "/etc/telegraf/ca.pem"
+  tls_cert = "/etc/telegraf/cert.pem"
+  tls_key = "/etc/telegraf/key.pem"
 ```
 
 #### Metric Version
@@ -114,7 +114,7 @@ style concurrently:
      servers = ["tcp(127.0.0.1:3306)/"]
 
    [[inputs.mysql]]
-     name_override = "_2"
+     name_suffix = "_v2"
      metric_version = 2
 
      servers = ["tcp(127.0.0.1:3306)/"]
@@ -141,7 +141,7 @@ measurement name.
      metric_version = 2
 
    [[inputs.mysql]]
-     name_override = "_2"
+     name_suffix = "_v2"
      metric_version = 2
 
      servers = ["tcp(127.0.0.1:3306)/"]

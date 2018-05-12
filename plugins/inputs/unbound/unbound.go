@@ -87,7 +87,7 @@ func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Serv
 			server = server + "@" + port
 		}
 
-		cmdArgs = append(cmdArgs, "-s", server)
+		cmdArgs = append([]string{"-s", server}, cmdArgs...)
 	}
 
 	cmd := exec.Command(cmdName, cmdArgs...)
@@ -101,7 +101,7 @@ func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Serv
 	cmd.Stdout = &out
 	err := internal.RunTimeout(cmd, Timeout.Duration)
 	if err != nil {
-		return &out, fmt.Errorf("error running unbound-control: %s", err)
+		return &out, fmt.Errorf("error running unbound-control: %s (%s %v)", err, cmdName, cmdArgs)
 	}
 
 	return &out, nil

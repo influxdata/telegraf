@@ -80,6 +80,8 @@ Timestamp modifiers can be used to convert captures to the timestamp of the
 parsed metric.  If no timestamp is parsed the metric will be created using the
 current time.
 
+You must capture at least one field per line.
+
 - Available modifiers:
   - string   (default if nothing is specified)
   - int

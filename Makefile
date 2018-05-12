@@ -27,7 +27,7 @@ deps:
 	gdm restore
 
 telegraf:
-	go build -i -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 go-install:
 	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf

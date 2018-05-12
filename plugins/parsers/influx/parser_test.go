@@ -282,7 +282,7 @@ var ptests = []struct {
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
-						"value": 9223372036854775807,
+						"value": int64(9223372036854775807),
 					},
 					time.Unix(42, 0),
 				),

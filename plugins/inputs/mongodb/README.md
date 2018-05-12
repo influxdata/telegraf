@@ -14,11 +14,11 @@
   ## When true, collect per database stats
   # gather_perdb_stats = false
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 ```
 
@@ -48,6 +48,10 @@ Error in input [mongodb]: not authorized on admin to execute command { serverSta
     - active_reads (integer)
     - active_writes (integer)
     - commands_per_sec (integer)
+    - cursor_timed_out (integer)
+    - cursor_no_timeout (integer)
+    - cursor_pinned (integer)
+    - cursor_total (integer)
     - deletes_per_sec (integer)
     - flushes_per_sec (integer)
     - getmores_per_sec (integer)
@@ -120,7 +124,7 @@ Error in input [mongodb]: not authorized on admin to execute command { serverSta
 
 ### Example Output:
 ```
-mongodb,hostname=127.0.0.1:27017 active_reads=0i,active_writes=0i,commands_per_sec=6i,deletes_per_sec=0i,flushes_per_sec=0i,getmores_per_sec=1i,inserts_per_sec=0i,jumbo_chunks=0i,member_status="PRI",net_in_bytes=851i,net_out_bytes=23904i,open_connections=6i,percent_cache_dirty=0,percent_cache_used=0,queries_per_sec=2i,queued_reads=0i,queued_writes=0i,repl_commands_per_sec=0i,repl_deletes_per_sec=0i,repl_getmores_per_sec=0i,repl_inserts_per_sec=0i,repl_lag=0i,repl_queries_per_sec=0i,repl_updates_per_sec=0i,resident_megabytes=67i,state="PRIMARY",total_available=0i,total_created=0i,total_in_use=0i,total_refreshing=0i,ttl_deletes_per_sec=0i,ttl_passes_per_sec=0i,updates_per_sec=0i,vsize_megabytes=729i,wtcache_app_threads_page_read_count=4i,wtcache_app_threads_page_read_time=18i,wtcache_app_threads_page_write_count=6i,wtcache_bytes_read_into=10075i,wtcache_bytes_written_from=115711i,wtcache_current_bytes=86038i,wtcache_max_bytes_configured=1073741824i,wtcache_pages_evicted_by_app_thread=0i,wtcache_pages_queued_for_eviction=0i,wtcache_server_evicting_pages=0i,wtcache_tracked_dirty_bytes=0i,wtcache_worker_thread_evictingpages=0i 1522798796000000000
+mongodb,hostname=127.0.0.1:27017 active_reads=0i,active_writes=0i,commands_per_sec=6i,cursor_no_timeout=0i,cursor_pinned=0i,cursor_timed_out=0i,cursor_total=0i,deletes_per_sec=0i,flushes_per_sec=0i,getmores_per_sec=1i,inserts_per_sec=0i,jumbo_chunks=0i,member_status="PRI",net_in_bytes=851i,net_out_bytes=23904i,open_connections=6i,percent_cache_dirty=0,percent_cache_used=0,queries_per_sec=2i,queued_reads=0i,queued_writes=0i,repl_commands_per_sec=0i,repl_deletes_per_sec=0i,repl_getmores_per_sec=0i,repl_inserts_per_sec=0i,repl_lag=0i,repl_queries_per_sec=0i,repl_updates_per_sec=0i,resident_megabytes=67i,state="PRIMARY",total_available=0i,total_created=0i,total_in_use=0i,total_refreshing=0i,ttl_deletes_per_sec=0i,ttl_passes_per_sec=0i,updates_per_sec=0i,vsize_megabytes=729i,wtcache_app_threads_page_read_count=4i,wtcache_app_threads_page_read_time=18i,wtcache_app_threads_page_write_count=6i,wtcache_bytes_read_into=10075i,wtcache_bytes_written_from=115711i,wtcache_current_bytes=86038i,wtcache_max_bytes_configured=1073741824i,wtcache_pages_evicted_by_app_thread=0i,wtcache_pages_queued_for_eviction=0i,wtcache_server_evicting_pages=0i,wtcache_tracked_dirty_bytes=0i,wtcache_worker_thread_evictingpages=0i 1522798796000000000
 mongodb_db_stats,db_name=local,hostname=127.0.0.1:27017 avg_obj_size=818.625,collections=5i,data_size=6549i,index_size=86016i,indexes=4i,num_extents=0i,objects=8i,ok=1i,storage_size=118784i,type="db_stat" 1522799074000000000
 mongodb_shard_stats,hostname=127.0.0.1:27017,in_use=3i,available=3i,created=4i,refreshing=0i 1522799074000000000
 ```
