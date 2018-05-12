@@ -97,11 +97,13 @@ func (c *LanzClient) Start(acc telegraf.Accumulator) error {
 		client.Run(c.in)
 		c.done <- true
 	}()
-	go c.receiver(u)
+	go c.receiver()
 	return nil
 }
 
-func (c *LanzClient) receiver(u *url.URL) {
+func (c *LanzClient) receiver() {
+
+	u, _ := url.Parse(c.Server)
 
 	for {
 
@@ -119,11 +121,11 @@ func (c *LanzClient) receiver(u *url.URL) {
 					"q_drop_count":     int64(cr.GetQDropCount()),
 				}
 				tags := map[string]string{
-					"intfname":              cr.GetIntfName(),
-					"switchid":              strconv.FormatInt(int64(cr.GetSwitchId()), 10),
-					"portid":                strconv.FormatInt(int64(cr.GetPortId()), 10),
-					"entrytype":             strconv.FormatInt(int64(cr.GetEntryType()), 10),
-					"trafficclass":          strconv.FormatInt(int64(cr.GetTrafficClass()), 10),
+					"intf_name":             cr.GetIntfName(),
+					"switch_id":             strconv.FormatInt(int64(cr.GetSwitchId()), 10),
+					"port_id":               strconv.FormatInt(int64(cr.GetPortId()), 10),
+					"entry_type":            strconv.FormatInt(int64(cr.GetEntryType()), 10),
+					"traffic_class":         strconv.FormatInt(int64(cr.GetTrafficClass()), 10),
 					"fabric_peer_intf_name": cr.GetFabricPeerIntfName(),
 					"host":                  u.Host,
 				}

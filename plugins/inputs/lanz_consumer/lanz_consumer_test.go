@@ -1,11 +1,12 @@
 package lanz_consumer
 
 import (
+	"strconv"
+	"testing"
+
 	pb "github.com/aristanetworks/goarista/lanz/proto"
 	"github.com/golang/protobuf/proto"
 	"github.com/influxdata/telegraf/testutil"
-	"strconv"
-	"testing"
 )
 
 var testProtoBufCongestionRecord1 = &pb.LanzRecord{
@@ -72,47 +73,47 @@ func TestLanzConsumerGeneratesMetrics(t *testing.T) {
 	acc.Wait(1)
 
 	vals1 := map[string]interface{}{
-		"timestamp":     int64(100000000000000),
-		"queueSize":     int64(1),
-		"timeOfMaxQLen": int64(100000000000000),
-		"txLatency":     int64(100),
-		"qDropCount":    int64(1),
+		"timestamp":        int64(100000000000000),
+		"queue_size":       int64(1),
+		"time_of_max_qlen": int64(100000000000000),
+		"tx_latency":       int64(100),
+		"q_drop_count":     int64(1),
 	}
 	tags1 := map[string]string{
-		"intfName":           "eth1",
-		"switchId":           strconv.FormatInt(int64(1), 10),
-		"portId":             strconv.FormatInt(int64(1), 10),
-		"entryType":          strconv.FormatInt(int64(1), 10),
-		"trafficClass":       strconv.FormatInt(int64(1), 10),
-		"fabricPeerIntfName": "FabricPeerIntfName1",
-		"host":               "switch01.int.example.com:50001",
+		"intf_name":             "eth1",
+		"switch_id":             strconv.FormatInt(int64(1), 10),
+		"port_id":               strconv.FormatInt(int64(1), 10),
+		"entry_type":            strconv.FormatInt(int64(1), 10),
+		"traffic_class":         strconv.FormatInt(int64(1), 10),
+		"fabric_peer_intf_name": "FabricPeerIntfName1",
+		"host":                  "switch01.int.example.com:50001",
 	}
 
-	acc.AssertContainsTaggedFields(t, "congestionRecord", vals1, tags1)
+	acc.AssertContainsTaggedFields(t, "congestion_record", vals1, tags1)
 
 	acc.ClearMetrics()
 	c2.in <- testProtoBufCongestionRecord2
 	acc.Wait(1)
 
 	vals2 := map[string]interface{}{
-		"timestamp":     int64(200000000000000),
-		"queueSize":     int64(2),
-		"timeOfMaxQLen": int64(200000000000000),
-		"txLatency":     int64(200),
-		"qDropCount":    int64(2),
+		"timestamp":        int64(200000000000000),
+		"queue_size":       int64(2),
+		"time_of_max_qlen": int64(200000000000000),
+		"tx_latency":       int64(200),
+		"q_drop_count":     int64(2),
 	}
 	tags2 := map[string]string{
-		"intfName":           "eth2",
-		"switchId":           strconv.FormatInt(int64(2), 10),
-		"portId":             strconv.FormatInt(int64(2), 10),
-		"entryType":          strconv.FormatInt(int64(2), 10),
-		"trafficClass":       strconv.FormatInt(int64(2), 10),
-		"fabricPeerIntfName": "FabricPeerIntfName2",
-		"host":               "switch02.int.example.com:50001",
+		"intf_name":             "eth2",
+		"switch_id":             strconv.FormatInt(int64(2), 10),
+		"port_id":               strconv.FormatInt(int64(2), 10),
+		"entry_type":            strconv.FormatInt(int64(2), 10),
+		"traffic_class":         strconv.FormatInt(int64(2), 10),
+		"fabric_peer_intf_name": "FabricPeerIntfName2",
+		"host":                  "switch02.int.example.com:50001",
 	}
 
-	acc.AssertContainsFields(t, "congestionRecord", vals2)
-	acc.AssertContainsTaggedFields(t, "congestionRecord", vals2, tags2)
+	acc.AssertContainsFields(t, "congestion_record", vals2)
+	acc.AssertContainsTaggedFields(t, "congestion_record", vals2, tags2)
 
 	c1.done <- true
 	c2.done <- true
