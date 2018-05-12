@@ -29,12 +29,12 @@ func defaultVSphere() *VSphere {
 	}
 }
 
-func createSim() (*simulator.Model, *simulator.Server) {
+func createSim() (*simulator.Model, *simulator.Server, error) {
 	model := simulator.VPX()
 
 	err := model.Create()
 	if err != nil {
-		fmt.Errorf("Error creating model: %s\n", err)
+		return nil, nil, err
 	}
 
 	model.Service.TLS = new(tls.Config)
@@ -42,11 +42,14 @@ func createSim() (*simulator.Model, *simulator.Server) {
 	s := model.Service.NewServer()
 	fmt.Printf("Server created at: %s\n", s.URL)
 
-	return model, s
+	return model, s, nil
 }
 
 func TestAll(t *testing.T) {
-	m, s := createSim()
+	m, s, err := createSim()
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer m.Remove()
 	defer s.Close()
 
