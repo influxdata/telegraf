@@ -3,9 +3,9 @@ package jolokia2
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 )
 
 type JolokiaAgent struct {
@@ -16,7 +16,7 @@ type JolokiaAgent struct {
 	URLs            []string `toml:"urls"`
 	Username        string
 	Password        string
-	ResponseTimeout time.Duration `toml:"response_timeout"`
+	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
 	SSLCA              string `toml:"ssl_ca"`
 	SSLCert            string `toml:"ssl_cert"`
@@ -103,7 +103,7 @@ func (ja *JolokiaAgent) createClient(url string) (*Client, error) {
 	return NewClient(url, &ClientConfig{
 		Username:           ja.Username,
 		Password:           ja.Password,
-		ResponseTimeout:    ja.ResponseTimeout,
+		ResponseTimeout:    ja.ResponseTimeout.Duration,
 		SSLCA:              ja.SSLCA,
 		SSLCert:            ja.SSLCert,
 		SSLKey:             ja.SSLKey,
