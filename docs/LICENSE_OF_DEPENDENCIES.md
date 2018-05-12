@@ -97,6 +97,8 @@ following works:
 - golang.org/x/net [BSD](https://go.googlesource.com/net/+/master/LICENSE)
 - golang.org/x/text [BSD](https://go.googlesource.com/text/+/master/LICENSE)
 - golang.org/x/sys [BSD](https://go.googlesource.com/sys/+/master/LICENSE)
+- google.golang.org/grpc [APACHE](https://github.com/google/grpc-go/blob/master/LICENSE)
+- google.golang.org/genproto [APACHE](https://github.com/google/go-genproto/blob/master/LICENSE)
 - gopkg.in/asn1-ber.v1 [MIT](https://github.com/go-asn1-ber/asn1-ber/blob/v1.2/LICENSE)
 - gopkg.in/dancannon/gorethink.v1 [APACHE](https://github.com/dancannon/gorethink/blob/v1.1.2/LICENSE)
 - gopkg.in/fatih/pool.v2 [MIT](https://github.com/fatih/pool/blob/v2.0.0/LICENSE)

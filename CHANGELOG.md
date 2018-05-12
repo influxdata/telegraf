@@ -14,6 +14,7 @@
 ### New Inputs
 
 - [fibaro](./plugins/inputs/fibaro/README.md) - Contributed by @dynek
+- [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry/README.md) - Contributed by @ajhai
 - [mcrouter](./plugins/inputs/mcrouter/README.md) - Contributed by @cthayer
 - [nvidia_smi](./plugins/inputs/nvidia_smi/README.md) - Contributed by @jackzampolin
 
