@@ -1,15 +1,19 @@
 package vsphere
 
 import (
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/vmware/govmomi/vim25/soap"
 	"log"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/vmware/govmomi/vim25/soap"
 )
 
+// VSphere is the top level type for the vSphere input plugin. It contains all the configuration
+// and a list of connected vSphere endpoints
 type VSphere struct {
 	Vcenters []string
 
@@ -26,16 +30,10 @@ type VSphere struct {
 	ObjectDiscoveryInterval internal.Duration
 	Timeout                 internal.Duration
 
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
-
 	endpoints []*Endpoint
+
+	// Mix in the TLS/SSL goodness from core
+	tls.ClientConfig
 }
 
 var sampleConfig = `
@@ -43,10 +41,13 @@ var sampleConfig = `
   # vcenters = [ "https://administrator%40vsphere.local:VMware1!@vcenter.local/sdk" ]
 `
 
+// SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
+// Telegraf.
 func (v *VSphere) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description returns a short textual description of the plugin
 func (v *VSphere) Description() string {
 	return "Read metrics from VMware vCenter"
 }
@@ -57,16 +58,18 @@ func (v *VSphere) checkEndpoints() {
 	}
 
 	v.endpoints = make([]*Endpoint, len(v.Vcenters))
-	for i, rawUrl := range v.Vcenters {
-		u, err := soap.ParseURL(rawUrl)
+	for i, rawURL := range v.Vcenters {
+		u, err := soap.ParseURL(rawURL)
 		if err != nil {
-			log.Printf("E! Can't parse URL %s\n", rawUrl)
+			log.Printf("E! Can't parse URL %s\n", rawURL)
 		}
 
 		v.endpoints[i] = NewEndpoint(v, u)
 	}
 }
 
+// Gather is the main data collection function called by the Telegraf core. It performs all
+// the data collection and writes all metrics into the Accumulator passed as an argument.
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 
 	v.checkEndpoints()

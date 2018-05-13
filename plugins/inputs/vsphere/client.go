@@ -2,14 +2,15 @@ package vsphere
 
 import (
 	"context"
-	"github.com/influxdata/telegraf/internal"
+	"log"
+	"net/url"
+
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/view"
-	"log"
-	"net/url"
 )
 
+// Client represents a connection to vSphere and is backed by a govmoni connection
 type Client struct {
 	Client *govmomi.Client
 	Views  *view.Manager
@@ -17,9 +18,9 @@ type Client struct {
 	Perf   *performance.Manager
 }
 
+// NewClient creates a new vSphere client based on the url and setting passed as parameters.
 func NewClient(url *url.URL, vs *VSphere) (*Client, error) {
-
-	tlsCfg, err := internal.GetTLSConfig(vs.SSLCert, vs.SSLKey, vs.SSLCA, vs.InsecureSkipVerify)
+	tlsCfg, err := vs.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -58,6 +59,7 @@ func NewClient(url *url.URL, vs *VSphere) (*Client, error) {
 	}, nil
 }
 
+// Close disconnects a client from the vSphere backend and releases all assiciated resources.
 func (c *Client) Close() {
 	ctx := context.Background()
 	if c.Views != nil {

@@ -3,25 +3,27 @@ package vsphere
 import (
 	"crypto/tls"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/influxdata/telegraf/internal"
+	itls "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/vmware/govmomi/simulator"
-	"testing"
-	"time"
 )
 
 func defaultVSphere() *VSphere {
 	return &VSphere{
-		GatherClusters:     true,
-		ClusterMetrics:     nil,
-		GatherHosts:        true,
-		HostMetrics:        nil,
-		GatherVms:          true,
-		VmMetrics:          nil,
-		GatherDatastores:   true,
-		DatastoreMetrics:   nil,
-		InsecureSkipVerify: true,
+		GatherClusters:   true,
+		ClusterMetrics:   nil,
+		GatherHosts:      true,
+		HostMetrics:      nil,
+		GatherVms:        true,
+		VmMetrics:        nil,
+		GatherDatastores: true,
+		DatastoreMetrics: nil,
+		ClientConfig:     itls.ClientConfig{InsecureSkipVerify: true},
 
 		ObjectsPerQuery:         256,
 		ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},

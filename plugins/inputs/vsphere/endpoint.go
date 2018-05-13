@@ -2,21 +2,24 @@ package vsphere
 
 import (
 	"context"
-	"github.com/gobwas/glob"
-	"github.com/influxdata/telegraf"
-	"github.com/vmware/govmomi/view"
-	"github.com/vmware/govmomi/vim25/mo"
-	"github.com/vmware/govmomi/vim25/types"
 	"log"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/gobwas/glob"
+	"github.com/influxdata/telegraf"
+	"github.com/vmware/govmomi/view"
+	"github.com/vmware/govmomi/vim25/mo"
+	"github.com/vmware/govmomi/vim25/types"
 )
 
+// Endpoint is a high-level representation of a connected vCenter endpoint. It is backed by the lower
+// level Client type.
 type Endpoint struct {
 	Parent          *VSphere
-	Url             *url.URL
+	URL             *url.URL
 	client          *Client
 	lastColls       map[string]time.Time
 	nameCache       map[string]string
@@ -46,9 +49,11 @@ type objectRef struct {
 	guest     string
 }
 
+// NewEndpoint returns a new connection to a vCenter based on the URL and configuration passed
+// as parameters.
 func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 	e := Endpoint{
-		Url:         url,
+		URL:         url,
 		Parent:      parent,
 		lastColls:   make(map[string]time.Time),
 		nameCache:   make(map[string]string),
@@ -99,7 +104,7 @@ func (e *Endpoint) init() error {
 
 	err := e.setupMetricIds()
 	if err != nil {
-		log.Printf("E! Error in metric setup for %s: %v", e.Url.Host, err)
+		log.Printf("E! Error in metric setup for %s: %v", e.URL.Host, err)
 		return err
 	}
 
@@ -108,7 +113,7 @@ func (e *Endpoint) init() error {
 		//
 		err = e.discover()
 		if err != nil {
-			log.Printf("E! Error in initial discovery for %s: %v", e.Url.Host, err)
+			log.Printf("E! Error in initial discovery for %s: %v", e.URL.Host, err)
 			return err
 		}
 
@@ -119,7 +124,7 @@ func (e *Endpoint) init() error {
 			for range e.discoveryTicker.C {
 				err := e.discover()
 				if err != nil {
-					log.Printf("E! Error in discovery for %s: %v", e.Url.Host, err)
+					log.Printf("E! Error in discovery for %s: %v", e.URL.Host, err)
 				}
 			}
 		}()
@@ -193,7 +198,7 @@ func resolveMetricWildcards(metricMap map[string]*types.PerfCounterInfo, wildcar
 }
 
 func (e *Endpoint) discover() error {
-	log.Printf("D! Discover new objects for %s", e.Url.Host)
+	log.Printf("D! Discover new objects for %s", e.URL.Host)
 
 	client, err := e.getClient()
 	if err != nil {
@@ -234,7 +239,7 @@ func (e *Endpoint) discover() error {
 	e.nameCache = nameCache
 	e.resources = resources
 
-	log.Printf("D! Discovered %d objects for %s", len(nameCache), e.Url.Host)
+	log.Printf("D! Discovered %d objects for %s", len(nameCache), e.URL.Host)
 
 	return nil
 }
@@ -279,7 +284,7 @@ func getVMs(root *view.ContainerView) (objectMap, error) {
 		// Sometimes Config is unknown and returns a nil pointer
 		//
 		if r.Config != nil {
-			guest = cleanGuestId(r.Config.GuestId)
+			guest = cleanGuestID(r.Config.GuestId)
 		} else {
 			guest = "unknown"
 		}
@@ -318,7 +323,7 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() == 0 {
 		err = e.discover()
 		if err != nil {
-			log.Printf("E! Error in discovery prior to collect for %s: %v", e.Url.Host, err)
+			log.Printf("E! Error in discovery prior to collect for %s: %v", e.URL.Host, err)
 			return err
 		}
 	}
@@ -332,7 +337,7 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 
 			acc.AddGauge("vsphere",
 				map[string]interface{}{"gather.count": count, "gather.duration": duration},
-				map[string]string{"vcenter": e.Url.Host, "type": k},
+				map[string]string{"vcenter": e.URL.Host, "type": k},
 				time.Now())
 		}
 	}
@@ -352,7 +357,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 		if elapsed < float64(res.sampling) {
 			// No new data would be available. We're outta here!
 			//
-			log.Printf("D! Sampling period for %s of %d has not elapsed for %s", resourceType, res.sampling, e.Url.Host)
+			log.Printf("D! Sampling period for %s of %d has not elapsed for %s", resourceType, res.sampling, e.URL.Host)
 			return 0, 0, nil
 		}
 	}
@@ -363,9 +368,9 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 	}
 
 	if len(res.metricIds) == 0 {
-		log.Printf("D! Collecting all metrics for %d objects of type %s for %s", len(res.objects), resourceType, e.Url.Host)
+		log.Printf("D! Collecting all metrics for %d objects of type %s for %s", len(res.objects), resourceType, e.URL.Host)
 	} else {
-		log.Printf("D! Collecting %d metrics for %d objects of type %s for %s", len(res.metricIds), len(res.objects), resourceType, e.Url.Host)
+		log.Printf("D! Collecting %d metrics for %d objects of type %s for %s", len(res.metricIds), len(res.objects), resourceType, e.URL.Host)
 	}
 
 	client, err := e.getClient()
@@ -404,11 +409,11 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 		// Filled up a chunk or at end of data? Run a query with the collected objects
 		//
 		if len(pqs) >= int(e.Parent.ObjectsPerQuery) || total == len(res.objects) {
-			log.Printf("D! Querying %d objects of type %s for %s. Object count: %d. Total objects %d", len(pqs), resourceType, e.Url.Host, total, len(res.objects))
+			log.Printf("D! Querying %d objects of type %s for %s. Object count: %d. Total objects %d", len(pqs), resourceType, e.URL.Host, total, len(res.objects))
 			metrics, err := client.Perf.Query(ctx, pqs)
 			if err != nil {
 				//TODO: Check the error and attempt to handle gracefully. (ie: object no longer exists)
-				log.Printf("E! Error querying metrics of %s for %s", resourceType, e.Url.Host)
+				log.Printf("E! Error querying metrics of %s for %s", resourceType, e.URL.Host)
 				e.checkClient()
 				return count, time.Now().Sub(start).Seconds(), err
 			}
@@ -429,7 +434,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 
 						objectName := e.nameCache[moid]
 						t := map[string]string{
-							"vcenter":  e.Url.Host,
+							"vcenter":  e.URL.Host,
 							"hostname": objectName,
 							"moid":     moid,
 						}
@@ -501,11 +506,11 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 		e.lastColls[resourceType] = lastTS
 	}
 
-	log.Printf("D! Collection of %s for %s, took %v returning %d metrics", resourceType, e.Url.Host, time.Now().Sub(start), count)
+	log.Printf("D! Collection of %s for %s, took %v returning %d metrics", resourceType, e.URL.Host, time.Now().Sub(start), count)
 	return count, time.Now().Sub(start).Seconds(), nil
 }
 
-func cleanGuestId(id string) string {
+func cleanGuestID(id string) string {
 	if strings.HasSuffix(id, "Guest") {
 		return id[:len(id)-5]
 	}
@@ -533,8 +538,8 @@ func (e *Endpoint) getClient() (*Client, error) {
 		e.clientMux.Lock()
 		defer e.clientMux.Unlock()
 		if e.client == nil {
-			log.Printf("D! Creating new vCenter client for: %s", e.Url.Host)
-			client, err := NewClient(e.Url, e.Parent)
+			log.Printf("D! Creating new vCenter client for: %s", e.URL.Host)
+			client, err := NewClient(e.URL, e.Parent)
 			if err != nil {
 				return nil, err
 			}
@@ -548,11 +553,11 @@ func (e *Endpoint) checkClient() {
 	if e.client != nil {
 		active, err := e.client.Client.SessionManager.SessionIsActive(context.Background())
 		if err != nil {
-			log.Printf("E! SessionIsActive returned an error on %s: %v", e.Url.Host, err)
+			log.Printf("E! SessionIsActive returned an error on %s: %v", e.URL.Host, err)
 			e.client = nil
 		}
 		if !active {
-			log.Printf("I! Session no longer active, reseting client: %s", e.Url.Host)
+			log.Printf("I! Session no longer active, reseting client: %s", e.URL.Host)
 			e.client = nil
 		}
 	}
