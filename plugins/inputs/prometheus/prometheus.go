@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -30,14 +31,7 @@ type Prometheus struct {
 
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	client *http.Client
 }
@@ -55,11 +49,11 @@ var sampleConfig = `
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
 
-  ## Optional SSL Config
-  # ssl_ca = /path/to/cafile
-  # ssl_cert = /path/to/certfile
-  # ssl_key = /path/to/keyfile
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = /path/to/cafile
+  # tls_cert = /path/to/certfile
+  # tls_key = /path/to/keyfile
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
 
@@ -167,8 +161,7 @@ var client = &http.Client{
 }
 
 func (p *Prometheus) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := internal.GetTLSConfig(
-		p.SSLCert, p.SSLKey, p.SSLCA, p.InsecureSkipVerify)
+	tlsCfg, err := p.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

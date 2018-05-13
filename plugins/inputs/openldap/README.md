@@ -20,7 +20,7 @@ To use this plugin you must enable the [monitoring](https://www.openldap.org/dev
   insecure_skip_verify = false
 
   # Path to PEM-encoded Root certificate to use to verify server certificate
-  ssl_ca = "/etc/ssl/certs.pem"
+  tls_ca = "/etc/ssl/certs.pem"
 
   # dn/password to bind with. If bind_dn is empty, an anonymous bind is performed.
   bind_dn = ""

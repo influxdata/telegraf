@@ -5,7 +5,7 @@ and writing metrics.
 
 Design goals are to have a minimal memory footprint with a plugin system so
 that developers in the community can easily add support for collecting metrics
-from local or remote services.
+.  For an example configuration referencet from local or remote services.
 
 Telegraf is plugin-driven and has the concept of 4 distinct plugins:
 
@@ -130,7 +130,7 @@ configuration options.
 * [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
 * [bond](./plugins/inputs/bond)
-* [cassandra](./plugins/inputs/cassandra)
+* [cassandra](./plugins/inputs/cassandra) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
 * [ceph](./plugins/inputs/ceph)
 * [cgroup](./plugins/inputs/cgroup)
 * [chrony](./plugins/inputs/chrony)
@@ -147,6 +147,7 @@ configuration options.
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [fail2ban](./plugins/inputs/fail2ban)
+* [fibaro](./plugins/inputs/fibaro)
 * [filestat](./plugins/inputs/filestat)
 * [fluentd](./plugins/inputs/fluentd)
 * [graylog](./plugins/inputs/graylog)
@@ -162,12 +163,14 @@ configuration options.
 * [iptables](./plugins/inputs/iptables)
 * [ipset](./plugins/inputs/ipset)
 * [jolokia](./plugins/inputs/jolokia) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
-* [jolokia2](./plugins/inputs/jolokia2)
+* [jolokia2](./plugins/inputs/jolokia2) (java, cassandra, kafka)
+- [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry)
 * [kapacitor](./plugins/inputs/kapacitor)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
+* [mcrouter](./plugins/inputs/mcrouter)
 * [memcached](./plugins/inputs/memcached)
 * [mesos](./plugins/inputs/mesos)
 * [minecraft](./plugins/inputs/minecraft)
@@ -180,6 +183,7 @@ configuration options.
 * [nsq](./plugins/inputs/nsq)
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
+* [nvidia_smi](./plugins/inputs/nvidia_smi)
 * [openldap](./plugins/inputs/openldap)
 * [opensmtpd](./plugins/inputs/opensmtpd)
 * [pf](./plugins/inputs/pf)
@@ -263,7 +267,9 @@ formats may be used with input plugins supporting the `data_format` option:
 
 ## Processor Plugins
 
+* [override](./plugins/processors/override)
 * [printer](./plugins/processors/printer)
+* [topk](./plugins/processors/topk)
 
 ## Aggregator Plugins
 

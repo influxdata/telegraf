@@ -12,6 +12,8 @@ Enable TLS by specifying the file names of a service TLS certificate and key.
 
 Enable mutually authenticated TLS and authorize client connections by signing certificate authority by including a list of allowed CA certificate file names in ````tls_allowed_cacerts````.
 
+Enable basic HTTP authentication of clients by specifying a username and password to check for. These credentials will be received from the client _as plain text_ if TLS is not configured.
+
 See: [Telegraf Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#influx).
 
 **Example:**
@@ -39,4 +41,8 @@ This is a sample configuration for the plugin.
 
   ## MTLS
   tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+
+  ## Basic authentication
+  basic_username = "foobar"
+  basic_password = "barfoo"
 ```

@@ -89,7 +89,6 @@ func (p *GraphiteParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		if line == "" {
 			continue
 		}
-
 		metric, err := p.ParseLine(line)
 		if err == nil {
 			metrics = append(metrics, metric)

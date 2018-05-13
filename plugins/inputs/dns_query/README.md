@@ -3,9 +3,8 @@
 The DNS plugin gathers dns query times in miliseconds - like [Dig](https://en.wikipedia.org/wiki/Dig_\(command\))
 
 ### Configuration:
-
-```
-# Sample Config:
+```toml
+# Query given DNS server and gives statistics
 [[inputs.dns_query]]
   ## servers to query
   servers = ["8.8.8.8"]
@@ -27,29 +26,20 @@ The DNS plugin gathers dns query times in miliseconds - like [Dig](https://en.wi
   # timeout = 2
 ```
 
-For querying more than one record type make:
+### Metrics:
+
+- dns_query
+  - tags:
+    - server
+    - domain
+    - record_type
+    - result
+  - fields:
+    - query_time_ms (float)
+    - result_code (int, success = 0, timeout = 1, error = 2)
+
+### Example Output:
 
 ```
-[[inputs.dns_query]]
-  domains = ["mjasion.pl"]
-  servers = ["8.8.8.8", "8.8.4.4"]
-  record_type = "A"
-
-[[inputs.dns_query]]
-  domains = ["mjasion.pl"]
-  servers = ["8.8.8.8", "8.8.4.4"]
-  record_type = "MX"
-```
-
-### Tags:
-
-- server
-- domain
-- record_type
-
-### Example output:
-
-```
-telegraf --input-filter dns_query --test
-> dns_query,domain=mjasion.pl,record_type=A,server=8.8.8.8 query_time_ms=67.189842 1456082743585760680
+dns_query,domain=mjasion.pl,record_type=A,server=8.8.8.8 query_time_ms=67.189842 1456082743585760680
 ```

@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -16,34 +16,35 @@ type Consul struct {
 	Username   string
 	Password   string
 	Datacentre string
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	// client used to connect to Consul agnet
 	client *api.Client
 }
 
 var sampleConfig = `
-  ## Most of these values defaults to the one configured on a Consul's agent level.
-  ## Optional Consul server address (default: "localhost")
+  ## Consul server address
   # address = "localhost"
-  ## Optional URI scheme for the Consul server (default: "http")
+
+  ## URI scheme for the Consul server, one of "http", "https"
   # scheme = "http"
-  ## Optional ACL token used in every request (default: "")
+
+  ## ACL token used in every request
   # token = ""
-  ## Optional username used for request HTTP Basic Authentication (default: "")
+
+  ## HTTP Basic Authentication username and password.
   # username = ""
-  ## Optional password used for HTTP Basic Authentication (default: "")
   # password = ""
-  ## Optional data centre to query the health checks from (default: "")
+
+  ## Data centre to query the health checks from
   # datacentre = ""
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = true
 `
 
 func (c *Consul) Description() string {
@@ -80,9 +81,7 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 		}
 	}
 
-	tlsCfg, err := internal.GetTLSConfig(
-		c.SSLCert, c.SSLKey, c.SSLCA, c.InsecureSkipVerify)
-
+	tlsCfg, err := c.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

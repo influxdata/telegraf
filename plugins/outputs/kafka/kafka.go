@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 
@@ -36,7 +36,7 @@ type (
 		// MaxRetry Tag
 		MaxRetry int
 
-		// Legacy SSL config options
+		// Legacy TLS config options
 		// TLS client certificate
 		Certificate string
 		// TLS client key
@@ -44,15 +44,7 @@ type (
 		// TLS certificate authority
 		CA string
 
-		// Path to CA file
-		SSLCA string `toml:"ssl_ca"`
-		// Path to host cert file
-		SSLCert string `toml:"ssl_cert"`
-		// Path to cert key file
-		SSLKey string `toml:"ssl_key"`
-
-		// Skip SSL verification
-		InsecureSkipVerify bool
+		tlsint.ClientConfig
 
 		// SASL Username
 		SASLUsername string `toml:"sasl_username"`
@@ -113,7 +105,7 @@ var sampleConfig = `
   ##  0 : No compression
   ##  1 : Gzip compression
   ##  2 : Snappy compression
-  compression_codec = 0
+  # compression_codec = 0
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many
   ##  replica acknowledgements it must see before responding
@@ -129,16 +121,17 @@ var sampleConfig = `
   ##       received the data. This option provides the best durability, we
   ##       guarantee that no messages will be lost as long as at least one in
   ##       sync replica remains.
-  required_acks = -1
+  # required_acks = -1
 
-  ##  The total number of times to retry sending a message
-  max_retry = 3
+  ## The maximum number of times to retry sending a metric before failing
+  ## until the next flush.
+  # max_retry = 3
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Optional SASL Config
@@ -149,7 +142,7 @@ var sampleConfig = `
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "influx"
+  # data_format = "influx"
 `
 
 func ValidateTopicSuffixMethod(method string) error {
@@ -200,13 +193,12 @@ func (k *Kafka) Connect() error {
 
 	// Legacy support ssl config
 	if k.Certificate != "" {
-		k.SSLCert = k.Certificate
-		k.SSLCA = k.CA
-		k.SSLKey = k.Key
+		k.TLSCert = k.Certificate
+		k.TLSCA = k.CA
+		k.TLSKey = k.Key
 	}
 
-	tlsConfig, err := internal.GetTLSConfig(
-		k.SSLCert, k.SSLKey, k.SSLCA, k.InsecureSkipVerify)
+	tlsConfig, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}

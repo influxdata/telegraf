@@ -25,6 +25,11 @@ type Serializer interface {
 	// separate metrics should be separated by a newline, and there should be
 	// a newline at the end of the buffer.
 	Serialize(metric telegraf.Metric) ([]byte, error)
+
+	// SerializeBatch takes an array of telegraf metric and serializes it into
+	// a byte buffer.  This method is not required to be suitable for use with
+	// line oriented framing.
+	SerializeBatch(metrics []telegraf.Metric) ([]byte, error)
 }
 
 // Config is a struct that covers the data types needed for all serializer types,
@@ -32,6 +37,16 @@ type Serializer interface {
 type Config struct {
 	// Dataformat can be one of: influx, graphite, or json
 	DataFormat string
+
+	// Maximum line length in bytes; influx format only
+	InfluxMaxLineBytes int
+
+	// Sort field keys, set to true only when debugging as it less performant
+	// than unsorted fields; influx format only
+	InfluxSortFields bool
+
+	// Support unsigned integer output; influx format only
+	InfluxUintSupport bool
 
 	// Prefix to add to all measurements, only supports Graphite
 	Prefix string
@@ -50,7 +65,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	var serializer Serializer
 	switch config.DataFormat {
 	case "influx":
-		serializer, err = NewInfluxSerializer()
+		serializer, err = NewInfluxSerializerConfig(config)
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template)
 	case "json":
@@ -62,11 +77,29 @@ func NewSerializer(config *Config) (Serializer, error) {
 }
 
 func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
-	return &json.JsonSerializer{TimestampUnits: timestampUnits}, nil
+	return json.NewSerializer(timestampUnits)
+}
+
+func NewInfluxSerializerConfig(config *Config) (Serializer, error) {
+	var sort influx.FieldSortOrder
+	if config.InfluxSortFields {
+		sort = influx.SortFields
+	}
+
+	var typeSupport influx.FieldTypeSupport
+	if config.InfluxUintSupport {
+		typeSupport = typeSupport + influx.UintSupport
+	}
+
+	s := influx.NewSerializer()
+	s.SetMaxLineBytes(config.InfluxMaxLineBytes)
+	s.SetFieldSortOrder(sort)
+	s.SetFieldTypeSupport(typeSupport)
+	return s, nil
 }
 
 func NewInfluxSerializer() (Serializer, error) {
-	return &influx.InfluxSerializer{}, nil
+	return influx.NewSerializer(), nil
 }
 
 func NewGraphiteSerializer(prefix, template string) (Serializer, error) {

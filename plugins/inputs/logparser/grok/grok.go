@@ -132,6 +132,7 @@ func (p *Parser) Compile() error {
 	// "custom patterns"
 	p.namedPatterns = make([]string, 0, len(p.Patterns))
 	for i, pattern := range p.Patterns {
+		pattern = strings.TrimSpace(pattern)
 		if pattern == "" {
 			continue
 		}
@@ -324,6 +325,10 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				log.Printf("E! Error parsing %s to time layout [%s]: %s", v, t, err)
 			}
 		}
+	}
+
+	if len(fields) == 0 {
+		return nil, fmt.Errorf("logparser_grok: must have one or more fields")
 	}
 
 	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))
