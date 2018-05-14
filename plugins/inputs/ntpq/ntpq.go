@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"math"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -60,6 +61,33 @@ func (n *NTPQ) SampleConfig() string {
 `
 }
 
+func Aggregate(aggfields map[string]map[string]interface{}, field string, value float64, count int) {
+	countf64 := float64(count)
+
+	current_mean, ok_mean := aggfields["mean"][field].(float64)
+	if !ok_mean {
+		current_mean = 0.0
+	}
+	aggfields["mean"][field] = current_mean*(countf64-1)/countf64 + value/countf64
+	aggfields["mean"]["validpeers"] = countf64
+
+	current_min, ok_min := aggfields["min"][field].(float64)
+	if ok_min {
+		aggfields["min"][field] = math.Min(current_min, value)
+	} else {
+		aggfields["min"][field] = value
+	}
+	aggfields["min"]["validpeers"] = countf64
+
+	current_max, ok_max := aggfields["max"][field].(float64)
+	if ok_max {
+		aggfields["max"][field] = math.Max(current_max, value)
+	} else {
+		aggfields["max"][field] = value
+	}
+	aggfields["max"]["validpeers"] = countf64
+}
+
 func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 	out, err := n.runQ()
 	if err != nil {
@@ -75,7 +103,16 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 	}
 
 	lineCounter := 0
+	validPeerCounter := 0
+
 	scanner := bufio.NewScanner(bytes.NewReader(out))
+
+	mAggregatedFields := map[string]map[string]interface{}{
+		"mean": make(map[string]interface{}),
+		"min":  make(map[string]interface{}),
+		"max":  make(map[string]interface{}),
+	}
+
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -126,6 +163,11 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 				tags[key] = fields[index]
 			}
 
+			isValidPeer := strings.ContainsAny(tags["state_prefix"], "*#o+")
+			if isValidPeer {
+				validPeerCounter++
+			}
+
 			// Get integer metrics from output
 			for key, index := range intI {
 				if index == -1 || index >= len(fields) {
@@ -174,6 +216,9 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 					continue
 				}
 				mFields[key] = int64(m)
+				if isValidPeer {
+					Aggregate(mAggregatedFields, key, float64(m), validPeerCounter)
+				}
 			}
 
 			// get float metrics from output
@@ -191,13 +236,20 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 					continue
 				}
 				mFields[key] = m
+				if isValidPeer {
+					Aggregate(mAggregatedFields, key, m, validPeerCounter)
+				}
 			}
 
 			acc.AddFields("ntpq", mFields, tags)
 		}
-
 		lineCounter++
 	}
+
+	for key := range mAggregatedFields {
+		acc.AddFields("ntpq_aggregated", mAggregatedFields[key], map[string]string{"function": key})
+	}
+
 	return nil
 }
 
