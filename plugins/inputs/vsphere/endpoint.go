@@ -25,8 +25,8 @@ type Endpoint struct {
 	nameCache       map[string]string
 	resources       map[string]resource
 	discoveryTicker *time.Ticker
-	clientMux       *sync.Mutex
-	collectMux      *sync.RWMutex
+	clientMux       sync.Mutex
+	collectMux      sync.RWMutex
 	initialized     bool
 }
 
@@ -57,8 +57,6 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 		Parent:      parent,
 		lastColls:   make(map[string]time.Time),
 		nameCache:   make(map[string]string),
-		clientMux:   &sync.Mutex{},
-		collectMux:  &sync.RWMutex{},
 		initialized: false,
 	}
 
@@ -230,9 +228,6 @@ func (e *Endpoint) discover() error {
 
 	// Atomically swap maps
 	//
-	if e.collectMux == nil {
-		e.collectMux = &sync.RWMutex{}
-	}
 	e.collectMux.Lock()
 	defer e.collectMux.Unlock()
 
