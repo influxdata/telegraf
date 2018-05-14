@@ -36,9 +36,7 @@ const (
 
 	DEFAULT_TIME_OUT = 3
 
-	CONTENT_TYPE     = "content-type"
-	APPLICATION_JSON = "application/json"
-	PLAIN_TEXT       = "plain/text"
+	CONTENT_TYPE = "content-type"
 )
 
 type Http struct {
@@ -66,6 +64,18 @@ func (h *Http) Connect() error {
 		Timeout: time.Duration(h.Timeout) * time.Second,
 	}
 
+	var isValid bool
+
+	for k := range h.Headers {
+		if strings.ToLower(k) == CONTENT_TYPE {
+			isValid = true
+		}
+	}
+
+	if !isValid {
+		return fmt.Errorf("E! httpHeader require content-type!")
+	}
+
 	return nil
 }
 
@@ -86,31 +96,10 @@ func (h *Http) SampleConfig() string {
 
 // Writes metrics over HTTP POST
 func (h *Http) Write(metrics []telegraf.Metric) error {
-	var mCount int
-	var reqBodyBuf []byte
-
-	for _, m := range metrics {
-		buf, err := h.serializer.Serialize(m)
-
-		if err != nil {
-			return fmt.Errorf("E! Error serializing some metrics: %s", err.Error())
-		}
-
-		reqBodyBuf = append(reqBodyBuf, buf...)
-		mCount++
-	}
-
-	var contentType string
-	var err error
-
-	if contentType, err = getContentType(h.Headers); err != nil {
-		return err
-	}
-
-	reqBody, err := makeReqBody(contentType, reqBodyBuf, mCount)
+	reqBody, err := h.serializer.SerializeBatch(metrics)
 
 	if err != nil {
-		return fmt.Errorf("E! Error serialized metric is not assembled : %s", err.Error())
+		return fmt.Errorf("E! Error serializing some metrics: %s", err.Error())
 	}
 
 	if err := h.write(reqBody); err != nil {
@@ -151,36 +140,6 @@ func (h *Http) isOk(resp *http.Response, err error) error {
 	}
 
 	return nil
-}
-
-func getContentType(headers map[string]string) (string, error) {
-	var contentType string
-
-	for k, v := range headers {
-		if strings.ToLower(k) == CONTENT_TYPE {
-			contentType = strings.ToLower(v)
-
-			return contentType, nil
-		}
-	}
-
-	return "", fmt.Errorf("E! httpHeader require content-type!")
-}
-
-// makeReqBody translates each serializer's converted metric into a request body by HTTP content-type format.
-func makeReqBody(contentType string, reqBodyBuf []byte, mCount int) ([]byte, error) {
-	switch contentType {
-	case APPLICATION_JSON:
-		var arrayJsonObj []byte
-		arrayJsonObj = append(arrayJsonObj, []byte("[")...)
-		arrayJsonObj = append(arrayJsonObj, reqBodyBuf...)
-		arrayJsonObj = append(arrayJsonObj, []byte("]")...)
-		return bytes.Replace(arrayJsonObj, []byte("\n"), []byte(","), mCount-1), nil
-	case PLAIN_TEXT:
-		return reqBodyBuf, nil
-	default:
-		return nil, fmt.Errorf("E! HTTP %s content-type is not supported!", contentType)
-	}
 }
 
 func init() {
