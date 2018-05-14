@@ -60,7 +60,7 @@ type (
 		SASLPassword string `toml:"sasl_password"`
 
 		tlsConfig tls.Config
-		producer  sarama.SyncProducer
+		producer  sarama.AsyncProducer
 
 		serializer serializers.Serializer
 	}
@@ -197,7 +197,7 @@ func (k *Kafka) Connect() error {
 	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
 	config.Producer.Compression = sarama.CompressionCodec(k.CompressionCodec)
 	config.Producer.Retry.Max = k.MaxRetry
-	config.Producer.Return.Successes = true
+	config.Producer.Return.Successes = false
 
 	// Legacy support ssl config
 	if k.Certificate != "" {
@@ -223,7 +223,7 @@ func (k *Kafka) Connect() error {
 		config.Net.SASL.Enable = true
 	}
 
-	producer, err := sarama.NewSyncProducer(k.Brokers, config)
+	producer, err := sarama.NewAsyncProducer(k.Brokers, config)
 	if err != nil {
 		return err
 	}
@@ -264,7 +264,8 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 			m.Key = sarama.StringEncoder(h)
 		}
 
-		_, _, err = k.producer.SendMessage(m)
+		err = nil
+		k.producer.Input() <- m
 
 		if err != nil {
 			return fmt.Errorf("FAILED to send kafka message: %s\n", err)
