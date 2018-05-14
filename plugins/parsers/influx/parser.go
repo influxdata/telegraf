@@ -38,9 +38,18 @@ type Parser struct {
 	handler *MetricHandler
 }
 
+// NewParser returns a Parser than accepts line protocol
 func NewParser(handler *MetricHandler) *Parser {
 	return &Parser{
 		machine: NewMachine(handler),
+		handler: handler,
+	}
+}
+
+// NewSeriesParser returns a Parser than accepts a measurement and tagset
+func NewSeriesParser(handler *MetricHandler) *Parser {
+	return &Parser{
+		machine: NewSeriesMachine(handler),
 		handler: handler,
 	}
 }
