@@ -202,6 +202,10 @@ func (m *metric) RemoveField(key string) {
 	}
 }
 
+func (m *metric) SetTime(t time.Time) {
+	m.tm = t
+}
+
 func (m *metric) Copy() telegraf.Metric {
 	m2 := &metric{
 		name:      m.name,
