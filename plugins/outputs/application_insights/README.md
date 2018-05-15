@@ -1,32 +1,43 @@
 # Application Insights Output Plugin
 
-This plugin writes telegraf metrics to Azure Application Insights
+This plugin writes telegraf metrics to [Azure Application Insights](https://azure.microsoft.com/en-us/services/application-insights/).
 
-## Configuration
-```
+### Configuration:
+```toml
 [[outputs.application_insights]]
   ## Instrumentation key of the Application Insights resource.
-  instrumentationKey = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
+  instrumentation_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
 
-  ## Timeout on close. If not provided, will default to 5s. 0s means no timeout (not recommended).
+  ## Timeout for closing (default: 5s).
   # timeout = "5s"
 
-  ## Determines whether diagnostic logging (for Application Insights endpoint traffic) is enabled. Default is false.
-  # enable_diagnosic_logging = "true"
+  ## Enable additional diagnostic logging.
+  # enable_diagnosic_logging = false
 
-  ## ContextTagSources dictionary instructs the Application Insights plugin to set Application Insights context tags using metric properties.
-  ## In this dictionary keys are Application Insights context tags to set, and values are names of metric properties to use as source of data.
-  ## For example:
+  ## Context Tag Sources add Application Insights context tags to a tag value.
+  ##
+  ## For list of allowed context tag keys see:
+  ## https://github.com/Microsoft/ApplicationInsights-Go/blob/master/appinsights/contracts/contexttagkeys.go
   # [outputs.application_insights.context_tag_sources]
-  # "ai.cloud.role" = "kubernetes_container_name"
-  # "ai.cloud.roleInstance" = "kubernetes_pod_name"
-  ## will set the ai.cloud.role context tag to the value of kubernetes_container_name property (if present), 
-  ## and the ai.cloud.roleInstance context tag to the value of kubernetes_pod_name property.
-  ## For list of all context tag keys see https://github.com/Microsoft/ApplicationInsights-Go/blob/master/appinsights/contracts/contexttagkeys.go
+  #   "ai.cloud.role" = "kubernetes_container_name"
+  #   "ai.cloud.roleInstance" = "kubernetes_pod_name"
 ```
 
-## Implementation notes
-- Every field in a metric will result in a separate metric telemetry. For example, the metric `foo,host=a first=42,second=43 1525293034000000000`
-will result in two metric telemetry records sent to Application Insights: first named `foo_first` and value of 42, and the secod named `foo_second` and a value of 43 (both having property `host` set to "a". \
-\
-The exception is a single-field metric with a value named `value`, in that case the single metric telemetry created will use just the whole metric name without the "value" suffix. For example, `bar,host=a value=23 1525293034000000000` will result in a telemetry named `bar` and value 23.
+
+### Metric Encoding:
+
+For each field an Application Insights Telemetry record is created named based
+on the measurement name and field.
+
+
+**Example:** Create the telemetry records `foo_first` and `foo_second`:
+```
+foo,host=a first=42,second=43 1525293034000000000
+```
+
+In the special case of a single field named `value`, a single telemetry record is created named using only the measurement name
+
+**Example:** Create a telemetry record `foo`:
+```
+bar,host=a value=42 1525293034000000000
+```

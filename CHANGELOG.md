@@ -25,6 +25,7 @@
 ### New Outputs
 
 - [http](./plugins/outputs/http/README.md) - Contributed by @Dark0096
+- [application_insights](./plugins/outputs/application_insights/README.md): Contribute by @karolz-ms
 
 ### Features
 
@@ -41,6 +42,7 @@
 - [#4096](https://github.com/influxdata/telegraf/pull/4096): Add topk processor plugin.
 - [#4114](https://github.com/influxdata/telegraf/pull/4114): Add cursor metrics to mongodb input.
 - [#3455](https://github.com/influxdata/telegraf/pull/3455): Add tag/integer pair for result to net_response.
+- [#4010](https://github.com/influxdata/telegraf/pull/3455): Add application_insights output plugin.
 
 ### Bugfixes
 
