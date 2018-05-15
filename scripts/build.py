@@ -697,8 +697,6 @@ def main(args):
         logging.error("Invalid build platform: {}".format(args.platform))
         return 1
 
-    build_output = {}
-
     if args.branch != orig_branch and args.commit != orig_commit:
         logging.error("Can only specify one branch or commit to build from.")
         return 1
@@ -729,6 +727,7 @@ def main(args):
     else:
         platforms = [args.platform]
 
+    build_output = {}
     for platform in platforms:
         build_output.update( { platform : {} } )
         archs = []
@@ -742,16 +741,17 @@ def main(args):
             od = args.outdir
             if not single_build:
                 od = os.path.join(args.outdir, platform, arch)
-            if not build(version=args.version,
-                         platform=platform,
-                         arch=arch,
-                         nightly=args.nightly,
-                         race=args.race,
-                         clean=args.clean,
-                         outdir=od,
-                         tags=args.build_tags,
-                         static=args.static):
-                return 1
+            if not args.already_builded:
+                if not build(version=args.version,
+                             platform=platform,
+                             arch=arch,
+                             nightly=args.nightly,
+                             race=args.race,
+                             clean=args.clean,
+                             outdir=od,
+                             tags=args.build_tags,
+                             static=args.static):
+                    return 1
             build_output.get(platform).update( { arch : od } )
 
     # Build packages
@@ -917,6 +917,10 @@ if __name__ == '__main__':
                         metavar='<timeout>',
                         type=str,
                         help='Timeout for tests before failing')
+    parser.add_argument('--already-builded',
+                        action='store_true',
+                        default=False,
+                        help='Run without build package')
     args = parser.parse_args()
     print_banner()
     sys.exit(main(args))
