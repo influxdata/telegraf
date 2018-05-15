@@ -25,6 +25,8 @@ type (
 		Brokers []string
 		// Kafka topic
 		Topic string
+		// Producer mode
+		Mode string
 		// Kafka topic suffix option
 		TopicSuffix TopicSuffix `toml:"topic_suffix"`
 		// Routing Key Tag
@@ -52,7 +54,8 @@ type (
 		SASLPassword string `toml:"sasl_password"`
 
 		tlsConfig tls.Config
-		producer  sarama.SyncProducer
+		syncProducer  sarama.SyncProducer
+		asyncProducer sarama.AsyncProducer
 
 		serializer serializers.Serializer
 	}
@@ -68,6 +71,10 @@ var sampleConfig = `
   brokers = ["localhost:9092"]
   ## Kafka topic for producer messages
   topic = "telegraf"
+
+  ## Producer mode, either sync or async
+  ## With async producer required_acks setting doesn't matter
+  # mode = "async"
 
   ## Optional topic suffix configuration.
   ## If the section is omitted, no suffix is used.
@@ -214,16 +221,32 @@ func (k *Kafka) Connect() error {
 		config.Net.SASL.Enable = true
 	}
 
-	producer, err := sarama.NewSyncProducer(k.Brokers, config)
-	if err != nil {
-		return err
+	var syncProducer sarama.SyncProducer
+	var asyncProducer sarama.AsyncProducer
+	err = nil
+	if k.Mode == "sync" {
+		config.Producer.Return.Successes = true
+		syncProducer, err = sarama.NewSyncProducer(k.Brokers, config)
+		k.syncProducer = syncProducer
+		if err != nil {
+			return err
+		}
+	} else if k.Mode == "async" {
+		config.Producer.Return.Successes = false
+		asyncProducer, err = sarama.NewAsyncProducer(k.Brokers, config)
+		k.asyncProducer = asyncProducer
 	}
-	k.producer = producer
+
 	return nil
 }
 
 func (k *Kafka) Close() error {
-	return k.producer.Close()
+	if k.Mode == "sync" {
+		return k.syncProducer.Close()
+	} else if k.Mode == "async" {
+		return k.asyncProducer.Close()
+	}
+	return nil
 }
 
 func (k *Kafka) SampleConfig() string {
@@ -255,10 +278,13 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 			m.Key = sarama.StringEncoder(h)
 		}
 
-		_, _, err = k.producer.SendMessage(m)
-
-		if err != nil {
-			return fmt.Errorf("FAILED to send kafka message: %s\n", err)
+		if k.Mode == "sync" {
+			_, _, err = k.syncProducer.SendMessage(m)
+			if err != nil {
+				return fmt.Errorf("FAILED to send kafka message: %s\n", err)
+			}
+		} else if k.Mode == "async" {
+			k.asyncProducer.Input() <- m
 		}
 	}
 	return nil
@@ -269,6 +295,7 @@ func init() {
 		return &Kafka{
 			MaxRetry:     3,
 			RequiredAcks: -1,
+			Mode: "async",
 		}
 	})
 }
