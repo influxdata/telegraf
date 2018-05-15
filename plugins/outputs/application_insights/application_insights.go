@@ -41,24 +41,22 @@ const (
 
 var (
 	sampleConfig = `
-## Instrumentation key of the Application Insights resource.
+  ## Instrumentation key of the Application Insights resource.
   instrumentation_key = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx"
 
-## Timeout on close. If not provided, will default to 5s. 0s means no timeout (not recommended).
-# timeout = "5s"
+  ## Timeout for closing (default: 5s).
+  # timeout = "5s"
 
-## Determines whether diagnostic logging (for Application Insights endpoint traffic) is enabled. Default is false.
-# enable_diagnosic_logging = "true"
+  ## Enable additional diagnostic logging.
+  # enable_diagnosic_logging = false
 
-## ContextTagSources dictionary instructs the Application Insights plugin to set Application Insights context tags using metric properties.
-## In this dictionary keys are Application Insights context tags to set, and values are names of metric properties to use as source of data.
-## For example:
-# [outputs.application_insights.context_tag_sources]
-# "ai.cloud.role" = "kubernetes_container_name"
-# "ai.cloud.roleInstance" = "kubernetes_pod_name"
-## will set the ai.cloud.role context tag to the value of kubernetes_container_name property (if present), 
-## and the ai.cloud.roleInstance context tag to the value of kubernetes_pod_name property.
-## For list of all context tag keys see https://github.com/Microsoft/ApplicationInsights-Go/blob/master/appinsights/contracts/contexttagkeys.go
+  ## Context Tag Sources add Application Insights context tags to a tag value.
+  ##
+  ## For list of allowed context tag keys see:
+  ## https://github.com/Microsoft/ApplicationInsights-Go/blob/master/appinsights/contracts/contexttagkeys.go
+  # [outputs.application_insights.context_tag_sources]
+  #   "ai.cloud.role" = "kubernetes_container_name"
+  #   "ai.cloud.roleInstance" = "kubernetes_pod_name"
 `
 	is32Bit        bool
 	is32BitChecked bool
@@ -69,7 +67,7 @@ func (a *ApplicationInsights) SampleConfig() string {
 }
 
 func (a *ApplicationInsights) Description() string {
-	return "Send telegraf metrics to Azure Application Insights"
+	return "Send metrics to Azure Application Insights"
 }
 
 func (a *ApplicationInsights) Connect() error {
