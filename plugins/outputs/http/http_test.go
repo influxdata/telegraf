@@ -2,243 +2,290 @@ package http
 
 import (
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/influxdata/telegraf/plugins/serializers/graphite"
-	"github.com/influxdata/telegraf/plugins/serializers/json"
-	"github.com/stretchr/testify/assert"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/stretchr/testify/require"
 )
 
-var (
-	cpuTags = map[string]string{
-		"host":       "localhost",
-		"cpu":        "cpu0",
-		"datacenter": "us-west-2",
-	}
-
-	cpuField = map[string]interface{}{
-		"usage_idle": float64(91.5),
-	}
-
-	memTags = map[string]string{
-		"host":       "localhost",
-		"cpu":        "mem",
-		"datacenter": "us-west-2",
-	}
-
-	memField = map[string]interface{}{
-		"used": float64(91.5),
-	}
-
-	count int
-)
-
-type TestOkHandler struct {
-	T        *testing.T
-	Expected []string
-}
-
-// The handler gets a new variable each time it receives a request, so it fetches an expected string based on global variable.
-func (h TestOkHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	actual, _ := ioutil.ReadAll(r.Body)
-
-	assert.Equal(h.T, h.Expected[count], string(actual), fmt.Sprintf("%d Expected fail!", count))
-
-	count++
-
-	fmt.Fprint(w, "ok")
-}
-
-type TestNotFoundHandler struct {
-}
-
-func (h TestNotFoundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	http.NotFound(w, r)
-}
-
-func TestWriteAllInputMetric(t *testing.T) {
-	now := time.Now()
-
-	server := httptest.NewServer(&TestOkHandler{
-		T: t,
-		Expected: []string{
-			fmt.Sprintf("telegraf.cpu0.us-west-2.localhost.cpu.usage_idle 91.5 %d\ntelegraf.mem.us-west-2.localhost.mem.used 91.5 %d\n", now.Unix(), now.Unix()),
+func getMetric() telegraf.Metric {
+	m, err := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
 		},
-	})
-	defer server.Close()
-	defer resetCount()
-
-	m1, _ := metric.New("cpu", cpuTags, cpuField, now)
-	m2, _ := metric.New("mem", memTags, memField, now)
-	metrics := []telegraf.Metric{m1, m2}
-
-	http := &Http{
-		URL: server.URL,
-		Headers: map[string]string{
-			"Content-Type": "plain/text",
-		},
+		time.Unix(0, 0),
+	)
+	if err != nil {
+		panic(err)
 	}
-
-	http.SetSerializer(&graphite.GraphiteSerializer{
-		Prefix:   "telegraf",
-		Template: "tags.measurement.field",
-	})
-
-	http.Connect()
-	err := http.Write(metrics)
-
-	assert.NoError(t, err)
+	return m
 }
 
-func TestHttpWriteWithUnexpected404StatusCode(t *testing.T) {
-	now := time.Now()
+func TestInvalidMethod(t *testing.T) {
+	plugin := &HTTP{
+		URL:    "",
+		Method: http.MethodGet,
+	}
 
-	server := httptest.NewServer(&TestNotFoundHandler{})
-	defer server.Close()
+	err := plugin.Connect()
+	require.Error(t, err)
+}
 
-	m, _ := metric.New("cpu", cpuTags, cpuField, now)
-	metrics := []telegraf.Metric{m}
+func TestMethod(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
 
-	http := &Http{
-		URL: server.URL,
-		Headers: map[string]string{
-			"Content-Type": "application/json",
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	tests := []struct {
+		name           string
+		plugin         *HTTP
+		expectedMethod string
+		connectError   bool
+	}{
+		{
+			name: "default method is POST",
+			plugin: &HTTP{
+				URL:    u.String(),
+				Method: defaultMethod,
+			},
+			expectedMethod: http.MethodPost,
+		},
+		{
+			name: "put is okay",
+			plugin: &HTTP{
+				URL:    u.String(),
+				Method: http.MethodPut,
+			},
+			expectedMethod: http.MethodPut,
+		},
+		{
+			name: "get is invalid",
+			plugin: &HTTP{
+				URL:    u.String(),
+				Method: http.MethodGet,
+			},
+			connectError: true,
+		},
+		{
+			name: "method is case insensitive",
+			plugin: &HTTP{
+				URL:    u.String(),
+				Method: "poST",
+			},
+			expectedMethod: http.MethodPost,
 		},
 	}
 
-	http.SetSerializer(&graphite.GraphiteSerializer{
-		Prefix:   "telegraf",
-		Template: "tags.measurement.field",
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, tt.expectedMethod, r.Method)
+				w.WriteHeader(http.StatusOK)
+			})
 
-	http.Connect()
-	err := http.Write(metrics)
+			serializer := influx.NewSerializer()
+			tt.plugin.SetSerializer(serializer)
+			err = tt.plugin.Connect()
+			if tt.connectError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
 
-	assert.Error(t, err)
+			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
+			require.NoError(t, err)
+		})
+	}
 }
 
-func TestHttpWriteWithExpected404StatusCode(t *testing.T) {
-	now := time.Now()
+func TestStatusCode(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
 
-	server := httptest.NewServer(&TestNotFoundHandler{})
-	defer server.Close()
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
 
-	m, _ := metric.New("cpu", cpuTags, cpuField, now)
-	metrics := []telegraf.Metric{m}
-
-	http := &Http{
-		URL: server.URL,
-		Headers: map[string]string{
-			"Content-Type": "application/json",
+	tests := []struct {
+		name       string
+		plugin     *HTTP
+		statusCode int
+		errFunc    func(t *testing.T, err error)
+	}{
+		{
+			name: "success",
+			plugin: &HTTP{
+				URL: u.String(),
+			},
+			statusCode: http.StatusOK,
+			errFunc: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "1xx status is an error",
+			plugin: &HTTP{
+				URL: u.String(),
+			},
+			statusCode: 103,
+			errFunc: func(t *testing.T, err error) {
+				require.Error(t, err)
+			},
+		},
+		{
+			name: "3xx status is an error",
+			plugin: &HTTP{
+				URL: u.String(),
+			},
+			statusCode: http.StatusMultipleChoices,
+			errFunc: func(t *testing.T, err error) {
+				require.Error(t, err)
+			},
+		},
+		{
+			name: "4xx status is an error",
+			plugin: &HTTP{
+				URL: u.String(),
+			},
+			statusCode: http.StatusMultipleChoices,
+			errFunc: func(t *testing.T, err error) {
+				require.Error(t, err)
+			},
 		},
 	}
 
-	http.SetSerializer(&graphite.GraphiteSerializer{
-		Prefix:   "telegraf",
-		Template: "tags.measurement.field",
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tt.statusCode)
+			})
 
-	http.Connect()
-	err := http.Write(metrics)
+			serializer := influx.NewSerializer()
+			tt.plugin.SetSerializer(serializer)
+			err = tt.plugin.Connect()
+			require.NoError(t, err)
 
-	assert.Error(t, err)
+			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
+			tt.errFunc(t, err)
+		})
+	}
 }
 
-func TestHttpWriteWithIncorrectServerPort(t *testing.T) {
-	now := time.Now()
+func TestContentType(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
 
-	m, _ := metric.New("cpu", cpuTags, cpuField, now)
-	metrics := []telegraf.Metric{m}
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
 
-	http := &Http{
-		URL: "http://127.0.0.1:56879/incorrect/url",
-		Headers: map[string]string{
-			"Content-Type": "application/json",
+	tests := []struct {
+		name     string
+		plugin   *HTTP
+		expected string
+	}{
+		{
+			name: "default is text plain",
+			plugin: &HTTP{
+				URL: u.String(),
+			},
+			expected: defaultContentType,
+		},
+		{
+			name: "overwrite content_type",
+			plugin: &HTTP{
+				URL:     u.String(),
+				Headers: map[string]string{"Content-Type": "application/json"},
+			},
+			expected: "application/json",
 		},
 	}
 
-	http.SetSerializer(&graphite.GraphiteSerializer{
-		Prefix:   "telegraf",
-		Template: "tags.measurement.field",
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, tt.expected, r.Header.Get("Content-Type"))
+				w.WriteHeader(http.StatusOK)
+			})
 
-	http.Connect()
-	err := http.Write(metrics)
+			serializer := influx.NewSerializer()
+			tt.plugin.SetSerializer(serializer)
+			err = tt.plugin.Connect()
+			require.NoError(t, err)
 
-	assert.Error(t, err)
-}
-
-func TestHttpWriteWithHttpSerializer(t *testing.T) {
-	now := time.Now()
-
-	server := httptest.NewServer(&TestOkHandler{
-		T: t,
-		Expected: []string{
-			fmt.Sprintf("{\"metrics\":[{\"fields\":{\"usage_idle\":91.5},\"name\":\"cpu\",\"tags\":{\"cpu\":\"cpu0\",\"datacenter\":\"us-west-2\",\"host\":\"localhost\"},\"timestamp\":%d},{\"fields\":{\"usage_idle\":91.5},\"name\":\"cpu\",\"tags\":{\"cpu\":\"cpu0\",\"datacenter\":\"us-west-2\",\"host\":\"localhost\"},\"timestamp\":%d}]}", now.Unix(), now.Unix()),
-		},
-	})
-
-	defer server.Close()
-
-	http := &Http{
-		URL: server.URL,
-		Headers: map[string]string{
-			"Content-Type": "application/json",
-		},
+			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
+			require.NoError(t, err)
+		})
 	}
-	jsonSerializer, _ := json.NewSerializer(time.Second)
-	http.SetSerializer(jsonSerializer)
-
-	m1, _ := metric.New("cpu", cpuTags, cpuField, now)
-	m2, _ := metric.New("cpu", cpuTags, cpuField, now)
-	metrics := []telegraf.Metric{m1, m2}
-
-	http.Connect()
-	err := http.Write(metrics)
-
-	assert.Nil(t, err)
 }
 
-func TestHttpWithoutContentType(t *testing.T) {
-	http := &Http{
-		URL: "http://127.0.0.1:56879/correct/url",
-	}
+func TestBasicAuth(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
 
-	err := http.Connect()
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
 
-	assert.Error(t, err)
-}
-
-func TestHttpWithContentType(t *testing.T) {
-	http := &Http{
-		URL: "http://127.0.0.1:56879/correct/url",
-		Headers: map[string]string{
-			"Content-Type": "application/json",
+	tests := []struct {
+		name     string
+		plugin   *HTTP
+		username string
+		password string
+	}{
+		{
+			name: "default",
+			plugin: &HTTP{
+				URL: u.String(),
+			},
 		},
-	}
-
-	err := http.Connect()
-
-	assert.Nil(t, err)
-}
-
-func TestImplementedInterfaceFunction(t *testing.T) {
-	http := &Http{
-		URL: "http://127.0.0.1:56879/incorrect/url",
-		Headers: map[string]string{
-			"Content-Type": "application/json",
+		{
+			name: "username only",
+			plugin: &HTTP{
+				URL:      u.String(),
+				Username: "username",
+			},
+		},
+		{
+			name: "password only",
+			plugin: &HTTP{
+				URL:      u.String(),
+				Password: "pa$$word",
+			},
+		},
+		{
+			name: "username and password",
+			plugin: &HTTP{
+				URL:      u.String(),
+				Username: "username",
+				Password: "pa$$word",
+			},
 		},
 	}
 
-	assert.NotNil(t, http.SampleConfig())
-	assert.NotNil(t, http.Description())
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				username, password, _ := r.BasicAuth()
+				require.Equal(t, tt.username, username)
+				require.Equal(t, tt.password, password)
+				w.WriteHeader(http.StatusOK)
+			})
 
-func resetCount() {
-	count = 0
+			serializer := influx.NewSerializer()
+			tt.plugin.SetSerializer(serializer)
+			err = tt.plugin.Connect()
+			require.NoError(t, err)
+
+			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
+			require.NoError(t, err)
+		})
+	}
 }

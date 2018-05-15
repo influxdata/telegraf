@@ -1,28 +1,41 @@
 # HTTP Output Plugin
 
-This plugin writes to a HTTP Server using the `POST Method`.
-
-Data collected from telegraf is sent in the Request Body.
+This plugin sends metrics in a HTTP message encoded using one of the output
+data formats.  For data_formats that support batching, metrics are sent in batch format.
 
 ### Configuration:
 
 ```toml
-# Send telegraf metrics to HTTP Server(s)
+# A plugin that can transmit metrics over HTTP
 [[outputs.http]]
-  ## It requires a url name.
-  ## Will be transmitted telegraf metrics to the HTTP Server using the below URL.
-  ## Note that not support the HTTPS.
+  ## URL is the address to send metrics to
   url = "http://127.0.0.1:8080/metric"
-  ## Configure dial timeout in seconds. Default : 3
-  timeout = 3
-  ## http_headers option can add a custom header to the request.
-  ## Content-Type is required http header in http plugin.
-  ## so content-type of HTTP specification (plain/text, application/json, etc...) must be filled out.
-  [outputs.http.headers]
-    Content-Type = "plain/text"
+
+  ## Timeout for HTTP message
+  # timeout = "5s"
+
+  ## HTTP method, one of: "POST" or "PUT"
+  # method = "POST"
+
+  ## HTTP Basic Auth credentials
+  # username = "username"
+  # password = "pa$$word"
+
+  ## Additional HTTP headers
+  # [outputs.http.headers]
+  #   # Should be set manually to "application/json" for json data_format
+  #   Content-Type = "text/plain; charset=utf-8"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
+
   ## Data format to output.
   ## Each data format has it's own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "influx"
+  # data_format = "influx"
 ```
