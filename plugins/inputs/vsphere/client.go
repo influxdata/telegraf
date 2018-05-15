@@ -2,6 +2,7 @@ package vsphere
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/url"
 
@@ -19,29 +20,32 @@ type Client struct {
 }
 
 // NewClient creates a new vSphere client based on the url and setting passed as parameters.
-func NewClient(url *url.URL, vs *VSphere) (*Client, error) {
+func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 	tlsCfg, err := vs.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
 
+	if vs.Username != "" {
+		if vs.Password == "" {
+			return nil, fmt.Errorf("vSphere password must be specified")
+		}
+		log.Printf("D! Logging in using explicit credentials: %s", vs.Username)
+		u.User = url.UserPassword(vs.Username, vs.Password)
+	}
 	ctx := context.Background()
-
 	var c *govmomi.Client
 	if tlsCfg != nil && len(tlsCfg.Certificates) > 0 {
-		//TODO: remove this log output before final release
-		log.Printf("Creating client with Certificate: %s", url.Host)
-		c, err = govmomi.NewClientWithCertificate(ctx, url, vs.InsecureSkipVerify, tlsCfg.Certificates[0])
+		log.Printf("D! Creating client with Certificate: %s", u.Host)
+		c, err = govmomi.NewClientWithCertificate(ctx, u, vs.InsecureSkipVerify, tlsCfg.Certificates[0])
 	} else {
-		//TODO: remove this log output before final release
-		log.Printf("Creating client: %s", url.Host)
-		c, err = govmomi.NewClient(ctx, url, vs.InsecureSkipVerify)
+		log.Printf("D! Creating client: %s", u.Host)
+		c, err = govmomi.NewClient(ctx, u, vs.InsecureSkipVerify)
 	}
 	if err != nil {
 		return nil, err
 	}
 	c.Timeout = vs.Timeout.Duration
-
 	m := view.NewManager(c.Client)
 
 	v, err := m.CreateContainerView(ctx, c.ServiceContent.RootFolder, []string{}, true)

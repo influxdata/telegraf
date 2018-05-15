@@ -15,8 +15,9 @@ import (
 // VSphere is the top level type for the vSphere input plugin. It contains all the configuration
 // and a list of connected vSphere endpoints
 type VSphere struct {
-	Vcenters []string
-
+	Vcenters         []string
+	Username         string
+	Password         string
 	GatherClusters   bool
 	ClusterMetrics   []string
 	GatherHosts      bool
