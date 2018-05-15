@@ -22,6 +22,10 @@
 
 - [topk](./plugins/processors/topk/README.md) - Contributed by @mirath
 
+### New Outputs
+
+- [http](./plugins/outputs/http/README.md) - Contributed by @Dark0096
+
 ### Features
 
 - [#3964](https://github.com/influxdata/telegraf/pull/3964): Add repl_oplog_window_sec metric to mongodb input.
