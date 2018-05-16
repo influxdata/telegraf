@@ -1,6 +1,7 @@
 package linux_wireless
 
 import (
+	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
@@ -109,6 +110,7 @@ func loadWirelessTable(table []byte, dumpZeros bool) (WirelessData, error) {
 	// first 2 headers have a '-' in them, so join those and remove the '-'
 	// also, ignore the first one, since it is the interface name
 	header_fields[0] = strings.ToLower(strings.Replace(h1[1]+h2[1], "-", "", -1))
+	fmt.Println("loadWirelessTable:Header 0: ", header_fields[0])
 	// next headers are composed with sub-headers, so build those.
 	for y := 2; y < len(h1)-2; y++ {
 		tmpStr := strings.Split(h2[y], " ")
@@ -117,14 +119,14 @@ func loadWirelessTable(table []byte, dumpZeros bool) (WirelessData, error) {
 				continue
 			}
 			header_fields[header_count] = strings.ToLower(strings.Replace(h1[y]+"_"+tmpStr[z], " ", "_", -1))
-			//fmt.Println(header_fields[header_count])
+			fmt.Println("loadWirelessTable:Header ", header_count, ": ", header_fields[header_count])
 			header_count++
 		}
 	}
 	// last 2 are simple multi-line headers, so join them
 	for t := len(h1) - 2; t < len(h1); t++ {
 		header_fields[header_count] = strings.ToLower(h1[t] + "_" + h2[t])
-		//fmt.Println(header_fields[header_count])
+		fmt.Println("loadWirelessTable:Header ", header_count, ": ", header_fields[header_count])
 		header_count++
 	}
 	// now let's go through the data and save it for return.
@@ -162,6 +164,7 @@ func loadWirelessTable(table []byte, dumpZeros bool) (WirelessData, error) {
 			}
 		}
 		data[x-2] = sub_data
+		fmt.Println("Data ", x-2, ": ", data[x-2])
 	}
 	// Now fill out the Wireless struct and return it
 	wd.Headers = header_fields

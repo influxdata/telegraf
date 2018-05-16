@@ -44,7 +44,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/kapacitor"
 	_ "github.com/influxdata/telegraf/plugins/inputs/kubernetes"
 	_ "github.com/influxdata/telegraf/plugins/inputs/leofs"
-	_ "github.com/influxdata/telegraf/plugins/inputs/linux_battery"
 	_ "github.com/influxdata/telegraf/plugins/inputs/linux_wireless"
 	_ "github.com/influxdata/telegraf/plugins/inputs/logparser"
 	_ "github.com/influxdata/telegraf/plugins/inputs/lustre2"
