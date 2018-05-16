@@ -2,7 +2,7 @@
 
 Collect syslog messages as per RFC5425.
 
-It acts as a syslog transport receiver.
+It acts as a syslog transport receiver - ie., TLS (or TCP) server.
 
 This plugin listens for syslog messages. When received it parses them extracting metrics.
 
