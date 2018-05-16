@@ -98,7 +98,7 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 		return nil, err
 	}
 
-	config.HttpClient.Transport = &http.Transport{
+	config.Transport = &http.Transport{
 		TLSClientConfig: tlsCfg,
 	}
 
