@@ -10,6 +10,7 @@ import (
 
 	"github.com/gobwas/glob"
 	"github.com/influxdata/telegraf"
+	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
@@ -22,8 +23,9 @@ type Endpoint struct {
 	URL             *url.URL
 	client          *Client
 	lastColls       map[string]time.Time
-	nameCache       map[string]string
+	instanceInfo    map[string]resourceInfo
 	resources       map[string]resource
+	metricNames     map[int32]string
 	discoveryTicker *time.Ticker
 	clientMux       sync.Mutex
 	collectMux      sync.RWMutex
@@ -35,8 +37,8 @@ type resource struct {
 	realTime   bool
 	sampling   int32
 	objects    objectMap
-	metricIds  []types.PerfMetricId
-	wildcards  []string
+	includes   []string
+	excludes   []string
 	getObjects func(*view.ContainerView) (objectMap, error)
 }
 
@@ -49,15 +51,20 @@ type objectRef struct {
 	guest     string
 }
 
+type resourceInfo struct {
+	name    string
+	metrics performance.MetricList
+}
+
 // NewEndpoint returns a new connection to a vCenter based on the URL and configuration passed
 // as parameters.
 func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 	e := Endpoint{
-		URL:         url,
-		Parent:      parent,
-		lastColls:   make(map[string]time.Time),
-		nameCache:   make(map[string]string),
-		initialized: false,
+		URL:          url,
+		Parent:       parent,
+		lastColls:    make(map[string]time.Time),
+		instanceInfo: make(map[string]resourceInfo),
+		initialized:  false,
 	}
 
 	e.resources = map[string]resource{
@@ -66,7 +73,8 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 			realTime:   false,
 			sampling:   300,
 			objects:    make(objectMap),
-			wildcards:  parent.ClusterMetrics,
+			includes:   parent.ClusterMetricInclude,
+			excludes:   parent.ClusterMetricExclude,
 			getObjects: getClusters,
 		},
 		"host": {
@@ -74,7 +82,8 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 			realTime:   true,
 			sampling:   20,
 			objects:    make(objectMap),
-			wildcards:  parent.HostMetrics,
+			includes:   parent.HostMetricInclude,
+			excludes:   parent.HostMetricExclude,
 			getObjects: getHosts,
 		},
 		"vm": {
@@ -82,7 +91,8 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 			realTime:   true,
 			sampling:   20,
 			objects:    make(objectMap),
-			wildcards:  parent.VmMetrics,
+			includes:   parent.VmMetricInclude,
+			excludes:   parent.VmMetricExclude,
 			getObjects: getVMs,
 		},
 		"datastore": {
@@ -90,7 +100,8 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 			realTime:   false,
 			sampling:   300,
 			objects:    make(objectMap),
-			wildcards:  parent.DatastoreMetrics,
+			includes:   parent.DatastoreMetricInclude,
+			excludes:   parent.DatastoreMetricExclude,
 			getObjects: getDatastores,
 		},
 	}
@@ -138,64 +149,19 @@ func (e *Endpoint) setupMetricIds() error {
 		return err
 	}
 	ctx := context.Background()
-
-	metricMap, err := client.Perf.CounterInfoByName(ctx)
+	mn, err := client.Perf.CounterInfoByName(ctx)
 	if err != nil {
 		return err
 	}
-
-	for k, res := range e.resources {
-		if res.enabled {
-			res.metricIds, err = resolveMetricWildcards(metricMap, res.wildcards)
-			if err != nil {
-				return err
-			}
-			e.resources[k] = res
-		}
+	e.metricNames = make(map[int32]string)
+	for name, m := range mn {
+		e.metricNames[m.Key] = name
 	}
-
 	return nil
 }
 
-func resolveMetricWildcards(metricMap map[string]*types.PerfCounterInfo, wildcards []string) ([]types.PerfMetricId, error) {
-	// Nothing specified assumes we're looking at everything
-	//
-	if wildcards == nil || len(wildcards) == 0 {
-		return nil, nil
-	}
-	tmpMap := make(map[string]types.PerfMetricId)
-	for _, pattern := range wildcards {
-		exclude := false
-		if pattern[0] == '!' {
-			pattern = pattern[1:]
-			exclude = true
-		}
-		p, err := glob.Compile(pattern)
-		if err != nil {
-			return nil, err
-		}
-		for name, info := range metricMap {
-			if p.Match(name) {
-				if exclude {
-					delete(tmpMap, name)
-					log.Printf("D! excluded %s", name)
-				} else {
-					tmpMap[name] = types.PerfMetricId{CounterId: info.Key}
-					log.Printf("D! included %s", name)
-				}
-			}
-		}
-	}
-	result := make([]types.PerfMetricId, len(tmpMap))
-	idx := 0
-	for _, id := range tmpMap {
-		result[idx] = id
-		idx++
-	}
-	return result, nil
-}
-
 func (e *Endpoint) discover() error {
+	start := time.Now()
 	log.Printf("D! Discover new objects for %s", e.URL.Host)
 
 	client, err := e.getClient()
@@ -203,12 +169,24 @@ func (e *Endpoint) discover() error {
 		return err
 	}
 
-	nameCache := make(map[string]string)
+	instInfo := make(map[string]resourceInfo)
 	resources := e.resources
 
 	// Populate resource objects, and endpoint name cache
 	//
 	for k, res := range resources {
+		// Don't be tempted to skip disabled resources here! We may need them to resolve parent references
+		//
+		// Precompile includes and excludes
+		//
+		cInc := make([]glob.Glob, len(res.includes))
+		for i, p := range res.includes {
+			cInc[i] = glob.MustCompile(p)
+		}
+		cExc := make([]glob.Glob, len(res.excludes))
+		for i, p := range res.excludes {
+			cExc[i] = glob.MustCompile(p)
+		}
 		// Need to do this for all resource types even if they are not enabled (but datastore)
 		//
 		if res.enabled || k != "datastore" {
@@ -217,9 +195,46 @@ func (e *Endpoint) discover() error {
 				e.checkClient()
 				return err
 			}
-
 			for _, obj := range objects {
-				nameCache[obj.ref.Value] = obj.name
+				ctx := context.Background()
+				mList := make(performance.MetricList, 0)
+				metrics, err := e.client.Perf.AvailableMetric(ctx, obj.ref.Reference(), res.sampling)
+				if err != nil {
+					e.checkClient()
+					return err
+				}
+
+				// Mmetric metadata gathering is only needed for enabled resource types.
+				//
+				if res.enabled {
+					for _, m := range metrics {
+						include := len(cInc) == 0 // Empty include list means include all
+						mName := e.metricNames[m.CounterId]
+						if !include {
+							for _, p := range cInc {
+								if p.Match(mName) {
+									include = true
+									break
+								}
+							}
+						}
+						if include {
+							for _, p := range cExc {
+								if p.Match(mName) {
+									include = false
+									log.Printf("D! Excluded: %s", mName)
+									break
+								}
+							}
+							if include {
+								mList = append(mList, m)
+								log.Printf("D! Included %s Sampling: %d", mName, res.sampling)
+							}
+						}
+
+					}
+				}
+				instInfo[obj.ref.Value] = resourceInfo{name: obj.name, metrics: mList}
 			}
 			res.objects = objects
 			resources[k] = res
@@ -231,10 +246,10 @@ func (e *Endpoint) discover() error {
 	e.collectMux.Lock()
 	defer e.collectMux.Unlock()
 
-	e.nameCache = nameCache
+	e.instanceInfo = instInfo
 	e.resources = resources
 
-	log.Printf("D! Discovered %d objects for %s", len(nameCache), e.URL.Host)
+	log.Printf("D! Discovered %d objects for %s. Took %s", len(instInfo), e.URL.Host, time.Now().Sub(start))
 
 	return nil
 }
@@ -349,24 +364,19 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 	latest, hasLatest := e.lastColls[resourceType]
 	if hasLatest {
 		elapsed := time.Now().Sub(latest).Seconds()
+		log.Printf("D! Latest: %s, elapsed: %f, resource: %s", latest, elapsed, resourceType)
 		if elapsed < float64(res.sampling) {
 			// No new data would be available. We're outta here!
 			//
 			log.Printf("D! Sampling period for %s of %d has not elapsed for %s", resourceType, res.sampling, e.URL.Host)
 			return 0, 0, nil
 		}
-	}
-
-	if !hasLatest {
+	} else {
 		latest = now.Add(-time.Duration(res.sampling) * time.Second)
 		e.lastColls[resourceType] = latest
 	}
 
-	if len(res.metricIds) == 0 {
-		log.Printf("D! Collecting all metrics for %d objects of type %s for %s", len(res.objects), resourceType, e.URL.Host)
-	} else {
-		log.Printf("D! Collecting %d metrics for %d objects of type %s for %s", len(res.metricIds), len(res.objects), resourceType, e.URL.Host)
-	}
+	log.Printf("D! Collecting metrics for %d objects of type %s for %s", len(res.objects), resourceType, e.URL.Host)
 
 	client, err := e.getClient()
 	if err != nil {
@@ -386,10 +396,14 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 	lastTS := latest
 	pqs := make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
 	for _, object := range res.objects {
+		info, found := e.instanceInfo[object.ref.Value]
+		if !found {
+			log.Printf("E! Internal error: Instance info not found for MOID %s", object.ref)
+		}
 		pq := types.PerfQuerySpec{
 			Entity:     object.ref,
 			MaxSample:  1,
-			MetricId:   res.metricIds,
+			MetricId:   info.metrics,
 			IntervalId: res.sampling,
 		}
 
@@ -426,34 +440,39 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 				for _, v := range em.Value {
 					name := v.Name
 					for idx, value := range v.Value {
-
-						objectName := e.nameCache[moid]
+						instInfo, found := e.instanceInfo[moid]
+						if !found {
+							log.Printf("E! MOID % not found in cache. Skipping!", moid)
+							continue
+						}
 						t := map[string]string{
 							"vcenter":  e.URL.Host,
-							"hostname": objectName,
+							"hostname": instInfo.name,
 							"moid":     moid,
 						}
 
 						objectRef, ok := res.objects[moid]
 						if ok {
-							parent := e.nameCache[objectRef.parentRef.Value]
-							switch resourceType {
-							case "host":
-								t["cluster"] = parent
-								break
+							parent, found := e.instanceInfo[objectRef.parentRef.Value]
+							if found {
+								switch resourceType {
+								case "host":
+									t["cluster"] = parent.name
+									break
 
-							case "vm":
-								t["guest"] = objectRef.guest
-								t["esxhost"] = parent
-								hostRes := e.resources["host"]
-								hostRef, ok := hostRes.objects[objectRef.parentRef.Value]
-								if ok {
-									cluster, ok := e.nameCache[hostRef.parentRef.Value]
+								case "vm":
+									t["guest"] = objectRef.guest
+									t["esxhost"] = parent.name
+									hostRes := e.resources["host"]
+									hostRef, ok := hostRes.objects[objectRef.parentRef.Value]
 									if ok {
-										t["cluster"] = cluster
+										cluster, ok := e.instanceInfo[hostRef.parentRef.Value]
+										if ok {
+											t["cluster"] = cluster.name
+										}
 									}
+									break
 								}
-								break
 							}
 						}
 
