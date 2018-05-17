@@ -17,6 +17,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
+const defaultReadTimeout = time.Millisecond * 500
+
 // Syslog is a syslog plugin
 type Syslog struct {
 	Address            string `toml:"server"`
@@ -25,7 +27,9 @@ type Syslog struct {
 	Key                string `toml:"tls_key"`
 	InsecureSkipVerify bool
 	KeepAlivePeriod    *internal.Duration
+	ReadTimeout        *internal.Duration
 	MaxConnections     int
+	BestEffort         bool
 
 	now func() time.Time
 
@@ -33,6 +37,7 @@ type Syslog struct {
 	wg sync.WaitGroup
 
 	listener      net.Listener
+	tlsConfig     *tls.Config
 	connections   map[string]net.Conn
 	connectionsMu sync.Mutex
 }
@@ -43,7 +48,7 @@ var sampleConfig = `
     ## Address and port to host the syslog receiver.
     ## If no server is specified, then localhost is used as the host.
     ## If no port is specified, 6514 is used (RFC5425#section-4.1).
-    server = [":6514"]
+    server = ":6514"
 
     ## TLS Config
     # tls_cacert = "/etc/telegraf/ca.pem"
@@ -58,9 +63,18 @@ var sampleConfig = `
 	## Defaults to the OS configuration.
 	# keep_alive_period = "5m"
 
-	## Maximum number of concurrent connections.
-	## 0 (default) is unlimited.
+	## Maximum number of concurrent connections (default = 0).
+	## 0 means is unlimited.
 	# max_connections = 1024
+
+	## Read timeout (default = 500ms).
+  	## Only applies to stream sockets (e.g. TCP).
+  	## 0 means is unlimited.
+	read_timeout = 500ms
+
+	## Whether to parse in best effort mode or not (default = false).
+	## By default best effort parsing is off.
+	# best_effort = false
 `
 
 // SampleConfig returns sample configuration message
@@ -87,15 +101,13 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 	// 	"address": s.Address,
 	// }
 
-	var err error
-	var tlsConfig *tls.Config
-	if tlsConfig, err = internal.GetTLSConfig(s.Cert, s.Key, s.Cacert, s.InsecureSkipVerify); tlsConfig != nil {
-		s.listener, err = tls.Listen("tcp", s.Address, tlsConfig)
-	} else {
-		s.listener, err = net.Listen("tcp", s.Address)
-	}
+	l, err := net.Listen("tcp", s.Address)
 	if err != nil {
 		return err
+	}
+	s.listener = l
+	if tlsConfig, _ := internal.GetTLSConfig(s.Cert, s.Key, s.Cacert, s.InsecureSkipVerify); tlsConfig != nil {
+		s.tlsConfig = tlsConfig
 	}
 
 	s.wg.Add(1)
@@ -112,12 +124,17 @@ func (s *Syslog) listen(acc telegraf.Accumulator) {
 
 	for {
 		conn, err := s.listener.Accept()
+
 		if err != nil {
+			log.Println(err)
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				log.Println(err)
 				acc.AddError(err)
 			}
 			break
+		}
+		var tcpConn, _ = conn.(*net.TCPConn)
+		if s.tlsConfig != nil {
+			conn = tls.Server(conn, s.tlsConfig)
 		}
 
 		s.connectionsMu.Lock()
@@ -129,37 +146,58 @@ func (s *Syslog) listen(acc telegraf.Accumulator) {
 		s.connections[conn.RemoteAddr().String()] = conn
 		s.connectionsMu.Unlock()
 
-		if err := s.setKeepAlive(conn); err != nil {
+		if err := s.setKeepAlive(tcpConn); err != nil {
 			acc.AddError(fmt.Errorf("unable to configure keep alive (%s): %s", s.Address, err))
 		}
 
 		go s.handle(conn, acc)
 	}
+
+	s.connectionsMu.Lock()
+	for _, c := range s.connections {
+		c.Close()
+	}
+	s.connectionsMu.Unlock()
 }
+
+func (s *Syslog) removeConnection(c net.Conn) {
+	s.connectionsMu.Lock()
+	delete(s.connections, c.RemoteAddr().String())
+	s.connectionsMu.Unlock()
+}
+
 func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
+	defer s.removeConnection(conn)
 	defer conn.Close()
 
-	p := rfc5425.NewParser(conn, rfc5425.WithBestEffort())
+	if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
+		conn.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))
+	}
+
+	var p *rfc5425.Parser
+	if s.BestEffort {
+		p = rfc5425.NewParser(conn, rfc5425.WithBestEffort())
+	} else {
+		p = rfc5425.NewParser(conn)
+	}
+
 	p.ParseExecuting(func(r *rfc5425.Result) {
 		s.store(*r, acc)
 	})
 }
 
-func (s *Syslog) setKeepAlive(c net.Conn) error {
+func (s *Syslog) setKeepAlive(c *net.TCPConn) error {
 	if s.KeepAlivePeriod == nil {
 		return nil
 	}
-	tcpConn, ok := c.(*net.TCPConn)
-	if !ok {
-		return fmt.Errorf("not a tcp connection")
-	}
+
 	if s.KeepAlivePeriod.Duration == 0 {
-		return tcpConn.SetKeepAlive(false)
+		return c.SetKeepAlive(false)
 	}
-	if err := tcpConn.SetKeepAlive(true); err != nil {
+	if err := c.SetKeepAlive(true); err != nil {
 		return err
 	}
-	return tcpConn.SetKeepAlivePeriod(s.KeepAlivePeriod.Duration)
+	return c.SetKeepAlivePeriod(s.KeepAlivePeriod.Duration)
 }
 
 func (s *Syslog) store(res rfc5425.Result, acc telegraf.Accumulator) {
@@ -252,9 +290,14 @@ func (s *Syslog) Stop() {
 
 func init() {
 	inputs.Add("syslog", func() telegraf.Input {
+		d := &internal.Duration{
+			Duration: defaultReadTimeout,
+		}
+
 		return &Syslog{
-			Address: ":6514",
-			now:     time.Now,
+			Address:     ":6514",
+			now:         time.Now,
+			ReadTimeout: d,
 		}
 	})
 }
