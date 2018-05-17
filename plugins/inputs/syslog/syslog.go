@@ -89,9 +89,11 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 
 	var err error
 	var tlsConfig *tls.Config
-	if tlsConfig, err = internal.GetTLSConfig(s.Cert, s.Key, s.Cacert, s.InsecureSkipVerify); err != nil && tlsConfig != nil {
+	if tlsConfig, err = internal.GetTLSConfig(s.Cert, s.Key, s.Cacert, s.InsecureSkipVerify); tlsConfig != nil {
+		log.Println("TLS")
 		s.listener, err = tls.Listen("tcp", s.Address, tlsConfig)
 	} else {
+		log.Println("TCP")
 		s.listener, err = net.Listen("tcp", s.Address)
 	}
 	if err != nil {

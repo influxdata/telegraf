@@ -6,7 +6,6 @@ import (
 	"crypto/x509"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"sync"
 	"testing"
@@ -96,11 +95,13 @@ var (
 	serviceKeyFile       string
 )
 
+var defaultTime = time.Unix(0, 0)
+
 func newTCPSyslogReceiver() *Syslog {
 	return &Syslog{
 		Address: address,
 		now: func() time.Time {
-			return time.Unix(0, 0)
+			return defaultTime
 		},
 	}
 }
@@ -150,10 +151,13 @@ func getTLSSyslogSender() net.Conn {
 		}
 
 		config := &tls.Config{
-			RootCAs:      cas,
-			Certificates: []tls.Certificate{clientCert},
-			MinVersion:   tls.VersionTLS12,
-			MaxVersion:   tls.VersionTLS12,
+			RootCAs:            cas,
+			Certificates:       []tls.Certificate{clientCert},
+			MinVersion:         tls.VersionTLS12,
+			MaxVersion:         tls.VersionTLS12,
+			Renegotiation:      tls.RenegotiateNever,
+			InsecureSkipVerify: false,
+			ServerName:         "localhost",
 		}
 
 		client, err = tls.Dial("tcp", address, config)
@@ -165,17 +169,90 @@ func getTLSSyslogSender() net.Conn {
 	return client
 }
 
-func getTCPSyslogSender() net.Conn {
-	initClient.Do(func() {
-		var err error
-		client, err = net.Dial("tcp", address)
-		log.Println("dial to>", client, err)
-		if err != nil {
-			panic(err)
-		}
-	})
+type testCase struct {
+	name string
+	data []byte
+	want []testutil.Metric
+	werr bool
+}
 
-	return client
+var testCases = []testCase{
+	{
+		name: "1/min/ok",
+		data: []byte("16 <1>1 - - - - - -"),
+		want: []testutil.Metric{
+			testutil.Metric{
+				Measurement: "syslog",
+				Fields: map[string]interface{}{
+					"version": uint16(1),
+				},
+				Tags: map[string]string{
+					"severity":         "1",
+					"severity_level":   "alert",
+					"facility":         "0",
+					"facility_message": "kernel messages",
+				},
+				Time: defaultTime,
+			},
+		},
+		werr: false,
+	},
+	{
+		name: "2/min/ok",
+		data: []byte("16 <1>2 - - - - - -17 <4>11 - - - - - -"),
+		want: []testutil.Metric{
+			testutil.Metric{
+				Measurement: "syslog",
+				Fields: map[string]interface{}{
+					"version": uint16(2),
+				},
+				Tags: map[string]string{
+					"severity":         "1",
+					"severity_level":   "alert",
+					"facility":         "0",
+					"facility_message": "kernel messages",
+				},
+				Time: defaultTime,
+			},
+			testutil.Metric{
+				Measurement: "syslog",
+				Fields: map[string]interface{}{
+					"version": uint16(11),
+				},
+				Tags: map[string]string{
+					"severity":         "4",
+					"severity_level":   "warning",
+					"facility":         "0",
+					"facility_message": "kernel messages",
+				},
+				Time: defaultTime,
+			},
+		},
+		werr: false,
+	},
+}
+
+func test(t *testing.T, acc *testutil.Accumulator, conn net.Conn) {
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			acc.ClearMetrics()
+			// Write
+			conn.Write(tc.data)
+			// Wait that the the number of data points is accumulated
+			// Since the receiver is running concurrently
+			acc.Wait(len(tc.want))
+			// Verify
+			if len(acc.Errors) > 0 != tc.werr {
+				t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tc.werr, acc.Errors)
+			}
+
+			var got []testutil.Metric
+			for _, metric := range acc.Metrics {
+				got = append(got, *metric)
+			}
+			require.Equal(t, tc.want, got)
+		})
+	}
 }
 
 func TestTCP(t *testing.T) {
@@ -183,49 +260,27 @@ func TestTCP(t *testing.T) {
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, receiver.Start(acc))
+	defer receiver.Stop()
 
 	conn, err := net.Dial("tcp", address)
 	require.NoError(t, err)
-	log.Println("dial to>", conn)
 
-	conn.Write([]byte("16 <1>2 - - - - - -17 <4>11 - - - - - -"))
-
-	want := []testutil.Metric{
-		testutil.Metric{
-			Measurement: "syslog",
-			Fields: map[string]interface{}{
-				"version": uint16(2),
-			},
-			Tags: map[string]string{
-				"severity":         "1",
-				"severity_level":   "alert",
-				"facility":         "0",
-				"facility_message": "kernel messages",
-			},
-			Time: receiver.now(),
-		},
-		testutil.Metric{
-			Measurement: "syslog",
-			Fields: map[string]interface{}{
-				"version": uint16(11),
-			},
-			Tags: map[string]string{
-				"severity":         "4",
-				"severity_level":   "warning",
-				"facility":         "0",
-				"facility_message": "kernel messages",
-			},
-			Time: receiver.now(),
-		},
-	}
-
-	acc.Wait(len(want))
-	var got []testutil.Metric
-	for _, metric := range acc.Metrics {
-		got = append(got, *metric)
-	}
-	require.Equal(t, want, got)
+	test(t, acc, conn)
 
 	conn.Close()
-	receiver.Stop()
+}
+
+func TestTLS(t *testing.T) {
+	receiver := newTLSSyslogReceiver()
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, receiver.Start(acc))
+	defer receiver.Stop()
+
+	conn := getTLSSyslogSender()
+	require.NotNil(t, conn)
+
+	test(t, acc, conn)
+
+	conn.Close()
 }
