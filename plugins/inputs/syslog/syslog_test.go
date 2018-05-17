@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -169,71 +172,8 @@ func getTLSSyslogSender() net.Conn {
 	return client
 }
 
-type testCase struct {
-	name string
-	data []byte
-	want []testutil.Metric
-	werr bool
-}
-
-var testCases = []testCase{
-	{
-		name: "1/min/ok",
-		data: []byte("16 <1>1 - - - - - -"),
-		want: []testutil.Metric{
-			testutil.Metric{
-				Measurement: "syslog",
-				Fields: map[string]interface{}{
-					"version": uint16(1),
-				},
-				Tags: map[string]string{
-					"severity":         "1",
-					"severity_level":   "alert",
-					"facility":         "0",
-					"facility_message": "kernel messages",
-				},
-				Time: defaultTime,
-			},
-		},
-		werr: false,
-	},
-	{
-		name: "2/min/ok",
-		data: []byte("16 <1>2 - - - - - -17 <4>11 - - - - - -"),
-		want: []testutil.Metric{
-			testutil.Metric{
-				Measurement: "syslog",
-				Fields: map[string]interface{}{
-					"version": uint16(2),
-				},
-				Tags: map[string]string{
-					"severity":         "1",
-					"severity_level":   "alert",
-					"facility":         "0",
-					"facility_message": "kernel messages",
-				},
-				Time: defaultTime,
-			},
-			testutil.Metric{
-				Measurement: "syslog",
-				Fields: map[string]interface{}{
-					"version": uint16(11),
-				},
-				Tags: map[string]string{
-					"severity":         "4",
-					"severity_level":   "warning",
-					"facility":         "0",
-					"facility_message": "kernel messages",
-				},
-				Time: defaultTime,
-			},
-		},
-		werr: false,
-	},
-}
-
 func test(t *testing.T, acc *testutil.Accumulator, conn net.Conn) {
-	for _, tc := range testCases {
+	for _, tc := range getTestCases() {
 		t.Run(tc.name, func(t *testing.T) {
 			acc.ClearMetrics()
 			// Write
@@ -245,12 +185,13 @@ func test(t *testing.T, acc *testutil.Accumulator, conn net.Conn) {
 			if len(acc.Errors) > 0 != tc.werr {
 				t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tc.werr, acc.Errors)
 			}
-
 			var got []testutil.Metric
 			for _, metric := range acc.Metrics {
 				got = append(got, *metric)
 			}
-			require.Equal(t, tc.want, got)
+			if !cmp.Equal(tc.want, got) {
+				t.Fatalf("Got (+) / Want (-)\n %s", cmp.Diff(tc.want, got))
+			}
 		})
 	}
 }
@@ -283,4 +224,237 @@ func TestTLS(t *testing.T) {
 	test(t, acc, conn)
 
 	conn.Close()
+}
+
+func TestListenError(t *testing.T) {
+	receiver := &Syslog{
+		Address: "wrong address",
+	}
+	require.Error(t, receiver.Start(&testutil.Accumulator{}))
+}
+
+func TestKeepAlive(t *testing.T) {
+
+}
+
+func TestMaxConnections(t *testing.T) {
+
+}
+
+type testCase struct {
+	name string
+	data []byte
+	want []testutil.Metric
+	werr bool // want errors ?
+}
+
+func getRandomString(n int) string {
+	const (
+		letterBytes   = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		letterIdxBits = 6                    // 6 bits to represent a letter index
+		letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+		letterIdxMax  = 63 / letterIdxBits   // Number of letter indices fitting in 63 bits
+	)
+
+	src := rand.NewSource(time.Now().UnixNano())
+	b := make([]byte, n)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters
+	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			b[i] = letterBytes[idx]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
+	}
+
+	return string(b)
+}
+
+func getTestCases() []testCase {
+	maxP := uint8(191)
+	maxV := uint16(999)
+	maxTS := "2017-12-31T23:59:59.999999+00:00"
+	maxH := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabc"
+	maxA := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdef"
+	maxPID := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzab"
+	maxMID := "abcdefghilmnopqrstuvzabcdefghilm"
+	message7681 := getRandomString(7681)
+
+	testCases := []testCase{
+		{
+			name: "1st/min/ok",
+			data: []byte("16 <1>1 - - - - - -"),
+			want: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": uint16(1),
+					},
+					Tags: map[string]string{
+						"severity":         "1",
+						"severity_level":   "alert",
+						"facility":         "0",
+						"facility_message": "kernel messages",
+					},
+					Time: defaultTime,
+				},
+			},
+		},
+		{
+			name: "1st/avg/ok",
+			data: []byte(`188 <29>1 2016-02-21T04:32:57+00:00 web1 someservice 2341 2 [origin][meta sequence="14125553" service="someservice"] "GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`),
+			want: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version":       uint16(1),
+						"procid":        "2341",
+						"msgid":         "2",
+						"message":       `"GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`,
+						"origin":        true,
+						"meta sequence": "14125553",
+						"meta service":  "someservice",
+					},
+					Tags: map[string]string{
+						"severity":         "5",
+						"severity_level":   "notice",
+						"facility":         "3",
+						"facility_message": "system daemons",
+						"hostname":         "web1",
+						"appname":          "someservice",
+					},
+					Time: time.Unix(1456029177, 0).UTC(),
+				},
+			},
+		},
+		{
+			name: "1st/min/ok//2nd/min/ok",
+			data: []byte("16 <1>2 - - - - - -17 <4>11 - - - - - -"),
+			want: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": uint16(2),
+					},
+					Tags: map[string]string{
+						"severity":         "1",
+						"severity_level":   "alert",
+						"facility":         "0",
+						"facility_message": "kernel messages",
+					},
+					Time: defaultTime,
+				},
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": uint16(11),
+					},
+					Tags: map[string]string{
+						"severity":         "4",
+						"severity_level":   "warning",
+						"facility":         "0",
+						"facility_message": "kernel messages",
+					},
+					Time: defaultTime,
+				},
+			},
+		},
+		{
+			name: "1st/utf8/ok",
+			data: []byte("23 <1>1 - - - - - - hellø"),
+			want: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": uint16(1),
+						"message": "hellø",
+					},
+					Tags: map[string]string{
+						"severity":         "1",
+						"severity_level":   "alert",
+						"facility":         "0",
+						"facility_message": "kernel messages",
+					},
+					Time: defaultTime,
+				},
+			},
+			werr: false,
+		},
+		{
+			name: "1st/nl/ok", // newline
+			data: []byte(`28 <1>1 - - - - - - hello
+world`),
+			want: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": uint16(1),
+						"message": "hello\nworld",
+					},
+					Tags: map[string]string{
+						"severity":         "1",
+						"severity_level":   "alert",
+						"facility":         "0",
+						"facility_message": "kernel messages",
+					},
+					Time: defaultTime,
+				},
+			},
+		},
+		{
+			name: "1st/max/ok",
+			data: []byte(fmt.Sprintf("8192 <%d>%d %s %s %s %s %s - %s", maxP, maxV, maxTS, maxH, maxA, maxPID, maxMID, message7681)),
+			want: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": maxV,
+						"message": message7681,
+						"procid":  maxPID,
+						"msgid":   maxMID,
+					},
+					Tags: map[string]string{
+						"severity":         "7",
+						"severity_level":   "debug",
+						"facility":         "23",
+						"facility_message": "local use 7 (local7)",
+						"hostname":         maxH,
+						"appname":          maxA,
+					},
+					Time: time.Unix(1514764799, 999999000).UTC(),
+				},
+			},
+		},
+		// {
+		// 	name: "1st/uf/ko", // underflow (msglen less than provided octets)
+		// 	data: []byte("16 <1>1"),
+		// 	want: []testutil.Metric{
+		// 		testutil.Metric{
+		// 			Measurement: "syslog",
+		// 			Fields: map[string]interface{}{
+		// 				"version": uint16(1),
+		// 			},
+		// 			Tags: map[string]string{
+		// 				"severity":         "1",
+		// 				"severity_level":   "alert",
+		// 				"facility":         "0",
+		// 				"facility_message": "kernel messages",
+		// 			},
+		// 			Time: defaultTime,
+		// 		},
+		// 	},
+		// },
+		// {
+		// 	name: "1st/of/ko", // overflow (msglen greather then max allowed octets)
+		// 	data: []byte(fmt.Sprintf("8193 <%d>%d %s %s %s %s %s - %s", maxP, maxV, maxTS, maxH, maxA, maxPID, maxMID, message7681)),
+		// 	want: []testutil.Metric{},
+		// 	// werr: true,
+		// },
+	}
+
+	return testCases
 }

@@ -90,10 +90,8 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 	var err error
 	var tlsConfig *tls.Config
 	if tlsConfig, err = internal.GetTLSConfig(s.Cert, s.Key, s.Cacert, s.InsecureSkipVerify); tlsConfig != nil {
-		log.Println("TLS")
 		s.listener, err = tls.Listen("tcp", s.Address, tlsConfig)
 	} else {
-		log.Println("TCP")
 		s.listener, err = net.Listen("tcp", s.Address)
 	}
 	if err != nil {
@@ -114,7 +112,6 @@ func (s *Syslog) listen(acc telegraf.Accumulator) {
 
 	for {
 		conn, err := s.listener.Accept()
-		log.Println("list to>", conn)
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 				log.Println(err)
@@ -166,7 +163,6 @@ func (s *Syslog) setKeepAlive(c net.Conn) error {
 }
 
 func (s *Syslog) store(res rfc5425.Result, acc telegraf.Accumulator) {
-	log.Println("STORE")
 	if res.Error != nil {
 		acc.AddError(res.Error)
 	}
@@ -206,7 +202,6 @@ func tags(msg *rfc5424.SyslogMessage) map[string]string {
 		ts["appname"] = *msg.Appname()
 	}
 
-	log.Println(ts)
 	return ts
 }
 
@@ -241,8 +236,6 @@ func fields(msg *rfc5424.SyslogMessage) map[string]interface{} {
 		}
 	}
 
-	log.Println(flds)
-
 	return flds
 }
 
@@ -254,7 +247,7 @@ func (s *Syslog) Stop() {
 	s.listener.Close()
 	s.wg.Wait()
 
-	log.Println("I! Stopped syslog receiver at ", s.Address)
+	log.Printf("I! Stopped syslog receiver at %s\n", s.Address)
 }
 
 func init() {
