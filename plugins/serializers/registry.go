@@ -7,6 +7,7 @@ import (
 	"github.com/influxdata/telegraf"
 
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
+	"github.com/influxdata/telegraf/plugins/serializers/graphite11"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
@@ -104,6 +105,13 @@ func NewInfluxSerializer() (Serializer, error) {
 
 func NewGraphiteSerializer(prefix, template string) (Serializer, error) {
 	return &graphite.GraphiteSerializer{
+		Prefix:   prefix,
+		Template: template,
+	}, nil
+}
+
+func NewGraphite11Serializer(prefix, template string) (Serializer, error) {
+	return &graphite11.Graphite11Serializer{
 		Prefix:   prefix,
 		Template: template,
 	}, nil

@@ -11,6 +11,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/elasticsearch"
 	_ "github.com/influxdata/telegraf/plugins/outputs/file"
 	_ "github.com/influxdata/telegraf/plugins/outputs/graphite"
+	_ "github.com/influxdata/telegraf/plugins/outputs/graphite11"
 	_ "github.com/influxdata/telegraf/plugins/outputs/graylog"
 	_ "github.com/influxdata/telegraf/plugins/outputs/http"
 	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb"
