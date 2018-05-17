@@ -5,11 +5,11 @@ package win_perf_counters
 import (
 	"errors"
 	"fmt"
-	"strings"
-	"unsafe"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"regexp"
+	"strings"
+	"time"
 )
 
 var sampleConfig = `
@@ -69,9 +69,12 @@ type Win_PerfCounters struct {
 	PrintValid      bool
 	PreVistaSupport bool
 	Object          []perfobject
+	WarnOnMissing   bool
+	FailOnMissing   bool
 
 	configParsed bool
 	itemCache    []*item
+	queryHandle  PDH_HQUERY
 }
 
 type perfobject struct {
@@ -98,28 +101,114 @@ type item struct {
 var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 	" ", "_", "%", "Percent", `\`, "")
 
+//General Counter path pattern is: \\computer\object(parent/instance#index)\counter
+//parent/instance#index part is skipped in single instance objects (e.g. Memory): \\computer\object\counter
+
+var counterPathRE = regexp.MustCompile(`\\\\.*\\(.*)\\(.*)`)
+var objectInstanceRE = regexp.MustCompile(`(.*)\((.*)\)`)
+
+//get object name, instance name (if available) and counter name from counter path
+func extractObjectInstanceCounterFromQueryRE(query string) (object string, instance string, counter string, err error) {
+	pathParts := counterPathRE.FindAllStringSubmatch(query, -1)
+	if pathParts == nil || len(pathParts[0]) != 3 {
+		err = errors.New("Could not extract counter info from: " + query)
+		return
+	}
+	counter = pathParts[0][2]
+	//try to get instance name
+	objectInstanceParts := objectInstanceRE.FindAllStringSubmatch(pathParts[0][1], -1)
+	if objectInstanceParts == nil || len(objectInstanceParts[0]) != 3 {
+		object = pathParts[0][1]
+	} else {
+		object = objectInstanceParts[0][1]
+		instance = objectInstanceParts[0][2]
+	}
+	return
+}
+
+
+func extractObjectInstanceCounterFromQuery(query string) (object string, instance string, counter string, err error) {
+	left_paren_idx := strings.Index(query, "(")
+	right_paren_idx := strings.Index(query, ")")
+
+	if left_paren_idx != -1 && right_paren_idx != -1 {
+		instance = query[left_paren_idx+1 : right_paren_idx]
+	}
+
+	last_slash_idx := strings.LastIndex(query, "\\")
+
+	if last_slash_idx == -1 {
+		err = errors.New("Could not extract counter name from: " + query)
+		return
+	}
+
+	counter = query[last_slash_idx:]
+
+	prelast_slash_idx := strings.LastIndex(query[:last_slash_idx], "\\")
+
+	if prelast_slash_idx == -1 {
+		err = errors.New("Could not extract object name from: " + query)
+		return
+	}
+
+	objNameEndInd := last_slash_idx
+
+	if left_paren_idx != -1 {
+		objNameEndInd = left_paren_idx
+	}
+
+	object = query[prelast_slash_idx+1 : objNameEndInd]
+
+	return
+}
+
 func (m *Win_PerfCounters) AddItem(query string, objectName string, counter string, instance string,
 	measurement string, include_total bool) error {
 
-	var handle PDH_HQUERY
 	var counterHandle PDH_HCOUNTER
-	ret := PdhOpenQuery(0, 0, &handle)
-	if m.PreVistaSupport {
-		ret = PdhAddCounter(handle, query, 0, &counterHandle)
+	var ret uint32
+	if !PdhAddEnglishCounterSupported() {
+		ret = PdhAddCounter(m.queryHandle, query, 0, &counterHandle)
+		if ret != ERROR_SUCCESS {
+			return errors.New(PdhFormatError(ret))
+		}
 	} else {
-		ret = PdhAddEnglishCounter(handle, query, 0, &counterHandle)
+		ret = PdhAddEnglishCounter(m.queryHandle, query, 0, &counterHandle)
+		if ret != ERROR_SUCCESS {
+			return errors.New(PdhFormatError(ret))
+		}
+		ci, err := GetCounterInfo(counterHandle)
+		if err != nil {
+			return err
+		}
+		query = UTF16PtrToString(ci.SzFullPath)
 	}
 
-	// Call PdhCollectQueryData one time to check existence of the counter
-	ret = PdhCollectQueryData(handle)
-	if ret != ERROR_SUCCESS {
-		PdhCloseQuery(handle)
-		return errors.New(PdhFormatError(ret))
+	counters, err := ExpandWildCardPath(query)
+	if err != nil {
+		return err
 	}
 
-	newItem := &item{query, objectName, counter, instance, measurement,
-		include_total, handle, counterHandle}
-	m.itemCache = append(m.itemCache, newItem)
+	for _, counterPath := range counters {
+		ret = PdhAddCounter(m.queryHandle, counterPath, 0, &counterHandle)
+		if ret != ERROR_SUCCESS {
+			return errors.New(PdhFormatError(ret))
+		}
+
+		parsedObjectName, parsedInstance, parsedCounter, err := extractObjectInstanceCounterFromQueryRE(counterPath)
+		if err != nil {
+			return err
+		}
+
+		if parsedInstance == "_Total" && !include_total {
+			continue
+		}
+
+		newItem := &item{counterPath, parsedObjectName, parsedCounter, parsedInstance, measurement,
+			include_total, m.queryHandle, counterHandle}
+		//fmt.Printf("Added q: %s, o: %s, i: %s, c: %s\n", newItem.query, newItem.objectName, newItem.instance, newItem.counter)
+		m.itemCache = append(m.itemCache, newItem)
+	}
 
 	return nil
 }
@@ -134,6 +223,8 @@ func (m *Win_PerfCounters) SampleConfig() string {
 
 func (m *Win_PerfCounters) ParseConfig() error {
 	var query string
+
+	start := time.Now()
 
 	if len(m.Object) > 0 {
 		for _, PerfObject := range m.Object {
@@ -155,22 +246,25 @@ func (m *Win_PerfCounters) ParseConfig() error {
 							fmt.Printf("Valid: %s\n", query)
 						}
 					} else {
-						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
+						if m.WarnOnMissing || m.FailOnMissing || PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
 							fmt.Printf("Invalid query: '%s'. Error: %s", query, err.Error())
 						}
-						if PerfObject.FailOnMissing {
+						if m.FailOnMissing || PerfObject.FailOnMissing {
 							return err
 						}
 					}
 				}
 			}
 		}
+		took := time.Now().Sub(start).Seconds()
 
+		fmt.Printf("ParseConfig: Found %d items, took %.2f\n", len(m.itemCache), took)
 		return nil
 	} else {
 		err := errors.New("No performance objects configured!")
 		return err
 	}
+
 }
 
 func (m *Win_PerfCounters) GetParsedItemsForTesting() []*item {
@@ -179,18 +273,25 @@ func (m *Win_PerfCounters) GetParsedItemsForTesting() []*item {
 
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// Parse the config once
+	var err error
 	if !m.configParsed {
-		err := m.ParseConfig()
+		m.queryHandle, err = OpenPerformanceCountersQuery()
+		if err != nil {
+			return err
+		}
+
+		err = m.ParseConfig()
 		m.configParsed = true
 		if err != nil {
 			return err
 		}
+		//some counters need two data samples before computing a value
+		ret := PdhCollectQueryData(m.queryHandle)
+		if ret != ERROR_SUCCESS {
+			return errors.New(PdhFormatError(ret))
+		}
+		time.Sleep(time.Second)
 	}
-
-	var bufSize uint32
-	var bufCount uint32
-	var size uint32 = uint32(unsafe.Sizeof(PDH_FMT_COUNTERVALUE_ITEM_DOUBLE{}))
-	var emptyBuf [1]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE // need at least 1 addressable null ptr.
 
 	type InstanceGrouping struct {
 		name       string
@@ -200,71 +301,39 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 
 	var collectFields = make(map[InstanceGrouping]map[string]interface{})
 
+	start := time.Now()
+
+	ret := PdhCollectQueryData(m.queryHandle)
+	if ret != ERROR_SUCCESS {
+		return errors.New(PdhFormatError(ret))
+	}
+	//some counters
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range m.itemCache {
 		// collect
-		ret := PdhCollectQueryData(metric.handle)
-		if ret == ERROR_SUCCESS {
-			ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle, &bufSize,
-				&bufCount, &emptyBuf[0]) // uses null ptr here according to MSDN.
-			if ret == PDH_MORE_DATA {
-				filledBuf := make([]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE, bufCount*size)
-				if len(filledBuf) == 0 {
-					continue
-				}
-				ret = PdhGetFormattedCounterArrayDouble(metric.counterHandle,
-					&bufSize, &bufCount, &filledBuf[0])
-				for i := 0; i < int(bufCount); i++ {
-					c := filledBuf[i]
-					var s string = UTF16PtrToString(c.SzName)
+		//fmt.Printf("Getting values for %s\n", metric.query)
 
-					var add bool
-
-					if metric.include_total {
-						// If IncludeTotal is set, include all.
-						add = true
-					} else if metric.instance == "*" && !strings.Contains(s, "_Total") {
-						// Catch if set to * and that it is not a '*_Total*' instance.
-						add = true
-					} else if metric.instance == s {
-						// Catch if we set it to total or some form of it
-						add = true
-					} else if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, s) {
-						// If you are using a multiple instance identifier such as "w3wp#1"
-						// phd.dll returns only the first 2 characters of the identifier.
-						add = true
-						s = metric.instance
-					} else if metric.instance == "------" {
-						add = true
-					}
-
-					if add {
-						tags := make(map[string]string)
-						if s != "" {
-							tags["instance"] = s
-						}
-						tags["objectname"] = metric.objectName
-
-						measurement := sanitizedChars.Replace(metric.measurement)
-						if measurement == "" {
-							measurement = "win_perf_counters"
-						}
-						var instance = InstanceGrouping{measurement, s, metric.objectName}
-
-						if collectFields[instance] == nil {
-							collectFields[instance] = make(map[string]interface{})
-						}
-						collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(c.FmtValue.DoubleValue)
-					}
-				}
-
-				filledBuf = nil
-				// Need to at least set bufSize to zero, because if not, the function will not
-				// return PDH_MORE_DATA and will not set the bufSize.
-				bufCount = 0
-				bufSize = 0
+		//time.Sleep(time.Second)
+		//ret = PdhCollectQueryData(metric.handle)
+		//if ret == ERROR_SUCCESS {
+		value, err := GetFormattedCounterValueDouble(metric.counterHandle)
+		if err == nil {
+			measurement := sanitizedChars.Replace(metric.measurement)
+			if measurement == "" {
+				measurement = "win_perf_counters"
 			}
+
+			var instance = InstanceGrouping{measurement, metric.instance, metric.objectName}
+			if collectFields[instance] == nil {
+				collectFields[instance] = make(map[string]interface{})
+			}
+			collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value.DoubleValue)
+		} else {
+			return fmt.Errorf("error while getting value for counter %s: %v", metric.query, err)
 		}
+		//} else {
+		//	return errors.New(PdhFormatError(ret))
+		//}
 	}
 
 	for instance, fields := range collectFields {
@@ -274,7 +343,9 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		}
 		acc.AddFields(instance.name, fields, tags)
 	}
+	took := time.Now().Sub(start).Seconds()
 
+	fmt.Printf("Gather: took %.2f\n", took)
 	return nil
 }
 
