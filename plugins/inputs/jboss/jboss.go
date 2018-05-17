@@ -3,12 +3,10 @@ package jboss
 import (
 	"bytes"
 	"crypto/md5"
-	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -20,6 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -171,14 +170,7 @@ type JBoss struct {
 
 	ResponseTimeout internal.Duration
 
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	client HTTPClient
 }
@@ -222,30 +214,32 @@ func (c *RealHTTPClient) HTTPClient() *http.Client {
 var sampleConfig = `
   # Config for get statistics from JBoss AS
   servers = [
-    "http://[jboss-server-ip]:9090/management",
+    "http://localhost:9090/management",
   ]
-	## Execution Mode
-	exec_as_domain = false
+  ## Execution Mode
+  exec_as_domain = false
+  
   ## Username and password
   username = ""
   password = ""
-	## authorization mode could be "basic" or "digest"
+  
+  ## authorization mode could be "basic" or "digest"
   authorization = "digest"
 
   ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
-	## Metric selection
-	metrics =[
-		"jvm",
-		"web_con",
-		"deployment",
-		"database",
-		"jms",
-	]
+  ## Metric selection
+  metrics =[
+	"jvm",
+	"web_con",
+	"deployment",
+	"database",
+	"jms",
+  ]
 `
 
 // SampleConfig returns a sample configuration block
@@ -256,51 +250,6 @@ func (*JBoss) SampleConfig() string {
 // Description just returns a short description of the JBoss plugin
 func (*JBoss) Description() string {
 	return "Telegraf plugin for gathering metrics from JBoss AS"
-}
-
-func (h *JBoss) checkAuth(host string, uri string) error {
-	url := h.Servers[0]
-
-	method := "POST"
-	req, err := http.NewRequest(method, url, nil)
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusUnauthorized {
-		log.Printf("Recieved status code '%v' auth skipped\n", resp.StatusCode)
-		return nil
-	}
-	digestParts := digestParts(resp)
-	digestParts["uri"] = uri
-	digestParts["method"] = method
-	digestParts["username"] = h.Username
-	digestParts["password"] = h.Password
-	postData := []byte("{\"address\":[\"\"],\"child-type\":\"host\",\"json.pretty\":1,\"operation\":\"read-children-names\"}")
-	req, err = http.NewRequest(method, url, bytes.NewBuffer(postData))
-	h.Authorization = getDigestAuthrization2(digestParts)
-	req.Header.Set("Authorization", h.Authorization)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err = client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-	log.Printf("D! JBoss HTTP response code: %d \n", resp.StatusCode)
-
-	if resp.StatusCode != http.StatusOK {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			panic(err)
-		}
-		log.Printf("D! JBoss HTTP response body: %s \n", string(body))
-		return nil
-	}
-	return nil
 }
 
 func digestParts(resp *http.Response) map[string]string {
@@ -326,25 +275,7 @@ func getMD5(text string) string {
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-func getCnonce() string {
-	b := make([]byte, 8)
-	io.ReadFull(rand.Reader, b)
-	return fmt.Sprintf("%x", b)[:16]
-}
-
 func getDigestAuthrization(digestParts map[string]string) string {
-	d := digestParts
-	ha1 := getMD5(d["username"] + ":" + d["realm"] + ":" + d["password"])
-	ha2 := getMD5(d["method"] + ":" + d["uri"])
-	nonceCount := 00000001
-	cnonce := getCnonce()
-	response := getMD5(fmt.Sprintf("%s:%s:%v:%s:%s:%s", ha1, d["nonce"], nonceCount, cnonce, d["qop"], ha2))
-	authorization := fmt.Sprintf(`Digest username="%s", realm="%s", nonce="%s", uri="%s", cnonce="%s", nc="%v", qop="%s", response="%s"`,
-		d["username"], d["realm"], d["nonce"], d["uri"], cnonce, nonceCount, d["qop"], response)
-	return authorization
-}
-
-func getDigestAuthrization2(digestParts map[string]string) string {
 	d := digestParts
 	ha1 := getMD5(d["username"] + ":" + d["realm"] + ":" + d["password"])
 	ha2 := getMD5(d["method"] + ":" + d["uri"])
@@ -363,8 +294,8 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if h.client.HTTPClient() == nil {
-		tlsCfg, err := internal.GetTLSConfig(
-			h.SSLCert, h.SSLKey, h.SSLCA, h.InsecureSkipVerify)
+		tlsCfg, err := h.ClientConfig.TLSConfig()
+
 		if err != nil {
 			return err
 		}
@@ -389,7 +320,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 			hosts := HostResponse{Outcome: "", Result: []string{"standalone"}}
 			log.Printf("I! JBoss Plugin Working as Domain: %t\n", h.ExecAsDomain)
 			if h.ExecAsDomain {
-				bodyContent, err := h.prepareRequest(GetHosts, nil)
+				bodyContent, err := h.createRequestBody(GetHosts, nil)
 				if err != nil {
 					errorChannel <- err
 				}
@@ -464,8 +395,7 @@ func (h *JBoss) getServersOnHost(
 				adr := OrderedMap{
 					{"host", host},
 				}
-
-				bodyContent, err := h.prepareRequest(GetServers, adr)
+				bodyContent, err := h.createRequestBody(GetServers, adr)
 				if err != nil {
 					errorChannel <- err
 				}
@@ -557,7 +487,7 @@ func (h *JBoss) getWebStatistics(
 		}
 	}
 
-	bodyContent, err := h.prepareRequest(GetWebStat, adr)
+	bodyContent, err := h.createRequestBody(GetWebStat, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
@@ -629,13 +559,14 @@ func (h *JBoss) getDatasourceStatistics(
 			{"server", serverName},
 			{"subsystem", "datasources"},
 		}
+
 	} else {
 		adr = OrderedMap{
 			{"subsystem", "datasources"},
 		}
 	}
 
-	bodyContent, err := h.prepareRequest(GetDBStat, adr)
+	bodyContent, err := h.createRequestBody(GetDBStat, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
@@ -715,7 +646,7 @@ func (h *JBoss) getJMSStatistics(
 		}
 	}
 
-	bodyContent, err := h.prepareRequest(opType, adr)
+	bodyContent, err := h.createRequestBody(opType, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
@@ -784,7 +715,7 @@ func (h *JBoss) getJVMStatistics(
 		}
 	}
 
-	bodyContent, err := h.prepareRequest(GetJVMStat, adr)
+	bodyContent, err := h.createRequestBody(GetJVMStat, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
@@ -908,7 +839,7 @@ func (h *JBoss) getServerDeploymentStatistics(
 		}
 	}
 
-	bodyContent, err := h.prepareRequest(GetDeployments, adr)
+	bodyContent, err := h.createRequestBody(GetDeployments, adr)
 	if err != nil {
 		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
 	}
@@ -946,7 +877,7 @@ func (h *JBoss) getServerDeploymentStatistics(
 				}
 			}
 
-			bodyContent, err := h.prepareRequest(GetDeploymentStat, adr2)
+			bodyContent, err := h.createRequestBody(GetDeploymentStat, adr2)
 			if err != nil {
 				errorChannel <- err
 			}
@@ -1064,74 +995,91 @@ func (h *JBoss) flatten(item map[string]interface{}, fields map[string]interface
 	}
 }
 
-//func (j *JBoss) prepareRequest(optype int, adress map[string]interface{}) (map[string]interface{}, error) {
-func (h *JBoss) prepareRequest(optype int, adress OrderedMap) (map[string]interface{}, error) {
+func (h *JBoss) createRequestBody(optype int, address OrderedMap) (map[string]interface{}, error) {
 	bodyContent := make(map[string]interface{})
 
 	// Create bodyContent
 	switch optype {
 	case GetHosts:
-		bodyContent["operation"] = "read-children-names"
-		bodyContent["child-type"] = "host"
-		bodyContent["address"] = []string{}
-		bodyContent["json.pretty"] = 1
+		bodyContent = map[string]interface{}{
+			"operation":   "read-children-names",
+			"child-type":  "host",
+			"address":     []string{},
+			"json.pretty": 1,
+		}
 	case GetServers:
-		bodyContent["operation"] = "read-children-names"
-		bodyContent["child-type"] = "server"
-		bodyContent["recursive-depth"] = 0
-		bodyContent["address"] = adress
-		bodyContent["json.pretty"] = 1
+		bodyContent = map[string]interface{}{
+			"operation":       "read-children-names",
+			"child-type":      "server",
+			"recursive-depth": 0,
+			"address":         address,
+			"json.pretty":     1,
+		}
 	case GetDBStat:
-		bodyContent["operation"] = "read-resource"
-		bodyContent["include-runtime"] = "true"
-		bodyContent["recursive-depth"] = 2
-		bodyContent["address"] = adress
-		bodyContent["json.pretty"] = 1
+		bodyContent = map[string]interface{}{
+			"operation":       "read-resource",
+			"include-runtime": "true",
+			"recursive-depth": 2,
+			"address":         address,
+			"json.pretty":     1,
+		}
 	case GetJVMStat:
-		bodyContent["operation"] = "read-resource"
-		bodyContent["include-runtime"] = "true"
-		bodyContent["recursive"] = "true"
-		bodyContent["address"] = adress
-		bodyContent["json.pretty"] = 1
+		bodyContent = map[string]interface{}{
+			"operation":       "read-resource",
+			"include-runtime": "true",
+			"recursive":       "true",
+			"address":         address,
+			"json.pretty":     1,
+		}
 	case GetDeployments:
-		bodyContent["operation"] = "read-children-names"
-		bodyContent["child-type"] = "deployment"
-		bodyContent["address"] = adress
-		bodyContent["json.pretty"] = 1
+		bodyContent = map[string]interface{}{
+			"operation":   "read-children-names",
+			"child-type":  "deployment",
+			"address":     address,
+			"json.pretty": 1,
+		}
 	case GetDeploymentStat:
-		bodyContent["operation"] = "read-resource"
-		bodyContent["include-runtime"] = "true"
-		bodyContent["recursive-depth"] = 3
-		bodyContent["address"] = adress
-		bodyContent["json.pretty"] = 1
+		bodyContent = map[string]interface{}{
+			"operation":       "read-resource",
+			"include-runtime": "true",
+			"recursive-depth": 3,
+			"address":         address,
+			"json.pretty":     1,
+		}
 	case GetWebStat:
-		bodyContent["operation"] = "read-resource"
-		bodyContent["include-runtime"] = "true"
-		bodyContent["recursive-depth"] = 0
-		bodyContent["address"] = adress
-		bodyContent["json.pretty"] = 1
+		bodyContent = map[string]interface{}{
+			"operation":       "read-resource",
+			"include-runtime": "true",
+			"recursive-depth": 0,
+			"address":         address,
+			"json.pretty":     1,
+		}
 	case GetJMSQueueStat:
-		bodyContent["operation"] = "read-children-resources"
-		bodyContent["child-type"] = "jms-queue"
-		bodyContent["include-runtime"] = "true"
-		bodyContent["recursive-depth"] = 2
-		bodyContent["address"] = adress
-		bodyContent["json.pretty"] = 1
+		bodyContent = map[string]interface{}{
+			"operation":       "read-children-resources",
+			"child-type":      "jms-queue",
+			"include-runtime": "true",
+			"recursive-depth": 2,
+			"address":         address,
+			"json.pretty":     1,
+		}
 	case GetJMSTopicStat:
-		bodyContent["operation"] = "read-children-resources"
-		bodyContent["child-type"] = "jms-topic"
-		bodyContent["include-runtime"] = "true"
-		bodyContent["recursive-depth"] = 2
-		bodyContent["address"] = adress
-		bodyContent["json.pretty"] = 1
+		bodyContent = map[string]interface{}{
+			"operation":       "read-children-resources",
+			"child-type":      "jms-topic",
+			"include-runtime": "true",
+			"recursive-depth": 2,
+			"address":         address,
+			"json.pretty":     1,
+		}
 	}
 
 	return bodyContent, nil
 }
 
-func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) ([]byte, error) {
+func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) ([]byte, error) {
 
-	serverUrl, err := url.Parse(domainUrl)
+	serverURL, err := url.Parse(domainURL)
 	if err != nil {
 		return nil, err
 	}
@@ -1141,19 +1089,19 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 	// Debug JSON request
 	log.Printf("D! Req: %s\n", requestBody)
 
-	req, err := http.NewRequest(method, serverUrl.String(), bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest(method, serverURL.String(), bytes.NewBuffer(requestBody))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	if j.Authorization == "basic" {
-		if j.Username != "" || j.Password != "" {
-			serverUrl.User = url.UserPassword(j.Username, j.Password)
+	if h.Authorization == "basic" {
+		if h.Username != "" || h.Password != "" {
+			serverURL.User = url.UserPassword(h.Username, h.Password)
 		}
 	}
 
-	resp, err := j.client.MakeRequest(req)
+	resp, err := h.client.MakeRequest(req)
 	if err != nil {
 		log.Printf("D! HTTP REQ:%#+v", req)
 		log.Printf("D! HTTP RESP:%#+v", resp)
@@ -1165,28 +1113,29 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 
 	if resp.StatusCode == http.StatusUnauthorized {
 		digestParts := digestParts(resp)
-		digestParts["uri"] = serverUrl.RequestURI()
+		digestParts["uri"] = serverURL.RequestURI()
 		digestParts["method"] = method
-		digestParts["username"] = j.Username
-		digestParts["password"] = j.Password
+		digestParts["username"] = h.Username
+		digestParts["password"] = h.Password
 
-		req, err = http.NewRequest(method, serverUrl.String(), bytes.NewBuffer(requestBody))
+		req, err = http.NewRequest(method, serverURL.String(), bytes.NewBuffer(requestBody))
 		if err != nil {
 			return nil, err
 		}
-		j.Authorization = getDigestAuthrization2(digestParts)
-		req.Header.Set("Authorization", j.Authorization)
+		h.Authorization = getDigestAuthrization(digestParts)
+		req.Header.Set("Authorization", h.Authorization)
 		req.Header.Set("Content-Type", "application/json")
 
-		resp, err = j.client.MakeRequest(req)
+		resp, err = h.client.MakeRequest(req)
 		if err != nil {
 			return nil, err
 		}
 		defer resp.Body.Close()
 	}
 
-	log.Printf("D! JBoss API Req HTTP REQ:%#+v", req)
-	log.Printf("D! JBoss API Req HTTP RESP:%#+v", resp)
+	//uncomment to do a superdebug
+	//log.Printf("D! JBoss API Req HTTP REQ:%#+v", req)
+	//log.Printf("D! JBoss API Req HTTP RESP:%#+v", resp)
 
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
@@ -1197,8 +1146,6 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 			http.StatusText(http.StatusOK))
 		return nil, err
 	}
-
-	//req, err := http.NewRequest("POST", serverUrl.String(), bytes.NewBuffer(requestBody))
 
 	// read body
 	body, err := ioutil.ReadAll(resp.Body)
