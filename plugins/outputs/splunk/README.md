@@ -68,7 +68,7 @@ The expected input for a Splunk Metric is:
       "<dimension1_name>":"<dimension1_value>",
       "<dimension2_name>":"<dimension2_value>",
       ...,
-      <dimensionN_name>":"<dimensionN_value>"
+      "<dimensionN_name>":"<dimensionN_value>"
    }
 }
 ```
