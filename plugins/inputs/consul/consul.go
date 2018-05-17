@@ -2,7 +2,6 @@ package consul
 
 import (
 	"net/http"
-	"regexp"
 	"strings"
 
 	"github.com/hashicorp/consul/api"
@@ -19,8 +18,7 @@ type Consul struct {
 	Password   string
 	Datacentre string
 	tls.ClientConfig
-	GatherAllTags bool
-	TagDelimiter  string
+	TagDelimiter string
 
 	// client used to connect to Consul agnet
 	client *api.Client
@@ -49,9 +47,6 @@ var sampleConfig = `
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = true
-
-  ## Gather all Consul checks' tags
-  # gather_all_tags = false
 
   ## Consul checks' tag splitting
   # When tags are formatted like "key:value" with ":" as a delimiter then
@@ -123,19 +118,16 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 		tags["service_name"] = check.ServiceName
 		tags["check_id"] = check.CheckID
 
-		if c.GatherAllTags {
-			for _, checkTag := range check.ServiceTags {
-				if c.TagDelimiter != "" && len(c.TagDelimiter) == 1 {
-					r, _ := regexp.Compile("\\w+" + c.TagDelimiter + "\\w+")
-					if r.MatchString(checkTag) {
-						splittedTag := strings.Split(checkTag, c.TagDelimiter)
-						tags[splittedTag[0]] = splittedTag[1]
-					} else {
-						tags[checkTag] = checkTag
-					}
-				} else {
+		for _, checkTag := range check.ServiceTags {
+			if c.TagDelimiter != "" {
+				splittedTag := strings.SplitN(checkTag, c.TagDelimiter, 2)
+				if len(splittedTag) == 1 {
 					tags[checkTag] = checkTag
+				} else if len(splittedTag) == 2 {
+					tags[splittedTag[0]] = splittedTag[1]
 				}
+			} else {
+				tags[checkTag] = checkTag
 			}
 		}
 

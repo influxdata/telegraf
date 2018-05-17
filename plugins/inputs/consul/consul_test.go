@@ -17,7 +17,7 @@ var sampleChecks = []*api.HealthCheck{
 		Output:      "OK",
 		ServiceID:   "foo.123",
 		ServiceName: "foo",
-		ServiceTags: []string{"bar", "env:sandbox"},
+		ServiceTags: []string{"bar", "env:sandbox", "tagkey:value:stillvalue"},
 	},
 }
 
@@ -32,9 +32,12 @@ func TestGatherHealthCheck(t *testing.T) {
 	}
 
 	expectedTags := map[string]string{
-		"node":         "localhost",
-		"service_name": "foo",
-		"check_id":     "foo.health123",
+		"node":                    "localhost",
+		"service_name":            "foo",
+		"check_id":                "foo.health123",
+		"bar":                     "bar",
+		"env:sandbox":             "env:sandbox",
+		"tagkey:value:stillvalue": "tagkey:value:stillvalue",
 	}
 
 	var acc testutil.Accumulator
@@ -61,13 +64,13 @@ func TestGatherHealthCheckWithDelimitedTags(t *testing.T) {
 		"check_id":     "foo.health123",
 		"bar":          "bar",
 		"env":          "sandbox",
+		"tagkey":       "value:stillvalue",
 	}
 
 	var acc testutil.Accumulator
 
 	consul := &Consul{
-		GatherAllTags: true,
-		TagDelimiter:  ":",
+		TagDelimiter: ":",
 	}
 	consul.GatherHealthCheck(&acc, sampleChecks)
 
