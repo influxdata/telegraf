@@ -25,7 +25,6 @@ func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if vs.Username != "" {
 		if vs.Password == "" {
 			return nil, fmt.Errorf("vSphere password must be specified")

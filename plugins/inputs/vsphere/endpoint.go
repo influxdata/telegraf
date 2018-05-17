@@ -203,6 +203,7 @@ func (e *Endpoint) discover() error {
 					e.checkClient()
 					return err
 				}
+				log.Printf("D! Obj: %s, metrics found: %d, enabled: %t", obj.name, len(metrics), res.enabled)
 
 				// Mmetric metadata gathering is only needed for enabled resource types.
 				//
@@ -210,11 +211,11 @@ func (e *Endpoint) discover() error {
 					for _, m := range metrics {
 						include := len(cInc) == 0 // Empty include list means include all
 						mName := e.metricNames[m.CounterId]
-						if !include {
+						//log.Printf("% %s", mName, cInc)
+						if !include { // If not included by default
 							for _, p := range cInc {
 								if p.Match(mName) {
 									include = true
-									break
 								}
 							}
 						}
@@ -226,10 +227,8 @@ func (e *Endpoint) discover() error {
 									break
 								}
 							}
-							if include {
-								mList = append(mList, m)
-								log.Printf("D! Included %s Sampling: %d", mName, res.sampling)
-							}
+							mList = append(mList, m)
+							log.Printf("D! Included %s Sampling: %d", mName, res.sampling)
 						}
 
 					}
@@ -400,24 +399,31 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 		if !found {
 			log.Printf("E! Internal error: Instance info not found for MOID %s", object.ref)
 		}
-		pq := types.PerfQuerySpec{
-			Entity:     object.ref,
-			MaxSample:  1,
-			MetricId:   info.metrics,
-			IntervalId: res.sampling,
-		}
+		if len(info.metrics) > 0 {
 
-		if !res.realTime {
-			pq.StartTime = &latest
-			pq.EndTime = &now
-		}
+			pq := types.PerfQuerySpec{
+				Entity:     object.ref,
+				MaxSample:  1,
+				MetricId:   info.metrics,
+				IntervalId: res.sampling,
+			}
 
-		pqs = append(pqs, pq)
+			if !res.realTime {
+				pq.StartTime = &latest
+				pq.EndTime = &now
+			}
+
+			pqs = append(pqs, pq)
+		} else {
+			log.Printf("D! No metrics available for %s. Skipping.", info.name)
+			// Maintainers: Don't be tempted to skip a turn in the loop here! We still need to check if
+			// the chunk needs processing or we risk skipping the last chunk. (Ask me how I found this out... :) )
+		}
 		total++
 
 		// Filled up a chunk or at end of data? Run a query with the collected objects
 		//
-		if len(pqs) >= int(e.Parent.ObjectsPerQuery) || total == len(res.objects) {
+		if len(pqs) >= int(e.Parent.ObjectsPerQuery) || total >= len(res.objects) {
 			log.Printf("D! Querying %d objects of type %s for %s. Object count: %d. Total objects %d", len(pqs), resourceType, e.URL.Host, total, len(res.objects))
 			metrics, err := client.Perf.Query(ctx, pqs)
 			if err != nil {
@@ -442,7 +448,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 					for idx, value := range v.Value {
 						instInfo, found := e.instanceInfo[moid]
 						if !found {
-							log.Printf("E! MOID % not found in cache. Skipping!", moid)
+							log.Printf("E! MOID %s not found in cache. Skipping!", moid)
 							continue
 						}
 						t := map[string]string{
