@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net"
 	"sync"
@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -100,16 +101,29 @@ var (
 
 var defaultTime = time.Unix(0, 0)
 
-func newTCPSyslogReceiver() *Syslog {
-	return &Syslog{
+func newTCPSyslogReceiver(keepAlive *internal.Duration, maxConn int, bestEffort bool) *Syslog {
+	d := &internal.Duration{
+		Duration: defaultReadTimeout,
+	}
+	s := &Syslog{
 		Address: address,
 		now: func() time.Time {
 			return defaultTime
 		},
+		ReadTimeout: d,
 	}
+	if keepAlive != nil {
+		s.KeepAlivePeriod = keepAlive
+	}
+	if maxConn > 0 {
+		s.MaxConnections = maxConn
+	}
+	s.BestEffort = bestEffort
+
+	return s
 }
 
-func newTLSSyslogReceiver() *Syslog {
+func newTLSSyslogReceiver(keepAlive *internal.Duration, maxConn int, bestEffort bool) *Syslog {
 	initServiceCertFiles.Do(func() {
 		scaf, err := ioutil.TempFile("", "serviceCAFile.crt")
 		if err != nil {
@@ -136,7 +150,7 @@ func newTLSSyslogReceiver() *Syslog {
 		serviceKeyFile = skf.Name()
 	})
 
-	receiver := newTCPSyslogReceiver()
+	receiver := newTCPSyslogReceiver(keepAlive, maxConn, bestEffort)
 	receiver.Cacert = serviceCAFile
 	receiver.Cert = serviceCertFile
 	receiver.Key = serviceKeyFile
@@ -165,6 +179,7 @@ func getTLSSyslogSender() net.Conn {
 
 		client, err = tls.Dial("tcp", address, config)
 		if err != nil {
+			log.Println(err)
 			panic(err)
 		}
 	})
@@ -172,15 +187,22 @@ func getTLSSyslogSender() net.Conn {
 	return client
 }
 
-func test(t *testing.T, acc *testutil.Accumulator, conn net.Conn) {
+func test(t *testing.T, acc *testutil.Accumulator, conn net.Conn, recv *Syslog) {
 	for _, tc := range getTestCases() {
 		t.Run(tc.name, func(t *testing.T) {
+			// Clear
 			acc.ClearMetrics()
+			acc.Errors = make([]error, 0)
 			// Write
 			conn.Write(tc.data)
 			// Wait that the the number of data points is accumulated
 			// Since the receiver is running concurrently
-			acc.Wait(len(tc.want))
+			if tc.want != nil && tc.bestEffort == recv.BestEffort {
+				acc.Wait(len(tc.want))
+			}
+			if tc.werr {
+				acc.WaitError(1)
+			}
 			// Verify
 			if len(acc.Errors) > 0 != tc.werr {
 				t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tc.werr, acc.Errors)
@@ -189,7 +211,7 @@ func test(t *testing.T, acc *testutil.Accumulator, conn net.Conn) {
 			for _, metric := range acc.Metrics {
 				got = append(got, *metric)
 			}
-			if !cmp.Equal(tc.want, got) {
+			if !cmp.Equal(tc.want, got) && tc.bestEffort == recv.BestEffort {
 				t.Fatalf("Got (+) / Want (-)\n %s", cmp.Diff(tc.want, got))
 			}
 		})
@@ -197,7 +219,7 @@ func test(t *testing.T, acc *testutil.Accumulator, conn net.Conn) {
 }
 
 func TestTCP(t *testing.T) {
-	receiver := newTCPSyslogReceiver()
+	receiver := newTCPSyslogReceiver(nil, 0, false)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, receiver.Start(acc))
@@ -206,13 +228,13 @@ func TestTCP(t *testing.T) {
 	conn, err := net.Dial("tcp", address)
 	require.NoError(t, err)
 
-	test(t, acc, conn)
+	test(t, acc, conn, receiver)
 
 	conn.Close()
 }
 
 func TestTLS(t *testing.T) {
-	receiver := newTLSSyslogReceiver()
+	receiver := newTLSSyslogReceiver(nil, 0, false)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, receiver.Start(acc))
@@ -221,7 +243,7 @@ func TestTLS(t *testing.T) {
 	conn := getTLSSyslogSender()
 	require.NotNil(t, conn)
 
-	test(t, acc, conn)
+	test(t, acc, conn, receiver)
 
 	conn.Close()
 }
@@ -233,19 +255,47 @@ func TestListenError(t *testing.T) {
 	require.Error(t, receiver.Start(&testutil.Accumulator{}))
 }
 
-func TestKeepAlive(t *testing.T) {
+func TestWithBestEffortOn(t *testing.T) {
+	receiver := newTLSSyslogReceiver(nil, 0, true)
+	require.True(t, receiver.BestEffort)
 
+	acc := &testutil.Accumulator{}
+	require.NoError(t, receiver.Start(acc))
+	defer receiver.Stop()
+
+	conn := getTLSSyslogSender()
+	require.NotNil(t, conn)
+
+	test(t, acc, conn, receiver)
+
+	conn.Close()
 }
 
-func TestMaxConnections(t *testing.T) {
+func TestKeepAlive(t *testing.T) {
+	keepAlivePeriod := &internal.Duration{
+		Duration: time.Minute,
+	}
+	receiver := newTLSSyslogReceiver(keepAlivePeriod, 0, false)
+	require.Equal(t, receiver.KeepAlivePeriod, keepAlivePeriod)
 
+	acc := &testutil.Accumulator{}
+	require.NoError(t, receiver.Start(acc))
+	defer receiver.Stop()
+
+	conn := getTLSSyslogSender()
+	require.NotNil(t, conn)
+
+	test(t, acc, conn, receiver)
+
+	conn.Close()
 }
 
 type testCase struct {
-	name string
-	data []byte
-	want []testutil.Metric
-	werr bool // want errors ?
+	name       string
+	data       []byte
+	want       []testutil.Metric
+	bestEffort bool // whether the wanted metrics are expected only in with best effort mode on
+	werr       bool // expecting errors ?
 }
 
 func getRandomString(n int) string {
@@ -275,14 +325,14 @@ func getRandomString(n int) string {
 }
 
 func getTestCases() []testCase {
-	maxP := uint8(191)
-	maxV := uint16(999)
-	maxTS := "2017-12-31T23:59:59.999999+00:00"
-	maxH := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabc"
-	maxA := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdef"
-	maxPID := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzab"
-	maxMID := "abcdefghilmnopqrstuvzabcdefghilm"
-	message7681 := getRandomString(7681)
+	// maxP := uint8(191)
+	// maxV := uint16(999)
+	// maxTS := "2017-12-31T23:59:59.999999+00:00"
+	// maxH := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabc"
+	// maxA := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdef"
+	// maxPID := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzab"
+	// maxMID := "abcdefghilmnopqrstuvzabcdefghilm"
+	// message7681 := getRandomString(7681)
 
 	testCases := []testCase{
 		{
@@ -386,8 +436,7 @@ func getTestCases() []testCase {
 		},
 		{
 			name: "1st/nl/ok", // newline
-			data: []byte(`28 <1>1 - - - - - - hello
-world`),
+			data: []byte("28 <1>1 - - - - - - hello\nworld"),
 			want: []testutil.Metric{
 				testutil.Metric{
 					Measurement: "syslog",
@@ -405,54 +454,56 @@ world`),
 				},
 			},
 		},
-		{
-			name: "1st/max/ok",
-			data: []byte(fmt.Sprintf("8192 <%d>%d %s %s %s %s %s - %s", maxP, maxV, maxTS, maxH, maxA, maxPID, maxMID, message7681)),
-			want: []testutil.Metric{
-				testutil.Metric{
-					Measurement: "syslog",
-					Fields: map[string]interface{}{
-						"version": maxV,
-						"message": message7681,
-						"procid":  maxPID,
-						"msgid":   maxMID,
-					},
-					Tags: map[string]string{
-						"severity":         "7",
-						"severity_level":   "debug",
-						"facility":         "23",
-						"facility_message": "local use 7 (local7)",
-						"hostname":         maxH,
-						"appname":          maxA,
-					},
-					Time: time.Unix(1514764799, 999999000).UTC(),
-				},
-			},
-		},
 		// {
-		// 	name: "1st/uf/ko", // underflow (msglen less than provided octets)
-		// 	data: []byte("16 <1>1"),
+		// 	name: "1st/max/ok",
+		// 	data: []byte(fmt.Sprintf("8192 <%d>%d %s %s %s %s %s - %s", maxP, maxV, maxTS, maxH, maxA, maxPID, maxMID, message7681)),
 		// 	want: []testutil.Metric{
 		// 		testutil.Metric{
 		// 			Measurement: "syslog",
 		// 			Fields: map[string]interface{}{
-		// 				"version": uint16(1),
+		// 				"version": maxV,
+		// 				"message": message7681,
+		// 				"procid":  maxPID,
+		// 				"msgid":   maxMID,
 		// 			},
 		// 			Tags: map[string]string{
-		// 				"severity":         "1",
-		// 				"severity_level":   "alert",
-		// 				"facility":         "0",
-		// 				"facility_message": "kernel messages",
+		// 				"severity":         "7",
+		// 				"severity_level":   "debug",
+		// 				"facility":         "23",
+		// 				"facility_message": "local use 7 (local7)",
+		// 				"hostname":         maxH,
+		// 				"appname":          maxA,
 		// 			},
-		// 			Time: defaultTime,
+		// 			Time: time.Unix(1514764799, 999999000).UTC(),
 		// 		},
 		// 	},
 		// },
+		{
+			name:       "1st/uf/ko", // underflow (msglen less than provided octets)
+			data:       []byte("16 <1>2"),
+			bestEffort: true,
+			want: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": uint16(2),
+					},
+					Tags: map[string]string{
+						"severity":         "1",
+						"severity_level":   "alert",
+						"facility":         "0",
+						"facility_message": "kernel messages",
+					},
+					Time: defaultTime,
+				},
+			},
+			werr: true,
+		},
 		// {
 		// 	name: "1st/of/ko", // overflow (msglen greather then max allowed octets)
-		// 	data: []byte(fmt.Sprintf("8193 <%d>%d %s %s %s %s %s - %s", maxP, maxV, maxTS, maxH, maxA, maxPID, maxMID, message7681)),
+		// 	data: []byte(fmt.Sprintf("8193 <%d>%d %s %s %s %s %s 12 %s", maxP, maxV, maxTS, maxH, maxA, maxPID, maxMID, message7681)),
 		// 	want: []testutil.Metric{},
-		// 	// werr: true,
+		// 	werr: true,
 		// },
 	}
 
