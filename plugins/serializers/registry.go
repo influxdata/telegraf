@@ -69,6 +69,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewInfluxSerializerConfig(config)
 	case "graphite":
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template)
+	case "graphite11":
+		serializer, err = NewGraphite11Serializer(config.Prefix, config.Template)
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
 	default:
