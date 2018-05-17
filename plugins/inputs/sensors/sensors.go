@@ -17,12 +17,14 @@ import (
 )
 
 var (
-	execCommand = exec.Command // execCommand is used to mock commands in tests.
-	numberRegp  = regexp.MustCompile("[0-9]+")
+	execCommand    = exec.Command // execCommand is used to mock commands in tests.
+	numberRegp     = regexp.MustCompile("[0-9]+")
+	defaultTimeout = internal.Duration{Duration: 5 * time.Second}
 )
 
 type Sensors struct {
-	RemoveNumbers bool `toml:"remove_numbers"`
+	RemoveNumbers bool              `toml:"remove_numbers"`
+	Timeout       internal.Duration `toml:"timeout"`
 	path          string
 }
 
@@ -35,6 +37,9 @@ func (*Sensors) SampleConfig() string {
   ## Remove numbers from field names.
   ## If true, a field name like 'temp1_input' will be changed to 'temp_input'.
   # remove_numbers = true
+
+  ## Timeout is the maximum amount of time that the sensors command can run.
+  # timeout = "5s"
 `
 
 }
@@ -55,7 +60,7 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{}
 	chip := ""
 	cmd := execCommand(s.path, "-A", "-u")
-	out, err := internal.CombinedOutputTimeout(cmd, time.Second*5)
+	out, err := internal.CombinedOutputTimeout(cmd, s.Timeout.Duration)
 	if err != nil {
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
@@ -99,9 +104,15 @@ func (s *Sensors) parse(acc telegraf.Accumulator) error {
 	return nil
 }
 
+// snake converts string to snake case
+func snake(input string) string {
+	return strings.ToLower(strings.Replace(strings.TrimSpace(input), " ", "_", -1))
+}
+
 func init() {
 	s := Sensors{
 		RemoveNumbers: true,
+		Timeout:       defaultTimeout,
 	}
 	path, _ := exec.LookPath("sensors")
 	if len(path) > 0 {
@@ -110,9 +121,4 @@ func init() {
 	inputs.Add("sensors", func() telegraf.Input {
 		return &s
 	})
-}
-
-// snake converts string to snake case
-func snake(input string) string {
-	return strings.ToLower(strings.Replace(strings.TrimSpace(input), " ", "_", -1))
 }
