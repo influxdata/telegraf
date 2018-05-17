@@ -46,9 +46,9 @@
     - http_500 total number of 500 requests
     - http_502 total number of 502 requests
     - http_503 total number of 503 requests
-    http_504 total number of 504 requests
-    http_508 total number of 508 requests
-    http_other_detail_status total number of requests of other status codes*http_ups_4xx total number of requests of upstream 4xx
+    - http_504 total number of 504 requests
+    - http_508 total number of 508 requests
+    - http_other_detail_status total number of requests of other status codes*http_ups_4xx total number of requests of upstream 4xx
     - http_ups_5xx total number of requests of upstream 5xx
 ### Tags:
 
