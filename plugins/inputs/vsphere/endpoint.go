@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -40,6 +41,13 @@ type resource struct {
 	includes   []string
 	excludes   []string
 	getObjects func(*view.ContainerView) (objectMap, error)
+}
+
+type metricEntry struct {
+	tags   map[string]string
+	name   string
+	ts     time.Time
+	fields map[string]interface{}
 }
 
 type objectMap map[string]objectRef
@@ -311,14 +319,13 @@ func getDatastores(root *view.ContainerView) (objectMap, error) {
 	}
 	m := make(objectMap)
 	for _, r := range resources {
-		m[r.Summary.Name] = objectRef{
+		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
 			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
 	}
 	return m, nil
 }
 
 func (e *Endpoint) collect(acc telegraf.Accumulator) error {
-
 	var err error
 	if !e.initialized {
 		err := e.init()
@@ -336,26 +343,22 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-
 	for k, res := range e.resources {
 		if res.enabled {
 			count, duration, err := e.collectResource(k, acc)
 			if err != nil {
 				return err
 			}
-
 			acc.AddGauge("vsphere",
 				map[string]interface{}{"gather.count": count, "gather.duration": duration},
 				map[string]string{"vcenter": e.URL.Host, "type": k},
 				time.Now())
 		}
 	}
-
 	return nil
 }
 
 func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator) (int, float64, error) {
-
 	// Do we have new data yet?
 	//
 	res := e.resources[resourceType]
@@ -377,18 +380,11 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 
 	log.Printf("D! Collecting metrics for %d objects of type %s for %s", len(res.objects), resourceType, e.URL.Host)
 
-	client, err := e.getClient()
-	if err != nil {
-		return 0, 0, err
-	}
-	ctx := context.Background()
-
-	// Object maps may change, so we need to hold the collect lock
+	// Object maps may change, so we need to hold the collect lock in read mode
 	//
 	e.collectMux.RLock()
 	defer e.collectMux.RUnlock()
 
-	measurementName := "vsphere." + resourceType
 	count := 0
 	start := time.Now()
 	total := 0
@@ -425,99 +421,12 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 		//
 		if len(pqs) >= int(e.Parent.ObjectsPerQuery) || total >= len(res.objects) {
 			log.Printf("D! Querying %d objects of type %s for %s. Object count: %d. Total objects %d", len(pqs), resourceType, e.URL.Host, total, len(res.objects))
-			metrics, err := client.Perf.Query(ctx, pqs)
-			if err != nil {
-				//TODO: Check the error and attempt to handle gracefully. (ie: object no longer exists)
-				log.Printf("E! Error querying metrics of %s for %s", resourceType, e.URL.Host)
-				e.checkClient()
-				return count, time.Now().Sub(start).Seconds(), err
-			}
-
-			ems, err := client.Perf.ToMetricSeries(ctx, metrics)
+			n, err := e.collectChunk(pqs, resourceType, res, acc, &lastTS)
 			if err != nil {
 				e.checkClient()
 				return count, time.Now().Sub(start).Seconds(), err
 			}
-
-			// Iterate through result and fields list
-			//
-			for _, em := range ems {
-				moid := em.Entity.Reference().Value
-				for _, v := range em.Value {
-					name := v.Name
-					for idx, value := range v.Value {
-						instInfo, found := e.instanceInfo[moid]
-						if !found {
-							log.Printf("E! MOID %s not found in cache. Skipping!", moid)
-							continue
-						}
-						t := map[string]string{
-							"vcenter":  e.URL.Host,
-							"hostname": instInfo.name,
-							"moid":     moid,
-						}
-
-						objectRef, ok := res.objects[moid]
-						if ok {
-							parent, found := e.instanceInfo[objectRef.parentRef.Value]
-							if found {
-								switch resourceType {
-								case "host":
-									t["cluster"] = parent.name
-									break
-
-								case "vm":
-									t["guest"] = objectRef.guest
-									t["esxhost"] = parent.name
-									hostRes := e.resources["host"]
-									hostRef, ok := hostRes.objects[objectRef.parentRef.Value]
-									if ok {
-										cluster, ok := e.instanceInfo[hostRef.parentRef.Value]
-										if ok {
-											t["cluster"] = cluster.name
-										}
-									}
-									break
-								}
-							}
-						}
-
-						if v.Instance != "" {
-							if strings.HasPrefix(name, "cpu.") {
-								t["cpu"] = v.Instance
-							} else if strings.HasPrefix(name, "datastore.") {
-								t["datastore"] = v.Instance
-							} else if strings.HasPrefix(name, "disk.") {
-								t["disk"] = cleanDiskTag(v.Instance)
-							} else if strings.HasPrefix(name, "net.") {
-								t["interface"] = v.Instance
-							} else if strings.HasPrefix(name, "storageAdapter.") {
-								t["adapter"] = v.Instance
-							} else if strings.HasPrefix(name, "storagePath.") {
-								t["path"] = v.Instance
-							} else if strings.HasPrefix(name, "sys.resource") {
-								t["resource"] = v.Instance
-							} else if strings.HasPrefix(name, "vflashModule.") {
-								t["module"] = v.Instance
-							} else if strings.HasPrefix(name, "virtualDisk.") {
-								t["disk"] = v.Instance
-							} else {
-								// default to instance
-								t["instance"] = v.Instance
-							}
-						}
-
-						ts := em.SampleInfo[idx].Timestamp
-						if ts.After(lastTS) {
-							lastTS = ts
-						}
-
-						f := map[string]interface{}{name: value}
-						acc.AddFields(measurementName, f, t, ts)
-						count++
-					}
-				}
-			}
+			count += n
 			pqs = make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
 		}
 	}
@@ -525,9 +434,151 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 	if count > 0 {
 		e.lastColls[resourceType] = lastTS
 	}
-
 	log.Printf("D! Collection of %s for %s, took %v returning %d metrics", resourceType, e.URL.Host, time.Now().Sub(start), count)
 	return count, time.Now().Sub(start).Seconds(), nil
+}
+
+func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, res resource, acc telegraf.Accumulator, lastTS *time.Time) (int, error) {
+	count := 0
+	prefix := "vsphere." + resourceType
+	client, err := e.getClient()
+	if err != nil {
+		return 0, err
+	}
+	ctx := context.Background()
+	metrics, err := client.Perf.Query(ctx, pqs)
+	if err != nil {
+		//TODO: Check the error and attempt to handle gracefully. (ie: object no longer exists)
+		log.Printf("E! Error querying metrics of %s for %s", resourceType, e.URL.Host)
+		return count, err
+	}
+
+	ems, err := client.Perf.ToMetricSeries(ctx, metrics)
+	if err != nil {
+		return count, err
+	}
+
+	// Iterate through results
+	//
+	for _, em := range ems {
+		moid := em.Entity.Reference().Value
+		instInfo, found := e.instanceInfo[moid]
+		if !found {
+			log.Printf("E! MOID %s not found in cache. Skipping! (This should not happen!)", moid)
+			continue
+		}
+		buckets := make(map[string]metricEntry)
+		for _, v := range em.Value {
+			name := v.Name
+			t := map[string]string{
+				"vcenter":  e.URL.Host,
+				"hostname": instInfo.name,
+				"moid":     moid,
+			}
+			// Populate tags
+			//
+			objectRef, ok := res.objects[moid]
+			if !ok {
+				log.Printf("E! MOID %s not found in cache. Skipping", moid)
+				continue
+			}
+			e.populateTags(objectRef, resourceType, t, &v)
+
+			// Now deal with the values
+			//
+			for idx, value := range v.Value {
+
+				ts := em.SampleInfo[idx].Timestamp
+				if ts.After(*lastTS) {
+					*lastTS = ts
+				}
+
+				// Organize the metrics into a bucket per measurement.
+				// Data SHOULD be presented to us with the same timestamp for all samples, but in case
+				// they don't we use the measurement name + timestamp as the key for the bucket.
+				//
+				mn, fn := makeMetricIdentifier(prefix, name)
+				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
+				log.Printf("Bucket key: %s, resource: %s, field: %s", bKey, instInfo.name, fn)
+				bucket, found := buckets[bKey]
+				if !found {
+					bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: t}
+					buckets[bKey] = bucket
+				}
+				bucket.fields[fn] = value
+				count++
+			}
+		}
+		// We've iterated through all the metrics and collected buckets for each
+		// measurement name. Now emit them!
+		//
+		log.Printf("D! Collected %d buckets for %s", len(buckets), instInfo.name)
+		for key, bucket := range buckets {
+			log.Printf("D! Key: %s, Tags: %s", key, bucket.tags)
+			acc.AddFields(bucket.name, bucket.fields, bucket.tags, bucket.ts)
+		}
+	}
+	return count, nil
+}
+
+func (e *Endpoint) populateTags(objectRef objectRef, resourceType string, t map[string]string, v *performance.MetricSeries) {
+	parent, found := e.instanceInfo[objectRef.parentRef.Value]
+	if found {
+		switch resourceType {
+		case "host":
+			t["cluster"] = parent.name
+			break
+
+		case "vm":
+			t["guest"] = objectRef.guest
+			t["esxhost"] = parent.name
+			hostRes := e.resources["host"]
+			hostRef, ok := hostRes.objects[objectRef.parentRef.Value]
+			if ok {
+				cluster, ok := e.instanceInfo[hostRef.parentRef.Value]
+				if ok {
+					t["cluster"] = cluster.name
+				}
+			}
+			break
+		}
+	}
+
+	// Determine which point tag to map to the instance
+	//
+	name := v.Name
+	if v.Instance != "" {
+		if strings.HasPrefix(name, "cpu.") {
+			t["cpu"] = v.Instance
+		} else if strings.HasPrefix(name, "datastore.") {
+			t["datastore"] = v.Instance
+		} else if strings.HasPrefix(name, "disk.") {
+			t["disk"] = cleanDiskTag(v.Instance)
+		} else if strings.HasPrefix(name, "net.") {
+			t["interface"] = v.Instance
+		} else if strings.HasPrefix(name, "storageAdapter.") {
+			t["adapter"] = v.Instance
+		} else if strings.HasPrefix(name, "storagePath.") {
+			t["path"] = v.Instance
+		} else if strings.HasPrefix(name, "sys.resource") {
+			t["resource"] = v.Instance
+		} else if strings.HasPrefix(name, "vflashModule.") {
+			t["module"] = v.Instance
+		} else if strings.HasPrefix(name, "virtualDisk.") {
+			t["disk"] = v.Instance
+		} else {
+			// default to instance
+			t["instance"] = v.Instance
+		}
+	}
+}
+
+func makeMetricIdentifier(prefix, metric string) (string, string) {
+	parts := strings.Split(metric, ".")
+	if len(parts) == 1 {
+		return prefix, parts[0]
+	}
+	return prefix + "." + parts[0], strings.Join(parts[1:], ".")
 }
 
 func cleanGuestID(id string) string {
