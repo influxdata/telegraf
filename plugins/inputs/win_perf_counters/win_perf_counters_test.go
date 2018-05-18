@@ -38,7 +38,9 @@ func TestWinPerfcountersConfigGet1(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
+
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m.query.Open()
 
 	err := m.ParseConfig()
 	require.NoError(t, err)
@@ -57,7 +59,7 @@ func TestWinPerfcountersConfigGet2(t *testing.T) {
 	var measurement string = "test"
 	var warnonmissing bool = false
 	var failonmissing bool = true
-	var includetotal bool = false
+	var includetotal bool = true
 
 	PerfObject := perfobject{
 		ObjectName:    objectname,
@@ -71,7 +73,8 @@ func TestWinPerfcountersConfigGet2(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m.query.Open()
 
 	err := m.ParseConfig()
 	require.NoError(t, err)
@@ -105,7 +108,7 @@ func TestWinPerfcountersConfigGet3(t *testing.T) {
 	var measurement string = "test"
 	var warnonmissing bool = false
 	var failonmissing bool = true
-	var includetotal bool = false
+	var includetotal bool = true
 
 	PerfObject := perfobject{
 		ObjectName:    objectname,
@@ -119,7 +122,8 @@ func TestWinPerfcountersConfigGet3(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m.query.Open()
 
 	err := m.ParseConfig()
 	require.NoError(t, err)
@@ -155,7 +159,7 @@ func TestWinPerfcountersConfigGet4(t *testing.T) {
 	var measurement string = "test"
 	var warnonmissing bool = false
 	var failonmissing bool = true
-	var includetotal bool = false
+	var includetotal bool = true
 
 	PerfObject := perfobject{
 		ObjectName:    objectname,
@@ -169,7 +173,8 @@ func TestWinPerfcountersConfigGet4(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m.query.Open()
 
 	err := m.ParseConfig()
 	require.NoError(t, err)
@@ -220,21 +225,22 @@ func TestWinPerfcountersConfigGet5(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m.query.Open()
 
 	err := m.ParseConfig()
 	require.NoError(t, err)
 
 	var parsedItems = m.GetParsedItemsForTesting()
 
-	if len(parsedItems) == 4 {
+	if len(parsedItems) == 2 {
 		require.NoError(t, nil)
-	} else if len(parsedItems) < 4 {
+	} else if len(parsedItems) < 2 {
 		var errorstring1 string = "Too few results returned from the counterPath: " +
 			string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
-	} else if len(parsedItems) > 4 {
+	} else if len(parsedItems) > 2 {
 		var errorstring1 string = "Too many results returned from the counterPath: " +
 			string(len(parsedItems))
 		err2 := errors.New(errorstring1)
@@ -269,7 +275,8 @@ func TestWinPerfcountersConfigGet6(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m.query.Open()
 
 	err := m.ParseConfig()
 	require.NoError(t, err)
@@ -290,7 +297,7 @@ func TestWinPerfcountersConfigGet7(t *testing.T) {
 	var measurement string = "test"
 	var warnonmissing bool = false
 	var failonmissing bool = false
-	var includetotal bool = false
+	var includetotal bool = true
 
 	PerfObject := perfobject{
 		ObjectName:    objectname,
@@ -304,7 +311,8 @@ func TestWinPerfcountersConfigGet7(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m.query.Open()
 
 	err := m.ParseConfig()
 	require.NoError(t, err)
@@ -353,7 +361,8 @@ func TestWinPerfcountersConfigError1(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m.query.Open()
 
 	err := m.ParseConfig()
 	require.Error(t, err)
@@ -386,9 +395,12 @@ func TestWinPerfcountersConfigError2(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m.query.Open()
 
 	err := m.ParseConfig()
+	var acc testutil.Accumulator
+	err = m.Gather(&acc)
 	require.Error(t, err)
 }
 
@@ -419,7 +431,8 @@ func TestWinPerfcountersConfigError3(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m.query.Open()
 
 	err := m.ParseConfig()
 	require.Error(t, err)
@@ -440,7 +453,7 @@ func TestWinPerfcountersCollect1(t *testing.T) {
 	var measurement string = "test"
 	var warnonmissing bool = false
 	var failonmissing bool = true
-	var includetotal bool = false
+	var includetotal bool = true
 
 	PerfObject := perfobject{
 		ObjectName:    objectname,
@@ -454,7 +467,7 @@ func TestWinPerfcountersCollect1(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)
@@ -488,7 +501,7 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 	var measurement string = "test"
 	var warnonmissing bool = false
 	var failonmissing bool = true
-	var includetotal bool = false
+	var includetotal bool = true
 
 	PerfObject := perfobject{
 		ObjectName:    objectname,
@@ -502,7 +515,7 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)
@@ -515,7 +528,7 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 		"objectname": objectname,
 	}
 	fields := map[string]interface{}{
-		expectedCounter: float32(0),
+		expectedCounter: float32(2),
 	}
 
 	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
@@ -524,7 +537,7 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 		"objectname": objectname,
 	}
 	fields = map[string]interface{}{
-		expectedCounter: float32(0),
+		expectedCounter: float32(2),
 	}
 	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
 
