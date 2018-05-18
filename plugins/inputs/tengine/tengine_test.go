@@ -18,7 +18,7 @@ check.proxyradar.com,535,771,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0
 tenka-prod-api.txwy.tw,2992518616,14187906760,32562,3180654,3157774,0,0,22880,0,246095380,2666852,246095109,2666852,3157774,0,0,0,0,0,0,0,16384,6496,0,0,0,0,0,22880`
 
 // Verify that tengine tags are properly parsed based on the server
-func TestNginxTags(t *testing.T) {
+func TestTengineTags(t *testing.T) {
 	urls := []string{"http://localhost/endpoint", "http://localhost:80/endpoint"}
 	var addr *url.URL
 	for _, url1 := range urls {
@@ -28,7 +28,7 @@ func TestNginxTags(t *testing.T) {
 	}
 }
 
-func TestNginxGeneratesMetrics(t *testing.T) {
+func TestTengineGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var rsp string
 		rsp = tengineSampleResponse

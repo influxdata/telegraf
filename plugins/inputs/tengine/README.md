@@ -5,8 +5,8 @@
 ```
 # Read Tengine's basic status information (ngx_http_reqstat_module)
 [[inputs.tengine]]
-  ## An array of Nginx stub_status URI to gather stats.
-  urls = ["http://localhost/server_status"]
+  ## An array of Tengine reqstat module URI to gather stats.
+  urls = ["http://127.0.0.1/us"]
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
