@@ -14,7 +14,7 @@ const clusterHealthResponse = `
    "unassigned_shards": 0,
    "number_of_pending_tasks": 0,
    "task_max_waiting_in_queue_millis": 0,
-   "active_shards_percent_as_number": 100.0,
+   "active_shards_percent_as_number": 100.0
 }
 `
 
@@ -33,7 +33,6 @@ const clusterHealthResponseWithIndices = `
    "number_of_pending_tasks": 0,
    "task_max_waiting_in_queue_millis": 0,
    "active_shards_percent_as_number": 100.0,
-
    "indices": {
       "v1": {
          "status": "green",
