@@ -152,6 +152,9 @@ func (n *Tengine) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 			break
 		}
 		line_split := strings.Split(strings.TrimSpace(line), ",")
+		if len(line_split) != 30 {
+			continue
+		}
 		tenginestatus.host= line_split[0]
 		if err != nil {
 			return err
