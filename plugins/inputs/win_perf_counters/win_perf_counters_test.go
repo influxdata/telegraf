@@ -81,11 +81,11 @@ func TestWinPerfcountersConfigGet2(t *testing.T) {
 	if len(parsedItems) == 1 {
 		require.NoError(t, nil)
 	} else if len(parsedItems) == 0 {
-		var errorstring1 string = "No results returned from the query: " + string(len(parsedItems))
+		var errorstring1 string = "No results returned from the counterPath: " + string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	} else if len(parsedItems) > 1 {
-		var errorstring1 string = "Too many results returned from the query: " + string(len(parsedItems))
+		var errorstring1 string = "Too many results returned from the counterPath: " + string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
@@ -130,12 +130,12 @@ func TestWinPerfcountersConfigGet3(t *testing.T) {
 		require.NoError(t, nil)
 	} else if len(parsedItems) < 2 {
 
-		var errorstring1 string = "Too few results returned from the query. " + string(len(parsedItems))
+		var errorstring1 string = "Too few results returned from the counterPath. " + string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	} else if len(parsedItems) > 2 {
 
-		var errorstring1 string = "Too many results returned from the query: " + string(len(parsedItems))
+		var errorstring1 string = "Too many results returned from the counterPath: " + string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
@@ -180,12 +180,12 @@ func TestWinPerfcountersConfigGet4(t *testing.T) {
 		require.NoError(t, nil)
 	} else if len(parsedItems) < 2 {
 
-		var errorstring1 string = "Too few results returned from the query: " + string(len(parsedItems))
+		var errorstring1 string = "Too few results returned from the counterPath: " + string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	} else if len(parsedItems) > 2 {
 
-		var errorstring1 string = "Too many results returned from the query: " + string(len(parsedItems))
+		var errorstring1 string = "Too many results returned from the counterPath: " + string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	}
@@ -230,12 +230,12 @@ func TestWinPerfcountersConfigGet5(t *testing.T) {
 	if len(parsedItems) == 4 {
 		require.NoError(t, nil)
 	} else if len(parsedItems) < 4 {
-		var errorstring1 string = "Too few results returned from the query: " +
+		var errorstring1 string = "Too few results returned from the counterPath: " +
 			string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	} else if len(parsedItems) > 4 {
-		var errorstring1 string = "Too many results returned from the query: " +
+		var errorstring1 string = "Too many results returned from the counterPath: " +
 			string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
@@ -314,12 +314,12 @@ func TestWinPerfcountersConfigGet7(t *testing.T) {
 	if len(parsedItems) == 2 {
 		require.NoError(t, nil)
 	} else if len(parsedItems) < 2 {
-		var errorstring1 string = "Too few results returned from the query: " +
+		var errorstring1 string = "Too few results returned from the counterPath: " +
 			string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)
 	} else if len(parsedItems) > 2 {
-		var errorstring1 string = "Too many results returned from the query: " +
+		var errorstring1 string = "Too many results returned from the counterPath: " +
 			string(len(parsedItems))
 		err2 := errors.New(errorstring1)
 		require.NoError(t, err2)

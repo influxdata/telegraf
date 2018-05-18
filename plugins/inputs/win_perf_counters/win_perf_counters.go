@@ -53,7 +53,7 @@ var sampleConfig = `
     Measurement = "win_system"
 
   [[inputs.win_perf_counters.object]]
-    # Example query where the Instance portion must be removed to get data back,
+    # Example counterPath where the Instance portion must be removed to get data back,
     # such as from the Memory object.
     ObjectName = "Memory"
     Counters = [
@@ -61,7 +61,7 @@ var sampleConfig = `
       "Page Faults/sec", "Pages/sec", "Transition Faults/sec",
       "Pool Nonpaged Bytes", "Pool Paged Bytes"
     ]
-    Instances = ["------"] # Use 6 x - to remove the Instance bit from the query.
+    Instances = ["------"] # Use 6 x - to remove the Instance bit from the counterPath.
     Measurement = "win_mem"
 `
 
@@ -73,8 +73,8 @@ type Win_PerfCounters struct {
 	FailOnMissing   bool
 
 	configParsed bool
-	itemCache    []*item
-	queryHandle  PDH_HQUERY
+	counters     []*counter
+	query        PerformanceQuery
 }
 
 type perfobject struct {
@@ -87,14 +87,13 @@ type perfobject struct {
 	IncludeTotal  bool
 }
 
-type item struct {
-	query         string
+type counter struct {
+	counterPath   string
 	objectName    string
 	counter       string
 	instance      string
 	measurement   string
-	include_total bool
-	handle        PDH_HQUERY
+	includeTotal  bool
 	counterHandle PDH_HCOUNTER
 }
 
@@ -127,94 +126,53 @@ func extractObjectInstanceCounterFromQueryRE(query string) (object string, insta
 }
 
 
-func extractObjectInstanceCounterFromQuery(query string) (object string, instance string, counter string, err error) {
-	left_paren_idx := strings.Index(query, "(")
-	right_paren_idx := strings.Index(query, ")")
+func (m *Win_PerfCounters) AddItem(counterPath string,	measurement string, includeTotal bool) error {
 
-	if left_paren_idx != -1 && right_paren_idx != -1 {
-		instance = query[left_paren_idx+1 : right_paren_idx]
-	}
-
-	last_slash_idx := strings.LastIndex(query, "\\")
-
-	if last_slash_idx == -1 {
-		err = errors.New("Could not extract counter name from: " + query)
-		return
-	}
-
-	counter = query[last_slash_idx:]
-
-	prelast_slash_idx := strings.LastIndex(query[:last_slash_idx], "\\")
-
-	if prelast_slash_idx == -1 {
-		err = errors.New("Could not extract object name from: " + query)
-		return
-	}
-
-	objNameEndInd := last_slash_idx
-
-	if left_paren_idx != -1 {
-		objNameEndInd = left_paren_idx
-	}
-
-	object = query[prelast_slash_idx+1 : objNameEndInd]
-
-	return
-}
-
-func (m *Win_PerfCounters) AddItem(query string, objectName string, counter string, instance string,
-	measurement string, include_total bool) error {
-
-	var counterHandle PDH_HCOUNTER
-	var ret uint32
-	if !PdhAddEnglishCounterSupported() {
-		ret = PdhAddCounter(m.queryHandle, query, 0, &counterHandle)
-		if ret != ERROR_SUCCESS {
-			return errors.New(PdhFormatError(ret))
-		}
-	} else {
-		ret = PdhAddEnglishCounter(m.queryHandle, query, 0, &counterHandle)
-		if ret != ERROR_SUCCESS {
-			return errors.New(PdhFormatError(ret))
-		}
-		ci, err := GetCounterInfo(counterHandle)
+	if !m.query.AddEnglishCounterSupported() {
+		_, err := m.query.AddCounterToQuery (counterPath)
 		if err != nil {
 			return err
 		}
-		query = UTF16PtrToString(ci.SzFullPath)
+	} else {
+		counterHandle, err := m.query.AddEnglishCounterToQuery (counterPath)
+		if err != nil {
+			return err
+		}
+		ci, err :=  m.query.GetCounterInfo(counterHandle)
+		if err != nil {
+			return err
+		}
+		counterPath = UTF16PtrToString(ci.SzFullPath)
 	}
 
-	counters, err := ExpandWildCardPath(query)
+	counters, err :=  m.query.ExpandWildCardPath(counterPath)
 	if err != nil {
 		return err
 	}
 
 	for _, counterPath := range counters {
-		ret = PdhAddCounter(m.queryHandle, counterPath, 0, &counterHandle)
-		if ret != ERROR_SUCCESS {
-			return errors.New(PdhFormatError(ret))
-		}
+		counterHandle, err := m.query.AddCounterToQuery (counterPath)
 
 		parsedObjectName, parsedInstance, parsedCounter, err := extractObjectInstanceCounterFromQueryRE(counterPath)
 		if err != nil {
 			return err
 		}
 
-		if parsedInstance == "_Total" && !include_total {
+		if parsedInstance == "_Total" && !includeTotal {
 			continue
 		}
 
-		newItem := &item{counterPath, parsedObjectName, parsedCounter, parsedInstance, measurement,
-			include_total, m.queryHandle, counterHandle}
-		//fmt.Printf("Added q: %s, o: %s, i: %s, c: %s\n", newItem.query, newItem.objectName, newItem.instance, newItem.counter)
-		m.itemCache = append(m.itemCache, newItem)
+		newItem := &counter{counterPath, parsedObjectName, parsedCounter, parsedInstance, measurement,
+			includeTotal, counterHandle}
+		//fmt.Printf("Added q: %s, o: %s, i: %s, c: %s\n", newItem.counterPath, newItem.objectName, newItem.instance, newItem.counter)
+		m.counters = append(m.counters, newItem)
 	}
 
 	return nil
 }
 
 func (m *Win_PerfCounters) Description() string {
-	return "Input plugin to query Performance Counters on Windows operating systems"
+	return "Input plugin to counterPath Performance Counters on Windows operating systems"
 }
 
 func (m *Win_PerfCounters) SampleConfig() string {
@@ -222,7 +180,7 @@ func (m *Win_PerfCounters) SampleConfig() string {
 }
 
 func (m *Win_PerfCounters) ParseConfig() error {
-	var query string
+	var counterPath string
 
 	start := time.Now()
 
@@ -233,21 +191,20 @@ func (m *Win_PerfCounters) ParseConfig() error {
 					objectname := PerfObject.ObjectName
 
 					if instance == "------" {
-						query = "\\" + objectname + "\\" + counter
+						counterPath = "\\" + objectname + "\\" + counter
 					} else {
-						query = "\\" + objectname + "(" + instance + ")\\" + counter
+						counterPath = "\\" + objectname + "(" + instance + ")\\" + counter
 					}
 
-					err := m.AddItem(query, objectname, counter, instance,
-						PerfObject.Measurement, PerfObject.IncludeTotal)
+					err := m.AddItem(counterPath, PerfObject.Measurement, PerfObject.IncludeTotal)
 
 					if err == nil {
 						if m.PrintValid {
-							fmt.Printf("Valid: %s\n", query)
+							fmt.Printf("Valid: %s\n", counterPath)
 						}
 					} else {
 						if m.WarnOnMissing || m.FailOnMissing || PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							fmt.Printf("Invalid query: '%s'. Error: %s", query, err.Error())
+							fmt.Printf("Invalid counterPath: '%s'. Error: %s", counterPath, err.Error())
 						}
 						if m.FailOnMissing || PerfObject.FailOnMissing {
 							return err
@@ -258,24 +215,24 @@ func (m *Win_PerfCounters) ParseConfig() error {
 		}
 		took := time.Now().Sub(start).Seconds()
 
-		fmt.Printf("ParseConfig: Found %d items, took %.2f\n", len(m.itemCache), took)
+		fmt.Printf("ParseConfig: Found %d items, took %.2f\n", len(m.counters), took)
 		return nil
 	} else {
-		err := errors.New("No performance objects configured!")
+		err := errors.New("no performance objects configured")
 		return err
 	}
 
 }
 
-func (m *Win_PerfCounters) GetParsedItemsForTesting() []*item {
-	return m.itemCache
+func (m *Win_PerfCounters) GetParsedItemsForTesting() []*counter {
+	return m.counters
 }
 
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// Parse the config once
 	var err error
 	if !m.configParsed {
-		m.queryHandle, err = OpenPerformanceCountersQuery()
+		err = m.query.Open()
 		if err != nil {
 			return err
 		}
@@ -286,9 +243,9 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		//some counters need two data samples before computing a value
-		ret := PdhCollectQueryData(m.queryHandle)
-		if ret != ERROR_SUCCESS {
-			return errors.New(PdhFormatError(ret))
+		err = m.query.CollectData()
+		if err != nil {
+			return err
 		}
 		time.Sleep(time.Second)
 	}
@@ -303,20 +260,14 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 
 	start := time.Now()
 
-	ret := PdhCollectQueryData(m.queryHandle)
-	if ret != ERROR_SUCCESS {
-		return errors.New(PdhFormatError(ret))
+	err = m.query.CollectData()
+	if err != nil {
+		return err
 	}
-	//some counters
 	// For iterate over the known metrics and get the samples.
-	for _, metric := range m.itemCache {
+	for _, metric := range m.counters {
 		// collect
-		//fmt.Printf("Getting values for %s\n", metric.query)
-
-		//time.Sleep(time.Second)
-		//ret = PdhCollectQueryData(metric.handle)
-		//if ret == ERROR_SUCCESS {
-		value, err := GetFormattedCounterValueDouble(metric.counterHandle)
+		value, err := m.query.GetFormattedCounterValueDouble(metric.counterHandle)
 		if err == nil {
 			measurement := sanitizedChars.Replace(metric.measurement)
 			if measurement == "" {
@@ -327,13 +278,10 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 			if collectFields[instance] == nil {
 				collectFields[instance] = make(map[string]interface{})
 			}
-			collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value.DoubleValue)
+			collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value)
 		} else {
-			return fmt.Errorf("error while getting value for counter %s: %v", metric.query, err)
+			return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
 		}
-		//} else {
-		//	return errors.New(PdhFormatError(ret))
-		//}
 	}
 
 	for instance, fields := range collectFields {
@@ -350,5 +298,5 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("win_perf_counters", func() telegraf.Input { return &Win_PerfCounters{} })
+	inputs.Add("win_perf_counters", func() telegraf.Input { return &Win_PerfCounters{query: &PerformanceQueryImpl{} }})
 }
