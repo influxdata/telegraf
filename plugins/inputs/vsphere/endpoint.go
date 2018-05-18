@@ -419,7 +419,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 
 		// Filled up a chunk or at end of data? Run a query with the collected objects
 		//
-		if len(pqs) >= int(e.Parent.ObjectsPerQuery) || total >= len(res.objects) {
+		if len(pqs) > 0 && len(pqs) >= int(e.Parent.ObjectsPerQuery) || total >= len(res.objects) {
 			log.Printf("D! Querying %d objects of type %s for %s. Object count: %d. Total objects %d", len(pqs), resourceType, e.URL.Host, total, len(res.objects))
 			n, err := e.collectChunk(pqs, resourceType, res, acc, &lastTS)
 			if err != nil {
