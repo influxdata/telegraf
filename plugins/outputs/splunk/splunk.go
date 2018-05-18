@@ -55,7 +55,8 @@ var sampleConfig = `
 SplunkUrl = "http://localhost:8088/services/collector"
 
 ## REQUIRED
-## Splunk Authorization Token for sending data to a Splunk HTTPEventCollector (HEC).  
+## Splunk Authorization Token for sending data to a Splunk HTTPEventCollector (HEC). 
+##   Note:  This Token should map to a 'metrics' index in Splunk.  
 AuthString = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
 
 ## OPTIONAL:  prefix for metrics keys
