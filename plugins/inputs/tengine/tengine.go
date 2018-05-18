@@ -275,8 +275,7 @@ func (n *Tengine) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		tags := getTags(addr)
-		tags["server_name"] = tenginestatus.host
+		tags := getTags(addr,tenginestatus.host)
 		fields := map[string]interface{}{
 			"bytes_in": tenginestatus.bytes_in,
 			"bytes_out": tenginestatus.bytes_out,
@@ -315,7 +314,7 @@ func (n *Tengine) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 }
 
 // Get tag(s) for the tengine plugin
-func getTags(addr *url.URL) map[string]string {
+func getTags(addr *url.URL, server_name string) map[string]string {
 	h := addr.Host
 	host, port, err := net.SplitHostPort(h)
 	if err != nil {
@@ -328,7 +327,7 @@ func getTags(addr *url.URL) map[string]string {
 			port = ""
 		}
 	}
-	return map[string]string{"server": host, "port": port}
+	return map[string]string{"server": host, "port": port, "server_name": server_name}
 }
 
 func init() {
