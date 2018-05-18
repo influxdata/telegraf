@@ -124,7 +124,6 @@ func (s *Syslog) listen(acc telegraf.Accumulator) {
 
 	for {
 		conn, err := s.listener.Accept()
-
 		if err != nil {
 			log.Println(err)
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
@@ -289,15 +288,13 @@ func (s *Syslog) Stop() {
 }
 
 func init() {
-	inputs.Add("syslog", func() telegraf.Input {
-		d := &internal.Duration{
+	receiver := &Syslog{
+		Address: ":6514",
+		now:     time.Now,
+		ReadTimeout: &internal.Duration{
 			Duration: defaultReadTimeout,
-		}
+		},
+	}
 
-		return &Syslog{
-			Address:     ":6514",
-			now:         time.Now,
-			ReadTimeout: d,
-		}
-	})
+	inputs.Add("syslog", func() telegraf.Input { return receiver })
 }

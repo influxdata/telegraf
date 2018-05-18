@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -91,8 +92,6 @@ RaR4pzgPbnKj7atG+2dBnffWfE+1Mcy0INDAO6WxPg0=
 )
 
 var (
-	initClient           sync.Once
-	client               net.Conn
 	initServiceCertFiles sync.Once
 	serviceCAFile        string
 	serviceCertFile      string
@@ -159,37 +158,47 @@ func newTLSSyslogReceiver(keepAlive *internal.Duration, maxConn int, bestEffort 
 }
 
 func getTLSSyslogSender() net.Conn {
-	initClient.Do(func() {
-		cas := x509.NewCertPool()
-		cas.AppendCertsFromPEM([]byte(serviceRootPEM))
-		clientCert, err := tls.X509KeyPair([]byte(clientCertPEM), []byte(clientKeyPEM))
-		if err != nil {
-			panic(err)
-		}
+	cas := x509.NewCertPool()
+	cas.AppendCertsFromPEM([]byte(serviceRootPEM))
+	clientCert, err := tls.X509KeyPair([]byte(clientCertPEM), []byte(clientKeyPEM))
+	if err != nil {
+		panic(err)
+	}
 
-		config := &tls.Config{
-			RootCAs:            cas,
-			Certificates:       []tls.Certificate{clientCert},
-			MinVersion:         tls.VersionTLS12,
-			MaxVersion:         tls.VersionTLS12,
-			Renegotiation:      tls.RenegotiateNever,
-			InsecureSkipVerify: false,
-			ServerName:         "localhost",
-		}
+	config := &tls.Config{
+		RootCAs:            cas,
+		Certificates:       []tls.Certificate{clientCert},
+		MinVersion:         tls.VersionTLS12,
+		MaxVersion:         tls.VersionTLS12,
+		Renegotiation:      tls.RenegotiateNever,
+		InsecureSkipVerify: false,
+		ServerName:         "localhost",
+	}
 
-		client, err = tls.Dial("tcp", address, config)
-		if err != nil {
-			log.Println(err)
-			panic(err)
-		}
-	})
+	c, err := tls.Dial("tcp", address, config)
+	if err != nil {
+		log.Println(err)
+		panic(err)
+	}
 
-	return client
+	return c
 }
 
-func test(t *testing.T, acc *testutil.Accumulator, conn net.Conn, recv *Syslog) {
+func testStrict(t *testing.T, acc *testutil.Accumulator, tls bool) {
 	for _, tc := range getTestCases() {
 		t.Run(tc.name, func(t *testing.T) {
+			// Connect
+			var conn net.Conn
+			var err error
+			if tls {
+				conn = getTLSSyslogSender()
+				require.NotNil(t, conn)
+			} else {
+				conn, err = net.Dial("tcp", address)
+				require.NoError(t, err)
+				defer conn.Close()
+			}
+
 			// Clear
 			acc.ClearMetrics()
 			acc.Errors = make([]error, 0)
@@ -197,55 +206,119 @@ func test(t *testing.T, acc *testutil.Accumulator, conn net.Conn, recv *Syslog) 
 			conn.Write(tc.data)
 			// Wait that the the number of data points is accumulated
 			// Since the receiver is running concurrently
-			if tc.want != nil && tc.bestEffort == recv.BestEffort {
-				acc.Wait(len(tc.want))
+			if tc.wantStrict != nil {
+				acc.Wait(len(tc.wantStrict))
 			}
-			if tc.werr {
-				acc.WaitError(1)
-			}
+			// if tc.werr {
+			// 	// Wait the rfc5425 parsing error
+			// 	acc.WaitError(1)
+			// 	// When best effort mode is on we have to wait also the rfc5424 parsing error
+			// 	if tc.bestEffort && recv.BestEffort {
+			// 		acc.WaitError(1)
+			// 	}
+			// }
 			// Verify
-			if len(acc.Errors) > 0 != tc.werr {
-				t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tc.werr, acc.Errors)
-			}
+			// if len(acc.Errors) > 0 != tc.werr {
+			// 	t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tc.werr, acc.Errors)
+			// }
 			var got []testutil.Metric
 			for _, metric := range acc.Metrics {
 				got = append(got, *metric)
 			}
-			if !cmp.Equal(tc.want, got) && tc.bestEffort == recv.BestEffort {
-				t.Fatalf("Got (+) / Want (-)\n %s", cmp.Diff(tc.want, got))
+			if !cmp.Equal(tc.wantStrict, got) {
+				t.Fatalf("Got (+) / Want (-)\n %s", cmp.Diff(tc.wantStrict, got))
 			}
 		})
 	}
 }
 
-func TestTCP(t *testing.T) {
+func testBestEffort(t *testing.T, acc *testutil.Accumulator, tls bool) {
+	for _, tc := range getTestCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			// Connect
+			var conn net.Conn
+			var err error
+			if tls {
+				conn = getTLSSyslogSender()
+				require.NotNil(t, conn)
+			} else {
+				conn, err = net.Dial("tcp", address)
+				require.NoError(t, err)
+				defer conn.Close()
+			}
+
+			// Clear
+			acc.ClearMetrics()
+			acc.Errors = make([]error, 0)
+			// Write
+			conn.Write(tc.data)
+			// Wait that the the number of data points is accumulated
+			// Since the receiver is running concurrently
+			if tc.wantBestEffort != nil {
+				acc.Wait(len(tc.wantBestEffort))
+			}
+			// if tc.werr {
+			// 	// Wait the rfc5425 parsing error
+			// 	acc.WaitError(1)
+			// 	// When best effort mode is on we have to wait also the rfc5424 parsing error
+			// 	if tc.bestEffort && recv.BestEffort {
+			// 		acc.WaitError(1)
+			// 	}
+			// }
+			// Verify
+			// if len(acc.Errors) > 0 != tc.werr {
+			// 	t.Fatalf("Got unexpected errors. want error = %v, errors = %v\n", tc.werr, acc.Errors)
+			// }
+			var got []testutil.Metric
+			for _, metric := range acc.Metrics {
+				got = append(got, *metric)
+			}
+			if !cmp.Equal(tc.wantBestEffort, got) {
+				t.Fatalf("Got (+) / Want (-)\n %s", cmp.Diff(tc.wantBestEffort, got))
+			}
+		})
+	}
+}
+
+func TestTCPInStrictMode(t *testing.T) {
 	receiver := newTCPSyslogReceiver(nil, 0, false)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, receiver.Start(acc))
 	defer receiver.Stop()
 
-	conn, err := net.Dial("tcp", address)
-	require.NoError(t, err)
-
-	test(t, acc, conn, receiver)
-
-	conn.Close()
+	testStrict(t, acc, false)
 }
 
-func TestTLS(t *testing.T) {
+func TestTCPInBestEffort(t *testing.T) {
+	receiver := newTCPSyslogReceiver(nil, 0, true)
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, receiver.Start(acc))
+	defer receiver.Stop()
+
+	testBestEffort(t, acc, false)
+}
+
+func TestTLSInStrictMode(t *testing.T) {
 	receiver := newTLSSyslogReceiver(nil, 0, false)
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, receiver.Start(acc))
 	defer receiver.Stop()
 
-	conn := getTLSSyslogSender()
-	require.NotNil(t, conn)
+	testStrict(t, acc, true)
+}
 
-	test(t, acc, conn, receiver)
+func TestTLSInBestEffortOn(t *testing.T) {
+	receiver := newTLSSyslogReceiver(nil, 0, true)
+	require.True(t, receiver.BestEffort)
 
-	conn.Close()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, receiver.Start(acc))
+	defer receiver.Stop()
+
+	testBestEffort(t, acc, true)
 }
 
 func TestListenError(t *testing.T) {
@@ -255,23 +328,7 @@ func TestListenError(t *testing.T) {
 	require.Error(t, receiver.Start(&testutil.Accumulator{}))
 }
 
-func TestWithBestEffortOn(t *testing.T) {
-	receiver := newTLSSyslogReceiver(nil, 0, true)
-	require.True(t, receiver.BestEffort)
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, receiver.Start(acc))
-	defer receiver.Stop()
-
-	conn := getTLSSyslogSender()
-	require.NotNil(t, conn)
-
-	test(t, acc, conn, receiver)
-
-	conn.Close()
-}
-
-func TestKeepAlive(t *testing.T) {
+func TestTLSWithKeepAliveInStrictMode(t *testing.T) {
 	keepAlivePeriod := &internal.Duration{
 		Duration: time.Minute,
 	}
@@ -282,20 +339,29 @@ func TestKeepAlive(t *testing.T) {
 	require.NoError(t, receiver.Start(acc))
 	defer receiver.Stop()
 
-	conn := getTLSSyslogSender()
-	require.NotNil(t, conn)
+	testStrict(t, acc, true)
+}
 
-	test(t, acc, conn, receiver)
+func TestTLSWithZeroKeepAliveInStrictMode(t *testing.T) {
+	keepAlivePeriod := &internal.Duration{
+		Duration: 0,
+	}
+	receiver := newTLSSyslogReceiver(keepAlivePeriod, 0, false)
+	require.Equal(t, receiver.KeepAlivePeriod, keepAlivePeriod)
 
-	conn.Close()
+	acc := &testutil.Accumulator{}
+	require.NoError(t, receiver.Start(acc))
+	defer receiver.Stop()
+
+	testStrict(t, acc, true)
 }
 
 type testCase struct {
-	name       string
-	data       []byte
-	want       []testutil.Metric
-	bestEffort bool // whether the wanted metrics are expected only in with best effort mode on
-	werr       bool // expecting errors ?
+	name           string
+	data           []byte
+	wantBestEffort []testutil.Metric
+	wantStrict     []testutil.Metric
+	werr           bool // expecting errors ?
 }
 
 func getRandomString(n int) string {
@@ -325,39 +391,43 @@ func getRandomString(n int) string {
 }
 
 func getTestCases() []testCase {
-	// maxP := uint8(191)
-	// maxV := uint16(999)
-	// maxTS := "2017-12-31T23:59:59.999999+00:00"
-	// maxH := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabc"
-	// maxA := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdef"
-	// maxPID := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzab"
-	// maxMID := "abcdefghilmnopqrstuvzabcdefghilm"
-	// message7681 := getRandomString(7681)
+	maxP := uint8(191)
+	maxV := uint16(999)
+	maxTS := "2017-12-31T23:59:59.999999+00:00"
+	maxH := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabc"
+	maxA := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdef"
+	maxPID := "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzab"
+	maxMID := "abcdefghilmnopqrstuvzabcdefghilm"
+	message7681 := getRandomString(7681)
 
 	testCases := []testCase{
 		{
-			name: "1st/min/ok",
-			data: []byte("16 <1>1 - - - - - -"),
-			want: []testutil.Metric{
+			name: "1st/avg/ok",
+			data: []byte(`188 <29>1 2016-02-21T04:32:57+00:00 web1 someservice 2341 2 [origin][meta sequence="14125553" service="someservice"] "GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`),
+			wantStrict: []testutil.Metric{
 				testutil.Metric{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
-						"version": uint16(1),
+						"version":       uint16(1),
+						"procid":        "2341",
+						"msgid":         "2",
+						"message":       `"GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`,
+						"origin":        true,
+						"meta sequence": "14125553",
+						"meta service":  "someservice",
 					},
 					Tags: map[string]string{
-						"severity":         "1",
-						"severity_level":   "alert",
-						"facility":         "0",
-						"facility_message": "kernel messages",
+						"severity":         "5",
+						"severity_level":   "notice",
+						"facility":         "3",
+						"facility_message": "system daemons",
+						"hostname":         "web1",
+						"appname":          "someservice",
 					},
-					Time: defaultTime,
+					Time: time.Unix(1456029177, 0).UTC(),
 				},
 			},
-		},
-		{
-			name: "1st/avg/ok",
-			data: []byte(`188 <29>1 2016-02-21T04:32:57+00:00 web1 someservice 2341 2 [origin][meta sequence="14125553" service="someservice"] "GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`),
-			want: []testutil.Metric{
+			wantBestEffort: []testutil.Metric{
 				testutil.Metric{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
@@ -384,7 +454,35 @@ func getTestCases() []testCase {
 		{
 			name: "1st/min/ok//2nd/min/ok",
 			data: []byte("16 <1>2 - - - - - -17 <4>11 - - - - - -"),
-			want: []testutil.Metric{
+			wantStrict: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": uint16(2),
+					},
+					Tags: map[string]string{
+						"severity":         "1",
+						"severity_level":   "alert",
+						"facility":         "0",
+						"facility_message": "kernel messages",
+					},
+					Time: defaultTime,
+				},
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": uint16(11),
+					},
+					Tags: map[string]string{
+						"severity":         "4",
+						"severity_level":   "warning",
+						"facility":         "0",
+						"facility_message": "kernel messages",
+					},
+					Time: defaultTime,
+				},
+			},
+			wantBestEffort: []testutil.Metric{
 				testutil.Metric{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
@@ -416,7 +514,23 @@ func getTestCases() []testCase {
 		{
 			name: "1st/utf8/ok",
 			data: []byte("23 <1>1 - - - - - - hellø"),
-			want: []testutil.Metric{
+			wantStrict: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": uint16(1),
+						"message": "hellø",
+					},
+					Tags: map[string]string{
+						"severity":         "1",
+						"severity_level":   "alert",
+						"facility":         "0",
+						"facility_message": "kernel messages",
+					},
+					Time: defaultTime,
+				},
+			},
+			wantBestEffort: []testutil.Metric{
 				testutil.Metric{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
@@ -436,12 +550,28 @@ func getTestCases() []testCase {
 		},
 		{
 			name: "1st/nl/ok", // newline
-			data: []byte("28 <1>1 - - - - - - hello\nworld"),
-			want: []testutil.Metric{
+			data: []byte("28 <1>3 - - - - - - hello\nworld"),
+			wantStrict: []testutil.Metric{
 				testutil.Metric{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
-						"version": uint16(1),
+						"version": uint16(3),
+						"message": "hello\nworld",
+					},
+					Tags: map[string]string{
+						"severity":         "1",
+						"severity_level":   "alert",
+						"facility":         "0",
+						"facility_message": "kernel messages",
+					},
+					Time: defaultTime,
+				},
+			},
+			wantBestEffort: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": uint16(3),
 						"message": "hello\nworld",
 					},
 					Tags: map[string]string{
@@ -454,39 +584,70 @@ func getTestCases() []testCase {
 				},
 			},
 		},
-		// {
-		// 	name: "1st/max/ok",
-		// 	data: []byte(fmt.Sprintf("8192 <%d>%d %s %s %s %s %s - %s", maxP, maxV, maxTS, maxH, maxA, maxPID, maxMID, message7681)),
-		// 	want: []testutil.Metric{
-		// 		testutil.Metric{
-		// 			Measurement: "syslog",
-		// 			Fields: map[string]interface{}{
-		// 				"version": maxV,
-		// 				"message": message7681,
-		// 				"procid":  maxPID,
-		// 				"msgid":   maxMID,
-		// 			},
-		// 			Tags: map[string]string{
-		// 				"severity":         "7",
-		// 				"severity_level":   "debug",
-		// 				"facility":         "23",
-		// 				"facility_message": "local use 7 (local7)",
-		// 				"hostname":         maxH,
-		// 				"appname":          maxA,
-		// 			},
-		// 			Time: time.Unix(1514764799, 999999000).UTC(),
-		// 		},
-		// 	},
-		// },
 		{
 			name:       "1st/uf/ko", // underflow (msglen less than provided octets)
 			data:       []byte("16 <1>2"),
-			bestEffort: true,
-			want: []testutil.Metric{
+			wantStrict: nil,
+			wantBestEffort: []testutil.Metric{
 				testutil.Metric{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version": uint16(2),
+					},
+					Tags: map[string]string{
+						"severity":         "1",
+						"severity_level":   "alert",
+						"facility":         "0",
+						"facility_message": "kernel messages",
+					},
+					Time: defaultTime,
+				},
+			},
+			werr: true,
+		},
+		{
+			name: "1st/min/ok",
+			data: []byte("16 <1>1 - - - - - -"),
+			wantStrict: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": uint16(1),
+					},
+					Tags: map[string]string{
+						"severity":         "1",
+						"severity_level":   "alert",
+						"facility":         "0",
+						"facility_message": "kernel messages",
+					},
+					Time: defaultTime,
+				},
+			},
+			wantBestEffort: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": uint16(1),
+					},
+					Tags: map[string]string{
+						"severity":         "1",
+						"severity_level":   "alert",
+						"facility":         "0",
+						"facility_message": "kernel messages",
+					},
+					Time: defaultTime,
+				},
+			},
+		},
+		{
+			name:       "1st/uf/mf", // The first "underflow" message breaks also the second one
+			data:       []byte("16 <1>217 <11>1 - - - - - -"),
+			wantStrict: nil,
+			wantBestEffort: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": uint16(217),
 					},
 					Tags: map[string]string{
 						"severity":         "1",
@@ -505,6 +666,50 @@ func getTestCases() []testCase {
 		// 	want: []testutil.Metric{},
 		// 	werr: true,
 		// },
+		{
+			name: "1st/max/ok",
+			data: []byte(fmt.Sprintf("8192 <%d>%d %s %s %s %s %s - %s", maxP, maxV, maxTS, maxH, maxA, maxPID, maxMID, message7681)),
+			wantStrict: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": maxV,
+						"message": message7681,
+						"procid":  maxPID,
+						"msgid":   maxMID,
+					},
+					Tags: map[string]string{
+						"severity":         "7",
+						"severity_level":   "debug",
+						"facility":         "23",
+						"facility_message": "local use 7 (local7)",
+						"hostname":         maxH,
+						"appname":          maxA,
+					},
+					Time: time.Unix(1514764799, 999999000).UTC(),
+				},
+			},
+			wantBestEffort: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version": maxV,
+						"message": message7681,
+						"procid":  maxPID,
+						"msgid":   maxMID,
+					},
+					Tags: map[string]string{
+						"severity":         "7",
+						"severity_level":   "debug",
+						"facility":         "23",
+						"facility_message": "local use 7 (local7)",
+						"hostname":         maxH,
+						"appname":          maxA,
+					},
+					Time: time.Unix(1514764799, 999999000).UTC(),
+				},
+			},
+		},
 	}
 
 	return testCases
