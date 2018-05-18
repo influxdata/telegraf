@@ -127,7 +127,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		hostname = ""
 	}
 
-	metricsmap := make(map[string][]byte)
+	metricsmap := make(map[string][]telegraf.Metric)
 
 	for _, metric := range metrics {
 		var t []string
@@ -141,15 +141,15 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		t = append(t, metric.Name())
 		topic := strings.Join(t, "/")
 
-		buf, err := m.serializer.Serialize(metric)
-
-		if err != nil {
-			return err
-		}
-
 		if m.BatchMessage {
-			metricsmap[topic] = append(metricsmap[topic], buf...)
+			metricsmap[topic] = append(metricsmap[topic], metric)
 		} else {
+			buf, err := m.serializer.Serialize(metric)
+
+			if err != nil {
+				return err
+			}
+
 			err = m.publish(topic, buf)
 			if err != nil {
 				return fmt.Errorf("Could not write to MQTT server, %s", err)
@@ -158,9 +158,14 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 	}
 
 	for key := range metricsmap {
-		err := m.publish(key, metricsmap[key])
+		buf, err := m.serializer.SerializeBatch(metricsmap[key])
+
 		if err != nil {
-			return fmt.Errorf("Could not write to MQTT server, %s", err)
+			return err
+		}
+		publisherr := m.publish(key, buf)
+		if publisherr != nil {
+			return fmt.Errorf("Could not write to MQTT server, %s", publisherr)
 		}
 	}
 
