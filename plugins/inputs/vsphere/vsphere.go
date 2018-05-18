@@ -30,6 +30,7 @@ type VSphere struct {
 	GatherDatastores       bool
 	DatastoreMetricInclude []string
 	DatastoreMetricExclude []string
+	Separator              string
 
 	ObjectsPerQuery         int32
 	ObjectDiscoveryInterval internal.Duration
@@ -136,11 +137,15 @@ var sampleConfig = `
 # gather_datastore = true ### (default=true)
 
 ## Typical datastore metrics (if omitted, all metrics are collected)
-# datastore_metric_include = [
-#   "disk.used.*",
-#   "disk.provsioned.*" ]
-
-# storage_metric_exclude = [] ## Nothing excluded by default
+##
+## WARNING: It is not recommended to include all metrics. Your collection will probably time out if you do!
+##
+datastore_metric_include = [
+	"datastore.read.average"
+	"datastore.write.average"
+	"datastore.throughput.usage.average"
+	"datastore.throughput.contention.average" ]
+datastore_metric_exclude = [ "disk.*" ]
 
 ## number of objects to retreive per query. set to 64 for vCenter 5.5 and 6.0 (default: 256)
 # objects_per_query = 256
@@ -224,6 +229,7 @@ func init() {
 			GatherDatastores:       true,
 			DatastoreMetricInclude: nil,
 			DatastoreMetricExclude: nil,
+			Separator:              ".",
 
 			ObjectsPerQuery:         256,
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},

@@ -24,23 +24,23 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 
   # Typical VM metrics (if omitted, all metrics are collected)
   # vm_metric_include = [
-  #	"cpu.ready.summation.delta.millisecond",
-  #		"mem.swapinRate.average.rate.kiloBytesPerSecond",
-  #		"virtualDisk.numberReadAveraged.average.rate.number",
-  #		"virtualDisk.numberWriteAveraged.average.rate.number",
-  #		"virtualDisk.totalReadLatency.average.absolute.millisecond",
-  #		"virtualDisk.totalWriteLatency.average.absolute.millisecond",
-  #		"virtualDisk.readOIO.latest.absolute.number",
-  #		"virtualDisk.writeOIO.latest.absolute.number",
-  #		"net.bytesRx.average.rate.kiloBytesPerSecond",
-  #		"net.bytesTx.average.rate.kiloBytesPerSecond",
-  #		"net.droppedRx.summation.delta.number",
-  #		"net.droppedTx.summation.delta.number",
-  #		"cpu.run.summation.delta.millisecond",
-  #		"cpu.used.summation.delta.millisecond",
-  #		"mem.swapoutRate.average.rate.kiloBytesPerSecond",
-  #		"virtualDisk.read.average.rate.kiloBytesPerSecond",
-  #		"virtualDisk.write.average.rate.kiloBytesPerSecond" ]
+  #	"cpu.ready.summation",
+  #		"mem.swapinRate.average",
+  #		"virtualDisk.numberReadAveraged.average",
+  #		"virtualDisk.numberWriteAveraged.average",
+  #		"virtualDisk.totalReadLatency.average",
+  #		"virtualDisk.totalWriteLatency.average",
+  #		"virtualDisk.readOIO.latest",
+  #		"virtualDisk.writeOIO.latest",
+  #		"net.bytesRx.average",
+  #		"net.bytesTx.average",
+  #		"net.droppedRx.summation",
+  #		"net.droppedTx.summation",
+  #		"cpu.run.summation",
+  #		"cpu.used.summation",
+  #		"mem.swapoutRate.average",
+  #		"virtualDisk.read.average",
+  #		"virtualDisk.write.average" ]
 
   # vm_metric_exclude []
 
@@ -50,41 +50,41 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
   
   ## Typical host metrics (if omitted, all metrics are collected)
   # host_metric_include = [
-  #		"cpu.ready.summation.delta.millisecond",
-  #		"cpu.latency.average.rate.percent",
-  #		"cpu.coreUtilization.average.rate.percent",
-  #		"mem.usage.average.absolute.percent",
-  #		"mem.swapinRate.average.rate.kiloBytesPerSecond",
-  #		"mem.state.latest.absolute.number",
-  #		"mem.latency.average.absolute.percent",
-  #		"mem.vmmemctl.average.absolute.kiloBytes",
-  #		"disk.read.average.rate.kiloBytesPerSecond",
-  #		"disk.write.average.rate.kiloBytesPerSecond",
-  #		"disk.numberReadAveraged.average.rate.number",
-  #		"disk.numberWriteAveraged.average.rate.number",
-  #		"disk.deviceReadLatency.average.absolute.millisecond",
-  #		"disk.deviceWriteLatency.average.absolute.millisecond",
-  #		"disk.totalReadLatency.average.absolute.millisecond",
-  #		"disk.totalWriteLatency.average.absolute.millisecond",
-  #		"storageAdapter.read.average.rate.kiloBytesPerSecond",
-  #		"storageAdapter.write.average.rate.kiloBytesPerSecond",
-  #		"storageAdapter.numberReadAveraged.average.rate.number",
-  #		"storageAdapter.numberWriteAveraged.average.rate.number",
-  #		"net.errorsRx.summation.delta.number",
-  #		"net.errorsTx.summation.delta.number",
-  #		"net.bytesRx.average.rate.kiloBytesPerSecond",
-  #		"net.bytesTx.average.rate.kiloBytesPerSecond",
-  #		"cpu.used.summation.delta.millisecond",
-  #		"cpu.usage.average.rate.percent",
-  #		"cpu.utilization.average.rate.percent",
-  #		"cpu.wait.summation.delta.millisecond",
-  #		"cpu.idle.summation.delta.millisecond",
-  #		"cpu.readiness.average.rate.percent",
-  #		"cpu.costop.summation.delta.millisecond",
-  #		"cpu.swapwait.summation.delta.millisecond",
-  #		"mem.swapoutRate.average.rate.kiloBytesPerSecond",
-  #		"disk.kernelReadLatency.average.absolute.millisecond",
-  #		"disk.kernelWriteLatency.average.absolute.millisecond" ]
+  #		"cpu.ready.summation",
+  #		"cpu.latency.average",
+  #		"cpu.coreUtilization.average",
+  #		"mem.usage.average",
+  #		"mem.swapinRate.average",
+  #		"mem.state.latest",
+  #		"mem.latency.average",
+  #		"mem.vmmemctl.average",
+  #		"disk.read.average",
+  #		"disk.write.average",
+  #		"disk.numberReadAveraged.average",
+  #		"disk.numberWriteAveraged.average",
+  #		"disk.deviceReadLatency.average",
+  #		"disk.deviceWriteLatency.average",
+  #		"disk.totalReadLatency.average",
+  #		"disk.totalWriteLatency.average",
+  #		"storageAdapter.read.average",
+  #		"storageAdapter.write.average",
+  #		"storageAdapter.numberReadAveraged.average",
+  #		"storageAdapter.numberWriteAveraged.average",
+  #		"net.errorsRx.summation",
+  #		"net.errorsTx.summation",
+  #		"net.bytesRx.average",
+  #		"net.bytesTx.average",
+  #		"cpu.used.summation",
+  #		"cpu.usage.average",
+  #		"cpu.utilization.average",
+  #		"cpu.wait.summation",
+  #		"cpu.idle.summation",
+  #		"cpu.readiness.average",
+  #		"cpu.costop.summation",
+  #		"cpu.swapwait.summation",
+  #		"mem.swapoutRate.average",
+  #		"disk.kernelReadLatency.average",
+  #		"disk.kernelWriteLatency.average" ]
 
   # host_metric_exclude = [] # Nothing excluded by default
 
@@ -106,11 +106,15 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
   # gather_datastore = true # (default=true)
   
   ## Typical datastore metrics (if omitted, all metrics are collected)
-  # datastore_metric_include = [
-  #   "disk.used.*",
-  #   "disk.provsioned.*" ]
-
-  # storage_metric_exclude = [] # Nothing excluded by default
+  #
+  # WARNING: It is not recommended to include all metrics. Your collection will probably time out if you do!
+  #
+  datastore_metric_include = [
+	"datastore.read.average"
+	"datastore.write.average"
+	"datastore.throughput.usage.average"
+	"datastore.throughput.contention.average" ]
+  datastore_metric_exclude = [ "disk.*" ]
   
   ## number of objects to retreive per query. set to 64 for vCenter 5.5 and 6.0 (default: 256)
   # objects_per_query = 256

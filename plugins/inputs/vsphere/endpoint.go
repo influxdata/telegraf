@@ -440,7 +440,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 
 func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, res resource, acc telegraf.Accumulator, lastTS *time.Time) (int, error) {
 	count := 0
-	prefix := "vsphere." + resourceType
+	prefix := "vsphere" + e.Parent.Separator + resourceType
 	client, err := e.getClient()
 	if err != nil {
 		return 0, err
@@ -497,9 +497,9 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 				// Data SHOULD be presented to us with the same timestamp for all samples, but in case
 				// they don't we use the measurement name + timestamp as the key for the bucket.
 				//
-				mn, fn := makeMetricIdentifier(prefix, name)
+				mn, fn := e.makeMetricIdentifier(prefix, name)
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
-				log.Printf("Bucket key: %s, resource: %s, field: %s", bKey, instInfo.name, fn)
+				log.Printf("D! Bucket key: %s, resource: %s, field: %s", bKey, instInfo.name, fn)
 				bucket, found := buckets[bKey]
 				if !found {
 					bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: t}
@@ -573,12 +573,13 @@ func (e *Endpoint) populateTags(objectRef objectRef, resourceType string, t map[
 	}
 }
 
-func makeMetricIdentifier(prefix, metric string) (string, string) {
+func (e *Endpoint) makeMetricIdentifier(prefix, metric string) (string, string) {
 	parts := strings.Split(metric, ".")
 	if len(parts) == 1 {
 		return prefix, parts[0]
 	}
-	return prefix + "." + parts[0], strings.Join(parts[1:], ".")
+
+	return prefix + "." + parts[0], strings.Join(parts[1:], e.Parent.Separator)
 }
 
 func cleanGuestID(id string) string {
