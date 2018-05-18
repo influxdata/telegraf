@@ -36,8 +36,12 @@ github.com/hashicorp/consul 5174058f0d2bda63fa5198ab96c33d9a909c58ed
 github.com/influxdata/go-syslog 28acef32f4677d5e2f7984deec2ee25794ffce12
 =======
 github.com/hashicorp/consul 63d2fc68239b996096a1c55a0d4b400ea4c2583f
+<<<<<<< HEAD
 github.com/influxdata/go-syslog 5f3e6f5aca982afcdf4e3dac781105c1387bd05a
 >>>>>>> Update syslog parser to latest go-syslog
+=======
+github.com/influxdata/go-syslog dcd9920f1eea047ffa10928fd2b7fbad6c7abe83
+>>>>>>> Deps: Upgrade to latest go-syslog
 github.com/influxdata/tail c43482518d410361b6c383d7aebce33d0471d7bc
 github.com/influxdata/toml 5d1d907f22ead1cd47adde17ceec5bda9cacaf8f
 github.com/influxdata/wlog 7c63b0a71ef8300adc255344d275e10e5c3a71ec
