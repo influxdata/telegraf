@@ -11,7 +11,10 @@ const clusterHealthResponse = `
    "active_shards": 15,
    "relocating_shards": 0,
    "initializing_shards": 0,
-   "unassigned_shards": 0
+   "unassigned_shards": 0,
+   "number_of_pending_tasks": 0,
+   "task_max_waiting_in_queue_millis": 0,
+   "active_shards_percent_as_number": 100.0
 }
 `
 
@@ -27,6 +30,9 @@ const clusterHealthResponseWithIndices = `
    "relocating_shards": 0,
    "initializing_shards": 0,
    "unassigned_shards": 0,
+   "number_of_pending_tasks": 0,
+   "task_max_waiting_in_queue_millis": 0,
+   "active_shards_percent_as_number": 100.0,
    "indices": {
       "v1": {
          "status": "green",
@@ -53,16 +59,19 @@ const clusterHealthResponseWithIndices = `
 `
 
 var clusterHealthExpected = map[string]interface{}{
-	"status":                "green",
-	"status_code":           1,
-	"timed_out":             false,
-	"number_of_nodes":       3,
-	"number_of_data_nodes":  3,
-	"active_primary_shards": 5,
-	"active_shards":         15,
-	"relocating_shards":     0,
-	"initializing_shards":   0,
-	"unassigned_shards":     0,
+	"status":                           "green",
+	"status_code":                      1,
+	"timed_out":                        false,
+	"number_of_nodes":                  3,
+	"number_of_data_nodes":             3,
+	"active_primary_shards":            5,
+	"active_shards":                    15,
+	"relocating_shards":                0,
+	"initializing_shards":              0,
+	"unassigned_shards":                0,
+	"number_of_pending_tasks":          0,
+	"task_max_waiting_in_queue_millis": 0,
+	"active_shards_percent_as_number":  100.0,
 }
 
 var v1IndexExpected = map[string]interface{}{
