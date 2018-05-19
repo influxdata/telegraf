@@ -17,6 +17,10 @@ via raw TCP.
   ## Graphite output template
   ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   template = "host.tags.measurement.field"
+  ## Enable Graphite tags support
+  ## see http://graphite.readthedocs.io/en/latest/tags.html 
+  ## Defaults to "false"
+  # graphite_tag_support = true
   ## timeout in seconds for the write connection to graphite
   timeout = 2
 

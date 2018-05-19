@@ -89,6 +89,15 @@ tars.cpu-total.us-east-1.cpu.usage_idle 98.09 1455320690
 Fields with string values will be skipped.  Boolean fields will be converted
 to 1 (true) or 0 (false).
 
+With enable `graphite_tag_support` option following influx metric -> graphite conversion would happen:
+
+```
+cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.09,usage_user=0.89 1455320660004257758
+=>
+cpu.usage_user;cpu=cpu-total;dc=us-east-1;host=tars 0.89 1455320690
+cpu.usage_idle;cpu=cpu-total;dc=us-east-1;host=tars 98.09 1455320690
+```
+
 ### Graphite Configuration
 
 ```toml
@@ -106,6 +115,9 @@ to 1 (true) or 0 (false).
   prefix = "telegraf"
   # graphite template
   template = "host.tags.measurement.field"
+  # Enable Graphite tags support
+  # Defaults to "false"
+  graphite_tag_support = true
 ```
 
 

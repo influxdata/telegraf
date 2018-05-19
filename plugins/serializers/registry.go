@@ -7,7 +7,6 @@ import (
 	"github.com/influxdata/telegraf"
 
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
-	"github.com/influxdata/telegraf/plugins/serializers/graphite11"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 )
@@ -39,6 +38,9 @@ type Config struct {
 	// Dataformat can be one of: influx, graphite, or json
 	DataFormat string
 
+	// Support tags in graphite protocol
+	GraphiteTagSupport bool
+
 	// Maximum line length in bytes; influx format only
 	InfluxMaxLineBytes int
 
@@ -68,9 +70,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "influx":
 		serializer, err = NewInfluxSerializerConfig(config)
 	case "graphite":
-		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template)
-	case "graphite11":
-		serializer, err = NewGraphite11Serializer(config.Prefix, config.Template)
+		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport)
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
 	default:
@@ -105,16 +105,10 @@ func NewInfluxSerializer() (Serializer, error) {
 	return influx.NewSerializer(), nil
 }
 
-func NewGraphiteSerializer(prefix, template string) (Serializer, error) {
+func NewGraphiteSerializer(prefix, template string, tag_support bool) (Serializer, error) {
 	return &graphite.GraphiteSerializer{
-		Prefix:   prefix,
-		Template: template,
-	}, nil
-}
-
-func NewGraphite11Serializer(prefix, template string) (Serializer, error) {
-	return &graphite11.Graphite11Serializer{
-		Prefix:   prefix,
-		Template: template,
+		Prefix:     prefix,
+		Template:   template,
+		TagSupport: tag_support,
 	}, nil
 }
