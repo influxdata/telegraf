@@ -30,6 +30,15 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## Batch messages in a topic
+  ## batch = false
+  ## Flag to determine if messages sent in a topic in a flush interval,
+  ## need to be batched into one message.
+  ## batch = true, batches the messages in a topic to one messages
+  ## batch = false, default behaviour
+  # batch = false
+
+
   ## Data format to output.
   data_format = "influx"
 ```

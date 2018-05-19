@@ -45,6 +45,15 @@ var sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "influx"
+
+  ## Batch messages in a topic
+  ## batch = false
+  ## Flag to determine if messages sent in a topic in a flush interval,
+  ## need to be batched into one message.
+  ## batch = true, batches the messages in a topic to one messages
+  ## batch = false, default behaviour
+  # batch = false
+
 `
 
 type MQTT struct {
@@ -57,6 +66,7 @@ type MQTT struct {
 	QoS         int    `toml:"qos"`
 	ClientID    string `toml:"client_id"`
 	tls.ClientConfig
+	BatchMessage bool `toml:"batch"`
 
 	client paho.Client
 	opts   *paho.ClientOptions
@@ -117,6 +127,8 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		hostname = ""
 	}
 
+	metricsmap := make(map[string][]telegraf.Metric)
+
 	for _, metric := range metrics {
 		var t []string
 		if m.TopicPrefix != "" {
@@ -129,14 +141,31 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		t = append(t, metric.Name())
 		topic := strings.Join(t, "/")
 
-		buf, err := m.serializer.Serialize(metric)
+		if m.BatchMessage {
+			metricsmap[topic] = append(metricsmap[topic], metric)
+		} else {
+			buf, err := m.serializer.Serialize(metric)
+
+			if err != nil {
+				return err
+			}
+
+			err = m.publish(topic, buf)
+			if err != nil {
+				return fmt.Errorf("Could not write to MQTT server, %s", err)
+			}
+		}
+	}
+
+	for key := range metricsmap {
+		buf, err := m.serializer.SerializeBatch(metricsmap[key])
+
 		if err != nil {
 			return err
 		}
-
-		err = m.publish(topic, buf)
-		if err != nil {
-			return fmt.Errorf("Could not write to MQTT server, %s", err)
+		publisherr := m.publish(key, buf)
+		if publisherr != nil {
+			return fmt.Errorf("Could not write to MQTT server, %s", publisherr)
 		}
 	}
 
