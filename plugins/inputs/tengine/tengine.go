@@ -303,7 +303,7 @@ func (n *Tengine) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
 			"http_503": tenginestatus.http_503,
 			"http_504": tenginestatus.http_504,
 			"http_508": tenginestatus.http_508,
-			"http_other_detail_status": tenginestatus.http_other_status,
+			"http_other_detail_status": tenginestatus.http_other_detail_status,
 			"http_ups_4xx": tenginestatus.http_ups_4xx,
 			"http_ups_5xx": tenginestatus.http_ups_5xx,
 		}
