@@ -44,6 +44,7 @@
 - [#3455](https://github.com/influxdata/telegraf/pull/3455): Add tag/integer pair for result to net_response.
 - [#4010](https://github.com/influxdata/telegraf/pull/3455): Add application_insights output plugin.
 - [#4167](https://github.com/influxdata/telegraf/pull/4167): Added several important elasticsearch cluster health metrics.
+- [#4094](https://github.com/influxdata/telegraf/pull/4094): Add batch mode to mqtt output.
 
 ### Bugfixes
 
