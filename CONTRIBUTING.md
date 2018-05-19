@@ -170,7 +170,7 @@ and `Stop()` methods.
 ### Service Plugin Guidelines
 
 * Same as the `Plugin` guidelines, except that they must conform to the
-`inputs.ServiceInput` interface.
+[`telegraf.ServiceInput`](https://godoc.org/github.com/influxdata/telegraf#ServiceInput) interface.
 
 ## Output Plugins
 

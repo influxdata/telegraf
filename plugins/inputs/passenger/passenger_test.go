@@ -126,7 +126,7 @@ func TestPassengerGenerateMetric(t *testing.T) {
 		"spawn_start_time":      int64(1452746844946982),
 		"spawn_end_time":        int64(1452746845013365),
 		"last_used":             int64(1452747071764940),
-		"uptime":                int64(226), // in seconds of 3m 46s
+		"uptime":                int64(191026), // in seconds of 2d 5h 3m 46s
 		"cpu":                   int64(58),
 		"rss":                   int64(418548),
 		"pss":                   int64(319391),
@@ -219,7 +219,7 @@ var sampleStat = `
             <spawn_end_time>1452746845013365</spawn_end_time>
             <last_used>1452747071764940</last_used>
             <last_used_desc>0s ago</last_used_desc>
-            <uptime>3m 46s</uptime>
+            <uptime>2d 5h 3m 46s</uptime>
             <code_revision>899ac7f</code_revision>
             <life_status>ALIVE</life_status>
             <enabled>ENABLED</enabled>
@@ -263,7 +263,7 @@ var sampleStat = `
             <spawn_end_time>1452746845172460</spawn_end_time>
             <last_used>1452747071709179</last_used>
             <last_used_desc>0s ago</last_used_desc>
-            <uptime>3m 46s</uptime>
+            <uptime>2d 5h 3m 46s</uptime>
             <code_revision>899ac7f</code_revision>
             <life_status>ALIVE</life_status>
             <enabled>ENABLED</enabled>
