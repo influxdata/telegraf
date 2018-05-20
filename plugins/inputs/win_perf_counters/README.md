@@ -334,3 +334,16 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
     Measurement = "win_dotnet_security"
     #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
 ```
+
+## Troubleshooting
+
+If no metrics are emitted even with the default config, you may need to repair
+your performance counters.
+
+1. Launch Command Prompt as Administrator (right click Runs As Administrator).
+1. Drop into the C:\WINDOWS\System32 directory by typing `C:` then `cd \Windows\System32`
+1. Rebuild your counter values, which may take a few moments so please be
+   patient, by running:
+   ```
+   lodctr /r
+   ```

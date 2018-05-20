@@ -615,7 +615,10 @@ func TestDockerGatherInfo(t *testing.T) {
 			"n_images":                int(199),
 			"n_goroutines":            int(39),
 		},
-		map[string]string{"engine_host": "absol"},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
 	)
 
 	acc.AssertContainsTaggedFields(t,
@@ -626,8 +629,9 @@ func TestDockerGatherInfo(t *testing.T) {
 			"available": int64(36530000000),
 		},
 		map[string]string{
-			"unit":        "bytes",
-			"engine_host": "absol",
+			"unit":           "bytes",
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -648,6 +652,7 @@ func TestDockerGatherInfo(t *testing.T) {
 			"ENVVAR7":           "ENVVAR8=ENVVAR9",
 			"label1":            "test_value_1",
 			"label2":            "test_value_2",
+			"server_version":    "17.09.0-ce",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -670,6 +675,7 @@ func TestDockerGatherInfo(t *testing.T) {
 			"ENVVAR7":           "ENVVAR8=ENVVAR9",
 			"label1":            "test_value_1",
 			"label2":            "test_value_2",
+			"server_version":    "17.09.0-ce",
 		},
 	)
 }

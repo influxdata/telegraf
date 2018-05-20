@@ -352,6 +352,8 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				switch fv := fv.(type) {
 				case int64:
 					value = float64(fv)
+				case uint64:
+					value = float64(fv)
 				case float64:
 					value = fv
 				default:
@@ -391,6 +393,8 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				switch fv := fv.(type) {
 				case int64:
 					value = float64(fv)
+				case uint64:
+					value = float64(fv)
 				case float64:
 					value = fv
 				default:
@@ -426,6 +430,8 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				var value float64
 				switch fv := fv.(type) {
 				case int64:
+					value = float64(fv)
+				case uint64:
 					value = float64(fv)
 				case float64:
 					value = fv

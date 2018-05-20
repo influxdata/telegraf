@@ -123,6 +123,7 @@ func (m *metric) AddTag(key, value string) {
 
 		if key == tag.Key {
 			tag.Value = value
+			return
 		}
 
 		m.tags = append(m.tags, nil)
@@ -201,6 +202,10 @@ func (m *metric) RemoveField(key string) {
 	}
 }
 
+func (m *metric) SetTime(t time.Time) {
+	m.tm = t
+}
+
 func (m *metric) Copy() telegraf.Metric {
 	m2 := &metric{
 		name:      m.name,
@@ -232,9 +237,12 @@ func (m *metric) IsAggregate() bool {
 func (m *metric) HashID() uint64 {
 	h := fnv.New64a()
 	h.Write([]byte(m.name))
+	h.Write([]byte("\n"))
 	for _, tag := range m.tags {
 		h.Write([]byte(tag.Key))
+		h.Write([]byte("\n"))
 		h.Write([]byte(tag.Value))
+		h.Write([]byte("\n"))
 	}
 	return h.Sum64()
 }

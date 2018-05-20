@@ -2,8 +2,9 @@ package influx
 
 import (
 	"bytes"
-	"errors"
+	"fmt"
 	"io"
+	"log"
 	"math"
 	"sort"
 	"strconv"
@@ -11,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-const MaxInt = int(^uint(0) >> 1)
+const MaxInt64 = int64(^uint64(0) >> 1)
 
 type FieldSortOrder int
 
@@ -26,14 +27,28 @@ const (
 	UintSupport FieldTypeSupport = 1 << iota
 )
 
+// MetricError is an error causing a metric to be unserializable.
+type MetricError struct {
+	s string
+}
+
+func (e MetricError) Error() string {
+	return e.s
+}
+
+// FieldError is an error causing a field to be unserializable.
+type FieldError struct {
+	s string
+}
+
+func (e FieldError) Error() string {
+	return e.s
+}
+
 var (
-	ErrNeedMoreSpace    = errors.New("need more space")
-	ErrInvalidName      = errors.New("invalid name")
-	ErrInvalidFieldKey  = errors.New("invalid field key")
-	ErrInvalidFieldType = errors.New("invalid field type")
-	ErrFieldIsNaN       = errors.New("is NaN")
-	ErrFieldIsInf       = errors.New("is Inf")
-	ErrNoFields         = errors.New("no fields")
+	ErrNeedMoreSpace = &MetricError{"need more space"}
+	ErrInvalidName   = &MetricError{"invalid name"}
+	ErrNoFields      = &MetricError{"no serializable fields"}
 )
 
 // Serializer is a serializer for line protocol.
@@ -85,6 +100,17 @@ func (s *Serializer) Serialize(m telegraf.Metric) ([]byte, error) {
 	out := make([]byte, s.buf.Len())
 	copy(out, s.buf.Bytes())
 	return out, nil
+}
+
+func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+	var batch bytes.Buffer
+	for _, m := range metrics {
+		_, err := s.Write(&batch, m)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return batch.Bytes(), nil
 }
 
 func (s *Serializer) Write(w io.Writer, m telegraf.Metric) (int, error) {
@@ -148,7 +174,7 @@ func (s *Serializer) buildFieldPair(key string, value interface{}) error {
 	// Some keys are not encodeable as line protocol, such as those with a
 	// trailing '\' or empty strings.
 	if key == "" {
-		return ErrInvalidFieldKey
+		return &FieldError{"invalid field key"}
 	}
 
 	s.pair = append(s.pair, key...)
@@ -182,6 +208,9 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 	for _, field := range m.FieldList() {
 		err = s.buildFieldPair(field.Key, field.Value)
 		if err != nil {
+			log.Printf(
+				"D! [serializers.influx] could not serialize field %q: %v; discarding field",
+				field.Key, err)
 			continue
 		}
 
@@ -252,21 +281,21 @@ func (s *Serializer) appendFieldValue(buf []byte, value interface{}) ([]byte, er
 		if s.fieldTypeSupport&UintSupport != 0 {
 			return appendUintField(buf, v), nil
 		} else {
-			if v <= uint64(MaxInt) {
+			if v <= uint64(MaxInt64) {
 				return appendIntField(buf, int64(v)), nil
 			} else {
-				return appendIntField(buf, int64(MaxInt)), nil
+				return appendIntField(buf, int64(MaxInt64)), nil
 			}
 		}
 	case int64:
 		return appendIntField(buf, v), nil
 	case float64:
 		if math.IsNaN(v) {
-			return nil, ErrFieldIsNaN
+			return nil, &FieldError{"is NaN"}
 		}
 
 		if math.IsInf(v, 0) {
-			return nil, ErrFieldIsInf
+			return nil, &FieldError{"is Inf"}
 		}
 
 		return appendFloatField(buf, v), nil
@@ -274,8 +303,9 @@ func (s *Serializer) appendFieldValue(buf []byte, value interface{}) ([]byte, er
 		return appendStringField(buf, v), nil
 	case bool:
 		return appendBoolField(buf, v), nil
+	default:
+		return buf, &FieldError{fmt.Sprintf("invalid value type: %T", v)}
 	}
-	return buf, ErrInvalidFieldType
 }
 
 func appendUintField(buf []byte, value uint64) []byte {

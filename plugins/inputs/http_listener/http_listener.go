@@ -5,9 +5,7 @@ import (
 	"compress/gzip"
 	"crypto/subtle"
 	"crypto/tls"
-	"crypto/x509"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -16,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/selfstat"
@@ -43,9 +42,7 @@ type HTTPListener struct {
 	MaxLineSize    int
 	Port           int
 
-	TlsAllowedCacerts []string
-	TlsCert           string
-	TlsKey            string
+	tlsint.ServerConfig
 
 	BasicUsername string
 	BasicPassword string
@@ -158,7 +155,10 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 	h.acc = acc
 	h.pool = NewPool(200, h.MaxLineSize)
 
-	tlsConf := h.getTLSConfig()
+	tlsConf, err := h.ServerConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
 
 	server := &http.Server{
 		Addr:         h.ServiceAddress,
@@ -168,7 +168,6 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 		TLSConfig:    tlsConf,
 	}
 
-	var err error
 	var listener net.Listener
 	if tlsConf != nil {
 		listener, err = tls.Listen("tcp", h.ServiceAddress, tlsConf)
@@ -370,38 +369,6 @@ func badRequest(res http.ResponseWriter) {
 	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.WriteHeader(http.StatusBadRequest)
 	res.Write([]byte(`{"error":"http: bad request"}`))
-}
-
-func (h *HTTPListener) getTLSConfig() *tls.Config {
-	tlsConf := &tls.Config{
-		InsecureSkipVerify: false,
-		Renegotiation:      tls.RenegotiateNever,
-	}
-
-	if len(h.TlsCert) == 0 || len(h.TlsKey) == 0 {
-		return nil
-	}
-
-	cert, err := tls.LoadX509KeyPair(h.TlsCert, h.TlsKey)
-	if err != nil {
-		return nil
-	}
-	tlsConf.Certificates = []tls.Certificate{cert}
-
-	if h.TlsAllowedCacerts != nil {
-		tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
-		clientPool := x509.NewCertPool()
-		for _, ca := range h.TlsAllowedCacerts {
-			c, err := ioutil.ReadFile(ca)
-			if err != nil {
-				continue
-			}
-			clientPool.AppendCertsFromPEM(c)
-		}
-		tlsConf.ClientCAs = clientPool
-	}
-
-	return tlsConf
 }
 
 func (h *HTTPListener) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {

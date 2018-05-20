@@ -20,11 +20,11 @@ in Prometheus format.
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
 
-  ## Optional SSL Config
-  # ssl_ca = /path/to/cafile
-  # ssl_cert = /path/to/certfile
-  # ssl_key = /path/to/keyfile
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = /path/to/cafile
+  # tls_cert = /path/to/certfile
+  # tls_key = /path/to/keyfile
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 ```
 

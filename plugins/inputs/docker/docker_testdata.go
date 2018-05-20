@@ -55,6 +55,7 @@ var info = types.Info{
 	DockerRootDir:     "/var/lib/docker",
 	NoProxy:           "",
 	BridgeNfIP6tables: true,
+	ServerVersion:     "17.09.0-ce",
 }
 
 var containerList = []types.Container{

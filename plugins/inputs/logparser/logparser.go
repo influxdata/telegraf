@@ -70,7 +70,6 @@ const sampleConfig = `
   # watch_method = "inotify"
 
   ## Parse logstash-style "grok" patterns:
-  ##   Telegraf built-in parsing patterns: https://goo.gl/dkay10
   [inputs.logparser.grok]
     ## This is a list of patterns to check the given log file(s) for.
     ## Note that adding patterns here increases processing time. The most

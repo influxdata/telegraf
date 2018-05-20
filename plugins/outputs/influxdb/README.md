@@ -11,6 +11,7 @@ This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/
   ##
   ## Multiple URLs can be specified for a single cluster, only ONE of the
   ## urls will be written to each interval.
+  # urls = ["unix:///var/run/influxdb.sock"]
   # urls = ["udp://127.0.0.1:8089"]
   # urls = ["http://127.0.0.1:8086"]
 
@@ -23,10 +24,11 @@ This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/
   # skip_database_creation = false
 
   ## Name of existing retention policy to write to.  Empty string writes to
-  ## the default retention policy.
+  ## the default retention policy.  Only takes effect when using HTTP.
   # retention_policy = ""
 
-  ## Write consistency (clusters only), can be: "any", "one", "quorum", "all"
+  ## Write consistency (clusters only), can be: "any", "one", "quorum", "all".
+  ## Only takes effect when using HTTP.
   # write_consistency = "any"
 
   ## Timeout for HTTP messages.
@@ -42,11 +44,11 @@ This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/
   ## UDP payload size is the maximum packet size to send.
   # udp_payload = 512
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config for use on HTTP connections.
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## HTTP Proxy override, if unset values the standard proxy environment

@@ -519,7 +519,13 @@ func (c *Config) LoadDirectory(path string) error {
 			log.Printf("W! Telegraf is not permitted to read %s", thispath)
 			return nil
 		}
+
 		if info.IsDir() {
+			if strings.HasPrefix(info.Name(), "..") {
+				// skip Kubernetes mounts, prevening loading the same config twice
+				return filepath.SkipDir
+			}
+
 			return nil
 		}
 		name := info.Name()
