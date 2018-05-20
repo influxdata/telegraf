@@ -72,7 +72,7 @@ func TestFieldConversions(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		regex := &Regex{}
+		regex := NewRegex()
 		regex.Fields = []converter{
 			test.converter,
 		}
@@ -125,7 +125,7 @@ func TestTagConversions(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		regex := &Regex{}
+		regex := NewRegex()
 		regex.Tags = []converter{
 			test.converter,
 		}
@@ -143,7 +143,7 @@ func TestTagConversions(t *testing.T) {
 }
 
 func TestMultipleConversions(t *testing.T) {
-	regex := &Regex{}
+	regex := NewRegex()
 	regex.Tags = []converter{
 		{
 			Key:         "resp_code",
@@ -237,7 +237,7 @@ func TestNoMatches(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		regex := &Regex{}
+		regex := NewRegex()
 		regex.Fields = []converter{
 			test.converter,
 		}
@@ -245,5 +245,29 @@ func TestNoMatches(t *testing.T) {
 		processed := regex.Apply(newM1())
 
 		assert.Equal(t, test.expectedFields, processed[0].Fields(), test.message)
+	}
+}
+
+func BenchmarkConversions(b *testing.B) {
+	regex := NewRegex()
+	regex.Tags = []converter{
+		{
+			Key:         "resp_code",
+			Pattern:     "^(\\d)\\d\\d$",
+			Replacement: "${1}xx",
+			ResultKey:   "resp_code_group",
+		},
+	}
+	regex.Fields = []converter{
+		{
+			Key:         "request",
+			Pattern:     "^/users/\\d+/$",
+			Replacement: "/users/{id}/",
+		},
+	}
+
+	for n := 0; n < b.N; n++ {
+		processed := regex.Apply(newM1())
+		_ = processed
 	}
 }

@@ -8,8 +8,9 @@ import (
 )
 
 type Regex struct {
-	Tags   []converter
-	Fields []converter
+	Tags       []converter
+	Fields     []converter
+	regexCache map[string]*regexp.Regexp
 }
 
 type converter struct {
@@ -48,6 +49,12 @@ const sampleConfig = `
   #   result_key = "search_category"
 `
 
+func NewRegex() *Regex {
+	return &Regex{
+		regexCache: make(map[string]*regexp.Regexp),
+	}
+}
+
 func (r *Regex) SampleConfig() string {
 	return sampleConfig
 }
@@ -59,22 +66,16 @@ func (r *Regex) Description() string {
 func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
 		for _, converter := range r.Tags {
-			if value, ok := metric.Tags()[converter.Key]; ok {
-				metric.AddTag(
-					getKey(converter),
-					getValue(converter, value),
-				)
+			if value, ok := metric.GetTag(converter.Key); ok {
+				metric.AddTag(r.convert(converter, value))
 			}
 		}
 
 		for _, converter := range r.Fields {
-			if value, ok := metric.Fields()[converter.Key]; ok {
+			if value, ok := metric.GetField(converter.Key); ok {
 				switch value := value.(type) {
 				case string:
-					metric.AddField(
-						getKey(converter),
-						getValue(converter, value),
-					)
+					metric.AddField(r.convert(converter, value))
 				}
 			}
 		}
@@ -83,23 +84,27 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	return in
 }
 
-func getKey(c converter) string {
-	if c.ResultKey != "" {
-		return c.ResultKey
+func (r *Regex) convert(c converter, src string) (string, string) {
+	regex, compiled := r.regexCache[c.Pattern]
+	if !compiled {
+		regex = regexp.MustCompile(c.Pattern)
+		r.regexCache[c.Pattern] = regex
 	}
-	return c.Key
-}
 
-func getValue(c converter, value string) string {
-	regex := regexp.MustCompile(c.Pattern)
-	if c.ResultKey != "" && !regex.MatchString(value) {
-		return ""
+	value := ""
+	if c.ResultKey == "" || regex.MatchString(src) {
+		value = regex.ReplaceAllString(src, c.Replacement)
 	}
-	return regex.ReplaceAllString(value, c.Replacement)
+
+	if c.ResultKey != "" {
+		return c.ResultKey, value
+	}
+
+	return c.Key, value
 }
 
 func init() {
 	processors.Add("regex", func() telegraf.Processor {
-		return &Regex{}
+		return NewRegex()
 	})
 }
