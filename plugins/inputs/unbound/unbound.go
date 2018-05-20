@@ -162,18 +162,24 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 
 		// is this a thread related value?
 		if s.ThreadAsTag && strings.HasPrefix(stat, "thread") {
-			// split the that
+			// split the stat
 			statTokens := strings.Split(stat, ".")
-			// set the thread identifier
-			threadID := strings.TrimPrefix(statTokens[0], "thread")
-			// create new slice without the thread identifier (skip first token)
-			threadTokens := statTokens[1:]
-			// re-define stat
-			field := strings.Join(threadTokens[:], "_")
-			if fieldsThreads[threadID] == nil {
-				fieldsThreads[threadID] = make(map[string]interface{})
+			// make sure we split something
+			if len(statTokens) > 1 {
+				// set the thread identifier
+				threadID := strings.TrimPrefix(statTokens[0], "thread")
+				// make sure we have a proper thread ID
+				if _, err = strconv.Atoi(threadID); err == nil {
+					// create new slice without the thread identifier (skip first token)
+					threadTokens := statTokens[1:]
+					// re-define stat
+					field := strings.Join(threadTokens[:], "_")
+					if fieldsThreads[threadID] == nil {
+						fieldsThreads[threadID] = make(map[string]interface{})
+					}
+					fieldsThreads[threadID][field] = fieldValue
+				}
 			}
-			fieldsThreads[threadID][field] = fieldValue
 		} else {
 			field := strings.Replace(stat, ".", "_", -1)
 			fields[field] = fieldValue
