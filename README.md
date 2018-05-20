@@ -133,7 +133,6 @@ configuration options.
 * [bond](./plugins/inputs/bond)
 * [cassandra](./plugins/inputs/cassandra) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
 * [burrow](./plugins/inputs/burrow)
-* [cassandra](./plugins/inputs/cassandra)
 * [ceph](./plugins/inputs/ceph)
 * [cgroup](./plugins/inputs/cgroup)
 * [chrony](./plugins/inputs/chrony)
