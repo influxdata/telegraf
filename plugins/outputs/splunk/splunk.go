@@ -178,11 +178,13 @@ func (s *Splunk) Write(measures []telegraf.Metric) error {
 			if err != nil {
 				return fmt.Errorf("error POST-ing metrics to Splunk[%s]  Sending Data:%s\n", err, payload)
 			}
-			defer resp.Body.Close()
 
 			if resp.StatusCode < 200 || resp.StatusCode > 209 {
 				return fmt.Errorf("received bad status code posting to %s, %d\n\n%s\n", s.SplunkUrl, resp.StatusCode, payload)
 			}
+
+			defer resp.Body.Close()
+
 		}
 	}
 	return nil
