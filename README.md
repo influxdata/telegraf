@@ -270,6 +270,7 @@ formats may be used with input plugins supporting the `data_format` option:
 
 * [override](./plugins/processors/override)
 * [printer](./plugins/processors/printer)
+* [regex](./plugins/processors/regex)
 * [topk](./plugins/processors/topk)
 
 ## Aggregator Plugins
