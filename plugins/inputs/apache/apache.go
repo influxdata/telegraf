@@ -63,6 +63,8 @@ func (n *Apache) Description() string {
 }
 
 func (n *Apache) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
+
 	if len(n.Urls) == 0 {
 		n.Urls = []string{"http://localhost/server-status?auto"}
 	}
@@ -78,8 +80,6 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 		n.client = client
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(len(n.Urls))
 	for _, u := range n.Urls {
 		addr, err := url.Parse(u)
 		if err != nil {
@@ -87,6 +87,7 @@ func (n *Apache) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
+		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
 			acc.AddError(n.gatherUrl(addr, acc))
