@@ -83,9 +83,9 @@ AuthString = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
 type SplunkMetric struct {
 	Time   int64      `json:"time"`
 	Event  string     `json:"event"`
-	Source string     `json:"source","omitempty"`
+	Source string     `json:"source,omitempty"`
 	Host   string     `json:"host"`
-	Fields map[string]interface{} `json:"fields","omitempty"`
+	Fields map[string]interface{} `json:"fields,omitempty"`
 }
 
 
