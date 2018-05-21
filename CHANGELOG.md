@@ -102,6 +102,7 @@
 - [#4195](https://github.com/influxdata/telegraf/pull/4195): Revert to previous aerospike library version due to memory leak.
 
 ## v1.6.3 [2018-05-21]
+## v1.6.3 [unreleased]
 
 ### Bugfixes
 
