@@ -11,6 +11,70 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type testCounter struct {
+	handle PDH_HCOUNTER
+	path string
+	value float32
+}
+type FakePerformanceQuery struct {
+	counters map[string]testCounter
+	addEnglishSupported bool
+	expanded map[string][]string
+}
+
+func (m *FakePerformanceQuery) Open() error {
+	return nil
+}
+
+func (m *FakePerformanceQuery) Close() error {
+	return nil
+}
+
+func (m *FakePerformanceQuery) AddCounterToQuery(counterPath string) (PDH_HCOUNTER, error) {
+	if c, ok := m.counters[counterPath]; ok {
+		return c.handle, nil
+	} else {
+		return 0, errors.New("invalid path")
+	}
+}
+
+func (m *FakePerformanceQuery) AddEnglishCounterToQuery(counterPath string) (PDH_HCOUNTER, error) {
+	if c, ok := m.counters[counterPath]; ok {
+		return c.handle, nil
+	} else {
+		return 0, errors.New("invalid path")
+	}
+}
+
+func (m *FakePerformanceQuery) GetCounterPath(counterHandle PDH_HCOUNTER) (string, error) {
+	for _, counter := range m.counters {
+		if counter.handle == counterHandle {
+			return counter.path, nil
+		}
+	}
+	return "", errors.New("invalid handle")
+}
+
+func (m *FakePerformanceQuery) ExpandWildCardPath(counterPath string) ([]string, error) {
+	if e, ok := m.expanded[counterPath]; ok {
+		return e, nil
+	} else {
+		return []string{}, errors.New("invalid path")
+	}
+}
+
+func (m *FakePerformanceQuery) GetFormattedCounterValueDouble(hCounter PDH_HCOUNTER) (float64, error) {
+	panic("implement me")
+}
+
+func (m *FakePerformanceQuery) CollectData() error {
+	return nil
+}
+
+func (m *FakePerformanceQuery) AddEnglishCounterSupported() bool {
+	return m.addEnglishSupported
+}
+
 func TestWinPerfcountersConfigGet1(t *testing.T) {
 
 	var instances = make([]string, 1)
@@ -295,18 +359,15 @@ func TestWinPerfcountersConfigGet7(t *testing.T) {
 	counters[2] = "% Idle Time"
 
 	var measurement string = "test"
-	var warnonmissing bool = false
-	var failonmissing bool = false
-	var includetotal bool = true
 
 	PerfObject := perfobject{
-		ObjectName:    objectname,
-		Instances:     instances,
-		Counters:      counters,
-		Measurement:   measurement,
-		WarnOnMissing: warnonmissing,
-		FailOnMissing: failonmissing,
-		IncludeTotal:  includetotal,
+		objectname,
+		counters,
+		instances,
+		measurement,
+		false,
+		false,
+		true,
 	}
 
 	perfobjects[0] = PerfObject
