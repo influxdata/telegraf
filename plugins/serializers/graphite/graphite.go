@@ -30,8 +30,9 @@ var (
 )
 
 type GraphiteSerializer struct {
-	Prefix   string
-	Template string
+	Prefix     string
+	Template   string
+	TagSupport bool
 }
 
 func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
@@ -40,23 +41,42 @@ func (s *GraphiteSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	// Convert UnixNano to Unix timestamps
 	timestamp := metric.Time().UnixNano() / 1000000000
 
-	bucket := SerializeBucketName(metric.Name(), metric.Tags(), s.Template, s.Prefix)
-	if bucket == "" {
-		return out, nil
-	}
-
-	for fieldName, value := range metric.Fields() {
-		fieldValue := formatValue(value)
-		if fieldValue == "" {
-			continue
+	switch s.TagSupport {
+	case true:
+		for fieldName, value := range metric.Fields() {
+			fieldValue := formatValue(value)
+			if fieldValue == "" {
+				continue
+			}
+			bucket := SerializeBucketNameWithTags(metric.Name(), metric.Tags(), s.Prefix, fieldName)
+			metricString := fmt.Sprintf("%s %s %d\n",
+				// insert "field" section of template
+				bucket,
+				//bucket,
+				fieldValue,
+				timestamp)
+			point := []byte(metricString)
+			out = append(out, point...)
 		}
-		metricString := fmt.Sprintf("%s %s %d\n",
-			// insert "field" section of template
-			sanitize(InsertField(bucket, fieldName)),
-			fieldValue,
-			timestamp)
-		point := []byte(metricString)
-		out = append(out, point...)
+	default:
+		bucket := SerializeBucketName(metric.Name(), metric.Tags(), s.Template, s.Prefix)
+		if bucket == "" {
+			return out, nil
+		}
+
+		for fieldName, value := range metric.Fields() {
+			fieldValue := formatValue(value)
+			if fieldValue == "" {
+				continue
+			}
+			metricString := fmt.Sprintf("%s %s %d\n",
+				// insert "field" section of template
+				sanitize(InsertField(bucket, fieldName)),
+				fieldValue,
+				timestamp)
+			point := []byte(metricString)
+			out = append(out, point...)
+		}
 	}
 	return out, nil
 }
@@ -163,6 +183,44 @@ func SerializeBucketName(
 		return strings.Join(out, ".")
 	}
 	return prefix + "." + strings.Join(out, ".")
+}
+
+// SerializeBucketNameWithTags will take the given measurement name and tags and
+// produce a graphite bucket. It will use the Graphite11Serializer.
+// http://graphite.readthedocs.io/en/latest/tags.html
+func SerializeBucketNameWithTags(
+	measurement string,
+	tags map[string]string,
+	prefix string,
+	field string,
+) string {
+	var out string
+	var tagsCopy []string
+	for k, v := range tags {
+		if k == "name" {
+			k = "_name"
+		}
+		tagsCopy = append(tagsCopy, sanitize(k+"="+v))
+	}
+	sort.Strings(tagsCopy)
+
+	if prefix != "" {
+		out = prefix + "."
+	}
+
+	out += measurement
+
+	if field != "value" {
+		out += "." + field
+	}
+
+	out = sanitize(out)
+
+	if len(tagsCopy) > 0 {
+		out += ";" + strings.Join(tagsCopy, ";")
+	}
+
+	return out
 }
 
 // InsertField takes the bucket string from SerializeBucketName and replaces the

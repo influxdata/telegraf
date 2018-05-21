@@ -3,6 +3,11 @@
 This plugin writes to [Graphite](http://graphite.readthedocs.org/en/latest/index.html)
 via raw TCP.
 
+<aside class="notice">
+When `graphite_tag_support` is enabled, `name` as tag name is reserved for graphite metric and will be replaced with `_name`.
+</aside>
+
+
 ## Configuration:
 
 ```toml
@@ -17,6 +22,10 @@ via raw TCP.
   ## Graphite output template
   ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   template = "host.tags.measurement.field"
+  ## Enable Graphite tags support
+  ## see http://graphite.readthedocs.io/en/latest/tags.html 
+  ## Defaults to "false"
+  # graphite_tag_support = true
   ## timeout in seconds for the write connection to graphite
   timeout = 2
 

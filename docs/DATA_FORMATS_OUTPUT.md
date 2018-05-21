@@ -89,6 +89,15 @@ tars.cpu-total.us-east-1.cpu.usage_idle 98.09 1455320690
 Fields with string values will be skipped.  Boolean fields will be converted
 to 1 (true) or 0 (false).
 
+With enable `graphite_tag_support` option following influx metric -> graphite conversion would happen:
+
+```
+cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.09,usage_user=0.89 1455320660004257758
+=>
+cpu.usage_user;cpu=cpu-total;dc=us-east-1;host=tars 0.89 1455320690
+cpu.usage_idle;cpu=cpu-total;dc=us-east-1;host=tars 98.09 1455320690
+```
+
 ### Graphite Configuration
 
 ```toml
@@ -106,6 +115,43 @@ to 1 (true) or 0 (false).
   prefix = "telegraf"
   # graphite template
   template = "host.tags.measurement.field"
+  # Enable Graphite tags support
+  # Defaults to "false"
+  graphite_tag_support = true
+```
+
+
+## Graphite 1.1
+
+The Graphite11 data format translates Telegraf metrics into Graphite protocol which supports storing data using tags to identify each series. [Graphite Tag Support](http://graphite.readthedocs.io/en/latest/tags.html)
+
+Which means the following influx metric -> graphite 1.1.x conversion would happen:
+
+```
+cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.09,usage_user=0.89 1455320660004257758
+=>
+cpu.usage_user;cpu=cpu-total;dc=us-east-1;host=tars 0.89 1455320690
+cpu.usage_idle;cpu=cpu-total;dc=us-east-1;host=tars 98.09 1455320690
+```
+
+Fields with string values will be skipped.  Boolean fields will be converted
+to 1 (true) or 0 (false).
+
+### Graphite Configuration
+
+```toml
+[[outputs.file]]
+  ## Files to write to, "stdout" is a specially handled file.
+  files = ["stdout", "/tmp/metrics.out"]
+
+  ## Data format to output.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "graphite11"
+
+  # prefix each graphite bucket
+  prefix = "telegraf"
 ```
 
 ## JSON
