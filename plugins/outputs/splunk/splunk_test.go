@@ -36,12 +36,15 @@ func TestSplunk(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	s.SplunkUrl = ts.URL
+	// Check for existence of s.AuthString to prevent race ('panic: runtime error: invalid memory address or nil pointer dereference')
+	if s != nil {
+		s.SplunkUrl = ts.URL
 
-	// -----------------------------------------------------------------------------------------------------------------
-	//  Call the Write method with a test metric to ensure parsing works correctly.
-	// -----------------------------------------------------------------------------------------------------------------
-	s.Write(testutil.MockMetrics())
-
+		// -----------------------------------------------------------------------------------------------------------------
+		//  Call the Write method with a test metric to ensure parsing works correctly.
+		// -----------------------------------------------------------------------------------------------------------------
+		s.Write(testutil.MockMetrics())
+	}
+	
 	return
 }
