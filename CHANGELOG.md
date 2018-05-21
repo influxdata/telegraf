@@ -55,7 +55,7 @@
 - [#4118](https://github.com/influxdata/telegraf/pull/4118): Report results of dns_query instead of 0ms on timeout.
 - [#4155](https://github.com/influxdata/telegraf/pull/4155): Add consul service tags to metric.
 
-## v1.6.3 [unreleased]
+## v1.6.3 [2018-05-21]
 
 ### Bugfixes
 
