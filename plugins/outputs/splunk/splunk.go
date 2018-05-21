@@ -175,7 +175,7 @@ func (s *Splunk) Write(measures []telegraf.Metric) error {
 			req.Header.Add("Content-Type", "application/json")
 			// Check for existence of s.AuthString to prevent race ('panic: runtime error: invalid memory address or nil pointer dereference')
 			if s != nil {
-				req.Header.Add("Authorization", "Splunk " + s.AuthString)
+				req.Header.Add("Authorization", "Splunk "+s.AuthString)
 			}
 			resp, err := s.client.Do(req)
 			if err != nil {
