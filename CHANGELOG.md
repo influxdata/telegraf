@@ -62,6 +62,7 @@
 - [#4136](https://github.com/influxdata/telegraf/pull/4130): Fix jolokia2 timeout parsing.
 - [#4142](https://github.com/influxdata/telegraf/pull/4142): Fix error parsing dropwizard metrics.
 - [#4149](https://github.com/influxdata/telegraf/issues/4149): Fix librato output support for uint and bool.
+- [#4176](https://github.com/influxdata/telegraf/pull/4176): Fix waitgroup deadlock if url is incorrect in apache input.
 
 ## v1.6.2 [2018-05-08]
 
