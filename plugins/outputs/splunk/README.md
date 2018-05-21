@@ -1,7 +1,6 @@
 # Splunk Output Plugin
 
-This plugin writes to a [Splunk HTTP Event Collector (HEC)](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector)
-and requires an `Authorization Token` which will be created when you setup your Splunk HEC Token.
+This plugin writes metrics to a [Splunk Metric Index](https://docs.splunk.com/Documentation/Splunk/latest/Indexer/Setupmultipleindexes#Create_metrics_indexes) via a [Splunk HTTP Event Collector (HEC)](http://docs.splunk.com/Documentation/Splunk/latest/Data/UsetheHTTPEventCollector).  This requires an `Authorization Token` which will be created when you setup your Splunk HEC Token.
 
 Notes:
 1. If any point value cannot be converted to a float64, that metric will be skipped.
@@ -20,6 +19,7 @@ Notes:
 
   ## REQUIRED
   ## Splunk Authorization Token for sending data to a Splunk HTTPEventCollector (HEC).
+  ##   Note:  This Token should map to a 'metrics' index in Splunk.  
   AuthString = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
 
   ## OPTIONAL:  prefix for metrics keys
