@@ -13,6 +13,7 @@
 
 ### New Inputs
 
+- [aurora](./plugins/inputs/aurora/README.md) - Contributed by @influxdata
 - [fibaro](./plugins/inputs/fibaro/README.md) - Contributed by @dynek
 - [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry/README.md) - Contributed by @ajhai
 - [mcrouter](./plugins/inputs/mcrouter/README.md) - Contributed by @cthayer
@@ -45,6 +46,7 @@
 - [#4010](https://github.com/influxdata/telegraf/pull/3455): Add application_insights output plugin.
 - [#4167](https://github.com/influxdata/telegraf/pull/4167): Added several important elasticsearch cluster health metrics.
 - [#4094](https://github.com/influxdata/telegraf/pull/4094): Add batch mode to mqtt output.
+- [#4158](https://github.com/influxdata/telegraf/pull/4158): Add aurora input plugin.
 
 ### Bugfixes
 
