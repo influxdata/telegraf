@@ -197,6 +197,9 @@ func SerializeBucketNameWithTags(
 	var out string
 	var tagsCopy []string
 	for k, v := range tags {
+		if k == "name" {
+			k = "_name"
+		}
 		tagsCopy = append(tagsCopy, sanitize(k+"="+v))
 	}
 	sort.Strings(tagsCopy)

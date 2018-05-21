@@ -3,6 +3,11 @@
 This plugin writes to [Graphite](http://graphite.readthedocs.org/en/latest/index.html)
 via raw TCP.
 
+<aside class="notice">
+When `graphite_tag_support` is enabled, `name` as tag name is reserved for graphite metric and will be replaced with `_name`.
+</aside>
+
+
 ## Configuration:
 
 ```toml
