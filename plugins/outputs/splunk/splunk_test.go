@@ -2,20 +2,20 @@ package splunk
 
 import (
 	"encoding/json"
+	"github.com/influxdata/telegraf/testutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"github.com/influxdata/telegraf/testutil"
 )
 
 // default config used by Tests
-// AuthString == echo -n "uid:pwd" | base64 
+// AuthString == echo -n "uid:pwd" | base64
 func defaultSplunk() *Splunk {
 	return &Splunk{
-		Prefix:         "splunk.metrics.test",
-		Source: 		"",
-		SplunkUrl: 		"http://localhost:8088/services/collector",
-		AuthString:		"XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",		
+		Prefix:          "splunk.metrics.test",
+		Source:          "",
+		SplunkUrl:       "http://localhost:8088/services/collector",
+		AuthString:      "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
 		SimpleFields:    false,
 		MetricSeparator: ".",
 		ConvertPaths:    true,
@@ -24,7 +24,7 @@ func defaultSplunk() *Splunk {
 	}
 }
 
-func TestSplunk(t *testing.T){
+func TestSplunk(t *testing.T) {
 	s := defaultSplunk()
 
 	// -----------------------------------------------------------------------------------------------------------------
@@ -33,15 +33,15 @@ func TestSplunk(t *testing.T){
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(`{"status":"ok"}`)
-	}))		  
+	}))
 	defer ts.Close()
 
-	s.SplunkUrl  = ts.URL
+	s.SplunkUrl = ts.URL
 
 	// -----------------------------------------------------------------------------------------------------------------
 	//  Call the Write method with a test metric to ensure parsing works correctly.
 	// -----------------------------------------------------------------------------------------------------------------
 	s.Write(testutil.MockMetrics())
 
-	return 
+	return
 }
