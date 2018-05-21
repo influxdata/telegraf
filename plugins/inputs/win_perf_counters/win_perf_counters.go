@@ -138,11 +138,10 @@ func (m *Win_PerfCounters) AddItem(counterPath string,	measurement string, inclu
 		if err != nil {
 			return err
 		}
-		ci, err :=  m.query.GetCounterInfo(counterHandle)
+		counterPath, err =  m.query.GetCounterPath(counterHandle)
 		if err != nil {
 			return err
 		}
-		counterPath = UTF16PtrToString(ci.SzFullPath)
 	}
 
 	counters, err :=  m.query.ExpandWildCardPath(counterPath)
