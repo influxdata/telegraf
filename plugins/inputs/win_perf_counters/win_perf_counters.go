@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"github.com/influxdata/telegraf/internal"
 )
 
 var sampleConfig = `
@@ -20,6 +21,8 @@ var sampleConfig = `
   ## agent, it will not be gathered.
   ## Settings:
   # PrintValid = false # Print All matching performance counters
+  # Period after which counters will be reread from configuration and wildcards in counter paths expanded
+  CountersRefreshRate="1m"
 
   [[inputs.win_perf_counters.object]]
     # Processor usage, alternative to native, reports on a per core.
@@ -67,12 +70,12 @@ var sampleConfig = `
 
 type Win_PerfCounters struct {
 	PrintValid      bool
+	//deprecated: determined dynamically
 	PreVistaSupport bool
 	Object          []perfobject
-	WarnOnMissing   bool
-	FailOnMissing   bool
+	CountersRefreshRate internal.Duration
 
-	configParsed bool
+	lastRefreshed time.Time
 	counters     []*counter
 	query        PerformanceQuery
 }
@@ -106,8 +109,8 @@ var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 var counterPathRE = regexp.MustCompile(`\\\\.*\\(.*)\\(.*)`)
 var objectInstanceRE = regexp.MustCompile(`(.*)\((.*)\)`)
 
-//get object name, instance name (if available) and counter name from counter path
-func extractObjectInstanceCounterFromQueryRE(query string) (object string, instance string, counter string, err error) {
+//extractObjectInstanceCounterFromQuery gets object name, instance name (if available) and counter name from counter path
+func extractObjectInstanceCounterFromQuery(query string) (object string, instance string, counter string, err error) {
 	pathParts := counterPathRE.FindAllStringSubmatch(query, -1)
 	if pathParts == nil || len(pathParts[0]) != 3 {
 		err = errors.New("Could not extract counter info from: " + query)
@@ -125,8 +128,15 @@ func extractObjectInstanceCounterFromQueryRE(query string) (object string, insta
 	return
 }
 
+func (m *Win_PerfCounters) Description() string {
+	return "Input plugin to counterPath Performance Counters on Windows operating systems"
+}
 
-func (m *Win_PerfCounters) AddItem(counterPath string,	measurement string, includeTotal bool) error {
+func (m *Win_PerfCounters) SampleConfig() string {
+	return sampleConfig
+}
+
+func (m *Win_PerfCounters) AddItem(counterPath string,	instance string, measurement string, includeTotal bool) error {
 
 	if !m.query.AddEnglishCounterSupported() {
 		_, err := m.query.AddCounterToQuery (counterPath)
@@ -152,12 +162,12 @@ func (m *Win_PerfCounters) AddItem(counterPath string,	measurement string, inclu
 	for _, counterPath := range counters {
 		counterHandle, err := m.query.AddCounterToQuery (counterPath)
 
-		parsedObjectName, parsedInstance, parsedCounter, err := extractObjectInstanceCounterFromQueryRE(counterPath)
+		parsedObjectName, parsedInstance, parsedCounter, err := extractObjectInstanceCounterFromQuery(counterPath)
 		if err != nil {
 			return err
 		}
 
-		if parsedInstance == "_Total" && !includeTotal {
+		if parsedInstance == "_Total" && instance == "*" && !includeTotal {
 			continue
 		}
 
@@ -165,23 +175,17 @@ func (m *Win_PerfCounters) AddItem(counterPath string,	measurement string, inclu
 			includeTotal, counterHandle}
 		//fmt.Printf("Added q: %s, o: %s, i: %s, c: %s\n", newItem.counterPath, newItem.objectName, newItem.instance, newItem.counter)
 		m.counters = append(m.counters, newItem)
+
+		if m.PrintValid {
+			fmt.Printf("Valid: %s\n", counterPath)
+		}
 	}
 
 	return nil
 }
 
-func (m *Win_PerfCounters) Description() string {
-	return "Input plugin to counterPath Performance Counters on Windows operating systems"
-}
-
-func (m *Win_PerfCounters) SampleConfig() string {
-	return sampleConfig
-}
-
 func (m *Win_PerfCounters) ParseConfig() error {
 	var counterPath string
-
-	start := time.Now()
 
 	if len(m.Object) > 0 {
 		for _, PerfObject := range m.Object {
@@ -195,26 +199,19 @@ func (m *Win_PerfCounters) ParseConfig() error {
 						counterPath = "\\" + objectname + "(" + instance + ")\\" + counter
 					}
 
-					err := m.AddItem(counterPath, PerfObject.Measurement, PerfObject.IncludeTotal)
+					err := m.AddItem(counterPath, instance, PerfObject.Measurement, PerfObject.IncludeTotal)
 
-					if err == nil {
-						if m.PrintValid {
-							fmt.Printf("Valid: %s\n", counterPath)
-						}
-					} else {
-						if m.WarnOnMissing || m.FailOnMissing || PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
+					if err != nil {
+						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
 							fmt.Printf("Invalid counterPath: '%s'. Error: %s", counterPath, err.Error())
 						}
-						if m.FailOnMissing || PerfObject.FailOnMissing {
+						if PerfObject.FailOnMissing {
 							return err
 						}
 					}
 				}
 			}
 		}
-		took := time.Now().Sub(start).Seconds()
-
-		fmt.Printf("ParseConfig: Found %d items, took %.2f\n", len(m.counters), took)
 		return nil
 	} else {
 		err := errors.New("no performance objects configured")
@@ -230,14 +227,17 @@ func (m *Win_PerfCounters) GetParsedItemsForTesting() []*counter {
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// Parse the config once
 	var err error
-	if !m.configParsed {
+
+	if m.lastRefreshed.IsZero() || (m.CountersRefreshRate.Duration.Nanoseconds() > 0 && m.lastRefreshed.Add(m.CountersRefreshRate.Duration).Before(time.Now())) {
+		m.counters= m.counters[:0]
+
 		err = m.query.Open()
 		if err != nil {
 			return err
 		}
+		defer m.query.Close()
 
 		err = m.ParseConfig()
-		m.configParsed = true
 		if err != nil {
 			return err
 		}
@@ -246,6 +246,8 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
+		m.lastRefreshed = time.Now()
+
 		time.Sleep(time.Second)
 	}
 
@@ -257,7 +259,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 
 	var collectFields = make(map[InstanceGrouping]map[string]interface{})
 
-	start := time.Now()
 
 	err = m.query.CollectData()
 	if err != nil {
@@ -285,14 +286,14 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 
 	for instance, fields := range collectFields {
 		var tags = map[string]string{
-			"instance":   instance.instance,
 			"objectname": instance.objectname,
+		}
+		if len(instance.instance) >0 {
+			tags["instance"] = instance.instance
 		}
 		acc.AddFields(instance.name, fields, tags)
 	}
-	took := time.Now().Sub(start).Seconds()
 
-	fmt.Printf("Gather: took %.2f\n", took)
 	return nil
 }
 
