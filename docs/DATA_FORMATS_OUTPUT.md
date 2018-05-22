@@ -58,9 +58,15 @@ interoperability.
 
 ## Graphite
 
-The Graphite data format translates Telegraf metrics into _dot_ buckets. A
-template can be specified for the output of Telegraf metrics into Graphite
-buckets. The default template is:
+The Graphite data format is translated from Telegraf Metrics using either the
+template pattern or tag support method.  You can select between the two
+methods using the [`graphite_tag_support`](#graphite-tag-support) option.  When set, the tag support
+method is used, otherwise the [`template` pattern](#template-pattern) is used.
+
+#### Template Pattern
+
+The `template` option describes how Telegraf traslates metrics into _dot_
+buckets.  The default template is:
 
 ```
 template = "host.tags.measurement.field"
@@ -77,7 +83,7 @@ tag keys are filled.
 1. _measurement_ is a special keyword that outputs the measurement name.
 1. _field_ is a special keyword that outputs the field name.
 
-Which means the following influx metric -> graphite conversion would happen:
+**Example Conversion**:
 
 ```
 cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.09,usage_user=0.89 1455320660004257758
@@ -88,6 +94,24 @@ tars.cpu-total.us-east-1.cpu.usage_idle 98.09 1455320690
 
 Fields with string values will be skipped.  Boolean fields will be converted
 to 1 (true) or 0 (false).
+
+#### Graphite Tag Support
+
+When the `graphite_tag_support` option is enabled, the template pattern is not
+used.  Instead, tags are encoded using
+[Graphite tag support](http://graphite.readthedocs.io/en/latest/tags.html)
+added in Graphite 1.1.  The `metric_path` is a combination of the optional
+`prefix` option, measurement name, and field name.
+
+The tag `name` is reserved by Graphite, any conflicting tags and will be encoded as `_name`.
+
+**Example Conversion**:
+```
+cpu,cpu=cpu-total,dc=us-east-1,host=tars usage_idle=98.09,usage_user=0.89 1455320660004257758
+=>
+cpu.usage_user;cpu=cpu-total;dc=us-east-1;host=tars 0.89 1455320690
+cpu.usage_idle;cpu=cpu-total;dc=us-east-1;host=tars 98.09 1455320690
+```
 
 ### Graphite Configuration
 
@@ -102,10 +126,13 @@ to 1 (true) or 0 (false).
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   data_format = "graphite"
 
-  # prefix each graphite bucket
+  ## Prefix added to each graphite bucket
   prefix = "telegraf"
-  # graphite template
+  ## Graphite template pattern
   template = "host.tags.measurement.field"
+
+  ## Support Graphite tags, recommended to enable when using Graphite 1.1 or later.
+  # graphite_tag_support = false
 ```
 
 ## JSON

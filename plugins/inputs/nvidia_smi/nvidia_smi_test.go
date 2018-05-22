@@ -2,6 +2,8 @@ package nvidia_smi
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseLineStandard(t *testing.T) {
@@ -32,4 +34,11 @@ func TestParseLineBad(t *testing.T) {
 	if err == nil {
 		t.Fail()
 	}
+}
+
+func TestParseLineNotSupported(t *testing.T) {
+	line := "[Not Supported], 7606, 0, 7606, P0, 38, Tesla P4, GPU-xxx, Default, 0, 0, 0\n"
+	_, fields, err := parseLine(line)
+	require.NoError(t, err)
+	require.Equal(t, nil, fields["fan_speed"])
 }

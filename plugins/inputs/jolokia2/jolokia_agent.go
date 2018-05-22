@@ -3,9 +3,9 @@ package jolokia2
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 )
 
@@ -17,12 +17,13 @@ type JolokiaAgent struct {
 	URLs            []string `toml:"urls"`
 	Username        string
 	Password        string
-	ResponseTimeout time.Duration `toml:"response_timeout"`
+	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
 	tls.ClientConfig
 
 	Metrics  []MetricConfig `toml:"metric"`
 	gatherer *Gatherer
+	clients  []*Client
 }
 
 func (ja *JolokiaAgent) SampleConfig() string {
@@ -60,20 +61,27 @@ func (ja *JolokiaAgent) Gather(acc telegraf.Accumulator) error {
 		ja.gatherer = NewGatherer(ja.createMetrics())
 	}
 
+	// Initialize clients once
+	if ja.clients == nil {
+		ja.clients = make([]*Client, 0, len(ja.URLs))
+		for _, url := range ja.URLs {
+			client, err := ja.createClient(url)
+			if err != nil {
+				acc.AddError(fmt.Errorf("Unable to create client for %s: %v", url, err))
+				continue
+			}
+			ja.clients = append(ja.clients, client)
+		}
+	}
+
 	var wg sync.WaitGroup
 
-	for _, url := range ja.URLs {
-		client, err := ja.createClient(url)
-		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to create client for %s: %v", url, err))
-			continue
-		}
-
+	for _, client := range ja.clients {
 		wg.Add(1)
 		go func(client *Client) {
 			defer wg.Done()
 
-			err = ja.gatherer.Gather(client, acc)
+			err := ja.gatherer.Gather(client, acc)
 			if err != nil {
 				acc.AddError(fmt.Errorf("Unable to gather metrics for %s: %v", client.URL, err))
 			}
@@ -101,7 +109,7 @@ func (ja *JolokiaAgent) createClient(url string) (*Client, error) {
 	return NewClient(url, &ClientConfig{
 		Username:        ja.Username,
 		Password:        ja.Password,
-		ResponseTimeout: ja.ResponseTimeout,
+		ResponseTimeout: ja.ResponseTimeout.Duration,
 		ClientConfig:    ja.ClientConfig,
 	})
 }

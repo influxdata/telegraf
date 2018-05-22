@@ -125,15 +125,20 @@ func parseLine(line string) (map[string]string, map[string]interface{}, error) {
 	// Make sure there are as many metrics in the line as there were queried.
 	if len(met) == len(metricNames) {
 		for i, m := range metricNames {
+			col := strings.TrimSpace(met[i])
 
 			// First handle the tags
 			if m[1] == "tag" {
-				tags[m[0]] = strings.TrimSpace(met[i])
+				tags[m[0]] = col
+				continue
+			}
+
+			if strings.Contains(col, "[Not Supported]") {
 				continue
 			}
 
 			// Then parse the integers out of the fields
-			out, err := strconv.ParseInt(strings.TrimSpace(met[i]), 10, 64)
+			out, err := strconv.ParseInt(col, 10, 64)
 			if err != nil {
 				return tags, fields, err
 			}

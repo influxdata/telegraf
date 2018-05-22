@@ -16,6 +16,7 @@ import (
 )
 
 type Graphite struct {
+	GraphiteTagSupport bool
 	// URL is only for backwards compatibility
 	Servers  []string
 	Prefix   string
@@ -35,6 +36,10 @@ var sampleConfig = `
   ## Graphite output template
   ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   template = "host.tags.measurement.field"
+
+  ## Enable Graphite tags support
+  # graphite_tag_support = false
+
   ## timeout in seconds for the write connection to graphite
   timeout = 2
 
@@ -129,7 +134,7 @@ func checkEOF(conn net.Conn) {
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var batch []byte
-	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template)
+	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport)
 	if err != nil {
 		return err
 	}

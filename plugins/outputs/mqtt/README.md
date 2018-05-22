@@ -11,6 +11,9 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
   topic_prefix = "telegraf"
 
   ## QoS policy for messages
+  ##   0 = at most once
+  ##   1 = at least once
+  ##   2 = exactly once
   qos = 2
 
   ## username and password to connect MQTT server.
@@ -30,8 +33,12 @@ This plugin writes to a [MQTT Broker](http://http://mqtt.org/) acting as a mqtt 
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
+  ## When true, metrics will be sent in one MQTT message per flush.  Otherwise,
+  ## metrics are written one metric per MQTT message.
+  # batch = false
+
   ## Data format to output.
-  data_format = "influx"
+  # data_format = "influx"
 ```
 
 ### Required parameters:

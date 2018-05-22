@@ -3,7 +3,10 @@
 This plugin writes to [Graphite](http://graphite.readthedocs.org/en/latest/index.html)
 via raw TCP.
 
-## Configuration:
+For details on the translation between Telegraf Metrics and Graphite output,
+see the [Graphite Data Format](../../../docs/DATA_FORMATS_OUTPUT.md)
+
+### Configuration:
 
 ```toml
 # Configuration for Graphite server to send metrics to
@@ -17,6 +20,10 @@ via raw TCP.
   ## Graphite output template
   ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   template = "host.tags.measurement.field"
+
+  ## Enable Graphite tags support
+  # graphite_tag_support = false
+
   ## timeout in seconds for the write connection to graphite
   timeout = 2
 
