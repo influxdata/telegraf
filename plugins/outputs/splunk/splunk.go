@@ -171,10 +171,10 @@ func (s *Splunk) Write(measures []telegraf.Metric) error {
 			if err != nil {
 				return fmt.Errorf("unable to create http.Request \n    URL:%s\n\n", s.SplunkUrl)
 			}
-			
+
 			req.Header.Add("Content-Type", "application/json")
 			req.Header.Add("Authorization", "Splunk "+s.AuthString)
-			
+
 			//// Check for existence of s && req to prevent race ('panic: runtime error: invalid memory address or nil pointer dereference')
 			if s != nil && req != nil {
 				resp, err := s.client.Do(req)
