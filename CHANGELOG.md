@@ -50,6 +50,7 @@
 - [#4158](https://github.com/influxdata/telegraf/pull/4158): Add aurora input plugin.
 - [#3839](https://github.com/influxdata/telegraf/pull/3839): Add regex processor plugin.
 - [#4165](https://github.com/influxdata/telegraf/pull/4165): Add support for Graphite 1.1 tags.
+- [#4162](https://github.com/influxdata/telegraf/pull/4162): Add timeout option to sensors input.
 
 ### Bugfixes
 
