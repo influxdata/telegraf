@@ -100,6 +100,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/tail"
 	_ "github.com/influxdata/telegraf/plugins/inputs/tcp_listener"
 	_ "github.com/influxdata/telegraf/plugins/inputs/teamspeak"
+	_ "github.com/influxdata/telegraf/plugins/inputs/tengine"
 	_ "github.com/influxdata/telegraf/plugins/inputs/tomcat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/trig"
 	_ "github.com/influxdata/telegraf/plugins/inputs/twemproxy"
@@ -112,5 +113,4 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/zfs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zipkin"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zookeeper"
-	_ "github.com/influxdata/telegraf/plugins/inputs/tengine"
 )
