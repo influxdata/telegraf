@@ -3,8 +3,10 @@ package syslog
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,10 +20,12 @@ import (
 )
 
 const defaultReadTimeout = time.Millisecond * 500
+const ipMaxPacketSize = 64 * 1024
 
 // Syslog is a syslog plugin
 type Syslog struct {
 	Address            string `toml:"server"`
+	Protocol           string
 	Cacert             string `toml:"tls_cacert"`
 	Cert               string `toml:"tls_cert"`
 	Key                string `toml:"tls_key"`
@@ -35,20 +39,29 @@ type Syslog struct {
 
 	mu sync.Mutex
 	wg sync.WaitGroup
+	io.Closer
 
-	listener      net.Listener
+	isTCP         bool
+	tcpListener   net.Listener
 	tlsConfig     *tls.Config
 	connections   map[string]net.Conn
 	connectionsMu sync.Mutex
+
+	udpListener net.PacketConn
 }
 
 var sampleConfig = `
     ## Specify an ip or hostname with port - eg., localhost:6514, 10.0.0.1:6514
-
     ## Address and port to host the syslog receiver.
     ## If no server is specified, then localhost is used as the host.
     ## If no port is specified, 6514 is used (RFC5425#section-4.1).
-    server = ":6514"
+	server = ":6514"
+	
+	## Protocol (default = tcp)
+	## Should be one of the following values:
+	## tcp, tcp4, tcp6, unix, unixpacket, udp, udp4, udp6, ip, ip4, ip6, unixgram.
+	## Otherwise forced to the default.
+	# protocol = "tcp"
 
     ## TLS Config
     # tls_cacert = "/etc/telegraf/ca.pem"
@@ -58,18 +71,19 @@ var sampleConfig = `
 	# insecure_skip_verify = true
 	
 	## Period between keep alive probes.
-	## Only applies to TCP sockets.
 	## 0 disables keep alive probes.
 	## Defaults to the OS configuration.
+	## Only applies to stream sockets (e.g. TCP).
 	# keep_alive_period = "5m"
 
 	## Maximum number of concurrent connections (default = 0).
-	## 0 means is unlimited.
+	## 0 means unlimited.
+	## Only applies to stream sockets (e.g. TCP).
 	# max_connections = 1024
 
 	## Read timeout (default = 500ms).
-  	## Only applies to stream sockets (e.g. TCP).
-  	## 0 means is unlimited.
+	## 0 means unlimited.
+	## Only applies to stream sockets (e.g. TCP).
 	read_timeout = 500ms
 
 	## Whether to parse in best effort mode or not (default = false).
@@ -101,32 +115,104 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 	// 	"address": s.Address,
 	// }
 
-	l, err := net.Listen("tcp", s.Address)
-	if err != nil {
-		return err
-	}
-	s.listener = l
-	if tlsConfig, _ := internal.GetTLSConfig(s.Cert, s.Key, s.Cacert, s.InsecureSkipVerify); tlsConfig != nil {
-		s.tlsConfig = tlsConfig
+	switch s.Protocol {
+	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
+		s.isTCP = true
+	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
+		s.isTCP = false
+	default:
+		s.Protocol = "tcp"
+		s.isTCP = true
 	}
 
-	s.wg.Add(1)
-	go s.listen(acc)
+	if s.Protocol == "unix" || s.Protocol == "unixpacket" || s.Protocol == "unixgram" {
+		os.Remove(s.Address)
+	}
+
+	if s.isTCP {
+		l, err := net.Listen(s.Protocol, s.Address)
+		if err != nil {
+			return err
+		}
+		s.Closer = l
+		s.tcpListener = l
+		if tlsConfig, _ := internal.GetTLSConfig(s.Cert, s.Key, s.Cacert, s.InsecureSkipVerify); tlsConfig != nil {
+			s.tlsConfig = tlsConfig
+		}
+
+		s.wg.Add(1)
+		go s.listenStream(acc)
+	} else {
+		l, err := net.ListenPacket(s.Protocol, s.Address)
+		if err != nil {
+			return err
+		}
+		s.Closer = l
+		s.udpListener = l
+
+		s.wg.Add(1)
+		go s.listenPacket(acc)
+	}
+
+	if s.Protocol == "unix" || s.Protocol == "unixpacket" || s.Protocol == "unixgram" {
+		s.Closer = unixCloser{path: s.Address, closer: s.Closer}
+	}
 
 	log.Printf("I! Started syslog receiver at %s\n", s.Address)
 	return nil
 }
 
-func (s *Syslog) listen(acc telegraf.Accumulator) {
+// Stop cleans up all resources
+func (s *Syslog) Stop() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.Closer != nil {
+		s.Close()
+	}
+	s.wg.Wait()
+
+	log.Printf("I! Stopped syslog receiver at %s\n", s.Address)
+}
+
+func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
+	defer s.wg.Done()
+	b := make([]byte, ipMaxPacketSize)
+	for {
+		n, _, err := s.udpListener.ReadFrom(b)
+		if err != nil {
+			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+				log.Println(err)
+				acc.AddError(err)
+			}
+			break
+		}
+
+		// if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
+		// 	s.udpListener.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))
+		// }
+
+		p := rfc5424.NewParser()
+		mex, err := p.Parse(b[:n], &s.BestEffort)
+		if mex != nil {
+			acc.AddFields("syslog", fields(mex), tags(mex), tm(mex, s.now))
+		}
+		if err != nil {
+			acc.AddError(err)
+		}
+	}
+}
+
+func (s *Syslog) listenStream(acc telegraf.Accumulator) {
 	defer s.wg.Done()
 
 	s.connections = map[string]net.Conn{}
 
 	for {
-		conn, err := s.listener.Accept()
+		conn, err := s.tcpListener.Accept()
 		if err != nil {
-			log.Println(err)
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+				log.Println(err)
 				acc.AddError(err)
 			}
 			break
@@ -276,15 +362,15 @@ func fields(msg *rfc5424.SyslogMessage) map[string]interface{} {
 	return flds
 }
 
-// Stop cleans up all resources
-func (s *Syslog) Stop() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+type unixCloser struct {
+	path   string
+	closer io.Closer
+}
 
-	s.listener.Close()
-	s.wg.Wait()
-
-	log.Printf("I! Stopped syslog receiver at %s\n", s.Address)
+func (uc unixCloser) Close() error {
+	err := uc.closer.Close()
+	os.Remove(uc.path) // ignore error
+	return err
 }
 
 func init() {
