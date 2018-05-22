@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/go-syslog/rfc5425"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	tlsConfig "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -24,16 +25,13 @@ const ipMaxPacketSize = 64 * 1024
 
 // Syslog is a syslog plugin
 type Syslog struct {
-	Address            string `toml:"server"`
-	Protocol           string
-	Cacert             string `toml:"tls_cacert"`
-	Cert               string `toml:"tls_cert"`
-	Key                string `toml:"tls_key"`
-	InsecureSkipVerify bool
-	KeepAlivePeriod    *internal.Duration
-	ReadTimeout        *internal.Duration
-	MaxConnections     int
-	BestEffort         bool
+	Address  string `toml:"server"`
+	Protocol string
+	tlsConfig.ServerConfig
+	KeepAlivePeriod *internal.Duration
+	ReadTimeout     *internal.Duration
+	MaxConnections  int
+	BestEffort      bool
 
 	now func() time.Time
 
@@ -64,11 +62,9 @@ var sampleConfig = `
 	# protocol = "tcp"
 
     ## TLS Config
-    # tls_cacert = "/etc/telegraf/ca.pem"
+    # tls_allowed_cacerts = ["/etc/telegraf/ca.pem"]
     # tls_cert = "/etc/telegraf/cert.pem"
     # tls_key = "/etc/telegraf/key.pem"
-    ## If false, skip chain & host verification
-	# insecure_skip_verify = true
 	
 	## Period between keep alive probes.
 	## 0 disables keep alive probes.
@@ -136,7 +132,7 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 		}
 		s.Closer = l
 		s.tcpListener = l
-		if tlsConfig, _ := internal.GetTLSConfig(s.Cert, s.Key, s.Cacert, s.InsecureSkipVerify); tlsConfig != nil {
+		if tlsConfig, _ := s.TLSConfig(); tlsConfig != nil {
 			s.tlsConfig = tlsConfig
 		}
 

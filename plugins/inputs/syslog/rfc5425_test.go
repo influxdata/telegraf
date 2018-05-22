@@ -474,9 +474,9 @@ func newTLSSyslogReceiver(keepAlive *internal.Duration, maxConn int, bestEffort 
 	})
 
 	receiver := newTCPSyslogReceiver(keepAlive, maxConn, bestEffort)
-	receiver.Cacert = serviceCAFile
-	receiver.Cert = serviceCertFile
-	receiver.Key = serviceKeyFile
+	receiver.TLSAllowedCACerts = append(receiver.TLSAllowedCACerts, serviceCAFile)
+	receiver.TLSCert = serviceCertFile
+	receiver.TLSKey = serviceKeyFile
 
 	return receiver
 }
