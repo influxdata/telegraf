@@ -11,6 +11,7 @@ ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
 RestartForceExitStatus=SIGPIPE
 KillMode=control-group
+StandardError=/var/log/telegraf/telegraf.log
 
 [Install]
 WantedBy=multi-user.target
