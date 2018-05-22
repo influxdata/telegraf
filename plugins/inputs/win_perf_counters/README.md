@@ -5,14 +5,14 @@ Input plugin to read Performance Counters on Windows operating systems.
 Configuration is parsed and then tested for validity such as
 whether the Object, Instance and Counter exist on Telegraf startup.
 
-Counter paths are refreshed periodically, see [CountersRefreshRate](#CountersRefreshRate)
+Counter paths are refreshed periodically, see [CountersRefreshRate](#countersrefreshrate)
 configuration parameter for more info.
 
 Wildcards can be used in instance and counter names. Partial wildcards are supported only
 in instance names on Windows Vista and newer.
 
-In case of query for all instances "*", the plugin does not return the instance _Total_
-by default. See [IncludeTotal](#IncludeTotal) for more info.
+In case of query for all instances `["*"]`, the plugin does not return the instance `_Total`
+by default. See [IncludeTotal](#includetotal) for more info.
 
 ## Basics
 
@@ -37,11 +37,11 @@ Example:
 #### CountersRefreshRate
 
 Configured counters are matched against available counters at the interval
-specified by the _CountersRefreshRate_ parameter. Default value is `1m` (1 minute).
+specified by the `CountersRefreshRate` parameter. Default value is `1m` (1 minute).
 
 If wildcards are used in instance or counter names, they are expanded at this point.
 
-Setting _CountersRefreshRate_ too low (order of seconds) can cause Telegraf to create
+Setting `CountersRefreshRate` too low (order of seconds) can cause Telegraf to create
 a high CPU load.
 
 Set to `0s` to disable periodic refreshing.
@@ -83,12 +83,12 @@ Instances key (this is an array) is the instances of a counter you would like re
 it can be one or more values.
 
 Example, `Instances = ["C:","D:","E:"]` will return only for the instances
-C:, D: and E: where relevant. To get all instances of a Counter, use ["*"] only.
+C:, D: and E: where relevant. To get all instances of a Counter, use `["*"]` only.
 By default any results containing `_Total` are stripped,
 unless this is specified as the wanted instance.
-Alternatively see the option IncludeTotal below.
+Alternatively see the option `IncludeTotal` below.
 
-It is also possible to set partial wildcards, eg. ["chrome*"]
+It is also possible to set partial wildcards, eg. `["chrome*"]`
 
 Some Objects do not have instances to select from at all.
 Here only one option is valid if you want data back,
@@ -102,12 +102,12 @@ you would like returned, it can also be one or more values.
 
 Example: `Counters = ["% Idle Time", "% Disk Read Time", "% Disk Write Time"]`
 This must be specified for every counter you want the results of,
-or use ["*"] for all the counters for object.
+or use `["*"]` for all the counters for object.
 
 #### Measurement
 *Optional*
 
-This key is optional, if it is not set it will be _win_perf_counters_.
+This key is optional, if it is not set it will be `win_perf_counters`.
 In InfluxDB this is the key by which the returned data is stored underneath,
 so for ordering your data in a good manner,
 this is a good key to set with a value when you want your IIS and Disk results stored
@@ -120,8 +120,8 @@ Example: `Measurement = "win_disk"
 
 This key is optional, it is a simple bool.
 If it is not set to true or included it is treated as false.
-This key only has an effect if the Instances key is set to "*"
-and you would also like all instances containg _Total returned,
+This key only has an effect if the Instances key is set to `["*"]`
+and you would also like all instances containing `_Total` returned,
 like `_Total`, `0,_Total` and so on where applicable
 (Processor Information is one example).
 
