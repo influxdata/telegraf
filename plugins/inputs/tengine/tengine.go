@@ -102,36 +102,36 @@ func (n *Tengine) createHttpClient() (*http.Client, error) {
 }
 
 type TengineSatus struct {
-	host                     string `json:"host"`
-	bytes_in                 uint64 `json:"bytes_in"`
-	bytes_out                uint64 `json:"bytes_out"`
-	conn_total               uint64 `json:"conn_total"`
-	req_total                uint64 `json:"req_total"`
-	http_2xx                 uint64 `json:"http_2xx"`
-	http_3xx                 uint64 `json:"http_3xx"`
-	http_4xx                 uint64 `json:"http_4xx"`
-	http_5xx                 uint64 `json:"http_5xx"`
-	http_other_status        uint64 `json:"http_other_status"`
-	rt                       uint64 `json:"rt"`
-	ups_req                  uint64 `json:"ups_req"`
-	ups_rt                   uint64 `json:"ups_rt"`
-	ups_tries                uint64 `json:"ups_tries"`
-	http_200                 uint64 `json:"http_200"`
-	http_206                 uint64 `json:"http_206"`
-	http_302                 uint64 `json:"http_302"`
-	http_304                 uint64 `json:"http_304"`
-	http_403                 uint64 `json:"http_403"`
-	http_404                 uint64 `json:"http_404"`
-	http_416                 uint64 `json:"http_416"`
-	http_499                 uint64 `json:"http_499"`
-	http_500                 uint64 `json:"http_500"`
-	http_502                 uint64 `json:"http_502"`
-	http_503                 uint64 `json:"http_503"`
-	http_504                 uint64 `json:"http_504"`
-	http_508                 uint64 `json:"http_508"`
-	http_other_detail_status uint64 `json:"http_other_detail_status"`
-	http_ups_4xx             uint64 `json:"http_ups_4xx"`
-	http_ups_5xx             uint64 `json:"http_ups_5xx"`
+	host                     string
+	bytes_in                 uint64
+	bytes_out                uint64
+	conn_total               uint64
+	req_total                uint64
+	http_2xx                 uint64
+	http_3xx                 uint64
+	http_4xx                 uint64
+	http_5xx                 uint64
+	http_other_status        uint64
+	rt                       uint64
+	ups_req                  uint64
+	ups_rt                   uint64
+	ups_tries                uint64
+	http_200                 uint64
+	http_206                 uint64
+	http_302                 uint64
+	http_304                 uint64
+	http_403                 uint64
+	http_404                 uint64
+	http_416                 uint64
+	http_499                 uint64
+	http_500                 uint64
+	http_502                 uint64
+	http_503                 uint64
+	http_504                 uint64
+	http_508                 uint64
+	http_other_detail_status uint64
+	http_ups_4xx             uint64
+	http_ups_5xx             uint64
 }
 
 func (n *Tengine) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
