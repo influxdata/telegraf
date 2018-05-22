@@ -14,6 +14,7 @@
 ### New Inputs
 
 - [aurora](./plugins/inputs/aurora/README.md) - Contributed by @influxdata
+- [burrow](./plugins/inputs/burrow/README.md) - Contributed by @arkady-emelyanov
 - [fibaro](./plugins/inputs/fibaro/README.md) - Contributed by @dynek
 - [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry/README.md) - Contributed by @ajhai
 - [mcrouter](./plugins/inputs/mcrouter/README.md) - Contributed by @cthayer
@@ -51,6 +52,7 @@
 - [#3839](https://github.com/influxdata/telegraf/pull/3839): Add regex processor plugin.
 - [#4165](https://github.com/influxdata/telegraf/pull/4165): Add support for Graphite 1.1 tags.
 - [#4162](https://github.com/influxdata/telegraf/pull/4162): Add timeout option to sensors input.
+- [#3489](https://github.com/influxdata/telegraf/pull/3489): Add burrow input plugin.
 
 ### Bugfixes
 
