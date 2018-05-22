@@ -195,7 +195,7 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 		p := rfc5424.NewParser()
 		mex, err := p.Parse(b[:n], &s.BestEffort)
 		if mex != nil {
-			acc.AddFields("syslog", fields(mex), tags(mex), tm(mex, s.now))
+			acc.AddFields("syslog", fields(mex), tags(mex), s.now())
 		}
 		if err != nil {
 			acc.AddError(err)
@@ -293,16 +293,8 @@ func (s *Syslog) store(res rfc5425.Result, acc telegraf.Accumulator) {
 		acc.AddError(res.MessageError)
 	}
 	if res.Message != nil {
-		acc.AddFields("syslog", fields(res.Message), tags(res.Message), tm(res.Message, s.now))
+		acc.AddFields("syslog", fields(res.Message), tags(res.Message), s.now())
 	}
-}
-
-func tm(msg *rfc5424.SyslogMessage, now func() time.Time) time.Time {
-	t := now()
-	if msg.Timestamp() != nil {
-		t = *msg.Timestamp()
-	}
-	return t
 }
 
 func tags(msg *rfc5424.SyslogMessage) map[string]string {
@@ -331,6 +323,10 @@ func tags(msg *rfc5424.SyslogMessage) map[string]string {
 func fields(msg *rfc5424.SyslogMessage) map[string]interface{} {
 	flds := map[string]interface{}{
 		"version": msg.Version(),
+	}
+
+	if msg.Timestamp() != nil {
+		flds["timestamp"] = *msg.Timestamp()
 	}
 
 	if msg.ProcID() != nil {
