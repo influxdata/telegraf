@@ -1,13 +1,18 @@
 # win_perf_counters readme
 
-The way this plugin works is that on load of Telegraf,
-the plugin will be handed configuration from Telegraf.
-This configuration is parsed and then tested for validity such as
-if the Object, Instance and Counter existing.
-If it does not match at startup, it will not be fetched.
-Exceptions to this are in cases where you query for all instances "*".
-By default the plugin does not return _Total
-when it is querying for all (*) as this is redundant.
+Input plugin to read Performance Counters on Windows operating systems.
+
+Configuration is parsed and then tested for validity such as
+if the Object, Instance and Counter existing on Telegraf startup.
+
+Counter paths are refreshed periodically, see [CountersRefreshRate](#CountersRefreshRate) 
+configuration parameter for more info.
+
+Wildcards can be used in instance and counter names. Partial wildcards are supported only 
+in instance names on Windows Vista and newer.
+
+In case of query for all instances "*", the plugin does not return the __Total_ instance
+by default. See [IncludeTotal](#IncludeTotal) for more info. 
 
 ## Basics
 
@@ -29,7 +34,21 @@ Bool, if set to `true` will print out all matching performance objects.
 Example:
 `PrintValid=true`
 
+#### CountersRefreshRate
+
+Configured counters are matched against available counters at the interval 
+specified by the _CountersRefreshRate_ parameter. Default value is `1m` (1 minute). 
+
+If wildcards are used in instance or counter names, they are expanded at this point.
+
+Setting _CountersRefreshRate_ to too low values (order of seconds) can cause Telegraf to create
+ high CPU load.
+ 
+Set to `0s` to disable periodic refreshing.
+
 #### PreVistaSupport
+
+_Deprecated. Necessary features on Windows Vista and newer are checked dynamically_
 
 Bool, if set to `true` will use the localized PerfCounter interface that is present before Vista for backwards compatability.
 
@@ -69,6 +88,8 @@ By default any results containing _Total are stripped,
 unless this is specified as the wanted instance.
 Alternatively see the option IncludeTotal below.
 
+It is also possible to set partial wildcards, eg. ["chrome*"]
+
 Some Objects does not have instances to select from at all,
 here only one option is valid if you want data back,
 and that is to specify `Instances = ["------"]`.
@@ -81,12 +102,12 @@ you would like returned, it can also be one or more values.
 
 Example: `Counters = ["% Idle Time", "% Disk Read Time", "% Disk Write Time"]`
 This must be specified for every counter you want the results of,
-it is not possible to ask for all counters in the ObjectName.
+or use ["*"] for all the counters for object.
 
 #### Measurement
 *Optional*
 
-This key is optional, if it is not set it will be win_perf_counters.
+This key is optional, if it is not set it will be _win_perf_counters_.
 In InfluxDB this is the key by which the returned data is stored underneath,
 so for ordering your data in a good manner,
 this is a good key to set with where you want your IIS and Disk results stored,
@@ -336,6 +357,10 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ```
 
 ## Troubleshooting
+
+If you are getting error about invalid counter, use the `typeperf` command to check counter path 
+on command line.
+E.g. `typeperf "Process(chrome*)\% Processor Time"`
 
 If no metrics are emitted even with the default config, you may need to repair
 your performance counters.
