@@ -2,15 +2,16 @@ package splunk
 
 import (
 	"encoding/json"
-	"github.com/influxdata/telegraf/testutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"log"
+	"io/ioutil"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
-// default config used by Tests
-// AuthString == echo -n "uid:pwd" | base64
-func defaultSplunk() *Splunk {
+func fakeSplunk() *Splunk {
 	return &Splunk{
 		Prefix:          "splunk.metrics.test",
 		Source:          "",
@@ -24,27 +25,32 @@ func defaultSplunk() *Splunk {
 	}
 }
 
+
 func TestSplunk(t *testing.T) {
-	s := defaultSplunk()
+	s := fakeSplunk()
 
 	// -----------------------------------------------------------------------------------------------------------------
-	//  Create a Fake Server to send Splunk formatted metrics to  (reset the SplunkUrl from above)
+	//  Create a Fake Server to send Splunk formatted metrics to  
 	// -----------------------------------------------------------------------------------------------------------------
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := ioutil.ReadAll(r.Body)
+	    if err != nil {
+	        panic(err)
+	    }
+	    log.Println(string(body))
+
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(`{"status":"ok"}`)
 	}))
 	defer ts.Close()
 
-	// Check for existence of s.AuthString to prevent race ('panic: runtime error: invalid memory address or nil pointer dereference')
-	if s != nil {
-		s.SplunkUrl = ts.URL
-
-		// -----------------------------------------------------------------------------------------------------------------
-		//  Call the Write method with a test metric to ensure parsing works correctly.
-		// -----------------------------------------------------------------------------------------------------------------
-		s.Write(testutil.MockMetrics())
-	}
-
-	return
+	// -----------------------------------------------------------------------------------------------------------------
+	//  Set the SplunkUrl from above and process MockMetrics
+	// -----------------------------------------------------------------------------------------------------------------
+	s.SplunkUrl = ts.URL
+	err := s.Connect()
+	require.NoError(t, err)
+	err = s.Write(testutil.MockMetrics())
+	require.NoError(t, err)
 }
+

@@ -56,7 +56,7 @@ SplunkUrl = "http://localhost:8088/services/collector"
 
 ## REQUIRED
 ## Splunk Authorization Token for sending data to a Splunk HTTPEventCollector (HEC). 
-##   Note:  This Token should map to a 'metrics' index in Splunk.  
+##   Note:  This Token should map to a 'metrics' index in Splunk. 
 AuthString = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
 
 ## OPTIONAL:  prefix for metrics keys
@@ -171,20 +171,22 @@ func (s *Splunk) Write(measures []telegraf.Metric) error {
 			if err != nil {
 				return fmt.Errorf("unable to create http.Request \n    URL:%s\n\n", s.SplunkUrl)
 			}
-
+			
 			req.Header.Add("Content-Type", "application/json")
-			// Check for existence of s.AuthString to prevent race ('panic: runtime error: invalid memory address or nil pointer dereference')
-			if s != nil {
-				req.Header.Add("Authorization", "Splunk "+s.AuthString)
-			}
-			resp, err := s.client.Do(req)
-			if err != nil {
-				return fmt.Errorf("error POST-ing metrics to Splunk[%s]  Sending Data:%s\n", err, payload)
-			}
-			defer resp.Body.Close()
+			req.Header.Add("Authorization", "Splunk "+s.AuthString)
+			
+			//// Check for existence of s && req to prevent race ('panic: runtime error: invalid memory address or nil pointer dereference')
+			if s != nil && req != nil {
+				resp, err := s.client.Do(req)
+				if err != nil {
+					return fmt.Errorf("error POST-ing metrics to Splunk[%s]  Sending Data:%s\n", err, payload)
+				}
 
-			if resp.StatusCode < 200 || resp.StatusCode > 209 {
-				return fmt.Errorf("received bad status code posting to %s, %d\n\n%s\n", s.SplunkUrl, resp.StatusCode, payload)
+				defer resp.Body.Close()
+
+				if resp.StatusCode < 200 || resp.StatusCode > 209 {
+					return fmt.Errorf("received bad status code posting to %s, %d\n\n%s\n", s.SplunkUrl, resp.StatusCode, payload)
+				}
 			}
 		}
 	}
