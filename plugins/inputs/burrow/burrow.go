@@ -6,11 +6,12 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
-	"github.com/gobwas/glob"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -39,17 +40,20 @@ const configSample = `
   ## Useful in case of large number of topics or consumer groups.
   # concurrent_connections = 20
 
-  ## Filter out clusters by providing list of glob patterns.
-  ## Default is no filtering.
-  # clusters = []
+  ## Filter clusters, default is no filtering.
+  ## Values can be specified as glob patterns.
+  # clusters_include = []
+  # clusters_exclude = []
 
-  ## Filter out consumer groups by providing list of glob patterns.
-  ## Default is no filtering.
-  # groups = []
+  ## Filter consumer groups, default is no filtering.
+  ## Values can be specified as glob patterns.
+  # groups_include = []
+  # groups_exclude = []
 
-  ## Filter out topics by providing list of glob patterns.
-  ## Default is no filtering.
-  # topics = []
+  ## Filter topics, default is no filtering.
+  ## Values can be specified as glob patterns.
+  # topics_include = []
+  # topics_exclude = []
 
   ## Credentials for basic HTTP authentication.
   # username = ""
@@ -72,15 +76,18 @@ type (
 		ResponseTimeout       internal.Duration
 		ConcurrentConnections int
 
-		APIPrefix string `toml:"api_prefix"`
-		Clusters  []string
-		Groups    []string
-		Topics    []string
+		APIPrefix       string `toml:"api_prefix"`
+		ClustersExclude []string
+		ClustersInclude []string
+		GroupsExclude   []string
+		GroupsInclude   []string
+		TopicsExclude   []string
+		TopicsInclude   []string
 
-		client    *http.Client
-		gClusters []glob.Glob
-		gGroups   []glob.Glob
-		gTopics   []glob.Glob
+		client         *http.Client
+		filterClusters filter.Filter
+		filterGroups   filter.Filter
+		filterTopics   filter.Filter
 	}
 
 	// response
@@ -191,15 +198,15 @@ func (b *burrow) compileGlobs() error {
 	var err error
 
 	// compile glob patterns
-	b.gClusters, err = makeGlobs(b.Clusters)
+	b.filterClusters, err = filter.NewIncludeExcludeFilter(b.ClustersInclude, b.ClustersExclude)
 	if err != nil {
 		return err
 	}
-	b.gGroups, err = makeGlobs(b.Groups)
+	b.filterGroups, err = filter.NewIncludeExcludeFilter(b.GroupsInclude, b.GroupsExclude)
 	if err != nil {
 		return err
 	}
-	b.gTopics, err = makeGlobs(b.Topics)
+	b.filterTopics, err = filter.NewIncludeExcludeFilter(b.TopicsInclude, b.TopicsExclude)
 	if err != nil {
 		return err
 	}
@@ -257,7 +264,7 @@ func (b *burrow) gatherServer(src *url.URL, acc telegraf.Accumulator) error {
 
 	guard := make(chan struct{}, b.ConcurrentConnections)
 	for _, cluster := range r.Clusters {
-		if !isAllowed(cluster, b.gClusters) {
+		if !b.filterClusters.Match(cluster) {
 			continue
 		}
 
@@ -267,7 +274,7 @@ func (b *burrow) gatherServer(src *url.URL, acc telegraf.Accumulator) error {
 
 			// fetch topic list
 			// endpoint: <api_prefix>/(cluster)/topic
-			ut := extendUrlPath(src, cluster, "topic")
+			ut := appendPathToURL(src, cluster, "topic")
 			b.gatherTopics(guard, ut, cluster, acc)
 		}(cluster)
 
@@ -277,7 +284,7 @@ func (b *burrow) gatherServer(src *url.URL, acc telegraf.Accumulator) error {
 
 			// fetch consumer group list
 			// endpoint: <api_prefix>/(cluster)/consumer
-			uc := extendUrlPath(src, cluster, "consumer")
+			uc := appendPathToURL(src, cluster, "consumer")
 			b.gatherGroups(guard, uc, cluster, acc)
 		}(cluster)
 	}
@@ -296,7 +303,7 @@ func (b *burrow) gatherTopics(guard chan struct{}, src *url.URL, cluster string,
 	}
 
 	for _, topic := range r.Topics {
-		if !isAllowed(topic, b.gTopics) {
+		if !b.filterTopics.Match(topic) {
 			continue
 		}
 
@@ -311,7 +318,7 @@ func (b *burrow) gatherTopics(guard chan struct{}, src *url.URL, cluster string,
 
 			// fetch topic offsets
 			// endpoint: <api_prefix>/<cluster>/topic/<topic>
-			tu := extendUrlPath(src, topic)
+			tu := appendPathToURL(src, topic)
 			tr, err := b.getResponse(tu)
 			if err != nil {
 				acc.AddError(err)
@@ -353,7 +360,7 @@ func (b *burrow) gatherGroups(guard chan struct{}, src *url.URL, cluster string,
 	}
 
 	for _, group := range r.Groups {
-		if !isAllowed(group, b.gGroups) {
+		if !b.filterGroups.Match(group) {
 			continue
 		}
 
@@ -368,7 +375,7 @@ func (b *burrow) gatherGroups(guard chan struct{}, src *url.URL, cluster string,
 
 			// fetch consumer group status
 			// endpoint: <api_prefix>/<cluster>/consumer/<group>/lag
-			gl := extendUrlPath(src, group, "lag")
+			gl := appendPathToURL(src, group, "lag")
 			gr, err := b.getResponse(gl)
 			if err != nil {
 				acc.AddError(err)
@@ -410,7 +417,7 @@ func (b *burrow) genGroupStatusMetrics(r *apiResponse, cluster, group string, ac
 		"burrow_group",
 		map[string]interface{}{
 			"status":          r.Status.Status,
-			"status_code":     remapStatus(r.Status.Status),
+			"status_code":     mapStatusToCode(r.Status.Status),
 			"partition_count": partitionCount,
 			"total_lag":       r.Status.TotalLag,
 			"lag":             lag,
@@ -430,7 +437,7 @@ func (b *burrow) genGroupLagMetrics(r *apiResponse, cluster, group string, acc t
 			"burrow_partition",
 			map[string]interface{}{
 				"status":      partition.Status,
-				"status_code": remapStatus(partition.Status),
+				"status_code": mapStatusToCode(partition.Status),
 				"lag":         partition.CurrentLag,
 				"offset":      partition.End.Offset,
 				"timestamp":   partition.End.Timestamp,
@@ -442,5 +449,37 @@ func (b *burrow) genGroupLagMetrics(r *apiResponse, cluster, group string, acc t
 				"partition": strconv.FormatInt(int64(partition.Partition), 10),
 			},
 		)
+	}
+}
+
+func appendPathToURL(src *url.URL, parts ...string) *url.URL {
+	dst := new(url.URL)
+	*dst = *src
+
+	for i, part := range parts {
+		parts[i] = url.PathEscape(part)
+	}
+
+	ext := strings.Join(parts, "/")
+	dst.Path = fmt.Sprintf("%s/%s", src.Path, ext)
+	return dst
+}
+
+func mapStatusToCode(src string) int {
+	switch src {
+	case "OK":
+		return 1
+	case "NOT_FOUND":
+		return 2
+	case "WARN":
+		return 3
+	case "ERR":
+		return 4
+	case "STOP":
+		return 5
+	case "STALL":
+		return 6
+	default:
+		return 0
 	}
 }

@@ -23,17 +23,20 @@ Supported Burrow version: `1.x`
   ## Useful in case of large number of topics or consumer groups.
   # concurrent_connections = 20
 
-  ## Filter out clusters by providing list of glob patterns.
-  ## Default is no filtering.
-  # clusters = []
+  ## Filter clusters, default is no filtering.
+  ## Values can be specified as glob patterns.
+  # clusters_include = []
+  # clusters_exclude = []
 
-  ## Filter out consumer groups by providing list of glob patterns.
-  ## Default is no filtering.
-  # groups = []
+  ## Filter consumer groups, default is no filtering.
+  ## Values can be specified as glob patterns.
+  # groups_include = []
+  # groups_exclude = []
 
-  ## Filter out topics by providing list of glob patterns.
-  ## Default is no filtering.
-  # topics = []
+  ## Filter topics, default is no filtering.
+  ## Values can be specified as glob patterns.
+  # topics_include = []
+  # topics_exclude = []
 
   ## Credentials for basic HTTP authentication.
   # username = ""

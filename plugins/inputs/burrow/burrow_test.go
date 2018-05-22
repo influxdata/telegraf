@@ -231,13 +231,13 @@ func TestBasicAuthConfig(t *testing.T) {
 }
 
 // collect from whitelisted clusters
-func TestGlobClusters(t *testing.T) {
+func TestFilterClusters(t *testing.T) {
 	s := getHTTPServer()
 	defer s.Close()
 
 	plugin := &burrow{
-		Servers:  []string{s.URL},
-		Clusters: []string{"wrongname*"}, // clustername1 -> no match
+		Servers:         []string{s.URL},
+		ClustersInclude: []string{"wrongname*"}, // clustername1 -> no match
 	}
 
 	acc := &testutil.Accumulator{}
@@ -249,14 +249,14 @@ func TestGlobClusters(t *testing.T) {
 }
 
 // collect from whitelisted groups
-func TestGlobGroups(t *testing.T) {
+func TestFilterGroups(t *testing.T) {
 	s := getHTTPServer()
 	defer s.Close()
 
 	plugin := &burrow{
-		Servers: []string{s.URL},
-		Groups:  []string{"group?"}, // group1 -> match
-		Topics:  []string{"-"},      // topicA -> no match
+		Servers:       []string{s.URL},
+		GroupsInclude: []string{"group?"}, // group1 -> match
+		TopicsExclude: []string{"*"},      // exclude all
 	}
 
 	acc := &testutil.Accumulator{}
@@ -267,14 +267,14 @@ func TestGlobGroups(t *testing.T) {
 }
 
 // collect from whitelisted topics
-func TestGlobTopics(t *testing.T) {
+func TestFilterTopics(t *testing.T) {
 	s := getHTTPServer()
 	defer s.Close()
 
 	plugin := &burrow{
-		Servers: []string{s.URL},
-		Topics:  []string{"topic?"}, // topicA -> match
-		Groups:  []string{"-"},      // no matched groups
+		Servers:       []string{s.URL},
+		TopicsInclude: []string{"topic?"}, // topicA -> match
+		GroupsExclude: []string{"*"},      // exclude all
 	}
 
 	acc := &testutil.Accumulator{}
