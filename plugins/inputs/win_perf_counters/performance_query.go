@@ -9,7 +9,7 @@ import (
 	"errors"
 )
 
-//PerformanceQuery provides API for with Windows performance counters in GO
+//PerformanceQuery provides wrappers around Windows performance counters API for easy usage in GO
 type PerformanceQuery interface {
 	Open() error
 	Close() error
