@@ -7,6 +7,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/aurora"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bcache"
 	_ "github.com/influxdata/telegraf/plugins/inputs/bond"
+	_ "github.com/influxdata/telegraf/plugins/inputs/burrow"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cassandra"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ceph"
 	_ "github.com/influxdata/telegraf/plugins/inputs/cgroup"

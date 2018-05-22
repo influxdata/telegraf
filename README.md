@@ -132,6 +132,7 @@ configuration options.
 * [bcache](./plugins/inputs/bcache)
 * [bond](./plugins/inputs/bond)
 * [cassandra](./plugins/inputs/cassandra) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
+* [burrow](./plugins/inputs/burrow)
 * [ceph](./plugins/inputs/ceph)
 * [cgroup](./plugins/inputs/cgroup)
 * [chrony](./plugins/inputs/chrony)
