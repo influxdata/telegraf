@@ -21,11 +21,11 @@ type testCase5426 struct {
 
 func getTestCasesForRFC5426() []testCase5426 {
 	testCases := []testCase5426{
-		// (fixme) > need a timeout
-		// {
-		// 	name: "empty",
-		// 	data: []byte(""),
-		// },
+		{
+			name: "empty",
+			data: []byte(""),
+			werr: true,
+		},
 		{
 			name: "complete",
 			data: []byte("<1>1 - - - - - - A"),
@@ -48,6 +48,38 @@ func getTestCasesForRFC5426() []testCase5426 {
 				Fields: map[string]interface{}{
 					"version": uint16(1),
 					"message": "A",
+				},
+				Tags: map[string]string{
+					"severity":         "1",
+					"severity_level":   "alert",
+					"facility":         "0",
+					"facility_message": "kernel messages",
+				},
+				Time: defaultTime,
+			},
+		},
+		{
+			name: "one/per/packet",
+			data: []byte("<1>3 - - - - - - A<1>4 - - - - - - B"),
+			wantBestEffort: &testutil.Metric{
+				Measurement: "syslog",
+				Fields: map[string]interface{}{
+					"version": uint16(3),
+					"message": "A<1>4 - - - - - - B",
+				},
+				Tags: map[string]string{
+					"severity":         "1",
+					"severity_level":   "alert",
+					"facility":         "0",
+					"facility_message": "kernel messages",
+				},
+				Time: defaultTime,
+			},
+			wantStrict: &testutil.Metric{
+				Measurement: "syslog",
+				Fields: map[string]interface{}{
+					"version": uint16(3),
+					"message": "A<1>4 - - - - - - B",
 				},
 				Tags: map[string]string{
 					"severity":         "1",

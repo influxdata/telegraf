@@ -188,9 +188,9 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 			break
 		}
 
-		// if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
-		// 	s.udpListener.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))
-		// }
+		if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
+			s.udpListener.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))
+		}
 
 		p := rfc5424.NewParser()
 		mex, err := p.Parse(b[:n], &s.BestEffort)
