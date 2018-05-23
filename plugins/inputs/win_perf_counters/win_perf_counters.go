@@ -231,7 +231,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-		defer m.query.Close()
 
 		err = m.ParseConfig()
 		if err != nil {
@@ -294,5 +293,5 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("win_perf_counters", func() telegraf.Input { return &Win_PerfCounters{query: &PerformanceQueryImpl{} }})
+	inputs.Add("win_perf_counters", func() telegraf.Input { return &Win_PerfCounters{query: &PerformanceQueryImpl{}, CountersRefreshRate: internal.Duration{Duration: time.Second*60} }})
 }
