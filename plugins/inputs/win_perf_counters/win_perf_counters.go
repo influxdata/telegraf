@@ -106,7 +106,7 @@ var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 //General Counter path pattern is: \\computer\object(parent/instance#index)\counter
 //parent/instance#index part is skipped in single instance objects (e.g. Memory): \\computer\object\counter
 
-var counterPathRE = regexp.MustCompile(`\\\\.*\\(.*)\\(.*)`)
+var counterPathRE = regexp.MustCompile(`.*\\(.*)\\(.*)`)
 var objectInstanceRE = regexp.MustCompile(`(.*)\((.*)\)`)
 
 //extractObjectInstanceCounterFromQuery gets object name, instance name (if available) and counter name from counter path
