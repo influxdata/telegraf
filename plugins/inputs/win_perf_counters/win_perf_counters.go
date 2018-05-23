@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 	"github.com/influxdata/telegraf/internal"
+	"log"
 )
 
 var sampleConfig = `
@@ -173,11 +174,10 @@ func (m *Win_PerfCounters) AddItem(counterPath string,	instance string, measurem
 
 		newItem := &counter{counterPath, parsedObjectName, parsedCounter, parsedInstance, measurement,
 			includeTotal, counterHandle}
-		//fmt.Printf("Added q: %s, o: %s, i: %s, c: %s\n", newItem.counterPath, newItem.objectName, newItem.instance, newItem.counter)
 		m.counters = append(m.counters, newItem)
 
 		if m.PrintValid {
-			fmt.Printf("Valid: %s\n", counterPath)
+			log.Printf ("Valid: %s\n", counterPath)
 		}
 	}
 
@@ -203,7 +203,7 @@ func (m *Win_PerfCounters) ParseConfig() error {
 
 					if err != nil {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							fmt.Printf("Invalid counterPath: '%s'. Error: %s", counterPath, err.Error())
+							log.Printf ("Invalid counterPath: '%s'. Error: %s\n", counterPath, err.Error())
 						}
 						if PerfObject.FailOnMissing {
 							return err
