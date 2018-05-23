@@ -34,14 +34,14 @@ Bool, if set to `true` will print out all matching performance objects.
 Example:
 `PrintValid=true`
 
-#### CountersRefreshRate
+#### CountersRefreshInterval
 
 Configured counters are matched against available counters at the interval
-specified by the `CountersRefreshRate` parameter. Default value is `1m` (1 minute).
+specified by the `CountersRefreshInterval` parameter. Default value is `1m` (1 minute).
 
 If wildcards are used in instance or counter names, they are expanded at this point.
 
-Setting `CountersRefreshRate` too low (order of seconds) can cause Telegraf to create
+Setting `CountersRefreshInterval` too low (order of seconds) can cause Telegraf to create
 a high CPU load.
 
 Set to `0s` to disable periodic refreshing.
