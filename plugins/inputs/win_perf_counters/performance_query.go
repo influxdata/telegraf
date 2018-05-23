@@ -140,7 +140,11 @@ func (m *PerformanceQueryImpl) GetFormattedCounterValueDouble(hCounter PDH_HCOUN
 	var value PDH_FMT_COUNTERVALUE_DOUBLE
 	ret := PdhGetFormattedCounterValueDouble(hCounter, &counterType, &value)
 	if ret == ERROR_SUCCESS {
-		return value.DoubleValue, nil
+		if value.CStatus == PDH_CSTATUS_VALID_DATA || value.CStatus == PDH_CSTATUS_NEW_DATA {
+			return value.DoubleValue, nil
+		} else {
+			return 0, NewPdhError(value.CStatus)
+		}
 	} else {
 		return 0, NewPdhError(ret)
 	}
