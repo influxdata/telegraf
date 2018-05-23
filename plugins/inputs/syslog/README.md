@@ -8,14 +8,44 @@ This plugin listens for syslog messages following RFC5424 format. When received 
 
 ### Configuration:
 
-To configure it as a TLS syslog receiver as recommended by RFC5425 give it the following configuration:
-
 ```toml
 [[inputs.syslog]]
-  address = ":6514"
-  tls_cacert = "/etc/telegraf/ca.pem"
-  tls_cert = "/etc/telegraf/cert.pem"
-  tls_key = "/etc/telegraf/key.pem"
+  ## Specify an ip or hostname with port - eg., localhost:6514, 10.0.0.1:6514
+  ## Address and port to host the syslog receiver.
+  ## If no server is specified, then localhost is used as the host.
+  ## If no port is specified, 6514 is used (RFC5425#section-4.1).
+  server = ":6514"
+
+  ## Protocol (default = tcp)
+  ## Should be one of the following values:
+  ## tcp, tcp4, tcp6, unix, unixpacket, udp, udp4, udp6, ip, ip4, ip6, unixgram.
+  ## Otherwise forced to the default.
+  # protocol = "tcp"
+
+  ## TLS Config
+  # tls_allowed_cacerts = ["/etc/telegraf/ca.pem"]
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+
+  ## Period between keep alive probes.
+  ## 0 disables keep alive probes.
+  ## Defaults to the OS configuration.
+  ## Only applies to stream sockets (e.g. TCP).
+  # keep_alive_period = "5m"
+
+  ## Maximum number of concurrent connections (default = 0).
+  ## 0 means unlimited.
+  ## Only applies to stream sockets (e.g. TCP).
+  # max_connections = 1024
+
+  ## Read timeout (default = 500ms).
+  ## 0 means unlimited.
+  ## Only applies to stream sockets (e.g. TCP).
+  # read_timeout = 500ms
+
+  ## Whether to parse in best effort mode or not (default = false).
+  ## By default best effort parsing is off.
+  # best_effort = false
 ```
 
 #### Other configs

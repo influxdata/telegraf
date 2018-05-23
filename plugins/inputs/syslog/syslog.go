@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -183,7 +182,7 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 
 		message, err := p.Parse(b[:n], &s.BestEffort)
 		if message != nil {
-			acc.AddFields("syslog", fields(message), tags(message), s.now())
+			acc.AddFields("syslog", fields(*message), tags(*message), s.now())
 		}
 		if err != nil {
 			acc.AddError(err)
@@ -282,21 +281,17 @@ func (s *Syslog) store(res rfc5425.Result, acc telegraf.Accumulator) {
 		acc.AddError(res.MessageError)
 	}
 	if res.Message != nil {
-		acc.AddFields("syslog", fields(res.Message), tags(res.Message), s.now())
+		msg := *res.Message
+		acc.AddFields("syslog", fields(msg), tags(msg), s.now())
 	}
 }
 
-func tags(msg *rfc5424.SyslogMessage) map[string]string {
+func tags(msg rfc5424.SyslogMessage) map[string]string {
 	ts := map[string]string{}
-	if lvl := msg.SeverityLevel(); lvl != nil {
-		ts["severity"] = strconv.Itoa(int(*msg.Severity()))
-		ts["severity_level"] = *lvl
-	}
 
-	if f := msg.FacilityMessage(); f != nil {
-		ts["facility"] = strconv.Itoa(int(*msg.Facility()))
-		ts["facility_message"] = *f
-	}
+	// Not checking assuming a minimally valid message
+	ts["severity"] = *msg.SeverityShortLevel()
+	ts["facility"] = *msg.FacilityLevel()
 
 	if msg.Hostname() != nil {
 		ts["hostname"] = *msg.Hostname()
@@ -309,10 +304,13 @@ func tags(msg *rfc5424.SyslogMessage) map[string]string {
 	return ts
 }
 
-func fields(msg *rfc5424.SyslogMessage) map[string]interface{} {
+func fields(msg rfc5424.SyslogMessage) map[string]interface{} {
+	// Not checking assuming a minimally valid message
 	flds := map[string]interface{}{
 		"version": msg.Version(),
 	}
+	flds["severity_code"] = int(*msg.Severity())
+	flds["facility_code"] = int(*msg.Facility())
 
 	if msg.Timestamp() != nil {
 		flds["timestamp"] = *msg.Timestamp()
