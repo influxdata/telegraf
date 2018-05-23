@@ -616,3 +616,83 @@ func BenchmarkParser(b *testing.B) {
 		})
 	}
 }
+
+func TestSeriesParser(t *testing.T) {
+	var tests = []struct {
+		name      string
+		input     []byte
+		timeFunc  func() time.Time
+		precision time.Duration
+		metrics   []telegraf.Metric
+		err       error
+	}{
+		{
+			name:    "empty",
+			input:   []byte(""),
+			metrics: []telegraf.Metric{},
+		},
+		{
+			name:  "minimal",
+			input: []byte("cpu"),
+			metrics: []telegraf.Metric{
+				Metric(
+					metric.New(
+						"cpu",
+						map[string]string{},
+						map[string]interface{}{},
+						time.Unix(0, 0),
+					),
+				),
+			},
+		},
+		{
+			name:  "tags",
+			input: []byte("cpu,a=x,b=y"),
+			metrics: []telegraf.Metric{
+				Metric(
+					metric.New(
+						"cpu",
+						map[string]string{
+							"a": "x",
+							"b": "y",
+						},
+						map[string]interface{}{},
+						time.Unix(0, 0),
+					),
+				),
+			},
+		},
+		{
+			name:    "missing tag value",
+			input:   []byte("cpu,a="),
+			metrics: []telegraf.Metric{},
+			err: &ParseError{
+				Offset: 6,
+				msg:    ErrTagParse.Error(),
+				buf:    "cpu,a=",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := NewMetricHandler()
+			handler.SetTimeFunc(DefaultTime)
+			if tt.timeFunc != nil {
+				handler.SetTimeFunc(tt.timeFunc)
+			}
+			if tt.precision > 0 {
+				handler.SetTimePrecision(tt.precision)
+			}
+			parser := NewSeriesParser(handler)
+
+			metrics, err := parser.Parse(tt.input)
+			require.Equal(t, tt.err, err)
+
+			require.Equal(t, len(tt.metrics), len(metrics))
+			for i, expected := range tt.metrics {
+				require.Equal(t, expected.Name(), metrics[i].Name())
+				require.Equal(t, expected.Tags(), metrics[i].Tags())
+			}
+		})
+	}
+}

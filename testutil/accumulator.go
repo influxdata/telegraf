@@ -42,6 +42,13 @@ func (a *Accumulator) NMetrics() uint64 {
 	return atomic.LoadUint64(&a.nMetrics)
 }
 
+func (a *Accumulator) FirstError() error {
+	if len(a.Errors) == 0 {
+		return nil
+	}
+	return a.Errors[0]
+}
+
 func (a *Accumulator) ClearMetrics() {
 	a.Lock()
 	defer a.Unlock()
