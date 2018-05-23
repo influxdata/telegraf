@@ -22,6 +22,23 @@ type PerformanceQuery interface {
 	AddEnglishCounterSupported() bool
 }
 
+//PdhError represents error returned from Performance Counters API
+type PdhError struct {
+	ErrorCode uint32
+	errorText string
+}
+
+func (m *PdhError) Error() string {
+	return m.errorText
+}
+
+func NewPdhError(code uint32) error {
+	return &PdhError{
+		ErrorCode: code,
+		errorText: PdhFormatError(code),
+	}
+}
+
 //PerformanceQueryImpl is implementation of PerformanceQuery interface, which calls phd.dll functions
 type PerformanceQueryImpl struct {
 	query PDH_HQUERY
@@ -38,7 +55,7 @@ func (m *PerformanceQueryImpl) Open() error {
 	var handle PDH_HQUERY
 	ret := PdhOpenQuery(0, 0, &handle )
 	if ret != ERROR_SUCCESS {
-		return errors.New(PdhFormatError(ret))
+		return NewPdhError(ret)
 	}
 	m.query = handle
 	return nil
@@ -51,7 +68,7 @@ func (m *PerformanceQueryImpl) Close() error {
 	}
 	ret := PdhCloseQuery(m.query)
 	if ret != ERROR_SUCCESS {
-		return errors.New(PdhFormatError(ret))
+		return NewPdhError(ret)
 	}
 	m.query = 0
 	return nil
@@ -64,7 +81,7 @@ func (m *PerformanceQueryImpl) AddCounterToQuery(counterPath string) (PDH_HCOUNT
 	}
 	ret := PdhAddCounter(m.query, counterPath, 0, &counterHandle)
 	if ret != ERROR_SUCCESS {
-		return 0, errors.New(PdhFormatError(ret))
+		return 0, NewPdhError(ret)
 	}
 	return counterHandle, nil
 }
@@ -76,7 +93,7 @@ func (m *PerformanceQueryImpl) AddEnglishCounterToQuery(counterPath string) (PDH
 	}
 	ret := PdhAddEnglishCounter(m.query, counterPath, 0, &counterHandle)
 	if ret != ERROR_SUCCESS {
-		return 0,errors.New(PdhFormatError(ret))
+		return 0, NewPdhError(ret)
 	}
 	return counterHandle, nil
 }
@@ -85,8 +102,8 @@ func (m *PerformanceQueryImpl) AddEnglishCounterToQuery(counterPath string) (PDH
 func (m *PerformanceQueryImpl) GetCounterPath(counterHandle PDH_HCOUNTER) (string, error) {
 	var bufSize uint32
 	var buff []byte
-	ret := PdhGetCounterInfo(counterHandle, 0, &bufSize, nil)
 
+	ret := PdhGetCounterInfo(counterHandle, 0, &bufSize, nil)
 	if ret == PDH_MORE_DATA {
 		buff = make([]byte, bufSize)
 		bufSize = uint32(len(buff))
@@ -96,15 +113,15 @@ func (m *PerformanceQueryImpl) GetCounterPath(counterHandle PDH_HCOUNTER) (strin
 			return  UTF16PtrToString(ci.SzFullPath), nil
 		}
 	}
-	return "", errors.New(PdhFormatError(ret))
+	return "", NewPdhError(ret)
 }
 
 // ExpandWildCardPath  examines local computer and returns those counter paths that match the given counter path which contains wildcard characters.
 func (m *PerformanceQueryImpl) ExpandWildCardPath(counterPath string) ([]string, error) {
 	var bufSize uint32
 	var buff []uint16
-	ret := PdhExpandWildCardPath(counterPath, nil, &bufSize)
 
+	ret := PdhExpandWildCardPath(counterPath, nil, &bufSize)
 	if ret == PDH_MORE_DATA {
 		buff = make([]uint16, bufSize)
 		bufSize = uint32(len(buff))
@@ -114,7 +131,7 @@ func (m *PerformanceQueryImpl) ExpandWildCardPath(counterPath string) ([]string,
 			return list, nil
 		}
 	}
-	return nil, errors.New(PdhFormatError(ret))
+	return nil, NewPdhError(ret)
 }
 
 //GetFormattedCounterValueDouble computes a displayable value for the specified counter
@@ -125,7 +142,7 @@ func (m *PerformanceQueryImpl) GetFormattedCounterValueDouble(hCounter PDH_HCOUN
 	if ret == ERROR_SUCCESS {
 		return value.DoubleValue, nil
 	} else {
-		return 0, errors.New(PdhFormatError(ret))
+		return 0, NewPdhError(ret)
 	}
 }
 
@@ -135,7 +152,7 @@ func (m *PerformanceQueryImpl) CollectData() error {
 	}
 	ret := PdhCollectQueryData(m.query)
 	if ret != ERROR_SUCCESS {
-		return errors.New(PdhFormatError(ret))
+		return NewPdhError(ret)
 	}
 	return nil
 }
