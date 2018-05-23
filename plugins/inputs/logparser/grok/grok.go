@@ -32,6 +32,7 @@ var timeLayouts = map[string]string{
 	// will get handled in the ParseLine function.
 	"ts-epoch":     "EPOCH",
 	"ts-epochnano": "EPOCH_NANO",
+	"ts-syslog":    "SYSLOG_TIMESTAMP",
 	"ts":           "GENERIC_TIMESTAMP", // try parsing all known timestamp layouts.
 }
 
@@ -44,6 +45,7 @@ const (
 	DROP              = "drop"
 	EPOCH             = "EPOCH"
 	EPOCH_NANO        = "EPOCH_NANO"
+	SYSLOG_TIMESTAMP  = "SYSLOG_TIMESTAMP"
 	GENERIC_TIMESTAMP = "GENERIC_TIMESTAMP"
 )
 
@@ -112,6 +114,7 @@ type Parser struct {
 	// layouts.
 	foundTsLayouts []string
 
+	timeFunc func() time.Time
 	g        *grok.Grok
 	tsModder *tsModder
 }
@@ -172,6 +175,10 @@ func (p *Parser) Compile() error {
 	if err != nil {
 		log.Printf("W! improper timezone supplied (%s), setting loc to UTC", p.Timezone)
 		p.loc, _ = time.LoadLocation("UTC")
+	}
+
+	if p.timeFunc == nil {
+		p.timeFunc = time.Now
 	}
 
 	return p.compileCustomPatterns()
@@ -284,6 +291,16 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				log.Printf("E! Error parsing %s to int: %s", v, err)
 			} else {
 				timestamp = time.Unix(0, iv)
+			}
+		case SYSLOG_TIMESTAMP:
+			ts, err := time.ParseInLocation("Jan 02 15:04:05", v, p.loc)
+			if err == nil {
+				if ts.Year() == 0 {
+					ts = ts.AddDate(timestamp.Year(), 0, 0)
+				}
+				timestamp = ts
+			} else {
+				log.Printf("E! Error parsing %s to time layout [%s]: %s", v, t, err)
 			}
 		case GENERIC_TIMESTAMP:
 			var foundTs bool
