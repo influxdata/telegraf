@@ -1,3 +1,2 @@
-FROM telegraf:alpine
+FROM telegraf
 COPY entrypoint.sh entrypoint.sh
-CMD ./entrypoint.sh 
