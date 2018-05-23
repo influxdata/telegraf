@@ -220,10 +220,6 @@ func (m *Win_PerfCounters) ParseConfig() error {
 
 }
 
-func (m *Win_PerfCounters) GetParsedItemsForTesting() []*counter {
-	return m.counters
-}
-
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// Parse the config once
 	var err error
