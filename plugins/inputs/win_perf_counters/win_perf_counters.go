@@ -6,12 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"log"
 	"regexp"
 	"strings"
 	"time"
-	"github.com/influxdata/telegraf/internal"
-	"log"
 )
 
 var sampleConfig = `
@@ -23,7 +23,7 @@ var sampleConfig = `
   ## Settings:
   # PrintValid = false # Print All matching performance counters
   # Period after which counters will be reread from configuration and wildcards in counter paths expanded
-  CountersRefreshRate="1m"
+  CountersRefreshInterval="1m"
 
   [[inputs.win_perf_counters.object]]
     # Processor usage, alternative to native, reports on a per core.
@@ -70,15 +70,15 @@ var sampleConfig = `
 `
 
 type Win_PerfCounters struct {
-	PrintValid      bool
+	PrintValid bool
 	//deprecated: determined dynamically
-	PreVistaSupport bool
-	Object          []perfobject
-	CountersRefreshRate internal.Duration
+	PreVistaSupport         bool
+	Object                  []perfobject
+	CountersRefreshInterval internal.Duration
 
 	lastRefreshed time.Time
-	counters     []*counter
-	query        PerformanceQuery
+	counters      []*counter
+	query         PerformanceQuery
 }
 
 type perfobject struct {
@@ -137,31 +137,31 @@ func (m *Win_PerfCounters) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *Win_PerfCounters) AddItem(counterPath string,	instance string, measurement string, includeTotal bool) error {
-
+func (m *Win_PerfCounters) AddItem(counterPath string, instance string, measurement string, includeTotal bool) error {
 	if !m.query.AddEnglishCounterSupported() {
-		_, err := m.query.AddCounterToQuery (counterPath)
+		_, err := m.query.AddCounterToQuery(counterPath)
 		if err != nil {
 			return err
 		}
 	} else {
-		counterHandle, err := m.query.AddEnglishCounterToQuery (counterPath)
+		counterHandle, err := m.query.AddEnglishCounterToQuery(counterPath)
 		if err != nil {
 			return err
 		}
-		counterPath, err =  m.query.GetCounterPath(counterHandle)
+		counterPath, err = m.query.GetCounterPath(counterHandle)
 		if err != nil {
 			return err
 		}
 	}
 
-	counters, err :=  m.query.ExpandWildCardPath(counterPath)
+	counters, err := m.query.ExpandWildCardPath(counterPath)
 	if err != nil {
 		return err
 	}
 
 	for _, counterPath := range counters {
-		counterHandle, err := m.query.AddCounterToQuery (counterPath)
+		var err error
+		counterHandle, err := m.query.AddCounterToQuery(counterPath)
 
 		parsedObjectName, parsedInstance, parsedCounter, err := extractObjectInstanceCounterFromQuery(counterPath)
 		if err != nil {
@@ -177,7 +177,7 @@ func (m *Win_PerfCounters) AddItem(counterPath string,	instance string, measurem
 		m.counters = append(m.counters, newItem)
 
 		if m.PrintValid {
-			log.Printf ("Valid: %s\n", counterPath)
+			log.Printf("Valid: %s\n", counterPath)
 		}
 	}
 
@@ -203,7 +203,7 @@ func (m *Win_PerfCounters) ParseConfig() error {
 
 					if err != nil {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
-							log.Printf ("Invalid counterPath: '%s'. Error: %s\n", counterPath, err.Error())
+							log.Printf("Invalid counterPath: '%s'. Error: %s\n", counterPath, err.Error())
 						}
 						if PerfObject.FailOnMissing {
 							return err
@@ -224,8 +224,8 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// Parse the config once
 	var err error
 
-	if m.lastRefreshed.IsZero() || (m.CountersRefreshRate.Duration.Nanoseconds() > 0 && m.lastRefreshed.Add(m.CountersRefreshRate.Duration).Before(time.Now())) {
-		m.counters= m.counters[:0]
+	if m.lastRefreshed.IsZero() || (m.CountersRefreshInterval.Duration.Nanoseconds() > 0 && m.lastRefreshed.Add(m.CountersRefreshInterval.Duration).Before(time.Now())) {
+		m.counters = m.counters[:0]
 
 		err = m.query.Open()
 		if err != nil {
@@ -254,7 +254,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 
 	var collectFields = make(map[InstanceGrouping]map[string]interface{})
 
-
 	err = m.query.CollectData()
 	if err != nil {
 		return err
@@ -275,7 +274,10 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 			}
 			collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value)
 		} else {
-			return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
+			//ignore invalid data from as some counters from process instances returns this sometimes
+			if phderr, ok := err.(*PdhError); ok && phderr.ErrorCode != PDH_INVALID_DATA && phderr.ErrorCode != PDH_CALC_NEGATIVE_VALUE {
+				return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
+			}
 		}
 	}
 
@@ -283,7 +285,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		var tags = map[string]string{
 			"objectname": instance.objectname,
 		}
-		if len(instance.instance) >0 {
+		if len(instance.instance) > 0 {
 			tags["instance"] = instance.instance
 		}
 		acc.AddFields(instance.name, fields, tags)
@@ -293,5 +295,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("win_perf_counters", func() telegraf.Input { return &Win_PerfCounters{query: &PerformanceQueryImpl{}, CountersRefreshRate: internal.Duration{Duration: time.Second*60} }})
+	inputs.Add("win_perf_counters", func() telegraf.Input {
+		return &Win_PerfCounters{query: &PerformanceQueryImpl{}, CountersRefreshInterval: internal.Duration{Duration: time.Second * 60}}
+	})
 }
