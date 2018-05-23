@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -151,7 +150,6 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 		s.Closer = unixCloser{path: s.Address, closer: s.Closer}
 	}
 
-	log.Printf("I! Started syslog receiver at %s\n", s.Address)
 	return nil
 }
 
@@ -169,6 +167,7 @@ func (s *Syslog) Stop() {
 func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 	defer s.wg.Done()
 	b := make([]byte, ipMaxPacketSize)
+	p := rfc5424.NewParser()
 	for {
 		n, _, err := s.udpListener.ReadFrom(b)
 		if err != nil {
@@ -182,7 +181,6 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 			s.udpListener.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))
 		}
 
-		p := rfc5424.NewParser()
 		message, err := p.Parse(b[:n], &s.BestEffort)
 		if message != nil {
 			acc.AddFields("syslog", fields(message), tags(message), s.now())

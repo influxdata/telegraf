@@ -8,19 +8,6 @@ This plugin listens for syslog messages following RFC5424 format. When received 
 
 ### Configuration:
 
-#### TCP
-
-The minimal configuration is the following:
-
-```toml
-[[inputs.syslog]]
-  address = ":6514"
-```
-
-This starts this plugins as a syslog receiver over TCP protocol on port 6514.
-
-#### TLS
-
 To configure it as a TLS syslog receiver as recommended by RFC5425 give it the following configuration:
 
 ```toml
@@ -29,16 +16,6 @@ To configure it as a TLS syslog receiver as recommended by RFC5425 give it the f
   tls_cacert = "/etc/telegraf/ca.pem"
   tls_cert = "/etc/telegraf/cert.pem"
   tls_key = "/etc/telegraf/key.pem"
-```
-
-#### UDP
-
-To configure this plugin as per RFC5426 give it the following configuration:
-
-```toml
-[[inputs.syslog]]
-  protocol = "udp"
-  address = ":6514"
 ```
 
 #### Other configs

@@ -214,19 +214,30 @@ func newUDPSyslogReceiver(bestEffort bool) *Syslog {
 	}
 }
 
-func testRFC5426(t *testing.T, acc *testutil.Accumulator, bestEffort bool) {
+func testRFC5426(t *testing.T, bestEffort bool) {
 	for _, tc := range getTestCasesForRFC5426() {
 		t.Run(tc.name, func(t *testing.T) {
+			// Create receiver
+			receiver := newUDPSyslogReceiver(bestEffort)
+			require.Equal(t, receiver.Protocol, "udp")
+			acc := &testutil.Accumulator{}
+			require.NoError(t, receiver.Start(acc))
+			defer receiver.Stop()
+
 			// Clear
 			acc.ClearMetrics()
+			acc.Errors = make([]error, 0)
+
 			// Connect
 			conn, err := net.Dial("udp", address)
 			defer conn.Close()
 			require.NotNil(t, conn)
 			require.Nil(t, err)
+
 			// Write
 			_, e := conn.Write(tc.data)
 			require.Nil(t, e)
+
 			// Waiting ...
 			if tc.wantStrict == nil && tc.werr || bestEffort && tc.werr {
 				acc.WaitError(1)
@@ -234,6 +245,7 @@ func testRFC5426(t *testing.T, acc *testutil.Accumulator, bestEffort bool) {
 			if tc.wantBestEffort != nil && bestEffort || tc.wantStrict != nil && !bestEffort {
 				acc.Wait(1) // RFC5426 mandates a syslog message per UDP packet
 			}
+
 			// Compare
 			var got *testutil.Metric
 			var want *testutil.Metric
@@ -252,25 +264,10 @@ func testRFC5426(t *testing.T, acc *testutil.Accumulator, bestEffort bool) {
 	}
 }
 
-func TestUDPInBestEffortMode(t *testing.T) {
-	bestEffort := true
-	receiver := newUDPSyslogReceiver(bestEffort)
-	require.Equal(t, receiver.Protocol, "udp")
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, receiver.Start(acc))
-	defer receiver.Stop()
-
-	testRFC5426(t, acc, bestEffort)
+func TestBestEffort_udp(t *testing.T) {
+	testRFC5426(t, true)
 }
 
-func TestUDPInStrictMode(t *testing.T) {
-	receiver := newUDPSyslogReceiver(false)
-	require.Equal(t, receiver.Protocol, "udp")
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, receiver.Start(acc))
-	defer receiver.Stop()
-
-	testRFC5426(t, acc, false)
+func TestStrict_udp(t *testing.T) {
+	testRFC5426(t, false)
 }
