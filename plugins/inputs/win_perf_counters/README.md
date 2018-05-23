@@ -5,7 +5,7 @@ Input plugin to read Performance Counters on Windows operating systems.
 Configuration is parsed and then tested for validity such as
 whether the Object, Instance and Counter exist on Telegraf startup.
 
-Counter paths are refreshed periodically, see [CountersRefreshRate](#countersrefreshrate)
+Counter paths are refreshed periodically, see [CountersRefreshInterval](#countersrefreshinterval)
 configuration parameter for more info.
 
 Wildcards can be used in instance and counter names. Partial wildcards are supported only
