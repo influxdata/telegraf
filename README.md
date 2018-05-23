@@ -269,6 +269,7 @@ formats may be used with input plugins supporting the `data_format` option:
 
 ## Processor Plugins
 
+* [converter](./plugins/processors/converter)
 * [override](./plugins/processors/override)
 * [printer](./plugins/processors/printer)
 * [regex](./plugins/processors/regex)

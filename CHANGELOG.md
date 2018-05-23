@@ -22,6 +22,7 @@
 
 ### New Processors
 
+- [converter](./plugins/processors/converter/README.md) - Contributed by @influxdata
 - [regex](./plugins/processors/regex/README.md) - Contributed by @44px
 - [topk](./plugins/processors/topk/README.md) - Contributed by @mirath
 
