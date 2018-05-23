@@ -54,6 +54,7 @@
 - [#4162](https://github.com/influxdata/telegraf/pull/4162): Add timeout option to sensors input.
 - [#3489](https://github.com/influxdata/telegraf/pull/3489): Add burrow input plugin.
 - [#3969](https://github.com/influxdata/telegraf/pull/3969): Add option to unbound module to use threads as tags.
+- [#4183](https://github.com/influxdata/telegraf/pull/4183): Add support for TLS and username/password auth to aerospike input.
 
 ### Bugfixes
 
