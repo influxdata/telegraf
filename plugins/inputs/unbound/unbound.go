@@ -35,31 +35,30 @@ var defaultBinary = "/usr/sbin/unbound-control"
 var defaultTimeout = internal.Duration{Duration: time.Second}
 
 var sampleConfig = `
-  ## If running as a restricted user you can prepend sudo for additional access:
-  #use_sudo = false
-
-  ## The default location of the unbound-control binary can be overridden with:
-  binary = "/usr/sbin/unbound-control"
-
-  ## The default timeout of 1s can be overriden with:
-  timeout = "1s"
-
-  ## Use the builtin fielddrop/fieldpass telegraf filters in order to keep/remove specific fields
-  fieldpass = ["total_*", "num_*","time_up", "mem_*"]
-
-  ## IP of server to connect to, read from unbound conf default, optionally ':port'
+  ## Address of server to connect to, read from unbound conf default, optionally ':port'
   ## Will lookup IP if given a hostname
   server = "127.0.0.1:8953"
 
-  ## Output thread related values in a separate measurement "unbound_threads", with additional tag
-  ## "thread" identifying the thread number (0 ... the number of configured threads)
-  ## By default, thread related metrics are output as additional fields in a single metric point
+  ## If running as a restricted user you can prepend sudo for additional access:
+  # use_sudo = false
+
+  ## The default location of the unbound-control binary can be overridden with:
+  # binary = "/usr/sbin/unbound-control"
+
+  ## The default timeout of 1s can be overriden with:
+  # timeout = "1s"
+
+  ## When set to true, thread metrics are tagged with the thread id.
+  ##
+  ## The default is false for backwards compatibility, and will be change to
+  ## true in a future version.  It is recommended to set to true on new
+  ## deployments.
   thread_as_tag = false
 `
 
 // Description displays what this plugin is about
 func (s *Unbound) Description() string {
-	return "A plugin to collect stats from Unbound - a validating, recursive, and caching DNS resolver"
+	return "A plugin to collect stats from the Unbound DNS resolver"
 }
 
 // SampleConfig displays configuration instructions
