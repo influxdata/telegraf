@@ -53,6 +53,7 @@
 - [#4165](https://github.com/influxdata/telegraf/pull/4165): Add support for Graphite 1.1 tags.
 - [#4162](https://github.com/influxdata/telegraf/pull/4162): Add timeout option to sensors input.
 - [#3489](https://github.com/influxdata/telegraf/pull/3489): Add burrow input plugin.
+- [#3969](https://github.com/influxdata/telegraf/pull/3969): Add option to unbound module to use threads as tags.
 
 ### Bugfixes
 
