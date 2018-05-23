@@ -49,42 +49,42 @@ type Syslog struct {
 }
 
 var sampleConfig = `
-    ## Specify an ip or hostname with port - eg., localhost:6514, 10.0.0.1:6514
-    ## Address and port to host the syslog receiver.
-    ## If no server is specified, then localhost is used as the host.
-    ## If no port is specified, 6514 is used (RFC5425#section-4.1).
-	server = ":6514"
-	
-	## Protocol (default = tcp)
-	## Should be one of the following values:
-	## tcp, tcp4, tcp6, unix, unixpacket, udp, udp4, udp6, ip, ip4, ip6, unixgram.
-	## Otherwise forced to the default.
-	# protocol = "tcp"
+  ## Specify an ip or hostname with port - eg., localhost:6514, 10.0.0.1:6514
+  ## Address and port to host the syslog receiver.
+  ## If no server is specified, then localhost is used as the host.
+  ## If no port is specified, 6514 is used (RFC5425#section-4.1).
+  server = ":6514"
 
-    ## TLS Config
-    # tls_allowed_cacerts = ["/etc/telegraf/ca.pem"]
-    # tls_cert = "/etc/telegraf/cert.pem"
-    # tls_key = "/etc/telegraf/key.pem"
-	
-	## Period between keep alive probes.
-	## 0 disables keep alive probes.
-	## Defaults to the OS configuration.
-	## Only applies to stream sockets (e.g. TCP).
-	# keep_alive_period = "5m"
+  ## Protocol (default = tcp)
+  ## Should be one of the following values:
+  ## tcp, tcp4, tcp6, unix, unixpacket, udp, udp4, udp6, ip, ip4, ip6, unixgram.
+  ## Otherwise forced to the default.
+  # protocol = "tcp"
 
-	## Maximum number of concurrent connections (default = 0).
-	## 0 means unlimited.
-	## Only applies to stream sockets (e.g. TCP).
-	# max_connections = 1024
+  ## TLS Config
+  # tls_allowed_cacerts = ["/etc/telegraf/ca.pem"]
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
 
-	## Read timeout (default = 500ms).
-	## 0 means unlimited.
-	## Only applies to stream sockets (e.g. TCP).
-	read_timeout = 500ms
+  ## Period between keep alive probes.
+  ## 0 disables keep alive probes.
+  ## Defaults to the OS configuration.
+  ## Only applies to stream sockets (e.g. TCP).
+  # keep_alive_period = "5m"
 
-	## Whether to parse in best effort mode or not (default = false).
-	## By default best effort parsing is off.
-	# best_effort = false
+  ## Maximum number of concurrent connections (default = 0).
+  ## 0 means unlimited.
+  ## Only applies to stream sockets (e.g. TCP).
+  # max_connections = 1024
+
+  ## Read timeout (default = 500ms).
+  ## 0 means unlimited.
+  ## Only applies to stream sockets (e.g. TCP).
+  # read_timeout = 500ms
+
+  ## Whether to parse in best effort mode or not (default = false).
+  ## By default best effort parsing is off.
+  # best_effort = false
 `
 
 // SampleConfig returns sample configuration message
@@ -94,7 +94,7 @@ func (s *Syslog) SampleConfig() string {
 
 // Description returns the plugin description
 func (s *Syslog) Description() string {
-	return "Influx syslog receiver as per RFC5425"
+	return "Accepts syslog messages per RFC5425"
 }
 
 // Gather ...
@@ -106,10 +106,6 @@ func (s *Syslog) Gather(_ telegraf.Accumulator) error {
 func (s *Syslog) Start(acc telegraf.Accumulator) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
-	// tags := map[string]string{
-	// 	"address": s.Address,
-	// }
 
 	switch s.Protocol {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
@@ -132,8 +128,9 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 		}
 		s.Closer = l
 		s.tcpListener = l
-		if tlsConfig, _ := s.TLSConfig(); tlsConfig != nil {
-			s.tlsConfig = tlsConfig
+		s.tlsConfig, err = s.TLSConfig()
+		if err != nil {
+			return err
 		}
 
 		s.wg.Add(1)
@@ -167,8 +164,6 @@ func (s *Syslog) Stop() {
 		s.Close()
 	}
 	s.wg.Wait()
-
-	log.Printf("I! Stopped syslog receiver at %s\n", s.Address)
 }
 
 func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
@@ -178,7 +173,6 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 		n, _, err := s.udpListener.ReadFrom(b)
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				log.Println(err)
 				acc.AddError(err)
 			}
 			break
@@ -189,9 +183,9 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 		}
 
 		p := rfc5424.NewParser()
-		mex, err := p.Parse(b[:n], &s.BestEffort)
-		if mex != nil {
-			acc.AddFields("syslog", fields(mex), tags(mex), s.now())
+		message, err := p.Parse(b[:n], &s.BestEffort)
+		if message != nil {
+			acc.AddFields("syslog", fields(message), tags(message), s.now())
 		}
 		if err != nil {
 			acc.AddError(err)
@@ -208,7 +202,6 @@ func (s *Syslog) listenStream(acc telegraf.Accumulator) {
 		conn, err := s.tcpListener.Accept()
 		if err != nil {
 			if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
-				log.Println(err)
 				acc.AddError(err)
 			}
 			break
@@ -248,8 +241,10 @@ func (s *Syslog) removeConnection(c net.Conn) {
 }
 
 func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
-	defer s.removeConnection(conn)
-	defer conn.Close()
+	defer func() {
+		s.removeConnection(conn)
+		conn.Close()
+	}()
 
 	if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
 		conn.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))

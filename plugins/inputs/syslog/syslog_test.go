@@ -10,17 +10,14 @@ import (
 )
 
 var defaultTime = time.Unix(0, 0)
-
-var (
-	maxP        uint8
-	maxV        uint16
-	maxTS       string
-	maxH        string
-	maxA        string
-	maxPID      string
-	maxMID      string
-	message7681 string
-)
+var maxP = uint8(191)
+var maxV = uint16(999)
+var maxTS = "2017-12-31T23:59:59.999999+00:00"
+var maxH = "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabc"
+var maxA = "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdef"
+var maxPID = "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzab"
+var maxMID = "abcdefghilmnopqrstuvzabcdefghilm"
+var message7681 = getRandomString(7681)
 
 func TestListenError(t *testing.T) {
 	receiver := &Syslog{
@@ -53,15 +50,4 @@ func getRandomString(n int) string {
 	}
 
 	return string(b)
-}
-
-func init() {
-	maxP = uint8(191)
-	maxV = uint16(999)
-	maxTS = "2017-12-31T23:59:59.999999+00:00"
-	maxH = "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabc"
-	maxA = "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdef"
-	maxPID = "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzab"
-	maxMID = "abcdefghilmnopqrstuvzabcdefghilm"
-	message7681 = getRandomString(7681)
 }

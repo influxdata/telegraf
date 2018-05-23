@@ -46,7 +46,8 @@ To configure this plugin as per RFC5426 give it the following configuration:
 Other available configurations are:
 
 - `keep_alive_period`, `max_connections` for stream sockets
-- `best_effort` to tell the parser to work until it is able to do and extract partial but valid info
+- `read_timeout`
+- `best_effort` to tell the parser to work until it is able to do and extract partial but valid info (more [here](https://github.com/influxdata/go-syslog#best-effort-mode))
 
 ### Metrics
 
@@ -70,9 +71,9 @@ The name of fields in _italic_ corresponds to their runtime value.
 
 The fields/tags which name is in **bold** will always be present when a valid Syslog message has been received.
 
-### Syslog transport sender
+### RSYSLOG integration
 
-The following instructions illustrate how to configure a syslog transport sender as per RFC5425 - ie., using the octect framing technique.
+The following instructions illustrate how to configure a syslog transport sender as per RFC5425 - ie., using the octect framing technique - via RSYSLOG.
 
 Install `rsyslog`.
 
