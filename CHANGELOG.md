@@ -1,8 +1,15 @@
 ## v1.8 [unreleased]
 
+### Release Notes
+
+### New Inputs
+
+- [tengine](./plugins/inputs/tengine/README.md) - Contirbuted by @ertaoxu
+
 ### Features
 
 - [#4236](https://github.com/influxdata/telegraf/pull/4236): Add SSL/TLS support to redis input.
+- [#4160](https://github.com/influxdata/telegraf/pull/4160): Add tengine input plugin.
 
 ## v1.7 [unreleased]
 
