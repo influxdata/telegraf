@@ -17,14 +17,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string) (*bytes.Buffer, error)
+type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool) (*bytes.Buffer, error)
 
 // Unbound is used to store configuration values
 type Unbound struct {
-	Binary  string
-	Timeout internal.Duration
-	UseSudo bool
-	Server  string
+	Binary      string
+	Timeout     internal.Duration
+	UseSudo     bool
+	Server      string
+	ThreadAsTag bool
 
 	filter filter.Filter
 	run    runner
@@ -45,12 +46,18 @@ var sampleConfig = `
 
   ## Use the builtin fielddrop/fieldpass telegraf filters in order to keep/remove specific fields
   fieldpass = ["total_*", "num_*","time_up", "mem_*"]
-  
+
   ## IP of server to connect to, read from unbound conf default, optionally ':port'
   ## Will lookup IP if given a hostname
   server = "127.0.0.1:8953"
+
+  ## Output thread related values in a separate measurement "unbound_threads", with additional tag
+  ## "thread" identifying the thread number (0 ... the number of configured threads)
+  ## By default, thread related metrics are output as additional fields in a single metric point
+  thread_as_tag = false
 `
 
+// Description displays what this plugin is about
 func (s *Unbound) Description() string {
 	return "A plugin to collect stats from Unbound - a validating, recursive, and caching DNS resolver"
 }
@@ -61,7 +68,7 @@ func (s *Unbound) SampleConfig() string {
 }
 
 // Shell out to unbound_stat and return the output
-func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string) (*bytes.Buffer, error) {
+func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
 
 	if Server != "" {
@@ -113,19 +120,21 @@ func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Serv
 func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 
 	// Always exclude histrogram statistics
-	stat_excluded := []string{"histogram.*"}
-	filter_excluded, err := filter.Compile(stat_excluded)
+	statExcluded := []string{"histogram.*"}
+	filterExcluded, err := filter.Compile(statExcluded)
 	if err != nil {
 		return err
 	}
 
-	out, err := s.run(s.Binary, s.Timeout, s.UseSudo, s.Server)
+	out, err := s.run(s.Binary, s.Timeout, s.UseSudo, s.Server, s.ThreadAsTag)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}
 
 	// Process values
 	fields := make(map[string]interface{})
+	fieldsThreads := make(map[string]map[string]interface{})
+
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
 
@@ -140,20 +149,52 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 		value := cols[1]
 
 		// Filter value
-		if filter_excluded.Match(stat) {
+		if filterExcluded.Match(stat) {
 			continue
 		}
 
-		field := strings.Replace(stat, ".", "_", -1)
-
-		fields[field], err = strconv.ParseFloat(value, 64)
+		fieldValue, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Expected a numerical value for %s = %v\n",
+			acc.AddError(fmt.Errorf("Expected a numerical value for %s = %v",
 				stat, value))
+			continue
 		}
+
+		// is this a thread related value?
+		if s.ThreadAsTag && strings.HasPrefix(stat, "thread") {
+			// split the stat
+			statTokens := strings.Split(stat, ".")
+			// make sure we split something
+			if len(statTokens) > 1 {
+				// set the thread identifier
+				threadID := strings.TrimPrefix(statTokens[0], "thread")
+				// make sure we have a proper thread ID
+				if _, err = strconv.Atoi(threadID); err == nil {
+					// create new slice without the thread identifier (skip first token)
+					threadTokens := statTokens[1:]
+					// re-define stat
+					field := strings.Join(threadTokens[:], "_")
+					if fieldsThreads[threadID] == nil {
+						fieldsThreads[threadID] = make(map[string]interface{})
+					}
+					fieldsThreads[threadID][field] = fieldValue
+				}
+			}
+		} else {
+			field := strings.Replace(stat, ".", "_", -1)
+			fields[field] = fieldValue
+		}
+
 	}
 
 	acc.AddFields("unbound", fields, nil)
+
+	if s.ThreadAsTag && len(fieldsThreads) > 0 {
+		for thisThreadID, thisThreadFields := range fieldsThreads {
+			thisThreadTag := map[string]string{"thread": thisThreadID}
+			acc.AddFields("unbound_threads", thisThreadFields, thisThreadTag)
+		}
+	}
 
 	return nil
 }
@@ -161,11 +202,12 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("unbound", func() telegraf.Input {
 		return &Unbound{
-			run:     unboundRunner,
-			Binary:  defaultBinary,
-			Timeout: defaultTimeout,
-			UseSudo: false,
-			Server:  "",
+			run:         unboundRunner,
+			Binary:      defaultBinary,
+			Timeout:     defaultTimeout,
+			UseSudo:     false,
+			Server:      "",
+			ThreadAsTag: false,
 		}
 	})
 }
