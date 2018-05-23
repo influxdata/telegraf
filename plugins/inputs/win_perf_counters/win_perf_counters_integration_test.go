@@ -15,6 +15,9 @@ import (
 
 
 func TestWinPerformanceQueryImpl(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	var query PerformanceQuery
 	var hCounter PDH_HCOUNTER
 	var err error
@@ -82,6 +85,9 @@ func TestWinPerformanceQueryImpl(t *testing.T) {
 }
 
 func TestWinPerfcountersConfigGet1(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 1)
@@ -114,6 +120,9 @@ func TestWinPerfcountersConfigGet1(t *testing.T) {
 }
 
 func TestWinPerfcountersConfigGet2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 1)
@@ -158,6 +167,9 @@ func TestWinPerfcountersConfigGet2(t *testing.T) {
 }
 
 func TestWinPerfcountersConfigGet3(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 2)
@@ -204,6 +216,9 @@ func TestWinPerfcountersConfigGet3(t *testing.T) {
 }
 
 func TestWinPerfcountersConfigGet4(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	var instances = make([]string, 2)
 	var counters = make([]string, 1)
@@ -250,6 +265,9 @@ func TestWinPerfcountersConfigGet4(t *testing.T) {
 }
 
 func TestWinPerfcountersConfigGet5(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	var instances = make([]string, 2)
 	var counters = make([]string, 2)
@@ -297,6 +315,9 @@ func TestWinPerfcountersConfigGet5(t *testing.T) {
 }
 
 func TestWinPerfcountersConfigGet6(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 1)
@@ -328,6 +349,9 @@ func TestWinPerfcountersConfigGet6(t *testing.T) {
 }
 
 func TestWinPerfcountersConfigGet7(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 3)
@@ -375,6 +399,9 @@ func TestWinPerfcountersConfigGet7(t *testing.T) {
 }
 
 func TestWinPerfcountersConfigError1(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 1)
@@ -406,6 +433,9 @@ func TestWinPerfcountersConfigError1(t *testing.T) {
 }
 
 func TestWinPerfcountersConfigError2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 1)
@@ -439,6 +469,9 @@ func TestWinPerfcountersConfigError2(t *testing.T) {
 }
 
 func TestWinPerfcountersConfigError3(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	var instances = make([]string, 1)
 	var counters = make([]string, 1)
@@ -470,7 +503,9 @@ func TestWinPerfcountersConfigError3(t *testing.T) {
 }
 
 func TestWinPerfcountersCollect1(t *testing.T) {
-
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 	var instances = make([]string, 1)
 	var counters = make([]string, 1)
 	var perfobjects = make([]perfobject, 1)
@@ -514,6 +549,9 @@ func TestWinPerfcountersCollect1(t *testing.T) {
 
 }
 func TestWinPerfcountersCollect2(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
 
 	var instances = make([]string, 2)
 	var counters = make([]string, 1)
