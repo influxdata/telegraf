@@ -534,15 +534,13 @@ func TestWinPerfcountersCollect1(t *testing.T) {
 
 	time.Sleep(2000 * time.Millisecond)
 	err = m.Gather(&acc)
+	require.NoError(t, err)
+	assert.Len(t, acc.Metrics, 2)
 
-	tags := map[string]string{
-		"instance":   instances[0],
-		"objectname": objectname,
+	for _, metric := range acc.Metrics {
+		_, ok := metric.Fields[expectedCounter]
+		assert.True(t, ok)
 	}
-	fields := map[string]interface{}{
-		expectedCounter: float32(0),
-	}
-	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
 
 }
 func TestWinPerfcountersCollect2(t *testing.T) {
@@ -582,23 +580,13 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 
 	time.Sleep(2000 * time.Millisecond)
 	err = m.Gather(&acc)
+	require.NoError(t, err)
 
-	tags := map[string]string{
-		"instance":   instances[0],
-		"objectname": objectname,
-	}
-	fields := map[string]interface{}{
-		expectedCounter: float32(2),
-	}
+	assert.Len(t, acc.Metrics, 4)
 
-	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
-	tags = map[string]string{
-		"instance":   instances[1],
-		"objectname": objectname,
+	for _, metric := range acc.Metrics {
+		_, ok := metric.Fields[expectedCounter]
+		assert.True(t, ok)
 	}
-	fields = map[string]interface{}{
-		expectedCounter: float32(2),
-	}
-	acc.AssertContainsTaggedFields(t, measurement, fields, tags)
 
 }
