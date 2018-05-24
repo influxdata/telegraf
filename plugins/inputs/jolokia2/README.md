@@ -172,8 +172,14 @@ Both `jolokia2_agent` and `jolokia2_proxy` plugins support default configuration
 
 ### Example Configurations:
 
-- [Java JVM](/plugins/inputs/jolokia2/examples/java.conf)
-- [Kafka](/plugins/inputs/jolokia2/examples/kafka.conf)
+- [ActiveMQ](/plugins/inputs/jolokia2/examples/activemq.conf)
+- [BitBucket](/plugins/inputs/jolokia2/examples/bitbucket.conf)
 - [Cassandra](/plugins/inputs/jolokia2/examples/cassandra.conf)
+- [Hadoop-HDFS](/plugins/inputs/jolokia2/examples/hadoop-hdfs.conf)
+- [Java JVM](/plugins/inputs/jolokia2/examples/java.conf)
+- [JBoss](/plugins/inputs/jolokia2/examples/jboss.conf)
+- [Kafka](/plugins/inputs/jolokia2/examples/kafka.conf)
+- [Tomcat](/plugins/inputs/jolokia2/examples/tomcat.conf)
+- [Weblogic](/plugins/inputs/jolokia2/examples/weblogic.conf)
 
 Please help improve this list and contribute new configuration files by opening an issue or pull request.
