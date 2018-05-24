@@ -270,3 +270,116 @@ func TestBestEffort_udp(t *testing.T) {
 func TestStrict_udp(t *testing.T) {
 	testRFC5426(t, false)
 }
+
+func TestTimeIncrement_udp(t *testing.T) {
+	i := 0
+	getNow := func() time.Time {
+		if i%2 == 0 {
+			return time.Unix(1, 0)
+		}
+		return time.Unix(1, 1)
+	}
+
+	// Create receiver
+	receiver := &Syslog{
+		Address:    "udp://" + address,
+		now:        getNow,
+		BestEffort: false,
+		Separator:  "_",
+	}
+	acc := &testutil.Accumulator{}
+	require.NoError(t, receiver.Start(acc))
+	defer receiver.Stop()
+
+	// Connect
+	conn, err := net.Dial("udp", address)
+	require.NotNil(t, conn)
+	defer conn.Close()
+	require.Nil(t, err)
+
+	// Write
+	_, e := conn.Write([]byte("<1>1 - - - - - -"))
+	require.Nil(t, e)
+
+	// Wait
+	acc.Wait(1)
+
+	want := &testutil.Metric{
+		Measurement: "syslog",
+		Fields: map[string]interface{}{
+			"version":       uint16(1),
+			"facility_code": 0,
+			"severity_code": 1,
+		},
+		Tags: map[string]string{
+			"severity": "alert",
+			"facility": "kern",
+		},
+		Time: getNow(),
+	}
+
+	if !cmp.Equal(want, acc.Metrics[0]) {
+		t.Fatalf("Got (+) / Want (-)\n %s", cmp.Diff(want, acc.Metrics[0]))
+	}
+
+	// New one with different time
+	i++
+
+	// Clear
+	acc.ClearMetrics()
+
+	// Write
+	_, e = conn.Write([]byte("<1>1 - - - - - -"))
+	require.Nil(t, e)
+
+	// Wait
+	acc.Wait(1)
+
+	want = &testutil.Metric{
+		Measurement: "syslog",
+		Fields: map[string]interface{}{
+			"version":       uint16(1),
+			"facility_code": 0,
+			"severity_code": 1,
+		},
+		Tags: map[string]string{
+			"severity": "alert",
+			"facility": "kern",
+		},
+		Time: getNow(),
+	}
+
+	if !cmp.Equal(want, acc.Metrics[0]) {
+		t.Fatalf("Got (+) / Want (-)\n %s", cmp.Diff(want, acc.Metrics[0]))
+	}
+
+	// New one with same time as previous one
+
+	// Clear
+	acc.ClearMetrics()
+
+	// Write
+	_, e = conn.Write([]byte("<1>1 - - - - - -"))
+	require.Nil(t, e)
+
+	// Wait
+	acc.Wait(1)
+
+	want = &testutil.Metric{
+		Measurement: "syslog",
+		Fields: map[string]interface{}{
+			"version":       uint16(1),
+			"facility_code": 0,
+			"severity_code": 1,
+		},
+		Tags: map[string]string{
+			"severity": "alert",
+			"facility": "kern",
+		},
+		Time: getNow().Add(time.Nanosecond),
+	}
+
+	if !cmp.Equal(want, acc.Metrics[0]) {
+		t.Fatalf("Got (+) / Want (-)\n %s", cmp.Diff(want, acc.Metrics[0]))
+	}
+}

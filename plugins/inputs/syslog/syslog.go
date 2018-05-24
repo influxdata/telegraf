@@ -32,7 +32,8 @@ type Syslog struct {
 	BestEffort      bool
 	Separator       string `toml:"sdparam_separator"`
 
-	now func() time.Time
+	now      func() time.Time
+	lastTime time.Time
 
 	mu sync.Mutex
 	wg sync.WaitGroup
@@ -217,7 +218,7 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 
 		message, err := p.Parse(b[:n], &s.BestEffort)
 		if message != nil {
-			acc.AddFields("syslog", fields(*message, s), tags(*message), s.now())
+			acc.AddFields("syslog", fields(*message, s), tags(*message), s.time())
 		}
 		if err != nil {
 			acc.AddError(err)
@@ -317,7 +318,7 @@ func (s *Syslog) store(res rfc5425.Result, acc telegraf.Accumulator) {
 	}
 	if res.Message != nil {
 		msg := *res.Message
-		acc.AddFields("syslog", fields(msg, s), tags(msg), s.now())
+		acc.AddFields("syslog", fields(msg, s), tags(msg), s.time())
 	}
 }
 
@@ -391,10 +392,23 @@ func (uc unixCloser) Close() error {
 	return err
 }
 
+func (s *Syslog) time() time.Time {
+	t := s.now()
+	if t == s.lastTime {
+		t = t.Add(time.Nanosecond)
+	}
+	s.lastTime = t
+	return t
+}
+
+func getNanoNow() time.Time {
+	return time.Unix(0, time.Now().UnixNano())
+}
+
 func init() {
 	receiver := &Syslog{
 		Address: ":6514",
-		now:     time.Now,
+		now:     getNanoNow,
 		ReadTimeout: &internal.Duration{
 			Duration: defaultReadTimeout,
 		},

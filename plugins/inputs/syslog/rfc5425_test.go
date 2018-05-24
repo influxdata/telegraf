@@ -107,7 +107,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 						"severity": "warning",
 						"facility": "kern",
 					},
-					Time: defaultTime,
+					Time: defaultTime.Add(time.Nanosecond),
 				},
 			},
 			wantBestEffort: []testutil.Metric{
@@ -135,7 +135,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 						"severity": "warning",
 						"facility": "kern",
 					},
-					Time: defaultTime,
+					Time: defaultTime.Add(time.Nanosecond),
 				},
 			},
 		},
