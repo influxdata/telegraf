@@ -205,8 +205,7 @@ func getTestCasesForRFC5426() []testCase5426 {
 
 func newUDPSyslogReceiver(bestEffort bool) *Syslog {
 	return &Syslog{
-		Protocol: "udp",
-		Address:  address,
+		Address: "udp://" + address,
 		now: func() time.Time {
 			return defaultTime
 		},
@@ -220,7 +219,6 @@ func testRFC5426(t *testing.T, bestEffort bool) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create receiver
 			receiver := newUDPSyslogReceiver(bestEffort)
-			require.Equal(t, receiver.Protocol, "udp")
 			acc := &testutil.Accumulator{}
 			require.NoError(t, receiver.Start(acc))
 			defer receiver.Stop()
@@ -231,8 +229,8 @@ func testRFC5426(t *testing.T, bestEffort bool) {
 
 			// Connect
 			conn, err := net.Dial("udp", address)
-			defer conn.Close()
 			require.NotNil(t, conn)
+			defer conn.Close()
 			require.Nil(t, err)
 
 			// Write

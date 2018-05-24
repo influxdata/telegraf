@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -23,9 +24,8 @@ const ipMaxPacketSize = 64 * 1024
 
 // Syslog is a syslog plugin
 type Syslog struct {
-	Address  string `toml:"server"`
-	Protocol string
 	tlsConfig.ServerConfig
+	Address         string `toml:"server"`
 	KeepAlivePeriod *internal.Duration
 	ReadTimeout     *internal.Duration
 	MaxConnections  int
@@ -38,7 +38,7 @@ type Syslog struct {
 	wg sync.WaitGroup
 	io.Closer
 
-	isTCP         bool
+	isStream      bool
 	tcpListener   net.Listener
 	tlsConfig     *tls.Config
 	connections   map[string]net.Conn
@@ -48,17 +48,11 @@ type Syslog struct {
 }
 
 var sampleConfig = `
-  ## Specify an ip or hostname with port - eg., localhost:6514, 10.0.0.1:6514
-  ## Address and port to host the syslog receiver.
-  ## If no server is specified, then localhost is used as the host.
+  ## Specify an ip or hostname with port - eg., tcp://localhost:6514, tcp://10.0.0.1:6514
+  ## Protocol, address and port to host the syslog receiver.
+  ## If no host is specified, then localhost is used.
   ## If no port is specified, 6514 is used (RFC5425#section-4.1).
-  server = ":6514"
-
-  ## Protocol (default = tcp)
-  ## Should be one of the following values:
-  ## tcp, tcp4, tcp6, unix, unixpacket, udp, udp4, udp6, ip, ip4, ip6, unixgram.
-  ## Otherwise forced to the default.
-  # protocol = "tcp"
+  server = "tcp://:6514"
 
   ## TLS Config
   # tls_allowed_cacerts = ["/etc/telegraf/ca.pem"]
@@ -112,22 +106,27 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	switch s.Protocol {
+	scheme, host, err := getAddressParts(s.Address)
+	if err != nil {
+		return err
+	}
+	s.Address = host
+
+	switch scheme {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
-		s.isTCP = true
+		s.isStream = true
 	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
-		s.isTCP = false
+		s.isStream = false
 	default:
-		s.Protocol = "tcp"
-		s.isTCP = true
+		return fmt.Errorf("unknown protocol '%s' in '%s'", scheme, s.Address)
 	}
 
-	if s.Protocol == "unix" || s.Protocol == "unixpacket" || s.Protocol == "unixgram" {
+	if scheme == "unix" || scheme == "unixpacket" || scheme == "unixgram" {
 		os.Remove(s.Address)
 	}
 
-	if s.isTCP {
-		l, err := net.Listen(s.Protocol, s.Address)
+	if s.isStream {
+		l, err := net.Listen(scheme, s.Address)
 		if err != nil {
 			return err
 		}
@@ -141,7 +140,7 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 		s.wg.Add(1)
 		go s.listenStream(acc)
 	} else {
-		l, err := net.ListenPacket(s.Protocol, s.Address)
+		l, err := net.ListenPacket(scheme, s.Address)
 		if err != nil {
 			return err
 		}
@@ -152,7 +151,7 @@ func (s *Syslog) Start(acc telegraf.Accumulator) error {
 		go s.listenPacket(acc)
 	}
 
-	if s.Protocol == "unix" || s.Protocol == "unixpacket" || s.Protocol == "unixgram" {
+	if scheme == "unix" || scheme == "unixpacket" || scheme == "unixgram" {
 		s.Closer = unixCloser{path: s.Address, closer: s.Closer}
 	}
 
@@ -168,6 +167,35 @@ func (s *Syslog) Stop() {
 		s.Close()
 	}
 	s.wg.Wait()
+}
+
+// getAddressParts returns the address scheme and host
+// it also sets defaults for them when missing
+// when the input address does not specify the protocol it returns an error
+func getAddressParts(a string) (string, string, error) {
+	parts := strings.SplitN(a, "://", 2)
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("missing protocol within address '%s'", a)
+	}
+
+	u, _ := url.Parse(a)
+	switch u.Scheme {
+	case "unix", "unixpacket", "unixgram":
+		return parts[0], parts[1], nil
+	}
+
+	var host string
+	if u.Hostname() != "" {
+		host = u.Hostname()
+	}
+	host += ":"
+	if u.Port() == "" {
+		host += "6514"
+	} else {
+		host += u.Port()
+	}
+
+	return u.Scheme, host, nil
 }
 
 func (s *Syslog) listenPacket(acc telegraf.Accumulator) {

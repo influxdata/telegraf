@@ -13,10 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	address = ":6514"
-)
-
 var (
 	pki = testutil.NewPKI("../../../testutil/pki")
 )
@@ -352,8 +348,7 @@ func newTCPSyslogReceiver(keepAlive *internal.Duration, maxConn int, bestEffort 
 		Duration: defaultReadTimeout,
 	}
 	s := &Syslog{
-		Protocol: "tcp",
-		Address:  address,
+		Address: "tcp://" + address,
 		now: func() time.Time {
 			return defaultTime
 		},

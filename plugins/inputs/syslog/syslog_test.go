@@ -9,6 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	address = ":6514"
+)
+
 var defaultTime = time.Unix(0, 0)
 var maxP = uint8(191)
 var maxV = uint16(999)
@@ -19,9 +23,38 @@ var maxPID = "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabc
 var maxMID = "abcdefghilmnopqrstuvzabcdefghilm"
 var message7681 = strings.Repeat("l", 7681)
 
-func TestListenError(t *testing.T) {
-	receiver := &Syslog{
-		Address: "wrong address",
+func TestAddress(t *testing.T) {
+	var err error
+	var rec *Syslog
+
+	rec = &Syslog{
+		Address: "localhost:6514",
 	}
-	require.Error(t, receiver.Start(&testutil.Accumulator{}))
+	err = rec.Start(&testutil.Accumulator{})
+	require.EqualError(t, err, "missing protocol within address 'localhost:6514'")
+	require.Error(t, err)
+
+	rec = &Syslog{
+		Address: "unsupported://example.com:6514",
+	}
+	err = rec.Start(&testutil.Accumulator{})
+	require.EqualError(t, err, "unknown protocol 'unsupported' in 'example.com:6514'")
+	require.Error(t, err)
+
+	rec = &Syslog{
+		Address: "unixgram:///tmp/telegraf.sock",
+	}
+	err = rec.Start(&testutil.Accumulator{})
+	require.NoError(t, err)
+	require.Equal(t, "/tmp/telegraf.sock", rec.Address)
+	rec.Stop()
+
+	// Default port is 6514
+	rec = &Syslog{
+		Address: "tcp://localhost",
+	}
+	err = rec.Start(&testutil.Accumulator{})
+	require.NoError(t, err)
+	require.Equal(t, "localhost:6514", rec.Address)
+	rec.Stop()
 }
