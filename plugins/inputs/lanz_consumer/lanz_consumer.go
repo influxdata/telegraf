@@ -127,7 +127,8 @@ func (c *LanzClient) receiver() {
 					"entry_type":            strconv.FormatInt(int64(cr.GetEntryType()), 10),
 					"traffic_class":         strconv.FormatInt(int64(cr.GetTrafficClass()), 10),
 					"fabric_peer_intf_name": cr.GetFabricPeerIntfName(),
-					"host":                  u.Host,
+					"hostname":              u.Hostname(),
+					"port":                  u.Port(),
 				}
 				c.acc.AddFields("congestion_record", vals, tags)
 			}
@@ -141,7 +142,8 @@ func (c *LanzClient) receiver() {
 				}
 				tags := map[string]string{
 					"entry_type": strconv.FormatInt(int64(gbur.GetEntryType()), 10),
-					"host":       u.Host,
+					"hostname":   u.Hostname(),
+					"port":       u.Port(),
 				}
 				c.acc.AddFields("global_buffer_usage_record", vals, tags)
 			}
