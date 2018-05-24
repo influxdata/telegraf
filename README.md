@@ -187,6 +187,7 @@ configuration options.
 * [ntpq](./plugins/inputs/ntpq)
 * [nvidia_smi](./plugins/inputs/nvidia_smi)
 * [openldap](./plugins/inputs/openldap)
+* [openntpd](./plugins/inputs/openntpd)
 * [opensmtpd](./plugins/inputs/opensmtpd)
 * [pf](./plugins/inputs/pf)
 * [phpfpm](./plugins/inputs/phpfpm)
