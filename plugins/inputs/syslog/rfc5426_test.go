@@ -102,8 +102,8 @@ func getTestCasesForRFC5426() []testCase5426 {
 					"msgid":         "2",
 					"message":       `"GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`,
 					"origin":        true,
-					"meta sequence": "14125553",
-					"meta service":  "someservice",
+					"meta_sequence": "14125553",
+					"meta_service":  "someservice",
 					"severity_code": 5,
 					"facility_code": 3,
 				},
@@ -124,8 +124,8 @@ func getTestCasesForRFC5426() []testCase5426 {
 					"msgid":         "2",
 					"message":       `"GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`,
 					"origin":        true,
-					"meta sequence": "14125553",
-					"meta service":  "someservice",
+					"meta_sequence": "14125553",
+					"meta_service":  "someservice",
 					"severity_code": 5,
 					"facility_code": 3,
 				},
@@ -211,6 +211,7 @@ func newUDPSyslogReceiver(bestEffort bool) *Syslog {
 			return defaultTime
 		},
 		BestEffort: bestEffort,
+		Separator:  "_",
 	}
 }
 

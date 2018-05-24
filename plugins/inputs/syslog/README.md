@@ -6,7 +6,7 @@ It can act as a syslog transport receiver over TLS (or TCP) - ie., RFC5425 - or 
 
 This plugin listens for syslog messages following RFC5424 format. When received it parses them extracting metrics.
 
-### Configuration:
+### Configuration
 
 ```toml
 [[inputs.syslog]]
@@ -40,12 +40,18 @@ This plugin listens for syslog messages following RFC5424 format. When received 
 
   ## Read timeout (default = 500ms).
   ## 0 means unlimited.
-  ## Only applies to stream sockets (e.g. TCP).
   # read_timeout = 500ms
 
   ## Whether to parse in best effort mode or not (default = false).
   ## By default best effort parsing is off.
   # best_effort = false
+
+  ## Character to prepend to SD-PARAMs (default = "_").
+  ## A syslog message can contain multiple parameters and multiple identifiers within structured data section.
+  ## Eg., [id1 name1="val1" name2="val2"][id2 name1="val1" nameA="valA"]
+  ## For each combination a field is created.
+  ## Its name is created concatenating identifier, sdparam_separator, and parameter name.
+  # sdparam_separator = "_"
 ```
 
 #### Other configs
@@ -55,22 +61,23 @@ Other available configurations are:
 - `keep_alive_period`, `max_connections` for stream sockets
 - `read_timeout`
 - `best_effort` to tell the parser to work until it is able to do and extract partial but valid info (more [here](https://github.com/influxdata/go-syslog#best-effort-mode))
+- `sdparam_separator` to choose how to separate structured data param name from its structured data identifier
 
 ### Metrics
 
 - syslog
   - fields
     - **version** (`uint16`)
+    - **severity_code** (`int`)
+    - **facility_code** (`int`)
     - timestamp (`time.Time`)
     - procid (`string`)
     - msgid (`string`)
-    - _structureddata element id_ (`bool`)
-    - _structureddata element parameter name_ (`string`)
+    - *sdid* (`bool`)
+    - *sdid . sdparam_separator . sdparam_name* (`string`)
   - tags
     - **severity** (`string`)
-    - **severity_level** (`string`)
     - **facility** (`string`)
-    - **facility_message** (`string`)
     - hostname (`string`)
     - appname (`string`)
 

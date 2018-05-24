@@ -30,6 +30,7 @@ type Syslog struct {
 	ReadTimeout     *internal.Duration
 	MaxConnections  int
 	BestEffort      bool
+	Separator       string `toml:"sdparam_separator"`
 
 	now func() time.Time
 
@@ -77,12 +78,18 @@ var sampleConfig = `
 
   ## Read timeout (default = 500ms).
   ## 0 means unlimited.
-  ## Only applies to stream sockets (e.g. TCP).
   # read_timeout = 500ms
 
   ## Whether to parse in best effort mode or not (default = false).
   ## By default best effort parsing is off.
   # best_effort = false
+
+  ## Character to prepend to SD-PARAMs (default = "_").
+  ## A syslog message can contain multiple parameters and multiple identifiers within structured data section.
+  ## Eg., [id1 name1="val1" name2="val2"][id2 name1="val1" nameA="valA"]
+  ## For each combination a field is created.
+  ## Its name is created concatenating identifier, sdparam_separator, and parameter name.
+  # sdparam_separator = "_"
 `
 
 // SampleConfig returns sample configuration message
@@ -182,7 +189,7 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 
 		message, err := p.Parse(b[:n], &s.BestEffort)
 		if message != nil {
-			acc.AddFields("syslog", fields(*message), tags(*message), s.now())
+			acc.AddFields("syslog", fields(*message, s), tags(*message), s.now())
 		}
 		if err != nil {
 			acc.AddError(err)
@@ -282,7 +289,7 @@ func (s *Syslog) store(res rfc5425.Result, acc telegraf.Accumulator) {
 	}
 	if res.Message != nil {
 		msg := *res.Message
-		acc.AddFields("syslog", fields(msg), tags(msg), s.now())
+		acc.AddFields("syslog", fields(msg, s), tags(msg), s.now())
 	}
 }
 
@@ -304,7 +311,7 @@ func tags(msg rfc5424.SyslogMessage) map[string]string {
 	return ts
 }
 
-func fields(msg rfc5424.SyslogMessage) map[string]interface{} {
+func fields(msg rfc5424.SyslogMessage, s *Syslog) map[string]interface{} {
 	// Not checking assuming a minimally valid message
 	flds := map[string]interface{}{
 		"version": msg.Version(),
@@ -337,7 +344,7 @@ func fields(msg rfc5424.SyslogMessage) map[string]interface{} {
 			}
 			for name, value := range sdparams {
 				// Using whitespace as separator since it is not allowed by the grammar within SDID
-				flds[sdid+" "+name] = value
+				flds[sdid+s.Separator+name] = value
 			}
 		}
 	}
@@ -363,6 +370,7 @@ func init() {
 		ReadTimeout: &internal.Duration{
 			Duration: defaultReadTimeout,
 		},
+		Separator: "_",
 	}
 
 	inputs.Add("syslog", func() telegraf.Input { return receiver })
