@@ -110,7 +110,7 @@ func TestLanzConsumerGeneratesMetrics(t *testing.T) {
 		"entry_type":            strconv.FormatInt(int64(2), 10),
 		"traffic_class":         strconv.FormatInt(int64(2), 10),
 		"fabric_peer_intf_name": "FabricPeerIntfName2",
-		"hostname":              "switch02.int.example.com:50001",
+		"hostname":              "switch02.int.example.com",
 		"port":                  "50001",
 	}
 
