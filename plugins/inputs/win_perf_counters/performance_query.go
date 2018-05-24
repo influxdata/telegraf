@@ -4,9 +4,9 @@
 package win_perf_counters
 
 import (
+	"errors"
 	"syscall"
 	"unsafe"
-	"errors"
 )
 
 //PerformanceQuery provides wrappers around Windows performance counters API for easy usage in GO
@@ -43,6 +43,7 @@ func NewPdhError(code uint32) error {
 type PerformanceQueryImpl struct {
 	query PDH_HQUERY
 }
+
 // Open creates a new counterPath that is used to manage the collection of performance data.
 // It returns counterPath handle used for subsequent calls for adding counters and querying data
 func (m *PerformanceQueryImpl) Open() error {
@@ -53,7 +54,7 @@ func (m *PerformanceQueryImpl) Open() error {
 		}
 	}
 	var handle PDH_HQUERY
-	ret := PdhOpenQuery(0, 0, &handle )
+	ret := PdhOpenQuery(0, 0, &handle)
 	if ret != ERROR_SUCCESS {
 		return NewPdhError(ret)
 	}
@@ -110,7 +111,7 @@ func (m *PerformanceQueryImpl) GetCounterPath(counterHandle PDH_HCOUNTER) (strin
 		ret = PdhGetCounterInfo(counterHandle, 0, &bufSize, &buff[0])
 		if ret == ERROR_SUCCESS {
 			ci := (*PDH_COUNTER_INFO)(unsafe.Pointer(&buff[0]))
-			return  UTF16PtrToString(ci.SzFullPath), nil
+			return UTF16PtrToString(ci.SzFullPath), nil
 		}
 	}
 	return "", NewPdhError(ret)
@@ -172,6 +173,7 @@ func UTF16PtrToString(s *uint16) string {
 	}
 	return syscall.UTF16ToString((*[1 << 29]uint16)(unsafe.Pointer(s))[0:])
 }
+
 // UTF16ToStringArray converts list of Windows API NULL terminated strings  to go string array
 func UTF16ToStringArray(buf []uint16) []string {
 	var strings []string
@@ -185,4 +187,3 @@ func UTF16ToStringArray(buf []uint16) []string {
 	}
 	return strings
 }
-

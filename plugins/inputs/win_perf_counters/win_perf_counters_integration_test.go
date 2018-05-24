@@ -8,11 +8,10 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"strings"
 )
-
 
 func TestWinPerformanceQueryImpl(t *testing.T) {
 	if testing.Short() {
@@ -28,15 +27,15 @@ func TestWinPerformanceQueryImpl(t *testing.T) {
 
 	_, err = query.AddCounterToQuery("")
 	require.Error(t, err, "uninitialized query must return errors")
-	assert.True(t, strings.Contains(err.Error(),"uninitialised"))
+	assert.True(t, strings.Contains(err.Error(), "uninitialised"))
 
 	_, err = query.AddEnglishCounterToQuery("")
 	require.Error(t, err, "uninitialized query must return errors")
-	assert.True(t, strings.Contains(err.Error(),"uninitialised"))
+	assert.True(t, strings.Contains(err.Error(), "uninitialised"))
 
 	err = query.CollectData()
 	require.Error(t, err, "uninitialized query must return errors")
-	assert.True(t, strings.Contains(err.Error(),"uninitialised"))
+	assert.True(t, strings.Contains(err.Error(), "uninitialised"))
 
 	err = query.Open()
 	require.NoError(t, err)
@@ -111,7 +110,6 @@ func TestWinPerfcountersConfigGet1(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-
 	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
 	m.query.Open()
 
@@ -151,7 +149,6 @@ func TestWinPerfcountersConfigGet2(t *testing.T) {
 
 	err := m.ParseConfig()
 	require.NoError(t, err)
-
 
 	if len(m.counters) == 1 {
 		require.NoError(t, nil)
