@@ -345,7 +345,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 
 func newTCPSyslogReceiver(address string, keepAlive *internal.Duration, maxConn int, bestEffort bool) *Syslog {
 	d := &internal.Duration{
-		Duration: 50 * time.Millisecond,
+		Duration: defaultReadTimeout,
 	}
 	s := &Syslog{
 		Address: address,

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -285,9 +286,10 @@ func TestStrict_unixgram(t *testing.T) {
 }
 
 func TestTimeIncrement_udp(t *testing.T) {
-	i := 0
+	var i int64
+	atomic.StoreInt64(&i, 0)
 	getNow := func() time.Time {
-		if i%2 == 0 {
+		if atomic.LoadInt64(&i)%2 == 0 {
 			return time.Unix(1, 0)
 		}
 		return time.Unix(1, 1)
@@ -336,7 +338,7 @@ func TestTimeIncrement_udp(t *testing.T) {
 	}
 
 	// New one with different time
-	i++
+	atomic.StoreInt64(&i, atomic.LoadInt64(&i)+1)
 
 	// Clear
 	acc.ClearMetrics()
