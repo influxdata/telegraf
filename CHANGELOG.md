@@ -64,6 +64,8 @@
 - [#4036](https://github.com/influxdata/telegraf/pull/4036): Add all win_perf_counters fields for a series in a single metric.
 - [#4118](https://github.com/influxdata/telegraf/pull/4118): Report results of dns_query instead of 0ms on timeout.
 - [#4155](https://github.com/influxdata/telegraf/pull/4155): Add consul service tags to metric.
+- [#2879](https://github.com/influxdata/telegraf/issues/2879): Fix wildcards and multi instance processes in win_perf_counters.
+- [#2468](https://github.com/influxdata/telegraf/issues/2468): Fix crash on 32-bit Windows in win_perf_counters.
 
 ## v1.6.3 [2018-05-21]
 
