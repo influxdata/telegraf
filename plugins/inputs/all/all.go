@@ -15,6 +15,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/consul"
 	_ "github.com/influxdata/telegraf/plugins/inputs/couchbase"
 	_ "github.com/influxdata/telegraf/plugins/inputs/couchdb"
+	_ "github.com/influxdata/telegraf/plugins/inputs/crypto"
 	_ "github.com/influxdata/telegraf/plugins/inputs/dcos"
 	_ "github.com/influxdata/telegraf/plugins/inputs/disque"
 	_ "github.com/influxdata/telegraf/plugins/inputs/dmcache"
