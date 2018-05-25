@@ -97,6 +97,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/solr"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sqlserver"
 	_ "github.com/influxdata/telegraf/plugins/inputs/statsd"
+	_ "github.com/influxdata/telegraf/plugins/inputs/syslog"
 	_ "github.com/influxdata/telegraf/plugins/inputs/sysstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/system"
 	_ "github.com/influxdata/telegraf/plugins/inputs/tail"
