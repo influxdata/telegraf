@@ -35,7 +35,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(1),
-						"timestamp":     time.Unix(1456029177, 0).UTC(),
+						"timestamp":     time.Unix(1456029177, 0).UnixNano(),
 						"procid":        "2341",
 						"msgid":         "2",
 						"message":       `"GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`,
@@ -59,7 +59,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(1),
-						"timestamp":     time.Unix(1456029177, 0).UTC(),
+						"timestamp":     time.Unix(1456029177, 0).UnixNano(),
 						"procid":        "2341",
 						"msgid":         "2",
 						"message":       `"GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`,
@@ -300,7 +300,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       maxV,
-						"timestamp":     time.Unix(1514764799, 999999000).UTC(),
+						"timestamp":     time.Unix(1514764799, 999999000).UnixNano(),
 						"message":       message7681,
 						"procid":        maxPID,
 						"msgid":         maxMID,
@@ -321,7 +321,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       maxV,
-						"timestamp":     time.Unix(1514764799, 999999000).UTC(),
+						"timestamp":     time.Unix(1514764799, 999999000).UnixNano(),
 						"message":       message7681,
 						"procid":        maxPID,
 						"msgid":         maxMID,

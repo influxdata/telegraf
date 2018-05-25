@@ -349,7 +349,7 @@ func fields(msg rfc5424.SyslogMessage, s *Syslog) map[string]interface{} {
 	flds["facility_code"] = int(*msg.Facility())
 
 	if msg.Timestamp() != nil {
-		flds["timestamp"] = *msg.Timestamp()
+		flds["timestamp"] = (*msg.Timestamp()).UnixNano()
 	}
 
 	if msg.ProcID() != nil {

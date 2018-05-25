@@ -64,7 +64,7 @@ Other available configurations are:
     - **version** (`uint16`)
     - **severity_code** (`int`)
     - **facility_code** (`int`)
-    - timestamp (`time.Time`)
+    - timestamp (`int`)
     - procid (`string`)
     - msgid (`string`)
     - *sdid* (`bool`)
