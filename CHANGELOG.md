@@ -19,6 +19,7 @@
 - [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry/README.md) - Contributed by @ajhai
 - [mcrouter](./plugins/inputs/mcrouter/README.md) - Contributed by @cthayer
 - [nvidia_smi](./plugins/inputs/nvidia_smi/README.md) - Contributed by @jackzampolin
+- [syslog](./plugins/inputs/syslog/README.md) - Contributed by @influxdata
 
 ### New Processors
 
@@ -57,7 +58,8 @@
 - [#3969](https://github.com/influxdata/telegraf/pull/3969): Add option to unbound module to use threads as tags.
 - [#4183](https://github.com/influxdata/telegraf/pull/4183): Add support for TLS and username/password auth to aerospike input.
 - [#4190](https://github.com/influxdata/telegraf/pull/4190): Add special syslog timestamp parser to grok parser that uses current year.
--
+- [#4181](https://github.com/influxdata/telegraf/pull/4181): Add syslog input plugin.
+
 ### Bugfixes
 
 - [#4018](https://github.com/influxdata/telegraf/pull/4018): Write to working file outputs if any files are not writeable.
