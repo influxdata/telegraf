@@ -2,6 +2,7 @@ package system
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -129,7 +130,7 @@ func (s *systemPS) DiskUsage(
 			continue
 		}
 
-		du.Path = strings.TrimPrefix(p.Mountpoint, hostMountPrefix)
+		du.Path = filepath.Join("/", strings.TrimPrefix(p.Mountpoint, hostMountPrefix))
 		du.Fstype = p.Fstype
 		usage = append(usage, du)
 		partitions = append(partitions, &p)

@@ -26,7 +26,7 @@ type MetricMaker interface {
 func NewAccumulator(
 	maker MetricMaker,
 	metrics chan telegraf.Metric,
-) *accumulator {
+) telegraf.Accumulator {
 	acc := accumulator{
 		maker:     maker,
 		metrics:   metrics,

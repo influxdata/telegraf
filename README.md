@@ -5,7 +5,7 @@ and writing metrics.
 
 Design goals are to have a minimal memory footprint with a plugin system so
 that developers in the community can easily add support for collecting metrics
-from local or remote services.
+.  For an example configuration referencet from local or remote services.
 
 Telegraf is plugin-driven and has the concept of 4 distinct plugins:
 
@@ -127,10 +127,12 @@ configuration options.
 * [aerospike](./plugins/inputs/aerospike)
 * [amqp_consumer](./plugins/inputs/amqp_consumer) (rabbitmq)
 * [apache](./plugins/inputs/apache)
+* [aurora](./plugins/inputs/aurora)
 * [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
 * [bond](./plugins/inputs/bond)
-* [cassandra](./plugins/inputs/cassandra)
+* [cassandra](./plugins/inputs/cassandra) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
+* [burrow](./plugins/inputs/burrow)
 * [ceph](./plugins/inputs/ceph)
 * [cgroup](./plugins/inputs/cgroup)
 * [chrony](./plugins/inputs/chrony)
@@ -147,11 +149,13 @@ configuration options.
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [fail2ban](./plugins/inputs/fail2ban)
+* [fibaro](./plugins/inputs/fibaro)
 * [filestat](./plugins/inputs/filestat)
 * [fluentd](./plugins/inputs/fluentd)
 * [graylog](./plugins/inputs/graylog)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
+* [http](./plugins/inputs/http) (generic HTTP plugin, supports using input data formats)
 * [http_response](./plugins/inputs/http_response)
 * [httpjson](./plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
 * [internal](./plugins/inputs/internal)
@@ -159,24 +163,29 @@ configuration options.
 * [interrupts](./plugins/inputs/interrupts)
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
 * [iptables](./plugins/inputs/iptables)
+* [ipset](./plugins/inputs/ipset)
 * [jolokia](./plugins/inputs/jolokia) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
-* [jolokia2](./plugins/inputs/jolokia2)
+* [jolokia2](./plugins/inputs/jolokia2) (java, cassandra, kafka)
+- [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry)
 * [kapacitor](./plugins/inputs/kapacitor)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
+* [mcrouter](./plugins/inputs/mcrouter)
 * [memcached](./plugins/inputs/memcached)
 * [mesos](./plugins/inputs/mesos)
 * [minecraft](./plugins/inputs/minecraft)
 * [mongodb](./plugins/inputs/mongodb)
 * [mysql](./plugins/inputs/mysql)
+* [nats](./plugins/inputs/nats)
 * [net_response](./plugins/inputs/net_response)
 * [nginx](./plugins/inputs/nginx)
 * [nginx_plus](./plugins/inputs/nginx_plus)
 * [nsq](./plugins/inputs/nsq)
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
+* [nvidia_smi](./plugins/inputs/nvidia_smi)
 * [openldap](./plugins/inputs/openldap)
 * [opensmtpd](./plugins/inputs/opensmtpd)
 * [pf](./plugins/inputs/pf)
@@ -205,7 +214,7 @@ configuration options.
 * [teamspeak](./plugins/inputs/teamspeak)
 * [tomcat](./plugins/inputs/tomcat)
 * [twemproxy](./plugins/inputs/twemproxy)
-* [unbound](./plugins/input/unbound)
+* [unbound](./plugins/inputs/unbound)
 * [varnish](./plugins/inputs/varnish)
 * [zfs](./plugins/inputs/zfs)
 * [zookeeper](./plugins/inputs/zookeeper)
@@ -260,7 +269,11 @@ formats may be used with input plugins supporting the `data_format` option:
 
 ## Processor Plugins
 
+* [converter](./plugins/processors/converter)
+* [override](./plugins/processors/override)
 * [printer](./plugins/processors/printer)
+* [regex](./plugins/processors/regex)
+* [topk](./plugins/processors/topk)
 
 ## Aggregator Plugins
 
@@ -273,6 +286,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [influxdb](./plugins/outputs/influxdb)
 * [amon](./plugins/outputs/amon)
 * [amqp](./plugins/outputs/amqp) (rabbitmq)
+* [application_insights](./plugins/outputs/application_insights)
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
 * [cratedb](./plugins/outputs/cratedb)
@@ -282,6 +296,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [file](./plugins/outputs/file)
 * [graphite](./plugins/outputs/graphite)
 * [graylog](./plugins/outputs/graylog)
+* [http](./plugins/outputs/http)
 * [instrumental](./plugins/outputs/instrumental)
 * [kafka](./plugins/outputs/kafka)
 * [librato](./plugins/outputs/librato)

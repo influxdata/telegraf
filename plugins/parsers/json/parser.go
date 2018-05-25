@@ -12,6 +12,10 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
+var (
+	utf8BOM = []byte("\xef\xbb\xbf")
+)
+
 type JSONParser struct {
 	MetricName  string
 	TagKeys     []string
@@ -68,6 +72,7 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 
 func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	buf = bytes.TrimSpace(buf)
+	buf = bytes.TrimPrefix(buf, utf8BOM)
 	if len(buf) == 0 {
 		return make([]telegraf.Metric, 0), nil
 	}

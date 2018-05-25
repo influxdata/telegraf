@@ -90,6 +90,7 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     - master_link_down_since_seconds(int, number)
     - master_link_status(string)
     - master_repl_offset(int, number)
+    - second_repl_offset(int, number)
     - repl_backlog_active(int, number)
     - repl_backlog_size(int, bytes)
     - repl_backlog_first_byte_offset(int, number)

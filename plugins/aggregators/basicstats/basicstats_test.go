@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 )
 
 var m1, _ = metric.New("m1",
@@ -250,6 +251,83 @@ func TestBasicStatsWithOnlyMean(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
 }
 
+// Test only aggregating sum
+func TestBasicStatsWithOnlySum(t *testing.T) {
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"sum"}
+
+	aggregator.Add(m1)
+	aggregator.Add(m2)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	expectedFields := map[string]interface{}{
+		"a_sum": float64(2),
+		"b_sum": float64(4),
+		"c_sum": float64(6),
+		"d_sum": float64(8),
+		"e_sum": float64(200),
+	}
+	expectedTags := map[string]string{
+		"foo": "bar",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
+// Verify that sum doesn't suffer from floating point errors.  Early
+// implementations of sum were calulated from mean and count, which
+// e.g. summed "1, 1, 5, 1" as "7.999999..." instead of 8.
+func TestBasicStatsWithOnlySumFloatingPointErrata(t *testing.T) {
+
+	var sum1, _ = metric.New("m1",
+		map[string]string{},
+		map[string]interface{}{
+			"a": int64(1),
+		},
+		time.Now(),
+	)
+	var sum2, _ = metric.New("m1",
+		map[string]string{},
+		map[string]interface{}{
+			"a": int64(1),
+		},
+		time.Now(),
+	)
+	var sum3, _ = metric.New("m1",
+		map[string]string{},
+		map[string]interface{}{
+			"a": int64(5),
+		},
+		time.Now(),
+	)
+	var sum4, _ = metric.New("m1",
+		map[string]string{},
+		map[string]interface{}{
+			"a": int64(1),
+		},
+		time.Now(),
+	)
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"sum"}
+
+	aggregator.Add(sum1)
+	aggregator.Add(sum2)
+	aggregator.Add(sum3)
+	aggregator.Add(sum4)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	expectedFields := map[string]interface{}{
+		"a_sum": float64(8),
+	}
+	expectedTags := map[string]string{}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
 // Test only aggregating variance
 func TestBasicStatsWithOnlyVariance(t *testing.T) {
 
@@ -328,6 +406,57 @@ func TestBasicStatsWithMinAndMax(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
 }
 
+// Test aggregating with all stats
+func TestBasicStatsWithAllStats(t *testing.T) {
+	acc := testutil.Accumulator{}
+	minmax := NewBasicStats()
+	minmax.Stats = []string{"count", "min", "max", "mean", "stdev", "s2", "sum"}
+
+	minmax.Add(m1)
+	minmax.Add(m2)
+	minmax.Push(&acc)
+
+	expectedFields := map[string]interface{}{
+		"a_count": float64(2), //a
+		"a_max":   float64(1),
+		"a_min":   float64(1),
+		"a_mean":  float64(1),
+		"a_stdev": float64(0),
+		"a_s2":    float64(0),
+		"a_sum":   float64(2),
+		"b_count": float64(2), //b
+		"b_max":   float64(3),
+		"b_min":   float64(1),
+		"b_mean":  float64(2),
+		"b_s2":    float64(2),
+		"b_sum":   float64(4),
+		"b_stdev": math.Sqrt(2),
+		"c_count": float64(2), //c
+		"c_max":   float64(4),
+		"c_min":   float64(2),
+		"c_mean":  float64(3),
+		"c_s2":    float64(2),
+		"c_stdev": math.Sqrt(2),
+		"c_sum":   float64(6),
+		"d_count": float64(2), //d
+		"d_max":   float64(6),
+		"d_min":   float64(2),
+		"d_mean":  float64(4),
+		"d_s2":    float64(8),
+		"d_stdev": math.Sqrt(8),
+		"d_sum":   float64(8),
+		"e_count": float64(1), //e
+		"e_max":   float64(200),
+		"e_min":   float64(200),
+		"e_mean":  float64(200),
+		"e_sum":   float64(200),
+	}
+	expectedTags := map[string]string{
+		"foo": "bar",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
 // Test that if an empty array is passed, no points are pushed
 func TestBasicStatsWithNoStats(t *testing.T) {
 
@@ -356,4 +485,27 @@ func TestBasicStatsWithUnknownStat(t *testing.T) {
 	aggregator.Push(&acc)
 
 	acc.AssertDoesNotContainMeasurement(t, "m1")
+}
+
+// Test that if Stats isn't supplied, then we only do count, min, max, mean,
+// stdev, and s2.  We purposely exclude sum for backwards compatability,
+// otherwise user's working systems will suddenly (and surprisingly) start
+// capturing sum without their input.
+func TestBasicStatsWithDefaultStats(t *testing.T) {
+
+	aggregator := NewBasicStats()
+
+	aggregator.Add(m1)
+	aggregator.Add(m2)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	assert.True(t, acc.HasField("m1", "a_count"))
+	assert.True(t, acc.HasField("m1", "a_min"))
+	assert.True(t, acc.HasField("m1", "a_max"))
+	assert.True(t, acc.HasField("m1", "a_mean"))
+	assert.True(t, acc.HasField("m1", "a_stdev"))
+	assert.True(t, acc.HasField("m1", "a_s2"))
+	assert.False(t, acc.HasField("m1", "a_sum"))
 }
