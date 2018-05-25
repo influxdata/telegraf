@@ -3,6 +3,7 @@ package syslog
 import (
 	"fmt"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -203,9 +204,9 @@ func getTestCasesForRFC5426() []testCase5426 {
 	return testCases
 }
 
-func newUDPSyslogReceiver(bestEffort bool) *Syslog {
+func newUDPSyslogReceiver(address string, bestEffort bool) *Syslog {
 	return &Syslog{
-		Address: "udp://" + address,
+		Address: address,
 		now: func() time.Time {
 			return defaultTime
 		},
@@ -214,11 +215,11 @@ func newUDPSyslogReceiver(bestEffort bool) *Syslog {
 	}
 }
 
-func testRFC5426(t *testing.T, bestEffort bool) {
+func testRFC5426(t *testing.T, protocol string, address string, bestEffort bool) {
 	for _, tc := range getTestCasesForRFC5426() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Create receiver
-			receiver := newUDPSyslogReceiver(bestEffort)
+			receiver := newUDPSyslogReceiver(protocol+"://"+address, bestEffort)
 			acc := &testutil.Accumulator{}
 			require.NoError(t, receiver.Start(acc))
 			defer receiver.Stop()
@@ -228,7 +229,7 @@ func testRFC5426(t *testing.T, bestEffort bool) {
 			acc.Errors = make([]error, 0)
 
 			// Connect
-			conn, err := net.Dial("udp", address)
+			conn, err := net.Dial(protocol, address)
 			require.NotNil(t, conn)
 			defer conn.Close()
 			require.Nil(t, err)
@@ -264,11 +265,23 @@ func testRFC5426(t *testing.T, bestEffort bool) {
 }
 
 func TestBestEffort_udp(t *testing.T) {
-	testRFC5426(t, true)
+	testRFC5426(t, "udp", address, true)
 }
 
 func TestStrict_udp(t *testing.T) {
-	testRFC5426(t, false)
+	testRFC5426(t, "udp", address, false)
+}
+
+func TestBestEffort_unixgram(t *testing.T) {
+	sockname := "/tmp/telegraf_test.sock"
+	os.Create(sockname)
+	testRFC5426(t, "unixgram", sockname, true)
+}
+
+func TestStrict_unixgram(t *testing.T) {
+	sockname := "/tmp/telegraf_test.sock"
+	os.Create(sockname)
+	testRFC5426(t, "unixgram", sockname, false)
 }
 
 func TestTimeIncrement_udp(t *testing.T) {

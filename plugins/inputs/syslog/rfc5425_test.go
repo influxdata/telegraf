@@ -343,12 +343,12 @@ func getTestCasesForRFC5425() []testCase5425 {
 	return testCases
 }
 
-func newTCPSyslogReceiver(keepAlive *internal.Duration, maxConn int, bestEffort bool) *Syslog {
+func newTCPSyslogReceiver(address string, keepAlive *internal.Duration, maxConn int, bestEffort bool) *Syslog {
 	d := &internal.Duration{
-		Duration: defaultReadTimeout,
+		Duration: 50 * time.Millisecond,
 	}
 	s := &Syslog{
-		Address: "tcp://" + address,
+		Address: address,
 		now: func() time.Time {
 			return defaultTime
 		},
@@ -366,11 +366,11 @@ func newTCPSyslogReceiver(keepAlive *internal.Duration, maxConn int, bestEffort 
 	return s
 }
 
-func testStrictRFC5425(t *testing.T, wantTLS bool, keepAlive *internal.Duration) {
+func testStrictRFC5425(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
 	for _, tc := range getTestCasesForRFC5425() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
-			receiver := newTCPSyslogReceiver(keepAlive, 0, false)
+			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false)
 			require.NotNil(t, receiver)
 			if wantTLS {
 				receiver.ServerConfig = *pki.TLSServerConfig()
@@ -387,9 +387,9 @@ func testStrictRFC5425(t *testing.T, wantTLS bool, keepAlive *internal.Duration)
 				config, e := pki.TLSClientConfig().TLSConfig()
 				require.NoError(t, e)
 				config.ServerName = "localhost"
-				conn, err = tls.Dial("tcp", address, config)
+				conn, err = tls.Dial(protocol, address, config)
 			} else {
-				conn, err = net.Dial("tcp", address)
+				conn, err = net.Dial(protocol, address)
 				defer conn.Close()
 			}
 			require.NotNil(t, conn)
@@ -425,11 +425,11 @@ func testStrictRFC5425(t *testing.T, wantTLS bool, keepAlive *internal.Duration)
 	}
 }
 
-func testBestEffortRFC5425(t *testing.T, wantTLS bool, keepAlive *internal.Duration) {
+func testBestEffortRFC5425(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
 	for _, tc := range getTestCasesForRFC5425() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
-			receiver := newTCPSyslogReceiver(keepAlive, 0, true)
+			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, true)
 			require.NotNil(t, receiver)
 			if wantTLS {
 				receiver.ServerConfig = *pki.TLSServerConfig()
@@ -446,9 +446,9 @@ func testBestEffortRFC5425(t *testing.T, wantTLS bool, keepAlive *internal.Durat
 				config, e := pki.TLSClientConfig().TLSConfig()
 				require.NoError(t, e)
 				config.ServerName = "localhost"
-				conn, err = tls.Dial("tcp", address, config)
+				conn, err = tls.Dial(protocol, address, config)
 			} else {
-				conn, err = net.Dial("tcp", address)
+				conn, err = net.Dial(protocol, address)
 				defer conn.Close()
 			}
 			require.NotNil(t, conn)
@@ -480,25 +480,41 @@ func testBestEffortRFC5425(t *testing.T, wantTLS bool, keepAlive *internal.Durat
 }
 
 func TestStrict_tcp(t *testing.T) {
-	testStrictRFC5425(t, false, nil)
+	testStrictRFC5425(t, "tcp", address, false, nil)
 }
 
 func TestBestEffort_tcp(t *testing.T) {
-	testBestEffortRFC5425(t, false, nil)
+	testBestEffortRFC5425(t, "tcp", address, false, nil)
 }
 
 func TestStrict_tcp_tls(t *testing.T) {
-	testStrictRFC5425(t, true, nil)
+	testStrictRFC5425(t, "tcp", address, true, nil)
 }
 
 func TestBestEffort_tcp_tls(t *testing.T) {
-	testBestEffortRFC5425(t, true, nil)
+	testBestEffortRFC5425(t, "tcp", address, true, nil)
 }
 
 func TestStrictWithKeepAlive_tcp_tls(t *testing.T) {
-	testStrictRFC5425(t, true, &internal.Duration{Duration: time.Minute})
+	testStrictRFC5425(t, "tcp", address, true, &internal.Duration{Duration: time.Minute})
 }
 
 func TestStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
-	testStrictRFC5425(t, true, &internal.Duration{Duration: 0})
+	testStrictRFC5425(t, "tcp", address, true, &internal.Duration{Duration: 0})
+}
+
+func TestStrict_unix(t *testing.T) {
+	testStrictRFC5425(t, "unix", "/tmp/telegraf_test.sock", false, nil)
+}
+
+func TestBestEffort_unix(t *testing.T) {
+	testBestEffortRFC5425(t, "unix", "/tmp/telegraf_test.sock", false, nil)
+}
+
+func TestStrict_unix_tls(t *testing.T) {
+	testStrictRFC5425(t, "unix", "/tmp/telegraf_test.sock", true, nil)
+}
+
+func TestBestEffort_unix_tls(t *testing.T) {
+	testBestEffortRFC5425(t, "unix", "/tmp/telegraf_test.sock", true, nil)
 }
