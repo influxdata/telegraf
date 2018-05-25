@@ -30,6 +30,7 @@ type Docker struct {
 	ContainerNames []string // deprecated in 1.4; use container_name_include
 
 	GatherServices bool `toml:"gather_services"`
+	DetectLeader   bool `toml:"detect_leader"`
 
 	Timeout        internal.Duration
 	PerDevice      bool     `toml:"perdevice"`
@@ -57,6 +58,7 @@ type Docker struct {
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
+	isLeader	bool
 }
 
 // KB, MB, GB, TB, PB...human friendly
@@ -83,6 +85,8 @@ var sampleConfig = `
 
   ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
   gather_services = false
+  ## If gather_services is true, only collect if this node is the leader
+  detect_leader = false
 
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
@@ -171,9 +175,11 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if d.GatherServices {
-		err := d.gatherSwarmInfo(acc)
-		if err != nil {
-			acc.AddError(err)
+		if !d.detectLeader || d.isLeader {
+			err := d.gatherSwarmInfo(acc)
+			if err != nil {
+				acc.AddError(err)
+			}				
 		}
 	}
 
@@ -302,6 +308,14 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 
 	d.engine_host = info.Name
 	d.serverVersion = info.ServerVersion
+	
+	// Detect leader status in swarm
+	if info.Swarm != nil {
+		r, err := d.client.NodeInspect(ctx, info.Swarm.NodeID)
+		if err == nil {
+			d.isLeader = r.ManagerStatus.Leader
+		}
+	}
 
 	tags := map[string]string{
 		"engine_host":    d.engine_host,
