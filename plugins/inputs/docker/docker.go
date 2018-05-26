@@ -84,8 +84,11 @@ var sampleConfig = `
   endpoint = "unix:///var/run/docker.sock"
 
   ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
+  ## Note: configure this in one of the manager nodes in a Swarm cluster.
+  ## configuring in multiple Swarm managers results in duplication of metrics.
   gather_services = false
-  ## If gather_services is true, only collect if this node is the leader
+  ## If gather_services is true, only collect if this node is the leader.
+  ## This allows the same configuration to be used on all nodes in a Swarm.
   detect_leader = false
 
   ## Only collect metrics for these containers, collect all if empty
