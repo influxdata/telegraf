@@ -20,6 +20,8 @@ to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.24/)
   ## Note: configure this in one of the manager nodes in a Swarm cluster.
   ## configuring in multiple Swarm managers results in duplication of metrics.
   gather_services = false
+  ## If gather_services is true, only collect if this node is the leader
+  detect_leader = false
 
   ## Only collect metrics for these containers. Values will be appended to
   ## container_name_include.
