@@ -58,7 +58,7 @@ type Docker struct {
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
-	isLeader	bool
+	isLeader        bool
 }
 
 // KB, MB, GB, TB, PB...human friendly
@@ -182,7 +182,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 			err := d.gatherSwarmInfo(acc)
 			if err != nil {
 				acc.AddError(err)
-			}				
+			}
 		}
 	}
 

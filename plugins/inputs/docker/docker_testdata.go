@@ -56,8 +56,8 @@ var info = types.Info{
 	NoProxy:           "",
 	BridgeNfIP6tables: true,
 	ServerVersion:     "17.09.0-ce",
-	Swarm:  swarm.Info{
-		NodeID:	   "k67qz4598weg5unwwffg6z1m1",
+	Swarm: swarm.Info{
+		NodeID: "k67qz4598weg5unwwffg6z1m1",
 	},
 }
 

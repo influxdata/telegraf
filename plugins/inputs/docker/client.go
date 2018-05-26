@@ -79,7 +79,7 @@ func (c *SocketClient) TaskList(ctx context.Context, options types.TaskListOptio
 func (c *SocketClient) NodeList(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error) {
 	return c.client.NodeList(ctx, options)
 }
-func (c *SocketClient) NodeInspect(ctx context.Context, nodeID string) (swarm.Node,  error) {
+func (c *SocketClient) NodeInspect(ctx context.Context, nodeID string) (swarm.Node, error) {
 	node, _, error := c.client.NodeInspectWithRaw(ctx, nodeID)
 	return node, error
 }
