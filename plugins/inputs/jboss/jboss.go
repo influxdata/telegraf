@@ -287,7 +287,6 @@ func getDigestAuthrization(digestParts map[string]string) string {
 
 // Gather Gathers data for all servers.
 func (h *JBoss) Gather(acc telegraf.Accumulator) error {
-	var wg sync.WaitGroup
 
 	if h.ResponseTimeout.Duration < time.Second {
 		h.ResponseTimeout.Duration = time.Second * 5
@@ -300,8 +299,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
-			TLSClientConfig:       tlsCfg,
+			TLSClientConfig: tlsCfg,
 		}
 		client := &http.Client{
 			Transport: tr,
@@ -310,19 +308,18 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 		h.client.SetHTTPClient(client)
 	}
 
-	errorChannel := make(chan error, len(h.Servers))
-
+	var wg sync.WaitGroup
 	for _, server := range h.Servers {
 		wg.Add(1)
 		go func(server string) {
 			defer wg.Done()
 			//default as standalone server
 			hosts := HostResponse{Outcome: "", Result: []string{"standalone"}}
-			log.Printf("I! JBoss Plugin Working as Domain: %t\n", h.ExecAsDomain)
+			log.Printf("D! JBoss Plugin Working as Domain: %t\n", h.ExecAsDomain)
 			if h.ExecAsDomain {
 				bodyContent, err := h.createRequestBody(GetHosts, nil)
 				if err != nil {
-					errorChannel <- err
+					acc.AddError(err)
 				}
 
 				out, err := h.doRequest(server, bodyContent)
@@ -333,13 +330,13 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 				if err != nil {
 					log.Printf("E! JBoss Error handling response 1: %s\n", err)
 					log.Printf("E! JBoss server:%s bodyContent %s\n", server, bodyContent)
-					errorChannel <- err
+					acc.AddError(err)
 					return
 				}
 				// Unmarshal json
 
 				if err = json.Unmarshal(out, &hosts); err != nil {
-					errorChannel <- errors.New("Error decoding JSON response")
+					acc.AddError(errors.New("Error decoding JSON response"))
 				}
 				log.Printf("D! JBoss HOSTS %s", hosts)
 			}
@@ -350,18 +347,8 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 	}
 
 	wg.Wait()
-	close(errorChannel)
 
-	// Get all errors and return them as one giant error
-	errorStrings := []string{}
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
-
-	if len(errorStrings) == 0 {
-		return nil
-	}
-	return errors.New(strings.Join(errorStrings, "\n"))
+	return nil
 }
 
 // Gathers data from a particular host
@@ -380,8 +367,6 @@ func (h *JBoss) getServersOnHost(
 ) error {
 	var wg sync.WaitGroup
 
-	errorChannel := make(chan error, len(hosts))
-
 	for _, host := range hosts {
 		wg.Add(1)
 		go func(host string) {
@@ -397,7 +382,7 @@ func (h *JBoss) getServersOnHost(
 				}
 				bodyContent, err := h.createRequestBody(GetServers, adr)
 				if err != nil {
-					errorChannel <- err
+					acc.AddError(err)
 				}
 
 				out, err := h.doRequest(serverURL, bodyContent)
@@ -407,12 +392,13 @@ func (h *JBoss) getServersOnHost(
 
 				if err != nil {
 					log.Printf("E! JBoss Error handling response 2: %s\n", err)
-					errorChannel <- err
+					acc.AddError(err)
 					return
 				}
 
 				if err = json.Unmarshal(out, &servers); err != nil {
-					errorChannel <- errors.New("Error decoding JSON response")
+					log.Printf("E! JBoss Error on JSON decoding")
+					acc.AddError(err)
 				}
 			}
 
@@ -441,18 +427,8 @@ func (h *JBoss) getServersOnHost(
 	}
 
 	wg.Wait()
-	close(errorChannel)
 
-	// Get all errors and return them as one giant error
-	errorStrings := []string{}
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
-
-	if len(errorStrings) == 0 {
-		return nil
-	}
-	return errors.New(strings.Join(errorStrings, "\n"))
+	return nil
 }
 
 // Gathers web data from a particular host
@@ -858,8 +834,6 @@ func (h *JBoss) getServerDeploymentStatistics(
 		return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
 	}
 
-	errorChannel := make(chan error, len(deployments.Result))
-
 	for _, deployment := range deployments.Result {
 		wg.Add(1)
 		go func(deployment string) {
@@ -879,7 +853,7 @@ func (h *JBoss) getServerDeploymentStatistics(
 
 			bodyContent, err := h.createRequestBody(GetDeploymentStat, adr2)
 			if err != nil {
-				errorChannel <- err
+				acc.AddError(err)
 			}
 
 			out, err := h.doRequest(serverURL, bodyContent)
@@ -889,13 +863,13 @@ func (h *JBoss) getServerDeploymentStatistics(
 
 			if err != nil {
 				log.Printf("E! JBoss Deployment Error handling response 3: %s\n", err)
-				errorChannel <- err
+				acc.AddError(err)
 				return
 			}
 			// everything ok ! continue with decoding data
 			deploy := DeploymentResponse{}
 			if err = json.Unmarshal(out, &deploy); err != nil {
-				errorChannel <- errors.New("Error decoding JSON response")
+				acc.AddError(errors.New("Error decoding JSON response"))
 			}
 			// This struct apply on EAR files
 			for typeName, value := range deploy.Result.Subdeployment {
@@ -957,18 +931,7 @@ func (h *JBoss) getServerDeploymentStatistics(
 	}
 
 	wg.Wait()
-	close(errorChannel)
-
-	// Get all errors and return them as one giant error
-	errorStrings := []string{}
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
-	}
-
-	if len(errorStrings) == 0 {
-		return nil
-	}
-	return errors.New(strings.Join(errorStrings, "\n"))
+	return nil
 }
 
 // Flatten JSON hierarchy to produce field name and field value
