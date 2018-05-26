@@ -175,7 +175,7 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if d.GatherServices {
-		if !d.detectLeader || d.isLeader {
+		if !d.DetectLeader || d.isLeader {
 			err := d.gatherSwarmInfo(acc)
 			if err != nil {
 				acc.AddError(err)
@@ -308,9 +308,9 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 
 	d.engine_host = info.Name
 	d.serverVersion = info.ServerVersion
-	
+
 	// Detect leader status in swarm
-	if info.Swarm != nil {
+	if info.Swarm.NodeID != "" {
 		r, err := d.client.NodeInspect(ctx, info.Swarm.NodeID)
 		if err == nil {
 			d.isLeader = r.ManagerStatus.Leader
