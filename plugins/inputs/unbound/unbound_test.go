@@ -12,8 +12,8 @@ import (
 
 var TestTimeout = internal.Duration{Duration: time.Second}
 
-func UnboundControl(output string, Timeout internal.Duration, useSudo bool, Server string, ThreadAsTag bool) func(string, internal.Duration, bool, string, bool) (*bytes.Buffer, error) {
-	return func(string, internal.Duration, bool, string, bool) (*bytes.Buffer, error) {
+func UnboundControl(output string, Timeout internal.Duration, useSudo bool, Server string, ThreadAsTag bool, ResetStats bool) func(string, internal.Duration, bool, string, bool, bool) (*bytes.Buffer, error) {
+	return func(string, internal.Duration, bool, string, bool, bool) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -21,7 +21,7 @@ func UnboundControl(output string, Timeout internal.Duration, useSudo bool, Serv
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Unbound{
-		run: UnboundControl(fullOutput, TestTimeout, true, "", false),
+		run: UnboundControl(fullOutput, TestTimeout, true, "", false, false),
 	}
 	err := v.Gather(acc)
 
@@ -38,7 +38,7 @@ func TestParseFullOutput(t *testing.T) {
 func TestParseFullOutputThreadAsTag(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Unbound{
-		run:         UnboundControl(fullOutput, TestTimeout, true, "", true),
+		run:         UnboundControl(fullOutput, TestTimeout, true, "", true, false),
 		ThreadAsTag: true,
 	}
 	err := v.Gather(acc)

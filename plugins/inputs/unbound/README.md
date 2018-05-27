@@ -27,6 +27,9 @@ a validating, recursive, and caching DNS resolver.
   ## true in a future version.  It is recommended to set to true on new
   ## deployments.
   thread_as_tag = false
+
+  ## When set to true metrics are reset each time they are collected
+  reset_stats = false
 ```
 
 #### Permissions:
