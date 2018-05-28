@@ -122,7 +122,7 @@ unsigned =
 	( digit | ( non_zero_digit digit* ) );
 
 number =
-	( integer ( '.' digit* )? ) | ( '.' digit* );
+	'-'? (digit+ ('.' digit*)? | '.' digit+);
 
 scientific =
 	number 'e'i ["\-+"]? digit+;
@@ -142,7 +142,7 @@ fieldfloat =
 fieldinteger =
 	(integer 'i') >begin %integer;
 
-fieldunsigned = 
+fieldunsigned =
 	(unsigned 'u') >begin %unsigned;
 
 false =
@@ -155,7 +155,7 @@ fieldbool =
 	(true | false) >begin %bool;
 
 fieldstringchar =
-	[^\\"] | '\\' [\\"];
+	[^\n\f\r\\"] | '\\' [\\"];
 
 fieldstring =
 	fieldstringchar* >begin %string;
@@ -221,9 +221,22 @@ discard_line :=
 # main machine.
 align :=
 	(space* comment)* space* measurement_start @hold_recover %eof(yield);
+
+series := measurement tagset $err(parse_error) eol;
 }%%
 
 %% write data;
+
+type Handler interface {
+	SetMeasurement(name []byte)
+	AddTag(key []byte, value []byte)
+	AddInt(key []byte, value []byte)
+	AddUint(key []byte, value []byte)
+	AddFloat(key []byte, value []byte)
+	AddString(key []byte, value []byte)
+	AddBool(key []byte, value []byte)
+	SetTimestamp(tm []byte)
+}
 
 type machine struct {
 	data       []byte
@@ -231,12 +244,30 @@ type machine struct {
 	p, pe, eof int
 	pb         int
 	handler    Handler
+	initState  int
 	err        error
 }
 
 func NewMachine(handler Handler) *machine {
 	m := &machine{
 		handler: handler,
+		initState: LineProtocol_en_align,
+	}
+
+	%% access m.;
+	%% variable p m.p;
+	%% variable pe m.pe;
+	%% variable eof m.eof;
+	%% variable data m.data;
+	%% write init;
+
+	return m
+}
+
+func NewSeriesMachine(handler Handler) *machine {
+	m := &machine{
+		handler: handler,
+		initState: LineProtocol_en_series,
 	}
 
 	%% access m.;
@@ -258,7 +289,7 @@ func (m *machine) SetData(data []byte) {
 	m.err = nil
 
 	%% write init;
-	m.cs = LineProtocol_en_align
+	m.cs = m.initState
 }
 
 // ParseLine parses a line of input and returns true if more data can be

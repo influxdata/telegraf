@@ -34,7 +34,9 @@ fi
 DEFAULT=/etc/default/telegraf
 
 if [ -r $DEFAULT ]; then
+    set -o allexport
     source $DEFAULT
+    set +o allexport
 fi
 
 if [ -z "$STDOUT" ]; then

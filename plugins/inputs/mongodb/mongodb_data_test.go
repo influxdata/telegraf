@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"sort"
 	"testing"
 	"time"
 
@@ -33,6 +34,10 @@ func TestAddNonReplStats(t *testing.T) {
 			NumConnections:   0,
 			Passes:           0,
 			DeletedDocuments: 0,
+			TimedOutC:        0,
+			NoTimeoutC:       0,
+			PinnedC:          0,
+			TotalC:           0,
 		},
 		tags,
 	)
@@ -120,6 +125,43 @@ func TestAddShardStats(t *testing.T) {
 	}
 }
 
+func TestAddShardHostStats(t *testing.T) {
+	expectedHosts := []string{"hostA", "hostB"}
+	hostStatLines := map[string]ShardHostStatLine{}
+	for _, host := range expectedHosts {
+		hostStatLines[host] = ShardHostStatLine{
+			InUse:      0,
+			Available:  0,
+			Created:    0,
+			Refreshing: 0,
+		}
+	}
+
+	d := NewMongodbData(
+		&StatLine{
+			ShardHostStatsLines: hostStatLines,
+		},
+		map[string]string{}, // Use empty tags, so we don't break existing tests
+	)
+
+	var acc testutil.Accumulator
+	d.AddShardHostStats()
+	d.flush(&acc)
+
+	var hostsFound []string
+	for host, _ := range hostStatLines {
+		for key, _ := range ShardHostStats {
+			assert.True(t, acc.HasInt64Field("mongodb_shard_stats", key))
+		}
+
+		assert.True(t, acc.HasTag("mongodb_shard_stats", "hostname"))
+		hostsFound = append(hostsFound, host)
+	}
+	sort.Strings(hostsFound)
+	sort.Strings(expectedHosts)
+	assert.Equal(t, hostsFound, expectedHosts)
+}
+
 func TestStateTag(t *testing.T) {
 	d := NewMongodbData(
 		&StatLine{
@@ -162,6 +204,7 @@ func TestStateTag(t *testing.T) {
 		"repl_queries_per_sec":  int64(0),
 		"repl_updates_per_sec":  int64(0),
 		"repl_lag":              int64(0),
+		"repl_oplog_window_sec": int64(0),
 		"resident_megabytes":    int64(0),
 		"updates_per_sec":       int64(0),
 		"vsize_megabytes":       int64(0),
@@ -172,6 +215,10 @@ func TestStateTag(t *testing.T) {
 		"total_available":       int64(0),
 		"total_created":         int64(0),
 		"total_refreshing":      int64(0),
+		"cursor_timed_out":      int64(0),
+		"cursor_no_timeout":     int64(0),
+		"cursor_pinned":         int64(0),
+		"cursor_total":          int64(0),
 	}
 	acc.AssertContainsTaggedFields(t, "mongodb", fields, stateTags)
 }

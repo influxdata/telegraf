@@ -958,3 +958,27 @@ func TestTimezoneLocalCompileFileAndParse(t *testing.T) {
 	assert.Equal(t, map[string]string{}, metricB.Tags())
 	assert.Equal(t, time.Date(2016, time.June, 4, 12, 41, 45, 0, time.Local).UnixNano(), metricB.Time().UnixNano())
 }
+
+func TestNewlineInPatterns(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{`
+			%{SYSLOGTIMESTAMP:timestamp}
+		`},
+	}
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("Apr 10 05:11:57")
+	require.NoError(t, err)
+	require.NotNil(t, m)
+}
+
+func TestSyslogTimestampParser(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{`%{SYSLOGTIMESTAMP:timestamp:ts-syslog} value=%{NUMBER:value:int}`},
+		timeFunc: func() time.Time { return time.Date(2018, time.April, 1, 0, 0, 0, 0, nil) },
+	}
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("Sep 25 09:01:55 value=42")
+	require.NoError(t, err)
+	require.NotNil(t, m)
+	require.Equal(t, 2018, m.Time().Year())
+}

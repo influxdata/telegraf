@@ -66,11 +66,16 @@ func (d *MockDialer) DialContext(ctx context.Context, network string, address st
 }
 
 type MockSerializer struct {
-	SerializeF func(metric telegraf.Metric) ([]byte, error)
+	SerializeF      func(metric telegraf.Metric) ([]byte, error)
+	SerializeBatchF func(metrics []telegraf.Metric) ([]byte, error)
 }
 
 func (s *MockSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 	return s.SerializeF(metric)
+}
+
+func (s *MockSerializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+	return s.SerializeBatchF(metrics)
 }
 
 func TestUDP_NewUDPClientNoURL(t *testing.T) {
@@ -197,7 +202,7 @@ func TestUDP_SerializeError(t *testing.T) {
 }
 
 func TestUDP_WriteWithRealConn(t *testing.T) {
-	conn, err := net.ListenPacket("udp", ":0")
+	conn, err := net.ListenPacket("udp", "127.0.0.0:0")
 	require.NoError(t, err)
 
 	metrics := []telegraf.Metric{

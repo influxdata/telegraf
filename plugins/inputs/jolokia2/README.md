@@ -2,7 +2,9 @@
 
 The [Jolokia](http://jolokia.org) _agent_ and _proxy_ input plugins collect JMX metrics from an HTTP endpoint using Jolokia's [JSON-over-HTTP protocol](https://jolokia.org/reference/html/protocol.html).
 
-## Jolokia Agent Configuration
+### Configuration:
+
+#### Jolokia Agent Configuration
 
 The `jolokia2_agent` input plugin reads JMX metrics from one or more [Jolokia agent](https://jolokia.org/agent/jvm.html) REST endpoints.
 
@@ -16,14 +18,14 @@ The `jolokia2_agent` input plugin reads JMX metrics from one or more [Jolokia ag
     paths = ["Uptime"]
 ```
 
-Optionally, specify SSL options for communicating with agents:
+Optionally, specify TLS options for communicating with agents:
 
 ```toml
 [[inputs.jolokia2_agent]]
   urls = ["https://agent:8080/jolokia"]
-  ssl_ca   = "/var/private/ca.pem"
-  ssl_cert = "/var/private/client.pem"
-  ssl_key  = "/var/private/client-key.pem"
+  tls_ca   = "/var/private/ca.pem"
+  tls_cert = "/var/private/client.pem"
+  tls_key  = "/var/private/client-key.pem"
   #insecure_skip_verify = false
 
   [[inputs.jolokia2_agent.metric]]
@@ -32,7 +34,7 @@ Optionally, specify SSL options for communicating with agents:
     paths = ["Uptime"]
 ```
 
-## Jolokia Proxy Configuration
+#### Jolokia Proxy Configuration
 
 The `jolokia2_proxy` input plugin reads JMX metrics from one or more _targets_ by interacting with a [Jolokia proxy](https://jolokia.org/features/proxy.html) REST endpoint.
 
@@ -53,15 +55,15 @@ The `jolokia2_proxy` input plugin reads JMX metrics from one or more _targets_ b
     paths = ["Uptime"]
 ```
 
-Optionally, specify SSL options for communicating with proxies:
+Optionally, specify TLS options for communicating with proxies:
 
 ```toml
 [[inputs.jolokia2_proxy]]
   url = "https://proxy:8080/jolokia"
 
-  ssl_ca   = "/var/private/ca.pem"
-  ssl_cert = "/var/private/client.pem"
-  ssl_key  = "/var/private/client-key.pem"
+  tls_ca   = "/var/private/ca.pem"
+  tls_cert = "/var/private/client.pem"
+  tls_key  = "/var/private/client-key.pem"
   #insecure_skip_verify = false
 
   #default_target_username = ""
@@ -77,7 +79,7 @@ Optionally, specify SSL options for communicating with proxies:
     paths = ["Uptime"]
 ```
 
-## Jolokia Metric Configuration
+#### Jolokia Metric Configuration
 
 Each `metric` declaration generates a Jolokia request to fetch telemetry from a JMX MBean.
 
@@ -167,3 +169,17 @@ Both `jolokia2_agent` and `jolokia2_proxy` plugins support default configuration
 | `default_field_separator` | `.`           | A character to use to join Mbean attributes when creating fields. |
 | `default_field_prefix`    | _None_        | A string to prepend to the field names produced by all `metric` declarations. |
 | `default_tag_prefix`      | _None_        | A string to prepend to the tag names produced by all `metric` declarations. |
+
+### Example Configurations:
+
+- [ActiveMQ](/plugins/inputs/jolokia2/examples/activemq.conf)
+- [BitBucket](/plugins/inputs/jolokia2/examples/bitbucket.conf)
+- [Cassandra](/plugins/inputs/jolokia2/examples/cassandra.conf)
+- [Hadoop-HDFS](/plugins/inputs/jolokia2/examples/hadoop-hdfs.conf)
+- [Java JVM](/plugins/inputs/jolokia2/examples/java.conf)
+- [JBoss](/plugins/inputs/jolokia2/examples/jboss.conf)
+- [Kafka](/plugins/inputs/jolokia2/examples/kafka.conf)
+- [Tomcat](/plugins/inputs/jolokia2/examples/tomcat.conf)
+- [Weblogic](/plugins/inputs/jolokia2/examples/weblogic.conf)
+
+Please help improve this list and contribute new configuration files by opening an issue or pull request.

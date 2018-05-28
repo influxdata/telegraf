@@ -10,13 +10,15 @@ type TimeFunc func() time.Time
 
 type Builder struct {
 	TimeFunc
+	TimePrecision time.Duration
 
 	*metric
 }
 
 func NewBuilder() *Builder {
 	b := &Builder{
-		TimeFunc: time.Now,
+		TimeFunc:      time.Now,
+		TimePrecision: 1 * time.Nanosecond,
 	}
 	b.Reset()
 	return b
@@ -44,7 +46,7 @@ func (b *Builder) Reset() {
 
 func (b *Builder) Metric() (telegraf.Metric, error) {
 	if b.tm.IsZero() {
-		b.tm = b.TimeFunc()
+		b.tm = b.TimeFunc().Truncate(b.TimePrecision)
 	}
 
 	return b.metric, nil

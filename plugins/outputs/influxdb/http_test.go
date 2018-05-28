@@ -46,6 +46,17 @@ func TestHTTP_MinimalConfig(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestHTTP_UnsupportedScheme(t *testing.T) {
+	config := &influxdb.HTTPConfig{
+		URL: &url.URL{
+			Scheme: "foo",
+			Host:   "localhost",
+		},
+	}
+	_, err := influxdb.NewHTTPClient(config)
+	require.Error(t, err)
+}
+
 func TestHTTP_CreateDatabase(t *testing.T) {
 	ts := httptest.NewServer(http.NotFoundHandler())
 	defer ts.Close()
@@ -575,9 +586,6 @@ func TestHTTP_UnixSocket(t *testing.T) {
 	ts.Listener = listener
 	ts.Start()
 	defer ts.Close()
-
-	x, _ := url.Parse("unix://" + sock)
-	fmt.Println(x)
 
 	successResponse := []byte(`{"results": [{"statement_id": 0}]}`)
 

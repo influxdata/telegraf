@@ -203,11 +203,6 @@ func (a *Agent) Test() error {
 		input.SetTrace(true)
 		input.SetDefaultTags(a.Config.Tags)
 
-		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name())
-		if input.Config.Interval != 0 {
-			fmt.Printf("* Internal: %s\n", input.Config.Interval)
-		}
-
 		if err := input.Input.Gather(acc); err != nil {
 			return err
 		}
@@ -217,7 +212,6 @@ func (a *Agent) Test() error {
 		switch input.Name() {
 		case "inputs.cpu", "inputs.mongodb", "inputs.procstat":
 			time.Sleep(500 * time.Millisecond)
-			fmt.Printf("* Plugin: %s, Collection 2\n", input.Name())
 			if err := input.Input.Gather(acc); err != nil {
 				return err
 			}
