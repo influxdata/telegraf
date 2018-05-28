@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	constants "github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/plugins/aggregators"
+	util "github.com/influxdata/telegraf/utility"
 )
 
 type AzureMetrics struct {
@@ -150,32 +150,32 @@ func (m *AzureMetrics) Push(acc telegraf.Accumulator) {
 			//we are treating each field in the measurement as a measurement itself, with its own fields and tags
 			fields := map[string]interface{}{}
 			if config.count {
-				fields[constants.SAMPLE_COUNT] = v.count
+				fields[util.SAMPLE_COUNT] = v.count
 			}
 			if config.min {
-				fields[constants.MIN_SAMPLE] = v.min
+				fields[util.MIN_SAMPLE] = v.min
 			}
 			if config.max {
-				fields[constants.MAX_SAMPLE] = v.max
+				fields[util.MAX_SAMPLE] = v.max
 			}
 			if config.mean {
-				fields[constants.MEAN] = v.mean
+				fields[util.MEAN] = v.mean
 			}
 			if config.lastSample {
-				fields[constants.LAST_SAMPLE] = v.lastSample
+				fields[util.LAST_SAMPLE] = v.lastSample
 			}
 			if config.beginningTimestamp {
-				fields[constants.BEGIN_TIMESTAMP] = v.beginningTimestamp
+				fields[util.BEGIN_TIMESTAMP] = v.beginningTimestamp
 			}
 			if config.totalSum {
-				fields[constants.TOTAL] = v.totalSum
+				fields[util.TOTAL] = v.totalSum
 			}
 			if config.endTimestamp {
-				fields[constants.END_TIMESTAMP] = v.endTimestamp
+				fields[util.END_TIMESTAMP] = v.endTimestamp
 			}
-			fields[constants.COUNTER_NAME] = k
+			fields[util.COUNTER_NAME] = k
 			tags := aggregate.tags
-			tags[constants.PERIOD] = m.Period
+			tags[util.PERIOD] = m.Period
 			acc.AddFields(k, fields, tags)
 		}
 	}

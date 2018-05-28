@@ -5,6 +5,8 @@ import (
 	"time"
 
 	storage "github.com/Azure/azure-sdk-for-go/storage"
+	testutil "github.com/influxdata/telegraf/testutil"
+	util "github.com/influxdata/telegraf/utility"
 	assert "github.com/stretchr/testify/assert"
 )
 
@@ -19,59 +21,17 @@ func getAzureTableStorageObj() AzureTableStorage {
 	}
 	return azureTableStorageObj
 }
-func getNumOfSeconds() int64 {
-	return int64(1524115802)
-}
-func getMicroSeconds() int64 {
-	return int64(0)
-}
-func getFileTime() int64 {
-	return int64(131685894020000000)
-}
 
-//Test conversion of mdsdtime to filetime
-func TestToFileTime(t *testing.T) {
-	azureTableStorageObj := getAzureTableStorageObj()
-
-	numOfSeconds := getNumOfSeconds()
-	numOfMicroSeconds := getMicroSeconds()
-
-	mdsdTime := MdsdTime{numOfSeconds, numOfMicroSeconds}
-
-	actualFileTime, er := azureTableStorageObj.toFileTime(mdsdTime)
-	expectedFileTime := getFileTime()
-	assert.Nil(t, er)
-	assert.Equal(t, expectedFileTime, actualFileTime)
-
-	//test integer overflow
-	mdsdTime.seconds = int64(9223372036854775807)
-	actualFileTime, er = azureTableStorageObj.toFileTime(mdsdTime)
-	assert.NotNil(t, er)
-}
-
-func TestToMdsdTime(t *testing.T) {
-	azureTableStorageObj := getAzureTableStorageObj()
-
-	fileTime := getFileTime()
-	actualMdsdTime := azureTableStorageObj.toMdsdTime(fileTime)
-
-	numOfSeconds := getNumOfSeconds()
-	numOfMicroSeconds := getMicroSeconds()
-	expectedMdsdTime := MdsdTime{seconds: numOfSeconds, microSeconds: numOfMicroSeconds}
-
-	assert.Equal(t, expectedMdsdTime, actualMdsdTime)
-}
 func TestGetTableSuffix(t *testing.T) {
-	azureTableStorageObj := getAzureTableStorageObj()
-	numOfSeconds := getNumOfSeconds()
-	actualSuffix, er := azureTableStorageObj.getTableDateSuffix(numOfSeconds)
+	numOfSeconds := testutil.GetNumOfSeconds()
+	actualSuffix, er := getTableDateSuffix(numOfSeconds)
 	expectedSuffix := "20180415"
 	assert.Equal(t, expectedSuffix, actualSuffix)
 	assert.Nil(t, er)
 
 	//invalid number of seconds
 	invalidNumOfSeconds := int64(-123)
-	actualSuffix, er = azureTableStorageObj.getTableDateSuffix(invalidNumOfSeconds)
+	actualSuffix, er = getTableDateSuffix(invalidNumOfSeconds)
 	assert.NotNil(t, er)
 
 	//tableSuffix should change by 10 days
@@ -79,32 +39,19 @@ func TestGetTableSuffix(t *testing.T) {
 	time := time.Unix(numOfSeconds, 0)
 	timeAfter12Days := time.AddDate(0, 0, 12)
 	numOfSecondsAfter12Days := timeAfter12Days.Unix()
-	actualSuffix, er = azureTableStorageObj.getTableDateSuffix(numOfSecondsAfter12Days)
+	actualSuffix, er = getTableDateSuffix(numOfSecondsAfter12Days)
 
 	assert.Nil(t, er)
 	assert.Equal(t, expectedSuffix, actualSuffix)
 
 }
-func TestGetPeriodStr(t *testing.T) {
-	azureTableStorageObj := getAzureTableStorageObj()
-	validPeriod := "3672s"
-	actualPeriodStr, er := azureTableStorageObj.getPeriodStr(validPeriod)
-	expectedPeriodStr := "PT1H1M12S"
-	assert.Nil(t, er)
-	assert.Equal(t, expectedPeriodStr, actualPeriodStr)
-
-	//invalid period
-	invalidPeriod := "abcs"
-	actualPeriodStr, er = azureTableStorageObj.getPeriodStr(invalidPeriod)
-	assert.NotNil(t, er)
-}
 
 func TestGetAzurePeriodVsTableNameVsTableRefMap(t *testing.T) {
 	azureTableStorageObj := getAzureTableStorageObj()
 	tableServiceClient := storage.TableServiceClient{}
-	numberOfSeconds := getNumOfSeconds()
+	numberOfSeconds := testutil.GetNumOfSeconds()
 
-	actualMap, er := azureTableStorageObj.getAzurePeriodVsTableNameVsTableRefMap(numberOfSeconds, tableServiceClient)
+	actualMap, er := azureTableStorageObj.getAzureperiodVsTableNameVsTableRefMap(numberOfSeconds, tableServiceClient)
 	assert.Nil(t, er)
 
 	expectedMap := map[string]TableNameVsTableRef{}
@@ -123,24 +70,49 @@ func TestGetAzurePeriodVsTableNameVsTableRefMap(t *testing.T) {
 	assert.Equal(t, expectedMap, actualMap)
 }
 
-func TestEncodeSpecialCharacterToUTF16(t *testing.T) {
-	azureTableStorageObj := getAzureTableStorageObj()
-	resourceId := azureTableStorageObj.ResourceId
-	actualEncodedResourceId := azureTableStorageObj.encodeSpecialCharacterToUTF16(resourceId)
-	expectedEncodedResourceId := "dummy:002FsubscriptionId:002FresourceGroup:002FVMScaleset"
-	assert.Equal(t, expectedEncodedResourceId, actualEncodedResourceId)
-}
+func TestValidateRow(t *testing.T) {
+	columnsInTable := []string{}
+	columnsInTable = append(columnsInTable, util.MEAN)
+	columnsInTable = append(columnsInTable, util.SAMPLE_COUNT)
+	columnsInTable = append(columnsInTable, util.COUNTER_NAME)
+	columnsInTable = append(columnsInTable, util.DEPLOYMENT_ID)
+	columnsInTable = append(columnsInTable, util.HOST)
+	columnsInTable = append(columnsInTable, util.LAST_SAMPLE)
+	columnsInTable = append(columnsInTable, util.MAX_SAMPLE)
+	columnsInTable = append(columnsInTable, util.MIN_SAMPLE)
+	columnsInTable = append(columnsInTable, util.BEGIN_TIMESTAMP)
+	columnsInTable = append(columnsInTable, util.END_TIMESTAMP)
+	columnsInTable = append(columnsInTable, util.TOTAL)
 
-func TestGetUTCTicks_DescendingOrder(t *testing.T) {
-	azureTableStorageObj := getAzureTableStorageObj()
-	timestamp := "19/04/2018 12:20:00 PM"
-	actualTicks, er := azureTableStorageObj.getUTCTicks_DescendingOrder(timestamp)
-	expectedTicks := uint64(3140137571999999999)
-	assert.Nil(t, er)
-	assert.Equal(t, expectedTicks, actualTicks)
+	//invalid: len of prop != len of valid columns, props has invalid column
+	props := make(map[string]interface{})
+	props["InValidColumn"] = "value"
+	isValid := validateRow(columnsInTable, props)
+	assert.False(t, isValid)
 
-	//invalid timestamp
-	timestamp = "3140137571999999999"
-	actualTicks, er = azureTableStorageObj.getUTCTicks_DescendingOrder(timestamp)
-	assert.NotNil(t, er)
+	//invalid: len of prop != len of valid columns, props has invalid column
+	props1 := make(map[string]interface{})
+	for i := range columnsInTable {
+		props1[columnsInTable[i]+"Invalid"] = "invalid"
+	}
+	isValid = validateRow(columnsInTable, props1)
+	assert.False(t, isValid)
+
+	//invalid with empty value
+	props2 := make(map[string]interface{})
+	for i := range columnsInTable {
+		props2[columnsInTable[i]] = ""
+	}
+	props2[columnsInTable[0]] = float64(0) // valid value
+	isValid = validateRow(columnsInTable, props2)
+	assert.False(t, isValid)
+
+	//valid props
+	props3 := make(map[string]interface{})
+	for i := range columnsInTable {
+		props3[columnsInTable[i]] = "valid"
+	}
+	props3[columnsInTable[0]] = float64(0) // valid value
+	isValid = validateRow(columnsInTable, props3)
+	assert.True(t, isValid)
 }
