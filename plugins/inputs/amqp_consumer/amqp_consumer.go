@@ -10,7 +10,7 @@ import (
 	"github.com/streadway/amqp"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -31,14 +31,7 @@ type AMQPConsumer struct {
 
 	// AMQP Auth method
 	AuthMethod string
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	parser parsers.Parser
 	conn   *amqp.Connection
@@ -78,11 +71,11 @@ func (a *AMQPConsumer) SampleConfig() string {
   ## described here: https://www.rabbitmq.com/plugins.html
   # auth_method = "PLAIN"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Data format to consume.
@@ -108,8 +101,7 @@ func (a *AMQPConsumer) Gather(_ telegraf.Accumulator) error {
 
 func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 	// make new tls config
-	tls, err := internal.GetTLSConfig(
-		a.SSLCert, a.SSLKey, a.SSLCA, a.InsecureSkipVerify)
+	tls, err := a.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -145,23 +137,25 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 	go a.process(msgs, acc)
 
 	go func() {
-		err := <-a.conn.NotifyClose(make(chan *amqp.Error))
-		if err == nil {
-			return
-		}
-
-		log.Printf("I! AMQP consumer connection closed: %s; trying to reconnect", err)
 		for {
-			msgs, err := a.connect(amqpConf)
-			if err != nil {
-				log.Printf("E! AMQP connection failed: %s", err)
-				time.Sleep(10 * time.Second)
-				continue
+			err := <-a.conn.NotifyClose(make(chan *amqp.Error))
+			if err == nil {
+				break
 			}
 
-			a.wg.Add(1)
-			go a.process(msgs, acc)
-			break
+			log.Printf("I! AMQP consumer connection closed: %s; trying to reconnect", err)
+			for {
+				msgs, err := a.connect(amqpConf)
+				if err != nil {
+					log.Printf("E! AMQP connection failed: %s", err)
+					time.Sleep(10 * time.Second)
+					continue
+				}
+
+				a.wg.Add(1)
+				go a.process(msgs, acc)
+				break
+			}
 		}
 	}()
 

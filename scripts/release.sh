@@ -20,6 +20,7 @@ run gzip telegraf -c > "$ARTIFACT_DIR/telegraf.gz"
 
 # RPM is used to build packages for Enterprise Linux hosts.
 # Boto is used to upload packages to S3.
+run sudo apt-get update
 run sudo apt-get install -y rpm python-boto ruby ruby-dev autoconf libtool
 run sudo gem install fpm
 

@@ -1,12 +1,11 @@
 package models
 
 import (
-	"fmt"
-	"math"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -45,77 +44,17 @@ func TestMakeMetricNilFields(t *testing.T) {
 		telegraf.Untyped,
 		now,
 	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
-		m.String(),
-	)
-}
 
-// make an untyped, counter, & gauge metric
-func TestMakeMetric(t *testing.T) {
-	now := time.Now()
-	ri := NewRunningInput(&testInput{}, &InputConfig{
-		Name: "TestRunningInput",
-	})
-
-	ri.SetTrace(true)
-	assert.Equal(t, true, ri.Trace())
-	assert.Equal(t, "inputs.TestRunningInput", ri.Name())
-
-	m := ri.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
+	expected, err := metric.New("RITest",
 		map[string]string{},
-		telegraf.Untyped,
+		map[string]interface{}{
+			"value": int(101),
+		},
 		now,
 	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
-		m.String(),
-	)
-	assert.Equal(
-		t,
-		m.Type(),
-		telegraf.Untyped,
-	)
+	require.NoError(t, err)
 
-	m = ri.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
-		map[string]string{},
-		telegraf.Counter,
-		now,
-	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
-		m.String(),
-	)
-	assert.Equal(
-		t,
-		m.Type(),
-		telegraf.Counter,
-	)
-
-	m = ri.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
-		map[string]string{},
-		telegraf.Gauge,
-		now,
-	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
-		m.String(),
-	)
-	assert.Equal(
-		t,
-		m.Type(),
-		telegraf.Gauge,
-	)
+	require.Equal(t, expected, m)
 }
 
 func TestMakeMetricWithPluginTags(t *testing.T) {
@@ -137,11 +76,18 @@ func TestMakeMetricWithPluginTags(t *testing.T) {
 		telegraf.Untyped,
 		now,
 	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest,foo=bar value=101i %d\n", now.UnixNano()),
-		m.String(),
+
+	expected, err := metric.New("RITest",
+		map[string]string{
+			"foo": "bar",
+		},
+		map[string]interface{}{
+			"value": 101,
+		},
+		now,
 	)
+	require.NoError(t, err)
+	require.Equal(t, expected, m)
 }
 
 func TestMakeMetricFilteredOut(t *testing.T) {
@@ -187,87 +133,17 @@ func TestMakeMetricWithDaemonTags(t *testing.T) {
 		telegraf.Untyped,
 		now,
 	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest,foo=bar value=101i %d\n", now.UnixNano()),
-		m.String(),
-	)
-}
-
-// make an untyped, counter, & gauge metric
-func TestMakeMetricInfFields(t *testing.T) {
-	inf := math.Inf(1)
-	ninf := math.Inf(-1)
-	now := time.Now()
-	ri := NewRunningInput(&testInput{}, &InputConfig{
-		Name: "TestRunningInput",
-	})
-
-	ri.SetTrace(true)
-	assert.Equal(t, true, ri.Trace())
-
-	m := ri.MakeMetric(
-		"RITest",
-		map[string]interface{}{
-			"value": int(101),
-			"inf":   inf,
-			"ninf":  ninf,
+	expected, err := metric.New("RITest",
+		map[string]string{
+			"foo": "bar",
 		},
-		map[string]string{},
-		telegraf.Untyped,
+		map[string]interface{}{
+			"value": 101,
+		},
 		now,
 	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
-		m.String(),
-	)
-}
-
-func TestMakeMetricAllFieldTypes(t *testing.T) {
-	now := time.Now()
-	ri := NewRunningInput(&testInput{}, &InputConfig{
-		Name: "TestRunningInput",
-	})
-
-	ri.SetTrace(true)
-	assert.Equal(t, true, ri.Trace())
-
-	m := ri.MakeMetric(
-		"RITest",
-		map[string]interface{}{
-			"a": int(10),
-			"b": int8(10),
-			"c": int16(10),
-			"d": int32(10),
-			"e": uint(10),
-			"f": uint8(10),
-			"g": uint16(10),
-			"h": uint32(10),
-			"i": uint64(10),
-			"j": float32(10),
-			"k": uint64(9223372036854775810),
-			"l": "foobar",
-			"m": true,
-		},
-		map[string]string{},
-		telegraf.Untyped,
-		now,
-	)
-	assert.Contains(t, m.String(), "a=10i")
-	assert.Contains(t, m.String(), "b=10i")
-	assert.Contains(t, m.String(), "c=10i")
-	assert.Contains(t, m.String(), "d=10i")
-	assert.Contains(t, m.String(), "e=10i")
-	assert.Contains(t, m.String(), "f=10i")
-	assert.Contains(t, m.String(), "g=10i")
-	assert.Contains(t, m.String(), "h=10i")
-	assert.Contains(t, m.String(), "i=10i")
-	assert.Contains(t, m.String(), "j=10")
-	assert.NotContains(t, m.String(), "j=10i")
-	assert.Contains(t, m.String(), "k=9223372036854775807i")
-	assert.Contains(t, m.String(), "l=\"foobar\"")
-	assert.Contains(t, m.String(), "m=true")
+	require.NoError(t, err)
+	require.Equal(t, expected, m)
 }
 
 func TestMakeMetricNameOverride(t *testing.T) {
@@ -284,11 +160,15 @@ func TestMakeMetricNameOverride(t *testing.T) {
 		telegraf.Untyped,
 		now,
 	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("foobar value=101i %d\n", now.UnixNano()),
-		m.String(),
+	expected, err := metric.New("foobar",
+		nil,
+		map[string]interface{}{
+			"value": 101,
+		},
+		now,
 	)
+	require.NoError(t, err)
+	require.Equal(t, expected, m)
 }
 
 func TestMakeMetricNamePrefix(t *testing.T) {
@@ -305,11 +185,15 @@ func TestMakeMetricNamePrefix(t *testing.T) {
 		telegraf.Untyped,
 		now,
 	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("foobar_RITest value=101i %d\n", now.UnixNano()),
-		m.String(),
+	expected, err := metric.New("foobar_RITest",
+		nil,
+		map[string]interface{}{
+			"value": 101,
+		},
+		now,
 	)
+	require.NoError(t, err)
+	require.Equal(t, expected, m)
 }
 
 func TestMakeMetricNameSuffix(t *testing.T) {
@@ -326,134 +210,15 @@ func TestMakeMetricNameSuffix(t *testing.T) {
 		telegraf.Untyped,
 		now,
 	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest_foobar value=101i %d\n", now.UnixNano()),
-		m.String(),
+	expected, err := metric.New("RITest_foobar",
+		nil,
+		map[string]interface{}{
+			"value": 101,
+		},
+		now,
 	)
-}
-
-func TestMakeMetric_TrailingSlash(t *testing.T) {
-	now := time.Now()
-
-	tests := []struct {
-		name                string
-		measurement         string
-		fields              map[string]interface{}
-		tags                map[string]string
-		expectedNil         bool
-		expectedMeasurement string
-		expectedFields      map[string]interface{}
-		expectedTags        map[string]string
-	}{
-		{
-			name:        "Measurement cannot have trailing slash",
-			measurement: `cpu\`,
-			fields: map[string]interface{}{
-				"value": int64(42),
-			},
-			tags:        map[string]string{},
-			expectedNil: true,
-		},
-		{
-			name:        "Field key with trailing slash dropped",
-			measurement: `cpu`,
-			fields: map[string]interface{}{
-				"value": int64(42),
-				`bad\`:  `xyzzy`,
-			},
-			tags:                map[string]string{},
-			expectedMeasurement: `cpu`,
-			expectedFields: map[string]interface{}{
-				"value": int64(42),
-			},
-			expectedTags: map[string]string{},
-		},
-		{
-			name:        "Field value with trailing slash okay",
-			measurement: `cpu`,
-			fields: map[string]interface{}{
-				"value": int64(42),
-				"ok":    `xyzzy\`,
-			},
-			tags:                map[string]string{},
-			expectedMeasurement: `cpu`,
-			expectedFields: map[string]interface{}{
-				"value": int64(42),
-				"ok":    `xyzzy\`,
-			},
-			expectedTags: map[string]string{},
-		},
-		{
-			name:        "Must have one field after dropped",
-			measurement: `cpu`,
-			fields: map[string]interface{}{
-				"bad": math.NaN(),
-			},
-			tags:        map[string]string{},
-			expectedNil: true,
-		},
-		{
-			name:        "Tag key with trailing slash dropped",
-			measurement: `cpu`,
-			fields: map[string]interface{}{
-				"value": int64(42),
-			},
-			tags: map[string]string{
-				`host\`: "localhost",
-				"a":     "x",
-			},
-			expectedMeasurement: `cpu`,
-			expectedFields: map[string]interface{}{
-				"value": int64(42),
-			},
-			expectedTags: map[string]string{
-				"a": "x",
-			},
-		},
-		{
-			name:        "Tag value with trailing slash dropped",
-			measurement: `cpu`,
-			fields: map[string]interface{}{
-				"value": int64(42),
-			},
-			tags: map[string]string{
-				`host`: `localhost\`,
-				"a":    "x",
-			},
-			expectedMeasurement: `cpu`,
-			expectedFields: map[string]interface{}{
-				"value": int64(42),
-			},
-			expectedTags: map[string]string{
-				"a": "x",
-			},
-		},
-	}
-
-	ri := NewRunningInput(&testInput{}, &InputConfig{
-		Name: "TestRunningInput",
-	})
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			m := ri.MakeMetric(
-				tc.measurement,
-				tc.fields,
-				tc.tags,
-				telegraf.Untyped,
-				now)
-
-			if tc.expectedNil {
-				require.Nil(t, m)
-			} else {
-				require.NotNil(t, m)
-				require.Equal(t, tc.expectedMeasurement, m.Name())
-				require.Equal(t, tc.expectedFields, m.Fields())
-				require.Equal(t, tc.expectedTags, m.Tags())
-			}
-		})
-	}
+	require.NoError(t, err)
+	require.Equal(t, expected, m)
 }
 
 type testInput struct{}
