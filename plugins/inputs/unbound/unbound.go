@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool) (*bytes.Buffer, error)
+type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool, ResetStats bool) (*bytes.Buffer, error)
 
 // Unbound is used to store configuration values
 type Unbound struct {
@@ -26,6 +26,7 @@ type Unbound struct {
 	UseSudo     bool
 	Server      string
 	ThreadAsTag bool
+	ResetStats  bool
 
 	filter filter.Filter
 	run    runner
@@ -54,6 +55,9 @@ var sampleConfig = `
   ## true in a future version.  It is recommended to set to true on new
   ## deployments.
   thread_as_tag = false
+
+  ## When set to true metrics are reset each time they are collected
+  reset_stats = false
 `
 
 // Description displays what this plugin is about
@@ -67,8 +71,13 @@ func (s *Unbound) SampleConfig() string {
 }
 
 // Shell out to unbound_stat and return the output
-func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool) (*bytes.Buffer, error) {
-	cmdArgs := []string{"stats_noreset"}
+func unboundRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool, ResetStats bool) (*bytes.Buffer, error) {
+	cmdArgs := []string{}
+	if ResetStats {
+		cmdArgs = append(cmdArgs, "stats")
+	} else {
+		cmdArgs = append(cmdArgs, "stats_noreset")
+	}
 
 	if Server != "" {
 		host, port, err := net.SplitHostPort(Server)
@@ -125,7 +134,7 @@ func (s *Unbound) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	out, err := s.run(s.Binary, s.Timeout, s.UseSudo, s.Server, s.ThreadAsTag)
+	out, err := s.run(s.Binary, s.Timeout, s.UseSudo, s.Server, s.ThreadAsTag, s.ResetStats)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}
@@ -207,6 +216,7 @@ func init() {
 			UseSudo:     false,
 			Server:      "",
 			ThreadAsTag: false,
+			ResetStats:  false,
 		}
 	})
 }
