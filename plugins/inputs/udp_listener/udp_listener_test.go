@@ -47,11 +47,13 @@ func TestHighTrafficUDP(t *testing.T) {
 		ServiceAddress:         ":8126",
 		AllowedPendingMessages: 100000,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
 
 	// send multiple messages to socket
-	err := listener.Start(acc)
+	err = listener.Start(acc)
 	require.NoError(t, err)
 
 	conn, err := net.Dial("udp", "127.0.0.1:8126")

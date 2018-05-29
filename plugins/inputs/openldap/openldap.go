@@ -8,7 +8,7 @@ import (
 	"gopkg.in/ldap.v2"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -36,7 +36,7 @@ const sampleConfig string = `
   insecure_skip_verify = false
 
   # Path to PEM-encoded Root certificate to use to verify server certificate
-  ssl_ca = "/etc/ssl/certs.pem"
+  tls_ca = "/etc/ssl/certs.pem"
 
   # dn/password to bind with. If bind_dn is empty, an anonymous bind is performed.
   bind_dn = ""
@@ -85,7 +85,11 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 	var l *ldap.Conn
 	if o.Ssl != "" {
 		// build tls config
-		tlsConfig, err := internal.GetTLSConfig("", "", o.SslCa, o.InsecureSkipVerify)
+		clientTLSConfig := tls.ClientConfig{
+			SSLCA:              o.SslCa,
+			InsecureSkipVerify: o.InsecureSkipVerify,
+		}
+		tlsConfig, err := clientTLSConfig.TLSConfig()
 		if err != nil {
 			acc.AddError(err)
 			return nil

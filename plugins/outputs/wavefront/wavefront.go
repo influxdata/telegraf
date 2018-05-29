@@ -9,9 +9,10 @@ import (
 	"strconv"
 	"strings"
 
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"time"
 )
 
 type Wavefront struct {
@@ -126,7 +127,6 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		for _, metricPoint := range buildMetrics(m, w) {
 			metricLine := formatMetricPoint(metricPoint, w)
-			log.Printf("D! Output [wavefront] %s", metricLine)
 			_, err := connection.Write([]byte(metricLine))
 			if err != nil {
 				return fmt.Errorf("Wavefront: TCP writing error %s", err.Error())
@@ -160,7 +160,7 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricPoint {
 
 		metric := &MetricPoint{
 			Metric:    name,
-			Timestamp: m.UnixNano() / 1000000000,
+			Timestamp: m.Time().Unix(),
 		}
 
 		metricValue, buildError := buildValue(value, metric.Metric, w)
