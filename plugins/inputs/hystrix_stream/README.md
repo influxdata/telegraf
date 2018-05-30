@@ -12,7 +12,7 @@ generate it using `telegraf --usage hystrix-stream`.
 ```toml
 [[inputs.HystrixStream]]
 ## Hystrix stream servlet to connect to (with port and full path)
-   hystrix_servlet_url = "http://localhost:8090/hystrix"
+   url = "http://localhost:8090/hystrix"
 ```
 
 ### Metrics:
