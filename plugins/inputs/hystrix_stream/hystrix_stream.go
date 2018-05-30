@@ -1,18 +1,19 @@
 package hystrix_stream
 
 import (
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"time"
 )
 
 const sampleConfig = `
   ## Hystrix stream servlet to connect to (with port and full path)
-  hystrix_servlet_url = "http://localhost:8090/hystrix"
+  url = "http://localhost:8090/hystrix"
  `
 
 type HystrixData struct {
-	Hystrix_servlet_url string
+	Url string
 }
 
 func (s *HystrixData) Description() string {
@@ -25,7 +26,7 @@ func (s *HystrixData) SampleConfig() string {
 
 func (s *HystrixData) Gather(acc telegraf.Accumulator) error {
 
-	entries, errors := latestEntries(s.Hystrix_servlet_url)
+	entries, errors := latestEntries(s.Url)
 	if errors != nil {
 		return errors
 	}
@@ -74,6 +75,21 @@ func getCounterFields(entry HystrixStreamEntry) map[string]interface{} {
 	fields["LatencyExecute100"] = entry.LatencyExecute.Num100
 	fields["ReportingHosts"] = entry.ReportingHosts
 	fields["ErrorPercentage"] = entry.ErrorPercentage
+	fields["RollingCountBadRequests"] = entry.RollingCountBadRequests
+	fields["RollingCountCollapsedRequests"] = entry.RollingCountCollapsedRequests
+	fields["RollingCountEmit"] = entry.RollingCountEmit
+	fields["RollingCountExceptionsThrown"] = entry.RollingCountExceptionsThrown
+	fields["RollingCountFailure"] = entry.RollingCountFailure
+	fields["RollingCountFallbackFailure"] = entry.RollingCountFallbackFailure
+	fields["RollingCountFallbackRejection"] = entry.RollingCountFallbackRejection
+	fields["RollingCountFallbackSuccess"] = entry.RollingCountFallbackSuccess
+	fields["RollingCountResponsesFromCache"] = entry.RollingCountResponsesFromCache
+	fields["RollingCountSemaphoreRejected"] = entry.RollingCountSemaphoreRejected
+	fields["RollingCountShortCircuited"] = entry.RollingCountShortCircuited
+	fields["RollingCountSuccess"] = entry.RollingCountSuccess
+	fields["RollingCountThreadPoolRejected"] = entry.RollingCountThreadPoolRejected
+	fields["RollingCountTimeout"] = entry.RollingCountTimeout
+	fields["RollingMaxConcurrentExecutionCount"] = entry.RollingMaxConcurrentExecutionCount
 	fields["IsCircuitBreakerOpen"] = entry.IsCircuitBreakerOpen
 	fields["CurrentConcurrentExecutionCount"] = entry.CurrentConcurrentExecutionCount
 	return fields

@@ -36,7 +36,6 @@ type HystrixStreamEntry struct {
 	RollingCountTimeout                int    `json:"rollingCountTimeout"`
 	CurrentConcurrentExecutionCount    int    `json:"currentConcurrentExecutionCount"`
 	RollingMaxConcurrentExecutionCount int    `json:"rollingMaxConcurrentExecutionCount"`
-	LatencyExecuteMean                 int    `json:"latencyExecute_mean"`
 	LatencyExecute                     struct {
 		Num0   int `json:"0"`
 		Num25  int `json:"25"`
@@ -48,8 +47,7 @@ type HystrixStreamEntry struct {
 		Num100 int `json:"100"`
 		Nine95 int `json:"99.5"`
 	} `json:"latencyExecute"`
-	LatencyTotalMean int `json:"latencyTotal_mean"`
-	LatencyTotal     struct {
+	LatencyTotal struct {
 		Num0   int `json:"0"`
 		Num25  int `json:"25"`
 		Num50  int `json:"50"`
@@ -60,24 +58,8 @@ type HystrixStreamEntry struct {
 		Num100 int `json:"100"`
 		Nine95 int `json:"99.5"`
 	} `json:"latencyTotal"`
-	PropertyValueCircuitBreakerRequestVolumeThreshold             int         `json:"propertyValue_circuitBreakerRequestVolumeThreshold"`
-	PropertyValueCircuitBreakerSleepWindowInMilliseconds          int         `json:"propertyValue_circuitBreakerSleepWindowInMilliseconds"`
-	PropertyValueCircuitBreakerErrorThresholdPercentage           int         `json:"propertyValue_circuitBreakerErrorThresholdPercentage"`
-	PropertyValueCircuitBreakerForceOpen                          bool        `json:"propertyValue_circuitBreakerForceOpen"`
-	PropertyValueCircuitBreakerForceClosed                        bool        `json:"propertyValue_circuitBreakerForceClosed"`
-	PropertyValueCircuitBreakerEnabled                            bool        `json:"propertyValue_circuitBreakerEnabled"`
-	PropertyValueExecutionIsolationStrategy                       string      `json:"propertyValue_executionIsolationStrategy"`
-	PropertyValueExecutionIsolationThreadTimeoutInMilliseconds    int         `json:"propertyValue_executionIsolationThreadTimeoutInMilliseconds"`
-	PropertyValueExecutionTimeoutInMilliseconds                   int         `json:"propertyValue_executionTimeoutInMilliseconds"`
-	PropertyValueExecutionIsolationThreadInterruptOnTimeout       bool        `json:"propertyValue_executionIsolationThreadInterruptOnTimeout"`
-	PropertyValueExecutionIsolationThreadPoolKeyOverride          interface{} `json:"propertyValue_executionIsolationThreadPoolKeyOverride"`
-	PropertyValueExecutionIsolationSemaphoreMaxConcurrentRequests int         `json:"propertyValue_executionIsolationSemaphoreMaxConcurrentRequests"`
-	PropertyValueFallbackIsolationSemaphoreMaxConcurrentRequests  int         `json:"propertyValue_fallbackIsolationSemaphoreMaxConcurrentRequests"`
-	PropertyValueMetricsRollingStatisticalWindowInMilliseconds    int         `json:"propertyValue_metricsRollingStatisticalWindowInMilliseconds"`
-	PropertyValueRequestCacheEnabled                              bool        `json:"propertyValue_requestCacheEnabled"`
-	PropertyValueRequestLogEnabled                                bool        `json:"propertyValue_requestLogEnabled"`
-	ReportingHosts                                                int         `json:"reportingHosts"`
-	ThreadPool                                                    string      `json:"threadPool"`
+	ReportingHosts int    `json:"reportingHosts"`
+	ThreadPool     string `json:"threadPool"`
 }
 
 var (
@@ -100,7 +82,6 @@ func latestEntries(url string) ([]HystrixStreamEntry, error) {
 		cachedEntries = make([]HystrixStreamEntry, 0)
 		go fillCacheForever(scanner)
 		healthy = true
-		log.Printf("I! Initialized hystrix-input with url : [%s]", url)
 	}
 
 	if scanner.Err() != nil {
@@ -126,23 +107,32 @@ func fillCacheForever(scanner *bufio.Scanner) {
 
 func fillCacheForeverMax(scanner *bufio.Scanner, maxEntries int) {
 	newEntryCounter := 0
+
 	for scanner.Err() == nil {
 		chunks := streamToStrings(scanner)
-		for _, chunk := range chunks {
-			entries, err := parseChunk(chunk)
-			if err == nil {
-				for _, entry := range entries {
-					cacheLock.Lock()
-					cachedEntries = append(cachedEntries, entry)
-					newEntryCounter++
-					cacheLock.Unlock()
-				}
+		entries, err := parseChunk(chunks)
+		if err == nil {
+			for _, entry := range entries {
+				cacheLock.Lock()
+				cachedEntries = append(cachedEntries, entry)
+				newEntryCounter++
+				cacheLock.Unlock()
 			}
 		}
 		if newEntryCounter >= maxEntries {
 			return
 		}
 	}
+}
+
+func streamToStrings(scanner *bufio.Scanner) string {
+	for scanner.Scan() {
+		text := scanner.Text()
+		if text != "" {
+			return text
+		}
+	}
+	return ""
 }
 
 func parseChunk(streamChunk string) ([]HystrixStreamEntry, error) {
@@ -164,20 +154,4 @@ func parseChunk(streamChunk string) ([]HystrixStreamEntry, error) {
 	}
 
 	return entries, nil
-}
-
-func streamToStrings(scanner *bufio.Scanner) []string {
-	result := make([]string, 0)
-	for scanner.Scan() {
-		text := scanner.Text()
-		if isData(text) {
-			result = append(result, scanner.Text())
-			break
-		}
-	}
-	return result
-}
-
-func isData(i string) bool {
-	return len(i) > 0
 }
