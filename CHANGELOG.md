@@ -1,3 +1,75 @@
+## v1.7 [unreleased]
+
+### Release Notes
+
+- The `cassandra` input plugin has been deprecated in favor of the `jolokia2`
+  input plugin which is much more configurable and more performant.  There is
+  an [example configuration](./plugins/inputs/jolokia2/examples) to help you
+  get started.
+
+- For plugins supporting TLS, you can now specify the certificate and keys
+  using `tls_ca`, `tls_cert`, `tls_key`.  These options behave the same as
+  the, now deprecated, `ssl` forms.
+
+### New Inputs
+
+- [aurora](./plugins/inputs/aurora/README.md) - Contributed by @influxdata
+- [burrow](./plugins/inputs/burrow/README.md) - Contributed by @arkady-emelyanov
+- [fibaro](./plugins/inputs/fibaro/README.md) - Contributed by @dynek
+- [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry/README.md) - Contributed by @ajhai
+- [mcrouter](./plugins/inputs/mcrouter/README.md) - Contributed by @cthayer
+- [nvidia_smi](./plugins/inputs/nvidia_smi/README.md) - Contributed by @jackzampolin
+- [syslog](./plugins/inputs/syslog/README.md) - Contributed by @influxdata
+
+### New Processors
+
+- [converter](./plugins/processors/converter/README.md) - Contributed by @influxdata
+- [regex](./plugins/processors/regex/README.md) - Contributed by @44px
+- [topk](./plugins/processors/topk/README.md) - Contributed by @mirath
+
+### New Outputs
+
+- [http](./plugins/outputs/http/README.md) - Contributed by @Dark0096
+- [application_insights](./plugins/outputs/application_insights/README.md): Contribute by @karolz-ms
+
+### Features
+
+- [#3964](https://github.com/influxdata/telegraf/pull/3964): Add repl_oplog_window_sec metric to mongodb input.
+- [#3819](https://github.com/influxdata/telegraf/pull/3819): Add per-host shard metrics in mongodb input.
+- [#3999](https://github.com/influxdata/telegraf/pull/3999): Skip files with leading `..` in config directory.
+- [#4021](https://github.com/influxdata/telegraf/pull/4021): Add TLS support to socket_writer and socket_listener plugins.
+- [#4025](https://github.com/influxdata/telegraf/pull/4025): Add snmp input option to strip non fixed length index suffixes.
+- [#4035](https://github.com/influxdata/telegraf/pull/4035): Add server version tag to docker input.
+- [#4044](https://github.com/influxdata/telegraf/pull/4044): Add support for LeoFS 1.4 to leofs input.
+- [#4068](https://github.com/influxdata/telegraf/pull/4068): Add parameter to force the interval of gather for sysstat.
+- [#3877](https://github.com/influxdata/telegraf/pull/3877): Support busybox ping in the ping input.
+- [#4077](https://github.com/influxdata/telegraf/pull/4077): Add input plugin for McRouter.
+- [#4096](https://github.com/influxdata/telegraf/pull/4096): Add topk processor plugin.
+- [#4114](https://github.com/influxdata/telegraf/pull/4114): Add cursor metrics to mongodb input.
+- [#3455](https://github.com/influxdata/telegraf/pull/3455): Add tag/integer pair for result to net_response.
+- [#4010](https://github.com/influxdata/telegraf/pull/3455): Add application_insights output plugin.
+- [#4167](https://github.com/influxdata/telegraf/pull/4167): Added several important elasticsearch cluster health metrics.
+- [#4094](https://github.com/influxdata/telegraf/pull/4094): Add batch mode to mqtt output.
+- [#4158](https://github.com/influxdata/telegraf/pull/4158): Add aurora input plugin.
+- [#3839](https://github.com/influxdata/telegraf/pull/3839): Add regex processor plugin.
+- [#4165](https://github.com/influxdata/telegraf/pull/4165): Add support for Graphite 1.1 tags.
+- [#4162](https://github.com/influxdata/telegraf/pull/4162): Add timeout option to sensors input.
+- [#3489](https://github.com/influxdata/telegraf/pull/3489): Add burrow input plugin.
+- [#3969](https://github.com/influxdata/telegraf/pull/3969): Add option to unbound module to use threads as tags.
+- [#4183](https://github.com/influxdata/telegraf/pull/4183): Add support for TLS and username/password auth to aerospike input.
+- [#4190](https://github.com/influxdata/telegraf/pull/4190): Add special syslog timestamp parser to grok parser that uses current year.
+- [#4181](https://github.com/influxdata/telegraf/pull/4181): Add syslog input plugin.
+
+### Bugfixes
+
+- [#4018](https://github.com/influxdata/telegraf/pull/4018): Write to working file outputs if any files are not writeable.
+- [#4036](https://github.com/influxdata/telegraf/pull/4036): Add all win_perf_counters fields for a series in a single metric.
+- [#4118](https://github.com/influxdata/telegraf/pull/4118): Report results of dns_query instead of 0ms on timeout.
+- [#4155](https://github.com/influxdata/telegraf/pull/4155): Add consul service tags to metric.
+- [#2879](https://github.com/influxdata/telegraf/issues/2879): Fix wildcards and multi instance processes in win_perf_counters.
+- [#2468](https://github.com/influxdata/telegraf/issues/2468): Fix crash on 32-bit Windows in win_perf_counters.
+- [#4203](https://github.com/influxdata/telegraf/issues/4203): Fix snmp overriding of auto-configured table fields.
+
 ## v1.6.3 [2018-05-21]
 
 ### Bugfixes
