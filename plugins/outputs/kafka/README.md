@@ -5,6 +5,8 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
 ### Configuration:
 ```toml
 [[outputs.kafka]]
+  ## Kafka version (optimize batch sending in the latest version of kafka + allow use LZ4 compression)
+  # version = "0.8.2.0"
   ## URLs of kafka brokers
   brokers = ["localhost:9092"]
   ## Kafka topic for producer messages
@@ -46,6 +48,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ##  0 : No compression
   ##  1 : Gzip compression
   ##  2 : Snappy compression
+  ##  3 : LZ4 compression
   # compression_codec = 0
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many
@@ -67,6 +70,10 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## The maximum number of times to retry sending a metric before failing
   ## until the next flush.
   # max_retry = 3
+
+  ## When true, metrics will be sent in one message per flush.  Otherwise,
+  ## metrics are written one metric per message.
+  # batch = false
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
