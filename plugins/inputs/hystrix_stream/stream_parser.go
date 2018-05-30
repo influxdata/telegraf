@@ -109,8 +109,8 @@ func fillCacheForeverMax(scanner *bufio.Scanner, maxEntries int) {
 	newEntryCounter := 0
 
 	for scanner.Err() == nil {
-		chunks := streamToStrings(scanner)
-		entries, err := parseChunk(chunks)
+		entry := firstNonEmptyLine(scanner)
+		entries, err := parseChunk(entry)
 		if err == nil {
 			for _, entry := range entries {
 				cacheLock.Lock()
@@ -125,7 +125,7 @@ func fillCacheForeverMax(scanner *bufio.Scanner, maxEntries int) {
 	}
 }
 
-func streamToStrings(scanner *bufio.Scanner) string {
+func firstNonEmptyLine(scanner *bufio.Scanner) string {
 	for scanner.Scan() {
 		text := scanner.Text()
 		if text != "" {
