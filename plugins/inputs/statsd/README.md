@@ -5,11 +5,19 @@
 ```toml
 # Statsd Server
 [[inputs.statsd]]
-  ## Protocol, must be "tcp" or "udp" (default=udp)
+  ## Protocol, must be "tcp", "udp4", "udp6" or "udp" (default=udp)
   protocol = "udp"
 
   ## MaxTCPConnection - applicable when protocol is set to tcp (default=250)
   max_tcp_connections = 250
+  
+  ## Enable TCP keep alive probes (default=false)
+  tcp_keep_alive = false
+
+  ## Specifies the keep-alive period for an active network connection.
+  ## Only applies to TCP sockets and will be ignored if tcp_keep_alive is false.
+  ## Defaults to the OS configuration.
+  # tcp_keep_alive_period = "2h"
 
   ## Address and port to host UDP listener on
   service_address = ":8125"
@@ -157,6 +165,8 @@ metric type:
 - **protocol** string: Protocol used in listener - tcp or udp options
 - **max_tcp_connections** []int: Maximum number of concurrent TCP connections
 to allow. Used when protocol is set to tcp.
+- **tcp_keep_alive** boolean: Enable TCP keep alive probes
+- **tcp_keep_alive_period** internal.Duration: Specifies the keep-alive period for an active network connection
 - **service_address** string: Address to listen for statsd UDP packets on
 - **delete_gauges** boolean: Delete gauges on every collection interval
 - **delete_counters** boolean: Delete counters on every collection interval

@@ -2,29 +2,24 @@ package postgresql_extensible
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
 	"log"
-	"regexp"
 	"strings"
 
 	// register in driver.
 	_ "github.com/jackc/pgx/stdlib"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/postgresql"
 )
 
 type Postgresql struct {
-	Address          string
-	Outputaddress    string
-	Databases        []string
-	OrderedColumns   []string
-	AllColumns       []string
-	AdditionalTags   []string
-	sanitizedAddress string
-	Query            []struct {
+	postgresql.Service
+	Databases      []string
+	AdditionalTags []string
+	Query          []struct {
 		Sqlquery    string
 		Version     int
 		Withdbname  bool
@@ -58,14 +53,20 @@ var sampleConfig = `
   ## to grab metrics for.
   #
   address = "host=localhost user=postgres sslmode=disable"
+
+  ## connection configuration.
+  ## maxlifetime - specify the maximum lifetime of a connection.
+  ## default is forever (0s)
+  max_lifetime = "0s"
+
   ## A list of databases to pull metrics about. If not specified, metrics for all
   ## databases are gathered.
   ## databases = ["app_production", "testing"]
   #
-  # outputaddress = "db01"
   ## A custom name for the database that will be used as the "server" tag in the
   ## measurement output. If not specified, a default one generated from
   ## the connection address is used.
+  # outputaddress = "db01"
   #
   ## Define the toml config where the sql queries are stored
   ## New queries can be added, if the withdbname is set to true and there is no
@@ -113,36 +114,25 @@ func (p *Postgresql) IgnoredColumns() map[string]bool {
 	return ignoredColumns
 }
 
-var localhost = "host=localhost sslmode=disable"
-
 func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 	var (
 		err         error
-		db          *sql.DB
 		sql_query   string
 		query_addon string
 		db_version  int
 		query       string
 		tag_value   string
 		meas_name   string
+		columns     []string
 	)
-
-	if p.Address == "" || p.Address == "localhost" {
-		p.Address = localhost
-	}
-
-	if db, err = sql.Open("pgx", p.Address); err != nil {
-		return err
-	}
-	defer db.Close()
 
 	// Retreiving the database version
 
 	query = `select substring(setting from 1 for 3) as version from pg_settings where name='server_version_num'`
-	err = db.QueryRow(query).Scan(&db_version)
-	if err != nil {
+	if err = p.DB.QueryRow(query).Scan(&db_version); err != nil {
 		db_version = 0
 	}
+
 	// We loop in order to process each query
 	// Query is not run if Database version does not match the query version.
 
@@ -168,7 +158,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 		sql_query += query_addon
 
 		if p.Query[i].Version <= db_version {
-			rows, err := db.Query(sql_query)
+			rows, err := p.DB.Query(sql_query)
 			if err != nil {
 				acc.AddError(err)
 				continue
@@ -177,15 +167,11 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			defer rows.Close()
 
 			// grab the column information from the result
-			p.OrderedColumns, err = rows.Columns()
-			if err != nil {
+			if columns, err = rows.Columns(); err != nil {
 				acc.AddError(err)
 				continue
-			} else {
-				for _, v := range p.OrderedColumns {
-					p.AllColumns = append(p.AllColumns, v)
-				}
 			}
+
 			p.AdditionalTags = nil
 			if tag_value != "" {
 				tag_list := strings.Split(tag_value, ",")
@@ -195,7 +181,7 @@ func (p *Postgresql) Gather(acc telegraf.Accumulator) error {
 			}
 
 			for rows.Next() {
-				err = p.accRow(meas_name, rows, acc)
+				err = p.accRow(meas_name, rows, acc, columns)
 				if err != nil {
 					acc.AddError(err)
 					break
@@ -210,27 +196,7 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-var KVMatcher, _ = regexp.Compile("(password|sslcert|sslkey|sslmode|sslrootcert)=\\S+ ?")
-
-func (p *Postgresql) SanitizedAddress() (_ string, err error) {
-	if p.Outputaddress != "" {
-		return p.Outputaddress, nil
-	}
-	var canonicalizedAddress string
-	if strings.HasPrefix(p.Address, "postgres://") || strings.HasPrefix(p.Address, "postgresql://") {
-		canonicalizedAddress, err = postgresql.ParseURL(p.Address)
-		if err != nil {
-			return p.sanitizedAddress, err
-		}
-	} else {
-		canonicalizedAddress = p.Address
-	}
-	p.sanitizedAddress = KVMatcher.ReplaceAllString(canonicalizedAddress, "")
-
-	return p.sanitizedAddress, err
-}
-
-func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumulator) error {
+func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumulator, columns []string) error {
 	var (
 		err        error
 		columnVars []interface{}
@@ -241,13 +207,13 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 	// this is where we'll store the column name with its *interface{}
 	columnMap := make(map[string]*interface{})
 
-	for _, column := range p.OrderedColumns {
+	for _, column := range columns {
 		columnMap[column] = new(interface{})
 	}
 
 	// populate the array of interface{} with the pointers in the right order
 	for i := 0; i < len(columnMap); i++ {
-		columnVars = append(columnVars, columnMap[p.OrderedColumns[i]])
+		columnVars = append(columnVars, columnMap[columns[i]])
 	}
 
 	// deconstruct array of variables and send to Scan
@@ -275,7 +241,7 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 	fields := make(map[string]interface{})
 COLUMN:
 	for col, val := range columnMap {
-		log.Printf("D! postgresql_extensible: column: %s = %T: %s\n", col, *val, *val)
+		log.Printf("D! postgresql_extensible: column: %s = %T: %v\n", col, *val, *val)
 		_, ignore := ignoredColumns[col]
 		if ignore || *val == nil {
 			continue
@@ -310,6 +276,14 @@ COLUMN:
 
 func init() {
 	inputs.Add("postgresql_extensible", func() telegraf.Input {
-		return &Postgresql{}
+		return &Postgresql{
+			Service: postgresql.Service{
+				MaxIdle: 1,
+				MaxOpen: 1,
+				MaxLifetime: internal.Duration{
+					Duration: 0,
+				},
+			},
+		}
 	})
 }

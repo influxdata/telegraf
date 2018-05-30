@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -23,7 +24,8 @@ var (
 )
 
 type Kernel struct {
-	statFile string
+	statFile        string
+	entropyStatFile string
 }
 
 func (k *Kernel) Description() string {
@@ -33,12 +35,26 @@ func (k *Kernel) Description() string {
 func (k *Kernel) SampleConfig() string { return "" }
 
 func (k *Kernel) Gather(acc telegraf.Accumulator) error {
+
 	data, err := k.getProcStat()
 	if err != nil {
 		return err
 	}
 
+	entropyData, err := ioutil.ReadFile(k.entropyStatFile)
+	if err != nil {
+		return err
+	}
+
+	entropyString := string(entropyData)
+	entropyValue, err := strconv.ParseInt(strings.TrimSpace(entropyString), 10, 64)
+	if err != nil {
+		return err
+	}
+
 	fields := make(map[string]interface{})
+
+	fields["entropy_avail"] = int64(entropyValue)
 
 	dataFields := bytes.Fields(data)
 	for i, field := range dataFields {
@@ -104,7 +120,8 @@ func (k *Kernel) getProcStat() ([]byte, error) {
 func init() {
 	inputs.Add("kernel", func() telegraf.Input {
 		return &Kernel{
-			statFile: "/proc/stat",
+			statFile:        "/proc/stat",
+			entropyStatFile: "/proc/sys/kernel/random/entropy_avail",
 		}
 	})
 }

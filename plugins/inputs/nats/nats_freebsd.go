@@ -1,0 +1,3 @@
+// +build freebsd
+
+package nats

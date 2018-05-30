@@ -10,7 +10,9 @@ The plugin expects messages in the
 ```toml
 # Read metrics from MQTT topic(s)
 [[inputs.mqtt_consumer]]
-  servers = ["localhost:1883"]
+  ## MQTT broker URLs to be used. The format should be scheme://host:port,
+  ## schema can be tcp, ssl, or ws.
+  servers = ["tcp://localhost:1883"]
   ## MQTT QoS, must be 0, 1, or 2
   qos = 0
   ## Connection timeout for initial connection in seconds
@@ -34,11 +36,11 @@ The plugin expects messages in the
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Data format to consume.

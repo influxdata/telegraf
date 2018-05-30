@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"time"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
@@ -67,7 +69,7 @@ var sampleConfig = `
   #use_regex = false
 
   ## point tags to use as the source name for Wavefront (if none found, host will be used)
-  #source_override = ["hostname", "snmp_host", "node_host"]
+  #source_override = ["hostname", "agent_host", "node_host"]
 
   ## whether to convert boolean values to numeric values, with false -> 0.0 and true -> 1.0.  default true
   #convert_bool = true
@@ -120,11 +122,11 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 		return fmt.Errorf("Wavefront: TCP connect fail %s", err.Error())
 	}
 	defer connection.Close()
+	connection.SetWriteDeadline(time.Now().Add(5 * time.Second))
 
 	for _, m := range metrics {
 		for _, metricPoint := range buildMetrics(m, w) {
 			metricLine := formatMetricPoint(metricPoint, w)
-			log.Printf("D! Output [wavefront] %s", metricLine)
 			_, err := connection.Write([]byte(metricLine))
 			if err != nil {
 				return fmt.Errorf("Wavefront: TCP writing error %s", err.Error())
@@ -158,7 +160,7 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricPoint {
 
 		metric := &MetricPoint{
 			Metric:    name,
-			Timestamp: m.UnixNano() / 1000000000,
+			Timestamp: m.Time().Unix(),
 		}
 
 		metricValue, buildError := buildValue(value, metric.Metric, w)

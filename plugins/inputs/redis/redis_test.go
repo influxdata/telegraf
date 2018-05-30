@@ -86,6 +86,7 @@ func TestRedis_ParseMetrics(t *testing.T) {
 		"repl_backlog_size":              int64(1048576),
 		"repl_backlog_first_byte_offset": int64(0),
 		"repl_backlog_histlen":           int64(0),
+		"second_repl_offset":             int64(-1),
 		"used_cpu_sys":                   float64(0.14),
 		"used_cpu_user":                  float64(0.05),
 		"used_cpu_sys_children":          float64(0.00),
@@ -189,7 +190,10 @@ latest_fork_usec:0
 # Replication
 role:master
 connected_slaves:0
+master_replid:8c4d7b768b26826825ceb20ff4a2c7c54616350b
+master_replid2:0000000000000000000000000000000000000000
 master_repl_offset:0
+second_repl_offset:-1
 repl_backlog_active:0
 repl_backlog_size:1048576
 repl_backlog_first_byte_offset:0

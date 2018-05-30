@@ -30,7 +30,7 @@ Using the environment variable `HOST_PROC` the plugin will retrieve process info
     - zombie
     - dead
     - wait (freebsd only)
-    - idle (bsd only)
+    - idle (bsd and Linux 4+ only)
     - paging (linux only)
     - total_threads (linux only)
 
@@ -47,7 +47,7 @@ Linux  FreeBSD  Darwin  meaning
   Z       Z       Z     zombie
   X      none    none   dead
   T       T       T     stopped
- none     I       I     idle (sleeping for longer than about 20 seconds)
+  I       I       I     idle (sleeping for longer than about 20 seconds)
   D      D,L      U     blocked (waiting in uninterruptible sleep, or locked)
   W       W      none   paging (linux kernel < 2.6 only), wait (freebsd)
 ```

@@ -42,6 +42,13 @@ func (a *Accumulator) NMetrics() uint64 {
 	return atomic.LoadUint64(&a.nMetrics)
 }
 
+func (a *Accumulator) FirstError() error {
+	if len(a.Errors) == 0 {
+		return nil
+	}
+	return a.Errors[0]
+}
+
 func (a *Accumulator) ClearMetrics() {
 	a.Lock()
 	defer a.Unlock()
@@ -65,8 +72,15 @@ func (a *Accumulator) AddFields(
 	if a.Discard {
 		return
 	}
-	if tags == nil {
-		tags = map[string]string{}
+
+	tagsCopy := map[string]string{}
+	for k, v := range tags {
+		tagsCopy[k] = v
+	}
+
+	fieldsCopy := map[string]interface{}{}
+	for k, v := range fields {
+		fieldsCopy[k] = v
 	}
 
 	if len(fields) == 0 {
@@ -91,7 +105,7 @@ func (a *Accumulator) AddFields(
 	p := &Metric{
 		Measurement: measurement,
 		Fields:      fields,
-		Tags:        tags,
+		Tags:        tagsCopy,
 		Time:        t,
 	}
 
@@ -120,6 +134,24 @@ func (a *Accumulator) AddMetrics(metrics []telegraf.Metric) {
 	for _, m := range metrics {
 		a.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 	}
+}
+
+func (a *Accumulator) AddSummary(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	timestamp ...time.Time,
+) {
+	a.AddFields(measurement, fields, tags, timestamp...)
+}
+
+func (a *Accumulator) AddHistogram(
+	measurement string,
+	fields map[string]interface{},
+	tags map[string]string,
+	timestamp ...time.Time,
+) {
+	a.AddFields(measurement, fields, tags, timestamp...)
 }
 
 // AddError appends the given error to Accumulator.Errors.
@@ -295,6 +327,31 @@ func (a *Accumulator) AssertContainsFields(
 	}
 	msg := fmt.Sprintf("unknown measurement %s", measurement)
 	assert.Fail(t, msg)
+}
+
+func (a *Accumulator) HasPoint(
+	measurement string,
+	tags map[string]string,
+	fieldKey string,
+	fieldValue interface{},
+) bool {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement != measurement {
+			continue
+		}
+
+		if !reflect.DeepEqual(tags, p.Tags) {
+			continue
+		}
+
+		v, ok := p.Fields[fieldKey]
+		if ok && reflect.DeepEqual(v, fieldValue) {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *Accumulator) AssertDoesNotContainMeasurement(t *testing.T, measurement string) {
@@ -485,6 +542,24 @@ func (a *Accumulator) Int64Field(measurement string, field string) (int64, bool)
 			for fieldname, value := range p.Fields {
 				if fieldname == field {
 					v, ok := value.(int64)
+					return v, ok
+				}
+			}
+		}
+	}
+
+	return 0, false
+}
+
+// Uint64Field returns the int64 value of the given measurement and field or false.
+func (a *Accumulator) Uint64Field(measurement string, field string) (uint64, bool) {
+	a.Lock()
+	defer a.Unlock()
+	for _, p := range a.Metrics {
+		if p.Measurement == measurement {
+			for fieldname, value := range p.Fields {
+				if fieldname == field {
+					v, ok := value.(uint64)
 					return v, ok
 				}
 			}

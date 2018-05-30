@@ -21,9 +21,10 @@ func TestMemStats(t *testing.T) {
 		Free:      1235,
 		Active:    8134,
 		Inactive:  1124,
+		Slab:      1234,
+		Wired:     134,
 		// Buffers:     771,
 		// Cached:      4312,
-		// Wired:       134,
 		// Shared:      2142,
 	}
 
@@ -54,6 +55,8 @@ func TestMemStats(t *testing.T) {
 		"buffered":          uint64(0),
 		"active":            uint64(8134),
 		"inactive":          uint64(1124),
+		"wired":             uint64(134),
+		"slab":              uint64(1234),
 	}
 	acc.AssertContainsTaggedFields(t, "mem", memfields, make(map[string]string))
 

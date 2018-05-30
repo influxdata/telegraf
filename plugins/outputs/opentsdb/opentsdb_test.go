@@ -183,7 +183,7 @@ func BenchmarkHttpSend(b *testing.B) {
 // 	err = o.Write(testutil.MockMetrics())
 // 	require.NoError(t, err)
 
-// 	// Verify postive and negative test cases of writing data
+// 	// Verify positive and negative test cases of writing data
 // 	metrics := testutil.MockMetrics()
 // 	metrics = append(metrics, testutil.TestMetric(float64(1.0),
 // 		"justametric.float"))

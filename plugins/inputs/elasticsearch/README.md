@@ -23,17 +23,39 @@ or [cluster-stats](https://www.elastic.co/guide/en/elasticsearch/reference/curre
   ## Set cluster_health to true when you want to also obtain cluster health stats
   cluster_health = false
 
-  ## Set cluster_stats to true when you want to obtain cluster stats from the 
-  ## Master node. 
+  ## Adjust cluster_health_level when you want to also obtain detailed health stats
+  ## The options are
+  ##  - indices (default)
+  ##  - cluster
+  # cluster_health_level = "indices"
+
+  ## Set cluster_stats to true when you want to also obtain cluster stats from the
+  ## Master node.
   cluster_stats = false
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## node_stats is a list of sub-stats that you want to have gathered. Valid options
+  ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",
+  ## "breaker". Per default, all stats are gathered.
+  # node_stats = ["jvm", "http"]
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 ```
+
+### Status mappings
+
+When reporting health (green/yellow/red), additional field `status_code`
+is reported. Field contains mapping from status:string to status_code:int
+with following rules:
+
+* `green` - 1
+* `yellow` - 2
+* `red` - 3
+* `unknown` - 0
 
 ### Measurements & Fields:
 

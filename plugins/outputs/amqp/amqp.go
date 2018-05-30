@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 
@@ -39,20 +40,17 @@ type AMQP struct {
 	Precision string
 	// Connection timeout
 	Timeout internal.Duration
+	// Delivery Mode controls if a published message is persistent
+	// Valid options are "transient" and "persistent". default: "transient"
+	DeliveryMode string
 
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	sync.Mutex
 	c *client
 
-	serializer serializers.Serializer
+	deliveryMode uint8
+	serializer   serializers.Serializer
 }
 
 type externalAuth struct{}
@@ -82,6 +80,9 @@ var sampleConfig = `
   ## Telegraf tag to use as a routing key
   ##  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
+  ## Delivery Mode controls if a published message is persistent
+  ## Valid options are "transient" and "persistent". default: "transient"
+  delivery_mode = "transient"
 
   ## InfluxDB retention policy
   # retention_policy = "default"
@@ -92,11 +93,11 @@ var sampleConfig = `
   ## to 5s. 0s means no timeout (not recommended).
   # timeout = "5s"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Data format to output.
@@ -111,6 +112,18 @@ func (a *AMQP) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (q *AMQP) Connect() error {
+	switch q.DeliveryMode {
+	case "transient":
+		q.deliveryMode = amqp.Transient
+		break
+	case "persistent":
+		q.deliveryMode = amqp.Persistent
+		break
+	default:
+		q.deliveryMode = amqp.Transient
+		break
+	}
+
 	headers := amqp.Table{
 		"database":         q.Database,
 		"retention_policy": q.RetentionPolicy,
@@ -118,8 +131,7 @@ func (q *AMQP) Connect() error {
 
 	var connection *amqp.Connection
 	// make new tls config
-	tls, err := internal.GetTLSConfig(
-		q.SSLCert, q.SSLKey, q.SSLCA, q.InsecureSkipVerify)
+	tls, err := q.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}
@@ -245,9 +257,10 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 			false,      // mandatory
 			false,      // immediate
 			amqp.Publishing{
-				Headers:     c.headers,
-				ContentType: "text/plain",
-				Body:        buf,
+				Headers:      c.headers,
+				ContentType:  "text/plain",
+				Body:         buf,
+				DeliveryMode: q.deliveryMode,
 			})
 		if err != nil {
 			return fmt.Errorf("Failed to send AMQP message: %s", err)

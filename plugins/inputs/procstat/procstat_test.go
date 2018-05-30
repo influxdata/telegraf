@@ -2,7 +2,12 @@ package procstat
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,6 +17,46 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func init() {
+	execCommand = mockExecCommand
+}
+func mockExecCommand(arg0 string, args ...string) *exec.Cmd {
+	args = append([]string{"-test.run=TestMockExecCommand", "--", arg0}, args...)
+	cmd := exec.Command(os.Args[0], args...)
+	cmd.Stderr = os.Stderr
+	return cmd
+}
+func TestMockExecCommand(t *testing.T) {
+	var cmd []string
+	for _, arg := range os.Args {
+		if string(arg) == "--" {
+			cmd = []string{}
+			continue
+		}
+		if cmd == nil {
+			continue
+		}
+		cmd = append(cmd, string(arg))
+	}
+	if cmd == nil {
+		return
+	}
+	cmdline := strings.Join(cmd, " ")
+
+	if cmdline == "systemctl show TestGather_systemdUnitPIDs" {
+		fmt.Printf(`PIDFile=
+GuessMainPID=yes
+MainPID=11408
+ControlPID=0
+ExecMainPID=11408
+`)
+		os.Exit(0)
+	}
+
+	fmt.Printf("command not found\n")
+	os.Exit(1)
+}
 
 type testPgrep struct {
 	pids []PID
@@ -291,4 +336,36 @@ func TestGather_PercentSecondPass(t *testing.T) {
 
 	assert.True(t, acc.HasFloatField("procstat", "cpu_time_user"))
 	assert.True(t, acc.HasFloatField("procstat", "cpu_usage"))
+}
+
+func TestGather_systemdUnitPIDs(t *testing.T) {
+	p := Procstat{
+		createPIDFinder: pidFinder([]PID{}, nil),
+		SystemdUnit:     "TestGather_systemdUnitPIDs",
+	}
+	pids, tags, err := p.findPids()
+	require.NoError(t, err)
+	assert.Equal(t, []PID{11408}, pids)
+	assert.Equal(t, "TestGather_systemdUnitPIDs", tags["systemd_unit"])
+}
+
+func TestGather_cgroupPIDs(t *testing.T) {
+	//no cgroups in windows
+	if runtime.GOOS == "windows" {
+		t.Skip("no cgroups in windows")
+	}
+	td, err := ioutil.TempDir("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(td)
+	err = ioutil.WriteFile(filepath.Join(td, "cgroup.procs"), []byte("1234\n5678\n"), 0644)
+	require.NoError(t, err)
+
+	p := Procstat{
+		createPIDFinder: pidFinder([]PID{}, nil),
+		CGroup:          td,
+	}
+	pids, tags, err := p.findPids()
+	require.NoError(t, err)
+	assert.Equal(t, []PID{1234, 5678}, pids)
+	assert.Equal(t, td, tags["cgroup"])
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
@@ -33,15 +34,7 @@ type MQTTConsumer struct {
 
 	PersistentSession bool
 	ClientID          string `toml:"client_id"`
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	sync.Mutex
 	client mqtt.Client
@@ -56,7 +49,10 @@ type MQTTConsumer struct {
 }
 
 var sampleConfig = `
-  servers = ["localhost:1883"]
+  ## MQTT broker URLs to be used. The format should be scheme://host:port,
+  ## schema can be tcp, ssl, or ws.
+  servers = ["tcp://localhost:1883"]
+
   ## MQTT QoS, must be 0, 1, or 2
   qos = 0
   ## Connection timeout for initial connection in seconds
@@ -80,11 +76,11 @@ var sampleConfig = `
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Data format to consume.
@@ -233,15 +229,12 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		opts.SetClientID(m.ClientID)
 	}
 
-	tlsCfg, err := internal.GetTLSConfig(
-		m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
+	tlsCfg, err := m.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	scheme := "tcp"
 	if tlsCfg != nil {
-		scheme = "ssl"
 		opts.SetTLSConfig(tlsCfg)
 	}
 
@@ -257,8 +250,17 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	if len(m.Servers) == 0 {
 		return opts, fmt.Errorf("could not get host infomations")
 	}
-	for _, host := range m.Servers {
-		server := fmt.Sprintf("%s://%s", scheme, host)
+
+	for _, server := range m.Servers {
+		// Preserve support for host:port style servers; deprecated in Telegraf 1.4.4
+		if !strings.Contains(server, "://") {
+			log.Printf("W! mqtt_consumer server %q should be updated to use `scheme://host:port` format", server)
+			if tlsCfg == nil {
+				server = "tcp://" + server
+			} else {
+				server = "ssl://" + server
+			}
+		}
 
 		opts.AddBroker(server)
 	}

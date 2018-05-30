@@ -76,7 +76,7 @@ func TestMemcachedGeneratesMetrics(t *testing.T) {
 	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
 	socket, err := net.Listen("unix", fmt.Sprintf("/tmp/pdns%d.controlsocket", randomNumber))
 	if err != nil {
-		t.Fatal("Cannot initalize server on port ")
+		t.Fatal("Cannot initialize server on port ")
 	}
 
 	defer socket.Close()

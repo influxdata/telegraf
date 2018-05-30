@@ -81,7 +81,7 @@ func TestIptables_Gather(t *testing.T) {
 		                K     4520 RETURN     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0
             `},
 		},
-		{ // 8 - Multiple rows, multipe chains => no error
+		{ // 8 - Multiple rows, multiple chains => no error
 			table:  "filter",
 			chains: []string{"INPUT", "FORWARD"},
 			values: []string{

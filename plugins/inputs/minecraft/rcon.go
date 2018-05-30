@@ -76,7 +76,7 @@ func newClient(server, port string) (*rcon.Client, error) {
 	return client, nil
 }
 
-// Gather recieves all player scoreboard information and returns it per player.
+// Gather receives all player scoreboard information and returns it per player.
 func (r *RCON) Gather(producer RCONClientProducer) ([]string, error) {
 	if r.client == nil {
 		var err error

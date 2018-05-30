@@ -143,7 +143,7 @@ func (a *Agent) gatherer(
 func gatherWithTimeout(
 	shutdown chan struct{},
 	input *models.RunningInput,
-	acc *accumulator,
+	acc telegraf.Accumulator,
 	timeout time.Duration,
 ) {
 	ticker := time.NewTicker(timeout)
@@ -203,11 +203,6 @@ func (a *Agent) Test() error {
 		input.SetTrace(true)
 		input.SetDefaultTags(a.Config.Tags)
 
-		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name())
-		if input.Config.Interval != 0 {
-			fmt.Printf("* Internal: %s\n", input.Config.Interval)
-		}
-
 		if err := input.Input.Gather(acc); err != nil {
 			return err
 		}
@@ -217,7 +212,6 @@ func (a *Agent) Test() error {
 		switch input.Name() {
 		case "inputs.cpu", "inputs.mongodb", "inputs.procstat":
 			time.Sleep(500 * time.Millisecond)
-			fmt.Printf("* Plugin: %s, Collection 2\n", input.Name())
 			if err := input.Input.Gather(acc); err != nil {
 				return err
 			}
@@ -252,7 +246,7 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric, ag
 	// the flusher will flush after metrics are collected.
 	time.Sleep(time.Millisecond * 300)
 
-	// create an output metric channel and a gorouting that continously passes
+	// create an output metric channel and a gorouting that continuously passes
 	// each metric onto the output plugins & aggregators.
 	outMetricC := make(chan telegraf.Metric, 100)
 	var wg sync.WaitGroup
@@ -271,11 +265,9 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric, ag
 				// if dropOriginal is set to true, then we will only send this
 				// metric to the aggregators, not the outputs.
 				var dropOriginal bool
-				if !m.IsAggregate() {
-					for _, agg := range a.Config.Aggregators {
-						if ok := agg.Add(m.Copy()); ok {
-							dropOriginal = true
-						}
+				for _, agg := range a.Config.Aggregators {
+					if ok := agg.Add(m.Copy()); ok {
+						dropOriginal = true
 					}
 				}
 				if !dropOriginal {
@@ -308,7 +300,13 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric, ag
 					metrics = processor.Apply(metrics...)
 				}
 				for _, m := range metrics {
-					outMetricC <- m
+					for i, o := range a.Config.Outputs {
+						if i == len(a.Config.Outputs)-1 {
+							o.AddMetric(m)
+						} else {
+							o.AddMetric(m.Copy())
+						}
+					}
 				}
 			}
 		}
@@ -364,8 +362,6 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	metricC := make(chan telegraf.Metric, 100)
 	aggC := make(chan telegraf.Metric, 100)
 
-	now := time.Now()
-
 	// Start all ServicePlugins
 	for _, input := range a.Config.Inputs {
 		input.SetDefaultTags(a.Config.Tags)
@@ -406,7 +402,7 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 			acc := NewAccumulator(agg, aggC)
 			acc.SetPrecision(a.Config.Agent.Precision.Duration,
 				a.Config.Agent.Interval.Duration)
-			agg.Run(acc, now, shutdown)
+			agg.Run(acc, shutdown)
 		}(aggregator)
 	}
 

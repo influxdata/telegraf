@@ -21,7 +21,7 @@ func newTestTcpListener() (*Statsd, chan *bytes.Buffer) {
 	in := make(chan *bytes.Buffer, 1500)
 	listener := &Statsd{
 		Protocol:               "tcp",
-		ServiceAddress:         ":8125",
+		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      250,
 		in:                     in,
@@ -50,7 +50,7 @@ func NewTestStatsd() *Statsd {
 func TestConcurrentConns(t *testing.T) {
 	listener := Statsd{
 		Protocol:               "tcp",
-		ServiceAddress:         ":8125",
+		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
 	}
@@ -59,7 +59,7 @@ func TestConcurrentConns(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
+	time.Sleep(time.Millisecond * 250)
 	_, err := net.Dial("tcp", "127.0.0.1:8125")
 	assert.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8125")
@@ -72,7 +72,7 @@ func TestConcurrentConns(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = conn.Write([]byte(testMsg))
 	assert.NoError(t, err)
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 100)
 	assert.Zero(t, acc.NFields())
 }
 
@@ -80,7 +80,7 @@ func TestConcurrentConns(t *testing.T) {
 func TestConcurrentConns1(t *testing.T) {
 	listener := Statsd{
 		Protocol:               "tcp",
-		ServiceAddress:         ":8125",
+		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      1,
 	}
@@ -89,7 +89,7 @@ func TestConcurrentConns1(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
+	time.Sleep(time.Millisecond * 250)
 	_, err := net.Dial("tcp", "127.0.0.1:8125")
 	assert.NoError(t, err)
 
@@ -100,7 +100,7 @@ func TestConcurrentConns1(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = conn.Write([]byte(testMsg))
 	assert.NoError(t, err)
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 100)
 	assert.Zero(t, acc.NFields())
 }
 
@@ -108,7 +108,7 @@ func TestConcurrentConns1(t *testing.T) {
 func TestCloseConcurrentConns(t *testing.T) {
 	listener := Statsd{
 		Protocol:               "tcp",
-		ServiceAddress:         ":8125",
+		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 10000,
 		MaxTCPConnections:      2,
 	}
@@ -116,7 +116,7 @@ func TestCloseConcurrentConns(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 
-	time.Sleep(time.Millisecond * 25)
+	time.Sleep(time.Millisecond * 250)
 	_, err := net.Dial("tcp", "127.0.0.1:8125")
 	assert.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8125")
@@ -129,7 +129,7 @@ func TestCloseConcurrentConns(t *testing.T) {
 func BenchmarkUDP(b *testing.B) {
 	listener := Statsd{
 		Protocol:               "udp",
-		ServiceAddress:         ":8125",
+		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 250000,
 	}
 	acc := &testutil.Accumulator{Discard: true}
@@ -141,7 +141,7 @@ func BenchmarkUDP(b *testing.B) {
 			panic(err)
 		}
 
-		time.Sleep(time.Millisecond * 25)
+		time.Sleep(time.Millisecond * 250)
 		conn, err := net.Dial("udp", "127.0.0.1:8125")
 		if err != nil {
 			panic(err)
@@ -159,7 +159,7 @@ func BenchmarkUDP(b *testing.B) {
 func BenchmarkTCP(b *testing.B) {
 	listener := Statsd{
 		Protocol:               "tcp",
-		ServiceAddress:         ":8125",
+		ServiceAddress:         "localhost:8125",
 		AllowedPendingMessages: 250000,
 		MaxTCPConnections:      250,
 	}
@@ -172,7 +172,7 @@ func BenchmarkTCP(b *testing.B) {
 			panic(err)
 		}
 
-		time.Sleep(time.Millisecond * 25)
+		time.Sleep(time.Millisecond * 250)
 		conn, err := net.Dial("tcp", "127.0.0.1:8125")
 		if err != nil {
 			panic(err)

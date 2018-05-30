@@ -80,6 +80,8 @@ Timestamp modifiers can be used to convert captures to the timestamp of the
 parsed metric.  If no timestamp is parsed the metric will be created using the
 current time.
 
+You must capture at least one field per line.
+
 - Available modifiers:
   - string   (default if nothing is specified)
   - int
@@ -100,18 +102,20 @@ current time.
   - ts-rfc3339       ("2006-01-02T15:04:05Z07:00")
   - ts-rfc3339nano   ("2006-01-02T15:04:05.999999999Z07:00")
   - ts-httpd         ("02/Jan/2006:15:04:05 -0700")
-  - ts-epoch         (seconds since unix epoch)
+  - ts-epoch         (seconds since unix epoch, may contain decimal)
   - ts-epochnano     (nanoseconds since unix epoch)
+  - ts-syslog        ("Jan 02 15:04:05", parsed time is set to the current year)
   - ts-"CUSTOM"
 
 CUSTOM time layouts must be within quotes and be the representation of the
 "reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`
 See https://golang.org/pkg/time/#Parse for more details.
 
-Telegraf has many of its own
-[built-in patterns](./grok/patterns/influx-patterns),
-as well as supporting
+Telegraf has many of its own [built-in patterns](./grok/patterns/influx-patterns),
+as well as support for most of
 [logstash's builtin patterns](https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns).
+_Golang regular expressions do not support lookahead or lookbehind.
+logstash patterns that depend on these are not supported._
 
 If you need help building patterns to match your logs,
 you will find the https://grokdebug.herokuapp.com application quite useful!
@@ -128,6 +132,19 @@ This example input and config parses a file using a custom timestamp conversion:
 [[inputs.logparser]]
   [inputs.logparser.grok]
     patterns = ['%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02 15:04:05"} value=%{NUMBER:value:int}']
+```
+
+This example input and config parses a file using a timestamp in unix time:
+
+```
+1466004605 value=42
+1466004605.123456789 value=42
+```
+
+```toml
+[[inputs.logparser]]
+  [inputs.logparser.grok]
+    patterns = ['%{NUMBER:timestamp:ts-epoch} value=%{NUMBER:value:int}']
 ```
 
 This example parses a file using a built-in conversion and a custom pattern:

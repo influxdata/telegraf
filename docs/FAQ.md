@@ -1,5 +1,24 @@
 # Frequently Asked Questions
 
+### Q: How can I monitor the Docker Engine Host from within a container?
+
+You will need to setup several volume mounts as well as some environment
+variables:
+```
+docker run --name telegraf
+	-v /:/hostfs:ro
+	-v /etc:/hostfs/etc:ro
+	-v /proc:/hostfs/proc:ro
+	-v /sys:/hostfs/sys:ro
+	-v /var/run/utmp:/var/run/utmp:ro
+	-e HOST_ETC=/hostfs/etc
+	-e HOST_PROC=/hostfs/proc
+	-e HOST_SYS=/hostfs/sys
+	-e HOST_MOUNT_PREFIX=/hostfs
+	telegraf
+```
+
+
 ### Q: Why do I get a "no such host" error resolving hostnames that other
 programs can resolve?
 
@@ -20,3 +39,8 @@ If running as a service add the environment variable to `/etc/default/telegraf`:
 ```
 GODEBUG=netdns=cgo
 ```
+
+### Q: When will the next version be released?
+
+The latest release date estimate can be viewed on the
+[milestones](https://github.com/influxdata/telegraf/milestones) page.

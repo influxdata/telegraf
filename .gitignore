@@ -1,8 +1,4 @@
-build
-tivan
-.vagrant
+/build
 /telegraf
-.idea
-.vscode
-*~
-*#
+/telegraf.exe
+/telegraf.gz

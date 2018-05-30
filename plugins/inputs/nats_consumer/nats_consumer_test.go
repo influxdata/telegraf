@@ -59,7 +59,7 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	in <- natsMsg(invalidMsg)
 
 	acc.WaitError(1)
-	assert.Contains(t, acc.Errors[0].Error(), "E! subject: telegraf, error:  metric parsing error")
+	assert.Contains(t, acc.Errors[0].Error(), "E! subject: telegraf, error: metric parse error")
 	assert.EqualValues(t, 0, acc.NMetrics())
 }
 
