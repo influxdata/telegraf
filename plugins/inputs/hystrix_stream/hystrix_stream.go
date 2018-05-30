@@ -3,10 +3,13 @@ package hystrix_stream
 import (
 	"bufio"
 	"io"
+	"net/http"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -22,6 +25,9 @@ type HystrixData struct {
 	cachedEntries []HystrixStreamEntry
 	reader        io.ReadCloser
 	cacheLock     sync.Mutex
+	client        *http.Client
+	Timeout       internal.Duration
+	tls.ClientConfig
 }
 
 func (s *HystrixData) Description() string {
@@ -34,6 +40,19 @@ func (s *HystrixData) SampleConfig() string {
 
 func (s *HystrixData) Gather(acc telegraf.Accumulator) error {
 
+	if s.client == nil {
+		tlsCfg, err := s.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+		s.client = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: tlsCfg,
+				Proxy:           http.ProxyFromEnvironment,
+			},
+			Timeout: s.Timeout.Duration,
+		}
+	}
 	entries, errors := s.latestEntries()
 	if errors != nil {
 		return errors
