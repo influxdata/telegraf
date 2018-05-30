@@ -3,5 +3,6 @@ tivan
 .vagrant
 /telegraf
 .idea
+.vscode
 *~
 *#
