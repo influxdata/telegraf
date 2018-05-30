@@ -68,6 +68,7 @@
 - [#4155](https://github.com/influxdata/telegraf/pull/4155): Add consul service tags to metric.
 - [#2879](https://github.com/influxdata/telegraf/issues/2879): Fix wildcards and multi instance processes in win_perf_counters.
 - [#2468](https://github.com/influxdata/telegraf/issues/2468): Fix crash on 32-bit Windows in win_perf_counters.
+- [#4203](https://github.com/influxdata/telegraf/issues/4203): Fix snmp overriding of auto-configured table fields.
 
 ## v1.6.3 [2018-05-21]
 
