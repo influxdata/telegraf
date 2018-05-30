@@ -59,6 +59,7 @@
 - [#4183](https://github.com/influxdata/telegraf/pull/4183): Add support for TLS and username/password auth to aerospike input.
 - [#4190](https://github.com/influxdata/telegraf/pull/4190): Add special syslog timestamp parser to grok parser that uses current year.
 - [#4181](https://github.com/influxdata/telegraf/pull/4181): Add syslog input plugin.
+- [#4212](https://github.com/influxdata/telegraf/pull/4212): Print the enabled aggregator and processor plugins on startup.
 
 ### Bugfixes
 
@@ -68,6 +69,7 @@
 - [#4155](https://github.com/influxdata/telegraf/pull/4155): Add consul service tags to metric.
 - [#2879](https://github.com/influxdata/telegraf/issues/2879): Fix wildcards and multi instance processes in win_perf_counters.
 - [#2468](https://github.com/influxdata/telegraf/issues/2468): Fix crash on 32-bit Windows in win_perf_counters.
+- [#4198](https://github.com/influxdata/telegraf/issues/4198): Fix win_perf_counters not collecting at every interval.
 - [#4203](https://github.com/influxdata/telegraf/issues/4203): Fix snmp overriding of auto-configured table fields.
 
 ## v1.6.3 [2018-05-21]
