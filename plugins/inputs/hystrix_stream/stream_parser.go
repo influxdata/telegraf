@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"log"
-	"net/http"
 	"strings"
 )
 
@@ -63,7 +62,7 @@ type HystrixStreamEntry struct {
 func (s *HystrixData) latestEntries() ([]HystrixStreamEntry, error) {
 
 	if !s.healthy {
-		resp, err := http.Get(s.Url)
+		resp, err := s.client.Get(s.Url)
 		if err != nil {
 			return make([]HystrixStreamEntry, 0), err
 		}
