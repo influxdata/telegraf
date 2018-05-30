@@ -3,11 +3,9 @@ package hystrix_stream
 import (
 	"bufio"
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"strings"
-	"sync"
 )
 
 // HystrixStreamEntry is 1 entry in the stream from the metrics-stream-servlet
@@ -62,50 +60,42 @@ type HystrixStreamEntry struct {
 	ThreadPool     string `json:"threadPool"`
 }
 
-var (
-	healthy       = false
-	scanner       *bufio.Scanner
-	cachedEntries []HystrixStreamEntry
-	reader        io.ReadCloser
-	cacheLock     sync.Mutex
-)
+func (s *HystrixData) latestEntries() ([]HystrixStreamEntry, error) {
 
-func latestEntries(url string) ([]HystrixStreamEntry, error) {
-
-	if !healthy {
-		resp, err := http.Get(url)
+	if !s.healthy {
+		resp, err := http.Get(s.Url)
 		if err != nil {
 			return make([]HystrixStreamEntry, 0), err
 		}
-		scanner = bufio.NewScanner(resp.Body)
-		reader = resp.Body
-		cachedEntries = make([]HystrixStreamEntry, 0)
-		go fillCacheForever(scanner)
-		healthy = true
+		s.scanner = bufio.NewScanner(resp.Body)
+		s.reader = resp.Body
+		s.cachedEntries = make([]HystrixStreamEntry, 0)
+		go s.fillCacheForever(s.scanner)
+		s.healthy = true
 	}
 
-	if scanner.Err() != nil {
-		log.Printf("E! Error scanning hystrix-servlet: [%v]", scanner.Err())
-		reader.Close()
-		healthy = false
-		return make([]HystrixStreamEntry, 0), scanner.Err()
+	if s.scanner.Err() != nil {
+		log.Printf("E! Error scanning hystrix-servlet: [%v]", s.scanner.Err())
+		s.reader.Close()
+		s.healthy = false
+		return make([]HystrixStreamEntry, 0), s.scanner.Err()
 	}
 
-	defer clearCache()
-	return cachedEntries, nil
+	defer s.clearCache()
+	return s.cachedEntries, nil
 }
 
-func clearCache() {
-	cacheLock.Lock()
-	cachedEntries = cachedEntries[:0]
-	cacheLock.Unlock()
+func (s *HystrixData) clearCache() {
+	s.cacheLock.Lock()
+	s.cachedEntries = s.cachedEntries[:0]
+	s.cacheLock.Unlock()
 }
 
-func fillCacheForever(scanner *bufio.Scanner) {
-	fillCacheForeverMax(scanner, 100000)
+func (s *HystrixData) fillCacheForever(scanner *bufio.Scanner) {
+	s.fillCacheForeverMax(scanner, 100000)
 }
 
-func fillCacheForeverMax(scanner *bufio.Scanner, maxEntries int) {
+func (s *HystrixData) fillCacheForeverMax(scanner *bufio.Scanner, maxEntries int) {
 	newEntryCounter := 0
 
 	for scanner.Err() == nil {
@@ -113,10 +103,10 @@ func fillCacheForeverMax(scanner *bufio.Scanner, maxEntries int) {
 		entries, err := parseChunk(entry)
 		if err == nil {
 			for _, entry := range entries {
-				cacheLock.Lock()
-				cachedEntries = append(cachedEntries, entry)
+				s.cacheLock.Lock()
+				s.cachedEntries = append(s.cachedEntries, entry)
 				newEntryCounter++
-				cacheLock.Unlock()
+				s.cacheLock.Unlock()
 			}
 		}
 		if newEntryCounter >= maxEntries {

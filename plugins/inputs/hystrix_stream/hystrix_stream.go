@@ -1,6 +1,9 @@
 package hystrix_stream
 
 import (
+	"bufio"
+	"io"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -13,7 +16,12 @@ const sampleConfig = `
  `
 
 type HystrixData struct {
-	Url string
+	Url           string
+	healthy       bool
+	scanner       *bufio.Scanner
+	cachedEntries []HystrixStreamEntry
+	reader        io.ReadCloser
+	cacheLock     sync.Mutex
 }
 
 func (s *HystrixData) Description() string {
@@ -26,7 +34,7 @@ func (s *HystrixData) SampleConfig() string {
 
 func (s *HystrixData) Gather(acc telegraf.Accumulator) error {
 
-	entries, errors := latestEntries(s.Url)
+	entries, errors := s.latestEntries()
 	if errors != nil {
 		return errors
 	}

@@ -41,16 +41,20 @@ func Test_fill_cache(t *testing.T) {
 
 	scanner := bufio.NewScanner(file)
 
-	fillCacheForeverMax(scanner, 181)
+	s := HystrixData{}
 
-	if len(cachedEntries) != 181 {
-		t.Errorf("Expected to have read 181 entries, read %d", len(cachedEntries))
+	s.fillCacheForeverMax(scanner, 181)
+
+	if len(s.cachedEntries) != 181 {
+		t.Errorf("Expected to have read 181 entries, read %d", len(s.cachedEntries))
 	}
 }
 
 func local_Test_stream_entries_locally(t *testing.T) {
 
-	_, err := latestEntries("http://localhost:8090/hystrix")
+	s := HystrixData{Url: "http://localhost:8090/hystrix"}
+
+	_, err := s.latestEntries()
 
 	if err != nil {
 		t.Fatalf("Error on first read : %v", err)
@@ -58,7 +62,7 @@ func local_Test_stream_entries_locally(t *testing.T) {
 
 	time.Sleep(1500 * time.Millisecond)
 
-	entries, err2 := latestEntries("http://localhost:8090/hystrix")
+	entries, err2 := s.latestEntries()
 
 	if err2 != nil {
 		t.Fatalf("Error on first read : %v", err2)
@@ -68,5 +72,5 @@ func local_Test_stream_entries_locally(t *testing.T) {
 		t.Error("Expected more than zero entries")
 	}
 
-	fmt.Printf("Got %d entries, cached is %d", len(entries), len(cachedEntries))
+	fmt.Printf("Got %d entries, cached is %d", len(entries), len(s.cachedEntries))
 }
