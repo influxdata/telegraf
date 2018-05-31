@@ -211,6 +211,7 @@ configuration options.
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
 * [solr](./plugins/inputs/solr)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
+* [syslog](./plugins/inputs/syslog)
 * [teamspeak](./plugins/inputs/teamspeak)
 * [tomcat](./plugins/inputs/tomcat)
 * [twemproxy](./plugins/inputs/twemproxy)
