@@ -230,7 +230,7 @@ func displayVersion() string {
 	return "v" + version
 }
 
-func main() {
+func main_1() {
 	flag.Usage = func() { usageExit(0) }
 	flag.Parse()
 	args := flag.Args()
