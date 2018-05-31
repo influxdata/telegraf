@@ -181,7 +181,7 @@ func UTF16ToStringArray(buf []uint16) []string {
 	stringLine := UTF16PtrToString(&buf[0])
 	for stringLine != "" {
 		strings = append(strings, stringLine)
-		nextLineStart += len([]rune(stringLine)) + 1
+		nextLineStart += len(stringLine) + 1
 		remainingBuf := buf[nextLineStart:]
 		stringLine = UTF16PtrToString(&remainingBuf[0])
 	}

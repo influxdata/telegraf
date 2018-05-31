@@ -5,7 +5,12 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
 ### Configuration:
 ```toml
 [[outputs.kafka]]
-  ## Kafka version (optimize batch sending in the latest version of kafka + allow use LZ4 compression)
+  ## The version of Kafka that Telegraf (Sarama lib) will assume it is running against.
+  ## Defaults to the oldest supported stable version. Since Kafka provides
+  ## backwards-compatibility, setting it to a version older than you have
+  ## will not break anything, although it may prevent you from using the
+  ## latest features. Setting it to a version greater than you are actually
+  ## running may lead to random breakage.
   # version = "0.8.2.0"
   ## URLs of kafka brokers
   brokers = ["localhost:9092"]
@@ -48,7 +53,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ##  0 : No compression
   ##  1 : Gzip compression
   ##  2 : Snappy compression
-  ##  3 : LZ4 compression
+  ##  3 : LZ4 compression (you need use Kafka greater than 0.10.0.0 and set 'version' parameter in this config)
   # compression_codec = 0
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many

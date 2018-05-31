@@ -68,92 +68,97 @@ type (
 )
 
 var sampleConfig = `
-## Kafka version (optimize batch sending in the latest version of kafka + allow use LZ4 compression)
-# version = "0.8.2.0"
-## URLs of kafka brokers
-brokers = ["localhost:9092"]
-## Kafka topic for producer messages
-topic = "telegraf"
+  ## The version of Kafka that Telegraf (Sarama lib) will assume it is running against.
+  ## Defaults to the oldest supported stable version. Since Kafka provides
+  ## backwards-compatibility, setting it to a version older than you have
+  ## will not break anything, although it may prevent you from using the
+  ## latest features. Setting it to a version greater than you are actually
+  ## running may lead to random breakage.
+  # version = "0.8.2.0"
+  ## URLs of kafka brokers
+  brokers = ["localhost:9092"]
+  ## Kafka topic for producer messages
+  topic = "telegraf"
 
-## Optional topic suffix configuration.
-## If the section is omitted, no suffix is used.
-## Following topic suffix methods are supported:
-##   measurement - suffix equals to separator + measurement's name
-##   tags        - suffix equals to separator + specified tags' values
-##                 interleaved with separator
+  ## Optional topic suffix configuration.
+  ## If the section is omitted, no suffix is used.
+  ## Following topic suffix methods are supported:
+  ##   measurement - suffix equals to separator + measurement's name
+  ##   tags        - suffix equals to separator + specified tags' values
+  ##                 interleaved with separator
 
-## Suffix equals to "_" + measurement's name
-# [outputs.kafka.topic_suffix]
-#   method = "measurement"
-#   separator = "_"
+  ## Suffix equals to "_" + measurement's name
+  # [outputs.kafka.topic_suffix]
+  #   method = "measurement"
+  #   separator = "_"
 
-## Suffix equals to "__" + measurement's "foo" tag value.
-##   If there's no such a tag, suffix equals to an empty string
-# [outputs.kafka.topic_suffix]
-#   method = "tags"
-#   keys = ["foo"]
-#   separator = "__"
+  ## Suffix equals to "__" + measurement's "foo" tag value.
+  ##   If there's no such a tag, suffix equals to an empty string
+  # [outputs.kafka.topic_suffix]
+  #   method = "tags"
+  #   keys = ["foo"]
+  #   separator = "__"
 
-## Suffix equals to "_" + measurement's "foo" and "bar"
-##   tag values, separated by "_". If there is no such tags,
-##   their values treated as empty strings.
-# [outputs.kafka.topic_suffix]
-#   method = "tags"
-#   keys = ["foo", "bar"]
-#   separator = "_"
+  ## Suffix equals to "_" + measurement's "foo" and "bar"
+  ##   tag values, separated by "_". If there is no such tags,
+  ##   their values treated as empty strings.
+  # [outputs.kafka.topic_suffix]
+  #   method = "tags"
+  #   keys = ["foo", "bar"]
+  #   separator = "_"
 
-## Telegraf tag to use as a routing key
-##  ie, if this tag exists, its value will be used as the routing key
-routing_tag = "host"
+  ## Telegraf tag to use as a routing key
+  ##  ie, if this tag exists, its value will be used as the routing key
+  routing_tag = "host"
 
-## CompressionCodec represents the various compression codecs recognized by
-## Kafka in messages.
-##  0 : No compression
-##  1 : Gzip compression
-##  2 : Snappy compression
-##  3 : LZ4 compression
-# compression_codec = 0
+  ## CompressionCodec represents the various compression codecs recognized by
+  ## Kafka in messages.
+  ##  0 : No compression
+  ##  1 : Gzip compression
+  ##  2 : Snappy compression
+  ##  3 : LZ4 compression
+  # compression_codec = 0
 
-##  RequiredAcks is used in Produce Requests to tell the broker how many
-##  replica acknowledgements it must see before responding
-##   0 : the producer never waits for an acknowledgement from the broker.
-##       This option provides the lowest latency but the weakest durability
-##       guarantees (some data will be lost when a server fails).
-##   1 : the producer gets an acknowledgement after the leader replica has
-##       received the data. This option provides better durability as the
-##       client waits until the server acknowledges the request as successful
-##       (only messages that were written to the now-dead leader but not yet
-##       replicated will be lost).
-##   -1: the producer gets an acknowledgement after all in-sync replicas have
-##       received the data. This option provides the best durability, we
-##       guarantee that no messages will be lost as long as at least one in
-##       sync replica remains.
-# required_acks = -1
+  ##  RequiredAcks is used in Produce Requests to tell the broker how many
+  ##  replica acknowledgements it must see before responding
+  ##   0 : the producer never waits for an acknowledgement from the broker.
+  ##       This option provides the lowest latency but the weakest durability
+  ##       guarantees (some data will be lost when a server fails).
+  ##   1 : the producer gets an acknowledgement after the leader replica has
+  ##       received the data. This option provides better durability as the
+  ##       client waits until the server acknowledges the request as successful
+  ##       (only messages that were written to the now-dead leader but not yet
+  ##       replicated will be lost).
+  ##   -1: the producer gets an acknowledgement after all in-sync replicas have
+  ##       received the data. This option provides the best durability, we
+  ##       guarantee that no messages will be lost as long as at least one in
+  ##       sync replica remains.
+  # required_acks = -1
 
-## The maximum number of times to retry sending a metric before failing
-## until the next flush.
-# max_retry = 3
+  ## The maximum number of times to retry sending a metric before failing
+  ## until the next flush.
+  # max_retry = 3
 
-## When true, metrics will be sent in one message per flush.  Otherwise,
-## metrics are written one metric per message.
-# batch = false
+  ## When true, metrics will be sent in one message per flush.  Otherwise,
+  ## metrics are written one metric per message.
+  # batch = false
 
-## Optional TLS Config
-# tls_ca = "/etc/telegraf/ca.pem"
-# tls_cert = "/etc/telegraf/cert.pem"
-# tls_key = "/etc/telegraf/key.pem"
-## Use TLS but skip chain & host verification
-# insecure_skip_verify = false
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 
-## Optional SASL Config
-# sasl_username = "kafka"
-# sasl_password = "secret"
+  ## Optional SASL Config
+  # sasl_username = "kafka"
+  # sasl_password = "secret"
 
-## Data format to output.
-## Each data format has its own unique set of configuration options, read
-## more about them here:
-## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-# data_format = "influx"
+  ## Data format to output.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  # data_format = "influx"
 `
 
 func ValidateTopicSuffixMethod(method string) error {
