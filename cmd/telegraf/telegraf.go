@@ -166,8 +166,10 @@ func reloadLoop(
 		}()
 
 		log.Printf("I! Starting Telegraf %s\n", displayVersion())
-		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
 		log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
+		log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
+		log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
+		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
 		log.Printf("I! Tags enabled: %s", c.ListTags())
 
 		if *fPidfile != "" {
