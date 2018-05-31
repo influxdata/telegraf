@@ -27,10 +27,11 @@ import (
 // * hashrate	    // integer, total hashrate in H/s or Sol/s etc.
 // * uptime   		// integer, uptime of the miner in second
 // recommended field names:
-// * shares_total	// integer
-// * shares_good	// integer
-// * shares_bad		// integer
-// * shares_invalid	// integer
+// * shares_total		// integer
+// * shares_accepted	// integer
+// * shares_rejected	// integer
+// * shares_discarded	// integer
+// * shares_rate		// float64
 // per GPU/Unit based fields:
 // * hashrate		// integer
 // * temperature	// integer

@@ -94,17 +94,18 @@ func (m *XMRStak) serverGather(acc telegraf.Accumulator, i int, tags map[string]
 	tags["pool"] = reply.Connection.Pool
 
 	fields := map[string]interface{}{
-		"uptime":       reply.Connection.Uptime, // in seconds
-		"hashrate":     uint64(reply.Hashrate.Total[0]),
-		"ping":         reply.Connection.Ping,
-		"diff_current": reply.Results.DiffCurrent,
-		"shares_total": reply.Results.SharesTotal,
-		"shares_good":  reply.Results.SharesGood,
-		"shares_bad":   reply.Results.SharesTotal - reply.Results.SharesGood,
-		"avg_time":     reply.Results.AverageTime,
-		"hashes_total": reply.Results.HashesTotal,
-		"gpu":          len(reply.Hashrate.Threads) / m.Threads,
-		"thread":       len(reply.Hashrate.Threads),
+		"uptime":          reply.Connection.Uptime, // in seconds
+		"hashrate":        uint64(reply.Hashrate.Total[0]),
+		"ping":            reply.Connection.Ping,
+		"diff_current":    reply.Results.DiffCurrent,
+		"shares_total":    reply.Results.SharesTotal,
+		"shares_accepted": reply.Results.SharesGood,
+		"shares_rejected": reply.Results.SharesTotal - reply.Results.SharesGood,
+		"shares_rate":     100 * reply.Results.SharesGood / reply.Results.SharesTotal,
+		"avg_time":        reply.Results.AverageTime,
+		"hashes_total":    reply.Results.HashesTotal,
+		"gpu":             len(reply.Hashrate.Threads) / m.Threads,
+		"thread":          len(reply.Hashrate.Threads),
 	}
 	acc.AddFields(xmrstakName, fields, tags)
 

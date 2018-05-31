@@ -104,14 +104,15 @@ func (m *Claymore) serverGather(acc telegraf.Accumulator, i int, tags map[string
 	hashrates := strings.Split(results[3], ";")
 	tempFans := strings.Split(results[6], ";")
 	fields := map[string]interface{}{
-		"uptime":         toInt(results[1]) * 60, // was in minutes
-		"hashrate":       toInt(shares[0]) * mul,
-		"shares_total":   total,
-		"shares_bad":     bad,
-		"shares_good":    total - bad - invalid,
-		"shares_invalid": invalid,
-		"pool_switch":    toInt(invalids[1]),
-		"gpu":            len(hashrates),
+		"uptime":           toInt(results[1]) * 60, // was in minutes
+		"hashrate":         toInt(shares[0]) * mul,
+		"shares_total":     total,
+		"shares_rejected":  bad,
+		"shares_discarded": invalid,
+		"shares_accepted":  total - bad - invalid,
+		"shares_rate":      100 * (total - bad - invalid) / total,
+		"pool_switch":      toInt(invalids[1]),
+		"gpu":              len(hashrates),
 	}
 	acc.AddFields(claymoreName, fields, tags)
 
@@ -139,14 +140,14 @@ func (m *Claymore) serverGather(acc telegraf.Accumulator, i int, tags map[string
 		bad = toInt(shares[2])
 		hashrates = strings.Split(results[5], ";")
 		fields := map[string]interface{}{
-			"uptime":         toInt(results[1]) * 60, // was in minutes
-			"hashrate":       toInt(shares[0]),       // * mul ???
-			"shares_total":   total,
-			"shares_bad":     bad,
-			"shares_good":    total - bad - invalid,
-			"shares_invalid": invalid,
-			"pool_switch":    toInt(invalids[3]),
-			"gpu":            len(hashrates),
+			"uptime":           toInt(results[1]) * 60, // was in minutes
+			"hashrate":         toInt(shares[0]),       // * mul ???
+			"shares_total":     total,
+			"shares_rejected":  bad,
+			"shares_accepted":  total - bad - invalid,
+			"shares_discarded": invalid,
+			"pool_switch":      toInt(invalids[3]),
+			"gpu":              len(hashrates),
 		}
 		acc.AddFields(claymoreName, fields, tags)
 
