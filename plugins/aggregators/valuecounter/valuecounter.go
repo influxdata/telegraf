@@ -14,7 +14,7 @@ type aggregate struct {
 }
 
 type ValueCounter struct {
-	cache       map[uint64]aggregate
+	cache  map[uint64]aggregate
 	Fields []string
 }
 
