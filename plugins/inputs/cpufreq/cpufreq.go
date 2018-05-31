@@ -21,11 +21,15 @@ type CPUFreq struct {
 }
 
 var sampleConfig = `
-  ## PathSysfs
+  ## Path for sysfs filesystem.
+  ## See https://www.kernel.org/doc/Documentation/filesystems/sysfs.txt
+  ## Defaults:
   # path_sysfs = "/sys"
-  ## 
+  ## Gather CPU throttles per socker
+  ## Defaults:
   # throttles_per_socket = false
-  ##
+  ## Gather CPU throttles per physical core
+  ## Defaults:
   # throttles_per_core = false
 `
 
