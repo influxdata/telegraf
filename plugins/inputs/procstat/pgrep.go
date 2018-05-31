@@ -8,13 +8,6 @@ import (
 	"strings"
 )
 
-type PIDFinder interface {
-	PidFile(path string) ([]PID, error)
-	Pattern(pattern string) ([]PID, error)
-	Uid(user string) ([]PID, error)
-	FullPattern(path string) ([]PID, error)
-}
-
 // Implemention of PIDGatherer that execs pgrep to find processes
 type Pgrep struct {
 	path string

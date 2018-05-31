@@ -13,7 +13,7 @@ import (
 type File struct {
 	Files []string
 
-	writer  io.Writer
+	writers []io.Writer
 	closers []io.Closer
 
 	serializer serializers.Serializer
@@ -35,15 +35,13 @@ func (f *File) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (f *File) Connect() error {
-	writers := []io.Writer{}
-
 	if len(f.Files) == 0 {
 		f.Files = []string{"stdout"}
 	}
 
 	for _, file := range f.Files {
 		if file == "stdout" {
-			writers = append(writers, os.Stdout)
+			f.writers = append(f.writers, os.Stdout)
 		} else {
 			var of *os.File
 			var err error
@@ -56,11 +54,10 @@ func (f *File) Connect() error {
 			if err != nil {
 				return err
 			}
-			writers = append(writers, of)
+			f.writers = append(f.writers, of)
 			f.closers = append(f.closers, of)
 		}
 	}
-	f.writer = io.MultiWriter(writers...)
 	return nil
 }
 
@@ -90,17 +87,21 @@ func (f *File) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
+	var writeErr error = nil
 	for _, metric := range metrics {
 		b, err := f.serializer.Serialize(metric)
 		if err != nil {
 			return fmt.Errorf("failed to serialize message: %s", err)
 		}
-		_, err = f.writer.Write(b)
-		if err != nil {
-			return fmt.Errorf("failed to write message: %s, %s", metric.Serialize(), err)
+
+		for _, writer := range f.writers {
+			_, err = writer.Write(b)
+			if err != nil && writer != os.Stdout {
+				writeErr = fmt.Errorf("E! failed to write message: %s, %s", b, err)
+			}
 		}
 	}
-	return nil
+	return writeErr
 }
 
 func init() {

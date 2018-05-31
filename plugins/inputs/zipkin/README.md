@@ -84,7 +84,7 @@ SELECT max("duration_ns") FROM "zipkin" WHERE "service_name" = 'my_service' AND 
 
 ### Recommended InfluxDB setup
 
-This test will create high cardinality data so we reccomend using the [tsi influxDB engine](https://www.influxdata.com/path-1-billion-time-series-influxdb-high-cardinality-indexing-ready-testing/).
+This test will create high cardinality data so we recommend using the [tsi influxDB engine](https://www.influxdata.com/path-1-billion-time-series-influxdb-high-cardinality-indexing-ready-testing/).
 #### How To Set Up InfluxDB For Work With Zipkin
 
   ##### Steps

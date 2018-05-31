@@ -1,6 +1,7 @@
 package aerospike
 
 import (
+	"crypto/tls"
 	"errors"
 	"log"
 	"net"
@@ -10,13 +11,24 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	as "github.com/aerospike/aerospike-client-go"
 )
 
 type Aerospike struct {
-	Servers []string
+	Servers []string `toml:"servers"`
+
+	Username string `toml:"username"`
+	Password string `toml:"password"`
+
+	EnableTLS bool `toml:"enable_tls"`
+	EnableSSL bool `toml:"enable_ssl"` // deprecated in 1.7; use enable_tls
+	tlsint.ClientConfig
+
+	initialized bool
+	tlsConfig   *tls.Config
 }
 
 var sampleConfig = `
@@ -24,6 +36,17 @@ var sampleConfig = `
   ## This plugin will query all namespaces the aerospike
   ## server has configured and get stats for them.
   servers = ["localhost:3000"]
+
+  # username = "telegraf"
+  # password = "pa$$word"
+
+  ## Optional TLS Config
+  # enable_tls = false
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## If false, skip chain & host verification
+  # insecure_skip_verify = true
  `
 
 func (a *Aerospike) SampleConfig() string {
@@ -35,6 +58,18 @@ func (a *Aerospike) Description() string {
 }
 
 func (a *Aerospike) Gather(acc telegraf.Accumulator) error {
+	if !a.initialized {
+		tlsConfig, err := a.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+		if tlsConfig == nil && (a.EnableTLS || a.EnableSSL) {
+			tlsConfig = &tls.Config{}
+		}
+		a.tlsConfig = tlsConfig
+		a.initialized = true
+	}
+
 	if len(a.Servers) == 0 {
 		return a.gatherServer("127.0.0.1:3000", acc)
 	}
@@ -63,7 +98,11 @@ func (a *Aerospike) gatherServer(hostport string, acc telegraf.Accumulator) erro
 		iport = 3000
 	}
 
-	c, err := as.NewClient(host, iport)
+	policy := as.NewClientPolicy()
+	policy.User = a.Username
+	policy.Password = a.Password
+	policy.TlsConfig = a.tlsConfig
+	c, err := as.NewClientWithPolicy(policy, host, iport)
 	if err != nil {
 		return err
 	}

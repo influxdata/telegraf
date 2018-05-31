@@ -19,6 +19,10 @@ func TestConnectAndWrite(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	if os.Getenv("CIRCLE_PROJECT_REPONAME") != "" {
+		t.Skip("Skipping test on CircleCI due to docker failures")
+	}
+
 	url := testURL()
 	table := "test"
 
@@ -95,6 +99,10 @@ func Test_escapeValue(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
+	if os.Getenv("CIRCLE_PROJECT_REPONAME") != "" {
+		t.Skip("Skipping test on CircleCI due to docker failures")
+	}
+
 	tests := []struct {
 		Val  interface{}
 		Want string
@@ -103,12 +111,12 @@ func Test_escapeValue(t *testing.T) {
 		{`foo`, `'foo'`},
 		{`foo'bar 'yeah`, `'foo''bar ''yeah'`},
 		// int types
-		{123, `123`}, // int
 		{int64(123), `123`},
-		{int32(123), `123`},
+		{uint64(123), `123`},
+		{uint64(MaxInt64) + 1, `9223372036854775807`},
+		{true, `true`},
+		{false, `false`},
 		// float types
-		{123.456, `123.456`},
-		{float32(123.456), `123.456`}, // floating point SNAFU
 		{float64(123.456), `123.456`},
 		// time.Time
 		{time.Date(2017, 8, 7, 16, 44, 52, 123*1000*1000, time.FixedZone("Dreamland", 5400)), `'2017-08-07T16:44:52.123+0130'`},

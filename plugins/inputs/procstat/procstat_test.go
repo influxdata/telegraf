@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -349,6 +350,10 @@ func TestGather_systemdUnitPIDs(t *testing.T) {
 }
 
 func TestGather_cgroupPIDs(t *testing.T) {
+	//no cgroups in windows
+	if runtime.GOOS == "windows" {
+		t.Skip("no cgroups in windows")
+	}
 	td, err := ioutil.TempDir("", "")
 	require.NoError(t, err)
 	defer os.RemoveAll(td)

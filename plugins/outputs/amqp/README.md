@@ -29,6 +29,9 @@ For an introduction to AMQP see:
   ## Telegraf tag to use as a routing key
   ##  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
+  ## Delivery Mode controls if a published message is persistent
+  ## Valid options are "transient" and "persistent". default: "transient"
+  # delivery_mode = "transient"
 
   ## InfluxDB retention policy
   # retention_policy = "default"
@@ -39,11 +42,11 @@ For an introduction to AMQP see:
   ## to 5s. 0s means no timeout (not recommended).
   # timeout = "5s"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Data format to output.
