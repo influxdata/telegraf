@@ -1,24 +1,20 @@
 package azureblobstorage
 
 import (
-	"encoding/base64"
 	"log"
 	"strings"
 
 	storage "github.com/Azure/azure-sdk-for-go/storage"
 	telegraf "github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	util "github.com/influxdata/telegraf/utility"
 )
 
 type AzureBlobStorage struct {
 	AccountName               string //azure storage account name
 	SasToken                  string
-	ResourceId                string //resource id for the VM or VMSS
-	DeploymentId              string
-	Periods                   []string //this is the list of periods being configured for various aggregator instances.
+	ResourceId                string //resource id for the VM or VMSS//this is the list of periods being configured for various aggregator instances.
 	BlobStorageEndPointSuffix string
-	HostName                  string
-	columnsInTable            []string
 	Protocol                  string
 	Namespace                 string
 	EventName                 string
@@ -28,20 +24,32 @@ type AzureBlobStorage struct {
 	blobPath                  string
 	BaseTime                  string
 	Interval                  string
+	intervalISO8601           string
+	Role                      string
+	RoleInstance              string
+	Tenant                    string
 }
-
+func (azureBlobStorage *AzureBlobStorage) initialize() {
+	var er error
+	azureBlobStorage.intervalISO8601, er = getIntervalISO8601(azureBlobStorage.Interval)
+	if er != nil {
+		//log this error and stop as this is not a transient error which will get fixed on retries.
+		log.Fatal("Error while Parsing interval to ISO8601 format " + azureBlobStorage.Interval + er.Error())
+	}
+}
 func (azureBlobStorage *AzureBlobStorage) Connect() error {
-
+	azureBlobStorage.initialize()
 	blobServiceUrlEndpoint := azureBlobStorage.Protocol + azureBlobStorage.AccountName + azureBlobStorage.BlobStorageEndPointSuffix
 	client, er := storage.NewAccountSASClientFromEndpointToken(blobServiceUrlEndpoint, azureBlobStorage.SasToken)
 	if er != nil {
 		log.Println("error while getti ng client for blob storage " + er.Error())
 		return er
 	}
-
+	//TODO: validate client
 	blobClient := client.GetBlobService()
 
-	containerName := strings.ToLower(azureBlobStorage.Namespace + azureBlobStorage.EventName + azureBlobStorage.EventVersion) //getEventVerStr(azureBlobStorage.EventVersion)
+	containerName := strings.ToLower(azureBlobStorage.Namespace + azureBlobStorage.EventName) //getEventVerStr(azureBlobStorage.EventVersion))
+	//TODO: validate container ref
 	azureBlobStorage.container = blobClient.GetContainerReference(containerName)
 	options := storage.CreateContainerOptions{
 		Access: storage.ContainerAccessTypeBlob,
@@ -79,58 +87,34 @@ func (azureBlobStorage *AzureBlobStorage) SampleConfig() string {
 func (azureBlobStorage *AzureBlobStorage) Write(metrics []telegraf.Metric) error {
 	var props map[string]interface{}
 	var er error
-	azureBlobStorage.blobPath, er = getBlobPath(azureBlobStorage.ResourceId, azureBlobStorage.AgentIdentityHash, azureBlobStorage.BaseTime, azureBlobStorage.Interval)
+	azureBlobStorage.blobPath, er = getBlobPath(azureBlobStorage.ResourceId, azureBlobStorage.AgentIdentityHash, azureBlobStorage.BaseTime, azureBlobStorage.intervalISO8601)
 	if er != nil {
 		log.Println("Error while constructing BlobPath" + er.Error())
 		return nil
 	}
+
 	for i, _ := range metrics {
 		props = metrics[i].Fields()
-		props["DeploymentId"] = azureBlobStorage.DeploymentId
-
-		//tags := metrics[i].Tags()
-		//props["CounterName"] = tags["InputPlugin"] + "/" + props["CounterName"].(string)
-		jsonBlock := getJsonBlock(props)
-
-		blockID := base64.StdEncoding.EncodeToString([]byte(jsonBlock))
-		blockBlobRef := azureBlobStorage.container.GetBlobReference(azureBlobStorage.blobPath)
-
-	}
-	/*// iterate over the list of metrics and create a new entity for each metrics and add to the table.
-	for i, _ := range metrics {
-		props = metrics[i].Fields()
-		props[util.DEPLOYMENT_ID] = azureBlobStorage.DeploymentId
-		props[util.HOST] = azureTableStorage.HostName
 
 		tags := metrics[i].Tags()
 		props[util.COUNTER_NAME] = tags[util.INPUT_PLUGIN] + "/" + props[util.COUNTER_NAME].(string)
+		jsonBlock, err := getJsonBlock(props, azureBlobStorage)
 
-		UTCTicks_DescendingOrderStr, encodedCounterName, er := getRowKeyComponents(props[util.END_TIMESTAMP].(string),
-			props[util.COUNTER_NAME].(string))
-		if er != nil {
-			log.Println("Error: Unable to get valid row key components. Since, this cannot be corrected even on retries hence skipping this row." + util.GetPropsStr(props))
+		if err != nil {
+			//discarding the metric as this error is not recoverable.
+			log.Println("Error while converting metrics fields to json metric is not sent to blob storage " + azureBlobStorage.container.Name + util.GetPropsStr(props) + err.Error())
 			continue
 		}
-
-		periodStr := tags[util.PERIOD]
-		table := azureTableStorage.periodVsTableNameVsTableRef[periodStr].TableRef
-
-		//don't write incomplete rows to the table storage
-		isValidRow := validateRow(azureTableStorage.columnsInTable, props)
-		if isValidRow == false {
-			logMsg := "Invalid Row hence not writing it to the table. Row values : " + util.GetPropsStr(props)
-			log.Println(logMsg)
-			continue
-		}
-		//two rows are written for each metric as Azure table has optimized prefix search only and no index.
-		rowKey1 := UTCTicks_DescendingOrderStr + "_" + encodedCounterName
-		rowKey2 := encodedCounterName + "_" + UTCTicks_DescendingOrderStr
-		er = writeEntitiesToTable(partitionKey, rowKey1, rowKey2, props, table)
+		//TODO: validate BlobRef
+		blockBlobRef := azureBlobStorage.container.GetBlobReference(azureBlobStorage.blobPath)
+		blockId, er := writeJsonBlockToBlob(jsonBlock, blockBlobRef)
 		if er != nil {
-			log.Println("Error occured while writing entities to the table")
+			log.Println("Error while writing block to blob storage blockId,content" + blockId + jsonBlock + er.Error())
 			return er
+		} else {
+			log.Println("Success: Written block to storage" + blockId)
 		}
-	}*/
+	}
 	return nil
 }
 func init() {
