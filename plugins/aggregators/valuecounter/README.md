@@ -1,14 +1,14 @@
 # ValueCounter Aggregator Plugin
 
-The valuecounter plugin counts the occurance of values in fields and emmits the
-counter once every 'preriod' seconds.
+The valuecounter plugin counts the occurrence of values in fields and emits the
+counter once every 'period' seconds.
 
-A usecase for the valuecounter plugin is when you are processing a HTTP access
+A use case for the valuecounter plugin is when you are processing a HTTP access
 log (with the logparser input) and want to count the HTTP status codes.
 
-The fields which will be counted must be configured with the `field_names`
-configuration directive. When no `field_names` is provided the plugin will not
-count any fields. The results are emitted in fields in the format:
+The fields which will be counted must be configured with the `fields`
+configuration directive. When no `fields` is provided the plugin will not count
+any fields. The results are emitted in fields in the format:
 `originalfieldname_fieldvalue = count`.
 
 ### Configuration:
@@ -22,7 +22,7 @@ count any fields. The results are emitted in fields in the format:
   ## aggregator and will not get sent to the output plugins.
   drop_original = false
   ## The fields for which the values will be counted
-  field_names = ["status"]
+  fields = ["status"]
 ```
 
 ### Measurements & Fields:
@@ -49,7 +49,7 @@ telegraf.conf:
 
 [[aggregators.valuecounter]]
   namepass = ["access"]
-  field_names = ["response"]
+  fields = ["response"]
 ```
 
 /tmp/tst.log

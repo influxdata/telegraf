@@ -10,10 +10,9 @@ import (
 )
 
 // Create a valuecounter with config
-func NewTestValueCounter(field_names []string) telegraf.Aggregator {
+func NewTestValueCounter(fields []string) telegraf.Aggregator {
 	vc := &ValueCounter{
-		//Field_names: []string{"status"},
-		Field_names: field_names,
+		Fields: fields,
 	}
 	vc.Reset()
 

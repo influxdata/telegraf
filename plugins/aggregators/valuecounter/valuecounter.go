@@ -15,7 +15,7 @@ type aggregate struct {
 
 type ValueCounter struct {
 	cache       map[uint64]aggregate
-	Field_names []string
+	Fields []string
 }
 
 func NewValueCounter() telegraf.Aggregator {
@@ -32,7 +32,7 @@ var sampleConfig = `
   ## aggregator and will not get sent to the output plugins.
   drop_original = false
   ## The fields for which the values will be counted
-  field_names = ""
+  fields = []
 `
 
 func (vc *ValueCounter) SampleConfig() string {
@@ -60,7 +60,7 @@ func (vc *ValueCounter) Add(in telegraf.Metric) {
 	// Check if this metric has fields which we need to count, if so increment
 	// the count.
 	for fk, fv := range in.Fields() {
-		for _, cf := range vc.Field_names {
+		for _, cf := range vc.Fields {
 			if fk == cf {
 				fn := fmt.Sprintf("%v_%v", fk, fv)
 				vc.cache[id].fieldCount[fn] += 1
@@ -69,7 +69,7 @@ func (vc *ValueCounter) Add(in telegraf.Metric) {
 	}
 }
 
-// Emmit the counters
+// Emit the counters
 func (vc *ValueCounter) Push(acc telegraf.Accumulator) {
 	for _, agg := range vc.cache {
 		fields := map[string]interface{}{}
