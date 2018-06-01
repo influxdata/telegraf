@@ -70,7 +70,13 @@
 - [#2879](https://github.com/influxdata/telegraf/issues/2879): Fix wildcards and multi instance processes in win_perf_counters.
 - [#2468](https://github.com/influxdata/telegraf/issues/2468): Fix crash on 32-bit Windows in win_perf_counters.
 - [#4198](https://github.com/influxdata/telegraf/issues/4198): Fix win_perf_counters not collecting at every interval.
+
+## v1.6.4 [unreleased]
+
+### Bugfixes
+
 - [#4203](https://github.com/influxdata/telegraf/issues/4203): Fix snmp overriding of auto-configured table fields.
+- [#4218](https://github.com/influxdata/telegraf/issues/4218): Fix uint support in cloudwatch output.
 
 ## v1.6.3 [2018-05-21]
 
