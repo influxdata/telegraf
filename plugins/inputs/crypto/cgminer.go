@@ -230,7 +230,7 @@ func (m *CGMiner) singleChainGather(statMap map[string]*json.RawMessage, chains 
 		var acs string
 		json.Unmarshal(*statMap[fmt.Sprintf("chain_acs%d", i)], &acs)
 		fields := map[string]interface{}{
-			"hashrate":        uint64(hash),
+			"hashrate":        uint64(hash * 1000000000.0), // was in GH/s
 			"temperature_pcb": tempPcb,
 			"temperature":     temp,
 			"failed":          strings.Count(acs, "x"),
@@ -255,7 +255,7 @@ func (m *CGMiner) multiChainGather(statsArray []stats, acc telegraf.Accumulator,
 			tags["source"] = CHAIN.String()
 			tags["unit"] = fmt.Sprintf("%d", stat.ChainID)
 			fields := map[string]interface{}{
-				"hashrate":    uint64(stat.MHSAv),
+				"hashrate":    uint64(stat.MHSAv * 1000000.0), // was in MH/s
 				"temperature": int(stat.Temp),
 				"fan":         stat.FanDuty,
 				"failed":      stat.NumChips - stat.NumActiveChips,
@@ -302,7 +302,7 @@ func (m *CGMiner) serverGather(acc telegraf.Accumulator, i int, tags map[string]
 	if summary.GHS5s != 0.0 {
 		fields["hashrate"] = uint64(summary.GHS5s * 1000000000.0) // was in GH/s
 	} else if summary.MHS5s != 0.0 {
-		fields["hashrate"] = uint64(summary.MHS5s)
+		fields["hashrate"] = uint64(summary.MHS5s * 1000000.0) // was in MH/s
 	}
 	acc.AddFields(cgMinerName, fields, tags)
 
