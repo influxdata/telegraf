@@ -15,15 +15,17 @@ func Getmd5Hash(content string) (string, error) {
 	md5HashStr := ""
 	md5Hasher := md5.New()
 	data := []byte(content)
-	v, er := md5Hasher.Write(data)
+	_, er := md5Hasher.Write(data)
 	if er != nil {
 		log.Println("Error while calculating md5 hash of block " + content + er.Error())
 		return "", er
 	}
-	log.Println(string(v))
+
 	md5HashStr = base64.StdEncoding.EncodeToString(md5Hasher.Sum(nil))
-	l := len(md5HashStr)
-	log.Println(string(l))
+	log.Println("md5hash of block content is (md5hash, content) " +
+		md5HashStr + " " +
+		content)
+
 	return md5HashStr, nil
 }
 
@@ -41,7 +43,7 @@ func GetPropsStr(props map[string]interface{}) string {
 	return propsStr
 }
 
-func GetPeriodStr(period string) (string, error) {
+func GetIntervalISO8601(period string) (string, error) {
 
 	var periodStr string
 
