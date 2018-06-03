@@ -30,7 +30,9 @@ type AMQP struct {
 	Exchange string
 	// AMQP Auth method
 	AuthMethod string
-	// Routing Key Tag
+	// Routing Key (static)
+	RoutingKey string `toml:"routing_key"`
+	// Routing Key from Tag
 	RoutingTag string `toml:"routing_tag"`
 	// InfluxDB database
 	Database string
@@ -77,8 +79,11 @@ var sampleConfig = `
   ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
   ## described here: https://www.rabbitmq.com/plugins.html
   # auth_method = "PLAIN"
+  ## Topic routing key
+  # routing_key = ""
   ## Telegraf tag to use as a routing key
   ##  ie, if this tag exists, its value will be used as the routing key
+  ##  and override routing_key config even if defined
   routing_tag = "host"
   ## Delivery Mode controls if a published message is persistent
   ## Valid options are "transient" and "persistent". default: "transient"
@@ -234,6 +239,9 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 
 	for _, metric := range metrics {
 		var key string
+		if q.RoutingKey != "" {
+			key = q.RoutingKey
+		}
 		if q.RoutingTag != "" {
 			if h, ok := metric.Tags()[q.RoutingTag]; ok {
 				key = h
