@@ -60,6 +60,8 @@
 - [#4190](https://github.com/influxdata/telegraf/pull/4190): Add special syslog timestamp parser to grok parser that uses current year.
 - [#4181](https://github.com/influxdata/telegraf/pull/4181): Add syslog input plugin.
 - [#4212](https://github.com/influxdata/telegraf/pull/4212): Print the enabled aggregator and processor plugins on startup.
+- [#3994](https://github.com/influxdata/telegraf/pull/3994): Add static routing_key option to amqp output.
+- [#3995](https://github.com/influxdata/telegraf/pull/3995): Add passive mode exchange declaration option to amqp consumer input.
 
 ### Bugfixes
 
