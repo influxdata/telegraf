@@ -26,8 +26,13 @@ type client struct {
 type AMQP struct {
 	// AMQP brokers to send metrics to
 	URL string
-	// AMQP exchange
-	Exchange string
+
+	Exchange           string            `toml:"exchange"`
+	ExchangeType       string            `toml:"exchange_type"`
+	ExchangeDurability string            `toml:"exchange_durability"`
+	ExchangePassive    bool              `toml:"exchange_passive"`
+	ExchangeArguments  map[string]string `toml:"exchange_arguments"`
+
 	// AMQP Auth method
 	AuthMethod string
 	// Routing Key (static)
@@ -65,7 +70,11 @@ func (a *externalAuth) Response() string {
 }
 
 const (
-	DefaultAuthMethod      = "PLAIN"
+	DefaultAuthMethod = "PLAIN"
+
+	DefaultExchangeType       = "topic"
+	DefaultExchangeDurability = "durable"
+
 	DefaultRetentionPolicy = "default"
 	DefaultDatabase        = "telegraf"
 )
@@ -73,8 +82,23 @@ const (
 var sampleConfig = `
   ## AMQP url
   url = "amqp://localhost:5672/influxdb"
-  ## AMQP exchange
+
+  ## Exchange to declare and publish to.
   exchange = "telegraf"
+
+  ## Exchange type; common types are "direct", "fanout", "topic", "header", "x-consistent-hash".
+  # exchange_type = "topic"
+
+  ## If true, exchange will be passively declared.
+  # exchange_passive = false
+
+  ## Exchange durability can be either "transient" or "durable".
+  # exchange_durability = "durable"
+
+  ## Additional exchange arguments.
+  # exchange_args = { }
+  # exchange_args = {"hash_propery" = "timestamp"}
+
   ## Auth method. PLAIN and EXTERNAL are supported
   ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
   ## described here: https://www.rabbitmq.com/plugins.html
@@ -166,17 +190,28 @@ func (q *AMQP) Connect() error {
 		return fmt.Errorf("Failed to open a channel: %s", err)
 	}
 
-	err = channel.ExchangeDeclare(
-		q.Exchange, // name
-		"topic",    // type
-		true,       // durable
-		false,      // delete when unused
-		false,      // internal
-		false,      // no-wait
-		nil,        // arguments
-	)
+	var exchangeDurable = true
+	switch q.ExchangeDurability {
+	case "transient":
+		exchangeDurable = false
+	default:
+		exchangeDurable = true
+	}
+
+	exchangeArgs := make(amqp.Table, len(q.ExchangeArguments))
+	for k, v := range q.ExchangeArguments {
+		exchangeArgs[k] = v
+	}
+
+	err = declareExchange(
+		channel,
+		q.Exchange,
+		q.ExchangeType,
+		q.ExchangePassive,
+		exchangeDurable,
+		exchangeArgs)
 	if err != nil {
-		return fmt.Errorf("Failed to declare an exchange: %s", err)
+		return err
 	}
 
 	q.setClient(&client{
@@ -200,6 +235,42 @@ func (q *AMQP) Connect() error {
 			time.Sleep(10 * time.Second)
 		}
 	}()
+	return nil
+}
+
+func declareExchange(
+	channel *amqp.Channel,
+	exchangeName string,
+	exchangeType string,
+	exchangePassive bool,
+	exchangeDurable bool,
+	exchangeArguments amqp.Table,
+) error {
+	var err error
+	if exchangePassive {
+		err = channel.ExchangeDeclarePassive(
+			exchangeName,
+			exchangeType,
+			exchangeDurable,
+			false, // delete when unused
+			false, // internal
+			false, // no-wait
+			exchangeArguments,
+		)
+	} else {
+		err = channel.ExchangeDeclare(
+			exchangeName,
+			exchangeType,
+			exchangeDurable,
+			false, // delete when unused
+			false, // internal
+			false, // no-wait
+			exchangeArguments,
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("error declaring exchange: %v", err)
+	}
 	return nil
 }
 
@@ -292,10 +363,12 @@ func (q *AMQP) setClient(c *client) {
 func init() {
 	outputs.Add("amqp", func() telegraf.Output {
 		return &AMQP{
-			AuthMethod:      DefaultAuthMethod,
-			Database:        DefaultDatabase,
-			RetentionPolicy: DefaultRetentionPolicy,
-			Timeout:         internal.Duration{Duration: time.Second * 5},
+			AuthMethod:         DefaultAuthMethod,
+			ExchangeType:       DefaultExchangeType,
+			ExchangeDurability: DefaultExchangeDurability,
+			Database:           DefaultDatabase,
+			RetentionPolicy:    DefaultRetentionPolicy,
+			Timeout:            internal.Duration{Duration: time.Second * 5},
 		}
 	})
 }

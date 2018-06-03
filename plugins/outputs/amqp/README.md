@@ -21,13 +21,28 @@ For an introduction to AMQP see:
 
 ### Configuration:
 
-```
+```toml
 # Configuration for the AMQP server to send metrics to
 [[outputs.amqp]]
   ## AMQP url
   url = "amqp://localhost:5672/influxdb"
-  ## AMQP exchange
+
+  ## Exchange to declare and publish to.
   exchange = "telegraf"
+
+  ## Exchange type; common types are "direct", "fanout", "topic", "header", "x-consistent-hash".
+  # exchange_type = "topic"
+
+  ## If true, exchange will be passively declared.
+  # exchange_passive = false
+
+  ## Exchange durability can be either "transient" or "durable".
+  # exchange_durability = "durable"
+
+  ## Additional exchange arguments.
+  # exchange_args = { }
+  # exchange_args = {"hash_propery" = "timestamp"}
+
   ## Auth method. PLAIN and EXTERNAL are supported
   ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
   ## described here: https://www.rabbitmq.com/plugins.html
@@ -40,7 +55,7 @@ For an introduction to AMQP see:
   routing_tag = "host"
   ## Delivery Mode controls if a published message is persistent
   ## Valid options are "transient" and "persistent". default: "transient"
-  # delivery_mode = "transient"
+  delivery_mode = "transient"
 
   ## InfluxDB retention policy
   # retention_policy = "default"
