@@ -15,23 +15,48 @@ The following defaults are known to work with RabbitMQ:
 ```toml
 # AMQP consumer plugin
 [[inputs.amqp_consumer]]
-  ## AMQP url
-  url = "amqp://localhost:5672/influxdb"
-  ## AMQP exchange
+  ## Broker to consume from.
+  ##   deprecated in 1.7; use the brokers option
+  # url = "amqp://localhost:5672/influxdb"
+
+  ## Brokers to consume from.  If multiple brokers are specified a random broker
+  ## will be selected anytime a connection is established.  This can be
+  ## helpful for load balancing when not using a dedicated load balancer.
+  brokers = ["amqp://localhost:5672/influxdb"]
+
+  ## Authentication credentials for the PLAIN auth_method.
+  # username = ""
+  # password = ""
+
+  ## Exchange to declare and consume from.
   exchange = "telegraf"
+
+  ## Exchange type; common types are "direct", "fanout", "topic", "header", "x-consistent-hash".
+  # exchange_type = "topic"
+
+  ## If true, exchange will be passively declared.
+  # exchange_passive = false
+
+  ## Exchange durability can be either "transient" or "durable".
+  # exchange_durability = "durable"
+
+  ## Additional exchange arguments.
+  # exchange_arguments = { }
+  # exchange_arguments = {"hash_propery" = "timestamp"}
+
   ## AMQP queue name
   queue = "telegraf"
   ## Binding Key
   binding_key = "#"
 
-  ## Controls how many messages the server will try to keep on the network
-  ## for consumers before receiving delivery acks.
-  #prefetch_count = 50
+  ## Maximum number of messages server should give to the worker.
+  # prefetch_count = 50
 
-  ## Auth method. PLAIN and EXTERNAL are supported.
+  ## Auth method. PLAIN and EXTERNAL are supported
   ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
   ## described here: https://www.rabbitmq.com/plugins.html
   # auth_method = "PLAIN"
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"

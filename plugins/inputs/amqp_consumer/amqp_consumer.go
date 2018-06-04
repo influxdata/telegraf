@@ -1,8 +1,10 @@
 package amqp_consumer
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"strings"
 	"sync"
 	"time"
@@ -17,9 +19,16 @@ import (
 
 // AMQPConsumer is the top level struct for this plugin
 type AMQPConsumer struct {
-	URL string
-	// AMQP exchange
-	Exchange string
+	URL                string            `toml:"url"` // deprecated in 1.7; use brokers
+	Brokers            []string          `toml:"brokers"`
+	Username           string            `toml:"username"`
+	Password           string            `toml:"password"`
+	Exchange           string            `toml:"exchange"`
+	ExchangeType       string            `toml:"exchange_type"`
+	ExchangeDurability string            `toml:"exchange_durability"`
+	ExchangePassive    bool              `toml:"exchange_passive"`
+	ExchangeArguments  map[string]string `toml:"exchange_arguments"`
+
 	// Queue Name
 	Queue string
 	// Binding Key
@@ -48,23 +57,55 @@ func (a *externalAuth) Response() string {
 }
 
 const (
-	DefaultAuthMethod    = "PLAIN"
+	DefaultAuthMethod = "PLAIN"
+
+	DefaultBroker = "amqp://localhost:5672/influxdb"
+
+	DefaultExchangeType       = "topic"
+	DefaultExchangeDurability = "durable"
+
 	DefaultPrefetchCount = 50
 )
 
 func (a *AMQPConsumer) SampleConfig() string {
 	return `
-  ## AMQP url
-  url = "amqp://localhost:5672/influxdb"
-  ## AMQP exchange
+  ## Broker to consume from.
+  ##   deprecated in 1.7; use the brokers option
+  # url = "amqp://localhost:5672/influxdb"
+
+  ## Brokers to consume from.  If multiple brokers are specified a random broker
+  ## will be selected anytime a connection is established.  This can be
+  ## helpful for load balancing when not using a dedicated load balancer.
+  brokers = ["amqp://localhost:5672/influxdb"]
+
+  ## Authentication credentials for the PLAIN auth_method.
+  # username = ""
+  # password = ""
+
+  ## Exchange to declare and consume from.
   exchange = "telegraf"
+
+  ## Exchange type; common types are "direct", "fanout", "topic", "header", "x-consistent-hash".
+  # exchange_type = "topic"
+
+  ## If true, exchange will be passively declared.
+  # exchange_passive = false
+
+  ## Exchange durability can be either "transient" or "durable".
+  # exchange_durability = "durable"
+
+  ## Additional exchange arguments.
+  # exchange_arguments = { }
+  # exchange_arguments = {"hash_propery" = "timestamp"}
+
   ## AMQP queue name
   queue = "telegraf"
+
   ## Binding Key
   binding_key = "#"
 
   ## Maximum number of messages server should give to the worker.
-  prefetch_count = 50
+  # prefetch_count = 50
 
   ## Auth method. PLAIN and EXTERNAL are supported
   ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
@@ -106,16 +147,21 @@ func (a *AMQPConsumer) createConfig() (*amqp.Config, error) {
 		return nil, err
 	}
 
-	// parse auth method
-	var sasl []amqp.Authentication // nil by default
-
+	var auth []amqp.Authentication
 	if strings.ToUpper(a.AuthMethod) == "EXTERNAL" {
-		sasl = []amqp.Authentication{&externalAuth{}}
+		auth = []amqp.Authentication{&externalAuth{}}
+	} else if a.Username != "" || a.Password != "" {
+		auth = []amqp.Authentication{
+			&amqp.PlainAuth{
+				Username: a.Username,
+				Password: a.Password,
+			},
+		}
 	}
 
 	config := amqp.Config{
 		TLSClientConfig: tls,
-		SASL:            sasl, // if nil, it will be PLAIN
+		SASL:            auth, // if nil, it will be PLAIN
 	}
 	return &config, nil
 }
@@ -163,28 +209,55 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 }
 
 func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, error) {
-	conn, err := amqp.DialConfig(a.URL, *amqpConf)
-	if err != nil {
-		return nil, err
+	brokers := a.Brokers
+	if len(brokers) == 0 {
+		brokers = []string{a.URL}
 	}
-	a.conn = conn
 
-	ch, err := conn.Channel()
+	p := rand.Perm(len(brokers))
+	for _, n := range p {
+		broker := brokers[n]
+		log.Printf("D! [amqp_consumer] connecting to %q", broker)
+		conn, err := amqp.DialConfig(broker, *amqpConf)
+		if err == nil {
+			a.conn = conn
+			log.Printf("D! [amqp_consumer] connected to %q", broker)
+			break
+		}
+		log.Printf("D! [amqp_consumer] error connecting to %q", broker)
+	}
+
+	if a.conn == nil {
+		return nil, errors.New("could not connect to any broker")
+	}
+
+	ch, err := a.conn.Channel()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to open a channel: %s", err)
 	}
 
-	err = ch.ExchangeDeclare(
-		a.Exchange, // name
-		"topic",    // type
-		true,       // durable
-		false,      // auto-deleted
-		false,      // internal
-		false,      // no-wait
-		nil,        // arguments
-	)
+	var exchangeDurable = true
+	switch a.ExchangeDurability {
+	case "transient":
+		exchangeDurable = false
+	default:
+		exchangeDurable = true
+	}
+
+	exchangeArgs := make(amqp.Table, len(a.ExchangeArguments))
+	for k, v := range a.ExchangeArguments {
+		exchangeArgs[k] = v
+	}
+
+	err = declareExchange(
+		ch,
+		a.Exchange,
+		a.ExchangeType,
+		a.ExchangePassive,
+		exchangeDurable,
+		exchangeArgs)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to declare an exchange: %s", err)
+		return nil, err
 	}
 
 	q, err := ch.QueueDeclare(
@@ -236,6 +309,42 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 	return msgs, err
 }
 
+func declareExchange(
+	channel *amqp.Channel,
+	exchangeName string,
+	exchangeType string,
+	exchangePassive bool,
+	exchangeDurable bool,
+	exchangeArguments amqp.Table,
+) error {
+	var err error
+	if exchangePassive {
+		err = channel.ExchangeDeclarePassive(
+			exchangeName,
+			exchangeType,
+			exchangeDurable,
+			false, // delete when unused
+			false, // internal
+			false, // no-wait
+			exchangeArguments,
+		)
+	} else {
+		err = channel.ExchangeDeclare(
+			exchangeName,
+			exchangeType,
+			exchangeDurable,
+			false, // delete when unused
+			false, // internal
+			false, // no-wait
+			exchangeArguments,
+		)
+	}
+	if err != nil {
+		return fmt.Errorf("error declaring exchange: %v", err)
+	}
+	return nil
+}
+
 // Read messages from queue and add them to the Accumulator
 func (a *AMQPConsumer) process(msgs <-chan amqp.Delivery, acc telegraf.Accumulator) {
 	defer a.wg.Done()
@@ -267,8 +376,11 @@ func (a *AMQPConsumer) Stop() {
 func init() {
 	inputs.Add("amqp_consumer", func() telegraf.Input {
 		return &AMQPConsumer{
-			AuthMethod:    DefaultAuthMethod,
-			PrefetchCount: DefaultPrefetchCount,
+			URL:                DefaultBroker,
+			AuthMethod:         DefaultAuthMethod,
+			ExchangeType:       DefaultExchangeType,
+			ExchangeDurability: DefaultExchangeDurability,
+			PrefetchCount:      DefaultPrefetchCount,
 		}
 	})
 }

@@ -3,14 +3,15 @@
 package conntrack
 
 import (
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 )
 
 func restoreDflts(savedFiles, savedDirs []string) {
@@ -39,6 +40,7 @@ func TestDefaultsUsed(t *testing.T) {
 
 	tmpFile, err := ioutil.TempFile(tmpdir, "ip_conntrack_count")
 	assert.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
 
 	dfltDirs = []string{tmpdir}
 	fname := path.Base(tmpFile.Name())
@@ -63,6 +65,8 @@ func TestConfigsUsed(t *testing.T) {
 	cntFile, err := ioutil.TempFile(tmpdir, "nf_conntrack_count")
 	maxFile, err := ioutil.TempFile(tmpdir, "nf_conntrack_max")
 	assert.NoError(t, err)
+	defer os.Remove(cntFile.Name())
+	defer os.Remove(maxFile.Name())
 
 	dfltDirs = []string{tmpdir}
 	cntFname := path.Base(cntFile.Name())
