@@ -1,8 +1,10 @@
 package amqp
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"strings"
 	"sync"
@@ -24,9 +26,10 @@ type client struct {
 }
 
 type AMQP struct {
-	// AMQP brokers to send metrics to
-	URL string
-
+	URL                string            `toml:"url"` // deprecated in 1.7; use brokers
+	Brokers            []string          `toml:"brokers"`
+	Username           string            `toml:"username"`
+	Password           string            `toml:"password"`
 	Exchange           string            `toml:"exchange"`
 	ExchangeType       string            `toml:"exchange_type"`
 	ExchangeDurability string            `toml:"exchange_durability"`
@@ -72,6 +75,8 @@ func (a *externalAuth) Response() string {
 const (
 	DefaultAuthMethod = "PLAIN"
 
+	DefaultBroker = "amqp://localhost:5672/influxdb"
+
 	DefaultExchangeType       = "topic"
 	DefaultExchangeDurability = "durable"
 
@@ -80,8 +85,18 @@ const (
 )
 
 var sampleConfig = `
-  ## AMQP url
-  url = "amqp://localhost:5672/influxdb"
+  ## Broker to publish to.
+  ##   deprecated in 1.7; use the brokers option
+  # url = "amqp://localhost:5672/influxdb"
+
+  ## Brokers to publish to.  If multiple brokers are specified a random broker
+  ## will be selected anytime a connection is established.  This can be
+  ## helpful for load balancing when not using a dedicated load balancer.
+  brokers = ["amqp://localhost:5672/influxdb"]
+
+  ## Authentication credentials for the PLAIN auth_method.
+  # username = ""
+  # password = ""
 
   ## Exchange to declare and publish to.
   exchange = "telegraf"
@@ -158,31 +173,53 @@ func (q *AMQP) Connect() error {
 		"retention_policy": q.RetentionPolicy,
 	}
 
-	var connection *amqp.Connection
 	// make new tls config
 	tls, err := q.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}
 
-	// parse auth method
-	var sasl []amqp.Authentication // nil by default
-
+	var auth []amqp.Authentication
 	if strings.ToUpper(q.AuthMethod) == "EXTERNAL" {
-		sasl = []amqp.Authentication{&externalAuth{}}
+		auth = []amqp.Authentication{&externalAuth{}}
+	} else if q.Username != "" || q.Password != "" {
+		auth = []amqp.Authentication{
+			&amqp.PlainAuth{
+				Username: q.Username,
+				Password: q.Password,
+			},
+		}
+	}
+
+	brokers := q.Brokers
+	if len(brokers) == 0 {
+		brokers = []string{q.URL}
 	}
 
 	amqpConf := amqp.Config{
 		TLSClientConfig: tls,
-		SASL:            sasl, // if nil, it will be PLAIN
+		SASL:            auth, // if nil, it will be PLAIN
 		Dial: func(network, addr string) (net.Conn, error) {
 			return net.DialTimeout(network, addr, q.Timeout.Duration)
 		},
 	}
 
-	connection, err = amqp.DialConfig(q.URL, amqpConf)
-	if err != nil {
-		return err
+	var connection *amqp.Connection
+	p := rand.Perm(len(brokers))
+	for _, n := range p {
+		broker := brokers[n]
+		log.Printf("D! Output [amqp] connecting to %q", broker)
+		conn, err := amqp.DialConfig(broker, amqpConf)
+		if err == nil {
+			connection = conn
+			log.Printf("D! Output [amqp] connected to %q", broker)
+			break
+		}
+		log.Printf("D! Output [amqp] error connecting to %q", broker)
+	}
+
+	if connection == nil {
+		return errors.New("could not connect to any broker")
 	}
 
 	channel, err := connection.Channel()
@@ -363,6 +400,7 @@ func (q *AMQP) setClient(c *client) {
 func init() {
 	outputs.Add("amqp", func() telegraf.Output {
 		return &AMQP{
+			URL:                DefaultBroker,
 			AuthMethod:         DefaultAuthMethod,
 			ExchangeType:       DefaultExchangeType,
 			ExchangeDurability: DefaultExchangeDurability,
