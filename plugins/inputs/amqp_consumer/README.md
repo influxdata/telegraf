@@ -50,7 +50,7 @@ The following defaults are known to work with RabbitMQ:
   binding_key = "#"
 
   ## Maximum number of messages server should give to the worker.
-  prefetch_count = 50
+  # prefetch_count = 50
 
   ## Auth method. PLAIN and EXTERNAL are supported
   ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
