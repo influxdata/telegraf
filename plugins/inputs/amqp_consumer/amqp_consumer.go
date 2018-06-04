@@ -95,8 +95,8 @@ func (a *AMQPConsumer) SampleConfig() string {
   # exchange_durability = "durable"
 
   ## Additional exchange arguments.
-  # exchange_args = { }
-  # exchange_args = {"hash_propery" = "timestamp"}
+  # exchange_arguments = { }
+  # exchange_arguments = {"hash_propery" = "timestamp"}
 
   ## AMQP queue name
   queue = "telegraf"

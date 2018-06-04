@@ -39,8 +39,8 @@ For an introduction to AMQP see:
   # exchange_durable = true
 
   ## Additional exchange arguments.
-  # exchange_args = { }
-  # exchange_args = {"hash_propery" = "timestamp"}
+  # exchange_arguments = { }
+  # exchange_arguments = {"hash_propery" = "timestamp"}
 
   ## Authentication credentials for the PLAIN auth_method.
   # username = ""
