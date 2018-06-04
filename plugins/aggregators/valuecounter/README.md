@@ -11,6 +11,9 @@ configuration directive. When no `fields` is provided the plugin will not count
 any fields. The results are emitted in fields in the format:
 `originalfieldname_fieldvalue = count`.
 
+Valuecounter only works on fields of the type int, bool or string. Float fields
+are being dropped to prevent the creating of too many fields.
+
 ### Configuration:
 
 ```toml

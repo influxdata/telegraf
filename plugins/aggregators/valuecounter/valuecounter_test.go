@@ -83,7 +83,6 @@ func TestMultipleFields(t *testing.T) {
 	expectedFields := map[string]interface{}{
 		"status_200":      2,
 		"status_OK":       2,
-		"somefield_20.1":  2,
 		"boolfield_false": 2,
 	}
 	expectedTags := map[string]string{

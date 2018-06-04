@@ -2,6 +2,7 @@ package valuecounter
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/aggregators"
@@ -13,11 +14,14 @@ type aggregate struct {
 	fieldCount map[string]int
 }
 
+// ValueCounter an aggregation plugin
 type ValueCounter struct {
 	cache  map[uint64]aggregate
 	Fields []string
 }
 
+// NewValueCounter create a new aggregation plugin which counts the occurances
+// of fields and emits the count.
 func NewValueCounter() telegraf.Aggregator {
 	vc := &ValueCounter{}
 	vc.Reset()
@@ -35,15 +39,17 @@ var sampleConfig = `
   fields = []
 `
 
+// SampleConfig generates a sample config for the ValueCounter plugin
 func (vc *ValueCounter) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description returns the description of the ValueCounter plugin
 func (vc *ValueCounter) Description() string {
 	return "Count the occurance of values in fields."
 }
 
-// Run on every metric which passes the plugin
+// Add is run on every metric which passes the plugin
 func (vc *ValueCounter) Add(in telegraf.Metric) {
 	id := in.HashID()
 
@@ -62,14 +68,23 @@ func (vc *ValueCounter) Add(in telegraf.Metric) {
 	for fk, fv := range in.Fields() {
 		for _, cf := range vc.Fields {
 			if fk == cf {
+				// Do not process float types to prevent memory from blowing up
+				switch fv.(type) {
+				default:
+					log.Printf("I! Valuecounter: Unsupported field type. " +
+						"Must be an int, string or bool. Ignoring.")
+					continue
+				case uint8, uint16, uint32, uint64, int8,
+					int16, int32, int64, string, bool:
+				}
 				fn := fmt.Sprintf("%v_%v", fk, fv)
-				vc.cache[id].fieldCount[fn] += 1
+				vc.cache[id].fieldCount[fn]++
 			}
 		}
 	}
 }
 
-// Emit the counters
+// Push emits the counters
 func (vc *ValueCounter) Push(acc telegraf.Accumulator) {
 	for _, agg := range vc.cache {
 		fields := map[string]interface{}{}
