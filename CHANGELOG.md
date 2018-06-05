@@ -62,6 +62,7 @@
 - [#4212](https://github.com/influxdata/telegraf/pull/4212): Print the enabled aggregator and processor plugins on startup.
 - [#3994](https://github.com/influxdata/telegraf/pull/3994): Add static routing_key option to amqp output.
 - [#3995](https://github.com/influxdata/telegraf/pull/3995): Add passive mode exchange declaration option to amqp consumer input.
+- [#4216](https://github.com/influxdata/telegraf/pull/4216): Add counter fields to pf input.
 
 ### Bugfixes
 
