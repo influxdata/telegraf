@@ -80,6 +80,7 @@
 
 - [#4203](https://github.com/influxdata/telegraf/issues/4203): Fix snmp overriding of auto-configured table fields.
 - [#4218](https://github.com/influxdata/telegraf/issues/4218): Fix uint support in cloudwatch output.
+- [#4188](https://github.com/influxdata/telegraf/pull/4188): Fix documentation of instance_name option in varnish input.
 
 ## v1.6.3 [2018-05-21]
 
