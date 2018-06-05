@@ -18,8 +18,7 @@ Currently tested on JBoss EAP 6.X , JBoss AS 7.X
   servers = [
     "http://localhost:9990/management",
   ]
-  ## Execution Mode
-  exec_as_domain = false
+
   ## Username and password
   #username = ""
   #password = ""

@@ -11,6 +11,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var jboss_exec_mode_out = `
+{
+    "outcome" : "success",
+    "result" : "STANDAONE"
+}
+`
+
 var jboss_database_out = `
 {
     "outcome" : "success",
@@ -1249,13 +1256,14 @@ var jboss_jms_out = `
 `
 
 type BodyContent struct {
-	Operation      string            `json:"operation"`
-	IncludeRuntime string            `json:"include-runtime"`
-	ChildType      string            `json:"child-type"`
-	RecursiveDepth int               `json:"recursive-depth"`
-	Recursive      string            `json:"recursive"`
-	Address        map[string]string `json:"address"`
-	JsonPretty     int               `json:"json.pretty"`
+	Operation      string                 `json:"operation"`
+	Name           string                 `json:"name"`
+	IncludeRuntime string                 `json:"include-runtime"`
+	ChildType      string                 `json:"child-type"`
+	RecursiveDepth int                    `json:"recursive-depth"`
+	Recursive      string                 `json:"recursive"`
+	Address        map[string]interface{} `json:"address"`
+	JsonPretty     int                    `json:"json.pretty"`
 }
 
 func testJBossServer(t *testing.T) *httptest.Server {
@@ -1271,7 +1279,13 @@ func testJBossServer(t *testing.T) *httptest.Server {
 		}
 		fmt.Printf("REQUEST:%+v\n", r.Body)
 		fmt.Printf("BODYCONTENT:%+v\n", b)
+		if b.Operation == "read-attribute" {
+			fmt.Fprintln(w, jboss_exec_mode_out)
+			return
+		}
 		if b.Operation == "read-resource" {
+			fmt.Printf("DEBUG: %#+v\n", b.Address)
+
 			if v, ok := b.Address["core-service"]; ok {
 				if v == "platform-mbean" {
 					fmt.Fprintln(w, jboss_jvm_out)
@@ -1330,7 +1344,6 @@ func TestHTTPJboss(t *testing.T) {
 	defer ts.Close()
 	j := JBoss{
 		Servers:       []string{ts.URL},
-		ExecAsDomain:  false,
 		Username:      "",
 		Password:      "",
 		Authorization: "digest",
@@ -1347,7 +1360,6 @@ func TestHTTPJboss(t *testing.T) {
 	acc := new(testutil.Accumulator)
 	err := acc.GatherError(j.Gather)
 	require.NoError(t, err)
-
 	//TEST JVM
 	fields_jvm := map[string]interface{}{
 		"thread-count":              float64(417),

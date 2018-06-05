@@ -5,7 +5,6 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -24,15 +23,16 @@ import (
 
 // GetHosts constan applied to jboss management query types
 const (
-	GetHosts          = 0
-	GetServers        = 1
-	GetDBStat         = 2
-	GetJVMStat        = 3
-	GetDeployments    = 4
-	GetDeploymentStat = 5
-	GetWebStat        = 6
-	GetJMSQueueStat   = 7
-	GetJMSTopicStat   = 8
+	GetExecStat = iota
+	GetHosts
+	GetServers
+	GetDBStat
+	GetJVMStat
+	GetDeployments
+	GetDeploymentStat
+	GetWebStat
+	GetJMSQueueStat
+	GetJMSTopicStat
 )
 
 // KeyVal key / value struct
@@ -70,6 +70,12 @@ func (omap OrderedMap) MarshalJSON() ([]byte, error) {
 
 	buf.WriteString("}")
 	return buf.Bytes(), nil
+}
+
+// HostResponse expected GetHost response type
+type ExecTypeResponse struct {
+	Outcome string `json:"outcome"`
+	Result  string `json:"result"`
 }
 
 // HostResponse expected GetHost response type
@@ -164,8 +170,6 @@ type JBoss struct {
 	Username string
 	Password string
 
-	ExecAsDomain bool `toml:"exec_as_domain"`
-
 	Authorization string
 
 	ResponseTimeout internal.Duration
@@ -216,8 +220,6 @@ var sampleConfig = `
   servers = [
     "http://localhost:9090/management",
   ]
-  ## Execution Mode
-  exec_as_domain = false
   
   ## Username and password
   username = ""
@@ -310,13 +312,39 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 
 	var wg sync.WaitGroup
 	for _, server := range h.Servers {
+
+		//Check Exec Mode for each servers
+
+		bodyContent, err := h.createRequestBody(GetExecStat, nil)
+		if err != nil {
+			acc.AddError(err)
+		}
+
+		out, err := h.doRequest(server, bodyContent)
+		if err != nil {
+			log.Printf("E! JBoss Error handling ExecMode Test: %s\n", err)
+			acc.AddError(err)
+		}
+		// Unmarshal json
+		exec := ExecTypeResponse{}
+		if err = json.Unmarshal(out, &exec); err != nil {
+			acc.AddError(fmt.Errorf("Error decoding JSON response (ExecTypeResponse) %s,%s", out, err))
+		}
+		var execAsDomain bool
+		if exec.Result == "DOMAIN" {
+			execAsDomain = true
+		} else {
+			execAsDomain = false
+		}
+		log.Printf("D! JBoss Plugin Working as Domain : %t ( %s )  for server %s \n", execAsDomain, exec.Result, server)
+
 		wg.Add(1)
-		go func(server string) {
+		go func(server string, execAsDomain bool) {
 			defer wg.Done()
 			//default as standalone server
 			hosts := HostResponse{Outcome: "", Result: []string{"standalone"}}
-			log.Printf("D! JBoss Plugin Working as Domain: %t\n", h.ExecAsDomain)
-			if h.ExecAsDomain {
+
+			if execAsDomain {
 				bodyContent, err := h.createRequestBody(GetHosts, nil)
 				if err != nil {
 					acc.AddError(err)
@@ -336,14 +364,14 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 				// Unmarshal json
 
 				if err = json.Unmarshal(out, &hosts); err != nil {
-					acc.AddError(errors.New("Error decoding JSON response"))
+					acc.AddError(fmt.Errorf("Error decoding JSON response (HostResponse) %s :%s", out, err))
 				}
 				log.Printf("D! JBoss HOSTS %s", hosts)
 			}
 
-			h.getServersOnHost(acc, server, hosts.Result)
+			h.getServersOnHost(acc, server, execAsDomain, hosts.Result)
 
-		}(server)
+		}(server, execAsDomain)
 	}
 
 	wg.Wait()
@@ -363,6 +391,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 func (h *JBoss) getServersOnHost(
 	acc telegraf.Accumulator,
 	serverURL string,
+	execAsDomain bool,
 	hosts []string,
 ) error {
 	var wg sync.WaitGroup
@@ -375,7 +404,7 @@ func (h *JBoss) getServersOnHost(
 
 			servers := HostResponse{Outcome: "", Result: []string{"standalone"}}
 
-			if h.ExecAsDomain {
+			if execAsDomain {
 				//get servers
 				adr := OrderedMap{
 					{"host", host},
@@ -407,17 +436,17 @@ func (h *JBoss) getServersOnHost(
 				for _, v := range h.Metrics {
 					switch v {
 					case "jvm":
-						h.getJVMStatistics(acc, serverURL, host, server)
+						h.getJVMStatistics(acc, serverURL, execAsDomain, host, server)
 					case "web_con":
-						h.getWebStatistics(acc, serverURL, host, server, "ajp")
-						h.getWebStatistics(acc, serverURL, host, server, "http")
+						h.getWebStatistics(acc, serverURL, execAsDomain, host, server, "ajp")
+						h.getWebStatistics(acc, serverURL, execAsDomain, host, server, "http")
 					case "deployment":
-						h.getServerDeploymentStatistics(acc, serverURL, host, server)
+						h.getServerDeploymentStatistics(acc, serverURL, execAsDomain, host, server)
 					case "database":
-						h.getDatasourceStatistics(acc, serverURL, host, server)
+						h.getDatasourceStatistics(acc, serverURL, execAsDomain, host, server)
 					case "jms":
-						h.getJMSStatistics(acc, serverURL, host, server, GetJMSQueueStat)
-						h.getJMSStatistics(acc, serverURL, host, server, GetJMSTopicStat)
+						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, GetJMSQueueStat)
+						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, GetJMSTopicStat)
 					default:
 						log.Printf("E! Jboss doesn't exist the metric set %s\n", v)
 					}
@@ -444,12 +473,13 @@ func (h *JBoss) getServersOnHost(
 func (h *JBoss) getWebStatistics(
 	acc telegraf.Accumulator,
 	serverURL string,
+	execAsDomain bool,
 	host string,
 	serverName string,
 	connector string,
 ) error {
 	adr := OrderedMap{}
-	if h.ExecAsDomain {
+	if execAsDomain {
 		adr = OrderedMap{
 			{"host", host},
 			{"server", serverName},
@@ -478,7 +508,7 @@ func (h *JBoss) getWebStatistics(
 	}
 	server := WebResponse{}
 	if err = json.Unmarshal(out, &server); err != nil {
-		return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
+		return fmt.Errorf("Error decoding JSON response (WebResponse): %s : %s", out, err)
 	}
 
 	fields := make(map[string]interface{})
@@ -525,11 +555,12 @@ func (h *JBoss) getWebStatistics(
 func (h *JBoss) getDatasourceStatistics(
 	acc telegraf.Accumulator,
 	serverURL string,
+	execAsDomain bool,
 	host string,
 	serverName string,
 ) error {
 	adr := OrderedMap{}
-	if h.ExecAsDomain {
+	if execAsDomain {
 		adr = OrderedMap{
 			{"host", host},
 			{"server", serverName},
@@ -557,7 +588,7 @@ func (h *JBoss) getDatasourceStatistics(
 	}
 	server := DatasourceResponse{}
 	if err = json.Unmarshal(out, &server); err != nil {
-		return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
+		return fmt.Errorf("Error decoding JSON response (DataSourceResponse): %s : %s", out, err)
 	}
 
 	for database, value := range server.Result.DataSource {
@@ -601,6 +632,7 @@ func (h *JBoss) getDatasourceStatistics(
 func (h *JBoss) getJMSStatistics(
 	acc telegraf.Accumulator,
 	serverURL string,
+	execAsDomain bool,
 	host string,
 	serverName string,
 	opType int,
@@ -608,7 +640,7 @@ func (h *JBoss) getJMSStatistics(
 
 	adr := OrderedMap{}
 
-	if h.ExecAsDomain {
+	if execAsDomain {
 		adr = OrderedMap{
 			{"host", host},
 			{"server", serverName},
@@ -637,7 +669,7 @@ func (h *JBoss) getJMSStatistics(
 	}
 	jmsresponse := JMSResponse{}
 	if err = json.Unmarshal(out, &jmsresponse); err != nil {
-		return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
+		return fmt.Errorf("Error decoding JSON response (JMSResponse): %s : %s", out, err)
 	}
 
 	for jmsQueue, value := range jmsresponse.Result {
@@ -675,11 +707,12 @@ func (h *JBoss) getJMSStatistics(
 func (h *JBoss) getJVMStatistics(
 	acc telegraf.Accumulator,
 	serverURL string,
+	execAsDomain bool,
 	host string,
 	serverName string,
 ) error {
 	adr := OrderedMap{}
-	if h.ExecAsDomain {
+	if execAsDomain {
 		adr = OrderedMap{
 			{"host", host},
 			{"server", serverName},
@@ -707,7 +740,7 @@ func (h *JBoss) getJVMStatistics(
 
 	server := JVMResponse{}
 	if err = json.Unmarshal(out, &server); err != nil {
-		return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
+		return fmt.Errorf("Error decoding JSON response (JVMReponse): %s : %s", out, err)
 	}
 
 	fields := make(map[string]interface{})
@@ -802,13 +835,14 @@ func (h *JBoss) processWebAppStats(acc telegraf.Accumulator, web map[string]inte
 func (h *JBoss) getServerDeploymentStatistics(
 	acc telegraf.Accumulator,
 	serverURL string,
+	execAsDomain bool,
 	host string,
 	serverName string,
 ) error {
 	var wg sync.WaitGroup
 	adr := OrderedMap{}
 
-	if h.ExecAsDomain {
+	if execAsDomain {
 		adr = OrderedMap{
 			{"host", host},
 			{"server", serverName},
@@ -831,7 +865,7 @@ func (h *JBoss) getServerDeploymentStatistics(
 
 	deployments := HostResponse{}
 	if err = json.Unmarshal(out, &deployments); err != nil {
-		return fmt.Errorf("Error decoding JSON response: %s : %s", out, err)
+		return fmt.Errorf("Error decoding JSON response (HostResponse): %s : %s", out, err)
 	}
 
 	for _, deployment := range deployments.Result {
@@ -839,7 +873,7 @@ func (h *JBoss) getServerDeploymentStatistics(
 		go func(deployment string) {
 			defer wg.Done()
 			adr2 := OrderedMap{}
-			if h.ExecAsDomain {
+			if execAsDomain {
 				adr2 = OrderedMap{
 					{"host", host},
 					{"server", serverName},
@@ -869,7 +903,7 @@ func (h *JBoss) getServerDeploymentStatistics(
 			// everything ok ! continue with decoding data
 			deploy := DeploymentResponse{}
 			if err = json.Unmarshal(out, &deploy); err != nil {
-				acc.AddError(errors.New("Error decoding JSON response"))
+				acc.AddError(fmt.Errorf("Error decoding JSON response(DeploymentResponse): %s : %s", out, err))
 			}
 			// This struct apply on EAR files
 			for typeName, value := range deploy.Result.Subdeployment {
@@ -963,6 +997,13 @@ func (h *JBoss) createRequestBody(optype int, address OrderedMap) (map[string]in
 
 	// Create bodyContent
 	switch optype {
+	case GetExecStat:
+		bodyContent = map[string]interface{}{
+			"operation":   "read-attribute",
+			"name":        "launch-type",
+			"address":     []string{},
+			"json.pretty": 1,
+		}
 	case GetHosts:
 		bodyContent = map[string]interface{}{
 			"operation":   "read-children-names",
