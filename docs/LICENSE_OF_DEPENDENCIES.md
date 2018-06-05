@@ -44,6 +44,7 @@ following works:
 - github.com/hashicorp/raft [MPL](https://github.com/hashicorp/raft/blob/master/LICENSE)
 - github.com/influxdata/tail [MIT](https://github.com/influxdata/tail/blob/master/LICENSE.txt)
 - github.com/influxdata/toml [MIT](https://github.com/influxdata/toml/blob/master/LICENSE)
+- github.com/influxdata/go-syslog [MIT](https://github.com/influxdata/go-syslog/blob/develop/LICENSE)
 - github.com/influxdata/wlog [MIT](https://github.com/influxdata/wlog/blob/master/LICENSE)
 - github.com/jackc/pgx [MIT](https://github.com/jackc/pgx/blob/master/LICENSE)
 - github.com/jmespath/go-jmespath [APACHE](https://github.com/jmespath/go-jmespath/blob/master/LICENSE)
