@@ -67,7 +67,7 @@ func errMissingData(tag string) error {
 
 type pfctlOutputStanza struct {
 	HeaderRE  *regexp.Regexp
-	ParseFunc func([]string, map[string]interface{}) error
+	ParseFunc func([]string, telegraf.Accumulator) error
 	Found     bool
 }
 
@@ -76,16 +76,11 @@ var pfctlOutputStanzas = []*pfctlOutputStanza{
 		HeaderRE:  regexp.MustCompile("^State Table"),
 		ParseFunc: parseStateTable,
 	},
-	&pfctlOutputStanza{
-		HeaderRE:  regexp.MustCompile("^Counters"),
-		ParseFunc: parseCounterTable,
-	},
 }
 
 var anyTableHeaderRE = regexp.MustCompile("^[A-Z]")
 
 func (pf *PF) parsePfctlOutput(pfoutput string, acc telegraf.Accumulator) error {
-	fields := make(map[string]interface{})
 	scanner := bufio.NewScanner(strings.NewReader(pfoutput))
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -96,14 +91,10 @@ func (pf *PF) parsePfctlOutput(pfoutput string, acc telegraf.Accumulator) error 
 				line = scanner.Text()
 				for !anyTableHeaderRE.MatchString(line) {
 					stanzaLines = append(stanzaLines, line)
-					more := scanner.Scan()
-					if more {
-						line = scanner.Text()
-					} else {
-						break
-					}
+					scanner.Scan()
+					line = scanner.Text()
 				}
-				if perr := s.ParseFunc(stanzaLines, fields); perr != nil {
+				if perr := s.ParseFunc(stanzaLines, acc); perr != nil {
 					return perr
 				}
 				s.Found = true
@@ -115,8 +106,6 @@ func (pf *PF) parsePfctlOutput(pfoutput string, acc telegraf.Accumulator) error 
 			return errParseHeader
 		}
 	}
-
-	acc.AddFields(measurement, fields, make(map[string]string))
 	return nil
 }
 
@@ -135,40 +124,11 @@ var StateTable = []*Entry{
 
 var stateTableRE = regexp.MustCompile(`^  (.*?)\s+(\d+)`)
 
-func parseStateTable(lines []string, fields map[string]interface{}) error {
-	return storeFieldValues(lines, stateTableRE, fields, StateTable)
-}
-
-var CounterTable = []*Entry{
-	&Entry{"match", "match", -1},
-	&Entry{"bad-offset", "bad-offset", -1},
-	&Entry{"fragment", "fragment", -1},
-	&Entry{"short", "short", -1},
-	&Entry{"normalize", "normalize", -1},
-	&Entry{"memory", "memory", -1},
-	&Entry{"bad-timestamp", "bad-timestamp", -1},
-	&Entry{"congestion", "congestion", -1},
-	&Entry{"ip-option", "ip-option", -1},
-	&Entry{"proto-cksum", "proto-cksum", -1},
-	&Entry{"state-mismatch", "state-mismatch", -1},
-	&Entry{"state-insert", "state-insert", -1},
-	&Entry{"state-limit", "state-limit", -1},
-	&Entry{"src-limit", "src-limit", -1},
-	&Entry{"synproxy", "synproxy", -1},
-}
-
-var counterTableRE = regexp.MustCompile(`^  (.*?)\s+(\d+)`)
-
-func parseCounterTable(lines []string, fields map[string]interface{}) error {
-	return storeFieldValues(lines, counterTableRE, fields, CounterTable)
-}
-
-func storeFieldValues(lines []string, regex *regexp.Regexp, fields map[string]interface{}, entryTable []*Entry) error {
-
+func parseStateTable(lines []string, acc telegraf.Accumulator) error {
 	for _, v := range lines {
-		entries := regex.FindStringSubmatch(v)
+		entries := stateTableRE.FindStringSubmatch(v)
 		if entries != nil {
-			for _, f := range entryTable {
+			for _, f := range StateTable {
 				if f.PfctlTitle == entries[1] {
 					var err error
 					if f.Value, err = strconv.ParseInt(entries[2], 10, 64); err != nil {
@@ -179,13 +139,15 @@ func storeFieldValues(lines []string, regex *regexp.Regexp, fields map[string]in
 		}
 	}
 
-	for _, v := range entryTable {
+	fields := make(map[string]interface{})
+	for _, v := range StateTable {
 		if v.Value == -1 {
 			return errMissingData(v.PfctlTitle)
 		}
 		fields[v.Field] = v.Value
 	}
 
+	acc.AddFields(measurement, fields, make(map[string]string))
 	return nil
 }
 
