@@ -74,7 +74,7 @@
 - [#2468](https://github.com/influxdata/telegraf/issues/2468): Fix crash on 32-bit Windows in win_perf_counters.
 - [#4198](https://github.com/influxdata/telegraf/issues/4198): Fix win_perf_counters not collecting at every interval.
 
-## v1.6.4 [unreleased]
+## v1.6.4 [2018-06-05]
 
 ### Bugfixes
 
