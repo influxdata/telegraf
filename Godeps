@@ -28,7 +28,7 @@ github.com/golang/snappy 7db9049039a047d955fe8c19b83c8ff5abd765c7
 github.com/go-ole/go-ole be49f7c07711fcb603cff39e1de7c67926dc0ba7
 github.com/google/go-cmp f94e52cad91c65a63acc1e75d4be223ea22e99bc
 github.com/gorilla/mux 53c1911da2b537f792e7cafcb446b05ffe33b996
-github.com/go-redis/redis 73b70592cdaa9e6abdfcfbf97b4a90d80728c836
+github.com/go-redis/redis 83fb42932f6145ce52df09860384a4653d2d332a
 github.com/go-sql-driver/mysql 2e00b5cd70399450106cec6431c2e2ce3cae5034
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
 github.com/hashicorp/consul 5174058f0d2bda63fa5198ab96c33d9a909c58ed
