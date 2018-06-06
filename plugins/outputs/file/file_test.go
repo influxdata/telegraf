@@ -22,6 +22,7 @@ const (
 
 func TestFileExistingFile(t *testing.T) {
 	fh := createFile()
+	defer os.Remove(fh.Name())
 	s, _ := serializers.NewInfluxSerializer()
 	f := File{
 		Files:      []string{fh.Name()},
@@ -43,6 +44,7 @@ func TestFileExistingFile(t *testing.T) {
 func TestFileNewFile(t *testing.T) {
 	s, _ := serializers.NewInfluxSerializer()
 	fh := tmpFile()
+	defer os.Remove(fh)
 	f := File{
 		Files:      []string{fh},
 		serializer: s,
@@ -62,8 +64,11 @@ func TestFileNewFile(t *testing.T) {
 
 func TestFileExistingFiles(t *testing.T) {
 	fh1 := createFile()
+	defer os.Remove(fh1.Name())
 	fh2 := createFile()
+	defer os.Remove(fh2.Name())
 	fh3 := createFile()
+	defer os.Remove(fh3.Name())
 
 	s, _ := serializers.NewInfluxSerializer()
 	f := File{
@@ -88,8 +93,11 @@ func TestFileExistingFiles(t *testing.T) {
 func TestFileNewFiles(t *testing.T) {
 	s, _ := serializers.NewInfluxSerializer()
 	fh1 := tmpFile()
+	defer os.Remove(fh1)
 	fh2 := tmpFile()
+	defer os.Remove(fh2)
 	fh3 := tmpFile()
+	defer os.Remove(fh3)
 	f := File{
 		Files:      []string{fh1, fh2, fh3},
 		serializer: s,
@@ -111,7 +119,9 @@ func TestFileNewFiles(t *testing.T) {
 
 func TestFileBoth(t *testing.T) {
 	fh1 := createFile()
+	defer os.Remove(fh1.Name())
 	fh2 := tmpFile()
+	defer os.Remove(fh2)
 
 	s, _ := serializers.NewInfluxSerializer()
 	f := File{
