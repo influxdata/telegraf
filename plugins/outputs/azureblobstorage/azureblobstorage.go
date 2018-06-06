@@ -55,6 +55,25 @@ type BlockObject struct {
 	Last       float64    `json:"last"`
 }
 
+var sampleConfig = `
+[[outputs.azureblobstorage]]
+ resource_id = "subscriptionId/resourceGroup/VMScaleset"
+ account_name = "nirastoladdiag466"
+ sas_token=""
+  #periods is the list of period configured for each aggregator plugin
+ interval = "3600s"
+ blob_storage_end_point_suffix = ".blob.core.windows.net"
+ protocol = "https://"
+ event_name = "containerName2" #xmlCfg.xml -> eventname property
+ event_version = "2" # xmlCfg.xml <MonitoringManagement eventVersion="2" namespace="" timestamp="2017-03-27T19:45:00.000" version="1.0">
+ namespace = ""
+ agent_identity_hash = "" # present in xmlCfg.xml this value is read from file /sys/class/dmi/id/product_uuid on the VM
+ tenant=""
+ role=""
+ role_instance=""
+ base_time="1527865026" #start time when first container is to be created.
+`
+
 func (azureBlobStorage *AzureBlobStorage) initializeProperties() error {
 	var er error
 	if azureBlobStorage.Interval == "" {
@@ -144,7 +163,7 @@ func (azureBlobStorage *AzureBlobStorage) Description() string {
 
 // SampleConfig returns the default configuration of the Output
 func (azureBlobStorage *AzureBlobStorage) SampleConfig() string {
-	return ""
+	return sampleConfig
 }
 func (azureBlobStorage *AzureBlobStorage) setCurrentBlobPath() error {
 	var er error
@@ -177,14 +196,6 @@ func (azureBlobStorage *AzureBlobStorage) setCurrentBlobPath() error {
 		}
 	}
 	return nil
-}
-
-func getJsonBlock(jsonObj BlockObject) (string, error) {
-	jsonBlock, er := json.Marshal(&jsonObj)
-	if er != nil {
-		return "", er
-	}
-	return string(jsonBlock), nil
 }
 
 func (azureBlobStorage *AzureBlobStorage) getJsonObject(props map[string]interface{}) BlockObject {
@@ -283,6 +294,7 @@ func (azureBlobStorage *AzureBlobStorage) Write(metrics []telegraf.Metric) error
 			log.Println("Error while setting blobPath skipping writing metrics to this blobpath " + util.GetPropsStr(props) + er.Error())
 			continue
 		}
+
 		jsonObject := azureBlobStorage.getJsonObject(props)
 		//	isValidJsonRow := validateObject(jsonObject)
 		//	log.Println(strconv.FormatBool(isValidJsonRow))
