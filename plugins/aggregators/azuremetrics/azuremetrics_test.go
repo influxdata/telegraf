@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/influxdata/telegraf/metric"
-	constants "github.com/influxdata/telegraf/plugins"
 	"github.com/influxdata/telegraf/testutil"
+	constants "github.com/influxdata/telegraf/utility"
 )
 
 var m1, _ = metric.New("m1",
@@ -39,7 +39,7 @@ var m2, _ = metric.New("m1",
 func TestAzureMetricsAddingTwoMetrics(t *testing.T) {
 	acc := testutil.Accumulator{}
 	minmax := NewAzureMetrics()
-	minmax.Period = "30s"
+	minmax.PeriodTag = "30s"
 	minmax.Add(m1)
 	minmax.Add(m2)
 	minmax.Push(&acc)

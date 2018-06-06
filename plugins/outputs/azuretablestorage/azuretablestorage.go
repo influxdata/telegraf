@@ -3,6 +3,7 @@ package azuretablestorage
 import (
 	"errors"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -20,8 +21,9 @@ const (
 )
 
 type TableNameVsTableRef struct {
-	TableName string         //TableName: name of Azure Table
-	TableRef  *storage.Table //TableRef: reference of the Azure Table client object
+	tableName      string         //TableName: name of Azure Table
+	isTableCreated bool           //flag to check if the table is created successfully.
+	tableRef       *storage.Table //TableRef: reference of the Azure Table client object
 }
 type AzureTableStorage struct {
 	AccountName                 string //azure storage account name
@@ -35,6 +37,7 @@ type AzureTableStorage struct {
 	HostName                    string
 	columnsInTable              []string
 	Protocol                    string
+	isTableStorageClientCreated bool //flag to check if tableclient is created successfully
 }
 
 var sampleConfig = `
@@ -81,7 +84,7 @@ func (azureTableStorage *AzureTableStorage) getAzureperiodVsTableNameVsTableRefM
 			log.Println(logMsg)
 			return periodVsTableNameVsTableRef, errors.New(logMsg)
 		}
-		tableNameVsTableRefObj := TableNameVsTableRef{TableName: tableName, TableRef: table}
+		tableNameVsTableRefObj := TableNameVsTableRef{tableName: tableName, isTableCreated: false, tableRef: table}
 		periodVsTableNameVsTableRef[period] = tableNameVsTableRefObj
 	}
 	return periodVsTableNameVsTableRef, nil
@@ -102,44 +105,62 @@ func (azureTableStorage *AzureTableStorage) initDefaults() {
 	azureTableStorage.columnsInTable = append(azureTableStorage.columnsInTable, util.TOTAL)
 }
 
-//TODO: if Connect() fails on multiple retries then log message, skip this plugin and continue with rest of the sinks.
-func (azureTableStorage *AzureTableStorage) Connect() error {
-	azureTableStorage.initDefaults()
+func (azureTableStorage *AzureTableStorage) getTableClient() (storage.TableServiceClient, error) {
+	var tableClient storage.TableServiceClient
 	sasUrl := azureTableStorage.Protocol + azureTableStorage.AccountName + azureTableStorage.TableStorageEndPointSuffix
 	client, er := storage.NewAccountSASClientFromEndpointToken(sasUrl, azureTableStorage.SasToken)
 
 	if er != nil {
 		log.Println("Error in getting table storage client ")
-		return er
+		return tableClient, er
 	}
 
-	tableClient := client.GetTableService()
+	tableClient = client.GetTableService()
 	er = validateTableClient(tableClient)
 	if er != nil {
-		log.Println("Error while creating table client ")
+		log.Println("Error while creating table client " + er.Error())
+		return tableClient, er
+	}
+	azureTableStorage.isTableStorageClientCreated = true
+	return tableClient, nil
+}
+func (azureTableStorage *AzureTableStorage) createTable() error {
+	//create all the tables
+	for _, tableVsTableRef := range azureTableStorage.periodVsTableNameVsTableRef {
+		if tableVsTableRef.isTableCreated == false {
+			er := tableVsTableRef.tableRef.Create(30, FullMetadata, nil)
+			if er != nil && strings.Contains(er.Error(), "TableAlreadyExists") {
+				log.Println("INFO: the table ", tableVsTableRef.tableName, " already exists.")
+			} else if er != nil {
+				log.Println("ERROR: while creating table " + tableVsTableRef.tableName)
+				log.Println(er.Error())
+				return er
+			}
+			tableVsTableRef.isTableCreated = true
+		}
+	}
+	return nil
+}
+
+//TODO: if Connect() fails on multiple retries then log message, skip this plugin and continue with rest of the sinks.
+func (azureTableStorage *AzureTableStorage) Connect() error {
+	azureTableStorage.initDefaults()
+	tableClient, er := azureTableStorage.getTableClient()
+	if er != nil {
+		log.Println("ERROR: while getting table storage client" + er.Error())
 		return er
 	}
-
 	//secondsElapsedTillNow: number of seconds elapsed till now from 1 Jan 1970.
 	secondsElapsedTillNow := time.Now().Unix()
 	azureTableStorage.periodVsTableNameVsTableRef, er =
 		azureTableStorage.getAzureperiodVsTableNameVsTableRefMap(secondsElapsedTillNow, tableClient)
-
 	if er != nil {
-		log.Println("Error while constructing map of <period , <tableName, tableClient>>")
+		log.Println("Error while constructing map of <period , <tableName, tableClient>>" + er.Error())
 		return er
 	}
-
-	//create all the tables
-	for _, tableVsTableRef := range azureTableStorage.periodVsTableNameVsTableRef {
-		er := tableVsTableRef.TableRef.Create(30, FullMetadata, nil)
-		if er != nil && strings.Contains(er.Error(), "TableAlreadyExists") {
-			log.Println("the table ", tableVsTableRef.TableName, " already exists.")
-		} else if er != nil {
-			log.Println("Error while creating table " + tableVsTableRef.TableName)
-			log.Println(er.Error())
-			return er
-		}
+	er = azureTableStorage.createTable()
+	if er != nil {
+		log.Println("ERROR: in creating tables " + er.Error())
 	}
 	return nil
 }
@@ -152,9 +173,52 @@ func (azureTableStorage *AzureTableStorage) Description() string {
 	return "Sends metrics collected by input plugin to azure storage tables"
 }
 
+func (azureTableStorage *AzureTableStorage) checkClientAndTables() (bool, error) {
+	skipMetrics := false
+	if azureTableStorage.isTableStorageClientCreated == false {
+		tableClient, er := azureTableStorage.getTableClient()
+		if er != nil {
+			log.Println("ERROR: while creating tabe storage client " + er.Error())
+			return skipMetrics, er
+		}
+		azureTableStorage.isTableStorageClientCreated = true
+		//secondsElapsedTillNow: number of seconds elapsed till now from 1 Jan 1970.
+		secondsElapsedTillNow := time.Now().Unix()
+		azureTableStorage.periodVsTableNameVsTableRef, er =
+			azureTableStorage.getAzureperiodVsTableNameVsTableRefMap(secondsElapsedTillNow, tableClient)
+		if er != nil {
+			log.Println("ERROR irrecoverable error while constructing map of <period , <tableName, tableClient>>" + er.Error())
+			skipMetrics = true
+			return skipMetrics, er
+		}
+	}
+	er := azureTableStorage.createTable()
+	if er != nil {
+		log.Println("ERROR in creating talbes " + er.Error())
+		return skipMetrics, er
+	}
+	return skipMetrics, nil
+}
+
 func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) error {
 
 	var props map[string]interface{}
+
+	skipMetrics, er := azureTableStorage.checkClientAndTables()
+	//in case some irecoverable error occurs then write all the metrics to log file and return
+	if er != nil {
+		if skipMetrics == true {
+			log.Println("ERROR Irrecoverable error occured, hence skipping following metrics" + er.Error())
+			for i, _ := range metrics {
+				props = metrics[i].Fields()
+				log.Println("Metrics->" + strconv.Itoa(i) + util.GetPropsStr(props))
+			}
+			return nil
+		} else {
+			log.Println("ERROR in creating clients and talbes " + er.Error())
+			return er
+		}
+	}
 	partitionKey := getPartitionKey(azureTableStorage.ResourceId)
 
 	// iterate over the list of metrics and create a new entity for each metrics and add to the table.
@@ -174,7 +238,7 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 		}
 
 		periodStr := tags[util.PERIOD]
-		table := azureTableStorage.periodVsTableNameVsTableRef[periodStr].TableRef
+		table := azureTableStorage.periodVsTableNameVsTableRef[periodStr].tableRef
 
 		//don't write incomplete rows to the table storage
 		isValidRow := validateRow(azureTableStorage.columnsInTable, props)
@@ -188,7 +252,7 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 		rowKey2 := encodedCounterName + "_" + UTCTicks_DescendingOrderStr
 		er = writeEntitiesToTable(partitionKey, rowKey1, rowKey2, props, table)
 		if er != nil {
-			log.Println("Error occured while writing entities to the table")
+			log.Println("Error occured while writing entities to the table" + er.Error())
 			return er
 		}
 	}

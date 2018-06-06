@@ -59,12 +59,12 @@ func TestGetAzurePeriodVsTableNameVsTableRefMap(t *testing.T) {
 	period1 := azureTableStorageObj.Periods[0]
 	tableName1 := "WADMetricsPT30SP10DV2520180415"
 	table1 := tableServiceClient.GetTableReference(tableName1)
-	tableRef1 := TableNameVsTableRef{tableName1, table1}
+	tableRef1 := TableNameVsTableRef{tableName1, false, table1}
 
 	period2 := azureTableStorageObj.Periods[1]
 	tableName2 := "WADMetricsPT1MP10DV2520180415"
 	table2 := tableServiceClient.GetTableReference(tableName2)
-	tableRef2 := TableNameVsTableRef{tableName2, table2}
+	tableRef2 := TableNameVsTableRef{tableName2, false, table2}
 	expectedMap[period1] = tableRef1
 	expectedMap[period2] = tableRef2
 	assert.Equal(t, expectedMap, actualMap)
