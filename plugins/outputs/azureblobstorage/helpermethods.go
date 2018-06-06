@@ -2,6 +2,7 @@ package azureblobstorage
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"log"
 	"strconv"
@@ -96,6 +97,14 @@ func validateBlobClient(blobClient storage.BlobStorageClient) error {
 		return er
 	}
 	return nil
+}
+
+func getJsonBlock(jsonObj BlockObject) (string, error) {
+	jsonBlock, er := json.Marshal(&jsonObj)
+	if er != nil {
+		return "", er
+	}
+	return string(jsonBlock), nil
 }
 
 //if event version = 2 then result is ver2v0
