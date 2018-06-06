@@ -1,3 +1,9 @@
+## v1.8 [unreleased]
+
+### Features
+
+- [#4236](https://github.com/influxdata/telegraf/pull/4236): Add SSL/TLS support to redis input.
+
 ## v1.7 [unreleased]
 
 ### Release Notes
