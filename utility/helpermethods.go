@@ -55,8 +55,8 @@ func GetUTCTicks_DescendingOrder(lastSampleTimestamp string) (uint64, error) {
 
 	currentTime, err := time.Parse(LAYOUT, lastSampleTimestamp)
 	if err != nil {
-		log.Println("Error while parsing timestamp " + lastSampleTimestamp + "in the layout " + LAYOUT)
-		log.Print(err)
+		log.Println("E! ERROR while parsing timestamp " + lastSampleTimestamp + "in the layout " + LAYOUT)
+		log.Print(err.Error())
 		return 0, err
 	}
 	//maxValureDateTime := time.Date(9999, time.December, 31, 12, 59, 59, 59, time.UTC)
@@ -83,7 +83,7 @@ func GetPeriodStr(period string) (string, error) {
 	totalSeconds, err := strconv.Atoi(strings.Trim(period, "s"))
 
 	if err != nil {
-		log.Println(" Error while parsing period." + period)
+		log.Println("E! ERROR while parsing period." + period)
 		log.Print(err.Error())
 		return "", err
 	}
@@ -108,7 +108,7 @@ func ToFileTime(mdsdTime MdsdTime) (int64, error) {
 	//check for int64 overflow
 	fileTimeSeconds, ok := overflow.Add64(EPOCH_DIFFERENCE, mdsdTime.Seconds)
 	if ok == false {
-		erMsg := "integer64 overflow while computing EPOCH_DIFFERENCE + mdsdTime.seconds " +
+		erMsg := "E! ERROR integer64 overflow while computing EPOCH_DIFFERENCE + mdsdTime.seconds " +
 			strconv.FormatInt(EPOCH_DIFFERENCE, 10) + " + " + strconv.FormatInt(mdsdTime.Seconds, 10)
 		log.Print(erMsg)
 		err := errors.New(erMsg)
@@ -117,7 +117,7 @@ func ToFileTime(mdsdTime MdsdTime) (int64, error) {
 
 	fileTimeTickPerSecond, ok := overflow.Mul64(fileTimeSeconds, TICKS_PER_SECOND)
 	if ok == false {
-		erMsg := "integer64 overflow while computing fileTimeSeconds * TICKS_PER_SECOND " +
+		erMsg := "E! ERROR integer64 overflow while computing fileTimeSeconds * TICKS_PER_SECOND " +
 			strconv.FormatInt(fileTimeSeconds, 10) + " * " + strconv.FormatInt(TICKS_PER_SECOND, 10)
 		log.Print(erMsg)
 		err := errors.New(erMsg)
@@ -125,7 +125,7 @@ func ToFileTime(mdsdTime MdsdTime) (int64, error) {
 	}
 	fileTime, ok := overflow.Add64(fileTimeTickPerSecond, mdsdTime.MicroSeconds*10)
 	if ok == false {
-		erMsg := "integer64 overflow while computing fileTimeTickPerSecond + mdsdTime.microSeconds*10" +
+		erMsg := "E! ERROR integer64 overflow while computing fileTimeTickPerSecond + mdsdTime.microSeconds*10" +
 			strconv.FormatInt(fileTimeTickPerSecond, 10) + " +* " + strconv.FormatInt(mdsdTime.MicroSeconds, 10)
 		log.Print(erMsg)
 		err := errors.New(erMsg)

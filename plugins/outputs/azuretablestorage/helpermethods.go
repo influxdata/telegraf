@@ -22,7 +22,7 @@ func getRowKeyComponents(lastSampleTimestamp string, counterName string) (string
 
 	UTCTicks_DescendingOrder, err := util.GetUTCTicks_DescendingOrder(lastSampleTimestamp)
 	if err != nil {
-		log.Println("Error while computing UTCTicks_DescendingOrder")
+		log.Println("E! ERROR while computing UTCTicks_DescendingOrder" + err.Error())
 		return "", "", err
 	}
 	UTCTicks_DescendingOrderStr := strconv.FormatInt(int64(UTCTicks_DescendingOrder), 10)
@@ -76,7 +76,7 @@ func validateTableClient(tableClient storage.TableServiceClient) error {
 func getTableDateSuffix(secondsElapsedTillNow int64) (string, error) {
 
 	if secondsElapsedTillNow < 0 {
-		erMsg := "Invalid time passed to getTableDateSuffix(): "
+		erMsg := "E! ERROR Invalid time passed to getTableDateSuffix(): "
 		log.Print(erMsg)
 		err := errors.New(erMsg)
 		return "", err
@@ -87,9 +87,9 @@ func getTableDateSuffix(secondsElapsedTillNow int64) (string, error) {
 	//fileTime gives the number of 100ns elapsed till mdsdTime since 1601-01-01
 	fileTime, er := util.ToFileTime(mdsdTime)
 	if er != nil {
-		log.Print("Error occurred while converting mdsdtime to filetime mdsdTime = " +
+		log.Print("E! ERROR occurred while converting mdsdtime to filetime mdsdTime = " +
 			strconv.FormatInt(mdsdTime.Seconds, 10) +
-			":" + strconv.FormatInt(mdsdTime.MicroSeconds, 10))
+			":" + strconv.FormatInt(mdsdTime.MicroSeconds, 10) + er.Error())
 		return "", er
 	}
 	//The “ten day” rollover is the time at which FILETIME mod (number of seconds in 10 days) is zero
@@ -118,28 +118,28 @@ func writeEntitiesToTable(
 	var entity *storage.Entity
 	entity = table.GetEntityReference(partitionKey, rowKey1)
 	if entity.PartitionKey == "" {
-		logMsg := "Error: invalid entity reference for entity : " + util.GetPropsStr(props)
+		logMsg := "E! ERROR: invalid entity reference for entity : " + util.GetPropsStr(props)
 		log.Println(logMsg)
 		return errors.New(logMsg)
 	}
 	entity.Properties = props
 	er = entity.Insert(FullMetadata, nil)
 	if er != nil {
-		log.Println("Error: Failed to write entity to the table " + entity.Table.Name +
-			" entity value: " + util.GetPropsStr(entity.Properties))
+		log.Println("E! ERROR: Failed to write entity to the table " + entity.Table.Name +
+			" entity value: " + util.GetPropsStr(entity.Properties) + er.Error())
 		return er
 	}
 
 	entity = table.GetEntityReference(partitionKey, rowKey2)
 	if entity.PartitionKey == "" {
-		logMsg := "Error: invalid entity reference for entity : " + util.GetPropsStr(props)
+		logMsg := "E! ERROR: invalid entity reference for entity : " + util.GetPropsStr(props)
 		log.Println(logMsg)
 		return errors.New(logMsg)
 	}
 	entity.Properties = props
 	er = entity.Insert(FullMetadata, nil)
 	if er != nil {
-		log.Println("Failed to write entity to the table " + entity.Table.Name +
+		log.Println("E! ERROR Failed to write entity to the table " + entity.Table.Name +
 			" entity value: " + util.GetPropsStr(entity.Properties))
 		return er
 	}
