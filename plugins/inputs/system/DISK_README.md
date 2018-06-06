@@ -16,7 +16,7 @@ https://en.wikipedia.org/wiki/Df_(Unix) for more details.
   # mount_points = ["/"]
 
   ## Ignore mount points by filesystem type.
-  ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
+  ignore_fs = ["tmpfs", "devtmpfs", "devfs", "overlay", "aufs", "squashfs"]
 ```
 
 #### Docker container
