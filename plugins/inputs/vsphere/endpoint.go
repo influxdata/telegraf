@@ -235,8 +235,10 @@ func (e *Endpoint) discover() error {
 									break
 								}
 							}
-							mList = append(mList, m)
-							log.Printf("D! Included %s Sampling: %d", mName, res.sampling)
+							if include { // If still included after processing excludes
+								mList = append(mList, m)
+								log.Printf("D! Included %s Sampling: %d", mName, res.sampling)
+							}
 						}
 
 					}
@@ -374,9 +376,9 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 			return 0, 0, nil
 		}
 	} else {
-		latest = now.Add(-time.Duration(res.sampling) * time.Second)
-		e.lastColls[resourceType] = latest
+		latest = time.Now().Add(time.Duration(-res.sampling) * time.Second)
 	}
+	log.Printf("Start of sample period deemed to be %s", latest)
 
 	log.Printf("D! Collecting metrics for %d objects of type %s for %s", len(res.objects), resourceType, e.URL.Host)
 
@@ -388,7 +390,6 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 	count := 0
 	start := time.Now()
 	total := 0
-	lastTS := latest
 	pqs := make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
 	for _, object := range res.objects {
 		info, found := e.instanceInfo[object.ref.Value]
@@ -421,7 +422,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 		//
 		if len(pqs) > 0 && (len(pqs) >= int(e.Parent.ObjectsPerQuery) || total >= len(res.objects)) {
 			log.Printf("D! Querying %d objects of type %s for %s. Object count: %d. Total objects %d", len(pqs), resourceType, e.URL.Host, total, len(res.objects))
-			n, err := e.collectChunk(pqs, resourceType, res, acc, &lastTS)
+			n, err := e.collectChunk(pqs, resourceType, res, acc)
 			if err != nil {
 				e.checkClient()
 				return count, time.Now().Sub(start).Seconds(), err
@@ -430,15 +431,12 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 			pqs = make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
 		}
 	}
-
-	if count > 0 {
-		e.lastColls[resourceType] = lastTS
-	}
+	e.lastColls[resourceType] = now // Use value captured at the beginning to avoid blind spots.
 	log.Printf("D! Collection of %s for %s, took %v returning %d metrics", resourceType, e.URL.Host, time.Now().Sub(start), count)
 	return count, time.Now().Sub(start).Seconds(), nil
 }
 
-func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, res resource, acc telegraf.Accumulator, lastTS *time.Time) (int, error) {
+func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, res resource, acc telegraf.Accumulator) (int, error) {
 	count := 0
 	prefix := "vsphere" + e.Parent.Separator + resourceType
 	client, err := e.getClient()
@@ -487,11 +485,7 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 			// Now deal with the values
 			//
 			for idx, value := range v.Value {
-
 				ts := em.SampleInfo[idx].Timestamp
-				if ts.After(*lastTS) {
-					*lastTS = ts
-				}
 
 				// Organize the metrics into a bucket per measurement.
 				// Data SHOULD be presented to us with the same timestamp for all samples, but in case
@@ -499,7 +493,7 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 				//
 				mn, fn := e.makeMetricIdentifier(prefix, name)
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
-				log.Printf("D! Bucket key: %s, resource: %s, field: %s", bKey, instInfo.name, fn)
+				//log.Printf("D! Bucket key: %s, resource: %s, field: %s", bKey, instInfo.name, fn)
 				bucket, found := buckets[bKey]
 				if !found {
 					bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: t}
@@ -514,7 +508,7 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 		//
 		log.Printf("D! Collected %d buckets for %s", len(buckets), instInfo.name)
 		for key, bucket := range buckets {
-			log.Printf("D! Key: %s, Tags: %s", key, bucket.tags)
+			log.Printf("D! Key: %s, Tags: %s, Fields: %s", key, bucket.tags, bucket.fields)
 			acc.AddFields(bucket.name, bucket.fields, bucket.tags, bucket.ts)
 		}
 	}
@@ -522,6 +516,19 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 }
 
 func (e *Endpoint) populateTags(objectRef objectRef, resourceType string, t map[string]string, v *performance.MetricSeries) {
+	// Map name of object. For vms and hosts, we use the default "hostname".
+	//
+	switch resourceType {
+	case "datastore":
+		t["dsname"] = objectRef.name
+	case "disk":
+		t["diskname"] = objectRef.name
+	case "cluster":
+		t["clustername"] = objectRef.name
+	}
+
+	// Map parent reference
+	//
 	parent, found := e.instanceInfo[objectRef.parentRef.Value]
 	if found {
 		switch resourceType {
@@ -551,7 +558,7 @@ func (e *Endpoint) populateTags(objectRef objectRef, resourceType string, t map[
 		if strings.HasPrefix(name, "cpu.") {
 			t["cpu"] = v.Instance
 		} else if strings.HasPrefix(name, "datastore.") {
-			t["datastore"] = v.Instance
+			t["lun"] = v.Instance
 		} else if strings.HasPrefix(name, "disk.") {
 			t["disk"] = cleanDiskTag(v.Instance)
 		} else if strings.HasPrefix(name, "net.") {
@@ -578,8 +585,7 @@ func (e *Endpoint) makeMetricIdentifier(prefix, metric string) (string, string) 
 	if len(parts) == 1 {
 		return prefix, parts[0]
 	}
-
-	return prefix + "." + parts[0], strings.Join(parts[1:], e.Parent.Separator)
+	return prefix + e.Parent.Separator + parts[0], strings.Join(parts[1:], e.Parent.Separator)
 }
 
 func cleanGuestID(id string) string {

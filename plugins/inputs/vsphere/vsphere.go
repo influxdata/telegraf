@@ -124,7 +124,7 @@ var sampleConfig = `
 # gather_clusters = true ## (default=true)
 
 ## Typical cluster metrics (if omitted, all metrics are collected)
-# cluster_metric_include = [
+#cluster_metric_include = [
 #	  "cpu.usage.*",
 #	  "cpu.usagemhz.*",
 #	  "mem.usage.*",
@@ -134,18 +134,18 @@ var sampleConfig = `
 
 ############### Datastores ###############
 
-# gather_datastore = true ### (default=true)
+# gather_datastores = true ## (default=true)
 
 ## Typical datastore metrics (if omitted, all metrics are collected)
 ##
 ## WARNING: It is not recommended to include all metrics. Your collection will probably time out if you do!
 ##
+
 datastore_metric_include = [
-	"datastore.read.average"
-	"datastore.write.average"
-	"datastore.throughput.usage.average"
+	"datastore.read.average",
+	"datastore.write.average",
+	"datastore.throughput.usage.average",	
 	"datastore.throughput.contention.average" ]
-datastore_metric_exclude = [ "disk.*" ]
 
 ## number of objects to retreive per query. set to 64 for vCenter 5.5 and 6.0 (default: 256)
 # objects_per_query = 256

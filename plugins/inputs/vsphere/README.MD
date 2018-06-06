@@ -12,143 +12,125 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 ```
 # Read metrics from one or many vCenters
 [[inputs.vsphere]]
-  ## List of vCenter URLs to be monitored. 
-  # vcenters = [ "https://vcenter.local/sdk" ]
-  # username = "user@corp.local"
-  # password = "secret"
+  # List of vCenter URLs to be monitored. These three lines must be uncommented
+## and edited for the plugin to work.
+# vcenters = [ "https://vcenter.local/sdk" ]
+# username = "user@corp.local"
+# password = "secret"
 
+############### VMs ###############
 
-  ############### VMs ###############
-  
-  # gather_vms = true # (default=true)
+# gather_vms = true ### (default=true)
 
-  # Typical VM metrics (if omitted, all metrics are collected)
-  # vm_metric_include = [
-  #	"cpu.ready.summation",
-  #		"mem.swapinRate.average",
-  #		"virtualDisk.numberReadAveraged.average",
-  #		"virtualDisk.numberWriteAveraged.average",
-  #		"virtualDisk.totalReadLatency.average",
-  #		"virtualDisk.totalWriteLatency.average",
-  #		"virtualDisk.readOIO.latest",
-  #		"virtualDisk.writeOIO.latest",
-  #		"net.bytesRx.average",
-  #		"net.bytesTx.average",
-  #		"net.droppedRx.summation",
-  #		"net.droppedTx.summation",
-  #		"cpu.run.summation",
-  #		"cpu.used.summation",
-  #		"mem.swapoutRate.average",
-  #		"virtualDisk.read.average",
-  #		"virtualDisk.write.average" ]
+## Typical VM metrics (if omitted, all metrics are collected)
+# vm_metric_include = [
+#		"cpu.ready.summation",
+#		"mem.swapinRate.average",
+#		"virtualDisk.numberReadAveraged.average",
+#		"virtualDisk.numberWriteAveraged.average",
+#		"virtualDisk.totalReadLatency.average",
+#		"virtualDisk.totalWriteLatency.average",
+#		"virtualDisk.readOIO.latest",
+#		"virtualDisk.writeOIO.latest",
+#		"net.bytesRx.average",
+#		"net.bytesTx.average",
+#		"net.droppedRx.summation.",
+#		"net.droppedTx.summation.",
+#		"cpu.run.summation",
+#		"cpu.used.summation",
+#		"mem.swapoutRate.average",
+#		"virtualDisk.read.average",
+#		"virtualDisk.write.average" ]
 
-  # vm_metric_exclude []
+# vm_metric_exclude = [] ## Nothing is excluded by default
 
-  ############### Hosts ###############
+############### Hosts ###############
 
-  # gather_hosts = true # (default=true)
-  
-  ## Typical host metrics (if omitted, all metrics are collected)
-  # host_metric_include = [
-  #		"cpu.ready.summation",
-  #		"cpu.latency.average",
-  #		"cpu.coreUtilization.average",
-  #		"mem.usage.average",
-  #		"mem.swapinRate.average",
-  #		"mem.state.latest",
-  #		"mem.latency.average",
-  #		"mem.vmmemctl.average",
-  #		"disk.read.average",
-  #		"disk.write.average",
-  #		"disk.numberReadAveraged.average",
-  #		"disk.numberWriteAveraged.average",
-  #		"disk.deviceReadLatency.average",
-  #		"disk.deviceWriteLatency.average",
-  #		"disk.totalReadLatency.average",
-  #		"disk.totalWriteLatency.average",
-  #		"storageAdapter.read.average",
-  #		"storageAdapter.write.average",
-  #		"storageAdapter.numberReadAveraged.average",
-  #		"storageAdapter.numberWriteAveraged.average",
-  #		"net.errorsRx.summation",
-  #		"net.errorsTx.summation",
-  #		"net.bytesRx.average",
-  #		"net.bytesTx.average",
-  #		"cpu.used.summation",
-  #		"cpu.usage.average",
-  #		"cpu.utilization.average",
-  #		"cpu.wait.summation",
-  #		"cpu.idle.summation",
-  #		"cpu.readiness.average",
-  #		"cpu.costop.summation",
-  #		"cpu.swapwait.summation",
-  #		"mem.swapoutRate.average",
-  #		"disk.kernelReadLatency.average",
-  #		"disk.kernelWriteLatency.average" ]
+# gather_hosts = true ## (default=true)
 
-  # host_metric_exclude = [] # Nothing excluded by default
+## Typical host metrics (if omitted, all metrics are collected)
+# host_metric_include = [
+#		"cpu.ready.summation",
+#		"cpu.latency.average",
+#		"cpu.coreUtilization.average",
+#		"mem.usage.average",
+#		"mem.swapinRate.average",
+#		"mem.state.latest",
+#		"mem.latency.average",
+#		"mem.vmmemctl.average",
+#		"disk.read.average",
+#		"disk.write.average",
+#		"disk.numberReadAveraged.average",
+#		"disk.numberWriteAveraged.average",
+#		"disk.deviceReadLatency.average",
+#		"disk.deviceWriteLatency.average",
+#		"disk.totalReadLatency.average",
+#		"disk.totalWriteLatency.average",
+#		"storageAdapter.read.average",
+#		"storageAdapter.write.average",
+#		"storageAdapter.numberReadAveraged.average",
+#		"storageAdapter.numberWriteAveraged.average",
+#		"net.errorsRx.summation",
+#		"net.errorsTx.summation",
+#		"net.bytesRx.average",
+#		"net.bytesTx.average",
+#		"cpu.used.summation",
+#		"cpu.usage.average",
+#		"cpu.utilization.average",
+#		"cpu.wait.summation.",
+#		"cpu.idle.summation",
+#		"cpu.readiness.average",
+#		"cpu.costop.summation",
+#		"cpu.swapwait.summation",
+#		"mem.swapoutRate.average",
+#		"disk.kernelReadLatency.average",
+#		"disk.kernelWriteLatency.average" ]
 
-  ############### Clusters ###############
+# host_metric_exclude = [] ## Nothing excluded by default
 
-  # gather_clusters = true # (default=true)
-  
-  ## Typical cluster metrics (if omitted, all metrics are collected)
-  # cluster_metric_include = [
-  #	  "cpu.usage.*",
-  #	  "cpu.usagemhz.*",
-  #	  "mem.usage.*",
-  #	  "mem.active.*" ]
+############### Clusters ###############
 
-  # cluster_metric_exclude [] # Nothing excluded by default
+# gather_clusters = true ## (default=true)
 
-  ############### Datastores ###############
+## Typical cluster metrics (if omitted, all metrics are collected)
+#cluster_metric_include = [
+#	  "cpu.usage.*",
+#	  "cpu.usagemhz.*",
+#	  "mem.usage.*",
+#	  "mem.active.*" ]
 
-  # gather_datastore = true # (default=true)
-  
-  ## Typical datastore metrics (if omitted, all metrics are collected)
-  #
-  # WARNING: It is not recommended to include all metrics. Your collection will probably time out if you do!
-  #
-  datastore_metric_include = [
-	"datastore.read.average"
-	"datastore.write.average"
-	"datastore.throughput.usage.average"
+# cluster_metric_exclude = [] ## Nothing excluded by default
+
+############### Datastores ###############
+
+# gather_datastores = true ## (default=true)
+
+## Typical datastore metrics (if omitted, all metrics are collected)
+##
+## WARNING: It is not recommended to include all metrics. Your collection will probably time out if you do!
+##
+
+datastore_metric_include = [
+	"datastore.read.average",
+	"datastore.write.average",
+	"datastore.throughput.usage.average",	
 	"datastore.throughput.contention.average" ]
-  datastore_metric_exclude = [ "disk.*" ]
-  
-  ## number of objects to retreive per query. set to 64 for vCenter 5.5 and 6.0 (default: 256)
-  # objects_per_query = 256
-  
-  ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
-  # object_discovery_interval = "300s"
-  
-  ## timeout applies to any of the connection request made to vcenter
-  # timeout = "20s"
-  
-  ## Optional SSL Config
-  # ssl_ca = /path/to/cafile
-  # ssl_cert = /path/to/certfile
-  # ssl_key = /path/to/keyfile
-  ## Use SSL but skip chain & host verification
-  # insecure_skip_verify = false  
-```
 
-### Metrics Selection
+## number of objects to retreive per query. set to 64 for vCenter 5.5 and 6.0 (default: 256)
+# objects_per_query = 256
 
-vSphere metrics are available in 4 categories: Clusters, Hosts, VMs, and Datastores. Each category can be enabled
-independently, and for each category a list with wildcards can be applied to filter metrics. If the &lt;category&gt;_metrics 
-property is not specified all metrics will be included for the category. Metrics can be specified with standard glob
-style wildcards (*, ?). You can specify metrics to be negated, by using an exclamation mark (!) as the first character. 
-Metrics will be checked against every item in the list in order, meaning you can include multiple metrics with the first 
-item, and negate selectively within that list on a subsequent item. Negating metrics that have not been whitelisted in 
-a prior item of the list, has no effect.
+## the interval before (re)discovering objects subject to metrics collection (default: 300s)
+# object_discovery_interval = "300s"
 
-A configuration to include all metrics under the host category that start with `cpu.*` but will not include
-`cpu.idle.summation`.
+## timeout applies to any of the connection request made to vcenter
+# timeout = "20s"
 
-```
-  host_metrics = ["cpu.*", "!cpu.idle.summation"]
-
+## Optional SSL Config
+# ssl_ca = "/path/to/cafile"
+# ssl_cert = "/path/to/certfile"
+# ssl_key = "/path/to/keyfile"
+## Use SSL but skip chain & host verification
+# insecure_skip_verify = false 
 ``` 
 
 ### Objects Per Query
