@@ -14,7 +14,7 @@ type AzureMetrics struct {
 	Stats       []string `toml:"stats"`
 	cache       map[uint64]aggregate
 	statsConfig *configuredStats
-	Period      string
+	PeriodTag   string
 }
 
 type configuredStats struct {
@@ -59,7 +59,7 @@ var sampleConfig = `
   period = "30s"
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
-  drop_original = false
+  drop_original = true
 `
 
 func (m *AzureMetrics) SampleConfig() string {
@@ -175,7 +175,7 @@ func (m *AzureMetrics) Push(acc telegraf.Accumulator) {
 			}
 			fields[util.COUNTER_NAME] = k
 			tags := aggregate.tags
-			tags[util.PERIOD] = m.Period
+			tags[util.PERIOD] = m.PeriodTag
 			acc.AddFields(k, fields, tags)
 		}
 	}

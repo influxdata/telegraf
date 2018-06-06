@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -168,41 +169,40 @@ func writeJsonBlockToBlob(requiredFields map[string][]string, requiredFieldCount
 
 	//block Id the length of string pre encoding should be less than 64
 	blockId := base64.StdEncoding.EncodeToString([]byte(jsonBlock[1:60]))
+	log.Println("I! INFO attempting to write block with blockId: " + blockId)
 	md5HashOfBlock, er := util.Getmd5Hash(jsonBlock)
 	if er != nil {
 		log.Println("Error while calculating md5 hash of content " + jsonBlock)
 		return "", nil
 	}
-
+	log.Println("I! INFO mdd5 hash of block is " + md5HashOfBlock)
 	options := storage.PutBlockOptions{
 		Timeout:    30,             // in seconds
 		ContentMD5: md5HashOfBlock, // to ensure integrity of the content of block being sent to the storage
 		RequestID:  md5HashOfBlock,
 	}
-	log.Println("Request Id " + md5HashOfBlock)
-	log.Println("Writing block to storage " + blockId)
+	log.Println("I! INFO Request Id " + md5HashOfBlock)
 	er = blockBlobRef.PutBlock(blockId, []byte(jsonBlock), &options)
 	if er != nil {
-		log.Println("Error while writing block to blob storage blockId,content" + blockId + jsonBlock + er.Error())
+		log.Println("E! ERROr while writing block to blob storage blockId,content" + blockId + jsonBlock + er.Error())
 		return "", er
 	}
 	blockList := []storage.Block{{blockId, storage.BlockStatusUncommitted}}
 	requestId, err := util.Getmd5Hash(base64.StdEncoding.EncodeToString([]byte(blockId)))
+	log.Println("I! INFO Committing block with request Id " + requestId + "blockId:" + blockId)
 	if err != nil {
-		log.Println("Error while computing md5 hash of blockid " + blockId)
+		log.Println("E! ERROr while computing md5 hash of blockid " + blockId)
 		return "", err
 	}
-	log.Println("Committing block (RequestId, BlockID) " +
-		requestId + " " +
-		blockId)
 	putBlockListOptions := storage.PutBlockListOptions{
 		RequestID: requestId,
 	}
 	er = blockBlobRef.PutBlockList(blockList, &putBlockListOptions)
 	if er != nil {
-		log.Println("Error while writing block to blob storage blockId,content" + blockId + jsonBlock + er.Error())
+		log.Println("E! ERROR while writing block to blob storage blockId,content" + blockId + jsonBlock + er.Error())
 		return "", er
 	}
+	log.Println("I! Successfully written block with block id" + blockId)
 	return blockId, nil
 }
 
@@ -239,4 +239,173 @@ func getRequiredFieldList() (map[string][]string, int) {
 	requiredFieldMap[util.BLOCK_JSON_KEY_DIMENSIONS] = dimensions
 
 	return requiredFieldMap, 14
+}
+
+func (azureBlobStorage *AzureBlobStorage) checkBlobClientContainer() error {
+	if azureBlobStorage.isBlobClientCreated == false {
+		er := azureBlobStorage.setBlobClient()
+		if er != nil {
+			log.Println("E! Error while creating Blob Client " + er.Error())
+			return er
+		} else {
+			azureBlobStorage.isBlobClientCreated = true
+			log.Println("I! INFO blob client created successfully")
+		}
+	}
+	if azureBlobStorage.isContainerCreated == false {
+		er := azureBlobStorage.createBlobContainer()
+		if er != nil {
+			log.Println("E! Error while creating Blob Container " + er.Error())
+			return er
+		} else {
+			azureBlobStorage.isContainerCreated = true
+			log.Println("I! INFO container created successfully")
+		}
+	}
+	return nil
+}
+
+func (azureBlobStorage *AzureBlobStorage) setCurrentBlobPath() error {
+	var er error
+	isIntervalOver, er := checkIsIntervalOver(azureBlobStorage.BaseTime, azureBlobStorage.Interval)
+	if er != nil {
+		log.Println("E! ERROR while checking if new bolb is to be constructed baseTime, interval " +
+			azureBlobStorage.BaseTime + " " +
+			azureBlobStorage.Interval + " " +
+			er.Error())
+		return er
+	}
+	if isIntervalOver == true {
+		newBaseTime, er := getNewBaseTime(azureBlobStorage.BaseTime, azureBlobStorage.Interval)
+		if er != nil {
+			log.Println("E! ERROR while setting new base time by adding interval to basetime " +
+				azureBlobStorage.BaseTime + " " +
+				azureBlobStorage.Interval + " " +
+				er.Error())
+			return er
+		}
+		azureBlobStorage.BaseTime = newBaseTime
+		azureBlobStorage.blobPath, er = getBlobPath(azureBlobStorage.ResourceId, azureBlobStorage.AgentIdentityHash, azureBlobStorage.BaseTime, azureBlobStorage.intervalISO8601)
+		if er != nil {
+			log.Println("E! ERROR while constructing BlobPath" + azureBlobStorage.ResourceId + " " +
+				azureBlobStorage.AgentIdentityHash + " " +
+				azureBlobStorage.BaseTime + " " +
+				azureBlobStorage.intervalISO8601 + " " +
+				er.Error())
+			return er
+		}
+	}
+	return nil
+}
+
+func (azureBlobStorage *AzureBlobStorage) getJsonObject(props map[string]interface{}) BlockObject {
+	jsonObject := BlockObject{}
+	jsonObject.Total = props[util.TOTAL].(float64)
+	jsonObject.Timegrain = azureBlobStorage.intervalISO8601
+	jsonObject.Time = props[util.END_TIMESTAMP].(string)
+	jsonObject.ResourceId = azureBlobStorage.ResourceId
+	jsonObject.Minimum = props[util.MIN_SAMPLE].(float64)
+	jsonObject.Maximum = props[util.MAX_SAMPLE].(float64)
+	jsonObject.MetricName = props[util.COUNTER_NAME].(string)
+	jsonObject.Last = props[util.LAST_SAMPLE].(float64)
+	jsonObject.Count = props[util.SAMPLE_COUNT].(float64)
+	jsonObject.Average = props[util.MEAN].(float64)
+
+	dimensionObj := Dimensions{}
+	dimensionObj.Role = azureBlobStorage.Role
+	dimensionObj.RoleInstance = azureBlobStorage.RoleInstance
+	dimensionObj.Tenant = azureBlobStorage.Tenant
+
+	jsonObject.Dimensions = dimensionObj
+	return jsonObject
+}
+func checkIsValueValid(value interface{}) bool {
+	isValid := true
+	switch typeOfValue := value.(type) {
+	case string:
+		if value.(string) == "" {
+			isValid = false
+		}
+		break
+	case float64:
+		break
+	case Dimensions:
+		isValid = validateObject1(value.(Dimensions))
+		_ = typeOfValue
+	}
+	return isValid
+}
+func validateObject1(object Dimensions) bool {
+	isValid := true
+	s := reflect.ValueOf(&object).Elem()
+	_ = s.Type()
+	for i := 0; i < s.NumField(); i++ {
+		f := s.Field(i)
+		isValid = checkIsValueValid(f.Interface())
+		if isValid == false {
+			break
+		}
+	}
+	return isValid
+}
+func validateObject(object BlockObject) bool {
+	isValid := true
+	s := reflect.ValueOf(&object).Elem()
+	_ = s.Type()
+	for i := 0; i < s.NumField(); i++ {
+		f := s.Field(i)
+		isValid = checkIsValueValid(f.Interface())
+		if isValid == false {
+			break
+		}
+	}
+	return isValid
+}
+
+func compareBlockObject(obj1 BlockObject, obj2 BlockObject) bool {
+	return true
+}
+func validateJsonRow(jsonObject BlockObject, jsonBlock string) bool {
+	var jsonBlockObject BlockObject
+	er := json.Unmarshal([]byte(jsonBlock), &jsonBlockObject)
+	if er != nil {
+
+	}
+	isValid := true
+	isValid = compareBlockObject(jsonObject, jsonBlockObject)
+	return isValid
+}
+
+func (azureBlobStorage *AzureBlobStorage) createBlobContainer() error {
+
+	eventVersion, er := getEventVersionStr(azureBlobStorage.EventVersion)
+	if er != nil {
+		log.Println("E! ERROR while getting event version hence ignoring it while constructing name of container" + er.Error())
+		eventVersion = ""
+	}
+	containerName := strings.ToLower(azureBlobStorage.Namespace + azureBlobStorage.EventName + eventVersion)
+	azureBlobStorage.container = azureBlobStorage.blobClient.GetContainerReference(containerName)
+	er = validateContainerRef(azureBlobStorage.container)
+	if er != nil {
+		log.Println("E! ERROR Invalid container reference for " + containerName + er.Error())
+		return er
+	}
+
+	options := storage.CreateContainerOptions{
+		Access: storage.ContainerAccessTypeBlob,
+	}
+	log.Println("I! INFO attempting to create container " + containerName)
+	isCreated, er := azureBlobStorage.container.CreateIfNotExists(&options)
+	if er != nil {
+		log.Println("E! ERROR while creating container " + containerName)
+		log.Println(er.Error())
+		return er
+	}
+	if isCreated {
+		log.Println("I! INFO Created container " + containerName)
+	} else {
+		log.Println("I! INFO Container already exists " + containerName)
+	}
+	azureBlobStorage.isContainerCreated = true
+	return nil
 }
