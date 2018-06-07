@@ -5,10 +5,26 @@ import (
 	"encoding/base64"
 	"log"
 	"math"
+	"math/rand"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
+
+func Serialize(stringArray []string) string {
+	serializedArray := "["
+	for i := range stringArray {
+		serializedArray = serializedArray + stringArray[i] + ",\n"
+	}
+	serializedArray = serializedArray + "]"
+	return serializedArray
+}
+func GetRand() *rand.Rand {
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+	return r1
+}
 
 //https://golang.org/pkg/crypto/md5/
 func Getmd5Hash(content string) (string, error) {

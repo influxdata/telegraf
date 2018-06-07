@@ -1,8 +1,10 @@
 package azureblobstorage
 
 import (
+	"encoding/base64"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	storage "github.com/Azure/azure-sdk-for-go/storage"
@@ -27,7 +29,8 @@ type AzureBlobStorage struct {
 	Role                      string
 	RoleInstance              string
 	Tenant                    string
-	blobPath                  string
+	MaxBlockSize              int
+	blobInstanceProp          blobInstancePropType
 	container                 *storage.Container
 	requiredFieldList         map[string][]string
 	requiredFieldSize         int
@@ -37,6 +40,12 @@ type AzureBlobStorage struct {
 	blobClient          storage.BlobStorageClient
 }
 
+type blobInstancePropType struct {
+	blobPath          string
+	blockIds          []string
+	blockIdEncodedLen int
+	blockIdDecodedLen int
+}
 type Dimensions struct {
 	Tenant       string `json:"Tenant"`
 	Role         string `json:"Role"`
@@ -73,6 +82,7 @@ var sampleConfig = `
  role=""
  role_instance=""
  base_time="1527865026" #start time when first container is to be created.
+ max_block_size=1000000 #1MB
 `
 
 func (azureBlobStorage *AzureBlobStorage) initializeProperties() error {
@@ -90,6 +100,7 @@ func (azureBlobStorage *AzureBlobStorage) initializeProperties() error {
 	if azureBlobStorage.BaseTime == "" {
 		azureBlobStorage.BaseTime = strconv.FormatInt(time.Now().Unix(), 10)
 	}
+	//so that only one blob is created in each interval
 	azureBlobStorage.BaseTime, er = getBaseTimeMultipleOfInterval(azureBlobStorage.BaseTime, azureBlobStorage.Interval)
 	if er != nil {
 		log.Println("E! ERROR while converting base time as multiple of interval baseTime,interval " +
@@ -98,6 +109,8 @@ func (azureBlobStorage *AzureBlobStorage) initializeProperties() error {
 			er.Error())
 		return er
 	}
+	azureBlobStorage.blobInstanceProp.blockIdEncodedLen = 60
+	azureBlobStorage.blobInstanceProp.blockIdDecodedLen = base64.StdEncoding.DecodedLen(azureBlobStorage.blobInstanceProp.blockIdEncodedLen)
 	azureBlobStorage.requiredFieldList, azureBlobStorage.requiredFieldSize = getRequiredFieldList()
 
 	return nil
@@ -170,7 +183,11 @@ func (azureBlobStorage *AzureBlobStorage) Write(metrics []telegraf.Metric) error
 		log.Println("E! ERROr skipping metrics ")
 		return er
 	}
-	for i, _ := range metrics {
+
+	var jsonList string
+	jsonList = "[\n"
+	var i int
+	for i, _ = range metrics {
 
 		props = metrics[i].Fields()
 		tags := metrics[i].Tags()
@@ -196,28 +213,59 @@ func (azureBlobStorage *AzureBlobStorage) Write(metrics []telegraf.Metric) error
 				err.Error())
 			continue
 		}
+		jsonList = jsonList + jsonBlock + ",\n"
 
-		blockBlobRef := azureBlobStorage.container.GetBlobReference(azureBlobStorage.blobPath)
-		er = validateBlobRef(blockBlobRef)
+		blockSize := len([]byte(jsonList))
+		if blockSize >= azureBlobStorage.MaxBlockSize {
+			jsonList = jsonList + "]"
+			er = azureBlobStorage.flush(jsonList)
+			if er != nil {
+				log.Println("E! ERROR while writing block to blob storage " + er.Error())
+				log.Println("I!" + jsonList)
+				return er
+			}
+			jsonList = "[\n"
+		} /*else {
+			if i < len(metrics)-1 {
+				jsonList = jsonList + ",\n"
+			}
+		}*/
+	}
+	jsonList = jsonList + "\n]"
+	//if the flush() happened when last element of the metrics[] was getting processed then jsonList wil be equal to "[\n\n]"
+	if i == len(metrics)-1 && len(strings.TrimSpace(jsonList)) > 4 {
+		er = azureBlobStorage.flush(jsonList)
 		if er != nil {
-			log.Println("E! ERROR invalid BlobReference for container,blob path " +
-				azureBlobStorage.container.Name + " " +
-				azureBlobStorage.blobPath +
-				er.Error())
+			log.Println("E! ERROR while writing block to blob storage " + er.Error())
+			log.Println("I! " + jsonList)
 			return er
 		}
-		//isValidJson := validateJsonRow(jsonObject, jsonBlock)
-		blockId, er := writeJsonBlockToBlob(azureBlobStorage.requiredFieldList,
-			azureBlobStorage.requiredFieldSize, jsonBlock, blockBlobRef)
-		if er != nil {
-			log.Println("!E ERROR while writing block to blob storage blockId,content" + blockId + jsonBlock + er.Error())
-			return er
-		} else {
-			log.Println("I! INFO Success: Written block to storage" + blockId)
-		}
+	}
+
+	return nil
+}
+
+func (azureBlobStorage *AzureBlobStorage) flush(blockJsonListStr string) error {
+
+	blockBlobRef := azureBlobStorage.container.GetBlobReference(azureBlobStorage.blobInstanceProp.blobPath)
+	er := validateBlobRef(blockBlobRef)
+	if er != nil {
+		log.Println("E! ERROR invalid BlobReference for container,blob path " +
+			azureBlobStorage.container.Name + " " +
+			azureBlobStorage.blobInstanceProp.blobPath +
+			er.Error())
+		return er
+	}
+	blockId, er := azureBlobStorage.writeJsonBlockToBlob(blockJsonListStr, blockBlobRef)
+	if er != nil {
+		log.Println("!E ERROR while writing block to blob storage blockId,content" + blockId + blockJsonListStr + er.Error())
+		return er
+	} else {
+		log.Println("I! INFO Success: Written block to storage" + blockId)
 	}
 	return nil
 }
+
 func init() {
 	outputs.Add("azureblobstorage", func() telegraf.Output {
 		return &AzureBlobStorage{}

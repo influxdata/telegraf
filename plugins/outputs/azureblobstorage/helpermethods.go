@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -165,17 +166,20 @@ func getBlobPath(resourceId string, identityHash string, baseTime string, interv
 
 // writes blocks to blob storage
 // https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs#about-block-blobs
-func writeJsonBlockToBlob(requiredFields map[string][]string, requiredFieldCount int, jsonBlock string, blockBlobRef *storage.Blob) (string, error) {
+func (azureBlobStorage *AzureBlobStorage) writeJsonBlockToBlob(jsonBlock string, blockBlobRef *storage.Blob) (string, error) {
 
-	//block Id the length of string pre encoding should be less than 64
-	blockId := base64.StdEncoding.EncodeToString([]byte(jsonBlock[1:60]))
-	log.Println("I! INFO attempting to write block with blockId: " + blockId)
 	md5HashOfBlock, er := util.Getmd5Hash(jsonBlock)
 	if er != nil {
-		log.Println("Error while calculating md5 hash of content " + jsonBlock)
+		log.Println("E! ERROR while calculating md5 hash of content " + jsonBlock)
 		return "", nil
 	}
 	log.Println("I! INFO mdd5 hash of block is " + md5HashOfBlock)
+	blockId, ok := azureBlobStorage.getBlockId(md5HashOfBlock)
+	if !ok {
+		log.Println("I! invalid block id skipping this batch " + jsonBlock)
+		return blockId, nil
+	}
+	log.Println("I! INFO attempting to write block with blockId: " + blockId)
 	options := storage.PutBlockOptions{
 		Timeout:    30,             // in seconds
 		ContentMD5: md5HashOfBlock, // to ensure integrity of the content of block being sent to the storage
@@ -184,10 +188,10 @@ func writeJsonBlockToBlob(requiredFields map[string][]string, requiredFieldCount
 	log.Println("I! INFO Request Id " + md5HashOfBlock)
 	er = blockBlobRef.PutBlock(blockId, []byte(jsonBlock), &options)
 	if er != nil {
-		log.Println("E! ERROr while writing block to blob storage blockId,content" + blockId + jsonBlock + er.Error())
+		log.Println("E! ERROR while writing block to blob storage blockId,content" + blockId + jsonBlock + er.Error())
 		return "", er
 	}
-	blockList := []storage.Block{{blockId, storage.BlockStatusUncommitted}}
+
 	requestId, err := util.Getmd5Hash(base64.StdEncoding.EncodeToString([]byte(blockId)))
 	log.Println("I! INFO Committing block with request Id " + requestId + "blockId:" + blockId)
 	if err != nil {
@@ -197,6 +201,13 @@ func writeJsonBlockToBlob(requiredFields map[string][]string, requiredFieldCount
 	putBlockListOptions := storage.PutBlockListOptions{
 		RequestID: requestId,
 	}
+	var blockList []storage.Block
+	for i := range azureBlobStorage.blobInstanceProp.blockIds {
+		blockList = append(blockList, storage.Block{azureBlobStorage.blobInstanceProp.blockIds[i], storage.BlockStatusCommitted})
+	}
+	blockList = append(blockList, storage.Block{blockId, storage.BlockStatusUncommitted})
+	azureBlobStorage.blobInstanceProp.blockIds = append(azureBlobStorage.blobInstanceProp.blockIds, blockId)
+	//blockList = []storage.Block{{blockId, storage.BlockStatusUncommitted}}
 	er = blockBlobRef.PutBlockList(blockList, &putBlockListOptions)
 	if er != nil {
 		log.Println("E! ERROR while writing block to blob storage blockId,content" + blockId + jsonBlock + er.Error())
@@ -206,19 +217,30 @@ func writeJsonBlockToBlob(requiredFields map[string][]string, requiredFieldCount
 	return blockId, nil
 }
 
-func getColumnConversionMap() map[string]string {
-	columnConversionMap := make(map[string]string)
-	columnConversionMap[util.BLOCK_JSON_KEY_COUNTER_NAME] = util.COUNTER_NAME
-	columnConversionMap[util.BLOCK_JSON_KEY_END_TIMESTAMP] = util.END_TIMESTAMP
-	columnConversionMap[util.BLOCK_JSON_KEY_LAST_SAMPLE] = util.LAST_SAMPLE
-	columnConversionMap[util.BLOCK_JSON_KEY_MAX_SAMPLE] = util.LAST_SAMPLE
-	columnConversionMap[util.BLOCK_JSON_KEY_MIN_SAMPLE] = util.MIN_SAMPLE
-	columnConversionMap[util.BLOCK_JSON_KEY_MEAN] = util.MEAN
-	columnConversionMap[util.BLOCK_JSON_KEY_SAMPLE_COUNT] = util.SAMPLE_COUNT
-	columnConversionMap[util.BLOCK_JSON_KEY_TOTAL] = util.TOTAL
-	return columnConversionMap
-}
+func (azureBlobStorage *AzureBlobStorage) getBlockId(md5HashOfBlock string) (string, bool) {
+	blockId := ""
+	//block Id: the length of string pre encoding should be less than 64
+	//using md5 hash of block content instead of block content as the firs 60 characters of the content are usually same
+	//hence resulting in same block id for different blocks which will override previous block
+	//each time new block with same block id is written to blob.
 
+	blockIdValue := md5HashOfBlock + strconv.Itoa(util.GetRand().Intn(9999))
+	if len(blockIdValue) > azureBlobStorage.blobInstanceProp.blockIdDecodedLen {
+		blockId = base64.StdEncoding.EncodeToString([]byte(blockIdValue[(len(blockIdValue) - azureBlobStorage.blobInstanceProp.blockIdDecodedLen):]))
+	} else {
+		diffLen := float64(azureBlobStorage.blobInstanceProp.blockIdDecodedLen - len(blockIdValue))
+		//	minRange := int64(math.Pow10(diffLen - 1))
+		maxRange := math.Pow(10, diffLen) - 1
+		//	randeDiff := maxRange - minRange
+		blockIdValue = blockIdValue + strconv.FormatInt(int64(math.Floor(util.GetRand().Float64()*maxRange)), 10)
+		blockId = base64.StdEncoding.EncodeToString([]byte(blockIdValue))
+		if len(blockId) != azureBlobStorage.blobInstanceProp.blockIdEncodedLen {
+			log.Println("I! the length of block id is not " + strconv.Itoa(len(blockId)) + blockId + strconv.Itoa(azureBlobStorage.blobInstanceProp.blockIdEncodedLen))
+			return blockId, false
+		}
+	}
+	return blockId, true
+}
 func getRequiredFieldList() (map[string][]string, int) {
 	requiredFieldMap := make(map[string][]string)
 	requiredFieldMap[util.BLOCK_JSON_KEY_END_TIMESTAMP] = nil
@@ -285,7 +307,7 @@ func (azureBlobStorage *AzureBlobStorage) setCurrentBlobPath() error {
 			return er
 		}
 		azureBlobStorage.BaseTime = newBaseTime
-		azureBlobStorage.blobPath, er = getBlobPath(azureBlobStorage.ResourceId, azureBlobStorage.AgentIdentityHash, azureBlobStorage.BaseTime, azureBlobStorage.intervalISO8601)
+		azureBlobStorage.blobInstanceProp.blobPath, er = getBlobPath(azureBlobStorage.ResourceId, azureBlobStorage.AgentIdentityHash, azureBlobStorage.BaseTime, azureBlobStorage.intervalISO8601)
 		if er != nil {
 			log.Println("E! ERROR while constructing BlobPath" + azureBlobStorage.ResourceId + " " +
 				azureBlobStorage.AgentIdentityHash + " " +
