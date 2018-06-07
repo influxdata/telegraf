@@ -14,7 +14,7 @@ To use this plugin you must enable the [monitoring](https://www.openldap.org/dev
   # ldaps, starttls, or no encryption. default is an empty string, disabling all encryption.
   # note that port will likely need to be changed to 636 for ldaps
   # valid options: "" | "starttls" | "ldaps"
-  ssl = ""
+  tls = ""
 
   # skip peer certificate verification. Default is false.
   insecure_skip_verify = false

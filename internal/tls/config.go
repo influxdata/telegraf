@@ -17,7 +17,7 @@ type ClientConfig struct {
 	// Deprecated in 1.7; use TLS variables above
 	SSLCA   string `toml:"ssl_ca"`
 	SSLCert string `toml:"ssl_cert"`
-	SSLKey  string `toml:"ssl_ca"`
+	SSLKey  string `toml:"ssl_key"`
 }
 
 // ServerConfig represents the standard server TLS config.
