@@ -1,5 +1,3 @@
-// +build !freebsd
-
 package nats
 
 import (
@@ -14,8 +12,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	gnatsd "github.com/nats-io/gnatsd/server"
 )
 
 type Nats struct {
@@ -23,6 +19,31 @@ type Nats struct {
 	ResponseTimeout internal.Duration
 
 	client *http.Client
+}
+
+// Varz is a copy of the internal Varz type in gnatsd
+// Copied from: https://github.com/nats-io/gnatsd/blob/master/server/monitor.go
+type Varz struct {
+	Port             int               `json:"port"`
+	MaxPayload       int               `json:"max_payload"`
+	Start            time.Time         `json:"start"`
+	Now              time.Time         `json:"now"`
+	Uptime           string            `json:"uptime"`
+	Mem              int64             `json:"mem"`
+	Cores            int               `json:"cores"`
+	CPU              float64           `json:"cpu"`
+	Connections      int               `json:"connections"`
+	TotalConnections uint64            `json:"total_connections"`
+	Routes           int               `json:"routes"`
+	Remotes          int               `json:"remotes"`
+	InMsgs           int64             `json:"in_msgs"`
+	OutMsgs          int64             `json:"out_msgs"`
+	InBytes          int64             `json:"in_bytes"`
+	OutBytes         int64             `json:"out_bytes"`
+	SlowConsumers    int64             `json:"slow_consumers"`
+	Subscriptions    uint32            `json:"subscriptions"`
+	HTTPReqStats     map[string]uint64 `json:"http_req_stats"`
+	ConfigLoadTime   time.Time         `json:"config_load_time"`
 }
 
 var sampleConfig = `
@@ -62,7 +83,7 @@ func (n *Nats) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	stats := new(gnatsd.Varz)
+	stats := new(Varz)
 	err = json.Unmarshal([]byte(bytes), &stats)
 	if err != nil {
 		return err
