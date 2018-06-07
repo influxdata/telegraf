@@ -175,7 +175,7 @@ func (p *Ping) args(url string) []string {
 	}
 	if p.Timeout > 0 {
 		switch runtime.GOOS {
-		case "darwin":
+		case "darwin", "freebsd", "netbsd", "openbsd":
 			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
 		case "linux":
 			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
@@ -186,7 +186,7 @@ func (p *Ping) args(url string) []string {
 	}
 	if p.Deadline > 0 {
 		switch runtime.GOOS {
-		case "darwin":
+		case "darwin", "freebsd", "netbsd", "openbsd":
 			args = append(args, "-t", strconv.Itoa(p.Deadline))
 		case "linux":
 			args = append(args, "-w", strconv.Itoa(p.Deadline))
@@ -197,10 +197,10 @@ func (p *Ping) args(url string) []string {
 	}
 	if p.Interface != "" {
 		switch runtime.GOOS {
+		case "darwin", "freebsd", "netbsd", "openbsd":
+			args = append(args, "-S", p.Interface)
 		case "linux":
 			args = append(args, "-I", p.Interface)
-		case "freebsd", "darwin":
-			args = append(args, "-S", p.Interface)
 		default:
 			// Not sure the best option here, just assume GNU ping?
 			args = append(args, "-I", p.Interface)
