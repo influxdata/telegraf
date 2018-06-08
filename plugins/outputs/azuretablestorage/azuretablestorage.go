@@ -72,7 +72,7 @@ func (azureTableStorage *AzureTableStorage) getAzureperiodVsTableNameVsTableRefM
 	}
 
 	for _, period := range azureTableStorage.Periods {
-		periodStr, err := util.GetPeriodStr(period)
+		periodStr, err := util.GetIntervalISO8601(period)
 		if err != nil {
 			log.Println("E! Error while parsing scheduled transfer period for metrics to the table: " + period)
 			return periodVsTableNameVsTableRef, err

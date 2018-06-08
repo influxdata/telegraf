@@ -30,10 +30,16 @@ type AzureBlobStorage struct {
 	RoleInstance              string
 	Tenant                    string
 	MaxBlockSize              int
-	blobInstanceProp          blobInstancePropType
-	container                 *storage.Container
-	requiredFieldList         map[string][]string
-	requiredFieldSize         int
+	//fileWithBlockIds file contains list of blockIds which are written to a particular blob path
+	//this permanent persistence of blockIds in a blob is important for situations where telegraf crashes and
+	//on its startup, if the blob path is same( can happen if telegraf crashes and restarts within 1 hr
+	//or the value of configured interval). So, if the blob path is same then in order to keep the previously written blocks to the blob
+	//the block ids of old blocks are to be sent while calling PutBlockList API.
+	FileWithBlockIds  string
+	blobInstanceProp  blobInstancePropType
+	container         *storage.Container
+	requiredFieldList map[string][]string
+	requiredFieldSize int
 
 	isBlobClientCreated bool
 	isContainerCreated  bool
@@ -45,6 +51,7 @@ type blobInstancePropType struct {
 	blockIds          []string
 	blockIdEncodedLen int
 	blockIdDecodedLen int
+	oldBlocks         BlobPathBlockIds
 }
 type Dimensions struct {
 	Tenant       string `json:"Tenant"`
@@ -83,6 +90,7 @@ var sampleConfig = `
  role_instance=""
  base_time="1527865026" #start time when first container is to be created.
  max_block_size=1000000 #1MB
+ file_with_block_ids=""
 `
 
 func (azureBlobStorage *AzureBlobStorage) initializeProperties() error {
@@ -112,7 +120,10 @@ func (azureBlobStorage *AzureBlobStorage) initializeProperties() error {
 	azureBlobStorage.blobInstanceProp.blockIdEncodedLen = 60
 	azureBlobStorage.blobInstanceProp.blockIdDecodedLen = base64.StdEncoding.DecodedLen(azureBlobStorage.blobInstanceProp.blockIdEncodedLen)
 	azureBlobStorage.requiredFieldList, azureBlobStorage.requiredFieldSize = getRequiredFieldList()
-
+	azureBlobStorage.blobInstanceProp.oldBlocks, er = azureBlobStorage.checkOldBlocksForBlob()
+	if er != nil {
+		log.Println("E! Error while reading in old blocks for this blob. If any prev blocks they might be lost" + er.Error())
+	}
 	return nil
 }
 func (azureBlobStorage *AzureBlobStorage) setBlobClient() error {

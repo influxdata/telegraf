@@ -4,8 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"log"
 	"math"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -163,11 +165,41 @@ func getBlobPath(resourceId string, identityHash string, baseTime string, interv
 	blobPath := "resourceId=" + resourceId + "/i=" + identityHash + "/" + baseTimeStr + "/" + intervalISO8601 + ".json"
 	return blobPath, nil
 }
+func (azureBlobStorage *AzureBlobStorage) checkOldBlocksForBlob() (BlobPathBlockIds, error) {
+
+	var blockIdsBlobPath BlobPathBlockIds
+	raw, err := ioutil.ReadFile(azureBlobStorage.FileWithBlockIds)
+	if err != nil {
+		log.Println("!E Error while reading file " + azureBlobStorage.FileWithBlockIds + err.Error())
+		return blockIdsBlobPath, err
+	}
+
+	json.Unmarshal(raw, &blockIdsBlobPath)
+
+	return blockIdsBlobPath, nil
+}
+
+func (azureBlobStorage *AzureBlobStorage) checkOldBlockIds() []string {
+
+	var blockIds []string
+	var emptyBlocks BlobPathBlockIds
+	if azureBlobStorage.blobInstanceProp.oldBlocks.BlobPath == azureBlobStorage.blobInstanceProp.blobPath {
+		blockIds = azureBlobStorage.blobInstanceProp.oldBlocks.BlockIds
+		azureBlobStorage.blobInstanceProp.oldBlocks = emptyBlocks
+	}
+
+	return blockIds
+}
 
 // writes blocks to blob storage
 // https://docs.microsoft.com/en-us/rest/api/storageservices/understanding-block-blobs--append-blobs--and-page-blobs#about-block-blobs
 func (azureBlobStorage *AzureBlobStorage) writeJsonBlockToBlob(jsonBlock string, blockBlobRef *storage.Blob) (string, error) {
-
+	blockIds := azureBlobStorage.checkOldBlockIds()
+	if len(blockIds) > 0 {
+		for i := range blockIds {
+			azureBlobStorage.blobInstanceProp.blockIds = append(azureBlobStorage.blobInstanceProp.blockIds, blockIds[i])
+		}
+	}
 	md5HashOfBlock, er := util.Getmd5Hash(jsonBlock)
 	if er != nil {
 		log.Println("E! ERROR while calculating md5 hash of content " + jsonBlock)
@@ -202,11 +234,10 @@ func (azureBlobStorage *AzureBlobStorage) writeJsonBlockToBlob(jsonBlock string,
 		RequestID: requestId,
 	}
 	var blockList []storage.Block
-	for i := range azureBlobStorage.blobInstanceProp.blockIds {
-		blockList = append(blockList, storage.Block{azureBlobStorage.blobInstanceProp.blockIds[i], storage.BlockStatusCommitted})
-	}
-	blockList = append(blockList, storage.Block{blockId, storage.BlockStatusUncommitted})
 	azureBlobStorage.blobInstanceProp.blockIds = append(azureBlobStorage.blobInstanceProp.blockIds, blockId)
+	for i := range azureBlobStorage.blobInstanceProp.blockIds {
+		blockList = append(blockList, storage.Block{azureBlobStorage.blobInstanceProp.blockIds[i], storage.BlockStatusLatest})
+	}
 	//blockList = []storage.Block{{blockId, storage.BlockStatusUncommitted}}
 	er = blockBlobRef.PutBlockList(blockList, &putBlockListOptions)
 	if er != nil {
@@ -214,9 +245,44 @@ func (azureBlobStorage *AzureBlobStorage) writeJsonBlockToBlob(jsonBlock string,
 		return "", er
 	}
 	log.Println("I! Successfully written block with block id" + blockId)
+	er = azureBlobStorage.writeBlockIdToFile()
+	if er != nil {
+		log.Println("E! the blocks might be lost if telegraf restarts and tries to write to same blob")
+	}
 	return blockId, nil
 }
 
+type BlobPathBlockIds struct {
+	BlobPath string   `json:"blobPath"`
+	BlockIds []string `json:"blockIds"`
+}
+
+func (azureBlobStorage *AzureBlobStorage) writeBlockIdToFile() error {
+
+	content := BlobPathBlockIds{azureBlobStorage.blobInstanceProp.blobPath, azureBlobStorage.blobInstanceProp.blockIds}
+	//everytime this file is opened it is intentionally empty
+	//at any particular time, this file will contain current blob to which blobs are getting written
+	//and the block ids of already written blocks
+	f, err := os.Create(azureBlobStorage.FileWithBlockIds)
+	if err != nil {
+		log.Println("E! error while creating file " + azureBlobStorage.FileWithBlockIds + err.Error())
+		return err
+	}
+	jsonObjectBytes, er := json.Marshal(&content)
+	if er != nil {
+		log.Println("E! Error while parsing blobPathBlockIds to json " + content.BlobPath + er.Error())
+		return er
+	}
+	_, err = f.WriteString(string(jsonObjectBytes))
+	if err != nil {
+		log.Println("E! error while creating file " + azureBlobStorage.FileWithBlockIds + err.Error())
+		return err
+	}
+	log.Println("I! Successfully written to file " + string(jsonObjectBytes))
+	f.Sync()
+	f.Close()
+	return nil
+}
 func (azureBlobStorage *AzureBlobStorage) getBlockId(md5HashOfBlock string) (string, bool) {
 	blockId := ""
 	//block Id: the length of string pre encoding should be less than 64
@@ -233,6 +299,10 @@ func (azureBlobStorage *AzureBlobStorage) getBlockId(md5HashOfBlock string) (str
 		maxRange := math.Pow(10, diffLen) - 1
 		//	randeDiff := maxRange - minRange
 		blockIdValue = blockIdValue + strconv.FormatInt(int64(math.Floor(util.GetRand().Float64()*maxRange)), 10)
+		if len(blockIdValue) != azureBlobStorage.blobInstanceProp.blockIdDecodedLen {
+			log.Println("I! the length of block id is not " + strconv.Itoa(len(blockIdValue)) + blockIdValue + strconv.Itoa(azureBlobStorage.blobInstanceProp.blockIdEncodedLen))
+			return blockIdValue, false
+		}
 		blockId = base64.StdEncoding.EncodeToString([]byte(blockIdValue))
 		if len(blockId) != azureBlobStorage.blobInstanceProp.blockIdEncodedLen {
 			log.Println("I! the length of block id is not " + strconv.Itoa(len(blockId)) + blockId + strconv.Itoa(azureBlobStorage.blobInstanceProp.blockIdEncodedLen))

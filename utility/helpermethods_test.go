@@ -38,16 +38,16 @@ func TestToMdsdTime(t *testing.T) {
 
 	assert.Equal(t, expectedMdsdTime, actualMdsdTime)
 }
-func TestGetPeriodStr(t *testing.T) {
+func TestGetIntervalISO8601(t *testing.T) {
 	validPeriod := "3672s"
-	actualPeriodStr, er := GetPeriodStr(validPeriod)
+	actualPeriodStr, er := GetIntervalISO8601(validPeriod)
 	expectedPeriodStr := "PT1H1M12S"
 	assert.Nil(t, er)
 	assert.Equal(t, expectedPeriodStr, actualPeriodStr)
 
 	//invalid period
 	invalidPeriod := "abcs"
-	actualPeriodStr, er = GetPeriodStr(invalidPeriod)
+	actualPeriodStr, er = GetIntervalISO8601(invalidPeriod)
 	assert.NotNil(t, er)
 }
 
