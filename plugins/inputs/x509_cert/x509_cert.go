@@ -1,4 +1,4 @@
-package ssl_cert
+package x509_cert
 
 import (
 	"crypto/tls"
@@ -8,27 +8,37 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	_tls "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const sampleConfig = `
   ## List of local SSL files
-  # files = []
+  # files = ["/etc/ssl/certs/ssl-cert-snakeoil.pem"]
   ## List of servers
-  # servers = []
+  # servers = ["tcp://example.org:443"]
   ## Timeout for SSL connection
   # timeout = 5
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 const description = "Reads metrics from a SSL certificate"
 
-// SSLCert holds the configuration of the plugin.
-type SSLCert struct {
-	Servers []string      `toml:"servers"`
-	Files   []string      `toml:"files"`
-	Timeout time.Duration `toml:"timeout"`
+// X509Cert holds the configuration of the plugin.
+type X509Cert struct {
+	Servers []string          `toml:"servers"`
+	Files   []string          `toml:"files"`
+	Timeout internal.Duration `toml:"timeout"`
+	_tls.ClientConfig
 }
 
 // For tests
@@ -38,21 +48,31 @@ var (
 )
 
 // Description returns description of the plugin.
-func (sc *SSLCert) Description() string {
+func (c *X509Cert) Description() string {
 	return description
 }
 
 // SampleConfig returns configuration sample for the plugin.
-func (sc *SSLCert) SampleConfig() string {
+func (c *X509Cert) SampleConfig() string {
 	return sampleConfig
 }
 
-func getRemoteCert(server string, timeout time.Duration) (*x509.Certificate, error) {
-	tlsCfg := &tls.Config{
-		InsecureSkipVerify: true,
+func (c *X509Cert) getRemoteCert(server string, timeout time.Duration) (*x509.Certificate, error) {
+	tlsCfg, err := c.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
 	}
 
-	ipConn, err := net.DialTimeout("tcp", server, timeout)
+	network := "tcp"
+	host_port := server
+	vals := strings.Split(server, "://")
+
+	if len(vals) > 1 {
+		network = vals[0]
+		host_port = vals[1]
+	}
+
+	ipConn, err := net.DialTimeout(network, host_port, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -102,28 +122,30 @@ func getLocalCert(filename string) (*x509.Certificate, error) {
 	return cert, nil
 }
 
-func getMetrics(cert *x509.Certificate, now time.Time) map[string]interface{} {
+func getFields(cert *x509.Certificate, now time.Time) map[string]interface{} {
 	age := int(now.Sub(cert.NotBefore).Seconds())
 	expiry := int(cert.NotAfter.Sub(now).Seconds())
-	startdate := int(cert.NotBefore.Unix())
-	enddate := int(cert.NotAfter.Unix())
+	startdate := cert.NotBefore.Unix()
+	enddate := cert.NotAfter.Unix()
+	valid := expiry > 0
 
-	metrics := map[string]interface{}{
+	fields := map[string]interface{}{
 		"age":       age,
 		"expiry":    expiry,
 		"startdate": startdate,
 		"enddate":   enddate,
+		"valid":     valid,
 	}
 
-	return metrics
+	return fields
 }
 
 // Gather adds metrics into the accumulator.
-func (sc *SSLCert) Gather(acc telegraf.Accumulator) error {
+func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
-	for _, server := range sc.Servers {
-		cert, err := getRemoteCert(server, sc.Timeout*time.Second)
+	for _, server := range c.Servers {
+		cert, err := c.getRemoteCert(server, c.Timeout.Duration*time.Second)
 		if err != nil {
 			return fmt.Errorf("cannot get remote SSL cert '%s': %s", server, err)
 		}
@@ -132,12 +154,12 @@ func (sc *SSLCert) Gather(acc telegraf.Accumulator) error {
 			"server": server,
 		}
 
-		fields := getMetrics(cert, now)
+		fields := getFields(cert, now)
 
-		acc.AddFields("ssl_cert", fields, tags)
+		acc.AddFields("x509_cert", fields, tags)
 	}
 
-	for _, file := range sc.Files {
+	for _, file := range c.Files {
 		cert, err := getLocalCert(file)
 		if err != nil {
 			return fmt.Errorf("cannot get local SSL cert '%s': %s", file, err)
@@ -147,20 +169,20 @@ func (sc *SSLCert) Gather(acc telegraf.Accumulator) error {
 			"file": file,
 		}
 
-		fields := getMetrics(cert, now)
+		fields := getFields(cert, now)
 
-		acc.AddFields("ssl_cert", fields, tags)
+		acc.AddFields("x509_cert", fields, tags)
 	}
 
 	return nil
 }
 
 func init() {
-	inputs.Add("ssl_cert", func() telegraf.Input {
-		return &SSLCert{
+	inputs.Add("x509_cert", func() telegraf.Input {
+		return &X509Cert{
 			Files:   []string{},
 			Servers: []string{},
-			Timeout: 5,
+			Timeout: internal.Duration{Duration: 5},
 		}
 	})
 }
