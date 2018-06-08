@@ -1,5 +1,6 @@
 package utility
 
+//fields in the azure table
 const COUNTER_NAME = "CounterName"
 const END_TIMESTAMP = "Timestamp"
 const TOTAL = "Total"
@@ -16,7 +17,6 @@ const INPUT_PLUGIN = "input_plugin"
 
 const PERIOD = "period"
 
-//Add these to the file while merging
 const BLOCK_JSON_KEY_COUNTER_NAME = "metricName"
 const BLOCK_JSON_KEY_END_TIMESTAMP = "time"
 const BLOCK_JSON_KEY_TOTAL = "total"
@@ -31,3 +31,20 @@ const BLOCK_JSON_KEY_DIMENSIONS = "dimensions"
 const BLOCK_JSON_KEY_TENANT = "Tenant"
 const BLOCK_JSON_KEY_ROLE = "Role"
 const BLOCK_JSON_KEY_ROLE_INSTANCE = "RoleInstance"
+
+//parts of azure table name
+const WAD_METRICS = "WADMetrics"
+const P10DV25 = "P10DV25"
+const PT = "PT"
+const H = "H"
+const M = "M"
+const S = "S"
+const DATE_SUFFIX_FORMAT = "2006/01/02"
+
+//1 tick is 100ns, 1tick=10^-7 sec, 1sec=10^7tick
+const TICKS_PER_SECOND = int64(10000000)
+
+//number of seconds lapsed between 01-01-1601 and 01-01-1970
+const EPOCH_DIFFERENCE = int64(11644473600)
+
+const LAYOUT = "02/01/2006 03:04:05 PM"
