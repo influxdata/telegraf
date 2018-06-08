@@ -3,7 +3,6 @@ package azuretablestorage
 import (
 	"errors"
 	"log"
-	"strconv"
 	"strings"
 	"time"
 
@@ -216,11 +215,7 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 	//in case some irecoverable error occurs then write all the metrics to log file and return
 	if er != nil {
 		if skipMetrics == true {
-			log.Println("E! ERROR Irrecoverable error occured, hence skipping following metrics" + er.Error())
-			for i, _ := range metrics {
-				props = metrics[i].Fields()
-				log.Println("Metrics->" + strconv.Itoa(i) + util.GetPropsStr(props))
-			}
+			log.Println("E! ERROR Irrecoverable error occured while connecting to client or creating table, hence skipping metrics" + er.Error())
 			return nil
 		} else {
 			log.Println("E! ERROR in creating clients and talbes " + er.Error())
