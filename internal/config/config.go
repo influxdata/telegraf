@@ -940,6 +940,7 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 		}
 	}
 
+	//not deleting period from the table as we intend to add this field to aggregator plugin as well
 	delete(tbl.Fields, "period")
 	delete(tbl.Fields, "delay")
 	delete(tbl.Fields, "drop_original")
