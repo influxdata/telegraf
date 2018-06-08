@@ -218,10 +218,20 @@ func (t *Table) initBuild() error {
 	if err != nil {
 		return err
 	}
+
 	if t.Name == "" {
 		t.Name = oidText
 	}
-	t.Fields = append(t.Fields, fields...)
+
+	knownOIDs := map[string]bool{}
+	for _, f := range t.Fields {
+		knownOIDs[f.Oid] = true
+	}
+	for _, f := range fields {
+		if !knownOIDs[f.Oid] {
+			t.Fields = append(t.Fields, f)
+		}
+	}
 
 	return nil
 }
