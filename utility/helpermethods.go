@@ -25,7 +25,7 @@ func GetPropsStr(props map[string]interface{}) string {
 	for key, value := range props {
 		valueStr := ""
 		if reflect.TypeOf(value).String() == "float64" {
-			valueStr = strconv.FormatFloat(value.(float64), 'E', -1, 64)
+			valueStr = strconv.FormatFloat(value.(float64), 'f', 5, 64)
 		} else {
 			valueStr = value.(string)
 		}

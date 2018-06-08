@@ -3,6 +3,7 @@ package azuretablestorage
 import (
 	"errors"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -46,7 +47,7 @@ resource_id = ""
 account_name = ""
 sas_token = ""
 #periods is the list of period configured for each aggregator plugin
-periods = ["30s","60s"] 
+periods = ["30s","60s"] #NOTE: Each of the period value has to be written againgst period_tag key in azuremetrics aggregator's configuration
 table_storage_end_point_suffix = ".table.core.windows.net"
 host_name = ""
 protocol = ""
@@ -91,6 +92,16 @@ func (azureTableStorage *AzureTableStorage) getAzureperiodVsTableNameVsTableRefM
 func (azureTableStorage *AzureTableStorage) initDefaults() {
 	log.Println("I! INFO: initializing defaults")
 	azureTableStorage.Protocol = "https://"
+	var er error
+	if azureTableStorage.HostName == "" {
+		log.Println("I! hostname in config is empty, attempting to get hostname by os call")
+		azureTableStorage.HostName, er = os.Hostname()
+		if er != nil {
+			log.Println("E! Error while getting hostname from os call hence the value of hostname is kept to be empty by default " +
+				er.Error())
+			azureTableStorage.HostName = ""
+		}
+	}
 	azureTableStorage.columnsInTable = []string{}
 	azureTableStorage.columnsInTable = append(azureTableStorage.columnsInTable, util.MEAN)
 	azureTableStorage.columnsInTable = append(azureTableStorage.columnsInTable, util.SAMPLE_COUNT)
@@ -246,6 +257,9 @@ func (azureTableStorage *AzureTableStorage) Write(metrics []telegraf.Metric) err
 		table := azureTableStorage.periodVsTableNameVsTableRef[periodStr].tableRef
 
 		//don't write incomplete rows to the table storage
+		//TODO:This validation fails when any of the field is empty, which might not be actually an invalid entry sometimes
+		//TODO: need to check only the fields which are mandatory, as of now the mandatory fields are not known hence
+		//TODO: validation code has to be modified in future
 		isValidRow := validateRow(azureTableStorage.columnsInTable, props)
 		if isValidRow == false {
 			logMsg := "Invalid Row hence not writing it to the table. Row values : " + util.GetPropsStr(props)
