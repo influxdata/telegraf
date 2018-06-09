@@ -4,9 +4,9 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"sync"
@@ -115,33 +115,50 @@ var netTransport = &http.Transport{
 	TLSHandshakeTimeout: networkTimeout * time.Second,
 }
 
-func httpReader(URL string) (io.ReadCloser, error) {
+func httpReader(URL string, header http.Header, body io.Reader) (io.ReadCloser, error) {
 	var httpClient = &http.Client{
 		Timeout:   networkTimeout * time.Second,
 		Transport: netTransport,
 	}
-	response, err := httpClient.Get(URL)
+	req, err := http.NewRequest("GET", URL, body)
 	if err != nil {
 		return nil, err
+	}
+	for key, values := range header {
+		for _, value := range values {
+			req.Header.Set(key, value)
+		}
+	}
+	response, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if response.StatusCode != http.StatusOK {
+		return nil, errors.New("HTTP error: " + response.Status + " on: " + URL)
 	}
 	return response.Body, nil
 }
 
-func getResponse(url string, reply interface{}, errorPrefix string) bool {
-	reader, err := httpReader(url)
-	if err != nil { // we skip network problems
-		log.Println(errorPrefix+" error: ", err, url)
-		return false
+func httpReaderSimple(URL string) (io.ReadCloser, error) {
+	return httpReader(URL, nil, nil)
+}
+
+func getResponse(url string, header http.Header, body io.Reader, reply interface{}) error {
+	reader, err := httpReader(url, header, body)
+	if err != nil {
+		return err
 	}
 	defer reader.Close()
 
-	err = json.NewDecoder(reader).Decode(&reply)
-	if err != nil { // we skip network problems
-		log.Println(errorPrefix+" error: ", err, url)
-		return false
+	if err = json.NewDecoder(reader).Decode(&reply); err != nil {
+		return err
 	}
 	io.Copy(ioutil.Discard, reader)
-	return true
+	return nil
+}
+
+func getResponseSimple(url string, reply interface{}) error {
+	return getResponse(url, nil, nil, reply)
 }
 
 func jsonReader(address string, command string, buf *bytes.Buffer) error {

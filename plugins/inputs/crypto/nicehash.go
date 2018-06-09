@@ -251,9 +251,9 @@ type Nicehash struct {
 var nicehashSampleConf = `
   interval = "1m"
   ## each profitability is in BTC/GH/day
-  # addr = [ <Nicehash BTC address> ]
+  # addr          = [ <Nicehash BTC address> ]
   # profitability = [ false ]
-  # worker = [ false ]
+  # worker        = [ false ]
 `
 
 // Description of Nicehash
@@ -276,8 +276,8 @@ func (n *Nicehash) getStandardAlgoName(niceName string) string {
 
 func (n *Nicehash) getCurrentPaying(acc telegraf.Accumulator, tags map[string]string) error {
 	var reply profitabilityRespponse
-	if !getResponse(nicehashAPI+profitabilityMethod, &reply, nicehashName) {
-		return nil
+	if err := getResponseSimple(nicehashAPI+profitabilityMethod, &reply); err != nil {
+		return err
 	}
 
 	fields := map[string]interface{}{}
@@ -295,8 +295,8 @@ func (n *Nicehash) getCurrentPaying(acc telegraf.Accumulator, tags map[string]st
 
 func (n *Nicehash) getAccount(acc telegraf.Accumulator, i int, tags map[string]string) error {
 	var reply providerRespponse
-	if !getResponse(nicehashAPI+providerMethod+n.Addr[i], &reply, nicehashName) {
-		return nil
+	if err := getResponseSimple(nicehashAPI+providerMethod+n.Addr[i], &reply); err != nil {
+		return err
 	}
 
 	tags["base_currency"] = "btc"
@@ -320,7 +320,7 @@ func (n *Nicehash) getAccount(acc telegraf.Accumulator, i int, tags map[string]s
 
 func (n *Nicehash) getWorker(acc telegraf.Accumulator, i int, tags map[string]string) error {
 	var reply workerRespponse
-	if !getResponse(nicehashAPI+workerMethod+n.Addr[i], &reply, nicehashName) {
+	if err := getResponseSimple(nicehashAPI+workerMethod+n.Addr[i], &reply); err != nil {
 		return nil
 	}
 

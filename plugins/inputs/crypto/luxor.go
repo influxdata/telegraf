@@ -107,8 +107,8 @@ type Luxor struct {
 
 var luxorSampleConf = `
   interval = "1m"
-  coin = [ <coin type: SC, DCR, LBC> ]
-  addr = [ <coin address> ]
+  coin     = [ <coin type: SC, DCR, LBC> ]
+  addr     = [ <coin address> ]
   # earnings = [ <usd,btc> ]
 `
 
@@ -128,8 +128,8 @@ func (n *Luxor) luxorAPIURL(path string, i int) string {
 
 func (n *Luxor) getAccount(acc telegraf.Accumulator, i int, tags map[string]string) error {
 	var reply luxorUserResponse
-	if !getResponse(n.luxorAPIURL(luxorUserPath, i)+n.Addr[i], &reply, luxorName) {
-		return nil
+	if err := getResponseSimple(n.luxorAPIURL(luxorUserPath, i)+n.Addr[i], &reply); err != nil {
+		return err
 	}
 
 	tags["source"] = ACCOUNT.String()

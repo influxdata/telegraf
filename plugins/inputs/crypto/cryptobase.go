@@ -65,7 +65,7 @@ const (
 	POOL
 )
 
-func unitMultilier(unit string) uint64 {
+func unitMultilier(unit string) int64 {
 	if len(unit) == 0 {
 		return 0
 	}

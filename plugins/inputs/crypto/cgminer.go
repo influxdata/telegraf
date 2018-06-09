@@ -123,7 +123,7 @@ var cgMinerSampleConf = `
 `
 
 // CGMiner API docs: https://github.com/ckolivas/cgminer/blob/master/API-README
-// nc 127.0.0.1 4028 <<< '{"command":"stats+pools+summary"}' | sed "s/}{/,/" | jq .
+// nc 127.0.0.1 4028 <<< '{"command":"stats+pools+summary"}' | sed "s/{[^}]+}{/{/" | jq .
 type CGMiner struct {
 	serverBase
 	Algorithms []string `toml:"algorithms"`
@@ -204,14 +204,19 @@ func (m *CGMiner) arrayChainGather(devsArray []devs, acc telegraf.Accumulator, t
 		if dev.Status != "Alive" {
 			failed = 1
 		}
+		total := dev.Accepted + dev.Rejected
+		rate := 100
+		if total != 0 {
+			rate = 100 * dev.Accepted / total
+		}
 		fields := map[string]interface{}{
 			"hashrate":        uint64(dev.MHS1m * 1000000.0), // was in MH/s
-			"temperature":     dev.Temperature,
+			"temperature":     int(dev.Temperature),
 			"failed":          failed,
-			"shares_total":    dev.Accepted + dev.Rejected,
+			"shares_total":    total,
 			"shares_accepted": dev.Accepted,
 			"shares_rejected": dev.Rejected,
-			"shares_rate":     100 * dev.Accepted / (dev.Accepted + dev.Rejected),
+			"shares_rate":     rate,
 		}
 		acc.AddFields(cgMinerName, fields, tags)
 	}
@@ -265,7 +270,10 @@ func (m *CGMiner) serverGather(acc telegraf.Accumulator, i int, tags map[string]
 		if pool.StratumActive {
 			tags["pool"] = pool.URL
 			total := pool.Accepted + pool.Rejected
-			rate := 100 * pool.Accepted / total
+			rate := 100
+			if total != 0 {
+				rate = 100 * pool.Accepted / total
+			}
 			fields := map[string]interface{}{
 				"shares_total":    total,
 				"shares_accepted": pool.Accepted,

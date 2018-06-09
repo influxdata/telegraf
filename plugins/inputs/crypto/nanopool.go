@@ -1,7 +1,7 @@
 package crypto
 
 import (
-	"log"
+	"errors"
 	"strconv"
 	"sync"
 
@@ -117,10 +117,10 @@ type Nanopool struct {
 
 var nanopoolSampleConf = `
   interval = "1m"
-  coin = [ <coin type: eth, etc, sia, zec, xmr, asc, etn> ]
-  addr = [ <coin addresses> ]
+  coin     = [ <coin type: eth, etc, sia, zec, xmr, asc, etn> ]
+  addr     = [ <coin addresses> ]
   # earnings = [ <coins,dollars,yuan,euros,rubles,bitcoins> ]
-  # worker = [ false ]
+  # worker   = [ false ]
 `
 
 // Description of Nanopool
@@ -154,12 +154,11 @@ func (n *Nanopool) getDaily(i int, day nanopoolEarning) (currency string, daily 
 func (n *Nanopool) getAccount(acc telegraf.Accumulator, i int, tags map[string]string) error {
 	var user nanopoolUserRespponse
 	url := nanopoolAPI + n.Coin[i] + nanopoolUserPath + n.Addr[i]
-	if !getResponse(url, &user, nanopoolName) {
-		return nil
+	if err := getResponseSimple(url, &user); err != nil {
+		return err
 	}
 	if !user.Status {
-		log.Println(nanopoolName+" error: ", user.Error, url)
-		return nil
+		return errors.New(user.Error)
 	}
 
 	tags["source"] = ACCOUNT.String()
@@ -175,13 +174,13 @@ func (n *Nanopool) getAccount(acc telegraf.Accumulator, i int, tags map[string]s
 	if user.Data.Hashrate > 0 {
 		var earnings nanopoolEarningsRespponse
 		url = nanopoolAPI + n.Coin[i] + nanopoolEarningsPath + strconv.FormatFloat(user.Data.Hashrate, 'f', -1, 64)
-		if getResponse(url, &earnings, nanopoolName) {
-			if !earnings.Status {
-				log.Println(nanopoolName+" error: ", earnings.Error, url)
-			} else {
-				day = earnings.Data.Day
-			}
+		if err := getResponseSimple(url, &earnings); err != nil {
+			return err
 		}
+		if !earnings.Status {
+			return errors.New(earnings.Error)
+		}
+		day = earnings.Data.Day
 	}
 	tags["base_currency"], fields["daily"] = n.getDaily(i, day)
 	acc.AddFields(nanopoolName, fields, tags)
@@ -191,12 +190,11 @@ func (n *Nanopool) getAccount(acc telegraf.Accumulator, i int, tags map[string]s
 	if n.Worker[i] {
 		var reported nanopoolReportedRespponse
 		url = nanopoolAPI + n.Coin[i] + nanopoolReportedPath + n.Addr[i]
-		if !getResponse(url, &reported, nanopoolName) {
-			return nil
+		if err := getResponseSimple(url, &reported); err != nil {
+			return err
 		}
 		if !reported.Status {
-			log.Println(nanopoolName+" error: ", reported.Error, url)
-			return nil
+			return errors.New(reported.Error)
 		}
 
 		reportedHash := map[string]float64{}

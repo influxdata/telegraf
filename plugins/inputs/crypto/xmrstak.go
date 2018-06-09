@@ -1,8 +1,8 @@
 package crypto
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -78,12 +78,14 @@ func (*XMRStak) getURL(address string) string {
 
 func (m *XMRStak) serverGather(acc telegraf.Accumulator, i int, tags map[string]string) error {
 	var reply xmrStakResponse
-	if !getResponse(m.getURL(m.getAddress(i)), &reply, xmrstakName) {
-		return nil
+	if err := getResponseSimple(m.getURL(m.getAddress(i)), &reply); err != nil {
+		return err
 	}
-	if reply.Connection.Pool == "not connected" || reply.Hashrate.Total[0] == 0 {
-		log.Println(xmrstakName+" error: ", reply.Connection.Pool, reply.Hashrate.Total[0])
-		return nil
+	if reply.Connection.Pool == "not connected" {
+		return errors.New(reply.Connection.Pool + " not connected")
+	}
+	if reply.Hashrate.Total[0] == 0 {
+		return errors.New("Hashrate is 0")
 	}
 
 	version := strings.Split(reply.Version, "/")[1]
@@ -92,7 +94,10 @@ func (m *XMRStak) serverGather(acc telegraf.Accumulator, i int, tags map[string]
 	tags["algorithm"] = cryptonightv7.String()
 	tags["version"] = version
 	tags["pool"] = reply.Connection.Pool
-
+	rate := 100
+	if reply.Results.SharesTotal != 0 {
+		rate = 100 * reply.Results.SharesGood / reply.Results.SharesTotal
+	}
 	fields := map[string]interface{}{
 		"uptime":          reply.Connection.Uptime, // in seconds
 		"hashrate":        uint64(reply.Hashrate.Total[0]),
@@ -101,7 +106,7 @@ func (m *XMRStak) serverGather(acc telegraf.Accumulator, i int, tags map[string]
 		"shares_total":    reply.Results.SharesTotal,
 		"shares_accepted": reply.Results.SharesGood,
 		"shares_rejected": reply.Results.SharesTotal - reply.Results.SharesGood,
-		"shares_rate":     100 * reply.Results.SharesGood / reply.Results.SharesTotal,
+		"shares_rate":     rate,
 		"avg_time":        reply.Results.AverageTime,
 		"hashes_total":    reply.Results.HashesTotal,
 		"gpu":             len(reply.Hashrate.Threads) / m.Threads,

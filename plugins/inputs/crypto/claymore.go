@@ -41,8 +41,8 @@ var claymoreAlgoUnit = map[string]string{
 var claymoreSampleConf = `
   interval = "1m"
   ## Miner servers addresses and names
-  servers    = ["rig1;localhost:3333"]
-  names      = ["Rig1"]
+  servers = ["localhost:3333"]
+  names   = ["Rig1"]
 `
 
 // Claymore API docs: https://github.com/abuisine/docker-claymore/blob/master/API.txt
@@ -60,8 +60,8 @@ func (*Claymore) SampleConfig() string {
 	return claymoreSampleConf
 }
 
-func toInt(val string) uint64 {
-	res, err := strconv.ParseUint(val, 10, 64)
+func toInt(val string) int64 {
+	res, err := strconv.ParseInt(val, 10, 64)
 	if err != nil {
 		return 0
 	}
@@ -90,9 +90,9 @@ func (m *Claymore) serverGather(acc telegraf.Accumulator, i int, tags map[string
 	if len(pools) > 0 {
 		tags["pool"] = pools[0]
 	}
-	version := results[0]
-	tags["version"] = strings.TrimSpace(strings.Split(version, "-")[0])
-	algo := strings.TrimSpace(strings.ToLower(strings.Split(version, "-")[1]))
+	version := strings.TrimSpace(strings.Split(results[0], "-")[0])
+	algo := strings.TrimSpace(strings.ToLower(strings.Split(results[0], "-")[1]))
+	tags["version"] = version
 	tags["algorithm"] = claymoreAlgoMap[algo]
 
 	mul := unitMultilier(claymoreAlgoUnit[algo])
@@ -103,6 +103,10 @@ func (m *Claymore) serverGather(acc telegraf.Accumulator, i int, tags map[string
 	bad := toInt(shares[2])
 	hashrates := strings.Split(results[3], ";")
 	tempFans := strings.Split(results[6], ";")
+	rate := int64(100)
+	if total != 0 {
+		rate = 100 * (total - bad - invalid) / total
+	}
 	fields := map[string]interface{}{
 		"uptime":           toInt(results[1]) * 60, // was in minutes
 		"hashrate":         toInt(shares[0]) * mul,
@@ -110,7 +114,7 @@ func (m *Claymore) serverGather(acc telegraf.Accumulator, i int, tags map[string
 		"shares_rejected":  bad,
 		"shares_discarded": invalid,
 		"shares_accepted":  total - bad - invalid,
-		"shares_rate":      100 * (total - bad - invalid) / total,
+		"shares_rate":      rate,
 		"pool_switch":      toInt(invalids[1]),
 		"gpu":              len(hashrates),
 	}
@@ -129,8 +133,9 @@ func (m *Claymore) serverGather(acc telegraf.Accumulator, i int, tags map[string
 		acc.AddFields(claymoreName, fields, tags)
 	}
 	if hasDcr {
-		tags["version"] = results[0]
-		//tags["algorithm"] = strings.Split(m.getAlgorithm(i), ":")[1]
+		delete(tags, "unit")
+		tags["version"] = version
+		tags["algorithm"] = "dcr"
 		tags["pool"] = pools[1]
 		tags["source"] = MINER.String()
 
@@ -139,6 +144,10 @@ func (m *Claymore) serverGather(acc telegraf.Accumulator, i int, tags map[string
 		total = toInt(shares[1])
 		bad = toInt(shares[2])
 		hashrates = strings.Split(results[5], ";")
+		rate := int64(100)
+		if total != 0 {
+			rate = 100 * (total - bad - invalid) / total
+		}
 		fields := map[string]interface{}{
 			"uptime":           toInt(results[1]) * 60, // was in minutes
 			"hashrate":         toInt(shares[0]),       // * mul ???
@@ -146,11 +155,13 @@ func (m *Claymore) serverGather(acc telegraf.Accumulator, i int, tags map[string
 			"shares_rejected":  bad,
 			"shares_accepted":  total - bad - invalid,
 			"shares_discarded": invalid,
+			"shares_rate":      rate,
 			"pool_switch":      toInt(invalids[3]),
 			"gpu":              len(hashrates),
 		}
 		acc.AddFields(claymoreName, fields, tags)
 
+		delete(tags, "version")
 		delete(tags, "pool")
 		for i, hash := range hashrates {
 			tags["source"] = GPU.String()
