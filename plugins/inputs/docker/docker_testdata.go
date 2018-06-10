@@ -198,9 +198,12 @@ var TaskList = []swarm.Task{
 
 var NodeList = []swarm.Node{
 	swarm.Node{
-		ID: "0cl4jturcyd1ks3fwpd010kor",
+		ID: "k67qz4598weg5unwwffg6z1m1",
 		Status: swarm.NodeStatus{
 			State: "ready",
+		},
+		ManagerStatus: &swarm.ManagerStatus{
+			Leader: true,
 		},
 	},
 	swarm.Node{
@@ -488,11 +491,5 @@ var containerInspect = types.ContainerJSON{
 				Status:        "Unhealthy",
 			},
 		},
-	},
-}
-
-var nodeInspect = swarm.Node{
-	ManagerStatus: &swarm.ManagerStatus{
-		Leader: true,
 	},
 }

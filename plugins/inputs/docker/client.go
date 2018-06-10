@@ -24,7 +24,6 @@ type Client interface {
 	ServiceList(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
 	TaskList(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
 	NodeList(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
-	NodeInspect(ctx context.Context, nodeID string) (swarm.Node, error)
 }
 
 func NewEnvClient() (Client, error) {
@@ -78,8 +77,4 @@ func (c *SocketClient) TaskList(ctx context.Context, options types.TaskListOptio
 }
 func (c *SocketClient) NodeList(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error) {
 	return c.client.NodeList(ctx, options)
-}
-func (c *SocketClient) NodeInspect(ctx context.Context, nodeID string) (swarm.Node, error) {
-	node, _, error := c.client.NodeInspectWithRaw(ctx, nodeID)
-	return node, error
 }

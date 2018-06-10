@@ -21,7 +21,6 @@ type MockClient struct {
 	ServiceListF      func(ctx context.Context, options types.ServiceListOptions) ([]swarm.Service, error)
 	TaskListF         func(ctx context.Context, options types.TaskListOptions) ([]swarm.Task, error)
 	NodeListF         func(ctx context.Context, options types.NodeListOptions) ([]swarm.Node, error)
-	NodeInspectF      func(ctx context.Context, swarmID string) (swarm.Node, error)
 }
 
 func (c *MockClient) Info(ctx context.Context) (types.Info, error) {
@@ -71,13 +70,6 @@ func (c *MockClient) NodeList(
 	return c.NodeListF(ctx, options)
 }
 
-func (c *MockClient) NodeInspect(
-	ctx context.Context,
-	nodeID string,
-) (swarm.Node, error) {
-	return c.NodeInspectF(ctx, nodeID)
-}
-
 var baseClient = MockClient{
 	InfoF: func(context.Context) (types.Info, error) {
 		return info, nil
@@ -99,9 +91,6 @@ var baseClient = MockClient{
 	},
 	NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
 		return NodeList, nil
-	},
-	NodeInspectF: func(context.Context, string) (swarm.Node, error) {
-		return nodeInspect, nil
 	},
 }
 
@@ -283,9 +272,6 @@ func TestDocker_WindowsMemoryContainerStats(t *testing.T) {
 				},
 				NodeListF: func(context.Context, types.NodeListOptions) ([]swarm.Node, error) {
 					return NodeList, nil
-				},
-				NodeInspectF: func(ctx context.Context, nodeID string) (swarm.Node, error) {
-					return nodeInspect, nil
 				},
 			}, nil
 		},
@@ -702,8 +688,8 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 
 	err := acc.GatherError(d.Gather)
 	require.NoError(t, err)
-	require.True(t, d.isLeader)
 
+	d.SwarmReporting = "leader"
 	d.gatherSwarmInfo(&acc)
 
 	// test docker_container_net measurement
