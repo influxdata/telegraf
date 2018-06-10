@@ -240,14 +240,19 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	isLeader := false
 	activeNodes := make(map[string]struct{})
 	for _, n := range nodes {
-		if n.ID == d.nodeID && d.SwarmReporting == "leader" && !n.ManagerStatus.Leader {
-			return nil
+		if n.ID == d.nodeID {
+			isLeader = n.ManagerStatus.Leader
 		}
 		if n.Status.State != swarm.NodeStateDown {
 			activeNodes[n.ID] = struct{}{}
 		}
+	}
+
+	if d.SwarmReporting == "leader" && !isLeader {
+		return nil
 	}
 
 	services, err := d.client.ServiceList(ctx, types.ServiceListOptions{})
