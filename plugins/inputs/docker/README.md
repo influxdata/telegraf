@@ -16,13 +16,9 @@ to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.24/)
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
 
-  ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
-  ## Note: configure this in one of the manager nodes in a Swarm cluster.
-  ## configuring in multiple Swarm managers results in duplication of metrics.
-  gather_services = false
-  ## If gather_services is true, only collect if this node is the leader. 
-  ## This allows the same configuration to be used on all nodes in a Swarm.
-  detect_leader = false
+  ## Sets the condition for collecting Swarm data.  Can be one of:
+  ## "leader", "always", or "never".
+  swarm_reporting = "never"
 
   ## Only collect metrics for these containers. Values will be appended to
   ## container_name_include.
