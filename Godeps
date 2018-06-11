@@ -1,5 +1,4 @@
 collectd.org 2ce144541b8903101fb8f1483cc0497a68798122
-github.com/Microsoft/ApplicationInsights-Go 3612f58550c1de70f1a110c78c830e55f29aa65d
 github.com/Shopify/sarama 3b1b38866a79f06deddf0487d5c27ba0697ccd65
 github.com/Sirupsen/logrus 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
 github.com/aerospike/aerospike-client-go 95e1ad7791bdbca44707fedbb29be42024900d9c
