@@ -247,13 +247,24 @@ func TestParseConfigBasic(t *testing.T) {
 	assert.Len(t, m.counters, 4)
 	err = m.query.Close()
 	require.NoError(t, err)
+
+	m.UseWildcardsExpansion = true
+	m.counters = nil
+
+	err = m.query.Open()
+	require.NoError(t, err)
+	err = m.ParseConfig()
+	require.NoError(t, err)
+	assert.Len(t, m.counters, 4)
+	err = m.query.Close()
+	require.NoError(t, err)
 }
 
 func TestParseConfigNoInstance(t *testing.T) {
 	var err error
 	perfObjects := createPerfObject("m", "O", []string{"------"}, []string{"C1", "C2"}, false, false)
 	cps1 := []string{"\\O\\C1", "\\O\\C2"}
-	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, query: &FakePerformanceQuery{
+	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, UseWildcardsExpansion: false, query: &FakePerformanceQuery{
 		counters: createCounterMap(cps1, []float64{1.1, 1.2}),
 		expandPaths: map[string][]string{
 			cps1[0]: {cps1[0]},
@@ -261,6 +272,17 @@ func TestParseConfigNoInstance(t *testing.T) {
 		},
 		addEnglishSupported: true,
 	}}
+	err = m.query.Open()
+	require.NoError(t, err)
+	err = m.ParseConfig()
+	require.NoError(t, err)
+	assert.Len(t, m.counters, 2)
+	err = m.query.Close()
+	require.NoError(t, err)
+
+	m.UseWildcardsExpansion = true
+	m.counters = nil
+
 	err = m.query.Open()
 	require.NoError(t, err)
 	err = m.ParseConfig()
@@ -289,6 +311,16 @@ func TestParseConfigInvalidCounterError(t *testing.T) {
 	require.Error(t, err)
 	err = m.query.Close()
 	require.NoError(t, err)
+
+	m.UseWildcardsExpansion = true
+	m.counters = nil
+
+	err = m.query.Open()
+	require.NoError(t, err)
+	err = m.ParseConfig()
+	require.Error(t, err)
+	err = m.query.Close()
+	require.NoError(t, err)
 }
 
 func TestParseConfigInvalidCounterNoError(t *testing.T) {
@@ -310,9 +342,20 @@ func TestParseConfigInvalidCounterNoError(t *testing.T) {
 	require.NoError(t, err)
 	err = m.query.Close()
 	require.NoError(t, err)
+
+	m.UseWildcardsExpansion = true
+	m.counters = nil
+
+	err = m.query.Open()
+	require.NoError(t, err)
+	err = m.ParseConfig()
+	require.NoError(t, err)
+	err = m.query.Close()
+	require.NoError(t, err)
+
 }
 
-func TestParseConfigTotal(t *testing.T) {
+func TestParseConfigTotalExpansion(t *testing.T) {
 	var err error
 	perfObjects := createPerfObject("m", "O", []string{"*"}, []string{"*"}, true, true)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(_Total)\\C1", "\\O(_Total)\\C2"}
@@ -396,6 +439,17 @@ func TestSimpleGather(t *testing.T) {
 		"objectname": "O",
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
+
+	m.UseWildcardsExpansion = true
+	m.counters = nil
+	m.lastRefreshed = time.Time{}
+
+	var acc2 testutil.Accumulator
+
+	err = m.Gather(&acc2)
+	require.NoError(t, err)
+	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
+
 }
 
 func TestGatherInvalidDataIgnore(t *testing.T) {
@@ -426,6 +480,15 @@ func TestGatherInvalidDataIgnore(t *testing.T) {
 		"instance":   "I",
 		"objectname": "O",
 	}
+	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
+
+	m.UseWildcardsExpansion = true
+	m.counters = nil
+	m.lastRefreshed = time.Time{}
+
+	var acc2 testutil.Accumulator
+	err = m.Gather(&acc2)
+	require.NoError(t, err)
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 }
 
@@ -634,4 +697,58 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 	acc3.AssertContainsTaggedFields(t, measurement, fields4, tags4)
 	acc3.AssertContainsTaggedFields(t, measurement, fields5, tags5)
 
+}
+
+func TestGatherTotalNoExpansion(t *testing.T) {
+	var err error
+	measurement := "m"
+	perfObjects := createPerfObject(measurement, "O", []string{"*"}, []string{"C1", "C2"}, true, true)
+	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(_Total)\\C1", "\\O(_Total)\\C2"}
+	m := Win_PerfCounters{PrintValid: false, UseWildcardsExpansion: false, Object: perfObjects, query: &FakePerformanceQuery{
+		counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 1.2, 1.3, 1.4}),
+		expandPaths: map[string][]string{
+			"\\O(*)\\C1": {cps1[0], cps1[2]},
+			"\\O(*)\\C2": {cps1[1], cps1[3]},
+		},
+		addEnglishSupported: true,
+	}}
+	var acc1 testutil.Accumulator
+	err = m.Gather(&acc1)
+	require.NoError(t, err)
+	assert.Len(t, m.counters, 2)
+	assert.Len(t, acc1.Metrics, 2)
+	fields1 := map[string]interface{}{
+		"C1": float32(1.1),
+		"C2": float32(1.2),
+	}
+	tags1 := map[string]string{
+		"instance":   "I1",
+		"objectname": "O",
+	}
+	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
+
+	fields2 := map[string]interface{}{
+		"C1": float32(1.3),
+		"C2": float32(1.4),
+	}
+	tags2 := map[string]string{
+		"instance":   "_Total",
+		"objectname": "O",
+	}
+	acc1.AssertContainsTaggedFields(t, measurement, fields2, tags2)
+
+	perfObjects[0].IncludeTotal = false
+
+	m.counters = nil
+	m.lastRefreshed = time.Time{}
+
+	var acc2 testutil.Accumulator
+	err = m.Gather(&acc2)
+	require.NoError(t, err)
+	assert.Len(t, m.counters, 2)
+	assert.Len(t, acc2.Metrics, 1)
+
+	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
+
+	acc2.AssertDoesNotContainsTaggedFields(t, measurement, fields2, tags2)
 }
