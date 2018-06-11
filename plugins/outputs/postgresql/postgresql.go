@@ -334,8 +334,8 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		var table_and_cols string;
-		var placeholder, quoted_columns []string;
+		var table_and_cols string
+		var placeholder, quoted_columns []string
 		for _, column := range columns {
 			quoted_columns = append(quoted_columns, quoteIdent(column))
 		}
@@ -343,7 +343,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 		batches[table_and_cols] = append(batches[table_and_cols], values...)
 		for i, _ := range columns {
 			i += len(params[table_and_cols]) * len(columns)
-			placeholder = append(placeholder, fmt.Sprintf("$%d", i + 1))
+			placeholder = append(placeholder, fmt.Sprintf("$%d", i+1))
 		}
 		params[table_and_cols] = append(params[table_and_cols], strings.Join(placeholder, ","))
 		colmap[table_and_cols] = columns
