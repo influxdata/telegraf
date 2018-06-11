@@ -51,7 +51,6 @@ github.com/multiplay/go-ts3 07477f49b8dfa3ada231afc7b7b17617d42afe8e
 github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
 github.com/nats-io/gnatsd 393bbb7c031433e68707c8810fda0bfcfbe6ab9b
 github.com/nats-io/go-nats ea9585611a4ab58a205b9b125ebd74c389a6b898
-github.com/nats-io/nats ea9585611a4ab58a205b9b125ebd74c389a6b898
 github.com/nats-io/nuid 289cccf02c178dc782430d534e3c1f5b72af807f
 github.com/nsqio/go-nsq eee57a3ac4174c55924125bb15eeeda8cffb6e6f
 github.com/opencontainers/runc 89ab7f2ccc1e45ddf6485eaa802c35dcf321dfc8
