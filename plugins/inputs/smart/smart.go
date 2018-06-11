@@ -1,6 +1,7 @@
 package smart
 
 import (
+	"bufio"
 	"fmt"
 	"os/exec"
 	"path"
@@ -202,7 +203,10 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, smartctl, no
 	device_fields := make(map[string]interface{})
 	device_fields["exit_status"] = exitStatus
 
-	for _, line := range strings.Split(outStr, "\n") {
+	scanner := bufio.NewScanner(strings.NewReader(outStr))
+
+	for scanner.Scan() {
+		line := scanner.Text()
 
 		model := modelInInfo.FindStringSubmatch(line)
 		if len(model) > 1 {

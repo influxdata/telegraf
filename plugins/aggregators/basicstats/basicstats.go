@@ -22,6 +22,7 @@ type configuredStats struct {
 	mean     bool
 	variance bool
 	stdev    bool
+	sum      bool
 }
 
 func NewBasicStats() *BasicStats {
@@ -40,6 +41,7 @@ type basicstats struct {
 	count float64
 	min   float64
 	max   float64
+	sum   float64
 	mean  float64
 	M2    float64 //intermedia value for variance/stdev
 }
@@ -77,6 +79,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 					min:   fv,
 					max:   fv,
 					mean:  fv,
+					sum:   fv,
 					M2:    0.0,
 				}
 			}
@@ -92,6 +95,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 						min:   fv,
 						max:   fv,
 						mean:  fv,
+						sum:   fv,
 						M2:    0.0,
 					}
 					continue
@@ -119,6 +123,8 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				} else if fv > tmp.max {
 					tmp.max = fv
 				}
+				//sum compute
+				tmp.sum += fv
 				//store final data
 				m.cache[id].fields[k] = tmp
 			}
@@ -145,6 +151,9 @@ func (m *BasicStats) Push(acc telegraf.Accumulator) {
 			}
 			if config.mean {
 				fields[k+"_mean"] = v.mean
+			}
+			if config.sum {
+				fields[k+"_sum"] = v.sum
 			}
 
 			//v.count always >=1
@@ -187,6 +196,8 @@ func parseStats(names []string) *configuredStats {
 			parsed.variance = true
 		case "stdev":
 			parsed.stdev = true
+		case "sum":
+			parsed.sum = true
 
 		default:
 			log.Printf("W! Unrecognized basic stat '%s', ignoring", name)
@@ -206,6 +217,7 @@ func defaultStats() *configuredStats {
 	defaults.mean = true
 	defaults.variance = true
 	defaults.stdev = true
+	defaults.sum = false
 
 	return defaults
 }
