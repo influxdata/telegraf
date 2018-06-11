@@ -9,6 +9,12 @@ import (
 	"unsafe"
 )
 
+//PerformanceQuery is abstraction for PDH_FMT_COUNTERVALUE_ITEM_DOUBLE
+type CounterValue struct {
+	InstanceName string
+	Value        float64
+}
+
 //PerformanceQuery provides wrappers around Windows performance counters API for easy usage in GO
 type PerformanceQuery interface {
 	Open() error
@@ -18,6 +24,7 @@ type PerformanceQuery interface {
 	GetCounterPath(counterHandle PDH_HCOUNTER) (string, error)
 	ExpandWildCardPath(counterPath string) ([]string, error)
 	GetFormattedCounterValueDouble(hCounter PDH_HCOUNTER) (float64, error)
+	GetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER) ([]CounterValue, error)
 	CollectData() error
 	AddEnglishCounterSupported() bool
 }
@@ -149,6 +156,28 @@ func (m *PerformanceQueryImpl) GetFormattedCounterValueDouble(hCounter PDH_HCOUN
 	} else {
 		return 0, NewPdhError(ret)
 	}
+}
+
+func (m *PerformanceQueryImpl) GetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER) ([]CounterValue, error) {
+	var buffSize uint32
+	var itemCount uint32
+	ret := PdhGetFormattedCounterArrayDouble(hCounter, &buffSize, &itemCount, nil)
+	if ret == PDH_MORE_DATA {
+		buff := make([]byte, buffSize)
+		ret = PdhGetFormattedCounterArrayDouble(hCounter, &buffSize, &itemCount, &buff[0])
+		if ret == ERROR_SUCCESS {
+			items := (*[1 << 20]PDH_FMT_COUNTERVALUE_ITEM_DOUBLE)(unsafe.Pointer(&buff[0]))[:itemCount]
+			values := make([]CounterValue, 0, itemCount)
+			for _, item := range items {
+				if item.FmtValue.CStatus == PDH_CSTATUS_VALID_DATA || item.FmtValue.CStatus == PDH_CSTATUS_NEW_DATA {
+					val := CounterValue{UTF16PtrToString(item.SzName), item.FmtValue.DoubleValue}
+					values = append(values, val)
+				}
+			}
+			return values, nil
+		}
+	}
+	return nil, NewPdhError(ret)
 }
 
 func (m *PerformanceQueryImpl) CollectData() error {

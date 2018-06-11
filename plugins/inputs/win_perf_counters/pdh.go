@@ -352,7 +352,7 @@ func PdhGetFormattedCounterValueDouble(hCounter PDH_HCOUNTER, lpdwType *uint32, 
 //			time.Sleep(2000 * time.Millisecond)
 //		}
 //	}
-func PdhGetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *PDH_FMT_COUNTERVALUE_ITEM_DOUBLE) uint32 {
+func PdhGetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
 	ret, _, _ := pdh_GetFormattedCounterArrayW.Call(
 		uintptr(hCounter),
 		uintptr(PDH_FMT_DOUBLE|PDH_FMT_NOCAP100),
