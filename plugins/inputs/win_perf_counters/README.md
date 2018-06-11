@@ -33,15 +33,15 @@ Example:
 
 #### UseWildcardsExpansion
 
-If `UseWildcardsExpansion` is set to true, wildcards can be used in instance name and counter name
-. 
-Partial wildcard (e.g. `chrome*`) is supported only in instance name on Windows Vista and newer. 
+If `UseWildcardsExpansion` is set to true, wildcards can be used in the
+instance name and the counter name.  When using localized Windows, counters
+will be also be localized.  Instance indexes will also be returned in the
+instance name.
 
-On localized Windows, returned counters will be also localized. 
+Partial wildcards (e.g. `chrome*`) are supported only in the instance name on Windows Vista and newer.
 
-It also returns instance indexes in instance names.
-
-If set to `false`, wildcards (not partial) in instance names can still be used, but instance indexes will not be returned in instance names.
+If disabled, wildcards (not partial) in instance names can still be used, but
+instance indexes will not be returned in the instance names.
 
 Example:
 `UseWildcardsExpansion=true`
@@ -116,8 +116,10 @@ Counters key (this is an array) is the counters of the ObjectName
 you would like returned, it can also be one or more values.
 
 Example: `Counters = ["% Idle Time", "% Disk Read Time", "% Disk Write Time"]`
-This must be specified for every counter you want the results of, or use `["*"]` for all the counters for object, 
-if the `UseWildcardsExpansion` param is set to `true`
+
+This must be specified for every counter you want the results of, or use
+`["*"]` for all the counters for object, if the `UseWildcardsExpansion` param
+is set to `true`
 
 #### Measurement
 *Optional*
