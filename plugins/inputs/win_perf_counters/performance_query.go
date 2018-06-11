@@ -6,6 +6,7 @@ package win_perf_counters
 import (
 	"errors"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -19,7 +20,8 @@ type PerformanceQuery interface {
 	ExpandWildCardPath(counterPath string) ([]string, error)
 	GetFormattedCounterValueDouble(hCounter PDH_HCOUNTER) (float64, error)
 	CollectData() error
-	AddEnglishCounterSupported() bool
+	CollectDataWithTime() (time.Time, error)
+	IsVistaOrNewer() bool
 }
 
 //PdhError represents error returned from Performance Counters API
@@ -162,7 +164,18 @@ func (m *PerformanceQueryImpl) CollectData() error {
 	return nil
 }
 
-func (m *PerformanceQueryImpl) AddEnglishCounterSupported() bool {
+func (m *PerformanceQueryImpl) CollectDataWithTime() (time.Time, error) {
+	if m.query == 0 {
+		return time.Now(), errors.New("uninitialised query")
+	}
+	ret, mtime := PdhCollectQueryDataWithTime(m.query)
+	if ret != ERROR_SUCCESS {
+		return time.Now(), NewPdhError(ret)
+	}
+	return mtime, nil
+}
+
+func (m *PerformanceQueryImpl) IsVistaOrNewer() bool {
 	return PdhAddEnglishCounterSupported()
 }
 

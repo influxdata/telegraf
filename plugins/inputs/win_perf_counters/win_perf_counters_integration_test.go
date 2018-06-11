@@ -70,6 +70,11 @@ func TestWinPerformanceQueryImpl(t *testing.T) {
 	_, err = query.GetFormattedCounterValueDouble(hCounter)
 	require.NoError(t, err)
 
+	now := time.Now()
+	mtime, err := query.CollectDataWithTime()
+	require.NoError(t, err)
+	assert.True(t, mtime.Sub(now) < time.Second)
+
 	counterPath = "\\Process(*)\\% Processor Time"
 	paths, err := query.ExpandWildCardPath(counterPath)
 	require.NoError(t, err)

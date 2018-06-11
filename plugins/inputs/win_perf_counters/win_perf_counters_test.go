@@ -19,11 +19,13 @@ type testCounter struct {
 	value  float64
 }
 type FakePerformanceQuery struct {
-	counters            map[string]testCounter
-	addEnglishSupported bool
-	expandPaths         map[string][]string
-	openCalled          bool
+	counters      map[string]testCounter
+	vistaAndNewer bool
+	expandPaths   map[string][]string
+	openCalled    bool
 }
+
+var MetricTime = time.Date(2018, 5, 28, 12, 0, 0, 0, time.UTC)
 
 func (m *FakePerformanceQuery) Open() error {
 	if m.openCalled {
@@ -110,8 +112,15 @@ func (m *FakePerformanceQuery) CollectData() error {
 	return nil
 }
 
-func (m *FakePerformanceQuery) AddEnglishCounterSupported() bool {
-	return m.addEnglishSupported
+func (m *FakePerformanceQuery) CollectDataWithTime() (time.Time, error) {
+	if !m.openCalled {
+		return time.Now(), errors.New("CollectData: uninitialised query")
+	}
+	return MetricTime, nil
+}
+
+func (m *FakePerformanceQuery) IsVistaOrNewer() bool {
+	return m.vistaAndNewer
 }
 
 func createPerfObject(measurement string, object string, instances []string, counters []string, failOnMissing bool, includeTotal bool) []perfobject {
@@ -148,7 +157,7 @@ func TestAddItemSimple(t *testing.T) {
 		expandPaths: map[string][]string{
 			cps1[0]: cps1,
 		},
-		addEnglishSupported: true,
+		vistaAndNewer: true,
 	}}
 	err = m.query.Open()
 	require.NoError(t, err)
@@ -166,7 +175,7 @@ func TestAddItemInvalidCountPath(t *testing.T) {
 		expandPaths: map[string][]string{
 			cps1[0]: {"\\O/C"},
 		},
-		addEnglishSupported: true,
+		vistaAndNewer: true,
 	}}
 	err = m.query.Open()
 	require.NoError(t, err)
@@ -188,7 +197,7 @@ func TestParseConfigBasic(t *testing.T) {
 			cps1[2]: {cps1[2]},
 			cps1[3]: {cps1[3]},
 		},
-		addEnglishSupported: true,
+		vistaAndNewer: true,
 	}}
 	err = m.query.Open()
 	require.NoError(t, err)
@@ -209,7 +218,7 @@ func TestParseConfigNoInstance(t *testing.T) {
 			cps1[0]: {cps1[0]},
 			cps1[1]: {cps1[1]},
 		},
-		addEnglishSupported: true,
+		vistaAndNewer: true,
 	}}
 	err = m.query.Open()
 	require.NoError(t, err)
@@ -231,7 +240,7 @@ func TestParseConfigInvalidCounterError(t *testing.T) {
 			cps1[1]: {cps1[1]},
 			cps1[2]: {cps1[2]},
 		},
-		addEnglishSupported: true,
+		vistaAndNewer: true,
 	}}
 	err = m.query.Open()
 	require.NoError(t, err)
@@ -252,7 +261,7 @@ func TestParseConfigInvalidCounterNoError(t *testing.T) {
 			cps1[1]: {cps1[1]},
 			cps1[2]: {cps1[2]},
 		},
-		addEnglishSupported: true,
+		vistaAndNewer: true,
 	}}
 	err = m.query.Open()
 	require.NoError(t, err)
@@ -271,7 +280,7 @@ func TestParseConfigTotal(t *testing.T) {
 		expandPaths: map[string][]string{
 			"\\O(*)\\*": cps1,
 		},
-		addEnglishSupported: true,
+		vistaAndNewer: true,
 	}}
 	err = m.query.Open()
 	require.NoError(t, err)
@@ -288,7 +297,7 @@ func TestParseConfigTotal(t *testing.T) {
 		expandPaths: map[string][]string{
 			"\\O(*)\\*": cps1,
 		},
-		addEnglishSupported: true,
+		vistaAndNewer: true,
 	}}
 	err = m.query.Open()
 	require.NoError(t, err)
@@ -308,7 +317,7 @@ func TestParseConfigExpand(t *testing.T) {
 		expandPaths: map[string][]string{
 			"\\O(*)\\*": cps1,
 		},
-		addEnglishSupported: true,
+		vistaAndNewer: true,
 	}}
 	err = m.query.Open()
 	require.NoError(t, err)
@@ -332,7 +341,7 @@ func TestSimpleGather(t *testing.T) {
 		expandPaths: map[string][]string{
 			cp1: {cp1},
 		},
-		addEnglishSupported: false,
+		vistaAndNewer: false,
 	}}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
@@ -346,6 +355,36 @@ func TestSimpleGather(t *testing.T) {
 		"objectname": "O",
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
+}
+
+func TestSimpleGatherWithTimestamp(t *testing.T) {
+	var err error
+	if testing.Short() {
+		t.Skip("Skipping long taking test in short mode")
+	}
+	measurement := "test"
+	perfObjects := createPerfObject(measurement, "O", []string{"I"}, []string{"C"}, false, false)
+	cp1 := "\\O(I)\\C"
+	m := Win_PerfCounters{PrintValid: false, UsePerfCounterTime: true, Object: perfObjects, query: &FakePerformanceQuery{
+		counters: createCounterMap([]string{cp1}, []float64{1.2}),
+		expandPaths: map[string][]string{
+			cp1: {cp1},
+		},
+		vistaAndNewer: true,
+	}}
+	var acc1 testutil.Accumulator
+	err = m.Gather(&acc1)
+	require.NoError(t, err)
+
+	fields1 := map[string]interface{}{
+		"C": float32(1.2),
+	}
+	tags1 := map[string]string{
+		"instance":   "I",
+		"objectname": "O",
+	}
+	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
+	assert.True(t, acc1.HasTimestamp(measurement, MetricTime))
 }
 
 func TestGatherInvalidDataIgnore(t *testing.T) {
@@ -363,7 +402,7 @@ func TestGatherInvalidDataIgnore(t *testing.T) {
 			cps1[1]: {cps1[1]},
 			cps1[2]: {cps1[2]},
 		},
-		addEnglishSupported: false,
+		vistaAndNewer: false,
 	}}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
@@ -392,7 +431,7 @@ func TestGatherRefreshing(t *testing.T) {
 		expandPaths: map[string][]string{
 			"\\O(*)\\*": cps1,
 		},
-		addEnglishSupported: true,
+		vistaAndNewer: true,
 	}
 	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, query: fpm, CountersRefreshInterval: internal.Duration{Duration: time.Second * 10}}
 	var acc1 testutil.Accumulator
@@ -426,7 +465,7 @@ func TestGatherRefreshing(t *testing.T) {
 		expandPaths: map[string][]string{
 			"\\O(*)\\*": cps2,
 		},
-		addEnglishSupported: true,
+		vistaAndNewer: true,
 	}
 	m.query = fpm
 	fpm.Open()

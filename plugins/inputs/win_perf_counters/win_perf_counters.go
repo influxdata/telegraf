@@ -22,6 +22,8 @@ var sampleConfig = `
   ## agent, it will not be gathered.
   ## Settings:
   # PrintValid = false # Print All matching performance counters
+  # Whether request a timestamp along with the PerfCounter data or just use current time
+  # UsePerfCounterTime=true
   # Period after which counters will be reread from configuration and wildcards in counter paths expanded
   CountersRefreshInterval="1m"
 
@@ -73,6 +75,7 @@ type Win_PerfCounters struct {
 	PrintValid bool
 	//deprecated: determined dynamically
 	PreVistaSupport         bool
+	UsePerfCounterTime      bool
 	Object                  []perfobject
 	CountersRefreshInterval internal.Duration
 
@@ -138,7 +141,7 @@ func (m *Win_PerfCounters) SampleConfig() string {
 }
 
 func (m *Win_PerfCounters) AddItem(counterPath string, instance string, measurement string, includeTotal bool) error {
-	if !m.query.AddEnglishCounterSupported() {
+	if !m.query.IsVistaOrNewer() {
 		_, err := m.query.AddCounterToQuery(counterPath)
 		if err != nil {
 			return err
@@ -254,10 +257,20 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 
 	var collectFields = make(map[InstanceGrouping]map[string]interface{})
 
-	err = m.query.CollectData()
-	if err != nil {
-		return err
+	var timestamp time.Time
+	if m.UsePerfCounterTime && m.query.IsVistaOrNewer() {
+		timestamp, err = m.query.CollectDataWithTime()
+		if err != nil {
+			return err
+		}
+	} else {
+		timestamp = time.Now()
+		err = m.query.CollectData()
+		if err != nil {
+			return err
+		}
 	}
+
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range m.counters {
 		// collect
@@ -288,7 +301,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		if len(instance.instance) > 0 {
 			tags["instance"] = instance.instance
 		}
-		acc.AddFields(instance.name, fields, tags)
+		acc.AddFields(instance.name, fields, tags, timestamp)
 	}
 
 	return nil

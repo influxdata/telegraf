@@ -38,12 +38,15 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+	"time"
 )
 
 // Error codes
 const (
-	ERROR_SUCCESS          = 0
-	ERROR_INVALID_FUNCTION = 1
+	ERROR_SUCCESS                 = 0
+	ERROR_FAILURE                 = 1
+	ERROR_INVALID_FUNCTION        = 1
+	EPOCH_DIFFERENCE_MICROS int64 = 11644473600000000
 )
 
 type (
@@ -170,6 +173,7 @@ var (
 	pdh_AddEnglishCounterW        *syscall.Proc
 	pdh_CloseQuery                *syscall.Proc
 	pdh_CollectQueryData          *syscall.Proc
+	pdh_CollectQueryDataWithTime  *syscall.Proc
 	pdh_GetFormattedCounterValue  *syscall.Proc
 	pdh_GetFormattedCounterArrayW *syscall.Proc
 	pdh_OpenQuery                 *syscall.Proc
@@ -187,6 +191,7 @@ func init() {
 	pdh_AddEnglishCounterW, _ = libpdhDll.FindProc("PdhAddEnglishCounterW") // XXX: only supported on versions > Vista.
 	pdh_CloseQuery = libpdhDll.MustFindProc("PdhCloseQuery")
 	pdh_CollectQueryData = libpdhDll.MustFindProc("PdhCollectQueryData")
+	pdh_CollectQueryDataWithTime, _ = libpdhDll.FindProc("PdhCollectQueryDataWithTime")
 	pdh_GetFormattedCounterValue = libpdhDll.MustFindProc("PdhGetFormattedCounterValue")
 	pdh_GetFormattedCounterArrayW = libpdhDll.MustFindProc("PdhGetFormattedCounterArrayW")
 	pdh_OpenQuery = libpdhDll.MustFindProc("PdhOpenQuery")
@@ -301,6 +306,37 @@ func PdhCollectQueryData(hQuery PDH_HQUERY) uint32 {
 	ret, _, _ := pdh_CollectQueryData.Call(uintptr(hQuery))
 
 	return uint32(ret)
+}
+
+// PdhCollectQueryDataWithTime queries data from perfmon, retrieving the device/windows timestamp from the node it was collected on.
+// Converts the filetime structure to a GO time class and returns the native time.
+//
+func PdhCollectQueryDataWithTime(hQuery PDH_HQUERY) (uint32, time.Time) {
+	var localFileTime FILETIME
+	ret, _, _ := pdh_CollectQueryDataWithTime.Call(uintptr(hQuery), uintptr(unsafe.Pointer(&localFileTime)))
+
+	if ret == ERROR_SUCCESS {
+		var utcFileTime FILETIME
+		ret, _, _ := krn_LocalFileTimeToFileTime.Call(
+			uintptr(unsafe.Pointer(&localFileTime)),
+			uintptr(unsafe.Pointer(&utcFileTime)))
+
+		if ret == 0 {
+			return uint32(ERROR_FAILURE), time.Now()
+		}
+
+		// First convert 100-ns intervals to microseconds, then adjust for the
+		// epoch difference
+		var totalMicroSeconds int64
+		totalMicroSeconds = ((int64(utcFileTime.dwHighDateTime) << 32) | int64(utcFileTime.dwLowDateTime)) / 10
+		totalMicroSeconds -= EPOCH_DIFFERENCE_MICROS
+
+		retTime := time.Unix(0, totalMicroSeconds*1000)
+
+		return uint32(ERROR_SUCCESS), retTime
+	}
+
+	return uint32(ret), time.Now()
 }
 
 // PdhGetFormattedCounterValueDouble formats the given hCounter using a 'double'. The result is set into the specialized union struct pValue.
