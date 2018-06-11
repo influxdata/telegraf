@@ -25,6 +25,14 @@ type FakePerformanceQuery struct {
 	openCalled          bool
 }
 
+func (m *testCounter) ToCounterValue() *CounterValue {
+	_, inst, _, _ := extractObjectInstanceCounterFromQuery(m.path)
+	if inst == "" {
+		inst = "--"
+	}
+	return &CounterValue{inst, m.value}
+}
+
 func (m *FakePerformanceQuery) Open() error {
 	if m.openCalled {
 		err := m.Close()
@@ -102,6 +110,48 @@ func (m *FakePerformanceQuery) GetFormattedCounterValueDouble(counterHandle PDH_
 	}
 	return 0, fmt.Errorf("GetFormattedCounterValueDouble: invalid handle: %d", counterHandle)
 }
+func (m *FakePerformanceQuery) findCounterByPath(counterPath string) *testCounter {
+	for _, c := range m.counters {
+		if c.path == counterPath {
+			return &c
+		}
+	}
+	return nil
+}
+
+func (m *FakePerformanceQuery) findCounterByHandle(counterHandle PDH_HCOUNTER) *testCounter {
+	for _, c := range m.counters {
+		if c.handle == counterHandle {
+			return &c
+		}
+	}
+	return nil
+}
+
+func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER) ([]CounterValue, error) {
+	if !m.openCalled {
+		return nil, errors.New("GetFormattedCounterArrayDouble: uninitialised query")
+	}
+	for _, c := range m.counters {
+		if c.handle == hCounter {
+			if e, ok := m.expandPaths[c.path]; ok {
+				counters := make([]CounterValue, 0, len(e))
+				for _, p := range e {
+					counter := m.findCounterByPath(p)
+					if counter != nil && counter.value > 0 {
+						counters = append(counters, *counter.ToCounterValue())
+					} else {
+						return nil, fmt.Errorf("GetFormattedCounterArrayDouble: invalid counter : %s", p)
+					}
+				}
+				return counters, nil
+			} else {
+				return nil, fmt.Errorf("GetFormattedCounterArrayDouble: invalid counter : %d", hCounter)
+			}
+		}
+	}
+	return nil, fmt.Errorf("GetFormattedCounterArrayDouble: invalid counter : %d, no paths found", hCounter)
+}
 
 func (m *FakePerformanceQuery) CollectData() error {
 	if !m.openCalled {
@@ -152,7 +202,7 @@ func TestAddItemSimple(t *testing.T) {
 	}}
 	err = m.query.Open()
 	require.NoError(t, err)
-	err = m.AddItem(cps1[0], "I", "test", false)
+	err = m.AddItem(cps1[0], "O", "I", "c", "test", false)
 	require.NoError(t, err)
 	err = m.query.Close()
 	require.NoError(t, err)
@@ -161,7 +211,7 @@ func TestAddItemSimple(t *testing.T) {
 func TestAddItemInvalidCountPath(t *testing.T) {
 	var err error
 	cps1 := []string{"\\O\\C"}
-	m := Win_PerfCounters{PrintValid: false, Object: nil, query: &FakePerformanceQuery{
+	m := Win_PerfCounters{PrintValid: false, Object: nil, UseWildcardsExpansion: true, query: &FakePerformanceQuery{
 		counters: createCounterMap(cps1, []float64{1.1}),
 		expandPaths: map[string][]string{
 			cps1[0]: {"\\O/C"},
@@ -170,7 +220,7 @@ func TestAddItemInvalidCountPath(t *testing.T) {
 	}}
 	err = m.query.Open()
 	require.NoError(t, err)
-	err = m.AddItem("\\O\\C", "*", "test", false)
+	err = m.AddItem("\\O\\C", "O", "------", "C", "test", false)
 	require.Error(t, err)
 	err = m.query.Close()
 	require.NoError(t, err)
@@ -266,7 +316,7 @@ func TestParseConfigTotal(t *testing.T) {
 	var err error
 	perfObjects := createPerfObject("m", "O", []string{"*"}, []string{"*"}, true, true)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(_Total)\\C1", "\\O(_Total)\\C2"}
-	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, query: &FakePerformanceQuery{
+	m := Win_PerfCounters{PrintValid: false, UseWildcardsExpansion: true, Object: perfObjects, query: &FakePerformanceQuery{
 		counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}),
 		expandPaths: map[string][]string{
 			"\\O(*)\\*": cps1,
@@ -283,7 +333,7 @@ func TestParseConfigTotal(t *testing.T) {
 
 	perfObjects[0].IncludeTotal = false
 
-	m = Win_PerfCounters{PrintValid: false, Object: perfObjects, query: &FakePerformanceQuery{
+	m = Win_PerfCounters{PrintValid: false, UseWildcardsExpansion: true, Object: perfObjects, query: &FakePerformanceQuery{
 		counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}),
 		expandPaths: map[string][]string{
 			"\\O(*)\\*": cps1,
@@ -303,7 +353,7 @@ func TestParseConfigExpand(t *testing.T) {
 	var err error
 	perfObjects := createPerfObject("m", "O", []string{"*"}, []string{"*"}, false, false)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
-	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, query: &FakePerformanceQuery{
+	m := Win_PerfCounters{PrintValid: false, UseWildcardsExpansion: true, Object: perfObjects, query: &FakePerformanceQuery{
 		counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}),
 		expandPaths: map[string][]string{
 			"\\O(*)\\*": cps1,
@@ -379,13 +429,14 @@ func TestGatherInvalidDataIgnore(t *testing.T) {
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 }
 
-func TestGatherRefreshing(t *testing.T) {
+//tests with expansion
+func TestGatherRefreshingWithExpansion(t *testing.T) {
 	var err error
 	if testing.Short() {
 		t.Skip("Skipping long taking test in short mode")
 	}
 	measurement := "test"
-	perfObjects := createPerfObject(measurement, "O", []string{"*"}, []string{"*"}, false, false)
+	perfObjects := createPerfObject(measurement, "O", []string{"*"}, []string{"*"}, true, false)
 	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
 	fpm := &FakePerformanceQuery{
 		counters: createCounterMap(append(cps1, "\\O(*)\\*"), []float64{1.1, 1.2, 1.3, 1.4, 0}),
@@ -394,7 +445,7 @@ func TestGatherRefreshing(t *testing.T) {
 		},
 		addEnglishSupported: true,
 	}
-	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, query: fpm, CountersRefreshInterval: internal.Duration{Duration: time.Second * 10}}
+	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, UseWildcardsExpansion: true, query: fpm, CountersRefreshInterval: internal.Duration{Duration: time.Second * 10}}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	assert.Len(t, m.counters, 4)
@@ -461,5 +512,126 @@ func TestGatherRefreshing(t *testing.T) {
 	acc3.AssertContainsTaggedFields(t, measurement, fields2, tags2)
 
 	acc3.AssertContainsTaggedFields(t, measurement, fields3, tags3)
+
+}
+
+func TestGatherRefreshingWithoutExpansion(t *testing.T) {
+	var err error
+	if testing.Short() {
+		t.Skip("Skipping long taking test in short mode")
+	}
+	measurement := "test"
+	perfObjects := createPerfObject(measurement, "O", []string{"*"}, []string{"C1", "C2"}, true, false)
+	cps1 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2"}
+	fpm := &FakePerformanceQuery{
+		counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps1...), []float64{0, 0, 1.1, 1.2, 1.3, 1.4}),
+		expandPaths: map[string][]string{
+			"\\O(*)\\C1": {cps1[0], cps1[2]},
+			"\\O(*)\\C2": {cps1[1], cps1[3]},
+		},
+		addEnglishSupported: true,
+	}
+	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, UseWildcardsExpansion: false, query: fpm, CountersRefreshInterval: internal.Duration{Duration: time.Second * 10}}
+	var acc1 testutil.Accumulator
+	err = m.Gather(&acc1)
+	assert.Len(t, m.counters, 2)
+	require.NoError(t, err)
+	assert.Len(t, acc1.Metrics, 2)
+
+	fields1 := map[string]interface{}{
+		"C1": float32(1.1),
+		"C2": float32(1.2),
+	}
+	tags1 := map[string]string{
+		"instance":   "I1",
+		"objectname": "O",
+	}
+	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
+
+	fields2 := map[string]interface{}{
+		"C1": float32(1.3),
+		"C2": float32(1.4),
+	}
+	tags2 := map[string]string{
+		"instance":   "I2",
+		"objectname": "O",
+	}
+	acc1.AssertContainsTaggedFields(t, measurement, fields2, tags2)
+	//test finding new instance
+	cps2 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I2)\\C1", "\\O(I2)\\C2", "\\O(I3)\\C1", "\\O(I3)\\C2"}
+	fpm = &FakePerformanceQuery{
+		counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2"}, cps2...), []float64{0, 0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6}),
+		expandPaths: map[string][]string{
+			"\\O(*)\\C1": {cps2[0], cps2[2], cps2[4]},
+			"\\O(*)\\C2": {cps2[1], cps2[3], cps2[5]},
+		},
+		addEnglishSupported: true,
+	}
+	m.query = fpm
+	fpm.Open()
+	var acc2 testutil.Accumulator
+
+	fields3 := map[string]interface{}{
+		"C1": float32(1.5),
+		"C2": float32(1.6),
+	}
+	tags3 := map[string]string{
+		"instance":   "I3",
+		"objectname": "O",
+	}
+
+	//test before elapsing CounterRefreshRate counters are not refreshed
+	err = m.Gather(&acc2)
+	require.NoError(t, err)
+	assert.Len(t, m.counters, 2)
+	assert.Len(t, acc2.Metrics, 3)
+
+	acc2.AssertContainsTaggedFields(t, measurement, fields1, tags1)
+	acc2.AssertContainsTaggedFields(t, measurement, fields2, tags2)
+	acc2.AssertContainsTaggedFields(t, measurement, fields3, tags3)
+	//test changed configuration
+	perfObjects = createPerfObject(measurement, "O", []string{"*"}, []string{"C1", "C2", "C3"}, true, false)
+	cps3 := []string{"\\O(I1)\\C1", "\\O(I1)\\C2", "\\O(I1)\\C3", "\\O(I2)\\C1", "\\O(I2)\\C2", "\\O(I2)\\C3"}
+	fpm = &FakePerformanceQuery{
+		counters: createCounterMap(append([]string{"\\O(*)\\C1", "\\O(*)\\C2", "\\O(*)\\C3"}, cps3...), []float64{0, 0, 0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6}),
+		expandPaths: map[string][]string{
+			"\\O(*)\\C1": {cps3[0], cps3[3]},
+			"\\O(*)\\C2": {cps3[1], cps3[4]},
+			"\\O(*)\\C3": {cps3[2], cps3[5]},
+		},
+		addEnglishSupported: true,
+	}
+	m.query = fpm
+	m.Object = perfObjects
+
+	fpm.Open()
+
+	time.Sleep(m.CountersRefreshInterval.Duration)
+
+	var acc3 testutil.Accumulator
+	err = m.Gather(&acc3)
+	require.NoError(t, err)
+	assert.Len(t, acc3.Metrics, 2)
+	fields4 := map[string]interface{}{
+		"C1": float32(1.1),
+		"C2": float32(1.2),
+		"C3": float32(1.3),
+	}
+	tags4 := map[string]string{
+		"instance":   "I1",
+		"objectname": "O",
+	}
+	fields5 := map[string]interface{}{
+		"C1": float32(1.4),
+		"C2": float32(1.5),
+		"C3": float32(1.6),
+	}
+	tags5 := map[string]string{
+		"instance":   "I2",
+		"objectname": "O",
+	}
+
+	acc3.AssertContainsTaggedFields(t, measurement, fields4, tags4)
+	acc3.AssertContainsTaggedFields(t, measurement, fields5, tags5)
 
 }

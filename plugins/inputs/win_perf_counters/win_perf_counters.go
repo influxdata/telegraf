@@ -75,6 +75,7 @@ type Win_PerfCounters struct {
 	PreVistaSupport         bool
 	Object                  []perfobject
 	CountersRefreshInterval internal.Duration
+	UseWildcardsExpansion   bool
 
 	lastRefreshed time.Time
 	counters      []*counter
@@ -137,45 +138,59 @@ func (m *Win_PerfCounters) SampleConfig() string {
 	return sampleConfig
 }
 
-func (m *Win_PerfCounters) AddItem(counterPath string, instance string, measurement string, includeTotal bool) error {
+//objectName string, counter string, instance string, measurement string, include_total bool
+func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool) error {
+	var err error
+	var counterHandle PDH_HCOUNTER
 	if !m.query.AddEnglishCounterSupported() {
-		_, err := m.query.AddCounterToQuery(counterPath)
+		counterHandle, err = m.query.AddCounterToQuery(counterPath)
 		if err != nil {
 			return err
 		}
 	} else {
-		counterHandle, err := m.query.AddEnglishCounterToQuery(counterPath)
+		counterHandle, err = m.query.AddEnglishCounterToQuery(counterPath)
 		if err != nil {
 			return err
 		}
+
+	}
+
+	if m.UseWildcardsExpansion {
+		origInstance := instance
 		counterPath, err = m.query.GetCounterPath(counterHandle)
 		if err != nil {
 			return err
 		}
-	}
-
-	counters, err := m.query.ExpandWildCardPath(counterPath)
-	if err != nil {
-		return err
-	}
-
-	for _, counterPath := range counters {
-		var err error
-		counterHandle, err := m.query.AddCounterToQuery(counterPath)
-
-		parsedObjectName, parsedInstance, parsedCounter, err := extractObjectInstanceCounterFromQuery(counterPath)
+		counters, err := m.query.ExpandWildCardPath(counterPath)
 		if err != nil {
 			return err
 		}
 
-		if parsedInstance == "_Total" && instance == "*" && !includeTotal {
-			continue
-		}
+		for _, counterPath := range counters {
+			var err error
+			counterHandle, err := m.query.AddCounterToQuery(counterPath)
 
-		newItem := &counter{counterPath, parsedObjectName, parsedCounter, parsedInstance, measurement,
+			objectName, instance, counterName, err = extractObjectInstanceCounterFromQuery(counterPath)
+			if err != nil {
+				return err
+			}
+
+			if instance == "_Total" && origInstance == "*" && !includeTotal {
+				continue
+			}
+
+			newItem := &counter{counterPath, objectName, counterName, instance, measurement,
+				includeTotal, counterHandle}
+			m.counters = append(m.counters, newItem)
+
+			if m.PrintValid {
+				log.Printf("Valid: %s\n", counterPath)
+			}
+		}
+	} else {
+		newItem := &counter{counterPath, objectName, counterName, instance, measurement,
 			includeTotal, counterHandle}
 		m.counters = append(m.counters, newItem)
-
 		if m.PrintValid {
 			log.Printf("Valid: %s\n", counterPath)
 		}
@@ -199,7 +214,7 @@ func (m *Win_PerfCounters) ParseConfig() error {
 						counterPath = "\\" + objectname + "(" + instance + ")\\" + counter
 					}
 
-					err := m.AddItem(counterPath, instance, PerfObject.Measurement, PerfObject.IncludeTotal)
+					err := m.AddItem(counterPath, objectname, instance, counter, PerfObject.Measurement, PerfObject.IncludeTotal)
 
 					if err != nil {
 						if PerfObject.FailOnMissing || PerfObject.WarnOnMissing {
@@ -225,7 +240,9 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	var err error
 
 	if m.lastRefreshed.IsZero() || (m.CountersRefreshInterval.Duration.Nanoseconds() > 0 && m.lastRefreshed.Add(m.CountersRefreshInterval.Duration).Before(time.Now())) {
-		m.counters = m.counters[:0]
+		if m.counters != nil {
+			m.counters = m.counters[:0]
+		}
 
 		err = m.query.Open()
 		if err != nil {
@@ -261,22 +278,68 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range m.counters {
 		// collect
-		value, err := m.query.GetFormattedCounterValueDouble(metric.counterHandle)
-		if err == nil {
-			measurement := sanitizedChars.Replace(metric.measurement)
-			if measurement == "" {
-				measurement = "win_perf_counters"
-			}
+		if m.UseWildcardsExpansion {
+			value, err := m.query.GetFormattedCounterValueDouble(metric.counterHandle)
+			if err == nil {
+				measurement := sanitizedChars.Replace(metric.measurement)
+				if measurement == "" {
+					measurement = "win_perf_counters"
+				}
 
-			var instance = InstanceGrouping{measurement, metric.instance, metric.objectName}
-			if collectFields[instance] == nil {
-				collectFields[instance] = make(map[string]interface{})
+				var instance = InstanceGrouping{measurement, metric.instance, metric.objectName}
+				if collectFields[instance] == nil {
+					collectFields[instance] = make(map[string]interface{})
+				}
+				collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value)
+			} else {
+				//ignore invalid data from as some counters from process instances returns this sometimes
+				if phderr, ok := err.(*PdhError); ok && phderr.ErrorCode != PDH_INVALID_DATA && phderr.ErrorCode != PDH_CALC_NEGATIVE_VALUE {
+					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
+				}
 			}
-			collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value)
 		} else {
-			//ignore invalid data from as some counters from process instances returns this sometimes
-			if phderr, ok := err.(*PdhError); ok && phderr.ErrorCode != PDH_INVALID_DATA && phderr.ErrorCode != PDH_CALC_NEGATIVE_VALUE {
-				return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
+			counterValues, err := m.query.GetFormattedCounterArrayDouble(metric.counterHandle)
+			if err == nil {
+				for _, value := range counterValues {
+					var add bool
+
+					if metric.includeTotal {
+						// If IncludeTotal is set, include all.
+						add = true
+					} else if metric.instance == "*" && !strings.Contains(value.InstanceName, "_Total") {
+						// Catch if set to * and that it is not a '*_Total*' instance.
+						add = true
+					} else if metric.instance == value.InstanceName {
+						// Catch if we set it to total or some form of it
+						add = true
+					} else if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, value.InstanceName) {
+						// If you are using a multiple instance identifier such as "w3wp#1"
+						// phd.dll returns only the first 2 characters of the identifier.
+						add = true
+						value.InstanceName = metric.instance
+					} else if metric.instance == "------" {
+						add = true
+					}
+
+					if add {
+						tags := make(map[string]string)
+						if value.InstanceName != "" {
+							tags["instance"] = value.InstanceName
+						}
+						tags["objectname"] = metric.objectName
+
+						measurement := sanitizedChars.Replace(metric.measurement)
+						if measurement == "" {
+							measurement = "win_perf_counters"
+						}
+						var instance = InstanceGrouping{measurement, value.InstanceName, metric.objectName}
+
+						if collectFields[instance] == nil {
+							collectFields[instance] = make(map[string]interface{})
+						}
+						collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value.Value)
+					}
+				}
 			}
 		}
 	}
