@@ -1,7 +1,7 @@
 # Converter Processor
 
 The converter processor is used to change the type of tag or field values.  In
-addition to changing field types it can convert fields to tags and vis versa.
+addition to changing field types it can convert between fields and tags.
 
 Values that cannot be converted are dropped.
 
