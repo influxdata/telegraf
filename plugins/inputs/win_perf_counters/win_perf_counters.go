@@ -22,6 +22,10 @@ var sampleConfig = `
   ## agent, it will not be gathered.
   ## Settings:
   # PrintValid = false # Print All matching performance counters
+  # If UseWildcardsExpansion params is set to true, wildcards (partial wildcards in instance names and wildcards in counters names) in configured counter paths will be expanded 
+  # and in case of localized Windows, counter paths will be also localized. It also returns instance indexes in instance names.
+  # If false, wildcards (not partial) in instance names will be still expanded, but instance indexes will not be returned in instance names.
+  #UseWildcardsExpansion = false
   # Period after which counters will be reread from configuration and wildcards in counter paths expanded
   CountersRefreshInterval="1m"
 
@@ -300,44 +304,37 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		} else {
 			counterValues, err := m.query.GetFormattedCounterArrayDouble(metric.counterHandle)
 			if err == nil {
-				for _, value := range counterValues {
+				for _, cValue := range counterValues {
 					var add bool
-
 					if metric.includeTotal {
 						// If IncludeTotal is set, include all.
 						add = true
-					} else if metric.instance == "*" && !strings.Contains(value.InstanceName, "_Total") {
+					} else if metric.instance == "*" && !strings.Contains(cValue.InstanceName, "_Total") {
 						// Catch if set to * and that it is not a '*_Total*' instance.
 						add = true
-					} else if metric.instance == value.InstanceName {
+					} else if metric.instance == cValue.InstanceName {
 						// Catch if we set it to total or some form of it
 						add = true
-					} else if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, value.InstanceName) {
+					} else if strings.Contains(metric.instance, "#") && strings.HasPrefix(metric.instance, cValue.InstanceName) {
 						// If you are using a multiple instance identifier such as "w3wp#1"
 						// phd.dll returns only the first 2 characters of the identifier.
 						add = true
-						value.InstanceName = metric.instance
+						cValue.InstanceName = metric.instance
 					} else if metric.instance == "------" {
 						add = true
 					}
 
 					if add {
-						tags := make(map[string]string)
-						if value.InstanceName != "" {
-							tags["instance"] = value.InstanceName
-						}
-						tags["objectname"] = metric.objectName
-
 						measurement := sanitizedChars.Replace(metric.measurement)
 						if measurement == "" {
 							measurement = "win_perf_counters"
 						}
-						var instance = InstanceGrouping{measurement, value.InstanceName, metric.objectName}
+						var instance = InstanceGrouping{measurement, cValue.InstanceName, metric.objectName}
 
 						if collectFields[instance] == nil {
 							collectFields[instance] = make(map[string]interface{})
 						}
-						collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value.Value)
+						collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(cValue.Value)
 					}
 				}
 			}
