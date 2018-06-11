@@ -116,8 +116,8 @@ func (u *UpTime) read(acc telegraf.Accumulator) {
 				tags["host"] = m.Tags()["host"]
 			}
 			fields["host-plugin_uptime"] = m.Fields()["uptime"]
-			tags["sf_prefix"] = "gauge.sf"
-			acc.AddGauge("signalfx-metadata", fields, tags, m.Time())
+			tags["plugin"] = "signalfx-metadata"
+			acc.AddGauge("gauge.sf", fields, tags, m.Time())
 		}
 	}
 }
@@ -242,9 +242,9 @@ func (t *Total) read(acc telegraf.Accumulator) {
 		}
 
 		tags["plugin_instance"] = t.pluginInstance
-		tags["sf_prefix"] = t.pluginName
+		tags["plugin"] = "signalfx-metadata"
 		fields["total"] = t.total
-		acc.AddCounter("signalfx-metadata", fields, tags, time)
+		acc.AddCounter(t.pluginName, fields, tags, time)
 	}
 	t.cleanUpDevices(max)
 }
@@ -411,9 +411,9 @@ func (u *DiskTotalUtilization) read(acc telegraf.Accumulator) {
 		var tags = make(map[string]string)
 		tags["plugin_instance"] = "utilization"
 		fields["summary_utilization"] = 1.0 * float64(used) / float64(total) * 100
-		tags["sf_prefix"] = "disk"
+		tags["plugin"] = "signalfx-metadata"
 		tags["host"] = u.host
-		acc.AddGauge("signalfx-metadata", fields, tags, time.Now())
+		acc.AddGauge("disk", fields, tags, time.Now())
 	}
 }
 
@@ -479,8 +479,8 @@ func (u *DiskUtilization) read(acc telegraf.Accumulator) {
 						}
 						m.AddTag("plugin_instance", pluginInstance)
 					}
-					m.AddTag("sf_prefix", "disk")
-					acc.AddGauge("signalfx-metadata", fields, m.Tags(), m.Time())
+					m.AddTag("plugin", "signalfx-metadata")
+					acc.AddGauge("disk", fields, m.Tags(), m.Time())
 				}
 			}
 		}
@@ -515,13 +515,13 @@ type MemoryUtilization struct {
 // MemoryUtilization.read -
 func (u *MemoryUtilization) read(acc telegraf.Accumulator) {
 	log.Println("D! Aggregator [signalfx-util] Reading out metrics from MemoryUtilization")
-	u.UtilizationBase.read(acc, "signalfx-metadata", "used_percent")
+	u.UtilizationBase.read(acc, "memory", "used_percent")
 }
 
 // MemoryUtilization.addMetric -
 func (u *MemoryUtilization) addMetric(metric telegraf.Metric) {
 	var key = metric.Time().String()
-	metric.AddTag("sf_prefix", "memory")
+	metric.AddTag("plugin", "signalfx-metadata")
 	u.UtilizationBase.addMetric(metric, key)
 }
 
@@ -568,8 +568,8 @@ func (u *CPUUtilization) read(acc telegraf.Accumulator) {
 					fields[fieldName] = 100.0 - value.(float64)
 					// Add plugin_instance tag for dimensional parity
 					m.AddTag("plugin_instance", "utilization")
-					m.AddTag("sf_prefix", "cpu")
-					acc.AddGauge("signalfx-metadata", fields, m.Tags(), m.Time())
+					m.AddTag("plugin", "signalfx-metadata")
+					acc.AddGauge("cpu", fields, m.Tags(), m.Time())
 				}
 			}
 		}
