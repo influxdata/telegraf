@@ -87,6 +87,7 @@
 - [#2468](https://github.com/influxdata/telegraf/issues/2468): Fix crash on 32-bit Windows in win_perf_counters.
 - [#4198](https://github.com/influxdata/telegraf/issues/4198): Fix win_perf_counters not collecting at every interval.
 - [#4227](https://github.com/influxdata/telegraf/issues/4227): Use same flags for all BSD family ping variants.
+- [#4266](https://github.com/influxdata/telegraf/issues/4266): Remove tags with empty values from Wavefront output.
 
 ## v1.6.4 [2018-06-05]
 
