@@ -153,7 +153,7 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 	var err error
 	var counterHandle PDH_HCOUNTER
 	if !m.query.IsVistaOrNewer() {
-		_, err := m.query.AddCounterToQuery(counterPath)
+		counterHandle, err = m.query.AddCounterToQuery(counterPath)
 		if err != nil {
 			return err
 		}
