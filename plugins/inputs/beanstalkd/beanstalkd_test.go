@@ -93,8 +93,6 @@ func TestBeanstalkd(t *testing.T) {
 }
 
 func startTestServer(t *testing.T) (net.Listener, error) {
-	t.Helper()
-
 	server, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return nil, err
