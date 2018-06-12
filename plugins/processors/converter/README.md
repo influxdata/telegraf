@@ -5,7 +5,7 @@ addition to changing field types it can convert between fields and tags.
 
 Values that cannot be converted are dropped.
 
-**Note:** When converting tags to fields, take care not to ensure the series is still
+**Note:** When converting tags to fields, take care to ensure the series is still
 uniquely identifiable.  Fields with the same series key (measurement + tags)
 will overwrite one another.
 
