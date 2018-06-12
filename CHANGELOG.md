@@ -4,7 +4,7 @@
 
 ### New Inputs
 
-- [tengine](./plugins/inputs/tengine/README.md) - Contirbuted by @ertaoxu
+- [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
 
 ### Features
 
