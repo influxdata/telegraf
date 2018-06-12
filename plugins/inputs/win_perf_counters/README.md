@@ -33,10 +33,11 @@ Example:
 
 #### UseWildcardsExpansion
 
-If `UseWildcardsExpansion` is set to true, wildcards can be used in the
-instance name and the counter name.  When using localized Windows, counters
-will be also be localized.  Instance indexes will also be returned in the
-instance name.
+Bool, if set to true, wildcards can be used in the instance name and the counter name.  
+
+On localized Windows, returned counters will be also localized.
+
+It also returns instance indexes in instance names
 
 Partial wildcards (e.g. `chrome*`) are supported only in the instance name on Windows Vista and newer.
 
