@@ -8,9 +8,6 @@ whether the Object, Instance and Counter exist on Telegraf startup.
 Counter paths are refreshed periodically, see [CountersRefreshInterval](#countersrefreshinterval)
 configuration parameter for more info.
 
-Wildcards can be used in instance and counter names. Partial wildcards are supported only
-in instance names on Windows Vista and newer.
-
 In case of query for all instances `["*"]`, the plugin does not return the instance `_Total`
 by default. See [IncludeTotal](#includetotal) for more info.
 
@@ -34,17 +31,35 @@ Bool, if set to `true` will print out all matching performance objects.
 Example:
 `PrintValid=true`
 
+#### UseWildcardsExpansion
+
+If `UseWildcardsExpansion` is set to true, wildcards can be used in the
+instance name and the counter name.  When using localized Windows, counters
+will be also be localized.  Instance indexes will also be returned in the
+instance name.
+
+Partial wildcards (e.g. `chrome*`) are supported only in the instance name on Windows Vista and newer.
+
+If disabled, wildcards (not partial) in instance names can still be used, but
+instance indexes will not be returned in the instance names.
+
+Example:
+`UseWildcardsExpansion=true`
+
 #### CountersRefreshInterval
 
 Configured counters are matched against available counters at the interval
 specified by the `CountersRefreshInterval` parameter. Default value is `1m` (1 minute).
 
-If wildcards are used in instance or counter names, they are expanded at this point.
+If wildcards are used in instance or counter names, they are expanded at this point, if the `UseWildcardsExpansion` param is set to `true`.
 
 Setting `CountersRefreshInterval` too low (order of seconds) can cause Telegraf to create
 a high CPU load.
 
 Set to `0s` to disable periodic refreshing.
+
+Example:
+`CountersRefreshInterval=1m`
 
 #### PreVistaSupport
 
@@ -88,7 +103,7 @@ By default any results containing `_Total` are stripped,
 unless this is specified as the wanted instance.
 Alternatively see the option `IncludeTotal` below.
 
-It is also possible to set partial wildcards, eg. `["chrome*"]`
+It is also possible to set partial wildcards, eg. `["chrome*"]`, if the `UseWildcardsExpansion` param is set to `true`
 
 Some Objects do not have instances to select from at all.
 Here only one option is valid if you want data back,
@@ -101,8 +116,10 @@ Counters key (this is an array) is the counters of the ObjectName
 you would like returned, it can also be one or more values.
 
 Example: `Counters = ["% Idle Time", "% Disk Read Time", "% Disk Write Time"]`
-This must be specified for every counter you want the results of,
-or use `["*"]` for all the counters for object.
+
+This must be specified for every counter you want the results of, or use
+`["*"]` for all the counters for object, if the `UseWildcardsExpansion` param
+is set to `true`
 
 #### Measurement
 *Optional*

@@ -83,10 +83,6 @@ func (f *File) Description() string {
 }
 
 func (f *File) Write(metrics []telegraf.Metric) error {
-	if len(metrics) == 0 {
-		return nil
-	}
-
 	var writeErr error = nil
 	for _, metric := range metrics {
 		b, err := f.serializer.Serialize(metric)

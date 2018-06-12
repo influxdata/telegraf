@@ -81,6 +81,29 @@ func TestWinPerformanceQueryImpl(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, paths)
 	assert.True(t, len(paths) > 1)
+
+	err = query.Open()
+	require.NoError(t, err)
+
+	counterPath = "\\Process(*)\\% Processor Time"
+	hCounter, err = query.AddEnglishCounterToQuery(counterPath)
+	require.NoError(t, err)
+	assert.NotEqual(t, 0, hCounter)
+
+	err = query.CollectData()
+	require.NoError(t, err)
+	time.Sleep(time.Second)
+
+	err = query.CollectData()
+	require.NoError(t, err)
+
+	arr, err := query.GetFormattedCounterArrayDouble(hCounter)
+	require.NoError(t, err)
+	assert.True(t, len(arr) > 0, "Too")
+
+	err = query.Close()
+	require.NoError(t, err)
+
 }
 
 func TestWinPerfcountersConfigGet1(t *testing.T) {
@@ -573,7 +596,7 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}}
+	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}, UseWildcardsExpansion: true}
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)
