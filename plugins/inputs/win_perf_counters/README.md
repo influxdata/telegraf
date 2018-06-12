@@ -1,11 +1,11 @@
 # win_perf_counters readme
 
-Input plugin to read Performance Counters on Windows operating systems.
+This document presents the input plugin to read Performance Counters on Windows operating systems.
 
-Configuration is parsed and then tested for validity such as
+The configuration is parsed and then tested for validity, such as
 whether the Object, Instance and Counter exist on Telegraf startup.
 
-Counter paths are refreshed periodically, see [CountersRefreshInterval](#countersrefreshinterval)
+Counter paths are refreshed periodically, see the [CountersRefreshInterval](#countersrefreshinterval)
 configuration parameter for more info.
 
 In case of query for all instances `["*"]`, the plugin does not return the instance `_Total`
@@ -16,7 +16,7 @@ by default. See [IncludeTotal](#includetotal) for more info.
 The examples contained in this file have been found on the internet
 as counters used when performance monitoring
  Active Directory and IIS in particular.
- There are a lot other good objects to monitor, if you know what to look for.
+ There are a lot of other good objects to monitor, if you know what to look for.
  This file is likely to be updated in the future with more examples for
  useful configurations for separate scenarios.
 
@@ -49,14 +49,14 @@ Example:
 #### CountersRefreshInterval
 
 Configured counters are matched against available counters at the interval
-specified by the `CountersRefreshInterval` parameter. Default value is `1m` (1 minute).
+specified by the `CountersRefreshInterval` parameter. The default value is `1m` (1 minute).
 
 If wildcards are used in instance or counter names, they are expanded at this point, if the `UseWildcardsExpansion` param is set to `true`.
 
-Setting `CountersRefreshInterval` too low (order of seconds) can cause Telegraf to create
+Setting the `CountersRefreshInterval` too low (order of seconds) can cause Telegraf to create
 a high CPU load.
 
-Set to `0s` to disable periodic refreshing.
+Set it to `0s` to disable periodic refreshing.
 
 Example:
 `CountersRefreshInterval=1m`
@@ -65,7 +65,7 @@ Example:
 
 _Deprecated. Necessary features on Windows Vista and newer are checked dynamically_
 
-Bool, if set to `true` will use the localized PerfCounter interface that has been present since before Vista for backwards compatability.
+Bool, if set to `true`, the plugin will use the localized PerfCounter interface that has been present since before Vista for backwards compatability.
 
 It is recommended NOT to use this on OSes starting with Vista and newer because it requires more configuration to use this than the newer interface present since Vista.
 
@@ -77,12 +77,12 @@ Example for Windows Server 2003, this would be set to true:
 See Entry below.
 
 ### Entry
-A new configuration entry consists of the TOML header to start with,
+A new configuration entry consists of the TOML header starting with,
 `[[inputs.win_perf_counters.object]]`.
 This must follow before other plugin configurations,
 beneath the main win_perf_counters entry, `[[inputs.win_perf_counters]]`.
 
-Following this are 3 required key/value pairs and the three optional parameters and their usage.
+Following this are 3 required key/value pairs and three optional parameters and their usage.
 
 #### ObjectName
 **Required**
@@ -94,10 +94,12 @@ Example: `ObjectName = "LogicalDisk"`
 #### Instances
 **Required**
 
-Instances key (this is an array) is the instances of a counter you would like returned,
+The instances key (this is an array) declares the instances of a counter you would like returned,
 it can be one or more values.
 
-Example, `Instances = ["C:","D:","E:"]` will return only for the instances
+Example: `Instances = ["C:","D:","E:"]`
+
+This will return only for the instances
 C:, D: and E: where relevant. To get all instances of a Counter, use `["*"]` only.
 By default any results containing `_Total` are stripped,
 unless this is specified as the wanted instance.
@@ -112,43 +114,43 @@ and that is to specify `Instances = ["------"]`.
 #### Counters
 **Required**
 
-Counters key (this is an array) is the counters of the ObjectName
+The Counters key (this is an array) declares the counters of the ObjectName
 you would like returned, it can also be one or more values.
 
 Example: `Counters = ["% Idle Time", "% Disk Read Time", "% Disk Write Time"]`
 
 This must be specified for every counter you want the results of, or use
-`["*"]` for all the counters for object, if the `UseWildcardsExpansion` param
-is set to `true`
+`["*"]` for all the counters of the object, if the `UseWildcardsExpansion` param
+is set to `true`.
 
 #### Measurement
 *Optional*
 
-This key is optional, if it is not set it will be `win_perf_counters`.
-In InfluxDB this is the key by which the returned data is stored underneath,
-so for ordering your data in a good manner,
+This key is optional. If it is not set it will be `win_perf_counters`.
+In InfluxDB this is the key underneath which the returned data is stored.
+So for ordering your data in a good manner,
 this is a good key to set with a value when you want your IIS and Disk results stored
 separately from Processor results.
 
-Example: `Measurement = "win_disk"
+Example: `Measurement = "win_disk"``
 
 #### IncludeTotal
 *Optional*
 
-This key is optional, it is a simple bool.
+This key is optional. It is a simple bool.
 If it is not set to true or included it is treated as false.
-This key only has an effect if the Instances key is set to `["*"]`
-and you would also like all instances containing `_Total` returned,
+This key only has effect if the Instances key is set to `["*"]`
+and you would also like all instances containing `_Total` to be returned,
 like `_Total`, `0,_Total` and so on where applicable
 (Processor Information is one example).
 
 #### WarnOnMissing
 *Optional*
 
-This key is optional, it is a simple bool.
+This key is optional. It is a simple bool.
 If it is not set to true or included it is treated as false.
-This only has an effect on the first execution of the plugin,
-it will print out any ObjectName/Instance/Counter combinations
+This only has effect on the first execution of the plugin.
+It will print out any ObjectName/Instance/Counter combinations
 asked for that do not match. Useful when debugging new configurations.
 
 #### FailOnMissing
