@@ -27,6 +27,7 @@ This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvid
     - `memory_free` (integer, MiB)
     - `memory_used` (integer, MiB)
     - `memory_total` (integer, MiB)
+    - `power_draw` (float, W)
     - `temperature_gpu` (integer, degrees C)
     - `utilization_gpu` (integer, percentage)
     - `utilization_memory` (integer, percentage)

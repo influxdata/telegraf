@@ -3,7 +3,7 @@ package nats
 import (
 	"fmt"
 
-	nats_client "github.com/nats-io/nats"
+	nats_client "github.com/nats-io/go-nats"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
