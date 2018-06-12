@@ -13,6 +13,12 @@
 - [#4262](https://github.com/influxdata/telegraf/pull/4262): Add power draw field to nvidia_smi plugin.
 - [#4271](https://github.com/influxdata/telegraf/pull/4271): Add support for solr 7 to the solr input.
 
+## v1.7.1 [unreleased]
+
+### Bugfixes
+
+- [#4277](https://github.com/influxdata/telegraf/pull/4277): Treat sigterm as a clean shutdown signal.
+
 ## v1.7 [2018-06-12]
 
 ### Release Notes
