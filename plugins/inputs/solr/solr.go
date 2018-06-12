@@ -415,7 +415,26 @@ func addCacheMetricsToAcc(acc telegraf.Accumulator, core string, mBeansData *MBe
 		for key, value := range metrics.Stats {
 			splitKey := strings.Split(key, ".")
 			newKey := splitKey[len(splitKey)-1]
-			coreFields[newKey] = value
+			switch newKey {
+			case "cumulative_evictions",
+				"cumulative_hits",
+				"cumulative_inserts",
+				"cumulative_lookups",
+				"eviction",
+				"hits",
+				"inserts",
+				"lookups",
+				"size",
+				"evictions":
+				coreFields[newKey] = getInt(value)
+			case "hitratio",
+				"cumulative_hitratio":
+				coreFields[newKey] = getFloat(value)
+			case "warmupTime":
+				coreFields["warmup_time"] = getInt(value)
+			default:
+				continue
+			}
 		}
 		acc.AddFields(
 			"solr_cache",
