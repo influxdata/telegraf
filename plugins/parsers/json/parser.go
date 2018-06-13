@@ -62,12 +62,46 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 		return nil, err
 	}
 
-	metric, err := metric.New(p.MetricName, tags, f.Fields, time.Now().UTC())
+	tags, nFields := p.switchFieldToTag(tags, f.Fields)
+
+	metric, err := metric.New(p.MetricName, tags, nFields, time.Now().UTC())
 
 	if err != nil {
 		return nil, err
 	}
 	return append(metrics, metric), nil
+}
+
+//will take in field map with strings and bools,
+//search for TagKeys that match fieldnames and add them to tags
+//will delete any strings/bools that shouldn't be fields
+//assumes that any non-numeric values in TagKeys should be displayed as tags
+func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]interface{}) (map[string]string, map[string]interface{}) {
+	for _, name := range p.TagKeys {
+		//switch any fields in tagkeys into tags
+		if fields[name] != nil {
+			switch fields[name].(type) {
+			//case of field is string
+			case string:
+				tags[name] = fields[name].(string)
+				delete(fields, name)
+			case bool:
+				tags[name] = strconv.FormatBool(fields[name].(bool))
+				delete(fields, name)
+			}
+		}
+	}
+
+	//remove any additional string/bool values from fields
+	for k := range fields {
+		switch fields[k].(type) {
+		case string:
+			delete(fields, k)
+		case bool:
+			delete(fields, k)
+		}
+	}
+	return tags, fields
 }
 
 func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -119,7 +153,10 @@ func (f *JSONFlattener) FlattenJSON(
 	if f.Fields == nil {
 		f.Fields = make(map[string]interface{})
 	}
-	return f.FullFlattenJSON(fieldname, v, false, false)
+
+	//bool values to be changed to allow strings, bools as fields
+	//changed to true true, func switchFieldToTag will remove values
+	return f.FullFlattenJSON(fieldname, v, true, true)
 }
 
 // FullFlattenJSON flattens nested maps/interfaces into a fields map (including bools and string)
