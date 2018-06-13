@@ -103,6 +103,10 @@ func TestWinPerformanceQueryImpl(t *testing.T) {
 	require.NoError(t, err)
 
 	arr, err := query.GetFormattedCounterArrayDouble(hCounter)
+	if phderr, ok := err.(*PdhError); ok && phderr.ErrorCode != PDH_INVALID_DATA && phderr.ErrorCode != PDH_CALC_NEGATIVE_VALUE {
+		time.Sleep(time.Second)
+		arr, err = query.GetFormattedCounterArrayDouble(hCounter)
+	}
 	require.NoError(t, err)
 	assert.True(t, len(arr) > 0, "Too")
 
