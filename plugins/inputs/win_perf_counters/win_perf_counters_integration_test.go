@@ -605,7 +605,7 @@ func TestWinPerfcountersCollect2(t *testing.T) {
 
 	perfobjects[0] = PerfObject
 
-	m := Win_PerfCounters{PrintValid: false, Object: perfobjects, query: &PerformanceQueryImpl{}, UseWildcardsExpansion: true}
+	m := Win_PerfCounters{PrintValid: false, UsePerfCounterTime: true, Object: perfobjects, query: &PerformanceQueryImpl{}, UseWildcardsExpansion: true}
 	var acc testutil.Accumulator
 	err := m.Gather(&acc)
 	require.NoError(t, err)
