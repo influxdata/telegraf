@@ -104,8 +104,10 @@ func (m *FakePerformanceQuery) GetFormattedCounterValueDouble(counterHandle PDH_
 			} else {
 				if counter.value == 0 {
 					return 0, NewPdhError(PDH_INVALID_DATA)
-				} else {
+				} else if counter.value == -1 {
 					return 0, NewPdhError(PDH_CALC_NEGATIVE_VALUE)
+				} else {
+					return 0, NewPdhError(PDH_ACCESS_DENIED)
 				}
 			}
 		}
@@ -140,8 +142,18 @@ func (m *FakePerformanceQuery) GetFormattedCounterArrayDouble(hCounter PDH_HCOUN
 				counters := make([]CounterValue, 0, len(e))
 				for _, p := range e {
 					counter := m.findCounterByPath(p)
-					if counter != nil && counter.value > 0 {
-						counters = append(counters, *counter.ToCounterValue())
+					if counter != nil {
+						if counter.value > 0 {
+							counters = append(counters, *counter.ToCounterValue())
+						} else {
+							if counter.value == 0 {
+								return nil, NewPdhError(PDH_INVALID_DATA)
+							} else if counter.value == -1 {
+								return nil, NewPdhError(PDH_CALC_NEGATIVE_VALUE)
+							} else {
+								return nil, NewPdhError(PDH_ACCESS_DENIED)
+							}
+						}
 					} else {
 						return nil, fmt.Errorf("GetFormattedCounterArrayDouble: invalid counter : %s", p)
 					}
@@ -488,6 +500,35 @@ func TestSimpleGatherWithTimestamp(t *testing.T) {
 	}
 	acc1.AssertContainsTaggedFields(t, measurement, fields1, tags1)
 	assert.True(t, acc1.HasTimestamp(measurement, MetricTime))
+}
+
+func TestGatherError(t *testing.T) {
+	var err error
+	if testing.Short() {
+		t.Skip("Skipping long taking test in short mode")
+	}
+	measurement := "test"
+	perfObjects := createPerfObject(measurement, "O", []string{"I"}, []string{"C"}, false, false)
+	cp1 := "\\O(I)\\C"
+	m := Win_PerfCounters{PrintValid: false, Object: perfObjects, query: &FakePerformanceQuery{
+		counters: createCounterMap([]string{cp1}, []float64{-2}),
+		expandPaths: map[string][]string{
+			cp1: {cp1},
+		},
+		vistaAndNewer: false,
+	}}
+	var acc1 testutil.Accumulator
+	err = m.Gather(&acc1)
+	require.Error(t, err)
+
+	m.UseWildcardsExpansion = true
+	m.counters = nil
+	m.lastRefreshed = time.Time{}
+
+	var acc2 testutil.Accumulator
+
+	err = m.Gather(&acc2)
+	require.Error(t, err)
 }
 
 func TestGatherInvalidDataIgnore(t *testing.T) {
