@@ -480,7 +480,7 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 				log.Printf("E! MOID %s not found in cache. Skipping", moid)
 				continue
 			}
-			e.populateTags(objectRef, resourceType, t, &v)
+			e.populateTags(&objectRef, resourceType, t, &v)
 
 			// Now deal with the values
 			//
@@ -515,7 +515,7 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 	return count, nil
 }
 
-func (e *Endpoint) populateTags(objectRef objectRef, resourceType string, t map[string]string, v *performance.MetricSeries) {
+func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, t map[string]string, v *performance.MetricSeries) {
 	// Map name of object. For vms and hosts, we use the default "hostname".
 	//
 	switch resourceType {
@@ -533,18 +533,18 @@ func (e *Endpoint) populateTags(objectRef objectRef, resourceType string, t map[
 	if found {
 		switch resourceType {
 		case "host":
-			t["cluster"] = parent.name
+			t["clustername"] = parent.name
 			break
 
 		case "vm":
 			t["guest"] = objectRef.guest
-			t["esxhost"] = parent.name
+			t["esxhostname"] = parent.name
 			hostRes := e.resources["host"]
 			hostRef, ok := hostRes.objects[objectRef.parentRef.Value]
 			if ok {
 				cluster, ok := e.instanceInfo[hostRef.parentRef.Value]
 				if ok {
-					t["cluster"] = cluster.name
+					t["clustername"] = cluster.name
 				}
 			}
 			break
