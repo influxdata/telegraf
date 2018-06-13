@@ -180,6 +180,14 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricPoint {
 }
 
 func buildTags(mTags map[string]string, w *Wavefront) (string, map[string]string) {
+
+	// Remove all empty tags.
+	for k, v := range mTags {
+		if v == "" {
+			delete(mTags, k)
+		}
+	}
+
 	var source string
 	sourceTagFound := false
 

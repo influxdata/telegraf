@@ -362,24 +362,6 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	metricC := make(chan telegraf.Metric, 100)
 	aggC := make(chan telegraf.Metric, 100)
 
-	// Start all ServicePlugins
-	for _, input := range a.Config.Inputs {
-		input.SetDefaultTags(a.Config.Tags)
-		switch p := input.Input.(type) {
-		case telegraf.ServiceInput:
-			acc := NewAccumulator(input, metricC)
-			// Service input plugins should set their own precision of their
-			// metrics.
-			acc.SetPrecision(time.Nanosecond, 0)
-			if err := p.Start(acc); err != nil {
-				log.Printf("E! Service for input %s failed to start, exiting\n%s\n",
-					input.Name(), err.Error())
-				return err
-			}
-			defer p.Stop()
-		}
-	}
-
 	// Round collection to nearest interval by sleeping
 	if a.Config.Agent.RoundInterval {
 		i := int64(a.Config.Agent.Interval.Duration)
@@ -417,6 +399,25 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 			defer wg.Done()
 			a.gatherer(shutdown, in, interv, metricC)
 		}(input, interval)
+	}
+
+	// Start all ServicePlugins inputs after all other
+	// plugins are loaded so that no metrics get dropped
+	for _, input := range a.Config.Inputs {
+		input.SetDefaultTags(a.Config.Tags)
+		switch p := input.Input.(type) {
+		case telegraf.ServiceInput:
+			acc := NewAccumulator(input, metricC)
+			// Service input plugins should set their own precision of their
+			// metrics.
+			acc.SetPrecision(time.Nanosecond, 0)
+			if err := p.Start(acc); err != nil {
+				log.Printf("E! Service for input %s failed to start, exiting\n%s\n",
+					input.Name(), err.Error())
+				return err
+			}
+			defer p.Stop()
+		}
 	}
 
 	wg.Wait()

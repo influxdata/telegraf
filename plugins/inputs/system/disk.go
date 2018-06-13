@@ -28,7 +28,7 @@ var diskSampleConfig = `
   # mount_points = ["/"]
 
   ## Ignore mount points by filesystem type.
-  ignore_fs = ["tmpfs", "devtmpfs", "devfs"]
+  ignore_fs = ["tmpfs", "devtmpfs", "devfs", "overlay", "aufs", "squashfs"]
 `
 
 func (_ *DiskStats) SampleConfig() string {

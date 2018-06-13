@@ -213,6 +213,7 @@ configuration options.
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
 * [syslog](./plugins/inputs/syslog)
 * [teamspeak](./plugins/inputs/teamspeak)
+* [tengine](./plugins/inputs/tengine)
 * [tomcat](./plugins/inputs/tomcat)
 * [twemproxy](./plugins/inputs/twemproxy)
 * [unbound](./plugins/inputs/unbound)

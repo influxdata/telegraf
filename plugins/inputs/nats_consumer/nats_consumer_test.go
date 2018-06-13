@@ -5,7 +5,7 @@ import (
 
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/nats-io/nats"
+	nats "github.com/nats-io/go-nats"
 	"github.com/stretchr/testify/assert"
 )
 

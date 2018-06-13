@@ -58,7 +58,7 @@ var fService = flag.String("service", "",
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
 var (
-	nextVersion = "1.7.0"
+	nextVersion = "1.8.0"
 	version     string
 	commit      string
 	branch      string
@@ -147,11 +147,11 @@ func reloadLoop(
 
 		shutdown := make(chan struct{})
 		signals := make(chan os.Signal)
-		signal.Notify(signals, os.Interrupt, syscall.SIGHUP)
+		signal.Notify(signals, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
 		go func() {
 			select {
 			case sig := <-signals:
-				if sig == os.Interrupt {
+				if sig == os.Interrupt || sig == syscall.SIGTERM {
 					close(shutdown)
 				}
 				if sig == syscall.SIGHUP {
