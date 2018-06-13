@@ -254,18 +254,15 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 			m.counters = m.counters[:0]
 		}
 
-		err = m.query.Open()
-		if err != nil {
+		if err = m.query.Open(); err != nil {
 			return err
 		}
 
-		err = m.ParseConfig()
-		if err != nil {
+		if err = m.ParseConfig(); err != nil {
 			return err
 		}
 		//some counters need two data samples before computing a value
-		err = m.query.CollectData()
-		if err != nil {
+		if err = m.query.CollectData(); err != nil {
 			return err
 		}
 		m.lastRefreshed = time.Now()
@@ -289,8 +286,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		}
 	} else {
 		timestamp = time.Now()
-		err = m.query.CollectData()
-		if err != nil {
+		if err = m.query.CollectData(); err != nil {
 			return err
 		}
 	}
