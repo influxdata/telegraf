@@ -12,6 +12,7 @@
 - [#4160](https://github.com/influxdata/telegraf/pull/4160): Add tengine input plugin.
 - [#4262](https://github.com/influxdata/telegraf/pull/4262): Add power draw field to nvidia_smi plugin.
 - [#4271](https://github.com/influxdata/telegraf/pull/4271): Add support for solr 7 to the solr input.
+- [#4281](https://github.com/influxdata/telegraf/pull/4281): Add owner tag on partitions in burrow input.
 
 ## v1.7.1 [unreleased]
 
