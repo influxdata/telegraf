@@ -74,8 +74,7 @@ func (vc *ValueCounter) Add(in telegraf.Metric) {
 					log.Printf("I! Valuecounter: Unsupported field type. " +
 						"Must be an int, string or bool. Ignoring.")
 					continue
-				case uint8, uint16, uint32, uint64, int8,
-					int16, int32, int64, string, bool:
+				case uint64, int64, string, bool:
 				}
 				fn := fmt.Sprintf("%v_%v", fk, fv)
 				vc.cache[id].fieldCount[fn]++
