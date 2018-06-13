@@ -34,6 +34,7 @@ type Endpoint struct {
 }
 
 type resource struct {
+	pKey       string
 	enabled    bool
 	realTime   bool
 	sampling   int32
@@ -77,6 +78,7 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 
 	e.resources = map[string]resource{
 		"cluster": {
+			pKey:       "clustername",
 			enabled:    parent.GatherClusters,
 			realTime:   false,
 			sampling:   300,
@@ -86,6 +88,7 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 			getObjects: getClusters,
 		},
 		"host": {
+			pKey:       "esxhostname",
 			enabled:    parent.GatherHosts,
 			realTime:   true,
 			sampling:   20,
@@ -95,6 +98,7 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 			getObjects: getHosts,
 		},
 		"vm": {
+			pKey:       "vmname",
 			enabled:    parent.GatherVms,
 			realTime:   true,
 			sampling:   20,
@@ -104,6 +108,7 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 			getObjects: getVMs,
 		},
 		"datastore": {
+			pKey:       "dsname",
 			enabled:    parent.GatherDatastores,
 			realTime:   false,
 			sampling:   300,
@@ -378,7 +383,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 	} else {
 		latest = time.Now().Add(time.Duration(-res.sampling) * time.Second)
 	}
-	log.Printf("Start of sample period deemed to be %s", latest)
+	log.Printf("D! Start of sample period deemed to be %s", latest)
 
 	log.Printf("D! Collecting metrics for %d objects of type %s for %s", len(res.objects), resourceType, e.URL.Host)
 
@@ -480,7 +485,7 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 				log.Printf("E! MOID %s not found in cache. Skipping", moid)
 				continue
 			}
-			e.populateTags(&objectRef, resourceType, t, &v)
+			e.populateTags(&objectRef, resourceType, &res, t, &v)
 
 			// Now deal with the values
 			//
@@ -515,16 +520,11 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 	return count, nil
 }
 
-func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, t map[string]string, v *performance.MetricSeries) {
-	// Map name of object. For vms and hosts, we use the default "hostname".
+func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resource *resource, t map[string]string, v *performance.MetricSeries) {
+	// Map name of object.
 	//
-	switch resourceType {
-	case "datastore":
-		t["dsname"] = objectRef.name
-	case "disk":
-		t["diskname"] = objectRef.name
-	case "cluster":
-		t["clustername"] = objectRef.name
+	if resource.pKey != "" {
+		t[resource.pKey] = objectRef.name
 	}
 
 	// Map parent reference
