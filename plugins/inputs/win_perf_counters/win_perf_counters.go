@@ -5,13 +5,14 @@ package win_perf_counters
 import (
 	"errors"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"log"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 var sampleConfig = `
@@ -22,15 +23,12 @@ var sampleConfig = `
   ## agent, it will not be gathered.
   ## Settings:
   # PrintValid = false # Print All matching performance counters
-<<<<<<< HEAD
   # Whether request a timestamp along with the PerfCounter data or just use current time
   # UsePerfCounterTime=true
-=======
-  # If UseWildcardsExpansion params is set to true, wildcards (partial wildcards in instance names and wildcards in counters names) in configured counter paths will be expanded 
+  # If UseWildcardsExpansion params is set to true, wildcards (partial wildcards in instance names and wildcards in counters names) in configured counter paths will be expanded
   # and in case of localized Windows, counter paths will be also localized. It also returns instance indexes in instance names.
-  # If false, wildcards (not partial) in instance names will be still expanded, but instance indexes will not be returned in instance names.
+  # If false, wildcards (not partial) in instance names will still be expanded, but instance indexes will not be returned in instance names.
   #UseWildcardsExpansion = false
->>>>>>> master
   # Period after which counters will be reread from configuration and wildcards in counter paths expanded
   CountersRefreshInterval="1m"
 

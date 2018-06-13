@@ -34,7 +34,7 @@ go-install:
 
 install: telegraf
 	mkdir -p $(DESTDIR)$(PREFIX)/bin/
-	cp $(TELEGRAF) $(DESTDIR)$(PREFIX)/bin/
+	cp telegraf $(DESTDIR)$(PREFIX)/bin/
 
 test:
 	go test -short ./...
