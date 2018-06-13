@@ -353,6 +353,11 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 						collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(cValue.Value)
 					}
 				}
+			} else {
+				//ignore invalid data from as some counters from process instances returns this sometimes
+				if phderr, ok := err.(*PdhError); ok && phderr.ErrorCode != PDH_INVALID_DATA && phderr.ErrorCode != PDH_CALC_NEGATIVE_VALUE {
+					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
+				}
 			}
 		}
 	}
