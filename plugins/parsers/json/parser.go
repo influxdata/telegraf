@@ -57,7 +57,7 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 	}
 
 	f := JSONFlattener{}
-	err := f.FlattenJSON("", jsonOut)
+	err := f.FullFlattenJSON("", jsonOut, true, true)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func (f *JSONFlattener) FlattenJSON(
 
 	//bool values to be changed to allow strings, bools as fields
 	//changed to true true, func switchFieldToTag will remove values
-	return f.FullFlattenJSON(fieldname, v, true, true)
+	return f.FullFlattenJSON(fieldname, v, false, false)
 }
 
 // FullFlattenJSON flattens nested maps/interfaces into a fields map (including bools and string)
