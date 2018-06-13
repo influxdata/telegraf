@@ -438,14 +438,9 @@ func (d *Docker) gatherContainer(
 	if info.State != nil {
 		statefields := map[string]interface{}{
 			"status":     info.State.Status,
-			"running":    info.State.Running,
-			"paused":     info.State.Paused,
-			"restarting": info.State.Restarting,
 			"oomkilled":  info.State.OOMKilled,
-			"dead":       info.State.Dead,
 			"pid":        info.State.Pid,
 			"exitcode":   info.State.ExitCode,
-			"error":      info.State.Error,
 			"startedat":  info.State.StartedAt,
 			"finishedat": info.State.FinishedAt,
 		}
