@@ -5,7 +5,7 @@ and writing metrics.
 
 Design goals are to have a minimal memory footprint with a plugin system so
 that developers in the community can easily add support for collecting metrics
-from local or remote services.
+.  For an example configuration referencet from local or remote services.
 
 Telegraf is plugin-driven and has the concept of 4 distinct plugins:
 
@@ -127,10 +127,12 @@ configuration options.
 * [aerospike](./plugins/inputs/aerospike)
 * [amqp_consumer](./plugins/inputs/amqp_consumer) (rabbitmq)
 * [apache](./plugins/inputs/apache)
+* [aurora](./plugins/inputs/aurora)
 * [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
 * [bond](./plugins/inputs/bond)
-* [cassandra](./plugins/inputs/cassandra)
+* [cassandra](./plugins/inputs/cassandra) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
+* [burrow](./plugins/inputs/burrow)
 * [ceph](./plugins/inputs/ceph)
 * [cgroup](./plugins/inputs/cgroup)
 * [chrony](./plugins/inputs/chrony)
@@ -163,12 +165,14 @@ configuration options.
 * [iptables](./plugins/inputs/iptables)
 * [ipset](./plugins/inputs/ipset)
 * [jolokia](./plugins/inputs/jolokia) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
-* [jolokia2](./plugins/inputs/jolokia2)
+* [jolokia2](./plugins/inputs/jolokia2) (java, cassandra, kafka)
+- [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry)
 * [kapacitor](./plugins/inputs/kapacitor)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
+* [mcrouter](./plugins/inputs/mcrouter)
 * [memcached](./plugins/inputs/memcached)
 * [mesos](./plugins/inputs/mesos)
 * [minecraft](./plugins/inputs/minecraft)
@@ -181,6 +185,7 @@ configuration options.
 * [nsq](./plugins/inputs/nsq)
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
+* [nvidia_smi](./plugins/inputs/nvidia_smi)
 * [openldap](./plugins/inputs/openldap)
 * [opensmtpd](./plugins/inputs/opensmtpd)
 * [pf](./plugins/inputs/pf)
@@ -206,7 +211,9 @@ configuration options.
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
 * [solr](./plugins/inputs/solr)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
+* [syslog](./plugins/inputs/syslog)
 * [teamspeak](./plugins/inputs/teamspeak)
+* [tengine](./plugins/inputs/tengine)
 * [tomcat](./plugins/inputs/tomcat)
 * [twemproxy](./plugins/inputs/twemproxy)
 * [unbound](./plugins/inputs/unbound)
@@ -264,8 +271,11 @@ formats may be used with input plugins supporting the `data_format` option:
 
 ## Processor Plugins
 
-* [printer](./plugins/processors/printer)
+* [converter](./plugins/processors/converter)
 * [override](./plugins/processors/override)
+* [printer](./plugins/processors/printer)
+* [regex](./plugins/processors/regex)
+* [topk](./plugins/processors/topk)
 
 ## Aggregator Plugins
 
@@ -278,6 +288,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [influxdb](./plugins/outputs/influxdb)
 * [amon](./plugins/outputs/amon)
 * [amqp](./plugins/outputs/amqp) (rabbitmq)
+* [application_insights](./plugins/outputs/application_insights)
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
 * [cratedb](./plugins/outputs/cratedb)
@@ -287,6 +298,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [file](./plugins/outputs/file)
 * [graphite](./plugins/outputs/graphite)
 * [graylog](./plugins/outputs/graylog)
+* [http](./plugins/outputs/http)
 * [instrumental](./plugins/outputs/instrumental)
 * [kafka](./plugins/outputs/kafka)
 * [librato](./plugins/outputs/librato)

@@ -171,22 +171,22 @@ func (p *Ping) args(url string) []string {
 	// Build the ping command args based on toml config
 	args := []string{"-c", strconv.Itoa(p.Count), "-n", "-s", "16"}
 	if p.PingInterval > 0 {
-		args = append(args, "-i", strconv.FormatFloat(p.PingInterval, 'f', 1, 64))
+		args = append(args, "-i", strconv.FormatFloat(p.PingInterval, 'f', -1, 64))
 	}
 	if p.Timeout > 0 {
 		switch runtime.GOOS {
-		case "darwin":
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', 1, 64))
+		case "darwin", "freebsd", "netbsd", "openbsd":
+			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
 		case "linux":
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', 1, 64))
+			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
 		default:
 			// Not sure the best option here, just assume GNU ping?
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', 1, 64))
+			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
 		}
 	}
 	if p.Deadline > 0 {
 		switch runtime.GOOS {
-		case "darwin":
+		case "darwin", "freebsd", "netbsd", "openbsd":
 			args = append(args, "-t", strconv.Itoa(p.Deadline))
 		case "linux":
 			args = append(args, "-w", strconv.Itoa(p.Deadline))
@@ -197,10 +197,10 @@ func (p *Ping) args(url string) []string {
 	}
 	if p.Interface != "" {
 		switch runtime.GOOS {
+		case "darwin", "freebsd", "netbsd", "openbsd":
+			args = append(args, "-S", p.Interface)
 		case "linux":
 			args = append(args, "-I", p.Interface)
-		case "freebsd", "darwin":
-			args = append(args, "-S", p.Interface)
 		default:
 			// Not sure the best option here, just assume GNU ping?
 			args = append(args, "-I", p.Interface)
@@ -243,21 +243,24 @@ func processPingOutput(out string) (int, int, float64, float64, float64, float64
 			}
 		} else if strings.Contains(line, "min/avg/max") {
 			stats := strings.Split(line, " ")[3]
-			min, err = strconv.ParseFloat(strings.Split(stats, "/")[0], 64)
+			data := strings.Split(stats, "/")
+			min, err = strconv.ParseFloat(data[0], 64)
 			if err != nil {
 				return trans, recv, min, avg, max, stddev, err
 			}
-			avg, err = strconv.ParseFloat(strings.Split(stats, "/")[1], 64)
+			avg, err = strconv.ParseFloat(data[1], 64)
 			if err != nil {
 				return trans, recv, min, avg, max, stddev, err
 			}
-			max, err = strconv.ParseFloat(strings.Split(stats, "/")[2], 64)
+			max, err = strconv.ParseFloat(data[2], 64)
 			if err != nil {
 				return trans, recv, min, avg, max, stddev, err
 			}
-			stddev, err = strconv.ParseFloat(strings.Split(stats, "/")[3], 64)
-			if err != nil {
-				return trans, recv, min, avg, max, stddev, err
+			if len(data) == 4 {
+				stddev, err = strconv.ParseFloat(data[3], 64)
+				if err != nil {
+					return trans, recv, min, avg, max, stddev, err
+				}
 			}
 		}
 	}

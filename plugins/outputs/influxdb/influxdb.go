@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
@@ -46,15 +47,7 @@ type InfluxDB struct {
 	ContentEncoding      string            `toml:"content_encoding"`
 	SkipDatabaseCreation bool              `toml:"skip_database_creation"`
 	InfluxUintSupport    bool              `toml:"influx_uint_support"`
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	Precision string // precision deprecated in 1.0; value is ignored
 
@@ -84,10 +77,11 @@ var sampleConfig = `
   # skip_database_creation = false
 
   ## Name of existing retention policy to write to.  Empty string writes to
-  ## the default retention policy.
+  ## the default retention policy.  Only takes effect when using HTTP.
   # retention_policy = ""
 
-  ## Write consistency (clusters only), can be: "any", "one", "quorum", "all"
+  ## Write consistency (clusters only), can be: "any", "one", "quorum", "all".
+  ## Only takes effect when using HTTP.
   # write_consistency = "any"
 
   ## Timeout for HTTP messages.
@@ -103,11 +97,11 @@ var sampleConfig = `
   ## UDP payload size is the maximum packet size to send.
   # udp_payload = 512
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config for use on HTTP connections.
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## HTTP Proxy override, if unset values the standard proxy environment
@@ -244,8 +238,7 @@ func (i *InfluxDB) udpClient(url *url.URL) (Client, error) {
 }
 
 func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL) (Client, error) {
-	tlsConfig, err := internal.GetTLSConfig(
-		i.SSLCert, i.SSLKey, i.SSLCA, i.InsecureSkipVerify)
+	tlsConfig, err := i.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

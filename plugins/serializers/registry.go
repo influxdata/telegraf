@@ -25,6 +25,11 @@ type Serializer interface {
 	// separate metrics should be separated by a newline, and there should be
 	// a newline at the end of the buffer.
 	Serialize(metric telegraf.Metric) ([]byte, error)
+
+	// SerializeBatch takes an array of telegraf metric and serializes it into
+	// a byte buffer.  This method is not required to be suitable for use with
+	// line oriented framing.
+	SerializeBatch(metrics []telegraf.Metric) ([]byte, error)
 }
 
 // Config is a struct that covers the data types needed for all serializer types,
@@ -32,6 +37,9 @@ type Serializer interface {
 type Config struct {
 	// Dataformat can be one of: influx, graphite, or json
 	DataFormat string
+
+	// Support tags in graphite protocol
+	GraphiteTagSupport bool
 
 	// Maximum line length in bytes; influx format only
 	InfluxMaxLineBytes int
@@ -62,7 +70,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "influx":
 		serializer, err = NewInfluxSerializerConfig(config)
 	case "graphite":
-		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template)
+		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport)
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
 	default:
@@ -72,7 +80,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 }
 
 func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
-	return &json.JsonSerializer{TimestampUnits: timestampUnits}, nil
+	return json.NewSerializer(timestampUnits)
 }
 
 func NewInfluxSerializerConfig(config *Config) (Serializer, error) {
@@ -97,9 +105,10 @@ func NewInfluxSerializer() (Serializer, error) {
 	return influx.NewSerializer(), nil
 }
 
-func NewGraphiteSerializer(prefix, template string) (Serializer, error) {
+func NewGraphiteSerializer(prefix, template string, tag_support bool) (Serializer, error) {
 	return &graphite.GraphiteSerializer{
-		Prefix:   prefix,
-		Template: template,
+		Prefix:     prefix,
+		Template:   template,
+		TagSupport: tag_support,
 	}, nil
 }

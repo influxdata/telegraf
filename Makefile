@@ -24,17 +24,17 @@ all:
 deps:
 	go get -u github.com/golang/lint/golint
 	go get github.com/sparrc/gdm
-	gdm restore
+	gdm restore --parallel=false
 
 telegraf:
-	go build -i -ldflags "$(LDFLAGS)" ./cmd/telegraf
+	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 go-install:
 	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
 install: telegraf
 	mkdir -p $(DESTDIR)$(PREFIX)/bin/
-	cp $(TELEGRAF) $(DESTDIR)$(PREFIX)/bin/
+	cp telegraf $(DESTDIR)$(PREFIX)/bin/
 
 test:
 	go test -short ./...

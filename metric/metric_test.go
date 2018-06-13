@@ -63,6 +63,7 @@ func TestAddTagOverwrites(t *testing.T) {
 	value, ok := m.GetTag("host")
 	require.True(t, ok)
 	require.Equal(t, "example.org", value)
+	require.Equal(t, 1, len(m.TagList()))
 }
 
 func TestRemoveTagNoEffectOnMissingTags(t *testing.T) {

@@ -2,7 +2,9 @@ package influx
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"log"
 
 	"github.com/influxdata/telegraf"
 )
@@ -47,11 +49,25 @@ func (r *reader) Read(p []byte) (int, error) {
 		return 0, io.EOF
 	}
 
-	_, err := r.serializer.Write(r.buf, r.metrics[r.offset])
-	r.offset += 1
-	if err != nil {
-		r.buf.Reset()
-		return 0, err
+	for _, metric := range r.metrics[r.offset:] {
+		_, err := r.serializer.Write(r.buf, metric)
+		r.offset += 1
+		if err != nil {
+			r.buf.Reset()
+			switch err.(type) {
+			case *MetricError:
+				// Since we are serializing an array of metrics, don't fail
+				// the entire batch just because of one unserializable metric.
+				log.Printf(
+					"D! [serializers.influx] could not serialize metric %q: %v; discarding metric",
+					metric.Name(), err)
+				continue
+			default:
+				fmt.Println(err)
+				return 0, err
+			}
+		}
+		break
 	}
 
 	return r.buf.Read(p)

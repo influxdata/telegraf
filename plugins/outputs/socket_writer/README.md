@@ -19,6 +19,13 @@ It can output data in any of the [supported output formats](https://github.com/i
   # address = "unix:///tmp/telegraf.sock"
   # address = "unixgram:///tmp/telegraf.sock"
 
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
+
   ## Period between keep alive probes.
   ## Only applies to TCP sockets.
   ## 0 disables keep alive probes.

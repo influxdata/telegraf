@@ -80,6 +80,8 @@ Timestamp modifiers can be used to convert captures to the timestamp of the
 parsed metric.  If no timestamp is parsed the metric will be created using the
 current time.
 
+You must capture at least one field per line.
+
 - Available modifiers:
   - string   (default if nothing is specified)
   - int
@@ -102,6 +104,7 @@ current time.
   - ts-httpd         ("02/Jan/2006:15:04:05 -0700")
   - ts-epoch         (seconds since unix epoch, may contain decimal)
   - ts-epochnano     (nanoseconds since unix epoch)
+  - ts-syslog        ("Jan 02 15:04:05", parsed time is set to the current year)
   - ts-"CUSTOM"
 
 CUSTOM time layouts must be within quotes and be the representation of the

@@ -9,6 +9,27 @@ The metric names, to make it less complicated in querying, have replaced all `-`
 
 All metrics are attempted to be cast to integers, then booleans, then strings.
 
+### Configuration:
+```toml
+# Read stats from aerospike server(s)
+[[inputs.aerospike]]
+  ## Aerospike servers to connect to (with port)
+  ## This plugin will query all namespaces the aerospike
+  ## server has configured and get stats for them.
+  servers = ["localhost:3000"]
+
+  # username = "telegraf"
+  # password = "pa$$word"
+
+  ## Optional TLS Config
+  # enable_tls = false
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## If false, skip chain & host verification
+  # insecure_skip_verify = true
+```
+
 ### Measurements:
 
 The aerospike metrics are under two measurement names:

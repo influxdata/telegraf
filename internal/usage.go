@@ -1,8 +1,8 @@
-// +build windows
+// +build !windows
 
-package main
+package internal
 
-const usage = `Telegraf, The plugin-driven server agent for collecting and reporting metrics.
+const Usage = `Telegraf, The plugin-driven server agent for collecting and reporting metrics.
 
 Usage:
 
@@ -23,9 +23,6 @@ The commands & flags are:
   --pprof-addr        pprof address to listen on, format: localhost:6060 or :6060
   --quiet             run in quiet mode
 
-  --console           run as console application
-  --service           operate on service, one of: install, uninstall, start, stop
-
 Examples:
 
   # generate a telegraf config file:
@@ -45,10 +42,4 @@ Examples:
 
   # run telegraf with pprof
   telegraf --config telegraf.conf --pprof-addr localhost:6060
-
-  # run telegraf without service controller
-  telegraf --console install --config "C:\Program Files\Telegraf\telegraf.conf"
-
-  # install telegraf service
-  telegraf --service install --config "C:\Program Files\Telegraf\telegraf.conf"
 `

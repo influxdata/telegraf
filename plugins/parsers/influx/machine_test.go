@@ -518,6 +518,55 @@ var tests = []struct {
 		},
 	},
 	{
+		name:  "float without integer digits negative",
+		input: []byte("cpu value=-.42"),
+		results: []Result{
+			Result{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			Result{
+				Name:  FieldKey,
+				Value: []byte("value"),
+			},
+			Result{
+				Name:  FieldFloat,
+				Value: []byte("-.42"),
+			},
+		},
+	},
+	{
+		name:  "float with multiple leading 0",
+		input: []byte("cpu value=00.42"),
+		results: []Result{
+			Result{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			Result{
+				Name:  FieldKey,
+				Value: []byte("value"),
+			},
+			Result{
+				Name:  FieldFloat,
+				Value: []byte("00.42"),
+			},
+		},
+	},
+	{
+		name:  "invalid float with only dot",
+		input: []byte("cpu value=."),
+		results: []Result{
+			Result{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			Result{
+				err: ErrFieldParse,
+			},
+		},
+	},
+	{
 		name:  "multiple fields",
 		input: []byte("cpu x=42,y=42"),
 		results: []Result{
@@ -1339,5 +1388,82 @@ func BenchmarkMachineProcstat(b *testing.B) {
 		fsm.SetData(input)
 		for fsm.ParseLine() {
 		}
+	}
+}
+
+func TestSeriesMachine(t *testing.T) {
+	var tests = []struct {
+		name    string
+		input   []byte
+		results []Result
+		err     error
+	}{
+		{
+			name:    "empty string",
+			input:   []byte(""),
+			results: nil,
+		},
+		{
+			name:  "no tags",
+			input: []byte("cpu"),
+			results: []Result{
+				Result{
+					Name:  Measurement,
+					Value: []byte("cpu"),
+				},
+			},
+		},
+		{
+			name:  "tags",
+			input: []byte("cpu,a=x,b=y"),
+			results: []Result{
+				Result{
+					Name:  Measurement,
+					Value: []byte("cpu"),
+				},
+				Result{
+					Name:  TagKey,
+					Value: []byte("a"),
+				},
+				Result{
+					Name:  TagValue,
+					Value: []byte("x"),
+				},
+				Result{
+					Name:  TagKey,
+					Value: []byte("b"),
+				},
+				Result{
+					Name:  TagValue,
+					Value: []byte("y"),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := &TestingHandler{}
+			fsm := NewSeriesMachine(handler)
+			fsm.SetData(tt.input)
+
+			count := 0
+			for fsm.ParseLine() {
+				if fsm.Err() != nil {
+					handler.AddError(fsm.Err())
+				}
+				count++
+				if count > 20 {
+					break
+				}
+			}
+
+			if fsm.Err() != nil {
+				handler.AddError(fsm.Err())
+			}
+
+			results := handler.Results()
+			require.Equal(t, tt.results, results)
+		})
 	}
 }

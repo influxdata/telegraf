@@ -123,6 +123,7 @@ func (m *metric) AddTag(key, value string) {
 
 		if key == tag.Key {
 			tag.Value = value
+			return
 		}
 
 		m.tags = append(m.tags, nil)
@@ -199,6 +200,10 @@ func (m *metric) RemoveField(key string) {
 			return
 		}
 	}
+}
+
+func (m *metric) SetTime(t time.Time) {
+	m.tm = t
 }
 
 func (m *metric) Copy() telegraf.Metric {

@@ -48,7 +48,7 @@ var sampleConfig = `
 
   ## Optional name for the varnish instance (or working directory) to query
   ## Usually appened after -n in varnish cli
-  #name = instanceName
+  # instance_name = instanceName
 `
 
 func (s *Varnish) Description() string {
