@@ -5,58 +5,46 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/bndr/gojenkins"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Jenkins struct {
-	URL    string
-	User   string
-	Passwd string
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
-	// HTTP Timeout specified as a string - 3s, 1m, 1h
+	URL      string
+	Username string
+	Password string
+	tls.ClientConfig
 	ResponseTimeout internal.Duration
 	Instance        *gojenkins.Jenkins
+	client          *http.Client
 
-	LastbuildFilterInterval internal.Duration `toml:"lastbuild_interval"`
-	JobFilterName           []string          `toml:"job_exclude"`
+	MaxBuildAge   internal.Duration `toml:"max_build_age"`
+	JobFilterName []string          `toml:"job_exclude"`
 }
-
-type byBuildNumber []gojenkins.JobBuild
-
-func (a byBuildNumber) Len() int           { return len(a) }
-func (a byBuildNumber) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a byBuildNumber) Less(i, j int) bool { return a[i].Number > a[j].Number }
 
 const sampleConfig = `
   url = "http://my-jenkins-instance:8080"
-  user = "admin"
-  passwd = "admin"
+  username = "admin"
+  password = "admin"
   ## Set response_timeout
   response_timeout = "5s"
 
-  ## Optional SSL Config
-  # ssl_ca = /path/to/cafile
-  # ssl_cert = /path/to/certfile
-  # ssl_key = /path/to/keyfile
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = /path/to/cafile
+  # tls_cert = /path/to/certfile
+  # tls_key = /path/to/keyfile
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Job & build filter
-  lastbuild_interval = "1h"
+  max_build_age = "1h"
   # job_exclude = [ "MyJob", "MyOtherJob" ]
 `
 
@@ -69,42 +57,55 @@ func (j *Jenkins) Description() string {
 }
 
 func (j *Jenkins) Gather(acc telegraf.Accumulator) error {
+	if j.client == nil {
+		client, err := j.createHttpClient()
+		if err != nil {
+			return err
+		}
+		j.client = client
+	}
 
-	tlsCfg, err := internal.GetTLSConfig(j.SSLCert, j.SSLKey, j.SSLCA, j.InsecureSkipVerify)
+	instance, err := gojenkins.CreateJenkins(j.client, j.URL, j.Username, j.Password).Init()
 	if err != nil {
-		return err
-	}
-
-	tr := &http.Transport{
-		TLSClientConfig: tlsCfg,
-	}
-
-	httpclient := &http.Client{
-		Transport: tr,
-		Timeout:   j.ResponseTimeout.Duration,
-	}
-
-	instance, err := gojenkins.CreateJenkins(httpclient, j.URL, j.User, j.Passwd).Init()
-	if err != nil {
-		return fmt.Errorf("E! It was not possible to connect to the Jenkins instance\n")
+		return fmt.Errorf("error retrieving connecting to jenkins instance[%s]: %v", j.URL, err)
 	}
 
 	j.Instance = instance
 
 	nodes, err := instance.GetAllNodes()
 	if err != nil {
-		return fmt.Errorf("E! Something went wrong retrieving nodes information from Jenkins\n")
+		return fmt.Errorf("error retrieving nodes[%s]: %v", j.URL, err)
 	}
 
 	jobs, err := instance.GetAllJobs()
 	if err != nil {
-		return fmt.Errorf("E! Something went wrong retrieving jobs information from Jenkins\n")
+		return fmt.Errorf("error retrieving jobs[%s]: %v", j.URL, err)
 	}
 
 	acc.AddError(j.GetNodesData(nodes, acc))
 	acc.AddError(j.GetJobsData(jobs, acc))
 
 	return nil
+}
+
+func (j *Jenkins) createHttpClient() (*http.Client, error) {
+	tlsCfg, err := j.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	if j.ResponseTimeout.Duration < time.Second {
+		j.ResponseTimeout.Duration = time.Second * 5
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: j.ResponseTimeout.Duration,
+	}
+
+	return client, nil
 }
 
 func (j *Jenkins) GetNodesData(nodes []*gojenkins.Node, acc telegraf.Accumulator) error {
@@ -116,7 +117,10 @@ func (j *Jenkins) GetNodesData(nodes []*gojenkins.Node, acc telegraf.Accumulator
 
 	// get node data
 	for _, node := range nodes {
-		info, _ := node.Info()
+		info, err := node.Info()
+		if err != nil {
+			return fmt.Errorf("error retrieving node information: %v", err)
+		}
 		tags["node_name"] = node.GetName()
 
 		// skip nodes without information
@@ -125,32 +129,49 @@ func (j *Jenkins) GetNodesData(nodes []*gojenkins.Node, acc telegraf.Accumulator
 		}
 
 		tags["arch"] = info.MonitorData.Hudson_NodeMonitors_ArchitectureMonitor.(string)
-		isOnline, _ := node.IsOnline()
-		fields["online"] = int(0)
-		if isOnline {
-			fields["online"] = int(1)
+
+		isOnline, err := node.IsOnline()
+		if err != nil {
+			return fmt.Errorf("error retrieving isOnline data from node: %v", err)
 		}
 
+		tags["online"] = strconv.FormatBool(isOnline)
 		fields["response_time"] = info.MonitorData.Hudson_NodeMonitors_ResponseTimeMonitor.Average
 
 		if info.MonitorData.Hudson_NodeMonitors_DiskSpaceMonitor != nil {
 			diskSpace := info.MonitorData.Hudson_NodeMonitors_DiskSpaceMonitor.(map[string]interface{})
-			tags["disk_path"] = diskSpace["path"].(string)
-			fields["disk_available"] = diskSpace["size"].(float64)
+			if diskPath, ok := diskSpace["path"].(string); ok {
+				tags["disk_path"] = diskPath
+			}
+			if diskAvailable, ok := diskSpace["size"].(float64); ok {
+				fields["disk_available"] = diskAvailable
+			}
 		}
 
 		if info.MonitorData.Hudson_NodeMonitors_TemporarySpaceMonitor != nil {
 			tempSpace := info.MonitorData.Hudson_NodeMonitors_TemporarySpaceMonitor.(map[string]interface{})
-			tags["temp_path"] = tempSpace["path"].(string)
-			fields["temp_available"] = tempSpace["size"].(float64)
+			if tempPath, ok := tempSpace["path"].(string); ok {
+				tags["temp_path"] = tempPath
+			}
+			if tempAvailable, ok := tempSpace["size"].(float64); ok {
+				fields["temp_available"] = tempAvailable
+			}
 		}
 
 		if info.MonitorData.Hudson_NodeMonitors_SwapSpaceMonitor != nil {
 			swapSpace := info.MonitorData.Hudson_NodeMonitors_SwapSpaceMonitor.(map[string]interface{})
-			fields["swap_available"] = swapSpace["availableSwapSpace"].(float64)
-			fields["swap_total"] = swapSpace["totalSwapSpace"].(float64)
-			fields["memory_available"] = swapSpace["availablePhysicalMemory"].(float64)
-			fields["memory_total"] = swapSpace["totalPhysicalMemory"].(float64)
+			if swapAvailable, ok := swapSpace["availableSwapSpace"].(float64); ok {
+				fields["swap_available"] = swapAvailable
+			}
+			if swapTotal, ok := swapSpace["totalSwapSpace"].(float64); ok {
+				fields["swap_total"] = swapTotal
+			}
+			if memoryAvailable, ok := swapSpace["availablePhysicalMemory"].(float64); ok {
+				fields["memory_available"] = memoryAvailable
+			}
+			if memoryTotal, ok := swapSpace["totalPhysicalMemory"].(float64); ok {
+				fields["memory_total"] = memoryTotal
+			}
 		}
 
 		acc.AddFields(measurement, fields, tags)
@@ -181,34 +202,32 @@ func (j *Jenkins) GetJobsData(jobs []*gojenkins.Job, acc telegraf.Accumulator) e
 
 		jobLastBuild, err := job.GetLastBuild()
 		if err != nil {
-			log.Printf("E! Error retrieving last build from job %s: %s", jobName, err.Error())
-			return err
+			return fmt.Errorf("error retrieving last build from job [%s]: %v", jobName, err)
 		}
 
 		// ignore if last build is too old
-		if (j.LastbuildFilterInterval != internal.Duration{Duration: 0}) {
+		if (j.MaxBuildAge != internal.Duration{Duration: 0}) {
 			buildSecAgo := time.Now().Sub(jobLastBuild.GetTimestamp()).Seconds()
 
-			if buildSecAgo > j.LastbuildFilterInterval.Duration.Seconds() {
+			if buildSecAgo > j.MaxBuildAge.Duration.Seconds() {
 				log.Printf("D! Last job too old, last %s build was %v seconds ago", jobName, buildSecAgo)
 				continue
 			}
 		}
 
 		buildIds, err := job.GetAllBuildIds()
-		sort.Sort(byBuildNumber(buildIds))
-
 		if err != nil {
-			log.Printf("E! Error retrieving all builds from job \"%s\": %s", jobName, err.Error())
-			return err
+			return fmt.Errorf("error retrieving all builds from job [%s]: %v", jobName, err)
 		}
+
+		sort.Slice(buildIds, func(i, j int) bool {
+			return buildIds[i].Number > buildIds[j].Number
+		})
 
 		for _, buildId := range buildIds {
 			build, err := job.GetBuild(buildId.Number)
-			log.Printf("D! Reading data from job %s build %v", jobName, buildId.Number)
 			if err != nil {
-				log.Printf("E! Error retrieving build from job \"%s\": %s", jobName, err.Error())
-				return err
+				return fmt.Errorf("error retrieving build from job [%s]: %v", jobName, err)
 			}
 
 			// ignore if build is ongoing
@@ -218,10 +237,10 @@ func (j *Jenkins) GetJobsData(jobs []*gojenkins.Job, acc telegraf.Accumulator) e
 			}
 
 			// stop if build is too old
-			if (j.LastbuildFilterInterval != internal.Duration{Duration: 0}) {
+			if (j.MaxBuildAge != internal.Duration{Duration: 0}) {
 				buildSecAgo := time.Now().Sub(build.GetTimestamp()).Seconds()
 
-				if time.Now().Sub(build.GetTimestamp()).Seconds() > j.LastbuildFilterInterval.Duration.Seconds() {
+				if time.Now().Sub(build.GetTimestamp()).Seconds() > j.MaxBuildAge.Duration.Seconds() {
 					log.Printf("D! Job %s build %v too old (%v seconds ago), skipping to next job", jobName, buildId.Number, buildSecAgo)
 					break
 				}
@@ -229,7 +248,7 @@ func (j *Jenkins) GetJobsData(jobs []*gojenkins.Job, acc telegraf.Accumulator) e
 
 			tags := map[string]string{"job_name": jobName, "result": build.GetResult()}
 			fields := make(map[string]interface{})
-			fields["duration"] = build.GetDuration()
+			fields["duration_ms"] = build.GetDuration()
 			fields["result_code"] = mapResultCode(build.GetResult())
 
 			acc.AddFields(measurement, fields, tags, build.GetTimestamp())

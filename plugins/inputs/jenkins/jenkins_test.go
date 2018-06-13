@@ -1,7 +1,6 @@
 package jenkins
 
 import (
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -15,7 +14,7 @@ import (
 
 func TestJenkins_Gather(t *testing.T) {
 
-	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var resp string
 		switch r.RequestURI {
 
@@ -43,9 +42,6 @@ func TestJenkins_Gather(t *testing.T) {
 		w.Write([]byte(resp))
 	}))
 
-	l, _ := net.Listen("tcp", "127.0.0.1:8080")
-	ts.Listener = l
-	ts.Start()
 	defer ts.Close()
 
 	var acc testutil.Accumulator
@@ -60,7 +56,6 @@ func TestJenkins_Gather(t *testing.T) {
 	fields := map[string]interface{}{
 		"memory_total":     float64(6089498624),
 		"swap_total":       float64(4294963200),
-		"online":           int(1),
 		"response_time":    int64(0),
 		"disk_available":   float64(152393224192),
 		"temp_available":   float64(152393224192),
@@ -72,12 +67,13 @@ func TestJenkins_Gather(t *testing.T) {
 		"arch":      "Linux (amd64)",
 		"disk_path": "/var/jenkins_home",
 		"temp_path": "/tmp",
+		"online":    "true",
 	}
 
 	acc.AssertContainsTaggedFields(t, "jenkins_node", fields, tags)
 
 	fields = map[string]interface{}{
-		"duration":    int64(2022068),
+		"duration_ms": int64(2022068),
 		"result_code": int(1),
 	}
 
@@ -89,7 +85,7 @@ func TestJenkins_Gather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "jenkins_job", fields, tags)
 
 	fields = map[string]interface{}{
-		"duration":    int64(2137068),
+		"duration_ms": int64(2137068),
 		"result_code": int(0),
 	}
 
