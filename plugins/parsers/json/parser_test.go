@@ -470,6 +470,5 @@ func TestJSONParseNestedArray(t *testing.T) {
 	t.Logf("metric tags: %v", metrics[0].Tags())
 	t.Logf("metric fields: %v", metrics[0].Fields())
 	require.Equal(t, len(parser.TagKeys), len(metrics[0].Tags()))
-	t.Error()
 	//require.NoError(t, err)
 }
