@@ -454,7 +454,7 @@ func TestJSONParseNestedArray(t *testing.T) {
 	"avg_find_time": 4,
 	"tester": "work",
 	"tester2": "don't want this",
-	"tester3": true
+	"tester3": 7.93
 	}
 	}`
 

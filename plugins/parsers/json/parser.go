@@ -92,7 +92,7 @@ func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]
 				tags[name] = strconv.Itoa(fields[name].(int))
 				delete(fields, name)
 			case float64:
-				tags[name] = strconv.FormatFloat(fields[name].(float64), 'f', -1, 6)
+				tags[name] = strconv.FormatFloat(fields[name].(float64), 'f', -1, 64)
 				delete(fields, name)
 			}
 		}
