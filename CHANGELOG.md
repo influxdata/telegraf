@@ -3,6 +3,7 @@
 ### Bugfixes
 
 - [#4277](https://github.com/influxdata/telegraf/pull/4277): Treat sigterm as a clean shutdown signal.
+- [#4284](https://github.com/influxdata/telegraf/pull/4284): Fix selection of tags under nested objects in the JSON parser.
 
 ## v1.7 [2018-06-12]
 
