@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -439,4 +440,30 @@ func TestHttpJsonBOM(t *testing.T) {
 	// Most basic vanilla test
 	_, err := parser.Parse(jsonBOM)
 	assert.NoError(t, err)
+}
+
+//for testing issue #4260
+func TestJSONParseNestedArray(t *testing.T) {
+	testString := `{
+	"total_devices": 5,
+	"total_threads": 10,
+	"shares": {
+	"total": 5,
+	"accepted": 5,
+	"rejected": 0,
+	"avg_find_time": 4,
+	"tester": "work",
+	"tester2": "don't want this",
+	"tester3": 7.93
+	}
+	}`
+
+	parser := JSONParser{
+		MetricName: "json_test",
+		TagKeys:    []string{"total_devices", "total_threads", "shares_tester", "shares_tester3"},
+	}
+
+	metrics, err := parser.Parse([]byte(testString))
+	require.NoError(t, err)
+	require.Equal(t, len(parser.TagKeys), len(metrics[0].Tags()))
 }
