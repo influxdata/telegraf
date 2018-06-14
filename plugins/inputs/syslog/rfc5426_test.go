@@ -2,8 +2,10 @@ package syslog
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -274,15 +276,21 @@ func TestStrict_udp(t *testing.T) {
 }
 
 func TestBestEffort_unixgram(t *testing.T) {
-	sockname := "/tmp/telegraf_test.sock"
-	os.Create(sockname)
-	testRFC5426(t, "unixgram", sockname, true)
+	tmpdir, err := ioutil.TempDir("", "telegraf")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unixgram.sock")
+	os.Create(sock)
+	testRFC5426(t, "unixgram", sock, true)
 }
 
 func TestStrict_unixgram(t *testing.T) {
-	sockname := "/tmp/telegraf_test.sock"
-	os.Create(sockname)
-	testRFC5426(t, "unixgram", sockname, false)
+	tmpdir, err := ioutil.TempDir("", "telegraf")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+	sock := filepath.Join(tmpdir, "syslog.TestStrict_unixgram.sock")
+	os.Create(sock)
+	testRFC5426(t, "unixgram", sock, false)
 }
 
 func TestTimeIncrement_udp(t *testing.T) {

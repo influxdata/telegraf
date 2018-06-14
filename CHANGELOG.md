@@ -1,4 +1,26 @@
-## v1.7 [unreleased]
+## v1.8 [unreleased]
+
+### Release Notes
+
+### New Inputs
+
+- [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
+
+### Features
+
+- [#4236](https://github.com/influxdata/telegraf/pull/4236): Add SSL/TLS support to redis input.
+- [#4160](https://github.com/influxdata/telegraf/pull/4160): Add tengine input plugin.
+- [#4262](https://github.com/influxdata/telegraf/pull/4262): Add power draw field to nvidia_smi plugin.
+- [#4271](https://github.com/influxdata/telegraf/pull/4271): Add support for solr 7 to the solr input.
+- [#4281](https://github.com/influxdata/telegraf/pull/4281): Add owner tag on partitions in burrow input.
+
+## v1.7.1 [unreleased]
+
+### Bugfixes
+
+- [#4277](https://github.com/influxdata/telegraf/pull/4277): Treat sigterm as a clean shutdown signal.
+
+## v1.7 [2018-06-12]
 
 ### Release Notes
 
@@ -19,6 +41,7 @@
 - [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry/README.md) - Contributed by @ajhai
 - [mcrouter](./plugins/inputs/mcrouter/README.md) - Contributed by @cthayer
 - [nvidia_smi](./plugins/inputs/nvidia_smi/README.md) - Contributed by @jackzampolin
+- [syslog](./plugins/inputs/syslog/README.md) - Contributed by @influxdata
 
 ### New Processors
 
@@ -57,7 +80,12 @@
 - [#3969](https://github.com/influxdata/telegraf/pull/3969): Add option to unbound module to use threads as tags.
 - [#4183](https://github.com/influxdata/telegraf/pull/4183): Add support for TLS and username/password auth to aerospike input.
 - [#4190](https://github.com/influxdata/telegraf/pull/4190): Add special syslog timestamp parser to grok parser that uses current year.
--
+- [#4181](https://github.com/influxdata/telegraf/pull/4181): Add syslog input plugin.
+- [#4212](https://github.com/influxdata/telegraf/pull/4212): Print the enabled aggregator and processor plugins on startup.
+- [#3994](https://github.com/influxdata/telegraf/pull/3994): Add static routing_key option to amqp output.
+- [#3995](https://github.com/influxdata/telegraf/pull/3995): Add passive mode exchange declaration option to amqp consumer input.
+- [#4216](https://github.com/influxdata/telegraf/pull/4216): Add counter fields to pf input.
+
 ### Bugfixes
 
 - [#4018](https://github.com/influxdata/telegraf/pull/4018): Write to working file outputs if any files are not writeable.
@@ -66,6 +94,18 @@
 - [#4155](https://github.com/influxdata/telegraf/pull/4155): Add consul service tags to metric.
 - [#2879](https://github.com/influxdata/telegraf/issues/2879): Fix wildcards and multi instance processes in win_perf_counters.
 - [#2468](https://github.com/influxdata/telegraf/issues/2468): Fix crash on 32-bit Windows in win_perf_counters.
+- [#4198](https://github.com/influxdata/telegraf/issues/4198): Fix win_perf_counters not collecting at every interval.
+- [#4227](https://github.com/influxdata/telegraf/issues/4227): Use same flags for all BSD family ping variants.
+- [#4266](https://github.com/influxdata/telegraf/issues/4266): Remove tags with empty values from Wavefront output.
+
+## v1.6.4 [2018-06-05]
+
+### Bugfixes
+
+- [#4203](https://github.com/influxdata/telegraf/issues/4203): Fix snmp overriding of auto-configured table fields.
+- [#4218](https://github.com/influxdata/telegraf/issues/4218): Fix uint support in cloudwatch output.
+- [#4188](https://github.com/influxdata/telegraf/pull/4188): Fix documentation of instance_name option in varnish input.
+- [#4195](https://github.com/influxdata/telegraf/pull/4195): Revert to previous aerospike library version due to memory leak.
 
 ## v1.6.3 [2018-05-21]
 

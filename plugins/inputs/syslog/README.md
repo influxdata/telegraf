@@ -1,10 +1,11 @@
-# syslog input plugin
+# Syslog Input Plugin
 
-Collects syslog messages as per RFC5425 or RFC5426.
+The syslog plugin listens for syslog messages transmitted over
+[UDP](https://tools.ietf.org/html/rfc5426) or
+[TCP](https://tools.ietf.org/html/rfc5425).
 
-It can act as a syslog transport receiver over TLS (or TCP) - ie., RFC5425 - or over UDP - ie., RFC5426.
-
-This plugin listens for syslog messages following RFC5424 format. When received it parses them extracting metrics.
+Syslog messages should be formatted according to
+[RFC 5424](https://tools.ietf.org/html/rfc5424).
 
 ### Configuration
 
@@ -48,72 +49,50 @@ This plugin listens for syslog messages following RFC5424 format. When received 
   # sdparam_separator = "_"
 ```
 
-#### Other configs
+#### Best Effort
 
-Other available configurations are:
-
-- `keep_alive_period`, `max_connections` for stream sockets
-- `read_timeout`
-- `best_effort` to tell the parser to work until it is able to do and extract partial but valid info (more [here](https://github.com/influxdata/go-syslog#best-effort-mode))
-- `sdparam_separator` to choose how to separate structured data param name from its structured data identifier
+The [`best_effort`](https://github.com/influxdata/go-syslog#best-effort-mode)
+option instructs the parser to extract partial but valid info from syslog
+messages.  If unset only full messages will be collected.
 
 ### Metrics
 
 - syslog
-  - fields
-    - **version** (`uint16`)
-    - **severity_code** (`int`)
-    - **facility_code** (`int`)
-    - timestamp (`int`)
-    - procid (`string`)
-    - msgid (`string`)
-    - *sdid* (`bool`)
-    - *sdid . sdparam_separator . sdparam_name* (`string`)
   - tags
-    - **severity** (`string`)
-    - **facility** (`string`)
-    - hostname (`string`)
-    - appname (`string`)
+    - severity (string)
+    - facility (string)
+    - hostname (string)
+    - appname (string)
+  - fields
+    - version (integer)
+    - severity_code (integer)
+    - facility_code (integer)
+    - timestamp (integer)
+    - procid (string)
+    - msgid (string)
+    - sdid (bool)
+    - *Structured Data* (string)
 
-The name of fields in _italic_ corresponds to their runtime value.
+### Rsyslog Integration
 
-The fields/tags which name is in **bold** will always be present when a valid Syslog message has been received.
+Rsyslog can be configured to forward logging messages to Telegraf by configuring
+[remote logging](https://www.rsyslog.com/doc/v8-stable/configuration/actions.html#remote-machine).
 
-### RSYSLOG integration
+Most system are setup with a configuration split between `/etc/rsyslog.conf`
+and the files in the `/etc/rsyslog.d/` directory, it is recommended to add the
+new configuration into the config directory to simplify updates to the main
+config file.
 
-The following instructions illustrate how to configure a syslog transport sender as per RFC5425 - ie., using the octect framing technique - via RSYSLOG.
-
-Install `rsyslog`.
-
-Give it a configuration - ie., `/etc/rsyslog.conf`.
-
+Add the following lines to `/etc/rsyslog.d/50-telegraf.conf` making
+adjustments to the target address as needed:
 ```
-$ModLoad imuxsock  # provides support for local system logging
-$ModLoad imklog    # provides kernel logging support
-$ModLoad immark    # provides heart-beat logs
-$FileOwner root
-$FileGroup root
-$FileCreateMode 0640
-$DirCreateMode 0755
-$Umask 0022
-$WorkDirectory /var/spool/rsyslog # default location for work (spool) files
 $ActionQueueType LinkedList # use asynchronous processing
 $ActionQueueFileName srvrfwd # set file name, also enables disk mode
 $ActionResumeRetryCount -1 # infinite retries on insert failure
 $ActionQueueSaveOnShutdown on # save in-memory data if rsyslog shuts down
-$IncludeConfig /etc/rsyslog.d/*.conf
-```
 
-Specify you want the octet framing technique enabled and the format of each syslog message to follow the RFC5424.
-
-Create a file - eg., `/etc/rsyslog.d/50-default.conf` - containing:
-
-```
+# forward over tcp with octet framing according to RFC 5425
 *.* @@(o)127.0.0.1:6514;RSYSLOG_SyslogProtocol23Format
 ```
 
-To complete the TLS setup please refer to [rsyslog docs](https://www.rsyslog.com/doc/v8-stable/tutorials/tls.html).
-
-Notice that this configuration tells `rsyslog` to broadcast messages to `127.0.0.1>6514`.
-
-So you have to configure this plugin accordingly.
+To complete TLS setup please refer to [rsyslog docs](https://www.rsyslog.com/doc/v8-stable/tutorials/tls.html).

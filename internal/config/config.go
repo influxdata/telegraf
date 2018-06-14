@@ -156,6 +156,24 @@ func (c *Config) InputNames() []string {
 	return name
 }
 
+// Outputs returns a list of strings of the configured aggregators.
+func (c *Config) AggregatorNames() []string {
+	var name []string
+	for _, aggregator := range c.Aggregators {
+		name = append(name, aggregator.Name())
+	}
+	return name
+}
+
+// Outputs returns a list of strings of the configured processors.
+func (c *Config) ProcessorNames() []string {
+	var name []string
+	for _, processor := range c.Processors {
+		name = append(name, processor.Name)
+	}
+	return name
+}
+
 // Outputs returns a list of strings of the configured outputs.
 func (c *Config) OutputNames() []string {
 	var name []string
