@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -44,18 +45,6 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 		tags[k] = v
 	}
 
-	for _, tag := range p.TagKeys {
-		switch v := jsonOut[tag].(type) {
-		case string:
-			tags[tag] = v
-		case bool:
-			tags[tag] = strconv.FormatBool(v)
-		case float64:
-			tags[tag] = strconv.FormatFloat(v, 'f', -1, 64)
-		}
-		delete(jsonOut, tag)
-	}
-
 	f := JSONFlattener{}
 	err := f.FullFlattenJSON("", jsonOut, true, true)
 	if err != nil {
@@ -79,22 +68,21 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]interface{}) (map[string]string, map[string]interface{}) {
 	for _, name := range p.TagKeys {
 		//switch any fields in tagkeys into tags
-		if fields[name] != nil {
-			switch fields[name].(type) {
-			//case of field is string
-			case string:
-				tags[name] = fields[name].(string)
-				delete(fields, name)
-			case bool:
-				tags[name] = strconv.FormatBool(fields[name].(bool))
-				delete(fields, name)
-			case int:
-				tags[name] = strconv.Itoa(fields[name].(int))
-				delete(fields, name)
-			case float64:
-				tags[name] = strconv.FormatFloat(fields[name].(float64), 'f', -1, 64)
-				delete(fields, name)
-			}
+		if fields[name] == nil {
+			continue
+		}
+		switch value := fields[name].(type) {
+		case string:
+			tags[name] = value
+			delete(fields, name)
+		case bool:
+			tags[name] = strconv.FormatBool(value)
+			delete(fields, name)
+		case float64:
+			tags[name] = strconv.FormatFloat(value, 'f', -1, 64)
+			delete(fields, name)
+		default:
+			log.Printf("E! [parsers.json] Unrecognized type %T", value)
 		}
 	}
 
@@ -160,8 +148,6 @@ func (f *JSONFlattener) FlattenJSON(
 		f.Fields = make(map[string]interface{})
 	}
 
-	//bool values to be changed to allow strings, bools as fields
-	//changed to true true, func switchFieldToTag will remove values
 	return f.FullFlattenJSON(fieldname, v, false, false)
 }
 

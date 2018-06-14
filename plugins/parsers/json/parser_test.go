@@ -461,14 +461,9 @@ func TestJSONParseNestedArray(t *testing.T) {
 	parser := JSONParser{
 		MetricName: "json_test",
 		TagKeys:    []string{"total_devices", "total_threads", "shares_tester", "shares_tester3"},
-		//TagKeys: []string{"mytag", "a", "b_c", "b_d"},
 	}
 
 	metrics, err := parser.Parse([]byte(testString))
-	t.Logf("error: %v", err)
-	t.Logf("num of metrics: %v", len(metrics))
-	t.Logf("metric tags: %v", metrics[0].Tags())
-	t.Logf("metric fields: %v", metrics[0].Fields())
+	require.NoError(t, err)
 	require.Equal(t, len(parser.TagKeys), len(metrics[0].Tags()))
-	//require.NoError(t, err)
 }
