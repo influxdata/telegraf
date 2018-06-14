@@ -436,13 +436,13 @@ func (d *Docker) gatherContainer(
 		}
 	}
 	if info.State != nil {
+		tags["container_status"] = info.State.Status
 		statefields := map[string]interface{}{
-			"status":     info.State.Status,
-			"oomkilled":  info.State.OOMKilled,
-			"pid":        info.State.Pid,
-			"exitcode":   info.State.ExitCode,
-			"startedat":  info.State.StartedAt,
-			"finishedat": info.State.FinishedAt,
+			"oomkilled":   info.State.OOMKilled,
+			"pid":         info.State.Pid,
+			"exitcode":    info.State.ExitCode,
+			"started_at":  info.State.StartedAt,
+			"finished_at": info.State.FinishedAt,
 		}
 		acc.AddFields("docker_container_status", statefields, tags, time.Now())
 	}
