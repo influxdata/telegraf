@@ -218,6 +218,22 @@
   name = "gopkg.in/yaml.v2"
   version = "^2.2.1"
 
+[[constraint]]
+  name = "k8s.io/api"
+  version = "kubernetes-1.11.0"
+
+[[constraint]]
+  name = "k8s.io/apimachinery"
+  version = "kubernetes-1.11.0"
+
+[[constraint]]
+  name = "k8s.io/kubernetes"
+  version = "=1.11.0"
+
+[[constraint]]
+  name = "github.com/robfig/cron"
+  version = "=1.1.0"
+
 [[override]]
   source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
   name = "gopkg.in/fsnotify.v1"
