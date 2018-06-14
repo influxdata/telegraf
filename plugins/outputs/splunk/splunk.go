@@ -28,6 +28,7 @@ type Splunk struct {
 	MetricSeparator string
 	ConvertPaths    bool
 	ConvertBool     bool
+	ReplaceSpecials bool
 	UseRegex        bool
 	StringToNumber  map[string][]map[string]float64
 	serializer      serializers.Serializer
@@ -62,15 +63,20 @@ AuthString = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
 ## OPTIONAL:  prefix for metrics keys
 #prefix = "my.specific.prefix."
 
-## OPTIONAL:  whether to use "value" for name of simple fields
+## OPTIONAL:  whether to use "value" for name of simple fields.    
+##  Default is false which will result in using only the measurement name as the metric name, not "value"
 #simple_fields = false
 
 ## OPTIONAL:  character to use between metric and field name.  defaults to . (dot)
 #metric_separator = "."
 
 ## OPTIONAL:  Convert metric name paths to use metricSeperator character
-## When true (default) will convert all _ (underscore) chartacters in final metric name
-#convert_paths = true
+## When true will convert all _ (underscore) chartacters in final metric name
+#convert_paths = false
+
+## OPTIONAL:  Replace special characters in metric names with "-".  
+## This can be useful if metric names contain special characters  
+#replace_special_chars = false
 
 ## OPTIONAL:  Use Regex to sanitize metric and tag names from invalid characters  
 ## Regex is more thorough, but significantly slower
@@ -113,10 +119,11 @@ func (s *Splunk) Write(measures []telegraf.Metric) error {
 		return nil
 	}
 
+	var allMetrics = []SplunkMetric{}
 	splunkMetric := SplunkMetric{}
 
 	// -----------------------------------------------------------------------------------------------------------------------
-	//  Loop through each measure (plugin)
+	//  Loop through each measure (input plugin)
 	// -----------------------------------------------------------------------------------------------------------------------
 	for _, m := range measures {
 		//fmt.Printf("\n\n Processing %s \n  %+v \n\n",m.Name(), m.Fields())
@@ -124,20 +131,20 @@ func (s *Splunk) Write(measures []telegraf.Metric) error {
 		// -----------------------------------------------------------------------------------------------------------------------
 		//  Loop through tags for each measure    (add ALL Tags (except host) to each "field" element)
 		// -----------------------------------------------------------------------------------------------------------------------
-		newTags := make(map[string]interface{}) // convert the Tags array from map[string]string to map[string]interface{}
+		fields := make(map[string]interface{})     // convert the Tags array from map[string]string to map[string]interface{}
 		for tagName, value := range m.Tags() {
 			//fmt.Printf(" tag values:  %s:%s \n",tagName,value)
+			// if the tagName == 'host', set the Splunk metric 'header' value == host
 			if tagName == "host" {
 				splunkMetric.Host = value
-			} else {
-				newTags[tagName] = value
+			}else {
+				fields[tagName] = value
 			}
 		}
 
 		// -----------------------------------------------------------------------------------------------------------------------
 		//  Loop through each metric and create a map of all tags + the name and value of the metric  (Splunk Metric format)
 		// -----------------------------------------------------------------------------------------------------------------------
-		fields := newTags
 		for fieldName, value := range m.Fields() {
 			fields["metric_name"] = processFieldName(m.Name(), fieldName, s)
 
@@ -148,68 +155,83 @@ func (s *Splunk) Write(measures []telegraf.Metric) error {
 			}
 			fields["_value"] = metricValue
 
-			// -----------------------------------------------------------------------------------------------------------------
-			//  Create a []byte array to send via an HTTP POST
-			// -----------------------------------------------------------------------------------------------------------------
-			var payload []byte
-			var err error
-
-			splunkMetric.Time = m.Time().UnixNano() / 1000000000 // convert metric nanoseconds to unix time
+			splunkMetric.Time = m.Time().UnixNano()  // convert metric nanoseconds to unix time
 			splunkMetric.Event = "metric"
 			splunkMetric.Fields = fields
-			payload, err = json.Marshal(splunkMetric)
 
-			if err != nil {
-				return fmt.Errorf("unable to marshal data, %s\n", err.Error())
-			}
-			log.Printf("D! Output [Splunk] %s\n", payload)
+		}   //for fieldName, value := range m.Fields() {
+		
+		// add this metric to the splunkMetric array
+		allMetrics = append(allMetrics, splunkMetric)
 
-			// -----------------------------------------------------------------------------------------------------------------
-			//  Send the data to Splunk
-			// -----------------------------------------------------------------------------------------------------------------
-			req, err := http.NewRequest("POST", s.SplunkUrl, bytes.NewBuffer(payload))
-			if err != nil {
-				return fmt.Errorf("unable to create http.Request \n    URL:%s\n\n", s.SplunkUrl)
-			}
+	}   //for _, m := range measures {
 
-			req.Header.Add("Content-Type", "application/json")
-			req.Header.Add("Authorization", "Splunk "+s.AuthString)
 
-			//// Check for existence of s && req to prevent race ('panic: runtime error: invalid memory address or nil pointer dereference')
-			if s != nil && req != nil {
-				resp, err := s.client.Do(req)
-				if err != nil {
-					return fmt.Errorf("error POST-ing metrics to Splunk[%s]  Sending Data:%s\n", err, payload)
-				}
 
-				defer resp.Body.Close()
+	// -----------------------------------------------------------------------------------------------------------------
+	//  Now we can send this set of metrics to Splunk
+	//
+	//  Create a []byte array to send via an HTTP POST
+	// -----------------------------------------------------------------------------------------------------------------
+	var payload []byte
+	var err error
+	payload, err = json.Marshal(allMetrics)
 
-				if resp.StatusCode < 200 || resp.StatusCode > 209 {
-					return fmt.Errorf("received bad status code posting to %s, %d\n\n%s\n", s.SplunkUrl, resp.StatusCode, payload)
-				}
-			}
-		}
+	if err != nil {
+		return fmt.Errorf("unable to marshal data, %s\n", err.Error())
 	}
+	log.Printf("D! Output [Splunk] %s\n", payload)
+
+	// -----------------------------------------------------------------------------------------------------------------
+	//  Send the data to Splunk
+	// -----------------------------------------------------------------------------------------------------------------
+	req, err := http.NewRequest("POST", s.SplunkUrl, bytes.NewBuffer(payload))
+	if err != nil {
+		return fmt.Errorf("unable to create http.Request \n    URL:%s\n\n", s.SplunkUrl)
+	}
+
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Splunk "+s.AuthString)
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("error POST-ing metrics to Splunk[%s]  Sending Data:%s\n", err, payload)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode > 209 {
+		return fmt.Errorf("received bad status code posting to %s, %d\n\n%s\n", s.SplunkUrl, resp.StatusCode, payload)
+	}
+
 	return nil
 }
 
+
+
 // -----------------------------------------------------------------------------------------------------------------------
-//  Check for metric name ending with .value and remove it, sanitize characters and add separators
+//  Check for metric name ending with .value and remove it, sanitize characters if desired and add separators if needed
 // -----------------------------------------------------------------------------------------------------------------------
 func processFieldName(measureName string, fieldName string, s *Splunk) string {
-	var name string
-	if !s.SimpleFields && fieldName == "value" {
-		name = fmt.Sprintf("%s%s", s.Prefix, measureName)
-	} else {
-		name = fmt.Sprintf("%s%s%s%s", s.Prefix, measureName, s.MetricSeparator, fieldName)
-	}
+	// Add any optional metric prefix to the metric name
+	name := s.Prefix + measureName
 
-	if s.UseRegex {
-		name = sanitizedRegex.ReplaceAllLiteralString(name, "-")
-	} else {
+	// If the fieldName!="value" add it to the metric name  
+	if s.SimpleFields || fieldName != "value" {
+		name += s.MetricSeparator + fieldName
+	}
+	
+	// Sanitize metric name by removing special characters
+	if s.ReplaceSpecials {
 		name = sanitizedChars.Replace(name)
 	}
 
+	// Sanitize metric name using regex
+	if s.UseRegex {
+		name = sanitizedRegex.ReplaceAllLiteralString(name, "-")
+	}
+
+	// Convert all _ (underscore) chartacters in final metric name to metricSeparator ("." by default)
 	if s.ConvertPaths {
 		name = pathReplacer.Replace(name)
 	}
@@ -229,12 +251,12 @@ func processFieldValue(v interface{}, name string, s *Splunk) (float64, error) {
 				return 0, nil
 			}
 		}
-	case int64:
-		return float64(v.(int64)), nil
-	case uint64:
-		return float64(v.(uint64)), nil
-	case float64:
-		return v.(float64), nil
+	case int, int8, int16, int32, int64:
+    	return float64(v.(int64)), nil
+    case uint, uint8, uint16, uint32, uint64:
+    	return float64(v.(uint64)), nil
+    case float32, float64:
+    	return float64(v.(float64)), nil
 	case string:
 		for prefix, mappings := range s.StringToNumber {
 			if strings.HasPrefix(name, prefix) {
@@ -270,7 +292,7 @@ func init() {
 	outputs.Add("splunk", func() telegraf.Output {
 		return &Splunk{
 			MetricSeparator: ".",
-			ConvertPaths:    true,
+			ConvertPaths:    false,
 			ConvertBool:     true,
 		}
 	})

@@ -26,14 +26,19 @@ Notes:
   #prefix = "my.specific.prefix."
 
   ## OPTIONAL:  whether to use "value" for name of simple fields
+  ##  Default is false which will result in using only the measurement name as the metric name, not "value"
   #simple_fields = false
 
   ## OPTIONAL:  character to use between metric and field name.  defaults to . (dot)
   #metric_separator = "."
 
   ## OPTIONAL:  Convert metric name paths to use metricSeperator character
-  ## When true (default) will convert all _ (underscore) chartacters in final metric name
-  #convert_paths = true
+  ## When true will convert all _ (underscore) chartacters in final metric name
+  #convert_paths = false
+
+  ## OPTIONAL:  Replace special characters in metric names with "-".  
+  ## This can be useful if metric names contain special characters  
+  #replace_special_chars = false
 
   ## OPTIONAL:  Use Regex to sanitize metric and tag names from invalid characters
   ## Regex is more thorough, but significantly slower
@@ -46,12 +51,12 @@ Notes:
 
 ### Convert Path & Metric Separator
 If the `convert_path` option is true any `_` in metric and field names will be converted to the `metric_separator` value. 
-By default, the `convert_path` option is true, and `metric_separator` is `.` (dot). 
+By default, the `convert_path` option is false and `metric_separator` is `.` (dot). 
 
 
-### Use Regex
-Most illegal characters in the metric name are automatically converted to `-`.  
-The `use_regex` setting can be used to ensure all illegal characters are properly handled, but can lead to performance degradation.
+### Replace Special Characters & Use Regex
+Special characters in the metric name can be automatically converted to `-` by setting replace_special_chars to true.  This is false by default.  
+The `use_regex` setting can be used to ensure all special characters are properly handled, but can lead to performance degradation.
 
 
 
