@@ -1,12 +1,23 @@
-package main
+package filecount
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
+const sampleConfig = `
+  ## TODO: add comments
+  directory = "/var/cache/apt/archives"
+  name = "*.deb"
+  recursive = false
+  regular_only = true
+  size = 0
+  mtime = 0
+`
 
 type FileCount struct {
 	Directory   string
@@ -14,16 +25,18 @@ type FileCount struct {
 	Recursive   bool
 	RegularOnly bool
 	Size        int64
-	MTime       int64
+	MTime       int64 `toml:"mtime"`
 	fileFilters []fileFilterFunc
 }
 
 type findFunc func(os.FileInfo)
-type fileFilterFunc func(os.FileInfo) bool
+type fileFilterFunc func(os.FileInfo) (bool, error)
 
-func logError(err error) {
-	log.Println(err)
+func (_ *FileCount) Description() string {
+	return "Count files in one or more directories"
 }
+
+func (_ *FileCount) SampleConfig() string { return sampleConfig }
 
 func rejectNilFilters(filters []fileFilterFunc) []fileFilterFunc {
 	filtered := make([]fileFilterFunc, 0, len(filters))
@@ -54,13 +67,12 @@ func (fc *FileCount) nameFilter() fileFilterFunc {
 		return nil
 	}
 
-	return func(f os.FileInfo) bool {
-		nameMatch, err := filepath.Match(fc.Name, f.Name())
+	return func(f os.FileInfo) (bool, error) {
+		match, err := filepath.Match(fc.Name, f.Name())
 		if err != nil {
-			logError(err)
-			return false
+			return false, err
 		}
-		return nameMatch
+		return match, nil
 	}
 }
 
@@ -69,8 +81,8 @@ func (fc *FileCount) regularOnlyFilter() fileFilterFunc {
 		return nil
 	}
 
-	return func(f os.FileInfo) bool {
-		return f.Mode().IsRegular()
+	return func(f os.FileInfo) (bool, error) {
+		return f.Mode().IsRegular(), nil
 	}
 }
 
@@ -79,14 +91,14 @@ func (fc *FileCount) sizeFilter() fileFilterFunc {
 		return nil
 	}
 
-	return func(f os.FileInfo) bool {
+	return func(f os.FileInfo) (bool, error) {
 		if !f.Mode().IsRegular() {
-			return false
+			return false, nil
 		}
 		if fc.Size < 0 {
-			return f.Size() < -fc.Size
+			return f.Size() < -fc.Size, nil
 		}
-		return f.Size() >= fc.Size
+		return f.Size() >= fc.Size, nil
 	}
 }
 
@@ -95,13 +107,13 @@ func (fc *FileCount) mtimeFilter() fileFilterFunc {
 		return nil
 	}
 
-	return func(f os.FileInfo) bool {
+	return func(f os.FileInfo) (bool, error) {
 		age := time.Duration(absInt(fc.MTime)) * time.Second
 		mtime := time.Now().Add(-age)
 		if fc.MTime < 0 {
-			return f.ModTime().After(mtime)
+			return f.ModTime().After(mtime), nil
 		}
-		return f.ModTime().Before(mtime)
+		return f.ModTime().Before(mtime), nil
 	}
 }
 
@@ -143,46 +155,67 @@ func (fc *FileCount) initFileFilters() {
 	fc.fileFilters = rejectNilFilters(filters)
 }
 
-func (fc *FileCount) filter(file os.FileInfo) bool {
+func (fc *FileCount) filter(file os.FileInfo) (bool, error) {
 	if fc.fileFilters == nil {
 		fc.initFileFilters()
 	}
 
 	for _, fileFilter := range fc.fileFilters {
-		if !fileFilter(file) {
-			return false
+		match, err := fileFilter(file)
+		if err != nil {
+			return false, err
+		}
+		if !match {
+			return false, nil
 		}
 	}
 
-	return true
+	return true, nil
 }
 
-func (fc *FileCount) count() int {
+func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 	numFiles := int64(0)
 	ff := func(f os.FileInfo) {
-		if !fc.filter(f) {
+		match, err := fc.filter(f)
+		if err != nil {
+			acc.AddError(err)
+			return
+		}
+		if !match {
 			return
 		}
 		numFiles++
 	}
 	err := find(fc.Directory, fc.Recursive, ff)
 	if err != nil {
-		logError(err)
+		acc.AddError(err)
 	}
-	return numFiles
+
+	acc.AddFields("filecount",
+		map[string]interface{}{
+			"count": numFiles,
+		},
+		map[string]string{
+			"directory": fc.Directory,
+		})
+
+	return nil
 }
 
-func main() {
-	for _, dir := range os.Args[1:] {
-		fc := &FileCount{
-			Directory:   dir,
-			Name:        "*",
-			Recursive:   true,
-			RegularOnly: true,
-			Size:        0,
-			MTime:       0,
-			fileFilters: nil,
-		}
-		fmt.Printf("%v: %v\n", dir, fc.count())
+func NewFileCount() *FileCount {
+	return &FileCount{
+		Directory:   "",
+		Name:        "*",
+		Recursive:   true,
+		RegularOnly: true,
+		Size:        0,
+		MTime:       0,
+		fileFilters: nil,
 	}
+}
+
+func init() {
+	inputs.Add("filecount", func() telegraf.Input {
+		return NewFileCount()
+	})
 }
