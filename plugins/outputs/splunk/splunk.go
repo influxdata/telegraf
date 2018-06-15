@@ -33,12 +33,13 @@ type Splunk struct {
 	StringToNumber  map[string][]map[string]float64
 	serializer      serializers.Serializer
 }
+
 // Descriptions of the flags in Splunk struct
 /*
 SimpleFields    - boolean to determine whether or not to use xxx.value as the metric name (true) or ommit the .value from the metric name (false)
 MetricSeparator - character to use between metric and field name.  defaults to . (dot)
 ConvertPaths    - boolean to convert all _ (underscore) chartacters in metric name to MetricSeparator
-ConvertBool     - boolean to convert all true/false values to 1/0 
+ConvertBool     - boolean to convert all true/false values to 1/0
 ReplaceSpecials - boolean to sanitize special characters in metric names with "-"
 UseRegex        - boolean to use Regex to sanitize metric and tag names from invalid characters
 StringToNumber  - map used internally to convert string values to numerics
