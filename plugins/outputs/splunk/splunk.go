@@ -95,6 +95,7 @@ AuthString = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
 
 ## OPTIONAL:  whether to convert boolean values to numeric values, with false -> 0.0 and true -> 1.0.  default true
 #convert_bool = true
+
 `
 
 type SplunkMetric struct {
