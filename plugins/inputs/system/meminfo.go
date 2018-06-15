@@ -31,17 +31,17 @@ func (k *Meminfo) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-    data = bytes.TrimRight(data,"\n")
-    // Get rid of the :'s
-    data = bytes.Replace(data,[]byte(":"),[]byte(""),-1)
-    // Get rid of the kB's
-    data = bytes.Replace(data,[]byte("kB"),[]byte(""),-1)
-    // Change ('s to _'s
-    data = bytes.Replace(data,[]byte("("),[]byte("_"),-1)
-    // Get rid of the )'s
-    data = bytes.Replace(data,[]byte(")"),[]byte(""),-1)
+	data = bytes.TrimRight(data, "\n")
+	// Get rid of the :'s
+	data = bytes.Replace(data, []byte(":"), []byte(""), -1)
+	// Get rid of the kB's
+	data = bytes.Replace(data, []byte("kB"), []byte(""), -1)
+	// Change ('s to _'s
+	data = bytes.Replace(data, []byte("("), []byte("_"), -1)
+	// Get rid of the )'s
+	data = bytes.Replace(data, []byte(")"), []byte(""), -1)
 
-    dataFields := bytes.Fields(data)
+	dataFields := bytes.Fields(data)
 
 	fields := make(map[string]interface{})
 
