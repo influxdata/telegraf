@@ -484,6 +484,12 @@ var containerInspect = types.ContainerJSON{
 				FailingStreak: 1,
 				Status:        "Unhealthy",
 			},
+			Status:     "running",
+			OOMKilled:  false,
+			Pid:        1234,
+			ExitCode:   0,
+			StartedAt:  "2018-06-14T05:48:53.266176036Z",
+			FinishedAt: "0001-01-01T00:00:00Z",
 		},
 	},
 }
