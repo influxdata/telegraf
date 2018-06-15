@@ -104,6 +104,29 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	}
 	p.procs = procs
 
+	//adds a metric with info on the pgrep query
+	fields := make(map[string]interface{})
+	tags := make(map[string]string)
+	fields["pid_count"] = len(procs)
+	tags["pid_finder"] = p.PidFinder
+
+	//specific tags based on config
+	if p.PidFile != "" {
+		tags["pidfile"] = p.PidFile
+	} else if p.Exe != "" {
+		tags["exe"] = p.Exe
+	} else if p.Pattern != "" {
+		tags["pattern"] = p.Pattern
+	} else if p.User != "" {
+		tags["user"] = p.User
+	} else if p.SystemdUnit != "" {
+		tags["systemd_unit"] = p.SystemdUnit
+	} else if p.CGroup != "" {
+		tags["cgroup"] = p.CGroup
+	}
+
+	acc.AddFields("procstat_lookup", fields, tags)
+
 	for _, proc := range p.procs {
 		p.addMetrics(proc, acc)
 	}

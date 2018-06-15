@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/process"
@@ -368,4 +369,40 @@ func TestGather_cgroupPIDs(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []PID{1234, 5678}, pids)
 	assert.Equal(t, td, tags["cgroup"])
+}
+
+func TestExitStatus(t *testing.T) {
+	out, err := exec.Command("pgrep", "-G", "sys").Output()
+	t.Logf("cmd out: %v", out)
+	exitNum, _ := internal.ExitStatus(err)
+	t.Logf("error status: %v", exitNum)
+	require.Equal(t, 1, exitNum)
+}
+
+func TestNoPgrepResults(t *testing.T) {
+	p := Procstat{
+		PidFinder: "pgrep",
+		//executing this command should result exit status 1
+		Exe: "-Gsys",
+	}
+
+	var acc testutil.Accumulator
+	err := acc.GatherError(p.Gather)
+
+	t.Logf("gather err: %v", err)
+	require.NoError(t, err)
+}
+
+func TestProcstatMetrics(t *testing.T) {
+	p := Procstat{
+		PidFinder: "pgrep",
+		//executing this command should result exit status 1
+		Exe: "-Gsys",
+	}
+	var acc testutil.Accumulator
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+	t.Logf("num of pids: %v", len(p.procs))
+	t.Logf("num of metrics: %v", len(acc.Metrics))
+	require.Equal(t, len(p.procs)+1, len(acc.Metrics))
 }
