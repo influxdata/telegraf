@@ -33,6 +33,16 @@ type Splunk struct {
 	StringToNumber  map[string][]map[string]float64
 	serializer      serializers.Serializer
 }
+// Descriptions of the flags in Splunk struct
+/*
+SimpleFields    - boolean to determine whether or not to use xxx.value as the metric name (true) or ommit the .value from the metric name (false)
+MetricSeparator - character to use between metric and field name.  defaults to . (dot)
+ConvertPaths    - boolean to convert all _ (underscore) chartacters in metric name to MetricSeparator
+ConvertBool     - boolean to convert all true/false values to 1/0 
+ReplaceSpecials - boolean to sanitize special characters in metric names with "-"
+UseRegex        - boolean to use Regex to sanitize metric and tag names from invalid characters
+StringToNumber  - map used internally to convert string values to numerics
+*/
 
 // catch many of the invalid chars that could appear in a metric or tag name
 var sanitizedChars = strings.NewReplacer(
@@ -130,13 +140,13 @@ func (s *Splunk) Write(measures []telegraf.Metric) error {
 		// -----------------------------------------------------------------------------------------------------------------------
 		//  Loop through tags for each measure    (add ALL Tags (except host) to each "field" element)
 		// -----------------------------------------------------------------------------------------------------------------------
-		fields := make(map[string]interface{})     // convert the Tags array from map[string]string to map[string]interface{}
+		fields := make(map[string]interface{}) // convert the Tags array from map[string]string to map[string]interface{}
 		for tagName, value := range m.Tags() {
 			//fmt.Printf(" tag values:  %s:%s \n",tagName,value)
 			// if the tagName == 'host', set the Splunk metric 'header' value == host
 			if tagName == "host" {
 				splunkMetric.Host = value
-			}else {
+			} else {
 				fields[tagName] = value
 			}
 		}
@@ -154,18 +164,16 @@ func (s *Splunk) Write(measures []telegraf.Metric) error {
 			}
 			fields["_value"] = metricValue
 
-			splunkMetric.Time = m.Time().UnixNano()  // convert metric nanoseconds to unix time
+			splunkMetric.Time = m.Time().UnixNano() // convert metric nanoseconds to unix time
 			splunkMetric.Event = "metric"
 			splunkMetric.Fields = fields
 
-		}   //for fieldName, value := range m.Fields() {
-		
+		} //for fieldName, value := range m.Fields() {
+
 		// add this metric to the splunkMetric array
 		allMetrics = append(allMetrics, splunkMetric)
 
-	}   //for _, m := range measures {
-
-
+	} //for _, m := range measures {
 
 	// -----------------------------------------------------------------------------------------------------------------
 	//  Now we can send this set of metrics to Splunk
@@ -206,8 +214,6 @@ func (s *Splunk) Write(measures []telegraf.Metric) error {
 	return nil
 }
 
-
-
 // -----------------------------------------------------------------------------------------------------------------------
 //  Check for metric name ending with .value and remove it, sanitize characters if desired and add separators if needed
 // -----------------------------------------------------------------------------------------------------------------------
@@ -215,11 +221,11 @@ func processFieldName(measureName string, fieldName string, s *Splunk) string {
 	// Add any optional metric prefix to the metric name
 	name := s.Prefix + measureName
 
-	// If the fieldName!="value" add it to the metric name  
+	// If the fieldName!="value" add it to the metric name
 	if s.SimpleFields || fieldName != "value" {
 		name += s.MetricSeparator + fieldName
 	}
-	
+
 	// Sanitize metric name by removing special characters
 	if s.ReplaceSpecials {
 		name = sanitizedChars.Replace(name)
@@ -250,12 +256,30 @@ func processFieldValue(v interface{}, name string, s *Splunk) (float64, error) {
 				return 0, nil
 			}
 		}
-	case int, int8, int16, int32, int64:
-    	return float64(v.(int64)), nil
-    case uint, uint8, uint16, uint32, uint64:
-    	return float64(v.(uint64)), nil
-    case float32, float64:
-    	return float64(v.(float64)), nil
+	case int:
+		return float64(p), nil
+	case int8:
+		return float64(p), nil
+	case int16:
+		return float64(p), nil
+	case int32:
+		return float64(p), nil
+	case int64:
+		return float64(p), nil
+	case uint:
+		return float64(p), nil
+	case uint8:
+		return float64(p), nil
+	case uint16:
+		return float64(p), nil
+	case uint32:
+		return float64(p), nil
+	case uint64:
+		return float64(p), nil
+	case float32:
+		return float64(p), nil
+	case float64:
+		return float64(p), nil
 	case string:
 		for prefix, mappings := range s.StringToNumber {
 			if strings.HasPrefix(name, prefix) {
