@@ -258,27 +258,9 @@ func processFieldValue(v interface{}, name string, s *Splunk) (float64, error) {
 				return 0, nil
 			}
 		}
-	case int:
-		return float64(p), nil
-	case int8:
-		return float64(p), nil
-	case int16:
-		return float64(p), nil
-	case int32:
-		return float64(p), nil
 	case int64:
 		return float64(p), nil
-	case uint:
-		return float64(p), nil
-	case uint8:
-		return float64(p), nil
-	case uint16:
-		return float64(p), nil
-	case uint32:
-		return float64(p), nil
 	case uint64:
-		return float64(p), nil
-	case float32:
 		return float64(p), nil
 	case float64:
 		return float64(p), nil
