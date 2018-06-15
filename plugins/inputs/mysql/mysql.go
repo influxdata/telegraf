@@ -872,10 +872,6 @@ func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegr
 		return err
 	}
 
-	if len(read) != len(cols) {
-		return fmt.Errorf("Results (%d) don't match up with columns (%d)!", len(read), len(cols))
-	}
-
 	servtag := getDSNTag(serv)
 	for rows.Next() {
 		err = rows.Scan(read...)
