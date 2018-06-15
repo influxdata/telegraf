@@ -653,7 +653,6 @@ func TestDockerGatherInfo(t *testing.T) {
 			"label1":            "test_value_1",
 			"label2":            "test_value_2",
 			"server_version":    "17.09.0-ce",
-			"container_status":  "running",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -677,7 +676,6 @@ func TestDockerGatherInfo(t *testing.T) {
 			"label1":            "test_value_1",
 			"label2":            "test_value_2",
 			"server_version":    "17.09.0-ce",
-			"container_status":  "running",
 		},
 	)
 }
