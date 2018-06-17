@@ -10,7 +10,7 @@ This section contains the default TOML to configure the plugin.  You can
 generate it using `telegraf --usage hystrix-stream`.
 
 ```toml
-[[inputs.HystrixStream]]
+[[inputs.hystrix_stream]]
 ## Hystrix stream servlet to connect to (with port and full path)
    url = "http://localhost:8090/hystrix"
 ```

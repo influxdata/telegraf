@@ -123,5 +123,5 @@ func getCounterFields(entry HystrixStreamEntry) map[string]interface{} {
 }
 
 func init() {
-	inputs.Add("HystrixStream", func() telegraf.Input { return &HystrixData{} })
+	inputs.Add("hystrix_stream", func() telegraf.Input { return &HystrixData{} })
 }
