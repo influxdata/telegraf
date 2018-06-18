@@ -26,7 +26,6 @@ jobs:
       - attach_workspace:
           at: '/go/src'
       - run: 'make test-ci'
-      - run: 'GOARCH=386 make test-ci'
   test-go-1.10:
     <<: [ *defaults, *go-1_10 ]
     steps:
