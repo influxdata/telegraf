@@ -4,7 +4,7 @@
 
 [[constraint]]
   name = "github.com/aerospike/aerospike-client-go"
-  version = "^1.24.0"
+  version = "^1.33.0"
 
 [[constraint]]
   name = "github.com/amir/raidman"
@@ -12,211 +12,231 @@
 
 [[constraint]]
   name = "github.com/apache/thrift"
-  revision = "4aaa92ece8503a6da9bc6701604f69acf2b99d07"
+  version = "0.11.0"
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
-  revision = "c861d27d0304a79f727e9a8a4e2ac1e74602fdc0"
+  version = "1.14.8"
+#  version = "1.8.39"
 
 [[constraint]]
   name = "github.com/bsm/sarama-cluster"
-  revision = "abf039439f66c1ce78017f560b490612552f6472"
+  version = "2.1.13"
+#  version = "2.1.10"
 
 [[constraint]]
   name = "github.com/couchbase/go-couchbase"
-  revision = "bfe555a140d53dc1adf390f1a1d4b0fd4ceadb28"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/dgrijalva/jwt-go"
-  revision = "dbeaa9332f19a944acb5736b4456cfcc02140e29"
+  version = "3.2.0"
+#  version = "3.1.0"
 
 [[constraint]]
   name = "github.com/docker/docker"
-  revision = "f5ec1e2936dcbe7b5001c2b817188b095c700c27"
+  version = "~17.03.2-ce"
 
 [[constraint]]
   name = "github.com/docker/go-connections"
-  revision = "990a1a1a70b0da4c4cb70e117971a4f0babfbf1a"
+  version = "0.3.0"
+#  version = "0.2.1"
 
 [[constraint]]
   name = "github.com/eclipse/paho.mqtt.golang"
-  revision = "aff15770515e3c57fc6109da73d42b0d46f7f483"
+  version = "~1.1.1"
+#  version = "1.1.0"
 
 [[constraint]]
   name = "github.com/go-sql-driver/mysql"
-  revision = "2e00b5cd70399450106cec6431c2e2ce3cae5034"
+  version = "1.4.0"
+#  version = "1.3.0"
 
 [[constraint]]
   name = "github.com/gobwas/glob"
-  revision = "bea32b9cd2d6f55753d94a28e959b13f0244797a"
+  version = "0.2.3"
+#  version = "0.2.2"
 
 [[constraint]]
   name = "github.com/golang/protobuf"
-  revision = "8ee79997227bf9b34611aee7946ae64735e6fd93"
+  version = "1.1.0"
+#  version = "1.0.0"
 
 [[constraint]]
   name = "github.com/google/go-cmp"
-  revision = "f94e52cad91c65a63acc1e75d4be223ea22e99bc"
+  version = "0.2.0"
+#  version = "0.1.0"
 
 [[constraint]]
   name = "github.com/gorilla/mux"
-  revision = "53c1911da2b537f792e7cafcb446b05ffe33b996"
+  version = "1.6.2"
+#  version = "1.6.1"
 
 [[constraint]]
   name = "github.com/go-redis/redis"
-  revision = "83fb42932f6145ce52df09860384a4653d2d332a"
+  version = "6.12.0"
 
 [[constraint]]
   name = "github.com/hashicorp/consul"
-  revision = "5174058f0d2bda63fa5198ab96c33d9a909c58ed"
+  version = "1.1.0"
 
 [[constraint]]
   name = "github.com/influxdata/go-syslog"
-  revision = "eecd51df3ad85464a2bab9b7d3a45bc1e299059e"
+  version = "1.0.1"
 
 [[constraint]]
   name = "github.com/influxdata/tail"
-  revision = "c43482518d410361b6c383d7aebce33d0471d7bc"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/influxdata/toml"
-  revision = "2a2e3012f7cfbef64091cc79776311e65dfa211b"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/influxdata/wlog"
-  revision = "7c63b0a71ef8300adc255344d275e10e5c3a71ec"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/jackc/pgx"
-  revision = "63f58fd32edb5684b9e9f4cfaac847c6b42b3917"
+  version = "3.1.0"
 
 [[constraint]]
   name = "github.com/kardianos/service"
-  revision = "6d3a0ee7d3425d9d835debc51a0ca1ffa28f4893"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/kballard/go-shellquote"
-  revision = "d8ec1a69a250a17bb0e419c386eac1f3711dc142"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/matttproud/golang_protobuf_extensions"
-  revision = "c12348ce28de40eed0136aa2b644d0ee0650e56c"
+  version = "1.0.1"
 
 [[constraint]]
   name = "github.com/Microsoft/ApplicationInsights-Go"
-  revision = "3612f58550c1de70f1a110c78c830e55f29aa65d"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/miekg/dns"
-  revision = "99f84ae56e75126dd77e5de4fae2ea034a468ca1"
+  version = "1.0.8"
+#  version = "1.0.0"
 
 [[constraint]]
   name = "github.com/multiplay/go-ts3"
-  revision = "07477f49b8dfa3ada231afc7b7b17617d42afe8e"
+  version = "1.0.0"
 
 [[constraint]]
   name = "github.com/nats-io/gnatsd"
-  revision = "393bbb7c031433e68707c8810fda0bfcfbe6ab9b"
+  version = "1.1.0"
+#  version = "1.0.4"
 
 [[constraint]]
   name = "github.com/nats-io/go-nats"
-  revision = "ea9585611a4ab58a205b9b125ebd74c389a6b898"
+  version = "1.5.0"
+#  version = "1.3.0"
 
 [[constraint]]
   name = "github.com/nsqio/go-nsq"
-  revision = "eee57a3ac4174c55924125bb15eeeda8cffb6e6f"
+  version = "1.0.7"
 
 [[constraint]]
   name = "github.com/openzipkin/zipkin-go-opentracing"
-  revision = "1cafbdfde94fbf2b373534764e0863aa3bd0bf7b"
+  version = "0.3.4"
+#  version = "0.3.0"
 
 [[constraint]]
   name = "github.com/prometheus/client_golang"
-  revision = "c317fb74746eac4fc65fe3909195f4cf67c5562a"
+  version = "0.8.0"
 
 [[constraint]]
   name = "github.com/prometheus/client_model"
-  revision = "fa8ad6fec33561be4280a8f0514318c79d7f6cb6"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/prometheus/common"
-  revision = "dd2f054febf4a6c00f2343686efb775948a8bff4"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/satori/go.uuid"
-  revision = "5bf94b69c6b68ee1b541973bb8e1144db23a194b"
+  version = "1.2.0"
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"
-  revision = "c95755e4bcd7a62bb8bd33f3a597a7c7f35e2cf3"
+  version = "2.18.05"
+#  version = "2.18.04"
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
-  revision = "3b1b38866a79f06deddf0487d5c27ba0697ccd65"
+  version = "1.17.0"
+#  version = "1.15.0"
 
 [[constraint]]
   name = "github.com/soniah/gosnmp"
-  revision = "f15472a4cd6f6ea7929e4c7d9f163c49f059924f"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/StackExchange/wmi"
-  revision = "f3e2bae1e0cb5aef83e319133eabfee30013a4a5"
+  version = "1.0.0"
 
 [[constraint]]
   name = "github.com/streadway/amqp"
-  revision = "63795daa9a446c920826655f26ba31c81c860fd6"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/stretchr/testify"
-  revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
+  version = "1.2.2"
+#  version = "1.2.1"
 
 [[constraint]]
   name = "github.com/tidwall/gjson"
-  revision = "0623bd8fbdbf97cc62b98d15108832851a658e59"
+  version = "1.1.1"
+#  version = "1.0.0"
 
 [[constraint]]
   name = "github.com/vjeantet/grok"
-  revision = "d73e972b60935c7fec0b4ffbc904ed39ecaf7efe"
+  version = "1.0.0"
 
 [[constraint]]
   name = "github.com/wvanbergen/kafka"
-  revision = "bc265fedb9ff5b5c5d3c0fdcef4a819b3523d3ee"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/zensqlmonitor/go-mssqldb"
-  revision = "ffe5510c6fa5e15e6d983210ab501c815b56b363"
+  branch = "master"
 
 [[constraint]]
   name = "golang.org/x/net"
-  revision = "a337091b0525af65de94df2eb7e98bd9962dcbe2"
+  branch = "master"
 
 [[constraint]]
   name = "golang.org/x/sys"
-  revision = "739734461d1c916b6c72a63d7efda2b27edb369f"
+  branch = "master"
 
 [[constraint]]
   name = "google.golang.org/grpc"
-  revision = "de2209a968d48e8970546c8a710189f7461370f7"
+  version = "1.12.2"
+#  version = "1.8.0"
 
 [[constraint]]
   name = "gopkg.in/gorethink/gorethink.v3"
-  revision = "7ab832f7b65573104a555d84a27992ae9ea1f659"
+  version = "3.0.5"
 
 [[constraint]]
   name = "gopkg.in/ldap.v2"
-  revision = "8168ee085ee43257585e50c6441aadf54ecb2c9f"
+  version = "2.5.1"
 
 [[constraint]]
   name = "gopkg.in/mgo.v2"
-  revision = "3f83fa5005286a7fe593b055f0d7771a7dce4655"
+  branch = "v2"
 
 [[constraint]]
   name = "gopkg.in/olivere/elastic.v5"
-  revision = "3113f9b9ad37509fe5f8a0e5e91c96fdc4435e26"
+  version = "^5.0.69"
+#  version = "^6.1.23"
 
 [[constraint]]
   name = "gopkg.in/yaml.v2"
-  revision = "4c78c975fe7c825c6d1466c42be594d1d6f3aba6"
+  version = "^2.2.1"
 
 [[override]]
   source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
