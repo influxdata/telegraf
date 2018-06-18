@@ -87,10 +87,10 @@
   revision = "1ccc43bfb9c93cb401a4025e49c64ba71e5e668b"
 
 [[projects]]
+  branch = "master"
   name = "github.com/apache/thrift"
   packages = ["lib/go/thrift"]
-  revision = "327ebb6c2b6df8bf075da02ef45a2a034e9b79ba"
-  version = "0.11.0"
+  revision = "f5f430df56871bc937950274b2c86681d3db6e59"
 
 [[projects]]
   name = "github.com/aws/aws-sdk-go"
@@ -968,6 +968,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "d6f5a0f8e2d2b1a63a34c104394aea56841db2d108d319991583da732215ab4d"
+  inputs-digest = "024194b983d91b9500fe97e0aa0ddb5fe725030cb51ddfb034e386cae1098370"
   solver-name = "gps-cdcl"
   solver-version = 1
