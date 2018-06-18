@@ -7,10 +7,10 @@ defaults:
       - image: 'circleci/golang:1.8.7'
   go-1_9: &go-1_9
     docker:
-      - image: 'circleci/golang:1.9.5'
+      - image: 'circleci/golang:1.9.7'
   go-1_10: &go-1_10
     docker:
-      - image: 'circleci/golang:1.10.1'
+      - image: 'circleci/golang:1.10.3'
 
 version: 2
 jobs:
