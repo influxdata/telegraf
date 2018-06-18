@@ -97,35 +97,12 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		p.createProcess = defaultProcess
 	}
 
-	procs, err := p.updateProcesses(p.procs)
+	procs, err := p.updateProcesses(acc, p.procs)
 	if err != nil {
 		acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
 			p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
 	}
 	p.procs = procs
-
-	//adds a metric with info on the pgrep query
-	fields := make(map[string]interface{})
-	tags := make(map[string]string)
-	fields["pid_count"] = len(procs)
-	tags["pid_finder"] = p.PidFinder
-
-	//specific tags based on config
-	if p.PidFile != "" {
-		tags["pidfile"] = p.PidFile
-	} else if p.Exe != "" {
-		tags["exe"] = p.Exe
-	} else if p.Pattern != "" {
-		tags["pattern"] = p.Pattern
-	} else if p.User != "" {
-		tags["user"] = p.User
-	} else if p.SystemdUnit != "" {
-		tags["systemd_unit"] = p.SystemdUnit
-	} else if p.CGroup != "" {
-		tags["cgroup"] = p.CGroup
-	}
-
-	acc.AddFields("procstat_lookup", fields, tags)
 
 	for _, proc := range p.procs {
 		p.addMetrics(proc, acc)
@@ -253,8 +230,8 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 }
 
 // Update monitored Processes
-func (p *Procstat) updateProcesses(prevInfo map[PID]Process) (map[PID]Process, error) {
-	pids, tags, err := p.findPids()
+func (p *Procstat) updateProcesses(acc telegraf.Accumulator, prevInfo map[PID]Process) (map[PID]Process, error) {
+	pids, tags, err := p.findPids(acc)
 	if err != nil {
 		return nil, err
 	}
@@ -304,9 +281,9 @@ func (p *Procstat) getPIDFinder() (PIDFinder, error) {
 }
 
 // Get matching PIDs and their initial tags
-func (p *Procstat) findPids() ([]PID, map[string]string, error) {
+func (p *Procstat) findPids(acc telegraf.Accumulator) ([]PID, map[string]string, error) {
 	var pids []PID
-	var tags map[string]string
+	tags := make(map[string]string)
 	var err error
 
 	f, err := p.getPIDFinder()
@@ -316,25 +293,31 @@ func (p *Procstat) findPids() ([]PID, map[string]string, error) {
 
 	if p.PidFile != "" {
 		pids, err = f.PidFile(p.PidFile)
-		tags = map[string]string{"pidfile": p.PidFile}
+		tags["pidfile"] = p.PidFile
 	} else if p.Exe != "" {
 		pids, err = f.Pattern(p.Exe)
-		tags = map[string]string{"exe": p.Exe}
+		tags["exe"] = p.Exe
 	} else if p.Pattern != "" {
 		pids, err = f.FullPattern(p.Pattern)
-		tags = map[string]string{"pattern": p.Pattern}
+		tags["pattern"] = p.Pattern
 	} else if p.User != "" {
 		pids, err = f.Uid(p.User)
-		tags = map[string]string{"user": p.User}
+		tags["user"] = p.User
 	} else if p.SystemdUnit != "" {
 		pids, err = p.systemdUnitPIDs()
-		tags = map[string]string{"systemd_unit": p.SystemdUnit}
+		tags["systemd_unit"] = p.SystemdUnit
 	} else if p.CGroup != "" {
 		pids, err = p.cgroupPIDs()
-		tags = map[string]string{"cgroup": p.CGroup}
+		tags["cgroup"] = p.CGroup
 	} else {
 		err = fmt.Errorf("Either exe, pid_file, user, pattern, systemd_unit, or cgroup must be specified")
 	}
+
+	//adds a metric with info on the pgrep query
+	fields := make(map[string]interface{})
+	tags["pid_finder"] = p.PidFinder
+	fields["pid_count"] = len(pids)
+	acc.AddFields("procstat_lookup", fields, tags)
 
 	return pids, tags, err
 }

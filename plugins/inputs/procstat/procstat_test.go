@@ -343,7 +343,8 @@ func TestGather_systemdUnitPIDs(t *testing.T) {
 		createPIDFinder: pidFinder([]PID{}, nil),
 		SystemdUnit:     "TestGather_systemdUnitPIDs",
 	}
-	pids, tags, err := p.findPids()
+	var acc testutil.Accumulator
+	pids, tags, err := p.findPids(&acc)
 	require.NoError(t, err)
 	assert.Equal(t, []PID{11408}, pids)
 	assert.Equal(t, "TestGather_systemdUnitPIDs", tags["systemd_unit"])
@@ -364,7 +365,8 @@ func TestGather_cgroupPIDs(t *testing.T) {
 		createPIDFinder: pidFinder([]PID{}, nil),
 		CGroup:          td,
 	}
-	pids, tags, err := p.findPids()
+	var acc testutil.Accumulator
+	pids, tags, err := p.findPids(&acc)
 	require.NoError(t, err)
 	assert.Equal(t, []PID{1234, 5678}, pids)
 	assert.Equal(t, td, tags["cgroup"])
@@ -373,7 +375,7 @@ func TestGather_cgroupPIDs(t *testing.T) {
 func TestProcstatMetrics(t *testing.T) {
 	p := Procstat{
 		createPIDFinder: pidFinder([]PID{543}, nil),
-		Exe:             "-G",
+		Exe:             "-Gsys",
 	}
 	var acc testutil.Accumulator
 	err := acc.GatherError(p.Gather)
