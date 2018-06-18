@@ -80,7 +80,7 @@ var sampleConfig = `
   ## gather thread state counts from INFORMATION_SCHEMA.PROCESSLIST
   gather_process_list                       = true
   #
-  ## gather thread state counts from INFORMATION_SCHEMA.USER_STATISTICS
+  ## gather user statistics from INFORMATION_SCHEMA.USER_STATISTICS
   gather_user_statistics                    = true
   #
   ## gather auto_increment columns and max values from information schema
@@ -283,8 +283,7 @@ const (
         ORDER BY null`
 	infoSchemaUserStatisticsQuery = `
         SELECT *
-        FROM information_schema.user_statistics
-        GROUP BY user`
+        FROM information_schema.user_statistics`
 	infoSchemaAutoIncQuery = `
         SELECT table_schema, table_name, column_name, auto_increment,
           CAST(pow(2, case data_type
@@ -763,7 +762,8 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 	}
 	// gather connection metrics from processlist for each user
 	if m.GatherProcessList {
-		conn_rows, err := db.Query("SELECT user, sum(1) FROM INFORMATION_SCHEMA.PROCESSLIST GROUP BY user")
+		// get count of connections from each user
+		conn_rows, err := db.Query("SELECT user, sum(1) AS connections FROM INFORMATION_SCHEMA.PROCESSLIST GROUP BY user")
 		if err != nil {
 			log.Printf("E! MySQL Error gathering process list: %s", err)
 		} else {
@@ -785,18 +785,6 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 				fields["connections"] = connections
 				acc.AddFields("mysql_users", fields, tags)
 			}
-		}
-	}
-
-	// gather connection metrics from user_statistics for each user
-	if m.GatherUserStatistics {
-		err = m.GatherUserStatisticsStatuses(db, serv, acc)
-		if err != nil {
-			// disable collecting if table is not found (suppresses repeat errors)
-			if strings.Contains(err.Error(), "nknown table 'user_statistics'") {
-				m.GatherUserStatistics = false
-			}
-			log.Printf("E! MySQL Error gathering user stats: %s", err)
 		}
 	}
 
@@ -858,11 +846,16 @@ func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegr
 	// run query
 	rows, err := db.Query(infoSchemaUserStatisticsQuery)
 	if err != nil {
+		// disable collecting if table is not found (mysql specific error)
+		// (suppresses repeat errors)
+		if strings.Contains(err.Error(), "nknown table 'user_statistics'") {
+			m.GatherUserStatistics = false
+		}
 		return err
 	}
 	defer rows.Close()
 
-	cols, err := convertColumns(rows.Columns())
+	cols, err := columnsToLower(rows.Columns())
 	if err != nil {
 		return err
 	}
@@ -926,8 +919,8 @@ func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegr
 	return nil
 }
 
-// convertColumns converts selected column names to lowercase.
-func convertColumns(s []string, e error) ([]string, error) {
+// columnsToLower converts selected column names to lowercase.
+func columnsToLower(s []string, e error) ([]string, error) {
 	if e != nil {
 		return nil, e
 	}
@@ -972,7 +965,6 @@ func getColSlice(l int) ([]interface{}, error) {
 		fbusy_time float64
 		fcpu_time  float64
 		// percona specific
-		client          string
 		rows_fetched    int64
 		table_rows_read int64
 	)
@@ -1034,7 +1026,7 @@ func getColSlice(l int) ([]interface{}, error) {
 		}, nil
 	case 21: // percona
 		return []interface{}{
-			&client,
+			&user,
 			&total_connections,
 			&concurrent_connections,
 			&connected_time,
