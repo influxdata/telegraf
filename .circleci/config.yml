@@ -15,7 +15,14 @@ jobs:
     <<: [ *defaults, *go-1_10 ]
     steps:
       - checkout
+      - restore_cache:
+          key: 'vendor'
       - run: 'make deps'
+      - save_cache:
+          name: 'vendored deps'
+          key: 'vendor'
+          paths:
+            - './vendor'
       - persist_to_workspace:
           root: '/go/src'
           paths:
