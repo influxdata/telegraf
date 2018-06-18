@@ -990,7 +990,7 @@ func TestReplaceTimestampComma(t *testing.T) {
 	}
 
 	require.NoError(t, p.Compile())
-	m, err := p.ParseLine("2018-02-21 13:10:34.555 successfulMatches=1")
+	m, err := p.ParseLine("2018-02-21 13:10:34,555 successfulMatches=1")
 	require.NoError(t, err)
 	require.NotNil(t, m)
 
