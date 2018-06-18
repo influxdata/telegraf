@@ -2,15 +2,12 @@
 defaults:
   defaults: &defaults
     working_directory: '/go/src/github.com/influxdata/telegraf'
-  go-1_8: &go-1_8
-    docker:
-      - image: 'circleci/golang:1.8.7'
   go-1_9: &go-1_9
     docker:
-      - image: 'circleci/golang:1.9.5'
+      - image: 'circleci/golang:1.9.7'
   go-1_10: &go-1_10
     docker:
-      - image: 'circleci/golang:1.10.1'
+      - image: 'circleci/golang:1.10.3'
 
 version: 2
 jobs:
@@ -23,12 +20,6 @@ jobs:
           root: '/go/src'
           paths:
             - '*'
-  test-go-1.8:
-    <<: [ *defaults, *go-1_8 ]
-    steps:
-      - attach_workspace:
-          at: '/go/src'
-      - run: 'make test-ci'
   test-go-1.9:
     <<: [ *defaults, *go-1_9 ]
     steps:
@@ -66,9 +57,6 @@ workflows:
   build_and_release:
     jobs:
       - 'deps'
-      - 'test-go-1.8':
-          requires:
-            - 'deps'
       - 'test-go-1.9':
           requires:
             - 'deps'
@@ -77,15 +65,11 @@ workflows:
             - 'deps'
       - 'release':
           requires:
-            - 'test-go-1.8'
             - 'test-go-1.9'
             - 'test-go-1.10'
   nightly:
     jobs:
       - 'deps'
-      - 'test-go-1.8':
-          requires:
-            - 'deps'
       - 'test-go-1.9':
           requires:
             - 'deps'
@@ -94,7 +78,6 @@ workflows:
             - 'deps'
       - 'nightly':
           requires:
-            - 'test-go-1.8'
             - 'test-go-1.9'
             - 'test-go-1.10'
     triggers:
