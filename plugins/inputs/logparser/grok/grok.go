@@ -186,6 +186,7 @@ func (p *Parser) Compile() error {
 
 // ParseLine is the primary function to process individual lines, returning the metrics
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
+
 	var err error
 	// values are the parsed fields from the log line
 	var values map[string]string
@@ -293,6 +294,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				timestamp = time.Unix(0, iv)
 			}
 		case SYSLOG_TIMESTAMP:
+
 			ts, err := time.ParseInLocation("Jan 02 15:04:05", v, p.loc)
 			if err == nil {
 				if ts.Year() == 0 {
@@ -335,6 +337,9 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		case DROP:
 		// goodbye!
 		default:
+			// Replace commas with dot character
+			v = strings.Replace(v, ",", ".", -1)
+
 			ts, err := time.ParseInLocation(t, v, p.loc)
 			if err == nil {
 				timestamp = ts
