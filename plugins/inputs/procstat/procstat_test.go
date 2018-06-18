@@ -373,6 +373,7 @@ func TestGather_cgroupPIDs(t *testing.T) {
 func TestProcstatMetrics(t *testing.T) {
 	p := Procstat{
 		createPIDFinder: pidFinder([]PID{543}, nil),
+		Exe:             "-G",
 	}
 	var acc testutil.Accumulator
 	err := acc.GatherError(p.Gather)
