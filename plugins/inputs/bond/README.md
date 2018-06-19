@@ -2,7 +2,6 @@
 
 The Bond input plugin collects network bond interface status for both the
 network bond interface as well as slave interfaces.
-The Bond Input plugin collects network bond interface status, bond's slaves interfaces
 status and failures count of bond's slaves interfaces.
 The plugin collects these metrics from `/proc/net/bonding/*` files.
 

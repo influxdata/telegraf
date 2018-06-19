@@ -13,7 +13,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"time"
 )
 
 type Wavefront struct {

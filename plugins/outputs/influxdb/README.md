@@ -68,34 +68,3 @@ This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/
   ## existing data has been written.
   # influx_uint_support = false
 ```
-  ## Optional HTTP headers
-  # http_headers = {"X-Special-Header" = "Special-Value"}
-
-  ## Compress each HTTP request payload using GZIP.
-  # content_encoding = "gzip"
-```
-
-### Required parameters:
-
-* `urls`: List of strings, this is for InfluxDB clustering
-support. On each flush interval, Telegraf will randomly choose one of the urls
-to write to. Each URL should start with either `http://` or `udp://`
-* `database`: The name of the database to write to.
-
-
-### Optional parameters:
-
-* `write_consistency`: Write consistency (clusters only), can be: "any", "one", "quorum", "all".
-* `retention_policy`:  Name of existing retention policy to write to.  Empty string writes to the default retention policy.
-* `timeout`: Write timeout (for the InfluxDB client), formatted as a string. If not provided, will default to 5s. 0s means no timeout (not recommended).
-* `username`: Username for influxdb
-* `password`: Password for influxdb
-* `user_agent`:  Set the user agent for HTTP POSTs (can be useful for log differentiation)
-* `udp_payload`: Set UDP payload size, defaults to InfluxDB UDP Client default (512 bytes)
-* `ssl_ca`: SSL CA
-* `ssl_cert`: SSL CERT
-* `ssl_key`: SSL key
-* `insecure_skip_verify`: Use SSL but skip chain & host verification (default: false)
-* `http_proxy`: HTTP Proxy URI
-* `http_headers`: HTTP headers to add to each HTTP request
-* `content_encoding`: Compress each HTTP request payload using gzip if set to: "gzip"

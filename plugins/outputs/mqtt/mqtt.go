@@ -33,9 +33,6 @@ var sampleConfig = `
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
 
-  ## Timeout for write operations. default: 5s
-  # timeout = "5s"
-
   ## client ID, if not set a random ID is generated
   # client_id = ""
 
@@ -188,11 +185,6 @@ func (m *MQTT) publish(topic string, body []byte) error {
 func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	opts := paho.NewClientOptions()
 	opts.KeepAlive = 0 * time.Second
-
-	if m.Timeout.Duration < time.Second {
-		m.Timeout.Duration = 5 * time.Second
-	}
-	opts.WriteTimeout = m.Timeout.Duration
 
 	if m.Timeout.Duration < time.Second {
 		m.Timeout.Duration = 5 * time.Second
