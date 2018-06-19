@@ -80,6 +80,7 @@ github.com/stretchr/testify 12b6f73e6084dad08a7c6e575284b177ecafbc71
 github.com/tidwall/gjson 0623bd8fbdbf97cc62b98d15108832851a658e59
 github.com/tidwall/match 173748da739a410c5b0b813b956f89ff94730b4c
 github.com/vjeantet/grok d73e972b60935c7fec0b4ffbc904ed39ecaf7efe
+github.com/vmware/govmomi 9bfdc5ce62c0585b48b154cc460f8664dcd124c3
 github.com/wvanbergen/kafka bc265fedb9ff5b5c5d3c0fdcef4a819b3523d3ee
 github.com/wvanbergen/kazoo-go 968957352185472eacb69215fa3dbfcfdbac1096
 github.com/yuin/gopher-lua 66c871e454fcf10251c61bf8eff02d0978cae75a
