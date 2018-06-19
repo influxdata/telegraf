@@ -2,4 +2,4 @@
 /telegraf
 /telegraf.exe
 /telegraf.gz
-vendor/
+/vendor

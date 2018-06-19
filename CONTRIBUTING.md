@@ -30,9 +30,9 @@ which can be found [on our website](http://influxdb.com/community/cla.html)
 
 Assuming you can already build the project, run these in the telegraf directory:
 
-1. `go get github.com/sparrc/gdm`
-1. `gdm restore`
-1. `GOOS=linux gdm save`
+1. `go get -u github.com/golang/dep/cmd/dep`
+2. `dep ensure`
+3. `dep ensure -add github.com/[dependency]/[new-package]`
 
 ## Input Plugins
 
