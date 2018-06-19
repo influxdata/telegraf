@@ -5,6 +5,7 @@ github.com/amir/raidman c74861fe6a7bb8ede0a010ce4485bdbb4fc4c985
 github.com/apache/thrift 4aaa92ece8503a6da9bc6701604f69acf2b99d07
 github.com/aws/aws-sdk-go c861d27d0304a79f727e9a8a4e2ac1e74602fdc0
 github.com/beorn7/perks 4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9
+github.com/bndr/gojenkins 3118be93040f0a8e7c1eeec9f9db09419deb59ab
 github.com/bsm/sarama-cluster abf039439f66c1ce78017f560b490612552f6472
 github.com/cenkalti/backoff b02f2bbce11d7ea6b97f282ef1771b0fe2f65ef3
 github.com/couchbase/go-couchbase bfe555a140d53dc1adf390f1a1d4b0fd4ceadb28
