@@ -283,7 +283,7 @@ func (p *Procstat) getPIDFinder() (PIDFinder, error) {
 // Get matching PIDs and their initial tags
 func (p *Procstat) findPids(acc telegraf.Accumulator) ([]PID, map[string]string, error) {
 	var pids []PID
-	var tags map[string]string
+	tags := make(map[string]string)
 	var err error
 
 	f, err := p.getPIDFinder()
