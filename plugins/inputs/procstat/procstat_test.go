@@ -372,7 +372,7 @@ func TestGather_cgroupPIDs(t *testing.T) {
 	assert.Equal(t, td, tags["cgroup"])
 }
 
-func TestProcstatMetrics(t *testing.T) {
+func TestProcstatLookupMetric(t *testing.T) {
 	p := Procstat{
 		createPIDFinder: pidFinder([]PID{543}, nil),
 		Exe:             "-Gsys",

@@ -283,7 +283,7 @@ func (p *Procstat) getPIDFinder() (PIDFinder, error) {
 // Get matching PIDs and their initial tags
 func (p *Procstat) findPids(acc telegraf.Accumulator) ([]PID, map[string]string, error) {
 	var pids []PID
-	tags := make(map[string]string)
+	var tags map[string]string
 	var err error
 
 	f, err := p.getPIDFinder()
@@ -293,24 +293,29 @@ func (p *Procstat) findPids(acc telegraf.Accumulator) ([]PID, map[string]string,
 
 	if p.PidFile != "" {
 		pids, err = f.PidFile(p.PidFile)
-		tags["pidfile"] = p.PidFile
+		tags = map[string]string{"pidfile": p.PidFile}
 	} else if p.Exe != "" {
 		pids, err = f.Pattern(p.Exe)
-		tags["exe"] = p.Exe
+		tags = map[string]string{"exe": p.Exe}
 	} else if p.Pattern != "" {
 		pids, err = f.FullPattern(p.Pattern)
-		tags["pattern"] = p.Pattern
+		tags = map[string]string{"pattern": p.Pattern}
 	} else if p.User != "" {
 		pids, err = f.Uid(p.User)
-		tags["user"] = p.User
+		tags = map[string]string{"user": p.User}
 	} else if p.SystemdUnit != "" {
 		pids, err = p.systemdUnitPIDs()
-		tags["systemd_unit"] = p.SystemdUnit
+		tags = map[string]string{"systemd_unit": p.SystemdUnit}
 	} else if p.CGroup != "" {
 		pids, err = p.cgroupPIDs()
-		tags["cgroup"] = p.CGroup
+		tags = map[string]string{"cgroup": p.CGroup}
 	} else {
 		err = fmt.Errorf("Either exe, pid_file, user, pattern, systemd_unit, or cgroup must be specified")
+	}
+
+	rTags := make(map[string]string)
+	for k, v := range tags {
+		rTags[k] = v
 	}
 
 	//adds a metric with info on the pgrep query
@@ -319,7 +324,7 @@ func (p *Procstat) findPids(acc telegraf.Accumulator) ([]PID, map[string]string,
 	fields["pid_count"] = len(pids)
 	acc.AddFields("procstat_lookup", fields, tags)
 
-	return pids, tags, err
+	return pids, rTags, err
 }
 
 // execCommand is so tests can mock out exec.Command usage.
