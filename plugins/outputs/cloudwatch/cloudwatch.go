@@ -93,27 +93,17 @@ func (c *CloudWatch) Close() error {
 }
 
 func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
+
+	var datums []*cloudwatch.MetricDatum
 	for _, m := range metrics {
-		err := c.WriteSinglePoint(m)
-		if err != nil {
-			return err
-		}
+		d := BuildMetricDatum(m)
+		datums = append(datums, d...)
 	}
-
-	return nil
-}
-
-// Write data for a single point. A point can have many fields and one field
-// is equal to one MetricDatum. There is a limit on how many MetricDatums a
-// request can have so we process one Point at a time.
-func (c *CloudWatch) WriteSinglePoint(point telegraf.Metric) error {
-	datums := BuildMetricDatum(point)
 
 	const maxDatumsPerCall = 20 // PutMetricData only supports up to 20 data metrics per call
 
 	for _, partition := range PartitionDatums(maxDatumsPerCall, datums) {
 		err := c.WriteToCloudWatch(partition)
-
 		if err != nil {
 			return err
 		}
