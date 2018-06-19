@@ -995,7 +995,7 @@ func getColSlice(l int) ([]interface{}, error) {
 			&total_ssl_connections,
 			&max_statement_time_exceeded,
 		}, nil
-	case 21: // percona
+	case 22: // percona
 		return []interface{}{
 			&user,
 			&total_connections,
@@ -1018,6 +1018,7 @@ func getColSlice(l int) ([]interface{}, error) {
 			&lost_connections,
 			&access_denied,
 			&empty_queries,
+			&total_ssl_connections,
 		}, nil
 	}
 
