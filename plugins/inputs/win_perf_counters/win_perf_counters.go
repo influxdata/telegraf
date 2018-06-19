@@ -110,6 +110,12 @@ type counter struct {
 	counterHandle PDH_HCOUNTER
 }
 
+type instanceGrouping struct {
+	name       string
+	instance   string
+	objectname string
+}
+
 var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 	" ", "_", "%", "Percent", `\`, "")
 
@@ -268,13 +274,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		time.Sleep(time.Second)
 	}
 
-	type InstanceGrouping struct {
-		name       string
-		instance   string
-		objectname string
-	}
-
-	var collectFields = make(map[InstanceGrouping]map[string]interface{})
+	var collectFields = make(map[instanceGrouping]map[string]interface{})
 
 	var timestamp time.Time
 	if m.UsePerfCounterTime && m.query.IsVistaOrNewer() {
@@ -295,19 +295,10 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		if m.UseWildcardsExpansion {
 			value, err := m.query.GetFormattedCounterValueDouble(metric.counterHandle)
 			if err == nil {
-				measurement := sanitizedChars.Replace(metric.measurement)
-				if measurement == "" {
-					measurement = "win_perf_counters"
-				}
-
-				var instance = InstanceGrouping{measurement, metric.instance, metric.objectName}
-				if collectFields[instance] == nil {
-					collectFields[instance] = make(map[string]interface{})
-				}
-				collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value)
+				addCounterMeasurement(metric, metric.instance, value, collectFields)
 			} else {
-				//ignore invalid data from as some counters from process instances returns this sometimes
-				if !isKnowError(err) {
+				//ignore invalid data  as some counters from process instances returns this sometimes
+				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
 				}
 			}
@@ -335,21 +326,12 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 					}
 
 					if add {
-						measurement := sanitizedChars.Replace(metric.measurement)
-						if measurement == "" {
-							measurement = "win_perf_counters"
-						}
-						var instance = InstanceGrouping{measurement, cValue.InstanceName, metric.objectName}
-
-						if collectFields[instance] == nil {
-							collectFields[instance] = make(map[string]interface{})
-						}
-						collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(cValue.Value)
+						addCounterMeasurement(metric, cValue.InstanceName, cValue.Value, collectFields)
 					}
 				}
 			} else {
-				//ignore invalid data from as some counters from process instances returns this sometimes
-				if !isKnowError(err) {
+				//ignore invalid data as some counters from process instances returns this sometimes
+				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
 				}
 			}
@@ -369,9 +351,22 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-//returns true if err is an error we count with
-func isKnowError(err error) bool {
-	if phderr, ok := err.(*PdhError); ok && (phderr.ErrorCode == PDH_INVALID_DATA || phderr.ErrorCode == PDH_CALC_NEGATIVE_VALUE || phderr.ErrorCode == PDH_CSTATUS_INVALID_DATA) {
+func addCounterMeasurement(metric *counter, instanceName string, value float64, collectFields map[instanceGrouping]map[string]interface{}) {
+	measurement := sanitizedChars.Replace(metric.measurement)
+	if measurement == "" {
+		measurement = "win_perf_counters"
+	}
+	var instance = instanceGrouping{measurement, instanceName, metric.objectName}
+	if collectFields[instance] == nil {
+		collectFields[instance] = make(map[string]interface{})
+	}
+	collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value)
+}
+
+func isKnownCounterDataError(err error) bool {
+	if pdhErr, ok := err.(*PdhError); ok && (pdhErr.ErrorCode == PDH_INVALID_DATA ||
+		pdhErr.ErrorCode == PDH_CALC_NEGATIVE_VALUE ||
+		pdhErr.ErrorCode == PDH_CSTATUS_INVALID_DATA) {
 		return true
 	}
 	return false
