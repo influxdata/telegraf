@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"os/user"
 	"path/filepath"
 
 	"regexp"
@@ -565,8 +566,12 @@ func (c *Config) LoadDirectory(path string) error {
 //   3. /etc/telegraf/telegraf.conf
 //
 func getDefaultConfigPath() (string, error) {
+	usr, err := user.Current()
+	if err != nil {
+		log.Fatal( err )
+	}
 	envfile := os.Getenv("TELEGRAF_CONFIG_PATH")
-	homefile := os.ExpandEnv("${HOME}/.telegraf/telegraf.conf")
+	homefile := filepath.Join(usr.HomeDir, "/.telegraf/telegraf.conf")
 	etcfile := "/etc/telegraf/telegraf.conf"
 	if runtime.GOOS == "windows" {
 		etcfile = `C:\Program Files\Telegraf\telegraf.conf`
