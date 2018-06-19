@@ -19,6 +19,7 @@
 - [#4281](https://github.com/influxdata/telegraf/pull/4281): Add owner tag on partitions in burrow input.
 - [#4259](https://github.com/influxdata/telegraf/pull/4259): Add container status tag to docker input.
 - [#3523](https://github.com/influxdata/telegraf/pull/3523): Add valuecounter aggregator plugin.
+- [#4307](https://github.com/influxdata/telegraf/pull/4307): Add new measurement with results of pgrep lookup to procstat input.
 
 ## v1.7.1 [unreleased]
 
