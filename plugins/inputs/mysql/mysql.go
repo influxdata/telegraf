@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -876,31 +875,7 @@ func (m *Mysql) GatherUserStatisticsStatuses(db *sql.DB, serv string, acc telegr
 				continue // skip "user"
 			}
 			switch v := read[i].(type) {
-			case *bool:
-				fields[cols[i]] = *v
-			case *int:
-				fields[cols[i]] = *v
-			case *int8:
-				fields[cols[i]] = *v
-			case *int16:
-				fields[cols[i]] = *v
-			case *int32:
-				fields[cols[i]] = *v
 			case *int64:
-				fields[cols[i]] = *v
-			case *uint:
-				fields[cols[i]] = *v
-			case *uint8:
-				fields[cols[i]] = *v
-			case *uint16:
-				fields[cols[i]] = *v
-			case *uint32:
-				fields[cols[i]] = *v
-			case *uint64:
-				fields[cols[i]] = *v
-			case *uintptr:
-				fields[cols[i]] = *v
-			case *float32:
 				fields[cols[i]] = *v
 			case *float64:
 				fields[cols[i]] = *v
