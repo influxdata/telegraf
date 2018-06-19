@@ -16,6 +16,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/influxdb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/instrumental"
 	_ "github.com/influxdata/telegraf/plugins/outputs/kafka"
+	_ "github.com/influxdata/telegraf/plugins/outputs/kafka_confluent"
 	_ "github.com/influxdata/telegraf/plugins/outputs/kinesis"
 	_ "github.com/influxdata/telegraf/plugins/outputs/librato"
 	_ "github.com/influxdata/telegraf/plugins/outputs/mqtt"

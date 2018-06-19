@@ -85,7 +85,7 @@ clean:
 	rm -f telegraf.exe
 
 docker-image:
-	./scripts/build.py --package --platform=linux --arch=amd64
+	./scripts/build.py --package --platform=linux --arch=amd64 ${ARGS}
 	cp build/telegraf*$(COMMIT)*.deb .
 	docker build -f scripts/dev.docker --build-arg "package=telegraf*$(COMMIT)*.deb" -t "telegraf-dev:$(COMMIT)" .
 
