@@ -760,33 +760,6 @@ func (m *Mysql) gatherGlobalStatuses(db *sql.DB, serv string, acc telegraf.Accum
 	if len(fields) > 0 {
 		acc.AddFields("mysql", fields, tags)
 	}
-	// gather connection metrics from processlist for each user
-	if m.GatherProcessList {
-		// get count of connections from each user
-		conn_rows, err := db.Query("SELECT user, sum(1) AS connections FROM INFORMATION_SCHEMA.PROCESSLIST GROUP BY user")
-		if err != nil {
-			log.Printf("E! MySQL Error gathering process list: %s", err)
-		} else {
-			for conn_rows.Next() {
-				var user string
-				var connections int64
-
-				err = conn_rows.Scan(&user, &connections)
-				if err != nil {
-					return err
-				}
-
-				tags := map[string]string{"server": servtag, "user": user}
-				fields := make(map[string]interface{})
-
-				if err != nil {
-					return err
-				}
-				fields["connections"] = connections
-				acc.AddFields("mysql_users", fields, tags)
-			}
-		}
-	}
 
 	return nil
 }
@@ -837,6 +810,29 @@ func (m *Mysql) GatherProcessListStatuses(db *sql.DB, serv string, acc telegraf.
 	} else {
 		acc.AddFields("mysql_process_list", fields, tags)
 	}
+
+	// get count of connections from each user
+	conn_rows, err := db.Query("SELECT user, sum(1) AS connections FROM INFORMATION_SCHEMA.PROCESSLIST GROUP BY user")
+	if err != nil {
+		return err
+	}
+
+	for conn_rows.Next() {
+		var user string
+		var connections int64
+
+		err = conn_rows.Scan(&user, &connections)
+		if err != nil {
+			return err
+		}
+
+		tags := map[string]string{"server": servtag, "user": user}
+		fields := make(map[string]interface{})
+
+		fields["connections"] = connections
+		acc.AddFields("mysql_users", fields, tags)
+	}
+
 	return nil
 }
 
