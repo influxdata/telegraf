@@ -1,5 +1,4 @@
 ## v1.7 [2018-06-12]
-## v1.7 [unreleased]
 
 ### Release Notes
 
@@ -32,21 +31,6 @@
 
 - [http](./plugins/outputs/http/README.md) - Contributed by @Dark0096
 - [application_insights](./plugins/outputs/application_insights/README.md): Contribute by @karolz-ms
-## v1.6.1 [unreleased]
-## v1.7 [unreleased]
-
-### New Inputs
-
-- [fibaro](./plugins/inputs/fibaro/README.md) - Contributed by @dynek
-- [nvidia_smi](./plugins/inputs/nvidia_smi/README.md) - Contributed by @jackzampolin
-
-- [fibaro](./plugins/inputs/fibaro/README.md) - Contributed by @dynek
-- [mcrouter](./plugins/inputs/mcrouter/README.md) - Contributed by @cthayer
-- [nvidia_smi](./plugins/inputs/nvidia_smi/README.md) - Contributed by @jackzampolin
-
-### New Processors
-
-- [topk](./plugins/processors/topk/README.md) - Contributed by @mirath
 
 ### Features
 
@@ -102,8 +86,6 @@
 - [#4195](https://github.com/influxdata/telegraf/pull/4195): Revert to previous aerospike library version due to memory leak.
 
 ## v1.6.3 [2018-05-21]
-## v1.6.3 [unreleased]
-## v1.6.3 [2018-05-21]
 
 ### Bugfixes
 
@@ -113,15 +95,6 @@
 - [#4142](https://github.com/influxdata/telegraf/pull/4142): Fix error parsing dropwizard metrics.
 - [#4149](https://github.com/influxdata/telegraf/issues/4149): Fix librato output support for uint and bool.
 - [#4176](https://github.com/influxdata/telegraf/pull/4176): Fix waitgroup deadlock if url is incorrect in apache input.
-
-## v1.6.2 [2018-05-08]
-## v1.6.2 [unreleased]
-
-## v1.6.3 [unreleased]
-
-### Bugfixes
-
-- [4127](https://github.com/influxdata/telegraf/issues/4127): Fix intermittent panic in aerospike input.
 
 ## v1.6.2 [2018-05-08]
 
@@ -147,13 +120,7 @@
 - [#4062](https://github.com/influxdata/telegraf/pull/4062): Add server argument as first argument in unbound input.
 - [#4063](https://github.com/influxdata/telegraf/issues/4063): Fix handling of floats with multiple leading zeroes.
 - [#4064](https://github.com/influxdata/telegraf/issues/4064): Return errors in mongodb SSL/TLS configuration.
-## v1.6.1 [unreleased]
 
-### Bugfixes
-- [#3835](https://github.com/influxdata/telegraf/pull/3835): Report mem input fields as gauges instead counters.
-
-- [#3835](https://github.com/influxdata/telegraf/issues/3835): Report mem input fields as gauges instead counters.
-- [#4030](https://github.com/influxdata/telegraf/issues/4030): Fix graphite outputs unsigned integers in wrong format.
 ## v1.6.0-sfx0 [2018-04-16]
 
 ### Release Notes
@@ -272,22 +239,12 @@
 - [#4004](https://github.com/influxdata/telegraf/issues/4004): Allow grok pattern to contain newlines.
 
 ## v1.5.3 [2018-03-14]
-## v1.5.3 [unreleased]
-## v1.5.3 [2018-03-14]
 
 ### Bugfixes
 
 - [#3729](https://github.com/influxdata/telegraf/issues/3729): Set path to / if HOST_MOUNT_PREFIX matches full path.
 - [#3739](https://github.com/influxdata/telegraf/issues/3739): Remove userinfo from url tag in prometheus input.
 - [#3778](https://github.com/influxdata/telegraf/issues/3778): Fix ping plugin not reporting zero durations.
-- [#3697](https://github.com/influxdata/telegraf/issues/3697): Disable keepalive in mqtt output to prevent deadlock.
-- [#3786](https://github.com/influxdata/telegraf/pull/3786): Fix collation difference in sqlserver input.
-- [#3871](https://github.com/influxdata/telegraf/pull/3871): Fix uptime metric in passenger input plugin.
-- [#3851](https://github.com/influxdata/telegraf/issues/3851): Add output of stderr in case of error to exec log message.
-
-## v1.5.2 [2018-01-30]
-## v1.5.2 [unreleased]
-- [#3807](https://github.com/influxdata/telegraf/issues/3807): Fix memory leak in postgresql_extensible.
 - [#3697](https://github.com/influxdata/telegraf/issues/3697): Disable keepalive in mqtt output to prevent deadlock.
 - [#3786](https://github.com/influxdata/telegraf/pull/3786): Fix collation difference in sqlserver input.
 - [#3871](https://github.com/influxdata/telegraf/pull/3871): Fix uptime metric in passenger input plugin.
@@ -307,8 +264,6 @@
 - [#3710](https://github.com/influxdata/telegraf/issues/3710): Add timeout to wavefront output write.
 - [#3725](https://github.com/influxdata/telegraf/issues/3725): Exclude master_replid fields from redis input.
 
-## v1.5.1 [2018-01-10]
-## v1.5.1 [unreleased]
 ## v1.5.1.sfx2 [2018-03-13]
 
 ### Release Notes
@@ -331,7 +286,7 @@
 - Distribute SignalFx metadata and process info collection across multiple go routines
 - Batch metric output to SignalFx
 
-## v1.5.1 [2017-01-10]
+## v1.5.1 [2018-01-10]
 
 ### Bugfixes
 
@@ -341,6 +296,7 @@
 - [#3594](https://github.com/influxdata/telegraf/pull/3594): Document permissions setup for postfix input.
 - [#3633](https://github.com/influxdata/telegraf/pull/3633): Fix deliver_get field in rabbitmq input.
 - [#3607](https://github.com/influxdata/telegraf/issues/3607): Escape environment variables during config toml parsing.
+
 ## v1.5.0.sfx0 [2018-01-08]
 
 ### Release Notes
@@ -513,6 +469,7 @@
 - [#3175](https://github.com/influxdata/telegraf/issues/3175): Fix duplicate keys in perf counters sqlserver query.
 - [#3230](https://github.com/influxdata/telegraf/issues/3230): Fix panic in statsd p100 calculation.
 - [#3242](https://github.com/influxdata/telegraf/issues/3242): Fix arm64 packages contain 32-bit executable.
+
 ## v1.4.0.sfx0 [2017-09-08]
 
 ### Release Notes
