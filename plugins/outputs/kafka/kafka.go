@@ -25,6 +25,8 @@ type (
 		Brokers []string
 		// Kafka topic
 		Topic string
+		// Kafka client id
+		ClientId string `toml:"client_id"`
 		// Kafka topic suffix option
 		TopicSuffix TopicSuffix `toml:"topic_suffix"`
 		// Routing Key Tag
@@ -68,6 +70,8 @@ var sampleConfig = `
   brokers = ["localhost:9092"]
   ## Kafka topic for producer messages
   topic = "telegraf"
+  ## Kafka client id
+  client_id = "my_client"
 
   ## Optional topic suffix configuration.
   ## If the section is omitted, no suffix is used.
@@ -185,6 +189,10 @@ func (k *Kafka) Connect() error {
 		return err
 	}
 	config := sarama.NewConfig()
+
+	if k.ClientId != "" {
+		config.ClientID = k.ClientId
+	}
 
 	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
 	config.Producer.Compression = sarama.CompressionCodec(k.CompressionCodec)
