@@ -15,7 +15,14 @@ jobs:
     <<: [ *defaults, *go-1_10 ]
     steps:
       - checkout
+      - restore_cache:
+          key: vendor-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
       - run: 'make deps'
+      - save_cache:
+          name: 'vendored deps'
+          key: vendor-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          paths:
+            - './vendor'
       - persist_to_workspace:
           root: '/go/src'
           paths:
