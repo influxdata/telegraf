@@ -71,9 +71,9 @@ github.com/satori/go.uuid 5bf94b69c6b68ee1b541973bb8e1144db23a194b
 github.com/shirou/gopsutil c95755e4bcd7a62bb8bd33f3a597a7c7f35e2cf3
 github.com/shirou/w32 3c9377fc6748f222729a8270fe2775d149a249ad
 github.com/Shopify/sarama 3b1b38866a79f06deddf0487d5c27ba0697ccd65
-github.com/signalfx/com_signalfx_metrics_protobuf c2cf2ea6c74f6ca217767bc69e002f7a721c50df
+github.com/signalfx/com_signalfx_metrics_protobuf 93e507b42f43f458a109ca278d1542a26a0b87fc
 github.com/signalfx/gohistogram 1ccfd2ff508314074672f4450a917011a2060408
-github.com/signalfx/golib 18f12a260c4e6a0c93d4f37ecca95679c48a25d7
+github.com/signalfx/golib b1be94c3ec8d1fdeccd62735b851489f0b3798e0
 github.com/Sirupsen/logrus 61e43dc76f7ee59a82bdf3d71033dc12bea4c77d
 github.com/soniah/gosnmp f15472a4cd6f6ea7929e4c7d9f163c49f059924f
 github.com/StackExchange/wmi f3e2bae1e0cb5aef83e319133eabfee30013a4a5
@@ -97,7 +97,9 @@ gopkg.in/asn1-ber.v1 4e86f4367175e39f69d9358a5f17b4dda270378d
 gopkg.in/fatih/pool.v2 6e328e67893eb46323ad06f0e92cb9536babbabc
 gopkg.in/gorethink/gorethink.v3 7ab832f7b65573104a555d84a27992ae9ea1f659
 gopkg.in/ldap.v2 8168ee085ee43257585e50c6441aadf54ecb2c9f
+gopkg.in/logfmt.v0 390ab7935ee28ec6b286364bba9b4dd6410cb3d5
 gopkg.in/mgo.v2 3f83fa5005286a7fe593b055f0d7771a7dce4655
 gopkg.in/olivere/elastic.v5 3113f9b9ad37509fe5f8a0e5e91c96fdc4435e26
+gopkg.in/stack.v1 100eb0c0a9c5b306ca2fb4f165df21d80ada4b82
 gopkg.in/tomb.v1 dd632973f1e7218eb1089048e0798ec9ae7dceb8
 gopkg.in/yaml.v2 4c78c975fe7c825c6d1466c42be594d1d6f3aba6
