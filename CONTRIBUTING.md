@@ -100,6 +100,13 @@ func init() {
 }
 ```
 
+### Input Plugin Development
+
+* Run `make static` followed by `make plugin-[pluginName]` to spin up a docker test environment
+using docker-compose.
+* When developing a plugin, add a test directory with a `docker-compose.yml` and `telegraf.conf`
+as well as any other supporting files.
+
 ## Adding Typed Metrics
 
 In addition the the `AddFields` function, the accumulator also supports an
@@ -171,13 +178,6 @@ and `Stop()` methods.
 
 * Same as the `Plugin` guidelines, except that they must conform to the
 [`telegraf.ServiceInput`](https://godoc.org/github.com/influxdata/telegraf#ServiceInput) interface.
-
-### Input Plugin Development
-
-* Run `make static` followed by `make plugin-[pluginName]` to spin up a docker test environment
-using docker-compose.
-* When developing a plugin, add a test directory with a `docker-compose.yml` and `telegraf.conf`
-as well as any other supporting files.
 
 ## Output Plugins
 
