@@ -1,3 +1,5 @@
+include plugins.mk
+
 PREFIX := /usr/local
 VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
@@ -92,4 +94,4 @@ docker-image:
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
 
-.PHONY: deps telegraf install test test-windows lint vet test-all package clean docker-image fmtcheck uint64
+.PHONY: deps telegraf install test test-windows lint vet test-all package clean docker-image fmtcheck uint64 static
