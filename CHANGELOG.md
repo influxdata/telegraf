@@ -6,6 +6,10 @@
 
 - [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
 
+### New Aggregators
+
+- [valuecounter](./plugins/aggregators/valuecounter/README.md) - Contributed by @piotr1212
+
 ### Features
 
 - [#4236](https://github.com/influxdata/telegraf/pull/4236): Add SSL/TLS support to redis input.
@@ -13,6 +17,9 @@
 - [#4262](https://github.com/influxdata/telegraf/pull/4262): Add power draw field to nvidia_smi plugin.
 - [#4271](https://github.com/influxdata/telegraf/pull/4271): Add support for solr 7 to the solr input.
 - [#4281](https://github.com/influxdata/telegraf/pull/4281): Add owner tag on partitions in burrow input.
+- [#4259](https://github.com/influxdata/telegraf/pull/4259): Add container status tag to docker input.
+- [#3523](https://github.com/influxdata/telegraf/pull/3523): Add valuecounter aggregator plugin.
+- [#4307](https://github.com/influxdata/telegraf/pull/4307): Add new measurement with results of pgrep lookup to procstat input.
 
 ## v1.7.1 [unreleased]
 
