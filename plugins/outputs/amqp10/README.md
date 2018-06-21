@@ -19,7 +19,7 @@ Further information can be found here:
   brokers = ["amqps://[SASPolicyName]:[SASPolicyKey]@[namespace].servicebus.windows.net"]
 
   ## Target address to send the message to.
-  link_target_address = "/target"
+  topic = "/target"
 
   ## Authentication credentials.
   # username = ""
