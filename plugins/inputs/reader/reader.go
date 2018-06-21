@@ -20,7 +20,7 @@ type Reader struct {
 	Filenames []string
 }
 
-const sampleConfig = `## Log files to parse.
+const sampleConfig = `## Files to parse.
 ## These accept standard unix glob matching rules, but with the addition of
 ## ** as a "super asterisk". ie:
 ##   /var/log/**.log     -> recursively find all .log files in /var/log
@@ -32,8 +32,7 @@ files = ["/var/log/apache/access.log"]
 ## Each data format has its own unique set of configuration options, read
 ## more about them here:
 ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-data_format = ""
-'''`
+data_format = ""`
 
 // SampleConfig returns the default configuration of the Input
 func (r *Reader) SampleConfig() string {
