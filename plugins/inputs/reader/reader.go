@@ -18,6 +18,12 @@ type Reader struct {
 	Tags          []string
 
 	Filenames []string
+
+	//for grok parser
+	Patterns           []string
+	namedPatterns      []string
+	CustomPatterns     string
+	CustomPatternFiles []string
 }
 
 const sampleConfig = `## Files to parse.
@@ -63,13 +69,15 @@ func (r *Reader) compileParser() {
 		log.Printf("E! No data_format specified")
 		return
 	}
-	if r.DataFormat == "grok" {
-		log.Printf("Grok isn't supported yet")
-		return
-	}
 	r.ParserConfig = parsers.Config{
 		DataFormat: r.DataFormat,
 		TagKeys:    r.Tags,
+
+		//grok settings
+		Patterns:           r.Patterns,
+		NamedPatterns:      r.namedPatterns,
+		CustomPatterns:     r.CustomPatterns,
+		CustomPatternFiles: r.CustomPatternFiles,
 	}
 	nParser, err := parsers.NewParser(&r.ParserConfig)
 	if err != nil {
