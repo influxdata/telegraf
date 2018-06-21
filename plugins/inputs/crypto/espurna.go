@@ -56,7 +56,8 @@ func (e *espurna) serverGather(acc telegraf.Accumulator, i int, tags map[string]
 		}
 		for key, value := range response {
 			if strings.Contains(key, "/") {
-				name := strings.Split(key, "/")[0]
+				// name := strings.Split(key, "/")[0]
+				name := strings.Replace(key, "/", "_", -1)
 				fields[name] = value
 			} else {
 				fields[key] = value
