@@ -982,3 +982,21 @@ func TestSyslogTimestampParser(t *testing.T) {
 	require.NotNil(t, m)
 	require.Equal(t, 2018, m.Time().Year())
 }
+
+func TestReplaceTimestampComma(t *testing.T) {
+
+	p := &Parser{
+		Patterns: []string{`%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02 15:04:05.000"} successfulMatches=%{NUMBER:value:int}`},
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("2018-02-21 13:10:34,555 successfulMatches=1")
+	require.NoError(t, err)
+	require.NotNil(t, m)
+
+	require.Equal(t, 2018, m.Time().Year())
+	require.Equal(t, 13, m.Time().Hour())
+	require.Equal(t, 34, m.Time().Second())
+	//Convert Nanosecond to milisecond for compare
+	require.Equal(t, 555, m.Time().Nanosecond()/1000000)
+}
