@@ -59,6 +59,10 @@ func (r *Reader) Gather(acc telegraf.Accumulator) error {
 }
 
 func (r *Reader) compileParser() {
+	if r.DataFormat == "" {
+		log.Printf("E! No data_format specified")
+		return
+	}
 	if r.DataFormat == "grok" {
 		log.Printf("Grok isn't supported yet")
 		return
