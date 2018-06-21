@@ -24,7 +24,7 @@ func TestJSONParserCompile(t *testing.T) {
 	testDir := getPluginDir()
 	var acc testutil.Accumulator
 	r := Reader{
-		Filepaths:  []string{testDir + "/reader/testfiles/**.log"},
+		Filepaths:  []string{testDir + "/reader/testfiles/json_a.log"},
 		DataFormat: "json",
 		Tags:       []string{"parent_ignored_child"},
 	}
