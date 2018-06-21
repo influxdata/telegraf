@@ -1,0 +1,41 @@
+package reader
+
+import (
+	"log"
+	"runtime"
+	"strings"
+	"testing"
+
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestRefreshFilePaths(t *testing.T) {
+	testDir := getPluginDir()
+	r := Reader{
+		Filepaths: []string{testDir + "/logparser/grok/testdata/**.log"},
+	}
+
+	r.refreshFilePaths()
+	//log.Printf("filenames: %v", filenames)
+	assert.Equal(t, len(r.Filenames), 2)
+}
+func TestJSONParserCompile(t *testing.T) {
+	testDir := getPluginDir()
+	var acc testutil.Accumulator
+	r := Reader{
+		Filepaths:  []string{testDir + "/reader/testfiles/**.log"},
+		DataFormat: "json",
+		Tags:       []string{"parent_ignored_child"},
+	}
+	r.compileParser()
+	r.Gather(&acc)
+	log.Printf("acc: %v", acc.Metrics[0].Tags)
+	assert.Equal(t, map[string]string{"parent_ignored_child": "hi"}, acc.Metrics[0].Tags)
+	assert.Equal(t, 5, len(acc.Metrics[0].Fields))
+}
+
+func getPluginDir() string {
+	_, filename, _, _ := runtime.Caller(1)
+	return strings.Replace(filename, "/reader/reader_test.go", "", 1)
+}
