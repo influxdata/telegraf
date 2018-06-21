@@ -5,4 +5,5 @@
 *~
 *#
 .vscode/
+cmd/telegraf/debug
 plugins/inputs/crypto/test
