@@ -49,7 +49,7 @@ func TestGrokParser(t *testing.T) {
 	log.Printf("err: %v", err)
 	log.Printf("metric[0]_tags: %v, metric[0]_fields: %v", acc.Metrics[0].Tags, acc.Metrics[0].Fields)
 	log.Printf("metric[1]_tags: %v, metric[1]_fields: %v", acc.Metrics[1].Tags, acc.Metrics[1].Fields)
-	t.Error()
+	assert.Equal(t, 2, len(acc.Metrics))
 }
 
 func getPluginDir() string {
