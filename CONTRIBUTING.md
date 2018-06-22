@@ -102,10 +102,10 @@ func init() {
 
 ### Input Plugin Development
 
-* Run `make static` followed by `make plugin-[pluginName]` to spin up a docker test environment
+* Run `make static` followed by `make plugin-[pluginName]` to spin up a docker dev environment
 using docker-compose.
-* When developing a plugin, add a test directory with a `docker-compose.yml` and `telegraf.conf`
-as well as any other supporting files.
+* ***[Optional]*** When developing a plugin, add a test directory with a `docker-compose.yml` and `telegraf.conf`
+as well as any other supporting files, where sensible.
 
 ## Adding Typed Metrics
 
