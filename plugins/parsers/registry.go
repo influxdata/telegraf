@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
+	"github.com/influxdata/telegraf/plugins/parsers/fileinfo"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
@@ -97,6 +98,8 @@ func NewParser(config *Config) (Parser, error) {
 	case "json":
 		parser, err = NewJSONParser(config.MetricName,
 			config.TagKeys, config.DefaultTags)
+	case "fileinfo":
+		parser, err = NewFileInfoParser()
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.DefaultTags)
@@ -124,6 +127,11 @@ func NewParser(config *Config) (Parser, error) {
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
 	return parser, err
+}
+
+func NewFileInfoParser() (Parser, error) {
+	f, err := fileinfo.NewFileInfoParser()
+	return f, err
 }
 
 func NewJSONParser(
