@@ -25,6 +25,8 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann_legacy"
+ 	_ "github.com/influxdata/telegraf/plugins/outputs/sftp"
 	_ "github.com/influxdata/telegraf/plugins/outputs/socket_writer"
 	_ "github.com/influxdata/telegraf/plugins/outputs/wavefront"
+	_ "github.com/influxdata/telegraf/plugins/outputs/webdav"
 )
