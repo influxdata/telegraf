@@ -88,4 +88,4 @@ gopkg.in/ldap.v2 8168ee085ee43257585e50c6441aadf54ecb2c9f
 gopkg.in/mgo.v2 3f83fa5005286a7fe593b055f0d7771a7dce4655
 gopkg.in/olivere/elastic.v5 3113f9b9ad37509fe5f8a0e5e91c96fdc4435e26
 gopkg.in/yaml.v2 4c78c975fe7c825c6d1466c42be594d1d6f3aba6
-pack.ag/amqp 7d3e15159ef9c7e5d043d2c71bc20a43ef172739
+pack.ag/amqp e6aeb3d8e5ac68426935114ac2a430c32391e5a7

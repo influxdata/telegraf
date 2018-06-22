@@ -13,7 +13,8 @@ func TestConnectAndWrite(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	brokers := []string{testutil.GetLocalHost() + ":5672"}
+	// Use port 5673 instead of 5672 to not interfere with existing RabbitMQ tests
+	brokers := []string{"amqp://" + testutil.GetLocalHost() + ":5673"}
 	s, _ := serializers.NewInfluxSerializer()
 	k := &AMQP10{
 		Brokers:    brokers,
@@ -21,11 +22,11 @@ func TestConnectAndWrite(t *testing.T) {
 		serializer: s,
 	}
 
-	// Verify that we can connect to the Kafka broker
+	// Verify that we can connect to the AMQP10 broker
 	err := k.Connect()
 	require.NoError(t, err)
 
-	// Verify that we can successfully write data to the kafka broker
+	// Verify that we can successfully write data to the AMQP10 broker
 	err = k.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 	k.Close()
