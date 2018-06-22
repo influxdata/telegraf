@@ -108,7 +108,9 @@ You must capture at least one field per line.
   - ts-"CUSTOM"
 
 CUSTOM time layouts must be within quotes and be the representation of the
-"reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`
+"reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`.  
+To match a comma decimal point you can use a period.  For example `%{TIMESTAMP:timestamp:ts-"2006-01-02 15:04:05.000"}` can be used to match `"2018-01-02 15:04:05,000"`
+To match a comma decimal point you can use a period in the pattern string.
 See https://golang.org/pkg/time/#Parse for more details.
 
 Telegraf has many of its own [built-in patterns](./grok/patterns/influx-patterns),

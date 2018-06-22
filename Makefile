@@ -23,8 +23,8 @@ all:
 
 deps:
 	go get -u github.com/golang/lint/golint
-	go get github.com/sparrc/gdm
-	gdm restore --parallel=false
+	go get -u github.com/golang/dep/cmd/dep
+	dep ensure
 
 telegraf:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
@@ -34,7 +34,7 @@ go-install:
 
 install: telegraf
 	mkdir -p $(DESTDIR)$(PREFIX)/bin/
-	cp $(TELEGRAF) $(DESTDIR)$(PREFIX)/bin/
+	cp telegraf $(DESTDIR)$(PREFIX)/bin/
 
 test:
 	go test -short ./...
@@ -54,11 +54,11 @@ fmtcheck:
 	@echo '[INFO] done.'
 
 test-windows:
-	go test ./plugins/inputs/ping/...
-	go test ./plugins/inputs/win_perf_counters/...
-	go test ./plugins/inputs/win_services/...
-	go test ./plugins/inputs/procstat/...
-	go test ./plugins/inputs/ntpq/...
+	go test -short ./plugins/inputs/ping/...
+	go test -short ./plugins/inputs/win_perf_counters/...
+	go test -short ./plugins/inputs/win_services/...
+	go test -short ./plugins/inputs/procstat/...
+	go test -short ./plugins/inputs/ntpq/...
 
 # vet runs the Go source code static analysis tool `vet` to find
 # any common errors.

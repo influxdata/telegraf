@@ -40,9 +40,9 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf requires golang version 1.8+, the Makefile requires GNU make.
+Telegraf requires golang version 1.9 or newer, the Makefile requires GNU make.
 
-Dependencies are managed with [gdm](https://github.com/sparrc/gdm),
+Dependencies are managed with [dep](https://github.com/golang/dep),
 which is installed by the Makefile if you don't have it already.
 
 1. [Install Go](https://golang.org/doc/install)
@@ -283,6 +283,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [basicstats](./plugins/aggregators/basicstats)
 * [minmax](./plugins/aggregators/minmax)
 * [histogram](./plugins/aggregators/histogram)
+* [valuecounter](./plugins/aggregators/valuecounter)
 
 ## Output Plugins
 

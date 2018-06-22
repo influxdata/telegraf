@@ -335,6 +335,9 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		case DROP:
 		// goodbye!
 		default:
+			// Replace commas with dot character
+			v = strings.Replace(v, ",", ".", -1)
+
 			ts, err := time.ParseInLocation(t, v, p.loc)
 			if err == nil {
 				timestamp = ts
