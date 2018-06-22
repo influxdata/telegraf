@@ -1009,3 +1009,19 @@ func TestMeasurementModifierNoName(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, m.Name(), "hello")
 }
+
+func TestFailDivideByZeroError(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{`%{APPLE_SYSLOG_TIME_SHORT:timestamp:ts-"Jan 2 15:04:05"} %{HOSTNAME} %{APP_NAME:app_name}\[%{NUMBER:pid:int}\]%{GREEDYDATA:message}`},
+		CustomPatterns: `
+		APPLE_SYSLOG_TIME_SHORT %{MONTH} +%{MONTHDAY} %{TIME}
+		APP_NAME [a-zA-Z0-9\.]+
+		`,
+	}
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("Nov  6 13:57:03 rsavage iTunes[6504]: info> Scale factor of main display = 2.0")
+	m, err = p.ParseLine("Nov  6 13:57:03 rsavage iTunes[6504]: objc[6504]: Class AMSupportURLConnectionDelegate is implemented in both /System/Library/PrivateFrameworks/EmbeddedOSInstall.framework/Versions/A/EmbeddedOSInstall (0x7fffa594e748) and /System/Library/PrivateFrameworks/MobileDevice.framework/MobileDevice (0x107e67008). One of the two will be used. Which one is undefined.")
+	require.NoError(t, err)
+	require.NotNil(t, m)
+	require.Equal(t, 2018, m.Time().Year())
+}
