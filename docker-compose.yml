@@ -91,3 +91,14 @@ services:
       - -Clicense.enterprise=false
     environment:
       - CRATE_HEAP_SIZE=128m
+  traefik_https:
+    image: traefik
+    ports:
+      - "8443:8443"
+    command: "--insecureSkipVerify=true --debug --api --entryPoints='Name:traefik Address::8443 TLS'"
+  traefik:
+    image: traefik
+    ports:
+      - "8080:8080"
+    command: "--debug --api"
+

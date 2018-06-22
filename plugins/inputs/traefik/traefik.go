@@ -8,6 +8,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -16,6 +17,8 @@ type Traefik struct {
 	ResponseTimeout              internal.Duration
 	IncludeStatusCodeMeasurement bool
 	lastRequestTiming            float64
+	tls.ClientConfig
+	client *http.Client
 }
 
 type HealthCheck struct {
@@ -30,15 +33,22 @@ type HealthCheck struct {
 type HttpCodes map[string]int
 
 var sampleConfig = `
-# Required Traefik server address, host and port (default: "127.0.0.1")
-address = "http://127.0.0.1:8080"
+    # Required Traefik server address, host and port (default: "127.0.0.1")
+    address = "http://127.0.0.1:8080"
 
-# default is false. Setting to true can increase cardinality
-include_status_code_measurement = true
+    # default is false. Setting to true can increase cardinality
+    include_status_code_measurement = true
 
-# Additional tags
-[inputs.traefik.tags]
-  instance = "prod"
+    ## Optional TLS Config
+    # tls_ca = "/etc/telegraf/ca.pem"
+    # tls_cert = "/etc/telegraf/cert.pem"
+    # tls_key = "/etc/telegraf/key.pem"
+    ## Use TLS but skip chain & host verification
+    # insecure_skip_verify = false
+
+    # Additional tags
+    [inputs.traefik.tags]
+      instance = "prod"
 `
 
 func (t *Traefik) Description() string {
@@ -98,9 +108,28 @@ func (t *Traefik) submitPrimaryMeasurement(acc telegraf.Accumulator, check *Heal
 	return nil
 }
 
-func (t *Traefik) Gather(acc telegraf.Accumulator) error {
+func (t *Traefik) createHttpClient() (*http.Client, error) {
+	tlsCfg, err := t.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
 		Timeout: t.ResponseTimeout.Duration,
+	}
+
+	return client, nil
+}
+func (t *Traefik) Gather(acc telegraf.Accumulator) error {
+	if t.client == nil {
+		client, err := t.createHttpClient()
+		if err != nil {
+			return err
+		}
+		t.client = client
 	}
 
 	req, err := http.NewRequest("GET", fmt.Sprintf("%v/health", t.Address), nil)
@@ -108,7 +137,7 @@ func (t *Traefik) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 	start := time.Now()
-	resp, err := client.Do(req)
+	resp, err := t.client.Do(req)
 	if err != nil {
 		return err
 	}

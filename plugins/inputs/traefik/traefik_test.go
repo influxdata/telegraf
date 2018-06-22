@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var pki = testutil.NewPKI("../../../testutil/pki")
+
 func TestInvalidAddress(t *testing.T) {
 	server := createMockServer()
 	defer server.Close()
@@ -70,6 +72,31 @@ func TestGatherStatusCodes(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "traefik_status_codes",
 		expected404Fields,
 		map[string]string{"status_code": "404", "server": server.URL})
+}
+
+func TestHTTPSGatherHealthCheckIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	address := fmt.Sprintf("https://%v:%v", testutil.GetLocalHost(), 8443)
+	traefik := &Traefik{
+		Address:      address,
+		ClientConfig: *pki.TLSClientConfig(),
+	}
+	traefik.ClientConfig.InsecureSkipVerify = true
+
+	var acc testutil.Accumulator
+	require.NoError(t, traefik.Gather(&acc))
+
+	assert.True(t, acc.HasMeasurement("traefik"), "expecting measurement traefik to be present")
+
+	assert.True(t, acc.HasField("traefik", "total_response_time_sec"), "expecting field: total_response_time_sec")
+	assert.True(t, acc.HasField("traefik", "total_count"), "expecting field: total_count")
+	assert.True(t, acc.HasField("traefik", "average_response_time_sec"), "expecting field: average_response_time_sec")
+	assert.True(t, acc.HasField("traefik", "unixtime"), "expecting field: unixtime")
+	assert.True(t, acc.HasField("traefik", "uptime_sec"), "expecting field: uptime_sec")
+	assert.True(t, acc.HasField("traefik", "health_response_time_sec"), "expecting field: health_response_time_sec")
 }
 
 func TestGatherHealthCheckIntegration(t *testing.T) {
