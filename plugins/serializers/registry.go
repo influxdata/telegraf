@@ -9,6 +9,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/influxdata/telegraf/plugins/serializers/vqtcsv"
+	"github.com/influxdata/telegraf/plugins/serializers/wwfastload"
 )
 
 // SerializerOutput is an interface for output plugins that are able to
@@ -73,6 +75,10 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport)
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
+	case "vqtcsv":
+		serializer, err = NewVqtCsvFileSerializer()
+	case "wwfastload":
+		serializer, err = wwfastload.NewWwFastLoadSerializer(config.Template)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -111,4 +117,8 @@ func NewGraphiteSerializer(prefix, template string, tag_support bool) (Serialize
 		Template:   template,
 		TagSupport: tag_support,
 	}, nil
+}
+
+func NewVqtCsvFileSerializer() (Serializer, error) {
+	return &vqtcsv.VqtCsvSerializer{}, nil
 }
