@@ -23,6 +23,7 @@ func TestConnectAndWrite(t *testing.T) {
 	k := &Kafka{
 		Brokers:    brokers,
 		Topic:      "Test",
+		Mode:       "async",
 		serializer: s,
 	}
 
