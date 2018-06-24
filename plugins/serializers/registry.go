@@ -61,6 +61,9 @@ type Config struct {
 
 	// Timestamp units to use for JSON formatted output
 	TimestampUnits time.Duration
+
+    // Include HEC routing fields for splunkmetric output
+    HecRouting bool
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -75,7 +78,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
 	case "splunkmetric":
-		serializer, err = NewSplunkmetricSerializer(config.TimestampUnits)
+		serializer, err = NewSplunkmetricSerializer(config.HecRouting)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -86,8 +89,8 @@ func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return json.NewSerializer(timestampUnits)
 }
 
-func NewSplunkmetricSerializer(timestampUnits time.Duration) (Serializer, error) {
-	return splunkmetric.NewSerializer(timestampUnits)
+func NewSplunkmetricSerializer(hec_routing bool) (Serializer, error) {
+	return splunkmetric.NewSerializer(hec_routing)
 }
 
 func NewInfluxSerializerConfig(config *Config) (Serializer, error) {

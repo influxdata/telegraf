@@ -56,6 +56,7 @@ to manage the HEC authorization, here's a sample config for an HTTP output:
 #   ## more about them here:
 #   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
    data_format = "splunkmetric"
+   hec_routing = true
 #
 #   ## Additional HTTP headers
     [outputs.http.headers]
@@ -83,3 +84,51 @@ Such as this example which overrides the index just on the cpu metric:
     index = "cpu_metrics"
 ```
 
+## Using with the File output
+
+You can use the file output when running telegraf on a machine with a Splunk forwarder.
+
+A sample event when `hec_routing` is false (or unset) looks like:
+```javascript
+{
+    "_value": 0.6,
+    "cpu": "cpu0",
+    "dc": "mobile",
+    "metric_name": "cpu.usage_user",
+    "user": "ronnocol",
+    "time": 1529708430
+}
+```
+Data formatted in this manner can be ingested with a simple `props.conf` file that
+looks like this:
+
+```ini
+[telegraf]
+category = Metrics
+description = Telegraf Metrics
+pulldown_type = 1
+DATETIME_CONFIG =
+NO_BINARY_CHECK = true
+SHOULD_LINEMERGE = true
+disabled = false
+INDEXED_EXTRACTIONS = json
+KV_MODE = none
+TIMESTAMP_FIELDS = time
+TIME_FORMAT = %s.%3N
+```
+
+An example configuration of a file based output is: 
+
+```toml
+# # Send telegraf metrics to file(s)
+[[outputs.file]]
+#   ## Files to write to, "stdout" is a specially handled file.
+   files = ["/tmp/metrics.out"]
+#
+#   ## Data format to output.
+#   ## Each data format has its own unique set of configuration options, read
+#   ## more about them here:
+#   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+   data_format = "splunkmetric"
+   hec_routing = false
+```

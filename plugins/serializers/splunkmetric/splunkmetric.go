@@ -3,61 +3,58 @@ package splunkmetric
 import (
 	"encoding/json"
 	"errors"
-	"time"
+	"log"
 
 	"github.com/influxdata/telegraf"
 )
 
 type serializer struct {
-	TimestampUnits time.Duration
+	HecRouting bool
 }
 
-func NewSerializer(timestampUnits time.Duration) (*serializer, error) {
+func NewSerializer(hec_routing bool) (*serializer, error) {
 	s := &serializer{
-		TimestampUnits: truncateDuration(timestampUnits),
+		HecRouting: hec_routing,
 	}
 	return s, nil
 }
 
 func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	var serialized string
 
 	m, err := s.createObject(metric)
-	if err == nil {
-		serialized = m + "\n"
+	if err != nil {
+		log.Printf("E! [serializer.splunkmetric] Dropping invalid metric")
+		return []byte(""), err
 	}
 
-	return []byte(serialized), nil
+	return m, nil
 }
 
 func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 
-	var serialized string
-
-	var objects []string
+	var serialized []byte
 
 	for _, metric := range metrics {
 		m, err := s.createObject(metric)
-		if err == nil {
-			objects = append(objects, m)
+		if err != nil {
+			log.Printf("E! [serializer.splunkmetric] Dropping invalid metric")
+		} else {
+			serialized = append(serialized, m...)
 		}
 	}
 
-	for _, m := range objects {
-		serialized = serialized + m + "\n"
-	}
-
-	return []byte(serialized), nil
+	return serialized, nil
 }
 
-func (s *serializer) createObject(metric telegraf.Metric) (metricString string, err error) {
+func (s *serializer) createObject(metric telegraf.Metric) (metricJson []byte, err error) {
 
-	/* Splunk supports one metric per line and has the following required names:
-	 ** metric_name: The name of the metric
-	 ** _value:      The value for the metric
-	 ** _time:       The timestamp for the metric
-	 ** All other index fields become deminsions.
-	 */
+	/*  Splunk supports one metric json object, and does _not_ support an array of JSON objects.
+	     ** Splunk has the following required names for the metric store:
+		 ** metric_name: The name of the metric
+		 ** _value:      The value for the metric
+		 ** time:       The timestamp for the metric
+		 ** All other index fields become deminsions.
+	*/
 	type HECTimeSeries struct {
 		Time   float64                `json:"time"`
 		Event  string                 `json:"event"`
@@ -73,7 +70,7 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricString string, 
 
 		if !verifyValue(v) {
 			err = errors.New("can not parse value")
-			return "", err
+			return []byte(""), err
 		}
 
 		obj := map[string]interface{}{}
@@ -81,7 +78,8 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricString string, 
 		obj["_value"] = v
 
 		dataGroup.Event = "metric"
-		dataGroup.Time = float64(metric.Time().UnixNano() / int64(s.TimestampUnits))
+		// Convert ns to float seconds since epoch.
+		dataGroup.Time = float64(metric.Time().UnixNano()) / float64(1000000000)
 		dataGroup.Fields = obj
 
 		// Break tags out into key(n)=value(t) pairs
@@ -100,14 +98,21 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricString string, 
 		dataGroup.Fields["_value"] = v
 	}
 
-	metricJson, err := json.Marshal(dataGroup)
-
-	if err != nil {
-		return "", err
+	switch s.HecRouting {
+	case true:
+		// Output the data as a fields array and host,index,time,source overrides for the HEC.
+		metricJson, err = json.Marshal(dataGroup)
+	default:
+		// Just output the data and the time, useful for file based outuputs
+		dataGroup.Fields["time"] = dataGroup.Time
+		metricJson, err = json.Marshal(dataGroup.Fields)
 	}
 
-	metricString = string(metricJson)
-	return metricString, nil
+	if err != nil {
+		return []byte(""), err
+	}
+
+	return metricJson, nil
 }
 
 func verifyValue(v interface{}) bool {
@@ -116,20 +121,4 @@ func verifyValue(v interface{}) bool {
 		return false
 	}
 	return true
-}
-
-func truncateDuration(units time.Duration) time.Duration {
-	// Default precision is 1s
-	if units <= 0 {
-		return time.Second
-	}
-
-	// Search for the power of ten less than the duration
-	d := time.Nanosecond
-	for {
-		if d*10 > units {
-			return d
-		}
-		d = d * 10
-	}
 }
