@@ -67,6 +67,8 @@ type Devices struct {
 	Enabled    bool   `json:"enabled"`
 	Properties struct {
 		Dead   interface{} `json:"dead"`
+		Energy interface{} `json:"energy"`
+		Power  interface{} `json:"power"`
 		Value  interface{} `json:"value"`
 		Value2 interface{} `json:"value2"`
 	} `json:"properties"`
@@ -162,12 +164,25 @@ func (f *Fibaro) Gather(acc telegraf.Accumulator) error {
 		}
 
 		tags := map[string]string{
-			"section": sections[rooms[device.RoomID].SectionID],
-			"room":    rooms[device.RoomID].Name,
-			"name":    device.Name,
-			"type":    device.Type,
+			"deviceId": strconv.FormatUint(uint64(device.ID), 10),
+			"section":  sections[rooms[device.RoomID].SectionID],
+			"room":     rooms[device.RoomID].Name,
+			"name":     device.Name,
+			"type":     device.Type,
 		}
 		fields := make(map[string]interface{})
+
+		if device.Properties.Energy != nil {
+			if fValue, err := strconv.ParseFloat(device.Properties.Energy.(string), 64); err == nil {
+				fields["energy"] = fValue
+			}
+		}
+
+		if device.Properties.Power != nil {
+			if fValue, err := strconv.ParseFloat(device.Properties.Power.(string), 64); err == nil {
+				fields["power"] = fValue
+			}
+		}
 
 		if device.Properties.Value != nil {
 			value := device.Properties.Value
