@@ -62,8 +62,8 @@ type Config struct {
 	// Timestamp units to use for JSON formatted output
 	TimestampUnits time.Duration
 
-    // Include HEC routing fields for splunkmetric output
-    HecRouting bool
+	// Include HEC routing fields for splunkmetric output
+	HecRouting bool
 }
 
 // NewSerializer a Serializer interface based on the given config.
