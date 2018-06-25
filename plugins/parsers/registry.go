@@ -94,6 +94,7 @@ type Config struct {
 	NamedPatterns      []string
 	CustomPatterns     string
 	CustomPatternFiles []string
+	TimeZone           string
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -133,7 +134,8 @@ func NewParser(config *Config) (Parser, error) {
 			config.Patterns,
 			config.NamedPatterns,
 			config.CustomPatterns,
-			config.CustomPatternFiles)
+			config.CustomPatternFiles,
+			config.TimeZone)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -144,13 +146,14 @@ func NewGrokParser(metricName string,
 	patterns []string,
 	nPatterns []string,
 	cPatterns string,
-	cPatternFiles []string) (Parser, error) {
+	cPatternFiles []string, tZone string) (Parser, error) {
 	parser := grok.Parser{
 		Measurement:        metricName,
 		Patterns:           patterns,
 		NamedPatterns:      nPatterns,
 		CustomPatterns:     cPatterns,
 		CustomPatternFiles: cPatternFiles,
+		Timezone:           tZone,
 	}
 
 	parser.Compile()
