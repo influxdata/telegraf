@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
@@ -153,4 +154,10 @@ func (r *Reader) readMetric(filename string) ([]telegraf.Metric, error) {
 
 	return r.Parser.Parse(fileContents)
 
+}
+
+func init() {
+	inputs.Add("reader", func() telegraf.Input {
+		return &Reader{}
+	})
 }
