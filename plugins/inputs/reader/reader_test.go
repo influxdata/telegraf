@@ -25,13 +25,11 @@ func TestJSONParserCompile(t *testing.T) {
 	testDir := getPluginDir()
 	var acc testutil.Accumulator
 	r := Reader{
-		Filepaths:  []string{testDir + "/reader/testfiles/json_a.log"},
-		DataFormat: "json",
-		Tags:       []string{"parent_ignored_child"},
+		Filepaths: []string{testDir + "/reader/testfiles/json_a.log"},
 	}
 	parserConfig := parsers.Config{
-		DataFormat: r.DataFormat,
-		TagKeys:    r.Tags,
+		DataFormat: "json",
+		TagKeys:    []string{"parent_ignored_child"},
 	}
 	nParser, err := parsers.NewParser(&parserConfig)
 	r.parser = nParser
@@ -47,14 +45,12 @@ func TestGrokParser(t *testing.T) {
 	testDir := getPluginDir()
 	var acc testutil.Accumulator
 	r := Reader{
-		Filepaths:  []string{testDir + "/reader/testfiles/grok_a.log"},
-		DataFormat: "grok",
+		Filepaths: []string{testDir + "/reader/testfiles/grok_a.log"},
 	}
 
 	parserConfig := parsers.Config{
-		DataFormat: r.DataFormat,
-		TagKeys:    r.Tags,
-		Patterns:   []string{"{%COMMON-LOG-FORMAT}"},
+		DataFormat: "grok",
+		Patterns:   []string{"%{COMMON_LOG_FORMAT}"},
 	}
 
 	nParser, err := parsers.NewParser(&parserConfig)
@@ -67,7 +63,6 @@ func TestGrokParser(t *testing.T) {
 	log.Printf("metric[0]_tags: %v, metric[0]_fields: %v", acc.Metrics[0].Tags, acc.Metrics[0].Fields)
 	log.Printf("metric[1]_tags: %v, metric[1]_fields: %v", acc.Metrics[1].Tags, acc.Metrics[1].Fields)
 	assert.Equal(t, 2, len(acc.Metrics))
-	t.Error()
 }
 
 func getPluginDir() string {
