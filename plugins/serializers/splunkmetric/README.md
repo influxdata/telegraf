@@ -56,6 +56,7 @@ to manage the HEC authorization, here's a sample config for an HTTP output:
 #   ## more about them here:
 #   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
    data_format = "splunkmetric"
+    ## Provides time, index, source overrides for the HEC
    hec_routing = true
 #
 #   ## Additional HTTP headers
