@@ -9,6 +9,7 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Nagios](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#nagios) (exec input only)
 1. [Collectd](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#collectd)
 1. [Dropwizard](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#dropwizard)
+1. [Grok](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#grok)
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -651,5 +652,37 @@ For more information about the dropwizard json format see
   # [inputs.exec.dropwizard_tag_paths]
   #   tag1 = "tags.tag1"
   #   tag2 = "tags.tag2"
-
 ```
+
+#### Grok
+Parse logstash-style "grok" patterns:
+```toml
+  [inputs.reader]
+    ## This is a list of patterns to check the given log file(s) for.
+    ## Note that adding patterns here increases processing time. The most
+    ## efficient configuration is to have one pattern per logparser.
+    ## Other common built-in patterns are:
+    ##   %{COMMON_LOG_FORMAT}   (plain apache & nginx access logs)
+    ##   %{COMBINED_LOG_FORMAT} (access logs + referrer & agent)
+    patterns = ["%{COMBINED_LOG_FORMAT}"]
+
+    ## Name of the outputted measurement name.
+    name_override = "apache_access_log"
+
+    ## Full path(s) to custom pattern files.
+    custom_pattern_files = []
+
+    ## Custom patterns can also be defined here. Put one pattern per line.
+    custom_patterns = '''
+
+    ## Timezone allows you to provide an override for timestamps that
+    ## don't already include an offset
+    ## e.g. 04/06/2016 12:41:45 data one two 5.43µs
+    ##
+    ## Default: "" which renders UTC
+    ## Options are as follows:
+    ##   1. Local             -- interpret based on machine localtime
+    ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+    ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
+    timezone = "Canada/Eastern"
+    ```
