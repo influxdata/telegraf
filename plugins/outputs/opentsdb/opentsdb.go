@@ -32,6 +32,7 @@ type OpenTSDB struct {
 	Port int
 
 	HttpBatchSize int
+	HttpPath      string
 
 	Debug bool
 
@@ -53,6 +54,10 @@ var sampleConfig = `
   ## Number of data points to send to OpenTSDB in Http requests.
   ## Not used with telnet API.
   httpBatchSize = 50
+
+  ## URI Path for Http requests to OpenTSDB.
+  ## Used in cases where OpenTSDB is located behind a reverse proxy.
+  httpPath = "/api/put"
 
   ## Debug true - Prints OpenTSDB communication
   debug = false
@@ -121,6 +126,7 @@ func (o *OpenTSDB) WriteHttp(metrics []telegraf.Metric, u *url.URL) error {
 		Scheme:    u.Scheme,
 		User:      u.User,
 		BatchSize: o.HttpBatchSize,
+		Path:      o.HttpPath,
 		Debug:     o.Debug,
 	}
 
