@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
@@ -60,15 +61,15 @@ func TestMTimeFilter(t *testing.T) {
 	if err := os.Chtimes(oldFile, mtime, mtime); err != nil {
 		t.Skip("skipping mtime filter test.")
 	}
-	fileAge := int64(time.Since(mtime).Seconds()) - 60
+	fileAge := time.Since(mtime) - (60 * time.Second)
 
 	fc := getNoFilterFileCount()
-	fc.MTime = -fileAge
+	fc.MTime = internal.Duration{Duration: -fileAge}
 	matches := []string{"foo", "bar", "qux",
 		"subdir/", "subdir/quux", "subdir/quuz"}
 	require.True(t, fileCountEquals(fc, len(matches)))
 
-	fc.MTime = fileAge
+	fc.MTime = internal.Duration{Duration: fileAge}
 	matches = []string{"baz"}
 	require.True(t, fileCountEquals(fc, len(matches)))
 }
@@ -80,7 +81,7 @@ func getNoFilterFileCount() FileCount {
 		Recursive:   true,
 		RegularOnly: false,
 		Size:        0,
-		MTime:       0,
+		MTime:       internal.Duration{Duration: 0},
 		fileFilters: nil,
 	}
 }

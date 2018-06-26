@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -16,7 +17,7 @@ const sampleConfig = `
   recursive = false
   regular_only = true
   size = 0
-  mtime = 0
+  mtime = "0s"
 `
 
 type FileCount struct {
@@ -25,7 +26,7 @@ type FileCount struct {
 	Recursive   bool
 	RegularOnly bool
 	Size        int64
-	MTime       int64 `toml:"mtime"`
+	MTime       internal.Duration `toml:"mtime"`
 	fileFilters []fileFilterFunc
 }
 
@@ -103,21 +104,21 @@ func (fc *FileCount) sizeFilter() fileFilterFunc {
 }
 
 func (fc *FileCount) mtimeFilter() fileFilterFunc {
-	if fc.MTime == 0 {
+	if fc.MTime.Duration == 0 {
 		return nil
 	}
 
 	return func(f os.FileInfo) (bool, error) {
-		age := time.Duration(absInt(fc.MTime)) * time.Second
+		age := absDuration(fc.MTime.Duration)
 		mtime := time.Now().Add(-age)
-		if fc.MTime < 0 {
+		if fc.MTime.Duration < 0 {
 			return f.ModTime().After(mtime), nil
 		}
 		return f.ModTime().Before(mtime), nil
 	}
 }
 
-func absInt(x int64) int64 {
+func absDuration(x time.Duration) time.Duration {
 	if x < 0 {
 		return -x
 	}
@@ -209,7 +210,7 @@ func NewFileCount() *FileCount {
 		Recursive:   true,
 		RegularOnly: true,
 		Size:        0,
-		MTime:       0,
+		MTime:       internal.Duration{Duration: 0},
 		fileFilters: nil,
 	}
 }
