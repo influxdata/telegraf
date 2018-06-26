@@ -2,10 +2,6 @@ version: '3'
 services:
     mongodb:
         image: mongo
-#        environment:
-#            - MONGODB_USERNAME=tele_user
-#            - MONGODB_PASSWORD=password001!
-#            - MONGODB_DATABASE=tele_db
 
     telegraf:
         image: glinton/scratch
