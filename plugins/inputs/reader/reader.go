@@ -18,7 +18,7 @@ type Reader struct {
 	Filenames []string
 }
 
-const sampleConfig = `## Files to parse.
+const sampleConfig = `## Files to parse each interval.
 ## These accept standard unix glob matching rules, but with the addition of
 ## ** as a "super asterisk". ie:
 ##   /var/log/**.log     -> recursively find all .log files in /var/log
