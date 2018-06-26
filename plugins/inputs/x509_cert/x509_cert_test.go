@@ -45,7 +45,7 @@ func TestGatherRemote(t *testing.T) {
 
 		config := &tls.Config{
 			InsecureSkipVerify: true,
-			Certificates: []tls.Certificate{pair},
+			Certificates:       []tls.Certificate{pair},
 		}
 
 		ln, err := tls.Listen("tcp", ":0", config)
@@ -77,6 +77,7 @@ func TestGatherRemote(t *testing.T) {
 			Timeout: internal.Duration{Duration: test.timeout},
 		}
 
+		sc.InsecureSkipVerify = true
 		closeConn = test.close
 		unsetCerts = test.unset
 
