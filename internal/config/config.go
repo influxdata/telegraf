@@ -1214,6 +1214,7 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	c := &parsers.Config{}
 
+	fmt.Errorf("name [%s] tbl [%s]\n", name, tbl)
 	if node, ok := tbl.Fields["data_format"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
