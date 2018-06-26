@@ -17,7 +17,6 @@ func TestRefreshFilePaths(t *testing.T) {
 	}
 
 	r.refreshFilePaths()
-	//log.Printf("filenames: %v", filenames)
 	assert.Equal(t, len(r.Filenames), 2)
 }
 func TestJSONParserCompile(t *testing.T) {
