@@ -1,7 +1,6 @@
 package reader
 
 import (
-	"log"
 	"runtime"
 	"strings"
 	"testing"
@@ -36,7 +35,6 @@ func TestJSONParserCompile(t *testing.T) {
 	assert.NoError(t, err)
 
 	r.Gather(&acc)
-	log.Printf("acc: %v", acc.Metrics[0].Tags)
 	assert.Equal(t, map[string]string{"parent_ignored_child": "hi"}, acc.Metrics[0].Tags)
 	assert.Equal(t, 5, len(acc.Metrics[0].Fields))
 }
@@ -57,11 +55,7 @@ func TestGrokParser(t *testing.T) {
 	r.parser = nParser
 	assert.NoError(t, err)
 
-	log.Printf("path: %v", r.Filepaths[0])
 	err = r.Gather(&acc)
-	log.Printf("err: %v", err)
-	log.Printf("metric[0]_tags: %v, metric[0]_fields: %v", acc.Metrics[0].Tags, acc.Metrics[0].Fields)
-	log.Printf("metric[1]_tags: %v, metric[1]_fields: %v", acc.Metrics[1].Tags, acc.Metrics[1].Fields)
 	assert.Equal(t, 2, len(acc.Metrics))
 }
 
