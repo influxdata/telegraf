@@ -303,6 +303,7 @@ func (ddo *DirDefObject) MoveFile(id int, filename string, success bool) {
 }
 
 func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accumulator) error {
+	ddo.fiParser.SetIncomingDir(ddo.Incoming)
 	fiMetrics, err := ddo.fiParser.Parse([]byte(fileName))
 	if err != nil {
 		log.Printf("ERROR [%s]: %s", fileName, err)
