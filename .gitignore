@@ -3,3 +3,6 @@
 /telegraf.exe
 /telegraf.gz
 /vendor
+etc/telegraf_dlmon.conf
+etc/telegraf_tail.conf
+telegraf.log
