@@ -21,6 +21,8 @@ var ValidTopicSuffixMethods = []string{
 
 type (
 	Kafka struct {
+		// Kafka version
+		Version string
 		// Kafka brokers to send metrics to
 		Brokers []string
 		// Kafka topic
@@ -45,6 +47,8 @@ type (
 		CA string
 
 		tlsint.ClientConfig
+		// Batch messages (if output format support it)
+		BatchMessage bool `toml:"batch"`
 
 		// SASL Username
 		SASLUsername string `toml:"sasl_username"`
@@ -64,6 +68,13 @@ type (
 )
 
 var sampleConfig = `
+  ## The version of Kafka that Telegraf (Sarama lib) will assume it is running against.
+  ## Defaults to the oldest supported stable version. Since Kafka provides
+  ## backwards-compatibility, setting it to a version older than you have
+  ## will not break anything, although it may prevent you from using the
+  ## latest features. Setting it to a version greater than you are actually
+  ## running may lead to random breakage.
+  # version = "0.8.2.0"
   ## URLs of kafka brokers
   brokers = ["localhost:9092"]
   ## Kafka topic for producer messages
@@ -76,7 +87,7 @@ var sampleConfig = `
   ##   tags        - suffix equals to separator + specified tags' values
   ##                 interleaved with separator
 
-  ## Suffix equals to "_" + measurement name
+  ## Suffix equals to "_" + measurement's name
   # [outputs.kafka.topic_suffix]
   #   method = "measurement"
   #   separator = "_"
@@ -105,6 +116,7 @@ var sampleConfig = `
   ##  0 : No compression
   ##  1 : Gzip compression
   ##  2 : Snappy compression
+  ##  3 : LZ4 compression
   # compression_codec = 0
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many
@@ -126,6 +138,10 @@ var sampleConfig = `
   ## The maximum number of times to retry sending a metric before failing
   ## until the next flush.
   # max_retry = 3
+
+  ## When true, metrics will be sent in one message per flush.  Otherwise,
+  ## metrics are written one metric per message.
+  # batch = false
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -186,6 +202,11 @@ func (k *Kafka) Connect() error {
 	}
 	config := sarama.NewConfig()
 
+	kafkaVersion, err := sarama.ParseKafkaVersion(k.Version)
+	if err != nil {
+		return err
+	}
+	config.Version = kafkaVersion
 	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
 	config.Producer.Compression = sarama.CompressionCodec(k.CompressionCodec)
 	config.Producer.Retry.Max = k.MaxRetry
@@ -235,30 +256,69 @@ func (k *Kafka) Description() string {
 }
 
 func (k *Kafka) Write(metrics []telegraf.Metric) error {
+	var (
+		metricsmap  = map[string]map[string][]telegraf.Metric{}
+		routingTags = map[string]bool{}
+		routingTag  string
+	)
+
 	if len(metrics) == 0 {
 		return nil
 	}
 
 	for _, metric := range metrics {
-		buf, err := k.serializer.Serialize(metric)
-		if err != nil {
-			return err
+		routingTag = metric.Tags()[k.RoutingTag]
+		if _, found := routingTags[routingTag]; !found {
+			metricsmap[routingTag] = make(map[string][]telegraf.Metric)
 		}
+		routingTags[routingTag] = true
 
 		topicName := k.GetTopicName(metric)
 
-		m := &sarama.ProducerMessage{
-			Topic: topicName,
-			Value: sarama.ByteEncoder(buf),
-		}
-		if h, ok := metric.Tags()[k.RoutingTag]; ok {
-			m.Key = sarama.StringEncoder(h)
-		}
+		if k.BatchMessage {
+			metricsmap[routingTag][topicName] = append(metricsmap[routingTag][topicName], metric)
+		} else {
+			buf, err := k.serializer.Serialize(metric)
+			if err != nil {
+				return err
+			}
 
-		_, _, err = k.producer.SendMessage(m)
+			m := &sarama.ProducerMessage{
+				Topic: topicName,
+				Value: sarama.ByteEncoder(buf),
+			}
+			if routingTag != "" {
+				m.Key = sarama.StringEncoder(routingTag)
+			}
 
-		if err != nil {
-			return fmt.Errorf("FAILED to send kafka message: %s\n", err)
+			_, _, err = k.producer.SendMessage(m)
+
+			if err != nil {
+				return fmt.Errorf("FAILED to send kafka message: %s", err)
+			}
+		}
+	}
+
+	for routingTag := range metricsmap {
+		for topicName := range metricsmap[routingTag] {
+			buf, err := k.serializer.SerializeBatch(metricsmap[routingTag][topicName])
+
+			if err != nil {
+				return err
+			}
+			m := &sarama.ProducerMessage{
+				Topic: topicName,
+				Value: sarama.ByteEncoder(buf),
+			}
+			if routingTag != "" {
+				m.Key = sarama.StringEncoder(routingTag)
+			}
+
+			_, _, err = k.producer.SendMessage(m)
+
+			if err != nil {
+				return fmt.Errorf("FAILED to send kafka message: %s", err)
+			}
 		}
 	}
 	return nil
@@ -267,6 +327,7 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 func init() {
 	outputs.Add("kafka", func() telegraf.Output {
 		return &Kafka{
+			Version:      "0.8.2.0",
 			MaxRetry:     3,
 			RequiredAcks: -1,
 		}

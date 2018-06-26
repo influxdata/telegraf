@@ -21,6 +21,7 @@ func TestConnectAndWrite(t *testing.T) {
 	brokers := []string{testutil.GetLocalHost() + ":9092"}
 	s, _ := serializers.NewInfluxSerializer()
 	k := &Kafka{
+		Version:    "0.8.2.0",
 		Brokers:    brokers,
 		Topic:      "Test",
 		serializer: s,
