@@ -1393,6 +1393,14 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 
 	c.MetricName = name
 
+	if node, ok := tbl.Fields["name_override"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.MetricName = str.Value
+			}
+		}
+	}
+
 	delete(tbl.Fields, "data_format")
 	delete(tbl.Fields, "separator")
 	delete(tbl.Fields, "templates")
@@ -1411,6 +1419,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "custom_patterns")
 	delete(tbl.Fields, "custom_pattern_files")
 	delete(tbl.Fields, "timezone")
+	delete(tbl.Fields, "name_override")
 
 	return parsers.NewParser(c)
 }

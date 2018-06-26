@@ -50,7 +50,13 @@ func (r *Reader) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		for _, m := range metrics {
+		for i, m := range metrics {
+
+			//error if m is nil
+			if m == nil {
+				log.Printf("E! Metric could not be parsed from: %v, on line %v", k, i)
+				continue
+			}
 			acc.AddFields(m.Name(), m.Fields(), m.Tags())
 		}
 	}
