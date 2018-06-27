@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/beeker1121/goque"
+	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/jlaffaye/ftp"
-	"github.com/srclosson/telegraf/plugins/outputs"
 
 	"github.com/influxdata/telegraf"
 )
@@ -40,11 +40,8 @@ type Ftp struct {
 	Password    string
 	DataDir     string
 	Concurrency int
-	Concatenate int
-	ForceMax    bool
 	MinSize     int
 	MaxConcat   int
-	MaxDuration time.Duration
 
 	pq        *goque.PrefixQueue
 	queue     chan FtpItem
@@ -92,13 +89,13 @@ func (f *FtpItem) Move(inDir string, outDir string, errorDir string, success boo
 				// Move to Archive dir
 				err := os.Rename(inDir+filename, outDir+filename)
 				if err != nil {
-					log.Println("ERROR [outgoing.rename]", err)
+					log.Println("ERROR [ftp.outgoing.rename]", err)
 				}
 			} else {
 				// Move to Bad dir
 				err := os.Rename(inDir+filename, errorDir+filename)
 				if err != nil {
-					log.Println("ERROR [error.rename]", err)
+					log.Println("ERROR [ftp.error.rename]", err)
 				}
 			}
 		}
@@ -165,7 +162,7 @@ func (f *Ftp) NewFtpItem(relative_path string, tags map[string]string) *FtpItem 
 
 	item.Data, err = ioutil.ReadFile(name)
 	if err != nil {
-		log.Println("ERROR [ReadFile]: ", err)
+		log.Println("ERROR [ftp.ReadFile]: ", err)
 	}
 
 	item.Source = name
@@ -176,18 +173,24 @@ func (f *Ftp) NewFtpItem(relative_path string, tags map[string]string) *FtpItem 
 
 func (f *Ftp) CreateConnection(pwg *sync.WaitGroup) {
 	defer pwg.Done()
-	splitDest := strings.Split(f.Destination, "/")
-	if len(splitDest) < 2 {
+	index := strings.Index(f.Destination, "/")
+	if index < 2 {
 		log.Fatalf("Invalid ftp destination: %s", f.Destination)
 	}
 
-	ftpaddr := splitDest[0]
+	ftpaddr := f.Destination[0:index]
 	conn, err := ftp.Connect(ftpaddr)
 	if err != nil {
 		log.Fatalf("%s: %s", f.Destination, err)
 	}
 
+	err = conn.Login(f.Username, f.Password)
+	if err != nil {
+		log.Fatalf("%s: %s", f.Destination, err)
+	}
+
 	f.conn = append(f.conn, conn)
+	f.outdir = f.Destination[index:]
 }
 
 func (f *Ftp) Connect() error {

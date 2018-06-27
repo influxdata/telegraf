@@ -482,12 +482,14 @@ func (ddo DirDefObject) FileProcessor(id int) {
 		}
 
 		err := ddo.ProcessFile(id, filename, ddo.acc)
-		if err != nil {
-			ddo.MoveFile(id, filename, false)
-			continue
-		}
+		if len(ddo.Outgoing) > 0 {
+			if err != nil {
+				ddo.MoveFile(id, filename, false)
+				continue
+			}
 
-		ddo.MoveFile(id, filename, true)
+			ddo.MoveFile(id, filename, true)
+		}
 	}
 }
 
