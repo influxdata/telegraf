@@ -655,7 +655,9 @@ For more information about the dropwizard json format see
 ```
 
 #### Grok
-Parse logstash-style "grok" patterns:
+Parse logstash-style "grok" patterns. Patterns can be added to patterns, or custom patterns read from custom_pattern_files.
+
+#### Grok Configuration:
 ```toml
   [inputs.reader]
     ## This is a list of patterns to check the given log file(s) for.
