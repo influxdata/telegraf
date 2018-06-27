@@ -62,11 +62,12 @@ func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
 
 	if len(m.Servers) > 0 {
 		for _, server := range m.Servers {
-			err := m.parse(acc, server)
-			if err != nil {
-				acc.AddError(err)
-				continue
-			}
+			go func(a telegraf.Accumulator, s string) {
+				err := m.parse(a, s)
+				if err != nil {
+					a.AddError(err)
+				}
+			}(acc, server)
 		}
 	} else {
 		err := m.parse(acc, "")
