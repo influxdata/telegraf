@@ -104,9 +104,10 @@ but can be overridden using the `name_override` config option.
 
 #### JSON Configuration:
 
-The JSON data format supports specifying "tag keys". If specified, keys
-will be searched for in the root-level of the JSON blob. If the key(s) exist,
-they will be applied as tags to the Telegraf metrics.
+The JSON data format supports specifying "tag keys" and "field keys". If specified, keys
+will be searched for in the root-level and any nested lists of the JSON blob. If the key(s) exist,
+they will be applied as tags or fields to the Telegraf metrics.  If "field_keys" is not specified,
+all int and float values will be set as fields by default.
 
 For example, if you had this configuration:
 
@@ -173,6 +174,7 @@ For example, if the following configuration:
     "my_tag_1",
     "my_tag_2"
   ]
+  field_keys = ["b_c"]
 ```
 
 with this JSON output from a command:
@@ -198,11 +200,11 @@ with this JSON output from a command:
 ]
 ```
 
-Your Telegraf metrics would get tagged with "my_tag_1" and "my_tag_2"
+Your Telegraf metrics would get tagged with "my_tag_1" and "my_tag_2" and fielded with "b_c"
 
 ```
-exec_mycollector,my_tag_1=foo,my_tag_2=baz a=5,b_c=6
-exec_mycollector,my_tag_1=bar,my_tag_2=baz a=7,b_c=8
+exec_mycollector,my_tag_1=foo,my_tag_2=baz b_c=6
+exec_mycollector,my_tag_1=bar,my_tag_2=baz b_c=8
 ```
 
 # Value:

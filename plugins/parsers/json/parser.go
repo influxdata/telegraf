@@ -20,6 +20,7 @@ var (
 type JSONParser struct {
 	MetricName  string
 	TagKeys     []string
+	FieldKeys   []string
 	DefaultTags map[string]string
 }
 
@@ -84,6 +85,17 @@ func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]
 		default:
 			log.Printf("E! [parsers.json] Unrecognized type %T", value)
 		}
+	}
+
+	//if field_keys is specified, only those values should be reported as fields
+	if len(p.FieldKeys) > 0 {
+		nFields := make(map[string]interface{})
+		for _, name := range p.FieldKeys {
+			if fields[name] != nil {
+				nFields[name] = fields[name]
+			}
+		}
+		return tags, nFields
 	}
 
 	//remove any additional string/bool values from fields

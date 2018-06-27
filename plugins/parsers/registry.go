@@ -56,6 +56,8 @@ type Config struct {
 
 	// TagKeys only apply to JSON data
 	TagKeys []string
+	// FieldKeys only apply to JSON
+	FieldKeys []string
 	// MetricName applies to JSON & value. This will be the name of the measurement.
 	MetricName string
 
@@ -96,7 +98,7 @@ func NewParser(config *Config) (Parser, error) {
 	switch config.DataFormat {
 	case "json":
 		parser, err = NewJSONParser(config.MetricName,
-			config.TagKeys, config.DefaultTags)
+			config.TagKeys, config.FieldKeys, config.DefaultTags)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.DefaultTags)
@@ -129,11 +131,13 @@ func NewParser(config *Config) (Parser, error) {
 func NewJSONParser(
 	metricName string,
 	tagKeys []string,
+	fieldKeys []string,
 	defaultTags map[string]string,
 ) (Parser, error) {
 	parser := &json.JSONParser{
 		MetricName:  metricName,
 		TagKeys:     tagKeys,
+		FieldKeys:   fieldKeys,
 		DefaultTags: defaultTags,
 	}
 	return parser, nil

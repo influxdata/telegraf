@@ -448,19 +448,24 @@ func TestJSONParseNestedArray(t *testing.T) {
 	"total_devices": 5,
 	"total_threads": 10,
 	"shares": {
-	"total": 5,
-	"accepted": 5,
-	"rejected": 0,
-	"avg_find_time": 4,
-	"tester": "work",
-	"tester2": "don't want this",
-	"tester3": 7.93
+		"total": 5,
+		"accepted": 5,
+		"rejected": 0,
+		"avg_find_time": 4,
+		"tester": "work",
+		"tester2": "don't want this",
+		"tester3": {
+			"hello":"sup",
+			"fun":"money",
+			"break":9
+		}
 	}
 	}`
 
 	parser := JSONParser{
 		MetricName: "json_test",
-		TagKeys:    []string{"total_devices", "total_threads", "shares_tester", "shares_tester3"},
+		TagKeys:    []string{"total_devices", "total_threads", "shares_tester3_fun"},
+		FieldKeys:  []string{"shares_tester", "shares_tester3_break"},
 	}
 
 	metrics, err := parser.Parse([]byte(testString))
