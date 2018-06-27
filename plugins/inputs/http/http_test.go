@@ -26,7 +26,7 @@ func TestHTTPwithJSONFormat(t *testing.T) {
 		URLs: []string{url},
 	}
 	metricName := "metricName"
-	p, _ := parsers.NewJSONParser(metricName, nil, nil)
+	p, _ := parsers.NewJSONParser(metricName, nil, nil, nil)
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
@@ -64,7 +64,7 @@ func TestHTTPHeaders(t *testing.T) {
 		Headers: map[string]string{header: headerValue},
 	}
 	metricName := "metricName"
-	p, _ := parsers.NewJSONParser(metricName, nil, nil)
+	p, _ := parsers.NewJSONParser(metricName, nil, nil, nil)
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
@@ -83,7 +83,7 @@ func TestInvalidStatusCode(t *testing.T) {
 	}
 
 	metricName := "metricName"
-	p, _ := parsers.NewJSONParser(metricName, nil, nil)
+	p, _ := parsers.NewJSONParser(metricName, nil, nil, nil)
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator
@@ -106,7 +106,7 @@ func TestMethod(t *testing.T) {
 	}
 
 	metricName := "metricName"
-	p, _ := parsers.NewJSONParser(metricName, nil, nil)
+	p, _ := parsers.NewJSONParser(metricName, nil, nil, nil)
 	plugin.SetParser(p)
 
 	var acc testutil.Accumulator

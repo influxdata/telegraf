@@ -181,7 +181,7 @@ func (h *HttpJson) gatherServer(
 		"server": serverURL,
 	}
 
-	parser, err := parsers.NewJSONParser(msrmnt_name, h.TagKeys, tags)
+	parser, err := parsers.NewJSONParser(msrmnt_name, h.TagKeys, nil, tags)
 	if err != nil {
 		return err
 	}
