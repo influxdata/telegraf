@@ -1,10 +1,12 @@
 # Reader Input Plugin
 
-The Reader Plugin updates a list of files every interval and parses the data inside.  
+The Reader Plugin updates a list of files every interval and parses the data inside.
+Files will always be read from the beginning.  
 This plugin can parse any "data_format" formats.
 
 ### Configuration:
 ```toml
+[[inputs.reader]]
 ## Files to parse each interval.
 ## These accept standard unix glob matching rules, but with the addition of
 ## ** as a "super asterisk". ie:
