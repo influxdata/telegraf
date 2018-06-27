@@ -21,18 +21,18 @@ func SetPluginDimension(metricName string, metricDims map[string]string) {
 }
 
 // GetMetricName combines telegraf fields and tags into a full metric name
-func GetMetricName(metric string, field string, dims map[string]string) (name string, isSFX bool) {
+func GetMetricName(metric string, field string, dims map[string]string) (string, bool) {
 	// If sf_metric is provided
-	if name, isSFX = dims["sf_metric"]; isSFX {
-		return
+	if name, isSFX := dims["sf_metric"]; isSFX {
+		return name, isSFX
 	}
 
 	// Include field when it adds to the metric name
 	if field != "value" {
-		name = metric + "." + field
+		return fmt.Sprintf("%s.%s", metric, field), false
 	}
 
-	return
+	return metric, false
 }
 
 // ExtractProperty of the metric according to the following rules

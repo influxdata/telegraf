@@ -231,7 +231,7 @@ func (s *SignalFx) GetObjects(metrics []telegraf.Metric, dps chan *datapoint.Dat
 
 			// Check if the metric is explicitly excluded
 			if s.isExcluded(metricName) {
-				log.Println("D! Outputs [signalfx] excluding the following metric: ", metricName)
+				log.Println("D! Outputs [signalfx] excluding the following metric: ", metricName, metric)
 				continue
 			}
 

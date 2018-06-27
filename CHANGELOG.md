@@ -1,3 +1,10 @@
+## v1.7.0.sfx1 [2018-06-27]
+
+### Release Notes
+
+- Fix bug in SignalFx Output Plugin that resulted in metrics with "value" field
+  to be dropped
+
 ## v1.7.0.sfx0 [2018-06-22]
 
 ### Release Notes
