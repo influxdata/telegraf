@@ -1,6 +1,7 @@
 package json
 
 import (
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -469,6 +470,40 @@ func TestJSONParseNestedArray(t *testing.T) {
 	}
 
 	metrics, err := parser.Parse([]byte(testString))
+	log.Printf("m[0] name: %v, tags: %v, fields: %v", metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields())
 	require.NoError(t, err)
 	require.Equal(t, len(parser.TagKeys), len(metrics[0].Tags()))
+	t.Error()
+}
+
+func TestJSONPathFunctionality(t *testing.T) {
+	testString := `{
+		"total_devices": 5,
+		"total_threads": 10,
+		"shares": {
+			"total": 5,
+			"accepted": 5,
+			"rejected": 0,
+			"avg_find_time": 4,
+			"tester": "work",
+			"tester2": "don't want this",
+			"tester3": {
+				"hello":"sup",
+				"fun":"money",
+				"break":9
+			}
+		}
+	}`
+
+	parser := JSONParser{
+		MetricName: "json_test",
+		TagKeys:    []string{"total_devices", "total_threads", "shares_tester3_fun"},
+		FieldKeys:  []string{"shares_tester", "shares_tester3_break"},
+		TagPaths:   map[string]string{"name_test": "$.shares.total"},
+	}
+
+	metrics, err := parser.Parse([]byte(testString))
+	log.Printf("m[0] name: %v, tags: %v, fields: %v", metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields())
+	assert.NoError(t, err)
+	t.Error()
 }
