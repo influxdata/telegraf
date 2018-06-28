@@ -143,6 +143,7 @@ func newJSONParser(
 	return parser, nil
 }
 
+//Deprecated: Use NewParser to get a JSONParser object
 func NewJSONParser(
 	metricName string,
 	tagKeys []string,
