@@ -143,11 +143,10 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		"Testdata did not produce correct memcached metadata.")
 
 	ex := inputs.Inputs["exec"]().(*exec.Exec)
-	config := &parsers.Config{
+	p, err := parsers.NewParser(&parsers.Config{
 		MetricName: "exec",
 		DataFormat: "json",
-	}
-	p, err := parsers.NewParser(config)
+	})
 	assert.NoError(t, err)
 	ex.SetParser(p)
 	ex.Command = "/usr/bin/myothercollector --foo=bar"

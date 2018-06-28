@@ -181,14 +181,12 @@ func (h *HttpJson) gatherServer(
 		"server": serverURL,
 	}
 
-	config := &parsers.Config{
+	parser, err := parsers.NewParser(&parsers.Config{
 		DataFormat:  "json",
 		MetricName:  msrmnt_name,
 		TagKeys:     h.TagKeys,
 		DefaultTags: tags,
-	}
-
-	parser, err := parsers.NewParser(config)
+	})
 	if err != nil {
 		return err
 	}
