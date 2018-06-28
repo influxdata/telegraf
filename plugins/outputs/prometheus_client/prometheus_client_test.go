@@ -45,7 +45,7 @@ func TestWrite_Basic(t *testing.T) {
 
 	fam, ok := client.fam["foo"]
 	require.True(t, ok)
-	require.Equal(t, telegraf.Untyped, fam.TelegrafValueType)
+	require.Equal(t, telegraf.Untyped, fam.ValueType)
 	require.Equal(t, map[string]int{}, fam.LabelSet)
 
 	sample, ok := fam.Samples[CreateSampleID(pt1.Tags())]
@@ -177,7 +177,7 @@ func TestWrite_Counters(t *testing.T) {
 
 			fam, ok := client.fam[tt.metricName]
 			require.True(t, ok)
-			require.Equal(t, tt.valueType, fam.TelegrafValueType)
+			require.Equal(t, tt.valueType, fam.ValueType)
 		})
 	}
 }
@@ -275,7 +275,7 @@ func TestWrite_Gauge(t *testing.T) {
 
 			fam, ok := client.fam[tt.metricName]
 			require.True(t, ok)
-			require.Equal(t, tt.valueType, fam.TelegrafValueType)
+			require.Equal(t, tt.valueType, fam.ValueType)
 
 		})
 	}
@@ -426,7 +426,7 @@ func TestWrite_Tags(t *testing.T) {
 
 	fam, ok := client.fam["foo"]
 	require.True(t, ok)
-	require.Equal(t, telegraf.Untyped, fam.TelegrafValueType)
+	require.Equal(t, telegraf.Untyped, fam.ValueType)
 
 	require.Equal(t, map[string]int{"host": 1}, fam.LabelSet)
 
