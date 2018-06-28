@@ -143,6 +143,19 @@ func newJSONParser(
 	return parser, nil
 }
 
+func NewJSONParser(
+	metricName string,
+	tagKeys []string,
+	defaultTags map[string]string,
+) (Parser, error) {
+	parser := &json.JSONParser{
+		MetricName:  metricName,
+		TagKeys:     tagKeys,
+		DefaultTags: defaultTags,
+	}
+	return parser, nil
+}
+
 func NewNagiosParser() (Parser, error) {
 	return &nagios.NagiosParser{}, nil
 }
