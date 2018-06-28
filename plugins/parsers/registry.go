@@ -97,7 +97,7 @@ func NewParser(config *Config) (Parser, error) {
 	var parser Parser
 	switch config.DataFormat {
 	case "json":
-		parser, err = NewJSONParser(config.MetricName,
+		parser, err = newJSONParser(config.MetricName,
 			config.TagKeys, config.FieldKeys, config.DefaultTags)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
@@ -128,7 +128,7 @@ func NewParser(config *Config) (Parser, error) {
 	return parser, err
 }
 
-func NewJSONParser(
+func newJSONParser(
 	metricName string,
 	tagKeys []string,
 	fieldKeys []string,

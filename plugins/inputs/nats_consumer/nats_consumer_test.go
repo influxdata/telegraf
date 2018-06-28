@@ -108,7 +108,12 @@ func TestRunParserAndGatherJSON(t *testing.T) {
 	n.acc = &acc
 	defer close(n.done)
 
-	n.parser, _ = parsers.NewJSONParser("nats_json_test", []string{}, nil, nil)
+	config := &parsers.Config{
+		DataFormat: "json",
+		MetricName: "nats_json_test",
+	}
+
+	n.parser, _ = parsers.NewParser(config)
 	n.wg.Add(1)
 	go n.receiver()
 	in <- natsMsg(testMsgJSON)
