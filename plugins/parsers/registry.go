@@ -129,7 +129,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.Separator,
 			config.Templates)
 	case "grok":
-		parser, err = NewGrokParser(
+		parser, err = newGrokParser(
 			config.MetricName,
 			config.Patterns,
 			config.NamedPatterns,
@@ -142,7 +142,7 @@ func NewParser(config *Config) (Parser, error) {
 	return parser, err
 }
 
-func NewGrokParser(metricName string,
+func newGrokParser(metricName string,
 	patterns []string,
 	nPatterns []string,
 	cPatterns string,
