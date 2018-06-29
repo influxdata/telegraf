@@ -11,12 +11,26 @@ import (
 )
 
 const sampleConfig = `
-  ## TODO: add comments
+  ## Directory to gather stats about.
   directory = "/var/cache/apt/archives"
+
+  ## Only count files that match the name pattern. Defaults to "*".
   name = "*.deb"
+
+  ## Count files in subdirectories. Defaults to true.
   recursive = false
+
+  ## Only count regular files. Defaults to true.
   regular_only = true
+
+  ## Only count files that are at least this size in bytes. If size is
+  ## a negative number, only count files that are smaller than the
+  ## absolute value of size. Defaults to 0.
   size = 0
+
+  ## Only count files that have not been touched for at least this
+  ## duration. If mtime is negative, only count files that have been
+  ## touched in this duration. Defaults to "0s".
   mtime = "0s"
 `
 
@@ -34,7 +48,7 @@ type findFunc func(os.FileInfo)
 type fileFilterFunc func(os.FileInfo) (bool, error)
 
 func (_ *FileCount) Description() string {
-	return "Count files in one or more directories"
+	return "Count files in a directory"
 }
 
 func (_ *FileCount) SampleConfig() string { return sampleConfig }

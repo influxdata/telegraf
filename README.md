@@ -158,6 +158,7 @@ configuration options.
 * [fibaro](./plugins/inputs/fibaro)
 * [file](./plugins/inputs/file)
 * [filestat](./plugins/inputs/filestat)
+* [filecount](./plugins/inputs/filecount)
 * [fluentd](./plugins/inputs/fluentd)
 * [graylog](./plugins/inputs/graylog)
 * [haproxy](./plugins/inputs/haproxy)
