@@ -38,6 +38,10 @@ func TestAddNonReplStats(t *testing.T) {
 			NoTimeoutC:       0,
 			PinnedC:          0,
 			TotalC:           0,
+			DeletedD:         0,
+			InsertedD:        0,
+			ReturnedD:        0,
+			UpdatedD:         0,
 		},
 		tags,
 	)
@@ -219,6 +223,10 @@ func TestStateTag(t *testing.T) {
 		"cursor_no_timeout":     int64(0),
 		"cursor_pinned":         int64(0),
 		"cursor_total":          int64(0),
+		"document_deleted":      int64(0),
+		"document_inserted":     int64(0),
+		"document_returned":     int64(0),
+		"document_updated":      int64(0),
 	}
 	acc.AssertContainsTaggedFields(t, "mongodb", fields, stateTags)
 }

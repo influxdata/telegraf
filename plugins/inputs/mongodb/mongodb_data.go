@@ -53,6 +53,10 @@ var DefaultStats = map[string]string{
 	"cursor_no_timeout":   "NoTimeoutC",
 	"cursor_pinned":       "PinnedC",
 	"cursor_total":        "TotalC",
+	"document_deleted":    "DeletedD",
+	"document_inserted":   "InsertedD",
+	"document_returned":   "ReturnedD",
+	"document_updated":    "UpdatedD",
 }
 
 var DefaultReplStats = map[string]string{

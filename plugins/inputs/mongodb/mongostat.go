@@ -289,8 +289,9 @@ type OpcountStats struct {
 
 // MetricsStats stores information related to metrics
 type MetricsStats struct {
-	TTL    *TTLStats    `bson:"ttl"`
-	Cursor *CursorStats `bson:"cursor"`
+	TTL      *TTLStats      `bson:"ttl"`
+	Cursor   *CursorStats   `bson:"cursor"`
+	Document *DocumentStats `bson:"document"`
 }
 
 // TTLStats stores information related to documents with a ttl index.
@@ -303,6 +304,14 @@ type TTLStats struct {
 type CursorStats struct {
 	TimedOut int64            `bson:"timedOut"`
 	Open     *OpenCursorStats `bson:"open"`
+}
+
+// DocumentStats stores information related to document metrics.
+type DocumentStats struct {
+	Deleted  int64 `bson:"deleted"`
+	Inserted int64 `bson:"inserted"`
+	Returned int64 `bson:"returned"`
+	Updated  int64 `bson:"updated"`
 }
 
 // OpenCursorStats stores information related to open cursor metrics
@@ -456,6 +465,9 @@ type StatLine struct {
 	// Cursor fields
 	TimedOutC                   int64
 	NoTimeoutC, PinnedC, TotalC int64
+
+	// Document fields
+	DeletedD, InsertedD, ReturnedD, UpdatedD int64
 
 	// Collection locks (3.0 mmap only)
 	CollectionLocks *CollectionLockStatus
