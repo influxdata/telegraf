@@ -225,7 +225,7 @@ type FlushStats struct {
 type ConnectionStats struct {
 	Current      int64 `bson:"current"`
 	Available    int64 `bson:"available"`
-	TotalCreated int64 `bson:"totalCreated"`
+	TotalCreated int64 `bson:"total_created"`
 }
 
 // DurTiming stores information related to journaling.
@@ -468,6 +468,9 @@ type StatLine struct {
 
 	// Document fields
 	DeletedD, InsertedD, ReturnedD, UpdatedD int64
+
+	// Connection fields
+	CurrentC, AvailableC, TotalCreatedC int64
 
 	// Collection locks (3.0 mmap only)
 	CollectionLocks *CollectionLockStatus
