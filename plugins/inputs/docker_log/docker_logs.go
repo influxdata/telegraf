@@ -21,10 +21,10 @@ type DockerLogs struct {
 	Endpoint       string
 	ContainerNames []string // deprecated in 1.4; use container_name_include
 
-	Timeout      internal.Duration
+	Timeout internal.Duration
 
-	LabelInclude   []string `toml:"docker_label_include"`
-	LabelExclude   []string `toml:"docker_label_exclude"`
+	LabelInclude []string `toml:"docker_label_include"`
+	LabelExclude []string `toml:"docker_label_exclude"`
 
 	ContainerInclude []string `toml:"container_name_include"`
 	ContainerExclude []string `toml:"container_name_exclude"`
