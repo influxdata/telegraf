@@ -224,7 +224,6 @@ func (d *DockerLogs) getContainerLogs(
 			acc.AddFields("docker_log", fields, tags)
 		}
 	}
-	return nil
 }
 func (d *DockerLogs) Start(acc telegraf.Accumulator) error {
 	d.mu.Lock()
