@@ -22,6 +22,7 @@
 - [#4307](https://github.com/influxdata/telegraf/pull/4307): Add new measurement with results of pgrep lookup to procstat input.
 - [#4311](https://github.com/influxdata/telegraf/pull/4311): Add support for comma in logparser timestamp format.
 - [#4292](https://github.com/influxdata/telegraf/pull/4292): Add path tag to tail input plugin.
+- [#4322](https://github.com/influxdata/telegraf/pull/4322): Add log message when tail is added or removed from a file.
 
 ## v1.7.1 [unreleased]
 
