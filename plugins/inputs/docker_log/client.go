@@ -10,6 +10,7 @@ import (
 	"github.com/docker/go-connections/sockets"
 	"io"
 )
+
 /*This file is inherited from telegraf docker input plugin*/
 var (
 	version        = "1.24"
@@ -18,7 +19,7 @@ var (
 
 type Client interface {
 	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
-	ContainerLogs(ctx context.Context, containerID string,options types.ContainerLogsOptions) (io.ReadCloser, error)
+	ContainerLogs(ctx context.Context, containerID string, options types.ContainerLogsOptions) (io.ReadCloser, error)
 }
 
 func NewEnvClient() (Client, error) {
@@ -56,6 +57,6 @@ func (c *SocketClient) ContainerList(ctx context.Context, options types.Containe
 	return c.client.ContainerList(ctx, options)
 }
 
-func (c *SocketClient) ContainerLogs(ctx context.Context, containerID string,options types.ContainerLogsOptions) (io.ReadCloser, error) {
+func (c *SocketClient) ContainerLogs(ctx context.Context, containerID string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
 	return c.client.ContainerLogs(ctx, containerID, options)
 }

@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
-	"time"
-	"sync"
 	"log"
+	"sync"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
@@ -16,13 +16,14 @@ import (
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
+
 type DockerLogs struct {
 	Endpoint       string
 	ContainerNames []string // deprecated in 1.4; use container_name_include
 
-	Timeout        internal.Duration
-	LabelInclude   []string `toml:"docker_label_include"`
-	LabelExclude   []string `toml:"docker_label_exclude"`
+	Timeout      internal.Duration
+	LabelInclude []string `toml:"docker_label_include"`
+	LabelExclude []string `toml:"docker_label_exclude"`
 
 	ContainerInclude []string `toml:"container_name_include"`
 	ContainerExclude []string `toml:"container_name_exclude"`
@@ -40,10 +41,10 @@ type DockerLogs struct {
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
-	opts	types.ContainerListOptions
-	wg sync.WaitGroup
-	mu sync.Mutex
-	containerList  map[string]io.ReadCloser
+	opts            types.ContainerListOptions
+	wg              sync.WaitGroup
+	mu              sync.Mutex
+	containerList   map[string]io.ReadCloser
 }
 
 const (
@@ -87,7 +88,7 @@ func (d *DockerLogs) Description() string {
 }
 
 func (d *DockerLogs) SampleConfig() string {
-	return sampleConfig;
+	return sampleConfig
 }
 
 func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
@@ -95,6 +96,7 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 	d.containerListUpdate(acc)
 	return nil
 }
+
 /*Following few functions have been inherited from telegraf docker input plugin*/
 func (d *DockerLogs) createContainerFilters() error {
 	// Backwards compatibility for deprecated `container_names` parameter.
@@ -131,25 +133,25 @@ func (d *DockerLogs) createContainerStateFilters() error {
 	return nil
 }
 
-func (d *DockerLogs) addToContainerList(containerId string,logReader io.ReadCloser) error {
-	d.containerList[containerId] = logReader;
-	return nil;
+func (d *DockerLogs) addToContainerList(containerId string, logReader io.ReadCloser) error {
+	d.containerList[containerId] = logReader
+	return nil
 }
 
 func (d *DockerLogs) removeFromContainerList(containerId string) error {
 	delete(d.containerList, containerId)
-	return nil;
+	return nil
 }
 
 func (d *DockerLogs) containerInContainerList(containerId string) bool {
 	if _, ok := d.containerList[containerId]; ok {
-		return true;
+		return true
 	}
-	return false;
+	return false
 }
 
 func (d *DockerLogs) stopAllReaders() error {
-	for _,container := range (d.containerList) {
+	for _, container := range d.containerList {
 		container.Close()
 	}
 	return nil
@@ -159,8 +161,8 @@ func (d *DockerLogs) containerListUpdate(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
 	if d.client == nil {
-		log.Println("ERR:Dock client is null");
-		return nil;
+		log.Println("ERR:Dock client is null")
+		return nil
 	}
 	containers, err := d.client.ContainerList(ctx, d.opts)
 	if err != nil {
@@ -168,7 +170,7 @@ func (d *DockerLogs) containerListUpdate(acc telegraf.Accumulator) error {
 	}
 	for _, container := range containers {
 		if d.containerInContainerList(container.ID) {
-			continue;
+			continue
 		}
 		d.wg.Add(1)
 		/*Start a new goroutine for every new container that has logs to collect*/
@@ -177,8 +179,8 @@ func (d *DockerLogs) containerListUpdate(acc telegraf.Accumulator) error {
 			err := d.getContainerLogs(c, acc)
 			if err != nil {
 				d.removeFromContainerList(c.ID)
-				log.Println(err);
-				return;
+				log.Println(err)
+				return
 			}
 		}(container)
 	}
@@ -195,13 +197,13 @@ func (d *DockerLogs) getContainerLogs(
 		Timestamps: false,
 		Details:    true,
 		Follow:     true,
-		Tail:     "0",
+		Tail:       "0",
 	}
 	logReader, err := d.client.ContainerLogs(context.Background(), container.ID, logOptions)
-	d.addToContainerList(container.ID,logReader)
+	d.addToContainerList(container.ID, logReader)
 	if err != nil {
 		log.Printf("Error getting docker stats: %s", err.Error())
-		return err;
+		return err
 	}
 	tags := map[string]string{
 		"containerId": container.ID,
@@ -212,13 +214,13 @@ func (d *DockerLogs) getContainerLogs(
 		num, err := logReader.Read(data)
 		if err != nil {
 			if err == io.EOF {
-				fields["log"]=data[:num]
+				fields["log"] = data[:num]
 				acc.AddFields("docker_log", fields, tags)
 			}
 			return err
 		}
 		if len(data) > 0 {
-			fields["log"]=data[:num]
+			fields["log"] = data[:num]
 			acc.AddFields("docker_log", fields, tags)
 		}
 	}
@@ -285,12 +287,14 @@ func (d *DockerLogs) Stop() {
 }
 
 func init() {
-	inputs.Add("docker_logs", func() telegraf.Input { return &DockerLogs{
+	inputs.Add("docker_logs", func() telegraf.Input {
+		return &DockerLogs{
 			Timeout:        internal.Duration{Duration: time.Second * 5},
 			Endpoint:       defaultEndpoint,
 			newEnvClient:   NewEnvClient,
 			newClient:      NewClient,
 			filtersCreated: false,
 			containerList:  make(map[string]io.ReadCloser),
-	}})
+		}
+	})
 }
