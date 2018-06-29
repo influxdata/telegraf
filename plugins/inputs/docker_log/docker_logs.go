@@ -22,8 +22,9 @@ type DockerLogs struct {
 	ContainerNames []string // deprecated in 1.4; use container_name_include
 
 	Timeout      internal.Duration
-	LabelInclude []string `toml:"docker_label_include"`
-	LabelExclude []string `toml:"docker_label_exclude"`
+
+	LabelInclude   []string `toml:"docker_label_include"`
+	LabelExclude   []string `toml:"docker_label_exclude"`
 
 	ContainerInclude []string `toml:"container_name_include"`
 	ContainerExclude []string `toml:"container_name_exclude"`
@@ -71,10 +72,12 @@ var sampleConfig = `
   ## When empty only containers in the "running" state will be captured.
   # container_state_include = []
   # container_state_exclude = []
+
   ## docker labels to include and exclude as tags.  Globs accepted.
   ## Note that an empty array for both will include all labels as tags
   docker_label_include = []
   docker_label_exclude = []
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -202,11 +205,17 @@ func (d *DockerLogs) getContainerLogs(
 	logReader, err := d.client.ContainerLogs(context.Background(), container.ID, logOptions)
 	d.addToContainerList(container.ID, logReader)
 	if err != nil {
-		log.Printf("Error getting docker stats: %s", err.Error())
+		log.Printf("Error getting docker logs: %s", err.Error())
 		return err
 	}
 	tags := map[string]string{
 		"containerId": container.ID,
+	}
+	// Add labels to tags
+	for k, label := range container.Labels {
+		if d.labelFilter.Match(k) {
+			tags[k] = label
+		}
 	}
 	fields := map[string]interface{}{}
 	data := make([]byte, LOG_BYTES_MAX)
