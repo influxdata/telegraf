@@ -22,6 +22,7 @@ var (
 		`%`, "-",
 		"#", "-",
 		"$", "-")
+	defaultHttpPath  = "/api/put"
 	defaultSeperator = "_"
 )
 
@@ -266,6 +267,7 @@ func sanitize(value string) string {
 func init() {
 	outputs.Add("opentsdb", func() telegraf.Output {
 		return &OpenTSDB{
+			HttpPath:  defaultHttpPath,
 			Separator: defaultSeperator,
 		}
 	})
