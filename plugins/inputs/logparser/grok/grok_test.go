@@ -971,14 +971,39 @@ func TestNewlineInPatterns(t *testing.T) {
 	require.NotNil(t, m)
 }
 
-func TestSyslogTimestampParser(t *testing.T) {
-	p := &Parser{
-		Patterns: []string{`%{SYSLOGTIMESTAMP:timestamp:ts-syslog} value=%{NUMBER:value:int}`},
-		timeFunc: func() time.Time { return time.Date(2018, time.April, 1, 0, 0, 0, 0, nil) },
+func TestSyslogTimestamp(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		expected time.Time
+	}{
+		{
+			name:     "two digit day of month",
+			line:     "Sep 25 09:01:55 value=42",
+			expected: time.Date(2018, time.September, 25, 9, 1, 55, 0, time.UTC),
+		},
+		{
+			name:     "one digit day of month single space",
+			line:     "Sep 2 09:01:55 value=42",
+			expected: time.Date(2018, time.September, 2, 9, 1, 55, 0, time.UTC),
+		},
+		{
+			name:     "one digit day of month double space",
+			line:     "Sep  2 09:01:55 value=42",
+			expected: time.Date(2018, time.September, 2, 9, 1, 55, 0, time.UTC),
+		},
 	}
-	require.NoError(t, p.Compile())
-	m, err := p.ParseLine("Sep 25 09:01:55 value=42")
-	require.NoError(t, err)
-	require.NotNil(t, m)
-	require.Equal(t, 2018, m.Time().Year())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &Parser{
+				Patterns: []string{`%{SYSLOGTIMESTAMP:timestamp:ts-syslog} value=%{NUMBER:value:int}`},
+				timeFunc: func() time.Time { return time.Date(2017, time.April, 1, 0, 0, 0, 0, time.UTC) },
+			}
+			require.NoError(t, p.Compile())
+			m, err := p.ParseLine(tt.line)
+			require.NoError(t, err)
+			require.NotNil(t, m)
+			require.Equal(t, tt.expected, m.Time())
+		})
+	}
 }
