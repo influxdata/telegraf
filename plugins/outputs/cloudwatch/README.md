@@ -36,3 +36,12 @@ Examples include but are not limited to:
 ### namespace
 
 The namespace used for AWS CloudWatch metrics.
+
+### enable_statistic_values
+
+If you have a large amount of metrics, you should consider to send 
+statistic values instead of raw metrics. This would not only improve
+performance but also save AWS API cost. Use `basicstats` aggregator to 
+calculate those required statistic fields (count, min, max, and sum).
+[See Cloudwatch StatisticSet](https://docs.aws.amazon.com/sdk-for-go/api/service/cloudwatch/#StatisticSet).
+This plugin would try to parse those statistic fields and send to Cloudwatch.

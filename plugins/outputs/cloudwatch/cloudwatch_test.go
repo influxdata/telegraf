@@ -5,11 +5,13 @@ import (
 	"math"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
@@ -72,13 +74,31 @@ func TestBuildMetricDatums(t *testing.T) {
 		testutil.TestMetric(float64(1.174272e+108)), // largest should be 1.174271e+108
 	}
 	for _, point := range validMetrics {
-		datums := BuildMetricDatum(point)
+		datums := BuildMetricDatum(false, point)
 		assert.Equal(1, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", point))
 	}
 	for _, point := range invalidMetrics {
-		datums := BuildMetricDatum(point)
+		datums := BuildMetricDatum(false, point)
 		assert.Equal(0, len(datums), fmt.Sprintf("Valid point should not create a Datum {value: %v}", point))
 	}
+
+	statisticMetric, _ := metric.New(
+		"test1",
+		map[string]string{"tag1": "value1"},
+		map[string]interface{}{"value_max": float64(10), "value_min": float64(0), "value_sum": float64(100), "value_count": float64(20)},
+		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	datums := BuildMetricDatum(true, statisticMetric)
+	assert.Equal(1, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", statisticMetric))
+
+	multipleFieldsMetric, _ := metric.New(
+		"test1",
+		map[string]string{"tag1": "value1"},
+		map[string]interface{}{"valueA": float64(10), "valueB": float64(0), "valueC": float64(100), "valueD": float64(20)},
+		time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	datums = BuildMetricDatum(true, multipleFieldsMetric)
+	assert.Equal(4, len(datums), fmt.Sprintf("Each field should create a Datum {value: %v}", multipleFieldsMetric))
 }
 
 func TestPartitionDatums(t *testing.T) {
