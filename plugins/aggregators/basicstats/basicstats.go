@@ -246,6 +246,8 @@ func convert(in interface{}) (float64, bool) {
 		return v, true
 	case int64:
 		return float64(v), true
+	case uint64:
+		return float64(v), true
 	default:
 		return 0, false
 	}
