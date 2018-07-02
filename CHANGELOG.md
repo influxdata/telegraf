@@ -22,6 +22,9 @@
 - [#4307](https://github.com/influxdata/telegraf/pull/4307): Add new measurement with results of pgrep lookup to procstat input.
 - [#4311](https://github.com/influxdata/telegraf/pull/4311): Add support for comma in logparser timestamp format.
 - [#4292](https://github.com/influxdata/telegraf/pull/4292): Add path tag to tail input plugin.
+- [#4322](https://github.com/influxdata/telegraf/pull/4322): Add log message when tail is added or removed from a file.
+- [#4267](https://github.com/influxdata/telegraf/pull/4267): Add option to use of counter time in win perf counters.
+- [#4343](https://github.com/influxdata/telegraf/pull/4343): Add energy and power field and device id tag to fibaro input.
 
 ## v1.7.1 [unreleased]
 
@@ -30,6 +33,10 @@
 - [#4277](https://github.com/influxdata/telegraf/pull/4277): Treat sigterm as a clean shutdown signal.
 - [#4284](https://github.com/influxdata/telegraf/pull/4284): Fix selection of tags under nested objects in the JSON parser.
 - [#4135](https://github.com/influxdata/telegraf/issues/4135): Fix postfix input handling multi-level queues.
+- [#4334](https://github.com/influxdata/telegraf/pull/4334): Fix syslog timestamp parsing with single digit day of month.
+- [#2910](https://github.com/influxdata/telegraf/issues/2910): Handle mysql input variations in the user_statistics collecting.
+- [#4293](https://github.com/influxdata/telegraf/issues/4293): Fix minmax and basicstats aggregators to use uint64.
+- [#4290](https://github.com/influxdata/telegraf/issues/4290): Document swap input plugin.
 
 ## v1.7 [2018-06-12]
 
