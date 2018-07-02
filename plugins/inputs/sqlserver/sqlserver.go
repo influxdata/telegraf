@@ -9,7 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	// go-mssqldb initialization
-	_ "github.com/zensqlmonitor/go-mssqldb"
+	_ "github.com/denisenkom/go-mssqldb"
 )
 
 // SQLServer struct
