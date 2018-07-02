@@ -211,11 +211,11 @@ GJSON also parses JSON data, but uses paths to name and identify fields of your 
 
 The GJSON parser supports 5 different configuration fields for json objects:
 
--'gjson_tag_paths'
--'gjson_string_paths'
--'gjson_int_paths'
--'gjson_float_paths'
--'gjson_bool_paths'
+1.'gjson_tag_paths'
+2.'gjson_string_paths'
+3.'gjson_int_paths'
+4.'gjson_float_paths'
+5.'gjson_bool_paths'
 
 Each field is a map type that will map a field_name to a field_path.  Path syntax is described below.
 Path maps should be configured as:
@@ -225,13 +225,14 @@ Any paths specified in gjson_tag_paths will be converted to strings and stored a
 Any paths otherwise specified will be their marked type and stored as fields.
 
 #### GJSON Configuration:
-Paths are a series of keys seperated by a dot, ie "obj.sub_obj"
+Paths are a series of keys seperated by a dot, ie "obj.sub_obj".
 Paths should not lead to an JSON array, but a single object.  
 An error message will be thrown if a path describes an array.
 Further reading for path syntax can be found here: https://github.com/tidwall/gjson
 
 As an example, if you had the json:
-`json
+
+```json
 {
   "name": {"first": "Tom", "last": "Anderson"},
   "age":37,
@@ -243,8 +244,9 @@ As an example, if you had the json:
     {"first": "Jane", "last": "Murphy", "age": 47}
   ]
 }
-`
+```
 with the config:
+
 ```toml
 [[inputs.exec]]
   ## Commands array
