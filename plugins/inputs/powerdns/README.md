@@ -55,6 +55,7 @@ The powerdns plugin gathers metrics about PowerDNS using unix socket.
   - sys-msec
   - uptime
   - user-msec
+  - respsizes (latency histogram)
 
 ### Tags:
 
