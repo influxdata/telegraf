@@ -228,6 +228,7 @@ Any paths otherwise specified will be their marked type and stored as fields.
 Paths are a series of keys seperated by a dot, ie "obj.sub_obj"
 Paths should not lead to an JSON array, but a single object.  
 An error message will be thrown if a path describes an array.
+Further reading for path syntax can be found here: https://github.com/tidwall/gjson
 
 As an example, if you had the json:
 `json
