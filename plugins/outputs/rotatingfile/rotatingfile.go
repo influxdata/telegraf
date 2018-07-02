@@ -20,7 +20,7 @@ type File struct {
 }
 
 var sampleConfig = `
-  ## Files to write to, "stdout" is a specially handled file.
+  ## Path to write files into.
   root = "/tmp"
   filename_prefix = "metrics"
   max_age = "1m"

@@ -16,7 +16,7 @@ var RootPerm = os.FileMode(0755)
 
 // FilePerm defines the permissions that Writer will use for all
 // the files it creates.
-var FilePerm = os.FileMode(0666)
+var FilePerm = os.FileMode(0644)
 
 // Writer implements the io.Writer interface and writes to the
 // "current" file in the root directory.  When current file age
