@@ -16,12 +16,12 @@ For a more information on what swap memory is, read [All about Linux swap space]
 
 - swap
   - fields:
-  	- free (int)
-  	- total (int)
-  	- used (int)
-  	- used_percent (float)
-    - sin (int)
-    - sout (int)
+    - free (int)
+    - total (int)
+    - used (int)
+    - used_percent (float)
+    - in (int)
+    - out (int)
 
 ### Example Output:
 
