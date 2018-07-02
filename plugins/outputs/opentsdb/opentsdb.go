@@ -32,7 +32,7 @@ type OpenTSDB struct {
 	Host string
 	Port int
 
-	HttpBatchSize int
+	HttpBatchSize int // deprecated httpBatchSize form in 1.8
 	HttpPath      string
 
 	Debug bool
@@ -54,11 +54,11 @@ var sampleConfig = `
 
   ## Number of data points to send to OpenTSDB in Http requests.
   ## Not used with telnet API.
-  httpBatchSize = 50
+  http_batch_size = 50
 
   ## URI Path for Http requests to OpenTSDB.
   ## Used in cases where OpenTSDB is located behind a reverse proxy.
-  httpPath = "/api/put"
+  http_path = "/api/put"
 
   ## Debug true - Prints OpenTSDB communication
   debug = false
