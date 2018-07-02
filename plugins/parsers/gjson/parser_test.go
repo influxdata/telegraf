@@ -36,7 +36,6 @@ func TestParseJsonPath(t *testing.T) {
 	metrics, err := jsonParser.Parse([]byte(testString))
 	assert.NoError(t, err)
 	log.Printf("m[0] name: %v, tags: %v, fields: %v", metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields())
-	t.Error()
 
 }
 
