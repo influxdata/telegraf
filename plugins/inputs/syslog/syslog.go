@@ -1,6 +1,7 @@
 package syslog
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -279,20 +280,53 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 		conn.Close()
 	}()
 
-	if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
-		conn.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))
-	}
+	zero := time.Time{}
+	for {
+		// make a temporary bytes var to read from the connection
+		tmp := make([]byte, 128)
+		// make 0 length data bytes (since we'll be appending)
+		data := make([]byte, 0)
 
-	var p *rfc5425.Parser
-	if s.BestEffort {
-		p = rfc5425.NewParser(conn, rfc5425.WithBestEffort())
-	} else {
-		p = rfc5425.NewParser(conn)
-	}
+		// loop through the connection stream, appending tmp to data
+		for {
+			if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
+				conn.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))
+			}
 
-	p.ParseExecuting(func(r *rfc5425.Result) {
-		s.store(*r, acc)
-	})
+			// read to the tmp var
+			n, err := conn.Read(tmp)
+			if err != nil {
+				// Ignore known/recoverable errors. In contrived tests:
+				// * i/o timeout error - no data to Read() before s.ReadTimeout.Duration expired
+				// * EOF error - connection open/close immediately
+				if er, ok := err.(net.Error); err != io.EOF && (ok && !er.Timeout()) {
+					s.store(rfc5425.Result{Error: fmt.Errorf("Failed reading from syslog client - %s", err.Error())}, acc)
+				}
+				return
+			}
+
+			// append read data to full data
+			data = append(data, tmp[:n]...)
+
+			// break if ends with '\n' (todo: need to ensure writing w/o "\n" works)
+			if tmp[n-1] == '\n' { //|| tmp[n-1] == 'EOF' {
+				break
+			}
+		}
+
+		conn.SetReadDeadline(zero)
+
+		var p *rfc5425.Parser
+		if s.BestEffort {
+			p = rfc5425.NewParser(bytes.NewReader(data), rfc5425.WithBestEffort())
+		} else {
+			p = rfc5425.NewParser(bytes.NewReader(data))
+		}
+
+		p.ParseExecuting(func(r *rfc5425.Result) {
+			s.store(*r, acc)
+		})
+	}
 }
 
 func (s *Syslog) setKeepAlive(c *net.TCPConn) error {
