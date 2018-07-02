@@ -4,6 +4,7 @@ Telegraf is able to parse the following input data formats into metrics:
 
 1. [InfluxDB Line Protocol](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#influx)
 1. [JSON](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#json)
+1. [GJSON](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#gjson)
 1. [Graphite](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite)
 1. [Value](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#value), ie: 45 or "booyah"
 1. [Nagios](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#nagios) (exec input only)
@@ -204,6 +205,66 @@ Your Telegraf metrics would get tagged with "my_tag_1" and "my_tag_2"
 exec_mycollector,my_tag_1=foo,my_tag_2=baz a=5,b_c=6
 exec_mycollector,my_tag_1=bar,my_tag_2=baz a=7,b_c=8
 ```
+
+# GJSON:
+GJSON also parses JSON data, but uses paths to name and identify fields of your choosing.
+
+The GJSON parser supports 5 different configuration fields for json objects:
+
+-'gjson_tag_paths'
+-'gjson_string_paths'
+-'gjson_int_paths'
+-'gjson_float_paths'
+-'gjson_bool_paths'
+
+Each field is a map type that will map a field_name to a field_path.  Path syntax is described below.
+Path maps should be configured as:
+`toml gjson_tag_paths = {"field_name" = "field.path", "field_name2" = "field.path2"}`
+
+Any paths specified in gjson_tag_paths will be converted to strings and stored as tags.
+Any paths otherwise specified will be their marked type and stored as fields.
+
+#### GJSON Configuration:
+Paths are a series of keys seperated by a dot, ie "obj.sub_obj"
+Paths should not lead to an JSON array, but a single object.  
+An error message will be thrown if a path describes an array.
+
+As an example, if you had the json:
+`json
+{
+  "name": {"first": "Tom", "last": "Anderson"},
+  "age":37,
+  "children": ["Sara","Alex","Jack"],
+  "fav.movie": "Deer Hunter",
+  "friends": [
+    {"first": "Dale", "last": "Murphy", "age": 44},
+    {"first": "Roger", "last": "Craig", "age": 68},
+    {"first": "Jane", "last": "Murphy", "age": 47}
+  ]
+}
+`
+with the config:
+```toml
+[[inputs.exec]]
+  ## Commands array
+  commands = ["/usr/bin/mycollector --foo=bar"]
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "gjson"
+
+  name_override = "gjson_sample"
+
+  gjson_tag_paths = {"first_name_tag" = "name.first"}
+  gjson_string_paths = {"last_name" = "name.last"}
+  gjson_int_paths = {"age" = "age", "Janes_age" = "friends.2.age"}
+```
+
+would output the metric:
+`gjson_sample, first_name_tag=Tom last_name=Anderson,age=37,Janes_age=47`
+
 
 # Value:
 

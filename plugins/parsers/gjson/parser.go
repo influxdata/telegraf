@@ -29,21 +29,37 @@ func (j *JSONPath) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	for k, v := range j.TagPath {
 		c := gjson.GetBytes(buf, v)
+		if c.IsArray() {
+			log.Printf("E! GJSON cannot assign array to field on path: %v", v)
+			continue
+		}
 		tags[k] = c.String()
 	}
 
 	for k, v := range j.FloatPath {
 		c := gjson.GetBytes(buf, v)
+		if c.IsArray() {
+			log.Printf("E! GJSON cannot assign array to field on path: %v", v)
+			continue
+		}
 		fields[k] = c.Float()
 	}
 
 	for k, v := range j.IntPath {
 		c := gjson.GetBytes(buf, v)
+		if c.IsArray() {
+			log.Printf("E! GJSON cannot assign array to field on path: %v", v)
+			continue
+		}
 		fields[k] = c.Int()
 	}
 
 	for k, v := range j.BoolPath {
 		c := gjson.GetBytes(buf, v)
+		if c.IsArray() {
+			log.Printf("E! GJSON cannot assign array to field on path: %v", v)
+			continue
+		}
 		if c.String() == "true" {
 			fields[k] = true
 		} else if c.String() == "false" {
@@ -55,6 +71,10 @@ func (j *JSONPath) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	for k, v := range j.StrPath {
 		c := gjson.GetBytes(buf, v)
+		if c.IsArray() {
+			log.Printf("E! GJSON cannot assign array to field on path: %v", v)
+			continue
+		}
 		fields[k] = c.String()
 	}
 
