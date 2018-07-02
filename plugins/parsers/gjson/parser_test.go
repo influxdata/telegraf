@@ -1,4 +1,4 @@
-package jsonpath
+package gjson
 
 import (
 	"log"
@@ -17,7 +17,7 @@ func TestParseJsonPath(t *testing.T) {
 			"rejected": 0,
 			"avg_find_time": 4,
 			"tester": "work",
-			"tester2": "don't want this",
+			"tester2": true,
 			"tester3": {
 				"hello":"sup",
 				"fun":"money",
@@ -28,7 +28,8 @@ func TestParseJsonPath(t *testing.T) {
 
 	jsonParser := JSONPath{
 		MetricName: "jsonpather",
-		TagPath:    map[string]string{"total": "$.shares.tester3"},
+		TagPath:    map[string]string{"hello": "shares.tester3.hello"},
+		BoolPath:   map[string]string{"bool": "shares.tester2"},
 	}
 
 	metrics, err := jsonParser.Parse([]byte(testString))

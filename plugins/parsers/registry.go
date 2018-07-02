@@ -7,6 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
+	"github.com/influxdata/telegraf/plugins/parsers/gjson"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
@@ -87,6 +88,12 @@ type Config struct {
 	// an optional map containing tag names as keys and json paths to retrieve the tag values from as values
 	// used if TagsPath is empty or doesn't return any tags
 	DropwizardTagPathsMap map[string]string
+
+	//for gjson format
+	TagPaths    map[string]string
+	BoolPaths   map[string]string
+	FloatPaths  map[string]string
+	StringPaths map[string]string
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -120,10 +127,32 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags,
 			config.Separator,
 			config.Templates)
+
+	case "gjson":
+		parser, err = newGJSONParser(config.MetricName,
+			config.TagPaths,
+			config.StringPaths,
+			config.BoolPaths,
+			config.FloatPaths)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
 	return parser, err
+}
+
+func newGJSONParser(metricName string,
+	tagPaths map[string]string,
+	strPaths map[string]string,
+	boolPaths map[string]string,
+	floatPaths map[string]string) (Parser, error) {
+	parser := &gjson.JSONPath{
+		MetricName: metricName,
+		TagPath:    tagPaths,
+		StrPath:    strPaths,
+		BoolPath:   boolPaths,
+		FloatPath:  floatPaths,
+	}
+	return parser, nil
 }
 
 func NewJSONParser(
