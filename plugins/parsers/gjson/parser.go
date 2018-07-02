@@ -40,7 +40,6 @@ func (j *JSONPath) Parse(buf []byte) ([]telegraf.Metric, error) {
 	for k, v := range j.IntPath {
 		c := gjson.GetBytes(buf, v)
 		fields[k] = c.Int()
-		log.Printf("got a int: fields[%v]: %v", k, c.Int())
 	}
 
 	for k, v := range j.BoolPath {
