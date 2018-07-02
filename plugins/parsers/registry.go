@@ -90,10 +90,11 @@ type Config struct {
 	DropwizardTagPathsMap map[string]string
 
 	//for gjson format
-	TagPaths    map[string]string
-	BoolPaths   map[string]string
-	FloatPaths  map[string]string
-	StringPaths map[string]string
+	GJSONTagPaths    map[string]string
+	GJSONBoolPaths   map[string]string
+	GJSONFloatPaths  map[string]string
+	GJSONStringPaths map[string]string
+	GJSONIntPaths    map[string]string
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -130,10 +131,11 @@ func NewParser(config *Config) (Parser, error) {
 
 	case "gjson":
 		parser, err = newGJSONParser(config.MetricName,
-			config.TagPaths,
-			config.StringPaths,
-			config.BoolPaths,
-			config.FloatPaths)
+			config.GJSONTagPaths,
+			config.GJSONStringPaths,
+			config.GJSONBoolPaths,
+			config.GJSONFloatPaths,
+			config.GJSONIntPaths)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -144,13 +146,15 @@ func newGJSONParser(metricName string,
 	tagPaths map[string]string,
 	strPaths map[string]string,
 	boolPaths map[string]string,
-	floatPaths map[string]string) (Parser, error) {
+	floatPaths map[string]string,
+	intPaths map[string]string) (Parser, error) {
 	parser := &gjson.JSONPath{
 		MetricName: metricName,
 		TagPath:    tagPaths,
 		StrPath:    strPaths,
 		BoolPath:   boolPaths,
 		FloatPath:  floatPaths,
+		IntPath:    intPaths,
 	}
 	return parser, nil
 }

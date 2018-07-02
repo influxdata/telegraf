@@ -13,24 +13,34 @@ type JSONPath struct {
 	MetricName  string
 	TagPath     map[string]string
 	FloatPath   map[string]string
+	IntPath     map[string]string
 	StrPath     map[string]string
 	BoolPath    map[string]string
 	DefaultTags map[string]string
 }
 
 func (j *JSONPath) Parse(buf []byte) ([]telegraf.Metric, error) {
-	tags := j.DefaultTags
+	tags := make(map[string]string)
+	for k, v := range j.DefaultTags {
+		tags[k] = v
+	}
 	fields := make(map[string]interface{})
 	metrics := make([]telegraf.Metric, 0)
 
 	for k, v := range j.TagPath {
 		c := gjson.GetBytes(buf, v)
-		tags[k] = c.Str
+		tags[k] = c.String()
 	}
 
 	for k, v := range j.FloatPath {
 		c := gjson.GetBytes(buf, v)
-		fields[k] = c.Num
+		fields[k] = c.Float()
+	}
+
+	for k, v := range j.IntPath {
+		c := gjson.GetBytes(buf, v)
+		fields[k] = c.Int()
+		log.Printf("got a int: fields[%v]: %v", k, c.Int())
 	}
 
 	for k, v := range j.BoolPath {
@@ -46,7 +56,7 @@ func (j *JSONPath) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	for k, v := range j.StrPath {
 		c := gjson.GetBytes(buf, v)
-		fields[k] = c.Str
+		fields[k] = c.String()
 	}
 
 	m, err := metric.New(j.MetricName, tags, fields, time.Now())

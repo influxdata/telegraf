@@ -1390,6 +1390,19 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	c.GJSONIntPaths = make(map[string]string)
+	if node, ok := tbl.Fields["gjson_int_paths"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					if str, ok := kv.Value.(*ast.String); ok {
+						c.GJSONIntPaths[name] = str.Value
+					}
+				}
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1409,6 +1422,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "gjson_bool_paths")
 	delete(tbl.Fields, "gjson_float_paths")
 	delete(tbl.Fields, "gjson_string_paths")
+	delete(tbl.Fields, "gjson_int_paths")
 
 	return parsers.NewParser(c)
 }
