@@ -24,6 +24,7 @@
 - [#4292](https://github.com/influxdata/telegraf/pull/4292): Add path tag to tail input plugin.
 - [#4322](https://github.com/influxdata/telegraf/pull/4322): Add log message when tail is added or removed from a file.
 - [#4267](https://github.com/influxdata/telegraf/pull/4267): Add option to use of counter time in win perf counters.
+- [#4343](https://github.com/influxdata/telegraf/pull/4343): Add energy and power field and device id tag to fibaro input.
 
 ## v1.7.1 [unreleased]
 
