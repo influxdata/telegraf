@@ -44,7 +44,7 @@ type FileCount struct {
 	fileFilters []fileFilterFunc
 }
 
-type findFunc func(os.FileInfo)
+type countFunc func(os.FileInfo)
 type fileFilterFunc func(os.FileInfo) (bool, error)
 
 func (_ *FileCount) Description() string {
@@ -61,20 +61,6 @@ func rejectNilFilters(filters []fileFilterFunc) []fileFilterFunc {
 		}
 	}
 	return filtered
-}
-
-func readdir(directory string) ([]os.FileInfo, error) {
-	f, err := os.Open(directory)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	files, err := f.Readdir(-1)
-	if err != nil {
-		return nil, err
-	}
-	return files, nil
 }
 
 func (fc *FileCount) nameFilter() fileFilterFunc {
@@ -139,25 +125,18 @@ func absDuration(x time.Duration) time.Duration {
 	return x
 }
 
-func find(directory string, recursive bool, ff findFunc) error {
-	files, err := readdir(directory)
-	if err != nil {
-		return err
-	}
-
-	for _, file := range files {
-		path := filepath.Join(directory, file.Name())
-
-		if recursive && file.IsDir() {
-			err = find(path, recursive, ff)
-			if err != nil {
-				return err
-			}
+func count(basedir string, recursive bool, countFn countFunc) error {
+	walkFn := func(path string, file os.FileInfo, err error) error {
+		if path == basedir {
+			return nil
 		}
-
-		ff(file)
+		countFn(file)
+		if !recursive && file.IsDir() {
+			return filepath.SkipDir
+		}
+		return nil
 	}
-	return nil
+	return filepath.Walk(basedir, walkFn)
 }
 
 func (fc *FileCount) initFileFilters() {
@@ -190,7 +169,7 @@ func (fc *FileCount) filter(file os.FileInfo) (bool, error) {
 
 func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 	numFiles := int64(0)
-	ff := func(f os.FileInfo) {
+	countFn := func(f os.FileInfo) {
 		match, err := fc.filter(f)
 		if err != nil {
 			acc.AddError(err)
@@ -201,7 +180,7 @@ func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 		}
 		numFiles++
 	}
-	err := find(fc.Directory, fc.Recursive, ff)
+	err := count(fc.Directory, fc.Recursive, countFn)
 	if err != nil {
 		acc.AddError(err)
 	}
