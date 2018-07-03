@@ -26,6 +26,7 @@
 - [#4267](https://github.com/influxdata/telegraf/pull/4267): Add option to use of counter time in win perf counters.
 - [#4343](https://github.com/influxdata/telegraf/pull/4343): Add energy and power field and device id tag to fibaro input.
 - [#4347](https://github.com/influxdata/telegraf/pull/4347): Add http path configuration for OpenTSDB output.
+- [#4352](https://github.com/influxdata/telegraf/pull/4352): Gather IPMI metrics concurrently.
 
 ## v1.7.1 [unreleased]
 
