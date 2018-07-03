@@ -296,12 +296,16 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 			// read to the tmp var
 			n, err := conn.Read(tmp)
 			if err != nil {
-				// Ignore known/recoverable errors. In contrived tests:
-				// * i/o timeout error - no data to Read() before s.ReadTimeout.Duration expired
-				// * EOF error - connection open/close immediately
-				if er, ok := err.(net.Error); err != io.EOF && (ok && !er.Timeout()) {
-					s.store(rfc5425.Result{Error: fmt.Errorf("Failed reading from syslog client - %s", err.Error())}, acc)
+				// read timeout reached, retry
+				if er, ok := err.(net.Error); ok && er.Timeout() {
+					continue
 				}
+				// client has closed connection, return
+				if err == io.EOF {
+					return
+				}
+				// other error, log and return
+				s.store(rfc5425.Result{Error: fmt.Errorf("failed reading from syslog client - %s", err.Error())}, acc)
 				return
 			}
 
