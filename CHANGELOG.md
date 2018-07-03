@@ -28,7 +28,7 @@
 - [#4347](https://github.com/influxdata/telegraf/pull/4347): Add http path configuration for OpenTSDB output.
 - [#4352](https://github.com/influxdata/telegraf/pull/4352): Gather IPMI metrics concurrently.
 
-## v1.7.1 [unreleased]
+## v1.7.1 [2018-07-03]
 
 ### Bugfixes
 
