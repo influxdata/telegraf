@@ -395,7 +395,7 @@ func fields(msg rfc5424.SyslogMessage, s *Syslog) map[string]interface{} {
 	}
 
 	if msg.Message() != nil {
-		flds["message"] = *msg.Message()
+		flds["message"] = strings.TrimSpace(*msg.Message())
 	}
 
 	if msg.StructuredData() != nil {
