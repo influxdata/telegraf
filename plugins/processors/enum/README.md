@@ -9,26 +9,25 @@ used for all values, which are not contained in the value_mappings. The
 processor supports explicit configuration of a destination field. By default the
 source field is overwritten.
 
-### Configuration
-Configuration using table syntax:
-`toml
-# Configure a status mapping for field 'status'
-[[processors.enum.fields]]
-  source = "status"
-  destination = "code"
-  default = -1
-  [processors.enum.fields.value_mappings]
-    green = 0
-    yellow = 1
-    red = 2
-`
+### Configuration:
 
-Configuration using inline syntax:
-`toml
-# Configure a status mapping for field 'status'
-[[processors.enum.fields]]
-  source = "status"
-  destination = "code"
-  default = -1
-  value_mappings = {green = 0, yellow = 1, red = 2 }
-`
+```toml
+[[processors.enum]]
+  [[processors.enum.fields]]
+    ## Name of the field to map
+    source = "name"
+
+    ## Destination field to be used for the mapped value.  By default the source
+    ## field is used, overwriting the original value.
+    # destination = "mapped"
+
+    ## Default value to be used for all values not contained in the mapping
+    ## table.  When unset, the unmodified value for the field will be used if no
+    ## match is found.
+    # default = 0
+
+    ## Table of mappings
+    [processors.enum.fields.value_mappings]
+      value1 = 1
+      value2 = 2
+```

@@ -8,30 +8,23 @@ import (
 )
 
 var sampleConfig = `
-## NOTE This processor will map metric values to different values. It is aimed
-## to map enum values to numeric values.
+  [[processors.enum.fields]]
+    ## Name of the field to map
+    source = "name"
 
-## Fields to be considered
-# [[processors.enum.fields]]
-#
-# Name of the field source field to map
-#   source = "name"
-#
-# Optional destination field to be used for the mapped value. Source field is
-# used, when no explicit destination is configured.
-#   destination = "mapped"
-#
-# Optional default value to be used for all values not contained in the mapping
-# table. Only applied when configured.
-#   default = 0
-#
-# Value Mapping Table
-#   [processors.enum.value_mappings]
-#     value1 = 1
-#     value2 = 2
-#
-## Alternatively the mapping table can be given in inline notation
-#   value_mappings = {value1 = 1, value2 = 2}
+    ## Destination field to be used for the mapped value.  By default the source
+    ## field is used, overwriting the original value.
+    # destination = "mapped"
+
+    ## Default value to be used for all values not contained in the mapping
+    ## table.  When unset, the unmodified value for the field will be used if no
+    ## match is found.
+    # default = 0
+
+    ## Table of mappings
+    [processors.enum.fields.value_mappings]
+      value1 = 1
+      value2 = 2
 `
 
 type EnumMapper struct {
