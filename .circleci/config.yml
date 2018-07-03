@@ -16,11 +16,11 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          key: vendor-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          key: vendor-{{ checksum "Gopkg.lock" }}
       - run: 'make deps'
       - save_cache:
           name: 'vendored deps'
-          key: vendor-{{ .Branch }}-{{ checksum "Gopkg.lock" }}
+          key: vendor-{{ checksum "Gopkg.lock" }}
           paths:
             - './vendor'
       - persist_to_workspace:
