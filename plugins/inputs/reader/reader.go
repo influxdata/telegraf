@@ -1,8 +1,8 @@
 package reader
 
 import (
+	"fmt"
 	"io/ioutil"
-	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
@@ -50,14 +50,8 @@ func (r *Reader) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		for i, m := range metrics {
-
-			//error if m is nil
-			if m == nil {
-				log.Printf("E! Metric could not be parsed from: %v, on line %v", k, i)
-				continue
-			}
-			acc.AddFields(m.Name(), m.Fields(), m.Tags())
+		for _, m := range metrics {
+			acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 		}
 	}
 	return nil
@@ -67,13 +61,12 @@ func (r *Reader) SetParser(p parsers.Parser) {
 	r.parser = p
 }
 
-func (r *Reader) refreshFilePaths() {
+func (r *Reader) refreshFilePaths() error {
 	var allFiles []string
 	for _, filepath := range r.Filepaths {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
-			log.Printf("E! Error Glob %s failed to compile, %s", filepath, err)
-			continue
+			return fmt.Errorf("E! Error Glob: %v could not be compiled, %s", filepath, err)
 		}
 		files := g.Match()
 
@@ -83,13 +76,13 @@ func (r *Reader) refreshFilePaths() {
 	}
 
 	r.Filenames = allFiles
+	return nil
 }
 
-//requires that Parser has been compiled
 func (r *Reader) readMetric(filename string) ([]telegraf.Metric, error) {
 	fileContents, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Printf("E! File could not be opened: %v", filename)
+		return nil, fmt.Errorf("E! Error file: %v could not be read, %s", filename, err)
 	}
 	return r.parser.Parse(fileContents)
 

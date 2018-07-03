@@ -148,7 +148,7 @@ func newGrokParser(metricName string,
 	cPatterns string,
 	cPatternFiles []string, tZone string) (Parser, error) {
 	parser := grok.Parser{
-		Measurement:        metricName,
+		MetricName:         metricName,
 		Patterns:           patterns,
 		NamedPatterns:      nPatterns,
 		CustomPatterns:     cPatterns,

@@ -1339,7 +1339,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	}
 
 	//for grok data_format
-	if node, ok := tbl.Fields["named_patterns"]; ok {
+	if node, ok := tbl.Fields["grok_named_patterns"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
@@ -1351,7 +1351,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
-	if node, ok := tbl.Fields["patterns"]; ok {
+	if node, ok := tbl.Fields["grok_patterns"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
@@ -1363,7 +1363,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
-	if node, ok := tbl.Fields["custom_patterns"]; ok {
+	if node, ok := tbl.Fields["grok_custom_patterns"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
 				c.CustomPatterns = str.Value
@@ -1371,7 +1371,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
-	if node, ok := tbl.Fields["custom_pattern_files"]; ok {
+	if node, ok := tbl.Fields["grok_custom_pattern_files"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
@@ -1383,7 +1383,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
-	if node, ok := tbl.Fields["timezone"]; ok {
+	if node, ok := tbl.Fields["grok_timezone"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
 				c.TimeZone = str.Value
@@ -1406,11 +1406,11 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "dropwizard_time_format")
 	delete(tbl.Fields, "dropwizard_tags_path")
 	delete(tbl.Fields, "dropwizard_tag_paths")
-	delete(tbl.Fields, "named_patterns")
-	delete(tbl.Fields, "patterns")
-	delete(tbl.Fields, "custom_patterns")
-	delete(tbl.Fields, "custom_pattern_files")
-	delete(tbl.Fields, "timezone")
+	delete(tbl.Fields, "grok_named_patterns")
+	delete(tbl.Fields, "grok_patterns")
+	delete(tbl.Fields, "grok_custom_patterns")
+	delete(tbl.Fields, "grok_custom_pattern_files")
+	delete(tbl.Fields, "grok_timezone")
 
 	return parsers.NewParser(c)
 }

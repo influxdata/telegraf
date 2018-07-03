@@ -71,7 +71,7 @@ type Parser struct {
 	NamedPatterns      []string
 	CustomPatterns     string
 	CustomPatternFiles []string
-	Measurement        string
+	MetricName         string
 
 	// Timezone is an optional component to help render log dates to
 	// your chosen zone.
@@ -165,10 +165,6 @@ func (p *Parser) Compile() error {
 
 		scanner := bufio.NewScanner(bufio.NewReader(file))
 		p.addCustomPatterns(scanner)
-	}
-
-	if p.Measurement == "" {
-		p.Measurement = "logparser_grok"
 	}
 
 	p.loc, err = time.LoadLocation(p.Timezone)
@@ -348,7 +344,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		return nil, fmt.Errorf("logparser_grok: must have one or more fields")
 	}
 
-	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))
+	return metric.New(p.MetricName, tags, fields, p.tsModder.tsMod(timestamp))
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {

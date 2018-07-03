@@ -9,8 +9,8 @@ import (
 
 func TestGrokParse(t *testing.T) {
 	parser := Parser{
-		Measurement: "t_met",
-		Patterns:    []string{"%{COMMON_LOG_FORMAT}"},
+		MetricName: "t_met",
+		Patterns:   []string{"%{COMMON_LOG_FORMAT}"},
 	}
 	parser.Compile()
 	metrics, err := parser.Parse([]byte(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`))
