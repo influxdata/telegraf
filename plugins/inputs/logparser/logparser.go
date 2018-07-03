@@ -14,9 +14,8 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
+	"github.com/influxdata/telegraf/plugins/parsers"
 	// Parsers
-	"github.com/influxdata/telegraf/plugins/inputs/logparser/grok"
 )
 
 const (
@@ -45,11 +44,17 @@ type LogParserPlugin struct {
 	done    chan struct{}
 	wg      sync.WaitGroup
 	acc     telegraf.Accumulator
-	parsers []LogParser
+	parsers []parsers.Parser
 
 	sync.Mutex
 
-	GrokParser *grok.Parser `toml:"grok"`
+	GrokParser *parsers.Parser `toml:"grok"`
+
+	Patterns           []string
+	NamedPatterns      []string
+	CustomPatterns     string
+	CustomPatternFiles []string
+	TimeZone           string
 }
 
 const sampleConfig = `
@@ -131,16 +136,30 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.tailers = make(map[string]*tail.Tail)
 
 	// Looks for fields which implement LogParser interface
-	l.parsers = []LogParser{}
+	l.parsers = []parsers.Parser{}
+	config := &parsers.Config{
+		Patterns:           l.Patterns,
+		NamedPatterns:      l.NamedPatterns,
+		CustomPatterns:     l.CustomPatterns,
+		CustomPatternFiles: l.CustomPatternFiles,
+		TimeZone:           l.TimeZone,
+		DataFormat:         "grok",
+	}
+	var err error
+	*l.GrokParser, err = parsers.NewParser(config)
+	if err != nil {
+		return err
+	}
+
 	s := reflect.ValueOf(l).Elem()
 	for i := 0; i < s.NumField(); i++ {
 		f := s.Field(i)
-
+		log.Printf("got field %v: %v", i, f)
 		if !f.CanInterface() {
 			continue
 		}
 
-		if lpPlugin, ok := f.Interface().(LogParser); ok {
+		if lpPlugin, ok := f.Interface().(parsers.Parser); ok {
 			if reflect.ValueOf(lpPlugin).IsNil() {
 				continue
 			}
@@ -152,12 +171,12 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("logparser input plugin: no parser defined")
 	}
 
-	// compile log parser patterns:
-	for _, parser := range l.parsers {
-		if err := parser.Compile(); err != nil {
-			return err
-		}
-	}
+	// //compile log parser patterns:
+	// for _, parser := range l.parsers {
+	// 	if err := parser.Compile(); err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	l.wg.Add(1)
 	go l.parser()
@@ -247,8 +266,8 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 	}
 }
 
-// parser is launched as a goroutine to watch the l.lines channel.
-// when a line is available, parser parses it and adds the metric(s) to the
+// parse is launched as a goroutine to watch the l.lines channel.
+// when a line is available, parse parses it and adds the metric(s) to the
 // accumulator.
 func (l *LogParserPlugin) parser() {
 	defer l.wg.Done()
