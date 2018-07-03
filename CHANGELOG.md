@@ -27,6 +27,7 @@
 - [#4343](https://github.com/influxdata/telegraf/pull/4343): Add energy and power field and device id tag to fibaro input.
 - [#4347](https://github.com/influxdata/telegraf/pull/4347): Add http path configuration for OpenTSDB output.
 - [#4352](https://github.com/influxdata/telegraf/pull/4352): Gather IPMI metrics concurrently.
+- [#4362](https://github.com/influxdata/telegraf/pull/4362): Add mongo document and connection metrics.
 
 ## v1.7.1 [2018-07-03]
 
