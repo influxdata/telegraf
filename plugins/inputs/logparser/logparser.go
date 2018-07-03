@@ -3,9 +3,7 @@
 package logparser
 
 import (
-	"fmt"
 	"log"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -35,9 +33,10 @@ type logEntry struct {
 
 // LogParserPlugin is the primary struct to implement the interface for logparser plugin
 type LogParserPlugin struct {
-	Files         []string
-	FromBeginning bool
-	WatchMethod   string
+	Files           []string
+	FromBeginning   bool
+	WatchMethod     string
+	MeasurementName string `toml:"measurement"`
 
 	tailers map[string]*tail.Tail
 	lines   chan logEntry
@@ -48,7 +47,7 @@ type LogParserPlugin struct {
 
 	sync.Mutex
 
-	GrokParser *parsers.Parser `toml:"grok"`
+	GrokParser parsers.Parser `toml:"grok"`
 
 	Patterns           []string
 	NamedPatterns      []string
@@ -146,37 +145,10 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 		DataFormat:         "grok",
 	}
 	var err error
-	*l.GrokParser, err = parsers.NewParser(config)
+	l.GrokParser, err = parsers.NewParser(config)
 	if err != nil {
 		return err
 	}
-
-	s := reflect.ValueOf(l).Elem()
-	for i := 0; i < s.NumField(); i++ {
-		f := s.Field(i)
-		log.Printf("got field %v: %v", i, f)
-		if !f.CanInterface() {
-			continue
-		}
-
-		if lpPlugin, ok := f.Interface().(parsers.Parser); ok {
-			if reflect.ValueOf(lpPlugin).IsNil() {
-				continue
-			}
-			l.parsers = append(l.parsers, lpPlugin)
-		}
-	}
-
-	if len(l.parsers) == 0 {
-		return fmt.Errorf("logparser input plugin: no parser defined")
-	}
-
-	// //compile log parser patterns:
-	// for _, parser := range l.parsers {
-	// 	if err := parser.Compile(); err != nil {
-	// 		return err
-	// 	}
-	// }
 
 	l.wg.Add(1)
 	go l.parser()
@@ -284,18 +256,17 @@ func (l *LogParserPlugin) parser() {
 				continue
 			}
 		}
-		for _, parser := range l.parsers {
-			m, err = parser.ParseLine(entry.line)
-			if err == nil {
-				if m != nil {
-					tags := m.Tags()
-					tags["path"] = entry.path
-					l.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
-				}
-			} else {
-				log.Println("E! Error parsing log line: " + err.Error())
+		m, err = l.GrokParser.ParseLine(entry.line)
+		if err == nil {
+			if m != nil {
+				tags := m.Tags()
+				tags["path"] = entry.path
+				l.acc.AddFields(l.MeasurementName, m.Fields(), tags, m.Time())
 			}
+		} else {
+			log.Println("E! Error parsing log line: " + err.Error())
 		}
+
 	}
 }
 
