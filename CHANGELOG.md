@@ -6,6 +6,10 @@
 
 - [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
 
+### New Processors
+
+- [enum](./plugins/processors/enum/README.md) - Contributed by @KarstenSchnitter
+
 ### New Aggregators
 
 - [valuecounter](./plugins/aggregators/valuecounter/README.md) - Contributed by @piotr1212
@@ -28,6 +32,7 @@
 - [#4347](https://github.com/influxdata/telegraf/pull/4347): Add http path configuration for OpenTSDB output.
 - [#4352](https://github.com/influxdata/telegraf/pull/4352): Gather IPMI metrics concurrently.
 - [#4362](https://github.com/influxdata/telegraf/pull/4362): Add mongo document and connection metrics.
+- [#3772](https://github.com/influxdata/telegraf/pull/3772): Add Enum Processor.
 
 ## v1.7.1 [2018-07-03]
 
