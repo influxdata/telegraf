@@ -8,7 +8,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-var m1, _ = metric.New("m",
+var m3, _ = metric.New("m",
 	map[string]string{"foo": "bar"},
 	map[string]interface{}{
 		"a": int64(1),
@@ -16,7 +16,7 @@ var m1, _ = metric.New("m",
 	},
 	time.Now(),
 )
-var m2, _ = metric.New("m",
+var m4, _ = metric.New("m",
 	map[string]string{"foo": "bar"},
 	map[string]interface{}{
 		"a": int64(2),
@@ -59,17 +59,17 @@ func TestCoStatsCovariance(t *testing.T) {
 	}
 
 	aggregator.Add(n1)
-	aggregator.Add(m1)
+	aggregator.Add(m3)
 	aggregator.Add(n2)
-	aggregator.Add(m2)
+	aggregator.Add(m4)
 	aggregator.Add(n1)
-	aggregator.Add(m1)
+	aggregator.Add(m3)
 	aggregator.Add(n2)
-	aggregator.Add(m2)
+	aggregator.Add(m4)
 	aggregator.Add(n1)
-	aggregator.Add(m1)
+	aggregator.Add(m3)
 	aggregator.Add(n2)
-	aggregator.Add(m2)
+	aggregator.Add(m4)
 
 	aggregator.Push(&acc)
 
