@@ -1,15 +1,13 @@
 package basicstats
 
 import (
-//	"log"
 	"math"
 
 	"github.com/influxdata/telegraf"
 )
 
 type CoStats struct {
-
-	cache    *map[string]map[string]map[string]map[string]map[uint64]map[uint64]float64
+	cache *map[string]map[string]map[string]map[string]map[uint64]map[uint64]float64
 
 	m *BasicStats
 }
@@ -19,8 +17,8 @@ type costat struct {
 }
 
 type metrics struct {
-	Name  string	`toml:"name"`
-	Field  string	`toml:"field"`
+	Name  string `toml:"name"`
+	Field string `toml:"field"`
 }
 
 func NewCoStats(m *BasicStats) *CoStats {
@@ -31,17 +29,15 @@ func NewCoStats(m *BasicStats) *CoStats {
 
 func (e *CoStats) Add(in telegraf.Metric, id1 uint64, field1 string) {
 
-//	log.Printf("Costats Add %d %s", id1, field1);
-
 	//https://en.m.wikipedia.org/wiki/Algorithms_for_calculating_variance (for covariance online algorithm)
 
 	// coStats products update
-	if(e.cache == nil) {
+	if e.cache == nil {
 		e.initCache()
 	}
-	name1 :=in.Name()
+	name1 := in.Name()
 	m := (*(e.m))
-	coCache:= (*e.cache)
+	coCache := (*e.cache)
 	if _, ok := coCache[name1]; !ok {
 		return
 	}
@@ -73,11 +69,8 @@ func (e *CoStats) Add(in telegraf.Metric, id1 uint64, field1 string) {
 	}
 }
 
-
 func (e *CoStats) Push(
 	id1 uint64, field1 string, fieldsOutput map[string]interface{}) {
-
-//	log.Printf("Push stats %d %s %+v", id1, field1, fieldsOutput);
 
 	m := (*(e.m))
 	v := m.cache[id1].fields[field1]
@@ -85,30 +78,29 @@ func (e *CoStats) Push(
 	variance := v.M2 / (v.count - 1)
 
 	name1 := m.cache[id1].name
-	coCache:= (*e.cache)
+	coCache := (*e.cache)
 	if _, ok := coCache[name1]; !ok {
 		return
 	}
 	if _, ok := coCache[name1][field1]; !ok {
 		return
 	}
-//	log.Printf("Push costats coCache %+v", coCache[name1][field1]);
 	for name2 := range coCache[name1][field1] {
 		for field2 := range coCache[name1][field1][name2] {
 			if _, ok := coCache[name1][field1][name2][field2][id1]; ok {
 				for id2, product := range coCache[name1][field1][name2][field2][id1] {
-					tagString2 :=""
+					tagString2 := ""
 					for tagK, tagV := range m.cache[id2].tags {
-						tagString2 +="/"+tagK+":"+tagV
+						tagString2 += "/" + tagK + ":" + tagV
 					}
-					tagString1 :=""
+					tagString1 := ""
 					for tagK, tagV := range m.cache[id1].tags {
-						tagString1 +="/"+tagK+":"+tagV
+						tagString1 += "/" + tagK + ":" + tagV
 					}
 					variance2 := m.cache[id2].fields[field2].M2 / (m.cache[id2].fields[field2].count - 1)
-					covariance := product/(v.count-1)
+					covariance := product / (v.count - 1)
 					fieldsOutput["covariance["+name1+"/"+field1+tagString1+"]["+name2+"/"+field2+tagString2+"]"] = covariance
-					fieldsOutput["correlation["+name1+"/"+field1+tagString1+"]["+name2+"/"+field2+tagString2+"]"] = covariance/(math.Sqrt(variance)*math.Sqrt(variance2))
+					fieldsOutput["correlation["+name1+"/"+field1+tagString1+"]["+name2+"/"+field2+tagString2+"]"] = covariance / (math.Sqrt(variance) * math.Sqrt(variance2))
 				}
 			}
 		}
@@ -116,28 +108,22 @@ func (e *CoStats) Push(
 
 }
 
-
 func (e *CoStats) initCache() {
 
 	parsed := make(map[string]map[string]map[string]map[string]map[uint64]map[uint64]float64)
 
-//	log.Printf("Stats %+v", (*(e.m)).Stats);
-
 	if (*(e.m)).CoStatsConfig == nil {
-//		log.Printf("coCache '%v'", parsed);
 		e.cache = &parsed
 		return
 	}
 
-//	log.Printf("CoStats %+v", (*(e.m)).CoStatsConfig);
-
 	for _, costat := range (*(e.m)).CoStatsConfig {
 
-		if len(costat.Metrics) !=2 {
-				continue
+		if len(costat.Metrics) != 2 {
+			continue
 		}
-		metric1 := costat.Metrics[0];
-		metric2 := costat.Metrics[1];
+		metric1 := costat.Metrics[0]
+		metric2 := costat.Metrics[1]
 		name1 := metric1.Name
 		field1 := metric1.Field
 		name2 := metric2.Name

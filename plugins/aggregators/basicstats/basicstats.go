@@ -9,7 +9,7 @@ import (
 )
 
 type BasicStats struct {
-	Stats []string `toml:"stats"`
+	Stats         []string `toml:"stats"`
 	CoStatsConfig []costat `toml:"costat"`
 
 	statsConfig *configuredStats
@@ -35,9 +35,9 @@ func NewBasicStats() *BasicStats {
 }
 
 type aggregate struct {
-	name    string
-	tags    map[string]string
-	fields	map[string]basicstats
+	name   string
+	tags   map[string]string
+	fields map[string]basicstats
 }
 
 type basicstats struct {
@@ -142,10 +142,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 	}
 }
 
-
 func (m *BasicStats) Push(acc telegraf.Accumulator) {
-
-//	log.Printf("Push stats ");
 
 	config := getConfiguredStats(m)
 
@@ -180,7 +177,6 @@ func (m *BasicStats) Push(acc telegraf.Accumulator) {
 					fields[k+"_stdev"] = math.Sqrt(variance)
 				}
 
-//				log.Printf("Push costats coCache %+v", fields);
 				// co stats
 				(*(m.e)).Push(id, k, fields)
 
