@@ -10,9 +10,12 @@ import (
 
 type BasicStats struct {
 	Stats []string `toml:"stats"`
+	CoStatsConfig []costat `toml:"costat"`
 
-	cache       map[uint64]aggregate
 	statsConfig *configuredStats
+	cache       map[uint64]aggregate
+
+	e *CoStats
 }
 
 type configuredStats struct {
@@ -32,9 +35,9 @@ func NewBasicStats() *BasicStats {
 }
 
 type aggregate struct {
-	fields map[string]basicstats
-	name   string
-	tags   map[string]string
+	name    string
+	tags    map[string]string
+	fields	map[string]basicstats
 }
 
 type basicstats struct {
@@ -44,6 +47,7 @@ type basicstats struct {
 	sum   float64
 	mean  float64
 	M2    float64 //intermedia value for variance/stdev
+	delta float64 //last value delta from the mean
 }
 
 var sampleConfig = `
@@ -81,6 +85,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 					mean:  fv,
 					sum:   fv,
 					M2:    0.0,
+					delta: 0.0,
 				}
 			}
 		}
@@ -97,6 +102,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 						mean:  fv,
 						sum:   fv,
 						M2:    0.0,
+						delta: 0.0,
 					}
 					continue
 				}
@@ -112,6 +118,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				tmp.count = n
 				//mean compute
 				delta := x - mean
+				tmp.delta = delta
 				mean = mean + delta/n
 				tmp.mean = mean
 				//variance/stdev compute
@@ -127,16 +134,22 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				tmp.sum += fv
 				//store final data
 				m.cache[id].fields[field.Key] = tmp
+
+				// coStats products update
+				(*(m.e)).Add(in, id, field.Key)
 			}
 		}
 	}
 }
 
+
 func (m *BasicStats) Push(acc telegraf.Accumulator) {
+
+//	log.Printf("Push stats ");
 
 	config := getConfiguredStats(m)
 
-	for _, aggregate := range m.cache {
+	for id, aggregate := range m.cache {
 		fields := map[string]interface{}{}
 		for k, v := range aggregate.fields {
 
@@ -166,14 +179,20 @@ func (m *BasicStats) Push(acc telegraf.Accumulator) {
 				if config.stdev {
 					fields[k+"_stdev"] = math.Sqrt(variance)
 				}
+
+//				log.Printf("Push costats coCache %+v", fields);
+				// co stats
+				(*(m.e)).Push(id, k, fields)
+
 			}
-			//if count == 1 StdDev = infinite => so I won't send data
 		}
+		//if count == 1 StdDev = infinite => so I won't send data
 
 		if len(fields) > 0 {
 			acc.AddFields(aggregate.name, fields, aggregate.tags)
 		}
 	}
+
 }
 
 func parseStats(names []string) *configuredStats {
@@ -238,6 +257,7 @@ func getConfiguredStats(m *BasicStats) *configuredStats {
 
 func (m *BasicStats) Reset() {
 	m.cache = make(map[uint64]aggregate)
+	m.e = NewCoStats(m)
 }
 
 func convert(in interface{}) (float64, bool) {
