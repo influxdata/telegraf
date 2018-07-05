@@ -366,9 +366,22 @@ func (d *Docker) gatherContainer(
 	var v *types.StatsJSON
 	// Parse container name
 	cname := "unknown"
-	if len(container.Names) > 0 {
-		// Not sure what to do with other names, just take the first.
-		cname = strings.TrimPrefix(container.Names[0], "/")
+	match := false
+	if len(container.Names) == 0 { // for tests
+		match = true
+	}
+
+	for i := range container.Names {
+		if !match {
+			match = d.containerFilter.Match(strings.TrimPrefix(container.Names[i], "/"))
+			if match {
+				cname = strings.TrimPrefix(container.Names[i], "/")
+			}
+		}
+	}
+
+	if !match {
+		return nil
 	}
 
 	// the image name sometimes has a version part, or a private repo
@@ -391,10 +404,6 @@ func (d *Docker) gatherContainer(
 		"container_version": imageVersion,
 	}
 
-	if !d.containerFilter.Match(cname) {
-		return nil
-	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
 	r, err := d.client.ContainerStats(ctx, container.ID, false)
@@ -410,6 +419,11 @@ func (d *Docker) gatherContainer(
 		return fmt.Errorf("Error decoding: %s", err.Error())
 	}
 	daemonOSType := r.OSType
+
+	// use common (printed at `docker ps`) name for container
+	if cname != strings.TrimPrefix(v.Name, "/") && v.Name != "" {
+		tags["container_name"] = strings.TrimPrefix(v.Name, "/")
+	}
 
 	// Add labels to tags
 	for k, label := range container.Labels {
@@ -461,12 +475,12 @@ func (d *Docker) gatherContainer(
 		acc.AddFields("docker_container_health", healthfields, tags, time.Now())
 	}
 
-	gatherContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total, daemonOSType)
+	parseContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total, daemonOSType)
 
 	return nil
 }
 
-func gatherContainerStats(
+func parseContainerStats(
 	stat *types.StatsJSON,
 	acc telegraf.Accumulator,
 	tags map[string]string,

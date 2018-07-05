@@ -107,7 +107,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_image": "redis/image",
 	}
 
-	gatherContainerStats(stats, &acc, tags, "123456789", true, true, "linux")
+	parseContainerStats(stats, &acc, tags, "123456789", true, true, "linux")
 
 	// test docker_container_net measurement
 	netfields := map[string]interface{}{
