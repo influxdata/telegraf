@@ -73,7 +73,7 @@ func deriveDatatype(value interface{}) string {
 		datatype = "text"
 	default:
 		datatype = "text"
-		log.Printf("E! Unknown datatype %T(%v)", value)
+		log.Printf("E! Unknown datatype %T(%v)", value, value)
 	}
 	return datatype
 }
