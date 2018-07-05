@@ -63,6 +63,8 @@ func deriveDatatype(value interface{}) string {
 	switch value.(type) {
 	case bool:
 		datatype = "boolean"
+	case uint64:
+		datatype = "int8"
 	case int64:
 		datatype = "int8"
 	case float64:
