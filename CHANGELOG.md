@@ -35,6 +35,12 @@
 - [#3772](https://github.com/influxdata/telegraf/pull/3772): Add Enum Processor.
 - [#4386](https://github.com/influxdata/telegraf/pull/4386): Add user tag to procstat input.
 
+## v1.7.2 [unreleased]
+
+### Bugfixes
+
+- [#4381](https://github.com/influxdata/telegraf/issues/4381): Use localhost as default server tag in zookeeper input.
+
 ## v1.7.1 [2018-07-03]
 
 ### Bugfixes
