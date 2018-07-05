@@ -41,7 +41,6 @@ func (k *KubeAuditWebhook) eventHandler(w http.ResponseWriter, r *http.Request) 
 		tags := map[string]string{}
 		fields := map[string]interface{}{}
 		audit := audits.Items[ii]
-		tags["audit_id"] = string(audit.AuditID)
 		tags["level"] = string(audit.Level)
 		tags["stage"] = string(audit.Stage)
 		tags["verb"] = string(audit.Verb)
@@ -60,6 +59,7 @@ func (k *KubeAuditWebhook) eventHandler(w http.ResponseWriter, r *http.Request) 
 		// "sourceIPs": ["192.168.99.100"],
 		//audit.SourceIPs
 
+		fields["audit_id"] = string(audit.AuditID)
 		fields["request_uri"] = string(audit.RequestURI)
 		k.acc.AddFields("kubernetes_audit", fields, tags, audit.RequestReceivedTimestamp.Time)
 	}
