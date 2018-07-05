@@ -158,8 +158,14 @@ func (z *Zookeeper) gatherServer(ctx context.Context, address string, acc telegr
 			}
 		}
 	}
+
+	srv := "localhost"
+	if service[0] != "" {
+		srv = service[0]
+	}
+
 	tags := map[string]string{
-		"server": service[0],
+		"server": srv,
 		"port":   service[1],
 		"state":  zookeeper_state,
 	}
