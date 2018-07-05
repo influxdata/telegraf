@@ -34,7 +34,7 @@ const sampleConfig = `
   #   key = "request"
   #   ## All the power of the Go regular expressions available here
   #   ## For example, named subgroups
-  #   pattern = "^/api(?P<method>/[\\w/]+)\\S*" 
+  #   pattern = "^/api(?P<method>/[\\w/]+)\\S*"
   #   replacement = "${method}"
   #   ## If result_key is present, a new field will be created
   #   ## instead of changing existing field
@@ -67,7 +67,10 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
 		for _, converter := range r.Tags {
 			if value, ok := metric.GetTag(converter.Key); ok {
-				metric.AddTag(r.convert(converter, value))
+				k, v := r.convert(converter, value)
+				if k != "" && v != "" {
+					metric.AddTag(k, v)
+				}
 			}
 		}
 
@@ -75,7 +78,10 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			if value, ok := metric.GetField(converter.Key); ok {
 				switch value := value.(type) {
 				case string:
-					metric.AddField(r.convert(converter, value))
+					k, v := r.convert(converter, value)
+					if k != "" && v != "" {
+						metric.AddField(r.convert(converter, value))
+					}
 				}
 			}
 		}
