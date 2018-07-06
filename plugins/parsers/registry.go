@@ -156,8 +156,8 @@ func newGrokParser(metricName string,
 		Timezone:           tZone,
 	}
 
-	parser.Compile()
-	return &parser, nil
+	err := parser.Compile()
+	return &parser, err
 }
 
 func NewJSONParser(
