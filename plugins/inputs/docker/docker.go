@@ -527,11 +527,11 @@ func gatherContainerStats(
 
 	if daemonOSType != "windows" {
 		memfields["limit"] = stat.MemoryStats.Limit
-		memfields["usage"] = stat.MemoryStats.Usage
 		memfields["max_usage"] = stat.MemoryStats.MaxUsage
 
 		mem := calculateMemUsageUnixNoCache(stat.MemoryStats)
 		memLimit := float64(stat.MemoryStats.Limit)
+		memfields["usage"] = uint64(mem)
 		memfields["usage_percent"] = calculateMemPercentUnixNoCache(memLimit, mem)
 	} else {
 		memfields["commit_bytes"] = stat.MemoryStats.Commit
