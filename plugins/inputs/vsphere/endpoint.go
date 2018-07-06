@@ -22,7 +22,7 @@ import (
 type Endpoint struct {
 	Parent          *VSphere
 	URL             *url.URL
-	client          *Client
+	pool            Pool
 	lastColls       map[string]time.Time
 	instanceInfo    map[string]resourceInfo
 	resources       map[string]resource
@@ -69,6 +69,7 @@ type resourceInfo struct {
 // as parameters.
 func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 	e := Endpoint{
+		pool:         Pool{u: url, v: parent, root: nil},
 		URL:          url,
 		Parent:       parent,
 		lastColls:    make(map[string]time.Time),
@@ -157,10 +158,11 @@ func (e *Endpoint) init() error {
 }
 
 func (e *Endpoint) setupMetricIds() error {
-	client, err := e.getClient()
+	client, err := e.pool.Take()
 	if err != nil {
 		return err
 	}
+	defer e.pool.Return(client)
 	ctx := context.Background()
 	mn, err := client.Perf.CounterInfoByName(ctx)
 	if err != nil {
@@ -177,17 +179,18 @@ func (e *Endpoint) discover() error {
 	start := time.Now()
 	log.Printf("D! Discover new objects for %s", e.URL.Host)
 
-	client, err := e.getClient()
+	client, err := e.pool.Take()
 	if err != nil {
 		return err
 	}
+	defer e.pool.Return(client)
 
 	instInfo := make(map[string]resourceInfo)
-	resources := e.resources
+	resources := make(map[string]resource)
 
 	// Populate resource objects, and endpoint name cache
 	//
-	for k, res := range resources {
+	for k, res := range e.resources {
 		// Don't be tempted to skip disabled resources here! We may need them to resolve parent references
 		//
 		// Precompile includes and excludes
@@ -202,18 +205,18 @@ func (e *Endpoint) discover() error {
 		}
 		// Need to do this for all resource types even if they are not enabled (but datastore)
 		//
-		if res.enabled || k != "datastore" {
+		if res.enabled || (k != "datastore" && k != "vm") {
 			objects, err := res.getObjects(client.Root)
 			if err != nil {
-				e.checkClient()
+				client = nil // Don't reuse this one!
 				return err
 			}
 			for _, obj := range objects {
 				ctx := context.Background()
 				mList := make(performance.MetricList, 0)
-				metrics, err := e.client.Perf.AvailableMetric(ctx, obj.ref.Reference(), res.sampling)
+				metrics, err := client.Perf.AvailableMetric(ctx, obj.ref.Reference(), res.sampling)
 				if err != nil {
-					e.checkClient()
+					client = nil // Don't reuse this one!
 					return err
 				}
 				log.Printf("D! Obj: %s, metrics found: %d, enabled: %t", obj.name, len(metrics), res.enabled)
@@ -242,7 +245,7 @@ func (e *Endpoint) discover() error {
 							}
 							if include { // If still included after processing excludes
 								mList = append(mList, m)
-								log.Printf("D! Included %s Sampling: %d", mName, res.sampling)
+								//log.Printf("D! Included %s Sampling: %d", mName, res.sampling)
 							}
 						}
 
@@ -341,6 +344,9 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 		}
 	}
 
+	e.collectMux.RLock()
+	defer e.collectMux.RUnlock()
+
 	// If discovery interval is disabled (0), discover on each collection cycle
 	//
 	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() == 0 {
@@ -384,13 +390,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 		latest = time.Now().Add(time.Duration(-res.sampling) * time.Second)
 	}
 	log.Printf("D! Start of sample period deemed to be %s", latest)
-
 	log.Printf("D! Collecting metrics for %d objects of type %s for %s", len(res.objects), resourceType, e.URL.Host)
-
-	// Object maps may change, so we need to hold the collect lock in read mode
-	//
-	e.collectMux.RLock()
-	defer e.collectMux.RUnlock()
 
 	count := 0
 	start := time.Now()
@@ -429,7 +429,6 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 			log.Printf("D! Querying %d objects of type %s for %s. Object count: %d. Total objects %d", len(pqs), resourceType, e.URL.Host, total, len(res.objects))
 			n, err := e.collectChunk(pqs, resourceType, res, acc)
 			if err != nil {
-				e.checkClient()
 				return count, time.Now().Sub(start).Seconds(), err
 			}
 			count += n
@@ -444,10 +443,11 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, res resource, acc telegraf.Accumulator) (int, error) {
 	count := 0
 	prefix := "vsphere" + e.Parent.Separator + resourceType
-	client, err := e.getClient()
+	client, err := e.pool.Take()
 	if err != nil {
 		return 0, err
 	}
+	defer e.pool.Return(client)
 	ctx := context.Background()
 	metrics, err := client.Perf.Query(ctx, pqs)
 	if err != nil {
@@ -458,6 +458,7 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 
 	ems, err := client.Perf.ToMetricSeries(ctx, metrics)
 	if err != nil {
+		client = nil
 		return count, err
 	}
 
@@ -609,34 +610,4 @@ func cleanDiskTag(disk string) string {
 	}
 
 	return disk
-}
-
-func (e *Endpoint) getClient() (*Client, error) {
-	if e.client == nil {
-		e.clientMux.Lock()
-		defer e.clientMux.Unlock()
-		if e.client == nil {
-			log.Printf("D! Creating new vCenter client for: %s", e.URL.Host)
-			client, err := NewClient(e.URL, e.Parent)
-			if err != nil {
-				return nil, err
-			}
-			e.client = client
-		}
-	}
-	return e.client, nil
-}
-
-func (e *Endpoint) checkClient() {
-	if e.client != nil {
-		active, err := e.client.Client.SessionManager.SessionIsActive(context.Background())
-		if err != nil {
-			log.Printf("E! SessionIsActive returned an error on %s: %v", e.URL.Host, err)
-			e.client = nil
-		}
-		if !active {
-			log.Printf("I! Session no longer active, reseting client: %s", e.URL.Host)
-			e.client = nil
-		}
-	}
 }
