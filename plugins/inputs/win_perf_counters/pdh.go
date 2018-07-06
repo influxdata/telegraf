@@ -38,12 +38,15 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
+	"time"
 )
 
 // Error codes
 const (
-	ERROR_SUCCESS          = 0
-	ERROR_INVALID_FUNCTION = 1
+	ERROR_SUCCESS                 = 0
+	ERROR_FAILURE                 = 1
+	ERROR_INVALID_FUNCTION        = 1
+	EPOCH_DIFFERENCE_MICROS int64 = 11644473600000000
 )
 
 type (
@@ -161,43 +164,6 @@ type (
 	PDH_HCOUNTER HANDLE // counter handle
 )
 
-// Union specialization for double values
-type PDH_FMT_COUNTERVALUE_DOUBLE struct {
-	CStatus     uint32
-	DoubleValue float64
-}
-
-// Union specialization for 64 bit integer values
-type PDH_FMT_COUNTERVALUE_LARGE struct {
-	CStatus    uint32
-	LargeValue int64
-}
-
-// Union specialization for long values
-type PDH_FMT_COUNTERVALUE_LONG struct {
-	CStatus   uint32
-	LongValue int32
-	padding   [4]byte
-}
-
-// Union specialization for double values, used by PdhGetFormattedCounterArrayDouble()
-type PDH_FMT_COUNTERVALUE_ITEM_DOUBLE struct {
-	SzName   *uint16 // pointer to a string
-	FmtValue PDH_FMT_COUNTERVALUE_DOUBLE
-}
-
-// Union specialization for 'large' values, used by PdhGetFormattedCounterArrayLarge()
-type PDH_FMT_COUNTERVALUE_ITEM_LARGE struct {
-	SzName   *uint16 // pointer to a string
-	FmtValue PDH_FMT_COUNTERVALUE_LARGE
-}
-
-// Union specialization for long values, used by PdhGetFormattedCounterArrayLong()
-type PDH_FMT_COUNTERVALUE_ITEM_LONG struct {
-	SzName   *uint16 // pointer to a string
-	FmtValue PDH_FMT_COUNTERVALUE_LONG
-}
-
 var (
 	// Library
 	libpdhDll *syscall.DLL
@@ -207,10 +173,13 @@ var (
 	pdh_AddEnglishCounterW        *syscall.Proc
 	pdh_CloseQuery                *syscall.Proc
 	pdh_CollectQueryData          *syscall.Proc
+	pdh_CollectQueryDataWithTime  *syscall.Proc
 	pdh_GetFormattedCounterValue  *syscall.Proc
 	pdh_GetFormattedCounterArrayW *syscall.Proc
 	pdh_OpenQuery                 *syscall.Proc
 	pdh_ValidatePathW             *syscall.Proc
+	pdh_ExpandWildCardPathW       *syscall.Proc
+	pdh_GetCounterInfoW           *syscall.Proc
 )
 
 func init() {
@@ -222,13 +191,16 @@ func init() {
 	pdh_AddEnglishCounterW, _ = libpdhDll.FindProc("PdhAddEnglishCounterW") // XXX: only supported on versions > Vista.
 	pdh_CloseQuery = libpdhDll.MustFindProc("PdhCloseQuery")
 	pdh_CollectQueryData = libpdhDll.MustFindProc("PdhCollectQueryData")
+	pdh_CollectQueryDataWithTime, _ = libpdhDll.FindProc("PdhCollectQueryDataWithTime")
 	pdh_GetFormattedCounterValue = libpdhDll.MustFindProc("PdhGetFormattedCounterValue")
 	pdh_GetFormattedCounterArrayW = libpdhDll.MustFindProc("PdhGetFormattedCounterArrayW")
 	pdh_OpenQuery = libpdhDll.MustFindProc("PdhOpenQuery")
 	pdh_ValidatePathW = libpdhDll.MustFindProc("PdhValidatePathW")
+	pdh_ExpandWildCardPathW = libpdhDll.MustFindProc("PdhExpandWildCardPathW")
+	pdh_GetCounterInfoW = libpdhDll.MustFindProc("PdhGetCounterInfoW")
 }
 
-// Adds the specified counter to the query. This is the internationalized version. Preferably, use the
+// PdhAddCounter adds the specified counter to the query. This is the internationalized version. Preferably, use the
 // function PdhAddEnglishCounter instead. hQuery is the query handle, which has been fetched by PdhOpenQuery.
 // szFullCounterPath is a full, internationalized counter path (this will differ per Windows language version).
 // dwUserData is a 'user-defined value', which becomes part of the counter information. To retrieve this value
@@ -277,7 +249,14 @@ func PdhAddCounter(hQuery PDH_HQUERY, szFullCounterPath string, dwUserData uintp
 	return uint32(ret)
 }
 
-// Adds the specified language-neutral counter to the query. See the PdhAddCounter function. This function only exists on
+// PdhAddEnglishCounterSupported returns true if PdhAddEnglishCounterW Win API function was found in pdh.dll.
+// PdhAddEnglishCounterW function is not supported on pre-Windows Vista systems
+
+func PdhAddEnglishCounterSupported() bool {
+	return pdh_AddEnglishCounterW != nil
+}
+
+// PdhAddEnglishCounter adds the specified language-neutral counter to the query. See the PdhAddCounter function. This function only exists on
 // Windows versions higher than Vista.
 func PdhAddEnglishCounter(hQuery PDH_HQUERY, szFullCounterPath string, dwUserData uintptr, phCounter *PDH_HCOUNTER) uint32 {
 	if pdh_AddEnglishCounterW == nil {
@@ -294,7 +273,7 @@ func PdhAddEnglishCounter(hQuery PDH_HQUERY, szFullCounterPath string, dwUserDat
 	return uint32(ret)
 }
 
-// Closes all counters contained in the specified query, closes all handles related to the query,
+// PdhCloseQuery closes all counters contained in the specified query, closes all handles related to the query,
 // and frees all memory associated with the query.
 func PdhCloseQuery(hQuery PDH_HQUERY) uint32 {
 	ret, _, _ := pdh_CloseQuery.Call(uintptr(hQuery))
@@ -329,7 +308,38 @@ func PdhCollectQueryData(hQuery PDH_HQUERY) uint32 {
 	return uint32(ret)
 }
 
-// Formats the given hCounter using a 'double'. The result is set into the specialized union struct pValue.
+// PdhCollectQueryDataWithTime queries data from perfmon, retrieving the device/windows timestamp from the node it was collected on.
+// Converts the filetime structure to a GO time class and returns the native time.
+//
+func PdhCollectQueryDataWithTime(hQuery PDH_HQUERY) (uint32, time.Time) {
+	var localFileTime FILETIME
+	ret, _, _ := pdh_CollectQueryDataWithTime.Call(uintptr(hQuery), uintptr(unsafe.Pointer(&localFileTime)))
+
+	if ret == ERROR_SUCCESS {
+		var utcFileTime FILETIME
+		ret, _, _ := krn_LocalFileTimeToFileTime.Call(
+			uintptr(unsafe.Pointer(&localFileTime)),
+			uintptr(unsafe.Pointer(&utcFileTime)))
+
+		if ret == 0 {
+			return uint32(ERROR_FAILURE), time.Now()
+		}
+
+		// First convert 100-ns intervals to microseconds, then adjust for the
+		// epoch difference
+		var totalMicroSeconds int64
+		totalMicroSeconds = ((int64(utcFileTime.dwHighDateTime) << 32) | int64(utcFileTime.dwLowDateTime)) / 10
+		totalMicroSeconds -= EPOCH_DIFFERENCE_MICROS
+
+		retTime := time.Unix(0, totalMicroSeconds*1000)
+
+		return uint32(ERROR_SUCCESS), retTime
+	}
+
+	return uint32(ret), time.Now()
+}
+
+// PdhGetFormattedCounterValueDouble formats the given hCounter using a 'double'. The result is set into the specialized union struct pValue.
 // This function does not directly translate to a Windows counterpart due to union specialization tricks.
 func PdhGetFormattedCounterValueDouble(hCounter PDH_HCOUNTER, lpdwType *uint32, pValue *PDH_FMT_COUNTERVALUE_DOUBLE) uint32 {
 	ret, _, _ := pdh_GetFormattedCounterValue.Call(
@@ -341,7 +351,7 @@ func PdhGetFormattedCounterValueDouble(hCounter PDH_HCOUNTER, lpdwType *uint32, 
 	return uint32(ret)
 }
 
-// Returns an array of formatted counter values. Use this function when you want to format the counter values of a
+// PdhGetFormattedCounterArrayDouble returns an array of formatted counter values. Use this function when you want to format the counter values of a
 // counter that contains a wildcard character for the instance name. The itemBuffer must a slice of type PDH_FMT_COUNTERVALUE_ITEM_DOUBLE.
 // An example of how this function can be used:
 //
@@ -378,7 +388,7 @@ func PdhGetFormattedCounterValueDouble(hCounter PDH_HCOUNTER, lpdwType *uint32, 
 //			time.Sleep(2000 * time.Millisecond)
 //		}
 //	}
-func PdhGetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *PDH_FMT_COUNTERVALUE_ITEM_DOUBLE) uint32 {
+func PdhGetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER, lpdwBufferSize *uint32, lpdwBufferCount *uint32, itemBuffer *byte) uint32 {
 	ret, _, _ := pdh_GetFormattedCounterArrayW.Call(
 		uintptr(hCounter),
 		uintptr(PDH_FMT_DOUBLE|PDH_FMT_NOCAP100),
@@ -389,7 +399,7 @@ func PdhGetFormattedCounterArrayDouble(hCounter PDH_HCOUNTER, lpdwBufferSize *ui
 	return uint32(ret)
 }
 
-// Creates a new query that is used to manage the collection of performance data.
+// PdhOpenQuery creates a new query that is used to manage the collection of performance data.
 // szDataSource is a null terminated string that specifies the name of the log file from which to
 // retrieve the performance data. If 0, performance data is collected from a real-time data source.
 // dwUserData is a user-defined value to associate with this query. To retrieve the user data later,
@@ -405,20 +415,57 @@ func PdhOpenQuery(szDataSource uintptr, dwUserData uintptr, phQuery *PDH_HQUERY)
 	return uint32(ret)
 }
 
-// Validates a path. Will return ERROR_SUCCESS when ok, or PDH_CSTATUS_BAD_COUNTERNAME when the path is
+//PdhExpandWildCardPath examines the specified computer or log file and returns those counter paths that match the given counter path which contains wildcard characters.
+//The general counter path format is as follows:
+//
+//\\computer\object(parent/instance#index)\counter
+//
+//The parent, instance, index, and counter components of the counter path may contain either a valid name or a wildcard character. The computer, parent, instance,
+// and index components are not necessary for all counters.
+//
+//The following is a list of the possible formats:
+//
+//\\computer\object(parent/instance#index)\counter
+//\\computer\object(parent/instance)\counter
+//\\computer\object(instance#index)\counter
+//\\computer\object(instance)\counter
+//\\computer\object\counter
+//\object(parent/instance#index)\counter
+//\object(parent/instance)\counter
+//\object(instance#index)\counter
+//\object(instance)\counter
+//\object\counter
+//Use an asterisk (*) as the wildcard character, for example, \object(*)\counter.
+//
+//If a wildcard character is specified in the parent name, all instances of the specified object that match the specified instance and counter fields will be returned.
+// For example, \object(*/instance)\counter.
+//
+//If a wildcard character is specified in the instance name, all instances of the specified object and parent object will be returned if all instance names
+// corresponding to the specified index match the wildcard character. For example, \object(parent/*)\counter. If the object does not contain an instance, an error occurs.
+//
+//If a wildcard character is specified in the counter name, all counters of the specified object are returned.
+//
+//Partial counter path string matches (for example, "pro*") are supported.
+func PdhExpandWildCardPath(szWildCardPath string, mszExpandedPathList *uint16, pcchPathListLength *uint32) uint32 {
+	ptxt, _ := syscall.UTF16PtrFromString(szWildCardPath)
+	flags := uint32(0) // expand instances and counters
+	ret, _, _ := pdh_ExpandWildCardPathW.Call(
+		uintptr(unsafe.Pointer(nil)), // search counters on local computer
+		uintptr(unsafe.Pointer(ptxt)),
+		uintptr(unsafe.Pointer(mszExpandedPathList)),
+		uintptr(unsafe.Pointer(pcchPathListLength)),
+		uintptr(unsafe.Pointer(&flags)))
+
+	return uint32(ret)
+}
+
+// PdhValidatePath validates a path. Will return ERROR_SUCCESS when ok, or PDH_CSTATUS_BAD_COUNTERNAME when the path is
 // erroneous.
 func PdhValidatePath(path string) uint32 {
 	ptxt, _ := syscall.UTF16PtrFromString(path)
 	ret, _, _ := pdh_ValidatePathW.Call(uintptr(unsafe.Pointer(ptxt)))
 
 	return uint32(ret)
-}
-
-func UTF16PtrToString(s *uint16) string {
-	if s == nil {
-		return ""
-	}
-	return syscall.UTF16ToString((*[1 << 29]uint16)(unsafe.Pointer(s))[0:])
 }
 
 func PdhFormatError(msgId uint32) string {
@@ -429,4 +476,26 @@ func PdhFormatError(msgId uint32) string {
 		return fmt.Sprintf("%s", UTF16PtrToString(&buf[0]))
 	}
 	return fmt.Sprintf("(pdhErr=%d) %s", msgId, err.Error())
+}
+
+//Retrieves information about a counter, such as data size, counter type, path, and user-supplied data values
+//hCounter [in]
+//Handle of the counter from which you want to retrieve information. The PdhAddCounter function returns this handle.
+//
+//bRetrieveExplainText [in]
+//Determines whether explain text is retrieved. If you set this parameter to TRUE, the explain text for the counter is retrieved. If you set this parameter to FALSE, the field in the returned buffer is NULL.
+//
+//pdwBufferSize [in, out]
+//Size of the lpBuffer buffer, in bytes. If zero on input, the function returns PDH_MORE_DATA and sets this parameter to the required buffer size. If the buffer is larger than the required size, the function sets this parameter to the actual size of the buffer that was used. If the specified size on input is greater than zero but less than the required size, you should not rely on the returned size to reallocate the buffer.
+//
+//lpBuffer [out]
+//Caller-allocated buffer that receives a PDH_COUNTER_INFO structure. The structure is variable-length, because the string data is appended to the end of the fixed-format portion of the structure. This is done so that all data is returned in a single buffer allocated by the caller. Set to NULL if pdwBufferSize is zero.
+func PdhGetCounterInfo(hCounter PDH_HCOUNTER, bRetrieveExplainText int, pdwBufferSize *uint32, lpBuffer *byte) uint32 {
+	ret, _, _ := pdh_GetCounterInfoW.Call(
+		uintptr(hCounter),
+		uintptr(bRetrieveExplainText),
+		uintptr(unsafe.Pointer(pdwBufferSize)),
+		uintptr(unsafe.Pointer(lpBuffer)))
+
+	return uint32(ret)
 }

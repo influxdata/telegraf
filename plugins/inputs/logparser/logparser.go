@@ -203,6 +203,10 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 					Poll:      poll,
 					Logger:    tail.DiscardingLogger,
 				})
+
+			//add message saying a new tailer was added for the file
+			log.Printf("D! tail added for file: %v", file)
+
 			if err != nil {
 				l.acc.AddError(err)
 				continue
@@ -287,6 +291,10 @@ func (l *LogParserPlugin) Stop() {
 
 	for _, t := range l.tailers {
 		err := t.Stop()
+
+		//message for a stopped tailer
+		log.Printf("D! tail dropped for file: %v", t.Filename)
+
 		if err != nil {
 			log.Printf("E! Error stopping tail on file %s\n", t.Filename)
 		}

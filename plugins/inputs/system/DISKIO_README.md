@@ -107,13 +107,13 @@ requests that are in the queue but not yet issued to the device driver.
 
 #### Calculate percent IO utilization per disk and host:
 ```
-SELECT derivative(last("io_time"),1ms) FROM "diskio" WHERE time > now() - 30m GROUP BY "host","name",time(60s)
+SELECT non_negative_derivative(last("io_time"),1ms) FROM "diskio" WHERE time > now() - 30m GROUP BY "host","name",time(60s)
 ```
 
 #### Calculate average queue depth:
 `iops_in_progress` will give you an instantaneous value. This will give you the average between polling intervals.
 ```
-SELECT derivative(last("weighted_io_time",1ms)) from "diskio" WHERE time > now() - 30m GROUP BY "host","name",time(60s)
+SELECT non_negative_derivative(last("weighted_io_time",1ms)) from "diskio" WHERE time > now() - 30m GROUP BY "host","name",time(60s)
 ```
 
 ### Example Output:

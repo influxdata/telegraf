@@ -4,12 +4,18 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 
 	"fmt"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+var TimeFunc = func() time.Time {
+	return time.Unix(0, 0)
+}
 
 // validEmptyJSON is a valid dropwizard json document, but without any metrics
 const validEmptyJSON = `
@@ -24,7 +30,7 @@ const validEmptyJSON = `
 `
 
 func TestParseValidEmptyJSON(t *testing.T) {
-	parser := Parser{}
+	parser := NewParser()
 
 	// Most basic vanilla test
 	metrics, err := parser.Parse([]byte(validEmptyJSON))
@@ -49,7 +55,7 @@ const validCounterJSON = `
 `
 
 func TestParseValidCounterJSON(t *testing.T) {
-	parser := Parser{}
+	parser := NewParser()
 
 	metrics, err := parser.Parse([]byte(validCounterJSON))
 	assert.NoError(t, err)
@@ -87,11 +93,10 @@ const validEmbeddedCounterJSON = `
 func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 	timeFormat := "2006-01-02T15:04:05Z07:00"
 	metricTime, _ := time.Parse(timeFormat, "2017-02-22T15:33:03.662+03:00")
-	parser := Parser{
-		MetricRegistryPath: "metrics",
-		TagsPath:           "tags",
-		TimePath:           "time",
-	}
+	parser := NewParser()
+	parser.MetricRegistryPath = "metrics"
+	parser.TagsPath = "tags"
+	parser.TimePath = "time"
 
 	metrics, err := parser.Parse([]byte(validEmbeddedCounterJSON))
 	assert.NoError(t, err)
@@ -109,11 +114,10 @@ func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 	assert.True(t, metricTime.Equal(metrics[0].Time()), fmt.Sprintf("%s should be equal to %s", metrics[0].Time(), metricTime))
 
 	// now test json tags through TagPathsMap
-	parser2 := Parser{
-		MetricRegistryPath: "metrics",
-		TagPathsMap:        map[string]string{"tag1": "tags.tag1"},
-		TimePath:           "time",
-	}
+	parser2 := NewParser()
+	parser2.MetricRegistryPath = "metrics"
+	parser2.TagPathsMap = map[string]string{"tag1": "tags.tag1"}
+	parser2.TimePath = "time"
 	metrics2, err2 := parser2.Parse([]byte(validEmbeddedCounterJSON))
 	assert.NoError(t, err2)
 	assert.Equal(t, map[string]string{"metric_type": "counter", "tag1": "green"}, metrics2[0].Tags())
@@ -141,7 +145,7 @@ const validMeterJSON1 = `
 `
 
 func TestParseValidMeterJSON1(t *testing.T) {
-	parser := Parser{}
+	parser := NewParser()
 
 	metrics, err := parser.Parse([]byte(validMeterJSON1))
 	assert.NoError(t, err)
@@ -181,7 +185,7 @@ const validMeterJSON2 = `
 `
 
 func TestParseValidMeterJSON2(t *testing.T) {
-	parser := Parser{}
+	parser := NewParser()
 
 	metrics, err := parser.Parse([]byte(validMeterJSON2))
 	assert.NoError(t, err)
@@ -215,7 +219,7 @@ const validGaugeJSON = `
 `
 
 func TestParseValidGaugeJSON(t *testing.T) {
-	parser := Parser{}
+	parser := NewParser()
 
 	metrics, err := parser.Parse([]byte(validGaugeJSON))
 	assert.NoError(t, err)
@@ -254,7 +258,7 @@ const validHistogramJSON = `
 `
 
 func TestParseValidHistogramJSON(t *testing.T) {
-	parser := Parser{}
+	parser := NewParser()
 
 	metrics, err := parser.Parse([]byte(validHistogramJSON))
 	assert.NoError(t, err)
@@ -309,7 +313,7 @@ const validTimerJSON = `
 `
 
 func TestParseValidTimerJSON(t *testing.T) {
-	parser := Parser{}
+	parser := NewParser()
 
 	metrics, err := parser.Parse([]byte(validTimerJSON))
 	assert.NoError(t, err)
@@ -360,7 +364,7 @@ const validAllJSON = `
 `
 
 func TestParseValidAllJSON(t *testing.T) {
-	parser := Parser{}
+	parser := NewParser()
 
 	metrics, err := parser.Parse([]byte(validAllJSON))
 	assert.NoError(t, err)
@@ -369,18 +373,19 @@ func TestParseValidAllJSON(t *testing.T) {
 
 func TestTagParsingProblems(t *testing.T) {
 	// giving a wrong path results in empty tags
-	parser1 := Parser{MetricRegistryPath: "metrics", TagsPath: "tags1"}
+	parser1 := NewParser()
+	parser1.MetricRegistryPath = "metrics"
+	parser1.TagsPath = "tags1"
 	metrics1, err1 := parser1.Parse([]byte(validEmbeddedCounterJSON))
 	assert.NoError(t, err1)
 	assert.Len(t, metrics1, 1)
 	assert.Equal(t, map[string]string{"metric_type": "counter"}, metrics1[0].Tags())
 
 	// giving a wrong TagsPath falls back to TagPathsMap
-	parser2 := Parser{
-		MetricRegistryPath: "metrics",
-		TagsPath:           "tags1",
-		TagPathsMap:        map[string]string{"tag1": "tags.tag1"},
-	}
+	parser2 := NewParser()
+	parser2.MetricRegistryPath = "metrics"
+	parser2.TagsPath = "tags1"
+	parser2.TagPathsMap = map[string]string{"tag1": "tags.tag1"}
 	metrics2, err2 := parser2.Parse([]byte(validEmbeddedCounterJSON))
 	assert.NoError(t, err2)
 	assert.Len(t, metrics2, 1)
@@ -425,23 +430,21 @@ const sampleTemplateJSON = `
 `
 
 func TestParseSampleTemplateJSON(t *testing.T) {
-	parser := Parser{
-		Separator: "_",
-		Templates: []string{
-			"jenkins.* measurement.metric.metric.field",
-			"vm.* measurement.measurement.pool.field",
-		},
-	}
-	parser.InitTemplating()
+	parser := NewParser()
+	err := parser.SetTemplates("_", []string{
+		"jenkins.* measurement.metric.metric.field",
+		"vm.* measurement.measurement.pool.field",
+	})
+	require.NoError(t, err)
 
 	metrics, err := parser.Parse([]byte(sampleTemplateJSON))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.Len(t, metrics, 11)
+	require.Len(t, metrics, 11)
 
 	jenkinsMetric := search(metrics, "jenkins", nil, "")
-	assert.NotNil(t, jenkinsMetric, "the metrics should contain a jenkins measurement")
-	assert.Equal(t, map[string]interface{}{
+	require.NotNil(t, jenkinsMetric, "the metrics should contain a jenkins measurement")
+	require.Equal(t, map[string]interface{}{
 		"duration_count":  float64(1),
 		"duration_max":    float64(2),
 		"duration_mean":   float64(3),
@@ -454,21 +457,21 @@ func TestParseSampleTemplateJSON(t *testing.T) {
 		"duration_p999":   float64(10),
 		"duration_stddev": float64(11),
 	}, jenkinsMetric.Fields())
-	assert.Equal(t, map[string]string{"metric_type": "histogram", "metric": "job_building"}, jenkinsMetric.Tags())
+	require.Equal(t, map[string]string{"metric_type": "histogram", "metric": "job_building"}, jenkinsMetric.Tags())
 
 	vmMemoryHeapCommitted := search(metrics, "vm_memory", map[string]string{"pool": "heap"}, "committed_value")
-	assert.NotNil(t, vmMemoryHeapCommitted)
-	assert.Equal(t, map[string]interface{}{
+	require.NotNil(t, vmMemoryHeapCommitted)
+	require.Equal(t, map[string]interface{}{
 		"committed_value": float64(1),
 	}, vmMemoryHeapCommitted.Fields())
-	assert.Equal(t, map[string]string{"metric_type": "gauge", "pool": "heap"}, vmMemoryHeapCommitted.Tags())
+	require.Equal(t, map[string]string{"metric_type": "gauge", "pool": "heap"}, vmMemoryHeapCommitted.Tags())
 
 	vmMemoryNonHeapCommitted := search(metrics, "vm_memory", map[string]string{"pool": "non-heap"}, "committed_value")
-	assert.NotNil(t, vmMemoryNonHeapCommitted)
-	assert.Equal(t, map[string]interface{}{
+	require.NotNil(t, vmMemoryNonHeapCommitted)
+	require.Equal(t, map[string]interface{}{
 		"committed_value": float64(6),
 	}, vmMemoryNonHeapCommitted.Fields())
-	assert.Equal(t, map[string]string{"metric_type": "gauge", "pool": "non-heap"}, vmMemoryNonHeapCommitted.Tags())
+	require.Equal(t, map[string]string{"metric_type": "gauge", "pool": "non-heap"}, vmMemoryNonHeapCommitted.Tags())
 }
 
 func search(metrics []telegraf.Metric, name string, tags map[string]string, fieldName string) telegraf.Metric {
@@ -492,4 +495,106 @@ func containsAll(t1 map[string]string, t2 map[string]string) bool {
 		}
 	}
 	return true
+}
+
+func Metric(v telegraf.Metric, err error) telegraf.Metric {
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+func NoError(t *testing.T, err error) {
+	require.NoError(t, err)
+}
+
+func TestDropWizard(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   []byte
+		metrics []telegraf.Metric
+		errFunc func(t *testing.T, err error)
+	}{
+		{
+			name:  "minimal",
+			input: []byte(`{"version": "3.0.0", "counters": {"cpu": {"value": 42}}}`),
+			metrics: []telegraf.Metric{
+				Metric(
+					metric.New(
+						"cpu",
+						map[string]string{
+							"metric_type": "counter",
+						},
+						map[string]interface{}{
+							"value": 42.0,
+						},
+						TimeFunc(),
+					),
+				),
+			},
+			errFunc: NoError,
+		},
+		{
+			name:  "name with space unescaped",
+			input: []byte(`{"version": "3.0.0", "counters": {"hello world": {"value": 42}}}`),
+			metrics: []telegraf.Metric{
+				Metric(
+					metric.New(
+						"hello world",
+						map[string]string{
+							"metric_type": "counter",
+						},
+						map[string]interface{}{
+							"value": 42.0,
+						},
+						TimeFunc(),
+					),
+				),
+			},
+			errFunc: NoError,
+		},
+		{
+			name:  "name with space single slash escaped is not valid JSON",
+			input: []byte(`{"version": "3.0.0", "counters": {"hello\ world": {"value": 42}}}`),
+			errFunc: func(t *testing.T, err error) {
+				require.Error(t, err)
+			},
+		},
+		{
+			name:  "name with space double slash escape",
+			input: []byte(`{"version": "3.0.0", "counters": {"hello\\ world": {"value": 42}}}`),
+			metrics: []telegraf.Metric{
+				Metric(
+					metric.New(
+						"hello world",
+						map[string]string{
+							"metric_type": "counter",
+						},
+						map[string]interface{}{
+							"value": 42.0,
+						},
+						TimeFunc(),
+					),
+				),
+			},
+			errFunc: NoError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := NewParser()
+			parser.SetTimeFunc(TimeFunc)
+			metrics, err := parser.Parse(tt.input)
+			tt.errFunc(t, err)
+
+			require.Equal(t, len(tt.metrics), len(metrics))
+			for i, expected := range tt.metrics {
+				require.Equal(t, expected.Name(), metrics[i].Name())
+				require.Equal(t, expected.Tags(), metrics[i].Tags())
+				require.Equal(t, expected.Fields(), metrics[i].Fields())
+				require.Equal(t, expected.Time(), metrics[i].Time())
+			}
+		})
+	}
 }

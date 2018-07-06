@@ -137,6 +137,7 @@ func (sw *SocketWriter) Write(metrics []telegraf.Metric) error {
 				// permanent error. close the connection
 				sw.Close()
 				sw.Conn = nil
+				return fmt.Errorf("closing connection: %v", err)
 			}
 			return err
 		}

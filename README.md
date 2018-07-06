@@ -40,9 +40,9 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf requires golang version 1.8+, the Makefile requires GNU make.
+Telegraf requires golang version 1.9 or newer, the Makefile requires GNU make.
 
-Dependencies are managed with [gdm](https://github.com/sparrc/gdm),
+Dependencies are managed with [dep](https://github.com/golang/dep),
 which is installed by the Makefile if you don't have it already.
 
 1. [Install Go](https://golang.org/doc/install)
@@ -127,10 +127,12 @@ configuration options.
 * [aerospike](./plugins/inputs/aerospike)
 * [amqp_consumer](./plugins/inputs/amqp_consumer) (rabbitmq)
 * [apache](./plugins/inputs/apache)
+* [aurora](./plugins/inputs/aurora)
 * [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
 * [bond](./plugins/inputs/bond)
 * [cassandra](./plugins/inputs/cassandra) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
+* [burrow](./plugins/inputs/burrow)
 * [ceph](./plugins/inputs/ceph)
 * [cgroup](./plugins/inputs/cgroup)
 * [chrony](./plugins/inputs/chrony)
@@ -209,7 +211,9 @@ configuration options.
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
 * [solr](./plugins/inputs/solr)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
+* [syslog](./plugins/inputs/syslog)
 * [teamspeak](./plugins/inputs/teamspeak)
+* [tengine](./plugins/inputs/tengine)
 * [tomcat](./plugins/inputs/tomcat)
 * [twemproxy](./plugins/inputs/twemproxy)
 * [unbound](./plugins/inputs/unbound)
@@ -267,8 +271,10 @@ formats may be used with input plugins supporting the `data_format` option:
 
 ## Processor Plugins
 
+* [converter](./plugins/processors/converter)
 * [override](./plugins/processors/override)
 * [printer](./plugins/processors/printer)
+* [regex](./plugins/processors/regex)
 * [topk](./plugins/processors/topk)
 
 ## Aggregator Plugins
@@ -276,12 +282,14 @@ formats may be used with input plugins supporting the `data_format` option:
 * [basicstats](./plugins/aggregators/basicstats)
 * [minmax](./plugins/aggregators/minmax)
 * [histogram](./plugins/aggregators/histogram)
+* [valuecounter](./plugins/aggregators/valuecounter)
 
 ## Output Plugins
 
 * [influxdb](./plugins/outputs/influxdb)
 * [amon](./plugins/outputs/amon)
 * [amqp](./plugins/outputs/amqp) (rabbitmq)
+* [application_insights](./plugins/outputs/application_insights)
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
 * [cratedb](./plugins/outputs/cratedb)
@@ -291,6 +299,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [file](./plugins/outputs/file)
 * [graphite](./plugins/outputs/graphite)
 * [graylog](./plugins/outputs/graylog)
+* [http](./plugins/outputs/http)
 * [instrumental](./plugins/outputs/instrumental)
 * [kafka](./plugins/outputs/kafka)
 * [librato](./plugins/outputs/librato)

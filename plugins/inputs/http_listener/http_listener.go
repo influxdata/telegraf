@@ -343,6 +343,9 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 }
 
 func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	h.handler.SetTimePrecision(getPrecisionMultiplier(precision))
 	h.handler.SetTimeFunc(func() time.Time { return t })
 	metrics, err := h.parser.Parse(b)

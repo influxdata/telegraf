@@ -15,9 +15,11 @@ import (
 type Openldap struct {
 	Host               string
 	Port               int
-	Ssl                string
+	SSL                string `toml:"ssl"` // Deprecated in 1.7; use TLS
+	TLS                string `toml:"tls"`
 	InsecureSkipVerify bool
-	SslCa              string
+	SSLCA              string `toml:"ssl_ca"` // Deprecated in 1.7; use TLSCA
+	TLSCA              string `toml:"tls_ca"`
 	BindDn             string
 	BindPassword       string
 	ReverseMetricNames bool
@@ -30,7 +32,7 @@ const sampleConfig string = `
   # ldaps, starttls, or no encryption. default is an empty string, disabling all encryption.
   # note that port will likely need to be changed to 636 for ldaps
   # valid options: "" | "starttls" | "ldaps"
-  ssl = ""
+  tls = ""
 
   # skip peer certificate verification. Default is false.
   insecure_skip_verify = false
@@ -70,9 +72,11 @@ func NewOpenldap() *Openldap {
 	return &Openldap{
 		Host:               "localhost",
 		Port:               389,
-		Ssl:                "",
+		SSL:                "",
+		TLS:                "",
 		InsecureSkipVerify: false,
-		SslCa:              "",
+		SSLCA:              "",
+		TLSCA:              "",
 		BindDn:             "",
 		BindPassword:       "",
 		ReverseMetricNames: false,
@@ -81,12 +85,19 @@ func NewOpenldap() *Openldap {
 
 // gather metrics
 func (o *Openldap) Gather(acc telegraf.Accumulator) error {
+	if o.TLS == "" {
+		o.TLS = o.SSL
+	}
+	if o.TLSCA == "" {
+		o.TLSCA = o.SSLCA
+	}
+
 	var err error
 	var l *ldap.Conn
-	if o.Ssl != "" {
+	if o.TLS != "" {
 		// build tls config
 		clientTLSConfig := tls.ClientConfig{
-			SSLCA:              o.SslCa,
+			TLSCA:              o.TLSCA,
 			InsecureSkipVerify: o.InsecureSkipVerify,
 		}
 		tlsConfig, err := clientTLSConfig.TLSConfig()
@@ -94,13 +105,13 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(err)
 			return nil
 		}
-		if o.Ssl == "ldaps" {
+		if o.TLS == "ldaps" {
 			l, err = ldap.DialTLS("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port), tlsConfig)
 			if err != nil {
 				acc.AddError(err)
 				return nil
 			}
-		} else if o.Ssl == "starttls" {
+		} else if o.TLS == "starttls" {
 			l, err = ldap.Dial("tcp", fmt.Sprintf("%s:%d", o.Host, o.Port))
 			if err != nil {
 				acc.AddError(err)
@@ -108,7 +119,7 @@ func (o *Openldap) Gather(acc telegraf.Accumulator) error {
 			}
 			err = l.StartTLS(tlsConfig)
 		} else {
-			acc.AddError(fmt.Errorf("Invalid setting for ssl: %s", o.Ssl))
+			acc.AddError(fmt.Errorf("Invalid setting for ssl: %s", o.TLS))
 			return nil
 		}
 	} else {

@@ -435,6 +435,23 @@ func (d *Docker) gatherContainer(
 			}
 		}
 	}
+	if info.State != nil {
+		tags["container_status"] = info.State.Status
+		statefields := map[string]interface{}{
+			"oomkilled": info.State.OOMKilled,
+			"pid":       info.State.Pid,
+			"exitcode":  info.State.ExitCode,
+		}
+		container_time, err := time.Parse(time.RFC3339, info.State.StartedAt)
+		if err == nil && !container_time.IsZero() {
+			statefields["started_at"] = container_time.UnixNano()
+		}
+		container_time, err = time.Parse(time.RFC3339, info.State.FinishedAt)
+		if err == nil && !container_time.IsZero() {
+			statefields["finished_at"] = container_time.UnixNano()
+		}
+		acc.AddFields("docker_container_status", statefields, tags, time.Now())
+	}
 
 	if info.State.Health != nil {
 		healthfields := map[string]interface{}{
