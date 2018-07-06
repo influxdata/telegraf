@@ -188,7 +188,7 @@ func createSim() (*simulator.Model, *simulator.Server, error) {
 	model.Service.TLS = new(tls.Config)
 
 	s := model.Service.NewServer()
-	fmt.Printf("Server created at: %s\n", s.URL)
+	//fmt.Printf("Server created at: %s\n", s.URL)
 
 	return model, s, nil
 }
@@ -196,11 +196,12 @@ func createSim() (*simulator.Model, *simulator.Server, error) {
 func TestParseConfig(t *testing.T) {
 	v := VSphere{}
 	c := v.SampleConfig()
-	p := regexp.MustCompile("#[^#]")
-	c = configHeader + "\n[[inputs.vsphere]]\n" + p.ReplaceAllLiteralString(c, "")
+	p := regexp.MustCompile("\n#")
+	fmt.Printf("Source=%s", p.ReplaceAllLiteralString(c, "\n"))
+	c = configHeader + "\n[[inputs.vsphere]]\n" + p.ReplaceAllLiteralString(c, "\n")
 	tab, err := toml.Parse([]byte(c))
-	t.Log(tab.Fields)
 	require.NoError(t, err)
+	require.NotNil(t, tab)
 }
 
 func TestAll(t *testing.T) {
