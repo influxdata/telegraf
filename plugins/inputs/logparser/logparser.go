@@ -3,7 +3,9 @@
 package logparser
 
 import (
+	"fmt"
 	"log"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -43,7 +45,7 @@ type LogParserPlugin struct {
 	done    chan struct{}
 	wg      sync.WaitGroup
 	acc     telegraf.Accumulator
-	parsers []parsers.Parser
+	parsers []LogParser
 
 	sync.Mutex
 
@@ -135,7 +137,7 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.tailers = make(map[string]*tail.Tail)
 
 	// Looks for fields which implement LogParser interface
-	l.parsers = []parsers.Parser{}
+	l.parsers = []LogParser{}
 	config := &parsers.Config{
 		Patterns:           l.Patterns,
 		NamedPatterns:      l.NamedPatterns,
@@ -144,10 +146,31 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 		TimeZone:           l.TimeZone,
 		DataFormat:         "grok",
 	}
+
 	var err error
 	l.GrokParser, err = parsers.NewParser(config)
 	if err != nil {
 		return err
+	}
+
+	s := reflect.ValueOf(l).Elem()
+	for i := 0; i < s.NumField(); i++ {
+		f := s.Field(i)
+
+		if !f.CanInterface() {
+			continue
+		}
+
+		if lpPlugin, ok := f.Interface().(LogParser); ok {
+			if reflect.ValueOf(lpPlugin).IsNil() {
+				continue
+			}
+			l.parsers = append(l.parsers, lpPlugin)
+		}
+	}
+
+	if len(l.parsers) == 0 {
+		return fmt.Errorf("logparser input plugin: no parser defined")
 	}
 
 	l.wg.Add(1)

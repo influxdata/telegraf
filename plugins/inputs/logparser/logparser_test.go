@@ -10,8 +10,6 @@ import (
 
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -27,21 +25,16 @@ func TestStartNoParsers(t *testing.T) {
 
 func TestGrokParseLogFilesNonExistPattern(t *testing.T) {
 	thisdir := getCurrentDir()
-	c := &parsers.Config{
-		Patterns:           []string{"%{FOOBAR}"},
-		CustomPatternFiles: []string{thisdir + "grok/testdata/test-patterns"},
-		DataFormat:         "grok",
-	}
-	p, err := parsers.NewParser(c)
 
 	logparser := &LogParserPlugin{
-		FromBeginning: true,
-		Files:         []string{thisdir + "grok/testdata/*.log"},
-		GrokParser:    p,
+		FromBeginning:      true,
+		Files:              []string{thisdir + "grok/testdata/*.log"},
+		Patterns:           []string{"%{FOOBAR}"},
+		CustomPatternFiles: []string{thisdir + "grok/testdata/test-patterns"},
 	}
 
 	acc := testutil.Accumulator{}
-	err = logparser.Start(&acc)
+	err := logparser.Start(&acc)
 	assert.Error(t, err)
 }
 
