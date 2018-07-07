@@ -222,7 +222,7 @@ func TestNoMatches(t *testing.T) {
 			},
 		},
 		{
-			message: "Should emit empty string when result_key given but regex doesn't match",
+			message: "Should not emit new tag/field when result_key given but regex doesn't match",
 			converter: converter{
 				Key:         "request",
 				Pattern:     "not_match",
@@ -230,8 +230,7 @@ func TestNoMatches(t *testing.T) {
 				ResultKey:   "new_field",
 			},
 			expectedFields: map[string]interface{}{
-				"request":   "/users/42/",
-				"new_field": "",
+				"request": "/users/42/",
 			},
 		},
 	}

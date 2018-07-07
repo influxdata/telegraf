@@ -68,7 +68,9 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   [[inputs.cloudwatch.metrics]]
     names = ["Latency", "RequestCount"]
 
-    ## Dimension filters for Metric (optional)
+    ## Dimension filters for Metric.  These are optional however all dimensions
+    ## defined for the metric names must be specified in order to retrieve
+    ## the metric statistics.
     [[inputs.cloudwatch.metrics.dimensions]]
       name = "LoadBalancerName"
       value = "p-example"
@@ -141,6 +143,20 @@ Tag Dimension names are represented in [snake case](https://en.wikipedia.org/wik
   - region           (CloudWatch Region)
   - unit             (CloudWatch Metric Unit)
   - {dimension-name} (Cloudwatch Dimension value - one for each metric dimension)
+
+### Troubleshooting:
+
+You can use the aws cli to get a list of available metrics and dimensions:
+```
+aws cloudwatch list-metrics --namespace AWS/EC2 --region us-east-1
+aws cloudwatch list-metrics --namespace AWS/EC2 --region us-east-1 --metric-name CPUCreditBalance
+```
+
+If the expected metrics are not returned, you can try getting them manually
+for a short period of time:
+```
+aws cloudwatch get-metric-statistics --namespace AWS/EC2 --region us-east-1 --period 300 --start-time 2018-07-01T00:00:00Z --end-time 2018-07-01T00:15:00Z --statistics Average --metric-name CPUCreditBalance --dimensions Name=InstanceId,Value=i-deadbeef
+```
 
 ### Example Output:
 
