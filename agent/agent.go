@@ -388,21 +388,11 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		}(aggregator)
 	}
 
-	wg.Add(len(a.Config.Inputs))
-	for _, input := range a.Config.Inputs {
-		interval := a.Config.Agent.Interval.Duration
-		// overwrite global interval if this plugin has it's own.
-		if input.Config.Interval != 0 {
-			interval = input.Config.Interval
-		}
-		go func(in *models.RunningInput, interv time.Duration) {
-			defer wg.Done()
-			a.gatherer(shutdown, in, interv, metricC)
-		}(input, interval)
-	}
-
-	// Start all ServicePlugins inputs after all other
-	// plugins are loaded so that no metrics get dropped
+	// Service inputs may immediately add metrics, if metrics are added before
+	// the aggregator starts they will be dropped.  Generally this occurs
+	// only during testing but it is an outstanding issue.
+	//
+	//   https://github.com/influxdata/telegraf/issues/4394
 	for _, input := range a.Config.Inputs {
 		input.SetDefaultTags(a.Config.Tags)
 		switch p := input.Input.(type) {
@@ -418,6 +408,19 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 			}
 			defer p.Stop()
 		}
+	}
+
+	wg.Add(len(a.Config.Inputs))
+	for _, input := range a.Config.Inputs {
+		interval := a.Config.Agent.Interval.Duration
+		// overwrite global interval if this plugin has it's own.
+		if input.Config.Interval != 0 {
+			interval = input.Config.Interval
+		}
+		go func(in *models.RunningInput, interv time.Duration) {
+			defer wg.Done()
+			a.gatherer(shutdown, in, interv, metricC)
+		}(input, interval)
 	}
 
 	wg.Wait()
