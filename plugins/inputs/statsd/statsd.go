@@ -64,6 +64,9 @@ type Statsd struct {
 	DeleteTimings  bool
 	ConvertNames   bool
 
+	ExpirationInterval internal.Duration `toml:"expiration_interval"`
+	LastGatherTime     time.Time
+
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string
 	// This flag enables parsing of tags in the dogstatsd extension to the
@@ -96,10 +99,10 @@ type Statsd struct {
 	// Cache gauges, counters & sets so they can be aggregated as they arrive
 	// gauges and counters map measurement/tags hash -> field name -> metrics
 	// sets and timings map measurement/tags hash -> metrics
-	gauges   map[string]cachedgauge
-	counters map[string]cachedcounter
-	sets     map[string]cachedset
-	timings  map[string]cachedtimings
+	gauges   map[string]*cachedgauge
+	counters map[string]*cachedcounter
+	sets     map[string]*cachedset
+	timings  map[string]*cachedtimings
 
 	// bucket -> influx templates
 	Templates []string
@@ -145,28 +148,30 @@ type metric struct {
 	tags       map[string]string
 }
 
+type cachedmetric struct {
+	name       string
+	tags       map[string]string
+	updateTime time.Time
+}
+
 type cachedset struct {
-	name   string
+	cachedmetric
 	fields map[string]map[string]bool
-	tags   map[string]string
 }
 
 type cachedgauge struct {
-	name   string
+	cachedmetric
 	fields map[string]interface{}
-	tags   map[string]string
 }
 
 type cachedcounter struct {
-	name   string
+	cachedmetric
 	fields map[string]interface{}
-	tags   map[string]string
 }
 
 type cachedtimings struct {
-	name   string
+	cachedmetric
 	fields map[string]RunningStats
-	tags   map[string]string
 }
 
 func (_ *Statsd) Description() string {
@@ -203,6 +208,9 @@ const sampleConfig = `
   ## Reset timings & histograms every interval (default=true)
   delete_timings = true
 
+  ## Interval to expire metrics and not be collected, 0 == no expiration (default=1h)
+  expiration_interval = "24h"
+
   ## Percentiles to calculate for timing & histogram stats
   percentiles = [90]
 
@@ -237,8 +245,17 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	s.Lock()
 	defer s.Unlock()
 	now := time.Now()
+	expirationInterval := s.ExpirationInterval.Duration
 
-	for _, metric := range s.timings {
+	for bucket, metric := range s.timings {
+		if !s.DeleteTimings && expirationInterval > 0 && now.Sub(metric.updateTime) > expirationInterval {
+			delete(s.timings, bucket)
+			continue
+		}
+		if metric.updateTime.Before(s.LastGatherTime) {
+			continue
+		}
+
 		// Defining a template to parse field names for timers allows us to split
 		// out multiple fields per timer. In this case we prefix each stat with the
 		// field name and store these all in a single measurement.
@@ -263,24 +280,48 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 		acc.AddFields(metric.name, fields, metric.tags, now)
 	}
 	if s.DeleteTimings {
-		s.timings = make(map[string]cachedtimings)
+		s.timings = make(map[string]*cachedtimings)
 	}
 
-	for _, metric := range s.gauges {
+	for bucket, metric := range s.gauges {
+		if !s.DeleteGauges && expirationInterval > 0 && now.Sub(metric.updateTime) > expirationInterval {
+			delete(s.gauges, bucket)
+			continue
+		}
+		if !metric.updateTime.After(s.LastGatherTime) {
+			continue
+		}
+
 		acc.AddGauge(metric.name, metric.fields, metric.tags, now)
 	}
 	if s.DeleteGauges {
-		s.gauges = make(map[string]cachedgauge)
+		s.gauges = make(map[string]*cachedgauge)
 	}
 
-	for _, metric := range s.counters {
+	for bucket, metric := range s.counters {
+		if !s.DeleteCounters && expirationInterval > 0 && now.Sub(metric.updateTime) > expirationInterval {
+			delete(s.counters, bucket)
+			continue
+		}
+		if !metric.updateTime.After(s.LastGatherTime) {
+			continue
+		}
+
 		acc.AddCounter(metric.name, metric.fields, metric.tags, now)
 	}
 	if s.DeleteCounters {
-		s.counters = make(map[string]cachedcounter)
+		s.counters = make(map[string]*cachedcounter)
 	}
 
-	for _, metric := range s.sets {
+	for bucket, metric := range s.sets {
+		if !s.DeleteSets && expirationInterval > 0 && now.Sub(metric.updateTime) > expirationInterval {
+			delete(s.sets, bucket)
+			continue
+		}
+		if !metric.updateTime.After(s.LastGatherTime) {
+			continue
+		}
+
 		fields := make(map[string]interface{})
 		for field, set := range metric.fields {
 			fields[field] = int64(len(set))
@@ -288,18 +329,20 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 		acc.AddFields(metric.name, fields, metric.tags, now)
 	}
 	if s.DeleteSets {
-		s.sets = make(map[string]cachedset)
+		s.sets = make(map[string]*cachedset)
 	}
+
+	s.LastGatherTime = now
 
 	return nil
 }
 
 func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	// Make data structures
-	s.gauges = make(map[string]cachedgauge)
-	s.counters = make(map[string]cachedcounter)
-	s.sets = make(map[string]cachedset)
-	s.timings = make(map[string]cachedtimings)
+	s.gauges = make(map[string]*cachedgauge)
+	s.counters = make(map[string]*cachedcounter)
+	s.sets = make(map[string]*cachedset)
+	s.timings = make(map[string]*cachedtimings)
 
 	s.Lock()
 	defer s.Unlock()
@@ -693,10 +736,12 @@ func (s *Statsd) aggregate(m metric) {
 		// Check if the measurement exists
 		cached, ok := s.timings[m.hash]
 		if !ok {
-			cached = cachedtimings{
-				name:   m.name,
+			cached = &cachedtimings{
+				cachedmetric: cachedmetric{
+					name: m.name,
+					tags: m.tags,
+				},
 				fields: make(map[string]RunningStats),
-				tags:   m.tags,
 			}
 		}
 		// Check if the field exists. If we've not enabled multiple fields per timer
@@ -715,15 +760,18 @@ func (s *Statsd) aggregate(m metric) {
 			field.AddValue(m.floatvalue)
 		}
 		cached.fields[m.field] = field
+		cached.updateTime = time.Now()
 		s.timings[m.hash] = cached
 	case "c":
 		// check if the measurement exists
 		_, ok := s.counters[m.hash]
 		if !ok {
-			s.counters[m.hash] = cachedcounter{
-				name:   m.name,
+			s.counters[m.hash] = &cachedcounter{
+				cachedmetric: cachedmetric{
+					name: m.name,
+					tags: m.tags,
+				},
 				fields: make(map[string]interface{}),
-				tags:   m.tags,
 			}
 		}
 		// check if the field exists
@@ -733,14 +781,17 @@ func (s *Statsd) aggregate(m metric) {
 		}
 		s.counters[m.hash].fields[m.field] =
 			s.counters[m.hash].fields[m.field].(int64) + m.intvalue
+		s.counters[m.hash].updateTime = time.Now()
 	case "g":
 		// check if the measurement exists
 		_, ok := s.gauges[m.hash]
 		if !ok {
-			s.gauges[m.hash] = cachedgauge{
-				name:   m.name,
+			s.gauges[m.hash] = &cachedgauge{
+				cachedmetric: cachedmetric{
+					name: m.name,
+					tags: m.tags,
+				},
 				fields: make(map[string]interface{}),
-				tags:   m.tags,
 			}
 		}
 		// check if the field exists
@@ -754,14 +805,17 @@ func (s *Statsd) aggregate(m metric) {
 		} else {
 			s.gauges[m.hash].fields[m.field] = m.floatvalue
 		}
+		s.gauges[m.hash].updateTime = time.Now()
 	case "s":
 		// check if the measurement exists
 		_, ok := s.sets[m.hash]
 		if !ok {
-			s.sets[m.hash] = cachedset{
-				name:   m.name,
+			s.sets[m.hash] = &cachedset{
+				cachedmetric: cachedmetric{
+					name: m.name,
+					tags: m.tags,
+				},
 				fields: make(map[string]map[string]bool),
-				tags:   m.tags,
 			}
 		}
 		// check if the field exists
@@ -770,6 +824,7 @@ func (s *Statsd) aggregate(m metric) {
 			s.sets[m.hash].fields[m.field] = make(map[string]bool)
 		}
 		s.sets[m.hash].fields[m.field][m.strvalue] = true
+		s.sets[m.hash].updateTime = time.Now()
 	}
 }
 
@@ -893,6 +948,8 @@ func init() {
 			DeleteGauges:           true,
 			DeleteSets:             true,
 			DeleteTimings:          true,
+			ExpirationInterval:     internal.Duration{Duration: time.Duration(1) * time.Hour},
+			LastGatherTime:         time.Now(),
 		}
 	})
 }
