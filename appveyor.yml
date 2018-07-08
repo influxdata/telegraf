@@ -21,6 +21,7 @@ install:
   - 7z x "C:\Cache\gnuwin32-dep.zip" -oC:\GnuWin32 -y
   - go version
   - go env
+  - git config --system core.longpaths true
 
 build_script:
   - cmd: C:\GnuWin32\bin\make deps

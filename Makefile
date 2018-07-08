@@ -23,8 +23,8 @@ all:
 
 deps:
 	go get -u github.com/golang/lint/golint
-	go get github.com/sparrc/gdm
-	gdm restore --parallel=false
+	go get -u github.com/golang/dep/cmd/dep
+	dep ensure
 
 telegraf:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
@@ -54,11 +54,11 @@ fmtcheck:
 	@echo '[INFO] done.'
 
 test-windows:
-	go test ./plugins/inputs/ping/...
-	go test ./plugins/inputs/win_perf_counters/...
-	go test ./plugins/inputs/win_services/...
-	go test ./plugins/inputs/procstat/...
-	go test ./plugins/inputs/ntpq/...
+	go test -short ./plugins/inputs/ping/...
+	go test -short ./plugins/inputs/win_perf_counters/...
+	go test -short ./plugins/inputs/win_services/...
+	go test -short ./plugins/inputs/procstat/...
+	go test -short ./plugins/inputs/ntpq/...
 
 # vet runs the Go source code static analysis tool `vet` to find
 # any common errors.
@@ -92,4 +92,15 @@ docker-image:
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
 
-.PHONY: deps telegraf install test test-windows lint vet test-all package clean docker-image fmtcheck uint64
+static:
+	@echo "Building static linux binary..."
+	@CGO_ENABLED=0 \
+	GOOS=linux \
+	GOARCH=amd64 \
+	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
+
+plugin-%:
+	@echo "Starting dev environment for $${$(@)} input plugin..."
+	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
+
+.PHONY: deps telegraf install test test-windows lint vet test-all package clean docker-image fmtcheck uint64 static
