@@ -7,6 +7,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"io"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -123,7 +124,11 @@ func (p *PointParser) convertPointToTelegrafMetric(points []Point) ([]telegraf.M
 
 		// single field for value
 		fields := make(map[string]interface{})
-		fields["value"] = point.Value
+		v, err := strconv.ParseFloat(point.Value, 64)
+		if err != nil {
+			return nil, err
+		}
+		fields["value"] = v
 
 		m, err := metric.New(point.Name, tags, fields, time.Unix(point.Timestamp, 0))
 		if err != nil {
