@@ -62,6 +62,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/mysql"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nats"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nats_consumer"
+	_ "github.com/influxdata/telegraf/plugins/inputs/nats_streaming"
 	_ "github.com/influxdata/telegraf/plugins/inputs/net_response"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nginx"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nginx_plus"

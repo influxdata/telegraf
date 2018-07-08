@@ -179,6 +179,7 @@ configuration options.
 * [mongodb](./plugins/inputs/mongodb)
 * [mysql](./plugins/inputs/mysql)
 * [nats](./plugins/inputs/nats)
+* [nats_streaming](./plugins/input/nats_streaming)
 * [net_response](./plugins/inputs/net_response)
 * [nginx](./plugins/inputs/nginx)
 * [nginx_plus](./plugins/inputs/nginx_plus)

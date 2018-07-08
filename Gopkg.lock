@@ -18,13 +18,13 @@
   version = "v0.3.0"
 
 [[projects]]
+  branch = "master"
   name = "github.com/Microsoft/ApplicationInsights-Go"
   packages = [
     "appinsights",
     "appinsights/contracts"
   ]
   revision = "d2df5d440eda5372f24fcac03839a64d6cb5f7e5"
-  version = "v0.4.2"
 
 [[projects]]
   name = "github.com/Microsoft/go-winio"
@@ -93,6 +93,12 @@
   revision = "f5f430df56871bc937950274b2c86681d3db6e59"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/armon/go-metrics"
+  packages = ["."]
+  revision = "58588f401c2cc130a7308a52ca3bc6c0a76db04b"
+
+[[projects]]
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -134,6 +140,12 @@
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
+
+[[projects]]
+  name = "github.com/boltdb/bolt"
+  packages = ["."]
+  revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
+  version = "v1.3.1"
 
 [[projects]]
   name = "github.com/bsm/sarama-cluster"
@@ -317,7 +329,11 @@
 
 [[projects]]
   name = "github.com/gogo/protobuf"
-  packages = ["proto"]
+  packages = [
+    "gogoproto",
+    "proto",
+    "protoc-gen-gogo/descriptor"
+  ]
   revision = "1adfc126b41513cc696b209667c8656ea7aac67c"
   version = "v1.0.0"
 
@@ -382,9 +398,33 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/hashicorp/go-immutable-radix"
+  packages = ["."]
+  revision = "7f3cd4390caab3250a57f30efdb2a65dd7649ecf"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/go-msgpack"
+  packages = ["codec"]
+  revision = "fa3f63826f7c23912c15263591e65d54d080b458"
+
+[[projects]]
+  branch = "master"
   name = "github.com/hashicorp/go-rootcerts"
   packages = ["."]
   revision = "6bb64b370b90e7ef1fa532be9e591a81c3493e00"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/golang-lru"
+  packages = ["simplelru"]
+  revision = "0fb14efe8c47ae851c0034ed7a448854d3d34cf3"
+
+[[projects]]
+  name = "github.com/hashicorp/raft"
+  packages = ["."]
+  revision = "6d14f0c70869faabd9e60ba7ed88a6cbbd6a661f"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/hashicorp/serf"
@@ -539,6 +579,24 @@
   ]
   revision = "062418ea1c2181f52dc0f954f6204370519a868b"
   version = "v1.5.0"
+
+[[projects]]
+  name = "github.com/nats-io/go-nats-streaming"
+  packages = ["pb"]
+  revision = "e15a53f85e4932540600a16b56f6c4f65f58176f"
+  version = "v0.4.0"
+
+[[projects]]
+  name = "github.com/nats-io/nats-streaming-server"
+  packages = [
+    "logger",
+    "server",
+    "spb",
+    "stores",
+    "util"
+  ]
+  revision = "63e2c334b66dba3edade0047625a25c0d8f18f80"
+  version = "v0.10.2"
 
 [[projects]]
   name = "github.com/nats-io/nuid"
@@ -968,6 +1026,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "024194b983d91b9500fe97e0aa0ddb5fe725030cb51ddfb034e386cae1098370"
+  inputs-digest = "586ea6145e9e03bf63b3450fc6821c0d6ead0b571d71821b905b34cba3d9276f"
   solver-name = "gps-cdcl"
   solver-version = 1
