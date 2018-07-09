@@ -209,7 +209,7 @@ exec_mycollector,my_tag_1=bar,my_tag_2=baz a=7,b_c=8
 # GJSON:
 GJSON also parses JSON data, but uses paths to name and identify fields of your choosing.
 
-The GJSON parser supports 5 different configuration fields for json objects:
+The GJSON parser supports 5 different configuration fields for json values:
 
 1.'gjson_tag_paths'
 2.'gjson_string_paths'
@@ -219,18 +219,18 @@ The GJSON parser supports 5 different configuration fields for json objects:
 
 Each field is a map type that will map a field_name to a field_path.  Path syntax is described below.
 Path maps should be configured as:
-`toml gjson_tag_paths = {"field_name" = "field.path", "field_name2" = "field.path2"}`
+`toml gjson_tag_paths = {"field_name" = "obj.sub_obj", "field_name2" = "obj2"}`
 
 Any paths specified in gjson_tag_paths will be converted to strings and stored as tags.
 Any paths otherwise specified will be their marked type and stored as fields.
 
-#### GJSON Configuration:
 Paths are a series of keys seperated by a dot, ie "obj.sub_obj".
-Paths should not lead to an JSON array, but a single object.  
-An error message will be thrown if a path describes an array.
-Further reading for path syntax can be found here: https://github.com/tidwall/gjson
+Paths that lead to an JSON array will be labeled by the object name, followed by the index in the array.
+Paths that lead to an JSON object will be labeled by the object name, followed by the subobject's name.
+Further reading for path syntax can be found here: https://github.com/tidwall/gjson#path-syntax
 
-As an example, if you had the json:
+#### GJSON Configuration:
+As an example, the json:
 
 ```json
 {
@@ -261,12 +261,12 @@ with the config:
   name_override = "gjson_sample"
 
   gjson_tag_paths = {"first_name_tag" = "name.first"}
-  gjson_string_paths = {"last_name" = "name.last"}
+  gjson_string_paths = {"friend_last_names" = "friends.?.last"}
   gjson_int_paths = {"age" = "age", "Janes_age" = "friends.2.age"}
 ```
 
 would output the metric:
-`gjson_sample, first_name_tag=Tom last_name=Anderson,age=37,Janes_age=47`
+`gjson_sample, first_name_tag=Tom friend_last_names_0=Anderson,friend_last_names_1=Craig,friend_last_names_2=Murphy, age=37,Janes_age=47`
 
 
 # Value:

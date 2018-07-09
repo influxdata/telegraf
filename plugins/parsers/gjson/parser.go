@@ -1,6 +1,7 @@
 package gjson
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -29,7 +30,7 @@ func (j *JSONPath) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	for k, v := range j.TagPath {
 		c := gjson.GetBytes(buf, v)
-		if c.IsArray() {
+		if c.IsObject() {
 			log.Printf("E! GJSON cannot assign array to field on path: %v", v)
 			continue
 		}
@@ -38,7 +39,7 @@ func (j *JSONPath) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	for k, v := range j.FloatPath {
 		c := gjson.GetBytes(buf, v)
-		if c.IsArray() {
+		if c.IsObject() {
 			log.Printf("E! GJSON cannot assign array to field on path: %v", v)
 			continue
 		}
@@ -47,7 +48,7 @@ func (j *JSONPath) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	for k, v := range j.IntPath {
 		c := gjson.GetBytes(buf, v)
-		if c.IsArray() {
+		if c.IsObject() {
 			log.Printf("E! GJSON cannot assign array to field on path: %v", v)
 			continue
 		}
@@ -56,7 +57,7 @@ func (j *JSONPath) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	for k, v := range j.BoolPath {
 		c := gjson.GetBytes(buf, v)
-		if c.IsArray() {
+		if c.IsObject() {
 			log.Printf("E! GJSON cannot assign array to field on path: %v", v)
 			continue
 		}
@@ -71,9 +72,13 @@ func (j *JSONPath) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	for k, v := range j.StrPath {
 		c := gjson.GetBytes(buf, v)
-		if c.IsArray() {
-			log.Printf("E! GJSON cannot assign array to field on path: %v", v)
-			continue
+		if c.IsObject() {
+			objMap := c.Map()
+
+			for nk, nv := range objMap {
+				label := fmt.Sprintf("%v_%v", k, nk)
+				fields[label] = nv.String()
+			}
 		}
 		fields[k] = c.String()
 	}

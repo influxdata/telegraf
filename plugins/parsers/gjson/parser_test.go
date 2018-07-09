@@ -54,6 +54,7 @@ func TestTagTypes(t *testing.T) {
 				"fun":true,
 				"break":9.97
 			}
+			"test_arr":[3,4,5]
 		}
 	}`
 
@@ -61,7 +62,7 @@ func TestTagTypes(t *testing.T) {
 		TagPath:   map[string]string{"int1": "total_devices", "my_bool": "shares.my_bool"},
 		FloatPath: map[string]string{"total": "shares.total"},
 		BoolPath:  map[string]string{"fun": "shares.tester2.fun"},
-		StrPath:   map[string]string{"hello": "shares.tester2.hello"},
+		StrPath:   map[string]string{"hello": "shares.tester2"},
 		IntPath:   map[string]string{"accepted": "shares.accepted"},
 	}
 
