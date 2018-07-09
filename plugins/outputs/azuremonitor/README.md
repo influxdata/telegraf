@@ -30,7 +30,7 @@ must be configured.
 
 The region is the Azure region that you wish to connect to.
 Examples include but are not limited to:
-* useast
+* eastus
 * centralus
 * westcentralus
 * westeurope
@@ -52,7 +52,7 @@ The resourceId used for Azure Monitor metrics.
 #resource_id = "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
 ## Azure region to publish metrics against.  Defaults to eastus.
 ## Leave blank to automatically query the region via MSI.
-#region = "useast"
+#region = "eastus"
 
 ## Write HTTP timeout, formatted as a string.  If not provided, will default
 ## to 5s. 0s means no timeout (not recommended).

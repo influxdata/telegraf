@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/adal"
@@ -51,7 +52,6 @@ type aggregate struct {
 }
 
 const (
-	defaultRegion          string = "eastus"
 	defaultMSIResource     string = "https://monitoring.azure.com/"
 	urlTemplate            string = "https://%s.monitoring.azure.com%s/metrics"
 	resourceIDTemplate     string = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s"
@@ -65,9 +65,10 @@ var sampleConfig = `
   ## of the VM via the instance metadata service (optional if running 
   ## on an Azure VM with MSI)
   #resource_id = "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
-  ## Azure region to publish metrics against.  Defaults to eastus.
+  ## Azure region to publish metrics against.
   ## Leave blank to automatically query the region via MSI.
-  #region = "useast"
+  ## Region must be manually set or acquired by MSI.
+  #region = ""
 
   ## Write HTTP timeout, formatted as a string.  If not provided, will default
   ## to 5s. 0s means no timeout (not recommended).
@@ -76,6 +77,7 @@ var sampleConfig = `
   ## Whether or not to use managed service identity.
   #use_managed_service_identity = true
 
+  ## *The following fields are required if MSI is not used.*
   ## Fill in the following values if using Active Directory Service
   ## Principal or User Principal for authentication.
   ## Subscription ID
@@ -111,27 +113,29 @@ func (a *AzureMonitor) Connect() error {
 	if a.AzureSubscriptionID == "" && a.AzureTenantID == "" && a.AzureClientID == "" && a.AzureClientSecret == "" {
 		a.useMsi = true
 	} else if a.AzureSubscriptionID == "" || a.AzureTenantID == "" || a.AzureClientID == "" || a.AzureClientSecret == "" {
-		return fmt.Errorf("E! Must provide values for azure_subscription, azure_tenant, azure_client and azure_client_secret, or leave all blank to default to MSI")
+		return fmt.Errorf("must provide values for azure_subscription, azure_tenant, azure_client and azure_client_secret, or leave all blank to default to MSI")
 	}
 
 	if !a.useMsi {
 		// If using direct AD authentication create the AD access client
 		oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, a.AzureTenantID)
 		if err != nil {
-			return fmt.Errorf("E! Could not initialize AD client: %s", err)
+			return fmt.Errorf("could not initialize AD client: %s", err)
 		}
 		a.oauthConfig = oauthConfig
 	}
 
 	// Pull region and resource identifier
 	err := a.GetInstanceMetadata()
-	if err != nil && a.ResourceID == "" && a.Region == "" {
-		return fmt.Errorf("E! No resource id specified, and Azure Instance metadata service not available.  If not running on an Azure VM, provide a value for resource_id")
+	if err != nil && a.ResourceID == "" {
+		return fmt.Errorf("no resource ID specified or available via MSI")
+	} else if a.Region == "" {
+		return fmt.Errorf("no region not specified and not available via MSI")
 	}
 
 	err = a.validateCredentials()
 	if err != nil {
-		return fmt.Errorf("E! Unable to fetch authentication credentials: %v", err)
+		return fmt.Errorf("unable to fetch authentication credentials: %v", err)
 	}
 
 	a.Reset()
@@ -152,13 +156,13 @@ func (a *AzureMonitor) validateCredentials() error {
 		return nil
 	}
 
-	adToken, err := adal.NewServicePrincipalToken(
+	adalToken, err := adal.NewServicePrincipalToken(
 		*(a.oauthConfig), a.AzureClientID, a.AzureClientSecret,
 		azure.PublicCloud.ActiveDirectoryEndpoint)
 	if err != nil {
-		return fmt.Errorf("Could not acquire ADAL token: %s", err)
+		return fmt.Errorf("could not acquire ADAL token: %s", err)
 	}
-	a.adalToken = adToken
+	a.adalToken = adalToken
 	return nil
 }
 
@@ -220,7 +224,7 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 	}
 
 	if err := a.validateCredentials(); err != nil {
-		return fmt.Errorf("E! Unable to fetch authentication credentials: %v", err)
+		return fmt.Errorf("E! [outputs.azuremonitor] Unable to fetch authentication credentials: %v", err)
 	}
 
 	req, err := http.NewRequest("POST", a.url, bytes.NewBuffer(body))
@@ -228,7 +232,11 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	req.Header.Set("Authorization", "Bearer "+a.msiToken.AccessToken)
+	if a.adalToken != nil {
+		req.Header.Set("Authorization", "Bearer "+a.adalToken.OAuthToken())
+	} else {
+		req.Header.Set("Authorization", "Bearer "+a.msiToken.AccessToken)
+	}
 	req.Header.Set("Content-Type", "application/x-ndjson")
 
 	resp, err := a.client.Do(req)
@@ -237,13 +245,13 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
-		reply, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			reply = nil
-		}
-		return fmt.Errorf("E! Get Error. %d HTTP response: %s response body: %s",
-			resp.StatusCode, resp.Status, reply)
+	rbody, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		rbody = nil
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("E! Failed to write to [%s]: %v", a.ResourceID, rbody)
 	}
 
 	return nil
@@ -286,7 +294,7 @@ func translate(m telegraf.Metric) *azureMonitorMetric {
 		Data: &azureMonitorData{
 			BaseData: &azureMonitorBaseData{
 				Metric:         m.Name(),
-				Namespace:      "default",
+				Namespace:      "Telegraf/" + strings.SplitN(m.Name(), "-", 1)[0],
 				DimensionNames: dimensionNames,
 				Series: []*azureMonitorSeries{
 					&azureMonitorSeries{
@@ -331,7 +339,7 @@ func (a *AzureMonitor) Add(m telegraf.Metric) {
 
 		// Azure Monitor does not support fields so the field
 		// name is appended to the metric name.
-		name := m.Name() + "_" + sanitize(f.Key)
+		name := m.Name() + "-" + sanitize(f.Key)
 		id := hashIDWithField(m.HashID(), f.Key)
 
 		_, ok = a.cache[tbucket]
@@ -438,7 +446,6 @@ func init() {
 		return &AzureMonitor{
 			StringAsDimension: false,
 			Timeout:           internal.Duration{Duration: time.Second * 5},
-			Region:            defaultRegion,
 			cache:             make(map[time.Time]map[uint64]*aggregate, 36),
 		}
 	})

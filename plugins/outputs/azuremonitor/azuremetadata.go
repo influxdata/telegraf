@@ -10,49 +10,6 @@ import (
 	"time"
 )
 
-// VirtualMachineMetadata contains information about a VM from the metadata service
-type VirtualMachineMetadata struct {
-	Raw             string
-	AzureResourceID string
-	Compute         struct {
-		Location             string `json:"location"`
-		Name                 string `json:"name"`
-		Offer                string `json:"offer"`
-		OsType               string `json:"osType"`
-		PlacementGroupID     string `json:"placementGroupId"`
-		PlatformFaultDomain  string `json:"platformFaultDomain"`
-		PlatformUpdateDomain string `json:"platformUpdateDomain"`
-		Publisher            string `json:"publisher"`
-		ResourceGroupName    string `json:"resourceGroupName"`
-		Sku                  string `json:"sku"`
-		SubscriptionID       string `json:"subscriptionId"`
-		Tags                 string `json:"tags"`
-		Version              string `json:"version"`
-		VMID                 string `json:"vmId"`
-		VMScaleSetName       string `json:"vmScaleSetName"`
-		VMSize               string `json:"vmSize"`
-		Zone                 string `json:"zone"`
-	} `json:"compute"`
-	Network struct {
-		Interface []struct {
-			Ipv4 struct {
-				IPAddress []struct {
-					PrivateIPAddress string `json:"privateIpAddress"`
-					PublicIPAddress  string `json:"publicIpAddress"`
-				} `json:"ipAddress"`
-				Subnet []struct {
-					Address string `json:"address"`
-					Prefix  string `json:"prefix"`
-				} `json:"subnet"`
-			} `json:"ipv4"`
-			Ipv6 struct {
-				IPAddress []interface{} `json:"ipAddress"`
-			} `json:"ipv6"`
-			MacAddress string `json:"macAddress"`
-		} `json:"interface"`
-	} `json:"network"`
-}
-
 // msiToken is the managed service identity token
 type msiToken struct {
 	AccessToken  string `json:"access_token"`
@@ -156,18 +113,26 @@ func (a *AzureMonitor) GetInstanceMetadata() error {
 	}
 	defer resp.Body.Close()
 
-	reply, err := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-
 	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
-		return fmt.Errorf("Post Error. HTTP response code:%d message:%s reply:\n%s",
-			resp.StatusCode, resp.Status, reply)
+		return fmt.Errorf("unable to fetch MSI: %v", body)
+	}
+
+	// VirtualMachineMetadata contains information about a VM from the metadata service
+	type VirtualMachineMetadata struct {
+		Compute struct {
+			Location          string `json:"location"`
+			Name              string `json:"name"`
+			ResourceGroupName string `json:"resourceGroupName"`
+			SubscriptionID    string `json:"subscriptionId"`
+		} `json:"compute"`
 	}
 
 	var metadata VirtualMachineMetadata
-	if err := json.Unmarshal(reply, &metadata); err != nil {
+	if err := json.Unmarshal(body, &metadata); err != nil {
 		return err
 	}
 

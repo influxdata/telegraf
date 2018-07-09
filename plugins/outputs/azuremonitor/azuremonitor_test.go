@@ -1,11 +1,18 @@
 package azuremonitor
 
 import (
+	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
+
+func TestConnectionMSI(t *testing.T) {
+	azm := AzureMonitor{
+		
+	}
+}
 
 // MockMetrics returns a mock []telegraf.Metric object for using in unit tests
 // of telegraf output sinks.
