@@ -2,7 +2,6 @@ package logparser
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"runtime"
 	"strings"
@@ -51,12 +50,10 @@ func TestGrokParseLogFiles(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	assert.NoError(t, logparser.Start(&acc))
-
 	acc.Wait(2)
 
 	logparser.Stop()
 
-	log.Printf("metric[0] %v, tags: %v, fields: %v", acc.Metrics[0].Measurement, acc.Metrics[0].Tags, acc.Metrics[0].Fields)
 	acc.AssertContainsTaggedFields(t, "logparser_grok",
 		map[string]interface{}{
 			"clientip":      "192.168.1.1",
