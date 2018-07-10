@@ -26,18 +26,18 @@ var _ telegraf.Output = (*AzureMonitor)(nil)
 
 // AzureMonitor allows publishing of metrics to the Azure Monitor custom metrics service
 type AzureMonitor struct {
-	useMsi              bool              `toml:"use_managed_service_identity"`
-	ResourceID          string            `toml:"resource_id"`
-	Region              string            `toml:"region"`
-	Timeout             internal.Duration `toml:"Timeout"`
-	AzureSubscriptionID string            `toml:"azure_subscription"`
-	AzureTenantID       string            `toml:"azure_tenant"`
-	AzureClientID       string            `toml:"azure_client_id"`
-	AzureClientSecret   string            `toml:"azure_client_secret"`
-	StringsAsDimensions bool              `toml:"strings_as_dimensions"`
+	Region              string
+	ResourceID          string `toml:"resource_id"`
+	StringsAsDimensions bool   `toml:"strings_as_dimensions"`
+	Timeout             internal.Duration
+
+	AzureSubscriptionID string `toml:"azure_subscription"`
+	AzureTenantID       string `toml:"azure_tenant"`
+	AzureClientID       string `toml:"azure_client_id"`
+	AzureClientSecret   string `toml:"azure_client_secret"`
 
 	url    string
-	auth   autorest.Preparer
+	auth   autorest.Authorizer
 	client *http.Client
 
 	cache map[time.Time]map[uint64]*aggregate
@@ -49,11 +49,12 @@ type aggregate struct {
 }
 
 const (
-	defaultAuthResource    string = "https://monitoring.azure.com/"
-	urlTemplate            string = "https://%s.monitoring.azure.com%s/metrics"
-	resourceIDTemplate     string = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s"
-	vmInstanceMetadataURL  string = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
-	msiInstanceMetadataURL string = "http://169.254.169.254/metadata/identity/oauth2/token"
+	defaultRequestTimeout = time.Second * 5
+	defaultAuthResource   = "https://monitoring.azure.com/"
+
+	vmInstanceMetadataURL = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
+	resourceIDTemplate    = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s"
+	urlTemplate           = "https://%s.monitoring.azure.com%s/metrics"
 )
 
 var sampleConfig = `
@@ -88,12 +89,20 @@ func (a *AzureMonitor) SampleConfig() string {
 
 // Connect initializes the plugin and validates connectivity
 func (a *AzureMonitor) Connect() error {
+	fmt.Println("test")
+
+	timeout := a.Timeout.Duration
+	if timeout == 0 {
+		timeout = defaultRequestTimeout
+	}
+
 	var client = &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: a.Timeout.Duration,
+		Timeout: timeout,
 	}
+	fmt.Printf("timeout: %+v", a.client.Timeout)
 
 	// Pull region and resource identifier
 	region, resourceID, err := vmInstanceMetadata(client)
@@ -108,13 +117,13 @@ func (a *AzureMonitor) Connect() error {
 	} else if region == "" {
 		return fmt.Errorf("no region configured or available via VM instance metadata")
 	}
-	a.url = fmt.Sprintf(urlTemplate, a.Region, a.ResourceID)
+	a.url = fmt.Sprintf(urlTemplate, region, resourceID)
+	log.Printf("D! Writing to Azure Monitor URL: %s", a.url)
 
-	auth, err := auth.NewAuthorizerFromEnvironmentWithResource(defaultAuthResource)
+	a.auth, err = auth.NewAuthorizerFromEnvironmentWithResource(defaultAuthResource)
 	if err != nil {
 		return nil
 	}
-	a.auth = autorest.CreatePreparer(auth.WithAuthorization())
 
 	a.Reset()
 
@@ -231,22 +240,28 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	req, err = a.auth.Prepare(req)
+	req, err = autorest.CreatePreparer(a.auth.WithAuthorization()).Prepare(req)
+	// req, err = a.auth.Prepare(req)
 	if err != nil {
 		return fmt.Errorf("E! [outputs.azuremonitor] Unable to fetch authentication credentials: %v", err)
 	}
-	fmt.Println("sending request to:", req)
+	fmt.Printf("sending request to: %+v", req)
+	fmt.Printf("timeout: %+v", a.client.Timeout)
 
 	resp, err := a.client.Do(req)
+	fmt.Println("made request")
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
+	fmt.Println("sent batch")
+
 	rbody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		rbody = nil
 	}
+	fmt.Println("read body")
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("E! Failed to write to [%s]: %v", a.ResourceID, rbody)
