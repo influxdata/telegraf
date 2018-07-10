@@ -116,6 +116,8 @@ func TestParseValidPrometheus(t *testing.T) {
 		"cadvisorVersion":  "",
 		"dockerVersion":    "1.8.2",
 		"kernelVersion":    "3.10.0-229.20.1.el7.x86_64",
+		"prometheus_help":  "A metric with a constant '1' value labeled by kernel version, OS version, docker version, cadvisor version & cadvisor revision.",
+		"prometheus_type":  "GAUGE",
 	}, metrics[0].Tags())
 
 	// Counter value
@@ -126,7 +128,10 @@ func TestParseValidPrometheus(t *testing.T) {
 	assert.Equal(t, map[string]interface{}{
 		"counter": float64(0),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+	assert.Equal(t, map[string]string{
+		"prometheus_help": "Counter of failed Token() requests to the alternate token source",
+		"prometheus_type": "COUNTER",
+	}, metrics[0].Tags())
 
 	// Summary data
 	//SetDefaultTags(map[string]string{})
@@ -141,7 +146,11 @@ func TestParseValidPrometheus(t *testing.T) {
 		"count": 9.0,
 		"sum":   1.8909097205e+07,
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{"handler": "prometheus"}, metrics[0].Tags())
+	assert.Equal(t, map[string]string{
+		"handler":         "prometheus",
+		"prometheus_help": "The HTTP request latencies in microseconds.",
+		"prometheus_type": "SUMMARY",
+	}, metrics[0].Tags())
 
 	// histogram data
 	metrics, err = Parse([]byte(validUniqueHistogram), http.Header{})
@@ -161,7 +170,11 @@ func TestParseValidPrometheus(t *testing.T) {
 		"1e+06":  2005.0,
 	}, metrics[0].Fields())
 	assert.Equal(t,
-		map[string]string{"verb": "POST", "resource": "bindings"},
-		metrics[0].Tags())
+		map[string]string{
+			"verb":            "POST",
+			"resource":        "bindings",
+			"prometheus_help": "Response latency distribution in microseconds for each verb, resource and client.",
+			"prometheus_type": "HISTOGRAM",
+		}, metrics[0].Tags())
 
 }
