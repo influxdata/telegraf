@@ -91,6 +91,17 @@ func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]
 
 	//remove any additional string/bool values from fields
 	for k := range fields {
+		//check if field is in StringFields
+		sField := false
+		for _, v := range p.StringFields {
+			if v == k {
+				sField = true
+			}
+		}
+		if sField {
+			continue
+		}
+
 		switch fields[k].(type) {
 		case string:
 			delete(fields, k)

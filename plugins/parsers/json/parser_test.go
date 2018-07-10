@@ -532,10 +532,7 @@ func TestArrayOfObjects(t *testing.T) {
 
 	metrics, err := parser.Parse([]byte(testString))
 	assert.NoError(t, err)
-	log.Printf("len metrics: %v", len(metrics))
 	assert.Equal(t, 3, len(metrics))
-	log.Printf("m[0] name: %v, tags: %v, fields: %v", metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields())
-	t.Error()
 }
 
 func TestUseCaseJSONQuery(t *testing.T) {
@@ -574,13 +571,12 @@ func TestUseCaseJSONQuery(t *testing.T) {
 	  }`
 
 	parser := JSONParser{
-		MetricName: "json_test",
-		TagKeys:    []string{"ice"},
-		JSONQuery:  "metadata.gateways",
+		MetricName:   "json_test",
+		StringFields: []string{"gtw_id"},
+		JSONQuery:    "metadata.gateways",
 	}
 
 	metrics, err := parser.Parse([]byte(testString))
 	assert.NoError(t, err)
-	log.Printf("m[0] name: %v, tags: %v, fields: %v", metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields())
-	t.Error()
+	assert.Equal(t, metrics[0].Fields()["gtw_id"], "eui-b827ebfffe3e082a")
 }
