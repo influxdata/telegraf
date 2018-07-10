@@ -2,6 +2,7 @@ package azuremonitor
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -24,17 +25,14 @@ import (
 var _ telegraf.AggregatingOutput = (*AzureMonitor)(nil)
 var _ telegraf.Output = (*AzureMonitor)(nil)
 
-// AzureMonitor allows publishing of metrics to the Azure Monitor custom metrics service
+// AzureMonitor allows publishing of metrics to the Azure Monitor custom metrics
+// service
 type AzureMonitor struct {
+	Timeout             internal.Duration
+	NamespacePrefix     string `toml:namespace_prefix`
+	StringsAsDimensions bool   `toml:"strings_as_dimensions"`
 	Region              string
 	ResourceID          string `toml:"resource_id"`
-	StringsAsDimensions bool   `toml:"strings_as_dimensions"`
-	Timeout             internal.Duration
-
-	AzureSubscriptionID string `toml:"azure_subscription"`
-	AzureTenantID       string `toml:"azure_tenant"`
-	AzureClientID       string `toml:"azure_client_id"`
-	AzureClientSecret   string `toml:"azure_client_secret"`
 
 	url    string
 	auth   autorest.Authorizer
@@ -49,18 +47,22 @@ type aggregate struct {
 }
 
 const (
-	defaultRequestTimeout = time.Second * 5
-	defaultAuthResource   = "https://monitoring.azure.com/"
+	defaultRequestTimeout  = time.Second * 5
+	defaultNamespacePrefix = "Telegraf/"
+	defaultAuthResource    = "https://monitoring.azure.com/"
 
 	vmInstanceMetadataURL = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
 	resourceIDTemplate    = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s"
 	urlTemplate           = "https://%s.monitoring.azure.com%s/metrics"
+	maxRequestBodySize    = 4000000
 )
 
 var sampleConfig = `
-  ## Write HTTP timeout, formatted as a string.  If not provided, will default
-  ## to 5s. 0s means no timeout (not recommended).
-  # timeout = "5s"
+  ## Write HTTP timeout, formatted as a string. Defaults to 20s.
+  #timeout = "20s"
+
+  ## Set the namespace prefix, defaults to "Telegraf/<input-name>".
+  #namespace_prefix = "Telegraf/"
 
   ## Azure Monitor doesn't have a string value type, so convert string
   ## fields to dimensions (a.k.a. tags) if enabled. Azure Monitor allows
@@ -89,23 +91,23 @@ func (a *AzureMonitor) SampleConfig() string {
 
 // Connect initializes the plugin and validates connectivity
 func (a *AzureMonitor) Connect() error {
-	fmt.Println("test")
-
-	timeout := a.Timeout.Duration
-	if timeout == 0 {
-		timeout = defaultRequestTimeout
+	if a.Timeout.Duration == 0 {
+		a.Timeout.Duration = defaultRequestTimeout
 	}
 
-	var client = &http.Client{
+	a.client = &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: timeout,
+		Timeout: a.Timeout.Duration,
 	}
-	fmt.Printf("timeout: %+v", a.client.Timeout)
+
+	if a.NamespacePrefix == "" {
+		a.NamespacePrefix = defaultNamespacePrefix
+	}
 
 	// Pull region and resource identifier
-	region, resourceID, err := vmInstanceMetadata(client)
+	region, resourceID, err := vmInstanceMetadata(a.client)
 	if a.Region != "" {
 		region = a.Region
 	} else if a.ResourceID != "" {
@@ -118,6 +120,7 @@ func (a *AzureMonitor) Connect() error {
 		return fmt.Errorf("no region configured or available via VM instance metadata")
 	}
 	a.url = fmt.Sprintf(urlTemplate, region, resourceID)
+
 	log.Printf("D! Writing to Azure Monitor URL: %s", a.url)
 
 	a.auth, err = auth.NewAuthorizerFromEnvironmentWithResource(defaultAuthResource)
@@ -214,57 +217,73 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		id := hashIDWithTagKeysOnly(m)
 		if azm, ok := azmetrics[id]; !ok {
-			azmetrics[id] = translate(m)
+			azmetrics[id] = translate(m, a.NamespacePrefix)
 		} else {
 			azmetrics[id].Data.BaseData.Series = append(
 				azm.Data.BaseData.Series,
-				translate(m).Data.BaseData.Series...,
+				translate(m, a.NamespacePrefix).Data.BaseData.Series...,
 			)
 		}
 	}
 
 	var body []byte
-	for _, m := range azmetrics {
+	for i, m := range azmetrics {
 		// Azure Monitor accepts new batches of points in new-line delimited
 		// JSON, following RFC 4288 (see https://github.com/ndjson/ndjson-spec).
 		jsonBytes, err := json.Marshal(&m)
 		if err != nil {
 			return err
 		}
+		// Azure Monitor's maximum request body size of 4MB. Send batches that
+		// exceed this size via separate write requests.
+		if (len(body) + len(jsonBytes)) > maxRequestBodySize {
+			err := a.Write(metrics[i:])
+			if err != nil {
+				return err
+			}
+		}
 		body = append(body, jsonBytes...)
 		body = append(body, '\n')
 	}
 
-	req, err := http.NewRequest("POST", a.url, bytes.NewBuffer(body))
+	var buf bytes.Buffer
+	g := gzip.NewWriter(&buf)
+	if _, err := g.Write(body); err != nil {
+		return err
+	}
+	if err := g.Close(); err != nil {
+		return err
+	}
+
+	// req, err := http.NewRequest("POST", a.url, bytes.NewBuffer(body))
+	req, err := http.NewRequest("POST", a.url, &buf)
 	if err != nil {
 		return err
 	}
 
+	req.Header.Set("Content-Encoding", "gzip")
+	req.Header.Set("Content-Type", "application/x-ndjson")
+
+	// Add the authorization header. WithAuthorization will automatically
+	// refresh the token if needed.
 	req, err = autorest.CreatePreparer(a.auth.WithAuthorization()).Prepare(req)
-	// req, err = a.auth.Prepare(req)
 	if err != nil {
 		return fmt.Errorf("E! [outputs.azuremonitor] Unable to fetch authentication credentials: %v", err)
 	}
-	fmt.Printf("sending request to: %+v", req)
-	fmt.Printf("timeout: %+v", a.client.Timeout)
 
 	resp, err := a.client.Do(req)
-	fmt.Println("made request")
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("sent batch")
-
 	rbody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		rbody = nil
 	}
-	fmt.Println("read body")
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return fmt.Errorf("E! Failed to write to [%s]: %v", a.ResourceID, rbody)
+		return fmt.Errorf("E! Failed to write: %v", string(rbody))
 	}
 
 	return nil
@@ -285,7 +304,7 @@ func hashIDWithTagKeysOnly(m telegraf.Metric) uint64 {
 	return h.Sum64()
 }
 
-func translate(m telegraf.Metric) *azureMonitorMetric {
+func translate(m telegraf.Metric, prefix string) *azureMonitorMetric {
 	var dimensionNames []string
 	var dimensionValues []string
 	for i, tag := range m.TagList() {
@@ -306,8 +325,8 @@ func translate(m telegraf.Metric) *azureMonitorMetric {
 		Time: m.Time(),
 		Data: &azureMonitorData{
 			BaseData: &azureMonitorBaseData{
-				Metric:         m.Name(),
-				Namespace:      "Telegraf/" + strings.SplitN(m.Name(), "-", 1)[0],
+				Metric:         strings.SplitN(m.Name(), "-", 2)[1],
+				Namespace:      prefix + strings.SplitN(m.Name(), "-", 2)[0],
 				DimensionNames: dimensionNames,
 				Series: []*azureMonitorSeries{
 					&azureMonitorSeries{
@@ -325,8 +344,8 @@ func translate(m telegraf.Metric) *azureMonitorMetric {
 
 // Add will append a metric to the output aggregate
 func (a *AzureMonitor) Add(m telegraf.Metric) {
-	// Azure Monitor only supports aggregates 30 minutes into the past
-	// and 4 minutes into the future. Future metrics are dropped when pushed.
+	// Azure Monitor only supports aggregates 30 minutes into the past and 4
+	// minutes into the future. Future metrics are dropped when pushed.
 	t := m.Time()
 	tbucket := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
 	if tbucket.Before(time.Now().Add(-time.Minute * 30)) {
@@ -334,8 +353,8 @@ func (a *AzureMonitor) Add(m telegraf.Metric) {
 		return
 	}
 
-	// Azure Monitor doesn't have a string value type, so convert string
-	// fields to dimensions (a.k.a. tags) if enabled.
+	// Azure Monitor doesn't have a string value type, so convert string fields
+	// to dimensions (a.k.a. tags) if enabled.
 	if a.StringsAsDimensions {
 		for fk, fv := range m.Fields() {
 			if v, ok := fv.(string); ok {
@@ -350,8 +369,8 @@ func (a *AzureMonitor) Add(m telegraf.Metric) {
 			continue
 		}
 
-		// Azure Monitor does not support fields so the field
-		// name is appended to the metric name.
+		// Azure Monitor does not support fields so the field name is appended
+		// to the metric name.
 		name := m.Name() + "-" + sanitize(f.Key)
 		id := hashIDWithField(m.HashID(), f.Key)
 
@@ -429,8 +448,7 @@ func (a *AzureMonitor) Push() []telegraf.Metric {
 			continue
 		}
 		for _, agg := range aggs {
-			// Only send aggregates that have had an update since
-			// the last push.
+			// Only send aggregates that have had an update since the last push.
 			if !agg.updated {
 				continue
 			}
@@ -448,6 +466,11 @@ func (a *AzureMonitor) Reset() {
 			delete(a.cache, tbucket)
 			continue
 		}
+		// Metrics updated within the latest 1m have not been pushed and should
+		// not be cleared.
+		if tbucket.After(time.Now().Add(-time.Minute)) {
+			continue
+		}
 		for id := range a.cache[tbucket] {
 			a.cache[tbucket][id].updated = false
 		}
@@ -457,9 +480,7 @@ func (a *AzureMonitor) Reset() {
 func init() {
 	outputs.Add("azuremonitor", func() telegraf.Output {
 		return &AzureMonitor{
-			StringsAsDimensions: false,
-			Timeout:             internal.Duration{Duration: time.Second * 5},
-			cache:               make(map[time.Time]map[uint64]*aggregate, 36),
+			cache: make(map[time.Time]map[uint64]*aggregate, 36),
 		}
 	})
 }
