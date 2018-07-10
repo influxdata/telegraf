@@ -11,6 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/tidwall/gjson"
 )
 
 var (
@@ -18,10 +19,11 @@ var (
 )
 
 type JSONParser struct {
-	MetricName  string
-	TagKeys     []string
-	FieldKeys   []string
-	DefaultTags map[string]string
+	MetricName   string
+	TagKeys      []string
+	StringFields []string
+	JSONQuery    string
+	DefaultTags  map[string]string
 }
 
 func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
@@ -87,17 +89,6 @@ func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]
 		}
 	}
 
-	//if field_keys is specified, only those values should be reported as fields
-	if len(p.FieldKeys) > 0 {
-		nFields := make(map[string]interface{})
-		for _, name := range p.FieldKeys {
-			if fields[name] != nil {
-				nFields[name] = fields[name]
-			}
-		}
-		return tags, nFields
-	}
-
 	//remove any additional string/bool values from fields
 	for k := range fields {
 		switch fields[k].(type) {
@@ -111,6 +102,17 @@ func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]
 }
 
 func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+
+	if p.JSONQuery != "" {
+		result := gjson.GetBytes(buf, p.JSONQuery)
+		log.Printf("query result: %v", result)
+		buf = []byte(result.Raw)
+		if !result.IsArray() && !result.IsObject() {
+			err := fmt.Errorf("E! Query path must lead to a JSON object or array of objects, but lead to: %v", result.Type)
+			return nil, err
+		}
+	}
+
 	buf = bytes.TrimSpace(buf)
 	buf = bytes.TrimPrefix(buf, utf8BOM)
 	if len(buf) == 0 {

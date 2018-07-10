@@ -57,9 +57,12 @@ type Config struct {
 	// TagKeys only apply to JSON data
 	TagKeys []string
 	// FieldKeys only apply to JSON
-	FieldKeys []string
+	StringFields []string
 	// MetricName applies to JSON & value. This will be the name of the measurement.
 	MetricName string
+
+	//holds a gjson path for json parser
+	JSONQuery string
 
 	// Authentication file for collectd
 	CollectdAuthFile string
@@ -98,7 +101,7 @@ func NewParser(config *Config) (Parser, error) {
 	switch config.DataFormat {
 	case "json":
 		parser, err = newJSONParser(config.MetricName,
-			config.TagKeys, config.FieldKeys, config.DefaultTags)
+			config.TagKeys, config.StringFields, config.JSONQuery, config.DefaultTags)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.DefaultTags)
@@ -131,14 +134,16 @@ func NewParser(config *Config) (Parser, error) {
 func newJSONParser(
 	metricName string,
 	tagKeys []string,
-	fieldKeys []string,
+	stringFields []string,
+	jsonQuery string,
 	defaultTags map[string]string,
 ) (Parser, error) {
 	parser := &json.JSONParser{
-		MetricName:  metricName,
-		TagKeys:     tagKeys,
-		FieldKeys:   fieldKeys,
-		DefaultTags: defaultTags,
+		MetricName:   metricName,
+		TagKeys:      tagKeys,
+		StringFields: stringFields,
+		JSONQuery:    jsonQuery,
+		DefaultTags:  defaultTags,
 	}
 	return parser, nil
 }

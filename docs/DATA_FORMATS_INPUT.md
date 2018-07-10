@@ -104,10 +104,13 @@ but can be overridden using the `name_override` config option.
 
 #### JSON Configuration:
 
-The JSON data format supports specifying "tag keys" and "field keys". If specified, keys
-will be searched for in the root-level and any nested lists of the JSON blob. If the key(s) exist,
-they will be applied as tags or fields to the Telegraf metrics.  If "field_keys" is not specified,
-all int and float values will be set as fields by default.
+The JSON data format supports specifying "tag_keys", "string_keys", and "object_path". 
+If specified, keys in "tag_keys" and "string_keys" will be searched for in the root-level and any nested lists of the JSON blob. All int and float values are added to fields by default. If the key(s) exist, they will be applied as 
+tags or fields to the Telegraf metrics.  If "string_keys" is specified, the string will 
+be added to fields.
+
+The "json_query" configuration is a gjson path to an JSON object or list of JSON objects.  If this path leads to an array or single data point an error will be thrown.  If this configuration is specified, only the result of the query will be parsed and returned as a metric.  Object paths are specified using gjson path format, which is denoted by a "." to go deeper in nested JSON objects.  
+Additional information on gjson paths can be found here: https://github.com/tidwall/gjson#path-syntax
 
 For example, if you had this configuration:
 
@@ -125,11 +128,18 @@ For example, if you had this configuration:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "json"
 
-  ## List of tag names to extract from top-level of JSON server response
+  ## List of tag names to extract from JSON server response
   tag_keys = [
     "my_tag_1",
     "my_tag_2"
   ]
+
+  ## List of field names to extract from JSON and add as string fields
+  # string_fields = []
+
+  ## gjson query path to specify a specific chunk of JSON to be parsed with the above configuration
+  ## if not specified, the whole file will be parsed
+  # json_query = ""
 ```
 
 with this JSON output from a command:

@@ -1261,14 +1261,22 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
-	if node, ok := tbl.Fields["field_keys"]; ok {
+	if node, ok := tbl.Fields["string_fields"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
-						c.FieldKeys = append(c.FieldKeys, str.Value)
+						c.StringFields = append(c.StringFields, str.Value)
 					}
 				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["json_query"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.JSONQuery = str.Value
 			}
 		}
 	}
@@ -1356,7 +1364,8 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "separator")
 	delete(tbl.Fields, "templates")
 	delete(tbl.Fields, "tag_keys")
-	delete(tbl.Fields, "field_keys")
+	delete(tbl.Fields, "string_fields")
+	delete(tbl.Fields, "json_query")
 	delete(tbl.Fields, "data_type")
 	delete(tbl.Fields, "collectd_auth_file")
 	delete(tbl.Fields, "collectd_security_level")

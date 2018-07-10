@@ -466,11 +466,121 @@ func TestJSONParseNestedArray(t *testing.T) {
 	parser := JSONParser{
 		MetricName: "json_test",
 		TagKeys:    []string{"total_devices", "total_threads", "shares_tester3_fun"},
-		FieldKeys:  []string{"shares_tester", "shares_tester3_break"},
 	}
 
 	metrics, err := parser.Parse([]byte(testString))
 	log.Printf("m[0] name: %v, tags: %v, fields: %v", metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields())
 	require.NoError(t, err)
 	require.Equal(t, len(parser.TagKeys), len(metrics[0].Tags()))
+}
+
+func TestJSONQueryErrorOnArray(t *testing.T) {
+	testString := `{
+		"total_devices": 5,
+		"total_threads": 10,
+		"shares": {
+			"total": 5,
+			"accepted": 6,
+			"test_string": "don't want this",
+			"test_obj": {
+				"hello":"sup",
+				"fun":"money",
+				"break":9
+			},
+			"myArr":[4,5,6]
+		}
+	}`
+
+	parser := JSONParser{
+		MetricName: "json_test",
+		TagKeys:    []string{},
+		JSONQuery:  "shares.myArr",
+	}
+
+	_, err := parser.Parse([]byte(testString))
+	assert.Error(t, err)
+}
+
+func TestArrayOfObjects(t *testing.T) {
+	testString := `{
+		"meta": {
+			"info":9,
+			"shares": [{
+				"channel": 6,
+				"time": 1130,
+				"ice":"man"
+			},
+			{
+				"channel": 5,
+				"time": 1030,
+				"ice":"bucket"
+			},
+			{
+				"channel": 10,
+				"time": 330,
+				"ice":"cream"
+			}]
+		},
+		"more_stuff":"junk"
+	}`
+
+	parser := JSONParser{
+		MetricName: "json_test",
+		TagKeys:    []string{"ice"},
+		JSONQuery:  "meta.shares",
+	}
+
+	metrics, err := parser.Parse([]byte(testString))
+	assert.NoError(t, err)
+	log.Printf("len metrics: %v", len(metrics))
+	assert.Equal(t, 3, len(metrics))
+	log.Printf("m[0] name: %v, tags: %v, fields: %v", metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields())
+	t.Error()
+}
+
+func TestUseCaseJSONQuery(t *testing.T) {
+	testString := `{
+		"app_id": "scifablab", 
+		"counter": 206, 
+		"dev_id": "temperaturefablab", 
+		"hardware_serial": "70B3D549965136C0", 
+		"metadata": {
+		  "airtime": 1318912000, 
+		  "coding_rate": "4/5", 
+		  "data_rate": "SF12BW125", 
+		  "frequency": 868.3, 
+		  "gateways": [
+			{
+			  "altitude": 5, 
+			  "channel": 1, 
+			  "gtw_id": "eui-b827ebfffe3e082a", 
+			  "latitude": 45.70472, 
+			  "longitude": 13.71917, 
+			  "rf_chain": 1, 
+			  "rssi": -81, 
+			  "snr": 7.8, 
+			  "time": "", 
+			  "timestamp": 1356577852
+			}
+		  ], 
+		  "modulation": "LORA", 
+		  "time": "2018-05-07T15:58:55.754160274Z"
+		}, 
+		"payload_fields": {
+		  "temperature_7": 32.3
+		}, 
+		"payload_raw": "B2cBQw==", 
+		"port": 2
+	  }`
+
+	parser := JSONParser{
+		MetricName: "json_test",
+		TagKeys:    []string{"ice"},
+		JSONQuery:  "metadata.gateways",
+	}
+
+	metrics, err := parser.Parse([]byte(testString))
+	assert.NoError(t, err)
+	log.Printf("m[0] name: %v, tags: %v, fields: %v", metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields())
+	t.Error()
 }
