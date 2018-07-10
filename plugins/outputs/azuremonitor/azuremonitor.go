@@ -9,12 +9,16 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
@@ -36,10 +40,14 @@ type AzureMonitor struct {
 	AzureClientSecret   string            `toml:"azure_client_secret"`
 	StringAsDimension   bool              `toml:"string_as_dimension"`
 
+
+
 	url         string
-	msiToken    *msiToken
-	oauthConfig *adal.OAuthConfig
-	adalToken   adal.OAuthTokenProvider
+	authorizer *autorest.Authorizer
+
+	// msiToken    *msiToken
+	// oauthConfig *adal.OAuthConfig
+	// adalToken   adal.OAuthTokenProvider
 
 	client *http.Client
 
@@ -52,7 +60,7 @@ type aggregate struct {
 }
 
 const (
-	defaultMSIResource     string = "https://monitoring.azure.com/"
+	defaultAuthResource     string = "https://monitoring.azure.com/"
 	urlTemplate            string = "https://%s.monitoring.azure.com%s/metrics"
 	resourceIDTemplate     string = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s"
 	vmInstanceMetadataURL  string = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
@@ -102,22 +110,47 @@ func (a *AzureMonitor) SampleConfig() string {
 
 // Connect initializes the plugin and validates connectivity
 func (a *AzureMonitor) Connect() error {
-	a.client = &http.Client{
+	var client = &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
 		Timeout: a.Timeout.Duration,
 	}
 
-	// If no direct AD values provided, fall back to MSI
-	if a.AzureSubscriptionID == "" && a.AzureTenantID == "" && a.AzureClientID == "" && a.AzureClientSecret == "" {
-		a.useMsi = true
-	} else if a.AzureSubscriptionID == "" || a.AzureTenantID == "" || a.AzureClientID == "" || a.AzureClientSecret == "" {
-		return fmt.Errorf("must provide values for azure_subscription, azure_tenant, azure_client and azure_client_secret, or leave all blank to default to MSI")
+	// Pull region and resource identifier
+	region, resource, err := vmInstanceMetadata(client)
+	if a.ResourceID != "" {
+		resource = a.ResourceID
+	} else if a.Region != "" {
+		region = a.Region
 	}
 
-	if !a.useMsi {
-		// If using direct AD authentication create the AD access client
+	if resource == "" {
+		return fmt.Errorf("no resource ID configured or available via VM instance metadata")
+	} else if region == "" {
+		return fmt.Errorf("no region configured or available via VM instance metadata")
+	}
+	a.url = fmt.Sprintf(urlTemplate, a.Region, a.ResourceID)
+
+	a.authorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(defaultAuthResource)
+	if err != nil {
+		return nil
+	}
+
+	if a.msiToken {
+		a.auth, err = msiClient(client)
+		if err != nil {
+			return err
+		}
+	} else {
+		a.auth, err = adalClient(client, a.AzureTenantID, a.AzureClientID, a.AzureClientSecret)
+		if err != nil {
+			return err
+		}
+
+		if a.AzureSubscriptionID == "" || a.AzureTenantID == "" || a.AzureClientID == "" || a.AzureClientSecret == "" {
+			return fmt.Errorf("must provide values for azure_subscription, azure_tenant, azure_client and azure_client_secret, or leave all blank to default to MSI")
+		}
 		oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, a.AzureTenantID)
 		if err != nil {
 			return fmt.Errorf("could not initialize AD client: %s", err)
@@ -125,25 +158,177 @@ func (a *AzureMonitor) Connect() error {
 		a.oauthConfig = oauthConfig
 	}
 
-	// Pull region and resource identifier
-	err := a.GetInstanceMetadata()
-	if err != nil && a.ResourceID == "" {
-		return fmt.Errorf("no resource ID specified or available via MSI")
-	} else if a.Region == "" {
-		return fmt.Errorf("no region not specified and not available via MSI")
-	}
-
 	err = a.validateCredentials()
 	if err != nil {
 		return fmt.Errorf("unable to fetch authentication credentials: %v", err)
 	}
+	log.Printf("D! Output [azure_monitor] publishing metrics for resource: %q", a.url)
 
 	a.Reset()
 
 	return nil
 }
 
-func (a *AzureMonitor) validateCredentials() error {
+
+type adalClient struct {
+	c *http.Client
+	azTenantID string
+	azClientID string
+	azClientSecret string
+}
+
+// vmMetadata retrieves metadata about the current Azure VM
+func vmMetadata(c *http.Client) (string, string, error) {
+	req, err := http.NewRequest("GET", vmInstanceMetadataURL, nil)
+	if err != nil {
+		return "", "", fmt.Errorf("Error creating HTTP request")
+	}
+	req.Header.Set("Metadata", "true")
+
+	resp, err := c.Do(req)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", "", err
+	}
+	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
+		return "", "", fmt.Errorf("unable to fetch MSI: %v", body)
+	}
+
+	// VirtualMachineMetadata contains information about a VM from the metadata service
+	type VirtualMachineMetadata struct {
+		Compute struct {
+			Location          string `json:"location"`
+			Name              string `json:"name"`
+			ResourceGroupName string `json:"resourceGroupName"`
+			SubscriptionID    string `json:"subscriptionId"`
+		} `json:"compute"`
+	}
+
+	var metadata VirtualMachineMetadata
+	if err := json.Unmarshal(body, &metadata); err != nil {
+		return "", "", err
+	}
+
+	return metadata.Compute.Location,
+		   fmt.Sprintf(resourceIDTemplate,
+					   metadata.Compute.SubscriptionID,
+					   metadata.Compute.ResourceGroupName,
+					   metadata.Compute.Name
+			), nil
+}
+
+type authorizer interface {
+	Refresh() error
+	Expired() bool
+	String() string
+}
+
+type adalClient struct {
+	c *http.Client
+}
+
+// msiToken is the Managed Service Identity (MSI) token
+type msiClient struct {
+	c *http.Client
+
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    string `json:"expires_in"`
+	ExpiresOn    string `json:"expires_on"`
+	NotBefore    string `json:"not_before"`
+	Resource     string `json:"resource"`
+	TokenType    string `json:"token_type"`
+
+	expiresAt time.Time
+	notBefore time.Time
+	raw       string
+}
+
+func (m *msiToken) parseTimes() {
+	val, err := strconv.ParseInt(m.ExpiresOn, 10, 64)
+	if err == nil {
+		m.expiresAt = time.Unix(val, 0)
+	}
+
+	val, err = strconv.ParseInt(m.NotBefore, 10, 64)
+	if err == nil {
+		m.notBefore = time.Unix(val, 0)
+	}
+}
+
+// ExpiresInDuration returns the duration until the token expires
+func (m *msiToken) expiresInDuration() time.Duration {
+	expiresDuration := m.expiresAt.Sub(time.Now().UTC())
+	return expiresDuration
+}
+
+// NewMSIToken retrieves a managed service identity token from the specified port on the local VM
+func (a *msiToken) newMSIToken(clientID string) (*msiToken, error) {
+	// Acquire an MSI token.  Documented at:
+	// https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/how-to-use-vm-token
+	//
+	//GET http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F&client_id=712eac09-e943-418c-9be6-9fd5c91078bl HTTP/1.1 Metadata: true
+
+	// Create HTTP request for MSI token to access Azure Resource Manager
+	var msiEndpoint *url.URL
+	msiEndpoint, err := url.Parse(msiInstanceMetadataURL)
+	if err != nil {
+		return nil, err
+	}
+
+	msiParameters := url.Values{}
+	// Resource ID defaults to https://monitoring.azure.com
+	msiParameters.Add("resource", defaultAuthResource)
+	msiParameters.Add("api-version", "2018-02-01")
+
+	// Client id is optional
+	if clientID != "" {
+		msiParameters.Add("client_id", clientID)
+	}
+
+	msiEndpoint.RawQuery = msiParameters.Encode()
+	req, err := http.NewRequest("GET", msiEndpoint.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Metadata", "true")
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	reply, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
+		return nil, fmt.Errorf("E! Get Error. %d HTTP response: %s response body: %s",
+			resp.StatusCode, resp.Status, reply)
+	}
+
+	var token msiToken
+	if err := json.Unmarshal(reply, &token); err != nil {
+		return nil, err
+	}
+	token.parseTimes()
+	token.raw = string(reply)
+	return &token, nil
+}
+
+func (t *token) Credential() error {
+	if t.Expired() {
+		if err := t.Refresh(); err != nil {
+			return err
+		}
+	}
 	if a.useMsi {
 		// Check expiry on the token
 		if a.msiToken == nil || a.msiToken.expiresInDuration() < time.Minute {
@@ -223,7 +408,7 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 		body = append(body, '\n')
 	}
 
-	if err := a.validateCredentials(); err != nil {
+	if err := a.refreshToken(); err != nil {
 		return fmt.Errorf("E! [outputs.azuremonitor] Unable to fetch authentication credentials: %v", err)
 	}
 
@@ -232,12 +417,10 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	if a.adalToken != nil {
-		req.Header.Set("Authorization", "Bearer "+a.adalToken.OAuthToken())
-	} else {
-		req.Header.Set("Authorization", "Bearer "+a.msiToken.AccessToken)
+	req, err = a.authorizer.WithAuthorization(req)
+	if err != nil {
+		return err
 	}
-	req.Header.Set("Content-Type", "application/x-ndjson")
 
 	resp, err := a.client.Do(req)
 	if err != nil {
