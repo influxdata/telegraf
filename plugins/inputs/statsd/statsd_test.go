@@ -36,10 +36,10 @@ func NewTestStatsd() *Statsd {
 	// Make data structures
 	s.done = make(chan struct{})
 	s.in = make(chan *bytes.Buffer, s.AllowedPendingMessages)
-	s.gauges = make(map[string]cachedgauge)
-	s.counters = make(map[string]cachedcounter)
-	s.sets = make(map[string]cachedset)
-	s.timings = make(map[string]cachedtimings)
+	s.gauges = make(map[string]*cachedgauge)
+	s.counters = make(map[string]*cachedcounter)
+	s.sets = make(map[string]*cachedset)
+	s.timings = make(map[string]*cachedtimings)
 
 	s.MetricSeparator = "_"
 
@@ -503,7 +503,7 @@ func TestParse_InvalidSampleRate(t *testing.T) {
 	counter_validations := []struct {
 		name  string
 		value int64
-		cache map[string]cachedcounter
+		cache map[string]*cachedcounter
 	}{
 		{
 			"invalid_sample_rate",
@@ -920,20 +920,20 @@ func TestParse_DataDogTags(t *testing.T) {
 
 func tagsForItem(m interface{}) map[string]string {
 	switch m.(type) {
-	case map[string]cachedcounter:
-		for _, v := range m.(map[string]cachedcounter) {
+	case map[string]*cachedcounter:
+		for _, v := range m.(map[string]*cachedcounter) {
 			return v.tags
 		}
-	case map[string]cachedgauge:
-		for _, v := range m.(map[string]cachedgauge) {
+	case map[string]*cachedgauge:
+		for _, v := range m.(map[string]*cachedgauge) {
 			return v.tags
 		}
-	case map[string]cachedset:
-		for _, v := range m.(map[string]cachedset) {
+	case map[string]*cachedset:
+		for _, v := range m.(map[string]*cachedset) {
 			return v.tags
 		}
-	case map[string]cachedtimings:
-		for _, v := range m.(map[string]cachedtimings) {
+	case map[string]*cachedtimings:
+		for _, v := range m.(map[string]*cachedtimings) {
 			return v.tags
 		}
 	}
@@ -1508,7 +1508,7 @@ func TestParseKeyValue(t *testing.T) {
 func test_validate_set(
 	name string,
 	value int64,
-	cache map[string]cachedset,
+	cache map[string]*cachedset,
 	field ...string,
 ) error {
 	var f string
@@ -1517,7 +1517,7 @@ func test_validate_set(
 	} else {
 		f = "value"
 	}
-	var metric cachedset
+	var metric *cachedset
 	var found bool
 	for _, v := range cache {
 		if v.name == name {
@@ -1540,7 +1540,7 @@ func test_validate_set(
 func test_validate_counter(
 	name string,
 	valueExpected int64,
-	cache map[string]cachedcounter,
+	cache map[string]*cachedcounter,
 	field ...string,
 ) error {
 	var f string
@@ -1572,7 +1572,7 @@ func test_validate_counter(
 func test_validate_gauge(
 	name string,
 	valueExpected float64,
-	cache map[string]cachedgauge,
+	cache map[string]*cachedgauge,
 	field ...string,
 ) error {
 	var f string

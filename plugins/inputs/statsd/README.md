@@ -3,14 +3,14 @@
 ### Configuration
 
 ```toml
-# Statsd Server
+# Statsd UDP/TCP Server
 [[inputs.statsd]]
-  ## Protocol, must be "tcp", "udp4", "udp6" or "udp" (default=udp)
+  ## Protocol, must be "tcp", "udp", "udp4" or "udp6" (default=udp)
   protocol = "udp"
 
   ## MaxTCPConnection - applicable when protocol is set to tcp (default=250)
   max_tcp_connections = 250
-  
+
   ## Enable TCP keep alive probes (default=false)
   tcp_keep_alive = false
 
@@ -33,6 +33,9 @@
   delete_sets = true
   ## Reset timings & histograms every interval (default=true)
   delete_timings = true
+
+  ## Interval to expire metrics and not be collected, 0 == no expiration (default=1h)
+  expiration_interval = "24h"
 
   ## Percentiles to calculate for timing & histogram stats
   percentiles = [90]
@@ -172,6 +175,7 @@ to allow. Used when protocol is set to tcp.
 - **delete_counters** boolean: Delete counters on every collection interval
 - **delete_sets** boolean: Delete set counters on every collection interval
 - **delete_timings** boolean: Delete timings on every collection interval
+- **expiration_interval** Duration: Expire unchanged old metrics on every collection internal
 - **percentiles** []int: Percentiles to calculate for timing & histogram stats
 - **allowed_pending_messages** integer: Number of messages allowed to queue up
 waiting to be processed. When this fills, messages will be dropped and logged.
