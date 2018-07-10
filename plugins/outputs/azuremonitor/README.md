@@ -43,32 +43,21 @@ The resourceId used for Azure Monitor metrics.
 ### Configuration:
 
 ```
-# Configuration for sending aggregate metrics to Azure Monitor
-[[outputs.azuremonitor]]
-## The resource ID against which metric will be logged.  If not
-## specified, the plugin will attempt to retrieve the resource ID
-## of the VM via the instance metadata service (optional if running 
-## on an Azure VM with MSI)
-#resource_id = "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
-## Azure region to publish metrics against.  Defaults to eastus.
-## Leave blank to automatically query the region via MSI.
-#region = "eastus"
-
 ## Write HTTP timeout, formatted as a string.  If not provided, will default
 ## to 5s. 0s means no timeout (not recommended).
 # timeout = "5s"
 
-## Whether or not to use managed service identity.
-#useManagedServiceIdentity = true
+## Azure Monitor doesn't have a string value type, so convert string
+## fields to dimensions (a.k.a. tags) if enabled. Azure Monitor allows
+## a maximum of 10 dimensions so Telegraf will only send the first 10
+## alphanumeric dimensions.
+#strings_as_dimensions = false
 
-## Fill in the following values if using Active Directory Service
-## Principal or User Principal for authentication.
-## Subscription ID
-#azureSubscription = ""
-## Tenant ID
-#azureTenant = ""
-## Client ID
-#azureClientId = ""
-## Client secrete
-#azureClientSecret = ""
+## *The following two fields must be set or be available via the
+## Instance Metadata service on Azure Virtual Machines.*
+## The Azure Resource ID against which metric will be logged, e.g.
+## "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
+#resource_id = ""
+## Azure Region to publish metrics against, e.g. eastus, southcentralus.
+#region = ""
 ```
