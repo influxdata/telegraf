@@ -537,46 +537,28 @@ func TestArrayOfObjects(t *testing.T) {
 
 func TestUseCaseJSONQuery(t *testing.T) {
 	testString := `{
-		"app_id": "scifablab", 
-		"counter": 206, 
-		"dev_id": "temperaturefablab", 
-		"hardware_serial": "70B3D549965136C0", 
-		"metadata": {
-		  "airtime": 1318912000, 
-		  "coding_rate": "4/5", 
-		  "data_rate": "SF12BW125", 
-		  "frequency": 868.3, 
-		  "gateways": [
-			{
-			  "altitude": 5, 
-			  "channel": 1, 
-			  "gtw_id": "eui-b827ebfffe3e082a", 
-			  "latitude": 45.70472, 
-			  "longitude": 13.71917, 
-			  "rf_chain": 1, 
-			  "rssi": -81, 
-			  "snr": 7.8, 
-			  "time": "", 
-			  "timestamp": 1356577852
-			}
-		  ], 
-		  "modulation": "LORA", 
-		  "time": "2018-05-07T15:58:55.754160274Z"
-		}, 
-		"payload_fields": {
-		  "temperature_7": 32.3
-		}, 
-		"payload_raw": "B2cBQw==", 
-		"port": 2
-	  }`
+		"obj": {
+			"name": {"first": "Tom", "last": "Anderson"},
+			"age":37,
+			"children": ["Sara","Alex","Jack"],
+			"fav.movie": "Deer Hunter",
+			"friends": [
+				{"first": "Dale", "last": "Murphy", "age": 44},
+				{"first": "Roger", "last": "Craig", "age": 68},
+				{"first": "Jane", "last": "Murphy", "age": 47}
+			]
+		}
+	}`
 
 	parser := JSONParser{
 		MetricName:   "json_test",
-		StringFields: []string{"gtw_id"},
-		JSONQuery:    "metadata.gateways",
+		StringFields: []string{"last"},
+		TagKeys:      []string{"first"},
+		JSONQuery:    "obj.friends",
 	}
 
 	metrics, err := parser.Parse([]byte(testString))
 	assert.NoError(t, err)
-	assert.Equal(t, metrics[0].Fields()["gtw_id"], "eui-b827ebfffe3e082a")
+	assert.Equal(t, metrics[0].Fields()["last"], "Murphy")
+	assert.Equal(t, 3, len(metrics))
 }

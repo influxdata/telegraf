@@ -105,11 +105,17 @@ but can be overridden using the `name_override` config option.
 #### JSON Configuration:
 
 The JSON data format supports specifying "tag_keys", "string_keys", and "object_path". 
-If specified, keys in "tag_keys" and "string_keys" will be searched for in the root-level and any nested lists of the JSON blob. All int and float values are added to fields by default. If the key(s) exist, they will be applied as 
-tags or fields to the Telegraf metrics.  If "string_keys" is specified, the string will 
-be added to fields.
+If specified, keys in "tag_keys" and "string_keys" will be searched for in the root-level 
+and any nested lists of the JSON blob. All int and float values are added to fields by default. 
+If the key(s) exist, they will be applied as tags or fields to the Telegraf metrics.  
+If "string_keys" is specified, the string will be added as a field.
 
-The "json_query" configuration is a gjson path to an JSON object or list of JSON objects.  If this path leads to an array or single data point an error will be thrown.  If this configuration is specified, only the result of the query will be parsed and returned as a metric.  Object paths are specified using gjson path format, which is denoted by a "." to go deeper in nested JSON objects.  
+The "json_query" configuration is a gjson path to an JSON object or list of JSON objects.  
+If this path leads to an array or single data point an error will be thrown.  If this 
+configuration is specified, only the result of the query will be parsed and returned as a metric.  
+
+Object paths are specified using gjson path format, which is denoted by object keys 
+concatenated with "." to go deeper in nested JSON objects.  
 Additional information on gjson paths can be found here: https://github.com/tidwall/gjson#path-syntax
 
 For example, if you had this configuration:
@@ -184,7 +190,13 @@ For example, if the following configuration:
     "my_tag_1",
     "my_tag_2"
   ]
-  field_keys = ["b_c"]
+
+  ## List of field names to extract from JSON and add as string fields
+  # string_fields = []
+
+  ## gjson query path to specify a specific chunk of JSON to be parsed with the above configuration
+  ## if not specified, the whole file will be parsed
+  # json_query = ""
 ```
 
 with this JSON output from a command:
@@ -215,6 +227,59 @@ Your Telegraf metrics would get tagged with "my_tag_1" and "my_tag_2" and fielde
 ```
 exec_mycollector,my_tag_1=foo,my_tag_2=baz b_c=6
 exec_mycollector,my_tag_1=bar,my_tag_2=baz b_c=8
+```
+
+If you want to only use a specific portion of your JSON, use the "json_query" 
+configuration to specify a path to a JSON object.
+
+For example, with the following config:
+```toml
+[[inputs.exec]]
+  ## Commands array
+  commands = ["/usr/bin/mycollector --foo=bar"]
+
+  ## measurement name suffix (for separating different commands)
+  name_suffix = "_mycollector"
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "json"
+
+  ## List of tag names to extract from top-level of JSON server response
+  tag_keys = ["first"]
+
+  ## List of field names to extract from JSON and add as string fields
+  string_fields = ["last"]
+
+  ## gjson query path to specify a specific chunk of JSON to be parsed with the above configuration
+  ## if not specified, the whole file will be parsed
+  json_query = "obj.friends"
+```
+
+with this JSON as input:
+```json
+{
+    "obj": {
+        "name": {"first": "Tom", "last": "Anderson"},
+        "age":37,
+        "children": ["Sara","Alex","Jack"],
+        "fav.movie": "Deer Hunter",
+        "friends": [
+            {"first": "Dale", "last": "Murphy", "age": 44},
+            {"first": "Roger", "last": "Craig", "age": 68},
+            {"first": "Jane", "last": "Murphy", "age": 47}
+        ]
+    }
+}
+```
+You would recieve 3 metrics tagged with "first", and fielded with "last" and "age"
+
+```
+exec_mycollector, "first":"Dale" "last":"Murphy","age":44
+exec_mycollector, "first":"Roger" "last":"Craig","age":68
+exec_mycollector, "first":"Jane" "last":"Murphy","age":47
 ```
 
 # Value:
