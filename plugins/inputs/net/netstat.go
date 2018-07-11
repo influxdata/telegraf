@@ -6,10 +6,11 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
 type NetStats struct {
-	ps inputs.PS
+	ps system.PS
 }
 
 func (_ *NetStats) Description() string {
@@ -66,6 +67,6 @@ func (s *NetStats) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("netstat", func() telegraf.Input {
-		return &NetStats{ps: inputs.NewSystemPS()}
+		return &NetStats{ps: system.NewSystemPS()}
 	})
 }

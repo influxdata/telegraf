@@ -3,7 +3,7 @@ package diskio
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/stretchr/testify/require"
@@ -97,7 +97,7 @@ func TestDiskIO(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var mps inputs.MockPS
+			var mps system.MockPS
 			mps.On("DiskIO").Return(tt.result.stats, tt.result.err)
 
 			var acc testutil.Accumulator

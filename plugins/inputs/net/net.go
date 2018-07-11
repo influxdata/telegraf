@@ -8,11 +8,12 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
 type NetIOStats struct {
 	filter filter.Filter
-	ps     inputs.PS
+	ps     system.PS
 
 	skipChecks          bool
 	IgnoreProtocolStats bool
@@ -119,6 +120,6 @@ func (s *NetIOStats) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("net", func() telegraf.Input {
-		return &NetIOStats{ps: inputs.NewSystemPS()}
+		return &NetIOStats{ps: system.NewSystemPS()}
 	})
 }

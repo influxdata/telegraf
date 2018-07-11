@@ -5,10 +5,11 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
 type MemStats struct {
-	ps inputs.PS
+	ps system.PS
 }
 
 func (_ *MemStats) Description() string {
@@ -43,7 +44,7 @@ func (s *MemStats) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	ps := inputs.NewSystemPS()
+	ps := system.NewSystemPS()
 	inputs.Add("mem", func() telegraf.Input {
 		return &MemStats{ps: ps}
 	})

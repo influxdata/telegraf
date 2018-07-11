@@ -5,10 +5,11 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
 type SwapStats struct {
-	ps inputs.PS
+	ps system.PS
 }
 
 func (_ *SwapStats) Description() string {
@@ -40,7 +41,7 @@ func (s *SwapStats) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	ps := inputs.NewSystemPS()
+	ps := system.NewSystemPS()
 	inputs.Add("swap", func() telegraf.Input {
 		return &SwapStats{ps: ps}
 	})
