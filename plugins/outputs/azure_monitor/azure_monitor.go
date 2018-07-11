@@ -1,4 +1,4 @@
-package azuremonitor
+package azure_monitor
 
 import (
 	"bytes"
@@ -29,7 +29,7 @@ var _ telegraf.Output = (*AzureMonitor)(nil)
 // service
 type AzureMonitor struct {
 	Timeout             internal.Duration
-	NamespacePrefix     string `toml:namespace_prefix`
+	NamespacePrefix     string `toml:"namespace_prefix"`
 	StringsAsDimensions bool   `toml:"strings_as_dimensions"`
 	Region              string
 	ResourceID          string `toml:"resource_id"`
@@ -58,6 +58,9 @@ const (
 )
 
 var sampleConfig = `
+  ## See the [Azure Monitor output plugin README](/plugins/outputs/azure_monitor/README.md)
+  ## for details on authentication options.
+
   ## Write HTTP timeout, formatted as a string. Defaults to 20s.
   #timeout = "20s"
 
@@ -72,12 +75,14 @@ var sampleConfig = `
 
   ## *The following two fields must be set or be available via the
   ## Instance Metadata service on Azure Virtual Machines.*
+
+  ## Azure Region to publish metrics against, e.g. eastus, southcentralus.
+  #region = ""
+  
   ## The Azure Resource ID against which metric will be logged, e.g.
   ## "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
   #resource_id = ""
-  ## Azure Region to publish metrics against, e.g. eastus, southcentralus.
-  #region = ""
-`
+  `
 
 // Description provides a description of the plugin
 func (a *AzureMonitor) Description() string {
@@ -268,7 +273,7 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 	// refresh the token if needed.
 	req, err = autorest.CreatePreparer(a.auth.WithAuthorization()).Prepare(req)
 	if err != nil {
-		return fmt.Errorf("E! [outputs.azuremonitor] Unable to fetch authentication credentials: %v", err)
+		return fmt.Errorf("E! [outputs.azure_monitor] Unable to fetch authentication credentials: %v", err)
 	}
 
 	resp, err := a.client.Do(req)
@@ -310,7 +315,7 @@ func translate(m telegraf.Metric, prefix string) *azureMonitorMetric {
 	for i, tag := range m.TagList() {
 		// Azure custom metrics service supports up to 10 dimensions
 		if i > 10 {
-			log.Printf("W! [outputs.azuremonitor] metric [%s] exceeds 10 dimensions", m.Name())
+			log.Printf("W! [outputs.azure_monitor] metric [%s] exceeds 10 dimensions", m.Name())
 			continue
 		}
 		dimensionNames = append(dimensionNames, tag.Key)
@@ -478,7 +483,7 @@ func (a *AzureMonitor) Reset() {
 }
 
 func init() {
-	outputs.Add("azuremonitor", func() telegraf.Output {
+	outputs.Add("azure_monitor", func() telegraf.Output {
 		return &AzureMonitor{
 			cache: make(map[time.Time]map[uint64]*aggregate, 36),
 		}
