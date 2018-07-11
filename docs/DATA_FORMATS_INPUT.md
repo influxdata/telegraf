@@ -104,19 +104,23 @@ but can be overridden using the `name_override` config option.
 
 #### JSON Configuration:
 
-The JSON data format supports specifying "tag_keys", "string_keys", and "object_path". 
+The JSON data format supports specifying "tag_keys", "string_keys", and "json_query". 
 If specified, keys in "tag_keys" and "string_keys" will be searched for in the root-level 
 and any nested lists of the JSON blob. All int and float values are added to fields by default. 
 If the key(s) exist, they will be applied as tags or fields to the Telegraf metrics.  
 If "string_keys" is specified, the string will be added as a field.
 
 The "json_query" configuration is a gjson path to an JSON object or list of JSON objects.  
-If this path leads to an array or single data point an error will be thrown.  If this 
-configuration is specified, only the result of the query will be parsed and returned as a metric.  
+If this path leads to an array of values or single data point an error will be thrown.  If this 
+configuration is specified, only the result of the query will be parsed and returned as metrics.  
 
 Object paths are specified using gjson path format, which is denoted by object keys 
 concatenated with "." to go deeper in nested JSON objects.  
 Additional information on gjson paths can be found here: https://github.com/tidwall/gjson#path-syntax
+
+The JSON data format also supports extracting time values through the config "json_time_key" and "json_time_format". 
+If "json_time_key" is set, "json_time_format" must be specified.  The "json_time_key" describes the name of the field containing time information.  The "json_time_format" must be a recognized Go time format.  
+More info on time formats can be found here: https://golang.org/src/time/format.go
 
 For example, if you had this configuration:
 
@@ -144,8 +148,15 @@ For example, if you had this configuration:
   # string_fields = []
 
   ## gjson query path to specify a specific chunk of JSON to be parsed with the above configuration
-  ## if not specified, the whole file will be parsed
+  ## if not specified, the whole file will be parsed. 
+  ## gjson query paths are described here: 
   # json_query = ""
+
+  ## holds the name of the tag of timestamp
+  # json_time_key = ""
+
+  ## holds the format of timestamp to be parsed
+  # json_time_format = ""
 ```
 
 with this JSON output from a command:
@@ -197,6 +208,12 @@ For example, if the following configuration:
   ## gjson query path to specify a specific chunk of JSON to be parsed with the above configuration
   ## if not specified, the whole file will be parsed
   # json_query = ""
+
+  ## holds the name of the tag of timestamp
+  # json_time_key = "b_time"
+
+  ## holds the format of timestamp to be parsed
+  # json_time_format = "02 Jan 06 15:04 MST"
 ```
 
 with this JSON output from a command:
@@ -206,7 +223,8 @@ with this JSON output from a command:
     {
         "a": 5,
         "b": {
-            "c": 6
+            "c": 6,
+            "time":"04 Jan 06 15:04 MST"
         },
         "my_tag_1": "foo",
         "my_tag_2": "baz"
@@ -214,7 +232,8 @@ with this JSON output from a command:
     {
         "a": 7,
         "b": {
-            "c": 8
+            "c": 8,
+            "time":"11 Jan 07 15:04 MST"
         },
         "my_tag_1": "bar",
         "my_tag_2": "baz"
@@ -223,10 +242,11 @@ with this JSON output from a command:
 ```
 
 Your Telegraf metrics would get tagged with "my_tag_1" and "my_tag_2" and fielded with "b_c"
+The metric's time will be a time.Time object, as specified by "b_time"
 
 ```
-exec_mycollector,my_tag_1=foo,my_tag_2=baz b_c=6
-exec_mycollector,my_tag_1=bar,my_tag_2=baz b_c=8
+exec_mycollector,my_tag_1=foo,my_tag_2=baz b_c=6 1136387040000000000
+exec_mycollector,my_tag_1=bar,my_tag_2=baz b_c=8 1168527840000000000
 ```
 
 If you want to only use a specific portion of your JSON, use the "json_query" 
@@ -256,6 +276,12 @@ For example, with the following config:
   ## gjson query path to specify a specific chunk of JSON to be parsed with the above configuration
   ## if not specified, the whole file will be parsed
   json_query = "obj.friends"
+
+  ## holds the name of the tag of timestamp
+  # json_time_key = ""
+
+  ## holds the format of timestamp to be parsed
+  # json_time_format = ""
 ```
 
 with this JSON as input:

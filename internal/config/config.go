@@ -1281,6 +1281,22 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["json_time_key"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.JSONTimeKey = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["json_time_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.JSONTimeFormat = str.Value
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["data_type"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -1366,6 +1382,8 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "tag_keys")
 	delete(tbl.Fields, "string_fields")
 	delete(tbl.Fields, "json_query")
+	delete(tbl.Fields, "json_time_key")
+	delete(tbl.Fields, "json_time_format")
 	delete(tbl.Fields, "data_type")
 	delete(tbl.Fields, "collectd_auth_file")
 	delete(tbl.Fields, "collectd_security_level")

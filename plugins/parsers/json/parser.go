@@ -19,11 +19,13 @@ var (
 )
 
 type JSONParser struct {
-	MetricName   string
-	TagKeys      []string
-	StringFields []string
-	JSONQuery    string
-	DefaultTags  map[string]string
+	MetricName     string
+	TagKeys        []string
+	StringFields   []string
+	JSONQuery      string
+	JSONTimeKey    string
+	JSONTimeFormat string
+	DefaultTags    map[string]string
 }
 
 func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
@@ -37,6 +39,9 @@ func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
 	}
 	for _, item := range jsonOut {
 		metrics, err = p.parseObject(metrics, item)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return metrics, nil
 }
@@ -54,10 +59,28 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 		return nil, err
 	}
 
+	//if time key is specified, set it to time
+	nTime := time.Now().UTC()
+	if p.JSONTimeKey != "" {
+		if p.JSONTimeFormat == "" {
+			err := fmt.Errorf("E! If 'json_time_key' is specified, there must be a 'json_time_format'")
+			return nil, err
+		}
+
+		if f.Fields[p.JSONTimeKey] == nil {
+			err := fmt.Errorf("E! JSON time key could not be found")
+			return nil, err
+		}
+
+		nTime, err = time.Parse(p.JSONTimeFormat, f.Fields[p.JSONTimeKey].(string))
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
 	tags, nFields := p.switchFieldToTag(tags, f.Fields)
-
-	metric, err := metric.New(p.MetricName, tags, nFields, time.Now().UTC())
-
+	metric, err := metric.New(p.MetricName, tags, nFields, nTime)
 	if err != nil {
 		return nil, err
 	}
@@ -114,6 +137,7 @@ func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]
 
 func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
+	//if json_query is specified
 	if p.JSONQuery != "" {
 		result := gjson.GetBytes(buf, p.JSONQuery)
 		buf = []byte(result.Raw)

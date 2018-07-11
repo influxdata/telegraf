@@ -562,3 +562,35 @@ func TestUseCaseJSONQuery(t *testing.T) {
 	assert.Equal(t, metrics[0].Fields()["last"], "Murphy")
 	assert.Equal(t, 3, len(metrics))
 }
+
+func TestTimeParser(t *testing.T) {
+	testString := `[
+		{
+			"a": 5,
+			"b": {
+				"c": 6,
+				"time":"04 Jan 06 15:04 MST"
+			},
+			"my_tag_1": "foo",
+			"my_tag_2": "baz"
+		},
+		{
+			"a": 7,
+			"b": {
+				"c": 8,
+				"time":"11 Jan 07 15:04 MST"
+			},
+			"my_tag_1": "bar",
+			"my_tag_2": "baz"
+		}
+	]`
+
+	parser := JSONParser{
+		MetricName:     "json_test",
+		JSONTimeKey:    "b_time",
+		JSONTimeFormat: "02 Jan 06 15:04 MST",
+	}
+	metrics, err := parser.Parse([]byte(testString))
+	assert.NoError(t, err)
+	assert.Equal(t, false, metrics[0].Time() == metrics[1].Time())
+}

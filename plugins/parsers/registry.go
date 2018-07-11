@@ -64,6 +64,12 @@ type Config struct {
 	//holds a gjson path for json parser
 	JSONQuery string
 
+	//key of time
+	JSONTimeKey string
+
+	//time format
+	JSONTimeFormat string
+
 	// Authentication file for collectd
 	CollectdAuthFile string
 	// One of none (default), sign, or encrypt
@@ -101,7 +107,12 @@ func NewParser(config *Config) (Parser, error) {
 	switch config.DataFormat {
 	case "json":
 		parser, err = newJSONParser(config.MetricName,
-			config.TagKeys, config.StringFields, config.JSONQuery, config.DefaultTags)
+			config.TagKeys,
+			config.StringFields,
+			config.JSONQuery,
+			config.JSONTimeKey,
+			config.JSONTimeFormat,
+			config.DefaultTags)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.DefaultTags)
@@ -136,14 +147,18 @@ func newJSONParser(
 	tagKeys []string,
 	stringFields []string,
 	jsonQuery string,
+	timeKey string,
+	timeFormat string,
 	defaultTags map[string]string,
 ) (Parser, error) {
 	parser := &json.JSONParser{
-		MetricName:   metricName,
-		TagKeys:      tagKeys,
-		StringFields: stringFields,
-		JSONQuery:    jsonQuery,
-		DefaultTags:  defaultTags,
+		MetricName:     metricName,
+		TagKeys:        tagKeys,
+		StringFields:   stringFields,
+		JSONQuery:      jsonQuery,
+		JSONTimeKey:    timeKey,
+		JSONTimeFormat: timeFormat,
+		DefaultTags:    defaultTags,
 	}
 	return parser, nil
 }
