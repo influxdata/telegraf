@@ -1,6 +1,6 @@
 // +build linux
 
-package system
+package kernel_vmstat
 
 import (
 	"io/ioutil"
@@ -13,7 +13,7 @@ import (
 )
 
 func TestFullVmStatProcFile(t *testing.T) {
-	tmpfile := makeFakeStatFile([]byte(vmStatFile_Full))
+	tmpfile := makeFakeVmStatFile([]byte(vmStatFile_Full))
 	defer os.Remove(tmpfile)
 
 	k := KernelVmstat{
@@ -121,7 +121,7 @@ func TestFullVmStatProcFile(t *testing.T) {
 }
 
 func TestPartialVmStatProcFile(t *testing.T) {
-	tmpfile := makeFakeStatFile([]byte(vmStatFile_Partial))
+	tmpfile := makeFakeVmStatFile([]byte(vmStatFile_Partial))
 	defer os.Remove(tmpfile)
 
 	k := KernelVmstat{
@@ -151,7 +151,7 @@ func TestPartialVmStatProcFile(t *testing.T) {
 }
 
 func TestInvalidVmStatProcFile1(t *testing.T) {
-	tmpfile := makeFakeStatFile([]byte(vmStatFile_Invalid))
+	tmpfile := makeFakeVmStatFile([]byte(vmStatFile_Invalid))
 	defer os.Remove(tmpfile)
 
 	k := KernelVmstat{
@@ -164,7 +164,7 @@ func TestInvalidVmStatProcFile1(t *testing.T) {
 }
 
 func TestNoVmStatProcFile(t *testing.T) {
-	tmpfile := makeFakeStatFile([]byte(vmStatFile_Invalid))
+	tmpfile := makeFakeVmStatFile([]byte(vmStatFile_Invalid))
 	os.Remove(tmpfile)
 
 	k := KernelVmstat{

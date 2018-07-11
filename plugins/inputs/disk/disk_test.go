@@ -1,9 +1,10 @@
-package system
+package disk
 
 import (
 	"os"
 	"testing"
 
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +18,7 @@ type MockFileInfo struct {
 
 func TestDiskUsage(t *testing.T) {
 	mck := &mock.Mock{}
-	mps := MockPSDisk{&systemPS{&mockDiskUsage{mck}}, mck}
+	mps := system.MockPSDisk{SystemPS: &system.SystemPS{PSDiskDeps: &system.MockDiskUsage{Mock: mck}}, Mock: mck}
 	defer mps.AssertExpectations(t)
 
 	var acc testutil.Accumulator
@@ -229,7 +230,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mck := &mock.Mock{}
-			mps := MockPSDisk{&systemPS{&mockDiskUsage{mck}}, mck}
+			mps := system.MockPSDisk{SystemPS: &system.SystemPS{PSDiskDeps: &system.MockDiskUsage{Mock: mck}}, Mock: mck}
 			defer mps.AssertExpectations(t)
 
 			var acc testutil.Accumulator
@@ -252,7 +253,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 }
 
 func TestDiskStats(t *testing.T) {
-	var mps MockPS
+	var mps system.MockPS
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
 	var err error

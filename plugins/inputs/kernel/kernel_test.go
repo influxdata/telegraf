@@ -1,6 +1,6 @@
 // +build linux
 
-package system
+package kernel
 
 import (
 	"io/ioutil"
@@ -168,7 +168,7 @@ const entropyStatFile_Partial = `1024`
 const entropyStatFile_Invalid = ``
 
 func makeFakeStatFile(content []byte) string {
-	tmpfile, err := ioutil.TempFile("", "kerneltest")
+	tmpfile, err := ioutil.TempFile("", "kernel_test")
 	if err != nil {
 		panic(err)
 	}

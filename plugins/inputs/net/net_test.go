@@ -1,16 +1,17 @@
-package system
+package net
 
 import (
 	"syscall"
 	"testing"
 
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/shirou/gopsutil/net"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNetStats(t *testing.T) {
-	var mps MockPS
+	var mps system.MockPS
 	var err error
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator

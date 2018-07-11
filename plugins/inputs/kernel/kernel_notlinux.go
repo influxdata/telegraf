@@ -1,6 +1,6 @@
 // +build !linux
 
-package system
+package kernel
 
 import (
 	"github.com/influxdata/telegraf"

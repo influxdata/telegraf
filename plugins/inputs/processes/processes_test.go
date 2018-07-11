@@ -1,4 +1,6 @@
-package system
+// +build !windows
+
+package processes
 
 import (
 	"fmt"

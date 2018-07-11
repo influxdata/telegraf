@@ -1,6 +1,6 @@
 // +build linux
 
-package system
+package kernel_vmstat
 
 import (
 	"bytes"

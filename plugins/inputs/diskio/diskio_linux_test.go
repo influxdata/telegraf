@@ -1,6 +1,6 @@
 // +build linux
 
-package system
+package diskio
 
 import (
 	"io/ioutil"

@@ -1,4 +1,4 @@
-package system
+package disk
 
 import (
 	"fmt"
@@ -6,10 +6,11 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
 type DiskStats struct {
-	ps PS
+	ps system.PS
 
 	// Legacy support
 	Mountpoints []string
@@ -105,7 +106,7 @@ func parseOptions(opts string) MountOptions {
 }
 
 func init() {
-	ps := newSystemPS()
+	ps := system.NewSystemPS()
 	inputs.Add("disk", func() telegraf.Input {
 		return &DiskStats{ps: ps}
 	})

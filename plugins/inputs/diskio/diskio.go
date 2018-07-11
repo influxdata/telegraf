@@ -1,4 +1,4 @@
-package system
+package diskio
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 )
 
 var (
@@ -16,7 +17,7 @@ var (
 )
 
 type DiskIO struct {
-	ps PS
+	ps system.PS
 
 	Devices          []string
 	DeviceTags       []string
@@ -189,7 +190,7 @@ func (s *DiskIO) diskTags(devName string) map[string]string {
 }
 
 func init() {
-	ps := newSystemPS()
+	ps := system.NewSystemPS()
 	inputs.Add("diskio", func() telegraf.Input {
 		return &DiskIO{ps: ps, SkipSerialNumber: true}
 	})

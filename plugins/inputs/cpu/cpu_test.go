@@ -1,9 +1,10 @@
-package system
+package cpu
 
 import (
 	"fmt"
 	"testing"
 
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/stretchr/testify/assert"
@@ -11,7 +12,7 @@ import (
 )
 
 func TestCPUStats(t *testing.T) {
-	var mps MockPS
+	var mps system.MockPS
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
 
@@ -68,7 +69,7 @@ func TestCPUStats(t *testing.T) {
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_guest", 3.1, 0, cputags)
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_guest_nice", 0.324, 0, cputags)
 
-	mps2 := MockPS{}
+	mps2 := system.MockPS{}
 	mps2.On("CPUTimes").Return([]cpu.TimesStat{cts2}, nil)
 	cs.ps = &mps2
 
@@ -153,8 +154,8 @@ func assertContainsTaggedFloat(
 // TestCPUCountChange tests that no errors are encountered if the number of
 // CPUs increases as reported with LXC.
 func TestCPUCountIncrease(t *testing.T) {
-	var mps MockPS
-	var mps2 MockPS
+	var mps system.MockPS
+	var mps2 system.MockPS
 	var acc testutil.Accumulator
 	var err error
 
@@ -188,7 +189,7 @@ func TestCPUCountIncrease(t *testing.T) {
 // TestCPUTimesDecrease tests that telegraf continue to works after
 // CPU times decrease, which seems to occur when Linux system is suspended.
 func TestCPUTimesDecrease(t *testing.T) {
-	var mps MockPS
+	var mps system.MockPS
 	defer mps.AssertExpectations(t)
 	var acc testutil.Accumulator
 
@@ -230,7 +231,7 @@ func TestCPUTimesDecrease(t *testing.T) {
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_idle", 80, 0, cputags)
 	assertContainsTaggedFloat(t, &acc, "cpu", "time_iowait", 2, 0, cputags)
 
-	mps2 := MockPS{}
+	mps2 := system.MockPS{}
 	mps2.On("CPUTimes").Return([]cpu.TimesStat{cts2}, nil)
 	cs.ps = &mps2
 
@@ -238,7 +239,7 @@ func TestCPUTimesDecrease(t *testing.T) {
 	err = cs.Gather(&acc)
 	require.Error(t, err)
 
-	mps3 := MockPS{}
+	mps3 := system.MockPS{}
 	mps3.On("CPUTimes").Return([]cpu.TimesStat{cts3}, nil)
 	cs.ps = &mps3
 

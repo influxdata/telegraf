@@ -1,4 +1,4 @@
-package system
+package cpu
 
 import (
 	"fmt"
@@ -6,11 +6,12 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/system"
 	"github.com/shirou/gopsutil/cpu"
 )
 
 type CPUStats struct {
-	ps        PS
+	ps        system.PS
 	lastStats map[string]cpu.TimesStat
 
 	PerCPU         bool `toml:"percpu"`
@@ -19,7 +20,7 @@ type CPUStats struct {
 	ReportActive   bool `toml:"report_active"`
 }
 
-func NewCPUStats(ps PS) *CPUStats {
+func NewCPUStats(ps system.PS) *CPUStats {
 	return &CPUStats{
 		ps:             ps,
 		CollectCPUTime: true,
@@ -146,7 +147,7 @@ func init() {
 		return &CPUStats{
 			PerCPU:   true,
 			TotalCPU: true,
-			ps:       newSystemPS(),
+			ps:       system.NewSystemPS(),
 		}
 	})
 }
