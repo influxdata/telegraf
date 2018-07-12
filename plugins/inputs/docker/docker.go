@@ -365,22 +365,17 @@ func (d *Docker) gatherContainer(
 ) error {
 	var v *types.StatsJSON
 	// Parse container name
-	cname := "unknown"
-	match := false
-	if len(container.Names) == 0 { // for tests
-		match = true
-	}
-
-	for i := range container.Names {
-		if !match {
-			match = d.containerFilter.Match(strings.TrimPrefix(container.Names[i], "/"))
-			if match {
-				cname = strings.TrimPrefix(container.Names[i], "/")
-			}
+	var cname string
+	for _, name := range container.Names {
+		trimmedName := strings.TrimPrefix(name, "/")
+		match := d.containerFilter.Match(trimmedName)
+		if match {
+			cname = trimmedName
+			break
 		}
 	}
 
-	if !match {
+	if cname == "" {
 		return nil
 	}
 
@@ -421,9 +416,7 @@ func (d *Docker) gatherContainer(
 	daemonOSType := r.OSType
 
 	// use common (printed at `docker ps`) name for container
-	if cname != strings.TrimPrefix(v.Name, "/") && v.Name != "" {
-		tags["container_name"] = strings.TrimPrefix(v.Name, "/")
-	}
+	tags["container_name"] = strings.TrimPrefix(v.Name, "/")
 
 	// Add labels to tags
 	for k, label := range container.Labels {
