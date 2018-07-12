@@ -289,7 +289,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				timestamp = time.Unix(0, iv)
 			}
 		case SYSLOG_TIMESTAMP:
-			ts, err := time.ParseInLocation("Jan 02 15:04:05", v, p.loc)
+			ts, err := time.ParseInLocation(time.Stamp, v, p.loc)
 			if err == nil {
 				if ts.Year() == 0 {
 					ts = ts.AddDate(timestamp.Year(), 0, 0)
@@ -331,6 +331,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		case DROP:
 		// goodbye!
 		default:
+			v = strings.Replace(v, ",", ".", -1)
 			ts, err := time.ParseInLocation(t, v, p.loc)
 			if err == nil {
 				timestamp = ts

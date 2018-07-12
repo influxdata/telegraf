@@ -67,6 +67,9 @@ type Config struct {
 	// Dataset specification for collectd
 	CollectdTypesDB []string
 
+	// whether to split or join multivalue metrics
+	CollectdSplit string
+
 	// DataType only applies to value, this will be the type to parse value to
 	DataType string
 
@@ -117,7 +120,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.Templates, config.DefaultTags)
 	case "collectd":
 		parser, err = NewCollectdParser(config.CollectdAuthFile,
-			config.CollectdSecurityLevel, config.CollectdTypesDB)
+			config.CollectdSecurityLevel, config.CollectdTypesDB, config.CollectdSplit)
 	case "dropwizard":
 		parser, err = NewDropwizardParser(
 			config.DropwizardMetricRegistryPath,
@@ -206,8 +209,9 @@ func NewCollectdParser(
 	authFile string,
 	securityLevel string,
 	typesDB []string,
+	split string,
 ) (Parser, error) {
-	return collectd.NewCollectdParser(authFile, securityLevel, typesDB)
+	return collectd.NewCollectdParser(authFile, securityLevel, typesDB, split)
 }
 
 func NewDropwizardParser(

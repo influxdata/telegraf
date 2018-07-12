@@ -128,6 +128,14 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 		}
 	}
 
+	//If user tag is not already set, set to actual name
+	if _, ok := proc.Tags()["user"]; !ok {
+		user, err := proc.Username()
+		if err == nil {
+			proc.Tags()["user"] = user
+		}
+	}
+
 	//If pid is not present as a tag, include it as a field.
 	if _, pidInTags := proc.Tags()["pid"]; !pidInTags {
 		fields["pid"] = int32(proc.PID())
