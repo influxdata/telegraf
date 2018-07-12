@@ -1,5 +1,14 @@
+ifeq ($(SHELL), cmd)
+	VERSION := $(shell git describe --exact-match --tags 2>nil)
+	HOME := $(HOMEPATH)
+else ifeq ($(SHELL), sh.exe)
+	VERSION := $(shell git describe --exact-match --tags 2>nil)
+	HOME := $(HOMEPATH)
+else
+	VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
+endif
+
 PREFIX := /usr/local
-VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 COMMIT := $(shell git rev-parse --short HEAD)
 GOFILES ?= $(shell git ls-files '*.go')
@@ -8,8 +17,10 @@ BUILDFLAGS ?=
 
 ifdef GOBIN
 PATH := $(GOBIN):$(PATH)
-else
+else ifdef GOPATH
 PATH := $(subst :,/bin:,$(GOPATH))/bin:$(PATH)
+else
+PATH := $(HOME)/go/bin:$(PATH)
 endif
 
 LDFLAGS := $(LDFLAGS) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)
@@ -24,7 +35,7 @@ all:
 deps:
 	go get -u github.com/golang/lint/golint
 	go get -u github.com/golang/dep/cmd/dep
-	dep ensure
+	dep ensure -vendor-only
 
 telegraf:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
