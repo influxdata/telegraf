@@ -59,7 +59,7 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 		return nil, err
 	}
 
-	//if time key is specified, set it to time
+	//if time key is specified, set it to nTime
 	nTime := time.Now().UTC()
 	if p.JSONTimeKey != "" {
 		if p.JSONTimeFormat == "" {
@@ -141,8 +141,6 @@ func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]
 }
 
 func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
-
-	//if json_query is specified
 	if p.JSONQuery != "" {
 		result := gjson.GetBytes(buf, p.JSONQuery)
 		buf = []byte(result.Raw)
