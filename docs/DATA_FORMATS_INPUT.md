@@ -210,10 +210,10 @@ For example, if the following configuration:
   # json_query = ""
 
   ## holds the name of the tag of timestamp
-  # json_time_key = "b_time"
+  json_time_key = "b_time"
 
   ## holds the format of timestamp to be parsed
-  # json_time_format = "02 Jan 06 15:04 MST"
+  json_time_format = "02 Jan 06 15:04 MST"
 ```
 
 with this JSON output from a command:
