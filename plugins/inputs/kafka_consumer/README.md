@@ -16,13 +16,14 @@ and use the old zookeeper connection method.
 [[inputs.kafka_consumer]]
   ## topic(s) to consume
   topics = ["telegraf"]
-  ## kafka client id
-  client_id = "my_client"
   brokers = ["localhost:9092"]
   ## the name of the consumer group
   consumer_group = "telegraf_metrics_consumers"
   ## Offset (must be either "oldest" or "newest")
   offset = "oldest"
+
+  ## Optional client id
+  # client_id = "my_client"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

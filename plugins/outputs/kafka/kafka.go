@@ -70,8 +70,9 @@ var sampleConfig = `
   brokers = ["localhost:9092"]
   ## Kafka topic for producer messages
   topic = "telegraf"
-  ## Kafka client id
-  client_id = "my_client"
+  
+  ## Optional Client id
+  # client_id = "my_client"
 
   ## Optional topic suffix configuration.
   ## If the section is omitted, no suffix is used.

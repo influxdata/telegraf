@@ -60,8 +60,9 @@ var sampleConfig = `
   brokers = ["localhost:9092"]
   ## topic(s) to consume
   topics = ["telegraf"]
-  ## kafka client id
-  client_id = "my_client"
+  
+  ## Optional Client id
+  # client_id = "my_client"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

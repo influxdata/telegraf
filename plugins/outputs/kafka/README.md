@@ -9,8 +9,9 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   brokers = ["localhost:9092"]
   ## Kafka topic for producer messages
   topic = "telegraf"
-  ## kafka client id
-  client_id = "my_client"
+
+  ## Optional client id
+  # client_id = "my_client"
 
   ## Optional topic suffix configuration.
   ## If the section is omitted, no suffix is used.
