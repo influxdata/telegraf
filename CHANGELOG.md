@@ -34,6 +34,7 @@
 - [#4362](https://github.com/influxdata/telegraf/pull/4362): Add mongo document and connection metrics.
 - [#3772](https://github.com/influxdata/telegraf/pull/3772): Add Enum Processor.
 - [#4386](https://github.com/influxdata/telegraf/pull/4386): Add user tag to procstat input.
+- [#4403](https://github.com/influxdata/telegraf/pull/4403): Add support for multivalue metrics to collectd parser.
 
 ## v1.7.2 [unreleased]
 
