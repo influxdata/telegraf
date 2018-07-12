@@ -169,7 +169,7 @@ configuration options.
 * [ipset](./plugins/inputs/ipset)
 * [jolokia](./plugins/inputs/jolokia) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
 * [jolokia2](./plugins/inputs/jolokia2) (java, cassandra, kafka)
-- [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry)
+* [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry)
 * [kapacitor](./plugins/inputs/kapacitor)
 * [kernel](./plugins/inputs/kernel)
 * [kernel_vmstat](./plugins/inputs/kernel_vmstat)
