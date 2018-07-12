@@ -26,10 +26,12 @@ func TestGrokParseLogFilesNonExistPattern(t *testing.T) {
 	thisdir := getCurrentDir()
 
 	logparser := &LogParserPlugin{
-		FromBeginning:      true,
-		Files:              []string{thisdir + "grok/testdata/*.log"},
-		Patterns:           []string{"%{FOOBAR}"},
-		CustomPatternFiles: []string{thisdir + "grok/testdata/test-patterns"},
+		FromBeginning: true,
+		Files:         []string{thisdir + "grok/testdata/*.log"},
+		GrokConfig: GrokConfig{
+			Patterns:           []string{"%{FOOBAR}"},
+			CustomPatternFiles: []string{thisdir + "grok/testdata/test-patterns"},
+		},
 	}
 
 	acc := testutil.Accumulator{}
@@ -41,11 +43,13 @@ func TestGrokParseLogFiles(t *testing.T) {
 	thisdir := getCurrentDir()
 
 	logparser := &LogParserPlugin{
-		Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
-		CustomPatternFiles: []string{thisdir + "grok/testdata/test-patterns"},
-		FromBeginning:      true,
-		Files:              []string{thisdir + "grok/testdata/*.log"},
-		MeasurementName:    "logparser_grok",
+		GrokConfig: GrokConfig{
+			Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
+			CustomPatternFiles: []string{thisdir + "grok/testdata/test-patterns"},
+		},
+		FromBeginning:   true,
+		Files:           []string{thisdir + "grok/testdata/*.log"},
+		MeasurementName: "logparser_grok",
 	}
 
 	acc := testutil.Accumulator{}
@@ -85,11 +89,13 @@ func TestGrokParseLogFilesAppearLater(t *testing.T) {
 	thisdir := getCurrentDir()
 
 	logparser := &LogParserPlugin{
-		FromBeginning:      true,
-		Files:              []string{emptydir + "/*.log"},
-		Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
-		CustomPatternFiles: []string{thisdir + "grok/testdata/test-patterns"},
-		MeasurementName:    "logparser_grok",
+		FromBeginning: true,
+		Files:         []string{emptydir + "/*.log"},
+		GrokConfig: GrokConfig{
+			Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
+			CustomPatternFiles: []string{thisdir + "grok/testdata/test-patterns"},
+		},
+		MeasurementName: "logparser_grok",
 	}
 
 	acc := testutil.Accumulator{}
@@ -122,11 +128,13 @@ func TestGrokParseLogFilesOneBad(t *testing.T) {
 	thisdir := getCurrentDir()
 
 	logparser := &LogParserPlugin{
-		FromBeginning:      true,
-		Files:              []string{thisdir + "grok/testdata/test_a.log"},
-		Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_BAD}"},
-		CustomPatternFiles: []string{thisdir + "grok/testdata/test-patterns"},
-		MeasurementName:    "logparser_grok",
+		FromBeginning: true,
+		Files:         []string{thisdir + "grok/testdata/test_a.log"},
+		GrokConfig: GrokConfig{
+			Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_BAD}"},
+			CustomPatternFiles: []string{thisdir + "grok/testdata/test-patterns"},
+		},
+		MeasurementName: "logparser_grok",
 	}
 
 	acc := testutil.Accumulator{}

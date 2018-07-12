@@ -21,9 +21,12 @@ const (
 )
 
 // LogParser in the primary interface for the plugin
-type LogParser interface {
-	ParseLine(line string) (telegraf.Metric, error)
-	Compile() error
+type GrokConfig struct {
+	Patterns           []string
+	NamedPatterns      []string
+	CustomPatterns     string
+	CustomPatternFiles []string
+	TimeZone           string
 }
 
 type logEntry struct {
@@ -46,13 +49,8 @@ type LogParserPlugin struct {
 
 	sync.Mutex
 
-	GrokParser parsers.Parser `toml:"grok"`
-
-	Patterns           []string
-	NamedPatterns      []string
-	CustomPatterns     string
-	CustomPatternFiles []string
-	TimeZone           string
+	GrokParser parsers.Parser
+	GrokConfig GrokConfig `toml:"grok"`
 }
 
 const sampleConfig = `
@@ -135,11 +133,11 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 
 	// Looks for fields which implement LogParser interface
 	config := &parsers.Config{
-		GrokPatterns:           l.Patterns,
-		GrokNamedPatterns:      l.NamedPatterns,
-		GrokCustomPatterns:     l.CustomPatterns,
-		GrokCustomPatternFiles: l.CustomPatternFiles,
-		GrokTimeZone:           l.TimeZone,
+		GrokPatterns:           l.GrokConfig.Patterns,
+		GrokNamedPatterns:      l.GrokConfig.NamedPatterns,
+		GrokCustomPatterns:     l.GrokConfig.CustomPatterns,
+		GrokCustomPatternFiles: l.GrokConfig.CustomPatternFiles,
+		GrokTimeZone:           l.GrokConfig.TimeZone,
 		DataFormat:             "grok",
 	}
 
