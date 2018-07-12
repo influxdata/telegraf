@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -61,13 +62,18 @@ func (m *Ipmi) Gather(acc telegraf.Accumulator) error {
 	}
 
 	if len(m.Servers) > 0 {
+		wg := sync.WaitGroup{}
 		for _, server := range m.Servers {
-			err := m.parse(acc, server)
-			if err != nil {
-				acc.AddError(err)
-				continue
-			}
+			wg.Add(1)
+			go func(a telegraf.Accumulator, s string) {
+				defer wg.Done()
+				err := m.parse(a, s)
+				if err != nil {
+					a.AddError(err)
+				}
+			}(acc, server)
 		}
+		wg.Wait()
 	} else {
 		err := m.parse(acc, "")
 		if err != nil {

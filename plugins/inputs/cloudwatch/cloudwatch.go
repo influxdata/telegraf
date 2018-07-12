@@ -115,7 +115,9 @@ func (c *CloudWatch) SampleConfig() string {
   #[[inputs.cloudwatch.metrics]]
   #  names = ["Latency", "RequestCount"]
   #
-  #  ## Dimension filters for Metric (optional)
+  #  ## Dimension filters for Metric.  These are optional however all dimensions
+  #  ## defined for the metric names must be specified in order to retrieve
+  #  ## the metric statistics.
   #  [[inputs.cloudwatch.metrics.dimensions]]
   #    name = "LoadBalancerName"
   #    value = "p-example"

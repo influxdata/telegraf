@@ -6,6 +6,7 @@ import (
 
 	"collectd.org/api"
 	"collectd.org/network"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
@@ -76,7 +77,7 @@ var multiMetric = testCase{
 				api.Derive(42),
 				api.Gauge(42),
 			},
-			DSNames: []string(nil),
+			DSNames: []string{"t1", "t2"},
 		},
 	},
 	[]metricData{
@@ -108,7 +109,7 @@ var multiMetric = testCase{
 }
 
 func TestNewCollectdParser(t *testing.T) {
-	parser, err := NewCollectdParser("", "", []string{})
+	parser, err := NewCollectdParser("", "", []string{}, "join")
 	require.Nil(t, err)
 	require.Equal(t, parser.popts.SecurityLevel, network.None)
 	require.NotNil(t, parser.popts.PasswordLookup)
@@ -131,6 +132,19 @@ func TestParse(t *testing.T) {
 
 		assertEqualMetrics(t, tc.expected, metrics)
 	}
+}
+
+func TestParseMultiValueSplit(t *testing.T) {
+	buf, err := writeValueList(multiMetric.vl)
+	require.Nil(t, err)
+	bytes, err := buf.Bytes()
+	require.Nil(t, err)
+
+	parser := &CollectdParser{ParseMultiValue: "split"}
+	metrics, err := parser.Parse(bytes)
+	require.Nil(t, err)
+
+	assert.Equal(t, 2, len(metrics))
 }
 
 func TestParse_DefaultTags(t *testing.T) {
@@ -266,7 +280,7 @@ func TestParseLine(t *testing.T) {
 	bytes, err := buf.Bytes()
 	require.Nil(t, err)
 
-	parser, err := NewCollectdParser("", "", []string{})
+	parser, err := NewCollectdParser("", "", []string{}, "split")
 	require.Nil(t, err)
 	metric, err := parser.ParseLine(string(bytes))
 	require.Nil(t, err)

@@ -1,6 +1,8 @@
 # Procstat Input Plugin
 
 The procstat plugin can be used to monitor the system resource usage of one or more processes.
+The procstat_lookup metric displays the query information, 
+specifically the number of PIDs returned on a search
 
 Processes can be selected for monitoring using one of several methods:
 - pidfile
@@ -127,7 +129,18 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - voluntary_context_switches (int)
     - write_bytes (int, *telegraf* may need to be ran as **root**)
     - write_count (int, *telegraf* may need to be ran as **root**)
-
+- procstat_lookup
+  - tags:
+    - exe (string)
+    - pid_finder (string)
+    - pid_file (string)
+    - pattern (string)
+    - prefix (string)
+    - user (string)
+    - systemd_unit (string)
+    - cgroup (string)
+  - fields:
+    - pid_count (int)
 *NOTE: Resource limit > 2147483647 will be reported as 2147483647.*
 
 ### Example Output:

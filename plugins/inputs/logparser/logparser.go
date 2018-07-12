@@ -70,7 +70,6 @@ const sampleConfig = `
   # watch_method = "inotify"
 
   ## Parse logstash-style "grok" patterns:
-  ##   Telegraf built-in parsing patterns: https://goo.gl/dkay10
   [inputs.logparser.grok]
     ## This is a list of patterns to check the given log file(s) for.
     ## Note that adding patterns here increases processing time. The most
@@ -204,6 +203,10 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 					Poll:      poll,
 					Logger:    tail.DiscardingLogger,
 				})
+
+			//add message saying a new tailer was added for the file
+			log.Printf("D! tail added for file: %v", file)
+
 			if err != nil {
 				l.acc.AddError(err)
 				continue
@@ -288,6 +291,10 @@ func (l *LogParserPlugin) Stop() {
 
 	for _, t := range l.tailers {
 		err := t.Stop()
+
+		//message for a stopped tailer
+		log.Printf("D! tail dropped for file: %v", t.Filename)
+
 		if err != nil {
 			log.Printf("E! Error stopping tail on file %s\n", t.Filename)
 		}

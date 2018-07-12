@@ -26,11 +26,15 @@ type Parser interface {
 	// Parse takes a byte buffer separated by newlines
 	// ie, `cpu.usage.idle 90\ncpu.usage.busy 10`
 	// and parses it into telegraf metrics
+	//
+	// Must be thread-safe.
 	Parse(buf []byte) ([]telegraf.Metric, error)
 
 	// ParseLine takes a single string metric
 	// ie, "cpu.usage.idle 90"
 	// and parses it into a telegraf metric.
+	//
+	// Must be thread-safe.
 	ParseLine(line string) (telegraf.Metric, error)
 
 	// SetDefaultTags tells the parser to add all of the given tags
@@ -61,6 +65,9 @@ type Config struct {
 	CollectdSecurityLevel string
 	// Dataset specification for collectd
 	CollectdTypesDB []string
+
+	// whether to split or join multivalue metrics
+	CollectdSplit string
 
 	// DataType only applies to value, this will be the type to parse value to
 	DataType string
@@ -105,11 +112,17 @@ func NewParser(config *Config) (Parser, error) {
 			config.Templates, config.DefaultTags)
 	case "collectd":
 		parser, err = NewCollectdParser(config.CollectdAuthFile,
-			config.CollectdSecurityLevel, config.CollectdTypesDB)
+			config.CollectdSecurityLevel, config.CollectdTypesDB, config.CollectdSplit)
 	case "dropwizard":
-		parser, err = NewDropwizardParser(config.DropwizardMetricRegistryPath,
-			config.DropwizardTimePath, config.DropwizardTimeFormat, config.DropwizardTagsPath, config.DropwizardTagPathsMap, config.DefaultTags,
-			config.Separator, config.Templates)
+		parser, err = NewDropwizardParser(
+			config.DropwizardMetricRegistryPath,
+			config.DropwizardTimePath,
+			config.DropwizardTimeFormat,
+			config.DropwizardTagsPath,
+			config.DropwizardTagPathsMap,
+			config.DefaultTags,
+			config.Separator,
+			config.Templates)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -134,7 +147,8 @@ func NewNagiosParser() (Parser, error) {
 }
 
 func NewInfluxParser() (Parser, error) {
-	return &influx.InfluxParser{}, nil
+	handler := influx.NewMetricHandler()
+	return influx.NewParser(handler), nil
 }
 
 func NewGraphiteParser(
@@ -161,8 +175,9 @@ func NewCollectdParser(
 	authFile string,
 	securityLevel string,
 	typesDB []string,
+	split string,
 ) (Parser, error) {
-	return collectd.NewCollectdParser(authFile, securityLevel, typesDB)
+	return collectd.NewCollectdParser(authFile, securityLevel, typesDB, split)
 }
 
 func NewDropwizardParser(
@@ -176,17 +191,16 @@ func NewDropwizardParser(
 	templates []string,
 
 ) (Parser, error) {
-	parser := &dropwizard.Parser{
-		MetricRegistryPath: metricRegistryPath,
-		TimePath:           timePath,
-		TimeFormat:         timeFormat,
-		TagsPath:           tagsPath,
-		TagPathsMap:        tagPathsMap,
-		DefaultTags:        defaultTags,
-		Separator:          separator,
-		Templates:          templates,
+	parser := dropwizard.NewParser()
+	parser.MetricRegistryPath = metricRegistryPath
+	parser.TimePath = timePath
+	parser.TimeFormat = timeFormat
+	parser.TagsPath = tagsPath
+	parser.TagPathsMap = tagPathsMap
+	parser.DefaultTags = defaultTags
+	err := parser.SetTemplates(separator, templates)
+	if err != nil {
+		return nil, err
 	}
-	err := parser.InitTemplating()
-
 	return parser, err
 }
