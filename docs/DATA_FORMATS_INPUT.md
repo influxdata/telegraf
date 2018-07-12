@@ -110,17 +110,21 @@ and any nested lists of the JSON blob. All int and float values are added to fie
 If the key(s) exist, they will be applied as tags or fields to the Telegraf metrics.  
 If "string_keys" is specified, the string will be added as a field.
 
-The "json_query" configuration is a gjson path to an JSON object or list of JSON objects.  
-If this path leads to an array of values or single data point an error will be thrown.  If this 
-configuration is specified, only the result of the query will be parsed and returned as metrics.  
+The "json_query" configuration is a gjson path to an JSON object or 
+list of JSON objects. If this path leads to an array of values or 
+single data point an error will be thrown.  If this configuration 
+is specified, only the result of the query will be parsed and returned as metrics.  
 
 Object paths are specified using gjson path format, which is denoted by object keys 
 concatenated with "." to go deeper in nested JSON objects.  
 Additional information on gjson paths can be found here: https://github.com/tidwall/gjson#path-syntax
 
-The JSON data format also supports extracting time values through the config "json_time_key" and "json_time_format". 
-If "json_time_key" is set, "json_time_format" must be specified.  The "json_time_key" describes the name of the field containing time information.  The "json_time_format" must be a recognized Go time format.  
-More info on time formats can be found here: https://golang.org/src/time/format.go
+The JSON data format also supports extracting time values through the 
+config "json_time_key" and "json_time_format". If "json_time_key" is set, 
+"json_time_format" must be specified.  The "json_time_key" describes the 
+name of the field containing time information.  The "json_time_format" 
+must be a recognized Go time format.  
+More info on time formats can be found here: https://golang.org/pkg/time/#Parse
 
 For example, if you had this configuration:
 
@@ -147,8 +151,8 @@ For example, if you had this configuration:
   ## List of field names to extract from JSON and add as string fields
   # string_fields = []
 
-  ## gjson query path to specify a specific chunk of JSON to be parsed with the above configuration
-  ## if not specified, the whole file will be parsed. 
+  ## gjson query path to specify a specific chunk of JSON to be parsed with 
+  ## the above configuration. If not specified, the whole file will be parsed. 
   ## gjson query paths are described here: 
   # json_query = ""
 
@@ -177,8 +181,9 @@ Your Telegraf metrics would get tagged with "my_tag_1"
 exec_mycollector,my_tag_1=foo a=5,b_c=6
 ```
 
-If the JSON data is an array, then each element of the array is parsed with the configured settings.
-Each resulting metric will be output with the same timestamp.
+If the JSON data is an array, then each element of the array is 
+parsed with the configured settings.  Each resulting metric will 
+be output with the same timestamp.
 
 For example, if the following configuration:
 
@@ -205,8 +210,8 @@ For example, if the following configuration:
   ## List of field names to extract from JSON and add as string fields
   # string_fields = []
 
-  ## gjson query path to specify a specific chunk of JSON to be parsed with the above configuration
-  ## if not specified, the whole file will be parsed
+  ## gjson query path to specify a specific chunk of JSON to be parsed with 
+  ## the above configuration. If not specified, the whole file will be parsed
   # json_query = ""
 
   ## holds the name of the tag of timestamp
@@ -273,8 +278,8 @@ For example, with the following config:
   ## List of field names to extract from JSON and add as string fields
   string_fields = ["last"]
 
-  ## gjson query path to specify a specific chunk of JSON to be parsed with the above configuration
-  ## if not specified, the whole file will be parsed
+  ## gjson query path to specify a specific chunk of JSON to be parsed with 
+  ## the above configuration. If not specified, the whole file will be parsed
   json_query = "obj.friends"
 
   ## holds the name of the tag of timestamp

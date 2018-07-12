@@ -63,16 +63,21 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 	nTime := time.Now().UTC()
 	if p.JSONTimeKey != "" {
 		if p.JSONTimeFormat == "" {
-			err := fmt.Errorf("E! If 'json_time_key' is specified, there must be a 'json_time_format'")
+			err := fmt.Errorf("use of 'json_time_key' requires 'json_time_format'")
 			return nil, err
 		}
 
 		if f.Fields[p.JSONTimeKey] == nil {
-			err := fmt.Errorf("E! JSON time key could not be found")
+			err := fmt.Errorf("JSON time key could not be found")
 			return nil, err
 		}
 
-		nTime, err = time.Parse(p.JSONTimeFormat, f.Fields[p.JSONTimeKey].(string))
+		timeStr, ok := f.Fields[p.JSONTimeKey].(string)
+		if !ok {
+			err := fmt.Errorf("time: %v could not be converted to string", f.Fields[p.JSONTimeKey])
+			return nil, err
+		}
+		nTime, err = time.Parse(p.JSONTimeFormat, timeStr)
 		if err != nil {
 			return nil, err
 		}
@@ -174,7 +179,7 @@ func (p *JSONParser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(metrics) < 1 {
-		return nil, fmt.Errorf("Can not parse the line: %s, for data format: influx ", line)
+		return nil, fmt.Errorf("can not parse the line: %s, for data format: influx ", line)
 	}
 
 	return metrics[0], nil

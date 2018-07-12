@@ -1,10 +1,10 @@
 package json
 
 import (
+	"fmt"
 	"log"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -56,46 +56,46 @@ func TestParseValidJSON(t *testing.T) {
 
 	// Most basic vanilla test
 	metrics, err := parser.Parse([]byte(validJSON))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "json_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+	require.Equal(t, map[string]string{}, metrics[0].Tags())
 
 	// Test that newlines are fine
 	metrics, err = parser.Parse([]byte(validJSONNewline))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "json_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"d":   float64(7),
 		"b_d": float64(8),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+	require.Equal(t, map[string]string{}, metrics[0].Tags())
 
 	// Test that strings without TagKeys defined are ignored
 	metrics, err = parser.Parse([]byte(validJSONTags))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "json_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+	require.Equal(t, map[string]string{}, metrics[0].Tags())
 
 	// Test that whitespace only will parse as an empty list of metrics
 	metrics, err = parser.Parse([]byte("\n\t"))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 0)
+	require.NoError(t, err)
+	require.Len(t, metrics, 0)
 
 	// Test that an empty string will parse as an empty list of metrics
 	metrics, err = parser.Parse([]byte(""))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 0)
+	require.NoError(t, err)
+	require.Len(t, metrics, 0)
 }
 
 func TestParseLineValidJSON(t *testing.T) {
@@ -105,33 +105,33 @@ func TestParseLineValidJSON(t *testing.T) {
 
 	// Most basic vanilla test
 	metric, err := parser.ParseLine(validJSON)
-	assert.NoError(t, err)
-	assert.Equal(t, "json_test", metric.Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Equal(t, "json_test", metric.Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metric.Fields())
-	assert.Equal(t, map[string]string{}, metric.Tags())
+	require.Equal(t, map[string]string{}, metric.Tags())
 
 	// Test that newlines are fine
 	metric, err = parser.ParseLine(validJSONNewline)
-	assert.NoError(t, err)
-	assert.Equal(t, "json_test", metric.Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Equal(t, "json_test", metric.Name())
+	require.Equal(t, map[string]interface{}{
 		"d":   float64(7),
 		"b_d": float64(8),
 	}, metric.Fields())
-	assert.Equal(t, map[string]string{}, metric.Tags())
+	require.Equal(t, map[string]string{}, metric.Tags())
 
 	// Test that strings without TagKeys defined are ignored
 	metric, err = parser.ParseLine(validJSONTags)
-	assert.NoError(t, err)
-	assert.Equal(t, "json_test", metric.Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Equal(t, "json_test", metric.Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metric.Fields())
-	assert.Equal(t, map[string]string{}, metric.Tags())
+	require.Equal(t, map[string]string{}, metric.Tags())
 }
 
 func TestParseInvalidJSON(t *testing.T) {
@@ -140,11 +140,11 @@ func TestParseInvalidJSON(t *testing.T) {
 	}
 
 	_, err := parser.Parse([]byte(invalidJSON))
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = parser.Parse([]byte(invalidJSON2))
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = parser.ParseLine(invalidJSON)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestParseWithTagKeys(t *testing.T) {
@@ -154,14 +154,14 @@ func TestParseWithTagKeys(t *testing.T) {
 		TagKeys:    []string{"wrongtagkey"},
 	}
 	metrics, err := parser.Parse([]byte(validJSONTags))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "json_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+	require.Equal(t, map[string]string{}, metrics[0].Tags())
 
 	// Test that single tag key is found and applied
 	parser = JSONParser{
@@ -169,14 +169,14 @@ func TestParseWithTagKeys(t *testing.T) {
 		TagKeys:    []string{"mytag"},
 	}
 	metrics, err = parser.Parse([]byte(validJSONTags))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "json_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"mytag": "foobar",
 	}, metrics[0].Tags())
 
@@ -186,14 +186,14 @@ func TestParseWithTagKeys(t *testing.T) {
 		TagKeys:    []string{"mytag", "othertag"},
 	}
 	metrics, err = parser.Parse([]byte(validJSONTags))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "json_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"mytag":    "foobar",
 		"othertag": "baz",
 	}, metrics[0].Tags())
@@ -206,13 +206,13 @@ func TestParseLineWithTagKeys(t *testing.T) {
 		TagKeys:    []string{"wrongtagkey"},
 	}
 	metric, err := parser.ParseLine(validJSONTags)
-	assert.NoError(t, err)
-	assert.Equal(t, "json_test", metric.Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Equal(t, "json_test", metric.Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metric.Fields())
-	assert.Equal(t, map[string]string{}, metric.Tags())
+	require.Equal(t, map[string]string{}, metric.Tags())
 
 	// Test that single tag key is found and applied
 	parser = JSONParser{
@@ -220,13 +220,13 @@ func TestParseLineWithTagKeys(t *testing.T) {
 		TagKeys:    []string{"mytag"},
 	}
 	metric, err = parser.ParseLine(validJSONTags)
-	assert.NoError(t, err)
-	assert.Equal(t, "json_test", metric.Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Equal(t, "json_test", metric.Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metric.Fields())
-	assert.Equal(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"mytag": "foobar",
 	}, metric.Tags())
 
@@ -236,13 +236,13 @@ func TestParseLineWithTagKeys(t *testing.T) {
 		TagKeys:    []string{"mytag", "othertag"},
 	}
 	metric, err = parser.ParseLine(validJSONTags)
-	assert.NoError(t, err)
-	assert.Equal(t, "json_test", metric.Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Equal(t, "json_test", metric.Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metric.Fields())
-	assert.Equal(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"mytag":    "foobar",
 		"othertag": "baz",
 	}, metric.Tags())
@@ -259,25 +259,25 @@ func TestParseValidJSONDefaultTags(t *testing.T) {
 
 	// Most basic vanilla test
 	metrics, err := parser.Parse([]byte(validJSON))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "json_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{"t4g": "default"}, metrics[0].Tags())
+	require.Equal(t, map[string]string{"t4g": "default"}, metrics[0].Tags())
 
 	// Test that tagkeys and default tags are applied
 	metrics, err = parser.Parse([]byte(validJSONTags))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "json_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"t4g":   "default",
 		"mytag": "foobar",
 	}, metrics[0].Tags())
@@ -295,25 +295,25 @@ func TestParseValidJSONDefaultTagsOverride(t *testing.T) {
 
 	// Most basic vanilla test
 	metrics, err := parser.Parse([]byte(validJSON))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "json_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{"mytag": "default"}, metrics[0].Tags())
+	require.Equal(t, map[string]string{"mytag": "default"}, metrics[0].Tags())
 
 	// Test that tagkeys override default tags
 	metrics, err = parser.Parse([]byte(validJSONTags))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "json_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"mytag": "foobar",
 	}, metrics[0].Tags())
 }
@@ -326,31 +326,31 @@ func TestParseValidJSONArray(t *testing.T) {
 
 	// Most basic vanilla test
 	metrics, err := parser.Parse([]byte(validJSONArray))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 1)
-	assert.Equal(t, "json_array_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 1)
+	require.Equal(t, "json_array_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+	require.Equal(t, map[string]string{}, metrics[0].Tags())
 
 	// Basic multiple datapoints
 	metrics, err = parser.Parse([]byte(validJSONArrayMultiple))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 2)
-	assert.Equal(t, "json_array_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 2)
+	require.Equal(t, "json_array_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{}, metrics[1].Tags())
-	assert.Equal(t, "json_array_test", metrics[1].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.Equal(t, map[string]string{}, metrics[1].Tags())
+	require.Equal(t, "json_array_test", metrics[1].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(7),
 		"b_c": float64(8),
 	}, metrics[1].Fields())
-	assert.Equal(t, map[string]string{}, metrics[1].Tags())
+	require.Equal(t, map[string]string{}, metrics[1].Tags())
 }
 
 func TestParseArrayWithTagKeys(t *testing.T) {
@@ -360,21 +360,21 @@ func TestParseArrayWithTagKeys(t *testing.T) {
 		TagKeys:    []string{"wrongtagkey"},
 	}
 	metrics, err := parser.Parse([]byte(validJSONArrayTags))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 2)
-	assert.Equal(t, "json_array_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 2)
+	require.Equal(t, "json_array_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{}, metrics[0].Tags())
+	require.Equal(t, map[string]string{}, metrics[0].Tags())
 
-	assert.Equal(t, "json_array_test", metrics[1].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.Equal(t, "json_array_test", metrics[1].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(7),
 		"b_c": float64(8),
 	}, metrics[1].Fields())
-	assert.Equal(t, map[string]string{}, metrics[1].Tags())
+	require.Equal(t, map[string]string{}, metrics[1].Tags())
 
 	// Test that single tag key is found and applied
 	parser = JSONParser{
@@ -382,23 +382,23 @@ func TestParseArrayWithTagKeys(t *testing.T) {
 		TagKeys:    []string{"mytag"},
 	}
 	metrics, err = parser.Parse([]byte(validJSONArrayTags))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 2)
-	assert.Equal(t, "json_array_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 2)
+	require.Equal(t, "json_array_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"mytag": "foo",
 	}, metrics[0].Tags())
 
-	assert.Equal(t, "json_array_test", metrics[1].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.Equal(t, "json_array_test", metrics[1].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(7),
 		"b_c": float64(8),
 	}, metrics[1].Fields())
-	assert.Equal(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"mytag": "bar",
 	}, metrics[1].Tags())
 
@@ -408,24 +408,24 @@ func TestParseArrayWithTagKeys(t *testing.T) {
 		TagKeys:    []string{"mytag", "othertag"},
 	}
 	metrics, err = parser.Parse([]byte(validJSONArrayTags))
-	assert.NoError(t, err)
-	assert.Len(t, metrics, 2)
-	assert.Equal(t, "json_array_test", metrics[0].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.NoError(t, err)
+	require.Len(t, metrics, 2)
+	require.Equal(t, "json_array_test", metrics[0].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(5),
 		"b_c": float64(6),
 	}, metrics[0].Fields())
-	assert.Equal(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"mytag":    "foo",
 		"othertag": "baz",
 	}, metrics[0].Tags())
 
-	assert.Equal(t, "json_array_test", metrics[1].Name())
-	assert.Equal(t, map[string]interface{}{
+	require.Equal(t, "json_array_test", metrics[1].Name())
+	require.Equal(t, map[string]interface{}{
 		"a":   float64(7),
 		"b_c": float64(8),
 	}, metrics[1].Fields())
-	assert.Equal(t, map[string]string{
+	require.Equal(t, map[string]string{
 		"mytag":    "bar",
 		"othertag": "baz",
 	}, metrics[1].Tags())
@@ -440,7 +440,7 @@ func TestHttpJsonBOM(t *testing.T) {
 
 	// Most basic vanilla test
 	_, err := parser.Parse(jsonBOM)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 //for testing issue #4260
@@ -498,7 +498,7 @@ func TestJSONQueryErrorOnArray(t *testing.T) {
 	}
 
 	_, err := parser.Parse([]byte(testString))
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestArrayOfObjects(t *testing.T) {
@@ -531,8 +531,8 @@ func TestArrayOfObjects(t *testing.T) {
 	}
 
 	metrics, err := parser.Parse([]byte(testString))
-	assert.NoError(t, err)
-	assert.Equal(t, 3, len(metrics))
+	require.NoError(t, err)
+	require.Equal(t, 3, len(metrics))
 }
 
 func TestUseCaseJSONQuery(t *testing.T) {
@@ -558,9 +558,9 @@ func TestUseCaseJSONQuery(t *testing.T) {
 	}
 
 	metrics, err := parser.Parse([]byte(testString))
-	assert.NoError(t, err)
-	assert.Equal(t, metrics[0].Fields()["last"], "Murphy")
-	assert.Equal(t, 3, len(metrics))
+	require.NoError(t, err)
+	require.Equal(t, 3, len(metrics))
+	require.Equal(t, metrics[0].Fields()["last"], "Murphy")
 }
 
 func TestTimeParser(t *testing.T) {
@@ -591,6 +591,50 @@ func TestTimeParser(t *testing.T) {
 		JSONTimeFormat: "02 Jan 06 15:04 MST",
 	}
 	metrics, err := parser.Parse([]byte(testString))
-	assert.NoError(t, err)
-	assert.Equal(t, false, metrics[0].Time() == metrics[1].Time())
+	require.NoError(t, err)
+	require.Equal(t, 2, len(metrics))
+	require.Equal(t, false, metrics[0].Time() == metrics[1].Time())
+}
+
+func TestTimeErrors(t *testing.T) {
+	testString := `{
+		"a": 5,
+		"b": {
+			"c": 6,
+			"time":"04 Jan 06 15:04 MST"
+		},
+		"my_tag_1": "foo",
+		"my_tag_2": "baz"
+	}`
+
+	parser := JSONParser{
+		MetricName:     "json_test",
+		JSONTimeKey:    "b_time",
+		JSONTimeFormat: "02 January 06 15:04 MST",
+	}
+
+	metrics, err := parser.Parse([]byte(testString))
+	require.Error(t, err)
+	require.Equal(t, 0, len(metrics))
+
+	testString2 := `{
+		"a": 5,
+		"b": {
+			"c": 6
+		},
+		"my_tag_1": "foo",
+		"my_tag_2": "baz"
+	}`
+
+	parser = JSONParser{
+		MetricName:     "json_test",
+		JSONTimeKey:    "b_time",
+		JSONTimeFormat: "02 January 06 15:04 MST",
+	}
+
+	metrics, err = parser.Parse([]byte(testString2))
+	log.Printf("err: %v", err)
+	require.Error(t, err)
+	require.Equal(t, 0, len(metrics))
+	require.Equal(t, fmt.Errorf("JSON time key could not be found"), err)
 }
