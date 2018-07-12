@@ -16,6 +16,8 @@ and use the old zookeeper connection method.
 [[inputs.kafka_consumer]]
   ## topic(s) to consume
   topics = ["telegraf"]
+  ## kafka client id
+  client_id = "my_client"
   brokers = ["localhost:9092"]
   ## the name of the consumer group
   consumer_group = "telegraf_metrics_consumers"
