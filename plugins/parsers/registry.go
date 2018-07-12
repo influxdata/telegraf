@@ -93,11 +93,11 @@ type Config struct {
 	DropwizardTagPathsMap map[string]string
 
 	//grok patterns
-	Patterns           []string
-	NamedPatterns      []string
-	CustomPatterns     string
-	CustomPatternFiles []string
-	TimeZone           string
+	GrokPatterns           []string
+	GrokNamedPatterns      []string
+	GrokCustomPatterns     string
+	GrokCustomPatternFiles []string
+	GrokTimeZone           string
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -134,11 +134,11 @@ func NewParser(config *Config) (Parser, error) {
 	case "grok":
 		parser, err = newGrokParser(
 			config.MetricName,
-			config.Patterns,
-			config.NamedPatterns,
-			config.CustomPatterns,
-			config.CustomPatternFiles,
-			config.TimeZone)
+			config.GrokPatterns,
+			config.GrokNamedPatterns,
+			config.GrokCustomPatterns,
+			config.GrokCustomPatternFiles,
+			config.GrokTimeZone)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -151,7 +151,7 @@ func newGrokParser(metricName string,
 	cPatterns string,
 	cPatternFiles []string, tZone string) (Parser, error) {
 	parser := grok.Parser{
-		MetricName:         metricName,
+		Measurement:        metricName,
 		Patterns:           patterns,
 		NamedPatterns:      nPatterns,
 		CustomPatterns:     cPatterns,

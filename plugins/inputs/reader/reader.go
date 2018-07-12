@@ -11,11 +11,11 @@ import (
 )
 
 type Reader struct {
-	Filepaths     []string `toml:"files"`
+	Files         []string `toml:"files"`
 	FromBeginning bool
 	parser        parsers.Parser
 
-	Filenames []string
+	filenames []string
 }
 
 const sampleConfig = `## Files to parse each interval.
@@ -44,7 +44,7 @@ func (r *Reader) Description() string {
 
 func (r *Reader) Gather(acc telegraf.Accumulator) error {
 	r.refreshFilePaths()
-	for _, k := range r.Filenames {
+	for _, k := range r.filenames {
 		metrics, err := r.readMetric(k)
 		if err != nil {
 			return err
@@ -63,10 +63,10 @@ func (r *Reader) SetParser(p parsers.Parser) {
 
 func (r *Reader) refreshFilePaths() error {
 	var allFiles []string
-	for _, filepath := range r.Filepaths {
+	for _, filepath := range r.Files {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
-			return fmt.Errorf("E! Error Glob: %v could not be compiled, %s", filepath, err)
+			return fmt.Errorf("could not compile glob %v: %v", filepath, err)
 		}
 		files := g.Match()
 
@@ -75,7 +75,7 @@ func (r *Reader) refreshFilePaths() error {
 		}
 	}
 
-	r.Filenames = allFiles
+	r.filenames = allFiles
 	return nil
 }
 

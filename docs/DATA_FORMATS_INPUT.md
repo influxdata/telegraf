@@ -749,6 +749,7 @@ HTTPD_ERRORLOG %{HTTPD20_ERRORLOG}|%{HTTPD24_ERRORLOG}
 
   ## Custom patterns can also be defined here. Put one pattern per line.
   grok_custom_patterns = '''
+  '''
 
   ## Timezone allows you to provide an override for timestamps that
   ## don't already include an offset

@@ -13,17 +13,17 @@ import (
 func TestRefreshFilePaths(t *testing.T) {
 	testDir := getPluginDir()
 	r := Reader{
-		Filepaths: []string{testDir + "/logparser/grok/testdata/**.log"},
+		Files: []string{testDir + "/reader/testfiles/**.log"},
 	}
 
 	r.refreshFilePaths()
-	assert.Equal(t, len(r.Filenames), 2)
+	assert.Equal(t, len(r.filenames), 2)
 }
 func TestJSONParserCompile(t *testing.T) {
 	testDir := getPluginDir()
 	var acc testutil.Accumulator
 	r := Reader{
-		Filepaths: []string{testDir + "/reader/testfiles/json_a.log"},
+		Files: []string{testDir + "/reader/testfiles/json_a.log"},
 	}
 	parserConfig := parsers.Config{
 		DataFormat: "json",
@@ -42,12 +42,12 @@ func TestGrokParser(t *testing.T) {
 	testDir := getPluginDir()
 	var acc testutil.Accumulator
 	r := Reader{
-		Filepaths: []string{testDir + "/reader/testfiles/grok_a.log"},
+		Files: []string{testDir + "/reader/testfiles/grok_a.log"},
 	}
 
 	parserConfig := parsers.Config{
-		DataFormat: "grok",
-		Patterns:   []string{"%{COMMON_LOG_FORMAT}"},
+		DataFormat:   "grok",
+		GrokPatterns: []string{"%{COMMON_LOG_FORMAT}"},
 	}
 
 	nParser, err := parsers.NewParser(&parserConfig)

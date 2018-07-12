@@ -71,7 +71,8 @@ type Parser struct {
 	NamedPatterns      []string
 	CustomPatterns     string
 	CustomPatternFiles []string
-	MetricName         string
+	Measurement        string
+	DefaultTags        map[string]string
 
 	// Timezone is an optional component to help render log dates to
 	// your chosen zone.
@@ -204,6 +205,12 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
+
+	//add default tags
+	for k, v := range p.DefaultTags {
+		tags[k] = v
+	}
+
 	timestamp := time.Now()
 	for k, v := range values {
 		if k == "" || v == "" {
@@ -345,11 +352,15 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		return nil, fmt.Errorf("logparser_grok: must have one or more fields")
 	}
 
-	return metric.New(p.MetricName, tags, fields, p.tsModder.tsMod(timestamp))
+	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	lines := strings.Split(string(buf), "\n")
+	scanner := bufio.NewScanner(strings.NewReader(string(buf)))
+	var lines []string
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
 	var metrics []telegraf.Metric
 
 	for _, line := range lines {
@@ -364,7 +375,7 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *Parser) SetDefaultTags(tags map[string]string) {
-	//needs implementation
+	p.DefaultTags = tags
 }
 
 func (p *Parser) addCustomPatterns(scanner *bufio.Scanner) {
