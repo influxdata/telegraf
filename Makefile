@@ -1,5 +1,14 @@
+ifeq ($(SHELL), cmd)
+	VERSION := $(shell git describe --exact-match --tags 2>nil)
+	HOME := $(HOMEPATH)
+else ifeq ($(SHELL), sh.exe)
+	VERSION := $(shell git describe --exact-match --tags 2>nil)
+	HOME := $(HOMEPATH)
+else
+	VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
+endif
+
 PREFIX := /usr/local
-VERSION := $(shell git describe --exact-match --tags 2>/dev/null)
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 COMMIT := $(shell git rev-parse --short HEAD)
 GOFILES ?= $(shell git ls-files '*.go')
