@@ -135,12 +135,12 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 
 	// Looks for fields which implement LogParser interface
 	config := &parsers.Config{
-		Patterns:           l.Patterns,
-		NamedPatterns:      l.NamedPatterns,
-		CustomPatterns:     l.CustomPatterns,
-		CustomPatternFiles: l.CustomPatternFiles,
-		TimeZone:           l.TimeZone,
-		DataFormat:         "grok",
+		GrokPatterns:           l.Patterns,
+		GrokNamedPatterns:      l.NamedPatterns,
+		GrokCustomPatterns:     l.CustomPatterns,
+		GrokCustomPatternFiles: l.CustomPatternFiles,
+		GrokTimeZone:           l.TimeZone,
+		DataFormat:             "grok",
 	}
 
 	var err error

@@ -1352,7 +1352,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
-						c.NamedPatterns = append(c.NamedPatterns, str.Value)
+						c.GrokNamedPatterns = append(c.GrokNamedPatterns, str.Value)
 					}
 				}
 			}
@@ -1364,7 +1364,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
-						c.Patterns = append(c.Patterns, str.Value)
+						c.GrokPatterns = append(c.GrokPatterns, str.Value)
 					}
 				}
 			}
@@ -1374,7 +1374,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	if node, ok := tbl.Fields["grok_custom_patterns"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
-				c.CustomPatterns = str.Value
+				c.GrokCustomPatterns = str.Value
 			}
 		}
 	}
@@ -1384,7 +1384,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
-						c.CustomPatternFiles = append(c.CustomPatternFiles, str.Value)
+						c.GrokCustomPatternFiles = append(c.GrokCustomPatternFiles, str.Value)
 					}
 				}
 			}
@@ -1394,7 +1394,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	if node, ok := tbl.Fields["grok_timezone"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
-				c.TimeZone = str.Value
+				c.GrokTimeZone = str.Value
 			}
 		}
 	}
