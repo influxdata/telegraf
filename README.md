@@ -140,7 +140,10 @@ configuration options.
 * [conntrack](./plugins/inputs/conntrack)
 * [couchbase](./plugins/inputs/couchbase)
 * [couchdb](./plugins/inputs/couchdb)
+* [cpu](./plugins/inputs/cpu)
 * [DC/OS](./plugins/inputs/dcos)
+* [diskio](./plugins/inputs/diskio)
+* [disk](./plugins/inputs/disk)
 * [disque](./plugins/inputs/disque)
 * [dmcache](./plugins/inputs/dmcache)
 * [dns query time](./plugins/inputs/dns_query)
@@ -168,18 +171,24 @@ configuration options.
 * [jolokia2](./plugins/inputs/jolokia2) (java, cassandra, kafka)
 - [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry)
 * [kapacitor](./plugins/inputs/kapacitor)
+* [kernel](./plugins/inputs/kernel)
+* [kernel_vmstat](./plugins/inputs/kernel_vmstat)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
+* [linux_sysctl_fs](./plugins/inputs/linux_sysctl_fs)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
 * [mcrouter](./plugins/inputs/mcrouter)
 * [memcached](./plugins/inputs/memcached)
+* [mem](./plugins/inputs/mem)
 * [mesos](./plugins/inputs/mesos)
 * [minecraft](./plugins/inputs/minecraft)
 * [mongodb](./plugins/inputs/mongodb)
 * [mysql](./plugins/inputs/mysql)
 * [nats](./plugins/inputs/nats)
+* [net](./plugins/inputs/net)
 * [net_response](./plugins/inputs/net_response)
+* [netstat](./plugins/inputs/netstat)
 * [nginx](./plugins/inputs/nginx)
 * [nginx_plus](./plugins/inputs/nginx_plus)
 * [nsq](./plugins/inputs/nsq)
@@ -196,6 +205,7 @@ configuration options.
 * [postgresql_extensible](./plugins/inputs/postgresql_extensible)
 * [postgresql](./plugins/inputs/postgresql)
 * [powerdns](./plugins/inputs/powerdns)
+* [processes](./plugins/inputs/processes)
 * [procstat](./plugins/inputs/procstat)
 * [prometheus](./plugins/inputs/prometheus) (can be used for [Caddy server](./plugins/inputs/prometheus/README.md#usage-for-caddy-http-server))
 * [puppetagent](./plugins/inputs/puppetagent)
@@ -211,7 +221,9 @@ configuration options.
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
 * [solr](./plugins/inputs/solr)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
+* [swap](./plugins/inputs/swap)
 * [syslog](./plugins/inputs/syslog)
+* [system](./plugins/inputs/system)
 * [teamspeak](./plugins/inputs/teamspeak)
 * [tengine](./plugins/inputs/tengine)
 * [tomcat](./plugins/inputs/tomcat)
@@ -223,18 +235,6 @@ configuration options.
 * [win_perf_counters](./plugins/inputs/win_perf_counters) (windows performance counters)
 * [win_services](./plugins/inputs/win_services)
 * [sysstat](./plugins/inputs/sysstat)
-* [system](./plugins/inputs/system)
-    * cpu
-    * mem
-    * net
-    * netstat
-    * disk
-    * diskio
-    * swap
-    * processes
-    * kernel (/proc/stat)
-    * kernel (/proc/vmstat)
-    * linux_sysctl_fs (/proc/sys/fs)
 
 Telegraf can also collect metrics via the following service plugins:
 
