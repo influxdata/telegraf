@@ -43,7 +43,10 @@ func (r *Reader) Description() string {
 }
 
 func (r *Reader) Gather(acc telegraf.Accumulator) error {
-	r.refreshFilePaths()
+	err := r.refreshFilePaths()
+	if err != nil {
+		return err
+	}
 	for _, k := range r.filenames {
 		metrics, err := r.readMetric(k)
 		if err != nil {
@@ -63,12 +66,15 @@ func (r *Reader) SetParser(p parsers.Parser) {
 
 func (r *Reader) refreshFilePaths() error {
 	var allFiles []string
-	for _, filepath := range r.Files {
-		g, err := globpath.Compile(filepath)
+	for _, file := range r.Files {
+		g, err := globpath.Compile(file)
 		if err != nil {
-			return fmt.Errorf("could not compile glob %v: %v", filepath, err)
+			return fmt.Errorf("could not compile glob %v: %v", file, err)
 		}
 		files := g.Match()
+		if len(files) <= 0 {
+			return fmt.Errorf("could not find file: %v", file)
+		}
 
 		for k := range files {
 			allFiles = append(allFiles, k)

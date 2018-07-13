@@ -1,29 +1,31 @@
 package reader
 
 import (
-	"runtime"
-	"strings"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRefreshFilePaths(t *testing.T) {
-	testDir := getPluginDir()
+	wd, err := os.Getwd()
 	r := Reader{
-		Files: []string{testDir + "/reader/testfiles/**.log"},
+		Files: []string{filepath.Join(wd, "testfiles/**.log")},
 	}
 
-	r.refreshFilePaths()
+	err = r.refreshFilePaths()
+	require.NoError(t, err)
 	assert.Equal(t, len(r.filenames), 2)
 }
 func TestJSONParserCompile(t *testing.T) {
-	testDir := getPluginDir()
 	var acc testutil.Accumulator
+	wd, _ := os.Getwd()
 	r := Reader{
-		Files: []string{testDir + "/reader/testfiles/json_a.log"},
+		Files: []string{filepath.Join(wd, "testfiles/json_a.log")},
 	}
 	parserConfig := parsers.Config{
 		DataFormat: "json",
@@ -39,10 +41,10 @@ func TestJSONParserCompile(t *testing.T) {
 }
 
 func TestGrokParser(t *testing.T) {
-	testDir := getPluginDir()
+	wd, _ := os.Getwd()
 	var acc testutil.Accumulator
 	r := Reader{
-		Files: []string{testDir + "/reader/testfiles/grok_a.log"},
+		Files: []string{filepath.Join(wd, "testfiles/grok_a.log")},
 	}
 
 	parserConfig := parsers.Config{
@@ -56,9 +58,4 @@ func TestGrokParser(t *testing.T) {
 
 	err = r.Gather(&acc)
 	assert.Equal(t, 2, len(acc.Metrics))
-}
-
-func getPluginDir() string {
-	_, filename, _, _ := runtime.Caller(1)
-	return strings.Replace(filename, "/reader/reader_test.go", "", 1)
 }
