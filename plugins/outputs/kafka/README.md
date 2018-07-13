@@ -10,6 +10,9 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Kafka topic for producer messages
   topic = "telegraf"
 
+  ## Optional client id
+  # client_id = "my_client"
+
   ## Optional topic suffix configuration.
   ## If the section is omitted, no suffix is used.
   ## Following topic suffix methods are supported:

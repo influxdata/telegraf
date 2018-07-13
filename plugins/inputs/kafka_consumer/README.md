@@ -22,6 +22,9 @@ and use the old zookeeper connection method.
   ## Offset (must be either "oldest" or "newest")
   offset = "oldest"
 
+  ## Optional client id
+  # client_id = "my_client"
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
