@@ -37,6 +37,7 @@ var timeLayouts = map[string]string{
 }
 
 const (
+	MEASUREMENT       = "measurement"
 	INT               = "int"
 	TAG               = "tag"
 	FLOAT             = "float"
@@ -222,6 +223,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		// check if pattern has some modifiers
 		if types, ok := p.typeMap[patternName]; ok {
 			t = types[k]
+			log.Printf("key: %v, val: %v, tag: %v", k, v, t)
 		}
 		// if we didn't find a modifier, check if we have a timestamp layout
 		if t == "" {
@@ -238,6 +240,8 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		}
 
 		switch t {
+		case MEASUREMENT:
+			p.Measurement = v
 		case INT:
 			iv, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
