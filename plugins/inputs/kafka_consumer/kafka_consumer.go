@@ -17,7 +17,7 @@ import (
 
 type Kafka struct {
 	ConsumerGroup string
-	ClientId      string `toml:"client_id"`
+	ClientID      string `toml:"client_id"`
 	Topics        []string
 	Brokers       []string
 	MaxMessageLen int
@@ -62,7 +62,7 @@ var sampleConfig = `
   topics = ["telegraf"]
   
   ## Optional Client id
-  # client_id = "my_client"
+  # client_id = "Telegraf"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -118,8 +118,10 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	if k.ClientId != "" {
-		config.ClientID = k.ClientId
+	if k.ClientID != "" {
+		config.ClientID = k.ClientID
+	} else {
+		config.ClientID = "Telegraf"
 	}
 
 	if tlsConfig != nil {

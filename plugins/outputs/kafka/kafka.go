@@ -26,7 +26,7 @@ type (
 		// Kafka topic
 		Topic string
 		// Kafka client id
-		ClientId string `toml:"client_id"`
+		ClientID string `toml:"client_id"`
 		// Kafka topic suffix option
 		TopicSuffix TopicSuffix `toml:"topic_suffix"`
 		// Routing Key Tag
@@ -72,7 +72,7 @@ var sampleConfig = `
   topic = "telegraf"
   
   ## Optional Client id
-  # client_id = "my_client"
+  # client_id = "Telegraf"
 
   ## Optional topic suffix configuration.
   ## If the section is omitted, no suffix is used.
@@ -191,8 +191,10 @@ func (k *Kafka) Connect() error {
 	}
 	config := sarama.NewConfig()
 
-	if k.ClientId != "" {
-		config.ClientID = k.ClientId
+	if k.ClientID != "" {
+		config.ClientID = k.ClientID
+	} else {
+		config.ClientID = "Telegraf"
 	}
 
 	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
