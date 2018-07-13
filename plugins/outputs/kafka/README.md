@@ -11,7 +11,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   topic = "telegraf"
 
   ## Optional client id
-  # client_id = "my_client"
+  # client_id = "Telegraf"
 
   ## Optional topic suffix configuration.
   ## If the section is omitted, no suffix is used.

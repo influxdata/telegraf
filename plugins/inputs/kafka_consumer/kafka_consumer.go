@@ -60,7 +60,7 @@ var sampleConfig = `
   brokers = ["localhost:9092"]
   ## topic(s) to consume
   topics = ["telegraf"]
-  
+
   ## Optional Client id
   # client_id = "Telegraf"
 

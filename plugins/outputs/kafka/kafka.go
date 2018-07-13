@@ -70,7 +70,7 @@ var sampleConfig = `
   brokers = ["localhost:9092"]
   ## Kafka topic for producer messages
   topic = "telegraf"
-  
+
   ## Optional Client id
   # client_id = "Telegraf"
 
