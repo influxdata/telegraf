@@ -1346,6 +1346,71 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	c.GJSONTagPaths = make(map[string]string)
+	if node, ok := tbl.Fields["gjson_tag_paths"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					if str, ok := kv.Value.(*ast.String); ok {
+						c.GJSONTagPaths[name] = str.Value
+					}
+				}
+			}
+		}
+	}
+
+	c.GJSONBoolPaths = make(map[string]string)
+	if node, ok := tbl.Fields["gjson_bool_paths"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					if str, ok := kv.Value.(*ast.String); ok {
+						c.GJSONBoolPaths[name] = str.Value
+					}
+				}
+			}
+		}
+	}
+
+	c.GJSONFloatPaths = make(map[string]string)
+	if node, ok := tbl.Fields["gjson_float_paths"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					if str, ok := kv.Value.(*ast.String); ok {
+						c.GJSONFloatPaths[name] = str.Value
+					}
+				}
+			}
+		}
+	}
+
+	c.GJSONStringPaths = make(map[string]string)
+	if node, ok := tbl.Fields["gjson_string_paths"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					if str, ok := kv.Value.(*ast.String); ok {
+						c.GJSONStringPaths[name] = str.Value
+					}
+				}
+			}
+		}
+	}
+
+	c.GJSONIntPaths = make(map[string]string)
+	if node, ok := tbl.Fields["gjson_int_paths"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					if str, ok := kv.Value.(*ast.String); ok {
+						c.GJSONIntPaths[name] = str.Value
+					}
+				}
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1362,6 +1427,11 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "dropwizard_time_format")
 	delete(tbl.Fields, "dropwizard_tags_path")
 	delete(tbl.Fields, "dropwizard_tag_paths")
+	delete(tbl.Fields, "gjson_tag_paths")
+	delete(tbl.Fields, "gjson_bool_paths")
+	delete(tbl.Fields, "gjson_float_paths")
+	delete(tbl.Fields, "gjson_string_paths")
+	delete(tbl.Fields, "gjson_int_paths")
 
 	return parsers.NewParser(c)
 }
