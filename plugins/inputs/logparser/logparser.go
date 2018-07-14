@@ -22,6 +22,7 @@ const (
 
 // LogParser in the primary interface for the plugin
 type GrokConfig struct {
+	MeasurementName    string `toml:"measurement"`
 	Patterns           []string
 	NamedPatterns      []string
 	CustomPatterns     string
@@ -36,10 +37,9 @@ type logEntry struct {
 
 // LogParserPlugin is the primary struct to implement the interface for logparser plugin
 type LogParserPlugin struct {
-	Files           []string
-	FromBeginning   bool
-	WatchMethod     string
-	MeasurementName string `toml:"measurement"`
+	Files         []string
+	FromBeginning bool
+	WatchMethod   string
 
 	tailers map[string]*tail.Tail
 	lines   chan logEntry
@@ -262,7 +262,7 @@ func (l *LogParserPlugin) parser() {
 			if m != nil {
 				tags := m.Tags()
 				tags["path"] = entry.path
-				l.acc.AddFields(l.MeasurementName, m.Fields(), tags, m.Time())
+				l.acc.AddFields(l.GrokConfig.MeasurementName, m.Fields(), tags, m.Time())
 			}
 		} else {
 			log.Println("E! Error parsing log line: " + err.Error())
