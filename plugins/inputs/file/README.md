@@ -5,7 +5,7 @@ using the selected
 [input data format](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
 
 Files will always be read in their entirety, if you wish to tail/follow a file
-use the [tail input plugin](plugins/inputs/tail) instead.
+use the [tail input plugin](/plugins/inputs/tail) instead.
 
 ### Configuration:
 ```toml
