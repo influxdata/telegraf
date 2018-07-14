@@ -153,6 +153,7 @@ configuration options.
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [fail2ban](./plugins/inputs/fail2ban)
 * [fibaro](./plugins/inputs/fibaro)
+* [file](./plugins/inputs/file)
 * [filestat](./plugins/inputs/filestat)
 * [fluentd](./plugins/inputs/fluentd)
 * [graylog](./plugins/inputs/graylog)

@@ -68,10 +68,11 @@ type Parser struct {
 	// specified by the user in Patterns.
 	// They will look like:
 	//   GROK_INTERNAL_PATTERN_0, GROK_INTERNAL_PATTERN_1, etc.
-	namedPatterns      []string
+	NamedPatterns      []string
 	CustomPatterns     string
 	CustomPatternFiles []string
 	Measurement        string
+	DefaultTags        map[string]string
 
 	// Timezone is an optional component to help render log dates to
 	// your chosen zone.
@@ -133,7 +134,7 @@ func (p *Parser) Compile() error {
 
 	// Give Patterns fake names so that they can be treated as named
 	// "custom patterns"
-	p.namedPatterns = make([]string, 0, len(p.Patterns))
+	p.NamedPatterns = make([]string, 0, len(p.Patterns))
 	for i, pattern := range p.Patterns {
 		pattern = strings.TrimSpace(pattern)
 		if pattern == "" {
@@ -141,10 +142,10 @@ func (p *Parser) Compile() error {
 		}
 		name := fmt.Sprintf("GROK_INTERNAL_PATTERN_%d", i)
 		p.CustomPatterns += "\n" + name + " " + pattern + "\n"
-		p.namedPatterns = append(p.namedPatterns, "%{"+name+"}")
+		p.NamedPatterns = append(p.NamedPatterns, "%{"+name+"}")
 	}
 
-	if len(p.namedPatterns) == 0 {
+	if len(p.NamedPatterns) == 0 {
 		return fmt.Errorf("pattern required")
 	}
 
@@ -167,10 +168,6 @@ func (p *Parser) Compile() error {
 		p.addCustomPatterns(scanner)
 	}
 
-	if p.Measurement == "" {
-		p.Measurement = "logparser_grok"
-	}
-
 	p.loc, err = time.LoadLocation(p.Timezone)
 	if err != nil {
 		log.Printf("W! improper timezone supplied (%s), setting loc to UTC", p.Timezone)
@@ -191,7 +188,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	var values map[string]string
 	// the matching pattern string
 	var patternName string
-	for _, pattern := range p.namedPatterns {
+	for _, pattern := range p.NamedPatterns {
 		if values, err = p.g.Parse(pattern, line); err != nil {
 			return nil, err
 		}
@@ -208,6 +205,12 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
+
+	//add default tags
+	for k, v := range p.DefaultTags {
+		tags[k] = v
+	}
+
 	timestamp := time.Now()
 	for k, v := range values {
 		if k == "" || v == "" {
@@ -335,9 +338,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		case DROP:
 		// goodbye!
 		default:
-			// Replace commas with dot character
 			v = strings.Replace(v, ",", ".", -1)
-
 			ts, err := time.ParseInLocation(t, v, p.loc)
 			if err == nil {
 				timestamp = ts
@@ -352,6 +353,29 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))
+}
+
+func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	scanner := bufio.NewScanner(strings.NewReader(string(buf)))
+	var lines []string
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	var metrics []telegraf.Metric
+
+	for _, line := range lines {
+		m, err := p.ParseLine(line)
+		if err != nil {
+			return nil, err
+		}
+		metrics = append(metrics, m)
+	}
+
+	return metrics, nil
+}
+
+func (p *Parser) SetDefaultTags(tags map[string]string) {
+	p.DefaultTags = tags
 }
 
 func (p *Parser) addCustomPatterns(scanner *bufio.Scanner) {
