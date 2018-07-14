@@ -10,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-type Reader struct {
+type File struct {
 	Files         []string `toml:"files"`
 	FromBeginning bool
 	parser        parsers.Parser
@@ -27,7 +27,7 @@ const sampleConfig = `
   ##   /var/log/apache.log -> only tail the apache log file
   files = ["/var/log/apache/access.log"]
 
-  ## The dataformat to be read from files 
+  ## The dataformat to be read from files
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
@@ -35,21 +35,21 @@ const sampleConfig = `
 `
 
 // SampleConfig returns the default configuration of the Input
-func (r *Reader) SampleConfig() string {
+func (f *File) SampleConfig() string {
 	return sampleConfig
 }
 
-func (r *Reader) Description() string {
+func (f *File) Description() string {
 	return "reload and gather from file[s] on telegraf's interval"
 }
 
-func (r *Reader) Gather(acc telegraf.Accumulator) error {
-	err := r.refreshFilePaths()
+func (f *File) Gather(acc telegraf.Accumulator) error {
+	err := f.refreshFilePaths()
 	if err != nil {
 		return err
 	}
-	for _, k := range r.filenames {
-		metrics, err := r.readMetric(k)
+	for _, k := range f.filenames {
+		metrics, err := f.readMetric(k)
 		if err != nil {
 			return err
 		}
@@ -61,13 +61,13 @@ func (r *Reader) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (r *Reader) SetParser(p parsers.Parser) {
-	r.parser = p
+func (f *File) SetParser(p parsers.Parser) {
+	f.parser = p
 }
 
-func (r *Reader) refreshFilePaths() error {
+func (f *File) refreshFilePaths() error {
 	var allFiles []string
-	for _, file := range r.Files {
+	for _, file := range f.Files {
 		g, err := globpath.Compile(file)
 		if err != nil {
 			return fmt.Errorf("could not compile glob %v: %v", file, err)
@@ -82,21 +82,21 @@ func (r *Reader) refreshFilePaths() error {
 		}
 	}
 
-	r.filenames = allFiles
+	f.filenames = allFiles
 	return nil
 }
 
-func (r *Reader) readMetric(filename string) ([]telegraf.Metric, error) {
+func (f *File) readMetric(filename string) ([]telegraf.Metric, error) {
 	fileContents, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("E! Error file: %v could not be read, %s", filename, err)
 	}
-	return r.parser.Parse(fileContents)
+	return f.parser.Parse(fileContents)
 
 }
 
 func init() {
-	inputs.Add("reader", func() telegraf.Input {
-		return &Reader{}
+	inputs.Add("file", func() telegraf.Input {
+		return &File{}
 	})
 }

@@ -13,7 +13,7 @@ import (
 
 func TestRefreshFilePaths(t *testing.T) {
 	wd, err := os.Getwd()
-	r := Reader{
+	r := File{
 		Files: []string{filepath.Join(wd, "testfiles/**.log")},
 	}
 
@@ -24,7 +24,7 @@ func TestRefreshFilePaths(t *testing.T) {
 func TestJSONParserCompile(t *testing.T) {
 	var acc testutil.Accumulator
 	wd, _ := os.Getwd()
-	r := Reader{
+	r := File{
 		Files: []string{filepath.Join(wd, "testfiles/json_a.log")},
 	}
 	parserConfig := parsers.Config{
@@ -43,7 +43,7 @@ func TestJSONParserCompile(t *testing.T) {
 func TestGrokParser(t *testing.T) {
 	wd, _ := os.Getwd()
 	var acc testutil.Accumulator
-	r := Reader{
+	r := File{
 		Files: []string{filepath.Join(wd, "testfiles/grok_a.log")},
 	}
 
