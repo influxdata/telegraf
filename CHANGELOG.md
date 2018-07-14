@@ -4,6 +4,7 @@
 
 ### New Inputs
 
+- [file](./plugins/inputs/file/README.md) - Contributed by @maxunt
 - [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
 
 ### New Processors
@@ -36,6 +37,7 @@
 - [#4386](https://github.com/influxdata/telegraf/pull/4386): Add user tag to procstat input.
 - [#4403](https://github.com/influxdata/telegraf/pull/4403): Add support for multivalue metrics to collectd parser.
 - [#4418](https://github.com/influxdata/telegraf/pull/4418): Add support for setting kafka client id.
+- [#4332](https://github.com/influxdata/telegraf/pull/4332): Add file input plugin and grok parser.
 
 ## v1.7.2 [unreleased]
 
