@@ -1,5 +1,9 @@
 # Logparser Input Plugin
 
+### **Deprecated in version 1.8**: Please use the
+[tail](/plugins/inputs/tail) plugin with the `grok`
+[data format](/docs/DATA_FORMATS_INPUT.md).
+
 The `logparser` plugin streams and parses the given logfiles. Currently it
 has the capability of parsing "grok" patterns from logfiles, which also supports
 regex patterns.
@@ -8,6 +12,9 @@ regex patterns.
 
 ```toml
 [[inputs.logparser]]
+  ## DEPRECATED: The `logparser` plugin is deprecated in 1.8.  Please use the
+  ## `tail` plugin with the grok data_format instead.
+
   ## Log files to parse.
   ## These accept standard unix glob matching rules, but with the addition of
   ## ** as a "super asterisk". ie:
