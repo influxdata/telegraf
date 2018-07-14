@@ -44,6 +44,7 @@
 - [#4381](https://github.com/influxdata/telegraf/issues/4381): Use localhost as default server tag in zookeeper input.
 - [#4374](https://github.com/influxdata/telegraf/issues/4374): Don't set values when pattern doesn't match in regex processor.
 - [#4416](https://github.com/influxdata/telegraf/issues/4416): Fix output format of printer processor.
+- [#4422](https://github.com/influxdata/telegraf/issues/4422): Fix metric can have duplicate field.
 
 ## v1.7.1 [2018-07-03]
 
