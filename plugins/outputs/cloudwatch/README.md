@@ -37,11 +37,12 @@ Examples include but are not limited to:
 
 The namespace used for AWS CloudWatch metrics.
 
-### enable_statistic_values
+### write_statistics
 
-If you have a large amount of metrics, you should consider to send 
-statistic values instead of raw metrics. This would not only improve
-performance but also save AWS API cost. Use `basicstats` aggregator to 
-calculate those required statistic fields (count, min, max, and sum).
-[See Cloudwatch StatisticSet](https://docs.aws.amazon.com/sdk-for-go/api/service/cloudwatch/#StatisticSet).
-This plugin would try to parse those statistic fields and send to Cloudwatch.
+If you have a large amount of metrics, you should consider to send statistic 
+values instead of raw metrics which could not only improve performance but 
+also save AWS API cost. If enable this flag, this plugin would parse the required 
+[CloudWatch statistic fields](https://docs.aws.amazon.com/sdk-for-go/api/service/cloudwatch/#StatisticSet) 
+(count, min, max, and sum) and send them to CloudWatch. You could use `basicstats` 
+aggregator to calculate those fields. If not all statistic fields are available, 
+all fields would still be sent as raw metrics.

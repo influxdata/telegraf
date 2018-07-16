@@ -28,7 +28,7 @@ type CloudWatch struct {
 	Namespace string `toml:"namespace"` // CloudWatch Metrics Namespace
 	svc       *cloudwatch.CloudWatch
 
-	EnableStatisticValues bool `toml:"enable_statistic_values"`
+	WriteStatistics bool `toml:"write_statistics"`
 }
 
 type statisticSet struct {
@@ -61,13 +61,13 @@ var sampleConfig = `
   ## Namespace for the CloudWatch MetricDatums
   namespace = "InfluxData/Telegraf"
 
-  ## If you have a large amount of metrics, you should consider to send 
-  ## statistic values instead of raw metrics. This would not only improve
-  ## performance but also save AWS API cost. Use basicstats aggregator to
-  ## calculate required statistic fields (count, min, max, and sum) and 
-  ## enable this flag. This plugin would try to parse those fields and 
-  ## send statistic values to Cloudwatch.
-  # enable_statistic_values = false
+  ## If you have a large amount of metrics, you should consider to send statistic 
+  ## values instead of raw metrics which could not only improve performance but 
+  ## also save AWS API cost. If enable this flag, this plugin would parse the required 
+  ## CloudWatch statistic fields (count, min, max, and sum) and send them to CloudWatch. 
+  ## You could use basicstats aggregator to calculate those fields. If not all statistic 
+  ## fields are available, all fields would still be sent as raw metrics. 
+  # write_statistics = false
 `
 
 func (c *CloudWatch) SampleConfig() string {
@@ -114,7 +114,7 @@ func (c *CloudWatch) Write(metrics []telegraf.Metric) error {
 
 	var datums []*cloudwatch.MetricDatum
 	for _, m := range metrics {
-		d := BuildMetricDatum(m)
+		d := BuildMetricDatum(c.WriteStatistics, m)
 		datums = append(datums, d...)
 	}
 
