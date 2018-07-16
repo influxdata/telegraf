@@ -27,10 +27,17 @@ type FileInfo struct {
 
 type FileInfoParser struct {
 	DefaultTags map[string]string
+	IncomingDir string
 }
 
 func NewFileInfoParser() (*FileInfoParser, error) {
 	return &FileInfoParser{}, nil
+}
+
+// Provided so that you can accurately calcuate the relative path against
+// A specific source directory
+func (p *FileInfoParser) SetIncomingDir(dir string) {
+	p.IncomingDir = dir
 }
 
 func (p *FileInfoParser) GetFileInfo(fileName string) FileInfo {
@@ -41,6 +48,9 @@ func (p *FileInfoParser) GetFileInfo(fileName string) FileInfo {
 	var site = equipment[0:3]
 	var splitExt = strings.Split(splitName[5], ".")
 	var relative = fileName
+	if len(p.IncomingDir) > 0 {
+		relative = strings.TrimPrefix(fileName, p.IncomingDir)
+	}
 
 	var fi FileInfo
 	var err error

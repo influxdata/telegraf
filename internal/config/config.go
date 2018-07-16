@@ -797,6 +797,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	if len(c.OutputFilters) > 0 && !sliceContains(name, c.OutputFilters) {
 		return nil
 	}
+
 	creator, ok := outputs.Outputs[name]
 	if !ok {
 		return fmt.Errorf("Undefined but requested output: %s", name)
