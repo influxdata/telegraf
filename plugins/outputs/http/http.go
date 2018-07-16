@@ -127,6 +127,9 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 
 func (h *HTTP) write(reqBody []byte) error {
 	req, err := http.NewRequest(h.Method, h.URL, bytes.NewBuffer(reqBody))
+	if err != nil {
+		return err
+	}
 
 	req.Header.Set("Content-Type", defaultContentType)
 	for k, v := range h.Headers {
