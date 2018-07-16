@@ -75,6 +75,9 @@ type Parser struct {
 	Measurement        string
 	DefaultTags        map[string]string
 
+	//holds any modifiers set on named user patterns
+	patternModifiers map[string][]string
+
 	// Timezone is an optional component to help render log dates to
 	// your chosen zone.
 	// Default: "" which renders UTC
@@ -127,6 +130,7 @@ func (p *Parser) Compile() error {
 	p.tsMap = make(map[string]map[string]string)
 	p.patterns = make(map[string]string)
 	p.tsModder = &tsModder{}
+	p.patternModifiers = make(map[string][]string)
 	var err error
 	p.g, err = grok.NewWithConfig(&grok.Config{NamedCapturesOnly: true})
 	if err != nil {
@@ -138,11 +142,18 @@ func (p *Parser) Compile() error {
 	p.NamedPatterns = make([]string, 0, len(p.Patterns))
 	for i, pattern := range p.Patterns {
 		pattern = strings.TrimSpace(pattern)
+
+		//extract any modifiers off pattern
+		pattern = strings.Trim(pattern, "%{}")
+		splitPattern := strings.SplitN(pattern, ":", 3)
 		if pattern == "" {
 			continue
 		}
 		name := fmt.Sprintf("GROK_INTERNAL_PATTERN_%d", i)
-		p.CustomPatterns += "\n" + name + " " + pattern + "\n"
+
+		//map pattern modifiers by name
+		p.patternModifiers["%{"+name+"}"] = splitPattern[1:3]
+		p.CustomPatterns += "\n" + name + " " + "%{" + splitPattern[0] + "}" + "\n"
 		p.NamedPatterns = append(p.NamedPatterns, "%{"+name+"}")
 	}
 
@@ -223,7 +234,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		// check if pattern has some modifiers
 		if types, ok := p.typeMap[patternName]; ok {
 			t = types[k]
-			log.Printf("key: %v, val: %v, tag: %v", k, v, t)
 		}
 		// if we didn't find a modifier, check if we have a timestamp layout
 		if t == "" {
@@ -350,6 +360,15 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				log.Printf("E! Error parsing %s to time layout [%s]: %s", v, t, err)
 			}
 		}
+	}
+
+	//check the modifiers on the pattern
+	modifiers, ok := p.patternModifiers[patternName]
+	if ok && modifiers[1] == "measurement" {
+		if p.patternModifiers[patternName][0] == "" {
+			return nil, fmt.Errorf("pattern: %v must be named to use 'measurement' modifier", patternName)
+		}
+		p.Measurement = p.patternModifiers[patternName][0]
 	}
 
 	if len(fields) == 0 {

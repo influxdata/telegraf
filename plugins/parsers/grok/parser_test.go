@@ -1,7 +1,6 @@
 package grok
 
 import (
-	"log"
 	"testing"
 	"time"
 
@@ -961,15 +960,14 @@ func TestReplaceTimestampComma(t *testing.T) {
 	require.Equal(t, 555, m.Time().Nanosecond()/1000000)
 }
 
-func TestMeasurementModifier(t *testing.T) {
+func TestDynamicMeasurementModifier(t *testing.T) {
 	p := &Parser{
-		Patterns:       []string{"%{TEST::measurement}"},
-		CustomPatterns: "TEST %{NUMBER:var1:float} %{NUMBER:var2:float} %{WORD:var3:string}",
+		Patterns:       []string{"%{TEST}"},
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:var3:measurement}",
 	}
 
 	require.NoError(t, p.Compile())
 	m, err := p.ParseLine("4 5 hello")
 	require.NoError(t, err)
-	log.Printf("m: %v", m)
-	t.Error()
+	require.Equal(t, m.Name(), "hello")
 }
