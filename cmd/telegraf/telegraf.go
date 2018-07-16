@@ -207,10 +207,12 @@ type program struct {
 }
 
 func (p *program) Start(s service.Service) error {
+	log.Println("Starting...")
 	go p.run()
 	return nil
 }
 func (p *program) run() {
+	log.Println("Running...")
 	stop = make(chan struct{})
 	reloadLoop(
 		stop,
@@ -233,9 +235,13 @@ func displayVersion() string {
 }
 
 func main() {
+	log.Println("Main...")
 	flag.Usage = func() { usageExit(0) }
+	log.Println("Parsing args...")
 	flag.Parse()
+	log.Println("Flagging args...")
 	args := flag.Args()
+	log.Println("Done...")
 
 	inputFilters, outputFilters := []string{}, []string{}
 	if *fInputFilters != "" {

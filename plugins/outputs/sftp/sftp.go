@@ -197,7 +197,8 @@ func (s *Sftp) CreateConnection(pwg *sync.WaitGroup) {
 		Auth: []ssh.AuthMethod{
 			ssh.Password(s.Password),
 		},
-		Config: sshCommonConfig,
+		Config:          sshCommonConfig,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	token := strings.Index(s.Destination, "/")

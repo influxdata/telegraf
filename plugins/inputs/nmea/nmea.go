@@ -1,6 +1,7 @@
 package nmea
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"reflect"
@@ -153,7 +154,9 @@ func (n *Nmea) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
+	fmt.Println("nmea init...")
 	inputs.Add("nmea", func() telegraf.Input {
 		return &Nmea{configParsed: false}
 	})
+	fmt.Println("nmea init done...")
 }

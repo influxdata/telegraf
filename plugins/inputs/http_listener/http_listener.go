@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"crypto/subtle"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -406,10 +407,12 @@ func getPrecisionMultiplier(precision string) time.Duration {
 }
 
 func init() {
+	fmt.Println("http_listener init...")
 	inputs.Add("http_listener", func() telegraf.Input {
 		return &HTTPListener{
 			ServiceAddress: ":8186",
 			TimeFunc:       time.Now,
 		}
 	})
+	fmt.Println("http_listener init done...")
 }

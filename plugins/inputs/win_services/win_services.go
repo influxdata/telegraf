@@ -4,6 +4,7 @@ package win_services
 
 import (
 	"fmt"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"golang.org/x/sys/windows/svc"
@@ -179,5 +180,7 @@ func collectServiceInfo(scmgr WinServiceManager, serviceName string) (serviceInf
 }
 
 func init() {
+	fmt.Println("win_services init...")
 	inputs.Add("win_services", func() telegraf.Input { return &WinServices{mgrProvider: &MgProvider{}} })
+	fmt.Println("win_services init done...")
 }

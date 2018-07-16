@@ -250,7 +250,9 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
+	fmt.Println("exec init...")
 	inputs.Add("exec", func() telegraf.Input {
 		return NewExec()
 	})
+	fmt.Println("exec init... done")
 }

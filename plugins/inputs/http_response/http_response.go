@@ -319,7 +319,9 @@ func (h *HTTPResponse) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
+	fmt.Println("http_response init...")
 	inputs.Add("http_response", func() telegraf.Input {
 		return &HTTPResponse{}
 	})
+	fmt.Println("http_response init...")
 }
