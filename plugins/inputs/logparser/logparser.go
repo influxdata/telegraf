@@ -27,6 +27,7 @@ type GrokConfig struct {
 	CustomPatterns     string
 	CustomPatternFiles []string
 	TimeZone           string
+	MeasurementName    string `toml:"measurement"`
 }
 
 type logEntry struct {
@@ -36,10 +37,9 @@ type logEntry struct {
 
 // LogParserPlugin is the primary struct to implement the interface for logparser plugin
 type LogParserPlugin struct {
-	Files           []string
-	FromBeginning   bool
-	WatchMethod     string
-	MeasurementName string `toml:"measurement"`
+	Files         []string
+	FromBeginning bool
+	WatchMethod   string
 
 	tailers map[string]*tail.Tail
 	lines   chan logEntry
@@ -54,6 +54,9 @@ type LogParserPlugin struct {
 }
 
 const sampleConfig = `
+  ## DEPRECATED: The 'logparser' plugin is deprecated in 1.8.  Please use the
+  ## 'tail' plugin with the grok data_format as a replacement.
+
   ## Log files to parse.
   ## These accept standard unix glob matching rules, but with the addition of
   ## ** as a "super asterisk". ie:
@@ -123,6 +126,9 @@ func (l *LogParserPlugin) Gather(acc telegraf.Accumulator) error {
 
 // Start kicks off collection of stats for the plugin
 func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
+	log.Println("W! DEPRECATED: The logparser plugin is deprecated in 1.8. " +
+		"Please use the tail plugin with the grok data_format as a replacement.")
+
 	l.Lock()
 	defer l.Unlock()
 
@@ -262,7 +268,7 @@ func (l *LogParserPlugin) parser() {
 			if m != nil {
 				tags := m.Tags()
 				tags["path"] = entry.path
-				l.acc.AddFields(l.MeasurementName, m.Fields(), tags, m.Time())
+				l.acc.AddFields(l.GrokConfig.MeasurementName, m.Fields(), tags, m.Time())
 			}
 		} else {
 			log.Println("E! Error parsing log line: " + err.Error())
