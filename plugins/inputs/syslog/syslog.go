@@ -280,8 +280,17 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 		conn.Close()
 	}()
 
+	var p *rfc5425.Parser
+	data := &bytes.Buffer{}
+
+	if s.BestEffort {
+		p = rfc5425.NewParser(data, rfc5425.WithBestEffort())
+	} else {
+		p = rfc5425.NewParser(data)
+	}
+
 	for {
-		data := &bytes.Buffer{}
+		data.Reset()
 
 		// read the data
 		if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
@@ -314,13 +323,6 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 		}
 
 	parseMsg:
-		var p *rfc5425.Parser
-		if s.BestEffort {
-			p = rfc5425.NewParser(data, rfc5425.WithBestEffort())
-		} else {
-			p = rfc5425.NewParser(data)
-		}
-
 		p.ParseExecuting(func(r *rfc5425.Result) {
 			s.store(*r, acc)
 		})
