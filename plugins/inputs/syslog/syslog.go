@@ -314,7 +314,7 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 				return
 			}
 			// other error, log and return
-			s.store(rfc5425.Result{Error: fmt.Errorf("failed reading from syslog client - %s", err.Error())}, acc)
+			acc.AddError(fmt.Errorf("failed reading from syslog client - %s", err.Error()))
 			return
 		}
 		// handle client disconnect
