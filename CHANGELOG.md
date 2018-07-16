@@ -2,6 +2,10 @@
 
 ### Release Notes
 
+- With the addition of the standalone `grok` input data format, the
+  `logparser` input plugin has been deprecated in favor of using the `tail`
+  input plugin combined with `data_format="grok"` .
+
 ### New Inputs
 
 - [file](./plugins/inputs/file/README.md) - Contributed by @maxunt
