@@ -43,6 +43,7 @@ func TestTailFromBeginning(t *testing.T) {
 		},
 		map[string]string{
 			"mytag": "foo",
+			"path":  tmpfile.Name(),
 		})
 }
 
@@ -84,6 +85,7 @@ func TestTailFromEnd(t *testing.T) {
 		},
 		map[string]string{
 			"othertag": "foo",
+			"path":     tmpfile.Name(),
 		})
 	assert.Len(t, acc.Metrics, 1)
 }

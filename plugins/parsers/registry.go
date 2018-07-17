@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
+	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
@@ -77,6 +78,9 @@ type Config struct {
 	// Dataset specification for collectd
 	CollectdTypesDB []string
 
+	// whether to split or join multivalue metrics
+	CollectdSplit string
+
 	// DataType only applies to value, this will be the type to parse value to
 	DataType string
 
@@ -98,6 +102,13 @@ type Config struct {
 	// an optional map containing tag names as keys and json paths to retrieve the tag values from as values
 	// used if TagsPath is empty or doesn't return any tags
 	DropwizardTagPathsMap map[string]string
+
+	//grok patterns
+	GrokPatterns           []string
+	GrokNamedPatterns      []string
+	GrokCustomPatterns     string
+	GrokCustomPatternFiles []string
+	GrokTimeZone           string
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -125,7 +136,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.Templates, config.DefaultTags)
 	case "collectd":
 		parser, err = NewCollectdParser(config.CollectdAuthFile,
-			config.CollectdSecurityLevel, config.CollectdTypesDB)
+			config.CollectdSecurityLevel, config.CollectdTypesDB, config.CollectdSplit)
 	case "dropwizard":
 		parser, err = NewDropwizardParser(
 			config.DropwizardMetricRegistryPath,
@@ -136,6 +147,14 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags,
 			config.Separator,
 			config.Templates)
+	case "grok":
+		parser, err = newGrokParser(
+			config.MetricName,
+			config.GrokPatterns,
+			config.GrokNamedPatterns,
+			config.GrokCustomPatterns,
+			config.GrokCustomPatternFiles,
+			config.GrokTimeZone)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -164,6 +183,24 @@ func newJSONParser(
 }
 
 //Deprecated: Use NewParser to get a JSONParser object
+func newGrokParser(metricName string,
+	patterns []string,
+	nPatterns []string,
+	cPatterns string,
+	cPatternFiles []string, tZone string) (Parser, error) {
+	parser := grok.Parser{
+		Measurement:        metricName,
+		Patterns:           patterns,
+		NamedPatterns:      nPatterns,
+		CustomPatterns:     cPatterns,
+		CustomPatternFiles: cPatternFiles,
+		Timezone:           tZone,
+	}
+
+	err := parser.Compile()
+	return &parser, err
+}
+
 func NewJSONParser(
 	metricName string,
 	tagKeys []string,
@@ -210,8 +247,9 @@ func NewCollectdParser(
 	authFile string,
 	securityLevel string,
 	typesDB []string,
+	split string,
 ) (Parser, error) {
-	return collectd.NewCollectdParser(authFile, securityLevel, typesDB)
+	return collectd.NewCollectdParser(authFile, securityLevel, typesDB, split)
 }
 
 func NewDropwizardParser(

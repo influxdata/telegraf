@@ -1321,6 +1321,14 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["collectd_parse_multivalue"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CollectdSplit = str.Value
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["collectd_typesdb"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
@@ -1374,6 +1382,59 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	//for grok data_format
+	if node, ok := tbl.Fields["grok_named_patterns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.GrokNamedPatterns = append(c.GrokNamedPatterns, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["grok_patterns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.GrokPatterns = append(c.GrokPatterns, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["grok_custom_patterns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.GrokCustomPatterns = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["grok_custom_pattern_files"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.GrokCustomPatternFiles = append(c.GrokCustomPatternFiles, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["grok_timezone"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.GrokTimeZone = str.Value
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1388,11 +1449,17 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "collectd_auth_file")
 	delete(tbl.Fields, "collectd_security_level")
 	delete(tbl.Fields, "collectd_typesdb")
+	delete(tbl.Fields, "collectd_parse_multivalue")
 	delete(tbl.Fields, "dropwizard_metric_registry_path")
 	delete(tbl.Fields, "dropwizard_time_path")
 	delete(tbl.Fields, "dropwizard_time_format")
 	delete(tbl.Fields, "dropwizard_tags_path")
 	delete(tbl.Fields, "dropwizard_tag_paths")
+	delete(tbl.Fields, "grok_named_patterns")
+	delete(tbl.Fields, "grok_patterns")
+	delete(tbl.Fields, "grok_custom_patterns")
+	delete(tbl.Fields, "grok_custom_pattern_files")
+	delete(tbl.Fields, "grok_timezone")
 
 	return parsers.NewParser(c)
 }
