@@ -1,7 +1,6 @@
 package syslog
 
 import (
-	"bytes"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -281,52 +280,23 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 	}()
 
 	var p *rfc5425.Parser
-	data := &bytes.Buffer{}
 
 	if s.BestEffort {
-		p = rfc5425.NewParser(data, rfc5425.WithBestEffort())
+		p = rfc5425.NewParser(conn, rfc5425.WithBestEffort())
 	} else {
-		p = rfc5425.NewParser(data)
+		p = rfc5425.NewParser(conn)
 	}
 
-	for {
-		data.Reset()
+	if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
+		conn.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))
+	}
 
-		// read the data
+	p.ParseExecuting(func(r *rfc5425.Result) {
+		s.store(*r, acc)
 		if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
 			conn.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))
 		}
-
-		n, err := io.Copy(data, conn)
-		if err != nil {
-			// read timeout reached, parse what we have
-			if er, ok := err.(net.Error); ok && er.Timeout() {
-				if n == 0 {
-					continue
-				}
-				goto parseMsg
-			}
-			// client has closed connection, return
-			if err == io.EOF {
-				if n > 0 {
-					goto parseMsg
-				}
-				return
-			}
-			// other error, log and return
-			acc.AddError(fmt.Errorf("failed reading from syslog client - %s", err.Error()))
-			return
-		}
-		// handle client disconnect
-		if n == 0 {
-			return
-		}
-
-	parseMsg:
-		p.ParseExecuting(func(r *rfc5425.Result) {
-			s.store(*r, acc)
-		})
-	}
+	})
 }
 
 func (s *Syslog) setKeepAlive(c *net.TCPConn) error {
