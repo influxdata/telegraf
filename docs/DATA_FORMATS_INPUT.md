@@ -663,6 +663,26 @@ For more information about the dropwizard json format see
 #### Grok
 Parse logstash-style "grok" patterns. Patterns can be added to patterns, or custom patterns read from custom_pattern_files.
 
+Modifiers can be appended to the end of a grok field to specify how that field should be handled. 
+There are also timestamp modifiers, which can be used to specify the format of time data.
+Available modifiers can be found below.
+
+The 'measurement' modifier has two seperate use cases, one for static measurement names and one for
+dynamic measurement names. 
+
+For setting a static measurement name, apply the 'measurement' modifier to the 'patterns' field.
+If grok matches the pattern, the measurement name will be changed to the specified name.
+So the config: `patterns = ["%{TEST:test_name:measurement}"]` would output a metric named "test_name" if grok
+matches the pattern. It is important to only specify one pattern per element in the patterns array field
+or an error will be thrown.
+So the config: `patterns = ["%{TEST:test_name:measurement}|%{TEST2:test2_name:measurement}"]` would need to be changed
+to: `patterns = ["%{TEST:test_name:measurement}","%{TEST2:test2_name:measurement}"]`
+
+For setting a dynamic measurement name, simply apply the 'measurement' modifier to a value in a custom pattern.
+If the pattern is matched, the measurement name will be set to the value of the field it was applied to.
+Each pattern should only have one 'measurement' modifier applied to it. The modifier should only apply to fields 
+of a single value type, not to another grok pattern.
+
 # View logstash grok pattern docs here:
 #   https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
 # All default logstash patterns are supported, these can be viewed here:
@@ -675,6 +695,7 @@ Parse logstash-style "grok" patterns. Patterns can be added to patterns, or cust
 #   duration (ie, 5.23ms gets converted to int nanoseconds)
 #   tag      (converts the field into a tag)
 #   drop     (drops the field completely)
+#   measurement (sets the metric name to designated field)
 # Timestamp modifiers:
 #   ts-ansic         ("Mon Jan _2 15:04:05 2006")
 #   ts-unix          ("Mon Jan _2 15:04:05 MST 2006")

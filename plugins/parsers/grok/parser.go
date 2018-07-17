@@ -143,18 +143,28 @@ func (p *Parser) Compile() error {
 	for i, pattern := range p.Patterns {
 		pattern = strings.TrimSpace(pattern)
 
-		//extract any modifiers off pattern
-		pattern = strings.Trim(pattern, "%{}")
-		splitPattern := strings.SplitN(pattern, ":", 3)
-		if pattern == "" {
-			continue
-		}
-		name := fmt.Sprintf("GROK_INTERNAL_PATTERN_%d", i)
+		//checks that there is only one named field in pattern and 2 ':' indicating a modifier
+		//then extract any modifiers off pattern
+		if strings.Count(pattern, "%") == 1 && strings.Count(pattern, ":") == 2 {
+			pattern = strings.Trim(pattern, "%{}")
+			splitPattern := strings.SplitN(pattern, ":", 3)
+			if pattern == "" {
+				continue
+			}
+			name := fmt.Sprintf("GROK_INTERNAL_PATTERN_%d", i)
 
-		//map pattern modifiers by name
-		p.patternModifiers["%{"+name+"}"] = splitPattern[1:3]
-		p.CustomPatterns += "\n" + name + " " + "%{" + splitPattern[0] + "}" + "\n"
-		p.NamedPatterns = append(p.NamedPatterns, "%{"+name+"}")
+			//map pattern modifiers by name
+			p.patternModifiers["%{"+name+"}"] = splitPattern[1:3]
+			p.CustomPatterns += "\n" + name + " " + "%{" + splitPattern[0] + "}" + "\n"
+			p.NamedPatterns = append(p.NamedPatterns, "%{"+name+"}")
+		} else {
+			if pattern == "" {
+				continue
+			}
+			name := fmt.Sprintf("GROK_INTERNAL_PATTERN_%d", i)
+			p.CustomPatterns += "\n" + name + " " + pattern + "\n"
+			p.NamedPatterns = append(p.NamedPatterns, "%{"+name+"}")
+		}
 	}
 
 	if len(p.NamedPatterns) == 0 {

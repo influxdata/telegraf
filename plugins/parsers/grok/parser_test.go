@@ -971,3 +971,42 @@ func TestDynamicMeasurementModifier(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, m.Name(), "hello")
 }
+
+func TestStaticMeasurementModifier(t *testing.T) {
+	p := &Parser{
+		Patterns:       []string{"%{TEST:test_name:measurement}"},
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:var3:string}",
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("4 5 hello")
+	require.NoError(t, err)
+	require.Equal(t, m.Name(), "test_name")
+}
+
+func TestStaticAndDynamicMeasurementModifier(t *testing.T) {
+	p := &Parser{
+		Patterns:       []string{"%{TEST:test_name:measurement}"},
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:var3:measurement}",
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("4 5 hello")
+	require.NoError(t, err)
+	require.Equal(t, m.Name(), "test_name")
+}
+
+func TestMultipleMeasurementModifier(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{TEST:test_name:measurement}", "%{TEST2:test2_name:measurement"},
+		CustomPatterns: `TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:var_string:string} 
+		TEST2 %{WORD:stringer1:tag} %{NUMBER:var2:float} %{NUMBER:var3:float}`,
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("4 5 hello")
+	m2, err := p.ParseLine("mystr 5 9.5")
+	require.NoError(t, err)
+	require.Equal(t, m.Name(), "test_name")
+	require.Equal(t, m2.Name(), "test2_name")
+}
