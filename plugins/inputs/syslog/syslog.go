@@ -19,7 +19,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const defaultReadTimeout = time.Millisecond * 500
+const defaultReadTimeout = time.Second * 5
 const ipMaxPacketSize = 64 * 1024
 
 // Syslog is a syslog plugin
