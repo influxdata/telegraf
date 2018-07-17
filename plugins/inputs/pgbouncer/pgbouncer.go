@@ -98,8 +98,15 @@ func (p *PgBouncer) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		tags["user"] = (*columnMap["user"]).(string)
-		tags["pool_mode"] = (*columnMap["pool_mode"]).(string)
+		switch (*columnMap["user"]).(type) {
+		case string:
+			tags["user"] = (*columnMap["user"]).(string)
+		}
+
+		switch (*columnMap["pool_mode"]).(type) {
+		case string:
+			tags["pool_mode"] = (*columnMap["pool_mode"]).(string)
+		}
 
 		fields := make(map[string]interface{})
 		for col, val := range columnMap {
