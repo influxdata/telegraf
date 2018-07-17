@@ -1629,6 +1629,11 @@ func parseValue(value sql.RawBytes) (interface{}, bool) {
 	if val, err := strconv.ParseInt(string(value), 10, 64); err == nil {
 		return val, true
 	}
+
+	if val, err := strconv.ParseUint(string(value), 10, 64); err == nil {
+		return val, true
+	}
+
 	if val, err := strconv.ParseFloat(string(value), 64); err == nil {
 		return val, true
 	}
