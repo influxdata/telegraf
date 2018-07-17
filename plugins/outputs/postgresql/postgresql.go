@@ -106,7 +106,7 @@ var sampleConfig = `
 
   ## Default template
   # table_template = "CREATE TABLE {TABLE}({COLUMNS})"
-  ## Example for timescale
+  ## Example for timescaledb
   # table_template = "CREATE TABLE {TABLE}({COLUMNS}); SELECT create_hypertable({TABLELITERAL},'time',chunk_time_interval := '1 week'::interval);"
 
   ## Use jsonb datatype for tags
