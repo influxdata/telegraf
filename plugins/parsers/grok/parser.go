@@ -57,7 +57,7 @@ var (
 	//     %{IPORHOST:clientip:tag}
 	//     %{HTTPDATE:ts1:ts-http}
 	//     %{HTTPDATE:ts2:ts-"02 Jan 06 15:04"}
-	modifierRe = regexp.MustCompile(`%{\w+:(\w+):(ts-".+"|t?s?-?\w+)}`)
+	modifierRe = regexp.MustCompile(`%{\w+:(\w+|):(ts-".+"|t?s?-?\w+)}`)
 	// matches a plain pattern name. ie, %{NUMBER}
 	patternOnlyRe = regexp.MustCompile(`%{(\w+)}`)
 )
@@ -158,6 +158,9 @@ func (p *Parser) Compile() error {
 			p.CustomPatterns += "\n" + name + " " + "%{" + splitPattern[0] + "}" + "\n"
 			p.NamedPatterns = append(p.NamedPatterns, "%{"+name+"}")
 		} else {
+			if strings.Count(pattern, ":measurement}") > 0 {
+				return fmt.Errorf("pattern with measurement modifier must have own 'pattern' field")
+			}
 			if pattern == "" {
 				continue
 			}
@@ -235,7 +238,8 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 	timestamp := time.Now()
 	for k, v := range values {
-		if k == "" || v == "" {
+		if (k == "" || v == "") && p.typeMap[patternName][k] != "measurement" {
+			log.Printf("skipping key: %v", k)
 			continue
 		}
 
@@ -262,6 +266,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		switch t {
 		case MEASUREMENT:
 			p.Measurement = v
+			log.Printf("measurement")
 		case INT:
 			iv, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
@@ -382,7 +387,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(fields) == 0 {
-		return nil, fmt.Errorf("logparser_grok: must have one or more fields")
+		return nil, fmt.Errorf("grok: must have one or more fields")
 	}
 
 	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))
@@ -486,6 +491,12 @@ func (p *Parser) parseTypedCaptures(name, pattern string) (string, error) {
 			}
 			hasTimestamp = true
 		} else {
+			//for handling measurement tag with no name
+			if match[1] == "" && match[2] == "measurement" {
+				match[1] = "measurement_name"
+				//add "measurement_name" to pattern so it is valid grok
+				pattern = strings.Replace(pattern, "::measurement", ":measurement_name:measurement", 1)
+			}
 			p.typeMap[patternName][match[1]] = match[2]
 		}
 

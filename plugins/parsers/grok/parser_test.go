@@ -1010,3 +1010,25 @@ func TestMultipleMeasurementModifier(t *testing.T) {
 	require.Equal(t, m.Name(), "test_name")
 	require.Equal(t, m2.Name(), "test2_name")
 }
+
+func TestMeasurementModifierNoName(t *testing.T) {
+	p := &Parser{
+		Patterns:       []string{"%{TEST}"},
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD::measurement}",
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("4 5 hello")
+	require.NoError(t, err)
+	require.Equal(t, m.Name(), "hello")
+}
+
+func TestMeasurementErrors(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{TEST:test_name:measurement}|%{TEST2:test2_name}"},
+		CustomPatterns: `TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:var_string:string} 
+		TEST2 %{WORD:stringer1:tag} %{NUMBER:var2:float} %{NUMBER:var3:float}`,
+	}
+	err := p.Compile()
+	require.Error(t, err)
+}
