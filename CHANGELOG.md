@@ -8,6 +8,7 @@
 - [#4422](https://github.com/influxdata/telegraf/issues/4422): Fix metric can have duplicate field.
 - [#4389](https://github.com/influxdata/telegraf/issues/4389): Return error if NewRequest fails in http output.
 - [#4335](https://github.com/influxdata/telegraf/issues/4335): Reset read deadline for syslog input.
+- [#4375](https://github.com/influxdata/telegraf/issues/4375): Exclude cached memory on docker input plugin.
 
 ## v1.7.1 [2018-07-03]
 
