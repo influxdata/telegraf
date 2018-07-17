@@ -3,6 +3,7 @@ package exec
 import (
 	"bytes"
 	"fmt"
+        "os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -97,6 +98,7 @@ func (c CommandRunner) Run(
 	}
 
 	cmd := exec.Command(split_cmd[0], split_cmd[1:]...)
+	cmd.Env = os.Environ()	
 
 	var (
 		out    bytes.Buffer
