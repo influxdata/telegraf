@@ -43,7 +43,7 @@
 - [#4418](https://github.com/influxdata/telegraf/pull/4418): Add support for setting kafka client id.
 - [#4332](https://github.com/influxdata/telegraf/pull/4332): Add file input plugin and grok parser.
 
-## v1.7.2 [unreleased]
+## v1.7.2 [2018-07-18]
 
 ### Bugfixes
 
