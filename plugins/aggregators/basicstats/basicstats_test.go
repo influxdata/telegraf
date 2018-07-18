@@ -422,6 +422,30 @@ func TestBasicStatsWithMinAndMax(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
 }
 
+// Test only aggregating diff
+func TestBasicStatsWithDiff(t *testing.T) {
+
+	aggregator := NewBasicStats()
+	aggregator.Stats = []string{"diff"}
+
+	aggregator.Add(m1)
+	aggregator.Add(m2)
+
+	acc := testutil.Accumulator{}
+	aggregator.Push(&acc)
+
+	expectedFields := map[string]interface{}{
+		"a_diff": float64(0),
+		"b_diff": float64(2),
+		"c_diff": float64(2),
+		"d_diff": float64(4),
+	}
+	expectedTags := map[string]string{
+		"foo": "bar",
+	}
+	acc.AssertContainsTaggedFields(t, "m1", expectedFields, expectedTags)
+}
+
 // Test aggregating with all stats
 func TestBasicStatsWithAllStats(t *testing.T) {
 	acc := testutil.Accumulator{}
