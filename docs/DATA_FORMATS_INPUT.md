@@ -10,6 +10,7 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Collectd](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#collectd)
 1. [Dropwizard](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#dropwizard)
 1. [Grok](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#grok)
+1. [CSV](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#csv)
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -762,3 +763,63 @@ HTTPD_ERRORLOG %{HTTPD20_ERRORLOG}|%{HTTPD24_ERRORLOG}
   ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
   grok_timezone = "Canada/Eastern"
 ```
+
+#### CSV
+Parse out metrics from a CSV formatted table. By default, the parser assumes there is a header and 
+will check the first row to extract column names from the header and will begin parsing data on the
+second row. To prevent the parser from skipping the first line, set the `csv_header` config to false.
+To assign custom column names, the `csv_data_columns` config is available. If the `csv_data_columns` 
+config is used, all columns must be named or an error will be thrown. If `csv_header` is set to false,
+`csv_data_columns` must be specified.
+
+The `csv_tag_columns` and `csv_field_columns` configs are available to add the column data to the metric.
+The name used to specify the column is the name in the header, or if specified, the corresponding 
+name assigned in `csv_data_columns`. If neither config is specified, no data will be added to the metric.
+
+Additional configs are available to dynamically name metrics and set custom timestamps.  If the 
+`csv_name_column` config is specified, the parser will assign the metric name to the value found 
+in that column. If the `csv_timestamp_column` is specified, the parser will extract the timestamp from
+that column. If `csv_timestamp_column` is specified, the `csv_timestamp_format` must also be specified
+or an error will be thrown.
+
+#### CSV Configuration
+```toml
+  data_format = "csv"
+
+  ## Whether or not to treat the first row of data as a header
+  ## By default, the parser will not parse the first row and
+  ## will treat the header as a list of column names
+  # csv_header = true
+
+  ## The seperator between csv fields
+  ## By default, the parser assumes a comma (",")
+  # csv_delimiter = ","
+
+  ## For assigning custom names to columns
+  ## If this is specified, all columns must have a name
+  ## ie there should be the same number of names listed
+  ## as there are columns of data
+  ## If `csv_header` is set to false, this config must be used
+  # csv_data_columns = []
+
+  ## Columns listed here will be added as tags
+  csv_tag_columns = []
+
+  ## Columns listed here will be added as fields
+  ## the field type is infered from the value of the field
+  csv_field_columns = []
+
+  ## The column to extract the name of the metric from
+  ## By default, this is the name of the plugin
+  ## the `name_override` config overrides this
+  # csv_name_column = ""
+
+  ## The column to extract time information for the metric
+  ## `csv_timestamp_format` must be specified if this is used
+  # csv_timestamp_column = ""
+
+  ## The format of time data extracted from `csv_timestamp_column`
+  ## this must be specified if `csv_timestamp_column` is specified
+  # csv_timestamp_format = ""
+  ```
+

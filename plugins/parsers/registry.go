@@ -6,6 +6,7 @@ import (
 	"github.com/influxdata/telegraf"
 
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
+	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
 	"github.com/influxdata/telegraf/plugins/parsers/graphite"
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
@@ -98,6 +99,16 @@ type Config struct {
 	GrokCustomPatterns     string
 	GrokCustomPatternFiles []string
 	GrokTimeZone           string
+
+	//csv configuration
+	CSVHeader          bool
+	CSVDelimiter       string
+	CSVDataColumns     []string
+	CSVTagColumns      []string
+	CSVFieldColumns    []string
+	CSVNameColumn      string
+	CSVTimestampColumn string
+	CSVTimestampFormat string
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -139,10 +150,47 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokCustomPatterns,
 			config.GrokCustomPatternFiles,
 			config.GrokTimeZone)
+	case "csv":
+		parser, err = newCSVParser(config.MetricName,
+			config.CSVHeader,
+			config.CSVDelimiter,
+			config.CSVDataColumns,
+			config.CSVTagColumns,
+			config.CSVFieldColumns,
+			config.CSVNameColumn,
+			config.CSVTimestampColumn,
+			config.CSVTimestampFormat,
+			config.DefaultTags)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
 	return parser, err
+}
+
+func newCSVParser(metricName string,
+	header bool,
+	delimiter string,
+	dataColumns []string,
+	tagColumns []string,
+	fieldColumns []string,
+	nameColumn string,
+	timestampColumn string,
+	timestampFormat string,
+	defaultTags map[string]string) (Parser, error) {
+	parser := &csv.CSVParser{
+		MetricName:      metricName,
+		Header:          header,
+		Delimiter:       delimiter,
+		DataColumns:     dataColumns,
+		TagColumns:      tagColumns,
+		FieldColumns:    fieldColumns,
+		NameColumn:      nameColumn,
+		TimestampColumn: timestampColumn,
+		TimestampFormat: timestampFormat,
+		DefaultTags:     defaultTags,
+	}
+
+	return parser, nil
 }
 
 func newGrokParser(metricName string,

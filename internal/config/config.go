@@ -1399,6 +1399,87 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	//for csv parser
+	if node, ok := tbl.Fields["csv_data_columns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CSVDataColumns = append(c.CSVDataColumns, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_tag_columns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CSVTagColumns = append(c.CSVTagColumns, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_field_columns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CSVFieldColumns = append(c.CSVFieldColumns, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_delimiter"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVDelimiter = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_name_column"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVNameColumn = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_timestamp_column"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVTimestampColumn = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_timestamp_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVTimestampFormat = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_header"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				val, err := strconv.ParseBool(str.Value)
+				if err != nil {
+					log.Printf("E! could not parse: %v as bool", str)
+				}
+				c.CSVHeader = val
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1420,6 +1501,14 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "grok_custom_patterns")
 	delete(tbl.Fields, "grok_custom_pattern_files")
 	delete(tbl.Fields, "grok_timezone")
+	delete(tbl.Fields, "csv_data_columns")
+	delete(tbl.Fields, "csv_tag_columns")
+	delete(tbl.Fields, "csv_field_columns")
+	delete(tbl.Fields, "csv_name_column")
+	delete(tbl.Fields, "csv_timestamp_column")
+	delete(tbl.Fields, "csv_timestamp_format")
+	delete(tbl.Fields, "csv_delimiter")
+	delete(tbl.Fields, "csv_header")
 
 	return parsers.NewParser(c)
 }
