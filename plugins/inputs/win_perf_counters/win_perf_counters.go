@@ -373,7 +373,9 @@ func isKnownCounterDataError(err error) bool {
 }
 
 func init() {
+	fmt.Println("win_perf_counters init...")
 	inputs.Add("win_perf_counters", func() telegraf.Input {
 		return &Win_PerfCounters{query: &PerformanceQueryImpl{}, CountersRefreshInterval: internal.Duration{Duration: time.Second * 60}}
 	})
+	fmt.Println("win_perf_counters init done...")
 }

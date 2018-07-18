@@ -2,6 +2,7 @@ package sqlserver
 
 import (
 	"database/sql"
+	"fmt"
 	"sync"
 	"time"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	// go-mssqldb initialization
-	_ "github.com/zensqlmonitor/go-mssqldb"
+	_ "github.com/denisenkom/go-mssqldb"
 )
 
 // SQLServer struct
@@ -235,9 +236,11 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 }
 
 func init() {
+	fmt.Println("sqlserver init...")
 	inputs.Add("sqlserver", func() telegraf.Input {
 		return &SQLServer{}
 	})
+	fmt.Println("sqlserver init...")
 }
 
 // Queries - V2

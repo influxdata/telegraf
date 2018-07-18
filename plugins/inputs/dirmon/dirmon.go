@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
+	"fmt"
 	"hash/fnv"
 	"io"
 	"io/ioutil"
@@ -303,6 +304,7 @@ func (ddo *DirDefObject) MoveFile(id int, filename string, success bool) {
 }
 
 func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accumulator) error {
+	ddo.fiParser.SetIncomingDir(ddo.Incoming)
 	fiMetrics, err := ddo.fiParser.Parse([]byte(fileName))
 	if err != nil {
 		log.Printf("ERROR [%s]: %s", fileName, err)
@@ -481,12 +483,14 @@ func (ddo DirDefObject) FileProcessor(id int) {
 		}
 
 		err := ddo.ProcessFile(id, filename, ddo.acc)
-		if err != nil {
-			ddo.MoveFile(id, filename, false)
-			continue
-		}
+		if len(ddo.Outgoing) > 0 {
+			if err != nil {
+				ddo.MoveFile(id, filename, false)
+				continue
+			}
 
-		ddo.MoveFile(id, filename, true)
+			ddo.MoveFile(id, filename, true)
+		}
 	}
 }
 
@@ -580,6 +584,9 @@ func (ddo DirDefObject) Start(acc telegraf.Accumulator, gFieldReplace map[string
 	if err != nil {
 		log.Fatalln("ERROR [receiver]: ", err)
 	}
+	if results == nil || len(results) == 0 {
+		log.Fatalln("ERROR [results]: No directory found to monitor")
+	}
 
 	for dir, files := range results {
 		go ddo.HistoryHandler(dir, files)
@@ -612,8 +619,10 @@ func (dm *DirMon) Stop() {
 }
 
 func init() {
+	fmt.Println("dirmon init...")
 	inputs.Add("dirmon", func() telegraf.Input {
 		dm := DirMon{}
 		return &dm
 	})
+	fmt.Println("dirmon init done...")
 }

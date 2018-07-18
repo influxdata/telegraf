@@ -172,7 +172,7 @@ func (s *Sftp) NewSftpItem(relative_path string, tags map[string]string) *SftpIt
 
 	item.Data, err = ioutil.ReadFile(name)
 	if err != nil {
-		log.Println("ERROR [ReadFile]: ", err)
+		log.Println("ERROR [sftp.ReadFile]: ", err)
 	}
 
 	item.Source = name
@@ -197,7 +197,8 @@ func (s *Sftp) CreateConnection(pwg *sync.WaitGroup) {
 		Auth: []ssh.AuthMethod{
 			ssh.Password(s.Password),
 		},
-		Config: sshCommonConfig,
+		Config:          sshCommonConfig,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 
 	token := strings.Index(s.Destination, "/")

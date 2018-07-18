@@ -226,7 +226,9 @@ func (k *Kafka) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
+	fmt.Println("kafka_consumer init...")
 	inputs.Add("kafka_consumer", func() telegraf.Input {
 		return &Kafka{}
 	})
+	fmt.Println("kafka_consumer init done...")
 }

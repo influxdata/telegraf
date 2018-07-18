@@ -187,10 +187,12 @@ func (h *HTTP) gatherURL(
 }
 
 func init() {
+	fmt.Println("http init...")
 	inputs.Add("http", func() telegraf.Input {
 		return &HTTP{
 			Timeout: internal.Duration{Duration: time.Second * 5},
 			Method:  "GET",
 		}
 	})
+	fmt.Println("http init done...")
 }
