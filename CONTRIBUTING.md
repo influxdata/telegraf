@@ -31,7 +31,7 @@ which can be found [on our website](http://influxdb.com/community/cla.html)
 Assuming you can already build the project, run these in the telegraf directory:
 
 1. `go get -u github.com/golang/dep/cmd/dep`
-2. `dep ensure`
+2. `dep ensure -vendor-only`
 3. `dep ensure -add github.com/[dependency]/[new-package]`
 
 ## Input Plugins
@@ -99,6 +99,13 @@ func init() {
     inputs.Add("simple", func() telegraf.Input { return &Simple{} })
 }
 ```
+
+### Input Plugin Development
+
+* Run `make static` followed by `make plugin-[pluginName]` to spin up a docker dev environment
+using docker-compose.
+* ***[Optional]*** When developing a plugin, add a `dev` directory with a `docker-compose.yml` and `telegraf.conf`
+as well as any other supporting files, where sensible.
 
 ## Adding Typed Metrics
 

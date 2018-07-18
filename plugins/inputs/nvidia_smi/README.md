@@ -7,11 +7,11 @@ This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvid
 ```toml
 # Pulls statistics from nvidia GPUs attached to the host
 [[inputs.nvidia_smi]]
-## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
-# bin_path = /usr/bin/nvidia-smi
+  ## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
+  # bin_path = "/usr/bin/nvidia-smi"
 
-## Optional: timeout for GPU polling
-# timeout = 5s
+  ## Optional: timeout for GPU polling
+  # timeout = "5s"
 ```
 
 ### Metrics

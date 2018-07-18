@@ -72,6 +72,15 @@ It is recommended NOT to use this on OSes starting with Vista and newer because 
 Example for Windows Server 2003, this would be set to true:
 `PreVistaSupport=true`
 
+#### UsePerfCounterTime
+
+Bool, if set to `true` will request a timestamp along with the PerfCounter data. 
+If se to `false`, current time will be used.
+
+Supported on Windows Vista/Windows Server 2008 and newer
+Example:
+`UsePerfCounterTime=true`
+
 ### Object
 
 See Entry below.

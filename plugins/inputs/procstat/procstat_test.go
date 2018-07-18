@@ -104,6 +104,10 @@ func (p *testProc) PID() PID {
 	return p.pid
 }
 
+func (p *testProc) Username() (string, error) {
+	return "testuser", nil
+}
+
 func (p *testProc) Tags() map[string]string {
 	return p.tags
 }

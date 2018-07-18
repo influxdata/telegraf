@@ -50,11 +50,11 @@ func (smi *NvidiaSMI) Description() string {
 // SampleConfig returns the sample configuration for the NvidiaSMI plugin
 func (smi *NvidiaSMI) SampleConfig() string {
 	return `
-## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
-# bin_path = /usr/bin/nvidia-smi
+  ## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
+  # bin_path = "/usr/bin/nvidia-smi"
 
-## Optional: timeout for GPU polling
-# timeout = 5s
+  ## Optional: timeout for GPU polling
+  # timeout = "5s"
 `
 }
 
