@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gobwas/glob"
@@ -227,7 +228,7 @@ func (e *Endpoint) discover() error {
 					for _, m := range metrics {
 						include := len(cInc) == 0 // Empty include list means include all
 						mName := e.metricNames[m.CounterId]
-						//log.Printf("% %s", mName, cInc)
+						//log.Printf("%s %s", mName, m.Instance)
 						if !include { // If not included by default
 							for _, p := range cInc {
 								if p.Match(mName) {
@@ -392,7 +393,33 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 	log.Printf("D! Start of sample period deemed to be %s", latest)
 	log.Printf("D! Collecting metrics for %d objects of type %s for %s", len(res.objects), resourceType, e.URL.Host)
 
-	count := 0
+	// Set up collection goroutines
+	//
+	count := int64(0)
+	chunkCh := make(chan []types.PerfQuerySpec)
+	errorCh := make(chan error, e.Parent.CollectConcurrency) // Try not to block on errors.
+	doneCh := make(chan bool)
+	for i := 0; i < e.Parent.CollectConcurrency; i++ {
+		go func() {
+			for {
+				select {
+				case chunk, valid := <-chunkCh:
+					if !valid {
+						doneCh <- true
+						log.Printf("D! No more work. Exiting collection goroutine")
+						return
+					}
+					n, err := e.collectChunk(chunk, resourceType, res, acc)
+					log.Printf("D! Query returned %d metrics", n)
+					if err != nil {
+						errorCh <- err
+					}
+					atomic.AddInt64(&count, int64(n))
+				}
+			}
+		}()
+	}
+
 	start := time.Now()
 	pqs := make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
 	metrics := 0
@@ -411,7 +438,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 				mc = headroom
 			}
 			fm := len(info.metrics) - mr
-			log.Printf("D! mr: %d, mm: %d, fm: %d, headroom before add: %d", mr, mc, fm, headroom)
+			log.Printf("D! mr: %d, mm: %d, fm: %d", mr, mc, fm)
 			pq := types.PerfQuerySpec{
 				Entity:     object.ref,
 				MaxSample:  1,
@@ -435,12 +462,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 			if mr > 0 || (!res.realTime && metrics >= e.Parent.MetricsPerQuery) || total >= len(res.objects)-1 || nRes >= e.Parent.ObjectsPerQuery {
 				log.Printf("D! Querying %d objects, %d metrics (%d remaining) of type %s for %s. Processed objects: %d. Total objects %d, metrics %d",
 					len(pqs), metrics, mr, resourceType, e.URL.Host, total+1, len(res.objects), count)
-				n, err := e.collectChunk(pqs, resourceType, res, acc)
-				if err != nil {
-					return count, time.Now().Sub(start).Seconds(), err
-				}
-				log.Printf("D! Query returned %d metrics", n)
-				count += n
+				chunkCh <- pqs
 				pqs = make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
 				metrics = 0
 				nRes = 0
@@ -450,14 +472,31 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 		total++
 		nRes++
 	}
-	// We should never have resources in the buffer when we get here. That indicates some bug!
+	// There may be dangling stuff in the queue. Handle them
 	//
 	if len(pqs) > 0 {
-		log.Printf("E! INTERNAL ERROR: Dangling items in query buffer. len(pqs) == %d", len(pqs))
+		log.Printf("Pushing dangling buffer with %d objects for %s", len(pqs), resourceType)
+		chunkCh <- pqs
 	}
+
+	var err error
+
+	// Inform collection goroutines that there's no more data and wait for them to finish
+	//
+	close(chunkCh)
+	alive := e.Parent.CollectConcurrency
+	for alive > 0 {
+		select {
+		case <-doneCh:
+			alive--
+		case err = <-errorCh:
+			log.Printf("!E Error from collection goroutine: %s", err)
+		}
+	}
+
 	e.lastColls[resourceType] = now // Use value captured at the beginning to avoid blind spots.
 	log.Printf("D! Collection of %s for %s, took %v returning %d metrics", resourceType, e.URL.Host, time.Now().Sub(start), count)
-	return count, time.Now().Sub(start).Seconds(), nil
+	return int(count), time.Now().Sub(start).Seconds(), err
 }
 
 func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, res resource, acc telegraf.Accumulator) (int, error) {
@@ -472,7 +511,7 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 	metrics, err := client.Perf.Query(ctx, pqs)
 	if err != nil {
 		//TODO: Check the error and attempt to handle gracefully. (ie: object no longer exists)
-		log.Printf("E! Error querying metrics of %s for %s", resourceType, e.URL.Host)
+		log.Printf("E! Error querying metrics of %s for %s %s", resourceType, e.URL.Host, err)
 		return count, err
 	}
 

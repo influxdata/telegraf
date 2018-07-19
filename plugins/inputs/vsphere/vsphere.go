@@ -34,6 +34,7 @@ type VSphere struct {
 
 	ObjectsPerQuery         int
 	MetricsPerQuery         int
+	CollectConcurrency      int
 	ObjectDiscoveryInterval internal.Duration
 	Timeout                 internal.Duration
 
@@ -234,6 +235,7 @@ func init() {
 
 			ObjectsPerQuery:         256,
 			MetricsPerQuery:         256,
+			CollectConcurrency:      1,
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 			Timeout:                 internal.Duration{Duration: time.Second * 20},
 		}
