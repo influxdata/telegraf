@@ -765,12 +765,14 @@ HTTPD_ERRORLOG %{HTTPD20_ERRORLOG}|%{HTTPD24_ERRORLOG}
 ```
 
 #### CSV
-Parse out metrics from a CSV formatted table. By default, the parser assumes there is a header and 
-will check the first row to extract column names from the header and will begin parsing data on the
-second row. To prevent the parser from skipping the first line, set the `csv_header` config to false.
+Parse out metrics from a CSV formatted table. By default, the parser assumes there is no header and
+will read data from the first line. If `csv_header` is true, the parser will extract column names from
+the first row and will begin parsing data on the second row.
+
 To assign custom column names, the `csv_data_columns` config is available. If the `csv_data_columns` 
 config is used, all columns must be named or an error will be thrown. If `csv_header` is set to false,
-`csv_data_columns` must be specified.
+`csv_data_columns` must be specified.  Names listed in `csv_data_columns` will override names extracted
+from the header.
 
 The `csv_tag_columns` and `csv_field_columns` configs are available to add the column data to the metric.
 The name used to specify the column is the name in the header, or if specified, the corresponding 
@@ -787,9 +789,12 @@ or an error will be thrown.
   data_format = "csv"
 
   ## Whether or not to treat the first row of data as a header
-  ## By default, the parser will not parse the first row and
-  ## will treat the header as a list of column names
-  # csv_header = true
+  ## By default, the parser assumes there is no header and will parse the 
+  ## first row as data. If set to true the parser will treat the first row 
+  ## as a header, extract the list of column names, and begin parsing data 
+  ## on the second line. If `csv_data_columns` is specified, the column 
+  ## names in header will be overridden.
+  # csv_header = false
 
   ## The seperator between csv fields
   ## By default, the parser assumes a comma (",")
@@ -800,7 +805,7 @@ or an error will be thrown.
   ## ie there should be the same number of names listed
   ## as there are columns of data
   ## If `csv_header` is set to false, this config must be used
-  # csv_data_columns = []
+  csv_data_columns = []
 
   ## Columns listed here will be added as tags
   csv_tag_columns = []

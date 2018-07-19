@@ -28,6 +28,14 @@ func (p *CSVParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	r := bytes.NewReader(buf)
 	csvReader := csv.NewReader(r)
 	csvReader.FieldsPerRecord = len(p.DataColumns)
+	if p.Delimiter != "" {
+		runeStr := []rune(p.Delimiter)
+		if len(runeStr) > 1 {
+			log.Printf("rune more than one char: %v", runeStr)
+			return nil, fmt.Errorf("delimiter must be a single character")
+		}
+		csvReader.Comma = runeStr[0]
+	}
 
 	//if there is a header and nothing in DataColumns
 	//set DataColumns to names extracted from the header
@@ -119,7 +127,7 @@ func (p *CSVParser) parseRecord(record []string) (telegraf.Metric, error) {
 
 	//will default to plugin name
 	measurementName := p.MetricName
-	if recordFields[p.NameColumn] != "" {
+	if recordFields[p.NameColumn] != nil {
 		measurementName = recordFields[p.NameColumn].(string)
 	}
 
