@@ -16,14 +16,15 @@ type BasicStats struct {
 }
 
 type configuredStats struct {
-	count    bool
-	min      bool
-	max      bool
-	mean     bool
-	variance bool
-	stdev    bool
-	sum      bool
-	diff     bool
+	count             bool
+	min               bool
+	max               bool
+	mean              bool
+	variance          bool
+	stdev             bool
+	sum               bool
+	diff              bool
+	non_negative_diff bool
 }
 
 func NewBasicStats() *BasicStats {
@@ -178,6 +179,9 @@ func (m *BasicStats) Push(acc telegraf.Accumulator) {
 				if config.diff {
 					fields[k+"_diff"] = v.diff
 				}
+				if config.non_negative_diff && v.diff >= 0 {
+					fields[k+"_non_negative_diff"] = v.diff
+				}
 
 			}
 			//if count == 1 StdDev = infinite => so I won't send data
@@ -213,6 +217,8 @@ func parseStats(names []string) *configuredStats {
 			parsed.sum = true
 		case "diff":
 			parsed.diff = true
+		case "non_negative_diff":
+			parsed.non_negative_diff = true
 
 		default:
 			log.Printf("W! Unrecognized basic stat '%s', ignoring", name)
@@ -233,7 +239,7 @@ func defaultStats() *configuredStats {
 	defaults.variance = true
 	defaults.stdev = true
 	defaults.sum = false
-	defaults.diff = false
+	defaults.non_negative_diff = false
 
 	return defaults
 }
