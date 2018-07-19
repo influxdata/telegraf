@@ -32,7 +32,8 @@ type VSphere struct {
 	DatastoreMetricExclude []string
 	Separator              string
 
-	ObjectsPerQuery         int32
+	ObjectsPerQuery         int
+	MetricsPerQuery         int
 	ObjectDiscoveryInterval internal.Duration
 	Timeout                 internal.Duration
 
@@ -232,6 +233,7 @@ func init() {
 			Separator:              ".",
 
 			ObjectsPerQuery:         256,
+			MetricsPerQuery:         256,
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 			Timeout:                 internal.Duration{Duration: time.Second * 20},
 		}

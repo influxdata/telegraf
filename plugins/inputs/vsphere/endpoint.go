@@ -208,7 +208,7 @@ func (e *Endpoint) discover() error {
 		if res.enabled || (k != "datastore" && k != "vm") {
 			objects, err := res.getObjects(client.Root)
 			if err != nil {
-				client = nil // Don't reuse this one!
+				client.Valid = false // Don't reuse this one!
 				return err
 			}
 			for _, obj := range objects {
@@ -216,7 +216,7 @@ func (e *Endpoint) discover() error {
 				mList := make(performance.MetricList, 0)
 				metrics, err := client.Perf.AvailableMetric(ctx, obj.ref.Reference(), res.sampling)
 				if err != nil {
-					client = nil // Don't reuse this one!
+					client.Valid = false // Don't reuse this one!
 					return err
 				}
 				log.Printf("D! Obj: %s, metrics found: %d, enabled: %t", obj.name, len(metrics), res.enabled)
@@ -394,19 +394,28 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 
 	count := 0
 	start := time.Now()
-	total := 0
 	pqs := make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
+	metrics := 0
+	total := 0
+	nRes := 0
 	for _, object := range res.objects {
 		info, found := e.instanceInfo[object.ref.Value]
 		if !found {
 			log.Printf("E! Internal error: Instance info not found for MOID %s", object.ref)
 		}
-		if len(info.metrics) > 0 {
-
+		mr := len(info.metrics)
+		for mr > 0 {
+			mc := mr
+			headroom := e.Parent.MetricsPerQuery - metrics
+			if !res.realTime && mc > headroom { // Metric query limit only applies to non-realtime metrics
+				mc = headroom
+			}
+			fm := len(info.metrics) - mr
+			log.Printf("D! mr: %d, mm: %d, fm: %d, headroom before add: %d", mr, mc, fm, headroom)
 			pq := types.PerfQuerySpec{
 				Entity:     object.ref,
 				MaxSample:  1,
-				MetricId:   info.metrics,
+				MetricId:   info.metrics[fm : fm+mc],
 				IntervalId: res.sampling,
 			}
 
@@ -414,26 +423,37 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 				pq.StartTime = &latest
 				pq.EndTime = &now
 			}
-
 			pqs = append(pqs, pq)
-		} else {
-			log.Printf("D! No metrics available for %s. Skipping.", info.name)
-			// Maintainers: Don't be tempted to skip a turn in the loop here! We still need to check if
-			// the chunk needs processing or we risk skipping the last chunk. (Ask me how I found this out... :) )
+			mr -= mc
+			metrics += mc
+
+			// We need to dump the current chunk of metrics for one of three reasons:
+			// 1) We filled up the metric quota while processing the current resource
+			// 2) The toral number of metrics exceeds the max
+			// 3) We are at the last resource and have no more data to process.
+			//
+			if mr > 0 || (!res.realTime && metrics >= e.Parent.MetricsPerQuery) || total >= len(res.objects)-1 || nRes >= e.Parent.ObjectsPerQuery {
+				log.Printf("D! Querying %d objects, %d metrics (%d remaining) of type %s for %s. Processed objects: %d. Total objects %d, metrics %d",
+					len(pqs), metrics, mr, resourceType, e.URL.Host, total+1, len(res.objects), count)
+				n, err := e.collectChunk(pqs, resourceType, res, acc)
+				if err != nil {
+					return count, time.Now().Sub(start).Seconds(), err
+				}
+				log.Printf("D! Query returned %d metrics", n)
+				count += n
+				pqs = make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
+				metrics = 0
+				nRes = 0
+			}
+			log.Printf("D! %d metrics remaining. Total metrics %d", mr, metrics)
 		}
 		total++
-
-		// Filled up a chunk or at end of data? Run a query with the collected objects
-		//
-		if len(pqs) > 0 && (len(pqs) >= int(e.Parent.ObjectsPerQuery) || total >= len(res.objects)) {
-			log.Printf("D! Querying %d objects of type %s for %s. Object count: %d. Total objects %d", len(pqs), resourceType, e.URL.Host, total, len(res.objects))
-			n, err := e.collectChunk(pqs, resourceType, res, acc)
-			if err != nil {
-				return count, time.Now().Sub(start).Seconds(), err
-			}
-			count += n
-			pqs = make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
-		}
+		nRes++
+	}
+	// We should never have resources in the buffer when we get here. That indicates some bug!
+	//
+	if len(pqs) > 0 {
+		log.Printf("E! INTERNAL ERROR: Dangling items in query buffer. len(pqs) == %d", len(pqs))
 	}
 	e.lastColls[resourceType] = now // Use value captured at the beginning to avoid blind spots.
 	log.Printf("D! Collection of %s for %s, took %v returning %d metrics", resourceType, e.URL.Host, time.Now().Sub(start), count)
@@ -458,7 +478,7 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 
 	ems, err := client.Perf.ToMetricSeries(ctx, metrics)
 	if err != nil {
-		client = nil
+		client.Valid = false
 		return count, err
 	}
 
@@ -513,8 +533,8 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 		// measurement name. Now emit them!
 		//
 		log.Printf("D! Collected %d buckets for %s", len(buckets), instInfo.name)
-		for key, bucket := range buckets {
-			log.Printf("D! Key: %s, Tags: %s, Fields: %s", key, bucket.tags, bucket.fields)
+		for _, bucket := range buckets {
+			//log.Printf("D! Key: %s, Tags: %s, Fields: %s", key, bucket.tags, bucket.fields)
 			acc.AddFields(bucket.name, bucket.fields, bucket.tags, bucket.ts)
 		}
 	}
