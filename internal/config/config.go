@@ -1470,12 +1470,19 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 
 	if node, ok := tbl.Fields["csv_header"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				val, err := strconv.ParseBool(str.Value)
-				if err != nil {
-					log.Printf("E! could not parse: %v as bool", str)
-				}
+			if str, ok := kv.Value.(*ast.Boolean); ok {
+				//for config with no quotes
+				val, _ := strconv.ParseBool(str.Value)
 				c.CSVHeader = val
+			} else {
+				//for config with quotes
+				strVal := kv.Value.(*ast.String)
+				val, err := strconv.ParseBool(strVal.Value)
+				if err != nil {
+					log.Printf("E! parsing to bool: %v", err)
+				} else {
+					c.CSVHeader = val
+				}
 			}
 		}
 	}

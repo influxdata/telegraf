@@ -31,8 +31,7 @@ func (p *CSVParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if p.Delimiter != "" {
 		runeStr := []rune(p.Delimiter)
 		if len(runeStr) > 1 {
-			log.Printf("rune more than one char: %v", runeStr)
-			return nil, fmt.Errorf("delimiter must be a single character")
+			return nil, fmt.Errorf("delimiter must be a single character, got: %v", p.Delimiter)
 		}
 		csvReader.Comma = runeStr[0]
 	}
@@ -101,14 +100,14 @@ func (p *CSVParser) parseRecord(record []string) (telegraf.Metric, error) {
 	}
 
 	for _, tagName := range p.TagColumns {
-		if recordFields[tagName] == "" {
+		if recordFields[tagName] == nil {
 			return nil, fmt.Errorf("could not find field: %v", tagName)
 		}
 		tags[tagName] = recordFields[tagName].(string)
 	}
 
 	for _, fieldName := range p.FieldColumns {
-		if recordFields[fieldName] == "" {
+		if recordFields[fieldName] == nil {
 			return nil, fmt.Errorf("could not find field: %v", fieldName)
 		}
 		switch value := recordFields[fieldName].(type) {
