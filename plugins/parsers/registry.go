@@ -172,6 +172,8 @@ func NewVqtCsvParser(config *Config) (Parser, error) {
 		config.MetricName,
 	)
 	return v, err
+}
+
 func newGrokParser(metricName string,
 	patterns []string,
 	nPatterns []string,

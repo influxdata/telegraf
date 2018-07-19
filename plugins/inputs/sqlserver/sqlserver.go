@@ -240,7 +240,7 @@ func init() {
 	inputs.Add("sqlserver", func() telegraf.Input {
 		return &SQLServer{}
 	})
-	fmt.Println("sqlserver init...")
+	fmt.Println("sqlserver init done...")
 }
 
 // Queries - V2

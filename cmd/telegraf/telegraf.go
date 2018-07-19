@@ -35,6 +35,9 @@ var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
+var fServiceName = flag.String("service-name", "telegraf", "Use this as the service name")
+var fServiceDisplayName = flag.String("service-displayname", "Telegraf Data Collector Service",
+	"Use this as the service display name")
 var fVersion = flag.Bool("version", false, "display the version")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
@@ -354,6 +357,13 @@ func main() {
 			if *fConfigDirectory != "" {
 				(*svcConfig).Arguments = append((*svcConfig).Arguments, "--config-directory", *fConfigDirectory)
 			}
+			if *fServiceName != "" {
+				(*svcConfig).Name = *fServiceName
+			}
+			if *fServiceDisplayName != "" {
+				(*svcConfig).DisplayName = *fServiceDisplayName
+			}
+
 			err := service.Control(s, *fService)
 			if err != nil {
 				log.Fatal("E! " + err.Error())

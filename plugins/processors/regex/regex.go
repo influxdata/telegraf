@@ -69,9 +69,6 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			if value, ok := metric.GetTag(converter.Key); ok {
 				if key, newValue := r.convert(converter, value); newValue != "" {
 					metric.AddTag(key, newValue)
-				k, v := r.convert(converter, value)
-				if k != "" && v != "" {
-					metric.AddTag(k, v)
 				}
 			}
 		}
@@ -82,9 +79,6 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 				case string:
 					if key, newValue := r.convert(converter, value); newValue != "" {
 						metric.AddField(key, newValue)
-					k, v := r.convert(converter, value)
-					if k != "" && v != "" {
-						metric.AddField(r.convert(converter, value))
 					}
 				}
 			}
