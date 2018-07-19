@@ -2,7 +2,6 @@ package csv
 
 import (
 	"fmt"
-	"log"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,10 +14,8 @@ func TestBasicCSV(t *testing.T) {
 		TagColumns:   []string{"third"},
 	}
 
-	m, err := p.ParseLine("1.4,true,hi")
+	_, err := p.ParseLine("1.4,true,hi")
 	require.NoError(t, err)
-	log.Printf("m: %v", m)
-	t.Error()
 }
 
 func TestHeaderCSV(t *testing.T) {
@@ -63,9 +60,7 @@ func TestTimestamp(t *testing.T) {
 07/11/09 04:05:06 PM,80,test_name2`
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
-	log.Printf("metrics: %v", metrics)
 	require.NotEqual(t, metrics[1].Time(), metrics[0].Time())
-	t.Error()
 }
 
 func TestTimestampError(t *testing.T) {
