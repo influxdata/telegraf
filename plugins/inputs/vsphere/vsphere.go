@@ -19,15 +19,19 @@ type VSphere struct {
 	Username               string
 	Password               string
 	GatherClusters         bool
+	ClusterInstances       bool
 	ClusterMetricInclude   []string
 	ClusterMetricExclude   []string
 	GatherHosts            bool
+	HostInstances          bool
 	HostMetricInclude      []string
 	HostMetricExclude      []string
 	GatherVms              bool
+	VmInstances            bool
 	VmMetricInclude        []string
 	VmMetricExclude        []string
 	GatherDatastores       bool
+	DatastoreInstances     bool
 	DatastoreMetricInclude []string
 	DatastoreMetricExclude []string
 	Separator              string
@@ -220,15 +224,19 @@ func init() {
 			Vcenters: []string{},
 
 			GatherClusters:         true,
+			ClusterInstances:       true,
 			ClusterMetricInclude:   nil,
 			ClusterMetricExclude:   nil,
 			GatherHosts:            true,
+			HostInstances:          true,
 			HostMetricInclude:      nil,
 			HostMetricExclude:      nil,
 			GatherVms:              true,
+			VmInstances:            true,
 			VmMetricInclude:        nil,
 			VmMetricExclude:        nil,
 			GatherDatastores:       true,
+			DatastoreInstances:     false,
 			DatastoreMetricInclude: nil,
 			DatastoreMetricExclude: nil,
 			Separator:              ".",

@@ -35,14 +35,15 @@ type Endpoint struct {
 }
 
 type resource struct {
-	pKey       string
-	enabled    bool
-	realTime   bool
-	sampling   int32
-	objects    objectMap
-	includes   []string
-	excludes   []string
-	getObjects func(*view.ContainerView) (objectMap, error)
+	pKey             string
+	enabled          bool
+	realTime         bool
+	sampling         int32
+	objects          objectMap
+	includes         []string
+	excludes         []string
+	collectInstances bool
+	getObjects       func(*view.ContainerView) (objectMap, error)
 }
 
 type metricEntry struct {
@@ -80,44 +81,48 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 
 	e.resources = map[string]resource{
 		"cluster": {
-			pKey:       "clustername",
-			enabled:    parent.GatherClusters,
-			realTime:   false,
-			sampling:   300,
-			objects:    make(objectMap),
-			includes:   parent.ClusterMetricInclude,
-			excludes:   parent.ClusterMetricExclude,
-			getObjects: getClusters,
+			pKey:             "clustername",
+			enabled:          parent.GatherClusters,
+			realTime:         false,
+			sampling:         300,
+			objects:          make(objectMap),
+			includes:         parent.ClusterMetricInclude,
+			excludes:         parent.ClusterMetricExclude,
+			collectInstances: parent.ClusterInstances,
+			getObjects:       getClusters,
 		},
 		"host": {
-			pKey:       "esxhostname",
-			enabled:    parent.GatherHosts,
-			realTime:   true,
-			sampling:   20,
-			objects:    make(objectMap),
-			includes:   parent.HostMetricInclude,
-			excludes:   parent.HostMetricExclude,
-			getObjects: getHosts,
+			pKey:             "esxhostname",
+			enabled:          parent.GatherHosts,
+			realTime:         true,
+			sampling:         20,
+			objects:          make(objectMap),
+			includes:         parent.HostMetricInclude,
+			excludes:         parent.HostMetricExclude,
+			collectInstances: parent.HostInstances,
+			getObjects:       getHosts,
 		},
 		"vm": {
-			pKey:       "vmname",
-			enabled:    parent.GatherVms,
-			realTime:   true,
-			sampling:   20,
-			objects:    make(objectMap),
-			includes:   parent.VmMetricInclude,
-			excludes:   parent.VmMetricExclude,
-			getObjects: getVMs,
+			pKey:             "vmname",
+			enabled:          parent.GatherVms,
+			realTime:         true,
+			sampling:         20,
+			objects:          make(objectMap),
+			includes:         parent.VmMetricInclude,
+			excludes:         parent.VmMetricExclude,
+			collectInstances: parent.VmInstances,
+			getObjects:       getVMs,
 		},
 		"datastore": {
-			pKey:       "dsname",
-			enabled:    parent.GatherDatastores,
-			realTime:   false,
-			sampling:   300,
-			objects:    make(objectMap),
-			includes:   parent.DatastoreMetricInclude,
-			excludes:   parent.DatastoreMetricExclude,
-			getObjects: getDatastores,
+			pKey:             "dsname",
+			enabled:          parent.GatherDatastores,
+			realTime:         false,
+			sampling:         300,
+			objects:          make(objectMap),
+			includes:         parent.DatastoreMetricInclude,
+			excludes:         parent.DatastoreMetricExclude,
+			collectInstances: parent.DatastoreInstances,
+			getObjects:       getDatastores,
 		},
 	}
 
@@ -226,6 +231,9 @@ func (e *Endpoint) discover() error {
 				//
 				if res.enabled {
 					for _, m := range metrics {
+						if m.Instance != "" && !res.collectInstances {
+							continue
+						}
 						include := len(cInc) == 0 // Empty include list means include all
 						mName := e.metricNames[m.CounterId]
 						//log.Printf("%s %s", mName, m.Instance)
