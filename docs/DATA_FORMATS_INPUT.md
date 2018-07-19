@@ -661,7 +661,7 @@ For more information about the dropwizard json format see
   #   tag2 = "tags.tag2"
 ```
 
-#### Grok
+# Grok
 Parse logstash-style "grok" patterns. Patterns can be added to patterns, or custom patterns read from custom_pattern_files.
 
 # View logstash grok pattern docs here:
@@ -764,7 +764,7 @@ HTTPD_ERRORLOG %{HTTPD20_ERRORLOG}|%{HTTPD24_ERRORLOG}
   grok_timezone = "Canada/Eastern"
 ```
 
-#### CSV
+# CSV
 Parse out metrics from a CSV formatted table. By default, the parser assumes there is no header and
 will read data from the first line. If `csv_header` is true, the parser will extract column names from
 the first row and will begin parsing data on the second row.
