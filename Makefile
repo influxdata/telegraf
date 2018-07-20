@@ -34,7 +34,7 @@ all:
 
 deps:
 	go get -u github.com/golang/lint/golint
-	go get -u github.com/golang/dep/cmd/dep
+	curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
 	dep ensure -vendor-only
 
 telegraf:

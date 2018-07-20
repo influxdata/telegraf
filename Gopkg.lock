@@ -33,12 +33,12 @@
   revision = "d2df5d440eda5372f24fcac03839a64d6cb5f7e5"
 
 [[projects]]
-  digest = "1:6542e2b66fda16e5287aaf563e799aacd5fbe48be9abdec576fa6e945b58a775"
+  digest = "1:ec6a42cd98d70f0916216d8f6df8ca61145edeaad041014aa9c003068de7364c"
   name = "github.com/Microsoft/go-winio"
   packages = ["."]
   pruneopts = ""
-  revision = "67921128fb397dd80339870d2193d6b1e6856fd4"
-  version = "v0.4.8"
+  revision = "a6d595ae73cf27a1b8fc32930668708f45ce1c85"
+  version = "v0.4.9"
 
 [[projects]]
   digest = "1:14af5ba5ac88efec490fb59734df34e1bd973198caefa7b0cceed0900ef6164c"
