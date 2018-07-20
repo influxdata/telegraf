@@ -98,24 +98,25 @@ func TestSerializeMetricIntHec(t *testing.T) {
 }
 
 func TestSerializeMetricString(t *testing.T) {
-	now := time.Now()
+	now := time.Unix(0, 0)
 	tags := map[string]string{
 		"cpu": "cpu0",
 	}
 	fields := map[string]interface{}{
-		"usage_idle": "foobar",
+		"processorType": "ARMv7 Processor rev 4 (v7l)",
+		"usage_idle":    int64(5),
 	}
 	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
 	s, _ := NewSerializer(false)
-	//var buf []byte
-	_, err = s.Serialize(m)
-	assert.Error(t, err)
+	var buf []byte
+	buf, err = s.Serialize(m)
+	assert.NoError(t, err)
 
-	//expS := ""
-	//	assert.Equal(t, string(expS), string(buf))
-	//assert.Error(t, err)
+	expS := `{"_value":5,"cpu":"cpu0","metric_name":"cpu.usage_idle","time":0}`
+	assert.Equal(t, string(expS), string(buf))
+	assert.NoError(t, err)
 }
 
 func TestSerializeBatch(t *testing.T) {
