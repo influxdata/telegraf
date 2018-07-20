@@ -1,16 +1,13 @@
 package models
 
 import (
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,28 +20,24 @@ func TestAdd(t *testing.T) {
 		},
 		Period: time.Millisecond * 500,
 	})
-	assert.NoError(t, ra.Config.Filter.Compile())
+	require.NoError(t, ra.Config.Filter.Compile())
 	acc := testutil.Accumulator{}
-	go ra.Run(&acc, make(chan struct{}))
 
-	m, err := metric.New("RITest",
+	now := time.Now()
+	ra.SetPeriodStart(now)
+
+	m := testutil.MustMetric("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
 		time.Now().Add(time.Millisecond*150),
 		telegraf.Untyped)
-	require.NoError(t, err)
+	require.False(t, ra.Add(m))
+	ra.Push(&acc)
 
-	assert.False(t, ra.Add(m))
-
-	for {
-		time.Sleep(time.Millisecond)
-		if atomic.LoadInt64(&a.sum) > 0 {
-			break
-		}
-	}
-	assert.Equal(t, int64(101), atomic.LoadInt64(&a.sum))
+	require.Equal(t, 1, len(acc.Metrics))
+	require.Equal(t, int64(101), acc.Metrics[0].Fields["sum"])
 }
 
 func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
@@ -56,50 +49,45 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 		},
 		Period: time.Millisecond * 500,
 	})
-	assert.NoError(t, ra.Config.Filter.Compile())
+	require.NoError(t, ra.Config.Filter.Compile())
 	acc := testutil.Accumulator{}
-	go ra.Run(&acc, make(chan struct{}))
+	now := time.Now()
+	ra.SetPeriodStart(now)
 
-	m, err := metric.New("RITest",
+	m := testutil.MustMetric("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
-		time.Now().Add(-time.Hour),
-		telegraf.Untyped)
-	require.NoError(t, err)
-
-	assert.False(t, ra.Add(m))
+		telegraf.Untyped,
+		now.Add(-time.Hour),
+	)
+	require.False(t, ra.Add(m))
 
 	// metric after current period
-	m, err = metric.New("RITest",
+	m := testutil.MustMetric("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
-		time.Now().Add(time.Hour),
-		telegraf.Untyped)
-	require.NoError(t, err)
-	assert.False(t, ra.Add(m))
+		telegraf.Untyped,
+		now.Add(time.Hour),
+	)
+	require.False(t, ra.Add(m))
 
 	// "now" metric
-	m, err = metric.New("RITest",
+	m := testutil.MustMetric("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
 		time.Now().Add(time.Millisecond*50),
 		telegraf.Untyped)
-	require.NoError(t, err)
-	assert.False(t, ra.Add(m))
+	require.False(t, ra.Add(m))
 
-	for {
-		time.Sleep(time.Millisecond)
-		if atomic.LoadInt64(&a.sum) > 0 {
-			break
-		}
-	}
-	assert.Equal(t, int64(101), atomic.LoadInt64(&a.sum))
+	ra.Push(&acc)
+	require.Equal(t, 1, len(acc.Metrics))
+	require.Equal(t, int64(101), acc.Metrics[0].Fields["sum"])
 }
 
 func TestAddAndPushOnePeriod(t *testing.T) {
@@ -111,37 +99,24 @@ func TestAddAndPushOnePeriod(t *testing.T) {
 		},
 		Period: time.Millisecond * 500,
 	})
-	assert.NoError(t, ra.Config.Filter.Compile())
+	require.NoError(t, ra.Config.Filter.Compile())
 	acc := testutil.Accumulator{}
-	shutdown := make(chan struct{})
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		ra.Run(&acc, shutdown)
-	}()
+	now := time.Now()
+	ra.SetPeriodStart(now)
 
-	m, err := metric.New("RITest",
+	m := testutil.MustMetric("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
 		time.Now().Add(time.Millisecond*100),
 		telegraf.Untyped)
-	require.NoError(t, err)
-	assert.False(t, ra.Add(m))
+	require.False(t, ra.Add(m))
 
-	for {
-		time.Sleep(time.Millisecond)
-		if acc.NMetrics() > 0 {
-			break
-		}
-	}
+	ra.Push(&acc)
+
 	acc.AssertContainsFields(t, "TestMetric", map[string]interface{}{"sum": int64(101)})
-
-	close(shutdown)
-	wg.Wait()
 }
 
 func TestAddDropOriginal(t *testing.T) {
@@ -152,28 +127,29 @@ func TestAddDropOriginal(t *testing.T) {
 		},
 		DropOriginal: true,
 	})
-	assert.NoError(t, ra.Config.Filter.Compile())
+	require.NoError(t, ra.Config.Filter.Compile())
 
-	m, err := metric.New("RITest",
+	now := time.Now()
+	ra.SetPeriodStart(now)
+
+	m := testutil.MustMetric("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
 		time.Now(),
 		telegraf.Untyped)
-	require.NoError(t, err)
-	assert.True(t, ra.Add(m))
+	require.True(t, ra.Add(m))
 
 	// this metric name doesn't match the filter, so Add will return false
-	m2, err := metric.New("foobar",
+	m2 := testutil.MustMetric("foobar",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
 		time.Now(),
 		telegraf.Untyped)
-	require.NoError(t, err)
-	assert.False(t, ra.Add(m2))
+	require.False(t, ra.Add(m2))
 }
 
 type TestAggregator struct {

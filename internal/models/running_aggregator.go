@@ -1,30 +1,53 @@
 package models
 
 import (
-	"log"
+	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 type RunningAggregator struct {
-	a      telegraf.Aggregator
-	Config *AggregatorConfig
-
-	metrics chan telegraf.Metric
-
+	sync.Mutex
+	Aggregator  telegraf.Aggregator
+	Config      *AggregatorConfig
 	periodStart time.Time
 	periodEnd   time.Time
+
+	MetricsPushed   selfstat.Stat
+	MetricsFiltered selfstat.Stat
+	MetricsDropped  selfstat.Stat
+	PushTime        selfstat.Stat
 }
 
 func NewRunningAggregator(
-	a telegraf.Aggregator,
-	conf *AggregatorConfig,
+	aggregator telegraf.Aggregator,
+	config *AggregatorConfig,
 ) *RunningAggregator {
 	return &RunningAggregator{
-		a:       a,
-		Config:  conf,
-		metrics: make(chan telegraf.Metric, 100),
+		Aggregator: aggregator,
+		Config:     config,
+		MetricsPushed: selfstat.Register(
+			"aggregate",
+			"metrics_pushed",
+			map[string]string{"aggregator": config.Name},
+		),
+		MetricsFiltered: selfstat.Register(
+			"aggregate",
+			"metrics_filtered",
+			map[string]string{"aggregator": config.Name},
+		),
+		MetricsDropped: selfstat.Register(
+			"aggregate",
+			"metrics_dropped",
+			map[string]string{"aggregator": config.Name},
+		),
+		PushTime: selfstat.Register(
+			"aggregate",
+			"push_time_ns",
+			map[string]string{"aggregator": config.Name},
+		),
 	}
 }
 
@@ -46,6 +69,15 @@ func (r *RunningAggregator) Name() string {
 	return "aggregators." + r.Config.Name
 }
 
+func (r *RunningAggregator) Period() time.Duration {
+	return r.Config.Period
+}
+
+func (r *RunningAggregator) SetPeriodStart(start time.Time) {
+	r.periodStart = start
+	r.periodEnd = r.periodStart.Add(r.Config.Period).Add(r.Config.Delay)
+}
+
 func (r *RunningAggregator) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	m := makemetric(
 		metric,
@@ -58,6 +90,8 @@ func (r *RunningAggregator) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	if m != nil {
 		m.SetAggregate(true)
 	}
+
+	r.MetricsPushed.Incr(1)
 
 	return m
 }
@@ -74,75 +108,31 @@ func (r *RunningAggregator) Add(metric telegraf.Metric) bool {
 		return r.Config.DropOriginal
 	}
 
-	r.metrics <- metric
+	r.Lock()
+	defer r.Unlock()
 
+	if r.periodStart.IsZero() || metric.Time().Before(r.periodStart) || metric.Time().After(r.periodEnd) {
+		r.MetricsDropped.Incr(1)
+		return false
+	}
+
+	r.Aggregator.Add(in)
 	return r.Config.DropOriginal
 }
 
-func (r *RunningAggregator) add(in telegraf.Metric) {
-	r.a.Add(in)
+func (r *RunningAggregator) Push(acc telegraf.Accumulator) {
+	r.Lock()
+	defer r.Unlock()
+
+	r.periodStart = r.periodEnd
+	r.periodEnd = r.periodStart.Add(r.Config.Period).Add(r.Config.Delay)
+	r.push(acc)
+	r.Aggregator.Reset()
 }
 
 func (r *RunningAggregator) push(acc telegraf.Accumulator) {
-	r.a.Push(acc)
-}
-
-func (r *RunningAggregator) reset() {
-	r.a.Reset()
-}
-
-// Run runs the running aggregator, listens for incoming metrics, and waits
-// for period ticks to tell it when to push and reset the aggregator.
-func (r *RunningAggregator) Run(
-	acc telegraf.Accumulator,
-	shutdown chan struct{},
-) {
-	// The start of the period is truncated to the nearest second.
-	//
-	// Every metric then gets it's timestamp checked and is dropped if it
-	// is not within:
-	//
-	//   start < t < end + truncation + delay
-	//
-	// So if we start at now = 00:00.2 with a 10s period and 0.3s delay:
-	//   now = 00:00.2
-	//   start = 00:00
-	//   truncation = 00:00.2
-	//   end = 00:10
-	// 1st interval: 00:00 - 00:10.5
-	// 2nd interval: 00:10 - 00:20.5
-	// etc.
-	//
-	now := time.Now()
-	r.periodStart = now.Truncate(time.Second)
-	truncation := now.Sub(r.periodStart)
-	r.periodEnd = r.periodStart.Add(r.Config.Period)
-	time.Sleep(r.Config.Delay)
-	periodT := time.NewTicker(r.Config.Period)
-	defer periodT.Stop()
-
-	for {
-		select {
-		case <-shutdown:
-			if len(r.metrics) > 0 {
-				// wait until metrics are flushed before exiting
-				continue
-			}
-			return
-		case m := <-r.metrics:
-			if m.Time().Before(r.periodStart) ||
-				m.Time().After(r.periodEnd.Add(truncation).Add(r.Config.Delay)) {
-				// the metric is outside the current aggregation period, so
-				// skip it.
-				log.Printf("D! aggregator: metric \"%s\" is not in the current timewindow, skipping", m.Name())
-				continue
-			}
-			r.add(m)
-		case <-periodT.C:
-			r.periodStart = r.periodEnd
-			r.periodEnd = r.periodStart.Add(r.Config.Period)
-			r.push(acc)
-			r.reset()
-		}
-	}
+	start := time.Now()
+	r.Aggregator.Push(acc)
+	elapsed := time.Since(start)
+	r.PushTime.Incr(elapsed.Nanoseconds())
 }

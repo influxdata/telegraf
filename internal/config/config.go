@@ -622,6 +622,19 @@ func (c *Config) LoadConfig(path string) error {
 		}
 	}
 
+	if !c.Agent.OmitHostname {
+		if c.Agent.Hostname == "" {
+			hostname, err := os.Hostname()
+			if err != nil {
+				return err
+			}
+
+			c.Agent.Hostname = hostname
+		}
+
+		c.Tags["host"] = c.Agent.Hostname
+	}
+
 	// Parse all the rest of the plugins:
 	for name, val := range tbl.Fields {
 		subTable, ok := val.(*ast.Table)
@@ -709,6 +722,7 @@ func (c *Config) LoadConfig(path string) error {
 	if len(c.Processors) > 1 {
 		sort.Sort(c.Processors)
 	}
+
 	return nil
 }
 
@@ -876,6 +890,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	}
 
 	rp := models.NewRunningInput(input, pluginConfig)
+	rp.SetDefaultTags(c.Tags)
 	c.Inputs = append(c.Inputs, rp)
 	return nil
 }

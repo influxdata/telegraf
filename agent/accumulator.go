@@ -20,13 +20,13 @@ type MetricMaker interface {
 
 type accumulator struct {
 	maker     MetricMaker
-	metrics   chan telegraf.Metric
+	metrics   chan<- telegraf.Metric
 	precision time.Duration
 }
 
 func NewAccumulator(
 	maker MetricMaker,
-	metrics chan telegraf.Metric,
+	metrics chan<- telegraf.Metric,
 ) telegraf.Accumulator {
 	acc := accumulator{
 		maker:     maker,

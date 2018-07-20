@@ -23,7 +23,7 @@ type Metric struct {
 }
 
 func (p *Metric) String() string {
-	return fmt.Sprintf("%s %v", p.Measurement, p.Fields)
+	return fmt.Sprintf("%s %v %v", p.Measurement, p.Tags, p.Fields)
 }
 
 // Accumulator defines a mocked out accumulator
