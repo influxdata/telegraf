@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -403,13 +404,17 @@ func testStrictRFC5425(t *testing.T, protocol string, address string, wantTLS bo
 			acc.Errors = make([]error, 0)
 
 			// Write
-			conn.Write(tc.data)
+			_, err = conn.Write(tc.data)
+			log.Printf("got err: %v", err)
 
 			// Wait that the the number of data points is accumulated
 			// Since the receiver is running concurrently
 			if tc.wantStrict != nil {
+				log.Printf("len of wantStrict: %v", len(tc.wantStrict))
 				acc.Wait(len(tc.wantStrict))
 			}
+
+			log.Printf("got metrics: %v", acc.Metrics)
 			// Wait the parsing error
 			acc.WaitError(tc.werr)
 
@@ -484,6 +489,7 @@ func testBestEffortRFC5425(t *testing.T, protocol string, address string, wantTL
 
 func TestStrict_tcp(t *testing.T) {
 	testStrictRFC5425(t, "tcp", address, false, nil)
+	t.Error()
 }
 
 func TestBestEffort_tcp(t *testing.T) {
