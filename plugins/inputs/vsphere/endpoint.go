@@ -26,7 +26,7 @@ type Endpoint struct {
 	pool            Pool
 	lastColls       map[string]time.Time
 	instanceInfo    map[string]resourceInfo
-	resources       map[string]resource
+	resourceKinds   map[string]resourceKind
 	metricNames     map[int32]string
 	discoveryTicker *time.Ticker
 	clientMux       sync.Mutex
@@ -34,7 +34,7 @@ type Endpoint struct {
 	initialized     bool
 }
 
-type resource struct {
+type resourceKind struct {
 	pKey             string
 	enabled          bool
 	realTime         bool
@@ -79,7 +79,7 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 		initialized:  false,
 	}
 
-	e.resources = map[string]resource{
+	e.resourceKinds = map[string]resourceKind{
 		"cluster": {
 			pKey:             "clustername",
 			enabled:          parent.GatherClusters,
@@ -138,25 +138,36 @@ func (e *Endpoint) init() error {
 	}
 
 	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() > 0 {
-		// Run an initial discovery.
-		//
-		err = e.discover()
-		if err != nil {
-			log.Printf("E! Error in initial discovery for %s: %v", e.URL.Host, err)
-			return err
+		discoverFunc := func() {
+			err = e.discover()
+			if err != nil {
+				log.Printf("E! Error in initial discovery for %s: %v", e.URL.Host, err)
+			}
+
+			// Create discovery ticker
+			//
+			e.discoveryTicker = time.NewTicker(e.Parent.ObjectDiscoveryInterval.Duration)
+			go func() {
+				for range e.discoveryTicker.C {
+					err := e.discover()
+					if err != nil {
+						log.Printf("E! Error in discovery for %s: %v", e.URL.Host, err)
+					}
+				}
+			}()
 		}
 
-		// Create discovery ticker
+		// Run an initial discovery. If force_discovery_on_init isn't set, we kick it off as a
+		// goroutine without waiting for it. This will probably cause us to report an empty
+		// dataset on the first collection, but it solves the issue of the first collection timing out.
 		//
-		e.discoveryTicker = time.NewTicker(e.Parent.ObjectDiscoveryInterval.Duration)
-		go func() {
-			for range e.discoveryTicker.C {
-				err := e.discover()
-				if err != nil {
-					log.Printf("E! Error in discovery for %s: %v", e.URL.Host, err)
-				}
-			}
-		}()
+		if e.Parent.ForceDiscoverOnInit {
+			log.Printf("Running initial discovery and waiting for it to finish")
+			discoverFunc()
+		} else {
+			log.Printf("Running initial discovery in the background")
+			go discoverFunc()
+		}
 	}
 
 	e.initialized = true
@@ -192,11 +203,11 @@ func (e *Endpoint) discover() error {
 	defer e.pool.Return(client)
 
 	instInfo := make(map[string]resourceInfo)
-	resources := make(map[string]resource)
+	resourceKinds := make(map[string]resourceKind)
 
 	// Populate resource objects, and endpoint name cache
 	//
-	for k, res := range e.resources {
+	for k, res := range e.resourceKinds {
 		// Don't be tempted to skip disabled resources here! We may need them to resolve parent references
 		//
 		// Precompile includes and excludes
@@ -263,7 +274,7 @@ func (e *Endpoint) discover() error {
 				instInfo[obj.ref.Value] = resourceInfo{name: obj.name, metrics: mList}
 			}
 			res.objects = objects
-			resources[k] = res
+			resourceKinds[k] = res
 		}
 	}
 
@@ -273,7 +284,7 @@ func (e *Endpoint) discover() error {
 	defer e.collectMux.Unlock()
 
 	e.instanceInfo = instInfo
-	e.resources = resources
+	e.resourceKinds = resourceKinds
 
 	log.Printf("D! Discovered %d objects for %s. Took %s", len(instInfo), e.URL.Host, time.Now().Sub(start))
 
@@ -365,7 +376,7 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-	for k, res := range e.resources {
+	for k, res := range e.resourceKinds {
 		if res.enabled {
 			count, duration, err := e.collectResource(k, acc)
 			if err != nil {
@@ -383,7 +394,7 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator) (int, float64, error) {
 	// Do we have new data yet?
 	//
-	res := e.resources[resourceType]
+	res := e.resourceKinds[resourceType]
 	now := time.Now()
 	latest, hasLatest := e.lastColls[resourceType]
 	if hasLatest {
@@ -409,11 +420,12 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 	doneCh := make(chan bool)
 	for i := 0; i < e.Parent.CollectConcurrency; i++ {
 		go func() {
+			defer func() { doneCh <- true }()
+			//timeout = time.After()
 			for {
 				select {
 				case chunk, valid := <-chunkCh:
 					if !valid {
-						doneCh <- true
 						log.Printf("D! No more work. Exiting collection goroutine")
 						return
 					}
@@ -498,7 +510,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 		case <-doneCh:
 			alive--
 		case err = <-errorCh:
-			log.Printf("!E Error from collection goroutine: %s", err)
+			log.Printf("E! Error from collection goroutine: %s", err)
 		}
 	}
 
@@ -507,7 +519,7 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 	return int(count), time.Now().Sub(start).Seconds(), err
 }
 
-func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, res resource, acc telegraf.Accumulator) (int, error) {
+func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, res resourceKind, acc telegraf.Accumulator) (int, error) {
 	count := 0
 	prefix := "vsphere" + e.Parent.Separator + resourceType
 	client, err := e.pool.Take()
@@ -566,7 +578,6 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 				//
 				mn, fn := e.makeMetricIdentifier(prefix, name)
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
-				//log.Printf("D! Bucket key: %s, resource: %s, field: %s", bKey, instInfo.name, fn)
 				bucket, found := buckets[bKey]
 				if !found {
 					bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: t}
@@ -581,14 +592,14 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 		//
 		log.Printf("D! Collected %d buckets for %s", len(buckets), instInfo.name)
 		for _, bucket := range buckets {
-			//log.Printf("D! Key: %s, Tags: %s, Fields: %s", key, bucket.tags, bucket.fields)
+			//log.Printf("Bucket key: %s", key)
 			acc.AddFields(bucket.name, bucket.fields, bucket.tags, bucket.ts)
 		}
 	}
 	return count, nil
 }
 
-func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resource *resource, t map[string]string, v *performance.MetricSeries) {
+func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resource *resourceKind, t map[string]string, v *performance.MetricSeries) {
 	// Map name of object.
 	//
 	if resource.pKey != "" {
@@ -607,7 +618,7 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 		case "vm":
 			t["guest"] = objectRef.guest
 			t["esxhostname"] = parent.name
-			hostRes := e.resources["host"]
+			hostRes := e.resourceKinds["host"]
 			hostRef, ok := hostRes.objects[objectRef.parentRef.Value]
 			if ok {
 				cluster, ok := e.instanceInfo[hostRef.parentRef.Value]
