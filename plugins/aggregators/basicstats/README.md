@@ -32,11 +32,11 @@ emitting the aggregate every `period` seconds.
 
 - measurement1
     - field1_count
-	- field1_diff (difference)
+    - field1_diff (difference)
     - field1_max
     - field1_min
     - field1_mean
-	- field1_non_negative_diff (non-negative difference)
+    - field1_non_negative_diff (non-negative difference)
     - field1_sum
     - field1_s2 (variance)
     - field1_stdev (standard deviation)
