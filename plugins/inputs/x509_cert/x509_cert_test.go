@@ -84,11 +84,11 @@ func TestGatherRemote(t *testing.T) {
 		}()
 
 		if test.server == "" {
-			test.server = ln.Addr().String()
+			test.server = "tcp://" + ln.Addr().String()
 		}
 
 		sc := X509Cert{
-			Servers: []string{test.server},
+			Sources: []string{test.server},
 			Timeout: internal.Duration{Duration: test.timeout},
 		}
 
@@ -145,7 +145,7 @@ func TestGatherLocal(t *testing.T) {
 		defer os.Remove(f.Name())
 
 		sc := X509Cert{
-			Files: []string{f.Name()},
+			Sources: []string{f.Name()},
 		}
 
 		error := false

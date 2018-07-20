@@ -1,3 +1,4 @@
+// Package x509_cert reports metrics from an SSL certificate.
 package x509_cert
 
 import (
@@ -7,7 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net"
-	"strings"
+	"net/url"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -17,16 +18,17 @@ import (
 )
 
 const sampleConfig = `
-  ## List of local SSL files
-  # files = ["/etc/ssl/certs/ssl-cert-snakeoil.pem"]
-  ## List of servers
-  # servers = ["tcp://example.org:443"]
+  ## List of servers and local SSL files
+  # sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443"]
+
   ## Timeout for SSL connection
   # timeout = 5
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
+
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
@@ -34,8 +36,7 @@ const description = "Reads metrics from a SSL certificate"
 
 // X509Cert holds the configuration of the plugin.
 type X509Cert struct {
-	Servers []string          `toml:"servers"`
-	Files   []string          `toml:"files"`
+	Sources []string          `toml:"sources"`
 	Timeout internal.Duration `toml:"timeout"`
 	_tls.ClientConfig
 }
@@ -50,61 +51,65 @@ func (c *X509Cert) SampleConfig() string {
 	return sampleConfig
 }
 
-func (c *X509Cert) getRemoteCert(server string, timeout time.Duration) (*x509.Certificate, error) {
-	tlsCfg, err := c.ClientConfig.TLSConfig()
+func (c *X509Cert) getCert(location string, timeout time.Duration) ([]*x509.Certificate, error) {
+	u, err := url.Parse(location)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to parse cert location - %s\n", err.Error())
 	}
 
-	network := "tcp"
-	host_port := server
-	vals := strings.Split(server, "://")
+	switch u.Scheme {
+	case "https":
+		u.Scheme = "tcp"
+		fallthrough
+	case "udp":
+		fallthrough
+	case "tcp":
+		tlsCfg, err := c.ClientConfig.TLSConfig()
+		if err != nil {
+			return nil, err
+		}
 
-	if len(vals) > 1 {
-		network = vals[0]
-		host_port = vals[1]
+		ipConn, err := net.DialTimeout(u.Scheme, u.Host, timeout)
+		if err != nil {
+			return nil, err
+		}
+		defer ipConn.Close()
+
+		conn := tls.Client(ipConn, tlsCfg)
+		defer conn.Close()
+
+		hsErr := conn.Handshake()
+		if hsErr != nil {
+			return nil, hsErr
+		}
+
+		certs := conn.ConnectionState().PeerCertificates
+
+		if certs == nil || len(certs) < 1 {
+			return nil, fmt.Errorf("couldn't get remote certificate")
+		}
+
+		return certs, nil
+	case "file":
+		fallthrough
+	default:
+		content, err := ioutil.ReadFile(u.Path)
+		if err != nil {
+			return nil, err
+		}
+
+		block, _ := pem.Decode(content)
+		if block == nil {
+			return nil, fmt.Errorf("failed to parse certificate PEM")
+		}
+
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+
+		return []*x509.Certificate{cert}, nil
 	}
-
-	ipConn, err := net.DialTimeout(network, host_port, timeout)
-	if err != nil {
-		return nil, err
-	}
-	defer ipConn.Close()
-
-	conn := tls.Client(ipConn, tlsCfg)
-	defer conn.Close()
-
-	hsErr := conn.Handshake()
-	if hsErr != nil {
-		return nil, hsErr
-	}
-
-	certs := conn.ConnectionState().PeerCertificates
-
-	if certs == nil || len(certs) < 1 {
-		return nil, fmt.Errorf("couldn't get remote certificate")
-	}
-
-	return certs[0], nil
-}
-
-func getLocalCert(filename string) (*x509.Certificate, error) {
-	content, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	block, _ := pem.Decode(content)
-	if block == nil {
-		return nil, fmt.Errorf("failed to parse certificate PEM")
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-
-	return cert, nil
 }
 
 func getFields(cert *x509.Certificate, now time.Time) map[string]interface{} {
@@ -129,34 +134,21 @@ func getFields(cert *x509.Certificate, now time.Time) map[string]interface{} {
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 
-	for _, server := range c.Servers {
-		cert, err := c.getRemoteCert(server, c.Timeout.Duration*time.Second)
+	for _, location := range c.Sources {
+		certs, err := c.getCert(location, c.Timeout.Duration*time.Second)
 		if err != nil {
-			return fmt.Errorf("cannot get remote SSL cert '%s': %s", server, err)
+			return fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error())
 		}
 
 		tags := map[string]string{
-			"server": server,
+			"source": location,
 		}
 
-		fields := getFields(cert, now)
+		for _, cert := range certs {
+			fields := getFields(cert, now)
 
-		acc.AddFields("x509_cert", fields, tags)
-	}
-
-	for _, file := range c.Files {
-		cert, err := getLocalCert(file)
-		if err != nil {
-			return fmt.Errorf("cannot get local SSL cert '%s': %s", file, err)
+			acc.AddFields("x509_cert", fields, tags)
 		}
-
-		tags := map[string]string{
-			"file": file,
-		}
-
-		fields := getFields(cert, now)
-
-		acc.AddFields("x509_cert", fields, tags)
 	}
 
 	return nil
@@ -165,8 +157,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("x509_cert", func() telegraf.Input {
 		return &X509Cert{
-			Files:   []string{},
-			Servers: []string{},
+			Sources: []string{},
 			Timeout: internal.Duration{Duration: 5},
 		}
 	})
