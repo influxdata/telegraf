@@ -70,7 +70,7 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricJson []byte, er
 
 		if !verifyValue(v) {
 			log.Printf("E! Can not parse value: %v for key: %v", v, k)
-            continue
+			continue
 		}
 
 		obj := map[string]interface{}{}
