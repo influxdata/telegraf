@@ -39,12 +39,14 @@ func NewClient(host string, tlsConfig *tls.Config) (Client, error) {
 	}
 	httpClient := &http.Client{Transport: transport}
 
-	client, err := docker.NewClientWithOpts(docker.WithHTTPHeaders(defaultHeaders), docker.WithHTTPClient(httpClient), docker.WithVersion(version), docker.WithHost(host))
+	client, err := docker.NewClientWithOpts(
+		docker.WithHTTPHeaders(defaultHeaders),
+		docker.WithHTTPClient(httpClient),
+		docker.WithVersion(version),
+		docker.WithHost(host))
 	if err != nil {
 		return nil, err
 	}
-
-	client.NegotiateAPIVersion(context.Background())
 
 	return &SocketClient{client}, nil
 }
