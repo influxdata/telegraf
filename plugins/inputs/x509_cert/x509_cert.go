@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -41,12 +40,6 @@ type X509Cert struct {
 	_tls.ClientConfig
 }
 
-// For tests
-var (
-	closeConn  bool
-	unsetCerts bool
-)
-
 // Description returns description of the plugin.
 func (c *X509Cert) Description() string {
 	return description
@@ -81,10 +74,6 @@ func (c *X509Cert) getRemoteCert(server string, timeout time.Duration) (*x509.Ce
 	conn := tls.Client(ipConn, tlsCfg)
 	defer conn.Close()
 
-	if closeConn {
-		conn.Close()
-	}
-
 	hsErr := conn.Handshake()
 	if hsErr != nil {
 		return nil, hsErr
@@ -92,12 +81,8 @@ func (c *X509Cert) getRemoteCert(server string, timeout time.Duration) (*x509.Ce
 
 	certs := conn.ConnectionState().PeerCertificates
 
-	if unsetCerts {
-		certs = nil
-	}
-
 	if certs == nil || len(certs) < 1 {
-		return nil, errors.New("couldn't get remote certificate")
+		return nil, fmt.Errorf("couldn't get remote certificate")
 	}
 
 	return certs[0], nil
@@ -111,7 +96,7 @@ func getLocalCert(filename string) (*x509.Certificate, error) {
 
 	block, _ := pem.Decode(content)
 	if block == nil {
-		return nil, errors.New("failed to parse certificate PEM")
+		return nil, fmt.Errorf("failed to parse certificate PEM")
 	}
 
 	cert, err := x509.ParseCertificate(block.Bytes)

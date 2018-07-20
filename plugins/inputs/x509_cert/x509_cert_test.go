@@ -29,23 +29,32 @@ func TestGatherRemote(t *testing.T) {
 		timeout time.Duration
 		close   bool
 		unset   bool
+		noshake bool
 		error   bool
 	}{
 		{server: ":99999", timeout: 0, close: false, unset: false, error: true},
 		{server: "", timeout: 5, close: false, unset: false, error: false},
 		{server: "", timeout: 5, close: false, unset: true, error: true},
 		{server: "", timeout: 0, close: true, unset: false, error: true},
+		{server: "", timeout: 5, close: false, unset: false, noshake: true, error: true},
+	}
+
+	pair, err := tls.X509KeyPair([]byte(pki.ReadServerCert()), []byte(pki.ReadServerKey()))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	config := &tls.Config{
+		InsecureSkipVerify: true,
+		Certificates:       []tls.Certificate{pair},
 	}
 
 	for i, test := range tests {
-		pair, err := tls.X509KeyPair([]byte(pki.ReadServerCert()), []byte(pki.ReadServerKey()))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		config := &tls.Config{
-			InsecureSkipVerify: true,
-			Certificates:       []tls.Certificate{pair},
+		if test.unset {
+			config.Certificates = nil
+			config.GetCertificate = func(i *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				return nil, nil
+			}
 		}
 
 		ln, err := tls.Listen("tcp", ":0", config)
@@ -59,10 +68,16 @@ func TestGatherRemote(t *testing.T) {
 			if err != nil {
 				return
 			}
+			if test.close {
+				sconn.Close()
+			}
 
 			serverConfig := config.Clone()
 
 			srv := tls.Server(sconn, serverConfig)
+			if test.noshake {
+				srv.Close()
+			}
 			if err := srv.Handshake(); err != nil {
 				return
 			}
@@ -78,18 +93,15 @@ func TestGatherRemote(t *testing.T) {
 		}
 
 		sc.InsecureSkipVerify = true
-		closeConn = test.close
-		unsetCerts = test.unset
-
-		error := false
+		testErr := false
 
 		acc := testutil.Accumulator{}
 		err = sc.Gather(&acc)
 		if err != nil {
-			error = true
+			testErr = true
 		}
 
-		if error != test.error {
+		if testErr != test.error {
 			t.Errorf("Test [%d]: %s.", i, err)
 		}
 	}
