@@ -18,7 +18,7 @@ import (
 )
 
 const sampleConfig = `
-  ## List of servers and local SSL files
+  ## List certificate sources
   # sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443"]
 
   ## Timeout for SSL connection
