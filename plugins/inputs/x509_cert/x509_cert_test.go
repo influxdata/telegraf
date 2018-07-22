@@ -24,6 +24,17 @@ func TestGatherRemote(t *testing.T) {
 		t.Skip("Skipping network-dependent test in short mode.")
 	}
 
+	tmpfile, err := ioutil.TempFile("", "example")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.Write([]byte(pki.ReadServerCert())); err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		server  string
 		timeout time.Duration
@@ -34,6 +45,8 @@ func TestGatherRemote(t *testing.T) {
 	}{
 		{server: ":99999", timeout: 0, close: false, unset: false, error: true},
 		{server: "", timeout: 5, close: false, unset: false, error: false},
+		{server: "https://example.org:443", timeout: 5, close: false, unset: false, error: false},
+		{server: "file://" + tmpfile.Name(), timeout: 5, close: false, unset: false, error: false},
 		{server: "", timeout: 5, close: false, unset: true, error: true},
 		{server: "", timeout: 0, close: true, unset: false, error: true},
 		{server: "", timeout: 5, close: false, unset: false, noshake: true, error: true},
