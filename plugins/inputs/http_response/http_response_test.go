@@ -662,7 +662,7 @@ func TestNetworkErrors(t *testing.T) {
 
 	// Connecton failed
 	h = &HTTPResponse{
-		Address:         "https://127.127.127.127", // Any non-routable IP works here
+		Address:         "https:/nonexistent.nonexistent", // Any non-routable IP works here
 		Body:            "",
 		Method:          "GET",
 		ResponseTimeout: internal.Duration{Duration: time.Second * 5},
@@ -674,13 +674,13 @@ func TestNetworkErrors(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedFields = map[string]interface{}{
-		"result_type": "timeout",
-		"result_code": 4,
+		"result_type": "connection_failed",
+		"result_code": 3,
 	}
 	expectedTags = map[string]interface{}{
 		"server": nil,
 		"method": "GET",
-		"result": "timeout",
+		"result": "connection_failed",
 	}
 	absentFields = []string{"http_response_code", "response_time", "response_string_match"}
 	absentTags = []string{"status_code"}
