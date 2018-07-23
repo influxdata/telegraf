@@ -24,7 +24,7 @@ var maxH = "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcde
 var maxA = "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdef"
 var maxPID = "abcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzabcdefghilmnopqrstuvzab"
 var maxMID = "abcdefghilmnopqrstuvzabcdefghilm"
-var message7681 = strings.Repeat("l", 8681)
+var message7681 = strings.Repeat("l", 7681)
 
 func TestAddress(t *testing.T) {
 	var err error

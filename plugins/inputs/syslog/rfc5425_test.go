@@ -405,7 +405,8 @@ func testStrictRFC5425(t *testing.T, protocol string, address string, wantTLS bo
 
 			// Write
 			_, err = conn.Write(tc.data)
-			log.Printf("got err: %v", err)
+			conn.Close()
+			require.NoError(t, err)
 
 			// Wait that the the number of data points is accumulated
 			// Since the receiver is running concurrently
@@ -457,7 +458,6 @@ func testBestEffortRFC5425(t *testing.T, protocol string, address string, wantTL
 				conn, err = tls.Dial(protocol, address, config)
 			} else {
 				conn, err = net.Dial(protocol, address)
-				defer conn.Close()
 			}
 			require.NotNil(t, conn)
 			require.NoError(t, err)
@@ -467,7 +467,9 @@ func testBestEffortRFC5425(t *testing.T, protocol string, address string, wantTL
 			acc.Errors = make([]error, 0)
 
 			// Write
-			conn.Write(tc.data)
+			_, err = conn.Write(tc.data)
+			require.NoError(t, err)
+			conn.Close()
 
 			// Wait that the the number of data points is accumulated
 			// Since the receiver is running concurrently
@@ -489,7 +491,6 @@ func testBestEffortRFC5425(t *testing.T, protocol string, address string, wantTL
 
 func TestStrict_tcp(t *testing.T) {
 	testStrictRFC5425(t, "tcp", address, false, nil)
-	t.Error()
 }
 
 func TestBestEffort_tcp(t *testing.T) {
