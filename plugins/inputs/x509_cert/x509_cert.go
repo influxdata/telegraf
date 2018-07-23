@@ -85,10 +85,6 @@ func (c *X509Cert) getCert(location string, timeout time.Duration) ([]*x509.Cert
 
 		certs := conn.ConnectionState().PeerCertificates
 
-		if certs == nil || len(certs) < 1 {
-			return nil, fmt.Errorf("couldn't get remote certificate")
-		}
-
 		return certs, nil
 	case "file":
 		fallthrough
