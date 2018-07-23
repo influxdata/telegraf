@@ -40,7 +40,6 @@ func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 	// Add certificate if we have it
 	//
 	if tlsCfg != nil && len(tlsCfg.Certificates) > 0 {
-		log.Printf("D! Creating client with Certificate: %s", u.Host)
 		c.Client.SetCertificate(tlsCfg.Certificates[0])
 	}
 

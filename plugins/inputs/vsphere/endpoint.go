@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gobwas/glob"
@@ -25,7 +26,7 @@ type Endpoint struct {
 	pool            Pool
 	lastColls       map[string]time.Time
 	instanceInfo    map[string]resourceInfo
-	resources       map[string]resource
+	resourceKinds   map[string]resourceKind
 	metricNames     map[int32]string
 	discoveryTicker *time.Ticker
 	clientMux       sync.Mutex
@@ -33,15 +34,16 @@ type Endpoint struct {
 	initialized     bool
 }
 
-type resource struct {
-	pKey       string
-	enabled    bool
-	realTime   bool
-	sampling   int32
-	objects    objectMap
-	includes   []string
-	excludes   []string
-	getObjects func(*view.ContainerView) (objectMap, error)
+type resourceKind struct {
+	pKey             string
+	enabled          bool
+	realTime         bool
+	sampling         int32
+	objects          objectMap
+	includes         []string
+	excludes         []string
+	collectInstances bool
+	getObjects       func(*view.ContainerView) (objectMap, error)
 }
 
 type metricEntry struct {
@@ -65,6 +67,11 @@ type resourceInfo struct {
 	metrics performance.MetricList
 }
 
+type metricQResponse struct {
+	obj     objectRef
+	metrics *performance.MetricList
+}
+
 // NewEndpoint returns a new connection to a vCenter based on the URL and configuration passed
 // as parameters.
 func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
@@ -77,46 +84,50 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 		initialized:  false,
 	}
 
-	e.resources = map[string]resource{
+	e.resourceKinds = map[string]resourceKind{
 		"cluster": {
-			pKey:       "clustername",
-			enabled:    parent.GatherClusters,
-			realTime:   false,
-			sampling:   300,
-			objects:    make(objectMap),
-			includes:   parent.ClusterMetricInclude,
-			excludes:   parent.ClusterMetricExclude,
-			getObjects: getClusters,
+			pKey:             "clustername",
+			enabled:          parent.GatherClusters,
+			realTime:         false,
+			sampling:         300,
+			objects:          make(objectMap),
+			includes:         parent.ClusterMetricInclude,
+			excludes:         parent.ClusterMetricExclude,
+			collectInstances: parent.ClusterInstances,
+			getObjects:       getClusters,
 		},
 		"host": {
-			pKey:       "esxhostname",
-			enabled:    parent.GatherHosts,
-			realTime:   true,
-			sampling:   20,
-			objects:    make(objectMap),
-			includes:   parent.HostMetricInclude,
-			excludes:   parent.HostMetricExclude,
-			getObjects: getHosts,
+			pKey:             "esxhostname",
+			enabled:          parent.GatherHosts,
+			realTime:         true,
+			sampling:         20,
+			objects:          make(objectMap),
+			includes:         parent.HostMetricInclude,
+			excludes:         parent.HostMetricExclude,
+			collectInstances: parent.HostInstances,
+			getObjects:       getHosts,
 		},
 		"vm": {
-			pKey:       "vmname",
-			enabled:    parent.GatherVms,
-			realTime:   true,
-			sampling:   20,
-			objects:    make(objectMap),
-			includes:   parent.VmMetricInclude,
-			excludes:   parent.VmMetricExclude,
-			getObjects: getVMs,
+			pKey:             "vmname",
+			enabled:          parent.GatherVms,
+			realTime:         true,
+			sampling:         20,
+			objects:          make(objectMap),
+			includes:         parent.VmMetricInclude,
+			excludes:         parent.VmMetricExclude,
+			collectInstances: parent.VmInstances,
+			getObjects:       getVMs,
 		},
 		"datastore": {
-			pKey:       "dsname",
-			enabled:    parent.GatherDatastores,
-			realTime:   false,
-			sampling:   300,
-			objects:    make(objectMap),
-			includes:   parent.DatastoreMetricInclude,
-			excludes:   parent.DatastoreMetricExclude,
-			getObjects: getDatastores,
+			pKey:             "dsname",
+			enabled:          parent.GatherDatastores,
+			realTime:         false,
+			sampling:         300,
+			objects:          make(objectMap),
+			includes:         parent.DatastoreMetricInclude,
+			excludes:         parent.DatastoreMetricExclude,
+			collectInstances: parent.DatastoreInstances,
+			getObjects:       getDatastores,
 		},
 	}
 
@@ -132,25 +143,36 @@ func (e *Endpoint) init() error {
 	}
 
 	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() > 0 {
-		// Run an initial discovery.
-		//
-		err = e.discover()
-		if err != nil {
-			log.Printf("E! Error in initial discovery for %s: %v", e.URL.Host, err)
-			return err
+		discoverFunc := func() {
+			err = e.discover()
+			if err != nil {
+				log.Printf("E! Error in initial discovery for %s: %v", e.URL.Host, err)
+			}
+
+			// Create discovery ticker
+			//
+			e.discoveryTicker = time.NewTicker(e.Parent.ObjectDiscoveryInterval.Duration)
+			go func() {
+				for range e.discoveryTicker.C {
+					err := e.discover()
+					if err != nil {
+						log.Printf("E! Error in discovery for %s: %v", e.URL.Host, err)
+					}
+				}
+			}()
 		}
 
-		// Create discovery ticker
+		// Run an initial discovery. If force_discovery_on_init isn't set, we kick it off as a
+		// goroutine without waiting for it. This will probably cause us to report an empty
+		// dataset on the first collection, but it solves the issue of the first collection timing out.
 		//
-		e.discoveryTicker = time.NewTicker(e.Parent.ObjectDiscoveryInterval.Duration)
-		go func() {
-			for range e.discoveryTicker.C {
-				err := e.discover()
-				if err != nil {
-					log.Printf("E! Error in discovery for %s: %v", e.URL.Host, err)
-				}
-			}
-		}()
+		if e.Parent.ForceDiscoverOnInit {
+			log.Printf("Running initial discovery and waiting for it to finish")
+			discoverFunc()
+		} else {
+			log.Printf("Running initial discovery in the background")
+			go discoverFunc()
+		}
 	}
 
 	e.initialized = true
@@ -175,6 +197,34 @@ func (e *Endpoint) setupMetricIds() error {
 	return nil
 }
 
+func (e *Endpoint) runMetricMetadataGetter(res *resourceKind, in chan objectRef, out chan *metricQResponse) {
+	client, err := e.pool.Take()
+	if err != nil {
+		log.Printf("E! Error getting client. Discovery will be incomplete. Error: %s", err)
+		return
+	}
+	defer e.pool.Return(client)
+	for {
+		select {
+		case obj, ok := <-in:
+			if !ok {
+				// Sending nil means that we're done.
+				//
+				log.Println("D! Metadata getter done. Exiting goroutine")
+				out <- nil
+				return
+			}
+			log.Printf("D! Getting metric metadata for: %s", obj.name)
+			ctx := context.Background()
+			metrics, err := client.Perf.AvailableMetric(ctx, obj.ref.Reference(), res.sampling)
+			if err != nil {
+				log.Printf("E! Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
+			}
+			out <- &metricQResponse{metrics: &metrics, obj: obj}
+		}
+	}
+}
+
 func (e *Endpoint) discover() error {
 	start := time.Now()
 	log.Printf("D! Discover new objects for %s", e.URL.Host)
@@ -186,11 +236,11 @@ func (e *Endpoint) discover() error {
 	defer e.pool.Return(client)
 
 	instInfo := make(map[string]resourceInfo)
-	resources := make(map[string]resource)
+	resourceKinds := make(map[string]resourceKind)
 
 	// Populate resource objects, and endpoint name cache
 	//
-	for k, res := range e.resources {
+	for k, res := range e.resourceKinds {
 		// Don't be tempted to skip disabled resources here! We may need them to resolve parent references
 		//
 		// Precompile includes and excludes
@@ -208,53 +258,77 @@ func (e *Endpoint) discover() error {
 		if res.enabled || (k != "datastore" && k != "vm") {
 			objects, err := res.getObjects(client.Root)
 			if err != nil {
-				client = nil // Don't reuse this one!
+				client.Valid = false // Don't reuse this one!
 				return err
 			}
+
+			// Start metadata getters.
+			// The response channel must have enough buffer to hold all responses, or
+			// we may deadlock. We also reserve one slot per goroutine to hold the final
+			// "nil" representing the end of the job.
+			//
+			rqCh := make(chan objectRef)
+			resCh := make(chan *metricQResponse, len(objects)+e.Parent.DiscoverConcurrency)
+			for i := 0; i < e.Parent.DiscoverConcurrency; i++ {
+				go e.runMetricMetadataGetter(&res, rqCh, resCh)
+			}
+
+			// Submit work to the getters
+			//
 			for _, obj := range objects {
-				ctx := context.Background()
-				mList := make(performance.MetricList, 0)
-				metrics, err := client.Perf.AvailableMetric(ctx, obj.ref.Reference(), res.sampling)
-				if err != nil {
-					client = nil // Don't reuse this one!
-					return err
-				}
-				log.Printf("D! Obj: %s, metrics found: %d, enabled: %t", obj.name, len(metrics), res.enabled)
+				rqCh <- obj
+			}
+			close(rqCh)
 
-				// Mmetric metadata gathering is only needed for enabled resource types.
-				//
-				if res.enabled {
-					for _, m := range metrics {
-						include := len(cInc) == 0 // Empty include list means include all
-						mName := e.metricNames[m.CounterId]
-						//log.Printf("% %s", mName, cInc)
-						if !include { // If not included by default
-							for _, p := range cInc {
-								if p.Match(mName) {
-									include = true
+			// Handle responses as they trickle in. Loop while there are still
+			// goroutines processing work.
+			//
+			alive := e.Parent.DiscoverConcurrency
+			for alive > 0 {
+				select {
+				case resp := <-resCh:
+					if resp == nil {
+						// Goroutine is done.
+						//
+						alive--
+					} else {
+						mList := make(performance.MetricList, 0)
+						if res.enabled {
+							for _, m := range *resp.metrics {
+								if m.Instance != "" && !res.collectInstances {
+									continue
+								}
+								include := len(cInc) == 0 // Empty include list means include all
+								mName := e.metricNames[m.CounterId]
+								//log.Printf("%s %s", mName, m.Instance)
+								if !include { // If not included by default
+									for _, p := range cInc {
+										if p.Match(mName) {
+											include = true
+										}
+									}
+								}
+								if include {
+									for _, p := range cExc {
+										if p.Match(mName) {
+											include = false
+											log.Printf("D! Excluded: %s", mName)
+											break
+										}
+									}
+									if include { // If still included after processing excludes
+										mList = append(mList, m)
+										//log.Printf("D! Included %s Sampling: %d", mName, res.sampling)
+									}
 								}
 							}
 						}
-						if include {
-							for _, p := range cExc {
-								if p.Match(mName) {
-									include = false
-									log.Printf("D! Excluded: %s", mName)
-									break
-								}
-							}
-							if include { // If still included after processing excludes
-								mList = append(mList, m)
-								//log.Printf("D! Included %s Sampling: %d", mName, res.sampling)
-							}
-						}
-
+						instInfo[resp.obj.ref.Value] = resourceInfo{name: resp.obj.name, metrics: mList}
 					}
 				}
-				instInfo[obj.ref.Value] = resourceInfo{name: obj.name, metrics: mList}
 			}
 			res.objects = objects
-			resources[k] = res
+			resourceKinds[k] = res
 		}
 	}
 
@@ -264,7 +338,7 @@ func (e *Endpoint) discover() error {
 	defer e.collectMux.Unlock()
 
 	e.instanceInfo = instInfo
-	e.resources = resources
+	e.resourceKinds = resourceKinds
 
 	log.Printf("D! Discovered %d objects for %s. Took %s", len(instInfo), e.URL.Host, time.Now().Sub(start))
 
@@ -356,7 +430,7 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
-	for k, res := range e.resources {
+	for k, res := range e.resourceKinds {
 		if res.enabled {
 			count, duration, err := e.collectResource(k, acc)
 			if err != nil {
@@ -374,7 +448,7 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator) (int, float64, error) {
 	// Do we have new data yet?
 	//
-	res := e.resources[resourceType]
+	res := e.resourceKinds[resourceType]
 	now := time.Now()
 	latest, hasLatest := e.lastColls[resourceType]
 	if hasLatest {
@@ -392,21 +466,57 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 	log.Printf("D! Start of sample period deemed to be %s", latest)
 	log.Printf("D! Collecting metrics for %d objects of type %s for %s", len(res.objects), resourceType, e.URL.Host)
 
-	count := 0
+	// Set up collection goroutines
+	//
+	count := int64(0)
+	chunkCh := make(chan []types.PerfQuerySpec)
+	errorCh := make(chan error, e.Parent.CollectConcurrency) // Try not to block on errors.
+	doneCh := make(chan bool)
+	for i := 0; i < e.Parent.CollectConcurrency; i++ {
+		go func() {
+			defer func() { doneCh <- true }()
+			//timeout = time.After()
+			for {
+				select {
+				case chunk, valid := <-chunkCh:
+					if !valid {
+						log.Printf("D! No more work. Exiting collection goroutine")
+						return
+					}
+					n, err := e.collectChunk(chunk, resourceType, res, acc)
+					log.Printf("D! Query returned %d metrics", n)
+					if err != nil {
+						errorCh <- err
+					}
+					atomic.AddInt64(&count, int64(n))
+				}
+			}
+		}()
+	}
+
 	start := time.Now()
-	total := 0
 	pqs := make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
+	metrics := 0
+	total := 0
+	nRes := 0
 	for _, object := range res.objects {
 		info, found := e.instanceInfo[object.ref.Value]
 		if !found {
 			log.Printf("E! Internal error: Instance info not found for MOID %s", object.ref)
 		}
-		if len(info.metrics) > 0 {
-
+		mr := len(info.metrics)
+		for mr > 0 {
+			mc := mr
+			headroom := e.Parent.MetricsPerQuery - metrics
+			if !res.realTime && mc > headroom { // Metric query limit only applies to non-realtime metrics
+				mc = headroom
+			}
+			fm := len(info.metrics) - mr
+			log.Printf("D! mr: %d, mm: %d, fm: %d", mr, mc, fm)
 			pq := types.PerfQuerySpec{
 				Entity:     object.ref,
 				MaxSample:  1,
-				MetricId:   info.metrics,
+				MetricId:   info.metrics[fm : fm+mc],
 				IntervalId: res.sampling,
 			}
 
@@ -414,33 +524,56 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 				pq.StartTime = &latest
 				pq.EndTime = &now
 			}
-
 			pqs = append(pqs, pq)
-		} else {
-			log.Printf("D! No metrics available for %s. Skipping.", info.name)
-			// Maintainers: Don't be tempted to skip a turn in the loop here! We still need to check if
-			// the chunk needs processing or we risk skipping the last chunk. (Ask me how I found this out... :) )
+			mr -= mc
+			metrics += mc
+
+			// We need to dump the current chunk of metrics for one of three reasons:
+			// 1) We filled up the metric quota while processing the current resource
+			// 2) The toral number of metrics exceeds the max
+			// 3) We are at the last resource and have no more data to process.
+			//
+			if mr > 0 || (!res.realTime && metrics >= e.Parent.MetricsPerQuery) /* || total >= len(res.objects)-1 */ || nRes >= e.Parent.ObjectsPerQuery {
+				log.Printf("D! Querying %d objects, %d metrics (%d remaining) of type %s for %s. Processed objects: %d. Total objects %d, metrics %d",
+					len(pqs), metrics, mr, resourceType, e.URL.Host, total+1, len(res.objects), count)
+				chunkCh <- pqs
+				pqs = make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
+				metrics = 0
+				nRes = 0
+			}
+			log.Printf("D! %d metrics remaining. Total metrics %d", mr, metrics)
 		}
 		total++
+		nRes++
+	}
+	// There may be dangling stuff in the queue. Handle them
+	//
+	if len(pqs) > 0 {
+		log.Printf("Pushing dangling buffer with %d objects for %s", len(pqs), resourceType)
+		chunkCh <- pqs
+	}
 
-		// Filled up a chunk or at end of data? Run a query with the collected objects
-		//
-		if len(pqs) > 0 && (len(pqs) >= int(e.Parent.ObjectsPerQuery) || total >= len(res.objects)) {
-			log.Printf("D! Querying %d objects of type %s for %s. Object count: %d. Total objects %d", len(pqs), resourceType, e.URL.Host, total, len(res.objects))
-			n, err := e.collectChunk(pqs, resourceType, res, acc)
-			if err != nil {
-				return count, time.Now().Sub(start).Seconds(), err
-			}
-			count += n
-			pqs = make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
+	var err error
+
+	// Inform collection goroutines that there's no more data and wait for them to finish
+	//
+	close(chunkCh)
+	alive := e.Parent.CollectConcurrency
+	for alive > 0 {
+		select {
+		case <-doneCh:
+			alive--
+		case err = <-errorCh:
+			log.Printf("E! Error from collection goroutine: %s", err)
 		}
 	}
+
 	e.lastColls[resourceType] = now // Use value captured at the beginning to avoid blind spots.
 	log.Printf("D! Collection of %s for %s, took %v returning %d metrics", resourceType, e.URL.Host, time.Now().Sub(start), count)
-	return count, time.Now().Sub(start).Seconds(), nil
+	return int(count), time.Now().Sub(start).Seconds(), err
 }
 
-func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, res resource, acc telegraf.Accumulator) (int, error) {
+func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, res resourceKind, acc telegraf.Accumulator) (int, error) {
 	count := 0
 	prefix := "vsphere" + e.Parent.Separator + resourceType
 	client, err := e.pool.Take()
@@ -452,13 +585,13 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 	metrics, err := client.Perf.Query(ctx, pqs)
 	if err != nil {
 		//TODO: Check the error and attempt to handle gracefully. (ie: object no longer exists)
-		log.Printf("E! Error querying metrics of %s for %s", resourceType, e.URL.Host)
+		log.Printf("E! Error querying metrics of %s for %s %s", resourceType, e.URL.Host, err)
 		return count, err
 	}
 
 	ems, err := client.Perf.ToMetricSeries(ctx, metrics)
 	if err != nil {
-		client = nil
+		client.Valid = false
 		return count, err
 	}
 
@@ -499,7 +632,6 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 				//
 				mn, fn := e.makeMetricIdentifier(prefix, name)
 				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
-				//log.Printf("D! Bucket key: %s, resource: %s, field: %s", bKey, instInfo.name, fn)
 				bucket, found := buckets[bKey]
 				if !found {
 					bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: t}
@@ -513,15 +645,15 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string, 
 		// measurement name. Now emit them!
 		//
 		log.Printf("D! Collected %d buckets for %s", len(buckets), instInfo.name)
-		for key, bucket := range buckets {
-			log.Printf("D! Key: %s, Tags: %s, Fields: %s", key, bucket.tags, bucket.fields)
+		for _, bucket := range buckets {
+			//log.Printf("Bucket key: %s", key)
 			acc.AddFields(bucket.name, bucket.fields, bucket.tags, bucket.ts)
 		}
 	}
 	return count, nil
 }
 
-func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resource *resource, t map[string]string, v *performance.MetricSeries) {
+func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resource *resourceKind, t map[string]string, v *performance.MetricSeries) {
 	// Map name of object.
 	//
 	if resource.pKey != "" {
@@ -540,7 +672,7 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 		case "vm":
 			t["guest"] = objectRef.guest
 			t["esxhostname"] = parent.name
-			hostRes := e.resources["host"]
+			hostRes := e.resourceKinds["host"]
 			hostRef, ok := hostRes.objects[objectRef.parentRef.Value]
 			if ok {
 				cluster, ok := e.instanceInfo[hostRef.parentRef.Value]
