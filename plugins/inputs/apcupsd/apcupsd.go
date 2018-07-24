@@ -2,6 +2,7 @@ package apcupsd
 
 import (
 	"context"
+	"net/url"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -10,7 +11,7 @@ import (
 	"github.com/mdlayher/apcupsd"
 )
 
-const defaultAddress = "127.0.0.1:3551"
+const defaultAddress = "tcp://127.0.0.1:3551"
 
 var defaultTimeout = internal.Duration{Duration: time.Duration(time.Second * 5)}
 
@@ -25,8 +26,8 @@ func (_ *ApcUpsd) Description() string {
 
 var sampleConfig = `
   # a list of running apcupsd server to connect to. 
-  # If not provided will default to 127.0.0.1:3551
-  servers = ["127.0.0.1:3551"]
+  # If not provided will default to tcp://127.0.0.1:3551
+  servers = ["tcp://127.0.0.1:3551"]
   timeout = "5s"
 `
 
@@ -36,7 +37,15 @@ func (_ *ApcUpsd) SampleConfig() string {
 
 func (h *ApcUpsd) Gather(acc telegraf.Accumulator) error {
 	for _, addr := range h.Servers {
-		status, err := fetchStatus(addr, h.Timeout.Duration)
+		addrBits, err := url.Parse(addr)
+		if err != nil {
+			return err
+		}
+		if addrBits.Scheme == "" {
+			addrBits.Scheme = "tcp"
+		}
+
+		status, err := fetchStatus(addrBits, h.Timeout.Duration)
 		if err != nil {
 			return err
 		}
@@ -72,10 +81,10 @@ func boolToInt(b bool) int {
 	return 0
 }
 
-func fetchStatus(addr string, timeout time.Duration) (*apcupsd.Status, error) {
+func fetchStatus(addr *url.URL, timeout time.Duration) (*apcupsd.Status, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	client, err := apcupsd.DialContext(ctx, "tcp", addr)
+	client, err := apcupsd.DialContext(ctx, addr.Scheme, addr.Host)
 	if err != nil {
 		return nil, err
 	}
