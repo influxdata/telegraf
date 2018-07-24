@@ -31,7 +31,7 @@ all:
 	@$(MAKE) --no-print-directory deps
 	@$(MAKE) --no-print-directory telegraf
 
-.PHONY: ensure
+.PHONY: deps
 deps:
 	dep ensure -vendor-only
 
