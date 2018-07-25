@@ -4,7 +4,6 @@ package logfmt
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -43,7 +42,6 @@ func (l *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 		}
 
 		for decoder.ScanKeyval() {
-			log.Printf("k: %v, v: %v", string(decoder.Key()), string(decoder.Value()))
 			if string(decoder.Value()) == "" {
 				return metrics, fmt.Errorf("value could not be found for key: %v", string(decoder.Key()))
 			}
