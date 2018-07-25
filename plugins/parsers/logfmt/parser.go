@@ -4,6 +4,7 @@ package logfmt
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -45,7 +46,18 @@ func (l *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 			if string(decoder.Value()) == "" {
 				return metrics, fmt.Errorf("value could not be found for key: %v", string(decoder.Key()))
 			}
-			fields[string(decoder.Key())] = string(decoder.Value())
+
+			//attempt type conversions
+			value := string(decoder.Value())
+			if iValue, err := strconv.Atoi(value); err == nil {
+				fields[string(decoder.Key())] = iValue
+			} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
+				fields[string(decoder.Key())] = fValue
+			} else if bValue, err := strconv.ParseBool(value); err == nil {
+				fields[string(decoder.Key())] = bValue
+			} else {
+				fields[string(decoder.Key())] = value
+			}
 		}
 		m, err := metric.New(l.MetricName, tags, fields, l.Now())
 		if err != nil {
@@ -70,7 +82,20 @@ func (l *Parser) ParseLine(s string) (telegraf.Metric, error) {
 	}
 
 	for decoder.ScanKeyval() {
-		fields[string(decoder.Key())] = string(decoder.Value())
+		if string(decoder.Value()) == "" {
+			return nil, fmt.Errorf("value could not be found for key: %v", string(decoder.Key()))
+		}
+		//attempt type conversions
+		value := string(decoder.Value())
+		if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
+			fields[string(decoder.Key())] = iValue
+		} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
+			fields[string(decoder.Key())] = fValue
+		} else if bValue, err := strconv.ParseBool(value); err == nil {
+			fields[string(decoder.Key())] = bValue
+		} else {
+			fields[string(decoder.Key())] = value
+		}
 	}
 	m, err := metric.New(l.MetricName, tags, fields, l.Now())
 	if err != nil {

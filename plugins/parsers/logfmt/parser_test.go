@@ -99,12 +99,12 @@ func TestParseLine(t *testing.T) {
 			name:        "log parser fmt returns all fields",
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
-			s:           `ts=2018-07-24T19:43:35.207268Z lvl=error msg="Write failed" log_id=09R4e4Rl000`,
+			s:           `ts=2018-07-24T19:43:35.207268Z lvl=5 msg="Write failed" log_id=09R4e4Rl000`,
 			want: testutil.Metric{
 				Measurement: "testlog",
 				Fields: map[string]interface{}{
 					"ts":     "2018-07-24T19:43:35.207268Z",
-					"lvl":    "error",
+					"lvl":    int64(5),
 					"msg":    "Write failed",
 					"log_id": "09R4e4Rl000",
 				},
