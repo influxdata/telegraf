@@ -3,7 +3,9 @@ package csv
 import (
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/require"
 )
 
@@ -107,4 +109,33 @@ func TestDelimiter(t *testing.T) {
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
 	require.Equal(t, "3,4", metrics[0].Fields()["first"])
+}
+
+func TestValueConversion(t *testing.T) {
+	p := CSVParser{
+		Header:       false,
+		Delimiter:    ",",
+		DataColumns:  []string{"first", "second", "third", "fourth"},
+		FieldColumns: []string{"second", "first", "third", "fourth"},
+		MetricName:   "test_value",
+	}
+	testCSV := `3.3,4.0,true,hello`
+
+	expectedFields := map[string]interface{}{
+		"first":  3.3,
+		"second": 4.0,
+		"third":  true,
+		"fourth": "hello",
+	}
+
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+
+	expectedTags := make(map[string]string)
+	goodMetric, err1 := metric.New("test_value", expectedTags, expectedFields, time.Unix(0, 0))
+	returnedMetric, err2 := metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
+	require.NoError(t, err1)
+	require.NoError(t, err2)
+
+	require.Equal(t, goodMetric, returnedMetric)
 }
