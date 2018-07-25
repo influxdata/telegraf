@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/csv"
 	"fmt"
-	"log"
+	"strconv"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -87,7 +87,7 @@ func (p *CSVParser) ParseLine(line string) (telegraf.Metric, error) {
 }
 
 func (p *CSVParser) parseRecord(record []string) (telegraf.Metric, error) {
-	recordFields := make(map[string]interface{})
+	recordFields := make(map[string]string)
 	tags := make(map[string]string)
 	fields := make(map[string]interface{})
 	for i, fieldName := range p.DataColumns {
@@ -100,34 +100,34 @@ func (p *CSVParser) parseRecord(record []string) (telegraf.Metric, error) {
 	}
 
 	for _, tagName := range p.TagColumns {
-		if recordFields[tagName] == nil {
+		if recordFields[tagName] == "" {
 			return nil, fmt.Errorf("could not find field: %v", tagName)
 		}
-		tags[tagName] = recordFields[tagName].(string)
+		tags[tagName] = recordFields[tagName]
 	}
 
 	for _, fieldName := range p.FieldColumns {
-		if recordFields[fieldName] == nil {
+		if recordFields[fieldName] == "" {
 			return nil, fmt.Errorf("could not find field: %v", fieldName)
 		}
-		switch value := recordFields[fieldName].(type) {
-		case int:
+
+		//attempt type conversions
+		value := recordFields[fieldName]
+		if iValue, err := strconv.Atoi(value); err == nil {
+			fields[fieldName] = iValue
+		} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
+			fields[fieldName] = fValue
+		} else if bValue, err := strconv.ParseBool(value); err == nil {
+			fields[fieldName] = bValue
+		} else {
 			fields[fieldName] = value
-		case float64:
-			fields[fieldName] = value
-		case bool:
-			fields[fieldName] = value
-		case string:
-			fields[fieldName] = value
-		default:
-			log.Printf("E! [parsers.csv] Unrecognized type %T", value)
 		}
 	}
 
 	//will default to plugin name
 	measurementName := p.MetricName
-	if recordFields[p.NameColumn] != nil {
-		measurementName = recordFields[p.NameColumn].(string)
+	if recordFields[p.NameColumn] != "" {
+		measurementName = recordFields[p.NameColumn]
 	}
 
 	metricTime := time.Now()
@@ -138,7 +138,7 @@ func (p *CSVParser) parseRecord(record []string) (telegraf.Metric, error) {
 		}
 
 		var err error
-		metricTime, err = time.Parse(p.TimestampFormat, tStr.(string))
+		metricTime, err = time.Parse(p.TimestampFormat, tStr)
 		if err != nil {
 			return nil, err
 		}

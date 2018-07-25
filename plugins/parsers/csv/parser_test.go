@@ -2,6 +2,8 @@ package csv
 
 import (
 	"fmt"
+	"log"
+	"reflect"
 	"testing"
 	"time"
 
@@ -119,11 +121,11 @@ func TestValueConversion(t *testing.T) {
 		FieldColumns: []string{"second", "first", "third", "fourth"},
 		MetricName:   "test_value",
 	}
-	testCSV := `3.3,4.0,true,hello`
+	testCSV := `3.3,4,true,hello`
 
 	expectedFields := map[string]interface{}{
 		"first":  3.3,
-		"second": 4.0,
+		"second": 4,
 		"third":  true,
 		"fourth": "hello",
 	}
@@ -137,5 +139,10 @@ func TestValueConversion(t *testing.T) {
 	require.NoError(t, err1)
 	require.NoError(t, err2)
 
-	require.Equal(t, goodMetric, returnedMetric)
+	//deep equal fields
+	for k := range goodMetric.Fields() {
+		log.Printf("expected field: %v, %T", goodMetric.Fields()[k], goodMetric.Fields()[k])
+		log.Printf("returned field: %v, %T", returnedMetric.Fields()[k], returnedMetric.Fields()[k])
+	}
+	require.True(t, reflect.DeepEqual(goodMetric.Fields(), returnedMetric.Fields()))
 }
