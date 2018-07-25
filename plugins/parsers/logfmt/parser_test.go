@@ -1,7 +1,6 @@
 package logfmt
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
@@ -25,21 +24,21 @@ func TestParse(t *testing.T) {
 		measurement string
 		now         func() time.Time
 		bytes       []byte
-		want        []telegraf.Metric
+		want        []testutil.Metric
 		wantErr     bool
 	}{
 		{
 			name: "no bytes returns no metrics",
 			now:  func() time.Time { return time.Unix(0, 0) },
-			want: []telegraf.Metric{},
+			want: []testutil.Metric{},
 		},
 		{
 			name:        "logfmt parser returns all the fields",
 			bytes:       []byte(`ts=2018-07-24T19:43:40.275Z lvl=info msg="http request" method=POST`),
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
-			want: []telegraf.Metric{
-				MustMetric(t, &testutil.Metric{
+			want: []testutil.Metric{
+				testutil.Metric{
 					Measurement: "testlog",
 					Tags:        map[string]string{},
 					Fields: map[string]interface{}{
@@ -49,14 +48,14 @@ func TestParse(t *testing.T) {
 						"ts":     "2018-07-24T19:43:40.275Z",
 					},
 					Time: time.Unix(0, 0),
-				}),
+				},
 			},
 		},
 		{
 			name:    "poorly formatted logfmt returns error",
 			now:     func() time.Time { return time.Unix(0, 0) },
 			bytes:   []byte(`i am garbage data.`),
-			want:    []telegraf.Metric{},
+			want:    []testutil.Metric{},
 			wantErr: true,
 		},
 	}
@@ -71,8 +70,8 @@ func TestParse(t *testing.T) {
 				t.Errorf("Logfmt.Parse error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Logfmt.Parse = %v, want %v", got, tt.want)
+			for i, m := range got {
+				testutil.MustEqual(t, m, tt.want[i])
 			}
 		})
 	}
@@ -84,22 +83,24 @@ func TestParseLine(t *testing.T) {
 		s           string
 		measurement string
 		now         func() time.Time
-		want        telegraf.Metric
+		want        testutil.Metric
 		wantErr     bool
 	}{
 		{
 			name: "test something",
 			now:  func() time.Time { return time.Unix(0, 0) },
-			want: MustMetric(t, &testutil.Metric{
-				Time: time.Unix(0, 0),
-			}),
+			want: testutil.Metric{
+				Tags:   map[string]string{},
+				Fields: map[string]interface{}{},
+				Time:   time.Unix(0, 0),
+			},
 		},
 		{
 			name:        "log parser fmt returns all fields",
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			s:           `ts=2018-07-24T19:43:35.207268Z lvl=error msg="Write failed" log_id=09R4e4Rl000`,
-			want: MustMetric(t, &testutil.Metric{
+			want: testutil.Metric{
 				Measurement: "testlog",
 				Fields: map[string]interface{}{
 					"ts":     "2018-07-24T19:43:35.207268Z",
@@ -107,8 +108,9 @@ func TestParseLine(t *testing.T) {
 					"msg":    "Write failed",
 					"log_id": "09R4e4Rl000",
 				},
+				Tags: map[string]string{},
 				Time: time.Unix(0, 0),
-			}),
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -122,9 +124,7 @@ func TestParseLine(t *testing.T) {
 				t.Errorf("Logfmt.Parse error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Logfmt.Parse = %v, want %v", got, tt.want)
-			}
+			testutil.MustEqual(t, got, tt.want)
 		})
 	}
 }
