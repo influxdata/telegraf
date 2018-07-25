@@ -4,7 +4,7 @@
 
 [[constraint]]
   name = "github.com/aerospike/aerospike-client-go"
-  version = "^1.33.0"
+  version = "<=1.27.0"
 
 [[constraint]]
   name = "github.com/amir/raidman"
