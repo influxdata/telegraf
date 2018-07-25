@@ -30,6 +30,7 @@ func TestApcupsdGather(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping network dependent tests in short mode")
 	}
+
 	ln, err := net.Listen("tcp", ":0")
 	if err != nil {
 		t.Fatal(err)
@@ -49,7 +50,7 @@ func TestApcupsdGather(t *testing.T) {
 		in := make([]byte, 128)
 		n, err := conn.Read(in)
 		if err != nil {
-			t.Fatal(fmt.Sprintf("failed to read from connection: %v", err))
+			t.Fatal(fmt.Sprintf("failed to read from connection - %s", err.Error()))
 		}
 
 		status := []byte{0, 6, 's', 't', 'a', 't', 'u', 's'}
@@ -64,10 +65,9 @@ func TestApcupsdGather(t *testing.T) {
 
 		for _, o := range out {
 			if _, err := conn.Write(o); err != nil {
-				t.Fatal(fmt.Sprintf("failed to write to connection: %v", err))
+				t.Fatal(fmt.Sprintf("failed to write to connection - %s", err.Error()))
 			}
 		}
-
 	}()
 
 	var acc testutil.Accumulator
@@ -90,12 +90,12 @@ func TestApcupsdGather(t *testing.T) {
 
 	err = apc.Gather(&acc)
 	if err != nil {
-		fmt.Println(err)
+		t.Fatal(fmt.Sprintf("Failed gathering when shouldn't - %s", err.Error()))
 	}
 	wg.Wait()
 }
 
-// The following functionality is straight from acpusd tests.
+// The following functionality is straight from apcupsd tests.
 
 // kvBytes is a helper to generate length and key/value byte buffers.
 func kvBytes(kv string) ([]byte, []byte) {
