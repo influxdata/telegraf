@@ -1,6 +1,7 @@
 package fieldparser
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/influxdata/telegraf"
@@ -39,40 +40,37 @@ func (p *FieldParser) Description() string {
 }
 
 func (p *FieldParser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
-	newMetrics := make([]telegraf.Metric, 0)
-
-	//load input metrics into newMetrics
-	newMetrics = append(newMetrics, metrics...)
 	if p.Parser == nil {
 		var err error
 		p.Parser, err = parsers.NewParser(&p.config)
 		if err != nil {
 			log.Printf("E! [processors.fieldparser] could not create parser: %v", err)
-			return newMetrics
+			return metrics
 		}
 	}
 
 	for _, metric := range metrics {
 		for _, key := range p.parseFields {
 			value := metric.Fields()[key]
-			nMetrics, err := p.parseField(value.(string))
+			strVal := fmt.Sprintf("%v", value)
+			nMetrics, err := p.parseField(strVal)
 			if err != nil {
 				log.Printf("E! [processors.fieldparser] could not parse field %v: %v", key, err)
-				return newMetrics
+				return metrics
 			}
-			newMetrics = append(newMetrics, nMetrics...)
+			metrics = append(metrics, nMetrics...)
 		}
 		for _, key := range p.parseTags {
 			value := metric.Tags()[key]
 			nMetrics, err := p.parseField(value)
 			if err != nil {
 				log.Printf("E! [processors.fieldparser] could not parse field %v: %v", key, err)
-				return newMetrics
+				return metrics
 			}
-			newMetrics = append(newMetrics, nMetrics...)
+			metrics = append(metrics, nMetrics...)
 		}
 	}
-	return newMetrics
+	return metrics
 
 }
 
