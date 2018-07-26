@@ -10,6 +10,7 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Collectd](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#collectd)
 1. [Dropwizard](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#dropwizard)
 1. [Grok](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#grok)
+1. [Logfmt](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#logfmt)
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -762,3 +763,8 @@ HTTPD_ERRORLOG %{HTTPD20_ERRORLOG}|%{HTTPD24_ERRORLOG}
   ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
   grok_timezone = "Canada/Eastern"
 ```
+
+# Logfmt
+For extracting key-value pairs from log text in the form `<key>=<value>`.
+At the moment, the plugin will produce one metric per line and all keys 
+are added as fields. Values are left as strings (for now).
