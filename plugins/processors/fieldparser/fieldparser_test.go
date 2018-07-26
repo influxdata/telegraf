@@ -17,7 +17,7 @@ func compareMetrics(t *testing.T, metrics1 []telegraf.Metric, metrics2 []telegra
 		m2 := metrics2[i]
 		require.True(t, reflect.DeepEqual(m1.Tags(), m2.Tags()))
 		require.True(t, reflect.DeepEqual(m1.Fields(), m2.Fields()))
-		//require.True(t, m1.Name() == m2.Name())
+		require.True(t, m1.Name() == m2.Name())
 	}
 }
 
