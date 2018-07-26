@@ -28,7 +28,6 @@ deps:
 
 telegraf:
 	go generate ./...
-	#go build -i -o $(TELEGRAF) -ldflags "$(LDFLAGS)" ./cmd/telegraf/telegraf.go
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
 go-install:
