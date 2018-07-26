@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"regexp"
+	"sort"
 	"testing"
 	"time"
 
@@ -202,6 +203,30 @@ func TestParseConfig(t *testing.T) {
 	tab, err := toml.Parse([]byte(c))
 	require.NoError(t, err)
 	require.NotNil(t, tab)
+}
+
+func TestWorkerPool(t *testing.T) {
+	wp := NewWorkerPool(100)
+	wp.Run(func(p interface{}) interface{} {
+		return p.(int) * 2
+	}, 10)
+
+	n := 100000
+	wp.Fill(func(in chan interface{}) {
+		for i := 0; i < n; i++ {
+			in <- i
+		}
+	})
+	results := make([]int, n)
+	i := 0
+	wp.Drain(func(p interface{}) {
+		results[i] = p.(int)
+		i++
+	})
+	sort.Ints(results)
+	for i := 0; i < n; i++ {
+		require.Equal(t, results[i], i*2)
+	}
 }
 
 func TestAll(t *testing.T) {
