@@ -464,6 +464,9 @@ WHERE	(
 			AND counter_name IN (
 				'Log Flushes/sec',
 				'Log Flush Wait Time',
+				'Log Pool Requests/sec',                                                                                                           
+                                'Log Pool Cache Misses/sec',                                                                                                       
+                                'Log Pool Disk Reads/sec'    
 				'Lock Timeouts/sec',
 				'Number of Deadlocks/sec',
 				'Lock Waits/sec',
