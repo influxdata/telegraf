@@ -154,7 +154,7 @@ For example, if you had this configuration:
 
   ## gjson query path to specify a specific chunk of JSON to be parsed with 
   ## the above configuration. If not specified, the whole file will be parsed. 
-  ## gjson query paths are described here: 
+  ## gjson query paths are described here: https://github.com/tidwall/gjson#path-syntax
   # json_query = ""
 
   ## holds the name of the tag of timestamp

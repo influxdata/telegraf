@@ -62,13 +62,13 @@ type Config struct {
 	// MetricName applies to JSON & value. This will be the name of the measurement.
 	MetricName string
 
-	//holds a gjson path for json parser
+	// holds a gjson path for json parser
 	JSONQuery string
 
-	//key of time
+	// key of time
 	JSONTimeKey string
 
-	//time format
+	// time format
 	JSONTimeFormat string
 
 	// Authentication file for collectd
