@@ -156,6 +156,24 @@ func (c *Config) InputNames() []string {
 	return name
 }
 
+// Outputs returns a list of strings of the configured aggregators.
+func (c *Config) AggregatorNames() []string {
+	var name []string
+	for _, aggregator := range c.Aggregators {
+		name = append(name, aggregator.Name())
+	}
+	return name
+}
+
+// Outputs returns a list of strings of the configured processors.
+func (c *Config) ProcessorNames() []string {
+	var name []string
+	for _, processor := range c.Processors {
+		name = append(name, processor.Name)
+	}
+	return name
+}
+
 // Outputs returns a list of strings of the configured outputs.
 func (c *Config) OutputNames() []string {
 	var name []string
@@ -519,7 +537,13 @@ func (c *Config) LoadDirectory(path string) error {
 			log.Printf("W! Telegraf is not permitted to read %s", thispath)
 			return nil
 		}
+
 		if info.IsDir() {
+			if strings.HasPrefix(info.Name(), "..") {
+				// skip Kubernetes mounts, prevening loading the same config twice
+				return filepath.SkipDir
+			}
+
 			return nil
 		}
 		name := info.Name()
@@ -1403,6 +1427,18 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["graphite_tag_support"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.GraphiteTagSupport, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["json_timestamp_units"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -1422,6 +1458,7 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 	delete(tbl.Fields, "influx_max_line_bytes")
 	delete(tbl.Fields, "influx_sort_fields")
 	delete(tbl.Fields, "influx_uint_support")
+	delete(tbl.Fields, "graphite_tag_support")
 	delete(tbl.Fields, "data_format")
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")

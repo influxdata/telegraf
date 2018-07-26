@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 )
 
 type JolokiaAgent struct {
@@ -18,10 +19,7 @@ type JolokiaAgent struct {
 	Password        string
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
-	SSLCA              string `toml:"ssl_ca"`
-	SSLCert            string `toml:"ssl_cert"`
-	SSLKey             string `toml:"ssl_key"`
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	Metrics  []MetricConfig `toml:"metric"`
 	gatherer *Gatherer
@@ -40,10 +38,10 @@ func (ja *JolokiaAgent) SampleConfig() string {
   # password = ""
   # response_timeout = "5s"
 
-  ## Optional SSL config
-  # ssl_ca   = "/var/private/ca.pem"
-  # ssl_cert = "/var/private/client.pem"
-  # ssl_key  = "/var/private/client-key.pem"
+  ## Optional TLS config
+  # tls_ca   = "/var/private/ca.pem"
+  # tls_cert = "/var/private/client.pem"
+  # tls_key  = "/var/private/client-key.pem"
   # insecure_skip_verify = false
 
   ## Add metrics to read
@@ -109,12 +107,9 @@ func (ja *JolokiaAgent) createMetrics() []Metric {
 
 func (ja *JolokiaAgent) createClient(url string) (*Client, error) {
 	return NewClient(url, &ClientConfig{
-		Username:           ja.Username,
-		Password:           ja.Password,
-		ResponseTimeout:    ja.ResponseTimeout.Duration,
-		SSLCA:              ja.SSLCA,
-		SSLCert:            ja.SSLCert,
-		SSLKey:             ja.SSLKey,
-		InsecureSkipVerify: ja.InsecureSkipVerify,
+		Username:        ja.Username,
+		Password:        ja.Password,
+		ResponseTimeout: ja.ResponseTimeout.Duration,
+		ClientConfig:    ja.ClientConfig,
 	})
 }

@@ -177,6 +177,8 @@ func BuildMetricDatum(point telegraf.Metric) []*cloudwatch.MetricDatum {
 			value = float64(t)
 		case int64:
 			value = float64(t)
+		case uint64:
+			value = float64(t)
 		case float64:
 			value = t
 		case bool:

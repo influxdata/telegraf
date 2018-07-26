@@ -8,6 +8,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
 	"github.com/stretchr/testify/require"
@@ -104,8 +105,10 @@ func TestConnectHTTPConfig(t *testing.T) {
 		HTTPHeaders: map[string]string{
 			"x": "y",
 		},
-		ContentEncoding:    "gzip",
-		InsecureSkipVerify: true,
+		ContentEncoding: "gzip",
+		ClientConfig: tls.ClientConfig{
+			InsecureSkipVerify: true,
+		},
 
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			actual = config
@@ -137,15 +140,21 @@ func TestConnectHTTPConfig(t *testing.T) {
 }
 
 func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
+<<<<<<< HEAD
 	var createDatabaseCalled bool
 
+=======
+>>>>>>> 1.7.2
 	output := influxdb.InfluxDB{
 		URLs: []string{"http://localhost:8086"},
 
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			return &MockClient{
 				CreateDatabaseF: func(ctx context.Context) error {
+<<<<<<< HEAD
 					createDatabaseCalled = true
+=======
+>>>>>>> 1.7.2
 					return nil
 				},
 				WriteF: func(ctx context.Context, metrics []telegraf.Metric) error {
@@ -178,7 +187,10 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 	require.NoError(t, err)
 	metrics := []telegraf.Metric{m}
 
+<<<<<<< HEAD
 	createDatabaseCalled = false
+=======
+>>>>>>> 1.7.2
 	err = output.Write(metrics)
 	// We only have one URL, so we expect an error
 	require.Error(t, err)

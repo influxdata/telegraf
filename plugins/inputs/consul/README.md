@@ -27,12 +27,17 @@ report those stats already using StatsD protocol if needed.
   ## Data centre to query the health checks from
   # datacentre = ""
 
-  ## SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## If false, skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = true
+
+  ## Consul checks' tag splitting
+  # When tags are formatted like "key:value" with ":" as a delimiter then
+  # they will be splitted and reported as proper key:value in Telegraf
+  # tag_delimiter = ":"
 ```
 
 ### Metrics:

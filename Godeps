@@ -1,3 +1,4 @@
+code.cloudfoundry.org/clock e9dc86bbf0e5bbe6bf7ff5a6f71e048959b61f71
 collectd.org 2ce144541b8903101fb8f1483cc0497a68798122
 github.com/aerospike/aerospike-client-go 9701404f4c60a6ea256595d24bf318f721a7e8b8
 github.com/amir/raidman c74861fe6a7bb8ede0a010ce4485bdbb4fc4c985
@@ -26,13 +27,14 @@ github.com/golang/protobuf 8ee79997227bf9b34611aee7946ae64735e6fd93
 github.com/golang/snappy 7db9049039a047d955fe8c19b83c8ff5abd765c7
 github.com/go-ole/go-ole be49f7c07711fcb603cff39e1de7c67926dc0ba7
 github.com/google/go-cmp f94e52cad91c65a63acc1e75d4be223ea22e99bc
-github.com/gorilla/mux 392c28fe23e1c45ddba891b0320b3b5df220beea
+github.com/gorilla/mux 53c1911da2b537f792e7cafcb446b05ffe33b996
 github.com/go-redis/redis 73b70592cdaa9e6abdfcfbf97b4a90d80728c836
 github.com/go-sql-driver/mysql 2e00b5cd70399450106cec6431c2e2ce3cae5034
 github.com/hailocab/go-hostpool e80d13ce29ede4452c43dea11e79b9bc8a15b478
-github.com/hashicorp/consul 63d2fc68239b996096a1c55a0d4b400ea4c2583f
+github.com/hashicorp/consul 5174058f0d2bda63fa5198ab96c33d9a909c58ed
+github.com/influxdata/go-syslog eecd51df3ad85464a2bab9b7d3a45bc1e299059e
 github.com/influxdata/tail c43482518d410361b6c383d7aebce33d0471d7bc
-github.com/influxdata/toml 5d1d907f22ead1cd47adde17ceec5bda9cacaf8f
+github.com/influxdata/toml 2a2e3012f7cfbef64091cc79776311e65dfa211b
 github.com/influxdata/wlog 7c63b0a71ef8300adc255344d275e10e5c3a71ec
 github.com/fsnotify/fsnotify c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9
 github.com/jackc/pgx 63f58fd32edb5684b9e9f4cfaac847c6b42b3917
@@ -41,6 +43,7 @@ github.com/kardianos/osext c2c54e542fb797ad986b31721e1baedf214ca413
 github.com/kardianos/service 6d3a0ee7d3425d9d835debc51a0ca1ffa28f4893
 github.com/kballard/go-shellquote d8ec1a69a250a17bb0e419c386eac1f3711dc142
 github.com/matttproud/golang_protobuf_extensions c12348ce28de40eed0136aa2b644d0ee0650e56c
+github.com/Microsoft/ApplicationInsights-Go 3612f58550c1de70f1a110c78c830e55f29aa65d
 github.com/Microsoft/go-winio ce2922f643c8fd76b46cadc7f404a06282678b34
 github.com/miekg/dns 99f84ae56e75126dd77e5de4fae2ea034a468ca1
 github.com/mitchellh/mapstructure d0303fe809921458f417bcf828397a65db30a7e4
@@ -48,7 +51,6 @@ github.com/multiplay/go-ts3 07477f49b8dfa3ada231afc7b7b17617d42afe8e
 github.com/naoina/go-stringutil 6b638e95a32d0c1131db0e7fe83775cbea4a0d0b
 github.com/nats-io/gnatsd 393bbb7c031433e68707c8810fda0bfcfbe6ab9b
 github.com/nats-io/go-nats ea9585611a4ab58a205b9b125ebd74c389a6b898
-github.com/nats-io/nats ea9585611a4ab58a205b9b125ebd74c389a6b898
 github.com/nats-io/nuid 289cccf02c178dc782430d534e3c1f5b72af807f
 github.com/nsqio/go-nsq eee57a3ac4174c55924125bb15eeeda8cffb6e6f
 github.com/opencontainers/runc 89ab7f2ccc1e45ddf6485eaa802c35dcf321dfc8
@@ -83,9 +85,11 @@ github.com/wvanbergen/kazoo-go 968957352185472eacb69215fa3dbfcfdbac1096
 github.com/yuin/gopher-lua 66c871e454fcf10251c61bf8eff02d0978cae75a
 github.com/zensqlmonitor/go-mssqldb ffe5510c6fa5e15e6d983210ab501c815b56b363
 golang.org/x/crypto dc137beb6cce2043eb6b5f223ab8bf51c32459f4
-golang.org/x/net f2499483f923065a842d38eb4c7f1927e6fc6e6d
+golang.org/x/net a337091b0525af65de94df2eb7e98bd9962dcbe2
 golang.org/x/sys 739734461d1c916b6c72a63d7efda2b27edb369f
 golang.org/x/text 506f9d5c962f284575e88337e7d9296d27e729d3
+google.golang.org/genproto 11c7f9e547da6db876260ce49ea7536985904c9b
+google.golang.org/grpc de2209a968d48e8970546c8a710189f7461370f7
 gopkg.in/asn1-ber.v1 4e86f4367175e39f69d9358a5f17b4dda270378d
 gopkg.in/fatih/pool.v2 6e328e67893eb46323ad06f0e92cb9536babbabc
 gopkg.in/gorethink/gorethink.v3 7ab832f7b65573104a555d84a27992ae9ea1f659

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -174,7 +175,11 @@ func (c cassandraMetric) addTagsFields(out map[string]interface{}) {
 
 func (j *Cassandra) SampleConfig() string {
 	return `
-  # This is the context root used to compose the jolokia url
+  ## DEPRECATED: The cassandra plugin has been deprecated.  Please use the
+  ## jolokia2 plugin instead.
+  ##
+  ## see https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2
+
   context = "/jolokia/read"
   ## List of cassandra servers exposing jolokia read service
   servers = ["myuser:mypassword@10.10.10.1:8778","10.10.10.2:8778",":8778"]
@@ -256,6 +261,16 @@ func parseServerTokens(server string) map[string]string {
 		serverTokens["passwd"] = userTokens[1]
 	}
 	return serverTokens
+}
+
+func (c *Cassandra) Start(acc telegraf.Accumulator) error {
+	log.Println("W! DEPRECATED: The cassandra plugin has been deprecated. " +
+		"Please use the jolokia2 plugin instead. " +
+		"https://github.com/influxdata/telegraf/tree/master/plugins/inputs/jolokia2")
+	return nil
+}
+
+func (c *Cassandra) Stop() {
 }
 
 func (c *Cassandra) Gather(acc telegraf.Accumulator) error {

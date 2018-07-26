@@ -77,6 +77,7 @@ func (r *RunningInput) MakeMetric(
 
 	if r.trace && m != nil {
 		s := influx.NewSerializer()
+		s.SetFieldSortOrder(influx.SortFields)
 		octets, err := s.Serialize(m)
 		if err == nil {
 			fmt.Print("> " + string(octets))

@@ -102,6 +102,17 @@ func (s *Serializer) Serialize(m telegraf.Metric) ([]byte, error) {
 	return out, nil
 }
 
+func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+	var batch bytes.Buffer
+	for _, m := range metrics {
+		_, err := s.Write(&batch, m)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return batch.Bytes(), nil
+}
+
 func (s *Serializer) Write(w io.Writer, m telegraf.Metric) (int, error) {
 	err := s.writeMetric(w, m)
 	return s.bytesWritten, err

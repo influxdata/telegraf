@@ -95,7 +95,7 @@ supported_packages = {
     "freebsd": [ "tar" ]
 }
 
-next_version = '1.6.0'
+next_version = '1.7.0'
 
 ################
 #### Telegraf Functions
@@ -694,7 +694,7 @@ def main(args):
     orig_branch = get_current_branch()
 
     if args.platform not in supported_builds and args.platform != 'all':
-        logging.error("Invalid build platform: {}".format(target_platform))
+        logging.error("Invalid build platform: {}".format(args.platform))
         return 1
 
     build_output = {}

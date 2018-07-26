@@ -16,6 +16,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -29,15 +30,7 @@ type HTTPResponse struct {
 	Headers             map[string]string
 	FollowRedirects     bool
 	ResponseStringMatch string
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	compiledStringMatch *regexp.Regexp
 	client              *http.Client
@@ -74,11 +67,11 @@ var sampleConfig = `
   # response_string_match = "ok"
   # response_string_match = "\".*_status\".?:.?\"up\""
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## HTTP Request Headers (all values must be strings)
@@ -113,8 +106,7 @@ func getProxyFunc(http_proxy string) func(*http.Request) (*url.URL, error) {
 // CreateHttpClient creates an http client which will timeout at the specified
 // timeout period and can follow redirects if specified
 func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := internal.GetTLSConfig(
-		h.SSLCert, h.SSLKey, h.SSLCA, h.InsecureSkipVerify)
+	tlsCfg, err := h.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}
