@@ -103,6 +103,8 @@ type Config struct {
 	//csv configuration
 	CSVHeader          bool
 	CSVDelimiter       string
+	CSVComment         string
+	CSVTrimSpace       bool
 	CSVDataColumns     []string
 	CSVTagColumns      []string
 	CSVFieldColumns    []string
@@ -154,6 +156,8 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = newCSVParser(config.MetricName,
 			config.CSVHeader,
 			config.CSVDelimiter,
+			config.CSVComment,
+			config.CSVTrimSpace,
 			config.CSVDataColumns,
 			config.CSVTagColumns,
 			config.CSVFieldColumns,
@@ -170,6 +174,8 @@ func NewParser(config *Config) (Parser, error) {
 func newCSVParser(metricName string,
 	header bool,
 	delimiter string,
+	comment string,
+	trimSpace bool,
 	dataColumns []string,
 	tagColumns []string,
 	fieldColumns []string,
@@ -181,6 +187,8 @@ func newCSVParser(metricName string,
 		MetricName:      metricName,
 		Header:          header,
 		Delimiter:       delimiter,
+		Comment:         comment,
+		TrimSpace:       trimSpace,
 		DataColumns:     dataColumns,
 		TagColumns:      tagColumns,
 		FieldColumns:    fieldColumns,

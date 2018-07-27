@@ -1444,6 +1444,14 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["csv_comment"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVComment = str.Value
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["csv_name_column"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -1482,6 +1490,25 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 					log.Printf("E! parsing to bool: %v", err)
 				} else {
 					c.CSVHeader = val
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_trim_space"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.Boolean); ok {
+				//for config with no quotes
+				val, _ := strconv.ParseBool(str.Value)
+				c.CSVTrimSpace = val
+			} else {
+				//for config with quotes
+				strVal := kv.Value.(*ast.String)
+				val, err := strconv.ParseBool(strVal.Value)
+				if err != nil {
+					log.Printf("E! parsing to bool: %v", err)
+				} else {
+					c.CSVTrimSpace = val
 				}
 			}
 		}

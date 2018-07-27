@@ -800,6 +800,14 @@ or an error will be thrown.
   ## By default, the parser assumes a comma (",")
   # csv_delimiter = ","
 
+  ## The character reserved for marking a row as a comment row
+  ## Commented rows are skipped and not parsed
+  # csv_comment = ""
+
+  ## If set to true, the parser will remove leading whitespace from fields
+  ## By default, this is false
+  # csv_trim_space = false
+
   ## For assigning custom names to columns
   ## If this is specified, all columns must have a name
   ## ie there should be the same number of names listed

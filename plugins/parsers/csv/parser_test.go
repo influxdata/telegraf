@@ -140,9 +140,54 @@ func TestValueConversion(t *testing.T) {
 	require.NoError(t, err2)
 
 	//deep equal fields
-	for k := range goodMetric.Fields() {
-		log.Printf("expected field: %v, %T", goodMetric.Fields()[k], goodMetric.Fields()[k])
-		log.Printf("returned field: %v, %T", returnedMetric.Fields()[k], returnedMetric.Fields()[k])
-	}
 	require.True(t, reflect.DeepEqual(goodMetric.Fields(), returnedMetric.Fields()))
+}
+
+func TestSkipComment(t *testing.T) {
+	p := CSVParser{
+		Header:       false,
+		Comment:      "#",
+		DataColumns:  []string{"first", "second", "third", "fourth"},
+		FieldColumns: []string{"second", "first", "third", "fourth"},
+		MetricName:   "test_value",
+	}
+	testCSV := `#3.3,4,true,hello
+4,9.9,true,name_this`
+
+	expectedFields := map[string]interface{}{
+		"first":  int64(4),
+		"second": 9.9,
+		"third":  true,
+		"fourth": "name_this",
+	}
+
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	require.Equal(t, true, reflect.DeepEqual(expectedFields, metrics[0].Fields()))
+}
+
+func TestTrimSpace(t *testing.T) {
+	p := CSVParser{
+		Header:       false,
+		TrimSpace:    true,
+		DataColumns:  []string{"first", "second", "third", "fourth"},
+		FieldColumns: []string{"second", "first", "third", "fourth"},
+		MetricName:   "test_value",
+	}
+	testCSV := ` 3.3, 4,    true,hello`
+
+	expectedFields := map[string]interface{}{
+		"first":  3.3,
+		"second": int64(4),
+		"third":  true,
+		"fourth": "hello",
+	}
+
+	metrics, err := p.Parse([]byte(testCSV))
+	for k := range metrics[0].Fields() {
+		log.Printf("want: %v, %T", expectedFields[k], expectedFields[k])
+		log.Printf("got: %v, %T", metrics[0].Fields()[k], metrics[0].Fields()[k])
+	}
+	require.NoError(t, err)
+	require.Equal(t, true, reflect.DeepEqual(expectedFields, metrics[0].Fields()))
 }

@@ -15,6 +15,8 @@ type CSVParser struct {
 	MetricName      string
 	Header          bool
 	Delimiter       string
+	Comment         string
+	TrimSpace       bool
 	DataColumns     []string
 	TagColumns      []string
 	FieldColumns    []string
@@ -34,6 +36,14 @@ func (p *CSVParser) compile(r *bytes.Reader) (*csv.Reader, error) {
 		}
 		csvReader.Comma = runeStr[0]
 	}
+	if p.Comment != "" {
+		runeStr := []rune(p.Comment)
+		if len(runeStr) > 1 {
+			return csvReader, fmt.Errorf("comment must be a single character, got: %s", p.Comment)
+		}
+		csvReader.Comment = runeStr[0]
+	}
+	csvReader.TrimLeadingSpace = p.TrimSpace
 	return csvReader, nil
 }
 
