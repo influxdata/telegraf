@@ -3,7 +3,6 @@ package syslog
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -245,8 +244,6 @@ func testRFC5426(t *testing.T, protocol string, address string, bestEffort bool)
 					if err.Err.Error() == "write: message too long" {
 						return
 					}
-
-					log.Printf("got err: %v", err.Err.Error())
 				}
 			}
 
@@ -257,8 +254,6 @@ func testRFC5426(t *testing.T, protocol string, address string, bestEffort bool)
 			if tc.wantBestEffort != nil && bestEffort || tc.wantStrict != nil && !bestEffort {
 				acc.Wait(1) // RFC5426 mandates a syslog message per UDP packet
 			}
-
-			log.Printf("got metric: %v", acc.Metrics)
 
 			// Compare
 			var got *testutil.Metric
