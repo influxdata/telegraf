@@ -11,9 +11,8 @@ import (
 )
 
 type Reader struct {
-	Files         []string `toml:"files"`
-	FromBeginning bool
-	parser        parsers.Parser
+	Files  []string `toml:"files"`
+	parser parsers.Parser
 
 	filenames []string
 }
@@ -23,7 +22,7 @@ const sampleConfig = `## Files to parse each interval.
 ## ** as a "super asterisk". ie:
 ##   /var/log/**.log     -> recursively find all .log files in /var/log
 ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
-##   /var/log/apache.log -> only tail the apache log file
+##   /var/log/apache.log -> only read the apache log file
 files = ["/var/log/apache/access.log"]
 
 ## The dataformat to be read from files
@@ -39,7 +38,7 @@ func (r *Reader) SampleConfig() string {
 }
 
 func (r *Reader) Description() string {
-	return "reload and gather from file[s] on telegraf's interval"
+	return "Reload and gather from file[s] on telegraf's interval."
 }
 
 func (r *Reader) Gather(acc telegraf.Accumulator) error {

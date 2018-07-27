@@ -13,7 +13,7 @@ import (
 func TestRefreshFilePaths(t *testing.T) {
 	testDir := getPluginDir()
 	r := Reader{
-		Files: []string{testDir + "/reader/testfiles/**.log"},
+		Files: []string{testDir + "/reader/dev/testfiles/**.log"},
 	}
 
 	r.refreshFilePaths()
@@ -23,7 +23,7 @@ func TestJSONParserCompile(t *testing.T) {
 	testDir := getPluginDir()
 	var acc testutil.Accumulator
 	r := Reader{
-		Files: []string{testDir + "/reader/testfiles/json_a.log"},
+		Files: []string{testDir + "/reader/dev/testfiles/json_a.log"},
 	}
 	parserConfig := parsers.Config{
 		DataFormat: "json",
@@ -42,7 +42,7 @@ func TestGrokParser(t *testing.T) {
 	testDir := getPluginDir()
 	var acc testutil.Accumulator
 	r := Reader{
-		Files: []string{testDir + "/reader/testfiles/grok_a.log"},
+		Files: []string{testDir + "/reader/dev/testfiles/grok_a.log"},
 	}
 
 	parserConfig := parsers.Config{

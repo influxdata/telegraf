@@ -158,7 +158,7 @@ func (p *Parser) Compile() error {
 			p.CustomPatterns += "\n" + name + " " + "%{" + splitPattern[0] + "}" + "\n"
 			p.NamedPatterns = append(p.NamedPatterns, "%{"+name+"}")
 		} else {
-			if strings.Count(pattern, ":measurement}") > 0 {
+			if strings.Contains(pattern, ":measurement}") {
 				return fmt.Errorf("pattern with measurement modifier must have own 'pattern' field")
 			}
 			if pattern == "" {
@@ -239,7 +239,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	timestamp := time.Now()
 	for k, v := range values {
 		if (k == "" || v == "") && p.typeMap[patternName][k] != "measurement" {
-			log.Printf("skipping key: %v", k)
+			log.Printf("D! skipping key: %v", k)
 			continue
 		}
 
@@ -266,7 +266,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		switch t {
 		case MEASUREMENT:
 			p.Measurement = v
-			log.Printf("measurement")
 		case INT:
 			iv, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
