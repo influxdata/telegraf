@@ -450,6 +450,12 @@ WHERE	(
 			'Buffer cache hit ratio',
 			'Buffer cache hit ratio base',
 			'Backup/Restore Throughput/sec',
+			'Connection_Memory_(KB)',
+                        'Database_Cache_Memory_(KB)',
+                        'Lock_Memory_(KB)',
+                        'Optimizer_Memory_(KB)',
+                        'SQL_Cache_Memory_(KB)',
+                        'Log_Pool_Memory_(KB)',
 			'Total Server Memory (KB)',
 			'Target Server Memory (KB)'
 		)
@@ -458,6 +464,9 @@ WHERE	(
 			AND counter_name IN (
 				'Log Flushes/sec',
 				'Log Flush Wait Time',
+				'Log Pool Requests/sec',                                                                                                           
+                                'Log Pool Cache Misses/sec',                                                                                                       
+                                'Log Pool Disk Reads/sec'    
 				'Lock Timeouts/sec',
 				'Number of Deadlocks/sec',
 				'Lock Waits/sec',
