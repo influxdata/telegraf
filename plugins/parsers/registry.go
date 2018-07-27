@@ -117,7 +117,7 @@ func NewParser(config *Config) (Parser, error) {
 	var parser Parser
 	switch config.DataFormat {
 	case "json":
-		parser, err = newJSONParser(config.MetricName,
+		parser = newJSONParser(config.MetricName,
 			config.TagKeys,
 			config.StringFields,
 			config.JSONQuery,
@@ -169,7 +169,7 @@ func newJSONParser(
 	timeKey string,
 	timeFormat string,
 	defaultTags map[string]string,
-) (Parser, error) {
+) Parser {
 	parser := &json.JSONParser{
 		MetricName:     metricName,
 		TagKeys:        tagKeys,
@@ -179,7 +179,7 @@ func newJSONParser(
 		JSONTimeFormat: timeFormat,
 		DefaultTags:    defaultTags,
 	}
-	return parser, nil
+	return parser
 }
 
 //Deprecated: Use NewParser to get a JSONParser object

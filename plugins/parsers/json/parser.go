@@ -177,7 +177,7 @@ func (p *JSONParser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(metrics) < 1 {
-		return nil, fmt.Errorf("can not parse the line: %s, for data format: influx ", line)
+		return nil, fmt.Errorf("can not parse the line: %s, for data format: json ", line)
 	}
 
 	return metrics[0], nil
