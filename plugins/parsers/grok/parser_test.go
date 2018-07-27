@@ -1,7 +1,6 @@
 package grok
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -1032,6 +1031,4 @@ func TestMeasurementErrors(t *testing.T) {
 	}
 	err := p.Compile()
 	require.Error(t, err)
-	str := strings.Trim("%{pattern}:name:measurement", "%{")
-	str = strings.Trim(str, "}")
 }
