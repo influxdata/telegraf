@@ -192,7 +192,6 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 			if instance == "_Total" && origInstance == "*" && !includeTotal {
 				continue
 			}
-
 			newItem := &counter{counterPath, objectName, counterName, instance, measurement,
 				includeTotal, counterHandle}
 			m.counters = append(m.counters, newItem)
@@ -252,8 +251,10 @@ func (m *Win_PerfCounters) ParseConfig() error {
 func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// Parse the config once
 	var err error
-
+	start := time.Now()
+	log.Printf("D! Gather started")
 	if m.lastRefreshed.IsZero() || (m.CountersRefreshInterval.Duration.Nanoseconds() > 0 && m.lastRefreshed.Add(m.CountersRefreshInterval.Duration).Before(time.Now())) {
+		log.Printf("D! Refreshing counters")
 		if m.counters != nil {
 			m.counters = m.counters[:0]
 		}
@@ -292,6 +293,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 	// For iterate over the known metrics and get the samples.
 	for _, metric := range m.counters {
 		// collect
+		log.Printf("D! Gathering values from: %s", metric.counterPath)
 		if m.UseWildcardsExpansion {
 			value, err := m.query.GetFormattedCounterValueDouble(metric.counterHandle)
 			if err == nil {
@@ -347,7 +349,8 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		}
 		acc.AddFields(instance.name, fields, tags, timestamp)
 	}
-
+	took := time.Now().Sub(start)
+	log.Printf("D! Gather finished, took %.3fms", float64(took.Nanoseconds())/1e6)
 	return nil
 }
 
@@ -356,17 +359,21 @@ func addCounterMeasurement(metric *counter, instanceName string, value float64, 
 	if measurement == "" {
 		measurement = "win_perf_counters"
 	}
+
 	var instance = instanceGrouping{measurement, instanceName, metric.objectName}
 	if collectFields[instance] == nil {
 		collectFields[instance] = make(map[string]interface{})
 	}
-	collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value)
+	counterName := sanitizedChars.Replace(metric.counter)
+	log.Printf("D! Got counter \\%s(%s)\\%s : %.2f, for measurement %s", metric.objectName, instanceName, counterName, value, measurement)
+	collectFields[instance][counterName] = float32(value)
 }
 
 func isKnownCounterDataError(err error) bool {
 	if pdhErr, ok := err.(*PdhError); ok && (pdhErr.ErrorCode == PDH_INVALID_DATA ||
 		pdhErr.ErrorCode == PDH_CALC_NEGATIVE_VALUE ||
 		pdhErr.ErrorCode == PDH_CSTATUS_INVALID_DATA) {
+		log.Printf("D! Got expected error: %x", pdhErr.ErrorCode)
 		return true
 	}
 	return false
