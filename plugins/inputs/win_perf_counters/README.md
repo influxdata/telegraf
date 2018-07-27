@@ -49,7 +49,7 @@ Example:
 #### CountersRefreshInterval
 
 Configured counters are matched against available counters at the interval
-specified by the `CountersRefreshInterval` parameter. The default value is `1m` (1 minute).
+specified by the `CountersRefreshInterval` parameter. The default value is `0s` (disabled).
 
 If wildcards are used in instance or counter names, they are expanded at this point, if the `UseWildcardsExpansion` param is set to `true`.
 
@@ -389,6 +389,20 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 If you are getting an error about an invalid counter, use the `typeperf` command to check the counter path
 on the command line.
 E.g. `typeperf "Process(chrome*)\% Processor Time"`
+
+Also, use `typeperf` if you suspect Telegraf is emitting wrong values. Typeperf uses the same mechanism for reading performance counter values as Telegraf.
+You can use [the tail plugin](../tail/) to read output from `typeperf` and send it to InfluxDb for easy comparision:
+1. Redirect typeperf 's output to file: e.g. `typeperf "\Processor(_Total)\% Processor Time" >c:\tmp\typeperf_cpu.log`
+1. Setup the Telegraf's tail plugin to read typeperf output:
+```toml
+[[inputs.tail]]
+  files = ['c:\tmp\typeperf_cpu.log']
+  from_beginning = true
+  data_format = "grok"
+  grok_patterns = ['"%{DATESTAMP:timestamp:ts-"01/02/2006 15:04:05.000"}","%{NUMBER:value:float}"']
+  name_override = "typeperf_cpu"
+  grok_timezone = "Local"
+```
 
 If no metrics are emitted even with the default config, you may need to repair
 your performance counters.
