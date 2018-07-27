@@ -661,7 +661,7 @@ For more information about the dropwizard json format see
   #   tag2 = "tags.tag2"
 ```
 
-# Grok
+#### Grok
 Parse logstash-style "grok" patterns. Patterns can be added to patterns, or custom patterns read from custom_pattern_files.
 
 # View logstash grok pattern docs here:
