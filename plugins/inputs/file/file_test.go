@@ -14,7 +14,7 @@ import (
 func TestRefreshFilePaths(t *testing.T) {
 	wd, err := os.Getwd()
 	r := File{
-		Files: []string{filepath.Join(wd, "testfiles/**.log")},
+		Files: []string{filepath.Join(wd, "dev/testfiles/**.log")},
 	}
 
 	err = r.refreshFilePaths()
@@ -25,7 +25,7 @@ func TestJSONParserCompile(t *testing.T) {
 	var acc testutil.Accumulator
 	wd, _ := os.Getwd()
 	r := File{
-		Files: []string{filepath.Join(wd, "testfiles/json_a.log")},
+		Files: []string{filepath.Join(wd, "dev/testfiles/json_a.log")},
 	}
 	parserConfig := parsers.Config{
 		DataFormat: "json",
@@ -44,7 +44,7 @@ func TestGrokParser(t *testing.T) {
 	wd, _ := os.Getwd()
 	var acc testutil.Accumulator
 	r := File{
-		Files: []string{filepath.Join(wd, "testfiles/grok_a.log")},
+		Files: []string{filepath.Join(wd, "dev/testfiles/grok_a.log")},
 	}
 
 	parserConfig := parsers.Config{
