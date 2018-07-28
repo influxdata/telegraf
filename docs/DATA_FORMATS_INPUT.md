@@ -2,14 +2,14 @@
 
 Telegraf is able to parse the following input data formats into metrics:
 
-1. [InfluxDB Line Protocol](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#influx)
-1. [JSON](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#json)
-1. [Graphite](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite)
-1. [Value](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#value), ie: 45 or "booyah"
-1. [Nagios](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#nagios) (exec input only)
-1. [Collectd](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#collectd)
-1. [Dropwizard](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#dropwizard)
-1. [Grok](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#grok)
+1. [InfluxDB Line Protocol](#influx)
+1. [JSON](#json)
+1. [Graphite](#graphite)
+1. [Value](#value), ie: 45 or "booyah"
+1. [Nagios](#nagios) (exec input only)
+1. [Collectd](#collectd)
+1. [Dropwizard](#dropwizard)
+1. [Grok](#grok)
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -481,9 +481,9 @@ You can also change the path to the typesdb or add additional typesdb using
   ## Path of to TypesDB specifications
   collectd_typesdb = ["/usr/share/collectd/types.db"]
 
-  # Multi-value plugins can be handled two ways.  
+  # Multi-value plugins can be handled two ways.
   # "split" will parse and store the multi-value plugin data into separate measurements
-  # "join" will parse and store the multi-value plugin as a single multi-value measurement.  
+  # "join" will parse and store the multi-value plugin as a single multi-value measurement.
   # "split" is the default behavior for backward compatability with previous versions of influxdb.
   collectd_parse_multivalue = "split"
 ```
@@ -566,7 +566,7 @@ measurement,metric_type=histogram count=1,max=1.0,mean=1.0,min=1.0,p50=1.0,p75=1
 measurement,metric_type=timer count=1,max=1.0,mean=1.0,min=1.0,p50=1.0,p75=1.0,p95=1.0,p98=1.0,p99=1.0,p999=1.0,stddev=1.0,m15_rate=1.0,m1_rate=1.0,m5_rate=1.0,mean_rate=1.0
 ```
 
-You may also parse a dropwizard registry from any JSON document which contains a dropwizard registry in some inner field. 
+You may also parse a dropwizard registry from any JSON document which contains a dropwizard registry in some inner field.
 Eg. to parse the following JSON document:
 
 ```json
@@ -577,7 +577,7 @@ Eg. to parse the following JSON document:
 		"tag2" : "yellow"
 	},
 	"metrics" : {
-		"counters" : 	{ 
+		"counters" : 	{
 			"measurement" : {
 				"count" : 1
 			}
@@ -641,16 +641,16 @@ For more information about the dropwizard json format see
   ## By providing an empty template array, templating is disabled and measurements are parsed as influxdb line protocol keys (measurement<,tag_set>)
   templates = []
 
-  ## You may use an appropriate [gjson path](https://github.com/tidwall/gjson#path-syntax) 
+  ## You may use an appropriate [gjson path](https://github.com/tidwall/gjson#path-syntax)
   ## to locate the metric registry within the JSON document
   # dropwizard_metric_registry_path = "metrics"
-  
-  ## You may use an appropriate [gjson path](https://github.com/tidwall/gjson#path-syntax) 
+
+  ## You may use an appropriate [gjson path](https://github.com/tidwall/gjson#path-syntax)
   ## to locate the default time of the measurements within the JSON document
   # dropwizard_time_path = "time"
   # dropwizard_time_format = "2006-01-02T15:04:05Z07:00"
-  
-  ## You may use an appropriate [gjson path](https://github.com/tidwall/gjson#path-syntax) 
+
+  ## You may use an appropriate [gjson path](https://github.com/tidwall/gjson#path-syntax)
   ## to locate the tags map within the JSON document
   # dropwizard_tags_path = "tags"
 
@@ -660,79 +660,32 @@ For more information about the dropwizard json format see
   #   tag2 = "tags.tag2"
 ```
 
-#### Grok
-Parse logstash-style "grok" patterns. Patterns can be added to patterns, or custom patterns read from custom_pattern_files.
+# Grok
 
-# View logstash grok pattern docs here:
-#   https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
-# All default logstash patterns are supported, these can be viewed here:
-#   https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns
+The grok data format parses line delimited data using a regular expression like
+language.
 
-# Available modifiers:
-#   string   (default if nothing is specified)
-#   int
-#   float
-#   duration (ie, 5.23ms gets converted to int nanoseconds)
-#   tag      (converts the field into a tag)
-#   drop     (drops the field completely)
-# Timestamp modifiers:
-#   ts-ansic         ("Mon Jan _2 15:04:05 2006")
-#   ts-unix          ("Mon Jan _2 15:04:05 MST 2006")
-#   ts-ruby          ("Mon Jan 02 15:04:05 -0700 2006")
-#   ts-rfc822        ("02 Jan 06 15:04 MST")
-#   ts-rfc822z       ("02 Jan 06 15:04 -0700")
-#   ts-rfc850        ("Monday, 02-Jan-06 15:04:05 MST")
-#   ts-rfc1123       ("Mon, 02 Jan 2006 15:04:05 MST")
-#   ts-rfc1123z      ("Mon, 02 Jan 2006 15:04:05 -0700")
-#   ts-rfc3339       ("2006-01-02T15:04:05Z07:00")
-#   ts-rfc3339nano   ("2006-01-02T15:04:05.999999999Z07:00")
-#   ts-httpd         ("02/Jan/2006:15:04:05 -0700")
-#   ts-epoch         (seconds since unix epoch)
-#   ts-epochnano     (nanoseconds since unix epoch)
-#   ts-"CUSTOM"
-# CUSTOM time layouts must be within quotes and be the representation of the
-# "reference time", which is Mon Jan 2 15:04:05 -0700 MST 2006
-# See https://golang.org/pkg/time/#Parse for more details.
-
-# Example log file pattern, example log looks like this:
-#   [04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs
-# Breakdown of the DURATION pattern below:
-#   NUMBER  is a builtin logstash grok pattern matching float & int numbers.
-#   [nuµm]? is a regex specifying 0 or 1 of the characters within brackets.
-#   s       is also regex, this pattern must end in "s".
-# so DURATION will match something like '5.324ms' or '6.1µs' or '10s'
-DURATION %{NUMBER}[nuµm]?s
-RESPONSE_CODE %{NUMBER:response_code:tag}
-RESPONSE_TIME %{DURATION:response_time_ns:duration}
-EXAMPLE_LOG \[%{HTTPDATE:ts:ts-httpd}\] %{NUMBER:myfloat:float} %{RESPONSE_CODE} %{IPORHOST:clientip} %{RESPONSE_TIME}
-
-# Wider-ranging username matching vs. logstash built-in %{USER}
-NGUSERNAME [a-zA-Z0-9\.\@\-\+_%]+
-NGUSER %{NGUSERNAME}
-# Wider-ranging client IP matching
-CLIENT (?:%{IPORHOST}|%{HOSTPORT}|::1)
-
-##
-## COMMON LOG PATTERNS
-##
-
-# apache & nginx logs, this is also known as the "common log format"
-#   see https://en.wikipedia.org/wiki/Common_Log_Format
-COMMON_LOG_FORMAT %{CLIENT:client_ip} %{NOTSPACE:ident} %{NOTSPACE:auth} \[%{HTTPDATE:ts:ts-httpd}\] "(?:%{WORD:verb:tag} %{NOTSPACE:request}(?: HTTP/%{NUMBER:http_version:float})?|%{DATA})" %{NUMBER:resp_code:tag} (?:%{NUMBER:resp_bytes:int}|-)
-
-# Combined log format is the same as the common log format but with the addition
-# of two quoted strings at the end for "referrer" and "agent"
-#   See Examples at http://httpd.apache.org/docs/current/mod/mod_log_config.html
-COMBINED_LOG_FORMAT %{COMMON_LOG_FORMAT} %{QS:referrer} %{QS:agent}
-
-# HTTPD log formats
-HTTPD20_ERRORLOG \[%{HTTPDERROR_DATE:timestamp}\] \[%{LOGLEVEL:loglevel:tag}\] (?:\[client %{IPORHOST:clientip}\] ){0,1}%{GREEDYDATA:errormsg}
-HTTPD24_ERRORLOG \[%{HTTPDERROR_DATE:timestamp}\] \[%{WORD:module}:%{LOGLEVEL:loglevel:tag}\] \[pid %{POSINT:pid:int}:tid %{NUMBER:tid:int}\]( \(%{POSINT:proxy_errorcode:int}\)%{DATA:proxy_errormessage}:)?( \[client %{IPORHOST:client}:%{POSINT:clientport}\])? %{DATA:errorcode}: %{GREEDYDATA:message}
-HTTPD_ERRORLOG %{HTTPD20_ERRORLOG}|%{HTTPD24_ERRORLOG}
+The best way to get acquainted with grok patterns is to read the logstash docs,
+which are available here:
+  https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
 
 #### Grok Configuration:
 ```toml
 [[inputs.reader]]
+  ## Files to parse each interval.
+  ## These accept standard unix glob matching rules, but with the addition of
+  ## ** as a "super asterisk". ie:
+  ##   /var/log/**.log     -> recursively find all .log files in /var/log
+  ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
+  ##   /var/log/apache.log -> only tail the apache log file
+  files = ["/var/log/apache/access.log"]
+
+  ## The dataformat to be read from files
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "grok"
+
   ## This is a list of patterns to check the given log file(s) for.
   ## Note that adding patterns here increases processing time. The most
   ## efficient configuration is to have one pattern per logparser.
@@ -740,9 +693,6 @@ HTTPD_ERRORLOG %{HTTPD20_ERRORLOG}|%{HTTPD24_ERRORLOG}
   ##   %{COMMON_LOG_FORMAT}   (plain apache & nginx access logs)
   ##   %{COMBINED_LOG_FORMAT} (access logs + referrer & agent)
   grok_patterns = ["%{COMBINED_LOG_FORMAT}"]
-
-  ## Name of the outputted measurement name.
-  grok_name_override = "apache_access_log"
 
   ## Full path(s) to custom pattern files.
   grok_custom_pattern_files = []
@@ -762,3 +712,178 @@ HTTPD_ERRORLOG %{HTTPD20_ERRORLOG}|%{HTTPD24_ERRORLOG}
   ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
   grok_timezone = "Canada/Eastern"
 ```
+
+The Telegraf grok parser uses a slightly modified version of logstash "grok"
+patterns, with the format
+
+```
+%{<capture_syntax>[:<semantic_name>][:<modifier>]}
+```
+
+The `capture_syntax` defines the grok pattern that's used to parse the input
+line and the `semantic_name` is used to name the field or tag.  The extension
+`modifier` controls the data type that the parsed item is converted to or
+other special handling.
+
+By default all named captures are converted into string fields.
+Timestamp modifiers can be used to convert captures to the timestamp of the
+parsed metric.  If no timestamp is parsed the metric will be created using the
+current time.
+
+You must capture at least one field per line.
+
+- Available modifiers:
+  - string   (default if nothing is specified)
+  - int
+  - float
+  - duration (ie, 5.23ms gets converted to int nanoseconds)
+  - tag      (converts the field into a tag)
+  - drop     (drops the field completely)
+- Timestamp modifiers:
+  - ts               (This will auto-learn the timestamp format)
+  - ts-ansic         ("Mon Jan _2 15:04:05 2006")
+  - ts-unix          ("Mon Jan _2 15:04:05 MST 2006")
+  - ts-ruby          ("Mon Jan 02 15:04:05 -0700 2006")
+  - ts-rfc822        ("02 Jan 06 15:04 MST")
+  - ts-rfc822z       ("02 Jan 06 15:04 -0700")
+  - ts-rfc850        ("Monday, 02-Jan-06 15:04:05 MST")
+  - ts-rfc1123       ("Mon, 02 Jan 2006 15:04:05 MST")
+  - ts-rfc1123z      ("Mon, 02 Jan 2006 15:04:05 -0700")
+  - ts-rfc3339       ("2006-01-02T15:04:05Z07:00")
+  - ts-rfc3339nano   ("2006-01-02T15:04:05.999999999Z07:00")
+  - ts-httpd         ("02/Jan/2006:15:04:05 -0700")
+  - ts-epoch         (seconds since unix epoch, may contain decimal)
+  - ts-epochnano     (nanoseconds since unix epoch)
+  - ts-syslog        ("Jan 02 15:04:05", parsed time is set to the current year)
+  - ts-"CUSTOM"
+
+CUSTOM time layouts must be within quotes and be the representation of the
+"reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`.  
+To match a comma decimal point you can use a period.  For example `%{TIMESTAMP:timestamp:ts-"2006-01-02 15:04:05.000"}` can be used to match `"2018-01-02 15:04:05,000"`
+To match a comma decimal point you can use a period in the pattern string.
+See https://golang.org/pkg/time/#Parse for more details.
+
+Telegraf has many of its own [built-in patterns](./grok/patterns/influx-patterns),
+as well as support for most of
+[logstash's builtin patterns](https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns).
+_Golang regular expressions do not support lookahead or lookbehind.
+logstash patterns that depend on these are not supported._
+
+If you need help building patterns to match your logs,
+you will find the https://grokdebug.herokuapp.com application quite useful!
+
+#### Timestamp Examples
+
+This example input and config parses a file using a custom timestamp conversion:
+
+```
+2017-02-21 13:10:34 value=42
+```
+
+```toml
+[[inputs.logparser]]
+  [inputs.logparser.grok]
+    patterns = ['%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02 15:04:05"} value=%{NUMBER:value:int}']
+```
+
+This example input and config parses a file using a timestamp in unix time:
+
+```
+1466004605 value=42
+1466004605.123456789 value=42
+```
+
+```toml
+[[inputs.logparser]]
+  [inputs.logparser.grok]
+    patterns = ['%{NUMBER:timestamp:ts-epoch} value=%{NUMBER:value:int}']
+```
+
+This example parses a file using a built-in conversion and a custom pattern:
+
+```
+Wed Apr 12 13:10:34 PST 2017 value=42
+```
+
+```toml
+[[inputs.logparser]]
+  [inputs.logparser.grok]
+	patterns = ["%{TS_UNIX:timestamp:ts-unix} value=%{NUMBER:value:int}"]
+    custom_patterns = '''
+      TS_UNIX %{DAY} %{MONTH} %{MONTHDAY} %{HOUR}:%{MINUTE}:%{SECOND} %{TZ} %{YEAR}
+    '''
+```
+
+For cases where the timestamp itself is without offset, the `timezone` config var is available
+to denote an offset. By default (with `timezone` either omit, blank or set to `"UTC"`), the times
+are processed as if in the UTC timezone. If specified as `timezone = "Local"`, the timestamp
+will be processed based on the current machine timezone configuration. Lastly, if using a
+timezone from the list of Unix [timezones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), the logparser grok will attempt to offset
+the timestamp accordingly. See test cases for more detailed examples.
+
+#### TOML Escaping
+
+When saving patterns to the configuration file, keep in mind the different TOML
+[string](https://github.com/toml-lang/toml#string) types and the escaping
+rules for each.  These escaping rules must be applied in addition to the
+escaping required by the grok syntax.  Using the Multi-line line literal
+syntax with `'''` may be useful.
+
+The following config examples will parse this input file:
+
+```
+|42|\uD83D\uDC2F|'telegraf'|
+```
+
+Since `|` is a special character in the grok language, we must escape it to
+get a literal `|`.  With a basic TOML string, special characters such as
+backslash must be escaped, requiring us to escape the backslash a second time.
+
+```toml
+[[inputs.logparser]]
+  [inputs.logparser.grok]
+    patterns = ["\\|%{NUMBER:value:int}\\|%{UNICODE_ESCAPE:escape}\\|'%{WORD:name}'\\|"]
+    custom_patterns = "UNICODE_ESCAPE (?:\\\\u[0-9A-F]{4})+"
+```
+
+We cannot use a literal TOML string for the pattern, because we cannot match a
+`'` within it.  However, it works well for the custom pattern.
+```toml
+[[inputs.logparser]]
+  [inputs.logparser.grok]
+    patterns = ["\\|%{NUMBER:value:int}\\|%{UNICODE_ESCAPE:escape}\\|'%{WORD:name}'\\|"]
+    custom_patterns = 'UNICODE_ESCAPE (?:\\u[0-9A-F]{4})+'
+```
+
+A multi-line literal string allows us to encode the pattern:
+```toml
+[[inputs.logparser]]
+  [inputs.logparser.grok]
+    patterns = ['''
+	  \|%{NUMBER:value:int}\|%{UNICODE_ESCAPE:escape}\|'%{WORD:name}'\|
+	''']
+    custom_patterns = 'UNICODE_ESCAPE (?:\\u[0-9A-F]{4})+'
+```
+
+#### Tips for creating patterns
+
+Writing complex patterns can be difficult, here is some advice for writing a
+new pattern or testing a pattern developed [online](https://grokdebug.herokuapp.com).
+
+Create a file output that writes to stdout, and disable other outputs while
+testing.  This will allow you to see the captured metrics.  Keep in mind that
+the file output will only print once per `flush_interval`.
+
+```toml
+[[outputs.file]]
+  files = ["stdout"]
+```
+
+- Start with a file containing only a single line of your input.
+- Remove all but the first token or piece of the line.
+- Add the section of your pattern to match this piece to your configuration file.
+- Verify that the metric is parsed successfully by running Telegraf.
+- If successful, add the next token, update the pattern and retest.
+- Continue one token at a time until the entire line is successfully parsed.
+
+
