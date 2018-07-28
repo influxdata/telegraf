@@ -25,7 +25,6 @@ import (
 type Endpoint struct {
 	Parent          *VSphere
 	URL             *url.URL
-	pool            Pool
 	lastColls       map[string]time.Time
 	instanceInfo    map[string]resourceInfo
 	resourceKinds   map[string]resourceKind
@@ -34,6 +33,8 @@ type Endpoint struct {
 	clientMux       sync.Mutex
 	collectMux      sync.RWMutex
 	initialized     bool
+	collectClient   *Client
+	discoverClient  *Client
 }
 
 type resourceKind struct {
@@ -83,7 +84,6 @@ type metricQResponse struct {
 // as parameters.
 func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 	e := Endpoint{
-		pool:         Pool{u: url, v: parent, root: nil},
 		URL:          url,
 		Parent:       parent,
 		lastColls:    make(map[string]time.Time),
@@ -121,8 +121,8 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 			realTime:         true,
 			sampling:         20,
 			objects:          make(objectMap),
-			filters:          newFilterOrPanic(parent.VmMetricInclude, parent.VmMetricExclude),
-			collectInstances: parent.VmInstances,
+			filters:          newFilterOrPanic(parent.VMMetricInclude, parent.VMMetricExclude),
+			collectInstances: parent.VMInstances,
 			getObjects:       getVMs,
 		},
 		"datastore": {
@@ -182,24 +182,21 @@ func (e *Endpoint) init() error {
 		// dataset on the first collection, but it solves the issue of the first collection timing out.
 		//
 		if e.Parent.ForceDiscoverOnInit {
-			log.Printf("Running initial discovery and waiting for it to finish")
+			log.Printf("D! Running initial discovery and waiting for it to finish")
 			discoverFunc()
-		} else {
-			log.Printf("Running initial discovery in the background")
-			go discoverFunc()
 		}
 	}
-
 	e.initialized = true
 	return nil
 }
 
 func (e *Endpoint) setupMetricIds() error {
-	client, err := e.pool.Take()
+	client, err := NewClient(e.URL, e.Parent)
 	if err != nil {
 		return err
 	}
-	defer e.pool.Return(client)
+	defer client.Close()
+
 	ctx := context.Background()
 	mn, err := client.Perf.CounterInfoByName(ctx)
 	if err != nil {
@@ -214,14 +211,9 @@ func (e *Endpoint) setupMetricIds() error {
 
 func (e *Endpoint) getMetadata(in interface{}) interface{} {
 	rq := in.(*metricQRequest)
-	client, err := e.pool.Take()
-	if err != nil {
-		panic(fmt.Sprintf("E! Error getting client. Error: %s", err))
-	}
-	defer e.pool.Return(client)
 	ctx := context.Background()
 	//log.Printf("D! Querying metadata for %s", rq.obj.name)
-	metrics, err := client.Perf.AvailableMetric(ctx, rq.obj.ref.Reference(), rq.res.sampling)
+	metrics, err := e.discoverClient.Perf.AvailableMetric(ctx, rq.obj.ref.Reference(), rq.res.sampling)
 	if err != nil {
 		log.Printf("E! Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
 	}
@@ -229,14 +221,18 @@ func (e *Endpoint) getMetadata(in interface{}) interface{} {
 }
 
 func (e *Endpoint) discover() error {
-	start := time.Now()
-	log.Printf("D! Discover new objects for %s", e.URL.Host)
-
-	client, err := e.pool.Take()
+	sw := NewStopwatch("discover", e.URL.Host)
+	var err error
+	e.discoverClient, err = NewClient(e.URL, e.Parent)
 	if err != nil {
 		return err
 	}
-	defer e.pool.Return(client)
+	defer func() {
+		e.discoverClient.Close()
+		e.discoverClient = nil
+	}()
+
+	log.Printf("D! Discover new objects for %s", e.URL.Host)
 
 	instInfo := make(map[string]resourceInfo)
 	resourceKinds := make(map[string]resourceKind)
@@ -246,9 +242,8 @@ func (e *Endpoint) discover() error {
 	for k, res := range e.resourceKinds {
 		// Need to do this for all resource types even if they are not enabled (but datastore)
 		if res.enabled || (k != "datastore" && k != "vm") {
-			objects, err := res.getObjects(client.Root)
+			objects, err := res.getObjects(e.discoverClient.Root)
 			if err != nil {
-				client.Valid = false // Don't reuse this one!
 				return err
 			}
 
@@ -293,8 +288,8 @@ func (e *Endpoint) discover() error {
 	e.instanceInfo = instInfo
 	e.resourceKinds = resourceKinds
 
-	log.Printf("D! Discovered %d objects for %s. Took %s", len(instInfo), e.URL.Host, time.Now().Sub(start))
-
+	sw.Stop()
+	SendInternalCounter("discovered_objects", e.URL.Host, int64(len(instInfo)))
 	return nil
 }
 
@@ -373,6 +368,15 @@ func (e *Endpoint) collect(acc telegraf.Accumulator) error {
 
 	e.collectMux.RLock()
 	defer e.collectMux.RUnlock()
+
+	e.collectClient, err = NewClient(e.URL, e.Parent)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		e.collectClient.Close()
+		e.collectClient = nil
+	}()
 
 	// If discovery interval is disabled (0), discover on each collection cycle
 	//
@@ -473,6 +477,10 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 	} else {
 		latest = time.Now().Add(time.Duration(-res.sampling) * time.Second)
 	}
+
+	internalTags := map[string]string{"resourcetype": resourceType}
+	sw := NewStopwatchWithTags("endpoint_gather", e.URL.Host, internalTags)
+
 	log.Printf("D! Start of sample period deemed to be %s", latest)
 	log.Printf("D! Collecting metrics for %d objects of type %s for %s",
 		len(res.objects), resourceType, e.URL.Host)
@@ -511,8 +519,9 @@ func (e *Endpoint) collectResource(resourceType string, acc telegraf.Accumulator
 	})
 
 	e.lastColls[resourceType] = now // Use value captured at the beginning to avoid blind spots.
-	log.Printf("D! Collection of %s for %s, took %v returning %d metrics",
-		resourceType, e.URL.Host, time.Now().Sub(now), count)
+
+	sw.Stop()
+	SendInternalCounterWithTags("endpoint_gather_count", e.URL.Host, internalTags, count)
 	return int(count), time.Now().Sub(now).Seconds(), err
 }
 
@@ -520,22 +529,17 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string,
 	res resourceKind, acc telegraf.Accumulator) (int, error) {
 	count := 0
 	prefix := "vsphere" + e.Parent.Separator + resourceType
-	client, err := e.pool.Take()
-	if err != nil {
-		return 0, err
-	}
-	defer e.pool.Return(client)
+
 	ctx := context.Background()
-	metrics, err := client.Perf.Query(ctx, pqs)
+	metrics, err := e.collectClient.Perf.Query(ctx, pqs)
 	if err != nil {
 		//TODO: Check the error and attempt to handle gracefully. (ie: object no longer exists)
 		log.Printf("E! Error querying metrics of %s for %s %s", resourceType, e.URL.Host, err)
 		return count, err
 	}
 
-	ems, err := client.Perf.ToMetricSeries(ctx, metrics)
+	ems, err := e.collectClient.Perf.ToMetricSeries(ctx, metrics)
 	if err != nil {
-		client.Valid = false
 		return count, err
 	}
 
@@ -580,6 +584,10 @@ func (e *Endpoint) collectChunk(pqs []types.PerfQuerySpec, resourceType string,
 				if !found {
 					bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: t}
 					buckets[bKey] = bucket
+				}
+				if value < 0 {
+					log.Printf("D! Negative value for %s on %s. Indicates missing samples", name, objectRef.name)
+					continue
 				}
 				bucket.fields[fn] = value
 				count++

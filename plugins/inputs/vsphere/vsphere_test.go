@@ -146,7 +146,7 @@ func defaultVSphere() *VSphere {
 			"disk.kernelWriteLatency.average.absolute.millisecond"},
 		HostMetricExclude: nil,
 		GatherVms:         true,
-		VmMetricInclude: []string{
+		VMMetricInclude: []string{
 			"cpu.ready.summation.delta.millisecond",
 			"mem.swapinRate.average.rate.kiloBytesPerSecond",
 			"virtualDisk.numberReadAveraged.average.rate.number",
@@ -164,7 +164,7 @@ func defaultVSphere() *VSphere {
 			"mem.swapoutRate.average.rate.kiloBytesPerSecond",
 			"virtualDisk.read.average.rate.kiloBytesPerSecond",
 			"virtualDisk.write.average.rate.kiloBytesPerSecond"},
-		VmMetricExclude:  nil,
+		VMMetricExclude:  nil,
 		GatherDatastores: true,
 		DatastoreMetricInclude: []string{
 			"disk.used.*",

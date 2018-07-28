@@ -28,9 +28,9 @@ type VSphere struct {
 	HostMetricInclude      []string
 	HostMetricExclude      []string
 	GatherVms              bool
-	VmInstances            bool
-	VmMetricInclude        []string
-	VmMetricExclude        []string
+	VMInstances            bool     `toml:"vm_instances"`
+	VMMetricInclude        []string `toml:"vm_metric_include"`
+	VMMetricExclude        []string `toml:"vm_metric_exclude"`
 	GatherDatastores       bool
 	DatastoreInstances     bool
 	DatastoreMetricInclude []string
@@ -218,9 +218,6 @@ func (v *VSphere) checkEndpoints() {
 // Gather is the main data collection function called by the Telegraf core. It performs all
 // the data collection and writes all metrics into the Accumulator passed as an argument.
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
-
-	log.Printf("Interval: %v", v.Interval)
-
 	v.checkEndpoints()
 
 	var wg sync.WaitGroup
@@ -252,9 +249,9 @@ func init() {
 			HostMetricInclude:      nil,
 			HostMetricExclude:      nil,
 			GatherVms:              true,
-			VmInstances:            true,
-			VmMetricInclude:        nil,
-			VmMetricExclude:        nil,
+			VMInstances:            true,
+			VMMetricInclude:        nil,
+			VMMetricExclude:        nil,
 			GatherDatastores:       true,
 			DatastoreInstances:     false,
 			DatastoreMetricInclude: nil,

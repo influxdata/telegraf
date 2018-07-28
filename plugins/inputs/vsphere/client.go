@@ -21,6 +21,7 @@ type Client struct {
 
 // NewClient creates a new vSphere client based on the url and setting passed as parameters.
 func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
+	sw := NewStopwatch("connect", u.Host)
 	tlsCfg, err := vs.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -52,6 +53,8 @@ func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 	}
 
 	p := performance.NewManager(c.Client)
+
+	sw.Stop()
 
 	return &Client{
 		Client: c,
