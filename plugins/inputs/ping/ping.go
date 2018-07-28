@@ -94,7 +94,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 				return
 			}
 
-			args := p.args(u)
+			args := p.args(u, runtime.GOOS)
 			totalTimeout := float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
 
 			out, err := p.pingHost(totalTimeout, args...)
@@ -167,14 +167,14 @@ func hostPinger(timeout float64, args ...string) (string, error) {
 }
 
 // args returns the arguments for the 'ping' executable
-func (p *Ping) args(url string) []string {
+func (p *Ping) args(url string, system string) []string {
 	// Build the ping command args based on toml config
 	args := []string{"-c", strconv.Itoa(p.Count), "-n", "-s", "16"}
 	if p.PingInterval > 0 {
 		args = append(args, "-i", strconv.FormatFloat(p.PingInterval, 'f', -1, 64))
 	}
 	if p.Timeout > 0 {
-		switch runtime.GOOS {
+		switch system {
 		case "darwin", "freebsd", "netbsd", "openbsd":
 			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
 		case "linux":
@@ -185,7 +185,7 @@ func (p *Ping) args(url string) []string {
 		}
 	}
 	if p.Deadline > 0 {
-		switch runtime.GOOS {
+		switch system {
 		case "darwin", "freebsd", "netbsd", "openbsd":
 			args = append(args, "-t", strconv.Itoa(p.Deadline))
 		case "linux":
@@ -196,7 +196,7 @@ func (p *Ping) args(url string) []string {
 		}
 	}
 	if p.Interface != "" {
-		switch runtime.GOOS {
+		switch system {
 		case "darwin", "freebsd", "netbsd", "openbsd":
 			args = append(args, "-S", p.Interface)
 		case "linux":
