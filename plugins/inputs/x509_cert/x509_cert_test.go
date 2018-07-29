@@ -47,6 +47,7 @@ func TestGatherRemote(t *testing.T) {
 		{server: "", timeout: 5, close: false, unset: false, error: false},
 		{server: "https://example.org:443", timeout: 5, close: false, unset: false, error: false},
 		{server: "file://" + tmpfile.Name(), timeout: 5, close: false, unset: false, error: false},
+		{server: "foo://", timeout: 5, close: false, unset: false, error: true},
 		{server: "", timeout: 5, close: false, unset: true, error: true},
 		{server: "", timeout: 0, close: true, unset: false, error: true},
 		{server: "", timeout: 5, close: false, unset: false, noshake: true, error: true},

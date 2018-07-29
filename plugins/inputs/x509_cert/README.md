@@ -10,10 +10,10 @@ file or network connection.
 # Reads metrics from a SSL certificate
 [[inputs.x509_cert]]
   ## List certificate sources
-  # sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "https://example.org"]
+  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "https://example.org"]
 
   ## Timeout for SSL connection
-  # timeout = 5
+  # timeout = 5s
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -19,10 +20,10 @@ import (
 
 const sampleConfig = `
   ## List certificate sources
-  # sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443"]
+  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443"]
 
   ## Timeout for SSL connection
-  # timeout = 5
+  # timeout = 5s
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -47,11 +48,15 @@ func (c *X509Cert) Description() string {
 }
 
 // SampleConfig returns configuration sample for the plugin.
-func (c *X509Cert) SampleConfig() string {
+    func (c *X509Cert) SampleConfig() string {
 	return sampleConfig
 }
 
 func (c *X509Cert) getCert(location string, timeout time.Duration) ([]*x509.Certificate, error) {
+	if strings.HasPrefix(location, "/") {
+		location = "file://" + location
+	}
+
 	u, err := url.Parse(location)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse cert location - %s\n", err.Error())
@@ -61,9 +66,9 @@ func (c *X509Cert) getCert(location string, timeout time.Duration) ([]*x509.Cert
 	case "https":
 		u.Scheme = "tcp"
 		fallthrough
-	case "udp":
+	case "udp", "udp4", "udp6":
 		fallthrough
-	case "tcp":
+	case "tcp", "tcp4", "tcp6":
 		tlsCfg, err := c.ClientConfig.TLSConfig()
 		if err != nil {
 			return nil, err
@@ -87,8 +92,6 @@ func (c *X509Cert) getCert(location string, timeout time.Duration) ([]*x509.Cert
 
 		return certs, nil
 	case "file":
-		fallthrough
-	default:
 		content, err := ioutil.ReadFile(u.Path)
 		if err != nil {
 			return nil, err
@@ -105,6 +108,8 @@ func (c *X509Cert) getCert(location string, timeout time.Duration) ([]*x509.Cert
 		}
 
 		return []*x509.Certificate{cert}, nil
+	default:
+		return nil, fmt.Errorf("unsuported scheme '%s' in location %s\n", u.Scheme, location)
 	}
 }
 
@@ -113,14 +118,12 @@ func getFields(cert *x509.Certificate, now time.Time) map[string]interface{} {
 	expiry := int(cert.NotAfter.Sub(now).Seconds())
 	startdate := cert.NotBefore.Unix()
 	enddate := cert.NotAfter.Unix()
-	valid := expiry > 0
 
 	fields := map[string]interface{}{
 		"age":       age,
 		"expiry":    expiry,
 		"startdate": startdate,
 		"enddate":   enddate,
-		"valid":     valid,
 	}
 
 	return fields
