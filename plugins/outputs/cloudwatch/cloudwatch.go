@@ -31,12 +31,139 @@ type CloudWatch struct {
 	WriteStatistics bool `toml:"write_statistics"`
 }
 
-type statisticSet struct {
-	field string
-	max   float64
-	min   float64
-	sum   float64
-	count float64
+type statisticType int
+
+const (
+	statisticTypeNone statisticType = iota
+	statisticTypeMax
+	statisticTypeMin
+	statisticTypeSum
+	statisticTypeCount
+)
+
+type cloudwatchField interface {
+	addValue(sType statisticType, value float64)
+	buildDatum() []*cloudwatch.MetricDatum
+}
+
+type statisticField struct {
+	metricName string
+	fieldName  string
+	tags       map[string]string
+	values     map[statisticType]float64
+	timestamp  time.Time
+}
+
+func (f *statisticField) addValue(sType statisticType, value float64) {
+	if sType != statisticTypeNone {
+		f.values[sType] = value
+	}
+}
+
+func (f *statisticField) buildDatum() []*cloudwatch.MetricDatum {
+
+	var datums []*cloudwatch.MetricDatum
+
+	if f.hasAllFields() {
+		// If we have all required fields, we build datum with StatisticValues
+		min, _ := f.values[statisticTypeMin]
+		max, _ := f.values[statisticTypeMax]
+		sum, _ := f.values[statisticTypeSum]
+		count, _ := f.values[statisticTypeCount]
+
+		datum := &cloudwatch.MetricDatum{
+			MetricName: aws.String(strings.Join([]string{f.metricName, f.fieldName}, "_")),
+			Dimensions: BuildDimensions(f.tags),
+			Timestamp:  aws.Time(f.timestamp),
+			StatisticValues: &cloudwatch.StatisticSet{
+				Minimum:     aws.Float64(min),
+				Maximum:     aws.Float64(max),
+				Sum:         aws.Float64(sum),
+				SampleCount: aws.Float64(count),
+			},
+		}
+
+		datums = append(datums, datum)
+
+	} else {
+		// If we don't have all required fields, we build each field as independent datum
+		for sType, value := range f.values {
+			datum := &cloudwatch.MetricDatum{
+				Value:      aws.Float64(value),
+				Dimensions: BuildDimensions(f.tags),
+				Timestamp:  aws.Time(f.timestamp),
+			}
+
+			switch sType {
+			case statisticTypeMin:
+				datum.MetricName = aws.String(strings.Join([]string{f.metricName, f.fieldName, "min"}, "_"))
+			case statisticTypeMax:
+				datum.MetricName = aws.String(strings.Join([]string{f.metricName, f.fieldName, "max"}, "_"))
+			case statisticTypeSum:
+				datum.MetricName = aws.String(strings.Join([]string{f.metricName, f.fieldName, "sum"}, "_"))
+			case statisticTypeCount:
+				datum.MetricName = aws.String(strings.Join([]string{f.metricName, f.fieldName, "count"}, "_"))
+			default:
+				// should not be here
+				continue
+			}
+
+			datums = append(datums, datum)
+		}
+	}
+
+	return datums
+}
+
+func (f *statisticField) hasAllFields() bool {
+
+	_, hasMin := f.values[statisticTypeMin]
+	_, hasMax := f.values[statisticTypeMax]
+	_, hasSum := f.values[statisticTypeSum]
+	_, hasCount := f.values[statisticTypeCount]
+
+	return hasMin && hasMax && hasSum && hasCount
+}
+
+type valueField struct {
+	metricName string
+	fieldName  string
+	tags       map[string]string
+	value      float64
+	timestamp  time.Time
+}
+
+func (f *valueField) addValue(sType statisticType, value float64) {
+	if sType == statisticTypeNone {
+		f.value = value
+	}
+}
+
+func (f *valueField) buildDatum() []*cloudwatch.MetricDatum {
+
+	// Do CloudWatch boundary checking
+	// Constraints at: http://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html
+	if math.IsNaN(f.value) {
+		return nil
+	}
+	if math.IsInf(f.value, 0) {
+		return nil
+	}
+	if f.value > 0 && f.value < float64(8.515920e-109) {
+		return nil
+	}
+	if f.value > float64(1.174271e+108) {
+		return nil
+	}
+
+	return []*cloudwatch.MetricDatum{
+		{
+			MetricName: aws.String(strings.Join([]string{f.metricName, f.fieldName}, "_")),
+			Value:      aws.Float64(f.value),
+			Dimensions: BuildDimensions(f.tags),
+			Timestamp:  aws.Time(f.timestamp),
+		},
+	}
 }
 
 var sampleConfig = `
@@ -171,105 +298,59 @@ func PartitionDatums(size int, datums []*cloudwatch.MetricDatum) [][]*cloudwatch
 
 // Make a MetricDatum from telegraf.Metric. It would check if all required fields of
 // cloudwatch.StatisticSet are available. If so, it would build MetricDatum from statistic values.
-// Otherwise, it would make MetricDatum from each field in a Point.
+// Otherwise, fields would still been built independently.
 func BuildMetricDatum(buildStatistic bool, point telegraf.Metric) []*cloudwatch.MetricDatum {
 
-	// If not enable, just take all metrics as value datums.
-	if !buildStatistic {
-		return BuildValueMetricDatum(point)
-	}
-
-	// Try to parse statisticSet first, then build statistic/value datum accordingly.
-	set, ok := getStatisticSet(point)
-	if ok {
-		return BuildStatisticMetricDatum(point, set)
-	} else {
-		return BuildValueMetricDatum(point)
-	}
-}
-
-// Make a MetricDatum for each field in a Point. Only fields with values that can be
-// converted to float64 are supported. Non-supported fields are skipped.
-func BuildValueMetricDatum(point telegraf.Metric) []*cloudwatch.MetricDatum {
-	datums := make([]*cloudwatch.MetricDatum, len(point.Fields()))
-	i := 0
-
-	var value float64
+	fields := make(map[string]cloudwatchField)
 
 	for k, v := range point.Fields() {
-		switch t := v.(type) {
-		case int:
-			value = float64(t)
-		case int32:
-			value = float64(t)
-		case int64:
-			value = float64(t)
-		case uint64:
-			value = float64(t)
-		case float64:
-			value = t
-		case bool:
-			if t {
-				value = 1
-			} else {
-				value = 0
+
+		val, ok := convert(v)
+		if !ok {
+			// Only fields with values that can be converted to float64 are supported.
+			// Non-supported fields are skipped.
+			continue
+		}
+
+		sType, fieldName := getStatisticType(k)
+
+		// If statistic metric is not enabled or non-statistic type, just take current field as a value field.
+		if !buildStatistic || sType == statisticTypeNone {
+			fields[k] = &valueField{
+				metricName: point.Name(),
+				fieldName:  k,
+				tags:       point.Tags(),
+				timestamp:  point.Time(),
+				value:      val,
 			}
-		case time.Time:
-			value = float64(t.Unix())
-		default:
-			// Skip unsupported type.
-			datums = datums[:len(datums)-1]
 			continue
 		}
 
-		// Do CloudWatch boundary checking
-		// Constraints at: http://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html
-		if math.IsNaN(value) {
-			datums = datums[:len(datums)-1]
-			continue
+		// Otherwise, it shall be a statistic field.
+		if _, ok := fields[fieldName]; !ok {
+			// Hit an uncached field, create statisticField for first time
+			fields[fieldName] = &statisticField{
+				metricName: point.Name(),
+				fieldName:  fieldName,
+				tags:       point.Tags(),
+				timestamp:  point.Time(),
+				values: map[statisticType]float64{
+					sType: val,
+				},
+			}
+		} else {
+			// Add new statistic value to this field
+			fields[fieldName].addValue(sType, val)
 		}
-		if math.IsInf(value, 0) {
-			datums = datums[:len(datums)-1]
-			continue
-		}
-		if value > 0 && value < float64(8.515920e-109) {
-			datums = datums[:len(datums)-1]
-			continue
-		}
-		if value > float64(1.174271e+108) {
-			datums = datums[:len(datums)-1]
-			continue
-		}
+	}
 
-		datums[i] = &cloudwatch.MetricDatum{
-			MetricName: aws.String(strings.Join([]string{point.Name(), k}, "_")),
-			Value:      aws.Float64(value),
-			Dimensions: BuildDimensions(point.Tags()),
-			Timestamp:  aws.Time(point.Time()),
-		}
-
-		i += 1
+	var datums []*cloudwatch.MetricDatum
+	for _, f := range fields {
+		d := f.buildDatum()
+		datums = append(datums, d...)
 	}
 
 	return datums
-}
-
-// Make a MetricDatum with statistic values.
-func BuildStatisticMetricDatum(point telegraf.Metric, set *statisticSet) []*cloudwatch.MetricDatum {
-
-	data := &cloudwatch.MetricDatum{
-		MetricName: aws.String(strings.Join([]string{point.Name(), set.field}, "_")),
-		StatisticValues: &cloudwatch.StatisticSet{
-			Minimum:     aws.Float64(set.min),
-			Maximum:     aws.Float64(set.max),
-			Sum:         aws.Float64(set.sum),
-			SampleCount: aws.Float64(set.count),
-		},
-		Dimensions: BuildDimensions(point.Tags()),
-		Timestamp:  aws.Time(point.Time()),
-	}
-
-	return []*cloudwatch.MetricDatum{data}
 }
 
 // Make a list of Dimensions by using a Point's tags. CloudWatch supports up to
@@ -315,64 +396,56 @@ func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
 	return dimensions
 }
 
-func getStatisticSet(point telegraf.Metric) (*statisticSet, bool) {
-
-	// cloudwatch.StatisticSet requires Max, Min, Count and Sum values.
-	// If this point has less than 4 fields, it's not possible to build
-	// StatisticSet from it.
-	if len(point.Fields()) < 4 {
-		return nil, false
-	}
-
-	// Try to find the max field. If we could find it, we will use its
-	// field name to find other required fields.
-	var set *statisticSet
-	for k, v := range point.Fields() {
-		if strings.HasSuffix(k, "_max") {
-			if fv, ok := convert(v); ok {
-				set = &statisticSet{
-					field: k[:len(k)-4],
-					max:   fv,
-				}
-				break
-			}
-		}
-	}
-	if set == nil {
-		return nil, false
-	}
-
-	// Check if we could find all required fields with the same field name
-	var ok bool
-	if set.min, ok = findField(point, set.field+"_min"); !ok {
-		return nil, false
-	}
-	if set.count, ok = findField(point, set.field+"_count"); !ok {
-		return nil, false
-	}
-	if set.sum, ok = findField(point, set.field+"_sum"); !ok {
-		return nil, false
-	}
-
-	return set, true
-}
-
-func convert(in interface{}) (float64, bool) {
-	switch v := in.(type) {
-	case float64:
-		return v, true
+func getStatisticType(name string) (sType statisticType, fieldName string) {
+	switch {
+	case strings.HasSuffix(name, "_max"):
+		sType = statisticTypeMax
+		fieldName = name[:len(name)-len("_max")]
+	case strings.HasSuffix(name, "_min"):
+		sType = statisticTypeMin
+		fieldName = name[:len(name)-len("_min")]
+	case strings.HasSuffix(name, "_sum"):
+		sType = statisticTypeSum
+		fieldName = name[:len(name)-len("_sum")]
+	case strings.HasSuffix(name, "_count"):
+		sType = statisticTypeCount
+		fieldName = name[:len(name)-len("_count")]
 	default:
-		return 0, false
+		sType = statisticTypeNone
+		fieldName = name
 	}
+	return
 }
 
-func findField(point telegraf.Metric, field string) (float64, bool) {
-	if v, ok := point.GetField(field); ok {
-		if fv, ok := convert(v); ok {
-			return fv, true
+func convert(v interface{}) (value float64, ok bool) {
+
+	ok = true
+
+	switch t := v.(type) {
+	case int:
+		value = float64(t)
+	case int32:
+		value = float64(t)
+	case int64:
+		value = float64(t)
+	case uint64:
+		value = float64(t)
+	case float64:
+		value = t
+	case bool:
+		if t {
+			value = 1
+		} else {
+			value = 0
 		}
+	case time.Time:
+		value = float64(t.Unix())
+	default:
+		// Skip unsupported type.
+		ok = false
 	}
-	return 0, false
+
+	return
 }
 
 func init() {
