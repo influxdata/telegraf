@@ -44,6 +44,7 @@
 - [#4332](https://github.com/influxdata/telegraf/pull/4332): Add file input plugin and grok parser.
 - [#4320](https://github.com/influxdata/telegraf/pull/4320): Improve cloudwatch output performance.
 - [#3768](https://github.com/influxdata/telegraf/pull/3768): Add x509_cert input plugin.
+- [#4471](https://github.com/influxdata/telegraf/pull/4471): Add IPSIpAddress syntax to ipaddr conversion in snmp plugin.
 
 ## v1.7.2 [2018-07-18]
 
