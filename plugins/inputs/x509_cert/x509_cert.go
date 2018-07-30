@@ -23,7 +23,7 @@ const sampleConfig = `
   sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443"]
 
   ## Timeout for SSL connection
-  # timeout = 5s
+  # timeout = "5s"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"

@@ -43,6 +43,7 @@
 - [#4418](https://github.com/influxdata/telegraf/pull/4418): Add support for setting kafka client id.
 - [#4332](https://github.com/influxdata/telegraf/pull/4332): Add file input plugin and grok parser.
 - [#4320](https://github.com/influxdata/telegraf/pull/4320): Improve cloudwatch output performance.
+- [#3768](https://github.com/influxdata/telegraf/pull/3768): Add x509_cert input plugin.
 
 ## v1.7.2 [2018-07-18]
 
