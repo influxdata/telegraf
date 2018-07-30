@@ -48,7 +48,7 @@ func (c *X509Cert) Description() string {
 }
 
 // SampleConfig returns configuration sample for the plugin.
-    func (c *X509Cert) SampleConfig() string {
+func (c *X509Cert) SampleConfig() string {
 	return sampleConfig
 }
 
