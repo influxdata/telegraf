@@ -246,32 +246,34 @@ func (k *Kafka) Description() string {
 }
 
 func (k *Kafka) Write(metrics []telegraf.Metric) error {
-	if len(metrics) == 0 {
-		return nil
-	}
-
+	msgs := make([]*sarama.ProducerMessage, 0, len(metrics))
 	for _, metric := range metrics {
 		buf, err := k.serializer.Serialize(metric)
 		if err != nil {
 			return err
 		}
 
-		topicName := k.GetTopicName(metric)
-
 		m := &sarama.ProducerMessage{
-			Topic: topicName,
+			Topic: k.GetTopicName(metric),
 			Value: sarama.ByteEncoder(buf),
 		}
-		if h, ok := metric.Tags()[k.RoutingTag]; ok {
+		if h, ok := metric.GetTag(k.RoutingTag); ok {
 			m.Key = sarama.StringEncoder(h)
 		}
-
-		_, _, err = k.producer.SendMessage(m)
-
-		if err != nil {
-			return fmt.Errorf("FAILED to send kafka message: %s\n", err)
-		}
+		msgs = append(msgs, m)
 	}
+
+	err := k.producer.SendMessages(msgs)
+	if err != nil {
+		// We could have many errors, return only the first encountered.
+		if errs, ok := err.(sarama.ProducerErrors); ok {
+			for _, prodErr := range errs {
+				return prodErr
+			}
+		}
+		return err
+	}
+
 	return nil
 }
 
