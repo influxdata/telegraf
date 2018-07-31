@@ -45,6 +45,10 @@
 - [#4320](https://github.com/influxdata/telegraf/pull/4320): Improve cloudwatch output performance.
 - [#3768](https://github.com/influxdata/telegraf/pull/3768): Add x509_cert input plugin.
 - [#4471](https://github.com/influxdata/telegraf/pull/4471): Add IPSIpAddress syntax to ipaddr conversion in snmp plugin.
+- [#4363](https://github.com/influxdata/telegraf/pull/4363): Add filecount input plugin.
+- [#4485](https://github.com/influxdata/telegraf/pull/4485): Add support for configuring an AWS endpoint_url.
+- [#4491](https://github.com/influxdata/telegraf/pull/4491): Send all messages before waiting for results in kafka output.
+- [#4492](https://github.com/influxdata/telegraf/pull/4492): Add support for lz4 compression to kafka output.
 
 ## v1.7.2 [2018-07-18]
 
