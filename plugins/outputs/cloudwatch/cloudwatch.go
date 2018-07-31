@@ -141,21 +141,6 @@ func (f *valueField) addValue(sType statisticType, value float64) {
 
 func (f *valueField) buildDatum() []*cloudwatch.MetricDatum {
 
-	// Do CloudWatch boundary checking
-	// Constraints at: http://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html
-	if math.IsNaN(f.value) {
-		return nil
-	}
-	if math.IsInf(f.value, 0) {
-		return nil
-	}
-	if f.value > 0 && f.value < float64(8.515920e-109) {
-		return nil
-	}
-	if f.value > float64(1.174271e+108) {
-		return nil
-	}
-
 	return []*cloudwatch.MetricDatum{
 		{
 			MetricName: aws.String(strings.Join([]string{f.metricName, f.fieldName}, "_")),
@@ -307,7 +292,7 @@ func BuildMetricDatum(buildStatistic bool, point telegraf.Metric) []*cloudwatch.
 
 		val, ok := convert(v)
 		if !ok {
-			// Only fields with values that can be converted to float64 are supported.
+			// Only fields with values that can be converted to float64 (and within CloudWatch boundary) are supported.
 			// Non-supported fields are skipped.
 			continue
 		}
@@ -443,6 +428,20 @@ func convert(v interface{}) (value float64, ok bool) {
 	default:
 		// Skip unsupported type.
 		ok = false
+		return
+	}
+
+	// Do CloudWatch boundary checking
+	// Constraints at: http://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_MetricDatum.html
+	switch {
+	case math.IsNaN(value):
+		return 0, false
+	case math.IsInf(value, 0):
+		return 0, false
+	case value > 0 && value < float64(8.515920e-109):
+		return 0, false
+	case value > float64(1.174271e+108):
+		return 0, false
 	}
 
 	return
