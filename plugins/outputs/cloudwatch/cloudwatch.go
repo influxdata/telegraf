@@ -400,16 +400,16 @@ func getStatisticType(name string) (sType statisticType, fieldName string) {
 	switch {
 	case strings.HasSuffix(name, "_max"):
 		sType = statisticTypeMax
-		fieldName = name[:len(name)-len("_max")]
+		fieldName = strings.TrimSuffix(name, "_max")
 	case strings.HasSuffix(name, "_min"):
 		sType = statisticTypeMin
-		fieldName = name[:len(name)-len("_min")]
+		fieldName = strings.TrimSuffix(name, "_min")
 	case strings.HasSuffix(name, "_sum"):
 		sType = statisticTypeSum
-		fieldName = name[:len(name)-len("_sum")]
+		fieldName = strings.TrimSuffix(name, "_sum")
 	case strings.HasSuffix(name, "_count"):
 		sType = statisticTypeCount
-		fieldName = name[:len(name)-len("_count")]
+		fieldName = strings.TrimSuffix(name, "_count")
 	default:
 		sType = statisticTypeNone
 		fieldName = name
