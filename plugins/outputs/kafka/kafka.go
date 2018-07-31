@@ -38,6 +38,8 @@ type (
 		// MaxRetry Tag
 		MaxRetry int
 
+		Version string `toml:"version"`
+
 		// Legacy TLS config options
 		// TLS client certificate
 		Certificate string
@@ -73,6 +75,12 @@ var sampleConfig = `
 
   ## Optional Client id
   # client_id = "Telegraf"
+
+  ## Set the minimal supported Kafka version.  Setting this enables the use of new
+  ## Kafka features and APIs.  Of particular interested, lz4 compression
+  ## requires at least version 0.10.0.0.
+  ##   ex: version = "1.1.0"
+  # version = ""
 
   ## Optional topic suffix configuration.
   ## If the section is omitted, no suffix is used.
@@ -190,6 +198,14 @@ func (k *Kafka) Connect() error {
 		return err
 	}
 	config := sarama.NewConfig()
+
+	if k.Version != "" {
+		version, err := sarama.ParseKafkaVersion(k.Version)
+		if err != nil {
+			return err
+		}
+		config.Version = version
+	}
 
 	if k.ClientID != "" {
 		config.ClientID = k.ClientID
