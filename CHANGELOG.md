@@ -10,6 +10,7 @@
 
 - [file](./plugins/inputs/file/README.md) - Contributed by @maxunt
 - [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
+- [x509_cert](./plugins/inputs/x509_cert/README.md) - Contributed by @jtyr
 
 ### New Processors
 
