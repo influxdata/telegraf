@@ -10,6 +10,7 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Collectd](#collectd)
 1. [Dropwizard](#dropwizard)
 1. [Grok](#grok)
+1. [Logfmt](#logfmt)
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -886,4 +887,7 @@ the file output will only print once per `flush_interval`.
 - If successful, add the next token, update the pattern and retest.
 - Continue one token at a time until the entire line is successfully parsed.
 
-
+# Logfmt
+For extracting key-value pairs from log text in the form `<key>=<value>`.
+At the moment, the plugin will produce one metric per line and all keys 
+are added as fields. Values are left as strings (for now).
