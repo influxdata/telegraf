@@ -17,13 +17,14 @@ import (
 )
 
 type CloudWatch struct {
-	Region    string `toml:"region"`
-	AccessKey string `toml:"access_key"`
-	SecretKey string `toml:"secret_key"`
-	RoleARN   string `toml:"role_arn"`
-	Profile   string `toml:"profile"`
-	Filename  string `toml:"shared_credential_file"`
-	Token     string `toml:"token"`
+	Region      string `toml:"region"`
+	AccessKey   string `toml:"access_key"`
+	SecretKey   string `toml:"secret_key"`
+	RoleARN     string `toml:"role_arn"`
+	Profile     string `toml:"profile"`
+	Filename    string `toml:"shared_credential_file"`
+	Token       string `toml:"token"`
+	EndpointURL string `toml:"endpoint_url"`
 
 	Namespace string `toml:"namespace"` // CloudWatch Metrics Namespace
 	svc       *cloudwatch.CloudWatch
@@ -48,6 +49,12 @@ var sampleConfig = `
   #profile = ""
   #shared_credential_file = ""
 
+  ## Endpoint to make request against, the correct endpoint is automatically
+  ## determined and this option should only be set if you wish to override the
+  ## default.
+  ##   ex: endpoint_url = "http://localhost:8000"
+  # endpoint_url = ""
+
   ## Namespace for the CloudWatch MetricDatums
   namespace = "InfluxData/Telegraf"
 `
@@ -62,13 +69,14 @@ func (c *CloudWatch) Description() string {
 
 func (c *CloudWatch) Connect() error {
 	credentialConfig := &internalaws.CredentialConfig{
-		Region:    c.Region,
-		AccessKey: c.AccessKey,
-		SecretKey: c.SecretKey,
-		RoleARN:   c.RoleARN,
-		Profile:   c.Profile,
-		Filename:  c.Filename,
-		Token:     c.Token,
+		Region:      c.Region,
+		AccessKey:   c.AccessKey,
+		SecretKey:   c.SecretKey,
+		RoleARN:     c.RoleARN,
+		Profile:     c.Profile,
+		Filename:    c.Filename,
+		Token:       c.Token,
+		EndpointURL: c.EndpointURL,
 	}
 	configProvider := credentialConfig.Credentials()
 
