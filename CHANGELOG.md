@@ -10,6 +10,8 @@
 
 - [file](./plugins/inputs/file/README.md) - Contributed by @maxunt
 - [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
+- [x509_cert](./plugins/inputs/x509_cert/README.md) - Contributed by @jtyr
+- [filecount](./plugins/inputs/filecount/README.md) - Contributed by @sometimesfood
 
 ### New Processors
 
@@ -49,6 +51,7 @@
 - [#4485](https://github.com/influxdata/telegraf/pull/4485): Add support for configuring an AWS endpoint_url.
 - [#4491](https://github.com/influxdata/telegraf/pull/4491): Send all messages before waiting for results in kafka output.
 - [#4492](https://github.com/influxdata/telegraf/pull/4492): Add support for lz4 compression to kafka output.
+- [#4450](https://github.com/influxdata/telegraf/pull/4450): Split multiple sensor keys in ipmi input.
 
 ## v1.7.2 [2018-07-18]
 
