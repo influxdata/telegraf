@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/influxdata/go-syslog/rfc5424"
 	"github.com/influxdata/go-syslog/rfc5425"
@@ -365,7 +366,9 @@ func fields(msg rfc5424.SyslogMessage, s *Syslog) map[string]interface{} {
 	}
 
 	if msg.Message() != nil {
-		flds["message"] = strings.TrimSpace(*msg.Message())
+		flds["message"] = strings.TrimRightFunc(*msg.Message(), func(r rune) bool {
+			return unicode.IsSpace(r)
+		})
 	}
 
 	if msg.StructuredData() != nil {
