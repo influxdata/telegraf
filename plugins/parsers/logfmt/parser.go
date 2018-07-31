@@ -30,18 +30,13 @@ func NewParser(metricName string, defaultTags map[string]string) *Parser {
 }
 
 // Parse converts a slice of bytes in logfmt format to metrics.
-func (l *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
+func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 	reader := bytes.NewReader(b)
 	decoder := glogfmt.NewDecoder(reader)
 	metrics := make([]telegraf.Metric, 0)
 	for decoder.ScanRecord() {
 		tags := make(map[string]string)
 		fields := make(map[string]interface{})
-		//add default tags
-		for k, v := range l.DefaultTags {
-			tags[k] = v
-		}
-
 		for decoder.ScanKeyval() {
 			if string(decoder.Value()) == "" {
 				return metrics, fmt.Errorf("value could not be found for key: %v", string(decoder.Key()))
@@ -59,17 +54,19 @@ func (l *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 				fields[string(decoder.Key())] = value
 			}
 		}
-		m, err := metric.New(l.MetricName, tags, fields, l.Now())
+		m, err := metric.New(p.MetricName, tags, fields, p.Now())
 		if err != nil {
 			return nil, err
 		}
 		metrics = append(metrics, m)
 	}
+	//add default tags
+	p.applyDefaultTags(metrics)
 	return metrics, nil
 }
 
 // ParseLine converts a single line of text in logfmt to metrics.
-func (l *Parser) ParseLine(s string) (telegraf.Metric, error) {
+func (p *Parser) ParseLine(s string) (telegraf.Metric, error) {
 	reader := strings.NewReader(s)
 	decoder := glogfmt.NewDecoder(reader)
 
@@ -77,7 +74,7 @@ func (l *Parser) ParseLine(s string) (telegraf.Metric, error) {
 	tags := make(map[string]string)
 	fields := make(map[string]interface{})
 	//add default tags
-	for k, v := range l.DefaultTags {
+	for k, v := range p.DefaultTags {
 		tags[k] = v
 	}
 
@@ -97,7 +94,7 @@ func (l *Parser) ParseLine(s string) (telegraf.Metric, error) {
 			fields[string(decoder.Key())] = value
 		}
 	}
-	m, err := metric.New(l.MetricName, tags, fields, l.Now())
+	m, err := metric.New(p.MetricName, tags, fields, p.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +102,20 @@ func (l *Parser) ParseLine(s string) (telegraf.Metric, error) {
 }
 
 // SetDefaultTags adds tags to the metrics outputs of Parse and ParseLine.
-func (l *Parser) SetDefaultTags(tags map[string]string) {
-	l.DefaultTags = tags
+func (p *Parser) SetDefaultTags(tags map[string]string) {
+	p.DefaultTags = tags
+}
+
+func (p *Parser) applyDefaultTags(metrics []telegraf.Metric) {
+	if len(p.DefaultTags) == 0 {
+		return
+	}
+
+	for _, m := range metrics {
+		for k, v := range p.DefaultTags {
+			if !m.HasTag(k) {
+				m.AddTag(k, v)
+			}
+		}
+	}
 }
