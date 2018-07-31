@@ -1,7 +1,6 @@
 package vsphere
 
 import (
-	"log"
 	"sync"
 	"time"
 
@@ -199,26 +198,30 @@ func (v *VSphere) Description() string {
 	return "Read metrics from VMware vCenter"
 }
 
-func (v *VSphere) checkEndpoints() {
+func (v *VSphere) checkEndpoints() error {
 	if v.endpoints != nil {
-		return
+		return nil
 	}
 
 	v.endpoints = make([]*Endpoint, len(v.Vcenters))
 	for i, rawURL := range v.Vcenters {
 		u, err := soap.ParseURL(rawURL)
 		if err != nil {
-			log.Printf("E! Can't parse URL %s\n", rawURL)
+			return err
 		}
 
 		v.endpoints[i] = NewEndpoint(v, u)
 	}
+	return nil
 }
 
 // Gather is the main data collection function called by the Telegraf core. It performs all
 // the data collection and writes all metrics into the Accumulator passed as an argument.
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
-	v.checkEndpoints()
+	err := v.checkEndpoints()
+	if err != nil {
+		return err
+	}
 
 	var wg sync.WaitGroup
 
