@@ -28,7 +28,7 @@ func TestGather(t *testing.T) {
 
 	require.NoError(t, err)
 
-	assert.Equal(t, acc.NFields(), 266, "non-numeric measurements should be ignored")
+	assert.Equal(t, acc.NFields(), 262, "non-numeric measurements should be ignored")
 
 	conn := NewConnection(i.Servers[0], i.Privilege)
 	assert.Equal(t, "USERID", conn.Username)
@@ -386,7 +386,7 @@ func TestGatherV2(t *testing.T) {
 		Path:          "ipmitool",
 		Privilege:     "USER",
 		Timeout:       internal.Duration{Duration: time.Second * 5},
-		SchemaVersion: 2,
+		MetricVersion: 2,
 	}
 	// overwriting exec commands with mock commands
 	execCommand = fakeExecCommandV2
@@ -426,7 +426,7 @@ func TestGatherV2(t *testing.T) {
 	i = &Ipmi{
 		Path:          "ipmitool",
 		Timeout:       internal.Duration{Duration: time.Second * 5},
-		SchemaVersion: 2,
+		MetricVersion: 2,
 	}
 
 	err = acc.GatherError(i.Gather)

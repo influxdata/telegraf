@@ -1,6 +1,8 @@
 package ipmi_sensor
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -15,7 +17,11 @@ import (
 )
 
 var (
-	execCommand = exec.Command // execCommand is used to mock commands in tests.
+	execCommand             = exec.Command // execCommand is used to mock commands in tests.
+	re_v1_parse_line        = regexp.MustCompile(`^(?P<name>[^|]*)\|(?P<description>[^|]*)\|(?P<status_code>.*)`)
+	re_v2_parse_line        = regexp.MustCompile(`^(?P<name>[^|]*)\|[^|]+\|(?P<status_code>[^|]*)\|(?P<entity_id>[^|]*)\|(?:(?P<description>[^|]+))?`)
+	re_v2_parse_description = regexp.MustCompile(`^(?P<analogValue>[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`)
+	re_v2_parse_unit        = regexp.MustCompile(`^(?P<realAnalogUnit>[^,]+)(?:,\s*(?P<statusDesc>.*))?`)
 )
 
 // Ipmi stores the configuration values for the ipmi_sensor input plugin
@@ -24,7 +30,7 @@ type Ipmi struct {
 	Privilege     string
 	Servers       []string
 	Timeout       internal.Duration
-	SchemaVersion int
+	MetricVersion int
 }
 
 var sampleConfig = `
@@ -51,7 +57,7 @@ var sampleConfig = `
   timeout = "20s"
 
   ## Schema Version: (Optional, defaults to version 1)
-  schemaVersion = 2
+  metric_version = 2
 `
 
 // SampleConfig returns the documentation about the sample configuration
@@ -102,26 +108,27 @@ func (m *Ipmi) parse(acc telegraf.Accumulator, server string) error {
 		opts = conn.options()
 	}
 	opts = append(opts, "sdr")
-	if m.SchemaVersion == 2 {
+	if m.MetricVersion == 2 {
 		opts = append(opts, "elist")
 	}
 	cmd := execCommand(m.Path, opts...)
 	out, err := internal.CombinedOutputTimeout(cmd, m.Timeout.Duration)
+	timestamp := time.Now()
 	if err != nil {
 		return fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
 	}
-	if m.SchemaVersion == 2 {
-		return parseV2(acc, hostname, string(out))
+	if m.MetricVersion == 2 {
+		return parseV2(acc, hostname, out, timestamp)
 	}
-	return parseV1(acc, hostname, string(out))
+	return parseV1(acc, hostname, out, timestamp)
 }
 
-func parseV1(acc telegraf.Accumulator, hostname string, cmdOut string) error {
+func parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_at time.Time) error {
 	// each line will look something like
 	// Planar VBAT      | 3.05 Volts        | ok
-	lines := strings.Split(cmdOut, "\n")
-	for i := 0; i < len(lines); i++ {
-		ipmiFields := extractFieldsFromRegex(`^(?P<name>[^|]*)\|(?P<description>[^|]*)\|(?P<status_code>.*)`, lines[i])
+	scanner := bufio.NewScanner(bytes.NewReader(cmdOut))
+	for scanner.Scan() {
+		ipmiFields := extractFieldsFromRegex(re_v1_parse_line, scanner.Text())
 		if len(ipmiFields) != 3 {
 			continue
 		}
@@ -145,7 +152,11 @@ func parseV1(acc telegraf.Accumulator, hostname string, cmdOut string) error {
 		if strings.Index(ipmiFields["description"], " ") > 0 {
 			// split middle column into value and unit
 			valunit := strings.SplitN(ipmiFields["description"], " ", 2)
-			fields["value"] = aToFloat(valunit[0])
+			var err error
+			fields["value"], err = aToFloat(valunit[0])
+			if err != nil {
+				continue
+			}
 			if len(valunit) > 1 {
 				tags["unit"] = transform(valunit[1])
 			}
@@ -153,20 +164,20 @@ func parseV1(acc telegraf.Accumulator, hostname string, cmdOut string) error {
 			fields["value"] = 0.0
 		}
 
-		acc.AddFields("ipmi_sensor", fields, tags, time.Now())
+		acc.AddFields("ipmi_sensor", fields, tags, measured_at)
 	}
 
-	return nil
+	return scanner.Err()
 }
 
-func parseV2(acc telegraf.Accumulator, hostname string, cmdOut string) error {
+func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_at time.Time) error {
 	// each line will look something like
 	// CMOS Battery     | 65h | ok  |  7.1 |
 	// Temp             | 0Eh | ok  |  3.1 | 55 degrees C
 	// Drive 0          | A0h | ok  |  7.1 | Drive Present
-	lines := strings.Split(cmdOut, "\n")
-	for i := 0; i < len(lines); i++ {
-		ipmiFields := extractFieldsFromRegex(`^(?P<name>[^|]*)\|[^|]+\|(?P<status_code>[^|]*)\|(?P<entity_id>[^|]*)\|(?:(?P<description>[^|]+))?`, lines[i])
+	scanner := bufio.NewScanner(bytes.NewReader(cmdOut))
+	for scanner.Scan() {
+		ipmiFields := extractFieldsFromRegex(re_v2_parse_line, scanner.Text())
 		if len(ipmiFields) < 3 || len(ipmiFields) > 4 {
 			continue
 		}
@@ -182,12 +193,16 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut string) error {
 		tags["entity_id"] = transform(ipmiFields["entity_id"])
 		tags["status_code"] = trim(ipmiFields["status_code"])
 		fields := make(map[string]interface{})
-		descriptionResults := extractFieldsFromRegex(`^(?P<analogValue>[0-9.]+)\s(?P<analogUnit>.*)|(?P<status>.+)|^$`, trim(ipmiFields["description"]))
+		descriptionResults := extractFieldsFromRegex(re_v2_parse_description, trim(ipmiFields["description"]))
 		// This is an analog value with a unit
 		if descriptionResults["analogValue"] != "" && len(descriptionResults["analogUnit"]) >= 1 {
-			fields["value"] = aToFloat(descriptionResults["analogValue"])
+			var err error
+			fields["value"], err = aToFloat(descriptionResults["analogValue"])
+			if err != nil {
+				continue
+			}
 			// Some implementations add an extra status to their analog units
-			unitResults := extractFieldsFromRegex(`^(?P<realAnalogUnit>[^,]+)(?:,\s*(?P<statusDesc>.*))?`, descriptionResults["analogUnit"])
+			unitResults := extractFieldsFromRegex(re_v2_parse_unit, descriptionResults["analogUnit"])
 			tags["unit"] = transform(unitResults["realAnalogUnit"])
 			if unitResults["statusDesc"] != "" {
 				tags["status_desc"] = transform(unitResults["statusDesc"])
@@ -203,15 +218,14 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut string) error {
 			}
 		}
 
-		acc.AddFields("ipmi_sensor", fields, tags, time.Now())
+		acc.AddFields("ipmi_sensor", fields, tags, measured_at)
 	}
 
-	return nil
+	return scanner.Err()
 }
 
 // extractFieldsFromRegex consumes a regex with named capture groups and returns a kvp map of strings with the results
-func extractFieldsFromRegex(regex string, input string) map[string]string {
-	re := regexp.MustCompile(regex)
+func extractFieldsFromRegex(re *regexp.Regexp, input string) map[string]string {
 	submatches := re.FindStringSubmatch(input)
 	results := make(map[string]string)
 	for i, name := range re.SubexpNames() {
@@ -223,12 +237,12 @@ func extractFieldsFromRegex(regex string, input string) map[string]string {
 }
 
 // aToFloat converts string representations of numbers to float64 values
-func aToFloat(val string) float64 {
+func aToFloat(val string) (float64, error) {
 	f, err := strconv.ParseFloat(val, 64)
 	if err != nil {
-		return 0.0
+		return 0.0, err
 	}
-	return f
+	return f, nil
 }
 
 func trim(s string) string {

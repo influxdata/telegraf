@@ -47,7 +47,7 @@ ipmitool -I lan -H SERVER -U USERID -P PASSW0RD sdr
   timeout = "20s"
 
   ## Schema Version: (Optional, defaults to version 1)
-  schemaVersion = 2
+  metric_version = 2
 ```
 
 ### Measurements
@@ -92,33 +92,33 @@ KERNEL=="ipmi*", MODE="660", GROUP="telegraf"
 #### Version 1 Schema
 When retrieving stats from a remote server:
 ```
-ipmi_sensor,server=10.20.2.203,name=uid_light,host=foo.bar.com value=0,status=1i 1517125513000000000
-ipmi_sensor,server=10.20.2.203,name=sys._health_led,host=foo.bar.com status=1i,value=0 1517125513000000000
-ipmi_sensor,server=10.20.2.203,unit=watts,host=foo.bar.com,name=power_supply_1 status=1i,value=110 1517125513000000000
-ipmi_sensor,server=10.20.2.203,host=foo.bar.com,name=power_supply_2,unit=watts status=1i,value=120 1517125513000000000
-ipmi_sensor,server=10.20.2.203,name=power_supplies,host=foo.bar.com value=0,status=1i 1517125513000000000
-ipmi_sensor,server=10.20.2.203,name=fan_1,unit=percent,host=foo.bar.com status=1i,value=43.12 1517125513000000000
+ipmi_sensor,server=10.20.2.203,name=uid_light value=0,status=1i 1517125513000000000
+ipmi_sensor,server=10.20.2.203,name=sys._health_led status=1i,value=0 1517125513000000000
+ipmi_sensor,server=10.20.2.203,name=power_supply_1,unit=watts status=1i,value=110 1517125513000000000
+ipmi_sensor,server=10.20.2.203,name=power_supply_2,unit=watts status=1i,value=120 1517125513000000000
+ipmi_sensor,server=10.20.2.203,name=power_supplies value=0,status=1i 1517125513000000000
+ipmi_sensor,server=10.20.2.203,name=fan_1,unit=percent status=1i,value=43.12 1517125513000000000
 ```
 
 
 When retrieving stats from the local machine (no server specified):
 ```
-ipmi_sensor,name=uid_light,host=foo.bar.com value=0,status=1i 1517125513000000000
-ipmi_sensor,name=sys._health_led,host=foo.bar.com status=1i,value=0 1517125513000000000
-ipmi_sensor,unit=watts,host=foo.bar.com,name=power_supply_1 status=1i,value=110 1517125513000000000
-ipmi_sensor,host=foo.bar.com,name=power_supply_2,unit=watts status=1i,value=120 1517125513000000000
-ipmi_sensor,name=power_supplies,host=foo.bar.com value=0,status=1i 1517125513000000000
-ipmi_sensor,name=fan_1,unit=percent,host=foo.bar.com status=1i,value=43.12 1517125513000000000
+ipmi_sensor,name=uid_light value=0,status=1i 1517125513000000000
+ipmi_sensor,name=sys._health_led status=1i,value=0 1517125513000000000
+ipmi_sensor,name=power_supply_1,unit=watts status=1i,value=110 1517125513000000000
+ipmi_sensor,name=power_supply_2,unit=watts status=1i,value=120 1517125513000000000
+ipmi_sensor,name=power_supplies value=0,status=1i 1517125513000000000
+ipmi_sensor,name=fan_1,unit=percent status=1i,value=43.12 1517125513000000000
 ```
 
 #### Version 2 Schema
 
 When retrieving stats from the local machine (no server specified):
 ```
-ipmi_sensor,name=uid_light,entity_id=23.1,status_code=ok,status_desc=ok,host=foo.bar.com value=0 1517125474000000000
-ipmi_sensor,host=foo.bar.com,name=sys._health_led,entity_id=23.2,status_code=ok,status_desc=ok value=0 1517125474000000000
-ipmi_sensor,status_code=ok,unit=watts,status_desc=presence_detected,host=foo.bar.com,name=power_supply_1,entity_id=10.1 value=110 1517125474000000000
-ipmi_sensor,host=foo.bar.com,name=power_supply_2,entity_id=10.2,status_code=ok,unit=watts,status_desc=presence_detected value=125 1517125474000000000
-ipmi_sensor,name=power_supplies,entity_id=10.3,status_code=ok,status_desc=fully_redundant,host=foo.bar.com value=0 1517125474000000000
-ipmi_sensor,unit=percent,status_desc=transition_to_running,host=foo.bar.com,name=fan_1,entity_id=7.1,status_code=ok value=43.12 1517125474000000000
+ipmi_sensor,name=uid_light,entity_id=23.1,status_code=ok,status_desc=ok value=0 1517125474000000000
+ipmi_sensor,name=sys._health_led,entity_id=23.2,status_code=ok,status_desc=ok value=0 1517125474000000000
+ipmi_sensor,entity_id=10.1,name=power_supply_1,status_code=ok,status_desc=presence_detected,unit=watts value=110 1517125474000000000
+ipmi_sensor,name=power_supply_2,entity_id=10.2,status_code=ok,unit=watts,status_desc=presence_detected value=125 1517125474000000000
+ipmi_sensor,name=power_supplies,entity_id=10.3,status_code=ok,status_desc=fully_redundant value=0 1517125474000000000
+ipmi_sensor,entity_id=7.1,name=fan_1,status_code=ok,status_desc=transition_to_running,unit=percent value=43.12 1517125474000000000
 ```
