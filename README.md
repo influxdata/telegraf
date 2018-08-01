@@ -198,7 +198,7 @@ configuration options.
 * [nats](./plugins/inputs/nats)
 * [net](./plugins/inputs/net)
 * [net_response](./plugins/inputs/net_response)
-* [netstat](./plugins/inputs/netstat)
+* [netstat](./plugins/inputs/net)
 * [nginx](./plugins/inputs/nginx)
 * [nginx_plus](./plugins/inputs/nginx_plus)
 * [nsq_consumer](./plugins/inputs/nsq_consumer)
