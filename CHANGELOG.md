@@ -1,3 +1,9 @@
+## v1.7.3 [unreleased]
+
+### Bugfixes
+
+- [#4498](https://github.com/influxdata/telegraf/pull/4498): Keep leading whitespace for messages in syslog input.
+
 ## v1.7.2 [2018-07-18]
 
 ### Bugfixes
