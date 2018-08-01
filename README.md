@@ -180,6 +180,7 @@ configuration options.
 * [mysql](./plugins/inputs/mysql)
 * [nats](./plugins/inputs/nats)
 * [net_response](./plugins/inputs/net_response)
+* [netstat](./plugins/inputs/net)
 * [nginx](./plugins/inputs/nginx)
 * [nginx_plus](./plugins/inputs/nginx_plus)
 * [nsq](./plugins/inputs/nsq)
