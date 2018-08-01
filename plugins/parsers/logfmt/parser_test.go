@@ -87,7 +87,7 @@ func TestParseLine(t *testing.T) {
 		wantErr     bool
 	}{
 		{
-			name:    " No Metric In line",
+			name:    "No Metric In line",
 			now:     func() time.Time { return time.Unix(0, 0) },
 			want:    testutil.Metric{},
 			wantErr: true,
@@ -118,10 +118,11 @@ func TestParseLine(t *testing.T) {
 			}
 			got, err := l.ParseLine(tt.s)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Logfmt.Parse error = %v, wantErr %v", err, tt.wantErr)
-				return
+				t.Fatalf("Logfmt.Parse error = %v, wantErr %v", err, tt.wantErr)
 			}
-			testutil.MustEqual(t, got, tt.want)
+			if got != nil {
+				testutil.MustEqual(t, got, tt.want)
+			}
 		})
 	}
 }

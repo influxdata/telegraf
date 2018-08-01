@@ -3,7 +3,6 @@ package logfmt
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -14,7 +13,7 @@ import (
 )
 
 var (
-	ErrNoMetric = errors.New("no metric in line")
+	ErrNoMetric = fmt.Errorf("no metric in line")
 )
 
 // Parser decodes logfmt formatted messages into metrics.
