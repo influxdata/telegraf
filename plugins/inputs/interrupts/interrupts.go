@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -52,10 +51,13 @@ func parseInterrupts(r io.Reader) ([]IRQ, error) {
 		}
 		cpucount = len(cpus)
 	}
-scan:
+
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
 		if !strings.HasSuffix(fields[0], ":") {
+			continue
+		}
+		if cpucount > len(fields) {
 			continue
 		}
 		irqid := strings.TrimRight(fields[0], ":")
@@ -65,8 +67,7 @@ scan:
 			if i < len(irqvals) {
 				irqval, err := strconv.ParseInt(irqvals[i], 10, 64)
 				if err != nil {
-					log.Printf("I! skipping interrupt field '%s': %s", irqvals[i], err.Error())
-					continue scan
+					return irqs, fmt.Errorf("Unable to parse %q from %q: %s", irqvals[i], scanner.Text(), err)
 				}
 				irq.Cpus = append(irq.Cpus, irqval)
 			}
