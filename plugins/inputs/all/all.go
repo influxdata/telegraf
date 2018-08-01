@@ -84,6 +84,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/opensmtpd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/passenger"
 	_ "github.com/influxdata/telegraf/plugins/inputs/pf"
+	_ "github.com/influxdata/telegraf/plugins/inputs/pgbouncer"
 	_ "github.com/influxdata/telegraf/plugins/inputs/phpfpm"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ping"
 	_ "github.com/influxdata/telegraf/plugins/inputs/postfix"
