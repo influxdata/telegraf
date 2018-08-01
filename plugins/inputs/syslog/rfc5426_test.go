@@ -202,6 +202,38 @@ func getTestCasesForRFC5426() []testCase5426 {
 			},
 			werr: true,
 		},
+		{
+			name: "trim message",
+			data: []byte("<1>1 - - - - - - \tA\n"),
+			wantBestEffort: &testutil.Metric{
+				Measurement: "syslog",
+				Fields: map[string]interface{}{
+					"version":       uint16(1),
+					"message":       "\tA",
+					"facility_code": 0,
+					"severity_code": 1,
+				},
+				Tags: map[string]string{
+					"severity": "alert",
+					"facility": "kern",
+				},
+				Time: defaultTime,
+			},
+			wantStrict: &testutil.Metric{
+				Measurement: "syslog",
+				Fields: map[string]interface{}{
+					"version":       uint16(1),
+					"message":       "\tA",
+					"facility_code": 0,
+					"severity_code": 1,
+				},
+				Tags: map[string]string{
+					"severity": "alert",
+					"facility": "kern",
+				},
+				Time: defaultTime,
+			},
+		},
 	}
 
 	return testCases
