@@ -87,16 +87,13 @@ func TestParseLine(t *testing.T) {
 		wantErr     bool
 	}{
 		{
-			name: "test something",
-			now:  func() time.Time { return time.Unix(0, 0) },
-			want: testutil.Metric{
-				Tags:   map[string]string{},
-				Fields: map[string]interface{}{},
-				Time:   time.Unix(0, 0),
-			},
+			name:    " No Metric In line",
+			now:     func() time.Time { return time.Unix(0, 0) },
+			want:    testutil.Metric{},
+			wantErr: true,
 		},
 		{
-			name:        "log parser fmt returns all fields",
+			name:        "Log parser fmt returns all fields",
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			s:           `ts=2018-07-24T19:43:35.207268Z lvl=5 msg="Write failed" log_id=09R4e4Rl000`,
