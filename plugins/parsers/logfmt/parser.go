@@ -3,14 +3,18 @@ package logfmt
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	glogfmt "github.com/go-logfmt/logfmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+)
+
+var (
+	ErrNoMetric = errors.New("no metric in line")
 )
 
 // Parser decodes logfmt formatted messages into metrics.
@@ -67,38 +71,15 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 
 // ParseLine converts a single line of text in logfmt to metrics.
 func (p *Parser) ParseLine(s string) (telegraf.Metric, error) {
-	reader := strings.NewReader(s)
-	decoder := glogfmt.NewDecoder(reader)
-
-	decoder.ScanRecord()
-	tags := make(map[string]string)
-	fields := make(map[string]interface{})
-	//add default tags
-	for k, v := range p.DefaultTags {
-		tags[k] = v
-	}
-
-	for decoder.ScanKeyval() {
-		if string(decoder.Value()) == "" {
-			return nil, fmt.Errorf("value could not be found for key: %v", string(decoder.Key()))
-		}
-		//attempt type conversions
-		value := string(decoder.Value())
-		if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
-			fields[string(decoder.Key())] = iValue
-		} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
-			fields[string(decoder.Key())] = fValue
-		} else if bValue, err := strconv.ParseBool(value); err == nil {
-			fields[string(decoder.Key())] = bValue
-		} else {
-			fields[string(decoder.Key())] = value
-		}
-	}
-	m, err := metric.New(p.MetricName, tags, fields, p.Now())
+	metrics, err := p.Parse([]byte(s))
 	if err != nil {
 		return nil, err
 	}
-	return m, nil
+
+	if len(metrics) < 1 {
+		return nil, ErrNoMetric
+	}
+	return metrics[0], nil
 }
 
 // SetDefaultTags adds tags to the metrics outputs of Parse and ParseLine.
