@@ -12,6 +12,7 @@
 - [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
 - [x509_cert](./plugins/inputs/x509_cert/README.md) - Contributed by @jtyr
 - [filecount](./plugins/inputs/filecount/README.md) - Contributed by @sometimesfood
+- [pgbouncer](./plugins/inputs/pgbouncer/README.md) - Contributed by @nerzhul
 
 ### New Processors
 
@@ -52,6 +53,9 @@
 - [#4491](https://github.com/influxdata/telegraf/pull/4491): Send all messages before waiting for results in kafka output.
 - [#4492](https://github.com/influxdata/telegraf/pull/4492): Add support for lz4 compression to kafka output.
 - [#4450](https://github.com/influxdata/telegraf/pull/4450): Split multiple sensor keys in ipmi input.
+- [#4364](https://github.com/influxdata/telegraf/pull/4364): Support StatisticValues in cloudwatch output plugin.
+- [#4431](https://github.com/influxdata/telegraf/pull/4431): Add ip restriction for the prometheus_client output.
+- [#3918](https://github.com/influxdata/telegraf/pull/3918): Add pgbouncer input plugin.
 
 ## v1.7.3 [unreleased]
 
