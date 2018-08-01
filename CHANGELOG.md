@@ -3,6 +3,8 @@
 ### Bugfixes
 
 - [#4498](https://github.com/influxdata/telegraf/pull/4498): Keep leading whitespace for messages in syslog input.
+- [#4497](https://github.com/influxdata/telegraf/pull/4497): Skip bad entries on interrupt input.
+- [#4481](https://github.com/influxdata/telegraf/pull/4481): Preserve metric type when using filters in output plugins.
 
 ## v1.7.2 [2018-07-18]
 
