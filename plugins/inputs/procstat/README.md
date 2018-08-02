@@ -92,6 +92,7 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - involuntary_context_switches (int)
     - memory_data (int)
     - memory_locked (int)
+    - memory_pss (int)
     - memory_rss (int)
     - memory_stack (int)
     - memory_swap (int)
