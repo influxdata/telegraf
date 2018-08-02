@@ -111,14 +111,12 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// Add metrics a single Process
+// Add metrics for a single Process
 func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 	var prefix string
 	if p.Prefix != "" {
-		prefix = p.Prefix + "_"
+		p.Prefix += "_"
 	}
-
-	fields := map[string]interface{}{}
 
 	//If process_name tag is not already set, set to actual name
 	if _, nameInTags := proc.Tags()["process_name"]; !nameInTags {
@@ -135,6 +133,23 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 			proc.Tags()["user"] = user
 		}
 	}
+
+	fields := map[string]interface{}{}
+
+	for k, v := range p.getCommonMetrics(proc, prefix) {
+		fields[k] = v
+	}
+
+	for k, v := range p.getOSMetrics(proc, prefix) {
+		fields[k] = v
+	}
+
+	acc.AddFields("procstat", fields, proc.Tags())
+}
+
+// Add common metrics into fields map
+func (p *Procstat) getCommonMetrics(proc Process, prefix string) map[string]interface{} {
+	fields := map[string]interface{}{}
 
 	//If pid is not present as a tag, include it as a field.
 	if _, pidInTags := proc.Tags()["pid"]; !pidInTags {
@@ -234,12 +249,13 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 		}
 	}
 
-	acc.AddFields("procstat", fields, proc.Tags())
+	return fields
 }
 
 // Update monitored Processes
 func (p *Procstat) updateProcesses(acc telegraf.Accumulator, prevInfo map[PID]Process) (map[PID]Process, error) {
 	pids, tags, err := p.findPids(acc)
+
 	if err != nil {
 		return nil, err
 	}
