@@ -636,6 +636,8 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 	err := acc.GatherError(d.Gather)
 	require.NoError(t, err)
 
+	d.SwarmReporting = "leader"
+	d.nodeID = "k67qz4598weg5unwwffg6z1m1"
 	d.gatherSwarmInfo(&acc)
 
 	// test docker_container_net measurement

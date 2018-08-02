@@ -29,7 +29,8 @@ type Docker struct {
 	Endpoint       string
 	ContainerNames []string // deprecated in 1.4; use container_name_include
 
-	GatherServices bool `toml:"gather_services"`
+	GatherServices bool   `toml:"gather_services"`
+	SwarmReporting string `toml:"swarm_reporting"`
 
 	Timeout        internal.Duration
 	PerDevice      bool     `toml:"perdevice"`
@@ -57,6 +58,8 @@ type Docker struct {
 	labelFilter     filter.Filter
 	containerFilter filter.Filter
 	stateFilter     filter.Filter
+
+	nodeID string
 }
 
 // KB, MB, GB, TB, PB...human friendly
@@ -81,8 +84,9 @@ var sampleConfig = `
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
 
-  ## Set to true to collect Swarm metrics(desired_replicas, running_replicas)
-  gather_services = false
+  ## Sets the condition for collecting Swarm data.  Can be one of:
+  ## "leader", "always", or "never".
+  swarm_reporting = "never"
 
   ## Only collect metrics for these containers, collect all if empty
   container_names = []
@@ -170,7 +174,15 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 		acc.AddError(err)
 	}
 
-	if d.GatherServices {
+	if d.SwarmReporting == "" {
+		if d.GatherServices {
+			d.SwarmReporting = "always"
+		} else {
+			d.SwarmReporting = "never"
+		}
+	}
+
+	if d.SwarmReporting == "always" || d.SwarmReporting == "leader" {
 		err := d.gatherSwarmInfo(acc)
 		if err != nil {
 			acc.AddError(err)
@@ -222,6 +234,27 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
+
+	nodes, err := d.client.NodeList(ctx, types.NodeListOptions{})
+	if err != nil {
+		return err
+	}
+
+	isLeader := false
+	activeNodes := make(map[string]struct{})
+	for _, n := range nodes {
+		if n.ID == d.nodeID {
+			isLeader = n.ManagerStatus.Leader
+		}
+		if n.Status.State != swarm.NodeStateDown {
+			activeNodes[n.ID] = struct{}{}
+		}
+	}
+
+	if d.SwarmReporting == "leader" && !isLeader {
+		return nil
+	}
+
 	services, err := d.client.ServiceList(ctx, types.ServiceListOptions{})
 	if err != nil {
 		return err
@@ -234,20 +267,8 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 			return err
 		}
 
-		nodes, err := d.client.NodeList(ctx, types.NodeListOptions{})
-		if err != nil {
-			return err
-		}
-
 		running := map[string]int{}
 		tasksNoShutdown := map[string]int{}
-
-		activeNodes := make(map[string]struct{})
-		for _, n := range nodes {
-			if n.Status.State != swarm.NodeStateDown {
-				activeNodes[n.ID] = struct{}{}
-			}
-		}
 
 		for _, task := range tasks {
 			if task.DesiredState != swarm.TaskStateShutdown {
@@ -302,6 +323,10 @@ func (d *Docker) gatherInfo(acc telegraf.Accumulator) error {
 
 	d.engine_host = info.Name
 	d.serverVersion = info.ServerVersion
+
+	if d.SwarmReporting == "leader" {
+		d.nodeID = info.Swarm.NodeID
+	}
 
 	tags := map[string]string{
 		"engine_host":    d.engine_host,

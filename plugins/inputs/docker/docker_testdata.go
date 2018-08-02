@@ -57,6 +57,9 @@ var info = types.Info{
 	NoProxy:           "",
 	BridgeNfIP6tables: true,
 	ServerVersion:     "17.09.0-ce",
+	Swarm: swarm.Info{
+		NodeID: "k67qz4598weg5unwwffg6z1m1",
+	},
 }
 
 var containerList = []types.Container{
@@ -208,9 +211,12 @@ var TaskList = []swarm.Task{
 
 var NodeList = []swarm.Node{
 	swarm.Node{
-		ID: "0cl4jturcyd1ks3fwpd010kor",
+		ID: "k67qz4598weg5unwwffg6z1m1",
 		Status: swarm.NodeStatus{
 			State: "ready",
+		},
+		ManagerStatus: &swarm.ManagerStatus{
+			Leader: true,
 		},
 	},
 	swarm.Node{
