@@ -197,7 +197,7 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 
 	mmaps, err := proc.MemoryMaps()
 	if err == nil {
-        fields[prefix+"memory_pss"] = mmaps.Pss
+		fields[prefix+"memory_pss"] = mmaps.Pss
 	}
 
 	rlims, err := proc.RlimitUsage(true)
