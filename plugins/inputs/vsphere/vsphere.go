@@ -1,6 +1,8 @@
 package vsphere
 
 import (
+	"context"
+	"log"
 	"sync"
 	"time"
 
@@ -45,6 +47,8 @@ type VSphere struct {
 	Timeout                 internal.Duration
 
 	endpoints []*Endpoint
+	rootCtx   context.Context
+	cancel    context.CancelFunc
 
 	// Mix in the TLS/SSL goodness from core
 	tls.ClientConfig
@@ -215,6 +219,25 @@ func (v *VSphere) checkEndpoints() error {
 	return nil
 }
 
+func (v *VSphere) Start(acc telegraf.Accumulator) error {
+	log.Println("D! [input.vsphere]: Starting plugin")
+	rootCtx, cancel := context.WithCancel(context.Background())
+	v.rootCtx = rootCtx
+	v.cancel = cancel
+	return nil
+}
+
+func (v *VSphere) Stop() {
+	log.Println("D! [input.vsphere]: Stopping plugin")
+	v.cancel()
+
+	// Wait for all endpoints to finish
+	for _, ep := range v.endpoints {
+		log.Printf("D! [input.vsphere]: Waiting for endpoint %s to finish", ep.URL.Host)
+		ep.wg.Wait()
+	}
+}
+
 // Gather is the main data collection function called by the Telegraf core. It performs all
 // the data collection and writes all metrics into the Accumulator passed as an argument.
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
@@ -229,12 +252,17 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(endpoint *Endpoint) {
 			defer wg.Done()
-			acc.AddError(endpoint.collect(acc))
+			err := endpoint.collect(v.rootCtx, acc)
+			if err == context.Canceled {
+
+				// No need to signal errors if we were merely canceled.
+				err = nil
+			}
+			acc.AddError(err)
 		}(ep)
 	}
 
 	wg.Wait()
-
 	return nil
 }
 

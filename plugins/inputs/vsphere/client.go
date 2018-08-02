@@ -27,12 +27,12 @@ func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 		return nil, err
 	}
 	if vs.Username != "" {
-		log.Printf("D! Logging in using explicit credentials: %s", vs.Username)
+		log.Printf("D! [input.vsphere]: Logging in using explicit credentials: %s", vs.Username)
 		u.User = url.UserPassword(vs.Username, vs.Password)
 	}
 	ctx := context.Background()
 
-	log.Printf("D! Creating client: %s", u.Host)
+	log.Printf("D! [input.vsphere]: Creating client: %s", u.Host)
 	c, err := govmomi.NewClient(ctx, u, vs.InsecureSkipVerify)
 	if err != nil {
 		return nil, err
