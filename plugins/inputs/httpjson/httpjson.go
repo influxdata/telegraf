@@ -2,6 +2,7 @@ package httpjson
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -26,6 +27,7 @@ type HttpJson struct {
 	Name            string
 	Servers         []string
 	Method          string
+	HTTPProxy       string `toml:"http_proxy"`
 	TagKeys         []string
 	ResponseTimeout internal.Duration
 	Parameters      map[string]string
@@ -87,6 +89,9 @@ var sampleConfig = `
   ## HTTP method to use: GET or POST (case-sensitive)
   method = "GET"
 
+  ## Set http_proxy (telegraf does not properly use the system wide proxy settings if it is not set)
+  # http_proxy = "http://localhost:8888"
+
   ## List of tag names to extract from top-level of JSON server response
   # tag_keys = [
   #   "my_tag_1",
@@ -113,6 +118,26 @@ var sampleConfig = `
   #   apiVersion = "v1"
 `
 
+// ErrRedirectAttempted indicates that a redirect occurred
+var ErrRedirectAttempted = errors.New("redirect")
+
+
+// Set the proxy. A configured proxy overwrites the system wide proxy.
+func getProxyFunc(http_proxy string) func(*http.Request) (*url.URL, error) {
+	if http_proxy == "" {
+		return http.ProxyFromEnvironment
+	}
+	proxyURL, err := url.Parse(http_proxy)
+	if err != nil {
+		return func(_ *http.Request) (*url.URL, error) {
+			return nil, errors.New("bad proxy: " + err.Error())
+		}
+	}
+	return func(r *http.Request) (*url.URL, error) {
+		return proxyURL, nil
+	}
+}
+
 func (h *HttpJson) SampleConfig() string {
 	return sampleConfig
 }
@@ -131,6 +156,8 @@ func (h *HttpJson) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
+			Proxy:             getProxyFunc(h.HTTPProxy),
+			DisableKeepAlives: true,
 			ResponseHeaderTimeout: h.ResponseTimeout.Duration,
 			TLSClientConfig:       tlsCfg,
 		}
