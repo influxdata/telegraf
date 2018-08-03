@@ -234,6 +234,10 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 		}
 	}
 
+	for k, v := range getOSSpecificMetrics() {
+		fields[k] = v
+	}
+
 	acc.AddFields("procstat", fields, proc.Tags())
 }
 
