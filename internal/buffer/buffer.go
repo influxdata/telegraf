@@ -40,18 +40,18 @@ func (b *Buffer) Len() int {
 
 // Add adds metrics to the buffer.
 func (b *Buffer) Add(metrics ...telegraf.Metric) {
+	b.mu.Lock()
 	for i, _ := range metrics {
 		MetricsWritten.Incr(1)
 		select {
 		case b.buf <- metrics[i]:
 		default:
-			b.mu.Lock()
 			MetricsDropped.Incr(1)
 			<-b.buf
 			b.buf <- metrics[i]
-			b.mu.Unlock()
 		}
 	}
+	b.mu.Unlock()
 }
 
 // Batch returns a batch of metrics of size batchSize.
