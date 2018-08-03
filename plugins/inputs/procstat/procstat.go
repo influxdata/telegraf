@@ -195,11 +195,6 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"memory_locked"] = mem.Locked
 	}
 
-	mmaps, err := proc.MemoryMaps()
-	if err == nil {
-		fields[prefix+"memory_pss"] = mmaps.Pss
-	}
-
 	rlims, err := proc.RlimitUsage(true)
 	if err == nil {
 		for _, rlim := range rlims {
@@ -237,6 +232,10 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 				fields[prefix+name] = rlim.Used
 			}
 		}
+	}
+
+	for k, v := range getOSSpecificMetrics() {
+		fields[k] = v
 	}
 
 	acc.AddFields("procstat", fields, proc.Tags())
