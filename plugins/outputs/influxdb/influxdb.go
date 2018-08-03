@@ -141,36 +141,36 @@ func (i *InfluxDB) Connect() error {
 	}
 
 	for _, u := range urls {
-		u, err := url.Parse(u)
+		parts, err := url.Parse(u)
 		if err != nil {
-			return fmt.Errorf("error parsing url [%s]: %v", u, err)
+			return fmt.Errorf("error parsing url [%q]: %v", u, err)
 		}
 
 		var proxy *url.URL
 		if len(i.HTTPProxy) > 0 {
 			proxy, err = url.Parse(i.HTTPProxy)
 			if err != nil {
-				return fmt.Errorf("error parsing proxy_url [%s]: %v", proxy, err)
+				return fmt.Errorf("error parsing proxy_url [%s]: %v", i.HTTPProxy, err)
 			}
 		}
 
-		switch u.Scheme {
+		switch parts.Scheme {
 		case "udp", "udp4", "udp6":
-			c, err := i.udpClient(u)
+			c, err := i.udpClient(parts)
 			if err != nil {
 				return err
 			}
 
 			i.clients = append(i.clients, c)
 		case "http", "https", "unix":
-			c, err := i.httpClient(ctx, u, proxy)
+			c, err := i.httpClient(ctx, parts, proxy)
 			if err != nil {
 				return err
 			}
 
 			i.clients = append(i.clients, c)
 		default:
-			return fmt.Errorf("unsupported scheme [%s]: %q", u, u.Scheme)
+			return fmt.Errorf("unsupported scheme [%q]: %q", u, parts.Scheme)
 		}
 	}
 
