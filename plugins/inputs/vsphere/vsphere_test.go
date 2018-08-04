@@ -1,6 +1,7 @@
 package vsphere
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"regexp"
@@ -207,19 +208,20 @@ func TestParseConfig(t *testing.T) {
 
 func TestWorkerPool(t *testing.T) {
 	wp := NewWorkerPool(100)
-	wp.Run(func(p interface{}) interface{} {
+	ctx := context.Background()
+	wp.Run(ctx, func(ctx context.Context, p interface{}) interface{} {
 		return p.(int) * 2
 	}, 10)
 
 	n := 100000
-	wp.Fill(func(in chan interface{}) {
+	wp.Fill(ctx, func(ctx context.Context, f PushFunc) {
 		for i := 0; i < n; i++ {
-			in <- i
+			f(ctx, i)
 		}
 	})
 	results := make([]int, n)
 	i := 0
-	wp.Drain(func(p interface{}) {
+	wp.Drain(ctx, func(ctx context.Context, p interface{}) {
 		results[i] = p.(int)
 		i++
 	})
@@ -227,6 +229,26 @@ func TestWorkerPool(t *testing.T) {
 	for i := 0; i < n; i++ {
 		require.Equal(t, results[i], i*2)
 	}
+}
+
+func TestWaitGroup(t *testing.T) {
+	c := NewConcurrentWaitGroup()
+	fmt.Println("Running...")
+	c.Add(1)
+	for i := 0; i < 5; i++ {
+		go func() {
+			require.True(t, c.Add(1)) // Should return true
+			defer c.Done()
+			time.Sleep(2 * time.Second)
+		}()
+	}
+
+	time.Sleep(1 * time.Second)
+	go c.Done()
+	c.Wait()
+
+	// Subsequent adds should return false.
+	require.True(t, !c.Add(1))
 }
 
 func TestAll(t *testing.T) {

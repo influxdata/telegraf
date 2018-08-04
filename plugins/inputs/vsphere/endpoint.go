@@ -35,7 +35,7 @@ type Endpoint struct {
 	stopped         uint32
 	collectClient   *Client
 	discoverClient  *Client
-	wg              sync.WaitGroup
+	wg              *ConcurrentWaitGroup
 }
 
 type resourceKind struct {
@@ -91,6 +91,7 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 		instanceInfo: make(map[string]resourceInfo),
 		stopped:      0,
 		initialized:  false,
+		wg:           NewConcurrentWaitGroup(),
 	}
 
 	e.resourceKinds = map[string]resourceKind{
@@ -222,9 +223,7 @@ func (e *Endpoint) setupMetricIds(ctx context.Context) error {
 	}
 	defer client.Close()
 
-	log.Println("Getting infos")
 	mn, err := client.Perf.CounterInfoByName(ctx)
-	log.Println("Done Getting infos")
 
 	if err != nil {
 		return err
@@ -247,7 +246,12 @@ func (e *Endpoint) getMetadata(ctx context.Context, in interface{}) interface{} 
 }
 
 func (e *Endpoint) discover(ctx context.Context) error {
-	e.wg.Add(1)
+	// Add returning false means we've been released from Wait and no
+	// more tasks are allowed. This happens when the plugin is stopped
+	// or reloaded.
+	if !e.wg.Add(1) {
+		return context.Canceled
+	}
 	defer e.wg.Done()
 
 	sw := NewStopwatch("discover", e.URL.Host)
@@ -386,7 +390,12 @@ func getDatastores(ctx context.Context, root *view.ContainerView) (objectMap, er
 }
 
 func (e *Endpoint) collect(ctx context.Context, acc telegraf.Accumulator) error {
-	e.wg.Add(1)
+	// Add returning false means we've been released from Wait and no
+	// more tasks are allowed. This happens when the plugin is stopped
+	// or reloaded.
+	if !e.wg.Add(1) {
+		return context.Canceled
+	}
 	defer e.wg.Done()
 
 	var err error
