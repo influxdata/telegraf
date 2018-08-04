@@ -20,19 +20,15 @@ type VSphere struct {
 	Vcenters               []string
 	Username               string
 	Password               string
-	GatherClusters         bool
 	ClusterInstances       bool
 	ClusterMetricInclude   []string
 	ClusterMetricExclude   []string
-	GatherHosts            bool
 	HostInstances          bool
 	HostMetricInclude      []string
 	HostMetricExclude      []string
-	GatherVms              bool
 	VMInstances            bool     `toml:"vm_instances"`
 	VMMetricInclude        []string `toml:"vm_metric_include"`
 	VMMetricExclude        []string `toml:"vm_metric_exclude"`
-	GatherDatastores       bool
 	DatastoreInstances     bool
 	DatastoreMetricInclude []string
 	DatastoreMetricExclude []string
@@ -63,8 +59,6 @@ var sampleConfig = `
 
 ############### VMs ###############
 
-# gather_vms = true ### (default=true)
-
 ## Collect VM instance metrics, such as individual cores? (default=true)
 #vm_instances = true
 
@@ -91,8 +85,6 @@ vm_metric_include = [
 # vm_metric_exclude = [] ## Nothing is excluded by default
 
 ############### Hosts ###############
-
-# gather_hosts = true ## (default=true)
 
 ## Collect host instance metrics, such as individual cores? (default=true)
 #host_instances = true
@@ -139,8 +131,6 @@ host_metric_include = [
 
 ############### Clusters ###############
 
-# gather_clusters = true ## (default=true)
-
 ## Collect cluster instance metrics, such as individual cores? (default=true)
 #cluster_instances = true
 
@@ -154,8 +144,6 @@ cluster_metric_include = [
 # cluster_metric_exclude = [] ## Nothing excluded by default
 
 ############### Datastores ###############
-
-# gather_datastores = true ## (default=true)
 
 ## Collect datastore instance metrics, such as individual LUNs and datafiles? (default=false)
 #datastore_instances = false
@@ -271,19 +259,15 @@ func init() {
 		return &VSphere{
 			Vcenters: []string{},
 
-			GatherClusters:         true,
 			ClusterInstances:       true,
 			ClusterMetricInclude:   nil,
 			ClusterMetricExclude:   nil,
-			GatherHosts:            true,
 			HostInstances:          true,
 			HostMetricInclude:      nil,
 			HostMetricExclude:      nil,
-			GatherVms:              true,
 			VMInstances:            true,
 			VMMetricInclude:        nil,
 			VMMetricExclude:        nil,
-			GatherDatastores:       true,
 			DatastoreInstances:     false,
 			DatastoreMetricInclude: nil,
 			DatastoreMetricExclude: nil,

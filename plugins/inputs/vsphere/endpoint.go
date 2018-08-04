@@ -32,7 +32,6 @@ type Endpoint struct {
 	discoveryTicker *time.Ticker
 	collectMux      sync.RWMutex
 	initialized     bool
-	stopped         uint32
 	collectClient   *Client
 	discoverClient  *Client
 	wg              *ConcurrentWaitGroup
@@ -89,7 +88,6 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 		Parent:       parent,
 		lastColls:    make(map[string]time.Time),
 		instanceInfo: make(map[string]resourceInfo),
-		stopped:      0,
 		initialized:  false,
 		wg:           NewConcurrentWaitGroup(),
 	}
@@ -98,7 +96,7 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 		"cluster": {
 			name:             "cluster",
 			pKey:             "clustername",
-			enabled:          parent.GatherClusters,
+			enabled:          anythingEnabled(parent.ClusterMetricExclude),
 			realTime:         false,
 			sampling:         300,
 			objects:          make(objectMap),
@@ -109,7 +107,7 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 		"host": {
 			name:             "host",
 			pKey:             "esxhostname",
-			enabled:          parent.GatherHosts,
+			enabled:          anythingEnabled(parent.HostMetricExclude),
 			realTime:         true,
 			sampling:         20,
 			objects:          make(objectMap),
@@ -120,7 +118,7 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 		"vm": {
 			name:             "vm",
 			pKey:             "vmname",
-			enabled:          parent.GatherVms,
+			enabled:          anythingEnabled(parent.VMMetricExclude),
 			realTime:         true,
 			sampling:         20,
 			objects:          make(objectMap),
@@ -131,7 +129,7 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 		"datastore": {
 			name:             "datastore",
 			pKey:             "dsname",
-			enabled:          parent.GatherDatastores,
+			enabled:          anythingEnabled(parent.DatastoreMetricExclude),
 			realTime:         false,
 			sampling:         300,
 			objects:          make(objectMap),
@@ -142,6 +140,15 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 	}
 
 	return &e
+}
+
+func anythingEnabled(ex []string) bool {
+	for _, s := range ex {
+		if s == "*" {
+			return false
+		}
+	}
+	return true
 }
 
 func newFilterOrPanic(include []string, exclude []string) filter.Filter {
@@ -189,27 +196,17 @@ func (e *Endpoint) init(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-
-			// Now schedule a recurring discovery after the configured delay period
-			go func() {
-				log.Println("D! [input.vsphere]: Waiting to schedule recurring discovery")
-				tmo := time.After(e.Parent.ObjectDiscoveryInterval.Duration)
-
-				// Wait for either initial collection delay to expire or shutdown.
-				select {
-				case <-tmo:
-					log.Println("D! [input.vsphere]: Scheduling recurring discovery")
-					e.startDiscovery(ctx)
-				case <-ctx.Done():
-					// Shutdown requested before first scheduled discovery. Bail out!
-					log.Printf("D! [input.vsphere]: Exiting discovery goroutine for %s", e.URL.Host)
-					return
-				}
-			}()
+			e.startDiscovery(ctx)
 		} else {
 			// Otherwise, just run it in the background. We'll probably have an incomplete first metric
 			// collection this way.
-			e.startDiscovery(ctx)
+			go func() {
+				err := e.discover(ctx)
+				if err != nil && err != context.Canceled {
+					log.Printf("E! [input.vsphere]: Error in discovery for %s: %v", e.URL.Host, err)
+				}
+				e.startDiscovery(ctx)
+			}()
 		}
 	}
 	e.initialized = true
