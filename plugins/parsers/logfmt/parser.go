@@ -1,9 +1,10 @@
-// Package logfmt converts logfmt data into metrics.
+// Package logfmt converts logfmt data into metrics.  New comment
 package logfmt
 
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -37,9 +38,11 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 	reader := bytes.NewReader(b)
 	decoder := glogfmt.NewDecoder(reader)
 	metrics := make([]telegraf.Metric, 0)
+	tags := make(map[string]string)
+	fields := make(map[string]interface{})
 	for decoder.ScanRecord() {
-		tags := make(map[string]string)
-		fields := make(map[string]interface{})
+		//tags := make(map[string]string)
+		//fields := make(map[string]interface{})
 		for decoder.ScanKeyval() {
 			if string(decoder.Value()) == "" {
 				return metrics, fmt.Errorf("value could not be found for key: %v", string(decoder.Key()))
@@ -48,22 +51,40 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 			//attempt type conversions
 			value := string(decoder.Value())
 			if iValue, err := strconv.Atoi(value); err == nil {
+				//log.Printf("Print Atoi Value Here:", iValue)
+				//log.Printf("DECODER =", decoder.Key())
 				fields[string(decoder.Key())] = iValue
 			} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
+				log.Printf("key:%s, value:%s", decoder.Key(), value)
+				//log.Printf("Print ParseFloat Value Here:", fValue)
 				fields[string(decoder.Key())] = fValue
 			} else if bValue, err := strconv.ParseBool(value); err == nil {
+				//log.Printf("Print ParseBool Value Here:", bValue)
 				fields[string(decoder.Key())] = bValue
 			} else {
+				log.Printf("key:%s, value:%s", decoder.Key(), value)
+				//				log.Printf("Print Value Here:", value)
 				fields[string(decoder.Key())] = value
+				//log.Printf("DECODER =", decoder.Key())
 			}
 		}
-		m, err := metric.New(p.MetricName, tags, fields, p.Now())
-		if err != nil {
+		log.Printf("All fields: %s", fields)
+		//m, err := metric.New(p.MetricName, tags, fields, p.Now())
+		//log.Printf("Return all the info in metric", p.MetricName, tags, fields)
+		/* if err != nil {
+			log.Println("Error occurred")
 			return nil, err
 		}
 		metrics = append(metrics, m)
+		log.Printf("The final appended metrics %s", metrics) */
+	}
+	m, err := metric.New(p.MetricName, tags, fields, p.Now())
+	if err != nil {
+		log.Println("Error occurred")
+		return nil, err
 	}
 	//add default tags
+	metrics = append(metrics, m)
 	p.applyDefaultTags(metrics)
 	return metrics, nil
 }
