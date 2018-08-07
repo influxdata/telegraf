@@ -3,7 +3,6 @@ package rename
 import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"sync"
 )
 
 const sampleConfig = `
@@ -36,13 +35,9 @@ type renamer struct {
 }
 
 type Rename struct {
-	Measurement  []renamer
-	Tag          []renamer
-	Field        []renamer
-	measurements map[string]string
-	tags         map[string]string
-	fields       map[string]string
-	once         sync.Once
+	Measurement []renamer
+	Tag         []renamer
+	Field       []renamer
 }
 
 func (r *Rename) SampleConfig() string {
@@ -54,44 +49,30 @@ func (r *Rename) Description() string {
 }
 
 func (r *Rename) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	r.once.Do(r.init)
-
 	for _, point := range in {
-		if newMeasurementName, ok := r.measurements[point.Name()]; ok {
-			point.SetName(newMeasurementName)
-		}
-		for oldTagName, tagValue := range point.Tags() {
-			if newTagName, ok := r.tags[oldTagName]; ok {
-				point.RemoveTag(oldTagName)
-				point.AddTag(newTagName, tagValue)
+		for _, measurementRenamer := range r.Measurement {
+			if point.Name() == measurementRenamer.From {
+				point.SetName(measurementRenamer.To)
+				break
 			}
 		}
-		for oldFieldName, fieldValue := range point.Fields() {
-			if newFieldName, ok := r.fields[oldFieldName]; ok {
-				point.RemoveField(oldFieldName)
-				point.AddField(newFieldName, fieldValue)
+
+		for _, tagRenamer := range r.Tag {
+			if value, ok := point.GetTag(tagRenamer.From); ok {
+				point.RemoveTag(tagRenamer.From)
+				point.AddTag(tagRenamer.To, value)
+			}
+		}
+
+		for _, fieldRenamer := range r.Field {
+			if value, ok := point.GetField(fieldRenamer.From); ok {
+				point.RemoveField(fieldRenamer.From)
+				point.AddField(fieldRenamer.To, value)
 			}
 		}
 	}
 
 	return in
-}
-
-func (r *Rename) init() {
-	if r.measurements == nil || r.tags == nil || r.fields == nil {
-		r.measurements = make(map[string]string, len(r.Measurement))
-		for _, o := range r.Measurement {
-			r.measurements[o.From] = o.To
-		}
-		r.tags = make(map[string]string, len(r.Tag))
-		for _, o := range r.Tag {
-			r.tags[o.From] = o.To
-		}
-		r.fields = make(map[string]string, len(r.Field))
-		for _, o := range r.Field {
-			r.fields[o.From] = o.To
-		}
-	}
 }
 
 func init() {
