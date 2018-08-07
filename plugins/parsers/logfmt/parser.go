@@ -40,7 +40,9 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 	metrics := make([]telegraf.Metric, 0)
 	tags := make(map[string]string)
 	fields := make(map[string]interface{})
+	counter := 0
 	for decoder.ScanRecord() {
+		counter++
 		//tags := make(map[string]string)
 		//fields := make(map[string]interface{})
 		for decoder.ScanKeyval() {
@@ -78,14 +80,16 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 		metrics = append(metrics, m)
 		log.Printf("The final appended metrics %s", metrics) */
 	}
-	m, err := metric.New(p.MetricName, tags, fields, p.Now())
-	if err != nil {
-		log.Println("Error occurred")
-		return nil, err
+	if counter > 0 {
+		m, err := metric.New(p.MetricName, tags, fields, p.Now())
+		if err != nil {
+			log.Println("Error occurred")
+			return nil, err
+		}
+		//add default tags
+		metrics = append(metrics, m)
+		p.applyDefaultTags(metrics)
 	}
-	//add default tags
-	metrics = append(metrics, m)
-	p.applyDefaultTags(metrics)
 	return metrics, nil
 }
 
@@ -97,6 +101,7 @@ func (p *Parser) ParseLine(s string) (telegraf.Metric, error) {
 	}
 
 	if len(metrics) < 1 {
+		//if metrics[1] == nil {
 		return nil, ErrNoMetric
 	}
 	return metrics[0], nil

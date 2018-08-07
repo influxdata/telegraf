@@ -7,6 +7,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 func MustMetric(t *testing.T, m *testutil.Metric) telegraf.Metric {
@@ -27,7 +28,7 @@ func TestParse(t *testing.T) {
 		want        []testutil.Metric
 		wantErr     bool
 	}{
-		/*{
+		{
 			name: "no bytes returns no metrics",
 			now:  func() time.Time { return time.Unix(0, 0) },
 			want: []testutil.Metric{},
@@ -50,7 +51,7 @@ func TestParse(t *testing.T) {
 					Time: time.Unix(0, 0),
 				},
 			},
-		},*/
+		},
 		{
 			name:        "logfmt parsers every line",
 			bytes:       []byte("ts=2018-07-24T19:43:40.275Z lvl=info msg=\"http request\" method=POST\nparent_id=088876RL000 duration=7.45 log_id=09R4e4Rl000"),
@@ -66,20 +67,20 @@ func TestParse(t *testing.T) {
 						"method":    "POST",
 						"ts":        "2018-07-24T19:43:40.275Z",
 						"parent_id": "088876RL000",
-						"duration":  "7.45",
+						"duration":  7.45,
 						"log_id":    "09R4e4Rl000",
 					},
 					Time: time.Unix(0, 0),
 				},
 			},
 		},
-		/*{
+		{
 			name:    "poorly formatted logfmt returns error",
 			now:     func() time.Time { return time.Unix(0, 0) },
 			bytes:   []byte(`i am garbage data.`),
 			want:    []testutil.Metric{},
 			wantErr: true,
-		},*/
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -92,6 +93,7 @@ func TestParse(t *testing.T) {
 				t.Errorf("Logfmt.Parse error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			require.Equal(t, len(tt.want), len(got))
 			for i, m := range got {
 				testutil.MustEqual(t, m, tt.want[i])
 				//log.Printf("Are they equal", t, tt.want[i], m)
@@ -100,7 +102,7 @@ func TestParse(t *testing.T) {
 	}
 }
 
-/*func TestParseLine(t *testing.T) {
+func TestParseLine(t *testing.T) {
 	tests := []struct {
 		name        string
 		s           string
@@ -166,4 +168,4 @@ func TestParse(t *testing.T) {
 			}
 		})
 	}
-}*/
+}
