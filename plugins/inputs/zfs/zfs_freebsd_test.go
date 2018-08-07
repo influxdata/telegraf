@@ -10,21 +10,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// $ zpool list -Hp
+// $ zpool list -Hp -o name,health,size,alloc,free,fragmentation,capacity,dedupratio
 var zpool_output = []string{
-	"freenas-boot	30601641984	2022177280	28579464704	-	-	6	1.00x	ONLINE	-",
-	"red1	8933531975680	1126164848640	7807367127040	-	8%	12	1.83x	ONLINE	/mnt",
-	"temp1	2989297238016	1626309320704	1362987917312	-	38%	54	1.28x	ONLINE	/mnt",
-	"temp2	2989297238016	626958278656	2362338959360	-	12%	20	1.00x	ONLINE	/mnt",
+	"freenas-boot	ONLINE	30601641984	2022177280	28579464704	-	6	1.00x",
+	"red1	ONLINE	8933531975680	1126164848640	7807367127040	8%	12	1.83x",
+	"temp1	ONLINE	2989297238016	1626309320704	1362987917312	38%	54	1.28x",
+	"temp2	ONLINE	2989297238016	626958278656	2362338959360	12%	20	1.00x",
 }
 
 func mock_zpool() ([]string, error) {
 	return zpool_output, nil
 }
 
-// $ zpool list -Hp
+// $ zpool list -Hp -o name,health,size,alloc,free,fragmentation,capacity,dedupratio
 var zpool_output_unavail = []string{
-	"temp2	-	-	-	-	-	-	-	UNAVAIL	-",
+	"temp2	UNAVAIL	-	-	-	-	-	-",
 }
 
 func mock_zpool_unavail() ([]string, error) {
