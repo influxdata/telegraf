@@ -1,26 +1,22 @@
 package services
 
 import (
-    /*
-	"strconv"
-    */
-	"strings"
 	"bufio"
-	"time"
-	"fmt"
 	"bytes"
+	"fmt"
 	"os/exec"
+	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-
 // Services is a telegraf plugin to gather services status from systemd and windows services
 type Services struct {
-    Timeout     internal.Duration
-    systemctl   systemctlCall
+	Timeout   internal.Duration
+	systemctl systemctlCall
 }
 
 type systemctlCall func(Timeout internal.Duration) (*bytes.Buffer, error)
@@ -42,8 +38,9 @@ func (services *Services) SampleConfig() string {
 `
 }
 
+// Gather parses systemctl outputs and adds counters to the Accumulator
 func (services *Services) Gather(acc telegraf.Accumulator) error {
-    out, e := services.systemctl(services.Timeout)
+	out, e := services.systemctl(services.Timeout)
 	if e != nil {
 		acc.AddError(e)
 	}
@@ -57,40 +54,40 @@ func (services *Services) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("Error parsing line (expected at least 4 fields): %s", line))
 			continue
 		}
-        tags := map[string]string{
-            "name": data[0],
-        }
-        var status int
-        switch active := data[2]; active {
-        case "active":
-            status = 0 // ok
-        case "inactive":
-            status = 0 // ok
-        case "failed":
-            status = 2 // error
-        default:
-            status = 3 // unknown
-        }
-        fields := map[string]interface{}{
-            "status": status,
-        }
-        acc.AddCounter(measurement, fields, tags)
-    }
+		tags := map[string]string{
+			"name": data[0],
+		}
+		var status int
+		switch active := data[2]; active {
+		case "active":
+			status = 0 // ok
+		case "inactive":
+			status = 0 // ok
+		case "failed":
+			status = 2 // error
+		default:
+			status = 3 // unknown
+		}
+		fields := map[string]interface{}{
+			"status": status,
+		}
+		acc.AddCounter(measurement, fields, tags)
+	}
 
-    return nil
+	return nil
 }
 
 func setSystemctlCall(Timeout internal.Duration) (*bytes.Buffer, error) {
-    // is systemctl available ?
+	// is systemctl available ?
 	systemctlPath, err := exec.LookPath("systemctl")
 	if err != nil {
 		return nil, err
 	}
 
-    cmd := exec.Command(systemctlPath, "list-units", "--type=service", "--no-legend")
+	cmd := exec.Command(systemctlPath, "list-units", "--type=service", "--no-legend")
 
-    var out bytes.Buffer
-    cmd.Stdout = &out
+	var out bytes.Buffer
+	cmd.Stdout = &out
 	err = internal.RunTimeout(cmd, Timeout.Duration)
 	if err != nil {
 		return &out, fmt.Errorf("error running systemctl list-units --type=service --no-legend: %s", err)
@@ -102,8 +99,8 @@ func setSystemctlCall(Timeout internal.Duration) (*bytes.Buffer, error) {
 func init() {
 	inputs.Add("services", func() telegraf.Input {
 		return &Services{
-            systemctl: setSystemctlCall,
-			Timeout: defaultTimeout,
+			systemctl: setSystemctlCall,
+			Timeout:   defaultTimeout,
 		}
 	})
 }
