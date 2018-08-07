@@ -115,7 +115,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 	var prefix string
 	if p.Prefix != "" {
-		p.Prefix += "_"
+		prefix = p.Prefix + "_"
 	}
 
 	//If process_name tag is not already set, set to actual name
