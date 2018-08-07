@@ -33,6 +33,36 @@ func TestParse(t *testing.T) {
 			now:  func() time.Time { return time.Unix(0, 0) },
 			want: []testutil.Metric{},
 		},
+		/*{
+			name: "test without trailing end"
+			bytes: []byte("foo=\"bar\"")
+			now func() time.Time { return time.Unix(0,0) },
+			want: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "testlog",
+					Tags:        map[string]string{},
+					Fields: map[string]interface{}{
+						"foo":    "bar",
+					},
+					Time: time.Unix(0,0),
+				},
+			},
+		},
+		{
+			name: "test with trailing end"
+			bytes: []byte("foo=\"bar\"\n")
+			now func() time.Time { return time.Unix(0,0) },
+			want: []testutil.Metric{
+				testutil.Metric{
+					Measurement: "testlog",
+					Tags:        map[string]string{},
+					Fields: map[string]interface{}{
+						"foo":    "bar",
+					},
+					Time: time.Unix(0,0),
+				},
+			},
+		},*/
 		{
 			name:        "logfmt parser returns all the fields",
 			bytes:       []byte(`ts=2018-07-24T19:43:40.275Z lvl=info msg="http request" method=POST`),
@@ -53,7 +83,7 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			name:        "logfmt parsers every line",
+			name:        "logfmt parses every line",
 			bytes:       []byte("ts=2018-07-24T19:43:40.275Z lvl=info msg=\"http request\" method=POST\nparent_id=088876RL000 duration=7.45 log_id=09R4e4Rl000"),
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
