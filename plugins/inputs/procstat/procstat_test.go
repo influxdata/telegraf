@@ -120,8 +120,8 @@ func (p *testProc) MemoryInfo() (*process.MemoryInfoStat, error) {
 	return &process.MemoryInfoStat{}, nil
 }
 
-func (p *testProc) MemoryMaps() (*process.MemoryMapsStat, error) {
-	return &process.MemoryMapsStat{}, nil
+func (p *testProc) MemoryMaps(bool) (*[]process.MemoryMapsStat, error) {
+	return &[]process.MemoryMapsStat{}, nil
 }
 
 func (p *testProc) Name() (string, error) {
