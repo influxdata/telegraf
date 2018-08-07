@@ -21,6 +21,14 @@ data formats.  For data_formats that support batching, metrics are sent in batch
   # username = "username"
   # password = "pa$$word"
 
+  ## OAuth2 credentials
+
+  # clientid = "clientid"
+  # clientsecret = "secret"
+  # tokenurl = "https://indentityprovider/oauth2/v1/token"
+  # scopes = "urn:opc:idm:__myscopes__"
+
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"

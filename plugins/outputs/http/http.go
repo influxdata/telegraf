@@ -2,23 +2,26 @@ package http
 
 import (
 	"bytes"
-	"fmt"
-	"io/ioutil"
-	"net/http"
-	"strings"
-	"time"
-
+		"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+		 	"io/ioutil"
+	"net/http"
+	"strings"
+	"time"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
+		"context"
 )
 
 var sampleConfig = `
   ## URL is the address to send metrics to
   url = "http://127.0.0.1:8080/metric"
-
+	
   ## Timeout for HTTP message
   # timeout = "5s"
 
@@ -26,7 +29,7 @@ var sampleConfig = `
   # method = "POST"
 
   ## HTTP Basic Auth credentials
-  # username = "username"
+  # username = "username""
   # password = "pa$$word"
 
   ## Optional TLS Config
@@ -43,29 +46,34 @@ var sampleConfig = `
   # data_format = "influx"
   
   ## Additional HTTP headers
-  # [outputs.http.headers]
+  #outputs.http.headers]
   #   # Should be set manually to "application/json" for json data_format
   #   Content-Type = "text/plain; charset=utf-8"
 `
 
 const (
 	defaultClientTimeout = 5 * time.Second
-	defaultContentType   = "text/plain; charset=utf-8"
+		defaultContentType   = "text/plain; charset=utf-8"
 	defaultMethod        = http.MethodPost
 )
-
 type HTTP struct {
-	URL      string            `toml:"url"`
-	Timeout  internal.Duration `toml:"timeout"`
-	Method   string            `toml:"method"`
-	Username string            `toml:"username"`
-	Password string            `toml:"password"`
-	Headers  map[string]string `toml:"headers"`
+	URL          string            `toml:"url"`
+	Timeout      internal.Duration `toml:"timeout"`
+	Method       string            `toml:"method"`
+	Username     string            `toml:"username"`
+	Password     string            `toml:"password"`
+	Headers      map[string]string `toml:"headers"`
+	ClientID     string            `toml:"clientid"`
+	ClientSecret string            `toml:"clientsecret"`
+	TokenURL     string            `toml:"tokenurl"`
+	Scopes       string            `toml:"scopes"`
 	tls.ClientConfig
 
 	client     *http.Client
 	serializer serializers.Serializer
 }
+
+var  tokensource oauth2.TokenSource
 
 func (h *HTTP) SetSerializer(serializer serializers.Serializer) {
 	h.serializer = serializer
@@ -96,6 +104,14 @@ func (h *HTTP) Connect() error {
 		},
 		Timeout: h.Timeout.Duration,
 	}
+	var appClientConf = clientcredentials.Config{
+		ClientID:     h.ClientID,
+		ClientSecret: h.ClientSecret,
+		TokenURL:     h.TokenURL,
+		Scopes:       []string{h.Scopes},
+	}
+	tokensource =appClientConf.TokenSource(context.Background())
+
 
 	return nil
 }
@@ -118,20 +134,27 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	if err := h.write(reqBody); err != nil {
+	token,err :=	tokensource.Token()
+
+	if err != nil {
+		return err
+	}
+	if err := h.write(reqBody,token.AccessToken); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (h *HTTP) write(reqBody []byte) error {
+func (h *HTTP) write(reqBody []byte, accessToken string) error {
 	req, err := http.NewRequest(h.Method, h.URL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("Content-Type", defaultContentType)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
 	for k, v := range h.Headers {
 		req.Header.Set(k, v)
 	}
@@ -151,6 +174,9 @@ func (h *HTTP) write(reqBody []byte) error {
 }
 
 func init() {
+
+
+
 	outputs.Add("http", func() telegraf.Output {
 		return &HTTP{
 			Timeout: internal.Duration{Duration: defaultClientTimeout},
