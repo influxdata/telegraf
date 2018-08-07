@@ -22,9 +22,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 )
 
-var _ telegraf.AggregatingOutput = (*AzureMonitor)(nil)
-var _ telegraf.Output = (*AzureMonitor)(nil)
-
 // AzureMonitor allows publishing of metrics to the Azure Monitor custom metrics
 // service
 type AzureMonitor struct {
@@ -60,22 +57,22 @@ const (
 var sampleConfig = `
   ## See the [Azure Monitor output plugin README](/plugins/outputs/azure_monitor/README.md)
   ## for details on authentication options.
-
+  
   ## Write HTTP timeout, formatted as a string. Defaults to 20s.
   #timeout = "20s"
-
+  
   ## Set the namespace prefix, defaults to "Telegraf/<input-name>".
   #namespace_prefix = "Telegraf/"
-
+  
   ## Azure Monitor doesn't have a string value type, so convert string
   ## fields to dimensions (a.k.a. tags) if enabled. Azure Monitor allows
   ## a maximum of 10 dimensions so Telegraf will only send the first 10
   ## alphanumeric dimensions.
   #strings_as_dimensions = false
-
+  
   ## *The following two fields must be set or be available via the
   ## Instance Metadata service on Azure Virtual Machines.*
-
+  
   ## Azure Region to publish metrics against, e.g. eastus, southcentralus.
   #region = ""
   
@@ -142,7 +139,7 @@ func (a *AzureMonitor) Connect() error {
 func vmInstanceMetadata(c *http.Client) (string, string, error) {
 	req, err := http.NewRequest("GET", vmInstanceMetadataURL, nil)
 	if err != nil {
-		return "", "", fmt.Errorf("Error creating HTTP request")
+		return "", "", fmt.Errorf("error creating request: %v", err)
 	}
 	req.Header.Set("Metadata", "true")
 
@@ -157,7 +154,7 @@ func vmInstanceMetadata(c *http.Client) (string, string, error) {
 		return "", "", err
 	}
 	if resp.StatusCode >= 300 || resp.StatusCode < 200 {
-		return "", "", fmt.Errorf("unable to fetch MSI: %v", body)
+		return "", "", fmt.Errorf("unable to fetch instance metadata: [%v] %s", resp.StatusCode, body)
 	}
 
 	// VirtualMachineMetadata contains information about a VM from the metadata service
@@ -232,7 +229,7 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 	}
 
 	var body []byte
-	for i, m := range azmetrics {
+	for _, m := range azmetrics {
 		// Azure Monitor accepts new batches of points in new-line delimited
 		// JSON, following RFC 4288 (see https://github.com/ndjson/ndjson-spec).
 		jsonBytes, err := json.Marshal(&m)
@@ -241,16 +238,21 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 		}
 		// Azure Monitor's maximum request body size of 4MB. Send batches that
 		// exceed this size via separate write requests.
-		if (len(body) + len(jsonBytes)) > maxRequestBodySize {
-			err := a.Write(metrics[i:])
+		if (len(body) + len(jsonBytes) + 1) > maxRequestBodySize {
+			err := a.send(body)
 			if err != nil {
 				return err
 			}
+			body = nil
 		}
 		body = append(body, jsonBytes...)
 		body = append(body, '\n')
 	}
 
+	return a.send(body)
+}
+
+func (a *AzureMonitor) send(body []byte) error {
 	var buf bytes.Buffer
 	g := gzip.NewWriter(&buf)
 	if _, err := g.Write(body); err != nil {
@@ -260,7 +262,6 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 		return err
 	}
 
-	// req, err := http.NewRequest("POST", a.url, bytes.NewBuffer(body))
 	req, err := http.NewRequest("POST", a.url, &buf)
 	if err != nil {
 		return err
@@ -273,7 +274,7 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 	// refresh the token if needed.
 	req, err = autorest.CreatePreparer(a.auth.WithAuthorization()).Prepare(req)
 	if err != nil {
-		return fmt.Errorf("E! [outputs.azure_monitor] Unable to fetch authentication credentials: %v", err)
+		return fmt.Errorf("unable to fetch authentication credentials: %v", err)
 	}
 
 	resp, err := a.client.Do(req)
@@ -282,13 +283,9 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 	}
 	defer resp.Body.Close()
 
-	rbody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		rbody = nil
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return fmt.Errorf("E! Failed to write: %v", string(rbody))
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("failed to write batch: [%v] %s", resp.StatusCode, resp.Status)
 	}
 
 	return nil
@@ -315,7 +312,6 @@ func translate(m telegraf.Metric, prefix string) *azureMonitorMetric {
 	for i, tag := range m.TagList() {
 		// Azure custom metrics service supports up to 10 dimensions
 		if i > 10 {
-			log.Printf("W! [outputs.azure_monitor] metric [%s] exceeds 10 dimensions", m.Name())
 			continue
 		}
 		dimensionNames = append(dimensionNames, tag.Key)
@@ -326,12 +322,21 @@ func translate(m telegraf.Metric, prefix string) *azureMonitorMetric {
 	max, _ := m.GetField("max")
 	sum, _ := m.GetField("sum")
 	count, _ := m.GetField("count")
+
+	mn, ns := "Missing", "Missing"
+	names := strings.SplitN(m.Name(), "-", 2)
+	if len(names) > 0 {
+		ns = names[0]
+	} else if len(names) > 1 {
+		mn = names[1]
+	}
+
 	return &azureMonitorMetric{
 		Time: m.Time(),
 		Data: &azureMonitorData{
 			BaseData: &azureMonitorBaseData{
-				Metric:         strings.SplitN(m.Name(), "-", 2)[1],
-				Namespace:      prefix + strings.SplitN(m.Name(), "-", 2)[0],
+				Metric:         mn,
+				Namespace:      ns,
 				DimensionNames: dimensionNames,
 				Series: []*azureMonitorSeries{
 					&azureMonitorSeries{
@@ -354,16 +359,16 @@ func (a *AzureMonitor) Add(m telegraf.Metric) {
 	t := m.Time()
 	tbucket := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
 	if tbucket.Before(time.Now().Add(-time.Minute * 30)) {
-		log.Printf("W! attempted to aggregate metric over 30 minutes old: %v, %v", t, tbucket)
+		//TODO: add a selfstat for metrics coming in outside 30 min window
 		return
 	}
 
 	// Azure Monitor doesn't have a string value type, so convert string fields
 	// to dimensions (a.k.a. tags) if enabled.
 	if a.StringsAsDimensions {
-		for fk, fv := range m.Fields() {
-			if v, ok := fv.(string); ok {
-				m.AddTag(fk, v)
+		for _, f := range m.FieldList() {
+			if v, ok := f.Value.(string); ok {
+				m.AddTag(f.Key, v)
 			}
 		}
 	}
