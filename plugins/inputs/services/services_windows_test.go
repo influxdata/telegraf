@@ -25,11 +25,11 @@ func TestServices(t *testing.T) {
 				State:     "Running",
 				Status:    "OK",
 			},
-			tags:   map[string]string{"name": "ExampleSvc"},
+			tags: map[string]string{"name": "ExampleSvc"},
 			fields: map[string]interface{}{
-                "state": "Running",
-                "status": 0,
-            },
+				"state":  "Running",
+				"status": 0,
+			},
 		},
 		{
 			name: "Testing startmode=auto state=stopped status=failed",
@@ -41,11 +41,11 @@ func TestServices(t *testing.T) {
 				State:     "Stopped",
 				Status:    "FAILED",
 			},
-			tags:   map[string]string{"name": "ExampleSvc"},
+			tags: map[string]string{"name": "ExampleSvc"},
 			fields: map[string]interface{}{
-                "state": "Stopped",
-                "status": 2,
-            },
+				"state":  "Stopped",
+				"status": 2,
+			},
 		},
 		{
 			name: "Testing startmode=foobar state=foobar status=foobar",
@@ -57,11 +57,11 @@ func TestServices(t *testing.T) {
 				State:     "foobar",
 				Status:    "foobar",
 			},
-			tags:   map[string]string{"name": "ExampleSvc"},
+			tags: map[string]string{"name": "ExampleSvc"},
 			fields: map[string]interface{}{
-                "state": "foobar",
-                "status": 3,
-            },
+				"state":  "foobar",
+				"status": 3,
+			},
 		},
 		{
 			name: "Testing startmode=manual state=stopped status=ok",
@@ -73,11 +73,11 @@ func TestServices(t *testing.T) {
 				State:     "Stopped",
 				Status:    "OK",
 			},
-			tags:   map[string]string{"name": "ExampleSvc"},
+			tags: map[string]string{"name": "ExampleSvc"},
 			fields: map[string]interface{}{
-                "state": "Stopped",
-                "status": 0,
-            },
+				"state":  "Stopped",
+				"status": 0,
+			},
 		},
 		{
 			name: "Testing startmode=disabled state=stopped status=ok",
@@ -89,11 +89,11 @@ func TestServices(t *testing.T) {
 				State:     "Stopped",
 				Status:    "OK",
 			},
-			tags:   map[string]string{"name": "ExampleSvc"},
+			tags: map[string]string{"name": "ExampleSvc"},
 			fields: map[string]interface{}{
-                "state": "Stopped",
-                "status": 0,
-            },
+				"state":  "Stopped",
+				"status": 0,
+			},
 		},
 	}
 

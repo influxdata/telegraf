@@ -57,7 +57,7 @@ func (services *Services) Gather(acc telegraf.Accumulator) error {
 		tags := map[string]string{
 			"name": data[0],
 		}
-        var state string
+		var state string
 		var status int
 		switch state = data[2] + "/" + data[3]; state {
 		case "active/running":
@@ -72,7 +72,7 @@ func (services *Services) Gather(acc telegraf.Accumulator) error {
 			status = 3 // unknown
 		}
 		fields := map[string]interface{}{
-            "state": state,
+			"state":  state,
 			"status": status,
 		}
 		acc.AddCounter(measurement, fields, tags)
