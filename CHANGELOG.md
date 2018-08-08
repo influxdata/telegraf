@@ -57,7 +57,7 @@
 - [#4431](https://github.com/influxdata/telegraf/pull/4431): Add ip restriction for the prometheus_client output.
 - [#3918](https://github.com/influxdata/telegraf/pull/3918): Add pgbouncer input plugin.
 
-## v1.7.3 [unreleased]
+## v1.7.3 [2018-08-07]
 
 ### Bugfixes
 
