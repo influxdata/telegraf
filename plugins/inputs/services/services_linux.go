@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// Services is a telegraf plugin to gather services status from systemd and windows services
+// Services is a telegraf plugin to gather services state and status from systemd and windows services
 type Services struct {
 	Timeout   internal.Duration
 	systemctl systemctl
@@ -27,7 +27,7 @@ var defaultTimeout = internal.Duration{Duration: time.Second}
 
 // Description returns a short description of the plugin
 func (services *Services) Description() string {
-	return "Gather service status for systemd units and windows services"
+	return "Gather service state and status for systemd units and windows services"
 }
 
 // SampleConfig returns sample configuration options.
@@ -57,18 +57,22 @@ func (services *Services) Gather(acc telegraf.Accumulator) error {
 		tags := map[string]string{
 			"name": data[0],
 		}
+        var state string
 		var status int
-		switch active := data[2]; active {
-		case "active":
+		switch state = data[2] + "/" + data[3]; state {
+		case "active/running":
 			status = 0 // ok
-		case "inactive":
+		case "active/exited":
 			status = 0 // ok
-		case "failed":
+		case "failed/failed":
 			status = 2 // error
+		case "inactive/dead":
+			status = 0 // ok
 		default:
 			status = 3 // unknown
 		}
 		fields := map[string]interface{}{
+            "state": state,
 			"status": status,
 		}
 		acc.AddCounter(measurement, fields, tags)

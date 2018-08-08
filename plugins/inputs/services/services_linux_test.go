@@ -23,31 +23,46 @@ func TestServices(t *testing.T) {
 			name:   "example loaded active running",
 			line:   "example.service                loaded active running example service description",
 			tags:   map[string]string{"name": "example.service"},
-			fields: map[string]interface{}{"status": 0},
+			fields: map[string]interface{}{
+                "state": "active/running",
+                "status": 0,
+            },
 		},
 		{
 			name:   "example loaded active exited",
 			line:   "example.service                loaded active exited  example service description",
 			tags:   map[string]string{"name": "example.service"},
-			fields: map[string]interface{}{"status": 0},
+			fields: map[string]interface{}{
+                "state": "active/exited",
+                "status": 0,
+            },
 		},
 		{
 			name:   "example loaded failed failed",
 			line:   "example.service                loaded failed failed  example service description",
 			tags:   map[string]string{"name": "example.service"},
-			fields: map[string]interface{}{"status": 2},
+			fields: map[string]interface{}{
+                "state": "failed/failed",
+                "status": 2,
+            },
 		},
 		{
 			name:   "example not-found inactive dead",
 			line:   "example.service                not-found inactive dead  example service description",
 			tags:   map[string]string{"name": "example.service"},
-			fields: map[string]interface{}{"status": 0},
+			fields: map[string]interface{}{
+                "state": "inactive/dead",
+                "status": 0,
+            },
 		},
 		{
 			name:   "example unknown unknown unknown",
 			line:   "example.service                unknown unknown unknown  example service description",
 			tags:   map[string]string{"name": "example.service"},
-			fields: map[string]interface{}{"status": 3},
+			fields: map[string]interface{}{
+                "state": "unknown/unknown",
+                "status": 3,
+            },
 		},
 		{
 			name: "example too few fields",
