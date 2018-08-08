@@ -69,7 +69,7 @@ func TestApply(t *testing.T) {
 					time.Unix(0, 0))),
 			},
 		},
-		/*{
+		{
 			name: "parse one field",
 			config: parsers.Config{
 				DataFormat: "logfmt",
@@ -79,10 +79,17 @@ func TestApply(t *testing.T) {
 					"success",
 					map[string]string{},
 					map[string]interface{}{
-						"test_name": `lvl=info`,
+						"level_test": `lvl=info`,
 					},
 					time.Unix(0, 0))),
 			expected: []telegraf.Metric{
+				Metric(metric.New(
+					"success",
+					map[string]string{},
+					map[string]interface{}{
+						"level_test": `lvl=info`,
+					},
+					time.Unix(0, 0))),
 				Metric(metric.New(
 					"success",
 					map[string]string{},
@@ -91,7 +98,7 @@ func TestApply(t *testing.T) {
 					},
 					time.Unix(0, 0))),
 			},
-		},*/
+		},
 		{
 			name: "parse two fields",
 			config: parsers.Config{
@@ -102,10 +109,17 @@ func TestApply(t *testing.T) {
 					"success",
 					map[string]string{},
 					map[string]interface{}{
-						"test_name": `ts=2018-07-24T19:43:40.275Z lvl=info`,
+						"test": "ts=2018-07-24T19:43:40.275Z lvl=info",
 					},
 					time.Unix(0, 0))),
 			expected: []telegraf.Metric{
+				Metric(metric.New(
+					"success",
+					map[string]string{},
+					map[string]interface{}{
+						"test": "ts=2018-07-24T19:43:40.275Z lvl=info",
+					},
+					time.Unix(0, 0))),
 				Metric(metric.New(
 					"success",
 					map[string]string{},
@@ -172,7 +186,7 @@ func TestApply(t *testing.T) {
 			},
 		},
 		{
-			name: "parse one tag",
+			name: "Fail to parse fields but still parses tag",
 			config: parsers.Config{
 				DataFormat: "logfmt",
 			},
@@ -181,7 +195,7 @@ func TestApply(t *testing.T) {
 					"success",
 					map[string]string{},
 					map[string]interface{}{
-						"timestamp": `ts=2018-07-24T19:43:40.275Z`,
+						"test_name": `ts=2018-07-24T19:43:40.275Z lvl=info msg="http request" method=POST`,
 					},
 					time.Unix(0, 0))),
 			expected: []telegraf.Metric{
@@ -189,8 +203,13 @@ func TestApply(t *testing.T) {
 					"success",
 					map[string]string{},
 					map[string]interface{}{
-						"timestamp": `ts=2018-07-24T19:43:40.275Z`,
+						"test_name": `ts=2018-07-24T19:43:40.275Z lvl=info msg="http request" method=POST`,
 					},
+					time.Unix(0, 0))),
+				Metric(metric.New(
+					"bad",
+					map[string]string{},
+					map[string]interface{}{},
 					time.Unix(0, 0))),
 			},
 		},
@@ -222,13 +241,22 @@ func TestBadApply(t *testing.T) {
 			config: parsers.Config{
 				DataFormat: "logfmt",
 			},
-			input: Metric(metric.New("bad", map[string]string{}, map[string]interface{}{
-				"some_field": 5,
-			}, time.Unix(0, 0))),
+			input: Metric(
+				metric.New(
+					"bad",
+					map[string]string{},
+					map[string]interface{}{
+						"some_field": 5,
+					},
+					time.Unix(0, 0))),
 			expected: []telegraf.Metric{
-				Metric(metric.New("bad", map[string]string{}, map[string]interface{}{
-					"some_field": 5,
-				}, time.Unix(0, 0))),
+				Metric(metric.New(
+					"bad",
+					map[string]string{},
+					map[string]interface{}{
+						"some_field": 5,
+					},
+					time.Unix(0, 0))),
 			},
 		},
 	}
