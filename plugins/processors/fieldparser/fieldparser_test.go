@@ -99,6 +99,54 @@ func TestApply(t *testing.T) {
 					time.Unix(0, 0))),
 			},
 		},
+		{
+			name: "parse multiple tags",
+			config: parsers.Config{
+				DataFormat: "logfmt",
+			},
+			input: Metric(
+				metric.New(
+					"success",
+					map[string]string{},
+					map[string]interface{}{
+						"timestamp": `ts=2018-07-24T19:43:40.275Z`,
+						"message":   `msg="http request"`,
+					},
+					time.Unix(0, 0))),
+			expected: []telegraf.Metric{
+				Metric(metric.New(
+					"success",
+					map[string]string{},
+					map[string]interface{}{
+						"timestamp": `ts=2018-07-24T19:43:40.275Z`,
+						"message":   `msg="http request"`,
+					},
+					time.Unix(0, 0))),
+			},
+		},
+		{
+			name: "parse one tag",
+			config: parsers.Config{
+				DataFormat: "logfmt",
+			},
+			input: Metric(
+				metric.New(
+					"success",
+					map[string]string{},
+					map[string]interface{}{
+						"timestamp": `ts=2018-07-24T19:43:40.275Z`,
+					},
+					time.Unix(0, 0))),
+			expected: []telegraf.Metric{
+				Metric(metric.New(
+					"success",
+					map[string]string{},
+					map[string]interface{}{
+						"timestamp": `ts=2018-07-24T19:43:40.275Z`,
+					},
+					time.Unix(0, 0))),
+			},
+		},
 	}
 
 	for _, tt := range tests {
