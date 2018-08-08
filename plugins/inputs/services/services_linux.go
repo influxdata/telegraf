@@ -16,10 +16,10 @@ import (
 // Services is a telegraf plugin to gather services status from systemd and windows services
 type Services struct {
 	Timeout   internal.Duration
-	systemctl systemctlCall
+	systemctl systemctl
 }
 
-type systemctlCall func(Timeout internal.Duration) (*bytes.Buffer, error)
+type systemctl func(Timeout internal.Duration) (*bytes.Buffer, error)
 
 const measurement = "services"
 
@@ -77,7 +77,7 @@ func (services *Services) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func setSystemctlCall(Timeout internal.Duration) (*bytes.Buffer, error) {
+func setSystemctl(Timeout internal.Duration) (*bytes.Buffer, error) {
 	// is systemctl available ?
 	systemctlPath, err := exec.LookPath("systemctl")
 	if err != nil {
@@ -99,7 +99,7 @@ func setSystemctlCall(Timeout internal.Duration) (*bytes.Buffer, error) {
 func init() {
 	inputs.Add("services", func() telegraf.Input {
 		return &Services{
-			systemctl: setSystemctlCall,
+			systemctl: setSystemctl,
 			Timeout:   defaultTimeout,
 		}
 	})

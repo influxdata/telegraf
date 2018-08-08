@@ -10,7 +10,19 @@ import (
 
 // Services is a telegraf plugin to gather services status from systemd and windows services
 type Services struct {
+	wmiQuery wmiQuery
 }
+
+type win32service struct {
+	ExitCode  int
+	Name      string
+	ProcessID int
+	StartMode string
+	State     string
+	Status    string
+}
+
+type wmiQuery func(query string, dst interface{}, connectServerArgs ...interface{}) error
 
 const measurement = "services"
 
@@ -28,19 +40,12 @@ func (services *Services) SampleConfig() string {
 
 // Gather parses wmi outputs and adds counters to the Accumulator
 func (services *Services) Gather(acc telegraf.Accumulator) error {
-	type win32service struct {
-		Name      string
-		ProcessID int
-		StartMode string
-		State     string
-		Status    string
-	}
-
 	//var dst []Win_32Service
 	var dst []win32service
 	//q := wmi.CreateQuery(&dst, "where startmode = 'auto'")
-	q := "select Name, ProcessId, StartMode, State, Status from Win32_Service where startmode = 'auto'"
-	err := wmi.Query(q, &dst)
+	q := "select ExitCode, Name, ProcessId, StartMode, State, Status from Win32_Service where startmode = 'auto'"
+	//err := wmi.Query(q, &dst)
+	err := services.wmiQuery(q, &dst)
 	if err != nil {
 		acc.AddError(err)
 	}
@@ -79,6 +84,8 @@ func init() {
 	wmi.DefaultClient.SWbemServicesClient = s
 
 	inputs.Add("services", func() telegraf.Input {
-		return &Services{}
+		return &Services{
+			wmiQuery: wmi.Query,
+		}
 	})
 }
