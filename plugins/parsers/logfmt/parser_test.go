@@ -92,10 +92,17 @@ func TestParse(t *testing.T) {
 					Measurement: "testlog",
 					Tags:        map[string]string{},
 					Fields: map[string]interface{}{
-						"lvl":       "info",
-						"msg":       "http request",
-						"method":    "POST",
-						"ts":        "2018-07-24T19:43:40.275Z",
+						"lvl":    "info",
+						"msg":    "http request",
+						"method": "POST",
+						"ts":     "2018-07-24T19:43:40.275Z",
+					},
+					Time: time.Unix(0, 0),
+				},
+				testutil.Metric{
+					Measurement: "testlog",
+					Tags:        map[string]string{},
+					Fields: map[string]interface{}{
 						"parent_id": "088876RL000",
 						"duration":  7.45,
 						"log_id":    "09R4e4Rl000",
