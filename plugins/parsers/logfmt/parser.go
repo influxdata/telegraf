@@ -38,13 +38,9 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 	reader := bytes.NewReader(b)
 	decoder := glogfmt.NewDecoder(reader)
 	metrics := make([]telegraf.Metric, 0)
-	tags := make(map[string]string)
-	fields := make(map[string]interface{})
-	counter := 0
 	for decoder.ScanRecord() {
-		counter++
-		//tags := make(map[string]string)
-		//fields := make(map[string]interface{})
+		tags := make(map[string]string)
+		fields := make(map[string]interface{})
 		for decoder.ScanKeyval() {
 			if string(decoder.Value()) == "" {
 				return metrics, fmt.Errorf("value could not be found for key: %v", string(decoder.Key()))
@@ -71,21 +67,13 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 			}
 		}
 		log.Printf("All fields: %s", fields)
-		//m, err := metric.New(p.MetricName, tags, fields, p.Now())
-		//log.Printf("Return all the info in metric", p.MetricName, tags, fields)
-		/* if err != nil {
-			log.Println("Error occurred")
-			return nil, err
-		}
-		metrics = append(metrics, m)
-		log.Printf("The final appended metrics %s", metrics) */
-	}
-	if counter > 0 {
 		m, err := metric.New(p.MetricName, tags, fields, p.Now())
+		//log.Printf("Return all the info in metric", p.MetricName, tags, fields)
 		if err != nil {
 			log.Println("Error occurred")
 			return nil, err
 		}
+
 		//add default tags
 		metrics = append(metrics, m)
 		p.applyDefaultTags(metrics)
