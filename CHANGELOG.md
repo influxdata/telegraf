@@ -57,13 +57,17 @@
 - [#4431](https://github.com/influxdata/telegraf/pull/4431): Add ip restriction for the prometheus_client output.
 - [#3918](https://github.com/influxdata/telegraf/pull/3918): Add pgbouncer input plugin.
 
-## v1.7.3 [unreleased]
+## v1.7.3 [2018-08-07]
 
 ### Bugfixes
 
+- [#4434](https://github.com/influxdata/telegraf/issues/4434): Reduce required docker API version.
 - [#4498](https://github.com/influxdata/telegraf/pull/4498): Keep leading whitespace for messages in syslog input.
-- [#4497](https://github.com/influxdata/telegraf/pull/4497): Skip bad entries on interrupt input.
-- [#4481](https://github.com/influxdata/telegraf/pull/4481): Preserve metric type when using filters in output plugins.
+- [#4470](https://github.com/influxdata/telegraf/issues/4470): Skip bad entries on interrupt input.
+- [#4501](https://github.com/influxdata/telegraf/issues/4501): Preserve metric type when using filters in output plugins.
+- [#3794](https://github.com/influxdata/telegraf/issues/3794): Fix error message if URL is unparseable in influxdb output.
+- [#4059](https://github.com/influxdata/telegraf/issues/4059): Use explicit zpool properties to fix parse error on FreeBSD 11.2.
+- [#4514](https://github.com/influxdata/telegraf/pull/4514): Lock buffer when adding metrics.
 
 ## v1.7.2 [2018-07-18]
 
