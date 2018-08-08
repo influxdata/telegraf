@@ -37,7 +37,7 @@ func TestApply(t *testing.T) {
 		expected    []telegraf.Metric
 	}{
 		{
-			name: "successfully parsed",
+			name: "parse multiple fields",
 			config: parsers.Config{
 				DataFormat: "logfmt",
 			},
@@ -65,6 +65,36 @@ func TestApply(t *testing.T) {
 						"lvl":    "info",
 						"msg":    "http request",
 						"method": "post",
+					},
+					time.Unix(0, 0))),
+			},
+		},
+		{
+			name: "parse one field",
+			config: parsers.Config{
+				DataFormat: "logfmt",
+			},
+			input: Metric(
+				metric.New(
+					"success",
+					map[string]string{},
+					map[string]interface{}{
+						"test_name": `ts=2018-07-24T19:43:40.275Z`,
+					},
+					time.Unix(0, 0))),
+			expected: []telegraf.Metric{
+				Metric(metric.New(
+					"success",
+					map[string]string{},
+					map[string]interface{}{
+						"test_name": `ts=2018-07-24T19:43:40.275Z`,
+					},
+					time.Unix(0, 0))),
+				Metric(metric.New(
+					"success",
+					map[string]string{},
+					map[string]interface{}{
+						"ts": "2018-07-24T19:43:40.275Z",
 					},
 					time.Unix(0, 0))),
 			},
