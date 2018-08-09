@@ -31,14 +31,14 @@ func Metric(v telegraf.Metric, err error) telegraf.Metric {
 func TestApply(t *testing.T) {
 	tests := []struct {
 		name        string
-		parseTags   []string
 		parseFields []string
 		config      parsers.Config
 		input       telegraf.Metric
 		expected    []telegraf.Metric
 	}{
 		{
-			name: "parse one field",
+			name:        "parse one field",
+			parseFields: []string{"test_name"},
 			config: parsers.Config{
 				DataFormat: "logfmt",
 			},
@@ -71,7 +71,8 @@ func TestApply(t *testing.T) {
 			},
 		},
 		{
-			name: "parse one field",
+			name:        "parse two fields",
+			parseFields: []string{"field_1", "field_2"},
 			config: parsers.Config{
 				DataFormat: "logfmt",
 			},
@@ -80,7 +81,8 @@ func TestApply(t *testing.T) {
 					"success",
 					map[string]string{},
 					map[string]interface{}{
-						"level_test": `lvl=info`,
+						"field_1": "ts=2018-07-24T19:43:40.275Z",
+						"field_2": "lvl=info",
 					},
 					time.Unix(0, 0))),
 			expected: []telegraf.Metric{
@@ -88,37 +90,8 @@ func TestApply(t *testing.T) {
 					"success",
 					map[string]string{},
 					map[string]interface{}{
-						"level_test": `lvl=info`,
-					},
-					time.Unix(0, 0))),
-				Metric(metric.New(
-					"success",
-					map[string]string{},
-					map[string]interface{}{
-						"lvl": "info",
-					},
-					time.Unix(0, 0))),
-			},
-		},
-		{
-			name: "parse two fields",
-			config: parsers.Config{
-				DataFormat: "logfmt",
-			},
-			input: Metric(
-				metric.New(
-					"success",
-					map[string]string{},
-					map[string]interface{}{
-						"test": "ts=2018-07-24T19:43:40.275Z lvl=info",
-					},
-					time.Unix(0, 0))),
-			expected: []telegraf.Metric{
-				Metric(metric.New(
-					"success",
-					map[string]string{},
-					map[string]interface{}{
-						"test": "ts=2018-07-24T19:43:40.275Z lvl=info",
+						"field_1": "ts=2018-07-24T19:43:40.275Z",
+						"field_2": "lvl=info",
 					},
 					time.Unix(0, 0))),
 				Metric(metric.New(
