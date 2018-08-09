@@ -1,9 +1,9 @@
 package meminfo
 
 import (
-	"testing"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestMemStats(t *testing.T) {
