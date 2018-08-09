@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/influxdata/telegraf"
-    "github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
 	"net"
 	"net/http"
 	"strings"
 )
 
 type Stats struct {
-	Fields	map[string]interface{}
-	Socket	string
+	Fields map[string]interface{}
+	Socket string
 }
 
 var DefaultSocket = "/var/run/docker.sock"
@@ -30,11 +30,11 @@ func (s *Stats) SampleConfig() string {
 
 func (s *Stats) Gather(acc telegraf.Accumulator) error {
 	c := http.Client{Transport: &http.Transport{
-				DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-					return net.Dial("unix", s.Socket)
-				},
-			},
-		 }
+		DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+			return net.Dial("unix", s.Socket)
+		},
+	},
+	}
 	var resp *http.Response
 	var err error
 	resp, err = c.Get("http://unix/containers/json?all=1&limit")
@@ -62,11 +62,11 @@ func (s *Stats) Gather(acc telegraf.Accumulator) error {
 		}
 		tags := map[string]string{
 			"container": container[0],
-			"version": container_ver,
-			"status": v["Status"].(string),
+			"version":   container_ver,
+			"status":    v["Status"].(string),
 		}
 		fields := map[string]interface{}{
-			"state": state,
+			"state":   state,
 			"created": v["Created"],
 		}
 		acc.AddGauge("dockerstate", fields, tags)
