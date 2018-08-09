@@ -189,6 +189,7 @@ configuration options.
 * [mcrouter](./plugins/inputs/mcrouter)
 * [memcached](./plugins/inputs/memcached)
 * [mem](./plugins/inputs/mem)
+* [meminfo](./plugins/inputs/meminfo)
 * [mesos](./plugins/inputs/mesos)
 * [minecraft](./plugins/inputs/minecraft)
 * [mongodb](./plugins/inputs/mongodb)
