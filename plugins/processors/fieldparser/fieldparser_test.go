@@ -31,6 +31,7 @@ func Metric(v telegraf.Metric, err error) telegraf.Metric {
 func TestApply(t *testing.T) {
 	tests := []struct {
 		name        string
+		parseTags   []string
 		parseFields []string
 		config      parsers.Config
 		input       telegraf.Metric
@@ -126,61 +127,6 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{
 						"ts":  "2018-07-24T19:43:40.275Z",
 						"lvl": "info",
-					},
-					time.Unix(0, 0))),
-			},
-		},
-		{
-			name: "parse one tag",
-			config: parsers.Config{
-				DataFormat: "logfmt",
-			},
-			input: Metric(
-				metric.New(
-					"success",
-					map[string]string{},
-					map[string]interface{}{
-						"test_name": `ts=2018-07-24T19:43:40.275Z`,
-					},
-					time.Unix(0, 0))),
-			expected: []telegraf.Metric{
-				Metric(metric.New(
-					"success",
-					map[string]string{},
-					map[string]interface{}{
-						"test_name": `ts=2018-07-24T19:43:40.275Z`,
-					},
-					time.Unix(0, 0))),
-				Metric(metric.New(
-					"success",
-					map[string]string{},
-					map[string]interface{}{
-						"ts": "2018-07-24T19:43:40.275Z",
-					},
-					time.Unix(0, 0))),
-			},
-		},
-		{
-			name: "parse two tags",
-			config: parsers.Config{
-				DataFormat: "logfmt",
-			},
-			input: Metric(
-				metric.New(
-					"success",
-					map[string]string{},
-					map[string]interface{}{
-						"timestamp": `ts=2018-07-24T19:43:40.275Z`,
-						"message":   `msg="http request"`,
-					},
-					time.Unix(0, 0))),
-			expected: []telegraf.Metric{
-				Metric(metric.New(
-					"success",
-					map[string]string{},
-					map[string]interface{}{
-						"timestamp": `ts=2018-07-24T19:43:40.275Z`,
-						"message":   `msg="http request"`,
 					},
 					time.Unix(0, 0))),
 			},
