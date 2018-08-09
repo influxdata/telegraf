@@ -151,6 +151,7 @@ configuration options.
 * [dmcache](./plugins/inputs/dmcache)
 * [dns query time](./plugins/inputs/dns_query)
 * [docker](./plugins/inputs/docker)
+* [dockerstate](./plugins/inputs/dockerstate)
 * [dovecot](./plugins/inputs/dovecot)
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
