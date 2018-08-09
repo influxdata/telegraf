@@ -34,6 +34,8 @@ func TestGatherQueuesMetrics(t *testing.T) {
 	tags := make(map[string]string)
 
 	tags["name"] = "Test"
+	tags["source"] = "localhost"
+	tags["port"] = "8161"
 
 	records["size"] = 0
 	records["consumer_count"] = 0
@@ -45,7 +47,7 @@ func TestGatherQueuesMetrics(t *testing.T) {
 	activeMQ := new(ActiveMQ)
 
 	activeMQ.GatherQueuesMetrics(&acc, queues)
-	acc.AssertContainsTaggedFields(t, "queues_metrics", records, tags)
+	acc.AssertContainsTaggedFields(t, "activemq_queues", records, tags)
 }
 
 func TestGatherTopicsMetrics(t *testing.T) {
@@ -76,6 +78,8 @@ func TestGatherTopicsMetrics(t *testing.T) {
 	tags := make(map[string]string)
 
 	tags["name"] = "ActiveMQ.Advisory.MasterBroker "
+	tags["source"] = "localhost"
+	tags["port"] = "8161"
 
 	records["size"] = 0
 	records["consumer_count"] = 0
@@ -87,7 +91,7 @@ func TestGatherTopicsMetrics(t *testing.T) {
 	activeMQ := new(ActiveMQ)
 
 	activeMQ.GatherTopicsMetrics(&acc, topics)
-	acc.AssertContainsTaggedFields(t, "topics_metrics", records, tags)
+	acc.AssertContainsTaggedFields(t, "activemq_topics", records, tags)
 }
 
 func TestGatherSubscribersMetrics(t *testing.T) {
@@ -111,6 +115,8 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 	tags["destination_name"] = "AAA"
 	tags["selector"] = "AA"
 	tags["active"] = "no"
+	tags["source"] = "localhost"
+	tags["port"] = "8161"
 
 	records["pending_queue_size"] = 0
 	records["dispatched_queue_size"] = 0
@@ -123,5 +129,5 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 	activeMQ := new(ActiveMQ)
 
 	activeMQ.GatherSubscribersMetrics(&acc, subscribers)
-	acc.AssertContainsTaggedFields(t, "subscribers_metrics", records, tags)
+	acc.AssertContainsTaggedFields(t, "activemq_subscribers", records, tags)
 }

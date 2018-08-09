@@ -5,18 +5,26 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
+
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"strings"
+	"github.com/mlabouardy/telegraf/internal"
+	"github.com/mlabouardy/telegraf/internal/tls"
 )
 
 type ActiveMQ struct {
-	Server   string `json:"server"`
-	Port     int    `json:"port"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Webadmin string `json:"webadmin"`
+	Server          string `json:"server"`
+	Port            int    `json:"port"`
+	Username        string `json:"username"`
+	Password        string `json:"password"`
+	Webadmin        string `json:"webadmin"`
+	ResponseTimeout internal.Duration
+	tls.ClientConfig
+
+	client *http.Client
 }
 
 type Topics struct {
@@ -87,6 +95,13 @@ var sampleConfig = `
   # password = "admin"
   ## Required ActiveMQ webadmin root path
   # webadmin = "admin"
+  ## Maximum time to receive response.
+  # response_timeout = "5s"
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   `
 
 func (a *ActiveMQ) Description() string {
@@ -97,8 +112,34 @@ func (a *ActiveMQ) SampleConfig() string {
 	return sampleConfig
 }
 
+func (a *ActiveMQ) createHttpClient() (*http.Client, error) {
+	tlsCfg, err := a.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: a.ResponseTimeout.Duration,
+	}
+
+	return client, nil
+}
+
 func (a *ActiveMQ) GetMetrics(keyword string) ([]byte, error) {
-	client := &http.Client{}
+	if a.ResponseTimeout.Duration < time.Second {
+		a.ResponseTimeout.Duration = time.Second * 5
+	}
+
+	if a.client == nil {
+		client, err := a.createHttpClient()
+		if err != nil {
+			return nil, err
+		}
+		a.client = client
+	}
 	url := fmt.Sprintf("http://%s:%d/%s/xml/%s.jsp", a.Server, a.Port, a.Webadmin, keyword)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -107,7 +148,7 @@ func (a *ActiveMQ) GetMetrics(keyword string) ([]byte, error) {
 	}
 
 	req.SetBasicAuth(a.Username, a.Password)
-	resp, err := client.Do(req)
+	resp, err := a.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -122,13 +163,15 @@ func (a *ActiveMQ) GatherQueuesMetrics(acc telegraf.Accumulator, queues Queues) 
 		tags := make(map[string]string)
 
 		tags["name"] = strings.TrimSpace(queue.Name)
+		tags["source"] = a.Server
+		tags["port"] = string(a.Port)
 
 		records["size"] = queue.Stats.Size
 		records["consumer_count"] = queue.Stats.ConsumerCount
 		records["enqueue_count"] = queue.Stats.EnqueueCount
 		records["dequeue_count"] = queue.Stats.DequeueCount
 
-		acc.AddFields("queues_metrics", records, tags)
+		acc.AddFields("activemq_queues", records, tags)
 	}
 }
 
@@ -138,13 +181,15 @@ func (a *ActiveMQ) GatherTopicsMetrics(acc telegraf.Accumulator, topics Topics) 
 		tags := make(map[string]string)
 
 		tags["name"] = topic.Name
+		tags["source"] = a.Server
+		tags["port"] = string(a.Port)
 
 		records["size"] = topic.Stats.Size
 		records["consumer_count"] = topic.Stats.ConsumerCount
 		records["enqueue_count"] = topic.Stats.EnqueueCount
 		records["dequeue_count"] = topic.Stats.DequeueCount
 
-		acc.AddFields("topics_metrics", records, tags)
+		acc.AddFields("activemq_topics", records, tags)
 	}
 }
 
@@ -159,6 +204,8 @@ func (a *ActiveMQ) GatherSubscribersMetrics(acc telegraf.Accumulator, subscriber
 		tags["destination_name"] = subscriber.DestinationName
 		tags["selector"] = subscriber.Selector
 		tags["active"] = subscriber.Active
+		tags["source"] = a.Server
+		tags["port"] = string(a.Port)
 
 		records["pending_queue_size"] = subscriber.Stats.PendingQueueSize
 		records["dispatched_queue_size"] = subscriber.Stats.DispatchedQueueSize
@@ -166,7 +213,7 @@ func (a *ActiveMQ) GatherSubscribersMetrics(acc telegraf.Accumulator, subscriber
 		records["enqueue_counter"] = subscriber.Stats.EnqueueCounter
 		records["dequeue_counter"] = subscriber.Stats.DequeueCounter
 
-		acc.AddFields("subscribers_metrics", records, tags)
+		acc.AddFields("activemq_subscribers", records, tags)
 	}
 }
 
@@ -200,5 +247,10 @@ func (a *ActiveMQ) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("activemq", func() telegraf.Input { return &ActiveMQ{} })
+	inputs.Add("activemq", func() telegraf.Input {
+		return &ActiveMQ{
+			Server: "localhost",
+			Port:   8161,
+		}
+	})
 }
