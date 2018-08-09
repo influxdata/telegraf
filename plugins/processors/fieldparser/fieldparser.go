@@ -12,7 +12,6 @@ import (
 type FieldParser struct {
 	config      parsers.Config
 	parseFields []string `toml:"parse_fields"`
-	parseTags   []string `toml:"parse_tags"`
 	Parser      parsers.Parser
 }
 
@@ -54,15 +53,6 @@ func (p *FieldParser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			value := metric.Fields()[key]
 			strVal := fmt.Sprintf("%v", value)
 			nMetrics, err := p.parseField(strVal)
-			if err != nil {
-				log.Printf("E! [processors.fieldparser] could not parse field %v: %v", key, err)
-				return metrics
-			}
-			metrics = append(metrics, nMetrics...)
-		}
-		for _, key := range p.parseTags {
-			value := metric.Tags()[key]
-			nMetrics, err := p.parseField(value)
 			if err != nil {
 				log.Printf("E! [processors.fieldparser] could not parse field %v: %v", key, err)
 				return metrics
