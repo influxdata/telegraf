@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"time"
 
 	"strings"
@@ -164,7 +165,7 @@ func (a *ActiveMQ) GatherQueuesMetrics(acc telegraf.Accumulator, queues Queues) 
 
 		tags["name"] = strings.TrimSpace(queue.Name)
 		tags["source"] = a.Server
-		tags["port"] = string(a.Port)
+		tags["port"] = strconv.Itoa(a.Port)
 
 		records["size"] = queue.Stats.Size
 		records["consumer_count"] = queue.Stats.ConsumerCount
@@ -182,7 +183,7 @@ func (a *ActiveMQ) GatherTopicsMetrics(acc telegraf.Accumulator, topics Topics) 
 
 		tags["name"] = topic.Name
 		tags["source"] = a.Server
-		tags["port"] = string(a.Port)
+		tags["port"] = strconv.Itoa(a.Port)
 
 		records["size"] = topic.Stats.Size
 		records["consumer_count"] = topic.Stats.ConsumerCount
@@ -205,7 +206,7 @@ func (a *ActiveMQ) GatherSubscribersMetrics(acc telegraf.Accumulator, subscriber
 		tags["selector"] = subscriber.Selector
 		tags["active"] = subscriber.Active
 		tags["source"] = a.Server
-		tags["port"] = string(a.Port)
+		tags["port"] = strconv.Itoa(a.Port)
 
 		records["pending_queue_size"] = subscriber.Stats.PendingQueueSize
 		records["dispatched_queue_size"] = subscriber.Stats.DispatchedQueueSize

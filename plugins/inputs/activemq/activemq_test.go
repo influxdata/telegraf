@@ -45,6 +45,8 @@ func TestGatherQueuesMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 
 	activeMQ := new(ActiveMQ)
+	activeMQ.Server = "localhost"
+	activeMQ.Port = 8161
 
 	activeMQ.GatherQueuesMetrics(&acc, queues)
 	acc.AssertContainsTaggedFields(t, "activemq_queues", records, tags)
@@ -89,6 +91,8 @@ func TestGatherTopicsMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 
 	activeMQ := new(ActiveMQ)
+	activeMQ.Server = "localhost"
+	activeMQ.Port = 8161
 
 	activeMQ.GatherTopicsMetrics(&acc, topics)
 	acc.AssertContainsTaggedFields(t, "activemq_topics", records, tags)
@@ -127,6 +131,8 @@ func TestGatherSubscribersMetrics(t *testing.T) {
 	var acc testutil.Accumulator
 
 	activeMQ := new(ActiveMQ)
+	activeMQ.Server = "localhost"
+	activeMQ.Port = 8161
 
 	activeMQ.GatherSubscribersMetrics(&acc, subscribers)
 	acc.AssertContainsTaggedFields(t, "activemq_subscribers", records, tags)
