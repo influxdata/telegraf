@@ -2,11 +2,11 @@ package meminfo
 
 import (
 	"bufio"
-	"os"
-	"strings"
-	"strconv"
 	"github.com/influxdata/telegraf"
-    "github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs"
+	"os"
+	"strconv"
+	"strings"
 )
 
 type MemStats struct {
