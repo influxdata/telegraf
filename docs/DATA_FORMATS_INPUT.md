@@ -888,6 +888,22 @@ the file output will only print once per `flush_interval`.
 - Continue one token at a time until the entire line is successfully parsed.
 
 # Logfmt
-For extracting key-value pairs from log text in the form `<key>=<value>`.
-At the moment, the plugin will produce one metric per line and all keys 
+This parser implements the logfmt format by extracting key-value pairs from log text in the form `<key>=<value>`.
+At the moment, the plugin will produce one metric per line and all keys
 are added as fields. Values are left as strings (for now).
+A typical log
+```
+method=GET host=influxdata.org ts=2018-07-24T19:43:40.275Z
+connect=4ms service=8ms status=200 bytes=1653
+```
+will be converted into
+```
+"method": "GET"
+"host":    "influxdata.org",
+"ts":    "2018-07-24T19:43:40.275Z",
+"connect":    "4ms",
+"service":    "8ms",
+"status":    200,
+"bytes":    1653,
+```
+Additional information about the logfmt format can be found [here](https://brandur.org/logfmt).
