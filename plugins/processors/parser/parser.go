@@ -1,4 +1,4 @@
-package fieldparser
+package parser
 
 import (
 	"fmt"
