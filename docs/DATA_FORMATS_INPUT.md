@@ -9,6 +9,7 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Nagios](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#nagios) (exec input only)
 1. [Collectd](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#collectd)
 1. [Dropwizard](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#dropwizard)
+1. [Wavefront](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#wavefront)
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -653,3 +654,29 @@ For more information about the dropwizard json format see
   #   tag2 = "tags.tag2"
 
 ```
+
+# Wavefront:
+
+Wavefront Data Format is metrics are parsed directly into Telegraf metrics.
+For more information about the Wavefront Data Format see
+[here](https://docs.wavefront.com/wavefront_data_format.html).
+
+There are no additional configuration options for Wavefront Data Format line-protocol.
+
+#### Wavefront Configuration:
+
+```toml
+[[inputs.exec]]
+  ## Commands array
+  commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
+
+  ## measurement name suffix (for separating different commands)
+  name_suffix = "_mycollector"
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "wavefront"
+```
+
