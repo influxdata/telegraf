@@ -9,7 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
-type FieldParser struct {
+type Parser struct {
 	config      parsers.Config
 	parseFields []string `toml:"parse_fields"`
 	Parser      parsers.Parser
@@ -17,33 +17,31 @@ type FieldParser struct {
 
 // holds a default sample config
 var SampleConfig = `
-## specify the name of the tag[s] whose value will be parsed
-parse_tags = []
 
 ## specify the name of the field[s] whose value will be parsed
 parse_fields = []
 
-[processors.fieldparser.config]
+[processors.parser.config]
   data_format = "logfmt"
   ## additional configurations for parser go here
 `
 
 // returns the default config
-func (p *FieldParser) SampleConfig() string {
+func (p *Parser) SampleConfig() string {
 	return SampleConfig
 }
 
 // returns a brief description of the processor
-func (p *FieldParser) Description() string {
+func (p *Parser) Description() string {
 	return "Parse a value in a specified field/tag(s) and add the result in a new metric"
 }
 
-func (p *FieldParser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
+func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 	if p.Parser == nil {
 		var err error
 		p.Parser, err = parsers.NewParser(&p.config)
 		if err != nil {
-			log.Printf("E! [processors.fieldparser] could not create parser: %v", err)
+			log.Printf("E! [processors.parser] could not create parser: %v", err)
 			return metrics
 		}
 	}
@@ -54,7 +52,7 @@ func (p *FieldParser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 			strVal := fmt.Sprintf("%v", value)
 			nMetrics, err := p.parseField(strVal)
 			if err != nil {
-				log.Printf("E! [processors.fieldparser] could not parse field %v: %v", key, err)
+				log.Printf("E! [processors.parser] could not parse field %v: %v", key, err)
 				return metrics
 			}
 			metrics = append(metrics, nMetrics...)
@@ -64,12 +62,12 @@ func (p *FieldParser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 
 }
 
-func (p *FieldParser) parseField(value string) ([]telegraf.Metric, error) {
+func (p *Parser) parseField(value string) ([]telegraf.Metric, error) {
 	return p.Parser.Parse([]byte(value))
 }
 
 func init() {
-	processors.Add("fieldparser", func() telegraf.Processor {
-		return &FieldParser{}
+	processors.Add("parser", func() telegraf.Processor {
+		return &Parser{}
 	})
 }
