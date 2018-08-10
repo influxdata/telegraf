@@ -403,13 +403,16 @@ func testStrictRFC5425(t *testing.T, protocol string, address string, wantTLS bo
 			acc.Errors = make([]error, 0)
 
 			// Write
-			conn.Write(tc.data)
+			_, err = conn.Write(tc.data)
+			conn.Close()
+			require.NoError(t, err)
 
 			// Wait that the the number of data points is accumulated
 			// Since the receiver is running concurrently
 			if tc.wantStrict != nil {
 				acc.Wait(len(tc.wantStrict))
 			}
+
 			// Wait the parsing error
 			acc.WaitError(tc.werr)
 
@@ -452,7 +455,6 @@ func testBestEffortRFC5425(t *testing.T, protocol string, address string, wantTL
 				conn, err = tls.Dial(protocol, address, config)
 			} else {
 				conn, err = net.Dial(protocol, address)
-				defer conn.Close()
 			}
 			require.NotNil(t, conn)
 			require.NoError(t, err)
@@ -462,7 +464,9 @@ func testBestEffortRFC5425(t *testing.T, protocol string, address string, wantTL
 			acc.Errors = make([]error, 0)
 
 			// Write
-			conn.Write(tc.data)
+			_, err = conn.Write(tc.data)
+			require.NoError(t, err)
+			conn.Close()
 
 			// Wait that the the number of data points is accumulated
 			// Since the receiver is running concurrently

@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"regexp"
@@ -58,6 +59,7 @@ type PrometheusClient struct {
 	TLSKey             string            `toml:"tls_key"`
 	BasicUsername      string            `toml:"basic_username"`
 	BasicPassword      string            `toml:"basic_password"`
+	IPRange            []string          `toml:"ip_range"`
 	ExpirationInterval internal.Duration `toml:"expiration_interval"`
 	Path               string            `toml:"path"`
 	CollectorsExclude  []string          `toml:"collectors_exclude"`
@@ -84,6 +86,9 @@ var sampleConfig = `
   #basic_username = "Foo"
   #basic_password = "Bar"
 
+  ## IP Ranges which are allowed to access metrics
+  #ip_range = ["192.168.0.0/24", "192.168.1.0/30"]
+
   ## Interval to expire metrics and not deliver to prometheus, 0 == no expiration
   # expiration_interval = "60s"
 
@@ -96,7 +101,7 @@ var sampleConfig = `
   string_as_label = true
 `
 
-func (p *PrometheusClient) basicAuth(h http.Handler) http.Handler {
+func (p *PrometheusClient) auth(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if p.BasicUsername != "" && p.BasicPassword != "" {
 			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
@@ -105,6 +110,27 @@ func (p *PrometheusClient) basicAuth(h http.Handler) http.Handler {
 			if !ok ||
 				subtle.ConstantTimeCompare([]byte(username), []byte(p.BasicUsername)) != 1 ||
 				subtle.ConstantTimeCompare([]byte(password), []byte(p.BasicPassword)) != 1 {
+				http.Error(w, "Not authorized", 401)
+				return
+			}
+		}
+
+		if len(p.IPRange) > 0 {
+			matched := false
+			remoteIPs, _, _ := net.SplitHostPort(r.RemoteAddr)
+			remoteIP := net.ParseIP(remoteIPs)
+			for _, iprange := range p.IPRange {
+				_, ipNet, err := net.ParseCIDR(iprange)
+				if err != nil {
+					http.Error(w, "Config Error in ip_range setting", 500)
+					return
+				}
+				if ipNet.Contains(remoteIP) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
 				http.Error(w, "Not authorized", 401)
 				return
 			}
@@ -146,7 +172,7 @@ func (p *PrometheusClient) Start() error {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle(p.Path, p.basicAuth(promhttp.HandlerFor(
+	mux.Handle(p.Path, p.auth(promhttp.HandlerFor(
 		registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})))
 
 	p.server = &http.Server{

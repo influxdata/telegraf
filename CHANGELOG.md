@@ -2,9 +2,17 @@
 
 ### Release Notes
 
+- With the addition of the standalone `grok` input data format, the
+  `logparser` input plugin has been deprecated in favor of using the `tail`
+  input plugin combined with `data_format="grok"` .
+
 ### New Inputs
 
+- [file](./plugins/inputs/file/README.md) - Contributed by @maxunt
 - [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
+- [x509_cert](./plugins/inputs/x509_cert/README.md) - Contributed by @jtyr
+- [filecount](./plugins/inputs/filecount/README.md) - Contributed by @sometimesfood
+- [pgbouncer](./plugins/inputs/pgbouncer/README.md) - Contributed by @nerzhul
 
 ### New Processors
 
@@ -34,13 +42,44 @@
 - [#4362](https://github.com/influxdata/telegraf/pull/4362): Add mongo document and connection metrics.
 - [#3772](https://github.com/influxdata/telegraf/pull/3772): Add Enum Processor.
 - [#4386](https://github.com/influxdata/telegraf/pull/4386): Add user tag to procstat input.
+- [#4403](https://github.com/influxdata/telegraf/pull/4403): Add support for multivalue metrics to collectd parser.
+- [#4418](https://github.com/influxdata/telegraf/pull/4418): Add support for setting kafka client id.
+- [#4332](https://github.com/influxdata/telegraf/pull/4332): Add file input plugin and grok parser.
+- [#4320](https://github.com/influxdata/telegraf/pull/4320): Improve cloudwatch output performance.
+- [#3768](https://github.com/influxdata/telegraf/pull/3768): Add x509_cert input plugin.
+- [#4471](https://github.com/influxdata/telegraf/pull/4471): Add IPSIpAddress syntax to ipaddr conversion in snmp plugin.
+- [#4363](https://github.com/influxdata/telegraf/pull/4363): Add filecount input plugin.
+- [#4485](https://github.com/influxdata/telegraf/pull/4485): Add support for configuring an AWS endpoint_url.
+- [#4491](https://github.com/influxdata/telegraf/pull/4491): Send all messages before waiting for results in kafka output.
+- [#4492](https://github.com/influxdata/telegraf/pull/4492): Add support for lz4 compression to kafka output.
+- [#4450](https://github.com/influxdata/telegraf/pull/4450): Split multiple sensor keys in ipmi input.
+- [#4364](https://github.com/influxdata/telegraf/pull/4364): Support StatisticValues in cloudwatch output plugin.
+- [#4431](https://github.com/influxdata/telegraf/pull/4431): Add ip restriction for the prometheus_client output.
+- [#3918](https://github.com/influxdata/telegraf/pull/3918): Add pgbouncer input plugin.
 
-## v1.7.2 [unreleased]
+## v1.7.3 [2018-08-07]
+
+### Bugfixes
+
+- [#4434](https://github.com/influxdata/telegraf/issues/4434): Reduce required docker API version.
+- [#4498](https://github.com/influxdata/telegraf/pull/4498): Keep leading whitespace for messages in syslog input.
+- [#4470](https://github.com/influxdata/telegraf/issues/4470): Skip bad entries on interrupt input.
+- [#4501](https://github.com/influxdata/telegraf/issues/4501): Preserve metric type when using filters in output plugins.
+- [#3794](https://github.com/influxdata/telegraf/issues/3794): Fix error message if URL is unparseable in influxdb output.
+- [#4059](https://github.com/influxdata/telegraf/issues/4059): Use explicit zpool properties to fix parse error on FreeBSD 11.2.
+- [#4514](https://github.com/influxdata/telegraf/pull/4514): Lock buffer when adding metrics.
+
+## v1.7.2 [2018-07-18]
 
 ### Bugfixes
 
 - [#4381](https://github.com/influxdata/telegraf/issues/4381): Use localhost as default server tag in zookeeper input.
 - [#4374](https://github.com/influxdata/telegraf/issues/4374): Don't set values when pattern doesn't match in regex processor.
+- [#4416](https://github.com/influxdata/telegraf/issues/4416): Fix output format of printer processor.
+- [#4422](https://github.com/influxdata/telegraf/issues/4422): Fix metric can have duplicate field.
+- [#4389](https://github.com/influxdata/telegraf/issues/4389): Return error if NewRequest fails in http output.
+- [#4335](https://github.com/influxdata/telegraf/issues/4335): Reset read deadline for syslog input.
+- [#4375](https://github.com/influxdata/telegraf/issues/4375): Exclude cached memory on docker input plugin.
 
 ## v1.7.1 [2018-07-03]
 

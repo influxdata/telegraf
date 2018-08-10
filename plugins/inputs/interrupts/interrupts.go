@@ -3,12 +3,13 @@ package interrupts
 import (
 	"bufio"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"io"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Interrupts struct{}
@@ -50,6 +51,8 @@ func parseInterrupts(r io.Reader) ([]IRQ, error) {
 		}
 		cpucount = len(cpus)
 	}
+
+scan:
 	for scanner.Scan() {
 		fields := strings.Fields(scanner.Text())
 		if !strings.HasSuffix(fields[0], ":") {
@@ -62,7 +65,7 @@ func parseInterrupts(r io.Reader) ([]IRQ, error) {
 			if i < len(irqvals) {
 				irqval, err := strconv.ParseInt(irqvals[i], 10, 64)
 				if err != nil {
-					return irqs, fmt.Errorf("Unable to parse %q from %q: %s", irqvals[i], scanner.Text(), err)
+					continue scan
 				}
 				irq.Cpus = append(irq.Cpus, irqval)
 			}

@@ -336,7 +336,7 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 
 // writes 25,000 metrics to the listener with 10 different writers
 func TestWriteHTTPHighTraffic(t *testing.T) {
-	if runtime.GOOS != "darwin" {
+	if runtime.GOOS == "darwin" {
 		t.Skip("Skipping due to hang on darwin")
 	}
 	listener := newTestHTTPListener()
