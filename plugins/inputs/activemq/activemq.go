@@ -88,16 +88,20 @@ const (
 var sampleConfig = `
   ## Required ActiveMQ Endpoint
   # server = "192.168.50.10"
+
   ## Required ActiveMQ port
   # port = 8161
-  ## Required username used for request HTTP Basic Authentication
+  
+  ## Credentials for basic HTTP authentication
   # username = "admin"
-  ## Required password used for HTTP Basic Authentication
   # password = "admin"
+
   ## Required ActiveMQ webadmin root path
   # webadmin = "admin"
+
   ## Maximum time to receive response.
   # response_timeout = "5s"
+  
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"

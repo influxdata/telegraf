@@ -8,25 +8,26 @@ This plugin gather queues, topics & subscribers metrics using ActiveMQ Console A
 # Description
 [[inputs.activemq]]
   ## Required ActiveMQ Endpoint
-  server = "192.168.50.10"
+  # server = "192.168.50.10"
+
   ## Required ActiveMQ port
-  port = 8161
-  ## Required username used for request HTTP Basic Authentication
-  username = "admin"
-  ## Required password used for HTTP Basic Authentication
-  password = "admin"
+  # port = 8161
+  
+  ## Credentials for basic HTTP authentication
+  # username = "admin"
+  # password = "admin"
+
   ## Required ActiveMQ webadmin root path
-  webadmin = "admin"
+  # webadmin = "admin"
 
   ## Maximum time to receive response.
   # response_timeout = "5s"
-
+  
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
 ```
 
 ### Measurements & Fields:
