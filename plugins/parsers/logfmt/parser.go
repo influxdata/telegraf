@@ -47,7 +47,7 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 
 			//type conversions
 			value := string(decoder.Value())
-			if iValue, err := strconv.Atoi(value); err == nil {
+			if iValue, err := strconv.ParseInt(value, 0, 64); err == nil {
 				fields[string(decoder.Key())] = iValue
 			} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
 				fields[string(decoder.Key())] = fValue
