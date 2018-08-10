@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
@@ -133,6 +134,18 @@ var containerList = []types.Container{
 		SizeRw:     0,
 		SizeRootFs: 0,
 	},
+	types.Container{
+		ID:    "e8a713dd90604f5a257b97c15945e047ab60ed5b2c4397c5a6b5bf40e1bd2791",
+		Names: []string{"/acme"},
+	},
+	types.Container{
+		ID:    "9bc6faf9ba8106fae32e8faafd38a1dd6f6d262bec172398cc10bc03c0d6841a",
+		Names: []string{"/acme-test"},
+	},
+	types.Container{
+		ID:    "d4ccced494a1d5fe8ebdb0a86335a0dab069319912221e5838a132ab18a8bc84",
+		Names: []string{"/foo"},
+	},
 }
 
 var two = uint64(2)
@@ -208,10 +221,25 @@ var NodeList = []swarm.Node{
 	},
 }
 
-func containerStats() types.ContainerStats {
+func containerStats(s string) types.ContainerStats {
 	var stat types.ContainerStats
-	jsonStat := `
+	var name string
+	switch s {
+	case "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb":
+		name = "etcd"
+	case "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173":
+		name = "etcd2"
+	case "e8a713dd90604f5a257b97c15945e047ab60ed5b2c4397c5a6b5bf40e1bd2791":
+		name = "/acme"
+	case "9bc6faf9ba8106fae32e8faafd38a1dd6f6d262bec172398cc10bc03c0d6841a":
+		name = "/acme-test"
+	case "d4ccced494a1d5fe8ebdb0a86335a0dab069319912221e5838a132ab18a8bc84":
+		name = "/foo"
+	}
+
+	jsonStat := fmt.Sprintf(`
 {
+    "name": "%s",
     "blkio_stats": {
         "io_service_bytes_recursive": [
             {
@@ -315,7 +343,7 @@ func containerStats() types.ContainerStats {
         "throttling_data": {}
     },
     "read": "2016-02-24T11:42:27.472459608-05:00"
-}`
+}`, name)
 	stat.Body = ioutil.NopCloser(strings.NewReader(jsonStat))
 	return stat
 }
@@ -484,6 +512,12 @@ var containerInspect = types.ContainerJSON{
 				FailingStreak: 1,
 				Status:        "Unhealthy",
 			},
+			Status:     "running",
+			OOMKilled:  false,
+			Pid:        1234,
+			ExitCode:   0,
+			StartedAt:  "2018-06-14T05:48:53.266176036Z",
+			FinishedAt: "0001-01-01T00:00:00Z",
 		},
 	},
 }

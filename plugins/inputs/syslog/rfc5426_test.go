@@ -2,8 +2,10 @@ package syslog
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -200,6 +202,38 @@ func getTestCasesForRFC5426() []testCase5426 {
 			},
 			werr: true,
 		},
+		{
+			name: "trim message",
+			data: []byte("<1>1 - - - - - - \tA\n"),
+			wantBestEffort: &testutil.Metric{
+				Measurement: "syslog",
+				Fields: map[string]interface{}{
+					"version":       uint16(1),
+					"message":       "\tA",
+					"facility_code": 0,
+					"severity_code": 1,
+				},
+				Tags: map[string]string{
+					"severity": "alert",
+					"facility": "kern",
+				},
+				Time: defaultTime,
+			},
+			wantStrict: &testutil.Metric{
+				Measurement: "syslog",
+				Fields: map[string]interface{}{
+					"version":       uint16(1),
+					"message":       "\tA",
+					"facility_code": 0,
+					"severity_code": 1,
+				},
+				Tags: map[string]string{
+					"severity": "alert",
+					"facility": "kern",
+				},
+				Time: defaultTime,
+			},
+		},
 	}
 
 	return testCases
@@ -232,12 +266,18 @@ func testRFC5426(t *testing.T, protocol string, address string, bestEffort bool)
 			// Connect
 			conn, err := net.Dial(protocol, address)
 			require.NotNil(t, conn)
-			defer conn.Close()
 			require.Nil(t, err)
 
 			// Write
-			_, e := conn.Write(tc.data)
-			require.Nil(t, e)
+			_, err = conn.Write(tc.data)
+			conn.Close()
+			if err != nil {
+				if err, ok := err.(*net.OpError); ok {
+					if err.Err.Error() == "write: message too long" {
+						return
+					}
+				}
+			}
 
 			// Waiting ...
 			if tc.wantStrict == nil && tc.werr || bestEffort && tc.werr {
@@ -274,15 +314,21 @@ func TestStrict_udp(t *testing.T) {
 }
 
 func TestBestEffort_unixgram(t *testing.T) {
-	sockname := "/tmp/telegraf_test.sock"
-	os.Create(sockname)
-	testRFC5426(t, "unixgram", sockname, true)
+	tmpdir, err := ioutil.TempDir("", "telegraf")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unixgram.sock")
+	os.Create(sock)
+	testRFC5426(t, "unixgram", sock, true)
 }
 
 func TestStrict_unixgram(t *testing.T) {
-	sockname := "/tmp/telegraf_test.sock"
-	os.Create(sockname)
-	testRFC5426(t, "unixgram", sockname, false)
+	tmpdir, err := ioutil.TempDir("", "telegraf")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+	sock := filepath.Join(tmpdir, "syslog.TestStrict_unixgram.sock")
+	os.Create(sock)
+	testRFC5426(t, "unixgram", sock, false)
 }
 
 func TestTimeIncrement_udp(t *testing.T) {

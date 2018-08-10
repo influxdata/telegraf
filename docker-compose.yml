@@ -40,6 +40,13 @@ services:
     image: memcached
     ports: 
       - "11211:11211"
+  pgbouncer:
+    image: mbed/pgbouncer
+    environment:
+      PG_ENV_POSTGRESQL_USER: pgbouncer
+      PG_ENV_POSTGRESQL_PASS: pgbouncer
+    ports:
+      - "6432:6432"
   postgres:
     image: postgres:alpine
     ports:

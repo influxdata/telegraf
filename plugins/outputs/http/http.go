@@ -29,11 +29,6 @@ var sampleConfig = `
   # username = "username"
   # password = "pa$$word"
 
-  ## Additional HTTP headers
-  # [outputs.http.headers]
-  #   # Should be set to "application/json" for json data_format
-  #   Content-Type = "text/plain; charset=utf-8"
-
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -46,6 +41,11 @@ var sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
+  
+  ## Additional HTTP headers
+  # [outputs.http.headers]
+  #   # Should be set manually to "application/json" for json data_format
+  #   Content-Type = "text/plain; charset=utf-8"
 `
 
 const (
@@ -127,6 +127,9 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 
 func (h *HTTP) write(reqBody []byte) error {
 	req, err := http.NewRequest(h.Method, h.URL, bytes.NewBuffer(reqBody))
+	if err != nil {
+		return err
+	}
 
 	req.Header.Set("Content-Type", defaultContentType)
 	for k, v := range h.Headers {

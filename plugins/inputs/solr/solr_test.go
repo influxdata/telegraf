@@ -43,6 +43,17 @@ func TestGatherStats(t *testing.T) {
 		map[string]string{"core": "main", "handler": "filterCache"})
 }
 
+func TestSolr7MbeansStats(t *testing.T) {
+	ts := createMockSolr7Server()
+	solr := NewSolr()
+	solr.Servers = []string{ts.URL}
+	var acc testutil.Accumulator
+	require.NoError(t, solr.Gather(&acc))
+	acc.AssertContainsTaggedFields(t, "solr_cache",
+		solr7CacheExpected,
+		map[string]string{"core": "main", "handler": "documentCache"})
+}
+
 func TestSolr3GatherStats(t *testing.T) {
 	ts := createMockSolr3Server()
 	solr := NewSolr()
@@ -144,6 +155,21 @@ func createMockSolr3Server() *httptest.Server {
 		} else if strings.Contains(r.URL.Path, "solr/core1/admin") {
 			w.WriteHeader(http.StatusOK)
 			fmt.Fprintln(w, mBeansSolr3MainResponse)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprintln(w, "nope")
+		}
+	}))
+}
+
+func createMockSolr7Server() *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.URL.Path, "/solr/admin/cores") {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, statusResponse)
+		} else if strings.Contains(r.URL.Path, "solr/main/admin") {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintln(w, mBeansSolr7Response)
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintln(w, "nope")

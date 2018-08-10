@@ -25,6 +25,8 @@ type (
 		Brokers []string
 		// Kafka topic
 		Topic string
+		// Kafka client id
+		ClientID string `toml:"client_id"`
 		// Kafka topic suffix option
 		TopicSuffix TopicSuffix `toml:"topic_suffix"`
 		// Routing Key Tag
@@ -35,6 +37,8 @@ type (
 		RequiredAcks int
 		// MaxRetry Tag
 		MaxRetry int
+
+		Version string `toml:"version"`
 
 		// Legacy TLS config options
 		// TLS client certificate
@@ -68,6 +72,15 @@ var sampleConfig = `
   brokers = ["localhost:9092"]
   ## Kafka topic for producer messages
   topic = "telegraf"
+
+  ## Optional Client id
+  # client_id = "Telegraf"
+
+  ## Set the minimal supported Kafka version.  Setting this enables the use of new
+  ## Kafka features and APIs.  Of particular interested, lz4 compression
+  ## requires at least version 0.10.0.0.
+  ##   ex: version = "1.1.0"
+  # version = ""
 
   ## Optional topic suffix configuration.
   ## If the section is omitted, no suffix is used.
@@ -186,6 +199,20 @@ func (k *Kafka) Connect() error {
 	}
 	config := sarama.NewConfig()
 
+	if k.Version != "" {
+		version, err := sarama.ParseKafkaVersion(k.Version)
+		if err != nil {
+			return err
+		}
+		config.Version = version
+	}
+
+	if k.ClientID != "" {
+		config.ClientID = k.ClientID
+	} else {
+		config.ClientID = "Telegraf"
+	}
+
 	config.Producer.RequiredAcks = sarama.RequiredAcks(k.RequiredAcks)
 	config.Producer.Compression = sarama.CompressionCodec(k.CompressionCodec)
 	config.Producer.Retry.Max = k.MaxRetry
@@ -235,32 +262,34 @@ func (k *Kafka) Description() string {
 }
 
 func (k *Kafka) Write(metrics []telegraf.Metric) error {
-	if len(metrics) == 0 {
-		return nil
-	}
-
+	msgs := make([]*sarama.ProducerMessage, 0, len(metrics))
 	for _, metric := range metrics {
 		buf, err := k.serializer.Serialize(metric)
 		if err != nil {
 			return err
 		}
 
-		topicName := k.GetTopicName(metric)
-
 		m := &sarama.ProducerMessage{
-			Topic: topicName,
+			Topic: k.GetTopicName(metric),
 			Value: sarama.ByteEncoder(buf),
 		}
-		if h, ok := metric.Tags()[k.RoutingTag]; ok {
+		if h, ok := metric.GetTag(k.RoutingTag); ok {
 			m.Key = sarama.StringEncoder(h)
 		}
-
-		_, _, err = k.producer.SendMessage(m)
-
-		if err != nil {
-			return fmt.Errorf("FAILED to send kafka message: %s\n", err)
-		}
+		msgs = append(msgs, m)
 	}
+
+	err := k.producer.SendMessages(msgs)
+	if err != nil {
+		// We could have many errors, return only the first encountered.
+		if errs, ok := err.(sarama.ProducerErrors); ok {
+			for _, prodErr := range errs {
+				return prodErr
+			}
+		}
+		return err
+	}
+
 	return nil
 }
 

@@ -3,7 +3,10 @@ package syslog
 import (
 	"crypto/tls"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -400,13 +403,16 @@ func testStrictRFC5425(t *testing.T, protocol string, address string, wantTLS bo
 			acc.Errors = make([]error, 0)
 
 			// Write
-			conn.Write(tc.data)
+			_, err = conn.Write(tc.data)
+			conn.Close()
+			require.NoError(t, err)
 
 			// Wait that the the number of data points is accumulated
 			// Since the receiver is running concurrently
 			if tc.wantStrict != nil {
 				acc.Wait(len(tc.wantStrict))
 			}
+
 			// Wait the parsing error
 			acc.WaitError(tc.werr)
 
@@ -449,7 +455,6 @@ func testBestEffortRFC5425(t *testing.T, protocol string, address string, wantTL
 				conn, err = tls.Dial(protocol, address, config)
 			} else {
 				conn, err = net.Dial(protocol, address)
-				defer conn.Close()
 			}
 			require.NotNil(t, conn)
 			require.NoError(t, err)
@@ -459,7 +464,9 @@ func testBestEffortRFC5425(t *testing.T, protocol string, address string, wantTL
 			acc.Errors = make([]error, 0)
 
 			// Write
-			conn.Write(tc.data)
+			_, err = conn.Write(tc.data)
+			require.NoError(t, err)
+			conn.Close()
 
 			// Wait that the the number of data points is accumulated
 			// Since the receiver is running concurrently
@@ -504,17 +511,33 @@ func TestStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
 }
 
 func TestStrict_unix(t *testing.T) {
-	testStrictRFC5425(t, "unix", "/tmp/telegraf_test.sock", false, nil)
+	tmpdir, err := ioutil.TempDir("", "telegraf")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix.sock")
+	testStrictRFC5425(t, "unix", sock, false, nil)
 }
 
 func TestBestEffort_unix(t *testing.T) {
-	testBestEffortRFC5425(t, "unix", "/tmp/telegraf_test.sock", false, nil)
+	tmpdir, err := ioutil.TempDir("", "telegraf")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix.sock")
+	testBestEffortRFC5425(t, "unix", sock, false, nil)
 }
 
 func TestStrict_unix_tls(t *testing.T) {
-	testStrictRFC5425(t, "unix", "/tmp/telegraf_test.sock", true, nil)
+	tmpdir, err := ioutil.TempDir("", "telegraf")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix_tls.sock")
+	testStrictRFC5425(t, "unix", sock, true, nil)
 }
 
 func TestBestEffort_unix_tls(t *testing.T) {
-	testBestEffortRFC5425(t, "unix", "/tmp/telegraf_test.sock", true, nil)
+	tmpdir, err := ioutil.TempDir("", "telegraf")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpdir)
+	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix_tls.sock")
+	testBestEffortRFC5425(t, "unix", sock, true, nil)
 }

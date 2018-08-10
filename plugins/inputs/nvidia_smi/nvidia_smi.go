@@ -16,20 +16,21 @@ import (
 
 var (
 	measurement = "nvidia_smi"
-	metrics     = "fan.speed,memory.total,memory.used,memory.free,pstate,temperature.gpu,name,uuid,compute_mode,utilization.gpu,utilization.memory,index"
+	metrics     = "fan.speed,memory.total,memory.used,memory.free,pstate,temperature.gpu,name,uuid,compute_mode,utilization.gpu,utilization.memory,index,power.draw"
 	metricNames = [][]string{
-		[]string{"fan_speed", "field"},
-		[]string{"memory_total", "field"},
-		[]string{"memory_used", "field"},
-		[]string{"memory_free", "field"},
+		[]string{"fan_speed", "integer"},
+		[]string{"memory_total", "integer"},
+		[]string{"memory_used", "integer"},
+		[]string{"memory_free", "integer"},
 		[]string{"pstate", "tag"},
-		[]string{"temperature_gpu", "field"},
+		[]string{"temperature_gpu", "integer"},
 		[]string{"name", "tag"},
 		[]string{"uuid", "tag"},
 		[]string{"compute_mode", "tag"},
-		[]string{"utilization_gpu", "field"},
-		[]string{"utilization_memory", "field"},
+		[]string{"utilization_gpu", "integer"},
+		[]string{"utilization_memory", "integer"},
 		[]string{"index", "tag"},
+		[]string{"power_draw", "float"},
 	}
 )
 
@@ -49,11 +50,11 @@ func (smi *NvidiaSMI) Description() string {
 // SampleConfig returns the sample configuration for the NvidiaSMI plugin
 func (smi *NvidiaSMI) SampleConfig() string {
 	return `
-## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
-# bin_path = /usr/bin/nvidia-smi
+  ## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
+  # bin_path = "/usr/bin/nvidia-smi"
 
-## Optional: timeout for GPU polling
-# timeout = 5s
+  ## Optional: timeout for GPU polling
+  # timeout = "5s"
 `
 }
 
@@ -127,7 +128,7 @@ func parseLine(line string) (map[string]string, map[string]interface{}, error) {
 		for i, m := range metricNames {
 			col := strings.TrimSpace(met[i])
 
-			// First handle the tags
+			// Handle the tags
 			if m[1] == "tag" {
 				tags[m[0]] = col
 				continue
@@ -137,12 +138,23 @@ func parseLine(line string) (map[string]string, map[string]interface{}, error) {
 				continue
 			}
 
-			// Then parse the integers out of the fields
-			out, err := strconv.ParseInt(col, 10, 64)
-			if err != nil {
-				return tags, fields, err
+			// Parse the integers
+			if m[1] == "integer" {
+				out, err := strconv.ParseInt(col, 10, 64)
+				if err != nil {
+					return tags, fields, err
+				}
+				fields[m[0]] = out
 			}
-			fields[m[0]] = out
+
+			// Parse the floats
+			if m[1] == "float" {
+				out, err := strconv.ParseFloat(col, 64)
+				if err != nil {
+					return tags, fields, err
+				}
+				fields[m[0]] = out
+			}
 		}
 
 		// Return the tags and fields

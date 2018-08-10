@@ -8,6 +8,7 @@ Supported Burrow version: `1.x`
 ### Configuration
 
 ```
+[[inputs.burrow]]
   ## Burrow API endpoints in format "schema://host:port".
   ## Default is "http://localhost:8000".
   servers = ["http://localhost:8000"]
@@ -91,6 +92,7 @@ Supported Burrow version: `1.x`
   - group (string)
   - topic (string)
   - partition (int)
+  - owner (string)
 
 * `burrow_topic`
   - cluster (string)

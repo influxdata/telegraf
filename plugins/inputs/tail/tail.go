@@ -146,7 +146,11 @@ func (t *Tail) receiver(tailer *tail.Tail) {
 
 		m, err = t.parser.ParseLine(text)
 		if err == nil {
-			t.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+			if m != nil {
+				tags := m.Tags()
+				tags["path"] = tailer.Filename
+				t.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
+			}
 		} else {
 			t.acc.AddError(fmt.Errorf("E! Malformed log line in %s: [%s], Error: %s\n",
 				tailer.Filename, line.Text, err))
