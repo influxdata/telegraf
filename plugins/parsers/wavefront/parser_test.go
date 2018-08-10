@@ -2,10 +2,11 @@ package wavefront
 
 import (
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf/metric"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParse(t *testing.T) {

@@ -193,7 +193,6 @@ func buildTags(mTags map[string]string, w *Wavefront) (string, map[string]string
 	if s, ok := mTags["source"]; ok {
 		source = s
 		delete(mTags, "source")
-
 	} else {
 		sourceTagFound := false
 		for _, s := range w.SourceOverride {

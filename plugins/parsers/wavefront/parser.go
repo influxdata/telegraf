@@ -3,12 +3,13 @@ package wavefront
 import (
 	"bufio"
 	"bytes"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
 	"io"
 	"log"
 	"strconv"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 const MAX_BUFFER_SIZE = 2
