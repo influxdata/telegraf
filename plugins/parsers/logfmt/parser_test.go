@@ -177,8 +177,7 @@ func TestParseLine(t *testing.T) {
 			name:        "Log parser only returns metrics from first string",
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
-			s: `ts=2018-07-24T19:43:35.207268Z lvl=5 msg="Write failed" log_id=09R4e4Rl000 "/n"
-													 method=POST parent_id=088876RL000 duration=7.45 log_id=09R4e4Rl000`,
+			s:           "ts=2018-07-24T19:43:35.207268Z lvl=5 msg=\"Write failed\" log_id=09R4e4Rl000\nmethod=POST parent_id=088876RL000 duration=7.45 log_id=09R4e4Rl000",
 			want: testutil.Metric{
 				Measurement: "testlog",
 				Fields: map[string]interface{}{
