@@ -101,14 +101,12 @@ var configHeader = `
 
 func defaultVSphere() *VSphere {
 	return &VSphere{
-		GatherClusters: true,
 		ClusterMetricInclude: []string{
 			"cpu.usage.*",
 			"cpu.usagemhz.*",
 			"mem.usage.*",
 			"mem.active.*"},
 		ClusterMetricExclude: nil,
-		GatherHosts:          true,
 		HostMetricInclude: []string{
 			"cpu.ready.summation.delta.millisecond",
 			"cpu.latency.average.rate.percent",
@@ -146,7 +144,6 @@ func defaultVSphere() *VSphere {
 			"disk.kernelReadLatency.average.absolute.millisecond",
 			"disk.kernelWriteLatency.average.absolute.millisecond"},
 		HostMetricExclude: nil,
-		GatherVms:         true,
 		VMMetricInclude: []string{
 			"cpu.ready.summation.delta.millisecond",
 			"mem.swapinRate.average.rate.kiloBytesPerSecond",
@@ -165,8 +162,7 @@ func defaultVSphere() *VSphere {
 			"mem.swapoutRate.average.rate.kiloBytesPerSecond",
 			"virtualDisk.read.average.rate.kiloBytesPerSecond",
 			"virtualDisk.write.average.rate.kiloBytesPerSecond"},
-		VMMetricExclude:  nil,
-		GatherDatastores: true,
+		VMMetricExclude: nil,
 		DatastoreMetricInclude: []string{
 			"disk.used.*",
 			"disk.provsioned.*"},
