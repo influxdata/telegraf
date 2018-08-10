@@ -85,7 +85,7 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			name:        "logfmt parses every line",
+			name:        "logfmt parser parses every line",
 			bytes:       []byte("ts=2018-07-24T19:43:40.275Z lvl=info msg=\"http request\" method=POST\nparent_id=088876RL000 duration=7.45 log_id=09R4e4Rl000"),
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
@@ -135,7 +135,6 @@ func TestParse(t *testing.T) {
 			require.Equal(t, len(tt.want), len(got))
 			for i, m := range got {
 				testutil.MustEqual(t, m, tt.want[i])
-				//log.Printf("Are they equal", t, tt.want[i], m)
 			}
 		})
 	}
@@ -174,7 +173,7 @@ func TestParseLine(t *testing.T) {
 			},
 		},
 		{
-			name:        "Log parser only returns metrics from first string",
+			name:        "ParseLine only returns metrics from first string",
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			s:           "ts=2018-07-24T19:43:35.207268Z lvl=5 msg=\"Write failed\" log_id=09R4e4Rl000\nmethod=POST parent_id=088876RL000 duration=7.45 log_id=09R4e4Rl000",
