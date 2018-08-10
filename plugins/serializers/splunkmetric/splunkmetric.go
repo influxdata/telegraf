@@ -2,7 +2,7 @@ package splunkmetric
 
 import (
 	"encoding/json"
-	//	"errors"
+	"fmt"
 	"log"
 
 	"github.com/influxdata/telegraf"
@@ -23,8 +23,8 @@ func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 
 	m, err := s.createObject(metric)
 	if err != nil {
-		log.Printf("E! [serializer.splunkmetric] Dropping invalid metric: %v [%v]", metric, m)
-		return []byte(""), err
+		log.Printf("D! [serializer.splunkmetric] Dropping invalid metric: %v [%v]", metric, m)
+		return nil, nil
 	}
 
 	return m, nil
@@ -37,7 +37,7 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	for _, metric := range metrics {
 		m, err := s.createObject(metric)
 		if err != nil {
-			log.Printf("E! [serializer.splunkmetric] Dropping invalid metric: %v [%v]", metric, m)
+			log.Printf("D! [serializer.splunkmetric] Dropping invalid metric: %v [%v]", metric, m)
 		} else {
 			serialized = append(serialized, m...)
 		}
@@ -69,8 +69,9 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricJson []byte, er
 	for k, v := range metric.Fields() {
 
 		if !verifyValue(v) {
-			log.Printf("E! Can not parse value: %v for key: %v", v, k)
-			continue
+			log.Printf("D! Can not parse value: %v for key: %v", v, k)
+			err := fmt.Errorf("D! Can not parse value: %v for key: %v", v, k)
+			return nil, err
 		}
 
 		obj := map[string]interface{}{}

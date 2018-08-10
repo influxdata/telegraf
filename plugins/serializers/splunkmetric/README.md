@@ -31,37 +31,37 @@ to manage the HEC authorization, here's a sample config for an HTTP output:
 
 ```toml
 [[outputs.http]]
-#   ## URL is the address to send metrics to
+   ## URL is the address to send metrics to
    url = "https://localhost:8088/services/collector"
-#
-#   ## Timeout for HTTP message
-#   # timeout = "5s"
-#
-#   ## HTTP method, one of: "POST" or "PUT"
-#   # method = "POST"
-#
-#   ## HTTP Basic Auth credentials
-#   # username = "username"
-#   # password = "pa$$word"
-#
-#   ## Optional TLS Config
-#   # tls_ca = "/etc/telegraf/ca.pem"
-#   # tls_cert = "/etc/telegraf/cert.pem"
-#   # tls_key = "/etc/telegraf/key.pem"
-#   ## Use TLS but skip chain & host verification
-#   # insecure_skip_verify = false
-#
-#   ## Data format to output.
-#   ## Each data format has it's own unique set of configuration options, read
-#   ## more about them here:
-#   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+
+   ## Timeout for HTTP message
+   # timeout = "5s"
+
+   ## HTTP method, one of: "POST" or "PUT"
+   # method = "POST"
+
+   ## HTTP Basic Auth credentials
+   # username = "username"
+   # password = "pa$$word"
+
+   ## Optional TLS Config
+   # tls_ca = "/etc/telegraf/ca.pem"
+   # tls_cert = "/etc/telegraf/cert.pem"
+   # tls_key = "/etc/telegraf/key.pem"
+   ## Use TLS but skip chain & host verification
+   # insecure_skip_verify = false
+
+   ## Data format to output.
+   ## Each data format has it's own unique set of configuration options, read
+   ## more about them here:
+   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
    data_format = "splunkmetric"
     ## Provides time, index, source overrides for the HEC
    hec_routing = true
-#
-#   ## Additional HTTP headers
+
+   ## Additional HTTP headers
     [outputs.http.headers]
-#   # Should be set manually to "application/json" for json data_format
+   # Should be set manually to "application/json" for json data_format
       Content-Type = "application/json"
       Authorization = "Splunk xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       X-Splunk-Request-Channel = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -121,15 +121,15 @@ TIME_FORMAT = %s.%3N
 An example configuration of a file based output is: 
 
 ```toml
-# # Send telegraf metrics to file(s)
+ # Send telegraf metrics to file(s)
 [[outputs.file]]
-#   ## Files to write to, "stdout" is a specially handled file.
+   ## Files to write to, "stdout" is a specially handled file.
    files = ["/tmp/metrics.out"]
-#
-#   ## Data format to output.
-#   ## Each data format has its own unique set of configuration options, read
-#   ## more about them here:
-#   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+
+   ## Data format to output.
+   ## Each data format has its own unique set of configuration options, read
+   ## more about them here:
+   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
    data_format = "splunkmetric"
    hec_routing = false
 ```
