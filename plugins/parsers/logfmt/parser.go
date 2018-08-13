@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	glogfmt "github.com/go-logfmt/logfmt"
+	"github.com/go-logfmt/logfmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
@@ -35,7 +35,7 @@ func NewParser(metricName string, defaultTags map[string]string) *Parser {
 // Parse converts a slice of bytes in logfmt format to metrics.
 func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 	reader := bytes.NewReader(b)
-	decoder := glogfmt.NewDecoder(reader)
+	decoder := logfmt.NewDecoder(reader)
 	metrics := make([]telegraf.Metric, 0)
 	for decoder.ScanRecord() {
 		tags := make(map[string]string)
@@ -47,7 +47,7 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 
 			//type conversions
 			value := string(decoder.Value())
-			if iValue, err := strconv.ParseInt(value, 0, 64); err == nil {
+			if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
 				fields[string(decoder.Key())] = iValue
 			} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
 				fields[string(decoder.Key())] = fValue
@@ -64,8 +64,8 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 		}
 
 		metrics = append(metrics, m)
-		p.applyDefaultTags(metrics)
 	}
+	p.applyDefaultTags(metrics)
 	return metrics, nil
 }
 
