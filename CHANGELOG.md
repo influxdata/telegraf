@@ -13,10 +13,12 @@
 - [x509_cert](./plugins/inputs/x509_cert/README.md) - Contributed by @jtyr
 - [filecount](./plugins/inputs/filecount/README.md) - Contributed by @sometimesfood
 - [pgbouncer](./plugins/inputs/pgbouncer/README.md) - Contributed by @nerzhul
+- [activemq](./plugins/inputs/activemq/README.md) - Contributed by @mlabouardy
 
 ### New Processors
 
 - [enum](./plugins/processors/enum/README.md) - Contributed by @KarstenSchnitter
+- [rename](./plugins/processors/rename/README.md) - Contributed by @goldibex
 
 ### New Aggregators
 
@@ -56,6 +58,11 @@
 - [#4364](https://github.com/influxdata/telegraf/pull/4364): Support StatisticValues in cloudwatch output plugin.
 - [#4431](https://github.com/influxdata/telegraf/pull/4431): Add ip restriction for the prometheus_client output.
 - [#3918](https://github.com/influxdata/telegraf/pull/3918): Add pgbouncer input plugin.
+- [#2689](https://github.com/influxdata/telegraf/pull/2689): Add ActiveMQ input plugin.
+- [#4402](https://github.com/influxdata/telegraf/pull/4402): Add wavefront parser.
+- [#4528](https://github.com/influxdata/telegraf/pull/4528): Add rename processor.
+- [#4537](https://github.com/influxdata/telegraf/pull/4537): Add message 'max_bytes' configuration to kafka input.
+- [#4546](https://github.com/influxdata/telegraf/pull/4546): Add gopsutil meminfo fields to mem plugin.
 
 ## v1.7.3 [2018-08-07]
 
