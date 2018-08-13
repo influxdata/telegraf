@@ -84,7 +84,7 @@ func TestMemStats(t *testing.T) {
 		"swap_cached":       uint64(0),
 		"swap_free":         uint64(524280),
 		"swap_total":        uint64(524280),
-		"vmalloc_chuck":     uint64(3872908),
+		"vmalloc_chunk":     uint64(3872908),
 		"vmalloc_total":     uint64(3874808),
 		"vmalloc_used":      uint64(1416),
 		"write_back":        uint64(0),

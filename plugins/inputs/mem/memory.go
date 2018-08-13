@@ -53,7 +53,7 @@ func (s *MemStats) Gather(acc telegraf.Accumulator) error {
 		"swap_cached":       vm.SwapCached,
 		"swap_free":         vm.SwapFree,
 		"swap_total":        vm.SwapTotal,
-		"vmalloc_chuck":     vm.VMallocChunk,
+		"vmalloc_chunk":     vm.VMallocChunk,
 		"vmalloc_total":     vm.VMallocTotal,
 		"vmalloc_used":      vm.VMallocUsed,
 		"write_back":        vm.Writeback,
