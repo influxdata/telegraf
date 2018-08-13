@@ -39,7 +39,7 @@ $ telegraf --test --config c:\temp\telegraf.conf
 
 | Value | Meaning  | Description                             |
 | ----- | -------  | -----------                             |
-| 0     | Ok       | Service state is withour failure        |
+| 0     | Ok       | Service state is without failure        |
 | 1     | Warning  | no used yet                             |
 | 2     | Critical | Service state indicates failure         |
 | 3     | Unknown  | Service state did not match expecations |

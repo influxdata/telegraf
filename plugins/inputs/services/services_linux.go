@@ -43,6 +43,7 @@ func (services *Services) Gather(acc telegraf.Accumulator) error {
 	out, e := services.systemctl(services.Timeout)
 	if e != nil {
 		acc.AddError(e)
+		return nil
 	}
 
 	scanner := bufio.NewScanner(out)

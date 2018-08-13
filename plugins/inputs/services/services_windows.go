@@ -40,14 +40,12 @@ func (services *Services) SampleConfig() string {
 
 // Gather parses wmi outputs and adds counters to the Accumulator
 func (services *Services) Gather(acc telegraf.Accumulator) error {
-	//var dst []Win_32Service
 	var dst []win32service
-	//q := wmi.CreateQuery(&dst, "where startmode = 'auto'")
 	q := "select ExitCode, Name, ProcessId, StartMode, State, Status from Win32_Service where startmode = 'auto'"
-	//err := wmi.Query(q, &dst)
 	err := services.wmiQuery(q, &dst)
 	if err != nil {
 		acc.AddError(err)
+		return nil
 	}
 
 	for _, service := range dst {
