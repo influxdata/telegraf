@@ -37,6 +37,8 @@ type (
 		RequiredAcks int
 		// MaxRetry Tag
 		MaxRetry int
+		// Max Message Bytes
+		MaxMessageBytes int
 
 		Version string `toml:"version"`
 
@@ -140,6 +142,9 @@ var sampleConfig = `
   ## until the next flush.
   # max_retry = 3
 
+  ## Max message bytes, should be lower than server message.max.bytes config
+  # MaxMessageBytes = 0
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -217,6 +222,10 @@ func (k *Kafka) Connect() error {
 	config.Producer.Compression = sarama.CompressionCodec(k.CompressionCodec)
 	config.Producer.Retry.Max = k.MaxRetry
 	config.Producer.Return.Successes = true
+
+	if k.MaxMessageBytes > 0 {
+		config.Producer.MaxMessageBytes = k.MaxMessageBytes
+	}
 
 	// Legacy support ssl config
 	if k.Certificate != "" {
