@@ -891,19 +891,21 @@ the file output will only print once per `flush_interval`.
 This parser implements the logfmt format by extracting key-value pairs from log text in the form `<key>=<value>`.
 At the moment, the plugin will produce one metric per line and all keys
 are added as fields. Values are left as strings (for now).
-A typical log
 ```
-method=GET host=influxdata.org ts=2018-07-24T19:43:40.275Z
-connect=4ms service=8ms status=200 bytes=1653
+[[inputs.exec]]
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them [here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
+  data_format = "logfmt"
+  ```
+
+A typical log
+
+method=GET host=influxdata.org ts=2018-07-24T19:43:40.275Z connect=4ms service=8ms status=200 bytes=1653
 ```
 will be converted into
 ```
-"method": "GET"
-"host":    "influxdata.org",
-"ts":    "2018-07-24T19:43:40.275Z",
-"connect":    "4ms",
-"service":    "8ms",
-"status":    200,
-"bytes":    1653,
+method=GET, host=influxdata.org, ts=2018-07-24T19:43:40.275Z, connect=4ms, service=8ms, status=200, bytes=1653,
 ```
 Additional information about the logfmt format can be found [here](https://brandur.org/logfmt).
