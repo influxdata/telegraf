@@ -41,6 +41,7 @@ func (services *Services) SampleConfig() string {
 // Gather parses wmi outputs and adds counters to the Accumulator
 func (services *Services) Gather(acc telegraf.Accumulator) error {
 	var dst []win32service
+	// win32_service is documented at https://docs.microsoft.com/en-us/windows/desktop/cimwin32prov/win32-service
 	q := "select ExitCode, Name, ProcessId, StartMode, State, Status from Win32_Service where startmode = 'auto'"
 	err := services.wmiQuery(q, &dst)
 	if err != nil {
@@ -51,18 +52,22 @@ func (services *Services) Gather(acc telegraf.Accumulator) error {
 		tags := map[string]string{
 			"name": service.Name,
 		}
-		var state string
+		// translate win32_service.status to nagios-style simple status
 		var status int
-		switch state = service.State; state {
-		case "Running":
+		switch service.Status {
+		case "Ok":
 			status = 0 // ok
-		case "Stopped":
+		case "Degraded", "Pred Fail":
+			status = 1 // warning
+		case "Error", "Starting", "Stopping", "Service", "Stressed", "NonRecover":
 			status = 2 // error
+		case "Unknown", "No Contact", "Lost Comm":
+			fallthrough
 		default:
 			status = 3 // unknown
 		}
 		fields := map[string]interface{}{
-			"state":  state,
+			"state":  service.State,
 			"status": status,
 		}
 		acc.AddCounter(measurement, fields, tags)
