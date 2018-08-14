@@ -882,9 +882,6 @@ the file output will only print once per `flush_interval`.
 - Continue one token at a time until the entire line is successfully parsed.
 
 
-```
-
-
 # Wavefront
 
 
