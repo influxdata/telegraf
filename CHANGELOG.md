@@ -63,6 +63,7 @@
 - [#4528](https://github.com/influxdata/telegraf/pull/4528): Add rename processor.
 - [#4537](https://github.com/influxdata/telegraf/pull/4537): Add message 'max_bytes' configuration to kafka input.
 - [#4546](https://github.com/influxdata/telegraf/pull/4546): Add gopsutil meminfo fields to mem plugin.
+- [#4285](https://github.com/influxdata/telegraf/pull/4285): Document how to parse telegraf logs.
 
 ## v1.7.4 [unreleased]
 
