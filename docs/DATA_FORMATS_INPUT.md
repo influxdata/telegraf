@@ -10,7 +10,7 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Collectd](#collectd)
 1. [Dropwizard](#dropwizard)
 1. [Grok](#grok)
-1. [Wavefront](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#wavefront)
+1. [Wavefront](#wavefront)
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -661,7 +661,7 @@ For more information about the dropwizard json format see
   #   tag2 = "tags.tag2"
 ```
 
-# Grok
+# Grok:
 
 The grok data format parses line delimited data using a regular expression like
 language.
@@ -880,9 +880,6 @@ the file output will only print once per `flush_interval`.
 - Verify that the metric is parsed successfully by running Telegraf.
 - If successful, add the next token, update the pattern and retest.
 - Continue one token at a time until the entire line is successfully parsed.
-
-
-```
 
 # Wavefront:
 

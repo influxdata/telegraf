@@ -64,6 +64,13 @@
 - [#4537](https://github.com/influxdata/telegraf/pull/4537): Add message 'max_bytes' configuration to kafka input.
 - [#4546](https://github.com/influxdata/telegraf/pull/4546): Add gopsutil meminfo fields to mem plugin.
 
+## v1.7.4 [unreleased]
+
+### Bugfixes
+
+- [#4534](https://github.com/influxdata/telegraf/pull/4534): Skip unserializable metric in influxDB UDP output.
+- [#4554](https://github.com/influxdata/telegraf/pull/4554): Fix powerdns input tests.
+
 ## v1.7.3 [2018-08-07]
 
 ### Bugfixes
