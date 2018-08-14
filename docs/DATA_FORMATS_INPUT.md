@@ -882,9 +882,8 @@ the file output will only print once per `flush_interval`.
 - Continue one token at a time until the entire line is successfully parsed.
 
 
-```
+# Wavefront
 
-# Wavefront:
 
 Wavefront Data Format is metrics are parsed directly into Telegraf metrics.
 For more information about the Wavefront Data Format see
