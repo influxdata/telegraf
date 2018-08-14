@@ -87,7 +87,7 @@ func NewRunningOutput(
 			map[string]string{"output": name},
 		),
 	}
-	ro.BufferLimit.Incr(int64(ro.MetricBufferLimit))
+	ro.BufferLimit.Set(int64(ro.MetricBufferLimit))
 	return ro
 }
 
@@ -105,12 +105,13 @@ func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
 		tags := m.Tags()
 		fields := m.Fields()
 		t := m.Time()
+		tp := m.Type()
 		if ok := ro.Config.Filter.Apply(name, fields, tags); !ok {
 			ro.MetricsFiltered.Incr(1)
 			return
 		}
 		// error is not possible if creating from another metric, so ignore.
-		m, _ = metric.New(name, tags, fields, t)
+		m, _ = metric.New(name, tags, fields, t, tp)
 	}
 
 	ro.metrics.Add(m)

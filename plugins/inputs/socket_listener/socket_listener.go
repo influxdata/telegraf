@@ -12,8 +12,11 @@ import (
 
 	"time"
 
+	"crypto/tls"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -25,6 +28,8 @@ type setReadBufferer interface {
 type streamSocketListener struct {
 	net.Listener
 	*SocketListener
+
+	sockType string
 
 	connections    map[string]net.Conn
 	connectionsMtx sync.Mutex
@@ -40,6 +45,14 @@ func (ssl *streamSocketListener) listen() {
 				ssl.AddError(err)
 			}
 			break
+		}
+
+		if ssl.ReadBufferSize > 0 {
+			if srb, ok := c.(setReadBufferer); ok {
+				srb.SetReadBuffer(ssl.ReadBufferSize)
+			} else {
+				log.Printf("W! Unable to set read buffer on a %s socket", ssl.sockType)
+			}
 		}
 
 		ssl.connectionsMtx.Lock()
@@ -112,9 +125,9 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 	}
 
 	if err := scnr.Err(); err != nil {
-		if err, ok := err.(net.Error); ok && err.Timeout() {
+		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			log.Printf("D! Timeout in plugin [input.socket_listener]: %s", err)
-		} else if !strings.HasSuffix(err.Error(), ": use of closed network connection") {
+		} else if netErr != nil && !strings.HasSuffix(err.Error(), ": use of closed network connection") {
 			ssl.AddError(err)
 		}
 	}
@@ -149,11 +162,12 @@ func (psl *packetSocketListener) listen() {
 }
 
 type SocketListener struct {
-	ServiceAddress  string
-	MaxConnections  int
-	ReadBufferSize  int
-	ReadTimeout     *internal.Duration
-	KeepAlivePeriod *internal.Duration
+	ServiceAddress  string             `toml:"service_address"`
+	MaxConnections  int                `toml:"max_connections"`
+	ReadBufferSize  int                `toml:"read_buffer_size"`
+	ReadTimeout     *internal.Duration `toml:"read_timeout"`
+	KeepAlivePeriod *internal.Duration `toml:"keep_alive_period"`
+	tlsint.ServerConfig
 
 	parsers.Parser
 	telegraf.Accumulator
@@ -187,6 +201,13 @@ func (sl *SocketListener) SampleConfig() string {
   ## Only applies to stream sockets (e.g. TCP).
   ## 0 (default) is unlimited.
   # read_timeout = "30s"
+
+  ## Optional TLS configuration.
+  ## Only applies to stream sockets (e.g. TCP).
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key  = "/etc/telegraf/key.pem"
+  ## Enables client authentication if set.
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
   ## Maximum socket buffer size in bytes.
   ## For stream sockets, once the buffer fills up, the sender will start backing up.
@@ -232,22 +253,29 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 
 	switch spl[0] {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
-		l, err := net.Listen(spl[0], spl[1])
+		var (
+			err error
+			l   net.Listener
+		)
+
+		tlsCfg, err := sl.ServerConfig.TLSConfig()
 		if err != nil {
-			return err
+			return nil
 		}
 
-		if sl.ReadBufferSize > 0 {
-			if srb, ok := l.(setReadBufferer); ok {
-				srb.SetReadBuffer(sl.ReadBufferSize)
-			} else {
-				log.Printf("W! Unable to set read buffer on a %s socket", spl[0])
-			}
+		if tlsCfg == nil {
+			l, err = net.Listen(spl[0], spl[1])
+		} else {
+			l, err = tls.Listen(spl[0], spl[1], tlsCfg)
+		}
+		if err != nil {
+			return err
 		}
 
 		ssl := &streamSocketListener{
 			Listener:       l,
 			SocketListener: sl,
+			sockType:       spl[0],
 		}
 
 		sl.Closer = ssl

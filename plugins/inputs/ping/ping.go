@@ -34,6 +34,9 @@ type Ping struct {
 	// Ping timeout, in seconds. 0 means no timeout (ping -W <TIMEOUT>)
 	Timeout float64
 
+	// Ping deadline, in seconds. 0 means no deadline. (ping -w <DEADLINE>)
+	Deadline int
+
 	// Interface or source address to send ping from (ping -I/-S <INTERFACE/SRC_ADDR>)
 	Interface string
 
@@ -60,6 +63,8 @@ const sampleConfig = `
   # ping_interval = 1.0
   ## per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
   # timeout = 1.0
+  ## total-ping deadline, in s. 0 == no deadline (ping -w <DEADLINE>)
+  # deadline = 10
   ## interface or source address to send ping from (ping -I <INTERFACE/SRC_ADDR>)
   ## on Darwin and Freebsd only source address possible: (ping -S <SRC_ADDR>)
   # interface = ""
@@ -89,7 +94,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 				return
 			}
 
-			args := p.args(u)
+			args := p.args(u, runtime.GOOS)
 			totalTimeout := float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
 
 			out, err := p.pingHost(totalTimeout, args...)
@@ -108,9 +113,9 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 					// Combine go err + stderr output
 					out = strings.TrimSpace(out)
 					if len(out) > 0 {
-						acc.AddError(fmt.Errorf("%s, %s", out, err))
+						acc.AddError(fmt.Errorf("host %s: %s, %s", u, out, err))
 					} else {
-						acc.AddError(err)
+						acc.AddError(fmt.Errorf("host %s: %s", u, err))
 					}
 					acc.AddFields("ping", fields, tags)
 					return
@@ -129,16 +134,16 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			fields["packets_transmitted"] = trans
 			fields["packets_received"] = rec
 			fields["percent_packet_loss"] = loss
-			if min > 0 {
+			if min >= 0 {
 				fields["minimum_response_ms"] = min
 			}
-			if avg > 0 {
+			if avg >= 0 {
 				fields["average_response_ms"] = avg
 			}
-			if max > 0 {
+			if max >= 0 {
 				fields["maximum_response_ms"] = max
 			}
-			if stddev > 0 {
+			if stddev >= 0 {
 				fields["standard_deviation_ms"] = stddev
 			}
 			acc.AddFields("ping", fields, tags)
@@ -162,29 +167,40 @@ func hostPinger(timeout float64, args ...string) (string, error) {
 }
 
 // args returns the arguments for the 'ping' executable
-func (p *Ping) args(url string) []string {
+func (p *Ping) args(url string, system string) []string {
 	// Build the ping command args based on toml config
 	args := []string{"-c", strconv.Itoa(p.Count), "-n", "-s", "16"}
 	if p.PingInterval > 0 {
-		args = append(args, "-i", strconv.FormatFloat(p.PingInterval, 'f', 1, 64))
+		args = append(args, "-i", strconv.FormatFloat(p.PingInterval, 'f', -1, 64))
 	}
 	if p.Timeout > 0 {
-		switch runtime.GOOS {
-		case "darwin":
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', 1, 64))
+		switch system {
+		case "darwin", "freebsd", "netbsd", "openbsd":
+			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
 		case "linux":
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', 1, 64))
+			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
 		default:
 			// Not sure the best option here, just assume GNU ping?
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', 1, 64))
+			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
+		}
+	}
+	if p.Deadline > 0 {
+		switch system {
+		case "darwin", "freebsd", "netbsd", "openbsd":
+			args = append(args, "-t", strconv.Itoa(p.Deadline))
+		case "linux":
+			args = append(args, "-w", strconv.Itoa(p.Deadline))
+		default:
+			// Not sure the best option here, just assume GNU ping?
+			args = append(args, "-w", strconv.Itoa(p.Deadline))
 		}
 	}
 	if p.Interface != "" {
-		switch runtime.GOOS {
+		switch system {
+		case "darwin", "freebsd", "netbsd", "openbsd":
+			args = append(args, "-S", p.Interface)
 		case "linux":
 			args = append(args, "-I", p.Interface)
-		case "freebsd", "darwin":
-			args = append(args, "-S", p.Interface)
 		default:
 			// Not sure the best option here, just assume GNU ping?
 			args = append(args, "-I", p.Interface)
@@ -207,7 +223,7 @@ func (p *Ping) args(url string) []string {
 // It returns (<transmitted packets>, <received packets>, <average response>)
 func processPingOutput(out string) (int, int, float64, float64, float64, float64, error) {
 	var trans, recv int
-	var min, avg, max, stddev float64
+	var min, avg, max, stddev float64 = -1.0, -1.0, -1.0, -1.0
 	// Set this error to nil if we find a 'transmitted' line
 	err := errors.New("Fatal error processing ping output")
 	lines := strings.Split(out, "\n")
@@ -227,21 +243,24 @@ func processPingOutput(out string) (int, int, float64, float64, float64, float64
 			}
 		} else if strings.Contains(line, "min/avg/max") {
 			stats := strings.Split(line, " ")[3]
-			min, err = strconv.ParseFloat(strings.Split(stats, "/")[0], 64)
+			data := strings.Split(stats, "/")
+			min, err = strconv.ParseFloat(data[0], 64)
 			if err != nil {
 				return trans, recv, min, avg, max, stddev, err
 			}
-			avg, err = strconv.ParseFloat(strings.Split(stats, "/")[1], 64)
+			avg, err = strconv.ParseFloat(data[1], 64)
 			if err != nil {
 				return trans, recv, min, avg, max, stddev, err
 			}
-			max, err = strconv.ParseFloat(strings.Split(stats, "/")[2], 64)
+			max, err = strconv.ParseFloat(data[2], 64)
 			if err != nil {
 				return trans, recv, min, avg, max, stddev, err
 			}
-			stddev, err = strconv.ParseFloat(strings.Split(stats, "/")[3], 64)
-			if err != nil {
-				return trans, recv, min, avg, max, stddev, err
+			if len(data) == 4 {
+				stddev, err = strconv.ParseFloat(data[3], 64)
+				if err != nil {
+					return trans, recv, min, avg, max, stddev, err
+				}
 			}
 		}
 	}
@@ -255,6 +274,7 @@ func init() {
 			PingInterval: 1.0,
 			Count:        1,
 			Timeout:      1.0,
+			Deadline:     10,
 		}
 	})
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 
@@ -22,22 +23,32 @@ var sampleConfig = `
   ##   ex: prefix/web01.example.com/mem
   topic_prefix = "telegraf"
 
+  ## QoS policy for messages
+  ##   0 = at most once
+  ##   1 = at least once
+  ##   2 = exactly once
+  # qos = 2
+
   ## username and password to connect MQTT server.
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
 
-  ## Timeout for write operations. default: 5s
-  # timeout = "5s"
-
   ## client ID, if not set a random ID is generated
   # client_id = ""
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Timeout for write operations. default: 5s
+  # timeout = "5s"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
+
+  ## When true, metrics will be sent in one MQTT message per flush.  Otherwise,
+  ## metrics are written one metric per MQTT message.
+  # batch = false
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
@@ -55,15 +66,8 @@ type MQTT struct {
 	TopicPrefix string
 	QoS         int    `toml:"qos"`
 	ClientID    string `toml:"client_id"`
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
+	BatchMessage bool `toml:"batch"`
 
 	client paho.Client
 	opts   *paho.ClientOptions
@@ -124,6 +128,8 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		hostname = ""
 	}
 
+	metricsmap := make(map[string][]telegraf.Metric)
+
 	for _, metric := range metrics {
 		var t []string
 		if m.TopicPrefix != "" {
@@ -136,15 +142,31 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 		t = append(t, metric.Name())
 		topic := strings.Join(t, "/")
 
-		buf, err := m.serializer.Serialize(metric)
-		if err != nil {
-			return fmt.Errorf("MQTT Could not serialize metric: %s",
-				metric.String())
-		}
+		if m.BatchMessage {
+			metricsmap[topic] = append(metricsmap[topic], metric)
+		} else {
+			buf, err := m.serializer.Serialize(metric)
 
-		err = m.publish(topic, buf)
+			if err != nil {
+				return err
+			}
+
+			err = m.publish(topic, buf)
+			if err != nil {
+				return fmt.Errorf("Could not write to MQTT server, %s", err)
+			}
+		}
+	}
+
+	for key := range metricsmap {
+		buf, err := m.serializer.SerializeBatch(metricsmap[key])
+
 		if err != nil {
-			return fmt.Errorf("Could not write to MQTT server, %s", err)
+			return err
+		}
+		publisherr := m.publish(key, buf)
+		if publisherr != nil {
+			return fmt.Errorf("Could not write to MQTT server, %s", publisherr)
 		}
 	}
 
@@ -162,6 +184,7 @@ func (m *MQTT) publish(topic string, body []byte) error {
 
 func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 	opts := paho.NewClientOptions()
+	opts.KeepAlive = 0
 
 	if m.Timeout.Duration < time.Second {
 		m.Timeout.Duration = 5 * time.Second
@@ -174,8 +197,7 @@ func (m *MQTT) createOpts() (*paho.ClientOptions, error) {
 		opts.SetClientID("Telegraf-Output-" + internal.RandomString(5))
 	}
 
-	tlsCfg, err := internal.GetTLSConfig(
-		m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
+	tlsCfg, err := m.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

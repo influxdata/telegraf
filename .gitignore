@@ -1,5 +1,5 @@
-build
+/build
 /telegraf
+/telegraf.exe
 /telegraf.gz
-*~
-*#
+/vendor
