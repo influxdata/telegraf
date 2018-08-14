@@ -8,14 +8,33 @@ to collect data on autostart services.
 The results are tagged with the service name and provide a status field
 indicating when an autostart service failed.
 
-# Configuration
+### Configuration
 ```
 [[inputs.services]]
   ## The default timeout of 1s for systemctl execution can be overridden here:
   # timeout = "1s"
 ```
 
-# Example Output
+### Metrics
+- services
+  - tags:
+    - name (string, service name)
+  - fields:
+    - state (string, systemd active/sub fields or win32_services.state field)
+    - status (int, nagios-style simple status, see below)
+
+#### Statuses
+
+| Value | Meaning  | Description                                       |
+| ----- | -------  | -----------                                       |
+| 0     | Ok       | Service state is without failure                  |
+| 1     | Warning  | Service state indicates pre-fault condition       |
+| 2     | Critical | Service state indicates failure                   |
+| 3     | Unknown  | Service state did not match expecations           |
+
+Note: values are identical in their meaning to other monitoring solutions like Nagios.
+
+### Example Output
 
 Linux Systemd Units:
 ```
@@ -35,17 +54,6 @@ $ telegraf --test --config c:\temp\telegraf.conf
 ...
 ```
 
-# Statuses
-
-| Value | Meaning  | Description                             |
-| ----- | -------  | -----------                             |
-| 0     | Ok       | Service state is without failure        |
-| 1     | Warning  | no used yet                             |
-| 2     | Critical | Service state indicates failure         |
-| 3     | Unknown  | Service state did not match expecations |
-
-Note: values are identical in their meaning to other monitoring solutions like Nagios.
-
-# Possible Improvements
+### Possible Improvements
 - add timeout for wmi calls
 - add blacklist to filter names
