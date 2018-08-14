@@ -18,6 +18,12 @@ const (
 	DEFAULT_METRIC_BUFFER_LIMIT = 10000
 )
 
+// OutputConfig containing name and filter
+type OutputConfig struct {
+	Name   string
+	Filter Filter
+}
+
 // RunningOutput contains the output configuration
 type RunningOutput struct {
 	Name              string
@@ -32,19 +38,11 @@ type RunningOutput struct {
 	BufferLimit     selfstat.Stat
 	WriteTime       selfstat.Stat
 
-	metrics     *buffer.Buffer
-	failMetrics *buffer.Buffer
+	batch      []telegraf.Metric
+	buffer     *buffer.Buffer
+	BatchReady chan time.Time
 
-	// Guards against concurrent calls to Add, Push, Reset
 	aggMutex sync.Mutex
-	// Guards against concurrent calls to the Output as described in #3009
-	writeMutex sync.Mutex
-}
-
-// OutputConfig containing name and filter
-type OutputConfig struct {
-	Name   string
-	Filter Filter
 }
 
 func NewRunningOutput(
@@ -62,8 +60,9 @@ func NewRunningOutput(
 	}
 	ro := &RunningOutput{
 		Name:              name,
-		metrics:           buffer.NewBuffer(batchSize),
-		failMetrics:       buffer.NewBuffer(bufferLimit),
+		batch:             make([]telegraf.Metric, 0, batchSize),
+		buffer:            buffer.NewBuffer(bufferLimit),
+		BatchReady:        make(chan time.Time, 1),
 		Output:            output,
 		Config:            conf,
 		MetricBufferLimit: bufferLimit,
@@ -118,85 +117,87 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 		return
 	}
 
-	ro.metrics.Add(metric)
-	if ro.metrics.Len() == ro.MetricBatchSize {
-		batch := ro.metrics.Batch(ro.MetricBatchSize)
-		err := ro.write(batch)
-		if err != nil {
-			ro.failMetrics.Add(batch...)
-			log.Printf("E! Error writing to output [%s]: %v", ro.Name, err)
+	ro.batch = append(ro.batch, metric)
+	if len(ro.batch) == ro.MetricBatchSize {
+		ro.addBatchToBuffer()
+
+		select {
+		case ro.BatchReady <- time.Now():
+		default:
 		}
 	}
 }
 
-// Write writes all cached points to this output.
+// AddBatchToBuffer moves the metrics from the batch into the metric buffer.
+func (ro *RunningOutput) addBatchToBuffer() {
+	ro.buffer.Add(ro.batch...)
+	ro.batch = ro.batch[:0]
+}
+
+// Write writes all metrics to the output, stopping when all have been sent on
+// or error.
 func (ro *RunningOutput) Write() error {
 	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
 		ro.aggMutex.Lock()
 		metrics := output.Push()
-		ro.metrics.Add(metrics...)
+		ro.buffer.Add(metrics...)
 		output.Reset()
 		ro.aggMutex.Unlock()
 	}
+	ro.addBatchToBuffer()
 
-	nFails, nMetrics := ro.failMetrics.Len(), ro.metrics.Len()
-	ro.BufferSize.Set(int64(nFails + nMetrics))
+	nBuffer := ro.buffer.Len()
+
+	ro.BufferSize.Set(int64(nBuffer))
 	log.Printf("D! Output [%s] buffer fullness: %d / %d metrics. ",
-		ro.Name, nFails+nMetrics, ro.MetricBufferLimit)
-	var err error
-	if ro.failMetrics.Len() > 0 {
-		// how many batches of failed writes we need to write.
-		nBatches := nFails/ro.MetricBatchSize + 1
-		batchSize := ro.MetricBatchSize
+		ro.Name, nBuffer, ro.MetricBufferLimit)
 
-		for i := 0; i < nBatches; i++ {
-			// If it's the last batch, only grab the metrics that have not had
-			// a write attempt already (this is primarily to preserve order).
-			if i == nBatches-1 {
-				batchSize = nFails % ro.MetricBatchSize
-			}
-			batch := ro.failMetrics.Batch(batchSize)
-			// If we've already failed previous writes, don't bother trying to
-			// write to this output again. We are not exiting the loop just so
-			// that we can rotate the metrics to preserve order.
-			if err == nil {
-				err = ro.write(batch)
-			}
-			if err != nil {
-				ro.failMetrics.Add(batch...)
-			}
+	// Only process the metrics in the buffer now.  Metrics added while we are
+	// writing will be sent on the next call.
+	nBatches := nBuffer/ro.MetricBatchSize + 1
+	for i := 0; i < nBatches; i++ {
+		batch := ro.buffer.Batch(ro.MetricBatchSize)
+		if len(batch) == 0 {
+			break
 		}
-	}
 
-	batch := ro.metrics.Batch(ro.MetricBatchSize)
-	// see comment above about not trying to write to an already failed output.
-	// if ro.failMetrics is empty then err will always be nil at this point.
-	if err == nil {
-		err = ro.write(batch)
-	}
-
-	if err != nil {
-		ro.failMetrics.Add(batch...)
-		return err
+		err := ro.write(batch)
+		if err != nil {
+			ro.buffer.Reject()
+			return err
+		}
+		ro.buffer.Ack()
 	}
 	return nil
 }
 
-func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
-	nMetrics := len(metrics)
-	if nMetrics == 0 {
+// WriteBatch writes only the batch metrics to the output.
+func (ro *RunningOutput) WriteBatch() error {
+	batch := ro.buffer.Batch(ro.MetricBatchSize)
+	if len(batch) == 0 {
 		return nil
 	}
-	ro.writeMutex.Lock()
-	defer ro.writeMutex.Unlock()
+
+	err := ro.write(batch)
+	if err != nil {
+		ro.buffer.Reject()
+		return err
+	}
+	ro.buffer.Ack()
+	return nil
+}
+
+func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 	start := time.Now()
 	err := ro.Output.Write(metrics)
 	elapsed := time.Since(start)
+	ro.WriteTime.Incr(elapsed.Nanoseconds())
+
 	if err == nil {
+		nMetrics := len(metrics)
 		log.Printf("D! Output [%s] wrote batch of %d metrics in %s\n",
 			ro.Name, nMetrics, elapsed)
 		ro.MetricsWritten.Incr(int64(nMetrics))
-		ro.WriteTime.Incr(elapsed.Nanoseconds())
 	}
 	return err
 }

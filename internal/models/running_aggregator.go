@@ -116,7 +116,7 @@ func (r *RunningAggregator) Add(metric telegraf.Metric) bool {
 		return false
 	}
 
-	r.Aggregator.Add(in)
+	r.Aggregator.Add(metric)
 	return r.Config.DropOriginal
 }
 

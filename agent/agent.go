@@ -75,6 +75,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		a.stopServiceInputs()
 
 		close(dst)
+		log.Printf("D! [agent] Input channel closed")
 	}(dst)
 
 	src = dst
@@ -91,6 +92,7 @@ func (a *Agent) Run(ctx context.Context) error {
 				log.Printf("E! [agent] Error running processors: %v", err)
 			}
 			close(dst)
+			log.Printf("D! [agent] Processor channel closed")
 		}(src, dst)
 
 		src = dst
@@ -108,6 +110,7 @@ func (a *Agent) Run(ctx context.Context) error {
 				log.Printf("E! [agent] Error running aggregators: %v", err)
 			}
 			close(dst)
+			log.Printf("D! [agent] Output channel closed")
 		}(src, dst)
 
 		src = dst
@@ -449,6 +452,7 @@ func (a *Agent) runOutputs(
 		}
 	}
 
+	log.Println("I! [agent] Hang on, flushing any cached metrics before shutdown")
 	cancel()
 	wg.Wait()
 
@@ -463,31 +467,39 @@ func (a *Agent) flush(
 	interval time.Duration,
 	jitter time.Duration,
 ) {
-	ticker := time.NewTicker(interval)
+	// since we are watching two channels we need a ticker with the jitter
+	// integrated.
+	ticker := NewTicker(interval, jitter)
 	defer ticker.Stop()
 
-	for {
-		err := internal.SleepContext(ctx, internal.RandomDuration(jitter))
+	logError := func(err error) {
 		if err != nil {
-			return
+			log.Printf("E! [agent] Error writing to output [%s]: %v", output.Name, err)
 		}
+	}
 
-		err = a.flushOnce(output, interval)
-		if err != nil {
-			log.Printf("E! [agent] Error writing to output [%s]: %v",
-				output.Name, err)
+	for {
+		// Favor shutdown over other methods.
+		select {
+		case <-ctx.Done():
+			logError(a.flushOnce(output, interval, output.Write))
+			return
+		default:
 		}
 
 		select {
 		case <-ticker.C:
-			continue
-		case <-ctx.Done():
-			log.Println("I! [agent] Hang on, flushing any cached metrics before shutdown")
-			err := a.flushOnce(output, interval)
-			if err != nil {
-				log.Printf("E! [agent] Error writing to output [%s]: %v",
-					output.Name, err)
+			logError(a.flushOnce(output, interval, output.Write))
+		case <-output.BatchReady:
+			// Favor the ticker over batch ready
+			select {
+			case <-ticker.C:
+				logError(a.flushOnce(output, interval, output.Write))
+			default:
+				logError(a.flushOnce(output, interval, output.WriteBatch))
 			}
+		case <-ctx.Done():
+			logError(a.flushOnce(output, interval, output.Write))
 			return
 		}
 	}
@@ -498,13 +510,14 @@ func (a *Agent) flush(
 func (a *Agent) flushOnce(
 	output *models.RunningOutput,
 	timeout time.Duration,
+	writeFunc func() error,
 ) error {
 	ticker := time.NewTicker(timeout)
 	defer ticker.Stop()
 
 	done := make(chan error)
 	go func() {
-		done <- output.Write()
+		done <- writeFunc()
 	}()
 
 	for {
@@ -516,6 +529,7 @@ func (a *Agent) flushOnce(
 				output.Name)
 		}
 	}
+
 }
 
 // connectOutputs connects to all outputs.

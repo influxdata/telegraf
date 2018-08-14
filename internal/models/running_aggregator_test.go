@@ -59,24 +59,24 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 		map[string]interface{}{
 			"value": int64(101),
 		},
-		telegraf.Untyped,
 		now.Add(-time.Hour),
+		telegraf.Untyped,
 	)
 	require.False(t, ra.Add(m))
 
 	// metric after current period
-	m := testutil.MustMetric("RITest",
+	m = testutil.MustMetric("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
-		telegraf.Untyped,
 		now.Add(time.Hour),
+		telegraf.Untyped,
 	)
 	require.False(t, ra.Add(m))
 
 	// "now" metric
-	m := testutil.MustMetric("RITest",
+	m = testutil.MustMetric("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
@@ -137,7 +137,7 @@ func TestAddDropOriginal(t *testing.T) {
 		map[string]interface{}{
 			"value": int64(101),
 		},
-		time.Now(),
+		now,
 		telegraf.Untyped)
 	require.True(t, ra.Add(m))
 
@@ -147,7 +147,7 @@ func TestAddDropOriginal(t *testing.T) {
 		map[string]interface{}{
 			"value": int64(101),
 		},
-		time.Now(),
+		now,
 		telegraf.Untyped)
 	require.False(t, ra.Add(m2))
 }

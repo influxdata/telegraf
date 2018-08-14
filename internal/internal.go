@@ -264,6 +264,10 @@ func RandomDuration(max time.Duration) time.Duration {
 
 // SleepContext sleeps until the context is closed or the duration is reached.
 func SleepContext(ctx context.Context, duration time.Duration) error {
+	if duration == 0 {
+		return nil
+	}
+
 	t := time.NewTimer(duration)
 	select {
 	case <-t.C:
@@ -276,11 +280,7 @@ func SleepContext(ctx context.Context, duration time.Duration) error {
 
 // AlignDuration returns the duration until next aligned interval.
 func AlignDuration(tm time.Time, interval time.Duration) time.Duration {
-	truncated := tm.Truncate(interval)
-	if truncated == tm {
-		return 0
-	}
-	return truncated.Add(interval).Sub(tm)
+	return AlignTime(tm, interval).Sub(tm)
 }
 
 // AlignTime returns the time of the next aligned interval.

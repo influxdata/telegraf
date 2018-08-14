@@ -74,7 +74,6 @@ func TestMakeMetricWithPluginTags(t *testing.T) {
 		},
 		now,
 		telegraf.Untyped)
-	require.NoError(t, err)
 	m = ri.MakeMetric(m)
 
 	expected, err := metric.New("RITest",

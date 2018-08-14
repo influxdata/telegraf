@@ -70,7 +70,7 @@ func (b *Buffer) add(m telegraf.Metric) {
 	b.size = min(b.size+1, b.end)
 }
 
-// Add adds metrics to the buffer.
+// Add adds metrics to the stack and returns the size of the stack.
 func (b *Buffer) Add(metrics ...telegraf.Metric) {
 	b.Lock()
 	defer b.Unlock()
