@@ -510,7 +510,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	if hasLatest {
 		elapsed := time.Now().Sub(latest).Seconds() + 5.0 // Allow 5 second jitter.
 		log.Printf("D! [input.vsphere]: Latest: %s, elapsed: %f, resource: %s", latest, elapsed, resourceType)
-		if elapsed < float64(res.sampling) {
+		if !res.realTime && elapsed < float64(res.sampling) {
 			// No new data would be available. We're outta herE! [input.vsphere]:
 			log.Printf("D! [input.vsphere]: Sampling period for %s of %d has not elapsed for %s",
 				resourceType, res.sampling, e.URL.Host)

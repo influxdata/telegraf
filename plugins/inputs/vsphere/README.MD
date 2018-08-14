@@ -20,8 +20,6 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 
 ############### VMs ###############
 
-# gather_vms = true ### (default=true)
-
 ## Typical VM metrics (if omitted, all metrics are collected)
 # vm_metric_include = [
 #		"cpu.ready.summation",
@@ -45,8 +43,6 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 # vm_metric_exclude = [] ## Nothing is excluded by default
 
 ############### Hosts ###############
-
-# gather_hosts = true ## (default=true)
 
 ## Typical host metrics (if omitted, all metrics are collected)
 # host_metric_include = [
@@ -90,8 +86,6 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 
 ############### Clusters ###############
 
-# gather_clusters = true ## (default=true)
-
 ## Typical cluster metrics (if omitted, all metrics are collected)
 #cluster_metric_include = [
 #	  "cpu.usage.*",
@@ -102,8 +96,6 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 # cluster_metric_exclude = [] ## Nothing excluded by default
 
 ############### Datastores ###############
-
-# gather_datastores = true ## (default=true)
 
 ## Typical datastore metrics (if omitted, all metrics are collected)
 ##

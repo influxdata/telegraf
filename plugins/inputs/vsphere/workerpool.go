@@ -12,6 +12,8 @@ import (
 // does some processing and returns a single result.
 type WorkerFunc func(context.Context, interface{}) interface{}
 
+// PushFunc is called from a FillerFunc to push a workitem onto
+// the input channel. Wraps some logic for gracefulk shutdowns.
 type PushFunc func(context.Context, interface{}) bool
 
 // DrainerFunc represents a function used to "drain" the WorkerPool,
