@@ -40,10 +40,9 @@ func (services *Services) SampleConfig() string {
 
 // Gather parses systemctl outputs and adds counters to the Accumulator
 func (services *Services) Gather(acc telegraf.Accumulator) error {
-	out, e := services.systemctl(services.Timeout)
-	if e != nil {
-		acc.AddError(e)
-		return nil
+	out, err := services.systemctl(services.Timeout)
+	if err != nil {
+		return err
 	}
 
 	scanner := bufio.NewScanner(out)

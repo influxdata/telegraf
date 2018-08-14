@@ -44,8 +44,7 @@ func (services *Services) Gather(acc telegraf.Accumulator) error {
 	q := "select ExitCode, Name, ProcessId, StartMode, State, Status from Win32_Service where startmode = 'auto'"
 	err := services.wmiQuery(q, &dst)
 	if err != nil {
-		acc.AddError(err)
-		return nil
+		return err
 	}
 
 	for _, service := range dst {
