@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 
@@ -18,12 +19,14 @@ var (
 )
 
 // default file paths
-const (
+var (
 	// the path where statistics are kept per NUMA nodes
 	NUMA_NODE_PATH = "/sys/devices/system/node"
 	// the path to the meminfo file which is produced by kernel
 	MEMINFO_PATH = "/proc/meminfo"
+)
 
+const (
 	// hugepages stat field names on meminfo file
 	HUGE_PAGES_TOTAL = "HugePages_Total"
 	HUGE_PAGES_FREE  = "HugePages_Free"
@@ -36,7 +39,6 @@ var hugepagesSampleConfig = `
   # meminfo_path = "/proc/meminfo"
 `
 
-// Mem is the
 type Hugepages struct {
 	NUMANodePath string `toml:"numa_node_path"`
 	MeminfoPath  string `toml:"meminfo_path"`
@@ -178,6 +180,13 @@ func (mem *Hugepages) loadPaths() {
 }
 
 func init() {
+	if nnPath := os.Getenv("NUMA_NODE_PATH"); nnPath != "" {
+		NUMA_NODE_PATH = nnPath
+	}
+	if miPath := os.Getenv("MEMINFO_PATH"); miPath != "" {
+		MEMINFO_PATH = miPath
+	}
+
 	inputs.Add("hugepages", func() telegraf.Input {
 		return &Hugepages{}
 	})
