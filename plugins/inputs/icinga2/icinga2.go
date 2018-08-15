@@ -143,8 +143,10 @@ func (s *Icinga2) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("icinga2", func() telegraf.Input { return &Icinga2{
-		Server: "https://localhost:5665",
-		Filter: "services",
-	} })
+	inputs.Add("icinga2", func() telegraf.Input {
+		return &Icinga2{
+			Server: "https://localhost:5665",
+			Filter: "services",
+		}
+	})
 }
