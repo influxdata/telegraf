@@ -36,10 +36,10 @@ type Object struct {
 }
 
 type Attribute struct {
-	CheckCommand string  `json:"check_command"`
-	DisplayName  string  `json:"display_name"`
-	Name         string  `json:"name"`
-	State        float32 `json:"state"`
+	CheckCommand string `json:"check_command"`
+	DisplayName  string `json:"display_name"`
+	Name         string `json:"name"`
+	State        int    `json:"state"`
 }
 
 type ObjectType string

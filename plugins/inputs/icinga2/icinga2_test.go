@@ -33,7 +33,7 @@ func TestGatherStatus(t *testing.T) {
 	tags := map[string]string{
 		"display_name":  "eq-par.dc2.fr",
 		"check_command": "check-bgp-juniper-netconf",
-		"server":        "https://localhost:5665",
+		"source":        "https://localhost:5665",
 	}
 
 	var acc testutil.Accumulator
