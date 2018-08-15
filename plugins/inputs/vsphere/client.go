@@ -28,14 +28,15 @@ type ClientFactory struct {
 
 // Client represents a connection to vSphere and is backed by a govmoni connection
 type Client struct {
-	Client   *govmomi.Client
-	Views    *view.Manager
-	Root     *view.ContainerView
-	Perf     *performance.Manager
-	Valid    bool
-	refcount int32
-	mux      sync.Mutex
-	idle     *sync.Cond
+	Client    *govmomi.Client
+	Views     *view.Manager
+	Root      *view.ContainerView
+	Perf      *performance.Manager
+	Valid     bool
+	refcount  int32
+	mux       sync.Mutex
+	idle      *sync.Cond
+	closeGate sync.Once
 }
 
 // NewClientFactory creates a new ClientFactory and prepares it for use.
@@ -164,14 +165,19 @@ func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 }
 
 func (c *Client) close() {
-	ctx := context.Background()
-	if c.Views != nil {
-		c.Views.Destroy(ctx)
 
-	}
-	if c.Client != nil {
-		c.Client.Logout(ctx)
-	}
+	// Use a Once to prevent us from panics stemming from trying
+	// to close it multiple times.
+	c.closeGate.Do(func() {
+		ctx := context.Background()
+		if c.Views != nil {
+			c.Views.Destroy(ctx)
+
+		}
+		if c.Client != nil {
+			c.Client.Logout(ctx)
+		}
+	})
 }
 
 func (c *Client) closeWhenIdle() {
@@ -181,7 +187,7 @@ func (c *Client) closeWhenIdle() {
 	for c.refcount > 0 {
 		c.idle.Wait()
 	}
-	log.Printf("[input.vsphere]: Closing connection")
+	log.Printf("D! [input.vsphere]: Closing connection")
 	c.close()
 }
 
