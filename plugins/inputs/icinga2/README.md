@@ -15,7 +15,7 @@ services and hosts. You can read Icinga2's documentation for their remote API
   # server = "https://localhost:5665"
   
   ## Required Icinga2 object type ("services" or "hosts, default "services")
-  # filter = "services"
+  # object_type = "services"
 
   ## Credentials for basic HTTP authentication
   # username = "admin"
@@ -29,6 +29,7 @@ services and hosts. You can read Icinga2's documentation for their remote API
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = true
 ```
 
 ### Measurements & Fields:

@@ -14,7 +14,7 @@ import (
 
 type Icinga2 struct {
 	Server          string
-	Filter          string
+	ObjectType      string
 	Username        string
 	Password        string
 	ResponseTimeout internal.Duration
@@ -49,7 +49,7 @@ var sampleConfig = `
   # server = "https://localhost:5665"
   
   ## Required Icinga2 object type ("services" or "hosts, default "services")
-  # filter = "services"
+  # object_type = "services"
 
   ## Credentials for basic HTTP authentication
   # username = "admin"
@@ -63,6 +63,7 @@ var sampleConfig = `
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = true
   `
 
 func (i *Icinga2) Description() string {
@@ -85,7 +86,7 @@ func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 		tags["check_command"] = check.Attrs.CheckCommand
 		tags["source"] = i.Server
 
-		acc.AddFields(fmt.Sprintf("icinga2_%s_status", i.Filter), fields, tags)
+		acc.AddFields(fmt.Sprintf("icinga2_%s_status", i.ObjectType), fields, tags)
 	}
 }
 
@@ -118,14 +119,17 @@ func (i *Icinga2) Gather(acc telegraf.Accumulator) error {
 		i.client = client
 	}
 
-	url := fmt.Sprintf("%s/v1/objects/%s?attrs=name&attrs=display_name&attrs=state&attrs=check_command", i.Server, i.Filter)
+	url := fmt.Sprintf("%s/v1/objects/%s?attrs=name&attrs=display_name&attrs=state&attrs=check_command", i.Server, i.ObjectType)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}
 
-	req.SetBasicAuth(i.Username, i.Password)
+	if i.Username != "" {
+		req.SetBasicAuth(i.Username, i.Password)
+	}
+
 	resp, err := i.client.Do(req)
 	if err != nil {
 		return err
@@ -147,8 +151,8 @@ func (i *Icinga2) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("icinga2", func() telegraf.Input {
 		return &Icinga2{
-			Server: "https://localhost:5665",
-			Filter: "services",
+			Server:     "https://localhost:5665",
+			ObjectType: "services",
 		}
 	})
 }
