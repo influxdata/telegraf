@@ -1,195 +1,262 @@
 package buffer
 
 import (
-	"sync"
-	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/require"
 )
 
-var metricList = []telegraf.Metric{
-	testutil.TestMetric(2, "mymetric1"),
-	testutil.TestMetric(1, "mymetric2"),
-	testutil.TestMetric(11, "mymetric3"),
-	testutil.TestMetric(15, "mymetric4"),
-	testutil.TestMetric(8, "mymetric5"),
-}
-
-func makeBench5(b *testing.B, freq, batchSize int) {
-	const k = 1000
-	var wg sync.WaitGroup
-	buf := NewBuffer(10000)
-	m := testutil.TestMetric(1, "mymetric")
-
-	for i := 0; i < b.N; i++ {
-		buf.Add(m, m, m, m, m)
-		if i%(freq*k) == 0 {
-			wg.Add(1)
-			go func() {
-				buf.Batch(batchSize * k)
-				wg.Done()
-			}()
-		}
+func Metric() telegraf.Metric {
+	m, err := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(0, 0),
+	)
+	if err != nil {
+		panic(err)
 	}
-	// Flush
-	buf.Batch(b.N)
-	wg.Wait()
-
+	return m
 }
-func makeBenchStrict(b *testing.B, freq, batchSize int) {
-	const k = 1000
-	var count uint64
-	var wg sync.WaitGroup
-	buf := NewBuffer(10000)
-	m := testutil.TestMetric(1, "mymetric")
 
-	for i := 0; i < b.N; i++ {
-		buf.Add(m)
-		if i%(freq*k) == 0 {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				l := len(buf.Batch(batchSize * k))
-				atomic.AddUint64(&count, uint64(l))
-			}()
-		}
+func MetricUnix(seconds int64) telegraf.Metric {
+	m, err := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(seconds, 0),
+	)
+	if err != nil {
+		panic(err)
 	}
-	// Flush
-	wg.Add(1)
-	go func() {
-		l := len(buf.Batch(b.N))
-		atomic.AddUint64(&count, uint64(l))
-		wg.Done()
-	}()
-
-	wg.Wait()
-	if count != uint64(b.N) {
-		b.Errorf("not all metrics came out. %d of %d", count, b.N)
-	}
-}
-func makeBench(b *testing.B, freq, batchSize int) {
-	const k = 1000
-	var wg sync.WaitGroup
-	buf := NewBuffer(10000)
-	m := testutil.TestMetric(1, "mymetric")
-
-	for i := 0; i < b.N; i++ {
-		buf.Add(m)
-		if i%(freq*k) == 0 {
-			wg.Add(1)
-			go func() {
-				buf.Batch(batchSize * k)
-				wg.Done()
-			}()
-		}
-	}
-	wg.Wait()
-	// Flush
-	buf.Batch(b.N)
-}
-
-func BenchmarkBufferBatch5Add(b *testing.B) {
-	makeBench5(b, 100, 101)
-}
-func BenchmarkBufferBigInfrequentBatchCatchup(b *testing.B) {
-	makeBench(b, 100, 101)
-}
-func BenchmarkBufferOftenBatch(b *testing.B) {
-	makeBench(b, 1, 1)
-}
-func BenchmarkBufferAlmostBatch(b *testing.B) {
-	makeBench(b, 10, 9)
-}
-func BenchmarkBufferSlowBatch(b *testing.B) {
-	makeBench(b, 10, 1)
-}
-func BenchmarkBufferBatchNoDrop(b *testing.B) {
-	makeBenchStrict(b, 1, 4)
-}
-func BenchmarkBufferCatchup(b *testing.B) {
-	buf := NewBuffer(10000)
-	m := testutil.TestMetric(1, "mymetric")
-
-	for i := 0; i < b.N; i++ {
-		buf.Add(m)
-	}
-	buf.Batch(b.N)
+	return m
 }
 
 func BenchmarkAddMetrics(b *testing.B) {
 	buf := NewBuffer(10000)
-	m := testutil.TestMetric(1, "mymetric")
+	m := Metric()
 	for n := 0; n < b.N; n++ {
 		buf.Add(m)
 	}
 }
 
-func TestNewBufferBasicFuncs(t *testing.T) {
-	b := NewBuffer(10)
-	MetricsDropped.Set(0)
-	MetricsWritten.Set(0)
+func TestBuffer_LenEmpty(t *testing.T) {
+	b := NewBuffer(5)
+	require.Equal(t, 0, b.Len())
+}
 
-	require.Zero(t, b.Len())
-	require.Zero(t, MetricsDropped.Get())
-	require.Zero(t, MetricsWritten.Get())
+func TestBuffer_LenOne(t *testing.T) {
+	m := Metric()
 
-	m := testutil.TestMetric(1, "mymetric")
+	b := NewBuffer(5)
 	b.Add(m)
-	require.Equal(t, b.Len(), 1)
-	require.Equal(t, int64(0), MetricsDropped.Get())
-	require.Equal(t, int64(1), MetricsWritten.Get())
-
-	b.Add(metricList...)
-	require.Equal(t, b.Len(), 6)
-	require.Equal(t, int64(0), MetricsDropped.Get())
-	require.Equal(t, int64(6), MetricsWritten.Get())
+	require.Equal(t, 1, b.Len())
 }
 
-func TestDroppingMetrics(t *testing.T) {
-	b := NewBuffer(10)
-	MetricsDropped.Set(0)
-	MetricsWritten.Set(0)
+func TestBuffer_LenFull(t *testing.T) {
+	m := Metric()
 
-	// Add up to the size of the buffer
-	b.Add(metricList...)
-	b.Add(metricList...)
-	require.Equal(t, b.Len(), 10)
-	require.Equal(t, int64(0), MetricsDropped.Get())
-	require.Equal(t, int64(10), MetricsWritten.Get())
-
-	// Add 5 more and verify they were dropped
-	b.Add(metricList...)
-	require.Equal(t, b.Len(), 10)
-	require.Equal(t, int64(5), MetricsDropped.Get())
-	require.Equal(t, int64(15), MetricsWritten.Get())
+	b := NewBuffer(5)
+	b.Add(m, m, m, m, m)
+	require.Equal(t, 5, b.Len())
 }
 
-func TestGettingBatches(t *testing.T) {
-	b := NewBuffer(20)
-	MetricsDropped.Set(0)
-	MetricsWritten.Set(0)
+func TestBuffer_LenOverfill(t *testing.T) {
+	m := Metric()
 
-	// Verify that the buffer returned is smaller than requested when there are
-	// not as many items as requested.
-	b.Add(metricList...)
-	batch := b.Batch(10)
+	b := NewBuffer(5)
+	b.Add(m, m, m, m, m, m)
+	require.Equal(t, 5, b.Len())
+}
+
+func TestBuffer_BatchEmpty(t *testing.T) {
+	b := NewBuffer(5)
+	batch := b.Batch(2)
+	require.Len(t, batch, 0)
+}
+
+func TestBuffer_BatchUnderfill(t *testing.T) {
+	m := Metric()
+	b := NewBuffer(5)
+	b.Add(m)
+	batch := b.Batch(2)
+	require.Len(t, batch, 1)
+}
+
+func TestBuffer_BatchExact(t *testing.T) {
+	m := Metric()
+	b := NewBuffer(5)
+	b.Add(m, m)
+	batch := b.Batch(2)
+	require.Len(t, batch, 2)
+}
+
+func TestBuffer_BatchPartial(t *testing.T) {
+	m := Metric()
+	b := NewBuffer(5)
+	b.Add(m, m, m)
+	batch := b.Batch(2)
+	require.Len(t, batch, 2)
+}
+
+func TestBuffer_BatchOverSize(t *testing.T) {
+	m := Metric()
+	b := NewBuffer(5)
+	b.Add(m, m, m, m, m)
+	batch := b.Batch(6)
 	require.Len(t, batch, 5)
+}
 
-	// Verify that the buffer is now empty
-	require.Zero(t, b.Len())
-	require.Zero(t, MetricsDropped.Get())
-	require.Equal(t, int64(5), MetricsWritten.Get())
+func TestBuffer_BatchReject(t *testing.T) {
+	m := Metric()
+	b := NewBuffer(5)
+	b.Add(m, m, m)
+	b.Batch(2)
+	b.Add(m, m)
+	b.Reject()
+	require.Equal(t, 5, b.Len())
+	batch := b.Batch(3)
+	require.Equal(t, 3, len(batch))
+}
 
-	// Verify that the buffer returned is not more than the size requested
-	b.Add(metricList...)
-	batch = b.Batch(3)
-	require.Len(t, batch, 3)
+func TestBuffer_BatchWrapped(t *testing.T) {
+	b := NewBuffer(5)
+	b.Add(
+		MetricUnix(1),
+		MetricUnix(2),
+		MetricUnix(3),
+		MetricUnix(4),
+		MetricUnix(5))
+	batch := b.Batch(2)
+	require.Len(t, batch, 2)
+	require.Equal(t, int64(1), batch[0].Time().Unix())
+	require.Equal(t, int64(2), batch[1].Time().Unix())
+	b.Ack()
+	b.Add(
+		MetricUnix(6),
+		MetricUnix(7))
+	batch = b.Batch(5)
+	require.Len(t, batch, 5)
+	require.Equal(t, int64(3), batch[0].Time().Unix())
+	require.Equal(t, int64(4), batch[1].Time().Unix())
+	require.Equal(t, int64(5), batch[2].Time().Unix())
+	require.Equal(t, int64(6), batch[3].Time().Unix())
+	require.Equal(t, int64(7), batch[4].Time().Unix())
+}
 
-	// Verify that buffer is not empty
-	require.Equal(t, b.Len(), 2)
+func TestBuffer_BatchOverwriteBatch(t *testing.T) {
+	b := NewBuffer(5)
+	MetricsDropped.Set(0)
+	MetricsWritten.Set(0)
+
+	b.Add(
+		MetricUnix(1),
+		MetricUnix(2),
+		MetricUnix(3),
+		MetricUnix(4),
+		MetricUnix(5))
+	batch := b.Batch(2)
+	require.Len(t, batch, 2)
+	require.Equal(t, int64(1), batch[0].Time().Unix())
+	require.Equal(t, int64(2), batch[1].Time().Unix())
+	b.Add(
+		MetricUnix(6), // overwrite 1
+		MetricUnix(7), // overwrite 2
+		MetricUnix(8), // overwrite 3
+		MetricUnix(9)) // overwrite 4
+	batch = b.Batch(2)
+	require.Len(t, batch, 2)
+	require.Equal(t, int64(5), batch[0].Time().Unix())
+	require.Equal(t, int64(6), batch[1].Time().Unix())
+
+	require.Equal(t, int64(4), MetricsDropped.Get())
+	require.Equal(t, int64(9), MetricsWritten.Get())
+}
+
+func TestBuffer_MetricsOverwrite(t *testing.T) {
+	m := Metric()
+	b := NewBuffer(5)
+	MetricsDropped.Set(0)
+	MetricsWritten.Set(0)
+
+	b.Add(m, m, m, m, m)
+	b.Add(m, m, m)
+	require.Equal(t, int64(3), MetricsDropped.Get())
+	require.Equal(t, int64(8), MetricsWritten.Get())
+}
+
+func TestBuffer_MetricsOverwriteBatchAck(t *testing.T) {
+	m := Metric()
+	b := NewBuffer(5)
+	MetricsDropped.Set(0)
+	MetricsWritten.Set(0)
+
+	b.Add(m, m, m, m, m)
+	b.Batch(3)
+	b.Add(m, m, m)
+	b.Ack()
+	require.Equal(t, int64(0), MetricsDropped.Get())
+	require.Equal(t, int64(8), MetricsWritten.Get())
+}
+
+func TestBuffer_MetricsOverwriteBatchReject(t *testing.T) {
+	m := Metric()
+	b := NewBuffer(5)
+	MetricsDropped.Set(0)
+	MetricsWritten.Set(0)
+
+	b.Add(m, m, m, m, m)
+	b.Batch(3)
+	b.Add(m, m, m)
+	b.Reject()
+	require.Equal(t, int64(3), MetricsDropped.Get())
+	require.Equal(t, int64(8), MetricsWritten.Get())
+}
+
+func TestBuffer_MetricsBatchAckRemoved(t *testing.T) {
+	m := Metric()
+	b := NewBuffer(5)
+	MetricsDropped.Set(0)
+	MetricsWritten.Set(0)
+
+	b.Add(m, m, m, m, m)
+	b.Batch(3)
+	b.Add(m, m, m, m, m)
+	b.Ack()
 	require.Equal(t, int64(0), MetricsDropped.Get())
 	require.Equal(t, int64(10), MetricsWritten.Get())
+}
+
+func TestBuffer_BatchKept(t *testing.T) {
+	m := Metric()
+	b := NewBuffer(5)
+	b.Add(m, m, m, m, m)
+	b.Batch(2)
+	require.Equal(t, 5, b.Len())
+}
+
+func TestBuffer_BatchRemovedOnAck(t *testing.T) {
+	m := Metric()
+	b := NewBuffer(5)
+	b.Add(m, m, m, m, m)
+	b.Batch(2)
+	b.Ack()
+	require.Equal(t, 3, b.Len())
+}
+
+func TestBuffer_BatchRejectAckNoop(t *testing.T) {
+	m := Metric()
+	b := NewBuffer(5)
+	b.Add(m, m, m, m, m)
+	b.Batch(2)
+	b.Reject()
+	b.Ack()
+	require.Equal(t, 5, b.Len())
 }
