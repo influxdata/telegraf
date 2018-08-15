@@ -207,6 +207,8 @@ func (v *VSphere) checkEndpoints() error {
 	return nil
 }
 
+// Start is called from telegraf core when a plugin is started and allows it to
+// perform initialization tasks.
 func (v *VSphere) Start(acc telegraf.Accumulator) error {
 	log.Println("D! [input.vsphere]: Starting plugin")
 	rootCtx, cancel := context.WithCancel(context.Background())
@@ -215,6 +217,8 @@ func (v *VSphere) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
+// Stop is called from telegraf core when a plugin is stopped and allows it to
+// perform shutdown tasks.
 func (v *VSphere) Stop() {
 	log.Println("D! [input.vsphere]: Stopping plugin")
 	v.cancel()

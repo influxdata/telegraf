@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 	"net/url"
+	"sync"
+	"time"
 
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/performance"
@@ -13,13 +15,75 @@ import (
 	"github.com/vmware/govmomi/vim25/soap"
 )
 
+// ClientFactory is used to obtain Clients to be used throughout the plugin. Typically,
+// a single Client is reused across all functions and goroutines, but the client
+// is periodically recycled to avoid authentication expiration issues.
+type ClientFactory struct {
+	client   *Client
+	mux      sync.Mutex
+	url      *url.URL
+	parent   *VSphere
+	recycler *time.Ticker
+}
+
 // Client represents a connection to vSphere and is backed by a govmoni connection
 type Client struct {
-	Client *govmomi.Client
-	Views  *view.Manager
-	Root   *view.ContainerView
-	Perf   *performance.Manager
-	Valid  bool
+	Client   *govmomi.Client
+	Views    *view.Manager
+	Root     *view.ContainerView
+	Perf     *performance.Manager
+	Valid    bool
+	refcount int32
+	mux      sync.Mutex
+	idle     *sync.Cond
+}
+
+// NewClientFactory creates a new ClientFactory and prepares it for use.
+func NewClientFactory(ctx context.Context, url *url.URL, parent *VSphere) *ClientFactory {
+	cf := &ClientFactory{
+		client:   nil,
+		parent:   parent,
+		url:      url,
+		recycler: time.NewTicker(30 * time.Minute),
+	}
+
+	// Perdiodically recycle clients to make sure they don't expire
+	go func() {
+		for {
+			select {
+			case <-cf.recycler.C:
+				cf.destroyCurrent()
+			case <-ctx.Done():
+				cf.destroyCurrent() // Kill the current connection when we're done.
+				return
+			}
+		}
+	}()
+	return cf
+}
+
+// GetClient returns a client. The caller is responsible for calling Release()
+// on the client once it's done using it.
+func (cf *ClientFactory) GetClient() (*Client, error) {
+	cf.mux.Lock()
+	defer cf.mux.Unlock()
+	if cf.client == nil {
+		var err error
+		if cf.client, err = NewClient(cf.url, cf.parent); err != nil {
+			return nil, err
+		}
+	}
+	cf.client.grab()
+	return cf.client, nil
+}
+
+func (cf *ClientFactory) destroyCurrent() {
+	cf.mux.Lock()
+	defer cf.mux.Unlock()
+	go func(c *Client) {
+		c.closeWhenIdle()
+	}(cf.client)
+	cf.client = nil
 }
 
 // NewClient creates a new vSphere client based on the url and setting passed as parameters.
@@ -87,17 +151,19 @@ func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 
 	sw.Stop()
 
-	return &Client{
-		Client: c,
-		Views:  m,
-		Root:   v,
-		Perf:   p,
-		Valid:  true,
-	}, nil
+	result := &Client{
+		Client:   c,
+		Views:    m,
+		Root:     v,
+		Perf:     p,
+		Valid:    true,
+		refcount: 0,
+	}
+	result.idle = sync.NewCond(&result.mux)
+	return result, nil
 }
 
-// Close disconnects a client from the vSphere backend and releases all assiciated resources.
-func (c *Client) Close() {
+func (c *Client) close() {
 	ctx := context.Background()
 	if c.Views != nil {
 		c.Views.Destroy(ctx)
@@ -106,4 +172,33 @@ func (c *Client) Close() {
 	if c.Client != nil {
 		c.Client.Logout(ctx)
 	}
+}
+
+func (c *Client) closeWhenIdle() {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+	log.Printf("D! [input.vsphere]: Waiting to close connection")
+	for c.refcount > 0 {
+		c.idle.Wait()
+	}
+	log.Printf("[input.vsphere]: Closing connection")
+	c.close()
+}
+
+// Release indicates that a caller is no longer using the client and it can
+// be recycled if needed.
+func (c *Client) Release() {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+	if c.refcount--; c.refcount == 0 {
+		c.idle.Broadcast()
+	}
+	//log.Printf("D! [input.vsphere]: Release. Connection refcount:%d", c.refcount)
+}
+
+func (c *Client) grab() {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+	c.refcount++
+	//log.Printf("D! [input.vsphere]: Grab. Connection refcount:%d", c.refcount)
 }

@@ -32,8 +32,7 @@ type Endpoint struct {
 	discoveryTicker *time.Ticker
 	collectMux      sync.RWMutex
 	initialized     bool
-	collectClient   *Client
-	discoverClient  *Client
+	clientFactory   *ClientFactory
 	wg              *ConcurrentWaitGroup
 }
 
@@ -84,12 +83,13 @@ type metricQResponse struct {
 // as parameters.
 func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 	e := Endpoint{
-		URL:          url,
-		Parent:       parent,
-		lastColls:    make(map[string]time.Time),
-		instanceInfo: make(map[string]resourceInfo),
-		initialized:  false,
-		wg:           NewConcurrentWaitGroup(),
+		URL:           url,
+		Parent:        parent,
+		lastColls:     make(map[string]time.Time),
+		instanceInfo:  make(map[string]resourceInfo),
+		initialized:   false,
+		wg:            NewConcurrentWaitGroup(),
+		clientFactory: NewClientFactory(parent.rootCtx, url, parent),
 	}
 
 	e.resourceKinds = map[string]resourceKind{
@@ -214,11 +214,11 @@ func (e *Endpoint) init(ctx context.Context) error {
 }
 
 func (e *Endpoint) setupMetricIds(ctx context.Context) error {
-	client, err := NewClient(e.URL, e.Parent)
+	client, err := e.clientFactory.GetClient()
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+	defer client.Release()
 
 	mn, err := client.Perf.CounterInfoByName(ctx)
 
@@ -233,9 +233,14 @@ func (e *Endpoint) setupMetricIds(ctx context.Context) error {
 }
 
 func (e *Endpoint) getMetadata(ctx context.Context, in interface{}) interface{} {
+	client, err := e.clientFactory.GetClient()
+	if err != nil {
+		return err
+	}
+	defer client.Release()
+
 	rq := in.(*metricQRequest)
-	//log.Printf("D! [input.vsphere]: Querying metadata for %s", rq.obj.name)
-	metrics, err := e.discoverClient.Perf.AvailableMetric(ctx, rq.obj.ref.Reference(), rq.res.sampling)
+	metrics, err := client.Perf.AvailableMetric(ctx, rq.obj.ref.Reference(), rq.res.sampling)
 	if err != nil && err != context.Canceled {
 		log.Printf("E! [input.vsphere]: Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
 	}
@@ -253,14 +258,12 @@ func (e *Endpoint) discover(ctx context.Context) error {
 
 	sw := NewStopwatch("discover", e.URL.Host)
 	var err error
-	e.discoverClient, err = NewClient(e.URL, e.Parent)
+
+	client, err := e.clientFactory.GetClient()
 	if err != nil {
 		return err
 	}
-	defer func() {
-		e.discoverClient.Close()
-		e.discoverClient = nil
-	}()
+	defer client.Release()
 
 	log.Printf("D! [input.vsphere]: Discover new objects for %s", e.URL.Host)
 
@@ -271,7 +274,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	for k, res := range e.resourceKinds {
 		// Need to do this for all resource types even if they are not enabled (but datastore)
 		if res.enabled || (k != "datastore" && k != "vm") {
-			objects, err := res.getObjects(ctx, e.discoverClient.Root)
+			objects, err := res.getObjects(ctx, client.Root)
 			if err != nil {
 				return err
 			}
@@ -405,15 +408,6 @@ func (e *Endpoint) collect(ctx context.Context, acc telegraf.Accumulator) error 
 
 	e.collectMux.RLock()
 	defer e.collectMux.RUnlock()
-
-	e.collectClient, err = NewClient(e.URL, e.Parent)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		e.collectClient.Close()
-		e.collectClient = nil
-	}()
 
 	// If discovery interval is disabled (0), discover on each collection cycle
 	//
@@ -569,12 +563,18 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 	count := 0
 	prefix := "vsphere" + e.Parent.Separator + resourceType
 
-	metrics, err := e.collectClient.Perf.Query(ctx, pqs)
+	client, err := e.clientFactory.GetClient()
+	if err != nil {
+		return 0, err
+	}
+	defer client.Release()
+
+	metrics, err := client.Perf.Query(ctx, pqs)
 	if err != nil {
 		return count, err
 	}
 
-	ems, err := e.collectClient.Perf.ToMetricSeries(ctx, metrics)
+	ems, err := client.Perf.ToMetricSeries(ctx, metrics)
 	if err != nil {
 		return count, err
 	}
