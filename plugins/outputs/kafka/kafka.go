@@ -38,7 +38,7 @@ type (
 		// MaxRetry Tag
 		MaxRetry int
 		// Max Message Bytes
-		MaxMessageBytes int
+		MaxMessageBytes int `toml:"max_message_bytes"`
 
 		Version string `toml:"version"`
 
@@ -142,8 +142,9 @@ var sampleConfig = `
   ## until the next flush.
   # max_retry = 3
 
-  ## Max message bytes, should be lower than server message.max.bytes config
-  # MaxMessageBytes = 0
+  ## The maximum permitted size of a message. Should be set equal to or
+  ## smaller than the broker's 'message.max.bytes'.
+  # max_message_bytes = 1000000
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
