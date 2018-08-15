@@ -144,7 +144,7 @@ func (ro *RunningOutput) Write() error {
 	log.Printf("D! Output [%s] buffer fullness: %d / %d metrics. ",
 		ro.Name, nFails+nMetrics, ro.MetricBufferLimit)
 	var err error
-	if !ro.failMetrics.IsEmpty() {
+	if ro.failMetrics.Len() > 0 {
 		// how many batches of failed writes we need to write.
 		nBatches := nFails/ro.MetricBatchSize + 1
 		batchSize := ro.MetricBatchSize

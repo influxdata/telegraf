@@ -35,11 +35,6 @@ func NewBuffer(size int) *Buffer {
 	}
 }
 
-// IsEmpty returns true if Buffer is empty.
-func (b *Buffer) IsEmpty() bool {
-	return b.empty
-}
-
 // Len returns the current length of the buffer.
 func (b *Buffer) Len() int {
 	if b.empty {
