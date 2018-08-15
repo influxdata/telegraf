@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -137,7 +138,7 @@ func (i *Icinga2) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	s.GatherStatus(acc, result.Results)
+	i.GatherStatus(acc, result.Results)
 
 	return nil
 }
