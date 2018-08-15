@@ -1,8 +1,10 @@
 package smart
 
 import (
+	"bufio"
 	"fmt"
 	"os/exec"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -134,7 +136,7 @@ func (m *Smart) scan() ([]string, error) {
 
 	devices := []string{}
 	for _, line := range strings.Split(string(out), "\n") {
-		dev := strings.Split(line, "#")
+		dev := strings.Split(line, " ")
 		if len(dev) > 1 && !excludedDev(m.Excludes, strings.TrimSpace(dev[0])) {
 			devices = append(devices, strings.TrimSpace(dev[0]))
 		}
@@ -178,13 +180,13 @@ func exitStatus(err error) (int, error) {
 	return 0, err
 }
 
-func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, path, nockeck, device string, wg *sync.WaitGroup) {
+func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, smartctl, nockeck, device string, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
 	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nockeck, "--format=brief"}
 	args = append(args, strings.Split(device, " ")...)
-	cmd := sudo(usesudo, path, args...)
+	cmd := sudo(usesudo, smartctl, args...)
 	out, e := internal.CombinedOutputTimeout(cmd, time.Second*5)
 	outStr := string(out)
 
@@ -196,11 +198,15 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, path, nockec
 	}
 
 	device_tags := map[string]string{}
-	device_tags["device"] = strings.Split(device, " ")[0]
+	device_node := strings.Split(device, " ")[0]
+	device_tags["device"] = path.Base(device_node)
 	device_fields := make(map[string]interface{})
 	device_fields["exit_status"] = exitStatus
 
-	for _, line := range strings.Split(outStr, "\n") {
+	scanner := bufio.NewScanner(strings.NewReader(outStr))
+
+	for scanner.Scan() {
+		line := scanner.Text()
 
 		model := modelInInfo.FindStringSubmatch(line)
 		if len(model) > 1 {
@@ -240,7 +246,8 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, path, nockec
 				tags := map[string]string{}
 				fields := make(map[string]interface{})
 
-				tags["device"] = strings.Split(device, " ")[0]
+				device_node := strings.Split(device, " ")[0]
+				tags["device"] = path.Base(device_node)
 
 				if serial, ok := device_tags["serial_no"]; ok {
 					tags["serial_no"] = serial

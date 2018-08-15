@@ -10,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/zipkin/codec"
 
 	"github.com/apache/thrift/lib/go/thrift"
-	"github.com/openzipkin/zipkin-go-opentracing/_thrift/gen-go/zipkincore"
+	"github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore"
 )
 
 // UnmarshalThrift converts raw bytes in thrift format to a slice of spans
@@ -199,5 +199,5 @@ func (s *span) Duration() time.Duration {
 }
 
 func formatID(id int64) string {
-	return strconv.FormatInt(id, 10)
+	return strconv.FormatInt(id, 16)
 }

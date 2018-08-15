@@ -127,8 +127,7 @@ func mergeTags(metricTags, outerTags map[string]string) map[string]string {
 // of a Metric match the corresponding elements in a ReadResponse object
 // returned by a Jolokia agent.
 func metricMatchesResponse(metric Metric, response ReadResponse) bool {
-
-	if metric.Mbean != response.RequestMbean {
+	if !metric.MatchObjectName(response.RequestMbean) {
 		return false
 	}
 
@@ -136,19 +135,9 @@ func metricMatchesResponse(metric Metric, response ReadResponse) bool {
 		return len(response.RequestAttributes) == 0
 	}
 
-	for _, fullPath := range metric.Paths {
-		segments := strings.SplitN(fullPath, "/", 2)
-		attribute := segments[0]
-
-		var path string
-		if len(segments) == 2 {
-			path = segments[1]
-		}
-
-		for _, rattr := range response.RequestAttributes {
-			if attribute == rattr && path == response.RequestPath {
-				return true
-			}
+	for _, attribute := range response.RequestAttributes {
+		if metric.MatchAttributeAndPath(attribute, response.RequestPath) {
+			return true
 		}
 	}
 

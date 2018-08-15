@@ -4,12 +4,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+)
+
+var (
+	utf8BOM = []byte("\xef\xbb\xbf")
 )
 
 type JSONParser struct {
@@ -40,25 +45,15 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 		tags[k] = v
 	}
 
-	for _, tag := range p.TagKeys {
-		switch v := jsonOut[tag].(type) {
-		case string:
-			tags[tag] = v
-		case bool:
-			tags[tag] = strconv.FormatBool(v)
-		case float64:
-			tags[tag] = strconv.FormatFloat(v, 'f', -1, 64)
-		}
-		delete(jsonOut, tag)
-	}
-
 	f := JSONFlattener{}
-	err := f.FlattenJSON("", jsonOut)
+	err := f.FullFlattenJSON("", jsonOut, true, true)
 	if err != nil {
 		return nil, err
 	}
 
-	metric, err := metric.New(p.MetricName, tags, f.Fields, time.Now().UTC())
+	tags, nFields := p.switchFieldToTag(tags, f.Fields)
+
+	metric, err := metric.New(p.MetricName, tags, nFields, time.Now().UTC())
 
 	if err != nil {
 		return nil, err
@@ -66,8 +61,46 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 	return append(metrics, metric), nil
 }
 
+//will take in field map with strings and bools,
+//search for TagKeys that match fieldnames and add them to tags
+//will delete any strings/bools that shouldn't be fields
+//assumes that any non-numeric values in TagKeys should be displayed as tags
+func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]interface{}) (map[string]string, map[string]interface{}) {
+	for _, name := range p.TagKeys {
+		//switch any fields in tagkeys into tags
+		if fields[name] == nil {
+			continue
+		}
+		switch value := fields[name].(type) {
+		case string:
+			tags[name] = value
+			delete(fields, name)
+		case bool:
+			tags[name] = strconv.FormatBool(value)
+			delete(fields, name)
+		case float64:
+			tags[name] = strconv.FormatFloat(value, 'f', -1, 64)
+			delete(fields, name)
+		default:
+			log.Printf("E! [parsers.json] Unrecognized type %T", value)
+		}
+	}
+
+	//remove any additional string/bool values from fields
+	for k := range fields {
+		switch fields[k].(type) {
+		case string:
+			delete(fields, k)
+		case bool:
+			delete(fields, k)
+		}
+	}
+	return tags, fields
+}
+
 func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	buf = bytes.TrimSpace(buf)
+	buf = bytes.TrimPrefix(buf, utf8BOM)
 	if len(buf) == 0 {
 		return make([]telegraf.Metric, 0), nil
 	}
@@ -114,6 +147,7 @@ func (f *JSONFlattener) FlattenJSON(
 	if f.Fields == nil {
 		f.Fields = make(map[string]interface{})
 	}
+
 	return f.FullFlattenJSON(fieldname, v, false, false)
 }
 

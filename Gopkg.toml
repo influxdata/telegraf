@@ -1,0 +1,223 @@
+[[constraint]]
+  name = "collectd.org"
+  version = "0.3.0"
+
+[[constraint]]
+  name = "github.com/aerospike/aerospike-client-go"
+  version = "<=1.27.0"
+
+[[constraint]]
+  name = "github.com/amir/raidman"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/apache/thrift"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/aws/aws-sdk-go"
+  version = "1.14.8"
+
+[[constraint]]
+  name = "github.com/bsm/sarama-cluster"
+  version = "2.1.13"
+
+[[constraint]]
+  name = "github.com/couchbase/go-couchbase"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/dgrijalva/jwt-go"
+  version = "3.2.0"
+
+[[constraint]]
+  name = "github.com/docker/docker"
+  revision = "ed7b6428c133e7c59404251a09b7d6b02fa83cc2" # v18.05.0-ce
+
+[[override]]
+  name = "github.com/docker/distribution"
+  revision = "edc3ab29cdff8694dd6feb85cfeb4b5f1b38ed9c" # v18.05.0-ce
+
+[[constraint]]
+  name = "github.com/eclipse/paho.mqtt.golang"
+  version = "~1.1.1"
+
+[[constraint]]
+  name = "github.com/go-sql-driver/mysql"
+  version = "1.4.0"
+
+[[constraint]]
+  name = "github.com/gobwas/glob"
+  version = "0.2.3"
+
+[[constraint]]
+  name = "github.com/golang/protobuf"
+  version = "1.1.0"
+
+[[constraint]]
+  name = "github.com/google/go-cmp"
+  version = "0.2.0"
+
+[[constraint]]
+  name = "github.com/gorilla/mux"
+  version = "1.6.2"
+
+[[constraint]]
+  name = "github.com/go-redis/redis"
+  version = "6.12.0"
+
+[[constraint]]
+  name = "github.com/hashicorp/consul"
+  version = "1.1.0"
+
+[[constraint]]
+  name = "github.com/influxdata/go-syslog"
+  version = "1.0.1"
+
+[[constraint]]
+  name = "github.com/influxdata/tail"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/influxdata/toml"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/influxdata/wlog"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/jackc/pgx"
+  version = "3.1.0"
+
+[[constraint]]
+  name = "github.com/kardianos/service"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/kballard/go-shellquote"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/matttproud/golang_protobuf_extensions"
+  version = "1.0.1"
+
+[[constraint]]
+  name = "github.com/Microsoft/ApplicationInsights-Go"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/miekg/dns"
+  version = "1.0.8"
+
+[[constraint]]
+  name = "github.com/multiplay/go-ts3"
+  version = "1.0.0"
+
+[[constraint]]
+  name = "github.com/nats-io/gnatsd"
+  version = "1.1.0"
+
+[[constraint]]
+  name = "github.com/nats-io/go-nats"
+  version = "1.5.0"
+
+[[constraint]]
+  name = "github.com/nsqio/go-nsq"
+  version = "1.0.7"
+
+[[constraint]]
+  name = "github.com/openzipkin/zipkin-go-opentracing"
+  version = "0.3.4"
+
+[[constraint]]
+  name = "github.com/prometheus/client_golang"
+  version = "0.8.0"
+
+[[constraint]]
+  name = "github.com/prometheus/client_model"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/prometheus/common"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/satori/go.uuid"
+  version = "1.2.0"
+
+[[constraint]]
+  name = "github.com/shirou/gopsutil"
+  version = "2.18.07"
+
+[[constraint]]
+  name = "github.com/Shopify/sarama"
+  version = "1.17.0"
+
+[[constraint]]
+  name = "github.com/soniah/gosnmp"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/StackExchange/wmi"
+  version = "1.0.0"
+
+[[constraint]]
+  name = "github.com/streadway/amqp"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/stretchr/testify"
+  version = "1.2.2"
+
+[[constraint]]
+  name = "github.com/tidwall/gjson"
+  version = "1.1.1"
+
+[[constraint]]
+  name = "github.com/vjeantet/grok"
+  version = "1.0.0"
+
+[[constraint]]
+  name = "github.com/wvanbergen/kafka"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/zensqlmonitor/go-mssqldb"
+  branch = "master"
+
+[[constraint]]
+  name = "golang.org/x/net"
+  branch = "master"
+
+[[constraint]]
+  name = "golang.org/x/sys"
+  branch = "master"
+
+[[constraint]]
+  name = "google.golang.org/grpc"
+  version = "1.12.2"
+
+[[constraint]]
+  name = "gopkg.in/gorethink/gorethink.v3"
+  version = "3.0.5"
+
+[[constraint]]
+  name = "gopkg.in/ldap.v2"
+  version = "2.5.1"
+
+[[constraint]]
+  name = "gopkg.in/mgo.v2"
+  branch = "v2"
+
+[[constraint]]
+  name = "gopkg.in/olivere/elastic.v5"
+  version = "^5.0.69"
+
+[[constraint]]
+  name = "gopkg.in/yaml.v2"
+  version = "^2.2.1"
+
+[[override]]
+  source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
+  name = "gopkg.in/fsnotify.v1"

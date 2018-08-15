@@ -1,33 +1,73 @@
 package json
 
 import (
-	ejson "encoding/json"
+	"encoding/json"
 	"time"
 
 	"github.com/influxdata/telegraf"
 )
 
-type JsonSerializer struct {
+type serializer struct {
 	TimestampUnits time.Duration
 }
 
-func (s *JsonSerializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	m := make(map[string]interface{})
-	units_nanoseconds := s.TimestampUnits.Nanoseconds()
-	// if the units passed in were less than or equal to zero,
-	// then serialize the timestamp in seconds (the default)
-	if units_nanoseconds <= 0 {
-		units_nanoseconds = 1000000000
+func NewSerializer(timestampUnits time.Duration) (*serializer, error) {
+	s := &serializer{
+		TimestampUnits: truncateDuration(timestampUnits),
 	}
-	m["tags"] = metric.Tags()
-	m["fields"] = metric.Fields()
-	m["name"] = metric.Name()
-	m["timestamp"] = metric.UnixNano() / units_nanoseconds
-	serialized, err := ejson.Marshal(m)
+	return s, nil
+}
+
+func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
+	m := s.createObject(metric)
+	serialized, err := json.Marshal(m)
 	if err != nil {
 		return []byte{}, err
 	}
 	serialized = append(serialized, '\n')
 
 	return serialized, nil
+}
+
+func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+	objects := make([]interface{}, 0, len(metrics))
+	for _, metric := range metrics {
+		m := s.createObject(metric)
+		objects = append(objects, m)
+	}
+
+	obj := map[string]interface{}{
+		"metrics": objects,
+	}
+
+	serialized, err := json.Marshal(obj)
+	if err != nil {
+		return []byte{}, err
+	}
+	return serialized, nil
+}
+
+func (s *serializer) createObject(metric telegraf.Metric) map[string]interface{} {
+	m := make(map[string]interface{}, 4)
+	m["tags"] = metric.Tags()
+	m["fields"] = metric.Fields()
+	m["name"] = metric.Name()
+	m["timestamp"] = metric.Time().UnixNano() / int64(s.TimestampUnits)
+	return m
+}
+
+func truncateDuration(units time.Duration) time.Duration {
+	// Default precision is 1s
+	if units <= 0 {
+		return time.Second
+	}
+
+	// Search for the power of ten less than the duration
+	d := time.Nanosecond
+	for {
+		if d*10 > units {
+			return d
+		}
+		d = d * 10
+	}
 }

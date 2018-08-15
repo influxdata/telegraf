@@ -1,4 +1,4 @@
-# Telegraf S.M.A.R.T. plugin
+# S.M.A.R.T. Input Plugin
 
 Get metrics using the command line utility `smartctl` for S.M.A.R.T. (Self-Monitoring, Analysis and Reporting Technology) storage devices. SMART is a monitoring system included in computer hard disk drives (HDDs) and solid-state drives (SSDs)[1] that detects and reports on various indicators of drive reliability, with the intent of enabling the anticipation of hardware failures.
 See smartmontools (https://www.smartmontools.org/).
@@ -24,68 +24,7 @@ To enable SMART on a storage device run:
 smartctl -s on <device>
 ```
 
-## Measurements
-
-- smart_device:
-
-    * Tags:
-      - `capacity`
-      - `device`
-      - `device_model`
-      - `enabled`
-      - `health`
-      - `serial_no`
-      - `wwn`
-    * Fields:
-      - `exit_status`
-      - `health_ok`
-      - `read_error_rate`
-      - `seek_error`
-      - `temp_c`
-      - `udma_crc_errors`
-
-- smart_attribute:
-
-    * Tags:
-      - `device`
-      - `fail`
-      - `flags`
-      - `id`
-      - `name`
-      - `serial_no`
-      - `wwn`
-    * Fields:
-      - `exit_status`
-      - `raw_value`
-      - `threshold`
-      - `value`
-      - `worst`
-
-### Flags
-
-The interpretation of the tag `flags` is:
- - *K* auto-keep
- - *C* event count
- - *R* error rate
- - *S* speed/performance
- - *O* updated online
- - *P* prefailure warning
-
-### Exit Status
-
-The `exit_status` field captures the exit status of the smartctl command which
-is defined by a bitmask. For the interpretation of the bitmask see the man page for
-smartctl.
-
-### Device Names
-
-Device names, e.g., `/dev/sda`, are *not persistent*, and may be
-subject to change across reboots or system changes. Instead, you can the
-*World Wide Name* (WWN) or serial number to identify devices. On Linux block
-devices can be referenced by the WWN in the following location:
-`/dev/disk/by-id/`.
-
-## Configuration
+### Configuration:
 
 ```toml
 # Read metrics from storage devices supporting S.M.A.R.T.
@@ -122,14 +61,72 @@ devices can be referenced by the WWN in the following location:
   # devices = [ "/dev/ada0 -d atacam" ]
 ```
 
+### Metrics:
+
+- smart_device:
+  - tags:
+    - capacity
+    - device
+    - device_model
+    - enabled
+    - health
+    - serial_no
+    - wwn
+  - fields:
+    - exit_status
+    - health_ok
+    - read_error_rate
+    - seek_error
+    - temp_c
+    - udma_crc_errors
+
+- smart_attribute:
+  - tags:
+    - device
+    - fail
+    - flags
+    - id
+    - name
+    - serial_no
+    - wwn
+  - fields:
+    - exit_status
+    - raw_value
+    - threshold
+    - value
+    - worst
+
+#### Flags
+
+The interpretation of the tag `flags` is:
+ - `K` auto-keep
+ - `C` event count
+ - `R` error rate
+ - `S` speed/performance
+ - `O` updated online
+ - `P` prefailure warning
+
+#### Exit Status
+
+The `exit_status` field captures the exit status of the smartctl command which
+is defined by a bitmask. For the interpretation of the bitmask see the man page for
+smartctl.
+
+#### Device Names
+
+Device names, e.g., `/dev/sda`, are *not persistent*, and may be
+subject to change across reboots or system changes. Instead, you can the
+*World Wide Name* (WWN) or serial number to identify devices. On Linux block
+devices can be referenced by the WWN in the following location:
+`/dev/disk/by-id/`.
+
 To run `smartctl` with `sudo` create a wrapper script and use `path` in
 the configuration to execute that.
 
-## Output
+### Output
 
-Example output from an _Apple SSD_:
 ```
-> smart_attribute,serial_no=S1K5NYCD964433,wwn=5002538655584d30,id=199,name=UDMA_CRC_Error_Count,flags=-O-RC-,fail=-,host=mbpro.local,device=/dev/rdisk0 threshold=0i,raw_value=0i,exit_status=0i,value=200i,worst=200i 1502536854000000000
-> smart_attribute,device=/dev/rdisk0,serial_no=S1K5NYCD964433,wwn=5002538655584d30,id=240,name=Unknown_SSD_Attribute,flags=-O---K,fail=-,host=mbpro.local exit_status=0i,value=100i,worst=100i,threshold=0i,raw_value=0i 1502536854000000000
-> smart_device,enabled=Enabled,host=mbpro.local,device=/dev/rdisk0,model=APPLE\ SSD\ SM0512F,serial_no=S1K5NYCD964433,wwn=5002538655584d30,capacity=500277790720 udma_crc_errors=0i,exit_status=0i,health_ok=true,read_error_rate=0i,temp_c=40i 1502536854000000000
+smart_device,enabled=Enabled,host=mbpro.local,device=rdisk0,model=APPLE\ SSD\ SM0512F,serial_no=S1K5NYCD964433,wwn=5002538655584d30,capacity=500277790720 udma_crc_errors=0i,exit_status=0i,health_ok=true,read_error_rate=0i,temp_c=40i 1502536854000000000
+smart_attribute,serial_no=S1K5NYCD964433,wwn=5002538655584d30,id=199,name=UDMA_CRC_Error_Count,flags=-O-RC-,fail=-,host=mbpro.local,device=rdisk0 threshold=0i,raw_value=0i,exit_status=0i,value=200i,worst=200i 1502536854000000000
+smart_attribute,device=rdisk0,serial_no=S1K5NYCD964433,wwn=5002538655584d30,id=240,name=Unknown_SSD_Attribute,flags=-O---K,fail=-,host=mbpro.local exit_status=0i,value=100i,worst=100i,threshold=0i,raw_value=0i 1502536854000000000
 ```
