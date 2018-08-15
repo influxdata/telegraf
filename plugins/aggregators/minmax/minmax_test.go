@@ -38,6 +38,7 @@ var m2, _ = metric.New("m1",
 		"i":        float64(1),
 		"j":        float64(1),
 		"k":        float64(200),
+		"l":        uint64(200),
 		"ignoreme": "string",
 		"andme":    true,
 	},
@@ -85,6 +86,8 @@ func TestMinMaxWithPeriod(t *testing.T) {
 		"j_min": float64(1),
 		"k_max": float64(200),
 		"k_min": float64(200),
+		"l_max": float64(200),
+		"l_min": float64(200),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -154,6 +157,8 @@ func TestMinMaxDifferentPeriods(t *testing.T) {
 		"j_min": float64(1),
 		"k_max": float64(200),
 		"k_min": float64(200),
+		"l_max": float64(200),
+		"l_min": float64(200),
 	}
 	expectedTags = map[string]string{
 		"foo": "bar",

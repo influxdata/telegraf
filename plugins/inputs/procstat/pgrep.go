@@ -6,14 +6,9 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-)
 
-type PIDFinder interface {
-	PidFile(path string) ([]PID, error)
-	Pattern(pattern string) ([]PID, error)
-	Uid(user string) ([]PID, error)
-	FullPattern(path string) ([]PID, error)
-}
+	"github.com/influxdata/telegraf/internal"
+)
 
 // Implemention of PIDGatherer that execs pgrep to find processes
 type Pgrep struct {
@@ -69,6 +64,12 @@ func find(path string, args []string) ([]PID, error) {
 
 func run(path string, args []string) (string, error) {
 	out, err := exec.Command(path, args...).Output()
+
+	//if exit code 1, ie no processes found, do not return error
+	if i, _ := internal.ExitStatus(err); i == 1 {
+		return "", nil
+	}
+
 	if err != nil {
 		return "", fmt.Errorf("Error running %s: %s", path, err)
 	}
