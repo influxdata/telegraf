@@ -37,6 +37,12 @@ func NewBuffer(size int) *Buffer {
 
 // Len returns the current length of the buffer.
 func (b *Buffer) Len() int {
+	b.Lock()
+	defer b.Unlock()
+	return b.length()
+}
+
+func (b *Buffer) length() int {
 	if b.empty {
 		return 0
 	} else if b.first <= b.last {
@@ -62,7 +68,8 @@ func (b *Buffer) push(m telegraf.Metric) {
 	// Full
 	if b.first == b.last {
 		MetricsDropped.Incr(1)
-		b.first = (b.first + 1) % b.size
+		b.first++
+		b.first %= b.size
 	}
 	b.buf[b.last] = m
 }
@@ -83,7 +90,7 @@ func (b *Buffer) Add(metrics ...telegraf.Metric) {
 func (b *Buffer) Batch(batchSize int) []telegraf.Metric {
 	b.Lock()
 	defer b.Unlock()
-	outLen := min(b.Len(), batchSize)
+	outLen := min(b.length(), batchSize)
 	out := make([]telegraf.Metric, outLen)
 	if outLen == 0 {
 		return out
