@@ -83,6 +83,7 @@ func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 
 		tags["display_name"] = check.Attrs.DisplayName
 		tags["check_command"] = check.Attrs.CheckCommand
+		tags["source"] = i.Server
 
 		acc.AddFields(fmt.Sprintf("icinga2_%s_status", i.Filter), fields, tags)
 	}
