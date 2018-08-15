@@ -103,27 +103,27 @@ func (i *Icinga2) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (s *Icinga2) Gather(acc telegraf.Accumulator) error {
+func (i *Icinga2) Gather(acc telegraf.Accumulator) error {
 	if i.ResponseTimeout.Duration < time.Second {
 		i.ResponseTimeout.Duration = time.Second * 5
 	}
 
 	if i.client == nil {
-		client, err := a.createHttpClient()
+		client, err := i.createHttpClient()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		i.client = client
 	}
 
-	url := fmt.Sprintf("%s/v1/objects/%s?attrs=name&attrs=display_name&attrs=state&attrs=check_command", s.Server, s.Filter)
+	url := fmt.Sprintf("%s/v1/objects/%s?attrs=name&attrs=display_name&attrs=state&attrs=check_command", i.Server, i.Filter)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return err
 	}
 
-	req.SetBasicAuth(s.Username, s.Password)
+	req.SetBasicAuth(i.Username, i.Password)
 	resp, err := i.client.Do(req)
 	if err != nil {
 		return err
