@@ -78,7 +78,7 @@ func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 		tags := make(map[string]string)
 
 		fields["name"] = check.Attrs.Name
-		fields["status"] = check.Attrs.State
+		fields["state"] = check.Attrs.State
 
 		tags["display_name"] = check.Attrs.DisplayName
 		tags["check_command"] = check.Attrs.CheckCommand

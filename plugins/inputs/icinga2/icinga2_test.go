@@ -28,7 +28,7 @@ func TestGatherStatus(t *testing.T) {
 	json.Unmarshal([]byte(s), &checks)
 	fields := map[string]interface{}{
 		"name":   "ef017af8-c684-4f3f-bb20-0dfe9fcd3dbe",
-		"status": 0,
+		"state": 0,
 	}
 	tags := map[string]string{
 		"display_name":  "eq-par.dc2.fr",
