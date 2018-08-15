@@ -7,8 +7,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var metricList = []telegraf.Metric{
@@ -133,20 +132,20 @@ func TestNewBufferBasicFuncs(t *testing.T) {
 	MetricsDropped.Set(0)
 	MetricsWritten.Set(0)
 
-	assert.Zero(t, b.Len())
-	assert.Zero(t, MetricsDropped.Get())
-	assert.Zero(t, MetricsWritten.Get())
+	require.Zero(t, b.Len())
+	require.Zero(t, MetricsDropped.Get())
+	require.Zero(t, MetricsWritten.Get())
 
 	m := testutil.TestMetric(1, "mymetric")
 	b.Add(m)
-	assert.Equal(t, b.Len(), 1)
-	assert.Equal(t, int64(0), MetricsDropped.Get())
-	assert.Equal(t, int64(1), MetricsWritten.Get())
+	require.Equal(t, b.Len(), 1)
+	require.Equal(t, int64(0), MetricsDropped.Get())
+	require.Equal(t, int64(1), MetricsWritten.Get())
 
 	b.Add(metricList...)
-	assert.Equal(t, b.Len(), 6)
-	assert.Equal(t, int64(0), MetricsDropped.Get())
-	assert.Equal(t, int64(6), MetricsWritten.Get())
+	require.Equal(t, b.Len(), 6)
+	require.Equal(t, int64(0), MetricsDropped.Get())
+	require.Equal(t, int64(6), MetricsWritten.Get())
 }
 
 func TestDroppingMetrics(t *testing.T) {
@@ -157,15 +156,15 @@ func TestDroppingMetrics(t *testing.T) {
 	// Add up to the size of the buffer
 	b.Add(metricList...)
 	b.Add(metricList...)
-	assert.Equal(t, b.Len(), 10)
-	assert.Equal(t, int64(0), MetricsDropped.Get())
-	assert.Equal(t, int64(10), MetricsWritten.Get())
+	require.Equal(t, b.Len(), 10)
+	require.Equal(t, int64(0), MetricsDropped.Get())
+	require.Equal(t, int64(10), MetricsWritten.Get())
 
 	// Add 5 more and verify they were dropped
 	b.Add(metricList...)
-	assert.Equal(t, b.Len(), 10)
-	assert.Equal(t, int64(5), MetricsDropped.Get())
-	assert.Equal(t, int64(15), MetricsWritten.Get())
+	require.Equal(t, b.Len(), 10)
+	require.Equal(t, int64(5), MetricsDropped.Get())
+	require.Equal(t, int64(15), MetricsWritten.Get())
 }
 
 func TestGettingBatches(t *testing.T) {
@@ -177,20 +176,20 @@ func TestGettingBatches(t *testing.T) {
 	// not as many items as requested.
 	b.Add(metricList...)
 	batch := b.Batch(10)
-	assert.Len(t, batch, 5)
+	require.Len(t, batch, 5)
 
 	// Verify that the buffer is now empty
-	assert.Zero(t, b.Len())
-	assert.Zero(t, MetricsDropped.Get())
-	assert.Equal(t, int64(5), MetricsWritten.Get())
+	require.Zero(t, b.Len())
+	require.Zero(t, MetricsDropped.Get())
+	require.Equal(t, int64(5), MetricsWritten.Get())
 
 	// Verify that the buffer returned is not more than the size requested
 	b.Add(metricList...)
 	batch = b.Batch(3)
-	assert.Len(t, batch, 3)
+	require.Len(t, batch, 3)
 
 	// Verify that buffer is not empty
-	assert.Equal(t, b.Len(), 2)
-	assert.Equal(t, int64(0), MetricsDropped.Get())
-	assert.Equal(t, int64(10), MetricsWritten.Get())
+	require.Equal(t, b.Len(), 2)
+	require.Equal(t, int64(0), MetricsDropped.Get())
+	require.Equal(t, int64(10), MetricsWritten.Get())
 }
