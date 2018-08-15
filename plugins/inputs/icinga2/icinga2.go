@@ -1,20 +1,25 @@
 package icinga2
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Icinga2 struct {
-	Server   string
-	Filter   string
-	Username string
-	Password string
+	Server          string
+	Filter          string
+	Username        string
+	Password        string
+	ResponseTimeout internal.Duration
+	tls.ClientConfig
+
+	client *http.Client
 }
 
 type Result struct {
@@ -39,67 +44,87 @@ type Attribute struct {
 type ObjectType string
 
 var sampleConfig = `
-	## Required Icinga2 server address (default: "https://localhost:5665")
-	# server = "https://localhost:5665"
-	## Required Icinga2 object type ("services" or "hosts, default "services")
-	# filter = "services"
-	## Required username used for request HTTP Basic Authentication (default: "")
-	# username = ""
-	## Required password used for HTTP Basic Authentication (default: "")
-	# password = ""
-	`
+  ## Required Icinga2 server address (default: "https://localhost:5665")
+  # server = "https://localhost:5665"
+  
+  ## Required Icinga2 object type ("services" or "hosts, default "services")
+  # filter = "services"
 
-func (s *Icinga2) Description() string {
-	return "Read status from Icinga2"
+  ## Credentials for basic HTTP authentication
+  # username = "admin"
+  # password = "admin"
+
+  ## Maximum time to receive response.
+  # response_timeout = "5s"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  `
+
+func (i *Icinga2) Description() string {
+	return "Gather Icinga2 status"
 }
 
-func (s *Icinga2) SampleConfig() string {
+func (i *Icinga2) SampleConfig() string {
 	return sampleConfig
 }
 
-func (s *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
+func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 	for _, check := range checks {
-		record := make(map[string]interface{})
+		fields := make(map[string]interface{})
 		tags := make(map[string]string)
 
-		record["name"] = check.Attrs.Name
-		record["status"] = check.Attrs.State
+		fields["name"] = check.Attrs.Name
+		fields["status"] = check.Attrs.State
 
 		tags["display_name"] = check.Attrs.DisplayName
 		tags["check_command"] = check.Attrs.CheckCommand
 
-		acc.AddFields(fmt.Sprintf("icinga2_%s_status", s.Filter), record, tags)
+		acc.AddFields(fmt.Sprintf("icinga2_%s_status", i.Filter), fields, tags)
 	}
 }
 
+func (i *Icinga2) createHttpClient() (*http.Client, error) {
+	tlsCfg, err := i.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: i.ResponseTimeout.Duration,
+	}
+
+	return client, nil
+}
+
 func (s *Icinga2) Gather(acc telegraf.Accumulator) error {
-
-	if s.Server == "" {
-		s.Server = "https://localhost:5665"
+	if i.ResponseTimeout.Duration < time.Second {
+		i.ResponseTimeout.Duration = time.Second * 5
 	}
 
-	if s.Filter == "" {
-		s.Filter = "services"
+	if i.client == nil {
+		client, err := a.createHttpClient()
+		if err != nil {
+			return nil, err
+		}
+		i.client = client
 	}
-
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
-	client := &http.Client{Transport: tr}
 
 	url := fmt.Sprintf("%s/v1/objects/%s?attrs=name&attrs=display_name&attrs=state&attrs=check_command", s.Server, s.Filter)
 
 	req, err := http.NewRequest("GET", url, nil)
-
 	if err != nil {
 		return err
 	}
 
 	req.SetBasicAuth(s.Username, s.Password)
-
-	resp, err := client.Do(req)
-
+	resp, err := i.client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -108,7 +133,6 @@ func (s *Icinga2) Gather(acc telegraf.Accumulator) error {
 
 	result := Result{}
 	json.NewDecoder(resp.Body).Decode(&result)
-
 	if err != nil {
 		return err
 	}
@@ -119,5 +143,8 @@ func (s *Icinga2) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("icinga2", func() telegraf.Input { return &Icinga2{} })
+	inputs.Add("icinga2", func() telegraf.Input { return &Icinga2{
+		Server: "https://localhost:5665",
+		Filter: "services",
+	} })
 }
