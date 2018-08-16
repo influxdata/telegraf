@@ -10,8 +10,14 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Kafka topic for producer messages
   topic = "telegraf"
 
-  ## Optional client id
+  ## Optional Client id
   # client_id = "Telegraf"
+
+  ## Set the minimal supported Kafka version.  Setting this enables the use of new
+  ## Kafka features and APIs.  Of particular interested, lz4 compression
+  ## requires at least version 0.10.0.0.
+  ##   ex: version = "1.1.0"
+  # version = ""
 
   ## Optional topic suffix configuration.
   ## If the section is omitted, no suffix is used.
@@ -20,7 +26,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ##   tags        - suffix equals to separator + specified tags' values
   ##                 interleaved with separator
 
-  ## Suffix equals to "_" + measurement's name
+  ## Suffix equals to "_" + measurement name
   # [outputs.kafka.topic_suffix]
   #   method = "measurement"
   #   separator = "_"
