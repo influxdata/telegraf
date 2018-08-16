@@ -125,7 +125,8 @@ The JSON data format also supports extracting time values through the
 config "json_time_key" and "json_time_format". If "json_time_key" is set, 
 "json_time_format" must be specified.  The "json_time_key" describes the 
 name of the field containing time information.  The "json_time_format" 
-must be a recognized Go time format.  
+must be a recognized Go time format.
+If there is no year provided, the metrics will have the current year.
 More info on time formats can be found here: https://golang.org/pkg/time/#Parse
 
 For example, if you had this configuration:

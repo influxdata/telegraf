@@ -78,6 +78,11 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 			return nil, err
 		}
 		nTime, err = time.Parse(p.JSONTimeFormat, timeStr)
+
+		//if the year is 0, set to current year
+		if nTime.Year() == 0 {
+			nTime = nTime.AddDate(time.Now().Year(), 0, 0)
+		}
 		if err != nil {
 			return nil, err
 		}
