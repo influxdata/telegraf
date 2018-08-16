@@ -10,9 +10,6 @@ This plugin parses defined fields containing the specified data format.
   ## specify what to do with the original message. [merge|replace|keep] default=keep
   original = "merge"
 
-
-  #fielddrop = "message"
-
   [processors.parser.config]
     data_format = "json"
     ## additional configurations for parser go here
