@@ -115,7 +115,10 @@ If "string_keys" is specified, the string will be added as a field.
 The "json_query" configuration is a gjson path to an JSON object or 
 list of JSON objects. If this path leads to an array of values or 
 single data point an error will be thrown.  If this configuration 
-is specified, only the result of the query will be parsed and returned as metrics.  
+is specified, only the result of the query will be parsed and returned as metrics.
+
+The "json_name_key" configuration specifies the key of the field whos value will be
+added as the metric name.
 
 Object paths are specified using gjson path format, which is denoted by object keys 
 concatenated with "." to go deeper in nested JSON objects.  
@@ -151,8 +154,11 @@ For example, if you had this configuration:
     "my_tag_2"
   ]
 
+  ## The json path specifying where to extract the metric name from
+  # json_name_key = ""
+
   ## List of field names to extract from JSON and add as string fields
-  # string_fields = []
+  # json_string_fields = []
 
   ## gjson query path to specify a specific chunk of JSON to be parsed with 
   ## the above configuration. If not specified, the whole file will be parsed. 

@@ -638,3 +638,23 @@ func TestTimeErrors(t *testing.T) {
 	require.Equal(t, 0, len(metrics))
 	require.Equal(t, fmt.Errorf("JSON time key could not be found"), err)
 }
+
+func TestNameKey(t *testing.T) {
+	testString := `{
+		"a": 5,
+		"b": {
+			"c": "this is my name",
+			"time":"04 Jan 06 15:04 MST"
+		},
+		"my_tag_1": "foo",
+		"my_tag_2": "baz"
+	}`
+
+	parser := JSONParser{
+		JSONNameKey: "b_c",
+	}
+
+	metrics, err := parser.Parse([]byte(testString))
+	require.NoError(t, err)
+	require.Equal(t, "this is my name", metrics[0].Name())
+}

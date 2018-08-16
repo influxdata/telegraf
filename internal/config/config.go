@@ -1261,14 +1261,22 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
-	if node, ok := tbl.Fields["string_fields"]; ok {
+	if node, ok := tbl.Fields["json_string_fields"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
-						c.StringFields = append(c.StringFields, str.Value)
+						c.JSONStringFields = append(c.JSONStringFields, str.Value)
 					}
 				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["json_name_key"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.JSONNameKey = str.Value
 			}
 		}
 	}
@@ -1443,6 +1451,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "tag_keys")
 	delete(tbl.Fields, "string_fields")
 	delete(tbl.Fields, "json_query")
+	delete(tbl.Fields, "json_name_key")
 	delete(tbl.Fields, "json_time_key")
 	delete(tbl.Fields, "json_time_format")
 	delete(tbl.Fields, "data_type")

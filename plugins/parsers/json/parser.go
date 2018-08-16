@@ -22,6 +22,7 @@ type JSONParser struct {
 	MetricName     string
 	TagKeys        []string
 	StringFields   []string
+	JSONNameKey    string
 	JSONQuery      string
 	JSONTimeKey    string
 	JSONTimeFormat string
@@ -59,6 +60,11 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 		return nil, err
 	}
 
+	//checks if json_name_key is set
+	if p.JSONNameKey != "" {
+		p.MetricName = f.Fields[p.JSONNameKey].(string)
+	}
+
 	//if time key is specified, set it to nTime
 	nTime := time.Now().UTC()
 	if p.JSONTimeKey != "" {
@@ -78,15 +84,14 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 			return nil, err
 		}
 		nTime, err = time.Parse(p.JSONTimeFormat, timeStr)
+		if err != nil {
+			return nil, err
+		}
 
 		//if the year is 0, set to current year
 		if nTime.Year() == 0 {
 			nTime = nTime.AddDate(time.Now().Year(), 0, 0)
 		}
-		if err != nil {
-			return nil, err
-		}
-
 	}
 
 	tags, nFields := p.switchFieldToTag(tags, f.Fields)

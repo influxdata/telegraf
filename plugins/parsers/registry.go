@@ -59,7 +59,9 @@ type Config struct {
 	// TagKeys only apply to JSON data
 	TagKeys []string
 	// FieldKeys only apply to JSON
-	StringFields []string
+	JSONStringFields []string
+
+	JSONNameKey string
 	// MetricName applies to JSON & value. This will be the name of the measurement.
 	MetricName string
 
@@ -120,7 +122,8 @@ func NewParser(config *Config) (Parser, error) {
 	case "json":
 		parser = newJSONParser(config.MetricName,
 			config.TagKeys,
-			config.StringFields,
+			config.JSONNameKey,
+			config.JSONStringFields,
 			config.JSONQuery,
 			config.JSONTimeKey,
 			config.JSONTimeFormat,
@@ -167,6 +170,7 @@ func NewParser(config *Config) (Parser, error) {
 func newJSONParser(
 	metricName string,
 	tagKeys []string,
+	jsonNameKey string,
 	stringFields []string,
 	jsonQuery string,
 	timeKey string,
@@ -177,6 +181,7 @@ func newJSONParser(
 		MetricName:     metricName,
 		TagKeys:        tagKeys,
 		StringFields:   stringFields,
+		JSONNameKey:    jsonNameKey,
 		JSONQuery:      jsonQuery,
 		JSONTimeKey:    timeKey,
 		JSONTimeFormat: timeFormat,
