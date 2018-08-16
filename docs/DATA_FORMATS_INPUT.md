@@ -672,22 +672,20 @@ There are also timestamp modifiers, which can be used to specify the format of t
 Available modifiers can be found below.
 
 The 'measurement' modifier has two seperate use cases, one for static measurement names and one for
-dynamic measurement names. 
+dynamic measurement names.  Static measurement names need a semantic name for a pattern, while dynamic
+measurement names are left empty.
+Static measurement modifier: `patterns = ["%{WORD:test_name:measurement}"]`
+Dynamic measurement modifier: `patterns = ["%{WORD::measurement}"]`
 
-For setting a static measurement name, apply the 'measurement' modifier to the a single pattern in the 
-'patterns' field.  If grok matches the pattern, the measurement name will be changed to the specified name.
+For setting a static measurement name, apply the 'measurement' modifier with a semantic name attached to the 
+field.  If grok matches the pattern, the measurement name will be changed to the specified name.
 So the config: `patterns = ["%{TEST:test_name:measurement}"]` would output a metric named "test_name" if grok
 matches the pattern. It is important to only specify one pattern per element in the patterns array field
 or an error will be thrown.
 So the config: `patterns = ["%{TEST:test_name:measurement}|%{TEST2:test2_name:measurement}"]` would need to be changed
 to: `patterns = ["%{TEST:test_name:measurement}","%{TEST2:test2_name:measurement}"]`
 
-For setting a dynamic measurement name, apply the 'measurement' modifier to a value in a custom pattern.
-If the pattern is matched, the measurement name will be set to the value of the field it was applied to.
-Each pattern should only have one 'measurement' modifier applied to it. The modifier should only apply to fields 
-of a single value type, not to another grok pattern.  The name of the field with the measurement modifier applied
-will be ignored, so these formats are the same: `custom_patterns = {"TEST %{WORD:ignored_name:measurement}"}`
-`custom_patterns = {"TEST %{WORD::measurement}"}`
+For setting a dynamic measurement name, apply the 'measurement' modifier to a specific field in a pattern without a semantic name: `custom_patterns = {"TEST %{WORD::measurement}"}`. If the pattern is matched, the measurement name will be set to the value of the field it was applied to.  Each pattern should only have one 'measurement' modifier applied to it. The modifier should only apply to fields of a single value type, not to another grok pattern.
 
 The best way to get acquainted with grok patterns is to read the logstash docs,
 which are available here:
