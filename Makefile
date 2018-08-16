@@ -17,10 +17,8 @@ BUILDFLAGS ?=
 
 ifdef GOBIN
 PATH := $(GOBIN):$(PATH)
-else ifdef GOPATH
-PATH := $(subst :,/bin:,$(GOPATH))/bin:$(PATH)
 else
-PATH := $(HOME)/go/bin:$(PATH)
+PATH := $(subst :,/bin:,$(shell go env GOPATH))/bin:$(PATH)
 endif
 
 LDFLAGS := $(LDFLAGS) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)
@@ -28,33 +26,39 @@ ifdef VERSION
 	LDFLAGS += -X main.version=$(VERSION)
 endif
 
+.PHONY: all
 all:
-	$(MAKE) deps
-	$(MAKE) telegraf
+	@$(MAKE) --no-print-directory deps
+	@$(MAKE) --no-print-directory telegraf
 
+.PHONY: deps
 deps:
-	go get -u github.com/golang/lint/golint
-	go get -u github.com/golang/dep/cmd/dep
 	dep ensure -vendor-only
 
+.PHONY: telegraf
 telegraf:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
+.PHONY: go-install
 go-install:
 	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
+.PHONY: install
 install: telegraf
 	mkdir -p $(DESTDIR)$(PREFIX)/bin/
 	cp telegraf $(DESTDIR)$(PREFIX)/bin/
 
+
+.PHONY: test
 test:
 	go test -short ./...
 
+.PHONY: fmt
 fmt:
 	@gofmt -w $(filter-out plugins/parsers/influx/machine.go, $(GOFILES))
 
+.PHONY: fmtcheck
 fmtcheck:
-	@echo '[INFO] running gofmt to identify incorrectly formatted code...'
 	@if [ ! -z "$(GOFMT)" ]; then \
 		echo "[ERROR] gofmt has found errors in the following files:"  ; \
 		echo "$(GOFMT)" ; \
@@ -62,8 +66,8 @@ fmtcheck:
 		echo "Run make fmt to fix them." ; \
 		exit 1 ;\
 	fi
-	@echo '[INFO] done.'
 
+.PHONY: test-windows
 test-windows:
 	go test -short ./plugins/inputs/ping/...
 	go test -short ./plugins/inputs/win_perf_counters/...
@@ -71,8 +75,7 @@ test-windows:
 	go test -short ./plugins/inputs/procstat/...
 	go test -short ./plugins/inputs/ntpq/...
 
-# vet runs the Go source code static analysis tool `vet` to find
-# any common errors.
+.PHONY: vet
 vet:
 	@echo 'go vet $$(go list ./... | grep -v ./plugins/parsers/influx)'
 	@go vet $$(go list ./... | grep -v ./plugins/parsers/influx) ; if [ $$? -ne 0 ]; then \
@@ -82,19 +85,33 @@ vet:
 		exit 1; \
 	fi
 
-test-ci: fmtcheck vet
-	go test -short ./...
+.PHONY: check
+check: fmtcheck vet
 
+.PHONY: test-all
 test-all: fmtcheck vet
 	go test ./...
 
+.PHONY: package
 package:
 	./scripts/build.py --package --platform=all --arch=all
 
+.PHONY: package-release
+package-release:
+	./scripts/build.py --release --package --platform=all --arch=all \
+		--upload --bucket=dl.influxdata.com/telegraf/releases
+
+.PHONY: package-nightly
+package-nightly:
+	./scripts/build.py --nightly --package --platform=all --arch=all \
+		--upload --bucket=dl.influxdata.com/telegraf/nightlies
+
+.PHONY: clean
 clean:
 	rm -f telegraf
 	rm -f telegraf.exe
 
+.PHONY: docker-image
 docker-image:
 	./scripts/build.py --package --platform=linux --arch=amd64
 	cp build/telegraf*$(COMMIT)*.deb .
@@ -103,6 +120,7 @@ docker-image:
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
 
+.PHONY: static
 static:
 	@echo "Building static linux binary..."
 	@CGO_ENABLED=0 \
@@ -110,8 +128,17 @@ static:
 	GOARCH=amd64 \
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
+.PHONY: plugin-%
 plugin-%:
 	@echo "Starting dev environment for $${$(@)} input plugin..."
 	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
 
-.PHONY: deps telegraf install test test-windows lint vet test-all package clean docker-image fmtcheck uint64 static
+.PHONY: ci-1.10
+ci-1.10:
+	docker build -t quay.io/influxdb/telegraf-ci:1.10.3 - < scripts/ci-1.10.docker
+	docker push quay.io/influxdb/telegraf-ci:1.10.3
+
+.PHONY: ci-1.9
+ci-1.9:
+	docker build -t quay.io/influxdb/telegraf-ci:1.9.7 - < scripts/ci-1.9.docker
+	docker push quay.io/influxdb/telegraf-ci:1.9.7

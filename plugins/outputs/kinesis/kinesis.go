@@ -17,13 +17,14 @@ import (
 
 type (
 	KinesisOutput struct {
-		Region    string `toml:"region"`
-		AccessKey string `toml:"access_key"`
-		SecretKey string `toml:"secret_key"`
-		RoleARN   string `toml:"role_arn"`
-		Profile   string `toml:"profile"`
-		Filename  string `toml:"shared_credential_file"`
-		Token     string `toml:"token"`
+		Region      string `toml:"region"`
+		AccessKey   string `toml:"access_key"`
+		SecretKey   string `toml:"secret_key"`
+		RoleARN     string `toml:"role_arn"`
+		Profile     string `toml:"profile"`
+		Filename    string `toml:"shared_credential_file"`
+		Token       string `toml:"token"`
+		EndpointURL string `toml:"endpoint_url"`
 
 		StreamName         string     `toml:"streamname"`
 		PartitionKey       string     `toml:"partitionkey"`
@@ -59,6 +60,12 @@ var sampleConfig = `
   #role_arn = ""
   #profile = ""
   #shared_credential_file = ""
+
+  ## Endpoint to make request against, the correct endpoint is automatically
+  ## determined and this option should only be set if you wish to override the
+  ## default.
+  ##   ex: endpoint_url = "http://localhost:8000"
+  # endpoint_url = ""
 
   ## Kinesis StreamName must exist prior to starting telegraf.
   streamname = "StreamName"
@@ -126,13 +133,14 @@ func (k *KinesisOutput) Connect() error {
 	}
 
 	credentialConfig := &internalaws.CredentialConfig{
-		Region:    k.Region,
-		AccessKey: k.AccessKey,
-		SecretKey: k.SecretKey,
-		RoleARN:   k.RoleARN,
-		Profile:   k.Profile,
-		Filename:  k.Filename,
-		Token:     k.Token,
+		Region:      k.Region,
+		AccessKey:   k.AccessKey,
+		SecretKey:   k.SecretKey,
+		RoleARN:     k.RoleARN,
+		Profile:     k.Profile,
+		Filename:    k.Filename,
+		Token:       k.Token,
+		EndpointURL: k.EndpointURL,
 	}
 	configProvider := credentialConfig.Credentials()
 	svc := kinesis.New(configProvider)

@@ -2,6 +2,7 @@ package grok
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -356,17 +357,19 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 }
 
 func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	scanner := bufio.NewScanner(strings.NewReader(string(buf)))
-	var lines []string
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	var metrics []telegraf.Metric
 
-	for _, line := range lines {
+	metrics := make([]telegraf.Metric, 0)
+
+	scanner := bufio.NewScanner(bytes.NewReader(buf))
+	for scanner.Scan() {
+		line := scanner.Text()
 		m, err := p.ParseLine(line)
 		if err != nil {
 			return nil, err
+		}
+
+		if m == nil {
+			continue
 		}
 		metrics = append(metrics, m)
 	}
