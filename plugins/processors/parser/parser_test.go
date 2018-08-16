@@ -13,6 +13,9 @@ import (
 
 //compares metrics without comparing time
 func compareMetrics(t *testing.T, metrics1 []telegraf.Metric, metrics2 []telegraf.Metric) {
+	if len(metrics1) != len(metrics2) {
+		t.Errorf("Output doesn't match expected")
+	}
 	for i, m1 := range metrics1 {
 		m2 := metrics2[i]
 		if m1 == nil || m2 == nil {
@@ -386,20 +389,20 @@ func TestApply(t *testing.T) {
 					time.Unix(0, 0))),
 				Metric(metric.New(
 					"success",
-					map[string]string{},
-					map[string]interface{}{
+					map[string]string{
 						"lvl": "info",
 					},
+					map[string]interface{}{},
 					time.Unix(0, 0))),
 			},
 		},
 		{
 			name:        "Fail to parse one field but parses other [keep] v2",
-			parseFields: []string{"good", "bad"},
+			parseFields: []string{"bad", "good", "ok"},
 			original:    "keep",
 			config: parsers.Config{
 				DataFormat: "json",
-				TagKeys:    []string{"lvl"},
+				TagKeys:    []string{"lvl", "thing"},
 			},
 			input: Metric(
 				metric.New(
@@ -408,6 +411,7 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{
 						"bad":  "why",
 						"good": `{"lvl":"info"}`,
+						"ok":   `{"thing":"thang"}`,
 					},
 					time.Unix(0, 0))),
 			expected: []telegraf.Metric{
@@ -417,14 +421,16 @@ func TestApply(t *testing.T) {
 					map[string]interface{}{
 						"bad":  "why",
 						"good": `{"lvl":"info"}`,
+						"ok":   `{"thing":"thang"}`,
 					},
 					time.Unix(0, 0))),
 				Metric(metric.New(
 					"success",
-					map[string]string{},
-					map[string]interface{}{
-						"lvl": "info",
+					map[string]string{
+						"lvl":   "info",
+						"thing": "thang",
 					},
+					map[string]interface{}{},
 					time.Unix(0, 0))),
 			},
 		},
@@ -537,6 +543,30 @@ func TestBadApply(t *testing.T) {
 					time.Unix(0, 0))),
 			},
 		},
+		{
+			name:        "non string field",
+			parseFields: []string{"some_field"},
+			config: parsers.Config{
+				DataFormat: "json",
+			},
+			input: Metric(
+				metric.New(
+					"bad",
+					map[string]string{},
+					map[string]interface{}{
+						"some_field": 5,
+					},
+					time.Unix(0, 0))),
+			expected: []telegraf.Metric{
+				Metric(metric.New(
+					"bad",
+					map[string]string{},
+					map[string]interface{}{
+						"some_field": 5,
+					},
+					time.Unix(0, 0))),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -548,5 +578,70 @@ func TestBadApply(t *testing.T) {
 		output := parser.Apply(tt.input)
 
 		compareMetrics(t, output, tt.expected)
+	}
+}
+
+// Benchmarks
+
+func getMetricFields(metric telegraf.Metric) interface{} {
+	key := "field3"
+	if value, ok := metric.Fields()[key]; ok {
+		return value
+	}
+	return nil
+}
+
+func getMetricFieldList(metric telegraf.Metric) interface{} {
+	key := "field3"
+	fields := metric.FieldList()
+	for _, field := range fields {
+		if field.Key == key {
+			return field.Value
+		}
+	}
+	return nil
+}
+
+func BenchmarkFieldListing(b *testing.B) {
+	metric := Metric(metric.New(
+		"test",
+		map[string]string{
+			"some": "tag",
+		},
+		map[string]interface{}{
+			"field0": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
+			"field1": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
+			"field2": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
+			"field3": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
+			"field4": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
+			"field5": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
+			"field6": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
+		},
+		time.Unix(0, 0)))
+
+	for n := 0; n < b.N; n++ {
+		getMetricFieldList(metric)
+	}
+}
+
+func BenchmarkFields(b *testing.B) {
+	metric := Metric(metric.New(
+		"test",
+		map[string]string{
+			"some": "tag",
+		},
+		map[string]interface{}{
+			"field0": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
+			"field1": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
+			"field2": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
+			"field3": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
+			"field4": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
+			"field5": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
+			"field6": `{"ts":"2018-07-24T19:43:40.275Z","lvl":"info","msg":"http request","method":"POST"}`,
+		},
+		time.Unix(0, 0)))
+
+	for n := 0; n < b.N; n++ {
+		getMetricFields(metric)
 	}
 }

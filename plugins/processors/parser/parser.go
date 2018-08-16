@@ -1,8 +1,8 @@
 package parser
 
 import (
-	"fmt"
 	"log"
+	"reflect"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -49,9 +49,9 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		}
 	}
 
-	rMetrics := []telegraf.Metric{}
+	toReturnMetrics := []telegraf.Metric{}
 	if p.Original != "replace" {
-		rMetrics = metrics
+		toReturnMetrics = metrics
 	}
 
 	name := ""
@@ -60,40 +60,41 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		if n := metric.Name(); n != "" {
 			name = n
 		}
-		sMetrics := []telegraf.Metric{}
+		combinedParsedMetric := []telegraf.Metric{}
 		for _, key := range p.ParseFields {
-			if value, ok := metric.Fields()[key]; ok {
-				strVal := fmt.Sprintf("%v", value)
-				nMetrics, err := p.parseField(strVal)
-				if err != nil {
-					log.Printf("E! [processors.parser] could not parse field %v: %v", key, err)
-					switch p.Original {
-					case "keep":
-						return metrics
-					case "merge":
-						nMetrics = metrics
+			fields := metric.FieldList()
+			for _, field := range fields {
+				if field.Key == key {
+					if reflect.TypeOf(field.Value).String() != "string" {
+						log.Printf("E! [processors.parser] field '%v' not a string, skipping", key)
+						continue
 					}
+					fromFieldMetric, err := p.parseField(field.Value.(string))
+					if err != nil {
+						log.Printf("E! [processors.parser] could not parse field %v: %v", key, err)
+						switch p.Original {
+						case "keep":
+							continue
+						case "merge":
+							fromFieldMetric = metrics
+						}
+					}
+					// multiple parsed fields shouldn't create multiple metrics so we'll merge tags/fields down into one prior to returning.
+					combinedParsedMetric = append(combinedParsedMetric, fromFieldMetric...)
 				}
-				sMetrics = append(sMetrics, nMetrics...)
-			} else {
-				fmt.Println("key not found", key)
 			}
 		}
-		rMetrics = append(rMetrics, p.mergeTagsFields(sMetrics...)...)
+		toReturnMetrics = append(toReturnMetrics, p.mergeTagsFields(combinedParsedMetric...)...)
 	}
 	if p.Original == "merge" {
-		rMetrics = p.mergeTagsFields(rMetrics...)
+		toReturnMetrics = p.mergeTagsFields(toReturnMetrics...)
 	}
 
-	return p.setName(name, rMetrics...)
+	return p.setName(name, toReturnMetrics...)
 
 }
 
 func (p Parser) setName(name string, metrics ...telegraf.Metric) []telegraf.Metric {
-	if len(metrics) == 0 {
-		return nil
-	}
-
 	for i := range metrics {
 		metrics[i].SetName(name)
 	}
@@ -108,11 +109,11 @@ func (p Parser) mergeTagsFields(metrics ...telegraf.Metric) []telegraf.Metric {
 
 	rMetric := metrics[0]
 	for _, metric := range metrics {
-		for key, field := range metric.Fields() {
-			rMetric.AddField(key, field)
+		for _, field := range metric.FieldList() {
+			rMetric.AddField(field.Key, field.Value)
 		}
-		for key, tag := range metric.Tags() {
-			rMetric.AddTag(key, tag)
+		for _, tag := range metric.TagList() {
+			rMetric.AddTag(tag.Key, tag.Value)
 		}
 	}
 	return []telegraf.Metric{rMetric}
