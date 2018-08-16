@@ -15,6 +15,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -36,58 +37,37 @@ const sampleConfig = `
   # username = "telegraf"
   # password = "mypassword"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Examples:
+[[inputs.elasticsearch_query.aggregation]]
+  measurement_name = "measurement"
+  index = "index-*"
+  date_field = "@timestamp"
+  ## Time window to query (eg. "1m" to query documents from last minute).
+  ## Normally should be set to same as collection interval
+  query_period = "1m"
 
-  # Search the average response time, per URI and per response status code
-[[inputs.elasticsearch_query.aggregation]]
-  measurement_name = "http_logs" 	# Name of destination measurement
-  index = "my-index-*" 				# Elasticsearch index to query
-  filter_query = "*" 				# Optional: Lucene query to filter results
-  metric_fields = ["response_time"] # Optional: field to aggregate values (must be numeric fields, for calculation)
-  metric_function = "avg" 			# Optional: function to use on aggregation
-  tags = ["URI.keyword", "response.keyword"] # Optional: fields to be used as tags (must be non-analyzed fields, aggregations will be performed per tag)
-  include_missing_tag = true 		# Optional: set to true to not ignore documents where the tag(s) specified above does not exist
-  missing_tag_value = "null" 		# Optional: value of the tag set for documents where the tag does not exist
-  date_field = "@timestamp" 		# Timestamp field, mandatory
-  query_period = "1m"  				# Time window to query (eg. "1m" to query documents from last minute). Normally should be set to same as collection interval
- 
-# Search the maximum response time per method and per URI
-[[inputs.elasticsearch_query.aggregation]]
-  measurement_name = "http_logs"
-  index = "my-index-*"
+  ## Optional parameters:
+  ## Lucene query to filter results
   filter_query = "*"
-  metric_fields = ["response_time"]
-  metric_function = "max"
-  tags = ["method.keyword","URI.keyword"]
-  include_missing_tag = false
+  ## Fields to aggregate values (must be numeric fields)
+  metric_fields = ["metric"]
+  ## Aggregation function to use on the metric fields
+  ## Valid values are: avg, sum, min, max, sum
+  metric_function = "avg"
+  ## Fields to be used as tags
+  ## Must be non-analyzed fields, aggregations are performed per tag
+  tags = ["field.keyword", "field2.keyword"]
+  ## Set to true to not ignore documents when the tag(s) above are missing
+  include_missing_tag = true
+  ## String value of the tag when the tag does not exist
+  ## Used when include_missing_tag is true
   missing_tag_value = "null"
-  date_field = "@timestamp"
-  query_period = "1m"
-
-# Search number of documents matching a filter query
-[[inputs.elasticsearch_query.aggregation]]
-  measurement_name = "http_logs"
-  index = "*"
-  filter_query = "product_1 AND HEAD"
-  query_period = "1m"
-  date_field = "@timestamp"
-
-# Search number of documents matching a filter query per response status code
-[[inputs.elasticsearch_query.aggregation]]
-  measurement_name = "http_logs"
-  index = "*"
-  filter_query = "downloads"
-  tags = ["response.keyword"]
-  include_missing_tag = false
-  date_field = "@timestamp"
-  query_period = "1m"
 `
 
 type ElasticsearchQuery struct {
@@ -99,12 +79,10 @@ type ElasticsearchQuery struct {
 	Timeout             internal.Duration
 	HealthCheckInterval internal.Duration
 	Aggregations        []Aggregation `toml:"aggregation"`
-	SSLCA               string        `toml:"ssl_ca"`   // Path to CA file
-	SSLCert             string        `toml:"ssl_cert"` // Path to host cert file
-	SSLKey              string        `toml:"ssl_key"`  // Path to cert key file
-	InsecureSkipVerify  bool          // Use SSL but skip chain & host verification
-	Client              *elastic.Client
-	acc                 telegraf.Accumulator
+	tls.ClientConfig
+	httpclient *http.Client
+	ESClient   *elastic.Client
+	acc        telegraf.Accumulator
 }
 
 type Aggregation struct {
@@ -133,6 +111,14 @@ type aggregationQueryData struct {
 	aggregation elastic.Aggregation
 }
 
+func (e *ElasticsearchQuery) SampleConfig() string {
+	return sampleConfig
+}
+
+func (e *ElasticsearchQuery) Description() string {
+	return description
+}
+
 func (e *ElasticsearchQuery) init() error {
 	if e.URLs == nil {
 		return fmt.Errorf("Elasticsearch urls is not defined")
@@ -146,21 +132,16 @@ func (e *ElasticsearchQuery) connectToES() error {
 
 	var clientOptions []elastic.ClientOptionFunc
 
-	tlsCfg, err := internal.GetTLSConfig(e.SSLCert, e.SSLKey, e.SSLCA, e.InsecureSkipVerify)
-	if err != nil {
-		return err
-	}
-	tr := &http.Transport{
-		TLSClientConfig: tlsCfg,
-	}
-
-	httpclient := &http.Client{
-		Transport: tr,
-		Timeout:   e.Timeout.Duration,
+	if e.httpclient == nil {
+		httpclient, err := e.createHttpClient()
+		if err != nil {
+			return err
+		}
+		e.httpclient = httpclient
 	}
 
 	clientOptions = append(clientOptions,
-		elastic.SetHttpClient(httpclient),
+		elastic.SetHttpClient(e.httpclient),
 		elastic.SetSniff(e.EnableSniffer),
 		elastic.SetURL(e.URLs...),
 		elastic.SetHealthcheckInterval(e.HealthCheckInterval.Duration),
@@ -198,11 +179,11 @@ func (e *ElasticsearchQuery) connectToES() error {
 
 	// quit if ES version is not supported
 	i, err := strconv.Atoi(strings.Split(esVersion, ".")[0])
-	if err != nil || i != 5 {
+	if err != nil || i < 5 {
 		return fmt.Errorf("Elasticsearch query: ES version not supported: %s", esVersion)
 	}
 
-	e.Client = client
+	e.ESClient = client
 	return nil
 }
 
@@ -228,6 +209,23 @@ func (e *ElasticsearchQuery) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 	return nil
+}
+
+func (e *ElasticsearchQuery) createHttpClient() (*http.Client, error) {
+	tlsCfg, err := e.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+	tr := &http.Transport{
+		ResponseHeaderTimeout: e.Timeout.Duration,
+		TLSClientConfig:       tlsCfg,
+	}
+	httpclient := &http.Client{
+		Transport: tr,
+		Timeout:   e.Timeout.Duration,
+	}
+
+	return httpclient, nil
 }
 
 func (e *ElasticsearchQuery) esAggregationQuery(aggregation Aggregation) error {
@@ -276,12 +274,4 @@ func init() {
 			HealthCheckInterval: internal.Duration{Duration: time.Second * 10},
 		}
 	})
-}
-
-func (e *ElasticsearchQuery) SampleConfig() string {
-	return sampleConfig
-}
-
-func (e *ElasticsearchQuery) Description() string {
-	return description
 }

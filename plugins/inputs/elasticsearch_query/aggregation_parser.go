@@ -54,7 +54,6 @@ func (e *ElasticsearchQuery) recurseResponse(aggKeys []*aggKey, aggs elastic.Agg
 			case *elastic.AggregationValueMetric:
 
 				// we've found a metric aggregation, add to field map
-
 				fields[aggKey.name] = float64(0)
 
 				if resp.Value != nil {
@@ -106,8 +105,6 @@ func (e *ElasticsearchQuery) getResponseAggregation(function string, aggName str
 	case "terms":
 		agg, found = aggs.Terms(aggName)
 		// TODO:
-		// case "count":
-		// 	agg, found = aggs.ValueCount(aggName)
 		// case "percentile":
 		// 	agg, found = aggs.Percentiles(aggName)
 	}

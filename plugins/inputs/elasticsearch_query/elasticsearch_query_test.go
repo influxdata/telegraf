@@ -123,7 +123,7 @@ func TestElasticsearchQuery(t *testing.T) {
 		fmt.Printf("Error connecting to Elasticsearch")
 	}
 
-	bulkRequest := e.Client.Bulk()
+	bulkRequest := e.ESClient.Bulk()
 
 	// populate elasticsearch with nginx_logs test data file
 	file, err := os.Open("testdata/nginx_logs")

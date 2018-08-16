@@ -10,7 +10,8 @@ The following is supported:
 
 ## Configuration
 
-```yaml
+```toml
+[[inputs.elasticsearch_query]]
  ## The full HTTP endpoint URL for your Elasticsearch instance
   ## Multiple urls can be specified as part of the same cluster,
   ## this means that only ONE of the urls will be written to each interval.
@@ -27,29 +28,61 @@ The following is supported:
   # username = "telegraf"
   # password = "mypassword"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
-  ## Examples:
-
-  # Search the average response time, per URI and per response status code
 [[inputs.elasticsearch_query.aggregation]]
-  measurement_name = "http_logs"   # Name of destination measurement
-  index = "my-index-*"              # Elasticsearch index to query
-  filter_query = "*"                # Optional: Lucene query to filter results
-  metric_fields = ["response_time"] # Optional: field to aggregate values (must be numeric fields, for calculation)
-  metric_function = "avg"           # Optional: function to use on aggregation
-  tags = ["URI.keyword", "response.keyword"] # Optional: fields to be used as tags (must be non-analyzed fields, aggregations will be performed per tag)
-  include_missing_tag = true        # Optional: set to true to not ignore documents where the tag(s) specified above does not exist
-  missing_tag_value = "null"        # Optional: value of the tag set for documents where the tag does not exist
-  date_field = "@timestamp"         # Timestamp field, mandatory
-  query_period = "1m"               # Time window to query (eg. "1m" to query documents from last minute). Normally should be set to same as collection interval
+  measurement_name = "measurement"
+  index = "index-*"
+  date_field = "@timestamp"
+  ## Time window to query (eg. "1m" to query documents from last minute).
+  ## Normally should be set to same as collection interval
+  query_period = "1m"
 
-# Search the maximum response time per method and per URI
+  ## Optional parameters:
+  ## Lucene query to filter results
+  filter_query = "*"
+  ## Fields to aggregate values (must be numeric fields)
+  metric_fields = ["metric"]
+  ## Aggregation function to use on the metric fields
+  ## Valid values are: avg, sum, min, max, sum
+  metric_function = "avg"
+  ## Fields to be used as tags
+  ## Must be non-analyzed fields, aggregations are performed per tag
+  tags = ["field.keyword", "field2.keyword"]
+  ## Set to true to not ignore documents when the tag(s) above are missing
+  include_missing_tag = true
+  ## String value of the tag when the tag does not exist
+  ## Used when include_missing_tag is true
+  missing_tag_value = "null"
+
+```
+
+## Examples
+
+### Search the average response time, per URI and per response status code
+
+```toml
+[[inputs.elasticsearch_query.aggregation]]
+  measurement_name = "http_logs"
+  index = "my-index-*"
+  filter_query = "*"
+  metric_fields = ["response_time"]
+  metric_function = "avg"
+  tags = ["URI.keyword", "response.keyword"]
+  include_missing_tag = true
+  missing_tag_value = "null"
+  date_field = "@timestamp"
+  query_period = "1m"
+```
+
+### Search the maximum response time per method and per URI
+
+```toml
 [[inputs.elasticsearch_query.aggregation]]
   measurement_name = "http_logs"
   index = "my-index-*"
@@ -61,16 +94,22 @@ The following is supported:
   missing_tag_value = "null"
   date_field = "@timestamp"
   query_period = "1m"
+```
 
-# Search number of documents matching a filter query in all indices
+### Search number of documents matching a filter query in all indices
+
+```toml
 [[inputs.elasticsearch_query.aggregation]]
   measurement_name = "http_logs"
   index = "*"
   filter_query = "product_1 AND HEAD"
   query_period = "1m"
   date_field = "@timestamp"
+```
 
-# Search number of documents matching a filter query, returning per response status code
+### Search number of documents matching a filter query, returning per response status code
+
+```toml
 [[inputs.elasticsearch_query.aggregation]]
   measurement_name = "http_logs"
   index = "*"

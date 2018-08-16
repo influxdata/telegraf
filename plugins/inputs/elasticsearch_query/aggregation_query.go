@@ -23,7 +23,7 @@ func (e *ElasticsearchQuery) runAggregationQuery(ctx context.Context, aggregatio
 	query = query.Filter(elastic.NewQueryStringQuery(filterQuery))
 	query = query.Filter(elastic.NewRangeQuery(aggregation.DateField).From(from).To(now))
 
-	search := e.Client.Search().
+	search := e.ESClient.Search().
 		Index(aggregation.Index).
 		Query(query).
 		Size(0)
@@ -51,7 +51,7 @@ func (e *ElasticsearchQuery) getMetricFields(ctx context.Context, aggregation Ag
 	var ftype string
 	mapMetricFields := make(map[string]string)
 
-	if e.Client == nil {
+	if e.ESClient == nil {
 		err := e.connectToES()
 		if err != nil {
 			return nil, err
@@ -61,7 +61,7 @@ func (e *ElasticsearchQuery) getMetricFields(ctx context.Context, aggregation Ag
 	// TODO: check if it is possible to improve this
 	for _, metricField := range aggregation.MetricFields {
 
-		resp, err := e.Client.GetFieldMapping().Index(aggregation.Index).Field(metricField).Do(ctx)
+		resp, err := e.ESClient.GetFieldMapping().Index(aggregation.Index).Field(metricField).Do(ctx)
 
 		if err != nil {
 			return mapMetricFields, err
@@ -140,8 +140,6 @@ func (e *ElasticsearchQuery) getFunctionAggregation(function string, aggfield st
 	case "max":
 		agg = elastic.NewMaxAggregation().Field(aggfield)
 	// TODO:
-	// case "count":
-	// 	agg = elastic.NewValueCountAggregation().Field(aggfield)
 	// case "percentile":
 	// 	agg = elastic.NewPercentilesAggregation().Field(aggfield)
 	default:
