@@ -159,9 +159,6 @@ func (p *Parser) Compile() error {
 			p.CustomPatterns += "\n" + name + " " + "%{" + splitPattern[0] + "}" + "\n"
 			p.NamedPatterns = append(p.NamedPatterns, "%{"+name+"}")
 		} else {
-			if strings.Contains(pattern, ":measurement}") {
-				return fmt.Errorf("pattern with measurement modifier must have own 'pattern' field")
-			}
 			if pattern == "" {
 				continue
 			}
@@ -266,7 +263,11 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 		switch t {
 		case MEASUREMENT:
-			p.Measurement = v
+			if k == "measurement_name" {
+				p.Measurement = v
+			} else {
+				p.Measurement = k
+			}
 		case INT:
 			iv, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
@@ -381,7 +382,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	modifiers, ok := p.patternModifiers[patternName]
 	if ok && modifiers[1] == "measurement" {
 		if p.patternModifiers[patternName][0] == "" {
-			return nil, fmt.Errorf("pattern: %v must be named to use 'measurement' modifier", patternName)
+			//return nil, fmt.Errorf("pattern: %v must be a field to use dynamic 'measurement' modifier", patternName)
 		}
 		p.Measurement = p.patternModifiers[patternName][0]
 	}
@@ -499,6 +500,7 @@ func (p *Parser) parseTypedCaptures(name, pattern string) (string, error) {
 				//add "measurement_name" to pattern so it is valid grok
 				pattern = strings.Replace(pattern, "::measurement", ":measurement_name:measurement", 1)
 			}
+			log.Printf("typed: %v, name: %v, modifier: %v", patternName, match[1], match[2])
 			p.typeMap[patternName][match[1]] = match[2]
 		}
 

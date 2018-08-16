@@ -1,6 +1,7 @@
 package grok
 
 import (
+	"log"
 	"testing"
 	"time"
 
@@ -969,21 +970,23 @@ func TestDynamicMeasurementModifier(t *testing.T) {
 	require.NoError(t, p.Compile())
 	m, err := p.ParseLine("4 5 hello")
 	require.NoError(t, err)
-	require.Equal(t, m.Name(), "hello")
+	require.Equal(t, m.Name(), "var3")
 }
 
 func TestStaticMeasurementModifier(t *testing.T) {
 	p := &Parser{
-		Patterns:       []string{"%{TEST:test_name:measurement}"},
-		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:var3:string}",
+		Patterns: []string{"%{NUMBER:hi:string} %{WORD:hi:string}"},
+		//CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:var3:tag}",
 	}
 
 	require.NoError(t, p.Compile())
-	m, err := p.ParseLine("4 5 hello")
+	m, err := p.ParseLine("42 hi")
+	log.Printf("%v", m)
 	require.NoError(t, err)
 	require.Equal(t, m.Name(), "test_name")
 }
 
+// tests that the top level measurement name is used
 func TestStaticAndDynamicMeasurementModifier(t *testing.T) {
 	p := &Parser{
 		Patterns:       []string{"%{TEST:test_name:measurement}"},
