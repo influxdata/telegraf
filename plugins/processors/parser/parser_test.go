@@ -1,4 +1,4 @@
-package fieldparser
+package parser
 
 import (
 	"reflect"
@@ -72,7 +72,7 @@ func TestApply(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		parser := FieldParser{
+		parser := Parser{
 			config:      tt.config,
 			parseFields: tt.parseFields,
 		}
@@ -109,7 +109,7 @@ func TestBadApply(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		parser := FieldParser{
+		parser := Parser{
 			config:      tt.config,
 			parseFields: tt.parseFields,
 		}
