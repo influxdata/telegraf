@@ -34,7 +34,7 @@ services and hosts. You can read Icinga2's documentation for their remote API
 
 ### Measurements & Fields:
 
-- ll measurements have the following fields:
+- All measurements have the following fields:
     - name (string)
     - state (int)
 
