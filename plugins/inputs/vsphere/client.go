@@ -5,13 +5,13 @@ import (
 	"log"
 	"net/url"
 	"sync"
-	"time"
 
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/session"
 	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vim25"
+	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/soap"
 )
 
@@ -19,11 +19,10 @@ import (
 // a single Client is reused across all functions and goroutines, but the client
 // is periodically recycled to avoid authentication expiration issues.
 type ClientFactory struct {
-	client   *Client
-	mux      sync.Mutex
-	url      *url.URL
-	parent   *VSphere
-	recycler *time.Ticker
+	client *Client
+	mux    sync.Mutex
+	url    *url.URL
+	parent *VSphere
 }
 
 // Client represents a connection to vSphere and is backed by a govmoni connection
@@ -33,39 +32,21 @@ type Client struct {
 	Root      *view.ContainerView
 	Perf      *performance.Manager
 	Valid     bool
-	refcount  int32
-	mux       sync.Mutex
-	idle      *sync.Cond
 	closeGate sync.Once
 }
 
 // NewClientFactory creates a new ClientFactory and prepares it for use.
 func NewClientFactory(ctx context.Context, url *url.URL, parent *VSphere) *ClientFactory {
-	cf := &ClientFactory{
-		client:   nil,
-		parent:   parent,
-		url:      url,
-		recycler: time.NewTicker(30 * time.Minute),
+	return &ClientFactory{
+		client: nil,
+		parent: parent,
+		url:    url,
 	}
-
-	// Perdiodically recycle clients to make sure they don't expire
-	go func() {
-		for {
-			select {
-			case <-cf.recycler.C:
-				cf.destroyCurrent()
-			case <-ctx.Done():
-				cf.destroyCurrent() // Kill the current connection when we're done.
-				return
-			}
-		}
-	}()
-	return cf
 }
 
 // GetClient returns a client. The caller is responsible for calling Release()
 // on the client once it's done using it.
-func (cf *ClientFactory) GetClient() (*Client, error) {
+func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 	cf.mux.Lock()
 	defer cf.mux.Unlock()
 	if cf.client == nil {
@@ -74,17 +55,18 @@ func (cf *ClientFactory) GetClient() (*Client, error) {
 			return nil, err
 		}
 	}
-	cf.client.grab()
-	return cf.client, nil
-}
 
-func (cf *ClientFactory) destroyCurrent() {
-	cf.mux.Lock()
-	defer cf.mux.Unlock()
-	go func(c *Client) {
-		c.closeWhenIdle()
-	}(cf.client)
-	cf.client = nil
+	// Execute a dummy call against the server to make sure the client is
+	// still functional. If not, try to log back in. If that doesn't work,
+	// we give up.
+	if _, err := methods.GetCurrentTime(ctx, cf.client.Client); err != nil {
+		log.Printf("I! [input.vsphere]: Client session seems to have time out. Reauthenticating!")
+		if cf.client.Client.SessionManager.Login(ctx, url.UserPassword(cf.parent.Username, cf.parent.Password)) != nil {
+			return nil, err
+		}
+	}
+
+	return cf.client, nil
 }
 
 // NewClient creates a new vSphere client based on the url and setting passed as parameters.
@@ -152,16 +134,22 @@ func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 
 	sw.Stop()
 
-	result := &Client{
-		Client:   c,
-		Views:    m,
-		Root:     v,
-		Perf:     p,
-		Valid:    true,
-		refcount: 0,
+	return &Client{
+		Client: c,
+		Views:  m,
+		Root:   v,
+		Perf:   p,
+		Valid:  true,
+	}, nil
+}
+
+// Close shuts down a ClientFactory and releases any resources associated with it.
+func (cf *ClientFactory) Close() {
+	cf.mux.Lock()
+	defer cf.mux.Unlock()
+	if cf.client != nil {
+		cf.client.close()
 	}
-	result.idle = sync.NewCond(&result.mux)
-	return result, nil
 }
 
 func (c *Client) close() {
@@ -178,33 +166,4 @@ func (c *Client) close() {
 			c.Client.Logout(ctx)
 		}
 	})
-}
-
-func (c *Client) closeWhenIdle() {
-	c.mux.Lock()
-	defer c.mux.Unlock()
-	log.Printf("D! [input.vsphere]: Waiting to close connection")
-	for c.refcount > 0 {
-		c.idle.Wait()
-	}
-	log.Printf("D! [input.vsphere]: Closing connection")
-	c.close()
-}
-
-// Release indicates that a caller is no longer using the client and it can
-// be recycled if needed.
-func (c *Client) Release() {
-	c.mux.Lock()
-	defer c.mux.Unlock()
-	if c.refcount--; c.refcount == 0 {
-		c.idle.Broadcast()
-	}
-	//log.Printf("D! [input.vsphere]: Release. Connection refcount:%d", c.refcount)
-}
-
-func (c *Client) grab() {
-	c.mux.Lock()
-	defer c.mux.Unlock()
-	c.refcount++
-	//log.Printf("D! [input.vsphere]: Grab. Connection refcount:%d", c.refcount)
 }

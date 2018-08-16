@@ -214,11 +214,10 @@ func (e *Endpoint) init(ctx context.Context) error {
 }
 
 func (e *Endpoint) setupMetricIds(ctx context.Context) error {
-	client, err := e.clientFactory.GetClient()
+	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
 		return err
 	}
-	defer client.Release()
 
 	mn, err := client.Perf.CounterInfoByName(ctx)
 
@@ -233,11 +232,10 @@ func (e *Endpoint) setupMetricIds(ctx context.Context) error {
 }
 
 func (e *Endpoint) getMetadata(ctx context.Context, in interface{}) interface{} {
-	client, err := e.clientFactory.GetClient()
+	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
 		return err
 	}
-	defer client.Release()
 
 	rq := in.(*metricQRequest)
 	metrics, err := client.Perf.AvailableMetric(ctx, rq.obj.ref.Reference(), rq.res.sampling)
@@ -259,11 +257,10 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	sw := NewStopwatch("discover", e.URL.Host)
 	var err error
 
-	client, err := e.clientFactory.GetClient()
+	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
 		return err
 	}
-	defer client.Release()
 
 	log.Printf("D! [input.vsphere]: Discover new objects for %s", e.URL.Host)
 
@@ -389,7 +386,13 @@ func getDatastores(ctx context.Context, root *view.ContainerView) (objectMap, er
 	return m, nil
 }
 
-func (e *Endpoint) collect(ctx context.Context, acc telegraf.Accumulator) error {
+// Close shuts down an Endpoint and releases any resources associated with it.
+func (e *Endpoint) Close() {
+	e.clientFactory.Close()
+}
+
+// Collect runs a round of data collections as specified in the configuration.
+func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error {
 	// Add returning false means we've been released from Wait and no
 	// more tasks are allowed. This happens when the plugin is stopped
 	// or reloaded.
@@ -563,11 +566,10 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 	count := 0
 	prefix := "vsphere" + e.Parent.Separator + resourceType
 
-	client, err := e.clientFactory.GetClient()
+	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
 		return 0, err
 	}
-	defer client.Release()
 
 	metrics, err := client.Perf.Query(ctx, pqs)
 	if err != nil {
@@ -591,9 +593,9 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 		for _, v := range em.Value {
 			name := v.Name
 			t := map[string]string{
-				"vcenter":  e.URL.Host,
-				"hostname": instInfo.name,
-				"moid":     moid,
+				"vcenter": e.URL.Host,
+				"source":  instInfo.name,
+				"moid":    moid,
 			}
 
 			// Populate tags

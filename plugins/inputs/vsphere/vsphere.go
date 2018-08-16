@@ -227,6 +227,7 @@ func (v *VSphere) Stop() {
 	for _, ep := range v.endpoints {
 		log.Printf("D! [input.vsphere]: Waiting for endpoint %s to finish", ep.URL.Host)
 		ep.wg.Wait()
+		ep.Close()
 	}
 }
 
@@ -244,7 +245,7 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(endpoint *Endpoint) {
 			defer wg.Done()
-			err := endpoint.collect(v.rootCtx, acc)
+			err := endpoint.Collect(v.rootCtx, acc)
 			if err == context.Canceled {
 
 				// No need to signal errors if we were merely canceled.
