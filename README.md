@@ -43,7 +43,7 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 Telegraf requires golang version 1.9 or newer, the Makefile requires GNU make.
 
 1. [Install Go](https://golang.org/doc/install) >=1.9
-2. [Install dep](https://golang.github.io/dep/docs/installation.html) ==v0.4.1
+2. [Install dep](https://golang.github.io/dep/docs/installation.html) ==v0.5.0
 3. Download Telegraf source:
    ```
    go get -d github.com/influxdata/telegraf
@@ -127,6 +127,7 @@ configuration options.
 
 ## Input Plugins
 
+* [activemq](./plugins/inputs/activemq)
 * [aerospike](./plugins/inputs/aerospike)
 * [amqp_consumer](./plugins/inputs/amqp_consumer) (rabbitmq)
 * [apache](./plugins/inputs/apache)
@@ -278,6 +279,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [override](./plugins/processors/override)
 * [printer](./plugins/processors/printer)
 * [regex](./plugins/processors/regex)
+* [rename](./plugins/processors/rename)
 * [topk](./plugins/processors/topk)
 
 ## Aggregator Plugins

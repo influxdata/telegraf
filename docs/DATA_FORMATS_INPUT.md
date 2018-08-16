@@ -10,6 +10,7 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Collectd](#collectd)
 1. [Dropwizard](#dropwizard)
 1. [Grok](#grok)
+1. [Wavefront](#wavefront)
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -660,7 +661,7 @@ For more information about the dropwizard json format see
   #   tag2 = "tags.tag2"
 ```
 
-# Grok
+# Grok:
 
 The grok data format parses line delimited data using a regular expression like
 language.
@@ -671,7 +672,7 @@ which are available here:
 
 #### Grok Configuration:
 ```toml
-[[inputs.reader]]
+[[inputs.file]]
   ## Files to parse each interval.
   ## These accept standard unix glob matching rules, but with the addition of
   ## ** as a "super asterisk". ie:
@@ -688,7 +689,7 @@ which are available here:
 
   ## This is a list of patterns to check the given log file(s) for.
   ## Note that adding patterns here increases processing time. The most
-  ## efficient configuration is to have one pattern per logparser.
+  ## efficient configuration is to have one pattern.
   ## Other common built-in patterns are:
   ##   %{COMMON_LOG_FORMAT}   (plain apache & nginx access logs)
   ##   %{COMBINED_LOG_FORMAT} (access logs + referrer & agent)
@@ -713,8 +714,8 @@ which are available here:
   grok_timezone = "Canada/Eastern"
 ```
 
-The Telegraf grok parser uses a slightly modified version of logstash "grok"
-patterns, with the format
+The grok parser uses a slightly modified version of logstash "grok"
+patterns, with the format:
 
 ```
 %{<capture_syntax>[:<semantic_name>][:<modifier>]}
@@ -781,9 +782,8 @@ This example input and config parses a file using a custom timestamp conversion:
 ```
 
 ```toml
-[[inputs.logparser]]
-  [inputs.logparser.grok]
-    patterns = ['%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02 15:04:05"} value=%{NUMBER:value:int}']
+[[inputs.file]]
+  grok_patterns = ['%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02 15:04:05"} value=%{NUMBER:value:int}']
 ```
 
 This example input and config parses a file using a timestamp in unix time:
@@ -794,9 +794,8 @@ This example input and config parses a file using a timestamp in unix time:
 ```
 
 ```toml
-[[inputs.logparser]]
-  [inputs.logparser.grok]
-    patterns = ['%{NUMBER:timestamp:ts-epoch} value=%{NUMBER:value:int}']
+[[inputs.file]]
+  grok_patterns = ['%{NUMBER:timestamp:ts-epoch} value=%{NUMBER:value:int}']
 ```
 
 This example parses a file using a built-in conversion and a custom pattern:
@@ -806,20 +805,19 @@ Wed Apr 12 13:10:34 PST 2017 value=42
 ```
 
 ```toml
-[[inputs.logparser]]
-  [inputs.logparser.grok]
-	patterns = ["%{TS_UNIX:timestamp:ts-unix} value=%{NUMBER:value:int}"]
-    custom_patterns = '''
-      TS_UNIX %{DAY} %{MONTH} %{MONTHDAY} %{HOUR}:%{MINUTE}:%{SECOND} %{TZ} %{YEAR}
-    '''
+[[inputs.file]]
+  grok_patterns = ["%{TS_UNIX:timestamp:ts-unix} value=%{NUMBER:value:int}"]
+  grok_custom_patterns = '''
+    TS_UNIX %{DAY} %{MONTH} %{MONTHDAY} %{HOUR}:%{MINUTE}:%{SECOND} %{TZ} %{YEAR}
+  '''
 ```
 
 For cases where the timestamp itself is without offset, the `timezone` config var is available
 to denote an offset. By default (with `timezone` either omit, blank or set to `"UTC"`), the times
 are processed as if in the UTC timezone. If specified as `timezone = "Local"`, the timestamp
 will be processed based on the current machine timezone configuration. Lastly, if using a
-timezone from the list of Unix [timezones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), the logparser grok will attempt to offset
-the timestamp accordingly. See test cases for more detailed examples.
+timezone from the list of Unix [timezones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones),
+grok will offset the timestamp accordingly.
 
 #### TOML Escaping
 
@@ -840,29 +838,26 @@ get a literal `|`.  With a basic TOML string, special characters such as
 backslash must be escaped, requiring us to escape the backslash a second time.
 
 ```toml
-[[inputs.logparser]]
-  [inputs.logparser.grok]
-    patterns = ["\\|%{NUMBER:value:int}\\|%{UNICODE_ESCAPE:escape}\\|'%{WORD:name}'\\|"]
-    custom_patterns = "UNICODE_ESCAPE (?:\\\\u[0-9A-F]{4})+"
+[[inputs.file]]
+  grok_patterns = ["\\|%{NUMBER:value:int}\\|%{UNICODE_ESCAPE:escape}\\|'%{WORD:name}'\\|"]
+  grok_custom_patterns = "UNICODE_ESCAPE (?:\\\\u[0-9A-F]{4})+"
 ```
 
 We cannot use a literal TOML string for the pattern, because we cannot match a
 `'` within it.  However, it works well for the custom pattern.
 ```toml
-[[inputs.logparser]]
-  [inputs.logparser.grok]
-    patterns = ["\\|%{NUMBER:value:int}\\|%{UNICODE_ESCAPE:escape}\\|'%{WORD:name}'\\|"]
-    custom_patterns = 'UNICODE_ESCAPE (?:\\u[0-9A-F]{4})+'
+[[inputs.file]]
+  grok_patterns = ["\\|%{NUMBER:value:int}\\|%{UNICODE_ESCAPE:escape}\\|'%{WORD:name}'\\|"]
+  grok_custom_patterns = 'UNICODE_ESCAPE (?:\\u[0-9A-F]{4})+'
 ```
 
 A multi-line literal string allows us to encode the pattern:
 ```toml
-[[inputs.logparser]]
-  [inputs.logparser.grok]
-    patterns = ['''
-	  \|%{NUMBER:value:int}\|%{UNICODE_ESCAPE:escape}\|'%{WORD:name}'\|
-	''']
-    custom_patterns = 'UNICODE_ESCAPE (?:\\u[0-9A-F]{4})+'
+[[inputs.file]]
+  grok_patterns = ['''
+    \|%{NUMBER:value:int}\|%{UNICODE_ESCAPE:escape}\|'%{WORD:name}'\|
+  ''']
+  grok_custom_patterns = 'UNICODE_ESCAPE (?:\\u[0-9A-F]{4})+'
 ```
 
 #### Tips for creating patterns
@@ -886,4 +881,27 @@ the file output will only print once per `flush_interval`.
 - If successful, add the next token, update the pattern and retest.
 - Continue one token at a time until the entire line is successfully parsed.
 
+# Wavefront:
 
+Wavefront Data Format is metrics are parsed directly into Telegraf metrics.
+For more information about the Wavefront Data Format see
+[here](https://docs.wavefront.com/wavefront_data_format.html).
+
+There are no additional configuration options for Wavefront Data Format line-protocol.
+
+#### Wavefront Configuration:
+
+```toml
+[[inputs.exec]]
+  ## Commands array
+  commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
+
+  ## measurement name suffix (for separating different commands)
+  name_suffix = "_mycollector"
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "wavefront"
+```

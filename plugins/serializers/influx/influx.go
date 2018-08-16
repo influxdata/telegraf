@@ -27,29 +27,33 @@ const (
 	UintSupport FieldTypeSupport = 1 << iota
 )
 
-// MetricError is an error causing a metric to be unserializable.
+var (
+	NeedMoreSpace = "need more space"
+	InvalidName   = "invalid name"
+	NoFields      = "no serializable fields"
+)
+
+// MetricError is an error causing an entire metric to be unserializable.
 type MetricError struct {
-	s string
+	series string
+	reason string
 }
 
 func (e MetricError) Error() string {
-	return e.s
+	if e.series != "" {
+		return fmt.Sprintf("%q: %s", e.series, e.reason)
+	}
+	return e.reason
 }
 
 // FieldError is an error causing a field to be unserializable.
 type FieldError struct {
-	s string
+	reason string
 }
 
 func (e FieldError) Error() string {
-	return e.s
+	return e.reason
 }
-
-var (
-	ErrNeedMoreSpace = &MetricError{"need more space"}
-	ErrInvalidName   = &MetricError{"invalid name"}
-	ErrNoFields      = &MetricError{"no serializable fields"}
-)
 
 // Serializer is a serializer for line protocol.
 type Serializer struct {
@@ -102,17 +106,20 @@ func (s *Serializer) Serialize(m telegraf.Metric) ([]byte, error) {
 	return out, nil
 }
 
+// SerializeBatch writes the slice of metrics and returns a byte slice of the
+// results.  The returned byte slice may contain multiple lines of data.
 func (s *Serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
-	var batch bytes.Buffer
+	s.buf.Reset()
 	for _, m := range metrics {
-		_, err := s.Write(&batch, m)
+		_, err := s.Write(&s.buf, m)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return batch.Bytes(), nil
+	out := make([]byte, s.buf.Len())
+	copy(out, s.buf.Bytes())
+	return out, nil
 }
-
 func (s *Serializer) Write(w io.Writer, m telegraf.Metric) (int, error) {
 	err := s.writeMetric(w, m)
 	return s.bytesWritten, err
@@ -135,7 +142,7 @@ func (s *Serializer) buildHeader(m telegraf.Metric) error {
 
 	name := nameEscape(m.Name())
 	if name == "" {
-		return ErrInvalidName
+		return s.newMetricError(InvalidName)
 	}
 
 	s.header = append(s.header, name...)
@@ -222,9 +229,10 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 		}
 
 		if s.maxLineBytes > 0 && bytesNeeded > s.maxLineBytes {
-			// Need at least one field per line
+			// Need at least one field per line, this metric cannot be fit
+			// into the max line bytes.
 			if firstField {
-				return ErrNeedMoreSpace
+				return s.newMetricError(NeedMoreSpace)
 			}
 
 			err = s.write(w, s.footer)
@@ -232,21 +240,12 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 				return err
 			}
 
+			firstField = true
 			bytesNeeded = len(s.header) + len(s.pair) + len(s.footer)
 
-			if s.maxLineBytes > 0 && bytesNeeded > s.maxLineBytes {
-				return ErrNeedMoreSpace
+			if bytesNeeded > s.maxLineBytes {
+				return s.newMetricError(NeedMoreSpace)
 			}
-
-			err = s.write(w, s.header)
-			if err != nil {
-				return err
-			}
-
-			s.write(w, s.pair)
-			pairsLen += len(s.pair)
-			firstField = false
-			continue
 		}
 
 		if firstField {
@@ -261,18 +260,28 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 			}
 		}
 
-		s.write(w, s.pair)
+		err = s.write(w, s.pair)
+		if err != nil {
+			return err
+		}
 
 		pairsLen += len(s.pair)
 		firstField = false
 	}
 
 	if firstField {
-		return ErrNoFields
+		return s.newMetricError(NoFields)
 	}
 
 	return s.write(w, s.footer)
+}
 
+func (s *Serializer) newMetricError(reason string) *MetricError {
+	if len(s.header) != 0 {
+		series := bytes.TrimRight(s.header, " ")
+		return &MetricError{series: string(series), reason: reason}
+	}
+	return &MetricError{reason: reason}
 }
 
 func (s *Serializer) appendFieldValue(buf []byte, value interface{}) ([]byte, error) {
