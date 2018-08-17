@@ -482,9 +482,9 @@ You can also change the path to the typesdb or add additional typesdb using
   ## Path of to TypesDB specifications
   collectd_typesdb = ["/usr/share/collectd/types.db"]
 
-  # Multi-value plugins can be handled two ways.  
+  # Multi-value plugins can be handled two ways.
   # "split" will parse and store the multi-value plugin data into separate measurements
-  # "join" will parse and store the multi-value plugin as a single multi-value measurement.  
+  # "join" will parse and store the multi-value plugin as a single multi-value measurement.
   # "split" is the default behavior for backward compatability with previous versions of influxdb.
   collectd_parse_multivalue = "split"
 ```
@@ -567,7 +567,7 @@ measurement,metric_type=histogram count=1,max=1.0,mean=1.0,min=1.0,p50=1.0,p75=1
 measurement,metric_type=timer count=1,max=1.0,mean=1.0,min=1.0,p50=1.0,p75=1.0,p95=1.0,p98=1.0,p99=1.0,p999=1.0,stddev=1.0,m15_rate=1.0,m1_rate=1.0,m5_rate=1.0,mean_rate=1.0
 ```
 
-You may also parse a dropwizard registry from any JSON document which contains a dropwizard registry in some inner field. 
+You may also parse a dropwizard registry from any JSON document which contains a dropwizard registry in some inner field.
 Eg. to parse the following JSON document:
 
 ```json
@@ -578,7 +578,7 @@ Eg. to parse the following JSON document:
 		"tag2" : "yellow"
 	},
 	"metrics" : {
-		"counters" : 	{ 
+		"counters" : 	{
 			"measurement" : {
 				"count" : 1
 			}
@@ -642,16 +642,16 @@ For more information about the dropwizard json format see
   ## By providing an empty template array, templating is disabled and measurements are parsed as influxdb line protocol keys (measurement<,tag_set>)
   templates = []
 
-  ## You may use an appropriate [gjson path](https://github.com/tidwall/gjson#path-syntax) 
+  ## You may use an appropriate [gjson path](https://github.com/tidwall/gjson#path-syntax)
   ## to locate the metric registry within the JSON document
   # dropwizard_metric_registry_path = "metrics"
-  
-  ## You may use an appropriate [gjson path](https://github.com/tidwall/gjson#path-syntax) 
+
+  ## You may use an appropriate [gjson path](https://github.com/tidwall/gjson#path-syntax)
   ## to locate the default time of the measurements within the JSON document
   # dropwizard_time_path = "time"
   # dropwizard_time_format = "2006-01-02T15:04:05Z07:00"
-  
-  ## You may use an appropriate [gjson path](https://github.com/tidwall/gjson#path-syntax) 
+
+  ## You may use an appropriate [gjson path](https://github.com/tidwall/gjson#path-syntax)
   ## to locate the tags map within the JSON document
   # dropwizard_tags_path = "tags"
 
@@ -661,89 +661,39 @@ For more information about the dropwizard json format see
   #   tag2 = "tags.tag2"
 ```
 
-#### Grok
-Parse logstash-style "grok" patterns. Patterns can be added to patterns, or custom patterns read from custom_pattern_files.
+# Grok:
 
-# View logstash grok pattern docs here:
-#   https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
-# All default logstash patterns are supported, these can be viewed here:
-#   https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns
+The grok data format parses line delimited data using a regular expression like
+language.
 
-# Available modifiers:
-#   string   (default if nothing is specified)
-#   int
-#   float
-#   duration (ie, 5.23ms gets converted to int nanoseconds)
-#   tag      (converts the field into a tag)
-#   drop     (drops the field completely)
-# Timestamp modifiers:
-#   ts-ansic         ("Mon Jan _2 15:04:05 2006")
-#   ts-unix          ("Mon Jan _2 15:04:05 MST 2006")
-#   ts-ruby          ("Mon Jan 02 15:04:05 -0700 2006")
-#   ts-rfc822        ("02 Jan 06 15:04 MST")
-#   ts-rfc822z       ("02 Jan 06 15:04 -0700")
-#   ts-rfc850        ("Monday, 02-Jan-06 15:04:05 MST")
-#   ts-rfc1123       ("Mon, 02 Jan 2006 15:04:05 MST")
-#   ts-rfc1123z      ("Mon, 02 Jan 2006 15:04:05 -0700")
-#   ts-rfc3339       ("2006-01-02T15:04:05Z07:00")
-#   ts-rfc3339nano   ("2006-01-02T15:04:05.999999999Z07:00")
-#   ts-httpd         ("02/Jan/2006:15:04:05 -0700")
-#   ts-epoch         (seconds since unix epoch)
-#   ts-epochnano     (nanoseconds since unix epoch)
-#   ts-"CUSTOM"
-# CUSTOM time layouts must be within quotes and be the representation of the
-# "reference time", which is Mon Jan 2 15:04:05 -0700 MST 2006
-# See https://golang.org/pkg/time/#Parse for more details.
-
-# Example log file pattern, example log looks like this:
-#   [04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs
-# Breakdown of the DURATION pattern below:
-#   NUMBER  is a builtin logstash grok pattern matching float & int numbers.
-#   [nuµm]? is a regex specifying 0 or 1 of the characters within brackets.
-#   s       is also regex, this pattern must end in "s".
-# so DURATION will match something like '5.324ms' or '6.1µs' or '10s'
-DURATION %{NUMBER}[nuµm]?s
-RESPONSE_CODE %{NUMBER:response_code:tag}
-RESPONSE_TIME %{DURATION:response_time_ns:duration}
-EXAMPLE_LOG \[%{HTTPDATE:ts:ts-httpd}\] %{NUMBER:myfloat:float} %{RESPONSE_CODE} %{IPORHOST:clientip} %{RESPONSE_TIME}
-
-# Wider-ranging username matching vs. logstash built-in %{USER}
-NGUSERNAME [a-zA-Z0-9\.\@\-\+_%]+
-NGUSER %{NGUSERNAME}
-# Wider-ranging client IP matching
-CLIENT (?:%{IPORHOST}|%{HOSTPORT}|::1)
-
-##
-## COMMON LOG PATTERNS
-##
-
-# apache & nginx logs, this is also known as the "common log format"
-#   see https://en.wikipedia.org/wiki/Common_Log_Format
-COMMON_LOG_FORMAT %{CLIENT:client_ip} %{NOTSPACE:ident} %{NOTSPACE:auth} \[%{HTTPDATE:ts:ts-httpd}\] "(?:%{WORD:verb:tag} %{NOTSPACE:request}(?: HTTP/%{NUMBER:http_version:float})?|%{DATA})" %{NUMBER:resp_code:tag} (?:%{NUMBER:resp_bytes:int}|-)
-
-# Combined log format is the same as the common log format but with the addition
-# of two quoted strings at the end for "referrer" and "agent"
-#   See Examples at http://httpd.apache.org/docs/current/mod/mod_log_config.html
-COMBINED_LOG_FORMAT %{COMMON_LOG_FORMAT} %{QS:referrer} %{QS:agent}
-
-# HTTPD log formats
-HTTPD20_ERRORLOG \[%{HTTPDERROR_DATE:timestamp}\] \[%{LOGLEVEL:loglevel:tag}\] (?:\[client %{IPORHOST:clientip}\] ){0,1}%{GREEDYDATA:errormsg}
-HTTPD24_ERRORLOG \[%{HTTPDERROR_DATE:timestamp}\] \[%{WORD:module}:%{LOGLEVEL:loglevel:tag}\] \[pid %{POSINT:pid:int}:tid %{NUMBER:tid:int}\]( \(%{POSINT:proxy_errorcode:int}\)%{DATA:proxy_errormessage}:)?( \[client %{IPORHOST:client}:%{POSINT:clientport}\])? %{DATA:errorcode}: %{GREEDYDATA:message}
-HTTPD_ERRORLOG %{HTTPD20_ERRORLOG}|%{HTTPD24_ERRORLOG}
+The best way to get acquainted with grok patterns is to read the logstash docs,
+which are available here:
+  https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
 
 #### Grok Configuration:
 ```toml
-[[inputs.reader]]
+[[inputs.file]]
+  ## Files to parse each interval.
+  ## These accept standard unix glob matching rules, but with the addition of
+  ## ** as a "super asterisk". ie:
+  ##   /var/log/**.log     -> recursively find all .log files in /var/log
+  ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
+  ##   /var/log/apache.log -> only tail the apache log file
+  files = ["/var/log/apache/access.log"]
+
+  ## The dataformat to be read from files
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "grok"
+
   ## This is a list of patterns to check the given log file(s) for.
   ## Note that adding patterns here increases processing time. The most
-  ## efficient configuration is to have one pattern per logparser.
+  ## efficient configuration is to have one pattern.
   ## Other common built-in patterns are:
   ##   %{COMMON_LOG_FORMAT}   (plain apache & nginx access logs)
   ##   %{COMBINED_LOG_FORMAT} (access logs + referrer & agent)
   grok_patterns = ["%{COMBINED_LOG_FORMAT}"]
-
-  ## Name of the outputted measurement name.
-  grok_name_override = "apache_access_log"
 
   ## Full path(s) to custom pattern files.
   grok_custom_pattern_files = []
