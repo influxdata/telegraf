@@ -65,6 +65,7 @@
 - [#4546](https://github.com/influxdata/telegraf/pull/4546): Add gopsutil meminfo fields to mem plugin.
 - [#4285](https://github.com/influxdata/telegraf/pull/4285): Document how to parse telegraf logs.
 - [#4542](https://github.com/influxdata/telegraf/pull/4542): Use dep v0.5.0.
+- [#4433](https://github.com/influxdata/telegraf/pull/4433): Add ability to set measurement from matched text in grok parser.
 
 ## v1.7.4 [unreleased]
 
