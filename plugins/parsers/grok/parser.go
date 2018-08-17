@@ -76,9 +76,6 @@ type Parser struct {
 	Measurement        string
 	DefaultTags        map[string]string
 
-	//holds any modifiers set on named user patterns
-	patternModifiers map[string][]string
-
 	// Timezone is an optional component to help render log dates to
 	// your chosen zone.
 	// Default: "" which renders UTC
@@ -131,7 +128,6 @@ func (p *Parser) Compile() error {
 	p.tsMap = make(map[string]map[string]string)
 	p.patterns = make(map[string]string)
 	p.tsModder = &tsModder{}
-	p.patternModifiers = make(map[string][]string)
 	var err error
 	p.g, err = grok.NewWithConfig(&grok.Config{NamedCapturesOnly: true})
 	if err != nil {
@@ -143,29 +139,12 @@ func (p *Parser) Compile() error {
 	p.NamedPatterns = make([]string, 0, len(p.Patterns))
 	for i, pattern := range p.Patterns {
 		pattern = strings.TrimSpace(pattern)
-
-		//checks that there is only one named field in pattern and 2 ':' indicating a modifier
-		//then extract any modifiers off pattern
-		if strings.Count(pattern, "%") == 1 && strings.Count(pattern, ":") == 2 {
-			pattern = strings.Trim(pattern, "%{}")
-			splitPattern := strings.SplitN(pattern, ":", 3)
-			if pattern == "" {
-				continue
-			}
-			name := fmt.Sprintf("GROK_INTERNAL_PATTERN_%d", i)
-
-			//map pattern modifiers by name
-			p.patternModifiers["%{"+name+"}"] = splitPattern[1:3]
-			p.CustomPatterns += "\n" + name + " " + "%{" + splitPattern[0] + "}" + "\n"
-			p.NamedPatterns = append(p.NamedPatterns, "%{"+name+"}")
-		} else {
-			if pattern == "" {
-				continue
-			}
-			name := fmt.Sprintf("GROK_INTERNAL_PATTERN_%d", i)
-			p.CustomPatterns += "\n" + name + " " + pattern + "\n"
-			p.NamedPatterns = append(p.NamedPatterns, "%{"+name+"}")
+		if pattern == "" {
+			continue
 		}
+		name := fmt.Sprintf("GROK_INTERNAL_PATTERN_%d", i)
+		p.CustomPatterns += "\n" + name + " " + pattern + "\n"
+		p.NamedPatterns = append(p.NamedPatterns, "%{"+name+"}")
 	}
 
 	if len(p.NamedPatterns) == 0 {
@@ -263,11 +242,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 		switch t {
 		case MEASUREMENT:
-			if k == "measurement_name" {
-				p.Measurement = v
-			} else {
-				p.Measurement = k
-			}
+			p.Measurement = v
 		case INT:
 			iv, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
@@ -376,15 +351,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				log.Printf("E! Error parsing %s to time layout [%s]: %s", v, t, err)
 			}
 		}
-	}
-
-	//check the modifiers on the pattern
-	modifiers, ok := p.patternModifiers[patternName]
-	if ok && modifiers[1] == "measurement" {
-		if p.patternModifiers[patternName][0] == "" {
-			//return nil, fmt.Errorf("pattern: %v must be a field to use dynamic 'measurement' modifier", patternName)
-		}
-		p.Measurement = p.patternModifiers[patternName][0]
 	}
 
 	if len(fields) == 0 {
@@ -500,7 +466,6 @@ func (p *Parser) parseTypedCaptures(name, pattern string) (string, error) {
 				//add "measurement_name" to pattern so it is valid grok
 				pattern = strings.Replace(pattern, "::measurement", ":measurement_name:measurement", 1)
 			}
-			log.Printf("typed: %v, name: %v, modifier: %v", patternName, match[1], match[2])
 			p.typeMap[patternName][match[1]] = match[2]
 		}
 

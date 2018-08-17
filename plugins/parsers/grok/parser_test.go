@@ -964,54 +964,38 @@ func TestReplaceTimestampComma(t *testing.T) {
 func TestDynamicMeasurementModifier(t *testing.T) {
 	p := &Parser{
 		Patterns:       []string{"%{TEST}"},
-		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:var3:measurement}",
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD::measurement}",
 	}
 
 	require.NoError(t, p.Compile())
 	m, err := p.ParseLine("4 5 hello")
 	require.NoError(t, err)
-	require.Equal(t, m.Name(), "var3")
+	require.Equal(t, m.Name(), "hello")
 }
 
 func TestStaticMeasurementModifier(t *testing.T) {
 	p := &Parser{
-		Patterns: []string{"%{NUMBER:hi:string} %{WORD:hi:string}"},
-		//CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:var3:tag}",
+		Patterns: []string{"%{WORD:hi:measurement} %{NUMBER:num:string}"},
 	}
 
 	require.NoError(t, p.Compile())
-	m, err := p.ParseLine("42 hi")
+	m, err := p.ParseLine("test_name 42")
 	log.Printf("%v", m)
 	require.NoError(t, err)
-	require.Equal(t, m.Name(), "test_name")
+	require.Equal(t, "test_name", m.Name())
 }
 
 // tests that the top level measurement name is used
-func TestStaticAndDynamicMeasurementModifier(t *testing.T) {
+func TestTwoMeasurementModifier(t *testing.T) {
 	p := &Parser{
 		Patterns:       []string{"%{TEST:test_name:measurement}"},
-		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:var3:measurement}",
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:measurement} %{WORD:var3:measurement}",
 	}
 
 	require.NoError(t, p.Compile())
 	m, err := p.ParseLine("4 5 hello")
 	require.NoError(t, err)
-	require.Equal(t, m.Name(), "test_name")
-}
-
-func TestMultipleMeasurementModifier(t *testing.T) {
-	p := &Parser{
-		Patterns: []string{"%{TEST:test_name:measurement}", "%{TEST2:test2_name:measurement"},
-		CustomPatterns: `TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:var_string:string} 
-		TEST2 %{WORD:stringer1:tag} %{NUMBER:var2:float} %{NUMBER:var3:float}`,
-	}
-
-	require.NoError(t, p.Compile())
-	m, err := p.ParseLine("4 5 hello")
-	m2, err := p.ParseLine("mystr 5 9.5")
-	require.NoError(t, err)
-	require.Equal(t, m.Name(), "test_name")
-	require.Equal(t, m2.Name(), "test2_name")
+	require.Equal(t, m.Name(), "4 5 hello")
 }
 
 func TestMeasurementModifierNoName(t *testing.T) {
@@ -1024,14 +1008,4 @@ func TestMeasurementModifierNoName(t *testing.T) {
 	m, err := p.ParseLine("4 5 hello")
 	require.NoError(t, err)
 	require.Equal(t, m.Name(), "hello")
-}
-
-func TestMeasurementErrors(t *testing.T) {
-	p := &Parser{
-		Patterns: []string{"%{TEST:test_name:measurement}|%{TEST2:test2_name}"},
-		CustomPatterns: `TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:var_string:string} 
-		TEST2 %{WORD:stringer1:tag} %{NUMBER:var2:float} %{NUMBER:var3:float}`,
-	}
-	err := p.Compile()
-	require.Error(t, err)
 }
