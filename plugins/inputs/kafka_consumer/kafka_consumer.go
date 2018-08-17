@@ -21,6 +21,7 @@ type Kafka struct {
 	Topics        []string
 	Brokers       []string
 	MaxMessageLen int
+	Version       string `toml:"version"`
 
 	Cluster *cluster.Consumer
 
@@ -64,6 +65,12 @@ var sampleConfig = `
   ## Optional Client id
   # client_id = "Telegraf"
 
+  ## Set the minimal supported Kafka version.  Setting this enables the use of new
+  ## Kafka features and APIs.  Of particular interest, lz4 compression
+  ## requires at least version 0.10.0.0.
+  ##   ex: version = "1.1.0"
+  # version = ""
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -88,7 +95,7 @@ var sampleConfig = `
 
   ## Maximum length of a message to consume, in bytes (default 0/unlimited);
   ## larger messages are dropped
-  max_message_len = 65536
+  max_message_len = 1000000
 `
 
 func (k *Kafka) SampleConfig() string {
@@ -111,6 +118,15 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 	k.acc = acc
 
 	config := cluster.NewConfig()
+
+	if k.Version != "" {
+		version, err := sarama.ParseKafkaVersion(k.Version)
+		if err != nil {
+			return err
+		}
+		config.Version = version
+	}
+
 	config.Consumer.Return.Errors = true
 
 	tlsConfig, err := k.ClientConfig.TLSConfig()

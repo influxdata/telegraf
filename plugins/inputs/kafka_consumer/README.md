@@ -44,7 +44,7 @@ and use the old zookeeper connection method.
 
   ## Maximum length of a message to consume, in bytes (default 0/unlimited);
   ## larger messages are dropped
-  max_message_len = 65536
+  max_message_len = 1000000
 ```
 
 ## Testing

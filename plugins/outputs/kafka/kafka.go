@@ -3,6 +3,7 @@ package kafka
 import (
 	"crypto/tls"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -79,7 +80,7 @@ var sampleConfig = `
   # client_id = "Telegraf"
 
   ## Set the minimal supported Kafka version.  Setting this enables the use of new
-  ## Kafka features and APIs.  Of particular interested, lz4 compression
+  ## Kafka features and APIs.  Of particular interest, lz4 compression
   ## requires at least version 0.10.0.0.
   ##   ex: version = "1.1.0"
   # version = ""
@@ -120,6 +121,7 @@ var sampleConfig = `
   ##  0 : No compression
   ##  1 : Gzip compression
   ##  2 : Snappy compression
+  ##  3 : LZ4 compression
   # compression_codec = 0
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many
@@ -294,6 +296,10 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		// We could have many errors, return only the first encountered.
 		if errs, ok := err.(sarama.ProducerErrors); ok {
 			for _, prodErr := range errs {
+				if prodErr.Err == sarama.ErrMessageSizeTooLarge {
+					log.Printf("E! Error writing to output [kafka]: Message too large, consider increasing `max_message_bytes`; dropping batch")
+					return nil
+				}
 				return prodErr
 			}
 		}
