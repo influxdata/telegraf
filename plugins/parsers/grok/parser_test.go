@@ -964,7 +964,7 @@ func TestReplaceTimestampComma(t *testing.T) {
 func TestDynamicMeasurementModifier(t *testing.T) {
 	p := &Parser{
 		Patterns:       []string{"%{TEST}"},
-		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD::measurement}",
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:test:measurement}",
 	}
 
 	require.NoError(t, p.Compile())
@@ -1001,7 +1001,7 @@ func TestTwoMeasurementModifier(t *testing.T) {
 func TestMeasurementModifierNoName(t *testing.T) {
 	p := &Parser{
 		Patterns:       []string{"%{TEST}"},
-		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD::measurement}",
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:hi:measurement}",
 	}
 
 	require.NoError(t, p.Compile())

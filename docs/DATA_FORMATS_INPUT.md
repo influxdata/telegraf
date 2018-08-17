@@ -672,8 +672,7 @@ There are also timestamp modifiers, which can be used to specify the format of t
 Available modifiers can be found below.
 
 The 'measurement' modifier is used for dynamic measurement names.  For setting a dynamic measurement name, 
-apply the 'measurement' modifier to a specific field in a pattern. 
-The configuration: `custom_patterns = {"TEST %{WORD::measurement}"}` is treated the same as `custom_patterns = {"TEST %{WORD:ignored_name:measurement}"}`, as semantic names are ignored. If the pattern is matched, the measurement name will be set to the value of the field it was applied to.  Each pattern should only have one 'measurement' modifier applied to it. The modifier should only apply to fields of a single value type, not to another grok pattern.
+apply the 'measurement' modifier to a specific field in a pattern. The semantic name will be ignored. If the pattern is matched, the measurement name will be set to the value of the field it was applied to.  Each pattern should only have one 'measurement' modifier applied to it.
 
 The best way to get acquainted with grok patterns is to read the logstash docs,
 which are available here:

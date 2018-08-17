@@ -58,7 +58,7 @@ var (
 	//     %{IPORHOST:clientip:tag}
 	//     %{HTTPDATE:ts1:ts-http}
 	//     %{HTTPDATE:ts2:ts-"02 Jan 06 15:04"}
-	modifierRe = regexp.MustCompile(`%{\w+:(\w+|):(ts-".+"|t?s?-?\w+)}`)
+	modifierRe = regexp.MustCompile(`%{\w+:(\w+):(ts-".+"|t?s?-?\w+)}`)
 	// matches a plain pattern name. ie, %{NUMBER}
 	patternOnlyRe = regexp.MustCompile(`%{(\w+)}`)
 )
