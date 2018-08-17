@@ -10,7 +10,7 @@ import (
 )
 
 type Parser struct {
-	Config      parsers.Config `toml:"config"`
+	parsers.Config
 	Original    string         `toml:"original"` // merge, replace, or keep (default)
 	ParseFields []string       `toml:"parse_fields"`
 	Parser      parsers.Parser `toml:"parser"`

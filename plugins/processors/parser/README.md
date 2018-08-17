@@ -10,10 +10,9 @@ This plugin parses defined fields containing the specified data format.
   ## specify what to do with the original message. [merge|replace|keep] default=keep
   original = "merge"
 
-  [processors.parser.config]
-    data_format = "json"
-    ## additional configurations for parser go here
-    tag_keys = ["verb", "request"]
+  data_format = "json"
+  ## additional configurations for parser go here
+  tag_keys = ["verb", "request"]
 ```
 
 ### Tags:
@@ -35,10 +34,9 @@ User specified tags may be added by this processor.
   ## specify what to do with the original message. [merge|replace|keep] default=keep
   original = "merge"
 
-  [processors.parser.config]
-    data_format = "json"
-    ## additional configurations for parser go here
-    tag_keys = ["verb", "request"]
+  data_format = "json"
+  ## additional configurations for parser go here
+  tag_keys = ["verb", "request"]
 
 [[outputs.file]]
   files = ["stdout"]
