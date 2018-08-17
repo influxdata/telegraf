@@ -32,6 +32,9 @@ This input plugin checks HTTP/HTTPS connections.
   # response_string_match = "ok"
   # response_string_match = "\".*_status\".?:.?\"up\""
 
+  ## Optional source address used on connections (useful when a host has multiple IP addresses)
+  # source_address = "a.b.c.d"
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"

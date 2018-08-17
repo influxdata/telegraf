@@ -30,6 +30,7 @@ type HTTPResponse struct {
 	Headers             map[string]string
 	FollowRedirects     bool
 	ResponseStringMatch string
+	SourceAddress       string `toml:"source_address"`
 	tls.ClientConfig
 
 	compiledStringMatch *regexp.Regexp
@@ -67,6 +68,9 @@ var sampleConfig = `
   # response_string_match = "ok"
   # response_string_match = "\".*_status\".?:.?\"up\""
 
+  ## Optional source address used on connections (useful when a host has multiple IP addresses)
+  # source_address = "a.b.c.d"
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -103,6 +107,17 @@ func getProxyFunc(http_proxy string) func(*http.Request) (*url.URL, error) {
 	}
 }
 
+// Create a dialer, setting the local address on the dialer if required.
+func getDialer(source_address string) *net.Dialer {
+	dialer := &net.Dialer{}
+	if source_address != "" {
+		if localAddr, err := net.ResolveTCPAddr("tcp", source_address+":"); err == nil {
+			dialer.LocalAddr = localAddr
+		}
+	}
+	return dialer
+}
+
 // CreateHttpClient creates an http client which will timeout at the specified
 // timeout period and can follow redirects if specified
 func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
@@ -113,6 +128,7 @@ func (h *HTTPResponse) createHttpClient() (*http.Client, error) {
 	client := &http.Client{
 		Transport: &http.Transport{
 			Proxy:             getProxyFunc(h.HTTPProxy),
+			DialContext:       (getDialer(h.SourceAddress)).DialContext,
 			DisableKeepAlives: true,
 			TLSClientConfig:   tlsCfg,
 		},
