@@ -215,6 +215,9 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 	timestamp := time.Now()
 	for k, v := range values {
+		if k == "" || v == "" {
+			continue
+		}
 		// t is the modifier of the field
 		var t string
 		// check if pattern has some modifiers
