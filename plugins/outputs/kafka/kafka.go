@@ -121,6 +121,7 @@ var sampleConfig = `
   ##  0 : No compression
   ##  1 : Gzip compression
   ##  2 : Snappy compression
+  ##  3 : LZ4 compression
   # compression_codec = 0
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many
