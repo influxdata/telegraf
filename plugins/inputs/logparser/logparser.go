@@ -22,12 +22,12 @@ const (
 
 // LogParser in the primary interface for the plugin
 type GrokConfig struct {
+	MeasurementName    string `toml:"measurement"`
 	Patterns           []string
 	NamedPatterns      []string
 	CustomPatterns     string
 	CustomPatternFiles []string
 	TimeZone           string
-	MeasurementName    string `toml:"measurement"`
 }
 
 type logEntry struct {

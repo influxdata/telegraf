@@ -44,9 +44,9 @@ func TestGrokParseLogFiles(t *testing.T) {
 
 	logparser := &LogParserPlugin{
 		GrokConfig: GrokConfig{
+			MeasurementName:    "logparser_grok",
 			Patterns:           []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
 			CustomPatternFiles: []string{thisdir + "grok/testdata/test-patterns"},
-			MeasurementName:    "logparser_grok",
 		},
 		FromBeginning: true,
 		Files:         []string{thisdir + "grok/testdata/*.log"},

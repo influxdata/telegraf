@@ -661,63 +661,74 @@ For more information about the dropwizard json format see
   #   tag2 = "tags.tag2"
 ```
 
-# Grok
+# Grok:
+
 The grok data format parses line delimited data using a regular expression like
 language.
 
-Patterns can be added to patterns, or custom patterns read from custom_pattern_files.
-
-Modifiers can be appended to the end of a grok field to specify how that field should be handled. 
-There are also timestamp modifiers, which can be used to specify the format of time data.
-Available modifiers can be found below.
-
-The 'measurement' modifier is used for dynamic measurement names.  For setting a dynamic measurement name, 
-apply the 'measurement' modifier to a specific field in a pattern. The semantic name will be ignored. If the pattern is matched, the measurement name will be set to the value of the field it was applied to.  Each pattern should only have one 'measurement' modifier applied to it.
-
 The best way to get acquainted with grok patterns is to read the logstash docs,
 which are available here:
   https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
 
-Available modifiers:
-- string   (default if nothing is specified)
-- int
-- float
-- duration (ie, 5.23ms gets converted to int nanoseconds)
-- tag      (converts the field into a tag)
-- drop     (drops the field completely)
-- measurement (sets the metric name to designated field)
-Timestamp modifiers:
-- ts-ansic         ("Mon Jan _2 15:04:05 2006")
-- ts-unix          ("Mon Jan _2 15:04:05 MST 2006")
-- ts-ruby          ("Mon Jan 02 15:04:05 -0700 2006")
-- ts-rfc822        ("02 Jan 06 15:04 MST")
-- ts-rfc822z       ("02 Jan 06 15:04 -0700")
-- ts-rfc850        ("Monday, 02-Jan-06 15:04:05 MST")
-- ts-rfc1123       ("Mon, 02 Jan 2006 15:04:05 MST")
-- ts-rfc1123z      ("Mon, 02 Jan 2006 15:04:05 -0700")
-- ts-rfc3339       ("2006-01-02T15:04:05Z07:00")
-- ts-rfc3339nano   ("2006-01-02T15:04:05.999999999Z07:00")
-- ts-httpd         ("02/Jan/2006:15:04:05 -0700")
-- ts-epoch         (seconds since unix epoch)
-- ts-epochnano     (nanoseconds since unix epoch)
-- ts-"CUSTOM"
+The grok parser uses a slightly modified version of logstash "grok"
+patterns, with the format:
+
+```
+%{<capture_syntax>[:<semantic_name>][:<modifier>]}
+```
+
+The `capture_syntax` defines the grok pattern that's used to parse the input
+line and the `semantic_name` is used to name the field or tag.  The extension
+`modifier` controls the data type that the parsed item is converted to or
+other special handling.
+
+By default all named captures are converted into string fields.
+Timestamp modifiers can be used to convert captures to the timestamp of the
+parsed metric.  If no timestamp is parsed the metric will be created using the
+current time.
+
+You must capture at least one field per line.
+
+- Available modifiers:
+  - string   (default if nothing is specified)
+  - int
+  - float
+  - duration (ie, 5.23ms gets converted to int nanoseconds)
+  - tag      (converts the field into a tag)
+  - drop     (drops the field completely)
+  - measurement (use the matched text as the measurement name)
+- Timestamp modifiers:
+  - ts               (This will auto-learn the timestamp format)
+  - ts-ansic         ("Mon Jan _2 15:04:05 2006")
+  - ts-unix          ("Mon Jan _2 15:04:05 MST 2006")
+  - ts-ruby          ("Mon Jan 02 15:04:05 -0700 2006")
+  - ts-rfc822        ("02 Jan 06 15:04 MST")
+  - ts-rfc822z       ("02 Jan 06 15:04 -0700")
+  - ts-rfc850        ("Monday, 02-Jan-06 15:04:05 MST")
+  - ts-rfc1123       ("Mon, 02 Jan 2006 15:04:05 MST")
+  - ts-rfc1123z      ("Mon, 02 Jan 2006 15:04:05 -0700")
+  - ts-rfc3339       ("2006-01-02T15:04:05Z07:00")
+  - ts-rfc3339nano   ("2006-01-02T15:04:05.999999999Z07:00")
+  - ts-httpd         ("02/Jan/2006:15:04:05 -0700")
+  - ts-epoch         (seconds since unix epoch, may contain decimal)
+  - ts-epochnano     (nanoseconds since unix epoch)
+  - ts-syslog        ("Jan 02 15:04:05", parsed time is set to the current year)
+  - ts-"CUSTOM"
+
 CUSTOM time layouts must be within quotes and be the representation of the
-"reference time", which is Mon Jan 2 15:04:05 -0700 MST 2006
+"reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`.
+To match a comma decimal point you can use a period.  For example `%{TIMESTAMP:timestamp:ts-"2006-01-02 15:04:05.000"}` can be used to match `"2018-01-02 15:04:05,000"`
+To match a comma decimal point you can use a period in the pattern string.
 See https://golang.org/pkg/time/#Parse for more details.
 
-Breakdown of the DURATION pattern below:
-`NUMBER`  is a builtin logstash grok pattern matching float & int numbers.
-`[nuµm]?` is a regex specifying 0 or 1 of the characters within brackets.
-`s` is also regex, this pattern must end in "s".
-so DURATION will match something like '5.324ms' or '6.1µs' or '10s'
-DURATION %{NUMBER}[nuµm]?s
-RESPONSE_CODE %{NUMBER:response_code:tag}
-RESPONSE_TIME %{DURATION:response_time_ns:duration}
-EXAMPLE_LOG \[%{HTTPDATE:ts:ts-httpd}\] %{NUMBER:myfloat:float} %{RESPONSE_CODE} %{IPORHOST:clientip} %{RESPONSE_TIME}
+Telegraf has many of its own [built-in patterns](./grok/patterns/influx-patterns),
+as well as support for most of
+[logstash's builtin patterns](https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns).
+_Golang regular expressions do not support lookahead or lookbehind.
+logstash patterns that depend on these are not supported._
 
-The best way to get acquainted with grok patterns is to read the logstash docs,
-which are available here:
-  https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
+If you need help building patterns to match your logs,
+you will find the https://grokdebug.herokuapp.com application quite useful!
 
 #### Grok Configuration:
 ```toml
@@ -762,65 +773,6 @@ which are available here:
   ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
   grok_timezone = "Canada/Eastern"
 ```
-
-The grok parser uses a slightly modified version of logstash "grok"
-patterns, with the format:
-
-```
-%{<capture_syntax>[:<semantic_name>][:<modifier>]}
-```
-
-The `capture_syntax` defines the grok pattern that's used to parse the input
-line and the `semantic_name` is used to name the field or tag.  The extension
-`modifier` controls the data type that the parsed item is converted to or
-other special handling.
-
-By default all named captures are converted into string fields.
-Timestamp modifiers can be used to convert captures to the timestamp of the
-parsed metric.  If no timestamp is parsed the metric will be created using the
-current time.
-
-You must capture at least one field per line.
-
-- Available modifiers:
-  - string   (default if nothing is specified)
-  - int
-  - float
-  - duration (ie, 5.23ms gets converted to int nanoseconds)
-  - tag      (converts the field into a tag)
-  - drop     (drops the field completely)
-- Timestamp modifiers:
-  - ts               (This will auto-learn the timestamp format)
-  - ts-ansic         ("Mon Jan _2 15:04:05 2006")
-  - ts-unix          ("Mon Jan _2 15:04:05 MST 2006")
-  - ts-ruby          ("Mon Jan 02 15:04:05 -0700 2006")
-  - ts-rfc822        ("02 Jan 06 15:04 MST")
-  - ts-rfc822z       ("02 Jan 06 15:04 -0700")
-  - ts-rfc850        ("Monday, 02-Jan-06 15:04:05 MST")
-  - ts-rfc1123       ("Mon, 02 Jan 2006 15:04:05 MST")
-  - ts-rfc1123z      ("Mon, 02 Jan 2006 15:04:05 -0700")
-  - ts-rfc3339       ("2006-01-02T15:04:05Z07:00")
-  - ts-rfc3339nano   ("2006-01-02T15:04:05.999999999Z07:00")
-  - ts-httpd         ("02/Jan/2006:15:04:05 -0700")
-  - ts-epoch         (seconds since unix epoch, may contain decimal)
-  - ts-epochnano     (nanoseconds since unix epoch)
-  - ts-syslog        ("Jan 02 15:04:05", parsed time is set to the current year)
-  - ts-"CUSTOM"
-
-CUSTOM time layouts must be within quotes and be the representation of the
-"reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`.  
-To match a comma decimal point you can use a period.  For example `%{TIMESTAMP:timestamp:ts-"2006-01-02 15:04:05.000"}` can be used to match `"2018-01-02 15:04:05,000"`
-To match a comma decimal point you can use a period in the pattern string.
-See https://golang.org/pkg/time/#Parse for more details.
-
-Telegraf has many of its own [built-in patterns](./grok/patterns/influx-patterns),
-as well as support for most of
-[logstash's builtin patterns](https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns).
-_Golang regular expressions do not support lookahead or lookbehind.
-logstash patterns that depend on these are not supported._
-
-If you need help building patterns to match your logs,
-you will find the https://grokdebug.herokuapp.com application quite useful!
 
 #### Timestamp Examples
 
