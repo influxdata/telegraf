@@ -215,11 +215,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 	timestamp := time.Now()
 	for k, v := range values {
-		if (k == "" || v == "") && p.typeMap[patternName][k] != "measurement" {
-			log.Printf("D! skipping key: %v", k)
-			continue
-		}
-
 		// t is the modifier of the field
 		var t string
 		// check if pattern has some modifiers
@@ -460,12 +455,6 @@ func (p *Parser) parseTypedCaptures(name, pattern string) (string, error) {
 			}
 			hasTimestamp = true
 		} else {
-			//for handling measurement tag with no name
-			if match[1] == "" && match[2] == "measurement" {
-				match[1] = "measurement_name"
-				//add "measurement_name" to pattern so it is valid grok
-				pattern = strings.Replace(pattern, "::measurement", ":measurement_name:measurement", 1)
-			}
 			p.typeMap[patternName][match[1]] = match[2]
 		}
 
