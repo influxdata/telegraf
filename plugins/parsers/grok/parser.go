@@ -38,6 +38,7 @@ var timeLayouts = map[string]string{
 }
 
 const (
+	MEASUREMENT       = "measurement"
 	INT               = "int"
 	TAG               = "tag"
 	FLOAT             = "float"
@@ -217,7 +218,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		if k == "" || v == "" {
 			continue
 		}
-
 		// t is the modifier of the field
 		var t string
 		// check if pattern has some modifiers
@@ -239,6 +239,8 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		}
 
 		switch t {
+		case MEASUREMENT:
+			p.Measurement = v
 		case INT:
 			iv, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
@@ -350,7 +352,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(fields) == 0 {
-		return nil, fmt.Errorf("logparser_grok: must have one or more fields")
+		return nil, fmt.Errorf("grok: must have one or more fields")
 	}
 
 	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))

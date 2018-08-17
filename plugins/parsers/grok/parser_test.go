@@ -1,6 +1,7 @@
 package grok
 
 import (
+	"log"
 	"testing"
 	"time"
 
@@ -958,4 +959,53 @@ func TestReplaceTimestampComma(t *testing.T) {
 	require.Equal(t, 34, m.Time().Second())
 	//Convert Nanosecond to milisecond for compare
 	require.Equal(t, 555, m.Time().Nanosecond()/1000000)
+}
+
+func TestDynamicMeasurementModifier(t *testing.T) {
+	p := &Parser{
+		Patterns:       []string{"%{TEST}"},
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:test:measurement}",
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("4 5 hello")
+	require.NoError(t, err)
+	require.Equal(t, m.Name(), "hello")
+}
+
+func TestStaticMeasurementModifier(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{WORD:hi:measurement} %{NUMBER:num:string}"},
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("test_name 42")
+	log.Printf("%v", m)
+	require.NoError(t, err)
+	require.Equal(t, "test_name", m.Name())
+}
+
+// tests that the top level measurement name is used
+func TestTwoMeasurementModifier(t *testing.T) {
+	p := &Parser{
+		Patterns:       []string{"%{TEST:test_name:measurement}"},
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:measurement} %{WORD:var3:measurement}",
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("4 5 hello")
+	require.NoError(t, err)
+	require.Equal(t, m.Name(), "4 5 hello")
+}
+
+func TestMeasurementModifierNoName(t *testing.T) {
+	p := &Parser{
+		Patterns:       []string{"%{TEST}"},
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:hi:measurement}",
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("4 5 hello")
+	require.NoError(t, err)
+	require.Equal(t, m.Name(), "hello")
 }
