@@ -29,11 +29,12 @@ func NewConcurrentWaitGroup() *ConcurrentWaitGroup {
 // Add signals the beginning of one or more jobs. The function returns false
 // if a Wait() has already been unblocked and callers should not run the job.
 func (c *ConcurrentWaitGroup) Add(inc int) bool {
+	c.mux.Lock()
+	defer c.mux.Unlock()
+
 	if c.done {
 		return false
 	}
-	c.mux.Lock()
-	defer c.mux.Unlock()
 	c.jobs += inc
 	if c.jobs == 0 {
 		c.cond.Broadcast()
