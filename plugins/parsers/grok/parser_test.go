@@ -1,82 +1,22 @@
 package grok
 
 import (
+	"log"
 	"testing"
 	"time"
-
-	"github.com/influxdata/telegraf"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-var benchM telegraf.Metric
-
-func Benchmark_ParseLine_CommonLogFormat(b *testing.B) {
-	p := &Parser{
-		Patterns: []string{"%{COMMON_LOG_FORMAT}"},
+func TestGrokParse(t *testing.T) {
+	parser := Parser{
+		Measurement: "t_met",
+		Patterns:    []string{"%{COMMON_LOG_FORMAT}"},
 	}
-	_ = p.Compile()
-
-	var m telegraf.Metric
-	for n := 0; n < b.N; n++ {
-		m, _ = p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
-	}
-	benchM = m
-}
-
-func Benchmark_ParseLine_CombinedLogFormat(b *testing.B) {
-	p := &Parser{
-		Patterns: []string{"%{COMBINED_LOG_FORMAT}"},
-	}
-	_ = p.Compile()
-
-	var m telegraf.Metric
-	for n := 0; n < b.N; n++ {
-		m, _ = p.ParseLine(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "-" "Mozilla"`)
-	}
-	benchM = m
-}
-
-func Benchmark_ParseLine_CustomPattern(b *testing.B) {
-	p := &Parser{
-		Patterns: []string{"%{TEST_LOG_A}", "%{TEST_LOG_B}"},
-		CustomPatterns: `
-			DURATION %{NUMBER}[nuµm]?s
-			RESPONSE_CODE %{NUMBER:response_code:tag}
-			RESPONSE_TIME %{DURATION:response_time:duration}
-			TEST_LOG_A %{NUMBER:myfloat:float} %{RESPONSE_CODE} %{IPORHOST:clientip} %{RESPONSE_TIME}
-		`,
-	}
-	_ = p.Compile()
-
-	var m telegraf.Metric
-	for n := 0; n < b.N; n++ {
-		m, _ = p.ParseLine(`[04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs 101`)
-	}
-	benchM = m
-}
-
-// Test a very simple parse pattern.
-func TestSimpleParse(t *testing.T) {
-	p := &Parser{
-		Patterns: []string{"%{TESTLOG}"},
-		CustomPatterns: `
-			TESTLOG %{NUMBER:num:int} %{WORD:client}
-		`,
-	}
-	assert.NoError(t, p.Compile())
-
-	m, err := p.ParseLine(`142 bot`)
+	parser.Compile()
+	_, err := parser.Parse([]byte(`127.0.0.1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`))
 	assert.NoError(t, err)
-	require.NotNil(t, m)
-
-	assert.Equal(t,
-		map[string]interface{}{
-			"num":    int64(142),
-			"client": "bot",
-		},
-		m.Fields())
 }
 
 // Verify that patterns with a regex lookahead fail at compile time.
@@ -96,8 +36,7 @@ func TestParsePatternsWithLookahead(t *testing.T) {
 
 func TestMeasurementName(t *testing.T) {
 	p := &Parser{
-		Measurement: "my_web_log",
-		Patterns:    []string{"%{COMMON_LOG_FORMAT}"},
+		Patterns: []string{"%{COMMON_LOG_FORMAT}"},
 	}
 	assert.NoError(t, p.Compile())
 
@@ -116,13 +55,11 @@ func TestMeasurementName(t *testing.T) {
 		},
 		m.Fields())
 	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
-	assert.Equal(t, "my_web_log", m.Name())
 }
 
 func TestCLF_IPv6(t *testing.T) {
 	p := &Parser{
-		Measurement: "my_web_log",
-		Patterns:    []string{"%{COMMON_LOG_FORMAT}"},
+		Patterns: []string{"%{COMMON_LOG_FORMAT}"},
 	}
 	assert.NoError(t, p.Compile())
 
@@ -140,7 +77,6 @@ func TestCLF_IPv6(t *testing.T) {
 		},
 		m.Fields())
 	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
-	assert.Equal(t, "my_web_log", m.Name())
 
 	m, err = p.ParseLine(`::1 user-identifier frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326`)
 	require.NotNil(t, m)
@@ -156,7 +92,6 @@ func TestCLF_IPv6(t *testing.T) {
 		},
 		m.Fields())
 	assert.Equal(t, map[string]string{"verb": "GET", "resp_code": "200"}, m.Tags())
-	assert.Equal(t, "my_web_log", m.Name())
 }
 
 func TestCustomInfluxdbHttpd(t *testing.T) {
@@ -1024,4 +959,53 @@ func TestReplaceTimestampComma(t *testing.T) {
 	require.Equal(t, 34, m.Time().Second())
 	//Convert Nanosecond to milisecond for compare
 	require.Equal(t, 555, m.Time().Nanosecond()/1000000)
+}
+
+func TestDynamicMeasurementModifier(t *testing.T) {
+	p := &Parser{
+		Patterns:       []string{"%{TEST}"},
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:test:measurement}",
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("4 5 hello")
+	require.NoError(t, err)
+	require.Equal(t, m.Name(), "hello")
+}
+
+func TestStaticMeasurementModifier(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{"%{WORD:hi:measurement} %{NUMBER:num:string}"},
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("test_name 42")
+	log.Printf("%v", m)
+	require.NoError(t, err)
+	require.Equal(t, "test_name", m.Name())
+}
+
+// tests that the top level measurement name is used
+func TestTwoMeasurementModifier(t *testing.T) {
+	p := &Parser{
+		Patterns:       []string{"%{TEST:test_name:measurement}"},
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:measurement} %{WORD:var3:measurement}",
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("4 5 hello")
+	require.NoError(t, err)
+	require.Equal(t, m.Name(), "4 5 hello")
+}
+
+func TestMeasurementModifierNoName(t *testing.T) {
+	p := &Parser{
+		Patterns:       []string{"%{TEST}"},
+		CustomPatterns: "TEST %{NUMBER:var1:tag} %{NUMBER:var2:float} %{WORD:hi:measurement}",
+	}
+
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine("4 5 hello")
+	require.NoError(t, err)
+	require.Equal(t, m.Name(), "hello")
 }

@@ -22,6 +22,9 @@ and use the old zookeeper connection method.
   ## Offset (must be either "oldest" or "newest")
   offset = "oldest"
 
+  ## Optional client id
+  # client_id = "Telegraf"
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -41,7 +44,7 @@ and use the old zookeeper connection method.
 
   ## Maximum length of a message to consume, in bytes (default 0/unlimited);
   ## larger messages are dropped
-  max_message_len = 65536
+  max_message_len = 1000000
 ```
 
 ## Testing
