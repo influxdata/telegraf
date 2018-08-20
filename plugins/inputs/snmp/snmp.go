@@ -1010,7 +1010,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			switch tc {
 			case "MacAddress", "PhysAddress":
 				conversion = "hwaddr"
-			case "InetAddressIPv4", "InetAddressIPv6", "InetAddress":
+			case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
 				conversion = "ipaddr"
 			}
 		} else if strings.HasPrefix(line, "::= { ") {

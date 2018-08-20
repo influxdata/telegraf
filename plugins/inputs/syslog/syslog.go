@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/influxdata/go-syslog/rfc5424"
 	"github.com/influxdata/go-syslog/rfc5425"
@@ -71,9 +72,9 @@ var sampleConfig = `
   ## Only applies to stream sockets (e.g. TCP).
   # max_connections = 1024
 
-  ## Read timeout (default = 500ms).
+  ## Read timeout is the maximum time allowed for reading a single message (default = 5s).
   ## 0 means unlimited.
-  # read_timeout = 500ms
+  # read_timeout = "5s"
 
   ## Whether to parse in best effort mode or not (default = false).
   ## By default best effort parsing is off.
@@ -365,7 +366,9 @@ func fields(msg rfc5424.SyslogMessage, s *Syslog) map[string]interface{} {
 	}
 
 	if msg.Message() != nil {
-		flds["message"] = strings.TrimSpace(*msg.Message())
+		flds["message"] = strings.TrimRightFunc(*msg.Message(), func(r rune) bool {
+			return unicode.IsSpace(r)
+		})
 	}
 
 	if msg.StructuredData() != nil {

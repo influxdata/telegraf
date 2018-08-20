@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
+	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 )
 
 // ParserInput is an interface for input plugins that are able to parse
@@ -131,6 +132,8 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags,
 			config.Separator,
 			config.Templates)
+	case "wavefront":
+		parser, err = NewWavefrontParser(config.DefaultTags)
 	case "grok":
 		parser, err = newGrokParser(
 			config.MetricName,
@@ -237,4 +240,8 @@ func NewDropwizardParser(
 		return nil, err
 	}
 	return parser, err
+}
+
+func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {
+	return wavefront.NewWavefrontParser(defaultTags), nil
 }
