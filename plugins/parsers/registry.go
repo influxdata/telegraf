@@ -102,16 +102,18 @@ type Config struct {
 	GrokTimeZone           string
 
 	//csv configuration
-	CSVDelimiter       string
-	CSVComment         string
-	CSVTrimSpace       bool
-	CSVDataColumns     []string
-	CSVTagColumns      []string
-	CSVFieldColumns    []string
-	CSVNameColumn      string
-	CSVTimestampColumn string
-	CSVTimestampFormat string
-	CSVHeaderRowCount  int
+	CSVDelimiter         string
+	CSVComment           string
+	CSVTrimSpace         bool
+	CSVNameColumns       []string
+	CSVTagColumns        []string
+	CSVFieldColumns      []string
+	CSVMeasurementColumn string
+	CSVTimestampColumn   string
+	CSVTimestampFormat   string
+	CSVHeaderRowCount    int
+	CSVSkipRows          int
+	CSVSkipHeaders       int
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -158,6 +160,8 @@ func NewParser(config *Config) (Parser, error) {
 	case "csv":
 		parser, err = newCSVParser(config.MetricName,
 			config.CSVHeaderRowCount,
+			config.CSVSkipRows,
+			config.CSVSkipColumns,
 			config.CSVDelimiter,
 			config.CSVComment,
 			config.CSVTrimSpace,
@@ -176,6 +180,8 @@ func NewParser(config *Config) (Parser, error) {
 
 func newCSVParser(metricName string,
 	header int,
+	skipRows int,
+	skipColumns int,
 	delimiter string,
 	comment string,
 	trimSpace bool,
@@ -187,18 +193,20 @@ func newCSVParser(metricName string,
 	timestampFormat string,
 	defaultTags map[string]string) (Parser, error) {
 	parser := &csv.CSVParser{
-		MetricName:      metricName,
-		HeaderRowCount:  header,
-		Delimiter:       delimiter,
-		Comment:         comment,
-		TrimSpace:       trimSpace,
-		DataColumns:     dataColumns,
-		TagColumns:      tagColumns,
-		FieldColumns:    fieldColumns,
-		NameColumn:      nameColumn,
-		TimestampColumn: timestampColumn,
-		TimestampFormat: timestampFormat,
-		DefaultTags:     defaultTags,
+		MetricName:        metricName,
+		HeaderRowCount:    header,
+		SkipRows:          skipRows,
+		SkipColumns:       skipColumns,
+		Delimiter:         delimiter,
+		Comment:           comment,
+		TrimSpace:         trimSpace,
+		DataColumns:       dataColumns,
+		TagColumns:        tagColumns,
+		FieldColumns:      fieldColumns,
+		MeasurementColumn: nameColumn,
+		TimestampColumn:   timestampColumn,
+		TimestampFormat:   timestampFormat,
+		DefaultTags:       defaultTags,
 	}
 
 	return parser, nil

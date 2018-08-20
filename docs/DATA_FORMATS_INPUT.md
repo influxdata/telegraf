@@ -874,20 +874,20 @@ The `csv_skip_rows` config indicates the number of rows to skip before looking f
 to parse. By default, no rows will be skipped.
 
 The `csv_skip_columns` config indicates the number of columns to be skipped before parsing data. These 
-columns will not be read out of the header.  Naming with the `csv_name_columns` will begin at the first
+columns will not be read out of the header.  Naming with the `csv_column_names` will begin at the first
 parsed column after skipping the indicated columns.  By default, no columns are skipped.
 
-To assign custom column names, the `csv_name_columns` config is available. If the `csv_name_columns` 
+To assign custom column names, the `csv_column_names` config is available. If the `csv_column_names` 
 config is used, all columns must be named as additional columns will be ignored. If `csv_header_row_count` 
-is set to 0, `csv_name_columns` must be specified.  Names listed in `csv_name_columns` will override names extracted
+is set to 0, `csv_column_names` must be specified.  Names listed in `csv_column_names` will override names extracted
 from the header.
 
 The `csv_tag_columns` and `csv_field_columns` configs are available to add the column data to the metric.
 The name used to specify the column is the name in the header, or if specified, the corresponding 
-name assigned in `csv_name_columns`. If neither config is specified, no data will be added to the metric.
+name assigned in `csv_column_names`. If neither config is specified, no data will be added to the metric.
 
 Additional configs are available to dynamically name metrics and set custom timestamps.  If the 
-`csv_name_column` config is specified, the parser will assign the metric name to the value found 
+`csv_column_names` config is specified, the parser will assign the metric name to the value found 
 in that column. If the `csv_timestamp_column` is specified, the parser will extract the timestamp from
 that column. If `csv_timestamp_column` is specified, the `csv_timestamp_format` must also be specified
 or an error will be thrown.
@@ -899,7 +899,7 @@ or an error will be thrown.
   ## Indicates how many rows to treat as a header. By default, the parser assumes 
   ## there is no header and will parse the first row as data. If set to anything more
   ## than 1, column names will be concatenated with the name listed in the next header row.
-  ## If `csv_data_columns` is specified, the column names in header will be overridden.
+  ## If `csv_column_names` is specified, the column names in header will be overridden.
   # csv_header_row_count = 0
   
   ## Indicates the number of rows to skip before looking for header information.
@@ -925,7 +925,7 @@ or an error will be thrown.
   ## If this is specified, all columns should have a name
   ## Unnamed columns will be ignored by the parser.
   ## If `csv_header_row_count` is set to 0, this config must be used
-  csv_name_columns = []
+  csv_column_names = []
 
   ## Columns listed here will be added as tags
   csv_tag_columns = []

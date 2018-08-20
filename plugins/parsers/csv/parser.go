@@ -12,23 +12,26 @@ import (
 )
 
 type CSVParser struct {
-	MetricName      string
-	HeaderRowCount  int
-	Delimiter       string
-	Comment         string
-	TrimSpace       bool
-	DataColumns     []string
-	TagColumns      []string
-	FieldColumns    []string
-	NameColumn      string
-	TimestampColumn string
-	TimestampFormat string
-	DefaultTags     map[string]string
+	MetricName        string
+	HeaderRowCount    int
+	SkipRows          int
+	SkipColumns       int
+	Delimiter         string
+	Comment           string
+	TrimSpace         bool
+	ColumnNames       []string
+	TagColumns        []string
+	FieldColumns      []string
+	MeasurementColumn string
+	TimestampColumn   string
+	TimestampFormat   string
+	DefaultTags       map[string]string
 }
 
 func (p *CSVParser) compile(r *bytes.Reader) (*csv.Reader, error) {
 	csvReader := csv.NewReader(r)
-	csvReader.FieldsPerRecord = len(p.DataColumns)
+	// ensures that the reader reads records of different lengths without an error
+	csvReader.FieldsPerRecord = -1
 	if p.Delimiter != "" {
 		runeStr := []rune(p.Delimiter)
 		if len(runeStr) > 1 {
@@ -53,20 +56,35 @@ func (p *CSVParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if err != nil {
 		return nil, err
 	}
+	// skip first rows
+	for i := 0; i < p.SkipRows; i++ {
+		csvReader.Read()
+	}
 	// if there is a header and nothing in DataColumns
 	// set DataColumns to names extracted from the header
-	if p.Header && len(p.DataColumns) == 0 {
-		header, err := csvReader.Read()
-		if err != nil {
-			return nil, err
+	headerNames := make([]string, 0)
+	if len(p.ColumnNames) == 0 {
+		for i := 0; i < p.HeaderRowCount; i++ {
+			header, err := csvReader.Read()
+			if err != nil {
+				return nil, err
+			}
+			//concatenate header names
+			for i := range header {
+				if len(headerNames) <= i {
+					headerNames = append(headerNames, header[i])
+				} else {
+					headerNames[i] = headerNames[i] + header[i]
+				}
+			}
 		}
-		p.DataColumns = header
-
-	} else if p.Header {
-		// if there is a header and DataColumns is specified, just skip header
-		csvReader.Read()
-
-	} else if !p.Header && len(p.DataColumns) == 0 {
+		p.ColumnNames = headerNames[p.SkipColumns:]
+	} else if len(p.ColumnNames) > 0 {
+		// if columns are named, just skip header rows
+		for i := 0; i < p.HeaderRowCount; i++ {
+			csvReader.Read()
+		}
+	} else if p.HeaderRowCount == 0 && len(p.ColumnNames) == 0 {
 		// if there is no header and no DataColumns, that's an error
 		return nil, fmt.Errorf("there must be a header if `csv_data_columns` is not specified")
 	}
@@ -88,6 +106,7 @@ func (p *CSVParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 // ParseLine does not use any information in header and assumes DataColumns is set
+// it will also not skip any rows
 func (p *CSVParser) ParseLine(line string) (telegraf.Metric, error) {
 	r := bytes.NewReader([]byte(line))
 	csvReader, err := p.compile(r)
@@ -96,7 +115,7 @@ func (p *CSVParser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	// if there is nothing in DataColumns, ParseLine will fail
-	if len(p.DataColumns) == 0 {
+	if len(p.ColumnNames) == 0 {
 		return nil, fmt.Errorf("[parsers.csv] data columns must be specified")
 	}
 
@@ -115,8 +134,13 @@ func (p *CSVParser) parseRecord(record []string) (telegraf.Metric, error) {
 	recordFields := make(map[string]string)
 	tags := make(map[string]string)
 	fields := make(map[string]interface{})
-	for i, fieldName := range p.DataColumns {
-		recordFields[fieldName] = record[i]
+
+	// skip columns in record
+	record = record[p.SkipColumns:]
+	for i, fieldName := range p.ColumnNames {
+		if i < len(record) {
+			recordFields[fieldName] = record[i]
+		}
 	}
 
 	// add default tags
@@ -151,8 +175,8 @@ func (p *CSVParser) parseRecord(record []string) (telegraf.Metric, error) {
 
 	// will default to plugin name
 	measurementName := p.MetricName
-	if recordFields[p.NameColumn] != "" {
-		measurementName = recordFields[p.NameColumn]
+	if recordFields[p.MeasurementColumn] != "" {
+		measurementName = recordFields[p.MeasurementColumn]
 	}
 
 	metricTime := time.Now()
