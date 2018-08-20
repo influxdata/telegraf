@@ -13,7 +13,7 @@ import (
 
 type CSVParser struct {
 	MetricName      string
-	Header          bool
+	HeaderRowCount  int
 	Delimiter       string
 	Comment         string
 	TrimSpace       bool

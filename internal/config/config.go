@@ -1400,7 +1400,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	}
 
 	//for csv parser
-	if node, ok := tbl.Fields["csv_data_columns"]; ok {
+	if node, ok := tbl.Fields["csv_name_columns"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
@@ -1452,7 +1452,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
-	if node, ok := tbl.Fields["csv_name_column"]; ok {
+	if node, ok := tbl.Fields["csv_measurement_column"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
 				c.CSVNameColumn = str.Value
@@ -1476,21 +1476,10 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
-	if node, ok := tbl.Fields["csv_header"]; ok {
+	if node, ok := tbl.Fields["csv_header_row_count"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.Boolean); ok {
-				//for config with no quotes
-				val, _ := strconv.ParseBool(str.Value)
-				c.CSVHeader = val
-			} else {
-				//for config with quotes
-				strVal := kv.Value.(*ast.String)
-				val, err := strconv.ParseBool(strVal.Value)
-				if err != nil {
-					log.Printf("E! parsing to bool: %v", err)
-				} else {
-					c.CSVHeader = val
-				}
+			if str, ok := kv.Value.(*ast.Value); ok {
+				c.CSVHeaderRowCount = str
 			}
 		}
 	}

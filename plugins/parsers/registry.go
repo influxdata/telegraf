@@ -102,7 +102,6 @@ type Config struct {
 	GrokTimeZone           string
 
 	//csv configuration
-	CSVHeader          bool
 	CSVDelimiter       string
 	CSVComment         string
 	CSVTrimSpace       bool
@@ -112,6 +111,7 @@ type Config struct {
 	CSVNameColumn      string
 	CSVTimestampColumn string
 	CSVTimestampFormat string
+	CSVHeaderRowCount  int
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -157,7 +157,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokTimeZone)
 	case "csv":
 		parser, err = newCSVParser(config.MetricName,
-			config.CSVHeader,
+			config.CSVHeaderRowCount,
 			config.CSVDelimiter,
 			config.CSVComment,
 			config.CSVTrimSpace,
@@ -175,7 +175,7 @@ func NewParser(config *Config) (Parser, error) {
 }
 
 func newCSVParser(metricName string,
-	header bool,
+	header int,
 	delimiter string,
 	comment string,
 	trimSpace bool,
@@ -188,7 +188,7 @@ func newCSVParser(metricName string,
 	defaultTags map[string]string) (Parser, error) {
 	parser := &csv.CSVParser{
 		MetricName:      metricName,
-		Header:          header,
+		HeaderRowCount:  header,
 		Delimiter:       delimiter,
 		Comment:         comment,
 		TrimSpace:       trimSpace,
