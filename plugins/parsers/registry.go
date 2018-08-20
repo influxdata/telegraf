@@ -105,15 +105,14 @@ type Config struct {
 	CSVDelimiter         string
 	CSVComment           string
 	CSVTrimSpace         bool
-	CSVNameColumns       []string
+	CSVColumnNames       []string
 	CSVTagColumns        []string
-	CSVFieldColumns      []string
 	CSVMeasurementColumn string
 	CSVTimestampColumn   string
 	CSVTimestampFormat   string
 	CSVHeaderRowCount    int
 	CSVSkipRows          int
-	CSVSkipHeaders       int
+	CSVSkipColumns       int
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -165,10 +164,9 @@ func NewParser(config *Config) (Parser, error) {
 			config.CSVDelimiter,
 			config.CSVComment,
 			config.CSVTrimSpace,
-			config.CSVDataColumns,
+			config.CSVColumnNames,
 			config.CSVTagColumns,
-			config.CSVFieldColumns,
-			config.CSVNameColumn,
+			config.CSVMeasurementColumn,
 			config.CSVTimestampColumn,
 			config.CSVTimestampFormat,
 			config.DefaultTags)
@@ -187,7 +185,6 @@ func newCSVParser(metricName string,
 	trimSpace bool,
 	dataColumns []string,
 	tagColumns []string,
-	fieldColumns []string,
 	nameColumn string,
 	timestampColumn string,
 	timestampFormat string,
@@ -200,9 +197,8 @@ func newCSVParser(metricName string,
 		Delimiter:         delimiter,
 		Comment:           comment,
 		TrimSpace:         trimSpace,
-		DataColumns:       dataColumns,
+		ColumnNames:       dataColumns,
 		TagColumns:        tagColumns,
-		FieldColumns:      fieldColumns,
 		MeasurementColumn: nameColumn,
 		TimestampColumn:   timestampColumn,
 		TimestampFormat:   timestampFormat,

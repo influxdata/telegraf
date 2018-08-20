@@ -927,12 +927,9 @@ or an error will be thrown.
   ## If `csv_header_row_count` is set to 0, this config must be used
   csv_column_names = []
 
-  ## Columns listed here will be added as tags
+  ## Columns listed here will be added as tags. Any other columns
+  ## will be added as fields.
   csv_tag_columns = []
-
-  ## Columns listed here will be added as fields
-  ## the field type is infered from the value of the field
-  csv_field_columns = []
 
   ## The column to extract the name of the metric from
   ## By default, this is the name of the plugin

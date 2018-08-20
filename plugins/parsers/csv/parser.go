@@ -21,7 +21,6 @@ type CSVParser struct {
 	TrimSpace         bool
 	ColumnNames       []string
 	TagColumns        []string
-	FieldColumns      []string
 	MeasurementColumn string
 	TimestampColumn   string
 	TimestampFormat   string

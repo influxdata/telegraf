@@ -1424,18 +1424,6 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
-	if node, ok := tbl.Fields["csv_field_columns"]; ok {
-		if kv, ok := node.(*ast.KeyValue); ok {
-			if ary, ok := kv.Value.(*ast.Array); ok {
-				for _, elem := range ary.Value {
-					if str, ok := elem.(*ast.String); ok {
-						c.CSVFieldColumns = append(c.CSVFieldColumns, str.Value)
-					}
-				}
-			}
-		}
-	}
-
 	if node, ok := tbl.Fields["csv_delimiter"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -1455,7 +1443,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	if node, ok := tbl.Fields["csv_measurement_column"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
-				c.CSVNameColumn = str.Value
+				c.CSVMeasurementColumn = str.Value
 			}
 		}
 	}
@@ -1478,10 +1466,11 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 
 	if node, ok := tbl.Fields["csv_header_row_count"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.Value); ok {
-				c.CSVHeaderRowCount, err = strconv.Aoit(str.Value)
+			if str, ok := kv.Value.(*ast.String); ok {
+				iVal, err := strconv.Atoi(str.Value)
+				c.CSVHeaderRowCount = iVal
 				if err != nil {
-					log.Printf("E! parsing to int: %v", err)
+					return nil, fmt.Errorf("E! parsing to int: %v", err)
 				}
 			}
 		}
@@ -1489,10 +1478,11 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 
 	if node, ok := tbl.Fields["csv_skip_rows"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.Value); ok {
-				c.CSVSkipRows, err = strconv.Aoit(str.Value)
+			if str, ok := kv.Value.(*ast.String); ok {
+				iVal, err := strconv.Atoi(str.Value)
+				c.CSVSkipRows = iVal
 				if err != nil {
-					log.Printf("E! parsing to int: %v", err)
+					return nil, fmt.Errorf("E! parsing to int: %v", err)
 				}
 			}
 		}
@@ -1500,10 +1490,11 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 
 	if node, ok := tbl.Fields["csv_skip_columns"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.Value); ok {
-				c.CSVSkipColumns, err = strconv.Aoit(str.Value)
+			if str, ok := kv.Value.(*ast.String); ok {
+				iVal, err := strconv.Atoi(str.Value)
+				c.CSVSkipColumns = iVal
 				if err != nil {
-					log.Printf("E! parsing to int: %v", err)
+					return nil, fmt.Errorf("E! parsing to int: %v", err)
 				}
 			}
 		}
@@ -1513,16 +1504,10 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.Boolean); ok {
 				//for config with no quotes
-				val, _ := strconv.ParseBool(str.Value)
+				val, err := strconv.ParseBool(str.Value)
 				c.CSVTrimSpace = val
-			} else {
-				//for config with quotes
-				strVal := kv.Value.(*ast.String)
-				val, err := strconv.ParseBool(strVal.Value)
 				if err != nil {
-					log.Printf("E! parsing to bool: %v", err)
-				} else {
-					c.CSVTrimSpace = val
+					return nil, fmt.Errorf("E! parsing to bool: %v", err)
 				}
 			}
 		}
