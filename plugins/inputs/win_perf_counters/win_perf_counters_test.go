@@ -28,7 +28,7 @@ type FakePerformanceQuery struct {
 var MetricTime = time.Date(2018, 5, 28, 12, 0, 0, 0, time.UTC)
 
 func (m *testCounter) ToCounterValue() *CounterValue {
-	_, inst, _, _ := extractObjectInstanceCounterFromQuery(m.path)
+	_, inst, _, _ := extractCounterInfoFromCounterPath(m.path)
 	if inst == "" {
 		inst = "--"
 	}
@@ -209,6 +209,25 @@ func createCounterMap(counterPaths []string, values []float64) map[string]testCo
 		}
 	}
 	return counters
+}
+
+var counterPathsAndRes = map[string][]string{
+	"\\O\\CT":                 {"O", "", "CT"},
+	"\\\\CM\\O\\CT":           {"O", "", "CT"},
+	"\\O(I)\\CT":              {"O", "I", "CT"},
+	"\\\\CM\\O(I)\\CT":        {"O", "I", "CT"},
+	"\\O(d:\\f\\I)\\CT":       {"O", "d:\\f\\I", "CT"},
+	"\\\\CM\\O(d:\\f\\I)\\CT": {"O", "d:\\f\\I", "CT"},
+	"\\O(I(info))\\CT":        {"O", "I(info)", "CT"},
+	"\\\\CM\\O(I(info))\\CT":  {"O", "I(info)", "CT"},
+}
+
+func TestCounterPathParsing(t *testing.T) {
+	for path, vals := range counterPathsAndRes {
+		o, i, c, err := extractCounterInfoFromCounterPath(path)
+		require.NoError(t, err)
+		assert.True(t, assert.ObjectsAreEqual(vals, []string{o, i, c}), "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
+	}
 }
 
 func TestAddItemSimple(t *testing.T) {
