@@ -12,9 +12,9 @@ import (
 func defaultTags() map[string]string {
 	return map[string]string{
 		"name":    "my-kibana",
-		"uuid":    "00000000-0000-0000-0000-000000000000",
-		"server":  "example.com:5601",
+		"source":  "example.com:5601",
 		"version": "6.3.2",
+		"status":  "green",
 	}
 }
 
@@ -48,7 +48,7 @@ func checkKibanaStatusResult(t *testing.T, acc *testutil.Accumulator) {
 
 func TestGather(t *testing.T) {
 	ks := newKibanahWithClient()
-	ks.Servers = []string{"https://user:passwd@example.com:5601"}
+	ks.Servers = []string{"http://example.com:5601"}
 	ks.client.Transport = newTransportMock(http.StatusOK, kibanaStatusResponse)
 
 	var acc testutil.Accumulator

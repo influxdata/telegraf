@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -15,14 +14,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// mask for masking username/password from error messages
-var mask = regexp.MustCompile(`https?:\/\/\S+:\S+@`)
-
 const statusPath = "/api/status"
 
 type kibanaStatus struct {
 	Name    string  `json:"name"`
-	UUID    string  `json:"uuid"`
 	Version version `json:"version"`
 	Status  status  `json:"status"`
 	Metrics metrics `json:"metrics"`
@@ -52,8 +47,8 @@ type metrics struct {
 }
 
 type responseTimes struct {
-	AvgInMillis int64 `json:"avg_in_millis"`
-	MaxInMillis int64 `json:"max_in_millis"`
+	AvgInMillis float64 `json:"avg_in_millis"`
+	MaxInMillis int64   `json:"max_in_millis"`
 }
 
 type process struct {
@@ -67,12 +62,14 @@ type mem struct {
 
 const sampleConfig = `
   ## specify a list of one or more Kibana servers
-  # you can add username and password to your url to use basic authentication:
-  # servers = ["http://user:pass@localhost:5601"]
   servers = ["http://localhost:5601"]
 
   ## Timeout for HTTP requests
-  http_timeout = "5s"
+  timeout = "5s"
+
+  ## HTTP Basic Auth credentials
+  # username = "username"
+  # password = "pa$$word"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -83,19 +80,19 @@ const sampleConfig = `
 `
 
 type Kibana struct {
-	Local       bool
-	Servers     []string
-	HttpTimeout internal.Duration
+	Local    bool
+	Servers  []string
+	Username string
+	Password string
+	Timeout  internal.Duration
 	tls.ClientConfig
 
-	client                  *http.Client
-	catMasterResponseTokens []string
-	isMaster                bool
+	client *http.Client
 }
 
 func NewKibana() *Kibana {
 	return &Kibana{
-		HttpTimeout: internal.Duration{Duration: time.Second * 5},
+		Timeout: internal.Duration{Duration: time.Second * 5},
 	}
 }
 
@@ -139,7 +136,7 @@ func (k *Kibana) Gather(acc telegraf.Accumulator) error {
 		go func(baseUrl string, acc telegraf.Accumulator) {
 			defer wg.Done()
 			if err := k.gatherKibanaStatus(baseUrl, acc); err != nil {
-				acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
+				acc.AddError(fmt.Errorf("[url=%s]: %s", baseUrl, err))
 				return
 			}
 		}(serv, acc)
@@ -154,13 +151,12 @@ func (k *Kibana) createHttpClient() (*http.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	tr := &http.Transport{
-		ResponseHeaderTimeout: k.HttpTimeout.Duration,
-		TLSClientConfig:       tlsCfg,
-	}
+
 	client := &http.Client{
-		Transport: tr,
-		Timeout:   k.HttpTimeout.Duration,
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: k.Timeout.Duration,
 	}
 
 	return client, nil
@@ -180,11 +176,10 @@ func (k *Kibana) gatherKibanaStatus(baseUrl string, acc telegraf.Accumulator) er
 	tags := make(map[string]string)
 
 	tags["name"] = kibanaStatus.Name
-	tags["uuid"] = kibanaStatus.UUID
-	tags["server"] = host
+	tags["source"] = host
 	tags["version"] = kibanaStatus.Version.Number
+	tags["status"] = kibanaStatus.Status.Overall.State
 
-	fields["status"] = kibanaStatus.Status.Overall.State
 	fields["status_code"] = mapHealthStatusToCode(kibanaStatus.Status.Overall.State)
 
 	fields["uptime_ms"] = kibanaStatus.Metrics.UptimeInMillis
@@ -200,27 +195,25 @@ func (k *Kibana) gatherKibanaStatus(baseUrl string, acc telegraf.Accumulator) er
 }
 
 func (k *Kibana) gatherJsonData(url string, v interface{}) (host string, err error) {
-	r, err := k.client.Get(url)
+
+	request, err := http.NewRequest("GET", url, nil)
+
+	if (k.Username != "") || (k.Password != "") {
+		request.SetBasicAuth(k.Username, k.Password)
+	}
+
+	response, err := k.client.Do(request)
 	if err != nil {
 		return "", err
 	}
 
-	host = r.Request.Host
+	defer response.Body.Close()
 
-	defer r.Body.Close()
-	if r.StatusCode != http.StatusOK {
-		// NOTE: we are not going to read/discard r.Body under the assumption we'd prefer
-		// to let the underlying transport close the connection and re-establish a new one for
-		// future calls.
-		return "", fmt.Errorf("kibana: API responded with status-code %d, expected %d",
-			r.StatusCode, http.StatusOK)
+	if err = json.NewDecoder(response.Body).Decode(v); err != nil {
+		return request.Host, err
 	}
 
-	if err = json.NewDecoder(r.Body).Decode(v); err != nil {
-		return host, err
-	}
-
-	return host, nil
+	return request.Host, nil
 }
 
 func init() {

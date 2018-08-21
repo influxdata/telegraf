@@ -7,13 +7,15 @@ obtain the health status of Kibana and some useful metrics.
 
 ```toml
 [[inputs.kibana]]
-   ## specify a list of one or more Kibana servers
-  # you can add username and password to your url to use basic authentication:
-  # servers = ["http://user:pass@localhost:5601"]
+  ## specify a list of one or more Kibana servers
   servers = ["http://localhost:5601"]
 
   ## Timeout for HTTP requests
-  http_timeout = "5s"
+  timeout = "5s"
+
+  ## HTTP Basic Auth credentials
+  # username = "username"
+  # password = "pa$$word"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -37,22 +39,22 @@ with following rules:
 ### Measurements & Fields
 
 - kibana
-  - status: string (green, yellow, red)
   - status_code: integer (1, 2, 3, 0)
   - heap_max_bytes: integer
   - heap_used_bytes: integer
   - uptime_ms: integer
-  - response_time_avg_ms: integer
+  - response_time_avg_ms: float
   - response_time_max_ms: integer
   - concurrent_connections: integer
 
 ### Tags
 
+- status (Kibana health: green, yellow, red)
 - name (Kibana reported name)
 - uuid (Kibana reported UUID)
 - version (Kibana version)
-- server (Kibana server hostname or IP)
+- source (Kibana server hostname or IP)
 
 ### Example Output
 
-kibana,host=myhost,name=my-kibana,server=localhost:5601,uuid=00000000-0000-0000-0000-000000000000,version=6.3.2 concurrent_connections=0i,heap_max_bytes=136478720i,heap_used_bytes=119231088i,response_time_avg_ms=0i,response_time_max_ms=0i,status="green",status_code=1i,uptime_ms=2187428019i 1534864502000000000
+kibana,host=myhost,name=my-kibana,source=localhost:5601,version=6.3.2 concurrent_connections=0i,heap_max_bytes=136478720i,heap_used_bytes=119231088i,response_time_avg_ms=0i,response_time_max_ms=0i,status="green",status_code=1i,uptime_ms=2187428019i 1534864502000000000
