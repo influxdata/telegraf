@@ -13,9 +13,8 @@ import (
 
 func TestBasicCSV(t *testing.T) {
 	p := CSVParser{
-		ColumnNames:  []string{"first", "second", "third"},
-		FieldColumns: []string{"first", "second"},
-		TagColumns:   []string{"third"},
+		ColumnNames: []string{"first", "second", "third"},
+		TagColumns:  []string{"third"},
 	}
 
 	_, err := p.ParseLine("1.4,true,hi")
@@ -25,7 +24,6 @@ func TestBasicCSV(t *testing.T) {
 func TestHeaderConcatenationCSV(t *testing.T) {
 	p := CSVParser{
 		HeaderRowCount:    2,
-		FieldColumns:      []string{"first1", "second2"},
 		MeasurementColumn: "3",
 	}
 	testCSV := `first,second
@@ -41,7 +39,6 @@ func TestHeaderOverride(t *testing.T) {
 	p := CSVParser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
-		FieldColumns:      []string{"first", "second"},
 		MeasurementColumn: "third",
 	}
 	testCSV := `line1,line2,line3
@@ -55,7 +52,6 @@ func TestTimestamp(t *testing.T) {
 	p := CSVParser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
-		FieldColumns:      []string{"second"},
 		MeasurementColumn: "third",
 		TimestampColumn:   "first",
 		TimestampFormat:   "02/01/06 03:04:05 PM",
@@ -72,7 +68,6 @@ func TestTimestampError(t *testing.T) {
 	p := CSVParser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
-		FieldColumns:      []string{"second"},
 		MeasurementColumn: "third",
 		TimestampColumn:   "first",
 	}
@@ -87,7 +82,6 @@ func TestQuotedCharacter(t *testing.T) {
 	p := CSVParser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
-		FieldColumns:      []string{"second", "first"},
 		MeasurementColumn: "third",
 	}
 
@@ -103,7 +97,6 @@ func TestDelimiter(t *testing.T) {
 		HeaderRowCount:    1,
 		Delimiter:         "%",
 		ColumnNames:       []string{"first", "second", "third"},
-		FieldColumns:      []string{"second", "first"},
 		MeasurementColumn: "third",
 	}
 
@@ -119,7 +112,6 @@ func TestValueConversion(t *testing.T) {
 		HeaderRowCount: 0,
 		Delimiter:      ",",
 		ColumnNames:    []string{"first", "second", "third", "fourth"},
-		FieldColumns:   []string{"second", "first", "third", "fourth"},
 		MetricName:     "test_value",
 	}
 	testCSV := `3.3,4,true,hello`
@@ -149,7 +141,6 @@ func TestSkipComment(t *testing.T) {
 		HeaderRowCount: 0,
 		Comment:        "#",
 		ColumnNames:    []string{"first", "second", "third", "fourth"},
-		FieldColumns:   []string{"second", "first", "third", "fourth"},
 		MetricName:     "test_value",
 	}
 	testCSV := `#3.3,4,true,hello
@@ -172,7 +163,6 @@ func TestTrimSpace(t *testing.T) {
 		HeaderRowCount: 0,
 		TrimSpace:      true,
 		ColumnNames:    []string{"first", "second", "third", "fourth"},
-		FieldColumns:   []string{"second", "first", "third", "fourth"},
 		MetricName:     "test_value",
 	}
 	testCSV := ` 3.3, 4,    true,hello`
@@ -197,7 +187,6 @@ func TestSkipRows(t *testing.T) {
 	p := CSVParser{
 		HeaderRowCount:    1,
 		SkipRows:          1,
-		FieldColumns:      []string{"line2", "line3"},
 		MeasurementColumn: "line3",
 	}
 	testCSV := `garbage nonsense
@@ -215,9 +204,8 @@ hello,80,test_name2`
 
 func TestSkipColumns(t *testing.T) {
 	p := CSVParser{
-		SkipColumns:  1,
-		ColumnNames:  []string{"line1", "line2"},
-		FieldColumns: []string{"line1", "line2"},
+		SkipColumns: 1,
+		ColumnNames: []string{"line1", "line2"},
 	}
 	testCSV := `hello,80,test_name`
 
@@ -234,7 +222,6 @@ func TestSkipColumnsWithHeader(t *testing.T) {
 	p := CSVParser{
 		SkipColumns:    1,
 		HeaderRowCount: 2,
-		FieldColumns:   []string{"col1"},
 	}
 	testCSV := `col,col,col
 	1,2,3

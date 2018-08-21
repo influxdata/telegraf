@@ -34,14 +34,14 @@ func (p *CSVParser) compile(r *bytes.Reader) (*csv.Reader, error) {
 	if p.Delimiter != "" {
 		runeStr := []rune(p.Delimiter)
 		if len(runeStr) > 1 {
-			return csvReader, fmt.Errorf("delimiter must be a single character, got: %s", p.Delimiter)
+			return nil, fmt.Errorf("delimiter must be a single character, got: %s", p.Delimiter)
 		}
 		csvReader.Comma = runeStr[0]
 	}
 	if p.Comment != "" {
 		runeStr := []rune(p.Comment)
 		if len(runeStr) > 1 {
-			return csvReader, fmt.Errorf("comment must be a single character, got: %s", p.Comment)
+			return nil, fmt.Errorf("comment must be a single character, got: %s", p.Comment)
 		}
 		csvReader.Comment = runeStr[0]
 	}
@@ -130,7 +130,7 @@ func (p *CSVParser) ParseLine(line string) (telegraf.Metric, error) {
 }
 
 func (p *CSVParser) parseRecord(record []string) (telegraf.Metric, error) {
-	recordFields := make(map[string]string)
+	recordFields := make(map[string]interface{})
 	tags := make(map[string]string)
 	fields := make(map[string]interface{})
 
@@ -138,7 +138,17 @@ func (p *CSVParser) parseRecord(record []string) (telegraf.Metric, error) {
 	record = record[p.SkipColumns:]
 	for i, fieldName := range p.ColumnNames {
 		if i < len(record) {
-			recordFields[fieldName] = record[i]
+			value := record[i]
+			// attempt type conversions
+			if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
+				recordFields[fieldName] = iValue
+			} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
+				recordFields[fieldName] = fValue
+			} else if bValue, err := strconv.ParseBool(value); err == nil {
+				recordFields[fieldName] = bValue
+			} else {
+				recordFields[fieldName] = value
+			}
 		}
 	}
 
@@ -147,40 +157,26 @@ func (p *CSVParser) parseRecord(record []string) (telegraf.Metric, error) {
 		tags[k] = v
 	}
 
-	for _, tagName := range p.TagColumns {
-		if recordFields[tagName] == "" {
-			return nil, fmt.Errorf("could not find field: %v", tagName)
-		}
-		tags[tagName] = recordFields[tagName]
-	}
-
-	for _, fieldName := range p.FieldColumns {
-		value, ok := recordFields[fieldName]
-		if !ok {
-			return nil, fmt.Errorf("could not find field: %v", fieldName)
-		}
-
-		// attempt type conversions
-		if iValue, err := strconv.Atoi(value); err == nil {
-			fields[fieldName] = iValue
-		} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
-			fields[fieldName] = fValue
-		} else if bValue, err := strconv.ParseBool(value); err == nil {
-			fields[fieldName] = bValue
-		} else {
-			fields[fieldName] = value
-		}
-	}
-
 	// will default to plugin name
 	measurementName := p.MetricName
-	if recordFields[p.MeasurementColumn] != "" {
-		measurementName = recordFields[p.MeasurementColumn]
+	if recordFields[p.MeasurementColumn] != nil {
+		measurementName = recordFields[p.MeasurementColumn].(string)
+	}
+
+	for _, tagName := range p.TagColumns {
+		if recordFields[tagName] == nil {
+			return nil, fmt.Errorf("could not find field: %v", tagName)
+		}
+		tags[tagName] = recordFields[tagName].(string)
+		delete(recordFields, tagName)
 	}
 
 	metricTime := time.Now()
 	if p.TimestampColumn != "" {
-		tStr := recordFields[p.TimestampColumn]
+		if recordFields[p.TimestampColumn] == nil {
+			return nil, fmt.Errorf("timestamp column: %v could not be found", p.TimestampColumn)
+		}
+		tStr := recordFields[p.TimestampColumn].(string)
 		if p.TimestampFormat == "" {
 			return nil, fmt.Errorf("timestamp format must be specified")
 		}
