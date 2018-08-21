@@ -122,41 +122,52 @@ var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 // General Counter path pattern is: \\computer\object(parent/instance#index)\counter
 // parent/instance#index part is skipped in single instance objects (e.g. Memory): \\computer\object\counter
 func extractCounterInfoFromCounterPath(counterPath string) (object string, instance string, counter string, err error) {
-	//find instance
-	var leftParenthesisIndex, rightParenthesisIndex, rightObjectBorderIndex int
 
-	leftParenthesisIndex = strings.Index(counterPath, "(")
-	if leftParenthesisIndex != -1 {
-		rightParenthesisIndex = strings.LastIndex(counterPath, ")")
-		if rightParenthesisIndex == -1 {
-			err = errors.New("cannot parse instance from: " + counterPath)
-			return
-		} else {
-			instance = counterPath[leftParenthesisIndex+1 : rightParenthesisIndex]
+	rightObjectBorderIndex := -1
+	leftObjectBorderIndex := -1
+	leftCounterBorderIndex := -1
+	rightInstanceBorderIndex := -1
+	leftInstanceBorderIndex := -1
+	bracketLevel := 0
+
+	for i := len(counterPath) - 1; i >= 0; i-- {
+		switch counterPath[i] {
+		case '\\':
+			if bracketLevel == 0 {
+				if leftCounterBorderIndex == -1 {
+					leftCounterBorderIndex = i
+				} else if leftObjectBorderIndex == -1 {
+					leftObjectBorderIndex = i
+				}
+			}
+		case '(':
+			bracketLevel--
+			if leftInstanceBorderIndex == -1 && bracketLevel == 0 && leftObjectBorderIndex == -1 && leftCounterBorderIndex > -1 {
+				leftInstanceBorderIndex = i
+				rightObjectBorderIndex = i
+			}
+		case ')':
+			if rightInstanceBorderIndex == -1 && bracketLevel == 0 && leftCounterBorderIndex > -1 {
+				rightInstanceBorderIndex = i
+			}
+			bracketLevel++
 		}
-	} else {
-		rightParenthesisIndex = -1
 	}
-	//find object
-	rightObjectBorderIndex = leftParenthesisIndex
 	if rightObjectBorderIndex == -1 {
-		rightObjectBorderIndex = strings.LastIndex(counterPath, "\\")
-		if rightObjectBorderIndex == -1 {
-			err = errors.New("cannot parse object from: " + counterPath)
-			return
-		}
+		rightObjectBorderIndex = leftCounterBorderIndex
 	}
-	leftobjectBorderIndex := strings.LastIndex(counterPath[:rightObjectBorderIndex], "\\")
-	if leftobjectBorderIndex == -1 {
+	if rightObjectBorderIndex == -1 || leftObjectBorderIndex == -1 {
 		err = errors.New("cannot parse object from: " + counterPath)
 		return
 	}
-	object = counterPath[leftobjectBorderIndex+1 : rightObjectBorderIndex]
-	//get countername
-	leftCounterBorderIndex := rightParenthesisIndex + 1
-	if leftCounterBorderIndex == 0 {
-		leftCounterBorderIndex = rightObjectBorderIndex
+
+	if leftInstanceBorderIndex > -1 && rightInstanceBorderIndex > -1 {
+		instance = counterPath[leftInstanceBorderIndex+1 : rightInstanceBorderIndex]
+	} else if (leftInstanceBorderIndex == -1 && rightInstanceBorderIndex > -1) || (leftInstanceBorderIndex > -1 && rightInstanceBorderIndex == -1) {
+		err = errors.New("cannot parse instance from: " + counterPath)
+		return
 	}
+	object = counterPath[leftObjectBorderIndex+1 : rightObjectBorderIndex]
 	counter = counterPath[leftCounterBorderIndex+1:]
 	return
 }
