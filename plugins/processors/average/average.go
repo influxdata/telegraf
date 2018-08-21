@@ -1,51 +1,47 @@
 package average
 
 import (
-	"encoding/binary"
+	"log"
+	"strconv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 type Average struct {
-	GroupSize      int    `toml:"group_size"`
-	AverageField   string `toml:"average_field"`
-	Sum            int
-	TotalProcessed int
+	AverageField string `toml:"average_field"`
+	Count        int
+	Sum          float64
 }
 
-func (s *Sampler) SampleConfig() string {
+func (s *Average) SampleConfig() string {
 	return `
-[[processors.sampler]]
+[[processors.average]]
 
-count = 5
-
-## fields added all up
-field_sum
-
-## field to be sampled over
+## field to compile a running average of
 average_field = "trace_id"`
 }
 
 func (a *Average) Description() string {
-	return "will pass through an average sampling of metrics"
+	return "will append a field to each metric indicating the running average of the specified field"
 }
 
 func (a *Average) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	nMetrics := make([]telegraf.Metric, 0)
 	for _, metric := range in {
-		value := metric.Fields()[a.AverageField]
-		if value == "" {
-			return nil
-		}
+		if metric.Fields()[a.AverageField] != nil {
 
-		hash := binary.BigEndian.Uint64([]byte(value.(string)))
-		hash = hash % 100
-		if hash >= 0 && hash <= uint64(s.PercentOfMetrics) {
-			nMetrics = append(nMetrics, in...)
+			fVal, err := strconv.ParseFloat(metric.Fields()[a.AverageField].(string), 64)
+			if err != nil {
+				log.Printf("E! %v must be a float or integer value, %v", a.AverageField, err)
+				continue
+			}
+			a.Sum += fVal
+			a.Count++
+			ave := a.Sum / float64(a.Count)
+			metric.AddField(a.AverageField+"_mean", ave)
 		}
 	}
-	return nMetrics
+	return in
 }
 
 func init() {
