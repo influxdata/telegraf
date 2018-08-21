@@ -2,7 +2,9 @@ package kafka
 
 import (
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -95,4 +97,45 @@ func TestValidateTopicSuffixMethod(t *testing.T) {
 		err := ValidateTopicSuffixMethod(method)
 		require.NoError(t, err, "Topic suffix method used should be valid.")
 	}
+}
+
+func TestRoutingKeyStatic(t *testing.T) {
+	k := &Kafka{
+		RoutingKey: "static",
+	}
+
+	metric, err := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(0, 0),
+	)
+	require.NoError(t, err)
+
+	expected := "static"
+	actual := k.routingKey(metric)
+	require.Equal(t, expected, actual)
+	require.NoError(t, err)
+}
+
+func TestRoutingKeyRandom(t *testing.T) {
+	k := &Kafka{
+		RoutingKey: "random",
+	}
+
+	metric, err := metric.New(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42.0,
+		},
+		time.Unix(0, 0),
+	)
+	require.NoError(t, err)
+
+	actual := k.routingKey(metric)
+	require.Equal(t, 36, len(actual))
+	require.NoError(t, err)
 }
