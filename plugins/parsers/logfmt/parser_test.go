@@ -114,11 +114,34 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			name:    "poorly formatted logfmt returns error",
+			name:    "keys without = or values are ignored",
 			now:     func() time.Time { return time.Unix(0, 0) },
-			bytes:   []byte(`i am garbage data.`),
+			bytes:   []byte(`i am no data.`),
 			want:    []testutil.Metric{},
-			wantErr: true,
+			wantErr: false,
+		},
+		{
+			name:    "keys without values are ignored",
+			now:     func() time.Time { return time.Unix(0, 0) },
+			bytes:   []byte(`foo="" bar=`),
+			want:    []testutil.Metric{},
+			wantErr: false,
+		},
+		{
+			name:        "unterminated quote produces error",
+			now:         func() time.Time { return time.Unix(0, 0) },
+			measurement: "testlog",
+			bytes:       []byte(`bar=baz foo="bar`),
+			want:        []testutil.Metric{},
+			wantErr:     true,
+		},
+		{
+			name:        "malformed key",
+			now:         func() time.Time { return time.Unix(0, 0) },
+			measurement: "testlog",
+			bytes:       []byte(`"foo=" bar=baz`),
+			want:        []testutil.Metric{},
+			wantErr:     true,
 		},
 	}
 	for _, tt := range tests {

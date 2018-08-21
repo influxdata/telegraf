@@ -3,7 +3,6 @@ package logfmt
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -37,12 +36,19 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 	reader := bytes.NewReader(b)
 	decoder := logfmt.NewDecoder(reader)
 	metrics := make([]telegraf.Metric, 0)
-	for decoder.ScanRecord() {
-		tags := make(map[string]string)
+	for {
+		ok := decoder.ScanRecord()
+		if !ok {
+			err := decoder.Err()
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
 		fields := make(map[string]interface{})
 		for decoder.ScanKeyval() {
 			if string(decoder.Value()) == "" {
-				return metrics, fmt.Errorf("value could not be found for key: %v", string(decoder.Key()))
+				continue
 			}
 
 			//type conversions
@@ -57,9 +63,12 @@ func (p *Parser) Parse(b []byte) ([]telegraf.Metric, error) {
 				fields[string(decoder.Key())] = value
 			}
 		}
-		m, err := metric.New(p.MetricName, tags, fields, p.Now())
+		if len(fields) == 0 {
+			continue
+		}
+
+		m, err := metric.New(p.MetricName, map[string]string{}, fields, p.Now())
 		if err != nil {
-			log.Println("Error occurred")
 			return nil, err
 		}
 
