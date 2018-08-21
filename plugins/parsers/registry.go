@@ -245,12 +245,11 @@ func NewDropwizardParser(
 	return parser, err
 }
 
-<<<<<<< HEAD
 // NewLogFmtParser returns a logfmt parser with the default options.
 func NewLogFmtParser(metricName string, defaultTags map[string]string) (Parser, error) {
 	return logfmt.NewParser(metricName, defaultTags), nil
-=======
+}
+
 func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {
 	return wavefront.NewWavefrontParser(defaultTags), nil
->>>>>>> master
 }

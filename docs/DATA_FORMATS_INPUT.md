@@ -10,11 +10,8 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Collectd](#collectd)
 1. [Dropwizard](#dropwizard)
 1. [Grok](#grok)
-<<<<<<< HEAD
 1. [Logfmt](#logfmt)
-=======
 1. [Wavefront](#wavefront)
->>>>>>> master
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
