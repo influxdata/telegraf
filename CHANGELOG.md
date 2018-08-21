@@ -67,6 +67,7 @@
 - [#4542](https://github.com/influxdata/telegraf/pull/4542): Use dep v0.5.0.
 - [#4433](https://github.com/influxdata/telegraf/pull/4433): Add ability to set measurement from matched text in grok parser.
 - [#4565](https://github.com/influxdata/telegraf/pull/4465): Drop message batches in kafka output if too large.
+- [#4579](https://github.com/influxdata/telegraf/pull/4579): Add support for static and random routing keys in kafka output.
 
 
 ## v1.7.4 [unreleased]
