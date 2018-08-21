@@ -9,6 +9,9 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 
 ## Configuration
 
+NOTE: To disable collection av a specific resource type, simply exclude all metrics using the XX_metric_exclude. For example, to disable collection of VMs, add this:
+```vm_metric_exclude = [ "*" ]```
+
 ```
 # Read metrics from one or many vCenters
 [[inputs.vsphere]]

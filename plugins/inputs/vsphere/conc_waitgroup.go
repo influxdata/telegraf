@@ -48,7 +48,10 @@ func (c *ConcurrentWaitGroup) Done() {
 	c.Add(-1)
 }
 
-// Wait blocks until the number of running jobs reaches zero.
+// Wait blocks until the number of running jobs reaches zero. Since the number
+// of jobs dropping to zero during a Wait() will prevent new jobs from being
+// started, this should only be called when it's desired to end all jobs,
+// e.g. after some worker pool construct has been shut down.
 func (c *ConcurrentWaitGroup) Wait() {
 	c.mux.Lock()
 	defer c.mux.Unlock()
