@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
@@ -99,43 +100,58 @@ func TestValidateTopicSuffixMethod(t *testing.T) {
 	}
 }
 
-func TestRoutingKeyStatic(t *testing.T) {
-	k := &Kafka{
-		RoutingKey: "static",
-	}
-
-	metric, err := metric.New(
-		"cpu",
-		map[string]string{},
-		map[string]interface{}{
-			"value": 42.0,
+func TestRoutingKey(t *testing.T) {
+	tests := []struct {
+		name   string
+		kafka  *Kafka
+		metric telegraf.Metric
+		check  func(t *testing.T, routingKey string)
+	}{
+		{
+			name: "static routing key",
+			kafka: &Kafka{
+				RoutingKey: "static",
+			},
+			metric: func() telegraf.Metric {
+				m, _ := metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(0, 0),
+				)
+				return m
+			}(),
+			check: func(t *testing.T, routingKey string) {
+				require.Equal(t, "static", routingKey)
+			},
 		},
-		time.Unix(0, 0),
-	)
-	require.NoError(t, err)
-
-	expected := "static"
-	actual := k.routingKey(metric)
-	require.Equal(t, expected, actual)
-	require.NoError(t, err)
-}
-
-func TestRoutingKeyRandom(t *testing.T) {
-	k := &Kafka{
-		RoutingKey: "random",
-	}
-
-	metric, err := metric.New(
-		"cpu",
-		map[string]string{},
-		map[string]interface{}{
-			"value": 42.0,
+		{
+			name: "random routing key",
+			kafka: &Kafka{
+				RoutingKey: "random",
+			},
+			metric: func() telegraf.Metric {
+				m, _ := metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(0, 0),
+				)
+				return m
+			}(),
+			check: func(t *testing.T, routingKey string) {
+				require.Equal(t, 36, len(routingKey))
+			},
 		},
-		time.Unix(0, 0),
-	)
-	require.NoError(t, err)
-
-	actual := k.routingKey(metric)
-	require.Equal(t, 36, len(actual))
-	require.NoError(t, err)
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			key := tt.kafka.routingKey(tt.metric)
+			tt.check(t, key)
+		})
+	}
 }

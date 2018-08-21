@@ -53,7 +53,9 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Static routing key.  Used when no routing_tag is set or as a fallback
   ## when the tag specified in routing tag is not found.  If set to "random",
   ## a random value will be generated for each message.
-  routing_key = "random"
+  ##   ex: routing_key = "random"
+  ##       routing_key = "telegraf"
+  # routing_key = ""
 
   ## CompressionCodec represents the various compression codecs recognized by
   ## Kafka in messages.
