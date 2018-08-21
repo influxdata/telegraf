@@ -105,12 +105,13 @@ func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
 		tags := m.Tags()
 		fields := m.Fields()
 		t := m.Time()
+		tp := m.Type()
 		if ok := ro.Config.Filter.Apply(name, fields, tags); !ok {
 			ro.MetricsFiltered.Incr(1)
 			return
 		}
 		// error is not possible if creating from another metric, so ignore.
-		m, _ = metric.New(name, tags, fields, t)
+		m, _ = metric.New(name, tags, fields, t, tp)
 	}
 
 	ro.metrics.Add(m)
@@ -119,6 +120,7 @@ func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
 		err := ro.write(batch)
 		if err != nil {
 			ro.failMetrics.Add(batch...)
+			log.Printf("E! Error writing to output [%s]: %v", ro.Name, err)
 		}
 	}
 }

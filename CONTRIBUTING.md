@@ -51,7 +51,9 @@ See below for a quick example.
 * Input Plugins must be added to the
 `github.com/influxdata/telegraf/plugins/inputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
-plugin can be configured. This is include in `telegraf config`.
+plugin can be configured. This is included in `telegraf config`.  Please
+consult the [SampleConfig](https://github.com/influxdata/telegraf/wiki/SampleConfig)
+page for the latest style guidelines.
 * The `Description` function should say in one line what this plugin does.
 
 Let's say you've written a plugin that emits metrics about processes on the
@@ -192,7 +194,9 @@ See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
 `github.com/influxdata/telegraf/plugins/outputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
-output can be configured. This is include in `telegraf config`.
+plugin can be configured. This is included in `telegraf config`.  Please
+consult the [SampleConfig](https://github.com/influxdata/telegraf/wiki/SampleConfig)
+page for the latest style guidelines.
 * The `Description` function should say in one line what this output does.
 
 ### Output Example

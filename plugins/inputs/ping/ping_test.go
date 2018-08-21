@@ -5,12 +5,12 @@ package ping
 import (
 	"errors"
 	"reflect"
-	"runtime"
 	"sort"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // BSD/Darwin ping output
@@ -99,68 +99,29 @@ func TestErrorProcessPingOutput(t *testing.T) {
 // Test that arg lists and created correctly
 func TestArgs(t *testing.T) {
 	p := Ping{
-		Count: 2,
+		Count:        2,
+		Interface:    "eth0",
+		Timeout:      12.0,
+		Deadline:     24,
+		PingInterval: 1.2,
 	}
 
-	// Actual and Expected arg lists must be sorted for reflect.DeepEqual
-
-	actual := p.args("www.google.com")
-	expected := []string{"-c", "2", "-n", "-s", "16", "www.google.com"}
-	sort.Strings(actual)
-	sort.Strings(expected)
-	assert.True(t, reflect.DeepEqual(expected, actual),
-		"Expected: %s Actual: %s", expected, actual)
-
-	p.Interface = "eth0"
-	actual = p.args("www.google.com")
-	expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0",
-		"www.google.com"}
-	sort.Strings(actual)
-	sort.Strings(expected)
-	assert.True(t, reflect.DeepEqual(expected, actual),
-		"Expected: %s Actual: %s", expected, actual)
-
-	p.Timeout = 12.0
-	actual = p.args("www.google.com")
-	switch runtime.GOOS {
-	case "darwin":
-		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
-			"12000.0", "www.google.com"}
-	default:
-		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
-			"12", "www.google.com"}
+	var systemCases = []struct {
+		system string
+		output []string
+	}{
+		{"darwin", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12000", "-t", "24", "-S", "eth0", "www.google.com"}},
+		{"linux", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-I", "eth0", "www.google.com"}},
+		{"anything else", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-I", "eth0", "www.google.com"}},
 	}
-
-	p.Deadline = 24
-	actual = p.args("www.google.com")
-	switch runtime.GOOS {
-	case "darwin":
-		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
-			"12000.0", "-t", "24", "www.google.com"}
-	default:
-		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
-			"12", "-w", "24", "www.google.com"}
+	for i := range systemCases {
+		actual := p.args("www.google.com", systemCases[i].system)
+		expected := systemCases[i].output
+		sort.Strings(actual)
+		sort.Strings(expected)
+		require.True(t, reflect.DeepEqual(expected, actual),
+			"Expected: %s Actual: %s", expected, actual)
 	}
-
-	sort.Strings(actual)
-	sort.Strings(expected)
-	assert.True(t, reflect.DeepEqual(expected, actual),
-		"Expected: %s Actual: %s", expected, actual)
-
-	p.PingInterval = 1.2
-	actual = p.args("www.google.com")
-	switch runtime.GOOS {
-	case "darwin":
-		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
-			"12000.0", "-t", "24", "-i", "1.2", "www.google.com"}
-	default:
-		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
-			"12", "-w", "24", "-i", "1.2", "www.google.com"}
-	}
-	sort.Strings(actual)
-	sort.Strings(expected)
-	assert.True(t, reflect.DeepEqual(expected, actual),
-		"Expected: %s Actual: %s", expected, actual)
 }
 
 func mockHostPinger(timeout float64, args ...string) (string, error) {
