@@ -10,7 +10,11 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Collectd](#collectd)
 1. [Dropwizard](#dropwizard)
 1. [Grok](#grok)
+<<<<<<< HEAD
 1. [Logfmt](#logfmt)
+=======
+1. [Wavefront](#wavefront)
+>>>>>>> master
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -661,7 +665,7 @@ For more information about the dropwizard json format see
   #   tag2 = "tags.tag2"
 ```
 
-# Grok
+# Grok:
 
 The grok data format parses line delimited data using a regular expression like
 language.
@@ -670,52 +674,8 @@ The best way to get acquainted with grok patterns is to read the logstash docs,
 which are available here:
   https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
 
-#### Grok Configuration:
-```toml
-[[inputs.reader]]
-  ## Files to parse each interval.
-  ## These accept standard unix glob matching rules, but with the addition of
-  ## ** as a "super asterisk". ie:
-  ##   /var/log/**.log     -> recursively find all .log files in /var/log
-  ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
-  ##   /var/log/apache.log -> only tail the apache log file
-  files = ["/var/log/apache/access.log"]
-
-  ## The dataformat to be read from files
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
-  data_format = "grok"
-
-  ## This is a list of patterns to check the given log file(s) for.
-  ## Note that adding patterns here increases processing time. The most
-  ## efficient configuration is to have one pattern per logparser.
-  ## Other common built-in patterns are:
-  ##   %{COMMON_LOG_FORMAT}   (plain apache & nginx access logs)
-  ##   %{COMBINED_LOG_FORMAT} (access logs + referrer & agent)
-  grok_patterns = ["%{COMBINED_LOG_FORMAT}"]
-
-  ## Full path(s) to custom pattern files.
-  grok_custom_pattern_files = []
-
-  ## Custom patterns can also be defined here. Put one pattern per line.
-  grok_custom_patterns = '''
-  '''
-
-  ## Timezone allows you to provide an override for timestamps that
-  ## don't already include an offset
-  ## e.g. 04/06/2016 12:41:45 data one two 5.43µs
-  ##
-  ## Default: "" which renders UTC
-  ## Options are as follows:
-  ##   1. Local             -- interpret based on machine localtime
-  ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-  ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
-  grok_timezone = "Canada/Eastern"
-```
-
-The Telegraf grok parser uses a slightly modified version of logstash "grok"
-patterns, with the format
+The grok parser uses a slightly modified version of logstash "grok"
+patterns, with the format:
 
 ```
 %{<capture_syntax>[:<semantic_name>][:<modifier>]}
@@ -740,6 +700,7 @@ You must capture at least one field per line.
   - duration (ie, 5.23ms gets converted to int nanoseconds)
   - tag      (converts the field into a tag)
   - drop     (drops the field completely)
+  - measurement (use the matched text as the measurement name)
 - Timestamp modifiers:
   - ts               (This will auto-learn the timestamp format)
   - ts-ansic         ("Mon Jan _2 15:04:05 2006")
@@ -759,7 +720,7 @@ You must capture at least one field per line.
   - ts-"CUSTOM"
 
 CUSTOM time layouts must be within quotes and be the representation of the
-"reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`.  
+"reference time", which is `Mon Jan 2 15:04:05 -0700 MST 2006`.
 To match a comma decimal point you can use a period.  For example `%{TIMESTAMP:timestamp:ts-"2006-01-02 15:04:05.000"}` can be used to match `"2018-01-02 15:04:05,000"`
 To match a comma decimal point you can use a period in the pattern string.
 See https://golang.org/pkg/time/#Parse for more details.
@@ -773,6 +734,50 @@ logstash patterns that depend on these are not supported._
 If you need help building patterns to match your logs,
 you will find the https://grokdebug.herokuapp.com application quite useful!
 
+#### Grok Configuration:
+```toml
+[[inputs.file]]
+  ## Files to parse each interval.
+  ## These accept standard unix glob matching rules, but with the addition of
+  ## ** as a "super asterisk". ie:
+  ##   /var/log/**.log     -> recursively find all .log files in /var/log
+  ##   /var/log/*/*.log    -> find all .log files with a parent dir in /var/log
+  ##   /var/log/apache.log -> only tail the apache log file
+  files = ["/var/log/apache/access.log"]
+
+  ## The dataformat to be read from files
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "grok"
+
+  ## This is a list of patterns to check the given log file(s) for.
+  ## Note that adding patterns here increases processing time. The most
+  ## efficient configuration is to have one pattern.
+  ## Other common built-in patterns are:
+  ##   %{COMMON_LOG_FORMAT}   (plain apache & nginx access logs)
+  ##   %{COMBINED_LOG_FORMAT} (access logs + referrer & agent)
+  grok_patterns = ["%{COMBINED_LOG_FORMAT}"]
+
+  ## Full path(s) to custom pattern files.
+  grok_custom_pattern_files = []
+
+  ## Custom patterns can also be defined here. Put one pattern per line.
+  grok_custom_patterns = '''
+  '''
+
+  ## Timezone allows you to provide an override for timestamps that
+  ## don't already include an offset
+  ## e.g. 04/06/2016 12:41:45 data one two 5.43µs
+  ##
+  ## Default: "" which renders UTC
+  ## Options are as follows:
+  ##   1. Local             -- interpret based on machine localtime
+  ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+  ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
+  grok_timezone = "Canada/Eastern"
+```
+
 #### Timestamp Examples
 
 This example input and config parses a file using a custom timestamp conversion:
@@ -782,9 +787,8 @@ This example input and config parses a file using a custom timestamp conversion:
 ```
 
 ```toml
-[[inputs.logparser]]
-  [inputs.logparser.grok]
-    patterns = ['%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02 15:04:05"} value=%{NUMBER:value:int}']
+[[inputs.file]]
+  grok_patterns = ['%{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02 15:04:05"} value=%{NUMBER:value:int}']
 ```
 
 This example input and config parses a file using a timestamp in unix time:
@@ -795,9 +799,8 @@ This example input and config parses a file using a timestamp in unix time:
 ```
 
 ```toml
-[[inputs.logparser]]
-  [inputs.logparser.grok]
-    patterns = ['%{NUMBER:timestamp:ts-epoch} value=%{NUMBER:value:int}']
+[[inputs.file]]
+  grok_patterns = ['%{NUMBER:timestamp:ts-epoch} value=%{NUMBER:value:int}']
 ```
 
 This example parses a file using a built-in conversion and a custom pattern:
@@ -807,20 +810,19 @@ Wed Apr 12 13:10:34 PST 2017 value=42
 ```
 
 ```toml
-[[inputs.logparser]]
-  [inputs.logparser.grok]
-	patterns = ["%{TS_UNIX:timestamp:ts-unix} value=%{NUMBER:value:int}"]
-    custom_patterns = '''
-      TS_UNIX %{DAY} %{MONTH} %{MONTHDAY} %{HOUR}:%{MINUTE}:%{SECOND} %{TZ} %{YEAR}
-    '''
+[[inputs.file]]
+  grok_patterns = ["%{TS_UNIX:timestamp:ts-unix} value=%{NUMBER:value:int}"]
+  grok_custom_patterns = '''
+    TS_UNIX %{DAY} %{MONTH} %{MONTHDAY} %{HOUR}:%{MINUTE}:%{SECOND} %{TZ} %{YEAR}
+  '''
 ```
 
 For cases where the timestamp itself is without offset, the `timezone` config var is available
 to denote an offset. By default (with `timezone` either omit, blank or set to `"UTC"`), the times
 are processed as if in the UTC timezone. If specified as `timezone = "Local"`, the timestamp
 will be processed based on the current machine timezone configuration. Lastly, if using a
-timezone from the list of Unix [timezones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones), the logparser grok will attempt to offset
-the timestamp accordingly. See test cases for more detailed examples.
+timezone from the list of Unix [timezones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones),
+grok will offset the timestamp accordingly.
 
 #### TOML Escaping
 
@@ -841,29 +843,26 @@ get a literal `|`.  With a basic TOML string, special characters such as
 backslash must be escaped, requiring us to escape the backslash a second time.
 
 ```toml
-[[inputs.logparser]]
-  [inputs.logparser.grok]
-    patterns = ["\\|%{NUMBER:value:int}\\|%{UNICODE_ESCAPE:escape}\\|'%{WORD:name}'\\|"]
-    custom_patterns = "UNICODE_ESCAPE (?:\\\\u[0-9A-F]{4})+"
+[[inputs.file]]
+  grok_patterns = ["\\|%{NUMBER:value:int}\\|%{UNICODE_ESCAPE:escape}\\|'%{WORD:name}'\\|"]
+  grok_custom_patterns = "UNICODE_ESCAPE (?:\\\\u[0-9A-F]{4})+"
 ```
 
 We cannot use a literal TOML string for the pattern, because we cannot match a
 `'` within it.  However, it works well for the custom pattern.
 ```toml
-[[inputs.logparser]]
-  [inputs.logparser.grok]
-    patterns = ["\\|%{NUMBER:value:int}\\|%{UNICODE_ESCAPE:escape}\\|'%{WORD:name}'\\|"]
-    custom_patterns = 'UNICODE_ESCAPE (?:\\u[0-9A-F]{4})+'
+[[inputs.file]]
+  grok_patterns = ["\\|%{NUMBER:value:int}\\|%{UNICODE_ESCAPE:escape}\\|'%{WORD:name}'\\|"]
+  grok_custom_patterns = 'UNICODE_ESCAPE (?:\\u[0-9A-F]{4})+'
 ```
 
 A multi-line literal string allows us to encode the pattern:
 ```toml
-[[inputs.logparser]]
-  [inputs.logparser.grok]
-    patterns = ['''
-	  \|%{NUMBER:value:int}\|%{UNICODE_ESCAPE:escape}\|'%{WORD:name}'\|
-	''']
-    custom_patterns = 'UNICODE_ESCAPE (?:\\u[0-9A-F]{4})+'
+[[inputs.file]]
+  grok_patterns = ['''
+    \|%{NUMBER:value:int}\|%{UNICODE_ESCAPE:escape}\|'%{WORD:name}'\|
+  ''']
+  grok_custom_patterns = 'UNICODE_ESCAPE (?:\\u[0-9A-F]{4})+'
 ```
 
 #### Tips for creating patterns
@@ -902,3 +901,28 @@ logfmt method="GET",host="influxdata.org",ts="2018-07-24T19:43:40.275Z",connect=
 
 ```
 Additional information about the logfmt format can be found [here](https://brandur.org/logfmt).
+
+# Wavefront:
+
+Wavefront Data Format is metrics are parsed directly into Telegraf metrics.
+For more information about the Wavefront Data Format see
+[here](https://docs.wavefront.com/wavefront_data_format.html).
+
+There are no additional configuration options for Wavefront Data Format line-protocol.
+
+#### Wavefront Configuration:
+
+```toml
+[[inputs.exec]]
+  ## Commands array
+  commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
+
+  ## measurement name suffix (for separating different commands)
+  name_suffix = "_mycollector"
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "wavefront"
+```

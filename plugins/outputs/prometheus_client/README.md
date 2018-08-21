@@ -18,6 +18,9 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
   basic_username = "Foo"
   basic_password = "Bar"
 
+  # IP Ranges which are allowed to access metrics
+  ip_range = ["192.168.0.0/24", "192.168.1.0/30"]
+
   # Path to publish the metrics on, defaults to /metrics
   path = "/metrics"   
 
