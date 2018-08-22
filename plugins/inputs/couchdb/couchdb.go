@@ -3,35 +3,38 @@ package couchdb
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"net/http"
 	"reflect"
 	"sync"
 	"time"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Schema:
 type metaData struct {
-	Description string  `json:"description"`
-	Current     float64 `json:"current"`
-	Sum         float64 `json:"sum"`
-	Mean        float64 `json:"mean"`
-	Stddev      float64 `json:"stddev"`
-	Min         float64 `json:"min"`
-	Max         float64 `json:"max"`
+	Current float64 `json:"current"`
+	Sum     float64 `json:"sum"`
+	Mean    float64 `json:"mean"`
+	Stddev  float64 `json:"stddev"`
+	Min     float64 `json:"min"`
+	Max     float64 `json:"max"`
+	Value   float64 `json:"value"`
 }
 
 type Stats struct {
 	Couchdb struct {
+		AuthCacheHits   metaData `json:"auth_cache_hits"`
 		AuthCacheMisses metaData `json:"auth_cache_misses"`
 		DatabaseWrites  metaData `json:"database_writes"`
-		OpenDatabases   metaData `json:"open_databases"`
-		AuthCacheHits   metaData `json:"auth_cache_hits"`
-		RequestTime     metaData `json:"request_time"`
 		DatabaseReads   metaData `json:"database_reads"`
+		OpenDatabases   metaData `json:"open_databases"`
 		OpenOsFiles     metaData `json:"open_os_files"`
+		RequestTime     metaData `json:"request_time"`
 	} `json:"couchdb"`
+	OpenOsFiles         metaData `json:"open_os_files"`
+	RequestTime         metaData `json:"request_time"`
 	HttpdRequestMethods struct {
 		Put    metaData `json:"PUT"`
 		Get    metaData `json:"GET"`
@@ -56,11 +59,11 @@ type Stats struct {
 		Status500 metaData `json:"500"`
 	} `json:"httpd_status_codes"`
 	Httpd struct {
-		ClientsRequestingChanges metaData `json:"clients_requesting_changes"`
-		TemporaryViewReads       metaData `json:"temporary_view_reads"`
-		Requests                 metaData `json:"requests"`
 		BulkRequests             metaData `json:"bulk_requests"`
+		Requests                 metaData `json:"requests"`
+		TemporaryViewReads       metaData `json:"temporary_view_reads"`
 		ViewReads                metaData `json:"view_reads"`
+		ClientsRequestingChanges metaData `json:"clients_requesting_changes"`
 	} `json:"httpd"`
 }
 
@@ -107,12 +110,15 @@ var client = &http.Client{
 }
 
 func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host string) error {
-
 	response, error := client.Get(host)
 	if error != nil {
 		return error
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode != 200 {
+		return fmt.Errorf("Failed to get stats from couchdb: HTTP responded %d", response.StatusCode)
+	}
 
 	var stats Stats
 	decoder := json.NewDecoder(response.Body)
@@ -128,6 +134,8 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 	c.MapCopy(fields, c.generateFields("couchdb_request_time", stats.Couchdb.RequestTime))
 	c.MapCopy(fields, c.generateFields("couchdb_database_reads", stats.Couchdb.DatabaseReads))
 	c.MapCopy(fields, c.generateFields("couchdb_open_os_files", stats.Couchdb.OpenOsFiles))
+	c.MapCopy(fields, c.generateFields("request_time", stats.RequestTime))
+	c.MapCopy(fields, c.generateFields("open_os_files", stats.OpenOsFiles))
 
 	// http request methods stats:
 	c.MapCopy(fields, c.generateFields("httpd_request_methods_put", stats.HttpdRequestMethods.Put))
@@ -182,6 +190,7 @@ func (*CouchDB) safeCheck(value interface{}) interface{} {
 
 func (c *CouchDB) generateFields(prefix string, obj metaData) map[string]interface{} {
 	fields := map[string]interface{}{
+		prefix + "_value":   c.safeCheck(obj.Value),
 		prefix + "_current": c.safeCheck(obj.Current),
 		prefix + "_sum":     c.safeCheck(obj.Sum),
 		prefix + "_mean":    c.safeCheck(obj.Mean),
