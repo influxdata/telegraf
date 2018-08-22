@@ -2,6 +2,7 @@
 
 Telegraf is able to parse the following input data formats into metrics:
 
+<<<<<<< HEAD
 1. [InfluxDB Line Protocol](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#influx)
 1. [JSON](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#json)
 1. [Graphite](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite)
@@ -11,6 +12,18 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Dropwizard](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#dropwizard)
 1. [Grok](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#grok)
 1. [CSV](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#csv)
+=======
+1. [InfluxDB Line Protocol](#influx)
+1. [JSON](#json)
+1. [Graphite](#graphite)
+1. [Value](#value), ie: 45 or "booyah"
+1. [Nagios](#nagios) (exec input only)
+1. [Collectd](#collectd)
+1. [Dropwizard](#dropwizard)
+1. [Grok](#grok)
+1. [Logfmt](#logfmt)
+1. [Wavefront](#wavefront)
+>>>>>>> master
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -945,3 +958,64 @@ or an error will be thrown.
   # csv_timestamp_format = ""
   ```
 
+#### Tips for creating patterns
+
+Writing complex patterns can be difficult, here is some advice for writing a
+new pattern or testing a pattern developed [online](https://grokdebug.herokuapp.com).
+
+Create a file output that writes to stdout, and disable other outputs while
+testing.  This will allow you to see the captured metrics.  Keep in mind that
+the file output will only print once per `flush_interval`.
+
+```toml
+[[outputs.file]]
+  files = ["stdout"]
+```
+
+- Start with a file containing only a single line of your input.
+- Remove all but the first token or piece of the line.
+- Add the section of your pattern to match this piece to your configuration file.
+- Verify that the metric is parsed successfully by running Telegraf.
+- If successful, add the next token, update the pattern and retest.
+- Continue one token at a time until the entire line is successfully parsed.
+
+# Logfmt
+This parser implements the logfmt format by extracting and converting key-value pairs from log text in the form `<key>=<value>`.
+At the moment, the plugin will produce one metric per line and all keys
+are added as fields.
+A typical log
+```
+method=GET host=influxdata.org ts=2018-07-24T19:43:40.275Z
+connect=4ms service=8ms status=200 bytes=1653
+```
+will be converted into
+```
+logfmt method="GET",host="influxdata.org",ts="2018-07-24T19:43:40.275Z",connect="4ms",service="8ms",status=200i,bytes=1653i
+
+```
+Additional information about the logfmt format can be found [here](https://brandur.org/logfmt).
+
+# Wavefront:
+
+Wavefront Data Format is metrics are parsed directly into Telegraf metrics.
+For more information about the Wavefront Data Format see
+[here](https://docs.wavefront.com/wavefront_data_format.html).
+
+There are no additional configuration options for Wavefront Data Format line-protocol.
+
+#### Wavefront Configuration:
+
+```toml
+[[inputs.exec]]
+  ## Commands array
+  commands = ["/tmp/test.sh", "/usr/bin/mycollector --foo=bar"]
+
+  ## measurement name suffix (for separating different commands)
+  name_suffix = "_mycollector"
+
+  ## Data format to consume.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "wavefront"
+```
