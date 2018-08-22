@@ -38,4 +38,6 @@ syslog,appname=influxd,facility=daemon,hostname=http://influxdb.example.org (inf
 ```
 
 **Output**:
+```
 syslog,appname=influxd,facility=daemon,hostname=http://influxdb.example.org (influxdb.example.org),severity=info version=1i,severity_code=6i,facility_code=3i,timestamp=1533848508138040000i,procid="6629",ts="2018-08-09T21:01:48.137963Z",lvl=info msg="Executing query",log_id="09p7QbOG000",service="query",query="SHOW DATABASES"
+```
