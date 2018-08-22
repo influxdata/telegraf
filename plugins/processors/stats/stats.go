@@ -29,7 +29,7 @@ func (s *Stats) SampleConfig() string {
 	return `
 [[processors.stats]]
 
-## field to compile a running average of
+## field to compile stats for
 stats_field = "trace_id"`
 }
 
