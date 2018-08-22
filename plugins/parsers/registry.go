@@ -189,7 +189,7 @@ func newCSVParser(metricName string,
 	timestampColumn string,
 	timestampFormat string,
 	defaultTags map[string]string) (Parser, error) {
-	parser := &csv.CSVParser{
+	parser := &csv.Parser{
 		MetricName:        metricName,
 		HeaderRowCount:    header,
 		SkipRows:          skipRows,

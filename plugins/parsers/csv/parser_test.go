@@ -3,7 +3,6 @@ package csv
 import (
 	"fmt"
 	"log"
-	"reflect"
 	"testing"
 	"time"
 
@@ -12,7 +11,7 @@ import (
 )
 
 func TestBasicCSV(t *testing.T) {
-	p := CSVParser{
+	p := Parser{
 		ColumnNames: []string{"first", "second", "third"},
 		TagColumns:  []string{"third"},
 	}
@@ -22,7 +21,7 @@ func TestBasicCSV(t *testing.T) {
 }
 
 func TestHeaderConcatenationCSV(t *testing.T) {
-	p := CSVParser{
+	p := Parser{
 		HeaderRowCount:    2,
 		MeasurementColumn: "3",
 	}
@@ -36,7 +35,7 @@ func TestHeaderConcatenationCSV(t *testing.T) {
 }
 
 func TestHeaderOverride(t *testing.T) {
-	p := CSVParser{
+	p := Parser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
 		MeasurementColumn: "third",
@@ -49,7 +48,7 @@ func TestHeaderOverride(t *testing.T) {
 }
 
 func TestTimestamp(t *testing.T) {
-	p := CSVParser{
+	p := Parser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
 		MeasurementColumn: "third",
@@ -60,12 +59,14 @@ func TestTimestamp(t *testing.T) {
 23/05/09 04:05:06 PM,70,test_name
 07/11/09 04:05:06 PM,80,test_name2`
 	metrics, err := p.Parse([]byte(testCSV))
+
 	require.NoError(t, err)
-	require.NotEqual(t, metrics[1].Time(), metrics[0].Time())
+	require.Equal(t, metrics[0].Time().UnixNano(), int64(1243094706000000000))
+	require.Equal(t, metrics[1].Time().UnixNano(), int64(1257609906000000000))
 }
 
 func TestTimestampError(t *testing.T) {
-	p := CSVParser{
+	p := Parser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
 		MeasurementColumn: "third",
@@ -79,7 +80,7 @@ func TestTimestampError(t *testing.T) {
 }
 
 func TestQuotedCharacter(t *testing.T) {
-	p := CSVParser{
+	p := Parser{
 		HeaderRowCount:    1,
 		ColumnNames:       []string{"first", "second", "third"},
 		MeasurementColumn: "third",
@@ -93,7 +94,7 @@ func TestQuotedCharacter(t *testing.T) {
 }
 
 func TestDelimiter(t *testing.T) {
-	p := CSVParser{
+	p := Parser{
 		HeaderRowCount:    1,
 		Delimiter:         "%",
 		ColumnNames:       []string{"first", "second", "third"},
@@ -108,7 +109,7 @@ func TestDelimiter(t *testing.T) {
 }
 
 func TestValueConversion(t *testing.T) {
-	p := CSVParser{
+	p := Parser{
 		HeaderRowCount: 0,
 		Delimiter:      ",",
 		ColumnNames:    []string{"first", "second", "third", "fourth"},
@@ -127,17 +128,17 @@ func TestValueConversion(t *testing.T) {
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
 
-	goodMetric, err1 := metric.New("test_value", expectedTags, expectedFields, time.Unix(0, 0))
+	expectedMetric, err1 := metric.New("test_value", expectedTags, expectedFields, time.Unix(0, 0))
 	returnedMetric, err2 := metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
 	require.NoError(t, err1)
 	require.NoError(t, err2)
 
 	//deep equal fields
-	require.True(t, reflect.DeepEqual(goodMetric.Fields(), returnedMetric.Fields()))
+	require.Equal(t, expectedMetric.Fields(), returnedMetric.Fields())
 }
 
 func TestSkipComment(t *testing.T) {
-	p := CSVParser{
+	p := Parser{
 		HeaderRowCount: 0,
 		Comment:        "#",
 		ColumnNames:    []string{"first", "second", "third", "fourth"},
@@ -155,11 +156,11 @@ func TestSkipComment(t *testing.T) {
 
 	metrics, err := p.Parse([]byte(testCSV))
 	require.NoError(t, err)
-	require.Equal(t, true, reflect.DeepEqual(expectedFields, metrics[0].Fields()))
+	require.Equal(t, expectedFields, metrics[0].Fields())
 }
 
 func TestTrimSpace(t *testing.T) {
-	p := CSVParser{
+	p := Parser{
 		HeaderRowCount: 0,
 		TrimSpace:      true,
 		ColumnNames:    []string{"first", "second", "third", "fourth"},
@@ -180,11 +181,11 @@ func TestTrimSpace(t *testing.T) {
 		log.Printf("got: %v, %T", metrics[0].Fields()[k], metrics[0].Fields()[k])
 	}
 	require.NoError(t, err)
-	require.Equal(t, true, reflect.DeepEqual(expectedFields, metrics[0].Fields()))
+	require.Equal(t, expectedFields, metrics[0].Fields())
 }
 
 func TestSkipRows(t *testing.T) {
-	p := CSVParser{
+	p := Parser{
 		HeaderRowCount:    1,
 		SkipRows:          1,
 		TagColumns:        []string{"line1"},
@@ -204,7 +205,7 @@ hello,80,test_name2`
 }
 
 func TestSkipColumns(t *testing.T) {
-	p := CSVParser{
+	p := Parser{
 		SkipColumns: 1,
 		ColumnNames: []string{"line1", "line2"},
 	}
@@ -220,7 +221,7 @@ func TestSkipColumns(t *testing.T) {
 }
 
 func TestSkipColumnsWithHeader(t *testing.T) {
-	p := CSVParser{
+	p := Parser{
 		SkipColumns:    1,
 		HeaderRowCount: 2,
 	}

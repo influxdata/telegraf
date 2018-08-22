@@ -11,7 +11,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
-type CSVParser struct {
+type Parser struct {
 	MetricName        string
 	HeaderRowCount    int
 	SkipRows          int
@@ -27,7 +27,7 @@ type CSVParser struct {
 	DefaultTags       map[string]string
 }
 
-func (p *CSVParser) compile(r *bytes.Reader) (*csv.Reader, error) {
+func (p *Parser) compile(r *bytes.Reader) (*csv.Reader, error) {
 	csvReader := csv.NewReader(r)
 	// ensures that the reader reads records of different lengths without an error
 	csvReader.FieldsPerRecord = -1
@@ -49,7 +49,7 @@ func (p *CSVParser) compile(r *bytes.Reader) (*csv.Reader, error) {
 	return csvReader, nil
 }
 
-func (p *CSVParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	r := bytes.NewReader(buf)
 	csvReader, err := p.compile(r)
 	if err != nil {
@@ -106,7 +106,7 @@ func (p *CSVParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 // ParseLine does not use any information in header and assumes DataColumns is set
 // it will also not skip any rows
-func (p *CSVParser) ParseLine(line string) (telegraf.Metric, error) {
+func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 	r := bytes.NewReader([]byte(line))
 	csvReader, err := p.compile(r)
 	if err != nil {
@@ -129,7 +129,7 @@ func (p *CSVParser) ParseLine(line string) (telegraf.Metric, error) {
 	return m, nil
 }
 
-func (p *CSVParser) parseRecord(record []string) (telegraf.Metric, error) {
+func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 	recordFields := make(map[string]interface{})
 	tags := make(map[string]string)
 
@@ -194,6 +194,6 @@ func (p *CSVParser) parseRecord(record []string) (telegraf.Metric, error) {
 	return m, nil
 }
 
-func (p *CSVParser) SetDefaultTags(tags map[string]string) {
+func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }
