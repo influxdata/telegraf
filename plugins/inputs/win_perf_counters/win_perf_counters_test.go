@@ -232,11 +232,26 @@ var counterPathsAndRes = map[string][]string{
 	"\\\\CM\\O(I(info))\\CT":            {"O", "I(info)", "CT"},
 }
 
+var invalidCounterPaths = []string{
+	"\\O(I\\C",
+	"\\OI)\\C",
+	"\\O(I\\C",
+	"\\O/C",
+	"\\O(I/C",
+	"\\O(I/C)",
+	"\\O(I\\)C",
+	"\\O(I\\C)",
+}
+
 func TestCounterPathParsing(t *testing.T) {
 	for path, vals := range counterPathsAndRes {
 		o, i, c, err := extractCounterInfoFromCounterPath(path)
 		require.NoError(t, err)
 		require.True(t, assert.ObjectsAreEqual(vals, []string{o, i, c}), "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
+	}
+	for _, path := range invalidCounterPaths {
+		_, _, _, err := extractCounterInfoFromCounterPath(path)
+		require.Error(t, err)
 	}
 }
 
