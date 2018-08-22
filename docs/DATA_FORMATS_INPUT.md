@@ -10,6 +10,7 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Collectd](#collectd)
 1. [Dropwizard](#dropwizard)
 1. [Grok](#grok)
+1. [Logfmt](#logfmt)
 1. [Wavefront](#wavefront)
 
 Telegraf metrics, like InfluxDB
@@ -881,6 +882,22 @@ the file output will only print once per `flush_interval`.
 - Verify that the metric is parsed successfully by running Telegraf.
 - If successful, add the next token, update the pattern and retest.
 - Continue one token at a time until the entire line is successfully parsed.
+
+# Logfmt
+This parser implements the logfmt format by extracting and converting key-value pairs from log text in the form `<key>=<value>`.
+At the moment, the plugin will produce one metric per line and all keys
+are added as fields.
+A typical log
+```
+method=GET host=influxdata.org ts=2018-07-24T19:43:40.275Z
+connect=4ms service=8ms status=200 bytes=1653
+```
+will be converted into
+```
+logfmt method="GET",host="influxdata.org",ts="2018-07-24T19:43:40.275Z",connect="4ms",service="8ms",status=200i,bytes=1653i
+
+```
+Additional information about the logfmt format can be found [here](https://brandur.org/logfmt).
 
 # Wavefront:
 
