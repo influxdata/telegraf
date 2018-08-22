@@ -45,15 +45,15 @@ type overallStatus struct {
 }
 
 type metrics struct {
-	UptimeInMillis        int           `json:"uptime_in_millis"`
-	ConcurrentConnections int           `json:"concurrent_connections"`
+	UptimeInMillis        int64         `json:"uptime_in_millis"`
+	ConcurrentConnections int64         `json:"concurrent_connections"`
 	ResponseTimes         responseTimes `json:"response_times"`
 	Process               process       `json:"process"`
 }
 
 type responseTimes struct {
-	AvgInMillis int `json:"avg_in_millis"`
-	MaxInMillis int `json:"max_in_millis"`
+	AvgInMillis int64 `json:"avg_in_millis"`
+	MaxInMillis int64 `json:"max_in_millis"`
 }
 
 type process struct {
@@ -61,8 +61,8 @@ type process struct {
 }
 
 type mem struct {
-	HeapMaxInBytes  int `json:"heap_max_in_bytes"`
-	HeapUsedInBytes int `json:"heap_used_in_bytes"`
+	HeapMaxInBytes  int64 `json:"heap_max_in_bytes"`
+	HeapUsedInBytes int64 `json:"heap_used_in_bytes"`
 }
 
 const sampleConfig = `

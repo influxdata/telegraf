@@ -190,10 +190,10 @@ const kibanaStatusResponse = `
 var kibanaStatusExpected = map[string]interface{}{
 	"status":                 "green",
 	"status_code":            1,
-	"heap_max_bytes":         149954560,
-	"heap_used_bytes":        126274392,
-	"uptime_ms":              2173595336,
-	"response_time_avg_ms":   12,
-	"response_time_max_ms":   123,
-	"concurrent_connections": 10,
+	"heap_max_bytes":         int64(149954560),
+	"heap_used_bytes":        int64(126274392),
+	"uptime_ms":              int64(2173595336),
+	"response_time_avg_ms":   int64(12),
+	"response_time_max_ms":   int64(123),
+	"concurrent_connections": int64(10),
 }
