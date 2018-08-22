@@ -3,7 +3,6 @@ package stats
 import (
 	"log"
 	"math"
-	"strconv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
@@ -39,10 +38,16 @@ func (s *Stats) Description() string {
 
 func (s *Stats) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
-		value, err := strconv.ParseFloat(metric.Fields()[s.StatsField].(string), 64)
-		if err != nil {
-			log.Printf("E! %v", err)
+		value := metric.Fields()[s.StatsField]
+		switch value.(type) {
+		case string:
+			log.Printf("E! field: %v must be a float or integer, got: string", s.StatsField)
 			continue
+		case bool:
+			log.Printf("E! field: %v must be a float or integer, got: bool", s.StatsField)
+			continue
+		case float64:
+		case int:
 		}
 
 		// for warmup
@@ -50,8 +55,8 @@ func (s *Stats) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			s.Window.Count++
 			s.Window.ValueSum += value
 			s.Window.Mean = s.Window.ValueSum / float64(s.Window.Count)
-			s.Window.Std = stdCalculator(value, s.Window)
-			s.Window.Variance = math.Pow(s.Window.Std, 2)
+			s.Window.Variance = varianceCalculator(value, s.Window)
+			s.Window.Std = math.Sqrt(s.Window.Variance)
 			continue
 		}
 
@@ -70,11 +75,11 @@ func (s *Stats) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		s.Window.Mean = s.Window.ValueSum / float64(s.Window.Count)
 		s.Buffer.Mean = s.Buffer.ValueSum / float64(s.Buffer.Count)
 
-		s.Window.Std = stdCalculator(value, s.Window)
-		s.Buffer.Std = stdCalculator(value, s.Buffer)
+		s.Window.Variance = varianceCalculator(value, s.Window)
+		s.Buffer.Variance = varianceCalculator(value, s.Buffer)
 
-		s.Window.Variance = math.Pow(s.Window.Std, 2)
-		s.Buffer.Variance = math.Pow(s.Buffer.Std, 2)
+		s.Window.Std = math.Sqrt(s.Window.Variance)
+		s.Buffer.Std = math.Sqrt(s.Buffer.Variance)
 
 		metric.AddField(s.StatsField+"_mean", s.Window.Mean)
 		metric.AddField(s.StatsField+"_deviation", s.Window.Std)
@@ -83,12 +88,12 @@ func (s *Stats) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	return in
 }
 
-func stdCalculator(currentVal float64, w Window) float64 {
+func varianceCalculator(currentVal float64, w Window) float64 {
 	diff := currentVal - w.Mean
 	sqrDiff := math.Pow(diff, 2)
 	w.DiffSum += sqrDiff
-	std := math.Sqrt(w.DiffSum / float64(w.Count))
-	return std
+	variance := w.DiffSum / float64(w.Count)
+	return variance
 }
 
 func init() {
