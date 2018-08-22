@@ -21,8 +21,8 @@ install:
   - 7z x "C:\Cache\gnuwin32-dep.zip" -oC:\GnuWin32 -y
   - go get -d github.com/golang/dep
   - cd "%GOPATH%\src\github.com\golang\dep"
-  - git checkout -q v0.4.1
-  - go install -ldflags="-X main.version=v0.4.1" ./cmd/dep
+  - git checkout -q v0.5.0
+  - go install -ldflags="-X main.version=v0.5.0" ./cmd/dep
   - cd "%GOPATH%\src\github.com\influxdata\telegraf"
   - git config --system core.longpaths true
   - go version

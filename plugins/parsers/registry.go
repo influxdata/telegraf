@@ -11,8 +11,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/grok"
 	"github.com/influxdata/telegraf/plugins/parsers/influx"
 	"github.com/influxdata/telegraf/plugins/parsers/json"
+	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
+	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 )
 
 // ParserInput is an interface for input plugins that are able to parse
@@ -131,6 +133,8 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags,
 			config.Separator,
 			config.Templates)
+	case "wavefront":
+		parser, err = NewWavefrontParser(config.DefaultTags)
 	case "grok":
 		parser, err = newGrokParser(
 			config.MetricName,
@@ -139,6 +143,8 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokCustomPatterns,
 			config.GrokCustomPatternFiles,
 			config.GrokTimeZone)
+	case "logfmt":
+		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -237,4 +243,13 @@ func NewDropwizardParser(
 		return nil, err
 	}
 	return parser, err
+}
+
+// NewLogFmtParser returns a logfmt parser with the default options.
+func NewLogFmtParser(metricName string, defaultTags map[string]string) (Parser, error) {
+	return logfmt.NewParser(metricName, defaultTags), nil
+}
+
+func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {
+	return wavefront.NewWavefrontParser(defaultTags), nil
 }
