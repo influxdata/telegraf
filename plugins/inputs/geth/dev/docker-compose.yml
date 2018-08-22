@@ -1,0 +1,21 @@
+version: '3'
+services:
+  geth:
+    image: ethereum/client-go:alltools-v1.8.11
+    volumes:
+      - ./entrypoint.sh:/entrypoint.sh
+      - ./genesis.json:/genesis.json
+    entrypoint:
+      - /entrypoint.sh
+  telegraf:
+    image: glinton/scratch
+    volumes:
+      - ./telegraf.conf:/telegraf.conf
+      - ../../../../telegraf:/telegraf
+    depends_on:
+      - geth
+    entrypoint:
+      - /telegraf
+      - --config
+      - /telegraf.conf
+    network_mode: service:geth
