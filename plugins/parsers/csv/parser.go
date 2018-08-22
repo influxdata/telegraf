@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -45,7 +46,6 @@ func (p *Parser) compile(r *bytes.Reader) (*csv.Reader, error) {
 		}
 		csvReader.Comment = runeStr[0]
 	}
-	csvReader.TrimLeadingSpace = p.TrimSpace
 	return csvReader, nil
 }
 
@@ -70,10 +70,12 @@ func (p *Parser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			}
 			//concatenate header names
 			for i := range header {
+				name := header[i]
+				name = strings.Trim(name, " ")
 				if len(headerNames) <= i {
-					headerNames = append(headerNames, header[i])
+					headerNames = append(headerNames, name)
 				} else {
-					headerNames[i] = headerNames[i] + header[i]
+					headerNames[i] = headerNames[i] + name
 				}
 			}
 		}
@@ -138,6 +140,7 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 	for i, fieldName := range p.ColumnNames {
 		if i < len(record) {
 			value := record[i]
+			value = strings.Trim(value, " ")
 			// attempt type conversions
 			if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
 				recordFields[fieldName] = iValue

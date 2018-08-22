@@ -2,7 +2,6 @@ package csv
 
 import (
 	"fmt"
-	"log"
 	"testing"
 	"time"
 
@@ -176,10 +175,6 @@ func TestTrimSpace(t *testing.T) {
 	}
 
 	metrics, err := p.Parse([]byte(testCSV))
-	for k := range metrics[0].Fields() {
-		log.Printf("want: %v, %T", expectedFields[k], expectedFields[k])
-		log.Printf("got: %v, %T", metrics[0].Fields()[k], metrics[0].Fields()[k])
-	}
 	require.NoError(t, err)
 	require.Equal(t, expectedFields, metrics[0].Fields())
 }
