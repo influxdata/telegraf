@@ -2,7 +2,6 @@ package parser
 
 import (
 	"log"
-	"reflect"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -11,30 +10,34 @@ import (
 
 type Parser struct {
 	parsers.Config
-	Original    string         `toml:"original"` // merge, replace, or keep (default)
-	ParseFields []string       `toml:"parse_fields"`
-	Parser      parsers.Parser `toml:"parser"`
+	DropOriginal bool     `toml:"drop_original"`
+	Merge        string   `toml:"merge"`
+	ParseFields  []string `toml:"parse_fields"`
+	Parser       parsers.Parser
 }
 
-// holds a default sample config
 var SampleConfig = `
-  ## specify the name of the field[s] whose value will be parsed
+  ## The name of the fields whose value will be parsed.
   parse_fields = []
 
-  ## specify what to do with the original message. [merge|replace|keep] default=keep
-  original = "keep"
+  ## If true, incoming metrics are not emitted.
+  drop_original = false
 
-  [processors.parser.config]
-    # data_format = "logfmt"
-    ## additional configurations for parser go here
+  ## If set to override, emitted metrics will be merged by overriding the
+  ## original metric using the newly parsed metrics.
+  merge = "override"
+
+  ## The dataformat to be read from files
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
+  data_format = "influx"
 `
 
-// returns the default config
 func (p *Parser) SampleConfig() string {
 	return SampleConfig
 }
 
-// returns a brief description of the processor
 func (p *Parser) Description() string {
 	return "Parse a value in a specified field/tag(s) and add the result in a new metric"
 }
@@ -49,74 +52,65 @@ func (p *Parser) Apply(metrics ...telegraf.Metric) []telegraf.Metric {
 		}
 	}
 
-	toReturnMetrics := []telegraf.Metric{}
-	if p.Original != "replace" {
-		toReturnMetrics = metrics
-	}
-
-	name := ""
+	results := []telegraf.Metric{}
 
 	for _, metric := range metrics {
-		if n := metric.Name(); n != "" {
-			name = n
+		newMetrics := []telegraf.Metric{}
+		if !p.DropOriginal {
+			newMetrics = append(newMetrics, metric)
 		}
-		combinedParsedMetric := []telegraf.Metric{}
+
 		for _, key := range p.ParseFields {
-			fields := metric.FieldList()
-			for _, field := range fields {
+			for _, field := range metric.FieldList() {
 				if field.Key == key {
-					if reflect.TypeOf(field.Value).String() != "string" {
-						log.Printf("E! [processors.parser] field '%v' not a string, skipping", key)
-						continue
-					}
-					fromFieldMetric, err := p.parseField(field.Value.(string))
-					if err != nil {
-						log.Printf("E! [processors.parser] could not parse field %v: %v", key, err)
-						switch p.Original {
-						case "keep":
-							continue
-						case "merge":
-							fromFieldMetric = metrics
+					switch value := field.Value.(type) {
+					case string:
+						fromFieldMetric, err := p.parseField(value)
+						if err != nil {
+							log.Printf("E! [processors.parser] could not parse field %s: %v", key, err)
 						}
+
+						for _, m := range fromFieldMetric {
+							if m.Name() == "" {
+								m.SetName(metric.Name())
+							}
+						}
+
+						// multiple parsed fields shouldn't create multiple
+						// metrics so we'll merge tags/fields down into one
+						// prior to returning.
+						newMetrics = append(newMetrics, fromFieldMetric...)
+					default:
+						log.Printf("E! [processors.parser] field '%s' not a string, skipping", key)
 					}
-					// multiple parsed fields shouldn't create multiple metrics so we'll merge tags/fields down into one prior to returning.
-					combinedParsedMetric = append(combinedParsedMetric, fromFieldMetric...)
 				}
 			}
 		}
-		toReturnMetrics = append(toReturnMetrics, p.mergeTagsFields(combinedParsedMetric...)...)
-	}
-	if p.Original == "merge" {
-		toReturnMetrics = p.mergeTagsFields(toReturnMetrics...)
-	}
 
-	return p.setName(name, toReturnMetrics...)
+		if len(newMetrics) == 0 {
+			continue
+		}
 
+		if p.Merge == "override" {
+			results = append(results, merge(newMetrics[0], newMetrics[1:]))
+		} else {
+			results = append(results, newMetrics...)
+		}
+	}
+	return results
 }
 
-func (p Parser) setName(name string, metrics ...telegraf.Metric) []telegraf.Metric {
-	for i := range metrics {
-		metrics[i].SetName(name)
-	}
-
-	return metrics
-}
-
-func (p Parser) mergeTagsFields(metrics ...telegraf.Metric) []telegraf.Metric {
-	if len(metrics) == 0 {
-		return nil
-	}
-
-	rMetric := metrics[0]
+func merge(base telegraf.Metric, metrics []telegraf.Metric) telegraf.Metric {
 	for _, metric := range metrics {
 		for _, field := range metric.FieldList() {
-			rMetric.AddField(field.Key, field.Value)
+			base.AddField(field.Key, field.Value)
 		}
 		for _, tag := range metric.TagList() {
-			rMetric.AddTag(tag.Key, tag.Value)
+			base.AddTag(tag.Key, tag.Value)
 		}
+		base.SetName(metric.Name())
 	}
-	return []telegraf.Metric{rMetric}
+	return base
 }
 
 func (p *Parser) parseField(value string) ([]telegraf.Metric, error) {
@@ -125,6 +119,6 @@ func (p *Parser) parseField(value string) ([]telegraf.Metric, error) {
 
 func init() {
 	processors.Add("parser", func() telegraf.Processor {
-		return &Parser{Original: "keep"}
+		return &Parser{DropOriginal: false}
 	})
 }

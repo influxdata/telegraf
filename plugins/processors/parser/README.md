@@ -1,52 +1,41 @@
 # Parser Processor Plugin
-This plugin parses defined fields containing the specified data format.
+
+This plugin parses defined fields containing the specified data format and
+creates new metrics based on the contents of the field.
 
 ## Configuration
 ```toml
 [[processors.parser]]
-  ## specify the name of the field[s] whose value will be parsed
+  ## The name of the fields whose value will be parsed.
   parse_fields = ["message"]
 
-  ## specify what to do with the original message. [merge|replace|keep] default=keep
-  original = "merge"
+  ## If true, incoming metrics are not emitted.
+  drop_original = false
 
-  data_format = "json"
-  ## additional configurations for parser go here
-  tag_keys = ["verb", "request"]
-```
+  ## If set to override, emitted metrics will be merged by overriding the
+  ## original metric using the newly parsed metrics.
+  merge = "override"
 
-### Tags:
-
-User specified tags may be added by this processor.
-
-### Example Config:
-```toml
-[[inputs.exec]]
+  ## The dataformat to be read from files
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
-  commands = [
-    "echo -en 'thing,host=\"mcfly\" message=\"{\\\"verb\\\":\\\"GET\\\",\\\"request\\\":\\\"/time/to/awesome\\\"}\" 1519652321000000000'"
-  ]
+```
 
+### Example:
+
+```toml
 [[processors.parser]]
-  ## specify the name of the field[s] whose value will be parsed
   parse_fields = ["message"]
-
-  ## specify what to do with the original message. [merge|replace|keep] default=keep
-  original = "merge"
-
-  data_format = "json"
-  ## additional configurations for parser go here
-  tag_keys = ["verb", "request"]
-
-[[outputs.file]]
-  files = ["stdout"]
+  merge = "override"
+  data_format = "logfmt"
 ```
 
-### Example Output [original=merge]:
+**Input**:
 ```
-# input = nginx_requests,host="mcfly" message="{\"verb\":\"GET\",\"request\":\"/time/to/awesome\"}" 1519652321000000000
-nginx_requests,host="mcfly",verb="GET",request="/time/to/awesome" message="{\"verb\":\"GET\",\"request\":\"/time/to/awesome\"}" 1519652321000000000
+syslog,appname=influxd,facility=daemon,hostname=http://influxdb.example.org (influxdb.example.org),severity=info version=1i,severity_code=6i,facility_code=3i,timestamp=1533848508138040000i,procid="6629",message=" ts=2018-08-09T21:01:48.137963Z lvl=info msg=\"Executing query\" log_id=09p7QbOG000 service=query query=\"SHOW DATABASES\""
 ```
 
-### Caveats
-While this plugin is functional, it may not work in *every* scenario. For the above example, "keep" and "replace" fail because the parsed field produces a metric with no fields. This leads to errors when serializing the output.
+**Output**:
+syslog,appname=influxd,facility=daemon,hostname=http://influxdb.example.org (influxdb.example.org),severity=info version=1i,severity_code=6i,facility_code=3i,timestamp=1533848508138040000i,procid="6629",ts="2018-08-09T21:01:48.137963Z",lvl=info msg="Executing query",log_id="09p7QbOG000",service="query",query="SHOW DATABASES"
