@@ -187,6 +187,7 @@ func TestSkipRows(t *testing.T) {
 	p := CSVParser{
 		HeaderRowCount:    1,
 		SkipRows:          1,
+		TagColumns:        []string{"line1"},
 		MeasurementColumn: "line3",
 	}
 	testCSV := `garbage nonsense
@@ -228,7 +229,7 @@ func TestSkipColumnsWithHeader(t *testing.T) {
 	trash,80,test_name`
 
 	// we should expect an error if we try to get col1
-	_, err := p.Parse([]byte(testCSV))
-	log.Printf("%v", err)
-	require.Error(t, err)
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	require.Equal(t, map[string]interface{}{"col2": int64(80), "col3": "test_name"}, metrics[0].Fields())
 }

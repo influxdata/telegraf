@@ -132,7 +132,6 @@ func (p *CSVParser) ParseLine(line string) (telegraf.Metric, error) {
 func (p *CSVParser) parseRecord(record []string) (telegraf.Metric, error) {
 	recordFields := make(map[string]interface{})
 	tags := make(map[string]string)
-	fields := make(map[string]interface{})
 
 	// skip columns in record
 	record = record[p.SkipColumns:]
@@ -188,7 +187,7 @@ func (p *CSVParser) parseRecord(record []string) (telegraf.Metric, error) {
 		}
 	}
 
-	m, err := metric.New(measurementName, tags, fields, metricTime)
+	m, err := metric.New(measurementName, tags, recordFields, metricTime)
 	if err != nil {
 		return nil, err
 	}
