@@ -68,7 +68,7 @@
 - [#4433](https://github.com/influxdata/telegraf/pull/4433): Add ability to set measurement from matched text in grok parser.
 - [#4565](https://github.com/influxdata/telegraf/pull/4465): Drop message batches in kafka output if too large.
 - [#4579](https://github.com/influxdata/telegraf/pull/4579): Add support for static and random routing keys in kafka output.
-
+- [#4539](https://github.com/influxdata/telegraf/pull/4539): Add logfmt parser.
 
 ## v1.7.4 [unreleased]
 
