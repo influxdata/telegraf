@@ -41,7 +41,9 @@ func (b *Builder) SetTime(tm time.Time) {
 }
 
 func (b *Builder) Reset() {
-	b.metric = &metric{}
+	b.metric = &metric{
+		tp: telegraf.Untyped,
+	}
 }
 
 func (b *Builder) Metric() (telegraf.Metric, error) {
