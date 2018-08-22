@@ -19,6 +19,7 @@
 
 - [enum](./plugins/processors/enum/README.md) - Contributed by @KarstenSchnitter
 - [rename](./plugins/processors/rename/README.md) - Contributed by @goldibex
+- [parser](./plugins/processors/parser/README.md) - Contributed by @maxunt & @Ayrdrie
 
 ### New Aggregators
 
@@ -68,7 +69,8 @@
 - [#4433](https://github.com/influxdata/telegraf/pull/4433): Add ability to set measurement from matched text in grok parser.
 - [#4565](https://github.com/influxdata/telegraf/pull/4465): Drop message batches in kafka output if too large.
 - [#4579](https://github.com/influxdata/telegraf/pull/4579): Add support for static and random routing keys in kafka output.
-
+- [#4539](https://github.com/influxdata/telegraf/pull/4539): Add logfmt parser.
+- [#4551](https://github.com/influxdata/telegraf/pull/4551): Add parser processor.
 
 ## v1.7.4 [unreleased]
 
