@@ -1405,7 +1405,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 			if ary, ok := kv.Value.(*ast.Array); ok {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
-						c.CSVDataColumns = append(c.CSVDataColumns, str.Value)
+						c.CSVColumnNames = append(c.CSVColumnNames, str.Value)
 					}
 				}
 			}
