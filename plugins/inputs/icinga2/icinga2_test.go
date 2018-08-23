@@ -53,7 +53,7 @@ func TestGatherHostsStatus(t *testing.T) {
 	s := `{"results":[
     {
       "attrs": {
-				"name": "webserver"
+				"name": "webserver",
         "address": "192.168.1.1",
         "check_command": "ping",
         "display_name": "apache",
