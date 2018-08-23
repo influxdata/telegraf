@@ -5,6 +5,7 @@
 - [#4534](https://github.com/influxdata/telegraf/pull/4534): Skip unserializable metric in influxDB UDP output.
 - [#4554](https://github.com/influxdata/telegraf/pull/4554): Fix powerdns input tests.
 - [#4584](https://github.com/influxdata/telegraf/pull/4584): Fix burrow_group offset calculation for burrow input.
+- [#4550](https://github.com/influxdata/telegraf/pull/4550): Add result_code value for errors running ping command.
 
 ## v1.7.3 [2018-08-07]
 
