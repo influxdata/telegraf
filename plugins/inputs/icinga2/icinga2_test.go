@@ -57,7 +57,7 @@ func TestGatherHostsStatus(t *testing.T) {
         "address": "192.168.1.1",
         "check_command": "ping",
         "display_name": "apache",
-        "state": 0
+        "state": 2
       },
       "joins": {},
       "meta": {},
