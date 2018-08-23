@@ -2,19 +2,19 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
-	"context"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/clientcredentials"
 )
 
 var sampleConfig = `
