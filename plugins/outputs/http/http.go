@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"context"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/clientcredentials"
+	"github.com/golang.org/x/oauth2"
+	"github.com/golang.org/x/oauth2/clientcredentials"
 )
 
 var sampleConfig = `
