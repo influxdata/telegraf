@@ -117,6 +117,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 					} else {
 						acc.AddError(fmt.Errorf("host %s: %s", u, err))
 					}
+					fields["result_code"] = 2
 					acc.AddFields("ping", fields, tags)
 					return
 				}
@@ -126,6 +127,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				// fatal error
 				acc.AddError(fmt.Errorf("%s: %s", err, u))
+				fields["result_code"] = 2
 				acc.AddFields("ping", fields, tags)
 				return
 			}
