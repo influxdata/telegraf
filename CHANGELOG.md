@@ -73,7 +73,7 @@
 - [#4539](https://github.com/influxdata/telegraf/pull/4539): Add logfmt parser plugin.
 - [#4551](https://github.com/influxdata/telegraf/pull/4551): Add parser processor plugin.
 - [#4559](https://github.com/influxdata/telegraf/pull/4559): Add Icinga2 input plugin.
-
+- [#4351](https://github.com/influxdata/telegraf/pull/4351): Add name, time, path and string field options to JSON parser.
 
 ## v1.7.4 [unreleased]
 
