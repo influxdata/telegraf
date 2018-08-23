@@ -36,13 +36,14 @@ services and hosts. You can read Icinga2's documentation for their remote API
 
 - All measurements have the following fields:
     - name (string)
-    - state (int)
+    - state_code (int)
 
 ### Tags:
 
 - All measurements have the following tags:
     - check_command
     - display_name
+    - state
     - source
     - port
     - scheme
@@ -50,15 +51,15 @@ services and hosts. You can read Icinga2's documentation for their remote API
 ### Sample Queries:
 
 ```
-SELECT * FROM "icinga2_services" WHERE state = 0 AND time > now() - 24h // Service with OK status
-SELECT * FROM "icinga2_services" WHERE state = 1 AND time > now() - 24h // Service with WARNING status
-SELECT * FROM "icinga2_services" WHERE state = 2 AND time > now() - 24h // Service with Critical status
-SELECT * FROM "icinga2_services" WHERE state = 3 AND time > now() - 24h // Service with UNKNOWN status
+SELECT * FROM "icinga2_services" WHERE state_code = 0 AND time > now() - 24h // Service with OK status
+SELECT * FROM "icinga2_services" WHERE state_code = 1 AND time > now() - 24h // Service with WARNING status
+SELECT * FROM "icinga2_services" WHERE state_code = 2 AND time > now() - 24h // Service with CRITICAL status
+SELECT * FROM "icinga2_services" WHERE state_code = 3 AND time > now() - 24h // Service with UNKNOWN status
 ```
 
 ### Example Output:
 
 ```
 $ ./telegraf -config telegraf.conf -input-filter icinga2 -test
-icinga2_hosts,display_name=router-fr.eqx.fr,check_command=hostalive-custom,host=test-vm,source=localhost,port=5665,scheme=https name="router-fr.eqx.fr",state=0 1492021603000000000
+icinga2_hosts,display_name=router-fr.eqx.fr,check_command=hostalive-custom,host=test-vm,source=localhost,port=5665,scheme=https,state=ok name="router-fr.eqx.fr",state=0 1492021603000000000
 ```
