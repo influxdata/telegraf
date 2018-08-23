@@ -488,6 +488,9 @@ type tsModder struct {
 // most significant time unit of ts.
 //   ie, if the input is at ms precision, it will increment it 1µs.
 func (t *tsModder) tsMod(ts time.Time) time.Time {
+	if ts.IsZero() {
+		return ts
+	}
 	defer func() { t.last = ts }()
 	// don't mod the time if we don't need to
 	if t.last.IsZero() || ts.IsZero() {
