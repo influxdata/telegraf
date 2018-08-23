@@ -195,7 +195,7 @@
   branch = "master"
 
 [[constraint]]
-  name = "github.com/golang/oauth2"
+  name = "golang.org/x/oauth2"
   branch = "master"
   
 [[constraint]]
