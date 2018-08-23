@@ -1,8 +1,10 @@
 package stats
 
 import (
+	"fmt"
 	"log"
 	"math"
+	"strconv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
@@ -39,23 +41,18 @@ func (s *Stats) Description() string {
 func (s *Stats) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
 		value := metric.Fields()[s.StatsField]
-		switch value.(type) {
-		case string:
-			log.Printf("E! field: %v must be a float or integer, got: string", s.StatsField)
-			continue
-		case bool:
-			log.Printf("E! field: %v must be a float or integer, got: bool", s.StatsField)
-			continue
-		case float64:
-		case int:
+		sVal := fmt.Sprintf("%v", value)
+		fVal, err := strconv.ParseFloat(sVal, 64)
+		if err != nil {
+			log.Printf("E! cannot convert field: %v to float, %v", s.StatsField, err)
 		}
 
 		// for warmup
 		if s.Window.Count < s.WindowSize/2 {
 			s.Window.Count++
-			s.Window.ValueSum += value
+			s.Window.ValueSum += fVal
 			s.Window.Mean = s.Window.ValueSum / float64(s.Window.Count)
-			s.Window.Variance = varianceCalculator(value, s.Window)
+			s.Window.Variance = varianceCalculator(fVal, s.Window)
 			s.Window.Std = math.Sqrt(s.Window.Variance)
 			continue
 		}
@@ -69,14 +66,14 @@ func (s *Stats) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		s.Window.Count++
 		s.Buffer.Count++
 
-		s.Window.ValueSum += value
-		s.Buffer.ValueSum += value
+		s.Window.ValueSum += fVal
+		s.Buffer.ValueSum += fVal
 
 		s.Window.Mean = s.Window.ValueSum / float64(s.Window.Count)
 		s.Buffer.Mean = s.Buffer.ValueSum / float64(s.Buffer.Count)
 
-		s.Window.Variance = varianceCalculator(value, s.Window)
-		s.Buffer.Variance = varianceCalculator(value, s.Buffer)
+		s.Window.Variance = varianceCalculator(fVal, s.Window)
+		s.Buffer.Variance = varianceCalculator(fVal, s.Buffer)
 
 		s.Window.Std = math.Sqrt(s.Window.Variance)
 		s.Buffer.Std = math.Sqrt(s.Buffer.Variance)
