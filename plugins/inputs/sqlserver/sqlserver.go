@@ -451,7 +451,8 @@ WHERE	(
 			'Buffer cache hit ratio base',
 			'Backup/Restore Throughput/sec',
 			'Total Server Memory (KB)',
-			'Target Server Memory (KB)'
+			'Target Server Memory (KB)',
+			'Forwarded Recs/sec'
 		)
 		) OR (
 			instance_name IN ('_Total','Column store object pool')
