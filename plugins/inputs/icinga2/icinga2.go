@@ -3,7 +3,9 @@ package icinga2
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -79,14 +81,21 @@ func (i *Icinga2) GatherStatus(acc telegraf.Accumulator, checks []Object) {
 		fields := make(map[string]interface{})
 		tags := make(map[string]string)
 
+		url, err := url.Parse(i.Server)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		fields["name"] = check.Attrs.Name
 		fields["state"] = check.Attrs.State
 
 		tags["display_name"] = check.Attrs.DisplayName
 		tags["check_command"] = check.Attrs.CheckCommand
-		tags["source"] = i.Server
+		tags["source"] = url.Hostname()
+		tags["scheme"] = url.Scheme
+		tags["port"] = url.Port()
 
-		acc.AddFields(fmt.Sprintf("icinga2_%s_status", i.ObjectType), fields, tags)
+		acc.AddFields(fmt.Sprintf("icinga2_%s", i.ObjectType), fields, tags)
 	}
 }
 

@@ -33,7 +33,9 @@ func TestGatherStatus(t *testing.T) {
 	tags := map[string]string{
 		"display_name":  "eq-par.dc2.fr",
 		"check_command": "check-bgp-juniper-netconf",
-		"source":        "https://localhost:5665",
+		"source":        "localhost",
+		"port":          "5665",
+		"scheme":        "https",
 	}
 
 	var acc testutil.Accumulator
@@ -42,5 +44,5 @@ func TestGatherStatus(t *testing.T) {
 	icinga2.ObjectType = "services"
 	icinga2.Server = "https://localhost:5665"
 	icinga2.GatherStatus(&acc, checks.Results)
-	acc.AssertContainsTaggedFields(t, "icinga2_services_status", fields, tags)
+	acc.AssertContainsTaggedFields(t, "icinga2_services", fields, tags)
 }

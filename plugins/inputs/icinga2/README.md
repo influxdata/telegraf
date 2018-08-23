@@ -1,4 +1,4 @@
-# Example Input Plugin
+# Icinga2 Input Plugin
 
 This plugin gather services & hosts status using Icinga2 Remote API.
 
@@ -44,19 +44,21 @@ services and hosts. You can read Icinga2's documentation for their remote API
     - check_command
     - display_name
     - source
+    - port
+    - scheme
 
 ### Sample Queries:
 
 ```
-SELECT * FROM "icinga2_services_status" WHERE state = 0 AND time > now() - 24h // Service with OK status
-SELECT * FROM "icinga2_services_status" WHERE state = 1 AND time > now() - 24h // Service with WARNING status
-SELECT * FROM "icinga2_services_status" WHERE state = 2 AND time > now() - 24h // Service with Critical status
-SELECT * FROM "icinga2_services_status" WHERE state = 3 AND time > now() - 24h // Service with UNKNOWN status
+SELECT * FROM "icinga2_services" WHERE state = 0 AND time > now() - 24h // Service with OK status
+SELECT * FROM "icinga2_services" WHERE state = 1 AND time > now() - 24h // Service with WARNING status
+SELECT * FROM "icinga2_services" WHERE state = 2 AND time > now() - 24h // Service with Critical status
+SELECT * FROM "icinga2_services" WHERE state = 3 AND time > now() - 24h // Service with UNKNOWN status
 ```
 
 ### Example Output:
 
 ```
 $ ./telegraf -config telegraf.conf -input-filter icinga2 -test
-icinga2_hosts_status,display_name=router-fr.eqx.fr,check_command=hostalive-custom,host=test-vm,source=https://localhost:5665 name="router-fr.eqx.fr",state=0 1492021603000000000
+icinga2_hosts,display_name=router-fr.eqx.fr,check_command=hostalive-custom,host=test-vm,source=localhost,port=5665,scheme=https name="router-fr.eqx.fr",state=0 1492021603000000000
 ```
