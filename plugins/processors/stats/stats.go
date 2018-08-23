@@ -52,7 +52,7 @@ func (s *Stats) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			s.Window.Count++
 			s.Window.ValueSum += fVal
 			s.Window.Mean = s.Window.ValueSum / float64(s.Window.Count)
-			s.Window.Variance = varianceCalculator(fVal, s.Window)
+			s.Window.Variance = varianceCalculator(fVal, &s.Window)
 			s.Window.Std = math.Sqrt(s.Window.Variance)
 			continue
 		}
@@ -72,8 +72,8 @@ func (s *Stats) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		s.Window.Mean = s.Window.ValueSum / float64(s.Window.Count)
 		s.Buffer.Mean = s.Buffer.ValueSum / float64(s.Buffer.Count)
 
-		s.Window.Variance = varianceCalculator(fVal, s.Window)
-		s.Buffer.Variance = varianceCalculator(fVal, s.Buffer)
+		s.Window.Variance = varianceCalculator(fVal, &s.Window)
+		s.Buffer.Variance = varianceCalculator(fVal, &s.Buffer)
 
 		s.Window.Std = math.Sqrt(s.Window.Variance)
 		s.Buffer.Std = math.Sqrt(s.Buffer.Variance)
@@ -85,11 +85,15 @@ func (s *Stats) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	return in
 }
 
-func varianceCalculator(currentVal float64, w Window) float64 {
+func varianceCalculator(currentVal float64, w *Window) float64 {
 	diff := currentVal - w.Mean
 	sqrDiff := math.Pow(diff, 2)
-	w.DiffSum += sqrDiff
-	variance := w.DiffSum / float64(w.Count)
+	w.DiffSum = w.DiffSum + sqrDiff
+	if w.Count-1 == 0 {
+		return 0
+	}
+	variance := w.DiffSum / float64(w.Count-1)
+	log.Printf("for val: %v mean: %v, sum: %v, var: %v", currentVal, w.Mean, w.DiffSum, variance)
 	return variance
 }
 

@@ -1,6 +1,7 @@
 package stats
 
 import (
+	"log"
 	"testing"
 	"time"
 
@@ -40,7 +41,7 @@ func TestStats(t *testing.T) {
 		{
 			name:  "Log parser fmt returns all fields",
 			now:   func() time.Time { return time.Unix(0, 0) },
-			input: MakeInputMetrics(16),
+			input: MakeInputMetrics(24),
 		},
 	}
 	for _, tt := range tests {
@@ -50,8 +51,14 @@ func TestStats(t *testing.T) {
 				StatsField: "sample_field",
 			}
 			got := s.Apply(tt.input...)
+			for i, m := range got {
+				std := m.Fields()["sample_field_deviation"]
+				variance := m.Fields()["sample_field_variance"]
+				mean := m.Fields()["sample_field_mean"]
+				log.Printf("m[%v]: std: %v, var: %v, mean: %v", i, std, variance, mean)
+			}
 			if got != nil {
-				require.Equal(t, got, tt.want)
+				require.Equal(t, tt.want, got)
 			}
 		})
 	}
