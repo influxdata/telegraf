@@ -89,8 +89,8 @@ func (h *HTTP) Connect() error {
 	h.Method = strings.ToUpper(h.Method)
 	if h.Method != http.MethodPost && h.Method != http.MethodPut {
 		return fmt.Errorf("invalid method [%s] %s",
- h.URL,
- h.Method)
+			h.URL,
+			h.Method)
 	}
 
 	if h.Timeout.Duration == 0 {
@@ -98,7 +98,7 @@ func (h *HTTP) Connect() error {
 	}
 
 	tlsCfg,
- err := h.ClientConfig.TLSConfig()
+		err := h.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}
@@ -107,22 +107,19 @@ func (h *HTTP) Connect() error {
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 
-			Proxy:           http.ProxyFromEnvironment,
-
+			Proxy: http.ProxyFromEnvironment,
 		},
 
 		Timeout: h.Timeout.Duration,
-
 	}
 	var appClientConf = clientcredentials.Config{
-		ClientID:     h.ClientID,
+		ClientID: h.ClientID,
 
 		ClientSecret: h.ClientSecret,
 
-		TokenURL:     h.TokenURL,
+		TokenURL: h.TokenURL,
 
-		Scopes:       []string{h.Scopes},
-
+		Scopes: []string{h.Scopes},
 	}
 	tokensource = appClientConf.TokenSource(context.Background())
 
@@ -143,19 +140,19 @@ func (h *HTTP) SampleConfig() string {
 
 func (h *HTTP) Write(metrics []telegraf.Metric) error {
 	reqBody,
- err := h.serializer.SerializeBatch(metrics)
+		err := h.serializer.SerializeBatch(metrics)
 	if err != nil {
 		return err
 	}
 
 	token,
- err := tokensource.Token()
+		err := tokensource.Token()
 
 	if err != nil {
 		return err
 	}
 	if err := h.write(reqBody,
- token.AccessToken); err != nil {
+		token.AccessToken); err != nil {
 		return err
 	}
 
@@ -163,39 +160,38 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 }
 
 func (h *HTTP) write(reqBody []byte,
- accessToken string) error {
+	accessToken string) error {
 	req,
- err := http.NewRequest(h.Method,
- h.URL,
- bytes.NewBuffer(reqBody))
+		err := http.NewRequest(h.Method,
+		h.URL,
+		bytes.NewBuffer(reqBody))
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("Content-Type",
- defaultContentType)
+		defaultContentType)
 	req.Header.Set("Authorization",
- "Bearer "+accessToken)
+		"Bearer "+accessToken)
 
-	for k,
- v := range h.Headers {
+	for k, v := range h.Headers {
 		req.Header.Set(k,
- v)
+			v)
 	}
 
 	resp,
- err := h.client.Do(req)
+		err := h.client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 	_,
- err = ioutil.ReadAll(resp.Body)
+		err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("when writing to [%s] received status code: %d",
- h.URL,
- resp.StatusCode)
+			h.URL,
+			resp.StatusCode)
 	}
 
 	return nil
@@ -204,12 +200,11 @@ func (h *HTTP) write(reqBody []byte,
 func init() {
 
 	outputs.Add("http",
- func() telegraf.Output {
-		return &HTTP{
-			Timeout: internal.Duration{Duration: defaultClientTimeout},
+		func() telegraf.Output {
+			return &HTTP{
+				Timeout: internal.Duration{Duration: defaultClientTimeout},
 
-			Method:  defaultMethod,
-
-		}
-	})
+				Method: defaultMethod,
+			}
+		})
 }
