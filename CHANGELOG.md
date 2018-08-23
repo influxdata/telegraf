@@ -14,6 +14,7 @@
 - [filecount](./plugins/inputs/filecount/README.md) - Contributed by @sometimesfood
 - [pgbouncer](./plugins/inputs/pgbouncer/README.md) - Contributed by @nerzhul
 - [activemq](./plugins/inputs/activemq/README.md) - Contributed by @mlabouardy
+- [icinga2](./plugins/inputs/icinga2/README.md) - Contributed by @mlabouardy
 
 ### New Processors
 
@@ -43,7 +44,7 @@
 - [#4347](https://github.com/influxdata/telegraf/pull/4347): Add http path configuration for OpenTSDB output.
 - [#4352](https://github.com/influxdata/telegraf/pull/4352): Gather IPMI metrics concurrently.
 - [#4362](https://github.com/influxdata/telegraf/pull/4362): Add mongo document and connection metrics.
-- [#3772](https://github.com/influxdata/telegraf/pull/3772): Add Enum Processor.
+- [#3772](https://github.com/influxdata/telegraf/pull/3772): Add enum processor plugin.
 - [#4386](https://github.com/influxdata/telegraf/pull/4386): Add user tag to procstat input.
 - [#4403](https://github.com/influxdata/telegraf/pull/4403): Add support for multivalue metrics to collectd parser.
 - [#4418](https://github.com/influxdata/telegraf/pull/4418): Add support for setting kafka client id.
@@ -60,8 +61,8 @@
 - [#4431](https://github.com/influxdata/telegraf/pull/4431): Add ip restriction for the prometheus_client output.
 - [#3918](https://github.com/influxdata/telegraf/pull/3918): Add pgbouncer input plugin.
 - [#2689](https://github.com/influxdata/telegraf/pull/2689): Add ActiveMQ input plugin.
-- [#4402](https://github.com/influxdata/telegraf/pull/4402): Add wavefront parser.
-- [#4528](https://github.com/influxdata/telegraf/pull/4528): Add rename processor.
+- [#4402](https://github.com/influxdata/telegraf/pull/4402): Add wavefront parser plugin.
+- [#4528](https://github.com/influxdata/telegraf/pull/4528): Add rename processor plugin.
 - [#4537](https://github.com/influxdata/telegraf/pull/4537): Add message 'max_bytes' configuration to kafka input.
 - [#4546](https://github.com/influxdata/telegraf/pull/4546): Add gopsutil meminfo fields to mem plugin.
 - [#4285](https://github.com/influxdata/telegraf/pull/4285): Document how to parse telegraf logs.
@@ -69,8 +70,10 @@
 - [#4433](https://github.com/influxdata/telegraf/pull/4433): Add ability to set measurement from matched text in grok parser.
 - [#4565](https://github.com/influxdata/telegraf/pull/4465): Drop message batches in kafka output if too large.
 - [#4579](https://github.com/influxdata/telegraf/pull/4579): Add support for static and random routing keys in kafka output.
-- [#4539](https://github.com/influxdata/telegraf/pull/4539): Add logfmt parser.
-- [#4551](https://github.com/influxdata/telegraf/pull/4551): Add parser processor.
+- [#4539](https://github.com/influxdata/telegraf/pull/4539): Add logfmt parser plugin.
+- [#4551](https://github.com/influxdata/telegraf/pull/4551): Add parser processor plugin.
+- [#4559](https://github.com/influxdata/telegraf/pull/4559): Add Icinga2 input plugin.
+
 
 ## v1.7.4 [unreleased]
 
