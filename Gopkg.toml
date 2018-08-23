@@ -199,10 +199,6 @@
   branch = "master"
   
 [[constraint]]
-  name = "golang.org/x/oauth2/clientcredentials"
-  branch = "master"
-
-[[constraint]]
   name = "google.golang.org/grpc"
   version = "1.12.2"
 
