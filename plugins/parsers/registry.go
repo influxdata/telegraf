@@ -59,8 +59,21 @@ type Config struct {
 
 	// TagKeys only apply to JSON data
 	TagKeys []string
+	// FieldKeys only apply to JSON
+	JSONStringFields []string
+
+	JSONNameKey string
 	// MetricName applies to JSON & value. This will be the name of the measurement.
 	MetricName string
+
+	// holds a gjson path for json parser
+	JSONQuery string
+
+	// key of time
+	JSONTimeKey string
+
+	// time format
+	JSONTimeFormat string
 
 	// Authentication file for collectd
 	CollectdAuthFile string
@@ -108,8 +121,14 @@ func NewParser(config *Config) (Parser, error) {
 	var parser Parser
 	switch config.DataFormat {
 	case "json":
-		parser, err = NewJSONParser(config.MetricName,
-			config.TagKeys, config.DefaultTags)
+		parser = newJSONParser(config.MetricName,
+			config.TagKeys,
+			config.JSONNameKey,
+			config.JSONStringFields,
+			config.JSONQuery,
+			config.JSONTimeKey,
+			config.JSONTimeFormat,
+			config.DefaultTags)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.DefaultTags)
@@ -151,6 +170,30 @@ func NewParser(config *Config) (Parser, error) {
 	return parser, err
 }
 
+func newJSONParser(
+	metricName string,
+	tagKeys []string,
+	jsonNameKey string,
+	stringFields []string,
+	jsonQuery string,
+	timeKey string,
+	timeFormat string,
+	defaultTags map[string]string,
+) Parser {
+	parser := &json.JSONParser{
+		MetricName:     metricName,
+		TagKeys:        tagKeys,
+		StringFields:   stringFields,
+		JSONNameKey:    jsonNameKey,
+		JSONQuery:      jsonQuery,
+		JSONTimeKey:    timeKey,
+		JSONTimeFormat: timeFormat,
+		DefaultTags:    defaultTags,
+	}
+	return parser
+}
+
+//Deprecated: Use NewParser to get a JSONParser object
 func newGrokParser(metricName string,
 	patterns []string,
 	nPatterns []string,
