@@ -24,7 +24,7 @@ type TracingSampler struct {
 
 func (a *TracingSampler) SampleConfig() string {
 	return `
-[[processors.allofem]]
+[[processors.tracing_sampler]]
 
 ## percent of total metrics to be returned as a sample
 percent_of_metrics = 5
@@ -47,16 +47,16 @@ func (a *TracingSampler) Description() string {
 
 func (a *TracingSampler) compile() error {
 	if a.StatsField == "" {
-		return fmt.Errorf("[processor.allofem] stats_field must be set")
+		return fmt.Errorf("[processor.tracing_sampler] stats_field must be set")
 	}
 	if a.WindowSize <= 0 {
-		return fmt.Errorf("[processor.allofem] window_size is invalid, cannot be zero or negative ")
+		return fmt.Errorf("[processor.tracing_sampler] window_size is invalid, cannot be zero or negative ")
 	}
 	if a.OutlierDistance == 0 {
-		return fmt.Errorf("[processor.allofem] outlier_distance is invalid, must be more than 0")
+		return fmt.Errorf("[processor.tracing_sampler] outlier_distance is invalid, must be more than 0")
 	}
 	if a.PercentOfMetrics < 0 {
-		return fmt.Errorf("[processor.allofem] percent_of_metrics can't be negative")
+		return fmt.Errorf("[processor.tracing_sampler] percent_of_metrics can't be negative")
 	}
 
 	a.Stats = stats.Stats{
