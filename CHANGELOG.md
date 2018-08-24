@@ -77,6 +77,7 @@
 - [#4351](https://github.com/influxdata/telegraf/pull/4351): Add name, time, path and string field options to JSON parser.
 - [#4571](https://github.com/influxdata/telegraf/pull/4571): Add forwarded records to sqlserver input.
 - [#4585](https://github.com/influxdata/telegraf/pull/4585): Add Kibana input plugin.
+- [#4439](https://github.com/influxdata/telegraf/pull/4439): Add csv parser plugin.
 
 ## v1.7.4 [unreleased]
 
