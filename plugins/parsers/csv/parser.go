@@ -128,6 +128,7 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 
 	// skip columns in record
 	record = record[p.SkipColumns:]
+outer:
 	for i, fieldName := range p.ColumnNames {
 		if i < len(record) {
 			value := record[i]
@@ -137,8 +138,8 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 
 			for _, tagName := range p.TagColumns {
 				if tagName == fieldName {
-					tags[tagName] = record[i]
-					continue
+					tags[tagName] = value
+					continue outer
 				}
 			}
 
