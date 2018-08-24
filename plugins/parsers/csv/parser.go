@@ -134,6 +134,14 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 			if p.TrimSpace {
 				value = strings.Trim(value, " ")
 			}
+
+			for _, tagName := range p.TagColumns {
+				if tagName == fieldName {
+					tags[tagName] = record[i]
+					continue
+				}
+			}
+
 			// attempt type conversions
 			if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
 				recordFields[fieldName] = iValue
@@ -156,14 +164,6 @@ func (p *Parser) parseRecord(record []string) (telegraf.Metric, error) {
 	measurementName := p.MetricName
 	if recordFields[p.MeasurementColumn] != nil {
 		measurementName = fmt.Sprintf("%v", recordFields[p.MeasurementColumn])
-	}
-
-	for _, tagName := range p.TagColumns {
-		if recordFields[tagName] == nil {
-			return nil, fmt.Errorf("could not find field: %v", tagName)
-		}
-		tags[tagName] = fmt.Sprintf("%v", recordFields[tagName])
-		delete(recordFields, tagName)
 	}
 
 	metricTime := time.Now()
