@@ -40,7 +40,7 @@ outlier_distance = "2"`
 }
 
 func (a *AllOfEm) Description() string {
-	return "will pass through a random sampling of metrics with specific stats added"
+	return "will pass through a random sampling of metrics and outliers with specific stats added"
 }
 
 func (a *AllOfEm) compile() error {
