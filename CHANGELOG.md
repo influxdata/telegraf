@@ -8,19 +8,20 @@
 
 ### New Inputs
 
+- [activemq](./plugins/inputs/activemq/README.md) - Contributed by @mlabouardy
+- [filecount](./plugins/inputs/filecount/README.md) - Contributed by @sometimesfood
 - [file](./plugins/inputs/file/README.md) - Contributed by @maxunt
+- [icinga2](./plugins/inputs/icinga2/README.md) - Contributed by @mlabouardy
+- [kibana](./plugins/inputs/icinga2/README.md) - Contributed by @lpic10
+- [pgbouncer](./plugins/inputs/pgbouncer/README.md) - Contributed by @nerzhul
 - [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
 - [x509_cert](./plugins/inputs/x509_cert/README.md) - Contributed by @jtyr
-- [filecount](./plugins/inputs/filecount/README.md) - Contributed by @sometimesfood
-- [pgbouncer](./plugins/inputs/pgbouncer/README.md) - Contributed by @nerzhul
-- [activemq](./plugins/inputs/activemq/README.md) - Contributed by @mlabouardy
-- [icinga2](./plugins/inputs/icinga2/README.md) - Contributed by @mlabouardy
 
 ### New Processors
 
 - [enum](./plugins/processors/enum/README.md) - Contributed by @KarstenSchnitter
-- [rename](./plugins/processors/rename/README.md) - Contributed by @goldibex
 - [parser](./plugins/processors/parser/README.md) - Contributed by @maxunt & @Ayrdrie
+- [rename](./plugins/processors/rename/README.md) - Contributed by @goldibex
 
 ### New Aggregators
 
@@ -75,6 +76,7 @@
 - [#4559](https://github.com/influxdata/telegraf/pull/4559): Add Icinga2 input plugin.
 - [#4351](https://github.com/influxdata/telegraf/pull/4351): Add name, time, path and string field options to JSON parser.
 - [#4571](https://github.com/influxdata/telegraf/pull/4571): Add forwarded records to sqlserver input.
+- [#4585](https://github.com/influxdata/telegraf/pull/4585): Add Kibana input plugin.
 
 ## v1.7.4 [unreleased]
 
