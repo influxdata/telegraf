@@ -1,7 +1,7 @@
 package allofem
 
 import (
-	"encoding/binary"
+	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
@@ -18,41 +18,69 @@ type AllOfEm struct {
 	Stats            stats.Stats
 	Threshold        threshold.Threshold
 	Sampler          sampler.Sampler
+	compiled         bool
 }
 
-func (s *AllOfEm) SampleConfig() string {
+func (a *AllOfEm) SampleConfig() string {
 	return `
 [[processors.sampler]]
 
 percent_of_metrics = 5
 
 ## field to be sampled over
-sample_field = "trace_id"`
+stats_field = "trace_id"
+
+## number of metrics considered for stats
+## to be calculated
+window_size = 6
+
+## Determine the number of standard deviations
+## away you want your outlier to be
+outlier_distance = "2"`
 }
 
-func (s *AllOfEm) Description() string {
-	return "will pass through a random sampling of metrics"
+func (a *AllOfEm) Description() string {
+	return "will pass through a random sampling of metrics with specific stats added"
 }
 
-func (s *AllOfEm) Apply(in ...telegraf.Metric) []telegraf.Metric {
-	nMetrics := make([]telegraf.Metric, 0)
-	for _, metric := range in {
-		value := metric.Fields()[s.StatsField]
-		if value == "" {
-			return nil
-		}
-
-		if metric.Fields()["stddev_away"] != nil {
-			nMetrics = append(nMetrics, metric)
-		}
-
-		hash := binary.BigEndian.Uint64([]byte(value.(string)))
-		hash = hash % 100
-		if hash >= 0 && hash <= uint64(s.PercentOfMetrics) {
-			nMetrics = append(nMetrics, metric)
-		}
+func (a *AllOfEm) compile() error {
+	if a.StatsField == "" {
+		return fmt.Errorf("[processor.allofem] stats_field must be set")
 	}
-	return nMetrics
+	if a.WindowSize <= 0 {
+		return fmt.Errorf("[processor.allofem] window_size is invalid, cannot be zero or negative ")
+	}
+	if a.OutlierDistance == 0 {
+		return fmt.Errorf("[processor.allofem] outlier_distance is invalid, must be more than 0")
+	}
+	if a.PercentOfMetrics < 0 {
+		return fmt.Errorf("[processor.allofem] percent_of_metrics can't be negative")
+	}
+
+	a.Stats = stats.Stats{
+		StatsField: a.StatsField,
+		WindowSize: a.WindowSize,
+	}
+	a.Threshold = threshold.Threshold{
+		FieldName:       a.StatsField,
+		OutlierDistance: a.OutlierDistance,
+	}
+	a.Sampler = sampler.Sampler{
+		SampleField:      a.StatsField,
+		PercentOfMetrics: a.PercentOfMetrics,
+	}
+	a.compiled = true
+	return nil
+}
+
+func (a *AllOfEm) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	if !a.compiled {
+		a.compile()
+	}
+	in = a.Stats.Apply(in...)
+	in = a.Threshold.Apply(in...)
+	in = a.Sampler.Apply(in...)
+	return in
 }
 
 func init() {

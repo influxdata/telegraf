@@ -1,7 +1,8 @@
 package sampler
 
 import (
-	"encoding/binary"
+	"fmt"
+	"hash/fnv"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
@@ -38,7 +39,9 @@ func (s *Sampler) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			nMetrics = append(nMetrics, metric)
 		}
 
-		hash := binary.BigEndian.Uint64([]byte(value.(string)))
+		h := fnv.New64a()
+		h.Write([]byte(fmt.Sprintf("%v", value)))
+		hash := h.Sum64()
 		hash = hash % 100
 		if hash >= 0 && hash <= uint64(s.PercentOfMetrics) {
 			nMetrics = append(nMetrics, metric)

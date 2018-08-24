@@ -31,7 +31,10 @@ func (s *Stats) SampleConfig() string {
 [[processors.stats]]
 
 ## field to compile stats for
-stats_field = "trace_id"`
+stats_field = "trace_id"
+
+## number of metrics considered for stats at a time
+window_size = 8`
 }
 
 func (s *Stats) Description() string {
@@ -93,7 +96,6 @@ func varianceCalculator(currentVal float64, w *Window) float64 {
 		return 0
 	}
 	variance := w.DiffSum / float64(w.Count-1)
-	log.Printf("for val: %v mean: %v, sum: %v, var: %v", currentVal, w.Mean, w.DiffSum, variance)
 	return variance
 }
 
