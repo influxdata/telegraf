@@ -211,6 +211,28 @@ func newCSVParser(metricName string,
 	timestampColumn string,
 	timestampFormat string,
 	defaultTags map[string]string) (Parser, error) {
+
+	if header == 0 && len(dataColumns) == 0 {
+		// if there is no header and no DataColumns, that's an error
+		return nil, fmt.Errorf("there must be a header if `csv_data_columns` is not specified")
+	}
+
+	if delimiter != "" {
+		runeStr := []rune(delimiter)
+		if len(runeStr) > 1 {
+			return nil, fmt.Errorf("delimiter must be a single character, got: %s", delimiter)
+		}
+		delimiter = fmt.Sprintf("%v", runeStr[0])
+	}
+
+	if comment != "" {
+		runeStr := []rune(comment)
+		if len(runeStr) > 1 {
+			return nil, fmt.Errorf("delimiter must be a single character, got: %s", comment)
+		}
+		comment = fmt.Sprintf("%v", runeStr[0])
+	}
+
 	parser := &csv.Parser{
 		MetricName:        metricName,
 		HeaderRowCount:    header,
