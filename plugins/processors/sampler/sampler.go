@@ -34,10 +34,14 @@ func (s *Sampler) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			return nil
 		}
 
+		if metric.Fields()["stddev_away"] != nil {
+			nMetrics = append(nMetrics, metric)
+		}
+
 		hash := binary.BigEndian.Uint64([]byte(value.(string)))
 		hash = hash % 100
 		if hash >= 0 && hash <= uint64(s.PercentOfMetrics) {
-			nMetrics = append(nMetrics, in...)
+			nMetrics = append(nMetrics, metric)
 		}
 	}
 	return nMetrics
