@@ -25,9 +25,10 @@ func (a *AllOfEm) SampleConfig() string {
 	return `
 [[processors.sampler]]
 
+## percent of total metrics to be returned as a sample
 percent_of_metrics = 5
 
-## field to be sampled over
+## field to have stats compiled for
 stats_field = "trace_id"
 
 ## number of metrics considered for stats
@@ -35,12 +36,12 @@ stats_field = "trace_id"
 window_size = 6
 
 ## Determine the number of standard deviations
-## away you want your outlier to be
-outlier_distance = "2"`
+## away you want your outlier to be from the mean
+outlier_distance = 2`
 }
 
 func (a *AllOfEm) Description() string {
-	return "will pass through a random sampling of metrics and outliers with specific stats added"
+	return "will add mean, variance, and standard deviation stats to metrics, mark outliers in the data set, and return a sample percentage of metrics along with any outliers"
 }
 
 func (a *AllOfEm) compile() error {
