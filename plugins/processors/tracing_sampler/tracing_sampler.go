@@ -1,4 +1,4 @@
-package allofem
+package tracing_sampler
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors/threshold"
 )
 
-type AllOfEm struct {
+type TracingSampler struct {
 	WindowSize       int     `toml:"window_size"`
 	StatsField       string  `toml:"stats_field"`
 	SampleField      string  `toml:"sample_field"`
@@ -22,7 +22,7 @@ type AllOfEm struct {
 	compiled         bool
 }
 
-func (a *AllOfEm) SampleConfig() string {
+func (a *TracingSampler) SampleConfig() string {
 	return `
 [[processors.allofem]]
 
@@ -41,11 +41,11 @@ window_size = 6
 outlier_distance = 2`
 }
 
-func (a *AllOfEm) Description() string {
+func (a *TracingSampler) Description() string {
 	return "will add mean, variance, and standard deviation stats to metrics, mark outliers in the data set, and return a sample percentage of metrics along with any outliers"
 }
 
-func (a *AllOfEm) compile() error {
+func (a *TracingSampler) compile() error {
 	if a.StatsField == "" {
 		return fmt.Errorf("[processor.allofem] stats_field must be set")
 	}
@@ -75,7 +75,7 @@ func (a *AllOfEm) compile() error {
 	return nil
 }
 
-func (a *AllOfEm) Apply(in ...telegraf.Metric) []telegraf.Metric {
+func (a *TracingSampler) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	if !a.compiled {
 		a.compile()
 	}
@@ -86,7 +86,7 @@ func (a *AllOfEm) Apply(in ...telegraf.Metric) []telegraf.Metric {
 }
 
 func init() {
-	processors.Add("allofem", func() telegraf.Processor {
-		return &AllOfEm{}
+	processors.Add("tracing_sampler", func() telegraf.Processor {
+		return &TracingSampler{}
 	})
 }

@@ -1,4 +1,4 @@
-package allofem
+package tracing_sampler
 
 import (
 	"log"
@@ -69,7 +69,7 @@ func TestAllOfEm(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := AllOfEm{
+			a := TracingSampler{
 				WindowSize:       tt.windowSize,
 				StatsField:       tt.fieldName,
 				PercentOfMetrics: tt.percent,
