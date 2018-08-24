@@ -13,6 +13,7 @@ import (
 type AllOfEm struct {
 	WindowSize       int     `toml:"window_size"`
 	StatsField       string  `toml:"stats_field"`
+	SampleField      string  `toml:"sample_field"`
 	OutlierDistance  float64 `toml:"outlier_distance"`
 	PercentOfMetrics int     `toml:"percent_of_metrics"`
 	Stats            stats.Stats
@@ -23,7 +24,7 @@ type AllOfEm struct {
 
 func (a *AllOfEm) SampleConfig() string {
 	return `
-[[processors.sampler]]
+[[processors.allofem]]
 
 ## percent of total metrics to be returned as a sample
 percent_of_metrics = 5
