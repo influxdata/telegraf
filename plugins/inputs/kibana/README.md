@@ -3,6 +3,8 @@
 The [kibana](https://www.elastic.co/) plugin queries Kibana status API to
 obtain the health status of Kibana and some useful metrics.
 
+This plugin has been tested and works on Kibana 6.x versions.
+
 ### Configuration
 
 ```toml
@@ -46,6 +48,7 @@ with following rules:
   - response_time_avg_ms: float
   - response_time_max_ms: integer
   - concurrent_connections: integer
+  - requests_per_sec: float
 
 ### Tags
 

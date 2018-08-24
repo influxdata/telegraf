@@ -40,10 +40,12 @@ type overallStatus struct {
 }
 
 type metrics struct {
-	UptimeInMillis        int64         `json:"uptime_in_millis"`
-	ConcurrentConnections int64         `json:"concurrent_connections"`
-	ResponseTimes         responseTimes `json:"response_times"`
-	Process               process       `json:"process"`
+	UptimeInMillis             int64         `json:"uptime_in_millis"`
+	ConcurrentConnections      int64         `json:"concurrent_connections"`
+	CollectionIntervalInMilles int64         `json:"collection_interval_in_millis"`
+	ResponseTimes              responseTimes `json:"response_times"`
+	Process                    process       `json:"process"`
+	Requests                   requests      `json:"requests"`
 }
 
 type responseTimes struct {
@@ -53,6 +55,10 @@ type responseTimes struct {
 
 type process struct {
 	Mem mem `json:"mem"`
+}
+
+type requests struct {
+	Total int64 `json:"total"`
 }
 
 type mem struct {
@@ -188,6 +194,7 @@ func (k *Kibana) gatherKibanaStatus(baseUrl string, acc telegraf.Accumulator) er
 	fields["heap_used_bytes"] = kibanaStatus.Metrics.Process.Mem.HeapUsedInBytes
 	fields["response_time_avg_ms"] = kibanaStatus.Metrics.ResponseTimes.AvgInMillis
 	fields["response_time_max_ms"] = kibanaStatus.Metrics.ResponseTimes.MaxInMillis
+	fields["requests_per_sec"] = float64(kibanaStatus.Metrics.Requests.Total) / float64(kibanaStatus.Metrics.CollectionIntervalInMilles) * 1000
 
 	acc.AddFields("kibana", fields, tags)
 

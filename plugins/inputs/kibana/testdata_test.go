@@ -195,4 +195,5 @@ var kibanaStatusExpected = map[string]interface{}{
 	"response_time_avg_ms":   float64(12.5),
 	"response_time_max_ms":   int64(123),
 	"concurrent_connections": int64(10),
+	"requests_per_sec":       float64(0.4),
 }
