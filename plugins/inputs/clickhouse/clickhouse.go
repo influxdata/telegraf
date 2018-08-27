@@ -15,10 +15,10 @@ import (
 )
 
 const sampleConfig = `
-### ClickHouse DSN
-dsn     = "native://localhost:9000?username=user&password=qwerty"
-cluster = false
-ignored_clusters = ["test_shard_localhost"]
+  ### ClickHouse DSN
+  dsn     = "native://localhost:9000?username=user&password=qwerty"
+  cluster = false
+  ignored_clusters = ["test_shard_localhost"]
 `
 
 type connect struct {
@@ -244,16 +244,16 @@ const (
 			table,
 			SUM(bytes) AS bytes,
 			COUNT(*)   AS parts,
-			SUM(rows)  AS rows 
+			SUM(rows)  AS rows
 		FROM system.parts
-		WHERE active = 1 
-		GROUP BY 
+		WHERE active = 1
+		GROUP BY
 			database, table
-		ORDER BY 
+		ORDER BY
 			database, table
 	`
 	systemClustersSQL = `
-		SELECT 
+		SELECT
 			cluster,
 			shard_num,
 			host_name,
