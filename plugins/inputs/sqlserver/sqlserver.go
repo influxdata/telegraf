@@ -244,7 +244,7 @@ func init() {
 // Thanks Bob Ward (http://aka.ms/bobwardms)
 // and the folks at Stack Overflow (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
 // for putting most of the memory clerk definitions online!
-const sqlMemoryClerkV2 = `DECLARE @SQL NVARCHAR(MAX) = 'SELECT	
+const sqlMemoryClerkV2 = `DECLARE @SQL NVARCHAR(MAX) = 'SELECT
 "sqlserver_memory_clerks" As [measurement],
 REPLACE(@@SERVERNAME,"\",":") AS [sql_instance],
 ISNULL(clerk_names.name,mc.type) AS clerk_type,
@@ -452,7 +452,7 @@ WHERE	(
 			'Backup/Restore Throughput/sec',
 			'Total Server Memory (KB)',
 			'Target Server Memory (KB)',
-			'Forwarded Recs/sec'
+			'Forwarded Records/sec'
 		)
 		) OR (
 			instance_name IN ('_Total','Column store object pool')
@@ -478,7 +478,7 @@ WHERE	(
 				'Resent Messages/sec',
 				'Redone Bytes/sec',
 				'XTP Memory Used (KB)'
-			) OR ( 
+			) OR (
 				counter_name IN (
 					'Log Bytes Received/sec',
 					'Log Apply Pending Queue',
@@ -524,7 +524,7 @@ CAST(vs.value AS BIGINT) AS value,
 1
 FROM
 (
-    SELECT 
+    SELECT
     rgwg.name AS instance,
     rgwg.total_request_count AS "Request Count",
     rgwg.total_queued_request_count AS "Queued Request Count",
@@ -1091,9 +1091,9 @@ ws.wait_type NOT IN (
 	N'DBMIRROR_DBM_EVENT', N'DBMIRROR_EVENTS_QUEUE', N'DBMIRROR_WORKER_QUEUE',
 	N'DBMIRRORING_CMD', N'DIRTY_PAGE_POLL', N'DISPATCHER_QUEUE_SEMAPHORE',
 	N'EXECSYNC', N'FSAGENT', N'FT_IFTS_SCHEDULER_IDLE_WAIT', N'FT_IFTSHC_MUTEX',
-	N'HADR_CLUSAPI_CALL', N'HADR_FILESTREAM_IOMGR_IOCOMPLETION', N'HADR_LOGCAPTURE_WAIT', 
+	N'HADR_CLUSAPI_CALL', N'HADR_FILESTREAM_IOMGR_IOCOMPLETION', N'HADR_LOGCAPTURE_WAIT',
 	N'HADR_NOTIFICATION_DEQUEUE', N'HADR_TIMER_TASK', N'HADR_WORK_QUEUE',
-	N'KSOURCE_WAKEUP', N'LAZYWRITER_SLEEP', N'LOGMGR_QUEUE', 
+	N'KSOURCE_WAKEUP', N'LAZYWRITER_SLEEP', N'LOGMGR_QUEUE',
 	N'MEMORY_ALLOCATION_EXT', N'ONDEMAND_TASK_QUEUE',
 	N'PARALLEL_REDO_WORKER_WAIT_WORK',
 	N'PREEMPTIVE_HADR_LEASE_MECHANISM', N'PREEMPTIVE_SP_SERVER_DIAGNOSTICS',
@@ -1138,9 +1138,9 @@ BEGIN
 		max_session_percent,
 		dtu_limit,
 		avg_login_rate_percent,
-		end_time 
+		end_time
 	FROM
-		sys.dm_db_resource_stats WITH (NOLOCK) 
+		sys.dm_db_resource_stats WITH (NOLOCK)
 	ORDER BY
 		end_time DESC
 	OPTION (RECOMPILE)
