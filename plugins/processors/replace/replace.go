@@ -16,7 +16,9 @@ var sampleConfig = `
   ## This plugin is used to replace substrings within field names to allow for
   ## different conventions between various input and output plugins. Some
   ## example usages are eliminating disallowed characters in field names or
-  ## replacing separators between different separators
+  ## replacing separators between different separators. Can also be used to
+  ## eliminate unneeded chars that were in metrics. If the entire name would be
+  ## deleted, it will refuse to perform the operation and keep the old name.
   #
   # [[processors.replace]]
   #   old = "_"
@@ -38,7 +40,7 @@ func (r *Replace) Description() string {
 func (r *Replace) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
 		newName := strings.Replace(metric.Name(), r.Old, r.New, -1)
-		if metric.Name() != newName {
+		if metric.Name() != newName && len(newName) > 0 {
 			metric.SetName(newName)
 		}
 	}
