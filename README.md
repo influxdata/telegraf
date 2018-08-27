@@ -5,7 +5,7 @@ and writing metrics.
 
 Design goals are to have a minimal memory footprint with a plugin system so
 that developers in the community can easily add support for collecting metrics
-from local or remote services.
+.  For an example configuration referencet from local or remote services.
 
 Telegraf is plugin-driven and has the concept of 4 distinct plugins:
 
@@ -40,16 +40,19 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 ### From Source:
 
-Telegraf requires golang version 1.8+, the Makefile requires GNU make.
+Telegraf requires golang version 1.9 or newer, the Makefile requires GNU make.
 
-Dependencies are managed with [gdm](https://github.com/sparrc/gdm),
-which is installed by the Makefile if you don't have it already.
-
-1. [Install Go](https://golang.org/doc/install)
-2. [Setup your GOPATH](https://golang.org/doc/code.html#GOPATH)
-3. Run `go get -d github.com/influxdata/telegraf`
-4. Run `cd $GOPATH/src/github.com/influxdata/telegraf`
-5. Run `make`
+1. [Install Go](https://golang.org/doc/install) >=1.9
+2. [Install dep](https://golang.github.io/dep/docs/installation.html) ==v0.5.0
+3. Download Telegraf source:
+   ```
+   go get -d github.com/influxdata/telegraf
+   ```
+4. Run make from the source directory
+   ```
+   cd "$HOME/go/src/github.com/influxdata/telegraf"
+   make
+   ```
 
 ### Nightly Builds
 
@@ -124,21 +127,27 @@ configuration options.
 
 ## Input Plugins
 
+* [activemq](./plugins/inputs/activemq)
 * [aerospike](./plugins/inputs/aerospike)
 * [amqp_consumer](./plugins/inputs/amqp_consumer) (rabbitmq)
 * [apache](./plugins/inputs/apache)
+* [aurora](./plugins/inputs/aurora)
 * [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
 * [bond](./plugins/inputs/bond)
-* [cassandra](./plugins/inputs/cassandra)
+* [burrow](./plugins/inputs/burrow)
+* [cassandra](./plugins/inputs/cassandra) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
 * [ceph](./plugins/inputs/ceph)
 * [cgroup](./plugins/inputs/cgroup)
 * [chrony](./plugins/inputs/chrony)
-* [consul](./plugins/inputs/consul)
 * [conntrack](./plugins/inputs/conntrack)
+* [consul](./plugins/inputs/consul)
 * [couchbase](./plugins/inputs/couchbase)
 * [couchdb](./plugins/inputs/couchdb)
+* [cpu](./plugins/inputs/cpu)
 * [DC/OS](./plugins/inputs/dcos)
+* [diskio](./plugins/inputs/diskio)
+* [disk](./plugins/inputs/disk)
 * [disque](./plugins/inputs/disque)
 * [dmcache](./plugins/inputs/dmcache)
 * [dns query time](./plugins/inputs/dns_query)
@@ -147,42 +156,62 @@ configuration options.
 * [elasticsearch](./plugins/inputs/elasticsearch)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [fail2ban](./plugins/inputs/fail2ban)
+* [fibaro](./plugins/inputs/fibaro)
+* [file](./plugins/inputs/file)
 * [filestat](./plugins/inputs/filestat)
+* [filecount](./plugins/inputs/filecount)
 * [fluentd](./plugins/inputs/fluentd)
 * [graylog](./plugins/inputs/graylog)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
+* [httpjson](./plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
+* [http_listener](./plugins/inputs/http_listener)
 * [http](./plugins/inputs/http) (generic HTTP plugin, supports using input data formats)
 * [http_response](./plugins/inputs/http_response)
-* [httpjson](./plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
-* [internal](./plugins/inputs/internal)
+* [icinga2](./plugins/inputs/icinga2)
 * [influxdb](./plugins/inputs/influxdb)
+* [internal](./plugins/inputs/internal)
 * [interrupts](./plugins/inputs/interrupts)
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
-* [iptables](./plugins/inputs/iptables)
 * [ipset](./plugins/inputs/ipset)
+* [iptables](./plugins/inputs/iptables)
+* [jolokia2](./plugins/inputs/jolokia2) (java, cassandra, kafka)
 * [jolokia](./plugins/inputs/jolokia) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
-* [jolokia2](./plugins/inputs/jolokia2)
+* [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry)
+* [kafka_consumer](./plugins/inputs/kafka_consumer)
 * [kapacitor](./plugins/inputs/kapacitor)
+* [kernel](./plugins/inputs/kernel)
+* [kernel_vmstat](./plugins/inputs/kernel_vmstat)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
+* [linux_sysctl_fs](./plugins/inputs/linux_sysctl_fs)
+* [logparser](./plugins/inputs/logparser)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
+* [mcrouter](./plugins/inputs/mcrouter)
 * [memcached](./plugins/inputs/memcached)
+* [mem](./plugins/inputs/mem)
 * [mesos](./plugins/inputs/mesos)
 * [minecraft](./plugins/inputs/minecraft)
 * [mongodb](./plugins/inputs/mongodb)
+* [mqtt_consumer](./plugins/inputs/mqtt_consumer)
 * [mysql](./plugins/inputs/mysql)
+* [nats_consumer](./plugins/inputs/nats_consumer)
 * [nats](./plugins/inputs/nats)
+* [net](./plugins/inputs/net)
 * [net_response](./plugins/inputs/net_response)
+* [netstat](./plugins/inputs/net)
 * [nginx](./plugins/inputs/nginx)
 * [nginx_plus](./plugins/inputs/nginx_plus)
+* [nsq_consumer](./plugins/inputs/nsq_consumer)
 * [nsq](./plugins/inputs/nsq)
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
+* [nvidia_smi](./plugins/inputs/nvidia_smi)
 * [openldap](./plugins/inputs/openldap)
 * [opensmtpd](./plugins/inputs/opensmtpd)
 * [pf](./plugins/inputs/pf)
+* [pgbouncer](./plugins/inputs/pgbouncer)
 * [phpfpm](./plugins/inputs/phpfpm)
 * [phusion passenger](./plugins/inputs/passenger)
 * [ping](./plugins/inputs/ping)
@@ -190,6 +219,7 @@ configuration options.
 * [postgresql_extensible](./plugins/inputs/postgresql_extensible)
 * [postgresql](./plugins/inputs/postgresql)
 * [powerdns](./plugins/inputs/powerdns)
+* [processes](./plugins/inputs/processes)
 * [procstat](./plugins/inputs/procstat)
 * [prometheus](./plugins/inputs/prometheus) (can be used for [Caddy server](./plugins/inputs/prometheus/README.md#usage-for-caddy-http-server))
 * [puppetagent](./plugins/inputs/puppetagent)
@@ -201,46 +231,25 @@ configuration options.
 * [salesforce](./plugins/inputs/salesforce)
 * [sensors](./plugins/inputs/sensors)
 * [smart](./plugins/inputs/smart)
-* [snmp](./plugins/inputs/snmp)
 * [snmp_legacy](./plugins/inputs/snmp_legacy)
+* [snmp](./plugins/inputs/snmp)
+* [socket_listener](./plugins/inputs/socket_listener)
 * [solr](./plugins/inputs/solr)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
-* [teamspeak](./plugins/inputs/teamspeak)
-* [tomcat](./plugins/inputs/tomcat)
-* [twemproxy](./plugins/inputs/twemproxy)
-* [unbound](./plugins/inputs/unbound)
-* [varnish](./plugins/inputs/varnish)
-* [zfs](./plugins/inputs/zfs)
-* [zookeeper](./plugins/inputs/zookeeper)
-* [win_perf_counters](./plugins/inputs/win_perf_counters) (windows performance counters)
-* [win_services](./plugins/inputs/win_services)
+* [statsd](./plugins/inputs/statsd)
+* [swap](./plugins/inputs/swap)
+* [syslog](./plugins/inputs/syslog)
 * [sysstat](./plugins/inputs/sysstat)
 * [system](./plugins/inputs/system)
-    * cpu
-    * mem
-    * net
-    * netstat
-    * disk
-    * diskio
-    * swap
-    * processes
-    * kernel (/proc/stat)
-    * kernel (/proc/vmstat)
-    * linux_sysctl_fs (/proc/sys/fs)
-
-Telegraf can also collect metrics via the following service plugins:
-
-* [http_listener](./plugins/inputs/http_listener)
-* [kafka_consumer](./plugins/inputs/kafka_consumer)
-* [mqtt_consumer](./plugins/inputs/mqtt_consumer)
-* [nats_consumer](./plugins/inputs/nats_consumer)
-* [nsq_consumer](./plugins/inputs/nsq_consumer)
-* [logparser](./plugins/inputs/logparser)
-* [statsd](./plugins/inputs/statsd)
-* [socket_listener](./plugins/inputs/socket_listener)
 * [tail](./plugins/inputs/tail)
 * [tcp_listener](./plugins/inputs/socket_listener)
+* [teamspeak](./plugins/inputs/teamspeak)
+* [tengine](./plugins/inputs/tengine)
+* [tomcat](./plugins/inputs/tomcat)
+* [twemproxy](./plugins/inputs/twemproxy)
 * [udp_listener](./plugins/inputs/socket_listener)
+* [unbound](./plugins/inputs/unbound)
+* [varnish](./plugins/inputs/varnish)
 * [webhooks](./plugins/inputs/webhooks)
   * [filestack](./plugins/inputs/webhooks/filestack)
   * [github](./plugins/inputs/webhooks/github)
@@ -248,7 +257,11 @@ Telegraf can also collect metrics via the following service plugins:
   * [papertrail](./plugins/inputs/webhooks/papertrail)
   * [particle](./plugins/inputs/webhooks/particle)
   * [rollbar](./plugins/inputs/webhooks/rollbar)
+* [win_perf_counters](./plugins/inputs/win_perf_counters) (windows performance counters)
+* [win_services](./plugins/inputs/win_services)
+* [zfs](./plugins/inputs/zfs)
 * [zipkin](./plugins/inputs/zipkin)
+* [zookeeper](./plugins/inputs/zookeeper)
 
 Telegraf is able to parse the following input data formats into metrics, these
 formats may be used with input plugins supporting the `data_format` option:
@@ -263,20 +276,26 @@ formats may be used with input plugins supporting the `data_format` option:
 
 ## Processor Plugins
 
-* [printer](./plugins/processors/printer)
+* [converter](./plugins/processors/converter)
 * [override](./plugins/processors/override)
+* [printer](./plugins/processors/printer)
+* [regex](./plugins/processors/regex)
+* [rename](./plugins/processors/rename)
+* [topk](./plugins/processors/topk)
 
 ## Aggregator Plugins
 
 * [basicstats](./plugins/aggregators/basicstats)
 * [minmax](./plugins/aggregators/minmax)
 * [histogram](./plugins/aggregators/histogram)
+* [valuecounter](./plugins/aggregators/valuecounter)
 
 ## Output Plugins
 
 * [influxdb](./plugins/outputs/influxdb)
 * [amon](./plugins/outputs/amon)
 * [amqp](./plugins/outputs/amqp) (rabbitmq)
+* [application_insights](./plugins/outputs/application_insights)
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
 * [cratedb](./plugins/outputs/cratedb)
@@ -286,6 +305,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [file](./plugins/outputs/file)
 * [graphite](./plugins/outputs/graphite)
 * [graylog](./plugins/outputs/graylog)
+* [http](./plugins/outputs/http)
 * [instrumental](./plugins/outputs/instrumental)
 * [kafka](./plugins/outputs/kafka)
 * [librato](./plugins/outputs/librato)

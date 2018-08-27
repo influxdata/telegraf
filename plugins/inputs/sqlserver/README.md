@@ -52,8 +52,7 @@ GO
   ## - DatabaseStats
   ## - MemoryClerk
   ## - VolumeSpace
-  ## - PerformanceMetrics
-  # exclude_query = [ 'PerformanceCounters','WaitStatsCatagorized' ]
+  exclude_query = [ 'DatabaseIO' ]
 ```
 
 ### Metrics:
@@ -130,5 +129,5 @@ The following metrics can be used directly, with no delta calculations:
  - SQLServer:Workload Group Stats\Requests completed/sec
 
 Version 2 queries have the following tags:
-- `host`: Physical host name
 - `sql_instance`: Physical host and instance name (hostname:instance)
+

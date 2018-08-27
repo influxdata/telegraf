@@ -4,27 +4,35 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
 
 ## Configuration
 
-```
+```toml
 # Publish all metrics to /metrics for Prometheus to scrape
 [[outputs.prometheus_client]]
-  # Address to listen on
+  ## Address to listen on.
   listen = ":9273"
 
-  # Use TLS
-  tls_cert = "/etc/ssl/telegraf.crt"
-  tls_key = "/etc/ssl/telegraf.key"
+  ## Use HTTP Basic Authentication.
+  # basic_username = "Foo"
+  # basic_password = "Bar"
 
-  # Use http basic authentication
-  basic_username = "Foo"
-  basic_password = "Bar"
+  ## If set, the IP Ranges which are allowed to access metrics.
+  ##   ex: ip_range = ["192.168.0.0/24", "192.168.1.0/30"]
+  # ip_range = []
 
-  # Path to publish the metrics on, defaults to /metrics
-  path = "/metrics"   
+  ## Path to publish the metrics on.
+  # path = "/metrics"
 
-  # Expiration interval for each metric. 0 == no expiration
-  expiration_interval = "60s"
+  ## Expiration interval for each metric. 0 == no expiration
+  # expiration_interval = "60s"
 
-  # Send string metrics as Prometheus labels.
-  # Unless set to false all string metrics will be sent as labels.
-  string_as_label = true
+  ## Collectors to enable, valid entries are "gocollector" and "process".
+  ## If unset, both are enabled.
+  # collectors_exclude = ["gocollector", "process"]
+
+  ## Send string metrics as Prometheus labels.
+  ## Unless set to false all string metrics will be sent as labels.
+  # string_as_label = true
+
+  ## If set, enable TLS with the given certificate.
+  # tls_cert = "/etc/ssl/telegraf.crt"
+  # tls_key = "/etc/ssl/telegraf.key"
 ```

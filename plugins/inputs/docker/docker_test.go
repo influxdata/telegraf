@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"crypto/tls"
+	"sort"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -76,8 +77,8 @@ var baseClient = MockClient{
 	ContainerListF: func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
 		return containerList, nil
 	},
-	ContainerStatsF: func(context.Context, string, bool) (types.ContainerStats, error) {
-		return containerStats(), nil
+	ContainerStatsF: func(c context.Context, s string, b bool) (types.ContainerStats, error) {
+		return containerStats(s), nil
 	},
 	ContainerInspectF: func(context.Context, string) (types.ContainerJSON, error) {
 		return containerInspect, nil
@@ -106,7 +107,7 @@ func TestDockerGatherContainerStats(t *testing.T) {
 		"container_image": "redis/image",
 	}
 
-	gatherContainerStats(stats, &acc, tags, "123456789", true, true, "linux")
+	parseContainerStats(stats, &acc, tags, "123456789", true, true, "linux")
 
 	// test docker_container_net measurement
 	netfields := map[string]interface{}{
@@ -289,11 +290,9 @@ func TestContainerLabels(t *testing.T) {
 	}{
 		{
 			name: "Nil filters matches all",
-			container: types.Container{
-				Labels: map[string]string{
-					"a": "x",
-				},
-			},
+			container: genContainerLabeled(map[string]string{
+				"a": "x",
+			}),
 			include: nil,
 			exclude: nil,
 			expected: map[string]string{
@@ -302,11 +301,9 @@ func TestContainerLabels(t *testing.T) {
 		},
 		{
 			name: "Empty filters matches all",
-			container: types.Container{
-				Labels: map[string]string{
-					"a": "x",
-				},
-			},
+			container: genContainerLabeled(map[string]string{
+				"a": "x",
+			}),
 			include: []string{},
 			exclude: []string{},
 			expected: map[string]string{
@@ -315,12 +312,10 @@ func TestContainerLabels(t *testing.T) {
 		},
 		{
 			name: "Must match include",
-			container: types.Container{
-				Labels: map[string]string{
-					"a": "x",
-					"b": "y",
-				},
-			},
+			container: genContainerLabeled(map[string]string{
+				"a": "x",
+				"b": "y",
+			}),
 			include: []string{"a"},
 			exclude: []string{},
 			expected: map[string]string{
@@ -329,12 +324,10 @@ func TestContainerLabels(t *testing.T) {
 		},
 		{
 			name: "Must not match exclude",
-			container: types.Container{
-				Labels: map[string]string{
-					"a": "x",
-					"b": "y",
-				},
-			},
+			container: genContainerLabeled(map[string]string{
+				"a": "x",
+				"b": "y",
+			}),
 			include: []string{},
 			exclude: []string{"b"},
 			expected: map[string]string{
@@ -343,13 +336,11 @@ func TestContainerLabels(t *testing.T) {
 		},
 		{
 			name: "Include Glob",
-			container: types.Container{
-				Labels: map[string]string{
-					"aa": "x",
-					"ab": "y",
-					"bb": "z",
-				},
-			},
+			container: genContainerLabeled(map[string]string{
+				"aa": "x",
+				"ab": "y",
+				"bb": "z",
+			}),
 			include: []string{"a*"},
 			exclude: []string{},
 			expected: map[string]string{
@@ -359,13 +350,11 @@ func TestContainerLabels(t *testing.T) {
 		},
 		{
 			name: "Exclude Glob",
-			container: types.Container{
-				Labels: map[string]string{
-					"aa": "x",
-					"ab": "y",
-					"bb": "z",
-				},
-			},
+			container: genContainerLabeled(map[string]string{
+				"aa": "x",
+				"ab": "y",
+				"bb": "z",
+			}),
 			include: []string{},
 			exclude: []string{"a*"},
 			expected: map[string]string{
@@ -374,13 +363,11 @@ func TestContainerLabels(t *testing.T) {
 		},
 		{
 			name: "Excluded Includes",
-			container: types.Container{
-				Labels: map[string]string{
-					"aa": "x",
-					"ab": "y",
-					"bb": "z",
-				},
-			},
+			container: genContainerLabeled(map[string]string{
+				"aa": "x",
+				"ab": "y",
+				"bb": "z",
+			}),
 			include: []string{"a*"},
 			exclude: []string{"*b"},
 			expected: map[string]string{
@@ -424,6 +411,12 @@ func TestContainerLabels(t *testing.T) {
 	}
 }
 
+func genContainerLabeled(labels map[string]string) types.Container {
+	c := containerList[0]
+	c.Labels = labels
+	return c
+}
+
 func TestContainerNames(t *testing.T) {
 	var tests = []struct {
 		name       string
@@ -433,112 +426,67 @@ func TestContainerNames(t *testing.T) {
 		expected   []string
 	}{
 		{
-			name: "Nil filters matches all",
-			containers: [][]string{
-				{"/etcd"},
-				{"/etcd2"},
-			},
+			name:     "Nil filters matches all",
 			include:  nil,
 			exclude:  nil,
-			expected: []string{"etcd", "etcd2"},
+			expected: []string{"etcd", "etcd2", "acme", "acme-test", "foo"},
 		},
 		{
-			name: "Empty filters matches all",
-			containers: [][]string{
-				{"/etcd"},
-				{"/etcd2"},
-			},
+			name:     "Empty filters matches all",
 			include:  []string{},
 			exclude:  []string{},
-			expected: []string{"etcd", "etcd2"},
+			expected: []string{"etcd", "etcd2", "acme", "acme-test", "foo"},
 		},
 		{
-			name: "Match all containers",
-			containers: [][]string{
-				{"/etcd"},
-				{"/etcd2"},
-			},
+			name:     "Match all containers",
 			include:  []string{"*"},
 			exclude:  []string{},
-			expected: []string{"etcd", "etcd2"},
+			expected: []string{"etcd", "etcd2", "acme", "acme-test", "foo"},
 		},
 		{
-			name: "Include prefix match",
-			containers: [][]string{
-				{"/etcd"},
-				{"/etcd2"},
-			},
+			name:     "Include prefix match",
 			include:  []string{"etc*"},
 			exclude:  []string{},
 			expected: []string{"etcd", "etcd2"},
 		},
 		{
-			name: "Exact match",
-			containers: [][]string{
-				{"/etcd"},
-				{"/etcd2"},
-			},
+			name:     "Exact match",
 			include:  []string{"etcd"},
 			exclude:  []string{},
 			expected: []string{"etcd"},
 		},
 		{
-			name: "Star matches zero length",
-			containers: [][]string{
-				{"/etcd"},
-				{"/etcd2"},
-			},
+			name:     "Star matches zero length",
 			include:  []string{"etcd2*"},
 			exclude:  []string{},
 			expected: []string{"etcd2"},
 		},
 		{
-			name: "Exclude matches all",
-			containers: [][]string{
-				{"/etcd"},
-				{"/etcd2"},
-			},
+			name:     "Exclude matches all",
 			include:  []string{},
 			exclude:  []string{"etc*"},
-			expected: []string{},
+			expected: []string{"acme", "acme-test", "foo"},
 		},
 		{
-			name: "Exclude single",
-			containers: [][]string{
-				{"/etcd"},
-				{"/etcd2"},
-			},
+			name:     "Exclude single",
 			include:  []string{},
 			exclude:  []string{"etcd"},
-			expected: []string{"etcd2"},
+			expected: []string{"etcd2", "acme", "acme-test", "foo"},
 		},
 		{
-			name: "Exclude all",
-			containers: [][]string{
-				{"/etcd"},
-				{"/etcd2"},
-			},
+			name:     "Exclude all",
 			include:  []string{"*"},
 			exclude:  []string{"*"},
 			expected: []string{},
 		},
 		{
-			name: "Exclude item matching include",
-			containers: [][]string{
-				{"acme"},
-				{"foo"},
-				{"acme-test"},
-			},
+			name:     "Exclude item matching include",
 			include:  []string{"acme*"},
 			exclude:  []string{"*test*"},
 			expected: []string{"acme"},
 		},
 		{
-			name: "Exclude item no wildcards",
-			containers: [][]string{
-				{"acme"},
-				{"acme-test"},
-			},
+			name:     "Exclude item no wildcards",
 			include:  []string{"acme*"},
 			exclude:  []string{"test"},
 			expected: []string{"acme", "acme-test"},
@@ -551,14 +499,12 @@ func TestContainerNames(t *testing.T) {
 			newClientFunc := func(host string, tlsConfig *tls.Config) (Client, error) {
 				client := baseClient
 				client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
-					var containers []types.Container
-					for _, names := range tt.containers {
-						containers = append(containers, types.Container{
-							Names: names,
-						})
-					}
-					return containers, nil
+					return containerList, nil
 				}
+				client.ContainerStatsF = func(c context.Context, s string, b bool) (types.ContainerStats, error) {
+					return containerStats(s), nil
+				}
+
 				return &client, nil
 			}
 
@@ -614,7 +560,10 @@ func TestDockerGatherInfo(t *testing.T) {
 			"n_images":                int(199),
 			"n_goroutines":            int(39),
 		},
-		map[string]string{"engine_host": "absol"},
+		map[string]string{
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
+		},
 	)
 
 	acc.AssertContainsTaggedFields(t,
@@ -625,8 +574,9 @@ func TestDockerGatherInfo(t *testing.T) {
 			"available": int64(36530000000),
 		},
 		map[string]string{
-			"unit":        "bytes",
-			"engine_host": "absol",
+			"unit":           "bytes",
+			"engine_host":    "absol",
+			"server_version": "17.09.0-ce",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -647,6 +597,8 @@ func TestDockerGatherInfo(t *testing.T) {
 			"ENVVAR7":           "ENVVAR8=ENVVAR9",
 			"label1":            "test_value_1",
 			"label2":            "test_value_2",
+			"server_version":    "17.09.0-ce",
+			"container_status":  "running",
 		},
 	)
 	acc.AssertContainsTaggedFields(t,
@@ -669,6 +621,8 @@ func TestDockerGatherInfo(t *testing.T) {
 			"ENVVAR7":           "ENVVAR8=ENVVAR9",
 			"label1":            "test_value_1",
 			"label2":            "test_value_2",
+			"server_version":    "17.09.0-ce",
+			"container_status":  "running",
 		},
 	)
 }
@@ -710,4 +664,86 @@ func TestDockerGatherSwarmInfo(t *testing.T) {
 			"service_mode": "global",
 		},
 	)
+}
+
+func TestContainerStateFilter(t *testing.T) {
+	var tests = []struct {
+		name     string
+		include  []string
+		exclude  []string
+		expected map[string][]string
+	}{
+		{
+			name: "default",
+			expected: map[string][]string{
+				"status": []string{"running"},
+			},
+		},
+		{
+			name:    "include running",
+			include: []string{"running"},
+			expected: map[string][]string{
+				"status": []string{"running"},
+			},
+		},
+		{
+			name:    "include glob",
+			include: []string{"r*"},
+			expected: map[string][]string{
+				"status": []string{"restarting", "running", "removing"},
+			},
+		},
+		{
+			name:    "include all",
+			include: []string{"*"},
+			expected: map[string][]string{
+				"status": []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"},
+			},
+		},
+		{
+			name:    "exclude all",
+			exclude: []string{"*"},
+			expected: map[string][]string{
+				"status": []string{},
+			},
+		},
+		{
+			name:    "exclude all",
+			include: []string{"*"},
+			exclude: []string{"exited"},
+			expected: map[string][]string{
+				"status": []string{"created", "restarting", "running", "removing", "paused", "dead"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var acc testutil.Accumulator
+
+			newClientFunc := func(host string, tlsConfig *tls.Config) (Client, error) {
+				client := baseClient
+				client.ContainerListF = func(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+					for k, v := range tt.expected {
+						actual := options.Filters.Get(k)
+						sort.Strings(actual)
+						sort.Strings(v)
+						require.Equal(t, v, actual)
+					}
+
+					return nil, nil
+				}
+				return &client, nil
+			}
+
+			d := Docker{
+				newClient:             newClientFunc,
+				ContainerStateInclude: tt.include,
+				ContainerStateExclude: tt.exclude,
+			}
+
+			err := d.Gather(&acc)
+			require.NoError(t, err)
+		})
+	}
 }

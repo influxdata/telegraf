@@ -20,7 +20,7 @@ This plugin gathers stats from [Varnish HTTP Cache](https://varnish-cache.org/)
 
    ## Optional name for the varnish instance (or working directory) to query
    ## Usually appened after -n in varnish cli
-   #name = instanceName
+   # instance_name = instanceName
 ```
 
 ### Measurements & Fields:
