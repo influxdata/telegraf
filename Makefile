@@ -15,12 +15,6 @@ GOFILES ?= $(shell git ls-files '*.go')
 GOFMT ?= $(shell gofmt -l $(filter-out plugins/parsers/influx/machine.go, $(GOFILES)))
 BUILDFLAGS ?=
 
-ifdef GOBIN
-PATH := $(GOBIN):$(PATH)
-else
-PATH := $(subst :,/bin:,$(shell go env GOPATH))/bin:$(PATH)
-endif
-
 LDFLAGS := $(LDFLAGS) -X main.commit=$(COMMIT) -X main.branch=$(BRANCH)
 ifdef VERSION
 	LDFLAGS += -X main.version=$(VERSION)

@@ -3,7 +3,6 @@
 import sys
 import os
 import subprocess
-import time
 from datetime import datetime
 import shutil
 import tempfile
@@ -156,8 +155,7 @@ def go_get(branch, update=False, no_uncommitted=False):
         logging.error("There are uncommitted changes in the current directory.")
         return False
     logging.info("Retrieving dependencies with `dep`...")
-    run("{}/bin/dep ensure -v -vendor-only".format(os.environ.get("GOPATH",
-        os.path.expanduser("~/go"))))
+    run("dep ensure -v -vendor-only")
     return True
 
 def run_tests(race, parallel, timeout, no_vet):
