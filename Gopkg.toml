@@ -148,7 +148,7 @@
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"
-  version = "2.18.05"
+  version = "2.18.07"
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
@@ -194,10 +194,6 @@
   name = "golang.org/x/sys"
   branch = "master"
 
-[[constraint]]
-  name = "github.com/golang/x"
-  branch = "master"
-  
 [[constraint]]
   name = "google.golang.org/grpc"
   version = "1.12.2"

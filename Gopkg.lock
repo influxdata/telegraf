@@ -33,12 +33,12 @@
   revision = "d2df5d440eda5372f24fcac03839a64d6cb5f7e5"
 
 [[projects]]
-  digest = "1:c7937d6337f88193ad8aade88c92d7e72b3d5fc6e5002a9515dabca5802624cd"
+  digest = "1:45ec6eb579713a01991ad07f538fed3b576ee55f5ce9f248320152a9270d9258"
   name = "github.com/Microsoft/go-winio"
   packages = ["."]
   pruneopts = ""
-  revision = "97e4973ce50b2ff5f09635a57e2b88a037aae829"
-  version = "v0.4.11"
+  revision = "a6d595ae73cf27a1b8fc32930668708f45ce1c85"
+  version = "v0.4.9"
 
 [[projects]]
   digest = "1:9362b2212139b7821f73a86169bf80ce6b0264956f87d82ab3aeedb2b5c08fea"
@@ -108,14 +108,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:570e2b16b8535c77bcadd16fd12d69641b5cceaea69dec1a60cbbbcf62f716b3"
+  digest = "1:0828d8c0f95689f832cf348fe23827feb7640cd698d612ef59e2f9d041f54c68"
   name = "github.com/apache/thrift"
   packages = ["lib/go/thrift"]
   pruneopts = ""
-  revision = "6e67faa92827ece022380b211c2caaadd6145bf5"
+  revision = "f2867c24984aa53edec54a138c03db934221bdea"
 
 [[projects]]
-  digest = "1:174e893894d5d9a24b89e863df45838c2a9f39e9d4e0467b6e211744c40644ac"
+  digest = "1:65a05bde9b02f645c73afa61c9f6af92d94d726c81a268f45cc70218bd58de65"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -151,8 +151,8 @@
     "service/sts",
   ]
   pruneopts = ""
-  revision = "4324bc9d8865bdb3e6aa86ec7772ca1272d2750e"
-  version = "v1.15.21"
+  revision = "8cf662a972fa7fba8f2c1ec57648cf840e2bb401"
+  version = "v1.14.30"
 
 [[projects]]
   branch = "master"
@@ -163,12 +163,12 @@
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
 
 [[projects]]
-  digest = "1:6da5545112f73dbad12895d25e39818c1c3e8040ebba488d4d3fe43bc8685eb6"
+  digest = "1:c5978131c797af795972c27c25396c81d1bf53b7b6e8e3e0259e58375765c071"
   name = "github.com/bsm/sarama-cluster"
   packages = ["."]
   pruneopts = ""
-  revision = "c618e605e15c0d7535f6c96ff8efbb0dba4fd66c"
-  version = "v2.1.15"
+  revision = "cf455bc755fe41ac9bb2861e7a961833d9c2ecc3"
+  version = "v2.1.13"
 
 [[projects]]
   digest = "1:f619cb9b07aebe5416262cdd8b86082e8d5bdc5264cb3b615ff858df0b645f97"
@@ -180,22 +180,22 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:cfb8658f82f55997a91fb7d83a88154ad96ca043d728ff789dbc5ca12a9edd97"
+  digest = "1:298e42868718da06fc0899ae8fdb99c48a14477045234c9274d81caa79af6a8f"
   name = "github.com/couchbase/go-couchbase"
   packages = ["."]
   pruneopts = ""
-  revision = "5a0c9a51996952787fa7d77dc1635661c4369f0c"
+  revision = "16db1f1fe037412f12738fa4d8448c549c4edd77"
 
 [[projects]]
   branch = "master"
-  digest = "1:5e98787b297c3e0305e74d88776bbf1cfda9c145e50a37ddc5418eb94f82e430"
+  digest = "1:c734658274a6be88870a36742fdea96a3fce4fc99a7b90946c9e84335ceae71a"
   name = "github.com/couchbase/gomemcached"
   packages = [
     ".",
     "client",
   ]
   pruneopts = ""
-  revision = "20e69a1ee160444d2663130ce853ac969aec4689"
+  revision = "0da75df145308b9a4e6704d762ca9d9b77752efc"
 
 [[projects]]
   branch = "master"
@@ -209,12 +209,12 @@
   revision = "e865a1461c8ac0032bd37e2d4dab3289faea3873"
 
 [[projects]]
-  digest = "1:0deddd908b6b4b768cfc272c16ee61e7088a60f7fe2f06c547bd3d8e1f8b8e77"
+  digest = "1:56c130d885a4aacae1dd9c7b71cfe39912c7ebc1ff7d2b46083c8812996dc43b"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   pruneopts = ""
-  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
-  version = "v1.1.1"
+  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:6098222470fe0172157ce9bbef5d2200df4edde17ee649c5d6e48330e4afa4c6"
@@ -260,7 +260,7 @@
   revision = "ed7b6428c133e7c59404251a09b7d6b02fa83cc2"
 
 [[projects]]
-  digest = "1:ebe593d8b65a2947b78b6e164a2dac1a230b977a700b694da3a398b03b7afb04"
+  digest = "1:a5ecc2e70260a87aa263811281465a5effcfae8a54bac319cee87c4625f04d63"
   name = "github.com/docker/go-connections"
   packages = [
     "nat",
@@ -268,8 +268,8 @@
     "tlsconfig",
   ]
   pruneopts = ""
-  revision = "7395e3f8aa162843a74ed6d48e79627d9792ac55"
-  version = "v0.4.0"
+  revision = "3ede32e2033de7505e6500d6c868c2b9ed9f169d"
+  version = "v0.3.0"
 
 [[projects]]
   digest = "1:582d54fcb7233da8dde1dfd2210a5b9675d0685f84246a8d317b07d680c18b1b"
@@ -289,11 +289,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6643c01e619a68f80ac12ad81223275df653528c6d7e3788291c1fd6f1d622f6"
+  digest = "1:7b12ea8b50040c6c2378ec5b5a1ab722730b2bfb46e8724ded57f2c3905431fa"
   name = "github.com/eapache/go-xerial-snappy"
   packages = ["."]
   pruneopts = ""
-  revision = "776d5712da21bc4762676d614db1d8a64f4238b0"
+  revision = "040cc1a32f578808623071247fdbd5cc43f37f5f"
 
 [[projects]]
   digest = "1:d8d46d21073d0f65daf1740ebf4629c65e04bf92e14ce93c2201e8624843c3d3"
@@ -315,12 +315,12 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:cd5bab9c9e23ffa6858eaa79dc827fd84bc24bc00b0cfb0b14036e393da2b1fa"
+  digest = "1:858b7fe7b0f4bc7ef9953926828f2816ea52d01a88d72d1c45bc8c108f23c356"
   name = "github.com/go-ini/ini"
   packages = ["."]
   pruneopts = ""
-  revision = "5cf292cae48347c2490ac1a58fe36735fb78df7e"
-  version = "v1.38.2"
+  revision = "358ee7663966325963d4e8b2e1fbd570c5195153"
+  version = "v1.38.1"
 
 [[projects]]
   digest = "1:6a4a01d58b227c4b6b11111b9f172ec5c17682b82724e58e6daf3f19f4faccd8"
@@ -342,7 +342,7 @@
   version = "v1.2.1"
 
 [[projects]]
-  digest = "1:45edc199c5fd8cb64c1ae8dd260b79223f3e636883eb0a3a561dba99f9371514"
+  digest = "1:3dfd659219b6f63dc0677a62b8d4e8f10b5cf53900aef40858db10a19407e41d"
   name = "github.com/go-redis/redis"
   packages = [
     ".",
@@ -355,8 +355,8 @@
     "internal/util",
   ]
   pruneopts = ""
-  revision = "1614e579ed966441b8e0c3ccea1dd0fbbd93a6ae"
-  version = "v6.14.0"
+  revision = "83fb42932f6145ce52df09860384a4653d2d332a"
+  version = "v6.12.0"
 
 [[projects]]
   digest = "1:c07de423ca37dc2765396d6971599ab652a339538084b9b58c9f7fc533b28525"
@@ -392,15 +392,7 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:73a7106c799f98af4f3da7552906efc6a2570329f4cd2d2f5fb8f9d6c053ff2f"
-  name = "github.com/golang/mock"
-  packages = ["gomock"]
-  pruneopts = ""
-  revision = "c34cdb4725f4c3844d095133c6e40e448b86589b"
-  version = "v1.1.1"
-
-[[projects]]
-  digest = "1:3dd078fda7500c341bc26cfbc6c6a34614f295a2457149fc1045cab767cbcf18"
+  digest = "1:f958a1c137db276e52f0b50efee41a1a389dcdded59a69711f3e872757dab34b"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -410,8 +402,8 @@
     "ptypes/timestamp",
   ]
   pruneopts = ""
-  revision = "aa810b61a9c79d51363740d207bb46cf8e620ed5"
-  version = "v1.2.0"
+  revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
+  version = "v1.1.0"
 
 [[projects]]
   branch = "master"
@@ -459,12 +451,12 @@
   revision = "e80d13ce29ede4452c43dea11e79b9bc8a15b478"
 
 [[projects]]
-  digest = "1:5190b0c9b2d3c491838653056455f1e9406e039ee91ec768849f3e5ab441f06a"
+  digest = "1:e7224669901bab4094e6d6697c136557b7177db6ceb01b7fc8b20d08f4b5aacd"
   name = "github.com/hashicorp/consul"
   packages = ["api"]
   pruneopts = ""
-  revision = "e716d1b5f8be252b3e53906c6d5632e0228f30fa"
-  version = "v1.2.2"
+  revision = "39f93f011e591c842acc8053a7f5972aa6e592fd"
+  version = "v1.2.1"
 
 [[projects]]
   branch = "master"
@@ -517,241 +509,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e54e963a3cb8c2d281417aa8d9beeb852599eebf01346402fe16c1c17e78c36a"
-  name = "github.com/influxdata/telegraf"
-  packages = [
-    ".",
-    "agent",
-    "filter",
-    "internal",
-    "internal/buffer",
-    "internal/config",
-    "internal/config/aws",
-    "internal/globpath",
-    "internal/limiter",
-    "internal/models",
-    "internal/templating",
-    "internal/tls",
-    "logger",
-    "metric",
-    "plugins/aggregators",
-    "plugins/aggregators/all",
-    "plugins/aggregators/basicstats",
-    "plugins/aggregators/histogram",
-    "plugins/aggregators/minmax",
-    "plugins/aggregators/valuecounter",
-    "plugins/inputs",
-    "plugins/inputs/activemq",
-    "plugins/inputs/aerospike",
-    "plugins/inputs/all",
-    "plugins/inputs/amqp_consumer",
-    "plugins/inputs/apache",
-    "plugins/inputs/aurora",
-    "plugins/inputs/bcache",
-    "plugins/inputs/bond",
-    "plugins/inputs/burrow",
-    "plugins/inputs/cassandra",
-    "plugins/inputs/ceph",
-    "plugins/inputs/cgroup",
-    "plugins/inputs/chrony",
-    "plugins/inputs/cloudwatch",
-    "plugins/inputs/conntrack",
-    "plugins/inputs/consul",
-    "plugins/inputs/couchbase",
-    "plugins/inputs/couchdb",
-    "plugins/inputs/cpu",
-    "plugins/inputs/dcos",
-    "plugins/inputs/disk",
-    "plugins/inputs/diskio",
-    "plugins/inputs/disque",
-    "plugins/inputs/dmcache",
-    "plugins/inputs/dns_query",
-    "plugins/inputs/docker",
-    "plugins/inputs/dovecot",
-    "plugins/inputs/elasticsearch",
-    "plugins/inputs/exec",
-    "plugins/inputs/fail2ban",
-    "plugins/inputs/fibaro",
-    "plugins/inputs/file",
-    "plugins/inputs/filecount",
-    "plugins/inputs/filestat",
-    "plugins/inputs/fluentd",
-    "plugins/inputs/graylog",
-    "plugins/inputs/haproxy",
-    "plugins/inputs/hddtemp",
-    "plugins/inputs/hddtemp/go-hddtemp",
-    "plugins/inputs/http",
-    "plugins/inputs/http_listener",
-    "plugins/inputs/http_response",
-    "plugins/inputs/httpjson",
-    "plugins/inputs/icinga2",
-    "plugins/inputs/influxdb",
-    "plugins/inputs/internal",
-    "plugins/inputs/interrupts",
-    "plugins/inputs/ipmi_sensor",
-    "plugins/inputs/ipset",
-    "plugins/inputs/iptables",
-    "plugins/inputs/jolokia",
-    "plugins/inputs/jolokia2",
-    "plugins/inputs/jti_openconfig_telemetry",
-    "plugins/inputs/jti_openconfig_telemetry/auth",
-    "plugins/inputs/jti_openconfig_telemetry/oc",
-    "plugins/inputs/kafka_consumer",
-    "plugins/inputs/kafka_consumer_legacy",
-    "plugins/inputs/kapacitor",
-    "plugins/inputs/kernel",
-    "plugins/inputs/kernel_vmstat",
-    "plugins/inputs/kibana",
-    "plugins/inputs/kubernetes",
-    "plugins/inputs/leofs",
-    "plugins/inputs/linux_sysctl_fs",
-    "plugins/inputs/logparser",
-    "plugins/inputs/lustre2",
-    "plugins/inputs/mailchimp",
-    "plugins/inputs/mcrouter",
-    "plugins/inputs/mem",
-    "plugins/inputs/memcached",
-    "plugins/inputs/mesos",
-    "plugins/inputs/minecraft",
-    "plugins/inputs/minecraft/internal/rcon",
-    "plugins/inputs/mongodb",
-    "plugins/inputs/mqtt_consumer",
-    "plugins/inputs/mysql",
-    "plugins/inputs/mysql/v1",
-    "plugins/inputs/nats",
-    "plugins/inputs/nats_consumer",
-    "plugins/inputs/net",
-    "plugins/inputs/net_response",
-    "plugins/inputs/nginx",
-    "plugins/inputs/nginx_plus",
-    "plugins/inputs/nsq",
-    "plugins/inputs/nsq_consumer",
-    "plugins/inputs/nstat",
-    "plugins/inputs/ntpq",
-    "plugins/inputs/nvidia_smi",
-    "plugins/inputs/openldap",
-    "plugins/inputs/opensmtpd",
-    "plugins/inputs/passenger",
-    "plugins/inputs/pf",
-    "plugins/inputs/pgbouncer",
-    "plugins/inputs/phpfpm",
-    "plugins/inputs/ping",
-    "plugins/inputs/postfix",
-    "plugins/inputs/postgresql",
-    "plugins/inputs/postgresql_extensible",
-    "plugins/inputs/powerdns",
-    "plugins/inputs/processes",
-    "plugins/inputs/procstat",
-    "plugins/inputs/prometheus",
-    "plugins/inputs/puppetagent",
-    "plugins/inputs/rabbitmq",
-    "plugins/inputs/raindrops",
-    "plugins/inputs/redis",
-    "plugins/inputs/rethinkdb",
-    "plugins/inputs/riak",
-    "plugins/inputs/salesforce",
-    "plugins/inputs/sensors",
-    "plugins/inputs/smart",
-    "plugins/inputs/snmp",
-    "plugins/inputs/snmp_legacy",
-    "plugins/inputs/socket_listener",
-    "plugins/inputs/solr",
-    "plugins/inputs/sqlserver",
-    "plugins/inputs/statsd",
-    "plugins/inputs/swap",
-    "plugins/inputs/syslog",
-    "plugins/inputs/sysstat",
-    "plugins/inputs/system",
-    "plugins/inputs/tail",
-    "plugins/inputs/tcp_listener",
-    "plugins/inputs/teamspeak",
-    "plugins/inputs/tengine",
-    "plugins/inputs/tomcat",
-    "plugins/inputs/trig",
-    "plugins/inputs/twemproxy",
-    "plugins/inputs/udp_listener",
-    "plugins/inputs/unbound",
-    "plugins/inputs/varnish",
-    "plugins/inputs/webhooks",
-    "plugins/inputs/webhooks/filestack",
-    "plugins/inputs/webhooks/github",
-    "plugins/inputs/webhooks/mandrill",
-    "plugins/inputs/webhooks/papertrail",
-    "plugins/inputs/webhooks/particle",
-    "plugins/inputs/webhooks/rollbar",
-    "plugins/inputs/win_perf_counters",
-    "plugins/inputs/win_services",
-    "plugins/inputs/x509_cert",
-    "plugins/inputs/zfs",
-    "plugins/inputs/zipkin",
-    "plugins/inputs/zipkin/codec",
-    "plugins/inputs/zipkin/codec/jsonV1",
-    "plugins/inputs/zipkin/codec/thrift",
-    "plugins/inputs/zipkin/trace",
-    "plugins/inputs/zookeeper",
-    "plugins/outputs",
-    "plugins/outputs/all",
-    "plugins/outputs/amon",
-    "plugins/outputs/amqp",
-    "plugins/outputs/application_insights",
-    "plugins/outputs/application_insights/mocks",
-    "plugins/outputs/cloudwatch",
-    "plugins/outputs/cratedb",
-    "plugins/outputs/datadog",
-    "plugins/outputs/discard",
-    "plugins/outputs/elasticsearch",
-    "plugins/outputs/file",
-    "plugins/outputs/graphite",
-    "plugins/outputs/graylog",
-    "plugins/outputs/http",
-    "plugins/outputs/influxdb",
-    "plugins/outputs/instrumental",
-    "plugins/outputs/kafka",
-    "plugins/outputs/kinesis",
-    "plugins/outputs/librato",
-    "plugins/outputs/mqtt",
-    "plugins/outputs/nats",
-    "plugins/outputs/nsq",
-    "plugins/outputs/opentsdb",
-    "plugins/outputs/prometheus_client",
-    "plugins/outputs/riemann",
-    "plugins/outputs/riemann_legacy",
-    "plugins/outputs/socket_writer",
-    "plugins/outputs/wavefront",
-    "plugins/parsers",
-    "plugins/parsers/collectd",
-    "plugins/parsers/csv",
-    "plugins/parsers/dropwizard",
-    "plugins/parsers/graphite",
-    "plugins/parsers/grok",
-    "plugins/parsers/influx",
-    "plugins/parsers/json",
-    "plugins/parsers/logfmt",
-    "plugins/parsers/nagios",
-    "plugins/parsers/value",
-    "plugins/parsers/wavefront",
-    "plugins/processors",
-    "plugins/processors/all",
-    "plugins/processors/converter",
-    "plugins/processors/enum",
-    "plugins/processors/override",
-    "plugins/processors/parser",
-    "plugins/processors/printer",
-    "plugins/processors/regex",
-    "plugins/processors/rename",
-    "plugins/processors/topk",
-    "plugins/serializers",
-    "plugins/serializers/graphite",
-    "plugins/serializers/influx",
-    "plugins/serializers/json",
-    "selfstat",
-    "testutil",
-  ]
-  pruneopts = ""
-  revision = "d3061520f4f94cdd74d979305fa5de76731cdd03"
-
-[[projects]]
-  branch = "master"
   digest = "1:7fb6cc9607eaa6ef309edebc42b57f704244bd4b9ab23bff128829c4ad09b95d"
   name = "github.com/influxdata/toml"
   packages = [
@@ -770,7 +527,7 @@
   revision = "7c63b0a71ef8300adc255344d275e10e5c3a71ec"
 
 [[projects]]
-  digest = "1:5544f7badae00bc5b9ec6829857bc08f88fce4d3ef73fb616ee57d49abbf7f48"
+  digest = "1:2de1791b9e43f26c696e36950e42676565e7da7499a870bc02213da4b59b1d14"
   name = "github.com/jackc/pgx"
   packages = [
     ".",
@@ -782,8 +539,8 @@
     "stdlib",
   ]
   pruneopts = ""
-  revision = "89f1e6ac7276b61d885db5e5aed6fcbedd1c7e31"
-  version = "v3.2.0"
+  revision = "da3231b0b66e2e74cdb779f1d46c5e958ba8be27"
+  version = "v3.1.0"
 
 [[projects]]
   digest = "1:6f49eae0c1e5dab1dafafee34b207aeb7a42303105960944828c2079b92fc88e"
@@ -802,11 +559,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b9a852e3614246740659ff6af2b3c39a92e6bcf774f6a53ac1b2a05a5a3625aa"
+  digest = "1:fed90fa725d3b1bac0a760de64426834dfef4546474cf182f2ec94285afa74a8"
   name = "github.com/kardianos/service"
   packages = ["."]
   pruneopts = ""
-  revision = "8f267d80f2eb68998661a325c0e53fca4485e626"
+  revision = "615a14ed75099c9eaac6949e22ac2341bf9d3197"
 
 [[projects]]
   branch = "master"
@@ -826,7 +583,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:212bebc561f4f654a653225868b2a97353cd5e160dc0b0bbc7232b06608474ec"
+  digest = "1:7e9956922e349af0190afa0b6621befcd201072679d8e51a9047ff149f2afe93"
   name = "github.com/mailru/easyjson"
   packages = [
     ".",
@@ -835,7 +592,7 @@
     "jwriter",
   ]
   pruneopts = ""
-  revision = "60711f1a8329503b04e1c88535f419d0bb440bff"
+  revision = "efc7eb8984d6655c26b5c9d2e65c024e5767c37c"
 
 [[projects]]
   digest = "1:63722a4b1e1717be7b98fc686e0b30d5e7f734b9e93d7dee86293b6deab7ea28"
@@ -854,20 +611,20 @@
   version = "v1.0.8"
 
 [[projects]]
-  digest = "1:096a8a9182648da3d00ff243b88407838902b6703fc12657f76890e08d1899bf"
+  branch = "master"
+  digest = "1:99651e95333755cbe5c9768c1b80031300acca64a80870b40309202b32585a5a"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
   pruneopts = ""
-  revision = "ae18d6b8b3205b561c79e8e5f69bff09736185f4"
-  version = "v1.0.0"
+  revision = "3864e76763d94a6df2f9960b16a20a33da9f9a66"
 
 [[projects]]
-  digest = "1:5219b4506253ccc598f9340677162a42d6a78f340a4cc6df2d62db4d0593c4e9"
+  branch = "master"
+  digest = "1:f43ed2c836208c14f45158fd01577c985688a4d11cf9fd475a939819fef3b321"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
   pruneopts = ""
-  revision = "fa473d140ef3c6adf42d6b391fe76707f1f243c8"
-  version = "v1.0.0"
+  revision = "f15292f7a699fcc1a38a80977f80a046874ba8ac"
 
 [[projects]]
   digest = "1:ee2e62b00a9ccc2dba1525f93396e35c847f90f87939df6f361b86315ea5f69a"
@@ -1029,7 +786,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f477ef7b65d94fb17574fc6548cef0c99a69c1634ea3b6da248b63a61ebe0498"
+  digest = "1:bfbc121ef802d245ef67421cff206615357d9202337a3d492b8f668906b485a8"
   name = "github.com/prometheus/common"
   packages = [
     "expfmt",
@@ -1038,11 +795,11 @@
     "model",
   ]
   pruneopts = ""
-  revision = "c7de2306084e37d54b8be01f3541a8464345e9a5"
+  revision = "7600349dcfe1abd18d72d3a1770870d9800a7801"
 
 [[projects]]
   branch = "master"
-  digest = "1:e04aaa0e8f8da0ed3d6c0700bd77eda52a47f38510063209d72d62f0ef807d5e"
+  digest = "1:b694a6bdecdace488f507cff872b30f6f490fdaf988abd74d87ea56406b23b6e"
   name = "github.com/prometheus/procfs"
   packages = [
     ".",
@@ -1051,7 +808,7 @@
     "xfs",
   ]
   pruneopts = ""
-  revision = "05ee40e3a273f7245e8777337fc7b46e533a9a92"
+  revision = "ae68e2d4c00fed4943b5f6698d504a5fe083da8a"
 
 [[projects]]
   branch = "master"
@@ -1103,28 +860,28 @@
   revision = "bb4de0191aa41b5507caa14b0650cdbddcd9280b"
 
 [[projects]]
-  digest = "1:3fcbf733a8d810a21265a7f2fe08a3353db2407da052b233f8b204b5afc03d9b"
+  digest = "1:8cf46b6c18a91068d446e26b67512cf16f1540b45d90b28b9533706a127f0ca6"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = ""
-  revision = "3e01752db0189b9157070a0e1668a620f9a85da2"
-  version = "v1.0.6"
+  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
+  version = "v1.0.5"
 
 [[projects]]
   branch = "master"
-  digest = "1:a2c7d04fb19a8b14b07ccc23767730820e885f8dc192c65b2dba83ac96173373"
+  digest = "1:4b0cabe65ca903a7b2a3e6272c5304eb788ce196d35ecb901c6563e5e7582443"
   name = "github.com/soniah/gosnmp"
   packages = ["."]
   pruneopts = ""
-  revision = "3651b0e1a5302d5d5f6d47a2af02658f8bb36311"
+  revision = "96b86229e9b3ffb4b954144cdc7f98fe3ee1003f"
 
 [[projects]]
   branch = "master"
-  digest = "1:cca262ebe762af6f1cef5f9134b2b8d04fd77b69938851d253faee4aed7322ad"
+  digest = "1:4e8f1cae8e6d83af9000d82566efb8823907dae77ba4f1d76ff28fdd197c3c90"
   name = "github.com/streadway/amqp"
   packages = ["."]
   pruneopts = ""
-  revision = "70e15c650864f4fc47f5d3c82ea117285480895d"
+  revision = "e5adc2ada8b8efff032bf61173a233d143e9318e"
 
 [[projects]]
   digest = "1:711eebe744c0151a9d09af2315f0bb729b2ec7637ef4c410fa90a18ef74b65b6"
@@ -1147,12 +904,12 @@
   version = "v1.2.2"
 
 [[projects]]
-  digest = "1:3ddca2bd5496c6922a2a9e636530e178a43c2a534ea6634211acdc7d10222794"
+  digest = "1:e139a0dfe24e723193005b291ed82a975041718cfcab9136aa6c9540df70a4ff"
   name = "github.com/tidwall/gjson"
   packages = ["."]
   pruneopts = ""
-  revision = "1e3f6aeaa5bad08d777ea7807b279a07885dd8b2"
-  version = "v1.1.3"
+  revision = "f123b340873a0084cb27267eddd8ff615115fbff"
+  version = "v1.1.2"
 
 [[projects]]
   branch = "master"
@@ -1188,7 +945,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ef9f534aedf640fa3b2e7e504572234bccd93ebc35c6cb96cda6162715e22202"
+  digest = "1:c5918689b7e187382cc1066bf0260de54ba9d1b323105f46ed2551d2fb4a17c7"
   name = "github.com/yuin/gopher-lua"
   packages = [
     ".",
@@ -1197,7 +954,7 @@
     "pm",
   ]
   pruneopts = ""
-  revision = "e1787a11979853335568be2967295c00e72b88ed"
+  revision = "46796da1b0b4794e1e341883a399f12cc7574b55"
 
 [[projects]]
   branch = "master"
@@ -1209,7 +966,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:793a79198b755828dec284c6f1325e24e09186f1b7ba818b65c7c35104ed86eb"
+  digest = "1:0773b5c3be42874166670a20aa177872edb450cd9fc70b1df97303d977702a50"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
@@ -1221,11 +978,11 @@
     "ssh/terminal",
   ]
   pruneopts = ""
-  revision = "614d502a4dac94afa3a6ce146bd1736da82514c6"
+  revision = "a2144134853fc9a27a7b1e3eb4f19f1a76df13c9"
 
 [[projects]]
   branch = "master"
-  digest = "1:cb1d185a419918501b7c2553fd880ba23ee4f1e44e2c5ae695c3035bd973fb53"
+  digest = "1:00ff990baae4665bb0a8174af5ff78228574227ed96c89671247a56852a50e21"
   name = "golang.org/x/net"
   packages = [
     "bpf",
@@ -1249,7 +1006,7 @@
     "websocket",
   ]
   pruneopts = ""
-  revision = "4bcd98cce591d8c7061bf313d7a3cbad05b58549"
+  revision = "a680a1efc54dd51c040b3b5ce4939ea3cf2ea0d1"
 
 [[projects]]
   branch = "master"
@@ -1265,7 +1022,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7a5f7a1206de6b90f67cb465e489eac3298e95afa7262813b542df4fab38952f"
+  digest = "1:677e38cad6833ad266ec843739d167755eda1e6f2d8af1c63102b0426ad820db"
   name = "golang.org/x/sys"
   packages = [
     "unix",
@@ -1277,7 +1034,7 @@
     "windows/svc/mgr",
   ]
   pruneopts = ""
-  revision = "4910a1d54f876d7b22162a85f4d066d3ee649450"
+  revision = "ac767d655b305d4e9612f5f6e33120b9176c4ad4"
 
 [[projects]]
   digest = "1:5acd3512b047305d49e8763eef7ba423901e85d5dd2fd1e71778a0ea8de10bd4"
@@ -1333,14 +1090,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:960f1fa3f12667fe595c15c12523718ed8b1b5428c83d70da54bb014da9a4c1a"
+  digest = "1:b1443b4e3cc990c84d27fcdece9d3302158c67dba870e33a6937a2c0076388c2"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = ""
-  revision = "c66870c02cf823ceb633bcd05be3c7cda29976f4"
+  revision = "fedd2861243fd1a8152376292b921b394c7bef7e"
 
 [[projects]]
-  digest = "1:ca75b3775a5d4e5d1fb48f57ef0865b4aaa8b3f00e6b52be68db991c4594e0a7"
+  digest = "1:5f31b45ee9da7a87f140bef3ed0a7ca34ea2a6d38eb888123b8e28170e8aa4f2"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -1356,9 +1113,7 @@
     "internal",
     "internal/backoff",
     "internal/channelz",
-    "internal/envconfig",
     "internal/grpcrand",
-    "internal/transport",
     "keepalive",
     "metadata",
     "naming",
@@ -1369,10 +1124,11 @@
     "stats",
     "status",
     "tap",
+    "transport",
   ]
   pruneopts = ""
-  revision = "32fb0ac620c32ba40a4626ddf94d90d12cce3455"
-  version = "v1.14.0"
+  revision = "168a6198bcb0ef175f7dacec0b8691fc141dc9b8"
+  version = "v1.13.0"
 
 [[projects]]
   digest = "1:15d017551627c8bb091bde628215b2861bed128855343fdd570c62d08871f6e1"
@@ -1443,7 +1199,7 @@
   revision = "9856a29383ce1c59f308dd1cf0363a79b5bef6b5"
 
 [[projects]]
-  digest = "1:0b9e515a5e0abbc3895e0e11fee88e3f236e624b1dbcd3a8db809d3a9405e9c4"
+  digest = "1:b49c4d3115800eace659c9a6a5c384a922f5b210178b24a01abb10731f404ea2"
   name = "gopkg.in/olivere/elastic.v5"
   packages = [
     ".",
@@ -1451,8 +1207,8 @@
     "uritemplates",
   ]
   pruneopts = ""
-  revision = "d94782c1eadecb8e1d3dcd5f38ba533b66992ff2"
-  version = "v5.0.74"
+  revision = "52741dc2ce53629cbe1e673869040d886cba2cd5"
+  version = "v5.0.70"
 
 [[projects]]
   branch = "v1"
@@ -1510,227 +1266,6 @@
     "github.com/influxdata/go-syslog/rfc5424",
     "github.com/influxdata/go-syslog/rfc5425",
     "github.com/influxdata/tail",
-    "github.com/influxdata/telegraf",
-    "github.com/influxdata/telegraf/agent",
-    "github.com/influxdata/telegraf/filter",
-    "github.com/influxdata/telegraf/internal",
-    "github.com/influxdata/telegraf/internal/buffer",
-    "github.com/influxdata/telegraf/internal/config",
-    "github.com/influxdata/telegraf/internal/config/aws",
-    "github.com/influxdata/telegraf/internal/globpath",
-    "github.com/influxdata/telegraf/internal/limiter",
-    "github.com/influxdata/telegraf/internal/models",
-    "github.com/influxdata/telegraf/internal/templating",
-    "github.com/influxdata/telegraf/internal/tls",
-    "github.com/influxdata/telegraf/logger",
-    "github.com/influxdata/telegraf/metric",
-    "github.com/influxdata/telegraf/plugins/aggregators",
-    "github.com/influxdata/telegraf/plugins/aggregators/all",
-    "github.com/influxdata/telegraf/plugins/aggregators/basicstats",
-    "github.com/influxdata/telegraf/plugins/aggregators/histogram",
-    "github.com/influxdata/telegraf/plugins/aggregators/minmax",
-    "github.com/influxdata/telegraf/plugins/aggregators/valuecounter",
-    "github.com/influxdata/telegraf/plugins/inputs",
-    "github.com/influxdata/telegraf/plugins/inputs/activemq",
-    "github.com/influxdata/telegraf/plugins/inputs/aerospike",
-    "github.com/influxdata/telegraf/plugins/inputs/all",
-    "github.com/influxdata/telegraf/plugins/inputs/amqp_consumer",
-    "github.com/influxdata/telegraf/plugins/inputs/apache",
-    "github.com/influxdata/telegraf/plugins/inputs/aurora",
-    "github.com/influxdata/telegraf/plugins/inputs/bcache",
-    "github.com/influxdata/telegraf/plugins/inputs/bond",
-    "github.com/influxdata/telegraf/plugins/inputs/burrow",
-    "github.com/influxdata/telegraf/plugins/inputs/cassandra",
-    "github.com/influxdata/telegraf/plugins/inputs/ceph",
-    "github.com/influxdata/telegraf/plugins/inputs/cgroup",
-    "github.com/influxdata/telegraf/plugins/inputs/chrony",
-    "github.com/influxdata/telegraf/plugins/inputs/cloudwatch",
-    "github.com/influxdata/telegraf/plugins/inputs/conntrack",
-    "github.com/influxdata/telegraf/plugins/inputs/consul",
-    "github.com/influxdata/telegraf/plugins/inputs/couchbase",
-    "github.com/influxdata/telegraf/plugins/inputs/couchdb",
-    "github.com/influxdata/telegraf/plugins/inputs/cpu",
-    "github.com/influxdata/telegraf/plugins/inputs/dcos",
-    "github.com/influxdata/telegraf/plugins/inputs/disk",
-    "github.com/influxdata/telegraf/plugins/inputs/diskio",
-    "github.com/influxdata/telegraf/plugins/inputs/disque",
-    "github.com/influxdata/telegraf/plugins/inputs/dmcache",
-    "github.com/influxdata/telegraf/plugins/inputs/dns_query",
-    "github.com/influxdata/telegraf/plugins/inputs/docker",
-    "github.com/influxdata/telegraf/plugins/inputs/dovecot",
-    "github.com/influxdata/telegraf/plugins/inputs/elasticsearch",
-    "github.com/influxdata/telegraf/plugins/inputs/exec",
-    "github.com/influxdata/telegraf/plugins/inputs/fail2ban",
-    "github.com/influxdata/telegraf/plugins/inputs/fibaro",
-    "github.com/influxdata/telegraf/plugins/inputs/file",
-    "github.com/influxdata/telegraf/plugins/inputs/filecount",
-    "github.com/influxdata/telegraf/plugins/inputs/filestat",
-    "github.com/influxdata/telegraf/plugins/inputs/fluentd",
-    "github.com/influxdata/telegraf/plugins/inputs/graylog",
-    "github.com/influxdata/telegraf/plugins/inputs/haproxy",
-    "github.com/influxdata/telegraf/plugins/inputs/hddtemp",
-    "github.com/influxdata/telegraf/plugins/inputs/hddtemp/go-hddtemp",
-    "github.com/influxdata/telegraf/plugins/inputs/http",
-    "github.com/influxdata/telegraf/plugins/inputs/http_listener",
-    "github.com/influxdata/telegraf/plugins/inputs/http_response",
-    "github.com/influxdata/telegraf/plugins/inputs/httpjson",
-    "github.com/influxdata/telegraf/plugins/inputs/influxdb",
-    "github.com/influxdata/telegraf/plugins/inputs/internal",
-    "github.com/influxdata/telegraf/plugins/inputs/interrupts",
-    "github.com/influxdata/telegraf/plugins/inputs/ipmi_sensor",
-    "github.com/influxdata/telegraf/plugins/inputs/ipset",
-    "github.com/influxdata/telegraf/plugins/inputs/iptables",
-    "github.com/influxdata/telegraf/plugins/inputs/jolokia",
-    "github.com/influxdata/telegraf/plugins/inputs/jolokia2",
-    "github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry",
-    "github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/auth",
-    "github.com/influxdata/telegraf/plugins/inputs/jti_openconfig_telemetry/oc",
-    "github.com/influxdata/telegraf/plugins/inputs/kafka_consumer",
-    "github.com/influxdata/telegraf/plugins/inputs/kafka_consumer_legacy",
-    "github.com/influxdata/telegraf/plugins/inputs/kapacitor",
-    "github.com/influxdata/telegraf/plugins/inputs/kernel",
-    "github.com/influxdata/telegraf/plugins/inputs/kernel_vmstat",
-    "github.com/influxdata/telegraf/plugins/inputs/kubernetes",
-    "github.com/influxdata/telegraf/plugins/inputs/leofs",
-    "github.com/influxdata/telegraf/plugins/inputs/linux_sysctl_fs",
-    "github.com/influxdata/telegraf/plugins/inputs/logparser",
-    "github.com/influxdata/telegraf/plugins/inputs/lustre2",
-    "github.com/influxdata/telegraf/plugins/inputs/mailchimp",
-    "github.com/influxdata/telegraf/plugins/inputs/mcrouter",
-    "github.com/influxdata/telegraf/plugins/inputs/mem",
-    "github.com/influxdata/telegraf/plugins/inputs/memcached",
-    "github.com/influxdata/telegraf/plugins/inputs/mesos",
-    "github.com/influxdata/telegraf/plugins/inputs/minecraft",
-    "github.com/influxdata/telegraf/plugins/inputs/minecraft/internal/rcon",
-    "github.com/influxdata/telegraf/plugins/inputs/mongodb",
-    "github.com/influxdata/telegraf/plugins/inputs/mqtt_consumer",
-    "github.com/influxdata/telegraf/plugins/inputs/mysql",
-    "github.com/influxdata/telegraf/plugins/inputs/mysql/v1",
-    "github.com/influxdata/telegraf/plugins/inputs/nats",
-    "github.com/influxdata/telegraf/plugins/inputs/nats_consumer",
-    "github.com/influxdata/telegraf/plugins/inputs/net",
-    "github.com/influxdata/telegraf/plugins/inputs/net_response",
-    "github.com/influxdata/telegraf/plugins/inputs/nginx",
-    "github.com/influxdata/telegraf/plugins/inputs/nginx_plus",
-    "github.com/influxdata/telegraf/plugins/inputs/nsq",
-    "github.com/influxdata/telegraf/plugins/inputs/nsq_consumer",
-    "github.com/influxdata/telegraf/plugins/inputs/nstat",
-    "github.com/influxdata/telegraf/plugins/inputs/ntpq",
-    "github.com/influxdata/telegraf/plugins/inputs/nvidia_smi",
-    "github.com/influxdata/telegraf/plugins/inputs/openldap",
-    "github.com/influxdata/telegraf/plugins/inputs/opensmtpd",
-    "github.com/influxdata/telegraf/plugins/inputs/passenger",
-    "github.com/influxdata/telegraf/plugins/inputs/pf",
-    "github.com/influxdata/telegraf/plugins/inputs/pgbouncer",
-    "github.com/influxdata/telegraf/plugins/inputs/phpfpm",
-    "github.com/influxdata/telegraf/plugins/inputs/ping",
-    "github.com/influxdata/telegraf/plugins/inputs/postfix",
-    "github.com/influxdata/telegraf/plugins/inputs/postgresql",
-    "github.com/influxdata/telegraf/plugins/inputs/postgresql_extensible",
-    "github.com/influxdata/telegraf/plugins/inputs/powerdns",
-    "github.com/influxdata/telegraf/plugins/inputs/processes",
-    "github.com/influxdata/telegraf/plugins/inputs/procstat",
-    "github.com/influxdata/telegraf/plugins/inputs/prometheus",
-    "github.com/influxdata/telegraf/plugins/inputs/puppetagent",
-    "github.com/influxdata/telegraf/plugins/inputs/rabbitmq",
-    "github.com/influxdata/telegraf/plugins/inputs/raindrops",
-    "github.com/influxdata/telegraf/plugins/inputs/redis",
-    "github.com/influxdata/telegraf/plugins/inputs/rethinkdb",
-    "github.com/influxdata/telegraf/plugins/inputs/riak",
-    "github.com/influxdata/telegraf/plugins/inputs/salesforce",
-    "github.com/influxdata/telegraf/plugins/inputs/sensors",
-    "github.com/influxdata/telegraf/plugins/inputs/smart",
-    "github.com/influxdata/telegraf/plugins/inputs/snmp",
-    "github.com/influxdata/telegraf/plugins/inputs/snmp_legacy",
-    "github.com/influxdata/telegraf/plugins/inputs/socket_listener",
-    "github.com/influxdata/telegraf/plugins/inputs/solr",
-    "github.com/influxdata/telegraf/plugins/inputs/sqlserver",
-    "github.com/influxdata/telegraf/plugins/inputs/statsd",
-    "github.com/influxdata/telegraf/plugins/inputs/swap",
-    "github.com/influxdata/telegraf/plugins/inputs/syslog",
-    "github.com/influxdata/telegraf/plugins/inputs/sysstat",
-    "github.com/influxdata/telegraf/plugins/inputs/system",
-    "github.com/influxdata/telegraf/plugins/inputs/tail",
-    "github.com/influxdata/telegraf/plugins/inputs/tcp_listener",
-    "github.com/influxdata/telegraf/plugins/inputs/teamspeak",
-    "github.com/influxdata/telegraf/plugins/inputs/tengine",
-    "github.com/influxdata/telegraf/plugins/inputs/tomcat",
-    "github.com/influxdata/telegraf/plugins/inputs/trig",
-    "github.com/influxdata/telegraf/plugins/inputs/twemproxy",
-    "github.com/influxdata/telegraf/plugins/inputs/udp_listener",
-    "github.com/influxdata/telegraf/plugins/inputs/unbound",
-    "github.com/influxdata/telegraf/plugins/inputs/varnish",
-    "github.com/influxdata/telegraf/plugins/inputs/webhooks",
-    "github.com/influxdata/telegraf/plugins/inputs/webhooks/filestack",
-    "github.com/influxdata/telegraf/plugins/inputs/webhooks/github",
-    "github.com/influxdata/telegraf/plugins/inputs/webhooks/mandrill",
-    "github.com/influxdata/telegraf/plugins/inputs/webhooks/papertrail",
-    "github.com/influxdata/telegraf/plugins/inputs/webhooks/particle",
-    "github.com/influxdata/telegraf/plugins/inputs/webhooks/rollbar",
-    "github.com/influxdata/telegraf/plugins/inputs/win_perf_counters",
-    "github.com/influxdata/telegraf/plugins/inputs/win_services",
-    "github.com/influxdata/telegraf/plugins/inputs/x509_cert",
-    "github.com/influxdata/telegraf/plugins/inputs/zfs",
-    "github.com/influxdata/telegraf/plugins/inputs/zipkin",
-    "github.com/influxdata/telegraf/plugins/inputs/zipkin/codec",
-    "github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/jsonV1",
-    "github.com/influxdata/telegraf/plugins/inputs/zipkin/codec/thrift",
-    "github.com/influxdata/telegraf/plugins/inputs/zipkin/trace",
-    "github.com/influxdata/telegraf/plugins/inputs/zookeeper",
-    "github.com/influxdata/telegraf/plugins/outputs",
-    "github.com/influxdata/telegraf/plugins/outputs/all",
-    "github.com/influxdata/telegraf/plugins/outputs/amon",
-    "github.com/influxdata/telegraf/plugins/outputs/amqp",
-    "github.com/influxdata/telegraf/plugins/outputs/application_insights",
-    "github.com/influxdata/telegraf/plugins/outputs/application_insights/mocks",
-    "github.com/influxdata/telegraf/plugins/outputs/cloudwatch",
-    "github.com/influxdata/telegraf/plugins/outputs/cratedb",
-    "github.com/influxdata/telegraf/plugins/outputs/datadog",
-    "github.com/influxdata/telegraf/plugins/outputs/discard",
-    "github.com/influxdata/telegraf/plugins/outputs/elasticsearch",
-    "github.com/influxdata/telegraf/plugins/outputs/file",
-    "github.com/influxdata/telegraf/plugins/outputs/graphite",
-    "github.com/influxdata/telegraf/plugins/outputs/graylog",
-    "github.com/influxdata/telegraf/plugins/outputs/http",
-    "github.com/influxdata/telegraf/plugins/outputs/influxdb",
-    "github.com/influxdata/telegraf/plugins/outputs/instrumental",
-    "github.com/influxdata/telegraf/plugins/outputs/kafka",
-    "github.com/influxdata/telegraf/plugins/outputs/kinesis",
-    "github.com/influxdata/telegraf/plugins/outputs/librato",
-    "github.com/influxdata/telegraf/plugins/outputs/mqtt",
-    "github.com/influxdata/telegraf/plugins/outputs/nats",
-    "github.com/influxdata/telegraf/plugins/outputs/nsq",
-    "github.com/influxdata/telegraf/plugins/outputs/opentsdb",
-    "github.com/influxdata/telegraf/plugins/outputs/prometheus_client",
-    "github.com/influxdata/telegraf/plugins/outputs/riemann",
-    "github.com/influxdata/telegraf/plugins/outputs/riemann_legacy",
-    "github.com/influxdata/telegraf/plugins/outputs/socket_writer",
-    "github.com/influxdata/telegraf/plugins/outputs/wavefront",
-    "github.com/influxdata/telegraf/plugins/parsers",
-    "github.com/influxdata/telegraf/plugins/parsers/collectd",
-    "github.com/influxdata/telegraf/plugins/parsers/dropwizard",
-    "github.com/influxdata/telegraf/plugins/parsers/graphite",
-    "github.com/influxdata/telegraf/plugins/parsers/grok",
-    "github.com/influxdata/telegraf/plugins/parsers/influx",
-    "github.com/influxdata/telegraf/plugins/parsers/json",
-    "github.com/influxdata/telegraf/plugins/parsers/nagios",
-    "github.com/influxdata/telegraf/plugins/parsers/value",
-    "github.com/influxdata/telegraf/plugins/parsers/wavefront",
-    "github.com/influxdata/telegraf/plugins/processors",
-    "github.com/influxdata/telegraf/plugins/processors/all",
-    "github.com/influxdata/telegraf/plugins/processors/converter",
-    "github.com/influxdata/telegraf/plugins/processors/enum",
-    "github.com/influxdata/telegraf/plugins/processors/override",
-    "github.com/influxdata/telegraf/plugins/processors/printer",
-    "github.com/influxdata/telegraf/plugins/processors/regex",
-    "github.com/influxdata/telegraf/plugins/processors/rename",
-    "github.com/influxdata/telegraf/plugins/processors/topk",
-    "github.com/influxdata/telegraf/plugins/serializers",
-    "github.com/influxdata/telegraf/plugins/serializers/graphite",
-    "github.com/influxdata/telegraf/plugins/serializers/influx",
-    "github.com/influxdata/telegraf/plugins/serializers/json",
-    "github.com/influxdata/telegraf/selfstat",
-    "github.com/influxdata/telegraf/testutil",
     "github.com/influxdata/toml",
     "github.com/influxdata/toml/ast",
     "github.com/influxdata/wlog",
