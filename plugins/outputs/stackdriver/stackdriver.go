@@ -17,8 +17,8 @@ import (
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 )
 
-// GCPStackdriver is the Google Stackdriver config info.
-type GCPStackdriver struct {
+// Stackdriver is the Google Stackdriver config info.
+type Stackdriver struct {
 	Project   string
 	Namespace string
 
@@ -41,7 +41,7 @@ var sampleConfig = `
 `
 
 // Connect initiates the primary connection to the GCP project.
-func (s *GCPStackdriver) Connect() error {
+func (s *Stackdriver) Connect() error {
 	if s.Project == "" {
 		return fmt.Errorf("Project is a required field for stackdriver output")
 	}
@@ -52,13 +52,10 @@ func (s *GCPStackdriver) Connect() error {
 
 	if s.client == nil {
 		ctx := context.Background()
-
-		// Creates a client
 		client, err := monitoring.NewMetricClient(ctx)
 		if err != nil {
 			return err
 		}
-
 		s.client = client
 	}
 
@@ -66,7 +63,7 @@ func (s *GCPStackdriver) Connect() error {
 }
 
 // Write the metrics to Google Cloud Stackdriver.
-func (s *GCPStackdriver) Write(metrics []telegraf.Metric) error {
+func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 
 	for _, m := range metrics {
@@ -211,26 +208,26 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 }
 
 // Close will terminate the session to the backend, returning error if an issue arises.
-func (s *GCPStackdriver) Close() error {
+func (s *Stackdriver) Close() error {
 	return s.client.Close()
 }
 
 // SampleConfig returns the formatted sample configuration for the plugin.
-func (s *GCPStackdriver) SampleConfig() string {
+func (s *Stackdriver) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description returns the human-readable function definition of the plugin.
-func (s *GCPStackdriver) Description() string {
+func (s *Stackdriver) Description() string {
 	return "Configuration for Google Cloud Stackdriver to send metrics to"
 }
 
-func newGCPStackdriver() *GCPStackdriver {
-	return &GCPStackdriver{}
+func newStackdriver() *Stackdriver {
+	return &Stackdriver{}
 }
 
 func init() {
 	outputs.Add("stackdriver", func() telegraf.Output {
-		return newGCPStackdriver()
+		return newStackdriver()
 	})
 }

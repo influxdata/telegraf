@@ -81,7 +81,7 @@ func TestWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	s := &GCPStackdriver{
+	s := &Stackdriver{
 		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
 		Namespace: "test",
 		client:    c,
