@@ -7,7 +7,9 @@
 - [#4584](https://github.com/influxdata/telegraf/pull/4584): Fix burrow_group offset calculation for burrow input.
 - [#4550](https://github.com/influxdata/telegraf/pull/4550): Add result_code value for errors running ping command.
 - [#4605](https://github.com/influxdata/telegraf/pull/4605): Remove timeout deadline for udp syslog input.
-- [#4601](https://github.com/influxdata/telegraf/pull/4601): Ensure channel closed if an error occurs in cgroup input.
+- [#4601](https://github.com/influxdata/telegraf/issues/4601): Ensure channel closed if an error occurs in cgroup input.
+- [#4544](https://github.com/influxdata/telegraf/issues/4544): Fix sending of basic auth credentials in http output.
+- [#4526](https://github.com/influxdata/telegraf/issues/4526): Use the correct GOARM value in the armel package.
 
 ## v1.7.3 [2018-08-07]
 
