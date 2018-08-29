@@ -325,11 +325,13 @@ func translate(m telegraf.Metric, prefix string) *azureMonitorMetric {
 
 	mn, ns := "Missing", "Missing"
 	names := strings.SplitN(m.Name(), "-", 2)
-	if len(names) > 0 {
-		ns = names[0]
-	} else if len(names) > 1 {
+	if len(names) > 1 {
 		mn = names[1]
 	}
+	if len(names) > 0 {
+		ns = names[0]
+	}
+	ns = prefix + ns
 
 	return &azureMonitorMetric{
 		Time: m.Time(),
