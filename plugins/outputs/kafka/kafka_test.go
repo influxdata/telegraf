@@ -2,7 +2,10 @@ package kafka
 
 import (
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -94,5 +97,61 @@ func TestValidateTopicSuffixMethod(t *testing.T) {
 	for _, method := range ValidTopicSuffixMethods {
 		err := ValidateTopicSuffixMethod(method)
 		require.NoError(t, err, "Topic suffix method used should be valid.")
+	}
+}
+
+func TestRoutingKey(t *testing.T) {
+	tests := []struct {
+		name   string
+		kafka  *Kafka
+		metric telegraf.Metric
+		check  func(t *testing.T, routingKey string)
+	}{
+		{
+			name: "static routing key",
+			kafka: &Kafka{
+				RoutingKey: "static",
+			},
+			metric: func() telegraf.Metric {
+				m, _ := metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(0, 0),
+				)
+				return m
+			}(),
+			check: func(t *testing.T, routingKey string) {
+				require.Equal(t, "static", routingKey)
+			},
+		},
+		{
+			name: "random routing key",
+			kafka: &Kafka{
+				RoutingKey: "random",
+			},
+			metric: func() telegraf.Metric {
+				m, _ := metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(0, 0),
+				)
+				return m
+			}(),
+			check: func(t *testing.T, routingKey string) {
+				require.Equal(t, 36, len(routingKey))
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			key := tt.kafka.routingKey(tt.metric)
+			tt.check(t, key)
+		})
 	}
 }
