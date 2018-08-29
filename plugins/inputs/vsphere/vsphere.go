@@ -16,7 +16,6 @@ import (
 // VSphere is the top level type for the vSphere input plugin. It contains all the configuration
 // and a list of connected vSphere endpoints
 type VSphere struct {
-	Interval               time.Duration
 	Vcenters               []string
 	Username               string
 	Password               string
@@ -34,8 +33,8 @@ type VSphere struct {
 	DatastoreMetricExclude []string
 	Separator              string
 
-	ObjectsPerQuery         int
-	MetricsPerQuery         int
+	MaxQueryObjects         int
+	MaxQueryMetrics         int
 	CollectConcurrency      int
 	DiscoverConcurrency     int
 	ForceDiscoverOnInit     bool
@@ -43,7 +42,6 @@ type VSphere struct {
 	Timeout                 internal.Duration
 
 	endpoints []*Endpoint
-	rootCtx   context.Context
 	cancel    context.CancelFunc
 
 	// Mix in the TLS/SSL goodness from core
@@ -57,94 +55,90 @@ var sampleConfig = `
 # username = "user@corp.local"
 # password = "secret"
 
-############### VMs ###############
-
+## VM counter configuration
 ## Collect VM instance metrics, such as individual cores? (default=true)
 #vm_instances = true
 
 ## Typical VM metrics (if omitted, all metrics are collected)
 vm_metric_include = [
-		"cpu.ready.summation",
-		"mem.swapinRate.average",
-		"virtualDisk.numberReadAveraged.average",
-		"virtualDisk.numberWriteAveraged.average",
-		"virtualDisk.totalReadLatency.average",
-		"virtualDisk.totalWriteLatency.average",
-		"virtualDisk.readOIO.latest",
-		"virtualDisk.writeOIO.latest",
-		"net.bytesRx.average",
-		"net.bytesTx.average",
-		"net.droppedRx.summation.",
-		"net.droppedTx.summation.",
-		"cpu.run.summation",
-		"cpu.used.summation",
-		"mem.swapoutRate.average",
-		"virtualDisk.read.average",
-		"virtualDisk.write.average" ]
+  "cpu.ready.summation",
+  "mem.swapinRate.average",
+  "virtualDisk.numberReadAveraged.average",
+  "virtualDisk.numberWriteAveraged.average",
+  "virtualDisk.totalReadLatency.average",
+  "virtualDisk.totalWriteLatency.average",
+  "virtualDisk.readOIO.latest",
+  "virtualDisk.writeOIO.latest",
+  "net.bytesRx.average",
+  "net.bytesTx.average",
+  "net.droppedRx.summation.",
+  "net.droppedTx.summation.",
+  "cpu.run.summation",
+  "cpu.used.summation",
+  "mem.swapoutRate.average",
+  "virtualDisk.read.average",
+  "virtualDisk.write.average" ]
 
 # vm_metric_exclude = [] ## Nothing is excluded by default
 
-############### Hosts ###############
-
+## Host counter configuration
 ## Collect host instance metrics, such as individual cores? (default=true)
 #host_instances = true
 
 ## Typical host metrics (if omitted, all metrics are collected)
 host_metric_include = [
-		"cpu.ready.summation",
-		"cpu.latency.average",
-		"cpu.coreUtilization.average",
-		"mem.usage.average",
-		"mem.swapinRate.average",
-		"mem.state.latest",
-		"mem.latency.average",
-		"mem.vmmemctl.average",
-		"disk.read.average",
-		"disk.write.average",
-		"disk.numberReadAveraged.average",
-		"disk.numberWriteAveraged.average",
-		"disk.deviceReadLatency.average",
-		"disk.deviceWriteLatency.average",
-		"disk.totalReadLatency.average",
-		"disk.totalWriteLatency.average",
-		"storageAdapter.read.average",
-		"storageAdapter.write.average",
-		"storageAdapter.numberReadAveraged.average",
-		"storageAdapter.numberWriteAveraged.average",
-		"net.errorsRx.summation",
-		"net.errorsTx.summation",
-		"net.bytesRx.average",
-		"net.bytesTx.average",
-		"cpu.used.summation",
-		"cpu.usage.average",
-		"cpu.utilization.average",
-		"cpu.wait.summation.",
-		"cpu.idle.summation",
-		"cpu.readiness.average",
-		"cpu.costop.summation",
-		"cpu.swapwait.summation",
-		"mem.swapoutRate.average",
-		"disk.kernelReadLatency.average",
-		"disk.kernelWriteLatency.average" ]
+  "cpu.ready.summation",
+  "cpu.latency.average",
+  "cpu.coreUtilization.average",
+  "mem.usage.average",
+  "mem.swapinRate.average",
+  "mem.state.latest",
+  "mem.latency.average",
+  "mem.vmmemctl.average",
+  "disk.read.average",
+  "disk.write.average",
+  "disk.numberReadAveraged.average",
+  "disk.numberWriteAveraged.average",
+  "disk.deviceReadLatency.average",
+  "disk.deviceWriteLatency.average",
+  "disk.totalReadLatency.average",
+  "disk.totalWriteLatency.average",
+  "storageAdapter.read.average",
+  "storageAdapter.write.average",
+  "storageAdapter.numberReadAveraged.average",
+  "storageAdapter.numberWriteAveraged.average",
+  "net.errorsRx.summation",
+  "net.errorsTx.summation",
+  "net.bytesRx.average",
+  "net.bytesTx.average",
+  "cpu.used.summation",
+  "cpu.usage.average",
+  "cpu.utilization.average",
+  "cpu.wait.summation.",
+  "cpu.idle.summation",
+  "cpu.readiness.average",
+  "cpu.costop.summation",
+  "cpu.swapwait.summation",
+  "mem.swapoutRate.average",
+  "disk.kernelReadLatency.average",
+  "disk.kernelWriteLatency.average" ]
 
 # host_metric_exclude = [] ## Nothing excluded by default
 
-############### Clusters ###############
-
+## Cluster counter configuration
 ## Collect cluster instance metrics, such as individual cores? (default=true)
 #cluster_instances = true
 
 ## Typical cluster metrics (if omitted, all metrics are collected)
 cluster_metric_include = [
-	  "cpu.usage.*",
-	  "cpu.usagemhz.*",
-	  "mem.usage.*",
-	  "mem.active.*" ]
+  "cpu.usage.*",
+  "cpu.usagemhz.*",
+  "mem.usage.*",
+  "mem.active.*" ]
 
 # cluster_metric_exclude = [] ## Nothing excluded by default
 
-############### Datastores ###############
-
+## Datastore counter configuration
 ## Collect datastore instance metrics, such as individual LUNs and datafiles? (default=false)
 #datastore_instances = false
 
@@ -153,17 +147,17 @@ cluster_metric_include = [
 ## WARNING: It is not recommended to include all metrics. Your collection will probably time out if you do!
 ##
 datastore_metric_include = [
-	"datastore.read.average",
-	"datastore.write.average",
-	"datastore.throughput.usage.average",	
-	"datastore.throughput.contention.average" ]
+  "datastore.read.average",
+  "datastore.write.average",
+  "datastore.throughput.usage.average",	
+  "datastore.throughput.contention.average" ]
 
 ## Number of objects to retreive per query. 
-# objects_per_query = 256
+# max_query_objects = 256
 
 ## Number of metrics (data points) to retrieve in each query for non-realtime metrics (cluster and datastore).
 ## Set to 64 for vCenter 5.5 and 6.0 (default: 256)
-# metrics_per_query = 256
+# max_query_metrics = 256
 
 ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
 # object_discovery_interval = "300s"
@@ -190,11 +184,14 @@ func (v *VSphere) Description() string {
 	return "Read metrics from VMware vCenter"
 }
 
-func (v *VSphere) checkEndpoints() error {
-	if v.endpoints != nil {
-		return nil
-	}
+// Start is called from telegraf core when a plugin is started and allows it to
+// perform initialization tasks.
+func (v *VSphere) Start(acc telegraf.Accumulator) error {
+	log.Println("D! [input.vsphere]: Starting plugin")
+	ctx, cancel := context.WithCancel(context.Background())
+	v.cancel = cancel
 
+	// Create endpoints, one for each vCenter we're monitoring
 	v.endpoints = make([]*Endpoint, len(v.Vcenters))
 	for i, rawURL := range v.Vcenters {
 		u, err := soap.ParseURL(rawURL)
@@ -202,18 +199,8 @@ func (v *VSphere) checkEndpoints() error {
 			return err
 		}
 
-		v.endpoints[i] = NewEndpoint(v, u)
+		v.endpoints[i] = NewEndpoint(ctx, v, u)
 	}
-	return nil
-}
-
-// Start is called from telegraf core when a plugin is started and allows it to
-// perform initialization tasks.
-func (v *VSphere) Start(acc telegraf.Accumulator) error {
-	log.Println("D! [input.vsphere]: Starting plugin")
-	rootCtx, cancel := context.WithCancel(context.Background())
-	v.rootCtx = rootCtx
-	v.cancel = cancel
 	return nil
 }
 
@@ -223,29 +210,31 @@ func (v *VSphere) Stop() {
 	log.Println("D! [input.vsphere]: Stopping plugin")
 	v.cancel()
 
-	// Wait for all endpoints to finish
+	// Wait for all endpoints to finish. No need to wait for
+	// Gather() to finish here, since it Stop() will only be called
+	// after the last Gather() has finished. We do, however, need to
+	// wait for any discovery to complete by trying to grab the
+	// "busy" mutex.
 	for _, ep := range v.endpoints {
 		log.Printf("D! [input.vsphere]: Waiting for endpoint %s to finish", ep.URL.Host)
-		ep.wg.Wait()
-		ep.Close()
+		func() {
+			ep.busy.Lock() // Wait until discovery is finished
+			defer ep.busy.Unlock()
+			ep.Close()
+		}()
 	}
 }
 
 // Gather is the main data collection function called by the Telegraf core. It performs all
 // the data collection and writes all metrics into the Accumulator passed as an argument.
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
-	err := v.checkEndpoints()
-	if err != nil {
-		return err
-	}
-
 	var wg sync.WaitGroup
 
 	for _, ep := range v.endpoints {
 		wg.Add(1)
 		go func(endpoint *Endpoint) {
 			defer wg.Done()
-			err := endpoint.Collect(v.rootCtx, acc)
+			err := endpoint.Collect(context.Background(), acc)
 			if err == context.Canceled {
 
 				// No need to signal errors if we were merely canceled.
@@ -276,10 +265,10 @@ func init() {
 			DatastoreInstances:     false,
 			DatastoreMetricInclude: nil,
 			DatastoreMetricExclude: nil,
-			Separator:              ".",
+			Separator:              "_",
 
-			ObjectsPerQuery:         256,
-			MetricsPerQuery:         256,
+			MaxQueryObjects:         256,
+			MaxQueryMetrics:         256,
 			CollectConcurrency:      1,
 			DiscoverConcurrency:     1,
 			ForceDiscoverOnInit:     true,

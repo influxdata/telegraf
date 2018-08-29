@@ -21,74 +21,71 @@ NOTE: To disable collection av a specific resource type, simply exclude all metr
 # username = "user@corp.local"
 # password = "secret"
 
-############### VMs ###############
-
+## VM counter configuration
 ## Typical VM metrics (if omitted, all metrics are collected)
 # vm_metric_include = [
-#		"cpu.ready.summation",
-#		"mem.swapinRate.average",
-#		"virtualDisk.numberReadAveraged.average",
-#		"virtualDisk.numberWriteAveraged.average",
-#		"virtualDisk.totalReadLatency.average",
-#		"virtualDisk.totalWriteLatency.average",
-#		"virtualDisk.readOIO.latest",
-#		"virtualDisk.writeOIO.latest",
-#		"net.bytesRx.average",
-#		"net.bytesTx.average",
-#		"net.droppedRx.summation.",
-#		"net.droppedTx.summation.",
-#		"cpu.run.summation",
-#		"cpu.used.summation",
-#		"mem.swapoutRate.average",
-#		"virtualDisk.read.average",
-#		"virtualDisk.write.average" ]
+#  "cpu.ready.summation",
+#  "mem.swapinRate.average",
+#  "virtualDisk.numberReadAveraged.average",
+#  "virtualDisk.numberWriteAveraged.average",
+#  "virtualDisk.totalReadLatency.average",
+#  "virtualDisk.totalWriteLatency.average",
+#  "virtualDisk.readOIO.latest",
+#  "virtualDisk.writeOIO.latest",
+#  "net.bytesRx.average",
+#  "net.bytesTx.average",
+#  "net.droppedRx.summation.",
+#  "net.droppedTx.summation.",
+#  "cpu.run.summation",
+#  "cpu.used.summation",
+#  "mem.swapoutRate.average",
+#  "virtualDisk.read.average",
+#  "virtualDisk.write.average" ]
 
 # vm_metric_exclude = [] ## Nothing is excluded by default
 
-############### Hosts ###############
-
+## Host counter configuration
 ## Typical host metrics (if omitted, all metrics are collected)
 # host_metric_include = [
-#		"cpu.ready.summation",
-#		"cpu.latency.average",
-#		"cpu.coreUtilization.average",
-#		"mem.usage.average",
-#		"mem.swapinRate.average",
-#		"mem.state.latest",
-#		"mem.latency.average",
-#		"mem.vmmemctl.average",
-#		"disk.read.average",
-#		"disk.write.average",
-#		"disk.numberReadAveraged.average",
-#		"disk.numberWriteAveraged.average",
-#		"disk.deviceReadLatency.average",
-#		"disk.deviceWriteLatency.average",
-#		"disk.totalReadLatency.average",
-#		"disk.totalWriteLatency.average",
-#		"storageAdapter.read.average",
-#		"storageAdapter.write.average",
-#		"storageAdapter.numberReadAveraged.average",
-#		"storageAdapter.numberWriteAveraged.average",
-#		"net.errorsRx.summation",
-#		"net.errorsTx.summation",
-#		"net.bytesRx.average",
-#		"net.bytesTx.average",
-#		"cpu.used.summation",
-#		"cpu.usage.average",
-#		"cpu.utilization.average",
-#		"cpu.wait.summation.",
-#		"cpu.idle.summation",
-#		"cpu.readiness.average",
-#		"cpu.costop.summation",
-#		"cpu.swapwait.summation",
-#		"mem.swapoutRate.average",
-#		"disk.kernelReadLatency.average",
-#		"disk.kernelWriteLatency.average" ]
+#  "cpu.ready.summation",
+#  "cpu.latency.average",
+#  "cpu.coreUtilization.average",
+#  "mem.usage.average",
+#  "mem.swapinRate.average",
+#  "mem.state.latest",
+#  "mem.latency.average",
+#  "mem.vmmemctl.average",
+#  "disk.read.average",
+#  "disk.write.average",
+#  "disk.numberReadAveraged.average",
+#  "disk.numberWriteAveraged.average",
+#  "disk.deviceReadLatency.average",
+#  "disk.deviceWriteLatency.average",
+#  "disk.totalReadLatency.average",
+#  "disk.totalWriteLatency.average",
+#  "storageAdapter.read.average",
+#  "storageAdapter.write.average",
+#  "storageAdapter.numberReadAveraged.average",
+#  "storageAdapter.numberWriteAveraged.average",
+#  "net.errorsRx.summation",
+#  "net.errorsTx.summation",
+#  "net.bytesRx.average",
+#  "net.bytesTx.average",
+#  "cpu.used.summation",
+#  "cpu.usage.average",
+#  "cpu.utilization.average",
+#  "cpu.wait.summation.",
+#  "cpu.idle.summation",
+#  "cpu.readiness.average",
+#  "cpu.costop.summation",
+#  "cpu.swapwait.summation",
+#  "mem.swapoutRate.average",
+#  "disk.kernelReadLatency.average",
+#  "disk.kernelWriteLatency.average" ]
 
 # host_metric_exclude = [] ## Nothing excluded by default
 
-############### Clusters ###############
-
+## Cluster counter configuration
 ## Typical cluster metrics (if omitted, all metrics are collected)
 #cluster_metric_include = [
 #	  "cpu.usage.*",
@@ -98,13 +95,11 @@ NOTE: To disable collection av a specific resource type, simply exclude all metr
 
 # cluster_metric_exclude = [] ## Nothing excluded by default
 
-############### Datastores ###############
-
+## Datastore counter configuration
 ## Typical datastore metrics (if omitted, all metrics are collected)
 ##
 ## WARNING: It is not recommended to include all metrics. Your collection will probably time out if you do!
 ##
-
 datastore_metric_include = [
 	"datastore.read.average",
 	"datastore.write.average",
@@ -112,7 +107,11 @@ datastore_metric_include = [
 	"datastore.throughput.contention.average" ]
 
 ## number of objects to retreive per query. set to 64 for vCenter 5.5 and 6.0 (default: 256)
-# objects_per_query = 256
+# max_query_objects = 256
+
+## Number of metrics (data points) to retrieve in each query for non-realtime metrics (cluster and datastore).
+## Set to 64 for vCenter 5.5 and 6.0 (default: 256)
+# max_query_metrics = 256
 
 ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
 # object_discovery_interval = "300s"
@@ -166,6 +165,8 @@ for more information.
 	- Virtual Disk: seeks, # reads/writes, latency, load 
 - Datastore stats:
 	- Disk: Capacity, provisioned, used  
+
+For a detailed list of commonly available metrics, please refer to [COUNTERS.MD](COUNTERS.MD)
 	
 ## Tags
 - all metrics

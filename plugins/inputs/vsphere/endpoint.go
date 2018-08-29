@@ -33,7 +33,7 @@ type Endpoint struct {
 	collectMux      sync.RWMutex
 	initialized     bool
 	clientFactory   *ClientFactory
-	wg              *ConcurrentWaitGroup
+	busy            sync.Mutex
 }
 
 type resourceKind struct {
@@ -81,15 +81,14 @@ type metricQResponse struct {
 
 // NewEndpoint returns a new connection to a vCenter based on the URL and configuration passed
 // as parameters.
-func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
+func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) *Endpoint {
 	e := Endpoint{
 		URL:           url,
 		Parent:        parent,
 		lastColls:     make(map[string]time.Time),
 		instanceInfo:  make(map[string]resourceInfo),
 		initialized:   false,
-		wg:            NewConcurrentWaitGroup(),
-		clientFactory: NewClientFactory(parent.rootCtx, url, parent),
+		clientFactory: NewClientFactory(ctx, url, parent),
 	}
 
 	e.resourceKinds = map[string]resourceKind{
@@ -139,6 +138,9 @@ func NewEndpoint(parent *VSphere, url *url.URL) *Endpoint {
 		},
 	}
 
+	// Start discover and other goodness
+	e.init(ctx)
+
 	return &e
 }
 
@@ -185,7 +187,7 @@ func (e *Endpoint) init(ctx context.Context) error {
 		return err
 	}
 
-	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() > 0 {
+	if e.Parent.ObjectDiscoveryInterval.Duration > 0 {
 
 		// Run an initial discovery. If force_discovery_on_init isn't set, we kick it off as a
 		// goroutine without waiting for it. This will probably cause us to report an empty
@@ -246,13 +248,11 @@ func (e *Endpoint) getMetadata(ctx context.Context, in interface{}) interface{} 
 }
 
 func (e *Endpoint) discover(ctx context.Context) error {
-	// Add returning false means we've been released from Wait and no
-	// more tasks are allowed. This happens when the plugin is stopped
-	// or reloaded.
-	if !e.wg.Add(1) {
-		return context.Canceled
+	e.busy.Lock()
+	defer e.busy.Unlock()
+	if ctx.Err() != nil {
+		return ctx.Err()
 	}
-	defer e.wg.Done()
 
 	sw := NewStopwatch("discover", e.URL.Host)
 	var err error
@@ -289,20 +289,26 @@ func (e *Endpoint) discover(ctx context.Context) error {
 			})
 
 			// Drain the resulting metadata and build instance infos.
-			wp.Drain(ctx, func(ctx context.Context, in interface{}) {
-				resp := in.(*metricQResponse)
-				mList := make(performance.MetricList, 0)
-				if res.enabled {
-					for _, m := range *resp.metrics {
-						if m.Instance != "" && !res.collectInstances {
-							continue
-						}
-						if res.filters.Match(e.metricNames[m.CounterId]) {
-							mList = append(mList, m)
+			wp.Drain(ctx, func(ctx context.Context, in interface{}) bool {
+				switch resp := in.(type) {
+				case *metricQResponse:
+					mList := make(performance.MetricList, 0)
+					if res.enabled {
+						for _, m := range *resp.metrics {
+							if m.Instance != "" && !res.collectInstances {
+								continue
+							}
+							if res.filters.Match(e.metricNames[m.CounterId]) {
+								mList = append(mList, m)
+							}
 						}
 					}
+					instInfo[resp.obj.ref.Value] = resourceInfo{name: resp.obj.name, metrics: mList}
+				case error:
+					log.Printf("[input.vsphere]: Error while discovering resources: %s", resp)
+					return false
 				}
-				instInfo[resp.obj.ref.Value] = resourceInfo{name: resp.obj.name, metrics: mList}
+				return true
 			})
 			res.objects = objects
 			resourceKinds[k] = res
@@ -393,50 +399,34 @@ func (e *Endpoint) Close() {
 
 // Collect runs a round of data collections as specified in the configuration.
 func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error {
-	// Add returning false means we've been released from Wait and no
-	// more tasks are allowed. This happens when the plugin is stopped
-	// or reloaded.
-	if !e.wg.Add(1) {
-		return context.Canceled
-	}
-	defer e.wg.Done()
-
-	var err error
-	if !e.initialized {
-		err := e.init(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
 	e.collectMux.RLock()
 	defer e.collectMux.RUnlock()
 
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+
 	// If discovery interval is disabled (0), discover on each collection cycle
 	//
-	if e.Parent.ObjectDiscoveryInterval.Duration.Seconds() == 0 {
-		err = e.discover(ctx)
+	if e.Parent.ObjectDiscoveryInterval.Duration == 0 {
+		err := e.discover(ctx)
 		if err != nil {
 			return err
 		}
 	}
 	for k, res := range e.resourceKinds {
 		if res.enabled {
-			count, duration, err := e.collectResource(ctx, k, acc)
+			err := e.collectResource(ctx, k, acc)
 			if err != nil {
 				return err
 			}
-			acc.AddGauge("vsphere",
-				map[string]interface{}{"gather.count": count, "gather.duration": duration},
-				map[string]string{"vcenter": e.URL.Host, "type": k},
-				time.Now())
 		}
 	}
 	return nil
 }
 
 func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, now time.Time, latest time.Time) {
-	pqs := make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
+	pqs := make([]types.PerfQuerySpec, 0, e.Parent.MaxQueryObjects)
 	metrics := 0
 	total := 0
 	nRes := 0
@@ -448,7 +438,7 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 		mr := len(info.metrics)
 		for mr > 0 {
 			mc := mr
-			headroom := e.Parent.MetricsPerQuery - metrics
+			headroom := e.Parent.MaxQueryMetrics - metrics
 			if !res.realTime && mc > headroom { // Metric query limit only applies to non-realtime metrics
 				mc = headroom
 			}
@@ -471,7 +461,7 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 			// We need to dump the current chunk of metrics for one of two reasons:
 			// 1) We filled up the metric quota while processing the current resource
 			// 2) We are at the last resource and have no more data to process.
-			if mr > 0 || (!res.realTime && metrics >= e.Parent.MetricsPerQuery) || nRes >= e.Parent.ObjectsPerQuery {
+			if mr > 0 || (!res.realTime && metrics >= e.Parent.MaxQueryMetrics) || nRes >= e.Parent.MaxQueryObjects {
 				log.Printf("D! [input.vsphere]: Querying %d objects, %d metrics (%d remaining) of type %s for %s. Processed objects: %d. Total objects %d",
 					len(pqs), metrics, mr, res.name, e.URL.Host, total+1, len(res.objects))
 
@@ -482,7 +472,7 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 
 				// Call push function
 				f(ctx, pqs)
-				pqs = make([]types.PerfQuerySpec, 0, e.Parent.ObjectsPerQuery)
+				pqs = make([]types.PerfQuerySpec, 0, e.Parent.MaxQueryObjects)
 				metrics = 0
 				nRes = 0
 			}
@@ -498,7 +488,7 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 	}
 }
 
-func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc telegraf.Accumulator) (int, float64, error) {
+func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc telegraf.Accumulator) error {
 
 	// Do we have new data yet?
 	res := e.resourceKinds[resourceType]
@@ -511,16 +501,16 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 			// No new data would be available. We're outta herE! [input.vsphere]:
 			log.Printf("D! [input.vsphere]: Sampling period for %s of %d has not elapsed for %s",
 				resourceType, res.sampling, e.URL.Host)
-			return 0, 0, nil
+			return nil
 		}
 	} else {
 		latest = time.Now().Add(time.Duration(-res.sampling) * time.Second)
 	}
 
 	internalTags := map[string]string{"resourcetype": resourceType}
-	sw := NewStopwatchWithTags("endpoint_gather", e.URL.Host, internalTags)
+	sw := NewStopwatchWithTags("gather_duration", e.URL.Host, internalTags)
 
-	log.Printf("D! [input.vsphere]: [input.vsphere] Start of sample period deemed to be %s", latest)
+	log.Printf("D! [input.vsphere]: Start of sample period deemed to be %s", latest)
 	log.Printf("D! [input.vsphere]: Collecting metrics for %d objects of type %s for %s",
 		len(res.objects), resourceType, e.URL.Host)
 
@@ -548,17 +538,19 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 
 	// Drain the pool. We're getting errors back. They should all be nil
 	var err error
-	wp.Drain(ctx, func(ctx context.Context, in interface{}) {
+	wp.Drain(ctx, func(ctx context.Context, in interface{}) bool {
 		if in != nil {
 			err = in.(error)
+			return false
 		}
+		return true
 	})
 
 	e.lastColls[resourceType] = now // Use value captured at the beginning to avoid blind spots.
 
 	sw.Stop()
-	SendInternalCounterWithTags("endpoint_gather_count", e.URL.Host, internalTags, count)
-	return int(count), time.Now().Sub(now).Seconds(), err
+	SendInternalCounterWithTags("gather_count", e.URL.Host, internalTags, count)
+	return err
 }
 
 func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, resourceType string,
@@ -569,6 +561,11 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
 		return 0, err
+	}
+
+	metricInfo, err := client.Perf.CounterInfoByName(ctx)
+	if err != nil {
+		return count, err
 	}
 
 	metrics, err := client.Perf.Query(ctx, pqs)
@@ -624,14 +621,23 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 					log.Printf("D! [input.vsphere]: Negative value for %s on %s. Indicates missing samples", name, objectRef.name)
 					continue
 				}
-				bucket.fields[fn] = value
+
+				// Percentage values must be scaled down by 100.
+				info, ok := metricInfo[name]
+				if !ok {
+					log.Printf("E! [input.vsphere]: Could not determine unit for %s. Skipping", name)
+				}
+				if info.UnitInfo.GetElementDescription().Key == "percent" {
+					bucket.fields[fn] = float64(value) / 100.0
+				} else {
+					bucket.fields[fn] = value
+				}
 				count++
 			}
 		}
 		// We've iterated through all the metrics and collected buckets for each
 		// measurement name. Now emit them!
 		for _, bucket := range buckets {
-			//log.Printf("Bucket key: %s", key)
 			acc.AddFields(bucket.name, bucket.fields, bucket.tags, bucket.ts)
 		}
 	}
@@ -704,24 +710,10 @@ func (e *Endpoint) makeMetricIdentifier(prefix, metric string) (string, string) 
 }
 
 func cleanGuestID(id string) string {
-	if strings.HasSuffix(id, "Guest") {
-		return id[:len(id)-5]
-	}
-
-	return id
+	return strings.TrimSuffix(id, "Guest")
 }
 
 func cleanDiskTag(disk string) string {
-	if strings.HasPrefix(disk, "<") {
-		i := strings.Index(disk, ">")
-		if i > -1 {
-			s1 := disk[1:i]
-			s2 := disk[i+1:]
-			if s1 == s2 {
-				return s1
-			}
-		}
-	}
-
-	return disk
+	// Remove enclosing "<>"
+	return strings.TrimSuffix(strings.TrimPrefix(disk, "<"), ">")
 }
