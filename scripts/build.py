@@ -452,13 +452,14 @@ def build(version=None,
             build_command += "CGO_ENABLED=0 "
 
         # Handle variations in architecture output
+        goarch = arch
         if arch == "i386" or arch == "i686":
-            arch = "386"
+            goarch = "386"
         elif "arm64" in arch:
-            arch = "arm64"
+            goarch = "arm64"
         elif "arm" in arch:
-            arch = "arm"
-        build_command += "GOOS={} GOARCH={} ".format(platform, arch)
+            goarch = "arm"
+        build_command += "GOOS={} GOARCH={} ".format(platform, goarch)
 
         if "arm" in arch:
             if arch == "armel":
