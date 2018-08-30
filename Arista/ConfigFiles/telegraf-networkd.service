@@ -5,6 +5,7 @@ After=network-online.target
 
 [Service]
 EnvironmentFile=-/etc/default/telegraf
+ExecStartPre=/bin/sh -c 'while [ "`hostname`" == "localhost.localdomain" ]; do sleep 1; /bin/echo "Waiting for hostname to be setup" >&1; done '
 ExecStart=/usr/bin/telegraf -config /etc/telegraf/telegraf.conf -config-directory /etc/telegraf/telegraf.d $TELEGRAF_OPTS
 KillMode=process
 # Journald restart in systemd < v219 causes SIGPIPE which is considered clean exit
