@@ -2,13 +2,9 @@ package jboss
 
 import (
 	"bytes"
-	"crypto/md5"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -21,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	dac "github.com/xinsnake/go-http-digest-auth-client"
 )
 
 const (
@@ -256,102 +253,6 @@ func (m *JBoss) SampleConfig() string {
 // Description just returns a short description of the JBoss plugin
 func (m *JBoss) Description() string {
 	return "Telegraf plugin for gathering metrics from JBoss AS"
-}
-
-func (h *JBoss) checkAuth(host string, uri string) error {
-	url := h.Servers[0]
-
-	method := "POST"
-	req, err := http.NewRequest(method, url, nil)
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusUnauthorized {
-		log.Printf("Recieved status code '%v' auth skipped\n", resp.StatusCode)
-		return nil
-	}
-	digestParts := digestParts(resp)
-	digestParts["uri"] = uri
-	digestParts["method"] = method
-	digestParts["username"] = h.Username
-	digestParts["password"] = h.Password
-	postData := []byte("{\"address\":[\"\"],\"child-type\":\"host\",\"json.pretty\":1,\"operation\":\"read-children-names\"}")
-	req, err = http.NewRequest(method, url, bytes.NewBuffer(postData))
-	h.Authorization = getDigestAuthrization2(digestParts)
-	req.Header.Set("Authorization", h.Authorization)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err = client.Do(req)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-	log.Printf("D! JBoss HTTP response code: %d \n", resp.StatusCode)
-
-	if resp.StatusCode != http.StatusOK {
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			panic(err)
-		}
-		log.Printf("D! JBoss HTTP response body: %s \n", string(body))
-		return nil
-	}
-	return nil
-}
-
-func digestParts(resp *http.Response) map[string]string {
-	result := map[string]string{}
-	if len(resp.Header["Www-Authenticate"]) > 0 {
-		//        wantedHeaders := []string{"nonce", "realm", "qop"}
-		wantedHeaders := []string{"nonce", "realm"}
-		responseHeaders := strings.Split(resp.Header["Www-Authenticate"][0], ",")
-		for _, r := range responseHeaders {
-			for _, w := range wantedHeaders {
-				if strings.Contains(r, w) {
-					result[w] = strings.Split(r, `"`)[1]
-				}
-			}
-		}
-	}
-	return result
-}
-
-func getMD5(text string) string {
-	hasher := md5.New()
-	hasher.Write([]byte(text))
-	return hex.EncodeToString(hasher.Sum(nil))
-}
-
-func getCnonce() string {
-	b := make([]byte, 8)
-	io.ReadFull(rand.Reader, b)
-	return fmt.Sprintf("%x", b)[:16]
-}
-
-func getDigestAuthrization(digestParts map[string]string) string {
-	d := digestParts
-	ha1 := getMD5(d["username"] + ":" + d["realm"] + ":" + d["password"])
-	ha2 := getMD5(d["method"] + ":" + d["uri"])
-	nonceCount := 00000001
-	cnonce := getCnonce()
-	response := getMD5(fmt.Sprintf("%s:%s:%v:%s:%s:%s", ha1, d["nonce"], nonceCount, cnonce, d["qop"], ha2))
-	authorization := fmt.Sprintf(`Digest username="%s", realm="%s", nonce="%s", uri="%s", cnonce="%s", nc="%v", qop="%s", response="%s"`,
-		d["username"], d["realm"], d["nonce"], d["uri"], cnonce, nonceCount, d["qop"], response)
-	return authorization
-}
-
-func getDigestAuthrization2(digestParts map[string]string) string {
-	d := digestParts
-	ha1 := getMD5(d["username"] + ":" + d["realm"] + ":" + d["password"])
-	ha2 := getMD5(d["method"] + ":" + d["uri"])
-	response := getMD5(fmt.Sprintf("%s:%s:%s", ha1, d["nonce"], ha2))
-	authorization := fmt.Sprintf(`Digest username="%s", realm="%s", nonce="%s", uri="%s", response="%s"`,
-		d["username"], d["realm"], d["nonce"], d["uri"], response)
-	return authorization
 }
 
 // Gathers data for all servers.
@@ -1192,7 +1093,6 @@ func (j *JBoss) prepareRequest(optype int, adress OrderedMap) (map[string]interf
 }
 
 func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) ([]byte, error) {
-
 	serverUrl, err := url.Parse(domainUrl)
 	if err != nil {
 		return nil, err
@@ -1203,48 +1103,15 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 	// Debug JSON request
 	log.Printf("D! Req: %s\n", requestBody)
 
-	req, err := http.NewRequest(method, serverUrl.String(), bytes.NewBuffer(requestBody))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("Content-Type", "application/json")
+	req := dac.NewRequest(j.Username, j.Password, method, serverUrl.String(), string(requestBody[:]))
+    req.Header.Add("Content-Type", "application/json")
 
-	if j.Authorization == "basic" {
-		if j.Username != "" || j.Password != "" {
-			serverUrl.User = url.UserPassword(j.Username, j.Password)
-		}
-	}
+	resp, err := req.Execute()
 
-	resp, err := j.client.MakeRequest(req)
 	if err != nil {
 		log.Printf("D! HTTP REQ:%#+v", req)
 		log.Printf("D! HTTP RESP:%#+v", resp)
 		return nil, err
-	}
-	defer resp.Body.Close()
-
-	// Process response
-
-	if resp.StatusCode == http.StatusUnauthorized {
-		digestParts := digestParts(resp)
-		digestParts["uri"] = serverUrl.RequestURI()
-		digestParts["method"] = method
-		digestParts["username"] = j.Username
-		digestParts["password"] = j.Password
-
-		req, err = http.NewRequest(method, serverUrl.String(), bytes.NewBuffer(requestBody))
-		if err != nil {
-			return nil, err
-		}
-		j.Authorization = getDigestAuthrization2(digestParts)
-		req.Header.Set("Authorization", j.Authorization)
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err = j.client.MakeRequest(req)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
 	}
 
 	log.Printf("D! JBoss API Req HTTP REQ:%#+v", req)
@@ -1252,16 +1119,14 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
-			req.RequestURI,
+			serverUrl,
 			resp.StatusCode,
 			http.StatusText(resp.StatusCode),
 			http.StatusOK,
 			http.StatusText(http.StatusOK))
 		return nil, err
 	}
-
-	//req, err := http.NewRequest("POST", serverUrl.String(), bytes.NewBuffer(requestBody))
-
+	
 	// read body
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
