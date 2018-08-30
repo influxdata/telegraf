@@ -21,12 +21,10 @@ TMP_BIN_DIR=./rpm_bin
 TMP_CONFIG_DIR=./rpm_config
 CONFIG_FILES_DIR=./ConfigFiles
 
-CONFIG_FILES_ITER=18
-BIN_RPM_ITER=3
-
 LICENSE=MIT
 URL=github.com/aristanetworks/telegraf
-DESCRIPTION="InfluxDB Telegraf agent"
+TELEGRAF_UPSTREAM_VERSION="v1.2.0-823-g89c596cf"
+DESCRIPTION="InfluxDB Telegraf agent version: $TELEGRAF_UPSTREAM_VERSION"
 VENDOR=Influxdata
 
 set -e
@@ -68,7 +66,6 @@ BINARY_FPM_ARGS="\
 --prefix / \
 -a $ARCH \
 -v $version \
---iteration $BIN_RPM_ITER \
 $COMMON_FPM_ARGS"
 
 # Make a copy of the generated binaries into a tmp directory bin
@@ -98,7 +95,6 @@ CONFIG_FPM_ARGS="\
 --after-install ./post_install_config.sh \
 --after-remove ./post_uninstall_config.sh \
 -v $version \
---iteration $CONFIG_FILES_ITER \
 $COMMON_FPM_ARGS"
 
 # Create directory structure for config files
