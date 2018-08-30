@@ -24,6 +24,7 @@ all:
 deps:
 	go get -u github.com/golang/lint/golint
 	go get github.com/sparrc/gdm
+	go get github.com/xinsnake/go-http-digest-auth-client
 	gdm restore
 
 telegraf:

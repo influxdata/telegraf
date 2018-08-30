@@ -22,6 +22,7 @@ import (
 // HTTPResponse struct
 type HTTPResponse struct {
 	Address             string
+	System              string
 	HTTPProxy           string `toml:"http_proxy"`
 	Body                string
 	Method              string
@@ -182,7 +183,7 @@ func setError(err error, fields map[string]interface{}, tags map[string]string) 
 func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, error) {
 	// Prepare fields and tags
 	fields := make(map[string]interface{})
-	tags := map[string]string{"server": h.Address, "method": h.Method}
+	tags := map[string]string{"server": h.Address, "method": h.Method, "system": h.System}
 
 	var body io.Reader
 	if h.Body != "" {
