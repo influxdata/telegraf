@@ -122,6 +122,11 @@ rm -f $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-redis.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-Redis" etc lib || cleanup_exit 1
 
+# Docker-Config
+rm -f $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
+cp $CONFIG_FILES_DIR/telegraf-docker.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-Docker" etc lib || cleanup_exit 1
+
 # Perforce-Config
 rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-perforce.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
