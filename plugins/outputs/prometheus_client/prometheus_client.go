@@ -2,8 +2,10 @@ package prometheus_client
 
 import (
 	"context"
+	"crypto/subtle"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"regexp"
@@ -53,9 +55,15 @@ type MetricFamily struct {
 
 type PrometheusClient struct {
 	Listen             string
+	TLSCert            string            `toml:"tls_cert"`
+	TLSKey             string            `toml:"tls_key"`
+	BasicUsername      string            `toml:"basic_username"`
+	BasicPassword      string            `toml:"basic_password"`
+	IPRange            []string          `toml:"ip_range"`
 	ExpirationInterval internal.Duration `toml:"expiration_interval"`
 	Path               string            `toml:"path"`
 	CollectorsExclude  []string          `toml:"collectors_exclude"`
+	StringAsLabel      bool              `toml:"string_as_label"`
 
 	server *http.Server
 
@@ -68,15 +76,73 @@ type PrometheusClient struct {
 
 var sampleConfig = `
   ## Address to listen on
-  # listen = ":9273"
+  listen = ":9273"
 
-  ## Interval to expire metrics and not deliver to prometheus, 0 == no expiration
+  ## Use HTTP Basic Authentication.
+  # basic_username = "Foo"
+  # basic_password = "Bar"
+
+  ## If set, the IP Ranges which are allowed to access metrics.
+  ##   ex: ip_range = ["192.168.0.0/24", "192.168.1.0/30"]
+  # ip_range = []
+
+  ## Path to publish the metrics on.
+  # path = "/metrics"
+
+  ## Expiration interval for each metric. 0 == no expiration
   # expiration_interval = "60s"
 
   ## Collectors to enable, valid entries are "gocollector" and "process".
   ## If unset, both are enabled.
-  collectors_exclude = ["gocollector", "process"]
+  # collectors_exclude = ["gocollector", "process"]
+
+  ## Send string metrics as Prometheus labels.
+  ## Unless set to false all string metrics will be sent as labels.
+  # string_as_label = true
+
+  ## If set, enable TLS with the given certificate.
+  # tls_cert = "/etc/ssl/telegraf.crt"
+  # tls_key = "/etc/ssl/telegraf.key"
 `
+
+func (p *PrometheusClient) auth(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if p.BasicUsername != "" && p.BasicPassword != "" {
+			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+
+			username, password, ok := r.BasicAuth()
+			if !ok ||
+				subtle.ConstantTimeCompare([]byte(username), []byte(p.BasicUsername)) != 1 ||
+				subtle.ConstantTimeCompare([]byte(password), []byte(p.BasicPassword)) != 1 {
+				http.Error(w, "Not authorized", 401)
+				return
+			}
+		}
+
+		if len(p.IPRange) > 0 {
+			matched := false
+			remoteIPs, _, _ := net.SplitHostPort(r.RemoteAddr)
+			remoteIP := net.ParseIP(remoteIPs)
+			for _, iprange := range p.IPRange {
+				_, ipNet, err := net.ParseCIDR(iprange)
+				if err != nil {
+					http.Error(w, "Config Error in ip_range setting", 500)
+					return
+				}
+				if ipNet.Contains(remoteIP) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				http.Error(w, "Not authorized", 401)
+				return
+			}
+		}
+
+		h.ServeHTTP(w, r)
+	})
+}
 
 func (p *PrometheusClient) Start() error {
 	defaultCollectors := map[string]bool{
@@ -110,8 +176,8 @@ func (p *PrometheusClient) Start() error {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle(p.Path, promhttp.HandlerFor(
-		registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError}))
+	mux.Handle(p.Path, p.auth(promhttp.HandlerFor(
+		registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})))
 
 	p.server = &http.Server{
 		Addr:    p.Listen,
@@ -119,13 +185,18 @@ func (p *PrometheusClient) Start() error {
 	}
 
 	go func() {
-		if err := p.server.ListenAndServe(); err != nil {
-			if err != http.ErrServerClosed {
-				log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
-					err.Error())
-			}
+		var err error
+		if p.TLSCert != "" && p.TLSKey != "" {
+			err = p.server.ListenAndServeTLS(p.TLSCert, p.TLSKey)
+		} else {
+			err = p.server.ListenAndServe()
+		}
+		if err != nil && err != http.ErrServerClosed {
+			log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
+				err.Error())
 		}
 	}()
+
 	return nil
 }
 
@@ -290,11 +361,13 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 		}
 
 		// Prometheus doesn't have a string value type, so convert string
-		// fields to labels.
-		for fn, fv := range point.Fields() {
-			switch fv := fv.(type) {
-			case string:
-				labels[sanitize(fn)] = fv
+		// fields to labels if enabled.
+		if p.StringAsLabel {
+			for fn, fv := range point.Fields() {
+				switch fv := fv.(type) {
+				case string:
+					labels[sanitize(fn)] = fv
+				}
 			}
 		}
 
@@ -308,6 +381,8 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				var value float64
 				switch fv := fv.(type) {
 				case int64:
+					value = float64(fv)
+				case uint64:
 					value = float64(fv)
 				case float64:
 					value = fv
@@ -348,6 +423,8 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				switch fv := fv.(type) {
 				case int64:
 					value = float64(fv)
+				case uint64:
+					value = float64(fv)
 				case float64:
 					value = fv
 				default:
@@ -383,6 +460,8 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				var value float64
 				switch fv := fv.(type) {
 				case int64:
+					value = float64(fv)
+				case uint64:
 					value = float64(fv)
 				case float64:
 					value = fv
@@ -429,6 +508,7 @@ func init() {
 	outputs.Add("prometheus_client", func() telegraf.Output {
 		return &PrometheusClient{
 			ExpirationInterval: internal.Duration{Duration: time.Second * 60},
+			StringAsLabel:      true,
 			fam:                make(map[string]*MetricFamily),
 			now:                time.Now,
 		}

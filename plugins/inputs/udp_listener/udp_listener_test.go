@@ -47,11 +47,13 @@ func TestHighTrafficUDP(t *testing.T) {
 		ServiceAddress:         ":8126",
 		AllowedPendingMessages: 100000,
 	}
-	listener.parser, _ = parsers.NewInfluxParser()
+	var err error
+	listener.parser, err = parsers.NewInfluxParser()
+	require.NoError(t, err)
 	acc := &testutil.Accumulator{}
 
 	// send multiple messages to socket
-	err := listener.Start(acc)
+	err = listener.Start(acc)
 	require.NoError(t, err)
 
 	conn, err := net.Dial("udp", "127.0.0.1:8126")
@@ -191,7 +193,10 @@ func TestRunParserJSONMsg(t *testing.T) {
 	listener.acc = &acc
 	defer close(listener.done)
 
-	listener.parser, _ = parsers.NewJSONParser("udp_json_test", []string{}, nil)
+	listener.parser, _ = parsers.NewParser(&parsers.Config{
+		DataFormat: "json",
+		MetricName: "udp_json_test",
+	})
 	listener.wg.Add(1)
 	go listener.udpParser()
 

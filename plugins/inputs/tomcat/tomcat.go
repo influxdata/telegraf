@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -63,11 +64,7 @@ type Tomcat struct {
 	Username string
 	Password string
 	Timeout  internal.Duration
-
-	SSLCA              string `toml:"ssl_ca"`
-	SSLCert            string `toml:"ssl_cert"`
-	SSLKey             string `toml:"ssl_key"`
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	client  *http.Client
 	request *http.Request
@@ -84,11 +81,11 @@ var sampleconfig = `
   ## Request timeout
   # timeout = "5s"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
 
@@ -191,8 +188,7 @@ func (s *Tomcat) Gather(acc telegraf.Accumulator) error {
 }
 
 func (s *Tomcat) createHttpClient() (*http.Client, error) {
-	tlsConfig, err := internal.GetTLSConfig(
-		s.SSLCert, s.SSLKey, s.SSLCA, s.InsecureSkipVerify)
+	tlsConfig, err := s.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

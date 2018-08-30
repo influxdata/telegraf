@@ -76,6 +76,8 @@ type Statsd struct {
 	// see https://github.com/influxdata/telegraf/pull/992
 	UDPPacketSize int `toml:"udp_packet_size"`
 
+	ReadBufferSize int `toml:"read_buffer_size"`
+
 	sync.Mutex
 	// Lock for preventing a data race during resource cleanup
 	cleanup sync.Mutex
@@ -112,6 +114,9 @@ type Statsd struct {
 	conns map[string]*net.TCPConn
 
 	MaxTCPConnections int `toml:"max_tcp_connections"`
+
+	TCPKeepAlive       bool               `toml:"tcp_keep_alive"`
+	TCPKeepAlivePeriod *internal.Duration `toml:"tcp_keep_alive_period"`
 
 	graphiteParser *graphite.GraphiteParser
 
@@ -176,6 +181,14 @@ const sampleConfig = `
 
   ## MaxTCPConnection - applicable when protocol is set to tcp (default=250)
   max_tcp_connections = 250
+
+  ## Enable TCP keep alive probes (default=false)
+  tcp_keep_alive = false
+
+  ## Specifies the keep-alive period for an active network connection.
+  ## Only applies to TCP sockets and will be ignored if tcp_keep_alive is false.
+  ## Defaults to the OS configuration.
+  # tcp_keep_alive_period = "2h"
 
   ## Address and port to host UDP listener on
   service_address = ":8125"
@@ -361,6 +374,18 @@ func (s *Statsd) tcpListen() error {
 				return err
 			}
 
+			if s.TCPKeepAlive {
+				if err = conn.SetKeepAlive(true); err != nil {
+					return err
+				}
+
+				if s.TCPKeepAlivePeriod != nil {
+					if err = conn.SetKeepAlivePeriod(s.TCPKeepAlivePeriod.Duration); err != nil {
+						return err
+					}
+				}
+			}
+
 			select {
 			case <-s.accept:
 				// not over connection limit, handle the connection properly.
@@ -387,6 +412,10 @@ func (s *Statsd) udpListen() error {
 		log.Fatalf("ERROR: ListenUDP - %s", err)
 	}
 	log.Println("I! Statsd UDP listener listening on: ", s.UDPlistener.LocalAddr().String())
+
+	if s.ReadBufferSize > 0 {
+		s.UDPlistener.SetReadBuffer(s.ReadBufferSize)
+	}
 
 	buf := make([]byte, UDP_MAX_PACKET_SIZE)
 	for {
@@ -863,6 +892,7 @@ func init() {
 			Protocol:               defaultProtocol,
 			ServiceAddress:         ":8125",
 			MaxTCPConnections:      250,
+			TCPKeepAlive:           false,
 			MetricSeparator:        "_",
 			AllowedPendingMessages: defaultAllowPendingMessage,
 			DeleteCounters:         true,

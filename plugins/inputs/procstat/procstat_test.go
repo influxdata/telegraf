@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -101,6 +102,10 @@ func newTestProc(pid PID) (Process, error) {
 
 func (p *testProc) PID() PID {
 	return p.pid
+}
+
+func (p *testProc) Username() (string, error) {
+	return "testuser", nil
 }
 
 func (p *testProc) Tags() map[string]string {
@@ -342,13 +347,18 @@ func TestGather_systemdUnitPIDs(t *testing.T) {
 		createPIDFinder: pidFinder([]PID{}, nil),
 		SystemdUnit:     "TestGather_systemdUnitPIDs",
 	}
-	pids, tags, err := p.findPids()
+	var acc testutil.Accumulator
+	pids, tags, err := p.findPids(&acc)
 	require.NoError(t, err)
 	assert.Equal(t, []PID{11408}, pids)
 	assert.Equal(t, "TestGather_systemdUnitPIDs", tags["systemd_unit"])
 }
 
 func TestGather_cgroupPIDs(t *testing.T) {
+	//no cgroups in windows
+	if runtime.GOOS == "windows" {
+		t.Skip("no cgroups in windows")
+	}
 	td, err := ioutil.TempDir("", "")
 	require.NoError(t, err)
 	defer os.RemoveAll(td)
@@ -359,8 +369,20 @@ func TestGather_cgroupPIDs(t *testing.T) {
 		createPIDFinder: pidFinder([]PID{}, nil),
 		CGroup:          td,
 	}
-	pids, tags, err := p.findPids()
+	var acc testutil.Accumulator
+	pids, tags, err := p.findPids(&acc)
 	require.NoError(t, err)
 	assert.Equal(t, []PID{1234, 5678}, pids)
 	assert.Equal(t, td, tags["cgroup"])
+}
+
+func TestProcstatLookupMetric(t *testing.T) {
+	p := Procstat{
+		createPIDFinder: pidFinder([]PID{543}, nil),
+		Exe:             "-Gsys",
+	}
+	var acc testutil.Accumulator
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+	require.Equal(t, len(p.procs)+1, len(acc.Metrics))
 }
