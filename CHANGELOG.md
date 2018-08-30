@@ -80,6 +80,10 @@
 - [#4439](https://github.com/influxdata/telegraf/pull/4439): Add csv parser plugin.
 - [#4598](https://github.com/influxdata/telegraf/pull/4598): Add read_buffer_size option to statsd input.
 
+### Bugfixes
+
+- [#3438](https://github.com/influxdata/telegraf/issues/3438): Fix divide by zero in logparser input.
+
 ## v1.7.4 [2018-08-29]
 
 ### Bugfixes
