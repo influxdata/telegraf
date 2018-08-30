@@ -76,6 +76,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/nats_consumer"
 	_ "github.com/influxdata/telegraf/plugins/inputs/net"
 	_ "github.com/influxdata/telegraf/plugins/inputs/net_response"
+	_ "github.com/influxdata/telegraf/plugins/inputs/nfsclient"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nginx"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nginx_plus"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nsq"
