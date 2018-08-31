@@ -2,109 +2,194 @@ package strings
 
 import (
 	"strings"
+	"unicode"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 )
 
 type Strings struct {
-    Lowercase  []converter
-    Uppercase  []converter
-    Trim       []converter
-    TrimLeft   []converter
-    TrimRight  []converter
-    TrimPrefix []converter
-    TrimSuffix []converter
+	Lowercase  []converter `toml:"lowercase"`
+	Uppercase  []converter `toml:"uppercase"`
+	Trim       []converter `toml:"trim"`
+	TrimLeft   []converter `toml:"trim_left"`
+	TrimRight  []converter `toml:"trim_right"`
+	TrimPrefix []converter `toml:"trim_prefix"`
+	TrimSuffix []converter `toml:"trim_suffix"`
+
+	converters []converter
+	init       bool
 }
 
+type ConvertFunc func(s string) string
+
 type converter struct {
+	Field       string
 	Tag         string
-    Field       string
-	ResultKey   string
-    Argument    string
+	Measurement string
+	Dest        string
+	Cutset      string
+	Suffix      string
+	Prefix      string
+
+	fn ConvertFunc
 }
 
 const sampleConfig = `
-  ## Tag and field conversions defined in a separate sub-tables
-
+  ## Convert a tag value to uppercase
   # [[processors.strings.uppercase]]
   #   tag = "method"
 
+  ## Convert a field value to lowercase and store in a new field
   # [[processors.strings.lowercase]]
   #   field = "uri_stem"
-  #   result_key = "uri_stem_normalised"
+  #   dest = "uri_stem_normalised"
+
+  ## Trim leading and trailing whitespace using the default cutset
+  # [[processors.strings.trim]]
+  #   field = "message"
+
+  ## Trim leading characters in cutset
+  # [[processors.strings.trim_left]]
+  #   field = "message"
+  #   cutset = "\t"
+
+  ## Trim trailing characters in cutset
+  # [[processors.strings.trim_right]]
+  #   field = "message"
+  #   cutset = "\r\n"
+
+  ## Trim the given prefix from the field
+  # [[processors.strings.trim_prefix]]
+  #   field = "my_value"
+  #   prefix = "my_"
+
+  ## Trim the given suffix from the field
+  # [[processors.strings.trim_suffix]]
+  #   field = "read_count"
+  #   suffix = "_count"
 `
 
-func (r *Strings) SampleConfig() string {
+func (s *Strings) SampleConfig() string {
 	return sampleConfig
 }
 
-func (r *Strings) Description() string {
-	return "Transforms tag and field values to lower case"
+func (s *Strings) Description() string {
+	return "Perform string processing on tags, fields, and measurements"
 }
 
-func ApplyFunction(
-        metric telegraf.Metric,
-        c converter,
-        fn func(string) string) {
+func (c *converter) convertTag(metric telegraf.Metric) {
+	tv, ok := metric.GetTag(c.Tag)
+	if !ok {
+		return
+	}
 
-    if value, ok := metric.Tags()[c.Tag]; ok {
-        metric.AddTag(
-            getKey(c),
-            fn(value),
-        )
-    } else if value, ok := metric.Fields()[c.Field]; ok {
-        switch value := value.(type) {
-        case string:
-            metric.AddField(
-                getKey(c),
-                fn(value),
-            )
-        }
-    }
+	dest := c.Tag
+	if c.Dest != "" {
+		dest = c.Dest
+	}
+
+	metric.AddTag(dest, c.fn(tv))
 }
 
-func (r *Strings) Apply(in ...telegraf.Metric) []telegraf.Metric {
+func (c *converter) convertField(metric telegraf.Metric) {
+	fv, ok := metric.GetField(c.Field)
+	if !ok {
+		return
+	}
+
+	dest := c.Field
+	if c.Dest != "" {
+		dest = c.Dest
+	}
+
+	if fv, ok := fv.(string); ok {
+		metric.AddField(dest, c.fn(fv))
+	}
+}
+
+func (c *converter) convertMeasurement(metric telegraf.Metric) {
+	if metric.Name() != c.Measurement {
+		return
+	}
+
+	metric.SetName(c.fn(metric.Name()))
+}
+
+func (c *converter) convert(metric telegraf.Metric) {
+	if c.Field != "" {
+		c.convertField(metric)
+	}
+
+	if c.Tag != "" {
+		c.convertTag(metric)
+	}
+
+	if c.Measurement != "" {
+		c.convertMeasurement(metric)
+	}
+}
+
+func (s *Strings) initOnce() {
+	if s.init {
+		return
+	}
+
+	s.converters = make([]converter, 0)
+	for _, c := range s.Lowercase {
+		c.fn = strings.ToLower
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.Uppercase {
+		c.fn = strings.ToUpper
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.Trim {
+		if c.Cutset != "" {
+			c.fn = func(s string) string { return strings.Trim(s, c.Cutset) }
+		} else {
+			c.fn = func(s string) string { return strings.TrimFunc(s, unicode.IsSpace) }
+		}
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.TrimLeft {
+		if c.Cutset != "" {
+			c.fn = func(s string) string { return strings.TrimLeft(s, c.Cutset) }
+		} else {
+			c.fn = func(s string) string { return strings.TrimLeftFunc(s, unicode.IsSpace) }
+		}
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.TrimRight {
+		if c.Cutset != "" {
+			c.fn = func(s string) string { return strings.TrimRight(s, c.Cutset) }
+		} else {
+			c.fn = func(s string) string { return strings.TrimRightFunc(s, unicode.IsSpace) }
+		}
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.TrimPrefix {
+		c.fn = func(s string) string { return strings.TrimPrefix(s, c.Prefix) }
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.TrimSuffix {
+		c.fn = func(s string) string { return strings.TrimSuffix(s, c.Suffix) }
+		s.converters = append(s.converters, c)
+	}
+
+	s.init = true
+}
+
+func (s *Strings) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	s.initOnce()
+
 	for _, metric := range in {
-		for _, converter := range r.Lowercase {
-            ApplyFunction(metric, converter, strings.ToLower)
+		for _, converter := range s.converters {
+			converter.convert(metric)
 		}
-		for _, converter := range r.Uppercase {
-            ApplyFunction(metric, converter, strings.ToUpper)
-		}
-        for _, converter := range r.Trim {
-            ApplyFunction(metric, converter,
-                func(s string) string { return strings.Trim(s, converter.Argument) })
-        }
-        for _, converter := range r.TrimPrefix {
-            ApplyFunction(metric, converter,
-                func(s string) string { return strings.TrimPrefix(s, converter.Argument) })
-        }
-        for _, converter := range r.TrimSuffix{
-            ApplyFunction(metric, converter,
-                func(s string) string { return strings.TrimSuffix(s, converter.Argument) })
-        }
-        for _, converter := range r.TrimRight {
-            ApplyFunction(metric, converter,
-                func(s string) string { return strings.TrimRight(s, converter.Argument) })
-        }
-        for _, converter := range r.TrimLeft {
-            ApplyFunction(metric, converter,
-                func(s string) string { return strings.TrimLeft(s, converter.Argument) })
-        }
 	}
 
 	return in
-}
-
-func getKey(c converter) string {
-	if c.ResultKey != "" {
-		return c.ResultKey
-	} else if c.Field != "" {
-        return c.Field
-    } else {
-	    return c.Tag
-    }
 }
 
 func init() {
