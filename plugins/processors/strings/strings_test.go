@@ -1,7 +1,6 @@
 package strings
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -356,8 +355,37 @@ func TestTagConversions(t *testing.T) {
 	}
 }
 
+func TestMeasurementConversions(t *testing.T) {
+	tests := []struct {
+		name   string
+		plugin *Strings
+		check  func(t *testing.T, actual telegraf.Metric)
+	}{
+		{
+			name: "lowercase measurement",
+			plugin: &Strings{
+				Lowercase: []converter{
+					converter{
+						Measurement: "IIS_log",
+					},
+				},
+			},
+			check: func(t *testing.T, actual telegraf.Metric) {
+				name := actual.Name()
+				require.Equal(t, "iis_log", name)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			metrics := tt.plugin.Apply(newM1())
+			require.Len(t, metrics, 1)
+			tt.check(t, metrics[0])
+		})
+	}
+}
+
 func TestMultipleConversions(t *testing.T) {
-	fmt.Println(2)
 	plugin := &Strings{
 		Lowercase: []converter{
 			converter{
@@ -391,6 +419,63 @@ func TestMultipleConversions(t *testing.T) {
 		"verb":           "GET",
 		"resp_code":      "200",
 		"s-computername": "mixedcase_hostname",
+	}
+
+	assert.Equal(t, expectedFields, processed[0].Fields())
+	assert.Equal(t, expectedTags, processed[0].Tags())
+}
+
+func TestReadmeExample(t *testing.T) {
+	plugin := &Strings{
+		Lowercase: []converter{
+			converter{
+				Tag: "uri_stem",
+			},
+		},
+		TrimPrefix: []converter{
+			converter{
+				Tag:    "uri_stem",
+				Prefix: "/api/",
+			},
+		},
+		Uppercase: []converter{
+			converter{
+				Field: "cs-host",
+				Dest:  "cs-host_normalised",
+			},
+		},
+	}
+
+	m, _ := metric.New("iis_log",
+		map[string]string{
+			"verb":     "get",
+			"uri_stem": "/API/HealthCheck",
+		},
+		map[string]interface{}{
+			"cs-host":      "MIXEDCASE_host",
+			"referrer":     "-",
+			"ident":        "-",
+			"http_version": "1.1",
+			"agent":        "UserAgent",
+			"resp_bytes":   int64(270),
+		},
+		time.Now(),
+	)
+
+	processed := plugin.Apply(m)
+
+	expectedTags := map[string]string{
+		"verb":     "get",
+		"uri_stem": "healthcheck",
+	}
+	expectedFields := map[string]interface{}{
+		"cs-host":            "MIXEDCASE_host",
+		"cs-host_normalised": "MIXEDCASE_HOST",
+		"referrer":           "-",
+		"ident":              "-",
+		"http_version":       "1.1",
+		"agent":              "UserAgent",
+		"resp_bytes":         int64(270),
 	}
 
 	assert.Equal(t, expectedFields, processed[0].Fields())

@@ -6,10 +6,10 @@ Implemented functions are:
 - lowercase
 - uppercase
 - trim
+- trim_left
+- trim_right
 - trim_prefix
 - trim_suffix
-- trim_right
-- trim_left
 
 Please note that in this implementation these are processed in the order that they appear above.
 
@@ -56,12 +56,28 @@ The `trim`, `trim_left`, and `trim_right` functions take an optional parameter: 
 The `trim_prefix` and `trim_suffix` functions remote the given `prefix` or `suffix`
 respectively from the string.
 
+### Example
+**Config**
+```toml
+[[processors.strings]]
+  [[processors.strings.lowercase]]
+    field = "uri-stem"
 
-### Example Input:
+  [[processors.strings.trim_prefix]]
+    field = "uri_stem"
+    prefix = "/api/"
+
+  [[processors.strings.uppercase]]
+    field = "cs-host"
+    dest = "cs-host_normalised"
+```
+
+**Input**
 ```
 iis_log,method=get,uri_stem=/API/HealthCheck cs-host="MIXEDCASE_host",referrer="-",ident="-",http_version=1.1,agent="UserAgent",resp_bytes=270i 1519652321000000000
 ```
-### Example Output:
+
+**Output**
 ```
 iis_log,method=get,uri_stem=healthcheck cs-host="MIXEDCASE_host",cs-host_normalised="MIXEDCASE_HOST",referrer="-",ident="-",http_version=1.1,agent="UserAgent",resp_bytes=270i 1519652321000000000
 ```
