@@ -45,8 +45,12 @@ Defining multiple instances of this plugin in telegraf.conf can lead to concurre
   use_sudo = false
   # run iptables with the lock option
   use_lock = false
+  # Define an alternate executable, such as "ip6tables". Default is "iptables".
+  # binary = "ip6tables"
   # defines the table to monitor:
   table = "filter"
+  # Define this to alter the measurement name. Default is "iptables".
+  # measurement = ""
   # defines the chains to monitor:
   chains = [ "INPUT" ]
 ```
@@ -57,6 +61,13 @@ Defining multiple instances of this plugin in telegraf.conf can lead to concurre
 - iptables
     - pkts (integer, count)
     - bytes (integer, bytes)
+
+By defining the 'measurement = ""' configuration option, the default measurement of iptables is overridden. This must not be left empty if defined For example:
+
+```toml
+  # Define this to alter the measurement name. Default is "iptables".
+  measurement = "firewall"
+```
 
 ### Tags:
 
