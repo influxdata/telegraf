@@ -57,25 +57,25 @@ const (
 var sampleConfig = `
   ## See the [Azure Monitor output plugin README](/plugins/outputs/azure_monitor/README.md)
   ## for details on authentication options.
-  
+
   ## Write HTTP timeout, formatted as a string. Defaults to 20s.
   #timeout = "20s"
-  
+
   ## Set the namespace prefix, defaults to "Telegraf/<input-name>".
   #namespace_prefix = "Telegraf/"
-  
+
   ## Azure Monitor doesn't have a string value type, so convert string
   ## fields to dimensions (a.k.a. tags) if enabled. Azure Monitor allows
   ## a maximum of 10 dimensions so Telegraf will only send the first 10
   ## alphanumeric dimensions.
   #strings_as_dimensions = false
-  
+
   ## *The following two fields must be set or be available via the
   ## Instance Metadata service on Azure Virtual Machines.*
-  
+
   ## Azure Region to publish metrics against, e.g. eastus, southcentralus.
   #region = ""
-  
+
   ## The Azure Resource ID against which metric will be logged, e.g.
   ## "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
   #resource_id = ""
