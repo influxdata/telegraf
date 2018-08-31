@@ -120,6 +120,7 @@ func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
 		err := ro.write(batch)
 		if err != nil {
 			ro.failMetrics.Add(batch...)
+			log.Printf("E! Error writing to output [%s]: %v", ro.Name, err)
 		}
 	}
 }

@@ -58,6 +58,10 @@
   ## calculation of percentiles. Raising this limit increases the accuracy
   ## of percentiles but also increases the memory usage and cpu time.
   percentile_limit = 1000
+
+  ## Maximum socket buffer size in bytes, once the buffer fills up, metrics
+  ## will start dropping.  Defaults to the OS default.
+  # read_buffer_size = 65535
 ```
 
 ### Description

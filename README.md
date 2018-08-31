@@ -168,6 +168,7 @@ configuration options.
 * [http_listener](./plugins/inputs/http_listener)
 * [http](./plugins/inputs/http) (generic HTTP plugin, supports using input data formats)
 * [http_response](./plugins/inputs/http_response)
+* [icinga2](./plugins/inputs/icinga2)
 * [influxdb](./plugins/inputs/influxdb)
 * [internal](./plugins/inputs/internal)
 * [interrupts](./plugins/inputs/interrupts)

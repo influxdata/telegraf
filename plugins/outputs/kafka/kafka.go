@@ -3,12 +3,14 @@ package kafka
 import (
 	"crypto/tls"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/influxdata/telegraf"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/Shopify/sarama"
 )
@@ -21,24 +23,16 @@ var ValidTopicSuffixMethods = []string{
 
 type (
 	Kafka struct {
-		// Kafka brokers to send metrics to
-		Brokers []string
-		// Kafka topic
-		Topic string
-		// Kafka client id
-		ClientID string `toml:"client_id"`
-		// Kafka topic suffix option
-		TopicSuffix TopicSuffix `toml:"topic_suffix"`
-		// Routing Key Tag
-		RoutingTag string `toml:"routing_tag"`
-		// Compression Codec Tag
+		Brokers          []string
+		Topic            string
+		ClientID         string      `toml:"client_id"`
+		TopicSuffix      TopicSuffix `toml:"topic_suffix"`
+		RoutingTag       string      `toml:"routing_tag"`
+		RoutingKey       string      `toml:"routing_key"`
 		CompressionCodec int
-		// RequiredAcks Tag
-		RequiredAcks int
-		// MaxRetry Tag
-		MaxRetry int
-		// Max Message Bytes
-		MaxMessageBytes int `toml:"max_message_bytes"`
+		RequiredAcks     int
+		MaxRetry         int
+		MaxMessageBytes  int `toml:"max_message_bytes"`
 
 		Version string `toml:"version"`
 
@@ -79,7 +73,7 @@ var sampleConfig = `
   # client_id = "Telegraf"
 
   ## Set the minimal supported Kafka version.  Setting this enables the use of new
-  ## Kafka features and APIs.  Of particular interested, lz4 compression
+  ## Kafka features and APIs.  Of particular interest, lz4 compression
   ## requires at least version 0.10.0.0.
   ##   ex: version = "1.1.0"
   # version = ""
@@ -115,11 +109,19 @@ var sampleConfig = `
   ##  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
 
+  ## Static routing key.  Used when no routing_tag is set or as a fallback
+  ## when the tag specified in routing tag is not found.  If set to "random",
+  ## a random value will be generated for each message.
+  ##   ex: routing_key = "random"
+  ##       routing_key = "telegraf"
+  # routing_key = ""
+
   ## CompressionCodec represents the various compression codecs recognized by
   ## Kafka in messages.
   ##  0 : No compression
   ##  1 : Gzip compression
   ##  2 : Snappy compression
+  ##  3 : LZ4 compression
   # compression_codec = 0
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many
@@ -271,6 +273,22 @@ func (k *Kafka) Description() string {
 	return "Configuration for the Kafka server to send metrics to"
 }
 
+func (k *Kafka) routingKey(metric telegraf.Metric) string {
+	if k.RoutingTag != "" {
+		key, ok := metric.GetTag(k.RoutingTag)
+		if ok {
+			return key
+		}
+	}
+
+	if k.RoutingKey == "random" {
+		u := uuid.NewV4()
+		return u.String()
+	}
+
+	return k.RoutingKey
+}
+
 func (k *Kafka) Write(metrics []telegraf.Metric) error {
 	msgs := make([]*sarama.ProducerMessage, 0, len(metrics))
 	for _, metric := range metrics {
@@ -283,8 +301,9 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 			Topic: k.GetTopicName(metric),
 			Value: sarama.ByteEncoder(buf),
 		}
-		if h, ok := metric.GetTag(k.RoutingTag); ok {
-			m.Key = sarama.StringEncoder(h)
+		key := k.routingKey(metric)
+		if key != "" {
+			m.Key = sarama.StringEncoder(key)
 		}
 		msgs = append(msgs, m)
 	}
@@ -294,6 +313,10 @@ func (k *Kafka) Write(metrics []telegraf.Metric) error {
 		// We could have many errors, return only the first encountered.
 		if errs, ok := err.(sarama.ProducerErrors); ok {
 			for _, prodErr := range errs {
+				if prodErr.Err == sarama.ErrMessageSizeTooLarge {
+					log.Printf("E! Error writing to output [kafka]: Message too large, consider increasing `max_message_bytes`; dropping batch")
+					return nil
+				}
 				return prodErr
 			}
 		}
