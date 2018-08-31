@@ -39,6 +39,7 @@ urls = ["www.google.com"] # required
 - result_code
     - 0: success
     - 1: no such host
+    - 2: ping error
 
 ### Tags:
 

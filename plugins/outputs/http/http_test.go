@@ -235,10 +235,8 @@ func TestBasicAuth(t *testing.T) {
 	require.NoError(t, err)
 
 	tests := []struct {
-		name     string
-		plugin   *HTTP
-		username string
-		password string
+		name   string
+		plugin *HTTP
 	}{
 		{
 			name: "default",
@@ -274,8 +272,8 @@ func TestBasicAuth(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				username, password, _ := r.BasicAuth()
-				require.Equal(t, tt.username, username)
-				require.Equal(t, tt.password, password)
+				require.Equal(t, tt.plugin.Username, username)
+				require.Equal(t, tt.plugin.Password, password)
 				w.WriteHeader(http.StatusOK)
 			})
 

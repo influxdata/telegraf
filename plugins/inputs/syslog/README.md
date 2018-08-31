@@ -33,9 +33,9 @@ Syslog messages should be formatted according to
   ## Only applies to stream sockets (e.g. TCP).
   # max_connections = 1024
 
-  ## Read timeout (default = 500ms).
+  ## Read timeout is the maximum time allowed for reading a single message (default = 5s).
   ## 0 means unlimited.
-  # read_timeout = 500ms
+  # read_timeout = "5s"
 
   ## Whether to parse in best effort mode or not (default = false).
   ## By default best effort parsing is off.

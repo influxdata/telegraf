@@ -8,12 +8,20 @@
 
 ### New Inputs
 
+- [activemq](./plugins/inputs/activemq/README.md) - Contributed by @mlabouardy
+- [filecount](./plugins/inputs/filecount/README.md) - Contributed by @sometimesfood
 - [file](./plugins/inputs/file/README.md) - Contributed by @maxunt
+- [icinga2](./plugins/inputs/icinga2/README.md) - Contributed by @mlabouardy
+- [kibana](./plugins/inputs/icinga2/README.md) - Contributed by @lpic10
+- [pgbouncer](./plugins/inputs/pgbouncer/README.md) - Contributed by @nerzhul
 - [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
+- [x509_cert](./plugins/inputs/x509_cert/README.md) - Contributed by @jtyr
 
 ### New Processors
 
 - [enum](./plugins/processors/enum/README.md) - Contributed by @KarstenSchnitter
+- [parser](./plugins/processors/parser/README.md) - Contributed by @maxunt & @Ayrdrie
+- [rename](./plugins/processors/rename/README.md) - Contributed by @goldibex
 
 ### New Aggregators
 
@@ -37,12 +45,69 @@
 - [#4347](https://github.com/influxdata/telegraf/pull/4347): Add http path configuration for OpenTSDB output.
 - [#4352](https://github.com/influxdata/telegraf/pull/4352): Gather IPMI metrics concurrently.
 - [#4362](https://github.com/influxdata/telegraf/pull/4362): Add mongo document and connection metrics.
-- [#3772](https://github.com/influxdata/telegraf/pull/3772): Add Enum Processor.
+- [#3772](https://github.com/influxdata/telegraf/pull/3772): Add enum processor plugin.
 - [#4386](https://github.com/influxdata/telegraf/pull/4386): Add user tag to procstat input.
 - [#4403](https://github.com/influxdata/telegraf/pull/4403): Add support for multivalue metrics to collectd parser.
 - [#4418](https://github.com/influxdata/telegraf/pull/4418): Add support for setting kafka client id.
 - [#4332](https://github.com/influxdata/telegraf/pull/4332): Add file input plugin and grok parser.
 - [#4320](https://github.com/influxdata/telegraf/pull/4320): Improve cloudwatch output performance.
+- [#3768](https://github.com/influxdata/telegraf/pull/3768): Add x509_cert input plugin.
+- [#4471](https://github.com/influxdata/telegraf/pull/4471): Add IPSIpAddress syntax to ipaddr conversion in snmp plugin.
+- [#4363](https://github.com/influxdata/telegraf/pull/4363): Add filecount input plugin.
+- [#4485](https://github.com/influxdata/telegraf/pull/4485): Add support for configuring an AWS endpoint_url.
+- [#4491](https://github.com/influxdata/telegraf/pull/4491): Send all messages before waiting for results in kafka output.
+- [#4492](https://github.com/influxdata/telegraf/pull/4492): Add support for lz4 compression to kafka output.
+- [#4450](https://github.com/influxdata/telegraf/pull/4450): Split multiple sensor keys in ipmi input.
+- [#4364](https://github.com/influxdata/telegraf/pull/4364): Support StatisticValues in cloudwatch output plugin.
+- [#4431](https://github.com/influxdata/telegraf/pull/4431): Add ip restriction for the prometheus_client output.
+- [#3918](https://github.com/influxdata/telegraf/pull/3918): Add pgbouncer input plugin.
+- [#2689](https://github.com/influxdata/telegraf/pull/2689): Add ActiveMQ input plugin.
+- [#4402](https://github.com/influxdata/telegraf/pull/4402): Add wavefront parser plugin.
+- [#4528](https://github.com/influxdata/telegraf/pull/4528): Add rename processor plugin.
+- [#4537](https://github.com/influxdata/telegraf/pull/4537): Add message 'max_bytes' configuration to kafka input.
+- [#4546](https://github.com/influxdata/telegraf/pull/4546): Add gopsutil meminfo fields to mem plugin.
+- [#4285](https://github.com/influxdata/telegraf/pull/4285): Document how to parse telegraf logs.
+- [#4542](https://github.com/influxdata/telegraf/pull/4542): Use dep v0.5.0.
+- [#4433](https://github.com/influxdata/telegraf/pull/4433): Add ability to set measurement from matched text in grok parser.
+- [#4565](https://github.com/influxdata/telegraf/pull/4465): Drop message batches in kafka output if too large.
+- [#4579](https://github.com/influxdata/telegraf/pull/4579): Add support for static and random routing keys in kafka output.
+- [#4539](https://github.com/influxdata/telegraf/pull/4539): Add logfmt parser plugin.
+- [#4551](https://github.com/influxdata/telegraf/pull/4551): Add parser processor plugin.
+- [#4559](https://github.com/influxdata/telegraf/pull/4559): Add Icinga2 input plugin.
+- [#4351](https://github.com/influxdata/telegraf/pull/4351): Add name, time, path and string field options to JSON parser.
+- [#4571](https://github.com/influxdata/telegraf/pull/4571): Add forwarded records to sqlserver input.
+- [#4585](https://github.com/influxdata/telegraf/pull/4585): Add Kibana input plugin.
+- [#4439](https://github.com/influxdata/telegraf/pull/4439): Add csv parser plugin.
+- [#4598](https://github.com/influxdata/telegraf/pull/4598): Add read_buffer_size option to statsd input.
+
+### Bugfixes
+
+- [#3438](https://github.com/influxdata/telegraf/issues/3438): Fix divide by zero in logparser input.
+
+## v1.7.4 [2018-08-29]
+
+### Bugfixes
+
+- [#4534](https://github.com/influxdata/telegraf/pull/4534): Skip unserializable metric in influxDB UDP output.
+- [#4554](https://github.com/influxdata/telegraf/pull/4554): Fix powerdns input tests.
+- [#4584](https://github.com/influxdata/telegraf/pull/4584): Fix burrow_group offset calculation for burrow input.
+- [#4550](https://github.com/influxdata/telegraf/pull/4550): Add result_code value for errors running ping command.
+- [#4605](https://github.com/influxdata/telegraf/pull/4605): Remove timeout deadline for udp syslog input.
+- [#4601](https://github.com/influxdata/telegraf/issues/4601): Ensure channel closed if an error occurs in cgroup input.
+- [#4544](https://github.com/influxdata/telegraf/issues/4544): Fix sending of basic auth credentials in http output.
+- [#4526](https://github.com/influxdata/telegraf/issues/4526): Use the correct GOARM value in the armel package.
+
+## v1.7.3 [2018-08-07]
+
+### Bugfixes
+
+- [#4434](https://github.com/influxdata/telegraf/issues/4434): Reduce required docker API version.
+- [#4498](https://github.com/influxdata/telegraf/pull/4498): Keep leading whitespace for messages in syslog input.
+- [#4470](https://github.com/influxdata/telegraf/issues/4470): Skip bad entries on interrupt input.
+- [#4501](https://github.com/influxdata/telegraf/issues/4501): Preserve metric type when using filters in output plugins.
+- [#3794](https://github.com/influxdata/telegraf/issues/3794): Fix error message if URL is unparseable in influxdb output.
+- [#4059](https://github.com/influxdata/telegraf/issues/4059): Use explicit zpool properties to fix parse error on FreeBSD 11.2.
+- [#4514](https://github.com/influxdata/telegraf/pull/4514): Lock buffer when adding metrics.
 
 ## v1.7.2 [2018-07-18]
 

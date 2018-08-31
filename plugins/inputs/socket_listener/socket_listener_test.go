@@ -55,7 +55,7 @@ func TestSocketListener_unix_tls(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "socket_listener.TestSocketListener_unix_tls.sock")
+	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unix_tls.sock")
 
 	sl := newSocketListener()
 	sl.ServiceAddress = "unix://" + sock
@@ -116,7 +116,7 @@ func TestSocketListener_unix(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "socket_listener.TestSocketListener_unix.sock")
+	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unix.sock")
 
 	defer testEmptyLog(t)()
 
@@ -140,7 +140,7 @@ func TestSocketListener_unixgram(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
-	sock := filepath.Join(tmpdir, "socket_listener.TestSocketListener_unixgram.sock")
+	sock := filepath.Join(tmpdir, "sl.TestSocketListener_unixgram.sock")
 
 	defer testEmptyLog(t)()
 

@@ -1,6 +1,7 @@
 package all
 
 import (
+	_ "github.com/influxdata/telegraf/plugins/inputs/activemq"
 	_ "github.com/influxdata/telegraf/plugins/inputs/aerospike"
 	_ "github.com/influxdata/telegraf/plugins/inputs/amqp_consumer"
 	_ "github.com/influxdata/telegraf/plugins/inputs/apache"
@@ -31,6 +32,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/fail2ban"
 	_ "github.com/influxdata/telegraf/plugins/inputs/fibaro"
 	_ "github.com/influxdata/telegraf/plugins/inputs/file"
+	_ "github.com/influxdata/telegraf/plugins/inputs/filecount"
 	_ "github.com/influxdata/telegraf/plugins/inputs/filestat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/fluentd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/graylog"
@@ -40,6 +42,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/http_listener"
 	_ "github.com/influxdata/telegraf/plugins/inputs/http_response"
 	_ "github.com/influxdata/telegraf/plugins/inputs/httpjson"
+	_ "github.com/influxdata/telegraf/plugins/inputs/icinga2"
 	_ "github.com/influxdata/telegraf/plugins/inputs/influxdb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/internal"
 	_ "github.com/influxdata/telegraf/plugins/inputs/interrupts"
@@ -54,6 +57,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/kapacitor"
 	_ "github.com/influxdata/telegraf/plugins/inputs/kernel"
 	_ "github.com/influxdata/telegraf/plugins/inputs/kernel_vmstat"
+	_ "github.com/influxdata/telegraf/plugins/inputs/kibana"
 	_ "github.com/influxdata/telegraf/plugins/inputs/kubernetes"
 	_ "github.com/influxdata/telegraf/plugins/inputs/leofs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/linux_sysctl_fs"
@@ -83,6 +87,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/opensmtpd"
 	_ "github.com/influxdata/telegraf/plugins/inputs/passenger"
 	_ "github.com/influxdata/telegraf/plugins/inputs/pf"
+	_ "github.com/influxdata/telegraf/plugins/inputs/pgbouncer"
 	_ "github.com/influxdata/telegraf/plugins/inputs/phpfpm"
 	_ "github.com/influxdata/telegraf/plugins/inputs/ping"
 	_ "github.com/influxdata/telegraf/plugins/inputs/postfix"
@@ -124,6 +129,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/webhooks"
 	_ "github.com/influxdata/telegraf/plugins/inputs/win_perf_counters"
 	_ "github.com/influxdata/telegraf/plugins/inputs/win_services"
+	_ "github.com/influxdata/telegraf/plugins/inputs/x509_cert"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zfs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zipkin"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zookeeper"
