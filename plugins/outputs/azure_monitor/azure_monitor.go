@@ -20,6 +20,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs"
+	"github.com/influxdata/telegraf/selfstat"
 )
 
 // AzureMonitor allows publishing of metrics to the Azure Monitor custom metrics
@@ -36,6 +37,8 @@ type AzureMonitor struct {
 	client *http.Client
 
 	cache map[time.Time]map[uint64]*aggregate
+
+	MetricOutsideWindow selfstat.Stat
 }
 
 type aggregate struct {
@@ -112,7 +115,8 @@ func (a *AzureMonitor) Connect() error {
 	region, resourceID, err := vmInstanceMetadata(a.client)
 	if a.Region != "" {
 		region = a.Region
-	} else if a.ResourceID != "" {
+	}
+	if a.ResourceID != "" {
 		resourceID = a.ResourceID
 	}
 
@@ -131,6 +135,12 @@ func (a *AzureMonitor) Connect() error {
 	}
 
 	a.Reset()
+
+	tags := map[string]string{
+		"region":      a.Region,
+		"resource_id": a.ResourceID,
+	}
+	a.MetricOutsideWindow = selfstat.Register("azure_monitor", "metric_outside_window", tags)
 
 	return nil
 }
@@ -361,7 +371,7 @@ func (a *AzureMonitor) Add(m telegraf.Metric) {
 	t := m.Time()
 	tbucket := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
 	if tbucket.Before(time.Now().Add(-time.Minute * 30)) {
-		//TODO: add a selfstat for metrics coming in outside 30 min window
+		a.MetricOutsideWindow.Incr(1)
 		return
 	}
 
