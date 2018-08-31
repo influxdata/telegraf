@@ -111,8 +111,16 @@ func (a *AzureMonitor) Connect() error {
 		a.NamespacePrefix = defaultNamespacePrefix
 	}
 
-	// Pull region and resource identifier
-	region, resourceID, err := vmInstanceMetadata(a.client)
+	var err error
+	var region string
+	var resourceID string
+	if a.Region == "" || a.ResourceID == "" {
+		// Pull region and resource identifier
+		region, resourceID, err = vmInstanceMetadata(a.client)
+		if err != nil {
+			return err
+		}
+	}
 	if a.Region != "" {
 		region = a.Region
 	}
