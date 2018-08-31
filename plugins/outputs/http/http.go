@@ -105,7 +105,7 @@ func (h *HTTP) createClient(ctx context.Context) (*http.Client, error) {
 			TokenURL:     h.TokenURL,
 			Scopes:       h.Scopes,
 		}
-		context.WithValue(ctx, oauth2.HTTPClient, client)
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, client)
 		client = oauthConfig.Client(ctx)
 	}
 
