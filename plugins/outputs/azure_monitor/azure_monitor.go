@@ -36,7 +36,8 @@ type AzureMonitor struct {
 	auth   autorest.Authorizer
 	client *http.Client
 
-	cache map[time.Time]map[uint64]*aggregate
+	cache    map[time.Time]map[uint64]*aggregate
+	timeFunc func() time.Time
 
 	MetricOutsideWindow selfstat.Stat
 }
@@ -96,6 +97,8 @@ func (a *AzureMonitor) SampleConfig() string {
 
 // Connect initializes the plugin and validates connectivity
 func (a *AzureMonitor) Connect() error {
+	a.cache = make(map[time.Time]map[uint64]*aggregate, 36)
+
 	if a.Timeout.Duration == 0 {
 		a.Timeout.Duration = defaultRequestTimeout
 	}
@@ -378,7 +381,7 @@ func (a *AzureMonitor) Add(m telegraf.Metric) {
 	// minutes into the future. Future metrics are dropped when pushed.
 	t := m.Time()
 	tbucket := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), 0, 0, t.Location())
-	if tbucket.Before(time.Now().Add(-time.Minute * 30)) {
+	if tbucket.Before(a.timeFunc().Add(-time.Minute * 30)) {
 		a.MetricOutsideWindow.Incr(1)
 		return
 	}
@@ -474,7 +477,7 @@ func (a *AzureMonitor) Push() []telegraf.Metric {
 	var metrics []telegraf.Metric
 	for tbucket, aggs := range a.cache {
 		// Do not send metrics early
-		if tbucket.After(time.Now().Add(-time.Minute)) {
+		if tbucket.After(a.timeFunc().Add(-time.Minute)) {
 			continue
 		}
 		for _, agg := range aggs {
@@ -492,13 +495,13 @@ func (a *AzureMonitor) Push() []telegraf.Metric {
 func (a *AzureMonitor) Reset() {
 	for tbucket := range a.cache {
 		// Remove aggregates older than 30 minutes
-		if tbucket.Before(time.Now().Add(-time.Minute * 30)) {
+		if tbucket.Before(a.timeFunc().Add(-time.Minute * 30)) {
 			delete(a.cache, tbucket)
 			continue
 		}
 		// Metrics updated within the latest 1m have not been pushed and should
 		// not be cleared.
-		if tbucket.After(time.Now().Add(-time.Minute)) {
+		if tbucket.After(a.timeFunc().Add(-time.Minute)) {
 			continue
 		}
 		for id := range a.cache[tbucket] {
@@ -510,7 +513,7 @@ func (a *AzureMonitor) Reset() {
 func init() {
 	outputs.Add("azure_monitor", func() telegraf.Output {
 		return &AzureMonitor{
-			cache: make(map[time.Time]map[uint64]*aggregate, 36),
+			timeFunc: time.Now,
 		}
 	})
 }
