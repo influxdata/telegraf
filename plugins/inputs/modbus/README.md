@@ -1,8 +1,8 @@
 # gomodbus Input Plugin
-=========
+
 This input plugin is a Fault-tolerant, fail-fast implementation of Modbus protocol in Go.
 
-Supported functions
+### Supported functions
 -------------------
 Bit access:
 *   Read Discrete Inputs
@@ -19,13 +19,15 @@ Bit access:
 *   Mask Write Register
 *   Read FIFO Queue
 
-Supported formats
+### Supported formats
 -----------------
 *   TCP
 *   Serial (RTU, ASCII)
 
-Usage:
-```go
+### Configuration:
+
+```toml
+[[inputs.bond]]
 	## Set Modbus Config (Either TCP or RTU Client)
 	## Modbust TCP Client
 	## TCP Client = "localhost:502"
@@ -54,8 +56,12 @@ Usage:
 	# Timeout in seconds
 	TimeOut = 5
 ```
+Run:
 
+```
+telegraf --config telegraf.conf --input-filter modbus --test
+```
 
-References
+### References
 ----------
 -   [Modbus Specifications and Implementation Guides](http://www.modbus.org/specs.php)
