@@ -83,6 +83,7 @@
 ### Bugfixes
 
 - [#3438](https://github.com/influxdata/telegraf/issues/3438): Fix divide by zero in logparser input.
+- [#4499](https://github.com/influxdata/telegraf/issues/4499): Fix instance and object name in performance counters with backslashes.
 
 ## v1.7.4 [2018-08-29]
 
