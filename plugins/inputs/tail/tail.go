@@ -103,11 +103,12 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			t.acc.AddError(fmt.Errorf("E! Error Glob %s failed to compile, %s", filepath, err))
 		}
-		// stat because error gets suppressed in g.Match()
-		if _, err = g.Stat(); err != nil {
-			log.Printf("E! [tail input] Failed to stat file: %s", err.Error())
+
+		if len(g.Match()) == 0 {
+			log.Printf("I! [tail input] No accessible files found matching '%s'", filepath)
 			continue
 		}
+
 		for file, _ := range g.Match() {
 			tailer, err := tail.TailFile(file,
 				tail.Config{
