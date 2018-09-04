@@ -1,0 +1,3 @@
+64-bit amd64 applications
+        vmx avx xsave pclmulqdq aes sse4.2 sse4.1 ssse3 popcnt tscp cx16
+        sse3 sse2 sse fxsr mmx cmov amd_sysc cx8 tsc fpu

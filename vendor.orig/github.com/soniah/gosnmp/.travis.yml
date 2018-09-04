@@ -1,0 +1,40 @@
+version: "= 0"
+
+language: go
+
+go:
+- 1.8
+- 1.9
+- "1.10"
+
+# TODO GOARCH 386 isn't being passed through to compiler - verify via raw logs
+
+env:
+  global:
+    - GOSNMP_TARGET=127.0.0.1
+    - GOSNMP_PORT=161
+    - GOSNMP_TARGET_IPV4=127.0.0.1
+    - GOSNMP_PORT_IPV4=161
+    - GOSNMP_TARGET_IPV6='::1'
+    - GOSNMP_PORT_IPV6=161
+  matrix:
+    - GOARCH=amd64
+    - GOARCH=386
+
+before_install:
+ - sudo apt-get update -qq
+ - sudo apt-get install snmpd
+
+install:
+ - go get github.com/soniah/gosnmp
+ - sudo ./snmp_users.sh
+ - sudo cat /etc/snmp/snmpd.conf
+ - sudo /etc/init.d/snmpd restart
+
+script:
+ - go test -v -tags helper
+ - go test -v -tags marshal
+ - go test -v -tags misc
+ - go test -v -tags api
+ - go test -v -tags end2end
+ - go test -v -tags trap

@@ -1,0 +1,4 @@
+64-bit amd64 applications
+        rdseed adx avx2 fma bmi2 bmi1 rdrand f16c vmx avx xsave pclmulqdq
+        aes movbe sse4.2 sse4.1 ssse3 popcnt tscp cx16 sse3 sse2 sse fxsr
+        mmx cmov amd_sysc cx8 tsc fpu

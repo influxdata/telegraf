@@ -1,0 +1,25 @@
+language: go
+
+go:
+  - 1.4.2
+  - tip
+
+matrix:
+  allow_failures:
+    - go: tip
+
+script:
+  - cd $HOME/gopath/src/collectd.org
+  - go vet -x ./...
+  - $HOME/gopath/bin/golint ./...
+  - go test -v -tags gofuzz ./...
+
+before_install:
+  - go get github.com/golang/lint/golint
+
+install:
+  - echo Skipping default TravisCI install step to handle canonical import paths...
+  - ln -s $HOME/gopath/src/github.com/ryancox/go-collectd $HOME/gopath/src/collectd.org 
+
+# notifications:
+#  irc: "chat.freenode.net#collectd"

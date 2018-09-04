@@ -1,0 +1,16 @@
+name: aerospike-client-go
+dir: src/github.com/aerospike/aerospike-client-go
+
+container:
+  - base:
+      - docker.qe.aerospike.com/build/aerospike-client-go:golang-1.5
+      - docker.qe.aerospike.com/build/aerospike-client-go:golang-1.6
+
+build:
+  - name: build
+    script:
+      - go get -v github.com/aerospike/aerospike-client-go
+      - go build -v -x github.com/aerospike/aerospike-client-go
+      - go install -v -x github.com/aerospike/aerospike-client-go/tools/cli
+      - go install -v -x github.com/aerospike/aerospike-client-go/tools/benchmark
+      - go install -v -x github.com/aerospike/aerospike-client-go/tools/asinfo
