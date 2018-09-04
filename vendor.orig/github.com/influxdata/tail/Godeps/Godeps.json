@@ -1,0 +1,15 @@
+{
+	"ImportPath": "github.com/hpcloud/tail",
+	"GoVersion": "go1.5.1",
+	"Deps": [
+		{
+			"ImportPath": "gopkg.in/fsnotify.v1",
+			"Comment": "v1.2.1",
+			"Rev": "7be54206639f256967dd82fa767397ba5f8f48f5"
+		},
+		{
+			"ImportPath": "gopkg.in/tomb.v1",
+			"Rev": "c131134a1947e9afd9cecfe11f4c6dff0732ae58"
+		}
+	]
+}

@@ -1,0 +1,19 @@
+sudo: false
+language: go
+go:
+  - 1.9.x
+  - 1.8.x
+install:
+  - go get -u github.com/golang/dep/cmd/dep
+  - dep ensure
+env:
+  - SCALA_VERSION=2.11 KAFKA_VERSION=0.10.1.1
+  - SCALA_VERSION=2.12 KAFKA_VERSION=0.10.2.1
+  - SCALA_VERSION=2.12 KAFKA_VERSION=0.11.0.1
+  - SCALA_VERSION=2.12 KAFKA_VERSION=1.0.0
+script:
+  - make default test-race
+addons:
+  apt:
+    packages:
+      - oracle-java8-set-default

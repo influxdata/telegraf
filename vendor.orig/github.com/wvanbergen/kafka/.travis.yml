@@ -1,0 +1,26 @@
+language: go
+sudo: false
+
+go:
+- "1.7"
+- "1.6"
+
+env:
+  global:
+  - ZOOKEEPER_PEERS=localhost:2181
+  - KAFKA_PEERS=localhost:9092
+
+before_install:
+- wget http://www.us.apache.org/dist/kafka/0.8.2.1/kafka_2.10-0.8.2.1.tgz -O kafka.tgz
+- mkdir -p kafka && tar xzf kafka.tgz -C kafka --strip-components 1
+- nohup bash -c "cd kafka && bin/zookeeper-server-start.sh config/zookeeper.properties &"
+- nohup bash -c "cd kafka && bin/kafka-server-start.sh config/server.properties &"
+- sleep 5
+- kafka/bin/kafka-topics.sh --create --partitions 1 --replication-factor 1 --topic test.1 --zookeeper localhost:2181
+- kafka/bin/kafka-topics.sh --create --partitions 4 --replication-factor 1 --topic test.4 --zookeeper localhost:2181
+- kafka/bin/kafka-topics.sh --create --partitions 64 --replication-factor 1 --topic test.64 --zookeeper localhost:2181
+
+script:
+- go build ./...
+- go vet ./...
+- GORACE="halt_on_error=1" go test -v -race ./...

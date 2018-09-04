@@ -1,0 +1,6 @@
+[submodule "appinsights/vendor/code.cloudfoundry.org/clock"]
+	path = vendor/code.cloudfoundry.org/clock
+	url = https://github.com/cloudfoundry/clock
+[submodule "vendor/github.com/satori/go.uuid"]
+	path = vendor/github.com/satori/go.uuid
+	url = https://github.com/satori/go.uuid.git

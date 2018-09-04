@@ -1,0 +1,18 @@
+{
+	"Name": "builder",
+	"DisplayName": "Go Builder",
+	"Description": "Run the Go Builder",
+	
+	"Dir": "C:\\dev\\go\\src",
+	"Exec": "C:\\windows\\system32\\cmd.exe",
+	"Args": ["/C","C:\\dev\\go\\src\\all.bat"],
+	"Env": [
+		"PATH=C:\\TDM-GCC-64\\bin;C:\\Program Files (x86)\\Git\\cmd",
+		"GOROOT_BOOTSTRAP=C:\\dev\\go_ready",
+		"HOMEDRIVE=C:",
+		"HOMEPATH=\\Documents and Settings\\Administrator"
+	],
+	
+	"Stderr": "C:\\builder_err.log",
+	"Stdout": "C:\\builder_out.log"
+}

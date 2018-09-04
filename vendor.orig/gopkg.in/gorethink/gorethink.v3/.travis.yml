@@ -1,0 +1,22 @@
+language: go
+
+go:
+  - 1.7.5
+  - 1.8.1
+  - tip
+
+cache: apt
+
+go_import_path: gopkg.in/gorethink/gorethink.v3
+
+before_script:
+  - source /etc/lsb-release && echo "deb http://download.rethinkdb.com/apt $DISTRIB_CODENAME main" | sudo tee /etc/apt/sources.list.d/rethinkdb.list
+  - wget -qO- http://download.rethinkdb.com/apt/pubkey.gpg | sudo apt-key add -
+  - sudo apt-get update
+  - sudo apt-get install rethinkdb
+  - rethinkdb > /dev/null 2>&1 &
+  - rethinkdb --port-offset 1 --directory rethinkdb_data1 --join localhost:29016 > /dev/null 2>&1 &
+  - rethinkdb --port-offset 2 --directory rethinkdb_data2 --join localhost:29016 > /dev/null 2>&1 &
+  - rethinkdb --port-offset 3 --directory rethinkdb_data3 --join localhost:29016 > /dev/null 2>&1 &
+
+script: go test -tags='cluster' -short -race -v ./...

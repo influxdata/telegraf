@@ -1,0 +1,15 @@
+language: go
+
+go:
+  - 1.8.x
+  - 1.9.x
+  - tip
+
+sudo: false
+
+os:
+  - osx
+  - linux
+
+script:
+  - go test -v ./appinsights/...

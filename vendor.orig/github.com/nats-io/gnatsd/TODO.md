@@ -1,0 +1,54 @@
+
+# General
+
+- [ ] Auth for queue groups?
+- [ ] Blacklist or ERR escalation to close connection for auth/permissions
+- [ ] Protocol updates, MAP, MPUB, etc
+- [ ] Multiple listen endpoints
+- [ ] Websocket / HTTP2 strategy
+- [ ] T series reservations
+- [ ] _SYS. server events?
+- [ ] No downtime restart
+- [ ] Signal based reload of configuration
+- [ ] brew, apt-get, rpm, chocately (windows)
+- [ ] IOVec pools and writev for high fanout?
+- [ ] Modify cluster support for single message across routes between pub/sub and d-queue
+- [ ] Memory limits/warnings?
+- [ ] Limit number of subscriptions a client can have, total memory usage etc.
+- [ ] Multi-tenant accounts with isolation of subject space
+- [ ] Pedantic state
+- [X] _SYS.> reserved for server events?
+- [X] Listen configure key vs addr and port
+- [X] Add ENV and variable support to dconf? ucl?
+- [X] Buffer pools/sync pools?
+- [X] Multiple Authorization / Access
+- [X] Write dynamic socket buffer sizes
+- [X] Read dynamic socket buffer sizes
+- [X] Info updates contain other implicit route servers
+- [X] Sublist better at high concurrency, cache uses writelock always currently
+- [X] Switch to 1.4/1.5 and use maps vs hashmaps in sublist
+- [X] NewSource on Rand to lower lock contention on QueueSubs, or redesign!
+- [X] Default sort by cid on connz
+- [X] Track last activity time per connection?
+- [X] Add total connections to varz so we won't miss spikes, etc.
+- [X] Add starttime and uptime to connz list.
+- [X] Gossip Protocol for discovery for clustering
+- [X] Add in HTTP requests to varz?
+- [X] Add favico and help link for monitoring?
+- [X] Better user/pass support using bcrypt etc.
+- [X] SSL/TLS support
+- [X] Add support for / to point to varz, connz, etc..
+- [X] Support sort options for /connz via nats-top
+- [X] Dropped message statistics (slow consumers)
+- [X] Add current time to each monitoring endpoint
+- [X] varz uptime do days and only integer secs
+- [X] Place version in varz (same info sent to clients)
+- [X] Place server ID/UUID in varz
+- [X] nats-top equivalent, utils
+- [X] Connz report routes (/routez)
+- [X] Docker
+- [X] Remove reliance on `ps`
+- [X] Syslog support
+- [X] Client support for language and version
+- [X] Fix benchmarks on linux
+- [X] Daemon mode? Won't fix

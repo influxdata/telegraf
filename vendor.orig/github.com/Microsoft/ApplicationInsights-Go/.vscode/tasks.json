@@ -1,0 +1,39 @@
+// Available variables which can be used inside of strings.
+// ${workspaceRoot}: the root folder of the team
+// ${file}: the current opened file
+// ${fileBasename}: the current opened file's basename
+// ${fileDirname}: the current opened file's dirname
+// ${fileExtname}: the current opened file's extension
+// ${cwd}: the current working directory of the spawned process
+
+// A task runner that calls the Go toolset
+{
+	"version": "0.1.0",
+	
+	// The command is tsc. Assumes that tsc has been installed using npm install -g typescript
+	"command": "go",
+	
+	// The command is a shell script
+	"isShellCommand": false,
+
+	// Show the output window only if unrecognized errors occur. 
+	"showOutput": "always",
+    
+    "windows": {
+        "command": "go.exe"
+    },
+	
+    "tasks": [
+        {
+            "taskName": "build",
+            "args": ["install"],
+            "isBuildCommand": true
+        },
+        {
+            "taskName": "test",
+            "args": ["test", "-v"],
+            "isBuildCommand": false,
+            "isTestCommand": true
+        }
+    ]
+}

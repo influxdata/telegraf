@@ -20,7 +20,6 @@ type Iptables struct {
 	Binary  string
 	Table   string
 	Chains  []string
-	Measurement  string
 	lister  chainLister
 }
 
@@ -44,8 +43,6 @@ func (ipt *Iptables) SampleConfig() string {
   # binary = "ip6tables" 
   ## defines the table to monitor:
   table = "filter"
-  ## Define this to alter the measurement name. Default is "iptables".
-  # measurement = ""
   ## defines the chains to monitor.
   ## NOTE: iptables rules without a comment will not be monitored.
   ## Read the plugin documentation for more information.
@@ -102,18 +99,14 @@ func (ipt *Iptables) chainList(table, chain string) (string, error) {
 	return string(out), err
 }
 
+const measurement = "iptables"
+
 var errParse = errors.New("Cannot parse iptables list information")
 var chainNameRe = regexp.MustCompile(`^Chain\s+(\S+)`)
 var fieldsHeaderRe = regexp.MustCompile(`^\s*pkts\s+bytes\s+`)
 var valuesRe = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+.*?/\*\s*(.+?)\s*\*/\s*`)
 
 func (ipt *Iptables) parseAndGather(data string, acc telegraf.Accumulator) error {
-	var measurement string
-	if ipt.Measurement != "" {
-		measurement = ipt.Measurement
-	} else {
-		measurement = "iptables"
-	}
 	lines := strings.Split(data, "\n")
 	if len(lines) < 3 {
 		return nil
