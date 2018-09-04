@@ -84,7 +84,7 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 				err := fmt.Errorf("time: %v could not be converted to float64", f.Fields[p.JSONTimeKey])
 				return nil, err
 			}
-			nTime = time.Unix(int64(timeInt) / 1000, (int64(timeInt) % 1000) * 1e6).UTC()
+			nTime = time.Unix(int64(timeInt)/1000, (int64(timeInt)%1000)*1e6).UTC()
 		} else {
 			timeStr, ok := f.Fields[p.JSONTimeKey].(string)
 			if !ok {
