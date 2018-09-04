@@ -48,7 +48,7 @@ func (g *GlobPath) Match() (map[string]os.FileInfo, error) {
 		info, err := os.Stat(g.path)
 		if err == nil {
 			out[g.path] = info
-		} else if strings.Contains(err.Error(), "permission denied") {
+		} else if os.IsPermission(err) {
 			return out, err
 		}
 		return out, nil
@@ -61,7 +61,7 @@ func (g *GlobPath) Match() (map[string]os.FileInfo, error) {
 			info, err := os.Stat(file)
 			if err == nil {
 				out[file] = info
-			} else if strings.Contains(err.Error(), "permission denied") {
+			} else if os.IsPermission(err) {
 				if returnErr.Error() != "" {
 					returnErr = fmt.Errorf("%s; %s", returnErr.Error(), err.Error())
 				} else {
@@ -83,12 +83,12 @@ func walkFilePath(root string, g glob.Glob) (map[string]os.FileInfo, error) {
 			matchedFiles[path] = info
 		} else {
 			fi, err := os.Stat(path)
-			if err != nil && strings.Contains(err.Error(), "permission denied") {
+			if err != nil && os.IsPermission(err) {
 				return err
 			}
 			if fi.IsDir() {
 				_, err := ioutil.ReadDir(path)
-				if err != nil && strings.Contains(err.Error(), "permission denied") {
+				if err != nil && os.IsPermission(err) {
 					return err
 				}
 			}
