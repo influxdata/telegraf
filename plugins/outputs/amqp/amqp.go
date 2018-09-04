@@ -93,8 +93,8 @@ var sampleConfig = `
   ## If true, exchange will be passively declared.
   # exchange_declare_passive = false
 
-  ## If true, exchange will be created as a durable exchange.
-  # exchange_durable = true
+  ## Exchange durability can be either "transient" or "durable".
+  # exchange_durability = "durable"
 
   ## Additional exchange arguments.
   # exchange_arguments = { }
