@@ -180,9 +180,14 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 			log.Printf("E! Error Glob %s failed to compile, %s", filepath, err)
 			continue
 		}
-		files := g.Match()
 
-		for file := range files {
+		// stat because error gets suppressed in g.Match()
+		if _, err = g.Stat(); err != nil {
+			log.Printf("E! [logparser input] Failed to stat file: %s", err.Error())
+			continue
+		}
+
+		for file := range g.Match() {
 			if _, ok := l.tailers[file]; ok {
 				// we're already tailing this file
 				continue

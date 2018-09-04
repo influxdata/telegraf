@@ -4,6 +4,7 @@ package tail
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 
@@ -101,6 +102,11 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 		g, err := globpath.Compile(filepath)
 		if err != nil {
 			t.acc.AddError(fmt.Errorf("E! Error Glob %s failed to compile, %s", filepath, err))
+		}
+		// stat because error gets suppressed in g.Match()
+		if _, err = g.Stat(); err != nil {
+			log.Printf("E! [tail input] Failed to stat file: %s", err.Error())
+			continue
 		}
 		for file, _ := range g.Match() {
 			tailer, err := tail.TailFile(file,

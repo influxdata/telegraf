@@ -64,6 +64,10 @@ func (g *GlobPath) Match() map[string]os.FileInfo {
 	return walkFilePath(g.root, g.g)
 }
 
+func (g *GlobPath) Stat() (os.FileInfo, error) {
+	return os.Stat(g.path)
+}
+
 // walk the filepath from the given root and return a list of files that match
 // the given glob.
 func walkFilePath(root string, g glob.Glob) map[string]os.FileInfo {
