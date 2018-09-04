@@ -3,6 +3,7 @@ package file
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
@@ -71,7 +72,13 @@ func (f *File) refreshFilePaths() error {
 		if err != nil {
 			return fmt.Errorf("could not compile glob %v: %v", file, err)
 		}
-		files := g.Match()
+
+		files, err := g.Match()
+		if err != nil {
+			log.Printf("E! [file input] Failed to open file '%s': %s", file, err.Error())
+			continue
+		}
+
 		if len(files) <= 0 {
 			return fmt.Errorf("could not find file: %v", file)
 		}

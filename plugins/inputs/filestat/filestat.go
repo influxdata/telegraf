@@ -61,7 +61,12 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 			f.globs[filepath] = g
 		}
 
-		files := g.Match()
+		files, err := g.Match()
+		if err != nil {
+			log.Printf("E! [filestat input] Failed to open file '%s': %s", filepath, err.Error())
+			continue
+		}
+
 		if len(files) == 0 {
 			acc.AddFields("filestat",
 				map[string]interface{}{

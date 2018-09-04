@@ -181,12 +181,13 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 			continue
 		}
 
-		if len(g.Match()) == 0 {
-			log.Printf("I! [logparser input] No accessible files found matching '%s'", filepath)
+		files, err := g.Match()
+		if err != nil {
+			log.Printf("E! [logparser input] Failed to open file '%s': %s", filepath, err.Error())
 			continue
 		}
 
-		for file := range g.Match() {
+		for file := range files {
 			if _, ok := l.tailers[file]; ok {
 				// we're already tailing this file
 				continue

@@ -2,6 +2,7 @@ package globpath
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,41 +42,61 @@ func Compile(path string) (*GlobPath, error) {
 	return &out, nil
 }
 
-func (g *GlobPath) Match() map[string]os.FileInfo {
+func (g *GlobPath) Match() (map[string]os.FileInfo, error) {
 	if !g.hasMeta {
 		out := make(map[string]os.FileInfo)
 		info, err := os.Stat(g.path)
 		if err == nil {
 			out[g.path] = info
+		} else if strings.Contains(err.Error(), "permission denied") {
+			return out, err
 		}
-		return out
+		return out, nil
 	}
 	if !g.hasSuperMeta {
 		out := make(map[string]os.FileInfo)
+		var returnErr error
 		files, _ := filepath.Glob(g.path)
 		for _, file := range files {
 			info, err := os.Stat(file)
 			if err == nil {
 				out[file] = info
+			} else if strings.Contains(err.Error(), "permission denied") {
+				if returnErr.Error() != "" {
+					returnErr = fmt.Errorf("%s; %s", returnErr.Error(), err.Error())
+				} else {
+					returnErr = err
+				}
 			}
 		}
-		return out
+		return out, returnErr
 	}
 	return walkFilePath(g.root, g.g)
 }
 
 // walk the filepath from the given root and return a list of files that match
 // the given glob.
-func walkFilePath(root string, g glob.Glob) map[string]os.FileInfo {
+func walkFilePath(root string, g glob.Glob) (map[string]os.FileInfo, error) {
 	matchedFiles := make(map[string]os.FileInfo)
 	walkfn := func(path string, info os.FileInfo, _ error) error {
 		if g.Match(path) {
 			matchedFiles[path] = info
+		} else {
+			fi, err := os.Stat(path)
+			if err != nil && strings.Contains(err.Error(), "permission denied") {
+				return err
+			}
+			if fi.IsDir() {
+				_, err := ioutil.ReadDir(path)
+				if err != nil && strings.Contains(err.Error(), "permission denied") {
+					return err
+				}
+			}
 		}
 		return nil
 	}
-	filepath.Walk(root, walkfn)
-	return matchedFiles
+	err := filepath.Walk(root, walkfn)
+	return matchedFiles, err
 }
 
 // find the root dir of the given path (could include globs).
