@@ -49,8 +49,6 @@ type VSphere struct {
 }
 
 var sampleConfig = `
-# Read metrics from one or many vCenters
-[[inputs.vsphere]]
   ## List of vCenter URLs to be monitored. These three lines must be uncommented
   ## and edited for the plugin to work.
   vcenters = [ "https://vcenter.local/sdk" ]
@@ -168,11 +166,11 @@ var sampleConfig = `
 
   ## number of objects to retreive per query for realtime resources (vms and hosts)
   ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
-  # objects_per_query = 256
+  # max_query_objects = 256
 
   ## number of metrics to retreive per query for non-realtime resources (clusters and datastores)
   ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
-  # metrics_per_query = 256
+  # max_query_metrics = 256
 
   ## number of go routines to use for collection and discovery of objects and metrics
   # collect_concurrency = 1

@@ -96,7 +96,6 @@ var configHeader = `
   hostname = ""
   ## If set to true, do no set the "host" tag in the telegraf agent.
   omit_hostname = false
-
 `
 
 func defaultVSphere() *VSphere {
@@ -198,6 +197,7 @@ func TestParseConfig(t *testing.T) {
 	p := regexp.MustCompile("\n#")
 	fmt.Printf("Source=%s", p.ReplaceAllLiteralString(c, "\n"))
 	c = configHeader + "\n[[inputs.vsphere]]\n" + p.ReplaceAllLiteralString(c, "\n")
+	fmt.Printf("Source=%s", c)
 	tab, err := toml.Parse([]byte(c))
 	require.NoError(t, err)
 	require.NotNil(t, tab)
