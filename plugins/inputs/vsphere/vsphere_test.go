@@ -172,6 +172,7 @@ func defaultVSphere() *VSphere {
 		MaxQueryObjects:         256,
 		ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 		Timeout:                 internal.Duration{Duration: time.Second * 20},
+		ForceDiscoverOnInit:     true,
 	}
 }
 
