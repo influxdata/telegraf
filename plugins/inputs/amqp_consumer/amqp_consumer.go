@@ -30,7 +30,8 @@ type AMQPConsumer struct {
 	ExchangeArguments  map[string]string `toml:"exchange_arguments"`
 
 	// Queue Name
-	Queue string
+	Queue           string `toml:"queue"`
+	QueueDurability bool   `toml:"queue_durability"`
 	// Binding Key
 	BindingKey string `toml:"binding_key"`
 
@@ -98,10 +99,13 @@ func (a *AMQPConsumer) SampleConfig() string {
   # exchange_arguments = { }
   # exchange_arguments = {"hash_propery" = "timestamp"}
 
-  ## AMQP queue name
+  ## AMQP queue name.
   queue = "telegraf"
 
-  ## Binding Key
+  ## AMQP queue durability.
+  queue_durability = true
+
+  ## Binding Key.
   binding_key = "#"
 
   ## Maximum number of messages server should give to the worker.
@@ -261,12 +265,12 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 	}
 
 	q, err := ch.QueueDeclare(
-		a.Queue, // queue
-		true,    // durable
-		false,   // delete when unused
-		false,   // exclusive
-		false,   // no-wait
-		nil,     // arguments
+		a.Queue,           // queue
+		a.QueueDurability, // durable
+		false,             // delete when unused
+		false,             // exclusive
+		false,             // no-wait
+		nil,               // arguments
 	)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to declare a queue: %s", err)
