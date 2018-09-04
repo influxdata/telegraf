@@ -130,8 +130,11 @@ The JSON data format also supports extracting time values through the
 config "json_time_key" and "json_time_format". If "json_time_key" is set,
 "json_time_format" must be specified.  The "json_time_key" describes the
 name of the field containing time information.  The "json_time_format"
-must be a recognized Go time format. If parsing a Unix epoch timestamp, e.g. 1536092344000,
-this config must be set to "Unix"; corresponding JSON value must be in milliseconds and unquoted.
+must be a recognized Go time format.
+If parsing a Unix epoch timestamp in seconds, e.g. 1536092344.1, this config must be set to "unix" (case insensitive);
+corresponding JSON value can have a decimal part and must be unquoted. NOTE: decimals beyond nanosecond precision will be ignored.
+If parsing a Unix epoch timestamp in milliseconds, e.g. 1536092344100, this config must be set to "unix_ms" (case insensitive);
+corresponding JSON value must be a (long) integer and be unquoted.
 If there is no year provided, the metrics will have the current year.
 More info on time formats can be found here: https://golang.org/pkg/time/#Parse
 

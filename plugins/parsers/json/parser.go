@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/tidwall/gjson"
+	"math"
 )
 
 var (
@@ -78,13 +79,21 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 			return nil, err
 		}
 
-		if p.JSONTimeFormat == "Unix" { // Unix epoch is assumed to be in milleseconds and unquoted.
-			timeInt, ok := f.Fields[p.JSONTimeKey].(float64) //Using float64 as that is what the JSONFlattener returns
+		// unix: epoch is assumed to be in seconds and unquoted. Can have a decimal part.
+		// unix_ms: epoch is assumed to be in milliseconds and unquoted. Cannot have a decimal part.
+		if strings.EqualFold(p.JSONTimeFormat, "unix") || strings.EqualFold(p.JSONTimeFormat, "unix_ms") {
+			timeEpoch, ok := f.Fields[p.JSONTimeKey].(float64) //Using float64 as that is what the JSONFlattener returns
 			if !ok {
 				err := fmt.Errorf("time: %v could not be converted to float64", f.Fields[p.JSONTimeKey])
 				return nil, err
 			}
-			nTime = time.Unix(int64(timeInt)/1000, (int64(timeInt)%1000)*1e6).UTC()
+
+			if strings.EqualFold(p.JSONTimeFormat, "unix") {
+				timeInt, timeFractional := math.Modf(timeEpoch)
+				nTime = time.Unix(int64(timeInt), int64(timeFractional*1e9)).UTC()
+			} else { //unix_ms
+				nTime = time.Unix(int64(timeEpoch)/1000, (int64(timeEpoch)%1000)*1e6).UTC()
+			}
 		} else {
 			timeStr, ok := f.Fields[p.JSONTimeKey].(string)
 			if !ok {
