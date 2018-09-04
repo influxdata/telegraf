@@ -28,15 +28,15 @@ func TestCompileAndMatch(t *testing.T) {
 	g5, err := Compile(dir + "/dir_doesnt_exist/**")
 	require.NoError(t, err)
 
-	matches := g1.Match()
+	matches, _ := g1.Match()
 	assert.Len(t, matches, 6)
-	matches = g2.Match()
+	matches, _ = g2.Match()
 	assert.Len(t, matches, 2)
-	matches = g3.Match()
+	matches, _ = g3.Match()
 	assert.Len(t, matches, 1)
-	matches = g4.Match()
+	matches, _ = g4.Match()
 	assert.Len(t, matches, 0)
-	matches = g5.Match()
+	matches, _ = g5.Match()
 	assert.Len(t, matches, 0)
 }
 
@@ -63,7 +63,7 @@ func TestFindNestedTextFile(t *testing.T) {
 	g1, err := Compile(dir + "/**.txt")
 	require.NoError(t, err)
 
-	matches := g1.Match()
+	matches, _ := g1.Match()
 	assert.Len(t, matches, 1)
 }
 
@@ -84,7 +84,7 @@ func TestMatch_ErrPermission(t *testing.T) {
 	for _, test := range tests {
 		glob, err := Compile(test.input)
 		require.NoError(t, err)
-		actual := glob.Match()
+		actual, _ := glob.Match()
 		require.Equal(t, test.expected, actual)
 	}
 }

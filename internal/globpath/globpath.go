@@ -86,7 +86,7 @@ func walkFilePath(root string, g glob.Glob) (map[string]os.FileInfo, error) {
 			if err != nil && os.IsPermission(err) {
 				return err
 			}
-			if fi.IsDir() {
+			if fi != nil && fi.IsDir() {
 				_, err := ioutil.ReadDir(path)
 				if err != nil && os.IsPermission(err) {
 					return err
