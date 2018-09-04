@@ -1,14 +1,16 @@
 package linux_wireless
 
 import (
+	"errors"
 	"fmt"
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	"io/ioutil"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // default file paths
@@ -80,11 +82,14 @@ func (ns *Wireless) gatherWireless(data []byte, acc telegraf.Accumulator) error 
 		tags := map[string]string{
 			"interface": wirelessData.Tags[x],
 		}
-		for z := 0; z < len(wirelessData.Data[x]); z++ {
-			entries[wirelessData.Headers[z]] = wirelessData.Data[x][z]
-			//fmt.Println(entries[wirelessData.Headers[z]])
+		if len(wirelessData.Headers) == len(wirelessData.Data[x]) && len(wirelessData.Data) == len(wirelessData.Tags) {
+			for z := 0; z < len(wirelessData.Data[x]); z++ {
+				entries[wirelessData.Headers[z]] = wirelessData.Data[x][z]
+			}
+			acc.AddFields("wireless", entries, tags)
+		} else {
+			return errors.New("Invalid field lengths returned.")
 		}
-		acc.AddFields("wireless", entries, tags)
 	}
 	return nil
 }
@@ -94,9 +99,15 @@ func loadWirelessTable(table []byte, dumpZeros bool) (WirelessData, error) {
 	var value int64
 	var err error
 	myLines := strings.Split(string(table), "\n")
+	if len(myLines) < 2 {
+		return WirelessData{}, errors.New("Error gathering Wireless Data")
+	}
 	// split on '|' and trim the spaces
 	h1 := strings.Split(myLines[0], "|")
 	h2 := strings.Split(myLines[1], "|")
+	if len(h2) < len(h1) || len(h2) < 2 {
+		return WirelessData{}, errors.New("Invalid header lengths returned.")
+	}
 	header_fields := make([]string, 11)
 	header_count := 1
 	// we'll collect the data and tags in here for now
@@ -110,7 +121,6 @@ func loadWirelessTable(table []byte, dumpZeros bool) (WirelessData, error) {
 	// first 2 headers have a '-' in them, so join those and remove the '-'
 	// also, ignore the first one, since it is the interface name
 	header_fields[0] = strings.ToLower(strings.Replace(h1[1]+h2[1], "-", "", -1))
-	fmt.Println("loadWirelessTable:Header 0: ", header_fields[0])
 	// next headers are composed with sub-headers, so build those.
 	for y := 2; y < len(h1)-2; y++ {
 		tmpStr := strings.Split(h2[y], " ")
@@ -119,14 +129,12 @@ func loadWirelessTable(table []byte, dumpZeros bool) (WirelessData, error) {
 				continue
 			}
 			header_fields[header_count] = strings.ToLower(strings.Replace(h1[y]+"_"+tmpStr[z], " ", "_", -1))
-			fmt.Println("loadWirelessTable:Header ", header_count, ": ", header_fields[header_count])
 			header_count++
 		}
 	}
 	// last 2 are simple multi-line headers, so join them
 	for t := len(h1) - 2; t < len(h1); t++ {
 		header_fields[header_count] = strings.ToLower(h1[t] + "_" + h2[t])
-		fmt.Println("loadWirelessTable:Header ", header_count, ": ", header_fields[header_count])
 		header_count++
 	}
 	// now let's go through the data and save it for return.
@@ -142,14 +150,6 @@ func loadWirelessTable(table []byte, dumpZeros bool) (WirelessData, error) {
 			} else {
 				if metrics[z] == "0" {
 					if dumpZeros {
-						continue
-						// if we're dumping zeros, we dump the header that goes with it.
-						if x == len(header_fields) {
-							//fmt.Println("Dump Zeros")
-						} else {
-							header_fields = append(header_fields[:x], header_fields[x+1:]...)
-						}
-
 						continue
 					}
 				}
