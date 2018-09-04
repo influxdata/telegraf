@@ -297,9 +297,6 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 
 				out, err := h.doRequest(server, bodyContent)
 
-				log.Printf("D! JBoss API Req err: %s", err)
-				log.Printf("D! JBoss API Req out: %s", out)
-
 				if err != nil {
 					log.Printf("E! JBoss Error handling response 1: %s\n", err)
 					log.Printf("E! JBoss server:%s bodyContent %s\n", server, bodyContent)
