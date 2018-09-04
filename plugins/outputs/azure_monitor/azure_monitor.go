@@ -59,9 +59,6 @@ const (
 )
 
 var sampleConfig = `
-  ## See the [Azure Monitor output plugin README](/plugins/outputs/azure_monitor/README.md)
-  ## for details on authentication options.
-
   ## Write HTTP timeout, formatted as a string. Defaults to 20s.
   # timeout = "20s"
 
@@ -74,12 +71,12 @@ var sampleConfig = `
   ## alphanumeric dimensions.
   # strings_as_dimensions = false
 
-  ## *The following two fields must be set or be available via the
+  ## Both region and resource_id must be set or be available via the
   ## Instance Metadata service on Azure Virtual Machines.*
-
+  #
   ## Azure Region to publish metrics against, e.g. eastus, southcentralus.
   # region = ""
-
+  #
   ## The Azure Resource ID against which metric will be logged, e.g.
   ## "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
   # resource_id = ""
@@ -240,13 +237,28 @@ func (a *AzureMonitor) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		id := hashIDWithTagKeysOnly(m)
 		if azm, ok := azmetrics[id]; !ok {
-			azmetrics[id] = translate(m, a.NamespacePrefix)
+			amm, err := translate(m, a.NamespacePrefix)
+			if err != nil {
+				log.Printf("E! [outputs.azure_monitor]: could not create azure metric for %q; discarding point", m.Name())
+				continue
+			}
+			azmetrics[id] = amm
 		} else {
+			amm, err := translate(m, a.NamespacePrefix)
+			if err != nil {
+				log.Printf("E! [outputs.azure_monitor]: could not create azure metric for %q; discarding point", m.Name())
+				continue
+			}
+
 			azmetrics[id].Data.BaseData.Series = append(
 				azm.Data.BaseData.Series,
-				translate(m, a.NamespacePrefix).Data.BaseData.Series...,
+				amm.Data.BaseData.Series...,
 			)
 		}
+	}
+
+	if len(azmetrics) == 0 {
+		return nil
 	}
 
 	var body []byte
@@ -327,7 +339,7 @@ func hashIDWithTagKeysOnly(m telegraf.Metric) uint64 {
 	return h.Sum64()
 }
 
-func translate(m telegraf.Metric, prefix string) *azureMonitorMetric {
+func translate(m telegraf.Metric, prefix string) (*azureMonitorMetric, error) {
 	var dimensionNames []string
 	var dimensionValues []string
 	for i, tag := range m.TagList() {
@@ -339,10 +351,22 @@ func translate(m telegraf.Metric, prefix string) *azureMonitorMetric {
 		dimensionValues = append(dimensionValues, tag.Value)
 	}
 
-	min, _ := m.GetField("min")
-	max, _ := m.GetField("max")
-	sum, _ := m.GetField("sum")
-	count, _ := m.GetField("count")
+	min, err := getFloatField(m, "min")
+	if err != nil {
+		return nil, err
+	}
+	max, err := getFloatField(m, "max")
+	if err != nil {
+		return nil, err
+	}
+	sum, err := getFloatField(m, "sum")
+	if err != nil {
+		return nil, err
+	}
+	count, err := getIntField(m, "count")
+	if err != nil {
+		return nil, err
+	}
 
 	mn, ns := "Missing", "Missing"
 	names := strings.SplitN(m.Name(), "-", 2)
@@ -364,15 +388,39 @@ func translate(m telegraf.Metric, prefix string) *azureMonitorMetric {
 				Series: []*azureMonitorSeries{
 					&azureMonitorSeries{
 						DimensionValues: dimensionValues,
-						Min:             min.(float64),
-						Max:             max.(float64),
-						Sum:             sum.(float64),
-						Count:           count.(int64),
+						Min:             min,
+						Max:             max,
+						Sum:             sum,
+						Count:           count,
 					},
 				},
 			},
 		},
+	}, nil
+}
+
+func getFloatField(m telegraf.Metric, key string) (float64, error) {
+	fv, ok := m.GetField(key)
+	if !ok {
+		return 0, fmt.Errorf("missing field: %s", key)
 	}
+
+	if value, ok := fv.(float64); ok {
+		return value, nil
+	}
+	return 0, fmt.Errorf("unexpected type: %s: %T", key, fv)
+}
+
+func getIntField(m telegraf.Metric, key string) (int64, error) {
+	fv, ok := m.GetField(key)
+	if !ok {
+		return 0, fmt.Errorf("missing field: %s", key)
+	}
+
+	if value, ok := fv.(int64); ok {
+		return value, nil
+	}
+	return 0, fmt.Errorf("unexpected type: %s: %T", key, fv)
 }
 
 // Add will append a metric to the output aggregate
