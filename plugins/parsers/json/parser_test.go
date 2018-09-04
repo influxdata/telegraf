@@ -596,6 +596,39 @@ func TestTimeParser(t *testing.T) {
 	require.Equal(t, false, metrics[0].Time() == metrics[1].Time())
 }
 
+func TestUnixTimeParser(t *testing.T) {
+	testString := `[
+		{
+			"a": 5,
+			"b": {
+				"c": 6,
+				"time": 1536001411000
+			},
+			"my_tag_1": "foo",
+			"my_tag_2": "baz"
+		},
+		{
+			"a": 7,
+			"b": {
+				"c": 8,
+				"time": 1536002769000
+			},
+			"my_tag_1": "bar",
+			"my_tag_2": "baz"
+		}
+	]`
+
+	parser := JSONParser{
+		MetricName:     "json_test",
+		JSONTimeKey:    "b_time",
+		JSONTimeFormat: "Unix",
+	}
+	metrics, err := parser.Parse([]byte(testString))
+	require.NoError(t, err)
+	require.Equal(t, 2, len(metrics))
+	require.Equal(t, false, metrics[0].Time() == metrics[1].Time())
+}
+
 func TestTimeErrors(t *testing.T) {
 	testString := `{
 		"a": 5,

@@ -78,14 +78,23 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 			return nil, err
 		}
 
-		timeStr, ok := f.Fields[p.JSONTimeKey].(string)
-		if !ok {
-			err := fmt.Errorf("time: %v could not be converted to string", f.Fields[p.JSONTimeKey])
-			return nil, err
-		}
-		nTime, err = time.Parse(p.JSONTimeFormat, timeStr)
-		if err != nil {
-			return nil, err
+		if p.JSONTimeFormat == "Unix" { // Unix epoch is assumed to be in milleseconds and unquoted.
+			timeInt, ok := f.Fields[p.JSONTimeKey].(float64) //Using float64 as that is what the JSONFlattener returns
+			if !ok {
+				err := fmt.Errorf("time: %v could not be converted to float64", f.Fields[p.JSONTimeKey])
+				return nil, err
+			}
+			nTime = time.Unix(int64(timeInt) / 1000, (int64(timeInt) % 1000) * 1e6).UTC()
+		} else {
+			timeStr, ok := f.Fields[p.JSONTimeKey].(string)
+			if !ok {
+				err := fmt.Errorf("time: %v could not be converted to string", f.Fields[p.JSONTimeKey])
+				return nil, err
+			}
+			nTime, err = time.Parse(p.JSONTimeFormat, timeStr)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		//if the year is 0, set to current year
