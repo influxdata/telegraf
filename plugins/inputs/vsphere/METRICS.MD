@@ -1,15 +1,17 @@
-# Common vSphere Performance Counters
-The set of performance counters in vSphere is open ended. Counters may be added or removed in new releases and the set of available counters may vary depending hardware, as well as what plugins and add-on products are installed. Therefore, providing a definitive list of available metrics is difficult. The metrics listed below are the most
-commonly available as of vSphere 6.5.
+# Common vSphere Performance Metrics
+The set of performance metrics in vSphere is open ended. Metrics may be added or removed in new releases 
+and the set of available metrics may vary depending hardware, as well as what plugins and add-on products 
+are installed. Therefore, providing a definitive list of available metrics is difficult. The metrics listed 
+below are the most commonly available as of vSphere 6.5.
 
 To list the exact set in your environment, please use the govc tool available [here](https://github.com/vmware/govmomi/tree/master/govc)
 
-To obtain the set of counters for e.g. a VM, you may use the following command:
+To obtain the set of metrics for e.g. a VM, you may use the following command:
 ```
 govc metric.ls vm/*
 ```
 
-## Virtual Machine Counters
+## Virtual Machine Metrics
 ```
 cpu.demandEntitlementRatio.latest
 cpu.usage.average
@@ -102,7 +104,7 @@ virtualDisk.write.average
 virtualDisk.read.average
 ```
 
-## Host System Counters
+## Host System Metrics
 ```
 cpu.corecount.contention.average
 cpu.usage.average
@@ -185,7 +187,7 @@ vmop.numSVMotion.latest
 vmop.numXVMotion.latest
 ```
 
-## Cluster Counters
+## Cluster Metrics
 ```
 cpu.corecount.contention.average
 cpu.usage.average
@@ -266,8 +268,10 @@ vmop.numChangeHostDS.latest
 vmop.numVMotion.latest
 vmop.numSVMotion.latest
 vmop.numXVMotion.latest
+```
 
-## Datastore Counters
+## Datastore Metrics
+```
 datastore.numberReadAveraged.average
 datastore.throughput.contention.average
 datastore.throughput.usage.average

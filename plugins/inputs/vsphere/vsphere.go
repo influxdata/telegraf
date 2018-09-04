@@ -49,128 +49,152 @@ type VSphere struct {
 }
 
 var sampleConfig = `
-## List of vCenter URLs to be monitored. These three lines must be uncommented
-## and edited for the plugin to work.
-# vcenters = [ "https://vcenter.local/sdk" ]
-# username = "user@corp.local"
-# password = "secret"
+# Read metrics from one or many vCenters
+[[inputs.vsphere]]
+  ## List of vCenter URLs to be monitored. These three lines must be uncommented
+  ## and edited for the plugin to work.
+  vcenters = [ "https://vcenter.local/sdk" ]
+  username = "user@corp.local"
+  password = "secret"
 
-## VM counter configuration
-## Collect VM instance metrics, such as individual cores? (default=true)
-#vm_instances = true
+  ############### VMs ###############
+  ## Typical VM metrics (if omitted or empty, all metrics are collected)
+  vm_metric_include = [
+    "cpu.demand.average",
+    "cpu.idle.summation",
+    "cpu.latency.average",
+    "cpu.readiness.average",
+    "cpu.ready.summation",
+    "cpu.run.summation",
+    "cpu.usagemhz.average",
+    "cpu.used.summation",
+    "cpu.wait.summation",
+    "mem.active.average",
+    "mem.granted.average",
+    "mem.latency.average",
+    "mem.swapin.average",
+    "mem.swapinRate.average",
+    "mem.swapout.average",
+    "mem.swapoutRate.average",
+    "mem.usage.average",
+    "mem.vmmemctl.average",
+    "net.bytesRx.average",
+    "net.bytesTx.average",
+    "net.droppedRx.summation",
+    "net.droppedTx.summation",
+    "net.usage.average",
+    "power.power.average",    
+    "virtualDisk.numberReadAveraged.average",
+    "virtualDisk.numberWriteAveraged.average",
+    "virtualDisk.read.average",
+    "virtualDisk.readOIO.latest",
+    "virtualDisk.throughput.usage.average",
+    "virtualDisk.totalReadLatency.average",
+    "virtualDisk.totalWriteLatency.average",
+    "virtualDisk.write.average",
+    "virtualDisk.writeOIO.latest",
+    "sys.uptime.latest",
+  ]
+  # vm_metric_exclude = [] ## Nothing is excluded by default
+  # vm_instances = true ## true by default
 
-## Typical VM metrics (if omitted, all metrics are collected)
-vm_metric_include = [
-  "cpu.ready.summation",
-  "mem.swapinRate.average",
-  "virtualDisk.numberReadAveraged.average",
-  "virtualDisk.numberWriteAveraged.average",
-  "virtualDisk.totalReadLatency.average",
-  "virtualDisk.totalWriteLatency.average",
-  "virtualDisk.readOIO.latest",
-  "virtualDisk.writeOIO.latest",
-  "net.bytesRx.average",
-  "net.bytesTx.average",
-  "net.droppedRx.summation.",
-  "net.droppedTx.summation.",
-  "cpu.run.summation",
-  "cpu.used.summation",
-  "mem.swapoutRate.average",
-  "virtualDisk.read.average",
-  "virtualDisk.write.average" ]
+  ############### Hosts ###############
+  ## Typical host metrics (if omitted or empty, all metrics are collected)
+  host_metric_include = [
+    "cpu.coreUtilization.average",
+    "cpu.costop.summation",
+    "cpu.demand.average",
+    "cpu.idle.summation",
+    "cpu.latency.average",
+    "cpu.readiness.average",
+    "cpu.ready.summation",
+    "cpu.swapwait.summation",
+    "cpu.usage.average",
+    "cpu.usagemhz.average",
+    "cpu.used.summation",
+    "cpu.utilization.average",
+    "cpu.wait.summation",
+    "disk.deviceReadLatency.average",
+    "disk.deviceWriteLatency.average",
+    "disk.kernelReadLatency.average",
+    "disk.kernelWriteLatency.average",
+    "disk.numberReadAveraged.average",
+    "disk.numberWriteAveraged.average",
+    "disk.read.average",
+    "disk.totalReadLatency.average",
+    "disk.totalWriteLatency.average",
+    "disk.write.average",
+    "mem.active.average",
+    "mem.latency.average",
+    "mem.state.latest",
+    "mem.swapin.average",
+    "mem.swapinRate.average",
+    "mem.swapout.average",
+    "mem.swapoutRate.average",
+    "mem.totalCapacity.average",
+    "mem.usage.average",
+    "mem.vmmemctl.average",
+    "net.bytesRx.average",
+    "net.bytesTx.average",
+    "net.droppedRx.summation",
+    "net.droppedTx.summation",
+    "net.errorsRx.summation",
+    "net.errorsTx.summation",
+    "net.usage.average",
+    "power.power.average",
+    "storageAdapter.numberReadAveraged.average",
+    "storageAdapter.numberWriteAveraged.average",
+    "storageAdapter.read.average",
+    "storageAdapter.write.average",
+    "sys.uptime.latest",
+  ]
+  # host_metric_exclude = [] ## Nothing excluded by default
+  # host_instances = true ## true by default
 
-# vm_metric_exclude = [] ## Nothing is excluded by default
+  ############### Clusters ###############
+  # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
+  # cluster_metric_exclude = [] ## Nothing excluded by default
+  # cluster_instances = true ## true by default
 
-## Host counter configuration
-## Collect host instance metrics, such as individual cores? (default=true)
-#host_instances = true
+  ############### Datastores ###############
+  # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
+  # datastore_metric_exclude = [] ## Nothing excluded by default
+  # datastore_instances = false ## false by default for Datastores only
 
-## Typical host metrics (if omitted, all metrics are collected)
-host_metric_include = [
-  "cpu.ready.summation",
-  "cpu.latency.average",
-  "cpu.coreUtilization.average",
-  "mem.usage.average",
-  "mem.swapinRate.average",
-  "mem.state.latest",
-  "mem.latency.average",
-  "mem.vmmemctl.average",
-  "disk.read.average",
-  "disk.write.average",
-  "disk.numberReadAveraged.average",
-  "disk.numberWriteAveraged.average",
-  "disk.deviceReadLatency.average",
-  "disk.deviceWriteLatency.average",
-  "disk.totalReadLatency.average",
-  "disk.totalWriteLatency.average",
-  "storageAdapter.read.average",
-  "storageAdapter.write.average",
-  "storageAdapter.numberReadAveraged.average",
-  "storageAdapter.numberWriteAveraged.average",
-  "net.errorsRx.summation",
-  "net.errorsTx.summation",
-  "net.bytesRx.average",
-  "net.bytesTx.average",
-  "cpu.used.summation",
-  "cpu.usage.average",
-  "cpu.utilization.average",
-  "cpu.wait.summation.",
-  "cpu.idle.summation",
-  "cpu.readiness.average",
-  "cpu.costop.summation",
-  "cpu.swapwait.summation",
-  "mem.swapoutRate.average",
-  "disk.kernelReadLatency.average",
-  "disk.kernelWriteLatency.average" ]
 
-# host_metric_exclude = [] ## Nothing excluded by default
+  ############### Plugin Settings  ###############
+  ## separator character to use for measurement and field names (default: "_")
+  # separator = "_"
 
-## Cluster counter configuration
-## Collect cluster instance metrics, such as individual cores? (default=true)
-#cluster_instances = true
+  ## number of objects to retreive per query for realtime resources (vms and hosts)
+  ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
+  # objects_per_query = 256
 
-## Typical cluster metrics (if omitted, all metrics are collected)
-cluster_metric_include = [
-  "cpu.usage.*",
-  "cpu.usagemhz.*",
-  "mem.usage.*",
-  "mem.active.*" ]
+  ## number of metrics to retreive per query for non-realtime resources (clusters and datastores)
+  ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
+  # metrics_per_query = 256
 
-# cluster_metric_exclude = [] ## Nothing excluded by default
+  ## number of go routines to use for collection and discovery of objects and metrics
+  # collect_concurrency = 1
+  # discover_concurrency = 1
 
-## Datastore counter configuration
-## Collect datastore instance metrics, such as individual LUNs and datafiles? (default=false)
-#datastore_instances = false
+  ## whether or not to force discovery of new objects on initial gather call before collecting metrics
+  ## when true for large environments this may cause errors for time elapsed while collecting metrics
+  ## when false (default) the first collection cycle may result in no or limited metrics while objects are discovered
+  # force_discover_on_init = false
 
-## Typical datastore metrics (if omitted, all metrics are collected)
-##
-## WARNING: It is not recommended to include all metrics. Your collection will probably time out if you do!
-##
-datastore_metric_include = [
-  "datastore.read.average",
-  "datastore.write.average",
-  "datastore.throughput.usage.average",	
-  "datastore.throughput.contention.average" ]
+  ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
+  # object_discovery_interval = "300s"
 
-## Number of objects to retreive per query. 
-# max_query_objects = 256
+  ## timeout applies to any of the api request made to vcenter
+  # timeout = "20s"
 
-## Number of metrics (data points) to retrieve in each query for non-realtime metrics (cluster and datastore).
-## Set to 64 for vCenter 5.5 and 6.0 (default: 256)
-# max_query_metrics = 256
-
-## the interval before (re)discovering objects subject to metrics collection (default: 300s)
-# object_discovery_interval = "300s"
-
-## timeout applies to any of the connection request made to vcenter
-# timeout = "20s"
-
-## Optional SSL Config
-# ssl_ca = "/path/to/cafile"
-# ssl_cert = "/path/to/certfile"
-# ssl_key = "/path/to/keyfile"
-## Use SSL but skip chain & host verification
-# insecure_skip_verify = false 
+  ## Optional SSL Config
+  # ssl_ca = "/path/to/cafile"
+  # ssl_cert = "/path/to/certfile"
+  # ssl_key = "/path/to/keyfile"
+  ## Use SSL but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
@@ -271,7 +295,7 @@ func init() {
 			MaxQueryMetrics:         256,
 			CollectConcurrency:      1,
 			DiscoverConcurrency:     1,
-			ForceDiscoverOnInit:     true,
+			ForceDiscoverOnInit:     false,
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 			Timeout:                 internal.Duration{Duration: time.Second * 20},
 		}
