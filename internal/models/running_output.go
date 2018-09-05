@@ -115,6 +115,8 @@ func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
 	}
 
 	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
+		ro.Lock()
+		defer ro.Unlock()
 		output.Add(m)
 		return
 	}
