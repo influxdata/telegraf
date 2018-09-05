@@ -27,6 +27,10 @@
 
 - [valuecounter](./plugins/aggregators/valuecounter/README.md) - Contributed by @piotr1212
 
+### New Outputs
+
+- [azure_monitor](./plugins/outputs/azure_monitor/README.md) - Contributed by @influxdata
+
 ### Features
 
 - [#4236](https://github.com/influxdata/telegraf/pull/4236): Add SSL/TLS support to redis input.
@@ -79,6 +83,8 @@
 - [#4585](https://github.com/influxdata/telegraf/pull/4585): Add Kibana input plugin.
 - [#4439](https://github.com/influxdata/telegraf/pull/4439): Add csv parser plugin.
 - [#4598](https://github.com/influxdata/telegraf/pull/4598): Add read_buffer_size option to statsd input.
+- [#4089](https://github.com/influxdata/telegraf/pull/4089): Add azure_monitor output plugin.
+- [#4628](https://github.com/influxdata/telegraf/pull/4628): Add queue_durability parameter to amqp_consumer input.
 
 ### Bugfixes
 
