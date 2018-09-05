@@ -69,7 +69,7 @@ const (
 )
 
 var sampleConfig = `
-  ## Write HTTP timeout, formatted as a string. Defaults to 20s.
+  ## Timeout for HTTP writes.
   # timeout = "20s"
 
   ## Set the namespace prefix, defaults to "Telegraf/<input-name>".
@@ -82,15 +82,16 @@ var sampleConfig = `
   # strings_as_dimensions = false
 
   ## Both region and resource_id must be set or be available via the
-  ## Instance Metadata service on Azure Virtual Machines.*
+  ## Instance Metadata service on Azure Virtual Machines.
   #
-  ## Azure Region to publish metrics against, e.g. eastus, southcentralus.
+  ## Azure Region to publish metrics against.
+  ##   ex: region = "southcentralus"
   # region = ""
   #
   ## The Azure Resource ID against which metric will be logged, e.g.
-  ## "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
+  ##   ex: resource_id = "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
   # resource_id = ""
-  `
+`
 
 // Description provides a description of the plugin
 func (a *AzureMonitor) Description() string {
