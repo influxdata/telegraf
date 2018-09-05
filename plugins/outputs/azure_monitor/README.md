@@ -34,14 +34,14 @@ amount will be deterministically dropped.
   # strings_as_dimensions = false
 
   ## Both region and resource_id must be set or be available via the
-  ## Instance Metadata service on Azure Virtual Machines.*
+  ## Instance Metadata service on Azure Virtual Machines.
   #
-  ## Azure Region to publish metrics against, e.g. eastus, southcentralus.
-  ##   ex: region = "eastus"
+  ## Azure Region to publish metrics against.
+  ##   ex: region = "southcentralus"
   # region = ""
   #
   ## The Azure Resource ID against which metric will be logged, e.g.
-  ## "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
+  ##   ex: resource_id = "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
   # resource_id = ""
 ```
 
@@ -54,8 +54,13 @@ amount will be deterministically dropped.
    For regions with Custom Metrics support, an endpoint will be available with
    the format `https://<region>.monitoring.azure.com`. The following regions
    are currently known to be supported:
-    - West Central US, e.g. `https://westcentralus.monitoring.azure.com`
-    - South Central US, e.g. `https://southcentralus.monitoring.azure.com`
+    - East US (eastus)
+    - West US 2 (westus2)
+    - South Central US (southcentralus)
+    - West Central US (westcentralus)
+    - North Europe (northeurope)
+    - West Europe (westeurope)
+    - Southeast Asia (southeastasia)
 
 [resource provider]: https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-manager-supported-services
 [enable msi]: https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/qs-configure-portal-windows-vm
