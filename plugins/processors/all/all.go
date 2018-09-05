@@ -7,7 +7,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/processors/parser"
 	_ "github.com/influxdata/telegraf/plugins/processors/printer"
 	_ "github.com/influxdata/telegraf/plugins/processors/regex"
-	_ "github.com/influxdata/telegraf/plugins/processors/strings"
 	_ "github.com/influxdata/telegraf/plugins/processors/rename"
+	_ "github.com/influxdata/telegraf/plugins/processors/strings"
 	_ "github.com/influxdata/telegraf/plugins/processors/topk"
 )
