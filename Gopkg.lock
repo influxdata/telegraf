@@ -22,6 +22,18 @@
   version = "v0.3.0"
 
 [[projects]]
+  name = "github.com/Azure/go-autorest"
+  packages = [
+    "autorest",
+    "autorest/adal",
+    "autorest/azure",
+    "autorest/azure/auth",
+    "autorest/date"
+  ]
+  revision = "1f7cd6cfe0adea687ad44a512dfe76140f804318"
+  version = "v10.12.0"
+
+[[projects]]
   branch = "master"
   digest = "1:298712a3ee36b59c3ca91f4183bd75d174d5eaa8b4aed5072831f126e2e752f6"
   name = "github.com/Microsoft/ApplicationInsights-Go"
@@ -223,6 +235,12 @@
   pruneopts = ""
   revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
   version = "v3.2.0"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/dimchansky/utfbom"
+  packages = ["."]
+  revision = "6c6132ff69f0f6c088739067407b5d32c52e1d0f"
 
 [[projects]]
   digest = "1:522eff2a1f014a64fb403db60fc0110653e4dc5b59779894d208e697b0708ddc"
@@ -975,7 +993,9 @@
     "ed25519/internal/edwards25519",
     "md4",
     "pbkdf2",
-    "ssh/terminal",
+    "pkcs12",
+    "pkcs12/internal/rc2",
+    "ssh/terminal"
   ]
   pruneopts = ""
   revision = "a2144134853fc9a27a7b1e3eb4f19f1a76df13c9"

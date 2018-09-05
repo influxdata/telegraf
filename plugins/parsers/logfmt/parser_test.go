@@ -7,7 +7,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/require"
 )
 
 func MustMetric(t *testing.T, m *testutil.Metric) telegraf.Metric {
@@ -25,28 +24,28 @@ func TestParse(t *testing.T) {
 		measurement string
 		now         func() time.Time
 		bytes       []byte
-		want        []testutil.Metric
+		want        []telegraf.Metric
 		wantErr     bool
 	}{
 		{
 			name: "no bytes returns no metrics",
 			now:  func() time.Time { return time.Unix(0, 0) },
-			want: []testutil.Metric{},
+			want: []telegraf.Metric{},
 		},
 		{
 			name:        "test without trailing end",
 			bytes:       []byte("foo=\"bar\""),
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
-			want: []testutil.Metric{
-				testutil.Metric{
-					Measurement: "testlog",
-					Tags:        map[string]string{},
-					Fields: map[string]interface{}{
+			want: []telegraf.Metric{
+				testutil.MustMetric(
+					"testlog",
+					map[string]string{},
+					map[string]interface{}{
 						"foo": "bar",
 					},
-					Time: time.Unix(0, 0),
-				},
+					time.Unix(0, 0),
+				),
 			},
 		},
 		{
@@ -54,15 +53,15 @@ func TestParse(t *testing.T) {
 			bytes:       []byte("foo=\"bar\"\n"),
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
-			want: []testutil.Metric{
-				testutil.Metric{
-					Measurement: "testlog",
-					Tags:        map[string]string{},
-					Fields: map[string]interface{}{
+			want: []telegraf.Metric{
+				testutil.MustMetric(
+					"testlog",
+					map[string]string{},
+					map[string]interface{}{
 						"foo": "bar",
 					},
-					Time: time.Unix(0, 0),
-				},
+					time.Unix(0, 0),
+				),
 			},
 		},
 		{
@@ -70,18 +69,18 @@ func TestParse(t *testing.T) {
 			bytes:       []byte(`ts=2018-07-24T19:43:40.275Z lvl=info msg="http request" method=POST`),
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
-			want: []testutil.Metric{
-				testutil.Metric{
-					Measurement: "testlog",
-					Tags:        map[string]string{},
-					Fields: map[string]interface{}{
+			want: []telegraf.Metric{
+				testutil.MustMetric(
+					"testlog",
+					map[string]string{},
+					map[string]interface{}{
 						"lvl":    "info",
 						"msg":    "http request",
 						"method": "POST",
 						"ts":     "2018-07-24T19:43:40.275Z",
 					},
-					Time: time.Unix(0, 0),
-				},
+					time.Unix(0, 0),
+				),
 			},
 		},
 		{
@@ -89,42 +88,42 @@ func TestParse(t *testing.T) {
 			bytes:       []byte("ts=2018-07-24T19:43:40.275Z lvl=info msg=\"http request\" method=POST\nparent_id=088876RL000 duration=7.45 log_id=09R4e4Rl000"),
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
-			want: []testutil.Metric{
-				testutil.Metric{
-					Measurement: "testlog",
-					Tags:        map[string]string{},
-					Fields: map[string]interface{}{
+			want: []telegraf.Metric{
+				testutil.MustMetric(
+					"testlog",
+					map[string]string{},
+					map[string]interface{}{
 						"lvl":    "info",
 						"msg":    "http request",
 						"method": "POST",
 						"ts":     "2018-07-24T19:43:40.275Z",
 					},
-					Time: time.Unix(0, 0),
-				},
-				testutil.Metric{
-					Measurement: "testlog",
-					Tags:        map[string]string{},
-					Fields: map[string]interface{}{
+					time.Unix(0, 0),
+				),
+				testutil.MustMetric(
+					"testlog",
+					map[string]string{},
+					map[string]interface{}{
 						"parent_id": "088876RL000",
 						"duration":  7.45,
 						"log_id":    "09R4e4Rl000",
 					},
-					Time: time.Unix(0, 0),
-				},
+					time.Unix(0, 0),
+				),
 			},
 		},
 		{
 			name:    "keys without = or values are ignored",
 			now:     func() time.Time { return time.Unix(0, 0) },
 			bytes:   []byte(`i am no data.`),
-			want:    []testutil.Metric{},
+			want:    []telegraf.Metric{},
 			wantErr: false,
 		},
 		{
 			name:    "keys without values are ignored",
 			now:     func() time.Time { return time.Unix(0, 0) },
 			bytes:   []byte(`foo="" bar=`),
-			want:    []testutil.Metric{},
+			want:    []telegraf.Metric{},
 			wantErr: false,
 		},
 		{
@@ -132,7 +131,7 @@ func TestParse(t *testing.T) {
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			bytes:       []byte(`bar=baz foo="bar`),
-			want:        []testutil.Metric{},
+			want:        []telegraf.Metric{},
 			wantErr:     true,
 		},
 		{
@@ -140,7 +139,7 @@ func TestParse(t *testing.T) {
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			bytes:       []byte(`"foo=" bar=baz`),
-			want:        []testutil.Metric{},
+			want:        []telegraf.Metric{},
 			wantErr:     true,
 		},
 	}
@@ -155,10 +154,8 @@ func TestParse(t *testing.T) {
 				t.Errorf("Logfmt.Parse error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			require.Equal(t, len(tt.want), len(got))
-			for i, m := range got {
-				testutil.MustEqual(t, m, tt.want[i])
-			}
+
+			testutil.RequireMetricsEqual(t, tt.want, got)
 		})
 	}
 }
@@ -169,13 +166,13 @@ func TestParseLine(t *testing.T) {
 		s           string
 		measurement string
 		now         func() time.Time
-		want        testutil.Metric
+		want        telegraf.Metric
 		wantErr     bool
 	}{
 		{
 			name:    "No Metric In line",
 			now:     func() time.Time { return time.Unix(0, 0) },
-			want:    testutil.Metric{},
+			want:    nil,
 			wantErr: true,
 		},
 		{
@@ -183,34 +180,34 @@ func TestParseLine(t *testing.T) {
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			s:           `ts=2018-07-24T19:43:35.207268Z lvl=5 msg="Write failed" log_id=09R4e4Rl000`,
-			want: testutil.Metric{
-				Measurement: "testlog",
-				Fields: map[string]interface{}{
+			want: testutil.MustMetric(
+				"testlog",
+				map[string]string{},
+				map[string]interface{}{
 					"ts":     "2018-07-24T19:43:35.207268Z",
 					"lvl":    int64(5),
 					"msg":    "Write failed",
 					"log_id": "09R4e4Rl000",
 				},
-				Tags: map[string]string{},
-				Time: time.Unix(0, 0),
-			},
+				time.Unix(0, 0),
+			),
 		},
 		{
 			name:        "ParseLine only returns metrics from first string",
 			now:         func() time.Time { return time.Unix(0, 0) },
 			measurement: "testlog",
 			s:           "ts=2018-07-24T19:43:35.207268Z lvl=5 msg=\"Write failed\" log_id=09R4e4Rl000\nmethod=POST parent_id=088876RL000 duration=7.45 log_id=09R4e4Rl000",
-			want: testutil.Metric{
-				Measurement: "testlog",
-				Fields: map[string]interface{}{
+			want: testutil.MustMetric(
+				"testlog",
+				map[string]string{},
+				map[string]interface{}{
 					"ts":     "2018-07-24T19:43:35.207268Z",
 					"lvl":    int64(5),
 					"msg":    "Write failed",
 					"log_id": "09R4e4Rl000",
 				},
-				Tags: map[string]string{},
-				Time: time.Unix(0, 0),
-			},
+				time.Unix(0, 0),
+			),
 		},
 	}
 	for _, tt := range tests {
@@ -223,9 +220,7 @@ func TestParseLine(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("Logfmt.Parse error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if got != nil {
-				testutil.MustEqual(t, got, tt.want)
-			}
+			testutil.RequireMetricEqual(t, tt.want, got)
 		})
 	}
 }
