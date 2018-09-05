@@ -31,7 +31,7 @@ type AMQPConsumer struct {
 
 	// Queue Name
 	Queue           string `toml:"queue"`
-	QueueDurability bool   `toml:"queue_durability"`
+	QueueDurability string `toml:"queue_durability"`
 	// Binding Key
 	BindingKey string `toml:"binding_key"`
 
@@ -102,8 +102,8 @@ func (a *AMQPConsumer) SampleConfig() string {
   ## AMQP queue name.
   queue = "telegraf"
 
-  ## AMQP queue durability.
-  queue_durability = true
+  ## AMQP queue durability can be "transient" or "durable".
+  queue_durability = "durable"
 
   ## Binding Key.
   binding_key = "#"
@@ -264,13 +264,21 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		return nil, err
 	}
 
+	var queueDurable = true
+	switch a.QueueDurability {
+	case "transient":
+		queueDurable = false
+	default:
+		queueDurable = true
+	}
+
 	q, err := ch.QueueDeclare(
-		a.Queue,           // queue
-		a.QueueDurability, // durable
-		false,             // delete when unused
-		false,             // exclusive
-		false,             // no-wait
-		nil,               // arguments
+		a.Queue,      // queue
+		queueDurable, // durable
+		false,        // delete when unused
+		false,        // exclusive
+		false,        // no-wait
+		nil,          // arguments
 	)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to declare a queue: %s", err)
