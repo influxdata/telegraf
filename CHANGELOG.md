@@ -22,6 +22,7 @@
 - [enum](./plugins/processors/enum/README.md) - Contributed by @KarstenSchnitter
 - [parser](./plugins/processors/parser/README.md) - Contributed by @maxunt & @Ayrdrie
 - [rename](./plugins/processors/rename/README.md) - Contributed by @goldibex
+- [strings](./plugins/processors/strings/README.md) - Contributed by @bsmaldon
 
 ### New Aggregators
 
@@ -85,6 +86,7 @@
 - [#4598](https://github.com/influxdata/telegraf/pull/4598): Add read_buffer_size option to statsd input.
 - [#4089](https://github.com/influxdata/telegraf/pull/4089): Add azure_monitor output plugin.
 - [#4628](https://github.com/influxdata/telegraf/pull/4628): Add queue_durability parameter to amqp_consumer input.
+- [#4476](https://github.com/influxdata/telegraf/pull/4476): Add strings processor.
 
 ### Bugfixes
 
