@@ -155,8 +155,8 @@ func (a *AzureMonitor) Connect() error {
 	a.Reset()
 
 	tags := map[string]string{
-		"region":      a.Region,
-		"resource_id": a.ResourceID,
+		"region":      region,
+		"resource_id": resourceID,
 	}
 	a.MetricOutsideWindow = selfstat.Register("azure_monitor", "metric_outside_window", tags)
 
@@ -352,11 +352,16 @@ func hashIDWithTagKeysOnly(m telegraf.Metric) uint64 {
 func translate(m telegraf.Metric, prefix string) (*azureMonitorMetric, error) {
 	var dimensionNames []string
 	var dimensionValues []string
-	for i, tag := range m.TagList() {
+	for _, tag := range m.TagList() {
 		// Azure custom metrics service supports up to 10 dimensions
-		if i > 10 {
+		if len(dimensionNames) > 10 {
 			continue
 		}
+
+		if tag.Key == "" || tag.Value == "" {
+			continue
+		}
+
 		dimensionNames = append(dimensionNames, tag.Key)
 		dimensionValues = append(dimensionValues, tag.Value)
 	}
