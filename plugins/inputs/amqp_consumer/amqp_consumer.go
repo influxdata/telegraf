@@ -32,6 +32,7 @@ type AMQPConsumer struct {
 	// Queue Name
 	Queue           string `toml:"queue"`
 	QueueDurability string `toml:"queue_durability"`
+
 	// Binding Key
 	BindingKey string `toml:"binding_key"`
 
@@ -64,6 +65,8 @@ const (
 
 	DefaultExchangeType       = "topic"
 	DefaultExchangeDurability = "durable"
+
+	DefaultQueueDurability = "durable"
 
 	DefaultPrefetchCount = 50
 )
@@ -392,6 +395,7 @@ func init() {
 			AuthMethod:         DefaultAuthMethod,
 			ExchangeType:       DefaultExchangeType,
 			ExchangeDurability: DefaultExchangeDurability,
+			QueueDurability:    DefaultQueueDurability,
 			PrefetchCount:      DefaultPrefetchCount,
 		}
 	})
