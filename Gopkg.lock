@@ -583,6 +583,22 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:caf4ef9be096e7391ae319678317365692ad1ce24f697d30c2366c0a2fa56f0e"
+  name = "github.com/kshvakov/clickhouse"
+  packages = [
+    ".",
+    "lib/binary",
+    "lib/column",
+    "lib/data",
+    "lib/protocol",
+    "lib/types",
+    "lib/writebuffer",
+  ]
+  pruneopts = ""
+  revision = "4e2869334f3815d257318e813e2627efce90a0d7"
+
+[[projects]]
+  branch = "master"
   digest = "1:7e9956922e349af0190afa0b6621befcd201072679d8e51a9047ff149f2afe93"
   name = "github.com/mailru/easyjson"
   packages = [
@@ -835,7 +851,7 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:fce9909f20bc6a6363a6d589e478bdcf8111044b41566d37d7552bf92d955540"
+  digest = "1:02715a2fb4b9279af36651a59a51dd4164eb689bd6785874811899f43eeb2a54"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -1235,6 +1251,7 @@
     "github.com/docker/docker/api/types/swarm",
     "github.com/docker/docker/client",
     "github.com/eclipse/paho.mqtt.golang",
+    "github.com/go-logfmt/logfmt",
     "github.com/go-redis/redis",
     "github.com/go-sql-driver/mysql",
     "github.com/gobwas/glob",
@@ -1253,6 +1270,7 @@
     "github.com/jackc/pgx/stdlib",
     "github.com/kardianos/service",
     "github.com/kballard/go-shellquote",
+    "github.com/kshvakov/clickhouse",
     "github.com/matttproud/golang_protobuf_extensions/pbutil",
     "github.com/miekg/dns",
     "github.com/multiplay/go-ts3",
