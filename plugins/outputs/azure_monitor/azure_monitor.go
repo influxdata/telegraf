@@ -42,9 +42,19 @@ type AzureMonitor struct {
 	MetricOutsideWindow selfstat.Stat
 }
 
+type dimension struct {
+	name  string
+	value string
+}
+
 type aggregate struct {
-	telegraf.Metric
-	updated bool
+	name       string
+	min        float64
+	max        float64
+	sum        float64
+	count      int64
+	dimensions []dimension
+	updated    bool
 }
 
 const (
@@ -461,27 +471,38 @@ func (a *AzureMonitor) Add(m telegraf.Metric) {
 			a.cache[tbucket] = make(map[uint64]*aggregate)
 		}
 
-		nf := make(map[string]interface{}, 4)
-		nf["min"] = fv
-		nf["max"] = fv
-		nf["sum"] = fv
-		nf["count"] = 1
 		// Fetch existing aggregate
-		agg, ok := a.cache[tbucket][id]
-		if ok {
-			aggfields := agg.Fields()
-			if fv > aggfields["min"].(float64) {
-				nf["min"] = aggfields["min"]
+		var agg *aggregate
+		agg, ok = a.cache[tbucket][id]
+		if !ok {
+			agg := &aggregate{
+				name:  name,
+				min:   fv,
+				max:   fv,
+				sum:   fv,
+				count: 1,
 			}
-			if fv < aggfields["max"].(float64) {
-				nf["max"] = aggfields["max"]
+			for _, tag := range m.TagList() {
+				dim := dimension{
+					name:  tag.Key,
+					value: tag.Value,
+				}
+				agg.dimensions = append(agg.dimensions, dim)
 			}
-			nf["sum"] = fv + aggfields["sum"].(float64)
-			nf["count"] = aggfields["count"].(int64) + 1
+			agg.updated = true
+			a.cache[tbucket][id] = agg
+			continue
 		}
 
-		na, _ := metric.New(name, m.Tags(), nf, tbucket)
-		a.cache[tbucket][id] = &aggregate{na, true}
+		if fv < agg.min {
+			agg.min = fv
+		}
+		if fv > agg.max {
+			agg.max = fv
+		}
+		agg.sum += fv
+		agg.count++
+		agg.updated = true
 	}
 }
 
@@ -533,7 +554,28 @@ func (a *AzureMonitor) Push() []telegraf.Metric {
 			if !agg.updated {
 				continue
 			}
-			metrics = append(metrics, agg.Metric)
+
+			tags := make(map[string]string, len(agg.dimensions))
+			for _, tag := range agg.dimensions {
+				tags[tag.name] = tag.value
+			}
+
+			m, err := metric.New(agg.name,
+				tags,
+				map[string]interface{}{
+					"min":   agg.min,
+					"max":   agg.max,
+					"sum":   agg.sum,
+					"count": agg.count,
+				},
+				tbucket,
+			)
+
+			if err != nil {
+				log.Printf("E! [outputs.azure_monitor]: could not create metric for aggregation %q; discarding point", agg.name)
+			}
+
+			metrics = append(metrics, m)
 		}
 	}
 	return metrics
