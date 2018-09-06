@@ -1,3 +1,28 @@
+## v1.7.4 [2018-08-29]
+
+### Bugfixes
+
+- [#4534](https://github.com/influxdata/telegraf/pull/4534): Skip unserializable metric in influxDB UDP output.
+- [#4554](https://github.com/influxdata/telegraf/pull/4554): Fix powerdns input tests.
+- [#4584](https://github.com/influxdata/telegraf/pull/4584): Fix burrow_group offset calculation for burrow input.
+- [#4550](https://github.com/influxdata/telegraf/pull/4550): Add result_code value for errors running ping command.
+- [#4605](https://github.com/influxdata/telegraf/pull/4605): Remove timeout deadline for udp syslog input.
+- [#4601](https://github.com/influxdata/telegraf/issues/4601): Ensure channel closed if an error occurs in cgroup input.
+- [#4544](https://github.com/influxdata/telegraf/issues/4544): Fix sending of basic auth credentials in http output.
+- [#4526](https://github.com/influxdata/telegraf/issues/4526): Use the correct GOARM value in the armel package.
+
+## v1.7.3 [2018-08-07]
+
+### Bugfixes
+
+- [#4434](https://github.com/influxdata/telegraf/issues/4434): Reduce required docker API version.
+- [#4498](https://github.com/influxdata/telegraf/pull/4498): Keep leading whitespace for messages in syslog input.
+- [#4470](https://github.com/influxdata/telegraf/issues/4470): Skip bad entries on interrupt input.
+- [#4501](https://github.com/influxdata/telegraf/issues/4501): Preserve metric type when using filters in output plugins.
+- [#3794](https://github.com/influxdata/telegraf/issues/3794): Fix error message if URL is unparseable in influxdb output.
+- [#4059](https://github.com/influxdata/telegraf/issues/4059): Use explicit zpool properties to fix parse error on FreeBSD 11.2.
+- [#4514](https://github.com/influxdata/telegraf/pull/4514): Lock buffer when adding metrics.
+
 ## v1.7.2 [2018-07-18]
 
 ### Bugfixes

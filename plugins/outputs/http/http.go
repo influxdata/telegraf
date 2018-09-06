@@ -131,6 +131,10 @@ func (h *HTTP) write(reqBody []byte) error {
 		return err
 	}
 
+	if h.Username != "" || h.Password != "" {
+		req.SetBasicAuth(h.Username, h.Password)
+	}
+
 	req.Header.Set("Content-Type", defaultContentType)
 	for k, v := range h.Headers {
 		req.Header.Set(k, v)
