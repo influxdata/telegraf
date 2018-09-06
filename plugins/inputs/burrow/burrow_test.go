@@ -129,9 +129,9 @@ func TestBurrowPartition(t *testing.T) {
 		},
 	}
 	tags := []map[string]string{
-		{"cluster": "clustername1", "group": "group1", "topic": "topicA", "partition": "0"},
-		{"cluster": "clustername1", "group": "group1", "topic": "topicA", "partition": "1"},
-		{"cluster": "clustername1", "group": "group1", "topic": "topicA", "partition": "2"},
+		{"cluster": "clustername1", "group": "group1", "topic": "topicA", "partition": "0", "owner": "kafka1"},
+		{"cluster": "clustername1", "group": "group1", "topic": "topicA", "partition": "1", "owner": "kafka2"},
+		{"cluster": "clustername1", "group": "group1", "topic": "topicA", "partition": "2", "owner": "kafka3"},
 	}
 
 	require.Empty(t, acc.Errors)

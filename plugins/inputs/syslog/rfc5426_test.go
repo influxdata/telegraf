@@ -266,12 +266,18 @@ func testRFC5426(t *testing.T, protocol string, address string, bestEffort bool)
 			// Connect
 			conn, err := net.Dial(protocol, address)
 			require.NotNil(t, conn)
-			defer conn.Close()
 			require.Nil(t, err)
 
 			// Write
-			_, e := conn.Write(tc.data)
-			require.Nil(t, e)
+			_, err = conn.Write(tc.data)
+			conn.Close()
+			if err != nil {
+				if err, ok := err.(*net.OpError); ok {
+					if err.Err.Error() == "write: message too long" {
+						return
+					}
+				}
+			}
 
 			// Waiting ...
 			if tc.wantStrict == nil && tc.werr || bestEffort && tc.werr {

@@ -230,7 +230,7 @@ func TestUDP_ErrorLogging(t *testing.T) {
 }
 
 func TestUDP_WriteWithRealConn(t *testing.T) {
-	conn, err := net.ListenPacket("udp", "127.0.0.0:0")
+	conn, err := net.ListenPacket("udp", "127.0.0.1:0")
 	require.NoError(t, err)
 
 	metrics := []telegraf.Metric{

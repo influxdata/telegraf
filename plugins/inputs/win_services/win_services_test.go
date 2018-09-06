@@ -5,12 +5,13 @@ package win_services
 import (
 	"errors"
 	"fmt"
+	"testing"
+
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/mgr"
-	"testing"
 )
 
 //testData is DD wrapper for unit testing of WinServices
@@ -84,14 +85,31 @@ func (m *FakeWinSvc) Config() (mgr.Config, error) {
 	if m.testData.serviceConfigError != nil {
 		return mgr.Config{}, m.testData.serviceConfigError
 	} else {
-		return mgr.Config{0, uint32(m.testData.startUpMode), 0, "", "", 0, nil, m.testData.serviceName, m.testData.displayName, "", ""}, nil
+		return mgr.Config{
+			ServiceType:      0,
+			StartType:        uint32(m.testData.startUpMode),
+			ErrorControl:     0,
+			BinaryPathName:   "",
+			LoadOrderGroup:   "",
+			TagId:            0,
+			Dependencies:     nil,
+			ServiceStartName: m.testData.serviceName,
+			DisplayName:      m.testData.displayName,
+			Password:         "",
+			Description:      "",
+		}, nil
 	}
 }
 func (m *FakeWinSvc) Query() (svc.Status, error) {
 	if m.testData.serviceQueryError != nil {
 		return svc.Status{}, m.testData.serviceQueryError
 	} else {
-		return svc.Status{svc.State(m.testData.state), 0, 0, 0}, nil
+		return svc.Status{
+			State:      svc.State(m.testData.state),
+			Accepts:    0,
+			CheckPoint: 0,
+			WaitHint:   0,
+		}, nil
 	}
 }
 

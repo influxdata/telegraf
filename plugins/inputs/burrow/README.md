@@ -94,6 +94,7 @@ Supported Burrow version: `1.x`
   - group (string)
   - topic (string)
   - partition (int)
+  - owner (string)
 
 * `burrow_topic`
   - cluster (string)

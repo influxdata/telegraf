@@ -2,8 +2,4 @@
 /telegraf
 /telegraf.exe
 /telegraf.gz
-*~
-*#
-.vscode/
-cmd/telegraf/debug
-plugins/inputs/crypto/test
+/vendor

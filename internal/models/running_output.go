@@ -114,18 +114,32 @@ func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
 		m, _ = metric.New(name, tags, fields, t, tp)
 	}
 
+	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
+		ro.Lock()
+		defer ro.Unlock()
+		output.Add(m)
+		return
+	}
+
 	ro.metrics.Add(m)
 	if ro.metrics.Len() == ro.MetricBatchSize {
 		batch := ro.metrics.Batch(ro.MetricBatchSize)
 		err := ro.write(batch)
 		if err != nil {
 			ro.failMetrics.Add(batch...)
+			log.Printf("E! Error writing to output [%s]: %v", ro.Name, err)
 		}
 	}
 }
 
 // Write writes all cached points to this output.
 func (ro *RunningOutput) Write() error {
+	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
+		metrics := output.Push()
+		ro.metrics.Add(metrics...)
+		output.Reset()
+	}
+
 	nFails, nMetrics := ro.failMetrics.Len(), ro.metrics.Len()
 	ro.BufferSize.Set(int64(nFails + nMetrics))
 	log.Printf("D! Output [%s] buffer fullness: %d / %d metrics. ",

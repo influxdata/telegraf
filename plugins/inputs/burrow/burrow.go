@@ -116,6 +116,7 @@ type (
 		Start      apiStatusResponseLagItem `json:"start"`
 		End        apiStatusResponseLagItem `json:"end"`
 		CurrentLag int64                    `json:"current_lag"`
+		Owner      string                   `json:"owner"`
 	}
 
 	// response: lag field item
@@ -445,6 +446,7 @@ func (b *burrow) genGroupLagMetrics(r *apiResponse, cluster, group string, acc t
 				"group":     group,
 				"topic":     partition.Topic,
 				"partition": strconv.FormatInt(int64(partition.Partition), 10),
+				"owner":     partition.Owner,
 			},
 		)
 	}
