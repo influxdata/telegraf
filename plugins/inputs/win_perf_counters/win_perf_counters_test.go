@@ -5,7 +5,6 @@ package win_perf_counters
 import (
 	"errors"
 	"fmt"
-
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
