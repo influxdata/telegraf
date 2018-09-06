@@ -42,9 +42,6 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 Telegraf requires golang version 1.9 or newer, the Makefile requires GNU make.
 
-Dependencies are managed with [gdm](https://github.com/sparrc/gdm),
-which is installed by the Makefile if you don't have it already.
-
 1. [Install Go](https://golang.org/doc/install) >=1.9
 2. [Install dep](https://golang.github.io/dep/docs/installation.html) ==v0.5.0
 3. Download Telegraf source:

@@ -5,13 +5,13 @@ package win_perf_counters
 import (
 	"errors"
 	"fmt"
-	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"testing"
+	"time"
 )
 
 type testCounter struct {

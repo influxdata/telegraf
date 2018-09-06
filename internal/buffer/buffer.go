@@ -80,7 +80,7 @@ func (b *Buffer) Add(metrics ...telegraf.Metric) {
 		MetricsWritten.Incr(1)
 		b.push(metrics[i])
 	}
-
+}
 
 // Batch returns a batch of metrics of size batchSize.
 // the batch will be of maximum length batchSize. It can be less than batchSize,
