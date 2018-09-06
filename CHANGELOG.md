@@ -87,6 +87,8 @@
 - [#4089](https://github.com/influxdata/telegraf/pull/4089): Add azure_monitor output plugin.
 - [#4628](https://github.com/influxdata/telegraf/pull/4628): Add queue_durability parameter to amqp_consumer input.
 - [#4476](https://github.com/influxdata/telegraf/pull/4476): Add strings processor.
+- [#4536](https://github.com/influxdata/telegraf/pull/4536): Add OAuth2 support to HTTP output plugin.
+
 
 ### Bugfixes
 
