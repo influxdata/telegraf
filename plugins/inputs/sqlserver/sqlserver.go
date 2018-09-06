@@ -348,7 +348,9 @@ ELSE
 EXEC(@SQL)
 `
 
-const sqlDatabaseIOV2 = `SELECT
+const sqlDatabaseIOV2 = `IF SERVERPROPERTY('EngineEdition') = 5
+BEGIN
+SELECT
 'sqlserver_database_io' As [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 DB_NAME([vfs].[database_id]) [database_name],
@@ -358,9 +360,32 @@ vfs.num_of_bytes_read AS read_bytes,
 vfs.io_stall_write_ms AS write_latency_ms,
 vfs.num_of_writes AS writes,
 vfs.num_of_bytes_written AS write_bytes,
-CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'ROWS' END AS file_type
+b.name as logicalFilename,
+b.physical_name as physicalFilename,
+CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'DATA' END AS file_type
 FROM
 [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
+inner join sys.database_files b on  b.file_id = vfs.file_id
+END
+ELSE
+BEGIN
+SELECT
+'sqlserver_database_io' As [measurement],
+REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+DB_NAME([vfs].[database_id]) [database_name],
+vfs.io_stall_read_ms AS read_latency_ms,
+vfs.num_of_reads AS reads,
+vfs.num_of_bytes_read AS read_bytes,
+vfs.io_stall_write_ms AS write_latency_ms,
+vfs.num_of_writes AS writes,
+vfs.num_of_bytes_written AS write_bytes,
+b.name as logicalFilename,
+b.physical_name as physicalFilename,
+CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'DATA' END AS file_type
+FROM
+[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
+inner join sys.master_files b on b.database_id = vfs.database_id and b.file_id = vfs.file_id
+END
 OPTION( RECOMPILE );
 `
 
@@ -432,7 +457,13 @@ SELECT	'sqlserver_server_properties' AS [measurement],
 		s.hardware_type,
 		s.total_storage_mb,
 		s.available_storage_mb,
-		s.uptime
+		s.uptime,
+		db_online,
+		db_restoring,
+		db_recovering,
+		db_recoveryPending,
+		db_suspect,
+		db_offline
 FROM	(
 			SELECT	SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS db_online,
 					SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS db_restoring,
@@ -541,7 +572,8 @@ WHERE	(
 				'Disk Write IO Throttled/sec',
 				'Disk Write IO/sec',
 				'Used memory (KB)',
-				'Forwarded Recs/sec'
+				'Forwarded Recs/sec',
+				'Background Writer pages/sec'
 			)
 		)  OR  ( 
 			object_name LIKE '%User Settable%'
