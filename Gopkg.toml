@@ -225,3 +225,7 @@
 [[constraint]]
   name = "github.com/Azure/go-autorest"
   version = "10.12.0"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/oauth2"

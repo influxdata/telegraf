@@ -1034,6 +1034,18 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:b697592485cb412be4188c08ca0beed9aab87f36b86418e21acc4a3998f63734"
+  name = "golang.org/x/oauth2"
+  packages = [
+    ".",
+    "clientcredentials",
+    "internal",
+  ]
+  pruneopts = ""
+  revision = "d2e6202438beef2727060aa7cabdd924d92ebfd9"
+
+[[projects]]
+  branch = "master"
   digest = "1:677e38cad6833ad266ec843739d167755eda1e6f2d8af1c63102b0426ad820db"
   name = "golang.org/x/sys"
   packages = [
@@ -1086,7 +1098,16 @@
 [[projects]]
   digest = "1:c1771ca6060335f9768dff6558108bc5ef6c58506821ad43377ee23ff059e472"
   name = "google.golang.org/appengine"
-  packages = ["cloudsql"]
+  packages = [
+    "cloudsql",
+    "internal",
+    "internal/base",
+    "internal/datastore",
+    "internal/log",
+    "internal/remote_api",
+    "internal/urlfetch",
+    "urlfetch",
+  ]
   pruneopts = ""
   revision = "b1f26356af11148e710935ed1ac8a7f5702c7612"
   version = "v1.1.0"
@@ -1312,6 +1333,8 @@
     "github.com/zensqlmonitor/go-mssqldb",
     "golang.org/x/net/context",
     "golang.org/x/net/html/charset",
+    "golang.org/x/oauth2",
+    "golang.org/x/oauth2/clientcredentials",
     "golang.org/x/sys/unix",
     "golang.org/x/sys/windows",
     "golang.org/x/sys/windows/svc",
