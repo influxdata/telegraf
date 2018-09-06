@@ -1,3 +1,25 @@
+// The MIT License (MIT)
+//
+// Copyright (c) 2016 Luca Di Stefano (luca@distefano.bz.it)
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
 package sql
 
 import (
@@ -30,22 +52,17 @@ const TYPE_FLOAT = 4
 const TYPE_TIME = 5
 const TYPE_AUTO = 0
 
-var qindex = 0
-
 type Query struct {
 	Query       string
+	QueryScript string
 	Measurement string
 	//
 	FieldTimestamp string
 	TimestampUnit  string
 	//
 	TagCols []string
-	// Data Conversion
-	IntFields   []string
-	FloatFields []string
-	BoolFields  []string
-	TimeFields  []string
-	// Verical structure
+
+	// Vertical structure
 	FieldHost        string
 	FieldName        string
 	FieldValue       string
@@ -54,15 +71,15 @@ type Query struct {
 	//
 	Sanitize bool
 	//
-	QueryScript string
 
 	// -------- internal data -----------
-	statements []*sql.Stmt
+	statement *sql.Stmt
 
 	column_name []string
 	cell_refs   []interface{}
 	cells       []interface{}
 
+	// Horizontal structure
 	field_count int
 	field_idx   []int // Column indexes of fields
 	field_type  []int // Column types of fields
@@ -70,36 +87,35 @@ type Query struct {
 	tag_count int
 	tag_idx   []int // Column indexes of tags (strings)
 
-	// Verical structure
+	// Vertical structure
 	field_host_idx        int
 	field_database_idx    int
 	field_measurement_idx int
 	field_name_idx        int
 	field_timestamp_idx   int
+
 	// Data Conversion
 	field_value_idx  int
 	field_value_type int
-
-	//	last_poll_ts time.Time
-
-	index int
 }
 
 type Sql struct {
 	Driver    string
 	SharedLib string
 
-	KeepConnection bool
+	//KeepConnection bool
+	MaxLifetime time.Duration
 
-	DbSourceNames []string
-
-	Servers []string
+	Source struct {
+		Dsn string
+	}
 
 	Query []Query
 
 	// internal
-	connections []*sql.DB
-	initialized bool
+	connection_ts time.Time
+	connection    *sql.DB
+	initialized   bool
 }
 
 var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
@@ -146,30 +162,27 @@ func (s *Sql) SampleConfig() string {
   ##    if false reconnection at each poll, no prepared statements 
   # keep_connection = false
   
-  ## Server DSNs, required. Connection DSN to pass to the DB driver
-  db_source_names  = ["readuser:sEcReT@tcp(neteye.wp.lan:3307)/rue", "readuser:sEcReT@tcp(hostmysql.wp.lan:3307)/monitoring"]
+  ## Maximum lifetime of a connection.
+  max_lifetime = "0s"
   
-  ## optional: for each server a relative host entry should be specified and will be added as server tag
-  #servers=["neteye", "hostmysql"]  
-        
+  ## Connection information for data source.  Table can be repeated to define multiple sources.
+  [[inputs.sql.source]]
+    ## Data source name for connecting.  Syntax depends on selected driver.
+    dsn = "readuser:sEcReT@tcp(neteye.wp.lan:3307)/rue"
+    
   ## Queries to perform (block below can be repeated)
   [[inputs.sql.query]]
     ## query has precedence on query_script, if both query and query_script are defined only query is executed
     query="SELECT avg_application_latency,avg_bytes,act_throughput FROM Baselines WHERE application>0"
     # query_script = "/path/to/sql/script.sql" # if query is empty and a valid file is provided, the query will be read from file
-
     ## destination measurement
     measurement="connection_errors"
+    
+    ## Horizontal srtucture
     ## colums used as tags
     tag_cols=["application"]
     ## select fields and use the database driver automatic datatype conversion
     field_cols=["avg_application_latency","avg_bytes","act_throughput"]
-    
-    #
-    # bool_fields=["ON"]                # adds fields and forces his value as bool
-    # int_fields=["MEMBERS",".*BYTES"]  # adds fields and forces his value as integer
-    # float_fields=["TEMPERATURE"]      # adds fields and forces his value as float
-    # time_fields=[".*_TIME"]           # adds fields and forces his value as time
     
     ## Vertical srtucture
     ## optional: the column that contains the name of the measurement, if not specified the value of the option measurement is used
@@ -183,10 +196,7 @@ func (s *Sql) SampleConfig() string {
     ## required if vertical: the column that contains the value of the counter
     # field_value = "counter_value"
     ## optional: the column where is to find the time of sample (should be a date datatype)
-    # field_timestamp = "sample_time"   
-    #
-    #sanitize = false                    # true: will perform some chars substitutions (false: use value as is)
-    #ignore_row_errors                   # true: if an error in row parse is raised then the row will be skipped and the parse continue on next row (false: fatal error)
+    # field_timestamp = "sample_time"  
 `
 }
 
@@ -195,7 +205,7 @@ func (_ *Sql) Description() string {
 }
 
 func (s *Sql) Init() error {
-	log.Printf("D! Init %d servers %d queries, driver %s", len(s.DbSourceNames), len(s.Query), s.Driver)
+	log.Printf("D! Init %s servers %d queries, driver %s", s.Source.Dsn, len(s.Query), s.Driver)
 
 	if len(s.SharedLib) > 0 {
 		_, err := plugin.Open(s.SharedLib)
@@ -205,24 +215,11 @@ func (s *Sql) Init() error {
 		log.Printf("D! Loaded shared lib '%s'", s.SharedLib)
 	}
 
-	if s.KeepConnection {
-		s.connections = make([]*sql.DB, len(s.DbSourceNames))
-		for i := 0; i < len(s.Query); i++ {
-			s.Query[i].statements = make([]*sql.Stmt, len(s.DbSourceNames))
-		}
-	}
-
-	if len(s.DbSourceNames) > 0 && len(s.Servers) > 0 && len(s.Servers) != len(s.DbSourceNames) {
-		return fmt.Errorf("For each DSN a host should be specified (%d/%d)", len(s.Servers), len(s.DbSourceNames))
-	}
 	return nil
 }
 
 func (s *Query) Init(cols []string) error {
-	qindex++
-	s.index = qindex
-
-	log.Printf("D! Init Query %d with %d columns", s.index, len(cols))
+	log.Printf("D! Init Query with %d columns", len(cols))
 
 	// Define index of tags and fields and keep it for reuse
 	s.column_name = cols
@@ -261,13 +258,13 @@ func (s *Query) Init(cols []string) error {
 		return fmt.Errorf("Missing column %s for given field_measurement", s.FieldMeasurement)
 	}
 	if len(s.FieldTimestamp) > 0 && !match_str(s.FieldTimestamp, s.column_name) {
-		return fmt.Errorf("Missing column %s for given field_measurement", s.FieldTimestamp)
+		return fmt.Errorf("Missing column %s for given field_timestamp", s.FieldTimestamp)
 	}
 	if len(s.FieldName) > 0 && !match_str(s.FieldName, s.column_name) {
-		return fmt.Errorf("Missing column %s for given field_measurement", s.FieldName)
+		return fmt.Errorf("Missing column %s for given field_name", s.FieldName)
 	}
 	if len(s.FieldValue) > 0 && !match_str(s.FieldValue, s.column_name) {
-		return fmt.Errorf("Missing column %s for given field_measurement", s.FieldValue)
+		return fmt.Errorf("Missing column %s for given field_value", s.FieldValue)
 	}
 	if (len(s.FieldValue) > 0 && len(s.FieldName) == 0) || (len(s.FieldName) > 0 && len(s.FieldValue) == 0) {
 		return fmt.Errorf("Both field_name and field_value should be set")
@@ -278,27 +275,13 @@ func (s *Query) Init(cols []string) error {
 	var cell interface{}
 	for i := 0; i < col_count; i++ {
 		dest_type := TYPE_AUTO
-		field_matched := true
+		field_matched := true // is horizontal field
 
 		if match_str(s.column_name[i], s.TagCols) {
 			field_matched = false
 			s.tag_idx[s.tag_count] = i
 			s.tag_count++
 			cell = new(string)
-			// Datatype conversion
-		} else if match_str(s.column_name[i], s.IntFields) {
-			dest_type = TYPE_INT
-			cell = new(sql.RawBytes)
-		} else if match_str(s.column_name[i], s.FloatFields) {
-			dest_type = TYPE_FLOAT
-			cell = new(sql.RawBytes)
-		} else if match_str(s.column_name[i], s.TimeFields) {
-			dest_type = TYPE_TIME
-			cell = new(sql.RawBytes)
-		} else if match_str(s.column_name[i], s.BoolFields) {
-			dest_type = TYPE_BOOL
-			cell = new(sql.RawBytes)
-			// -------------
 		} else {
 			dest_type = TYPE_AUTO
 			cell = new(sql.RawBytes)
@@ -308,35 +291,32 @@ func (s *Query) Init(cols []string) error {
 		if s.column_name[i] == s.FieldHost {
 			s.field_host_idx = i
 			field_matched = false
-		}
-		if s.column_name[i] == s.FieldDatabase {
+		} else if s.column_name[i] == s.FieldDatabase {
 			s.field_database_idx = i
 			field_matched = false
-		}
-		if s.column_name[i] == s.FieldMeasurement {
+		} else if s.column_name[i] == s.FieldMeasurement {
 			s.field_measurement_idx = i
 			field_matched = false
-		}
-		if s.column_name[i] == s.FieldName {
+		} else if s.column_name[i] == s.FieldName {
 			s.field_name_idx = i
 			field_matched = false
-		}
-		if s.column_name[i] == s.FieldValue {
+		} else if s.column_name[i] == s.FieldValue {
 			s.field_value_idx = i
 			s.field_value_type = dest_type
 			field_matched = false
-		}
-		if s.column_name[i] == s.FieldTimestamp {
+		} else if s.column_name[i] == s.FieldTimestamp {
 			s.field_timestamp_idx = i
 			field_matched = false
 		}
-		//---------
 
+		// Horizontal
 		if field_matched {
 			s.field_type[s.field_count] = dest_type
 			s.field_idx[s.field_count] = i
 			s.field_count++
 		}
+
+		//
 		s.cells[i] = cell
 		s.cell_refs[i] = &s.cells[i]
 	}
@@ -431,14 +411,15 @@ func (s *Query) GetStringFieldValue(index int) (string, error) {
 		return "", fmt.Errorf("Error converting name '%s' type %s, raw data '%s'", s.column_name[index], reflect.TypeOf(cell).Kind(), fmt.Sprintf("%v", cell))
 	}
 
-	if s.Sanitize {
-		value = sanitize(value)
-	}
+	//	if s.Sanitize {
+	//		value = sanitize(value)
+	//	}
 	return value, nil
 }
 
 func (s *Query) ParseRow(timestamp time.Time, measurement string, tags map[string]string, fields map[string]interface{}) (time.Time, string, error) {
 	// Vertical structure
+
 	// get timestamp from row
 	if s.field_timestamp_idx >= 0 {
 		// get the value of timestamp field
@@ -534,40 +515,41 @@ func (s *Query) ParseRow(timestamp time.Time, measurement string, tags map[strin
 	return timestamp, measurement, nil
 }
 
-func (p *Sql) Connect(si int) (*sql.DB, error) {
+func (p *Sql) Connect() (*sql.DB, error) {
 	var err error
 
 	// create connection to db server if not already done
 	var db *sql.DB
-	if p.KeepConnection {
-		db = p.connections[si]
+	if p.MaxLifetime > 0 && time.Since(p.connection_ts) < p.MaxLifetime {
+		db = p.connection
 	} else {
 		db = nil
 	}
 
 	if db == nil {
-		log.Printf("D! Setting up DB %s %s ...", p.Driver, p.DbSourceNames[si])
-		db, err = sql.Open(p.Driver, p.DbSourceNames[si])
+		log.Printf("D! Setting up DB %s %s ...", p.Driver, p.Source.Dsn)
+		db, err = sql.Open(p.Driver, p.Source.Dsn)
 		if err != nil {
 			return nil, err
 		}
+		p.connection_ts = time.Now()
 	} else {
-		log.Printf("D! Reusing connection to %s ...", p.DbSourceNames[si])
+		log.Printf("D! Reusing connection to %s ...", p.Source.Dsn)
 	}
 
-	log.Printf("D! Connecting to DB %s ...", p.DbSourceNames[si])
+	log.Printf("D! Connecting to DB %s ...", p.Source.Dsn)
 	err = db.Ping()
 	if err != nil {
 		return nil, err
 	}
 
-	if p.KeepConnection {
-		p.connections[si] = db
+	if p.MaxLifetime > 0 {
+		p.connection = db
 	}
 	return db, nil
 }
 
-func (q *Query) Execute(db *sql.DB, si int, KeepConnection bool) (*sql.Rows, error) {
+func (q *Query) Execute(db *sql.DB, KeepConnection bool) (*sql.Rows, error) {
 	var err error
 	var rows *sql.Rows
 	// read query from sql script and put it in query string
@@ -586,14 +568,14 @@ func (q *Query) Execute(db *sql.DB, si int, KeepConnection bool) (*sql.Rows, err
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(filerc)
 		q.Query = buf.String()
-		log.Printf("D! Read %d bytes SQL script from '%s' for query %d ...", len(q.Query), q.QueryScript, q.index)
+		log.Printf("D! Read %d bytes SQL script from '%s' for query ...", len(q.Query), q.QueryScript)
 	}
 	if len(q.Query) > 0 {
 		if KeepConnection {
 			// prepare statement if not already done
-			if q.statements[si] == nil {
-				log.Printf("D! Preparing statement query %d...", q.index)
-				q.statements[si], err = db.Prepare(q.Query)
+			if q.statement == nil {
+				log.Printf("D! Preparing statement query ...")
+				q.statement, err = db.Prepare(q.Query)
 				if err != nil {
 					return nil, err
 				}
@@ -601,14 +583,14 @@ func (q *Query) Execute(db *sql.DB, si int, KeepConnection bool) (*sql.Rows, err
 
 			// execute prepared statement
 			log.Printf("D! Performing query:\n\t\t%s\n...", q.Query)
-			rows, err = q.statements[si].Query()
+			rows, err = q.statement.Query()
 		} else {
 			// execute query
 			log.Printf("D! Performing query '%s'...", q.Query)
 			rows, err = db.Query(q.Query)
 		}
 	} else {
-		log.Printf("W! No query to execute %d", q.index)
+		log.Printf("W! No query to execute")
 		return nil, nil
 	}
 
@@ -629,93 +611,84 @@ func (p *Sql) Gather(acc telegraf.Accumulator) error {
 	}
 
 	log.Printf("D! Starting poll")
-	for si := 0; si < len(p.DbSourceNames); si++ {
-		var db *sql.DB
-		var query_time time.Time
 
-		db, err = p.Connect(si)
+	var db *sql.DB
+	var query_time time.Time
+
+	db, err = p.Connect()
+	query_time = time.Now()
+	duration := time.Since(query_time)
+	log.Printf("D! Server %s connection time: %s", p.Source.Dsn, duration)
+
+	if err != nil {
+		return err
+	}
+	if p.MaxLifetime == 0 {
+		defer db.Close()
+	}
+
+	// execute queries
+	for qi := 0; qi < len(p.Query); qi++ {
+		var rows *sql.Rows
+		q := &p.Query[qi]
+
 		query_time = time.Now()
-		duration := time.Since(query_time)
-		log.Printf("D! Server %d connection time: %s", si, duration)
+		rows, err = q.Execute(db, p.MaxLifetime > 0)
+		log.Printf("D! Query exectution time: %s", time.Since(query_time))
+
+		query_time = time.Now()
 
 		if err != nil {
 			return err
 		}
-		if !p.KeepConnection {
-			defer db.Close()
+		if rows == nil {
+			continue
 		}
+		defer rows.Close()
 
-		// execute queries
-		for qi := 0; qi < len(p.Query); qi++ {
-			var rows *sql.Rows
-			q := &p.Query[qi]
-
-			query_time = time.Now()
-			rows, err = q.Execute(db, si, p.KeepConnection)
-			log.Printf("D! Query %d exectution time: %s", q.index, time.Since(query_time))
-
-			query_time = time.Now()
-			//			q.last_poll_ts = query_time
-
+		if q.field_count == 0 {
+			// initialize once the structure of query
+			var cols []string
+			cols, err = rows.Columns()
 			if err != nil {
 				return err
 			}
-			if rows == nil {
-				continue
+			err = q.Init(cols)
+			if err != nil {
+				return err
 			}
-			defer rows.Close()
-
-			if q.field_count == 0 {
-				// initialize once the structure of query
-				var cols []string
-				cols, err = rows.Columns()
-				if err != nil {
-					return err
-				}
-				err = q.Init(cols)
-				if err != nil {
-					return err
-				}
-			}
-
-			row_count := 0
-
-			for rows.Next() {
-				var timestamp time.Time
-
-				if err = rows.Err(); err != nil {
-					return err
-				}
-				// database driver datatype conversion
-				err := rows.Scan(q.cell_refs...)
-				if err != nil {
-					return err
-				}
-
-				// collect tags and fields
-				tags := map[string]string{}
-				fields := map[string]interface{}{}
-				var measurement string
-
-				// use database server as host, not the local host
-				if len(p.Servers) > 0 {
-					_, ok := tags["server"]
-					if !ok {
-						tags["server"] = p.Servers[si]
-					}
-				}
-
-				timestamp, measurement, err = q.ParseRow(query_time, q.Measurement, tags, fields)
-				if err != nil {
-					log.Printf("W! Ignored error on row %d: %s", row_count, err)
-				} else {
-					acc.AddFields(measurement, fields, tags, timestamp)
-				}
-				row_count += 1
-			}
-			log.Printf("D! Query %d found %d rows written, processing duration %s", q.index, row_count, time.Since(query_time))
 		}
+
+		row_count := 0
+
+		for rows.Next() {
+			var timestamp time.Time
+
+			if err = rows.Err(); err != nil {
+				return err
+			}
+			// database driver datatype conversion
+			err := rows.Scan(q.cell_refs...)
+			if err != nil {
+				return err
+			}
+
+			// collect tags and fields
+			tags := map[string]string{}
+			fields := map[string]interface{}{}
+			var measurement string
+
+			timestamp, measurement, err = q.ParseRow(query_time, q.Measurement, tags, fields)
+			if err != nil {
+				log.Printf("W! Ignored error on row %d: %s", row_count, err)
+			} else {
+				acc.AddFields(measurement, fields, tags, timestamp)
+			}
+			row_count += 1
+		}
+		log.Printf("D! Query found %d rows written, processing duration %s", row_count, time.Since(query_time))
 	}
+
 	log.Printf("D! Poll done, duration %s", time.Since(start_time))
 
 	return nil
