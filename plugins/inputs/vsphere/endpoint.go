@@ -79,6 +79,8 @@ type metricQResponse struct {
 	metrics *performance.MetricList
 }
 
+type multiError []error
+
 // NewEndpoint returns a new connection to a vCenter based on the URL and configuration passed
 // as parameters.
 func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) *Endpoint {
@@ -142,6 +144,24 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) *Endpoint {
 	e.init(ctx)
 
 	return &e
+}
+
+func (m multiError) Error() string {
+	switch len(m) {
+	case 0:
+		return "No error recorded. Something is wrong!"
+	case 1:
+		return m[0].Error()
+	default:
+		s := "Multiple errors detected concurrently: "
+		for i, e := range m {
+			if i != 0 {
+				s += ", "
+			}
+			s += e.Error()
+		}
+		return s
+	}
 }
 
 func anythingEnabled(ex []string) bool {
@@ -399,6 +419,14 @@ func (e *Endpoint) Close() {
 
 // Collect runs a round of data collections as specified in the configuration.
 func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error {
+	// If we never managed to do a discovery, collection will be a no-op. Therefore,
+	// we need to check that a connection is available, or the collection will
+	// silently fail.
+	//
+	if _, err := e.clientFactory.GetClient(ctx); err != nil {
+		return err
+	}
+
 	e.collectMux.RLock()
 	defer e.collectMux.RUnlock()
 
@@ -523,12 +551,13 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 		n, err := e.collectChunk(ctx, chunk, resourceType, res, acc)
 		log.Printf("D! [input.vsphere]: Query returned %d metrics", n)
 		if err != nil {
+			log.Println(err)
 			return err
 		}
 		atomic.AddInt64(&count, int64(n))
 		return nil
 
-	}, 10)
+	}, e.Parent.CollectConcurrency)
 
 	// Fill the input channel of the worker queue by running the chunking
 	// logic implemented in chunker()
@@ -537,20 +566,25 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	})
 
 	// Drain the pool. We're getting errors back. They should all be nil
-	var err error
+	var mux sync.Mutex
+	err := make(multiError, 0)
 	wp.Drain(ctx, func(ctx context.Context, in interface{}) bool {
 		if in != nil {
-			err = in.(error)
+			mux.Unlock()
+			defer mux.Unlock()
+			err = append(err, in.(error))
 			return false
 		}
 		return true
 	})
-
 	e.lastColls[resourceType] = now // Use value captured at the beginning to avoid blind spots.
 
 	sw.Stop()
 	SendInternalCounterWithTags("gather_count", e.URL.Host, internalTags, count)
-	return err
+	if len(err) > 0 {
+		return err
+	}
+	return nil
 }
 
 func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, resourceType string,

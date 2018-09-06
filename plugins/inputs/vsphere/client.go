@@ -2,6 +2,7 @@ package vsphere
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"net/url"
 	"sync"
@@ -76,6 +77,10 @@ func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Use a default TLS config if it's missing
+	if tlsCfg == nil {
+		tlsCfg = &tls.Config{}
+	}
 	if vs.Username != "" {
 		u.User = url.UserPassword(vs.Username, vs.Password)
 	}
@@ -105,7 +110,9 @@ func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 
 	// If TSLKey is specified, try to log in as an extension using a cert.
 	if vs.TLSKey != "" {
-		sm.LoginExtensionByCertificate(ctx, vs.TLSKey)
+		if err := sm.LoginExtensionByCertificate(ctx, vs.TLSKey); err != nil {
+			return nil, err
+		}
 	}
 
 	// Create the govmomi client.
@@ -116,8 +123,7 @@ func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 
 	// Only login if the URL contains user information.
 	if u.User != nil {
-		err = c.Login(ctx, u.User)
-		if err != nil {
+		if err := c.Login(ctx, u.User); err != nil {
 			return nil, err
 		}
 	}

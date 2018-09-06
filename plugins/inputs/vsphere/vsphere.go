@@ -251,7 +251,6 @@ func (v *VSphere) Stop() {
 // the data collection and writes all metrics into the Accumulator passed as an argument.
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-
 	for _, ep := range v.endpoints {
 		wg.Add(1)
 		go func(endpoint *Endpoint) {
@@ -262,7 +261,9 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 				// No need to signal errors if we were merely canceled.
 				err = nil
 			}
-			acc.AddError(err)
+			if err != nil {
+				acc.AddError(err)
+			}
 		}(ep)
 	}
 
