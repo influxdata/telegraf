@@ -22,14 +22,16 @@
   version = "v0.3.0"
 
 [[projects]]
+  digest = "1:5923e22a060ab818a015593422f9e8a35b9d881d4cfcfed0669a82959b11c7ee"
   name = "github.com/Azure/go-autorest"
   packages = [
     "autorest",
     "autorest/adal",
     "autorest/azure",
     "autorest/azure/auth",
-    "autorest/date"
+    "autorest/date",
   ]
+  pruneopts = ""
   revision = "1f7cd6cfe0adea687ad44a512dfe76140f804318"
   version = "v10.12.0"
 
@@ -238,8 +240,10 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:654ac9799e7a8a586d8690bb2229a4f3408bbfe2c5494bf4dfe043053eeb5496"
   name = "github.com/dimchansky/utfbom"
   packages = ["."]
+  pruneopts = ""
   revision = "6c6132ff69f0f6c088739067407b5d32c52e1d0f"
 
 [[projects]]
@@ -853,7 +857,7 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:fce9909f20bc6a6363a6d589e478bdcf8111044b41566d37d7552bf92d955540"
+  digest = "1:02715a2fb4b9279af36651a59a51dd4164eb689bd6785874811899f43eeb2a54"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -995,7 +999,7 @@
     "pbkdf2",
     "pkcs12",
     "pkcs12/internal/rc2",
-    "ssh/terminal"
+    "ssh/terminal",
   ]
   pruneopts = ""
   revision = "a2144134853fc9a27a7b1e3eb4f19f1a76df13c9"
@@ -1231,6 +1235,8 @@
   input-imports = [
     "collectd.org/api",
     "collectd.org/network",
+    "github.com/Azure/go-autorest/autorest",
+    "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/Microsoft/ApplicationInsights-Go/appinsights",
     "github.com/Shopify/sarama",
     "github.com/StackExchange/wmi",
@@ -1255,6 +1261,7 @@
     "github.com/docker/docker/api/types/swarm",
     "github.com/docker/docker/client",
     "github.com/eclipse/paho.mqtt.golang",
+    "github.com/go-logfmt/logfmt",
     "github.com/go-redis/redis",
     "github.com/go-sql-driver/mysql",
     "github.com/gobwas/glob",
