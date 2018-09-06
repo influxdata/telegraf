@@ -100,6 +100,7 @@ following works:
 - github.com/zensqlmonitor/go-mssqldb [BSD](https://github.com/zensqlmonitor/go-mssqldb/blob/master/LICENSE.txt)
 - golang.org/x/crypto [BSD](https://github.com/golang/crypto/blob/master/LICENSE)
 - golang.org/x/net [BSD](https://go.googlesource.com/net/+/master/LICENSE)
+- golang.org/x/oauth2 [BSD](https://go.googlesource.com/oauth2/+/master/LICENSE)
 - golang.org/x/text [BSD](https://go.googlesource.com/text/+/master/LICENSE)
 - golang.org/x/sys [BSD](https://go.googlesource.com/sys/+/master/LICENSE)
 - google.golang.org/grpc [APACHE](https://github.com/google/grpc-go/blob/master/LICENSE)
