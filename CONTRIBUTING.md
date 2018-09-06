@@ -30,9 +30,8 @@ which can be found [on our website](http://influxdb.com/community/cla.html)
 
 Assuming you can already build the project, run these in the telegraf directory:
 
-1. `go get github.com/sparrc/gdm`
-1. `gdm restore`
-1. `GOOS=linux gdm save`
+1. `dep ensure -vendor-only`
+2. `dep ensure -add github.com/[dependency]/[new-package]`
 
 ## Input Plugins
 
@@ -52,7 +51,9 @@ See below for a quick example.
 * Input Plugins must be added to the
 `github.com/influxdata/telegraf/plugins/inputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
-plugin can be configured. This is include in `telegraf config`.
+plugin can be configured. This is included in `telegraf config`.  Please
+consult the [SampleConfig](https://github.com/influxdata/telegraf/wiki/SampleConfig)
+page for the latest style guidelines.
 * The `Description` function should say in one line what this plugin does.
 
 Let's say you've written a plugin that emits metrics about processes on the
@@ -99,6 +100,13 @@ func init() {
     inputs.Add("simple", func() telegraf.Input { return &Simple{} })
 }
 ```
+
+### Input Plugin Development
+
+* Run `make static` followed by `make plugin-[pluginName]` to spin up a docker dev environment
+using docker-compose.
+* ***[Optional]*** When developing a plugin, add a `dev` directory with a `docker-compose.yml` and `telegraf.conf`
+as well as any other supporting files, where sensible.
 
 ## Adding Typed Metrics
 
@@ -186,7 +194,9 @@ See below for a quick example.
 * To be available within Telegraf itself, plugins must add themselves to the
 `github.com/influxdata/telegraf/plugins/outputs/all/all.go` file.
 * The `SampleConfig` function should return valid toml that describes how the
-output can be configured. This is include in `telegraf config`.
+plugin can be configured. This is included in `telegraf config`.  Please
+consult the [SampleConfig](https://github.com/influxdata/telegraf/wiki/SampleConfig)
+page for the latest style guidelines.
 * The `Description` function should say in one line what this output does.
 
 ### Output Example

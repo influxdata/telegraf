@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
@@ -17,20 +17,15 @@ import (
 
 type Kafka struct {
 	ConsumerGroup string
+	ClientID      string `toml:"client_id"`
 	Topics        []string
 	Brokers       []string
 	MaxMessageLen int
+	Version       string `toml:"version"`
 
 	Cluster *cluster.Consumer
 
-	// Verify Kafka SSL Certificate
-	InsecureSkipVerify bool
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
+	tls.ClientConfig
 
 	// SASL Username
 	SASLUsername string `toml:"sasl_username"`
@@ -67,11 +62,20 @@ var sampleConfig = `
   ## topic(s) to consume
   topics = ["telegraf"]
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional Client id
+  # client_id = "Telegraf"
+
+  ## Set the minimal supported Kafka version.  Setting this enables the use of new
+  ## Kafka features and APIs.  Of particular interest, lz4 compression
+  ## requires at least version 0.10.0.0.
+  ##   ex: version = "1.1.0"
+  # version = ""
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Optional SASL Config
@@ -91,7 +95,7 @@ var sampleConfig = `
 
   ## Maximum length of a message to consume, in bytes (default 0/unlimited);
   ## larger messages are dropped
-  max_message_len = 65536
+  max_message_len = 1000000
 `
 
 func (k *Kafka) SampleConfig() string {
@@ -114,12 +118,26 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 	k.acc = acc
 
 	config := cluster.NewConfig()
+
+	if k.Version != "" {
+		version, err := sarama.ParseKafkaVersion(k.Version)
+		if err != nil {
+			return err
+		}
+		config.Version = version
+	}
+
 	config.Consumer.Return.Errors = true
 
-	tlsConfig, err := internal.GetTLSConfig(
-		k.SSLCert, k.SSLKey, k.SSLCA, k.InsecureSkipVerify)
+	tlsConfig, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
+	}
+
+	if k.ClientID != "" {
+		config.ClientID = k.ClientID
+	} else {
+		config.ClientID = "Telegraf"
 	}
 
 	if tlsConfig != nil {

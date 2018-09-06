@@ -9,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -17,18 +18,9 @@ const (
 )
 
 type Kapacitor struct {
-	URLs []string `toml:"urls"`
-
+	URLs    []string `toml:"urls"`
 	Timeout internal.Duration
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	client *http.Client
 }
@@ -48,11 +40,11 @@ func (*Kapacitor) SampleConfig() string {
   ## Time limit for http requests
   timeout = "5s"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
 }
@@ -82,8 +74,7 @@ func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
 }
 
 func (k *Kapacitor) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := internal.GetTLSConfig(
-		k.SSLCert, k.SSLKey, k.SSLCA, k.InsecureSkipVerify)
+	tlsCfg, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

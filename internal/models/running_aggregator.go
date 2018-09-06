@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -153,6 +154,7 @@ func (r *RunningAggregator) Run(
 				m.Time().After(r.periodEnd.Add(truncation).Add(r.Config.Delay)) {
 				// the metric is outside the current aggregation period, so
 				// skip it.
+				log.Printf("D! aggregator: metric \"%s\" is not in the current timewindow, skipping", m.Name())
 				continue
 			}
 			r.add(m)

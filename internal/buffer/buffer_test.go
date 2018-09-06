@@ -1,6 +1,8 @@
 package buffer
 
 import (
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/influxdata/telegraf"
@@ -15,6 +17,107 @@ var metricList = []telegraf.Metric{
 	testutil.TestMetric(11, "mymetric3"),
 	testutil.TestMetric(15, "mymetric4"),
 	testutil.TestMetric(8, "mymetric5"),
+}
+
+func makeBench5(b *testing.B, freq, batchSize int) {
+	const k = 1000
+	var wg sync.WaitGroup
+	buf := NewBuffer(10000)
+	m := testutil.TestMetric(1, "mymetric")
+
+	for i := 0; i < b.N; i++ {
+		buf.Add(m, m, m, m, m)
+		if i%(freq*k) == 0 {
+			wg.Add(1)
+			go func() {
+				buf.Batch(batchSize * k)
+				wg.Done()
+			}()
+		}
+	}
+	// Flush
+	buf.Batch(b.N)
+	wg.Wait()
+
+}
+func makeBenchStrict(b *testing.B, freq, batchSize int) {
+	const k = 1000
+	var count uint64
+	var wg sync.WaitGroup
+	buf := NewBuffer(10000)
+	m := testutil.TestMetric(1, "mymetric")
+
+	for i := 0; i < b.N; i++ {
+		buf.Add(m)
+		if i%(freq*k) == 0 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				l := len(buf.Batch(batchSize * k))
+				atomic.AddUint64(&count, uint64(l))
+			}()
+		}
+	}
+	// Flush
+	wg.Add(1)
+	go func() {
+		l := len(buf.Batch(b.N))
+		atomic.AddUint64(&count, uint64(l))
+		wg.Done()
+	}()
+
+	wg.Wait()
+	if count != uint64(b.N) {
+		b.Errorf("not all metrics came out. %d of %d", count, b.N)
+	}
+}
+func makeBench(b *testing.B, freq, batchSize int) {
+	const k = 1000
+	var wg sync.WaitGroup
+	buf := NewBuffer(10000)
+	m := testutil.TestMetric(1, "mymetric")
+
+	for i := 0; i < b.N; i++ {
+		buf.Add(m)
+		if i%(freq*k) == 0 {
+			wg.Add(1)
+			go func() {
+				buf.Batch(batchSize * k)
+				wg.Done()
+			}()
+		}
+	}
+	wg.Wait()
+	// Flush
+	buf.Batch(b.N)
+}
+
+func BenchmarkBufferBatch5Add(b *testing.B) {
+	makeBench5(b, 100, 101)
+}
+func BenchmarkBufferBigInfrequentBatchCatchup(b *testing.B) {
+	makeBench(b, 100, 101)
+}
+func BenchmarkBufferOftenBatch(b *testing.B) {
+	makeBench(b, 1, 1)
+}
+func BenchmarkBufferAlmostBatch(b *testing.B) {
+	makeBench(b, 10, 9)
+}
+func BenchmarkBufferSlowBatch(b *testing.B) {
+	makeBench(b, 10, 1)
+}
+func BenchmarkBufferBatchNoDrop(b *testing.B) {
+	makeBenchStrict(b, 1, 4)
+}
+func BenchmarkBufferCatchup(b *testing.B) {
+	buf := NewBuffer(10000)
+	m := testutil.TestMetric(1, "mymetric")
+
+	for i := 0; i < b.N; i++ {
+		buf.Add(m)
+	}
+	buf.Batch(b.N)
 }
 
 func BenchmarkAddMetrics(b *testing.B) {

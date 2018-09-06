@@ -13,6 +13,12 @@ type Output interface {
 	Write(metrics []Metric) error
 }
 
+type AggregatingOutput interface {
+	Add(in Metric)
+	Push() []Metric
+	Reset()
+}
+
 type ServiceOutput interface {
 	// Connect to the Output
 	Connect() error

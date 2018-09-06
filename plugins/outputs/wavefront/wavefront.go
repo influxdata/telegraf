@@ -180,27 +180,41 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricPoint {
 }
 
 func buildTags(mTags map[string]string, w *Wavefront) (string, map[string]string) {
-	var source string
-	sourceTagFound := false
 
-	for _, s := range w.SourceOverride {
-		for k, v := range mTags {
-			if k == s {
-				source = v
-				mTags["telegraf_host"] = mTags["host"]
-				sourceTagFound = true
-				delete(mTags, k)
+	// Remove all empty tags.
+	for k, v := range mTags {
+		if v == "" {
+			delete(mTags, k)
+		}
+	}
+
+	var source string
+
+	if s, ok := mTags["source"]; ok {
+		source = s
+		delete(mTags, "source")
+	} else {
+		sourceTagFound := false
+		for _, s := range w.SourceOverride {
+			for k, v := range mTags {
+				if k == s {
+					source = v
+					mTags["telegraf_host"] = mTags["host"]
+					sourceTagFound = true
+					delete(mTags, k)
+					break
+				}
+			}
+			if sourceTagFound {
 				break
 			}
 		}
-		if sourceTagFound {
-			break
+
+		if !sourceTagFound {
+			source = mTags["host"]
 		}
 	}
 
-	if !sourceTagFound {
-		source = mTags["host"]
-	}
 	delete(mTags, "host")
 
 	return tagValueReplacer.Replace(source), mTags

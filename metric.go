@@ -54,6 +54,8 @@ type Metric interface {
 	AddField(key string, value interface{})
 	RemoveField(key string)
 
+	SetTime(t time.Time)
+
 	// HashID returns an unique identifier for the series.
 	HashID() uint64
 

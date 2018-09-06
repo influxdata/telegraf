@@ -97,7 +97,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		p.createProcess = defaultProcess
 	}
 
-	procs, err := p.updateProcesses(p.procs)
+	procs, err := p.updateProcesses(acc, p.procs)
 	if err != nil {
 		acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
 			p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
@@ -125,6 +125,14 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 		name, err := proc.Name()
 		if err == nil {
 			proc.Tags()["process_name"] = name
+		}
+	}
+
+	//If user tag is not already set, set to actual name
+	if _, ok := proc.Tags()["user"]; !ok {
+		user, err := proc.Username()
+		if err == nil {
+			proc.Tags()["user"] = user
 		}
 	}
 
@@ -230,8 +238,8 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 }
 
 // Update monitored Processes
-func (p *Procstat) updateProcesses(prevInfo map[PID]Process) (map[PID]Process, error) {
-	pids, tags, err := p.findPids()
+func (p *Procstat) updateProcesses(acc telegraf.Accumulator, prevInfo map[PID]Process) (map[PID]Process, error) {
+	pids, tags, err := p.findPids(acc)
 	if err != nil {
 		return nil, err
 	}
@@ -281,9 +289,9 @@ func (p *Procstat) getPIDFinder() (PIDFinder, error) {
 }
 
 // Get matching PIDs and their initial tags
-func (p *Procstat) findPids() ([]PID, map[string]string, error) {
+func (p *Procstat) findPids(acc telegraf.Accumulator) ([]PID, map[string]string, error) {
 	var pids []PID
-	var tags map[string]string
+	tags := make(map[string]string)
 	var err error
 
 	f, err := p.getPIDFinder()
@@ -313,7 +321,18 @@ func (p *Procstat) findPids() ([]PID, map[string]string, error) {
 		err = fmt.Errorf("Either exe, pid_file, user, pattern, systemd_unit, or cgroup must be specified")
 	}
 
-	return pids, tags, err
+	rTags := make(map[string]string)
+	for k, v := range tags {
+		rTags[k] = v
+	}
+
+	//adds a metric with info on the pgrep query
+	fields := make(map[string]interface{})
+	tags["pid_finder"] = p.PidFinder
+	fields["pid_count"] = len(pids)
+	acc.AddFields("procstat_lookup", fields, tags)
+
+	return pids, rTags, err
 }
 
 // execCommand is so tests can mock out exec.Command usage.

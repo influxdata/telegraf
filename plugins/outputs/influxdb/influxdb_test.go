@@ -8,6 +8,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
 	"github.com/stretchr/testify/require"
@@ -104,8 +105,10 @@ func TestConnectHTTPConfig(t *testing.T) {
 		HTTPHeaders: map[string]string{
 			"x": "y",
 		},
-		ContentEncoding:    "gzip",
-		InsecureSkipVerify: true,
+		ContentEncoding: "gzip",
+		ClientConfig: tls.ClientConfig{
+			InsecureSkipVerify: true,
+		},
 
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			actual = config

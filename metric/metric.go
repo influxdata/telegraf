@@ -168,6 +168,7 @@ func (m *metric) AddField(key string, value interface{}) {
 	for i, field := range m.fields {
 		if key == field.Key {
 			m.fields[i] = &telegraf.Field{Key: key, Value: convertField(value)}
+			return
 		}
 	}
 	m.fields = append(m.fields, &telegraf.Field{Key: key, Value: convertField(value)})
@@ -200,6 +201,10 @@ func (m *metric) RemoveField(key string) {
 			return
 		}
 	}
+}
+
+func (m *metric) SetTime(t time.Time) {
+	m.tm = t
 }
 
 func (m *metric) Copy() telegraf.Metric {
