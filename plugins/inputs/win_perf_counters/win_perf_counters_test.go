@@ -5,12 +5,13 @@ package win_perf_counters
 import (
 	"errors"
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
-	"time"
 )
 
 type testCounter struct {
@@ -29,14 +30,6 @@ var MetricTime = time.Date(2018, 5, 28, 12, 0, 0, 0, time.UTC)
 
 func (m *testCounter) ToCounterValue() *CounterValue {
 	_, inst, _, _ := extractCounterInfoFromCounterPath(m.path)
-	if inst == "" {
-		inst = "--"
-	}
-	return &CounterValue{inst, m.value}
-}
-
-func (m *testCounter) ToCounterValue() *CounterValue {
-	_, inst, _, _ := extractObjectInstanceCounterFromQuery(m.path)
 	if inst == "" {
 		inst = "--"
 	}
@@ -759,11 +752,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 			"\\O(*)\\C1": {cps2[0], cps2[2], cps2[4]},
 			"\\O(*)\\C2": {cps2[1], cps2[3], cps2[5]},
 		},
-<<<<<<< HEAD
-		addEnglishSupported: true,
-=======
 		vistaAndNewer: true,
- upstream/master
 	}
 	m.query = fpm
 	fpm.Open()
@@ -797,11 +786,7 @@ func TestGatherRefreshingWithoutExpansion(t *testing.T) {
 			"\\O(*)\\C2": {cps3[1], cps3[4]},
 			"\\O(*)\\C3": {cps3[2], cps3[5]},
 		},
-<<<<<<< HEAD
-		addEnglishSupported: true,
-=======
 		vistaAndNewer: true,
- upstream/master
 	}
 	m.query = fpm
 	m.Object = perfObjects
@@ -849,11 +834,7 @@ func TestGatherTotalNoExpansion(t *testing.T) {
 			"\\O(*)\\C1": {cps1[0], cps1[2]},
 			"\\O(*)\\C2": {cps1[1], cps1[3]},
 		},
-<<<<<<< HEAD
-		addEnglishSupported: true,
-=======
 		vistaAndNewer: true,
- upstream/master
 	}}
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)

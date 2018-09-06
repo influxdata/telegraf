@@ -940,9 +940,6 @@ func TestSyslogTimestamp(t *testing.T) {
 			require.NotNil(t, m)
 			require.Equal(t, tt.expected, m.Time())
 		})
-<<<<<<< HEAD:plugins/inputs/logparser/grok/grok_test.go
-	}
-=======
 	}
 }
 
@@ -1027,5 +1024,4 @@ func TestEmptyYearInTimestamp(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, m)
 	require.Equal(t, 2018, m.Time().Year())
- upstream/master:plugins/parsers/grok/parser_test.go
 }

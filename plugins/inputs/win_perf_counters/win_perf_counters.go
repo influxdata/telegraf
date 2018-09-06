@@ -22,11 +22,8 @@ var sampleConfig = `
   ## agent, it will not be gathered.
   ## Settings:
   # PrintValid = false # Print All matching performance counters
-<<<<<<< HEAD
-=======
   # Whether request a timestamp along with the PerfCounter data or just use current time
   # UsePerfCounterTime=true
- upstream/master
   # If UseWildcardsExpansion params is set to true, wildcards (partial wildcards in instance names and wildcards in counters names) in configured counter paths will be expanded
   # and in case of localized Windows, counter paths will be also localized. It also returns instance indexes in instance names.
   # If false, wildcards (not partial) in instance names will still be expanded, but instance indexes will not be returned in instance names.
@@ -187,11 +184,7 @@ func (m *Win_PerfCounters) SampleConfig() string {
 func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instance string, counterName string, measurement string, includeTotal bool) error {
 	var err error
 	var counterHandle PDH_HCOUNTER
-<<<<<<< HEAD
-	if !m.query.AddEnglishCounterSupported() {
-=======
 	if !m.query.IsVistaOrNewer() {
- upstream/master
 		counterHandle, err = m.query.AddCounterToQuery(counterPath)
 		if err != nil {
 			return err
@@ -219,11 +212,7 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 			var err error
 			counterHandle, err := m.query.AddCounterToQuery(counterPath)
 
-<<<<<<< HEAD
-			objectName, instance, counterName, err = extractObjectInstanceCounterFromQuery(counterPath)
-=======
 			objectName, instance, counterName, err = extractCounterInfoFromCounterPath(counterPath)
- upstream/master
 			if err != nil {
 				return err
 			}
@@ -231,19 +220,11 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 			if instance == "_Total" && origInstance == "*" && !includeTotal {
 				continue
 			}
-<<<<<<< HEAD
 
 			newItem := &counter{counterPath, objectName, counterName, instance, measurement,
 				includeTotal, counterHandle}
 			m.counters = append(m.counters, newItem)
 
-=======
-
-			newItem := &counter{counterPath, objectName, counterName, instance, measurement,
-				includeTotal, counterHandle}
-			m.counters = append(m.counters, newItem)
-
- upstream/master
 			if m.PrintValid {
 				log.Printf("Valid: %s\n", counterPath)
 			}
@@ -342,26 +323,10 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		if m.UseWildcardsExpansion {
 			value, err := m.query.GetFormattedCounterValueDouble(metric.counterHandle)
 			if err == nil {
-<<<<<<< HEAD
-				measurement := sanitizedChars.Replace(metric.measurement)
-				if measurement == "" {
-					measurement = "win_perf_counters"
-				}
-
-				var instance = InstanceGrouping{measurement, metric.instance, metric.objectName}
-				if collectFields[instance] == nil {
-					collectFields[instance] = make(map[string]interface{})
-				}
-				collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(value)
-			} else {
-				//ignore invalid data from as some counters from process instances returns this sometimes
-				if phderr, ok := err.(*PdhError); ok && phderr.ErrorCode != PDH_INVALID_DATA && phderr.ErrorCode != PDH_CALC_NEGATIVE_VALUE {
-=======
 				addCounterMeasurement(metric, metric.instance, value, collectFields)
 			} else {
 				//ignore invalid data  as some counters from process instances returns this sometimes
 				if !isKnownCounterDataError(err) {
- upstream/master
 					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
 				}
 			}
@@ -389,20 +354,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 					}
 
 					if add {
-<<<<<<< HEAD
-						measurement := sanitizedChars.Replace(metric.measurement)
-						if measurement == "" {
-							measurement = "win_perf_counters"
-						}
-						var instance = InstanceGrouping{measurement, cValue.InstanceName, metric.objectName}
-
-						if collectFields[instance] == nil {
-							collectFields[instance] = make(map[string]interface{})
-						}
-						collectFields[instance][sanitizedChars.Replace(metric.counter)] = float32(cValue.Value)
-					}
-				}
-=======
 						addCounterMeasurement(metric, cValue.InstanceName, cValue.Value, collectFields)
 					}
 				}
@@ -411,7 +362,6 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				if !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
 				}
- upstream/master
 			}
 		}
 	}

@@ -35,20 +35,6 @@ apt-get install iputils-ping
 
 ### Metrics:
 
-- packets_transmitted ( from ping output )
-- reply_received ( increasing only on valid metric from echo replay, eg. 'Destination net unreachable' reply will increment packets_received but not reply_received )
-- packets_received ( from ping output )
-- percent_reply_loss ( compute from packets_transmitted and reply_received )
-- percent_packets_loss ( compute from packets_transmitted and packets_received )
-- errors ( when host can not be found or wrong parameters is passed to application )
-- response time
-    - average_response_ms ( compute from minimum_response_ms and maximum_response_ms )
-    - minimum_response_ms ( from ping output )
-    - maximum_response_ms ( from ping output )
-- result_code
-    - 0: success
-    - 1: no such host
-    - 2: ping error
 - ping
   - tags:
     - url
