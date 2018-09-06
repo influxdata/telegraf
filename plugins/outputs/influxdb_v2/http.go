@@ -4,7 +4,6 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -38,15 +37,6 @@ const (
 	defaultDatabase       = "telegraf"
 	defaultUserAgent      = "telegraf"
 )
-
-// WriteResponse is the response body from the /write endpoint
-type WriteResponse struct {
-	Err string `json:"error,omitempty"`
-}
-
-func (r WriteResponse) Error() string {
-	return r.Err
-}
 
 type HTTPConfig struct {
 	URL             *url.URL
@@ -176,16 +166,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		return nil
 	}
 
-	writeResp := &WriteResponse{}
-	dec := json.NewDecoder(resp.Body)
-
-	var desc string
-	err = dec.Decode(writeResp)
-	if err == nil {
-		desc = writeResp.Err
-	} else {
-		desc = resp.Header.Get("X-Influx-Error")
-	}
+	desc := resp.Header.Get("X-Influx-Error")
 
 	return &APIError{
 		StatusCode:  resp.StatusCode,

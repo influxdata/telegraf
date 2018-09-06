@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	defaultURL = "http://localhost:8086"
+	defaultURL = "http://localhost:9999"
 
 	ErrMissingURL = errors.New("missing URL")
 )
@@ -27,7 +27,7 @@ var sampleConfig = `
   ##
   ## Multiple URLs can be specified for a single cluster, only ONE of the
   ## urls will be written to each interval.
-  urls = ["http://127.0.0.1:8086"]
+  urls = ["http://127.0.0.1:9999"]
 
   ## Token for authentication.
   token = ""
