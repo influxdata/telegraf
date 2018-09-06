@@ -183,7 +183,7 @@
   branch = "master"
 
 [[constraint]]
-  name = "github.com/zensqlmonitor/go-mssqldb"
+  name = "github.com/denisenkom/go-mssqldb"
   branch = "master"
 
 [[constraint]]
