@@ -7,7 +7,7 @@ plugins.
 1. [InfluxDB Line Protocol](#influx)
 1. [JSON](#json)
 1. [Graphite](#graphite)
-1. [SplunkMetric](#splunkmetric)
+1. [SplunkMetric](../plugins/serializers/splunkmetric/README.md)
 
 You will be able to identify the plugins with support by the presence of a
 `data_format` config option, for example, in the `file` output plugin:
@@ -210,67 +210,3 @@ reference the documentation for the specific plugin.
   ## the power of 10 less than the specified units.
   json_timestamp_units = "1s"
 ```
-
-## SplunkMetric
-
-The SplunkMetric format translates the telegraf metrics into a JSON format compatible
-with a Splunk Metrics index. Normally you would use this to send the metrics to a
-HTTP Event Collector (HEC), it follows the format specified in the document [here.](http://dev.splunk.com/view/SP-CAAAFDN#json)
-
-```toml
-[[outputs.http]]
-   ## URL is the address to send metrics to
-   url = "https://localhost:8088/services/collector"
-
-   ## Timeout for HTTP message
-   # timeout = "5s"
-
-   ## HTTP method, one of: "POST" or "PUT"
-   # method = "POST"
-
-   ## HTTP Basic Auth credentials
-   # username = "username"
-   # password = "pa$$word"
-
-   ## Optional TLS Config
-   # tls_ca = "/etc/telegraf/ca.pem"
-   # tls_cert = "/etc/telegraf/cert.pem"
-   # tls_key = "/etc/telegraf/key.pem"
-   ## Use TLS but skip chain & host verification
-   # insecure_skip_verify = false
-
-   ## Data format to output.
-   ## Each data format has it's own unique set of configuration options, read
-   ## more about them here:
-   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-   data_format = "splunkmetric"
-   # Enable hec_routing 
-   hec_routing = true
-
-   ## Additional HTTP headers
-   [outputs.http.headers]
-   # Should be set manually to "application/json" for json data_format
-      Content-Type = "application/json"
-      Authorization = "Splunk xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      X-Splunk-Request-Channel = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-```
-
-It also has the option to output a more basic JSON structure that can be used by a
-Splunk Universal Forwarder or modular input.
-
-```toml
-[[outputs.file]]
-  ## Files to write to, "stdout" is a specially handled file.
-  files = ["stdout", "/tmp/metrics.out"]
-
-  ## Data format to output.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "json"
-  ## hec_routing defaults to false
-  # hec_routing = false
-```
-
-Please see the [Splunk Metrics README](../plugins/serializers/splunkmetric/README.md) for additional
-information.
