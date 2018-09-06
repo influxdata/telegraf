@@ -1009,3 +1009,19 @@ func TestMeasurementModifierNoName(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, m.Name(), "hello")
 }
+
+func TestEmptyYearInTimestamp(t *testing.T) {
+	p := &Parser{
+		Patterns: []string{`%{APPLE_SYSLOG_TIME_SHORT:timestamp:ts-"Jan 2 15:04:05"} %{HOSTNAME} %{APP_NAME:app_name}\[%{NUMBER:pid:int}\]%{GREEDYDATA:message}`},
+		CustomPatterns: `
+		APPLE_SYSLOG_TIME_SHORT %{MONTH} +%{MONTHDAY} %{TIME}
+		APP_NAME [a-zA-Z0-9\.]+
+		`,
+	}
+	require.NoError(t, p.Compile())
+	p.ParseLine("Nov  6 13:57:03 generic iTunes[6504]: info> Scale factor of main display = 2.0")
+	m, err := p.ParseLine("Nov  6 13:57:03 generic iTunes[6504]: objc[6504]: Object descriptor was null.")
+	require.NoError(t, err)
+	require.NotNil(t, m)
+	require.Equal(t, 2018, m.Time().Year())
+}

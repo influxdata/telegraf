@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"regexp"
 	"strings"
 	"time"
 
@@ -119,28 +118,57 @@ type instanceGrouping struct {
 var sanitizedChars = strings.NewReplacer("/sec", "_persec", "/Sec", "_persec",
 	" ", "_", "%", "Percent", `\`, "")
 
-//General Counter path pattern is: \\computer\object(parent/instance#index)\counter
-//parent/instance#index part is skipped in single instance objects (e.g. Memory): \\computer\object\counter
+// extractCounterInfoFromCounterPath gets object name, instance name (if available) and counter name from counter path
+// General Counter path pattern is: \\computer\object(parent/instance#index)\counter
+// parent/instance#index part is skipped in single instance objects (e.g. Memory): \\computer\object\counter
+func extractCounterInfoFromCounterPath(counterPath string) (object string, instance string, counter string, err error) {
 
-var counterPathRE = regexp.MustCompile(`.*\\(.*)\\(.*)`)
-var objectInstanceRE = regexp.MustCompile(`(.*)\((.*)\)`)
+	rightObjectBorderIndex := -1
+	leftObjectBorderIndex := -1
+	leftCounterBorderIndex := -1
+	rightInstanceBorderIndex := -1
+	leftInstanceBorderIndex := -1
+	bracketLevel := 0
 
-//extractObjectInstanceCounterFromQuery gets object name, instance name (if available) and counter name from counter path
-func extractObjectInstanceCounterFromQuery(query string) (object string, instance string, counter string, err error) {
-	pathParts := counterPathRE.FindAllStringSubmatch(query, -1)
-	if pathParts == nil || len(pathParts[0]) != 3 {
-		err = errors.New("Could not extract counter info from: " + query)
+	for i := len(counterPath) - 1; i >= 0; i-- {
+		switch counterPath[i] {
+		case '\\':
+			if bracketLevel == 0 {
+				if leftCounterBorderIndex == -1 {
+					leftCounterBorderIndex = i
+				} else if leftObjectBorderIndex == -1 {
+					leftObjectBorderIndex = i
+				}
+			}
+		case '(':
+			bracketLevel--
+			if leftInstanceBorderIndex == -1 && bracketLevel == 0 && leftObjectBorderIndex == -1 && leftCounterBorderIndex > -1 {
+				leftInstanceBorderIndex = i
+				rightObjectBorderIndex = i
+			}
+		case ')':
+			if rightInstanceBorderIndex == -1 && bracketLevel == 0 && leftCounterBorderIndex > -1 {
+				rightInstanceBorderIndex = i
+			}
+			bracketLevel++
+		}
+	}
+	if rightObjectBorderIndex == -1 {
+		rightObjectBorderIndex = leftCounterBorderIndex
+	}
+	if rightObjectBorderIndex == -1 || leftObjectBorderIndex == -1 {
+		err = errors.New("cannot parse object from: " + counterPath)
 		return
 	}
-	counter = pathParts[0][2]
-	//try to get instance name
-	objectInstanceParts := objectInstanceRE.FindAllStringSubmatch(pathParts[0][1], -1)
-	if objectInstanceParts == nil || len(objectInstanceParts[0]) != 3 {
-		object = pathParts[0][1]
-	} else {
-		object = objectInstanceParts[0][1]
-		instance = objectInstanceParts[0][2]
+
+	if leftInstanceBorderIndex > -1 && rightInstanceBorderIndex > -1 {
+		instance = counterPath[leftInstanceBorderIndex+1 : rightInstanceBorderIndex]
+	} else if (leftInstanceBorderIndex == -1 && rightInstanceBorderIndex > -1) || (leftInstanceBorderIndex > -1 && rightInstanceBorderIndex == -1) {
+		err = errors.New("cannot parse instance from: " + counterPath)
+		return
 	}
+	object = counterPath[leftObjectBorderIndex+1 : rightObjectBorderIndex]
+	counter = counterPath[leftCounterBorderIndex+1:]
 	return
 }
 
@@ -184,7 +212,7 @@ func (m *Win_PerfCounters) AddItem(counterPath string, objectName string, instan
 			var err error
 			counterHandle, err := m.query.AddCounterToQuery(counterPath)
 
-			objectName, instance, counterName, err = extractObjectInstanceCounterFromQuery(counterPath)
+			objectName, instance, counterName, err = extractCounterInfoFromCounterPath(counterPath)
 			if err != nil {
 				return err
 			}
