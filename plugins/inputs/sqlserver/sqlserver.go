@@ -386,7 +386,6 @@ FROM
 [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
 inner join sys.master_files b on b.database_id = vfs.database_id and b.file_id = vfs.file_id
 END
-OPTION( RECOMPILE );
 `
 
 const sqlServerPropertiesV2 = `DECLARE @sys_info TABLE (
