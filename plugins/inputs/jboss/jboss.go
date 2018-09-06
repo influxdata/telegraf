@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	dac "github.com/xinsnake/go-http-digest-auth-client"
+	dac "github.com/stefa975/go-http-digest-auth-client"
 )
 
 const (
@@ -1098,21 +1098,18 @@ func (j *JBoss) doRequest(domainUrl string, bodyContent map[string]interface{}) 
 	method := "POST"
 
 	// Debug JSON request
-	log.Printf("D! Req: %s\n", requestBody)
+	log.Printf("D! ReqBody: %s\n", requestBody)
 
 	req := dac.NewRequest(j.Username, j.Password, method, serverUrl.String(), string(requestBody[:]))
-    req.Header.Add("Content-Type", "application/json")
+        req.Header.Add("Content-Type", "application/json")
 
 	resp, err := req.Execute()
-
+	
 	if err != nil {
 		log.Printf("D! HTTP REQ:%#+v", req)
 		log.Printf("D! HTTP RESP:%#+v", resp)
 		return nil, err
 	}
-
-	log.Printf("D! JBoss API Req HTTP REQ:%#+v", req)
-	log.Printf("D! JBoss API Req HTTP RESP:%#+v", resp)
 
 	if resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("Response from url \"%s\" has status code %d (%s), expected %d (%s)",
