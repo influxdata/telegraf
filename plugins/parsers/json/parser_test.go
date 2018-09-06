@@ -602,7 +602,7 @@ func TestUnixTimeParser(t *testing.T) {
 			"a": 5,
 			"b": {
 				"c": 6,
-				"time": 1536001411.100
+				"time": "1536001411.1234567890"
 			},
 			"my_tag_1": "foo",
 			"my_tag_2": "baz"
@@ -611,7 +611,7 @@ func TestUnixTimeParser(t *testing.T) {
 			"a": 7,
 			"b": {
 				"c": 8,
-				"time": 1536002769.100
+				"time": 1536002769.123
 			},
 			"my_tag_1": "bar",
 			"my_tag_2": "baz"
@@ -635,7 +635,7 @@ func TestUnixMsTimeParser(t *testing.T) {
 			"a": 5,
 			"b": {
 				"c": 6,
-				"time": 1536001411000
+				"time": "1536001411100"
 			},
 			"my_tag_1": "foo",
 			"my_tag_2": "baz"
@@ -644,7 +644,7 @@ func TestUnixMsTimeParser(t *testing.T) {
 			"a": 7,
 			"b": {
 				"c": 8,
-				"time": 1536002769000
+				"time": 1536002769123
 			},
 			"my_tag_1": "bar",
 			"my_tag_2": "baz"

@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/tidwall/gjson"
 	"math"
+	"regexp"
 )
 
 var (
@@ -79,20 +80,42 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 			return nil, err
 		}
 
-		// unix: epoch is assumed to be in seconds and unquoted. Can have a decimal part.
-		// unix_ms: epoch is assumed to be in milliseconds and unquoted. Cannot have a decimal part.
+		// unix: epoch is assumed to be in seconds. Can have a decimal part.
+		// unix_ms: epoch is assumed to be in milliseconds. Cannot have a decimal part.
 		if strings.EqualFold(p.JSONTimeFormat, "unix") || strings.EqualFold(p.JSONTimeFormat, "unix_ms") {
-			timeEpoch, ok := f.Fields[p.JSONTimeKey].(float64) //Using float64 as that is what the JSONFlattener returns
+			timeInt, timeFractional := int64(0), int64(0)
+			timeEpochStr, ok := f.Fields[p.JSONTimeKey].(string)
 			if !ok {
-				err := fmt.Errorf("time: %v could not be converted to float64", f.Fields[p.JSONTimeKey])
-				return nil, err
-			}
+				timeEpochFloat, ok := f.Fields[p.JSONTimeKey].(float64)
+				if !ok {
+					err := fmt.Errorf("time: %v could not be converted to string nor float64", f.Fields[p.JSONTimeKey])
+					return nil, err
+				}
+				intPart, frac := math.Modf(timeEpochFloat)
+				timeInt, timeFractional = int64(intPart), int64(frac*1e9)
+			} else {
+				splitted := regexp.MustCompile("[.,]").Split(timeEpochStr, 2)
+				timeInt, err = strconv.ParseInt(splitted[0], 10, 64)
+				if err != nil {
+					return nil, err
+				}
 
+				if len(splitted) == 2 {
+					if len(splitted[1]) > 9 {
+						splitted[1] = splitted[1][:9] //truncates decimal part to nanoseconds precision
+					}
+					nanosecStr := splitted[1] + strings.Repeat("0", 9-len(splitted[1])) //adds 0's to the right to obtain a valid number of nanoseconds
+
+					timeFractional, err = strconv.ParseInt(nanosecStr, 10, 64)
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
 			if strings.EqualFold(p.JSONTimeFormat, "unix") {
-				timeInt, timeFractional := math.Modf(timeEpoch)
-				nTime = time.Unix(int64(timeInt), int64(timeFractional*1e9)).UTC()
+				nTime = time.Unix(timeInt, timeFractional).UTC()
 			} else { //unix_ms
-				nTime = time.Unix(int64(timeEpoch)/1000, (int64(timeEpoch)%1000)*1e6).UTC()
+				nTime = time.Unix(timeInt/1000, (timeInt%1000)*1e6).UTC()
 			}
 		} else {
 			timeStr, ok := f.Fields[p.JSONTimeKey].(string)
