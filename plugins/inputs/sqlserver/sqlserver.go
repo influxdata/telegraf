@@ -360,8 +360,8 @@ vfs.num_of_bytes_read AS read_bytes,
 vfs.io_stall_write_ms AS write_latency_ms,
 vfs.num_of_writes AS writes,
 vfs.num_of_bytes_written AS write_bytes,
-b.name as logicalFilename,
-b.physical_name as physicalFilename,
+b.name as logical_filename,
+b.physical_name as physical_filename,
 CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'DATA' END AS file_type
 FROM
 [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
@@ -379,8 +379,8 @@ vfs.num_of_bytes_read AS read_bytes,
 vfs.io_stall_write_ms AS write_latency_ms,
 vfs.num_of_writes AS writes,
 vfs.num_of_bytes_written AS write_bytes,
-b.name as logicalFilename,
-b.physical_name as physicalFilename,
+b.name as logical_filename,
+b.physical_name as physical_filename,
 CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'DATA' END AS file_type
 FROM
 [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
