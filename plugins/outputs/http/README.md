@@ -21,6 +21,12 @@ data formats.  For data_formats that support batching, metrics are sent in batch
   # username = "username"
   # password = "pa$$word"
 
+  ## OAuth2 Client Credentials Grant
+  # client_id = "clientid"
+  # client_secret = "secret"
+  # token_url = "https://indentityprovider/oauth2/v1/token"
+  # scopes = ["urn:opc:idm:__myscopes__"]
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -33,7 +39,7 @@ data formats.  For data_formats that support batching, metrics are sent in batch
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
-  
+
   ## Additional HTTP headers
   # [outputs.http.headers]
   #   # Should be set manually to "application/json" for json data_format

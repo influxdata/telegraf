@@ -344,6 +344,9 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			v = strings.Replace(v, ",", ".", -1)
 			ts, err := time.ParseInLocation(t, v, p.loc)
 			if err == nil {
+				if ts.Year() == 0 {
+					ts = ts.AddDate(timestamp.Year(), 0, 0)
+				}
 				timestamp = ts
 			} else {
 				log.Printf("E! Error parsing %s to time layout [%s]: %s", v, t, err)
@@ -485,6 +488,9 @@ type tsModder struct {
 // most significant time unit of ts.
 //   ie, if the input is at ms precision, it will increment it 1µs.
 func (t *tsModder) tsMod(ts time.Time) time.Time {
+	if ts.IsZero() {
+		return ts
+	}
 	defer func() { t.last = ts }()
 	// don't mod the time if we don't need to
 	if t.last.IsZero() || ts.IsZero() {
@@ -498,7 +504,6 @@ func (t *tsModder) tsMod(ts time.Time) time.Time {
 		t.rollover = 0
 		return ts
 	}
-
 	if ts.Equal(t.last) {
 		t.dupe = ts
 	}
