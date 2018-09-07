@@ -572,7 +572,8 @@ WHERE	(
 				'Disk Write IO/sec',
 				'Used memory (KB)',
 				'Forwarded Recs/sec',
-				'Background Writer pages/sec'
+				'Background Writer pages/sec',
+				'Percent Log Used'
 			)
 		)  OR  ( 
 			object_name LIKE '%User Settable%'
