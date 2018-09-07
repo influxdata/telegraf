@@ -768,7 +768,7 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 	return ioutil.ReadAll(resp.Body)
 }
 
-// parseFile loads a TOML configuration from a provided path and
+// parseConfig loads a TOML configuration from a provided path and
 // returns the AST produced from the TOML parser. When loading the file, it
 // will find environment variables and replace them.
 func parseConfig(contents []byte) (*ast.Table, error) {
