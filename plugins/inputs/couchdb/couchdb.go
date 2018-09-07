@@ -120,22 +120,30 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 		return fmt.Errorf("Failed to get stats from couchdb: HTTP responded %d", response.StatusCode)
 	}
 
-	var stats Stats
+	stats := Stats{
+		OpenOsFiles: metaData{Value: -1},
+		RequestTime: metaData{Value: -1},
+	}
 	decoder := json.NewDecoder(response.Body)
 	decoder.Decode(&stats)
 
 	fields := map[string]interface{}{}
+
+	requestTime := stats.Couchdb.RequestTime
+	openOSFiles := stats.Couchdb.OpenOsFiles
+	if !(stats.RequestTime.Value < 0) || !(stats.OpenOsFiles.Value < 0) {
+		requestTime = stats.RequestTime
+		openOSFiles = stats.OpenOsFiles
+	}
 
 	// CouchDB meta stats:
 	c.MapCopy(fields, c.generateFields("couchdb_auth_cache_misses", stats.Couchdb.AuthCacheMisses))
 	c.MapCopy(fields, c.generateFields("couchdb_database_writes", stats.Couchdb.DatabaseWrites))
 	c.MapCopy(fields, c.generateFields("couchdb_open_databases", stats.Couchdb.OpenDatabases))
 	c.MapCopy(fields, c.generateFields("couchdb_auth_cache_hits", stats.Couchdb.AuthCacheHits))
-	c.MapCopy(fields, c.generateFields("couchdb_request_time", stats.Couchdb.RequestTime))
+	c.MapCopy(fields, c.generateFields("couchdb_request_time", requestTime))
 	c.MapCopy(fields, c.generateFields("couchdb_database_reads", stats.Couchdb.DatabaseReads))
-	c.MapCopy(fields, c.generateFields("couchdb_open_os_files", stats.Couchdb.OpenOsFiles))
-	c.MapCopy(fields, c.generateFields("request_time", stats.RequestTime))
-	c.MapCopy(fields, c.generateFields("open_os_files", stats.OpenOsFiles))
+	c.MapCopy(fields, c.generateFields("couchdb_open_os_files", openOSFiles))
 
 	// http request methods stats:
 	c.MapCopy(fields, c.generateFields("httpd_request_methods_put", stats.HttpdRequestMethods.Put))
