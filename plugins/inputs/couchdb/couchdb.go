@@ -54,6 +54,7 @@ type couchdb struct {
 	HttpdRequestMethods httpdRequestMethods `json:"httpd_request_methods"`
 	HttpdStatusCodes    httpdStatusCodes    `json:"httpd_status_codes"`
 }
+
 type httpdRequestMethods struct {
 	Put    metaData `json:"PUT"`
 	Get    metaData `json:"GET"`
@@ -62,6 +63,7 @@ type httpdRequestMethods struct {
 	Post   metaData `json:"POST"`
 	Head   metaData `json:"HEAD"`
 }
+
 type httpdStatusCodes struct {
 	Status200 metaData `json:"200"`
 	Status201 metaData `json:"201"`
@@ -77,6 +79,7 @@ type httpdStatusCodes struct {
 	Status412 metaData `json:"412"`
 	Status500 metaData `json:"500"`
 }
+
 type httpd struct {
 	BulkRequests             metaData `json:"bulk_requests"`
 	Requests                 metaData `json:"requests"`
@@ -84,6 +87,7 @@ type httpd struct {
 	ViewReads                metaData `json:"view_reads"`
 	ClientsRequestingChanges metaData `json:"clients_requesting_changes"`
 }
+
 type Stats struct {
 	Couchdb             couchdb             `json:"couchdb"`
 	HttpdRequestMethods httpdRequestMethods `json:"httpd_request_methods"`
@@ -160,7 +164,6 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 		Max:     stats.Couchdb.RequestTime.Max,
 	}
 	requestTime := stats.Couchdb.RequestTime.Value
-	openOSFiles := stats.Couchdb.OpenOsFiles
 
 	httpdRequestMethodsPut := stats.HttpdRequestMethods.Put
 	httpdRequestMethodsGet := stats.HttpdRequestMethods.Get
@@ -215,7 +218,7 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 	c.MapCopy(fields, c.generateFields("couchdb_auth_cache_hits", stats.Couchdb.AuthCacheHits))
 	c.MapCopy(fields, c.generateFields("couchdb_request_time", requestTime))
 	c.MapCopy(fields, c.generateFields("couchdb_database_reads", stats.Couchdb.DatabaseReads))
-	c.MapCopy(fields, c.generateFields("couchdb_open_os_files", openOSFiles))
+	c.MapCopy(fields, c.generateFields("couchdb_open_os_files", stats.Couchdb.OpenOsFiles))
 
 	// http request methods stats:
 	c.MapCopy(fields, c.generateFields("httpd_request_methods_put", httpdRequestMethodsPut))
@@ -298,6 +301,8 @@ func (c *CouchDB) generateFields(prefix string, obj metaData) map[string]interfa
 	return fields
 }
 
+// newStats returns a new stats struct with default values of -1. This
+// allows us to not record a metric if it wasn't present in the payload.
 func newStats() Stats {
 	return Stats{
 		Couchdb: couchdb{
@@ -363,7 +368,6 @@ func newStats() Stats {
 			ClientsRequestingChanges: newMeta(),
 		},
 	}
-
 }
 
 func newMeta() metaData {

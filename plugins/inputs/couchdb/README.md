@@ -64,7 +64,7 @@ httpd statistics:
 
 **Post Couchdb 2.0**
 ```
-couchdb,server=http://172.17.0.3:5984/_node/_local/_stats \
+couchdb,server=http://couchdb22:5984/_node/_local/_stats \
 couchdb_open_os_files_value=2,
 httpd_request_methods_get_value=84,
 httpd_request_methods_head_value=0,
@@ -101,7 +101,7 @@ couchdb_database_writes_value=2 1536369358000000000
 
 **Pre Couchdb 2.0**
 ```
-couchdb,server=http://172.17.0.5:5984/_stats \
+couchdb,server=http://couchdb16:5984/_stats \
 httpd_request_methods_delete_min=0,
 httpd_request_methods_head_max=0,
 httpd_request_methods_head_stddev=0,
