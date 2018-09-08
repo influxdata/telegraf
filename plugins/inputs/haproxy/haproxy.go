@@ -173,7 +173,7 @@ func (g *haproxy) gatherServer(addr string, acc telegraf.Accumulator) error {
 		addr = u.String()
 	}
 
-	if g.Username != "" {
+	if g.Username != "" || g.Password != "" {
 		req.SetBasicAuth(g.Username, g.Password)
 	}
 
