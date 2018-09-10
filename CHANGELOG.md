@@ -3,11 +3,13 @@
 ### New Inputs
 
 - [activemq](./plugins/inputs/activemq/README.md) - Contributed by @mlabouardy
+- [beanstalkd](./plugins/inputs/beanstalkd/README.md) - Contributed by @44px
 - [filecount](./plugins/inputs/filecount/README.md) - Contributed by @sometimesfood
 - [file](./plugins/inputs/file/README.md) - Contributed by @maxunt
 - [icinga2](./plugins/inputs/icinga2/README.md) - Contributed by @mlabouardy
 - [kibana](./plugins/inputs/icinga2/README.md) - Contributed by @lpic10
 - [pgbouncer](./plugins/inputs/pgbouncer/README.md) - Contributed by @nerzhul
+- [temp](./plugins/inputs/temp/README.md) - Contributed by @pytimer
 - [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
 - [x509_cert](./plugins/inputs/x509_cert/README.md) - Contributed by @jtyr
 
@@ -83,12 +85,16 @@
 - [#4476](https://github.com/influxdata/telegraf/pull/4476): Add strings processor.
 - [#4536](https://github.com/influxdata/telegraf/pull/4536): Add OAuth2 support to HTTP output plugin.
 - [#4633](https://github.com/influxdata/telegraf/pull/4633): Add Unix epoch timestamp support for JSON parser.
+- [#4657](https://github.com/influxdata/telegraf/pull/4657): Add options for basic auth to haproxy input.
+- [#4411](https://github.com/influxdata/telegraf/pull/4411): Add temp input plugin.
+- [#4272](https://github.com/influxdata/telegraf/pull/4272): Add Beanstalkd input plugin.
 
 ### Bugfixes
 
 - [#3438](https://github.com/influxdata/telegraf/issues/3438): Fix divide by zero in logparser input.
 - [#4499](https://github.com/influxdata/telegraf/issues/4499): Fix instance and object name in performance counters with backslashes.
 - [#4646](https://github.com/influxdata/telegraf/issues/4646): Reset/flush saved contents from bad metric.
+- [#4520](https://github.com/influxdata/telegraf/issues/4520): Document all supported cli arguments.
 
 ## v1.7.4 [2018-08-29]
 
