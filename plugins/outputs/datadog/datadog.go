@@ -17,7 +17,7 @@ import (
 
 type Datadog struct {
 	Apikey  string
-	Appkey  string
+	Appkey string
 	Timeout internal.Duration
 
 	apiUrl string
