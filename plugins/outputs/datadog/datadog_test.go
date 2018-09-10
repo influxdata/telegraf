@@ -74,7 +74,7 @@ func TestAuthenticatedUrl(t *testing.T) {
 	d := fakeDatadog()
 
 	authUrl := d.authenticatedUrl()
-	assert.EqualValues(t, fmt.Sprintf("%s?api_key=%s&app_key=%s", fakeUrl, fakeApiKey,fakeAppKey), authUrl)
+	assert.EqualValues(t, fmt.Sprintf("%s?api_key=%s&app_key=%s", fakeUrl, fakeApiKey, fakeAppKey), authUrl)
 }
 
 func TestBuildTags(t *testing.T) {
