@@ -178,8 +178,8 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
         if err != nil {
            return nil, nil, err
         }
-        host, port, _ := net.SplitHostPort(fullurl.Host)
-        tags := map[string]string{"server": h.Address, "protocol": fullurl.Scheme, "host": host, "port": port, "path": fullurl.Path, "method": h.Method}
+        domain, port, _ := net.SplitHostPort(fullurl.Host)
+        tags := map[string]string{"server": h.Address, "protocol": fullurl.Scheme, "domain": domain, "port": port, "path": fullurl.Path, "method": h.Method}
 
 	var body io.Reader
 	if h.Body != "" {
