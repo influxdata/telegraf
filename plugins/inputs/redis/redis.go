@@ -2,6 +2,7 @@ package redis
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -18,7 +19,8 @@ import (
 )
 
 type Redis struct {
-	Servers []string
+	Servers   []string
+	Passwords []string
 	tls.ClientConfig
 
 	clients     []Client
@@ -59,6 +61,10 @@ var sampleConfig = `
   ## If no port is specified, 6379 is used
   servers = ["tcp://localhost:6379"]
 
+  ## specify server's passwords if they contain special characters. Must
+  ## be the same length and order as 'servers'
+  # passwords = ["s#cr@t%"]
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -90,6 +96,10 @@ func (r *Redis) init(acc telegraf.Accumulator) error {
 		r.Servers = []string{"tcp://localhost:6379"}
 	}
 
+	if len(r.Passwords) > 0 && len(r.Passwords) != len(r.Servers) {
+		return errors.New("Number of passwords must match number of servers")
+	}
+
 	r.clients = make([]Client, len(r.Servers))
 
 	for i, serv := range r.Servers {
@@ -109,6 +119,9 @@ func (r *Redis) init(acc telegraf.Accumulator) error {
 			if ok {
 				password = pw
 			}
+		}
+		if len(r.Passwords) > 0 {
+			password = r.Passwords[i]
 		}
 
 		var address string
