@@ -17,6 +17,7 @@ import (
 
 type Datadog struct {
 	Apikey  string
+	Appkey string
 	Timeout internal.Duration
 
 	apiUrl string
@@ -26,6 +27,9 @@ type Datadog struct {
 var sampleConfig = `
   ## Datadog API key
   apikey = "my-secret-key" # required.
+
+   ## Datadog APP key
+  appkey = "my-secret-key" # required.
 
   ## Connection timeout.
   # timeout = "5s"
@@ -56,6 +60,9 @@ func (d *Datadog) Connect() error {
 	if d.Apikey == "" {
 		return fmt.Errorf("apikey is a required field for datadog output")
 	}
+	if d.Appkey == "" {
+		return fmt.Errorf("appkey is a required along with apikey for datadog output")
+	}
 
 	d.client = &http.Client{
 		Transport: &http.Transport{
@@ -67,6 +74,7 @@ func (d *Datadog) Connect() error {
 }
 
 func (d *Datadog) Write(metrics []telegraf.Metric) error {
+
 	if len(metrics) == 0 {
 		return nil
 	}
@@ -138,6 +146,7 @@ func (d *Datadog) Description() string {
 func (d *Datadog) authenticatedUrl() string {
 	q := url.Values{
 		"api_key": []string{d.Apikey},
+		"app_key": []string{d.Appkey},
 	}
 	return fmt.Sprintf("%s?%s", d.apiUrl, q.Encode())
 }
