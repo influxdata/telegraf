@@ -88,6 +88,7 @@
 - [#4657](https://github.com/influxdata/telegraf/pull/4657): Add options for basic auth to haproxy input.
 - [#4411](https://github.com/influxdata/telegraf/pull/4411): Add temp input plugin.
 - [#4272](https://github.com/influxdata/telegraf/pull/4272): Add Beanstalkd input plugin.
+- [#4669](https://github.com/influxdata/telegraf/pull/4669): Add means to specify server password for redis input.
 
 ### Bugfixes
 
