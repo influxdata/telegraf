@@ -108,11 +108,11 @@ but can be overridden using the `name_override` config option.
 
 #### JSON Configuration:
 
-The JSON data format supports specifying "tag_keys", "string_keys", and "json_query".
-If specified, keys in "tag_keys" and "string_keys" will be searched for in the root-level
+The JSON data format supports specifying "tag_keys", "json_string_fields", and "json_query".
+If specified, keys in "tag_keys" and "json_string_fields" will be searched for in the root-level
 and any nested lists of the JSON blob. All int and float values are added to fields by default.
 If the key(s) exist, they will be applied as tags or fields to the Telegraf metrics.
-If "string_keys" is specified, the string will be added as a field.
+If "json_string_fields" is specified, the string will be added as a field.
 
 The "json_query" configuration is a gjson path to an JSON object or
 list of JSON objects. If this path leads to an array of values or
@@ -225,7 +225,7 @@ For example, if the following configuration:
   ]
 
   ## List of field names to extract from JSON and add as string fields
-  # string_fields = []
+  # json_string_fields = []
 
   ## gjson query path to specify a specific chunk of JSON to be parsed with
   ## the above configuration. If not specified, the whole file will be parsed
@@ -293,7 +293,7 @@ For example, with the following config:
   tag_keys = ["first"]
 
   ## List of field names to extract from JSON and add as string fields
-  string_fields = ["last"]
+  json_string_fields = ["last"]
 
   ## gjson query path to specify a specific chunk of JSON to be parsed with
   ## the above configuration. If not specified, the whole file will be parsed
