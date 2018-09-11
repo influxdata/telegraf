@@ -14,9 +14,10 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Wavefront](#wavefront)
 1. [CSV](#csv)
 
-Telegraf metrics, like InfluxDB
-[points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
-are a combination of four basic parts:
+Telegraf metrics, similar to InfluxDB's [points][influxdb key concepts], are a
+combination of four basic parts:
+
+[influxdb key concepts]: https://docs.influxdata.com/influxdb/v1.6/concepts/key_concepts/
 
 1. Measurement Name
 1. Tags
@@ -59,8 +60,10 @@ I'll go over below.
 
 # Influx:
 
-There are no additional configuration options for InfluxDB line-protocol. The
+There are no additional configuration options for InfluxDB [line protocol][]. The
 metrics are parsed directly into Telegraf metrics.
+
+[line protocol]: https://docs.influxdata.com/influxdb/latest/write_protocols/line/
 
 #### Influx Configuration:
 
