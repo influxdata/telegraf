@@ -19,7 +19,7 @@ import (
 type HTTP struct {
 	URLs   []string `toml:"urls"`
 	Method string
-	TagURL bool `toml:"tag_url"`
+	TagURL string `toml:"tag_url"`
 
 	Headers map[string]string
 
@@ -178,7 +178,7 @@ func (h *HTTP) gatherURL(
 	}
 
 	for _, metric := range metrics {
-		if !metric.HasTag("url") && h.TagURL {
+		if !metric.HasTag("url") && h.TagURL != "false" {
 			metric.AddTag("url", url)
 		}
 		acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
