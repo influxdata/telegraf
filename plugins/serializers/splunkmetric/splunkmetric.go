@@ -36,7 +36,7 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	for _, metric := range metrics {
 		m, err := s.createObject(metric)
 		if err != nil {
-		    return nil, fmt.Errorf("D! [serializer.splunkmetric] Dropping invalid metric: %s", metric.Name())
+			return nil, fmt.Errorf("D! [serializer.splunkmetric] Dropping invalid metric: %s", metric.Name())
 		} else if m != nil {
 			serialized = append(serialized, m...)
 		}
@@ -64,13 +64,13 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 	}
 
 	dataGroup := HECTimeSeries{}
-    var metricJson []byte
+	var metricJson []byte
 
 	for _, field := range metric.FieldList() {
 
 		if !verifyValue(field.Value) {
 			log.Printf("D! Can not parse value: %v for key: %v", field.Value, field.Key)
-            continue
+			continue
 		}
 
 		obj := map[string]interface{}{}
@@ -107,7 +107,7 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 			metricJson, err = json.Marshal(dataGroup.Fields)
 		}
 
-        metricGroup = append(metricGroup, metricJson...)
+		metricGroup = append(metricGroup, metricJson...)
 
 		if err != nil {
 			return nil, err
