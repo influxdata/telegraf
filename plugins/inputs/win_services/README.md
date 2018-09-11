@@ -25,7 +25,7 @@ The `state` field can have the following values:
 - 3 - stop pending
 - 4 - running
 - 5 - continue pending
-- 6 - pause pending 
+- 6 - pause pending
 - 7 - paused
 
 The `startup_mode` field can have the following values:
@@ -33,7 +33,7 @@ The `startup_mode` field can have the following values:
 - 1 - system start
 - 2 - auto start
 - 3 - demand start
-- 4 - disabled   
+- 4 - disabled
 
 ### Tags:
 
@@ -50,7 +50,7 @@ The `startup_mode` field can have the following values:
 ### TICK Scripts
 
 A sample TICK script for a notification about a not running service.
-It sends a notification whenever any service changes its state to be not _running_ and when it changes that state back to _running_. 
+It sends a notification whenever any service changes its state to be not _running_ and when it changes that state back to _running_.
 The notification is sent via an HTTP POST call.
 
 ```
