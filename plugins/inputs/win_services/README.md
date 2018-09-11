@@ -1,7 +1,9 @@
-# Telegraf Plugin: win_services
-Input plugin to report Windows services info.
+# Windows Services Input Plugin
 
-It requires that Telegraf must be running under the administrator privileges.
+Reports information about Windows service status.
+
+Monitoring some services may require running Telegraf with administrator privileges.
+
 ### Configuration:
 
 ```toml
@@ -43,9 +45,8 @@ The `startup_mode` field can have the following values:
 
 ### Example Output:
 ```
-* Plugin: inputs.win_services, Collection 1
-> win_services,host=WIN2008R2H401,display_name=Server,service_name=LanmanServer state=4i,startup_mode=2i 1500040669000000000
-> win_services,display_name=Remote\ Desktop\ Services,service_name=TermService,host=WIN2008R2H401 state=1i,startup_mode=3i 1500040669000000000
+win_services,host=WIN2008R2H401,display_name=Server,service_name=LanmanServer state=4i,startup_mode=2i 1500040669000000000
+win_services,display_name=Remote\ Desktop\ Services,service_name=TermService,host=WIN2008R2H401 state=1i,startup_mode=3i 1500040669000000000
 ```
 ### TICK Scripts
 
