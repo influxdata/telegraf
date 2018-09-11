@@ -17,6 +17,7 @@ import (
 
 type Datadog struct {
 	Apikey  string
+	Appkey  string
 	Timeout internal.Duration
 
 	apiUrl string
@@ -26,6 +27,9 @@ type Datadog struct {
 var sampleConfig = `
   ## Datadog API key
   apikey = "my-secret-key" # required.
+
+   ## Datadog APP key
+  appkey = "my-secret-key" # optional.
 
   ## Connection timeout.
   # timeout = "5s"
@@ -138,6 +142,7 @@ func (d *Datadog) Description() string {
 func (d *Datadog) authenticatedUrl() string {
 	q := url.Values{
 		"api_key": []string{d.Apikey},
+		"app_key": []string{d.Appkey},
 	}
 	return fmt.Sprintf("%s?%s", d.apiUrl, q.Encode())
 }

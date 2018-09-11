@@ -19,11 +19,13 @@ import (
 var (
 	fakeUrl    = "http://test.datadog.com"
 	fakeApiKey = "123456"
+	fakeAppKey = "56889"
 )
 
 func fakeDatadog() *Datadog {
 	d := NewDatadog(fakeUrl)
 	d.Apikey = fakeApiKey
+	d.Appkey = fakeAppKey
 	return d
 }
 
@@ -36,6 +38,7 @@ func TestUriOverride(t *testing.T) {
 
 	d := NewDatadog(ts.URL)
 	d.Apikey = "123456"
+	d.Appkey = "000000"
 	err := d.Connect()
 	require.NoError(t, err)
 	err = d.Write(testutil.MockMetrics())
@@ -54,9 +57,11 @@ func TestBadStatusCode(t *testing.T) {
 	defer ts.Close()
 
 	d := NewDatadog(ts.URL)
-	d.Apikey = "123456"
+	d.Apikey = "4444"
+	d.Appkey = "5555"
 	err := d.Connect()
 	require.NoError(t, err)
+
 	err = d.Write(testutil.MockMetrics())
 	if err == nil {
 		t.Errorf("error expected but none returned")
@@ -69,7 +74,7 @@ func TestAuthenticatedUrl(t *testing.T) {
 	d := fakeDatadog()
 
 	authUrl := d.authenticatedUrl()
-	assert.EqualValues(t, fmt.Sprintf("%s?api_key=%s", fakeUrl, fakeApiKey), authUrl)
+	assert.EqualValues(t, fmt.Sprintf("%s?api_key=%s&app_key=%s", fakeUrl, fakeApiKey, fakeAppKey), authUrl)
 }
 
 func TestBuildTags(t *testing.T) {
