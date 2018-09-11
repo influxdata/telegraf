@@ -174,6 +174,7 @@ func setError(err error, fields map[string]interface{}, tags map[string]string) 
 func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, error) {
 	// Prepare fields and tags
 	fields := make(map[string]interface{})
+<<<<<<< HEAD
 	//s :=  h.Address
 
 	fullurl, err := url.Parse(h.Address)
@@ -183,6 +184,14 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
 	domain, port, _ := net.SplitHostPort(fullurl.Host)
 
 	tags := map[string]string{"server": h.Address, "protocol": fullurl.Scheme, "source": domain, "port": port, "path": fullurl.Path, "method": h.Method}
+=======
+        fullurl, err := url.Parse(h.Address)
+        if err != nil {
+           return nil, nil, err
+        }
+        host, port, _ := net.SplitHostPort(fullurl.Host)
+        tags := map[string]string{"server": h.Address, "protocol": fullurl.Scheme, "host": host, "port": port, "path": fullurl.Path, "method": h.Method}
+>>>>>>> 5a2a45314a65b36557cc5a81714c23078a6d8616
 
 	var body io.Reader
 	if h.Body != "" {
