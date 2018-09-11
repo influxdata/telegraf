@@ -33,7 +33,7 @@ type HealthCheck struct {
 type HttpCodes map[string]int
 
 var sampleConfig = `
-    # Required Traefik server address, host and port (default: "127.0.0.1")
+    # Required Traefik server address, host and port (default: "127.0.0.1:8080")
     address = "http://127.0.0.1:8080"
 
     # default is false. Setting to true can increase cardinality
@@ -82,6 +82,7 @@ func copyFields(m map[string]interface{}) map[string]interface{} {
 	}
 	return fields
 }
+
 func copyTags(m map[string]string) map[string]string {
 	tags := make(map[string]string)
 	for k, v := range m {
@@ -123,6 +124,7 @@ func (t *Traefik) createHttpClient() (*http.Client, error) {
 
 	return client, nil
 }
+
 func (t *Traefik) Gather(acc telegraf.Accumulator) error {
 	if t.client == nil {
 		client, err := t.createHttpClient()
