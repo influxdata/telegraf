@@ -11,6 +11,7 @@
 - [pgbouncer](./plugins/inputs/pgbouncer/README.md) - Contributed by @nerzhul
 - [temp](./plugins/inputs/temp/README.md) - Contributed by @pytimer
 - [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
+- [vsphere](./plugins/inputs/vsphere/README.md) - Contributed by @prydin
 - [x509_cert](./plugins/inputs/x509_cert/README.md) - Contributed by @jtyr
 
 ### New Processors
@@ -99,7 +100,8 @@
 - [#4411](https://github.com/influxdata/telegraf/pull/4411): Add temp input plugin.
 - [#4272](https://github.com/influxdata/telegraf/pull/4272): Add Beanstalkd input plugin.
 - [#4669](https://github.com/influxdata/telegraf/pull/4669): Add means to specify server password for redis input.
-- [#4339](https://github.com/influxdata/telegraf/pull/4339): Add Splunk Metrics serializer
+- [#4339](https://github.com/influxdata/telegraf/pull/4339): Add Splunk Metrics serializer.
+- [#4141](https://github.com/influxdata/telegraf/pull/4141): Add input plugin for VMware vSphere.
 
 ### Bugfixes
 
