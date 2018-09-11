@@ -222,7 +222,7 @@ func (c *CloudWatch) Connect() error {
 			return err
 		}
 	}
-	
+
 	c.svc = cloudwatch.New(configProvider)
 
 	return nil
