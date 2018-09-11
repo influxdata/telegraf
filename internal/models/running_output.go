@@ -94,6 +94,9 @@ func NewRunningOutput(
 // AddMetric adds a metric to the output. This function can also write cached
 // points if FlushBufferWhenFull is true.
 func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
+	ro.Lock()
+	defer ro.Unlock()
+
 	if m == nil {
 		return
 	}
@@ -114,6 +117,11 @@ func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
 		m, _ = metric.New(name, tags, fields, t, tp)
 	}
 
+	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
+		output.Add(m)
+		return
+	}
+
 	ro.metrics.Add(m)
 	if ro.metrics.Len() == ro.MetricBatchSize {
 		batch := ro.metrics.Batch(ro.MetricBatchSize)
@@ -127,6 +135,15 @@ func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
 
 // Write writes all cached points to this output.
 func (ro *RunningOutput) Write() error {
+	ro.Lock()
+	defer ro.Unlock()
+
+	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
+		metrics := output.Push()
+		ro.metrics.Add(metrics...)
+		output.Reset()
+	}
+
 	nFails, nMetrics := ro.failMetrics.Len(), ro.metrics.Len()
 	ro.BufferSize.Set(int64(nFails + nMetrics))
 	log.Printf("D! Output [%s] buffer fullness: %d / %d metrics. ",
@@ -175,8 +192,6 @@ func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 	if nMetrics == 0 {
 		return nil
 	}
-	ro.Lock()
-	defer ro.Unlock()
 	start := time.Now()
 	err := ro.Output.Write(metrics)
 	elapsed := time.Since(start)

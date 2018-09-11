@@ -35,7 +35,7 @@ var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
-var fVersion = flag.Bool("version", false, "display the version")
+var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
@@ -54,7 +54,7 @@ var fProcessorFilters = flag.String("processor-filter", "",
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 var fService = flag.String("service", "",
-	"operate on the service")
+	"operate on the service (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
 var (

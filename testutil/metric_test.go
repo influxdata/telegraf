@@ -8,13 +8,11 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
-func TestMustEqual(t *testing.T) {
-	type args struct {
-	}
+func TestRequireMetricsEqual(t *testing.T) {
 	tests := []struct {
 		name string
 		got  telegraf.Metric
-		want Metric
+		want telegraf.Metric
 	}{
 		{
 			name: "telegraf and testutil metrics should be equal",
@@ -34,24 +32,27 @@ func TestMustEqual(t *testing.T) {
 				)
 				return m
 			}(),
-			want: Metric{
-				Measurement: "test",
-				Tags: map[string]string{
-					"t1": "v1",
-					"t2": "v2",
-				},
-				Fields: map[string]interface{}{
-					"f1": int64(1),
-					"f2": 3.14,
-					"f3": "v3",
-				},
-				Time: time.Unix(0, 0),
-			},
+			want: func() telegraf.Metric {
+				m, _ := metric.New(
+					"test",
+					map[string]string{
+						"t1": "v1",
+						"t2": "v2",
+					},
+					map[string]interface{}{
+						"f1": int64(1),
+						"f2": 3.14,
+						"f3": "v3",
+					},
+					time.Unix(0, 0),
+				)
+				return m
+			}(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			MustEqual(t, tt.got, tt.want)
+			RequireMetricEqual(t, tt.want, tt.got)
 		})
 	}
 }

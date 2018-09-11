@@ -160,7 +160,7 @@ func TestBurrowGroup(t *testing.T) {
 			"partition_count": 3,
 			"total_lag":       int64(0),
 			"lag":             int64(0),
-			"offset":          int64(431323195),
+			"offset":          int64(431323195 + 431322962 + 428636563),
 			"timestamp":       int64(1515609490008),
 		},
 	}

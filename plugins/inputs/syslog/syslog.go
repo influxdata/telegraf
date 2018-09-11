@@ -213,10 +213,6 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 			break
 		}
 
-		if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
-			s.udpListener.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))
-		}
-
 		message, err := p.Parse(b[:n], &s.BestEffort)
 		if message != nil {
 			acc.AddFields("syslog", fields(*message, s), tags(*message), s.time())
