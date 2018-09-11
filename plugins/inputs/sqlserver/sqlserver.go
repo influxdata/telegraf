@@ -399,7 +399,7 @@ const sqlServerPropertiesV2 = `DECLARE @sys_info TABLE (
 	uptime INT
 )
 
-IF  OBJECT_ID('master.sys.dm_os_sys_info') IS NOT NULL
+IF OBJECT_ID('master.sys.dm_os_sys_info') IS NOT NULL
 BEGIN
  
 	IF SERVERPROPERTY('EngineEdition') = 8  -- Managed Instance
@@ -575,7 +575,7 @@ WHERE	(
 				'Background Writer pages/sec',
 				'Percent Log Used'
 			)
-		)  OR  ( 
+		) OR (
 			object_name LIKE '%User Settable%'
 			OR object_name LIKE '%SQL Errors%'
 		) OR (

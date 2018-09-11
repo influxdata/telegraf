@@ -90,7 +90,17 @@ The new (version 2) metrics provide:
   - *TempDB*: Free space, Version store usage, Active temp tables, temp table creation rate, + more
   - *Resource Governor*: CPU Usage, Requests/sec, Queued Requests, and Blocked tasks per workload group + more
 - *Server properties*: Number of databases in all possible states (online, offline, suspect, etc.), cpu count, physical memory, SQL Server service uptime, and SQL Server version
-- *Wait stats*: Wait time in ms, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the sasme categories used in Query Store.
+- *Wait stats*: Wait time in ms, number of waiting tasks, resource wait time, signal wait time, max wait time in ms, wait type, and wait category. The waits are categorized using the same categories used in Query Store.
+- *Azure Managed Instances*
+  - Stats from `sys.server_resource_stats`:
+    - cpu_count
+    - server_memory
+    - sku
+    - engine_edition
+    - hardware_type
+    - total_storage_mb
+    - available_storage_mb
+    - uptime
 
 The following metrics can be used directly, with no delta calculations:
  - SQLServer:Buffer Manager\Buffer cache hit ratio
@@ -130,4 +140,3 @@ The following metrics can be used directly, with no delta calculations:
 
 Version 2 queries have the following tags:
 - `sql_instance`: Physical host and instance name (hostname:instance)
-
