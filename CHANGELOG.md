@@ -110,6 +110,7 @@
 - [#4499](https://github.com/influxdata/telegraf/issues/4499): Fix instance and object name in performance counters with backslashes.
 - [#4646](https://github.com/influxdata/telegraf/issues/4646): Reset/flush saved contents from bad metric.
 - [#4520](https://github.com/influxdata/telegraf/issues/4520): Document all supported cli arguments.
+- [#4674](https://github.com/influxdata/telegraf/pull/4674): Log access denied opening a service at debug level in win_services.
 
 ## v1.7.4 [2018-08-29]
 
