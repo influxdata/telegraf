@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/filter"
 
 	"github.com/influxdata/telegraf"
+	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vim25/mo"
@@ -28,7 +29,6 @@ type Endpoint struct {
 	lastColls       map[string]time.Time
 	instanceInfo    map[string]resourceInfo
 	resourceKinds   map[string]resourceKind
-	metricNames     map[int32]string
 	discoveryTicker *time.Ticker
 	collectMux      sync.RWMutex
 	initialized     bool
@@ -39,6 +39,7 @@ type Endpoint struct {
 type resourceKind struct {
 	name             string
 	pKey             string
+	parentTag        string
 	enabled          bool
 	realTime         bool
 	sampling         int32
@@ -62,11 +63,13 @@ type objectRef struct {
 	ref       types.ManagedObjectReference
 	parentRef *types.ManagedObjectReference //Pointer because it must be nillable
 	guest     string
+	dcname    string
 }
 
 type resourceInfo struct {
-	name    string
-	metrics performance.MetricList
+	name      string
+	metrics   performance.MetricList
+	parentRef *types.ManagedObjectReference
 }
 
 type metricQRequest struct {
@@ -83,7 +86,7 @@ type multiError []error
 
 // NewEndpoint returns a new connection to a vCenter based on the URL and configuration passed
 // as parameters.
-func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) *Endpoint {
+func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint, error) {
 	e := Endpoint{
 		URL:           url,
 		Parent:        parent,
@@ -94,9 +97,22 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) *Endpoint {
 	}
 
 	e.resourceKinds = map[string]resourceKind{
+		"datacenter": {
+			name:             "datacenter",
+			pKey:             "dcname",
+			parentTag:        "",
+			enabled:          anythingEnabled(parent.DatacenterMetricExclude),
+			realTime:         false,
+			sampling:         300,
+			objects:          make(objectMap),
+			filters:          newFilterOrPanic(parent.DatacenterMetricInclude, parent.DatacenterMetricExclude),
+			collectInstances: parent.DatacenterInstances,
+			getObjects:       getDatacenters,
+		},
 		"cluster": {
 			name:             "cluster",
 			pKey:             "clustername",
+			parentTag:        "dcname",
 			enabled:          anythingEnabled(parent.ClusterMetricExclude),
 			realTime:         false,
 			sampling:         300,
@@ -108,6 +124,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) *Endpoint {
 		"host": {
 			name:             "host",
 			pKey:             "esxhostname",
+			parentTag:        "clustername",
 			enabled:          anythingEnabled(parent.HostMetricExclude),
 			realTime:         true,
 			sampling:         20,
@@ -119,6 +136,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) *Endpoint {
 		"vm": {
 			name:             "vm",
 			pKey:             "vmname",
+			parentTag:        "esxhostname",
 			enabled:          anythingEnabled(parent.VMMetricExclude),
 			realTime:         true,
 			sampling:         20,
@@ -141,9 +159,9 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) *Endpoint {
 	}
 
 	// Start discover and other goodness
-	e.init(ctx)
+	err := e.init(ctx)
 
-	return &e
+	return &e, err
 }
 
 func (m multiError) Error() string {
@@ -200,12 +218,15 @@ func (e *Endpoint) startDiscovery(ctx context.Context) {
 	}()
 }
 
-func (e *Endpoint) init(ctx context.Context) error {
-
-	err := e.setupMetricIds(ctx)
-	if err != nil {
-		return err
+func (e *Endpoint) initalDiscovery(ctx context.Context) {
+	err := e.discover(ctx)
+	if err != nil && err != context.Canceled {
+		log.Printf("E! [input.vsphere]: Error in discovery for %s: %v", e.URL.Host, err)
 	}
+	e.startDiscovery(ctx)
+}
+
+func (e *Endpoint) init(ctx context.Context) error {
 
 	if e.Parent.ObjectDiscoveryInterval.Duration > 0 {
 
@@ -214,43 +235,33 @@ func (e *Endpoint) init(ctx context.Context) error {
 		// dataset on the first collection, but it solves the issue of the first collection timing out.
 		if e.Parent.ForceDiscoverOnInit {
 			log.Printf("D! [input.vsphere]: Running initial discovery and waiting for it to finish")
-			err := e.discover(ctx)
-			if err != nil {
-				return err
-			}
-			e.startDiscovery(ctx)
+			e.initalDiscovery(ctx)
 		} else {
 			// Otherwise, just run it in the background. We'll probably have an incomplete first metric
 			// collection this way.
-			go func() {
-				err := e.discover(ctx)
-				if err != nil && err != context.Canceled {
-					log.Printf("E! [input.vsphere]: Error in discovery for %s: %v", e.URL.Host, err)
-				}
-				e.startDiscovery(ctx)
-			}()
+			go e.initalDiscovery(ctx)
 		}
 	}
 	e.initialized = true
 	return nil
 }
 
-func (e *Endpoint) setupMetricIds(ctx context.Context) error {
+func (e *Endpoint) getMetricNameMap(ctx context.Context) (map[int32]string, error) {
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	mn, err := client.Perf.CounterInfoByName(ctx)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
-	e.metricNames = make(map[int32]string)
+	names := make(map[int32]string)
 	for name, m := range mn {
-		e.metricNames[m.Key] = name
+		names[m.Key] = name
 	}
-	return nil
+	return names, nil
 }
 
 func (e *Endpoint) getMetadata(ctx context.Context, in interface{}) interface{} {
@@ -267,6 +278,41 @@ func (e *Endpoint) getMetadata(ctx context.Context, in interface{}) interface{} 
 	return &metricQResponse{metrics: &metrics, obj: rq.obj}
 }
 
+func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache map[string]string, r types.ManagedObjectReference) string {
+	path := make([]string, 0)
+	returnVal := ""
+	here := r
+	for {
+		if name, ok := cache[here.Reference().String()]; ok {
+			// Populate cache for the entire chain of objects leading here.
+			returnVal = name
+			break
+		}
+		path = append(path, here.Reference().String())
+		o := object.NewCommon(client.Client.Client, r)
+		var result mo.ManagedEntity
+		err := o.Properties(ctx, here, []string{"parent", "name"}, &result)
+		if err != nil {
+			log.Printf("W! [input.vsphere]: Error while resolving parent. Assuming no parent exists. Error: %s", err)
+			break
+		}
+		if result.Reference().Type == "Datacenter" {
+			// Populate cache for the entire chain of objects leading here.
+			returnVal = result.Name
+			break
+		}
+		if result.Parent == nil {
+			log.Printf("D! [input.vsphere]: No parent found for %s (ascending from %s)", here.Reference(), r.Reference())
+			break
+		}
+		here = result.Parent.Reference()
+	}
+	for _, s := range path {
+		cache[s] = returnVal
+	}
+	return returnVal
+}
+
 func (e *Endpoint) discover(ctx context.Context) error {
 	e.busy.Lock()
 	defer e.busy.Unlock()
@@ -274,8 +320,12 @@ func (e *Endpoint) discover(ctx context.Context) error {
 		return ctx.Err()
 	}
 
+	metricNames, err := e.getMetricNameMap(ctx)
+	if err != nil {
+		return err
+	}
+
 	sw := NewStopwatch("discover", e.URL.Host)
-	var err error
 
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
@@ -286,14 +336,26 @@ func (e *Endpoint) discover(ctx context.Context) error {
 
 	instInfo := make(map[string]resourceInfo)
 	resourceKinds := make(map[string]resourceKind)
+	dcNameCache := make(map[string]string)
 
 	// Populate resource objects, and endpoint instance info.
 	for k, res := range e.resourceKinds {
+		log.Printf("D! [input.vsphere] Discovering resources for %s", res.name)
 		// Need to do this for all resource types even if they are not enabled (but datastore)
 		if res.enabled || (k != "datastore" && k != "vm") {
 			objects, err := res.getObjects(ctx, client.Root)
 			if err != nil {
 				return err
+			}
+
+			// Fill in datacenter names where available (no need to do it for Datacenters)
+			if res.name != "Datacenter" {
+				for k, obj := range objects {
+					if obj.parentRef != nil {
+						obj.dcname = e.getDatacenterName(ctx, client, dcNameCache, *obj.parentRef)
+						objects[k] = obj
+					}
+				}
 			}
 
 			// Set up a worker pool for processing metadata queries concurrently
@@ -318,14 +380,14 @@ func (e *Endpoint) discover(ctx context.Context) error {
 							if m.Instance != "" && !res.collectInstances {
 								continue
 							}
-							if res.filters.Match(e.metricNames[m.CounterId]) {
+							if res.filters.Match(metricNames[m.CounterId]) {
 								mList = append(mList, m)
 							}
 						}
 					}
-					instInfo[resp.obj.ref.Value] = resourceInfo{name: resp.obj.name, metrics: mList}
+					instInfo[resp.obj.ref.Value] = resourceInfo{name: resp.obj.name, metrics: mList, parentRef: resp.obj.parentRef}
 				case error:
-					log.Printf("[input.vsphere]: Error while discovering resources: %s", resp)
+					log.Printf("W! [input.vsphere]: Error while discovering resources: %s", resp)
 					return false
 				}
 				return true
@@ -348,16 +410,46 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	return nil
 }
 
-func getClusters(ctx context.Context, root *view.ContainerView) (objectMap, error) {
-	var resources []mo.ClusterComputeResource
-	err := root.Retrieve(ctx, []string{"ClusterComputeResource"}, []string{"name", "parent"}, &resources)
+func getDatacenters(ctx context.Context, root *view.ContainerView) (objectMap, error) {
+	var resources []mo.Datacenter
+	err := root.Retrieve(ctx, []string{"Datacenter"}, []string{"name", "parent"}, &resources)
 	if err != nil {
 		return nil, err
 	}
 	m := make(objectMap, len(resources))
 	for _, r := range resources {
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent, dcname: r.Name}
+	}
+	return m, nil
+}
+
+func getClusters(ctx context.Context, root *view.ContainerView) (objectMap, error) {
+	var resources []mo.ClusterComputeResource
+	err := root.Retrieve(ctx, []string{"ClusterComputeResource"}, []string{"name", "parent"}, &resources)
+	if err != nil {
+		return nil, err
+	}
+	cache := make(map[string]*types.ManagedObjectReference)
+	m := make(objectMap, len(resources))
+	for _, r := range resources {
+		// We're not interested in the immediate parent (a folder), but the data center.
+		p, ok := cache[r.Parent.Value]
+		if !ok {
+			o := object.NewFolder(root.Client(), *r.Parent)
+			var folder mo.Folder
+			err := o.Properties(ctx, *r.Parent, []string{"parent"}, &folder)
+			if err != nil {
+				log.Printf("W! [input.vsphere] Error while getting folder parent: %e", err)
+				p = nil
+			} else {
+				pp := folder.Parent.Reference()
+				p = &pp
+				cache[r.Parent.Value] = p
+			}
+		}
+		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: p}
 	}
 	return m, nil
 }
@@ -551,7 +643,6 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 		n, err := e.collectChunk(ctx, chunk, resourceType, res, acc)
 		log.Printf("D! [input.vsphere]: Query returned %d metrics", n)
 		if err != nil {
-			log.Println(err)
 			return err
 		}
 		atomic.AddInt64(&count, int64(n))
@@ -678,6 +769,16 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 	return count, nil
 }
 
+func (e *Endpoint) getParent(obj resourceInfo) (resourceInfo, bool) {
+	p := obj.parentRef
+	if p == nil {
+		log.Printf("D! [input.vsphere] No parent found for %s", obj.name)
+		return resourceInfo{}, false
+	}
+	r, ok := e.instanceInfo[p.Value]
+	return r, ok
+}
+
 func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resource *resourceKind, t map[string]string, v *performance.MetricSeries) {
 	// Map name of object.
 	if resource.pKey != "" {
@@ -687,51 +788,49 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	// Map parent reference
 	parent, found := e.instanceInfo[objectRef.parentRef.Value]
 	if found {
-		switch resourceType {
-		case "host":
-			t["clustername"] = parent.name
-			break
-
-		case "vm":
-			t["guest"] = objectRef.guest
-			t["esxhostname"] = parent.name
-			hostRes := e.resourceKinds["host"]
-			hostRef, ok := hostRes.objects[objectRef.parentRef.Value]
-			if ok {
-				cluster, ok := e.instanceInfo[hostRef.parentRef.Value]
-				if ok {
-					t["clustername"] = cluster.name
-				}
+		t[resource.parentTag] = parent.name
+		if resourceType == "vm" {
+			if objectRef.guest != "" {
+				t["guest"] = objectRef.guest
 			}
-			break
+			if c, ok := e.getParent(parent); ok {
+				t["clustername"] = c.name
+			}
 		}
+	}
+
+	// Fill in Datacenter name
+	if objectRef.dcname != "" {
+		t["dcname"] = objectRef.dcname
 	}
 
 	// Determine which point tag to map to the instance
 	name := v.Name
+	instance := "instance-total"
 	if v.Instance != "" {
-		if strings.HasPrefix(name, "cpu.") {
-			t["cpu"] = v.Instance
-		} else if strings.HasPrefix(name, "datastore.") {
-			t["lun"] = v.Instance
-		} else if strings.HasPrefix(name, "disk.") {
-			t["disk"] = cleanDiskTag(v.Instance)
-		} else if strings.HasPrefix(name, "net.") {
-			t["interface"] = v.Instance
-		} else if strings.HasPrefix(name, "storageAdapter.") {
-			t["adapter"] = v.Instance
-		} else if strings.HasPrefix(name, "storagePath.") {
-			t["path"] = v.Instance
-		} else if strings.HasPrefix(name, "sys.resource") {
-			t["resource"] = v.Instance
-		} else if strings.HasPrefix(name, "vflashModule.") {
-			t["module"] = v.Instance
-		} else if strings.HasPrefix(name, "virtualDisk.") {
-			t["disk"] = v.Instance
-		} else {
-			// default to instance
-			t["instance"] = v.Instance
-		}
+		instance = v.Instance
+	}
+	if strings.HasPrefix(name, "cpu.") {
+		t["cpu"] = instance
+	} else if strings.HasPrefix(name, "datastore.") {
+		t["lun"] = instance
+	} else if strings.HasPrefix(name, "disk.") {
+		t["disk"] = cleanDiskTag(instance)
+	} else if strings.HasPrefix(name, "net.") {
+		t["interface"] = instance
+	} else if strings.HasPrefix(name, "storageAdapter.") {
+		t["adapter"] = instance
+	} else if strings.HasPrefix(name, "storagePath.") {
+		t["path"] = instance
+	} else if strings.HasPrefix(name, "sys.resource") {
+		t["resource"] = instance
+	} else if strings.HasPrefix(name, "vflashModule.") {
+		t["module"] = instance
+	} else if strings.HasPrefix(name, "virtualDisk.") {
+		t["disk"] = instance
+	} else if v.Instance != "" {
+		// default
+		t["instance"] = v.Instance
 	}
 }
 

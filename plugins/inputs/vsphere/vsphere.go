@@ -16,22 +16,25 @@ import (
 // VSphere is the top level type for the vSphere input plugin. It contains all the configuration
 // and a list of connected vSphere endpoints
 type VSphere struct {
-	Vcenters               []string
-	Username               string
-	Password               string
-	ClusterInstances       bool
-	ClusterMetricInclude   []string
-	ClusterMetricExclude   []string
-	HostInstances          bool
-	HostMetricInclude      []string
-	HostMetricExclude      []string
-	VMInstances            bool     `toml:"vm_instances"`
-	VMMetricInclude        []string `toml:"vm_metric_include"`
-	VMMetricExclude        []string `toml:"vm_metric_exclude"`
-	DatastoreInstances     bool
-	DatastoreMetricInclude []string
-	DatastoreMetricExclude []string
-	Separator              string
+	Vcenters                []string
+	Username                string
+	Password                string
+	DatacenterInstances     bool
+	DatacenterMetricInclude []string
+	DatacenterMetricExclude []string
+	ClusterInstances        bool
+	ClusterMetricInclude    []string
+	ClusterMetricExclude    []string
+	HostInstances           bool
+	HostMetricInclude       []string
+	HostMetricExclude       []string
+	VMInstances             bool     `toml:"vm_instances"`
+	VMMetricInclude         []string `toml:"vm_metric_include"`
+	VMMetricExclude         []string `toml:"vm_metric_exclude"`
+	DatastoreInstances      bool
+	DatastoreMetricInclude  []string
+	DatastoreMetricExclude  []string
+	Separator               string
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
@@ -55,7 +58,7 @@ var sampleConfig = `
   username = "user@corp.local"
   password = "secret"
 
-  ############### VMs ###############
+  ## VMs
   ## Typical VM metrics (if omitted or empty, all metrics are collected)
   vm_metric_include = [
     "cpu.demand.average",
@@ -96,7 +99,7 @@ var sampleConfig = `
   # vm_metric_exclude = [] ## Nothing is excluded by default
   # vm_instances = true ## true by default
 
-  ############### Hosts ###############
+  ## Hosts 
   ## Typical host metrics (if omitted or empty, all metrics are collected)
   host_metric_include = [
     "cpu.coreUtilization.average",
@@ -149,18 +152,22 @@ var sampleConfig = `
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
-  ############### Clusters ###############
+  ## Clusters 
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
   # cluster_instances = true ## true by default
 
-  ############### Datastores ###############
+  ## Datastores 
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
   # datastore_instances = false ## false by default for Datastores only
 
+  ## Datacenters
+  datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
+  datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
+  # datacenter_instances = false ## false by default for Datastores only
 
-  ############### Plugin Settings  ###############
+  ## Plugin Settings  
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
 
@@ -220,8 +227,11 @@ func (v *VSphere) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-
-		v.endpoints[i] = NewEndpoint(ctx, v, u)
+		ep, err := NewEndpoint(ctx, v, u)
+		if err != nil {
+			return err
+		}
+		v.endpoints[i] = ep
 	}
 	return nil
 }

@@ -16,13 +16,13 @@ For example, to disable collection of VMs, add this:
 ```
 # Read metrics from one or many vCenters
 [[inputs.vsphere]]
-  ## List of vCenter URLs to be monitored. These three lines must be uncommented
+    ## List of vCenter URLs to be monitored. These three lines must be uncommented
   ## and edited for the plugin to work.
   vcenters = [ "https://vcenter.local/sdk" ]
   username = "user@corp.local"
   password = "secret"
 
-  ############### VMs ###############
+  ## VMs
   ## Typical VM metrics (if omitted or empty, all metrics are collected)
   vm_metric_include = [
     "cpu.demand.average",
@@ -63,7 +63,7 @@ For example, to disable collection of VMs, add this:
   # vm_metric_exclude = [] ## Nothing is excluded by default
   # vm_instances = true ## true by default
 
-  ############### Hosts ###############
+  ## Hosts 
   ## Typical host metrics (if omitted or empty, all metrics are collected)
   host_metric_include = [
     "cpu.coreUtilization.average",
@@ -116,28 +116,32 @@ For example, to disable collection of VMs, add this:
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
-  ############### Clusters ###############
+  ## Clusters 
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
   # cluster_instances = true ## true by default
 
-  ############### Datastores ###############
+  ## Datastores 
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
   # datastore_instances = false ## false by default for Datastores only
 
+  ## Datacenters
+  datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
+  datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
+  # datacenter_instances = false ## false by default for Datastores only
 
-  ############### Plugin Settings  ###############
+  ## Plugin Settings  
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
 
   ## number of objects to retreive per query for realtime resources (vms and hosts)
   ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
-  # objects_per_query = 256
+  # max_query_objects = 256
 
   ## number of metrics to retreive per query for non-realtime resources (clusters and datastores)
   ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
-  # metrics_per_query = 256
+  # max_query_metrics = 256
 
   ## number of go routines to use for collection and discovery of objects and metrics
   # collect_concurrency = 1
