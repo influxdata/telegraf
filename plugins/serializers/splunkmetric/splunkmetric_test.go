@@ -114,7 +114,7 @@ func TestSerializeMetricString(t *testing.T) {
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
 
-	expS := ""
+	expS := `{"_value":5,"cpu":"cpu0","metric_name":"cpu.usage_idle","time":0}`
 	assert.Equal(t, string(expS), string(buf))
 	assert.NoError(t, err)
 }

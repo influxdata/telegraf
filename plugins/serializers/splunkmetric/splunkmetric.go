@@ -12,9 +12,9 @@ type serializer struct {
 	HecRouting bool
 }
 
-func NewSerializer(hec_routing bool) (*serializer, error) {
+func NewSerializer(splunkmetric_hec_routing bool) (*serializer, error) {
 	s := &serializer{
-		HecRouting: hec_routing,
+		HecRouting: splunkmetric_hec_routing,
 	}
 	return s, nil
 }
@@ -23,8 +23,7 @@ func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 
 	m, err := s.createObject(metric)
 	if err != nil {
-		log.Printf("D! [serializer.splunkmetric] Dropping invalid metric: %v [%v]", metric, m)
-		return nil, nil
+		return nil, fmt.Errorf("D! [serializer.splunkmetric] Dropping invalid metric: %s", metric.Name())
 	}
 
 	return m, nil
@@ -37,8 +36,8 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	for _, metric := range metrics {
 		m, err := s.createObject(metric)
 		if err != nil {
-			log.Printf("D! [serializer.splunkmetric] Dropping invalid metric: %v [%v]", metric, m)
-		} else {
+		    return nil, fmt.Errorf("D! [serializer.splunkmetric] Dropping invalid metric: %s", metric.Name())
+		} else if m != nil {
 			serialized = append(serialized, m...)
 		}
 	}
@@ -46,7 +45,7 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	return serialized, nil
 }
 
-func (s *serializer) createObject(metric telegraf.Metric) (metricJson []byte, err error) {
+func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, err error) {
 
 	/*  Splunk supports one metric json object, and does _not_ support an array of JSON objects.
 	     ** Splunk has the following required names for the metric store:
@@ -65,18 +64,18 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricJson []byte, er
 	}
 
 	dataGroup := HECTimeSeries{}
+    var metricJson []byte
 
-	for k, v := range metric.Fields() {
+	for _, field := range metric.FieldList() {
 
-		if !verifyValue(v) {
-			log.Printf("D! Can not parse value: %v for key: %v", v, k)
-			err := fmt.Errorf("D! Can not parse value: %v for key: %v", v, k)
-			return nil, err
+		if !verifyValue(field.Value) {
+			log.Printf("D! Can not parse value: %v for key: %v", field.Value, field.Key)
+            continue
 		}
 
 		obj := map[string]interface{}{}
-		obj["metric_name"] = metric.Name() + "." + k
-		obj["_value"] = v
+		obj["metric_name"] = metric.Name() + "." + field.Key
+		obj["_value"] = field.Value
 
 		dataGroup.Event = "metric"
 		// Convert ns to float seconds since epoch.
@@ -95,25 +94,27 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricJson []byte, er
 				dataGroup.Fields[n] = t
 			}
 		}
-		dataGroup.Fields["metric_name"] = metric.Name() + "." + k
-		dataGroup.Fields["_value"] = v
+		dataGroup.Fields["metric_name"] = metric.Name() + "." + field.Key
+		dataGroup.Fields["_value"] = field.Value
+
+		switch s.HecRouting {
+		case true:
+			// Output the data as a fields array and host,index,time,source overrides for the HEC.
+			metricJson, err = json.Marshal(dataGroup)
+		default:
+			// Just output the data and the time, useful for file based outuputs
+			dataGroup.Fields["time"] = dataGroup.Time
+			metricJson, err = json.Marshal(dataGroup.Fields)
+		}
+
+        metricGroup = append(metricGroup, metricJson...)
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	switch s.HecRouting {
-	case true:
-		// Output the data as a fields array and host,index,time,source overrides for the HEC.
-		metricJson, err = json.Marshal(dataGroup)
-	default:
-		// Just output the data and the time, useful for file based outuputs
-		dataGroup.Fields["time"] = dataGroup.Time
-		metricJson, err = json.Marshal(dataGroup.Fields)
-	}
-
-	if err != nil {
-		return []byte(""), err
-	}
-
-	return metricJson, nil
+	return metricGroup, nil
 }
 
 func verifyValue(v interface{}) bool {

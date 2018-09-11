@@ -1455,7 +1455,7 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
-	if node, ok := tbl.Fields["hec_routing"]; ok {
+	if node, ok := tbl.Fields["splunkmetric_hec_routing"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if b, ok := kv.Value.(*ast.Boolean); ok {
 				var err error
@@ -1475,7 +1475,7 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")
 	delete(tbl.Fields, "json_timestamp_units")
-	delete(tbl.Fields, "hec_routing")
+	delete(tbl.Fields, "splunkmetric_hec_routing")
 	return serializers.NewSerializer(c)
 }
 

@@ -1,4 +1,4 @@
-# Splunk Metrics serialzier
+# Splunk Metrics serializer
 
 This serializer formats and outputs the metric data in a format that can be consumed by a Splunk metrics index.
 It can be used to write to a file using the file output, or for sending metrics to a HEC using the standard telegraf HTTP output.
@@ -61,7 +61,7 @@ to manage the HEC authorization, here's a sample config for an HTTP output:
    ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
    data_format = "splunkmetric"
     ## Provides time, index, source overrides for the HEC
-   hec_routing = true
+   splunkmetric_hec_routing = true
 
    ## Additional HTTP headers
     [outputs.http.headers]

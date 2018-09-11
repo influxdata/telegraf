@@ -89,8 +89,8 @@ func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return json.NewSerializer(timestampUnits)
 }
 
-func NewSplunkmetricSerializer(hec_routing bool) (Serializer, error) {
-	return splunkmetric.NewSerializer(hec_routing)
+func NewSplunkmetricSerializer(splunkmetric_hec_routing bool) (Serializer, error) {
+	return splunkmetric.NewSerializer(splunkmetric_hec_routing)
 }
 
 func NewInfluxSerializerConfig(config *Config) (Serializer, error) {
