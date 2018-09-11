@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"reflect"
 	"sync"
 	"time"
 
@@ -12,92 +11,80 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type metaData struct {
-	Current JSONFloat64 `json:"current"`
-	Sum     JSONFloat64 `json:"sum"`
-	Mean    JSONFloat64 `json:"mean"`
-	Stddev  JSONFloat64 `json:"stddev"`
-	Min     JSONFloat64 `json:"min"`
-	Max     JSONFloat64 `json:"max"`
-	Value   JSONFloat64 `json:"value"`
-}
-
-type JSONFloat64 float64
-
-// Used to restore Couchdb <2.0 API behavior
-func (j *JSONFloat64) UnmarshalJSON(data []byte) error {
-	if string(data) == "null" {
-		*j = JSONFloat64(0)
-		return nil
+type (
+	metaData struct {
+		Current *float64 `json:"current"`
+		Sum     *float64 `json:"sum"`
+		Mean    *float64 `json:"mean"`
+		Stddev  *float64 `json:"stddev"`
+		Min     *float64 `json:"min"`
+		Max     *float64 `json:"max"`
+		Value   *float64 `json:"value"`
 	}
-	var temp float64
-	if err := json.Unmarshal(data, &temp); err != nil {
-		return err
+
+	oldValue struct {
+		Value metaData `json:"value"`
+		metaData
 	}
-	*j = JSONFloat64(temp)
-	return nil
-}
 
-type oldValue struct {
-	Value metaData `json:"value"`
-	metaData
-}
+	couchdb struct {
+		AuthCacheHits       metaData            `json:"auth_cache_hits"`
+		AuthCacheMisses     metaData            `json:"auth_cache_misses"`
+		DatabaseWrites      metaData            `json:"database_writes"`
+		DatabaseReads       metaData            `json:"database_reads"`
+		OpenDatabases       metaData            `json:"open_databases"`
+		OpenOsFiles         metaData            `json:"open_os_files"`
+		RequestTime         oldValue            `json:"request_time"`
+		HttpdRequestMethods httpdRequestMethods `json:"httpd_request_methods"`
+		HttpdStatusCodes    httpdStatusCodes    `json:"httpd_status_codes"`
+	}
 
-type couchdb struct {
-	AuthCacheHits       metaData            `json:"auth_cache_hits"`
-	AuthCacheMisses     metaData            `json:"auth_cache_misses"`
-	DatabaseWrites      metaData            `json:"database_writes"`
-	DatabaseReads       metaData            `json:"database_reads"`
-	OpenDatabases       metaData            `json:"open_databases"`
-	OpenOsFiles         metaData            `json:"open_os_files"`
-	RequestTime         oldValue            `json:"request_time"`
-	HttpdRequestMethods httpdRequestMethods `json:"httpd_request_methods"`
-	HttpdStatusCodes    httpdStatusCodes    `json:"httpd_status_codes"`
-}
+	httpdRequestMethods struct {
+		Put    metaData `json:"PUT"`
+		Get    metaData `json:"GET"`
+		Copy   metaData `json:"COPY"`
+		Delete metaData `json:"DELETE"`
+		Post   metaData `json:"POST"`
+		Head   metaData `json:"HEAD"`
+	}
 
-type httpdRequestMethods struct {
-	Put    metaData `json:"PUT"`
-	Get    metaData `json:"GET"`
-	Copy   metaData `json:"COPY"`
-	Delete metaData `json:"DELETE"`
-	Post   metaData `json:"POST"`
-	Head   metaData `json:"HEAD"`
-}
+	httpdStatusCodes struct {
+		Status200 metaData `json:"200"`
+		Status201 metaData `json:"201"`
+		Status202 metaData `json:"202"`
+		Status301 metaData `json:"301"`
+		Status304 metaData `json:"304"`
+		Status400 metaData `json:"400"`
+		Status401 metaData `json:"401"`
+		Status403 metaData `json:"403"`
+		Status404 metaData `json:"404"`
+		Status405 metaData `json:"405"`
+		Status409 metaData `json:"409"`
+		Status412 metaData `json:"412"`
+		Status500 metaData `json:"500"`
+	}
 
-type httpdStatusCodes struct {
-	Status200 metaData `json:"200"`
-	Status201 metaData `json:"201"`
-	Status202 metaData `json:"202"`
-	Status301 metaData `json:"301"`
-	Status304 metaData `json:"304"`
-	Status400 metaData `json:"400"`
-	Status401 metaData `json:"401"`
-	Status403 metaData `json:"403"`
-	Status404 metaData `json:"404"`
-	Status405 metaData `json:"405"`
-	Status409 metaData `json:"409"`
-	Status412 metaData `json:"412"`
-	Status500 metaData `json:"500"`
-}
+	httpd struct {
+		BulkRequests             metaData `json:"bulk_requests"`
+		Requests                 metaData `json:"requests"`
+		TemporaryViewReads       metaData `json:"temporary_view_reads"`
+		ViewReads                metaData `json:"view_reads"`
+		ClientsRequestingChanges metaData `json:"clients_requesting_changes"`
+	}
 
-type httpd struct {
-	BulkRequests             metaData `json:"bulk_requests"`
-	Requests                 metaData `json:"requests"`
-	TemporaryViewReads       metaData `json:"temporary_view_reads"`
-	ViewReads                metaData `json:"view_reads"`
-	ClientsRequestingChanges metaData `json:"clients_requesting_changes"`
-}
+	Stats struct {
+		Couchdb             couchdb             `json:"couchdb"`
+		HttpdRequestMethods httpdRequestMethods `json:"httpd_request_methods"`
+		HttpdStatusCodes    httpdStatusCodes    `json:"httpd_status_codes"`
+		Httpd               httpd               `json:"httpd"`
+	}
 
-type Stats struct {
-	Couchdb             couchdb             `json:"couchdb"`
-	HttpdRequestMethods httpdRequestMethods `json:"httpd_request_methods"`
-	HttpdStatusCodes    httpdStatusCodes    `json:"httpd_status_codes"`
-	Httpd               httpd               `json:"httpd"`
-}
+	CouchDB struct {
+		Hosts []string `toml:"hosts"`
 
-type CouchDB struct {
-	HOSTs []string `toml:"hosts"`
-}
+		client *http.Client
+	}
+)
 
 func (*CouchDB) Description() string {
 	return "Read CouchDB Stats from one or more servers"
@@ -106,14 +93,14 @@ func (*CouchDB) Description() string {
 func (*CouchDB) SampleConfig() string {
 	return `
   ## Works with CouchDB stats endpoints out of the box
-  ## Multiple HOSTs from which to read CouchDB stats:
+  ## Multiple Hosts from which to read CouchDB stats:
   hosts = ["http://localhost:8086/_stats"]
 `
 }
 
 func (c *CouchDB) Gather(accumulator telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	for _, u := range c.HOSTs {
+	for _, u := range c.Hosts {
 		wg.Add(1)
 		go func(host string) {
 			defer wg.Done()
@@ -128,17 +115,16 @@ func (c *CouchDB) Gather(accumulator telegraf.Accumulator) error {
 	return nil
 }
 
-var tr = &http.Transport{
-	ResponseHeaderTimeout: time.Duration(3 * time.Second),
-}
-
-var client = &http.Client{
-	Transport: tr,
-	Timeout:   time.Duration(4 * time.Second),
-}
-
 func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host string) error {
-	response, error := client.Get(host)
+	if c.client == nil {
+		c.client = &http.Client{
+			Transport: &http.Transport{
+				ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			},
+			Timeout: time.Duration(4 * time.Second),
+		}
+	}
+	response, error := c.client.Get(host)
 	if error != nil {
 		return error
 	}
@@ -148,14 +134,14 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 		return fmt.Errorf("Failed to get stats from couchdb: HTTP responded %d", response.StatusCode)
 	}
 
-	stats := newStats()
+	stats := Stats{}
 	decoder := json.NewDecoder(response.Body)
 	decoder.Decode(&stats)
 
 	fields := map[string]interface{}{}
 
 	// for couchdb 2.0 API changes
-	stats.Couchdb.RequestTime.Value = metaData{
+	requestTime := metaData{
 		Current: stats.Couchdb.RequestTime.Current,
 		Sum:     stats.Couchdb.RequestTime.Sum,
 		Mean:    stats.Couchdb.RequestTime.Mean,
@@ -163,7 +149,6 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 		Min:     stats.Couchdb.RequestTime.Min,
 		Max:     stats.Couchdb.RequestTime.Max,
 	}
-	requestTime := stats.Couchdb.RequestTime.Value
 
 	httpdRequestMethodsPut := stats.HttpdRequestMethods.Put
 	httpdRequestMethodsGet := stats.HttpdRequestMethods.Get
@@ -186,7 +171,7 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 	httpdStatusCodesStatus412 := stats.HttpdStatusCodes.Status412
 	httpdStatusCodesStatus500 := stats.HttpdStatusCodes.Status500
 	// check if couchdb2.0 is used
-	if stats.Couchdb.HttpdRequestMethods.Get.Value > -1 {
+	if stats.Couchdb.HttpdRequestMethods.Get.Value != nil {
 		requestTime = stats.Couchdb.RequestTime.Value
 
 		httpdRequestMethodsPut = stats.Couchdb.HttpdRequestMethods.Put
@@ -212,43 +197,43 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 	}
 
 	// CouchDB meta stats:
-	c.MapCopy(fields, c.generateFields("couchdb_auth_cache_misses", stats.Couchdb.AuthCacheMisses))
-	c.MapCopy(fields, c.generateFields("couchdb_database_writes", stats.Couchdb.DatabaseWrites))
-	c.MapCopy(fields, c.generateFields("couchdb_open_databases", stats.Couchdb.OpenDatabases))
-	c.MapCopy(fields, c.generateFields("couchdb_auth_cache_hits", stats.Couchdb.AuthCacheHits))
-	c.MapCopy(fields, c.generateFields("couchdb_request_time", requestTime))
-	c.MapCopy(fields, c.generateFields("couchdb_database_reads", stats.Couchdb.DatabaseReads))
-	c.MapCopy(fields, c.generateFields("couchdb_open_os_files", stats.Couchdb.OpenOsFiles))
+	c.generateFields(fields, "couchdb_auth_cache_misses", stats.Couchdb.AuthCacheMisses)
+	c.generateFields(fields, "couchdb_database_writes", stats.Couchdb.DatabaseWrites)
+	c.generateFields(fields, "couchdb_open_databases", stats.Couchdb.OpenDatabases)
+	c.generateFields(fields, "couchdb_auth_cache_hits", stats.Couchdb.AuthCacheHits)
+	c.generateFields(fields, "couchdb_request_time", requestTime)
+	c.generateFields(fields, "couchdb_database_reads", stats.Couchdb.DatabaseReads)
+	c.generateFields(fields, "couchdb_open_os_files", stats.Couchdb.OpenOsFiles)
 
 	// http request methods stats:
-	c.MapCopy(fields, c.generateFields("httpd_request_methods_put", httpdRequestMethodsPut))
-	c.MapCopy(fields, c.generateFields("httpd_request_methods_get", httpdRequestMethodsGet))
-	c.MapCopy(fields, c.generateFields("httpd_request_methods_copy", httpdRequestMethodsCopy))
-	c.MapCopy(fields, c.generateFields("httpd_request_methods_delete", httpdRequestMethodsDelete))
-	c.MapCopy(fields, c.generateFields("httpd_request_methods_post", httpdRequestMethodsPost))
-	c.MapCopy(fields, c.generateFields("httpd_request_methods_head", httpdRequestMethodsHead))
+	c.generateFields(fields, "httpd_request_methods_put", httpdRequestMethodsPut)
+	c.generateFields(fields, "httpd_request_methods_get", httpdRequestMethodsGet)
+	c.generateFields(fields, "httpd_request_methods_copy", httpdRequestMethodsCopy)
+	c.generateFields(fields, "httpd_request_methods_delete", httpdRequestMethodsDelete)
+	c.generateFields(fields, "httpd_request_methods_post", httpdRequestMethodsPost)
+	c.generateFields(fields, "httpd_request_methods_head", httpdRequestMethodsHead)
 
 	// status code stats:
-	c.MapCopy(fields, c.generateFields("httpd_status_codes_200", httpdStatusCodesStatus200))
-	c.MapCopy(fields, c.generateFields("httpd_status_codes_201", httpdStatusCodesStatus201))
-	c.MapCopy(fields, c.generateFields("httpd_status_codes_202", httpdStatusCodesStatus202))
-	c.MapCopy(fields, c.generateFields("httpd_status_codes_301", httpdStatusCodesStatus301))
-	c.MapCopy(fields, c.generateFields("httpd_status_codes_304", httpdStatusCodesStatus304))
-	c.MapCopy(fields, c.generateFields("httpd_status_codes_400", httpdStatusCodesStatus400))
-	c.MapCopy(fields, c.generateFields("httpd_status_codes_401", httpdStatusCodesStatus401))
-	c.MapCopy(fields, c.generateFields("httpd_status_codes_403", httpdStatusCodesStatus403))
-	c.MapCopy(fields, c.generateFields("httpd_status_codes_404", httpdStatusCodesStatus404))
-	c.MapCopy(fields, c.generateFields("httpd_status_codes_405", httpdStatusCodesStatus405))
-	c.MapCopy(fields, c.generateFields("httpd_status_codes_409", httpdStatusCodesStatus409))
-	c.MapCopy(fields, c.generateFields("httpd_status_codes_412", httpdStatusCodesStatus412))
-	c.MapCopy(fields, c.generateFields("httpd_status_codes_500", httpdStatusCodesStatus500))
+	c.generateFields(fields, "httpd_status_codes_200", httpdStatusCodesStatus200)
+	c.generateFields(fields, "httpd_status_codes_201", httpdStatusCodesStatus201)
+	c.generateFields(fields, "httpd_status_codes_202", httpdStatusCodesStatus202)
+	c.generateFields(fields, "httpd_status_codes_301", httpdStatusCodesStatus301)
+	c.generateFields(fields, "httpd_status_codes_304", httpdStatusCodesStatus304)
+	c.generateFields(fields, "httpd_status_codes_400", httpdStatusCodesStatus400)
+	c.generateFields(fields, "httpd_status_codes_401", httpdStatusCodesStatus401)
+	c.generateFields(fields, "httpd_status_codes_403", httpdStatusCodesStatus403)
+	c.generateFields(fields, "httpd_status_codes_404", httpdStatusCodesStatus404)
+	c.generateFields(fields, "httpd_status_codes_405", httpdStatusCodesStatus405)
+	c.generateFields(fields, "httpd_status_codes_409", httpdStatusCodesStatus409)
+	c.generateFields(fields, "httpd_status_codes_412", httpdStatusCodesStatus412)
+	c.generateFields(fields, "httpd_status_codes_500", httpdStatusCodesStatus500)
 
 	// httpd stats:
-	c.MapCopy(fields, c.generateFields("httpd_clients_requesting_changes", stats.Httpd.ClientsRequestingChanges))
-	c.MapCopy(fields, c.generateFields("httpd_temporary_view_reads", stats.Httpd.TemporaryViewReads))
-	c.MapCopy(fields, c.generateFields("httpd_requests", stats.Httpd.Requests))
-	c.MapCopy(fields, c.generateFields("httpd_bulk_requests", stats.Httpd.BulkRequests))
-	c.MapCopy(fields, c.generateFields("httpd_view_reads", stats.Httpd.ViewReads))
+	c.generateFields(fields, "httpd_clients_requesting_changes", stats.Httpd.ClientsRequestingChanges)
+	c.generateFields(fields, "httpd_temporary_view_reads", stats.Httpd.TemporaryViewReads)
+	c.generateFields(fields, "httpd_requests", stats.Httpd.Requests)
+	c.generateFields(fields, "httpd_bulk_requests", stats.Httpd.BulkRequests)
+	c.generateFields(fields, "httpd_view_reads", stats.Httpd.ViewReads)
 
 	tags := map[string]string{
 		"server": host,
@@ -257,133 +242,39 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 	return nil
 }
 
-func (*CouchDB) MapCopy(dst, src interface{}) {
-	dv, sv := reflect.ValueOf(dst), reflect.ValueOf(src)
-	for _, k := range sv.MapKeys() {
-		dv.SetMapIndex(k, sv.MapIndex(k))
+func (c *CouchDB) generateFields(fields map[string]interface{}, prefix string, obj metaData) {
+	if obj.Value != nil {
+		fields[prefix+"_value"] = *obj.Value
 	}
-}
-
-func (*CouchDB) safeCheck(value interface{}) interface{} {
-	if value == nil {
-		return 0.0
+	if obj.Current != nil {
+		fields[prefix+"_current"] = *obj.Current
 	}
-	switch v := value.(type) {
-	case JSONFloat64:
-		return float64(v)
+	if obj.Sum != nil {
+		fields[prefix+"_sum"] = *obj.Sum
 	}
-	return value
-}
-
-func (c *CouchDB) generateFields(prefix string, obj metaData) map[string]interface{} {
-	fields := map[string]interface{}{}
-	if obj.Value > -1 {
-		fields[prefix+"_value"] = c.safeCheck(obj.Value)
+	if obj.Mean != nil {
+		fields[prefix+"_mean"] = *obj.Mean
 	}
-	if obj.Current > -1 {
-		fields[prefix+"_current"] = c.safeCheck(obj.Current)
+	if obj.Stddev != nil {
+		fields[prefix+"_stddev"] = *obj.Stddev
 	}
-	if obj.Sum > -1 {
-		fields[prefix+"_sum"] = c.safeCheck(obj.Sum)
+	if obj.Min != nil {
+		fields[prefix+"_min"] = *obj.Min
 	}
-	if obj.Mean > -1 {
-		fields[prefix+"_mean"] = c.safeCheck(obj.Mean)
-	}
-	if obj.Stddev > -1 {
-		fields[prefix+"_stddev"] = c.safeCheck(obj.Stddev)
-	}
-	if obj.Min > -1 {
-		fields[prefix+"_min"] = c.safeCheck(obj.Min)
-	}
-	if obj.Max > -1 {
-		fields[prefix+"_max"] = c.safeCheck(obj.Max)
-	}
-	return fields
-}
-
-// newStats returns a new stats struct with default values of -1. This
-// allows us to not record a metric if it wasn't present in the payload.
-func newStats() Stats {
-	return Stats{
-		Couchdb: couchdb{
-			AuthCacheHits:   newMeta(),
-			AuthCacheMisses: newMeta(),
-			DatabaseWrites:  newMeta(),
-			DatabaseReads:   newMeta(),
-			OpenDatabases:   newMeta(),
-			OpenOsFiles:     newMeta(),
-			RequestTime:     oldValue{Value: newMeta()},
-			HttpdRequestMethods: httpdRequestMethods{
-				Put:    newMeta(),
-				Get:    newMeta(),
-				Copy:   newMeta(),
-				Delete: newMeta(),
-				Post:   newMeta(),
-				Head:   newMeta(),
-			},
-			HttpdStatusCodes: httpdStatusCodes{
-				Status200: newMeta(),
-				Status201: newMeta(),
-				Status202: newMeta(),
-				Status301: newMeta(),
-				Status304: newMeta(),
-				Status400: newMeta(),
-				Status401: newMeta(),
-				Status403: newMeta(),
-				Status404: newMeta(),
-				Status405: newMeta(),
-				Status409: newMeta(),
-				Status412: newMeta(),
-				Status500: newMeta(),
-			},
-		},
-		HttpdRequestMethods: httpdRequestMethods{
-			Put:    newMeta(),
-			Get:    newMeta(),
-			Copy:   newMeta(),
-			Delete: newMeta(),
-			Post:   newMeta(),
-			Head:   newMeta(),
-		},
-		HttpdStatusCodes: httpdStatusCodes{
-			Status200: newMeta(),
-			Status201: newMeta(),
-			Status202: newMeta(),
-			Status301: newMeta(),
-			Status304: newMeta(),
-			Status400: newMeta(),
-			Status401: newMeta(),
-			Status403: newMeta(),
-			Status404: newMeta(),
-			Status405: newMeta(),
-			Status409: newMeta(),
-			Status412: newMeta(),
-			Status500: newMeta(),
-		},
-		Httpd: httpd{
-			BulkRequests:             newMeta(),
-			Requests:                 newMeta(),
-			TemporaryViewReads:       newMeta(),
-			ViewReads:                newMeta(),
-			ClientsRequestingChanges: newMeta(),
-		},
-	}
-}
-
-func newMeta() metaData {
-	return metaData{
-		Current: -1,
-		Sum:     -1,
-		Mean:    -1,
-		Stddev:  -1,
-		Min:     -1,
-		Max:     -1,
-		Value:   -1,
+	if obj.Max != nil {
+		fields[prefix+"_max"] = *obj.Max
 	}
 }
 
 func init() {
 	inputs.Add("couchdb", func() telegraf.Input {
-		return &CouchDB{}
+		return &CouchDB{
+			client: &http.Client{
+				Transport: &http.Transport{
+					ResponseHeaderTimeout: time.Duration(3 * time.Second),
+				},
+				Timeout: time.Duration(4 * time.Second),
+			},
+		}
 	})
 }
