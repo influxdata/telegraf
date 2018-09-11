@@ -223,6 +223,10 @@
   name = "gopkg.in/fsnotify.v1"
 
 [[constraint]]
+  name = "github.com/vmware/govmomi"
+  version = "0.18.0"
+
+ [[constraint]] 
   name = "github.com/Azure/go-autorest"
   version = "10.12.0"
 

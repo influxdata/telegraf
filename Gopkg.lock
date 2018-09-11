@@ -449,6 +449,14 @@
   version = "v0.2.0"
 
 [[projects]]
+  digest = "1:c1d7e883c50a26ea34019320d8ae40fad86c9e5d56e63a1ba2cb618cef43e986"
+  name = "github.com/google/uuid"
+  packages = ["."]
+  pruneopts = ""
+  revision = "064e2069ce9c359c118179501254f67d7d37ba24"
+  version = "0.2"
+
+[[projects]]
   digest = "1:dbbeb8ddb0be949954c8157ee8439c2adfd8dc1c9510eb44a6e58cb68c3dce28"
   name = "github.com/gorilla/context"
   packages = ["."]
@@ -950,6 +958,36 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:f9fe29bf856d49f9a51d6001588cb5ee5d65c8a7ff5e8b0dd5423c3a510f0833"
+  name = "github.com/vmware/govmomi"
+  packages = [
+    ".",
+    "find",
+    "list",
+    "nfc",
+    "object",
+    "performance",
+    "property",
+    "session",
+    "simulator",
+    "simulator/esx",
+    "simulator/vpx",
+    "task",
+    "view",
+    "vim25",
+    "vim25/debug",
+    "vim25/methods",
+    "vim25/mo",
+    "vim25/progress",
+    "vim25/soap",
+    "vim25/types",
+    "vim25/xml",
+  ]
+  pruneopts = ""
+  revision = "e3a01f9611c32b2362366434bcd671516e78955d"
+  version = "v0.18.0"
+
+[[projects]]
   branch = "master"
   digest = "1:98ed05e9796df287b90c1d96854e3913c8e349dbc546412d3cabb472ecf4b417"
   name = "github.com/wvanbergen/kafka"
@@ -1329,6 +1367,13 @@
     "github.com/stretchr/testify/require",
     "github.com/tidwall/gjson",
     "github.com/vjeantet/grok",
+    "github.com/vmware/govmomi",
+    "github.com/vmware/govmomi/performance",
+    "github.com/vmware/govmomi/simulator",
+    "github.com/vmware/govmomi/view",
+    "github.com/vmware/govmomi/vim25/mo",
+    "github.com/vmware/govmomi/vim25/soap",
+    "github.com/vmware/govmomi/vim25/types",
     "github.com/wvanbergen/kafka/consumergroup",
     "github.com/zensqlmonitor/go-mssqldb",
     "golang.org/x/net/context",
