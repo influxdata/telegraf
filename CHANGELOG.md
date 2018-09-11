@@ -16,7 +16,7 @@
 ### New Processors
 
 - [enum](./plugins/processors/enum/README.md) - Contributed by @KarstenSchnitter
-- [parser](./plugins/processors/parser/README.md) - Contributed by @maxunt & @Ayrdrie
+- [parser](./plugins/processors/parser/README.md) - Contributed by @Ayrdrie & @maxunt
 - [rename](./plugins/processors/rename/README.md) - Contributed by @goldibex
 - [strings](./plugins/processors/strings/README.md) - Contributed by @bsmaldon
 
@@ -27,6 +27,16 @@
 ### New Outputs
 
 - [azure_monitor](./plugins/outputs/azure_monitor/README.md) - Contributed by @influxdata
+
+### New Parsers
+
+- [csv](/docs/DATA_FORMATS_INPUT.md#csv) - Contributed by @maxunt
+- [grok](/docs/DATA_FORMATS_INPUT.md#grok) - Contributed by @maxunt
+- [logfmt](/docs/DATA_FORMATS_INPUT.md#logfmt) - Contributed by @Ayrdrie & @maxunt
+
+### New Serializers
+
+- [splunkmetric](/plugins/serializer/splunkmetric/README.md) - Contributed by @ronnocol
 
 ### Features
 
@@ -89,6 +99,7 @@
 - [#4411](https://github.com/influxdata/telegraf/pull/4411): Add temp input plugin.
 - [#4272](https://github.com/influxdata/telegraf/pull/4272): Add Beanstalkd input plugin.
 - [#4669](https://github.com/influxdata/telegraf/pull/4669): Add means to specify server password for redis input.
+- [#4339](https://github.com/influxdata/telegraf/pull/4339): Add Splunk Metrics serializer
 
 ### Bugfixes
 
