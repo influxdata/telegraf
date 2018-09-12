@@ -17,7 +17,7 @@ import (
 type Iptables struct {
 	UseSudo bool
 	UseLock bool
-	Binary	string
+	Binary  string
 	Table   string
 	Chains  []string
 	lister  chainLister
