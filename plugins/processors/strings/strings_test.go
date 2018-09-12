@@ -493,8 +493,8 @@ func TestMeasurementReplace(t *testing.T) {
 	plugin := &Strings{
 		Replace: []converter{
 			converter{
-				Old: "_",
-				New: "-",
+				Old:         "_",
+				New:         "-",
 				Measurement: "*",
 			},
 		},
@@ -514,8 +514,8 @@ func TestMeasurementCharDeletion(t *testing.T) {
 	plugin := &Strings{
 		Replace: []converter{
 			converter{
-				Old: "foo",
-				New: "",
+				Old:         "foo",
+				New:         "",
 				Measurement: "*",
 			},
 		},
