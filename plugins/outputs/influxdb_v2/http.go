@@ -172,7 +172,7 @@ func (g genericRespError) Error() string {
 
 func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error {
 	if c.retryTime.After(time.Now()) {
-		return errors.New("E! Retry time has not elapsed")
+		return errors.New("Retry time has not elapsed")
 	}
 	reader := influx.NewReader(metrics, c.serializer)
 	req, err := c.makeWriteRequest(reader)
@@ -206,7 +206,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 		retryAfter := resp.Header.Get("Retry-After")
 		retry, err := strconv.Atoi(retryAfter)
 		if err != nil {
-			return fmt.Errorf("Bad value for 'Retry-After': %s", err.Error())
+			retry = 0
 		}
 		if retry > defaultMaxWait {
 			log.Println("E! [outputs.influxdb_v2] Failed to write metric: retry interval too long")
