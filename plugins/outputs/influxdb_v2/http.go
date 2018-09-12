@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -36,6 +37,7 @@ func (e APIError) Error() string {
 
 const (
 	defaultRequestTimeout = time.Second * 5
+	defaultMaxWait        = 10 // seconds
 	defaultDatabase       = "telegraf"
 	defaultUserAgent      = "telegraf"
 )
@@ -45,7 +47,6 @@ type HTTPConfig struct {
 	Token           string
 	Organization    string
 	Bucket          string
-	Precision       string
 	Timeout         time.Duration
 	Headers         map[string]string
 	Proxy           *url.URL
@@ -104,8 +105,7 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 	writeURL, err := makeWriteURL(
 		*config.URL,
 		config.Organization,
-		config.Bucket,
-		config.Precision)
+		config.Bucket)
 	if err != nil {
 		return nil, err
 	}
@@ -154,19 +154,21 @@ func (c *httpClient) URL() string {
 type genericRespError struct {
 	Code      string
 	Message   string
-	Op        string
-	Err       string
-	Line      int32
-	MaxLength int32
+	Line      *int32
+	MaxLength *int32
 }
 
-func (g genericRespError) String() string {
-	return fmt.Sprintf("%s: %s", g.Code, g.Message)
+func (g genericRespError) Error() string {
+	errString := fmt.Sprintf("%s: %s", g.Code, g.Message)
+	if g.Line != nil {
+		return fmt.Sprintf("%s - line[%d]", errString, g.Line)
+	} else if g.MaxLength != nil {
+		return fmt.Sprintf("%s - maxlen[%d]", errString, g.MaxLength)
+	}
+	return errString
 }
 
 func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error {
-	var err error
-
 	reader := influx.NewReader(metrics, c.serializer)
 	req, err := c.makeWriteRequest(reader)
 	if err != nil {
@@ -184,31 +186,36 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	}
 
 	writeResp := &genericRespError{}
-	json.NewDecoder(resp.Body).Decode(writeResp)
-	var desc string
+	err = json.NewDecoder(resp.Body).Decode(writeResp)
+	desc := writeResp.Error()
+	if err != nil {
+		desc = err.Error()
+	}
 
 	switch resp.StatusCode {
-	case http.StatusBadRequest: // 400
-		// LineProtocolError
-		desc = fmt.Sprintf("%s - %s;%d;%s", writeResp, writeResp.Op, writeResp.Line, writeResp.Err)
-	case http.StatusUnauthorized, http.StatusForbidden: // 401, 403
-		// Error
-		desc = fmt.Sprintf("%s - %s;%s", writeResp, writeResp.Op, writeResp.Err)
-	case http.StatusRequestEntityTooLarge: // 413
-		// LineProtocolLengthError
-		desc = fmt.Sprintf("%s - %s;%d", writeResp, writeResp.Op, writeResp.MaxLength)
-	case http.StatusTooManyRequests, http.StatusServiceUnavailable: // 429, 503
+	case http.StatusBadRequest, http.StatusUnauthorized,
+		http.StatusForbidden, http.StatusRequestEntityTooLarge:
+		log.Printf("E! [outputs.influxdb_v2] Failed to write metric: %s\n", desc)
+		return nil
+	case http.StatusTooManyRequests, http.StatusServiceUnavailable:
 		retryAfter := resp.Header.Get("Retry-After")
 		retry, err := strconv.Atoi(retryAfter)
 		if err != nil {
 			return fmt.Errorf("Bad value for 'Retry-After': %s", err.Error())
 		}
+		if retry > defaultMaxWait {
+			log.Println("E! [outputs.influxdb_v2] Failed to write metric: retry interval too long")
+			return nil
+		}
+		// TODO: Don't sleep and write (#2919)
 		time.Sleep(time.Second * time.Duration(retry))
 		c.Write(ctx, metrics)
 	}
 
+	// This is only until platform spec is fully implemented. As of the
+	// time of writing, there is no error body returned.
 	if xErr := resp.Header.Get("X-Influx-Error"); xErr != "" {
-		desc = fmt.Sprintf("%s - %s", desc, xErr)
+		desc = fmt.Sprintf("%s; %s", desc, xErr)
 	}
 
 	return &APIError{
@@ -262,13 +269,10 @@ func compressWithGzip(data io.Reader) (io.Reader, error) {
 	return pipeReader, err
 }
 
-func makeWriteURL(loc url.URL, org, bucket, precision string) (string, error) {
+func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 	params := url.Values{}
 	params.Set("bucket", bucket)
 	params.Set("org", org)
-	if precision != "" {
-		params.Set("precision", precision)
-	}
 
 	switch loc.Scheme {
 	case "unix":

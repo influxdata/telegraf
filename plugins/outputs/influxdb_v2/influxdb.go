@@ -38,9 +38,6 @@ var sampleConfig = `
   ## Bucket to the name fo the bucketwrite into; must exist.
   bucket = ""
 
-  ## Precision for the unix timestamps within the body line-protocol.
-  # precision = "ns"
-
   ## Timeout for HTTP messages.
   # timeout = "5s"
 
@@ -77,7 +74,6 @@ type InfluxDB struct {
 	Token           string            `toml:"token"`
 	Organization    string            `toml:"organization"`
 	Bucket          string            `toml:"bucket"`
-	Precision       string            `toml:"precision"`
 	Timeout         internal.Duration `toml:"timeout"`
 	HTTPHeaders     map[string]string `toml:"http_headers"`
 	HTTPProxy       string            `toml:"http_proxy"`
@@ -172,7 +168,6 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.U
 		Token:           i.Token,
 		Organization:    i.Organization,
 		Bucket:          i.Bucket,
-		Precision:       i.Precision,
 		Timeout:         i.Timeout.Duration,
 		Headers:         i.HTTPHeaders,
 		Proxy:           proxy,
