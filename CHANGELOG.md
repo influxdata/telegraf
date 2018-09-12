@@ -103,6 +103,7 @@
 - [#4339](https://github.com/influxdata/telegraf/pull/4339): Add Splunk Metrics serializer.
 - [#4141](https://github.com/influxdata/telegraf/pull/4141): Add input plugin for VMware vSphere.
 - [#4667](https://github.com/influxdata/telegraf/pull/4667): Align metrics window to interval in cloudwatch input.
+- [#4642](https://github.com/influxdata/telegraf/pull/4642): Improve Azure Managed Instance support + more in sqlserver input.
 
 ### Bugfixes
 
