@@ -37,7 +37,7 @@ This InfluxDB output plugin writes metrics to the [InfluxDB 2.0](https://github.
 
   ## Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
-  # content_encoding = "identity"
+  # content_encoding = "gzip"
 
   ## Optional TLS Config for use on HTTP connections.
   # tls_ca = "/etc/telegraf/ca.pem"
