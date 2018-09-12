@@ -115,9 +115,9 @@ type DBStatistics struct {
 
 // DBPoolStatistics pool related statistics
 type DBPoolStatistics struct {
-	ActiveCount    string `json:"ActiveCount"`
-	AvailableCount string `json:"AvailableCount"`
-	InUseCount     string `json:"InUseCount"`
+	ActiveCount    interface{} `json:"ActiveCount"`
+	AvailableCount interface{} `json:"AvailableCount"`
+	InUseCount     interface{} `json:"InUseCount"`
 }
 
 // JVMResponse GetJVMStat expected response type
@@ -237,7 +237,8 @@ var sampleConfig = `
   ## Metric selection
   metrics =[
 	"jvm",
-	"web_con",
+	"web_con", 		#only for EAP <=6.X/AS <=7.X
+	"web_listener", #only for EAP >=7.X/Widlfly > 8
 	"deployment",
 	"database",
 	"jms",
@@ -420,7 +421,7 @@ func (h *JBoss) getServersOnHost(
 				log.Printf("D! JBoss API Req out: %s", out)
 
 				if err != nil {
-					log.Printf("E! JBoss Error handling response 2: %s\n", err)
+					log.Printf("E! JBoss Error handling response 2: ERR:%s : OUTPUT:%s\n", err, out)
 					acc.AddError(err)
 					return
 				}
@@ -440,13 +441,20 @@ func (h *JBoss) getServersOnHost(
 					case "web_con":
 						h.getWebStatistics(acc, serverURL, execAsDomain, host, server, "ajp")
 						h.getWebStatistics(acc, serverURL, execAsDomain, host, server, "http")
+					case "web_listeners":
+						h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "ajp-listener", "default")
+						h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "http-listener", "default")
+						h.getUndertowStatistics(acc, serverURL, execAsDomain, host, server, "https-listener", "https")
 					case "deployment":
 						h.getServerDeploymentStatistics(acc, serverURL, execAsDomain, host, server)
 					case "database":
 						h.getDatasourceStatistics(acc, serverURL, execAsDomain, host, server)
 					case "jms":
-						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, GetJMSQueueStat)
-						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, GetJMSTopicStat)
+
+						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging", GetJMSQueueStat)
+						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging", GetJMSTopicStat)
+						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging-activemq", GetJMSQueueStat)
+						h.getJMSStatistics(acc, serverURL, execAsDomain, host, server, "messaging-activemq", GetJMSTopicStat)
 					default:
 						log.Printf("E! Jboss doesn't exist the metric set %s\n", v)
 					}
@@ -542,6 +550,99 @@ func (h *JBoss) getWebStatistics(
 	return nil
 }
 
+func (h *JBoss) getUndertowStatistics(
+	acc telegraf.Accumulator,
+	serverURL string,
+	execAsDomain bool,
+	host string,
+	serverName string,
+	listType string,
+	listener string,
+) error {
+	adr := OrderedMap{}
+	if execAsDomain {
+		adr = OrderedMap{
+			{"host", host},
+			{"server", serverName},
+			{"subsystem", "undertow"},
+			{"server", "default-server"},
+			{listType, listener},
+		}
+	} else {
+		adr = OrderedMap{
+			{"subsystem", "undertow"},
+			{"server", "default-server"},
+			{listType, listener},
+		}
+	}
+
+	bodyContent, err := h.createRequestBody(GetWebStat, adr)
+	if err != nil {
+		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+	}
+
+	out, err := h.doRequest(serverURL, bodyContent)
+
+	log.Printf("D! JBoss API Req err: %s", err)
+	log.Printf("D! JBoss API Req out: %s", out)
+
+	if err != nil {
+		return fmt.Errorf("error on request to %s OUT: %s  ERR: %s\n", serverURL, out, err)
+	}
+	server := WebResponse{}
+	if err = json.Unmarshal(out, &server); err != nil {
+		return fmt.Errorf("Error decoding JSON response: OUT: %s  ERR: %s", out, err)
+	}
+
+	fields := make(map[string]interface{})
+	for key, value := range server.Result {
+		log.Printf("D! LISTERNER %s : %s \n", key, value)
+		switch key {
+		case "bytes-received", "bytes-sent", "request-count", "error-count", "max-processing-time", "processing-time":
+			if value != nil {
+				switch value.(type) {
+				case int:
+					fields[key] = value.(float64)
+				case float64:
+					fields[key] = value.(float64)
+				case string:
+					f, err := strconv.ParseFloat(value.(string), 64)
+					if err != nil {
+						log.Printf("E! JBoss Error decoding Float  from string : %s = %s\n", key, value.(string))
+					} else {
+						fields[key] = f
+					}
+				}
+			}
+		}
+	}
+	tags := map[string]string{
+		"jboss_host":   host,
+		"jboss_server": serverName,
+		"type":         listType,
+		"instance":     listener,
+	}
+	acc.AddFields("jboss_web_lstnr", fields, tags)
+
+	return nil
+}
+
+func GetPoolFields(pool DBPoolStatistics) map[string]interface{} {
+	retmap := make(map[string]interface{})
+	//Jboss EAP 6/AS 7.X returns "strings", wilrfly 12 returns integuers
+	switch pool.ActiveCount.(type) {
+	case string:
+		retmap["in-use-count"], _ = strconv.ParseInt(pool.InUseCount.(string), 10, 64)
+		retmap["active-count"], _ = strconv.ParseInt(pool.ActiveCount.(string), 10, 64)
+		retmap["available-count"], _ = strconv.ParseInt(pool.AvailableCount.(string), 10, 64)
+	default:
+		retmap["in-use-count"] = pool.InUseCount
+		retmap["active-count"] = pool.ActiveCount
+		retmap["available-count"] = pool.AvailableCount
+	}
+	return retmap
+}
+
 // Gathers database data from a particular host
 // Parameters:
 //     acc      : The telegraf Accumulator to use
@@ -584,7 +685,7 @@ func (h *JBoss) getDatasourceStatistics(
 	log.Printf("D! JBoss API Req out: %s", out)
 
 	if err != nil {
-		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+		return fmt.Errorf("error on request to %s : OUT: %s ERR: %s\n", serverURL, out, err)
 	}
 	server := DatasourceResponse{}
 	if err = json.Unmarshal(out, &server); err != nil {
@@ -592,10 +693,7 @@ func (h *JBoss) getDatasourceStatistics(
 	}
 
 	for database, value := range server.Result.DataSource {
-		fields := make(map[string]interface{})
-		fields["in-use-count"], _ = strconv.ParseInt(value.Statistics.Pool.InUseCount, 10, 64)
-		fields["active-count"], _ = strconv.ParseInt(value.Statistics.Pool.ActiveCount, 10, 64)
-		fields["available-count"], _ = strconv.ParseInt(value.Statistics.Pool.AvailableCount, 10, 64)
+		fields := GetPoolFields(value.Statistics.Pool)
 		tags := map[string]string{
 			"jboss_host":   host,
 			"jboss_server": serverName,
@@ -604,10 +702,7 @@ func (h *JBoss) getDatasourceStatistics(
 		acc.AddFields("jboss_database", fields, tags)
 	}
 	for database, value := range server.Result.XaDataSource {
-		fields := make(map[string]interface{})
-		fields["in-use-count"], _ = strconv.ParseInt(value.Statistics.Pool.InUseCount, 10, 64)
-		fields["active-count"], _ = strconv.ParseInt(value.Statistics.Pool.ActiveCount, 10, 64)
-		fields["available-count"], _ = strconv.ParseInt(value.Statistics.Pool.AvailableCount, 10, 64)
+		fields := GetPoolFields(value.Statistics.Pool)
 		tags := map[string]string{
 			"jboss_host":   host,
 			"jboss_server": serverName,
@@ -635,22 +730,31 @@ func (h *JBoss) getJMSStatistics(
 	execAsDomain bool,
 	host string,
 	serverName string,
+	subsystem string,
 	opType int,
 ) error {
 
 	adr := OrderedMap{}
 
+	var serverID string
+
+	if subsystem == "messaging-activemq" {
+		serverID = "server"
+	} else {
+		serverID = "hornetq-server"
+	}
+
 	if execAsDomain {
 		adr = OrderedMap{
 			{"host", host},
 			{"server", serverName},
-			{"subsystem", "messaging"},
-			{"hornetq-server", "default"},
+			{"subsystem", subsystem},
+			{serverID, "default"},
 		}
 	} else {
 		adr = OrderedMap{
-			{"subsystem", "messaging"},
-			{"hornetq-server", "default"},
+			{"subsystem", subsystem},
+			{serverID, "default"},
 		}
 	}
 
@@ -665,7 +769,7 @@ func (h *JBoss) getJMSStatistics(
 	log.Printf("D! JBoss API Req out: %s", out)
 
 	if err != nil {
-		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+		return fmt.Errorf("error on request to %s : OUT: %s ERR: %s\n", serverURL, out, err)
 	}
 	jmsresponse := JMSResponse{}
 	if err = json.Unmarshal(out, &jmsresponse); err != nil {
@@ -735,7 +839,7 @@ func (h *JBoss) getJVMStatistics(
 	log.Printf("D! JBoss API Req out: %s", out)
 
 	if err != nil {
-		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+		return fmt.Errorf("error on request to %s : OUT: %s ERR: %s\n", serverURL, out, err)
 	}
 
 	server := JVMResponse{}
@@ -860,7 +964,7 @@ func (h *JBoss) getServerDeploymentStatistics(
 	log.Printf("D! JBoss API Req out: %s", out)
 
 	if err != nil {
-		return fmt.Errorf("error on request to %s : %s\n", serverURL, err)
+		return fmt.Errorf("error on request to  %s OUT: %s  ERR : %s\n", serverURL, out, err)
 	}
 
 	deployments := HostResponse{}
@@ -940,6 +1044,18 @@ func (h *JBoss) getServerDeploymentStatistics(
 					}
 					h.processWebAppStats(acc, web, tags)
 				}
+				//undertow is the new web sybsystem since wildfly 8
+				if webValue, ok := subsystem["undertow"]; ok {
+					web := webValue.(map[string]interface{})
+					tags := map[string]string{
+						"jboss_host":   host,
+						"jboss_server": serverName,
+						"name":         typeName,
+						"runtime_name": deploy.Result.RuntimeName,
+					}
+					h.processWebAppStats(acc, web, tags)
+				}
+
 			}
 			// This struct apply on WAR files
 			for typeName, value := range deploy.Result.Subsystem {
@@ -947,7 +1063,7 @@ func (h *JBoss) getServerDeploymentStatistics(
 					log.Printf("D! JBoss Deployment SUBSYSTEM  value NULL")
 					continue
 				}
-				if typeName == "web" {
+				if typeName == "web" || typeName == "undertow" {
 					web := value.(map[string]interface{})
 					tags := map[string]string{
 						"jboss_host":   host,
@@ -1107,8 +1223,8 @@ func (h *JBoss) doRequest(domainURL string, bodyContent map[string]interface{}) 
 
 	resp, err := h.client.MakeRequest(req)
 	if err != nil {
-		log.Printf("D! HTTP REQ:%#+v", req)
-		log.Printf("D! HTTP RESP:%#+v", resp)
+		//log.Printf("D! HTTP REQ:%#+v", req)
+		//log.Printf("D! HTTP RESP:%#+v", resp)
 		return nil, err
 	}
 	defer resp.Body.Close()
