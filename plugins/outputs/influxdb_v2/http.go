@@ -209,8 +209,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			retry = 0
 		}
 		if retry > defaultMaxWait {
-			log.Println("E! [outputs.influxdb_v2] Failed to write metric: retry interval too long")
-			return nil
+			retry = defaultMaxWait
 		}
 		c.retryTime = time.Now().Add(time.Duration(retry) * time.Second)
 		return fmt.Errorf("Waiting %ds for server before sending metric again", retry)

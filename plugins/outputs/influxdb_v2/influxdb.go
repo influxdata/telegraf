@@ -53,7 +53,7 @@ var sampleConfig = `
 
   ## Content-Encoding for write request body, can be set to "gzip" to
   ## compress body or "identity" to apply no encoding.
-  # content_encoding = "identity"
+  # content_encoding = "gzip"
 
   ## Optional TLS Config for use on HTTP connections.
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -188,7 +188,8 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.U
 func init() {
 	outputs.Add("influxdb_v2", func() telegraf.Output {
 		return &InfluxDB{
-			Timeout: internal.Duration{Duration: time.Second * 5},
+			Timeout:         internal.Duration{Duration: time.Second * 5},
+			ContentEncoding: "gzip",
 		}
 	})
 }
