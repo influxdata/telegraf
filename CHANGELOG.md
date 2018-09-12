@@ -28,6 +28,7 @@
 ### New Outputs
 
 - [azure_monitor](./plugins/outputs/azure_monitor/README.md) - Contributed by @influxdata
+- [influxdb_v2](./plugins/outputs/influxdb_v2/README.md) - Contributed by @influxdata
 
 ### New Parsers
 
@@ -105,6 +106,7 @@
 - [#4667](https://github.com/influxdata/telegraf/pull/4667): Align metrics window to interval in cloudwatch input.
 - [#4642](https://github.com/influxdata/telegraf/pull/4642): Improve Azure Managed Instance support + more in sqlserver input.
 - [#4682](https://github.com/influxdata/telegraf/pull/4682): Allow alternate binaries for iptables input plugin.
+- [#4645](https://github.com/influxdata/telegraf/pull/4645): Add influxdb_v2 output plugin.
 
 ### Bugfixes
 
