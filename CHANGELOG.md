@@ -112,6 +112,7 @@
 - [#4646](https://github.com/influxdata/telegraf/issues/4646): Reset/flush saved contents from bad metric.
 - [#4520](https://github.com/influxdata/telegraf/issues/4520): Document all supported cli arguments.
 - [#4674](https://github.com/influxdata/telegraf/pull/4674): Log access denied opening a service at debug level in win_services.
+- [#4588](https://github.com/influxdata/telegraf/issues/4588): Add support for Kafka 2.0.
 
 ## v1.7.4 [2018-08-29]
 
