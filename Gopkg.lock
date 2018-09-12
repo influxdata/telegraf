@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  digest = "1:972f38a9c879a4920d1e3a3d3438104b6c06163bfa3e6f4064adb00468d40587"
+  name = "cloud.google.com/go"
+  packages = ["civil"]
+  pruneopts = ""
+  revision = "c728a003b238b26cef9ab6753a5dc424b331c3ad"
+  version = "v0.27.0"
+
+[[projects]]
   branch = "master"
   digest = "1:fc0802104acded1f48e4860a9f2db85b82b4a754fca9eae750ff4e8b8cdf2116"
   name = "code.cloudfoundry.org/clock"
@@ -122,7 +130,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0828d8c0f95689f832cf348fe23827feb7640cd698d612ef59e2f9d041f54c68"
+  digest = "1:5a5f28fcfe3a74247733a31ceaac0e53bfc2723e43c596b2e3f110eda9378575"
   name = "github.com/apache/thrift"
   packages = ["lib/go/thrift"]
   pruneopts = ""
@@ -231,6 +239,17 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:7fdc54859cd901c25b9d8db964410a4e0d98fa0dca267fe4cf49c0eede5e06c2"
+  name = "github.com/denisenkom/go-mssqldb"
+  packages = [
+    ".",
+    "internal/cp",
+  ]
+  pruneopts = ""
+  revision = "1eb28afdf9b6e56cf673badd47545f844fe81103"
+
+[[projects]]
   digest = "1:6098222470fe0172157ce9bbef5d2200df4edde17ee649c5d6e48330e4afa4c6"
   name = "github.com/dgrijalva/jwt-go"
   packages = ["."]
@@ -257,7 +276,7 @@
   revision = "edc3ab29cdff8694dd6feb85cfeb4b5f1b38ed9c"
 
 [[projects]]
-  digest = "1:d149605f1b00713fdc48150122892d77d49d30c825f690dd92f497aeb6cf18f5"
+  digest = "1:d2ca9295cce7d0e7b26b498c6b59ff903d8315e8ead97f0f6cadf9e7d613e1e8"
   name = "github.com/docker/docker"
   packages = [
     "api",
@@ -498,7 +517,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ff65bf6fc4d1116f94ac305342725c21b55c16819c2606adc8f527755716937f"
+  digest = "1:e1c91a91cc738cebecbf12fc98f554f6f932c8b97e2052ad63ea43948df5bcb0"
   name = "github.com/hashicorp/go-rootcerts"
   packages = ["."]
   pruneopts = ""
@@ -1018,14 +1037,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2fcfc6c3fb8dfe0d80d7789272230d3ac7db15022b66817113f98d9fff880225"
-  name = "github.com/zensqlmonitor/go-mssqldb"
-  packages = ["."]
-  pruneopts = ""
-  revision = "e8fbf836e44e86764eba398361d1825651709547"
-
-[[projects]]
-  branch = "master"
   digest = "1:0773b5c3be42874166670a20aa177872edb450cd9fc70b1df97303d977702a50"
   name = "golang.org/x/crypto"
   packages = [
@@ -1312,6 +1323,7 @@
     "github.com/aws/aws-sdk-go/service/sts",
     "github.com/bsm/sarama-cluster",
     "github.com/couchbase/go-couchbase",
+    "github.com/denisenkom/go-mssqldb",
     "github.com/dgrijalva/jwt-go",
     "github.com/docker/docker/api/types",
     "github.com/docker/docker/api/types/container",
@@ -1375,7 +1387,6 @@
     "github.com/vmware/govmomi/vim25/soap",
     "github.com/vmware/govmomi/vim25/types",
     "github.com/wvanbergen/kafka/consumergroup",
-    "github.com/zensqlmonitor/go-mssqldb",
     "golang.org/x/net/context",
     "golang.org/x/net/html/charset",
     "golang.org/x/oauth2",
