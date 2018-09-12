@@ -36,8 +36,10 @@ type RunningOutput struct {
 	metrics     *buffer.Buffer
 	failMetrics *buffer.Buffer
 
+	// Guards against concurrent calls to Add, Push, Reset
+	aggMutex sync.Mutex
 	// Guards against concurrent calls to the Output as described in #3009
-	sync.Mutex
+	writeMutex sync.Mutex
 }
 
 func NewRunningOutput(
@@ -94,8 +96,6 @@ func NewRunningOutput(
 // AddMetric adds a metric to the output. This function can also write cached
 // points if FlushBufferWhenFull is true.
 func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
-	ro.Lock()
-	defer ro.Unlock()
 
 	if m == nil {
 		return
@@ -118,7 +118,9 @@ func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
 	}
 
 	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
+		ro.aggMutex.Lock()
 		output.Add(m)
+		ro.aggMutex.Unlock()
 		return
 	}
 
@@ -135,13 +137,12 @@ func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
 
 // Write writes all cached points to this output.
 func (ro *RunningOutput) Write() error {
-	ro.Lock()
-	defer ro.Unlock()
-
 	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
+		ro.aggMutex.Lock()
 		metrics := output.Push()
 		ro.metrics.Add(metrics...)
 		output.Reset()
+		ro.aggMutex.Unlock()
 	}
 
 	nFails, nMetrics := ro.failMetrics.Len(), ro.metrics.Len()
@@ -192,6 +193,8 @@ func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 	if nMetrics == 0 {
 		return nil
 	}
+	ro.writeMutex.Lock()
+	defer ro.writeMutex.Unlock()
 	start := time.Now()
 	err := ro.Output.Write(metrics)
 	elapsed := time.Since(start)
