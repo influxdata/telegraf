@@ -7,6 +7,7 @@ plugins.
 1. [InfluxDB Line Protocol](#influx)
 1. [JSON](#json)
 1. [Graphite](#graphite)
+1. [SplunkMetric](../plugins/serializers/splunkmetric/README.md)
 
 You will be able to identify the plugins with support by the presence of a
 `data_format` config option, for example, in the `file` output plugin:

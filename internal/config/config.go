@@ -1563,11 +1563,11 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "separator")
 	delete(tbl.Fields, "templates")
 	delete(tbl.Fields, "tag_keys")
-	delete(tbl.Fields, "string_fields")
-	delete(tbl.Fields, "json_query")
 	delete(tbl.Fields, "json_name_key")
-	delete(tbl.Fields, "json_time_key")
+	delete(tbl.Fields, "json_query")
+	delete(tbl.Fields, "json_string_fields")
 	delete(tbl.Fields, "json_time_format")
+	delete(tbl.Fields, "json_time_key")
 	delete(tbl.Fields, "data_type")
 	delete(tbl.Fields, "collectd_auth_file")
 	delete(tbl.Fields, "collectd_security_level")
@@ -1693,6 +1693,18 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["splunkmetric_hec_routing"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.HecRouting, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 	delete(tbl.Fields, "influx_max_line_bytes")
 	delete(tbl.Fields, "influx_sort_fields")
 	delete(tbl.Fields, "influx_uint_support")
@@ -1701,6 +1713,7 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")
 	delete(tbl.Fields, "json_timestamp_units")
+	delete(tbl.Fields, "splunkmetric_hec_routing")
 	return serializers.NewSerializer(c)
 }
 

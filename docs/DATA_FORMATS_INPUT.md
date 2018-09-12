@@ -14,9 +14,10 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Wavefront](#wavefront)
 1. [CSV](#csv)
 
-Telegraf metrics, like InfluxDB
-[points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
-are a combination of four basic parts:
+Telegraf metrics, similar to InfluxDB's [points][influxdb key concepts], are a
+combination of four basic parts:
+
+[influxdb key concepts]: https://docs.influxdata.com/influxdb/v1.6/concepts/key_concepts/
 
 1. Measurement Name
 1. Tags
@@ -59,8 +60,10 @@ I'll go over below.
 
 # Influx:
 
-There are no additional configuration options for InfluxDB line-protocol. The
+There are no additional configuration options for InfluxDB [line protocol][]. The
 metrics are parsed directly into Telegraf metrics.
+
+[line protocol]: https://docs.influxdata.com/influxdb/latest/write_protocols/line/
 
 #### Influx Configuration:
 
@@ -108,11 +111,11 @@ but can be overridden using the `name_override` config option.
 
 #### JSON Configuration:
 
-The JSON data format supports specifying "tag_keys", "string_keys", and "json_query".
-If specified, keys in "tag_keys" and "string_keys" will be searched for in the root-level
+The JSON data format supports specifying "tag_keys", "json_string_fields", and "json_query".
+If specified, keys in "tag_keys" and "json_string_fields" will be searched for in the root-level
 and any nested lists of the JSON blob. All int and float values are added to fields by default.
 If the key(s) exist, they will be applied as tags or fields to the Telegraf metrics.
-If "string_keys" is specified, the string will be added as a field.
+If "json_string_fields" is specified, the string will be added as a field.
 
 The "json_query" configuration is a gjson path to an JSON object or
 list of JSON objects. If this path leads to an array of values or
@@ -131,6 +134,12 @@ config "json_time_key" and "json_time_format". If "json_time_key" is set,
 "json_time_format" must be specified.  The "json_time_key" describes the
 name of the field containing time information.  The "json_time_format"
 must be a recognized Go time format.
+If parsing a Unix epoch timestamp in seconds, e.g. 1536092344.1, this config must be set to "unix" (case insensitive);
+corresponding JSON value can have a decimal part and can be a string or a number JSON representation.
+If value is in number representation, it'll be treated as a double precision float, and could have some precision loss.
+If value is in string representation, there'll be no precision loss up to nanosecond precision. Decimal positions beyond that will be dropped.
+If parsing a Unix epoch timestamp in milliseconds, e.g. 1536092344100, this config must be set to "unix_ms" (case insensitive);
+corresponding JSON value must be a (long) integer and be in number JSON representation.
 If there is no year provided, the metrics will have the current year.
 More info on time formats can be found here: https://golang.org/pkg/time/#Parse
 
@@ -219,7 +228,7 @@ For example, if the following configuration:
   ]
 
   ## List of field names to extract from JSON and add as string fields
-  # string_fields = []
+  # json_string_fields = []
 
   ## gjson query path to specify a specific chunk of JSON to be parsed with
   ## the above configuration. If not specified, the whole file will be parsed
@@ -287,7 +296,7 @@ For example, with the following config:
   tag_keys = ["first"]
 
   ## List of field names to extract from JSON and add as string fields
-  string_fields = ["last"]
+  json_string_fields = ["last"]
 
   ## gjson query path to specify a specific chunk of JSON to be parsed with
   ## the above configuration. If not specified, the whole file will be parsed

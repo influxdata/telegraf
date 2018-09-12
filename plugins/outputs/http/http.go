@@ -2,6 +2,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -13,6 +14,8 @@ import (
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 var sampleConfig = `
@@ -29,6 +32,12 @@ var sampleConfig = `
   # username = "username"
   # password = "pa$$word"
 
+  ## OAuth2 Client Credentials Grant
+  # client_id = "clientid"
+  # client_secret = "secret"
+  # token_url = "https://indentityprovider/oauth2/v1/token"
+  # scopes = ["urn:opc:idm:__myscopes__"]
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
@@ -41,7 +50,7 @@ var sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   # data_format = "influx"
-  
+
   ## Additional HTTP headers
   # [outputs.http.headers]
   #   # Should be set manually to "application/json" for json data_format
@@ -55,12 +64,16 @@ const (
 )
 
 type HTTP struct {
-	URL      string            `toml:"url"`
-	Timeout  internal.Duration `toml:"timeout"`
-	Method   string            `toml:"method"`
-	Username string            `toml:"username"`
-	Password string            `toml:"password"`
-	Headers  map[string]string `toml:"headers"`
+	URL          string            `toml:"url"`
+	Timeout      internal.Duration `toml:"timeout"`
+	Method       string            `toml:"method"`
+	Username     string            `toml:"username"`
+	Password     string            `toml:"password"`
+	Headers      map[string]string `toml:"headers"`
+	ClientID     string            `toml:"client_id"`
+	ClientSecret string            `toml:"client_secret"`
+	TokenURL     string            `toml:"token_url"`
+	Scopes       []string          `toml:"scopes"`
 	tls.ClientConfig
 
 	client     *http.Client
@@ -69,6 +82,34 @@ type HTTP struct {
 
 func (h *HTTP) SetSerializer(serializer serializers.Serializer) {
 	h.serializer = serializer
+}
+
+func (h *HTTP) createClient(ctx context.Context) (*http.Client, error) {
+	tlsCfg, err := h.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+			Proxy:           http.ProxyFromEnvironment,
+		},
+		Timeout: h.Timeout.Duration,
+	}
+
+	if h.ClientID != "" && h.ClientSecret != "" && h.TokenURL != "" {
+		oauthConfig := clientcredentials.Config{
+			ClientID:     h.ClientID,
+			ClientSecret: h.ClientSecret,
+			TokenURL:     h.TokenURL,
+			Scopes:       h.Scopes,
+		}
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, client)
+		client = oauthConfig.Client(ctx)
+	}
+
+	return client, nil
 }
 
 func (h *HTTP) Connect() error {
@@ -84,18 +125,13 @@ func (h *HTTP) Connect() error {
 		h.Timeout.Duration = defaultClientTimeout
 	}
 
-	tlsCfg, err := h.ClientConfig.TLSConfig()
+	ctx := context.Background()
+	client, err := h.createClient(ctx)
 	if err != nil {
 		return err
 	}
 
-	h.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsCfg,
-			Proxy:           http.ProxyFromEnvironment,
-		},
-		Timeout: h.Timeout.Duration,
-	}
+	h.client = client
 
 	return nil
 }
@@ -129,6 +165,10 @@ func (h *HTTP) write(reqBody []byte) error {
 	req, err := http.NewRequest(h.Method, h.URL, bytes.NewBuffer(reqBody))
 	if err != nil {
 		return err
+	}
+
+	if h.Username != "" || h.Password != "" {
+		req.SetBasicAuth(h.Username, h.Password)
 	}
 
 	req.Header.Set("Content-Type", defaultContentType)
