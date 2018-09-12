@@ -39,6 +39,9 @@ This InfluxDB output plugin writes metrics to the [InfluxDB 2.0](https://github.
   ## compress body or "identity" to apply no encoding.
   # content_encoding = "gzip"
 
+  ## Enable or disable uint support for writing uints influxdb 2.0.
+  # uint_support = "disable"
+
   ## Optional TLS Config for use on HTTP connections.
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"
