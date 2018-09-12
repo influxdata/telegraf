@@ -56,7 +56,7 @@ var sampleConfig = `
   # content_encoding = "gzip"
 
   ## Enable or disable uint support for writing uints influxdb 2.0.
-  # uint_support = "disable"
+  # influx_uint_support = false
 
   ## Optional TLS Config for use on HTTP connections.
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -82,7 +82,7 @@ type InfluxDB struct {
 	HTTPProxy       string            `toml:"http_proxy"`
 	UserAgent       string            `toml:"user_agent"`
 	ContentEncoding string            `toml:"content_encoding"`
-	UintSupport     string            `toml:"uint_support"`
+	UintSupport     bool              `toml:"influx_uint_support"`
 	tls.ClientConfig
 
 	clients    []Client
@@ -97,7 +97,7 @@ func (i *InfluxDB) Connect() error {
 	}
 
 	i.serializer = influx.NewSerializer()
-	if i.UintSupport != "disabled" {
+	if i.UintSupport {
 		i.serializer.SetFieldTypeSupport(influx.UintSupport)
 	}
 
@@ -196,7 +196,6 @@ func init() {
 		return &InfluxDB{
 			Timeout:         internal.Duration{Duration: time.Second * 5},
 			ContentEncoding: "gzip",
-			UintSupport:     "disabled",
 		}
 	})
 }
