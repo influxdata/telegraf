@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -66,6 +67,7 @@ type httpClient struct {
 	client     *http.Client
 	serializer *influx.Serializer
 	url        *url.URL
+	retryTime  time.Time
 }
 
 func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
@@ -169,6 +171,9 @@ func (g genericRespError) Error() string {
 }
 
 func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error {
+	if c.retryTime.After(time.Now()) {
+		return errors.New("E! Retry time has not elapsed")
+	}
 	reader := influx.NewReader(metrics, c.serializer)
 	req, err := c.makeWriteRequest(reader)
 	if err != nil {
@@ -207,9 +212,8 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 			log.Println("E! [outputs.influxdb_v2] Failed to write metric: retry interval too long")
 			return nil
 		}
-		// TODO: Don't sleep and write (#2919)
-		time.Sleep(time.Second * time.Duration(retry))
-		c.Write(ctx, metrics)
+		c.retryTime = time.Now().Add(time.Duration(retry) * time.Second)
+		return fmt.Errorf("Waiting %ds for server before sending metric again", retry)
 	}
 
 	// This is only until platform spec is fully implemented. As of the
