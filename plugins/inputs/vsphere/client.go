@@ -164,12 +164,10 @@ func (c *Client) close() {
 	// to close it multiple times.
 	c.closeGate.Do(func() {
 		ctx := context.Background()
-		if c.Views != nil {
-			c.Views.Destroy(ctx)
-
-		}
 		if c.Client != nil {
-			c.Client.Logout(ctx)
+			if err := c.Client.Logout(ctx); err != nil {
+				log.Printf("E! [input.vsphere]: Error during logout: %s", err)
+			}
 		}
 	})
 }
