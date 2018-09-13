@@ -40,7 +40,7 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	for _, line := range lines {
 		data_splitted := strings.Split(line, "|")
 
-		if len(data_splitted) < 2 {
+		if len(data_splitted) != 2 {
 			// got human readable output only or bad line
 			continue
 		}
