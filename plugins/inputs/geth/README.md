@@ -1,5 +1,11 @@
 ## Geth Input Plugin
 
+Geth ([github.com/ethereum/go-ethereum](https://github.com/ethereum/go-ethereum) / [geth.ethereum.org](https://geth.ethereum.org) is the official Go implementation of the Ethereum protocol. This plugin allows users to collect metrics from their own Ethereum blockchains.
+
+### Requirements
+
+This plugin requires a running `geth` node that has been configured with the `--metrics` flag as well as the `--rpc --rpcapi debug,...` flags. An example node configuration can be found in the [dev/](dev/) test directory.
+
 ### Selecting Metrics
 
 In the toml config, a subset of all metrics can be chosen using the gjson syntax, for example:
