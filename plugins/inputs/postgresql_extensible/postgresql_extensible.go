@@ -221,7 +221,7 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 		return err
 	}
 
-	if columnMap["datname"] != nil {
+	if *columnMap["datname"] != nil {
 		// extract the database name from the column map
 		dbname.WriteString((*columnMap["datname"]).(string))
 	} else {
