@@ -203,9 +203,9 @@ Input:
 
 Output:
 ```
-file,first="Dale" last:"Murphy",age:44
-file,first="Roger" last:"Craig",age:68
-file,first="Jane" last="Murphy",age:47
+file,first=Dale last="Murphy",age=44
+file,first=Roger last="Craig",age=68
+file,first=Jane last="Murphy",age=47
 ```
 
 [gjson]:        https://github.com/tidwall/gjson
