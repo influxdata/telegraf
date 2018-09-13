@@ -1,9 +1,9 @@
 # Dropwizard
 
-The dropwizard format can parse the JSON representation of a single dropwizard metric registry. By default, tags are parsed from metric names as if they were actual influxdb line protocol keys (`measurement<,tag_set>`) which can be overriden by defining custom [measurement & tag templates](./DATA_FORMATS_INPUT.md#measurement--tag-templates). All field value types are supported, `string`, `number` and `boolean`.
+The `dropwizard` data format can parse the [JSON Dropwizard][dropwizard] representation of a single dropwizard metric registry. By default, tags are parsed from metric names as if they were actual influxdb line protocol keys (`measurement<,tag_set>`) which can be overriden by defining a custom [template pattern][templates]. All field value types are supported, `string`, `number` and `boolean`.
 
-For more information about the dropwizard json format see
-[here](http://metrics.dropwizard.io/3.1.0/manual/json/).
+[templates]: /docs/TEMPLATE_PATTERN.md
+[dropwizard]: http://metrics.dropwizard.io/3.1.0/manual/json/
 
 ### Configuration
 

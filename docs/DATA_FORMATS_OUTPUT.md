@@ -11,6 +11,7 @@ plugins.
 
 You will be able to identify the plugins with support by the presence of a
 `data_format` config option, for example, in the `file` output plugin:
+
 ```toml
 [[outputs.file]]
   ## Files to write to, "stdout" is a specially handled file.

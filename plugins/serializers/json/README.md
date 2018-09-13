@@ -1,7 +1,29 @@
 # JSON
 
-The JSON output data format output for a single metric is in the
-form:
+The `json` output data format converts metrics into JSON documents.
+
+### Configuration
+
+```toml
+[[outputs.file]]
+  ## Files to write to, "stdout" is a specially handled file.
+  files = ["stdout", "/tmp/metrics.out"]
+
+  ## Data format to output.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "json"
+
+  ## The resolution to use for the metric timestamp.  Must be a duration string
+  ## such as "1ns", "1us", "1ms", "10ms", "1s".  Durations are truncated to
+  ## the power of 10 less than the specified units.
+  json_timestamp_units = "1s"
+```
+
+### Examples:
+
+Standard form:
 ```json
 {
     "fields": {
@@ -52,23 +74,4 @@ reference the documentation for the specific plugin.
         }
     ]
 }
-```
-
-### Configuration
-
-```toml
-[[outputs.file]]
-  ## Files to write to, "stdout" is a specially handled file.
-  files = ["stdout", "/tmp/metrics.out"]
-
-  ## Data format to output.
-  ## Each data format has its own unique set of configuration options, read
-  ## more about them here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "json"
-
-  ## The resolution to use for the metric timestamp.  Must be a duration string
-  ## such as "1ns", "1us", "1ms", "10ms", "1s".  Durations are truncated to
-  ## the power of 10 less than the specified units.
-  json_timestamp_units = "1s"
 ```

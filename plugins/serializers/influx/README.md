@@ -1,9 +1,8 @@
 # Influx
 
-The `influx` data format outputs metrics using
-[InfluxDB Line Protocol](https://docs.influxdata.com/influxdb/latest/write_protocols/line_protocol_tutorial/).
-This is the recommended format unless another format is required for
-interoperability.
+The `influx` data format outputs metrics into [InfluxDB Line Protocol][line
+protocol].  This is the recommended format unless another format is required
+for interoperability.
 
 ### Configuration
 ```toml
@@ -18,18 +17,18 @@ interoperability.
   data_format = "influx"
 
   ## Maximum line length in bytes.  Useful only for debugging.
-  # influx_max_line_bytes = 0
+  influx_max_line_bytes = 0
 
   ## When true, fields will be output in ascending lexical order.  Enabling
   ## this option will result in decreased performance and is only recommended
   ## when you need predictable ordering while debugging.
-  # influx_sort_fields = false
+  influx_sort_fields = false
 
   ## When true, Telegraf will output unsigned integers as unsigned values,
   ## i.e.: `42u`.  You will need a version of InfluxDB supporting unsigned
   ## integer values.  Enabling this option will result in field type errors if
   ## existing data has been written.
-  # influx_uint_support = false
+  influx_uint_support = false
 ```
 
-
+[line protocol]: https://docs.influxdata.com/influxdb/latest/write_protocols/line_protocol_tutorial/
