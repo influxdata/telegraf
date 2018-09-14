@@ -79,6 +79,7 @@ type HTTPListener struct {
 	MeasurementName string
 	Precision       string
 	Protocol        string
+	Path            string
 
 	tlsint.ServerConfig
 
@@ -108,8 +109,13 @@ type HTTPListener struct {
 }
 
 const sampleConfig = `
+[[inputs.googlecoreiot]]
   ## Address and port to host HTTP listener on
   service_address = ":9999"
+
+  ## Path to serve
+  ## default is /write
+  path = "/write"
 
   ## maximum duration before timing out read of the request
   read_timeout = "10s"
@@ -191,6 +197,9 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 	if h.Protocol == "" {
 		h.Protocol = "line protocol"
 	}
+	if h.Path == "" {
+		h.Path = "/write"
+	}
 
 	h.acc = acc
 	h.pool = NewPool(200, h.MaxLineSize)
@@ -243,7 +252,7 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 		server.Serve(h.listener)
 	}()
 
-	log.Printf("I! Started HTTP listener service on %s\n", h.ServiceAddress)
+	log.Printf("I! Started HTTP listener service on %s%s\n", h.ServiceAddress, h.Path)
 	return nil
 }
 
@@ -255,17 +264,19 @@ func (h *HTTPListener) Stop() {
 	h.listener.Close()
 	h.wg.Wait()
 
-	log.Println("I! Stopped HTTP listener service on ", h.ServiceAddress)
+	log.Println("I! Stopped HTTP listener service on ", h.ServiceAddress, h.Path)
 }
 
 func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	h.RequestsRecv.Incr(1)
 	defer h.RequestsServed.Incr(1)
 	switch req.URL.Path {
-	case "/write":
+	case h.Path:
 		h.WritesRecv.Incr(1)
+		h.serveWrite(res, req)
 		defer h.WritesServed.Incr(1)
 	default:
+		h.serveWrite(res, req)
 		defer h.NotFoundsServed.Incr(1)
 	}
 }
@@ -405,7 +416,7 @@ func badRequest(res http.ResponseWriter) {
 }
 
 func init() {
-	inputs.Add("google_core_iot", func() telegraf.Input {
+	inputs.Add("googlecoreiot", func() telegraf.Input {
 		return &HTTPListener{
 			ServiceAddress: ":9999",
 			TimeFunc:       time.Now,
