@@ -3,3 +3,8 @@
 /telegraf.exe
 /telegraf.gz
 /vendor
+plugins/inputs/.DS_Store
+plugins/.DS_Store
+OpenWrt.sparseimage
+telegraf.arm64
+.DS_Store
