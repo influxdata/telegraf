@@ -36,9 +36,13 @@ An example program for sending data from a Google Core IoT device (Raspberry Pi)
 This is a sample configuration for the plugin.
 
 ```toml
-  ## Server listens on <server name>:port/write
+  ## Server listens on <server name>:port
   ## Address and port to host HTTP listener on
   service_address = ":9999"
+  
+  ## Path to serve
+  ## default is /write
+  ## path = "/foo" 
 
   ## maximum duration before timing out read of the request
   read_timeout = "10s"
