@@ -47,6 +47,10 @@
   version = "1.4.0"
 
 [[constraint]]
+  name = "github.com/goburrow/modbus"
+  version = "master"
+
+[[constraint]]
   name = "github.com/gobwas/glob"
   version = "0.2.3"
 
