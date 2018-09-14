@@ -223,3 +223,21 @@ func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
 		assert.False(t, acc.HasMeasurement(col))
 	}
 }
+
+func TestAccRow(t *testing.T) {
+	p := Postgresql{}
+	var acc testutil.Accumulator
+	row := fakeRow{}
+	columns := []string{"this", "that", "thing"}
+
+	err := p.accRow("pgTEST", row, &acc, columns)
+	if err != nil {
+		fmt.Println("THISNADA", err)
+	}
+}
+
+type fakeRow struct{}
+
+func (t fakeRow) Scan(dest ...interface{}) error {
+	return nil
+}

@@ -19,14 +19,8 @@ type Postgresql struct {
 	postgresql.Service
 	Databases      []string
 	AdditionalTags []string
-	Query          []struct {
-		Sqlquery    string
-		Version     int
-		Withdbname  bool
-		Tagvalue    string
-		Measurement string
-	}
-	Debug bool
+	Query          query
+	Debug          bool
 }
 
 type query []struct {
@@ -221,7 +215,7 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 		return err
 	}
 
-	if *columnMap["datname"] != nil {
+	if _, ok := columnMap["datname"]; ok {
 		// extract the database name from the column map
 		dbname.WriteString((*columnMap["datname"]).(string))
 	} else {
