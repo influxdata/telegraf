@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -102,7 +101,6 @@ func TestWriteHTTPSNoClientAuth(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
-	fmt.Println("Single Message: ", resp.StatusCode)
 }
 
 func TestWriteHTTPSWithClientAuth(t *testing.T) {
@@ -116,9 +114,7 @@ func TestWriteHTTPSWithClientAuth(t *testing.T) {
 	resp, err := getHTTPSClient().Post(createURL(listener, "https", "/write", ""), "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
 	resp.Body.Close()
-	fmt.Println(resp.Status)
 	require.EqualValues(t, 204, resp.StatusCode)
-	fmt.Println("Single Message w/ auth: ", resp.StatusCode)
 }
 
 func TestWriteHTTP(t *testing.T) {
@@ -138,14 +134,12 @@ func TestWriteHTTP(t *testing.T) {
 		map[string]interface{}{"temp_c": float64(23.95), "humidity": float64(62.83)},
 		map[string]string{"projectId": "conference-demos", "deviceRegistryId": "my-registry", "sensor": "bme_280", "subscription": "projects/conference-demos/subscriptions/my-subscription", "deviceId": "myPi", "deviceNumId": "2808946627307959", "deviceRegistryLocation": "us-central1", "message_id_2": "204004313210337", "subFolder": "", "message_id": "204004313210337"},
 	)
-	fmt.Println("Single Message succeeded: ", resp.StatusCode)
 
 	// post multiple message to listener
 	resp, err = http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(testMsgs)))
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
-	fmt.Println("Multi-Message: ", resp.StatusCode)
 	acc.Wait(2)
 
 }
@@ -163,9 +157,7 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
-	fmt.Println("Single Message: ", resp.StatusCode)
 	acc.Wait(1)
-	fmt.Println(acc.Metrics)
 	acc.AssertContainsTaggedFields(t, "testingGoogle",
 		map[string]interface{}{"temp_c": float64(23.95), "humidity": float64(62.83)},
 		map[string]string{"projectId": "conference-demos", "deviceRegistryId": "my-registry", "sensor": "bme_280", "subscription": "projects/conference-demos/subscriptions/my-subscription", "deviceId": "myPi", "deviceNumId": "2808946627307959", "deviceRegistryLocation": "us-central1", "message_id_2": "204004313210337", "subFolder": "", "message_id": "204004313210337"},
@@ -187,7 +179,6 @@ func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
-	fmt.Println("VerySmallMaxLine Message: ", resp.StatusCode)
 
 }
 
@@ -208,8 +199,8 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 		wg.Add(1)
 		go func(innerwg *sync.WaitGroup) {
 			defer innerwg.Done()
-			for i := 0; i < 500; i++ {
-				resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(testMsgs)))
+			for i := 0; i < 2500; i++ {
+				resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(testMsg)))
 				require.NoError(t, err)
 				resp.Body.Close()
 				require.EqualValues(t, 204, resp.StatusCode)

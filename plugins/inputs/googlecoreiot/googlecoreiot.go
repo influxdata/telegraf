@@ -377,7 +377,6 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 		res.WriteHeader(http.StatusNoContent)
 		for _, m := range metrics {
-			log.Println("I! Metrics: ", m)
 			h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 		}
 	}
