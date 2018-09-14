@@ -215,9 +215,9 @@ func (p *Postgresql) accRow(meas_name string, row scanner, acc telegraf.Accumula
 
 	if c, ok := columnMap["datname"]; ok && *c != nil {
 		// extract the database name from the column map
-		switch (*c).(type) {
+		switch datname := (*c).(type) {
 		case string:
-			dbname.WriteString((*columnMap["datname"]).(string))
+			dbname.WriteString(datname)
 		default:
 			dbname.WriteString("postgres")
 		}
