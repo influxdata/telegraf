@@ -1,6 +1,7 @@
 package postgresql_extensible
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -227,17 +228,37 @@ func TestPostgresqlIgnoresUnwantedColumns(t *testing.T) {
 func TestAccRow(t *testing.T) {
 	p := Postgresql{}
 	var acc testutil.Accumulator
-	row := fakeRow{}
-	columns := []string{"this", "that", "thing"}
+	columns := []string{"datname", "cat"}
 
-	err := p.accRow("pgTEST", row, &acc, columns)
-	if err != nil {
-		fmt.Println("THISNADA", err)
+	testRows := []fakeRow{
+		{fields: []interface{}{1, "gato"}},
+		{fields: []interface{}{nil, "gato"}},
+		{fields: []interface{}{"name", "gato"}},
+	}
+	for i := range testRows {
+		err := p.accRow("pgTEST", testRows[i], &acc, columns)
+		if err != nil {
+			t.Fatalf("Scan failed: %s", err)
+		}
 	}
 }
 
-type fakeRow struct{}
+type fakeRow struct {
+	fields []interface{}
+}
 
-func (t fakeRow) Scan(dest ...interface{}) error {
+func (f fakeRow) Scan(dest ...interface{}) error {
+	if len(f.fields) != len(dest) {
+		return errors.New("Nada matchy buddy")
+	}
+
+	for i, d := range dest {
+		switch d.(type) {
+		case (*interface{}):
+			*d.(*interface{}) = f.fields[i]
+		default:
+			return fmt.Errorf("Bad type %T", d)
+		}
+	}
 	return nil
 }
