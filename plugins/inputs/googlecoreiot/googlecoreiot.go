@@ -1,7 +1,6 @@
 package googlecoreiot
 
 import (
-	"compress/gzip"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -350,16 +349,6 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 	// Handle gzip request bodies
 	body := req.Body
-	if req.Header.Get("Content-Encoding") == "gzip" {
-		var err error
-		body, err = gzip.NewReader(req.Body)
-		defer body.Close()
-		if err != nil {
-			log.Println("E! " + err.Error())
-			badRequest(res)
-			return
-		}
-	}
 	body = http.MaxBytesReader(res, body, h.MaxBodySize)
 	buf := h.pool.get()
 	defer h.pool.put(buf)
@@ -401,7 +390,6 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		}
 		res.WriteHeader(http.StatusNoContent)
 		h.acc.AddFields(metrics.Name(), metrics.Fields(), metrics.Tags(), metrics.Time())
-		log.Println("I! Metrics: ", metrics)
 	}
 
 }

@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -134,11 +133,10 @@ func TestWriteHTTP(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
-	fmt.Println("TestWriteHHTP Message: ", resp.StatusCode)
 	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "bme_280",
-		map[string]interface{}{"temp_c": float64(22.85)},
-		map[string]string{"host": "server01"},
+	acc.AssertContainsTaggedFields(t, "testingGoogle",
+		map[string]interface{}{"temp_c": float64(23.95), "humidity": float64(62.83)},
+		map[string]string{"projectId": "conference-demos", "deviceRegistryId": "my-registry", "sensor": "bme_280", "subscription": "projects/conference-demos/subscriptions/my-subscription", "deviceId": "myPi", "deviceNumId": "2808946627307959", "deviceRegistryLocation": "us-central1", "message_id_2": "204004313210337", "subFolder": "", "message_id": "204004313210337"},
 	)
 	fmt.Println("Single Message succeeded: ", resp.StatusCode)
 
@@ -149,26 +147,7 @@ func TestWriteHTTP(t *testing.T) {
 	require.EqualValues(t, 204, resp.StatusCode)
 	fmt.Println("Multi-Message: ", resp.StatusCode)
 	acc.Wait(2)
-	hostTags := []string{"server02", "server03",
-		"server04", "server05", "server06"}
-	for _, hostTag := range hostTags {
-		acc.AssertContainsTaggedFields(t, "bme_280",
-			map[string]interface{}{"temp_c": float64(22.85)},
-			map[string]string{"host": hostTag},
-		)
-	}
 
-	// Post a gigantic metric to the listener and verify that an error is returned:
-	resp, err = http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric)))
-	require.NoError(t, err)
-	resp.Body.Close()
-	require.EqualValues(t, 400, resp.StatusCode)
-	fmt.Println("Gigantic Message: ", resp.StatusCode)
-	acc.Wait(3)
-	acc.AssertContainsTaggedFields(t, "bme_280",
-		map[string]interface{}{"temp_c": float64(22.85)},
-		map[string]string{"host": "server01"},
-	)
 }
 
 // http listener should add a newline at the end of the buffer if it's not there
@@ -188,46 +167,9 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 	acc.Wait(1)
 	fmt.Println(acc.Metrics)
 	acc.AssertContainsTaggedFields(t, "testingGoogle",
-		map[string]interface{}{"temp_c": float64(22.85)},
-		map[string]string{"": ""},
+		map[string]interface{}{"temp_c": float64(23.95), "humidity": float64(62.83)},
+		map[string]string{"projectId": "conference-demos", "deviceRegistryId": "my-registry", "sensor": "bme_280", "subscription": "projects/conference-demos/subscriptions/my-subscription", "deviceId": "myPi", "deviceNumId": "2808946627307959", "deviceRegistryLocation": "us-central1", "message_id_2": "204004313210337", "subFolder": "", "message_id": "204004313210337"},
 	)
-}
-
-func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
-	listener := &HTTPListener{
-		ServiceAddress: "localhost:0",
-		MaxLineSize:    128 * 1000,
-		TimeFunc:       time.Now,
-	}
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, listener.Start(acc))
-	defer listener.Stop()
-
-	// Post a gigantic metric to the listener and verify that it writes OK this time:
-	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric)))
-	require.NoError(t, err)
-	resp.Body.Close()
-	require.EqualValues(t, 204, resp.StatusCode)
-	fmt.Println("Gigantic Message: ", resp.StatusCode)
-}
-
-func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
-	listener := &HTTPListener{
-		ServiceAddress: "localhost:0",
-		MaxBodySize:    4096,
-		TimeFunc:       time.Now,
-	}
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, listener.Start(acc))
-	defer listener.Stop()
-
-	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric)))
-	require.NoError(t, err)
-	resp.Body.Close()
-	require.EqualValues(t, 413, resp.StatusCode)
-	fmt.Println("SmallMaxBody Message: ", resp.StatusCode)
 }
 
 func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
@@ -246,80 +188,13 @@ func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
 	fmt.Println("VerySmallMaxLine Message: ", resp.StatusCode)
-	hostTags := []string{"server02", "server03",
-		"server04", "server05", "server06"}
-	acc.Wait(len(hostTags))
-	for _, hostTag := range hostTags {
-		acc.AssertContainsTaggedFields(t, "bme_280",
-			map[string]interface{}{"temp_c": float64(22.85)},
-			map[string]string{"host": hostTag},
-		)
-	}
-}
 
-func TestWriteHTTPLargeLinesSkipped(t *testing.T) {
-	listener := &HTTPListener{
-		ServiceAddress: "localhost:0",
-		MaxLineSize:    100,
-		TimeFunc:       time.Now,
-	}
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, listener.Start(acc))
-	defer listener.Stop()
-
-	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric+testMsgs)))
-	require.NoError(t, err)
-	resp.Body.Close()
-	require.EqualValues(t, 400, resp.StatusCode)
-	fmt.Println("LargeLinesSkipped: ", resp.StatusCode)
-	hostTags := []string{"server02", "server03",
-		"server04", "server05", "server06"}
-	acc.Wait(len(hostTags))
-	for _, hostTag := range hostTags {
-		acc.AssertContainsTaggedFields(t, "bme_280",
-			map[string]interface{}{"temp_c": float64(22.85)},
-			map[string]string{"host": hostTag},
-		)
-	}
-}
-
-// test that writing gzipped data works
-func TestWriteHTTPGzippedData(t *testing.T) {
-	listener := newTestHTTPListener()
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, listener.Start(acc))
-	defer listener.Stop()
-
-	data, err := ioutil.ReadFile("./testdata/testmsgs.gz")
-	require.NoError(t, err)
-
-	req, err := http.NewRequest("POST", createURL(listener, "http", "/write", ""), bytes.NewBuffer(data))
-	require.NoError(t, err)
-	req.Header.Set("Content-Encoding", "gzip")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	require.NoError(t, err)
-	require.EqualValues(t, 204, resp.StatusCode)
-
-	hostTags := []string{"server02", "server03",
-		"server04", "server05", "server06"}
-	acc.Wait(len(hostTags))
-	for _, hostTag := range hostTags {
-		acc.AssertContainsTaggedFields(t, "bme_280",
-			map[string]interface{}{"temp_c": float64(22.85)},
-			map[string]string{"host": hostTag},
-		)
-	}
 }
 
 // writes 25,000 metrics to the listener with 10 different writers
 func TestWriteHTTPHighTraffic(t *testing.T) {
-	if runtime.GOOS != "darwin" {
+	if runtime.GOOS == "darwin" {
 		t.Skip("Skipping due to hang on darwin")
-		fmt.Println("Skipped")
 	}
 	listener := newTestHTTPListener()
 
@@ -390,5 +265,3 @@ func TestWriteHTTPEmpty(t *testing.T) {
 	resp.Body.Close()
 	require.EqualValues(t, 400, resp.StatusCode)
 }
-
-const hugeMetric = `{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}`
