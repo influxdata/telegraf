@@ -179,7 +179,7 @@ func getRTUdata(s *Modbus) (results []byte, err error) {
 	handler.StopBits = s.Comm.Stopbits
 	handler.SlaveId = s.SlaveAddress
 	handler.Timeout = time.Duration(s.TimeOut) * time.Second
-	
+
 	handler.Logger = log.New(os.Stdout, "RTU: ", log.LstdFlags)
 
 	err = handler.Connect()
