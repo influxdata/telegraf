@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -19,14 +20,14 @@ import (
 )
 
 const (
-	testMsg          = "{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}\n"
-	testMsgNoNewline = "{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}"
+	testMsg          = `{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}\n`
+	testMsgNoNewline = `{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`
 
-	testMsgs = `{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}
-{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}
-{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}
-{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}
-{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}
+	testMsgs = `{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}
+	{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}
+	{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}
+	{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}
+	{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}
 `
 	badMsg   = "blahblahblah: 42\n"
 	emptyMsg = ""
@@ -102,6 +103,7 @@ func TestWriteHTTPSNoClientAuth(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
+	fmt.Println("Single Message: ", resp.StatusCode)
 }
 
 func TestWriteHTTPSWithClientAuth(t *testing.T) {
@@ -115,7 +117,9 @@ func TestWriteHTTPSWithClientAuth(t *testing.T) {
 	resp, err := getHTTPSClient().Post(createURL(listener, "https", "/write", ""), "", bytes.NewBuffer([]byte(testMsg)))
 	require.NoError(t, err)
 	resp.Body.Close()
+	fmt.Println(resp.Status)
 	require.EqualValues(t, 204, resp.StatusCode)
+	fmt.Println("Single Message w/ auth: ", resp.StatusCode)
 }
 
 func TestWriteHTTP(t *testing.T) {
@@ -130,19 +134,20 @@ func TestWriteHTTP(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
-
+	fmt.Println("TestWriteHHTP Message: ", resp.StatusCode)
 	acc.Wait(1)
 	acc.AssertContainsTaggedFields(t, "bme_280",
 		map[string]interface{}{"temp_c": float64(22.85)},
 		map[string]string{"host": "server01"},
 	)
+	fmt.Println("Single Message succeeded: ", resp.StatusCode)
 
 	// post multiple message to listener
 	resp, err = http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(testMsgs)))
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
-
+	fmt.Println("Multi-Message: ", resp.StatusCode)
 	acc.Wait(2)
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
@@ -158,9 +163,9 @@ func TestWriteHTTP(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 400, resp.StatusCode)
-
+	fmt.Println("Gigantic Message: ", resp.StatusCode)
 	acc.Wait(3)
-	acc.AssertContainsTaggedFields(t, "cbme_280",
+	acc.AssertContainsTaggedFields(t, "bme_280",
 		map[string]interface{}{"temp_c": float64(22.85)},
 		map[string]string{"host": "server01"},
 	)
@@ -175,15 +180,16 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 	defer listener.Stop()
 
 	// post single message to listener
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
+	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(testMsgNoNewline)))
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
-
+	fmt.Println("Single Message: ", resp.StatusCode)
 	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "bme_280",
+	fmt.Println(acc.Metrics)
+	acc.AssertContainsTaggedFields(t, "testingGoogle",
 		map[string]interface{}{"temp_c": float64(22.85)},
-		map[string]string{"host": "server01"},
+		map[string]string{"": ""},
 	)
 }
 
@@ -203,6 +209,7 @@ func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
+	fmt.Println("Gigantic Message: ", resp.StatusCode)
 }
 
 func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
@@ -220,6 +227,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 413, resp.StatusCode)
+	fmt.Println("SmallMaxBody Message: ", resp.StatusCode)
 }
 
 func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
@@ -237,7 +245,7 @@ func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
-
+	fmt.Println("VerySmallMaxLine Message: ", resp.StatusCode)
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
 	acc.Wait(len(hostTags))
@@ -264,7 +272,7 @@ func TestWriteHTTPLargeLinesSkipped(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 400, resp.StatusCode)
-
+	fmt.Println("LargeLinesSkipped: ", resp.StatusCode)
 	hostTags := []string{"server02", "server03",
 		"server04", "server05", "server06"}
 	acc.Wait(len(hostTags))
@@ -309,8 +317,9 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 
 // writes 25,000 metrics to the listener with 10 different writers
 func TestWriteHTTPHighTraffic(t *testing.T) {
-	if runtime.GOOS == "darwin" {
+	if runtime.GOOS != "darwin" {
 		t.Skip("Skipping due to hang on darwin")
+		fmt.Println("Skipped")
 	}
 	listener := newTestHTTPListener()
 
@@ -375,11 +384,11 @@ func TestWriteHTTPEmpty(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	// post single message to listener
+	// post empty message to listener
 	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(emptyMsg)))
 	require.NoError(t, err)
 	resp.Body.Close()
-	require.EqualValues(t, 204, resp.StatusCode)
+	require.EqualValues(t, 400, resp.StatusCode)
 }
 
-const hugeMetric = `{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}{\"attributes\": {\"deviceId\": \"myPi\", \"deviceNumId\":\"2808946627307959\", \"deviceRegistryId\":\"my-registry\", \"deviceRegistryLocation\":\"us-central1\", \"projectId\":\"conference-demos\"}, \"data\": \"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==\", \"messageID\": \"193681629562075\", \"message_id\": \"193681629562075\", \"publishTime\": \"2018-09-14T14:11:29.096Z\", \"publish_time\": \"2018-09-14T14:11:29.096Z\"}, \"subscription\": \"projects/conference-demos/subscriptions/my-subscription\"}`
+const hugeMetric = `{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}{"attributes": {"deviceId": "myPi", "deviceNumId":"2808946627307959", "deviceRegistryId":"my-registry", "deviceRegistryLocation":"us-central1", "projectId":"conference-demos"}, "data": "dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuODIsaHVtaWRpdHk9NjMuOTUgMTUzNjkzNDI4OTA1ODM5MDY4NQ==", "messageID": "193681629562075", "message_id": "193681629562075", "publishTime": "2018-09-14T14:11:29.096Z", "publish_time": "2018-09-14T14:11:29.096Z"}, "subscription": "projects/conference-demos/subscriptions/my-subscription"}`

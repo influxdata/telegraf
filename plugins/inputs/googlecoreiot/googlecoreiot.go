@@ -276,7 +276,8 @@ func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		h.serveWrite(res, req)
 		defer h.WritesServed.Incr(1)
 	default:
-		h.serveWrite(res, req)
+
+		h.serveNotFound(res, req)
 		defer h.NotFoundsServed.Incr(1)
 	}
 }
@@ -285,7 +286,7 @@ func (h *HTTPListener) decodeLineProtocol(payload []byte, obj Payload) ([]telegr
 	parser := influx.NewParser(h.handler)
 	metrics, err := parser.Parse(payload)
 	if err != nil {
-		log.Println("E! ", err)
+		log.Println("E! Parser ", err)
 		return metrics, err
 	}
 
@@ -305,14 +306,14 @@ func (h *HTTPListener) decodeJSON(payload []byte, obj Payload) (telegraf.Metric,
 	e := JSONData{}
 	err := json.Unmarshal(payload, &e)
 	if err != nil {
-		log.Println("E! ", err)
+		log.Println("E! JSON Unmarshall ", err)
 		return h.handler.Metric()
 	}
 	b := []byte(strconv.FormatInt(e.Time, 10))
 	h.handler.SetTimestamp(b)
 	metrics, err := h.handler.Metric()
 	if err != nil {
-		log.Println("E! ", err)
+		log.Println("E! Metrics ", err)
 		return h.handler.Metric()
 	}
 	metrics.SetName(e.Name)
@@ -330,6 +331,14 @@ func (h *HTTPListener) decodeJSON(payload []byte, obj Payload) (telegraf.Metric,
 	metrics.AddTag("subscription", obj.Subscription)
 	return metrics, nil
 
+}
+
+func (h *HTTPListener) serveNotFound(res http.ResponseWriter, req *http.Request) {
+	res.Header().Set("Content-Type", "application/json")
+	res.Header().Set("X-Influxdb-Version", "1.0")
+	res.WriteHeader(http.StatusNotFound)
+	res.Write([]byte(`{"error":"http: not found"}`))
+	return
 }
 func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	// Check that the content length is not too large for us to handle.
@@ -352,7 +361,6 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 	body = http.MaxBytesReader(res, body, h.MaxBodySize)
-
 	buf := h.pool.get()
 	defer h.pool.put(buf)
 	decoder := json.NewDecoder(req.Body)
@@ -360,35 +368,40 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	var t Payload
 	err := decoder.Decode(&t)
 	if err != nil {
-		log.Println("E! ", err)
+		log.Println("E! Failed to decode Payload", err)
+		badRequest(res)
+		return
 	}
 	sDec, err := base64.StdEncoding.DecodeString(t.Msg.Data)
 	if err != nil {
-		log.Println("E! " + err.Error())
+		log.Println("E! Base64-Decode Failed" + err.Error())
 		badRequest(res)
 		return
 	}
 	if h.Protocol == "line protocol" {
 		metrics, err := h.decodeLineProtocol(sDec, t)
 		if err != nil {
-			log.Println("E! " + err.Error())
+			log.Println("E! Line Protocol Decode failed " + err.Error())
 			badRequest(res)
 			return
 		}
+
 		res.WriteHeader(http.StatusNoContent)
 		for _, m := range metrics {
+			log.Println("I! Metrics: ", m)
 			h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 		}
 	}
 	if h.Protocol == "json" {
 		metrics, err := h.decodeJSON(sDec, t)
 		if err != nil {
-			log.Println("E! " + err.Error())
+			log.Println("E! JSON Decode Failed " + err.Error())
 			badRequest(res)
 			return
 		}
 		res.WriteHeader(http.StatusNoContent)
 		h.acc.AddFields(metrics.Name(), metrics.Fields(), metrics.Tags(), metrics.Time())
+		log.Println("I! Metrics: ", metrics)
 	}
 
 }
