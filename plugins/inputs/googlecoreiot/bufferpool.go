@@ -1,4 +1,4 @@
-package google_core_iot
+package googlecoreiot
 
 import (
 	"sync/atomic"

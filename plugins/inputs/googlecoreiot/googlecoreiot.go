@@ -1,12 +1,10 @@
-package google_core_iot
+package googlecoreiot
 
 import (
 	"compress/gzip"
-	"crypto/subtle"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -23,6 +21,7 @@ import (
 	"github.com/influxdata/telegraf/selfstat"
 )
 
+// Attributes maps Default fields sent by Google Pub/Sub
 type Attributes struct {
 	DeviceID               string `json:"deviceId"`
 	DeviceNumID            string `json:"deviceNumId"`
@@ -32,6 +31,7 @@ type Attributes struct {
 	SubFolder              string `json:"subFolder"`
 }
 
+// Message Structure of a Google Pub/Sub message
 type Message struct {
 	Atts         map[string]interface{} `json:"attributes"`
 	Data         string                 `json:"data"`
@@ -40,12 +40,15 @@ type Message struct {
 	PublishTime  string                 `json:"publishTime"`
 	PublishTime2 string                 `json:"publish_time"`
 }
+
+// Payload of Line-Protocol payload after Base64-decode
 type Payload struct {
 	Msg          Message `json:"message"`
 	Subscription string  `json:"subscription"`
 }
 
-type JsonData struct {
+// JSONData structure of the Base-64 encoded payload
+type JSONData struct {
 	Name   string                 `json:"measurement"`
 	Tags   map[string]string      `json:"tags"`
 	Fields map[string]interface{} `json:"fields"`
@@ -58,7 +61,7 @@ const (
 	// 500 MB
 	DEFAULT_MAX_BODY_SIZE = 500 * 1024 * 1024
 
-	// MAX_LINE_SIZE is the maximum size, in bytes, that can be allocated for
+	// DEFAULT_MAX_LINE_SIZE is the maximum size, in bytes, that can be allocated for
 	// a single InfluxDB point.
 	// 64 KB
 	DEFAULT_MAX_LINE_SIZE = 64 * 1024
@@ -78,9 +81,6 @@ type HTTPListener struct {
 	Protocol        string
 
 	tlsint.ServerConfig
-
-	BasicUsername string
-	BasicPassword string
 
 	TimeFunc
 
@@ -136,10 +136,6 @@ const sampleConfig = `
   tls_cert = "/etc/telegraf/cert.pem"
   tls_key = "/etc/telegraf/key.pem"
 
-  ## Optional username and password to accept for HTTP basic authentication.
-  ## You probably want to make sure you have TLS configured above for this.
-  # basic_username = "foobar"
-  # basic_password = "barfoo"
 `
 
 func (h *HTTPListener) SampleConfig() string {
@@ -195,6 +191,7 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 	if h.Protocol == "" {
 		h.Protocol = "line protocol"
 	}
+
 	h.acc = acc
 	h.pool = NewPool(200, h.MaxLineSize)
 
@@ -229,19 +226,15 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 
 	case "second":
 		h.handler.SetTimePrecision(time.Second)
-		fmt.Println(h.Precision)
 		break
 	case "microsecond":
 		h.handler.SetTimePrecision(time.Microsecond)
-		fmt.Println(h.Precision)
 		break
 	case "nanosecond":
 		h.handler.SetTimePrecision(time.Nanosecond)
-		fmt.Println(h.Precision)
 		break
 	default:
 		h.handler.SetTimePrecision(time.Millisecond)
-		fmt.Println(h.Precision)
 		break
 	}
 	h.wg.Add(1)
@@ -269,14 +262,11 @@ func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	h.RequestsRecv.Incr(1)
 	defer h.RequestsServed.Incr(1)
 	switch req.URL.Path {
-	case "/test":
+	case "/write":
 		h.WritesRecv.Incr(1)
 		defer h.WritesServed.Incr(1)
-		h.AuthenticateIfSet(h.serveWrite, res, req)
 	default:
 		defer h.NotFoundsServed.Incr(1)
-		// Don't know how to respond to calls to other endpoints
-		h.AuthenticateIfSet(http.NotFound, res, req)
 	}
 }
 
@@ -284,7 +274,7 @@ func (h *HTTPListener) decodeLineProtocol(payload []byte, obj Payload) ([]telegr
 	parser := influx.NewParser(h.handler)
 	metrics, err := parser.Parse(payload)
 	if err != nil {
-		fmt.Println(err)
+		log.Println("E! ", err)
 		return metrics, err
 	}
 
@@ -293,6 +283,7 @@ func (h *HTTPListener) decodeLineProtocol(payload []byte, obj Payload) ([]telegr
 			m.AddTag(key, value.(string))
 			m.AddTag("message_id", obj.Msg.MessageID)
 			m.AddTag("message_id_2", obj.Msg.MessageID2)
+			m.AddTag("subscription", obj.Subscription)
 		}
 	}
 	return metrics, nil
@@ -300,17 +291,17 @@ func (h *HTTPListener) decodeLineProtocol(payload []byte, obj Payload) ([]telegr
 
 func (h *HTTPListener) decodeJSON(payload []byte, obj Payload) (telegraf.Metric, error) {
 
-	e := JsonData{}
+	e := JSONData{}
 	err := json.Unmarshal(payload, &e)
 	if err != nil {
-		fmt.Println(err)
+		log.Println("E! ", err)
 		return h.handler.Metric()
 	}
 	b := []byte(strconv.FormatInt(e.Time, 10))
 	h.handler.SetTimestamp(b)
 	metrics, err := h.handler.Metric()
 	if err != nil {
-		fmt.Println(err)
+		log.Println("E! ", err)
 		return h.handler.Metric()
 	}
 	metrics.SetName(e.Name)
@@ -325,6 +316,7 @@ func (h *HTTPListener) decodeJSON(payload []byte, obj Payload) (telegraf.Metric,
 	}
 	metrics.AddTag("message_id", obj.Msg.MessageID)
 	metrics.AddTag("message_id_2", obj.Msg.MessageID2)
+	metrics.AddTag("subscription", obj.Subscription)
 	return metrics, nil
 
 }
@@ -353,10 +345,11 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	buf := h.pool.get()
 	defer h.pool.put(buf)
 	decoder := json.NewDecoder(req.Body)
+
 	var t Payload
 	err := decoder.Decode(&t)
 	if err != nil {
-		fmt.Println(err)
+		log.Println("E! ", err)
 	}
 	sDec, err := base64.StdEncoding.DecodeString(t.Msg.Data)
 	if err != nil {
@@ -364,7 +357,6 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		badRequest(res)
 		return
 	}
-	fmt.Println("Payload: ", string(sDec))
 	if h.Protocol == "line protocol" {
 		metrics, err := h.decodeLineProtocol(sDec, t)
 		if err != nil {
@@ -374,7 +366,6 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		}
 		res.WriteHeader(http.StatusNoContent)
 		for _, m := range metrics {
-			fmt.Println("Metrics: ", m)
 			h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 		}
 	}
@@ -386,8 +377,6 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 		res.WriteHeader(http.StatusNoContent)
-
-		fmt.Println("Metrics: ", metrics)
 		h.acc.AddFields(metrics.Name(), metrics.Fields(), metrics.Tags(), metrics.Time())
 	}
 
@@ -413,23 +402,6 @@ func badRequest(res http.ResponseWriter) {
 	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.WriteHeader(http.StatusBadRequest)
 	res.Write([]byte(`{"error":"http: bad request"}`))
-}
-
-func (h *HTTPListener) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
-	if h.BasicUsername != "" && h.BasicPassword != "" {
-		reqUsername, reqPassword, ok := req.BasicAuth()
-		if !ok ||
-			subtle.ConstantTimeCompare([]byte(reqUsername), []byte(h.BasicUsername)) != 1 ||
-			subtle.ConstantTimeCompare([]byte(reqPassword), []byte(h.BasicPassword)) != 1 {
-
-			h.AuthFailures.Incr(1)
-			http.Error(res, "Unauthorized.", http.StatusUnauthorized)
-			return
-		}
-		handler(res, req)
-	} else {
-		handler(res, req)
-	}
 }
 
 func init() {

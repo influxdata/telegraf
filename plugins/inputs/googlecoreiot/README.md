@@ -36,6 +36,7 @@ An example program for sending data from a Google Core IoT device (Raspberry Pi)
 This is a sample configuration for the plugin.
 
 ```toml
+  ## Server listens on <server name>:port/write
   ## Address and port to host HTTP listener on
   service_address = ":9999"
 
@@ -61,8 +62,4 @@ This is a sample configuration for the plugin.
   tls_cert = "/etc/telegraf/cert.pem"
   tls_key = "/etc/telegraf/key.pem"
 
-  ## Optional username and password to accept for HTTP basic authentication.
-  ## You probably want to make sure you have TLS configured above for this.
-  # basic_username = "foobar"
-  # basic_password = "barfoo"
 ```
