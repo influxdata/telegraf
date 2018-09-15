@@ -22,7 +22,7 @@ import (
 // HostPinger is a function that runs the "ping" function using a list of
 // passed arguments. This can be easily switched with a mocked ping function
 // for unit test purposes (see ping_test.go)
-type HostPinger func(timeout float64, args ...string) (string, error)
+type HostPinger func(timeout float64, isV6 bool, args ...string) (string, error)
 
 type Ping struct {
 	// Interval at which to ping (ping -i <INTERVAL>)
@@ -43,6 +43,9 @@ type Ping struct {
 	// URLs to ping
 	Urls []string
 
+	// URLs to ping ipv6 address
+	UrlsV6 []string `toml:"urls_v6"`
+
 	// host ping function
 	pingHost HostPinger
 }
@@ -54,6 +57,9 @@ func (_ *Ping) Description() string {
 const sampleConfig = `
   ## List of urls to ping
   urls = ["example.org"]
+
+  ## List of urls to ping with ipv6 protocol
+  urls_v6 = ["example.org"]
 
   ## Number of pings to send per collection (ping -c <COUNT>)
   # count = 1
@@ -78,81 +84,16 @@ func (_ *Ping) SampleConfig() string {
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
-
 	var wg sync.WaitGroup
 
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
 		wg.Add(1)
-		go func(u string) {
-			defer wg.Done()
-			tags := map[string]string{"url": u}
-			fields := map[string]interface{}{"result_code": 0}
-
-			_, err := net.LookupHost(u)
-			if err != nil {
-				acc.AddError(err)
-				fields["result_code"] = 1
-				acc.AddFields("ping", fields, tags)
-				return
-			}
-
-			args := p.args(u, runtime.GOOS)
-			totalTimeout := float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
-
-			out, err := p.pingHost(totalTimeout, args...)
-			if err != nil {
-				// Some implementations of ping return a 1 exit code on
-				// timeout, if this occurs we will not exit and try to parse
-				// the output.
-				status := -1
-				if exitError, ok := err.(*exec.ExitError); ok {
-					if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
-						status = ws.ExitStatus()
-					}
-				}
-
-				if status != 1 {
-					// Combine go err + stderr output
-					out = strings.TrimSpace(out)
-					if len(out) > 0 {
-						acc.AddError(fmt.Errorf("host %s: %s, %s", u, out, err))
-					} else {
-						acc.AddError(fmt.Errorf("host %s: %s", u, err))
-					}
-					fields["result_code"] = 2
-					acc.AddFields("ping", fields, tags)
-					return
-				}
-			}
-
-			trans, rec, min, avg, max, stddev, err := processPingOutput(out)
-			if err != nil {
-				// fatal error
-				acc.AddError(fmt.Errorf("%s: %s", err, u))
-				fields["result_code"] = 2
-				acc.AddFields("ping", fields, tags)
-				return
-			}
-			// Calculate packet loss percentage
-			loss := float64(trans-rec) / float64(trans) * 100.0
-			fields["packets_transmitted"] = trans
-			fields["packets_received"] = rec
-			fields["percent_packet_loss"] = loss
-			if min >= 0 {
-				fields["minimum_response_ms"] = min
-			}
-			if avg >= 0 {
-				fields["average_response_ms"] = avg
-			}
-			if max >= 0 {
-				fields["maximum_response_ms"] = max
-			}
-			if stddev >= 0 {
-				fields["standard_deviation_ms"] = stddev
-			}
-			acc.AddFields("ping", fields, tags)
-		}(url)
+		go p.pingToURL(url, false, &wg, acc)
+	}
+	for _, url := range p.UrlsV6 {
+		wg.Add(1)
+		go p.pingToURL(url, true, &wg, acc)
 	}
 
 	wg.Wait()
@@ -160,8 +101,83 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func hostPinger(timeout float64, args ...string) (string, error) {
-	bin, err := exec.LookPath("ping")
+func (p *Ping) pingToURL(u string, isV6 bool, wg *sync.WaitGroup, acc telegraf.Accumulator) {
+	defer wg.Done()
+	tags := map[string]string{"url": u}
+	fields := map[string]interface{}{"result_code": 0}
+
+	_, err := net.LookupHost(u)
+	if err != nil {
+		acc.AddError(err)
+		fields["result_code"] = 1
+		acc.AddFields("ping", fields, tags)
+		return
+	}
+
+	args := p.args(u, runtime.GOOS)
+	totalTimeout := float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
+
+	out, err := p.pingHost(totalTimeout, isV6, args...)
+	if err != nil {
+		// Some implementations of ping return a 1 exit code on
+		// timeout, if this occurs we will not exit and try to parse
+		// the output.
+		status := -1
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
+				status = ws.ExitStatus()
+			}
+		}
+
+		if status != 1 {
+			// Combine go err + stderr output
+			out = strings.TrimSpace(out)
+			if len(out) > 0 {
+				acc.AddError(fmt.Errorf("host %s: %s, %s", u, out, err))
+			} else {
+				acc.AddError(fmt.Errorf("host %s: %s", u, err))
+			}
+			fields["result_code"] = 2
+			acc.AddFields("ping", fields, tags)
+			return
+		}
+	}
+
+	trans, rec, min, avg, max, stddev, err := processPingOutput(out)
+	if err != nil {
+		// fatal error
+		acc.AddError(fmt.Errorf("%s: %s", err, u))
+		fields["result_code"] = 2
+		acc.AddFields("ping", fields, tags)
+		return
+	}
+	// Calculate packet loss percentage
+	loss := float64(trans-rec) / float64(trans) * 100.0
+	fields["packets_transmitted"] = trans
+	fields["packets_received"] = rec
+	fields["percent_packet_loss"] = loss
+	if min >= 0 {
+		fields["minimum_response_ms"] = min
+	}
+	if avg >= 0 {
+		fields["average_response_ms"] = avg
+	}
+	if max >= 0 {
+		fields["maximum_response_ms"] = max
+	}
+	if stddev >= 0 {
+		fields["standard_deviation_ms"] = stddev
+	}
+	acc.AddFields("ping", fields, tags)
+}
+
+func hostPinger(timeout float64, isV6 bool, args ...string) (string, error) {
+	pingCmd := "ping"
+	if isV6 == true {
+		pingCmd = "ping6"
+	}
+
+	bin, err := exec.LookPath(pingCmd)
 	if err != nil {
 		return "", err
 	}
@@ -215,9 +231,9 @@ func (p *Ping) args(url string, system string) []string {
 	return args
 }
 
-// processPingOutput takes in a string output from the ping command, like:
+// processpingoutput takes in a string output from the ping command, like:
 //
-//     PING www.google.com (173.194.115.84): 56 data bytes
+//     ping www.google.com (173.194.115.84): 56 data bytes
 //     64 bytes from 173.194.115.84: icmp_seq=0 ttl=54 time=52.172 ms
 //     64 bytes from 173.194.115.84: icmp_seq=1 ttl=54 time=34.843 ms
 //
