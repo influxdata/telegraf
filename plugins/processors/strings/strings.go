@@ -1,6 +1,7 @@
 package strings
 
 import (
+	"encoding/base64"
 	"strings"
 	"unicode"
 
@@ -16,6 +17,7 @@ type Strings struct {
 	TrimRight  []converter `toml:"trim_right"`
 	TrimPrefix []converter `toml:"trim_prefix"`
 	TrimSuffix []converter `toml:"trim_suffix"`
+	Decode     []converter `toml:"decode"`
 
 	converters []converter
 	init       bool
@@ -68,6 +70,11 @@ const sampleConfig = `
   # [[processors.strings.trim_suffix]]
   #   field = "read_count"
   #   suffix = "_count"
+
+  ## Trim the given suffix from the field
+  # [[processors.strings.decode]]
+  #   field = "data"
+  #   dest  = "data"
 `
 
 func (s *Strings) SampleConfig() string {
@@ -174,6 +181,16 @@ func (s *Strings) initOnce() {
 	}
 	for _, c := range s.TrimSuffix {
 		c.fn = func(s string) string { return strings.TrimSuffix(s, c.Suffix) }
+		s.converters = append(s.converters, c)
+	}
+	for _, c := range s.Decode {
+		c.fn = func(s string) string {
+			r, err := base64.StdEncoding.DecodeString(s)
+			if err != nil {
+				r = []byte(s)
+			}
+			return string(r)
+		}
 		s.converters = append(s.converters, c)
 	}
 
