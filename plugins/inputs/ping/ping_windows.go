@@ -104,7 +104,7 @@ func (p *Ping) pingToURL(u string, isV6 bool, wg *sync.WaitGroup, acc telegraf.A
 	// but command was execute successfully
 	if err != nil {
 		// Combine go err + stderr output
-		pendingError = errors.New(strings.TrimSpace(out) + ", " + err.Error())
+		pendingError := errors.New(strings.TrimSpace(out) + ", " + err.Error())
 	}
 	trans, recReply, receivePacket, avg, min, max, err := processPingOutput(out)
 	if err != nil {
