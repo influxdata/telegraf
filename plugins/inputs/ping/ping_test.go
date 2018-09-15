@@ -265,7 +265,7 @@ func TestErrorWithHostNamePingGather(t *testing.T) {
 		var acc testutil.Accumulator
 		p := Ping{
 			Urls: []string{"www.amazon.com"},
-			pingHost: func(timeout float64, args ...string) (string, error) {
+			pingHost: func(timeout float64, isV6 bool, args ...string) (string, error) {
 				return param.out, errors.New("So very bad")
 			},
 		}

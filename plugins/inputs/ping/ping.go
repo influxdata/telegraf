@@ -96,7 +96,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 		go p.pingToURL(url, true, wg, acc)
 	}
 
-	wg.wait()
+	wg.Wait()
 
 	return nil
 }
