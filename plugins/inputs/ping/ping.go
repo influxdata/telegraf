@@ -177,54 +177,54 @@ func hostPinger(timeout float64, isV6 bool, args ...string) (string, error) {
 		pingCmd = "ping6"
 	}
 
-	bin, err := exec.lookpath(pingCmd)
+	bin, err := exec.LookPath(pingCmd)
 	if err != nil {
 		return "", err
 	}
-	c := exec.command(bin, args...)
-	out, err := internal.combinedoutputtimeout(c,
-		time.second*time.duration(timeout+5))
+	c := exec.Command(bin, args...)
+	out, err := internal.CombinedOutputTimeout(c,
+		time.Second*time.Duration(timeout+5))
 	return string(out), err
 }
 
 // args returns the arguments for the 'ping' executable
-func (p *ping) args(url string, system string) []string {
-	// build the ping command args based on toml config
-	args := []string{"-c", strconv.itoa(p.count), "-n", "-s", "16"}
-	if p.pinginterval > 0 {
-		args = append(args, "-i", strconv.formatfloat(p.pinginterval, 'f', -1, 64))
+func (p *Ping) args(url string, system string) []string {
+	// Build the ping command args based on toml config
+	args := []string{"-c", strconv.Itoa(p.Count), "-n", "-s", "16"}
+	if p.PingInterval > 0 {
+		args = append(args, "-i", strconv.FormatFloat(p.PingInterval, 'f', -1, 64))
 	}
-	if p.timeout > 0 {
+	if p.Timeout > 0 {
 		switch system {
 		case "darwin", "freebsd", "netbsd", "openbsd":
-			args = append(args, "-w", strconv.formatfloat(p.timeout*1000, 'f', -1, 64))
+			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
 		case "linux":
-			args = append(args, "-w", strconv.formatfloat(p.timeout, 'f', -1, 64))
+			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
 		default:
-			// not sure the best option here, just assume gnu ping?
-			args = append(args, "-w", strconv.formatfloat(p.timeout, 'f', -1, 64))
+			// Not sure the best option here, just assume GNU ping?
+			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
 		}
 	}
-	if p.deadline > 0 {
+	if p.Deadline > 0 {
 		switch system {
 		case "darwin", "freebsd", "netbsd", "openbsd":
-			args = append(args, "-t", strconv.itoa(p.deadline))
+			args = append(args, "-t", strconv.Itoa(p.Deadline))
 		case "linux":
-			args = append(args, "-w", strconv.itoa(p.deadline))
+			args = append(args, "-w", strconv.Itoa(p.Deadline))
 		default:
-			// not sure the best option here, just assume gnu ping?
-			args = append(args, "-w", strconv.itoa(p.deadline))
+			// Not sure the best option here, just assume GNU ping?
+			args = append(args, "-w", strconv.Itoa(p.Deadline))
 		}
 	}
-	if p.interface != "" {
+	if p.Interface != "" {
 		switch system {
 		case "darwin", "freebsd", "netbsd", "openbsd":
-			args = append(args, "-s", p.interface)
+			args = append(args, "-S", p.Interface)
 		case "linux":
-			args = append(args, "-i", p.interface)
+			args = append(args, "-I", p.Interface)
 		default:
-			// not sure the best option here, just assume gnu ping?
-			args = append(args, "-i", p.interface)
+			// Not sure the best option here, just assume GNU ping?
+			args = append(args, "-I", p.Interface)
 		}
 	}
 	args = append(args, url)
