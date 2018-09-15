@@ -21,7 +21,7 @@ import (
 // HostPinger is a function that runs the "ping" function using a list of
 // passed arguments. This can be easily switched with a mocked ping function
 // for unit test purposes (see ping_test.go)
-type HostPinger func(timeout float64, args ...string) (string, error)
+type HostPinger func(timeout float64, isV6 bool, args ...string) (string, error)
 
 type Ping struct {
 	// Number of pings to send (ping -c <COUNT>)
@@ -71,7 +71,11 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
 		wg.Add(1)
-		p.pingToURL(url, wg, acc)
+		go p.pingToURL(url, false, wg, acc)
+	}
+	for _, url := range p.UrlsV6 {
+		wg.Add(1)
+		go p.pingToURL(url, true, wg, acc)
 	}
 
 	wg.Wait()
@@ -79,7 +83,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *Ping) pingToURL(u string, wg sync.WaitGroup, acc telegraf.Accumulator) {
+func (p *Ping) pingToURL(u string, isV6 bool, wg sync.WaitGroup, acc telegraf.Accumulator) {
 	defer wg.Done()
 
 	tags := map[string]string{"url": u}
@@ -95,7 +99,7 @@ func (p *Ping) pingToURL(u string, wg sync.WaitGroup, acc telegraf.Accumulator) 
 
 	args := p.args(u)
 	totalTimeout := p.timeout() * float64(p.Count)
-	out, err := p.pingHost(totalTimeout, args...)
+	out, err := p.pingHost(totalTimeout, isV6, args...)
 	// ping host return exitcode != 0 also when there was no response from host
 	// but command was execute successfully
 	if err != nil {
@@ -137,8 +141,13 @@ func (p *Ping) pingToURL(u string, wg sync.WaitGroup, acc telegraf.Accumulator) 
 	acc.AddFields("ping", fields, tags)
 }
 
-func hostPinger(timeout float64, args ...string) (string, error) {
-	bin, err := exec.LookPath("ping")
+func hostPinger(timeout float64, isV6 bool, args ...string) (string, error) {
+	pingCmd := "ping"
+	if isV6 == true {
+		pingCmd = "ping6"
+	}
+
+	bin, err := exec.LookPath(pingCmd)
 	if err != nil {
 		return "", err
 	}
