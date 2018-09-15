@@ -43,6 +43,9 @@ type Ping struct {
 	// URLs to ping
 	Urls []string
 
+	// URLs to ping ipv6 address
+	UrlsV6 []string `toml:urls_v6`
+
 	// host ping function
 	pingHost HostPinger
 }
@@ -54,6 +57,9 @@ func (_ *Ping) Description() string {
 const sampleConfig = `
   ## List of urls to ping
   urls = ["example.org"]
+
+  ## List of urls to ping with ipv6 protocol
+  urls_v6 = ["example.org"]
 
   ## Number of pings to send per collection (ping -c <COUNT>)
   # count = 1
@@ -78,146 +84,147 @@ func (_ *Ping) SampleConfig() string {
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
-
 	var wg sync.WaitGroup
 
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
 		wg.Add(1)
-		go func(u string) {
-			defer wg.Done()
-			tags := map[string]string{"url": u}
-			fields := map[string]interface{}{"result_code": 0}
-
-			_, err := net.LookupHost(u)
-			if err != nil {
-				acc.AddError(err)
-				fields["result_code"] = 1
-				acc.AddFields("ping", fields, tags)
-				return
-			}
-
-			args := p.args(u, runtime.GOOS)
-			totalTimeout := float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
-
-			out, err := p.pingHost(totalTimeout, args...)
-			if err != nil {
-				// Some implementations of ping return a 1 exit code on
-				// timeout, if this occurs we will not exit and try to parse
-				// the output.
-				status := -1
-				if exitError, ok := err.(*exec.ExitError); ok {
-					if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
-						status = ws.ExitStatus()
-					}
-				}
-
-				if status != 1 {
-					// Combine go err + stderr output
-					out = strings.TrimSpace(out)
-					if len(out) > 0 {
-						acc.AddError(fmt.Errorf("host %s: %s, %s", u, out, err))
-					} else {
-						acc.AddError(fmt.Errorf("host %s: %s", u, err))
-					}
-					fields["result_code"] = 2
-					acc.AddFields("ping", fields, tags)
-					return
-				}
-			}
-
-			trans, rec, min, avg, max, stddev, err := processPingOutput(out)
-			if err != nil {
-				// fatal error
-				acc.AddError(fmt.Errorf("%s: %s", err, u))
-				fields["result_code"] = 2
-				acc.AddFields("ping", fields, tags)
-				return
-			}
-			// Calculate packet loss percentage
-			loss := float64(trans-rec) / float64(trans) * 100.0
-			fields["packets_transmitted"] = trans
-			fields["packets_received"] = rec
-			fields["percent_packet_loss"] = loss
-			if min >= 0 {
-				fields["minimum_response_ms"] = min
-			}
-			if avg >= 0 {
-				fields["average_response_ms"] = avg
-			}
-			if max >= 0 {
-				fields["maximum_response_ms"] = max
-			}
-			if stddev >= 0 {
-				fields["standard_deviation_ms"] = stddev
-			}
-			acc.AddFields("ping", fields, tags)
-		}(url)
+		p.pingToURL(url, wg, acc)
 	}
 
-	wg.Wait()
+	wg.wait()
 
 	return nil
 }
 
-func hostPinger(timeout float64, args ...string) (string, error) {
-	bin, err := exec.LookPath("ping")
+func (p *Ping) pingToURL(u string, wg sync.WaitGroup, acc telegraf.Accumulator) {
+	defer wg.Done()
+	tags := map[string]string{"url": u}
+	fields := map[string]interface{}{"result_code": 0}
+
+	_, err := net.LookupHost(u)
+	if err != nil {
+		acc.AddError(err)
+		fields["result_code"] = 1
+		acc.AddFields("ping", fields, tags)
+		return
+	}
+
+	args := p.args(u, runtime.GOOS)
+	totalTimeout := float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
+
+	out, err := p.pingHost(totalTimeout, args...)
+	if err != nil {
+		// Some implementations of ping return a 1 exit code on
+		// timeout, if this occurs we will not exit and try to parse
+		// the output.
+		status := -1
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
+				status = ws.ExitStatus()
+			}
+		}
+
+		if status != 1 {
+			// Combine go err + stderr output
+			out = strings.TrimSpace(out)
+			if len(out) > 0 {
+				acc.AddError(fmt.Errorf("host %s: %s, %s", u, out, err))
+			} else {
+				acc.AddError(fmt.Errorf("host %s: %s", u, err))
+			}
+			fields["result_code"] = 2
+			acc.AddFields("ping", fields, tags)
+			return
+		}
+	}
+
+	trans, rec, min, avg, max, stddev, err := processPingOutput(out)
+	if err != nil {
+		// fatal error
+		acc.AddError(fmt.Errorf("%s: %s", err, u))
+		fields["result_code"] = 2
+		acc.AddFields("ping", fields, tags)
+		return
+	}
+	// Calculate packet loss percentage
+	loss := float64(trans-rec) / float64(trans) * 100.0
+	fields["packets_transmitted"] = trans
+	fields["packets_received"] = rec
+	fields["percent_packet_loss"] = loss
+	if min >= 0 {
+		fields["minimum_response_ms"] = min
+	}
+	if avg >= 0 {
+		fields["average_response_ms"] = avg
+	}
+	if max >= 0 {
+		fields["maximum_response_ms"] = max
+	}
+	if stddev >= 0 {
+		fields["standard_deviation_ms"] = stddev
+	}
+	acc.AddFields("ping", fields, tags)
+}
+
+func hostpinger(timeout float64, args ...string) (string, error) {
+	bin, err := exec.lookpath("ping")
 	if err != nil {
 		return "", err
 	}
-	c := exec.Command(bin, args...)
-	out, err := internal.CombinedOutputTimeout(c,
-		time.Second*time.Duration(timeout+5))
+	c := exec.command(bin, args...)
+	out, err := internal.combinedoutputtimeout(c,
+		time.second*time.duration(timeout+5))
 	return string(out), err
 }
 
 // args returns the arguments for the 'ping' executable
-func (p *Ping) args(url string, system string) []string {
-	// Build the ping command args based on toml config
-	args := []string{"-c", strconv.Itoa(p.Count), "-n", "-s", "16"}
-	if p.PingInterval > 0 {
-		args = append(args, "-i", strconv.FormatFloat(p.PingInterval, 'f', -1, 64))
+func (p *ping) args(url string, system string) []string {
+	// build the ping command args based on toml config
+	args := []string{"-c", strconv.itoa(p.count), "-n", "-s", "16"}
+	if p.pinginterval > 0 {
+		args = append(args, "-i", strconv.formatfloat(p.pinginterval, 'f', -1, 64))
 	}
-	if p.Timeout > 0 {
+	if p.timeout > 0 {
 		switch system {
 		case "darwin", "freebsd", "netbsd", "openbsd":
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
+			args = append(args, "-w", strconv.formatfloat(p.timeout*1000, 'f', -1, 64))
 		case "linux":
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
+			args = append(args, "-w", strconv.formatfloat(p.timeout, 'f', -1, 64))
 		default:
-			// Not sure the best option here, just assume GNU ping?
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
+			// not sure the best option here, just assume gnu ping?
+			args = append(args, "-w", strconv.formatfloat(p.timeout, 'f', -1, 64))
 		}
 	}
-	if p.Deadline > 0 {
+	if p.deadline > 0 {
 		switch system {
 		case "darwin", "freebsd", "netbsd", "openbsd":
-			args = append(args, "-t", strconv.Itoa(p.Deadline))
+			args = append(args, "-t", strconv.itoa(p.deadline))
 		case "linux":
-			args = append(args, "-w", strconv.Itoa(p.Deadline))
+			args = append(args, "-w", strconv.itoa(p.deadline))
 		default:
-			// Not sure the best option here, just assume GNU ping?
-			args = append(args, "-w", strconv.Itoa(p.Deadline))
+			// not sure the best option here, just assume gnu ping?
+			args = append(args, "-w", strconv.itoa(p.deadline))
 		}
 	}
-	if p.Interface != "" {
+	if p.interface != "" {
 		switch system {
 		case "darwin", "freebsd", "netbsd", "openbsd":
-			args = append(args, "-S", p.Interface)
+			args = append(args, "-s", p.interface)
 		case "linux":
-			args = append(args, "-I", p.Interface)
+			args = append(args, "-i", p.interface)
 		default:
-			// Not sure the best option here, just assume GNU ping?
-			args = append(args, "-I", p.Interface)
+			// not sure the best option here, just assume gnu ping?
+			args = append(args, "-i", p.interface)
 		}
 	}
 	args = append(args, url)
 	return args
 }
 
-// processPingOutput takes in a string output from the ping command, like:
+// processpingoutput takes in a string output from the ping command, like:
 //
-//     PING www.google.com (173.194.115.84): 56 data bytes
+//     ping www.google.com (173.194.115.84): 56 data bytes
 //     64 bytes from 173.194.115.84: icmp_seq=0 ttl=54 time=52.172 ms
 //     64 bytes from 173.194.115.84: icmp_seq=1 ttl=54 time=34.843 ms
 //

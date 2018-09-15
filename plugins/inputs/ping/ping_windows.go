@@ -4,6 +4,7 @@ package ping
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"os/exec"
 	"regexp"
@@ -32,6 +33,9 @@ type Ping struct {
 	// URLs to ping
 	Urls []string
 
+	// URLs to ping ipv6 address
+	UrlsV6 []string `toml:urls_v6`
+
 	// host ping function
 	pingHost HostPinger
 }
@@ -43,6 +47,9 @@ func (s *Ping) Description() string {
 const sampleConfig = `
 	## List of urls to ping
 	urls = ["www.google.com"]
+
+	## List of urls to ping with ipv6 protocol
+	urls_v6 = ["www.google.com"]
 
 	## number of pings to send per collection (ping -n <COUNT>)
 	# count = 1
@@ -60,81 +67,74 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 		p.Count = 1
 	}
 	var wg sync.WaitGroup
-	errorChannel := make(chan error, len(p.Urls)*2)
-	var pendingError error = nil
+
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
 		wg.Add(1)
-		go func(u string) {
-			defer wg.Done()
-
-			tags := map[string]string{"url": u}
-			fields := map[string]interface{}{"result_code": 0}
-
-			_, err := net.LookupHost(u)
-			if err != nil {
-				errorChannel <- err
-				fields["result_code"] = 1
-				acc.AddFields("ping", fields, tags)
-				return
-			}
-
-			args := p.args(u)
-			totalTimeout := p.timeout() * float64(p.Count)
-			out, err := p.pingHost(totalTimeout, args...)
-			// ping host return exitcode != 0 also when there was no response from host
-			// but command was execute successfully
-			if err != nil {
-				// Combine go err + stderr output
-				pendingError = errors.New(strings.TrimSpace(out) + ", " + err.Error())
-			}
-			trans, recReply, receivePacket, avg, min, max, err := processPingOutput(out)
-			if err != nil {
-				// fatal error
-				if pendingError != nil {
-					errorChannel <- pendingError
-				}
-				errorChannel <- err
-
-				fields["errors"] = 100.0
-				acc.AddFields("ping", fields, tags)
-				return
-			}
-			// Calculate packet loss percentage
-			lossReply := float64(trans-recReply) / float64(trans) * 100.0
-			lossPackets := float64(trans-receivePacket) / float64(trans) * 100.0
-
-			fields["packets_transmitted"] = trans
-			fields["reply_received"] = recReply
-			fields["packets_received"] = receivePacket
-			fields["percent_packet_loss"] = lossPackets
-			fields["percent_reply_loss"] = lossReply
-			if avg >= 0 {
-				fields["average_response_ms"] = float64(avg)
-			}
-			if min >= 0 {
-				fields["minimum_response_ms"] = float64(min)
-			}
-			if max >= 0 {
-				fields["maximum_response_ms"] = float64(max)
-			}
-			acc.AddFields("ping", fields, tags)
-		}(url)
+		p.pingToURL(url, wg, acc)
 	}
 
 	wg.Wait()
-	close(errorChannel)
 
-	// Get all errors and return them as one giant error
-	errorStrings := []string{}
-	for err := range errorChannel {
-		errorStrings = append(errorStrings, err.Error())
+	return nil
+}
+
+func (p *Ping) pingToURL(u string, wg sync.WaitGroup, acc telegraf.Accumulator) {
+	defer wg.Done()
+
+	tags := map[string]string{"url": u}
+	fields := map[string]interface{}{"result_code": 0}
+
+	_, err := net.LookupHost(u)
+	if err != nil {
+		acc.AddError(err)
+		fields["result_code"] = 1
+		acc.AddFields("ping", fields, tags)
+		return
 	}
 
-	if len(errorStrings) == 0 {
-		return nil
+	args := p.args(u)
+	totalTimeout := p.timeout() * float64(p.Count)
+	out, err := p.pingHost(totalTimeout, args...)
+	// ping host return exitcode != 0 also when there was no response from host
+	// but command was execute successfully
+	if err != nil {
+		// Combine go err + stderr output
+		pendingError = errors.New(strings.TrimSpace(out) + ", " + err.Error())
 	}
-	return errors.New(strings.Join(errorStrings, "\n"))
+	trans, recReply, receivePacket, avg, min, max, err := processPingOutput(out)
+	if err != nil {
+		// fatal error
+		if pendingError != nil {
+			acc.AddError(fmt.Errorf("%s: %s", pendingError, u))
+		} else {
+			acc.AddError(fmt.Errorf("%s: %s", err, u))
+		}
+
+		fields["result_code"] = 2
+		fields["errors"] = 100.0
+		acc.AddFields("ping", fields, tags)
+		return
+	}
+	// Calculate packet loss percentage
+	lossReply := float64(trans-recReply) / float64(trans) * 100.0
+	lossPackets := float64(trans-receivePacket) / float64(trans) * 100.0
+
+	fields["packets_transmitted"] = trans
+	fields["reply_received"] = recReply
+	fields["packets_received"] = receivePacket
+	fields["percent_packet_loss"] = lossPackets
+	fields["percent_reply_loss"] = lossReply
+	if avg >= 0 {
+		fields["average_response_ms"] = float64(avg)
+	}
+	if min >= 0 {
+		fields["minimum_response_ms"] = float64(min)
+	}
+	if max >= 0 {
+		fields["maximum_response_ms"] = float64(max)
+	}
+	acc.AddFields("ping", fields, tags)
 }
 
 func hostPinger(timeout float64, args ...string) (string, error) {
