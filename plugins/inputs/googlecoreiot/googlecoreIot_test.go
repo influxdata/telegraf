@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -137,7 +136,6 @@ func TestWriteHTTP(t *testing.T) {
 
 	// post multiple message to listener
 	resp, err = http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(testMsgs)))
-	fmt.Println(acc.Metrics[0])
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 204, resp.StatusCode)
@@ -193,7 +191,7 @@ func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 
 // writes 25,000 metrics to the listener with 10 different writers
 func TestWriteHTTPHighTraffic(t *testing.T) {
-	if runtime.GOOS != "darwin" {
+	if runtime.GOOS == "darwin" {
 		t.Skip("Skipping due to hang on darwin")
 	}
 	listener := newTestHTTPListener()
