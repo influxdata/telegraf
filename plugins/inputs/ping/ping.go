@@ -44,7 +44,7 @@ type Ping struct {
 	Urls []string
 
 	// URLs to ping ipv6 address
-	UrlsV6 []string `toml:urls_v6`
+	UrlsV6 []string `toml:"urls_v6"`
 
 	// host ping function
 	pingHost HostPinger
@@ -89,11 +89,11 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
 		wg.Add(1)
-		go p.pingToURL(url, false, wg, acc)
+		go p.pingToURL(url, false, &wg, acc)
 	}
 	for _, url := range p.UrlsV6 {
 		wg.Add(1)
-		go p.pingToURL(url, true, wg, acc)
+		go p.pingToURL(url, true, &wg, acc)
 	}
 
 	wg.Wait()
@@ -101,7 +101,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *Ping) pingToURL(u string, isV6 bool, wg sync.WaitGroup, acc telegraf.Accumulator) {
+func (p *Ping) pingToURL(u string, isV6 bool, wg *sync.WaitGroup, acc telegraf.Accumulator) {
 	defer wg.Done()
 	tags := map[string]string{"url": u}
 	fields := map[string]interface{}{"result_code": 0}
