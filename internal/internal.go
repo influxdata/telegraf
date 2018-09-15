@@ -154,6 +154,7 @@ func RunTimeout(c *exec.Cmd, timeout time.Duration) error {
 // If the command times out, it attempts to kill the process.
 func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 	var err error
+	var timeoutErr error
 
 	timer := time.AfterFunc(timeout, func() {
 		err := c.Process.Kill()
@@ -161,13 +162,19 @@ func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 			log.Printf("E! FATAL error killing process: %s", err)
 			return
 		}
-		err = TimeoutErr
+		timeoutErr = TimeoutErr
 	})
 
-	c.Wait()
+	exitErr := c.Wait()
 	timer.Stop()
 
-	return err
+	if err != nil {
+		return err
+	} else if timeoutErr != nil {
+		return timeoutErr
+	}
+
+	return exitErr
 }
 
 // RandomSleep will sleep for a random amount of time up to max.
