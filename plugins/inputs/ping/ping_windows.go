@@ -102,9 +102,10 @@ func (p *Ping) pingToURL(u string, isV6 bool, wg *sync.WaitGroup, acc telegraf.A
 	out, err := p.pingHost(totalTimeout, isV6, args...)
 	// ping host return exitcode != 0 also when there was no response from host
 	// but command was execute successfully
+	var pendingError error
 	if err != nil {
 		// Combine go err + stderr output
-		pendingError := errors.New(strings.TrimSpace(out) + ", " + err.Error())
+		pendingError = errors.New(strings.TrimSpace(out) + ", " + err.Error())
 	}
 	trans, recReply, receivePacket, avg, min, max, err := processPingOutput(out)
 	if err != nil {
