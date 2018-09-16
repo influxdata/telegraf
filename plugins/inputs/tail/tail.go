@@ -92,7 +92,7 @@ func (t *Tail) Start(acc telegraf.Accumulator) error {
 
 func (t *Tail) tailNewFiles(fromBeginning bool) error {
 	var seek *tail.SeekInfo
-	if !t.Pipe && fromBeginning {
+	if !t.Pipe && !fromBeginning {
 		seek = &tail.SeekInfo{
 			Whence: 2,
 			Offset: 0,
