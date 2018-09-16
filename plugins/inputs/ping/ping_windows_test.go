@@ -59,7 +59,7 @@ func TestHost(t *testing.T) {
 	assert.Equal(t, 52, max, "Max 52")
 }
 
-func mockHostPinger(timeout float64, args ...string) (string, error) {
+func mockHostPinger(timeout float64, isV6 bool, args ...string) (string, error) {
 	return winENPingOutput, nil
 }
 
@@ -102,7 +102,7 @@ Statystyka badania ping dla 195.187.242.157:
              (100% straty),
 `
 
-func mockErrorHostPinger(timeout float64, args ...string) (string, error) {
+func mockErrorHostPinger(timeout float64, isV6 bool, args ...string) (string, error) {
 	return errorPingOutput, errors.New("No packets received")
 }
 
@@ -147,7 +147,7 @@ Szacunkowy czas błądzenia pakietów w millisekundach:
     Minimum = 114 ms, Maksimum = 119 ms, Czas średni = 115 ms
 `
 
-func mockLossyHostPinger(timeout float64, args ...string) (string, error) {
+func mockLossyHostPinger(timeout float64, isV6 bool, args ...string) (string, error) {
 	return lossyPingOutput, nil
 }
 
@@ -207,7 +207,7 @@ Options:
 
 `
 
-func mockFatalHostPinger(timeout float64, args ...string) (string, error) {
+func mockFatalHostPinger(timeout float64, isV6 bool, args ...string) (string, error) {
 	return fatalPingOutput, errors.New("So very bad")
 }
 
@@ -249,7 +249,7 @@ Ping statistics for 8.8.8.8:
     Packets: Sent = 4, Received = 1, Lost = 3 (75% loss),
 `
 
-func mockUnreachableHostPinger(timeout float64, args ...string) (string, error) {
+func mockUnreachableHostPinger(timeout float64, isV6 bool, args ...string) (string, error) {
 	return UnreachablePingOutput, errors.New("So very bad")
 }
 
@@ -298,7 +298,7 @@ Ping statistics for 8.8.8.8:
     Packets: Sent = 4, Received = 1, Lost = 3 (75% loss),
 `
 
-func mockTTLExpiredPinger(timeout float64, args ...string) (string, error) {
+func mockTTLExpiredPinger(timeout float64, isV6 bool, args ...string) (string, error) {
 	return TTLExpiredPingOutput, errors.New("So very bad")
 }
 
