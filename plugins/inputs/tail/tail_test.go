@@ -97,6 +97,7 @@ func TestTailBadLine(t *testing.T) {
 
 	tt := NewTail()
 	tt.FromBeginning = true
+	tt.Pipe = true
 	tt.Files = []string{tmpfile.Name()}
 	p, _ := parsers.NewInfluxParser()
 	tt.SetParser(p)
