@@ -79,7 +79,7 @@ The following aspects of the token can be overriden with tags:
 * source
 
 You can either use `[global_tags]` or using a more advanced configuration as documented [here](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md).
- 
+
 Such as this example which overrides the index just on the cpu metric:
 ```toml
 [[inputs.cpu]]
@@ -122,7 +122,7 @@ TIMESTAMP_FIELDS = time
 TIME_FORMAT = %s.%3N
 ```
 
-An example configuration of a file based output is: 
+An example configuration of a file based output is:
 
 ```toml
  # Send telegraf metrics to file(s)
