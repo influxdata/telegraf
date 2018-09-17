@@ -143,7 +143,7 @@ func (a *Agent) gatherer(
 func gatherWithTimeout(
 	shutdown chan struct{},
 	input *models.RunningInput,
-	acc *accumulator,
+	acc telegraf.Accumulator,
 	timeout time.Duration,
 ) {
 	ticker := time.NewTicker(timeout)
@@ -157,13 +157,13 @@ func gatherWithTimeout(
 		select {
 		case err := <-done:
 			if err != nil {
-				log.Printf("E! ERROR in input [%s]: %s", input.Name(), err)
+				acc.AddError(err)
 			}
 			return
 		case <-ticker.C:
-			log.Printf("E! ERROR: input [%s] took longer to collect than "+
-				"collection interval (%s)",
-				input.Name(), timeout)
+			err := fmt.Errorf("took longer to collect than collection interval (%s)",
+				timeout)
+			acc.AddError(err)
 			continue
 		case <-shutdown:
 			return
@@ -191,16 +191,17 @@ func (a *Agent) Test() error {
 	}()
 
 	for _, input := range a.Config.Inputs {
+		if _, ok := input.Input.(telegraf.ServiceInput); ok {
+			fmt.Printf("\nWARNING: skipping plugin [[%s]]: service inputs not supported in --test mode\n",
+				input.Name())
+			continue
+		}
+
 		acc := NewAccumulator(input, metricC)
 		acc.SetPrecision(a.Config.Agent.Precision.Duration,
 			a.Config.Agent.Interval.Duration)
 		input.SetTrace(true)
 		input.SetDefaultTags(a.Config.Tags)
-
-		fmt.Printf("* Plugin: %s, Collection 1\n", input.Name())
-		if input.Config.Interval != 0 {
-			fmt.Printf("* Internal: %s\n", input.Config.Interval)
-		}
 
 		if err := input.Input.Gather(acc); err != nil {
 			return err
@@ -209,9 +210,8 @@ func (a *Agent) Test() error {
 		// Special instructions for some inputs. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
 		switch input.Name() {
-		case "cpu", "mongodb", "procstat":
+		case "inputs.cpu", "inputs.mongodb", "inputs.procstat":
 			time.Sleep(500 * time.Millisecond)
-			fmt.Printf("* Plugin: %s, Collection 2\n", input.Name())
 			if err := input.Input.Gather(acc); err != nil {
 				return err
 			}
@@ -241,14 +241,12 @@ func (a *Agent) flush() {
 }
 
 // flusher monitors the metrics input channel and flushes on the minimum interval
-func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) error {
-	// Inelegant, but this sleep is to allow the Gather threads to run, so that
-	// the flusher will flush after metrics are collected.
-	time.Sleep(time.Millisecond * 300)
-
-	// create an output metric channel and a gorouting that continously passes
-	// each metric onto the output plugins & aggregators.
-	outMetricC := make(chan telegraf.Metric, 100)
+func (a *Agent) flusher(
+	shutdown chan struct{},
+	metricC chan telegraf.Metric,
+	aggMetricC chan telegraf.Metric,
+	outMetricC chan telegraf.Metric,
+) error {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -257,28 +255,66 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 			select {
 			case <-shutdown:
 				if len(outMetricC) > 0 {
-					// keep going until outMetricC is flushed
+					// keep going until channel is empty
 					continue
 				}
 				return
-			case m := <-outMetricC:
-				// if dropOriginal is set to true, then we will only send this
-				// metric to the aggregators, not the outputs.
-				var dropOriginal bool
-				if !m.IsAggregate() {
+			case metric := <-outMetricC:
+				for i, o := range a.Config.Outputs {
+					if i == len(a.Config.Outputs)-1 {
+						o.AddMetric(metric)
+					} else {
+						o.AddMetric(metric.Copy())
+					}
+				}
+			}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for metric := range aggMetricC {
+			// Apply Processors
+			metrics := []telegraf.Metric{metric}
+			for _, processor := range a.Config.Processors {
+				metrics = processor.Apply(metrics...)
+			}
+			outMetricC <- metric
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case <-shutdown:
+				if len(metricC) > 0 {
+					// keep going until channel is empty
+					continue
+				}
+				close(aggMetricC)
+				return
+			case metric := <-metricC:
+				// Apply Processors
+				metrics := []telegraf.Metric{metric}
+				for _, processor := range a.Config.Processors {
+					metrics = processor.Apply(metrics...)
+				}
+
+				for _, metric := range metrics {
+					// Apply Aggregators
+					var dropOriginal bool
 					for _, agg := range a.Config.Aggregators {
-						if ok := agg.Add(m.Copy()); ok {
+						if ok := agg.Add(metric.Copy()); ok {
 							dropOriginal = true
 						}
 					}
-				}
-				if !dropOriginal {
-					for i, o := range a.Config.Outputs {
-						if i == len(a.Config.Outputs)-1 {
-							o.AddMetric(m)
-						} else {
-							o.AddMetric(m.Copy())
-						}
+
+					// Forward metric to Outputs
+					if !dropOriginal {
+						outMetricC <- metric
 					}
 				}
 			}
@@ -286,6 +322,7 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 	}()
 
 	ticker := time.NewTicker(a.Config.Agent.FlushInterval.Duration)
+	semaphore := make(chan struct{}, 1)
 	for {
 		select {
 		case <-shutdown:
@@ -295,18 +332,18 @@ func (a *Agent) flusher(shutdown chan struct{}, metricC chan telegraf.Metric) er
 			a.flush()
 			return nil
 		case <-ticker.C:
-			internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
-			a.flush()
-		case metric := <-metricC:
-			// NOTE potential bottleneck here as we put each metric through the
-			// processors serially.
-			mS := []telegraf.Metric{metric}
-			for _, processor := range a.Config.Processors {
-				mS = processor.Apply(mS...)
-			}
-			for _, m := range mS {
-				outMetricC <- m
-			}
+			go func() {
+				select {
+				case semaphore <- struct{}{}:
+					internal.RandomSleep(a.Config.Agent.FlushJitter.Duration, shutdown)
+					a.flush()
+					<-semaphore
+				default:
+					// skipping this flush because one is already happening
+					log.Println("W! Skipping a scheduled flush because there is" +
+						" already a flush ongoing.")
+				}
+			}()
 		}
 	}
 }
@@ -320,10 +357,46 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
 
-	// channel shared between all input threads for accumulating metrics
+	// Channel shared between all input threads for accumulating metrics
 	metricC := make(chan telegraf.Metric, 100)
 
-	// Start all ServicePlugins
+	// Channel for metrics ready to be output
+	outMetricC := make(chan telegraf.Metric, 100)
+
+	// Channel for aggregated metrics
+	aggMetricC := make(chan telegraf.Metric, 100)
+
+	// Round collection to nearest interval by sleeping
+	if a.Config.Agent.RoundInterval {
+		i := int64(a.Config.Agent.Interval.Duration)
+		time.Sleep(time.Duration(i - (time.Now().UnixNano() % i)))
+	}
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := a.flusher(shutdown, metricC, aggMetricC, outMetricC); err != nil {
+			log.Printf("E! Flusher routine failed, exiting: %s\n", err.Error())
+			close(shutdown)
+		}
+	}()
+
+	wg.Add(len(a.Config.Aggregators))
+	for _, aggregator := range a.Config.Aggregators {
+		go func(agg *models.RunningAggregator) {
+			defer wg.Done()
+			acc := NewAccumulator(agg, aggMetricC)
+			acc.SetPrecision(a.Config.Agent.Precision.Duration,
+				a.Config.Agent.Interval.Duration)
+			agg.Run(acc, shutdown)
+		}(aggregator)
+	}
+
+	// Service inputs may immediately add metrics, if metrics are added before
+	// the aggregator starts they will be dropped.  Generally this occurs
+	// only during testing but it is an outstanding issue.
+	//
+	//   https://github.com/influxdata/telegraf/issues/4394
 	for _, input := range a.Config.Inputs {
 		input.SetDefaultTags(a.Config.Tags)
 		switch p := input.Input.(type) {
@@ -341,32 +414,6 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 		}
 	}
 
-	// Round collection to nearest interval by sleeping
-	if a.Config.Agent.RoundInterval {
-		i := int64(a.Config.Agent.Interval.Duration)
-		time.Sleep(time.Duration(i - (time.Now().UnixNano() % i)))
-	}
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		if err := a.flusher(shutdown, metricC); err != nil {
-			log.Printf("E! Flusher routine failed, exiting: %s\n", err.Error())
-			close(shutdown)
-		}
-	}()
-
-	wg.Add(len(a.Config.Aggregators))
-	for _, aggregator := range a.Config.Aggregators {
-		go func(agg *models.RunningAggregator) {
-			defer wg.Done()
-			acc := NewAccumulator(agg, metricC)
-			acc.SetPrecision(a.Config.Agent.Precision.Duration,
-				a.Config.Agent.Interval.Duration)
-			agg.Run(acc, shutdown)
-		}(aggregator)
-	}
-
 	wg.Add(len(a.Config.Inputs))
 	for _, input := range a.Config.Inputs {
 		interval := a.Config.Agent.Interval.Duration
@@ -381,5 +428,6 @@ func (a *Agent) Run(shutdown chan struct{}) error {
 	}
 
 	wg.Wait()
+	a.Close()
 	return nil
 }

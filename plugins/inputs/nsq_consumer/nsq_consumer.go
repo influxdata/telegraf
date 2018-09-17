@@ -1,17 +1,19 @@
 package nsq_consumer
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/nsqio/go-nsq"
+	nsq "github.com/nsqio/go-nsq"
 )
 
 //NSQConsumer represents the configuration of the plugin
 type NSQConsumer struct {
 	Server      string
+	Nsqd        []string
+	Nsqlookupd  []string
 	Topic       string
 	Channel     string
 	MaxInFlight int
@@ -21,14 +23,18 @@ type NSQConsumer struct {
 }
 
 var sampleConfig = `
-  ## An string representing the NSQD TCP Endpoint
-  server = "localhost:4150"
+  ## Server option still works but is deprecated, we just prepend it to the nsqd array.
+  # server = "localhost:4150"
+  ## An array representing the NSQD TCP HTTP Endpoints
+  nsqd = ["localhost:4150"]
+  ## An array representing the NSQLookupd HTTP Endpoints
+  nsqlookupd = ["localhost:4161"]
   topic = "telegraf"
   channel = "consumer"
   max_in_flight = 100
 
   ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
@@ -62,7 +68,7 @@ func (n *NSQConsumer) Start(acc telegraf.Accumulator) error {
 	n.consumer.AddConcurrentHandlers(nsq.HandlerFunc(func(message *nsq.Message) error {
 		metrics, err := n.parser.Parse(message.Body)
 		if err != nil {
-			log.Printf("E! NSQConsumer Parse Error\nmessage:%s\nerror:%s", string(message.Body), err.Error())
+			acc.AddError(fmt.Errorf("E! NSQConsumer Parse Error\nmessage:%s\nerror:%s", string(message.Body), err.Error()))
 			return nil
 		}
 		for _, metric := range metrics {
@@ -71,7 +77,11 @@ func (n *NSQConsumer) Start(acc telegraf.Accumulator) error {
 		message.Finish()
 		return nil
 	}), n.MaxInFlight)
-	n.consumer.ConnectToNSQD(n.Server)
+
+	if len(n.Nsqlookupd) > 0 {
+		n.consumer.ConnectToNSQLookupds(n.Nsqlookupd)
+	}
+	n.consumer.ConnectToNSQDs(append(n.Nsqd, n.Server))
 	return nil
 }
 

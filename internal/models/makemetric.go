@@ -2,7 +2,6 @@ package models
 
 import (
 	"log"
-	"math"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -74,62 +73,6 @@ func makemetric(
 	if applyFilter {
 		if ok := filter.Apply(measurement, fields, tags); !ok {
 			return nil
-		}
-	}
-
-	for k, v := range fields {
-		// Validate uint64 and float64 fields
-		// convert all int & uint types to int64
-		switch val := v.(type) {
-		case nil:
-			// delete nil fields
-			delete(fields, k)
-		case uint:
-			fields[k] = int64(val)
-			continue
-		case uint8:
-			fields[k] = int64(val)
-			continue
-		case uint16:
-			fields[k] = int64(val)
-			continue
-		case uint32:
-			fields[k] = int64(val)
-			continue
-		case int:
-			fields[k] = int64(val)
-			continue
-		case int8:
-			fields[k] = int64(val)
-			continue
-		case int16:
-			fields[k] = int64(val)
-			continue
-		case int32:
-			fields[k] = int64(val)
-			continue
-		case uint64:
-			// InfluxDB does not support writing uint64
-			if val < uint64(9223372036854775808) {
-				fields[k] = int64(val)
-			} else {
-				fields[k] = int64(9223372036854775807)
-			}
-			continue
-		case float32:
-			fields[k] = float64(val)
-			continue
-		case float64:
-			// NaNs are invalid values in influxdb, skip measurement
-			if math.IsNaN(val) || math.IsInf(val, 0) {
-				log.Printf("D! Measurement [%s] field [%s] has a NaN or Inf "+
-					"field, skipping",
-					measurement, k)
-				delete(fields, k)
-				continue
-			}
-		default:
-			fields[k] = v
 		}
 	}
 

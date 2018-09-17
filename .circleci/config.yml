@@ -1,0 +1,145 @@
+---
+defaults:
+  defaults: &defaults
+    working_directory: '/go/src/github.com/influxdata/telegraf'
+  go-1_9: &go-1_9
+    docker:
+      - image: 'quay.io/influxdb/telegraf-ci:1.9.7'
+  go-1_10: &go-1_10
+    docker:
+      - image: 'quay.io/influxdb/telegraf-ci:1.10.3'
+
+version: 2
+jobs:
+  deps:
+    <<: [ *defaults, *go-1_10 ]
+    steps:
+      - checkout
+      - restore_cache:
+          key: vendor-{{ checksum "Gopkg.lock" }}
+      - run: 'make deps'
+      - save_cache:
+          name: 'vendored deps'
+          key: vendor-{{ checksum "Gopkg.lock" }}
+          paths:
+            - './vendor'
+      - persist_to_workspace:
+          root: '/go/src'
+          paths:
+            - '*'
+
+  test-go-1.9:
+    <<: [ *defaults, *go-1_9 ]
+    steps:
+      - attach_workspace:
+          at: '/go/src'
+      - run: 'make check'
+      - run: 'make test'
+  test-go-1.10:
+    <<: [ *defaults, *go-1_10 ]
+    steps:
+      - attach_workspace:
+          at: '/go/src'
+      - run: 'make check'
+      - run: 'make test'
+  test-go-1.10-386:
+    <<: [ *defaults, *go-1_10 ]
+    steps:
+      - attach_workspace:
+          at: '/go/src'
+      - run: 'GOARCH=386 make check'
+      - run: 'GOARCH=386 make test'
+
+  package:
+    <<: [ *defaults, *go-1_10 ]
+    steps:
+      - attach_workspace:
+          at: '/go/src'
+      - run: 'make package'
+      - store_artifacts:
+          path: './build'
+          destination: 'build'
+  release:
+    <<: [ *defaults, *go-1_10 ]
+    steps:
+      - attach_workspace:
+          at: '/go/src'
+      - run: 'make package-release'
+      - store_artifacts:
+          path: './build'
+          destination: 'build'
+  nightly:
+    <<: [ *defaults, *go-1_10 ]
+    steps:
+      - attach_workspace:
+          at: '/go/src'
+      - run: 'make package-nightly'
+      - store_artifacts:
+          path: './build'
+          destination: 'build'
+
+workflows:
+  version: 2
+  check:
+    jobs:
+      - 'deps':
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1.9':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1.10':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'test-go-1.10-386':
+          requires:
+            - 'deps'
+          filters:
+            tags:
+              only: /.*/
+      - 'package':
+          requires:
+            - 'test-go-1.9'
+            - 'test-go-1.10'
+            - 'test-go-1.10-386'
+      - 'release':
+          requires:
+            - 'test-go-1.9'
+            - 'test-go-1.10'
+            - 'test-go-1.10-386'
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              ignore: /.*/
+  nightly:
+    jobs:
+      - 'deps'
+      - 'test-go-1.9':
+          requires:
+            - 'deps'
+      - 'test-go-1.10':
+          requires:
+            - 'deps'
+      - 'test-go-1.10-386':
+          requires:
+            - 'deps'
+      - 'nightly':
+          requires:
+            - 'test-go-1.9'
+            - 'test-go-1.10'
+            - 'test-go-1.10-386'
+    triggers:
+      - schedule:
+          cron: "0 7 * * *"
+          filters:
+            branches:
+              only:
+                - master

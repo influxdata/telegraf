@@ -1,6 +1,7 @@
 package globpath
 
 import (
+	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -28,7 +29,7 @@ func TestCompileAndMatch(t *testing.T) {
 	require.NoError(t, err)
 
 	matches := g1.Match()
-	assert.Len(t, matches, 3)
+	assert.Len(t, matches, 6)
 	matches = g2.Match()
 	assert.Len(t, matches, 2)
 	matches = g3.Match()
@@ -56,7 +57,34 @@ func TestFindRootDir(t *testing.T) {
 	}
 }
 
+func TestFindNestedTextFile(t *testing.T) {
+	dir := getTestdataDir()
+	// test super asterisk
+	g1, err := Compile(dir + "/**.txt")
+	require.NoError(t, err)
+
+	matches := g1.Match()
+	assert.Len(t, matches, 1)
+}
+
 func getTestdataDir() string {
 	_, filename, _, _ := runtime.Caller(1)
 	return strings.Replace(filename, "globpath_test.go", "testdata", 1)
+}
+
+func TestMatch_ErrPermission(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected map[string]os.FileInfo
+	}{
+		{"/root/foo", map[string]os.FileInfo{}},
+		{"/root/f*", map[string]os.FileInfo{}},
+	}
+
+	for _, test := range tests {
+		glob, err := Compile(test.input)
+		require.NoError(t, err)
+		actual := glob.Match()
+		require.Equal(t, test.expected, actual)
+	}
 }

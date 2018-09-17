@@ -1,11 +1,15 @@
 package models
 
 import (
+	"sync"
+
 	"github.com/influxdata/telegraf"
 )
 
 type RunningProcessor struct {
-	Name      string
+	Name string
+
+	sync.Mutex
 	Processor telegraf.Processor
 	Config    *ProcessorConfig
 }
@@ -24,6 +28,9 @@ type ProcessorConfig struct {
 }
 
 func (rp *RunningProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	rp.Lock()
+	defer rp.Unlock()
+
 	ret := []telegraf.Metric{}
 
 	for _, metric := range in {

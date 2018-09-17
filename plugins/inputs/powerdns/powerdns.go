@@ -41,7 +41,7 @@ func (p *Powerdns) Gather(acc telegraf.Accumulator) error {
 
 	for _, serverSocket := range p.UnixSockets {
 		if err := p.gatherServer(serverSocket, acc); err != nil {
-			return err
+			acc.AddError(err)
 		}
 	}
 

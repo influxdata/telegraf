@@ -1,8 +1,8 @@
 package kafka_consumer
 
 import (
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -23,11 +23,11 @@ func newTestKafka() (*Kafka, chan *sarama.ConsumerMessage) {
 	k := Kafka{
 		ConsumerGroup:   "test",
 		Topics:          []string{"telegraf"},
-		ZookeeperPeers:  []string{"localhost:2181"},
+		Brokers:         []string{"localhost:9092"},
 		Offset:          "oldest",
 		in:              in,
 		doNotCommitMsgs: true,
-		errs:            make(chan *sarama.ConsumerError, 1000),
+		errs:            make(chan error, 1000),
 		done:            make(chan struct{}),
 	}
 	return &k, in
@@ -43,7 +43,7 @@ func TestRunParser(t *testing.T) {
 	k.parser, _ = parsers.NewInfluxParser()
 	go k.receiver()
 	in <- saramaMsg(testMsg)
-	time.Sleep(time.Millisecond * 5)
+	acc.Wait(1)
 
 	assert.Equal(t, acc.NFields(), 1)
 }
@@ -58,7 +58,24 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	k.parser, _ = parsers.NewInfluxParser()
 	go k.receiver()
 	in <- saramaMsg(invalidMsg)
-	time.Sleep(time.Millisecond * 5)
+	acc.WaitError(1)
+
+	assert.Equal(t, acc.NFields(), 0)
+}
+
+// Test that overlong messages are dropped
+func TestDropOverlongMsg(t *testing.T) {
+	const maxMessageLen = 64 * 1024
+	k, in := newTestKafka()
+	k.MaxMessageLen = maxMessageLen
+	acc := testutil.Accumulator{}
+	k.acc = &acc
+	defer close(k.done)
+	overlongMsg := strings.Repeat("v", maxMessageLen+1)
+
+	go k.receiver()
+	in <- saramaMsg(overlongMsg)
+	acc.WaitError(1)
 
 	assert.Equal(t, acc.NFields(), 0)
 }
@@ -73,9 +90,9 @@ func TestRunParserAndGather(t *testing.T) {
 	k.parser, _ = parsers.NewInfluxParser()
 	go k.receiver()
 	in <- saramaMsg(testMsg)
-	time.Sleep(time.Millisecond * 5)
+	acc.Wait(1)
 
-	k.Gather(&acc)
+	acc.GatherError(k.Gather)
 
 	assert.Equal(t, acc.NFields(), 1)
 	acc.AssertContainsFields(t, "cpu_load_short",
@@ -92,9 +109,9 @@ func TestRunParserAndGatherGraphite(t *testing.T) {
 	k.parser, _ = parsers.NewGraphiteParser("_", []string{}, nil)
 	go k.receiver()
 	in <- saramaMsg(testMsgGraphite)
-	time.Sleep(time.Millisecond * 5)
+	acc.Wait(1)
 
-	k.Gather(&acc)
+	acc.GatherError(k.Gather)
 
 	assert.Equal(t, acc.NFields(), 1)
 	acc.AssertContainsFields(t, "cpu_load_short_graphite",
@@ -108,12 +125,15 @@ func TestRunParserAndGatherJSON(t *testing.T) {
 	k.acc = &acc
 	defer close(k.done)
 
-	k.parser, _ = parsers.NewJSONParser("kafka_json_test", []string{}, nil)
+	k.parser, _ = parsers.NewParser(&parsers.Config{
+		DataFormat: "json",
+		MetricName: "kafka_json_test",
+	})
 	go k.receiver()
 	in <- saramaMsg(testMsgJSON)
-	time.Sleep(time.Millisecond * 5)
+	acc.Wait(1)
 
-	k.Gather(&acc)
+	acc.GatherError(k.Gather)
 
 	assert.Equal(t, acc.NFields(), 2)
 	acc.AssertContainsFields(t, "kafka_json_test",

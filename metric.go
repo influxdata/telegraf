@@ -2,9 +2,6 @@ package telegraf
 
 import (
 	"time"
-
-	// TODO remove
-	"github.com/influxdata/influxdb/client/v2"
 )
 
 // ValueType is an enumeration of metric types that represent a simple value.
@@ -16,47 +13,56 @@ const (
 	Counter
 	Gauge
 	Untyped
+	Summary
+	Histogram
 )
 
+type Tag struct {
+	Key   string
+	Value string
+}
+
+type Field struct {
+	Key   string
+	Value interface{}
+}
+
 type Metric interface {
-	Serialize() []byte
-	String() string // convenience function for string(Serialize())
-	Copy() Metric
-	// Split will attempt to return multiple metrics with the same timestamp
-	// whose string representations are no longer than maxSize.
-	// Metrics with a single field may exceed the requested size.
-	Split(maxSize int) []Metric
+	// Getting data structure functions
+	Name() string
+	Tags() map[string]string
+	TagList() []*Tag
+	Fields() map[string]interface{}
+	FieldList() []*Field
+	Time() time.Time
+	Type() ValueType
+
+	// Name functions
+	SetName(name string)
+	AddPrefix(prefix string)
+	AddSuffix(suffix string)
 
 	// Tag functions
+	GetTag(key string) (string, bool)
 	HasTag(key string) bool
 	AddTag(key, value string)
 	RemoveTag(key string)
 
 	// Field functions
+	GetField(key string) (interface{}, bool)
 	HasField(key string) bool
 	AddField(key string, value interface{})
-	RemoveField(key string) error
+	RemoveField(key string)
 
-	// Name functions
-	SetName(name string)
-	SetPrefix(prefix string)
-	SetSuffix(suffix string)
+	SetTime(t time.Time)
 
-	// Getting data structure functions
-	Name() string
-	Tags() map[string]string
-	Fields() map[string]interface{}
-	Time() time.Time
-	UnixNano() int64
-	Type() ValueType
-	Len() int // returns the length of the serialized metric, including newline
+	// HashID returns an unique identifier for the series.
 	HashID() uint64
 
-	// aggregator things:
+	// Copy returns a deep copy of the Metric.
+	Copy() Metric
+
+	// Mark Metric as an aggregate
 	SetAggregate(bool)
 	IsAggregate() bool
-
-	// Point returns a influxdb client.Point object
-	// TODO remove this function
-	Point() *client.Point
 }

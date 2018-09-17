@@ -11,7 +11,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"log"
 	"path/filepath"
 )
 
@@ -93,15 +92,15 @@ func (c *Conntrack) Gather(acc telegraf.Accumulator) error {
 
 			contents, err := ioutil.ReadFile(fName)
 			if err != nil {
-				log.Printf("E! failed to read file '%s': %v", fName, err)
+				acc.AddError(fmt.Errorf("E! failed to read file '%s': %v", fName, err))
 				continue
 			}
 
 			v := strings.TrimSpace(string(contents))
 			fields[metricKey], err = strconv.ParseFloat(v, 64)
 			if err != nil {
-				log.Printf("E! failed to parse metric, expected number but "+
-					" found '%s': %v", v, err)
+				acc.AddError(fmt.Errorf("E! failed to parse metric, expected number but "+
+					" found '%s': %v", v, err))
 			}
 		}
 	}

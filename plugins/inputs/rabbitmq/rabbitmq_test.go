@@ -51,7 +51,25 @@ const sampleOverviewResponse = `
         "messages_unacknowledged_details": {
             "rate": 0.0
         }
-    }
+    },
+    "listeners": [
+        {
+            "name": "rabbit@node-a",
+            "protocol": "amqp"
+        },
+        {
+            "name": "rabbit@node-b",
+            "protocol": "amqp"
+        },
+        {
+            "name": "rabbit@node-a",
+            "protocol": "clustering"
+        },
+        {
+            "name": "rabbit@node-b",
+            "protocol": "clustering"
+        }
+    ]
 }
 `
 
@@ -374,53 +392,98 @@ const sampleQueuesResponse = `
 ]
 `
 
-const sampleConnectionsResponse = `
+const sampleExchangesResponse = `
 [
   {
-    "recv_oct": 166055,
-    "recv_oct_details": {
-      "rate": 0
+    "arguments": { },
+    "internal": false,
+    "auto_delete": false,
+    "durable": true,
+    "type": "direct",
+    "vhost": "\/",
+    "name": ""
+  },
+  {
+    "message_stats": {
+      "publish_in_details": {
+        "rate": 0
+      },
+      "publish_in": 2,
+      "publish_out_details": {
+        "rate": 0
+      },
+      "publish_out": 1
     },
-    "send_oct": 589,
-    "send_oct_details": {
-      "rate": 0
-    },
-    "recv_cnt": 124,
-    "send_cnt": 7,
-    "send_pend": 0,
-    "state": "running",
-    "channels": 1,
-    "type": "network",
-    "node": "rabbit@ip-10-0-12-133",
-    "name": "10.0.10.8:32774 -> 10.0.12.131:5672",
-    "port": 5672,
-    "peer_port": 32774,
-    "host": "10.0.12.131",
-    "peer_host": "10.0.10.8",
-    "ssl": false,
-    "peer_cert_subject": null,
-    "peer_cert_issuer": null,
-    "peer_cert_validity": null,
-    "auth_mechanism": "AMQPLAIN",
-    "ssl_protocol": null,
-    "ssl_key_exchange": null,
-    "ssl_cipher": null,
-    "ssl_hash": null,
-    "protocol": "AMQP 0-9-1",
-    "user": "workers",
-    "vhost": "main",
-    "timeout": 0,
-    "frame_max": 131072,
-    "channel_max": 65535,
-    "client_properties": {
-      "product": "py-amqp",
-      "product_version": "1.4.7",
-      "capabilities": {
-        "connection.blocked": true,
-        "consumer_cancel_notify": true
-      }
-    },
-    "connected_at": 1476647837266
+    "arguments": { },
+    "internal": false,
+    "auto_delete": false,
+    "durable": true,
+    "type": "fanout",
+    "vhost": "\/",
+    "name": "telegraf"
+  },
+  {
+    "arguments": { },
+    "internal": false,
+    "auto_delete": false,
+    "durable": true,
+    "type": "direct",
+    "vhost": "\/",
+    "name": "amq.direct"
+  },
+  {
+    "arguments": { },
+    "internal": false,
+    "auto_delete": false,
+    "durable": true,
+    "type": "fanout",
+    "vhost": "\/",
+    "name": "amq.fanout"
+  },
+  {
+    "arguments": { },
+    "internal": false,
+    "auto_delete": false,
+    "durable": true,
+    "type": "headers",
+    "vhost": "\/",
+    "name": "amq.headers"
+  },
+  {
+    "arguments": { },
+    "internal": false,
+    "auto_delete": false,
+    "durable": true,
+    "type": "headers",
+    "vhost": "\/",
+    "name": "amq.match"
+  },
+  {
+    "arguments": { },
+    "internal": true,
+    "auto_delete": false,
+    "durable": true,
+    "type": "topic",
+    "vhost": "\/",
+    "name": "amq.rabbitmq.log"
+  },
+  {
+    "arguments": { },
+    "internal": true,
+    "auto_delete": false,
+    "durable": true,
+    "type": "topic",
+    "vhost": "\/",
+    "name": "amq.rabbitmq.trace"
+  },
+  {
+    "arguments": { },
+    "internal": false,
+    "auto_delete": false,
+    "durable": true,
+    "type": "topic",
+    "vhost": "\/",
+    "name": "amq.topic"
   }
 ]
 `
@@ -436,8 +499,8 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 			rsp = sampleNodesResponse
 		case "/api/queues":
 			rsp = sampleQueuesResponse
-		case "/api/connections":
-			rsp = sampleConnectionsResponse
+		case "/api/exchanges":
+			rsp = sampleExchangesResponse
 		default:
 			panic("Cannot handle request")
 		}
@@ -452,7 +515,7 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err := r.Gather(&acc)
+	err := acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
 	intMetrics := []string{
@@ -469,10 +532,12 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"consumers",
 		"exchanges",
 		"queues",
+		"clustering_listeners",
+		"amqp_listeners",
 	}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("rabbitmq_overview", metric))
+		assert.True(t, acc.HasInt64Field("rabbitmq_overview", metric))
 	}
 
 	nodeIntMetrics := []string{
@@ -487,22 +552,21 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		"run_queue",
 		"sockets_total",
 		"sockets_used",
+		"running",
 	}
 
 	for _, metric := range nodeIntMetrics {
-		assert.True(t, acc.HasIntField("rabbitmq_node", metric))
+		assert.True(t, acc.HasInt64Field("rabbitmq_node", metric))
 	}
 
 	assert.True(t, acc.HasMeasurement("rabbitmq_queue"))
 
-	assert.True(t, acc.HasMeasurement("rabbitmq_connection"))
-
-	connection_fields := map[string]interface{}{
-		"recv_cnt":  int64(124),
-		"send_cnt":  int64(7),
-		"send_pend": int64(0),
-		"state":     "running",
+	exchangeIntMetrics := []string{
+		"messages_publish_in",
+		"messages_publish_out",
 	}
 
-	acc.AssertContainsFields(t, "rabbitmq_connection", connection_fields)
+	for _, metric := range exchangeIntMetrics {
+		assert.True(t, acc.HasInt64Field("rabbitmq_exchange", metric))
+	}
 }

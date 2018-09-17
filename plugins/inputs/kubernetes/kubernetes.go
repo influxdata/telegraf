@@ -11,7 +11,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/errchan"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -22,14 +22,10 @@ type Kubernetes struct {
 	// Bearer Token authorization file path
 	BearerToken string `toml:"bearer_token"`
 
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	// HTTP Timeout specified as a string - 3s, 1m, 1h
+	ResponseTimeout internal.Duration
+
+	tls.ClientConfig
 
 	RoundTripper http.RoundTripper
 }
@@ -41,11 +37,14 @@ var sampleConfig = `
   ## Use bearer token for authorization
   # bearer_token = /path/to/bearer/token
 
-  ## Optional SSL Config
-  # ssl_ca = /path/to/cafile
-  # ssl_cert = /path/to/certfile
-  # ssl_key = /path/to/keyfile
-  ## Use SSL but skip chain & host verification
+  ## Set response_timeout (default 5 seconds)
+  # response_timeout = "5s"
+
+  ## Optional TLS Config
+  # tls_ca = /path/to/cafile
+  # tls_cert = /path/to/certfile
+  # tls_key = /path/to/keyfile
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
 
@@ -72,14 +71,13 @@ func (k *Kubernetes) Description() string {
 //Gather collects kubernetes metrics from a given URL
 func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
-	errChan := errchan.New(1)
 	wg.Add(1)
 	go func(k *Kubernetes) {
 		defer wg.Done()
-		errChan.C <- k.gatherSummary(k.URL, acc)
+		acc.AddError(k.gatherSummary(k.URL, acc))
 	}(k)
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
 func buildURL(endpoint string, base string) (*url.URL, error) {
@@ -97,16 +95,20 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 	var token []byte
 	var resp *http.Response
 
-	tlsCfg, err := internal.GetTLSConfig(k.SSLCert, k.SSLKey, k.SSLCA, k.InsecureSkipVerify)
+	tlsCfg, err := k.ClientConfig.TLSConfig()
 	if err != nil {
 		return err
 	}
 
 	if k.RoundTripper == nil {
+		// Set default values
+		if k.ResponseTimeout.Duration < time.Second {
+			k.ResponseTimeout.Duration = time.Second * 5
+		}
 		k.RoundTripper = &http.Transport{
 			TLSHandshakeTimeout:   5 * time.Second,
 			TLSClientConfig:       tlsCfg,
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			ResponseHeaderTimeout: k.ResponseTimeout.Duration,
 		}
 	}
 

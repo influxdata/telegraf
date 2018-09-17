@@ -62,7 +62,7 @@ domains. You can read Dovecot's documentation
 ### Example Output:
 
 ```
-telegraf -config t.cfg -input-filter dovecot -test
+telegraf --config t.cfg --input-filter dovecot --test
 * Plugin: dovecot, Collection 1
 > dovecot,ip=192.168.0.1,server=dovecot-1.domain.test,type=ip clock_time=0,disk_input=0i,disk_output=0i,invol_cs=0i,last_update="2016-04-08 10:59:47.000208479 +0200 CEST",mail_cache_hits=0i,mail_lookup_attr=0i,mail_lookup_path=0i,mail_read_bytes=0i,mail_read_count=0i,maj_faults=0i,min_faults=0i,num_cmds=12i,num_connected_sessions=0i,num_logins=6i,read_bytes=0i,read_count=0i,reset_timestamp="2016-04-08 10:33:34 +0200 CEST",sys_cpu=0,user_cpu=0,vol_cs=0i,write_bytes=0i,write_count=0i 1460106251633824223
 * Plugin: dovecot, Collection 1

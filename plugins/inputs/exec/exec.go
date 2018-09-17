@@ -15,7 +15,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
@@ -36,11 +35,13 @@ const sampleConfig = `
   name_suffix = "_mycollector"
 
   ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 `
+
+const MaxStderrBytes = 512
 
 type Exec struct {
 	Commands []string
@@ -49,8 +50,7 @@ type Exec struct {
 
 	parser parsers.Parser
 
-	runner  Runner
-	errChan chan error
+	runner Runner
 }
 
 func NewExec() *Exec {
@@ -98,15 +98,41 @@ func (c CommandRunner) Run(
 
 	cmd := exec.Command(split_cmd[0], split_cmd[1:]...)
 
-	var out bytes.Buffer
+	var (
+		out    bytes.Buffer
+		stderr bytes.Buffer
+	)
 	cmd.Stdout = &out
+	cmd.Stderr = &stderr
 
 	if err := internal.RunTimeout(cmd, e.Timeout.Duration); err != nil {
 		switch e.parser.(type) {
 		case *nagios.NagiosParser:
 			AddNagiosState(err, acc)
 		default:
-			return nil, fmt.Errorf("exec: %s for command '%s'", err, command)
+			var errMessage = ""
+			if stderr.Len() > 0 {
+				stderr = removeCarriageReturns(stderr)
+				// Limit the number of bytes.
+				didTruncate := false
+				if stderr.Len() > MaxStderrBytes {
+					stderr.Truncate(MaxStderrBytes)
+					didTruncate = true
+				}
+				if i := bytes.IndexByte(stderr.Bytes(), '\n'); i > 0 {
+					// Only show truncation if the newline wasn't the last character.
+					if i < stderr.Len()-1 {
+						didTruncate = true
+					}
+					stderr.Truncate(i)
+				}
+				if didTruncate {
+					stderr.WriteString("...")
+				}
+
+				errMessage = fmt.Sprintf(": %s", stderr.String())
+			}
+			return nil, fmt.Errorf("exec: %s for command '%s'%s", err, command, errMessage)
 		}
 	} else {
 		switch e.parser.(type) {
@@ -150,13 +176,13 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 
 	out, err := e.runner.Run(e, command, acc)
 	if err != nil {
-		e.errChan <- err
+		acc.AddError(err)
 		return
 	}
 
 	metrics, err := e.parser.Parse(out)
 	if err != nil {
-		e.errChan <- err
+		acc.AddError(err)
 	} else {
 		for _, metric := range metrics {
 			acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
@@ -193,7 +219,8 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 
 		matches, err := filepath.Glob(cmdAndArgs[0])
 		if err != nil {
-			return err
+			acc.AddError(err)
+			continue
 		}
 
 		if len(matches) == 0 {
@@ -214,15 +241,12 @@ func (e *Exec) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	errChan := errchan.New(len(commands))
-	e.errChan = errChan.C
-
 	wg.Add(len(commands))
 	for _, command := range commands {
 		go e.ProcessCommand(command, acc, &wg)
 	}
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
 func init() {

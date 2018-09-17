@@ -42,6 +42,29 @@ func TestNewItem(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "rollbar_webhooks", fields, tags)
 }
 
+func TestOccurrence(t *testing.T) {
+	var acc testutil.Accumulator
+	rb := &RollbarWebhook{Path: "/rollbar", acc: &acc}
+	resp := postWebhooks(rb, OccurrenceJSON())
+	if resp.Code != http.StatusOK {
+		t.Errorf("POST occurrence returned HTTP status code %v.\nExpected %v", resp.Code, http.StatusOK)
+	}
+
+	fields := map[string]interface{}{
+		"id": 402860571,
+	}
+
+	tags := map[string]string{
+		"event":       "occurrence",
+		"environment": "production",
+		"project_id":  "78234",
+		"language":    "php",
+		"level":       "error",
+	}
+
+	acc.AssertContainsTaggedFields(t, "rollbar_webhooks", fields, tags)
+}
+
 func TestDeploy(t *testing.T) {
 	var acc testutil.Accumulator
 	rb := &RollbarWebhook{Path: "/rollbar", acc: &acc}

@@ -8,7 +8,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/nats-io/nats"
+	nats "github.com/nats-io/go-nats"
 )
 
 type natsError struct {
@@ -66,7 +66,7 @@ var sampleConfig = `
   # pending_bytes_limit = 67108864
 
   ## Data format to consume.
-  ## Each data format has it's own unique set of configuration options, read
+  ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
@@ -162,11 +162,11 @@ func (n *natsConsumer) receiver() {
 		case <-n.done:
 			return
 		case err := <-n.errs:
-			log.Printf("E! error reading from %s\n", err.Error())
+			n.acc.AddError(fmt.Errorf("E! error reading from %s\n", err.Error()))
 		case msg := <-n.in:
 			metrics, err := n.parser.Parse(msg.Data)
 			if err != nil {
-				log.Printf("E! subject: %s, error: %s", msg.Subject, err.Error())
+				n.acc.AddError(fmt.Errorf("E! subject: %s, error: %s", msg.Subject, err.Error()))
 			}
 
 			for _, metric := range metrics {
@@ -179,8 +179,8 @@ func (n *natsConsumer) receiver() {
 func (n *natsConsumer) clean() {
 	for _, sub := range n.Subs {
 		if err := sub.Unsubscribe(); err != nil {
-			log.Printf("E! Error unsubscribing from subject %s in queue %s: %s\n",
-				sub.Subject, sub.Queue, err.Error())
+			n.acc.AddError(fmt.Errorf("E! Error unsubscribing from subject %s in queue %s: %s\n",
+				sub.Subject, sub.Queue, err.Error()))
 		}
 	}
 

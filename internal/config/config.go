@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
+
 	"regexp"
 	"runtime"
 	"sort"
@@ -25,7 +27,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
 
-	"github.com/influxdata/config"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 )
@@ -40,6 +41,11 @@ var (
 
 	// envVarRe is a regex to find environment variables in the config file
 	envVarRe = regexp.MustCompile(`\$\w+`)
+
+	envVarEscaper = strings.NewReplacer(
+		`"`, `\"`,
+		`\`, `\\`,
+	)
 )
 
 // Config specifies the URL/user/password for the database that telegraf
@@ -85,8 +91,8 @@ type AgentConfig struct {
 	//     ie, if Interval=10s then always collect on :00, :10, :20, etc.
 	RoundInterval bool
 
-	// By default, precision will be set to the same timestamp order as the
-	// collection interval, with the maximum being 1s.
+	// By default or when set to "0s", precision will be set to the same
+	// timestamp order as the collection interval, with the maximum being 1s.
 	//   ie, when interval = "10s", precision will be "1s"
 	//       when interval = "250ms", precision will be "1ms"
 	// Precision will NOT be used for service inputs. It is up to each individual
@@ -126,7 +132,7 @@ type AgentConfig struct {
 
 	// TODO(cam): Remove UTC and parameter, they are no longer
 	// valid for the agent config. Leaving them here for now for backwards-
-	// compatability
+	// compatibility
 	UTC bool `toml:"utc"`
 
 	// Debug is the option for running in debug mode
@@ -146,6 +152,24 @@ func (c *Config) InputNames() []string {
 	var name []string
 	for _, input := range c.Inputs {
 		name = append(name, input.Name())
+	}
+	return name
+}
+
+// Outputs returns a list of strings of the configured aggregators.
+func (c *Config) AggregatorNames() []string {
+	var name []string
+	for _, aggregator := range c.Aggregators {
+		name = append(name, aggregator.Name())
+	}
+	return name
+}
+
+// Outputs returns a list of strings of the configured processors.
+func (c *Config) ProcessorNames() []string {
+	var name []string
+	for _, processor := range c.Processors {
+		name = append(name, processor.Name)
 	}
 	return name
 }
@@ -230,10 +254,13 @@ var header = `# Telegraf Configuration
   ## ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
   flush_jitter = "0s"
 
-  ## By default, precision will be set to the same timestamp order as the
-  ## collection interval, with the maximum being 1s.
-  ## Precision will NOT be used for service inputs, such as logparser and statsd.
-  ## Valid values are "ns", "us" (or "µs"), "ms", "s".
+  ## By default or when set to "0s", precision will be set to the same
+  ## timestamp order as the collection interval, with the maximum being 1s.
+  ##   ie, when interval = "10s", precision will be "1s"
+  ##       when interval = "250ms", precision will be "1ms"
+  ## Precision will NOT be used for service inputs. It is up to each individual
+  ## service input to set the timestamp at the appropriate precision.
+  ## Valid time units are "ns", "us" (or "µs"), "ms", "s".
   precision = ""
 
   ## Logging configuration:
@@ -506,7 +533,17 @@ func PrintOutputConfig(name string) error {
 
 func (c *Config) LoadDirectory(path string) error {
 	walkfn := func(thispath string, info os.FileInfo, _ error) error {
+		if info == nil {
+			log.Printf("W! Telegraf is not permitted to read %s", thispath)
+			return nil
+		}
+
 		if info.IsDir() {
+			if strings.HasPrefix(info.Name(), "..") {
+				// skip Kubernetes mounts, prevening loading the same config twice
+				return filepath.SkipDir
+			}
+
 			return nil
 		}
 		name := info.Name()
@@ -566,7 +603,7 @@ func (c *Config) LoadConfig(path string) error {
 			if !ok {
 				return fmt.Errorf("%s: invalid configuration", path)
 			}
-			if err = config.UnmarshalTable(subTable, c.Tags); err != nil {
+			if err = toml.UnmarshalTable(subTable, c.Tags); err != nil {
 				log.Printf("E! Could not parse [global_tags] config\n")
 				return fmt.Errorf("Error parsing %s, %s", path, err)
 			}
@@ -579,7 +616,7 @@ func (c *Config) LoadConfig(path string) error {
 		if !ok {
 			return fmt.Errorf("%s: invalid configuration", path)
 		}
-		if err = config.UnmarshalTable(subTable, c.Agent); err != nil {
+		if err = toml.UnmarshalTable(subTable, c.Agent); err != nil {
 			log.Printf("E! Could not parse [agent] config\n")
 			return fmt.Errorf("Error parsing %s, %s", path, err)
 		}
@@ -676,10 +713,15 @@ func (c *Config) LoadConfig(path string) error {
 }
 
 // trimBOM trims the Byte-Order-Marks from the beginning of the file.
-// this is for Windows compatability only.
+// this is for Windows compatibility only.
 // see https://github.com/influxdata/telegraf/issues/1378
 func trimBOM(f []byte) []byte {
 	return bytes.TrimPrefix(f, []byte("\xef\xbb\xbf"))
+}
+
+// escapeEnv escapes a value for inserting into a TOML string.
+func escapeEnv(value string) string {
+	return envVarEscaper.Replace(value)
 }
 
 // parseFile loads a TOML configuration from a provided path and
@@ -695,8 +737,9 @@ func parseFile(fpath string) (*ast.Table, error) {
 
 	env_vars := envVarRe.FindAll(contents, -1)
 	for _, env_var := range env_vars {
-		env_val := os.Getenv(strings.TrimPrefix(string(env_var), "$"))
-		if env_val != "" {
+		env_val, ok := os.LookupEnv(strings.TrimPrefix(string(env_var), "$"))
+		if ok {
+			env_val = escapeEnv(env_val)
 			contents = bytes.Replace(contents, env_var, []byte(env_val), 1)
 		}
 	}
@@ -716,7 +759,7 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := config.UnmarshalTable(table, aggregator); err != nil {
+	if err := toml.UnmarshalTable(table, aggregator); err != nil {
 		return err
 	}
 
@@ -736,7 +779,7 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := config.UnmarshalTable(table, processor); err != nil {
+	if err := toml.UnmarshalTable(table, processor); err != nil {
 		return err
 	}
 
@@ -776,7 +819,7 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := config.UnmarshalTable(table, output); err != nil {
+	if err := toml.UnmarshalTable(table, output); err != nil {
 		return err
 	}
 
@@ -817,7 +860,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return err
 	}
 
-	if err := config.UnmarshalTable(table, input); err != nil {
+	if err := toml.UnmarshalTable(table, input); err != nil {
 		return err
 	}
 
@@ -909,7 +952,7 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 	conf.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
-			if err := config.UnmarshalTable(subtbl, conf.Tags); err != nil {
+			if err := toml.UnmarshalTable(subtbl, conf.Tags); err != nil {
 				log.Printf("Could not parse tags for input %s\n", name)
 			}
 		}
@@ -1146,7 +1189,7 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 	cp.Tags = make(map[string]string)
 	if node, ok := tbl.Fields["tags"]; ok {
 		if subtbl, ok := node.(*ast.Table); ok {
-			if err := config.UnmarshalTable(subtbl, cp.Tags); err != nil {
+			if err := toml.UnmarshalTable(subtbl, cp.Tags); err != nil {
 				log.Printf("E! Could not parse tags for input %s\n", name)
 			}
 		}
@@ -1218,10 +1261,298 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["json_string_fields"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.JSONStringFields = append(c.JSONStringFields, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["json_name_key"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.JSONNameKey = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["json_query"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.JSONQuery = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["json_time_key"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.JSONTimeKey = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["json_time_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.JSONTimeFormat = str.Value
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["data_type"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
 				c.DataType = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["collectd_auth_file"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CollectdAuthFile = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["collectd_security_level"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CollectdSecurityLevel = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["collectd_parse_multivalue"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CollectdSplit = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["collectd_typesdb"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CollectdTypesDB = append(c.CollectdTypesDB, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["dropwizard_metric_registry_path"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DropwizardMetricRegistryPath = str.Value
+			}
+		}
+	}
+	if node, ok := tbl.Fields["dropwizard_time_path"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DropwizardTimePath = str.Value
+			}
+		}
+	}
+	if node, ok := tbl.Fields["dropwizard_time_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DropwizardTimeFormat = str.Value
+			}
+		}
+	}
+	if node, ok := tbl.Fields["dropwizard_tags_path"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.DropwizardTagsPath = str.Value
+			}
+		}
+	}
+	c.DropwizardTagPathsMap = make(map[string]string)
+	if node, ok := tbl.Fields["dropwizard_tag_paths"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					if str, ok := kv.Value.(*ast.String); ok {
+						c.DropwizardTagPathsMap[name] = str.Value
+					}
+				}
+			}
+		}
+	}
+
+	//for grok data_format
+	if node, ok := tbl.Fields["grok_named_patterns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.GrokNamedPatterns = append(c.GrokNamedPatterns, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["grok_patterns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.GrokPatterns = append(c.GrokPatterns, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["grok_custom_patterns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.GrokCustomPatterns = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["grok_custom_pattern_files"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.GrokCustomPatternFiles = append(c.GrokCustomPatternFiles, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["grok_timezone"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.GrokTimeZone = str.Value
+			}
+		}
+	}
+
+	//for csv parser
+	if node, ok := tbl.Fields["csv_column_names"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CSVColumnNames = append(c.CSVColumnNames, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_tag_columns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CSVTagColumns = append(c.CSVTagColumns, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_delimiter"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVDelimiter = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_comment"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVComment = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_measurement_column"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVMeasurementColumn = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_timestamp_column"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVTimestampColumn = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_timestamp_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVTimestampFormat = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_header_row_count"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				iVal, err := strconv.Atoi(str.Value)
+				c.CSVHeaderRowCount = iVal
+				if err != nil {
+					return nil, fmt.Errorf("E! parsing to int: %v", err)
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_skip_rows"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				iVal, err := strconv.Atoi(str.Value)
+				c.CSVSkipRows = iVal
+				if err != nil {
+					return nil, fmt.Errorf("E! parsing to int: %v", err)
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_skip_columns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				iVal, err := strconv.Atoi(str.Value)
+				c.CSVSkipColumns = iVal
+				if err != nil {
+					return nil, fmt.Errorf("E! parsing to int: %v", err)
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_trim_space"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.Boolean); ok {
+				//for config with no quotes
+				val, err := strconv.ParseBool(str.Value)
+				c.CSVTrimSpace = val
+				if err != nil {
+					return nil, fmt.Errorf("E! parsing to bool: %v", err)
+				}
 			}
 		}
 	}
@@ -1232,7 +1563,34 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "separator")
 	delete(tbl.Fields, "templates")
 	delete(tbl.Fields, "tag_keys")
+	delete(tbl.Fields, "json_name_key")
+	delete(tbl.Fields, "json_query")
+	delete(tbl.Fields, "json_string_fields")
+	delete(tbl.Fields, "json_time_format")
+	delete(tbl.Fields, "json_time_key")
 	delete(tbl.Fields, "data_type")
+	delete(tbl.Fields, "collectd_auth_file")
+	delete(tbl.Fields, "collectd_security_level")
+	delete(tbl.Fields, "collectd_typesdb")
+	delete(tbl.Fields, "collectd_parse_multivalue")
+	delete(tbl.Fields, "dropwizard_metric_registry_path")
+	delete(tbl.Fields, "dropwizard_time_path")
+	delete(tbl.Fields, "dropwizard_time_format")
+	delete(tbl.Fields, "dropwizard_tags_path")
+	delete(tbl.Fields, "dropwizard_tag_paths")
+	delete(tbl.Fields, "grok_named_patterns")
+	delete(tbl.Fields, "grok_patterns")
+	delete(tbl.Fields, "grok_custom_patterns")
+	delete(tbl.Fields, "grok_custom_pattern_files")
+	delete(tbl.Fields, "grok_timezone")
+	delete(tbl.Fields, "csv_data_columns")
+	delete(tbl.Fields, "csv_tag_columns")
+	delete(tbl.Fields, "csv_field_columns")
+	delete(tbl.Fields, "csv_name_column")
+	delete(tbl.Fields, "csv_timestamp_column")
+	delete(tbl.Fields, "csv_timestamp_format")
+	delete(tbl.Fields, "csv_delimiter")
+	delete(tbl.Fields, "csv_header")
 
 	return parsers.NewParser(c)
 }
@@ -1241,7 +1599,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 // a serializers.Serializer object, and creates it, which can then be added onto
 // an Output object.
 func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error) {
-	c := &serializers.Config{}
+	c := &serializers.Config{TimestampUnits: time.Duration(1 * time.Second)}
 
 	if node, ok := tbl.Fields["data_format"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -1271,9 +1629,91 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["influx_max_line_bytes"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if integer, ok := kv.Value.(*ast.Integer); ok {
+				v, err := integer.Int()
+				if err != nil {
+					return nil, err
+				}
+				c.InfluxMaxLineBytes = int(v)
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["influx_sort_fields"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.InfluxSortFields, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["influx_uint_support"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.InfluxUintSupport, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["graphite_tag_support"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.GraphiteTagSupport, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["json_timestamp_units"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				timestampVal, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, fmt.Errorf("Unable to parse json_timestamp_units as a duration, %s", err)
+				}
+				// now that we have a duration, truncate it to the nearest
+				// power of ten (just in case)
+				nearest_exponent := int64(math.Log10(float64(timestampVal.Nanoseconds())))
+				new_nanoseconds := int64(math.Pow(10.0, float64(nearest_exponent)))
+				c.TimestampUnits = time.Duration(new_nanoseconds)
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["splunkmetric_hec_routing"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.HecRouting, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	delete(tbl.Fields, "influx_max_line_bytes")
+	delete(tbl.Fields, "influx_sort_fields")
+	delete(tbl.Fields, "influx_uint_support")
+	delete(tbl.Fields, "graphite_tag_support")
 	delete(tbl.Fields, "data_format")
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")
+	delete(tbl.Fields, "json_timestamp_units")
+	delete(tbl.Fields, "splunkmetric_hec_routing")
 	return serializers.NewSerializer(c)
 }
 

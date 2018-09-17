@@ -45,7 +45,7 @@ type CPUMetrics struct {
 // PodMetrics contains metric data on a given pod
 type PodMetrics struct {
 	PodRef     PodReference       `json:"podRef"`
-	StartTime  time.Time          `json:"startTime"`
+	StartTime  *time.Time         `json:"startTime"`
 	Containers []ContainerMetrics `json:"containers"`
 	Network    NetworkMetrics     `json:"network"`
 	Volumes    []VolumeMetrics    `json:"volume"`

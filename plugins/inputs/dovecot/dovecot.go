@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -66,19 +65,18 @@ func (d *Dovecot) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var wg sync.WaitGroup
-	errChan := errchan.New(len(d.Servers) * len(d.Filters))
 	for _, server := range d.Servers {
 		for _, filter := range d.Filters {
 			wg.Add(1)
 			go func(s string, f string) {
 				defer wg.Done()
-				errChan.C <- d.gatherServer(s, acc, d.Type, f)
+				acc.AddError(d.gatherServer(s, acc, d.Type, f))
 			}(server, filter)
 		}
 	}
 
 	wg.Wait()
-	return errChan.Error()
+	return nil
 }
 
 func (d *Dovecot) gatherServer(addr string, acc telegraf.Accumulator, qtype string, filter string) error {

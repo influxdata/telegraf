@@ -30,5 +30,5 @@
     last_run: 1444936531
     cron: 0.000584
   version:
-    config: 1444936521
+    config: "environment:d6018ce"
     puppet: "3.7.5"

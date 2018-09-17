@@ -64,8 +64,8 @@ func TestNginxGeneratesMetrics(t *testing.T) {
 	var acc_nginx testutil.Accumulator
 	var acc_tengine testutil.Accumulator
 
-	err_nginx := n.Gather(&acc_nginx)
-	err_tengine := nt.Gather(&acc_tengine)
+	err_nginx := acc_nginx.GatherError(n.Gather)
+	err_tengine := acc_tengine.GatherError(nt.Gather)
 
 	require.NoError(t, err_nginx)
 	require.NoError(t, err_tengine)

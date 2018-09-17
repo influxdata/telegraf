@@ -1,5 +1,3 @@
-// +build !windows
-
 package ntpq
 
 import (
@@ -21,7 +19,7 @@ func TestSingleNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -51,7 +49,7 @@ func TestMissingJitterField(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -80,7 +78,7 @@ func TestBadIntNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.Error(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -109,7 +107,7 @@ func TestBadFloatNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.Error(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(2),
@@ -138,7 +136,7 @@ func TestDaysNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(172800),
@@ -168,10 +166,10 @@ func TestHoursNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
-		"when":   int64(720),
+		"when":   int64(7200),
 		"poll":   int64(256),
 		"reach":  int64(37),
 		"delay":  float64(51.016),
@@ -198,7 +196,7 @@ func TestMinutesNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(120),
@@ -228,7 +226,7 @@ func TestBadWhenNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.Error(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"poll":   int64(256),
@@ -247,6 +245,72 @@ func TestBadWhenNTPQ(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
 }
 
+// TestParserNTPQ - realated to:
+// https://github.com/influxdata/telegraf/issues/2386
+func TestParserNTPQ(t *testing.T) {
+	tt := tester{
+		ret: []byte(multiParserNTPQ),
+		err: nil,
+	}
+
+	n := &NTPQ{
+		runQ: tt.runqTest,
+	}
+	acc := testutil.Accumulator{}
+	assert.NoError(t, acc.GatherError(n.Gather))
+
+	fields := map[string]interface{}{
+		"poll":   int64(64),
+		"when":   int64(60),
+		"reach":  int64(377),
+		"delay":  float64(0.0),
+		"offset": float64(0.045),
+		"jitter": float64(1.012),
+	}
+	tags := map[string]string{
+		"remote":       "SHM(0)",
+		"state_prefix": "*",
+		"refid":        ".PPS.",
+		"stratum":      "1",
+		"type":         "u",
+	}
+	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
+
+	fields = map[string]interface{}{
+		"poll":   int64(128),
+		"when":   int64(121),
+		"reach":  int64(377),
+		"delay":  float64(0.0),
+		"offset": float64(10.105),
+		"jitter": float64(2.012),
+	}
+	tags = map[string]string{
+		"remote":       "SHM(1)",
+		"state_prefix": "-",
+		"refid":        ".GPS.",
+		"stratum":      "1",
+		"type":         "u",
+	}
+	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
+
+	fields = map[string]interface{}{
+		"poll":   int64(1024),
+		"when":   int64(10),
+		"reach":  int64(377),
+		"delay":  float64(1.748),
+		"offset": float64(0.373),
+		"jitter": float64(0.101),
+	}
+	tags = map[string]string{
+		"remote":       "37.58.57.238",
+		"state_prefix": "+",
+		"refid":        "192.53.103.103",
+		"stratum":      "2",
+		"type":         "u",
+	}
+	acc.AssertContainsTaggedFields(t, "ntpq", fields, tags)
+}
+
 func TestMultiNTPQ(t *testing.T) {
 	tt := tester{
 		ret: []byte(multiNTPQ),
@@ -257,7 +321,7 @@ func TestMultiNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"delay":  float64(54.033),
@@ -303,7 +367,7 @@ func TestBadHeaderNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -333,7 +397,7 @@ func TestMissingDelayColumnNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.NoError(t, n.Gather(&acc))
+	assert.NoError(t, acc.GatherError(n.Gather))
 
 	fields := map[string]interface{}{
 		"when":   int64(101),
@@ -361,7 +425,7 @@ func TestFailedNTPQ(t *testing.T) {
 	}
 
 	acc := testutil.Accumulator{}
-	assert.Error(t, n.Gather(&acc))
+	assert.Error(t, acc.GatherError(n.Gather))
 }
 
 type tester struct {
@@ -462,4 +526,12 @@ var multiNTPQ = `     remote           refid      st t when poll reach   delay  
  131.188.3.221   10.177.80.37     2 u  783 1024  377  111.820  261.921 449528.
  5.9.29.107      10.177.80.37     2 u  703 1024  377  205.704  160.406 449602.
  91.189.94.4     10.177.80.37     2 u  673 1024  377  143.047  274.726 449445.
+`
+var multiParserNTPQ = `     remote           refid      st t when poll reach   delay   offset  jitter
+==============================================================================
+*SHM(0)          .PPS.                          1 u   60  64   377    0.000    0.045   1.012
++37.58.57.238 (d 192.53.103.103			2 u   10 1024  377    1.748    0.373   0.101
++37.58.57.238 (domain) 192.53.103.103   2 u   10 1024  377    1.748    0.373   0.101
++37.58.57.238 ( 192.53.103.103			2 u   10 1024  377    1.748    0.373   0.101
+-SHM(1)          .GPS.                          1 u   121 128  377    0.000   10.105   2.012
 `

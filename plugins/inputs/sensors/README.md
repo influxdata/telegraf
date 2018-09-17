@@ -12,6 +12,9 @@ This plugin collects sensor metrics with the `sensors` executable from the lm-se
   ## Remove numbers from field names.
   ## If true, a field name like 'temp1_input' will be changed to 'temp_input'.
   # remove_numbers = true
+
+  ## Timeout is the maximum amount of time that the sensors command can run.
+  # timeout = "5s"
 ```
 
 ### Measurements & Fields:
@@ -27,7 +30,7 @@ Fields are created dynamicaly depending on the sensors. All fields are float.
 
 #### Default
 ```
-$ telegraf -config telegraf.conf -input-filter sensors -test
+$ telegraf --config telegraf.conf --input-filter sensors --test
 * Plugin: sensors, Collection 1
 > sensors,chip=power_meter-acpi-0,feature=power1 power_average=0,power_average_interval=300 1466751326000000000
 > sensors,chip=k10temp-pci-00c3,feature=temp1 temp_crit=70,temp_crit_hyst=65,temp_input=29,temp_max=70 1466751326000000000

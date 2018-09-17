@@ -1,8 +1,6 @@
 package powerdns
 
 import (
-	"crypto/rand"
-	"encoding/binary"
 	"fmt"
 	"net"
 	"testing"
@@ -70,13 +68,12 @@ func (s statServer) serverSocket(l net.Listener) {
 	}
 }
 
-func TestMemcachedGeneratesMetrics(t *testing.T) {
+func TestPowerdnsGeneratesMetrics(t *testing.T) {
 	// We create a fake server to return test data
-	var randomNumber int64
-	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
+	randomNumber := int64(5239846799706671610)
 	socket, err := net.Listen("unix", fmt.Sprintf("/tmp/pdns%d.controlsocket", randomNumber))
 	if err != nil {
-		t.Fatal("Cannot initalize server on port ")
+		t.Fatal("Cannot initialize server on port ")
 	}
 
 	defer socket.Close()
@@ -90,7 +87,7 @@ func TestMemcachedGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err = p.Gather(&acc)
+	err = acc.GatherError(p.Gather)
 	require.NoError(t, err)
 
 	intMetrics := []string{"corrupt-packets", "deferred-cache-inserts",
@@ -105,7 +102,7 @@ func TestMemcachedGeneratesMetrics(t *testing.T) {
 		"meta-cache-size", "qsize-q", "signature-cache-size", "sys-msec", "uptime", "user-msec"}
 
 	for _, metric := range intMetrics {
-		assert.True(t, acc.HasIntField("powerdns", metric), metric)
+		assert.True(t, acc.HasInt64Field("powerdns", metric), metric)
 	}
 }
 
