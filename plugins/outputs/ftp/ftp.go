@@ -44,6 +44,7 @@ type Ftp struct {
 	MaxConcat   int
 
 	pq        *goque.PrefixQueue
+	ftpaddr   string
 	queue     chan FtpItem
 	fileRegex *regexp.Regexp
 	outdir    string
@@ -64,42 +65,89 @@ var sampleConfig = `
 `
 
 func (f *Ftp) Transferer(id int, conn *ftp.ServerConn) {
-	for true {
+	var err error
+	for {
 		item := <-f.queue
 
-		// Send the file
-		fmt.Printf("Sending (%d)[%d]: %s\n", id, len(item.Data), item.Dest)
-		r := bytes.NewReader(item.Data)
-		err := conn.StorFrom(item.Dest, r, 0)
-		if err != nil {
-			// We could try to create the dest dir, but for now... just throw the file away
-			log.Printf("ERROR [ftp.storfrom] [%s]: %s", item.Dest, err)
-			item.Move(f.Incoming, f.Outgoing, f.Error, false)
-		}
+	TRANSFER:
+		for {
+			if conn == nil {
+				conn, err = f.OpenFtpConnection()
+				if err != nil {
+					time.Sleep(1 * time.Second)
+					continue TRANSFER
+				}
+			}
+			// Send the file until it's properly sent
+			fmt.Printf("Sending (%d)[%d]: %s\n", id, len(item.Data), item.Dest)
+			r := bytes.NewReader(item.Data)
+			err = conn.StorFrom(item.Dest, r, 0)
+			if err != nil {
+				// We could try to create the dest dir, but for now... just throw the file away
+				conn.Quit()
+				conn = nil
+				log.Printf("ERROR [ftp.storfrom] [%s]: %s", item.Dest, err)
+				time.Sleep(1 * time.Second)
+				continue TRANSFER
+			}
 
-		item.Move(f.Incoming, f.Outgoing, f.Error, true)
+			copyerr := item.Copy(f.Incoming, f.Outgoing, f.Error, true)
+
+			if copyerr == nil {
+				os.Remove(item.Source)
+				break TRANSFER
+			}
+		}
 	}
 }
 
-func (f *FtpItem) Move(inDir string, outDir string, errorDir string, success bool) {
+func CopyFile(inDir string, outDir string) error {
+	sFile, err := os.Open(inDir)
+	if err != nil {
+		return err
+	}
+	defer sFile.Close()
+
+	eFile, err := os.Create(outDir)
+	if err != nil {
+		return err
+	}
+	defer eFile.Close()
+
+	_, err = io.Copy(eFile, sFile) // first var shows number of bytes
+	if err != nil {
+		return err
+	}
+
+	err = eFile.Sync()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (f *FtpItem) Copy(inDir string, outDir string, errorDir string, success bool) error {
 	if len(inDir) > 0 && len(outDir) > 0 && len(errorDir) > 0 {
 		files := append(f.Files, f.Relative)
 		for _, filename := range files {
 			if success {
 				// Move to Archive dir
-				err := os.Rename(inDir+filename, outDir+filename)
+				err := CopyFile(inDir+filename, outDir+filename)
 				if err != nil {
-					log.Println("ERROR [ftp.outgoing.rename]", err)
+					return err
 				}
 			} else {
 				// Move to Bad dir
-				err := os.Rename(inDir+filename, errorDir+filename)
+				err := CopyFile(inDir+filename, errorDir+filename)
 				if err != nil {
-					log.Println("ERROR [ftp.error.rename]", err)
+					return err
 				}
 			}
 		}
 	}
+
+	return nil
 }
 
 func (f *Ftp) HandleFtpItem(item *FtpItem) {
@@ -171,26 +219,30 @@ func (f *Ftp) NewFtpItem(relative_path string, tags map[string]string) *FtpItem 
 	return item
 }
 
-func (f *Ftp) CreateConnection(pwg *sync.WaitGroup) {
-	defer pwg.Done()
-	index := strings.Index(f.Destination, "/")
-	if index < 2 {
-		log.Fatalf("Invalid ftp destination: %s", f.Destination)
-	}
-
-	ftpaddr := f.Destination[0:index]
-	conn, err := ftp.Connect(ftpaddr)
+func (f *Ftp) OpenFtpConnection() (*ftp.ServerConn, error) {
+	conn, err := ftp.Connect(f.ftpaddr)
 	if err != nil {
-		log.Fatalf("%s: %s", f.Destination, err)
+		return nil, err
 	}
 
 	err = conn.Login(f.Username, f.Password)
 	if err != nil {
-		log.Fatalf("%s: %s", f.Destination, err)
+		return nil, err
+	}
+
+	return conn, nil
+}
+
+func (f *Ftp) CreateConnection(pwg *sync.WaitGroup) {
+	defer pwg.Done()
+
+	conn, err := f.OpenFtpConnection()
+	if err != nil {
+		log.Printf("Could not open ftp connection: %s", err)
+		return
 	}
 
 	f.conn = append(f.conn, conn)
-	f.outdir = f.Destination[index:]
 }
 
 func (f *Ftp) Connect() error {
@@ -207,6 +259,12 @@ func (f *Ftp) Connect() error {
 	f.queue = make(chan FtpItem, f.Concurrency)
 	f.fileRegex = regexp.MustCompile(f.FilePattern)
 
+	index := strings.Index(f.Destination, "/")
+	f.ftpaddr = f.Destination[0:index]
+	if index < 2 {
+		log.Fatalf("Invalid ftp destination: %s", f.Destination)
+	}
+
 	var wg sync.WaitGroup
 
 	for i := 0; i < f.Concurrency; i++ {
@@ -214,6 +272,8 @@ func (f *Ftp) Connect() error {
 		go f.CreateConnection(&wg)
 	}
 	wg.Wait()
+
+	f.outdir = f.Destination[index:]
 
 	for i, ftpconn := range f.conn {
 		go f.Transferer(i, ftpconn)

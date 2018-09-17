@@ -50,9 +50,11 @@ func NewVqtCsvMetric(measurement string, timestamp time.Time) *VqtCsvMetric {
 	return m
 }
 
-func NewVqtCsvParser(metricName string) (*VqtCsvParser, error) {
+func NewVqtCsvParser(metricName string, location *time.Location, fieldReplace map[string]string) (*VqtCsvParser, error) {
 	v := &VqtCsvParser{
-		metricName: metricName,
+		metricName:   metricName,
+		Location:     location,
+		FieldReplace: fieldReplace,
 	}
 
 	return v, nil
@@ -194,7 +196,20 @@ func (p *VqtCsvParser) Process(csvline []string) (telegraf.Metric, error) {
 		}
 
 		splitName := strings.Split(csvline[i], "(")
+		idName := strings.Split(splitName[0], ".")
 		fieldName := splitName[0]
+
+		switch len(idName) {
+		case 2:
+			currentMetric.Measurement = idName[0]
+			fieldName = idName[1]
+			break
+		case 1:
+			fieldName = idName[0]
+			break
+		default:
+			break
+		}
 
 		// Replace the field if configured
 		if _, ok := p.FieldReplace[fieldName]; ok {

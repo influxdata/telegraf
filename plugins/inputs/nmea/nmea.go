@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
+	"net/url"
 	"reflect"
 	"strings"
 	"time"
@@ -20,11 +22,13 @@ type Serial struct {
 
 type Nmea struct {
 	Serial      Serial
+	Address     string
 	Measurement string
 	Include     []string
 	UseGpsTime  bool
 
 	port         io.ReadWriteCloser
+	conn         net.Conn
 	acc          telegraf.Accumulator
 	configParsed bool
 }
@@ -72,15 +76,28 @@ func IsEmptyDate(nd nmea.Date) bool {
 
 func (n *Nmea) Collect() {
 	for true {
+		var length int
+		var err error
+
 		sentence := make([]byte, 1024)
 		// This is a blocking call. No need to have a sleep.
-		length, err := n.port.Read(sentence)
-		if err != nil {
-			log.Println("ERROR [byte.Read]:", err)
+		if n.conn != nil {
+			length, err = n.conn.Read(sentence)
+			if err != nil {
+				log.Println("ERROR [net.Read]:", err)
+			}
+		} else if n.port != nil {
+			length, err = n.port.Read(sentence)
+			if err != nil {
+				log.Println("ERROR [serial.Read]:", err)
+			}
 		}
 
 		if length > 0 {
-			s, err := nmea.Parse(string(sentence[:length]))
+			if sentence[length-1] == '\n' {
+				sentence = sentence[:length-2]
+			}
+			s, err := nmea.Parse(string(sentence))
 			if err != nil {
 				log.Println("ERROR [nmea.Parse]:", err)
 			}
@@ -119,7 +136,7 @@ func (n *Nmea) Collect() {
 					timestamp = time.Date(y, time.Month(dt.MM), dt.DD, tm.Hour, tm.Minute, tm.Second, tm.Millisecond*1000000, time.UTC)
 				}
 
-				n.acc.AddFields(n.Measurement, fields, tags, timestamp)
+				n.acc.AddFields(n.Measurement, fields, tags, timestamp.Local())
 			}
 		}
 	}
@@ -127,8 +144,20 @@ func (n *Nmea) Collect() {
 
 func (n *Nmea) ParseConfig(pAcc *telegraf.Accumulator) error {
 	var err error
-	n.port, err = serial.Open(n.Serial.Options)
-	if err != nil {
+
+	url, err := url.Parse(n.Address)
+	if err == nil {
+		n.conn, err = net.Dial(url.Scheme, url.Host)
+		if err != nil {
+			return err
+		}
+	} else {
+		// If we didn't a URL successfully, don't worry about the serial port
+		n.port, err = serial.Open(n.Serial.Options)
+		if err != nil {
+			return err
+		}
+
 		return err
 	}
 
@@ -144,10 +173,10 @@ func (n *Nmea) ParseConfig(pAcc *telegraf.Accumulator) error {
 func (n *Nmea) Gather(acc telegraf.Accumulator) error {
 	if !n.configParsed {
 		err := n.ParseConfig(&acc)
-		n.configParsed = true
 		if err != nil {
 			return err
 		}
+		n.configParsed = true
 	}
 
 	return nil

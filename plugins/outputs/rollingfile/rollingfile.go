@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -128,8 +129,8 @@ func (f *RollingFile) Close() error {
 		w.Write(content)
 		w.Flush()
 	}
-
 	fileout.Close()
+
 	return nil
 }
 
@@ -164,7 +165,7 @@ func (f *RollingFile) Write(metrics []telegraf.Metric) error {
 	if (f.numBytes >= f.MaxFileSize) || (dur.Seconds() >= float64(f.MaxFileTime)) {
 		err := f.Close()
 		if err != nil {
-			fmt.Errorf("[On close]: %s", err)
+			log.Printf("[On close]: %s", err)
 		}
 		f.Open()
 	}

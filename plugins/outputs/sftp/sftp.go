@@ -24,6 +24,7 @@ type SftpItem struct {
 	Source   string
 	Relative string
 	Dest     string
+	Temp     string
 	Meta     map[string]string
 	Data     []byte
 	Files    []string
@@ -31,20 +32,21 @@ type SftpItem struct {
 }
 
 type Sftp struct {
-	Incoming    string
-	Outgoing    string
-	Error       string
-	FilePattern string
-	Destination string
-	Username    string
-	Password    string
-	DataDir     string
-	Concurrency int
-	Concatenate int
-	ForceMax    bool
-	MinSize     int
-	MaxConcat   int
-	MaxDuration time.Duration
+	Incoming      string
+	Outgoing      string
+	Error         string
+	FilePattern   string
+	Destination   string
+	Username      string
+	Password      string
+	DataDir       string
+	TempExtension string
+	Concurrency   int
+	Concatenate   int
+	ForceMax      bool
+	MinSize       int
+	MaxConcat     int
+	MaxDuration   time.Duration
 
 	pq        *goque.PrefixQueue
 	queue     chan SftpItem
@@ -72,13 +74,12 @@ func (s *Sftp) Transferer(id int, conn *sftp.Client) {
 
 		// Create the destination file
 		fmt.Printf("Sending (%d)[%d]: %s\n", id, len(item.Data), item.Dest)
-		dstFile, err := conn.Create(item.Dest)
+		dstFile, err := conn.Create(item.Temp)
 		if err != nil {
 			// We could try to create the dest dir, but for now... just throw the file away
 			log.Printf("ERROR [sftp.create] [%s]: %s", item.Dest, err)
 			item.Move(s.Incoming, s.Outgoing, s.Error, false)
 		}
-		defer dstFile.Close()
 
 		// Move the file
 		_, err = dstFile.Write(item.Data)
@@ -88,6 +89,12 @@ func (s *Sftp) Transferer(id int, conn *sftp.Client) {
 		}
 
 		item.Move(s.Incoming, s.Outgoing, s.Error, true)
+
+		dstFile.Close()
+		// Rename the file if we are using a temporary extension
+		if item.Temp != item.Dest {
+			conn.Rename(item.Temp, item.Dest)
+		}
 	}
 }
 
@@ -177,6 +184,11 @@ func (s *Sftp) NewSftpItem(relative_path string, tags map[string]string) *SftpIt
 
 	item.Source = name
 	item.Dest = fmt.Sprintf("%s/%s", s.GetDestName(tags), inbase)
+	item.Temp = item.Dest
+
+	if len(s.TempExtension) > 0 {
+		item.Temp += s.TempExtension
+	}
 
 	return item
 }

@@ -121,7 +121,8 @@ func (q *Query) Get(conn *sql.DB, pwg *sync.WaitGroup) ([]telegraf.Metric, error
 				if strings.HasPrefix(col, "tag_") {
 					// We are using this value as a tag value.
 					tagname := strings.TrimPrefix(col, "tag_")
-					tags[tagname] = v.(string)
+					stag := fmt.Sprintf("%v", v)
+					tags[tagname] = stag
 				} else {
 					fields[col] = v
 				}

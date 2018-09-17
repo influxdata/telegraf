@@ -94,7 +94,7 @@ import (
 	// _ "github.com/influxdata/telegraf/plugins/inputs/passenger"
 	// _ "github.com/influxdata/telegraf/plugins/inputs/pf"
 	// _ "github.com/influxdata/telegraf/plugins/inputs/phpfpm"
-	// _ "github.com/influxdata/telegraf/plugins/inputs/ping"
+	_ "github.com/influxdata/telegraf/plugins/inputs/ping"
 	// _ "github.com/influxdata/telegraf/plugins/inputs/postfix"
 	// _ "github.com/influxdata/telegraf/plugins/inputs/postgresql"
 	// _ "github.com/influxdata/telegraf/plugins/inputs/postgresql_extensible"

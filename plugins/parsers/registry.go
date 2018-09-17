@@ -2,6 +2,7 @@ package parsers
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/influxdata/telegraf"
 
@@ -170,6 +171,8 @@ func NewPhdCsvParser(config *Config) (Parser, error) {
 func NewVqtCsvParser(config *Config) (Parser, error) {
 	v, err := vqtcsv.NewVqtCsvParser(
 		config.MetricName,
+		config.Args["location"].(*time.Location),
+		config.Args["fieldreplace"].(map[string]string),
 	)
 	return v, err
 }

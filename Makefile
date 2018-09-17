@@ -40,6 +40,9 @@ deps:
 telegraf:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
+small:
+	go build -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
+
 go-install:
 	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 

@@ -40,7 +40,7 @@ func (p *FileInfoParser) SetIncomingDir(dir string) {
 	p.IncomingDir = dir
 }
 
-func (p *FileInfoParser) GetFileInfo(fileName string) FileInfo {
+func (p *FileInfoParser) GetFileInfo(fileName string) (*FileInfo, error) {
 	var baseName = filepath.Base(fileName)
 	var dirName = filepath.Dir(fileName)
 	var splitName = strings.Split(baseName, "_")
@@ -56,7 +56,7 @@ func (p *FileInfoParser) GetFileInfo(fileName string) FileInfo {
 	var err error
 	fi.OsFileInfo, err = os.Stat(fileName)
 	if err != nil {
-		log.Println("ERROR [os.stat]: ", err)
+		return nil, err
 	}
 	fi.Base = baseName
 	fi.Dir = dirName
@@ -71,7 +71,7 @@ func (p *FileInfoParser) GetFileInfo(fileName string) FileInfo {
 		log.Println("ERROR [time]: ", err)
 	}
 
-	return fi
+	return &fi, nil
 }
 
 func (p *FileInfoParser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -87,7 +87,11 @@ func (p *FileInfoParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *FileInfoParser) ParseLine(line string) (telegraf.Metric, error) {
-	fi := p.GetFileInfo(line)
+	fi, err := p.GetFileInfo(line)
+	if err != nil {
+		log.Println("[ERROR]: Could not get file info for line", line)
+		return nil, err
+	}
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 	fields["filename"] = fi.Base
