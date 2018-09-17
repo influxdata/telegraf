@@ -1,31 +1,44 @@
 ## v1.8 [unreleased]
 
-### Release Notes
-
-- With the addition of the standalone `grok` input data format, the
-  `logparser` input plugin has been deprecated in favor of using the `tail`
-  input plugin combined with `data_format="grok"` .
-
 ### New Inputs
 
 - [activemq](./plugins/inputs/activemq/README.md) - Contributed by @mlabouardy
+- [beanstalkd](./plugins/inputs/beanstalkd/README.md) - Contributed by @44px
 - [filecount](./plugins/inputs/filecount/README.md) - Contributed by @sometimesfood
 - [file](./plugins/inputs/file/README.md) - Contributed by @maxunt
 - [icinga2](./plugins/inputs/icinga2/README.md) - Contributed by @mlabouardy
 - [kibana](./plugins/inputs/icinga2/README.md) - Contributed by @lpic10
 - [pgbouncer](./plugins/inputs/pgbouncer/README.md) - Contributed by @nerzhul
+- [temp](./plugins/inputs/temp/README.md) - Contributed by @pytimer
 - [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
+- [vsphere](./plugins/inputs/vsphere/README.md) - Contributed by @prydin
 - [x509_cert](./plugins/inputs/x509_cert/README.md) - Contributed by @jtyr
 
 ### New Processors
 
 - [enum](./plugins/processors/enum/README.md) - Contributed by @KarstenSchnitter
-- [parser](./plugins/processors/parser/README.md) - Contributed by @maxunt & @Ayrdrie
+- [parser](./plugins/processors/parser/README.md) - Contributed by @Ayrdrie & @maxunt
 - [rename](./plugins/processors/rename/README.md) - Contributed by @goldibex
+- [strings](./plugins/processors/strings/README.md) - Contributed by @bsmaldon
 
 ### New Aggregators
 
 - [valuecounter](./plugins/aggregators/valuecounter/README.md) - Contributed by @piotr1212
+
+### New Outputs
+
+- [azure_monitor](./plugins/outputs/azure_monitor/README.md) - Contributed by @influxdata
+- [influxdb_v2](./plugins/outputs/influxdb_v2/README.md) - Contributed by @influxdata
+
+### New Parsers
+
+- [csv](/docs/DATA_FORMATS_INPUT.md#csv) - Contributed by @maxunt
+- [grok](/docs/DATA_FORMATS_INPUT.md#grok) - Contributed by @maxunt
+- [logfmt](/docs/DATA_FORMATS_INPUT.md#logfmt) - Contributed by @Ayrdrie & @maxunt
+
+### New Serializers
+
+- [splunkmetric](/plugins/serializers/splunkmetric/README.md) - Contributed by @ronnocol
 
 ### Features
 
@@ -79,11 +92,30 @@
 - [#4585](https://github.com/influxdata/telegraf/pull/4585): Add Kibana input plugin.
 - [#4439](https://github.com/influxdata/telegraf/pull/4439): Add csv parser plugin.
 - [#4598](https://github.com/influxdata/telegraf/pull/4598): Add read_buffer_size option to statsd input.
+- [#4089](https://github.com/influxdata/telegraf/pull/4089): Add azure_monitor output plugin.
+- [#4628](https://github.com/influxdata/telegraf/pull/4628): Add queue_durability parameter to amqp_consumer input.
+- [#4476](https://github.com/influxdata/telegraf/pull/4476): Add strings processor.
+- [#4536](https://github.com/influxdata/telegraf/pull/4536): Add OAuth2 support to HTTP output plugin.
+- [#4633](https://github.com/influxdata/telegraf/pull/4633): Add Unix epoch timestamp support for JSON parser.
+- [#4657](https://github.com/influxdata/telegraf/pull/4657): Add options for basic auth to haproxy input.
+- [#4411](https://github.com/influxdata/telegraf/pull/4411): Add temp input plugin.
+- [#4272](https://github.com/influxdata/telegraf/pull/4272): Add Beanstalkd input plugin.
+- [#4669](https://github.com/influxdata/telegraf/pull/4669): Add means to specify server password for redis input.
+- [#4339](https://github.com/influxdata/telegraf/pull/4339): Add Splunk Metrics serializer.
+- [#4141](https://github.com/influxdata/telegraf/pull/4141): Add input plugin for VMware vSphere.
+- [#4667](https://github.com/influxdata/telegraf/pull/4667): Align metrics window to interval in cloudwatch input.
+- [#4642](https://github.com/influxdata/telegraf/pull/4642): Improve Azure Managed Instance support + more in sqlserver input.
+- [#4682](https://github.com/influxdata/telegraf/pull/4682): Allow alternate binaries for iptables input plugin.
+- [#4645](https://github.com/influxdata/telegraf/pull/4645): Add influxdb_v2 output plugin.
 
 ### Bugfixes
 
 - [#3438](https://github.com/influxdata/telegraf/issues/3438): Fix divide by zero in logparser input.
 - [#4499](https://github.com/influxdata/telegraf/issues/4499): Fix instance and object name in performance counters with backslashes.
+- [#4646](https://github.com/influxdata/telegraf/issues/4646): Reset/flush saved contents from bad metric.
+- [#4520](https://github.com/influxdata/telegraf/issues/4520): Document all supported cli arguments.
+- [#4674](https://github.com/influxdata/telegraf/pull/4674): Log access denied opening a service at debug level in win_services.
+- [#4588](https://github.com/influxdata/telegraf/issues/4588): Add support for Kafka 2.0.
 
 ## v1.7.4 [2018-08-29]
 
