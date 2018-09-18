@@ -116,6 +116,12 @@
 - [#4520](https://github.com/influxdata/telegraf/issues/4520): Document all supported cli arguments.
 - [#4674](https://github.com/influxdata/telegraf/pull/4674): Log access denied opening a service at debug level in win_services.
 - [#4588](https://github.com/influxdata/telegraf/issues/4588): Add support for Kafka 2.0.
+- [#4087](https://github.com/influxdata/telegraf/issues/4087): Fix nagios parser does not support ranges in performance data.
+- [#4088](https://github.com/influxdata/telegraf/issues/4088): Fix nagios parser does not strip quotes from performance data.
+- [#4688](https://github.com/influxdata/telegraf/issues/4688): Fix null value crash in postgresql_extensible input.
+- [#4681](https://github.com/influxdata/telegraf/pull/4681): Remove the startup authentication check from the cloudwatch output.
+- [#4644](https://github.com/influxdata/telegraf/issues/4644): Support tailing files created after startup in tail input.
+- [#4706](https://github.com/influxdata/telegraf/issues/4706): Fix csv format configuration loading.
 
 ## v1.7.4 [2018-08-29]
 
