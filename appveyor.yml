@@ -1,4 +1,3 @@
-image: Previous Visual Studio 2015
 version: "{build}"
 
 cache:
@@ -13,21 +12,27 @@ platform: x64
 
 install:
   - IF NOT EXIST "C:\Cache" mkdir C:\Cache
-  - IF NOT EXIST "C:\Cache\go1.10.1.msi" curl -o "C:\Cache\go1.10.1.msi" https://storage.googleapis.com/golang/go1.10.1.windows-amd64.msi
+  - IF NOT EXIST "C:\Cache\go1.10.3.msi" curl -o "C:\Cache\go1.10.3.msi" https://storage.googleapis.com/golang/go1.10.3.windows-amd64.msi
   - IF NOT EXIST "C:\Cache\gnuwin32-bin.zip" curl -o "C:\Cache\gnuwin32-bin.zip" https://dl.influxdata.com/telegraf/ci/make-3.81-bin.zip
   - IF NOT EXIST "C:\Cache\gnuwin32-dep.zip" curl -o "C:\Cache\gnuwin32-dep.zip" https://dl.influxdata.com/telegraf/ci/make-3.81-dep.zip
   - IF EXIST "C:\Go" rmdir /S /Q C:\Go
-  - msiexec.exe /i "C:\Cache\go1.10.1.msi" /quiet
+  - msiexec.exe /i "C:\Cache\go1.10.3.msi" /quiet
   - 7z x "C:\Cache\gnuwin32-bin.zip" -oC:\GnuWin32 -y
   - 7z x "C:\Cache\gnuwin32-dep.zip" -oC:\GnuWin32 -y
+  - go get -d github.com/golang/dep
+  - cd "%GOPATH%\src\github.com\golang\dep"
+  - git checkout -q v0.5.0
+  - go install -ldflags="-X main.version=v0.5.0" ./cmd/dep
+  - cd "%GOPATH%\src\github.com\influxdata\telegraf"
+  - git config --system core.longpaths true
   - go version
   - go env
 
 build_script:
-  - cmd: C:\GnuWin32\bin\make deps
-  - cmd: C:\GnuWin32\bin\make telegraf
+  - cmd: C:\GnuWin32\bin\make
 
 test_script:
+  - cmd: C:\GnuWin32\bin\make check
   - cmd: C:\GnuWin32\bin\make test-windows
 
 artifacts:

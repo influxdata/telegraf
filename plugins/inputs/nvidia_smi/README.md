@@ -7,26 +7,27 @@ This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvid
 ```toml
 # Pulls statistics from nvidia GPUs attached to the host
 [[inputs.nvidia_smi]]
-## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
-# bin_path = /usr/bin/nvidia-smi
+  ## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
+  # bin_path = "/usr/bin/nvidia-smi"
 
-## Optional: timeout for GPU polling
-# timeout = 5s
+  ## Optional: timeout for GPU polling
+  # timeout = "5s"
 ```
 
 ### Metrics
 - measurement: `nvidia_smi`
   - tags
-    - `name` (type of GPU e.g. `GeForce GTX 170 Ti`)
+    - `name` (type of GPU e.g. `GeForce GTX 1070 Ti`)
     - `compute_mode` (The compute mode of the GPU e.g. `Default`)
     - `index` (The port index where the GPU is connected to the motherboard e.g. `1`)
     - `pstate` (Overclocking state for the GPU e.g. `P0`)
     - `uuid` (A unique identifier for the GPU e.g. `GPU-f9ba66fc-a7f5-94c5-da19-019ef2f9c665`)
   - fields
     - `fan_speed` (integer, percentage)
-    - `memory_free` (integer, KB)
-    - `memory_used` (integer, KB)
-    - `memory_total` (integer, KB)
+    - `memory_free` (integer, MiB)
+    - `memory_used` (integer, MiB)
+    - `memory_total` (integer, MiB)
+    - `power_draw` (float, W)
     - `temperature_gpu` (integer, degrees C)
     - `utilization_gpu` (integer, percentage)
     - `utilization_memory` (integer, percentage)

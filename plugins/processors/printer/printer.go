@@ -30,7 +30,7 @@ func (p *Printer) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		if err != nil {
 			continue
 		}
-		fmt.Println(octets)
+		fmt.Printf("%s", octets)
 	}
 	return in
 }
