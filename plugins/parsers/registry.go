@@ -2,6 +2,7 @@ package parsers
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/influxdata/telegraf"
 
@@ -18,11 +19,20 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 )
 
+type ParserFunc func() (Parser, error)
+
 // ParserInput is an interface for input plugins that are able to parse
 // arbitrary data formats.
 type ParserInput interface {
 	// SetParser sets the parser function for the interface
 	SetParser(parser Parser)
+}
+
+// ParserFuncInput is an interface for input plugins that are able to parse
+// arbitrary data formats.
+type ParserFuncInput interface {
+	// GetParser returns a new parser.
+	SetParserFunc(fn ParserFunc)
 }
 
 // Parser is an interface defining functions that a parser plugin must satisfy.
@@ -116,17 +126,17 @@ type Config struct {
 	GrokTimeZone           string
 
 	//csv configuration
-	CSVDelimiter         string
-	CSVComment           string
-	CSVTrimSpace         bool
-	CSVColumnNames       []string
-	CSVTagColumns        []string
-	CSVMeasurementColumn string
-	CSVTimestampColumn   string
-	CSVTimestampFormat   string
-	CSVHeaderRowCount    int
-	CSVSkipRows          int
-	CSVSkipColumns       int
+	CSVColumnNames       []string `toml:"csv_column_names"`
+	CSVComment           string   `toml:"csv_comment"`
+	CSVDelimiter         string   `toml:"csv_delimiter"`
+	CSVHeaderRowCount    int      `toml:"csv_header_row_count"`
+	CSVMeasurementColumn string   `toml:"csv_measurement_column"`
+	CSVSkipColumns       int      `toml:"csv_skip_columns"`
+	CSVSkipRows          int      `toml:"csv_skip_rows"`
+	CSVTagColumns        []string `toml:"csv_tag_columns"`
+	CSVTimestampColumn   string   `toml:"csv_timestamp_column"`
+	CSVTimestampFormat   string   `toml:"csv_timestamp_format"`
+	CSVTrimSpace         bool     `toml:"csv_trim_space"`
 }
 
 // NewParser returns a Parser interface based on the given config.
@@ -199,28 +209,27 @@ func NewParser(config *Config) (Parser, error) {
 }
 
 func newCSVParser(metricName string,
-	header int,
+	headerRowCount int,
 	skipRows int,
 	skipColumns int,
 	delimiter string,
 	comment string,
 	trimSpace bool,
-	dataColumns []string,
+	columnNames []string,
 	tagColumns []string,
 	nameColumn string,
 	timestampColumn string,
 	timestampFormat string,
 	defaultTags map[string]string) (Parser, error) {
 
-	if header == 0 && len(dataColumns) == 0 {
-		// if there is no header and no DataColumns, that's an error
-		return nil, fmt.Errorf("there must be a header if `csv_data_columns` is not specified")
+	if headerRowCount == 0 && len(columnNames) == 0 {
+		return nil, fmt.Errorf("there must be a header if `csv_column_names` is not specified")
 	}
 
 	if delimiter != "" {
 		runeStr := []rune(delimiter)
 		if len(runeStr) > 1 {
-			return nil, fmt.Errorf("delimiter must be a single character, got: %s", delimiter)
+			return nil, fmt.Errorf("csv_delimiter must be a single character, got: %s", delimiter)
 		}
 		delimiter = fmt.Sprintf("%v", runeStr[0])
 	}
@@ -228,25 +237,26 @@ func newCSVParser(metricName string,
 	if comment != "" {
 		runeStr := []rune(comment)
 		if len(runeStr) > 1 {
-			return nil, fmt.Errorf("delimiter must be a single character, got: %s", comment)
+			return nil, fmt.Errorf("csv_delimiter must be a single character, got: %s", comment)
 		}
 		comment = fmt.Sprintf("%v", runeStr[0])
 	}
 
 	parser := &csv.Parser{
 		MetricName:        metricName,
-		HeaderRowCount:    header,
+		HeaderRowCount:    headerRowCount,
 		SkipRows:          skipRows,
 		SkipColumns:       skipColumns,
 		Delimiter:         delimiter,
 		Comment:           comment,
 		TrimSpace:         trimSpace,
-		ColumnNames:       dataColumns,
+		ColumnNames:       columnNames,
 		TagColumns:        tagColumns,
 		MeasurementColumn: nameColumn,
 		TimestampColumn:   timestampColumn,
 		TimestampFormat:   timestampFormat,
 		DefaultTags:       defaultTags,
+		TimeFunc:          time.Now,
 	}
 
 	return parser, nil

@@ -855,6 +855,17 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		t.SetParser(parser)
 	}
 
+	switch t := input.(type) {
+	case parsers.ParserFuncInput:
+		config, err := getParserConfig(name, table)
+		if err != nil {
+			return err
+		}
+		t.SetParserFunc(func() (parsers.Parser, error) {
+			return parsers.NewParser(config)
+		})
+	}
+
 	pluginConfig, err := buildInput(name, table)
 	if err != nil {
 		return err
@@ -1212,6 +1223,14 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 // a parsers.Parser object, and creates it, which can then be added onto
 // an Input object.
 func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
+	config, err := getParserConfig(name, tbl)
+	if err != nil {
+		return nil, err
+	}
+	return parsers.NewParser(config)
+}
+
+func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	c := &parsers.Config{}
 
 	if node, ok := tbl.Fields["data_format"]; ok {
@@ -1510,12 +1529,12 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 
 	if node, ok := tbl.Fields["csv_header_row_count"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				iVal, err := strconv.Atoi(str.Value)
-				c.CSVHeaderRowCount = iVal
+			if integer, ok := kv.Value.(*ast.Integer); ok {
+				v, err := integer.Int()
 				if err != nil {
-					return nil, fmt.Errorf("E! parsing to int: %v", err)
+					return nil, err
 				}
+				c.CSVHeaderRowCount = int(v)
 			}
 		}
 	}
@@ -1583,16 +1602,19 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "grok_custom_patterns")
 	delete(tbl.Fields, "grok_custom_pattern_files")
 	delete(tbl.Fields, "grok_timezone")
-	delete(tbl.Fields, "csv_data_columns")
-	delete(tbl.Fields, "csv_tag_columns")
+	delete(tbl.Fields, "csv_column_names")
+	delete(tbl.Fields, "csv_comment")
+	delete(tbl.Fields, "csv_delimiter")
 	delete(tbl.Fields, "csv_field_columns")
-	delete(tbl.Fields, "csv_name_column")
+	delete(tbl.Fields, "csv_header_row_count")
+	delete(tbl.Fields, "csv_measurement_column")
+	delete(tbl.Fields, "csv_skip_columns")
+	delete(tbl.Fields, "csv_skip_rows")
+	delete(tbl.Fields, "csv_tag_columns")
 	delete(tbl.Fields, "csv_timestamp_column")
 	delete(tbl.Fields, "csv_timestamp_format")
-	delete(tbl.Fields, "csv_delimiter")
-	delete(tbl.Fields, "csv_header")
 
-	return parsers.NewParser(c)
+	return c, nil
 }
 
 // buildSerializer grabs the necessary entries from the ast.Table for creating
