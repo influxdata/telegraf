@@ -26,6 +26,11 @@ type Parser struct {
 	TimestampColumn   string
 	TimestampFormat   string
 	DefaultTags       map[string]string
+	TimeFunc          func() time.Time
+}
+
+func (p *Parser) SetTimeFunc(fn metric.TimeFunc) {
+	p.TimeFunc = fn
 }
 
 func (p *Parser) compile(r *bytes.Reader) (*csv.Reader, error) {
@@ -167,7 +172,7 @@ outer:
 		measurementName = fmt.Sprintf("%v", recordFields[p.MeasurementColumn])
 	}
 
-	metricTime := time.Now()
+	metricTime := p.TimeFunc()
 	if p.TimestampColumn != "" {
 		if recordFields[p.TimestampColumn] == nil {
 			return nil, fmt.Errorf("timestamp column: %v could not be found", p.TimestampColumn)
