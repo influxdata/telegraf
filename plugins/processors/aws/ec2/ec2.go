@@ -11,7 +11,6 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"github.com/influxdata/telegraf/plugins/processors/aws/utils"
 )
 
 type (
@@ -24,12 +23,10 @@ type (
 		Filename  string `toml:"shared_credential_file"`
 		Token     string `toml:"token"`
 
-		CacheTTL     internal.Duration `toml:"cache_ttl"`
-		MetricNames  []string          `toml:"metric_names"`
-		Id           string            `toml:"id"`
-		InstanceType bool              `toml:"instance_type"`
-		AmiId        bool              `toml:"ami_id"`
-		Tags         []string          `toml:"tags"`
+		CacheTTL    internal.Duration `toml:"cache_ttl"`
+		MetricNames []string          `toml:"metric_names"`
+		Id          string            `toml:"id"`
+		Tags        []string          `toml:"tags"`
 
 		client EC2Client
 	}
@@ -79,32 +76,26 @@ var sampleConfig = `
   ## 4) environment variables
   ## 5) shared credentials file
   ## 6) EC2 Instance Profile
-  #access_key = ""
-  #secret_key = ""
-  #token = ""
-  #role_arn = ""
-  #profile = ""
-  #shared_credential_file = ""
+  # access_key = ""
+  # secret_key = ""
+  # token = ""
+  # role_arn = ""
+  # profile = ""
+  # shared_credential_file = ""
 
   ## Specify the TTL for metadata lookups
-  #cache_ttl = "1h"
+  # cache_ttl = "1h"
 
   ## Specify the metric names to annotate with EC2 metadata
   ## By default is configured for "cloudwatch_aws_ec2", the default output from the Cloudwatch input plugin
-  #metric_names = [ "cloudwatch_aws_ec2" ]
+  # metric_names = [ "cloudwatch_aws_ec2" ]
 
   ## Specify the metric tag which contains the EC2 Instance ID
   ## By default is configured for "instance_id", the default from Cloudwatch input plugin when using the InstanceId dimension
-  #id = "instance_id"
+  # id = "instance_id"
 
-  ## Enable annotating metrics with the EC2 Instance Type
-  #instance_type = true
-
-  ## Enable annotating metrics with the AMI ID
-  #ami_id = true
-
-  ## Specify the EC2 Tags to append as metric tags
-  #tags = [ "Name" ]
+  ## Specify theinstance_id EC2 Tags to append as metric tags
+  # tags = [ "Name", "ami_id", "instance_type"]
 `
 
 func (e *EC2) SampleConfig() string {
@@ -120,7 +111,7 @@ func (e *EC2) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		e.initEc2Client()
 	}
 	for _, metric := range in {
-		if utils.IsSelected(metric, e.MetricNames) {
+		if isSelected(metric, e.MetricNames) {
 			e.annotate(metric)
 		}
 	}
@@ -134,31 +125,14 @@ func init() {
 			MetricNames: []string{
 				"cloudwatch_aws_ec2",
 			},
-			Id:           "instance_id",
-			InstanceType: true,
-			AmiId:        true,
-			Tags:         []string{"Name"},
+			Id:   "instance_id",
+			Tags: []string{"Name", "instance_type", "ami_id"},
 		}
 	})
 }
 
 func (e *EC2) annotate(metric telegraf.Metric) {
-	e.annotateWithInstanceMetadata(metric)
 	e.annotateWithTags(metric)
-}
-
-func (e *EC2) annotateWithInstanceMetadata(metric telegraf.Metric) {
-	instance, err := e.getInstanceForMetric(metric)
-	if err != nil {
-		log.Printf("E! %s", err)
-		return
-	}
-	if e.InstanceType {
-		metric.AddTag("instance_type", *instance.InstanceType)
-	}
-	if e.AmiId {
-		metric.AddTag("ami_id", *instance.ImageId)
-	}
 }
 
 func (e *EC2) annotateWithTags(metric telegraf.Metric) {
@@ -172,13 +146,23 @@ func (e *EC2) annotateWithTags(metric telegraf.Metric) {
 			if tag == *it.Key {
 				metric.AddTag(tag, *it.Value)
 				break
+			} else if tag == "instance_type" {
+				metric.AddTag("instance_type", *instance.InstanceType)
+				break
+			} else if tag == "ami_id" {
+				metric.AddTag("ami_id", *instance.ImageId)
+				break
 			}
 		}
 	}
 }
 
 func (e *EC2) getInstanceForMetric(metric telegraf.Metric) (*ec2.Instance, error) {
-	id := metric.Tags()[e.Id]
+	id, ok := metric.GetTag(e.Id)
+	if !ok {
+		return nil, fmt.Errorf("Metric tag '%s' not found", e.Id)
+	}
+
 	output, err := e.client.DescribeInstances(&ec2.DescribeInstancesInput{
 		InstanceIds: []*string{
 			aws.String(id),
@@ -210,4 +194,13 @@ func (e *EC2) initEc2Client() error {
 		ttl:    e.CacheTTL.Duration,
 	}
 	return nil
+}
+
+func isSelected(metric telegraf.Metric, configuredMetrics []string) bool {
+	for _, m := range configuredMetrics {
+		if m == metric.Name() {
+			return true
+		}
+	}
+	return false
 }

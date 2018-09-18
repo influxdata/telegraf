@@ -8,27 +8,36 @@ The EC2 Metadata processor plugin appends additional metadata from AWS to metric
 ## Annotate metrics from the cloudwatch plugin
 [[processors.aws_metadata_ec2]]
 
-## Specify the Amazon Region to operate in
-region = "us-east-1"
+  ## Specify the Amazon Region to operate in
+  region = "us-east-1"
 
-## Specify the TTL for metadata lookups
-#cache_ttl = "1h"
+  ## Amazon Credentials
+  ## Credentials are loaded in the following order
+  ## 1) Assumed credentials via STS if role_arn is specified
+  ## 2) explicit credentials from 'access_key' and 'secret_key'
+  ## 3) shared profile from 'profile'
+  ## 4) environment variables
+  ## 5) shared credentials file
+  ## 6) EC2 Instance Profile
+  # access_key = ""
+  # secret_key = ""
+  # token = ""
+  # role_arn = ""
+  # profile = ""
+  # shared_credential_file = ""
 
-## Process metrics from a Cloudwatch input plugin configured for the AWS/EC2 namespace
-## Default is "cloudwatch_aws_ec2"
-#metric_names = ["cloudwatch_aws_ec2"]
+  ## Specify the TTL for metadata lookups
+  # cache_ttl = "1h"
 
-## Metric tag that contains the EC2 Instance ID
-#id = "instance_id"
+  ## Process metrics from a Cloudwatch input plugin configured for the AWS/EC2 namespace
+  ## Default is "cloudwatch_aws_ec2"
+  # metric_names = ["cloudwatch_aws_ec2"]
 
-## Annotate metrics with the EC2 Instance type
-#instance_type = true
+  ## Metric tag that contains the EC2 Instance ID
+  # id = "instance_id"
 
-## Annotate metrics with the AMI ID
-#ami_id = true
-
-## Annotate metrics with EC2 Tags
-#tags = [ "Name" ]
+  ## Annotate metrics with EC2 Tags
+  # tags = [ "Name", "ami_id", "instance_type"]
 ```
 
 ### Tags:
