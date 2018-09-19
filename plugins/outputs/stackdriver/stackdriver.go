@@ -26,6 +26,16 @@ type Stackdriver struct {
 }
 
 const (
+	// QuotaLabelsPerMetricDescriptor is the limit
+	// to labels (tags) per metric descriptor.
+	QuotaLabelsPerMetricDescriptor = 10
+	// QuotaStringLengthForLabelKey is the limit
+	// to string length for label key.
+	QuotaStringLengthForLabelKey = 100
+	// QuotaStringLengthForLabelValue is the limit
+	// to string length for label value.
+	QuotaStringLengthForLabelValue = 1024
+
 	// StartTime for cumulative metrics.
 	StartTime = int64(1)
 	// MaxInt is the max int64 value.
@@ -99,7 +109,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 				&monitoringpb.TimeSeries{
 					Metric: &metricpb.Metric{
 						Type:   path.Join("custom.googleapis.com", s.Namespace, m.Name(), k),
-						Labels: m.Tags(),
+						Labels: getStackdriverLabels(m.Tags()),
 					},
 					MetricKind: metricKind,
 					Resource: &monitoredrespb.MonitoredResource{
@@ -214,6 +224,47 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 	default:
 		return nil, fmt.Errorf("value type \"%T\" not supported for stackdriver custom metrics", v)
 	}
+}
+
+func getStackdriverLabels(tags map[string]string) map[string]string {
+	for k, v := range tags {
+		if len(k) > QuotaStringLengthForLabelKey {
+			log.Printf(
+				"W! [output.stackdriver] tag [%s] key exceeds string length for label key [%d]",
+				k,
+				QuotaStringLengthForLabelKey,
+			)
+			delete(tags, k)
+			continue
+		}
+		if len(v) > QuotaStringLengthForLabelValue {
+			log.Printf(
+				"W! [output.stackdriver] tag [%s] value exceeds string length for label value [%d]",
+				k,
+				QuotaStringLengthForLabelValue,
+			)
+			delete(tags, k)
+			continue
+		}
+	}
+	if len(tags) > QuotaLabelsPerMetricDescriptor {
+		excess := len(tags) - QuotaLabelsPerMetricDescriptor
+		log.Printf(
+			"W! [output.stackdriver] tag count [%d] exceeds quota for stackdriver labels [%d] removing [%d] random tags",
+			len(tags),
+			QuotaLabelsPerMetricDescriptor,
+			excess,
+		)
+		for k := range tags {
+			if excess == 0 {
+				break
+			}
+			excess--
+			delete(tags, k)
+		}
+	}
+
+	return tags
 }
 
 // Close will terminate the session to the backend, returning error if an issue arises.
