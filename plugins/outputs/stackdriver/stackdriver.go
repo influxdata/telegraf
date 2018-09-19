@@ -67,6 +67,8 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 
 	for _, m := range metrics {
+		timeSeries := []*monitoringpb.TimeSeries{}
+
 		for k, v := range m.Fields() {
 			value, err := getStackdriverTypedValue(v)
 			if err != nil {
@@ -93,33 +95,40 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 			}
 
 			// Prepare time series.
-			timeSeries := &monitoringpb.CreateTimeSeriesRequest{
-				Name: monitoring.MetricProjectPath(s.Project),
-				TimeSeries: []*monitoringpb.TimeSeries{
-					{
-						Metric: &metricpb.Metric{
-							Type:   path.Join("custom.googleapis.com", s.Namespace, m.Name(), k),
-							Labels: m.Tags(),
-						},
-						MetricKind: metricKind,
-						Resource: &monitoredrespb.MonitoredResource{
-							Type: "global",
-							Labels: map[string]string{
-								"project_id": s.Project,
-							},
-						},
-						Points: []*monitoringpb.Point{
-							dataPoint,
+			timeSeries = append(timeSeries,
+				&monitoringpb.TimeSeries{
+					Metric: &metricpb.Metric{
+						Type:   path.Join("custom.googleapis.com", s.Namespace, m.Name(), k),
+						Labels: m.Tags(),
+					},
+					MetricKind: metricKind,
+					Resource: &monitoredrespb.MonitoredResource{
+						Type: "global",
+						Labels: map[string]string{
+							"project_id": s.Project,
 						},
 					},
-				}}
+					Points: []*monitoringpb.Point{
+						dataPoint,
+					},
+				})
+		}
 
-			// Create the time series in Stackdriver.
-			err = s.client.CreateTimeSeries(ctx, timeSeries)
-			if err != nil {
-				log.Printf("E! Error writing to output [stackdriver]: %s", err)
-				continue
-			}
+		if len(timeSeries) < 1 {
+			continue
+		}
+
+		// Prepare time series request.
+		timeSeriesRequest := &monitoringpb.CreateTimeSeriesRequest{
+			Name:       monitoring.MetricProjectPath(s.Project),
+			TimeSeries: timeSeries,
+		}
+
+		// Create the time series in Stackdriver.
+		err := s.client.CreateTimeSeries(ctx, timeSeriesRequest)
+		if err != nil {
+			log.Printf("E! Error writing to output [stackdriver]: %s", err)
+			continue
 		}
 	}
 
