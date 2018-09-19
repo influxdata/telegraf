@@ -469,7 +469,7 @@ FROM	(
 					SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
 					SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS db_recoveryPending,
 					SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
-					SUM( CASE WHEN state = 6 state = 10 THEN 1 ELSE 0 END ) AS db_offline
+					SUM( CASE WHEN state = 6 OR state = 10 THEN 1 ELSE 0 END ) AS db_offline
 			FROM	sys.databases
 		) AS dbs
 		CROSS APPLY (
