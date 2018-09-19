@@ -246,8 +246,8 @@ var header = `# Telegraf Configuration
   ## same time, which can have a measurable effect on the system.
   collection_jitter = "0s"
 
-  ## Default flushing interval for all outputs. You shouldn't set this below
-  ## interval. Maximum flush_interval will be flush_interval + flush_jitter
+  ## Default flushing interval for all outputs. Maximum flush_interval will be
+  ## flush_interval + flush_jitter
   flush_interval = "10s"
   ## Jitter the flush interval by a random amount. This is primarily to avoid
   ## large write spikes for users running a large number of telegraf instances.
