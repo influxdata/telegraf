@@ -46,6 +46,10 @@ The following defaults are known to work with RabbitMQ:
 
   ## AMQP queue name
   queue = "telegraf"
+  
+  ## AMQP queue durability can be "transient" or "durable".
+  queue_durability = "durable"
+  
   ## Binding Key
   binding_key = "#"
 

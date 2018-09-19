@@ -172,7 +172,10 @@ func TestRunParserAndGatherJSON(t *testing.T) {
 	n.acc = &acc
 	defer close(n.done)
 
-	n.parser, _ = parsers.NewJSONParser("nats_json_test", []string{}, nil)
+	n.parser, _ = parsers.NewParser(&parsers.Config{
+		DataFormat: "json",
+		MetricName: "nats_json_test",
+	})
 	go n.receiver()
 	in <- mqttMsg(testMsgJSON)
 

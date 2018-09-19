@@ -10,6 +10,15 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ## Kafka topic for producer messages
   topic = "telegraf"
 
+  ## Optional Client id
+  # client_id = "Telegraf"
+
+  ## Set the minimal supported Kafka version.  Setting this enables the use of new
+  ## Kafka features and APIs.  Of particular interested, lz4 compression
+  ## requires at least version 0.10.0.0.
+  ##   ex: version = "1.1.0"
+  # version = ""
+
   ## Optional topic suffix configuration.
   ## If the section is omitted, no suffix is used.
   ## Following topic suffix methods are supported:
@@ -17,7 +26,7 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ##   tags        - suffix equals to separator + specified tags' values
   ##                 interleaved with separator
 
-  ## Suffix equals to "_" + measurement's name
+  ## Suffix equals to "_" + measurement name
   # [outputs.kafka.topic_suffix]
   #   method = "measurement"
   #   separator = "_"
@@ -41,11 +50,19 @@ This plugin writes to a [Kafka Broker](http://kafka.apache.org/07/quickstart.htm
   ##  ie, if this tag exists, its value will be used as the routing key
   routing_tag = "host"
 
+  ## Static routing key.  Used when no routing_tag is set or as a fallback
+  ## when the tag specified in routing tag is not found.  If set to "random",
+  ## a random value will be generated for each message.
+  ##   ex: routing_key = "random"
+  ##       routing_key = "telegraf"
+  # routing_key = ""
+
   ## CompressionCodec represents the various compression codecs recognized by
   ## Kafka in messages.
   ##  0 : No compression
   ##  1 : Gzip compression
   ##  2 : Snappy compression
+  ##  3 : LZ4 compression
   # compression_codec = 0
 
   ##  RequiredAcks is used in Produce Requests to tell the broker how many

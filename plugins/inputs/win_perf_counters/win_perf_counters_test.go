@@ -28,7 +28,7 @@ type FakePerformanceQuery struct {
 var MetricTime = time.Date(2018, 5, 28, 12, 0, 0, 0, time.UTC)
 
 func (m *testCounter) ToCounterValue() *CounterValue {
-	_, inst, _, _ := extractObjectInstanceCounterFromQuery(m.path)
+	_, inst, _, _ := extractCounterInfoFromCounterPath(m.path)
 	if inst == "" {
 		inst = "--"
 	}
@@ -209,6 +209,50 @@ func createCounterMap(counterPaths []string, values []float64) map[string]testCo
 		}
 	}
 	return counters
+}
+
+var counterPathsAndRes = map[string][]string{
+	"\\O\\CT":                           {"O", "", "CT"},
+	"\\O\\CT(i)":                        {"O", "", "CT(i)"},
+	"\\O\\CT(d:\\f\\i)":                 {"O", "", "CT(d:\\f\\i)"},
+	"\\\\CM\\O\\CT":                     {"O", "", "CT"},
+	"\\O(I)\\CT":                        {"O", "I", "CT"},
+	"\\O(I)\\CT(i)":                     {"O", "I", "CT(i)"},
+	"\\O(I)\\CT(i)x":                    {"O", "I", "CT(i)x"},
+	"\\O(I)\\CT(d:\\f\\i)":              {"O", "I", "CT(d:\\f\\i)"},
+	"\\\\CM\\O(I)\\CT":                  {"O", "I", "CT"},
+	"\\O(d:\\f\\I)\\CT":                 {"O", "d:\\f\\I", "CT"},
+	"\\O(d:\\f\\I(d))\\CT":              {"O", "d:\\f\\I(d)", "CT"},
+	"\\O(d:\\f\\I(d)x)\\CT":             {"O", "d:\\f\\I(d)x", "CT"},
+	"\\O(d:\\f\\I)\\CT(i)":              {"O", "d:\\f\\I", "CT(i)"},
+	"\\O(d:\\f\\I)\\CT(d:\\f\\i)":       {"O", "d:\\f\\I", "CT(d:\\f\\i)"},
+	"\\\\CM\\O(d:\\f\\I)\\CT":           {"O", "d:\\f\\I", "CT"},
+	"\\\\CM\\O(d:\\f\\I)\\CT(d:\\f\\i)": {"O", "d:\\f\\I", "CT(d:\\f\\i)"},
+	"\\O(I(info))\\CT":                  {"O", "I(info)", "CT"},
+	"\\\\CM\\O(I(info))\\CT":            {"O", "I(info)", "CT"},
+}
+
+var invalidCounterPaths = []string{
+	"\\O(I\\C",
+	"\\OI)\\C",
+	"\\O(I\\C",
+	"\\O/C",
+	"\\O(I/C",
+	"\\O(I/C)",
+	"\\O(I\\)C",
+	"\\O(I\\C)",
+}
+
+func TestCounterPathParsing(t *testing.T) {
+	for path, vals := range counterPathsAndRes {
+		o, i, c, err := extractCounterInfoFromCounterPath(path)
+		require.NoError(t, err)
+		require.True(t, assert.ObjectsAreEqual(vals, []string{o, i, c}), "arrays: %#v and %#v are not equal", vals, []string{o, i, c})
+	}
+	for _, path := range invalidCounterPaths {
+		_, _, _, err := extractCounterInfoFromCounterPath(path)
+		require.Error(t, err)
+	}
 }
 
 func TestAddItemSimple(t *testing.T) {

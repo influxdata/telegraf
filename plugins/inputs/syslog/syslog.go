@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/influxdata/go-syslog/rfc5424"
 	"github.com/influxdata/go-syslog/rfc5425"
@@ -19,7 +20,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-const defaultReadTimeout = time.Millisecond * 500
+const defaultReadTimeout = time.Second * 5
 const ipMaxPacketSize = 64 * 1024
 
 // Syslog is a syslog plugin
@@ -71,9 +72,9 @@ var sampleConfig = `
   ## Only applies to stream sockets (e.g. TCP).
   # max_connections = 1024
 
-  ## Read timeout (default = 500ms).
+  ## Read timeout is the maximum time allowed for reading a single message (default = 5s).
   ## 0 means unlimited.
-  # read_timeout = 500ms
+  # read_timeout = "5s"
 
   ## Whether to parse in best effort mode or not (default = false).
   ## By default best effort parsing is off.
@@ -212,10 +213,6 @@ func (s *Syslog) listenPacket(acc telegraf.Accumulator) {
 			break
 		}
 
-		if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
-			s.udpListener.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))
-		}
-
 		message, err := p.Parse(b[:n], &s.BestEffort)
 		if message != nil {
 			acc.AddFields("syslog", fields(*message, s), tags(*message), s.time())
@@ -279,19 +276,23 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 		conn.Close()
 	}()
 
-	if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
-		conn.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))
-	}
-
 	var p *rfc5425.Parser
+
 	if s.BestEffort {
 		p = rfc5425.NewParser(conn, rfc5425.WithBestEffort())
 	} else {
 		p = rfc5425.NewParser(conn)
 	}
 
+	if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
+		conn.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))
+	}
+
 	p.ParseExecuting(func(r *rfc5425.Result) {
 		s.store(*r, acc)
+		if s.ReadTimeout != nil && s.ReadTimeout.Duration > 0 {
+			conn.SetReadDeadline(time.Now().Add(s.ReadTimeout.Duration))
+		}
 	})
 }
 
@@ -361,7 +362,9 @@ func fields(msg rfc5424.SyslogMessage, s *Syslog) map[string]interface{} {
 	}
 
 	if msg.Message() != nil {
-		flds["message"] = *msg.Message()
+		flds["message"] = strings.TrimRightFunc(*msg.Message(), func(r rune) bool {
+			return unicode.IsSpace(r)
+		})
 	}
 
 	if msg.StructuredData() != nil {

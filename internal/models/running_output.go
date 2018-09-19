@@ -36,8 +36,10 @@ type RunningOutput struct {
 	metrics     *buffer.Buffer
 	failMetrics *buffer.Buffer
 
+	// Guards against concurrent calls to Add, Push, Reset
+	aggMutex sync.Mutex
 	// Guards against concurrent calls to the Output as described in #3009
-	sync.Mutex
+	writeMutex sync.Mutex
 }
 
 func NewRunningOutput(
@@ -94,6 +96,7 @@ func NewRunningOutput(
 // AddMetric adds a metric to the output. This function can also write cached
 // points if FlushBufferWhenFull is true.
 func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
+
 	if m == nil {
 		return
 	}
@@ -105,12 +108,20 @@ func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
 		tags := m.Tags()
 		fields := m.Fields()
 		t := m.Time()
+		tp := m.Type()
 		if ok := ro.Config.Filter.Apply(name, fields, tags); !ok {
 			ro.MetricsFiltered.Incr(1)
 			return
 		}
 		// error is not possible if creating from another metric, so ignore.
-		m, _ = metric.New(name, tags, fields, t)
+		m, _ = metric.New(name, tags, fields, t, tp)
+	}
+
+	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
+		ro.aggMutex.Lock()
+		output.Add(m)
+		ro.aggMutex.Unlock()
+		return
 	}
 
 	ro.metrics.Add(m)
@@ -119,12 +130,21 @@ func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
 		err := ro.write(batch)
 		if err != nil {
 			ro.failMetrics.Add(batch...)
+			log.Printf("E! Error writing to output [%s]: %v", ro.Name, err)
 		}
 	}
 }
 
 // Write writes all cached points to this output.
 func (ro *RunningOutput) Write() error {
+	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
+		ro.aggMutex.Lock()
+		metrics := output.Push()
+		ro.metrics.Add(metrics...)
+		output.Reset()
+		ro.aggMutex.Unlock()
+	}
+
 	nFails, nMetrics := ro.failMetrics.Len(), ro.metrics.Len()
 	ro.BufferSize.Set(int64(nFails + nMetrics))
 	log.Printf("D! Output [%s] buffer fullness: %d / %d metrics. ",
@@ -173,8 +193,8 @@ func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 	if nMetrics == 0 {
 		return nil
 	}
-	ro.Lock()
-	defer ro.Unlock()
+	ro.writeMutex.Lock()
+	defer ro.writeMutex.Unlock()
 	start := time.Now()
 	err := ro.Output.Write(metrics)
 	elapsed := time.Since(start)
