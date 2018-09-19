@@ -183,6 +183,7 @@ For documentation on the latest development code see the [documentation index][d
 * [kapacitor](./plugins/inputs/kapacitor)
 * [kernel](./plugins/inputs/kernel)
 * [kernel_vmstat](./plugins/inputs/kernel_vmstat)
+* [kibana](./plugins/inputs/kibana)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
 * [linux_sysctl_fs](./plugins/inputs/linux_sysctl_fs)
