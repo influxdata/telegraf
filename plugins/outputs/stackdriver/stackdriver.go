@@ -230,7 +230,7 @@ func getStackdriverLabels(tags map[string]string) map[string]string {
 	for k, v := range tags {
 		if len(k) > QuotaStringLengthForLabelKey {
 			log.Printf(
-				"W! [output.stackdriver] tag [%s] key exceeds string length for label key [%d]",
+				"W! [output.stackdriver] removing tag [%s] key exceeds string length for label key [%d]",
 				k,
 				QuotaStringLengthForLabelKey,
 			)
@@ -239,7 +239,7 @@ func getStackdriverLabels(tags map[string]string) map[string]string {
 		}
 		if len(v) > QuotaStringLengthForLabelValue {
 			log.Printf(
-				"W! [output.stackdriver] tag [%s] value exceeds string length for label value [%d]",
+				"W! [output.stackdriver] removing tag [%s] value exceeds string length for label value [%d]",
 				k,
 				QuotaStringLengthForLabelValue,
 			)
