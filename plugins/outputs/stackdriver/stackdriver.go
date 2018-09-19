@@ -72,19 +72,19 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 		for k, v := range m.Fields() {
 			value, err := getStackdriverTypedValue(v)
 			if err != nil {
-				log.Printf("E! Error writing to output [stackdriver]: %s", err)
+				log.Printf("E! [output.stackdriver] get type failed: %s", err)
 				continue
 			}
 
 			metricKind, err := getStackdriverMetricKind(m.Type())
 			if err != nil {
-				log.Printf("E! Error writing to output [stackdriver]: %s", err)
+				log.Printf("E! [output.stackdriver] get metric failed: %s", err)
 				continue
 			}
 
 			timeInterval, err := getStackdriverTimeInterval(metricKind, StartTime, m.Time().Unix())
 			if err != nil {
-				log.Printf("E! Error writing to output [stackdriver]: %s", err)
+				log.Printf("E! [output.stackdriver] get time interval failed: %s", err)
 				continue
 			}
 
@@ -127,7 +127,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 		// Create the time series in Stackdriver.
 		err := s.client.CreateTimeSeries(ctx, timeSeriesRequest)
 		if err != nil {
-			log.Printf("E! Error writing to output [stackdriver]: %s", err)
+			log.Printf("E! [output.stackdriver] create time series failed: %s", err)
 			continue
 		}
 	}
@@ -159,7 +159,7 @@ func getStackdriverTimeInterval(
 	case metricpb.MetricDescriptor_DELTA, metricpb.MetricDescriptor_METRIC_KIND_UNSPECIFIED:
 		fallthrough
 	default:
-		return nil, fmt.Errorf("Unsupported metric kind %T", m)
+		return nil, fmt.Errorf("unsupported metric kind %T", m)
 	}
 }
 
@@ -212,7 +212,7 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 			},
 		}, nil
 	default:
-		return nil, fmt.Errorf("the value type \"%T\" is not supported for custom metrics", v)
+		return nil, fmt.Errorf("value type \"%T\" not supported for stackdriver custom metrics", v)
 	}
 }
 
