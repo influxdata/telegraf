@@ -179,13 +179,9 @@ func verifyValue(v interface{}) bool {
 
 func (p *Point) setValue(v interface{}) error {
 	switch d := v.(type) {
-	case int:
-		p[1] = float64(int(d))
-	case int32:
-		p[1] = float64(int32(d))
 	case int64:
-		p[1] = float64(int64(d))
-	case float32:
+		p[1] = float64(d)
+	case uint64:
 		p[1] = float64(d)
 	case float64:
 		p[1] = float64(d)
@@ -195,7 +191,7 @@ func (p *Point) setValue(v interface{}) error {
 			p[1] = float64(1)
 		}
 	default:
-		return fmt.Errorf("undeterminable type")
+		return fmt.Errorf("undeterminable field type: %T", v)
 	}
 	return nil
 }

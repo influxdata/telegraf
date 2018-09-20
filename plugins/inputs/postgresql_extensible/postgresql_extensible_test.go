@@ -17,6 +17,7 @@ func queryRunner(t *testing.T, q query) *testutil.Accumulator {
 				"host=%s user=postgres sslmode=disable",
 				testutil.GetLocalHost(),
 			),
+			IsPgBouncer: false,
 		},
 		Databases: []string{"postgres"},
 		Query:     q,

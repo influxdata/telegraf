@@ -54,10 +54,10 @@ your database.
   ## Maximum time to receive a response from cluster.
   # response_timeout = "20s"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
   ## If false, skip chain & host verification
   # insecure_skip_verify = true
 

@@ -28,6 +28,7 @@ var m2, _ = metric.New("m1",
 		"c":        float64(4),
 		"d":        float64(6),
 		"e":        float64(200),
+		"f":        uint64(200),
 		"ignoreme": "string",
 		"andme":    true,
 	},
@@ -81,6 +82,10 @@ func TestBasicStatsWithPeriod(t *testing.T) {
 		"e_max":   float64(200),
 		"e_min":   float64(200),
 		"e_mean":  float64(200),
+		"f_count": float64(1), //f
+		"f_max":   float64(200),
+		"f_min":   float64(200),
+		"f_mean":  float64(200),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -144,6 +149,10 @@ func TestBasicStatsDifferentPeriods(t *testing.T) {
 		"e_max":   float64(200),
 		"e_min":   float64(200),
 		"e_mean":  float64(200),
+		"f_count": float64(1), //f
+		"f_max":   float64(200),
+		"f_min":   float64(200),
+		"f_mean":  float64(200),
 	}
 	expectedTags = map[string]string{
 		"foo": "bar",
@@ -169,6 +178,7 @@ func TestBasicStatsWithOnlyCount(t *testing.T) {
 		"c_count": float64(2),
 		"d_count": float64(2),
 		"e_count": float64(1),
+		"f_count": float64(1),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -194,6 +204,7 @@ func TestBasicStatsWithOnlyMin(t *testing.T) {
 		"c_min": float64(2),
 		"d_min": float64(2),
 		"e_min": float64(200),
+		"f_min": float64(200),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -219,6 +230,7 @@ func TestBasicStatsWithOnlyMax(t *testing.T) {
 		"c_max": float64(4),
 		"d_max": float64(6),
 		"e_max": float64(200),
+		"f_max": float64(200),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -244,6 +256,7 @@ func TestBasicStatsWithOnlyMean(t *testing.T) {
 		"c_mean": float64(3),
 		"d_mean": float64(4),
 		"e_mean": float64(200),
+		"f_mean": float64(200),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -269,6 +282,7 @@ func TestBasicStatsWithOnlySum(t *testing.T) {
 		"c_sum": float64(6),
 		"d_sum": float64(8),
 		"e_sum": float64(200),
+		"f_sum": float64(200),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -399,6 +413,8 @@ func TestBasicStatsWithMinAndMax(t *testing.T) {
 		"d_min": float64(2),
 		"e_max": float64(200), //e
 		"e_min": float64(200),
+		"f_max": float64(200), //f
+		"f_min": float64(200),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
@@ -450,6 +466,11 @@ func TestBasicStatsWithAllStats(t *testing.T) {
 		"e_min":   float64(200),
 		"e_mean":  float64(200),
 		"e_sum":   float64(200),
+		"f_count": float64(1), //f
+		"f_max":   float64(200),
+		"f_min":   float64(200),
+		"f_mean":  float64(200),
+		"f_sum":   float64(200),
 	}
 	expectedTags := map[string]string{
 		"foo": "bar",
