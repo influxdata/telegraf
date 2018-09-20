@@ -7,7 +7,7 @@
 - [filecount](./plugins/inputs/filecount/README.md) - Contributed by @sometimesfood
 - [file](./plugins/inputs/file/README.md) - Contributed by @maxunt
 - [icinga2](./plugins/inputs/icinga2/README.md) - Contributed by @mlabouardy
-- [kibana](./plugins/inputs/icinga2/README.md) - Contributed by @lpic10
+- [kibana](./plugins/inputs/kibana/README.md) - Contributed by @lpic10
 - [pgbouncer](./plugins/inputs/pgbouncer/README.md) - Contributed by @nerzhul
 - [temp](./plugins/inputs/temp/README.md) - Contributed by @pytimer
 - [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
