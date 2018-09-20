@@ -1541,24 +1541,24 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 
 	if node, ok := tbl.Fields["csv_skip_rows"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				iVal, err := strconv.Atoi(str.Value)
-				c.CSVSkipRows = iVal
+			if integer, ok := kv.Value.(*ast.Integer); ok {
+				v, err := integer.Int()
 				if err != nil {
-					return nil, fmt.Errorf("E! parsing to int: %v", err)
+					return nil, err
 				}
+				c.CSVHeaderRowCount = int(v)
 			}
 		}
 	}
 
 	if node, ok := tbl.Fields["csv_skip_columns"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
-			if str, ok := kv.Value.(*ast.String); ok {
-				iVal, err := strconv.Atoi(str.Value)
-				c.CSVSkipColumns = iVal
+			if integer, ok := kv.Value.(*ast.Integer); ok {
+				v, err := integer.Int()
 				if err != nil {
-					return nil, fmt.Errorf("E! parsing to int: %v", err)
+					return nil, err
 				}
+				c.CSVHeaderRowCount = int(v)
 			}
 		}
 	}
