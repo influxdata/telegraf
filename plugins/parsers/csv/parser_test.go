@@ -106,7 +106,7 @@ func TestQuotedCharacter(t *testing.T) {
 func TestDelimiter(t *testing.T) {
 	p := Parser{
 		HeaderRowCount:    1,
-		Delimiter:         "%",
+		Delimiter:         '%',
 		ColumnNames:       []string{"first", "second", "third"},
 		MeasurementColumn: "third",
 		TimeFunc:          DefaultTime,
@@ -122,7 +122,7 @@ func TestDelimiter(t *testing.T) {
 func TestValueConversion(t *testing.T) {
 	p := Parser{
 		HeaderRowCount: 0,
-		Delimiter:      ",",
+		Delimiter:      ',',
 		ColumnNames:    []string{"first", "second", "third", "fourth"},
 		MetricName:     "test_value",
 		TimeFunc:       DefaultTime,
@@ -152,7 +152,7 @@ func TestValueConversion(t *testing.T) {
 func TestSkipComment(t *testing.T) {
 	p := Parser{
 		HeaderRowCount: 0,
-		Comment:        "#",
+		Comment:        '#',
 		ColumnNames:    []string{"first", "second", "third", "fourth"},
 		MetricName:     "test_value",
 		TimeFunc:       DefaultTime,
