@@ -1613,6 +1613,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "csv_tag_columns")
 	delete(tbl.Fields, "csv_timestamp_column")
 	delete(tbl.Fields, "csv_timestamp_format")
+	delete(tbl.Fields, "csv_trim_space")
 
 	return c, nil
 }
