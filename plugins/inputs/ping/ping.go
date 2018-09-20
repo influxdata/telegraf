@@ -52,20 +52,23 @@ func (_ *Ping) Description() string {
 }
 
 const sampleConfig = `
-  ## NOTE: this plugin forks the ping command. You may need to set capabilities
-  ## via setcap cap_net_raw+p /bin/ping
-  #
   ## List of urls to ping
-  urls = ["www.google.com"] # required
-  ## number of pings to send per collection (ping -c <COUNT>)
+  urls = ["example.org"]
+
+  ## Number of pings to send per collection (ping -c <COUNT>)
   # count = 1
-  ## interval, in s, at which to ping. 0 == default (ping -i <PING_INTERVAL>)
+
+  ## Interval, in s, at which to ping. 0 == default (ping -i <PING_INTERVAL>)
+  ## Not available in Windows.
   # ping_interval = 1.0
-  ## per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
+
+  ## Per-ping timeout, in s. 0 == no timeout (ping -W <TIMEOUT>)
   # timeout = 1.0
-  ## total-ping deadline, in s. 0 == no deadline (ping -w <DEADLINE>)
+
+  ## Total-ping deadline, in s. 0 == no deadline (ping -w <DEADLINE>)
   # deadline = 10
-  ## interface or source address to send ping from (ping -I <INTERFACE/SRC_ADDR>)
+
+  ## Interface or source address to send ping from (ping -I <INTERFACE/SRC_ADDR>)
   ## on Darwin and Freebsd only source address possible: (ping -S <SRC_ADDR>)
   # interface = ""
 `
@@ -117,6 +120,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 					} else {
 						acc.AddError(fmt.Errorf("host %s: %s", u, err))
 					}
+					fields["result_code"] = 2
 					acc.AddFields("ping", fields, tags)
 					return
 				}
@@ -126,6 +130,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				// fatal error
 				acc.AddError(fmt.Errorf("%s: %s", err, u))
+				fields["result_code"] = 2
 				acc.AddFields("ping", fields, tags)
 				return
 			}

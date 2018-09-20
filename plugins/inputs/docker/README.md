@@ -77,9 +77,6 @@ may prefer to exclude them:
 
 ### Metrics:
 
-Every effort was made to preserve the names based on the JSON response from the
-docker API.
-
 - docker
   - tags:
     - unit
@@ -96,7 +93,10 @@ docker API.
     - n_goroutines
     - n_listener_events
     - memory_total
-    - pool_blocksize
+    - pool_blocksize (requires devicemapper storage driver)
+
+The `docker_data` and `docker_metadata` measurements are available only for
+some storage drivers such as devicemapper.
 
 - docker_data
   - tags:
@@ -224,7 +224,11 @@ docker API.
     - io_serviced_recursive_write
     - container_id
 
-- docker_container_health
+The `docker_container_health` measurements report on a containers
+[HEALTHCHECK](https://docs.docker.com/engine/reference/builder/#healthcheck)
+status if configured.
+
+- docker_container_health (container must use the HEALTHCHECK)
   - tags:
     - engine_host
     - server_version

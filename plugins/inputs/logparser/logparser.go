@@ -54,9 +54,6 @@ type LogParserPlugin struct {
 }
 
 const sampleConfig = `
-  ## DEPRECATED: The 'logparser' plugin is deprecated in 1.8.  Please use the
-  ## 'tail' plugin with the grok data_format as a replacement.
-
   ## Log files to parse.
   ## These accept standard unix glob matching rules, but with the addition of
   ## ** as a "super asterisk". ie:
@@ -126,9 +123,6 @@ func (l *LogParserPlugin) Gather(acc telegraf.Accumulator) error {
 
 // Start kicks off collection of stats for the plugin
 func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
-	log.Println("W! DEPRECATED: The logparser plugin is deprecated in 1.8. " +
-		"Please use the tail plugin with the grok data_format as a replacement.")
-
 	l.Lock()
 	defer l.Unlock()
 
@@ -197,14 +191,12 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 					Poll:      poll,
 					Logger:    tail.DiscardingLogger,
 				})
-
-			//add message saying a new tailer was added for the file
-			log.Printf("D! tail added for file: %v", file)
-
 			if err != nil {
 				l.acc.AddError(err)
 				continue
 			}
+
+			log.Printf("D! [inputs.logparser] tail added for file: %v", file)
 
 			// create a goroutine for each "tailer"
 			l.wg.Add(1)

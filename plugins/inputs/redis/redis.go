@@ -18,7 +18,8 @@ import (
 )
 
 type Redis struct {
-	Servers []string
+	Servers  []string
+	Password string
 	tls.ClientConfig
 
 	clients     []Client
@@ -58,6 +59,9 @@ var sampleConfig = `
   ## If no servers are specified, then localhost is used as the host.
   ## If no port is specified, 6379 is used
   servers = ["tcp://localhost:6379"]
+
+  ## specify server password
+  # password = "s#cr@t%"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -109,6 +113,9 @@ func (r *Redis) init(acc telegraf.Accumulator) error {
 			if ok {
 				password = pw
 			}
+		}
+		if len(r.Password) > 0 {
+			password = r.Password
 		}
 
 		var address string

@@ -7,6 +7,7 @@ import (
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/host"
 
 	"github.com/shirou/gopsutil/load"
 	"github.com/shirou/gopsutil/mem"
@@ -95,6 +96,15 @@ func (m *MockPS) SwapStat() (*mem.SwapMemoryStat, error) {
 	ret := m.Called()
 
 	r0 := ret.Get(0).(*mem.SwapMemoryStat)
+	r1 := ret.Error(1)
+
+	return r0, r1
+}
+
+func (m *MockPS) Temperature() ([]host.TemperatureStat, error) {
+	ret := m.Called()
+
+	r0 := ret.Get(0).([]host.TemperatureStat)
 	r1 := ret.Error(1)
 
 	return r0, r1

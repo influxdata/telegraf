@@ -13,13 +13,13 @@ source field is overwritten.
 
 ```toml
 [[processors.enum]]
-  [[processors.enum.fields]]
+  [[processors.enum.mapping]]
     ## Name of the field to map
-    source = "name"
+    field = "status"
 
     ## Destination field to be used for the mapped value.  By default the source
     ## field is used, overwriting the original value.
-    # destination = "mapped"
+    # dest = "status_code"
 
     ## Default value to be used for all values not contained in the mapping
     ## table.  When unset, the unmodified value for the field will be used if no
@@ -27,7 +27,15 @@ source field is overwritten.
     # default = 0
 
     ## Table of mappings
-    [processors.enum.fields.value_mappings]
-      value1 = 1
-      value2 = 2
+    [processors.enum.mapping.value_mappings]
+      green = 1
+      amber = 2
+      red = 3
+```
+
+### Example:
+
+```diff
+- xyzzy status="green" 1502489900000000000
++ xyzzy status="green",status_code=1i 1502489900000000000
 ```
