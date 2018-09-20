@@ -238,7 +238,6 @@ func newCSVParser(metricName string,
 		if len(runeStr) > 1 {
 			return nil, fmt.Errorf("csv_delimiter must be a single character, got: %s", comment)
 		}
-		comment = fmt.Sprintf("%v", runeStr[0])
 	}
 
 	parser := &csv.Parser{
