@@ -16,22 +16,23 @@ import (
 func TestNoFilters(t *testing.T) {
 	fc := getNoFilterFileCount()
 	matches := []string{"foo", "bar", "baz", "qux",
-		"subdir/", "subdir/quux", "subdir/quuz"}
-	require.True(t, fileCountEquals(fc, len(matches)))
+		"subdir/", "subdir/quux", "subdir/quuz",
+		"subdir/qux"}
+	require.True(t, fileCountEquals(fc, len(matches), 4988))
 }
 
 func TestNameFilter(t *testing.T) {
 	fc := getNoFilterFileCount()
 	fc.Name = "ba*"
 	matches := []string{"bar", "baz"}
-	require.True(t, fileCountEquals(fc, len(matches)))
+	require.True(t, fileCountEquals(fc, len(matches), 0))
 }
 
 func TestNonRecursive(t *testing.T) {
 	fc := getNoFilterFileCount()
 	fc.Recursive = false
 	matches := []string{"foo", "bar", "baz", "qux", "subdir"}
-	require.True(t, fileCountEquals(fc, len(matches)))
+	require.True(t, fileCountEquals(fc, len(matches), 4542))
 }
 
 func TestRegularOnlyFilter(t *testing.T) {
@@ -39,8 +40,8 @@ func TestRegularOnlyFilter(t *testing.T) {
 	fc.RegularOnly = true
 	matches := []string{
 		"foo", "bar", "baz", "qux", "subdir/quux", "subdir/quuz",
-	}
-	require.True(t, fileCountEquals(fc, len(matches)))
+		"subdir/qux"}
+	require.True(t, fileCountEquals(fc, len(matches), 892))
 }
 
 func TestSizeFilter(t *testing.T) {
@@ -48,11 +49,11 @@ func TestSizeFilter(t *testing.T) {
 	fc.Size = -100
 	matches := []string{"foo", "bar", "baz",
 		"subdir/quux", "subdir/quuz"}
-	require.True(t, fileCountEquals(fc, len(matches)))
+	require.True(t, fileCountEquals(fc, len(matches), 0))
 
 	fc.Size = 100
-	matches = []string{"qux"}
-	require.True(t, fileCountEquals(fc, len(matches)))
+	matches = []string{"qux", "subdir/qux"}
+	require.True(t, fileCountEquals(fc, len(matches), 892))
 }
 
 func TestMTimeFilter(t *testing.T) {
@@ -66,17 +67,19 @@ func TestMTimeFilter(t *testing.T) {
 	fc := getNoFilterFileCount()
 	fc.MTime = internal.Duration{Duration: -fileAge}
 	matches := []string{"foo", "bar", "qux",
-		"subdir/", "subdir/quux", "subdir/quuz"}
-	require.True(t, fileCountEquals(fc, len(matches)))
+		"subdir/", "subdir/quux", "subdir/quuz",
+		"subdir/qux"}
+	require.True(t, fileCountEquals(fc, len(matches), 4988))
 
 	fc.MTime = internal.Duration{Duration: fileAge}
 	matches = []string{"baz"}
-	require.True(t, fileCountEquals(fc, len(matches)))
+	require.True(t, fileCountEquals(fc, len(matches), 0))
 }
 
 func getNoFilterFileCount() FileCount {
 	return FileCount{
 		Directory:   getTestdataDir(),
+		CountSize:   true,
 		Name:        "*",
 		Recursive:   true,
 		RegularOnly: false,
@@ -91,9 +94,10 @@ func getTestdataDir() string {
 	return strings.Replace(filename, "filecount_test.go", "testdata/", 1)
 }
 
-func fileCountEquals(fc FileCount, expectedCount int) bool {
+func fileCountEquals(fc FileCount, expectedCount int, expectedSize int) bool {
 	tags := map[string]string{"directory": getTestdataDir()}
 	acc := testutil.Accumulator{}
 	acc.GatherError(fc.Gather)
-	return acc.HasPoint("filecount", tags, "count", int64(expectedCount))
+	return acc.HasPoint("filecount", tags, "count", int64(expectedCount)) &&
+	 acc.HasPoint("filecount", tags, "size", int64(expectedSize))
 }

@@ -10,6 +10,9 @@ Counts files in directories that match certain criteria.
   ## Directory to gather stats about.
   directory = "/var/cache/apt/archives"
 
+  ## Also compute total size of matched elements. Defaults to false.
+  count_size = false
+
   ## Only count files that match the name pattern. Defaults to "*".
   name = "*.deb"
 
@@ -34,6 +37,7 @@ Counts files in directories that match certain criteria.
 
 - filecount
     - count (int)
+    - size (int, in Bytes)
 
 ### Tags:
 
@@ -44,6 +48,6 @@ Counts files in directories that match certain criteria.
 
 ```
 $ telegraf --config /etc/telegraf/telegraf.conf --input-filter filecount --test
-> filecount,directory=/var/cache/apt,host=czernobog count=7i 1530034445000000000
-> filecount,directory=/tmp,host=czernobog count=17i 1530034445000000000
+> filecount,directory=/var/cache/apt,host=czernobog count=7i,size=7438336i 1530034445000000000
+> filecount,directory=/tmp,host=czernobog count=17i,size=28934786i 1530034445000000000
 ```

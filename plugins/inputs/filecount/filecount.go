@@ -14,6 +14,9 @@ const sampleConfig = `
   ## Directory to gather stats about.
   directory = "/var/cache/apt/archives"
 
+  ## Also compute total size of matched elements. Defaults to false.
+  count_size = false
+
   ## Only count files that match the name pattern. Defaults to "*".
   name = "*.deb"
 
@@ -36,6 +39,7 @@ const sampleConfig = `
 
 type FileCount struct {
 	Directory   string
+	CountSize   bool
 	Name        string
 	Recursive   bool
 	RegularOnly bool
@@ -169,6 +173,7 @@ func (fc *FileCount) filter(file os.FileInfo) (bool, error) {
 
 func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 	numFiles := int64(0)
+	totalSize := int64(0)
 	countFn := func(f os.FileInfo) {
 		match, err := fc.filter(f)
 		if err != nil {
@@ -179,16 +184,22 @@ func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 			return
 		}
 		numFiles++
+		if fc.CountSize {
+			totalSize += f.Size()
+		}
 	}
 	err := count(fc.Directory, fc.Recursive, countFn)
 	if err != nil {
 		acc.AddError(err)
 	}
 
-	acc.AddFields("filecount",
-		map[string]interface{}{
-			"count": numFiles,
-		},
+	gauge := map[string]interface{}{
+		"count": numFiles,
+	}
+	if fc.CountSize {
+		gauge["size"] = totalSize
+	}
+	acc.AddGauge("filecount", gauge,
 		map[string]string{
 			"directory": fc.Directory,
 		})
@@ -199,6 +210,7 @@ func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 func NewFileCount() *FileCount {
 	return &FileCount{
 		Directory:   "",
+		CountSize:   false,
 		Name:        "*",
 		Recursive:   true,
 		RegularOnly: true,
