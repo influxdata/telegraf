@@ -20,8 +20,8 @@ type Parser struct {
 	HeaderRowCount    int
 	SkipRows          int
 	SkipColumns       int
-	Delimiter         rune
-	Comment           rune
+	Delimiter         string
+	Comment           string
 	TrimSpace         bool
 	ColumnNames       []string
 	ColumnTypes       []string
@@ -41,11 +41,11 @@ func (p *Parser) compile(r *bytes.Reader) (*csv.Reader, error) {
 	csvReader := csv.NewReader(r)
 	// ensures that the reader reads records of different lengths without an error
 	csvReader.FieldsPerRecord = -1
-	if p.Delimiter != 0 {
-		csvReader.Comma = p.Delimiter
+	if p.Delimiter != "" {
+		csvReader.Comma = []rune(p.Delimiter)[0]
 	}
-	if p.Comment != 0 {
-		csvReader.Comment = p.Comment
+	if p.Comment != "" {
+		csvReader.Comment = []rune(p.Comment)[0]
 	}
 	csvReader.TrimLeadingSpace = p.TrimSpace
 	return csvReader, nil
