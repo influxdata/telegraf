@@ -110,9 +110,9 @@ func TestArgs(t *testing.T) {
 		system string
 		output []string
 	}{
-		{"darwin", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12000", "-t", "24", "-S", "eth0", "www.google.com"}},
+		{"darwin", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12000", "-t", "24", "-I", "eth0", "www.google.com"}},
 		{"linux", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-I", "eth0", "www.google.com"}},
-		{"anything else", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-I", "eth0", "www.google.com"}},
+		{"anything else", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-i", "eth0", "www.google.com"}},
 	}
 	for i := range systemCases {
 		actual := p.args("www.google.com", systemCases[i].system)
