@@ -119,7 +119,10 @@ func (p *Ping) pingToURL(u string, wg sync.WaitGroup, acc telegraf.Accumulator) 
 	}
 
 	args := p.args(u, runtime.GOOS)
-	totalTimeout := float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
+	totalTimeout := 60.0
+	if len(p.Arguments) == 0 {
+		totalTimeout = float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
+	}
 
 	out, err := p.pingHost(p.Binary, totalTimeout, args...)
 	if err != nil {
