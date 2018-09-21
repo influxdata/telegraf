@@ -15,9 +15,6 @@ apt-get install iputils-ping
   ## List of urls to ping
   urls = ["example.org"]
 
-  ## List of urls to ping to ipv6 address
-  urls_v6 = ["example.org"]
-
   ## Number of pings to send per collection (ping -c <COUNT>)
   # count = 1
 
