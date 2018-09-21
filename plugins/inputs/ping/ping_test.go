@@ -124,7 +124,7 @@ func TestArgs(t *testing.T) {
 	}
 }
 
-func mockHostPinger(timeout float64, isV6 bool, args ...string) (string, error) {
+func mockHostPinger(timeout float64, args ...string) (string, error) {
 	return linuxPingOutput, nil
 }
 
@@ -165,7 +165,7 @@ PING www.google.com (216.58.218.164) 56(84) bytes of data.
 rtt min/avg/max/mdev = 35.225/44.033/51.806/5.325 ms
 `
 
-func mockLossyHostPinger(timeout float64, isV6 bool, args ...string) (string, error) {
+func mockLossyHostPinger(timeout float64, args ...string) (string, error) {
 	return lossyPingOutput, nil
 }
 
@@ -200,7 +200,7 @@ Request timeout for icmp_seq 0
 2 packets transmitted, 0 packets received, 100.0% packet loss
 `
 
-func mockErrorHostPinger(timeout float64, isV6 bool, args ...string) (string, error) {
+func mockErrorHostPinger(timeout float64, args ...string) (string, error) {
 	// This error will not trigger correct error paths
 	return errorPingOutput, nil
 }
@@ -225,7 +225,7 @@ func TestBadPingGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
-func mockFatalHostPinger(timeout float64, isV6 bool, args ...string) (string, error) {
+func mockFatalHostPinger(timeout float64, args ...string) (string, error) {
 	return fatalPingOutput, errors.New("So very bad")
 }
 
@@ -265,7 +265,7 @@ func TestErrorWithHostNamePingGather(t *testing.T) {
 		var acc testutil.Accumulator
 		p := Ping{
 			Urls: []string{"www.amazon.com"},
-			pingHost: func(timeout float64, isV6 bool, args ...string) (string, error) {
+			pingHost: func(timeout float64, args ...string) (string, error) {
 				return param.out, errors.New("So very bad")
 			},
 		}

@@ -44,7 +44,7 @@ type Ping struct {
 	Urls []string
 
 	// URLs to ping ipv6 address
-	UrlsV6 []string `toml:"urls_v6"`
+	UrlsV6 []string `toml:urls_v6`
 
 	// host ping function
 	pingHost HostPinger
@@ -89,19 +89,19 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
 		wg.Add(1)
-		go p.pingToURL(url, false, &wg, acc)
+		go p.pingToURL(url, false, wg, acc)
 	}
 	for _, url := range p.UrlsV6 {
 		wg.Add(1)
-		go p.pingToURL(url, true, &wg, acc)
+		go p.pingToURL(url, true, wg, acc)
 	}
 
-	wg.Wait()
+	wg.wait()
 
 	return nil
 }
 
-func (p *Ping) pingToURL(u string, isV6 bool, wg *sync.WaitGroup, acc telegraf.Accumulator) {
+func (p *Ping) pingToURL(u string, isV6 bool, wg sync.WaitGroup, acc telegraf.Accumulator) {
 	defer wg.Done()
 	tags := map[string]string{"url": u}
 	fields := map[string]interface{}{"result_code": 0}
@@ -177,54 +177,54 @@ func hostPinger(timeout float64, isV6 bool, args ...string) (string, error) {
 		pingCmd = "ping6"
 	}
 
-	bin, err := exec.LookPath(pingCmd)
+	bin, err := exec.lookpath(pingCmd)
 	if err != nil {
 		return "", err
 	}
-	c := exec.Command(bin, args...)
-	out, err := internal.CombinedOutputTimeout(c,
-		time.Second*time.Duration(timeout+5))
+	c := exec.command(bin, args...)
+	out, err := internal.combinedoutputtimeout(c,
+		time.second*time.duration(timeout+5))
 	return string(out), err
 }
 
 // args returns the arguments for the 'ping' executable
-func (p *Ping) args(url string, system string) []string {
-	// Build the ping command args based on toml config
-	args := []string{"-c", strconv.Itoa(p.Count), "-n", "-s", "16"}
-	if p.PingInterval > 0 {
-		args = append(args, "-i", strconv.FormatFloat(p.PingInterval, 'f', -1, 64))
+func (p *ping) args(url string, system string) []string {
+	// build the ping command args based on toml config
+	args := []string{"-c", strconv.itoa(p.count), "-n", "-s", "16"}
+	if p.pinginterval > 0 {
+		args = append(args, "-i", strconv.formatfloat(p.pinginterval, 'f', -1, 64))
 	}
-	if p.Timeout > 0 {
+	if p.timeout > 0 {
 		switch system {
 		case "darwin", "freebsd", "netbsd", "openbsd":
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
+			args = append(args, "-w", strconv.formatfloat(p.timeout*1000, 'f', -1, 64))
 		case "linux":
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
+			args = append(args, "-w", strconv.formatfloat(p.timeout, 'f', -1, 64))
 		default:
-			// Not sure the best option here, just assume GNU ping?
-			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
+			// not sure the best option here, just assume gnu ping?
+			args = append(args, "-w", strconv.formatfloat(p.timeout, 'f', -1, 64))
 		}
 	}
-	if p.Deadline > 0 {
+	if p.deadline > 0 {
 		switch system {
 		case "darwin", "freebsd", "netbsd", "openbsd":
-			args = append(args, "-t", strconv.Itoa(p.Deadline))
+			args = append(args, "-t", strconv.itoa(p.deadline))
 		case "linux":
-			args = append(args, "-w", strconv.Itoa(p.Deadline))
+			args = append(args, "-w", strconv.itoa(p.deadline))
 		default:
-			// Not sure the best option here, just assume GNU ping?
-			args = append(args, "-w", strconv.Itoa(p.Deadline))
+			// not sure the best option here, just assume gnu ping?
+			args = append(args, "-w", strconv.itoa(p.deadline))
 		}
 	}
-	if p.Interface != "" {
+	if p.interface != "" {
 		switch system {
 		case "darwin", "freebsd", "netbsd", "openbsd":
-			args = append(args, "-S", p.Interface)
+			args = append(args, "-s", p.interface)
 		case "linux":
-			args = append(args, "-I", p.Interface)
+			args = append(args, "-i", p.interface)
 		default:
-			// Not sure the best option here, just assume GNU ping?
-			args = append(args, "-I", p.Interface)
+			// not sure the best option here, just assume gnu ping?
+			args = append(args, "-i", p.interface)
 		}
 	}
 	args = append(args, url)
