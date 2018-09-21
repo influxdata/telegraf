@@ -1,4 +1,4 @@
-## v1.8 [unreleased]
+## v1.8 [2018-09-21]
 
 ### New Inputs
 
