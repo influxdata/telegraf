@@ -22,7 +22,7 @@ import (
 // HostPinger is a function that runs the "ping" function using a list of
 // passed arguments. This can be easily switched with a mocked ping function
 // for unit test purposes (see ping_test.go)
-type HostPinger func(timeout float64, isV6 bool, args ...string) (string, error)
+type HostPinger func(timeout float64, args ...string) (string, error)
 
 type Ping struct {
 	// Interval at which to ping (ping -i <INTERVAL>)
@@ -89,11 +89,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
 		wg.Add(1)
-		go p.pingToURL(url, false, wg, acc)
-	}
-	for _, url := range p.UrlsV6 {
-		wg.Add(1)
-		go p.pingToURL(url, true, wg, acc)
+		p.pingToURL(url, wg, acc)
 	}
 
 	wg.wait()
@@ -101,7 +97,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *Ping) pingToURL(u string, isV6 bool, wg sync.WaitGroup, acc telegraf.Accumulator) {
+func (p *Ping) pingToURL(u string, wg sync.WaitGroup, acc telegraf.Accumulator) {
 	defer wg.Done()
 	tags := map[string]string{"url": u}
 	fields := map[string]interface{}{"result_code": 0}
@@ -117,7 +113,7 @@ func (p *Ping) pingToURL(u string, isV6 bool, wg sync.WaitGroup, acc telegraf.Ac
 	args := p.args(u, runtime.GOOS)
 	totalTimeout := float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
 
-	out, err := p.pingHost(totalTimeout, isV6, args...)
+	out, err := p.pingHost(totalTimeout, args...)
 	if err != nil {
 		// Some implementations of ping return a 1 exit code on
 		// timeout, if this occurs we will not exit and try to parse
@@ -171,13 +167,8 @@ func (p *Ping) pingToURL(u string, isV6 bool, wg sync.WaitGroup, acc telegraf.Ac
 	acc.AddFields("ping", fields, tags)
 }
 
-func hostPinger(timeout float64, isV6 bool, args ...string) (string, error) {
-	pingCmd := "ping"
-	if isV6 == true {
-		pingCmd = "ping6"
-	}
-
-	bin, err := exec.lookpath(pingCmd)
+func hostpinger(timeout float64, args ...string) (string, error) {
+	bin, err := exec.lookpath("ping")
 	if err != nil {
 		return "", err
 	}
