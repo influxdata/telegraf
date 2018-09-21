@@ -33,8 +33,12 @@ type Ping struct {
 	// URLs to ping
 	Urls []string
 
-	// ping executable binary
+	// Ping executable binary
 	Binary string
+
+	// Arguments for ping command.
+	// when `Arguments` is not empty, other options (ping_interval, timeout, etc) will be ignored
+	Arguments []string
 
 	// host ping function
 	pingHost HostPinger
@@ -56,6 +60,10 @@ const sampleConfig = `
 
 	## Specify the ping executable binary, default is "ping"
 	# binary = "ping"
+
+	## Arguments for ping command
+	## when arguments is not empty, other options (ping_interval, timeout, etc) will be ignored
+	# arguemnts = ["-c", "3"]
 `
 
 func (s *Ping) SampleConfig() string {
@@ -151,6 +159,10 @@ func hostPinger(binary string, timeout float64, args ...string) (string, error) 
 
 // args returns the arguments for the 'ping' executable
 func (p *Ping) args(url string) []string {
+	if len(p.Arguments) > 0 {
+		return p.Arguments
+	}
+
 	args := []string{"-n", strconv.Itoa(p.Count)}
 
 	if p.Timeout > 0 {
@@ -233,8 +245,10 @@ func (p *Ping) timeout() float64 {
 func init() {
 	inputs.Add("ping", func() telegraf.Input {
 		return &Ping{
-			pingHost: hostPinger,
-			Count:    1,
+			pingHost:  hostPinger,
+			Count:     1,
+			Binary:    "ping",
+			Arguments: []string{},
 		}
 	})
 }
