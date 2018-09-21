@@ -3,7 +3,7 @@
 The Graphite data format is translated from Telegraf Metrics using either the
 template pattern or tag support method.  You can select between the two
 methods using the [`graphite_tag_support`](#graphite-tag-support) option.  When set, the tag support
-method is used, otherwise the [Template Pattern][templates]) is used.
+method is used, otherwise the [Template Pattern](templates) is used.
 
 ### Configuration
 
@@ -45,7 +45,4 @@ cpu.usage_user;cpu=cpu-total;dc=us-east-1;host=tars 0.89 1455320690
 cpu.usage_idle;cpu=cpu-total;dc=us-east-1;host=tars 98.09 1455320690
 ```
 
-#### templates
-
-Consult the [Template Patterns](/docs/TEMPLATE_PATTERN.md) documentation for
-details.
+[templates]: /docs/TEMPLATE_PATTERN.md
