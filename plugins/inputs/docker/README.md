@@ -66,6 +66,31 @@ to gather stats from the [Engine API](https://docs.docker.com/engine/api/v1.24/)
 When using the `"ENV"` endpoint, the connection is configured using the
 [cli Docker environment variables](https://godoc.org/github.com/moby/moby/client#NewEnvClient).
 
+#### Security
+
+Giving telegraf access to the Docker daemon expands the [attack surface](https://docs.docker.com/engine/security/security/#docker-daemon-attack-surface) that could result in an attacker gaining root access to a machine. This is especially relevant if the telegraf configuration can be changed by untrusted users.
+
+#### Docker Daemon Permissions
+
+Typically, telegraf must be given permission to access the docker daemon unix
+socket when using the default endpoint. This can be done by adding the
+`telegraf` unix user (created when installing a Telegraf package) to the
+`docker` unix group with the following command:
+
+```
+sudo usermod -aG docker telegraf
+```
+
+If telegraf is run within a container, the unix socket will need to be exposed
+within the telegraf container. This can be done in the docker CLI by add the
+option `-v /var/run/docker.sock:/var/run/docker.sock` or adding the following
+lines to the telegraf container definition in a docker compose file:
+
+```
+volumes:
+  - /var/run/docker.sock:/var/run/docker.sock
+```
+
 #### Kubernetes Labels
 
 Kubernetes may add many labels to your containers, if they are not needed you
@@ -73,7 +98,6 @@ may prefer to exclude them:
 ```
   docker_label_exclude = ["annotation.kubernetes*"]
 ```
-
 
 ### Metrics:
 
