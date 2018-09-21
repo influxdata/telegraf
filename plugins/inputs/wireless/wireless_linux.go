@@ -108,8 +108,8 @@ func loadWirelessTable(table []byte) ([]*wirelessInterface, error) {
 		}
 		values := []int64{}
 		fields := strings.Fields(string(lines[i]))
-		for k := 1; k < len(fields); k = k + 1 {
-			v, err := strconv.ParseInt(strings.Trim(fields[k], "."), 10, 64)
+		for j := 1; j < len(fields); j = j + 1 {
+			v, err := strconv.ParseInt(strings.Trim(fields[j], "."), 10, 64)
 			if err != nil {
 				return nil, err
 			}
