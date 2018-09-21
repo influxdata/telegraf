@@ -7,9 +7,9 @@ The wireless plugin gathers metrics about wireless link quality by reading the `
 ```toml
 # Monitor wifi signal strength and quality
 [[inputs.wireless]]
-  ## file paths for proc files. If empty default paths will be used:
-  ##    /proc/net/wireless
-  proc_net_wireless = "/proc/net/wireless"
+  ## Sets 'proc' directory path
+  ## If not specified, then default is /proc
+  # host_proc = "/proc"
 ```
 
 ### Metrics:
