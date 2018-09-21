@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -13,8 +15,6 @@ import (
 	"github.com/influxdata/telegraf/metric"
 	"github.com/pkg/errors"
 	"github.com/tidwall/gjson"
-	"math"
-	"regexp"
 )
 
 var (
@@ -94,7 +94,6 @@ func parseUnixTimestamp(jsonValue interface{}, format string) (time.Time, error)
 }
 
 func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]interface{}) ([]telegraf.Metric, error) {
-
 	tags := make(map[string]string)
 	for k, v := range p.DefaultTags {
 		tags[k] = v
@@ -108,7 +107,10 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 
 	//checks if json_name_key is set
 	if p.JSONNameKey != "" {
-		p.MetricName = f.Fields[p.JSONNameKey].(string)
+		switch field := f.Fields[p.JSONNameKey].(type) {
+		case string:
+			p.MetricName = field
+		}
 	}
 
 	//if time key is specified, set it to nTime
