@@ -108,7 +108,7 @@ Config:
   files = ["example"]
   name_key = "name"
   tag_keys = ["my_tag_1"]
-  string_fields = ["my_field"]
+  string_fields = ["b_my_field"]
   data_format = "json"
 ```
 
@@ -127,7 +127,7 @@ Input:
 
 Output:
 ```
-my_json,my_tag_1=foo a=5,b_c=6,my_field="description"
+my_json,my_tag_1=foo a=5,b_c=6,b_my_field="description"
 ```
 
 #### Arrays
