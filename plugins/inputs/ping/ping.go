@@ -22,7 +22,7 @@ import (
 // HostPinger is a function that runs the "ping" function using a list of
 // passed arguments. This can be easily switched with a mocked ping function
 // for unit test purposes (see ping_test.go)
-type HostPinger func(timeout float64, args ...string) (string, error)
+type HostPinger func(binary string, timeout float64, args ...string) (string, error)
 
 type Ping struct {
 	// Interval at which to ping (ping -i <INTERVAL>)
@@ -42,6 +42,9 @@ type Ping struct {
 
 	// URLs to ping
 	Urls []string
+
+	// ping executable binary
+	Binary string
 
 	// host ping function
 	pingHost HostPinger
@@ -71,6 +74,9 @@ const sampleConfig = `
   ## Interface or source address to send ping from (ping -I <INTERFACE/SRC_ADDR>)
   ## on Darwin and Freebsd only source address possible: (ping -S <SRC_ADDR>)
   # interface = ""
+
+  ## Specify the ping executable binary, default is "ping"
+  # binary = "ping"
 `
 
 func (_ *Ping) SampleConfig() string {
@@ -107,7 +113,7 @@ func (p *Ping) pingToURL(u string, wg sync.WaitGroup, acc telegraf.Accumulator) 
 	args := p.args(u, runtime.GOOS)
 	totalTimeout := float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
 
-	out, err := p.pingHost(totalTimeout, args...)
+	out, err := p.pingHost(p.Binary, totalTimeout, args...)
 	if err != nil {
 		// Some implementations of ping return a 1 exit code on
 		// timeout, if this occurs we will not exit and try to parse
@@ -161,8 +167,8 @@ func (p *Ping) pingToURL(u string, wg sync.WaitGroup, acc telegraf.Accumulator) 
 	acc.AddFields("ping", fields, tags)
 }
 
-func hostPinger(timeout float64, args ...string) (string, error) {
-	bin, err := exec.LookPath("ping")
+func hostPinger(binary string, timeout float64, args ...string) (string, error) {
+	bin, err := exec.LookPath(binary)
 	if err != nil {
 		return "", err
 	}
@@ -281,6 +287,7 @@ func init() {
 			Count:        1,
 			Timeout:      1.0,
 			Deadline:     10,
+			Binary:       "ping",
 		}
 	})
 }
