@@ -1,6 +1,6 @@
-# InfluxDB Output Plugin
+# InfluxDB v2.x Output Plugin
 
-This InfluxDB output plugin writes metrics to the [InfluxDB 2.0](https://github.com/influxdata/platform) HTTP service.
+The InfluxDB output plugin writes metrics to the [InfluxDB v2.x] HTTP service.
 
 ### Configuration:
 
@@ -49,3 +49,5 @@ This InfluxDB output plugin writes metrics to the [InfluxDB 2.0](https://github.
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 ```
+
+[InfluxDB v2.x]: https://github.com/influxdata/platform
