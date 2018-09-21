@@ -16,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/parsers/influx"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -36,6 +36,8 @@ type TimeFunc func() time.Time
 
 type HTTPListenerNG struct {
 	ServiceAddress string
+	Paths          []string
+	Methods        []string
 	ReadTimeout    internal.Duration
 	WriteTimeout   internal.Duration
 	MaxBodySize    int64
@@ -54,10 +56,9 @@ type HTTPListenerNG struct {
 
 	listener net.Listener
 
-	handler *influx.MetricHandler
-	parser  *influx.Parser
-	acc     telegraf.Accumulator
-	pool    *pool
+	parsers.Parser
+	acc  telegraf.Accumulator
+	pool *pool
 
 	BytesRecv       selfstat.Stat
 	RequestsServed  selfstat.Stat
@@ -76,6 +77,15 @@ type HTTPListenerNG struct {
 const sampleConfig = `
   ## Address and port to host HTTP listener on
   service_address = ":8186"
+
+  ## Paths to listen to.
+  ## "/query" and "/ping" paths are already taken.
+  ## "/query" delivers dummy response.
+  ## "/ping" responds to ping requests.
+  paths = ["/write"]
+
+  ## HTTP methods to accept.
+  methods = ["POST", "PUT"]
 
   ## maximum duration before timing out read of the request
   read_timeout = "10s"
@@ -190,9 +200,6 @@ func (h *HTTPListenerNG) Start(acc telegraf.Accumulator) error {
 	h.listener = listener
 	h.Port = listener.Addr().(*net.TCPAddr).Port
 
-	h.handler = influx.NewMetricHandler()
-	h.parser = influx.NewParser(h.handler)
-
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
@@ -218,12 +225,8 @@ func (h *HTTPListenerNG) Stop() {
 func (h *HTTPListenerNG) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	h.RequestsRecv.Incr(1)
 	defer h.RequestsServed.Incr(1)
-	switch req.URL.Path {
-	case "/write":
-		h.WritesRecv.Incr(1)
-		defer h.WritesServed.Incr(1)
-		h.AuthenticateIfSet(h.serveWrite, res, req)
-	case "/query":
+	switch {
+	case req.URL.Path == "/query":
 		h.QueriesRecv.Incr(1)
 		defer h.QueriesServed.Incr(1)
 		// Deliver a dummy response to the query endpoint, as some InfluxDB
@@ -234,18 +237,31 @@ func (h *HTTPListenerNG) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 			res.WriteHeader(http.StatusOK)
 			res.Write([]byte("{\"results\":[]}"))
 		}, res, req)
-	case "/ping":
+	case req.URL.Path == "/ping":
 		h.PingsRecv.Incr(1)
 		defer h.PingsServed.Incr(1)
 		// respond to ping requests
 		h.AuthenticateIfSet(func(res http.ResponseWriter, req *http.Request) {
 			res.WriteHeader(http.StatusNoContent)
 		}, res, req)
+	case contains(req.URL.Path, h.Paths):
+		h.WritesRecv.Incr(1)
+		defer h.WritesServed.Incr(1)
+		h.AuthenticateIfSet(h.serveWrite, res, req)
 	default:
 		defer h.NotFoundsServed.Incr(1)
 		// Don't know how to respond to calls to other endpoints
 		h.AuthenticateIfSet(http.NotFound, res, req)
 	}
+}
+
+func contains(value string, array []string) bool {
+	for _, i := range array {
+		if i == value {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) {
@@ -254,9 +270,18 @@ func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) 
 		tooLarge(res)
 		return
 	}
-	now := h.TimeFunc()
 
-	precision := req.URL.Query().Get("precision")
+	// Check if the requested HTTP method was specified in config.
+	isAcceptedMethod := false
+	for _, method := range h.Methods {
+		if req.Method == method {
+			isAcceptedMethod = true
+		}
+	}
+	if !isAcceptedMethod {
+		badRequest(res)
+		return
+	}
 
 	// Handle gzip request bodies
 	body := req.Body
@@ -314,7 +339,7 @@ func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) 
 
 		if err == io.ErrUnexpectedEOF {
 			// finished reading the request body
-			if err := h.parse(buf[:n+bufStart], now, precision); err != nil {
+			if err := h.parse(buf[:n+bufStart]); err != nil {
 				log.Println("E! " + err.Error())
 				return400 = true
 			}
@@ -339,7 +364,7 @@ func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) 
 			bufStart = 0
 			continue
 		}
-		if err := h.parse(buf[:i+1], now, precision); err != nil {
+		if err := h.parse(buf[:i+1]); err != nil {
 			log.Println("E! " + err.Error())
 			return400 = true
 		}
@@ -356,9 +381,7 @@ func (h *HTTPListenerNG) parse(b []byte) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	h.handler.SetTimePrecision(getPrecisionMultiplier(precision))
-	h.handler.SetTimeFunc(func() time.Time { return t })
-	metrics, err := h.parser.Parse(b)
+	metrics, err := h.Parse(b)
 	if err != nil {
 		return err
 	}
@@ -401,28 +424,16 @@ func (h *HTTPListenerNG) AuthenticateIfSet(handler http.HandlerFunc, res http.Re
 	}
 }
 
-func getPrecisionMultiplier(precision string) time.Duration {
-	d := time.Nanosecond
-	switch precision {
-	case "u":
-		d = time.Microsecond
-	case "ms":
-		d = time.Millisecond
-	case "s":
-		d = time.Second
-	case "m":
-		d = time.Minute
-	case "h":
-		d = time.Hour
-	}
-	return d
-}
-
 func init() {
-	inputs.Add("http_listener", func() telegraf.Input {
-		return &HTTPListener{
+	parser, _ := parsers.NewInfluxParser()
+
+	inputs.Add("http_listener_ng", func() telegraf.Input {
+		return &HTTPListenerNG{
 			ServiceAddress: ":8186",
 			TimeFunc:       time.Now,
+			Parser:         parser,
+			Paths:          []string{"/write"},
+			Methods:        []string{"POST", "PUT"},
 		}
 	})
 }
