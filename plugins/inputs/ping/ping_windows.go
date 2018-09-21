@@ -21,7 +21,7 @@ import (
 // HostPinger is a function that runs the "ping" function using a list of
 // passed arguments. This can be easily switched with a mocked ping function
 // for unit test purposes (see ping_test.go)
-type HostPinger func(timeout float64, args ...string) (string, error)
+type HostPinger func(binary string, timeout float64, args ...string) (string, error)
 
 type Ping struct {
 	// Number of pings to send (ping -c <COUNT>)
@@ -32,6 +32,9 @@ type Ping struct {
 
 	// URLs to ping
 	Urls []string
+
+	// ping executable binary
+	Binary string
 
 	// host ping function
 	pingHost HostPinger
@@ -50,6 +53,9 @@ const sampleConfig = `
 
 	## Ping timeout, in seconds. 0.0 means default timeout (ping -w <TIMEOUT>)
 	# timeout = 0.0
+
+	## Specify the ping executable binary, default is "ping"
+	# binary = "ping"
 `
 
 func (s *Ping) SampleConfig() string {
@@ -89,7 +95,7 @@ func (p *Ping) pingToURL(u string, wg sync.WaitGroup, acc telegraf.Accumulator) 
 
 	args := p.args(u)
 	totalTimeout := p.timeout() * float64(p.Count)
-	out, err := p.pingHost(totalTimeout, args...)
+	out, err := p.pingHost(p.Binary, totalTimeout, args...)
 	// ping host return exitcode != 0 also when there was no response from host
 	// but command was execute successfully
 	var pendingError error
@@ -132,8 +138,8 @@ func (p *Ping) pingToURL(u string, wg sync.WaitGroup, acc telegraf.Accumulator) 
 	acc.AddFields("ping", fields, tags)
 }
 
-func hostPinger(timeout float64, args ...string) (string, error) {
-	bin, err := exec.LookPath("ping")
+func hostPinger(binary string, timeout float64, args ...string) (string, error) {
+	bin, err := exec.LookPath(binary)
 	if err != nil {
 		return "", err
 	}
