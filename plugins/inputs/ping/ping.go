@@ -43,8 +43,12 @@ type Ping struct {
 	// URLs to ping
 	Urls []string
 
-	// ping executable binary
+	// Ping executable binary
 	Binary string
+
+	// Arguments for ping command.
+	// when `Arguments` is not empty, other options (ping_interval, timeout, etc) will be ignored
+	Arguments []string
 
 	// host ping function
 	pingHost HostPinger
@@ -77,6 +81,10 @@ const sampleConfig = `
 
   ## Specify the ping executable binary, default is "ping"
   # binary = "ping"
+
+  ## Arguments for ping command
+  ## when arguments is not empty, other options (ping_interval, timeout, etc) will be ignored
+  # arguments = ["-c", "3"]
 `
 
 func (_ *Ping) SampleConfig() string {
@@ -180,6 +188,10 @@ func hostPinger(binary string, timeout float64, args ...string) (string, error) 
 
 // args returns the arguments for the 'ping' executable
 func (p *Ping) args(url string, system string) []string {
+	if len(p.Arguments) > 0 {
+		return p.Arguments
+	}
+
 	// build the ping command args based on toml config
 	args := []string{"-c", strconv.Itoa(p.Count), "-n", "-s", "16"}
 	if p.PingInterval > 0 {
@@ -288,6 +300,7 @@ func init() {
 			Timeout:      1.0,
 			Deadline:     10,
 			Binary:       "ping",
+			Arguments:    []string{},
 		}
 	})
 }
