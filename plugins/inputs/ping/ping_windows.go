@@ -33,9 +33,6 @@ type Ping struct {
 	// URLs to ping
 	Urls []string
 
-	// URLs to ping ipv6 address
-	UrlsV6 []string `toml:urls_v6`
-
 	// host ping function
 	pingHost HostPinger
 }
@@ -47,9 +44,6 @@ func (s *Ping) Description() string {
 const sampleConfig = `
 	## List of urls to ping
 	urls = ["www.google.com"]
-
-	## List of urls to ping with ipv6 protocol
-	urls_v6 = ["www.google.com"]
 
 	## number of pings to send per collection (ping -n <COUNT>)
 	# count = 1
