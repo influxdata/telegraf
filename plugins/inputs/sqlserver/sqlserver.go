@@ -244,7 +244,7 @@ func init() {
 // Thanks Bob Ward (http://aka.ms/bobwardms)
 // and the folks at Stack Overflow (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
 // for putting most of the memory clerk definitions online!
-const sqlMemoryClerkV2 = `DECLARE @SQL NVARCHAR(MAX) = 'SELECT	
+const sqlMemoryClerkV2 = `DECLARE @SQL NVARCHAR(MAX) = 'SELECT
 "sqlserver_memory_clerks" As [measurement],
 REPLACE(@@SERVERNAME,"\",":") AS [sql_instance],
 ISNULL(clerk_names.name,mc.type) AS clerk_type,
@@ -401,7 +401,7 @@ const sqlServerPropertiesV2 = `DECLARE @sys_info TABLE (
 
 IF OBJECT_ID('master.sys.dm_os_sys_info') IS NOT NULL
 BEGIN
- 
+
 	IF SERVERPROPERTY('EngineEdition') = 8  -- Managed Instance
 		INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
 		SELECT 	TOP(1)
@@ -409,8 +409,8 @@ BEGIN
 				(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
 				sku,
 				cast(SERVERPROPERTY('EngineEdition') as smallint) AS engine_edition,
-				hardware_generation AS hardware_type, 
-				reserved_storage_mb AS total_storage_mb, 
+				hardware_generation AS hardware_type,
+				reserved_storage_mb AS total_storage_mb,
 				(reserved_storage_mb - storage_space_used_mb) AS available_storage_mb,
 				(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as uptime
 		FROM	sys.server_resource_stats
@@ -422,12 +422,12 @@ BEGIN
 				@available_space_mb BIGINT
 
 		SELECT	@total_disk_size_mb = sum(total_disk_size_mb),
-				@available_space_mb = sum(free_disk_space_mb) 
+				@available_space_mb = sum(free_disk_space_mb)
 		FROM	(
 					SELECT	distinct logical_volume_name AS LogicalName,
-							total_bytes/(1024*1024)as total_disk_size_mb, 
+							total_bytes/(1024*1024)as total_disk_size_mb,
 							available_bytes /(1024*1024) free_disk_space_mb
-					FROM	sys.master_files AS f  
+					FROM	sys.master_files AS f
 							CROSS APPLY sys.dm_os_volume_stats(f.database_id, f.file_id)
 				) as osVolumes
 
@@ -446,7 +446,7 @@ BEGIN
 		FROM	sys.dm_os_sys_info
 	END
 END
-	
+
 SELECT	'sqlserver_server_properties' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 		s.cpu_count,
@@ -469,7 +469,7 @@ FROM	(
 					SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
 					SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS db_recoveryPending,
 					SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
-					SUM( CASE WHEN state = 10 THEN 1 ELSE 0 END ) AS db_offline
+					SUM( CASE WHEN state = 6 or state = 10 THEN 1 ELSE 0 END ) AS db_offline
 			FROM	sys.databases
 		) AS dbs
 		CROSS APPLY (
@@ -571,7 +571,7 @@ WHERE	(
 				'Disk Write IO Throttled/sec',
 				'Disk Write IO/sec',
 				'Used memory (KB)',
-				'Forwarded Recs/sec',
+				'Forwarded Records/sec',
 				'Background Writer pages/sec',
 				'Percent Log Used'
 			)
@@ -598,7 +598,7 @@ CAST(vs.value AS BIGINT) AS value,
 1
 FROM
 (
-    SELECT 
+    SELECT
     rgwg.name AS instance,
     rgwg.total_request_count AS "Request Count",
     rgwg.total_queued_request_count AS "Queued Request Count",
@@ -1166,15 +1166,15 @@ ws.wait_type NOT IN (
 	N'DBMIRROR_DBM_EVENT', N'DBMIRROR_EVENTS_QUEUE', N'DBMIRROR_WORKER_QUEUE',
 	N'DBMIRRORING_CMD', N'DIRTY_PAGE_POLL', N'DISPATCHER_QUEUE_SEMAPHORE',
 	N'EXECSYNC', N'FSAGENT', N'FT_IFTS_SCHEDULER_IDLE_WAIT', N'FT_IFTSHC_MUTEX',
-	N'HADR_CLUSAPI_CALL', N'HADR_FILESTREAM_IOMGR_IOCOMPLETION', N'HADR_LOGCAPTURE_WAIT', 
+	N'HADR_CLUSAPI_CALL', N'HADR_FILESTREAM_IOMGR_IOCOMPLETION', N'HADR_LOGCAPTURE_WAIT',
 	N'HADR_NOTIFICATION_DEQUEUE', N'HADR_TIMER_TASK', N'HADR_WORK_QUEUE',
-	N'KSOURCE_WAKEUP', N'LAZYWRITER_SLEEP', N'LOGMGR_QUEUE', 
+	N'KSOURCE_WAKEUP', N'LAZYWRITER_SLEEP', N'LOGMGR_QUEUE',
 	N'MEMORY_ALLOCATION_EXT', N'ONDEMAND_TASK_QUEUE',
 	N'PARALLEL_REDO_WORKER_WAIT_WORK',
 	N'PREEMPTIVE_HADR_LEASE_MECHANISM', N'PREEMPTIVE_SP_SERVER_DIAGNOSTICS',
 	N'PREEMPTIVE_OS_LIBRARYOPS', N'PREEMPTIVE_OS_COMOPS', N'PREEMPTIVE_OS_CRYPTOPS',
 	N'PREEMPTIVE_OS_PIPEOPS','PREEMPTIVE_OS_GENERICOPS', N'PREEMPTIVE_OS_VERIFYTRUST',
-	N'PREEMPTIVE_OS_DEVICEOPS', 
+	N'PREEMPTIVE_OS_DEVICEOPS',
 	N'PREEMPTIVE_XE_CALLBACKEXECUTE', N'PREEMPTIVE_XE_DISPATCHER',
 	N'PREEMPTIVE_XE_GETTARGETSTATE', N'PREEMPTIVE_XE_SESSIONCOMMIT',
 	N'PREEMPTIVE_XE_TARGETINIT', N'PREEMPTIVE_XE_TARGETFINALIZE',
@@ -1186,7 +1186,7 @@ ws.wait_type NOT IN (
 	N'SLEEP_DCOMSTARTUP', N'SLEEP_MASTERDBREADY', N'SLEEP_MASTERMDREADY',
 	N'SLEEP_MASTERUPGRADED', N'SLEEP_MSDBSTARTUP', N'SLEEP_SYSTEMTASK', N'SLEEP_TASK',
 	N'SLEEP_TEMPDBSTARTUP', N'SNI_HTTP_ACCEPT', N'SP_SERVER_DIAGNOSTICS_SLEEP',
-	N'SQLTRACE_BUFFER_FLUSH', N'SQLTRACE_INCREMENTAL_FLUSH_SLEEP', 
+	N'SQLTRACE_BUFFER_FLUSH', N'SQLTRACE_INCREMENTAL_FLUSH_SLEEP',
 	N'SQLTRACE_WAIT_ENTRIES',
 	N'WAIT_FOR_RESULTS', N'WAITFOR', N'WAITFOR_TASKSHUTDOWN', N'WAIT_XTP_HOST_WAIT',
 	N'WAIT_XTP_OFFLINE_CKPT_NEW_LOG', N'WAIT_XTP_CKPT_CLOSE',
@@ -1212,9 +1212,9 @@ BEGIN
 		max_session_percent,
 		dtu_limit,
 		avg_login_rate_percent,
-		end_time 
+		end_time
 	FROM
-		sys.dm_db_resource_stats WITH (NOLOCK) 
+		sys.dm_db_resource_stats WITH (NOLOCK)
 	ORDER BY
 		end_time DESC
 	OPTION (RECOMPILE)
