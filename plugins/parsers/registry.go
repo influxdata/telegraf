@@ -226,20 +226,20 @@ func newCSVParser(metricName string,
 		return nil, fmt.Errorf("there must be a header if `csv_column_names` is not specified")
 	}
 
-	var delimiterRune rune
 	if delimiter != "" {
-		if len(delimiter) > 1 {
+		runeStr := []rune(delimiter)
+		if len(runeStr) > 1 {
 			return nil, fmt.Errorf("csv_delimiter must be a single character, got: %s", delimiter)
 		}
-		delimiterRune = []rune(delimiter)[0]
+		delimiter = fmt.Sprintf("%v", runeStr[0])
 	}
 
-	var commentRune rune
 	if comment != "" {
-		if len(comment) > 1 {
+		runeStr := []rune(comment)
+		if len(runeStr) > 1 {
 			return nil, fmt.Errorf("csv_delimiter must be a single character, got: %s", comment)
 		}
-		commentRune = []rune(comment)[0]
+		comment = fmt.Sprintf("%v", runeStr[0])
 	}
 
 	parser := &csv.Parser{
@@ -247,8 +247,8 @@ func newCSVParser(metricName string,
 		HeaderRowCount:    headerRowCount,
 		SkipRows:          skipRows,
 		SkipColumns:       skipColumns,
-		Delimiter:         delimiterRune,
-		Comment:           commentRune,
+		Delimiter:         delimiter,
+		Comment:           comment,
 		TrimSpace:         trimSpace,
 		ColumnNames:       columnNames,
 		TagColumns:        tagColumns,
