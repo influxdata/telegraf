@@ -111,13 +111,13 @@ func loadWirelessTable(table []byte) ([]*wirelessInterface, error) {
 
 	// iterate over intefaces
 	for i := 2; i < len(lines); i = i + 1 {
+		var values []int64
 		if len(lines[i]) == 0 {
 			continue
 		}
 		fields := strings.Fields(string(lines[i]))
-		var values []int64
 		for k := 1; k < len(fields); k = k + 1 {
-			v, err := strconv.ParseInt(fields[i], ".")
+			v, err := strconv.ParseInt(strings.Trim(fields[k], "."), 10, 64)
 			if err != nil {
 				return nil, err
 			}
