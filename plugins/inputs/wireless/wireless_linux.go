@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 
@@ -13,21 +14,13 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// default file paths
-const (
-	NET_WIRELESS = "/net/wireless"
-	NET_PROC     = "/proc"
-)
+// default host proc path
+const defaultHostProc = "/proc"
 
-// env variable names
-const (
-	ENV_WIRELESS = "PROC_NET_WIRELESS"
-	ENV_ROOT     = "PROC_ROOT"
-)
+// env host proc variable name
+const envProc = "HOST_PROC"
 
-var (
-	newLineByte = []byte("\n")
-)
+var newLineByte = []byte("\n")
 
 type wirelessInterface struct {
 	Interface string
@@ -45,13 +38,13 @@ type wirelessInterface struct {
 
 // Wireless is used to store configuration values.
 type Wireless struct {
-	ProcNetWireless string `toml:"proc_net_wireless"`
+	HostProc string `toml:"host_proc"`
 }
 
 var sampleConfig = `
-  ## file paths for proc files. If empty default paths will be used:
-  ##    /proc/net/wireless
-  proc_net_wireless = "/proc/net/wireless"
+  ## Sets 'proc' directory path
+  ## If not specified, then default is /proc
+  # host_proc = "/proc"
 `
 
 // Description returns information about the plugin.
@@ -66,10 +59,11 @@ func (w *Wireless) SampleConfig() string {
 
 // Gather collects the wireless information.
 func (w *Wireless) Gather(acc telegraf.Accumulator) error {
-	// load paths, get from env if config values are empty
-	w.loadPaths()
+	// load proc path, get default value if config value and env variable are empty
+	w.loadPath()
 
-	table, err := ioutil.ReadFile(w.ProcNetWireless)
+	wirelessPath := path.Join(w.HostProc, "net", "wireless")
+	table, err := ioutil.ReadFile(wirelessPath)
 	if err != nil {
 		return err
 	}
@@ -105,11 +99,9 @@ func (w *Wireless) Gather(acc telegraf.Accumulator) error {
 
 func loadWirelessTable(table []byte) ([]*wirelessInterface, error) {
 	var w []*wirelessInterface
-
-	// split the lines by newline
 	lines := bytes.Split(table, newLineByte)
 
-	// iterate over intefaces
+	// iterate over interfaces
 	for i := 2; i < len(lines); i = i + 1 {
 		if len(lines[i]) == 0 {
 			continue
@@ -140,11 +132,11 @@ func loadWirelessTable(table []byte) ([]*wirelessInterface, error) {
 	return w, nil
 }
 
-// loadPaths can be used to read paths firstly from config
-// if it is empty then try read from env variables
-func (w *Wireless) loadPaths() {
-	if w.ProcNetWireless == "" {
-		w.ProcNetWireless = proc(ENV_WIRELESS, NET_WIRELESS)
+// loadPath can be used to read path firstly from config
+// if it is empty then try read from env variable
+func (w *Wireless) loadPath() {
+	if w.HostProc == "" {
+		w.HostProc = proc(envProc, defaultHostProc)
 	}
 }
 
@@ -154,12 +146,8 @@ func proc(env, path string) string {
 	if p := os.Getenv(env); p != "" {
 		return p
 	}
-	// try to read root path, or use default root path
-	root := os.Getenv(ENV_ROOT)
-	if root == "" {
-		root = NET_PROC
-	}
-	return root + path
+	// return default path
+	return path
 }
 
 func init() {
