@@ -256,8 +256,8 @@ func (h *HTTPListenerNG) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 }
 
 func contains(value string, array []string) bool {
-	for _, i := range array {
-		if i == value {
+	for _, element := range array {
+		if element == value {
 			return true
 		}
 	}
