@@ -76,37 +76,37 @@ type HTTPListenerNG struct {
 
 const sampleConfig = `
   ## Address and port to host HTTP listener on
-  service_address = ":8186"
+  # service_address = ":8186"
 
   ## Paths to listen to.
   ## "/query" and "/ping" paths are already taken.
   ## "/query" delivers dummy response.
   ## "/ping" responds to ping requests.
-  paths = ["/write"]
+  # paths = ["/write"]
 
   ## HTTP methods to accept.
-  methods = ["POST", "PUT"]
+  # methods = ["POST", "PUT"]
 
   ## maximum duration before timing out read of the request
-  read_timeout = "10s"
+  # read_timeout = "10s"
   ## maximum duration before timing out write of the response
-  write_timeout = "10s"
+  # write_timeout = "10s"
 
   ## Maximum allowed http request body size in bytes.
   ## 0 means to use the default of 536,870,912 bytes (500 mebibytes)
-  max_body_size = 0
+  # max_body_size = 0
 
   ## Maximum line size allowed to be sent in bytes.
   ## 0 means to use the default of 65536 bytes (64 kibibytes)
-  max_line_size = 0
+  # max_line_size = 0
 
   ## Set one or more allowed client CA certificate file names to 
   ## enable mutually authenticated TLS connections
-  tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
   ## Add service certificate and key
-  tls_cert = "/etc/telegraf/cert.pem"
-  tls_key = "/etc/telegraf/key.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
 
   ## Optional username and password to accept for HTTP basic authentication.
   ## You probably want to make sure you have TLS configured above for this.
