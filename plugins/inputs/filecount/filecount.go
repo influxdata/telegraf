@@ -8,6 +8,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/alecthomas/units"
 )
 
 const sampleConfig = `
@@ -26,10 +27,12 @@ const sampleConfig = `
   ## Only count regular files. Defaults to true.
   regular_only = true
 
-  ## Only count files that are at least this size in bytes. If size is
-  ## a negative number, only count files that are smaller than the
-  ## absolute value of size. Defaults to 0.
-  size = 0
+  ## Only count files that are at least this size. If size is a 
+  ## negative number, only count files that are smaller than the
+  ## absolute value of size. Defaults to "0B".
+  ## For available units, see :
+  ## https://godoc.org/github.com/alecthomas/units#pkg-constants
+  size = "0B"
 
   ## Only count files that have not been touched for at least this
   ## duration. If mtime is negative, only count files that have been
@@ -40,30 +43,32 @@ const sampleConfig = `
   recursive_print = false
 
   ## Only output directories whose sub elements weighs more than this
-  ## size in bytes. Defaults to 0.
-  recursive_print_size = 0
+  ## size. Defaults to "0B".
+  recursive_print_size = "0B"
 `
 
 type FileCount struct {
-	Directory          string
-	CountSize          bool
-	Name               string
-	Recursive          bool
-	RegularOnly        bool
-	Size               int64
-	MTime              internal.Duration `toml:"mtime"`
-	RecursivePrint     bool
-	RecursivePrintSize int64
-	fileFilters        []fileFilterFunc
+	Directory           string
+	CountSize           bool
+	Name                string
+	Recursive           bool
+	RegularOnly         bool
+	Size                string
+	SizeB               int64
+	MTime               internal.Duration `toml:"mtime"`
+	RecursivePrint      bool
+	RecursivePrintSize  string
+	RecursivePrintSizeB int64
+	fileFilters         []fileFilterFunc
 }
-
-type fileFilterFunc func(os.FileInfo) (bool, error)
 
 func (_ *FileCount) Description() string {
 	return "Count files in a directory"
 }
 
 func (_ *FileCount) SampleConfig() string { return sampleConfig }
+
+type fileFilterFunc func(os.FileInfo) (bool, error)
 
 func rejectNilFilters(filters []fileFilterFunc) []fileFilterFunc {
 	filtered := make([]fileFilterFunc, 0, len(filters))
@@ -100,7 +105,7 @@ func (fc *FileCount) regularOnlyFilter() fileFilterFunc {
 }
 
 func (fc *FileCount) sizeFilter() fileFilterFunc {
-	if fc.Size == 0 {
+	if fc.SizeB == 0 {
 		return nil
 	}
 
@@ -108,10 +113,10 @@ func (fc *FileCount) sizeFilter() fileFilterFunc {
 		if !f.Mode().IsRegular() {
 			return false, nil
 		}
-		if fc.Size < 0 {
-			return f.Size() < -fc.Size, nil
+		if fc.SizeB < 0 {
+			return f.Size() < -fc.SizeB, nil
 		}
-		return f.Size() >= fc.Size, nil
+		return f.Size() >= fc.SizeB, nil
 	}
 }
 
@@ -178,7 +183,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string) (int64, int
 	}
 
 	if fc.RecursivePrint || basedir == fc.Directory {
-		if totalSize >= fc.RecursivePrintSize || basedir == fc.Directory {
+		if totalSize >= fc.RecursivePrintSizeB || basedir == fc.Directory {
 			gauge := map[string]interface{}{
 				"count": numFiles,
 			}
@@ -215,6 +220,20 @@ func (fc *FileCount) filter(file os.FileInfo) (bool, error) {
 }
 
 func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
+	var err error
+
+	if fc.Size != "" {
+		fc.SizeB, err = units.ParseStrictBytes(fc.Size)
+	}
+	if err != nil {
+		return err
+	}
+	if fc.RecursivePrintSize != "" {
+		fc.RecursivePrintSizeB, err = units.ParseStrictBytes(fc.RecursivePrintSize)
+	}
+	if err != nil {
+		return err
+	}
 
 	fc.count(acc, fc.Directory)
 
@@ -223,16 +242,18 @@ func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 
 func NewFileCount() *FileCount {
 	return &FileCount{
-		Directory:          "",
-		CountSize:          false,
-		Name:               "*",
-		Recursive:          true,
-		RegularOnly:        true,
-		Size:               0,
-		MTime:              internal.Duration{Duration: 0},
-		RecursivePrint:     false,
-		RecursivePrintSize: 0,
-		fileFilters:        nil,
+		Directory:           "",
+		CountSize:           false,
+		Name:                "*",
+		Recursive:           true,
+		RegularOnly:         true,
+		Size:                "",
+		SizeB:               int64(0),
+		MTime:               internal.Duration{Duration: 0},
+		RecursivePrint:      false,
+		RecursivePrintSize:  "",
+		RecursivePrintSizeB: int64(0),
+		fileFilters:         nil,
 	}
 }
 

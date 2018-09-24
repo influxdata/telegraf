@@ -46,12 +46,12 @@ func TestRegularOnlyFilter(t *testing.T) {
 
 func TestSizeFilter(t *testing.T) {
 	fc := getNoFilterFileCount()
-	fc.Size = -100
+	fc.Size = "-100B"
 	matches := []string{"foo", "bar", "baz",
 		"subdir/quux", "subdir/quuz"}
 	require.True(t, fileCountEquals(fc, len(matches), 0))
 
-	fc.Size = 100
+	fc.Size = "100B"
 	matches = []string{"qux", "subdir/qux"}
 	require.True(t, fileCountEquals(fc, len(matches), 892))
 }
@@ -95,10 +95,10 @@ func getNoFilterFileCount() FileCount {
 		Name:               "*",
 		Recursive:          true,
 		RegularOnly:        false,
-		Size:               0,
+		Size:               "0B",
 		MTime:              internal.Duration{Duration: 0},
 		RecursivePrint:     false,
-		RecursivePrintSize: 0,
+		RecursivePrintSize: "0B",
 		fileFilters:        nil,
 	}
 }

@@ -22,10 +22,12 @@ Counts files in directories that match certain criteria.
   ## Only count regular files. Defaults to true.
   regular_only = true
 
-  ## Only count files that are at least this size in bytes. If size is
-  ## a negative number, only count files that are smaller than the
-  ## absolute value of size. Defaults to 0.
-  size = 0
+  ## Only count files that are at least this size. If size is a 
+  ## negative number, only count files that are smaller than the
+  ## absolute value of size. Defaults to "0B".
+  ## For available units, see :
+  ## https://godoc.org/github.com/alecthomas/units#pkg-constants
+  size = "0B"
 
   ## Only count files that have not been touched for at least this
   ## duration. If mtime is negative, only count files that have been
@@ -36,8 +38,8 @@ Counts files in directories that match certain criteria.
   recursive_print = false
 
   ## Only output directories whose sub elements weighs more than this
-  ## size in bytes. Defaults to 0.
-  recursive_print_size = 0
+  ## size. Defaults to "0B".
+  recursive_print_size = "0B"
 ```
 
 ### Measurements & Fields:
