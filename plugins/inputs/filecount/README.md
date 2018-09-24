@@ -5,7 +5,7 @@ Counts files in directories that match certain criteria.
 ### Configuration:
 
 ```toml
-# Count files in a directory
+# Count files in a directory and compute their size
 [[inputs.filecount]]
   ## Directory to gather stats about.
   directory = "/var/cache/apt/archives"
@@ -31,6 +31,13 @@ Counts files in directories that match certain criteria.
   ## duration. If mtime is negative, only count files that have been
   ## touched in this duration. Defaults to "0s".
   mtime = "0s"
+
+  ## Output stats for every subdirectory. Defaults to false.
+  recursive_print = false
+
+  ## Only output directories whose sub elements weighs more than this
+  ## size in bytes. Defaults to 0.
+  recursive_print_size = 0
 ```
 
 ### Measurements & Fields:
@@ -42,7 +49,7 @@ Counts files in directories that match certain criteria.
 ### Tags:
 
 - All measurements have the following tags:
-    - directory (the directory path, as specified in the config)
+    - directory (the directory path)
 
 ### Example Output:
 

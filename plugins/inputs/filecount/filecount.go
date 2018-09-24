@@ -35,20 +35,28 @@ const sampleConfig = `
   ## duration. If mtime is negative, only count files that have been
   ## touched in this duration. Defaults to "0s".
   mtime = "0s"
+
+  ## Output stats for every subdirectory. Defaults to false.
+  recursive_print = false
+
+  ## Only output directories whose sub elements weighs more than this
+  ## size in bytes. Defaults to 0.
+  recursive_print_size = 0
 `
 
 type FileCount struct {
-	Directory   string
-	CountSize   bool
-	Name        string
-	Recursive   bool
-	RegularOnly bool
-	Size        int64
-	MTime       internal.Duration `toml:"mtime"`
-	fileFilters []fileFilterFunc
+	Directory          string
+	CountSize          bool
+	Name               string
+	Recursive          bool
+	RegularOnly        bool
+	Size               int64
+	MTime              internal.Duration `toml:"mtime"`
+	RecursivePrint     bool
+	RecursivePrintSize int64
+	fileFilters        []fileFilterFunc
 }
 
-type countFunc func(os.FileInfo)
 type fileFilterFunc func(os.FileInfo) (bool, error)
 
 func (_ *FileCount) Description() string {
@@ -129,20 +137,6 @@ func absDuration(x time.Duration) time.Duration {
 	return x
 }
 
-func count(basedir string, recursive bool, countFn countFunc) error {
-	walkFn := func(path string, file os.FileInfo, err error) error {
-		if path == basedir {
-			return nil
-		}
-		countFn(file)
-		if !recursive && file.IsDir() {
-			return filepath.SkipDir
-		}
-		return nil
-	}
-	return filepath.Walk(basedir, walkFn)
-}
-
 func (fc *FileCount) initFileFilters() {
 	filters := []fileFilterFunc{
 		fc.nameFilter(),
@@ -151,6 +145,55 @@ func (fc *FileCount) initFileFilters() {
 		fc.mtimeFilter(),
 	}
 	fc.fileFilters = rejectNilFilters(filters)
+}
+
+func (fc *FileCount) count(acc telegraf.Accumulator, basedir string) (int64, int64) {
+	numFiles, totalSize, nf, ts := int64(0), int64(0), int64(0), int64(0)
+
+	directory, err := os.Open(basedir)
+	if err != nil {
+		acc.AddError(err)
+		return numFiles, totalSize
+	}
+	files, err := directory.Readdir(0)
+	directory.Close()
+	if err != nil {
+		acc.AddError(err)
+		return numFiles, totalSize
+	}
+	for _, file := range files {
+		if fc.Recursive && file.IsDir() {
+			nf, ts = fc.count(acc, basedir + string(os.PathSeparator) + file.Name())
+			numFiles += nf
+			totalSize += ts
+		}
+		matches, err := fc.filter(file)
+		if err != nil {
+			acc.AddError(err)
+		}
+		if matches {
+			numFiles++
+			totalSize += file.Size()
+		}
+	}
+
+	if fc.RecursivePrint || basedir == fc.Directory {
+		if totalSize >= fc.RecursivePrintSize || basedir == fc.Directory {
+			gauge := map[string]interface{}{
+				"count": numFiles,
+			}
+			if fc.CountSize {
+				gauge["size"] = totalSize
+			}
+			acc.AddGauge("filecount", gauge,
+				map[string]string{
+					"directory": basedir,
+				})
+		}
+	}
+
+	return numFiles, totalSize
+
 }
 
 func (fc *FileCount) filter(file os.FileInfo) (bool, error) {
@@ -172,51 +215,24 @@ func (fc *FileCount) filter(file os.FileInfo) (bool, error) {
 }
 
 func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
-	numFiles := int64(0)
-	totalSize := int64(0)
-	countFn := func(f os.FileInfo) {
-		match, err := fc.filter(f)
-		if err != nil {
-			acc.AddError(err)
-			return
-		}
-		if !match {
-			return
-		}
-		numFiles++
-		if fc.CountSize {
-			totalSize += f.Size()
-		}
-	}
-	err := count(fc.Directory, fc.Recursive, countFn)
-	if err != nil {
-		acc.AddError(err)
-	}
 
-	gauge := map[string]interface{}{
-		"count": numFiles,
-	}
-	if fc.CountSize {
-		gauge["size"] = totalSize
-	}
-	acc.AddGauge("filecount", gauge,
-		map[string]string{
-			"directory": fc.Directory,
-		})
+	fc.count(acc, fc.Directory)
 
 	return nil
 }
 
 func NewFileCount() *FileCount {
 	return &FileCount{
-		Directory:   "",
-		CountSize:   false,
-		Name:        "*",
-		Recursive:   true,
-		RegularOnly: true,
-		Size:        0,
-		MTime:       internal.Duration{Duration: 0},
-		fileFilters: nil,
+		Directory:          "",
+		CountSize:          false,
+		Name:               "*",
+		Recursive:          true,
+		RegularOnly:        true,
+		Size:               0,
+		MTime:              internal.Duration{Duration: 0},
+		RecursivePrint:     false,
+		RecursivePrintSize: 0,
+		fileFilters:        nil,
 	}
 }
 

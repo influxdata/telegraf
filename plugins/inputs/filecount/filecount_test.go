@@ -76,16 +76,30 @@ func TestMTimeFilter(t *testing.T) {
 	require.True(t, fileCountEquals(fc, len(matches), 0))
 }
 
+func TestRecursivePrint(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.RecursivePrint = true;
+
+	acc := testutil.Accumulator{}
+	acc.GatherError(fc.Gather)
+	tags := map[string]string{"directory": getTestdataDir() + string(os.PathSeparator) + "subdir"}
+
+	require.True(t, acc.HasPoint("filecount", tags, "count", int64(3)))
+	require.True(t, acc.HasPoint("filecount", tags, "size", int64(446)))
+}
+
 func getNoFilterFileCount() FileCount {
 	return FileCount{
-		Directory:   getTestdataDir(),
-		CountSize:   true,
-		Name:        "*",
-		Recursive:   true,
-		RegularOnly: false,
-		Size:        0,
-		MTime:       internal.Duration{Duration: 0},
-		fileFilters: nil,
+		Directory:          getTestdataDir(),
+		CountSize:          true,
+		Name:               "*",
+		Recursive:          true,
+		RegularOnly:        false,
+		Size:               0,
+		MTime:              internal.Duration{Duration: 0},
+		RecursivePrint:     false,
+		RecursivePrintSize: 0,
+		fileFilters:        nil,
 	}
 }
 
