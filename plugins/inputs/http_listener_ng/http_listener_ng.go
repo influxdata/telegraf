@@ -270,7 +270,7 @@ func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) 
 		}
 	}
 	if !isAcceptedMethod {
-		badRequest(res)
+		methodNotAllowed(res)
 		return
 	}
 
@@ -396,6 +396,13 @@ func badRequest(res http.ResponseWriter) {
 	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.WriteHeader(http.StatusBadRequest)
 	res.Write([]byte(`{"error":"http: bad request"}`))
+}
+
+func methodNotAllowed(res http.ResponseWriter) {
+	res.Header().Set("Content-Type", "application/json")
+	res.Header().Set("X-Influxdb-Version", "1.0")
+	res.WriteHeader(http.StatusMethodNotAllowed)
+	res.Write([]byte(`{"error":"http: method not allowed"}`))
 }
 
 func (h *HTTPListenerNG) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
