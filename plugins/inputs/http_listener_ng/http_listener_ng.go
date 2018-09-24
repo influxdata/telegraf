@@ -36,7 +36,7 @@ type TimeFunc func() time.Time
 
 type HTTPListenerNG struct {
 	ServiceAddress string
-	Paths          []string
+	Path           string
 	Methods        []string
 	ReadTimeout    internal.Duration
 	WriteTimeout   internal.Duration
@@ -82,7 +82,7 @@ const sampleConfig = `
   ## "/query" and "/ping" paths are already taken.
   ## "/query" delivers dummy response.
   ## "/ping" responds to ping requests.
-  # paths = ["/write"]
+  # paths = "/telegraf"
 
   ## HTTP methods to accept.
   # methods = ["POST", "PUT"]
@@ -225,8 +225,8 @@ func (h *HTTPListenerNG) Stop() {
 func (h *HTTPListenerNG) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	h.RequestsRecv.Incr(1)
 	defer h.RequestsServed.Incr(1)
-	switch {
-	case req.URL.Path == "/query":
+	switch req.URL.Path {
+	case "/query":
 		h.QueriesRecv.Incr(1)
 		defer h.QueriesServed.Incr(1)
 		// Deliver a dummy response to the query endpoint, as some InfluxDB
@@ -237,14 +237,14 @@ func (h *HTTPListenerNG) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 			res.WriteHeader(http.StatusOK)
 			res.Write([]byte("{\"results\":[]}"))
 		}, res, req)
-	case req.URL.Path == "/ping":
+	case "/ping":
 		h.PingsRecv.Incr(1)
 		defer h.PingsServed.Incr(1)
 		// respond to ping requests
 		h.AuthenticateIfSet(func(res http.ResponseWriter, req *http.Request) {
 			res.WriteHeader(http.StatusNoContent)
 		}, res, req)
-	case contains(req.URL.Path, h.Paths):
+	case h.Path:
 		h.WritesRecv.Incr(1)
 		defer h.WritesServed.Incr(1)
 		h.AuthenticateIfSet(h.serveWrite, res, req)
@@ -253,15 +253,6 @@ func (h *HTTPListenerNG) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		// Don't know how to respond to calls to other endpoints
 		h.AuthenticateIfSet(http.NotFound, res, req)
 	}
-}
-
-func contains(value string, array []string) bool {
-	for _, element := range array {
-		if element == value {
-			return true
-		}
-	}
-	return false
 }
 
 func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) {
@@ -432,7 +423,7 @@ func init() {
 			ServiceAddress: ":8186",
 			TimeFunc:       time.Now,
 			Parser:         parser,
-			Paths:          []string{"/write"},
+			Path:           "/telegraf",
 			Methods:        []string{"POST", "PUT"},
 		}
 	})
