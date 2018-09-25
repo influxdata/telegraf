@@ -70,12 +70,17 @@ var sampleConfig = `
 func ToLineFormat(tags map[string]string) string {
 	tagsArray := make([]string, len(tags))
 	index := 0
+	skip := 0
 	for k, v := range tags {
+		if v == "" {
+			skip++
+			continue
+		}
 		tagsArray[index] = fmt.Sprintf("%s=%s", k, v)
 		index++
 	}
 	sort.Strings(tagsArray)
-	return strings.Join(tagsArray, " ")
+	return strings.Join(tagsArray[skip:], " ")
 }
 
 func (o *OpenTSDB) Connect() error {
