@@ -372,7 +372,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	x := 0
 	for x < len(input) {
 		if h.Protocol == "line protocol" {
-			metrics, err := h.decodeLineProtocol(sDec, t)
+			metrics, err := h.decodeLineProtocol([]byte(input[x]), t)
 			if err != nil {
 				log.Println("E! Line Protocol Decode failed " + err.Error())
 				badRequest(res)
@@ -384,7 +384,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 			}
 		}
 		if h.Protocol == "json" {
-			metrics, err := h.decodeJSON(sDec, t)
+			metrics, err := h.decodeJSON([]byte(input[x]), t)
 			if err != nil {
 				log.Println("E! JSON Decode Failed " + err.Error())
 				badRequest(res)
