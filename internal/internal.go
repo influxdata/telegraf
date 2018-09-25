@@ -153,8 +153,6 @@ func RunTimeout(c *exec.Cmd, timeout time.Duration) error {
 // It assumes the command has already been started.
 // If the command times out, it attempts to kill the process.
 func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
-	var err error
-
 	timer := time.AfterFunc(timeout, func() {
 		err := c.Process.Kill()
 		if err != nil {
@@ -163,7 +161,7 @@ func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 		}
 	})
 
-	exitErr := c.Wait()
+	err := c.Wait()
 	isTimeout := timer.Stop()
 
 	if err != nil {
@@ -172,7 +170,7 @@ func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
 		return TimeoutErr
 	}
 
-	return exitErr
+	return err
 }
 
 // RandomSleep will sleep for a random amount of time up to max.
