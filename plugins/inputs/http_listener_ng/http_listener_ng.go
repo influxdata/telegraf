@@ -21,15 +21,15 @@ import (
 )
 
 const (
-	// DEFAULT_MAX_BODY_SIZE is the default maximum request body size, in bytes.
+	// defaultMaxBodySize is the default maximum request body size, in bytes.
 	// if the request body is over this size, we will return an HTTP 413 error.
 	// 500 MB
-	DEFAULT_MAX_BODY_SIZE = 500 * 1024 * 1024
+	defaultMaxBodySize = 500 * 1024 * 1024
 
-	// MAX_LINE_SIZE is the maximum size, in bytes, that can be allocated for
+	// defaultMaxLineSize is the maximum size, in bytes, that can be allocated for
 	// a single InfluxDB point.
 	// 64 KB
-	DEFAULT_MAX_LINE_SIZE = 64 * 1024
+	defaultMaxLineSize = 64 * 1024
 )
 
 type TimeFunc func() time.Time
@@ -159,10 +159,10 @@ func (h *HTTPListenerNG) Start(acc telegraf.Accumulator) error {
 	h.AuthFailures = selfstat.Register("http_listener_ng", "auth_failures", tags)
 
 	if h.MaxBodySize == 0 {
-		h.MaxBodySize = DEFAULT_MAX_BODY_SIZE
+		h.MaxBodySize = defaultMaxBodySize
 	}
 	if h.MaxLineSize == 0 {
-		h.MaxLineSize = DEFAULT_MAX_LINE_SIZE
+		h.MaxLineSize = defaultMaxLineSize
 	}
 
 	if h.ReadTimeout.Duration < time.Second {
