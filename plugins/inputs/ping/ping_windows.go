@@ -24,6 +24,8 @@ import (
 type HostPinger func(binary string, timeout float64, args ...string) (string, error)
 
 type Ping struct {
+	wg sync.WaitGroup
+
 	// Number of pings to send (ping -c <COUNT>)
 	Count int
 
@@ -74,21 +76,20 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	if p.Count < 1 {
 		p.Count = 1
 	}
-	var wg sync.WaitGroup
 
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
-		wg.Add(1)
-		p.pingToURL(url, wg, acc)
+		p.wg.Add(1)
+		p.pingToURL(url, acc)
 	}
 
-	wg.Wait()
+	p.wg.Wait()
 
 	return nil
 }
 
-func (p *Ping) pingToURL(u string, wg sync.WaitGroup, acc telegraf.Accumulator) {
-	defer wg.Done()
+func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
+	defer p.wg.Done()
 
 	tags := map[string]string{"url": u}
 	fields := map[string]interface{}{"result_code": 0}
