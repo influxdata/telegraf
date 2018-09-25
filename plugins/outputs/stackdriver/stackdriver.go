@@ -137,12 +137,11 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 		// Create the time series in Stackdriver.
 		err := s.client.CreateTimeSeries(ctx, timeSeriesRequest)
 		if err != nil {
-			log.Printf("E! [output.stackdriver] create time series failed: %s", err)
-			continue
+			log.Printf("E! [output.stackdriver] unable to write to Stackdriver: %s", err)
 		}
 	}
 
-	return nil
+	return err
 }
 
 func getStackdriverTimeInterval(
