@@ -141,10 +141,8 @@ func TestArguments(t *testing.T) {
 		Arguments:    arguemnts,
 	}
 
-	for _, system := range []string{"darwin", "linux", "anything else"} {
-		actual := p.args("www.google.com", system)
-		require.True(t, reflect.DeepEqual(actual, arguments), "Expected : %s Actual: %s", arguments, actual)
-	}
+	actual := p.args("www.google.com")
+	require.True(t, reflect.DeepEqual(actual, arguments), "Expected : %s Actual: %s", arguments, actual)
 }
 
 var lossyPingOutput = `
