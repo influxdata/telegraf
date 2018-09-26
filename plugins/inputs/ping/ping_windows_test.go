@@ -133,12 +133,9 @@ func TestBadPingGather(t *testing.T) {
 func TestArguments(t *testing.T) {
 	arguments := []string{"-c", "3"}
 	p := Ping{
-		Count:        2,
-		Interface:    "eth0",
-		Timeout:      12.0,
-		Deadline:     24,
-		PingInterval: 1.2,
-		Arguments:    arguemnts,
+		Count:     2,
+		Timeout:   12.0,
+		Arguments: arguemnts,
 	}
 
 	actual := p.args("www.google.com")
