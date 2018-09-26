@@ -1,12 +1,14 @@
 package filecount
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -125,18 +127,42 @@ func absDuration(x time.Duration) time.Duration {
 	return x
 }
 
-func count(basedir string, recursive bool, countFn countFunc) error {
+func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, recursive bool) {
+	numFiles := int64(0)
 	walkFn := func(path string, file os.FileInfo, err error) error {
+		fmt.Println("###, cp2, path: ", path)
 		if path == basedir {
 			return nil
 		}
-		countFn(file)
+		match, err := fc.filter(file)
+		if err != nil {
+			acc.AddError(err)
+			return nil
+		}
+		if match {
+			numFiles++
+		}
 		if !recursive && file.IsDir() {
 			return filepath.SkipDir
 		}
 		return nil
 	}
-	return filepath.Walk(basedir, walkFn)
+
+	err := filepath.Walk(basedir, walkFn)
+	if err != nil {
+		acc.AddError(err)
+		return
+	}
+
+	fmt.Println("###, cp1, numFiles", numFiles)
+	acc.AddFields("filecount",
+		map[string]interface{}{
+			"count": numFiles,
+		},
+		map[string]string{
+			"directory": basedir,
+		},
+	)
 }
 
 func (fc *FileCount) initFileFilters() {
@@ -168,32 +194,31 @@ func (fc *FileCount) filter(file os.FileInfo) (bool, error) {
 }
 
 func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
-	numFiles := int64(0)
-	countFn := func(f os.FileInfo) {
-		match, err := fc.filter(f)
-		if err != nil {
-			acc.AddError(err)
-			return
-		}
-		if !match {
-			return
-		}
-		numFiles++
-	}
-	err := count(fc.Directory, fc.Recursive, countFn)
+	dirs, err := getTargetDirs(fc.Directory)
 	if err != nil {
-		acc.AddError(err)
+		return err
 	}
 
-	acc.AddFields("filecount",
-		map[string]interface{}{
-			"count": numFiles,
-		},
-		map[string]string{
-			"directory": fc.Directory,
-		})
+	for _, dir := range dirs {
+		fc.count(acc, dir, fc.Recursive)
+	}
 
 	return nil
+}
+
+func getTargetDirs(directory string) ([]string, error) {
+	g, err := globpath.Compile(directory)
+	if err != nil {
+		return nil, fmt.Errorf("could not compile glob %v: %v", directory, err)
+	}
+
+	filtered := []string{}
+	for path, file := range g.Match() {
+		if file.IsDir() == true {
+			filtered = append(filtered, path)
+		}
+	}
+	return filtered, nil
 }
 
 func NewFileCount() *FileCount {
