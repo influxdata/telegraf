@@ -4,10 +4,12 @@ package ping
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Windows ping format ( should support multilanguage ?)
@@ -126,6 +128,23 @@ func TestBadPingGather(t *testing.T) {
 		"result_code":         0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
+}
+
+func TestArguments(t *testing.T) {
+	arguments := []string{"-c", "3"}
+	p := Ping{
+		Count:        2,
+		Interface:    "eth0",
+		Timeout:      12.0,
+		Deadline:     24,
+		PingInterval: 1.2,
+		Arguments:    arguemnts,
+	}
+
+	for _, system := range []string{"darwin", "linux", "anything else"} {
+		actual := p.args("www.google.com", system)
+		require.True(t, reflect.DeepEqual(actual, arguments), "Expected : %s Actual: %s", arguments, actual)
+	}
 }
 
 var lossyPingOutput = `
@@ -332,4 +351,17 @@ func TestTTLExpiredPingGather(t *testing.T) {
 		"Fatal ping should not have packet measurements")
 	assert.False(t, acc.HasInt64Field("ping", "minimum_response_ms"),
 		"Fatal ping should not have packet measurements")
+}
+
+func TestPingBinary(t *testing.T) {
+	var acc testutil.Accumulator
+	p := Ping{
+		Urls:   []string{"www.google.com"},
+		Binary: "ping6",
+		pingHost: func(binary string, timeout float64, args ...string) (string, error) {
+			assert.True(t, binary == "ping6")
+			return "", nil
+		},
+	}
+	acc.GatherError(p.Gather)
 }

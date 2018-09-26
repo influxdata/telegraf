@@ -124,6 +124,23 @@ func TestArgs(t *testing.T) {
 	}
 }
 
+func TestArguments(t *testing.T) {
+	arguments := []string{"-c", "3"}
+	p := Ping{
+		Count:        2,
+		Interface:    "eth0",
+		Timeout:      12.0,
+		Deadline:     24,
+		PingInterval: 1.2,
+		Arguments:    arguments,
+	}
+
+	for _, system := range []string{"darwin", "linux", "anything else"} {
+		actual := p.args("www.google.com", system)
+		require.True(t, reflect.DeepEqual(actual, arguments), "Expected: %s Actual: %s", arguments, actual)
+	}
+}
+
 func mockHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return linuxPingOutput, nil
 }
@@ -273,4 +290,17 @@ func TestErrorWithHostNamePingGather(t *testing.T) {
 		assert.True(t, len(acc.Errors) > 0)
 		assert.Contains(t, acc.Errors, param.error)
 	}
+}
+
+func TestPingBinary(t *testing.T) {
+	var acc testutil.Accumulator
+	p := Ping{
+		Urls:   []string{"www.google.com"},
+		Binary: "ping6",
+		pingHost: func(binary string, timeout float64, args ...string) (string, error) {
+			assert.True(t, binary == "ping6")
+			return "", nil
+		},
+	}
+	acc.GatherError(p.Gather)
 }
