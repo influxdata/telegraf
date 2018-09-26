@@ -226,7 +226,8 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 	}
 }
 
-func getStackdriverLabels(tags []*telegraf.Tag) (labels map[string]string) {
+func getStackdriverLabels(tags []*telegraf.Tag) map[string]string {
+	labels := make(map[string]string)
 	for _, t := range tags {
 		labels[t.Key] = t.Value
 	}
@@ -250,11 +251,11 @@ func getStackdriverLabels(tags []*telegraf.Tag) (labels map[string]string) {
 			continue
 		}
 	}
-	if len(tags) > QuotaLabelsPerMetricDescriptor {
-		excess := len(tags) - QuotaLabelsPerMetricDescriptor
+	if len(labels) > QuotaLabelsPerMetricDescriptor {
+		excess := len(labels) - QuotaLabelsPerMetricDescriptor
 		log.Printf(
 			"W! [output.stackdriver] tag count [%d] exceeds quota for stackdriver labels [%d] removing [%d] random tags",
-			len(tags),
+			len(labels),
 			QuotaLabelsPerMetricDescriptor,
 			excess,
 		)
