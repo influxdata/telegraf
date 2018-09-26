@@ -57,8 +57,7 @@ type HTTPListenerNG struct {
 	listener net.Listener
 
 	parsers.Parser
-	acc  telegraf.Accumulator
-	pool *pool
+	acc telegraf.Accumulator
 
 	BytesRecv       selfstat.Stat
 	RequestsServed  selfstat.Stat
@@ -129,7 +128,6 @@ func (h *HTTPListenerNG) Description() string {
 }
 
 func (h *HTTPListenerNG) Gather(_ telegraf.Accumulator) error {
-	h.BuffersCreated.Set(h.pool.ncreated())
 	return nil
 }
 
@@ -173,7 +171,6 @@ func (h *HTTPListenerNG) Start(acc telegraf.Accumulator) error {
 	}
 
 	h.acc = acc
-	h.pool = NewPool(200, h.MaxLineSize)
 
 	tlsConf, err := h.ServerConfig.TLSConfig()
 	if err != nil {
@@ -290,8 +287,7 @@ func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) 
 
 	var return400 bool
 	var hangingBytes bool
-	buf := h.pool.get()
-	defer h.pool.put(buf)
+	buf := make([]byte, h.MaxLineSize)
 	bufStart := 0
 	for {
 		n, err := io.ReadFull(body, buf[bufStart:])
