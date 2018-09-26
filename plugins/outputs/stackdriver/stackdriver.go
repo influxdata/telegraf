@@ -79,8 +79,8 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 	for _, m := range metrics {
 		timeSeries := []*monitoringpb.TimeSeries{}
 
-		for k, v := range m.Fields() {
-			value, err := getStackdriverTypedValue(v)
+		for _, f := range m.FieldList() {
+			value, err := getStackdriverTypedValue(f.Value)
 			if err != nil {
 				log.Printf("E! [output.stackdriver] get type failed: %s", err)
 				continue
@@ -108,8 +108,8 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 			timeSeries = append(timeSeries,
 				&monitoringpb.TimeSeries{
 					Metric: &metricpb.Metric{
-						Type:   path.Join("custom.googleapis.com", s.Namespace, m.Name(), k),
-						Labels: getStackdriverLabels(m.Tags()),
+						Type:   path.Join("custom.googleapis.com", s.Namespace, m.Name(), f.Key),
+						Labels: getStackdriverLabels(m.TagList()),
 					},
 					MetricKind: metricKind,
 					Resource: &monitoredrespb.MonitoredResource{
@@ -138,10 +138,11 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 		err := s.client.CreateTimeSeries(ctx, timeSeriesRequest)
 		if err != nil {
 			log.Printf("E! [output.stackdriver] unable to write to Stackdriver: %s", err)
+			return err
 		}
 	}
 
-	return err
+	return nil
 }
 
 func getStackdriverTimeInterval(
@@ -225,15 +226,18 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 	}
 }
 
-func getStackdriverLabels(tags map[string]string) map[string]string {
-	for k, v := range tags {
+func getStackdriverLabels(tags []*telegraf.Tag) (labels map[string]string) {
+	for _, t := range tags {
+		labels[t.Key] = t.Value
+	}
+	for k, v := range labels {
 		if len(k) > QuotaStringLengthForLabelKey {
 			log.Printf(
 				"W! [output.stackdriver] removing tag [%s] key exceeds string length for label key [%d]",
 				k,
 				QuotaStringLengthForLabelKey,
 			)
-			delete(tags, k)
+			delete(labels, k)
 			continue
 		}
 		if len(v) > QuotaStringLengthForLabelValue {
@@ -242,7 +246,7 @@ func getStackdriverLabels(tags map[string]string) map[string]string {
 				k,
 				QuotaStringLengthForLabelValue,
 			)
-			delete(tags, k)
+			delete(labels, k)
 			continue
 		}
 	}
@@ -254,16 +258,16 @@ func getStackdriverLabels(tags map[string]string) map[string]string {
 			QuotaLabelsPerMetricDescriptor,
 			excess,
 		)
-		for k := range tags {
+		for k := range labels {
 			if excess == 0 {
 				break
 			}
 			excess--
-			delete(tags, k)
+			delete(labels, k)
 		}
 	}
 
-	return tags
+	return labels
 }
 
 // Close will terminate the session to the backend, returning error if an issue arises.
