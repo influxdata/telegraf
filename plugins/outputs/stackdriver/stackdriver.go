@@ -221,6 +221,12 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 				BoolValue: bool(v),
 			},
 		}, nil
+	case string:
+		return &monitoringpb.TypedValue{
+			Value: &monitoringpb.TypedValue_StringValue{
+				StringValue: string(v),
+			},
+		}, nil
 	default:
 		return nil, fmt.Errorf("value type \"%T\" not supported for stackdriver custom metrics", v)
 	}
