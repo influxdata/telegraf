@@ -135,7 +135,7 @@ func TestArguments(t *testing.T) {
 	p := Ping{
 		Count:     2,
 		Timeout:   12.0,
-		Arguments: arguemnts,
+		Arguments: arguments,
 	}
 
 	actual := p.args("www.google.com")
