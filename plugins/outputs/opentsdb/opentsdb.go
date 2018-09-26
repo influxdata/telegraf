@@ -70,17 +70,12 @@ var sampleConfig = `
 func ToLineFormat(tags map[string]string) string {
 	tagsArray := make([]string, len(tags))
 	index := 0
-	skip := 0
 	for k, v := range tags {
-		if v == "" {
-			skip++
-			continue
-		}
 		tagsArray[index] = fmt.Sprintf("%s=%s", k, v)
 		index++
 	}
 	sort.Strings(tagsArray)
-	return strings.Join(tagsArray[skip:], " ")
+	return strings.Join(tagsArray, " ")
 }
 
 func (o *OpenTSDB) Connect() error {
@@ -218,7 +213,10 @@ func (o *OpenTSDB) WriteTelnet(metrics []telegraf.Metric, u *url.URL) error {
 func cleanTags(tags map[string]string) map[string]string {
 	tagSet := make(map[string]string, len(tags))
 	for k, v := range tags {
-		tagSet[sanitize(k)] = sanitize(v)
+		val := sanitize(v)
+		if val != "" {
+			tagSet[sanitize(k)] = val
+		}
 	}
 	return tagSet
 }
