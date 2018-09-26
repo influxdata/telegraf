@@ -130,7 +130,6 @@ func absDuration(x time.Duration) time.Duration {
 func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, recursive bool) {
 	numFiles := int64(0)
 	walkFn := func(path string, file os.FileInfo, err error) error {
-		fmt.Println("###, cp2, path: ", path)
 		if path == basedir {
 			return nil
 		}
@@ -154,7 +153,6 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, recursive b
 		return
 	}
 
-	fmt.Println("###, cp1, numFiles", numFiles)
 	acc.AddFields("filecount",
 		map[string]interface{}{
 			"count": numFiles,
