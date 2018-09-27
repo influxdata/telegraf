@@ -4,6 +4,7 @@
 
 - [#4750](https://github.com/influxdata/telegraf/pull/4750): Fix hardware_type may be truncated in sqlserver input.
 - [#4723](https://github.com/influxdata/telegraf/issues/4723): Improve performance in basicstats aggregator.
+- [#4747](https://github.com/influxdata/telegraf/pull/4723): Add hostname to TLS config for SNI support.
 
 ## v1.8 [2018-09-21]
 
