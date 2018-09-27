@@ -566,7 +566,7 @@ func (h *JBoss) getUndertowStatistics(
 
 	fields := make(map[string]interface{})
 	for key, value := range server.Result {
-		log.Printf("D! LISTERNER %s : %s \n", key, value)
+		log.Printf("D! LISTENER %s : %s \n", key, value)
 		switch key {
 		case "bytes-received", "bytes-sent", "request-count", "error-count", "max-processing-time", "processing-time":
 			if value != nil {
@@ -899,6 +899,14 @@ func (h *JBoss) getJVMStatistics(
 			nonHeap := mem["non-heap-memory-usage"].(map[string]interface{})
 			h.flatten(heap, fields, "heap")
 			h.flatten(nonHeap, fields, "nonheap")
+		case "memory-pool":
+			data := value.(map[string]interface{})
+			name := data["name"].(map[string]interface{})
+			for poolName, poolArea := range name {
+			    poolData := poolArea.(map[string]interface{})
+			    usage := poolData["usage"].(map[string]interface{})
+			    h.flatten(usage, fields, poolName)
+			}
 		case "garbage-collector":
 			gc := value.(map[string]interface{})
 			gcName := gc["name"].(map[string]interface{})
