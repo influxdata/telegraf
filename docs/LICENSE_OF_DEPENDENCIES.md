@@ -37,7 +37,7 @@ following works:
 - github.com/go-logfmt/logfmt [MIT](https://github.com/go-logfmt/logfmt/blob/master/LICENSE)
 - github.com/gorilla/mux [BSD](https://github.com/gorilla/mux/blob/master/LICENSE)
 - github.com/go-ini/ini [APACHE](https://github.com/go-ini/ini/blob/master/LICENSE)
-- github.com/go-ole/go-ole [MPL](http://mattn.mit-license.org/2013)
+- github.com/go-ole/go-ole [MIT](https://github.com/go-ole/go-ole/blob/master/LICENSE)
 - github.com/go-sql-driver/mysql [MPL](https://github.com/go-sql-driver/mysql/blob/master/LICENSE)
 - github.com/hailocab/go-hostpool [MIT](https://github.com/hailocab/go-hostpool/blob/master/LICENSE)
 - github.com/hashicorp/consul [MPL](https://github.com/hashicorp/consul/blob/master/LICENSE)
