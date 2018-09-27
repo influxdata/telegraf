@@ -1,3 +1,9 @@
+## v1.8.1 [unreleased]
+
+### Bugfixes
+
+- [#4750](https://github.com/influxdata/telegraf/pull/4750): Fix hardware_type may be truncated in sqlserver input.
+
 ## v1.8 [2018-09-21]
 
 ### New Inputs
