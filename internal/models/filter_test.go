@@ -61,6 +61,7 @@ func TestFilter_ApplyDeleteFields(t *testing.T) {
 		time.Now())
 	require.NoError(t, err)
 	require.True(t, f.Select(m))
+	f.Modify(m)
 	require.Equal(t, map[string]interface{}{"value2": int64(2)}, m.Fields())
 }
 
@@ -80,7 +81,9 @@ func TestFilter_ApplyDeleteAllFields(t *testing.T) {
 		},
 		time.Now())
 	require.NoError(t, err)
-	require.False(t, f.Select(m))
+	require.True(t, f.Select(m))
+	f.Modify(m)
+	require.Len(t, m.FieldList(), 0)
 }
 
 func TestFilter_Empty(t *testing.T) {
