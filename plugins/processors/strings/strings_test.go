@@ -481,3 +481,52 @@ func TestReadmeExample(t *testing.T) {
 	assert.Equal(t, expectedFields, processed[0].Fields())
 	assert.Equal(t, expectedTags, processed[0].Tags())
 }
+
+func newMetric(name string) telegraf.Metric {
+	tags := map[string]string{}
+	fields := map[string]interface{}{}
+	m, _ := metric.New(name, tags, fields, time.Now())
+	return m
+}
+
+func TestMeasurementReplace(t *testing.T) {
+	plugin := &Strings{
+		Replace: []converter{
+			converter{
+				Old:         "_",
+				New:         "-",
+				Measurement: "*",
+			},
+		},
+	}
+	metrics := []telegraf.Metric{
+		newMetric("foo:some_value:bar"),
+		newMetric("average:cpu:usage"),
+		newMetric("average_cpu_usage"),
+	}
+	results := plugin.Apply(metrics...)
+	assert.Equal(t, "foo:some-value:bar", results[0].Name(), "`_` was not changed to `-`")
+	assert.Equal(t, "average:cpu:usage", results[1].Name(), "Input name should have been unchanged")
+	assert.Equal(t, "average-cpu-usage", results[2].Name(), "All instances of `_` should have been changed to `-`")
+}
+
+func TestMeasurementCharDeletion(t *testing.T) {
+	plugin := &Strings{
+		Replace: []converter{
+			converter{
+				Old:         "foo",
+				New:         "",
+				Measurement: "*",
+			},
+		},
+	}
+	metrics := []telegraf.Metric{
+		newMetric("foo:bar:baz"),
+		newMetric("foofoofoo"),
+		newMetric("barbarbar"),
+	}
+	results := plugin.Apply(metrics...)
+	assert.Equal(t, ":bar:baz", results[0].Name(), "Should have deleted the initial `foo`")
+	assert.Equal(t, "foofoofoo", results[1].Name(), "Should have refused to delete the whole string")
+	assert.Equal(t, "barbarbar", results[2].Name(), "Should not have changed the input")
+}
