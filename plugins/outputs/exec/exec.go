@@ -10,13 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gonuts/go-shellquote"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/errchan"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	shellquote "github.com/kballard/go-shellquote"
 )
 
 var sampleConfig = `
@@ -47,13 +46,6 @@ type Exec struct {
 	errChan chan error
 }
 
-func NewExec() *Exec {
-	return &Exec{
-		runner:  CommandRunner{},
-		Timeout: internal.Duration{Duration: time.Second * 5},
-	}
-}
-
 type Runner interface {
 	Run(*Exec, string, bytes.Buffer) error
 }
@@ -61,12 +53,12 @@ type Runner interface {
 type CommandRunner struct{}
 
 func (c CommandRunner) Run(e *Exec, command string, buffer bytes.Buffer) error {
-	split_cmd, err := shellquote.Split(command)
-	if err != nil || len(split_cmd) == 0 {
+	splitCmd, err := shellquote.Split(command)
+	if err != nil || len(splitCmd) == 0 {
 		return fmt.Errorf("exec: unable to parse command, %s", err)
 	}
 
-	cmd := exec.Command(split_cmd[0], split_cmd[1:]...)
+	cmd := exec.Command(splitCmd[0], splitCmd[1:]...)
 	cmd.Stdin = &buffer
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -119,14 +111,11 @@ func (e *Exec) Write(metrics []telegraf.Metric) error {
 
 	var buffer bytes.Buffer
 	for _, metric := range metrics {
-		values, err := e.serializer.Serialize(metric)
+		value, err := e.serializer.Serialize(metric)
 		if err != nil {
 			return err
 		}
-		for _, value := range values {
-			buffer.WriteString(value)
-			buffer.WriteString("\n")
-		}
+		buffer.Write(value)
 	}
 
 	// Lifted from 'plugins/inputs/exec/exec.go:Gather'
@@ -173,5 +162,10 @@ func (e *Exec) Write(metrics []telegraf.Metric) error {
 }
 
 func init() {
-	outputs.Add("exec", func() telegraf.Output { return NewExec() })
+	outputs.Add("exec", func() telegraf.Output {
+		return &Exec{
+			runner:  CommandRunner{},
+			Timeout: internal.Duration{Duration: time.Second * 5},
+		}
+	})
 }
