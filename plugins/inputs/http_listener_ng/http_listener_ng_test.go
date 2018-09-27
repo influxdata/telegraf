@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 
@@ -247,6 +249,8 @@ func TestWriteHTTPWithJSON(t *testing.T) {
 		map[string]interface{}{"value": float64(12)},
 		map[string]string{"host": "server01"},
 	)
+	time, _ := time.Parse("02 Jan 06 15:04 MST", "04 Jan 06 15:04 MST")
+	assert.True(t, acc.HasTimestamp("cpu_load_short", time))
 }
 
 // http listener should add a newline at the end of the buffer if it's not there
