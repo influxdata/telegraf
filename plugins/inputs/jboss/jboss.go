@@ -276,6 +276,7 @@ func (h *JBoss) Gather(acc telegraf.Accumulator) error {
 		exec := ExecTypeResponse{}
 		if err = json.Unmarshal(out, &exec); err != nil {
 			acc.AddError(fmt.Errorf("Error decoding JSON response (ExecTypeResponse) %s,%s", out, err))
+			continue
 		}
 		if exec.Result["launch-type"] == "DOMAIN" {
 			h.ExecAsDomain = true
