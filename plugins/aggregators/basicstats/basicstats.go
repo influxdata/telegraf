@@ -72,9 +72,9 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 			tags:   in.Tags(),
 			fields: make(map[string]basicstats),
 		}
-		for k, v := range in.Fields() {
-			if fv, ok := convert(v); ok {
-				a.fields[k] = basicstats{
+		for _, field := range in.FieldList() {
+			if fv, ok := convert(field.Value); ok {
+				a.fields[field.Key] = basicstats{
 					count: 1,
 					min:   fv,
 					max:   fv,
@@ -86,11 +86,11 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 		}
 		m.cache[id] = a
 	} else {
-		for k, v := range in.Fields() {
-			if fv, ok := convert(v); ok {
-				if _, ok := m.cache[id].fields[k]; !ok {
+		for _, field := range in.FieldList() {
+			if fv, ok := convert(field.Value); ok {
+				if _, ok := m.cache[id].fields[field.Key]; !ok {
 					// hit an uncached field of a cached metric
-					m.cache[id].fields[k] = basicstats{
+					m.cache[id].fields[field.Key] = basicstats{
 						count: 1,
 						min:   fv,
 						max:   fv,
@@ -101,7 +101,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 					continue
 				}
 
-				tmp := m.cache[id].fields[k]
+				tmp := m.cache[id].fields[field.Key]
 				//https://en.m.wikipedia.org/wiki/Algorithms_for_calculating_variance
 				//variable initialization
 				x := fv
@@ -126,7 +126,7 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				//sum compute
 				tmp.sum += fv
 				//store final data
-				m.cache[id].fields[k] = tmp
+				m.cache[id].fields[field.Key] = tmp
 			}
 		}
 	}
