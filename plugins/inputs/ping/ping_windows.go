@@ -65,7 +65,7 @@ const sampleConfig = `
 
 	## Arguments for ping command
 	## when arguments is not empty, other options (ping_interval, timeout, etc) will be ignored
-	# arguemnts = ["-c", "3"]
+	# arguments = ["-c", "3"]
 `
 
 func (s *Ping) SampleConfig() string {
