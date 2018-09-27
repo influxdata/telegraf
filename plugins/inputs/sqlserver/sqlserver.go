@@ -393,7 +393,7 @@ const sqlServerPropertiesV2 = `DECLARE @sys_info TABLE (
 	server_memory BIGINT,
 	sku NVARCHAR(64),
 	engine_edition SMALLINT,
-	hardware_type VARCHAR(15),
+	hardware_type VARCHAR(16),
 	total_storage_mb BIGINT,
 	available_storage_mb BIGINT,
 	uptime INT
