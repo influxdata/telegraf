@@ -3,6 +3,7 @@
 ### Bugfixes
 
 - [#4750](https://github.com/influxdata/telegraf/pull/4750): Fix hardware_type may be truncated in sqlserver input.
+- [#4723](https://github.com/influxdata/telegraf/issues/4723): Improve performance in basicstats aggregator.
 
 ## v1.8 [2018-09-21]
 
