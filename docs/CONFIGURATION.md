@@ -143,6 +143,7 @@ The [metric filtering](#metric-filtering) parameters can be used to limit what m
 handled by the processor.  Excluded metrics are passed downstream to the next
 processor.
 
+<a id="measurement-filtering"></a>
 ### Metric Filtering
 
 Metric filtering can be configured per plugin on any input, output, processor,
