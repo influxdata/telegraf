@@ -77,7 +77,7 @@ func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
 	for _, domain := range d.Domains {
 		for _, server := range d.Servers {
 			wg.Add(1)
-			go func() {
+			go func(domain, server string) {
 				fields := make(map[string]interface{}, 2)
 				tags := map[string]string{
 					"server":      server,
@@ -97,7 +97,7 @@ func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
 				}
 
 				acc.AddFields("dns_query", fields, tags)
-			}()
+			}(domain, server)
 		}
 	}
 
