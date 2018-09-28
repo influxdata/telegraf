@@ -311,7 +311,11 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 				return400 = true
 			}
 			if return400 {
-				badRequest(res, err.Error())
+				if err != nil {
+					badRequest(res, err.Error())
+				} else {
+					badRequest(res, "")
+				}
 			} else {
 				res.WriteHeader(http.StatusNoContent)
 			}
