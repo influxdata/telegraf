@@ -94,6 +94,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/postfix"
 	_ "github.com/influxdata/telegraf/plugins/inputs/postgresql"
 	_ "github.com/influxdata/telegraf/plugins/inputs/postgresql_extensible"
+	_ "github.com/influxdata/telegraf/plugins/inputs/db_extensible"
 	_ "github.com/influxdata/telegraf/plugins/inputs/powerdns"
 	_ "github.com/influxdata/telegraf/plugins/inputs/processes"
 	_ "github.com/influxdata/telegraf/plugins/inputs/procstat"
