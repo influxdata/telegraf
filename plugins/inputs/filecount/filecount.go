@@ -51,7 +51,6 @@ type FileCount struct {
 	fileFilters []fileFilterFunc
 }
 
-type countFunc func(os.FileInfo)
 type fileFilterFunc func(os.FileInfo) (bool, error)
 
 func (_ *FileCount) Description() string {
