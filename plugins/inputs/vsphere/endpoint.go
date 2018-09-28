@@ -661,7 +661,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	err := make(multiError, 0)
 	wp.Drain(ctx, func(ctx context.Context, in interface{}) bool {
 		if in != nil {
-			mux.Unlock()
+			mux.Lock()
 			defer mux.Unlock()
 			err = append(err, in.(error))
 			return false
