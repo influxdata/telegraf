@@ -112,7 +112,7 @@ func (f *Filter) Select(metric telegraf.Metric) bool {
 	return true
 }
 
-// Filter removes any tags and fields from the metric according to the
+// Modify removes any tags and fields from the metric according to the
 // fieldpass/fielddrop and taginclude/tagexclude filters.
 func (f *Filter) Modify(metric telegraf.Metric) {
 	if !f.isActive {

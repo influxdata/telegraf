@@ -46,9 +46,7 @@ func (r *RunningAggregator) Name() string {
 	return "aggregators." + r.Config.Name
 }
 
-func (r *RunningAggregator) MakeMetric(
-	metric telegraf.Metric,
-) telegraf.Metric {
+func (r *RunningAggregator) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	m := makemetric(
 		metric,
 		r.Config.NameOverride,
@@ -64,9 +62,8 @@ func (r *RunningAggregator) MakeMetric(
 	return m
 }
 
-// Add applies the given metric to the aggregator.
-// Before applying to the plugin, it will run any defined filters on the metric.
-// Apply returns true if the original metric should be dropped.
+// Add a metric to the aggregator and return true if the original metric
+// should be dropped.
 func (r *RunningAggregator) Add(metric telegraf.Metric) bool {
 	if ok := r.Config.Filter.Select(metric); !ok {
 		return false
@@ -78,8 +75,10 @@ func (r *RunningAggregator) Add(metric telegraf.Metric) bool {
 	}
 
 	r.metrics <- metric
+
 	return r.Config.DropOriginal
 }
+
 func (r *RunningAggregator) add(in telegraf.Metric) {
 	r.a.Add(in)
 }
