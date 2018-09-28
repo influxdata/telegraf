@@ -9,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -17,9 +18,9 @@ const (
 )
 
 type Kapacitor struct {
-	URLs []string `toml:"urls"`
-
+	URLs    []string `toml:"urls"`
 	Timeout internal.Duration
+	tls.ClientConfig
 
 	client *http.Client
 }
@@ -38,12 +39,23 @@ func (*Kapacitor) SampleConfig() string {
 
   ## Time limit for http requests
   timeout = "5s"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 }
 
 func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
 	if k.client == nil {
-		k.client = &http.Client{Timeout: k.Timeout.Duration}
+		client, err := k.createHttpClient()
+		if err != nil {
+			return err
+		}
+		k.client = client
 	}
 
 	var wg sync.WaitGroup
@@ -59,6 +71,22 @@ func (k *Kapacitor) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 	return nil
+}
+
+func (k *Kapacitor) createHttpClient() (*http.Client, error) {
+	tlsCfg, err := k.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsCfg,
+		},
+		Timeout: k.Timeout.Duration,
+	}
+
+	return client, nil
 }
 
 type object struct {

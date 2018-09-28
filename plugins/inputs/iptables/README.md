@@ -45,6 +45,8 @@ Defining multiple instances of this plugin in telegraf.conf can lead to concurre
   use_sudo = false
   # run iptables with the lock option
   use_lock = false
+  # Define an alternate executable, such as "ip6tables". Default is "iptables".
+  # binary = "ip6tables"
   # defines the table to monitor:
   table = "filter"
   # defines the chains to monitor:

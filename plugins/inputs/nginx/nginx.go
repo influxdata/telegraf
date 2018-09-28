@@ -13,34 +13,28 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Nginx struct {
-	// List of status URLs
-	Urls []string
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to client cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	Urls            []string
+	ResponseTimeout internal.Duration
+	tls.ClientConfig
+
 	// HTTP client
 	client *http.Client
-	// Response timeout
-	ResponseTimeout internal.Duration
 }
 
 var sampleConfig = `
   # An array of Nginx stub_status URI to gather stats.
   urls = ["http://localhost/server_status"]
 
-  # TLS/SSL configuration
-  ssl_ca = "/etc/telegraf/ca.pem"
-  ssl_cert = "/etc/telegraf/cert.cer"
-  ssl_key = "/etc/telegraf/key.key"
+  ## Optional TLS Config
+  tls_ca = "/etc/telegraf/ca.pem"
+  tls_cert = "/etc/telegraf/cert.cer"
+  tls_key = "/etc/telegraf/key.key"
+  ## Use TLS but skip chain & host verification
   insecure_skip_verify = false
 
   # HTTP response timeout (default: 5s)
@@ -87,8 +81,7 @@ func (n *Nginx) Gather(acc telegraf.Accumulator) error {
 }
 
 func (n *Nginx) createHttpClient() (*http.Client, error) {
-	tlsCfg, err := internal.GetTLSConfig(
-		n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
+	tlsCfg, err := n.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

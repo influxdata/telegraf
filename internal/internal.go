@@ -4,17 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"crypto/rand"
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 	"unicode"
 )
@@ -112,49 +109,6 @@ func RandomString(n int) string {
 	return string(bytes)
 }
 
-// GetTLSConfig gets a tls.Config object from the given certs, key, and CA files.
-// you must give the full path to the files.
-// If all files are blank and InsecureSkipVerify=false, returns a nil pointer.
-func GetTLSConfig(
-	SSLCert, SSLKey, SSLCA string,
-	InsecureSkipVerify bool,
-) (*tls.Config, error) {
-	if SSLCert == "" && SSLKey == "" && SSLCA == "" && !InsecureSkipVerify {
-		return nil, nil
-	}
-
-	t := &tls.Config{
-		InsecureSkipVerify: InsecureSkipVerify,
-	}
-
-	if SSLCA != "" {
-		caCert, err := ioutil.ReadFile(SSLCA)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf("Could not load TLS CA: %s",
-				err))
-		}
-
-		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(caCert)
-		t.RootCAs = caCertPool
-	}
-
-	if SSLCert != "" && SSLKey != "" {
-		cert, err := tls.LoadX509KeyPair(SSLCert, SSLKey)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf(
-				"Could not load TLS client key/certificate from %s:%s: %s",
-				SSLKey, SSLCert, err))
-		}
-
-		t.Certificates = []tls.Certificate{cert}
-		t.BuildNameToCertificate()
-	}
-
-	// will be nil by default if nothing is provided
-	return t, nil
-}
-
 // SnakeCase converts the given string to snake case following the Golang format:
 // acronyms are converted to lower-case and preceded by an underscore.
 func SnakeCase(in string) string {
@@ -199,22 +153,24 @@ func RunTimeout(c *exec.Cmd, timeout time.Duration) error {
 // It assumes the command has already been started.
 // If the command times out, it attempts to kill the process.
 func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
-	timer := time.NewTimer(timeout)
-	done := make(chan error)
-	go func() { done <- c.Wait() }()
-	select {
-	case err := <-done:
-		timer.Stop()
-		return err
-	case <-timer.C:
-		if err := c.Process.Kill(); err != nil {
+	timer := time.AfterFunc(timeout, func() {
+		err := c.Process.Kill()
+		if err != nil {
 			log.Printf("E! FATAL error killing process: %s", err)
-			return err
+			return
 		}
-		// wait for the command to return after killing it
-		<-done
+	})
+
+	err := c.Wait()
+	isTimeout := timer.Stop()
+
+	if err != nil {
+		return err
+	} else if isTimeout == false {
 		return TimeoutErr
 	}
+
+	return err
 }
 
 // RandomSleep will sleep for a random amount of time up to max.
@@ -239,4 +195,16 @@ func RandomSleep(max time.Duration, shutdown chan struct{}) {
 		t.Stop()
 		return
 	}
+}
+
+// Exit status takes the error from exec.Command
+// and returns the exit status and true
+// if error is not exit status, will return 0 and false
+func ExitStatus(err error) (int, bool) {
+	if exiterr, ok := err.(*exec.ExitError); ok {
+		if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+			return status.ExitStatus(), true
+		}
+	}
+	return 0, false
 }

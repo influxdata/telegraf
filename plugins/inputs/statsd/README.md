@@ -11,6 +11,14 @@
   ## MaxTCPConnection - applicable when protocol is set to tcp (default=250)
   max_tcp_connections = 250
 
+  ## Enable TCP keep alive probes (default=false)
+  tcp_keep_alive = false
+
+  ## Specifies the keep-alive period for an active network connection.
+  ## Only applies to TCP sockets and will be ignored if tcp_keep_alive is false.
+  ## Defaults to the OS configuration.
+  # tcp_keep_alive_period = "2h"
+
   ## Address and port to host UDP listener on
   service_address = ":8125"
 
@@ -37,7 +45,7 @@
   parse_data_dog_tags = false
 
   ## Statsd data translation templates, more info can be read here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite
+  ## https://github.com/influxdata/telegraf/blob/master/docs/TEMPLATE_PATTERN.md
   # templates = [
   #     "cpu.* measurement*"
   # ]
@@ -50,6 +58,10 @@
   ## calculation of percentiles. Raising this limit increases the accuracy
   ## of percentiles but also increases the memory usage and cpu time.
   percentile_limit = 1000
+
+  ## Maximum socket buffer size in bytes, once the buffer fills up, metrics
+  ## will start dropping.  Defaults to the OS default.
+  # read_buffer_size = 65535
 ```
 
 ### Description
@@ -157,6 +169,8 @@ metric type:
 - **protocol** string: Protocol used in listener - tcp or udp options
 - **max_tcp_connections** []int: Maximum number of concurrent TCP connections
 to allow. Used when protocol is set to tcp.
+- **tcp_keep_alive** boolean: Enable TCP keep alive probes
+- **tcp_keep_alive_period** internal.Duration: Specifies the keep-alive period for an active network connection
 - **service_address** string: Address to listen for statsd UDP packets on
 - **delete_gauges** boolean: Delete gauges on every collection interval
 - **delete_counters** boolean: Delete counters on every collection interval
@@ -213,5 +227,5 @@ mem.cached.localhost:256|g
 => mem_cached,host=localhost 256
 ```
 
-There are many more options available,
-[More details can be found here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite)
+Consult the [Template Patterns](/docs/TEMPLATE_PATTERN.md) documentation for
+additional details.

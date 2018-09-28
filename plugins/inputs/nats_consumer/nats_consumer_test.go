@@ -5,7 +5,7 @@ import (
 
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/nats-io/nats"
+	nats "github.com/nats-io/go-nats"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -59,7 +59,7 @@ func TestRunParserInvalidMsg(t *testing.T) {
 	in <- natsMsg(invalidMsg)
 
 	acc.WaitError(1)
-	assert.Contains(t, acc.Errors[0].Error(), "E! subject: telegraf, error:  metric parsing error")
+	assert.Contains(t, acc.Errors[0].Error(), "E! subject: telegraf, error: metric parse error")
 	assert.EqualValues(t, 0, acc.NMetrics())
 }
 
@@ -108,7 +108,10 @@ func TestRunParserAndGatherJSON(t *testing.T) {
 	n.acc = &acc
 	defer close(n.done)
 
-	n.parser, _ = parsers.NewJSONParser("nats_json_test", []string{}, nil)
+	n.parser, _ = parsers.NewParser(&parsers.Config{
+		DataFormat: "json",
+		MetricName: "nats_json_test",
+	})
 	n.wg.Add(1)
 	go n.receiver()
 	in <- natsMsg(testMsgJSON)

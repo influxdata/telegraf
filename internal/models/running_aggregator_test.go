@@ -1,16 +1,17 @@
 package models
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAdd(t *testing.T) {
@@ -24,15 +25,17 @@ func TestAdd(t *testing.T) {
 	})
 	assert.NoError(t, ra.Config.Filter.Compile())
 	acc := testutil.Accumulator{}
-	go ra.Run(&acc, time.Now(), make(chan struct{}))
+	go ra.Run(&acc, make(chan struct{}))
 
-	m := ra.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
+	m, err := metric.New("RITest",
 		map[string]string{},
-		telegraf.Untyped,
+		map[string]interface{}{
+			"value": int64(101),
+		},
 		time.Now().Add(time.Millisecond*150),
-	)
+		telegraf.Untyped)
+	require.NoError(t, err)
+
 	assert.False(t, ra.Add(m))
 
 	for {
@@ -55,36 +58,39 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 	})
 	assert.NoError(t, ra.Config.Filter.Compile())
 	acc := testutil.Accumulator{}
-	go ra.Run(&acc, time.Now(), make(chan struct{}))
+	go ra.Run(&acc, make(chan struct{}))
 
-	// metric before current period
-	m := ra.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
+	m, err := metric.New("RITest",
 		map[string]string{},
-		telegraf.Untyped,
+		map[string]interface{}{
+			"value": int64(101),
+		},
 		time.Now().Add(-time.Hour),
-	)
+		telegraf.Untyped)
+	require.NoError(t, err)
+
 	assert.False(t, ra.Add(m))
 
 	// metric after current period
-	m = ra.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
+	m, err = metric.New("RITest",
 		map[string]string{},
-		telegraf.Untyped,
+		map[string]interface{}{
+			"value": int64(101),
+		},
 		time.Now().Add(time.Hour),
-	)
+		telegraf.Untyped)
+	require.NoError(t, err)
 	assert.False(t, ra.Add(m))
 
 	// "now" metric
-	m = ra.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
+	m, err = metric.New("RITest",
 		map[string]string{},
-		telegraf.Untyped,
+		map[string]interface{}{
+			"value": int64(101),
+		},
 		time.Now().Add(time.Millisecond*50),
-	)
+		telegraf.Untyped)
+	require.NoError(t, err)
 	assert.False(t, ra.Add(m))
 
 	for {
@@ -113,16 +119,17 @@ func TestAddAndPushOnePeriod(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		ra.Run(&acc, time.Now(), shutdown)
+		ra.Run(&acc, shutdown)
 	}()
 
-	m := ra.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
+	m, err := metric.New("RITest",
 		map[string]string{},
-		telegraf.Untyped,
+		map[string]interface{}{
+			"value": int64(101),
+		},
 		time.Now().Add(time.Millisecond*100),
-	)
+		telegraf.Untyped)
+	require.NoError(t, err)
 	assert.False(t, ra.Add(m))
 
 	for {
@@ -147,87 +154,26 @@ func TestAddDropOriginal(t *testing.T) {
 	})
 	assert.NoError(t, ra.Config.Filter.Compile())
 
-	m := ra.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
+	m, err := metric.New("RITest",
 		map[string]string{},
-		telegraf.Untyped,
+		map[string]interface{}{
+			"value": int64(101),
+		},
 		time.Now(),
-	)
+		telegraf.Untyped)
+	require.NoError(t, err)
 	assert.True(t, ra.Add(m))
 
 	// this metric name doesn't match the filter, so Add will return false
-	m2 := ra.MakeMetric(
-		"foobar",
-		map[string]interface{}{"value": int(101)},
+	m2, err := metric.New("foobar",
 		map[string]string{},
-		telegraf.Untyped,
+		map[string]interface{}{
+			"value": int64(101),
+		},
 		time.Now(),
-	)
+		telegraf.Untyped)
+	require.NoError(t, err)
 	assert.False(t, ra.Add(m2))
-}
-
-// make an untyped, counter, & gauge metric
-func TestMakeMetricA(t *testing.T) {
-	now := time.Now()
-	ra := NewRunningAggregator(&TestAggregator{}, &AggregatorConfig{
-		Name: "TestRunningAggregator",
-	})
-	assert.Equal(t, "aggregators.TestRunningAggregator", ra.Name())
-
-	m := ra.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
-		map[string]string{},
-		telegraf.Untyped,
-		now,
-	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
-		m.String(),
-	)
-	assert.Equal(
-		t,
-		m.Type(),
-		telegraf.Untyped,
-	)
-
-	m = ra.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
-		map[string]string{},
-		telegraf.Counter,
-		now,
-	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
-		m.String(),
-	)
-	assert.Equal(
-		t,
-		m.Type(),
-		telegraf.Counter,
-	)
-
-	m = ra.MakeMetric(
-		"RITest",
-		map[string]interface{}{"value": int(101)},
-		map[string]string{},
-		telegraf.Gauge,
-		now,
-	)
-	assert.Equal(
-		t,
-		fmt.Sprintf("RITest value=101i %d\n", now.UnixNano()),
-		m.String(),
-	)
-	assert.Equal(
-		t,
-		m.Type(),
-		telegraf.Gauge,
-	)
 }
 
 type TestAggregator struct {

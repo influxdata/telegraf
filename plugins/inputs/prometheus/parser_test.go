@@ -111,9 +111,11 @@ func TestParseValidPrometheus(t *testing.T) {
 		"gauge": float64(1),
 	}, metrics[0].Fields())
 	assert.Equal(t, map[string]string{
-		"osVersion":     "CentOS Linux 7 (Core)",
-		"dockerVersion": "1.8.2",
-		"kernelVersion": "3.10.0-229.20.1.el7.x86_64",
+		"osVersion":        "CentOS Linux 7 (Core)",
+		"cadvisorRevision": "",
+		"cadvisorVersion":  "",
+		"dockerVersion":    "1.8.2",
+		"kernelVersion":    "3.10.0-229.20.1.el7.x86_64",
 	}, metrics[0].Tags())
 
 	// Counter value

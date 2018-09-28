@@ -20,6 +20,8 @@ $ sudo service telegraf start
 - [Mandrill](mandrill/)
 - [Rollbar](rollbar/)
 - [Papertrail](papertrail/)
+- [Particle](particle/)
+
 
 ## Adding new webhooks plugin
 
