@@ -352,14 +352,14 @@ func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
 	h.handler.SetTimeFunc(func() time.Time { return t })
 	metrics, err := h.parser.Parse(b)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to parse: %s", err.Error())
 	}
 
 	for _, m := range metrics {
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 	}
 
-	return err
+	return nil
 }
 
 func tooLarge(res http.ResponseWriter) {
