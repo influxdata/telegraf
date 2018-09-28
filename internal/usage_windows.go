@@ -33,6 +33,7 @@ The commands & flags are:
 
   --console                      run as console application (windows only)
   --service <service>            operate on the service (windows only)
+  --service-name                 service name (windows only)
 
 Examples:
 
@@ -59,4 +60,7 @@ Examples:
 
   # install telegraf service
   telegraf --service install --config "C:\Program Files\Telegraf\telegraf.conf"
+
+  # install telegraf service with custom name
+  telegraf --service install --service-name=my-telegraf
 `
