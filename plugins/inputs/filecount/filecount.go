@@ -216,7 +216,7 @@ func getTargetDirs(directory string) ([]string, error) {
 
 	filtered := []string{}
 	for path, file := range g.Match() {
-		if file.IsDir() == true {
+		if file.IsDir() {
 			filtered = append(filtered, path)
 		}
 	}
