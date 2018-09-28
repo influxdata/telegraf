@@ -34,14 +34,18 @@ func (rp *RunningProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	ret := []telegraf.Metric{}
 
 	for _, metric := range in {
-		if rp.Config.Filter.IsActive() {
-			// check if the filter should be applied to this metric
-			if ok := rp.Config.Filter.Apply(metric.Name(), metric.Fields(), metric.Tags()); !ok {
-				// this means filter should not be applied
-				ret = append(ret, metric)
-				continue
-			}
+		// In processors when a filter selects a metric it is sent through the
+		// processor.  Otherwise the metric continues downstream unmodified.
+		if ok := rp.Config.Filter.Select(metric); !ok {
+			ret = append(ret, metric)
+			continue
 		}
+
+		rp.Config.Filter.Modify(metric)
+		if len(metric.FieldList()) == 0 {
+			continue
+		}
+
 		// This metric should pass through the filter, so call the filter Apply
 		// function and append results to the output slice.
 		ret = append(ret, rp.Processor.Apply(metric)...)

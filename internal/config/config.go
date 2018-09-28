@@ -884,14 +884,6 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 // builds the filter and returns a
 // models.AggregatorConfig to be inserted into models.RunningAggregator
 func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, error) {
-	unsupportedFields := []string{"tagexclude", "taginclude"}
-	for _, field := range unsupportedFields {
-		if _, ok := tbl.Fields[field]; ok {
-			return nil, fmt.Errorf("%s is not supported for aggregator plugins (%s).",
-				field, name)
-		}
-	}
-
 	conf := &models.AggregatorConfig{
 		Name:   name,
 		Delay:  time.Millisecond * 100,
@@ -989,13 +981,6 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 // models.ProcessorConfig to be inserted into models.RunningProcessor
 func buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
 	conf := &models.ProcessorConfig{Name: name}
-	unsupportedFields := []string{"tagexclude", "taginclude", "fielddrop", "fieldpass"}
-	for _, field := range unsupportedFields {
-		if _, ok := tbl.Fields[field]; ok {
-			return nil, fmt.Errorf("%s is not supported for processor plugins (%s).",
-				field, name)
-		}
-	}
 
 	if node, ok := tbl.Fields["order"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
