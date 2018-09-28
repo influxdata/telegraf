@@ -26,8 +26,11 @@ type Prometheus struct {
 	// An array of Kubernetes services to scrape metrics from.
 	KubernetesServices []string
 
-	// Bearer Token authorization file path
+	// Bearer Token authorization.
 	BearerToken string `toml:"bearer_token"`
+
+	// Bearer Token authorization file path.
+	BearerTokenFile string `toml:"bearer_token_file"`
 
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
@@ -43,8 +46,9 @@ var sampleConfig = `
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
 
-  ## Use bearer token for authorization
-  # bearer_token = /path/to/bearer/token
+  ## Use bearer token for authorization. bearer_token and bearer_token_file must be mutually exclusive
+  # bearer_token = <secret>
+  # bearer_token_file = /path/to/bearer/token
 
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
@@ -183,8 +187,14 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	var token []byte
 	var resp *http.Response
 
+	if p.BearerToken != "" && p.BearerTokenFile != "" {
+		return errors.New("`bearer_token` and `bearer_token_file` must be mutually exclusive")
+	}
 	if p.BearerToken != "" {
-		token, err = ioutil.ReadFile(p.BearerToken)
+		req.Header.Set("Authorization", "Bearer "+p.BearerToken)
+	}
+	if p.BearerTokenFile != "" {
+		token, err = ioutil.ReadFile(p.BearerTokenFile)
 		if err != nil {
 			return err
 		}
