@@ -16,9 +16,9 @@ const sampleConfig = `
   ## Directory to gather stats about.
   ## This accept standard unit glob matching rules, but with the addition of
   ## ** as a "super asterisk". ie:
-  ##   /var/log/**    -> recursively find all directories in /var/log
-  ##   /var/log/*/*   -> find all directories with a parent dir in /var/log
-  ##   /var/log       -> only count the /var/log dir
+  ##   /var/log/**    -> recursively find all directories in /var/log and count files in each directories
+  ##   /var/log/*/*   -> find all directories with a parent dir in /var/log and count files in each directories
+  ##   /var/log       -> count all files in /var/log and all of its subdirectories
   directory = "/var/cache/apt/archives"
 
   ## Only count files that match the name pattern. Defaults to "*".
