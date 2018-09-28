@@ -3,6 +3,7 @@
 ### Features
 
 - [#4686](https://github.com/influxdata/telegraf/pull/4686): Add replace function to strings processor.
+- [#4754](https://github.com/influxdata/telegraf/pull/4754): Query servers in parallel in dns_query input.
 
 ## v1.8.1 [unreleased]
 
@@ -12,6 +13,7 @@
 - [#4723](https://github.com/influxdata/telegraf/issues/4723): Improve performance in basicstats aggregator.
 - [#4747](https://github.com/influxdata/telegraf/pull/4723): Add hostname to TLS config for SNI support.
 - [#4675](https://github.com/influxdata/telegraf/issues/4675): Don't add tags with empty values to opentsdb output.
+- [#4765](https://github.com/influxdata/telegraf/pull/4765): Fix panic during network error in vsphere input.
 
 ## v1.8 [2018-09-21]
 
