@@ -14,12 +14,16 @@ import (
 
 const sampleConfig = `
   ## Directory to gather stats about.
+  ##   deprecated in 1.9; use the directories option
+  directory = "/var/cache/apt/archives"
+
+  ## Directories to gather stats about.
   ## This accept standard unit glob matching rules, but with the addition of
   ## ** as a "super asterisk". ie:
   ##   /var/log/**    -> recursively find all directories in /var/log and count files in each directories
   ##   /var/log/*/*   -> find all directories with a parent dir in /var/log and count files in each directories
   ##   /var/log       -> count all files in /var/log and all of its subdirectories
-  directory = "/var/cache/apt/archives"
+  directories = ["/var/cache/apt/archives"]
 
   ## Only count files that match the name pattern. Defaults to "*".
   name = "*.deb"
@@ -42,7 +46,8 @@ const sampleConfig = `
 `
 
 type FileCount struct {
-	Directory   string
+	Directory   string // deprecated in 1.9
+	Directories []string
 	Name        string
 	Recursive   bool
 	RegularOnly bool
@@ -196,7 +201,8 @@ func (fc *FileCount) filter(file os.FileInfo) (bool, error) {
 }
 
 func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
-	dirs, err := getTargetDirs(fc.Directory)
+	globDirs := fc.getDirs()
+	dirs, err := getCompiledDirs(globDirs)
 	if err != nil {
 		return err
 	}
@@ -208,24 +214,40 @@ func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func getTargetDirs(directory string) ([]string, error) {
-	g, err := globpath.Compile(directory)
-	if err != nil {
-		return nil, fmt.Errorf("could not compile glob %v: %v", directory, err)
+func (fc *FileCount) getDirs() []string {
+	dirs := make([]string, len(fc.Directories))
+	for i, dir := range fc.Directories {
+		dirs[i] = dir
 	}
 
-	filtered := []string{}
-	for path, file := range g.Match() {
-		if file.IsDir() {
-			filtered = append(filtered, path)
+	if fc.Directory != "" {
+		dirs = append(dirs, fc.Directory)
+	}
+
+	return dirs
+}
+
+func getCompiledDirs(dirs []string) ([]string, error) {
+	compiledDirs := []string{}
+	for _, dir := range dirs {
+		g, err := globpath.Compile(dir)
+		if err != nil {
+			return nil, fmt.Errorf("could not compile glob %v: %v", dir, err)
+		}
+
+		for path, file := range g.Match() {
+			if file.IsDir() {
+				compiledDirs = append(compiledDirs, path)
+			}
 		}
 	}
-	return filtered, nil
+	return compiledDirs, nil
 }
 
 func NewFileCount() *FileCount {
 	return &FileCount{
 		Directory:   "",
+		Directories: []string{},
 		Name:        "*",
 		Recursive:   true,
 		RegularOnly: true,
