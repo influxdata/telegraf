@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"io"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -18,8 +19,7 @@ import (
 )
 
 type DockerLogs struct {
-	Endpoint       string
-	ContainerNames []string // deprecated in 1.4; use container_name_include
+	Endpoint string
 
 	Timeout internal.Duration
 
@@ -62,8 +62,6 @@ var sampleConfig = `
   ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
-  ## Only collect metrics for these containers, collect all if empty
-  container_names = []
   ## Containers to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all containers
   container_name_include = []
@@ -102,11 +100,6 @@ func (d *DockerLogs) Gather(acc telegraf.Accumulator) error {
 
 /*Following few functions have been inherited from telegraf docker input plugin*/
 func (d *DockerLogs) createContainerFilters() error {
-	// Backwards compatibility for deprecated `container_names` parameter.
-	if len(d.ContainerNames) > 0 {
-		d.ContainerInclude = append(d.ContainerInclude, d.ContainerNames...)
-	}
-
 	filter, err := filter.NewIncludeExcludeFilter(d.ContainerInclude, d.ContainerExclude)
 	if err != nil {
 		return err
@@ -137,6 +130,8 @@ func (d *DockerLogs) createContainerStateFilters() error {
 }
 
 func (d *DockerLogs) addToContainerList(containerId string, logReader io.ReadCloser) error {
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	d.containerList[containerId] = logReader
 	return nil
 }
@@ -164,7 +159,7 @@ func (d *DockerLogs) containerListUpdate(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
 	if d.client == nil {
-		log.Println("ERR:Dock client is null")
+		log.Println("E! Error Dock client is null")
 		return nil
 	}
 	containers, err := d.client.ContainerList(ctx, d.opts)
@@ -208,8 +203,16 @@ func (d *DockerLogs) getContainerLogs(
 		log.Printf("Error getting docker logs: %s", err.Error())
 		return err
 	}
+	/* Parse container name */
+	cname := "unknown"
+	if len(container.Names) > 0 {
+		/*Pick first container name*/
+		cname = strings.TrimPrefix(container.Names[0], "/")
+	}
+
 	tags := map[string]string{
-		"containerId": container.ID,
+		"containerId":   container.ID,
+		"containerName": cname,
 	}
 	// Add labels to tags
 	for k, label := range container.Labels {
@@ -228,12 +231,13 @@ func (d *DockerLogs) getContainerLogs(
 			}
 			return err
 		}
-		if len(data) > 0 {
+		if num > 0 && len(data) > 0 {
 			fields["log"] = data[:num]
 			acc.AddFields("docker_log", fields, tags)
 		}
 	}
 }
+
 func (d *DockerLogs) Start(acc telegraf.Accumulator) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()

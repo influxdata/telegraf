@@ -16,11 +16,6 @@ to gather logs from the [Engine API](https://docs.docker.com/engine/api/v1.24/).
   ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
 
-  ## Only collect metrics for these containers. Values will be appended to
-  ## container_name_include.
-  ## Deprecated (1.4.0), use container_name_include
-  container_names = []
-
   ## Containers to include and exclude. Collect all if empty. Globs accepted.
   container_name_include = []
   container_name_exclude = []
@@ -56,11 +51,13 @@ When using the `"ENV"` endpoint, the connection is configured using the
 - docker_log
   - tags:
     - containerId
+    - containerName
   - fields:
     - log
 ### Example Output:
 
 ```
-docker_log,containerId=4325333a47ab42c78b8bf5cb01d5b0972321f857a4b9e116856b4f0459047077,host=prash-laptop log=" root@4325333a47ab:/# ls -l\r\n" 1530162134000000000
-docker_log,containerId=4325333a47ab42c78b8bf5cb01d5b0972321f857a4b9e116856b4f0459047077,host=prash-laptop log=" total 64\r\n drwxr-xr-x   2 root root 4096 May 26 00:45 bin\r\n drwxr-xr-x   2 root root 4096 Apr 24 08:34 boot\r\n drwxr-xr-x   5 root root  360 Jun 28 05:01 dev\r\n drwxr-xr-x   1 root root 4096 Jun 28 05:01 etc\r\n drwxr-xr-x   2 root root 4096 Apr 24 08:34 home\r\n drwxr-xr-x   8 root root 4096 May 26 00:44 lib\r\n drwxr-xr-x   2 root root 4096 May 26 00:44 lib64\r\n drwxr-xr-x   2 root root 4096 May 26 00:44 media\r\n drwxr-xr-x   2 root root 4096 May 26 00:44 mnt\r\n" 1530162134000000000
+docker_log,containerId=168c940a98b4317de15e336140bf6caae009c1ea948226d7fac84c839ccf6e6d,containerName=loving_leavitt,host=prash-laptop log=" root@168c940a98b4:/# ls\r\n" 1538210547000000000
+docker_log,containerId=168c940a98b4317de15e336140bf6caae009c1ea948226d7fac84c839ccf6e6d,containerName=loving_leavitt,host=prash-laptop log=" bin  boot  dev  etc  home  lib  lib64  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var\r\n" 1538210547000000000
+docker_log,containerId=168c940a98b4317de15e336140bf6caae009c1ea948226d7fac84c839ccf6e6d,containerName=loving_leavitt,host=prash-laptop log=" root@168c940a98b4:/# pwd\r\n /\r\n" 1538210552000000000
 ```
