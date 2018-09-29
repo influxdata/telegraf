@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"crypto/subtle"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -278,8 +279,8 @@ func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) 
 		body, err = gzip.NewReader(req.Body)
 		defer body.Close()
 		if err != nil {
-			log.Println("E! " + err.Error())
-			badRequest(res)
+			log.Println("D! " + err.Error())
+			badRequest(res, err.Error())
 			return
 		}
 	}
@@ -292,16 +293,16 @@ func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) 
 	for {
 		n, err := io.ReadFull(body, buf[bufStart:])
 		if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
-			log.Println("E! " + err.Error())
+			log.Println("D! " + err.Error())
 			// problem reading the request body
-			badRequest(res)
+			badRequest(res, err.Error())
 			return
 		}
 		h.BytesRecv.Incr(int64(n))
 
 		if err == io.EOF {
 			if return400 {
-				badRequest(res)
+				badRequest(res, "")
 			} else {
 				res.WriteHeader(http.StatusNoContent)
 			}
@@ -327,11 +328,15 @@ func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) 
 		if err == io.ErrUnexpectedEOF {
 			// finished reading the request body
 			if err := h.parse(buf[:n+bufStart]); err != nil {
-				log.Println("E! " + err.Error())
+				log.Println("D! " + err.Error())
 				return400 = true
 			}
 			if return400 {
-				badRequest(res)
+				if err != nil {
+					badRequest(res, err.Error())
+				} else {
+					badRequest(res, "")
+				}
 			} else {
 				res.WriteHeader(http.StatusNoContent)
 			}
@@ -344,7 +349,7 @@ func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) 
 		i := bytes.LastIndexByte(buf, '\n')
 		if i == -1 {
 			// drop any line longer than the max buffer size
-			log.Printf("E! http_listener_ng received a single line longer than the maximum of %d bytes",
+			log.Printf("D! http_listener_ng received a single line longer than the maximum of %d bytes",
 				len(buf))
 			hangingBytes = true
 			return400 = true
@@ -352,7 +357,7 @@ func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) 
 			continue
 		}
 		if err := h.parse(buf[:i+1]); err != nil {
-			log.Println("E! " + err.Error())
+			log.Println("D! " + err.Error())
 			return400 = true
 		}
 		// rotate the bit remaining after the last newline to the front of the buffer
@@ -370,33 +375,39 @@ func (h *HTTPListenerNG) parse(b []byte) error {
 
 	metrics, err := h.Parse(b)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to parse: %s", err.Error())
 	}
 
 	for _, m := range metrics {
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 	}
 
-	return err
+	return nil
 }
 
 func tooLarge(res http.ResponseWriter) {
 	res.Header().Set("Content-Type", "application/json")
 	res.Header().Set("X-Influxdb-Version", "1.0")
+	res.Header().Set("X-Influxdb-Error", "http: request body too large")
 	res.WriteHeader(http.StatusRequestEntityTooLarge)
 	res.Write([]byte(`{"error":"http: request body too large"}`))
 }
 
-func badRequest(res http.ResponseWriter) {
+func badRequest(res http.ResponseWriter, errString string) {
 	res.Header().Set("Content-Type", "application/json")
 	res.Header().Set("X-Influxdb-Version", "1.0")
+	if errString == "" {
+		errString = "http: bad request"
+	}
+	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
-	res.Write([]byte(`{"error":"http: bad request"}`))
+	res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
 }
 
 func methodNotAllowed(res http.ResponseWriter) {
 	res.Header().Set("Content-Type", "application/json")
 	res.Header().Set("X-Influxdb-Version", "1.0")
+	res.Header().Set("X-Influxdb-Error", "http: method not allowed")
 	res.WriteHeader(http.StatusMethodNotAllowed)
 	res.Write([]byte(`{"error":"http: method not allowed"}`))
 }
