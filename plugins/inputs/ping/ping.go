@@ -97,7 +97,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
 		p.wg.Add(1)
-		p.pingToURL(url, acc)
+		go p.pingToURL(url, acc)
 	}
 
 	p.wg.Wait()
@@ -209,7 +209,7 @@ func (p *Ping) args(url string, system string) []string {
 		case "linux":
 			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
 		default:
-			// not sure the best option here, just assume gnu ping?
+			// Not sure the best option here, just assume GNU ping?
 			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
 		}
 	}
@@ -241,7 +241,7 @@ func (p *Ping) args(url string, system string) []string {
 	return args
 }
 
-// processpingoutput takes in a string output from the ping command, like:
+// processPingOutput takes in a string output from the ping command, like:
 //
 //     ping www.google.com (173.194.115.84): 56 data bytes
 //     64 bytes from 173.194.115.84: icmp_seq=0 ttl=54 time=52.172 ms

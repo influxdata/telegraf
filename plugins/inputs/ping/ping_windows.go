@@ -80,7 +80,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
 		p.wg.Add(1)
-		p.pingToURL(url, acc)
+		go p.pingToURL(url, acc)
 	}
 
 	p.wg.Wait()
