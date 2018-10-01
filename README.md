@@ -267,16 +267,26 @@ For documentation on the latest development code see the [documentation index][d
 * [zipkin](./plugins/inputs/zipkin)
 * [zookeeper](./plugins/inputs/zookeeper)
 
-Telegraf is able to parse the following input data formats into metrics, these
-formats may be used with input plugins supporting the `data_format` option:
+## Parsers
 
-* [InfluxDB Line Protocol](./docs/DATA_FORMATS_INPUT.md#influx)
-* [JSON](./docs/DATA_FORMATS_INPUT.md#json)
-* [Graphite](./docs/DATA_FORMATS_INPUT.md#graphite)
-* [Value](./docs/DATA_FORMATS_INPUT.md#value)
-* [Nagios](./docs/DATA_FORMATS_INPUT.md#nagios)
-* [Collectd](./docs/DATA_FORMATS_INPUT.md#collectd)
-* [Dropwizard](./docs/DATA_FORMATS_INPUT.md#dropwizard)
+- [InfluxDB Line Protocol](/plugins/parsers/influx)
+- [Collectd](/plugins/parsers/collectd)
+- [CSV](/plugins/parsers/csv)
+- [Dropwizard](/plugins/parsers/dropwizard)
+- [Graphite](/plugins/parsers/graphite)
+- [Grok](/plugins/parsers/grok)
+- [JSON](/plugins/parsers/json)
+- [Logfmt](/plugins/parsers/logfmt)
+- [Nagios](/plugins/parsers/nagios)
+- [Value](/plugins/parsers/value), ie: 45 or "booyah"
+- [Wavefront](/plugins/parsers/wavefront)
+
+## Serializers
+
+- [InfluxDB Line Protocol](/plugins/serializers/influx)
+- [JSON](/plugins/serializers/json)
+- [Graphite](/plugins/serializers/graphite)
+- [SplunkMetric](/plugins/serializers/splunkmetric)
 
 ## Processor Plugins
 
