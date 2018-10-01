@@ -13,8 +13,16 @@ The plugin expects messages in the
   ## MQTT broker URLs to be used. The format should be scheme://host:port,
   ## schema can be tcp, ssl, or ws.
   servers = ["tcp://localhost:1883"]
-  ## MQTT QoS, must be 0, 1, or 2
+
+  ## QoS policy for messages
+  ##   0 = at most once
+  ##   1 = at least once
+  ##   2 = exactly once
+  ##
+  ## When using a QoS of 1 or 2, you should enable persistent_session to allow
+  ## resuming unacknowledged messages.
   qos = 0
+
   ## Connection timeout for initial connection in seconds
   connection_timeout = "30s"
 
