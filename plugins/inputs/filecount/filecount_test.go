@@ -78,7 +78,7 @@ func TestMTimeFilter(t *testing.T) {
 
 func TestRecursivePrint(t *testing.T) {
 	fc := getNoFilterFileCount()
-	fc.RecursivePrint = true;
+	fc.RecursivePrint = true
 
 	acc := testutil.Accumulator{}
 	acc.GatherError(fc.Gather)
@@ -113,5 +113,5 @@ func fileCountEquals(fc FileCount, expectedCount int, expectedSize int) bool {
 	acc := testutil.Accumulator{}
 	acc.GatherError(fc.Gather)
 	return acc.HasPoint("filecount", tags, "count", int64(expectedCount)) &&
-	 acc.HasPoint("filecount", tags, "size", int64(expectedSize))
+		acc.HasPoint("filecount", tags, "size", int64(expectedSize))
 }
