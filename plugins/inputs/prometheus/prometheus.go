@@ -178,7 +178,25 @@ func (p *Prometheus) createHttpClient() (*http.Client, error) {
 }
 
 func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error {
-	var req, err = http.NewRequest("GET", u.URL.String(), nil)
+	var req *http.Request
+	var err error
+	if u.URL.Scheme == "unix" {
+		path := u.URL.Query().Get("path")
+		if path == "" {
+			path = "/metrics"
+		}
+		req, err = http.NewRequest("GET", "http://localhost"+path, nil)
+
+		((p.client.Transport).(*http.Transport)).Dial = func(network, addr string) (net.Conn, error) {
+			c, err := net.Dial("unix", u.URL.Path)
+			return c, err
+		}
+	} else {
+		if u.URL.Path == "" {
+			u.URL.Path = "/metrics"
+		}
+		req, err = http.NewRequest("GET", u.URL.String(), nil)
+	}
 	req.Header.Add("Accept", acceptHeader)
 	var token []byte
 	var resp *http.Response
