@@ -112,6 +112,42 @@ action(type="omfwd" Protocol="tcp" TCP_Framing="octet-counted" Target="127.0.0.1
 
 To complete TLS setup please refer to [rsyslog docs](https://www.rsyslog.com/doc/v8-stable/tutorials/tls.html).
 
+#### Rsyslog Integration
+
+Rsyslog can be configured to forward logging messages to Telegraf by configuring
+[remote logging](https://www.rsyslog.com/doc/v8-stable/configuration/actions.html#remote-machine).
+
+Most system are setup with a configuration split between `/etc/rsyslog.conf`
+and the files in the `/etc/rsyslog.d/` directory, it is recommended to add the
+new configuration into the config directory to simplify updates to the main
+config file.
+
+Add the following lines to `/etc/rsyslog.d/50-telegraf.conf` making
+adjustments to the target address as needed:
+```
+$ActionQueueType LinkedList # use asynchronous processing
+$ActionQueueFileName srvrfwd # set file name, also enables disk mode
+$ActionResumeRetryCount -1 # infinite retries on insert failure
+$ActionQueueSaveOnShutdown on # save in-memory data if rsyslog shuts down
+
+# forward over tcp with octet framing according to RFC 5425
+*.* @@(o)127.0.0.1:6514;RSYSLOG_SyslogProtocol23Format
+
+# uncomment to use udp according to RFC 5424
+#*.* @127.0.0.1:6514;RSYSLOG_SyslogProtocol23Format
+```
+
+You can alternately use `advanced` format (aka RainerScript):
+```
+# forward over tcp with octet framing according to RFC 5425
+action(type="omfwd" Protocol="tcp" TCP_Framing="octet-counted" Target="127.0.0.1" Port="6514" Template="RSYSLOG_SyslogProtocol23Format")
+
+# uncomment to use udp according to RFC 5424
+#action(type="omfwd" Protocol="udp" Target="127.0.0.1" Port="6514" Template="RSYSLOG_SyslogProtocol23Format")
+```
+
+To complete TLS setup please refer to [rsyslog docs](https://www.rsyslog.com/doc/v8-stable/tutorials/tls.html).
+
 ### Metrics
 
 - syslog
@@ -142,7 +178,38 @@ syslog,appname=evntslog,facility=local4,hostname=mymachine.example.com,severity=
 ```
 
 ### Troubleshooting
+Most system are setup with a configuration split between `/etc/rsyslog.conf`
+and the files in the `/etc/rsyslog.d/` directory, it is recommended to add the
+new configuration into the config directory to simplify updates to the main
+config file.
+#### Structured Data
 
+Structured data produces field keys by combining the `SD_ID` with the `PARAM_NAME` combined using the `sdparam_separator` as in the following example:
+```
+170 <165>1 2018-10-01:14:15.000Z mymachine.example.com evntslog - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"] An application event log entry...
+```
+```
+syslog,appname=evntslog,facility=local4,hostname=mymachine.example.com,severity=notice exampleSDID@32473_eventID="1011",exampleSDID@32473_eventSource="Application",exampleSDID@32473_iut="3",facility_code=20i,message="An application event log entry...",msgid="ID47",severity_code=5i,timestamp=1065910455003000000i,version=1i 1538421339749472344
+```
+
+You can send debugging messages directly to the input plugin using netcat:
+
+```sh
+# TCP with octet framing
+echo "57 <13>1 2018-10-01T12:00:00.0Z example.org root - - - test" | nc 127.0.0.1 6514
+
+# UDP
+echo "<13>1 2018-10-01T12:00:00.0Z example.org root - - - test" | nc -u 127.0.0.1 6514
+```
+
+#### RFC3164
+
+RFC3164 encoded messages are not currently supported.  You may see the following error if a message encoded in this format:
+```
+E! Error in plugin [inputs.syslog]: expecting a version value in the range 1-999 [col 5]
+```
+
+To complete TLS setup please refer to [rsyslog docs](https://www.rsyslog.com/doc/v8-stable/tutorials/tls.html).
 You can send debugging messages directly to the input plugin using netcat:
 
 ```sh
