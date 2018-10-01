@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/alecthomas/units"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/alecthomas/units"
 )
 
 const sampleConfig = `
@@ -168,7 +168,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string) (int64, int
 	}
 	for _, file := range files {
 		if fc.Recursive && file.IsDir() {
-			nf, ts = fc.count(acc, basedir + string(os.PathSeparator) + file.Name())
+			nf, ts = fc.count(acc, basedir+string(os.PathSeparator)+file.Name())
 			numFiles += nf
 			totalSize += ts
 		}
