@@ -2,7 +2,6 @@ package wireless
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -120,7 +119,6 @@ func loadMacWirelessTable(table []byte, dumpZeros bool) (map[string]interface{},
 
 	}
 	tags["interface"] = "airport"
-	fmt.Println(metrics)
 	return metrics, tags, nil
 
 }
@@ -240,7 +238,6 @@ func loadLinuxWirelessTable(table []byte, dumpZeros bool) (WirelessData, error) 
 			}
 		}
 		data[x-2] = sub_data
-		fmt.Println("Data ", x-2, ": ", data[x-2])
 	}
 	// Now fill out the Wireless struct and return it
 	wd.Headers = header_fields
