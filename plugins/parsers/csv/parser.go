@@ -21,6 +21,7 @@ type Parser struct {
 	Comment           string
 	TrimSpace         bool
 	ColumnNames       []string
+	ColumnTypes       []string
 	TagColumns        []string
 	MeasurementColumn string
 	TimestampColumn   string
@@ -146,6 +147,35 @@ outer:
 					tags[tagName] = value
 					continue outer
 				}
+			}
+
+			// In case if defined column names & types count don't match.
+			if i < len(p.ColumnTypes) {
+				var val interface{}
+				var err error
+
+				switch p.ColumnTypes[i] {
+				case "int":
+					val, err = strconv.ParseInt(value, 10, 64)
+					if err != nil {
+						return nil, fmt.Errorf("column type: parse int error %s", err)
+					}
+				case "float":
+					val, err = strconv.ParseFloat(value, 64)
+					if err != nil {
+						return nil, fmt.Errorf("column type: parse float error %s", err)
+					}
+				case "bool":
+					val, err = strconv.ParseBool(value)
+					if err != nil {
+						return nil, fmt.Errorf("column type: parse bool error %s", err)
+					}
+				default:
+					val = value
+				}
+
+				recordFields[fieldName] = val
+				continue
 			}
 
 			// attempt type conversions
