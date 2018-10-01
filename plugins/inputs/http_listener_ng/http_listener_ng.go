@@ -328,27 +328,22 @@ func (h *HTTPListenerNG) parse(b []byte) error {
 
 func tooLarge(res http.ResponseWriter) {
 	res.Header().Set("Content-Type", "application/json")
-	res.Header().Set("X-Influxdb-Version", "1.0")
-	res.Header().Set("X-Influxdb-Error", "http: request body too large")
 	res.WriteHeader(http.StatusRequestEntityTooLarge)
 	res.Write([]byte(`{"error":"http: request body too large"}`))
 }
 
 func badRequest(res http.ResponseWriter, errString string) {
 	res.Header().Set("Content-Type", "application/json")
-	res.Header().Set("X-Influxdb-Version", "1.0")
-	if errString == "" {
-		errString = "http: bad request"
-	}
-	res.Header().Set("X-Influxdb-Error", errString)
 	res.WriteHeader(http.StatusBadRequest)
-	res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
+	if errString != "" {
+		res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
+	} else {
+		res.Write([]byte(`{"error":"http: bad request"}`))
+	}
 }
 
 func methodNotAllowed(res http.ResponseWriter) {
 	res.Header().Set("Content-Type", "application/json")
-	res.Header().Set("X-Influxdb-Version", "1.0")
-	res.Header().Set("X-Influxdb-Error", "http: method not allowed")
 	res.WriteHeader(http.StatusMethodNotAllowed)
 	res.Write([]byte(`{"error":"http: method not allowed"}`))
 }
