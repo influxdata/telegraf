@@ -60,6 +60,7 @@ type objectMap map[string]objectRef
 
 type objectRef struct {
 	name      string
+	altID     string
 	ref       types.ManagedObjectReference
 	parentRef *types.ManagedObjectReference //Pointer because it must be nillable
 	guest     string
@@ -470,22 +471,22 @@ func getHosts(ctx context.Context, root *view.ContainerView) (objectMap, error) 
 
 func getVMs(ctx context.Context, root *view.ContainerView) (objectMap, error) {
 	var resources []mo.VirtualMachine
-	err := root.Retrieve(ctx, []string{"VirtualMachine"}, []string{"name", "runtime.host", "config.guestId"}, &resources)
+	err := root.Retrieve(ctx, []string{"VirtualMachine"}, []string{"name", "runtime.host", "config.guestId", "config.uuid"}, &resources)
 	if err != nil {
 		return nil, err
 	}
 	m := make(objectMap)
 	for _, r := range resources {
-		var guest string
+		guest := "unknown"
+		uuid := ""
 		// Sometimes Config is unknown and returns a nil pointer
 		//
 		if r.Config != nil {
 			guest = cleanGuestID(r.Config.GuestId)
-		} else {
-			guest = "unknown"
+			uuid = r.Config.Uuid
 		}
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host, guest: guest}
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host, guest: guest, altID: uuid}
 	}
 	return m, nil
 }
@@ -783,6 +784,10 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	// Map name of object.
 	if resource.pKey != "" {
 		t[resource.pKey] = objectRef.name
+	}
+
+	if resourceType == "vm" && objectRef.altID != "" {
+		t["uuid"] = objectRef.altID
 	}
 
 	// Map parent reference
