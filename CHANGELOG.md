@@ -50,9 +50,10 @@
 
 ### New Parsers
 
-- [csv](/docs/DATA_FORMATS_INPUT.md#csv) - Contributed by @maxunt
-- [grok](/docs/DATA_FORMATS_INPUT.md#grok) - Contributed by @maxunt
-- [logfmt](/docs/DATA_FORMATS_INPUT.md#logfmt) - Contributed by @Ayrdrie & @maxunt
+- [csv](/plugins/parsers/csv/README.md) - Contributed by @maxunt
+- [grok](/plugins/parsers/grok/README.md) - Contributed by @maxunt
+- [logfmt](/plugins/parsers/logfmt/README.md) - Contributed by @Ayrdrie & @maxunt
+- [wavefront](/plugins/parsers/wavefront/README.md) - Contributed by @puckpuck
 
 ### New Serializers
 
