@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Test that each tag becomes one dimension
@@ -113,6 +114,23 @@ func TestBuildMetricDatums(t *testing.T) {
 	)
 	datums = BuildMetricDatum(true, multiStatisticMetric)
 	assert.Equal(7, len(datums), fmt.Sprintf("Valid point should create a Datum {value: %v}", multiStatisticMetric))
+}
+
+func TestBuildMetricDatums_SkipEmptyTags(t *testing.T) {
+	input := testutil.MustMetric(
+		"cpu",
+		map[string]string{
+			"host": "example.org",
+			"foo":  "",
+		},
+		map[string]interface{}{
+			"value": int64(42),
+		},
+		time.Unix(0, 0),
+	)
+
+	datums := BuildMetricDatum(true, input)
+	require.Len(t, datums[0].Dimensions, 1)
 }
 
 func TestPartitionDatums(t *testing.T) {
