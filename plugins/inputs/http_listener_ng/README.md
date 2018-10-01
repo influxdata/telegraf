@@ -1,7 +1,7 @@
 # Generic HTTP listener service input plugin
 
 > NOTE: This is a new generation HTTP listener plugin.
-> This plugin supports all [data formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md) while the old [http_plugin](https://github.com/influxdata/telegraf/tree/master/plugins/inputs/http_listener)
+> This plugin supports all [data formats](/docs/DATA_FORMATS_INPUT.md) while the old [http_plugin](/plugins/inputs/http_listener)
 > only accepts data in InfluxDB line-protocol only
 
 The HTTP listener is a service input plugin that listens for messages sent via HTTP POST.
