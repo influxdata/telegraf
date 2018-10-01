@@ -55,25 +55,7 @@ The [`best_effort`](https://github.com/influxdata/go-syslog#best-effort-mode)
 option instructs the parser to extract partial but valid info from syslog
 messages.  If unset only full messages will be collected.
 
-### Metrics
-
-- syslog
-  - tags
-    - severity (string)
-    - facility (string)
-    - hostname (string)
-    - appname (string)
-  - fields
-    - version (integer)
-    - severity_code (integer)
-    - facility_code (integer)
-    - timestamp (integer)
-    - procid (string)
-    - msgid (string)
-    - sdid (bool)
-    - *Structured Data* (string)
-
-### Rsyslog Integration
+#### Rsyslog Integration
 
 Rsyslog can be configured to forward logging messages to Telegraf by configuring
 [remote logging](https://www.rsyslog.com/doc/v8-stable/configuration/actions.html#remote-machine).
@@ -96,3 +78,31 @@ $ActionQueueSaveOnShutdown on # save in-memory data if rsyslog shuts down
 ```
 
 To complete TLS setup please refer to [rsyslog docs](https://www.rsyslog.com/doc/v8-stable/tutorials/tls.html).
+
+### Metrics
+
+- syslog
+  - tags
+    - severity (string)
+    - facility (string)
+    - hostname (string)
+    - appname (string)
+  - fields
+    - version (integer)
+    - severity_code (integer)
+    - facility_code (integer)
+    - timestamp (integer)
+    - procid (string)
+    - msgid (string)
+    - sdid (bool)
+    - *Structured Data* (string)
+
+
+### Troubleshooting
+
+The syslog plugin does not yet support RFC3164 format data.  You may see the following error when this syslog format is received:
+``
+E! Error in plugin [inputs.syslog]: expecting a version value in the range 1-999 [col 5]
+```
+
+You can use rsyslog to translate RFC3164 syslog messages to RFC5424 or RFC5425 format.
