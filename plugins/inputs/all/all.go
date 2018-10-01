@@ -64,6 +64,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/linux_sysctl_fs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/logparser"
 	_ "github.com/influxdata/telegraf/plugins/inputs/lustre2"
+	_ "github.com/influxdata/telegraf/plugins/inputs/mac_wireless"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mailchimp"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mcrouter"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mem"
