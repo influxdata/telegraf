@@ -28,11 +28,8 @@ This is a sample configuration for the plugin.
   ## Address and port to host HTTP listener on
   service_address = ":8186"
 
-  ## Paths to listen to.
-  ## "/query" and "/ping" paths are already taken.
-  ## "/query" delivers dummy response.
-  ## "/ping" responds to ping requests.
-  paths = "/telegraf"
+  ## Path to listen to.
+  path = "/telegraf"
 
   ## HTTP methods to accept.
   methods = ["POST", "PUT"]

@@ -64,11 +64,8 @@ const sampleConfig = `
   ## Address and port to host HTTP listener on
   service_address = ":8186"
 
-  ## Paths to listen to.
-  ## "/query" and "/ping" paths are already taken.
-  ## "/query" delivers dummy response.
-  ## "/ping" responds to ping requests.
-  paths = "/telegraf"
+  ## Path to listen to.
+  path = "/telegraf"
 
   ## HTTP methods to accept.
   methods = ["POST", "PUT"]
@@ -191,25 +188,9 @@ func (h *HTTPListenerNG) Stop() {
 }
 
 func (h *HTTPListenerNG) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	switch req.URL.Path {
-	case "/query":
-		// Deliver a dummy response to the query endpoint, as some InfluxDB
-		// clients test endpoint availability with a query
-		h.AuthenticateIfSet(func(res http.ResponseWriter, req *http.Request) {
-			res.Header().Set("Content-Type", "application/json")
-			res.Header().Set("X-Influxdb-Version", "1.0")
-			res.WriteHeader(http.StatusOK)
-			res.Write([]byte("{\"results\":[]}"))
-		}, res, req)
-	case "/ping":
-		// respond to ping requests
-		h.AuthenticateIfSet(func(res http.ResponseWriter, req *http.Request) {
-			res.WriteHeader(http.StatusNoContent)
-		}, res, req)
-	case h.Path:
+	if req.URL.Path == h.Path {
 		h.AuthenticateIfSet(h.serveWrite, res, req)
-	default:
-		// Don't know how to respond to calls to other endpoints
+	} else {
 		h.AuthenticateIfSet(http.NotFound, res, req)
 	}
 }
