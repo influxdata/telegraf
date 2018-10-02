@@ -1,7 +1,6 @@
 package http_listener_ng
 
 import (
-	"bytes"
 	"compress/gzip"
 	"crypto/subtle"
 	"crypto/tls"
@@ -20,17 +19,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-const (
-	// defaultMaxBodySize is the default maximum request body size, in bytes.
-	// if the request body is over this size, we will return an HTTP 413 error.
-	// 500 MB
-	defaultMaxBodySize = 500 * 1024 * 1024
-
-	// defaultMaxLineSize is the maximum size, in bytes, that can be allocated for
-	// a single InfluxDB point.
-	// 64 KB
-	defaultMaxLineSize = 64 * 1024
-)
+// defaultMaxBodySize is the default maximum request body size, in bytes.
+// if the request body is over this size, we will return an HTTP 413 error.
+// 500 MB
+const defaultMaxBodySize = 500 * 1024 * 1024
 
 type TimeFunc func() time.Time
 
@@ -41,7 +33,6 @@ type HTTPListenerNG struct {
 	ReadTimeout    internal.Duration
 	WriteTimeout   internal.Duration
 	MaxBodySize    int64
-	MaxLineSize    int
 	Port           int
 
 	tlsint.ServerConfig
@@ -78,10 +69,6 @@ const sampleConfig = `
   ## Maximum allowed http request body size in bytes.
   ## 0 means to use the default of 536,870,912 bytes (500 mebibytes)
   max_body_size = 0
-
-  ## Maximum line size allowed to be sent in bytes.
-  ## 0 means to use the default of 65536 bytes (64 kibibytes)
-  max_line_size = 0
 
   ## Set one or more allowed client CA certificate file names to 
   ## enable mutually authenticated TLS connections
@@ -126,9 +113,6 @@ func (h *HTTPListenerNG) Start(acc telegraf.Accumulator) error {
 
 	if h.MaxBodySize == 0 {
 		h.MaxBodySize = defaultMaxBodySize
-	}
-	if h.MaxLineSize == 0 {
-		h.MaxLineSize = defaultMaxLineSize
 	}
 
 	if h.ReadTimeout.Duration < time.Second {
@@ -207,6 +191,7 @@ func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) 
 	for _, method := range h.Methods {
 		if req.Method == method {
 			isAcceptedMethod = true
+			break
 		}
 	}
 	if !isAcceptedMethod {
@@ -226,86 +211,21 @@ func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) 
 			return
 		}
 	}
-	body = http.MaxBytesReader(res, body, h.MaxBodySize)
 
-	var return400 bool
-	var hangingBytes bool
-	buf := make([]byte, h.MaxLineSize)
-	bufStart := 0
-	for {
-		n, err := io.ReadFull(body, buf[bufStart:])
-		if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+	// Add +1 for EOF
+	buf := make([]byte, h.MaxBodySize+1)
+	n, err := io.ReadFull(body, buf)
+	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+		log.Println("D! " + err.Error())
+		// problem reading the request body
+		badRequest(res, err.Error())
+	} else {
+		// finished reading the request body
+		if err := h.parse(buf[:n]); err != nil {
 			log.Println("D! " + err.Error())
-			// problem reading the request body
 			badRequest(res, err.Error())
-			return
-		}
-
-		if err == io.EOF {
-			if return400 {
-				badRequest(res, "")
-			} else {
-				res.WriteHeader(http.StatusNoContent)
-			}
-			return
-		}
-
-		if hangingBytes {
-			i := bytes.IndexByte(buf, '\n')
-			if i == -1 {
-				// still didn't find a newline, keep scanning
-				continue
-			}
-			// rotate the bit remaining after the first newline to the front of the buffer
-			i++ // start copying after the newline
-			bufStart = len(buf) - i
-			if bufStart > 0 {
-				copy(buf, buf[i:])
-			}
-			hangingBytes = false
-			continue
-		}
-
-		if err == io.ErrUnexpectedEOF {
-			// finished reading the request body
-			if err := h.parse(buf[:n+bufStart]); err != nil {
-				log.Println("D! " + err.Error())
-				return400 = true
-			}
-			if return400 {
-				if err != nil {
-					badRequest(res, err.Error())
-				} else {
-					badRequest(res, "")
-				}
-			} else {
-				res.WriteHeader(http.StatusNoContent)
-			}
-			return
-		}
-
-		// if we got down here it means that we filled our buffer, and there
-		// are still bytes remaining to be read. So we will parse up until the
-		// final newline, then push the rest of the bytes into the next buffer.
-		i := bytes.LastIndexByte(buf, '\n')
-		if i == -1 {
-			// drop any line longer than the max buffer size
-			log.Printf("D! http_listener_ng received a single line longer than the maximum of %d bytes",
-				len(buf))
-			hangingBytes = true
-			return400 = true
-			bufStart = 0
-			continue
-		}
-		if err := h.parse(buf[:i+1]); err != nil {
-			log.Println("D! " + err.Error())
-			return400 = true
-		}
-		// rotate the bit remaining after the last newline to the front of the buffer
-		i++ // start copying after the newline
-		bufStart = len(buf) - i
-		if bufStart > 0 {
-			copy(buf, buf[i:])
+		} else {
+			res.WriteHeader(http.StatusNoContent)
 		}
 	}
 }

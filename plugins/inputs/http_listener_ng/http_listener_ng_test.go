@@ -60,6 +60,7 @@ func newTestHTTPListenerNG() *HTTPListenerNG {
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		TimeFunc:       time.Now,
+		MaxBodySize:    70752,
 	}
 	return listener
 }
@@ -223,7 +224,7 @@ func TestWriteHTTP(t *testing.T) {
 	resp, err = http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(hugeMetric)))
 	require.NoError(t, err)
 	resp.Body.Close()
-	require.EqualValues(t, 400, resp.StatusCode)
+	require.EqualValues(t, 413, resp.StatusCode)
 
 	acc.Wait(3)
 	acc.AssertContainsTaggedFields(t, "cpu_load_short",
@@ -274,29 +275,6 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 	)
 }
 
-func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
-	parser, _ := parsers.NewInfluxParser()
-
-	listener := &HTTPListenerNG{
-		ServiceAddress: "localhost:0",
-		Path:           "/write",
-		Methods:        []string{"POST"},
-		Parser:         parser,
-		MaxLineSize:    128 * 1000,
-		TimeFunc:       time.Now,
-	}
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, listener.Start(acc))
-	defer listener.Stop()
-
-	// Post a gigantic metric to the listener and verify that it writes OK this time:
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(hugeMetric)))
-	require.NoError(t, err)
-	resp.Body.Close()
-	require.EqualValues(t, 204, resp.StatusCode)
-}
-
 func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	parser, _ := parsers.NewInfluxParser()
 
@@ -317,70 +295,6 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	require.NoError(t, err)
 	resp.Body.Close()
 	require.EqualValues(t, 413, resp.StatusCode)
-}
-
-func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
-	parser, _ := parsers.NewInfluxParser()
-
-	listener := &HTTPListenerNG{
-		ServiceAddress: "localhost:0",
-		Path:           "/write",
-		Methods:        []string{"POST"},
-		Parser:         parser,
-		MaxLineSize:    70,
-		TimeFunc:       time.Now,
-	}
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, listener.Start(acc))
-	defer listener.Stop()
-
-	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(testMsgs)))
-	require.NoError(t, err)
-	resp.Body.Close()
-	require.EqualValues(t, 204, resp.StatusCode)
-
-	hostTags := []string{"server02", "server03",
-		"server04", "server05", "server06"}
-	acc.Wait(len(hostTags))
-	for _, hostTag := range hostTags {
-		acc.AssertContainsTaggedFields(t, "cpu_load_short",
-			map[string]interface{}{"value": float64(12)},
-			map[string]string{"host": hostTag},
-		)
-	}
-}
-
-func TestWriteHTTPLargeLinesSkipped(t *testing.T) {
-	parser, _ := parsers.NewInfluxParser()
-
-	listener := &HTTPListenerNG{
-		ServiceAddress: "localhost:0",
-		Path:           "/write",
-		Methods:        []string{"POST"},
-		Parser:         parser,
-		MaxLineSize:    100,
-		TimeFunc:       time.Now,
-	}
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, listener.Start(acc))
-	defer listener.Stop()
-
-	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric+testMsgs)))
-	require.NoError(t, err)
-	resp.Body.Close()
-	require.EqualValues(t, 400, resp.StatusCode)
-
-	hostTags := []string{"server02", "server03",
-		"server04", "server05", "server06"}
-	acc.Wait(len(hostTags))
-	for _, hostTag := range hostTags {
-		acc.AssertContainsTaggedFields(t, "cpu_load_short",
-			map[string]interface{}{"value": float64(12)},
-			map[string]string{"host": hostTag},
-		)
-	}
 }
 
 // test that writing gzipped data works
