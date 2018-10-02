@@ -281,6 +281,7 @@ func PartitionDatums(size int, datums []*cloudwatch.MetricDatum) [][]*cloudwatch
 func BuildMetricDatum(buildStatistic bool, point telegraf.Metric) []*cloudwatch.MetricDatum {
 
 	fields := make(map[string]cloudwatchField)
+	tags := point.Tags()
 
 	for k, v := range point.Fields() {
 
@@ -298,7 +299,7 @@ func BuildMetricDatum(buildStatistic bool, point telegraf.Metric) []*cloudwatch.
 			fields[k] = &valueField{
 				metricName: point.Name(),
 				fieldName:  k,
-				tags:       point.Tags(),
+				tags:       tags,
 				timestamp:  point.Time(),
 				value:      val,
 			}
@@ -311,7 +312,7 @@ func BuildMetricDatum(buildStatistic bool, point telegraf.Metric) []*cloudwatch.
 			fields[fieldName] = &statisticField{
 				metricName: point.Name(),
 				fieldName:  fieldName,
-				tags:       point.Tags(),
+				tags:       tags,
 				timestamp:  point.Time(),
 				values: map[statisticType]float64{
 					sType: val,
@@ -336,19 +337,15 @@ func BuildMetricDatum(buildStatistic bool, point telegraf.Metric) []*cloudwatch.
 // 10 dimensions per metric so we only keep up to the first 10 alphabetically.
 // This always includes the "host" tag if it exists.
 func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
-
 	const MaxDimensions = 10
-	dimensions := make([]*cloudwatch.Dimension, int(math.Min(float64(len(mTags)), MaxDimensions)))
-
-	i := 0
+	dimensions := make([]*cloudwatch.Dimension, 0, MaxDimensions)
 
 	// This is pretty ugly but we always want to include the "host" tag if it exists.
 	if host, ok := mTags["host"]; ok {
-		dimensions[i] = &cloudwatch.Dimension{
+		dimensions = append(dimensions, &cloudwatch.Dimension{
 			Name:  aws.String("host"),
 			Value: aws.String(host),
-		}
-		i += 1
+		})
 	}
 
 	var keys []string
@@ -360,16 +357,19 @@ func BuildDimensions(mTags map[string]string) []*cloudwatch.Dimension {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		if i >= MaxDimensions {
+		if len(dimensions) >= MaxDimensions {
 			break
 		}
 
-		dimensions[i] = &cloudwatch.Dimension{
-			Name:  aws.String(k),
-			Value: aws.String(mTags[k]),
+		value := mTags[k]
+		if value == "" {
+			continue
 		}
 
-		i += 1
+		dimensions = append(dimensions, &cloudwatch.Dimension{
+			Name:  aws.String(k),
+			Value: aws.String(mTags[k]),
+		})
 	}
 
 	return dimensions
