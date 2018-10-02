@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/performance"
@@ -170,4 +171,12 @@ func (c *Client) close() {
 			}
 		}
 	})
+}
+
+func (c *Client) GetServerTime(ctx context.Context) (time.Time, error) {
+	if t, err := methods.GetCurrentTime(ctx, c.Client); err != nil {
+		return time.Time{}, err
+	} else {
+		return *t, nil
+	}
 }
