@@ -173,10 +173,11 @@ func (c *Client) close() {
 	})
 }
 
+// GetServerTime returns the time at the vCenter server
 func (c *Client) GetServerTime(ctx context.Context) (time.Time, error) {
-	if t, err := methods.GetCurrentTime(ctx, c.Client); err != nil {
+	t, err := methods.GetCurrentTime(ctx, c.Client)
+	if err != nil {
 		return time.Time{}, err
-	} else {
-		return *t, nil
 	}
+	return *t, nil
 }
