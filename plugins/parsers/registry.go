@@ -127,6 +127,7 @@ type Config struct {
 
 	//csv configuration
 	CSVColumnNames       []string `toml:"csv_column_names"`
+	CSVColumnTypes       []string `toml:"csv_column_types"`
 	CSVComment           string   `toml:"csv_comment"`
 	CSVDelimiter         string   `toml:"csv_delimiter"`
 	CSVHeaderRowCount    int      `toml:"csv_header_row_count"`
@@ -195,6 +196,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.CSVComment,
 			config.CSVTrimSpace,
 			config.CSVColumnNames,
+			config.CSVColumnTypes,
 			config.CSVTagColumns,
 			config.CSVMeasurementColumn,
 			config.CSVTimestampColumn,
@@ -216,6 +218,7 @@ func newCSVParser(metricName string,
 	comment string,
 	trimSpace bool,
 	columnNames []string,
+	columnTypes []string,
 	tagColumns []string,
 	nameColumn string,
 	timestampColumn string,
@@ -249,6 +252,7 @@ func newCSVParser(metricName string,
 		Comment:           comment,
 		TrimSpace:         trimSpace,
 		ColumnNames:       columnNames,
+		ColumnTypes:       columnTypes,
 		TagColumns:        tagColumns,
 		MeasurementColumn: nameColumn,
 		TimestampColumn:   timestampColumn,
