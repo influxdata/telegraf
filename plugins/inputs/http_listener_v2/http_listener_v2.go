@@ -215,11 +215,7 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 	// Add +1 for EOF
 	buf := make([]byte, h.MaxBodySize+1)
 	n, err := io.ReadFull(body, buf)
-	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
-		log.Println("D! " + err.Error())
-		// problem reading the request body
-		badRequest(res, err.Error())
-	} else {
+	if err == io.ErrUnexpectedEOF || err == io.EOF {
 		// finished reading the request body
 		if err := h.parse(buf[:n]); err != nil {
 			log.Println("D! " + err.Error())
@@ -227,6 +223,10 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 		} else {
 			res.WriteHeader(http.StatusNoContent)
 		}
+	} else {
+		log.Println("D! " + err.Error())
+		// problem reading the request body
+		internalServerError(res)
 	}
 }
 
@@ -252,6 +252,17 @@ func tooLarge(res http.ResponseWriter) {
 	res.Write([]byte(`{"error":"http: request body too large"}`))
 }
 
+func methodNotAllowed(res http.ResponseWriter) {
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusMethodNotAllowed)
+	res.Write([]byte(`{"error":"http: method not allowed"}`))
+}
+
+func internalServerError(res http.ResponseWriter) {
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusInternalServerError)
+}
+
 func badRequest(res http.ResponseWriter, errString string) {
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusBadRequest)
@@ -260,12 +271,6 @@ func badRequest(res http.ResponseWriter, errString string) {
 	} else {
 		res.Write([]byte(`{"error":"http: bad request"}`))
 	}
-}
-
-func methodNotAllowed(res http.ResponseWriter) {
-	res.Header().Set("Content-Type", "application/json")
-	res.WriteHeader(http.StatusMethodNotAllowed)
-	res.Write([]byte(`{"error":"http: method not allowed"}`))
 }
 
 func (h *HTTPListenerV2) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {

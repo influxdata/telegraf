@@ -60,7 +60,7 @@ func newTestHTTPListenerV2() *HTTPListenerV2 {
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		TimeFunc:       time.Now,
-		MaxBodySize:    70752,
+		MaxBodySize:    70000,
 	}
 	return listener
 }
@@ -273,6 +273,28 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 		map[string]interface{}{"value": float64(12)},
 		map[string]string{"host": "server01"},
 	)
+}
+
+func TestWriteHTTPExactMaxBodySize(t *testing.T) {
+	parser, _ := parsers.NewInfluxParser()
+
+	listener := &HTTPListenerV2{
+		ServiceAddress: "localhost:0",
+		Path:           "/write",
+		Methods:        []string{"POST"},
+		Parser:         parser,
+		MaxBodySize:    int64(len(hugeMetric)),
+		TimeFunc:       time.Now,
+	}
+
+	acc := &testutil.Accumulator{}
+	require.NoError(t, listener.Start(acc))
+	defer listener.Stop()
+
+	resp, err := http.Post(createURL(listener, "http", "/write", ""), "", bytes.NewBuffer([]byte(hugeMetric)))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.EqualValues(t, 204, resp.StatusCode)
 }
 
 func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
