@@ -19,10 +19,12 @@ For more information, please check the [Mesos Observability Metrics](http://meso
     "system",
     "agents",
     "frameworks",
+    "framework_offers",
     "tasks",
     "messages",
     "evqueue",
     "registrar",
+    "allocator",
   ]
   ## A list of Mesos slaves, default is []
   # slaves = []
@@ -108,6 +110,22 @@ Mesos master metric groups
     - master/frameworks_inactive
     - master/outstanding_offers
 
+- framework offers
+    - master/frameworks/subscribed
+    - master/frameworks/calls_total
+    - master/frameworks/calls
+    - master/frameworks/events_total
+    - master/frameworks/events
+    - master/frameworks/operations_total
+    - master/frameworks/operations
+    - master/frameworks/tasks/active
+    - master/frameworks/tasks/terminal
+    - master/frameworks/offers/sent
+    - master/frameworks/offers/accepted
+    - master/frameworks/offers/declined
+    - master/frameworks/offers/rescinded
+    - master/frameworks/roles/suppressed
+
 - tasks
     - master/tasks_error
     - master/tasks_failed
@@ -172,6 +190,40 @@ Mesos master metric groups
     - registrar/state_store_ms/p99
     - registrar/state_store_ms/p999
     - registrar/state_store_ms/p9999
+
+- allocator
+    - allocator/allocation_run_ms
+    - allocator/allocation_run_ms/count
+    - allocator/allocation_run_ms/max
+    - allocator/allocation_run_ms/min
+    - allocator/allocation_run_ms/p50
+    - allocator/allocation_run_ms/p90
+    - allocator/allocation_run_ms/p95
+    - allocator/allocation_run_ms/p99
+    - allocator/allocation_run_ms/p999
+    - allocator/allocation_run_ms/p9999
+    - allocator/allocation_runs
+    - allocator/allocation_run_latency_ms
+    - allocator/allocation_run_latency_ms/count
+    - allocator/allocation_run_latency_ms/max
+    - allocator/allocation_run_latency_ms/min
+    - allocator/allocation_run_latency_ms/p50
+    - allocator/allocation_run_latency_ms/p90
+    - allocator/allocation_run_latency_ms/p95
+    - allocator/allocation_run_latency_ms/p99
+    - allocator/allocation_run_latency_ms/p999
+    - allocator/allocation_run_latency_ms/p9999
+    - allocator/roles/shares/dominant
+    - allocator/event_queue_dispatches
+    - allocator/offer_filters/roles/active
+    - allocator/quota/roles/resources/offered_or_allocated
+    - allocator/quota/roles/resources/guarantee
+    - allocator/resources/cpus/offered_or_allocated
+    - allocator/resources/cpus/total
+    - allocator/resources/disk/offered_or_allocated
+    - allocator/resources/disk/total
+    - allocator/resources/mem/offered_or_allocated
+    - allocator/resources/mem/total
 
 Mesos slave metric groups
 - resources
