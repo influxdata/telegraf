@@ -3,6 +3,7 @@ package influx
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/influxdata/telegraf"
@@ -26,6 +27,19 @@ func (e *ParseError) Error() string {
 	buffer := e.buf
 	if len(buffer) > maxErrorBufferSize {
 		buffer = buffer[:maxErrorBufferSize] + "..."
+	}
+
+	multiBuffer := strings.Split(strings.TrimSpace(e.buf), "\n")
+	mbLen := len(multiBuffer)
+	if mbLen > 0 {
+		offset := 0
+		for i := range multiBuffer {
+			if e.Offset > len(multiBuffer[i])+1+offset {
+				offset += len(multiBuffer[i]) + 1
+				continue
+			}
+			return fmt.Sprintf("metric parse error: %s on line: %d, column %d: %q", e.msg, i+1, e.Offset-offset+1, buffer)
+		}
 	}
 	return fmt.Sprintf("metric parse error: %s at offset %d: %q", e.msg, e.Offset, buffer)
 }
