@@ -149,32 +149,50 @@ outer:
 				}
 			}
 
-			var val interface{}
-			var err error
+			// Try explicit conversion only when column types is defined.
+			if len(p.ColumnTypes) > 0 {
+				// Throw error if current column count exceeds defined types.
+				if i >= len(p.ColumnTypes) {
+					return nil, fmt.Errorf("column type: column count exceeded")
+				}
 
-			// Access array directly as we've thrown error on first parser init if
-			// column counts doesn't match.
-			switch p.ColumnTypes[i] {
-			case "int":
-				val, err = strconv.ParseInt(value, 10, 64)
-				if err != nil {
-					return nil, fmt.Errorf("column type: parse int error %s", err)
+				var val interface{}
+				var err error
+
+				switch p.ColumnTypes[i] {
+				case "int":
+					val, err = strconv.ParseInt(value, 10, 64)
+					if err != nil {
+						return nil, fmt.Errorf("column type: parse int error %s", err)
+					}
+				case "float":
+					val, err = strconv.ParseFloat(value, 64)
+					if err != nil {
+						return nil, fmt.Errorf("column type: parse float error %s", err)
+					}
+				case "bool":
+					val, err = strconv.ParseBool(value)
+					if err != nil {
+						return nil, fmt.Errorf("column type: parse bool error %s", err)
+					}
+				default:
+					val = value
 				}
-			case "float":
-				val, err = strconv.ParseFloat(value, 64)
-				if err != nil {
-					return nil, fmt.Errorf("column type: parse float error %s", err)
-				}
-			case "bool":
-				val, err = strconv.ParseBool(value)
-				if err != nil {
-					return nil, fmt.Errorf("column type: parse bool error %s", err)
-				}
-			default:
-				val = value
+
+				recordFields[fieldName] = val
+				continue
 			}
 
-			recordFields[fieldName] = val
+			// attempt type conversions
+			if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
+				recordFields[fieldName] = iValue
+			} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
+				recordFields[fieldName] = fValue
+			} else if bValue, err := strconv.ParseBool(value); err == nil {
+				recordFields[fieldName] = bValue
+			} else {
+				recordFields[fieldName] = value
+			}
 		}
 	}
 

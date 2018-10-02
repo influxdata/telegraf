@@ -243,7 +243,7 @@ func newCSVParser(metricName string,
 		}
 	}
 
-	if len(columnNames) != len(columnTypes) {
+	if len(columnNames) > 0 && len(columnTypes) > 0 && len(columnNames) != len(columnTypes) {
 		return nil, fmt.Errorf("csv_column_names field count doesn't match with csv_column_types")
 	}
 
