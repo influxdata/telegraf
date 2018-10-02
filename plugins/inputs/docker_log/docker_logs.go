@@ -231,7 +231,7 @@ func (d *DockerLogs) getContainerLogs(
 			}
 			return err
 		}
-		if num > 0 && len(data) > 0 {
+		if num > 0 {
 			fields["log"] = data[:num]
 			acc.AddFields("docker_log", fields, tags)
 		}
