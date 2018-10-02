@@ -5,6 +5,7 @@
 - [#4686](https://github.com/influxdata/telegraf/pull/4686): Add replace function to strings processor.
 - [#4754](https://github.com/influxdata/telegraf/pull/4754): Query servers in parallel in dns_query input.
 - [#4753](https://github.com/influxdata/telegraf/pull/4753): Add ability to define a custom service name when installing as a Windows service.
+- [#4703](https://github.com/influxdata/telegraf/pull/4703): Add support for IPv6 in the ping plugin.
 
 ## v1.8.1 [unreleased]
 
