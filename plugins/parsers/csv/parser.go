@@ -149,45 +149,32 @@ outer:
 				}
 			}
 
-			// In case if defined column names & types count don't match.
-			if i < len(p.ColumnTypes) {
-				var val interface{}
-				var err error
+			var val interface{}
+			var err error
 
-				switch p.ColumnTypes[i] {
-				case "int":
-					val, err = strconv.ParseInt(value, 10, 64)
-					if err != nil {
-						return nil, fmt.Errorf("column type: parse int error %s", err)
-					}
-				case "float":
-					val, err = strconv.ParseFloat(value, 64)
-					if err != nil {
-						return nil, fmt.Errorf("column type: parse float error %s", err)
-					}
-				case "bool":
-					val, err = strconv.ParseBool(value)
-					if err != nil {
-						return nil, fmt.Errorf("column type: parse bool error %s", err)
-					}
-				default:
-					val = value
+			// Access array directly as we've thrown error on first parser init if
+			// column counts doesn't match.
+			switch p.ColumnTypes[i] {
+			case "int":
+				val, err = strconv.ParseInt(value, 10, 64)
+				if err != nil {
+					return nil, fmt.Errorf("column type: parse int error %s", err)
 				}
-
-				recordFields[fieldName] = val
-				continue
+			case "float":
+				val, err = strconv.ParseFloat(value, 64)
+				if err != nil {
+					return nil, fmt.Errorf("column type: parse float error %s", err)
+				}
+			case "bool":
+				val, err = strconv.ParseBool(value)
+				if err != nil {
+					return nil, fmt.Errorf("column type: parse bool error %s", err)
+				}
+			default:
+				val = value
 			}
 
-			// attempt type conversions
-			if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
-				recordFields[fieldName] = iValue
-			} else if fValue, err := strconv.ParseFloat(value, 64); err == nil {
-				recordFields[fieldName] = fValue
-			} else if bValue, err := strconv.ParseBool(value); err == nil {
-				recordFields[fieldName] = bValue
-			} else {
-				recordFields[fieldName] = value
-			}
+			recordFields[fieldName] = val
 		}
 	}
 
