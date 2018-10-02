@@ -1,7 +1,7 @@
 # Generic HTTP listener service input plugin
 
-> NOTE: This is a new generation HTTP listener plugin.
-> This plugin supports all [data formats](/docs/DATA_FORMATS_INPUT.md) while the old [http_plugin](/plugins/inputs/http_listener)
+> NOTE: This is a new version of HTTP listener plugin.
+> This plugin supports all [data formats](/docs/DATA_FORMATS_INPUT.md) while the old [http_listener](/plugins/inputs/http_listener)
 > only accepts data in InfluxDB line-protocol only
 
 The HTTP listener is a service input plugin that listens for messages sent via HTTP POST.
@@ -11,8 +11,6 @@ Enable TLS by specifying the file names of a service TLS certificate and key.
 Enable mutually authenticated TLS and authorize client connections by signing certificate authority by including a list of allowed CA certificate file names in ````tls_allowed_cacerts````.
 
 Enable basic HTTP authentication of clients by specifying a username and password to check for. These credentials will be received from the client _as plain text_ if TLS is not configured.
-
-See: [Telegraf Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#influx).
 
 **Example:**
 ```
@@ -24,7 +22,7 @@ curl -i -XPOST 'http://localhost:8186/write' --data-binary 'cpu_load_short,host=
 This is a sample configuration for the plugin.
 
 ```toml
-[[inputs.http_plugin_ng]]
+[[inputs.http_listener_v2]]
   ## Address and port to host HTTP listener on
   service_address = ":8186"
 

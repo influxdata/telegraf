@@ -1,4 +1,4 @@
-package http_listener_ng
+package http_listener_v2
 
 import (
 	"bytes"
@@ -51,10 +51,10 @@ var (
 	pki = testutil.NewPKI("../../../testutil/pki")
 )
 
-func newTestHTTPListenerNG() *HTTPListenerNG {
+func newTestHTTPListenerV2() *HTTPListenerV2 {
 	parser, _ := parsers.NewInfluxParser()
 
-	listener := &HTTPListenerNG{
+	listener := &HTTPListenerV2{
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -65,14 +65,14 @@ func newTestHTTPListenerNG() *HTTPListenerNG {
 	return listener
 }
 
-func newTestHTTPAuthListener() *HTTPListenerNG {
-	listener := newTestHTTPListenerNG()
+func newTestHTTPAuthListener() *HTTPListenerV2 {
+	listener := newTestHTTPListenerV2()
 	listener.BasicUsername = basicUsername
 	listener.BasicPassword = basicPassword
 	return listener
 }
 
-func newTestHTTPListenerNGWithJSON() *HTTPListenerNG {
+func newTestHTTPListenerV2WithJSON() *HTTPListenerV2 {
 	parser, _ := parsers.NewParser(&parsers.Config{
 		DataFormat:     "json",
 		MetricName:     "cpu_load_short",
@@ -81,7 +81,7 @@ func newTestHTTPListenerNGWithJSON() *HTTPListenerNG {
 		JSONTimeFormat: "02 Jan 06 15:04 MST",
 	})
 
-	listener := &HTTPListenerNG{
+	listener := &HTTPListenerV2{
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -91,10 +91,10 @@ func newTestHTTPListenerNGWithJSON() *HTTPListenerNG {
 	return listener
 }
 
-func newTestHTTPSListenerNG() *HTTPListenerNG {
+func newTestHTTPSListenerV2() *HTTPListenerV2 {
 	parser, _ := parsers.NewInfluxParser()
 
-	listener := &HTTPListenerNG{
+	listener := &HTTPListenerV2{
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -118,7 +118,7 @@ func getHTTPSClient() *http.Client {
 	}
 }
 
-func createURL(listener *HTTPListenerNG, scheme string, path string, rawquery string) string {
+func createURL(listener *HTTPListenerV2, scheme string, path string, rawquery string) string {
 	u := url.URL{
 		Scheme:   scheme,
 		Host:     "localhost:" + strconv.Itoa(listener.Port),
@@ -129,7 +129,7 @@ func createURL(listener *HTTPListenerNG, scheme string, path string, rawquery st
 }
 
 func TestWriteHTTPSNoClientAuth(t *testing.T) {
-	listener := newTestHTTPSListenerNG()
+	listener := newTestHTTPSListenerV2()
 	listener.TLSAllowedCACerts = nil
 
 	acc := &testutil.Accumulator{}
@@ -154,7 +154,7 @@ func TestWriteHTTPSNoClientAuth(t *testing.T) {
 }
 
 func TestWriteHTTPSWithClientAuth(t *testing.T) {
-	listener := newTestHTTPSListenerNG()
+	listener := newTestHTTPSListenerV2()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -186,7 +186,7 @@ func TestWriteHTTPBasicAuth(t *testing.T) {
 }
 
 func TestWriteHTTP(t *testing.T) {
-	listener := newTestHTTPListenerNG()
+	listener := newTestHTTPListenerV2()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -234,7 +234,7 @@ func TestWriteHTTP(t *testing.T) {
 }
 
 func TestWriteHTTPWithJSON(t *testing.T) {
-	listener := newTestHTTPListenerNGWithJSON()
+	listener := newTestHTTPListenerV2WithJSON()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -256,7 +256,7 @@ func TestWriteHTTPWithJSON(t *testing.T) {
 
 // http listener should add a newline at the end of the buffer if it's not there
 func TestWriteHTTPNoNewline(t *testing.T) {
-	listener := newTestHTTPListenerNG()
+	listener := newTestHTTPListenerV2()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -278,7 +278,7 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	parser, _ := parsers.NewInfluxParser()
 
-	listener := &HTTPListenerNG{
+	listener := &HTTPListenerV2{
 		ServiceAddress: "localhost:0",
 		Path:           "/write",
 		Methods:        []string{"POST"},
@@ -299,7 +299,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 
 // test that writing gzipped data works
 func TestWriteHTTPGzippedData(t *testing.T) {
-	listener := newTestHTTPListenerNG()
+	listener := newTestHTTPListenerV2()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -333,7 +333,7 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 	if runtime.GOOS == "darwin" {
 		t.Skip("Skipping due to hang on darwin")
 	}
-	listener := newTestHTTPListenerNG()
+	listener := newTestHTTPListenerV2()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -362,7 +362,7 @@ func TestWriteHTTPHighTraffic(t *testing.T) {
 }
 
 func TestReceive404ForInvalidEndpoint(t *testing.T) {
-	listener := newTestHTTPListenerNG()
+	listener := newTestHTTPListenerV2()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -376,7 +376,7 @@ func TestReceive404ForInvalidEndpoint(t *testing.T) {
 }
 
 func TestWriteHTTPInvalid(t *testing.T) {
-	listener := newTestHTTPListenerNG()
+	listener := newTestHTTPListenerV2()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
@@ -390,7 +390,7 @@ func TestWriteHTTPInvalid(t *testing.T) {
 }
 
 func TestWriteHTTPEmpty(t *testing.T) {
-	listener := newTestHTTPListenerNG()
+	listener := newTestHTTPListenerV2()
 
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))

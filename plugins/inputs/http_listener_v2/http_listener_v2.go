@@ -1,4 +1,4 @@
-package http_listener_ng
+package http_listener_v2
 
 import (
 	"compress/gzip"
@@ -26,7 +26,7 @@ const defaultMaxBodySize = 500 * 1024 * 1024
 
 type TimeFunc func() time.Time
 
-type HTTPListenerNG struct {
+type HTTPListenerV2 struct {
 	ServiceAddress string
 	Path           string
 	Methods        []string
@@ -90,24 +90,24 @@ const sampleConfig = `
   data_format = "influx"
 `
 
-func (h *HTTPListenerNG) SampleConfig() string {
+func (h *HTTPListenerV2) SampleConfig() string {
 	return sampleConfig
 }
 
-func (h *HTTPListenerNG) Description() string {
+func (h *HTTPListenerV2) Description() string {
 	return "Generic HTTP write listener"
 }
 
-func (h *HTTPListenerNG) Gather(_ telegraf.Accumulator) error {
+func (h *HTTPListenerV2) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
-func (h *HTTPListenerNG) SetParser(parser parsers.Parser) {
+func (h *HTTPListenerV2) SetParser(parser parsers.Parser) {
 	h.Parser = parser
 }
 
 // Start starts the http listener service.
-func (h *HTTPListenerNG) Start(acc telegraf.Accumulator) error {
+func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -155,23 +155,23 @@ func (h *HTTPListenerNG) Start(acc telegraf.Accumulator) error {
 		server.Serve(h.listener)
 	}()
 
-	log.Printf("I! Started HTTP listener NG service on %s\n", h.ServiceAddress)
+	log.Printf("I! Started HTTP listener V2 service on %s\n", h.ServiceAddress)
 
 	return nil
 }
 
 // Stop cleans up all resources
-func (h *HTTPListenerNG) Stop() {
+func (h *HTTPListenerV2) Stop() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	h.listener.Close()
 	h.wg.Wait()
 
-	log.Println("I! Stopped HTTP listener NG service on ", h.ServiceAddress)
+	log.Println("I! Stopped HTTP listener V2 service on ", h.ServiceAddress)
 }
 
-func (h *HTTPListenerNG) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	if req.URL.Path == h.Path {
 		h.AuthenticateIfSet(h.serveWrite, res, req)
 	} else {
@@ -179,7 +179,7 @@ func (h *HTTPListenerNG) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) {
+func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) {
 	// Check that the content length is not too large for us to handle.
 	if req.ContentLength > h.MaxBodySize {
 		tooLarge(res)
@@ -230,7 +230,7 @@ func (h *HTTPListenerNG) serveWrite(res http.ResponseWriter, req *http.Request) 
 	}
 }
 
-func (h *HTTPListenerNG) parse(b []byte) error {
+func (h *HTTPListenerV2) parse(b []byte) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -268,7 +268,7 @@ func methodNotAllowed(res http.ResponseWriter) {
 	res.Write([]byte(`{"error":"http: method not allowed"}`))
 }
 
-func (h *HTTPListenerNG) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
+func (h *HTTPListenerV2) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
 	if h.BasicUsername != "" && h.BasicPassword != "" {
 		reqUsername, reqPassword, ok := req.BasicAuth()
 		if !ok ||
@@ -287,8 +287,8 @@ func (h *HTTPListenerNG) AuthenticateIfSet(handler http.HandlerFunc, res http.Re
 func init() {
 	parser, _ := parsers.NewInfluxParser()
 
-	inputs.Add("http_listener_ng", func() telegraf.Input {
-		return &HTTPListenerNG{
+	inputs.Add("http_listener_v2", func() telegraf.Input {
+		return &HTTPListenerV2{
 			ServiceAddress: ":8186",
 			TimeFunc:       time.Now,
 			Parser:         parser,
