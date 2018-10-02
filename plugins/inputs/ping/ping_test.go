@@ -110,9 +110,9 @@ func TestArgs(t *testing.T) {
 		system string
 		output []string
 	}{
-		{"darwin", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12000", "-t", "24", "-S", "eth0", "www.google.com"}},
+		{"darwin", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12000", "-t", "24", "-I", "eth0", "www.google.com"}},
 		{"linux", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-I", "eth0", "www.google.com"}},
-		{"anything else", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-I", "eth0", "www.google.com"}},
+		{"anything else", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-i", "eth0", "www.google.com"}},
 	}
 	for i := range systemCases {
 		actual := p.args("www.google.com", systemCases[i].system)
@@ -124,7 +124,24 @@ func TestArgs(t *testing.T) {
 	}
 }
 
-func mockHostPinger(timeout float64, args ...string) (string, error) {
+func TestArguments(t *testing.T) {
+	arguments := []string{"-c", "3"}
+	p := Ping{
+		Count:        2,
+		Interface:    "eth0",
+		Timeout:      12.0,
+		Deadline:     24,
+		PingInterval: 1.2,
+		Arguments:    arguments,
+	}
+
+	for _, system := range []string{"darwin", "linux", "anything else"} {
+		actual := p.args("www.google.com", system)
+		require.True(t, reflect.DeepEqual(actual, arguments), "Expected: %s Actual: %s", arguments, actual)
+	}
+}
+
+func mockHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return linuxPingOutput, nil
 }
 
@@ -165,7 +182,7 @@ PING www.google.com (216.58.218.164) 56(84) bytes of data.
 rtt min/avg/max/mdev = 35.225/44.033/51.806/5.325 ms
 `
 
-func mockLossyHostPinger(timeout float64, args ...string) (string, error) {
+func mockLossyHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return lossyPingOutput, nil
 }
 
@@ -200,7 +217,7 @@ Request timeout for icmp_seq 0
 2 packets transmitted, 0 packets received, 100.0% packet loss
 `
 
-func mockErrorHostPinger(timeout float64, args ...string) (string, error) {
+func mockErrorHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	// This error will not trigger correct error paths
 	return errorPingOutput, nil
 }
@@ -225,7 +242,7 @@ func TestBadPingGather(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
-func mockFatalHostPinger(timeout float64, args ...string) (string, error) {
+func mockFatalHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return fatalPingOutput, errors.New("So very bad")
 }
 
@@ -265,7 +282,7 @@ func TestErrorWithHostNamePingGather(t *testing.T) {
 		var acc testutil.Accumulator
 		p := Ping{
 			Urls: []string{"www.amazon.com"},
-			pingHost: func(timeout float64, args ...string) (string, error) {
+			pingHost: func(binary string, timeout float64, args ...string) (string, error) {
 				return param.out, errors.New("So very bad")
 			},
 		}
@@ -273,4 +290,17 @@ func TestErrorWithHostNamePingGather(t *testing.T) {
 		assert.True(t, len(acc.Errors) > 0)
 		assert.Contains(t, acc.Errors, param.error)
 	}
+}
+
+func TestPingBinary(t *testing.T) {
+	var acc testutil.Accumulator
+	p := Ping{
+		Urls:   []string{"www.google.com"},
+		Binary: "ping6",
+		pingHost: func(binary string, timeout float64, args ...string) (string, error) {
+			assert.True(t, binary == "ping6")
+			return "", nil
+		},
+	}
+	acc.GatherError(p.Gather)
 }
