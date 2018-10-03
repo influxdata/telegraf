@@ -198,7 +198,7 @@ func convert(line []string) []float64 {
 	return nline
 }
 
-func In(list []string, val string) bool {
+func in(list []string, val string) bool {
 	for _, v := range list {
 		if v == val {
 			return true
@@ -215,7 +215,7 @@ func (n *NFSCLIENT) parseStat(mountpoint string, export string, version string, 
 	var fields = make(map[string]interface{})
 
 	if version == "3" || version == "4" {
-		if In(nfs3Fields, first) {
+		if in(nfs3Fields, first) {
 			if first == "READ" {
 				fields["read_ops"] = nline[0]
 				fields["read_retrans"] = (nline[1] - nline[0])
@@ -271,7 +271,7 @@ func (n *NFSCLIENT) parseData(mountpoint string, export string, version string, 
 			}
 		}
 	} else if version == "3" {
-		if In(nfs3Fields, first) {
+		if in(nfs3Fields, first) {
 			for i, t := range nline {
 				item := fmt.Sprintf("%s_%s", first, nfsopFields[i])
 				fields[item] = t
@@ -279,7 +279,7 @@ func (n *NFSCLIENT) parseData(mountpoint string, export string, version string, 
 			acc.AddFields("nfs_ops", fields, tags)
 		}
 	} else if version == "4" {
-		if In(nfs4Fields, first) {
+		if in(nfs4Fields, first) {
 			for i, t := range nline {
 				item := fmt.Sprintf("%s_%s", first, nfsopFields[i])
 				fields[item] = t
@@ -296,10 +296,10 @@ func (n *NFSCLIENT) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 	var export string
 	for scanner.Scan() {
 		line := strings.Fields(scanner.Text())
-		if In(line, "fstype") && In(line, "nfs") || In(line, "nfs4") {
+		if in(line, "fstype") && in(line, "nfs") || in(line, "nfs4") {
 			device = line[4]
 			export = line[1]
-		} else if In(line, "(nfs)") || In(line, "(nfs4)") {
+		} else if in(line, "(nfs)") || in(line, "(nfs4)") {
 			version = strings.Split(line[5], "/")[1]
 		}
 		if len(line) > 0 {
