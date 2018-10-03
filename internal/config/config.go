@@ -1457,7 +1457,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	if node, ok := tbl.Fields["grok_timezone"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
-				c.GrokTimeZone = str.Value
+				c.GrokTimezone = str.Value
 			}
 		}
 	}
