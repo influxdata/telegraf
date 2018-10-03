@@ -123,7 +123,7 @@ type Config struct {
 	GrokNamedPatterns      []string
 	GrokCustomPatterns     string
 	GrokCustomPatternFiles []string
-	GrokTimeZone           string
+	GrokTimezone           string
 
 	//csv configuration
 	CSVColumnNames       []string `toml:"csv_column_names"`
@@ -185,7 +185,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokNamedPatterns,
 			config.GrokCustomPatterns,
 			config.GrokCustomPatternFiles,
-			config.GrokTimeZone)
+			config.GrokTimezone)
 	case "csv":
 		parser, err = newCSVParser(config.MetricName,
 			config.CSVHeaderRowCount,

@@ -27,7 +27,7 @@ type GrokConfig struct {
 	NamedPatterns      []string
 	CustomPatterns     string
 	CustomPatternFiles []string
-	TimeZone           string
+	Timezone           string
 }
 
 type logEntry struct {
@@ -137,7 +137,7 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 		GrokNamedPatterns:      l.GrokConfig.NamedPatterns,
 		GrokCustomPatterns:     l.GrokConfig.CustomPatterns,
 		GrokCustomPatternFiles: l.GrokConfig.CustomPatternFiles,
-		GrokTimeZone:           l.GrokConfig.TimeZone,
+		GrokTimezone:           l.GrokConfig.Timezone,
 		DataFormat:             "grok",
 	}
 
