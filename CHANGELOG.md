@@ -13,7 +13,7 @@
 
 - [#4750](https://github.com/influxdata/telegraf/pull/4750): Fix hardware_type may be truncated in sqlserver input.
 - [#4723](https://github.com/influxdata/telegraf/issues/4723): Improve performance in basicstats aggregator.
-- [#4747](https://github.com/influxdata/telegraf/pull/4723): Add hostname to TLS config for SNI support.
+- [#4747](https://github.com/influxdata/telegraf/pull/4747): Add hostname to TLS config for SNI support.
 - [#4675](https://github.com/influxdata/telegraf/issues/4675): Don't add tags with empty values to opentsdb output.
 - [#4765](https://github.com/influxdata/telegraf/pull/4765): Fix panic during network error in vsphere input.
 - [#4766](https://github.com/influxdata/telegraf/pull/4766): Unify http_listener error response with InfluxDB.
