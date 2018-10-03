@@ -29,7 +29,7 @@ func TestGatherPrimaryHealthCheck(t *testing.T) {
 	defer server.Close()
 
 	traefik := &Traefik{
-		Address:                      server.URL,
+		Address: server.URL,
 		IncludeStatusCodeMeasurement: false,
 	}
 	var acc testutil.Accumulator
@@ -50,7 +50,7 @@ func TestGatherStatusCodes(t *testing.T) {
 	defer server.Close()
 
 	traefik := &Traefik{
-		Address:                      server.URL,
+		Address: server.URL,
 		IncludeStatusCodeMeasurement: true,
 	}
 	var acc testutil.Accumulator
