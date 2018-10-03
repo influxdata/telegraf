@@ -7,7 +7,7 @@
 - [#4753](https://github.com/influxdata/telegraf/pull/4753): Add ability to define a custom service name when installing as a Windows service.
 - [#4703](https://github.com/influxdata/telegraf/pull/4703): Add support for IPv6 in the ping plugin.
 
-## v1.8.1 [unreleased]
+## v1.8.1 [2018-10-03]
 
 ### Bugfixes
 
@@ -20,6 +20,7 @@
 - [#4769](https://github.com/influxdata/telegraf/pull/4769): Add UUID to VMs in vSphere input.
 - [#4758](https://github.com/influxdata/telegraf/issues/4758): Skip tags with empty values in cloudwatch output.
 - [#4783](https://github.com/influxdata/telegraf/issues/4783): Fix missing non-realtime samples in vSphere input.
+- [#4799](https://github.com/influxdata/telegraf/pull/4799): Fix case of timezone/grok_timezone options.
 
 ## v1.8 [2018-09-21]
 
