@@ -134,7 +134,7 @@ func TestNFSClientParsev3(t *testing.T) {
 
 	nfsclient := NFSClient{}
 	data := strings.Fields("         READLINK: 500 501 502 503 504 505 506 507")
-	nfsclient.parseData("1.2.3.4:/storage/NFS", "/NFS", "3", data, &acc)
+	nfsclient.parseStat("1.2.3.4:/storage/NFS", "/NFS", "3", data, true, &acc)
 
 	fields_ops := map[string]interface{}{
 		"READLINK_ops":           int64(500),
@@ -154,7 +154,7 @@ func TestNFSClientParsev4(t *testing.T) {
 
 	nfsclient := NFSClient{}
 	data := strings.Fields("    DESTROY_SESSION: 500 501 502 503 504 505 506 507")
-	nfsclient.parseData("2.2.2.2:/nfsdata/", "/mnt", "4", data, &acc)
+	nfsclient.parseStat("2.2.2.2:/nfsdata/", "/mnt", "4", data, true, &acc)
 
 	fields_ops := map[string]interface{}{
 		"DESTROY_SESSION_ops":           int64(500),

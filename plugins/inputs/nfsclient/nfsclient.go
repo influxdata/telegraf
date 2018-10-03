@@ -207,14 +207,41 @@ func in(list []string, val string) bool {
 	return false
 }
 
-func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, acc telegraf.Accumulator) error {
+func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, fullstat bool, acc telegraf.Accumulator) error {
 	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
 	nline := convert(line)
 	first := strings.Replace(line[0], ":", "", 1)
 
 	var fields = make(map[string]interface{})
 
-	if version == "3" || version == "4" {
+	if fullstat && first == "events" {
+		for i, t := range eventsFields {
+			fields[t] = nline[i]
+		}
+		acc.AddFields("nfs_events", fields, tags)
+	} else if fullstat && first == "bytes" {
+		for i, t := range bytesFields {
+			fields[t] = nline[i]
+		}
+		acc.AddFields("nfs_bytes", fields, tags)
+	} else if fullstat && first == "xprt" {
+		switch line[1] {
+		case "tcp":
+			{
+				for i, t := range xprttcpFields {
+					fields[t] = nline[i+2]
+				}
+				acc.AddFields("nfs_xprttcp", fields, tags)
+			}
+		case "udp":
+			{
+				for i, t := range xprtudpFields {
+					fields[t] = nline[i+2]
+				}
+				acc.AddFields("nfs_xprtudp", fields, tags)
+			}
+		}
+	} else if version == "3" || version == "4" {
 		if in(nfs3Fields, first) {
 			if first == "READ" {
 				fields["read_ops"] = nline[0]
@@ -232,61 +259,25 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 				acc.AddFields("nfsstat_write", fields, tags)
 			}
 		}
-	}
-	return nil
-}
-
-func (n *NFSClient) parseData(mountpoint string, export string, version string, line []string, acc telegraf.Accumulator) error {
-	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
-	nline := convert(line)
-	first := strings.Replace(line[0], ":", "", 1)
-
-	var fields = make(map[string]interface{})
-
-	if first == "events" {
-		for i, t := range eventsFields {
-			fields[t] = nline[i]
-		}
-		acc.AddFields("nfs_events", fields, tags)
-	} else if first == "bytes" {
-		for i, t := range bytesFields {
-			fields[t] = nline[i]
-		}
-		acc.AddFields("nfs_bytes", fields, tags)
-	} else if first == "xprt" {
-		switch line[1] {
-		case "tcp":
-			{
-				for i, t := range xprttcpFields {
-					fields[t] = nline[i+2]
+		if fullstat && version == "3" {
+			if in(nfs3Fields, first) {
+				for i, t := range nline {
+					item := fmt.Sprintf("%s_%s", first, nfsopFields[i])
+					fields[item] = t
 				}
-				acc.AddFields("nfs_xprttcp", fields, tags)
+				acc.AddFields("nfs_ops", fields, tags)
 			}
-		case "udp":
-			{
-				for i, t := range xprtudpFields {
-					fields[t] = nline[i+2]
+		} else if fullstat && version == "4" {
+			if in(nfs4Fields, first) {
+				for i, t := range nline {
+					item := fmt.Sprintf("%s_%s", first, nfsopFields[i])
+					fields[item] = t
 				}
-				acc.AddFields("nfs_xprtudp", fields, tags)
+				acc.AddFields("nfs_ops", fields, tags)
 			}
-		}
-	} else if version == "3" {
-		if in(nfs3Fields, first) {
-			for i, t := range nline {
-				item := fmt.Sprintf("%s_%s", first, nfsopFields[i])
-				fields[item] = t
-			}
-			acc.AddFields("nfs_ops", fields, tags)
-		}
-	} else if version == "4" {
-		if in(nfs4Fields, first) {
-			for i, t := range nline {
-				item := fmt.Sprintf("%s_%s", first, nfsopFields[i])
-				fields[item] = t
-			}
-			acc.AddFields("nfs_ops", fields, tags)
 		}
 	}
+
 	return nil
 }
 
@@ -303,10 +294,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 			version = strings.Split(line[5], "/")[1]
 		}
 		if len(line) > 0 {
-			n.parseStat(device, export, version, line, acc)
-			if n.Fullstat == true {
-				n.parseData(device, export, version, line, acc)
-			}
+			n.parseStat(device, export, version, line, n.Fullstat, acc)
 		}
 	}
 	return nil
