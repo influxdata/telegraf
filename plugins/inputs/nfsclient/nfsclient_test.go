@@ -248,7 +248,6 @@ func TestNFSCLIENTProcessFull(t *testing.T) {
 		"writepages":       float64(30784819),
 	}
 	fields_xprttcp := map[string]interface{}{
-		//        "port": float64(733),
 		"bind_count":    float64(1),
 		"connect_count": float64(1),
 		"connect_time":  float64(0),

@@ -17,7 +17,6 @@ type NFSCLIENT struct {
 }
 
 var sampleConfig = `
-  # fullstat = true
   # Read more low-level metrics
   fullstat = false
 `
@@ -72,7 +71,6 @@ var bytesFields = []string{
 }
 
 var xprtudpFields = []string{
-	//        "port",
 	"bind_count",
 	"rpcsends",
 	"rpcreceives",
@@ -82,7 +80,6 @@ var xprtudpFields = []string{
 }
 
 var xprttcpFields = []string{
-	//        "port",
 	"bind_count",
 	"connect_count",
 	"connect_time",
