@@ -613,10 +613,17 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 
 	// Do we have new data yet?
 	res := e.resourceKinds[resourceType]
-	now := time.Now()
+	client, err := e.clientFactory.GetClient(ctx)
+	if err != nil {
+		return err
+	}
+	now, err := client.GetServerTime(ctx)
+	if err != nil {
+		return err
+	}
 	latest, hasLatest := e.lastColls[resourceType]
 	if hasLatest {
-		elapsed := time.Now().Sub(latest).Seconds() + 5.0 // Allow 5 second jitter.
+		elapsed := now.Sub(latest).Seconds() + 5.0 // Allow 5 second jitter.
 		log.Printf("D! [input.vsphere]: Latest: %s, elapsed: %f, resource: %s", latest, elapsed, resourceType)
 		if !res.realTime && elapsed < float64(res.sampling) {
 			// No new data would be available. We're outta herE! [input.vsphere]:
@@ -625,7 +632,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 			return nil
 		}
 	} else {
-		latest = time.Now().Add(time.Duration(-res.sampling) * time.Second)
+		latest = now.Add(time.Duration(-res.sampling) * time.Second)
 	}
 
 	internalTags := map[string]string{"resourcetype": resourceType}
@@ -659,12 +666,12 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 
 	// Drain the pool. We're getting errors back. They should all be nil
 	var mux sync.Mutex
-	err := make(multiError, 0)
+	merr := make(multiError, 0)
 	wp.Drain(ctx, func(ctx context.Context, in interface{}) bool {
 		if in != nil {
 			mux.Lock()
 			defer mux.Unlock()
-			err = append(err, in.(error))
+			merr = append(merr, in.(error))
 			return false
 		}
 		return true
@@ -673,7 +680,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 
 	sw.Stop()
 	SendInternalCounterWithTags("gather_count", e.URL.Host, internalTags, count)
-	if len(err) > 0 {
+	if len(merr) > 0 {
 		return err
 	}
 	return nil
