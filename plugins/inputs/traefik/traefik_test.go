@@ -29,7 +29,7 @@ func TestGatherPrimaryHealthCheck(t *testing.T) {
 	defer server.Close()
 
 	traefik := &Traefik{
-		Address: server.URL,
+		Address:                      server.URL,
 		IncludeStatusCodeMeasurement: false,
 	}
 	var acc testutil.Accumulator
@@ -50,7 +50,7 @@ func TestGatherStatusCodes(t *testing.T) {
 	defer server.Close()
 
 	traefik := &Traefik{
-		Address: server.URL,
+		Address:                      server.URL,
 		IncludeStatusCodeMeasurement: true,
 	}
 	var acc testutil.Accumulator
@@ -68,10 +68,10 @@ func TestGatherStatusCodes(t *testing.T) {
 	assert.False(t, acc.HasField("traefik_status_codes", "status_code_400"), "should not have status_code_* fields")
 	acc.AssertContainsTaggedFields(t, "traefik_status_codes",
 		expected200Fields,
-		map[string]string{"status_code": "200", "server": server.URL})
+		map[string]string{"status_code": "200", "source": server.URL})
 	acc.AssertContainsTaggedFields(t, "traefik_status_codes",
 		expected404Fields,
-		map[string]string{"status_code": "404", "server": server.URL})
+		map[string]string{"status_code": "404", "source": server.URL})
 }
 
 func TestHTTPSGatherHealthCheckIntegration(t *testing.T) {

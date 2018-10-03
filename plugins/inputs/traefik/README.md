@@ -55,7 +55,7 @@ Configuration with additional measurements for each status code encountered:
 ### Tags:
 
 - All measurements have the following tags:
-    - **server**
+    - **source**
 
 - `traefik_status_codes` measurement have the following additional tags:
     - **status_code**
@@ -80,8 +80,8 @@ SELECT difference(last("count")) FROM "traefik_status_codes" WHERE time > now() 
 
 ./telegraf -config telegraf.conf -input-filter traefik -test
 	
-> traefik,server=http://localhost:8080,instance=prod,host=My-MacBook-Pro.local status_code_302=27117i,status_code_307=4i,status_code_400=1011i,status_code_404=812i,status_code_401=1i,total_response_time_sec=83381.956659941,total_count=1222527i,uptime_sec=1387245.424820805,unixtime=1518039391i,status_code_500=34i,status_code_504=1206i,status_code_503=1i,status_code_301=3i,average_response_time_sec=0.068204593,status_code_502=715i,status_code_304=559007i,status_code_200=632616i,health_response_time_sec=0.061906656 1518039391000000000
+> traefik,source=http://localhost:8080,instance=prod,host=My-MacBook-Pro.local status_code_302=27117i,status_code_307=4i,status_code_400=1011i,status_code_404=812i,status_code_401=1i,total_response_time_sec=83381.956659941,total_count=1222527i,uptime_sec=1387245.424820805,unixtime=1518039391i,status_code_500=34i,status_code_504=1206i,status_code_503=1i,status_code_301=3i,average_response_time_sec=0.068204593,status_code_502=715i,status_code_304=559007i,status_code_200=632616i,health_response_time_sec=0.061906656 1518039391000000000
 
-> traefik_status_codes,server=http://localhost:8080,status_code=304,instance=prod total_count=1588167i,uptime_sec=1629993.771782303,unixtime=1518624416i,count=752109i,health_response_time_sec=1.0587943 1518624424000000000
+> traefik_status_codes,source=http://localhost:8080,status_code=304,instance=prod total_count=1588167i,uptime_sec=1629993.771782303,unixtime=1518624416i,count=752109i,health_response_time_sec=1.0587943 1518624424000000000
 
 ```

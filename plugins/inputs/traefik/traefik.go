@@ -149,7 +149,7 @@ func (t *Traefik) Gather(acc telegraf.Accumulator) error {
 	json.NewDecoder(resp.Body).Decode(&healthData)
 	t.lastRequestTiming = time.Since(start).Seconds()
 
-	tags := map[string]string{"server": t.Address}
+	tags := map[string]string{"source": t.Address}
 	fields := map[string]interface{}{"health_response_time_sec": t.lastRequestTiming}
 
 	t.submitPrimaryMeasurement(acc, healthData, tags, fields)
