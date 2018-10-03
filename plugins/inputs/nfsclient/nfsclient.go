@@ -12,7 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type NFSCLIENT struct {
+type NFSClient struct {
 	Fullstat bool
 }
 
@@ -21,11 +21,11 @@ var sampleConfig = `
   fullstat = false
 `
 
-func (n *NFSCLIENT) SampleConfig() string {
+func (n *NFSClient) SampleConfig() string {
 	return sampleConfig
 }
 
-func (n *NFSCLIENT) Description() string {
+func (n *NFSClient) Description() string {
 	return "Read per-mount NFS metrics from /proc/self/mountstats"
 }
 
@@ -207,7 +207,7 @@ func in(list []string, val string) bool {
 	return false
 }
 
-func (n *NFSCLIENT) parseStat(mountpoint string, export string, version string, line []string, acc telegraf.Accumulator) error {
+func (n *NFSClient) parseStat(mountpoint string, export string, version string, line []string, acc telegraf.Accumulator) error {
 	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
 	nline := convert(line)
 	first := strings.Replace(line[0], ":", "", 1)
@@ -236,7 +236,7 @@ func (n *NFSCLIENT) parseStat(mountpoint string, export string, version string, 
 	return nil
 }
 
-func (n *NFSCLIENT) parseData(mountpoint string, export string, version string, line []string, acc telegraf.Accumulator) error {
+func (n *NFSClient) parseData(mountpoint string, export string, version string, line []string, acc telegraf.Accumulator) error {
 	tags := map[string]string{"mountpoint": mountpoint, "serverexport": export}
 	nline := convert(line)
 	first := strings.Replace(line[0], ":", "", 1)
@@ -290,7 +290,7 @@ func (n *NFSCLIENT) parseData(mountpoint string, export string, version string, 
 	return nil
 }
 
-func (n *NFSCLIENT) processText(scanner *bufio.Scanner, acc telegraf.Accumulator) error {
+func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator) error {
 	var device string
 	var version string
 	var export string
@@ -312,7 +312,7 @@ func (n *NFSCLIENT) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 	return nil
 }
 
-func (n *NFSCLIENT) Gather(acc telegraf.Accumulator) error {
+func (n *NFSClient) Gather(acc telegraf.Accumulator) error {
 	var outerr error
 
 	file, err := os.Open("/proc/self/mountstats")
@@ -333,6 +333,6 @@ func (n *NFSCLIENT) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("nfsclient", func() telegraf.Input {
-		return &NFSCLIENT{}
+		return &NFSClient{}
 	})
 }

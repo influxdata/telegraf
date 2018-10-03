@@ -129,10 +129,10 @@ device 2.2.2.2:/nfsdata/ mounted on /mnt with fstype nfs4 statvers=1.1
 
 `
 
-func TestNFSCLIENTParsev3(t *testing.T) {
+func TestNFSClientParsev3(t *testing.T) {
 	var acc testutil.Accumulator
 
-	nfsclient := NFSCLIENT{}
+	nfsclient := NFSClient{}
 	data := strings.Fields("         READLINK: 500 501 502 503 504 505 506 507")
 	nfsclient.parseData("1.2.3.4:/storage/NFS", "/NFS", "3", data, &acc)
 
@@ -149,10 +149,10 @@ func TestNFSCLIENTParsev3(t *testing.T) {
 	acc.AssertContainsFields(t, "nfs_ops", fields_ops)
 }
 
-func TestNFSCLIENTParsev4(t *testing.T) {
+func TestNFSClientParsev4(t *testing.T) {
 	var acc testutil.Accumulator
 
-	nfsclient := NFSCLIENT{}
+	nfsclient := NFSClient{}
 	data := strings.Fields("    DESTROY_SESSION: 500 501 502 503 504 505 506 507")
 	nfsclient.parseData("2.2.2.2:/nfsdata/", "/mnt", "4", data, &acc)
 
@@ -169,10 +169,10 @@ func TestNFSCLIENTParsev4(t *testing.T) {
 	acc.AssertContainsFields(t, "nfs_ops", fields_ops)
 }
 
-func TestNFSCLIENTProcessStat(t *testing.T) {
+func TestNFSClientProcessStat(t *testing.T) {
 	var acc testutil.Accumulator
 
-	nfsclient := NFSCLIENT{}
+	nfsclient := NFSClient{}
 	scanner := bufio.NewScanner(strings.NewReader(mountstatstext))
 
 	nfsclient.processText(scanner, &acc)
@@ -199,10 +199,10 @@ func TestNFSCLIENTProcessStat(t *testing.T) {
 	acc.AssertContainsTaggedFields(t, "nfsstat_write", fields_writestat, tags)
 }
 
-func TestNFSCLIENTProcessFull(t *testing.T) {
+func TestNFSClientProcessFull(t *testing.T) {
 	var acc testutil.Accumulator
 
-	nfsclient := NFSCLIENT{}
+	nfsclient := NFSClient{}
 	nfsclient.Fullstat = true
 	scanner := bufio.NewScanner(strings.NewReader(mountstatstext))
 
