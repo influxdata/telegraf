@@ -19,6 +19,7 @@
 - [#4766](https://github.com/influxdata/telegraf/pull/4766): Unify http_listener error response with InfluxDB.
 - [#4769](https://github.com/influxdata/telegraf/pull/4769): Add UUID to VMs in vSphere input.
 - [#4758](https://github.com/influxdata/telegraf/issues/4758): Skip tags with empty values in cloudwatch output.
+- [#4783](https://github.com/influxdata/telegraf/issues/4783): Fix missing non-realtime samples in vSphere input.
 
 ## v1.8 [2018-09-21]
 
