@@ -76,6 +76,10 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 
 	for _, m := range metrics {
 		if dogMs, err := buildMetrics(m); err == nil {
+			tagMap := m.Tags()
+			metricTags := buildTags(tagMap)
+			host, _ := tagMap["host"]
+			
 			for fieldName, dogM := range dogMs {
 				// name of the datadog measurement
 				var dname string
@@ -85,11 +89,9 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 				} else {
 					dname = m.Name() + "." + fieldName
 				}
-				var host string
-				host, _ = m.Tags()["host"]
 				metric := &Metric{
 					Metric: dname,
-					Tags:   buildTags(m.Tags()),
+					Tags:   metricTags,
 					Host:   host,
 				}
 				metric.Points[0] = dogM
@@ -144,16 +146,16 @@ func (d *Datadog) authenticatedUrl() string {
 
 func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 	ms := make(map[string]Point)
-	for k, v := range m.Fields() {
-		if !verifyValue(v) {
+	for _, field := range m.FieldList() {
+		if !verifyValue(field.Value) {
 			continue
 		}
 		var p Point
-		if err := p.setValue(v); err != nil {
-			return ms, fmt.Errorf("unable to extract value from Fields %v error %v", k, err.Error())
+		if err := p.setValue(field.Value); err != nil {
+			return ms, fmt.Errorf("unable to extract value from Fields %v error %v", field.Key, err.Error())
 		}
 		p[0] = float64(m.Time().Unix())
-		ms[k] = p
+		ms[field.Key] = p
 	}
 	return ms, nil
 }
