@@ -287,7 +287,7 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 	var export string
 	for scanner.Scan() {
 		line := strings.Fields(scanner.Text())
-		if in(line, "fstype") && in(line, "nfs") || in(line, "nfs4") {
+		if in(line, "fstype") && (in(line, "nfs") || in(line, "nfs4")) {
 			device = line[4]
 			export = line[1]
 		} else if in(line, "(nfs)") || in(line, "(nfs4)") {
