@@ -1,11 +1,11 @@
-# Telegraf plugin: NFSCLIENT
+# Telegraf plugin: NFSClient
 
 #### Plugin arguments:
 - **fullstat** bool: Collect per-operation type metrics
 
 #### Description
 
-The NFSCLIENT plugin collects data from /proc/self/mountstats, by default it will only include a quite limited set of IO metrics. 
+The NFSClient plugin collects data from /proc/self/mountstats, by default it will only include a quite limited set of IO metrics.
 If fullstat is set, it will collect a lot of per-operation statistics.
 
 #### Measurements & Fields
