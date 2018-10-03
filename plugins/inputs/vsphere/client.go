@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/performance"
@@ -170,4 +171,13 @@ func (c *Client) close() {
 			}
 		}
 	})
+}
+
+// GetServerTime returns the time at the vCenter server
+func (c *Client) GetServerTime(ctx context.Context) (time.Time, error) {
+	t, err := methods.GetCurrentTime(ctx, c.Client)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return *t, nil
 }
