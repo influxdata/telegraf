@@ -214,27 +214,27 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 
 	var fields = make(map[string]interface{})
 
-	if fullstat && first == "events" {
+	if fullstat && first == "events" && len(nline) >= len(eventsFields) {
 		for i, t := range eventsFields {
 			fields[t] = nline[i]
 		}
 		acc.AddFields("nfs_events", fields, tags)
-	} else if fullstat && first == "bytes" {
+	} else if fullstat && first == "bytes" && len(nline) >= len(bytesFields) {
 		for i, t := range bytesFields {
 			fields[t] = nline[i]
 		}
 		acc.AddFields("nfs_bytes", fields, tags)
-	} else if fullstat && first == "xprt" {
+	} else if fullstat && first == "xprt" && len(line) > 1 {
 		switch line[1] {
 		case "tcp":
-			{
+			if len(nline)+2 >= len(xprttcpFields) {
 				for i, t := range xprttcpFields {
 					fields[t] = nline[i+2]
 				}
 				acc.AddFields("nfs_xprttcp", fields, tags)
 			}
 		case "udp":
-			{
+			if len(nline)+2 >= len(xprtudpFields) {
 				for i, t := range xprtudpFields {
 					fields[t] = nline[i+2]
 				}
@@ -242,7 +242,7 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 			}
 		}
 	} else if version == "3" || version == "4" {
-		if in(nfs3Fields, first) {
+		if in(nfs3Fields, first) && len(nline) > 7 {
 			if first == "READ" {
 				fields["read_ops"] = nline[0]
 				fields["read_retrans"] = (nline[1] - nline[0])
@@ -260,7 +260,7 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 			}
 		}
 		if fullstat && version == "3" {
-			if in(nfs3Fields, first) {
+			if in(nfs3Fields, first) && len(nline) <= len(nfsopFields) {
 				for i, t := range nline {
 					item := fmt.Sprintf("%s_%s", first, nfsopFields[i])
 					fields[item] = t
@@ -268,7 +268,7 @@ func (n *NFSClient) parseStat(mountpoint string, export string, version string, 
 				acc.AddFields("nfs_ops", fields, tags)
 			}
 		} else if fullstat && version == "4" {
-			if in(nfs4Fields, first) {
+			if in(nfs4Fields, first) && len(nline) <= len(nfsopFields) {
 				for i, t := range nline {
 					item := fmt.Sprintf("%s_%s", first, nfsopFields[i])
 					fields[item] = t
@@ -287,10 +287,10 @@ func (n *NFSClient) processText(scanner *bufio.Scanner, acc telegraf.Accumulator
 	var export string
 	for scanner.Scan() {
 		line := strings.Fields(scanner.Text())
-		if in(line, "fstype") && (in(line, "nfs") || in(line, "nfs4")) {
+		if in(line, "fstype") && (in(line, "nfs") || in(line, "nfs4")) && len(line) > 4 {
 			device = line[4]
 			export = line[1]
-		} else if in(line, "(nfs)") || in(line, "(nfs4)") {
+		} else if (in(line, "(nfs)") || in(line, "(nfs4)")) && len(line) > 5 {
 			version = strings.Split(line[5], "/")[1]
 		}
 		if len(line) > 0 {
