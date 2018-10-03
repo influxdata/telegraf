@@ -189,10 +189,10 @@ var nfsopFields = []string{
 	"total_time",
 }
 
-func convert(line []string) []float64 {
-	var nline []float64
+func convert(line []string) []int64 {
+	var nline []int64
 	for _, l := range line[1:] {
-		f, _ := strconv.ParseFloat(l, 64)
+		f, _ := strconv.ParseInt(l, 10, 64)
 		nline = append(nline, f)
 	}
 	return nline
