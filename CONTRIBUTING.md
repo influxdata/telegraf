@@ -477,7 +477,7 @@ the short tests.
 
 ### Execute linter
 
-execute `make lint`
+execute `make check`
 
 ### Execute short tests
 
