@@ -232,7 +232,7 @@ func (n *Netflow) parseV9OptionTemplateFlowset(frame *bytes.Buffer, exporter *ne
 		log.Printf("D! Template ID=%d", template.ID)
 		log.Printf("D! Option Scope Length=%d", template.OptionScopeLength)
 		log.Printf("D! Option Length=%d", template.OptionLength)
-		for i := uint16(0); i < template.OptionScopeLength / 4; i++ {
+		for i := uint16(0); i < template.OptionScopeLength/4; i++ {
 			var field = new(V9Field)
 			if err := binary.Read(frame, binary.BigEndian, &field.Type); err != nil {
 				log.Printf("E! %s\n", err.Error())
@@ -243,7 +243,7 @@ func (n *Netflow) parseV9OptionTemplateFlowset(frame *bytes.Buffer, exporter *ne
 			template.ScopeFields = append(template.ScopeFields, field)
 		}
 		current += template.OptionScopeLength
-		for i := uint16(0); i < template.OptionLength / 4; i++ {
+		for i := uint16(0); i < template.OptionLength/4; i++ {
 			var field = new(V9Field)
 			if err := binary.Read(frame, binary.BigEndian, &field.Type); err != nil {
 				log.Printf("E! %s\n", err.Error())
@@ -303,7 +303,7 @@ func (n *Netflow) parseV9DataFlowsetInternal(frame *bytes.Buffer, exporter *net.
 	var metrics []telegraf.Metric
 	recordCount := (fsLen - 4) / template.TotalLength()
 	padding := (fsLen - 4) % template.TotalLength()
-	for current := uint16(4); current < fsLen - padding; {
+	for current := uint16(4); current < fsLen-padding; {
 		fields := make(map[string]interface{})
 		tags := make(map[string]string)
 		for _, f := range template.Fields {
@@ -365,7 +365,7 @@ func (n *Netflow) parseV9DataFlowsetInternal(frame *bytes.Buffer, exporter *net.
 				appID, ok := applicationID.(uint32)
 				log.Printf("I! resolve application name by id=%d", appID)
 				if ok {
-					id := fmt.Sprintf("%d:%d", appID / 16777216, appID % 16777216) // 2^24 = 16777216
+					id := fmt.Sprintf("%d:%d", appID/16777216, appID%16777216) // 2^24 = 16777216
 					readOp := &ApplicationReadOp{Key: id, Resp: make(chan Application)}
 					n.readApplication <- readOp
 					select {
@@ -397,7 +397,7 @@ func (n *Netflow) parseV9OptionDataRecordInternal(frame *bytes.Buffer, fsLen uin
 	recordCount := (fsLen - 4) / template.TotalLength()
 	padding := (fsLen - 4) % template.TotalLength()
 	log.Printf("D! fsLen=%d, totalLength=%d, padding=%d", fsLen, template.TotalLength(), padding)
-	for current := uint16(4); current < fsLen - padding; {
+	for current := uint16(4); current < fsLen-padding; {
 		//scopeFields := make(map[string]interface{})
 		for _, f := range template.ScopeFields {
 			var byteArray = make([]byte, int(f.Length))

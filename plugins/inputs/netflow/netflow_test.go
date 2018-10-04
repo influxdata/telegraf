@@ -51,11 +51,11 @@ func TestV9Parser(t *testing.T) {
 		"ip_protocol":                int64(6),
 		"counter_bytes":              int64(99),
 		"counter_packets":            int64(2),
-		"ipv4_source_address":      "100.1.1.1",
-		"ipv4_destination_address": "200.1.1.1",
+		"ipv4_source_address":        "100.1.1.1",
+		"ipv4_destination_address":   "200.1.1.1",
 	}
 	tags := map[string]string{
-		"exporter":                 "192.168.0.1",
+		"exporter": "192.168.0.1",
 	}
 	m, _ := acc.Get("netflow")
 	log.Printf("tags: %v", m.Tags)
@@ -106,12 +106,12 @@ func TestResolveApplicationNameById(t *testing.T) {
 		"ip_protocol":                int64(6),
 		"counter_bytes":              int64(99),
 		"counter_packets":            int64(2),
-		"ipv4_source_address":      "100.1.1.1",
-		"ipv4_destination_address": "200.1.1.1",
+		"ipv4_source_address":        "100.1.1.1",
+		"ipv4_destination_address":   "200.1.1.1",
 	}
 	tags := map[string]string{
-		"application_name":         "bgp",
-		"exporter":                 "192.168.0.1",
+		"application_name": "bgp",
+		"exporter":         "192.168.0.1",
 	}
 	m, _ := acc.Get("netflow")
 	log.Printf("tags: %v", m.Tags)
@@ -167,12 +167,12 @@ func TestResolveIfnameByIfindex(t *testing.T) {
 		"counter_bytes":              int64(420),
 		"counter_packets":            int64(6),
 		"interface_input_snmp":       int64(1),
-		"ipv4_source_address":      "192.168.1.1",
-		"ipv4_destination_address": "192.168.1.254",
+		"ipv4_source_address":        "192.168.1.1",
+		"ipv4_destination_address":   "192.168.1.254",
 	}
 	tags := map[string]string{
-		"exporter":                 "192.168.0.1",
-		"interface_input_name":       string(b),
+		"exporter":             "192.168.0.1",
+		"interface_input_name": string(b),
 	}
 	m, _ := acc.Get("netflow")
 	log.Printf("tags: %v", m.Tags)

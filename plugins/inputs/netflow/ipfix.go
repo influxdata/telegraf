@@ -359,7 +359,7 @@ func (n *Netflow) parseIpfixDataSetInternal(frame *bytes.Buffer, exporter *net.U
 				appID, ok := applicationID.(uint32)
 				log.Printf("I! resolve application name by id=%d", appID)
 				if ok {
-					id := fmt.Sprintf("D! %d:%d", appID / 16777216, appID % 16777216) // 2^24 = 16777216
+					id := fmt.Sprintf("D! %d:%d", appID/16777216, appID%16777216) // 2^24 = 16777216
 					log.Printf("D! id=%s", id)
 					readOp := &ApplicationReadOp{Key: id, Resp: make(chan Application)}
 					n.readApplication <- readOp
