@@ -27,6 +27,11 @@ values.
   ## If `csv_header_row_count` is set to 0, this config must be used
   csv_column_names = []
 
+  ## For assigning explicit data types to columns.
+  ## Supported types: "int", "float", "bool", "string".
+  ## If this is not specified, type conversion will be done on the types above.
+  csv_column_types = []
+
   ## Indicates the number of rows to skip before looking for header information.
   csv_skip_rows = 0
 

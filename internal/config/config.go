@@ -1460,6 +1460,18 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["csv_column_types"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CSVColumnTypes = append(c.CSVColumnTypes, str.Value)
+					}
+				}
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["csv_tag_columns"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
@@ -1588,6 +1600,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "grok_custom_pattern_files")
 	delete(tbl.Fields, "grok_timezone")
 	delete(tbl.Fields, "csv_column_names")
+	delete(tbl.Fields, "csv_column_types")
 	delete(tbl.Fields, "csv_comment")
 	delete(tbl.Fields, "csv_delimiter")
 	delete(tbl.Fields, "csv_field_columns")

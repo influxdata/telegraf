@@ -147,6 +147,18 @@ func TestValueConversion(t *testing.T) {
 
 	//deep equal fields
 	require.Equal(t, expectedMetric.Fields(), returnedMetric.Fields())
+
+	// Test explicit type conversion.
+	p.ColumnTypes = []string{"float", "int", "bool", "string"}
+
+	metrics, err = p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+
+	returnedMetric, err2 = metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
+	require.NoError(t, err2)
+
+	//deep equal fields
+	require.Equal(t, expectedMetric.Fields(), returnedMetric.Fields())
 }
 
 func TestSkipComment(t *testing.T) {
