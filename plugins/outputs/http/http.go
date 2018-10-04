@@ -2,8 +2,10 @@ package http
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -55,6 +57,10 @@ var sampleConfig = `
   # [outputs.http.headers]
   #   # Should be set manually to "application/json" for json data_format
   #   Content-Type = "text/plain; charset=utf-8"
+
+  ## HTTP Content-Encoding for write request body, can be set to "gzip" to
+  ## compress body or "identity" to apply no encoding.
+  # content_encoding = "identity"
 `
 
 const (
@@ -64,16 +70,17 @@ const (
 )
 
 type HTTP struct {
-	URL          string            `toml:"url"`
-	Timeout      internal.Duration `toml:"timeout"`
-	Method       string            `toml:"method"`
-	Username     string            `toml:"username"`
-	Password     string            `toml:"password"`
-	Headers      map[string]string `toml:"headers"`
-	ClientID     string            `toml:"client_id"`
-	ClientSecret string            `toml:"client_secret"`
-	TokenURL     string            `toml:"token_url"`
-	Scopes       []string          `toml:"scopes"`
+	URL             string            `toml:"url"`
+	Timeout         internal.Duration `toml:"timeout"`
+	Method          string            `toml:"method"`
+	Username        string            `toml:"username"`
+	Password        string            `toml:"password"`
+	Headers         map[string]string `toml:"headers"`
+	ClientID        string            `toml:"client_id"`
+	ClientSecret    string            `toml:"client_secret"`
+	TokenURL        string            `toml:"token_url"`
+	Scopes          []string          `toml:"scopes"`
+	ContentEncoding string            `toml:"content_encoding"`
 	tls.ClientConfig
 
 	client     *http.Client
@@ -162,7 +169,18 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 }
 
 func (h *HTTP) write(reqBody []byte) error {
-	req, err := http.NewRequest(h.Method, h.URL, bytes.NewBuffer(reqBody))
+	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
+	var err error
+
+	if h.ContentEncoding == "gzip" {
+		reqBodyBuffer, err = compressWithGzip(reqBodyBuffer)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	req, err := http.NewRequest(h.Method, h.URL, reqBodyBuffer)
 	if err != nil {
 		return err
 	}
@@ -172,6 +190,9 @@ func (h *HTTP) write(reqBody []byte) error {
 	}
 
 	req.Header.Set("Content-Type", defaultContentType)
+	if h.ContentEncoding == "gzip" {
+		req.Header.Set("Content-Encoding", "gzip")
+	}
 	for k, v := range h.Headers {
 		req.Header.Set(k, v)
 	}
@@ -188,6 +209,20 @@ func (h *HTTP) write(reqBody []byte) error {
 	}
 
 	return nil
+}
+
+func compressWithGzip(data io.Reader) (io.Reader, error) {
+	pr, pw := io.Pipe()
+	gw := gzip.NewWriter(pw)
+	var err error
+
+	go func() {
+		_, err = io.Copy(gw, data)
+		gw.Close()
+		pw.Close()
+	}()
+
+	return pr, err
 }
 
 func init() {

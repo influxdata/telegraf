@@ -1,7 +1,9 @@
 package http
 
 import (
+	"compress/gzip"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -214,6 +216,66 @@ func TestContentType(t *testing.T) {
 			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, tt.expected, r.Header.Get("Content-Type"))
 				w.WriteHeader(http.StatusOK)
+			})
+
+			serializer := influx.NewSerializer()
+			tt.plugin.SetSerializer(serializer)
+			err = tt.plugin.Connect()
+			require.NoError(t, err)
+
+			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestContentEncodingGzip(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		plugin   *HTTP
+		payload  string
+		expected string
+	}{
+		{
+			name: "default is no content encoding",
+			plugin: &HTTP{
+				URL: u.String(),
+			},
+			expected: "",
+		},
+		{
+			name: "overwrite content_encoding",
+			plugin: &HTTP{
+				URL:             u.String(),
+				ContentEncoding: "gzip",
+			},
+			expected: "gzip",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, tt.expected, r.Header.Get("Content-Encoding"))
+
+				body := r.Body
+				var err error
+				if r.Header.Get("Content-Encoding") == "gzip" {
+					body, err = gzip.NewReader(r.Body)
+					require.NoError(t, err)
+				}
+
+				payload, err := ioutil.ReadAll(body)
+				require.NoError(t, err)
+				require.Contains(t, string(payload), "cpu value=42")
+
+				w.WriteHeader(http.StatusNoContent)
 			})
 
 			serializer := influx.NewSerializer()
