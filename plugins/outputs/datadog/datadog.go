@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"sort"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -76,10 +75,9 @@ func (d *Datadog) Write(metrics []telegraf.Metric) error {
 
 	for _, m := range metrics {
 		if dogMs, err := buildMetrics(m); err == nil {
-			tagMap := m.Tags()
-			metricTags := buildTags(tagMap)
-			host, _ := tagMap["host"]
-			
+			metricTags := buildTags(m.TagList())
+			host, _ := m.GetTag("host")
+
 			for fieldName, dogM := range dogMs {
 				// name of the datadog measurement
 				var dname string
@@ -160,14 +158,13 @@ func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
 	return ms, nil
 }
 
-func buildTags(mTags map[string]string) []string {
-	tags := make([]string, len(mTags))
+func buildTags(tagList []*telegraf.Tag) []string {
+	tags := make([]string, len(tagList))
 	index := 0
-	for k, v := range mTags {
-		tags[index] = fmt.Sprintf("%s:%s", k, v)
+	for _, tag := range tagList {
+		tags[index] = fmt.Sprintf("%s:%s", tag.Key, tag.Value)
 		index += 1
 	}
-	sort.Strings(tags)
 	return tags
 }
 
