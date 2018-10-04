@@ -151,15 +151,6 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-var tr = &http.Transport{
-	ResponseHeaderTimeout: time.Duration(3 * time.Second),
-}
-
-var client = &http.Client{
-	Transport: tr,
-	Timeout:   time.Duration(4 * time.Second),
-}
-
 func (p *Prometheus) createHttpClient() (*http.Client, error) {
 	tlsCfg, err := p.ClientConfig.TLSConfig()
 	if err != nil {
@@ -180,6 +171,7 @@ func (p *Prometheus) createHttpClient() (*http.Client, error) {
 func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error {
 	var req *http.Request
 	var err error
+	var uClient *http.Client
 	if u.URL.Scheme == "unix" {
 		path := u.URL.Query().Get("path")
 		if path == "" {
@@ -187,7 +179,8 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		}
 		req, err = http.NewRequest("GET", "http://localhost"+path, nil)
 
-		((p.client.Transport).(*http.Transport)).Dial = func(network, addr string) (net.Conn, error) {
+		uClient = p.client
+		((uClient.Transport).(*http.Transport)).Dial = func(network, addr string) (net.Conn, error) {
 			c, err := net.Dial("unix", u.URL.Path)
 			return c, err
 		}
@@ -209,7 +202,11 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		req.Header.Set("Authorization", "Bearer "+string(token))
 	}
 
-	resp, err = p.client.Do(req)
+	if u.URL.Scheme != "unix" {
+		resp, err = p.client.Do(req)
+	} else {
+		resp, err = uClient.Do(req)
+	}
 	if err != nil {
 		return fmt.Errorf("error making HTTP request to %s: %s", u.URL, err)
 	}
