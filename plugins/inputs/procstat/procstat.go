@@ -8,10 +8,13 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+	"unsafe"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/shirou/gopsutil/process"
+	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/svc/mgr"
 )
 
 var (
@@ -32,6 +35,7 @@ type Procstat struct {
 	SystemdUnit string
 	CGroup      string `toml:"cgroup"`
 	PidTag      bool
+	WinService  string `tom:"win_service"`
 
 	finder PIDFinder
 
@@ -53,6 +57,9 @@ var sampleConfig = `
   # systemd_unit = "nginx.service"
   ## CGroup name or path
   # cgroup = "systemd/system.slice/nginx.service"
+
+  ## Windows service name
+  # win_service = ""
 
   ## override for process_name
   ## This is optional; default is sourced from /proc/<pid>/status
@@ -317,6 +324,9 @@ func (p *Procstat) findPids(acc telegraf.Accumulator) ([]PID, map[string]string,
 	} else if p.CGroup != "" {
 		pids, err = p.cgroupPIDs()
 		tags = map[string]string{"cgroup": p.CGroup}
+	} else if p.WinService != "" {
+		pids, err = p.winServicePIDs()
+		tags = map[string]string{"win_service": p.WinService}
 	} else {
 		err = fmt.Errorf("Either exe, pid_file, user, pattern, systemd_unit, or cgroup must be specified")
 	}
@@ -387,6 +397,57 @@ func (p *Procstat) cgroupPIDs() ([]PID, error) {
 		}
 		pids = append(pids, PID(pid))
 	}
+
+	return pids, nil
+}
+
+func getService(name string) (*mgr.Service, error) {
+	m, err := mgr.Connect()
+	if err != nil {
+		return nil, err
+	}
+	defer m.Disconnect()
+
+	srv, err := m.OpenService(name)
+	if err != nil {
+		return nil, err
+	}
+
+	return srv, nil
+}
+
+func queryPidWithName(srv *mgr.Service) (uint32, error) {
+	var p *windows.SERVICE_STATUS_PROCESS
+	var bytesNeeded uint32
+	var buf []byte
+
+	if err := windows.QueryServiceStatusEx(srv.Handle, windows.SC_STATUS_PROCESS_INFO, nil, 0, &bytesNeeded); err != windows.ERROR_INSUFFICIENT_BUFFER {
+		return 0, err
+	}
+
+	buf = make([]byte, bytesNeeded)
+	p = (*windows.SERVICE_STATUS_PROCESS)(unsafe.Pointer(&buf[0]))
+	if err := windows.QueryServiceStatusEx(srv.Handle, windows.SC_STATUS_PROCESS_INFO, &buf[0], uint32(len(buf)), &bytesNeeded); err != nil {
+		return 0, err
+	}
+
+	return p.ProcessId, nil
+}
+
+func (p *Procstat) winServicePIDs() ([]PID, error) {
+	var pids []PID
+
+	srv, err := getService(p.WinService)
+	if err != nil {
+		return pids, err
+	}
+
+	pid, err := queryPidWithName(srv)
+	if err != nil {
+		return pids, err
+	}
+
+	pids = append(pids, PID(pid))
 
 	return pids, nil
 }
