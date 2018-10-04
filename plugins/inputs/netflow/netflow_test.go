@@ -45,12 +45,12 @@ func TestV9Parser(t *testing.T) {
 
 	netflow.Gather(&acc)
 	fields := map[string]interface{}{
-		"application_id":             int64(50331827),
-		"transport_source_port":      int64(28067),
-		"transport_destination_port": int64(179),
-		"ip_protocol":                int64(6),
-		"counter_bytes":              int64(99),
-		"counter_packets":            int64(2),
+		"application_id":             uint64(50331827),
+		"transport_source_port":      uint64(28067),
+		"transport_destination_port": uint64(179),
+		"ip_protocol":                uint64(6),
+		"counter_bytes":              uint64(99),
+		"counter_packets":            uint64(2),
 		"ipv4_source_address":        "100.1.1.1",
 		"ipv4_destination_address":   "200.1.1.1",
 	}
@@ -100,12 +100,12 @@ func TestResolveApplicationNameById(t *testing.T) {
 
 	netflow.Gather(&acc)
 	fields := map[string]interface{}{
-		"application_id":             int64(50331827),
-		"transport_source_port":      int64(28067),
-		"transport_destination_port": int64(179),
-		"ip_protocol":                int64(6),
-		"counter_bytes":              int64(99),
-		"counter_packets":            int64(2),
+		"application_id":             uint64(50331827),
+		"transport_source_port":      uint64(28067),
+		"transport_destination_port": uint64(179),
+		"ip_protocol":                uint64(6),
+		"counter_bytes":              uint64(99),
+		"counter_packets":            uint64(2),
 		"ipv4_source_address":        "100.1.1.1",
 		"ipv4_destination_address":   "200.1.1.1",
 	}
@@ -161,12 +161,12 @@ func TestResolveIfnameByIfindex(t *testing.T) {
 	netflow.Gather(&acc)
 	b := []byte{69, 116, 104, 101, 114, 110, 101, 116, 48, 47, 48, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} // "Ethernet0/0"
 	fields := map[string]interface{}{
-		"transport_source_port":      int64(0),
-		"transport_destination_port": int64(0),
-		"ip_protocol":                int64(88),
-		"counter_bytes":              int64(420),
-		"counter_packets":            int64(6),
-		"interface_input_snmp":       int64(1),
+		"transport_source_port":      uint64(0),
+		"transport_destination_port": uint64(0),
+		"ip_protocol":                uint64(88),
+		"counter_bytes":              uint64(420),
+		"counter_packets":            uint64(6),
+		"interface_input_snmp":       uint64(1),
 		"ipv4_source_address":        "192.168.1.1",
 		"ipv4_destination_address":   "192.168.1.254",
 	}
@@ -216,12 +216,12 @@ func TestIpfixParser(t *testing.T) {
 
 	netflow.Gather(&acc)
 	fields := map[string]interface{}{
-		"transport_source_port":      int64(22313),
-		"transport_destination_port": int64(179),
-		"ip_protocol":                int64(6),
-		"counter_bytes":              int64(44),
-		"counter_packets":            int64(1),
-		"application_id":             int64(218103809),
+		"transport_source_port":      uint64(22313),
+		"transport_destination_port": uint64(179),
+		"ip_protocol":                uint64(6),
+		"counter_bytes":              uint64(44),
+		"counter_packets":            uint64(1),
+		"application_id":             uint64(218103809),
 		"ipv4_source_address":        "100.1.1.1",
 		"ipv4_destination_address":   "200.1.1.1",
 	}
@@ -267,12 +267,12 @@ func TestIpfixResolveApplicationNameById(t *testing.T) {
 
 	netflow.Gather(&acc)
 	fields := map[string]interface{}{
-		"transport_source_port":      int64(22313),
-		"transport_destination_port": int64(179),
-		"ip_protocol":                int64(6),
-		"counter_bytes":              int64(44),
-		"counter_packets":            int64(1),
-		"application_id":             int64(218103809),
+		"transport_source_port":      uint64(22313),
+		"transport_destination_port": uint64(179),
+		"ip_protocol":                uint64(6),
+		"counter_bytes":              uint64(44),
+		"counter_packets":            uint64(1),
+		"application_id":             uint64(218103809),
 		"ipv4_source_address":        "100.1.1.1",
 		"ipv4_destination_address":   "200.1.1.1",
 	}
@@ -325,12 +325,12 @@ func TestIpfixResolveIfnameByIfindex(t *testing.T) {
 	netflow.Gather(&acc)
 	b := []byte{69, 116, 104, 101, 114, 110, 101, 116, 48, 47, 48, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0} // "Ethernet0/0"
 	fields := map[string]interface{}{
-		"transport_source_port":      int64(21672),
-		"transport_destination_port": int64(179),
-		"ip_protocol":                int64(6),
-		"counter_bytes":              int64(44),
-		"counter_packets":            int64(1),
-		"interface_input_snmp":       int64(1),
+		"transport_source_port":      uint64(21672),
+		"transport_destination_port": uint64(179),
+		"ip_protocol":                uint64(6),
+		"counter_bytes":              uint64(44),
+		"counter_packets":            uint64(1),
+		"interface_input_snmp":       uint64(1),
 		"ipv4_source_address":        "100.1.1.1",
 		"ipv4_destination_address":   "200.1.1.1",
 	}
