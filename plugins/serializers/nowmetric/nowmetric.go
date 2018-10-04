@@ -13,7 +13,7 @@ type serializer struct {
 	TimestampUnits time.Duration
 }
 
-const METRICFMT string = "{ \"metric_type\": \"%s\", \"resource\": \"%s\", \"node\": \"%s\", \"value\": %.2f, \"timestamp\": %d, \"ci2metric_id\": { \"node\": \"%s\" }, \"source\": \"Telegraf\" }"
+const METRICFMT string = "{ \"metric_type\": \"%s\", \"resource\": \"%s\", \"node\": \"%s\", \"value\": %v, \"timestamp\": %d, \"ci2metric_id\": { \"node\": \"%s\" }, \"source\": \"Telegraf\" }"
 
 // field 1, resourcename, hostname, field 2, timestamp, hostname
 //
