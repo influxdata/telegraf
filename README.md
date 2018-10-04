@@ -291,10 +291,13 @@ For documentation on the latest development code see the [documentation index][d
 ## Processor Plugins
 
 * [converter](./plugins/processors/converter)
+* [enum](./plugins/processors/enum)
 * [override](./plugins/processors/override)
+* [parser](./plugins/processors/parser)
 * [printer](./plugins/processors/printer)
 * [regex](./plugins/processors/regex)
 * [rename](./plugins/processors/rename)
+* [strings](./plugins/processors/strings)
 * [topk](./plugins/processors/topk)
 
 ## Aggregator Plugins
