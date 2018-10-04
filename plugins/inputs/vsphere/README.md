@@ -171,7 +171,7 @@ vm_metric_exclude = [ "*" ]
 
 ### Objects and Metrics Per Query
 
-By default, in vCenter's configuration, a limit is set to the number of entities that are included in a performance chart query. Default settings for vCenter 6.5 and above is 256. Prior versions of vCenter have this set to 64. 
+By default, in vCenter's configuration a limit is set to the number of entities that are included in a performance chart query. Default settings for vCenter 6.5 and above is 256. Prior versions of vCenter have this set to 64. 
 A vCenter administrator can change this setting, see this [VMware KB article](https://kb.vmware.com/s/article/2107096) for more information.
 
 Any modification should be reflected in this plugin by modifying the parameter `max_query_objects`
