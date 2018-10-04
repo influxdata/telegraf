@@ -10,6 +10,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
+	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
 )
 
 // SerializerOutput is an interface for output plugins that are able to
@@ -61,6 +62,9 @@ type Config struct {
 
 	// Timestamp units to use for JSON formatted output
 	TimestampUnits time.Duration
+
+	// Include HEC routing fields for splunkmetric output
+	HecRouting bool
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -74,7 +78,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport)
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
-	// Jef - Fct added
+	case "splunkmetric":
+		serializer, err = NewSplunkmetricSerializer(config.HecRouting)
 	case "nowmetric":
 		serializer, err = NewNowSerializer(config.TimestampUnits)
 	default:
@@ -87,7 +92,10 @@ func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return json.NewSerializer(timestampUnits)
 }
 
-// Jef - Fct added
+func NewSplunkmetricSerializer(splunkmetric_hec_routing bool) (Serializer, error) {
+	return splunkmetric.NewSerializer(splunkmetric_hec_routing)
+}
+
 func NewNowSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return nowmetric.NewSerializer(timestampUnits)
 }
