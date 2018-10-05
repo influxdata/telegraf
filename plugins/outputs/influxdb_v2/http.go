@@ -1,7 +1,6 @@
 package influxdb_v2
 
 import (
-	"compress/gzip"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -17,6 +16,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
@@ -231,7 +231,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 func (c *httpClient) makeWriteRequest(body io.Reader) (*http.Request, error) {
 	var err error
 	if c.ContentEncoding == "gzip" {
-		body, err = compressWithGzip(body)
+		body, err = internal.CompressWithGzip(body)
 		if err != nil {
 			return nil, err
 		}
@@ -256,20 +256,6 @@ func (c *httpClient) addHeaders(req *http.Request) {
 	for header, value := range c.Headers {
 		req.Header.Set(header, value)
 	}
-}
-
-func compressWithGzip(data io.Reader) (io.Reader, error) {
-	pipeReader, pipeWriter := io.Pipe()
-	gzipWriter := gzip.NewWriter(pipeWriter)
-	var err error
-
-	go func() {
-		_, err = io.Copy(gzipWriter, data)
-		gzipWriter.Close()
-		pipeWriter.Close()
-	}()
-
-	return pipeReader, err
 }
 
 func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
