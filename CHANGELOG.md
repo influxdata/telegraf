@@ -11,6 +11,7 @@
 - [#4803](https://github.com/influxdata/telegraf/pull/4803): Use non-allocating field and tag accessors in datadog output.
 - [#4752](https://github.com/influxdata/telegraf/pull/4752): Add per-directory file counts in the filecount input.
 - [#4811](https://github.com/influxdata/telegraf/pull/4811): Add windows service name lookup to procstat input.
+- [#4807](https://github.com/influxdata/telegraf/pull/4807): Add entity-body compression to http output.
 
 ## v1.8.1 [2018-10-03]
 
