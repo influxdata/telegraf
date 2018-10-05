@@ -21,6 +21,12 @@ var (
 	fakeApiKey = "123456"
 )
 
+func NewDatadog(url string) *Datadog {
+	return &Datadog{
+		URL: url,
+	}
+}
+
 func fakeDatadog() *Datadog {
 	d := NewDatadog(fakeUrl)
 	d.Apikey = fakeApiKey

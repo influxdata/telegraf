@@ -18,13 +18,16 @@ type Datadog struct {
 	Apikey  string
 	Timeout internal.Duration
 
-	apiUrl string
+	URL    string `toml:"url"`
 	client *http.Client
 }
 
 var sampleConfig = `
   ## Datadog API key
   apikey = "my-secret-key" # required.
+
+  # The base endpoint URL can optionally be specified but it defaults to:
+  #url = "https://app.datadoghq.com/api/v1/series"
 
   ## Connection timeout.
   # timeout = "5s"
@@ -44,12 +47,6 @@ type Metric struct {
 type Point [2]float64
 
 const datadog_api = "https://app.datadoghq.com/api/v1/series"
-
-func NewDatadog(apiUrl string) *Datadog {
-	return &Datadog{
-		apiUrl: apiUrl,
-	}
-}
 
 func (d *Datadog) Connect() error {
 	if d.Apikey == "" {
@@ -139,7 +136,7 @@ func (d *Datadog) authenticatedUrl() string {
 	q := url.Values{
 		"api_key": []string{d.Apikey},
 	}
-	return fmt.Sprintf("%s?%s", d.apiUrl, q.Encode())
+	return fmt.Sprintf("%s?%s", d.URL, q.Encode())
 }
 
 func buildMetrics(m telegraf.Metric) (map[string]Point, error) {
@@ -201,6 +198,8 @@ func (d *Datadog) Close() error {
 
 func init() {
 	outputs.Add("datadog", func() telegraf.Output {
-		return NewDatadog(datadog_api)
+		return &Datadog{
+			URL: datadog_api,
+		}
 	})
 }
