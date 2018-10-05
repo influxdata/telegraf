@@ -1,6 +1,9 @@
 package internal
 
 import (
+	"bytes"
+	"compress/gzip"
+	"io/ioutil"
 	"os/exec"
 	"testing"
 	"time"
@@ -161,4 +164,21 @@ func TestDuration(t *testing.T) {
 	d = Duration{}
 	d.UnmarshalTOML([]byte(`1.5`))
 	assert.Equal(t, time.Second, d.Duration)
+}
+
+func TestCompressWithGzip(t *testing.T) {
+	testData := "the quick brown fox jumps over the lazy dog"
+	inputBuffer := bytes.NewBuffer([]byte(testData))
+
+	outputBuffer, err := CompressWithGzip(inputBuffer)
+	assert.NoError(t, err)
+
+	gzipReader, err := gzip.NewReader(outputBuffer)
+	assert.NoError(t, err)
+	defer gzipReader.Close()
+
+	output, err := ioutil.ReadAll(gzipReader)
+	assert.NoError(t, err)
+
+	assert.Equal(t, testData, string(output))
 }

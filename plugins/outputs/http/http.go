@@ -2,7 +2,6 @@ package http
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -170,11 +169,10 @@ func (h *HTTP) Write(metrics []telegraf.Metric) error {
 
 func (h *HTTP) write(reqBody []byte) error {
 	var reqBodyBuffer io.Reader = bytes.NewBuffer(reqBody)
+
 	var err error
-
 	if h.ContentEncoding == "gzip" {
-		reqBodyBuffer, err = compressWithGzip(reqBodyBuffer)
-
+		reqBodyBuffer, err = internal.CompressWithGzip(reqBodyBuffer)
 		if err != nil {
 			return err
 		}
@@ -209,20 +207,6 @@ func (h *HTTP) write(reqBody []byte) error {
 	}
 
 	return nil
-}
-
-func compressWithGzip(data io.Reader) (io.Reader, error) {
-	pr, pw := io.Pipe()
-	gw := gzip.NewWriter(pw)
-	var err error
-
-	go func() {
-		_, err = io.Copy(gw, data)
-		gw.Close()
-		pw.Close()
-	}()
-
-	return pr, err
 }
 
 func init() {
