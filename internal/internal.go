@@ -223,7 +223,9 @@ func CompressWithGzip(data io.Reader) (io.Reader, error) {
 	go func() {
 		_, err = io.Copy(gzipWriter, data)
 		gzipWriter.Close()
-		pipeWriter.Close()
+		// subsequent reads from the read half of the pipe will
+		// return no bytes and the error err, or EOF if err is nil.
+		pipeWriter.CloseWithError(err)
 	}()
 
 	return pipeReader, err
