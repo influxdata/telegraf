@@ -74,19 +74,33 @@ func TestAuthenticatedUrl(t *testing.T) {
 
 func TestBuildTags(t *testing.T) {
 	var tagtests = []struct {
-		ptIn    map[string]string
+		ptIn    []*telegraf.Tag
 		outTags []string
 	}{
 		{
-			map[string]string{"one": "two", "three": "four"},
+			[]*telegraf.Tag{
+				&telegraf.Tag{
+					Key:   "one",
+					Value: "two",
+				},
+				&telegraf.Tag{
+					Key:   "three",
+					Value: "four",
+				},
+			},
 			[]string{"one:two", "three:four"},
 		},
 		{
-			map[string]string{"aaa": "bbb"},
+			[]*telegraf.Tag{
+				&telegraf.Tag{
+					Key:   "aaa",
+					Value: "bbb",
+				},
+			},
 			[]string{"aaa:bbb"},
 		},
 		{
-			map[string]string{},
+			[]*telegraf.Tag{},
 			[]string{},
 		},
 	}
