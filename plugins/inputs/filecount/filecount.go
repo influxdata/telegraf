@@ -8,12 +8,22 @@ import (
 	"github.com/alecthomas/units"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 const sampleConfig = `
   ## Directory to gather stats about.
+  ##   deprecated in 1.9; use the directories option
   directory = "/var/cache/apt/archives"
+
+  ## Directories to gather stats about.
+  ## This accept standard unit glob matching rules, but with the addition of
+  ## ** as a "super asterisk". ie:
+  ##   /var/log/**    -> recursively find all directories in /var/log and count files in each directories
+  ##   /var/log/*/*   -> find all directories with a parent dir in /var/log and count files in each directories
+  ##   /var/log       -> count all files in /var/log and all of its subdirectories
+  directories = ["/var/cache/apt/archives"]
 
   ## Also compute total size of matched elements. Defaults to false.
   count_size = false
@@ -39,16 +49,14 @@ const sampleConfig = `
   ## touched in this duration. Defaults to "0s".
   mtime = "0s"
 
-  ## Output stats for every subdirectory. Defaults to false.
-  recursive_print = false
-
   ## Only output directories whose sub elements weighs more than this
   ## size. Defaults to "0B".
   recursive_print_size = "0B"
 `
 
 type FileCount struct {
-	Directory           string
+	Directory           string // Deprecated in 1.9
+	Directories         []string
 	CountSize           bool
 	Name                string
 	Recursive           bool
@@ -56,7 +64,6 @@ type FileCount struct {
 	Size                string
 	SizeB               int64
 	MTime               internal.Duration `toml:"mtime"`
-	RecursivePrint      bool
 	RecursivePrintSize  string
 	RecursivePrintSizeB int64
 	fileFilters         []fileFilterFunc
@@ -152,7 +159,7 @@ func (fc *FileCount) initFileFilters() {
 	fc.fileFilters = rejectNilFilters(filters)
 }
 
-func (fc *FileCount) count(acc telegraf.Accumulator, basedir string) (int64, int64) {
+func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob *globpath.GlobPath) (int64, int64) {
 	numFiles, totalSize, nf, ts := int64(0), int64(0), int64(0), int64(0)
 
 	directory, err := os.Open(basedir)
@@ -168,7 +175,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string) (int64, int
 	}
 	for _, file := range files {
 		if fc.Recursive && file.IsDir() {
-			nf, ts = fc.count(acc, basedir+string(os.PathSeparator)+file.Name())
+			nf, ts = fc.count(acc, basedir+string(os.PathSeparator)+file.Name(), glob)
 			numFiles += nf
 			totalSize += ts
 		}
@@ -182,23 +189,20 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string) (int64, int
 		}
 	}
 
-	if fc.RecursivePrint || basedir == fc.Directory {
-		if totalSize >= fc.RecursivePrintSizeB || basedir == fc.Directory {
-			gauge := map[string]interface{}{
-				"count": numFiles,
-			}
-			if fc.CountSize {
-				gauge["size"] = totalSize
-			}
-			acc.AddGauge("filecount", gauge,
-				map[string]string{
-					"directory": basedir,
-				})
+	if glob.MatchString(basedir) && totalSize >= fc.RecursivePrintSizeB {
+		gauge := map[string]interface{}{
+			"count": numFiles,
 		}
+		if fc.CountSize {
+			gauge["size"] = totalSize
+		}
+		acc.AddGauge("filecount", gauge,
+			map[string]string{
+				"directory": basedir,
+			})
 	}
 
 	return numFiles, totalSize
-
 }
 
 func (fc *FileCount) filter(file os.FileInfo) (bool, error) {
@@ -235,9 +239,29 @@ func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	fc.count(acc, fc.Directory)
+	for _, globDir := range fc.getDirs() {
+		glob, err := globpath.Compile(globDir)
+		if err != nil {
+			acc.AddError(err)
+		} else {
+			fc.count(acc, glob.GetRootDir(), glob)
+		}
+	}
 
 	return nil
+}
+
+func (fc *FileCount) getDirs() []string {
+	dirs := make([]string, len(fc.Directories))
+	for i, dir := range fc.Directories {
+		dirs[i] = dir
+	}
+
+	if fc.Directory != "" {
+		dirs = append(dirs, fc.Directory)
+	}
+
+	return dirs
 }
 
 func NewFileCount() *FileCount {
@@ -250,7 +274,6 @@ func NewFileCount() *FileCount {
 		Size:                "",
 		SizeB:               int64(0),
 		MTime:               internal.Duration{Duration: 0},
-		RecursivePrint:      false,
 		RecursivePrintSize:  "",
 		RecursivePrintSizeB: int64(0),
 		fileFilters:         nil,

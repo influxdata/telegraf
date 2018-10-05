@@ -24,11 +24,18 @@ func Compile(path string) (*GlobPath, error) {
 		hasMeta:      hasMeta(path),
 		hasSuperMeta: hasSuperMeta(path),
 		path:         path,
+		root:         "",
 	}
 
+	// Get the root directory for this filepath
+	out.root = findRootDir(path)
+
 	// if there are no glob meta characters in the path, don't bother compiling
-	// a glob object or finding the root directory. (see short-circuit in Match)
+	// a glob object. (see short-circuits in Match and MatchString)
 	if !out.hasMeta || !out.hasSuperMeta {
+		if path != "/" {
+			out.path = strings.TrimSuffix(path, "/")
+		}
 		return &out, nil
 	}
 
@@ -36,8 +43,6 @@ func Compile(path string) (*GlobPath, error) {
 	if out.g, err = glob.Compile(path, os.PathSeparator); err != nil {
 		return nil, err
 	}
-	// Get the root directory for this filepath
-	out.root = findRootDir(path)
 	return &out, nil
 }
 
@@ -64,6 +69,21 @@ func (g *GlobPath) Match() map[string]os.FileInfo {
 	return walkFilePath(g.root, g.g)
 }
 
+func (g *GlobPath) MatchString(path string) bool {
+	if !g.hasMeta {
+		return (g.path == path)
+	}
+	if !g.hasSuperMeta {
+		res, _ := filepath.Match(g.path, path)
+		return res
+	}
+	return g.g.Match(path)
+}
+
+func (g *GlobPath) GetRootDir() string {
+	return g.root
+}
+
 // walk the filepath from the given root and return a list of files that match
 // the given glob.
 func walkFilePath(root string, g glob.Glob) map[string]os.FileInfo {
@@ -81,6 +101,7 @@ func walkFilePath(root string, g glob.Glob) map[string]os.FileInfo {
 // find the root dir of the given path (could include globs).
 // ie:
 //   /var/log/telegraf.conf -> /var/log
+//   /etc/telegraf.d       ->  /etc/telegraf.d
 //   /home/** ->               /home
 //   /home/*/** ->             /home
 //   /lib/share/*/*/**.txt ->  /lib/share
@@ -89,6 +110,13 @@ func findRootDir(path string) string {
 	out := sepStr
 	for i, item := range pathItems {
 		if i == len(pathItems)-1 {
+			file, err := os.Stat(out + item)
+			if err != nil {
+				break
+			}
+			if file.IsDir() {
+				out += item
+			}
 			break
 		}
 		if item == "" {

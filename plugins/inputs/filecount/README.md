@@ -8,7 +8,16 @@ Counts files in directories that match certain criteria.
 # Count files in a directory and compute their size
 [[inputs.filecount]]
   ## Directory to gather stats about.
+  ##   deprecated in 1.9; use the directories option
   directory = "/var/cache/apt/archives"
+
+  ## Directories to gather stats about.
+  ## This accept standard unit glob matching rules, but with the addition of
+  ## ** as a "super asterisk". ie:
+  ##   /var/log/**    -> recursively find all directories in /var/log and count files in each directories
+  ##   /var/log/*/*   -> find all directories with a parent dir in /var/log and count files in each directories
+  ##   /var/log       -> count all files in /var/log and all of its subdirectories
+  directories = ["/var/cache/apt/archives"]
 
   ## Also compute total size of matched elements. Defaults to false.
   count_size = false
@@ -33,9 +42,6 @@ Counts files in directories that match certain criteria.
   ## duration. If mtime is negative, only count files that have been
   ## touched in this duration. Defaults to "0s".
   mtime = "0s"
-
-  ## Output stats for every subdirectory. Defaults to false.
-  recursive_print = false
 
   ## Only output directories whose sub elements weighs more than this
   ## size. Defaults to "0B".
