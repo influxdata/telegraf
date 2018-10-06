@@ -453,3 +453,86 @@ func TestDefaultUserAgent(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCookieJar(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	tests := []struct {
+		name                string
+		plugin              *HTTP
+		cookieName          string
+		cookieValue         string
+		expiration          time.Time
+		expectedCookieCount int
+	}{
+		{
+			name: "cookie is set",
+			plugin: &HTTP{
+				URL: u.String(),
+			},
+			cookieName:          "Amaretti",
+			cookieValue:         "Italy",
+			expiration:          time.Now().Add(1 * time.Second),
+			expectedCookieCount: 1,
+		},
+		{
+			name: "expired cookie is not set",
+			plugin: &HTTP{
+				URL: u.String(),
+			},
+			cookieName:          "Macaron",
+			cookieValue:         "France",
+			expiration:          time.Now().Add(-1 * time.Second),
+			expectedCookieCount: 0,
+		},
+	}
+
+	serializer := influx.NewSerializer()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			firstReq := true
+			ts.Config.Handler = http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					// Set a cookie when receiving the first request
+					if firstReq {
+						http.SetCookie(w, &http.Cookie{
+							Name:    tt.cookieName,
+							Value:   tt.cookieValue,
+							Expires: tt.expiration,
+						})
+						firstReq = false
+						return
+					}
+
+					// Check that subsequent requests contain the cookie set above
+					cookies := r.Cookies()
+					require.Len(t, cookies, tt.expectedCookieCount)
+
+					if tt.expectedCookieCount > 0 {
+						require.Equal(
+							t,
+							fmt.Sprintf("%s=%s", tt.cookieName, tt.cookieValue),
+							cookies[0].String(),
+						)
+					}
+				},
+			)
+
+			tt.plugin.SetSerializer(serializer)
+			err = tt.plugin.Connect()
+			require.NoError(t, err)
+
+			// Send two requests to the mock server and check that the
+			// cookies are propagated properly during the second request.
+			for i := 0; i < 2; i++ {
+				err = tt.plugin.Write([]telegraf.Metric{getMetric()})
+				require.NoError(t, err)
+			}
+		})
+	}
+}

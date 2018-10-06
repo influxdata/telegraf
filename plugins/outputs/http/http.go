@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/cookiejar"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"golang.org/x/net/publicsuffix"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
@@ -82,6 +84,7 @@ type HTTP struct {
 	ContentEncoding string            `toml:"content_encoding"`
 	tls.ClientConfig
 
+	cookieJar  *cookiejar.Jar
 	client     *http.Client
 	serializer serializers.Serializer
 }
@@ -96,12 +99,20 @@ func (h *HTTP) createClient(ctx context.Context) (*http.Client, error) {
 		return nil, err
 	}
 
+	if h.cookieJar == nil {
+		h.cookieJar, err = cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create cookie jar: %s", err)
+		}
+	}
+
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: tlsCfg,
 			Proxy:           http.ProxyFromEnvironment,
 		},
 		Timeout: h.Timeout.Duration,
+		Jar:     h.cookieJar,
 	}
 
 	if h.ClientID != "" && h.ClientSecret != "" && h.TokenURL != "" {

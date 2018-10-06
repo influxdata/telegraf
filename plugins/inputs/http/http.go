@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/cookiejar"
 	"strings"
 	"sync"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"golang.org/x/net/publicsuffix"
 )
 
 type HTTP struct {
@@ -29,7 +31,8 @@ type HTTP struct {
 
 	Timeout internal.Duration
 
-	client *http.Client
+	cookieJar *cookiejar.Jar
+	client    *http.Client
 
 	// The parser will automatically be set by Telegraf core code because
 	// this plugin implements the ParserInput interface (i.e. the SetParser method)
@@ -86,6 +89,14 @@ func (h *HTTP) Gather(acc telegraf.Accumulator) error {
 		return errors.New("Parser is not set")
 	}
 
+	var err error
+	if h.cookieJar == nil {
+		h.cookieJar, err = cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
+		if err != nil {
+			return fmt.Errorf("failed to create cookie jar: %s", err)
+		}
+	}
+
 	if h.client == nil {
 		tlsCfg, err := h.ClientConfig.TLSConfig()
 		if err != nil {
@@ -97,6 +108,7 @@ func (h *HTTP) Gather(acc telegraf.Accumulator) error {
 				Proxy:           http.ProxyFromEnvironment,
 			},
 			Timeout: h.Timeout.Duration,
+			Jar:     h.cookieJar,
 		}
 	}
 
