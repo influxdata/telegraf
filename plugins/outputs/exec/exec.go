@@ -66,10 +66,10 @@ func (c CommandRunner) Run(e *Exec, command string, buffer bytes.Buffer) error {
 	if err := internal.RunTimeout(cmd, e.Timeout.Duration); err != nil {
 		s := stderr.String()
 		if s != "" {
-			log.Printf("D! Command error: %s\n", s)
+			log.Printf("D! Command error: %q\n", s)
 		}
 
-		return fmt.Errorf("exec: %s for command '%s'", err, command)
+		return fmt.Errorf("exec: %s for command %q", err, command)
 	}
 
 	return nil
