@@ -8,6 +8,7 @@ This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvid
 # Pulls statistics from nvidia GPUs attached to the host
 [[inputs.nvidia_smi]]
   ## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
+  ## Optional: for Windows users change bin_path to "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe"
   # bin_path = "/usr/bin/nvidia-smi"
 
   ## Optional: timeout for GPU polling
