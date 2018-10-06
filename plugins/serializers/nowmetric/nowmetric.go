@@ -15,8 +15,6 @@ type serializer struct {
 
 const METRICFMT string = "{ \"metric_type\": \"%s\", \"resource\": \"%s\", \"node\": \"%s\", \"value\": %v, \"timestamp\": %d, \"ci2metric_id\": { \"node\": \"%s\" }, \"source\": \"Telegraf\" }"
 
-// field 1, resourcename, hostname, field 2, timestamp, hostname
-//
 func NewSerializer(timestampUnits time.Duration) (*serializer, error) {
 	s := &serializer{
 		TimestampUnits: truncateDuration(timestampUnits),
@@ -33,7 +31,6 @@ func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 }
 
 func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
-
 	objects := make([]byte, 0)
 	for _, metric := range metrics {
 		m := s.createObject(metric)
@@ -44,7 +41,6 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 		return []byte{}, nil
 	}
 	return objects, nil
-
 }
 
 func (s *serializer) createObject(metric telegraf.Metric) []byte {
@@ -55,18 +51,16 @@ func (s *serializer) createObject(metric telegraf.Metric) []byte {
 
 	// Process Tags to extract node & resource name info
 	for _, tag := range metric.TagList() {
-		key := tag.Key
-		value := tag.Value
-
-		if key == "" || value == "" {
+		if tag.Key == "" || tag.Value == "" {
 			continue
 		}
 
-		if key == "objectname" {
-			resourcename = value
+		if tag.Key == "objectname" {
+			resourcename = tag.Value
 		}
-		if key == "host" {
-			hostname = value
+
+		if tag.Key == "host" {
+			hostname = tag.Value
 		}
 	}
 
@@ -76,23 +70,19 @@ func (s *serializer) createObject(metric telegraf.Metric) []byte {
 	nbdatapoint := 0
 	// Loop of fields value pair and build datapoint for each of them
 	for _, field := range metric.FieldList() {
-		// field.Key, field.Value
-		metrictype := field.Key
-		metricvalue := field.Value
-
-		if !verifyValue(metricvalue) {
+		if !verifyValue(field.Value) {
 			// Ignore String
 			continue
 		}
 
-		if metrictype == "" || metricvalue == "" {
+		if field.Key == "" || field.Value == "" {
 			continue
 		}
-		// Params : metrictype, resourcename, hostname, metricvalue, utime, hostname
+
 		if nbdatapoint >= 1 {
 			payload = payload + ",\n"
 		}
-		payload = payload + fmt.Sprintf(METRICFMT, metrictype, resourcename, hostname, metricvalue, utime, hostname)
+		payload = payload + fmt.Sprintf(METRICFMT, field.Key, resourcename, hostname, field.Value, utime, hostname)
 		nbdatapoint++
 	}
 
