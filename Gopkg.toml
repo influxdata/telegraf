@@ -233,3 +233,7 @@
 [[constraint]]
   branch = "master"
   name = "golang.org/x/oauth2"
+
+[[constraint]]
+  name = "github.com/coreos/go-systemd"
+  version = "17.0.0"

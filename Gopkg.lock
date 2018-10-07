@@ -201,6 +201,14 @@
   version = "v2.0.0"
 
 [[projects]]
+  digest = "1:1a99671bb8620f32c88d20f65c7069a8c3745d1533bd486b9c0c538a1d981a5c"
+  name = "github.com/coreos/go-systemd"
+  packages = ["dbus"]
+  pruneopts = ""
+  revision = "39ca1b05acc7ad1220e09f133283b8859a8b71ab"
+  version = "v17"
+
+[[projects]]
   branch = "master"
   digest = "1:298e42868718da06fc0899ae8fdb99c48a14477045234c9274d81caa79af6a8f"
   name = "github.com/couchbase/go-couchbase"
@@ -423,6 +431,14 @@
   pruneopts = ""
   revision = "5ccd90ef52e1e632236f7326478d4faa74f99438"
   version = "v0.2.3"
+
+[[projects]]
+  digest = "1:e772845668c277db6fcc8c6fcf31664c74851f6cce4d225be4f4adbee3861057"
+  name = "github.com/godbus/dbus"
+  packages = ["."]
+  pruneopts = ""
+  revision = "a389bdde4dd695d414e47b755e95e72b7826432c"
+  version = "v4.1.0"
 
 [[projects]]
   digest = "1:6e73003ecd35f4487a5e88270d3ca0a81bc80dc88053ac7e4dcfec5fba30d918"
@@ -1321,6 +1337,7 @@
     "github.com/aws/aws-sdk-go/service/cloudwatch",
     "github.com/aws/aws-sdk-go/service/kinesis",
     "github.com/bsm/sarama-cluster",
+    "github.com/coreos/go-systemd/dbus",
     "github.com/couchbase/go-couchbase",
     "github.com/denisenkom/go-mssqldb",
     "github.com/dgrijalva/jwt-go",
