@@ -48,8 +48,8 @@ func (s *SystemD) Gather(acc telegraf.Accumulator) error {
 
 	for _, unit := range units {
 		tags := map[string]string{
-			"unitName": unit.Name,
-			"unitType": "",
+			"unit_name": unit.Name,
+			"unit_type": "",
 		}
 		fields := map[string]interface{}{}
 
@@ -89,53 +89,53 @@ func (s *SystemD) filterUnits(acc telegraf.Accumulator, units []dbus.UnitStatus)
 }
 
 func collectActiveState(unit dbus.UnitStatus, conn dbusConn, fields map[string]interface{}) {
-	fields["isActive"] = 0
-	fields["activeEnterTimestamp"] = 0
+	fields["is_active"] = 0
+	fields["active_enter_timestamp"] = 0
 
 	if unit.ActiveState == "active" {
-		fields["isActive"] = 1
+		fields["is_active"] = 1
 
 		timestampValue, err := conn.GetUnitProperty(unit.Name, "ActiveEnterTimestamp")
 		if err == nil {
-			fields["activeEnterTimestamp"] = timestampValue.Value.Value().(uint64)
+			fields["active_enter_timestamp"] = timestampValue.Value.Value().(uint64)
 		}
 	}
 }
 
 func collectTimerUnit(unit dbus.UnitStatus, conn dbusConn, tags map[string]string, fields map[string]interface{}) {
-	tags["unitType"] = "Timer"
+	tags["unit_type"] = "Timer"
 
 	lastTriggerValue, err := conn.GetUnitTypeProperty(unit.Name, "Timer", "LastTriggerUSec")
 	if err == nil {
-		fields["lastTriggerUSec"] = lastTriggerValue.Value.Value().(uint64)
+		fields["last_trigger_usec"] = lastTriggerValue.Value.Value().(uint64)
 	}
 }
 
 func collectServiceUnit(unit dbus.UnitStatus, conn dbusConn, tags map[string]string, fields map[string]interface{}) {
-	tags["unitType"] = "Service"
+	tags["unit_type"] = "Service"
 
 	restartsCount, err := conn.GetUnitTypeProperty(unit.Name, "Service", "NRestarts")
 	if err == nil {
-		fields["nRestarts"] = restartsCount.Value.Value().(uint32)
+		fields["n_restarts"] = restartsCount.Value.Value().(uint32)
 	}
 }
 
 func collectSocketUnit(unit dbus.UnitStatus, conn dbusConn, tags map[string]string, fields map[string]interface{}) {
-	tags["unitType"] = "Socket"
+	tags["unit_type"] = "Socket"
 
 	acceptedConnectionCount, err := conn.GetUnitTypeProperty(unit.Name, "Socket", "NAccepted")
 	if err == nil {
-		fields["nAccepted"] = acceptedConnectionCount.Value.Value().(uint32)
+		fields["n_accepted"] = acceptedConnectionCount.Value.Value().(uint32)
 	}
 
 	currentConnectionCount, err := conn.GetUnitTypeProperty(unit.Name, "Socket", "NConnection")
 	if err == nil {
-		fields["nConnection"] = currentConnectionCount.Value.Value().(uint32)
+		fields["n_connection"] = currentConnectionCount.Value.Value().(uint32)
 	}
 
 	refusedConnectionCount, err := conn.GetUnitTypeProperty(unit.Name, "Socket", "NRefused")
 	if err == nil {
-		fields["nRefused"] = refusedConnectionCount.Value.Value().(uint32)
+		fields["n_refused"] = refusedConnectionCount.Value.Value().(uint32)
 	}
 }
 

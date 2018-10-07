@@ -46,8 +46,8 @@ func TestCollectActiveState(t *testing.T) {
 
 	collectActiveState(unit, conn, fields)
 
-	require.Equal(t, 1, fields["isActive"])
-	require.Equal(t, activeEnterTimestamp, fields["activeEnterTimestamp"])
+	require.Equal(t, 1, fields["is_active"])
+	require.Equal(t, activeEnterTimestamp, fields["active_enter_timestamp"])
 }
 
 func TestCollectPerUnitType(t *testing.T) {
@@ -72,20 +72,20 @@ func TestCollectPerUnitType(t *testing.T) {
 	tags := map[string]string{}
 	fields := map[string]interface{}{}
 	collectTimerUnit(unit, conn, tags, fields)
-	require.Equal(t, "Timer", tags["unitType"])
-	require.Equal(t, lastTriggerValue, fields["lastTriggerUSec"])
+	require.Equal(t, "Timer", tags["unit_type"])
+	require.Equal(t, lastTriggerValue, fields["last_trigger_usec"])
 
 	tags = map[string]string{}
 	fields = map[string]interface{}{}
 	collectServiceUnit(unit, conn, tags, fields)
-	require.Equal(t, "Service", tags["unitType"])
-	require.Equal(t, nRestarts, fields["nRestarts"])
+	require.Equal(t, "Service", tags["unit_type"])
+	require.Equal(t, nRestarts, fields["n_restarts"])
 
 	tags = map[string]string{}
 	fields = map[string]interface{}{}
 	collectSocketUnit(unit, conn, tags, fields)
-	require.Equal(t, "Socket", tags["unitType"])
-	require.Equal(t, nAccepted, fields["nAccepted"])
-	require.Equal(t, nConnection, fields["nConnection"])
-	require.Equal(t, nRefused, fields["nRefused"])
+	require.Equal(t, "Socket", tags["unit_type"])
+	require.Equal(t, nAccepted, fields["n_accepted"])
+	require.Equal(t, nConnection, fields["n_connection"])
+	require.Equal(t, nRefused, fields["n_refused"])
 }
