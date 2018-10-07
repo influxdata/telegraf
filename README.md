@@ -243,6 +243,7 @@ For documentation on the latest development code see the [documentation index][d
 * [syslog](./plugins/inputs/syslog)
 * [sysstat](./plugins/inputs/sysstat)
 * [system](./plugins/inputs/system)
+* [systemd](./plugins/inputs/systemd)
 * [tail](./plugins/inputs/tail)
 * [temp](./plugins/inputs/temp)
 * [tcp_listener](./plugins/inputs/socket_listener)
