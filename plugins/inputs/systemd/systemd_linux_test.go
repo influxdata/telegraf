@@ -13,12 +13,12 @@ type MockDbusConn struct {
 	mock.Mock
 }
 
-func (m MockDbusConn) GetUnitProperty(unit string, propertyName string) (*dbus.Property, error) {
+func (m *MockDbusConn) GetUnitProperty(unit string, propertyName string) (*dbus.Property, error) {
 	args := m.Called(unit, propertyName)
 	return args.Get(0).(*dbus.Property), args.Error(1)
 }
 
-func (m MockDbusConn) GetUnitTypeProperty(unit string, unitType string, propertyName string) (*dbus.Property, error) {
+func (m *MockDbusConn) GetUnitTypeProperty(unit string, unitType string, propertyName string) (*dbus.Property, error) {
 	args := m.Called(unit, unitType, propertyName)
 	return args.Get(0).(*dbus.Property), args.Error(1)
 }
