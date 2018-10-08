@@ -326,8 +326,13 @@ func main() {
 		return
 	}
 
+	shortVersion := version
+	if shortVersion == "" {
+		shortVersion = "unknown"
+	}
+
 	// Configure version
-	if err := internal.SetVersion(formatFullVersion()); err != nil {
+	if err := internal.SetVersion(shortVersion); err != nil {
 		log.Println("Telegraf version already configured to: " + internal.Version())
 	}
 
