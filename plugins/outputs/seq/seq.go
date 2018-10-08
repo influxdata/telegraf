@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"net/http"
-	"os"
 )
 
 type Seq struct {
@@ -62,12 +63,7 @@ func serialize(m telegraf.Metric) ([]byte, error) {
 	se["Tags"] = m.Tags()
 	se["Fields"] = m.Fields()
 
-	serialized, err := json.Marshal(se)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return serialized, nil
+	return json.Marshal(se)
 }
 
 func (a *Seq) Write(metrics []telegraf.Metric) error {
@@ -76,9 +72,7 @@ func (a *Seq) Write(metrics []telegraf.Metric) error {
 	}
 
 	var buffer bytes.Buffer
-
 	for _, metric := range metrics {
-
 		line, err := serialize(metric)
 		if err != nil {
 			return err
@@ -87,9 +81,7 @@ func (a *Seq) Write(metrics []telegraf.Metric) error {
 		buffer.Write(line)
 		buffer.WriteString("\n")
 	}
-
 	req, err := http.NewRequest("POST", a.authenticatedUrl(), &buffer)
-
 	if err != nil {
 		return fmt.Errorf("unable to create http.Request, %s\n", err.Error())
 	}
