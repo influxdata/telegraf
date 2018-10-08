@@ -1,7 +1,6 @@
 # `nvidia-smi` Input Plugin
 
 This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvidia-system-management-interface) binary to pull GPU stats including memory and GPU usage, temp and other.
-On windows, `nvidia-smi` is generally located at "C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe"
 
 ### Configuration
 
@@ -14,6 +13,10 @@ On windows, `nvidia-smi` is generally located at "C:\Program Files\NVIDIA Corpor
   ## Optional: timeout for GPU polling
   # timeout = "5s"
 ```
+
+#### Windows
+
+On Windows, `nvidia-smi` is generally located at `C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe`
 
 ### Metrics
 - measurement: `nvidia_smi`
