@@ -1,6 +1,6 @@
 # Seq Output Plugin
 
-This plugin writes metrics as structured events to a [Seq](http://www.getseq.net/) instance. Metrics are sent in batches of JSON Lines, formatted using Serilog's [compact json event format](https://github.com/serilog/serilog-formatting-compact). Telegraf _field_ and _tag_ collections are serialized with the metric and are made available to Seq as top-level properties.
+This plugin writes metrics as structured events to a [Seq](http://www.getseq.net/) instance. Metrics are sent in batches of JSON Lines formatted using Serilog's [compact json event format](https://github.com/serilog/serilog-formatting-compact). Telegraf _field_ and _tag_ collections are serialized with the event and are made available to Seq as top-level properties.
 
 An optional API key can be configured to enable additional tagging and filtering within Seq.
 
