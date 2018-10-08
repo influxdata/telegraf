@@ -1,6 +1,8 @@
 package seq
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -12,10 +14,15 @@ func TestConnectAndWrite(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	url := testutil.GetLocalHost() + ":5341"
+	ts := httptest.NewServer(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusCreated)
+			}))
+	defer ts.Close()
 
 	r := &Seq{
-		SeqInstance: url,
+		SeqInstance: ts.URL,
 	}
 
 	err := r.Connect()
