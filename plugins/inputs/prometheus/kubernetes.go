@@ -19,13 +19,13 @@ import (
 func loadClient(kubeconfigPath string) (*k8s.Client, error) {
 	data, err := ioutil.ReadFile(kubeconfigPath)
 	if err != nil {
-		return nil, fmt.Errorf("read kubeconfig: %v", err)
+		return nil, fmt.Errorf("read kubeconfig: %s", err.Error())
 	}
 
 	// Unmarshal YAML into a Kubernetes config object.
 	var config k8s.Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("unmarshal kubeconfig: %v", err)
+		return nil, fmt.Errorf("unmarshal kubeconfig: %s", err.Error())
 	}
 	return k8s.NewClient(&config)
 }
@@ -33,9 +33,10 @@ func loadClient(kubeconfigPath string) (*k8s.Client, error) {
 func start(p *Prometheus) error {
 	client, err := k8s.NewInClusterClient()
 	if err != nil {
+		// TODO: (glinton) kubeconfig file option in config
 		client, err = loadClient(fmt.Sprintf("%v/.kube/config", os.Getenv("HOME")))
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 	type payload struct {
@@ -43,11 +44,13 @@ func start(p *Prometheus) error {
 		pod      *corev1.Pod
 	}
 	in := make(chan payload)
+	// TODO: (glinton) make sure this isn't leaked
 	go func() {
 		var pod corev1.Pod
+		// TODO: (glinton) reconnect watcher, track new pods
 		watcher, err := client.Watch(context.Background(), "", &pod)
 		if err != nil {
-			log.Printf("E! [inputs.prometheus] unable to watch resources: %v", err)
+			log.Printf("E! [inputs.prometheus] unable to watch resources: %s", err.Error())
 		}
 		defer watcher.Close()
 
@@ -55,7 +58,7 @@ func start(p *Prometheus) error {
 			cm := new(corev1.Pod)
 			eventType, err := watcher.Next(cm)
 			if err != nil {
-				log.Println()
+				log.Printf("E! [inputs.prometheus] unable to watch next: %s", err.Error())
 			}
 			in <- payload{eventType, cm}
 		}
@@ -65,16 +68,12 @@ func start(p *Prometheus) error {
 		for {
 			select {
 			case <-p.done:
-				log.Printf("I! [inputs.prometheus] shutting dow\n")
+				log.Printf("I! [inputs.prometheus] shutting down\n")
 				return
 			case payload := <-in:
 				cm := payload.pod
 				eventType := payload.eventype
 
-				if err != nil {
-					log.Printf("E! [inputs.prometheus] watcher encountered and error: %v", err)
-					break
-				}
 				switch eventType {
 				case k8s.EventAdded:
 					registerPod(cm, p)
@@ -90,72 +89,84 @@ func start(p *Prometheus) error {
 }
 
 func registerPod(pod *corev1.Pod, p *Prometheus) {
-	targetURL := scrapeURL(pod)
-	if targetURL != nil {
-		log.Printf("I! [inputs.prometheus] will scrape metrics from %v\n", *targetURL)
-		p.lock.Lock()
-		// add annotation as metrics tags
-		tags := pod.GetMetadata().GetAnnotations()
-		tags["pod_name"] = pod.GetMetadata().GetName()
-		tags["namespace"] = pod.GetMetadata().GetNamespace()
-		// add labels as metrics tags
-		for k, v := range pod.GetMetadata().GetLabels() {
-			tags[k] = v
-		}
-		URL, err := url.Parse(*targetURL)
-		if err != nil {
-			log.Printf("E! [inputs.prometheus] could not parse URL %q: %v", targetURL, err)
-			return
-		}
-		podURL := p.AddressToURL(URL, URL.Hostname())
-		p.kubernetesPods = append(p.kubernetesPods, URLAndAddress{URL: podURL, Address: URL.Hostname(), OriginalURL: URL, Tags: tags})
-		p.lock.Unlock()
+	targetURL := getScrapeURL(pod)
+	if targetURL == nil {
+		return
 	}
+
+	log.Printf("I! [inputs.prometheus] will scrape metrics from %v\n", *targetURL)
+	// add annotation as metrics tags
+	tags := pod.GetMetadata().GetAnnotations()
+	tags["pod_name"] = pod.GetMetadata().GetName()
+	tags["namespace"] = pod.GetMetadata().GetNamespace()
+	// add labels as metrics tags
+	for k, v := range pod.GetMetadata().GetLabels() {
+		tags[k] = v
+	}
+	URL, err := url.Parse(*targetURL)
+	if err != nil {
+		log.Printf("E! [inputs.prometheus] could not parse URL %q: %v", targetURL, err)
+		return
+	}
+	podURL := p.AddressToURL(URL, URL.Hostname())
+	p.lock.Lock()
+	p.kubernetesPods = append(p.kubernetesPods,
+		URLAndAddress{
+			URL:         podURL,
+			Address:     URL.Hostname(),
+			OriginalURL: URL,
+			Tags:        tags})
+	p.lock.Unlock()
 }
 
-func scrapeURL(pod *corev1.Pod) *string {
+func getScrapeURL(pod *corev1.Pod) *string {
 	scrape := pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"]
+	if scrape != "true" {
+		return nil
+	}
 	if pod.Status.GetPodIP() == "" {
 		// return as if scrape was disabled, we will be notified again once the pod
 		// has an IP
-		log.Println("pod doesn't have an IP")
 		return nil
 	}
-	if scrape == "true" {
-		path := pod.GetMetadata().GetAnnotations()["prometheus.io/path"]
-		port := pod.GetMetadata().GetAnnotations()["prometheus.io/port"]
-		if port == "" {
-			port = "9102" // default
-		}
-		if path == "" {
-			path = "/metrics"
-		}
-		if !strings.HasPrefix(path, "/") {
-			path = "/" + path
-		}
 
-		ip := pod.Status.GetPodIP()
-		x := fmt.Sprintf("http://%v:%v%v", ip, port, path)
-		return &x
+	path := pod.GetMetadata().GetAnnotations()["prometheus.io/path"]
+	port := pod.GetMetadata().GetAnnotations()["prometheus.io/port"]
+	if port == "" {
+		port = "9102" // default
 	}
-	return nil
+	if path == "" {
+		path = "/metrics"
+	}
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
+	ip := pod.Status.GetPodIP()
+	// TODO: (glinton) use url and specify scheme
+	x := fmt.Sprintf("http://%s:%s%s", ip, port, path)
+
+	return &x
 }
 
 func unregisterPod(pod *corev1.Pod, p *Prometheus) {
-	url := scrapeURL(pod)
-	if url != nil {
-		p.lock.Lock()
-		defer p.lock.Unlock()
-		log.Printf("D! [inputs.prometheus] registred a delete request for %v in namespace %v\n", pod.GetMetadata().GetName(), pod.GetMetadata().GetNamespace())
-		var result []URLAndAddress
-		for _, v := range p.kubernetesPods {
-			if v.URL.String() != *url {
-				result = append(result, v)
-			} else {
-				log.Printf("D! [inputs.prometheus] will stop scraping for %v\n", *url)
-			}
-
-		}
-		p.kubernetesPods = result
+	url := getScrapeURL(pod)
+	if url == nil {
+		return
 	}
+
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	log.Printf("D! [inputs.prometheus] registered a delete request for %s in namespace %s\n",
+		pod.GetMetadata().GetName(), pod.GetMetadata().GetNamespace())
+	var result []URLAndAddress
+	for _, v := range p.kubernetesPods {
+		if v.URL.String() != *url {
+			result = append(result, v)
+		} else {
+			log.Printf("D! [inputs.prometheus] will stop scraping for %v\n", *url)
+		}
+
+	}
+	p.kubernetesPods = result
 }
