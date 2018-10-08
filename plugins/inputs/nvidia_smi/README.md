@@ -1,6 +1,7 @@
 # `nvidia-smi` Input Plugin
 
 This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvidia-system-management-interface) binary to pull GPU stats including memory and GPU usage, temp and other.
+On windows, `nvidia-smi` is generally located at "C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe"
 
 ### Configuration
 
@@ -8,7 +9,6 @@ This plugin uses a query on the [`nvidia-smi`](https://developer.nvidia.com/nvid
 # Pulls statistics from nvidia GPUs attached to the host
 [[inputs.nvidia_smi]]
   ## Optional: path to nvidia-smi binary, defaults to $PATH via exec.LookPath
-  ## Optional: for Windows users change bin_path to "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe"
   # bin_path = "/usr/bin/nvidia-smi"
 
   ## Optional: timeout for GPU polling
