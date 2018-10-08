@@ -162,3 +162,15 @@ func TestDuration(t *testing.T) {
 	d.UnmarshalTOML([]byte(`1.5`))
 	assert.Equal(t, time.Second, d.Duration)
 }
+
+func TestVersionAlreadySet(t *testing.T) {
+	err := SetVersion("foo")
+	assert.Nil(t, err)
+
+	err = SetVersion("bar")
+
+	assert.NotNil(t, err)
+	assert.IsType(t, VersionAlreadySetError, err)
+
+	assert.Equal(t, "foo", Version())
+}

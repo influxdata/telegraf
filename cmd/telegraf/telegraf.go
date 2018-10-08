@@ -326,6 +326,11 @@ func main() {
 		return
 	}
 
+	// Configure version
+	if err := internal.SetVersion(formatFullVersion()); err != nil {
+		log.Println("Telegraf version already configured to: " + internal.Version())
+	}
+
 	if runtime.GOOS == "windows" && !(*fRunAsConsole) {
 		svcConfig := &service.Config{
 			Name:        *fServiceName,
