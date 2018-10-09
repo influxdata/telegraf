@@ -105,6 +105,7 @@ func TestFindSockets(t *testing.T) {
 		CephBinary:             "foo",
 		OsdPrefix:              "ceph-osd",
 		MonPrefix:              "ceph-mon",
+		RgwPrefix:              "ceph-rgw",
 		SocketDir:              tmpdir,
 		SocketSuffix:           "asok",
 		CephUser:               "client.admin",
@@ -126,6 +127,10 @@ func TestFindSockets(t *testing.T) {
 		for i := 1; i <= st.mons; i++ {
 			assertFoundSocket(t, tmpdir, typeMon, i, sockets)
 		}
+
+		for i := 1; i <= st.rgws; i++ {
+			assertFoundSocket(t, tmpdir, typeRgw, i, sockets)
+		}
 		cleanupTestFiles(tmpdir, st)
 	}
 }
@@ -134,6 +139,8 @@ func assertFoundSocket(t *testing.T, dir, sockType string, i int, sockets []*soc
 	var prefix string
 	if sockType == typeOsd {
 		prefix = osdPrefix
+	} else if sockType == typeRgw {
+		prefix = rgwPrefix
 	} else {
 		prefix = monPrefix
 	}
@@ -182,23 +189,31 @@ func tstFileApply(st *SockTest, fn func(prefix string, i int)) {
 	for i := 1; i <= st.mons; i++ {
 		fn(monPrefix, i)
 	}
+	for i := 1; i <= st.rgws; i++ {
+		fn(rgwPrefix, i)
+	}
 }
 
 type SockTest struct {
 	osds int
 	mons int
+	rgws int
 }
 
 var sockTestParams = []*SockTest{
 	&SockTest{
 		osds: 2,
 		mons: 2,
+		rgws: 2,
 	},
 	&SockTest{
 		mons: 1,
 	},
 	&SockTest{
 		osds: 1,
+	},
+	&SockTest{
+		rgws: 1,
 	},
 	&SockTest{},
 }
