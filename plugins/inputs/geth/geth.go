@@ -2,7 +2,6 @@ package geth
 
 import (
 	"bytes"
-	// "encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -22,21 +21,22 @@ import (
 
 // Geth is a geth plugin
 type Geth struct {
-	Servers  []string
+	Servers []string
 	Metrics []string
 
 	client *http.Client
-	lock sync.Mutex
 }
 
-type GethError struct {
-	Code int `json:"code"`
+// APIError is the struct expected for Geth API errors
+type APIError struct {
+	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
-type GethResponse struct {
+// APIResponse is the struct expected for Geth API responses
+type APIResponse struct {
 	Result *json.RawMessage `json:"result"`
-	Error *GethError `json:"error"`
+	Error  *APIError        `json:"error"`
 }
 
 var sampleConfig = `
@@ -67,15 +67,17 @@ var sampleConfig = `
   # insecure_skip_verify = false
 `
 
+// SampleConfig returns an example Geth Plugin configuration
 func (g *Geth) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description returns a short description of the Geth Plugin
 func (g *Geth) Description() string {
 	return "Read flattened metrics from one or more Geth HTTP endpoints"
 }
 
-// Gathers data for all servers.
+// Gather returns data for all servers.
 func (g *Geth) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
 
@@ -86,12 +88,12 @@ func (g *Geth) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+			ResponseHeaderTimeout: 3 * time.Second,
 			TLSClientConfig:       tlsCfg,
 		}
 		client := &http.Client{
 			Transport: tr,
-			Timeout:   time.Duration(4 * time.Second),
+			Timeout:   4 * time.Second,
 		}
 		g.client = client
 	}
@@ -122,7 +124,7 @@ func (g *Geth) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-// Gathers data from a particular server
+// gatherServer returns data from a particular server
 // Parameters:
 //     acc      : The telegraf Accumulator to use
 //     serverURL: endpoint to send request to
@@ -146,8 +148,9 @@ func (g *Geth) gatherServer(acc telegraf.Accumulator, serverURL string) error {
 	return g.parseJSONMetrics(acc, respBytes, tags)
 }
 
+// parseJSONMetrics parses output from a Geth HTTP response
 func (g *Geth) parseJSONMetrics(acc telegraf.Accumulator, raw []byte, tags map[string]string) error {
-	resp := &GethResponse{}
+	resp := &APIResponse{}
 	if err := json.Unmarshal(raw, resp); err != nil {
 		return err
 	}
@@ -183,7 +186,7 @@ func (g *Geth) parseJSONMetrics(acc telegraf.Accumulator, raw []byte, tags map[s
 	return nil
 }
 
-// Sends an HTTP request to the server using the Geth object's HTTPClient.
+// sendRequest sends an HTTP request to the server using the Geth object's HTTPClient.
 // Parameters:
 //     serverURL: endpoint to send request to
 //
@@ -211,11 +214,19 @@ func (g *Geth) sendRequest(serverURL string) ([]byte, error) {
 		req.Header.Add(k, v)
 	}
 	resp, err := g.client.Do(req)
+
+	if resp != nil {
+		defer func() {
+			if closeErr := resp.Body.Close(); closeErr != nil {
+				fmt.Printf("error closing response body: %s", closeErr)
+			}
+
+		}()
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return body, err
@@ -234,6 +245,7 @@ func (g *Geth) sendRequest(serverURL string) ([]byte, error) {
 	return body, err
 }
 
+// init is the entrypoint for this plugin
 func init() {
 	inputs.Add("geth", func() telegraf.Input {
 		return &Geth{
