@@ -18,8 +18,10 @@ const (
 	measurement = "ceph"
 	typeMon     = "monitor"
 	typeOsd     = "osd"
+	typeRgw     = "rgw"
 	osdPrefix   = "ceph-osd"
 	monPrefix   = "ceph-mon"
+	rgwPrefix   = "ceph-rgw"
 	sockSuffix  = "asok"
 )
 
@@ -27,6 +29,7 @@ type Ceph struct {
 	CephBinary             string
 	OsdPrefix              string
 	MonPrefix              string
+	RgwPrefix              string
 	SocketDir              string
 	SocketSuffix           string
 	CephUser               string
@@ -55,6 +58,7 @@ var sampleConfig = `
   ## prefix of MON and OSD socket files, used to determine socket type
   mon_prefix = "ceph-mon"
   osd_prefix = "ceph-osd"
+  rgw_prefix = "ceph-rgw"
 
   ## suffix used to identify socket files
   socket_suffix = "asok"
@@ -148,6 +152,7 @@ func init() {
 		CephBinary:             "/usr/bin/ceph",
 		OsdPrefix:              osdPrefix,
 		MonPrefix:              monPrefix,
+		RgwPrefix:              rgwPrefix,
 		SocketDir:              "/var/run/ceph",
 		SocketSuffix:           sockSuffix,
 		CephUser:               "client.admin",
@@ -163,6 +168,8 @@ func init() {
 var perfDump = func(binary string, socket *socket) (string, error) {
 	cmdArgs := []string{"--admin-daemon", socket.socket}
 	if socket.sockType == typeOsd {
+		cmdArgs = append(cmdArgs, "perf", "dump")
+	} else if socket.sockType == typeRgw {
 		cmdArgs = append(cmdArgs, "perf", "dump")
 	} else if socket.sockType == typeMon {
 		cmdArgs = append(cmdArgs, "perfcounters_dump")
@@ -195,12 +202,16 @@ var findSockets = func(c *Ceph) ([]*socket, error) {
 			sockType = typeMon
 			sockPrefix = monPrefix
 		}
+		if strings.HasPrefix(f, c.RgwPrefix) {
+			sockType = typeRgw
+			sockPrefix = rgwPrefix
+		}
 		if strings.HasPrefix(f, c.OsdPrefix) {
 			sockType = typeOsd
 			sockPrefix = osdPrefix
 
 		}
-		if sockType == typeOsd || sockType == typeMon {
+		if sockType == typeOsd || sockType == typeMon || sockType == typeRgw {
 			path := filepath.Join(c.SocketDir, f)
 			sockets = append(sockets, &socket{parseSockId(f, sockPrefix, c.SocketSuffix), sockType, path})
 		}
