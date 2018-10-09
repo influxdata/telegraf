@@ -11,7 +11,7 @@ import (
 
 type MetricHandler struct {
 	builder   *metric.Builder
-	metrics   []telegraf.Metric
+	err       error
 	precision time.Duration
 }
 
@@ -32,7 +32,9 @@ func (h *MetricHandler) SetTimePrecision(precision time.Duration) {
 }
 
 func (h *MetricHandler) Metric() (telegraf.Metric, error) {
-	return h.builder.Metric()
+	m, err := h.builder.Metric()
+	h.builder.Reset()
+	return m, err
 }
 
 func (h *MetricHandler) SetMeasurement(name []byte) {
@@ -99,8 +101,4 @@ func (h *MetricHandler) SetTimestamp(tm []byte) {
 	}
 	ns := v * int64(h.precision)
 	h.builder.SetTime(time.Unix(0, ns))
-}
-
-func (h *MetricHandler) Reset() {
-	h.builder.Reset()
 }

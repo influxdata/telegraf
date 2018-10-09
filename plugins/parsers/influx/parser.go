@@ -60,10 +60,13 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 	metrics := make([]telegraf.Metric, 0)
 	p.machine.SetData(input)
 
-	for p.machine.ParseLine() {
-		err := p.machine.Err()
+	for {
+		err := p.machine.Next()
+		if err == EOF {
+			break
+		}
+
 		if err != nil {
-			p.handler.Reset()
 			return nil, &ParseError{
 				Offset: p.machine.Position(),
 				msg:    err.Error(),
@@ -75,7 +78,11 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 		if err != nil {
 			return nil, err
 		}
-		p.handler.Reset()
+
+		if metric == nil {
+			continue
+		}
+
 		metrics = append(metrics, metric)
 	}
 
@@ -84,7 +91,7 @@ func (p *Parser) Parse(input []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
-	metrics, err := p.Parse([]byte(line + "\n"))
+	metrics, err := p.Parse([]byte(line))
 	if err != nil {
 		return nil, err
 	}

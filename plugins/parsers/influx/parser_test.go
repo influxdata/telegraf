@@ -498,7 +498,7 @@ var ptests = []struct {
 		metrics: nil,
 		err: &ParseError{
 			Offset: 3,
-			msg:    ErrFieldParse.Error(),
+			msg:    ErrTagParse.Error(),
 			buf:    "cpu",
 		},
 	},
