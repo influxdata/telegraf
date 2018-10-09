@@ -161,6 +161,7 @@ For documentation on the latest development code see the [documentation index][d
 * [filestat](./plugins/inputs/filestat)
 * [filecount](./plugins/inputs/filecount)
 * [fluentd](./plugins/inputs/fluentd)
+* [geth](./plugins/inputs/geth)
 * [graylog](./plugins/inputs/graylog)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
