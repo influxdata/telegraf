@@ -182,3 +182,15 @@ func TestCompressWithGzip(t *testing.T) {
 
 	assert.Equal(t, testData, string(output))
 }
+
+func TestVersionAlreadySet(t *testing.T) {
+	err := SetVersion("foo")
+	assert.Nil(t, err)
+
+	err = SetVersion("bar")
+
+	assert.NotNil(t, err)
+	assert.IsType(t, VersionAlreadySetError, err)
+
+	assert.Equal(t, "foo", Version())
+}
