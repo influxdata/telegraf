@@ -13,6 +13,12 @@
 - [#4811](https://github.com/influxdata/telegraf/pull/4811): Add windows service name lookup to procstat input.
 - [#4807](https://github.com/influxdata/telegraf/pull/4807): Add entity-body compression to http output.
 
+## v1.8.2 [unreleased]
+
+### Bugfixes
+
+- [#4844](https://github.com/influxdata/telegraf/pull/4844): Update write path to match updated InfluxDB v2 API.
+
 ## v1.8.1 [2018-10-03]
 
 ### Bugfixes
