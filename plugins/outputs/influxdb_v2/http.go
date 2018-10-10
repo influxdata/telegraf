@@ -281,9 +281,9 @@ func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 	case "unix":
 		loc.Scheme = "http"
 		loc.Host = "127.0.0.1"
-		loc.Path = "v2/write"
+		loc.Path = "/api/v2/write"
 	case "http", "https":
-		loc.Path = path.Join(loc.Path, "v2/write")
+		loc.Path = path.Join(loc.Path, "/api/v2/write")
 	default:
 		return "", fmt.Errorf("unsupported scheme: %q", loc.Scheme)
 	}
