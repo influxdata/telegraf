@@ -48,7 +48,6 @@ func TestNoRecursiveButSuperMeta(t *testing.T) {
 	require.True(t, acc.HasPoint("filecount", tags, "size", int64(446)))
 }
 
-
 func TestNameFilter(t *testing.T) {
 	fc := getNoFilterFileCount()
 	fc.Name = "ba*"
@@ -128,4 +127,3 @@ func fileCountEquals(t *testing.T, fc FileCount, expectedCount int, expectedSize
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(expectedCount)))
 	require.True(t, acc.HasPoint("filecount", tags, "size", int64(expectedSize)))
 }
-
