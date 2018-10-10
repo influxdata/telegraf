@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,15 +28,15 @@ func TestCompileAndMatch(t *testing.T) {
 	require.NoError(t, err)
 
 	matches := g1.Match()
-	assert.Len(t, matches, 6)
+	require.Len(t, matches, 6)
 	matches = g2.Match()
-	assert.Len(t, matches, 2)
+	require.Len(t, matches, 2)
 	matches = g3.Match()
-	assert.Len(t, matches, 1)
+	require.Len(t, matches, 1)
 	matches = g4.Match()
-	assert.Len(t, matches, 0)
+	require.Len(t, matches, 0)
 	matches = g5.Match()
-	assert.Len(t, matches, 0)
+	require.Len(t, matches, 0)
 }
 
 func TestFindRoots(t *testing.T) {
@@ -54,7 +53,7 @@ func TestFindRoots(t *testing.T) {
 	for _, test := range tests {
 		actual, _ := findRoots(test.input)
 		for _, output := range test.output {
-			assert.Contains(t, actual, output)
+			require.Contains(t, actual, output)
 		}
 	}
 }
@@ -66,7 +65,7 @@ func TestFindNestedTextFile(t *testing.T) {
 	require.NoError(t, err)
 
 	matches := g1.Match()
-	assert.Len(t, matches, 1)
+	require.Len(t, matches, 1)
 }
 
 func getTestdataDir() string {
