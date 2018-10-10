@@ -1,6 +1,7 @@
 package mqtt_consumer
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -113,17 +114,16 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 	m.state = Disconnected
 
 	if m.PersistentSession && m.ClientID == "" {
-		return fmt.Errorf("ERROR MQTT Consumer: When using persistent_session" +
-			" = true, you MUST also set client_id")
+		return errors.New("persistent_session requires client_id")
 	}
 
 	m.acc = acc
 	if m.QoS > 2 || m.QoS < 0 {
-		return fmt.Errorf("MQTT Consumer, invalid QoS value: %d", m.QoS)
+		return fmt.Errorf("qos value must be 0, 1, or 2: %d", m.QoS)
 	}
 
 	if m.ConnectionTimeout.Duration < 1*time.Second {
-		return fmt.Errorf("MQTT Consumer, invalid connection_timeout value: %s", m.ConnectionTimeout.Duration)
+		return fmt.Errorf("connection_timeout must be greater than 1s: %s", m.ConnectionTimeout.Duration)
 	}
 
 	opts, err := m.createOpts()
@@ -141,13 +141,11 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 func (m *MQTTConsumer) connect() error {
 	if token := m.client.Connect(); token.Wait() && token.Error() != nil {
 		err := token.Error()
-		log.Printf("E! MQTT Consumer, connection error - %v", err)
 		m.state = Disconnected
 		return err
 	}
 
-	log.Printf("I! MQTT Client Connected")
-
+	log.Printf("I! [inputs.mqtt_consumer]: connected %v", m.Servers)
 	m.state = Connected
 
 	if !m.PersistentSession {
@@ -158,7 +156,7 @@ func (m *MQTTConsumer) connect() error {
 		subscribeToken := m.client.SubscribeMultiple(topics, m.recvMessage)
 		subscribeToken.Wait()
 		if subscribeToken.Error() != nil {
-			m.acc.AddError(fmt.Errorf("E! MQTT Subscribe Error\ntopics: %s\nerror: %s",
+			m.acc.AddError(fmt.Errorf("subscription error: topics: %s: %v",
 				strings.Join(m.Topics[:], ","), subscribeToken.Error()))
 		}
 	}
@@ -167,8 +165,9 @@ func (m *MQTTConsumer) connect() error {
 }
 
 func (m *MQTTConsumer) onConnectionLost(c mqtt.Client, err error) {
+	m.acc.AddError(fmt.Errorf("connection lost: %v", err))
+	log.Printf("D! [inputs.mqtt_consumer]: disconnected %v", m.Servers)
 	m.state = Disconnected
-	m.acc.AddError(fmt.Errorf("E! MQTT Connection lost: %v\n", err))
 	return
 }
 
@@ -176,8 +175,7 @@ func (m *MQTTConsumer) recvMessage(c mqtt.Client, msg mqtt.Message) {
 	topic := msg.Topic()
 	metrics, err := m.parser.Parse(msg.Payload())
 	if err != nil {
-		m.acc.AddError(fmt.Errorf("E! MQTT Parse Error\nmessage: %s\nerror: %s",
-			string(msg.Payload()), err.Error()))
+		m.acc.AddError(err)
 	}
 
 	for _, metric := range metrics {
@@ -189,9 +187,9 @@ func (m *MQTTConsumer) recvMessage(c mqtt.Client, msg mqtt.Message) {
 
 func (m *MQTTConsumer) Stop() {
 	if m.state == Connected {
-		log.Printf("I! MQTT Client Disconnecting")
+		log.Printf("D! [inputs.mqtt_consumer]: disconnecting %v", m.Servers)
 		m.client.Disconnect(200)
-		log.Printf("I! MQTT Client Disconnected")
+		log.Printf("D! [inputs.mqtt_consumer]: disconnected %v", m.Servers)
 		m.state = Disconnected
 	}
 }
@@ -199,7 +197,7 @@ func (m *MQTTConsumer) Stop() {
 func (m *MQTTConsumer) Gather(acc telegraf.Accumulator) error {
 	if m.state == Disconnected {
 		m.state = Connecting
-		log.Printf("I! MQTT Client Reconnecting")
+		log.Printf("D! [inputs.mqtt_consumer]: connecting %v", m.Servers)
 		m.connect()
 	}
 
@@ -242,7 +240,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 	for _, server := range m.Servers {
 		// Preserve support for host:port style servers; deprecated in Telegraf 1.4.4
 		if !strings.Contains(server, "://") {
-			log.Printf("W! mqtt_consumer server %q should be updated to use `scheme://host:port` format", server)
+			log.Printf("W! [inputs.mqtt_consumer] server %q should be updated to use `scheme://host:port` format", server)
 			if tlsCfg == nil {
 				server = "tcp://" + server
 			} else {
