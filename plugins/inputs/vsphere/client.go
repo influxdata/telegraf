@@ -173,7 +173,8 @@ func (c *Client) close() {
 	// Use a Once to prevent us from panics stemming from trying
 	// to close it multiple times.
 	c.closeGate.Do(func() {
-		ctx, _ := context.WithTimeout(context.Background(), c.Timeout)
+		ctx, cancel := context.WithTimeout(context.Background(), c.Timeout)
+		defer cancel()
 		if c.Client != nil {
 			if err := c.Client.Logout(ctx); err != nil {
 				log.Printf("E! [input.vsphere]: Error during logout: %s", err)
