@@ -35,6 +35,12 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   #profile = ""
   #shared_credential_file = ""
 
+  ## Endpoint to make request against, the correct endpoint is automatically
+  ## determined and this option should only be set if you wish to override the
+  ## default.
+  ##   ex: endpoint_url = "http://localhost:8000"
+  # endpoint_url = ""
+
   # The minimum period for Cloudwatch metrics is 1 minute (60s). However not all
   # metrics are made available to the 1 minute period. Some are collected at
   # 3 minute, 5 minute, or larger intervals. See https://aws.amazon.com/cloudwatch/faqs/#monitoring.
@@ -68,7 +74,9 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   [[inputs.cloudwatch.metrics]]
     names = ["Latency", "RequestCount"]
 
-    ## Dimension filters for Metric (optional)
+    ## Dimension filters for Metric.  These are optional however all dimensions
+    ## defined for the metric names must be specified in order to retrieve
+    ## the metric statistics.
     [[inputs.cloudwatch.metrics.dimensions]]
       name = "LoadBalancerName"
       value = "p-example"
@@ -141,6 +149,20 @@ Tag Dimension names are represented in [snake case](https://en.wikipedia.org/wik
   - region           (CloudWatch Region)
   - unit             (CloudWatch Metric Unit)
   - {dimension-name} (Cloudwatch Dimension value - one for each metric dimension)
+
+### Troubleshooting:
+
+You can use the aws cli to get a list of available metrics and dimensions:
+```
+aws cloudwatch list-metrics --namespace AWS/EC2 --region us-east-1
+aws cloudwatch list-metrics --namespace AWS/EC2 --region us-east-1 --metric-name CPUCreditBalance
+```
+
+If the expected metrics are not returned, you can try getting them manually
+for a short period of time:
+```
+aws cloudwatch get-metric-statistics --namespace AWS/EC2 --region us-east-1 --period 300 --start-time 2018-07-01T00:00:00Z --end-time 2018-07-01T00:15:00Z --statistics Average --metric-name CPUCreditBalance --dimensions Name=InstanceId,Value=i-deadbeef
+```
 
 ### Example Output:
 

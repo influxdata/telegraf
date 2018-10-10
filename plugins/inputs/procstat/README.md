@@ -1,6 +1,8 @@
 # Procstat Input Plugin
 
 The procstat plugin can be used to monitor the system resource usage of one or more processes.
+The procstat_lookup metric displays the query information, 
+specifically the number of PIDs returned on a search
 
 Processes can be selected for monitoring using one of several methods:
 - pidfile
@@ -9,6 +11,7 @@ Processes can be selected for monitoring using one of several methods:
 - user
 - systemd_unit
 - cgroup
+- win_service
 
 ### Configuration:
 
@@ -27,6 +30,9 @@ Processes can be selected for monitoring using one of several methods:
   # systemd_unit = "nginx.service"
   ## CGroup name or path
   # cgroup = "systemd/system.slice/nginx.service"
+
+  ## Windows service name
+  # win_service = ""
 
   ## override for process_name
   ## This is optional; default is sourced from /proc/<pid>/status
@@ -73,6 +79,7 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - user (when selected)
     - systemd_unit (when defined)
     - cgroup (when defined)
+    - win_service (when defined)
   - fields:
     - cpu_time (int)
     - cpu_time_guest (float)
@@ -127,7 +134,19 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - voluntary_context_switches (int)
     - write_bytes (int, *telegraf* may need to be ran as **root**)
     - write_count (int, *telegraf* may need to be ran as **root**)
-
+- procstat_lookup
+  - tags:
+    - exe (string)
+    - pid_finder (string)
+    - pid_file (string)
+    - pattern (string)
+    - prefix (string)
+    - user (string)
+    - systemd_unit (string)
+    - cgroup (string)
+    - win_service (string)
+  - fields:
+    - pid_count (int)
 *NOTE: Resource limit > 2147483647 will be reported as 2147483647.*
 
 ### Example Output:

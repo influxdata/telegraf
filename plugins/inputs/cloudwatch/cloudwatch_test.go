@@ -197,7 +197,9 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 
 	now := time.Now()
 
-	params := c.getStatisticsInput(m, now)
+	c.updateWindow(now)
+
+	params := c.getStatisticsInput(m)
 
 	assert.EqualValues(t, *params.EndTime, now.Add(-c.Delay.Duration))
 	assert.EqualValues(t, *params.StartTime, now.Add(-c.Period.Duration).Add(-c.Delay.Duration))
@@ -216,4 +218,37 @@ func TestMetricsCacheTimeout(t *testing.T) {
 	assert.True(t, cache.IsValid())
 	cache.Fetched = time.Now().Add(-time.Minute)
 	assert.False(t, cache.IsValid())
+}
+
+func TestUpdateWindow(t *testing.T) {
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := internal.Duration{
+		Duration: duration,
+	}
+
+	c := &CloudWatch{
+		Namespace: "AWS/ELB",
+		Delay:     internalDuration,
+		Period:    internalDuration,
+	}
+
+	now := time.Now()
+
+	assert.True(t, c.windowEnd.IsZero())
+	assert.True(t, c.windowStart.IsZero())
+
+	c.updateWindow(now)
+
+	newStartTime := c.windowEnd
+
+	// initial window just has a single period
+	assert.EqualValues(t, c.windowEnd, now.Add(-c.Delay.Duration))
+	assert.EqualValues(t, c.windowStart, now.Add(-c.Delay.Duration).Add(-c.Period.Duration))
+
+	now = time.Now()
+	c.updateWindow(now)
+
+	// subsequent window uses previous end time as start time
+	assert.EqualValues(t, c.windowEnd, now.Add(-c.Delay.Duration))
+	assert.EqualValues(t, c.windowStart, newStartTime)
 }

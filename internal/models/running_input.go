@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -35,47 +36,47 @@ func NewRunningInput(
 	}
 }
 
-// InputConfig containing a name, interval, and filter
+// InputConfig is the common config for all inputs.
 type InputConfig struct {
-	Name              string
+	Name     string
+	Interval time.Duration
+
 	NameOverride      string
 	MeasurementPrefix string
 	MeasurementSuffix string
 	Tags              map[string]string
 	Filter            Filter
-	Interval          time.Duration
 }
 
 func (r *RunningInput) Name() string {
 	return "inputs." + r.Config.Name
 }
 
-// MakeMetric either returns a metric, or returns nil if the metric doesn't
-// need to be created (because of filtering, an error, etc.)
-func (r *RunningInput) MakeMetric(
-	measurement string,
-	fields map[string]interface{},
-	tags map[string]string,
-	mType telegraf.ValueType,
-	t time.Time,
-) telegraf.Metric {
+func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
+	if ok := r.Config.Filter.Select(metric); !ok {
+		return nil
+	}
+
+	r.Config.Filter.Modify(metric)
+	if len(metric.FieldList()) == 0 {
+		return nil
+	}
+
 	m := makemetric(
-		measurement,
-		fields,
-		tags,
+		metric,
 		r.Config.NameOverride,
 		r.Config.MeasurementPrefix,
 		r.Config.MeasurementSuffix,
 		r.Config.Tags,
-		r.defaultTags,
-		r.Config.Filter,
-		true,
-		mType,
-		t,
-	)
+		r.defaultTags)
 
 	if r.trace && m != nil {
-		fmt.Print("> " + m.String())
+		s := influx.NewSerializer()
+		s.SetFieldSortOrder(influx.SortFields)
+		octets, err := s.Serialize(m)
+		if err == nil {
+			fmt.Print("> " + string(octets))
+		}
 	}
 
 	r.MetricsGathered.Incr(1)

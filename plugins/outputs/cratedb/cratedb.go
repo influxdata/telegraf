@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/jackc/pgx/stdlib"
 )
+
+const MaxInt64 = int64(^uint64(0) >> 1)
 
 type CrateDB struct {
 	URL         string
@@ -115,11 +118,19 @@ func escapeValue(val interface{}) (string, error) {
 	switch t := val.(type) {
 	case string:
 		return escapeString(t, `'`), nil
-	// We don't handle uint, uint32 and uint64 here because CrateDB doesn't
-	// seem to support unsigned types. But it seems like input plugins don't
-	// produce those types, so it's hopefully ok.
-	case int, int32, int64, float32, float64:
+	case int64, float64:
 		return fmt.Sprint(t), nil
+	case uint64:
+		// The long type is the largest integer type in CrateDB and is the
+		// size of a signed int64.  If our value is too large send the largest
+		// possible value.
+		if t <= uint64(MaxInt64) {
+			return strconv.FormatInt(int64(t), 10), nil
+		} else {
+			return strconv.FormatInt(MaxInt64, 10), nil
+		}
+	case bool:
+		return strconv.FormatBool(t), nil
 	case time.Time:
 		// see https://crate.io/docs/crate/reference/sql/data_types.html#timestamp
 		return escapeValue(t.Format("2006-01-02T15:04:05.999-0700"))

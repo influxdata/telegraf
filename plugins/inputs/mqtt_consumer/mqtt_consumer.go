@@ -9,6 +9,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
@@ -33,15 +34,7 @@ type MQTTConsumer struct {
 
 	PersistentSession bool
 	ClientID          string `toml:"client_id"`
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tls.ClientConfig
 
 	sync.Mutex
 	client mqtt.Client
@@ -60,8 +53,15 @@ var sampleConfig = `
   ## schema can be tcp, ssl, or ws.
   servers = ["tcp://localhost:1883"]
 
-  ## MQTT QoS, must be 0, 1, or 2
+  ## QoS policy for messages
+  ##   0 = at most once
+  ##   1 = at least once
+  ##   2 = exactly once
+  ##
+  ## When using a QoS of 1 or 2, you should enable persistent_session to allow
+  ## resuming unacknowledged messages.
   qos = 0
+
   ## Connection timeout for initial connection in seconds
   connection_timeout = "30s"
 
@@ -83,11 +83,11 @@ var sampleConfig = `
   # username = "telegraf"
   # password = "metricsmetricsmetricsmetrics"
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 
   ## Data format to consume.
@@ -236,8 +236,7 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 		opts.SetClientID(m.ClientID)
 	}
 
-	tlsCfg, err := internal.GetTLSConfig(
-		m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
+	tlsCfg, err := m.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
 	}

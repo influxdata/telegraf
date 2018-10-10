@@ -300,7 +300,10 @@ func TestRunParserJSONMsg(t *testing.T) {
 	listener.acc = &acc
 	defer close(listener.done)
 
-	listener.parser, _ = parsers.NewJSONParser("udp_json_test", []string{}, nil)
+	listener.parser, _ = parsers.NewParser(&parsers.Config{
+		DataFormat: "json",
+		MetricName: "udp_json_test",
+	})
 	listener.wg.Add(1)
 	go listener.tcpParser()
 

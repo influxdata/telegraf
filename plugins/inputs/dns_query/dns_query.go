@@ -5,12 +5,21 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/miekg/dns"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
+)
+
+type ResultType uint64
+
+const (
+	Success ResultType = 0
+	Timeout            = 1
+	Error              = 2
 )
 
 type DnsQuery struct {
@@ -62,23 +71,37 @@ func (d *DnsQuery) Description() string {
 	return "Query given DNS server and gives statistics"
 }
 func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
 	d.setDefaultValues()
 
 	for _, domain := range d.Domains {
 		for _, server := range d.Servers {
-			dnsQueryTime, err := d.getDnsQueryTime(domain, server)
-			acc.AddError(err)
-			tags := map[string]string{
-				"server":      server,
-				"domain":      domain,
-				"record_type": d.RecordType,
-			}
+			wg.Add(1)
+			go func(domain, server string) {
+				fields := make(map[string]interface{}, 2)
+				tags := map[string]string{
+					"server":      server,
+					"domain":      domain,
+					"record_type": d.RecordType,
+				}
 
-			fields := map[string]interface{}{"query_time_ms": dnsQueryTime}
-			acc.AddFields("dns_query", fields, tags)
+				dnsQueryTime, err := d.getDnsQueryTime(domain, server)
+				if err == nil {
+					setResult(Success, fields, tags)
+					fields["query_time_ms"] = dnsQueryTime
+				} else if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+					setResult(Timeout, fields, tags)
+				} else if err != nil {
+					setResult(Error, fields, tags)
+					acc.AddError(err)
+				}
+
+				acc.AddFields("dns_query", fields, tags)
+			}(domain, server)
 		}
 	}
 
+	wg.Wait()
 	return nil
 }
 
@@ -163,6 +186,21 @@ func (d *DnsQuery) parseRecordType() (uint16, error) {
 	}
 
 	return recordType, error
+}
+
+func setResult(result ResultType, fields map[string]interface{}, tags map[string]string) {
+	var tag string
+	switch result {
+	case Success:
+		tag = "success"
+	case Timeout:
+		tag = "timeout"
+	case Error:
+		tag = "error"
+	}
+
+	tags["result"] = tag
+	fields["result_code"] = uint64(result)
 }
 
 func init() {

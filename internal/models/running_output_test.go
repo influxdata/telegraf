@@ -75,23 +75,6 @@ func BenchmarkRunningOutputAddFailWrites(b *testing.B) {
 	}
 }
 
-func TestAddingNilMetric(t *testing.T) {
-	conf := &OutputConfig{
-		Filter: Filter{},
-	}
-
-	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf, 1000, 10000)
-
-	ro.AddMetric(nil)
-	ro.AddMetric(nil)
-	ro.AddMetric(nil)
-
-	err := ro.Write()
-	assert.NoError(t, err)
-	assert.Len(t, m.Metrics(), 0)
-}
-
 // Test that NameDrop filters ger properly applied.
 func TestRunningOutput_DropFilter(t *testing.T) {
 	conf := &OutputConfig{
