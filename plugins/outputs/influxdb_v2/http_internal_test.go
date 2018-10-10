@@ -21,11 +21,11 @@ func TestMakeWriteURL(t *testing.T) {
 	}{
 		{
 			url: genURL("http://localhost:9999"),
-			act: "http://localhost:9999/v2/write?bucket=telegraf&org=influx",
+			act: "http://localhost:9999/api/v2/write?bucket=telegraf&org=influx",
 		},
 		{
 			url: genURL("unix://var/run/influxd.sock"),
-			act: "http://127.0.0.1/v2/write?bucket=telegraf&org=influx",
+			act: "http://127.0.0.1/api/v2/write?bucket=telegraf&org=influx",
 		},
 		{
 			err: true,
