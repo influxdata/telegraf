@@ -14,7 +14,7 @@ var sepStr = fmt.Sprintf("%v", string(os.PathSeparator))
 type GlobPath struct {
 	path         string
 	hasMeta      bool
-	hasSuperMeta bool
+	HasSuperMeta bool
 	g            glob.Glob
 	root         string
 }
@@ -22,7 +22,7 @@ type GlobPath struct {
 func Compile(path string) (*GlobPath, error) {
 	out := GlobPath{
 		hasMeta:      hasMeta(path),
-		hasSuperMeta: hasSuperMeta(path),
+		HasSuperMeta: hasSuperMeta(path),
 		path:         path,
 		root:         "",
 	}
@@ -32,7 +32,7 @@ func Compile(path string) (*GlobPath, error) {
 
 	// if there are no glob meta characters in the path, don't bother compiling
 	// a glob object. (see short-circuits in Match and MatchString)
-	if !out.hasMeta || !out.hasSuperMeta {
+	if !out.hasMeta || !out.HasSuperMeta {
 		if path != "/" {
 			out.path = strings.TrimSuffix(path, "/")
 		}
@@ -55,7 +55,7 @@ func (g *GlobPath) Match() map[string]os.FileInfo {
 		}
 		return out
 	}
-	if !g.hasSuperMeta {
+	if !g.HasSuperMeta {
 		out := make(map[string]os.FileInfo)
 		files, _ := filepath.Glob(g.path)
 		for _, file := range files {
@@ -73,7 +73,7 @@ func (g *GlobPath) MatchString(path string) bool {
 	if !g.hasMeta {
 		return (g.path == path)
 	}
-	if !g.hasSuperMeta {
+	if !g.HasSuperMeta {
 		res, _ := filepath.Match(g.path, path)
 		return res
 	}

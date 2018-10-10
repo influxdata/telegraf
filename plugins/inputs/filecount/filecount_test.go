@@ -34,6 +34,21 @@ func TestNoFiltersOnChildDir(t *testing.T) {
 	require.True(t, acc.HasPoint("filecount", tags, "size", int64(446)))
 }
 
+func TestNoRecursiveButSuperMeta(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.Recursive = false
+	fc.Directories = []string{getTestdataDir() + "/**"}
+	matches := []string{"subdir/quux", "subdir/quuz", "subdir/qux"}
+
+	tags := map[string]string{"directory": getTestdataDir() + "/subdir"}
+	acc := testutil.Accumulator{}
+	acc.GatherError(fc.Gather)
+
+	require.True(t, acc.HasPoint("filecount", tags, "count", int64(len(matches))))
+	require.True(t, acc.HasPoint("filecount", tags, "size", int64(446)))
+}
+
+
 func TestNameFilter(t *testing.T) {
 	fc := getNoFilterFileCount()
 	fc.Name = "ba*"

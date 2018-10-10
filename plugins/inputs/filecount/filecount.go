@@ -160,10 +160,12 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob *globp
 		return numFiles, totalSize
 	}
 	for _, file := range files {
-		if fc.Recursive && file.IsDir() {
+		if file.IsDir() && (fc.Recursive || glob.HasSuperMeta) {
 			nf, ts = fc.count(acc, basedir+string(os.PathSeparator)+file.Name(), glob)
-			numFiles += nf
-			totalSize += ts
+			if fc.Recursive {
+				numFiles += nf
+				totalSize += ts
+			}
 		}
 		match, err := fc.filter(file)
 		if err != nil {
