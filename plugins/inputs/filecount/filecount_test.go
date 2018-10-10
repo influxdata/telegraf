@@ -59,12 +59,12 @@ func TestRegularOnlyFilter(t *testing.T) {
 
 func TestSizeFilter(t *testing.T) {
 	fc := getNoFilterFileCount()
-	fc.Size = "-100B"
+	fc.Size = -100
 	matches := []string{"foo", "bar", "baz",
 		"subdir/quux", "subdir/quuz"}
 	fileCountEquals(t, fc, len(matches), 0)
 
-	fc.Size = "100B"
+	fc.Size = 100
 	matches = []string{"qux", "subdir/qux"}
 	fileCountEquals(t, fc, len(matches), 892)
 }
@@ -91,15 +91,13 @@ func TestMTimeFilter(t *testing.T) {
 
 func getNoFilterFileCount() FileCount {
 	return FileCount{
-		Directories:        []string{getTestdataDir() + "/"},
-		CountSize:          true,
-		Name:               "*",
-		Recursive:          true,
-		RegularOnly:        false,
-		Size:               "0B",
-		MTime:              internal.Duration{Duration: 0},
-		RecursivePrintSize: "0B",
-		fileFilters:        nil,
+		Directories: []string{getTestdataDir() + "/"},
+		Name:        "*",
+		Recursive:   true,
+		RegularOnly: false,
+		Size:        0,
+		MTime:       internal.Duration{Duration: 0},
+		fileFilters: nil,
 	}
 }
 
@@ -115,3 +113,4 @@ func fileCountEquals(t *testing.T, fc FileCount, expectedCount int, expectedSize
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(expectedCount)))
 	require.True(t, acc.HasPoint("filecount", tags, "size", int64(expectedSize)))
 }
+

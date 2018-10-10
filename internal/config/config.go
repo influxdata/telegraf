@@ -884,14 +884,6 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 // builds the filter and returns a
 // models.AggregatorConfig to be inserted into models.RunningAggregator
 func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, error) {
-	unsupportedFields := []string{"tagexclude", "taginclude"}
-	for _, field := range unsupportedFields {
-		if _, ok := tbl.Fields[field]; ok {
-			return nil, fmt.Errorf("%s is not supported for aggregator plugins (%s).",
-				field, name)
-		}
-	}
-
 	conf := &models.AggregatorConfig{
 		Name:   name,
 		Delay:  time.Millisecond * 100,
@@ -989,13 +981,6 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 // models.ProcessorConfig to be inserted into models.RunningProcessor
 func buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
 	conf := &models.ProcessorConfig{Name: name}
-	unsupportedFields := []string{"tagexclude", "taginclude", "fielddrop", "fieldpass"}
-	for _, field := range unsupportedFields {
-		if _, ok := tbl.Fields[field]; ok {
-			return nil, fmt.Errorf("%s is not supported for processor plugins (%s).",
-				field, name)
-		}
-	}
 
 	if node, ok := tbl.Fields["order"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -1457,7 +1442,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	if node, ok := tbl.Fields["grok_timezone"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
-				c.GrokTimeZone = str.Value
+				c.GrokTimezone = str.Value
 			}
 		}
 	}
@@ -1469,6 +1454,18 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
 						c.CSVColumnNames = append(c.CSVColumnNames, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_column_types"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CSVColumnTypes = append(c.CSVColumnTypes, str.Value)
 					}
 				}
 			}
@@ -1603,6 +1600,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "grok_custom_pattern_files")
 	delete(tbl.Fields, "grok_timezone")
 	delete(tbl.Fields, "csv_column_names")
+	delete(tbl.Fields, "csv_column_types")
 	delete(tbl.Fields, "csv_comment")
 	delete(tbl.Fields, "csv_delimiter")
 	delete(tbl.Fields, "csv_field_columns")

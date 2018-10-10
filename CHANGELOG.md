@@ -1,4 +1,34 @@
-## v1.8 [unreleased]
+## v1.9 [unreleased]
+
+### Features
+
+- [#4686](https://github.com/influxdata/telegraf/pull/4686): Add replace function to strings processor.
+- [#4754](https://github.com/influxdata/telegraf/pull/4754): Query servers in parallel in dns_query input.
+- [#4753](https://github.com/influxdata/telegraf/pull/4753): Add ability to define a custom service name when installing as a Windows service.
+- [#4703](https://github.com/influxdata/telegraf/pull/4703): Add support for IPv6 in the ping plugin.
+- [#4781](https://github.com/influxdata/telegraf/pull/4781): Add new config for csv column explicit type conversion.
+- [#4800](https://github.com/influxdata/telegraf/pull/4800): Add an option to specify a custom datadog URL.
+- [#4803](https://github.com/influxdata/telegraf/pull/4803): Use non-allocating field and tag accessors in datadog output.
+- [#4752](https://github.com/influxdata/telegraf/pull/4752): Add per-directory file counts in the filecount input.
+- [#4811](https://github.com/influxdata/telegraf/pull/4811): Add windows service name lookup to procstat input.
+- [#4807](https://github.com/influxdata/telegraf/pull/4807): Add entity-body compression to http output.
+
+## v1.8.1 [2018-10-03]
+
+### Bugfixes
+
+- [#4750](https://github.com/influxdata/telegraf/pull/4750): Fix hardware_type may be truncated in sqlserver input.
+- [#4723](https://github.com/influxdata/telegraf/issues/4723): Improve performance in basicstats aggregator.
+- [#4747](https://github.com/influxdata/telegraf/pull/4747): Add hostname to TLS config for SNI support.
+- [#4675](https://github.com/influxdata/telegraf/issues/4675): Don't add tags with empty values to opentsdb output.
+- [#4765](https://github.com/influxdata/telegraf/pull/4765): Fix panic during network error in vsphere input.
+- [#4766](https://github.com/influxdata/telegraf/pull/4766): Unify http_listener error response with InfluxDB.
+- [#4769](https://github.com/influxdata/telegraf/pull/4769): Add UUID to VMs in vSphere input.
+- [#4758](https://github.com/influxdata/telegraf/issues/4758): Skip tags with empty values in cloudwatch output.
+- [#4783](https://github.com/influxdata/telegraf/issues/4783): Fix missing non-realtime samples in vSphere input.
+- [#4799](https://github.com/influxdata/telegraf/pull/4799): Fix case of timezone/grok_timezone options.
+
+## v1.8 [2018-09-21]
 
 ### New Inputs
 
@@ -32,9 +62,10 @@
 
 ### New Parsers
 
-- [csv](/docs/DATA_FORMATS_INPUT.md#csv) - Contributed by @maxunt
-- [grok](/docs/DATA_FORMATS_INPUT.md#grok) - Contributed by @maxunt
-- [logfmt](/docs/DATA_FORMATS_INPUT.md#logfmt) - Contributed by @Ayrdrie & @maxunt
+- [csv](/plugins/parsers/csv/README.md) - Contributed by @maxunt
+- [grok](/plugins/parsers/grok/README.md) - Contributed by @maxunt
+- [logfmt](/plugins/parsers/logfmt/README.md) - Contributed by @Ayrdrie & @maxunt
+- [wavefront](/plugins/parsers/wavefront/README.md) - Contributed by @puckpuck
 
 ### New Serializers
 

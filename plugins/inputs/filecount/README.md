@@ -5,7 +5,7 @@ Counts files in directories that match certain criteria.
 ### Configuration:
 
 ```toml
-# Count files in a directory and compute their size
+# Count files in a directory
 [[inputs.filecount]]
   ## Directory to gather stats about.
   ##   deprecated in 1.9; use the directories option
@@ -19,9 +19,6 @@ Counts files in directories that match certain criteria.
   ##   /var/log       -> count all files in /var/log and all of its subdirectories
   directories = ["/var/cache/apt/archives"]
 
-  ## Also compute total size of matched elements. Defaults to false.
-  count_size = false
-
   ## Only count files that match the name pattern. Defaults to "*".
   name = "*.deb"
 
@@ -31,21 +28,15 @@ Counts files in directories that match certain criteria.
   ## Only count regular files. Defaults to true.
   regular_only = true
 
-  ## Only count files that are at least this size. If size is a 
-  ## negative number, only count files that are smaller than the
-  ## absolute value of size. Defaults to "0B".
-  ## For available units, see :
-  ## https://godoc.org/github.com/alecthomas/units#pkg-constants
-  size = "0B"
+  ## Only count files that are at least this size in bytes. If size is
+  ## a negative number, only count files that are smaller than the
+  ## absolute value of size. Defaults to 0.
+  size = 0
 
   ## Only count files that have not been touched for at least this
   ## duration. If mtime is negative, only count files that have been
   ## touched in this duration. Defaults to "0s".
   mtime = "0s"
-
-  ## Only output directories whose sub elements weighs more than this
-  ## size. Defaults to "0B".
-  recursive_print_size = "0B"
 ```
 
 ### Measurements & Fields:

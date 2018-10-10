@@ -46,6 +46,16 @@ Telegraf can manage its own service through the --service flag:
 | `telegraf.exe --service start`     | Start the telegraf service    |
 | `telegraf.exe --service stop`      | Stop the telegraf service     |
 
+## Install multiple services
+
+You can install multiple telegraf instances with --service-name flag:
+
+```
+   > C:\"Program Files"\Telegraf\telegraf.exe --service install --service-name telegraf-1
+   > C:\"Program Files"\Telegraf\telegraf.exe --service install --service-name telegraf-2
+   > C:\"Program Files"\Telegraf\telegraf.exe --service uninstall --service-name telegraf-1
+```
+
 Troubleshooting  common error #1067
 
 When installing as service in Windows, always double check to specify full path of the config file, otherwise windows service will fail to start

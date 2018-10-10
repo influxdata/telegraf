@@ -60,6 +60,7 @@ type objectMap map[string]objectRef
 
 type objectRef struct {
 	name      string
+	altID     string
 	ref       types.ManagedObjectReference
 	parentRef *types.ManagedObjectReference //Pointer because it must be nillable
 	guest     string
@@ -470,22 +471,22 @@ func getHosts(ctx context.Context, root *view.ContainerView) (objectMap, error) 
 
 func getVMs(ctx context.Context, root *view.ContainerView) (objectMap, error) {
 	var resources []mo.VirtualMachine
-	err := root.Retrieve(ctx, []string{"VirtualMachine"}, []string{"name", "runtime.host", "config.guestId"}, &resources)
+	err := root.Retrieve(ctx, []string{"VirtualMachine"}, []string{"name", "runtime.host", "config.guestId", "config.uuid"}, &resources)
 	if err != nil {
 		return nil, err
 	}
 	m := make(objectMap)
 	for _, r := range resources {
-		var guest string
+		guest := "unknown"
+		uuid := ""
 		// Sometimes Config is unknown and returns a nil pointer
 		//
 		if r.Config != nil {
 			guest = cleanGuestID(r.Config.GuestId)
-		} else {
-			guest = "unknown"
+			uuid = r.Config.Uuid
 		}
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host, guest: guest}
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host, guest: guest, altID: uuid}
 	}
 	return m, nil
 }
@@ -612,10 +613,17 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 
 	// Do we have new data yet?
 	res := e.resourceKinds[resourceType]
-	now := time.Now()
+	client, err := e.clientFactory.GetClient(ctx)
+	if err != nil {
+		return err
+	}
+	now, err := client.GetServerTime(ctx)
+	if err != nil {
+		return err
+	}
 	latest, hasLatest := e.lastColls[resourceType]
 	if hasLatest {
-		elapsed := time.Now().Sub(latest).Seconds() + 5.0 // Allow 5 second jitter.
+		elapsed := now.Sub(latest).Seconds() + 5.0 // Allow 5 second jitter.
 		log.Printf("D! [input.vsphere]: Latest: %s, elapsed: %f, resource: %s", latest, elapsed, resourceType)
 		if !res.realTime && elapsed < float64(res.sampling) {
 			// No new data would be available. We're outta herE! [input.vsphere]:
@@ -624,7 +632,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 			return nil
 		}
 	} else {
-		latest = time.Now().Add(time.Duration(-res.sampling) * time.Second)
+		latest = now.Add(time.Duration(-res.sampling) * time.Second)
 	}
 
 	internalTags := map[string]string{"resourcetype": resourceType}
@@ -658,12 +666,12 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 
 	// Drain the pool. We're getting errors back. They should all be nil
 	var mux sync.Mutex
-	err := make(multiError, 0)
+	merr := make(multiError, 0)
 	wp.Drain(ctx, func(ctx context.Context, in interface{}) bool {
 		if in != nil {
-			mux.Unlock()
+			mux.Lock()
 			defer mux.Unlock()
-			err = append(err, in.(error))
+			merr = append(merr, in.(error))
 			return false
 		}
 		return true
@@ -672,7 +680,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 
 	sw.Stop()
 	SendInternalCounterWithTags("gather_count", e.URL.Host, internalTags, count)
-	if len(err) > 0 {
+	if len(merr) > 0 {
 		return err
 	}
 	return nil
@@ -783,6 +791,10 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	// Map name of object.
 	if resource.pKey != "" {
 		t[resource.pKey] = objectRef.name
+	}
+
+	if resourceType == "vm" && objectRef.altID != "" {
+		t["uuid"] = objectRef.altID
 	}
 
 	// Map parent reference

@@ -1,6 +1,6 @@
-# InfluxDB Output Plugin
+# InfluxDB v1.x Output Plugin
 
-This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/influxdata/influxdb) HTTP or UDP service.
+The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP service.
 
 ### Configuration:
 
@@ -68,3 +68,5 @@ This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/
   ## existing data has been written.
   # influx_uint_support = false
 ```
+
+[InfluxDB v1.x]: https://github.com/influxdata/influxdb
