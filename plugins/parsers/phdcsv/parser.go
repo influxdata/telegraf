@@ -1,16 +1,15 @@
 package phdcsv
 
 import (
-	"encoding/csv"
+	"errors"
 	"fmt"
-	"io"
 	"log"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/srclosson/telegraf/metric"
 )
 
 type DLEquipmentModelObject struct {
@@ -64,85 +63,76 @@ func parseConfidence(qualityIn int) string {
 	return qualityStr
 }
 
-func (p *PhdCsvParser) Process(fileName string) ([]telegraf.Metric, error) {
-	f, err := os.Open(fileName)
-	if err != nil {
-		// If we can't open the file... ignore and move on
-		return nil, nil
+func (p *PhdCsvParser) ProcessLine(line string) (telegraf.Metric, error) {
+
+	var value interface{}
+	entry := strings.Split(line, ",")
+	if len(entry) != 4 {
+		return nil, errors.New("Expected 4 columns but did get four")
 	}
-	defer f.Close()
 
-	cr := csv.NewReader(f)
+	epoch, err := strconv.Atoi(entry[0])
+	if err != nil {
+		return nil, err
+	}
 
-	err = nil
-	var entry []string
-	for entry, err = cr.Read(); err != io.EOF; entry, err = cr.Read() {
+	confidence, err := strconv.Atoi(entry[3])
+	if err != nil {
+		return nil, err
+	}
+
+	timestamp := time.Unix(int64(epoch), 0)
+
+	phdTagName := entry[1]
+	splitTag := strings.Split(phdTagName, ".")
+	if len(splitTag) != 2 {
+		return nil, err
+	}
+
+	measurement := splitTag[0]
+	equipment := splitTag[0]
+	fieldName := splitTag[1]
+
+	tags := make(map[string]string)
+	tags["Equipment"] = equipment
+	tags["Quality"] = parseConfidence(confidence)
+	tags["Site"] = equipment[0:3]
+
+	parsedVal, err := strconv.ParseFloat(entry[2], 64)
+	if err != nil {
+		// Not a float. Use the string value then.
+		value = entry[2]
+	} else {
+		value = parsedVal
+	}
+
+	fields := make(map[string]interface{})
+	fields[fieldName] = value
+
+	newMetric, err := metric.New(measurement, tags, fields, timestamp)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return newMetric, nil
+}
+
+func (p *PhdCsvParser) Process(content string) ([]telegraf.Metric, error) {
+	lines := strings.Split(content, "\n")
+	var metrics []telegraf.Metric
+
+	for _, line := range lines {
+		metric, err := p.ProcessLine(line)
 		if err != nil {
 			log.Println("ERROR: [process.line]: ", err)
 			continue
 		}
 
-		var value interface{}
-
-		epoch, err := strconv.Atoi(entry[0])
-		if err != nil {
-			continue
-		}
-
-		confidence, err := strconv.Atoi(entry[3])
-		if err != nil {
-			continue
-		}
-
-		timestamp := time.Unix(int64(epoch), 0)
-
-		phdTagName := entry[1]
-		splitTag := strings.Split(phdTagName, ".")
-		if len(splitTag) != 2 {
-			continue
-		}
-
-		newMetric := p.phdModel[phdTagName].Equipment
-		equipment := p.phdModel[phdTagName].Equipment
-		fieldName := p.phdModel[phdTagName].Metric
-
-		if len(newMetric) == 0 {
-			newMetric = splitTag[0]
-			equipment = splitTag[0]
-			fieldName = splitTag[1]
-		}
-
-		tags := make(map[string]string)
-		tags["Equipment"] = equipment
-		tags["Quality"] = parseConfidence(confidence)
-		tags["Site"] = equipment[0:3]
-
-		// Substitute the model tag config
-		if val, ok := p.model[equipment].Metrics[fieldName]; ok {
-			tags["description"] = val.Name
-
-			var tagName = "System"
-			for _, system := range val.Systems {
-				tags[tagName] = system
-				tagName = "Sub" + tagName
-			}
-		}
-
-		parsedVal, err := strconv.ParseFloat(entry[2], 64)
-		if err != nil {
-			// Not a float. Use the string value then.
-			value = entry[2]
-		} else {
-			value = parsedVal
-		}
-
-		fields := make(map[string]interface{})
-		fields[fieldName] = value
-
-		p.acc.AddFields(newMetric, fields, tags, timestamp)
+		metrics = append(metrics, metric)
 	}
 
-	return nil, nil
+	return metrics, nil
 }
 
 func (p *PhdCsvParser) Parse(buf []byte) ([]telegraf.Metric, error) {
@@ -157,7 +147,7 @@ func (p *PhdCsvParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *PhdCsvParser) ParseLine(line string) (telegraf.Metric, error) {
-	return nil, nil
+	return p.ProcessLine(line)
 }
 
 func (p *PhdCsvParser) SetDefaultTags(tags map[string]string) {

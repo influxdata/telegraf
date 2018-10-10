@@ -1,6 +1,7 @@
 package fileinfo
 
 import (
+	"errors"
 	"log"
 	"os"
 	"path/filepath"
@@ -44,6 +45,9 @@ func (p *FileInfoParser) GetFileInfo(fileName string) (*FileInfo, error) {
 	var baseName = filepath.Base(fileName)
 	var dirName = filepath.Dir(fileName)
 	var splitName = strings.Split(baseName, "_")
+	if len(splitName) < 5 {
+		return nil, errors.New("Not a fileinfo parseable file")
+	}
 	var equipment = splitName[4]
 	var site = equipment[0:3]
 	var splitExt = strings.Split(splitName[5], ".")
@@ -78,6 +82,9 @@ func (p *FileInfoParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	line := string(buf[:len(buf)])
 	var metrics []telegraf.Metric
 	metric, err := p.ParseLine(line)
+	if metric == nil && err == nil {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +95,10 @@ func (p *FileInfoParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 func (p *FileInfoParser) ParseLine(line string) (telegraf.Metric, error) {
 	fi, err := p.GetFileInfo(line)
-	if err != nil {
+	if err != nil && err.Error() == "Not a fileinfo parseable file" {
+		return nil, nil
+	}
+	if err != nil && fi != nil {
 		log.Println("[ERROR]: Could not get file info for line", line)
 		return nil, err
 	}

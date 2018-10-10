@@ -191,6 +191,45 @@ func fileHandler(fileName string) ([]string, error) {
 	return lines, nil
 }
 
+func getFileScanner(fileName string) (*bufio.Scanner, error) {
+	var f *os.File
+	var err error
+	var r io.Reader
+
+	for i := 0; i < 10; i++ {
+		f, err = os.Open(fileName)
+		if err != nil {
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+
+		break
+	}
+	defer f.Close()
+	if err != nil {
+		log.Println("file open error", err)
+		// If we can't open the file... ignore and move on
+		return nil, nil
+	}
+
+	extension := filepath.Ext(fileName)
+	r = bufio.NewReader(f)
+
+	switch extension {
+	case ".gz":
+		r, err = gzip.NewReader(r)
+		if err != nil {
+			log.Println("ERROR [gzip.NewReader]:", fileName, err)
+			return nil, err
+		}
+		break
+	}
+
+	s := bufio.NewScanner(r)
+
+	return s, nil
+}
+
 func HashID(metric telegraf.Metric) uint64 {
 	h := fnv.New64a()
 
@@ -311,23 +350,34 @@ func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accum
 		return err
 	}
 
-	if len(fiMetrics) > 1 {
-		log.Printf("ERROR [%s]: Expected 1 set of metrics. Found [%d]", fileName, len(fiMetrics))
-		return err
-	}
+	if fiMetrics != nil {
+		if len(fiMetrics) > 1 {
+			log.Printf("ERROR [%s]: Expected 1 set of metrics. Found [%d]", fileName, len(fiMetrics))
+			return err
+		}
 
-	for _, m := range fiMetrics {
-		acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+		for _, m := range fiMetrics {
+			acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+		}
 	}
 
 	// If we are just doing fileinfo... end here.
 	if ddo.DataFormat != "fileinfo" {
-		fileLines, err := fileHandler(fileName)
+		s, err := getFileScanner(fileName)
 		if err != nil {
+			log.Println("ERROR [getFileScanner]", err)
 			return err
 		}
-		groupedMetrics := make(map[uint64][]telegraf.Metric)
-		for _, line := range fileLines {
+
+		for s.Scan() {
+			//fileLines, err := fileHandler(fileName)
+			//if err != nil {
+			//	return err
+			//}
+			line := s.Text()
+			log.Println("line", line)
+			groupedMetrics := make(map[uint64][]telegraf.Metric)
+			//for _, line := range fileLines {
 			if len(line) == 0 {
 				continue
 			}
@@ -337,36 +387,40 @@ func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accum
 				continue
 			}
 
-			id := HashID(m)
-			groupedMetrics[id] = append(groupedMetrics[id], m)
+			if m != nil {
+				id := HashID(m)
+				groupedMetrics[id] = append(groupedMetrics[id], m)
+			}
+			//}
+
+			for _, metrics := range groupedMetrics {
+				metric := metrics[0]
+				for i := 1; i < len(metrics); i++ {
+					m := metrics[i]
+					for fieldkey, fieldval := range m.Fields() {
+						metric.AddField(fieldkey, fieldval)
+					}
+				}
+
+				name := metric.Name()
+				if ddo.metricMatch != nil {
+					match := ddo.metricMatch.FindStringSubmatch(fileName)
+					if len(match) > 1 {
+						name = match[1]
+					}
+				}
+
+				for key, regex := range ddo.fileTagMatch {
+					match := regex.FindStringSubmatch(fileName)
+					if len(match) > 1 {
+						metric.AddTag(key, match[1])
+					}
+				}
+
+				acc.AddFields(name, metric.Fields(), metric.Tags(), metric.Time())
+			}
 		}
 
-		for _, metrics := range groupedMetrics {
-			metric := metrics[0]
-			for i := 1; i < len(metrics); i++ {
-				m := metrics[i]
-				for fieldkey, fieldval := range m.Fields() {
-					metric.AddField(fieldkey, fieldval)
-				}
-			}
-
-			name := metric.Name()
-			if ddo.metricMatch != nil {
-				match := ddo.metricMatch.FindStringSubmatch(fileName)
-				if len(match) > 1 {
-					name = match[1]
-				}
-			}
-
-			for key, regex := range ddo.fileTagMatch {
-				match := regex.FindStringSubmatch(fileName)
-				if len(match) > 1 {
-					metric.AddTag(key, match[1])
-				}
-			}
-
-			acc.AddFields(name, metric.Fields(), metric.Tags(), metric.Time())
-		}
 	}
 
 	return nil
