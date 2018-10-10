@@ -823,6 +823,7 @@
 - [#4866](https://github.com/influxdata/telegraf/pull/4866): Fix version check in postgresql_extensible.
 
 ## v1.8.2 [2018-10-17]
+## v1.8.2 [unreleased]
 
 ### Bugfixes
 
