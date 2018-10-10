@@ -40,20 +40,22 @@ func TestCompileAndMatch(t *testing.T) {
 	assert.Len(t, matches, 0)
 }
 
-func TestFindRootDir(t *testing.T) {
+func TestFindRoots(t *testing.T) {
+	dir := getTestdataDir()
 	tests := []struct {
 		input  string
-		output string
+		output []string
 	}{
-		{"/var/log/telegraf.conf", "/var/log"},
-		{"/home/**", "/home"},
-		{"/home/*/**", "/home"},
-		{"/lib/share/*/*/**.txt", "/lib/share"},
+		{dir + "/**", []string{dir + "/test.conf", dir + "/nested1"}},
+		{dir + "/nested?/**", []string{dir + "/nested1/nested2"}},
+		{dir + "/lo*", []string{dir + "/log1.log", dir + "/log2.log"}},
 	}
 
 	for _, test := range tests {
-		actual := findRootDir(test.input)
-		assert.Equal(t, test.output, actual)
+		actual, _ := findRoots(test.input)
+		for _, output := range test.output {
+			assert.Contains(t, actual, output)
+		}
 	}
 }
 

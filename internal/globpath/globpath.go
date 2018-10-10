@@ -57,7 +57,7 @@ func (g *GlobPath) Match() map[string]os.FileInfo {
 		}
 		return out
 	}
-	roots, err := g.findRoots()
+	roots, err := findRoots(g.path)
 	if err != nil {
 		return out
 	}
@@ -82,11 +82,11 @@ func (g *GlobPath) Match() map[string]os.FileInfo {
 //   /home/** ->               filepath.Glob(/home/*)
 //   /home/*/** ->             filepath.Glob(/home/*/*)
 //   /lib/share/*/*/**.txt ->  filepath.Glob(/lib/share/*/*/*)
-func (g *GlobPath) findRoots() ([]string, error) {
-	if !g.hasSuperMeta {
-		return filepath.Glob(g.path)
+func findRoots(path string) ([]string, error) {
+	if strings.Index(path, "**") == -1 {
+		return filepath.Glob(path)
 	}
-	rootGlob := g.path[:strings.Index(g.path, "**")+1]
+	rootGlob := path[:strings.Index(path, "**")+1]
 	return filepath.Glob(rootGlob)
 }
 
