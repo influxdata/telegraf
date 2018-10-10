@@ -75,7 +75,7 @@ func (g *GlobPath) Match() map[string]os.FileInfo {
 }
 
 // find the root elements of the object path, the entry point for recursion
-// when you have a super-meta in your path (which are : 
+// when you have a super-meta in your path (which are :
 // glob(/your/expression/until/first/star/of/super-meta))
 // ie:
 //   /var/log/telegraf.conf -> /var/log/telegraf.conf
