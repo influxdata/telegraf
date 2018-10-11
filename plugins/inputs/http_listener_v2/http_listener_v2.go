@@ -53,7 +53,7 @@ type HTTPListenerV2 struct {
 
 const sampleConfig = `
   ## Address and port to host HTTP listener on
-  service_address = ":8186"
+  service_address = ":8080"
 
   ## Path to listen to.
   path = "/telegraf"
@@ -294,7 +294,7 @@ func init() {
 
 	inputs.Add("http_listener_v2", func() telegraf.Input {
 		return &HTTPListenerV2{
-			ServiceAddress: ":8186",
+			ServiceAddress: ":8080",
 			TimeFunc:       time.Now,
 			Parser:         parser,
 			Path:           "/telegraf",

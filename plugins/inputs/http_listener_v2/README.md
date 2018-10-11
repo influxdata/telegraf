@@ -14,7 +14,7 @@ Enable basic HTTP authentication of clients by specifying a username and passwor
 
 **Example:**
 ```
-curl -i -XPOST 'http://localhost:8186/write' --data-binary 'cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000'
+curl -i -XPOST 'http://localhost:8080/write' --data-binary 'cpu_load_short,host=server01,region=us-west value=0.64 1434055562000000000'
 ```
 
 ### Configuration:
@@ -24,7 +24,7 @@ This is a sample configuration for the plugin.
 ```toml
 [[inputs.http_listener_v2]]
   ## Address and port to host HTTP listener on
-  service_address = ":8186"
+  service_address = ":8080"
 
   ## Path to listen to.
   path = "/telegraf"
