@@ -35,7 +35,7 @@ var sampleConfig = `
   ## Organization is the name of the organization you wish to write to; must exist.
   organization = ""
 
-  ## Bucket to the name fo the bucketwrite into; must exist.
+  ## Destination bucket to write into.
   bucket = ""
 
   ## Timeout for HTTP messages.
