@@ -290,13 +290,10 @@ func (h *HTTPListenerV2) AuthenticateIfSet(handler http.HandlerFunc, res http.Re
 }
 
 func init() {
-	parser, _ := parsers.NewInfluxParser()
-
 	inputs.Add("http_listener_v2", func() telegraf.Input {
 		return &HTTPListenerV2{
 			ServiceAddress: ":8080",
 			TimeFunc:       time.Now,
-			Parser:         parser,
 			Path:           "/telegraf",
 			Methods:        []string{"POST", "PUT"},
 		}
