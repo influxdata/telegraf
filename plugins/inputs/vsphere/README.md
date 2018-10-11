@@ -5,13 +5,16 @@ The VMware vSphere plugin uses the vSphere API to gather metrics from multiple v
 * Clusters
 * Hosts
 * VMs
-* Data stores
+* Datastores
 
 ## Configuration
 
 NOTE: To disable collection of a specific resource type, simply exclude all metrics using the XX_metric_exclude. 
 For example, to disable collection of VMs, add this:
-```vm_metric_exclude = [ "*" ]```
+
+```
+vm_metric_exclude = [ "*" ]
+```
 
 ```
 # Read metrics from one or many vCenters
@@ -168,15 +171,30 @@ For example, to disable collection of VMs, add this:
 
 ### Objects and Metrics Per Query
 
-Default settings for vCenter 6.5 and above is 256. Prior versions of vCenter have this set to 64. A vCenter administrator
-can change this setting, which should be reflected in this plugin. See this [VMware KB article](https://kb.vmware.com/s/article/2107096)
-for more information.
+By default, in vCenter's configuration a limit is set to the number of entities that are included in a performance chart query. Default settings for vCenter 6.5 and above is 256. Prior versions of vCenter have this set to 64. 
+A vCenter administrator can change this setting, see this [VMware KB article](https://kb.vmware.com/s/article/2107096) for more information.
+
+Any modification should be reflected in this plugin by modifying the parameter `max_query_objects`
+
+```
+  ## number of objects to retreive per query for realtime resources (vms and hosts)
+  ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
+  # max_query_objects = 256
+```
 
 ### Collection and Discovery concurrency
 
 On large vCenter setups it may be prudent to have multiple concurrent go routines collect performance metrics
 in order to avoid potential errors for time elapsed during a collection cycle. This should never be greater than 8,
-though the default of 1 (no concurrency) should be sufficient for most configurations. 
+though the default of 1 (no concurrency) should be sufficient for most configurations.
+
+For setting up concurrency, modify `collect_concurrency` and `discover_concurrency` parameters.
+
+```
+  ## number of go routines to use for collection and discovery of objects and metrics
+  # collect_concurrency = 1
+  # discover_concurrency = 1
+```
 
 ## Measurements &amp; Fields
 
