@@ -375,7 +375,6 @@ func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accum
 			//	return err
 			//}
 			line := s.Text()
-			log.Println("line", line)
 			groupedMetrics := make(map[uint64][]telegraf.Metric)
 			//for _, line := range fileLines {
 			if len(line) == 0 {
