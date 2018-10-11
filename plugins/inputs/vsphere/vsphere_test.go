@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -227,6 +228,27 @@ func TestWorkerPool(t *testing.T) {
 	for i := 0; i < n; i++ {
 		require.Equal(t, results[i], i*2)
 	}
+}
+
+func TestTimeout(t *testing.T) {
+	m, s, err := createSim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Remove()
+	defer s.Close()
+
+	var acc testutil.Accumulator
+	v := defaultVSphere()
+	v.Vcenters = []string{s.URL.String()}
+	v.Timeout = internal.Duration{Duration: 1 * time.Nanosecond}
+	require.NoError(t, v.Start(nil)) // We're not using the Accumulator, so it can be nil.
+	defer v.Stop()
+	require.NoError(t, v.Gather(&acc))
+
+	// The accumulator must contain exactly one error and it must be a deadline exceeded.
+	require.Equal(t, 1, len(acc.Errors))
+	require.True(t, strings.Contains(acc.Errors[0].Error(), "context deadline exceeded"))
 }
 
 func TestAll(t *testing.T) {
