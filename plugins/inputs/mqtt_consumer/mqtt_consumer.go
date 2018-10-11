@@ -44,9 +44,10 @@ type MQTTConsumer struct {
 	ClientID          string `toml:"client_id"`
 	tls.ClientConfig
 
-	client mqtt.Client
-	acc    telegraf.Accumulator
-	state  ConnectionState
+	client     mqtt.Client
+	acc        telegraf.Accumulator
+	state      ConnectionState
+	subscribed bool
 }
 
 var sampleConfig = `
@@ -148,7 +149,11 @@ func (m *MQTTConsumer) connect() error {
 	log.Printf("I! [inputs.mqtt_consumer]: connected %v", m.Servers)
 	m.state = Connected
 
-	if !m.PersistentSession {
+	// Only subscribe on first connection when using persistent sessions.  On
+	// subsequent connections the subscriptions should be stored in the
+	// session, but the proper way to do this is to check the connection
+	// response to ensure a session was found.
+	if !m.PersistentSession || !m.subscribed {
 		topics := make(map[string]byte)
 		for _, topic := range m.Topics {
 			topics[topic] = byte(m.QoS)
@@ -159,6 +164,7 @@ func (m *MQTTConsumer) connect() error {
 			m.acc.AddError(fmt.Errorf("subscription error: topics: %s: %v",
 				strings.Join(m.Topics[:], ","), subscribeToken.Error()))
 		}
+		m.subscribed = true
 	}
 
 	return nil
