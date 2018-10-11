@@ -113,9 +113,7 @@ clean:
 
 .PHONY: docker-image
 docker-image:
-	./scripts/build.py --package --platform=linux --arch=amd64
-	cp build/telegraf*$(COMMIT)*.deb .
-	docker build -f scripts/dev.docker --build-arg "package=telegraf*$(COMMIT)*.deb" -t "telegraf-dev:$(COMMIT)" .
+	docker build -f scripts/stretch.docker -t "telegraf:$(COMMIT)" .
 
 plugins/parsers/influx/machine.go: plugins/parsers/influx/machine.go.rl
 	ragel -Z -G2 $^ -o $@
