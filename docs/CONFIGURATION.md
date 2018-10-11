@@ -192,11 +192,13 @@ they have passed the `fieldpass` test.
 An array of glob pattern strings.  Only tags with a tag key matching one of
 the patterns are emitted.  In contrast to `tagpass`, which will pass an entire
 metric based on its tag, `taginclude` removes all non matching tags from the
-metric.
+metric.  Any tag can be filtered including global tags and the agent `host`
+tag.
 
 - **tagexclude**:
 The inverse of `taginclude`. Tags with a tag key matching one of the patterns
-will be discarded from the metric.
+will be discarded from the metric.  Any tag can be filtered including global
+tags and the agent `host` tag.
 
 ### Input Configuration Examples
 
