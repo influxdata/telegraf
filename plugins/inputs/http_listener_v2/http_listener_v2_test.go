@@ -13,8 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 
@@ -32,13 +30,6 @@ cpu_load_short,host=server04 value=12.0 1422568543702900257
 cpu_load_short,host=server05 value=12.0 1422568543702900257
 cpu_load_short,host=server06 value=12.0 1422568543702900257
 `
-	testJSONMsgs = `
-{
-	"value": 12.0,
-	"host": "server01",
-	"time": "04 Jan 06 15:04 MST"
-}`
-
 	badMsg = "blahblahblah: 42\n"
 
 	emptyMsg = ""
@@ -69,25 +60,6 @@ func newTestHTTPAuthListener() *HTTPListenerV2 {
 	listener := newTestHTTPListenerV2()
 	listener.BasicUsername = basicUsername
 	listener.BasicPassword = basicPassword
-	return listener
-}
-
-func newTestHTTPListenerV2WithJSON() *HTTPListenerV2 {
-	parser, _ := parsers.NewParser(&parsers.Config{
-		DataFormat:     "json",
-		MetricName:     "cpu_load_short",
-		TagKeys:        []string{"host"},
-		JSONTimeKey:    "time",
-		JSONTimeFormat: "02 Jan 06 15:04 MST",
-	})
-
-	listener := &HTTPListenerV2{
-		ServiceAddress: "localhost:0",
-		Path:           "/write",
-		Methods:        []string{"POST"},
-		Parser:         parser,
-	}
-
 	return listener
 }
 
@@ -231,27 +203,6 @@ func TestWriteHTTP(t *testing.T) {
 		map[string]interface{}{"value": float64(12)},
 		map[string]string{"host": "server01"},
 	)
-}
-
-func TestWriteHTTPWithJSON(t *testing.T) {
-	listener := newTestHTTPListenerV2WithJSON()
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, listener.Start(acc))
-	defer listener.Stop()
-
-	resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "application/json", bytes.NewBuffer([]byte(testJSONMsgs)))
-	require.NoError(t, err)
-	resp.Body.Close()
-	require.EqualValues(t, 204, resp.StatusCode)
-
-	acc.Wait(1)
-	acc.AssertContainsTaggedFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(12)},
-		map[string]string{"host": "server01"},
-	)
-	time, _ := time.Parse("02 Jan 06 15:04 MST", "04 Jan 06 15:04 MST")
-	assert.True(t, acc.HasTimestamp("cpu_load_short", time))
 }
 
 // http listener should add a newline at the end of the buffer if it's not there
