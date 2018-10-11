@@ -258,9 +258,13 @@ func (l *LogParserPlugin) parser() {
 		m, err = l.GrokParser.ParseLine(entry.line)
 		if err == nil {
 			if m != nil {
+				mName := l.GrokConfig.MeasurementName
+				if mName == "" {
+					mName = "logparser"
+				}
 				tags := m.Tags()
 				tags["path"] = entry.path
-				l.acc.AddFields(l.GrokConfig.MeasurementName, m.Fields(), tags, m.Time())
+				l.acc.AddFields(mName, m.Fields(), tags, m.Time())
 			}
 		} else {
 			log.Println("E! Error parsing log line: " + err.Error())
