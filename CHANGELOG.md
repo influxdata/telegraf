@@ -19,6 +19,7 @@
 ### Bugfixes
 
 - [#4844](https://github.com/influxdata/telegraf/pull/4844): Update write path to match updated InfluxDB v2 API.
+- [#4840](https://github.com/influxdata/telegraf/pull/4840): Fix missing timeouts in vsphere input.
 
 ## v1.8.1 [2018-10-03]
 
