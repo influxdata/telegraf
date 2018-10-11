@@ -4,8 +4,7 @@ import (
 	"compress/gzip"
 	"crypto/subtle"
 	"crypto/tls"
-	"fmt"
-	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -204,46 +203,31 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 	if req.Header.Get("Content-Encoding") == "gzip" {
 		var err error
 		body, err = gzip.NewReader(req.Body)
-		defer body.Close()
 		if err != nil {
 			log.Println("D! " + err.Error())
-			badRequest(res, err.Error())
+			badRequest(res)
 			return
 		}
+		defer body.Close()
 	}
 
-	// Add +1 for EOF
-	buf := make([]byte, h.MaxBodySize+1)
-	n, err := io.ReadFull(body, buf)
-	if err == io.ErrUnexpectedEOF || err == io.EOF {
-		// finished reading the request body
-		if err := h.parse(buf[:n]); err != nil {
-			log.Println("D! " + err.Error())
-			badRequest(res, err.Error())
-		} else {
-			res.WriteHeader(http.StatusNoContent)
-		}
-	} else {
-		log.Println("D! " + err.Error())
-		// problem reading the request body
-		internalServerError(res)
-	}
-}
-
-func (h *HTTPListenerV2) parse(b []byte) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	metrics, err := h.Parse(b)
+	body = http.MaxBytesReader(res, body, h.MaxBodySize)
+	bytes, err := ioutil.ReadAll(body)
 	if err != nil {
-		return fmt.Errorf("unable to parse: %s", err.Error())
+		tooLarge(res)
+		return
 	}
 
+	metrics, err := h.Parse(bytes)
+	if err != nil {
+		log.Println("D! " + err.Error())
+		badRequest(res)
+		return
+	}
 	for _, m := range metrics {
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 	}
-
-	return nil
+	res.WriteHeader(http.StatusNoContent)
 }
 
 func tooLarge(res http.ResponseWriter) {
@@ -263,14 +247,10 @@ func internalServerError(res http.ResponseWriter) {
 	res.WriteHeader(http.StatusInternalServerError)
 }
 
-func badRequest(res http.ResponseWriter, errString string) {
+func badRequest(res http.ResponseWriter) {
 	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusBadRequest)
-	if errString != "" {
-		res.Write([]byte(fmt.Sprintf(`{"error":%q}`, errString)))
-	} else {
-		res.Write([]byte(`{"error":"http: bad request"}`))
-	}
+	res.Write([]byte(`{"error":"http: bad request"}`))
 }
 
 func (h *HTTPListenerV2) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
