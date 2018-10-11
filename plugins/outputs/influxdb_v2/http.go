@@ -40,7 +40,6 @@ const (
 	defaultRequestTimeout = time.Second * 5
 	defaultMaxWait        = 10 // seconds
 	defaultDatabase       = "telegraf"
-	defaultUserAgent      = "telegraf"
 )
 
 type HTTPConfig struct {
@@ -82,7 +81,7 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 
 	userAgent := config.UserAgent
 	if userAgent == "" {
-		userAgent = defaultUserAgent
+		userAgent = "Telegraf/" + internal.Version()
 	}
 
 	var headers = make(map[string]string, len(config.Headers)+2)
