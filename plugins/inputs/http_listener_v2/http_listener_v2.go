@@ -54,32 +54,32 @@ const sampleConfig = `
   service_address = ":8080"
 
   ## Path to listen to.
-  path = "/telegraf"
+  # path = "/telegraf"
 
   ## HTTP methods to accept.
-  methods = ["POST", "PUT"]
+  # methods = ["POST", "PUT"]
 
   ## maximum duration before timing out read of the request
-  read_timeout = "10s"
+  # read_timeout = "10s"
   ## maximum duration before timing out write of the response
-  write_timeout = "10s"
+  # write_timeout = "10s"
 
   ## Maximum allowed http request body size in bytes.
   ## 0 means to use the default of 536,870,912 bytes (500 mebibytes)
-  max_body_size = 0
+  # max_body_size = 0
 
   ## Set one or more allowed client CA certificate file names to 
   ## enable mutually authenticated TLS connections
-  tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
   ## Add service certificate and key
-  tls_cert = "/etc/telegraf/cert.pem"
-  tls_key = "/etc/telegraf/key.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
 
   ## Optional username and password to accept for HTTP basic authentication.
   ## You probably want to make sure you have TLS configured above for this.
-  basic_username = "foobar"
-  basic_password = "barfoo"
+  # basic_username = "foobar"
+  # basic_password = "barfoo"
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
