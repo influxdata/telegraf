@@ -1,11 +1,14 @@
 package filecount
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
+	"github.com/alecthomas/units"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/globpath"
@@ -34,10 +37,11 @@ const sampleConfig = `
   ## Only count regular files. Defaults to true.
   regular_only = true
 
-  ## Only count files that are at least this size in bytes. If size is
+  ## Only count files that are at least this size. If size is
   ## a negative number, only count files that are smaller than the
-  ## absolute value of size. Defaults to 0.
-  size = 0
+  ## absolute value of size. Acceptable units are B, KiB, MiB, KB, ...
+  ## Without quotes and units, interpreted as size in bytes.
+  size = "0B"
 
   ## Only count files that have not been touched for at least this
   ## duration. If mtime is negative, only count files that have been
@@ -45,13 +49,17 @@ const sampleConfig = `
   mtime = "0s"
 `
 
+type size struct {
+	Size int64
+}
+
 type FileCount struct {
 	Directory   string // deprecated in 1.9
 	Directories []string
 	Name        string
 	Recursive   bool
 	RegularOnly bool
-	Size        int64
+	Size        size
 	MTime       internal.Duration `toml:"mtime"`
 	fileFilters []fileFilterFunc
 }
@@ -63,6 +71,27 @@ func (_ *FileCount) Description() string {
 }
 
 func (_ *FileCount) SampleConfig() string { return sampleConfig }
+
+func (s *size) UnmarshalTOML(b []byte) error {
+	var err error
+	b = bytes.Trim(b, `'`)
+
+	val, err := strconv.ParseInt(string(b), 10, 64)
+	if err == nil {
+		s.Size = val
+		return nil
+	}
+	uq, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	val, err = units.ParseStrictBytes(uq)
+	if err != nil {
+		return err
+	}
+	s.Size = val
+	return nil
+}
 
 func rejectNilFilters(filters []fileFilterFunc) []fileFilterFunc {
 	filtered := make([]fileFilterFunc, 0, len(filters))
@@ -99,7 +128,7 @@ func (fc *FileCount) regularOnlyFilter() fileFilterFunc {
 }
 
 func (fc *FileCount) sizeFilter() fileFilterFunc {
-	if fc.Size == 0 {
+	if fc.Size.Size == 0 {
 		return nil
 	}
 
@@ -107,10 +136,10 @@ func (fc *FileCount) sizeFilter() fileFilterFunc {
 		if !f.Mode().IsRegular() {
 			return false, nil
 		}
-		if fc.Size < 0 {
-			return f.Size() < -fc.Size, nil
+		if fc.Size.Size < 0 {
+			return f.Size() < -fc.Size.Size, nil
 		}
-		return f.Size() >= fc.Size, nil
+		return f.Size() >= fc.Size.Size, nil
 	}
 }
 
@@ -251,7 +280,7 @@ func NewFileCount() *FileCount {
 		Name:        "*",
 		Recursive:   true,
 		RegularOnly: true,
-		Size:        0,
+		Size:        size{0},
 		MTime:       internal.Duration{Duration: 0},
 		fileFilters: nil,
 	}
