@@ -84,7 +84,7 @@ const sampleConfig = `
   write_timeout = "10s"
 
   ## Maximum allowed http request body size in bytes.
-  ## 0 means to use the default of 536,870,912 bytes (500 mebibytes)
+  ## 0 means to use the default of 524,288,000 bytes (500 mebibytes)
   max_body_size = "500MiB"
 
   ## Maximum line size allowed to be sent in bytes.
