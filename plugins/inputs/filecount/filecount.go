@@ -1,14 +1,11 @@
 package filecount
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
-	"github.com/alecthomas/units"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/globpath"
@@ -49,17 +46,13 @@ const sampleConfig = `
   mtime = "0s"
 `
 
-type size struct {
-	Size int64
-}
-
 type FileCount struct {
 	Directory   string // deprecated in 1.9
 	Directories []string
 	Name        string
 	Recursive   bool
 	RegularOnly bool
-	Size        size
+	Size        internal.Size
 	MTime       internal.Duration `toml:"mtime"`
 	fileFilters []fileFilterFunc
 }
@@ -71,27 +64,6 @@ func (_ *FileCount) Description() string {
 }
 
 func (_ *FileCount) SampleConfig() string { return sampleConfig }
-
-func (s *size) UnmarshalTOML(b []byte) error {
-	var err error
-	b = bytes.Trim(b, `'`)
-
-	val, err := strconv.ParseInt(string(b), 10, 64)
-	if err == nil {
-		s.Size = val
-		return nil
-	}
-	uq, err := strconv.Unquote(string(b))
-	if err != nil {
-		return err
-	}
-	val, err = units.ParseStrictBytes(uq)
-	if err != nil {
-		return err
-	}
-	s.Size = val
-	return nil
-}
 
 func rejectNilFilters(filters []fileFilterFunc) []fileFilterFunc {
 	filtered := make([]fileFilterFunc, 0, len(filters))
@@ -280,7 +252,7 @@ func NewFileCount() *FileCount {
 		Name:        "*",
 		Recursive:   true,
 		RegularOnly: true,
-		Size:        size{0},
+		Size:        internal.Size{Size: 0},
 		MTime:       internal.Duration{Duration: 0},
 		fileFilters: nil,
 	}
