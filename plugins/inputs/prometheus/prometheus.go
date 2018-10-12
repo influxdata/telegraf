@@ -125,7 +125,7 @@ func (p *Prometheus) GetAllURLs() ([]URLAndAddress, error) {
 // Returns one of the errors encountered while gather stats (if any).
 func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	if p.client == nil {
-		client, err := p.createHttpClient()
+		client, err := p.createHTTPClient()
 		if err != nil {
 			return err
 		}
@@ -151,7 +151,7 @@ func (p *Prometheus) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *Prometheus) createHttpClient() (*http.Client, error) {
+func (p *Prometheus) createHTTPClient() (*http.Client, error) {
 	tlsCfg, err := p.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -179,10 +179,18 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		}
 		req, err = http.NewRequest("GET", "http://localhost"+path, nil)
 
-		uClient = p.client
-		((uClient.Transport).(*http.Transport)).Dial = func(network, addr string) (net.Conn, error) {
-			c, err := net.Dial("unix", u.URL.Path)
-			return c, err
+		// ignore error because it's been handled before getting here
+		tlsCfg, _ := p.ClientConfig.TLSConfig()
+		uClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig:   tlsCfg,
+				DisableKeepAlives: true,
+				Dial: func(network, addr string) (net.Conn, error) {
+					c, err := net.Dial("unix", u.URL.Path)
+					return c, err
+				},
+			},
+			Timeout: p.ResponseTimeout.Duration,
 		}
 	} else {
 		if u.URL.Path == "" {
@@ -190,10 +198,10 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		}
 		req, err = http.NewRequest("GET", u.URL.String(), nil)
 	}
-	req.Header.Add("Accept", acceptHeader)
-	var token []byte
-	var resp *http.Response
 
+	req.Header.Add("Accept", acceptHeader)
+
+	var token []byte
 	if p.BearerToken != "" {
 		token, err = ioutil.ReadFile(p.BearerToken)
 		if err != nil {
@@ -202,6 +210,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		req.Header.Set("Authorization", "Bearer "+string(token))
 	}
 
+	var resp *http.Response
 	if u.URL.Scheme != "unix" {
 		resp, err = p.client.Do(req)
 	} else {
@@ -211,6 +220,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		return fmt.Errorf("error making HTTP request to %s: %s", u.URL, err)
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s returned HTTP status %s", u.URL, resp.Status)
 	}
@@ -225,7 +235,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		return fmt.Errorf("error reading metrics for %s: %s",
 			u.URL, err)
 	}
-	// Add (or not) collected metrics
+
 	for _, metric := range metrics {
 		tags := metric.Tags()
 		// strip user and password from URL
