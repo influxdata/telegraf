@@ -15,6 +15,7 @@ type GlobPath struct {
 	path         string
 	hasMeta      bool
 	hasSuperMeta bool
+	rootGlob     string
 	g            glob.Glob
 }
 
@@ -31,6 +32,10 @@ func Compile(path string) (*GlobPath, error) {
 		return &out, nil
 	}
 
+	// find the root elements of the object path, the entry point for recursion
+	// when you have a super-meta in your path (which are :
+	// glob(/your/expression/until/first/star/of/super-meta))
+	out.rootGlob = path[:strings.Index(path, "**")+1]
 	var err error
 	if out.g, err = glob.Compile(path, os.PathSeparator); err != nil {
 		return nil, err
@@ -57,7 +62,7 @@ func (g *GlobPath) Match() map[string]os.FileInfo {
 		}
 		return out
 	}
-	roots, err := findRoots(g.path)
+	roots, err := filepath.Glob(g.rootGlob)
 	if err != nil {
 		return out
 	}
@@ -72,22 +77,6 @@ func (g *GlobPath) Match() map[string]os.FileInfo {
 		filepath.Walk(root, walkfn)
 	}
 	return out
-}
-
-// find the root elements of the object path, the entry point for recursion
-// when you have a super-meta in your path (which are :
-// glob(/your/expression/until/first/star/of/super-meta))
-// ie:
-//   /var/log/telegraf.conf -> /var/log/telegraf.conf
-//   /home/** ->               filepath.Glob(/home/*)
-//   /home/*/** ->             filepath.Glob(/home/*/*)
-//   /lib/share/*/*/**.txt ->  filepath.Glob(/lib/share/*/*/*)
-func findRoots(path string) ([]string, error) {
-	if strings.Index(path, "**") == -1 {
-		return filepath.Glob(path)
-	}
-	rootGlob := path[:strings.Index(path, "**")+1]
-	return filepath.Glob(rootGlob)
 }
 
 // hasMeta reports whether path contains any magic glob characters.

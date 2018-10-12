@@ -39,22 +39,21 @@ func TestCompileAndMatch(t *testing.T) {
 	require.Len(t, matches, 0)
 }
 
-func TestFindRoots(t *testing.T) {
+func TestRootGlob(t *testing.T) {
 	dir := getTestdataDir()
 	tests := []struct {
 		input  string
-		output []string
+		output string
 	}{
-		{dir + "/**", []string{dir + "/test.conf", dir + "/nested1"}},
-		{dir + "/nested?/**", []string{dir + "/nested1/nested2"}},
-		{dir + "/lo*", []string{dir + "/log1.log", dir + "/log2.log"}},
+		{dir + "/**", dir + "/*"},
+		{dir + "/nested?/**", dir + "/nested?/*"},
+		{dir + "/ne**/nest*", dir + "/ne*"},
+		{dir + "/nested?/*", ""},
 	}
 
 	for _, test := range tests {
-		actual, _ := findRoots(test.input)
-		for _, output := range test.output {
-			require.Contains(t, actual, output)
-		}
+		actual, _ := Compile(test.input)
+		require.Equal(t, actual.rootGlob, test.output)
 	}
 }
 
