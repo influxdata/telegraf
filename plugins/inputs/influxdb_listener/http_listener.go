@@ -91,7 +91,7 @@ const sampleConfig = `
   ## 0 means to use the default of 65536 bytes (64 kibibytes)
   max_line_size = 0
 
-  ## Set one or more allowed client CA certificate file names to 
+  ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
   tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
@@ -420,7 +420,14 @@ func getPrecisionMultiplier(precision string) time.Duration {
 }
 
 func init() {
+	// http_listener deprecated in 1.9
 	inputs.Add("http_listener", func() telegraf.Input {
+		return &HTTPListener{
+			ServiceAddress: ":8186",
+			TimeFunc:       time.Now,
+		}
+	})
+	inputs.Add("influxdb_listener", func() telegraf.Input {
 		return &HTTPListener{
 			ServiceAddress: ":8186",
 			TimeFunc:       time.Now,
