@@ -6,7 +6,7 @@ import (
 
 type pool struct {
 	buffers chan []byte
-	size    int
+	size    int64
 
 	created int64
 }
@@ -14,7 +14,7 @@ type pool struct {
 // NewPool returns a new pool object.
 // n is the number of buffers
 // bufSize is the size (in bytes) of each buffer
-func NewPool(n, bufSize int) *pool {
+func NewPool(n, bufSize int64) *pool {
 	return &pool{
 		buffers: make(chan []byte, n),
 		size:    bufSize,
