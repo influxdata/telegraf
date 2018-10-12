@@ -139,6 +139,12 @@ func absDuration(x time.Duration) time.Duration {
 func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, recursive bool) {
 	numFiles := int64(0)
 	walkFn := func(path string, file os.FileInfo, err error) error {
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return err
+		}
 		if path == basedir {
 			return nil
 		}
