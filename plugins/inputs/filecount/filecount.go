@@ -53,6 +53,7 @@ type FileCount struct {
 	Size        int64
 	MTime       internal.Duration `toml:"mtime"`
 	fileFilters []fileFilterFunc
+	globPaths   []globpath.GlobPath
 }
 
 func (_ *FileCount) Description() string {
@@ -145,7 +146,7 @@ func (fc *FileCount) initFileFilters() {
 	fc.fileFilters = rejectNilFilters(filters)
 }
 
-func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob *globpath.GlobPath) (int64, int64) {
+func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpath.GlobPath) (int64, int64) {
 	numFiles, totalSize, nf, ts := int64(0), int64(0), int64(0), int64(0)
 
 	directory, err := os.Open(basedir)
@@ -210,14 +211,12 @@ func (fc *FileCount) filter(file os.FileInfo) (bool, error) {
 }
 
 func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
+	if fc.globPaths == nil {
+		fc.globPaths = fc.getGlobPaths(acc)
+	}
 
-	for _, globDir := range fc.getDirs() {
-		glob, err := globpath.Compile(globDir)
-		if err != nil {
-			acc.AddError(err)
-		} else {
-			fc.count(acc, glob.GetRootDir(), glob)
-		}
+	for _, glob := range fc.globPaths {
+		fc.count(acc, glob.GetRootDir(), glob)
 	}
 
 	return nil
@@ -234,6 +233,20 @@ func (fc *FileCount) getDirs() []string {
 	}
 
 	return dirs
+}
+
+func (fc *FileCount) getGlobPaths(acc telegraf.Accumulator) []globpath.GlobPath {
+	globPaths := []globpath.GlobPath{}
+	for _, directory := range fc.getDirs() {
+		glob, err := globpath.Compile(directory)
+		if err != nil {
+			acc.AddError(err)
+		} else {
+			globPaths = append(globPaths, *glob)
+		}
+	}
+
+	return globPaths
 }
 
 func NewFileCount() *FileCount {
