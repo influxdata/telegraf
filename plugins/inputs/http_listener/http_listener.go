@@ -154,7 +154,7 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 	}
 
 	h.acc = acc
-	h.pool = NewPool(200, h.MaxLineSize.Size)
+	h.pool = NewPool(200, int(h.MaxLineSize.Size))
 
 	tlsConf, err := h.ServerConfig.TLSConfig()
 	if err != nil {
