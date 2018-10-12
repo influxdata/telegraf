@@ -3,7 +3,9 @@ package docker
 import (
 	"context"
 	"crypto/tls"
+	"io/ioutil"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -744,6 +746,72 @@ func TestContainerStateFilter(t *testing.T) {
 
 			err := d.Gather(&acc)
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestContainerName(t *testing.T) {
+	tests := []struct {
+		name       string
+		clientFunc func(host string, tlsConfig *tls.Config) (Client, error)
+		expected   string
+	}{
+		{
+			name: "container stats name is preferred",
+			clientFunc: func(host string, tlsConfig *tls.Config) (Client, error) {
+				client := baseClient
+				client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+					var containers []types.Container
+					containers = append(containers, types.Container{
+						Names: []string{"/logspout/foo"},
+					})
+					return containers, nil
+				}
+				client.ContainerStatsF = func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
+					return types.ContainerStats{
+						Body: ioutil.NopCloser(strings.NewReader(`{"name": "logspout"}`)),
+					}, nil
+				}
+				return &client, nil
+			},
+			expected: "logspout",
+		},
+		{
+			name: "container stats without name uses container list name",
+			clientFunc: func(host string, tlsConfig *tls.Config) (Client, error) {
+				client := baseClient
+				client.ContainerListF = func(context.Context, types.ContainerListOptions) ([]types.Container, error) {
+					var containers []types.Container
+					containers = append(containers, types.Container{
+						Names: []string{"/logspout"},
+					})
+					return containers, nil
+				}
+				client.ContainerStatsF = func(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
+					return types.ContainerStats{
+						Body: ioutil.NopCloser(strings.NewReader(`{}`)),
+					}, nil
+				}
+				return &client, nil
+			},
+			expected: "logspout",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := Docker{
+				newClient: tt.clientFunc,
+			}
+			var acc testutil.Accumulator
+			err := d.Gather(&acc)
+			require.NoError(t, err)
+
+			for _, metric := range acc.Metrics {
+				// This tag is set on all container measurements
+				if metric.Measurement == "docker_container_mem" {
+					require.Equal(t, tt.expected, metric.Tags["container_name"])
+				}
+			}
 		})
 	}
 }
