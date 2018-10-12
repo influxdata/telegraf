@@ -127,6 +127,12 @@ func absDuration(x time.Duration) time.Duration {
 
 func count(basedir string, recursive bool, countFn countFunc) error {
 	walkFn := func(path string, file os.FileInfo, err error) error {
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return err
+		}
 		if path == basedir {
 			return nil
 		}
