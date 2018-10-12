@@ -32,6 +32,8 @@
 
 - [#4844](https://github.com/influxdata/telegraf/pull/4844): Update write path to match updated InfluxDB v2 API.
 - [#4840](https://github.com/influxdata/telegraf/pull/4840): Fix missing timeouts in vsphere input.
+- [#4851](https://github.com/influxdata/telegraf/pull/4851): Support uint fields in aerospike input.
+- [#4854](https://github.com/influxdata/telegraf/pull/4854): Use container name from list if no name in container stats.
 
 ## v1.8.1 [2018-10-03]
 
