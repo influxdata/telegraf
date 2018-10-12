@@ -42,7 +42,7 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP ser
   # user_agent = "telegraf"
 
   ## UDP payload size is the maximum packet size to send.
-  # udp_payload = 512
+  # udp_payload = "512B"
 
   ## Optional TLS Config for use on HTTP connections.
   # tls_ca = "/etc/telegraf/ca.pem"
