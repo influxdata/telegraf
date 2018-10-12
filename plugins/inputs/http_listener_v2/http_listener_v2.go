@@ -41,7 +41,6 @@ type HTTPListenerV2 struct {
 
 	TimeFunc
 
-	mu sync.Mutex
 	wg sync.WaitGroup
 
 	listener net.Listener
@@ -107,9 +106,6 @@ func (h *HTTPListenerV2) SetParser(parser parsers.Parser) {
 
 // Start starts the http listener service.
 func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	if h.MaxBodySize == 0 {
 		h.MaxBodySize = defaultMaxBodySize
 	}
@@ -161,9 +157,6 @@ func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
 
 // Stop cleans up all resources
 func (h *HTTPListenerV2) Stop() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	h.listener.Close()
 	h.wg.Wait()
 
