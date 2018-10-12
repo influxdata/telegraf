@@ -26,7 +26,12 @@ var (
 	TimeoutErr = errors.New("Command timed out.")
 
 	NotImplementedError = errors.New("not implemented yet")
+
+	VersionAlreadySetError = errors.New("version has already been set")
 )
+
+// Set via the main module
+var version string
 
 // Duration just wraps time.Duration
 type Duration struct {
@@ -36,6 +41,20 @@ type Duration struct {
 // Size just wraps an int64
 type Size struct {
 	Size int64
+}
+
+// SetVersion sets the telegraf agent version
+func SetVersion(v string) error {
+	if version != "" {
+		return VersionAlreadySetError
+	}
+	version = v
+	return nil
+}
+
+// Version returns the telegraf agent version
+func Version() string {
+	return version
 }
 
 // UnmarshalTOML parses the duration from the TOML config file

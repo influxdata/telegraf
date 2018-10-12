@@ -40,7 +40,6 @@ const (
 	defaultRequestTimeout = time.Second * 5
 	defaultMaxWait        = 10 // seconds
 	defaultDatabase       = "telegraf"
-	defaultUserAgent      = "telegraf"
 )
 
 type HTTPConfig struct {
@@ -82,7 +81,7 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 
 	userAgent := config.UserAgent
 	if userAgent == "" {
-		userAgent = defaultUserAgent
+		userAgent = "Telegraf/" + internal.Version()
 	}
 
 	var headers = make(map[string]string, len(config.Headers)+2)
@@ -267,9 +266,9 @@ func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 	case "unix":
 		loc.Scheme = "http"
 		loc.Host = "127.0.0.1"
-		loc.Path = "v2/write"
+		loc.Path = "/api/v2/write"
 	case "http", "https":
-		loc.Path = path.Join(loc.Path, "v2/write")
+		loc.Path = path.Join(loc.Path, "/api/v2/write")
 	default:
 		return "", fmt.Errorf("unsupported scheme: %q", loc.Scheme)
 	}
