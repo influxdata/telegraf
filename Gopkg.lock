@@ -130,6 +130,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:e9e3028d555759b840afa38b3667f634495197c4859685f2fd3f251b086f7bda"
+  name = "github.com/amoghe/libipvs"
+  packages = ["."]
+  pruneopts = ""
+  revision = "ec9c6c9b088817d9fc7099cb36b0a84ff5abbf3e"
+
+[[projects]]
+  branch = "master"
   digest = "1:0828d8c0f95689f832cf348fe23827feb7640cd698d612ef59e2f9d041f54c68"
   name = "github.com/apache/thrift"
   packages = ["lib/go/thrift"]
@@ -530,6 +538,14 @@
   pruneopts = ""
   revision = "d6574a5bb1226678d7010325fb6c985db20ee458"
   version = "v0.8.1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:3c591e075048f334a5a1cd94be61360bd9bd2cc5cf832620e1367f04df8d473c"
+  name = "github.com/hkwi/nlgo"
+  packages = ["."]
+  pruneopts = ""
+  revision = "dbae43f4fc47bf868bca3cc3c1ea2954c2059842"
 
 [[projects]]
   digest = "1:a39ef049cdeee03a57b132e7d60e32711b9d949c78458da78e702d9864c54369"
@@ -1312,6 +1328,7 @@
     "github.com/StackExchange/wmi",
     "github.com/aerospike/aerospike-client-go",
     "github.com/amir/raidman",
+    "github.com/amoghe/libipvs",
     "github.com/apache/thrift/lib/go/thrift",
     "github.com/aws/aws-sdk-go/aws",
     "github.com/aws/aws-sdk-go/aws/client",
