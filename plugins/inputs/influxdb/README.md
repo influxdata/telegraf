@@ -25,7 +25,7 @@ InfluxDB-formatted endpoints. See below for more information.
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
+  # InsecureSkipVerify = false
 
   ## http request & header timeout
   timeout = "5s"
