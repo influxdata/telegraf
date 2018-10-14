@@ -102,7 +102,7 @@ var sampleConfig = `
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false
+  # InsecureSkipVerify = false
 
   ## HTTP Proxy override, if unset values the standard proxy environment
   ## variables are consulted to determine which proxy, if any, should be used.
