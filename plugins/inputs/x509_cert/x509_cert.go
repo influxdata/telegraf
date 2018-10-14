@@ -143,11 +143,10 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			"source": location,
 		}
 
-		for _, cert := range certs {
-			fields := getFields(cert, now)
+		// Only extract data from the end-entity certificate (first in the chain)
+		fields := getFields(certs[0], now)
 
-			acc.AddFields("x509_cert", fields, tags)
-		}
+		acc.AddFields("x509_cert", fields, tags)
 	}
 
 	return nil
