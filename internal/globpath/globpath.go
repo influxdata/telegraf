@@ -1,15 +1,12 @@
 package globpath
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/gobwas/glob"
 )
-
-var sepStr = fmt.Sprintf("%v", string(os.PathSeparator))
 
 type GlobPath struct {
 	path         string
