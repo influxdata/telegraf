@@ -105,7 +105,7 @@ func TestMTimeFilter(t *testing.T) {
 
 func getNoFilterFileCount() FileCount {
 	return FileCount{
-		Directories: []string{getTestdataDir() + "/"},
+		Directories: []string{getTestdataDir()},
 		Name:        "*",
 		Recursive:   true,
 		RegularOnly: false,

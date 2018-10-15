@@ -216,10 +216,23 @@ func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 	}
 
 	for _, glob := range fc.globPaths {
-		fc.count(acc, glob.GetRootDir(), glob)
+		for _, dir := range onlyDirectories(glob.GetRoots()) {
+			fc.count(acc, dir, glob)
+		}
 	}
 
 	return nil
+}
+
+func onlyDirectories(directories []string) []string {
+	out := make([]string, 0)
+	for _, path := range directories {
+		info, err := os.Stat(path)
+		if err == nil && info.IsDir() {
+			out = append(out, path)
+		}
+	}
+	return out
 }
 
 func (fc *FileCount) getDirs() []string {
