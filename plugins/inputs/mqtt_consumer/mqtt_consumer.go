@@ -150,6 +150,9 @@ func (m *MQTTConsumer) connect() error {
 		return err
 	}
 
+	//Prevent the mqtt establish the second connection (#4594)
+	m.connected = true
+
 	go m.receiver()
 
 	return nil
