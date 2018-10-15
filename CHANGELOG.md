@@ -35,6 +35,7 @@
 - [#4851](https://github.com/influxdata/telegraf/pull/4851): Support uint fields in aerospike input.
 - [#4854](https://github.com/influxdata/telegraf/pull/4854): Use container name from list if no name in container stats.
 - [#4850](https://github.com/influxdata/telegraf/pull/4850): Prevent panic in filecount input on error in file stat.
+- [#4846](https://github.com/influxdata/telegraf/pull/4846): Fix mqtt_consumer connect and reconnect.
 
 ## v1.8.1 [2018-10-03]
 
