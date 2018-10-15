@@ -27,10 +27,8 @@ const (
 )
 
 const (
-	defaultRequestTimeout = time.Second * 5
-	defaultDatabase       = "telegraf"
-	defaultUserAgent      = "telegraf"
-
+	defaultRequestTimeout          = time.Second * 5
+	defaultDatabase                = "telegraf"
 	errStringDatabaseNotFound      = "database not found"
 	errStringHintedHandoffNotEmpty = "hinted handoff queue not empty"
 	errStringPartialWrite          = "partial write"
@@ -138,7 +136,7 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 
 	userAgent := config.UserAgent
 	if userAgent == "" {
-		userAgent = defaultUserAgent
+		userAgent = "Telegraf/" + internal.Version()
 	}
 
 	var headers = make(map[string]string, len(config.Headers)+1)

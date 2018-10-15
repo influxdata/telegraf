@@ -1,5 +1,17 @@
 ## v1.9 [unreleased]
 
+### Release Notes
+
+- The `http_listener` input plugin has been renamed to `influxdb_listener` and
+  use of the original name is deprecated.  The new name better describes the
+  intended use of the plugin as a InfluxDB relay.  For general purpose
+  transfer of metrics in any format via HTTP, it is recommended to use
+  `http_listener_v2` instead.
+
+### New Inputs
+
+- [http_listener_v2](/plugins/inputs/http_listener_v2/README.md) - Contributed by @jul1u5
+
 ### Features
 
 - [#4686](https://github.com/influxdata/telegraf/pull/4686): Add replace function to strings processor.
@@ -12,6 +24,17 @@
 - [#4752](https://github.com/influxdata/telegraf/pull/4752): Add per-directory file counts in the filecount input.
 - [#4811](https://github.com/influxdata/telegraf/pull/4811): Add windows service name lookup to procstat input.
 - [#4807](https://github.com/influxdata/telegraf/pull/4807): Add entity-body compression to http output.
+- [#4838](https://github.com/influxdata/telegraf/pull/4838): Add telegraf version to User-Agent header.
+
+## v1.8.2 [unreleased]
+
+### Bugfixes
+
+- [#4844](https://github.com/influxdata/telegraf/pull/4844): Update write path to match updated InfluxDB v2 API.
+- [#4840](https://github.com/influxdata/telegraf/pull/4840): Fix missing timeouts in vsphere input.
+- [#4851](https://github.com/influxdata/telegraf/pull/4851): Support uint fields in aerospike input.
+- [#4854](https://github.com/influxdata/telegraf/pull/4854): Use container name from list if no name in container stats.
+- [#4850](https://github.com/influxdata/telegraf/pull/4850): Prevent panic in filecount input on error in file stat.
 
 ## v1.8.1 [2018-10-03]
 
