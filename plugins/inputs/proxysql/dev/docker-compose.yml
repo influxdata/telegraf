@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+  mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: 1
+      MYSQL_USER: proxytest
+      MYSQL_PASSWORD: testpass
+      MYSQL_DATABASE: testdb
+  proxysql:
+    image: proxysql
+    environment:
+      PROXYSQL_MYSQL_HOST: mysql
+      PROXYSQL_MYSQL_USER: proxytest
+      PROXYSQL_MYSQL_PASSWORD: testpass
+      PROXYSQL_MONITOR_USER: proxytest
+      PROXYSQL_MONITOR_PASSWORD: testpass
+    depends_on:
+      - mysql
+    ports:
+      - 6032:6032
+      - 6033:6033
+
+  telegraf:
+    image: glinton/scratch
+    depends_on:
+      - proxysql
+    volumes:
+      - ./telegraf.conf:/telegraf.conf
+      - ../../../../telegraf:/telegraf
+    entrypoint:
+      - /telegraf
+      - --config
+      - /telegraf.conf
