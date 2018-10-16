@@ -105,9 +105,9 @@ var sampleConfig = `
   ##   {KEY_COLUMNS} - comma-separated list of key columns (time + tags)
 
   ## Default template
-  # table_template = "CREATE TABLE {TABLE}({COLUMNS})"
+  # table_template = "CREATE TABLE IF NOT EXISTS {TABLE}({COLUMNS})"
   ## Example for timescaledb
-  # table_template = "CREATE TABLE {TABLE}({COLUMNS}); SELECT create_hypertable({TABLELITERAL},'time',chunk_time_interval := '1 week'::interval);"
+  # table_template = "CREATE TABLE IF NOT EXISTS {TABLE}({COLUMNS}); SELECT create_hypertable({TABLELITERAL},'time',chunk_time_interval := '1 week'::interval,if_not_exists := true);"
 
   ## Use jsonb datatype for tags
   # tags_as_jsonb = true
@@ -386,7 +386,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 							datatype = deriveDatatype(values[i])
 						}
 					}
-					query := "ALTER TABLE %s.%s ADD COLUMN %s %s;"
+					query := "ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS %s %s;"
 					_, err = p.db.Exec(fmt.Sprintf(query, quoteIdent("public"), quoteIdent(tablename), quoteIdent(column), datatype))
 					if err != nil {
 						return err
@@ -406,7 +406,7 @@ func init() {
 
 func newPostgresql() *Postgresql {
 	return &Postgresql{
-		TableTemplate:  "CREATE TABLE {TABLE}({COLUMNS})",
+		TableTemplate:  "CREATE TABLE IF NOT EXISTS {TABLE}({COLUMNS})",
 		TagsAsJsonb:    true,
 		TagTableSuffix: "_tag",
 		FieldsAsJsonb:  true,
