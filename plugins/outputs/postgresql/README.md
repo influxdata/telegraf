@@ -23,9 +23,9 @@ This output plugin writes all metrics to PostgreSQL.
   ##   {KEY_COLUMNS} - comma-separated list of key columns (time + tags)
 
   ## Default template
-  # table_template = "CREATE TABLE {TABLE}({COLUMNS})"
+  # table_template = "CREATE TABLE IF NOT EXISTS {TABLE}({COLUMNS})"
   ## Example for timescaledb
-  # table_template = "CREATE TABLE {TABLE}({COLUMNS}); SELECT create_hypertable({TABLELITERAL},'time',chunk_time_interval := '1 week'::interval);"
+  # table_template = "CREATE TABLE IF NOT EXISTS {TABLE}({COLUMNS}); SELECT create_hypertable({TABLELITERAL},'time',chunk_time_interval := '1 week'::interval, if_not_exists := true);"
 
   ## Use jsonb datatype for tags. Default is true.
   # tags_as_jsonb = true
