@@ -5,6 +5,7 @@ package wireless
 import (
 	"bytes"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"strconv"
@@ -19,6 +20,9 @@ const defaultHostProc = "/proc"
 
 // env host proc variable name
 const envProc = "HOST_PROC"
+
+// length of wireless interface fields
+const interfaceFieldLength = 10
 
 var newLineByte = []byte("\n")
 
@@ -106,7 +110,7 @@ func loadWirelessTable(table []byte) ([]*wirelessInterface, error) {
 		if len(lines[i]) == 0 {
 			continue
 		}
-		values := []int64{}
+		values := make([]int64, 0, interfaceFieldLength)
 		fields := strings.Fields(string(lines[i]))
 		for j := 1; j < len(fields); j = j + 1 {
 			v, err := strconv.ParseInt(strings.Trim(fields[j], "."), 10, 64)
@@ -114,6 +118,10 @@ func loadWirelessTable(table []byte) ([]*wirelessInterface, error) {
 				return nil, err
 			}
 			values = append(values, v)
+		}
+		if len(values) != interfaceFieldLength {
+			log.Printf("E! [input.wireless] invalid length of interface values")
+			continue
 		}
 		w = append(w, &wirelessInterface{
 			Interface: strings.Trim(fields[0], ":"),
