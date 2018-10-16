@@ -11,6 +11,7 @@ Processes can be selected for monitoring using one of several methods:
 - user
 - systemd_unit
 - cgroup
+- win_service
 
 ### Configuration:
 
@@ -29,6 +30,9 @@ Processes can be selected for monitoring using one of several methods:
   # systemd_unit = "nginx.service"
   ## CGroup name or path
   # cgroup = "systemd/system.slice/nginx.service"
+
+  ## Windows service name
+  # win_service = ""
 
   ## override for process_name
   ## This is optional; default is sourced from /proc/<pid>/status
@@ -75,6 +79,7 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - user (when selected)
     - systemd_unit (when defined)
     - cgroup (when defined)
+    - win_service (when defined)
   - fields:
     - cpu_time (int)
     - cpu_time_guest (float)
@@ -139,6 +144,7 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - user (string)
     - systemd_unit (string)
     - cgroup (string)
+    - win_service (string)
   - fields:
     - pid_count (int)
 *NOTE: Resource limit > 2147483647 will be reported as 2147483647.*

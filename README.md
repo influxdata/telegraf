@@ -1,23 +1,19 @@
 # Telegraf [![Circle CI](https://circleci.com/gh/influxdata/telegraf.svg?style=svg)](https://circleci.com/gh/influxdata/telegraf) [![Docker pulls](https://img.shields.io/docker/pulls/library/telegraf.svg)](https://hub.docker.com/_/telegraf/)
 
-Telegraf is an agent written in Go for collecting, processing, aggregating,
-and writing metrics.
+Telegraf is an agent for collecting, processing, aggregating, and writing metrics.
 
 Design goals are to have a minimal memory footprint with a plugin system so
-that developers in the community can easily add support for collecting metrics
-.  For an example configuration referencet from local or remote services.
+that developers in the community can easily add support for collecting
+metrics.
 
-Telegraf is plugin-driven and has the concept of 4 distinct plugins:
+Telegraf is plugin-driven and has the concept of 4 distinct plugin types:
 
 1. [Input Plugins](#input-plugins) collect metrics from the system, services, or 3rd party APIs
 2. [Processor Plugins](#processor-plugins) transform, decorate, and/or filter metrics
 3. [Aggregator Plugins](#aggregator-plugins) create aggregate metrics (e.g. mean, min, max, quantiles, etc.)
 4. [Output Plugins](#output-plugins) write metrics to various destinations
 
-For more information on Processor and Aggregator plugins please [read this](./docs/AGGREGATORS_AND_PROCESSORS.md).
-
-New plugins are designed to be easy to contribute,
-we'll eagerly accept pull
+New plugins are designed to be easy to contribute, we'll eagerly accept pull
 requests and will manage the set of plugins that Telegraf supports.
 
 ## Contributing
@@ -26,7 +22,7 @@ There are many ways to contribute:
 - Fix and [report bugs](https://github.com/influxdata/telegraf/issues/new)
 - [Improve documentation](https://github.com/influxdata/telegraf/issues?q=is%3Aopen+label%3Adocumentation)
 - [Review code and feature proposals](https://github.com/influxdata/telegraf/pulls)
-- Answer questions on github and on the [Community Site](https://community.influxdata.com/)
+- Answer questions and discuss here on github and on the [Community Site](https://community.influxdata.com/)
 - [Contribute plugins](CONTRIBUTING.md)
 
 ## Installation:
@@ -42,7 +38,7 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 Telegraf requires golang version 1.9 or newer, the Makefile requires GNU make.
 
-1. [Install Go](https://golang.org/doc/install) >=1.9
+1. [Install Go](https://golang.org/doc/install) >=1.9 (1.10 recommended)
 2. [Install dep](https://golang.github.io/dep/docs/installation.html) ==v0.5.0
 3. Download Telegraf source:
    ```
@@ -86,44 +82,47 @@ These builds are generated from the master branch:
 See usage with:
 
 ```
-./telegraf --help
+telegraf --help
 ```
 
 #### Generate a telegraf config file:
 
 ```
-./telegraf config > telegraf.conf
+telegraf config > telegraf.conf
 ```
 
 #### Generate config with only cpu input & influxdb output plugins defined:
 
 ```
-./telegraf --input-filter cpu --output-filter influxdb config
+telegraf --input-filter cpu --output-filter influxdb config
 ```
 
 #### Run a single telegraf collection, outputing metrics to stdout:
 
 ```
-./telegraf --config telegraf.conf --test
+telegraf --config telegraf.conf --test
 ```
 
 #### Run telegraf with all plugins defined in config file:
 
 ```
-./telegraf --config telegraf.conf
+telegraf --config telegraf.conf
 ```
 
 #### Run telegraf, enabling the cpu & memory input, and influxdb output plugins:
 
 ```
-./telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
+telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
 ```
 
+## Documentation
 
-## Configuration
+[Latest Release Documentation][release docs].
 
-See the [configuration guide](docs/CONFIGURATION.md) for a rundown of the more advanced
-configuration options.
+For documentation on the latest development code see the [documentation index][devel docs].
+
+[release docs]: https://docs.influxdata.com/telegraf
+[devel docs]: docs
 
 ## Input Plugins
 
@@ -134,6 +133,7 @@ configuration options.
 * [aurora](./plugins/inputs/aurora)
 * [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
+* [beanstalkd](./plugins/inputs/beanstalkd)
 * [bond](./plugins/inputs/bond)
 * [burrow](./plugins/inputs/burrow)
 * [cassandra](./plugins/inputs/cassandra) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
@@ -165,10 +165,14 @@ configuration options.
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
 * [httpjson](./plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
-* [http_listener](./plugins/inputs/http_listener)
+* [http_listener](./plugins/inputs/influxdb_listener) (deprecated, renamed to [influxdb_listener](/plugins/inputs/influxdb_listener))
+* [http_listener_v2](./plugins/inputs/http_listener_v2)
 * [http](./plugins/inputs/http) (generic HTTP plugin, supports using input data formats)
 * [http_response](./plugins/inputs/http_response)
+* [icinga2](./plugins/inputs/icinga2)
 * [influxdb](./plugins/inputs/influxdb)
+* [influxdb_v2](./plugins/inputs/influxdb_v2)
+* [influxdb_listener](./plugins/inputs/influxdb_listener)
 * [internal](./plugins/inputs/internal)
 * [interrupts](./plugins/inputs/interrupts)
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
@@ -181,6 +185,7 @@ configuration options.
 * [kapacitor](./plugins/inputs/kapacitor)
 * [kernel](./plugins/inputs/kernel)
 * [kernel_vmstat](./plugins/inputs/kernel_vmstat)
+* [kibana](./plugins/inputs/kibana)
 * [kubernetes](./plugins/inputs/kubernetes)
 * [leofs](./plugins/inputs/leofs)
 * [linux_sysctl_fs](./plugins/inputs/linux_sysctl_fs)
@@ -241,6 +246,7 @@ configuration options.
 * [sysstat](./plugins/inputs/sysstat)
 * [system](./plugins/inputs/system)
 * [tail](./plugins/inputs/tail)
+* [temp](./plugins/inputs/temp)
 * [tcp_listener](./plugins/inputs/socket_listener)
 * [teamspeak](./plugins/inputs/teamspeak)
 * [tengine](./plugins/inputs/tengine)
@@ -249,6 +255,7 @@ configuration options.
 * [udp_listener](./plugins/inputs/socket_listener)
 * [unbound](./plugins/inputs/unbound)
 * [varnish](./plugins/inputs/varnish)
+* [vsphere](./plugins/inputs/vsphere) VMware vSphere
 * [webhooks](./plugins/inputs/webhooks)
   * [filestack](./plugins/inputs/webhooks/filestack)
   * [github](./plugins/inputs/webhooks/github)
@@ -262,24 +269,37 @@ configuration options.
 * [zipkin](./plugins/inputs/zipkin)
 * [zookeeper](./plugins/inputs/zookeeper)
 
-Telegraf is able to parse the following input data formats into metrics, these
-formats may be used with input plugins supporting the `data_format` option:
+## Parsers
 
-* [InfluxDB Line Protocol](./docs/DATA_FORMATS_INPUT.md#influx)
-* [JSON](./docs/DATA_FORMATS_INPUT.md#json)
-* [Graphite](./docs/DATA_FORMATS_INPUT.md#graphite)
-* [Value](./docs/DATA_FORMATS_INPUT.md#value)
-* [Nagios](./docs/DATA_FORMATS_INPUT.md#nagios)
-* [Collectd](./docs/DATA_FORMATS_INPUT.md#collectd)
-* [Dropwizard](./docs/DATA_FORMATS_INPUT.md#dropwizard)
+- [InfluxDB Line Protocol](/plugins/parsers/influx)
+- [Collectd](/plugins/parsers/collectd)
+- [CSV](/plugins/parsers/csv)
+- [Dropwizard](/plugins/parsers/dropwizard)
+- [Graphite](/plugins/parsers/graphite)
+- [Grok](/plugins/parsers/grok)
+- [JSON](/plugins/parsers/json)
+- [Logfmt](/plugins/parsers/logfmt)
+- [Nagios](/plugins/parsers/nagios)
+- [Value](/plugins/parsers/value), ie: 45 or "booyah"
+- [Wavefront](/plugins/parsers/wavefront)
+
+## Serializers
+
+- [InfluxDB Line Protocol](/plugins/serializers/influx)
+- [JSON](/plugins/serializers/json)
+- [Graphite](/plugins/serializers/graphite)
+- [SplunkMetric](/plugins/serializers/splunkmetric)
 
 ## Processor Plugins
 
 * [converter](./plugins/processors/converter)
+* [enum](./plugins/processors/enum)
 * [override](./plugins/processors/override)
+* [parser](./plugins/processors/parser)
 * [printer](./plugins/processors/printer)
 * [regex](./plugins/processors/regex)
 * [rename](./plugins/processors/rename)
+* [strings](./plugins/processors/strings)
 * [topk](./plugins/processors/topk)
 
 ## Aggregator Plugins
@@ -297,6 +317,7 @@ formats may be used with input plugins supporting the `data_format` option:
 * [application_insights](./plugins/outputs/application_insights)
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
+* [azure_monitor](./plugins/outputs/azure_monitor)
 * [cratedb](./plugins/outputs/cratedb)
 * [datadog](./plugins/outputs/datadog)
 * [discard](./plugins/outputs/discard)

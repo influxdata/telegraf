@@ -2,16 +2,12 @@
 
 
 [[projects]]
-  digest = "1:1acadbbc24182315b628f727b2e9ac653266d1644ca4007e0766c28110afc072"
+  digest = "1:972f38a9c879a4920d1e3a3d3438104b6c06163bfa3e6f4064adb00468d40587"
   name = "cloud.google.com/go"
-  packages = [
-    "compute/metadata",
-    "internal/version",
-    "monitoring/apiv3",
-  ]
+  packages = ["civil"]
   pruneopts = ""
-  revision = "97efc2c9ffd9fe8ef47f7f3203dc60bbca547374"
-  version = "v0.28.0"
+  revision = "c728a003b238b26cef9ab6753a5dc424b331c3ad"
+  version = "v0.27.0"
 
 [[projects]]
   branch = "master"
@@ -42,6 +38,20 @@
   version = "v0.6.0"
 
 [[projects]]
+  digest = "1:5923e22a060ab818a015593422f9e8a35b9d881d4cfcfed0669a82959b11c7ee"
+  name = "github.com/Azure/go-autorest"
+  packages = [
+    "autorest",
+    "autorest/adal",
+    "autorest/azure",
+    "autorest/azure/auth",
+    "autorest/date",
+  ]
+  pruneopts = ""
+  revision = "1f7cd6cfe0adea687ad44a512dfe76140f804318"
+  version = "v10.12.0"
+
+[[projects]]
   branch = "master"
   digest = "1:298712a3ee36b59c3ca91f4183bd75d174d5eaa8b4aed5072831f126e2e752f6"
   name = "github.com/Microsoft/ApplicationInsights-Go"
@@ -61,12 +71,12 @@
   version = "v0.4.9"
 
 [[projects]]
-  digest = "1:9362b2212139b7821f73a86169bf80ce6b0264956f87d82ab3aeedb2b5c08fea"
+  digest = "1:213b41361ad1cb4768add9d26c2e27794c65264eefdb24ed6ea34cdfeeff3f3c"
   name = "github.com/Shopify/sarama"
   packages = ["."]
   pruneopts = ""
-  revision = "35324cf48e33d8260e1c7c18854465a904ade249"
-  version = "v1.17.0"
+  revision = "a6144ae922fd99dd0ea5046c8137acfb7fab0914"
+  version = "v1.18.0"
 
 [[projects]]
   digest = "1:f82b8ac36058904227087141017bb82f4b0fc58272990a4cdae3e2d6d222644e"
@@ -237,12 +247,31 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:7fdc54859cd901c25b9d8db964410a4e0d98fa0dca267fe4cf49c0eede5e06c2"
+  name = "github.com/denisenkom/go-mssqldb"
+  packages = [
+    ".",
+    "internal/cp",
+  ]
+  pruneopts = ""
+  revision = "1eb28afdf9b6e56cf673badd47545f844fe81103"
+
+[[projects]]
   digest = "1:6098222470fe0172157ce9bbef5d2200df4edde17ee649c5d6e48330e4afa4c6"
   name = "github.com/dgrijalva/jwt-go"
   packages = ["."]
   pruneopts = ""
   revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
   version = "v3.2.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:654ac9799e7a8a586d8690bb2229a4f3408bbfe2c5494bf4dfe043053eeb5496"
+  name = "github.com/dimchansky/utfbom"
+  packages = ["."]
+  pruneopts = ""
+  revision = "6c6132ff69f0f6c088739067407b5d32c52e1d0f"
 
 [[projects]]
   digest = "1:522eff2a1f014a64fb403db60fc0110653e4dc5b59779894d208e697b0708ddc"
@@ -457,6 +486,14 @@
   pruneopts = ""
   revision = "317e0006254c44a0ac427cc52a0e083ff0b9622f"
   version = "v2.0.0"
+
+[[projects]]
+  digest = "1:c1d7e883c50a26ea34019320d8ae40fad86c9e5d56e63a1ba2cb618cef43e986"
+  name = "github.com/google/uuid"
+  packages = ["."]
+  pruneopts = ""
+  revision = "064e2069ce9c359c118179501254f67d7d37ba24"
+  version = "0.2"
 
 [[projects]]
   digest = "1:dbbeb8ddb0be949954c8157ee8439c2adfd8dc1c9510eb44a6e58cb68c3dce28"
@@ -960,6 +997,36 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:f9fe29bf856d49f9a51d6001588cb5ee5d65c8a7ff5e8b0dd5423c3a510f0833"
+  name = "github.com/vmware/govmomi"
+  packages = [
+    ".",
+    "find",
+    "list",
+    "nfc",
+    "object",
+    "performance",
+    "property",
+    "session",
+    "simulator",
+    "simulator/esx",
+    "simulator/vpx",
+    "task",
+    "view",
+    "vim25",
+    "vim25/debug",
+    "vim25/methods",
+    "vim25/mo",
+    "vim25/progress",
+    "vim25/soap",
+    "vim25/types",
+    "vim25/xml",
+  ]
+  pruneopts = ""
+  revision = "e3a01f9611c32b2362366434bcd671516e78955d"
+  version = "v0.18.0"
+
+[[projects]]
   branch = "master"
   digest = "1:98ed05e9796df287b90c1d96854e3913c8e349dbc546412d3cabb472ecf4b417"
   name = "github.com/wvanbergen/kafka"
@@ -1030,6 +1097,8 @@
     "ed25519/internal/edwards25519",
     "md4",
     "pbkdf2",
+    "pkcs12",
+    "pkcs12/internal/rc2",
     "ssh/terminal",
   ]
   pruneopts = ""
@@ -1073,6 +1142,8 @@
     "internal",
     "jws",
     "jwt",
+    "clientcredentials",
+    "internal",
   ]
   pruneopts = ""
   revision = "d2e6202438beef2727060aa7cabdd924d92ebfd9"
@@ -1160,6 +1231,13 @@
     "internal/socket",
     "internal/urlfetch",
     "socket",
+    "cloudsql",
+    "internal",
+    "internal/base",
+    "internal/datastore",
+    "internal/log",
+    "internal/remote_api",
+    "internal/urlfetch",
     "urlfetch",
   ]
   pruneopts = ""
@@ -1321,6 +1399,8 @@
     "cloud.google.com/go/monitoring/apiv3",
     "collectd.org/api",
     "collectd.org/network",
+    "github.com/Azure/go-autorest/autorest",
+    "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/Microsoft/ApplicationInsights-Go/appinsights",
     "github.com/Shopify/sarama",
     "github.com/StackExchange/wmi",
@@ -1334,9 +1414,9 @@
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/cloudwatch",
     "github.com/aws/aws-sdk-go/service/kinesis",
-    "github.com/aws/aws-sdk-go/service/sts",
     "github.com/bsm/sarama-cluster",
     "github.com/couchbase/go-couchbase",
+    "github.com/denisenkom/go-mssqldb",
     "github.com/dgrijalva/jwt-go",
     "github.com/docker/docker/api/types",
     "github.com/docker/docker/api/types/container",
@@ -1345,6 +1425,7 @@
     "github.com/docker/docker/api/types/swarm",
     "github.com/docker/docker/client",
     "github.com/eclipse/paho.mqtt.golang",
+    "github.com/go-logfmt/logfmt",
     "github.com/go-redis/redis",
     "github.com/go-sql-driver/mysql",
     "github.com/gobwas/glob",
@@ -1372,6 +1453,7 @@
     "github.com/nsqio/go-nsq",
     "github.com/openzipkin/zipkin-go-opentracing",
     "github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore",
+    "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/client_model/go",
@@ -1392,10 +1474,22 @@
     "github.com/stretchr/testify/require",
     "github.com/tidwall/gjson",
     "github.com/vjeantet/grok",
+    "github.com/vmware/govmomi",
+    "github.com/vmware/govmomi/object",
+    "github.com/vmware/govmomi/performance",
+    "github.com/vmware/govmomi/session",
+    "github.com/vmware/govmomi/simulator",
+    "github.com/vmware/govmomi/view",
+    "github.com/vmware/govmomi/vim25",
+    "github.com/vmware/govmomi/vim25/methods",
+    "github.com/vmware/govmomi/vim25/mo",
+    "github.com/vmware/govmomi/vim25/soap",
+    "github.com/vmware/govmomi/vim25/types",
     "github.com/wvanbergen/kafka/consumergroup",
-    "github.com/zensqlmonitor/go-mssqldb",
     "golang.org/x/net/context",
     "golang.org/x/net/html/charset",
+    "golang.org/x/oauth2",
+    "golang.org/x/oauth2/clientcredentials",
     "golang.org/x/sys/unix",
     "golang.org/x/sys/windows",
     "golang.org/x/sys/windows/svc",
