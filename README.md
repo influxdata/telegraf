@@ -337,6 +337,7 @@ For documentation on the latest development code see the [documentation index][d
 * [riemann](./plugins/outputs/riemann)
 * [riemann_legacy](./plugins/outputs/riemann_legacy)
 * [socket_writer](./plugins/outputs/socket_writer)
+* [stackdriver](./plugins/outputs/stackdriver)
 * [tcp](./plugins/outputs/socket_writer)
 * [udp](./plugins/outputs/socket_writer)
 * [wavefront](./plugins/outputs/wavefront)

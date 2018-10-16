@@ -1,6 +1,6 @@
 ## v1.9 [unreleased]
 
-### Release Notes
+#### Release Notes
 
 - The `http_listener` input plugin has been renamed to `influxdb_listener` and
   use of the original name is deprecated.  The new name better describes the
@@ -8,11 +8,15 @@
   transfer of metrics in any format via HTTP, it is recommended to use
   `http_listener_v2` instead.
 
-### New Inputs
+#### New Inputs
 
 - [http_listener_v2](/plugins/inputs/http_listener_v2/README.md) - Contributed by @jul1u5
 
-### Features
+#### New Outputs
+
+- [stackdriver](/plugins/outputs/stackdriver/README.md) - Contributed by @jamesmaidment
+
+#### Features
 
 - [#4686](https://github.com/influxdata/telegraf/pull/4686): Add replace function to strings processor.
 - [#4754](https://github.com/influxdata/telegraf/pull/4754): Query servers in parallel in dns_query input.
