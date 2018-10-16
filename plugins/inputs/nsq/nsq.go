@@ -52,8 +52,8 @@ var sampleConfig = `
   endpoints            = ["https://localhost:4152"]
   tls_cert             = "/path/to/client-cert.pem"
   tls_key              = "/path/to/client-key.pem"
-  tls_cacert           = "/path/to/ca.pem"
-	insecure_skip_verify = false
+  tls_ca               = "/path/to/ca.pem"
+  insecure_skip_verify = false
 `
 
 const (
