@@ -133,6 +133,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
 				status = ws.ExitStatus()
+				fields["result_code"] = status
 			}
 		}
 
