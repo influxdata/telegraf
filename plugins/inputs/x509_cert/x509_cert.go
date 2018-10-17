@@ -80,7 +80,10 @@ func (c *X509Cert) getCert(location string, timeout time.Duration) ([]*x509.Cert
 		}
 		defer ipConn.Close()
 
-		tlsCfg.ServerName = u.Host
+		if tlsCfg == nil {
+			tlsCfg = &tls.Config{}
+		}
+		tlsCfg.ServerName = u.Hostname()
 		conn := tls.Client(ipConn, tlsCfg)
 		defer conn.Close()
 

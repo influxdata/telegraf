@@ -4,6 +4,8 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -202,4 +204,20 @@ func TestStrings(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGatherCert(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	m := &X509Cert{
+		Sources: []string{"https://www.influxdata.com:443"},
+	}
+
+	var acc testutil.Accumulator
+	err := m.Gather(&acc)
+	require.NoError(t, err)
+
+	assert.True(t, acc.HasMeasurement("x509_cert"))
 }
