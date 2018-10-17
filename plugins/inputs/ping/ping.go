@@ -78,7 +78,6 @@ func (_ *Ping) SampleConfig() string {
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
-
 	var wg sync.WaitGroup
 
 	// Spin off a go routine for each url to ping
@@ -109,6 +108,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 				if exitError, ok := err.(*exec.ExitError); ok {
 					if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
 						status = ws.ExitStatus()
+						fields["result_code"] = status
 					}
 				}
 
