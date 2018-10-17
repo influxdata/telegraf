@@ -131,8 +131,14 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.done = make(chan struct{})
 	l.tailers = make(map[string]*tail.Tail)
 
+	mName := "logparser"
+	if l.GrokConfig.MeasurementName != "" {
+		mName = l.GrokConfig.MeasurementName
+	}
+
 	// Looks for fields which implement LogParser interface
 	config := &parsers.Config{
+		MetricName:             mName,
 		GrokPatterns:           l.GrokConfig.Patterns,
 		GrokNamedPatterns:      l.GrokConfig.NamedPatterns,
 		GrokCustomPatterns:     l.GrokConfig.CustomPatterns,
@@ -260,7 +266,7 @@ func (l *LogParserPlugin) parser() {
 			if m != nil {
 				tags := m.Tags()
 				tags["path"] = entry.path
-				l.acc.AddFields(l.GrokConfig.MeasurementName, m.Fields(), tags, m.Time())
+				l.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
 			}
 		} else {
 			log.Println("E! Error parsing log line: " + err.Error())
