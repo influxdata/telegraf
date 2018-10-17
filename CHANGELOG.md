@@ -30,7 +30,7 @@
 - [#4807](https://github.com/influxdata/telegraf/pull/4807): Add entity-body compression to http output.
 - [#4838](https://github.com/influxdata/telegraf/pull/4838): Add telegraf version to User-Agent header.
 
-## v1.8.2 [unreleased]
+## v1.8.2 [2018-10-17]
 
 ### Bugfixes
 
