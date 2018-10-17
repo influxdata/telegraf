@@ -40,6 +40,10 @@
 - [#4854](https://github.com/influxdata/telegraf/pull/4854): Use container name from list if no name in container stats.
 - [#4850](https://github.com/influxdata/telegraf/pull/4850): Prevent panic in filecount input on error in file stat.
 - [#4846](https://github.com/influxdata/telegraf/pull/4846): Fix mqtt_consumer connect and reconnect.
+- [#4849](https://github.com/influxdata/telegraf/pull/4849): Fix panic in logparser input.
+- [#4869](https://github.com/influxdata/telegraf/pull/4869): Lower authorization errors to debug level in mongodb input.
+- [#4875](https://github.com/influxdata/telegraf/pull/4875): Return correct response code on ping input.
+- [#4874](https://github.com/influxdata/telegraf/pull/4874): Fix segfault in x509_cert input.
 
 ## v1.8.1 [2018-10-03]
 
