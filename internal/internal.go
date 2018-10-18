@@ -3,8 +3,10 @@ package internal
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"crypto/rand"
 	"errors"
+	"io"
 	"log"
 	"math/big"
 	"os"
@@ -22,11 +24,30 @@ var (
 	TimeoutErr = errors.New("Command timed out.")
 
 	NotImplementedError = errors.New("not implemented yet")
+
+	VersionAlreadySetError = errors.New("version has already been set")
 )
+
+// Set via the main module
+var version string
 
 // Duration just wraps time.Duration
 type Duration struct {
 	Duration time.Duration
+}
+
+// SetVersion sets the telegraf agent version
+func SetVersion(v string) error {
+	if version != "" {
+		return VersionAlreadySetError
+	}
+	version = v
+	return nil
+}
+
+// Version returns the telegraf agent version
+func Version() string {
+	return version
 }
 
 // UnmarshalTOML parses the duration from the TOML config file
@@ -153,22 +174,24 @@ func RunTimeout(c *exec.Cmd, timeout time.Duration) error {
 // It assumes the command has already been started.
 // If the command times out, it attempts to kill the process.
 func WaitTimeout(c *exec.Cmd, timeout time.Duration) error {
-	timer := time.NewTimer(timeout)
-	done := make(chan error)
-	go func() { done <- c.Wait() }()
-	select {
-	case err := <-done:
-		timer.Stop()
-		return err
-	case <-timer.C:
-		if err := c.Process.Kill(); err != nil {
+	timer := time.AfterFunc(timeout, func() {
+		err := c.Process.Kill()
+		if err != nil {
 			log.Printf("E! FATAL error killing process: %s", err)
-			return err
+			return
 		}
-		// wait for the command to return after killing it
-		<-done
+	})
+
+	err := c.Wait()
+	isTimeout := timer.Stop()
+
+	if err != nil {
+		return err
+	} else if isTimeout == false {
 		return TimeoutErr
 	}
+
+	return err
 }
 
 // RandomSleep will sleep for a random amount of time up to max.
@@ -205,4 +228,24 @@ func ExitStatus(err error) (int, bool) {
 		}
 	}
 	return 0, false
+}
+
+// CompressWithGzip takes an io.Reader as input and pipes
+// it through a gzip.Writer returning an io.Reader containing
+// the gzipped data.
+// An error is returned if passing data to the gzip.Writer fails
+func CompressWithGzip(data io.Reader) (io.Reader, error) {
+	pipeReader, pipeWriter := io.Pipe()
+	gzipWriter := gzip.NewWriter(pipeWriter)
+
+	var err error
+	go func() {
+		_, err = io.Copy(gzipWriter, data)
+		gzipWriter.Close()
+		// subsequent reads from the read half of the pipe will
+		// return no bytes and the error err, or EOF if err is nil.
+		pipeWriter.CloseWithError(err)
+	}()
+
+	return pipeReader, err
 }

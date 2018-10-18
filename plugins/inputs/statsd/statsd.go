@@ -76,6 +76,8 @@ type Statsd struct {
 	// see https://github.com/influxdata/telegraf/pull/992
 	UDPPacketSize int `toml:"udp_packet_size"`
 
+	ReadBufferSize int `toml:"read_buffer_size"`
+
 	sync.Mutex
 	// Lock for preventing a data race during resource cleanup
 	cleanup sync.Mutex
@@ -214,7 +216,7 @@ const sampleConfig = `
   parse_data_dog_tags = false
 
   ## Statsd data translation templates, more info can be read here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite
+  ## https://github.com/influxdata/telegraf/blob/master/docs/TEMPLATE_PATTERN.md
   # templates = [
   #     "cpu.* measurement*"
   # ]
@@ -410,6 +412,10 @@ func (s *Statsd) udpListen() error {
 		log.Fatalf("ERROR: ListenUDP - %s", err)
 	}
 	log.Println("I! Statsd UDP listener listening on: ", s.UDPlistener.LocalAddr().String())
+
+	if s.ReadBufferSize > 0 {
+		s.UDPlistener.SetReadBuffer(s.ReadBufferSize)
+	}
 
 	buf := make([]byte, UDP_MAX_PACKET_SIZE)
 	for {

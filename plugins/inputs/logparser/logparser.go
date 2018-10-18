@@ -27,7 +27,7 @@ type GrokConfig struct {
 	NamedPatterns      []string
 	CustomPatterns     string
 	CustomPatternFiles []string
-	TimeZone           string
+	Timezone           string
 }
 
 type logEntry struct {
@@ -54,9 +54,6 @@ type LogParserPlugin struct {
 }
 
 const sampleConfig = `
-  ## DEPRECATED: The 'logparser' plugin is deprecated in 1.8.  Please use the
-  ## 'tail' plugin with the grok data_format as a replacement.
-
   ## Log files to parse.
   ## These accept standard unix glob matching rules, but with the addition of
   ## ** as a "super asterisk". ie:
@@ -126,9 +123,6 @@ func (l *LogParserPlugin) Gather(acc telegraf.Accumulator) error {
 
 // Start kicks off collection of stats for the plugin
 func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
-	log.Println("W! DEPRECATED: The logparser plugin is deprecated in 1.8. " +
-		"Please use the tail plugin with the grok data_format as a replacement.")
-
 	l.Lock()
 	defer l.Unlock()
 
@@ -137,13 +131,19 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.done = make(chan struct{})
 	l.tailers = make(map[string]*tail.Tail)
 
+	mName := "logparser"
+	if l.GrokConfig.MeasurementName != "" {
+		mName = l.GrokConfig.MeasurementName
+	}
+
 	// Looks for fields which implement LogParser interface
 	config := &parsers.Config{
+		MetricName:             mName,
 		GrokPatterns:           l.GrokConfig.Patterns,
 		GrokNamedPatterns:      l.GrokConfig.NamedPatterns,
 		GrokCustomPatterns:     l.GrokConfig.CustomPatterns,
 		GrokCustomPatternFiles: l.GrokConfig.CustomPatternFiles,
-		GrokTimeZone:           l.GrokConfig.TimeZone,
+		GrokTimezone:           l.GrokConfig.Timezone,
 		DataFormat:             "grok",
 	}
 
@@ -197,14 +197,12 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 					Poll:      poll,
 					Logger:    tail.DiscardingLogger,
 				})
-
-			//add message saying a new tailer was added for the file
-			log.Printf("D! tail added for file: %v", file)
-
 			if err != nil {
 				l.acc.AddError(err)
 				continue
 			}
+
+			log.Printf("D! [inputs.logparser] tail added for file: %v", file)
 
 			// create a goroutine for each "tailer"
 			l.wg.Add(1)
@@ -268,7 +266,7 @@ func (l *LogParserPlugin) parser() {
 			if m != nil {
 				tags := m.Tags()
 				tags["path"] = entry.path
-				l.acc.AddFields(l.GrokConfig.MeasurementName, m.Fields(), tags, m.Time())
+				l.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
 			}
 		} else {
 			log.Println("E! Error parsing log line: " + err.Error())
