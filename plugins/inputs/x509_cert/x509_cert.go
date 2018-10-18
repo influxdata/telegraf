@@ -149,6 +149,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 
 		for _, cert := range certs {
 			fields := getFields(cert, now)
+			tags["common_name"] = cert.Subject.CommonName
 
 			acc.AddFields("x509_cert", fields, tags)
 		}
