@@ -977,12 +977,14 @@
   revision = "1731857f09b1f38450e2c12409748407822dc6be"
 
 [[projects]]
-  digest = "1:dc7dae4a4ee322cb9852ba4cec6a0a61815cc2870d79b0c25edfb75e3bd618ec"
+  digest = "1:026b6ceaabbacaa147e94a63579efc3d3c73e00c73b67fa5c43ab46191ed04eb"
   name = "github.com/vishvananda/netlink"
-  packages = ["nl"]
+  packages = [
+    ".",
+    "nl",
+  ]
   pruneopts = ""
-  revision = "a2ad57a690f3caf3015351d2d6e1c0b95c349752"
-  version = "v1.0.0"
+  revision = "b2de5d10e38ecce8607e6b438b6d174f389a004e"
 
 [[projects]]
   branch = "master"
@@ -1403,6 +1405,7 @@
     "github.com/stretchr/testify/mock",
     "github.com/stretchr/testify/require",
     "github.com/tidwall/gjson",
+    "github.com/vishvananda/netlink",
     "github.com/vjeantet/grok",
     "github.com/vmware/govmomi",
     "github.com/vmware/govmomi/object",
