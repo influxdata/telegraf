@@ -149,6 +149,7 @@ func (psl *packetSocketListener) listen() {
 			break
 		}
 
+		log.Println("Parsing", string(buf[:n]))
 		metrics, err := psl.Parse(buf[:n])
 		if err != nil {
 			psl.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
@@ -156,6 +157,7 @@ func (psl *packetSocketListener) listen() {
 			continue
 		}
 		for _, m := range metrics {
+			log.Println(m)
 			psl.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 		}
 	}
