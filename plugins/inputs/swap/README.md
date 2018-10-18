@@ -14,14 +14,14 @@ For more information on what swap memory is, read [All about Linux swap space](h
 
 ### Metrics:
 
-| field        | type  | descripton                                                              |
-|--------------|:-----:|-------------------------------------------------------------------------|
-| free         | int   | free swap memory in bytes                                               |
-| total        | int   | total swap memory in bytes                                              |
-| used         | int   | used swap memory in bytes                                               |
-| used_percent | float | percentage of swap memory used                                          |
-| in           | int   | data swapped in since last boot in bytes (calculated from page number)  |
-| out          | int   | data swapped out since last boot in bytes (calculated from page number) |
+- swap
+  - fields:
+    - free (int, bytes): free swap memory
+    - total (int, bytes): total swap memory
+    - used (int, bytes): used swap memory
+    - used_percent (float, percent): percentage of swap memory used
+    - in (int, bytes): data swapped in since last boot calculated from page number
+    - out (int, bytes): data swapped out since last boot calculated from page number
 
 ### Example Output:
 
