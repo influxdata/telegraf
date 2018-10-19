@@ -450,5 +450,5 @@ func getTags(addr *url.URL) map[string]string {
 			port = ""
 		}
 	}
-	return map[string]string{"server": host, "port": port}
+	return map[string]string{"source": host, "port": port}
 }

@@ -463,7 +463,7 @@ func TestGatherProcessesMetrics(t *testing.T) {
 			"respawned": int(0),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 		})
 }
@@ -487,7 +487,7 @@ func TestGatherConnectioinsMetrics(t *testing.T) {
 			"idle":     int64(567),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 		})
 }
@@ -510,7 +510,7 @@ func TestGatherSslMetrics(t *testing.T) {
 			"session_reuses":    int64(15762),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 		})
 }
@@ -532,7 +532,7 @@ func TestGatherHttpRequestsMetrics(t *testing.T) {
 			"current": int64(4),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 		})
 }
@@ -563,7 +563,7 @@ func TestGatherHttpServerZonesMetrics(t *testing.T) {
 			"sent":            int64(20183175459),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 			"zone":   "site1",
 		})
@@ -585,7 +585,7 @@ func TestGatherHttpServerZonesMetrics(t *testing.T) {
 			"sent":            int64(2983241510),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 			"zone":   "site2",
 		})
@@ -608,7 +608,7 @@ func TestHatherHttpUpstreamsMetrics(t *testing.T) {
 			"zombies":   int(0),
 		},
 		map[string]string{
-			"server":   host,
+			"source":   host,
 			"port":     port,
 			"upstream": "trac-backend",
 		})
@@ -621,7 +621,7 @@ func TestHatherHttpUpstreamsMetrics(t *testing.T) {
 			"zombies":   int(0),
 		},
 		map[string]string{
-			"server":   host,
+			"source":   host,
 			"port":     port,
 			"upstream": "hg-backend",
 		})
@@ -654,7 +654,7 @@ func TestHatherHttpUpstreamsMetrics(t *testing.T) {
 			"weight":                   int(5),
 		},
 		map[string]string{
-			"server":           host,
+			"source":           host,
 			"port":             port,
 			"upstream":         "trac-backend",
 			"upstream_address": "10.0.0.1:8088",
@@ -687,7 +687,7 @@ func TestHatherHttpUpstreamsMetrics(t *testing.T) {
 			"weight":                   int(1),
 		},
 		map[string]string{
-			"server":           host,
+			"source":           host,
 			"port":             port,
 			"upstream":         "trac-backend",
 			"upstream_address": "10.0.0.1:8089",
@@ -722,7 +722,7 @@ func TestHatherHttpUpstreamsMetrics(t *testing.T) {
 			"weight":                   int(5),
 		},
 		map[string]string{
-			"server":           host,
+			"source":           host,
 			"port":             port,
 			"upstream":         "hg-backend",
 			"upstream_address": "10.0.0.1:8088",
@@ -755,7 +755,7 @@ func TestHatherHttpUpstreamsMetrics(t *testing.T) {
 			"weight":                   int(1),
 		},
 		map[string]string{
-			"server":           host,
+			"source":           host,
 			"port":             port,
 			"upstream":         "hg-backend",
 			"upstream_address": "10.0.0.1:8089",
@@ -801,7 +801,7 @@ func TestGatherHttpCachesMetrics(t *testing.T) {
 			"updating_responses":        int64(0),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 			"cache":  "http-cache",
 		})
@@ -835,7 +835,7 @@ func TestGatherHttpCachesMetrics(t *testing.T) {
 			"updating_responses":        int64(0),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 			"cache":  "frontend-cache",
 		})
@@ -857,7 +857,7 @@ func TestGatherStreamUpstreams(t *testing.T) {
 			"zombies": int(0),
 		},
 		map[string]string{
-			"server":   host,
+			"source":   host,
 			"port":     port,
 			"upstream": "mysql_backends",
 		})
@@ -869,7 +869,7 @@ func TestGatherStreamUpstreams(t *testing.T) {
 			"zombies": int(0),
 		},
 		map[string]string{
-			"server":   host,
+			"source":   host,
 			"port":     port,
 			"upstream": "dns",
 		})
@@ -894,7 +894,7 @@ func TestGatherStreamUpstreams(t *testing.T) {
 			"weight":                   int(5),
 		},
 		map[string]string{
-			"server":           host,
+			"source":           host,
 			"port":             port,
 			"upstream":         "mysql_backends",
 			"upstream_address": "10.0.0.1:12345",
@@ -921,7 +921,7 @@ func TestGatherStreamUpstreams(t *testing.T) {
 			"weight":                   int(1),
 		},
 		map[string]string{
-			"server":           host,
+			"source":           host,
 			"port":             port,
 			"upstream":         "mysql_backends",
 			"upstream_address": "10.0.0.1:12346",
@@ -948,7 +948,7 @@ func TestGatherStreamUpstreams(t *testing.T) {
 			"weight":                   int(5),
 		},
 		map[string]string{
-			"server":           host,
+			"source":           host,
 			"port":             port,
 			"upstream":         "dns",
 			"upstream_address": "10.0.0.1:12347",
@@ -975,7 +975,7 @@ func TestGatherStreamUpstreams(t *testing.T) {
 			"weight":                   int(1),
 		},
 		map[string]string{
-			"server":           host,
+			"source":           host,
 			"port":             port,
 			"upstream":         "dns",
 			"upstream_address": "10.0.0.1:12348",
@@ -1003,7 +1003,7 @@ func TestGatherStreamServerZonesMatrics(t *testing.T) {
 			"sent":        int64(3879346317),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 			"zone":   "mysql-frontend",
 		})
@@ -1018,7 +1018,7 @@ func TestGatherStreamServerZonesMatrics(t *testing.T) {
 			"sent":        int64(20489184),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 			"zone":   "dns",
 		})
