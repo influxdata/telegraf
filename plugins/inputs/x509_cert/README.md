@@ -27,14 +27,19 @@ file or network connection.
 
 ### Metrics
 
-- `x509_cert`
+- x509_cert
   - tags:
-    - `source` - source of the certificate
+    - source - source of the certificate
+    - organization
+    - organizational_unit
+    - country
+    - province
+    - locality
   - fields:
-    - `expiry` (int, seconds)
-    - `age` (int, seconds)
-    - `startdate` (int, seconds)
-    - `enddate` (int, seconds)
+    - expiry (int, seconds)
+    - age (int, seconds)
+    - startdate (int, seconds)
+    - enddate (int, seconds)
 
 
 ### Example output
