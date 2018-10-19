@@ -30,6 +30,7 @@
 - [#4807](https://github.com/influxdata/telegraf/pull/4807): Add entity-body compression to http output.
 - [#4838](https://github.com/influxdata/telegraf/pull/4838): Add telegraf version to User-Agent header.
 - [#4864](https://github.com/influxdata/telegraf/pull/4864): Use DescribeStreamSummary in place of ListStreams in kinesis output.
+- [#4852](https://github.com/influxdata/telegraf/pull/4852): Add ability to specify bytes options as strings with units.
 
 ## v1.8.3 [unreleased]
 
