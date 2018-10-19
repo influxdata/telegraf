@@ -209,7 +209,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	// Add the metrics received to our internal cache
 	for _, m := range in {
 
-		// Check if the metric has any of the fields over wich we are aggregating
+		// Check if the metric has any of the fields over which we are aggregating
 		hasField := false
 		for _, f := range t.Fields {
 			if m.HasField(f) {
@@ -279,7 +279,7 @@ func (t *TopK) push() []telegraf.Metric {
 		// Sort the aggregations
 		sortMetrics(aggregations, field, t.Bottomk)
 
-		// Create a one dimentional list with the top K metrics of each key
+		// Create a one dimensional list with the top K metrics of each key
 		for i, ag := range aggregations[0:min(t.K, len(aggregations))] {
 
 			// Check whether of not we need to add fields of tags to the selected metrics

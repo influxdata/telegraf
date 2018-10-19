@@ -33,7 +33,7 @@ func (pg *NativeFinder) Pattern(pattern string) ([]PID, error) {
 	return pids, err
 }
 
-//FullPattern matches on the command line when the proccess was executed
+//FullPattern matches on the command line when the process was executed
 func (pg *NativeFinder) FullPattern(pattern string) ([]PID, error) {
 	var pids []PID
 	regxPattern, err := regexp.Compile(pattern)

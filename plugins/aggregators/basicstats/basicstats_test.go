@@ -291,7 +291,7 @@ func TestBasicStatsWithOnlySum(t *testing.T) {
 }
 
 // Verify that sum doesn't suffer from floating point errors.  Early
-// implementations of sum were calulated from mean and count, which
+// implementations of sum were calculated from mean and count, which
 // e.g. summed "1, 1, 5, 1" as "7.999999..." instead of 8.
 func TestBasicStatsWithOnlySumFloatingPointErrata(t *testing.T) {
 
@@ -509,7 +509,7 @@ func TestBasicStatsWithUnknownStat(t *testing.T) {
 }
 
 // Test that if Stats isn't supplied, then we only do count, min, max, mean,
-// stdev, and s2.  We purposely exclude sum for backwards compatability,
+// stdev, and s2.  We purposely exclude sum for backwards compatibility,
 // otherwise user's working systems will suddenly (and surprisingly) start
 // capturing sum without their input.
 func TestBasicStatsWithDefaultStats(t *testing.T) {

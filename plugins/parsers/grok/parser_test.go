@@ -957,7 +957,7 @@ func TestReplaceTimestampComma(t *testing.T) {
 	require.Equal(t, 2018, m.Time().Year())
 	require.Equal(t, 13, m.Time().Hour())
 	require.Equal(t, 34, m.Time().Second())
-	//Convert Nanosecond to milisecond for compare
+	// Convert nanosecond to millisecond for compare
 	require.Equal(t, 555, m.Time().Nanosecond()/1000000)
 }
 
