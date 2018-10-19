@@ -1,6 +1,7 @@
 package amqp_consumer
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -9,13 +10,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streadway/amqp"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/streadway/amqp"
 )
+
+type empty struct{}
+type semaphore chan empty
 
 // AMQPConsumer is the top level struct for this plugin
 type AMQPConsumer struct {
@@ -44,9 +47,12 @@ type AMQPConsumer struct {
 	AuthMethod string
 	tls.ClientConfig
 
+	deliveries map[telegraf.TrackingID]amqp.Delivery
+
 	parser parsers.Parser
 	conn   *amqp.Connection
 	wg     *sync.WaitGroup
+	cancel context.CancelFunc
 }
 
 type externalAuth struct{}
@@ -185,9 +191,15 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	a.cancel = cancel
+
 	a.wg = &sync.WaitGroup{}
 	a.wg.Add(1)
-	go a.process(msgs, acc)
+	go func() {
+		defer a.wg.Done()
+		a.process(ctx, msgs, acc)
+	}()
 
 	go func() {
 		for {
@@ -196,7 +208,7 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 				break
 			}
 
-			log.Printf("I! AMQP consumer connection closed: %s; trying to reconnect", err)
+			log.Printf("I! [inputs.amqp_consumer] connection closed: %s; trying to reconnect", err)
 			for {
 				msgs, err := a.connect(amqpConf)
 				if err != nil {
@@ -206,7 +218,10 @@ func (a *AMQPConsumer) Start(acc telegraf.Accumulator) error {
 				}
 
 				a.wg.Add(1)
-				go a.process(msgs, acc)
+				go func() {
+					defer a.wg.Done()
+					a.process(ctx, msgs, acc)
+				}()
 				break
 			}
 		}
@@ -224,14 +239,14 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 	p := rand.Perm(len(brokers))
 	for _, n := range p {
 		broker := brokers[n]
-		log.Printf("D! [amqp_consumer] connecting to %q", broker)
+		log.Printf("D! [inputs.amqp_consumer] connecting to %q", broker)
 		conn, err := amqp.DialConfig(broker, *amqpConf)
 		if err == nil {
 			a.conn = conn
-			log.Printf("D! [amqp_consumer] connected to %q", broker)
+			log.Printf("D! [inputs.amqp_consumer] connected to %q", broker)
 			break
 		}
-		log.Printf("D! [amqp_consumer] error connecting to %q", broker)
+		log.Printf("D! [inputs.amqp_consumer] error connecting to %q", broker)
 	}
 
 	if a.conn == nil {
@@ -320,7 +335,6 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		return nil, fmt.Errorf("Failed establishing connection to queue: %s", err)
 	}
 
-	log.Println("I! Started AMQP consumer")
 	return msgs, err
 }
 
@@ -361,31 +375,81 @@ func declareExchange(
 }
 
 // Read messages from queue and add them to the Accumulator
-func (a *AMQPConsumer) process(msgs <-chan amqp.Delivery, acc telegraf.Accumulator) {
-	defer a.wg.Done()
-	for d := range msgs {
-		metrics, err := a.parser.Parse(d.Body)
-		if err != nil {
-			log.Printf("E! %v: error parsing metric - %v", err, string(d.Body))
-		} else {
-			for _, m := range metrics {
-				acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+func (a *AMQPConsumer) process(ctx context.Context, msgs <-chan amqp.Delivery, ac telegraf.Accumulator) {
+	a.deliveries = make(map[telegraf.TrackingID]amqp.Delivery)
+
+	acc := ac.WithTracking(a.PrefetchCount)
+	sem := make(semaphore, a.PrefetchCount)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case res := <-acc.Delivered():
+			<-sem
+			a.onDelivery(res)
+		case sem <- empty{}:
+			select {
+			case <-ctx.Done():
+				return
+			case track := <-acc.Delivered():
+				<-sem
+				<-sem
+				a.onDelivery(track)
+			case d, ok := <-msgs:
+				if !ok {
+					return
+				}
+				a.onMessage(acc, d)
 			}
 		}
-
-		d.Ack(false)
 	}
-	log.Printf("I! AMQP consumer queue closed")
+}
+
+func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delivery) {
+	metrics, err := a.parser.Parse(d.Body)
+	if err != nil {
+		log.Printf("E! [inputs.amqp_consumer] Parsing: %v", err)
+		return
+	}
+
+	id := acc.AddTrackingMetricGroup(metrics)
+	a.deliveries[id] = d
+}
+
+func (a *AMQPConsumer) onDelivery(track telegraf.DeliveryInfo) {
+	delivery, ok := a.deliveries[track.ID()]
+	if !ok {
+		log.Printf("E! [inputs.amqp_consumer] Could not mark message delivered: %d", track.ID())
+	}
+
+	if track.Rejected() == 0 {
+		err := delivery.Ack(false)
+		if err != nil {
+			log.Printf("E! [inputs.amqp_consumer] Unable to ack written delivery: %d: %v",
+				delivery.DeliveryTag, err)
+			a.conn.Close()
+		}
+	} else {
+		err := delivery.Reject(false)
+		if err != nil {
+			log.Printf("E! [inputs.amqp_consumer] Unable to reject failed delivery: %d: %v",
+				delivery.DeliveryTag, err)
+			a.conn.Close()
+		}
+	}
+
+	delete(a.deliveries, track.ID())
 }
 
 func (a *AMQPConsumer) Stop() {
+	a.cancel()
+	a.wg.Wait()
 	err := a.conn.Close()
 	if err != nil && err != amqp.ErrClosed {
-		log.Printf("E! Error closing AMQP connection: %s", err)
+		log.Printf("E! [inputs.amqp_consumer] Error closing AMQP connection: %s", err)
 		return
 	}
-	a.wg.Wait()
-	log.Println("I! Stopped AMQP service")
 }
 
 func init() {
