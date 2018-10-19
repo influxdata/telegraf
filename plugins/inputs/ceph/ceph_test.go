@@ -81,7 +81,7 @@ func TestGather(t *testing.T) {
 	}()
 
 	findSockets = func(c *Ceph) ([]*socket, error) {
-		return []*socket{&socket{"osd.1", typeOsd, ""}}, nil
+		return []*socket{{"osd.1", typeOsd, ""}}, nil
 	}
 
 	perfDump = func(binary string, s *socket) (string, error) {
@@ -190,17 +190,17 @@ type SockTest struct {
 }
 
 var sockTestParams = []*SockTest{
-	&SockTest{
+	{
 		osds: 2,
 		mons: 2,
 	},
-	&SockTest{
+	{
 		mons: 1,
 	},
-	&SockTest{
+	{
 		osds: 1,
 	},
-	&SockTest{},
+	{},
 }
 
 var monPerfDump = `

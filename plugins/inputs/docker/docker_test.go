@@ -678,35 +678,35 @@ func TestContainerStateFilter(t *testing.T) {
 		{
 			name: "default",
 			expected: map[string][]string{
-				"status": []string{"running"},
+				"status": {"running"},
 			},
 		},
 		{
 			name:    "include running",
 			include: []string{"running"},
 			expected: map[string][]string{
-				"status": []string{"running"},
+				"status": {"running"},
 			},
 		},
 		{
 			name:    "include glob",
 			include: []string{"r*"},
 			expected: map[string][]string{
-				"status": []string{"restarting", "running", "removing"},
+				"status": {"restarting", "running", "removing"},
 			},
 		},
 		{
 			name:    "include all",
 			include: []string{"*"},
 			expected: map[string][]string{
-				"status": []string{"created", "restarting", "running", "removing", "paused", "exited", "dead"},
+				"status": {"created", "restarting", "running", "removing", "paused", "exited", "dead"},
 			},
 		},
 		{
 			name:    "exclude all",
 			exclude: []string{"*"},
 			expected: map[string][]string{
-				"status": []string{},
+				"status": {},
 			},
 		},
 		{
@@ -714,7 +714,7 @@ func TestContainerStateFilter(t *testing.T) {
 			include: []string{"*"},
 			exclude: []string{"exited"},
 			expected: map[string][]string{
-				"status": []string{"created", "restarting", "running", "removing", "paused", "dead"},
+				"status": {"created", "restarting", "running", "removing", "paused", "dead"},
 			},
 		},
 	}
