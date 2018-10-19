@@ -1,3 +1,7 @@
+## v1.8.3 [unreleased]
+
+- [#4873](https://github.com/influxdata/telegraf/pull/4873): Add DN attributes as tags in x509_cert input to avoid series overwrite.
+
 ## v1.8.2 [2018-10-17]
 
 ### Bugfixes
