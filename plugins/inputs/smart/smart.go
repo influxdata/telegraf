@@ -136,7 +136,7 @@ func (m *Smart) scan() ([]string, error) {
 
 	devices := []string{}
 	for _, line := range strings.Split(string(out), "\n") {
-		dev := strings.Split(line, " ")
+		dev := strings.Split(line, "#")
 		if len(dev) > 1 && !excludedDev(m.Excludes, strings.TrimSpace(dev[0])) {
 			devices = append(devices, strings.TrimSpace(dev[0]))
 		}
@@ -198,8 +198,12 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, smartctl, no
 	}
 
 	device_tags := map[string]string{}
-	device_node := strings.Split(device, " ")[0]
-	device_tags["device"] = path.Base(device_node)
+	device_node := strings.SplitN(device, " ", 2)
+	if device_node[1] == "" {
+		device_tags["device"] = path.Base(device_node[0])
+	} else {
+		device_tags["device"] = path.Base(device_node[0]) + " " + device_node[1]
+	}
 	device_fields := make(map[string]interface{})
 	device_fields["exit_status"] = exitStatus
 
