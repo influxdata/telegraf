@@ -88,6 +88,7 @@ const sampleConfig = `
 
     ## Custom patterns can also be defined here. Put one pattern per line.
     custom_patterns = '''
+    '''
 
     ## Timezone allows you to provide an override for timestamps that
     ## don't already include an offset
@@ -98,8 +99,7 @@ const sampleConfig = `
     ##   1. Local             -- interpret based on machine localtime
     ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
     ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
-    timezone = "Canada/Eastern"
-    '''
+    # timezone = "Canada/Eastern"
 `
 
 // SampleConfig returns the sample configuration for the plugin
