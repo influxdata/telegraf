@@ -1,55 +1,54 @@
 package kafka_consumer
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
 	"sync"
 
+	"github.com/Shopify/sarama"
+	cluster "github.com/bsm/sarama-cluster"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-
-	"github.com/Shopify/sarama"
-	cluster "github.com/bsm/sarama-cluster"
 )
 
+const (
+	defaultMaxUnmarkedMessages = 1000
+)
+
+type empty struct{}
+type semaphore chan empty
+
+type Consumer interface {
+	Errors() <-chan error
+	Messages() <-chan *sarama.ConsumerMessage
+	MarkOffset(msg *sarama.ConsumerMessage, metadata string)
+	Close() error
+}
+
 type Kafka struct {
-	ConsumerGroup string
-	ClientID      string `toml:"client_id"`
-	Topics        []string
-	Brokers       []string
-	MaxMessageLen int
-	Version       string `toml:"version"`
-
-	Cluster *cluster.Consumer
-
+	ConsumerGroup       string   `toml:"consumer_group"`
+	ClientID            string   `toml:"client_id"`
+	Topics              []string `toml:"topics"`
+	Brokers             []string `toml:"brokers"`
+	MaxMessageLen       int      `toml:"max_message_len"`
+	Version             string   `toml:"version"`
+	MaxUnmarkedMessages int      `toml:"max_unmarked_messages"`
+	Offset              string   `toml:"offset"`
+	SASLUsername        string   `toml:"sasl_username"`
+	SASLPassword        string   `toml:"sasl_password"`
 	tls.ClientConfig
 
-	// SASL Username
-	SASLUsername string `toml:"sasl_username"`
-	// SASL Password
-	SASLPassword string `toml:"sasl_password"`
+	cluster Consumer
+	parser  parsers.Parser
+	wg      *sync.WaitGroup
+	cancel  context.CancelFunc
 
-	// Legacy metric buffer support
-	MetricBuffer int
-	// TODO remove PointBuffer, legacy support
-	PointBuffer int
-
-	Offset string
-	parser parsers.Parser
-
-	sync.Mutex
-
-	// channel for all incoming kafka messages
-	in <-chan *sarama.ConsumerMessage
-	// channel for all kafka consumer errors
-	errs <-chan error
-	done chan struct{}
-
-	// keep the accumulator internally:
-	acc telegraf.Accumulator
+	// Unconfirmed messages
+	messages map[telegraf.TrackingID]*sarama.ConsumerMessage
 
 	// doNotCommitMsgs tells the parser not to call CommitUpTo on the consumer
 	// this is mostly for test purposes, but there may be a use-case for it later.
@@ -111,11 +110,7 @@ func (k *Kafka) SetParser(parser parsers.Parser) {
 }
 
 func (k *Kafka) Start(acc telegraf.Accumulator) error {
-	k.Lock()
-	defer k.Unlock()
 	var clusterErr error
-
-	k.acc = acc
 
 	config := cluster.NewConfig()
 
@@ -159,13 +154,13 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 	case "newest":
 		config.Consumer.Offsets.Initial = sarama.OffsetNewest
 	default:
-		log.Printf("I! WARNING: Kafka consumer invalid offset '%s', using 'oldest'\n",
+		log.Printf("I! WARNING: Kafka consumer invalid offset '%s', using 'oldest'",
 			k.Offset)
 		config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	}
 
-	if k.Cluster == nil {
-		k.Cluster, clusterErr = cluster.NewConsumer(
+	if k.cluster == nil {
+		k.cluster, clusterErr = cluster.NewConsumer(
 			k.Brokers,
 			k.ConsumerGroup,
 			k.Topics,
@@ -173,67 +168,110 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 		)
 
 		if clusterErr != nil {
-			log.Printf("E! Error when creating Kafka Consumer, brokers: %v, topics: %v\n",
+			log.Printf("E! Error when creating Kafka Consumer, brokers: %v, topics: %v",
 				k.Brokers, k.Topics)
 			return clusterErr
 		}
-
-		// Setup message and error channels
-		k.in = k.Cluster.Messages()
-		k.errs = k.Cluster.Errors()
 	}
 
-	k.done = make(chan struct{})
-	// Start the kafka message reader
-	go k.receiver()
-	log.Printf("I! Started the kafka consumer service, brokers: %v, topics: %v\n",
+	ctx, cancel := context.WithCancel(context.Background())
+	k.cancel = cancel
+
+	// Start consumer goroutine
+	k.wg = &sync.WaitGroup{}
+	k.wg.Add(1)
+	go func() {
+		defer k.wg.Done()
+		k.receiver(ctx, acc)
+	}()
+
+	log.Printf("I! Started the kafka consumer service, brokers: %v, topics: %v",
 		k.Brokers, k.Topics)
 	return nil
 }
 
 // receiver() reads all incoming messages from the consumer, and parses them into
 // influxdb metric points.
-func (k *Kafka) receiver() {
+func (k *Kafka) receiver(ctx context.Context, ac telegraf.Accumulator) {
+	k.messages = make(map[telegraf.TrackingID]*sarama.ConsumerMessage)
+
+	acc := ac.WithTracking(k.MaxUnmarkedMessages)
+	sem := make(semaphore, k.MaxUnmarkedMessages)
+
 	for {
 		select {
-		case <-k.done:
+		case <-ctx.Done():
 			return
-		case err := <-k.errs:
-			if err != nil {
-				k.acc.AddError(fmt.Errorf("Consumer Error: %s\n", err))
-			}
-		case msg := <-k.in:
-			if k.MaxMessageLen != 0 && len(msg.Value) > k.MaxMessageLen {
-				k.acc.AddError(fmt.Errorf("Message longer than max_message_len (%d > %d)",
-					len(msg.Value), k.MaxMessageLen))
-			} else {
-				metrics, err := k.parser.Parse(msg.Value)
+		case track := <-acc.Delivered():
+			<-sem
+			k.onDelivery(track)
+		case err := <-k.cluster.Errors():
+			acc.AddError(err)
+		case sem <- empty{}:
+			select {
+			case <-ctx.Done():
+				return
+			case track := <-acc.Delivered():
+				// Once for the delivered message, once to leave the case
+				<-sem
+				<-sem
+				k.onDelivery(track)
+			case err := <-k.cluster.Errors():
+				<-sem
+				acc.AddError(err)
+			case msg := <-k.cluster.Messages():
+				err := k.onMessage(acc, msg)
 				if err != nil {
-					k.acc.AddError(fmt.Errorf("Message Parse Error\nmessage: %s\nerror: %s",
-						string(msg.Value), err.Error()))
+					acc.AddError(err)
+					<-sem
 				}
-				for _, metric := range metrics {
-					k.acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
-				}
-			}
-
-			if !k.doNotCommitMsgs {
-				// TODO(cam) this locking can be removed if this PR gets merged:
-				// https://github.com/wvanbergen/kafka/pull/84
-				k.Lock()
-				k.Cluster.MarkOffset(msg, "")
-				k.Unlock()
 			}
 		}
 	}
 }
 
+func (k *Kafka) markOffset(msg *sarama.ConsumerMessage) {
+	if !k.doNotCommitMsgs {
+		k.cluster.MarkOffset(msg, "")
+	}
+}
+
+func (k *Kafka) onMessage(acc telegraf.TrackingAccumulator, msg *sarama.ConsumerMessage) error {
+	if k.MaxMessageLen != 0 && len(msg.Value) > k.MaxMessageLen {
+		k.markOffset(msg)
+		return fmt.Errorf("Message longer than max_message_len (%d > %d)",
+			len(msg.Value), k.MaxMessageLen)
+	}
+
+	metrics, err := k.parser.Parse(msg.Value)
+	if err != nil {
+		return err
+	}
+
+	id := acc.AddTrackingMetricGroup(metrics)
+	k.messages[id] = msg
+
+	return nil
+}
+
+func (k *Kafka) onDelivery(track telegraf.DeliveryInfo) {
+	msg, ok := k.messages[track.ID()]
+	if !ok {
+		log.Printf("E! [inputs.kafka_consumer] Could not mark message delivered: %d", track.ID())
+	}
+
+	if track.Rejected() == 0 {
+		k.markOffset(msg)
+	}
+	delete(k.messages, track.ID())
+}
+
 func (k *Kafka) Stop() {
-	k.Lock()
-	defer k.Unlock()
-	close(k.done)
-	if err := k.Cluster.Close(); err != nil {
-		k.acc.AddError(fmt.Errorf("Error closing consumer: %s\n", err.Error()))
+	k.cancel()
+	k.wg.Wait()
+
+	if err := k.cluster.Close(); err != nil {
+		log.Printf("E! [inputs.kafka_consumer] Error closing consumer: %v", err)
 	}
 }
 
@@ -243,6 +281,8 @@ func (k *Kafka) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("kafka_consumer", func() telegraf.Input {
-		return &Kafka{}
+		return &Kafka{
+			MaxUnmarkedMessages: defaultMaxUnmarkedMessages,
+		}
 	})
 }
