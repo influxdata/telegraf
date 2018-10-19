@@ -41,7 +41,7 @@ type InfluxDB struct {
 	RetentionPolicy      string
 	WriteConsistency     string
 	Timeout              internal.Duration
-	UDPPayload           int               `toml:"udp_payload"`
+	UDPPayload           internal.Size     `toml:"udp_payload"`
 	HTTPProxy            string            `toml:"http_proxy"`
 	HTTPHeaders          map[string]string `toml:"http_headers"`
 	ContentEncoding      string            `toml:"content_encoding"`
@@ -95,7 +95,7 @@ var sampleConfig = `
   # user_agent = "telegraf"
 
   ## UDP payload size is the maximum packet size to send.
-  # udp_payload = 512
+  # udp_payload = "512B"
 
   ## Optional TLS Config for use on HTTP connections.
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -225,7 +225,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 func (i *InfluxDB) udpClient(url *url.URL) (Client, error) {
 	config := &UDPConfig{
 		URL:            url,
-		MaxPayloadSize: i.UDPPayload,
+		MaxPayloadSize: int(i.UDPPayload.Size),
 		Serializer:     i.serializer,
 	}
 
