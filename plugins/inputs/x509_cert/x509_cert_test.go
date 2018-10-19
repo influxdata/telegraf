@@ -184,6 +184,56 @@ func TestGatherLocal(t *testing.T) {
 	}
 }
 
+func TestGatherChain(t *testing.T) {
+	cert := fmt.Sprintf("%s\n%s", pki.ReadServerCert(), pki.ReadCACert())
+
+	tests := []struct {
+		name    string
+		content string
+		error   bool
+	}{
+		{name: "chain certificate", content: cert},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			f, err := ioutil.TempFile("", "x509_cert")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = f.Write([]byte(test.content))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = f.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			defer os.Remove(f.Name())
+
+			sc := X509Cert{
+				Sources: []string{f.Name()},
+			}
+
+			error := false
+
+			acc := testutil.Accumulator{}
+			err = sc.Gather(&acc)
+			if err != nil {
+				error = true
+			}
+
+			if error != test.error {
+				t.Errorf("%s", err)
+			}
+		})
+	}
+
+}
+
 func TestStrings(t *testing.T) {
 	sc := X509Cert{}
 
