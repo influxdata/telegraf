@@ -42,7 +42,7 @@ func TestIptables_Gather(t *testing.T) {
 		                pkts      bytes target     prot opt in     out     source               destination
 		                57     4520 RETURN     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0   /* foobar */
 		                `},
-			tags: []map[string]string{map[string]string{"table": "filter", "chain": "INPUT", "ruleid": "foobar"}},
+			tags: []map[string]string{{"table": "filter", "chain": "INPUT", "ruleid": "foobar"}},
 			fields: [][]map[string]interface{}{
 				{map[string]interface{}{"pkts": uint64(57), "bytes": uint64(4520)}},
 			},
@@ -98,9 +98,9 @@ func TestIptables_Gather(t *testing.T) {
 		                `,
 			},
 			tags: []map[string]string{
-				map[string]string{"table": "filter", "chain": "INPUT", "ruleid": "foo"},
-				map[string]string{"table": "filter", "chain": "FORWARD", "ruleid": "bar"},
-				map[string]string{"table": "filter", "chain": "FORWARD", "ruleid": "foobar"},
+				{"table": "filter", "chain": "INPUT", "ruleid": "foo"},
+				{"table": "filter", "chain": "FORWARD", "ruleid": "bar"},
+				{"table": "filter", "chain": "FORWARD", "ruleid": "foobar"},
 			},
 			fields: [][]map[string]interface{}{
 				{map[string]interface{}{"pkts": uint64(200), "bytes": uint64(4520)}},
@@ -118,7 +118,7 @@ func TestIptables_Gather(t *testing.T) {
                         100     4520 RETURN     tcp  --  *      *       0.0.0.0/0            0.0.0.0/0    tcp dpt:80
 		                `},
 			tags: []map[string]string{
-				map[string]string{"table": "filter", "chain": "INPUT", "ruleid": "foobar"},
+				{"table": "filter", "chain": "INPUT", "ruleid": "foobar"},
 			},
 			fields: [][]map[string]interface{}{
 				{map[string]interface{}{"pkts": uint64(57), "bytes": uint64(4520)}},
@@ -134,8 +134,8 @@ func TestIptables_Gather(t *testing.T) {
 						0 0 CLASSIFY all -- * * 1.3.5.7 0.0.0.0/0 /* test2 */ CLASSIFY set 1:4
 						`},
 			tags: []map[string]string{
-				map[string]string{"table": "mangle", "chain": "SHAPER", "ruleid": "test"},
-				map[string]string{"table": "mangle", "chain": "SHAPER", "ruleid": "test2"},
+				{"table": "mangle", "chain": "SHAPER", "ruleid": "test"},
+				{"table": "mangle", "chain": "SHAPER", "ruleid": "test2"},
 			},
 			fields: [][]map[string]interface{}{
 				{map[string]interface{}{"pkts": uint64(0), "bytes": uint64(0)}},
@@ -163,7 +163,7 @@ func TestIptables_Gather(t *testing.T) {
 						 123   456        all  --  eth0 *   0.0.0.0/0 0.0.0.0/0   /* all_recv */
 		               `},
 			tags: []map[string]string{
-				map[string]string{"table": "all_recv", "chain": "accountfwd", "ruleid": "all_recv"},
+				{"table": "all_recv", "chain": "accountfwd", "ruleid": "all_recv"},
 			},
 			fields: [][]map[string]interface{}{
 				{map[string]interface{}{"pkts": uint64(123), "bytes": uint64(456)}},

@@ -24,12 +24,12 @@ func TestReadsMetricsFromNSQ(t *testing.T) {
 
 	script := []instruction{
 		// SUB
-		instruction{0, nsq.FrameTypeResponse, []byte("OK")},
+		{0, nsq.FrameTypeResponse, []byte("OK")},
 		// IDENTIFY
-		instruction{0, nsq.FrameTypeResponse, []byte("OK")},
-		instruction{20 * time.Millisecond, nsq.FrameTypeMessage, frameMessage(msg)},
+		{0, nsq.FrameTypeResponse, []byte("OK")},
+		{20 * time.Millisecond, nsq.FrameTypeMessage, frameMessage(msg)},
 		// needed to exit test
-		instruction{100 * time.Millisecond, -1, []byte("exit")},
+		{100 * time.Millisecond, -1, []byte("exit")},
 	}
 
 	addr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:4155")

@@ -72,11 +72,11 @@ type pfctlOutputStanza struct {
 }
 
 var pfctlOutputStanzas = []*pfctlOutputStanza{
-	&pfctlOutputStanza{
+	{
 		HeaderRE:  regexp.MustCompile("^State Table"),
 		ParseFunc: parseStateTable,
 	},
-	&pfctlOutputStanza{
+	{
 		HeaderRE:  regexp.MustCompile("^Counters"),
 		ParseFunc: parseCounterTable,
 	},
@@ -127,10 +127,10 @@ type Entry struct {
 }
 
 var StateTable = []*Entry{
-	&Entry{"entries", "current entries", -1},
-	&Entry{"searches", "searches", -1},
-	&Entry{"inserts", "inserts", -1},
-	&Entry{"removals", "removals", -1},
+	{"entries", "current entries", -1},
+	{"searches", "searches", -1},
+	{"inserts", "inserts", -1},
+	{"removals", "removals", -1},
 }
 
 var stateTableRE = regexp.MustCompile(`^  (.*?)\s+(\d+)`)
@@ -140,21 +140,21 @@ func parseStateTable(lines []string, fields map[string]interface{}) error {
 }
 
 var CounterTable = []*Entry{
-	&Entry{"match", "match", -1},
-	&Entry{"bad-offset", "bad-offset", -1},
-	&Entry{"fragment", "fragment", -1},
-	&Entry{"short", "short", -1},
-	&Entry{"normalize", "normalize", -1},
-	&Entry{"memory", "memory", -1},
-	&Entry{"bad-timestamp", "bad-timestamp", -1},
-	&Entry{"congestion", "congestion", -1},
-	&Entry{"ip-option", "ip-option", -1},
-	&Entry{"proto-cksum", "proto-cksum", -1},
-	&Entry{"state-mismatch", "state-mismatch", -1},
-	&Entry{"state-insert", "state-insert", -1},
-	&Entry{"state-limit", "state-limit", -1},
-	&Entry{"src-limit", "src-limit", -1},
-	&Entry{"synproxy", "synproxy", -1},
+	{"match", "match", -1},
+	{"bad-offset", "bad-offset", -1},
+	{"fragment", "fragment", -1},
+	{"short", "short", -1},
+	{"normalize", "normalize", -1},
+	{"memory", "memory", -1},
+	{"bad-timestamp", "bad-timestamp", -1},
+	{"congestion", "congestion", -1},
+	{"ip-option", "ip-option", -1},
+	{"proto-cksum", "proto-cksum", -1},
+	{"state-mismatch", "state-mismatch", -1},
+	{"state-insert", "state-insert", -1},
+	{"state-limit", "state-limit", -1},
+	{"src-limit", "src-limit", -1},
+	{"synproxy", "synproxy", -1},
 }
 
 var counterTableRE = regexp.MustCompile(`^  (.*?)\s+(\d+)`)

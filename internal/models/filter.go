@@ -79,13 +79,13 @@ func (f *Filter) Compile() error {
 		return fmt.Errorf("Error compiling 'taginclude', %s", err)
 	}
 
-	for i, _ := range f.TagDrop {
+	for i := range f.TagDrop {
 		f.TagDrop[i].filter, err = filter.Compile(f.TagDrop[i].Filter)
 		if err != nil {
 			return fmt.Errorf("Error compiling 'tagdrop', %s", err)
 		}
 	}
-	for i, _ := range f.TagPass {
+	for i := range f.TagPass {
 		f.TagPass[i].filter, err = filter.Compile(f.TagPass[i].Filter)
 		if err != nil {
 			return fmt.Errorf("Error compiling 'tagpass', %s", err)

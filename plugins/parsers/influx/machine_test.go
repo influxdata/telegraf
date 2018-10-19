@@ -234,15 +234,15 @@ var tests = []struct {
 		name:  "minimal",
 		input: []byte("cpu value=42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -252,15 +252,15 @@ var tests = []struct {
 		name:  "newline",
 		input: []byte("cpu value=42\n"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -270,19 +270,19 @@ var tests = []struct {
 		name:  "minimal with timestamp",
 		input: []byte("cpu value=42 1516241192000000000"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
-			Result{
+			{
 				Name:  Timestamp,
 				Value: []byte("1516241192000000000"),
 			},
@@ -292,15 +292,15 @@ var tests = []struct {
 		name:  "measurement escape non-special",
 		input: []byte(`c\pu value=42`),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte(`c\pu`),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -310,15 +310,15 @@ var tests = []struct {
 		name:  "measurement escaped trailing backslash",
 		input: []byte(`cpu\\ value=42`),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte(`cpu\\`),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -328,15 +328,15 @@ var tests = []struct {
 		name:  "single char measurement",
 		input: []byte("c value=42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("c"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -346,15 +346,15 @@ var tests = []struct {
 		name:  "escape backslash in measurement",
 		input: []byte(`cp\\u value=42`),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte(`cp\\u`),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -364,15 +364,15 @@ var tests = []struct {
 		name:  "measurement escape space",
 		input: []byte(`cpu\ abc value=42`),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte(`cpu\ abc`),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -382,15 +382,15 @@ var tests = []struct {
 		name:  "scientific float",
 		input: []byte("cpu value=42e0"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42e0"),
 			},
@@ -400,15 +400,15 @@ var tests = []struct {
 		name:  "scientific float negative mantissa",
 		input: []byte("cpu value=-42e0"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("-42e0"),
 			},
@@ -418,15 +418,15 @@ var tests = []struct {
 		name:  "scientific float negative exponent",
 		input: []byte("cpu value=42e-1"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42e-1"),
 			},
@@ -436,15 +436,15 @@ var tests = []struct {
 		name:  "scientific float big e",
 		input: []byte("cpu value=42E0"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42E0"),
 			},
@@ -454,11 +454,11 @@ var tests = []struct {
 		name:  "scientific float missing exponent",
 		input: []byte("cpu value=42E"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrFieldParse,
 			},
 		},
@@ -467,15 +467,15 @@ var tests = []struct {
 		name:  "float with decimal",
 		input: []byte("cpu value=42.2"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42.2"),
 			},
@@ -485,15 +485,15 @@ var tests = []struct {
 		name:  "negative float",
 		input: []byte("cpu value=-42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("-42"),
 			},
@@ -503,15 +503,15 @@ var tests = []struct {
 		name:  "float without integer digits",
 		input: []byte("cpu value=.42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte(".42"),
 			},
@@ -521,15 +521,15 @@ var tests = []struct {
 		name:  "float without integer digits negative",
 		input: []byte("cpu value=-.42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("-.42"),
 			},
@@ -539,15 +539,15 @@ var tests = []struct {
 		name:  "float with multiple leading 0",
 		input: []byte("cpu value=00.42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("00.42"),
 			},
@@ -557,11 +557,11 @@ var tests = []struct {
 		name:  "invalid float with only dot",
 		input: []byte("cpu value=."),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrFieldParse,
 			},
 		},
@@ -570,23 +570,23 @@ var tests = []struct {
 		name:  "multiple fields",
 		input: []byte("cpu x=42,y=42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("x"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("y"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -596,15 +596,15 @@ var tests = []struct {
 		name:  "integer field",
 		input: []byte("cpu value=42i"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldInt,
 				Value: []byte("42i"),
 			},
@@ -614,15 +614,15 @@ var tests = []struct {
 		name:  "negative integer field",
 		input: []byte("cpu value=-42i"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldInt,
 				Value: []byte("-42i"),
 			},
@@ -632,15 +632,15 @@ var tests = []struct {
 		name:  "zero integer field",
 		input: []byte("cpu value=0i"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldInt,
 				Value: []byte("0i"),
 			},
@@ -650,15 +650,15 @@ var tests = []struct {
 		name:  "negative zero integer field",
 		input: []byte("cpu value=-0i"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldInt,
 				Value: []byte("-0i"),
 			},
@@ -668,11 +668,11 @@ var tests = []struct {
 		name:  "invalid field",
 		input: []byte("cpu value=howdy"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrFieldParse,
 			},
 		},
@@ -681,15 +681,15 @@ var tests = []struct {
 		name:  "string field",
 		input: []byte(`cpu value="42"`),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldString,
 				Value: []byte("42"),
 			},
@@ -699,15 +699,15 @@ var tests = []struct {
 		name:  "bool field",
 		input: []byte(`cpu value=true`),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldBool,
 				Value: []byte("true"),
 			},
@@ -717,23 +717,23 @@ var tests = []struct {
 		name:  "tag",
 		input: []byte(`cpu,host=localhost value=42`),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  TagKey,
 				Value: []byte("host"),
 			},
-			Result{
+			{
 				Name:  TagValue,
 				Value: []byte("localhost"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -743,23 +743,23 @@ var tests = []struct {
 		name:  "tag key escape space",
 		input: []byte(`cpu,h\ ost=localhost value=42`),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  TagKey,
 				Value: []byte(`h\ ost`),
 			},
-			Result{
+			{
 				Name:  TagValue,
 				Value: []byte("localhost"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -769,23 +769,23 @@ var tests = []struct {
 		name:  "tag key escape comma",
 		input: []byte(`cpu,h\,ost=localhost value=42`),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  TagKey,
 				Value: []byte(`h\,ost`),
 			},
-			Result{
+			{
 				Name:  TagValue,
 				Value: []byte("localhost"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -795,23 +795,23 @@ var tests = []struct {
 		name:  "tag key escape equal",
 		input: []byte(`cpu,h\=ost=localhost value=42`),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  TagKey,
 				Value: []byte(`h\=ost`),
 			},
-			Result{
+			{
 				Name:  TagValue,
 				Value: []byte("localhost"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -821,31 +821,31 @@ var tests = []struct {
 		name:  "multiple tags",
 		input: []byte(`cpu,host=localhost,cpu=cpu0 value=42`),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  TagKey,
 				Value: []byte("host"),
 			},
-			Result{
+			{
 				Name:  TagValue,
 				Value: []byte("localhost"),
 			},
-			Result{
+			{
 				Name:  TagKey,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  TagValue,
 				Value: []byte("cpu0"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -855,11 +855,11 @@ var tests = []struct {
 		name:  "tag invalid missing separator",
 		input: []byte("cpu,xyzzy value=42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrTagParse,
 			},
 		},
@@ -868,11 +868,11 @@ var tests = []struct {
 		name:  "tag invalid missing value",
 		input: []byte("cpu,xyzzy= value=42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrTagParse,
 			},
 		},
@@ -881,11 +881,11 @@ var tests = []struct {
 		name:  "tag invalid unescaped space",
 		input: []byte("cpu,h ost=localhost value=42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrTagParse,
 			},
 		},
@@ -894,11 +894,11 @@ var tests = []struct {
 		name:  "tag invalid unescaped comma",
 		input: []byte("cpu,h,ost=localhost value=42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrTagParse,
 			},
 		},
@@ -907,11 +907,11 @@ var tests = []struct {
 		name:  "tag invalid unescaped equals",
 		input: []byte("cpu,h=ost=localhost value=42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrTagParse,
 			},
 		},
@@ -920,19 +920,19 @@ var tests = []struct {
 		name:  "timestamp negative",
 		input: []byte("cpu value=42 -1"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
-			Result{
+			{
 				Name:  Timestamp,
 				Value: []byte("-1"),
 			},
@@ -942,19 +942,19 @@ var tests = []struct {
 		name:  "timestamp zero",
 		input: []byte("cpu value=42 0"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
-			Result{
+			{
 				Name:  Timestamp,
 				Value: []byte("0"),
 			},
@@ -964,27 +964,27 @@ var tests = []struct {
 		name:  "multiline",
 		input: []byte("cpu value=42\n\n\ncpu value=43\n"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("43"),
 			},
@@ -994,25 +994,25 @@ var tests = []struct {
 		name:  "error recovery",
 		input: []byte("cpu value=howdy\ncpu\ncpu value=42\n"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrFieldParse,
 			},
-			Result{
+			{
 				err: ErrFieldParse,
 			},
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -1022,31 +1022,31 @@ var tests = []struct {
 		name:  "line whitespace",
 		input: []byte("   cpu   value=42  1516241192000000000  \n\n cpu value=42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
-			Result{
+			{
 				Name:  Timestamp,
 				Value: []byte("1516241192000000000"),
 			},
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -1056,15 +1056,15 @@ var tests = []struct {
 		name:  "leading newline",
 		input: []byte("\ncpu value=42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -1074,11 +1074,11 @@ var tests = []struct {
 		name:  "invalid missing field value",
 		input: []byte("cpu value="),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrFieldParse,
 			},
 		},
@@ -1087,11 +1087,11 @@ var tests = []struct {
 		name:  "invalid eof field key",
 		input: []byte("cpu value"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrFieldParse,
 			},
 		},
@@ -1100,7 +1100,7 @@ var tests = []struct {
 		name:  "invalid measurement only",
 		input: []byte("cpu"),
 		results: []Result{
-			Result{
+			{
 				err: ErrFieldParse,
 			},
 		},
@@ -1109,7 +1109,7 @@ var tests = []struct {
 		name:  "invalid measurement only eol",
 		input: []byte("cpu\n"),
 		results: []Result{
-			Result{
+			{
 				err: ErrFieldParse,
 			},
 		},
@@ -1118,11 +1118,11 @@ var tests = []struct {
 		name:  "invalid missing tag",
 		input: []byte("cpu, value=42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrTagParse,
 			},
 		},
@@ -1131,19 +1131,19 @@ var tests = []struct {
 		name:  "invalid missing field",
 		input: []byte("cpu,x=y "),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  TagKey,
 				Value: []byte("x"),
 			},
-			Result{
+			{
 				Name:  TagValue,
 				Value: []byte("y"),
 			},
-			Result{
+			{
 				err: ErrFieldParse,
 			},
 		},
@@ -1152,19 +1152,19 @@ var tests = []struct {
 		name:  "invalid too many fields",
 		input: []byte("cpu value=42 value=43"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
-			Result{
+			{
 				err: ErrTimestampParse,
 			},
 		},
@@ -1173,19 +1173,19 @@ var tests = []struct {
 		name:  "invalid timestamp too long",
 		input: []byte("cpu value=42 12345678901234567890"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
-			Result{
+			{
 				err: ErrTimestampParse,
 			},
 		},
@@ -1194,11 +1194,11 @@ var tests = []struct {
 		name:  "invalid open string field",
 		input: []byte(`cpu value="42 12345678901234567890`),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrFieldParse,
 			},
 		},
@@ -1207,14 +1207,14 @@ var tests = []struct {
 		name:  "invalid newline in string field",
 		input: []byte("cpu value=\"4\n2\""),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrFieldParse,
 			},
-			Result{
+			{
 				err: ErrFieldParse,
 			},
 		},
@@ -1223,11 +1223,11 @@ var tests = []struct {
 		name:  "invalid field value",
 		input: []byte(`cpu value=howdy`),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				err: ErrFieldParse,
 			},
 		},
@@ -1236,19 +1236,19 @@ var tests = []struct {
 		name:  "invalid quoted timestamp",
 		input: []byte(`cpu value=42 "12345678901234567890"`),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
-			Result{
+			{
 				err: ErrTimestampParse,
 			},
 		},
@@ -1257,15 +1257,15 @@ var tests = []struct {
 		name:  "commented line",
 		input: []byte("# blah blah\ncpu value=42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -1275,15 +1275,15 @@ var tests = []struct {
 		name:  "end with comment",
 		input: []byte("cpu value=42\n# blah blah"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -1293,15 +1293,15 @@ var tests = []struct {
 		name:  "end with comment and whitespace",
 		input: []byte("cpu value=42\n# blah blah\n\n  "),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("value"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -1311,15 +1311,15 @@ var tests = []struct {
 		name:  "unicode",
 		input: []byte("cpu ☺=42"),
 		results: []Result{
-			Result{
+			{
 				Name:  Measurement,
 				Value: []byte("cpu"),
 			},
-			Result{
+			{
 				Name:  FieldKey,
 				Value: []byte("☺"),
 			},
-			Result{
+			{
 				Name:  FieldFloat,
 				Value: []byte("42"),
 			},
@@ -1407,7 +1407,7 @@ func TestSeriesMachine(t *testing.T) {
 			name:  "no tags",
 			input: []byte("cpu"),
 			results: []Result{
-				Result{
+				{
 					Name:  Measurement,
 					Value: []byte("cpu"),
 				},
@@ -1417,23 +1417,23 @@ func TestSeriesMachine(t *testing.T) {
 			name:  "tags",
 			input: []byte("cpu,a=x,b=y"),
 			results: []Result{
-				Result{
+				{
 					Name:  Measurement,
 					Value: []byte("cpu"),
 				},
-				Result{
+				{
 					Name:  TagKey,
 					Value: []byte("a"),
 				},
-				Result{
+				{
 					Name:  TagValue,
 					Value: []byte("x"),
 				},
-				Result{
+				{
 					Name:  TagKey,
 					Value: []byte("b"),
 				},
-				Result{
+				{
 					Name:  TagValue,
 					Value: []byte("y"),
 				},

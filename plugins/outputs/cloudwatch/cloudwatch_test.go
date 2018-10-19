@@ -29,7 +29,7 @@ func TestBuildDimensions(t *testing.T) {
 
 	tagKeys := make([]string, len(testPoint.Tags()))
 	i := 0
-	for k, _ := range testPoint.Tags() {
+	for k := range testPoint.Tags() {
 		tagKeys[i] = k
 		i += 1
 	}

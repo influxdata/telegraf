@@ -60,7 +60,7 @@ scan:
 		}
 		irqid := strings.TrimRight(fields[0], ":")
 		irq := NewIRQ(irqid)
-		irqvals := fields[1:len(fields)]
+		irqvals := fields[1:]
 		for i := 0; i < cpucount; i++ {
 			if i < len(irqvals) {
 				irqval, err := strconv.ParseInt(irqvals[i], 10, 64)

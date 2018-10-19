@@ -85,11 +85,11 @@ func TestBuildTags(t *testing.T) {
 	}{
 		{
 			[]*telegraf.Tag{
-				&telegraf.Tag{
+				{
 					Key:   "one",
 					Value: "two",
 				},
-				&telegraf.Tag{
+				{
 					Key:   "three",
 					Value: "four",
 				},
@@ -98,7 +98,7 @@ func TestBuildTags(t *testing.T) {
 		},
 		{
 			[]*telegraf.Tag{
-				&telegraf.Tag{
+				{
 					Key:   "aaa",
 					Value: "bbb",
 				},

@@ -18,7 +18,7 @@ func (m *mockGatherCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsI
 		Namespace:  params.Namespace,
 		MetricName: aws.String("Latency"),
 		Dimensions: []*cloudwatch.Dimension{
-			&cloudwatch.Dimension{
+			{
 				Name:  aws.String("LoadBalancerName"),
 				Value: aws.String("p-example"),
 			},
@@ -100,7 +100,7 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(params *cloudwatch.ListM
 				Namespace:  aws.String("AWS/ELB"),
 				MetricName: aws.String(m),
 				Dimensions: []*cloudwatch.Dimension{
-					&cloudwatch.Dimension{
+					{
 						Name:  aws.String("LoadBalancerName"),
 						Value: aws.String(lb),
 					},
@@ -112,11 +112,11 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(params *cloudwatch.ListM
 					Namespace:  aws.String("AWS/ELB"),
 					MetricName: aws.String(m),
 					Dimensions: []*cloudwatch.Dimension{
-						&cloudwatch.Dimension{
+						{
 							Name:  aws.String("LoadBalancerName"),
 							Value: aws.String(lb),
 						},
-						&cloudwatch.Dimension{
+						{
 							Name:  aws.String("AvailabilityZone"),
 							Value: aws.String(az),
 						},
@@ -148,14 +148,14 @@ func TestSelectMetrics(t *testing.T) {
 		Period:    internalDuration,
 		RateLimit: 200,
 		Metrics: []*Metric{
-			&Metric{
+			{
 				MetricNames: []string{"Latency", "RequestCount"},
 				Dimensions: []*Dimension{
-					&Dimension{
+					{
 						Name:  "LoadBalancerName",
 						Value: "*",
 					},
-					&Dimension{
+					{
 						Name:  "AvailabilityZone",
 						Value: "*",
 					},

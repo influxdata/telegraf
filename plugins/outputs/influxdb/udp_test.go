@@ -244,7 +244,7 @@ func TestUDP_WriteWithRealConn(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		var total int
-		for _, _ = range metrics {
+		for range metrics {
 			n, _, err := conn.ReadFrom(buf[total:])
 			if err != nil {
 				break

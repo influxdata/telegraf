@@ -18,19 +18,19 @@ var (
 	measurement = "nvidia_smi"
 	metrics     = "fan.speed,memory.total,memory.used,memory.free,pstate,temperature.gpu,name,uuid,compute_mode,utilization.gpu,utilization.memory,index,power.draw"
 	metricNames = [][]string{
-		[]string{"fan_speed", "integer"},
-		[]string{"memory_total", "integer"},
-		[]string{"memory_used", "integer"},
-		[]string{"memory_free", "integer"},
-		[]string{"pstate", "tag"},
-		[]string{"temperature_gpu", "integer"},
-		[]string{"name", "tag"},
-		[]string{"uuid", "tag"},
-		[]string{"compute_mode", "tag"},
-		[]string{"utilization_gpu", "integer"},
-		[]string{"utilization_memory", "integer"},
-		[]string{"index", "tag"},
-		[]string{"power_draw", "float"},
+		{"fan_speed", "integer"},
+		{"memory_total", "integer"},
+		{"memory_used", "integer"},
+		{"memory_free", "integer"},
+		{"pstate", "tag"},
+		{"temperature_gpu", "integer"},
+		{"name", "tag"},
+		{"uuid", "tag"},
+		{"compute_mode", "tag"},
+		{"utilization_gpu", "integer"},
+		{"utilization_memory", "integer"},
+		{"index", "tag"},
+		{"power_draw", "float"},
 	}
 )
 

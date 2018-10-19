@@ -237,7 +237,7 @@ func (a *Accumulator) NFields() int {
 	defer a.Unlock()
 	counter := 0
 	for _, pt := range a.Metrics {
-		for _, _ = range pt.Fields {
+		for range pt.Fields {
 			counter++
 		}
 	}

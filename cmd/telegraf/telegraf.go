@@ -296,13 +296,13 @@ func main() {
 	switch {
 	case *fOutputList:
 		fmt.Println("Available Output Plugins:")
-		for k, _ := range outputs.Outputs {
+		for k := range outputs.Outputs {
 			fmt.Printf("  %s\n", k)
 		}
 		return
 	case *fInputList:
 		fmt.Println("Available Input Plugins:")
-		for k, _ := range inputs.Inputs {
+		for k := range inputs.Inputs {
 			fmt.Printf("  %s\n", k)
 		}
 		return

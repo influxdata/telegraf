@@ -874,21 +874,21 @@ func TestParse_DataDogTags(t *testing.T) {
 	}
 
 	testTags := map[string]map[string]string{
-		"my_counter": map[string]string{
+		"my_counter": {
 			"host":        "localhost",
 			"environment": "prod",
 			"endpoint":    "/:tenant?/oauth/ro",
 		},
 
-		"my_gauge": map[string]string{
+		"my_gauge": {
 			"live": "",
 		},
 
-		"my_set": map[string]string{
+		"my_set": {
 			"host": "localhost",
 		},
 
-		"my_timer": map[string]string{
+		"my_timer": {
 			"live": "",
 			"host": "localhost",
 		},

@@ -60,7 +60,7 @@ var info = types.Info{
 }
 
 var containerList = []types.Container{
-	types.Container{
+	{
 		ID:      "e2173b9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296b7dfb",
 		Names:   []string{"/etcd"},
 		Image:   "quay.io/coreos/etcd:v2.2.2",
@@ -68,22 +68,22 @@ var containerList = []types.Container{
 		Created: 1455941930,
 		Status:  "Up 4 hours",
 		Ports: []types.Port{
-			types.Port{
+			{
 				PrivatePort: 7001,
 				PublicPort:  0,
 				Type:        "tcp",
 			},
-			types.Port{
+			{
 				PrivatePort: 4001,
 				PublicPort:  0,
 				Type:        "tcp",
 			},
-			types.Port{
+			{
 				PrivatePort: 2380,
 				PublicPort:  0,
 				Type:        "tcp",
 			},
-			types.Port{
+			{
 				PrivatePort: 2379,
 				PublicPort:  2379,
 				Type:        "tcp",
@@ -97,7 +97,7 @@ var containerList = []types.Container{
 		SizeRw:     0,
 		SizeRootFs: 0,
 	},
-	types.Container{
+	{
 		ID:      "b7dfbb9478a6ae55e237d4d74f8bbb753f0817192b5081334dc78476296e2173",
 		Names:   []string{"/etcd2"},
 		Image:   "quay.io:4443/coreos/etcd:v2.2.2",
@@ -105,22 +105,22 @@ var containerList = []types.Container{
 		Created: 1455941933,
 		Status:  "Up 4 hours",
 		Ports: []types.Port{
-			types.Port{
+			{
 				PrivatePort: 7002,
 				PublicPort:  0,
 				Type:        "tcp",
 			},
-			types.Port{
+			{
 				PrivatePort: 4002,
 				PublicPort:  0,
 				Type:        "tcp",
 			},
-			types.Port{
+			{
 				PrivatePort: 2381,
 				PublicPort:  0,
 				Type:        "tcp",
 			},
-			types.Port{
+			{
 				PrivatePort: 2382,
 				PublicPort:  2382,
 				Type:        "tcp",
@@ -134,15 +134,15 @@ var containerList = []types.Container{
 		SizeRw:     0,
 		SizeRootFs: 0,
 	},
-	types.Container{
+	{
 		ID:    "e8a713dd90604f5a257b97c15945e047ab60ed5b2c4397c5a6b5bf40e1bd2791",
 		Names: []string{"/acme"},
 	},
-	types.Container{
+	{
 		ID:    "9bc6faf9ba8106fae32e8faafd38a1dd6f6d262bec172398cc10bc03c0d6841a",
 		Names: []string{"/acme-test"},
 	},
-	types.Container{
+	{
 		ID:    "d4ccced494a1d5fe8ebdb0a86335a0dab069319912221e5838a132ab18a8bc84",
 		Names: []string{"/foo"},
 	},
@@ -150,7 +150,7 @@ var containerList = []types.Container{
 
 var two = uint64(2)
 var ServiceList = []swarm.Service{
-	swarm.Service{
+	{
 		ID: "qolkls9g5iasdiuihcyz9rnx2",
 		Spec: swarm.ServiceSpec{
 			Annotations: swarm.Annotations{
@@ -163,7 +163,7 @@ var ServiceList = []swarm.Service{
 			},
 		},
 	},
-	swarm.Service{
+	{
 		ID: "qolkls9g5iasdiuihcyz9rn3",
 		Spec: swarm.ServiceSpec{
 			Annotations: swarm.Annotations{
@@ -177,7 +177,7 @@ var ServiceList = []swarm.Service{
 }
 
 var TaskList = []swarm.Task{
-	swarm.Task{
+	{
 		ID:        "kwh0lv7hwwbh",
 		ServiceID: "qolkls9g5iasdiuihcyz9rnx2",
 		NodeID:    "0cl4jturcyd1ks3fwpd010kor",
@@ -186,7 +186,7 @@ var TaskList = []swarm.Task{
 		},
 		DesiredState: "running",
 	},
-	swarm.Task{
+	{
 		ID:        "u78m5ojbivc3",
 		ServiceID: "qolkls9g5iasdiuihcyz9rnx2",
 		NodeID:    "0cl4jturcyd1ks3fwpd010kor",
@@ -195,7 +195,7 @@ var TaskList = []swarm.Task{
 		},
 		DesiredState: "running",
 	},
-	swarm.Task{
+	{
 		ID:        "1n1uilkhr98l",
 		ServiceID: "qolkls9g5iasdiuihcyz9rn3",
 		NodeID:    "0cl4jturcyd1ks3fwpd010kor",
@@ -207,13 +207,13 @@ var TaskList = []swarm.Task{
 }
 
 var NodeList = []swarm.Node{
-	swarm.Node{
+	{
 		ID: "0cl4jturcyd1ks3fwpd010kor",
 		Status: swarm.NodeStatus{
 			State: "ready",
 		},
 	},
-	swarm.Node{
+	{
 		ID: "0cl4jturcyd1ks3fwpd010kor",
 		Status: swarm.NodeStatus{
 			State: "ready",

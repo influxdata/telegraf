@@ -19,31 +19,31 @@ NET_RX:     867028		225
 TASKLET:	205			0`
 	f := bytes.NewBufferString(interruptStr)
 	parsed := []IRQ{
-		IRQ{
+		{
 			ID: "0", Type: "IO-APIC-edge", Device: "timer",
 			Cpus: []int64{int64(134), int64(0)}, Total: int64(134),
 		},
-		IRQ{
+		{
 			ID: "1", Type: "IO-APIC-edge", Device: "i8042",
 			Cpus: []int64{int64(7), int64(3)}, Total: int64(10),
 		},
-		IRQ{
+		{
 			ID: "NMI", Type: "Non-maskable interrupts",
 			Cpus: []int64{int64(0), int64(0)}, Total: int64(0),
 		},
-		IRQ{
+		{
 			ID: "LOC", Type: "Local timer interrupts",
 			Cpus:  []int64{int64(2338608687), int64(2334309625)},
 			Total: int64(4672918312),
 		},
-		IRQ{
+		{
 			ID: "MIS", Cpus: []int64{int64(0)}, Total: int64(0),
 		},
-		IRQ{
+		{
 			ID: "NET_RX", Cpus: []int64{int64(867028), int64(225)},
 			Total: int64(867253),
 		},
-		IRQ{
+		{
 			ID: "TASKLET", Cpus: []int64{int64(205), int64(0)},
 			Total: int64(205),
 		},
@@ -88,91 +88,91 @@ func TestParseInterruptsBad(t *testing.T) {
    IPI6:          0          0          0          0  completion interrupts`
 	f := bytes.NewBufferString(interruptStr)
 	parsed := []IRQ{
-		IRQ{
+		{
 			ID: "16", Type: "bcm2836-timer", Device: "0 Edge arch_timer",
 			Cpus: []int64{0, 0, 0, 0},
 		},
-		IRQ{
+		{
 			ID: "17", Type: "bcm2836-timer", Device: "1 Edge arch_timer",
 			Cpus: []int64{127224250, 118424219, 127224437, 117885416}, Total: 490758322,
 		},
-		IRQ{
+		{
 			ID: "21", Type: "bcm2836-pmu", Device: "9 Edge arm-pmu",
 			Cpus: []int64{0, 0, 0, 0},
 		},
-		IRQ{
+		{
 			ID: "23", Type: "ARMCTRL-level", Device: "1 Edge 3f00b880.mailbox",
 			Cpus: []int64{1549514, 0, 0, 0}, Total: 1549514,
 		},
-		IRQ{
+		{
 			ID: "24", Type: "ARMCTRL-level", Device: "2 Edge VCHIQ doorbell",
 			Cpus: []int64{2, 0, 0, 0}, Total: 2,
 		},
-		IRQ{
+		{
 			ID: "46", Type: "ARMCTRL-level", Device: "48 Edge bcm2708_fb dma",
 			Cpus: []int64{0, 0, 0, 0},
 		},
-		IRQ{
+		{
 			ID: "48", Type: "ARMCTRL-level", Device: "50 Edge DMA IRQ",
 			Cpus: []int64{0, 0, 0, 0},
 		},
-		IRQ{
+		{
 			ID: "50", Type: "ARMCTRL-level", Device: "52 Edge DMA IRQ",
 			Cpus: []int64{0, 0, 0, 0},
 		},
-		IRQ{
+		{
 			ID: "51", Type: "ARMCTRL-level", Device: "53 Edge DMA IRQ",
 			Cpus: []int64{208, 0, 0, 0}, Total: 208,
 		},
-		IRQ{
+		{
 			ID: "54", Type: "ARMCTRL-level", Device: "56 Edge DMA IRQ",
 			Cpus: []int64{883002, 0, 0, 0}, Total: 883002,
 		},
-		IRQ{
+		{
 			ID: "59", Type: "ARMCTRL-level", Device: "61 Edge bcm2835-auxirq",
 			Cpus: []int64{0, 0, 0, 0},
 		},
-		IRQ{
+		{
 			ID: "62", Type: "ARMCTRL-level", Device: "64 Edge dwc_otg, dwc_otg_pcd, dwc_otg_hcd:usb1",
 			Cpus: []int64{521451447, 0, 0, 0}, Total: 521451447,
 		},
-		IRQ{
+		{
 			ID: "86", Type: "ARMCTRL-level", Device: "88 Edge mmc0",
 			Cpus: []int64{857597, 0, 0, 0}, Total: 857597,
 		},
-		IRQ{
+		{
 			ID: "87", Type: "ARMCTRL-level", Device: "89 Edge uart-pl011",
 			Cpus: []int64{4938, 0, 0, 0}, Total: 4938,
 		},
-		IRQ{
+		{
 			ID: "92", Type: "ARMCTRL-level", Device: "94 Edge mmc1",
 			Cpus: []int64{5669, 0, 0, 0}, Total: 5669,
 		},
-		IRQ{
+		{
 			ID: "IPI0", Type: "CPU wakeup interrupts",
 			Cpus: []int64{0, 0, 0, 0},
 		},
-		IRQ{
+		{
 			ID: "IPI1", Type: "Timer broadcast interrupts",
 			Cpus: []int64{0, 0, 0, 0},
 		},
-		IRQ{
+		{
 			ID: "IPI2", Type: "Rescheduling interrupts",
 			Cpus: []int64{23564958, 23464876, 23531165, 23040826}, Total: 93601825,
 		},
-		IRQ{
+		{
 			ID: "IPI3", Type: "Function call interrupts",
 			Cpus: []int64{148438, 639704, 644266, 588150}, Total: 2020558,
 		},
-		IRQ{
+		{
 			ID: "IPI4", Type: "CPU stop interrupts",
 			Cpus: []int64{0, 0, 0, 0},
 		},
-		IRQ{
+		{
 			ID: "IPI5", Type: "IRQ work interrupts",
 			Cpus: []int64{4348149, 1843985, 3819457, 1822877}, Total: 11834468,
 		},
-		IRQ{
+		{
 			ID: "IPI6", Type: "completion interrupts",
 			Cpus: []int64{0, 0, 0, 0},
 		},

@@ -405,7 +405,7 @@ func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metr
 			}
 			// Divide by the number of recorded measurements collected for every field
 			noMeasurementsFound := true // Canary to check if no field with values was found, so we can return nil
-			for k, _ := range mean {
+			for k := range mean {
 				if meanCounters[k] == 0 {
 					mean[k] = 0
 					continue
