@@ -7,7 +7,7 @@ defaults:
       - image: 'quay.io/influxdb/telegraf-ci:1.9.7'
   go-1_10: &go-1_10
     docker:
-      - image: 'quay.io/influxdb/telegraf-ci:1.10.3'
+      - image: 'quay.io/influxdb/telegraf-ci:1.10.4'
 
 version: 2
 jobs:

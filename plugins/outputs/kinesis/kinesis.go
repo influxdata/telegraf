@@ -2,7 +2,6 @@ package kinesis
 
 import (
 	"log"
-	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -115,17 +114,11 @@ func (k *KinesisOutput) Description() string {
 	return "Configuration for the AWS Kinesis output."
 }
 
-func checkstream(l []*string, s string) bool {
-	// Check if the StreamName exists in the slice returned from the ListStreams API request.
-	for _, stream := range l {
-		if *stream == s {
-			return true
-		}
-	}
-	return false
-}
-
 func (k *KinesisOutput) Connect() error {
+	if k.Partition == nil {
+		log.Print("E! kinesis : Deprecated paritionkey configuration in use, please consider using outputs.kinesis.partition")
+	}
+
 	// We attempt first to create a session to Kinesis using an IAMS role, if that fails it will fall through to using
 	// environment variables, and then Shared Credentials.
 	if k.Debug {
@@ -145,29 +138,10 @@ func (k *KinesisOutput) Connect() error {
 	configProvider := credentialConfig.Credentials()
 	svc := kinesis.New(configProvider)
 
-	KinesisParams := &kinesis.ListStreamsInput{
-		Limit: aws.Int64(100),
-	}
-
-	resp, err := svc.ListStreams(KinesisParams)
-
-	if err != nil {
-		log.Printf("E! kinesis: Error in ListSteams API call : %+v \n", err)
-	}
-
-	if checkstream(resp.StreamNames, k.StreamName) {
-		if k.Debug {
-			log.Printf("E! kinesis: Stream Exists")
-		}
-		k.svc = svc
-		return nil
-	} else {
-		log.Printf("E! kinesis : You have configured a StreamName %+v which does not exist. exiting.", k.StreamName)
-		os.Exit(1)
-	}
-	if k.Partition == nil {
-		log.Print("E! kinesis : Deprecated paritionkey configuration in use, please consider using outputs.kinesis.partition")
-	}
+	_, err := svc.DescribeStreamSummary(&kinesis.DescribeStreamSummaryInput{
+		StreamName: aws.String(k.StreamName),
+	})
+	k.svc = svc
 	return err
 }
 
