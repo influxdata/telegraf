@@ -165,7 +165,7 @@ func escapeObject(m map[string]interface{}) (string, error) {
 	// We find all keys and sort them first because iterating a map in go is
 	// randomized and we need consistent output for our unit tests.
 	keys := make([]string, 0, len(m))
-	for k, _ := range m {
+	for k := range m {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
