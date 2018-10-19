@@ -1,4 +1,4 @@
-package buffer
+package models
 
 import (
 	"testing"
@@ -118,11 +118,11 @@ func TestBuffer_BatchReject(t *testing.T) {
 	m := Metric()
 	b := NewBuffer(5)
 	b.Add(m, m, m)
-	b.Batch(2)
+	batch := b.Batch(2)
 	b.Add(m, m)
-	b.Reject()
+	b.Reject(batch)
 	require.Equal(t, 5, b.Len())
-	batch := b.Batch(3)
+	batch = b.Batch(3)
 	require.Equal(t, 3, len(batch))
 }
 
@@ -166,6 +166,7 @@ func TestBuffer_BatchOverwriteBatch(t *testing.T) {
 	require.Len(t, batch, 2)
 	require.Equal(t, int64(1), batch[0].Time().Unix())
 	require.Equal(t, int64(2), batch[1].Time().Unix())
+	b.Reject(batch)
 	b.Add(
 		MetricUnix(6), // overwrite 1
 		MetricUnix(7), // overwrite 2
@@ -213,9 +214,9 @@ func TestBuffer_MetricsOverwriteBatchReject(t *testing.T) {
 	MetricsWritten.Set(0)
 
 	b.Add(m, m, m, m, m)
-	b.Batch(3)
+	batch := b.Batch(3)
 	b.Add(m, m, m)
-	b.Reject()
+	b.Reject(batch)
 	require.Equal(t, int64(3), MetricsDropped.Get())
 	require.Equal(t, int64(8), MetricsWritten.Get())
 }
@@ -255,8 +256,8 @@ func TestBuffer_BatchRejectAckNoop(t *testing.T) {
 	m := Metric()
 	b := NewBuffer(5)
 	b.Add(m, m, m, m, m)
-	b.Batch(2)
-	b.Reject()
+	batch := b.Batch(2)
+	b.Reject(batch)
 	b.Ack()
 	require.Equal(t, 5, b.Len())
 }

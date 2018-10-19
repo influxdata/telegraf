@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal/buffer"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -39,7 +38,7 @@ type RunningOutput struct {
 	WriteTime       selfstat.Stat
 
 	batch      []telegraf.Metric
-	buffer     *buffer.Buffer
+	buffer     *Buffer
 	BatchReady chan time.Time
 
 	aggMutex sync.Mutex
@@ -61,7 +60,7 @@ func NewRunningOutput(
 	ro := &RunningOutput{
 		Name:              name,
 		batch:             make([]telegraf.Metric, 0, batchSize),
-		buffer:            buffer.NewBuffer(bufferLimit),
+		buffer:            NewBuffer(bufferLimit),
 		BatchReady:        make(chan time.Time, 1),
 		Output:            output,
 		Config:            conf,
@@ -97,16 +96,22 @@ func NewRunningOutput(
 	return ro
 }
 
+func (ro *RunningOutput) metricFiltered(metric telegraf.Metric) {
+	ro.MetricsFiltered.Incr(1)
+	metric.Accept()
+}
+
 // AddMetric adds a metric to the output. This function can also write cached
 // points if FlushBufferWhenFull is true.
 func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 	if ok := ro.Config.Filter.Select(metric); !ok {
-		ro.MetricsFiltered.Incr(1)
+		ro.metricFiltered(metric)
 		return
 	}
 
 	ro.Config.Filter.Modify(metric)
 	if len(metric.FieldList()) == 0 {
+		ro.metricFiltered(metric)
 		return
 	}
 
@@ -163,9 +168,14 @@ func (ro *RunningOutput) Write() error {
 
 		err := ro.write(batch)
 		if err != nil {
-			ro.buffer.Reject()
+			ro.buffer.Reject(batch)
 			return err
 		}
+
+		for _, m := range batch {
+			m.Accept()
+		}
+
 		ro.buffer.Ack()
 	}
 	return nil
@@ -180,9 +190,14 @@ func (ro *RunningOutput) WriteBatch() error {
 
 	err := ro.write(batch)
 	if err != nil {
-		ro.buffer.Reject()
+		ro.buffer.Reject(batch)
 		return err
 	}
+
+	for _, m := range batch {
+		m.Accept()
+	}
+
 	ro.buffer.Ack()
 	return nil
 }

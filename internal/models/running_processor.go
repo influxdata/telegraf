@@ -27,6 +27,19 @@ type ProcessorConfig struct {
 	Filter Filter
 }
 
+func (rp *RunningProcessor) metricFiltered(metric telegraf.Metric) {
+	metric.Accept()
+}
+
+func containsMetric(item telegraf.Metric, metrics []telegraf.Metric) bool {
+	for _, m := range metrics {
+		if item == m {
+			return true
+		}
+	}
+	return false
+}
+
 func (rp *RunningProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	rp.Lock()
 	defer rp.Unlock()
@@ -43,6 +56,7 @@ func (rp *RunningProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
 
 		rp.Config.Filter.Modify(metric)
 		if len(metric.FieldList()) == 0 {
+			rp.metricFiltered(metric)
 			continue
 		}
 

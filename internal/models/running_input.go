@@ -19,10 +19,7 @@ type RunningInput struct {
 	GatherTime      selfstat.Stat
 }
 
-func NewRunningInput(
-	input telegraf.Input,
-	config *InputConfig,
-) *RunningInput {
+func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 	return &RunningInput{
 		Input:  input,
 		Config: config,
@@ -55,13 +52,19 @@ func (r *RunningInput) Name() string {
 	return "inputs." + r.Config.Name
 }
 
+func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
+	metric.Accept()
+}
+
 func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	if ok := r.Config.Filter.Select(metric); !ok {
+		r.metricFiltered(metric)
 		return nil
 	}
 
 	r.Config.Filter.Modify(metric)
 	if len(metric.FieldList()) == 0 {
+		r.metricFiltered(metric)
 		return nil
 	}
 

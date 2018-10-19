@@ -206,7 +206,6 @@ func (a *Agent) runInputs(
 
 	var wg sync.WaitGroup
 	for _, input := range a.Config.Inputs {
-
 		// Overwrite agent interval if this plugin has it's own.
 		if input.Config.Interval != 0 {
 			interval = input.Config.Interval
@@ -227,7 +226,7 @@ func (a *Agent) runInputs(
 				}
 			}
 
-			gather(ctx, acc, input, interval, jitter)
+			a.gatherOnInterval(ctx, acc, input, interval, jitter)
 		}(input)
 	}
 	wg.Wait()
@@ -237,7 +236,7 @@ func (a *Agent) runInputs(
 
 // gather runs an input's gather function periodically until the context is
 // done.
-func gather(
+func (a *Agent) gatherOnInterval(
 	ctx context.Context,
 	acc telegraf.Accumulator,
 	input *models.RunningInput,
@@ -255,7 +254,7 @@ func gather(
 			return
 		}
 
-		err = gatherOnce(acc, input, interval)
+		err = a.gatherOnce(acc, input, interval)
 		if err != nil {
 			acc.AddError(err)
 		}
@@ -271,7 +270,7 @@ func gather(
 
 // gatherOnce runs the input's Gather function once, logging a warning each
 // interval it fails to complete before.
-func gatherOnce(
+func (a *Agent) gatherOnce(
 	acc telegraf.Accumulator,
 	input *models.RunningInput,
 	timeout time.Duration,
@@ -312,11 +311,12 @@ func (a *Agent) runProcessors(
 }
 
 // applyProcessors applies all processors to a metric.
-func (a *Agent) applyProcessors(metric telegraf.Metric) []telegraf.Metric {
-	metrics := []telegraf.Metric{metric}
+func (a *Agent) applyProcessors(m telegraf.Metric) []telegraf.Metric {
+	metrics := []telegraf.Metric{m}
 	for _, processor := range a.Config.Processors {
 		metrics = processor.Apply(metrics...)
 	}
+
 	return metrics
 }
 
@@ -574,10 +574,11 @@ func (a *Agent) startServiceInputs(
 
 	for _, input := range a.Config.Inputs {
 		if si, ok := input.Input.(telegraf.ServiceInput); ok {
-			acc := NewAccumulator(input, dst)
 			// Service input plugins are not subject to timestamp rounding.
 			// This only applies to the accumulator passed to Start(), the
-			// Gather() accumulator is still set to round.
+			// Gather() accumulator does apply rounding according to the
+			// precision agent setting.
+			acc := NewAccumulator(input, dst)
 			acc.SetPrecision(time.Nanosecond, 0)
 
 			err := si.Start(acc)

@@ -62,6 +62,17 @@ type Metric interface {
 	// Copy returns a deep copy of the Metric.
 	Copy() Metric
 
+	// Accept marks the metric as processed successfully and written to an
+	// output.
+	Accept()
+
+	// Reject marks the metric as processed unsuccessfully.
+	Reject()
+
+	// Remove marks the metric as processed without being written to any
+	// output.
+	Remove()
+
 	// Mark Metric as an aggregate
 	SetAggregate(bool)
 	IsAggregate() bool

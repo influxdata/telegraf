@@ -17,16 +17,7 @@ type Output interface {
 // if the Output only accepts a fixed set of aggregations over a time period.
 // These functions may be called concurrently to the Write function.
 type AggregatingOutput interface {
-	// Connect to the Output
-	Connect() error
-	// Close any connections to the Output
-	Close() error
-	// Description returns a one-sentence description on the Output
-	Description() string
-	// SampleConfig returns the default configuration of the Output
-	SampleConfig() string
-	// Write takes in group of points to be written to the Output
-	Write(metrics []Metric) error
+	Output
 
 	// Add the metric to the aggregator
 	Add(in Metric)

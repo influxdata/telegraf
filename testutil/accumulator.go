@@ -14,6 +14,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	lastID uint64
+)
+
+func newTrackingID() telegraf.TrackingID {
+	atomic.AddUint64(&lastID, 1)
+	return telegraf.TrackingID(lastID)
+}
+
 // Metric defines a single point measurement
 type Metric struct {
 	Measurement string
@@ -31,11 +40,12 @@ type Accumulator struct {
 	sync.Mutex
 	*sync.Cond
 
-	Metrics  []*Metric
-	nMetrics uint64
-	Discard  bool
-	Errors   []error
-	debug    bool
+	Metrics   []*Metric
+	nMetrics  uint64
+	Discard   bool
+	Errors    []error
+	debug     bool
+	delivered chan telegraf.DeliveryInfo
 }
 
 func (a *Accumulator) NMetrics() uint64 {
@@ -152,6 +162,33 @@ func (a *Accumulator) AddHistogram(
 	timestamp ...time.Time,
 ) {
 	a.AddFields(measurement, fields, tags, timestamp...)
+}
+
+func (a *Accumulator) AddMetric(m telegraf.Metric) {
+	a.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+}
+
+func (a *Accumulator) WithTracking(maxTracked int) telegraf.TrackingAccumulator {
+	return a
+}
+
+func (a *Accumulator) AddTrackingMetric(m telegraf.Metric) telegraf.TrackingID {
+	a.AddMetric(m)
+	return newTrackingID()
+}
+
+func (a *Accumulator) AddTrackingMetricGroup(group []telegraf.Metric) telegraf.TrackingID {
+	for _, m := range group {
+		a.AddMetric(m)
+	}
+	return newTrackingID()
+}
+
+func (a *Accumulator) Delivered() <-chan telegraf.DeliveryInfo {
+	if a.delivered == nil {
+		a.delivered = make(chan telegraf.DeliveryInfo)
+	}
+	return a.delivered
 }
 
 // AddError appends the given error to Accumulator.Errors.

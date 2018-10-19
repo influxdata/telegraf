@@ -248,6 +248,15 @@ func (m *metric) HashID() uint64 {
 	return h.Sum64()
 }
 
+func (m *metric) Accept() {
+}
+
+func (m *metric) Reject() {
+}
+
+func (m *metric) Remove() {
+}
+
 // Convert field to a supported type or nil if unconvertible
 func convertField(v interface{}) interface{} {
 	switch v := v.(type) {
