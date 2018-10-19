@@ -32,7 +32,7 @@ type natsConsumer struct {
 	PendingMessageLimit int
 	PendingBytesLimit   int
 
-	// Legacy metric buffer support
+	// Legacy metric buffer support; deprecated in v0.10.3
 	MetricBuffer int
 
 	parser parsers.Parser

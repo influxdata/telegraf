@@ -37,7 +37,7 @@ type MQTTConsumer struct {
 
 	parser parsers.Parser
 
-	// Legacy metric buffer support
+	// Legacy metric buffer support; deprecated in v0.10.3
 	MetricBuffer int
 
 	PersistentSession bool
