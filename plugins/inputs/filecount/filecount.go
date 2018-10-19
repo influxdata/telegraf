@@ -34,10 +34,11 @@ const sampleConfig = `
   ## Only count regular files. Defaults to true.
   regular_only = true
 
-  ## Only count files that are at least this size in bytes. If size is
+  ## Only count files that are at least this size. If size is
   ## a negative number, only count files that are smaller than the
-  ## absolute value of size. Defaults to 0.
-  size = 0
+  ## absolute value of size. Acceptable units are B, KiB, MiB, KB, ...
+  ## Without quotes and units, interpreted as size in bytes.
+  size = "0B"
 
   ## Only count files that have not been touched for at least this
   ## duration. If mtime is negative, only count files that have been
@@ -51,7 +52,7 @@ type FileCount struct {
 	Name        string
 	Recursive   bool
 	RegularOnly bool
-	Size        int64
+	Size        internal.Size
 	MTime       internal.Duration `toml:"mtime"`
 	fileFilters []fileFilterFunc
 }
@@ -99,7 +100,7 @@ func (fc *FileCount) regularOnlyFilter() fileFilterFunc {
 }
 
 func (fc *FileCount) sizeFilter() fileFilterFunc {
-	if fc.Size == 0 {
+	if fc.Size.Size == 0 {
 		return nil
 	}
 
@@ -107,10 +108,10 @@ func (fc *FileCount) sizeFilter() fileFilterFunc {
 		if !f.Mode().IsRegular() {
 			return false, nil
 		}
-		if fc.Size < 0 {
-			return f.Size() < -fc.Size, nil
+		if fc.Size.Size < 0 {
+			return f.Size() < -fc.Size.Size, nil
 		}
-		return f.Size() >= fc.Size, nil
+		return f.Size() >= fc.Size.Size, nil
 	}
 }
 
@@ -257,7 +258,7 @@ func NewFileCount() *FileCount {
 		Name:        "*",
 		Recursive:   true,
 		RegularOnly: true,
-		Size:        0,
+		Size:        internal.Size{Size: 0},
 		MTime:       internal.Duration{Duration: 0},
 		fileFilters: nil,
 	}
