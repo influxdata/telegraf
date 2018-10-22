@@ -180,8 +180,8 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 
 	if glob.MatchString(basedir) {
 		gauge := map[string]interface{}{
-			"count": numFiles,
-			"size":  totalSize,
+			"count":      numFiles,
+			"size_bytes": totalSize,
 		}
 		acc.AddGauge("filecount", gauge,
 			map[string]string{

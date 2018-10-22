@@ -31,7 +31,7 @@ func TestNoFiltersOnChildDir(t *testing.T) {
 	acc.GatherError(fc.Gather)
 
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(len(matches))))
-	require.True(t, acc.HasPoint("filecount", tags, "size", int64(446)))
+	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(446)))
 }
 
 func TestNoRecursiveButSuperMeta(t *testing.T) {
@@ -45,7 +45,7 @@ func TestNoRecursiveButSuperMeta(t *testing.T) {
 	acc.GatherError(fc.Gather)
 
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(len(matches))))
-	require.True(t, acc.HasPoint("filecount", tags, "size", int64(446)))
+	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(446)))
 }
 
 func TestNameFilter(t *testing.T) {
@@ -125,5 +125,5 @@ func fileCountEquals(t *testing.T, fc FileCount, expectedCount int, expectedSize
 	acc := testutil.Accumulator{}
 	acc.GatherError(fc.Gather)
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(expectedCount)))
-	require.True(t, acc.HasPoint("filecount", tags, "size", int64(expectedSize)))
+	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(expectedSize)))
 }

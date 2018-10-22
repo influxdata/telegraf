@@ -43,7 +43,7 @@ Counts files in directories that match certain criteria.
 
 - filecount
     - count (int)
-    - size (int, in Bytes)
+    - size_bytes (int)
 
 ### Tags:
 
