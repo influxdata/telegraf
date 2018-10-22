@@ -213,7 +213,7 @@ func (fc *FileCount) filter(file os.FileInfo) (bool, error) {
 
 func (fc *FileCount) Gather(acc telegraf.Accumulator) error {
 	if fc.globPaths == nil {
-		fc.globPaths = fc.getGlobPaths(acc)
+		fc.initGlobPaths(acc)
 	}
 
 	for _, glob := range fc.globPaths {
@@ -249,18 +249,16 @@ func (fc *FileCount) getDirs() []string {
 	return dirs
 }
 
-func (fc *FileCount) getGlobPaths(acc telegraf.Accumulator) []globpath.GlobPath {
-	globPaths := []globpath.GlobPath{}
+func (fc *FileCount) initGlobPaths(acc telegraf.Accumulator) {
+	fc.globPaths = []globpath.GlobPath{}
 	for _, directory := range fc.getDirs() {
 		glob, err := globpath.Compile(directory)
 		if err != nil {
 			acc.AddError(err)
 		} else {
-			globPaths = append(globPaths, *glob)
+			fc.globPaths = append(fc.globPaths, *glob)
 		}
 	}
-
-	return globPaths
 }
 
 func NewFileCount() *FileCount {
