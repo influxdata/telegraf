@@ -237,3 +237,7 @@
 [[constraint]]
   branch = "master"
   name = "golang.org/x/oauth2"
+
+[[constraint]]
+  name = "github.com/karrick/godirwalk"
+  version = "1.7.5"

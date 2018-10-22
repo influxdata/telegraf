@@ -3,12 +3,14 @@ package filecount
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/karrick/godirwalk"
 )
 
 const sampleConfig = `
@@ -147,50 +149,64 @@ func (fc *FileCount) initFileFilters() {
 	fc.fileFilters = rejectNilFilters(filters)
 }
 
-func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpath.GlobPath) (int64, int64) {
-	numFiles, totalSize, nf, ts := int64(0), int64(0), int64(0), int64(0)
-
-	directory, err := os.Open(basedir)
-	if err != nil {
-		acc.AddError(err)
-		return numFiles, totalSize
-	}
-	files, err := directory.Readdir(0)
-	directory.Close()
-	if err != nil {
-		acc.AddError(err)
-		return numFiles, totalSize
-	}
-	for _, file := range files {
-		if file.IsDir() && (fc.Recursive || glob.HasSuperMeta) {
-			nf, ts = fc.count(acc, basedir+string(os.PathSeparator)+file.Name(), glob)
-			if fc.Recursive {
-				numFiles += nf
-				totalSize += ts
+func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpath.GlobPath) {
+	childCount := make(map[string]int64)
+	childSize := make(map[string]int64)
+	walkFn := func(path string, de *godirwalk.Dirent) error {
+		if path == basedir {
+			return nil
+		}
+		file, err := os.Stat(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
 			}
+			return err
 		}
 		match, err := fc.filter(file)
 		if err != nil {
 			acc.AddError(err)
+			return nil
 		}
 		if match {
-			numFiles++
-			totalSize += file.Size()
+			parent := path[:strings.LastIndex(path, "/")]
+			childCount[parent]++
+			childSize[parent] += file.Size()
 		}
+		if file.IsDir() && !fc.Recursive && !glob.HasSuperMeta {
+			return filepath.SkipDir
+		}
+		return nil
+	}
+	postChildrenFn := func(path string, de *godirwalk.Dirent) error {
+		if glob.MatchString(path) {
+			gauge := map[string]interface{}{
+				"count":      childCount[path],
+				"size_bytes": childSize[path],
+			}
+			acc.AddGauge("filecount", gauge,
+				map[string]string{
+					"directory": basedir,
+				})
+		}
+		parent := path[:strings.LastIndex(path, "/")]
+		if fc.Recursive {
+			childCount[parent] += childCount[path]
+			childSize[parent] += childSize[path]
+		}
+		delete(childCount, path)
+		delete(childSize, path)
+		return nil
 	}
 
-	if glob.MatchString(basedir) {
-		gauge := map[string]interface{}{
-			"count":      numFiles,
-			"size_bytes": totalSize,
-		}
-		acc.AddGauge("filecount", gauge,
-			map[string]string{
-				"directory": basedir,
-			})
+	err := godirwalk.Walk(basedir, &godirwalk.Options{
+		Callback:             walkFn,
+		PostChildrenCallback: postChildrenFn,
+		Unsorted:             true,
+	})
+	if err != nil {
+		acc.AddError(err)
 	}
-
-	return numFiles, totalSize
 }
 
 func (fc *FileCount) filter(file os.FileInfo) (bool, error) {
