@@ -174,7 +174,6 @@ When run with:
 
 It produces:
 ```
-* Plugin: inputs.nginx_plus, Collection 1
 > nginx_plus_api_processes,host=localhost,port=80,source=localhost respawned=0i 1539163505000000000
 > nginx_plus_api_connections,host=localhost,port=80,source=localhost accepted=120890747i,active=6i,dropped=0i,idle=67i 1539163505000000000
 > nginx_plus_api_ssl,host=localhost,port=80,source=localhost handshakes=2983938i,handshakes_failed=54350i,session_reuses=2485267i 1539163506000000000

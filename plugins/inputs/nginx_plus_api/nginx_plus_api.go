@@ -96,7 +96,6 @@ func (n *NginxPlusApi) Gather(acc telegraf.Accumulator) error {
 }
 
 func (n *NginxPlusApi) createHttpClient() (*http.Client, error) {
-
 	if n.ResponseTimeout.Duration < time.Second {
 		n.ResponseTimeout.Duration = time.Second * 5
 	}
