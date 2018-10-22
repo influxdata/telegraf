@@ -2,12 +2,25 @@
 
 
 [[projects]]
+<<<<<<< HEAD
+  digest = "1:1acadbbc24182315b628f727b2e9ac653266d1644ca4007e0766c28110afc072"
+  name = "cloud.google.com/go"
+  packages = [
+    "compute/metadata",
+    "internal/version",
+    "monitoring/apiv3",
+  ]
+  pruneopts = ""
+  revision = "97efc2c9ffd9fe8ef47f7f3203dc60bbca547374"
+  version = "v0.28.0"
+=======
   digest = "1:972f38a9c879a4920d1e3a3d3438104b6c06163bfa3e6f4064adb00468d40587"
   name = "cloud.google.com/go"
   packages = ["civil"]
   pruneopts = ""
   revision = "c728a003b238b26cef9ab6753a5dc424b331c3ad"
   version = "v0.27.0"
+>>>>>>> master
 
 [[projects]]
   branch = "master"
@@ -30,14 +43,14 @@
   version = "v0.3.0"
 
 [[projects]]
+<<<<<<< HEAD
   digest = "1:5f61d4466cef935862c262f6bc00e24beb5b39b551e906f3cfb180dfac096d57"
   name = "contrib.go.opencensus.io/exporter/stackdriver"
   packages = ["propagation"]
   pruneopts = ""
   revision = "2b93072101d466aa4120b3c23c2e1b08af01541c"
   version = "v0.6.0"
-
-[[projects]]
+=======
   digest = "1:5923e22a060ab818a015593422f9e8a35b9d881d4cfcfed0669a82959b11c7ee"
   name = "github.com/Azure/go-autorest"
   packages = [
@@ -50,6 +63,7 @@
   pruneopts = ""
   revision = "1f7cd6cfe0adea687ad44a512dfe76140f804318"
   version = "v10.12.0"
+>>>>>>> master
 
 [[projects]]
   branch = "master"
@@ -145,7 +159,7 @@
   revision = "f2867c24984aa53edec54a138c03db934221bdea"
 
 [[projects]]
-  digest = "1:996727880e06dcf037f712c4d046e241d1b1b01844636fefb0fbaa480cfd230e"
+  digest = "1:65a05bde9b02f645c73afa61c9f6af92d94d726c81a268f45cc70218bd58de65"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -181,8 +195,8 @@
     "service/sts",
   ]
   pruneopts = ""
-  revision = "bf8067ceb6e7f51e150c218972dccfeeed892b85"
-  version = "v1.15.54"
+  revision = "8cf662a972fa7fba8f2c1ec57648cf840e2bb401"
+  version = "v1.14.30"
 
 [[projects]]
   branch = "master"
@@ -480,20 +494,21 @@
   version = "v0.2.0"
 
 [[projects]]
+<<<<<<< HEAD
   digest = "1:e097a364f4e8d8d91b9b9eeafb992d3796a41fde3eb548c1a87eb9d9f60725cf"
   name = "github.com/googleapis/gax-go"
   packages = ["."]
   pruneopts = ""
   revision = "317e0006254c44a0ac427cc52a0e083ff0b9622f"
   version = "v2.0.0"
-
-[[projects]]
+=======
   digest = "1:c1d7e883c50a26ea34019320d8ae40fad86c9e5d56e63a1ba2cb618cef43e986"
   name = "github.com/google/uuid"
   packages = ["."]
   pruneopts = ""
   revision = "064e2069ce9c359c118179501254f67d7d37ba24"
   version = "0.2"
+>>>>>>> master
 
 [[projects]]
   digest = "1:dbbeb8ddb0be949954c8157ee8439c2adfd8dc1c9510eb44a6e58cb68c3dce28"
@@ -1057,6 +1072,7 @@
 
 [[projects]]
   branch = "master"
+<<<<<<< HEAD
   digest = "1:2fcfc6c3fb8dfe0d80d7789272230d3ac7db15022b66817113f98d9fff880225"
   name = "github.com/zensqlmonitor/go-mssqldb"
   packages = ["."]
@@ -1088,6 +1104,8 @@
 
 [[projects]]
   branch = "master"
+=======
+>>>>>>> master
   digest = "1:0773b5c3be42874166670a20aa177872edb450cd9fc70b1df97303d977702a50"
   name = "golang.org/x/crypto"
   packages = [
@@ -1138,12 +1156,15 @@
   name = "golang.org/x/oauth2"
   packages = [
     ".",
+<<<<<<< HEAD
     "google",
     "internal",
     "jws",
     "jwt",
+=======
     "clientcredentials",
     "internal",
+>>>>>>> master
   ]
   pruneopts = ""
   revision = "d2e6202438beef2727060aa7cabdd924d92ebfd9"
@@ -1219,6 +1240,7 @@
   digest = "1:c1771ca6060335f9768dff6558108bc5ef6c58506821ad43377ee23ff059e472"
   name = "google.golang.org/appengine"
   packages = [
+<<<<<<< HEAD
     ".",
     "cloudsql",
     "internal",
@@ -1231,6 +1253,7 @@
     "internal/socket",
     "internal/urlfetch",
     "socket",
+=======
     "cloudsql",
     "internal",
     "internal/base",
@@ -1238,6 +1261,7 @@
     "internal/log",
     "internal/remote_api",
     "internal/urlfetch",
+>>>>>>> master
     "urlfetch",
   ]
   pruneopts = ""

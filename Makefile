@@ -12,7 +12,7 @@ PREFIX := /usr/local
 BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 COMMIT := $(shell git rev-parse --short HEAD)
 GOFILES ?= $(shell git ls-files '*.go')
-GOFMT ?= $(shell gofmt -l $(filter-out plugins/parsers/influx/machine.go, $(GOFILES)))
+GOFMT ?= $(shell gofmt -l -s $(filter-out plugins/parsers/influx/machine.go, $(GOFILES)))
 BUILDFLAGS ?=
 
 ifdef GOBIN
@@ -55,7 +55,7 @@ test:
 
 .PHONY: fmt
 fmt:
-	@gofmt -w $(filter-out plugins/parsers/influx/machine.go, $(GOFILES))
+	@gofmt -s -w $(filter-out plugins/parsers/influx/machine.go, $(GOFILES))
 
 .PHONY: fmtcheck
 fmtcheck:
@@ -131,10 +131,15 @@ plugin-%:
 	@echo "Starting dev environment for $${$(@)} input plugin..."
 	@docker-compose -f plugins/inputs/$${$(@)}/dev/docker-compose.yml up
 
+.PHONY: ci-1.11
+ci-1.11:
+	docker build -t quay.io/influxdb/telegraf-ci:1.11.1 - < scripts/ci-1.11.docker
+	docker push quay.io/influxdb/telegraf-ci:1.11.1
+
 .PHONY: ci-1.10
 ci-1.10:
-	docker build -t quay.io/influxdb/telegraf-ci:1.10.3 - < scripts/ci-1.10.docker
-	docker push quay.io/influxdb/telegraf-ci:1.10.3
+	docker build -t quay.io/influxdb/telegraf-ci:1.10.4 - < scripts/ci-1.10.docker
+	docker push quay.io/influxdb/telegraf-ci:1.10.4
 
 .PHONY: ci-1.9
 ci-1.9:

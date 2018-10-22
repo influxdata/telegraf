@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 
@@ -51,7 +52,7 @@ func newTestHTTPListenerV2() *HTTPListenerV2 {
 		Methods:        []string{"POST"},
 		Parser:         parser,
 		TimeFunc:       time.Now,
-		MaxBodySize:    70000,
+		MaxBodySize:    internal.Size{Size: 70000},
 	}
 	return listener
 }
@@ -234,7 +235,7 @@ func TestWriteHTTPExactMaxBodySize(t *testing.T) {
 		Path:           "/write",
 		Methods:        []string{"POST"},
 		Parser:         parser,
-		MaxBodySize:    int64(len(hugeMetric)),
+		MaxBodySize:    internal.Size{Size: int64(len(hugeMetric))},
 		TimeFunc:       time.Now,
 	}
 
@@ -256,7 +257,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 		Path:           "/write",
 		Methods:        []string{"POST"},
 		Parser:         parser,
-		MaxBodySize:    4096,
+		MaxBodySize:    internal.Size{Size: 4096},
 		TimeFunc:       time.Now,
 	}
 

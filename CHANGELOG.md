@@ -1,6 +1,6 @@
 ## v1.9 [unreleased]
 
-### Release Notes
+#### Release Notes
 
 - The `http_listener` input plugin has been renamed to `influxdb_listener` and
   use of the original name is deprecated.  The new name better describes the
@@ -8,11 +8,15 @@
   transfer of metrics in any format via HTTP, it is recommended to use
   `http_listener_v2` instead.
 
-### New Inputs
+#### New Inputs
 
 - [http_listener_v2](/plugins/inputs/http_listener_v2/README.md) - Contributed by @jul1u5
 
-### Features
+#### New Outputs
+
+- [stackdriver](/plugins/outputs/stackdriver/README.md) - Contributed by @jamesmaidment
+
+#### Features
 
 - [#4686](https://github.com/influxdata/telegraf/pull/4686): Add replace function to strings processor.
 - [#4754](https://github.com/influxdata/telegraf/pull/4754): Query servers in parallel in dns_query input.
@@ -25,8 +29,14 @@
 - [#4811](https://github.com/influxdata/telegraf/pull/4811): Add windows service name lookup to procstat input.
 - [#4807](https://github.com/influxdata/telegraf/pull/4807): Add entity-body compression to http output.
 - [#4838](https://github.com/influxdata/telegraf/pull/4838): Add telegraf version to User-Agent header.
+- [#4864](https://github.com/influxdata/telegraf/pull/4864): Use DescribeStreamSummary in place of ListStreams in kinesis output.
+- [#4852](https://github.com/influxdata/telegraf/pull/4852): Add ability to specify bytes options as strings with units.
 
-## v1.8.2 [unreleased]
+## v1.8.3 [unreleased]
+
+- [#4873](https://github.com/influxdata/telegraf/pull/4873): Add DN attributes as tags in x509_cert input to avoid series overwrite.
+
+## v1.8.2 [2018-10-17]
 
 ### Bugfixes
 
@@ -35,6 +45,11 @@
 - [#4851](https://github.com/influxdata/telegraf/pull/4851): Support uint fields in aerospike input.
 - [#4854](https://github.com/influxdata/telegraf/pull/4854): Use container name from list if no name in container stats.
 - [#4850](https://github.com/influxdata/telegraf/pull/4850): Prevent panic in filecount input on error in file stat.
+- [#4846](https://github.com/influxdata/telegraf/pull/4846): Fix mqtt_consumer connect and reconnect.
+- [#4849](https://github.com/influxdata/telegraf/pull/4849): Fix panic in logparser input.
+- [#4869](https://github.com/influxdata/telegraf/pull/4869): Lower authorization errors to debug level in mongodb input.
+- [#4875](https://github.com/influxdata/telegraf/pull/4875): Return correct response code on ping input.
+- [#4874](https://github.com/influxdata/telegraf/pull/4874): Fix segfault in x509_cert input.
 
 ## v1.8.1 [2018-10-03]
 

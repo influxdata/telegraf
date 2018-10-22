@@ -24,7 +24,7 @@ func TestFilter_ApplyEmpty(t *testing.T) {
 
 func TestFilter_ApplyTagsDontPass(t *testing.T) {
 	filters := []TagFilter{
-		TagFilter{
+		{
 			Name:   "cpu",
 			Filter: []string{"cpu-*"},
 		},
@@ -244,11 +244,11 @@ func TestFilter_FieldDrop(t *testing.T) {
 
 func TestFilter_TagPass(t *testing.T) {
 	filters := []TagFilter{
-		TagFilter{
+		{
 			Name:   "cpu",
 			Filter: []string{"cpu-*"},
 		},
-		TagFilter{
+		{
 			Name:   "mem",
 			Filter: []string{"mem_free"},
 		}}
@@ -258,19 +258,19 @@ func TestFilter_TagPass(t *testing.T) {
 	require.NoError(t, f.Compile())
 
 	passes := [][]*telegraf.Tag{
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cpu-total"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cpu-0"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cpu-1"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cpu-2"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "mem", Value: "mem_free"}},
+		{{Key: "cpu", Value: "cpu-total"}},
+		{{Key: "cpu", Value: "cpu-0"}},
+		{{Key: "cpu", Value: "cpu-1"}},
+		{{Key: "cpu", Value: "cpu-2"}},
+		{{Key: "mem", Value: "mem_free"}},
 	}
 
 	drops := [][]*telegraf.Tag{
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cputotal"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cpu0"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cpu1"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cpu2"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "mem", Value: "mem_used"}},
+		{{Key: "cpu", Value: "cputotal"}},
+		{{Key: "cpu", Value: "cpu0"}},
+		{{Key: "cpu", Value: "cpu1"}},
+		{{Key: "cpu", Value: "cpu2"}},
+		{{Key: "mem", Value: "mem_used"}},
 	}
 
 	for _, tags := range passes {
@@ -288,11 +288,11 @@ func TestFilter_TagPass(t *testing.T) {
 
 func TestFilter_TagDrop(t *testing.T) {
 	filters := []TagFilter{
-		TagFilter{
+		{
 			Name:   "cpu",
 			Filter: []string{"cpu-*"},
 		},
-		TagFilter{
+		{
 			Name:   "mem",
 			Filter: []string{"mem_free"},
 		}}
@@ -302,19 +302,19 @@ func TestFilter_TagDrop(t *testing.T) {
 	require.NoError(t, f.Compile())
 
 	drops := [][]*telegraf.Tag{
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cpu-total"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cpu-0"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cpu-1"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cpu-2"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "mem", Value: "mem_free"}},
+		{{Key: "cpu", Value: "cpu-total"}},
+		{{Key: "cpu", Value: "cpu-0"}},
+		{{Key: "cpu", Value: "cpu-1"}},
+		{{Key: "cpu", Value: "cpu-2"}},
+		{{Key: "mem", Value: "mem_free"}},
 	}
 
 	passes := [][]*telegraf.Tag{
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cputotal"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cpu0"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cpu1"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "cpu", Value: "cpu2"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "mem", Value: "mem_used"}},
+		{{Key: "cpu", Value: "cputotal"}},
+		{{Key: "cpu", Value: "cpu0"}},
+		{{Key: "cpu", Value: "cpu1"}},
+		{{Key: "cpu", Value: "cpu2"}},
+		{{Key: "mem", Value: "mem_used"}},
 	}
 
 	for _, tags := range passes {
@@ -442,27 +442,27 @@ func TestFilter_FilterFieldPassAndDrop(t *testing.T) {
 // see: https://github.com/influxdata/telegraf/issues/2860
 func TestFilter_FilterTagsPassAndDrop(t *testing.T) {
 	inputData := [][]*telegraf.Tag{
-		[]*telegraf.Tag{&telegraf.Tag{Key: "tag1", Value: "1"}, &telegraf.Tag{Key: "tag2", Value: "3"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "tag1", Value: "1"}, &telegraf.Tag{Key: "tag2", Value: "2"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "tag1", Value: "2"}, &telegraf.Tag{Key: "tag2", Value: "1"}},
-		[]*telegraf.Tag{&telegraf.Tag{Key: "tag1", Value: "4"}, &telegraf.Tag{Key: "tag2", Value: "1"}},
+		{{Key: "tag1", Value: "1"}, {Key: "tag2", Value: "3"}},
+		{{Key: "tag1", Value: "1"}, {Key: "tag2", Value: "2"}},
+		{{Key: "tag1", Value: "2"}, {Key: "tag2", Value: "1"}},
+		{{Key: "tag1", Value: "4"}, {Key: "tag2", Value: "1"}},
 	}
 
 	expectedResult := []bool{false, true, false, false}
 
 	filterPass := []TagFilter{
-		TagFilter{
+		{
 			Name:   "tag1",
 			Filter: []string{"1", "4"},
 		},
 	}
 
 	filterDrop := []TagFilter{
-		TagFilter{
+		{
 			Name:   "tag1",
 			Filter: []string{"4"},
 		},
-		TagFilter{
+		{
 			Name:   "tag2",
 			Filter: []string{"3"},
 		},

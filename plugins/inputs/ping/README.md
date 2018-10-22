@@ -31,6 +31,13 @@ apt-get install iputils-ping
   ## Interface or source address to send ping from (ping -I <INTERFACE/SRC_ADDR>)
   ## on Darwin and Freebsd only source address possible: (ping -S <SRC_ADDR>)
   # interface = ""
+
+  ## Specify the ping executable binary, default is "ping"
+  # binary = "ping"
+
+  ## Arguments for ping command
+  ## when arguments is not empty, other options (ping_interval, timeout, etc) will be ignored
+  # arguments = ["-c", "3"]
 ```
 
 ### Metrics:

@@ -14,13 +14,13 @@ type mockFetcher struct {
 
 func (h *mockFetcher) Fetch(address string) ([]hddtemp.Disk, error) {
 	return []hddtemp.Disk{
-		hddtemp.Disk{
+		{
 			DeviceName:  "Disk1",
 			Model:       "Model1",
 			Temperature: 13,
 			Unit:        "C",
 		},
-		hddtemp.Disk{
+		{
 			DeviceName:  "Disk2",
 			Model:       "Model2",
 			Temperature: 14,

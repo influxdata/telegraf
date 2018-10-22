@@ -73,12 +73,12 @@ func TestRegularOnlyFilter(t *testing.T) {
 
 func TestSizeFilter(t *testing.T) {
 	fc := getNoFilterFileCount()
-	fc.Size = -100
+	fc.Size = internal.Size{Size: -100}
 	matches := []string{"foo", "bar", "baz",
 		"subdir/quux", "subdir/quuz"}
 	fileCountEquals(t, fc, len(matches), 0)
 
-	fc.Size = 100
+	fc.Size = internal.Size{Size: 100}
 	matches = []string{"qux", "subdir/qux"}
 	fileCountEquals(t, fc, len(matches), 892)
 }
@@ -109,7 +109,7 @@ func getNoFilterFileCount() FileCount {
 		Name:        "*",
 		Recursive:   true,
 		RegularOnly: false,
-		Size:        0,
+		Size:        internal.Size{Size: 0},
 		MTime:       internal.Duration{Duration: 0},
 		fileFilters: nil,
 	}
