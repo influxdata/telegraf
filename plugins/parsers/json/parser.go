@@ -209,10 +209,10 @@ func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if p.JSONQuery != "" {
 		result := gjson.GetBytes(buf, p.JSONQuery)
 		buf = []byte(result.Raw)
-		if !result.IsArray() && !result.IsObject() {
-			err := fmt.Errorf("E! Query path must lead to a JSON object or array of objects, but lead to: %v", result.Type)
-			return nil, err
-		}
+		// if !result.IsArray() && !result.IsObject() {
+		// 	err := fmt.Errorf("E! Query path must lead to a JSON object or array of objects, but lead to: %v", result.Type)
+		// 	return nil, err
+		// }
 	}
 
 	buf = bytes.TrimSpace(buf)

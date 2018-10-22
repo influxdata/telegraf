@@ -35,14 +35,7 @@ var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
-<<<<<<< HEAD
-var fServiceName = flag.String("service-name", "telegraf", "Use this as the service name")
-var fServiceDisplayName = flag.String("service-displayname", "Telegraf Data Collector Service",
-	"Use this as the service display name")
 var fVersion = flag.Bool("version", false, "display the version")
-=======
-var fVersion = flag.Bool("version", false, "display the version and exit")
->>>>>>> upstream/master
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
@@ -63,6 +56,8 @@ var fUsage = flag.String("usage", "",
 var fService = flag.String("service", "",
 	"operate on the service (windows only)")
 var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
+var fServiceDisplayName = flag.String("service-displayname", "Telegraf Data Collector Service",
+	"Use this as the service display name")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
 var (

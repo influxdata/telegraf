@@ -39,13 +39,11 @@ deps:
 telegraf:
 	go build -ldflags "$(LDFLAGS)" ./cmd/telegraf
 
-<<<<<<< HEAD
+.PHONY: small
 small:
 	go build -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 
-=======
 .PHONY: go-install
->>>>>>> upstream/master
 go-install:
 	go install -ldflags "-w -s $(LDFLAGS)" ./cmd/telegraf
 

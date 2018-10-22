@@ -11,9 +11,10 @@ import (
 )
 
 type NSQ struct {
-	Server   string
-	Topic    string
-	producer *nsq.Producer
+	Server       string
+	Topic        string
+	producer     *nsq.Producer
+	BatchMessage bool `toml:"batch"`
 
 	serializer serializers.Serializer
 }
@@ -65,15 +66,33 @@ func (n *NSQ) Write(metrics []telegraf.Metric) error {
 		return nil
 	}
 
+	metricsmap := make(map[string][]telegraf.Metric)
+
 	for _, metric := range metrics {
-		buf, err := n.serializer.Serialize(metric)
+		if n.BatchMessage {
+			metricsmap[n.Topic] = append(metricsmap[n.Topic], metric)
+		} else {
+			buf, err := n.serializer.Serialize(metric)
+			if err != nil {
+				return err
+			}
+
+			err = n.producer.Publish(n.Topic, buf)
+			if err != nil {
+				return fmt.Errorf("FAILED to send NSQD message: %s", err)
+			}
+		}
+	}
+
+	for key := range metricsmap {
+		buf, err := n.serializer.SerializeBatch(metricsmap[key])
+
 		if err != nil {
 			return err
 		}
-
-		err = n.producer.Publish(n.Topic, buf)
-		if err != nil {
-			return fmt.Errorf("FAILED to send NSQD message: %s", err)
+		publisherr := n.producer.Publish(n.Topic, buf)
+		if publisherr != nil {
+			return fmt.Errorf("Could not write to MQTT server, %s", publisherr)
 		}
 	}
 	return nil
