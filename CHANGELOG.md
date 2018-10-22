@@ -11,6 +11,7 @@
 #### New Inputs
 
 - [http_listener_v2](/plugins/inputs/http_listener_v2/README.md) - Contributed by @jul1u5
+- [nginx_plus_api](/plugins/inputs/nginx_plus_api/README.md) - Contributed by Bugagazavr
 
 #### New Outputs
 
