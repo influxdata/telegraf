@@ -24,22 +24,26 @@ type Buffer struct {
 	batchFirst int // index of the first metric in the batch
 	batchLast  int // one after the index of the last metric in the batch
 	batchSize  int // number of metrics current in the batch
-	batchDrop  int // number of metrics overwritten in the batch
 
+	MetricsAdded   selfstat.Stat
 	MetricsWritten selfstat.Stat
 	MetricsDropped selfstat.Stat
 }
 
 // NewBuffer returns a new empty Buffer with the given capacity.
 func NewBuffer(name string, capacity int) *Buffer {
-
-	return &Buffer{
+	b := &Buffer{
 		buf:   make([]telegraf.Metric, capacity),
 		first: 0,
 		last:  0,
 		size:  0,
 		cap:   capacity,
 
+		MetricsAdded: selfstat.Register(
+			"write",
+			"metrics_added",
+			map[string]string{"output": name},
+		),
 		MetricsWritten: selfstat.Register(
 			"write",
 			"metrics_written",
@@ -51,6 +55,7 @@ func NewBuffer(name string, capacity int) *Buffer {
 			map[string]string{"output": name},
 		),
 	}
+	return b
 }
 
 // Len returns the number of metrics currently in the buffer.
@@ -59,6 +64,10 @@ func (b *Buffer) Len() int {
 	defer b.Unlock()
 
 	return b.size
+}
+
+func (b *Buffer) metricAdded() {
+	b.MetricsAdded.Incr(1)
 }
 
 func (b *Buffer) metricWritten(metric telegraf.Metric) {
@@ -74,6 +83,10 @@ func (b *Buffer) metricDropped(metric telegraf.Metric) {
 }
 
 func (b *Buffer) inBatch() bool {
+	if b.batchSize == 0 {
+		return false
+	}
+
 	if b.batchFirst < b.batchLast {
 		return b.last >= b.batchFirst && b.last < b.batchLast
 	} else {
@@ -82,7 +95,7 @@ func (b *Buffer) inBatch() bool {
 }
 
 func (b *Buffer) add(m telegraf.Metric) {
-	// Buffer is full
+	// Check if Buffer is full
 	if b.size == b.cap {
 		if b.batchSize == 0 {
 			// No batch taken by the output, we can drop the metric now.
@@ -90,14 +103,17 @@ func (b *Buffer) add(m telegraf.Metric) {
 		} else if b.inBatch() {
 			// There is an outstanding batch and this will overwrite a metric
 			// in it, delay the dropping only in case the batch gets rejected.
-			b.batchDrop++
-			b.batchDrop = min(b.batchDrop, b.batchSize)
+			b.batchSize--
+			b.batchFirst++
+			b.batchFirst %= b.cap
 		} else {
 			// There is an outstanding batch, but this overwrites a metric
 			// outside of it.
 			b.metricDropped(b.buf[b.last])
 		}
 	}
+
+	b.metricAdded()
 
 	b.buf[b.last] = m
 	b.last++
@@ -159,11 +175,13 @@ func (b *Buffer) Accept(batch []telegraf.Metric) {
 		b.metricWritten(m)
 	}
 
-	if b.batchSize != 0 {
-		b.first = b.batchLast
+	if b.batchSize > 0 {
 		b.size -= b.batchSize
-		b.resetBatch()
+		b.first += b.batchSize
+		b.first %= b.cap
 	}
+
+	b.resetBatch()
 }
 
 // Reject clears the current batch record so that calls to Accept will have no
@@ -172,9 +190,9 @@ func (b *Buffer) Reject(batch []telegraf.Metric) {
 	b.Lock()
 	defer b.Unlock()
 
-	if b.batchDrop > 0 {
+	if len(batch) > b.batchSize {
 		// Part or all of the batch was dropped before reject was called.
-		for _, m := range batch[:b.batchDrop] {
+		for _, m := range batch[b.batchSize:] {
 			b.metricDropped(m)
 		}
 	}
@@ -186,7 +204,6 @@ func (b *Buffer) resetBatch() {
 	b.batchFirst = 0
 	b.batchLast = 0
 	b.batchSize = 0
-	b.batchDrop = 0
 }
 
 func min(a, b int) int {

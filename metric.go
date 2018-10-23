@@ -69,8 +69,8 @@ type Metric interface {
 	// Reject marks the metric as processed unsuccessfully.
 	Reject()
 
-	// Remove marks the metric as processed without being written to any
-	// output.
+	// Remove marks the metric as processed successfully without being written
+	// to any output.
 	Remove()
 
 	// Mark Metric as an aggregate

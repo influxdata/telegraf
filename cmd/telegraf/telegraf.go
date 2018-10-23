@@ -87,8 +87,6 @@ func reloadLoop(
 		go func() {
 			select {
 			case sig := <-signals:
-				// FIXME: print
-				fmt.Println("Received", sig)
 				if sig == syscall.SIGHUP {
 					log.Printf("I! Reloading Telegraf config")
 					<-reload

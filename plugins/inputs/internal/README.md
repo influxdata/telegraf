@@ -55,6 +55,7 @@ that are of the same input type. They are tagged with `output=<plugin_name>`.
 - internal_write
     - buffer_limit
     - buffer_size
+    - metrics_added
     - metrics_written
     - metrics_dropped
     - metrics_filtered
@@ -77,7 +78,7 @@ to each particular plugin.
 ```
 internal_memstats,host=tyrion alloc_bytes=4457408i,sys_bytes=10590456i,pointer_lookups=7i,mallocs=17642i,frees=7473i,heap_sys_bytes=6848512i,heap_idle_bytes=1368064i,heap_in_use_bytes=5480448i,heap_released_bytes=0i,total_alloc_bytes=6875560i,heap_alloc_bytes=4457408i,heap_objects_bytes=10169i,num_gc=2i 1480682800000000000
 internal_agent,host=tyrion metrics_written=18i,metrics_dropped=0i,metrics_gathered=19i,gather_errors=0i 1480682800000000000
-internal_write,output=file,host=tyrion buffer_limit=10000i,write_time_ns=636609i,metrics_written=18i,buffer_size=0i 1480682800000000000
+internal_write,output=file,host=tyrion buffer_limit=10000i,write_time_ns=636609i,metrics_added=18i,metrics_written=18i,buffer_size=0i 1480682800000000000
 internal_gather,input=internal,host=tyrion metrics_gathered=19i,gather_time_ns=442114i 1480682800000000000
 internal_gather,input=http_listener,host=tyrion metrics_gathered=0i,gather_time_ns=167285i 1480682800000000000
 internal_http_listener,address=:8186,host=tyrion queries_received=0i,writes_received=0i,requests_received=0i,buffers_created=0i,requests_served=0i,pings_received=0i,bytes_received=0i,not_founds_served=0i,pings_served=0i,queries_served=0i,writes_served=0i 1480682800000000000

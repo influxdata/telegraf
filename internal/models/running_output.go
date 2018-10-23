@@ -21,6 +21,10 @@ const (
 type OutputConfig struct {
 	Name   string
 	Filter Filter
+
+	FlushInterval     time.Duration
+	MetricBufferLimit int
+	MetricBatchSize   int
 }
 
 // RunningOutput contains the output configuration
@@ -40,7 +44,8 @@ type RunningOutput struct {
 	buffer     *Buffer
 	BatchReady chan time.Time
 
-	aggMutex sync.Mutex
+	aggMutex   sync.Mutex
+	batchMutex sync.Mutex
 }
 
 func NewRunningOutput(
@@ -50,8 +55,14 @@ func NewRunningOutput(
 	batchSize int,
 	bufferLimit int,
 ) *RunningOutput {
+	if conf.MetricBufferLimit > 0 {
+		bufferLimit = conf.MetricBufferLimit
+	}
 	if bufferLimit == 0 {
 		bufferLimit = DEFAULT_METRIC_BUFFER_LIMIT
+	}
+	if conf.MetricBatchSize > 0 {
+		batchSize = conf.MetricBatchSize
 	}
 	if batchSize == 0 {
 		batchSize = DEFAULT_METRIC_BATCH_SIZE
@@ -96,8 +107,9 @@ func (ro *RunningOutput) metricFiltered(metric telegraf.Metric) {
 	metric.Accept()
 }
 
-// AddMetric adds a metric to the output. This function can also write cached
-// points if FlushBufferWhenFull is true.
+// AddMetric adds a metric to the output.
+//
+// Takes ownership of metric
 func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 	if ok := ro.Config.Filter.Select(metric); !ok {
 		ro.metricFiltered(metric)
@@ -117,6 +129,8 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 		return
 	}
 
+	ro.batchMutex.Lock()
+
 	ro.batch = append(ro.batch, metric)
 	if len(ro.batch) == ro.MetricBatchSize {
 		ro.addBatchToBuffer()
@@ -129,6 +143,8 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 		default:
 		}
 	}
+
+	ro.batchMutex.Unlock()
 }
 
 // AddBatchToBuffer moves the metrics from the batch into the metric buffer.
@@ -147,7 +163,10 @@ func (ro *RunningOutput) Write() error {
 		output.Reset()
 		ro.aggMutex.Unlock()
 	}
+	// add and write can be called concurrently
+	ro.batchMutex.Lock()
 	ro.addBatchToBuffer()
+	ro.batchMutex.Unlock()
 
 	nBuffer := ro.buffer.Len()
 
@@ -165,7 +184,6 @@ func (ro *RunningOutput) Write() error {
 			ro.buffer.Reject(batch)
 			return err
 		}
-
 		ro.buffer.Accept(batch)
 	}
 	return nil
@@ -183,8 +201,8 @@ func (ro *RunningOutput) WriteBatch() error {
 		ro.buffer.Reject(batch)
 		return err
 	}
-
 	ro.buffer.Accept(batch)
+
 	return nil
 }
 

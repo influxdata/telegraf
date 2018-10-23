@@ -30,7 +30,7 @@ func EnableDebugFinalizer() {
 
 var (
 	lastID    uint64
-	finalizer func(*trackingMetric)
+	finalizer func(*trackingData)
 )
 
 func newTrackingID() telegraf.TrackingID {
@@ -38,18 +38,18 @@ func newTrackingID() telegraf.TrackingID {
 	return telegraf.TrackingID(lastID)
 }
 
-func debugFinalizer(m *trackingMetric) {
-	if m.d.rc != 0 {
-		log.Printf("E! [agent] tracking metric collected with non-zero reference count: %v rc: %d",
-			m, m.d.rc)
+func debugFinalizer(d *trackingData) {
+	rc := atomic.LoadInt32(&d.rc)
+	if rc != 0 {
+		log.Fatalf("E! [agent] metric collected with non-zero reference count rc: %d", rc)
 	}
 }
 
 type trackingData struct {
 	id          telegraf.TrackingID
 	rc          int32
-	acceptCount int
-	rejectCount int
+	acceptCount int32
+	rejectCount int32
 	notify      NotifyFunc
 }
 
@@ -59,6 +59,14 @@ func (d *trackingData) incr() {
 
 func (d *trackingData) decr() int32 {
 	return atomic.AddInt32(&d.rc, -1)
+}
+
+func (d *trackingData) accept() {
+	atomic.AddInt32(&d.acceptCount, 1)
+}
+
+func (d *trackingData) reject() {
+	atomic.AddInt32(&d.rejectCount, 1)
 }
 
 type trackingMetric struct {
@@ -79,7 +87,7 @@ func newTrackingMetric(metric telegraf.Metric, fn NotifyFunc) (telegraf.Metric, 
 	}
 
 	if finalizer != nil {
-		runtime.SetFinalizer(m, finalizer)
+		runtime.SetFinalizer(m.d, finalizer)
 	}
 	return m, m.d.id
 }
@@ -101,9 +109,9 @@ func newTrackingMetricGroup(group []telegraf.Metric, fn NotifyFunc) ([]telegraf.
 		}
 		group[i] = dm
 
-		if finalizer != nil {
-			runtime.SetFinalizer(m, finalizer)
-		}
+	}
+	if finalizer != nil {
+		runtime.SetFinalizer(d, finalizer)
 	}
 
 	return group, d.id
@@ -118,12 +126,12 @@ func (m *trackingMetric) Copy() telegraf.Metric {
 }
 
 func (m *trackingMetric) Accept() {
-	m.d.acceptCount++
+	m.d.accept()
 	m.decr()
 }
 
 func (m *trackingMetric) Reject() {
-	m.d.rejectCount++
+	m.d.reject()
 	m.decr()
 }
 
@@ -141,8 +149,8 @@ func (m *trackingMetric) decr() {
 		m.d.notify(
 			&deliveryInfo{
 				id:       m.d.id,
-				accepted: m.d.acceptCount,
-				rejected: m.d.rejectCount,
+				accepted: int(m.d.acceptCount),
+				rejected: int(m.d.rejectCount),
 			},
 		)
 	}

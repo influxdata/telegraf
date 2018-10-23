@@ -30,7 +30,7 @@ func NewAgent(config *config.Config) (*Agent, error) {
 
 // Run starts and runs the Agent until the context is done.
 func (a *Agent) Run(ctx context.Context) error {
-	log.Printf("I! Agent Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
+	log.Printf("I! [agent] Config: Interval:%s, Quiet:%#v, Hostname:%#v, "+
 		"Flush Interval:%s",
 		a.Config.Agent.Interval.Duration, a.Config.Agent.Quiet,
 		a.Config.Agent.Hostname, a.Config.Agent.FlushInterval.Duration)
@@ -200,13 +200,13 @@ func (a *Agent) runInputs(
 	startTime time.Time,
 	dst chan<- telegraf.Metric,
 ) error {
-	interval := a.Config.Agent.Interval.Duration
-	precision := a.Config.Agent.Precision.Duration
-	jitter := a.Config.Agent.CollectionJitter.Duration
-
 	var wg sync.WaitGroup
 	for _, input := range a.Config.Inputs {
-		// Overwrite agent interval if this plugin has it's own.
+		interval := a.Config.Agent.Interval.Duration
+		precision := a.Config.Agent.Precision.Duration
+		jitter := a.Config.Agent.CollectionJitter.Duration
+
+		// Overwrite agent interval if this plugin has its own.
 		if input.Config.Interval != 0 {
 			interval = input.Config.Interval
 		}
@@ -426,6 +426,12 @@ func (a *Agent) runOutputs(
 
 	var wg sync.WaitGroup
 	for _, output := range a.Config.Outputs {
+		interval := interval
+		// Overwrite agent flush_interval if this plugin has its own.
+		if output.Config.FlushInterval != 0 {
+			interval = output.Config.FlushInterval
+		}
+
 		wg.Add(1)
 		go func(output *models.RunningOutput) {
 			defer wg.Done()

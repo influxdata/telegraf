@@ -9,7 +9,6 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-
 	"regexp"
 	"runtime"
 	"sort"
@@ -26,7 +25,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
-
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 )
@@ -1766,6 +1764,8 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 		Name:   name,
 		Filter: filter,
 	}
+
+	// TODO
 	// Outputs don't support FieldDrop/FieldPass, so set to NameDrop/NamePass
 	if len(oc.Filter.FieldDrop) > 0 {
 		oc.Filter.NameDrop = oc.Filter.FieldDrop
@@ -1773,5 +1773,47 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 	if len(oc.Filter.FieldPass) > 0 {
 		oc.Filter.NamePass = oc.Filter.FieldPass
 	}
+
+	if node, ok := tbl.Fields["flush_interval"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+
+				oc.FlushInterval = dur
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["metric_buffer_limit"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if integer, ok := kv.Value.(*ast.Integer); ok {
+				v, err := integer.Int()
+				if err != nil {
+					return nil, err
+				}
+				oc.MetricBufferLimit = int(v)
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["metric_batch_size"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if integer, ok := kv.Value.(*ast.Integer); ok {
+				v, err := integer.Int()
+				if err != nil {
+					return nil, err
+				}
+				oc.MetricBatchSize = int(v)
+			}
+		}
+	}
+
+	delete(tbl.Fields, "flush_interval")
+	delete(tbl.Fields, "metric_buffer_limit")
+	delete(tbl.Fields, "metric_batch_size")
+
 	return oc, nil
 }
