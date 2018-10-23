@@ -8,32 +8,48 @@ import (
 )
 
 var (
-	MetricsWritten = selfstat.Register("agent", "metrics_written", map[string]string{})
-	MetricsDropped = selfstat.Register("agent", "metrics_dropped", map[string]string{})
+	AgentMetricsWritten = selfstat.Register("agent", "metrics_written", map[string]string{})
+	AgentMetricsDropped = selfstat.Register("agent", "metrics_dropped", map[string]string{})
 )
 
 // Buffer stores metrics in a circular buffer.
 type Buffer struct {
 	sync.Mutex
-	buf        []telegraf.Metric
-	first      int // index of the first/oldest metric
-	last       int // one after the index of the last/newest metric
-	size       int // number of metrics currently in the buffer
-	cap        int // the capacity of the buffer
+	buf   []telegraf.Metric
+	first int // index of the first/oldest metric
+	last  int // one after the index of the last/newest metric
+	size  int // number of metrics currently in the buffer
+	cap   int // the capacity of the buffer
+
 	batchFirst int // index of the first metric in the batch
 	batchLast  int // one after the index of the last metric in the batch
 	batchSize  int // number of metrics current in the batch
 	batchDrop  int // number of metrics overwritten in the batch
+
+	MetricsWritten selfstat.Stat
+	MetricsDropped selfstat.Stat
 }
 
 // NewBuffer returns a new empty Buffer with the given capacity.
-func NewBuffer(capacity int) *Buffer {
+func NewBuffer(name string, capacity int) *Buffer {
+
 	return &Buffer{
 		buf:   make([]telegraf.Metric, capacity),
 		first: 0,
 		last:  0,
 		size:  0,
 		cap:   capacity,
+
+		MetricsWritten: selfstat.Register(
+			"write",
+			"metrics_written",
+			map[string]string{"output": name},
+		),
+		MetricsDropped: selfstat.Register(
+			"write",
+			"metrics_dropped",
+			map[string]string{"output": name},
+		),
 	}
 }
 
@@ -45,9 +61,24 @@ func (b *Buffer) Len() int {
 	return b.size
 }
 
+func (b *Buffer) metricWritten(metric telegraf.Metric) {
+	AgentMetricsWritten.Incr(1)
+	b.MetricsWritten.Incr(1)
+	metric.Accept()
+}
+
 func (b *Buffer) metricDropped(metric telegraf.Metric) {
-	MetricsDropped.Incr(1)
+	AgentMetricsDropped.Incr(1)
+	b.MetricsDropped.Incr(1)
 	metric.Reject()
+}
+
+func (b *Buffer) inBatch() bool {
+	if b.batchFirst < b.batchLast {
+		return b.last >= b.batchFirst && b.last < b.batchLast
+	} else {
+		return b.last >= b.batchFirst || b.last < b.batchLast
+	}
 }
 
 func (b *Buffer) add(m telegraf.Metric) {
@@ -57,9 +88,11 @@ func (b *Buffer) add(m telegraf.Metric) {
 		// Otherwise we will do it only if the batch is rejected
 		if b.batchSize == 0 {
 			b.metricDropped(b.buf[b.last])
-		} else {
+		} else if b.inBatch() {
 			b.batchDrop++
 			b.batchDrop = min(b.batchDrop, b.batchSize)
+		} else {
+			b.metricDropped(b.buf[b.last])
 		}
 	}
 
@@ -75,13 +108,12 @@ func (b *Buffer) add(m telegraf.Metric) {
 	b.size = min(b.size+1, b.cap)
 }
 
-// Add adds metrics to the stack and returns the size of the stack.
+// Add adds metrics to the buffer
 func (b *Buffer) Add(metrics ...telegraf.Metric) {
 	b.Lock()
 	defer b.Unlock()
 
 	for i := range metrics {
-		MetricsWritten.Incr(1)
 		b.add(metrics[i])
 	}
 }
@@ -90,8 +122,7 @@ func (b *Buffer) Add(metrics ...telegraf.Metric) {
 // metrics.
 //
 // The metrics contained in the batch are not removed from the buffer, instead
-// the last batch is recorded and removed only if Ack is called.  This is
-// meant to avoid the requirement to reorder the buffer if an error occurs.
+// the last batch is recorded and removed only if Accept is called.
 func (b *Buffer) Batch(batchSize int) []telegraf.Metric {
 	b.Lock()
 	defer b.Unlock()
@@ -116,10 +147,14 @@ func (b *Buffer) Batch(batchSize int) []telegraf.Metric {
 	return out
 }
 
-// Ack removes the metrics contained in the last batch.
-func (b *Buffer) Ack() {
+// Accept removes the metrics contained in the last batch.
+func (b *Buffer) Accept(batch []telegraf.Metric) {
 	b.Lock()
 	defer b.Unlock()
+
+	for _, m := range batch {
+		b.metricWritten(m)
+	}
 
 	if b.batchSize != 0 {
 		b.first = b.batchLast
@@ -128,7 +163,7 @@ func (b *Buffer) Ack() {
 	}
 }
 
-// Reject clears the current batch record so that calls to Ack will have no
+// Reject clears the current batch record so that calls to Accept will have no
 // effect.
 func (b *Buffer) Reject(batch []telegraf.Metric) {
 	b.Lock()

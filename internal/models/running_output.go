@@ -32,7 +32,6 @@ type RunningOutput struct {
 	MetricBatchSize   int
 
 	MetricsFiltered selfstat.Stat
-	MetricsWritten  selfstat.Stat
 	BufferSize      selfstat.Stat
 	BufferLimit     selfstat.Stat
 	WriteTime       selfstat.Stat
@@ -60,17 +59,12 @@ func NewRunningOutput(
 	ro := &RunningOutput{
 		Name:              name,
 		batch:             make([]telegraf.Metric, 0, batchSize),
-		buffer:            NewBuffer(bufferLimit),
+		buffer:            NewBuffer(name, bufferLimit),
 		BatchReady:        make(chan time.Time, 1),
 		Output:            output,
 		Config:            conf,
 		MetricBufferLimit: bufferLimit,
 		MetricBatchSize:   batchSize,
-		MetricsWritten: selfstat.Register(
-			"write",
-			"metrics_written",
-			map[string]string{"output": name},
-		),
 		MetricsFiltered: selfstat.Register(
 			"write",
 			"metrics_filtered",
@@ -92,6 +86,7 @@ func NewRunningOutput(
 			map[string]string{"output": name},
 		),
 	}
+
 	ro.BufferLimit.Set(int64(ro.MetricBufferLimit))
 	return ro
 }
@@ -126,6 +121,9 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 	if len(ro.batch) == ro.MetricBatchSize {
 		ro.addBatchToBuffer()
 
+		nBuffer := ro.buffer.Len()
+		ro.BufferSize.Set(int64(nBuffer))
+
 		select {
 		case ro.BatchReady <- time.Now():
 		default:
@@ -153,10 +151,6 @@ func (ro *RunningOutput) Write() error {
 
 	nBuffer := ro.buffer.Len()
 
-	ro.BufferSize.Set(int64(nBuffer))
-	log.Printf("D! Output [%s] buffer fullness: %d / %d metrics. ",
-		ro.Name, nBuffer, ro.MetricBufferLimit)
-
 	// Only process the metrics in the buffer now.  Metrics added while we are
 	// writing will be sent on the next call.
 	nBatches := nBuffer/ro.MetricBatchSize + 1
@@ -172,11 +166,7 @@ func (ro *RunningOutput) Write() error {
 			return err
 		}
 
-		for _, m := range batch {
-			m.Accept()
-		}
-
-		ro.buffer.Ack()
+		ro.buffer.Accept(batch)
 	}
 	return nil
 }
@@ -194,11 +184,7 @@ func (ro *RunningOutput) WriteBatch() error {
 		return err
 	}
 
-	for _, m := range batch {
-		m.Accept()
-	}
-
-	ro.buffer.Ack()
+	ro.buffer.Accept(batch)
 	return nil
 }
 
@@ -209,10 +195,14 @@ func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 	ro.WriteTime.Incr(elapsed.Nanoseconds())
 
 	if err == nil {
-		nMetrics := len(metrics)
 		log.Printf("D! Output [%s] wrote batch of %d metrics in %s\n",
-			ro.Name, nMetrics, elapsed)
-		ro.MetricsWritten.Incr(int64(nMetrics))
+			ro.Name, len(metrics), elapsed)
 	}
 	return err
+}
+
+func (ro *RunningOutput) LogBufferStatus() {
+	nBuffer := ro.buffer.Len()
+	log.Printf("D! Output [%s] buffer fullness: %d / %d metrics. ",
+		ro.Name, nBuffer, ro.MetricBufferLimit)
 }

@@ -523,10 +523,12 @@ func (a *Agent) flushOnce(
 	for {
 		select {
 		case err := <-done:
+			output.LogBufferStatus()
 			return err
 		case <-ticker.C:
 			log.Printf("W! [agent] output %q did not complete within its flush interval",
 				output.Name)
+			output.LogBufferStatus()
 		}
 	}
 
