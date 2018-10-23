@@ -4,11 +4,12 @@ type Sysctl func(metric string) ([]string, error)
 type Zpool func() ([]string, error)
 
 type Zfs struct {
-	KstatPath    string
-	KstatMetrics []string
-	PoolMetrics  bool
-	sysctl       Sysctl
-	zpool        Zpool
+	KstatPath     string
+	KstatMetrics  []string
+	PoolMetrics   bool
+	ObjsetMetrics bool
+	sysctl        Sysctl
+	zpool         Zpool
 }
 
 var sampleConfig = `
@@ -20,10 +21,12 @@ var sampleConfig = `
   ## If not specified, then default is:
   # kstatMetrics = ["arcstats", "zfetchstats", "vdev_cache_stats"]
   ## For Linux, the default is:
-  # kstatMetrics = ["abdstats", "arcstats", "dnodestats", "dbufcachestats",
+  # kstatMetrics = ["abdstats", "arcstats", "dnodestats", "dbufstats",
   #   "dmu_tx", "fm", "vdev_mirror_stats", "zfetchstats", "zil"]
   ## By default, don't gather zpool stats
   # poolMetrics = false
+  ## By default, don't gather objset (eg dataset) stats
+  # objsetMetrics = false
 `
 
 func (z *Zfs) SampleConfig() string {
