@@ -195,7 +195,7 @@ func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 	ro.WriteTime.Incr(elapsed.Nanoseconds())
 
 	if err == nil {
-		log.Printf("D! Output [%s] wrote batch of %d metrics in %s\n",
+		log.Printf("D! [outputs.%s] wrote batch of %d metrics in %s\n",
 			ro.Name, len(metrics), elapsed)
 	}
 	return err
@@ -203,6 +203,6 @@ func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 
 func (ro *RunningOutput) LogBufferStatus() {
 	nBuffer := ro.buffer.Len()
-	log.Printf("D! Output [%s] buffer fullness: %d / %d metrics. ",
+	log.Printf("D! [outputs.%s] buffer fullness: %d / %d metrics. ",
 		ro.Name, nBuffer, ro.MetricBufferLimit)
 }

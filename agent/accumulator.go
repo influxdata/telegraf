@@ -174,6 +174,8 @@ func (a *trackingAccumulator) onDelivery(info telegraf.DeliveryInfo) {
 	select {
 	case a.delivered <- info:
 	default:
+		// This is a programming error in the input.  More items were sent for
+		// tracking than space requested.
 		panic("channel is full")
 	}
 }

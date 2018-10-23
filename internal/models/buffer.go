@@ -84,14 +84,17 @@ func (b *Buffer) inBatch() bool {
 func (b *Buffer) add(m telegraf.Metric) {
 	// Buffer is full
 	if b.size == b.cap {
-		// If no batch taken by the output, we can drop the metric now.
-		// Otherwise we will do it only if the batch is rejected
 		if b.batchSize == 0 {
+			// No batch taken by the output, we can drop the metric now.
 			b.metricDropped(b.buf[b.last])
 		} else if b.inBatch() {
+			// There is an outstanding batch and this will overwrite a metric
+			// in it, delay the dropping only in case the batch gets rejected.
 			b.batchDrop++
 			b.batchDrop = min(b.batchDrop, b.batchSize)
 		} else {
+			// There is an outstanding batch, but this overwrites a metric
+			// outside of it.
 			b.metricDropped(b.buf[b.last])
 		}
 	}
@@ -170,6 +173,7 @@ func (b *Buffer) Reject(batch []telegraf.Metric) {
 	defer b.Unlock()
 
 	if b.batchDrop > 0 {
+		// Part or all of the batch was dropped before reject was called.
 		for _, m := range batch[:b.batchDrop] {
 			b.metricDropped(m)
 		}
