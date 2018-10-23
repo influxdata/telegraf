@@ -32,6 +32,7 @@
 - [#4838](https://github.com/influxdata/telegraf/pull/4838): Add telegraf version to User-Agent header.
 - [#4864](https://github.com/influxdata/telegraf/pull/4864): Use DescribeStreamSummary in place of ListStreams in kinesis output.
 - [#4852](https://github.com/influxdata/telegraf/pull/4852): Add ability to specify bytes options as strings with units.
+- [#3903](https://github.com/influxdata/telegraf/pull/3903): Add support for TLS configuration in NSQ input.
 
 ## v1.8.3 [unreleased]
 
