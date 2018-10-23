@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/require"
@@ -217,7 +218,7 @@ func TestWriteHTTPNoNewline(t *testing.T) {
 func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
 	listener := &HTTPListener{
 		ServiceAddress: "localhost:0",
-		MaxLineSize:    128 * 1000,
+		MaxLineSize:    internal.Size{Size: 128 * 1000},
 		TimeFunc:       time.Now,
 	}
 
@@ -235,7 +236,7 @@ func TestWriteHTTPMaxLineSizeIncrease(t *testing.T) {
 func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 	listener := &HTTPListener{
 		ServiceAddress: "localhost:0",
-		MaxBodySize:    4096,
+		MaxBodySize:    internal.Size{Size: 4096},
 		TimeFunc:       time.Now,
 	}
 
@@ -252,7 +253,7 @@ func TestWriteHTTPVerySmallMaxBody(t *testing.T) {
 func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 	listener := &HTTPListener{
 		ServiceAddress: "localhost:0",
-		MaxLineSize:    70,
+		MaxLineSize:    internal.Size{Size: 70},
 		TimeFunc:       time.Now,
 	}
 
@@ -279,7 +280,7 @@ func TestWriteHTTPVerySmallMaxLineSize(t *testing.T) {
 func TestWriteHTTPLargeLinesSkipped(t *testing.T) {
 	listener := &HTTPListener{
 		ServiceAddress: "localhost:0",
-		MaxLineSize:    100,
+		MaxLineSize:    internal.Size{Size: 100},
 		TimeFunc:       time.Now,
 	}
 

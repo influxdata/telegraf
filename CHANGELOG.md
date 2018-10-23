@@ -1,11 +1,57 @@
 ## v1.9 [unreleased]
 
-### Features
+#### Release Notes
+
+- The `http_listener` input plugin has been renamed to `influxdb_listener` and
+  use of the original name is deprecated.  The new name better describes the
+  intended use of the plugin as a InfluxDB relay.  For general purpose
+  transfer of metrics in any format via HTTP, it is recommended to use
+  `http_listener_v2` instead.
+
+#### New Inputs
+
+- [http_listener_v2](/plugins/inputs/http_listener_v2/README.md) - Contributed by @jul1u5
+- [nginx_plus_api](/plugins/inputs/nginx_plus_api/README.md) - Contributed by Bugagazavr
+
+#### New Outputs
+
+- [stackdriver](/plugins/outputs/stackdriver/README.md) - Contributed by @jamesmaidment
+
+#### Features
 
 - [#4686](https://github.com/influxdata/telegraf/pull/4686): Add replace function to strings processor.
 - [#4754](https://github.com/influxdata/telegraf/pull/4754): Query servers in parallel in dns_query input.
 - [#4753](https://github.com/influxdata/telegraf/pull/4753): Add ability to define a custom service name when installing as a Windows service.
 - [#4703](https://github.com/influxdata/telegraf/pull/4703): Add support for IPv6 in the ping plugin.
+- [#4781](https://github.com/influxdata/telegraf/pull/4781): Add new config for csv column explicit type conversion.
+- [#4800](https://github.com/influxdata/telegraf/pull/4800): Add an option to specify a custom datadog URL.
+- [#4803](https://github.com/influxdata/telegraf/pull/4803): Use non-allocating field and tag accessors in datadog output.
+- [#4752](https://github.com/influxdata/telegraf/pull/4752): Add per-directory file counts in the filecount input.
+- [#4811](https://github.com/influxdata/telegraf/pull/4811): Add windows service name lookup to procstat input.
+- [#4807](https://github.com/influxdata/telegraf/pull/4807): Add entity-body compression to http output.
+- [#4838](https://github.com/influxdata/telegraf/pull/4838): Add telegraf version to User-Agent header.
+- [#4864](https://github.com/influxdata/telegraf/pull/4864): Use DescribeStreamSummary in place of ListStreams in kinesis output.
+- [#4852](https://github.com/influxdata/telegraf/pull/4852): Add ability to specify bytes options as strings with units.
+- [#3903](https://github.com/influxdata/telegraf/pull/3903): Add support for TLS configuration in NSQ input.
+
+## v1.8.3 [unreleased]
+
+- [#4873](https://github.com/influxdata/telegraf/pull/4873): Add DN attributes as tags in x509_cert input to avoid series overwrite.
+
+## v1.8.2 [2018-10-17]
+
+### Bugfixes
+
+- [#4844](https://github.com/influxdata/telegraf/pull/4844): Update write path to match updated InfluxDB v2 API.
+- [#4840](https://github.com/influxdata/telegraf/pull/4840): Fix missing timeouts in vsphere input.
+- [#4851](https://github.com/influxdata/telegraf/pull/4851): Support uint fields in aerospike input.
+- [#4854](https://github.com/influxdata/telegraf/pull/4854): Use container name from list if no name in container stats.
+- [#4850](https://github.com/influxdata/telegraf/pull/4850): Prevent panic in filecount input on error in file stat.
+- [#4846](https://github.com/influxdata/telegraf/pull/4846): Fix mqtt_consumer connect and reconnect.
+- [#4849](https://github.com/influxdata/telegraf/pull/4849): Fix panic in logparser input.
+- [#4869](https://github.com/influxdata/telegraf/pull/4869): Lower authorization errors to debug level in mongodb input.
+- [#4875](https://github.com/influxdata/telegraf/pull/4875): Return correct response code on ping input.
+- [#4874](https://github.com/influxdata/telegraf/pull/4874): Fix segfault in x509_cert input.
 
 ## v1.8.1 [2018-10-03]
 
@@ -13,7 +59,7 @@
 
 - [#4750](https://github.com/influxdata/telegraf/pull/4750): Fix hardware_type may be truncated in sqlserver input.
 - [#4723](https://github.com/influxdata/telegraf/issues/4723): Improve performance in basicstats aggregator.
-- [#4747](https://github.com/influxdata/telegraf/pull/4723): Add hostname to TLS config for SNI support.
+- [#4747](https://github.com/influxdata/telegraf/pull/4747): Add hostname to TLS config for SNI support.
 - [#4675](https://github.com/influxdata/telegraf/issues/4675): Don't add tags with empty values to opentsdb output.
 - [#4765](https://github.com/influxdata/telegraf/pull/4765): Fix panic during network error in vsphere input.
 - [#4766](https://github.com/influxdata/telegraf/pull/4766): Unify http_listener error response with InfluxDB.

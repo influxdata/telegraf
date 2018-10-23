@@ -97,6 +97,8 @@ func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
 				}
 
 				acc.AddFields("dns_query", fields, tags)
+
+				wg.Done()
 			}(domain, server)
 		}
 	}
