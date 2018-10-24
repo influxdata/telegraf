@@ -113,7 +113,6 @@
 
 ### Features
 
-- [#4345](https://github.com/influxdata/telegraf/pull/4345): Allow to force gathering Elasticsearch cluster stats on non-master node.
 - [#4236](https://github.com/influxdata/telegraf/pull/4236): Add SSL/TLS support to redis input.
 - [#4160](https://github.com/influxdata/telegraf/pull/4160): Add tengine input plugin.
 - [#4262](https://github.com/influxdata/telegraf/pull/4262): Add power draw field to nvidia_smi plugin.
