@@ -21,6 +21,6 @@ to ensure these permissions before running telegraf with this plugin included.
 This is what you can expect the emitted metrics to look like
 
 ```
-{"fields":{"bytes_in":0,"bytes_out":0,"connections":0,"cps":0,"pkts_in":0,"pkts_out":0,"pps_in":0,"pps_out":0},"name":"ipvs_virtual_server","tags":{"address_family":"inet","netmask":"32","sched":"rr","address":"172.18.64.234","port":"9000","protocol":"tcp"},"timestamp":1539810710}
-{"fields":{"bytes_in":0,"bytes_out":0,"connections":0,"cps":0,"pkts_in":0,"pkts_out":0,"pps_in":0,"pps_out":0},"name":"ipvs_virtual_server","tags":{"address_family":"inet","netmask":"32","sched":"rr","fwmark":"47"},"timestamp":1539810710}
+ipvs_virtual_server,address=172.18.64.234,address_family=inet,netmask=32,port=9000,protocol=tcp,sched=mh_418 bytes_out=0i,pps_in=0i,pps_out=0i,cps=0i,pkts_in=0i,pkts_out=0i,connections=0i,bytes_in=0i 1540407540000000000
+ipvs_virtual_server,address_family=inet,fwmark=47,netmask=32,sched=mh_418 connections=0i,pkts_in=0i,bytes_out=0i,pps_in=0i,pps_out=0i,pkts_out=0i,bytes_in=0i,cps=0i 1540407540000000000
 ```
