@@ -32,13 +32,13 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
 		TagDrop: []models.TagFilter{
-			models.TagFilter{
+			{
 				Name:   "badtag",
 				Filter: []string{"othertag"},
 			},
 		},
 		TagPass: []models.TagFilter{
-			models.TagFilter{
+			{
 				Name:   "goodtag",
 				Filter: []string{"mytag"},
 			},
@@ -71,13 +71,13 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
 		TagDrop: []models.TagFilter{
-			models.TagFilter{
+			{
 				Name:   "badtag",
 				Filter: []string{"othertag"},
 			},
 		},
 		TagPass: []models.TagFilter{
-			models.TagFilter{
+			{
 				Name:   "goodtag",
 				Filter: []string{"mytag"},
 			},
@@ -117,13 +117,13 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
 		TagDrop: []models.TagFilter{
-			models.TagFilter{
+			{
 				Name:   "badtag",
 				Filter: []string{"othertag"},
 			},
 		},
 		TagPass: []models.TagFilter{
-			models.TagFilter{
+			{
 				Name:   "goodtag",
 				Filter: []string{"mytag"},
 			},

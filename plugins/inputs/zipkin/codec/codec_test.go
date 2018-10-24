@@ -382,7 +382,7 @@ func TestNewBinaryAnnotations(t *testing.T) {
 				name: "myservice",
 			},
 			want: []trace.BinaryAnnotation{
-				trace.BinaryAnnotation{
+				{
 					Host:        "myhost",
 					ServiceName: "myservice",
 					Key:         "mykey",
@@ -424,7 +424,7 @@ func TestNewAnnotations(t *testing.T) {
 				name: "myservice",
 			},
 			want: []trace.Annotation{
-				trace.Annotation{
+				{
 					Host:        "myhost",
 					ServiceName: "myservice",
 					Timestamp:   time.Unix(0, 0).UTC(),

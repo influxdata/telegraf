@@ -16,7 +16,7 @@
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
-  version = "1.14.8"
+  version = "1.15.54"
 
 [[constraint]]
   name = "github.com/bsm/sarama-cluster"
@@ -221,6 +221,10 @@
 [[override]]
   source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
   name = "gopkg.in/fsnotify.v1"
+
+[[constraint]]
+  branch = "master"
+  name = "google.golang.org/genproto"
 
 [[constraint]]
   name = "github.com/vmware/govmomi"

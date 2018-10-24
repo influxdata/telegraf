@@ -52,7 +52,7 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 		 ** metric_name: The name of the metric
 		 ** _value:      The value for the metric
 		 ** time:       The timestamp for the metric
-		 ** All other index fields become deminsions.
+		 ** All other index fields become dimensions.
 	*/
 	type HECTimeSeries struct {
 		Time   float64                `json:"time"`
