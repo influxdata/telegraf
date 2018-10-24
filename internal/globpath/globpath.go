@@ -40,6 +40,7 @@ func Compile(path string) (*GlobPath, error) {
 	return &out, nil
 }
 
+// Match returns all files matching the expression
 func (g *GlobPath) Match() map[string]os.FileInfo {
 	out := make(map[string]os.FileInfo)
 	if !g.hasMeta {
@@ -76,6 +77,7 @@ func (g *GlobPath) Match() map[string]os.FileInfo {
 	return out
 }
 
+// MatchString test a string against the glob
 func (g *GlobPath) MatchString(path string) bool {
 	if !g.HasSuperMeta {
 		res, _ := filepath.Match(g.path, path)
@@ -84,6 +86,11 @@ func (g *GlobPath) MatchString(path string) bool {
 	return g.g.Match(path)
 }
 
+// GetRoots returns a list of files and directories which should be optimal
+// prefixes of matching files when you have a super-meta in your expression :
+// - any directory under these roots may contain a matching file
+// - no file outside of these roots can match the pattern
+// Note that it returns both files and directories.
 func (g *GlobPath) GetRoots() []string {
 	if !g.hasMeta {
 		return []string{g.path}
