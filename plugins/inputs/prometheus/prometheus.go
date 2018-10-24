@@ -26,6 +26,9 @@ type Prometheus struct {
 	// An array of Kubernetes services to scrape metrics from.
 	KubernetesServices []string
 
+	// Location of kubernetes config file
+	KubeConfig string
+
 	// Bearer Token authorization file path
 	BearerToken string `toml:"bearer_token"`
 

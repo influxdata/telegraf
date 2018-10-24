@@ -33,8 +33,11 @@ func loadClient(kubeconfigPath string) (*k8s.Client, error) {
 func start(p *Prometheus) error {
 	client, err := k8s.NewInClusterClient()
 	if err != nil {
-		// TODO: (glinton) kubeconfig file option in config
-		client, err = loadClient(fmt.Sprintf("%v/.kube/config", os.Getenv("HOME")))
+		configLocation := fmt.Sprintf("%s/.kube/config", os.Getenv("HOME"))
+		if p.KubeConfig != "" {
+			configLocation = p.KubeConfig
+		}
+		client, err = loadClient(configLocation)
 		if err != nil {
 			return err
 		}
@@ -43,11 +46,11 @@ func start(p *Prometheus) error {
 		eventype string
 		pod      *corev1.Pod
 	}
+
 	in := make(chan payload)
-	// TODO: (glinton) make sure this isn't leaked
 	go func() {
 		var pod corev1.Pod
-		// TODO: (glinton) reconnect watcher, track new pods
+	rewatch:
 		watcher, err := client.Watch(context.Background(), "", &pod)
 		if err != nil {
 			log.Printf("E! [inputs.prometheus] unable to watch resources: %s", err.Error())
@@ -55,12 +58,19 @@ func start(p *Prometheus) error {
 		defer watcher.Close()
 
 		for {
-			cm := new(corev1.Pod)
-			eventType, err := watcher.Next(cm)
-			if err != nil {
-				log.Printf("E! [inputs.prometheus] unable to watch next: %s", err.Error())
+			select {
+			case <-p.done:
+				log.Printf("I! [inputs.prometheus] shutting down\n")
+				return
+			default:
+				cm := new(corev1.Pod)
+				eventType, err := watcher.Next(cm)
+				if err != nil {
+					log.Printf("D! [inputs.prometheus] unable to watch next: %s", err.Error())
+					goto rewatch
+				}
+				in <- payload{eventType, cm}
 			}
-			in <- payload{eventType, cm}
 		}
 	}()
 
@@ -124,7 +134,8 @@ func getScrapeURL(pod *corev1.Pod) *string {
 	if scrape != "true" {
 		return nil
 	}
-	if pod.Status.GetPodIP() == "" {
+	ip := pod.Status.GetPodIP()
+	if ip == "" {
 		// return as if scrape was disabled, we will be notified again once the pod
 		// has an IP
 		return nil
@@ -142,8 +153,6 @@ func getScrapeURL(pod *corev1.Pod) *string {
 		path = "/" + path
 	}
 
-	ip := pod.Status.GetPodIP()
-	// TODO: (glinton) use url and specify scheme
 	x := fmt.Sprintf("http://%s:%s%s", ip, port, path)
 
 	return &x
