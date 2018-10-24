@@ -186,7 +186,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 			}
 			acc.AddGauge("filecount", gauge,
 				map[string]string{
-					"directory": basedir,
+					"directory": path,
 				})
 		}
 		parent := path[:strings.LastIndex(path, "/")]

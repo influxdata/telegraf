@@ -17,35 +17,36 @@ func TestNoFilters(t *testing.T) {
 	fc := getNoFilterFileCount()
 	matches := []string{"foo", "bar", "baz", "qux",
 		"subdir/", "subdir/quux", "subdir/quuz",
-		"subdir/qux"}
-	fileCountEquals(t, fc, len(matches), 4988)
+		"subdir/nested2", "subdir/nested2/qux"}
+	fileCountEquals(t, fc, len(matches), 9084)
 }
 
 func TestNoFiltersOnChildDir(t *testing.T) {
 	fc := getNoFilterFileCount()
 	fc.Directories = []string{getTestdataDir() + "/*"}
-	matches := []string{"subdir/quux", "subdir/quuz", "subdir/qux"}
+	matches := []string{"subdir/quux", "subdir/quuz",
+		"subdir/nested2/qux", "subdir/nested2"}
 
 	tags := map[string]string{"directory": getTestdataDir() + "/subdir"}
 	acc := testutil.Accumulator{}
 	acc.GatherError(fc.Gather)
 
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(len(matches))))
-	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(446)))
+	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(4542)))
 }
 
 func TestNoRecursiveButSuperMeta(t *testing.T) {
 	fc := getNoFilterFileCount()
 	fc.Recursive = false
 	fc.Directories = []string{getTestdataDir() + "/**"}
-	matches := []string{"subdir/quux", "subdir/quuz", "subdir/qux"}
+	matches := []string{"subdir/quux", "subdir/quuz", "subdir/nested2"}
 
 	tags := map[string]string{"directory": getTestdataDir() + "/subdir"}
 	acc := testutil.Accumulator{}
 	acc.GatherError(fc.Gather)
 
 	require.True(t, acc.HasPoint("filecount", tags, "count", int64(len(matches))))
-	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(446)))
+	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(4096)))
 }
 
 func TestNameFilter(t *testing.T) {
@@ -62,12 +63,25 @@ func TestNonRecursive(t *testing.T) {
 	fileCountEquals(t, fc, len(matches), 4542)
 }
 
+func TestDoubleAndSimpleStar(t *testing.T) {
+	fc := getNoFilterFileCount()
+	fc.Directories = []string{getTestdataDir() + "/**/*"}
+	matches := []string{"qux"}
+	tags := map[string]string{"directory": getTestdataDir() + "/subdir/nested2"}
+
+	acc := testutil.Accumulator{}
+	acc.GatherError(fc.Gather)
+
+	require.True(t, acc.HasPoint("filecount", tags, "count", int64(len(matches))))
+	require.True(t, acc.HasPoint("filecount", tags, "size_bytes", int64(446)))
+}
+
 func TestRegularOnlyFilter(t *testing.T) {
 	fc := getNoFilterFileCount()
 	fc.RegularOnly = true
 	matches := []string{
 		"foo", "bar", "baz", "qux", "subdir/quux", "subdir/quuz",
-		"subdir/qux"}
+		"subdir/nested2/qux"}
 	fileCountEquals(t, fc, len(matches), 892)
 }
 
@@ -79,7 +93,7 @@ func TestSizeFilter(t *testing.T) {
 	fileCountEquals(t, fc, len(matches), 0)
 
 	fc.Size = internal.Size{Size: 100}
-	matches = []string{"qux", "subdir/qux"}
+	matches = []string{"qux", "subdir/nested2//qux"}
 	fileCountEquals(t, fc, len(matches), 892)
 }
 
@@ -95,8 +109,8 @@ func TestMTimeFilter(t *testing.T) {
 	fc.MTime = internal.Duration{Duration: -fileAge}
 	matches := []string{"foo", "bar", "qux",
 		"subdir/", "subdir/quux", "subdir/quuz",
-		"subdir/qux"}
-	fileCountEquals(t, fc, len(matches), 4988)
+		"sbudir/nested2", "subdir/nested2/qux"}
+	fileCountEquals(t, fc, len(matches), 9084)
 
 	fc.MTime = internal.Duration{Duration: fileAge}
 	matches = []string{"baz"}
