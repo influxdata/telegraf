@@ -5,7 +5,8 @@ metrics about ipvs virtual and real servers.
 
 ## Configuration
 
-None
+[[inputs.ipvs]]
+  # no configuration
 
 ## Permissions
 
