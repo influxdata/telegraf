@@ -238,6 +238,6 @@
   branch = "master"
   name = "github.com/docker/libnetwork"
 
-[[constraint]]
+[[override]]
   name = "github.com/vishvananda/netlink"
   revision = "b2de5d10e38ecce8607e6b438b6d174f389a004e"
