@@ -13,39 +13,39 @@ import (
 func TestScrapeURLNoAnnotations(t *testing.T) {
 	p := &v1.Pod{Metadata: &metav1.ObjectMeta{}}
 	p.GetMetadata().Annotations = map[string]string{}
-	url := scrapeURL(p)
+	url := getScrapeURL(p)
 	assert.Nil(t, url)
 }
 func TestScrapeURLAnnotationsNoScrape(t *testing.T) {
 	p := &v1.Pod{Metadata: &metav1.ObjectMeta{}}
 	p.Metadata.Name = str("myPod")
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "false"}
-	url := scrapeURL(p)
+	url := getScrapeURL(p)
 	assert.Nil(t, url)
 }
 func TestScrapeURLAnnotations(t *testing.T) {
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
-	url := scrapeURL(p)
+	url := getScrapeURL(p)
 	assert.Equal(t, "http://127.0.0.1:9102/metrics", *url)
 }
 func TestScrapeURLAnnotationsCustomPort(t *testing.T) {
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/port": "9000"}
-	url := scrapeURL(p)
+	url := getScrapeURL(p)
 	assert.Equal(t, "http://127.0.0.1:9000/metrics", *url)
 }
 func TestScrapeURLAnnotationsCustomPath(t *testing.T) {
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "mymetrics"}
-	url := scrapeURL(p)
+	url := getScrapeURL(p)
 	assert.Equal(t, "http://127.0.0.1:9102/mymetrics", *url)
 }
 
 func TestScrapeURLAnnotationsCustomPathWithSep(t *testing.T) {
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "/mymetrics"}
-	url := scrapeURL(p)
+	url := getScrapeURL(p)
 	assert.Equal(t, "http://127.0.0.1:9102/mymetrics", *url)
 }
 

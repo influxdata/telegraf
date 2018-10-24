@@ -115,7 +115,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	}
 	URL, err := url.Parse(*targetURL)
 	if err != nil {
-		log.Printf("E! [inputs.prometheus] could not parse URL %q: %v", targetURL, err)
+		log.Printf("E! [inputs.prometheus] could not parse URL %q: %v", *targetURL, err)
 		return
 	}
 	podURL := p.AddressToURL(URL, URL.Hostname())
