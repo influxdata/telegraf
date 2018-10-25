@@ -4,7 +4,12 @@
 [[projects]]
   digest = "1:972f38a9c879a4920d1e3a3d3438104b6c06163bfa3e6f4064adb00468d40587"
   name = "cloud.google.com/go"
-  packages = ["civil"]
+  packages = [
+    "civil",
+    "compute/metadata",
+    "internal/version",
+    "monitoring/apiv3",
+  ]
   pruneopts = ""
   revision = "c728a003b238b26cef9ab6753a5dc424b331c3ad"
   version = "v0.27.0"
@@ -488,20 +493,20 @@
   version = "v0.2.0"
 
 [[projects]]
-  digest = "1:e097a364f4e8d8d91b9b9eeafb992d3796a41fde3eb548c1a87eb9d9f60725cf"
-  name = "github.com/googleapis/gax-go"
-  packages = ["."]
-  pruneopts = ""
-  revision = "317e0006254c44a0ac427cc52a0e083ff0b9622f"
-  version = "v2.0.0"
-
-[[projects]]
   digest = "1:c1d7e883c50a26ea34019320d8ae40fad86c9e5d56e63a1ba2cb618cef43e986"
   name = "github.com/google/uuid"
   packages = ["."]
   pruneopts = ""
   revision = "064e2069ce9c359c118179501254f67d7d37ba24"
   version = "0.2"
+
+[[projects]]
+  digest = "1:e097a364f4e8d8d91b9b9eeafb992d3796a41fde3eb548c1a87eb9d9f60725cf"
+  name = "github.com/googleapis/gax-go"
+  packages = ["."]
+  pruneopts = ""
+  revision = "317e0006254c44a0ac427cc52a0e083ff0b9622f"
+  version = "v2.0.0"
 
 [[projects]]
   digest = "1:dbbeb8ddb0be949954c8157ee8439c2adfd8dc1c9510eb44a6e58cb68c3dce28"
@@ -1079,14 +1084,6 @@
   revision = "46796da1b0b4794e1e341883a399f12cc7574b55"
 
 [[projects]]
-  branch = "master"
-  digest = "1:2fcfc6c3fb8dfe0d80d7789272230d3ac7db15022b66817113f98d9fff880225"
-  name = "github.com/zensqlmonitor/go-mssqldb"
-  packages = ["."]
-  pruneopts = ""
-  revision = "e8fbf836e44e86764eba398361d1825651709547"
-
-[[projects]]
   digest = "1:8c8ec859c77fccd10a347b7219b597c4c21c448949e8bdf3fc3e6f4c78f952b4"
   name = "go.opencensus.io"
   packages = [
@@ -1161,12 +1158,11 @@
   name = "golang.org/x/oauth2"
   packages = [
     ".",
+    "clientcredentials",
     "google",
     "internal",
     "jws",
     "jwt",
-    "clientcredentials",
-    "internal",
   ]
   pruneopts = ""
   revision = "d2e6202438beef2727060aa7cabdd924d92ebfd9"
@@ -1254,13 +1250,6 @@
     "internal/socket",
     "internal/urlfetch",
     "socket",
-    "cloudsql",
-    "internal",
-    "internal/base",
-    "internal/datastore",
-    "internal/log",
-    "internal/remote_api",
-    "internal/urlfetch",
     "urlfetch",
   ]
   pruneopts = ""
@@ -1428,6 +1417,7 @@
     "github.com/Shopify/sarama",
     "github.com/StackExchange/wmi",
     "github.com/aerospike/aerospike-client-go",
+    "github.com/alecthomas/units",
     "github.com/amir/raidman",
     "github.com/apache/thrift/lib/go/thrift",
     "github.com/aws/aws-sdk-go/aws",
@@ -1454,6 +1444,7 @@
     "github.com/go-sql-driver/mysql",
     "github.com/gobwas/glob",
     "github.com/golang/protobuf/proto",
+    "github.com/golang/protobuf/ptypes/empty",
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/google/go-cmp/cmp",
     "github.com/gorilla/mux",
@@ -1525,6 +1516,7 @@
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/credentials",
+    "google.golang.org/grpc/metadata",
     "google.golang.org/grpc/status",
     "gopkg.in/gorethink/gorethink.v3",
     "gopkg.in/ldap.v2",
