@@ -329,6 +329,14 @@
   version = "v0.3.3"
 
 [[projects]]
+  branch = "master"
+  digest = "1:809792497a26f3936462cc5787a0d644b4d3cbfd59587e4f8845a9396ca2eb8a"
+  name = "github.com/docker/libnetwork"
+  packages = ["ipvs"]
+  pruneopts = ""
+  revision = "d7b61745d16675c9f548b19f06fda80d422a74f0"
+
+[[projects]]
   digest = "1:6d6672f85a84411509885eaa32f597577873de00e30729b9bb0eb1e1faa49c12"
   name = "github.com/eapache/go-resiliency"
   packages = ["breaker"]
@@ -989,6 +997,21 @@
   revision = "1731857f09b1f38450e2c12409748407822dc6be"
 
 [[projects]]
+  digest = "1:026b6ceaabbacaa147e94a63579efc3d3c73e00c73b67fa5c43ab46191ed04eb"
+  name = "github.com/vishvananda/netlink"
+  packages = ["nl"]
+  pruneopts = ""
+  revision = "b2de5d10e38ecce8607e6b438b6d174f389a004e"
+
+[[projects]]
+  branch = "master"
+  digest = "1:c09fddfdd491edaa4383396503e57023a26e5a824283a78c2310613a1252c649"
+  name = "github.com/vishvananda/netns"
+  packages = ["."]
+  pruneopts = ""
+  revision = "13995c7128ccc8e51e9a6bd2b551020a27180abd"
+
+[[projects]]
   digest = "1:343f20460c11a0d0529fe532553bfef9446918d1a1fda6d8661eb27d5b1a68b8"
   name = "github.com/vjeantet/grok"
   packages = ["."]
@@ -1424,6 +1447,7 @@
     "github.com/docker/docker/api/types/registry",
     "github.com/docker/docker/api/types/swarm",
     "github.com/docker/docker/client",
+    "github.com/docker/libnetwork/ipvs",
     "github.com/eclipse/paho.mqtt.golang",
     "github.com/go-logfmt/logfmt",
     "github.com/go-redis/redis",
