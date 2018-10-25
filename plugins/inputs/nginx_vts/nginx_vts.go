@@ -281,11 +281,11 @@ func gatherStatusURL(r *bufio.Reader, tags map[string]string, acc telegraf.Accum
 				"response_4xx_count": upstream.Responses.FourXx,
 				"response_5xx_count": upstream.Responses.FiveXx,
 
-				"weight":      upstream.Weight,
-				"maxFails":    upstream.MaxFails,
-				"failTimeout": upstream.FailTimeout,
-				"backup":      upstream.Backup,
-				"down":        upstream.Down,
+				"weight":       upstream.Weight,
+				"max_fails":    upstream.MaxFails,
+				"fail_timeout": upstream.FailTimeout,
+				"backup":       upstream.Backup,
+				"down":         upstream.Down,
 			}, upstreamServerTags)
 		}
 	}
