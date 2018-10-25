@@ -34,7 +34,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			name: "1st/avg/ok",
 			data: []byte(`188 <29>1 2016-02-21T04:32:57+00:00 web1 someservice 2341 2 [origin][meta sequence="14125553" service="someservice"] "GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`),
 			wantStrict: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(1),
@@ -58,7 +58,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 				},
 			},
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(1),
@@ -86,7 +86,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			name: "1st/min/ok//2nd/min/ok",
 			data: []byte("16 <1>2 - - - - - -17 <4>11 - - - - - -"),
 			wantStrict: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(2),
@@ -99,7 +99,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 					},
 					Time: defaultTime,
 				},
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(11),
@@ -114,7 +114,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 				},
 			},
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(2),
@@ -127,7 +127,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 					},
 					Time: defaultTime,
 				},
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(11),
@@ -146,7 +146,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			name: "1st/utf8/ok",
 			data: []byte("23 <1>1 - - - - - - hellø"),
 			wantStrict: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(1),
@@ -162,7 +162,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 				},
 			},
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(1),
@@ -182,7 +182,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			name: "1st/nl/ok", // newline
 			data: []byte("28 <1>3 - - - - - - hello\nworld"),
 			wantStrict: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(3),
@@ -198,7 +198,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 				},
 			},
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(3),
@@ -219,7 +219,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			data:       []byte("16 <1>2"),
 			wantStrict: nil,
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(2),
@@ -239,7 +239,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			name: "1st/min/ok",
 			data: []byte("16 <1>1 - - - - - -"),
 			wantStrict: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(1),
@@ -254,7 +254,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 				},
 			},
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(1),
@@ -274,7 +274,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			data:       []byte("16 <1>217 <11>1 - - - - - -"),
 			wantStrict: nil,
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(217),
@@ -299,7 +299,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			name: "1st/max/ok",
 			data: []byte(fmt.Sprintf("8192 <%d>%d %s %s %s %s %s - %s", maxP, maxV, maxTS, maxH, maxA, maxPID, maxMID, message7681)),
 			wantStrict: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       maxV,
@@ -320,7 +320,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 				},
 			},
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       maxV,

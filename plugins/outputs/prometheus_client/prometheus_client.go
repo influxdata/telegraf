@@ -154,7 +154,7 @@ func (p *PrometheusClient) Start() error {
 	}
 
 	registry := prometheus.NewRegistry()
-	for collector, _ := range defaultCollectors {
+	for collector := range defaultCollectors {
 		switch collector {
 		case "gocollector":
 			registry.Register(prometheus.NewGoCollector())
@@ -236,7 +236,7 @@ func (p *PrometheusClient) Expire() {
 	for name, family := range p.fam {
 		for key, sample := range family.Samples {
 			if p.ExpirationInterval.Duration != 0 && now.After(sample.Expiration) {
-				for k, _ := range sample.Labels {
+				for k := range sample.Labels {
 					family.LabelSet[k]--
 				}
 				delete(family.Samples, key)
@@ -323,7 +323,7 @@ func CreateSampleID(tags map[string]string) SampleID {
 
 func addSample(fam *MetricFamily, sample *Sample, sampleID SampleID) {
 
-	for k, _ := range sample.Labels {
+	for k := range sample.Labels {
 		fam.LabelSet[k]++
 	}
 

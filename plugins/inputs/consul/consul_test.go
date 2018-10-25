@@ -8,7 +8,7 @@ import (
 )
 
 var sampleChecks = []*api.HealthCheck{
-	&api.HealthCheck{
+	{
 		Node:        "localhost",
 		CheckID:     "foo.health123",
 		Name:        "foo.health",

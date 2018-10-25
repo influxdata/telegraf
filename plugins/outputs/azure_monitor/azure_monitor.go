@@ -402,7 +402,7 @@ func translate(m telegraf.Metric, prefix string) (*azureMonitorMetric, error) {
 				Namespace:      ns,
 				DimensionNames: dimensionNames,
 				Series: []*azureMonitorSeries{
-					&azureMonitorSeries{
+					{
 						DimensionValues: dimensionValues,
 						Min:             min,
 						Max:             max,
