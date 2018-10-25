@@ -138,7 +138,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 				},
 			},
 			usageStats: []*disk.UsageStat{
-				&disk.UsageStat{
+				{
 					Path:  "/",
 					Total: 42,
 				},
@@ -170,7 +170,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 				},
 			},
 			usageStats: []*disk.UsageStat{
-				&disk.UsageStat{
+				{
 					Path:  "/hostfs/var",
 					Total: 42,
 				},
@@ -203,7 +203,7 @@ func TestDiskUsageHostMountPrefix(t *testing.T) {
 				},
 			},
 			usageStats: []*disk.UsageStat{
-				&disk.UsageStat{
+				{
 					Path:  "/hostfs",
 					Total: 42,
 				},

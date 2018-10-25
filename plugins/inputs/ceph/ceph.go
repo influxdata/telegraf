@@ -278,7 +278,7 @@ func flatten(data interface{}) []*metric {
 
 	switch val := data.(type) {
 	case float64:
-		metrics = []*metric{&metric{make([]string, 0, 1), val}}
+		metrics = []*metric{{make([]string, 0, 1), val}}
 	case map[string]interface{}:
 		metrics = make([]*metric, 0, len(val))
 		for k, v := range val {

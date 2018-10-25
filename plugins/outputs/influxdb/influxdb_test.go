@@ -74,7 +74,7 @@ func TestConnectUDPConfig(t *testing.T) {
 
 	output := influxdb.InfluxDB{
 		URLs:       []string{"udp://localhost:8089"},
-		UDPPayload: 42,
+		UDPPayload: internal.Size{Size: 42},
 
 		CreateUDPClientF: func(config *influxdb.UDPConfig) (influxdb.Client, error) {
 			actual = config

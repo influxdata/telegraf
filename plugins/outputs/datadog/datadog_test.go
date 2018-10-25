@@ -21,6 +21,12 @@ var (
 	fakeApiKey = "123456"
 )
 
+func NewDatadog(url string) *Datadog {
+	return &Datadog{
+		URL: url,
+	}
+}
+
 func fakeDatadog() *Datadog {
 	d := NewDatadog(fakeUrl)
 	d.Apikey = fakeApiKey
@@ -74,19 +80,33 @@ func TestAuthenticatedUrl(t *testing.T) {
 
 func TestBuildTags(t *testing.T) {
 	var tagtests = []struct {
-		ptIn    map[string]string
+		ptIn    []*telegraf.Tag
 		outTags []string
 	}{
 		{
-			map[string]string{"one": "two", "three": "four"},
+			[]*telegraf.Tag{
+				{
+					Key:   "one",
+					Value: "two",
+				},
+				{
+					Key:   "three",
+					Value: "four",
+				},
+			},
 			[]string{"one:two", "three:four"},
 		},
 		{
-			map[string]string{"aaa": "bbb"},
+			[]*telegraf.Tag{
+				{
+					Key:   "aaa",
+					Value: "bbb",
+				},
+			},
 			[]string{"aaa:bbb"},
 		},
 		{
-			map[string]string{},
+			[]*telegraf.Tag{},
 			[]string{},
 		},
 	}

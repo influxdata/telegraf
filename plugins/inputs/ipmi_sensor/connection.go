@@ -28,7 +28,7 @@ func NewConnection(server string, privilege string) *Connection {
 
 	if inx1 > 0 {
 		security := server[0:inx1]
-		connstr = server[inx1+1 : len(server)]
+		connstr = server[inx1+1:]
 		up := strings.SplitN(security, ":", 2)
 		conn.Username = up[0]
 		conn.Password = up[1]

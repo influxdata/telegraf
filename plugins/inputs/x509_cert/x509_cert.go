@@ -4,6 +4,7 @@ package x509_cert
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -80,7 +81,10 @@ func (c *X509Cert) getCert(location string, timeout time.Duration) ([]*x509.Cert
 		}
 		defer ipConn.Close()
 
-		tlsCfg.ServerName = u.Host
+		if tlsCfg == nil {
+			tlsCfg = &tls.Config{}
+		}
+		tlsCfg.ServerName = u.Hostname()
 		conn := tls.Client(ipConn, tlsCfg)
 		defer conn.Close()
 
@@ -130,6 +134,31 @@ func getFields(cert *x509.Certificate, now time.Time) map[string]interface{} {
 	return fields
 }
 
+func getTags(subject pkix.Name, location string) map[string]string {
+	tags := map[string]string{
+		"source":      location,
+		"common_name": subject.CommonName,
+	}
+
+	if len(subject.Organization) > 0 {
+		tags["organization"] = subject.Organization[0]
+	}
+	if len(subject.OrganizationalUnit) > 0 {
+		tags["organizational_unit"] = subject.OrganizationalUnit[0]
+	}
+	if len(subject.Country) > 0 {
+		tags["country"] = subject.Country[0]
+	}
+	if len(subject.Province) > 0 {
+		tags["province"] = subject.Province[0]
+	}
+	if len(subject.Locality) > 0 {
+		tags["locality"] = subject.Locality[0]
+	}
+
+	return tags
+}
+
 // Gather adds metrics into the accumulator.
 func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
@@ -140,12 +169,9 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 			return fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error())
 		}
 
-		tags := map[string]string{
-			"source": location,
-		}
-
 		for _, cert := range certs {
 			fields := getFields(cert, now)
+			tags := getTags(cert.Subject, location)
 
 			acc.AddFields("x509_cert", fields, tags)
 		}

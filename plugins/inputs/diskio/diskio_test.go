@@ -30,7 +30,7 @@ func TestDiskIO(t *testing.T) {
 			name: "minimal",
 			result: Result{
 				stats: map[string]disk.IOCountersStat{
-					"sda": disk.IOCountersStat{
+					"sda": {
 						ReadCount:    888,
 						WriteCount:   5341,
 						ReadBytes:    100000,
@@ -46,7 +46,7 @@ func TestDiskIO(t *testing.T) {
 			},
 			err: nil,
 			metrics: []Metric{
-				Metric{
+				{
 					tags: map[string]string{
 						"name":   "sda",
 						"serial": "ab-123-ad",
@@ -70,11 +70,11 @@ func TestDiskIO(t *testing.T) {
 			devices: []string{"sd*"},
 			result: Result{
 				stats: map[string]disk.IOCountersStat{
-					"sda": disk.IOCountersStat{
+					"sda": {
 						Name:      "sda",
 						ReadCount: 42,
 					},
-					"vda": disk.IOCountersStat{
+					"vda": {
 						Name:      "vda",
 						ReadCount: 42,
 					},
@@ -83,7 +83,7 @@ func TestDiskIO(t *testing.T) {
 			},
 			err: nil,
 			metrics: []Metric{
-				Metric{
+				{
 					tags: map[string]string{
 						"name":   "sda",
 						"serial": "unknown",
