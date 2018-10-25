@@ -180,15 +180,13 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 }
 
 func (p *Postgresql) generateInsert(tablename string, columns []string) string {
-
 	var placeholder, quoted []string
 	for i, column := range columns {
 		placeholder = append(placeholder, fmt.Sprintf("$%d", i+1))
 		quoted = append(quoted, quoteIdent(column))
 	}
 
-	sql := fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", quoteIdent(tablename), strings.Join(quoted, ","), strings.Join(placeholder, ","))
-	return sql
+	return fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", quoteIdent(tablename), strings.Join(quoted, ","), strings.Join(placeholder, ","))
 }
 
 func (p *Postgresql) tableExists(tableName string) bool {
@@ -224,12 +222,9 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 			p.Tables[tablename] = true
 		}
 
-		var columns []string
-		var values []interface{}
+		columns := []string{"time"}
+		values := []interface{}{metric.Time()}
 		var js map[string]interface{}
-
-		columns = append(columns, "time")
-		values = append(values, metric.Time())
 
 		if len(metric.Tags()) > 0 {
 			if p.TagsAsForeignkeys {
@@ -268,7 +263,6 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 
 				err := p.db.QueryRow(query, where_values...).Scan(&tag_id)
 				if err != nil {
-					// log.Printf("I! Foreign key reference not found %s: %v", tablename, err)
 					query := p.generateInsert(tablename+p.TagTableSuffix, where_columns) + " RETURNING tag_id"
 					err := p.db.QueryRow(query, where_values...).Scan(&tag_id)
 					if err != nil {
@@ -353,7 +347,6 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 	}
 
 	for table_and_cols, values := range batches {
-		// log.Printf("Writing %d metrics into %s", len(params[table_and_cols]), table_and_cols)
 		sql := fmt.Sprintf("INSERT INTO %s VALUES (%s)", table_and_cols, strings.Join(params[table_and_cols], "),("))
 		_, err := p.db.Exec(sql, values...)
 		if err != nil {
