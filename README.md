@@ -178,6 +178,7 @@ For documentation on the latest development code see the [documentation index][d
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
 * [ipset](./plugins/inputs/ipset)
 * [iptables](./plugins/inputs/iptables)
+* [ipvs](./plugins/inputs/ipvs)
 * [jolokia2](./plugins/inputs/jolokia2) (java, cassandra, kafka)
 * [jolokia](./plugins/inputs/jolokia) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
 * [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry)
