@@ -31,7 +31,6 @@ func (i *IPVS) SampleConfig() string {
 
 // Gather gathers the stats
 func (i *IPVS) Gather(acc telegraf.Accumulator) error {
-
 	if i.handle == nil {
 		h, err := ipvs.New("") // TODO: make the namespace configurable
 		if err != nil {
@@ -106,7 +105,6 @@ func addressFamilyToString(af uint16) string {
 	default:
 		return fmt.Sprintf("%d", af)
 	}
-
 }
 
 func init() {
