@@ -220,9 +220,9 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 
 	var acc testutil.Accumulator
 
-	err_nginx := n.Gather(&acc)
+	err := n.Gather(&acc)
 
-	require.NoError(t, err_nginx)
+	require.NoError(t, err)
 
 	addr, err := url.Parse(ts.URL)
 	if err != nil {
@@ -254,7 +254,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 			"writing":  uint64(333),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 		})
 
@@ -283,7 +283,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 			"cache_scarce":      uint64(21),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 			"zone":   "example.com",
 		})
@@ -313,7 +313,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 			"cache_scarce":      uint64(68),
 		},
 		map[string]string{
-			"server":      host,
+			"source":      host,
 			"port":        port,
 			"filter_key":  "FI",
 			"filter_name": "country",
@@ -344,7 +344,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 			"cache_scarce":      uint64(29),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 			"zone":   "other.example.com",
 		})
@@ -372,7 +372,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 			"down":        bool(false),
 		},
 		map[string]string{
-			"server":           host,
+			"source":           host,
 			"port":             port,
 			"upstream":         "backend_cluster",
 			"upstream_address": "127.0.0.1:6000",
@@ -401,7 +401,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 			"down":        bool(false),
 		},
 		map[string]string{
-			"server":           host,
+			"source":           host,
 			"port":             port,
 			"upstream":         "::nogroups",
 			"upstream_address": "127.0.0.1:4433",
@@ -430,7 +430,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 			"down":        bool(true),
 		},
 		map[string]string{
-			"server":           host,
+			"source":           host,
 			"port":             port,
 			"upstream":         "::nogroups",
 			"upstream_address": "127.0.0.1:8080",
@@ -455,7 +455,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 			"scarce":      uint64(51),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 			"zone":   "example",
 		})
@@ -479,7 +479,7 @@ func TestNginxPlusGeneratesMetrics(t *testing.T) {
 			"scarce":      uint64(59),
 		},
 		map[string]string{
-			"server": host,
+			"source": host,
 			"port":   port,
 			"zone":   "static",
 		})
