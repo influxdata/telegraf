@@ -31,11 +31,20 @@ func TestPartitionKey(t *testing.T) {
 
 	k = KinesisOutput{
 		Partition: &Partition{
+			Method:  "tag",
+			Key:     "doesnotexist",
+			Default: "somedefault",
+		},
+	}
+	assert.Equal("somedefault", k.getPartitionKey(testPoint), "PartitionKey should use default")
+
+	k = KinesisOutput{
+		Partition: &Partition{
 			Method: "tag",
 			Key:    "doesnotexist",
 		},
 	}
-	assert.Equal("", k.getPartitionKey(testPoint), "PartitionKey should be value of ''")
+	assert.Equal("telegraf", k.getPartitionKey(testPoint), "PartitionKey should be telegraf")
 
 	k = KinesisOutput{
 		Partition: &Partition{

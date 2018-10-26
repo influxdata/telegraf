@@ -36,8 +36,9 @@ type (
 	}
 
 	Partition struct {
-		Method string `toml:"method"`
-		Key    string `toml:"key"`
+		Method  string `toml:"method"`
+		Key     string `toml:"key"`
+		Default string `toml:"default"`
 	}
 )
 
@@ -90,10 +91,11 @@ var sampleConfig = `
   #    method = "measurement"
   #
   ## Use the value of a tag for all writes, if the tag is not set the empty
-  ## string will be used:
+  ## default option will be used. When no default, defaults to "telegraf"
   #  [outputs.kinesis.partition]
   #    method = "tag"
   #    key = "host"
+  #    default = "mykey"
 
 
   ## Data format to output.
@@ -187,10 +189,13 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 		case "measurement":
 			return metric.Name()
 		case "tag":
-			if metric.HasTag(k.Partition.Key) {
-				return metric.Tags()[k.Partition.Key]
+			if t, ok := metric.GetTag(k.Partition.Key); ok {
+				return t
+			} else if len(k.Partition.Default) > 0 {
+				return k.Partition.Default
 			}
-			log.Printf("E! kinesis : You have configured a Partition using tag %+v which does not exist.", k.Partition.Key)
+			// Default partition name if default is not set
+			return "telegraf"
 		default:
 			log.Printf("E! kinesis : You have configured a Partition method of %+v which is not supported", k.Partition.Method)
 		}
