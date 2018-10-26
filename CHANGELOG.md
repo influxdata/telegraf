@@ -40,6 +40,7 @@
 
 - [#4873](https://github.com/influxdata/telegraf/pull/4873): Add DN attributes as tags in x509_cert input to avoid series overwrite.
 - [#4921](https://github.com/influxdata/telegraf/issues/4921): Prevent connection leak by closing unused connections in amqp output.
+- [#4904](https://github.com/influxdata/telegraf/issues/4904): Use default partition key when tag does not exist in kinesis output.
 
 ## v1.8.2 [2018-10-17]
 
