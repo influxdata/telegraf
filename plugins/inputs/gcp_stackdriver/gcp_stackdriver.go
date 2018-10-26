@@ -1,6 +1,7 @@
 package gcp_stackdriver
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math"
@@ -13,8 +14,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	"golang.org/x/net/context"
 
 	// Imports the Stackdriver Monitoring client package.
 	monitoring "cloud.google.com/go/monitoring/apiv3"
@@ -37,6 +36,7 @@ type GCPStackdriver struct {
 	DistributionAggregationAligners []string
 
 	client *monitoring.MetricClient
+	ctx    context.Context
 }
 
 func init() {
@@ -66,20 +66,20 @@ func (s *GCPStackdriver) SampleConfig() string {
   ## fetch every time series for a single metric type, though -- this is plenty
   ## fast for scraping all the builtin metric types (and even a handful of
   ## custom ones) every 60s.
-  #rateLimit = 14
+  # rateLimit = 14
 
   ## Every query to stackdriver queries for data points that have timestamp t
   ## such that: (now() - lookbackSeconds) <= t < now(). Note that influx will
   ## de-dedupe points that are pulled twice, so it's best to be safe here, just
   ## in case it takes GCP awhile to get around to recording the data you seek.
-  #lookbackSeconds = 600
+  # lookbackSeconds = 600
 
   ## Sets whether or not to scrape all bucket counts for metrics whose value
   ## type is "distribution". If those ~70 fields per metric
   ## type are annoying to you, try out the distributionAggregationAligners
   ## configuration option, wherein you may specifiy a list of aggregate functions
   ## (e.g., ALIGN_PERCENTILE_99) that might be more useful to you.
-  #scrapeDistributionBuckets = true
+  # scrapeDistributionBuckets = true
 
   ## Excluded GCP metric types. Any string prefix works.
   ## Only declare either this or includeMetricTypePrefixes
@@ -215,10 +215,10 @@ func (t *timeSeriesConf) initForDistribution() *timeSeriesConf {
 
 func (s *GCPStackdriver) initializeStackdriverClient() error {
 	if s.client == nil {
-		ctx := context.Background()
+		s.ctx = context.Background()
 
 		// Creates a client.
-		client, err := monitoring.NewMetricClient(ctx)
+		client, err := monitoring.NewMetricClient(s.ctx)
 		if err != nil {
 			return err
 		}
@@ -278,7 +278,7 @@ func (s *GCPStackdriver) includeTag(tagKey string) bool {
 func (s *GCPStackdriver) generatetimeSeriesConfs() ([]timeSeriesConf, error) {
 	ret := []timeSeriesConf{}
 	req := &monitoringpb.ListMetricDescriptorsRequest{Name: s.Project}
-	resp := s.client.ListMetricDescriptors(context.TODO(), req)
+	resp := s.client.ListMetricDescriptors(s.ctx, req)
 
 	for {
 		metricDescriptor, err := resp.Next()
@@ -345,7 +345,7 @@ func (s *GCPStackdriver) scrapeTimeSeries(acc telegraf.Accumulator,
 	tsReq := tsConf.listTimeSeriesRequest
 	measurement := tsConf.measurement
 	fieldPrefix := tsConf.fieldPrefix
-	tsResp := s.client.ListTimeSeries(context.TODO(), &tsReq)
+	tsResp := s.client.ListTimeSeries(s.ctx, &tsReq)
 
 	for {
 		tsDesc, tsErr := tsResp.Next()
@@ -392,6 +392,7 @@ func (s *GCPStackdriver) scrapeTimeSeries(acc telegraf.Accumulator,
 					field = p.Value.GetStringValue()
 				default:
 					// TODO: AddError here? Is it really an error?
+					// TODO: Maybe default to `field = p.Value.GetValue()`
 					continue
 				}
 
