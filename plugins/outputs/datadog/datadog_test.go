@@ -21,6 +21,12 @@ var (
 	fakeApiKey = "123456"
 )
 
+func NewDatadog(url string) *Datadog {
+	return &Datadog{
+		URL: url,
+	}
+}
+
 func fakeDatadog() *Datadog {
 	d := NewDatadog(fakeUrl)
 	d.Apikey = fakeApiKey
@@ -74,19 +80,33 @@ func TestAuthenticatedUrl(t *testing.T) {
 
 func TestBuildTags(t *testing.T) {
 	var tagtests = []struct {
-		ptIn    map[string]string
+		ptIn    []*telegraf.Tag
 		outTags []string
 	}{
 		{
-			map[string]string{"one": "two", "three": "four"},
+			[]*telegraf.Tag{
+				{
+					Key:   "one",
+					Value: "two",
+				},
+				{
+					Key:   "three",
+					Value: "four",
+				},
+			},
 			[]string{"one:two", "three:four"},
 		},
 		{
-			map[string]string{"aaa": "bbb"},
+			[]*telegraf.Tag{
+				{
+					Key:   "aaa",
+					Value: "bbb",
+				},
+			},
 			[]string{"aaa:bbb"},
 		},
 		{
-			map[string]string{},
+			[]*telegraf.Tag{},
 			[]string{},
 		},
 	}
@@ -149,6 +169,46 @@ func TestBuildPoint(t *testing.T) {
 			Point{
 				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
 				11234.5,
+			},
+			nil,
+		},
+		{
+			testutil.TestMetric(bool(true), "test7"),
+			Point{
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				1.0,
+			},
+			nil,
+		},
+		{
+			testutil.TestMetric(bool(false), "test8"),
+			Point{
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				0.0,
+			},
+			nil,
+		},
+		{
+			testutil.TestMetric(int64(0), "test int64"),
+			Point{
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				0.0,
+			},
+			nil,
+		},
+		{
+			testutil.TestMetric(uint64(0), "test uint64"),
+			Point{
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				0.0,
+			},
+			nil,
+		},
+		{
+			testutil.TestMetric(true, "test bool"),
+			Point{
+				float64(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC).Unix()),
+				1.0,
 			},
 			nil,
 		},

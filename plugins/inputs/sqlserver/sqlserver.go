@@ -9,7 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 
 	// go-mssqldb initialization
-	_ "github.com/zensqlmonitor/go-mssqldb"
+	_ "github.com/denisenkom/go-mssqldb"
 )
 
 // SQLServer struct
@@ -68,7 +68,7 @@ var sampleConfig = `
   ## - MemoryClerk
   ## - VolumeSpace
   ## - PerformanceMetrics
-  # exclude_query = [ 'PerformanceCounters','WaitStatsCatagorized' ]
+  # exclude_query = [ 'DatabaseIO' ]
 `
 
 // SampleConfig return the sample configuration
@@ -244,108 +244,115 @@ func init() {
 // Thanks Bob Ward (http://aka.ms/bobwardms)
 // and the folks at Stack Overflow (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
 // for putting most of the memory clerk definitions online!
-const sqlMemoryClerkV2 = `SELECT	
-'sqlserver_memory_clerks' As [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-SERVERPROPERTY('ServerName') AS [host],
+const sqlMemoryClerkV2 = `DECLARE @SQL NVARCHAR(MAX) = 'SELECT
+"sqlserver_memory_clerks" As [measurement],
+REPLACE(@@SERVERNAME,"\",":") AS [sql_instance],
 ISNULL(clerk_names.name,mc.type) AS clerk_type,
-SUM(mc.pages_kb) AS size_kb
+SUM({pages_kb}) AS size_kb
 FROM
 sys.dm_os_memory_clerks AS mc WITH (NOLOCK)
 LEFT OUTER JOIN ( VALUES
-('CACHESTORE_BROKERDSH','Service Broker Dialog Security Header Cache'),
-('CACHESTORE_BROKERKEK','Service Broker Key Exchange Key Cache'),
-('CACHESTORE_BROKERREADONLY','Service Broker (Read-Only)'),
-('CACHESTORE_BROKERRSB','Service Broker Null Remote Service Binding Cache'),
-('CACHESTORE_BROKERTBLACS','Broker dormant rowsets'),
-('CACHESTORE_BROKERTO','Service Broker Transmission Object Cache'),
-('CACHESTORE_BROKERUSERCERTLOOKUP','Service Broker user certificates lookup result cache'),
-('CACHESTORE_CLRPROC','CLR Procedure Cache'),
-('CACHESTORE_CLRUDTINFO','CLR UDT Info'),
-('CACHESTORE_COLUMNSTOREOBJECTPOOL','Column Store Object Pool'),
-('CACHESTORE_CONVPRI','Conversation Priority Cache'),
-('CACHESTORE_EVENTS','Event Notification Cache'),
-('CACHESTORE_FULLTEXTSTOPLIST','Full Text Stoplist Cache'),
-('CACHESTORE_NOTIF','Notification Store'),
-('CACHESTORE_OBJCP','Object Plans'),
-('CACHESTORE_PHDR','Bound Trees'),
-('CACHESTORE_SEARCHPROPERTYLIST','Search Property List Cache'),
-('CACHESTORE_SEHOBTCOLUMNATTRIBUTE','SE Shared Column Metadata Cache'),
-('CACHESTORE_SQLCP','SQL Plans'),
-('CACHESTORE_STACKFRAMES','SOS_StackFramesStore'),
-('CACHESTORE_SYSTEMROWSET','System Rowset Store'),
-('CACHESTORE_TEMPTABLES','Temporary Tables & Table Variables'),
-('CACHESTORE_VIEWDEFINITIONS','View Definition Cache'),
-('CACHESTORE_XML_SELECTIVE_DG','XML DB Cache (Selective)'),
-('CACHESTORE_XMLDBATTRIBUTE','XML DB Cache (Attribute)'),
-('CACHESTORE_XMLDBELEMENT','XML DB Cache (Element)'),
-('CACHESTORE_XMLDBTYPE','XML DB Cache (Type)'),
-('CACHESTORE_XPROC','Extended Stored Procedures'),
-('MEMORYCLERK_FILETABLE','Memory Clerk (File Table)'),
-('MEMORYCLERK_FSCHUNKER','Memory Clerk (FS Chunker)'),
-('MEMORYCLERK_FULLTEXT','Full Text'),
-('MEMORYCLERK_FULLTEXT_SHMEM','Full-text IG'),
-('MEMORYCLERK_HADR','HADR'),
-('MEMORYCLERK_HOST','Host'),
-('MEMORYCLERK_LANGSVC','Language Service'),
-('MEMORYCLERK_LWC','Light Weight Cache'),
-('MEMORYCLERK_QSRANGEPREFETCH','QS Range Prefetch'),
-('MEMORYCLERK_SERIALIZATION','Serialization'),
-('MEMORYCLERK_SNI','SNI'),
-('MEMORYCLERK_SOSMEMMANAGER','SOS Memory Manager'),
-('MEMORYCLERK_SOSNODE','SOS Node'),
-('MEMORYCLERK_SOSOS','SOS Memory Clerk'),
-('MEMORYCLERK_SQLBUFFERPOOL','Buffer Pool'),
-('MEMORYCLERK_SQLCLR','CLR'),
-('MEMORYCLERK_SQLCLRASSEMBLY','CLR Assembly'),
-('MEMORYCLERK_SQLCONNECTIONPOOL','Connection Pool'),
-('MEMORYCLERK_SQLGENERAL','General'),
-('MEMORYCLERK_SQLHTTP','HTTP'),
-('MEMORYCLERK_SQLLOGPOOL','Log Pool'),
-('MEMORYCLERK_SQLOPTIMIZER','SQL Optimizer'),
-('MEMORYCLERK_SQLQERESERVATIONS','SQL Reservations'),
-('MEMORYCLERK_SQLQUERYCOMPILE','SQL Query Compile'),
-('MEMORYCLERK_SQLQUERYEXEC','SQL Query Exec'),
-('MEMORYCLERK_SQLQUERYPLAN','SQL Query Plan'),
-('MEMORYCLERK_SQLSERVICEBROKER','SQL Service Broker'),
-('MEMORYCLERK_SQLSERVICEBROKERTRANSPORT','Unified Communication Stack'),
-('MEMORYCLERK_SQLSOAP','SQL SOAP'),
-('MEMORYCLERK_SQLSOAPSESSIONSTORE','SQL SOAP (Session Store)'),
-('MEMORYCLERK_SQLSTORENG','SQL Storage Engine'),
-('MEMORYCLERK_SQLUTILITIES','SQL Utilities'),
-('MEMORYCLERK_SQLXML','SQL XML'),
-('MEMORYCLERK_SQLXP','SQL XP'),
-('MEMORYCLERK_TRACE_EVTNOTIF','Trace Event Notification'),
-('MEMORYCLERK_XE','XE Engine'),
-('MEMORYCLERK_XE_BUFFER','XE Buffer'),
-('MEMORYCLERK_XTP','In-Memory OLTP'),
-('OBJECTSTORE_LBSS','Lbss Cache (Object Store)'),
-('OBJECTSTORE_LOCK_MANAGER','Lock Manager (Object Store)'),
-('OBJECTSTORE_SECAUDIT_EVENT_BUFFER','Audit Event Buffer (Object Store)'),
-('OBJECTSTORE_SERVICE_BROKER','Service Broker (Object Store)'),
-('OBJECTSTORE_SNI_PACKET','SNI Packet (Object Store)'),
-('OBJECTSTORE_XACT_CACHE','Transactions Cache (Object Store)'),
-('USERSTORE_DBMETADATA','DB Metadata (User Store)'),
-('USERSTORE_OBJPERM','Object Permissions (User Store)'),
-('USERSTORE_SCHEMAMGR','Schema Manager (User Store)'),
-('USERSTORE_SXC','SXC (User Store)'),
-('USERSTORE_TOKENPERM','Token Permissions (User Store)'),
-('USERSTORE_QDSSTMT','QDS Statement Buffer (Pre-persist)'),
-('CACHESTORE_QDSRUNTIMESTATS','QDS Runtime Stats (Pre-persist)'),
-('CACHESTORE_QDSCONTEXTSETTINGS','QDS Unique Context Settings'),
-('MEMORYCLERK_QUERYDISKSTORE','QDS General'),
-('MEMORYCLERK_QUERYDISKSTORE_HASHMAP','QDS Query/Plan Hash Table')
+("CACHESTORE_BROKERDSH","Service Broker Dialog Security Header Cache"),
+("CACHESTORE_BROKERKEK","Service Broker Key Exchange Key Cache"),
+("CACHESTORE_BROKERREADONLY","Service Broker (Read-Only)"),
+("CACHESTORE_BROKERRSB","Service Broker Null Remote Service Binding Cache"),
+("CACHESTORE_BROKERTBLACS","Broker dormant rowsets"),
+("CACHESTORE_BROKERTO","Service Broker Transmission Object Cache"),
+("CACHESTORE_BROKERUSERCERTLOOKUP","Service Broker user certificates lookup result cache"),
+("CACHESTORE_CLRPROC","CLR Procedure Cache"),
+("CACHESTORE_CLRUDTINFO","CLR UDT Info"),
+("CACHESTORE_COLUMNSTOREOBJECTPOOL","Column Store Object Pool"),
+("CACHESTORE_CONVPRI","Conversation Priority Cache"),
+("CACHESTORE_EVENTS","Event Notification Cache"),
+("CACHESTORE_FULLTEXTSTOPLIST","Full Text Stoplist Cache"),
+("CACHESTORE_NOTIF","Notification Store"),
+("CACHESTORE_OBJCP","Object Plans"),
+("CACHESTORE_PHDR","Bound Trees"),
+("CACHESTORE_SEARCHPROPERTYLIST","Search Property List Cache"),
+("CACHESTORE_SEHOBTCOLUMNATTRIBUTE","SE Shared Column Metadata Cache"),
+("CACHESTORE_SQLCP","SQL Plans"),
+("CACHESTORE_STACKFRAMES","SOS_StackFramesStore"),
+("CACHESTORE_SYSTEMROWSET","System Rowset Store"),
+("CACHESTORE_TEMPTABLES","Temporary Tables & Table Variables"),
+("CACHESTORE_VIEWDEFINITIONS","View Definition Cache"),
+("CACHESTORE_XML_SELECTIVE_DG","XML DB Cache (Selective)"),
+("CACHESTORE_XMLDBATTRIBUTE","XML DB Cache (Attribute)"),
+("CACHESTORE_XMLDBELEMENT","XML DB Cache (Element)"),
+("CACHESTORE_XMLDBTYPE","XML DB Cache (Type)"),
+("CACHESTORE_XPROC","Extended Stored Procedures"),
+("MEMORYCLERK_FILETABLE","Memory Clerk (File Table)"),
+("MEMORYCLERK_FSCHUNKER","Memory Clerk (FS Chunker)"),
+("MEMORYCLERK_FULLTEXT","Full Text"),
+("MEMORYCLERK_FULLTEXT_SHMEM","Full-text IG"),
+("MEMORYCLERK_HADR","HADR"),
+("MEMORYCLERK_HOST","Host"),
+("MEMORYCLERK_LANGSVC","Language Service"),
+("MEMORYCLERK_LWC","Light Weight Cache"),
+("MEMORYCLERK_QSRANGEPREFETCH","QS Range Prefetch"),
+("MEMORYCLERK_SERIALIZATION","Serialization"),
+("MEMORYCLERK_SNI","SNI"),
+("MEMORYCLERK_SOSMEMMANAGER","SOS Memory Manager"),
+("MEMORYCLERK_SOSNODE","SOS Node"),
+("MEMORYCLERK_SOSOS","SOS Memory Clerk"),
+("MEMORYCLERK_SQLBUFFERPOOL","Buffer Pool"),
+("MEMORYCLERK_SQLCLR","CLR"),
+("MEMORYCLERK_SQLCLRASSEMBLY","CLR Assembly"),
+("MEMORYCLERK_SQLCONNECTIONPOOL","Connection Pool"),
+("MEMORYCLERK_SQLGENERAL","General"),
+("MEMORYCLERK_SQLHTTP","HTTP"),
+("MEMORYCLERK_SQLLOGPOOL","Log Pool"),
+("MEMORYCLERK_SQLOPTIMIZER","SQL Optimizer"),
+("MEMORYCLERK_SQLQERESERVATIONS","SQL Reservations"),
+("MEMORYCLERK_SQLQUERYCOMPILE","SQL Query Compile"),
+("MEMORYCLERK_SQLQUERYEXEC","SQL Query Exec"),
+("MEMORYCLERK_SQLQUERYPLAN","SQL Query Plan"),
+("MEMORYCLERK_SQLSERVICEBROKER","SQL Service Broker"),
+("MEMORYCLERK_SQLSERVICEBROKERTRANSPORT","Unified Communication Stack"),
+("MEMORYCLERK_SQLSOAP","SQL SOAP"),
+("MEMORYCLERK_SQLSOAPSESSIONSTORE","SQL SOAP (Session Store)"),
+("MEMORYCLERK_SQLSTORENG","SQL Storage Engine"),
+("MEMORYCLERK_SQLUTILITIES","SQL Utilities"),
+("MEMORYCLERK_SQLXML","SQL XML"),
+("MEMORYCLERK_SQLXP","SQL XP"),
+("MEMORYCLERK_TRACE_EVTNOTIF","Trace Event Notification"),
+("MEMORYCLERK_XE","XE Engine"),
+("MEMORYCLERK_XE_BUFFER","XE Buffer"),
+("MEMORYCLERK_XTP","In-Memory OLTP"),
+("OBJECTSTORE_LBSS","Lbss Cache (Object Store)"),
+("OBJECTSTORE_LOCK_MANAGER","Lock Manager (Object Store)"),
+("OBJECTSTORE_SECAUDIT_EVENT_BUFFER","Audit Event Buffer (Object Store)"),
+("OBJECTSTORE_SERVICE_BROKER","Service Broker (Object Store)"),
+("OBJECTSTORE_SNI_PACKET","SNI Packet (Object Store)"),
+("OBJECTSTORE_XACT_CACHE","Transactions Cache (Object Store)"),
+("USERSTORE_DBMETADATA","DB Metadata (User Store)"),
+("USERSTORE_OBJPERM","Object Permissions (User Store)"),
+("USERSTORE_SCHEMAMGR","Schema Manager (User Store)"),
+("USERSTORE_SXC","SXC (User Store)"),
+("USERSTORE_TOKENPERM","Token Permissions (User Store)"),
+("USERSTORE_QDSSTMT","QDS Statement Buffer (Pre-persist)"),
+("CACHESTORE_QDSRUNTIMESTATS","QDS Runtime Stats (Pre-persist)"),
+("CACHESTORE_QDSCONTEXTSETTINGS","QDS Unique Context Settings"),
+("MEMORYCLERK_QUERYDISKSTORE","QDS General"),
+("MEMORYCLERK_QUERYDISKSTORE_HASHMAP","QDS Query/Plan Hash Table")
 ) AS clerk_names(system_name,name)
 ON mc.type = clerk_names.system_name
 GROUP BY ISNULL(clerk_names.name,mc.type)
-HAVING SUM(pages_kb) >= 1024
-OPTION( RECOMPILE );
+HAVING SUM({pages_kb}) >= 1024
+OPTION( RECOMPILE );'
+
+IF CAST(LEFT(CAST(SERVERPROPERTY('productversion') as varchar), 2) AS INT) > 10 -- SQL Server 2008 Compat
+    SET @SQL = REPLACE(REPLACE(@SQL,'{pages_kb}','mc.pages_kb'),'"','''')
+ELSE
+    SET @SQL = REPLACE(REPLACE(@SQL,'{pages_kb}','mc.single_pages_kb + mc.multi_pages_kb'),'"','''')
+
+EXEC(@SQL)
 `
 
-const sqlDatabaseIOV2 = `SELECT
+const sqlDatabaseIOV2 = `IF SERVERPROPERTY('EngineEdition') = 5
+BEGIN
+SELECT
 'sqlserver_database_io' As [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-SERVERPROPERTY('ServerName') AS [host],
 DB_NAME([vfs].[database_id]) [database_name],
 vfs.io_stall_read_ms AS read_latency_ms,
 vfs.num_of_reads AS reads,
@@ -353,48 +360,127 @@ vfs.num_of_bytes_read AS read_bytes,
 vfs.io_stall_write_ms AS write_latency_ms,
 vfs.num_of_writes AS writes,
 vfs.num_of_bytes_written AS write_bytes,
-CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'ROWS' END AS file_type
+b.name as logical_filename,
+b.physical_name as physical_filename,
+CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'DATA' END AS file_type
 FROM
 [sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
-OPTION( RECOMPILE );
+inner join sys.database_files b on  b.file_id = vfs.file_id
+END
+ELSE
+BEGIN
+SELECT
+'sqlserver_database_io' As [measurement],
+REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+DB_NAME([vfs].[database_id]) [database_name],
+vfs.io_stall_read_ms AS read_latency_ms,
+vfs.num_of_reads AS reads,
+vfs.num_of_bytes_read AS read_bytes,
+vfs.io_stall_write_ms AS write_latency_ms,
+vfs.num_of_writes AS writes,
+vfs.num_of_bytes_written AS write_bytes,
+b.name as logical_filename,
+b.physical_name as physical_filename,
+CASE WHEN vfs.file_id = 2 THEN 'LOG' ELSE 'DATA' END AS file_type
+FROM
+[sys].[dm_io_virtual_file_stats](NULL,NULL) AS vfs
+inner join sys.master_files b on b.database_id = vfs.database_id and b.file_id = vfs.file_id
+END
 `
 
 const sqlServerPropertiesV2 = `DECLARE @sys_info TABLE (
 	cpu_count INT,
-	server_memory INT,
+	server_memory BIGINT,
+	sku NVARCHAR(64),
+	engine_edition SMALLINT,
+	hardware_type VARCHAR(16),
+	total_storage_mb BIGINT,
+	available_storage_mb BIGINT,
 	uptime INT
 )
 
 IF OBJECT_ID('master.sys.dm_os_sys_info') IS NOT NULL
 BEGIN
-	INSERT INTO @sys_info ( cpu_count, server_memory, uptime )
-	EXEC('SELECT cpu_count, physical_memory_kb, DATEDIFF(MINUTE,sqlserver_start_time,GETDATE())	FROM sys.dm_os_sys_info')
+
+	IF SERVERPROPERTY('EngineEdition') = 8  -- Managed Instance
+		INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
+		SELECT 	TOP(1)
+				virtual_core_count AS cpu_count,
+				(SELECT process_memory_limit_mb FROM sys.dm_os_job_object) AS server_memory,
+				sku,
+				cast(SERVERPROPERTY('EngineEdition') as smallint) AS engine_edition,
+				hardware_generation AS hardware_type,
+				reserved_storage_mb AS total_storage_mb,
+				(reserved_storage_mb - storage_space_used_mb) AS available_storage_mb,
+				(select DATEDIFF(MINUTE,sqlserver_start_time,GETDATE()) from sys.dm_os_sys_info) as uptime
+		FROM	sys.server_resource_stats
+		ORDER BY start_time DESC
+
+	ELSE
+	BEGIN
+		DECLARE @total_disk_size_mb BIGINT,
+				@available_space_mb BIGINT
+
+		SELECT	@total_disk_size_mb = sum(total_disk_size_mb),
+				@available_space_mb = sum(free_disk_space_mb)
+		FROM	(
+					SELECT	distinct logical_volume_name AS LogicalName,
+							total_bytes/(1024*1024)as total_disk_size_mb,
+							available_bytes /(1024*1024) free_disk_space_mb
+					FROM	sys.master_files AS f
+							CROSS APPLY sys.dm_os_volume_stats(f.database_id, f.file_id)
+				) as osVolumes
+
+		INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
+		SELECT	cpu_count,
+				(SELECT total_physical_memory_kb FROM sys.dm_os_sys_memory) AS server_memory,
+				CAST(SERVERPROPERTY('Edition') AS NVARCHAR(64)) as sku,
+				CAST(SERVERPROPERTY('EngineEdition') as smallint) as engine_edition,
+				CASE virtual_machine_type_desc
+					WHEN 'NONE' THEN 'PHYSICAL Machine'
+					ELSE virtual_machine_type_desc
+				END AS hardware_type,
+				@total_disk_size_mb,
+				@available_space_mb,
+				 DATEDIFF(MINUTE,sqlserver_start_time,GETDATE())
+		FROM	sys.dm_os_sys_info
+	END
 END
 
-SELECT
-'sqlserver_server_properties' As [measurement],
-REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-SERVERPROPERTY('ServerName') AS [host],
-SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS db_online,
-SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS db_restoring,
-SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
-SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS db_recoveryPending,
-SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
-SUM( CASE WHEN state = 10 THEN 1 ELSE 0 END ) AS db_offline,
-MAX( sinfo.cpu_count ) AS cpu_count,
-MAX( sinfo.server_memory ) AS server_memory,
-MAX( sinfo.uptime ) AS uptime,
-SERVERPROPERTY('ProductVersion') AS sql_version
-FROM	sys.databases
-CROSS APPLY (
-	SELECT	*
-	FROM	@sys_info
-) AS sinfo
-WHERE	database_id > 4
-OPTION( RECOMPILE );
+SELECT	'sqlserver_server_properties' AS [measurement],
+		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
+		s.cpu_count,
+		s.server_memory,
+		s.sku,
+		s.engine_edition,
+		s.hardware_type,
+		s.total_storage_mb,
+		s.available_storage_mb,
+		s.uptime,
+		db_online,
+		db_restoring,
+		db_recovering,
+		db_recoveryPending,
+		db_suspect,
+		db_offline
+FROM	(
+			SELECT	SUM( CASE WHEN state = 0 THEN 1 ELSE 0 END ) AS db_online,
+					SUM( CASE WHEN state = 1 THEN 1 ELSE 0 END ) AS db_restoring,
+					SUM( CASE WHEN state = 2 THEN 1 ELSE 0 END ) AS db_recovering,
+					SUM( CASE WHEN state = 3 THEN 1 ELSE 0 END ) AS db_recoveryPending,
+					SUM( CASE WHEN state = 4 THEN 1 ELSE 0 END ) AS db_suspect,
+					SUM( CASE WHEN state = 6 or state = 10 THEN 1 ELSE 0 END ) AS db_offline
+			FROM	sys.databases
+		) AS dbs
+		CROSS APPLY (
+			SELECT	cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime
+			FROM	@sys_info
+		) AS s
+OPTION( RECOMPILE )
 `
 
-const sqlPerformanceCountersV2 string = `DECLARE @PCounters TABLE
+const sqlPerformanceCountersV2 string = `
+DECLARE @PCounters TABLE
 (
 	object_name nvarchar(128),
 	counter_name nvarchar(128),
@@ -403,59 +489,54 @@ const sqlPerformanceCountersV2 string = `DECLARE @PCounters TABLE
 	cntr_type INT,
 	Primary Key(object_name, counter_name, instance_name)
 );
-
 INSERT	INTO @PCounters
 SELECT	DISTINCT
 		RTrim(spi.object_name) object_name,
 		RTrim(spi.counter_name) counter_name,
 		RTrim(spi.instance_name) instance_name,
-		spi.cntr_value,
+		CAST(spi.cntr_value AS BIGINT) AS cntr_value,
 		spi.cntr_type
 FROM	sys.dm_os_performance_counters AS spi
 WHERE	(
-		counter_name IN (
-			'SQL Compilations/sec',
-			'SQL Re-Compilations/sec',
-			'User Connections',
-			'Batch Requests/sec',
-			'Logouts/sec',
-			'Logins/sec',
-			'Processes blocked',
-			'Latch Waits/sec',
-			'Full Scans/sec',
-			'Index Searches/sec',
-			'Page Splits/sec',
-			'Page Lookups/sec',
-			'Page Reads/sec',
-			'Page Writes/sec',
-			'Readahead Pages/sec',
-			'Lazy Writes/sec',
-			'Checkpoint Pages/sec',
-			'Page life expectancy',
-			'Log File(s) Size (KB)',
-			'Log File(s) Used Size (KB)',
-			'Data File(s) Size (KB)',
-			'Transactions/sec',
-			'Write Transactions/sec',
-			'Active Temp Tables',
-			'Temp Tables Creation Rate',
-			'Temp Tables For Destruction',
-			'Free Space in tempdb (KB)',
-			'Version Store Size (KB)',
-			'Memory Grants Pending',
-			'Free list stalls/sec',
-			'Buffer cache hit ratio',
-			'Buffer cache hit ratio base'
-		)
-		) OR (
-			instance_name IN ('_Total','Column store object pool')
-			AND counter_name IN (
+			counter_name IN (
+				'SQL Compilations/sec',
+				'SQL Re-Compilations/sec',
+				'User Connections',
+				'Batch Requests/sec',
+				'Logouts/sec',
+				'Logins/sec',
+				'Processes blocked',
+				'Latch Waits/sec',
+				'Full Scans/sec',
+				'Index Searches/sec',
+				'Page Splits/sec',
+				'Page Lookups/sec',
+				'Page Reads/sec',
+				'Page Writes/sec',
+				'Readahead Pages/sec',
+				'Lazy Writes/sec',
+				'Checkpoint Pages/sec',
+				'Page life expectancy',
+				'Log File(s) Size (KB)',
+				'Log File(s) Used Size (KB)',
+				'Data File(s) Size (KB)',
+				'Transactions/sec',
+				'Write Transactions/sec',
+				'Active Temp Tables',
+				'Temp Tables Creation Rate',
+				'Temp Tables For Destruction',
+				'Free Space in tempdb (KB)',
+				'Version Store Size (KB)',
+				'Memory Grants Pending',
+				'Memory Grants Outstanding',
+				'Free list stalls/sec',
+				'Buffer cache hit ratio',
+				'Buffer cache hit ratio base',
+				'Backup/Restore Throughput/sec',
+				'Total Server Memory (KB)',
+				'Target Server Memory (KB)',
 				'Log Flushes/sec',
 				'Log Flush Wait Time',
-				'Lock Timeouts/sec',
-				'Number of Deadlocks/sec',
-				'Lock Waits/sec',
-				'Latch Waits/sec',
 				'Memory broker clerk size',
 				'Log Bytes Flushed/sec',
 				'Bytes Sent to Replica/sec',
@@ -470,44 +551,81 @@ WHERE	(
 				'Flow Control/sec',
 				'Resent Messages/sec',
 				'Redone Bytes/sec',
-				'XTP Memory Used (KB)'
-			) OR ( 
-				object_name = 'SQLServer:Database Replica'
-				AND counter_name IN (
-					'Log Bytes Received/sec',
-					'Log Apply Pending Queue',
-					'Redone Bytes/sec',
-					'Recovery Queue',
-					'Log Apply Ready Queue'
-				)
-				AND instance_name = '_Total'
-			)
-		) OR (
-			object_name = 'SQLServer:Database Replica'
-			AND counter_name IN ('Transaction Delay')
-		) OR (
-			object_name = 'SQLServer:Workload Group Stats'
-			AND counter_name IN (
+				'XTP Memory Used (KB)',
+				'Transaction Delay',
+				'Log Bytes Received/sec',
+				'Log Apply Pending Queue',
+				'Redone Bytes/sec',
+				'Recovery Queue',
+				'Log Apply Ready Queue',
 				'CPU usage %',
 				'CPU usage % base',
 				'Queued requests',
 				'Requests completed/sec',
-				'Blocked tasks'
+				'Blocked tasks',
+				'Active memory grant amount (KB)',
+				'Disk Read Bytes/sec',
+				'Disk Read IO Throttled/sec',
+				'Disk Read IO/sec',
+				'Disk Write Bytes/sec',
+				'Disk Write IO Throttled/sec',
+				'Disk Write IO/sec',
+				'Used memory (KB)',
+				'Forwarded Records/sec',
+				'Background Writer pages/sec',
+				'Percent Log Used'
+			)
+		) OR (
+			object_name LIKE '%User Settable%'
+			OR object_name LIKE '%SQL Errors%'
+		) OR (
+			instance_name IN ('_Total')
+			AND counter_name IN (
+				'Lock Timeouts/sec',
+				'Number of Deadlocks/sec',
+				'Lock Waits/sec',
+				'Latch Waits/sec'
 			)
 		)
 
+DECLARE @SQL NVARCHAR(MAX)
+SET  @SQL = REPLACE('
+SELECT
+"SQLServer:Workload Group Stats" AS object,
+counter,
+instance,
+CAST(vs.value AS BIGINT) AS value,
+1
+FROM
+(
+    SELECT
+    rgwg.name AS instance,
+    rgwg.total_request_count AS "Request Count",
+    rgwg.total_queued_request_count AS "Queued Request Count",
+    rgwg.total_cpu_limit_violation_count AS "CPU Limit Violation Count",
+    rgwg.total_cpu_usage_ms AS "CPU Usage (time)",
+    ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN 'rgwg.total_cpu_usage_preemptive_ms AS "Premptive CPU Usage (time)",' ELSE '' END + '
+    rgwg.total_lock_wait_count AS "Lock Wait Count",
+    rgwg.total_lock_wait_time_ms AS "Lock Wait Time",
+    rgwg.total_reduced_memgrant_count AS "Reduced Memory Grant Count"
+    FROM sys.dm_resource_governor_workload_groups AS rgwg
+    INNER JOIN sys.dm_resource_governor_resource_pools AS rgrp
+    ON rgwg.pool_id = rgrp.pool_id
+) AS rg
+UNPIVOT (
+    value FOR counter IN ( [Request Count], [Queued Request Count], [CPU Limit Violation Count], [CPU Usage (time)], ' + CASE WHEN SERVERPROPERTY('ProductMajorVersion') > 10 THEN '[Premptive CPU Usage (time)], ' ELSE '' END + '[Lock Wait Count], [Lock Wait Time], [Reduced Memory Grant Count] )
+) AS vs'
+,'"','''')
+
+INSERT INTO @PCounters
+EXEC( @SQL )
+
 SELECT	'sqlserver_performance' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-		SERVERPROPERTY('ServerName') AS [host],
 		pc.object_name AS [object],
 		pc.counter_name AS [counter],
 		CASE pc.instance_name WHEN '_Total' THEN 'Total' ELSE ISNULL(pc.instance_name,'') END AS [instance],
-		CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value * 1.0) / (pc1.cntr_value * 1.0) * 100 ELSE pc.cntr_value END AS [value],
-		CASE 
-			WHEN pc.cntr_type = 272696576 THEN 'rate'
-			WHEN pc.cntr_type IN (65792,537003264) THEN 'raw'
-			ELSE 'unknown'
-		END AS c_type
+		CAST(CASE WHEN pc.cntr_type = 537003264 AND pc1.cntr_value > 0 THEN (pc.cntr_value * 1.0) / (pc1.cntr_value * 1.0) * 100 ELSE pc.cntr_value END AS float(10)) AS [value]
 FROM	@PCounters AS pc
 		LEFT OUTER JOIN @PCounters AS pc1
 			ON (
@@ -518,13 +636,12 @@ FROM	@PCounters AS pc
 			AND pc.instance_name = pc1.instance_name
 			AND pc1.counter_name LIKE '%base'
 WHERE	pc.counter_name NOT LIKE '% base'
-OPTION( RECOMPILE );
+OPTION(RECOMPILE);
 `
 
 const sqlWaitStatsCategorizedV2 string = `SELECT
 'sqlserver_waitstats' AS [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-SERVERPROPERTY('ServerName') AS [host],
 ws.wait_type,
 wait_time_ms,
 wait_time_ms - signal_wait_time_ms AS [resource_wait_ms],
@@ -574,6 +691,7 @@ LEFT OUTER JOIN ( VALUES
 ('CMEMPARTITIONED','Memory'),
 ('CMEMTHREAD','Memory'),
 ('CXPACKET','Parallelism'),
+('CXCONSUMER','Parallelism'),
 ('DBMIRROR_DBM_EVENT','Mirroring'),
 ('DBMIRROR_DBM_MUTEX','Mirroring'),
 ('DBMIRROR_EVENTS_QUEUE','Mirroring'),
@@ -1048,17 +1166,15 @@ ws.wait_type NOT IN (
 	N'DBMIRROR_DBM_EVENT', N'DBMIRROR_EVENTS_QUEUE', N'DBMIRROR_WORKER_QUEUE',
 	N'DBMIRRORING_CMD', N'DIRTY_PAGE_POLL', N'DISPATCHER_QUEUE_SEMAPHORE',
 	N'EXECSYNC', N'FSAGENT', N'FT_IFTS_SCHEDULER_IDLE_WAIT', N'FT_IFTSHC_MUTEX',
-	N'HADR_CLUSAPI_CALL', N'HADR_FILESTREAM_IOMGR_IOCOMPLETION', N'HADR_LOGCAPTURE_WAIT', 
+	N'HADR_CLUSAPI_CALL', N'HADR_FILESTREAM_IOMGR_IOCOMPLETION', N'HADR_LOGCAPTURE_WAIT',
 	N'HADR_NOTIFICATION_DEQUEUE', N'HADR_TIMER_TASK', N'HADR_WORK_QUEUE',
-	N'KSOURCE_WAKEUP', N'LAZYWRITER_SLEEP', N'LOGMGR_QUEUE', 
+	N'KSOURCE_WAKEUP', N'LAZYWRITER_SLEEP', N'LOGMGR_QUEUE',
 	N'MEMORY_ALLOCATION_EXT', N'ONDEMAND_TASK_QUEUE',
 	N'PARALLEL_REDO_WORKER_WAIT_WORK',
 	N'PREEMPTIVE_HADR_LEASE_MECHANISM', N'PREEMPTIVE_SP_SERVER_DIAGNOSTICS',
 	N'PREEMPTIVE_OS_LIBRARYOPS', N'PREEMPTIVE_OS_COMOPS', N'PREEMPTIVE_OS_CRYPTOPS',
-	N'PREEMPTIVE_OS_PIPEOPS', N'PREEMPTIVE_OS_AUTHENTICATIONOPS',
-	N'PREEMPTIVE_OS_GENERICOPS', N'PREEMPTIVE_OS_VERIFYTRUST',
-	N'PREEMPTIVE_OS_FILEOPS', N'PREEMPTIVE_OS_DEVICEOPS', N'PREEMPTIVE_OS_QUERYREGISTRY',
-	N'PREEMPTIVE_OS_WRITEFILE',
+	N'PREEMPTIVE_OS_PIPEOPS','PREEMPTIVE_OS_GENERICOPS', N'PREEMPTIVE_OS_VERIFYTRUST',
+	N'PREEMPTIVE_OS_DEVICEOPS',
 	N'PREEMPTIVE_XE_CALLBACKEXECUTE', N'PREEMPTIVE_XE_DISPATCHER',
 	N'PREEMPTIVE_XE_GETTARGETSTATE', N'PREEMPTIVE_XE_SESSIONCOMMIT',
 	N'PREEMPTIVE_XE_TARGETINIT', N'PREEMPTIVE_XE_TARGETFINALIZE',
@@ -1070,14 +1186,15 @@ ws.wait_type NOT IN (
 	N'SLEEP_DCOMSTARTUP', N'SLEEP_MASTERDBREADY', N'SLEEP_MASTERMDREADY',
 	N'SLEEP_MASTERUPGRADED', N'SLEEP_MSDBSTARTUP', N'SLEEP_SYSTEMTASK', N'SLEEP_TASK',
 	N'SLEEP_TEMPDBSTARTUP', N'SNI_HTTP_ACCEPT', N'SP_SERVER_DIAGNOSTICS_SLEEP',
-	N'SQLTRACE_BUFFER_FLUSH', N'SQLTRACE_INCREMENTAL_FLUSH_SLEEP', N'SQLTRACE_WAIT_ENTRIES',
+	N'SQLTRACE_BUFFER_FLUSH', N'SQLTRACE_INCREMENTAL_FLUSH_SLEEP',
+	N'SQLTRACE_WAIT_ENTRIES',
 	N'WAIT_FOR_RESULTS', N'WAITFOR', N'WAITFOR_TASKSHUTDOWN', N'WAIT_XTP_HOST_WAIT',
 	N'WAIT_XTP_OFFLINE_CKPT_NEW_LOG', N'WAIT_XTP_CKPT_CLOSE',
 	N'XE_BUFFERMGR_ALLPROCESSED_EVENT', N'XE_DISPATCHER_JOIN',
-	N'XE_DISPATCHER_WAIT', N'XE_LIVE_TARGET_TVF', N'XE_TIMER_EVENT')
+	N'XE_DISPATCHER_WAIT', N'XE_LIVE_TARGET_TVF', N'XE_TIMER_EVENT',
+	N'SOS_WORK_DISPATCHER','RESERVED_MEMORY_ALLOCATION_EXT')
 AND waiting_tasks_count > 0
-ORDER BY
-waiting_tasks_count DESC
+AND wait_time_ms > 100
 OPTION (RECOMPILE);
 `
 
@@ -1086,7 +1203,6 @@ BEGIN
 	SELECT TOP(1)
 		'sqlserver_azurestats' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
-		SERVERPROPERTY('ServerName') AS [host],
 		avg_cpu_percent,
 		avg_data_io_percent,
 		avg_log_write_percent,
@@ -1096,9 +1212,9 @@ BEGIN
 		max_session_percent,
 		dtu_limit,
 		avg_login_rate_percent,
-		end_time 
+		end_time
 	FROM
-		sys.dm_db_resource_stats WITH (NOLOCK) 
+		sys.dm_db_resource_stats WITH (NOLOCK)
 	ORDER BY
 		end_time DESC
 	OPTION (RECOMPILE)
@@ -2036,30 +2152,30 @@ DECLARE @delayInterval char(8) = CONVERT(Char(8), DATEADD(SECOND, @secondsBetwee
 
 DECLARE @w1 TABLE
 (
-	WaitType nvarchar(64) NOT NULL,
+	WaitType nvarchar(64) collate SQL_Latin1_General_CP1_CI_AS NOT NULL,
 	WaitTimeInMs bigint NOT NULL,
 	WaitTaskCount bigint NOT NULL,
 	CollectionDate datetime NOT NULL
 )
 DECLARE @w2 TABLE
 (
-	WaitType nvarchar(64) NOT NULL,
+	WaitType nvarchar(64) collate SQL_Latin1_General_CP1_CI_AS NOT NULL,
 	WaitTimeInMs bigint NOT NULL,
 	WaitTaskCount bigint NOT NULL,
 	CollectionDate datetime NOT NULL
 )
 DECLARE @w3 TABLE
 (
-	WaitType nvarchar(64) NOT NULL
+	WaitType nvarchar(64) collate SQL_Latin1_General_CP1_CI_AS NOT NULL
 )
 DECLARE @w4 TABLE
 (
-	WaitType nvarchar(64) NOT NULL,
-	WaitCategory nvarchar(64) NOT NULL
+	WaitType nvarchar(64) collate SQL_Latin1_General_CP1_CI_AS NOT NULL,
+	WaitCategory nvarchar(64) collate SQL_Latin1_General_CP1_CI_AS NOT NULL
 )
 DECLARE @w5 TABLE
 (
-	WaitCategory nvarchar(64) NOT NULL,
+	WaitCategory nvarchar(64) collate SQL_Latin1_General_CP1_CI_AS NOT NULL,
 	WaitTimeInMs bigint NOT NULL,
 	WaitTaskCount bigint NOT NULL
 )
@@ -2300,12 +2416,12 @@ INSERT @w4 (WaitType, WaitCategory) VALUES ('ABR', 'OTHER') ,
 
 INSERT @w1 (WaitType, WaitTimeInMs, WaitTaskCount, CollectionDate)
 SELECT
-  WaitType = wait_type
+  WaitType = wait_type  collate SQL_Latin1_General_CP1_CI_AS
 , WaitTimeInMs = SUM(wait_time_ms)
 , WaitTaskCount = SUM(waiting_tasks_count)
 , CollectionDate = GETDATE()
 FROM sys.dm_os_wait_stats
-WHERE [wait_type] NOT IN
+WHERE [wait_type]  collate SQL_Latin1_General_CP1_CI_AS NOT IN
 (
 	SELECT WaitType FROM  @w3
 )
@@ -2316,12 +2432,12 @@ WAITFOR DELAY @delayInterval;
 
 INSERT @w2 (WaitType, WaitTimeInMs, WaitTaskCount, CollectionDate)
 SELECT
-  WaitType = wait_type
+  WaitType = wait_type  collate SQL_Latin1_General_CP1_CI_AS
 , WaitTimeInMs = SUM(wait_time_ms)
 , WaitTaskCount = SUM(waiting_tasks_count)
 , CollectionDate = GETDATE()
 FROM sys.dm_os_wait_stats
-WHERE [wait_type] NOT IN
+WHERE [wait_type]  collate SQL_Latin1_General_CP1_CI_AS NOT IN
 (
 	SELECT WaitType FROM  @w3
 )

@@ -1,6 +1,9 @@
 package internal
 
 import (
+	"bytes"
+	"compress/gzip"
+	"io/ioutil"
 	"os/exec"
 	"testing"
 	"time"
@@ -161,4 +164,56 @@ func TestDuration(t *testing.T) {
 	d = Duration{}
 	d.UnmarshalTOML([]byte(`1.5`))
 	assert.Equal(t, time.Second, d.Duration)
+}
+
+func TestSize(t *testing.T) {
+	var s Size
+
+	s.UnmarshalTOML([]byte(`"1B"`))
+	assert.Equal(t, int64(1), s.Size)
+
+	s = Size{}
+	s.UnmarshalTOML([]byte(`1`))
+	assert.Equal(t, int64(1), s.Size)
+
+	s = Size{}
+	s.UnmarshalTOML([]byte(`'1'`))
+	assert.Equal(t, int64(1), s.Size)
+
+	s = Size{}
+	s.UnmarshalTOML([]byte(`"1GB"`))
+	assert.Equal(t, int64(1000*1000*1000), s.Size)
+
+	s = Size{}
+	s.UnmarshalTOML([]byte(`"12GiB"`))
+	assert.Equal(t, int64(12*1024*1024*1024), s.Size)
+}
+
+func TestCompressWithGzip(t *testing.T) {
+	testData := "the quick brown fox jumps over the lazy dog"
+	inputBuffer := bytes.NewBuffer([]byte(testData))
+
+	outputBuffer, err := CompressWithGzip(inputBuffer)
+	assert.NoError(t, err)
+
+	gzipReader, err := gzip.NewReader(outputBuffer)
+	assert.NoError(t, err)
+	defer gzipReader.Close()
+
+	output, err := ioutil.ReadAll(gzipReader)
+	assert.NoError(t, err)
+
+	assert.Equal(t, testData, string(output))
+}
+
+func TestVersionAlreadySet(t *testing.T) {
+	err := SetVersion("foo")
+	assert.Nil(t, err)
+
+	err = SetVersion("bar")
+
+	assert.NotNil(t, err)
+	assert.IsType(t, VersionAlreadySetError, err)
+
+	assert.Equal(t, "foo", Version())
 }

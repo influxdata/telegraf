@@ -22,6 +22,7 @@ type configuredStats struct {
 	mean     bool
 	variance bool
 	stdev    bool
+	sum      bool
 }
 
 func NewBasicStats() *BasicStats {
@@ -40,6 +41,7 @@ type basicstats struct {
 	count float64
 	min   float64
 	max   float64
+	sum   float64
 	mean  float64
 	M2    float64 //intermedia value for variance/stdev
 }
@@ -70,34 +72,36 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 			tags:   in.Tags(),
 			fields: make(map[string]basicstats),
 		}
-		for k, v := range in.Fields() {
-			if fv, ok := convert(v); ok {
-				a.fields[k] = basicstats{
+		for _, field := range in.FieldList() {
+			if fv, ok := convert(field.Value); ok {
+				a.fields[field.Key] = basicstats{
 					count: 1,
 					min:   fv,
 					max:   fv,
 					mean:  fv,
+					sum:   fv,
 					M2:    0.0,
 				}
 			}
 		}
 		m.cache[id] = a
 	} else {
-		for k, v := range in.Fields() {
-			if fv, ok := convert(v); ok {
-				if _, ok := m.cache[id].fields[k]; !ok {
+		for _, field := range in.FieldList() {
+			if fv, ok := convert(field.Value); ok {
+				if _, ok := m.cache[id].fields[field.Key]; !ok {
 					// hit an uncached field of a cached metric
-					m.cache[id].fields[k] = basicstats{
+					m.cache[id].fields[field.Key] = basicstats{
 						count: 1,
 						min:   fv,
 						max:   fv,
 						mean:  fv,
+						sum:   fv,
 						M2:    0.0,
 					}
 					continue
 				}
 
-				tmp := m.cache[id].fields[k]
+				tmp := m.cache[id].fields[field.Key]
 				//https://en.m.wikipedia.org/wiki/Algorithms_for_calculating_variance
 				//variable initialization
 				x := fv
@@ -119,8 +123,10 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 				} else if fv > tmp.max {
 					tmp.max = fv
 				}
+				//sum compute
+				tmp.sum += fv
 				//store final data
-				m.cache[id].fields[k] = tmp
+				m.cache[id].fields[field.Key] = tmp
 			}
 		}
 	}
@@ -145,6 +151,9 @@ func (m *BasicStats) Push(acc telegraf.Accumulator) {
 			}
 			if config.mean {
 				fields[k+"_mean"] = v.mean
+			}
+			if config.sum {
+				fields[k+"_sum"] = v.sum
 			}
 
 			//v.count always >=1
@@ -187,6 +196,8 @@ func parseStats(names []string) *configuredStats {
 			parsed.variance = true
 		case "stdev":
 			parsed.stdev = true
+		case "sum":
+			parsed.sum = true
 
 		default:
 			log.Printf("W! Unrecognized basic stat '%s', ignoring", name)
@@ -206,6 +217,7 @@ func defaultStats() *configuredStats {
 	defaults.mean = true
 	defaults.variance = true
 	defaults.stdev = true
+	defaults.sum = false
 
 	return defaults
 }
@@ -233,6 +245,8 @@ func convert(in interface{}) (float64, bool) {
 	case float64:
 		return v, true
 	case int64:
+		return float64(v), true
+	case uint64:
 		return float64(v), true
 	default:
 		return 0, false

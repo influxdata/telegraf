@@ -4,7 +4,7 @@ This plugin gathers metrics from OpenLDAP's cn=Monitor backend.
 
 ### Configuration:
 
-To use this plugin you must enable the [monitoring](https://www.openldap.org/devel/admin/monitoringslapd.html) backend.
+To use this plugin you must enable the [slapd monitoring](https://www.openldap.org/devel/admin/monitoringslapd.html) backend.
 
 ```toml
 [[inputs.openldap]]
@@ -14,13 +14,13 @@ To use this plugin you must enable the [monitoring](https://www.openldap.org/dev
   # ldaps, starttls, or no encryption. default is an empty string, disabling all encryption.
   # note that port will likely need to be changed to 636 for ldaps
   # valid options: "" | "starttls" | "ldaps"
-  ssl = ""
+  tls = ""
 
   # skip peer certificate verification. Default is false.
   insecure_skip_verify = false
 
   # Path to PEM-encoded Root certificate to use to verify server certificate
-  ssl_ca = "/etc/ssl/certs.pem"
+  tls_ca = "/etc/ssl/certs.pem"
 
   # dn/password to bind with. If bind_dn is empty, an anonymous bind is performed.
   bind_dn = ""

@@ -8,7 +8,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/nats-io/nats"
+	nats "github.com/nats-io/go-nats"
 )
 
 type natsError struct {
@@ -32,7 +32,7 @@ type natsConsumer struct {
 	PendingMessageLimit int
 	PendingBytesLimit   int
 
-	// Legacy metric buffer support
+	// Legacy metric buffer support; deprecated in v0.10.3
 	MetricBuffer int
 
 	parser parsers.Parser

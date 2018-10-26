@@ -7,7 +7,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/buffer"
-	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -36,8 +35,16 @@ type RunningOutput struct {
 	metrics     *buffer.Buffer
 	failMetrics *buffer.Buffer
 
+	// Guards against concurrent calls to Add, Push, Reset
+	aggMutex sync.Mutex
 	// Guards against concurrent calls to the Output as described in #3009
-	sync.Mutex
+	writeMutex sync.Mutex
+}
+
+// OutputConfig containing name and filter
+type OutputConfig struct {
+	Name   string
+	Filter Filter
 }
 
 func NewRunningOutput(
@@ -87,44 +94,51 @@ func NewRunningOutput(
 			map[string]string{"output": name},
 		),
 	}
-	ro.BufferLimit.Incr(int64(ro.MetricBufferLimit))
+	ro.BufferLimit.Set(int64(ro.MetricBufferLimit))
 	return ro
 }
 
 // AddMetric adds a metric to the output. This function can also write cached
 // points if FlushBufferWhenFull is true.
-func (ro *RunningOutput) AddMetric(m telegraf.Metric) {
-	if m == nil {
+func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
+	if ok := ro.Config.Filter.Select(metric); !ok {
+		ro.MetricsFiltered.Incr(1)
 		return
 	}
-	// Filter any tagexclude/taginclude parameters before adding metric
-	if ro.Config.Filter.IsActive() {
-		// In order to filter out tags, we need to create a new metric, since
-		// metrics are immutable once created.
-		name := m.Name()
-		tags := m.Tags()
-		fields := m.Fields()
-		t := m.Time()
-		if ok := ro.Config.Filter.Apply(name, fields, tags); !ok {
-			ro.MetricsFiltered.Incr(1)
-			return
-		}
-		// error is not possible if creating from another metric, so ignore.
-		m, _ = metric.New(name, tags, fields, t)
+
+	ro.Config.Filter.Modify(metric)
+	if len(metric.FieldList()) == 0 {
+		return
 	}
 
-	ro.metrics.Add(m)
+	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
+		ro.aggMutex.Lock()
+		output.Add(metric)
+		ro.aggMutex.Unlock()
+		return
+	}
+
+	ro.metrics.Add(metric)
 	if ro.metrics.Len() == ro.MetricBatchSize {
 		batch := ro.metrics.Batch(ro.MetricBatchSize)
 		err := ro.write(batch)
 		if err != nil {
 			ro.failMetrics.Add(batch...)
+			log.Printf("E! Error writing to output [%s]: %v", ro.Name, err)
 		}
 	}
 }
 
 // Write writes all cached points to this output.
 func (ro *RunningOutput) Write() error {
+	if output, ok := ro.Output.(telegraf.AggregatingOutput); ok {
+		ro.aggMutex.Lock()
+		metrics := output.Push()
+		ro.metrics.Add(metrics...)
+		output.Reset()
+		ro.aggMutex.Unlock()
+	}
+
 	nFails, nMetrics := ro.failMetrics.Len(), ro.metrics.Len()
 	ro.BufferSize.Set(int64(nFails + nMetrics))
 	log.Printf("D! Output [%s] buffer fullness: %d / %d metrics. ",
@@ -173,8 +187,8 @@ func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 	if nMetrics == 0 {
 		return nil
 	}
-	ro.Lock()
-	defer ro.Unlock()
+	ro.writeMutex.Lock()
+	defer ro.writeMutex.Unlock()
 	start := time.Now()
 	err := ro.Output.Write(metrics)
 	elapsed := time.Since(start)
@@ -185,10 +199,4 @@ func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 		ro.WriteTime.Incr(elapsed.Nanoseconds())
 	}
 	return err
-}
-
-// OutputConfig containing name and filter
-type OutputConfig struct {
-	Name   string
-	Filter Filter
 }
