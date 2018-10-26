@@ -5,6 +5,7 @@ package ipvs
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math/bits"
 	"strconv"
 	"syscall"
@@ -57,6 +58,34 @@ func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 			"cps":         s.Stats.CPS,
 		}
 		acc.AddGauge("ipvs_virtual_server", fields, serviceTags(s))
+
+		destinations, err := i.handle.GetDestinations(s)
+		if err != nil {
+			log.Println("E! Failed to list destinations for a virtual server")
+			continue // move on to the next virtual server
+		}
+
+		for _, d := range destinations {
+			fields := map[string]interface{}{
+				"connections": d.Stats.Connections,
+				"pkts_in":     d.Stats.PacketsIn,
+				"pkts_out":    d.Stats.PacketsOut,
+				"bytes_in":    d.Stats.BytesIn,
+				"bytes_out":   d.Stats.BytesOut,
+				"pps_in":      d.Stats.PPSIn,
+				"pps_out":     d.Stats.PPSOut,
+				"cps":         d.Stats.CPS,
+			}
+			destTags := destinationTags(d)
+			if s.FWMark > 0 {
+				destTags["virtual_fwmark"] = strconv.Itoa(int(s.FWMark))
+			} else {
+				destTags["virtual_protocol"] = protocolToString(s.Protocol)
+				destTags["virtual_address"] = s.Address.String()
+				destTags["virtual_port"] = strconv.Itoa(int(s.Port))
+			}
+			acc.AddGauge("ipvs_real_server", fields, destTags)
+		}
 	}
 
 	return nil
@@ -79,6 +108,17 @@ func serviceTags(s *ipvs.Service) map[string]string {
 		ret["port"] = strconv.Itoa(int(s.Port))
 	}
 	return ret
+}
+
+// helper: given a Destination, return tags that identify it
+func destinationTags(d *ipvs.Destination) map[string]string {
+	return map[string]string{
+		"address":        d.Address.String(),
+		"port":           fmt.Sprintf("%d", d.Port),
+		"address_family": addressFamilyToString(d.AddressFamily),
+		"active_conns":   fmt.Sprintf("%d", d.ActiveConnections),
+		"inactive_conns": fmt.Sprintf("%d", d.InactiveConnections),
+	}
 }
 
 // helper: convert protocol uint16 to human readable string (if possible)
