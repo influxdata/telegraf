@@ -249,6 +249,7 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 
 	if q.sentMessages >= q.MaxMessages && q.MaxMessages > 0 {
 		log.Printf("D! Output [amqp] sent MaxMessages; closing connection")
+		q.client.Close()
 		q.client = nil
 	}
 
