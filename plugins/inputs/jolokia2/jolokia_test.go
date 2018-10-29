@@ -143,7 +143,12 @@ func TestJolokia2_ObjectValues(t *testing.T) {
 	[[jolokia2_agent.metric]]
 		name     = "object_with_key_pattern"
 		mbean    = "object_with_key_pattern:test=*"
-		tag_keys = ["test"]`
+		tag_keys = ["test"]
+
+	[[jolokia2_agent.metric]]
+		name  = "ColumnFamily"
+		mbean = "org.apache.cassandra.metrics:keyspace=*,name=EstimatedRowSizeHistogram,scope=schema_columns,type=ColumnFamily"
+		tag_keys = ["keyspace", "name", "scope"]`
 
 	response := `[{
 		"request": {
@@ -214,7 +219,20 @@ func TestJolokia2_ObjectValues(t *testing.T) {
 			}
 		},
 		"status": 200
-	}]`
+	}, {
+		"request": {
+		  "mbean": "org.apache.cassandra.metrics:keyspace=*,name=EstimatedRowSizeHistogram,scope=schema_columns,type=ColumnFamily",
+		  "type": "read"
+		},
+		"value": {
+		  "org.apache.cassandra.metrics:keyspace=system,name=EstimatedRowSizeHistogram,scope=schema_columns,type=ColumnFamily": {
+			"Value": [
+				0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+			]
+		  }
+		},
+		"status": 200
+	  }]`
 
 	server := setupServer(http.StatusOK, response)
 	defer server.Close()
