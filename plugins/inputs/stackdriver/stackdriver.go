@@ -1,4 +1,4 @@
-package gcp_stackdriver
+package stackdriver
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
 )
 
-type GCPStackdriver struct {
+type Stackdriver struct {
 	Project                         string
 	RateLimit                       int
 	LookbackSeconds                 int64
@@ -41,7 +41,7 @@ type GCPStackdriver struct {
 
 func init() {
 	f := func() telegraf.Input {
-		return &GCPStackdriver{
+		return &Stackdriver{
 			RateLimit:                       14,
 			LookbackSeconds:                 600,
 			ScrapeDistributionBuckets:       true,
@@ -49,14 +49,14 @@ func init() {
 		}
 	}
 
-	inputs.Add("gcp_stackdriver", f)
+	inputs.Add("stackdriver", f)
 }
 
-func (s *GCPStackdriver) Description() string {
+func (s *Stackdriver) Description() string {
 	return "Plugin that scrapes Google's v3 monitoring API."
 }
 
-func (s *GCPStackdriver) SampleConfig() string {
+func (s *Stackdriver) SampleConfig() string {
 	return `
   ## GCP Project
   project = "projects/erudite-bloom-151019"
@@ -116,18 +116,16 @@ func (s *GCPStackdriver) SampleConfig() string {
 `
 }
 
-func (s *GCPStackdriver) Gather(acc telegraf.Accumulator) error {
-	log.Printf("Hello! Scraping from %s", s.Project)
-
+func (s *Stackdriver) Gather(acc telegraf.Accumulator) error {
 	err := s.initializeStackdriverClient()
 	if err != nil {
-		log.Printf("Failed to create stackdriver monitoring client: %v", err)
+		log.Printf("E! Failed to create stackdriver monitoring client: %v", err)
 		return err
 	}
 
 	timeSeriesRequests, err := s.generatetimeSeriesConfs()
 	if err != nil {
-		log.Printf("Failed to get metrics: %s\n", err)
+		log.Printf("E! Failed to get metrics: %s\n", err)
 		return err
 	}
 
@@ -154,7 +152,7 @@ type timeSeriesConf struct {
 
 // Create and initialize a timeSeriesConf for a given GCP metric type with
 // defaults taken from the gcp_stackdriver plugin configuration.
-func (s *GCPStackdriver) newTimeSeriesConf(metricType string) *timeSeriesConf {
+func (s *Stackdriver) newTimeSeriesConf(metricType string) *timeSeriesConf {
 	endSec := time.Now().Unix()
 	startSec := endSec - s.LookbackSeconds
 	endTs := &googlepbts.Timestamp{Seconds: endSec}
@@ -213,7 +211,7 @@ func (t *timeSeriesConf) initForDistribution() *timeSeriesConf {
 	return t
 }
 
-func (s *GCPStackdriver) initializeStackdriverClient() error {
+func (s *Stackdriver) initializeStackdriverClient() error {
 	if s.client == nil {
 		s.ctx = context.Background()
 
@@ -257,7 +255,7 @@ func includeExcludeHelper(key string, includes []string, excludes []string) bool
 // Test whether a particular GCP metric type should be scraped by this plugin
 // by checking the plugin name against the configuration's
 // "includeMetricTypePrefixes" and "excludeMetricTypePrefixes"
-func (s *GCPStackdriver) includeMetricType(metricType string) bool {
+func (s *Stackdriver) includeMetricType(metricType string) bool {
 	k := metricType
 	inc := s.IncludeMetricTypePrefixes
 	exc := s.ExcludeMetricTypePrefixes
@@ -265,7 +263,7 @@ func (s *GCPStackdriver) includeMetricType(metricType string) bool {
 	return includeExcludeHelper(k, inc, exc)
 }
 
-func (s *GCPStackdriver) includeTag(tagKey string) bool {
+func (s *Stackdriver) includeTag(tagKey string) bool {
 	k := tagKey
 	inc := s.IncludeTagPrefixes
 	exc := s.ExcludeTagPrefixes
@@ -275,7 +273,7 @@ func (s *GCPStackdriver) includeTag(tagKey string) bool {
 
 // Generate a list of timeSeriesConfig structs by making a ListMetricDescriptors
 // API request and filtering the result against our configuration.
-func (s *GCPStackdriver) generatetimeSeriesConfs() ([]timeSeriesConf, error) {
+func (s *Stackdriver) generatetimeSeriesConfs() ([]timeSeriesConf, error) {
 	ret := []timeSeriesConf{}
 	req := &monitoringpb.ListMetricDescriptorsRequest{Name: s.Project}
 	resp := s.client.ListMetricDescriptors(s.ctx, req)
@@ -316,7 +314,7 @@ func (s *GCPStackdriver) generatetimeSeriesConfs() ([]timeSeriesConf, error) {
 // Do the work! Create a (rate-limited) goroutine for each timeSeriesConf. The
 // rate limiting is super-necessary: GCP will trout-slap us if we talk to it
 // too quickly.
-func (s *GCPStackdriver) scrapeAllTimeSeries(
+func (s *Stackdriver) scrapeAllTimeSeries(
 	acc telegraf.Accumulator,
 	types []timeSeriesConf) error {
 
@@ -327,8 +325,8 @@ func (s *GCPStackdriver) scrapeAllTimeSeries(
 	wg.Add(len(types))
 	for _, timeSeriesRequest := range types {
 		go func(tsc timeSeriesConf) {
-			<-lmtr.C
 			defer wg.Done()
+			<-lmtr.C
 			acc.AddError(s.scrapeTimeSeries(acc, tsc))
 		}(timeSeriesRequest)
 	}
@@ -339,7 +337,7 @@ func (s *GCPStackdriver) scrapeAllTimeSeries(
 
 // Do the work to scrape an individual time series. Runs inside a
 // timeseries-specific goroutine.
-func (s *GCPStackdriver) scrapeTimeSeries(acc telegraf.Accumulator,
+func (s *Stackdriver) scrapeTimeSeries(acc telegraf.Accumulator,
 	tsConf timeSeriesConf) error {
 
 	tsReq := tsConf.listTimeSeriesRequest
@@ -353,7 +351,7 @@ func (s *GCPStackdriver) scrapeTimeSeries(acc telegraf.Accumulator,
 			break
 		}
 		if tsErr != nil {
-			log.Printf("Request %s failure: %s\n", tsReq.String(), tsErr)
+			log.Printf("D! Request %s failure: %s\n", tsReq.String(), tsErr)
 			return tsErr
 		}
 
@@ -416,7 +414,7 @@ func (s *GCPStackdriver) scrapeTimeSeries(acc telegraf.Accumulator,
 // buckets. If the next bucket in the order is, for example, "bucket_ge_2.6",
 // that means bucket_ge_1.5 holds points that are strictly less than the value
 // 2.6.
-func (s *GCPStackdriver) scrapeDistribution(acc telegraf.Accumulator,
+func (s *Stackdriver) scrapeDistribution(acc telegraf.Accumulator,
 	metricType string,
 	fieldPrefix string,
 	metric *distributionpb.Distribution) map[string]interface{} {
