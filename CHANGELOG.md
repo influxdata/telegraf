@@ -12,7 +12,8 @@
 
 - [http_listener_v2](/plugins/inputs/http_listener_v2/README.md) - Contributed by @jul1u5
 - [ipvs](/plugins/inputs/ipvs/README.md) - Contributed by @amoghe
-- [nginx_plus_api](/plugins/inputs/nginx_plus_api/README.md) - Contributed by Bugagazavr
+- [nginx_plus_api](/plugins/inputs/nginx_plus_api/README.md) - Contributed by @Bugagazavr
+- [wireless](/plugins/inputs/wireless/README.md) - Contributed by @jamesmaidment
 
 #### New Outputs
 
@@ -35,6 +36,7 @@
 - [#4852](https://github.com/influxdata/telegraf/pull/4852): Add ability to specify bytes options as strings with units.
 - [#3903](https://github.com/influxdata/telegraf/pull/3903): Add support for TLS configuration in NSQ input.
 - [#4914](https://github.com/influxdata/telegraf/pull/4914): Collect additional stats in memcached input.
+- [#3847](https://github.com/influxdata/telegraf/pull/3847): Add wireless input plugin.
 
 ## v1.8.3 [unreleased]
 

@@ -267,6 +267,7 @@ For documentation on the latest development code see the [documentation index][d
   * [rollbar](./plugins/inputs/webhooks/rollbar)
 * [win_perf_counters](./plugins/inputs/win_perf_counters) (windows performance counters)
 * [win_services](./plugins/inputs/win_services)
+* [wireless](./plugins/inputs/wireless)
 * [zfs](./plugins/inputs/zfs)
 * [zipkin](./plugins/inputs/zipkin)
 * [zookeeper](./plugins/inputs/zookeeper)
