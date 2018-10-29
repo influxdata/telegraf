@@ -753,14 +753,21 @@ func loadConfig(config string) ([]byte, error) {
 	case "https": // http not permitted
 		return fetchConfig(u)
 	default:
-		// If it isn't a http scheme, try it as a file.
+		// If it isn't a https scheme, try it as a file.
 	}
 	return ioutil.ReadFile(config)
 
 }
 
 func fetchConfig(u *url.URL) ([]byte, error) {
-	resp, err := http.Get(u.String())
+	v := os.Getenv("INFLUX_TOKEN")
+
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", "Token "+v)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
