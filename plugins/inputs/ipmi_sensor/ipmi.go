@@ -231,7 +231,7 @@ func extractFieldsFromRegex(re *regexp.Regexp, input string) map[string]string {
 	results := make(map[string]string)
 	subexpNames := re.SubexpNames()
 	if len(subexpNames) > len(submatches) {
-		log.Printf("E! No matches found in '%s'", input)
+		log.Printf("D! No matches found in '%s'", input)
 		return results
 	}
 	for i, name := range subexpNames {
