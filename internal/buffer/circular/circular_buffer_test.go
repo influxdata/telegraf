@@ -1,4 +1,4 @@
-package buffer
+package circular
 
 import (
 	"sync"
@@ -22,7 +22,7 @@ var metricList = []telegraf.Metric{
 func makeBench5(b *testing.B, freq, batchSize int) {
 	const k = 1000
 	var wg sync.WaitGroup
-	buf := NewBuffer(10000)
+	buf := NewCircularBuffer(10000)
 	m := testutil.TestMetric(1, "mymetric")
 
 	for i := 0; i < b.N; i++ {
@@ -44,7 +44,7 @@ func makeBenchStrict(b *testing.B, freq, batchSize int) {
 	const k = 1000
 	var count uint64
 	var wg sync.WaitGroup
-	buf := NewBuffer(10000)
+	buf := NewCircularBuffer(10000)
 	m := testutil.TestMetric(1, "mymetric")
 
 	for i := 0; i < b.N; i++ {
@@ -74,7 +74,7 @@ func makeBenchStrict(b *testing.B, freq, batchSize int) {
 func makeBench(b *testing.B, freq, batchSize int) {
 	const k = 1000
 	var wg sync.WaitGroup
-	buf := NewBuffer(10000)
+	buf := NewCircularBuffer(10000)
 	m := testutil.TestMetric(1, "mymetric")
 
 	for i := 0; i < b.N; i++ {
@@ -111,7 +111,7 @@ func BenchmarkBufferBatchNoDrop(b *testing.B) {
 	makeBenchStrict(b, 1, 4)
 }
 func BenchmarkBufferCatchup(b *testing.B) {
-	buf := NewBuffer(10000)
+	buf := NewCircularBuffer(10000)
 	m := testutil.TestMetric(1, "mymetric")
 
 	for i := 0; i < b.N; i++ {
@@ -121,7 +121,7 @@ func BenchmarkBufferCatchup(b *testing.B) {
 }
 
 func BenchmarkAddMetrics(b *testing.B) {
-	buf := NewBuffer(10000)
+	buf := NewCircularBuffer(10000)
 	m := testutil.TestMetric(1, "mymetric")
 	for n := 0; n < b.N; n++ {
 		buf.Add(m)
@@ -129,7 +129,7 @@ func BenchmarkAddMetrics(b *testing.B) {
 }
 
 func TestNewBufferBasicFuncs(t *testing.T) {
-	b := NewBuffer(10)
+	b := NewCircularBuffer(10)
 	MetricsDropped.Set(0)
 	MetricsWritten.Set(0)
 
@@ -153,7 +153,7 @@ func TestNewBufferBasicFuncs(t *testing.T) {
 }
 
 func TestDroppingMetrics(t *testing.T) {
-	b := NewBuffer(10)
+	b := NewCircularBuffer(10)
 	MetricsDropped.Set(0)
 	MetricsWritten.Set(0)
 
@@ -174,7 +174,7 @@ func TestDroppingMetrics(t *testing.T) {
 }
 
 func TestGettingBatches(t *testing.T) {
-	b := NewBuffer(20)
+	b := NewCircularBuffer(20)
 	MetricsDropped.Set(0)
 	MetricsWritten.Set(0)
 
