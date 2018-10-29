@@ -15,7 +15,7 @@ var testInput = []byte(`Inter-| sta-|   Quality        |   Discarded packets    
 
 func TestLoadWirelessTable(t *testing.T) {
 	expectedMetrics := []*wirelessInterface{
-		&wirelessInterface{
+		{
 			Interface: "wlan0",
 			Status:    int64(0000),
 			Link:      int64(60),
@@ -28,7 +28,7 @@ func TestLoadWirelessTable(t *testing.T) {
 			Misc:      int64(0),
 			Beacon:    int64(0),
 		},
-		&wirelessInterface{
+		{
 			Interface: "wlan1",
 			Status:    int64(0000),
 			Link:      int64(70),
