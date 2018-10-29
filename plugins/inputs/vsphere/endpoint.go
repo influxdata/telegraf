@@ -416,7 +416,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 		url := ds.altID
 		m := isolateLUN.FindStringSubmatch(url)
 		if m != nil {
-			log.Printf("[input.vsphere]: LUN: %s", m[1])
+			log.Printf("D! [input.vsphere]: LUN: %s", m[1])
 			l2d[m[1]] = ds.name
 		}
 	}
@@ -539,7 +539,7 @@ func getDatastores(ctx context.Context, e *Endpoint, root *view.ContainerView) (
 				url = info.Url
 			}
 		}
-		log.Printf("[input.vsphere]: DS URL: %s %s", url, r.Name)
+		log.Printf("D! [input.vsphere]: DS URL: %s %s", url, r.Name)
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
 			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent, altID: url}
 	}
