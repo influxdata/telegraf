@@ -67,14 +67,16 @@ func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 
 		for _, d := range destinations {
 			fields := map[string]interface{}{
-				"connections": d.Stats.Connections,
-				"pkts_in":     d.Stats.PacketsIn,
-				"pkts_out":    d.Stats.PacketsOut,
-				"bytes_in":    d.Stats.BytesIn,
-				"bytes_out":   d.Stats.BytesOut,
-				"pps_in":      d.Stats.PPSIn,
-				"pps_out":     d.Stats.PPSOut,
-				"cps":         d.Stats.CPS,
+				"active_connections":   strconv.Itoa(d.ActiveConnections),
+				"inactive_connections": strconv.Itoa(d.InactiveConnections),
+				"connections":          d.Stats.Connections,
+				"pkts_in":              d.Stats.PacketsIn,
+				"pkts_out":             d.Stats.PacketsOut,
+				"bytes_in":             d.Stats.BytesIn,
+				"bytes_out":            d.Stats.BytesOut,
+				"pps_in":               d.Stats.PPSIn,
+				"pps_out":              d.Stats.PPSOut,
+				"cps":                  d.Stats.CPS,
 			}
 			destTags := destinationTags(d)
 			if s.FWMark > 0 {
@@ -116,8 +118,6 @@ func destinationTags(d *ipvs.Destination) map[string]string {
 		"address":        d.Address.String(),
 		"port":           fmt.Sprintf("%d", d.Port),
 		"address_family": addressFamilyToString(d.AddressFamily),
-		"active_conns":   fmt.Sprintf("%d", d.ActiveConnections),
-		"inactive_conns": fmt.Sprintf("%d", d.InactiveConnections),
 	}
 }
 
