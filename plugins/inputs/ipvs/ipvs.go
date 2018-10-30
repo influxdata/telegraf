@@ -97,7 +97,7 @@ func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 func serviceTags(s *ipvs.Service) map[string]string {
 	ret := map[string]string{
 		"sched":          s.SchedName,
-		"netmask":        fmt.Sprintf("%d", bits.OnesCount32(s.Netmask)),
+		"netmask":        strconv.Itoa(bits.OnesCount32(s.Netmask)),
 		"address_family": addressFamilyToString(s.AddressFamily),
 	}
 	// Per the ipvsadm man page, a virtual service is defined "based on
@@ -116,7 +116,7 @@ func serviceTags(s *ipvs.Service) map[string]string {
 func destinationTags(d *ipvs.Destination) map[string]string {
 	return map[string]string{
 		"address":        d.Address.String(),
-		"port":           fmt.Sprintf("%d", d.Port),
+		"port":           strconv.Itoa(int(d.Port)),
 		"address_family": addressFamilyToString(d.AddressFamily),
 	}
 }
