@@ -242,7 +242,12 @@ func getCompiledDirs(dirs []string) ([]string, error) {
 			return nil, fmt.Errorf("could not compile glob %v: %v", dir, err)
 		}
 
-		for path, file := range g.Match() {
+		files, err := g.Match()
+		if err != nil {
+			return nil, fmt.Errorf("match failed: %s", err.Error())
+		}
+
+		for path, file := range files {
 			if file.IsDir() {
 				compiledDirs = append(compiledDirs, path)
 			}
