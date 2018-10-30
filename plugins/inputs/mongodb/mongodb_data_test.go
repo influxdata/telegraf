@@ -53,7 +53,7 @@ func TestAddNonReplStats(t *testing.T) {
 	d.AddDefaultStats()
 	d.flush(&acc)
 
-	for key, _ := range DefaultStats {
+	for key := range DefaultStats {
 		assert.True(t, acc.HasInt64Field("mongodb", key))
 	}
 }
@@ -74,7 +74,7 @@ func TestAddReplStats(t *testing.T) {
 	d.AddDefaultStats()
 	d.flush(&acc)
 
-	for key, _ := range MmapStats {
+	for key := range MmapStats {
 		assert.True(t, acc.HasInt64Field("mongodb", key))
 	}
 }
@@ -106,7 +106,7 @@ func TestAddWiredTigerStats(t *testing.T) {
 	d.AddDefaultStats()
 	d.flush(&acc)
 
-	for key, _ := range WiredTigerStats {
+	for key := range WiredTigerStats {
 		assert.True(t, acc.HasFloatField("mongodb", key))
 	}
 }
@@ -127,7 +127,7 @@ func TestAddShardStats(t *testing.T) {
 	d.AddDefaultStats()
 	d.flush(&acc)
 
-	for key, _ := range DefaultShardStats {
+	for key := range DefaultShardStats {
 		assert.True(t, acc.HasInt64Field("mongodb", key))
 	}
 }
@@ -156,8 +156,8 @@ func TestAddShardHostStats(t *testing.T) {
 	d.flush(&acc)
 
 	var hostsFound []string
-	for host, _ := range hostStatLines {
-		for key, _ := range ShardHostStats {
+	for host := range hostStatLines {
+		for key := range ShardHostStats {
 			assert.True(t, acc.HasInt64Field("mongodb_shard_stats", key))
 		}
 

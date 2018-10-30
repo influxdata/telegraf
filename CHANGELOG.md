@@ -1,4 +1,80 @@
-## v1.8 [unreleased]
+## v1.9 [unreleased]
+
+#### Release Notes
+
+- The `http_listener` input plugin has been renamed to `influxdb_listener` and
+  use of the original name is deprecated.  The new name better describes the
+  intended use of the plugin as a InfluxDB relay.  For general purpose
+  transfer of metrics in any format via HTTP, it is recommended to use
+  `http_listener_v2` instead.
+
+#### New Inputs
+
+- [http_listener_v2](/plugins/inputs/http_listener_v2/README.md) - Contributed by @jul1u5
+- [ipvs](/plugins/inputs/ipvs/README.md) - Contributed by @amoghe
+- [nginx_plus_api](/plugins/inputs/nginx_plus_api/README.md) - Contributed by @Bugagazavr
+- [wireless](/plugins/inputs/wireless/README.md) - Contributed by @jamesmaidment
+
+#### New Outputs
+
+- [stackdriver](/plugins/outputs/stackdriver/README.md) - Contributed by @jamesmaidment
+
+#### Features
+
+- [#4686](https://github.com/influxdata/telegraf/pull/4686): Add replace function to strings processor.
+- [#4754](https://github.com/influxdata/telegraf/pull/4754): Query servers in parallel in dns_query input.
+- [#4753](https://github.com/influxdata/telegraf/pull/4753): Add ability to define a custom service name when installing as a Windows service.
+- [#4703](https://github.com/influxdata/telegraf/pull/4703): Add support for IPv6 in the ping plugin.
+- [#4781](https://github.com/influxdata/telegraf/pull/4781): Add new config for csv column explicit type conversion.
+- [#4800](https://github.com/influxdata/telegraf/pull/4800): Add an option to specify a custom datadog URL.
+- [#4803](https://github.com/influxdata/telegraf/pull/4803): Use non-allocating field and tag accessors in datadog output.
+- [#4752](https://github.com/influxdata/telegraf/pull/4752): Add per-directory file counts in the filecount input.
+- [#4811](https://github.com/influxdata/telegraf/pull/4811): Add windows service name lookup to procstat input.
+- [#4807](https://github.com/influxdata/telegraf/pull/4807): Add entity-body compression to http output.
+- [#4838](https://github.com/influxdata/telegraf/pull/4838): Add telegraf version to User-Agent header.
+- [#4864](https://github.com/influxdata/telegraf/pull/4864): Use DescribeStreamSummary in place of ListStreams in kinesis output.
+- [#4852](https://github.com/influxdata/telegraf/pull/4852): Add ability to specify bytes options as strings with units.
+- [#3903](https://github.com/influxdata/telegraf/pull/3903): Add support for TLS configuration in NSQ input.
+- [#4914](https://github.com/influxdata/telegraf/pull/4914): Collect additional stats in memcached input.
+- [#3847](https://github.com/influxdata/telegraf/pull/3847): Add wireless input plugin.
+
+## v1.8.3 [unreleased]
+
+- [#4873](https://github.com/influxdata/telegraf/pull/4873): Add DN attributes as tags in x509_cert input to avoid series overwrite.
+- [#4921](https://github.com/influxdata/telegraf/issues/4921): Prevent connection leak by closing unused connections in amqp output.
+- [#4904](https://github.com/influxdata/telegraf/issues/4904): Use default partition key when tag does not exist in kinesis output.
+
+## v1.8.2 [2018-10-17]
+
+### Bugfixes
+
+- [#4844](https://github.com/influxdata/telegraf/pull/4844): Update write path to match updated InfluxDB v2 API.
+- [#4840](https://github.com/influxdata/telegraf/pull/4840): Fix missing timeouts in vsphere input.
+- [#4851](https://github.com/influxdata/telegraf/pull/4851): Support uint fields in aerospike input.
+- [#4854](https://github.com/influxdata/telegraf/pull/4854): Use container name from list if no name in container stats.
+- [#4850](https://github.com/influxdata/telegraf/pull/4850): Prevent panic in filecount input on error in file stat.
+- [#4846](https://github.com/influxdata/telegraf/pull/4846): Fix mqtt_consumer connect and reconnect.
+- [#4849](https://github.com/influxdata/telegraf/pull/4849): Fix panic in logparser input.
+- [#4869](https://github.com/influxdata/telegraf/pull/4869): Lower authorization errors to debug level in mongodb input.
+- [#4875](https://github.com/influxdata/telegraf/pull/4875): Return correct response code on ping input.
+- [#4874](https://github.com/influxdata/telegraf/pull/4874): Fix segfault in x509_cert input.
+
+## v1.8.1 [2018-10-03]
+
+### Bugfixes
+
+- [#4750](https://github.com/influxdata/telegraf/pull/4750): Fix hardware_type may be truncated in sqlserver input.
+- [#4723](https://github.com/influxdata/telegraf/issues/4723): Improve performance in basicstats aggregator.
+- [#4747](https://github.com/influxdata/telegraf/pull/4747): Add hostname to TLS config for SNI support.
+- [#4675](https://github.com/influxdata/telegraf/issues/4675): Don't add tags with empty values to opentsdb output.
+- [#4765](https://github.com/influxdata/telegraf/pull/4765): Fix panic during network error in vsphere input.
+- [#4766](https://github.com/influxdata/telegraf/pull/4766): Unify http_listener error response with InfluxDB.
+- [#4769](https://github.com/influxdata/telegraf/pull/4769): Add UUID to VMs in vSphere input.
+- [#4758](https://github.com/influxdata/telegraf/issues/4758): Skip tags with empty values in cloudwatch output.
+- [#4783](https://github.com/influxdata/telegraf/issues/4783): Fix missing non-realtime samples in vSphere input.
+- [#4799](https://github.com/influxdata/telegraf/pull/4799): Fix case of timezone/grok_timezone options.
+
+## v1.8 [2018-09-21]
 
 ### New Inputs
 
@@ -7,7 +83,7 @@
 - [filecount](./plugins/inputs/filecount/README.md) - Contributed by @sometimesfood
 - [file](./plugins/inputs/file/README.md) - Contributed by @maxunt
 - [icinga2](./plugins/inputs/icinga2/README.md) - Contributed by @mlabouardy
-- [kibana](./plugins/inputs/icinga2/README.md) - Contributed by @lpic10
+- [kibana](./plugins/inputs/kibana/README.md) - Contributed by @lpic10
 - [pgbouncer](./plugins/inputs/pgbouncer/README.md) - Contributed by @nerzhul
 - [temp](./plugins/inputs/temp/README.md) - Contributed by @pytimer
 - [tengine](./plugins/inputs/tengine/README.md) - Contributed by @ertaoxu
@@ -32,9 +108,10 @@
 
 ### New Parsers
 
-- [csv](/docs/DATA_FORMATS_INPUT.md#csv) - Contributed by @maxunt
-- [grok](/docs/DATA_FORMATS_INPUT.md#grok) - Contributed by @maxunt
-- [logfmt](/docs/DATA_FORMATS_INPUT.md#logfmt) - Contributed by @Ayrdrie & @maxunt
+- [csv](/plugins/parsers/csv/README.md) - Contributed by @maxunt
+- [grok](/plugins/parsers/grok/README.md) - Contributed by @maxunt
+- [logfmt](/plugins/parsers/logfmt/README.md) - Contributed by @Ayrdrie & @maxunt
+- [wavefront](/plugins/parsers/wavefront/README.md) - Contributed by @puckpuck
 
 ### New Serializers
 
@@ -116,6 +193,12 @@
 - [#4520](https://github.com/influxdata/telegraf/issues/4520): Document all supported cli arguments.
 - [#4674](https://github.com/influxdata/telegraf/pull/4674): Log access denied opening a service at debug level in win_services.
 - [#4588](https://github.com/influxdata/telegraf/issues/4588): Add support for Kafka 2.0.
+- [#4087](https://github.com/influxdata/telegraf/issues/4087): Fix nagios parser does not support ranges in performance data.
+- [#4088](https://github.com/influxdata/telegraf/issues/4088): Fix nagios parser does not strip quotes from performance data.
+- [#4688](https://github.com/influxdata/telegraf/issues/4688): Fix null value crash in postgresql_extensible input.
+- [#4681](https://github.com/influxdata/telegraf/pull/4681): Remove the startup authentication check from the cloudwatch output.
+- [#4644](https://github.com/influxdata/telegraf/issues/4644): Support tailing files created after startup in tail input.
+- [#4706](https://github.com/influxdata/telegraf/issues/4706): Fix csv format configuration loading.
 
 ## v1.7.4 [2018-08-29]
 

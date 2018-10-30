@@ -21,11 +21,17 @@ type Parser struct {
 	Comment           string
 	TrimSpace         bool
 	ColumnNames       []string
+	ColumnTypes       []string
 	TagColumns        []string
 	MeasurementColumn string
 	TimestampColumn   string
 	TimestampFormat   string
 	DefaultTags       map[string]string
+	TimeFunc          func() time.Time
+}
+
+func (p *Parser) SetTimeFunc(fn metric.TimeFunc) {
+	p.TimeFunc = fn
 }
 
 func (p *Parser) compile(r *bytes.Reader) (*csv.Reader, error) {
@@ -143,6 +149,40 @@ outer:
 				}
 			}
 
+			// Try explicit conversion only when column types is defined.
+			if len(p.ColumnTypes) > 0 {
+				// Throw error if current column count exceeds defined types.
+				if i >= len(p.ColumnTypes) {
+					return nil, fmt.Errorf("column type: column count exceeded")
+				}
+
+				var val interface{}
+				var err error
+
+				switch p.ColumnTypes[i] {
+				case "int":
+					val, err = strconv.ParseInt(value, 10, 64)
+					if err != nil {
+						return nil, fmt.Errorf("column type: parse int error %s", err)
+					}
+				case "float":
+					val, err = strconv.ParseFloat(value, 64)
+					if err != nil {
+						return nil, fmt.Errorf("column type: parse float error %s", err)
+					}
+				case "bool":
+					val, err = strconv.ParseBool(value)
+					if err != nil {
+						return nil, fmt.Errorf("column type: parse bool error %s", err)
+					}
+				default:
+					val = value
+				}
+
+				recordFields[fieldName] = val
+				continue
+			}
+
 			// attempt type conversions
 			if iValue, err := strconv.ParseInt(value, 10, 64); err == nil {
 				recordFields[fieldName] = iValue
@@ -167,7 +207,7 @@ outer:
 		measurementName = fmt.Sprintf("%v", recordFields[p.MeasurementColumn])
 	}
 
-	metricTime := time.Now()
+	metricTime := p.TimeFunc()
 	if p.TimestampColumn != "" {
 		if recordFields[p.TimestampColumn] == nil {
 			return nil, fmt.Errorf("timestamp column: %v could not be found", p.TimestampColumn)

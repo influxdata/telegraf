@@ -748,7 +748,7 @@ func setupPlugin(t *testing.T, conf string) telegraf.Input {
 		t.Fatalf("Unable to parse config! %v", err)
 	}
 
-	for name, _ := range table.Fields {
+	for name := range table.Fields {
 		object := table.Fields[name]
 		switch name {
 		case "jolokia2_agent":

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
 )
 
 type RunningAggregator struct {
@@ -29,47 +28,32 @@ func NewRunningAggregator(
 	}
 }
 
-// AggregatorConfig containing configuration parameters for the running
-// aggregator plugin.
+// AggregatorConfig is the common config for all aggregators.
 type AggregatorConfig struct {
-	Name string
+	Name         string
+	DropOriginal bool
+	Period       time.Duration
+	Delay        time.Duration
 
-	DropOriginal      bool
 	NameOverride      string
 	MeasurementPrefix string
 	MeasurementSuffix string
 	Tags              map[string]string
 	Filter            Filter
-
-	Period time.Duration
-	Delay  time.Duration
 }
 
 func (r *RunningAggregator) Name() string {
 	return "aggregators." + r.Config.Name
 }
 
-func (r *RunningAggregator) MakeMetric(
-	measurement string,
-	fields map[string]interface{},
-	tags map[string]string,
-	mType telegraf.ValueType,
-	t time.Time,
-) telegraf.Metric {
+func (r *RunningAggregator) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	m := makemetric(
-		measurement,
-		fields,
-		tags,
+		metric,
 		r.Config.NameOverride,
 		r.Config.MeasurementPrefix,
 		r.Config.MeasurementSuffix,
 		r.Config.Tags,
-		nil,
-		r.Config.Filter,
-		false,
-		mType,
-		t,
-	)
+		nil)
 
 	if m != nil {
 		m.SetAggregate(true)
@@ -78,27 +62,23 @@ func (r *RunningAggregator) MakeMetric(
 	return m
 }
 
-// Add applies the given metric to the aggregator.
-// Before applying to the plugin, it will run any defined filters on the metric.
-// Apply returns true if the original metric should be dropped.
-func (r *RunningAggregator) Add(in telegraf.Metric) bool {
-	if r.Config.Filter.IsActive() {
-		// check if the aggregator should apply this metric
-		name := in.Name()
-		fields := in.Fields()
-		tags := in.Tags()
-		t := in.Time()
-		if ok := r.Config.Filter.Apply(name, fields, tags); !ok {
-			// aggregator should not apply this metric
-			return false
-		}
-
-		in, _ = metric.New(name, tags, fields, t)
+// Add a metric to the aggregator and return true if the original metric
+// should be dropped.
+func (r *RunningAggregator) Add(metric telegraf.Metric) bool {
+	if ok := r.Config.Filter.Select(metric); !ok {
+		return false
 	}
 
-	r.metrics <- in
+	r.Config.Filter.Modify(metric)
+	if len(metric.FieldList()) == 0 {
+		return r.Config.DropOriginal
+	}
+
+	r.metrics <- metric
+
 	return r.Config.DropOriginal
 }
+
 func (r *RunningAggregator) add(in telegraf.Metric) {
 	r.a.Add(in)
 }

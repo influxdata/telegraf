@@ -55,6 +55,7 @@ var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 var fService = flag.String("service", "",
 	"operate on the service (windows only)")
+var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
 var (
@@ -295,13 +296,13 @@ func main() {
 	switch {
 	case *fOutputList:
 		fmt.Println("Available Output Plugins:")
-		for k, _ := range outputs.Outputs {
+		for k := range outputs.Outputs {
 			fmt.Printf("  %s\n", k)
 		}
 		return
 	case *fInputList:
 		fmt.Println("Available Input Plugins:")
-		for k, _ := range inputs.Inputs {
+		for k := range inputs.Inputs {
 			fmt.Printf("  %s\n", k)
 		}
 		return
@@ -325,9 +326,19 @@ func main() {
 		return
 	}
 
+	shortVersion := version
+	if shortVersion == "" {
+		shortVersion = "unknown"
+	}
+
+	// Configure version
+	if err := internal.SetVersion(shortVersion); err != nil {
+		log.Println("Telegraf version already configured to: " + internal.Version())
+	}
+
 	if runtime.GOOS == "windows" && !(*fRunAsConsole) {
 		svcConfig := &service.Config{
-			Name:        "telegraf",
+			Name:        *fServiceName,
 			DisplayName: "Telegraf Data Collector Service",
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",
