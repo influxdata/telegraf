@@ -175,6 +175,10 @@ func (pb *pointBuilder) fillFields(name string, value interface{}, fieldMap map[
 		return
 	}
 
+	if _, ok := value.([]interface{}); ok {
+		return
+	}
+
 	if pb.metric.FieldName != "" {
 		name = pb.metric.FieldName
 		if prefix := pb.metric.FieldPrefix; prefix != "" {
