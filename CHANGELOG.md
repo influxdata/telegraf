@@ -38,11 +38,15 @@
 - [#4914](https://github.com/influxdata/telegraf/pull/4914): Collect additional stats in memcached input.
 - [#3847](https://github.com/influxdata/telegraf/pull/3847): Add wireless input plugin.
 
-## v1.8.3 [unreleased]
+## v1.8.3 [2018-10-30]
 
 - [#4873](https://github.com/influxdata/telegraf/pull/4873): Add DN attributes as tags in x509_cert input to avoid series overwrite.
 - [#4921](https://github.com/influxdata/telegraf/issues/4921): Prevent connection leak by closing unused connections in amqp output.
 - [#4904](https://github.com/influxdata/telegraf/issues/4904): Use default partition key when tag does not exist in kinesis output.
+- [#4901](https://github.com/influxdata/telegraf/pull/4901): Log the correct error in jti_openconfig.
+- [#4937](https://github.com/influxdata/telegraf/pull/4937): Handle panic when ipmi_sensor input gets bad input.
+- [#4930](https://github.com/influxdata/telegraf/pull/4930): Don't add unserializable fields to jolokia2 input.
+- [#4866](https://github.com/influxdata/telegraf/pull/4866): Fix version check in postgresql_extensible.
 
 ## v1.8.2 [2018-10-17]
 
