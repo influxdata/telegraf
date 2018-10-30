@@ -20,27 +20,64 @@ plugin to communicate over netlink sockets it needs the telegraf process to be
 running as `root` (or some user with `CAP_NET_ADMIN` and `CAP_NET_RAW`). Be sure
 to ensure these permissions before running telegraf with this plugin included.
 
-## Example Output
+## Metrics
 
-### Virtual servers
+### Virtual Servers
 
 For virtual servers, this plugin reports the following:
 
-- Connections
-- PacketsIn
-- PacketsOut
-- BytesIn
-- BytesOut
-- CPS
-- PPSIn
-- PPSOut
-- BPSIn
-- BPSOut
+- `ipvs_virtual_server`
+  - tags:
+    - `sched` - the scheduler in use
+    - `netmask` - the mask used for determining affinity
+    - `address_family` - inet/inet6
+    - ONE of `address` + `port` + `protocol` *OR* `fwmark`
+  - fields:
+    - Connections
+    - PacketsIn
+    - PacketsOut
+    - BytesIn
+    - BytesOut
+    - CPS
+    - PPSIn
+    - PPSOut
+    - BPSIn
+    - BPSOut
 
-Each virtual server will contain tags identifying how it was configured, using one of:
+Each virtual server will contain tags identifying how it was configured, using
+one of `address` + `port` + `protocol` *OR* `fwmark`. This is how one would
+normally configure a virtual server using `ipvsadm`.
 
-- `address` + `port` + `protocol`
-- `fwmark`
+### Real Servers
+
+Metrics reported for each `ipvs_real_server`:
+
+- `ipvs_real_server`
+  - tags:
+    - `address`
+    - `port`
+    - `address_family`
+    - ONE of `virtual_address` + `virtual_port` + `virtual_protocol` OR `virtual_fwmark`
+  - fields:
+    - ActiveConnections
+    - InactiveConnections
+    - Connections
+    - PacketsIn
+    - PacketsOut
+    - BytesIn
+    - BytesOut
+    - CPS
+    - PPSIn
+    - PPSOut
+    - BPSIn
+    - BPSOut
+
+Each real server can be identified as belonging to a virtual server using one of
+either `virtual_address + virtual_port + virtual_protocol` OR `virtual_fwmark`
+
+## Example Output
+
+### Virtual servers
 
 Example:
 ```
@@ -49,26 +86,6 @@ ipvs_virtual_server,address_family=inet,fwmark=47,netmask=32,sched=mh_418 connec
 ```
 
 ### Real servers
-
-Metrics reported for each Real Server:
-
-- ActiveConnections
-- InactiveConnections
-- Connections
-- PacketsIn
-- PacketsOut
-- BytesIn
-- BytesOut
-- CPS
-- PPSIn
-- PPSOut
-- BPSIn
-- BPSOut
-
-Each real server can be identified as belonging to a virtual server using one of:
-
-- `virtual_address` + `virtual_port` + `virtual_protocol`
-- `virtual_fwmark`
 
 Example:
 ```
