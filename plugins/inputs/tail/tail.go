@@ -118,7 +118,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 			continue
 		}
 
-		for file, _ := range files {
+		for file := range files {
 			if _, ok := t.tailers[file]; ok {
 				// we're already tailing this file
 				continue
