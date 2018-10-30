@@ -104,7 +104,7 @@ func NewRunningOutput(
 
 func (ro *RunningOutput) metricFiltered(metric telegraf.Metric) {
 	ro.MetricsFiltered.Incr(1)
-	metric.Accept()
+	metric.Drop()
 }
 
 // AddMetric adds a metric to the output.

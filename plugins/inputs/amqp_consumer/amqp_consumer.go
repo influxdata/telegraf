@@ -423,7 +423,7 @@ func (a *AMQPConsumer) onDelivery(track telegraf.DeliveryInfo) {
 		log.Printf("E! [inputs.amqp_consumer] Could not mark message delivered: %d", track.ID())
 	}
 
-	if track.Rejected() == 0 {
+	if track.Delivered() {
 		err := delivery.Ack(false)
 		if err != nil {
 			log.Printf("E! [inputs.amqp_consumer] Unable to ack written delivery: %d: %v",

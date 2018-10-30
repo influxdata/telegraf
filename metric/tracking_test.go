@@ -32,11 +32,10 @@ func (d *deliveries) onDelivery(info telegraf.DeliveryInfo) {
 
 func TestTracking(t *testing.T) {
 	tests := []struct {
-		name     string
-		metric   telegraf.Metric
-		actions  func(metric telegraf.Metric)
-		accepted int
-		rejected int
+		name      string
+		metric    telegraf.Metric
+		actions   func(metric telegraf.Metric)
+		delivered bool
 	}{
 		{
 			name: "accept",
@@ -51,8 +50,7 @@ func TestTracking(t *testing.T) {
 			actions: func(m telegraf.Metric) {
 				m.Accept()
 			},
-			accepted: 1,
-			rejected: 0,
+			delivered: true,
 		},
 		{
 			name: "reject",
@@ -67,8 +65,7 @@ func TestTracking(t *testing.T) {
 			actions: func(m telegraf.Metric) {
 				m.Reject()
 			},
-			accepted: 0,
-			rejected: 1,
+			delivered: false,
 		},
 		{
 			name: "accept copy",
@@ -85,8 +82,7 @@ func TestTracking(t *testing.T) {
 				m.Accept()
 				m2.Accept()
 			},
-			accepted: 2,
-			rejected: 0,
+			delivered: true,
 		},
 		{
 			name: "copy with accept and done",
@@ -101,10 +97,9 @@ func TestTracking(t *testing.T) {
 			actions: func(m telegraf.Metric) {
 				m2 := m.Copy()
 				m.Accept()
-				m2.Remove()
+				m2.Drop()
 			},
-			accepted: 1,
-			rejected: 0,
+			delivered: true,
 		},
 		{
 			name: "copy with mixed delivery",
@@ -121,8 +116,7 @@ func TestTracking(t *testing.T) {
 				m.Accept()
 				m2.Reject()
 			},
-			accepted: 1,
-			rejected: 1,
+			delivered: false,
 		},
 	}
 	for _, tt := range tests {
@@ -134,19 +128,17 @@ func TestTracking(t *testing.T) {
 			tt.actions(metric)
 
 			info := d.Info[id]
-			require.Equal(t, tt.accepted, info.Accepted())
-			require.Equal(t, tt.rejected, info.Rejected())
+			require.Equal(t, tt.delivered, info.Delivered())
 		})
 	}
 }
 
 func TestGroupTracking(t *testing.T) {
 	tests := []struct {
-		name     string
-		metrics  []telegraf.Metric
-		actions  func(metrics []telegraf.Metric)
-		accepted int
-		rejected int
+		name      string
+		metrics   []telegraf.Metric
+		actions   func(metrics []telegraf.Metric)
+		delivered bool
 	}{
 		{
 			name: "accept",
@@ -172,8 +164,7 @@ func TestGroupTracking(t *testing.T) {
 				metrics[0].Accept()
 				metrics[1].Accept()
 			},
-			accepted: 2,
-			rejected: 0,
+			delivered: true,
 		},
 		{
 			name: "reject",
@@ -199,8 +190,7 @@ func TestGroupTracking(t *testing.T) {
 				metrics[0].Reject()
 				metrics[1].Reject()
 			},
-			accepted: 0,
-			rejected: 2,
+			delivered: false,
 		},
 		{
 			name: "remove",
@@ -223,11 +213,10 @@ func TestGroupTracking(t *testing.T) {
 				),
 			},
 			actions: func(metrics []telegraf.Metric) {
-				metrics[0].Remove()
-				metrics[1].Remove()
+				metrics[0].Drop()
+				metrics[1].Drop()
 			},
-			accepted: 0,
-			rejected: 0,
+			delivered: true,
 		},
 		{
 			name: "mixed",
@@ -253,8 +242,7 @@ func TestGroupTracking(t *testing.T) {
 				metrics[0].Accept()
 				metrics[1].Reject()
 			},
-			accepted: 1,
-			rejected: 1,
+			delivered: false,
 		},
 	}
 	for _, tt := range tests {
@@ -266,8 +254,7 @@ func TestGroupTracking(t *testing.T) {
 			tt.actions(metrics)
 
 			info := d.Info[id]
-			require.Equal(t, tt.accepted, info.Accepted())
-			require.Equal(t, tt.rejected, info.Rejected())
+			require.Equal(t, tt.delivered, info.Delivered())
 		})
 	}
 }

@@ -260,7 +260,7 @@ func (k *Kafka) onDelivery(track telegraf.DeliveryInfo) {
 		log.Printf("E! [inputs.kafka_consumer] Could not mark message delivered: %d", track.ID())
 	}
 
-	if track.Rejected() == 0 {
+	if track.Delivered() {
 		k.markOffset(msg)
 	}
 	delete(k.messages, track.ID())

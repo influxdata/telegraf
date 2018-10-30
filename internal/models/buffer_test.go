@@ -13,7 +13,7 @@ type MockMetric struct {
 	telegraf.Metric
 	AcceptF func()
 	RejectF func()
-	RemoveF func()
+	DropF   func()
 }
 
 func (m *MockMetric) Accept() {
@@ -24,8 +24,8 @@ func (m *MockMetric) Reject() {
 	m.RejectF()
 }
 
-func (m *MockMetric) Remove() {
-	m.RemoveF()
+func (m *MockMetric) Drop() {
+	m.DropF()
 }
 
 func Metric() telegraf.Metric {

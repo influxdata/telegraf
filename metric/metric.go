@@ -254,7 +254,7 @@ func (m *metric) Accept() {
 func (m *metric) Reject() {
 }
 
-func (m *metric) Remove() {
+func (m *metric) Drop() {
 }
 
 // Convert field to a supported type or nil if unconvertible

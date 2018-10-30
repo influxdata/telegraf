@@ -213,7 +213,7 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		// holding undelivered metrics while the input waits for metrics to be
 		// delivered.  Instead, treat all handled metrics as delivered and
 		// produced metrics as untracked in a similar way to aggregators.
-		m.Remove()
+		m.Drop()
 
 		// Check if the metric has any of the fields over which we are aggregating
 		hasField := false

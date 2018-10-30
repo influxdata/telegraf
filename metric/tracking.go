@@ -135,7 +135,7 @@ func (m *trackingMetric) Reject() {
 	m.decr()
 }
 
-func (m *trackingMetric) Remove() {
+func (m *trackingMetric) Drop() {
 	m.decr()
 }
 
@@ -166,10 +166,6 @@ func (r *deliveryInfo) ID() telegraf.TrackingID {
 	return r.id
 }
 
-func (r *deliveryInfo) Accepted() int {
-	return r.accepted
-}
-
-func (r *deliveryInfo) Rejected() int {
-	return r.rejected
+func (r *deliveryInfo) Delivered() bool {
+	return r.rejected == 0
 }

@@ -63,11 +63,8 @@ type DeliveryInfo interface {
 	// ID is the TrackingID
 	ID() TrackingID
 
-	// Accepted is the number of metrics in the group successfully processed.
-	Accepted() int
-
-	// Accepted is the number of metrics in the group unsuccessfully processed.
-	Rejected() int
+	// Delivered returns true if the metric was processed successfully.
+	Delivered() bool
 }
 
 // TrackingAccumulator is an Accumulator that provides a signal when the

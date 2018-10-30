@@ -28,7 +28,7 @@ type ProcessorConfig struct {
 }
 
 func (rp *RunningProcessor) metricFiltered(metric telegraf.Metric) {
-	metric.Accept()
+	metric.Drop()
 }
 
 func containsMetric(item telegraf.Metric, metrics []telegraf.Metric) bool {

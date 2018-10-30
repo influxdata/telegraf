@@ -53,7 +53,7 @@ func (r *RunningInput) Name() string {
 }
 
 func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
-	metric.Accept()
+	metric.Drop()
 }
 
 func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
