@@ -572,3 +572,41 @@ Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
 	}
 	os.Exit(0)
 }
+
+func TestExtractFields(t *testing.T) {
+	v1Data := `Ambient Temp     | 20 degrees C      | ok
+Altitude         | 80 feet           | ok
+Avg Power        | 210 Watts         | ok
+Planar 3.3V      | 3.29 Volts        | ok
+Planar 5V        | 4.90 Volts        | ok
+Planar 12V       | 12.04 Volts       | ok
+B                | 0x00              | ok
+Unable to send command: Invalid argument
+ECC Corr Err     | Not Readable      | ns
+Unable to send command: Invalid argument
+ECC Uncorr Err   | Not Readable      | ns
+Unable to send command: Invalid argument
+`
+
+	v2Data := `SEL              | 72h | ns  |  7.1 | No Reading
+Intrusion        | 73h | ok  |  7.1 |
+Fan1             | 30h | ok  |  7.1 | 5040 RPM
+Inlet Temp       | 04h | ok  |  7.1 | 25 degrees C
+USB Cable Pres   | 50h | ok  |  7.1 | Connected
+Unable to send command: Invalid argument
+Current 1        | 6Ah | ok  | 10.1 | 7.20 Amps
+Unable to send command: Invalid argument
+Power Supply 1   | 03h | ok  | 10.1 | 110 Watts, Presence detected
+`
+
+	tests := []string{
+		v1Data,
+		v2Data,
+	}
+
+	for i := range tests {
+		t.Logf("Checking v%d data...", i+1)
+		extractFieldsFromRegex(re_v1_parse_line, tests[i])
+		extractFieldsFromRegex(re_v2_parse_line, tests[i])
+	}
+}
