@@ -67,8 +67,8 @@ func (i *IPVS) Gather(acc telegraf.Accumulator) error {
 
 		for _, d := range destinations {
 			fields := map[string]interface{}{
-				"active_connections":   strconv.Itoa(d.ActiveConnections),
-				"inactive_connections": strconv.Itoa(d.InactiveConnections),
+				"active_connections":   d.ActiveConnections,
+				"inactive_connections": d.InactiveConnections,
 				"connections":          d.Stats.Connections,
 				"pkts_in":              d.Stats.PacketsIn,
 				"pkts_out":             d.Stats.PacketsOut,
