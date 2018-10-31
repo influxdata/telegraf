@@ -1,6 +1,7 @@
 package prometheus
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -40,9 +41,11 @@ type Prometheus struct {
 
 	// Should we scrape Kubernetes services for prometheus annotations
 	MonitorPods    bool `toml:"monitor_kubernetes_pods"`
-	lock           *sync.Mutex
+	lock           sync.Mutex
 	kubernetesPods []URLAndAddress
-	done           chan struct{}
+	ctx            context.Context
+	cancel         context.CancelFunc
+	wg             sync.WaitGroup
 }
 
 var sampleConfig = `
@@ -51,11 +54,14 @@ var sampleConfig = `
 
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
-  
-  # Scrape Kubernetes pods for prometheus annotations.
-  # prometheus.io/scrape: Enable scraping for this pod
-  # prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
-  # prometheus.io/port: If port is not 9102 use this annotation
+
+  ## Kubernetes config file to create client from.
+  # kube_config = "/path/to/kubernetes.config"
+
+  ## Scrape Kubernetes pods for the following prometheus annotations:
+  ## - prometheus.io/scrape: Enable scraping for this pod
+  ## - prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
+  ## - prometheus.io/port: If port is not 9102 use this annotation
   # monitor_kubernetes_pods = true
 
   ## Use bearer token for authorization
@@ -113,7 +119,7 @@ func (p *Prometheus) GetAllURLs() ([]URLAndAddress, error) {
 	for _, u := range p.URLs {
 		URL, err := url.Parse(u)
 		if err != nil {
-			log.Printf("prometheus: Could not parse %s, skipping it. Error: %s", u, err)
+			log.Printf("prometheus: Could not parse %s, skipping it. Error: %s", u, err.Error())
 			continue
 		}
 
@@ -132,7 +138,7 @@ func (p *Prometheus) GetAllURLs() ([]URLAndAddress, error) {
 
 		resolvedAddresses, err := net.LookupHost(URL.Hostname())
 		if err != nil {
-			log.Printf("prometheus: Could not resolve %s, skipping it. Error: %s", URL.Host, err)
+			log.Printf("prometheus: Could not resolve %s, skipping it. Error: %s", URL.Host, err.Error())
 			continue
 		}
 		for _, resolved := range resolvedAddresses {
@@ -262,12 +268,12 @@ func (p *Prometheus) Start(a telegraf.Accumulator) error {
 }
 
 func (p *Prometheus) Stop() {
-	close(p.done)
+	p.cancel()
+	wg.Wait()
 }
 
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
-		return &Prometheus{ResponseTimeout: internal.Duration{Duration: time.Second * 3},
-			lock: &sync.Mutex{}}
+		return &Prometheus{ResponseTimeout: internal.Duration{Duration: time.Second * 3}}
 	})
 }

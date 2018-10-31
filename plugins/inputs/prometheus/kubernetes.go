@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/ericchiang/k8s"
 	corev1 "github.com/ericchiang/k8s/apis/core/v1"
@@ -19,13 +20,13 @@ import (
 func loadClient(kubeconfigPath string) (*k8s.Client, error) {
 	data, err := ioutil.ReadFile(kubeconfigPath)
 	if err != nil {
-		return nil, fmt.Errorf("read kubeconfig: %s", err.Error())
+		return nil, fmt.Errorf("failed reading '%s': %s", kubeconfigPath err.Error())
 	}
 
 	// Unmarshal YAML into a Kubernetes config object.
 	var config k8s.Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("unmarshal kubeconfig: %s", err.Error())
+		return nil, err
 	}
 	return k8s.NewClient(&config)
 }
@@ -33,7 +34,7 @@ func loadClient(kubeconfigPath string) (*k8s.Client, error) {
 func start(p *Prometheus) error {
 	client, err := k8s.NewInClusterClient()
 	if err != nil {
-		configLocation := fmt.Sprintf("%s/.kube/config", os.Getenv("HOME"))
+		configLocation := filepath.Join(user.Current().HomeDir, ".kube/config")
 		if p.KubeConfig != "" {
 			configLocation = p.KubeConfig
 		}
@@ -47,38 +48,27 @@ func start(p *Prometheus) error {
 		pod      *corev1.Pod
 	}
 
+	p.wg = sync.WaitGroup
 	in := make(chan payload)
+
+	p.ctx, p.cancel = context.WithCancel(context.Background())
+
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		var pod corev1.Pod
 	rewatch:
-		watcher, err := client.Watch(context.Background(), "", &pod)
+		watcher, err := client.Watch(p.ctx, "", &pod)
 		if err != nil {
 			log.Printf("E! [inputs.prometheus] unable to watch resources: %s", err.Error())
+			return
 		}
 		defer watcher.Close()
 
 		for {
 			select {
-			case <-p.done:
-				log.Printf("I! [inputs.prometheus] shutting down\n")
-				return
-			default:
-				cm := new(corev1.Pod)
-				eventType, err := watcher.Next(cm)
-				if err != nil {
-					log.Printf("D! [inputs.prometheus] unable to watch next: %s", err.Error())
-					goto rewatch
-				}
-				in <- payload{eventType, cm}
-			}
-		}
-	}()
-
-	go func() {
-		for {
-			select {
-			case <-p.done:
-				log.Printf("I! [inputs.prometheus] shutting down\n")
+			case <-ctx.Done():
+				log.Printf("I! [inputs.prometheus] shutting down")
 				return
 			case payload := <-in:
 				cm := payload.pod
@@ -91,6 +81,14 @@ func start(p *Prometheus) error {
 					unregisterPod(cm, p)
 				case k8s.EventModified:
 				}
+			default:
+				cm := new(corev1.Pod)
+				eventType, err := watcher.Next(cm)
+				if err != nil {
+					log.Printf("D! [inputs.prometheus] unable to watch next: %s", err.Error())
+					goto rewatch
+				}
+				in <- payload{eventType, cm}
 			}
 		}
 	}()
@@ -104,7 +102,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 		return
 	}
 
-	log.Printf("I! [inputs.prometheus] will scrape metrics from %v\n", *targetURL)
+	log.Printf("I! [inputs.prometheus] will scrape metrics from %s", *targetURL)
 	// add annotation as metrics tags
 	tags := pod.GetMetadata().GetAnnotations()
 	tags["pod_name"] = pod.GetMetadata().GetName()
@@ -115,7 +113,7 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	}
 	URL, err := url.Parse(*targetURL)
 	if err != nil {
-		log.Printf("E! [inputs.prometheus] could not parse URL %q: %v", *targetURL, err)
+		log.Printf("E! [inputs.prometheus] could not parse URL %s: %s", *targetURL, err.Error())
 		return
 	}
 	podURL := p.AddressToURL(URL, URL.Hostname())
@@ -166,14 +164,14 @@ func unregisterPod(pod *corev1.Pod, p *Prometheus) {
 
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	log.Printf("D! [inputs.prometheus] registered a delete request for %s in namespace %s\n",
+	log.Printf("D! [inputs.prometheus] registered a delete request for %s in namespace %s",
 		pod.GetMetadata().GetName(), pod.GetMetadata().GetNamespace())
 	var result []URLAndAddress
 	for _, v := range p.kubernetesPods {
 		if v.URL.String() != *url {
 			result = append(result, v)
 		} else {
-			log.Printf("D! [inputs.prometheus] will stop scraping for %v\n", *url)
+			log.Printf("D! [inputs.prometheus] will stop scraping for %s", *url)
 		}
 
 	}

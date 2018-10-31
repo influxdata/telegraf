@@ -14,10 +14,13 @@ in Prometheus format.
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
 
-  # Scrape Kubernetes service for prometheus annotations.
-  # prometheus.io/scrape: Enable scraping for this service
-  # prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
-  # prometheus.io/port: If port is not 9102 use this annotation
+  ## Kubernetes config file to create client from.
+  # kube_config = "/path/to/kubernetes.config"
+
+  ## Scrape Kubernetes pods for the following prometheus annotations:
+  ## - prometheus.io/scrape: Enable scraping for this pod
+  ## - prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
+  ## - prometheus.io/port: If port is not 9102 use this annotation
   # monitor_kubernetes_pods = true
 
   ## Use bearer token for authorization
@@ -46,7 +49,8 @@ This method can be used to locate all
 #### Kubernetes scraping
 
 Enabling this option will allow the plugin to scrape for prometheus annotation on Kubernetes
-pods.
+pods. Currently, you can run this plugin in your kubernetes cluster, or we use the kubeconfig
+file to determine where to monitor.
 Currently the following annotation are supported:
 
 * `prometheus.io/scrape` Enable scraping for this pod
