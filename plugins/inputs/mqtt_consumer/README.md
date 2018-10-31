@@ -26,6 +26,10 @@ The plugin expects messages in the
   ## Connection timeout for initial connection in seconds
   connection_timeout = "30s"
 
+  ## Max messages to read from the broker that have not been written by an
+  ## output.
+  # max_messages_in_flight = 1000
+
   ## Topics to subscribe to
   topics = [
     "telegraf/host01/cpu",
