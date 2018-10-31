@@ -385,44 +385,53 @@ func (a *AMQPConsumer) process(ctx context.Context, msgs <-chan amqp.Delivery, a
 		select {
 		case <-ctx.Done():
 			return
-		case res := <-acc.Delivered():
+		case track := <-acc.Delivered():
+			delivery, ok := a.deliveries[track.ID()]
+			if !ok {
+				// Added by a previous connection
+				continue
+			}
 			<-sem
-			a.onDelivery(res)
+			a.onDelivery(track, delivery)
 		case sem <- empty{}:
 			select {
 			case <-ctx.Done():
 				return
 			case track := <-acc.Delivered():
+				delivery, ok := a.deliveries[track.ID()]
+				if !ok {
+					// Added by a previous connection
+					continue
+				}
 				<-sem
 				<-sem
-				a.onDelivery(track)
+				a.onDelivery(track, delivery)
 			case d, ok := <-msgs:
 				if !ok {
 					return
 				}
-				a.onMessage(acc, d)
+				err := a.onMessage(acc, d)
+				if err != nil {
+					acc.AddError(err)
+					<-sem
+				}
 			}
 		}
 	}
 }
 
-func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delivery) {
+func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delivery) error {
 	metrics, err := a.parser.Parse(d.Body)
 	if err != nil {
-		log.Printf("E! [inputs.amqp_consumer] Parsing: %v", err)
-		return
+		return err
 	}
 
 	id := acc.AddTrackingMetricGroup(metrics)
 	a.deliveries[id] = d
+	return nil
 }
 
-func (a *AMQPConsumer) onDelivery(track telegraf.DeliveryInfo) {
-	delivery, ok := a.deliveries[track.ID()]
-	if !ok {
-		log.Printf("E! [inputs.amqp_consumer] Could not mark message delivered: %d", track.ID())
-	}
-
+func (a *AMQPConsumer) onDelivery(track telegraf.DeliveryInfo, delivery amqp.Delivery) {
 	if track.Delivered() {
 		err := delivery.Ack(false)
 		if err != nil {
