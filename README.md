@@ -326,6 +326,7 @@ For documentation on the latest development code see the [documentation index][d
 * [solr](./plugins/inputs/solr)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
 * [stackdriver](./plugins/inputs/stackdriver) (Google Cloud Monitoring)
+* [sql](./plugins/outputs/sql) (SQL generic output)
 * [statsd](./plugins/inputs/statsd)
 * [suricata](./plugins/inputs/suricata)
 * [swap](./plugins/inputs/swap)
