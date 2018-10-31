@@ -260,6 +260,7 @@ func (v *VSphere) Stop() {
 // Gather is the main data collection function called by the Telegraf core. It performs all
 // the data collection and writes all metrics into the Accumulator passed as an argument.
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
+	merr := make(multiError, 0)
 	var wg sync.WaitGroup
 	for _, ep := range v.endpoints {
 		wg.Add(1)
@@ -273,11 +274,16 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 			}
 			if err != nil {
 				acc.AddError(err)
+				merr = append(merr, err)
 			}
 		}(ep)
 	}
 
 	wg.Wait()
+	if len(merr) > 0 {
+		log.Printf("E! [input.vsphere] Error during Gather: %s", merr)
+		return merr
+	}
 	return nil
 }
 
@@ -306,7 +312,7 @@ func init() {
 			DiscoverConcurrency:     1,
 			ForceDiscoverOnInit:     false,
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
-			Timeout:                 internal.Duration{Duration: time.Second * 20},
+			Timeout:                 internal.Duration{Duration: time.Second * 60},
 		}
 	})
 }
