@@ -24,7 +24,7 @@ import (
 
 var isolateLUN = regexp.MustCompile(".*/([^/]+)/?$")
 
-const metricLookback = 1
+const metricLookback = 3
 
 // Endpoint is a high-level representation of a connected vCenter endpoint. It is backed by the lower
 // level Client type.
