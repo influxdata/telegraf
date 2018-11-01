@@ -200,8 +200,6 @@ func (m *MQTTConsumer) onConnectionLost(c mqtt.Client, err error) {
 func (m *MQTTConsumer) recvMessage(c mqtt.Client, msg mqtt.Message) {
 	for {
 		select {
-		case <-m.ctx.Done():
-			return
 		case track := <-m.acc.Delivered():
 			_, ok := m.messages[track.ID()]
 			if !ok {
