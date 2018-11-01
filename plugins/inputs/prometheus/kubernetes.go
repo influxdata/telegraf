@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/url"
-	"os"
-	"strings"
+	"os/user"
+	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/ericchiang/k8s"
 	corev1 "github.com/ericchiang/k8s/apis/core/v1"
@@ -20,7 +22,7 @@ import (
 func loadClient(kubeconfigPath string) (*k8s.Client, error) {
 	data, err := ioutil.ReadFile(kubeconfigPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed reading '%s': %s", kubeconfigPath err.Error())
+		return nil, fmt.Errorf("failed reading '%s': %s", kubeconfigPath, err.Error())
 	}
 
 	// Unmarshal YAML into a Kubernetes config object.
@@ -34,7 +36,11 @@ func loadClient(kubeconfigPath string) (*k8s.Client, error) {
 func start(p *Prometheus) error {
 	client, err := k8s.NewInClusterClient()
 	if err != nil {
-		configLocation := filepath.Join(user.Current().HomeDir, ".kube/config")
+		u, err := user.Current()
+		if err != nil {
+			return fmt.Errorf("Failed to get current user - %s", err.Error())
+		}
+		configLocation := filepath.Join(u.HomeDir, ".kube/config")
 		if p.KubeConfig != "" {
 			configLocation = p.KubeConfig
 		}
@@ -43,22 +49,22 @@ func start(p *Prometheus) error {
 			return err
 		}
 	}
+
 	type payload struct {
 		eventype string
 		pod      *corev1.Pod
 	}
 
-	p.wg = sync.WaitGroup
+	p.ctx, p.cancel = context.WithCancel(context.Background())
+	p.wg = sync.WaitGroup{}
 	in := make(chan payload)
 
-	p.ctx, p.cancel = context.WithCancel(context.Background())
-
-	wg.Add(1)
+	p.wg.Add(1)
 	go func() {
-		defer wg.Done()
-		var pod corev1.Pod
+		defer p.wg.Done()
+		pod := &corev1.Pod{}
 	rewatch:
-		watcher, err := client.Watch(p.ctx, "", &pod)
+		watcher, err := client.Watch(p.ctx, "", &corev1.Pod{})
 		if err != nil {
 			log.Printf("E! [inputs.prometheus] unable to watch resources: %s", err.Error())
 			return
@@ -67,28 +73,36 @@ func start(p *Prometheus) error {
 
 		for {
 			select {
-			case <-ctx.Done():
+			case <-p.ctx.Done():
 				log.Printf("I! [inputs.prometheus] shutting down")
 				return
-			case payload := <-in:
-				cm := payload.pod
-				eventType := payload.eventype
+			case rcvdPayload := <-in:
+				pod = rcvdPayload.pod
+				eventType := rcvdPayload.eventype
 
 				switch eventType {
 				case k8s.EventAdded:
-					registerPod(cm, p)
+					registerPod(pod, p)
 				case k8s.EventDeleted:
-					unregisterPod(cm, p)
+					unregisterPod(pod, p)
 				case k8s.EventModified:
 				}
 			default:
-				cm := new(corev1.Pod)
-				eventType, err := watcher.Next(cm)
+				pod = &corev1.Pod{}
+				// An error here means we need to reconnect the watcher.
+				eventType, err := watcher.Next(pod)
 				if err != nil {
 					log.Printf("D! [inputs.prometheus] unable to watch next: %s", err.Error())
-					goto rewatch
+					watcher.Close()
+					select {
+					case <-p.ctx.Done():
+						log.Printf("I! [inputs.prometheus] shutting down")
+						return
+					case <-time.After(time.Second):
+						goto rewatch
+					}
 				}
-				in <- payload{eventType, cm}
+				in <- payload{eventType, pod}
 			}
 		}
 	}()
@@ -139,19 +153,27 @@ func getScrapeURL(pod *corev1.Pod) *string {
 		return nil
 	}
 
+	scheme := pod.GetMetadata().GetAnnotations()["prometheus.io/scheme"]
 	path := pod.GetMetadata().GetAnnotations()["prometheus.io/path"]
 	port := pod.GetMetadata().GetAnnotations()["prometheus.io/port"]
+
+	if scheme == "" {
+		scheme = "http"
+	}
 	if port == "" {
-		port = "9102" // default
+		port = "9102"
 	}
 	if path == "" {
 		path = "/metrics"
 	}
-	if !strings.HasPrefix(path, "/") {
-		path = "/" + path
+
+	u := &url.URL{
+		Scheme: scheme,
+		Host:   net.JoinHostPort(ip, port),
+		Path:   path,
 	}
 
-	x := fmt.Sprintf("http://%s:%s%s", ip, port, path)
+	x := u.String()
 
 	return &x
 }
