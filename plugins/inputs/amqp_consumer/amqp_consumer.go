@@ -386,26 +386,18 @@ func (a *AMQPConsumer) process(ctx context.Context, msgs <-chan amqp.Delivery, a
 		case <-ctx.Done():
 			return
 		case track := <-acc.Delivered():
-			delivery, ok := a.deliveries[track.ID()]
-			if !ok {
-				// Added by a previous connection
-				continue
+			if a.onDelivery(track) {
+				<-sem
 			}
-			<-sem
-			a.onDelivery(track, delivery)
 		case sem <- empty{}:
 			select {
 			case <-ctx.Done():
 				return
 			case track := <-acc.Delivered():
-				delivery, ok := a.deliveries[track.ID()]
-				if !ok {
-					// Added by a previous connection
-					continue
+				if a.onDelivery(track) {
+					<-sem
+					<-sem
 				}
-				<-sem
-				<-sem
-				a.onDelivery(track, delivery)
 			case d, ok := <-msgs:
 				if !ok {
 					return
@@ -431,7 +423,13 @@ func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delive
 	return nil
 }
 
-func (a *AMQPConsumer) onDelivery(track telegraf.DeliveryInfo, delivery amqp.Delivery) {
+func (a *AMQPConsumer) onDelivery(track telegraf.DeliveryInfo) bool {
+	delivery, ok := a.deliveries[track.ID()]
+	if !ok {
+		// Added by a previous connection
+		return false
+	}
+
 	if track.Delivered() {
 		err := delivery.Ack(false)
 		if err != nil {
@@ -449,6 +447,7 @@ func (a *AMQPConsumer) onDelivery(track telegraf.DeliveryInfo, delivery amqp.Del
 	}
 
 	delete(a.deliveries, track.ID())
+	return true
 }
 
 func (a *AMQPConsumer) Stop() {
