@@ -1,7 +1,9 @@
 package nsq_consumer
 
 import (
-	"fmt"
+	"context"
+	"log"
+	"sync"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -9,17 +11,32 @@ import (
 	nsq "github.com/nsqio/go-nsq"
 )
 
+type empty struct{}
+type semaphore chan empty
+
+type logger struct{}
+
+func (l *logger) Output(calldepth int, s string) error {
+	log.Println("D! [inputs.nsq_consumer] " + s)
+	return nil
+}
+
 //NSQConsumer represents the configuration of the plugin
 type NSQConsumer struct {
-	Server      string
-	Nsqd        []string
-	Nsqlookupd  []string
-	Topic       string
-	Channel     string
-	MaxInFlight int
-	parser      parsers.Parser
-	consumer    *nsq.Consumer
-	acc         telegraf.Accumulator
+	Server      string   `toml:"server"`
+	Nsqd        []string `toml:"nsqd"`
+	Nsqlookupd  []string `toml:"nsqlookupd"`
+	Topic       string   `toml:"topic"`
+	Channel     string   `toml:"channel"`
+	MaxInFlight int      `toml:"max_in_flight"`
+
+	parser   parsers.Parser
+	consumer *nsq.Consumer
+
+	mu       sync.Mutex
+	messages map[telegraf.TrackingID]*nsq.Message
+	wg       sync.WaitGroup
+	cancel   context.CancelFunc
 }
 
 var sampleConfig = `
@@ -40,12 +57,6 @@ var sampleConfig = `
   data_format = "influx"
 `
 
-func init() {
-	inputs.Add("nsq_consumer", func() telegraf.Input {
-		return &NSQConsumer{}
-	})
-}
-
 // SetParser takes the data_format from the config and finds the right parser for that format
 func (n *NSQConsumer) SetParser(parser parsers.Parser) {
 	n.parser = parser
@@ -62,32 +73,88 @@ func (n *NSQConsumer) Description() string {
 }
 
 // Start pulls data from nsq
-func (n *NSQConsumer) Start(acc telegraf.Accumulator) error {
-	n.acc = acc
+func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
+	acc := ac.WithTracking(n.MaxInFlight)
+	sem := make(semaphore, n.MaxInFlight)
+	n.messages = make(map[telegraf.TrackingID]*nsq.Message, n.MaxInFlight)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	n.cancel = cancel
+
 	n.connect()
-	n.consumer.AddConcurrentHandlers(nsq.HandlerFunc(func(message *nsq.Message) error {
+	n.consumer.SetLogger(&logger{}, nsq.LogLevelInfo)
+	n.consumer.AddHandler(nsq.HandlerFunc(func(message *nsq.Message) error {
 		metrics, err := n.parser.Parse(message.Body)
 		if err != nil {
-			acc.AddError(fmt.Errorf("E! NSQConsumer Parse Error\nmessage:%s\nerror:%s", string(message.Body), err.Error()))
+			acc.AddError(err)
+			// Remove the message from the queue
+			message.Finish()
 			return nil
 		}
-		for _, metric := range metrics {
-			n.acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
+		if len(metrics) == 0 {
+			message.Finish()
+			return nil
 		}
-		message.Finish()
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case sem <- empty{}:
+			break
+		}
+
+		n.mu.Lock()
+		id := acc.AddTrackingMetricGroup(metrics)
+		n.messages[id] = message
+		n.mu.Unlock()
+		message.DisableAutoResponse()
 		return nil
-	}), n.MaxInFlight)
+	}))
 
 	if len(n.Nsqlookupd) > 0 {
 		n.consumer.ConnectToNSQLookupds(n.Nsqlookupd)
 	}
 	n.consumer.ConnectToNSQDs(append(n.Nsqd, n.Server))
+
+	n.wg.Add(1)
+	go func() {
+		defer n.wg.Done()
+		n.onDelivery(ctx, acc, sem)
+	}()
 	return nil
+}
+
+func (n *NSQConsumer) onDelivery(ctx context.Context, acc telegraf.TrackingAccumulator, sem semaphore) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case info := <-acc.Delivered():
+			n.mu.Lock()
+			msg, ok := n.messages[info.ID()]
+			if !ok {
+				n.mu.Unlock()
+				continue
+			}
+			<-sem
+			delete(n.messages, info.ID())
+			n.mu.Unlock()
+
+			if info.Delivered() {
+				msg.Finish()
+			} else {
+				msg.Requeue(-1)
+			}
+		}
+	}
 }
 
 // Stop processing messages
 func (n *NSQConsumer) Stop() {
+	n.cancel()
+	n.wg.Wait()
 	n.consumer.Stop()
+	<-n.consumer.StopChan
 }
 
 // Gather is a noop
@@ -106,4 +173,10 @@ func (n *NSQConsumer) connect() error {
 		n.consumer = consumer
 	}
 	return nil
+}
+
+func init() {
+	inputs.Add("nsq_consumer", func() telegraf.Input {
+		return &NSQConsumer{}
+	})
 }
