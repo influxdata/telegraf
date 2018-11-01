@@ -1,0 +1,23 @@
+version: '3'
+
+services:
+  jira:
+    image: nginx
+    ports:
+      - "8080:80"
+    expose:
+      - "8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./:/usr/share/nginx/html
+  telegraf:
+    image: glinton/scratch
+    depends_on:
+      - jira
+    volumes:
+      - ./telegraf.conf:/telegraf.conf
+      - ../../../../telegraf:/telegraf
+    entrypoint:
+      - /telegraf
+      - --config
+      - /telegraf.conf
