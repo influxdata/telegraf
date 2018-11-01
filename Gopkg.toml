@@ -16,7 +16,7 @@
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
-  version = "1.14.8"
+  version = "1.15.54"
 
 [[constraint]]
   name = "github.com/bsm/sarama-cluster"
@@ -223,6 +223,10 @@
   name = "gopkg.in/fsnotify.v1"
 
 [[constraint]]
+  branch = "master"
+  name = "google.golang.org/genproto"
+
+[[constraint]]
   name = "github.com/vmware/govmomi"
   version = "0.18.0"
 
@@ -233,3 +237,11 @@
 [[constraint]]
   branch = "master"
   name = "golang.org/x/oauth2"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/docker/libnetwork"
+
+[[override]]
+  name = "github.com/vishvananda/netlink"
+  revision = "b2de5d10e38ecce8607e6b438b6d174f389a004e"

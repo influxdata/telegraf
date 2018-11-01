@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/performance"
@@ -33,6 +34,7 @@ type Client struct {
 	Root      *view.ContainerView
 	Perf      *performance.Manager
 	Valid     bool
+	Timeout   time.Duration
 	closeGate sync.Once
 }
 
@@ -52,7 +54,7 @@ func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 	defer cf.mux.Unlock()
 	if cf.client == nil {
 		var err error
-		if cf.client, err = NewClient(cf.url, cf.parent); err != nil {
+		if cf.client, err = NewClient(ctx, cf.url, cf.parent); err != nil {
 			return nil, err
 		}
 	}
@@ -60,9 +62,13 @@ func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 	// Execute a dummy call against the server to make sure the client is
 	// still functional. If not, try to log back in. If that doesn't work,
 	// we give up.
-	if _, err := methods.GetCurrentTime(ctx, cf.client.Client); err != nil {
+	ctx1, cancel1 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
+	defer cancel1()
+	if _, err := methods.GetCurrentTime(ctx1, cf.client.Client); err != nil {
 		log.Printf("I! [input.vsphere]: Client session seems to have time out. Reauthenticating!")
-		if cf.client.Client.SessionManager.Login(ctx, url.UserPassword(cf.parent.Username, cf.parent.Password)) != nil {
+		ctx2, cancel2 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
+		defer cancel2()
+		if cf.client.Client.SessionManager.Login(ctx2, url.UserPassword(cf.parent.Username, cf.parent.Password)) != nil {
 			return nil, err
 		}
 	}
@@ -71,7 +77,7 @@ func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 }
 
 // NewClient creates a new vSphere client based on the url and setting passed as parameters.
-func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
+func NewClient(ctx context.Context, u *url.URL, vs *VSphere) (*Client, error) {
 	sw := NewStopwatch("connect", u.Host)
 	tlsCfg, err := vs.ClientConfig.TLSConfig()
 	if err != nil {
@@ -84,7 +90,6 @@ func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 	if vs.Username != "" {
 		u.User = url.UserPassword(vs.Username, vs.Password)
 	}
-	ctx := context.Background()
 
 	log.Printf("D! [input.vsphere]: Creating client: %s", u.Host)
 	soapClient := soap.NewClient(u, tlsCfg.InsecureSkipVerify)
@@ -102,7 +107,9 @@ func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 		}
 	}
 
-	vimClient, err := vim25.NewClient(ctx, soapClient)
+	ctx1, cancel1 := context.WithTimeout(ctx, vs.Timeout.Duration)
+	defer cancel1()
+	vimClient, err := vim25.NewClient(ctx1, soapClient)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +117,9 @@ func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 
 	// If TSLKey is specified, try to log in as an extension using a cert.
 	if vs.TLSKey != "" {
-		if err := sm.LoginExtensionByCertificate(ctx, vs.TLSKey); err != nil {
+		ctx2, cancel2 := context.WithTimeout(ctx, vs.Timeout.Duration)
+		defer cancel2()
+		if err := sm.LoginExtensionByCertificate(ctx2, vs.TLSKey); err != nil {
 			return nil, err
 		}
 	}
@@ -141,11 +150,12 @@ func NewClient(u *url.URL, vs *VSphere) (*Client, error) {
 	sw.Stop()
 
 	return &Client{
-		Client: c,
-		Views:  m,
-		Root:   v,
-		Perf:   p,
-		Valid:  true,
+		Client:  c,
+		Views:   m,
+		Root:    v,
+		Perf:    p,
+		Valid:   true,
+		Timeout: vs.Timeout.Duration,
 	}, nil
 }
 
@@ -163,11 +173,21 @@ func (c *Client) close() {
 	// Use a Once to prevent us from panics stemming from trying
 	// to close it multiple times.
 	c.closeGate.Do(func() {
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), c.Timeout)
+		defer cancel()
 		if c.Client != nil {
 			if err := c.Client.Logout(ctx); err != nil {
 				log.Printf("E! [input.vsphere]: Error during logout: %s", err)
 			}
 		}
 	})
+}
+
+// GetServerTime returns the time at the vCenter server
+func (c *Client) GetServerTime(ctx context.Context) (time.Time, error) {
+	t, err := methods.GetCurrentTime(ctx, c.Client)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return *t, nil
 }

@@ -111,7 +111,7 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 		if err != nil {
 			t.acc.AddError(fmt.Errorf("E! Error Glob %s failed to compile, %s", filepath, err))
 		}
-		for file, _ := range g.Match() {
+		for file := range g.Match() {
 			if _, ok := t.tailers[file]; ok {
 				// we're already tailing this file
 				continue

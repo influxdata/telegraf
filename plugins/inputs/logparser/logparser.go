@@ -27,7 +27,7 @@ type GrokConfig struct {
 	NamedPatterns      []string
 	CustomPatterns     string
 	CustomPatternFiles []string
-	TimeZone           string
+	Timezone           string
 }
 
 type logEntry struct {
@@ -88,6 +88,7 @@ const sampleConfig = `
 
     ## Custom patterns can also be defined here. Put one pattern per line.
     custom_patterns = '''
+    '''
 
     ## Timezone allows you to provide an override for timestamps that
     ## don't already include an offset
@@ -98,8 +99,7 @@ const sampleConfig = `
     ##   1. Local             -- interpret based on machine localtime
     ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
     ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
-    timezone = "Canada/Eastern"
-    '''
+    # timezone = "Canada/Eastern"
 `
 
 // SampleConfig returns the sample configuration for the plugin
@@ -131,13 +131,19 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.done = make(chan struct{})
 	l.tailers = make(map[string]*tail.Tail)
 
+	mName := "logparser"
+	if l.GrokConfig.MeasurementName != "" {
+		mName = l.GrokConfig.MeasurementName
+	}
+
 	// Looks for fields which implement LogParser interface
 	config := &parsers.Config{
+		MetricName:             mName,
 		GrokPatterns:           l.GrokConfig.Patterns,
 		GrokNamedPatterns:      l.GrokConfig.NamedPatterns,
 		GrokCustomPatterns:     l.GrokConfig.CustomPatterns,
 		GrokCustomPatternFiles: l.GrokConfig.CustomPatternFiles,
-		GrokTimeZone:           l.GrokConfig.TimeZone,
+		GrokTimezone:           l.GrokConfig.Timezone,
 		DataFormat:             "grok",
 	}
 
@@ -260,7 +266,7 @@ func (l *LogParserPlugin) parser() {
 			if m != nil {
 				tags := m.Tags()
 				tags["path"] = entry.path
-				l.acc.AddFields(l.GrokConfig.MeasurementName, m.Fields(), tags, m.Time())
+				l.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
 			}
 		} else {
 			log.Println("E! Error parsing log line: " + err.Error())
