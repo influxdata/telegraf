@@ -126,10 +126,10 @@ func TestBasic(t *testing.T) {
 	defer fakeServer.Close()
 
 	plugin := &jira.Jira{
-		Servers:  []string{fakeServer.URL},
-		Fields:   []string{"priority"},
-		Tags:     []string{"customfield_10510"},
-		Jql:      []jira.Jql{{Key:"new", Value:"Jql"},{Key:"total", Value:"Jql"}},
+		Servers: []string{fakeServer.URL},
+		Fields:  []string{"priority"},
+		Tags:    []string{"customfield_10510"},
+		Jql:     []jira.Jql{{Key: "new", Value: "Jql"}, {Key: "total", Value: "Jql"}},
 	}
 
 	var acc testutil.Accumulator

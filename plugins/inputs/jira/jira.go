@@ -1,15 +1,15 @@
 package jira
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
-	"bytes"
-	"regexp"
-	"strings"
-	"strconv"
-	"net/http"
-	"encoding/json"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -17,38 +17,38 @@ import (
 
 type (
 	Jira struct {
-		Servers  []string  `toml:"hosts"`
-		Fields   []string  `toml:"fields"`
-		Tags     []string  `toml:"tag_fields"`
-		Jql      []Jql     `toml:"jql"`
-		client *http.Client
+		Servers []string `toml:"hosts"`
+		Fields  []string `toml:"fields"`
+		Tags    []string `toml:"tag_fields"`
+		Jql     []Jql    `toml:"jql"`
+		client  *http.Client
 	}
 	Jql struct {
-		Key    string  `toml:"name"`
-		Value  string  `toml:"jql"`
+		Key   string `toml:"name"`
+		Value string `toml:"jql"`
 	}
 )
 
 type (
 	field struct {
-		Id          int64   `json:"id"`
-		Field       string  `json:"_"`
-		Name        string  `json:"name"`
-		Value       string  `json:"value"`
+		Id    int64  `json:"id"`
+		Field string `json:"_"`
+		Name  string `json:"name"`
+		Value string `json:"value"`
 	}
-	
+
 	issues struct {
-		Id          string        `json:"id"`
-		Uri         string        `json:"self"`
-		Key         string        `json:"key"`
-		Fields  map[string]field  `json:"fields"`
+		Id     string           `json:"id"`
+		Uri    string           `json:"self"`
+		Key    string           `json:"key"`
+		Fields map[string]field `json:"fields"`
 	}
-	
+
 	Stats struct {
-		StartAt       int64   `json:"startAt"`
-		MaxResults    int64   `json:"maxResults"`
-		Total         int64   `json:"total"`
-		Issues      []issues  `json:"issues"`
+		StartAt    int64    `json:"startAt"`
+		MaxResults int64    `json:"maxResults"`
+		Total      int64    `json:"total"`
+		Issues     []issues `json:"issues"`
 	}
 )
 
@@ -110,14 +110,14 @@ func (j *Jira) fetchAndProcess(accumulator telegraf.Accumulator, host string) er
 			Timeout: time.Duration(4 * time.Second),
 		}
 	}
-	
+
 	time := time.Now()
 	cache := make(map[string]map[string]int64)
 	uri := host + "/rest/api/latest/search"
-	
+
 	for _, jql := range j.Jql {
 		name := jql.Key
-		filter := strings.Replace(jql.Value, "${DATE}", strconv.Itoa(time.Year()) + "-" + strconv.Itoa(int(time.Month())) + "-" + strconv.Itoa(time.Day()), -1)
+		filter := strings.Replace(jql.Value, "${DATE}", strconv.Itoa(time.Year())+"-"+strconv.Itoa(int(time.Month()))+"-"+strconv.Itoa(time.Day()), -1)
 
 		var post = []byte(`{"jql": "` + strings.Replace(filter, `"`, `\"`, -1) + `",
     "startAt": 0,
@@ -133,18 +133,18 @@ func (j *Jira) fetchAndProcess(accumulator telegraf.Accumulator, host string) er
 		if response.StatusCode != 200 {
 			return fmt.Errorf("Failed to get stats from jira: HTTP responded %d", response.StatusCode)
 		}
-		
+
 		stats := Stats{}
 		decoder := json.NewDecoder(response.Body)
 		decoder.Decode(&stats)
-		
+
 		for _, issue := range stats.Issues {
 			tags := j.getTagValues(issue.Fields)
 			if _, ok := cache[tags]; !ok {
 				cache[tags] = make(map[string]int64)
 			}
-			
-			var fieldName string;
+
+			var fieldName string
 			for _, fn := range j.Fields {
 				if field, ok := issue.Fields[fn]; ok {
 					fieldName = name + "_" + fn
@@ -163,14 +163,14 @@ func (j *Jira) fetchAndProcess(accumulator telegraf.Accumulator, host string) er
 		tags := map[string]string{
 			"server": host,
 		}
-		
+
 		for _, part := range strings.Split(tag, ",") {
 			var p = strings.Split(part, "=")
 			if len(p) == 2 {
 				tags[p[0]] = p[1]
 			}
 		}
-		
+
 		fields := map[string]interface{}{}
 		for n, v := range values {
 			fields[n] = v
@@ -191,7 +191,7 @@ func (j *Jira) getTagValues(fields map[string]field) string {
 			} else if len(field.Name) > 0 {
 				value = field.Name
 			}
-			tags = append(tags, tag + "=" + re.ReplaceAllString(value, ""))
+			tags = append(tags, tag+"="+re.ReplaceAllString(value, ""))
 		}
 	}
 	return strings.Join(tags[:], ",")
