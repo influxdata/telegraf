@@ -591,7 +591,7 @@ func (a *Agent) startServiceInputs(
 
 			err := si.Start(acc)
 			if err != nil {
-				log.Printf("E! Service for input %s failed to start: %v",
+				log.Printf("E! [agent] Service for input %s failed to start: %v",
 					input.Name(), err)
 
 				for _, si := range started {
