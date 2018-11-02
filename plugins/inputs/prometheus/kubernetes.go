@@ -2,6 +2,7 @@ package prometheus
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -16,6 +17,11 @@ import (
 	corev1 "github.com/ericchiang/k8s/apis/core/v1"
 	"github.com/ghodss/yaml"
 )
+
+type payload struct {
+	eventype string
+	pod      *corev1.Pod
+}
 
 // loadClient parses a kubeconfig from a file and returns a Kubernetes
 // client. It does not support extensions or client auth providers.
@@ -50,11 +56,6 @@ func start(p *Prometheus) error {
 		}
 	}
 
-	type payload struct {
-		eventype string
-		pod      *corev1.Pod
-	}
-
 	p.ctx, p.cancel = context.WithCancel(context.Background())
 	p.wg = sync.WaitGroup{}
 	in := make(chan payload)
@@ -62,52 +63,59 @@ func start(p *Prometheus) error {
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
-		pod := &corev1.Pod{}
-	rewatch:
-		watcher, err := client.Watch(p.ctx, "", &corev1.Pod{})
-		if err != nil {
-			log.Printf("E! [inputs.prometheus] unable to watch resources: %s", err.Error())
-			return
-		}
-		defer watcher.Close()
-
 		for {
-			select {
-			case <-p.ctx.Done():
-				log.Printf("I! [inputs.prometheus] shutting down")
-				return
-			case rcvdPayload := <-in:
-				pod = rcvdPayload.pod
-				eventType := rcvdPayload.eventype
-
-				switch eventType {
-				case k8s.EventAdded:
-					registerPod(pod, p)
-				case k8s.EventDeleted:
-					unregisterPod(pod, p)
-				case k8s.EventModified:
-				}
-			default:
-				pod = &corev1.Pod{}
-				// An error here means we need to reconnect the watcher.
-				eventType, err := watcher.Next(pod)
-				if err != nil {
-					log.Printf("D! [inputs.prometheus] unable to watch next: %s", err.Error())
-					watcher.Close()
-					select {
-					case <-p.ctx.Done():
-						log.Printf("I! [inputs.prometheus] shutting down")
-						return
-					case <-time.After(time.Second):
-						goto rewatch
-					}
-				}
-				in <- payload{eventType, pod}
+			err := watch(p, client, in)
+			if err == nil {
+				break
 			}
 		}
 	}()
 
 	return nil
+}
+
+func watch(p *Prometheus, client *k8s.Client, in chan payload) error {
+	pod := &corev1.Pod{}
+	watcher, err := client.Watch(p.ctx, "", &corev1.Pod{})
+	if err != nil {
+		log.Printf("E! [inputs.prometheus] unable to watch resources: %s", err.Error())
+		return err
+	}
+	defer watcher.Close()
+
+	for {
+		select {
+		case <-p.ctx.Done():
+			log.Printf("I! [inputs.prometheus] shutting down")
+			return nil
+		case rcvdPayload := <-in:
+			pod = rcvdPayload.pod
+			eventType := rcvdPayload.eventype
+
+			switch eventType {
+			case k8s.EventAdded:
+				registerPod(pod, p)
+			case k8s.EventDeleted:
+				unregisterPod(pod, p)
+			case k8s.EventModified:
+			}
+		default:
+			pod = &corev1.Pod{}
+			// An error here means we need to reconnect the watcher.
+			eventType, err := watcher.Next(pod)
+			if err != nil {
+				log.Printf("D! [inputs.prometheus] unable to watch next: %s", err.Error())
+				select {
+				case <-p.ctx.Done():
+					log.Printf("I! [inputs.prometheus] shutting down")
+					return nil
+				case <-time.After(time.Second):
+					return errors.New("Watcher closed")
+				}
+			}
+			in <- payload{eventType, pod}
+		}
+	}
 }
 
 func registerPod(pod *corev1.Pod, p *Prometheus) {
