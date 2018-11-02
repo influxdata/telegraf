@@ -43,7 +43,6 @@ type Prometheus struct {
 	MonitorPods    bool `toml:"monitor_kubernetes_pods"`
 	lock           sync.Mutex
 	kubernetesPods []URLAndAddress
-	ctx            context.Context
 	cancel         context.CancelFunc
 	wg             sync.WaitGroup
 }
@@ -264,7 +263,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 // Start will start the Kubernetes scraping if enabled in the configuration
 func (p *Prometheus) Start(a telegraf.Accumulator) error {
 	if p.MonitorPods {
-		return start(p)
+		var ctx context.Context
+		ctx, p.cancel = context.WithCancel(context.Background())
+		return p.start(ctx)
 	}
 	return nil
 }

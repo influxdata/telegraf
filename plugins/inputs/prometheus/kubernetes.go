@@ -38,7 +38,7 @@ func loadClient(kubeconfigPath string) (*k8s.Client, error) {
 	return k8s.NewClient(&config)
 }
 
-func start(p *Prometheus) error {
+func (p *Prometheus) start(ctx context.Context) error {
 	client, err := k8s.NewInClusterClient()
 	if err != nil {
 		u, err := user.Current()
@@ -55,7 +55,6 @@ func start(p *Prometheus) error {
 		}
 	}
 
-	p.ctx, p.cancel = context.WithCancel(context.Background())
 	p.wg = sync.WaitGroup{}
 	in := make(chan payload)
 
@@ -64,24 +63,23 @@ func start(p *Prometheus) error {
 		defer p.wg.Done()
 		for {
 			select {
-			case <-p.ctx.Done():
+			case <-ctx.Done():
 				break
 			case <-time.After(time.Second):
-				err := watch(p, client, in)
+				err := p.watch(ctx, client, in)
 				if err == nil {
 					break
 				}
 			}
 		}
-		log.Printf("D! [inputs.prometheus] shutting down")
 	}()
 
 	return nil
 }
 
-func watch(p *Prometheus, client *k8s.Client, in chan payload) error {
+func (p *Prometheus) watch(ctx context.Context, client *k8s.Client, in chan payload) error {
 	pod := &corev1.Pod{}
-	watcher, err := client.Watch(p.ctx, "", &corev1.Pod{})
+	watcher, err := client.Watch(ctx, "", &corev1.Pod{})
 	if err != nil {
 		log.Printf("E! [inputs.prometheus] unable to watch resources: %v", err)
 		return err
@@ -90,7 +88,7 @@ func watch(p *Prometheus, client *k8s.Client, in chan payload) error {
 
 	for {
 		select {
-		case <-p.ctx.Done():
+		case <-ctx.Done():
 			return nil
 		default:
 			pod = &corev1.Pod{}
