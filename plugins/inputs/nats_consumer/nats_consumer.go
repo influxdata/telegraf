@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	defaultMaxMessagesInFlight = 1000
+	defaultMaxUndeliveredMessages = 1000
 )
 
 type empty struct{}
@@ -40,7 +40,7 @@ type natsConsumer struct {
 	PendingMessageLimit int `toml:"pending_message_limit"`
 	PendingBytesLimit   int `toml:"pending_bytes_limit"`
 
-	MaxMessagesInFlight int `toml:"max_messages_in_flight"`
+	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
 	// Legacy metric buffer support; deprecated in v0.10.3
 	MetricBuffer int
@@ -60,22 +60,28 @@ type natsConsumer struct {
 
 var sampleConfig = `
   ## urls of NATS servers
-  # servers = ["nats://localhost:4222"]
+  servers = ["nats://localhost:4222"]
   ## Use Transport Layer Security
-  # secure = false
+  secure = false
   ## subject(s) to consume
-  # subjects = ["telegraf"]
+  subjects = ["telegraf"]
   ## name a queue group
-  # queue_group = "telegraf_consumers"
+  queue_group = "telegraf_consumers"
 
   ## Sets the limits for pending msgs and bytes for each subscription
   ## These shouldn't need to be adjusted except in very high throughput scenarios
   # pending_message_limit = 65536
   # pending_bytes_limit = 67108864
 
-  ## Max messages to read from the server that have not been written by an
-  ## output.
-  # max_messages_in_flight = 1000
+  ## Maximum messages to read from the broker that have not been written by an
+  ## output.  For best throughput set based on the number of metrics within
+  ## each message and the size of the output's metric_batch_size.
+  ##
+  ## For example, if each message from the queue contains 10 metrics and the
+  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
+  ## full batch is collected and the write is triggered immediately without
+  ## waiting until the next flush_interval.
+  # max_undelivered_messages = 1000
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
@@ -106,7 +112,7 @@ func (n *natsConsumer) natsErrHandler(c *nats.Conn, s *nats.Subscription, e erro
 
 // Start the nats consumer. Caller must call *natsConsumer.Stop() to clean up.
 func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
-	n.acc = acc.WithTracking(n.MaxMessagesInFlight)
+	n.acc = acc.WithTracking(n.MaxUndeliveredMessages)
 
 	var connectErr error
 
@@ -170,7 +176,7 @@ func (n *natsConsumer) Start(acc telegraf.Accumulator) error {
 // receiver() reads all incoming messages from NATS, and parses them into
 // telegraf metrics.
 func (n *natsConsumer) receiver(ctx context.Context) {
-	sem := make(semaphore, n.MaxMessagesInFlight)
+	sem := make(semaphore, n.MaxUndeliveredMessages)
 
 	for {
 		select {
@@ -230,13 +236,13 @@ func (n *natsConsumer) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("nats_consumer", func() telegraf.Input {
 		return &natsConsumer{
-			Servers:             []string{"nats://localhost:4222"},
-			Secure:              false,
-			Subjects:            []string{"telegraf"},
-			QueueGroup:          "telegraf_consumers",
-			PendingBytesLimit:   nats.DefaultSubPendingBytesLimit,
-			PendingMessageLimit: nats.DefaultSubPendingMsgsLimit,
-			MaxMessagesInFlight: defaultMaxMessagesInFlight,
+			Servers:                []string{"nats://localhost:4222"},
+			Secure:                 false,
+			Subjects:               []string{"telegraf"},
+			QueueGroup:             "telegraf_consumers",
+			PendingBytesLimit:      nats.DefaultSubPendingBytesLimit,
+			PendingMessageLimit:    nats.DefaultSubPendingMsgsLimit,
+			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}
 	})
 }

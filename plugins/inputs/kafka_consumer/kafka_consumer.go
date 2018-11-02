@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	defaultMaxUnmarkedMessages = 1000
+	defaultMaxUndeliveredMessages = 1000
 )
 
 type empty struct{}
@@ -30,16 +30,16 @@ type Consumer interface {
 }
 
 type Kafka struct {
-	ConsumerGroup       string   `toml:"consumer_group"`
-	ClientID            string   `toml:"client_id"`
-	Topics              []string `toml:"topics"`
-	Brokers             []string `toml:"brokers"`
-	MaxMessageLen       int      `toml:"max_message_len"`
-	Version             string   `toml:"version"`
-	MaxUnmarkedMessages int      `toml:"max_unmarked_messages"`
-	Offset              string   `toml:"offset"`
-	SASLUsername        string   `toml:"sasl_username"`
-	SASLPassword        string   `toml:"sasl_password"`
+	ConsumerGroup          string   `toml:"consumer_group"`
+	ClientID               string   `toml:"client_id"`
+	Topics                 []string `toml:"topics"`
+	Brokers                []string `toml:"brokers"`
+	MaxMessageLen          int      `toml:"max_message_len"`
+	Version                string   `toml:"version"`
+	MaxUndeliveredMessages int      `toml:"max_undelivered_messages"`
+	Offset                 string   `toml:"offset"`
+	SASLUsername           string   `toml:"sasl_username"`
+	SASLPassword           string   `toml:"sasl_password"`
 	tls.ClientConfig
 
 	cluster Consumer
@@ -85,16 +85,25 @@ var sampleConfig = `
   consumer_group = "telegraf_metrics_consumers"
   ## Offset (must be either "oldest" or "newest")
   offset = "oldest"
+  ## Maximum length of a message to consume, in bytes (default 0/unlimited);
+  ## larger messages are dropped
+  max_message_len = 1000000
+
+  ## Maximum messages to read from the broker that have not been written by an
+  ## output.  For best throughput set based on the number of metrics within
+  ## each message and the size of the output's metric_batch_size.
+  ##
+  ## For example, if each message from the queue contains 10 metrics and the
+  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
+  ## full batch is collected and the write is triggered immediately without
+  ## waiting until the next flush_interval.
+  # max_undelivered_messages = 1000
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
-
-  ## Maximum length of a message to consume, in bytes (default 0/unlimited);
-  ## larger messages are dropped
-  max_message_len = 1000000
 `
 
 func (k *Kafka) SampleConfig() string {
@@ -195,8 +204,8 @@ func (k *Kafka) Start(acc telegraf.Accumulator) error {
 func (k *Kafka) receiver(ctx context.Context, ac telegraf.Accumulator) {
 	k.messages = make(map[telegraf.TrackingID]*sarama.ConsumerMessage)
 
-	acc := ac.WithTracking(k.MaxUnmarkedMessages)
-	sem := make(semaphore, k.MaxUnmarkedMessages)
+	acc := ac.WithTracking(k.MaxUndeliveredMessages)
+	sem := make(semaphore, k.MaxUndeliveredMessages)
 
 	for {
 		select {
@@ -282,7 +291,7 @@ func (k *Kafka) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("kafka_consumer", func() telegraf.Input {
 		return &Kafka{
-			MaxUnmarkedMessages: defaultMaxUnmarkedMessages,
+			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}
 	})
 }

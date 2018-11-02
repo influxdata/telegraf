@@ -5,11 +5,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Shopify/sarama"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,14 +49,14 @@ func newTestKafka() (*Kafka, *TestConsumer) {
 		messages: make(chan *sarama.ConsumerMessage, 1000),
 	}
 	k := Kafka{
-		cluster:             consumer,
-		ConsumerGroup:       "test",
-		Topics:              []string{"telegraf"},
-		Brokers:             []string{"localhost:9092"},
-		Offset:              "oldest",
-		MaxUnmarkedMessages: defaultMaxUnmarkedMessages,
-		doNotCommitMsgs:     true,
-		messages:            make(map[telegraf.TrackingID]*sarama.ConsumerMessage),
+		cluster:                consumer,
+		ConsumerGroup:          "test",
+		Topics:                 []string{"telegraf"},
+		Brokers:                []string{"localhost:9092"},
+		Offset:                 "oldest",
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		doNotCommitMsgs:        true,
+		messages:               make(map[telegraf.TrackingID]*sarama.ConsumerMessage),
 	}
 	return &k, consumer
 }

@@ -20,7 +20,7 @@ var (
 	// 30 Seconds is the default used by paho.mqtt.golang
 	defaultConnectionTimeout = internal.Duration{Duration: 30 * time.Second}
 
-	defaultMaxMessagesInFlight = 1000
+	defaultMaxUndeliveredMessages = 1000
 )
 
 type ConnectionState int
@@ -34,13 +34,13 @@ const (
 )
 
 type MQTTConsumer struct {
-	Servers             []string
-	Topics              []string
-	Username            string
-	Password            string
-	QoS                 int               `toml:"qos"`
-	ConnectionTimeout   internal.Duration `toml:"connection_timeout"`
-	MaxMessagesInFlight int               `toml:"max_messages_in_flight"`
+	Servers                []string
+	Topics                 []string
+	Username               string
+	Password               string
+	QoS                    int               `toml:"qos"`
+	ConnectionTimeout      internal.Duration `toml:"connection_timeout"`
+	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
 
 	parser parsers.Parser
 
@@ -79,9 +79,15 @@ var sampleConfig = `
   ## Connection timeout for initial connection in seconds
   connection_timeout = "30s"
 
-  ## Max messages to read from the broker that have not been written by an
-  ## output.
-  # max_messages_in_flight = 1000
+  ## Maximum messages to read from the broker that have not been written by an
+  ## output.  For best throughput set based on the number of metrics within
+  ## each message and the size of the output's metric_batch_size.
+  ##
+  ## For example, if each message from the queue contains 10 metrics and the
+  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
+  ## full batch is collected and the write is triggered immediately without
+  ## waiting until the next flush_interval.
+  # max_undelivered_messages = 1000
 
   ## Topics to subscribe to
   topics = [
@@ -142,7 +148,7 @@ func (m *MQTTConsumer) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("connection_timeout must be greater than 1s: %s", m.ConnectionTimeout.Duration)
 	}
 
-	m.acc = acc.WithTracking(m.MaxMessagesInFlight)
+	m.acc = acc.WithTracking(m.MaxUndeliveredMessages)
 	m.ctx, m.cancel = context.WithCancel(context.Background())
 
 	opts, err := m.createOpts()
@@ -166,7 +172,7 @@ func (m *MQTTConsumer) connect() error {
 
 	log.Printf("I! [inputs.mqtt_consumer] Connected %v", m.Servers)
 	m.state = Connected
-	m.sem = make(semaphore, m.MaxMessagesInFlight)
+	m.sem = make(semaphore, m.MaxUndeliveredMessages)
 	m.messages = make(map[telegraf.TrackingID]bool)
 
 	// Only subscribe on first connection when using persistent sessions.  On
@@ -313,9 +319,9 @@ func (m *MQTTConsumer) createOpts() (*mqtt.ClientOptions, error) {
 func init() {
 	inputs.Add("mqtt_consumer", func() telegraf.Input {
 		return &MQTTConsumer{
-			ConnectionTimeout:   defaultConnectionTimeout,
-			MaxMessagesInFlight: defaultMaxMessagesInFlight,
-			state:               Disconnected,
+			ConnectionTimeout:      defaultConnectionTimeout,
+			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+			state: Disconnected,
 		}
 	})
 }

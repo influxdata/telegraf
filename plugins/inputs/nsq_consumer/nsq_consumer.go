@@ -11,6 +11,10 @@ import (
 	nsq "github.com/nsqio/go-nsq"
 )
 
+const (
+	defaultMaxUndeliveredMessages = 1000
+)
+
 type empty struct{}
 type semaphore chan empty
 
@@ -29,6 +33,8 @@ type NSQConsumer struct {
 	Topic       string   `toml:"topic"`
 	Channel     string   `toml:"channel"`
 	MaxInFlight int      `toml:"max_in_flight"`
+
+	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
 	parser   parsers.Parser
 	consumer *nsq.Consumer
@@ -49,6 +55,16 @@ var sampleConfig = `
   topic = "telegraf"
   channel = "consumer"
   max_in_flight = 100
+
+  ## Maximum messages to read from the broker that have not been written by an
+  ## output.  For best throughput set based on the number of metrics within
+  ## each message and the size of the output's metric_batch_size.
+  ##
+  ## For example, if each message from the queue contains 10 metrics and the
+  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
+  ## full batch is collected and the write is triggered immediately without
+  ## waiting until the next flush_interval.
+  # max_undelivered_messages = 1000
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
@@ -74,9 +90,9 @@ func (n *NSQConsumer) Description() string {
 
 // Start pulls data from nsq
 func (n *NSQConsumer) Start(ac telegraf.Accumulator) error {
-	acc := ac.WithTracking(n.MaxInFlight)
-	sem := make(semaphore, n.MaxInFlight)
-	n.messages = make(map[telegraf.TrackingID]*nsq.Message, n.MaxInFlight)
+	acc := ac.WithTracking(n.MaxUndeliveredMessages)
+	sem := make(semaphore, n.MaxUndeliveredMessages)
+	n.messages = make(map[telegraf.TrackingID]*nsq.Message, n.MaxUndeliveredMessages)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	n.cancel = cancel
@@ -177,6 +193,8 @@ func (n *NSQConsumer) connect() error {
 
 func init() {
 	inputs.Add("nsq_consumer", func() telegraf.Input {
-		return &NSQConsumer{}
+		return &NSQConsumer{
+			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		}
 	})
 }
