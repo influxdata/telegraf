@@ -5,8 +5,7 @@ This plugin gathers stats from [OpenSMTPD - a FREE implementation of the server-
 ### Configuration:
 
 ```toml
- # A plugin to collect stats from OpenSMTPD - a FREE implementation of the server-side SMTP protocol
- [[inputs.smtpctl]]
+ [[inputs.opensmtpd]]
    ## If running as a restricted user you can prepend sudo for additional access:
    #use_sudo = false
 
