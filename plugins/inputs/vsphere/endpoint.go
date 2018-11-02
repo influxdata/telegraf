@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,6 +22,8 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 )
 
+var isolateLUN = regexp.MustCompile(".*/([^/]+)/?$")
+
 // Endpoint is a high-level representation of a connected vCenter endpoint. It is backed by the lower
 // level Client type.
 type Endpoint struct {
@@ -29,6 +32,7 @@ type Endpoint struct {
 	lastColls       map[string]time.Time
 	instanceInfo    map[string]resourceInfo
 	resourceKinds   map[string]resourceKind
+	lun2ds          map[string]string
 	discoveryTicker *time.Ticker
 	collectMux      sync.RWMutex
 	initialized     bool
@@ -93,6 +97,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 		Parent:        parent,
 		lastColls:     make(map[string]time.Time),
 		instanceInfo:  make(map[string]resourceInfo),
+		lun2ds:        make(map[string]string),
 		initialized:   false,
 		clientFactory: NewClientFactory(ctx, url, parent),
 	}
@@ -404,13 +409,25 @@ func (e *Endpoint) discover(ctx context.Context) error {
 		}
 	}
 
+	// Build lun2ds map
+	dss := resourceKinds["datastore"]
+	l2d := make(map[string]string)
+	for _, ds := range dss.objects {
+		url := ds.altID
+		m := isolateLUN.FindStringSubmatch(url)
+		if m != nil {
+			log.Printf("D! [input.vsphere]: LUN: %s", m[1])
+			l2d[m[1]] = ds.name
+		}
+	}
+
 	// Atomically swap maps
-	//
 	e.collectMux.Lock()
 	defer e.collectMux.Unlock()
 
 	e.instanceInfo = instInfo
 	e.resourceKinds = resourceKinds
+	e.lun2ds = l2d
 
 	sw.Stop()
 	SendInternalCounter("discovered_objects", e.URL.Host, int64(len(instInfo)))
@@ -509,14 +526,22 @@ func getDatastores(ctx context.Context, e *Endpoint, root *view.ContainerView) (
 	var resources []mo.Datastore
 	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
 	defer cancel1()
-	err := root.Retrieve(ctx1, []string{"Datastore"}, []string{"name", "parent"}, &resources)
+	err := root.Retrieve(ctx1, []string{"Datastore"}, []string{"name", "parent", "info"}, &resources)
 	if err != nil {
 		return nil, err
 	}
 	m := make(objectMap)
 	for _, r := range resources {
+		url := ""
+		if r.Info != nil {
+			info := r.Info.GetDatastoreInfo()
+			if info != nil {
+				url = info.Url
+			}
+		}
+		log.Printf("D! [input.vsphere]: DS URL: %s %s", url, r.Name)
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent, altID: url}
 	}
 	return m, nil
 }
@@ -848,6 +873,11 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 		t["cpu"] = instance
 	} else if strings.HasPrefix(name, "datastore.") {
 		t["lun"] = instance
+		if ds, ok := e.lun2ds[instance]; ok {
+			t["dsname"] = ds
+		} else {
+			t["dsname"] = instance
+		}
 	} else if strings.HasPrefix(name, "disk.") {
 		t["disk"] = cleanDiskTag(instance)
 	} else if strings.HasPrefix(name, "net.") {
