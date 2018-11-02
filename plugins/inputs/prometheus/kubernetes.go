@@ -63,10 +63,18 @@ func start(p *Prometheus) error {
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
+		t := time.NewTimer(time.Second)
 		for {
-			err := watch(p, client, in)
-			if err == nil {
-				break
+			select {
+			case <-p.ctx.Done():
+				t.Stop()
+				log.Printf("I! [inputs.prometheus] shutting down")
+				return
+			case <-t.C:
+				err := watch(p, client, in)
+				if err == nil {
+					break
+				}
 			}
 		}
 	}()
@@ -105,13 +113,7 @@ func watch(p *Prometheus, client *k8s.Client, in chan payload) error {
 			eventType, err := watcher.Next(pod)
 			if err != nil {
 				log.Printf("D! [inputs.prometheus] unable to watch next: %s", err.Error())
-				select {
-				case <-p.ctx.Done():
-					log.Printf("I! [inputs.prometheus] shutting down")
-					return nil
-				case <-time.After(time.Second):
-					return errors.New("Watcher closed")
-				}
+				return errors.New("Watcher closed")
 			}
 			in <- payload{eventType, pod}
 		}
