@@ -193,7 +193,11 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	err = json.NewDecoder(resp.Body).Decode(writeResp)
 	desc := writeResp.Error()
 	if err != nil {
-		desc = err.Error()
+		if err != io.EOF {
+			desc = err.Error()
+		} else {
+			desc = resp.Status
+		}
 	}
 
 	switch resp.StatusCode {
