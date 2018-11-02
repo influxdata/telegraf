@@ -55,9 +55,10 @@ pods. Currently, you can run this plugin in your kubernetes cluster, or we use t
 file to determine where to monitor.
 Currently the following annotation are supported:
 
-* `prometheus.io/scrape` Enable scraping for this pod
-* `prometheus.io/path` Override the path for the metrics endpoint on the service. (default metrics).
-* `prometheus.io/port` Used to override the port, the default value is 9102
+* `prometheus.io/scrape` Enable scraping for this pod.
+* `prometheus.io/scheme` If the metrics endpoint is secured then you will need to set this to `https` & most likely set the tls config. (default 'http')
+* `prometheus.io/path` Override the path for the metrics endpoint on the service. (default '/metrics')
+* `prometheus.io/port` Used to override the port. (default 9102)
 
 #### Bearer Token
 

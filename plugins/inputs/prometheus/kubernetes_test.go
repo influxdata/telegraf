@@ -1,7 +1,6 @@
 package prometheus
 
 import (
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,14 +49,14 @@ func TestScrapeURLAnnotationsCustomPathWithSep(t *testing.T) {
 }
 
 func TestAddPod(t *testing.T) {
-	prom := &Prometheus{lock: sync.Mutex{}}
+	prom := &Prometheus{}
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
 	assert.Equal(t, 1, len(prom.kubernetesPods))
 }
 func TestAddMultiplePods(t *testing.T) {
-	prom := &Prometheus{lock: sync.Mutex{}}
+	prom := &Prometheus{}
 
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
@@ -67,7 +66,7 @@ func TestAddMultiplePods(t *testing.T) {
 	assert.Equal(t, 2, len(prom.kubernetesPods))
 }
 func TestDeletePods(t *testing.T) {
-	prom := &Prometheus{lock: sync.Mutex{}}
+	prom := &Prometheus{}
 
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
