@@ -38,6 +38,7 @@
 - [#4914](https://github.com/influxdata/telegraf/pull/4914): Collect additional stats in memcached input.
 - [#3847](https://github.com/influxdata/telegraf/pull/3847): Add wireless input plugin.
 - [#4934](https://github.com/influxdata/telegraf/pull/4934): Add LUN to datasource translation in vsphere input.
+- [#4798](https://github.com/influxdata/telegraf/pull/4798): Allow connecting to prometheus via unix socket.
 
 ## v1.8.3 [2018-10-30]
 
