@@ -8,13 +8,13 @@ import (
 )
 
 var sampleConfig = `
-  [[processors.enum.fields]]
+  [[processors.enum.mapping]]
     ## Name of the field to map
-    source = "name"
+    field = "status"
 
     ## Destination field to be used for the mapped value.  By default the source
     ## field is used, overwriting the original value.
-    # destination = "mapped"
+    # dest = "status_code"
 
     ## Default value to be used for all values not contained in the mapping
     ## table.  When unset, the unmodified value for the field will be used if no
@@ -22,18 +22,19 @@ var sampleConfig = `
     # default = 0
 
     ## Table of mappings
-    [processors.enum.fields.value_mappings]
-      value1 = 1
-      value2 = 2
+    [processors.enum.mapping.value_mappings]
+      green = 1
+      yellow = 2
+      red = 3
 `
 
 type EnumMapper struct {
-	Fields []Mapping
+	Mappings []Mapping `toml:"mapping"`
 }
 
 type Mapping struct {
-	Source        string
-	Destination   string
+	Field         string
+	Dest          string
 	Default       interface{}
 	ValueMappings map[string]interface{}
 }
@@ -54,8 +55,8 @@ func (mapper *EnumMapper) Apply(in ...telegraf.Metric) []telegraf.Metric {
 }
 
 func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric {
-	for _, mapping := range mapper.Fields {
-		if originalValue, isPresent := metric.GetField(mapping.Source); isPresent == true {
+	for _, mapping := range mapper.Mappings {
+		if originalValue, isPresent := metric.GetField(mapping.Field); isPresent == true {
 			if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString == true {
 				if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent == true {
 					writeField(metric, mapping.getDestination(), mappedValue)
@@ -84,16 +85,14 @@ func (mapping *Mapping) mapValue(original string) (interface{}, bool) {
 }
 
 func (mapping *Mapping) getDestination() string {
-	if mapping.Destination != "" {
-		return mapping.Destination
+	if mapping.Dest != "" {
+		return mapping.Dest
 	}
-	return mapping.Source
+	return mapping.Field
 }
 
 func writeField(metric telegraf.Metric, name string, value interface{}) {
-	if metric.HasField(name) {
-		metric.RemoveField(name)
-	}
+	metric.RemoveField(name)
 	metric.AddField(name, value)
 }
 

@@ -246,8 +246,8 @@ var header = `# Telegraf Configuration
   ## same time, which can have a measurable effect on the system.
   collection_jitter = "0s"
 
-  ## Default flushing interval for all outputs. You shouldn't set this below
-  ## interval. Maximum flush_interval will be flush_interval + flush_jitter
+  ## Default flushing interval for all outputs. Maximum flush_interval will be
+  ## flush_interval + flush_jitter
   flush_interval = "10s"
   ## Jitter the flush interval by a random amount. This is primarily to avoid
   ## large write spikes for users running a large number of telegraf instances.
@@ -855,6 +855,17 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		t.SetParser(parser)
 	}
 
+	switch t := input.(type) {
+	case parsers.ParserFuncInput:
+		config, err := getParserConfig(name, table)
+		if err != nil {
+			return err
+		}
+		t.SetParserFunc(func() (parsers.Parser, error) {
+			return parsers.NewParser(config)
+		})
+	}
+
 	pluginConfig, err := buildInput(name, table)
 	if err != nil {
 		return err
@@ -873,14 +884,6 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 // builds the filter and returns a
 // models.AggregatorConfig to be inserted into models.RunningAggregator
 func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, error) {
-	unsupportedFields := []string{"tagexclude", "taginclude"}
-	for _, field := range unsupportedFields {
-		if _, ok := tbl.Fields[field]; ok {
-			return nil, fmt.Errorf("%s is not supported for aggregator plugins (%s).",
-				field, name)
-		}
-	}
-
 	conf := &models.AggregatorConfig{
 		Name:   name,
 		Delay:  time.Millisecond * 100,
@@ -978,13 +981,6 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 // models.ProcessorConfig to be inserted into models.RunningProcessor
 func buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
 	conf := &models.ProcessorConfig{Name: name}
-	unsupportedFields := []string{"tagexclude", "taginclude", "fielddrop", "fieldpass"}
-	for _, field := range unsupportedFields {
-		if _, ok := tbl.Fields[field]; ok {
-			return nil, fmt.Errorf("%s is not supported for processor plugins (%s).",
-				field, name)
-		}
-	}
 
 	if node, ok := tbl.Fields["order"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -1212,6 +1208,14 @@ func buildInput(name string, tbl *ast.Table) (*models.InputConfig, error) {
 // a parsers.Parser object, and creates it, which can then be added onto
 // an Input object.
 func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
+	config, err := getParserConfig(name, tbl)
+	if err != nil {
+		return nil, err
+	}
+	return parsers.NewParser(config)
+}
+
+func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	c := &parsers.Config{}
 
 	if node, ok := tbl.Fields["data_format"]; ok {
@@ -1257,6 +1261,50 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 						c.TagKeys = append(c.TagKeys, str.Value)
 					}
 				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["json_string_fields"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.JSONStringFields = append(c.JSONStringFields, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["json_name_key"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.JSONNameKey = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["json_query"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.JSONQuery = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["json_time_key"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.JSONTimeKey = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["json_time_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.JSONTimeFormat = str.Value
 			}
 		}
 	}
@@ -1394,7 +1442,133 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	if node, ok := tbl.Fields["grok_timezone"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
-				c.GrokTimeZone = str.Value
+				c.GrokTimezone = str.Value
+			}
+		}
+	}
+
+	//for csv parser
+	if node, ok := tbl.Fields["csv_column_names"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CSVColumnNames = append(c.CSVColumnNames, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_column_types"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CSVColumnTypes = append(c.CSVColumnTypes, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_tag_columns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CSVTagColumns = append(c.CSVTagColumns, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_delimiter"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVDelimiter = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_comment"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVComment = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_measurement_column"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVMeasurementColumn = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_timestamp_column"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVTimestampColumn = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_timestamp_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CSVTimestampFormat = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_header_row_count"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if integer, ok := kv.Value.(*ast.Integer); ok {
+				v, err := integer.Int()
+				if err != nil {
+					return nil, err
+				}
+				c.CSVHeaderRowCount = int(v)
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_skip_rows"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if integer, ok := kv.Value.(*ast.Integer); ok {
+				v, err := integer.Int()
+				if err != nil {
+					return nil, err
+				}
+				c.CSVHeaderRowCount = int(v)
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_skip_columns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if integer, ok := kv.Value.(*ast.Integer); ok {
+				v, err := integer.Int()
+				if err != nil {
+					return nil, err
+				}
+				c.CSVHeaderRowCount = int(v)
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_trim_space"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.Boolean); ok {
+				//for config with no quotes
+				val, err := strconv.ParseBool(str.Value)
+				c.CSVTrimSpace = val
+				if err != nil {
+					return nil, fmt.Errorf("E! parsing to bool: %v", err)
+				}
 			}
 		}
 	}
@@ -1405,6 +1579,11 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "separator")
 	delete(tbl.Fields, "templates")
 	delete(tbl.Fields, "tag_keys")
+	delete(tbl.Fields, "json_name_key")
+	delete(tbl.Fields, "json_query")
+	delete(tbl.Fields, "json_string_fields")
+	delete(tbl.Fields, "json_time_format")
+	delete(tbl.Fields, "json_time_key")
 	delete(tbl.Fields, "data_type")
 	delete(tbl.Fields, "collectd_auth_file")
 	delete(tbl.Fields, "collectd_security_level")
@@ -1420,8 +1599,21 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "grok_custom_patterns")
 	delete(tbl.Fields, "grok_custom_pattern_files")
 	delete(tbl.Fields, "grok_timezone")
+	delete(tbl.Fields, "csv_column_names")
+	delete(tbl.Fields, "csv_column_types")
+	delete(tbl.Fields, "csv_comment")
+	delete(tbl.Fields, "csv_delimiter")
+	delete(tbl.Fields, "csv_field_columns")
+	delete(tbl.Fields, "csv_header_row_count")
+	delete(tbl.Fields, "csv_measurement_column")
+	delete(tbl.Fields, "csv_skip_columns")
+	delete(tbl.Fields, "csv_skip_rows")
+	delete(tbl.Fields, "csv_tag_columns")
+	delete(tbl.Fields, "csv_timestamp_column")
+	delete(tbl.Fields, "csv_timestamp_format")
+	delete(tbl.Fields, "csv_trim_space")
 
-	return parsers.NewParser(c)
+	return c, nil
 }
 
 // buildSerializer grabs the necessary entries from the ast.Table for creating
@@ -1522,6 +1714,18 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["splunkmetric_hec_routing"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.HecRouting, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 	delete(tbl.Fields, "influx_max_line_bytes")
 	delete(tbl.Fields, "influx_sort_fields")
 	delete(tbl.Fields, "influx_uint_support")
@@ -1530,6 +1734,7 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")
 	delete(tbl.Fields, "json_timestamp_units")
+	delete(tbl.Fields, "splunkmetric_hec_routing")
 	return serializers.NewSerializer(c)
 }
 

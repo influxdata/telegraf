@@ -35,7 +35,7 @@ var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
-var fVersion = flag.Bool("version", false, "display the version")
+var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
@@ -54,25 +54,15 @@ var fProcessorFilters = flag.String("processor-filter", "",
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 var fService = flag.String("service", "",
-	"operate on the service")
+	"operate on the service (windows only)")
+var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
 var (
-	nextVersion = "1.8.0"
-	version     string
-	commit      string
-	branch      string
+	version string
+	commit  string
+	branch  string
 )
-
-func init() {
-	// If commit or branch are not set, make that clear.
-	if commit == "" {
-		commit = "unknown"
-	}
-	if branch == "" {
-		branch = "unknown"
-	}
-}
 
 var stop chan struct{}
 
@@ -165,7 +155,7 @@ func reloadLoop(
 			}
 		}()
 
-		log.Printf("I! Starting Telegraf %s\n", displayVersion())
+		log.Printf("I! Starting Telegraf %s\n", version)
 		log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
 		log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
 		log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
@@ -225,11 +215,27 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
-func displayVersion() string {
-	if version == "" {
-		return fmt.Sprintf("v%s~%s", nextVersion, commit)
+func formatFullVersion() string {
+	var parts = []string{"Telegraf"}
+
+	if version != "" {
+		parts = append(parts, version)
+	} else {
+		parts = append(parts, "unknown")
 	}
-	return "v" + version
+
+	if branch != "" || commit != "" {
+		if branch == "" {
+			branch = "unknown"
+		}
+		if commit == "" {
+			commit = "unknown"
+		}
+		git := fmt.Sprintf("(git: %s %s)", branch, commit)
+		parts = append(parts, git)
+	}
+
+	return strings.Join(parts, " ")
 }
 
 func main() {
@@ -273,7 +279,7 @@ func main() {
 	if len(args) > 0 {
 		switch args[0] {
 		case "version":
-			fmt.Printf("Telegraf %s (git: %s %s)\n", displayVersion(), branch, commit)
+			fmt.Println(formatFullVersion())
 			return
 		case "config":
 			config.PrintSampleConfig(
@@ -290,18 +296,18 @@ func main() {
 	switch {
 	case *fOutputList:
 		fmt.Println("Available Output Plugins:")
-		for k, _ := range outputs.Outputs {
+		for k := range outputs.Outputs {
 			fmt.Printf("  %s\n", k)
 		}
 		return
 	case *fInputList:
 		fmt.Println("Available Input Plugins:")
-		for k, _ := range inputs.Inputs {
+		for k := range inputs.Inputs {
 			fmt.Printf("  %s\n", k)
 		}
 		return
 	case *fVersion:
-		fmt.Printf("Telegraf %s (git: %s %s)\n", displayVersion(), branch, commit)
+		fmt.Println(formatFullVersion())
 		return
 	case *fSampleConfig:
 		config.PrintSampleConfig(
@@ -320,9 +326,19 @@ func main() {
 		return
 	}
 
+	shortVersion := version
+	if shortVersion == "" {
+		shortVersion = "unknown"
+	}
+
+	// Configure version
+	if err := internal.SetVersion(shortVersion); err != nil {
+		log.Println("Telegraf version already configured to: " + internal.Version())
+	}
+
 	if runtime.GOOS == "windows" && !(*fRunAsConsole) {
 		svcConfig := &service.Config{
-			Name:        "telegraf",
+			Name:        *fServiceName,
 			DisplayName: "Telegraf Data Collector Service",
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",

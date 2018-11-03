@@ -10,7 +10,7 @@ file or network connection.
 # Reads metrics from a SSL certificate
 [[inputs.x509_cert]]
   ## List certificate sources
-  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "https://example.org"]
+  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "https://example.org:443"]
 
   ## Timeout for SSL connection
   # timeout = "5s"
@@ -27,14 +27,19 @@ file or network connection.
 
 ### Metrics
 
-- `x509_cert`
+- x509_cert
   - tags:
-    - `source` - source of the certificate
+    - source - source of the certificate
+    - organization
+    - organizational_unit
+    - country
+    - province
+    - locality
   - fields:
-    - `expiry` (int, seconds)
-    - `age` (int, seconds)
-    - `startdate` (int, seconds)
-    - `enddate` (int, seconds)
+    - expiry (int, seconds)
+    - age (int, seconds)
+    - startdate (int, seconds)
+    - enddate (int, seconds)
 
 
 ### Example output

@@ -76,29 +76,33 @@ type PrometheusClient struct {
 
 var sampleConfig = `
   ## Address to listen on
-  # listen = ":9273"
+  listen = ":9273"
 
-  ## Use TLS
-  #tls_cert = "/etc/ssl/telegraf.crt"
-  #tls_key = "/etc/ssl/telegraf.key"
+  ## Use HTTP Basic Authentication.
+  # basic_username = "Foo"
+  # basic_password = "Bar"
 
-  ## Use http basic authentication
-  #basic_username = "Foo"
-  #basic_password = "Bar"
+  ## If set, the IP Ranges which are allowed to access metrics.
+  ##   ex: ip_range = ["192.168.0.0/24", "192.168.1.0/30"]
+  # ip_range = []
 
-  ## IP Ranges which are allowed to access metrics
-  #ip_range = ["192.168.0.0/24", "192.168.1.0/30"]
+  ## Path to publish the metrics on.
+  # path = "/metrics"
 
-  ## Interval to expire metrics and not deliver to prometheus, 0 == no expiration
+  ## Expiration interval for each metric. 0 == no expiration
   # expiration_interval = "60s"
 
   ## Collectors to enable, valid entries are "gocollector" and "process".
   ## If unset, both are enabled.
-  collectors_exclude = ["gocollector", "process"]
+  # collectors_exclude = ["gocollector", "process"]
 
-  # Send string metrics as Prometheus labels.
-  # Unless set to false all string metrics will be sent as labels.
-  string_as_label = true
+  ## Send string metrics as Prometheus labels.
+  ## Unless set to false all string metrics will be sent as labels.
+  # string_as_label = true
+
+  ## If set, enable TLS with the given certificate.
+  # tls_cert = "/etc/ssl/telegraf.crt"
+  # tls_key = "/etc/ssl/telegraf.key"
 `
 
 func (p *PrometheusClient) auth(h http.Handler) http.Handler {
@@ -150,7 +154,7 @@ func (p *PrometheusClient) Start() error {
 	}
 
 	registry := prometheus.NewRegistry()
-	for collector, _ := range defaultCollectors {
+	for collector := range defaultCollectors {
 		switch collector {
 		case "gocollector":
 			registry.Register(prometheus.NewGoCollector())
@@ -232,7 +236,7 @@ func (p *PrometheusClient) Expire() {
 	for name, family := range p.fam {
 		for key, sample := range family.Samples {
 			if p.ExpirationInterval.Duration != 0 && now.After(sample.Expiration) {
-				for k, _ := range sample.Labels {
+				for k := range sample.Labels {
 					family.LabelSet[k]--
 				}
 				delete(family.Samples, key)
@@ -319,7 +323,7 @@ func CreateSampleID(tags map[string]string) SampleID {
 
 func addSample(fam *MetricFamily, sample *Sample, sampleID SampleID) {
 
-	for k, _ := range sample.Labels {
+	for k := range sample.Labels {
 		fam.LabelSet[k]++
 	}
 
