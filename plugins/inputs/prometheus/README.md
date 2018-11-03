@@ -28,6 +28,8 @@ in Prometheus format.
   # insecure_skip_verify = false
 ```
 
+`urls` can contain a unix socket as well. If a different path is required (default is `/metrics` for both http[s] and unix) for a unix socket, add `path` as a query parameter as follows: `unix:///var/run/prometheus.sock?path=/custom/metrics`
+
 #### Kubernetes Service Discovery
 
 URLs listed in the `kubernetes_services` parameter will be expanded
