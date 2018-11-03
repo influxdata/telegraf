@@ -118,9 +118,26 @@ behavior with a regular plugin.
 
 To create a Service Input implement the [telegraf.ServiceInput][] interface.
 
+### Metric Tracking
+
+Metric Tracking provides a system to be notified when metrics have been
+successfully written to their outputs or otherwise discarded.  This allows
+inputs to be created that function as reliable queue consumers.
+
+To get started with metric tracking begin by calling `WithTracking` on the
+[telegraf.Accumulator][].  Add metrics using the `AddTrackingMetricGroup`
+function on the returned [telegraf.TrackingAccumulator][] and store the
+`TrackingID`.  The `Delivered()` channel will return a type with information
+about the final delivery status of the metric group.
+
+Check the [amqp_consumer][] for an example implementation.
+
 [exec]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/exec
+[amqp_consumer]: https://github.com/influxdata/telegraf/tree/master/plugins/inputs/amqp_consumer
 [prom metric types]: https://prometheus.io/docs/concepts/metric_types/
 [input data formats]: https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
 [SampleConfig]: https://github.com/influxdata/telegraf/wiki/SampleConfig
 [telegraf.Input]: https://godoc.org/github.com/influxdata/telegraf#Input
 [telegraf.ServiceInput]: https://godoc.org/github.com/influxdata/telegraf#ServiceInput
+[telegraf.Accumulator]: https://godoc.org/github.com/influxdata/telegraf#Accumulator
+[telegraf.TrackingAccumulator]: https://godoc.org/github.com/influxdata/telegraf#Accumulator
