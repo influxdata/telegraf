@@ -229,7 +229,7 @@ For setting up concurrency, modify `collect_concurrency` and `discover_concurren
 - Datastore stats:
 	- Disk: Capacity, provisioned, used  
 
-For a detailed list of commonly available metrics, please refer to [METRICS.MD](METRICS.MD)
+For a detailed list of commonly available metrics, please refer to [METRICS.md](METRICS.md)
 	
 ## Tags
 
