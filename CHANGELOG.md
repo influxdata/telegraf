@@ -22,6 +22,7 @@
 
 - [http_listener_v2](/plugins/inputs/http_listener_v2/README.md) - Contributed by @jul1u5
 - [ipvs](/plugins/inputs/ipvs/README.md) - Contributed by @amoghe
+- [jenkins](/plugins/inputs/jenkins/README.md) - Contributed by @influxdata & @lpic10
 - [nginx_plus_api](/plugins/inputs/nginx_plus_api/README.md) - Contributed by @Bugagazavr
 - [nginx_vts](/plugins/inputs/nginx_vts/README.md) - Contributed by @monder
 - [wireless](/plugins/inputs/wireless/README.md) - Contributed by @jamesmaidment
