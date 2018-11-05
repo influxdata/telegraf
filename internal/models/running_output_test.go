@@ -231,56 +231,6 @@ func TestRunningOutputDefault(t *testing.T) {
 	assert.Len(t, m.Metrics(), 10)
 }
 
-// Test that running output doesn't flush until it's full when
-// FlushBufferWhenFull is set.
-func TestRunningOutputFlushWhenFull(t *testing.T) {
-	conf := &OutputConfig{
-		Filter: Filter{},
-	}
-
-	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf, 6, 10)
-
-	// Fill buffer to 1 under limit
-	for _, metric := range first5 {
-		ro.AddMetric(metric)
-	}
-	// no flush yet
-	assert.Len(t, m.Metrics(), 0)
-
-	// add one more metric
-	ro.AddMetric(next5[0])
-	// now it flushed
-	assert.Len(t, m.Metrics(), 6)
-
-	// add one more metric and write it manually
-	ro.AddMetric(next5[1])
-	err := ro.Write()
-	assert.NoError(t, err)
-	assert.Len(t, m.Metrics(), 7)
-}
-
-// Test that running output doesn't flush until it's full when
-// FlushBufferWhenFull is set, twice.
-func TestRunningOutputMultiFlushWhenFull(t *testing.T) {
-	conf := &OutputConfig{
-		Filter: Filter{},
-	}
-
-	m := &mockOutput{}
-	ro := NewRunningOutput("test", m, conf, 4, 12)
-
-	// Fill buffer past limit twive
-	for _, metric := range first5 {
-		ro.AddMetric(metric)
-	}
-	for _, metric := range next5 {
-		ro.AddMetric(metric)
-	}
-	// flushed twice
-	assert.Len(t, m.Metrics(), 8)
-}
-
 func TestRunningOutputWriteFail(t *testing.T) {
 	conf := &OutputConfig{
 		Filter: Filter{},

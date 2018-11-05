@@ -1,12 +1,12 @@
 package topk
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 // Key, value pair that represents a telegraf.Metric Field
@@ -95,7 +95,7 @@ func deepCopy(a []telegraf.Metric) []telegraf.Metric {
 
 func belongs(m telegraf.Metric, ms []telegraf.Metric) bool {
 	for _, i := range ms {
-		if reflect.DeepEqual(i, m) {
+		if testutil.MetricEqual(i, m) {
 			return true
 		}
 	}

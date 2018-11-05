@@ -1,14 +1,11 @@
 # MQTT Consumer Input Plugin
 
-The [MQTT](http://mqtt.org/) consumer plugin reads from
-specified MQTT topics and adds messages to InfluxDB.
-The plugin expects messages in the
-[Telegraf Input Data Formats](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md).
+The [MQTT][mqtt] consumer plugin reads from the specified MQTT topics
+and creates metrics using one of the supported [input data formats][].
 
 ### Configuration:
 
 ```toml
-# Read metrics from MQTT topic(s)
 [[inputs.mqtt_consumer]]
   ## MQTT broker URLs to be used. The format should be scheme://host:port,
   ## schema can be tcp, ssl, or ws.
@@ -25,6 +22,16 @@ The plugin expects messages in the
 
   ## Connection timeout for initial connection in seconds
   connection_timeout = "30s"
+
+  ## Maximum messages to read from the broker that have not been written by an
+  ## output.  For best throughput set based on the number of metrics within
+  ## each message and the size of the output's metric_batch_size.
+  ##
+  ## For example, if each message from the queue contains 10 metrics and the
+  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
+  ## full batch is collected and the write is triggered immediately without
+  ## waiting until the next flush_interval.
+  # max_undelivered_messages = 1000
 
   ## Topics to subscribe to
   topics = [
@@ -62,3 +69,6 @@ The plugin expects messages in the
 
 - All measurements are tagged with the incoming topic, ie
 `topic=telegraf/host01/cpu`
+
+[mqtt]: https://mqtt.org
+[input data formats]: /docs/DATA_FORMATS_INPUT.md

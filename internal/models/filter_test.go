@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -479,4 +480,46 @@ func TestFilter_FilterTagsPassAndDrop(t *testing.T) {
 		require.Equal(t, f.shouldTagsPass(tag), expectedResult[i])
 	}
 
+}
+
+func BenchmarkFilter(b *testing.B) {
+	tests := []struct {
+		name   string
+		filter Filter
+		metric telegraf.Metric
+	}{
+		{
+			name:   "empty filter",
+			filter: Filter{},
+			metric: testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		},
+		{
+			name: "namepass",
+			filter: Filter{
+				NamePass: []string{"cpu"},
+			},
+			metric: testutil.MustMetric("cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42,
+				},
+				time.Unix(0, 0),
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		b.Run(tt.name, func(b *testing.B) {
+			require.NoError(b, tt.filter.Compile())
+			for n := 0; n < b.N; n++ {
+				tt.filter.Select(tt.metric)
+			}
+		})
+	}
 }

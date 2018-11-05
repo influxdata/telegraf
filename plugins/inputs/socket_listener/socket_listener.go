@@ -2,6 +2,7 @@ package socket_listener
 
 import (
 	"bufio"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -9,10 +10,7 @@ import (
 	"os"
 	"strings"
 	"sync"
-
 	"time"
-
-	"crypto/tls"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -120,7 +118,7 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 			continue
 		}
 		for _, m := range metrics {
-			ssl.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+			ssl.AddMetric(m)
 		}
 	}
 
@@ -156,7 +154,7 @@ func (psl *packetSocketListener) listen() {
 			continue
 		}
 		for _, m := range metrics {
-			psl.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
+			psl.AddMetric(m)
 		}
 	}
 }

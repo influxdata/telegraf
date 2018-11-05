@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,17 +67,13 @@ func TestMakeMetricWithPluginTags(t *testing.T) {
 		},
 	})
 
-	ri.SetTrace(true)
-	assert.Equal(t, true, ri.Trace())
-
-	m, err := metric.New("RITest",
+	m := testutil.MustMetric("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
 		now,
 		telegraf.Untyped)
-	require.NoError(t, err)
 	m = ri.MakeMetric(m)
 
 	expected, err := metric.New("RITest",
@@ -102,8 +99,6 @@ func TestMakeMetricFilteredOut(t *testing.T) {
 		Filter: Filter{NamePass: []string{"foobar"}},
 	})
 
-	ri.SetTrace(true)
-	assert.Equal(t, true, ri.Trace())
 	assert.NoError(t, ri.Config.Filter.Compile())
 
 	m, err := metric.New("RITest",
@@ -127,17 +122,13 @@ func TestMakeMetricWithDaemonTags(t *testing.T) {
 		"foo": "bar",
 	})
 
-	ri.SetTrace(true)
-	assert.Equal(t, true, ri.Trace())
-
-	m, err := metric.New("RITest",
+	m := testutil.MustMetric("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
 		now,
 		telegraf.Untyped)
-	require.NoError(t, err)
 	m = ri.MakeMetric(m)
 	expected, err := metric.New("RITest",
 		map[string]string{

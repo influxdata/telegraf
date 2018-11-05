@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/require"
 )
@@ -41,20 +41,6 @@ func TagProcessor(key, value string) *MockProcessor {
 	}
 }
 
-func Metric(
-	name string,
-	tags map[string]string,
-	fields map[string]interface{},
-	tm time.Time,
-	tp ...telegraf.ValueType,
-) telegraf.Metric {
-	m, err := metric.New(name, tags, fields, tm, tp...)
-	if err != nil {
-		panic(err)
-	}
-	return m
-}
-
 func TestRunningProcessor_Apply(t *testing.T) {
 	type args struct {
 		Processor telegraf.Processor
@@ -76,7 +62,7 @@ func TestRunningProcessor_Apply(t *testing.T) {
 				},
 			},
 			input: []telegraf.Metric{
-				Metric(
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -86,7 +72,7 @@ func TestRunningProcessor_Apply(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				Metric(
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{
 						"apply": "true",
@@ -109,7 +95,7 @@ func TestRunningProcessor_Apply(t *testing.T) {
 				},
 			},
 			input: []telegraf.Metric{
-				Metric(
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -119,7 +105,7 @@ func TestRunningProcessor_Apply(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				Metric(
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{
 						"apply": "true",
@@ -142,7 +128,7 @@ func TestRunningProcessor_Apply(t *testing.T) {
 				},
 			},
 			input: []telegraf.Metric{
-				Metric(
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
@@ -152,7 +138,7 @@ func TestRunningProcessor_Apply(t *testing.T) {
 				),
 			},
 			expected: []telegraf.Metric{
-				Metric(
+				testutil.MustMetric(
 					"cpu",
 					map[string]string{},
 					map[string]interface{}{
