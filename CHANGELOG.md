@@ -40,6 +40,7 @@
 - [#3847](https://github.com/influxdata/telegraf/pull/3847): Add wireless input plugin.
 - [#4934](https://github.com/influxdata/telegraf/pull/4934): Add LUN to datasource translation in vsphere input.
 - [#4798](https://github.com/influxdata/telegraf/pull/4798): Allow connecting to prometheus via unix socket.
+- [#4920](https://github.com/influxdata/telegraf/pull/4920): Add scraping for Prometheus endpoint in Kubernetes.
 
 #### Bugfixes
 
