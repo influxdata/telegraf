@@ -81,6 +81,6 @@ type TrackingAccumulator interface {
 	// processed.
 	AddTrackingMetricGroup(group []Metric) TrackingID
 
-	// Results returns a channel that will contain the tracking results.
+	// Delivered returns a channel that will contain the tracking results.
 	Delivered() <-chan DeliveryInfo
 }
