@@ -32,7 +32,7 @@ type Procstat struct {
 	SystemdUnit string
 	CGroup      string `toml:"cgroup"`
 	PidTag      bool
-	WinService  string `tom:"win_service"`
+	WinService  string `toml:"win_service"`
 
 	finder PIDFinder
 
@@ -281,7 +281,6 @@ func (p *Procstat) updateProcesses(acc telegraf.Accumulator, prevInfo map[PID]Pr
 
 // Create and return PIDGatherer lazily
 func (p *Procstat) getPIDFinder() (PIDFinder, error) {
-
 	if p.finder == nil {
 		f, err := p.createPIDFinder()
 		if err != nil {

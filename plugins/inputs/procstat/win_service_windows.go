@@ -25,7 +25,6 @@ func getService(name string) (*mgr.Service, error) {
 }
 
 func queryPidWithWinServiceName(winServiceName string) (uint32, error) {
-
 	srv, err := getService(winServiceName)
 	if err != nil {
 		return 0, err
