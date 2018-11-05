@@ -7,6 +7,8 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -589,7 +591,12 @@ func (c *Config) LoadConfig(path string) error {
 			return err
 		}
 	}
-	tbl, err := parseFile(path)
+	data, err := loadConfig(path)
+	if err != nil {
+		return fmt.Errorf("Error loading %s, %s", path, err)
+	}
+
+	tbl, err := parseConfig(data)
 	if err != nil {
 		return fmt.Errorf("Error parsing %s, %s", path, err)
 	}
@@ -736,15 +743,43 @@ func escapeEnv(value string) string {
 	return envVarEscaper.Replace(value)
 }
 
-// parseFile loads a TOML configuration from a provided path and
-// returns the AST produced from the TOML parser. When loading the file, it
-// will find environment variables and replace them.
-func parseFile(fpath string) (*ast.Table, error) {
-	contents, err := ioutil.ReadFile(fpath)
+func loadConfig(config string) ([]byte, error) {
+	u, err := url.Parse(config)
 	if err != nil {
 		return nil, err
 	}
-	// ugh windows why
+
+	switch u.Scheme {
+	case "https": // http not permitted
+		return fetchConfig(u)
+	default:
+		// If it isn't a https scheme, try it as a file.
+	}
+	return ioutil.ReadFile(config)
+
+}
+
+func fetchConfig(u *url.URL) ([]byte, error) {
+	v := os.Getenv("INFLUX_TOKEN")
+
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", "Token "+v)
+	req.Header.Add("Accept", "application/toml")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return ioutil.ReadAll(resp.Body)
+}
+
+// parseConfig loads a TOML configuration from a provided path and
+// returns the AST produced from the TOML parser. When loading the file, it
+// will find environment variables and replace them.
+func parseConfig(contents []byte) (*ast.Table, error) {
 	contents = trimBOM(contents)
 
 	env_vars := envVarRe.FindAll(contents, -1)
