@@ -56,7 +56,6 @@ func (p *Prometheus) start(ctx context.Context) error {
 	}
 
 	p.wg = sync.WaitGroup{}
-	in := make(chan payload)
 
 	p.wg.Add(1)
 	go func() {
@@ -64,11 +63,11 @@ func (p *Prometheus) start(ctx context.Context) error {
 		for {
 			select {
 			case <-ctx.Done():
-				break
+				return
 			case <-time.After(time.Second):
-				err := p.watch(ctx, client, in)
-				if err == nil {
-					break
+				err := p.watch(ctx, client)
+				if err != nil {
+					log.Printf("E! [inputs.prometheus] unable to watch resources: %v", err)
 				}
 			}
 		}
@@ -77,11 +76,10 @@ func (p *Prometheus) start(ctx context.Context) error {
 	return nil
 }
 
-func (p *Prometheus) watch(ctx context.Context, client *k8s.Client, in chan payload) error {
+func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 	pod := &corev1.Pod{}
 	watcher, err := client.Watch(ctx, "", &corev1.Pod{})
 	if err != nil {
-		log.Printf("E! [inputs.prometheus] unable to watch resources: %v", err)
 		return err
 	}
 	defer watcher.Close()
@@ -95,7 +93,6 @@ func (p *Prometheus) watch(ctx context.Context, client *k8s.Client, in chan payl
 			// An error here means we need to reconnect the watcher.
 			eventType, err := watcher.Next(pod)
 			if err != nil {
-				log.Printf("D! [inputs.prometheus] unable to watch next: %v", err)
 				return err
 			}
 
