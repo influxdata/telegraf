@@ -377,6 +377,24 @@
   version = "v1.1.1"
 
 [[projects]]
+  digest = "1:99a0607f79d36202b64b674c0464781549917cfc4bfb88037aaa98b31e124a18"
+  name = "github.com/ericchiang/k8s"
+  packages = [
+    ".",
+    "apis/apiextensions/v1beta1",
+    "apis/core/v1",
+    "apis/meta/v1",
+    "apis/resource",
+    "runtime",
+    "runtime/schema",
+    "util/intstr",
+    "watch/versioned",
+  ]
+  pruneopts = ""
+  revision = "d1bbc0cffaf9849ddcae7b9efffae33e2dd52e9a"
+  version = "v1.2.0"
+
+[[projects]]
   digest = "1:858b7fe7b0f4bc7ef9953926828f2816ea52d01a88d72d1c45bc8c108f23c356"
   name = "github.com/go-ini/ini"
   packages = ["."]
@@ -1154,7 +1172,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b697592485cb412be4188c08ca0beed9aab87f36b86418e21acc4a3998f63734"
+  digest = "0:"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
@@ -1235,7 +1253,7 @@
   revision = "19ff8768a5c0b8e46ea281065664787eefc24121"
 
 [[projects]]
-  digest = "1:c1771ca6060335f9768dff6558108bc5ef6c58506821ad43377ee23ff059e472"
+  digest = "0:"
   name = "google.golang.org/appengine"
   packages = [
     ".",
@@ -1439,6 +1457,9 @@
     "github.com/docker/docker/client",
     "github.com/docker/libnetwork/ipvs",
     "github.com/eclipse/paho.mqtt.golang",
+    "github.com/ericchiang/k8s",
+    "github.com/ericchiang/k8s/apis/core/v1",
+    "github.com/ericchiang/k8s/apis/meta/v1",
     "github.com/go-logfmt/logfmt",
     "github.com/go-redis/redis",
     "github.com/go-sql-driver/mysql",

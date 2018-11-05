@@ -1,6 +1,7 @@
 package prometheus
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -26,6 +27,9 @@ type Prometheus struct {
 	// An array of Kubernetes services to scrape metrics from.
 	KubernetesServices []string
 
+	// Location of kubernetes config file
+	KubeConfig string
+
 	// Bearer Token authorization file path
 	BearerToken string `toml:"bearer_token"`
 
@@ -34,6 +38,13 @@ type Prometheus struct {
 	tls.ClientConfig
 
 	client *http.Client
+
+	// Should we scrape Kubernetes services for prometheus annotations
+	MonitorPods    bool `toml:"monitor_kubernetes_pods"`
+	lock           sync.Mutex
+	kubernetesPods []URLAndAddress
+	cancel         context.CancelFunc
+	wg             sync.WaitGroup
 }
 
 var sampleConfig = `
@@ -42,6 +53,17 @@ var sampleConfig = `
 
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
+
+  ## Kubernetes config file to create client from.
+  # kube_config = "/path/to/kubernetes.config"
+
+  ## Scrape Kubernetes pods for the following prometheus annotations:
+  ## - prometheus.io/scrape: Enable scraping for this pod
+  ## - prometheus.io/scheme: If the metrics endpoint is secured then you will need to
+  ##     set this to 'https' & most likely set the tls config.
+  ## - prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
+  ## - prometheus.io/port: If port is not 9102 use this annotation
+  # monitor_kubernetes_pods = true
 
   ## Use bearer token for authorization
   # bearer_token = /path/to/bearer/token
@@ -90,6 +112,7 @@ type URLAndAddress struct {
 	OriginalURL *url.URL
 	URL         *url.URL
 	Address     string
+	Tags        map[string]string
 }
 
 func (p *Prometheus) GetAllURLs() ([]URLAndAddress, error) {
@@ -97,20 +120,26 @@ func (p *Prometheus) GetAllURLs() ([]URLAndAddress, error) {
 	for _, u := range p.URLs {
 		URL, err := url.Parse(u)
 		if err != nil {
-			log.Printf("prometheus: Could not parse %s, skipping it. Error: %s", u, err)
+			log.Printf("prometheus: Could not parse %s, skipping it. Error: %s", u, err.Error())
 			continue
 		}
 
 		allURLs = append(allURLs, URLAndAddress{URL: URL, OriginalURL: URL})
 	}
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	// loop through all pods scraped via the prometheus annotation on the pods
+	allURLs = append(allURLs, p.kubernetesPods...)
+
 	for _, service := range p.KubernetesServices {
 		URL, err := url.Parse(service)
 		if err != nil {
 			return nil, err
 		}
+
 		resolvedAddresses, err := net.LookupHost(URL.Hostname())
 		if err != nil {
-			log.Printf("prometheus: Could not resolve %s, skipping it. Error: %s", URL.Host, err)
+			log.Printf("prometheus: Could not resolve %s, skipping it. Error: %s", URL.Host, err.Error())
 			continue
 		}
 		for _, resolved := range resolvedAddresses {
@@ -244,6 +273,9 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		if u.Address != "" {
 			tags["address"] = u.Address
 		}
+		for k, v := range u.Tags {
+			tags[k] = v
+		}
 
 		switch metric.Type() {
 		case telegraf.Counter:
@@ -260,6 +292,21 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	}
 
 	return nil
+}
+
+// Start will start the Kubernetes scraping if enabled in the configuration
+func (p *Prometheus) Start(a telegraf.Accumulator) error {
+	if p.MonitorPods {
+		var ctx context.Context
+		ctx, p.cancel = context.WithCancel(context.Background())
+		return p.start(ctx)
+	}
+	return nil
+}
+
+func (p *Prometheus) Stop() {
+	p.cancel()
+	p.wg.Wait()
 }
 
 func init() {
