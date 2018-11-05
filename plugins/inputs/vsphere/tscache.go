@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+// TSCache is a cache of timestamps used to determine the validity of datapoints
 type TSCache struct {
 	ttl   time.Duration
 	table map[string]time.Time
@@ -13,6 +14,7 @@ type TSCache struct {
 	mux   sync.RWMutex
 }
 
+// NewTSCache creates a new TSCache with a specified time-to-live after which timestamps are discarded.
 func NewTSCache(ttl time.Duration) *TSCache {
 	t := &TSCache{
 		ttl:   ttl,
@@ -47,6 +49,8 @@ func (t *TSCache) purge() {
 	log.Printf("D! [input.vsphere] Purged timestamp cache. %d deleted with %d remaining", n, len(t.table))
 }
 
+// IsNew returns true if the supplied timestamp for the supplied key is more recent than the
+// timestamp we have on record.
 func (t *TSCache) IsNew(key string, tm time.Time) bool {
 	t.mux.RLock()
 	defer t.mux.RUnlock()
@@ -57,12 +61,14 @@ func (t *TSCache) IsNew(key string, tm time.Time) bool {
 	return !tm.Before(v)
 }
 
+// Put updates the latest timestamp for the supplied key.
 func (t *TSCache) Put(key string, time time.Time) {
 	t.mux.Lock()
 	defer t.mux.Unlock()
 	t.table[key] = time
 }
 
+// Destroy shuts down the purging goroutine.
 func (t *TSCache) Destroy() {
 	close(t.done)
 }
