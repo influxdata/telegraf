@@ -50,6 +50,11 @@ Telegraf requires golang version 1.9 or newer, the Makefile requires GNU make.
    make
    ```
 
+### Changelog
+
+View the [changelog](/CHANGELOG.md) for the latest updates and changes by
+version.
+
 ### Nightly Builds
 
 These builds are generated from the master branch:

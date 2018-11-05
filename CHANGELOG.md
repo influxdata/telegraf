@@ -8,6 +8,16 @@
   transfer of metrics in any format via HTTP, it is recommended to use
   `http_listener_v2` instead.
 
+- Input plugins are no longer limited from adding metrics when the output is
+  writing, and new metrics will move into the metric buffer as needed.  This
+  will provide more robust degradation and recovery when writing to a slow
+  output at high throughput.
+
+  To avoid over consumption when reading from queue consumers: `kafka_consumer`,
+  `amqp_consumer`, `mqtt_consumer`, `nats_consumer`, and `nsq_consumer` use
+  the new option `max_undelivered_messages` to limit the number of outstanding
+  unwritten metrics.
+
 #### New Inputs
 
 - [http_listener_v2](/plugins/inputs/http_listener_v2/README.md) - Contributed by @jul1u5
@@ -41,10 +51,14 @@
 - [#4934](https://github.com/influxdata/telegraf/pull/4934): Add LUN to datasource translation in vsphere input.
 - [#4798](https://github.com/influxdata/telegraf/pull/4798): Allow connecting to prometheus via unix socket.
 - [#4920](https://github.com/influxdata/telegraf/pull/4920): Add scraping for Prometheus endpoint in Kubernetes.
+- [#4938](https://github.com/influxdata/telegraf/pull/4938): Add per output flush_interval, metric_buffer_limit and metric_batch_size.
 
 #### Bugfixes
 
 - [#4950](https://github.com/influxdata/telegraf/pull/4950): Remove the time_key from the field values in JSON parser.
+- [#3968](https://github.com/influxdata/telegraf/issues/3968): Fix input time rounding when using a custom interval.
+- [#4938](https://github.com/influxdata/telegraf/pull/4938): Fix potential deadlock or leaked resources on restart/reload.
+- [#2919](https://github.com/influxdata/telegraf/pull/2919): Fix outputs block inputs when batch size is reached.
 
 ## v1.8.3 [2018-10-30]
 
