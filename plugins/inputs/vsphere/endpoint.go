@@ -816,7 +816,7 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 				// Since non-realtime metrics are queries with a lookback, we need to check the high-water mark
 				// to determine if this should be included. Only samples not seen before should be included.
 				if !(res.realTime || e.hwMarks.IsNew(tsKey, ts)) {
-					log.Printf("D! [input.vsphere] Skipped %s for %s because we've already seen it", name, ts)
+					//log.Printf("D! [input.vsphere] Skipped %s for %s because we've already seen it", name, ts)
 					continue
 				}
 				value := v.Value[idx]
