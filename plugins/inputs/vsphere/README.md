@@ -159,7 +159,7 @@ vm_metric_exclude = [ "*" ]
   # object_discovery_interval = "300s"
 
   ## timeout applies to any of the api request made to vcenter
-  # timeout = "20s"
+  # timeout = "60s"
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"

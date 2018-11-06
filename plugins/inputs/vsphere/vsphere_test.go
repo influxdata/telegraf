@@ -15,7 +15,9 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/require"
+	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/simulator"
+	"github.com/vmware/govmomi/vim25/types"
 )
 
 var configHeader = `
@@ -187,8 +189,6 @@ func createSim() (*simulator.Model, *simulator.Server, error) {
 	model.Service.TLS = new(tls.Config)
 
 	s := model.Service.NewServer()
-	//fmt.Printf("Server created at: %s\n", s.URL)
-
 	return model, s, nil
 }
 
@@ -244,11 +244,49 @@ func TestTimeout(t *testing.T) {
 	v.Timeout = internal.Duration{Duration: 1 * time.Nanosecond}
 	require.NoError(t, v.Start(nil)) // We're not using the Accumulator, so it can be nil.
 	defer v.Stop()
-	require.NoError(t, v.Gather(&acc))
+	err = v.Gather(&acc)
+	require.NotNil(t, err, "Error should not be nil here")
 
 	// The accumulator must contain exactly one error and it must be a deadline exceeded.
 	require.Equal(t, 1, len(acc.Errors))
 	require.True(t, strings.Contains(acc.Errors[0].Error(), "context deadline exceeded"))
+}
+
+func TestMaxQuery(t *testing.T) {
+	m, s, err := createSim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Remove()
+	defer s.Close()
+
+	v := defaultVSphere()
+	v.MaxQueryMetrics = 256
+	ctx := context.Background()
+	c, err := NewClient(ctx, s.URL, v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	require.Equal(t, 256, v.MaxQueryMetrics)
+
+	om := object.NewOptionManager(c.Client.Client, *c.Client.Client.ServiceContent.Setting)
+	err = om.Update(ctx, []types.BaseOptionValue{&types.OptionValue{
+		Key:   "config.vpxd.stats.maxQueryMetrics",
+		Value: "42",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	v.MaxQueryMetrics = 256
+	ctx = context.Background()
+	c2, err := NewClient(ctx, s.URL, v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	require.Equal(t, 42, v.MaxQueryMetrics)
+	c.close()
+	c2.close()
 }
 
 func TestAll(t *testing.T) {

@@ -192,7 +192,7 @@ var sampleConfig = `
   # object_discovery_interval = "300s"
 
   ## timeout applies to any of the api request made to vcenter
-  # timeout = "20s"
+  # timeout = "60s"
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
@@ -260,6 +260,7 @@ func (v *VSphere) Stop() {
 // Gather is the main data collection function called by the Telegraf core. It performs all
 // the data collection and writes all metrics into the Accumulator passed as an argument.
 func (v *VSphere) Gather(acc telegraf.Accumulator) error {
+	merr := make(multiError, 0)
 	var wg sync.WaitGroup
 	for _, ep := range v.endpoints {
 		wg.Add(1)
@@ -273,11 +274,15 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 			}
 			if err != nil {
 				acc.AddError(err)
+				merr = append(merr, err)
 			}
 		}(ep)
 	}
 
 	wg.Wait()
+	if len(merr) > 0 {
+		return merr
+	}
 	return nil
 }
 
@@ -306,7 +311,7 @@ func init() {
 			DiscoverConcurrency:     1,
 			ForceDiscoverOnInit:     false,
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
-			Timeout:                 internal.Duration{Duration: time.Second * 20},
+			Timeout:                 internal.Duration{Duration: time.Second * 60},
 		}
 	})
 }
