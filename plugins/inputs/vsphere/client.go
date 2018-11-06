@@ -5,10 +5,13 @@ import (
 	"crypto/tls"
 	"log"
 	"net/url"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/vmware/govmomi"
+	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/performance"
 	"github.com/vmware/govmomi/session"
 	"github.com/vmware/govmomi/view"
@@ -16,6 +19,10 @@ import (
 	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/soap"
 )
+
+// The highest number of metrics we can query for, no matter what settings
+// and server say.
+const absoluteMaxMetrics = 10000
 
 // ClientFactory is used to obtain Clients to be used throughout the plugin. Typically,
 // a single Client is reused across all functions and goroutines, but the client
@@ -79,6 +86,8 @@ func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 // NewClient creates a new vSphere client based on the url and setting passed as parameters.
 func NewClient(ctx context.Context, u *url.URL, vs *VSphere) (*Client, error) {
 	sw := NewStopwatch("connect", u.Host)
+	defer sw.Stop()
+
 	tlsCfg, err := vs.ClientConfig.TLSConfig()
 	if err != nil {
 		return nil, err
@@ -147,16 +156,27 @@ func NewClient(ctx context.Context, u *url.URL, vs *VSphere) (*Client, error) {
 
 	p := performance.NewManager(c.Client)
 
-	sw.Stop()
-
-	return &Client{
+	client := &Client{
 		Client:  c,
 		Views:   m,
 		Root:    v,
 		Perf:    p,
 		Valid:   true,
 		Timeout: vs.Timeout.Duration,
-	}, nil
+	}
+	// Adjust max query size if needed
+	ctx3, cancel3 := context.WithTimeout(ctx, vs.Timeout.Duration)
+	defer cancel3()
+	n, err := client.GetMaxQueryMetrics(ctx3)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("D! [input.vsphere] vCenter says max_query_metrics should be %d", n)
+	if n < vs.MaxQueryMetrics {
+		log.Printf("W! [input.vsphere] Configured max_query_metrics is %d, but server limits it to %d. Reducing.", vs.MaxQueryMetrics, n)
+		vs.MaxQueryMetrics = n
+	}
+	return client, nil
 }
 
 // Close shuts down a ClientFactory and releases any resources associated with it.
@@ -190,4 +210,48 @@ func (c *Client) GetServerTime(ctx context.Context) (time.Time, error) {
 		return time.Time{}, err
 	}
 	return *t, nil
+}
+
+// GetMaxQueryMetrics returns the max_query_metrics setting as configured in vCenter
+func (c *Client) GetMaxQueryMetrics(ctx context.Context) (int, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
+	defer cancel()
+
+	om := object.NewOptionManager(c.Client.Client, *c.Client.Client.ServiceContent.Setting)
+	res, err := om.Query(ctx, "config.vpxd.stats.maxQueryMetrics")
+	if err == nil {
+		if len(res) > 0 {
+			if s, ok := res[0].GetOptionValue().Value.(string); ok {
+				v, err := strconv.Atoi(s)
+				if err == nil {
+					log.Printf("D! [input.vsphere] vCenter maxQueryMetrics is defined: %d", v)
+					if v == -1 {
+						// Whatever the server says, we never ask for more metrics than this.
+						return absoluteMaxMetrics, nil
+					}
+					return v, nil
+				}
+			}
+			// Fall through version-based inference if value isn't usable
+		}
+	} else {
+		log.Println("I! [input.vsphere] Option query for maxQueryMetrics failed. Using default")
+	}
+
+	// No usable maxQueryMetrics setting. Infer based on version
+	ver := c.Client.Client.ServiceContent.About.Version
+	parts := strings.Split(ver, ".")
+	if len(parts) < 2 {
+		log.Printf("W! [input.vsphere] vCenter returned an invalid version string: %s. Using default query size=64", ver)
+		return 64, nil
+	}
+	log.Printf("D! [input.vsphere] vCenter version is: %s", ver)
+	major, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, err
+	}
+	if major < 6 || major == 6 && parts[1] == "0" {
+		return 64, nil
+	}
+	return 256, nil
 }
