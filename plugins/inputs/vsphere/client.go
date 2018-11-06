@@ -214,7 +214,7 @@ func (c *Client) GetServerTime(ctx context.Context) (time.Time, error) {
 
 // GetMaxQueryMetrics returns the max_query_metrics setting as configured in vCenter
 func (c *Client) GetMaxQueryMetrics(ctx context.Context) (int, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), c.Timeout)
+	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
 	defer cancel()
 
 	om := object.NewOptionManager(c.Client.Client, *c.Client.Client.ServiceContent.Setting)
