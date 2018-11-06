@@ -592,7 +592,7 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 
 func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, now time.Time, latest time.Time) {
 	maxMetrics := e.Parent.MaxQueryMetrics
-	if maxMetrics == 0 {
+	if maxMetrics < 1 {
 		maxMetrics = 1
 	}
 
