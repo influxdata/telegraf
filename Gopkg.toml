@@ -245,3 +245,11 @@
 [[override]]
   name = "github.com/vishvananda/netlink"
   revision = "b2de5d10e38ecce8607e6b438b6d174f389a004e"
+
+[[constraint]]
+  name = "github.com/aliyun/alibaba-cloud-sdk-go"
+  version = "1.35.1"
+
+[[override]]
+  name = "github.com/jmespath/go-jmespath"
+  revision = "0b12d6b5"

@@ -133,6 +133,7 @@ For documentation on the latest development code see the [documentation index][d
 
 * [activemq](./plugins/inputs/activemq)
 * [aerospike](./plugins/inputs/aerospike)
+* [aliyuncms](./plugins/inputs/aliyuncms)
 * [amqp_consumer](./plugins/inputs/amqp_consumer) (rabbitmq)
 * [apache](./plugins/inputs/apache)
 * [aurora](./plugins/inputs/aurora)

@@ -131,6 +131,26 @@
   revision = "2efee857e7cfd4f3d0138cc3cbb1b4966962b93a"
 
 [[projects]]
+  digest = "1:775200d022b9878eb3060c0316ea72993511377bfaa202458ed42fb0c8358349"
+  name = "github.com/aliyun/alibaba-cloud-sdk-go"
+  packages = [
+    "sdk",
+    "sdk/auth",
+    "sdk/auth/credentials",
+    "sdk/auth/credentials/providers",
+    "sdk/auth/signers",
+    "sdk/endpoints",
+    "sdk/errors",
+    "sdk/requests",
+    "sdk/responses",
+    "sdk/utils",
+    "services/cms",
+  ]
+  pruneopts = ""
+  revision = "37fea6e641f09c8cc1c259eb43ffa0277390a1ed"
+  version = "1.35.1"
+
+[[projects]]
   branch = "master"
   digest = "1:7f21a8f175ee7f91c659f919c61032e11889fba5dc25c0cec555087cbb87435a"
   name = "github.com/amir/raidman"
@@ -650,6 +670,14 @@
   revision = "0b12d6b5"
 
 [[projects]]
+  digest = "1:b79fc583e4dc7055ed86742e22164ac41bf8c0940722dbcb600f1a3ace1a8cb5"
+  name = "github.com/json-iterator/go"
+  packages = ["."]
+  pruneopts = ""
+  revision = "1624edc4454b8682399def8740d46db5e4362ba4"
+  version = "v1.1.5"
+
+[[projects]]
   branch = "master"
   digest = "1:2c5ad58492804c40bdaf5d92039b0cde8b5becd2b7feeb37d7d1cc36a8aa8dbe"
   name = "github.com/kardianos/osext"
@@ -725,6 +753,22 @@
   packages = ["."]
   pruneopts = ""
   revision = "f15292f7a699fcc1a38a80977f80a046874ba8ac"
+
+[[projects]]
+  digest = "1:0c0ff2a89c1bb0d01887e1dac043ad7efbf3ec77482ef058ac423d13497e16fd"
+  name = "github.com/modern-go/concurrent"
+  packages = ["."]
+  pruneopts = ""
+  revision = "bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94"
+  version = "1.0.3"
+
+[[projects]]
+  digest = "1:e32bdbdb7c377a07a9a46378290059822efdce5c8d96fe71940d87cb4f918855"
+  name = "github.com/modern-go/reflect2"
+  packages = ["."]
+  pruneopts = ""
+  revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
+  version = "1.0.1"
 
 [[projects]]
   digest = "1:ee2e62b00a9ccc2dba1525f93396e35c847f90f87939df6f361b86315ea5f69a"
@@ -1172,7 +1216,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "0:"
+  digest = "1:b697592485cb412be4188c08ca0beed9aab87f36b86418e21acc4a3998f63734"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
@@ -1253,7 +1297,7 @@
   revision = "19ff8768a5c0b8e46ea281065664787eefc24121"
 
 [[projects]]
-  digest = "0:"
+  digest = "1:c1771ca6060335f9768dff6558108bc5ef6c58506821ad43377ee23ff059e472"
   name = "google.golang.org/appengine"
   packages = [
     ".",
@@ -1436,6 +1480,9 @@
     "github.com/StackExchange/wmi",
     "github.com/aerospike/aerospike-client-go",
     "github.com/alecthomas/units",
+    "github.com/aliyun/alibaba-cloud-sdk-go/sdk",
+    "github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers",
+    "github.com/aliyun/alibaba-cloud-sdk-go/services/cms",
     "github.com/amir/raidman",
     "github.com/apache/thrift/lib/go/thrift",
     "github.com/aws/aws-sdk-go/aws",
