@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/influxdata/telegraf/plugins/serializers/newrelic"
 	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
 )
 
@@ -77,6 +78,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport)
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
+	case "newrelic":
+		serializer, err = NewNewrelicSerializer(config.TimestampUnits)
 	case "splunkmetric":
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting)
 	default:
@@ -87,6 +90,10 @@ func NewSerializer(config *Config) (Serializer, error) {
 
 func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return json.NewSerializer(timestampUnits)
+}
+
+func NewNewrelicSerializer(timestampUnits time.Duration) (Serializer, error) {
+	return newrelic.NewSerializer(timestampUnits)
 }
 
 func NewSplunkmetricSerializer(splunkmetric_hec_routing bool) (Serializer, error) {
