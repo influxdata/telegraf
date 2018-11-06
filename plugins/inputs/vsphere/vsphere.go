@@ -192,7 +192,7 @@ var sampleConfig = `
   # object_discovery_interval = "300s"
 
   ## timeout applies to any of the api request made to vcenter
-  # timeout = "20s"
+  # timeout = "60s"
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
@@ -281,7 +281,6 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 	if len(merr) > 0 {
-		log.Printf("E! [input.vsphere] Error during Gather: %s", merr)
 		return merr
 	}
 	return nil

@@ -551,7 +551,6 @@ func getDatastores(ctx context.Context, e *Endpoint, root *view.ContainerView) (
 // Close shuts down an Endpoint and releases any resources associated with it.
 func (e *Endpoint) Close() {
 	e.clientFactory.Close()
-	e.hwMarks.Destroy()
 }
 
 // Collect runs a round of data collections as specified in the configuration.
@@ -587,6 +586,9 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 			}
 		}
 	}
+
+	// Purge old timestamps from the cache
+	e.hwMarks.Purge()
 	return nil
 }
 
@@ -816,7 +818,6 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 				// Since non-realtime metrics are queries with a lookback, we need to check the high-water mark
 				// to determine if this should be included. Only samples not seen before should be included.
 				if !(res.realTime || e.hwMarks.IsNew(tsKey, ts)) {
-					//log.Printf("D! [input.vsphere] Skipped %s for %s because we've already seen it", name, ts)
 					continue
 				}
 				value := v.Value[idx]

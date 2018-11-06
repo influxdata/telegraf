@@ -22,7 +22,7 @@ import (
 
 // The highest number of metrics we can query for, no matter what settings
 // and server say.
-const absoluteMaxMetrics = 100000
+const absoluteMaxMetrics = 10000
 
 // ClientFactory is used to obtain Clients to be used throughout the plugin. Typically,
 // a single Client is reused across all functions and goroutines, but the client
@@ -233,15 +233,19 @@ func (c *Client) GetMaxQueryMetrics(ctx context.Context) (int, error) {
 				}
 			}
 			// Fall through version-based inference if value isn't usable
-			log.Println("W! [input.vsphere] Option query returned for maxQueryMetrics not usable. Using default")
 		}
 	} else {
 		log.Println("I! [input.vsphere] Option query for maxQueryMetrics failed. Using default")
 	}
 
 	// No usable maxQueryMetrics setting. Infer based on version
-	parts := strings.Split(c.Client.Client.ServiceContent.About.Version, ".")
-	log.Printf("D! [input.vsphere] vCenter version is: %s", c.Client.Client.ServiceContent.About.Version)
+	ver := c.Client.Client.ServiceContent.About.Version
+	parts := strings.Split(ver, ".")
+	if len(parts) < 2 {
+		log.Printf("W! [input.vsphere] vCenter returned an invalid version string: %s. Using default query size=64", ver)
+		return 64, nil
+	}
+	log.Printf("D! [input.vsphere] vCenter version is: %s", ver)
 	major, err := strconv.Atoi(parts[0])
 	if err != nil {
 		return 0, err

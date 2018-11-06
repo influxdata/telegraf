@@ -16,27 +16,15 @@ type TSCache struct {
 
 // NewTSCache creates a new TSCache with a specified time-to-live after which timestamps are discarded.
 func NewTSCache(ttl time.Duration) *TSCache {
-	t := &TSCache{
+	return &TSCache{
 		ttl:   ttl,
 		table: make(map[string]time.Time),
 		done:  make(chan struct{}),
 	}
-	go func(t *TSCache) {
-		tick := time.NewTicker(time.Minute)
-		defer tick.Stop()
-		for {
-			select {
-			case <-t.done:
-				return
-			case <-tick.C:
-				t.purge()
-			}
-		}
-	}(t)
-	return t
 }
 
-func (t *TSCache) purge() {
+// Purge removes timestamps that are older than the time-to-live
+func (t *TSCache) Purge() {
 	t.mux.Lock()
 	defer t.mux.Unlock()
 	n := 0
@@ -66,9 +54,4 @@ func (t *TSCache) Put(key string, time time.Time) {
 	t.mux.Lock()
 	defer t.mux.Unlock()
 	t.table[key] = time
-}
-
-// Destroy shuts down the purging goroutine.
-func (t *TSCache) Destroy() {
-	close(t.done)
 }
