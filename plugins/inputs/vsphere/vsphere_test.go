@@ -244,7 +244,8 @@ func TestTimeout(t *testing.T) {
 	v.Timeout = internal.Duration{Duration: 1 * time.Nanosecond}
 	require.NoError(t, v.Start(nil)) // We're not using the Accumulator, so it can be nil.
 	defer v.Stop()
-	require.NoError(t, v.Gather(&acc))
+	err = v.Gather(&acc)
+	require.NotNil(t, err, "Error should not be nil here")
 
 	// The accumulator must contain exactly one error and it must be a deadline exceeded.
 	require.Equal(t, 1, len(acc.Errors))
