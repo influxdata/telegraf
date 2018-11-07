@@ -13,7 +13,6 @@ For an introduction to AMQP see:
 The following defaults are known to work with RabbitMQ:
 
 ```toml
-# AMQP consumer plugin
 [[inputs.amqp_consumer]]
   ## Broker to consume from.
   ##   deprecated in 1.7; use the brokers option
@@ -46,15 +45,25 @@ The following defaults are known to work with RabbitMQ:
 
   ## AMQP queue name
   queue = "telegraf"
-  
+
   ## AMQP queue durability can be "transient" or "durable".
   queue_durability = "durable"
-  
+
   ## Binding Key
   binding_key = "#"
 
   ## Maximum number of messages server should give to the worker.
   # prefetch_count = 50
+
+  ## Maximum messages to read from the broker that have not been written by an
+  ## output.  For best throughput set based on the number of metrics within
+  ## each message and the size of the output's metric_batch_size.
+  ##
+  ## For example, if each message from the queue contains 10 metrics and the
+  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
+  ## full batch is collected and the write is triggered immediately without
+  ## waiting until the next flush_interval.
+  # max_undelivered_messages = 1000
 
   ## Auth method. PLAIN and EXTERNAL are supported
   ## Using EXTERNAL requires enabling the rabbitmq_auth_mechanism_ssl plugin as
