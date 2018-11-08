@@ -73,6 +73,10 @@ func (a *Accumulator) AddFields(
 		return
 	}
 
+	if len(fields) == 0 {
+		return
+	}
+
 	tagsCopy := map[string]string{}
 	for k, v := range tags {
 		tagsCopy[k] = v
@@ -81,10 +85,6 @@ func (a *Accumulator) AddFields(
 	fieldsCopy := map[string]interface{}{}
 	for k, v := range fields {
 		fieldsCopy[k] = v
-	}
-
-	if len(fields) == 0 {
-		return
 	}
 
 	var t time.Time
