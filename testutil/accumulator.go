@@ -104,7 +104,7 @@ func (a *Accumulator) AddFields(
 
 	p := &Metric{
 		Measurement: measurement,
-		Fields:      fields,
+		Fields:      fieldsCopy,
 		Tags:        tagsCopy,
 		Time:        t,
 	}
