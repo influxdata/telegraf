@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/simulator"
+	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 )
 
@@ -304,42 +305,55 @@ func TestFinder(t *testing.T) {
 
 	f := Finder{c}
 
-	objs, err := f.Find(ctx, "Datacenter", "/DC0")
+	dc := []mo.Datacenter{}
+	err = f.Find(ctx, "Datacenter", "/DC0", &dc)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(objs))
-	require.Equal(t, "Datacenter:datacenter-2", objs[0].Reference().String())
+	require.Equal(t, 1, len(dc))
+	require.Equal(t, "DC0", dc[0].Name)
 
-	objs, err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_H0/DC0_H0")
+	host := []mo.HostSystem{}
+	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_H0/DC0_H0", &host)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(objs))
-	require.Equal(t, "HostSystem:host-19", objs[0].Reference().String())
+	require.Equal(t, 1, len(host))
+	require.Equal(t, "DC0_H0", host[0].Name)
 
-	objs, err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_C0/DC0_C0_H0")
+	host = []mo.HostSystem{}
+	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_C0/DC0_C0_H0", &host)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(objs))
-	require.Equal(t, "HostSystem:host-30", objs[0].Reference().String())
+	require.Equal(t, 1, len(host))
+	require.Equal(t, "DC0_C0_H0", host[0].Name)
 
-	objs, err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_C0/*")
+	host = []mo.HostSystem{}
+	err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_C0/*", &host)
 	require.NoError(t, err)
-	require.Equal(t, 3, len(objs))
+	require.Equal(t, 3, len(host))
 
-	objs, err = f.Find(ctx, "VirtualMachine", "/DC0/vm/DC0_H0_VM0")
+	vm := []mo.VirtualMachine{}
+	err = f.Find(ctx, "VirtualMachine", "/DC0/vm/DC0_H0_VM0", &vm)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(objs))
-	require.Equal(t, "VirtualMachine:vm-51", objs[0].Reference().String())
+	require.Equal(t, 1, len(dc))
+	require.Equal(t, "DC0_H0_VM0", vm[0].Name)
 
-	objs, err = f.Find(ctx, "VirtualMachine", "/DC0/*/DC0_H0_VM0")
+	vm = []mo.VirtualMachine{}
+	err = f.Find(ctx, "VirtualMachine", "/DC0/*/DC0_H0_VM0", &vm)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(objs))
-	require.Equal(t, "VirtualMachine:vm-51", objs[0].Reference().String())
+	require.Equal(t, 1, len(dc))
+	require.Equal(t, "DC0_H0_VM0", vm[0].Name)
 
-	objs, err = f.Find(ctx, "VirtualMachine", "/DC0/*/DC0_H0_*")
+	vm = []mo.VirtualMachine{}
+	err = f.Find(ctx, "VirtualMachine", "/DC0/*/DC0_H0_*", &vm)
 	require.NoError(t, err)
-	require.Equal(t, 2, len(objs))
+	require.Equal(t, 2, len(vm))
 
-	objs, err = f.Find(ctx, "VirtualMachine", "/DC0/**/DC0_H0_VM")
+	vm = []mo.VirtualMachine{}
+	err = f.Find(ctx, "VirtualMachine", "/DC0/**/DC0_H0_VM*", &vm)
 	require.NoError(t, err)
-	require.Equal(t, 2, len(objs))
+	require.Equal(t, 2, len(vm))
+
+	vm = []mo.VirtualMachine{}
+	err = f.Find(ctx, "VirtualMachine", "/DC0/**", &vm)
+	require.NoError(t, err)
+	require.Equal(t, 4, len(vm))
 }
 
 func TestAll(t *testing.T) {
