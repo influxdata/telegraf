@@ -289,6 +289,59 @@ func TestMaxQuery(t *testing.T) {
 	c2.close()
 }
 
+func TestFinder(t *testing.T) {
+	m, s, err := createSim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Remove()
+	defer s.Close()
+
+	v := defaultVSphere()
+	ctx := context.Background()
+
+	c, err := NewClient(ctx, s.URL, v)
+
+	f := Finder{c}
+
+	objs, err := f.Find(ctx, "Datacenter", "/DC0")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(objs))
+	require.Equal(t, "Datacenter:datacenter-2", objs[0].Reference().String())
+
+	objs, err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_H0/DC0_H0")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(objs))
+	require.Equal(t, "HostSystem:host-19", objs[0].Reference().String())
+
+	objs, err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_C0/DC0_C0_H0")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(objs))
+	require.Equal(t, "HostSystem:host-30", objs[0].Reference().String())
+
+	objs, err = f.Find(ctx, "HostSystem", "/DC0/host/DC0_C0/*")
+	require.NoError(t, err)
+	require.Equal(t, 3, len(objs))
+
+	objs, err = f.Find(ctx, "VirtualMachine", "/DC0/vm/DC0_H0_VM0")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(objs))
+	require.Equal(t, "VirtualMachine:vm-51", objs[0].Reference().String())
+
+	objs, err = f.Find(ctx, "VirtualMachine", "/DC0/*/DC0_H0_VM0")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(objs))
+	require.Equal(t, "VirtualMachine:vm-51", objs[0].Reference().String())
+
+	objs, err = f.Find(ctx, "VirtualMachine", "/DC0/*/DC0_H0_*")
+	require.NoError(t, err)
+	require.Equal(t, 2, len(objs))
+
+	objs, err = f.Find(ctx, "VirtualMachine", "/DC0/**/DC0_H0_VM")
+	require.NoError(t, err)
+	require.Equal(t, 2, len(objs))
+}
+
 func TestAll(t *testing.T) {
 	m, s, err := createSim()
 	if err != nil {
