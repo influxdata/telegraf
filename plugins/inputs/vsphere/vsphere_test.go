@@ -110,6 +110,7 @@ func defaultVSphere() *VSphere {
 			"mem.usage.*",
 			"mem.active.*"},
 		ClusterMetricExclude: nil,
+		ClusterInclude:       []string{"/**"},
 		HostMetricInclude: []string{
 			"cpu.ready.summation.delta.millisecond",
 			"cpu.latency.average.rate.percent",
@@ -147,6 +148,7 @@ func defaultVSphere() *VSphere {
 			"disk.kernelReadLatency.average.absolute.millisecond",
 			"disk.kernelWriteLatency.average.absolute.millisecond"},
 		HostMetricExclude: nil,
+		HostInclude:       []string{"/**"},
 		VMMetricInclude: []string{
 			"cpu.ready.summation.delta.millisecond",
 			"mem.swapinRate.average.rate.kiloBytesPerSecond",
@@ -166,11 +168,16 @@ func defaultVSphere() *VSphere {
 			"virtualDisk.read.average.rate.kiloBytesPerSecond",
 			"virtualDisk.write.average.rate.kiloBytesPerSecond"},
 		VMMetricExclude: nil,
+		VMInclude:       []string{"/**"},
 		DatastoreMetricInclude: []string{
 			"disk.used.*",
 			"disk.provsioned.*"},
-		DatastoreMetricExclude: nil,
-		ClientConfig:           itls.ClientConfig{InsecureSkipVerify: true},
+		DatastoreMetricExclude:  nil,
+		DatastoreInclude:        []string{"/**"},
+		DatacenterMetricInclude: nil,
+		DatacenterMetricExclude: nil,
+		DatacenterInclude:       []string{"/**"},
+		ClientConfig:            itls.ClientConfig{InsecureSkipVerify: true},
 
 		MaxQueryObjects:         256,
 		ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
@@ -335,6 +342,11 @@ func TestFinder(t *testing.T) {
 	require.Equal(t, "DC0_H0_VM0", vm[0].Name)
 
 	vm = []mo.VirtualMachine{}
+	err = f.Find(ctx, "VirtualMachine", "/DC0/vm/DC0_C0*", &vm)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(dc))
+
+	vm = []mo.VirtualMachine{}
 	err = f.Find(ctx, "VirtualMachine", "/DC0/*/DC0_H0_VM0", &vm)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(dc))
@@ -352,6 +364,31 @@ func TestFinder(t *testing.T) {
 
 	vm = []mo.VirtualMachine{}
 	err = f.Find(ctx, "VirtualMachine", "/DC0/**", &vm)
+	require.NoError(t, err)
+	require.Equal(t, 4, len(vm))
+
+	vm = []mo.VirtualMachine{}
+	err = f.Find(ctx, "VirtualMachine", "/**", &vm)
+	require.NoError(t, err)
+	require.Equal(t, 4, len(vm))
+
+	vm = []mo.VirtualMachine{}
+	err = f.Find(ctx, "VirtualMachine", "/**/DC0_H0_VM*", &vm)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(vm))
+
+	vm = []mo.VirtualMachine{}
+	err = f.Find(ctx, "VirtualMachine", "/**/vm/**", &vm)
+	require.NoError(t, err)
+	require.Equal(t, 4, len(vm))
+
+	vm = []mo.VirtualMachine{}
+	err = f.FindAll(ctx, "VirtualMachine", []string{"/DC0/vm/DC0_H0*", "/DC0/vm/DC0_C0*"}, &vm)
+	require.NoError(t, err)
+	require.Equal(t, 4, len(vm))
+
+	vm = []mo.VirtualMachine{}
+	err = f.FindAll(ctx, "VirtualMachine", []string{"/**"}, &vm)
 	require.NoError(t, err)
 	require.Equal(t, 4, len(vm))
 }

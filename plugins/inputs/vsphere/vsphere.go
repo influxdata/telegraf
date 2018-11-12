@@ -22,18 +22,23 @@ type VSphere struct {
 	DatacenterInstances     bool
 	DatacenterMetricInclude []string
 	DatacenterMetricExclude []string
+	DatacenterInclude       []string
 	ClusterInstances        bool
 	ClusterMetricInclude    []string
 	ClusterMetricExclude    []string
+	ClusterInclude          []string
 	HostInstances           bool
 	HostMetricInclude       []string
 	HostMetricExclude       []string
+	HostInclude             []string
 	VMInstances             bool     `toml:"vm_instances"`
 	VMMetricInclude         []string `toml:"vm_metric_include"`
 	VMMetricExclude         []string `toml:"vm_metric_exclude"`
+	VMInclude               []string `toml:"vm_include"`
 	DatastoreInstances      bool
 	DatastoreMetricInclude  []string
 	DatastoreMetricExclude  []string
+	DatastoreInclude        []string
 	Separator               string
 
 	MaxQueryObjects         int
@@ -291,19 +296,27 @@ func init() {
 		return &VSphere{
 			Vcenters: []string{},
 
-			ClusterInstances:       true,
-			ClusterMetricInclude:   nil,
-			ClusterMetricExclude:   nil,
-			HostInstances:          true,
-			HostMetricInclude:      nil,
-			HostMetricExclude:      nil,
-			VMInstances:            true,
-			VMMetricInclude:        nil,
-			VMMetricExclude:        nil,
-			DatastoreInstances:     false,
-			DatastoreMetricInclude: nil,
-			DatastoreMetricExclude: nil,
-			Separator:              "_",
+			DatacenterInstances:     true,
+			DatacenterMetricInclude: nil,
+			DatacenterMetricExclude: nil,
+			DatacenterInclude:       []string{"/*"},
+			ClusterInstances:        true,
+			ClusterMetricInclude:    nil,
+			ClusterMetricExclude:    nil,
+			ClusterInclude:          []string{"/*/host/**"},
+			HostInstances:           true,
+			HostMetricInclude:       nil,
+			HostMetricExclude:       nil,
+			HostInclude:             []string{"/*/host/**"},
+			VMInstances:             true,
+			VMMetricInclude:         nil,
+			VMMetricExclude:         nil,
+			VMInclude:               []string{"/*/vm/**"},
+			DatastoreInstances:      false,
+			DatastoreMetricInclude:  nil,
+			DatastoreMetricExclude:  nil,
+			DatastoreInclude:        []string{"/*/datastore/**"},
+			Separator:               "_",
 
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,

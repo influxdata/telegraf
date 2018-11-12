@@ -17,7 +17,6 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/performance"
-	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 )
@@ -45,6 +44,7 @@ type Endpoint struct {
 
 type resourceKind struct {
 	name             string
+	vcName           string
 	pKey             string
 	parentTag        string
 	enabled          bool
@@ -52,8 +52,9 @@ type resourceKind struct {
 	sampling         int32
 	objects          objectMap
 	filters          filter.Filter
+	paths            []string
 	collectInstances bool
-	getObjects       func(context.Context, *Endpoint, *view.ContainerView) (objectMap, error)
+	getObjects       func(context.Context, *Endpoint, *ResourceFilter) (objectMap, error)
 }
 
 type metricEntry struct {
@@ -109,6 +110,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 	e.resourceKinds = map[string]resourceKind{
 		"datacenter": {
 			name:             "datacenter",
+			vcName:           "Datacenter",
 			pKey:             "dcname",
 			parentTag:        "",
 			enabled:          anythingEnabled(parent.DatacenterMetricExclude),
@@ -116,11 +118,13 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			sampling:         300,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.DatacenterMetricInclude, parent.DatacenterMetricExclude),
+			paths:            parent.DatacenterInclude,
 			collectInstances: parent.DatacenterInstances,
 			getObjects:       getDatacenters,
 		},
 		"cluster": {
 			name:             "cluster",
+			vcName:           "ClusterComputeResource",
 			pKey:             "clustername",
 			parentTag:        "dcname",
 			enabled:          anythingEnabled(parent.ClusterMetricExclude),
@@ -128,11 +132,13 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			sampling:         300,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.ClusterMetricInclude, parent.ClusterMetricExclude),
+			paths:            parent.ClusterInclude,
 			collectInstances: parent.ClusterInstances,
 			getObjects:       getClusters,
 		},
 		"host": {
 			name:             "host",
+			vcName:           "HostSystem",
 			pKey:             "esxhostname",
 			parentTag:        "clustername",
 			enabled:          anythingEnabled(parent.HostMetricExclude),
@@ -140,11 +146,13 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			sampling:         20,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.HostMetricInclude, parent.HostMetricExclude),
+			paths:            parent.HostInclude,
 			collectInstances: parent.HostInstances,
 			getObjects:       getHosts,
 		},
 		"vm": {
 			name:             "vm",
+			vcName:           "VirtualMachine",
 			pKey:             "vmname",
 			parentTag:        "esxhostname",
 			enabled:          anythingEnabled(parent.VMMetricExclude),
@@ -152,17 +160,20 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			sampling:         20,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.VMMetricInclude, parent.VMMetricExclude),
+			paths:            parent.VMInclude,
 			collectInstances: parent.VMInstances,
 			getObjects:       getVMs,
 		},
 		"datastore": {
 			name:             "datastore",
+			vcName:           "Datastore",
 			pKey:             "dsname",
 			enabled:          anythingEnabled(parent.DatastoreMetricExclude),
 			realTime:         false,
 			sampling:         300,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
+			paths:            parent.DatastoreInclude,
 			collectInstances: parent.DatastoreInstances,
 			getObjects:       getDatastores,
 		},
@@ -359,7 +370,12 @@ func (e *Endpoint) discover(ctx context.Context) error {
 		log.Printf("D! [input.vsphere] Discovering resources for %s", res.name)
 		// Need to do this for all resource types even if they are not enabled
 		if res.enabled || k != "vm" {
-			objects, err := res.getObjects(ctx, e, client.Root)
+			rf := ResourceFilter{
+				finder:  &Finder{client},
+				resType: res.vcName,
+				paths:   res.paths}
+
+			objects, err := res.getObjects(ctx, e, &rf)
 			if err != nil {
 				return err
 			}
@@ -437,11 +453,11 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	return nil
 }
 
-func getDatacenters(ctx context.Context, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getDatacenters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.Datacenter
 	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
 	defer cancel1()
-	err := root.Retrieve(ctx1, []string{"Datacenter"}, []string{"name", "parent"}, &resources)
+	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -453,11 +469,11 @@ func getDatacenters(ctx context.Context, e *Endpoint, root *view.ContainerView) 
 	return m, nil
 }
 
-func getClusters(ctx context.Context, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.ClusterComputeResource
 	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
 	defer cancel1()
-	err := root.Retrieve(ctx1, []string{"ClusterComputeResource"}, []string{"name", "parent"}, &resources)
+	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -467,11 +483,17 @@ func getClusters(ctx context.Context, e *Endpoint, root *view.ContainerView) (ob
 		// We're not interested in the immediate parent (a folder), but the data center.
 		p, ok := cache[r.Parent.Value]
 		if !ok {
-			o := object.NewFolder(root.Client(), *r.Parent)
-			var folder mo.Folder
 			ctx2, cancel2 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
 			defer cancel2()
-			err := o.Properties(ctx2, *r.Parent, []string{"parent"}, &folder)
+			client, err := e.clientFactory.GetClient(ctx2)
+			if err != nil {
+				return nil, err
+			}
+			o := object.NewFolder(client.Client.Client, *r.Parent)
+			var folder mo.Folder
+			ctx3, cancel3 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+			defer cancel3()
+			err = o.Properties(ctx3, *r.Parent, []string{"parent"}, &folder)
 			if err != nil {
 				log.Printf("W! [input.vsphere] Error while getting folder parent: %e", err)
 				p = nil
@@ -487,9 +509,9 @@ func getClusters(ctx context.Context, e *Endpoint, root *view.ContainerView) (ob
 	return m, nil
 }
 
-func getHosts(ctx context.Context, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getHosts(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.HostSystem
-	err := root.Retrieve(ctx, []string{"HostSystem"}, []string{"name", "parent"}, &resources)
+	err := filter.FindAll(ctx, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -501,11 +523,11 @@ func getHosts(ctx context.Context, e *Endpoint, root *view.ContainerView) (objec
 	return m, nil
 }
 
-func getVMs(ctx context.Context, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.VirtualMachine
 	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
 	defer cancel1()
-	err := root.Retrieve(ctx1, []string{"VirtualMachine"}, []string{"name", "runtime.host", "config.guestId", "config.uuid"}, &resources)
+	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -525,11 +547,11 @@ func getVMs(ctx context.Context, e *Endpoint, root *view.ContainerView) (objectM
 	return m, nil
 }
 
-func getDatastores(ctx context.Context, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getDatastores(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap, error) {
 	var resources []mo.Datastore
 	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
 	defer cancel1()
-	err := root.Retrieve(ctx1, []string{"Datastore"}, []string{"name", "parent", "info"}, &resources)
+	err := filter.FindAll(ctx1, &resources)
 	if err != nil {
 		return nil, err
 	}

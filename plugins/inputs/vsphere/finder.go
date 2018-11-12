@@ -2,6 +2,7 @@ package vsphere
 
 import (
 	"context"
+	"log"
 	"reflect"
 	"strings"
 
@@ -13,13 +14,30 @@ import (
 
 var childTypes map[string][]string
 
+var addFields map[string][]string
+
 type Finder struct {
 	client *Client
+}
+
+type ResourceFilter struct {
+	finder  *Finder
+	resType string
+	paths   []string
 }
 
 type nameAndRef struct {
 	name string
 	ref  types.ManagedObjectReference
+}
+
+func (f *Finder) FindAll(ctx context.Context, resType string, paths []string, dst interface{}) error {
+	for _, p := range paths {
+		if err := f.Find(ctx, resType, p, dst); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (f *Finder) Find(ctx context.Context, resType, path string, dst interface{}) error {
@@ -34,23 +52,27 @@ func (f *Finder) Find(ctx context.Context, resType, path string, dst interface{}
 		return err
 	}
 	objectContentToTypedArray(objs, dst)
+	log.Printf("D! [input.vsphere] Find(%s, %s) returned %d objects", resType, path, len(objs))
 	return nil
 }
 
 func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference, resType string,
-	parts []property.Filter, pos int, objs map[string]types.ObjectContent) error {
+	tokens []property.Filter, pos int, objs map[string]types.ObjectContent) error {
+	isLeaf := pos == len(tokens)-1
 
 	// No more tokens to match?
-	if pos >= len(parts) {
+	if pos >= len(tokens) {
 		return nil
 	}
 
-	// Get children
+	// Determine child types
+
 	ct, ok := childTypes[root.Reference().Type]
 	if !ok {
 		// We don't know how to handle children of this type. Stop descending.
 		return nil
 	}
+
 	m := view.NewManager(f.client.Client.Client)
 	defer m.Destroy(ctx)
 	v, err := m.CreateContainerView(ctx, root, ct, false)
@@ -60,20 +82,68 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 	defer v.Destroy(ctx)
 	var content []types.ObjectContent
 
-	err = v.Retrieve(ctx, ct, []string{"name"}, &content)
-	if err != nil {
-		return err
+	// If we're at a potential leaf, we need to collect all properties specified for a target type. However,
+	// if we're reached a node that may have multiple types of children, we have to do it in two
+	// passes, since asking for fields that don't exist in all types will throw an error.
+	// This is needed because of recursive wildcards. Even if we're at the last token, we can't determine
+	// whether we've actually reached a leaf. This would happen for e.g. "/DC0/vm/**".
+	fields := []string{"name"}
+	if isLeaf {
+		// Filter out the requested type from potential fields.
+		fct := make([]string, 0, len(ct))
+		for _, t := range ct {
+			if t != resType {
+				fct = append(fct, t)
+			}
+		}
+		// Was the type present? (I.e. did we remove anything)
+		if len(ct) != len(fct) {
+			// Make a pass without the requested type with just the standard fields
+			if len(fct) > 0 {
+				err = v.Retrieve(ctx, fct, fields, &content)
+				if err != nil {
+					return err
+				}
+			}
+
+			// Now make a pass with a full set of fields, but only for the requested type
+			if af, ok := addFields[resType]; ok {
+				fields = append(fields, af...)
+			}
+			var content1 []types.ObjectContent
+			err = v.Retrieve(ctx, []string{resType}, fields, &content1)
+			if err != nil {
+				return err
+			}
+			content = append(content, content1...)
+		} else {
+			// The requested type wasn't part of potential children, so just collect the basics
+			err = v.Retrieve(ctx, ct, fields, &content)
+
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		// Not at a leaf, so we can keep things simple
+		err = v.Retrieve(ctx, ct, fields, &content)
+
+		if err != nil {
+			return err
+		}
 	}
+
 	for _, c := range content {
-		if !parts[pos].MatchPropertyList(c.PropSet) {
+		if !tokens[pos].MatchPropertyList(c.PropSet[:1]) {
 			continue
 		}
 
+		// Already been here through another path? Skip!
 		if _, ok := objs[root.Reference().String()]; ok {
 			continue
 		}
 
-		if c.Obj.Type == resType {
+		if c.Obj.Type == resType && isLeaf {
 			// We found what we're looking for. Consider it a leaf and stop descending
 			objs[c.Obj.String()] = c
 			continue
@@ -81,18 +151,20 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 
 		// Deal with recursive wildcards (**)
 		inc := 1 // Normally we advance one token.
-		if parts[pos]["name"] == "**" {
-			if pos >= len(parts)-1 {
+		if tokens[pos]["name"] == "**" {
+			if isLeaf {
 				inc = 0 // Can't advance past last token, so keep descending the tree
 			} else {
 				// Lookahead to next token. If it matches this child, we are out of
 				// the recursive wildcard handling and we can advance TWO tokens ahead, since
 				// the token that ended the recursive wildcard mode is now consumed.
-				if parts[pos+1].MatchPropertyList(c.PropSet) {
-					if pos < len(parts)-2 {
+				if tokens[pos+1].MatchPropertyList(c.PropSet) {
+					if pos < len(tokens)-2 {
 						inc = 2
 					} else {
-						inc = 0
+						// We found match and it's at a leaf! Grab it!
+						objs[c.Obj.String()] = c
+						continue
 					}
 				} else {
 					// We didn't break out of recursicve wildcard mode yet, so stay on this token.
@@ -101,7 +173,7 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 				}
 			}
 		}
-		err := f.descend(ctx, c.Obj, resType, parts, pos+inc, objs)
+		err := f.descend(ctx, c.Obj, resType, tokens, pos+inc, objs)
 		if err != nil {
 			return err
 		}
@@ -149,6 +221,10 @@ func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interfac
 	return nil
 }
 
+func (r *ResourceFilter) FindAll(ctx context.Context, dst interface{}) error {
+	return r.finder.FindAll(ctx, r.resType, r.paths, dst)
+}
+
 func init() {
 	childTypes = map[string][]string{
 		"HostSystem":             []string{"VirtualMachine"},
@@ -163,5 +239,13 @@ func init() {
 			"ClusterComputeResource",
 			"Datastore",
 		},
+	}
+
+	addFields = map[string][]string{
+		"HostSystem":             []string{"parent"},
+		"VirtualMachine":         []string{"runtime.host", "config.guestId", "config.uuid"},
+		"Datastore":              []string{"parent", "info"},
+		"ClusterComputeResource": []string{"parent"},
+		"Datacenter":             []string{"parent"},
 	}
 }
