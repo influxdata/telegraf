@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net/url"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -239,20 +241,27 @@ func TestWorkerPool(t *testing.T) {
 }
 
 func TestTimeout(t *testing.T) {
-	m, s, err := createSim()
-	if err != nil {
-		t.Fatal(err)
+	v := defaultVSphere()
+	url := os.Getenv("TGF_TEST_VSPHERE_URL")
+	if url != "" {
+		m, s, err := createSim()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer m.Remove()
+		defer s.Close()
+		url = s.URL.String()
+	} else {
+		v.Username = os.Getenv("TGF_TEST_VSPHERE_USER")
+		v.Password = os.Getenv("TGF_TEST_VSPHERE_PASSWORD")
 	}
-	defer m.Remove()
-	defer s.Close()
 
 	var acc testutil.Accumulator
-	v := defaultVSphere()
-	v.Vcenters = []string{s.URL.String()}
+	v.Vcenters = []string{url}
 	v.Timeout = internal.Duration{Duration: 1 * time.Nanosecond}
 	require.NoError(t, v.Start(nil)) // We're not using the Accumulator, so it can be nil.
 	defer v.Stop()
-	err = v.Gather(&acc)
+	err := v.Gather(&acc)
 	require.NotNil(t, err, "Error should not be nil here")
 
 	// The accumulator must contain exactly one error and it must be a deadline exceeded.
@@ -391,6 +400,39 @@ func TestFinder(t *testing.T) {
 	err = f.FindAll(ctx, "VirtualMachine", []string{"/**"}, &vm)
 	require.NoError(t, err)
 	require.Equal(t, 4, len(vm))
+}
+
+func TestExternalFinder(t *testing.T) {
+	os.Setenv("TGF_TEST_VSPHERE_URL", "https://10.198.15.245/sdk")
+	os.Setenv("TGF_TEST_VSPHERE_USER", "administrator@vsphere.local")
+	os.Setenv("TGF_TEST_VSPHERE_PASSWORD", "Admin!23")
+
+	v := defaultVSphere()
+	vu := os.Getenv("TGF_TEST_VSPHERE_URL")
+	if vu == "" {
+		t.Skip("No external vCenter specified. Skipping")
+	} else {
+		v.Username = os.Getenv("TGF_TEST_VSPHERE_USER")
+		v.Password = os.Getenv("TGF_TEST_VSPHERE_PASSWORD")
+	}
+
+	ctx := context.Background()
+	u, err := url.Parse(vu)
+	require.NoError(t, err, "Error parsing URL")
+	c, err := NewClient(ctx, u, v)
+	require.NoError(t, err, "Error connecting to vCenter")
+
+	f := Finder{c}
+
+	vm := []mo.VirtualMachine{}
+	err = f.Find(ctx, "VirtualMachine", "/**", &vm)
+	require.NoError(t, err)
+	require.True(t, len(vm) > 0)
+
+	dc := []mo.Datacenter{}
+	err = f.Find(ctx, "Datacenter", "/*", &dc)
+	require.NoError(t, err)
+	require.Equal(t, 1, len(dc))
 }
 
 func TestAll(t *testing.T) {

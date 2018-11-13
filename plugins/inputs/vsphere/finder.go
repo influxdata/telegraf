@@ -82,52 +82,37 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 	defer v.Destroy(ctx)
 	var content []types.ObjectContent
 
-	// If we're at a potential leaf, we need to collect all properties specified for a target type. However,
-	// if we're reached a node that may have multiple types of children, we have to do it in two
-	// passes, since asking for fields that don't exist in all types will throw an error.
-	// This is needed because of recursive wildcards. Even if we're at the last token, we can't determine
-	// whether we've actually reached a leaf. This would happen for e.g. "/DC0/vm/**".
 	fields := []string{"name"}
 	if isLeaf {
-		// Filter out the requested type from potential fields.
-		fct := make([]string, 0, len(ct))
-		for _, t := range ct {
-			if t != resType {
-				fct = append(fct, t)
-			}
-		}
-		// Was the type present? (I.e. did we remove anything)
-		if len(ct) != len(fct) {
-			// Make a pass without the requested type with just the standard fields
-			if len(fct) > 0 {
-				err = v.Retrieve(ctx, fct, fields, &content)
-				if err != nil {
-					return err
-				}
-			}
-
-			// Now make a pass with a full set of fields, but only for the requested type
+		// Special case: The last token is a recursive wildcard, so we can grab everything
+		// recursively in a single call.
+		if tokens[pos]["name"] == "**" {
+			v2, err := m.CreateContainerView(ctx, root, []string{resType}, true)
+			defer v2.Destroy(ctx)
 			if af, ok := addFields[resType]; ok {
 				fields = append(fields, af...)
 			}
-			var content1 []types.ObjectContent
-			err = v.Retrieve(ctx, []string{resType}, fields, &content1)
+			err = v2.Retrieve(ctx, []string{resType}, fields, &content)
 			if err != nil {
 				return err
 			}
-			content = append(content, content1...)
-		} else {
-			// The requested type wasn't part of potential children, so just collect the basics
-			err = v.Retrieve(ctx, ct, fields, &content)
-
-			if err != nil {
-				return err
+			log.Printf("D! [input.vsphere] Recursive query returned %d objects", len(content))
+			for _, c := range content {
+				objs[c.Obj.String()] = c
 			}
+			return nil
 		}
-	} else {
-		// Not at a leaf, so we can keep things simple
-		err = v.Retrieve(ctx, ct, fields, &content)
 
+		if af, ok := addFields[resType]; ok {
+			fields = append(fields, af...)
+		}
+		err = v.Retrieve(ctx, []string{resType}, fields, &content)
+		if err != nil {
+			return err
+		}
+		log.Printf("D! [input.vsphere] Target type query returned %d objects", len(content))
+	} else {
+		err = v.Retrieve(ctx, ct, fields, &content)
 		if err != nil {
 			return err
 		}
