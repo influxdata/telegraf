@@ -96,7 +96,6 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 			if err != nil {
 				return err
 			}
-			log.Printf("D! [input.vsphere] Recursive query returned %d objects", len(content))
 			for _, c := range content {
 				objs[c.Obj.String()] = c
 			}
@@ -110,7 +109,6 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 		if err != nil {
 			return err
 		}
-		log.Printf("D! [input.vsphere] Target type query returned %d objects", len(content))
 	} else {
 		err = v.Retrieve(ctx, ct, fields, &content)
 		if err != nil {
