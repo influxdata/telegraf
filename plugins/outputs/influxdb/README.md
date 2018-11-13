@@ -16,6 +16,7 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP ser
   # urls = ["http://127.0.0.1:8086"]
 
   ## The target database for metrics; will be created as needed.
+  ## For UDP url endpoint database needs to be configured on server side.
   # database = "telegraf"
 
   ## If true, no CREATE DATABASE queries will be sent.  Set to true when using
