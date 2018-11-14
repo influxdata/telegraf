@@ -16,10 +16,13 @@ var childTypes map[string][]string
 
 var addFields map[string][]string
 
+// Finder allows callers to find resources in vCenter given a query string.
 type Finder struct {
 	client *Client
 }
 
+// ResourceFilter is a convenience class holding a finder and a set of paths. It is useful when you need a
+// self contained object capable of returning a certain set of resources.
 type ResourceFilter struct {
 	finder  *Finder
 	resType string
@@ -31,6 +34,7 @@ type nameAndRef struct {
 	ref  types.ManagedObjectReference
 }
 
+// FindAll returns the union of resources found given the supplied resource type and paths.
 func (f *Finder) FindAll(ctx context.Context, resType string, paths []string, dst interface{}) error {
 	for _, p := range paths {
 		if err := f.Find(ctx, resType, p, dst); err != nil {
@@ -40,6 +44,7 @@ func (f *Finder) FindAll(ctx context.Context, resType string, paths []string, ds
 	return nil
 }
 
+// Find returns the resources matching the specified path.
 func (f *Finder) Find(ctx context.Context, resType, path string, dst interface{}) error {
 	p := strings.Split(path, "/")
 	flt := make([]property.Filter, len(p)-1)
@@ -204,17 +209,19 @@ func objectContentToTypedArray(objs map[string]types.ObjectContent, dst interfac
 	return nil
 }
 
+// FindAll finds all resources matching the paths that were specified upon creation of
+// the ResourceFilter.
 func (r *ResourceFilter) FindAll(ctx context.Context, dst interface{}) error {
 	return r.finder.FindAll(ctx, r.resType, r.paths, dst)
 }
 
 func init() {
 	childTypes = map[string][]string{
-		"HostSystem":             []string{"VirtualMachine"},
-		"ComputeResource":        []string{"HostSystem", "ResourcePool"},
-		"ClusterComputeResource": []string{"HostSystem", "ResourcePool"},
-		"Datacenter":             []string{"Folder"},
-		"Folder": []string{
+		"HostSystem":             {"VirtualMachine"},
+		"ComputeResource":        {"HostSystem", "ResourcePool"},
+		"ClusterComputeResource": {"HostSystem", "ResourcePool"},
+		"Datacenter":             {"Folder"},
+		"Folder": {
 			"Folder",
 			"Datacenter",
 			"VirtualMachine",
@@ -225,10 +232,10 @@ func init() {
 	}
 
 	addFields = map[string][]string{
-		"HostSystem":             []string{"parent"},
-		"VirtualMachine":         []string{"runtime.host", "config.guestId", "config.uuid"},
-		"Datastore":              []string{"parent", "info"},
-		"ClusterComputeResource": []string{"parent"},
-		"Datacenter":             []string{"parent"},
+		"HostSystem":             {"parent"},
+		"VirtualMachine":         {"runtime.host", "config.guestId", "config.uuid"},
+		"Datastore":              {"parent", "info"},
+		"ClusterComputeResource": {"parent"},
+		"Datacenter":             {"parent"},
 	}
 }
