@@ -141,8 +141,10 @@ func (a *Agent) Run(ctx context.Context) error {
 func (a *Agent) Test() error {
 	var wg sync.WaitGroup
 	metricC := make(chan telegraf.Metric)
+	nulC := make(chan telegraf.Metric)
 	defer func() {
 		close(metricC)
+		close(nulC)
 		wg.Wait()
 	}()
 
@@ -156,7 +158,15 @@ func (a *Agent) Test() error {
 			octets, err := s.Serialize(metric)
 			if err == nil {
 				fmt.Print("> ", string(octets))
+
 			}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for range nulC {
 		}
 	}()
 
@@ -172,20 +182,26 @@ func (a *Agent) Test() error {
 			a.Config.Agent.Interval.Duration)
 		input.SetDefaultTags(a.Config.Tags)
 
-		if err := input.Input.Gather(acc); err != nil {
-			return err
-		}
-
 		// Special instructions for some inputs. cpu, for example, needs to be
 		// run twice in order to return cpu usage percentages.
 		switch input.Name() {
 		case "inputs.cpu", "inputs.mongodb", "inputs.procstat":
+			nulAcc := NewAccumulator(input, nulC)
+			nulAcc.SetPrecision(a.Config.Agent.Precision.Duration,
+				a.Config.Agent.Interval.Duration)
+			if err := input.Input.Gather(nulAcc); err != nil {
+				return err
+			}
+
 			time.Sleep(500 * time.Millisecond)
 			if err := input.Input.Gather(acc); err != nil {
 				return err
 			}
+		default:
+			if err := input.Input.Gather(acc); err != nil {
+				return err
+			}
 		}
-
 	}
 
 	return nil
