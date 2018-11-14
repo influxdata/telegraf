@@ -46,7 +46,7 @@ avoid cardinality issues:
 ### DaemonSet
 
 For recommendations on running Telegraf as a DaemonSet see [Monitoring Kubernetes
-Architecture][k8s-telegraf].
+Architecture][k8s-telegraf] or view the [Helm charts][tick-charts].
 
 ### Metrics
 
@@ -132,3 +132,4 @@ kubernetes_pod_network,host=ip-10-0-0-0.ec2.internal,namespace=deis,node_name=ip
 [series cardinality]: https://docs.influxdata.com/influxdb/latest/query_language/spec/#show-cardinality
 [influx-docs]: https://docs.influxdata.com/influxdb/latest/
 [k8s-telegraf]: https://www.influxdata.com/blog/monitoring-kubernetes-architecture/
+[tick-charts]: https://github.com/influxdata/tick-charts
