@@ -61,6 +61,8 @@
 - [#4938](https://github.com/influxdata/telegraf/pull/4938): Fix potential deadlock or leaked resources on restart/reload.
 - [#2919](https://github.com/influxdata/telegraf/pull/2919): Fix outputs block inputs when batch size is reached.
 - [#4789](https://github.com/influxdata/telegraf/issues/4789): Fix potential missing datastore metrics in vSphere plugin.
+- [#4982](https://github.com/influxdata/telegraf/issues/4982): Log warning when wireless plugin is used on unsupported platform.
+- [#4965](https://github.com/influxdata/telegraf/issues/4965): Handle non-tls columns for mysql input.
 
 ## v1.8.3 [2018-10-30]
 
