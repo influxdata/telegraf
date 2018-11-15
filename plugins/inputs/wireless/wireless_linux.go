@@ -40,27 +40,6 @@ type wirelessInterface struct {
 	Beacon    int64
 }
 
-// Wireless is used to store configuration values.
-type Wireless struct {
-	HostProc string `toml:"host_proc"`
-}
-
-var sampleConfig = `
-  ## Sets 'proc' directory path
-  ## If not specified, then default is /proc
-  # host_proc = "/proc"
-`
-
-// Description returns information about the plugin.
-func (w *Wireless) Description() string {
-	return "Monitor wifi signal strength and quality"
-}
-
-// SampleConfig displays configuration instructions.
-func (w *Wireless) SampleConfig() string {
-	return sampleConfig
-}
-
 // Gather collects the wireless information.
 func (w *Wireless) Gather(acc telegraf.Accumulator) error {
 	// load proc path, get default value if config value and env variable are empty
