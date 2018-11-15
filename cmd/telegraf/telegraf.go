@@ -83,7 +83,8 @@ func reloadLoop(
 		ctx, cancel := context.WithCancel(context.Background())
 
 		signals := make(chan os.Signal)
-		signal.Notify(signals, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
+		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
+			syscall.SIGTERM, syscall.SIGINT)
 		go func() {
 			select {
 			case sig := <-signals:
@@ -154,7 +155,7 @@ func runAgent(ctx context.Context,
 	)
 
 	if *fTest {
-		return ag.Test()
+		return ag.Test(ctx)
 	}
 
 	log.Printf("I! Starting Telegraf %s\n", version)

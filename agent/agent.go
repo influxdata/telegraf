@@ -138,11 +138,13 @@ func (a *Agent) Run(ctx context.Context) error {
 }
 
 // Test runs the inputs once and prints the output to stdout in line protocol.
-func (a *Agent) Test() error {
+func (a *Agent) Test(ctx context.Context) error {
 	var wg sync.WaitGroup
 	metricC := make(chan telegraf.Metric)
+	nulC := make(chan telegraf.Metric)
 	defer func() {
 		close(metricC)
+		close(nulC)
 		wg.Wait()
 	}()
 
@@ -156,36 +158,55 @@ func (a *Agent) Test() error {
 			octets, err := s.Serialize(metric)
 			if err == nil {
 				fmt.Print("> ", string(octets))
+
 			}
 		}
 	}()
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for range nulC {
+		}
+	}()
+
 	for _, input := range a.Config.Inputs {
-		if _, ok := input.Input.(telegraf.ServiceInput); ok {
-			log.Printf("W!: [agent] skipping plugin [[%s]]: service inputs not supported in --test mode",
-				input.Name())
-			continue
-		}
+		select {
+		case <-ctx.Done():
+			return nil
+		default:
+			if _, ok := input.Input.(telegraf.ServiceInput); ok {
+				log.Printf("W!: [agent] skipping plugin [[%s]]: service inputs not supported in --test mode",
+					input.Name())
+				continue
+			}
 
-		acc := NewAccumulator(input, metricC)
-		acc.SetPrecision(a.Config.Agent.Precision.Duration,
-			a.Config.Agent.Interval.Duration)
-		input.SetDefaultTags(a.Config.Tags)
+			acc := NewAccumulator(input, metricC)
+			acc.SetPrecision(a.Config.Agent.Precision.Duration,
+				a.Config.Agent.Interval.Duration)
+			input.SetDefaultTags(a.Config.Tags)
 
-		if err := input.Input.Gather(acc); err != nil {
-			return err
-		}
+			// Special instructions for some inputs. cpu, for example, needs to be
+			// run twice in order to return cpu usage percentages.
+			switch input.Name() {
+			case "inputs.cpu", "inputs.mongodb", "inputs.procstat":
+				nulAcc := NewAccumulator(input, nulC)
+				nulAcc.SetPrecision(a.Config.Agent.Precision.Duration,
+					a.Config.Agent.Interval.Duration)
+				if err := input.Input.Gather(nulAcc); err != nil {
+					return err
+				}
 
-		// Special instructions for some inputs. cpu, for example, needs to be
-		// run twice in order to return cpu usage percentages.
-		switch input.Name() {
-		case "inputs.cpu", "inputs.mongodb", "inputs.procstat":
-			time.Sleep(500 * time.Millisecond)
-			if err := input.Input.Gather(acc); err != nil {
-				return err
+				time.Sleep(500 * time.Millisecond)
+				if err := input.Input.Gather(acc); err != nil {
+					return err
+				}
+			default:
+				if err := input.Input.Gather(acc); err != nil {
+					return err
+				}
 			}
 		}
-
 	}
 
 	return nil
