@@ -110,6 +110,11 @@ func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
+	// Setup default logging. This may need to change after reading the config
+	// file, but we can configure it to use our logger implementation now.
+	logger.SetupLogging(false, false, "")
+	log.Printf("I! Starting Telegraf %s", version)
+
 	// If no other options are specified, load the config file and run.
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
@@ -147,7 +152,7 @@ func runAgent(ctx context.Context,
 		return err
 	}
 
-	// Setup logging
+	// Setup logging as configured.
 	logger.SetupLogging(
 		ag.Config.Agent.Debug || *fDebug,
 		ag.Config.Agent.Quiet || *fQuiet,
@@ -158,7 +163,6 @@ func runAgent(ctx context.Context,
 		return ag.Test(ctx)
 	}
 
-	log.Printf("I! Starting Telegraf %s\n", version)
 	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
 	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
 	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
