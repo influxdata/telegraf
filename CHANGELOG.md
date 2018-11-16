@@ -63,6 +63,7 @@
 - [#4789](https://github.com/influxdata/telegraf/issues/4789): Fix potential missing datastore metrics in vSphere plugin.
 - [#4982](https://github.com/influxdata/telegraf/issues/4982): Log warning when wireless plugin is used on unsupported platform.
 - [#4965](https://github.com/influxdata/telegraf/issues/4965): Handle non-tls columns for mysql input.
+- [#4983](https://github.com/influxdata/telegraf/issues/4983): Fix panic in influxdb_listener when using gzip encoding.
 
 ## v1.8.3 [2018-10-30]
 
