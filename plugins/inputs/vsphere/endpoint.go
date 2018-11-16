@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -26,13 +27,15 @@ var isolateLUN = regexp.MustCompile(".*/([^/]+)/?$")
 
 const metricLookback = 3
 
+const rtMetricLookback = 3
+
 // Endpoint is a high-level representation of a connected vCenter endpoint. It is backed by the lower
 // level Client type.
 type Endpoint struct {
-	Parent          *VSphere
-	URL             *url.URL
-	lastColls       map[string]time.Time
-	instanceInfo    map[string]resourceInfo
+	Parent    *VSphere
+	URL       *url.URL
+	lastColls map[string]time.Time
+	//instanceInfo    map[string]resourceInfo
 	resourceKinds   map[string]resourceKind
 	hwMarks         *TSCache
 	lun2ds          map[string]string
@@ -52,6 +55,7 @@ type resourceKind struct {
 	sampling         int32
 	objects          objectMap
 	filters          filter.Filter
+	metrics          performance.MetricList
 	collectInstances bool
 	getObjects       func(context.Context, *Endpoint, *view.ContainerView) (objectMap, error)
 }
@@ -74,12 +78,6 @@ type objectRef struct {
 	dcname    string
 }
 
-type resourceInfo struct {
-	name      string
-	metrics   performance.MetricList
-	parentRef *types.ManagedObjectReference
-}
-
 type metricQRequest struct {
 	res *resourceKind
 	obj objectRef
@@ -100,7 +98,6 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 		Parent:        parent,
 		lastColls:     make(map[string]time.Time),
 		hwMarks:       NewTSCache(1 * time.Hour),
-		instanceInfo:  make(map[string]resourceInfo),
 		lun2ds:        make(map[string]string),
 		initialized:   false,
 		clientFactory: NewClientFactory(ctx, url, parent),
@@ -276,6 +273,21 @@ func (e *Endpoint) getMetricNameMap(ctx context.Context) (map[int32]string, erro
 	return names, nil
 }
 
+func (e *Endpoint) getMetadata2(ctx context.Context, obj objectRef, sampling int32) (performance.MetricList, error) {
+	client, err := e.clientFactory.GetClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+	defer cancel1()
+	metrics, err := client.Perf.AvailableMetric(ctx1, obj.ref.Reference(), sampling)
+	if err != nil && err != context.Canceled {
+		return nil, err
+	}
+	return metrics, nil
+}
+
 func (e *Endpoint) getMetadata(ctx context.Context, in interface{}) interface{} {
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
@@ -350,7 +362,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 
 	log.Printf("D! [input.vsphere]: Discover new objects for %s", e.URL.Host)
 
-	instInfo := make(map[string]resourceInfo)
+	instInfoMux := sync.Mutex{}
 	resourceKinds := make(map[string]resourceKind)
 	dcNameCache := make(map[string]string)
 
@@ -374,40 +386,51 @@ func (e *Endpoint) discover(ctx context.Context) error {
 				}
 			}
 
-			// Set up a worker pool for processing metadata queries concurrently
-			wp := NewWorkerPool(10)
-			wp.Run(ctx, e.getMetadata, e.Parent.DiscoverConcurrency)
-
-			// Fill the input channels with resources that need to be queried
-			// for metadata.
-			wp.Fill(ctx, func(ctx context.Context, f PushFunc) {
-				for _, obj := range objects {
-					f(ctx, &metricQRequest{obj: obj, res: &res})
+			// Get metric metadata and filter metrics
+			prob := 100.0 / float64(len(objects))
+			log.Printf("D! [input.vsphere] Probability of sampling a resource: %f", prob)
+			wg := sync.WaitGroup{}
+			limiter := make(chan struct{}, e.Parent.DiscoverConcurrency)
+			for _, obj := range objects {
+				if rand.Float64() > prob {
+					continue
 				}
-			})
-
-			// Drain the resulting metadata and build instance infos.
-			wp.Drain(ctx, func(ctx context.Context, in interface{}) bool {
-				switch resp := in.(type) {
-				case *metricQResponse:
-					mList := make(performance.MetricList, 0)
-					if res.enabled {
-						for _, m := range *resp.metrics {
-							if m.Instance != "" && !res.collectInstances {
-								continue
-							}
-							if res.filters.Match(metricNames[m.CounterId]) {
-								mList = append(mList, m)
-							}
+				wg.Add(1)
+				go func(obj objectRef) {
+					defer wg.Done()
+					limiter <- struct{}{}
+					defer func() {
+						<-limiter
+					}()
+					metrics, err := e.getMetadata2(ctx, obj, res.sampling)
+					if err != nil {
+						log.Printf("E! [input.vsphere]: Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
+					}
+					mMap := make(map[string]types.PerfMetricId)
+					for _, m := range metrics {
+						if m.Instance != "" && res.collectInstances {
+							m.Instance = "*"
+						} else {
+							m.Instance = ""
+						}
+						if res.filters.Match(metricNames[m.CounterId]) {
+							mMap[strconv.Itoa(int(m.CounterId))+"|"+m.Instance] = m
 						}
 					}
-					instInfo[resp.obj.ref.Value] = resourceInfo{name: resp.obj.name, metrics: mList, parentRef: resp.obj.parentRef}
-				case error:
-					log.Printf("W! [input.vsphere]: Error while discovering resources: %s", resp)
-					return false
-				}
-				return true
-			})
+					log.Printf("D! [input.vsphere] Found %d metrics for %s", len(mMap), obj.name)
+					instInfoMux.Lock()
+					defer instInfoMux.Unlock()
+					if len(mMap) > len(res.metrics) {
+						res.metrics = make(performance.MetricList, len(mMap))
+						i := 0
+						for _, m := range mMap {
+							res.metrics[i] = m
+							i++
+						}
+					}
+				}(obj)
+			}
+			wg.Wait()
 			res.objects = objects
 			resourceKinds[k] = res
 		}
@@ -428,12 +451,11 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	e.collectMux.Lock()
 	defer e.collectMux.Unlock()
 
-	e.instanceInfo = instInfo
 	e.resourceKinds = resourceKinds
 	e.lun2ds = l2d
 
 	sw.Stop()
-	SendInternalCounter("discovered_objects", e.URL.Host, int64(len(instInfo)))
+	// SendInternalCounter("discovered_objects", e.URL.Host, int64(len(instInfo))) TODO: Count the correct way
 	return nil
 }
 
@@ -505,12 +527,16 @@ func getVMs(ctx context.Context, e *Endpoint, root *view.ContainerView) (objectM
 	var resources []mo.VirtualMachine
 	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
 	defer cancel1()
-	err := root.Retrieve(ctx1, []string{"VirtualMachine"}, []string{"name", "runtime.host", "config.guestId", "config.uuid"}, &resources)
+	err := root.Retrieve(ctx1, []string{"VirtualMachine"}, []string{"name", "runtime.host", "runtime.powerState", "config.guestId", "config.uuid"}, &resources)
 	if err != nil {
 		return nil, err
 	}
 	m := make(objectMap)
 	for _, r := range resources {
+		if r.Runtime.PowerState != "poweredOn" {
+			log.Printf("D! [input.vsphere] Skipped powered off VM: %s", r.Name)
+			continue
+		}
 		guest := "unknown"
 		uuid := ""
 		// Sometimes Config is unknown and returns a nil pointer
@@ -609,22 +635,18 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 	total := 0
 	nRes := 0
 	for _, object := range res.objects {
-		info, found := e.instanceInfo[object.ref.Value]
-		if !found {
-			log.Printf("E! [input.vsphere]: Internal error: Instance info not found for MOID %s", object.ref)
-		}
-		mr := len(info.metrics)
+		mr := len(res.metrics)
 		for mr > 0 {
 			mc := mr
 			headroom := maxMetrics - metrics
 			if !res.realTime && mc > headroom { // Metric query limit only applies to non-realtime metrics
 				mc = headroom
 			}
-			fm := len(info.metrics) - mr
+			fm := len(res.metrics) - mr
 			pq := types.PerfQuerySpec{
 				Entity:     object.ref,
-				MaxSample:  1,
-				MetricId:   info.metrics[fm : fm+mc],
+				MaxSample:  rtMetricLookback,
+				MetricId:   res.metrics[fm : fm+mc],
 				IntervalId: res.sampling,
 				Format:     "normal",
 			}
@@ -694,7 +716,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 		elapsed := now.Sub(latest).Seconds() + 5.0 // Allow 5 second jitter.
 		log.Printf("D! [input.vsphere]: Latest: %s, elapsed: %f, resource: %s", latest, elapsed, resourceType)
 		if !res.realTime && elapsed < float64(res.sampling) {
-			// No new data would be available. We're outta herE! [input.vsphere]:
+			// No new data would be available. We're outta here!
 			log.Printf("D! [input.vsphere]: Sampling period for %s of %d has not elapsed on %s",
 				resourceType, res.sampling, e.URL.Host)
 			return nil
@@ -715,7 +737,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	wp := NewWorkerPool(10)
 	wp.Run(ctx, func(ctx context.Context, in interface{}) interface{} {
 		chunk := in.([]types.PerfQuerySpec)
-		n, err := e.collectChunk(ctx, chunk, resourceType, res, acc)
+		n, err := e.collectChunk(ctx, chunk, resourceType, &res, acc)
 		log.Printf("D! [input.vsphere] CollectChunk for %s returned %d metrics", resourceType, n)
 		if err != nil {
 			return err
@@ -754,7 +776,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 }
 
 func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, resourceType string,
-	res resourceKind, acc telegraf.Accumulator) (int, error) {
+	res *resourceKind, acc telegraf.Accumulator) (int, error) {
 	count := 0
 	prefix := "vsphere" + e.Parent.Separator + resourceType
 
@@ -788,7 +810,7 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 	// Iterate through results
 	for _, em := range ems {
 		moid := em.Entity.Reference().Value
-		instInfo, found := e.instanceInfo[moid]
+		instInfo, found := res.objects[moid]
 		if !found {
 			log.Printf("E! [input.vsphere]: MOID %s not found in cache. Skipping! (This should not happen!)", moid)
 			continue
@@ -808,16 +830,16 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 				log.Printf("E! [input.vsphere]: MOID %s not found in cache. Skipping", moid)
 				continue
 			}
-			e.populateTags(&objectRef, resourceType, &res, t, &v)
+			e.populateTags(&objectRef, resourceType, res, t, &v)
 
 			// Now deal with the values. Iterate backwards so we start with the latest value
 			tsKey := moid + "|" + name + "|" + v.Instance
 			for idx := len(v.Value) - 1; idx >= 0; idx-- {
 				ts := em.SampleInfo[idx].Timestamp
 
-				// Since non-realtime metrics are queries with a lookback, we need to check the high-water mark
+				// For queries with a lookback, we need to check the high-water mark
 				// to determine if this should be included. Only samples not seen before should be included.
-				if !(res.realTime || e.hwMarks.IsNew(tsKey, ts)) {
+				if !e.hwMarks.IsNew(tsKey, ts) {
 					continue
 				}
 				value := v.Value[idx]
@@ -850,9 +872,7 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 				count++
 
 				// Update highwater marks for non-realtime metrics.
-				if !res.realTime {
-					e.hwMarks.Put(tsKey, ts)
-				}
+				e.hwMarks.Put(tsKey, ts)
 			}
 		}
 		// We've iterated through all the metrics and collected buckets for each
@@ -864,13 +884,13 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 	return count, nil
 }
 
-func (e *Endpoint) getParent(obj resourceInfo) (resourceInfo, bool) {
+func (e *Endpoint) getParent(obj objectRef, res *resourceKind) (objectRef, bool) {
 	p := obj.parentRef
 	if p == nil {
 		log.Printf("D! [input.vsphere] No parent found for %s", obj.name)
-		return resourceInfo{}, false
+		return objectRef{}, false
 	}
-	r, ok := e.instanceInfo[p.Value]
+	r, ok := res.objects[p.Value]
 	return r, ok
 }
 
@@ -885,14 +905,14 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 
 	// Map parent reference
-	parent, found := e.instanceInfo[objectRef.parentRef.Value]
+	parent, found := resource.objects[objectRef.parentRef.Value]
 	if found {
 		t[resource.parentTag] = parent.name
 		if resourceType == "vm" {
 			if objectRef.guest != "" {
 				t["guest"] = objectRef.guest
 			}
-			if c, ok := e.getParent(parent); ok {
+			if c, ok := e.getParent(parent, resource); ok {
 				t["clustername"] = c.name
 			}
 		}

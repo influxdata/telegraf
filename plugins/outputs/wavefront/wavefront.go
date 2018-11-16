@@ -122,11 +122,11 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 		return fmt.Errorf("Wavefront: TCP connect fail %s", err.Error())
 	}
 	defer connection.Close()
-	connection.SetWriteDeadline(time.Now().Add(5 * time.Second))
 
 	for _, m := range metrics {
 		for _, metricPoint := range buildMetrics(m, w) {
 			metricLine := formatMetricPoint(metricPoint, w)
+			connection.SetWriteDeadline(time.Now().Add(30 * time.Second))
 			_, err := connection.Write([]byte(metricLine))
 			if err != nil {
 				return fmt.Errorf("Wavefront: TCP writing error %s", err.Error())
