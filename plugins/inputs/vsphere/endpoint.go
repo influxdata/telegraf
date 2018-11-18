@@ -29,6 +29,8 @@ const metricLookback = 3
 
 const rtMetricLookback = 3
 
+const maxSampleConst = 10
+
 // Endpoint is a high-level representation of a connected vCenter endpoint. It is backed by the lower
 // level Client type.
 type Endpoint struct {
@@ -57,6 +59,7 @@ type resourceKind struct {
 	filters          filter.Filter
 	metrics          performance.MetricList
 	collectInstances bool
+	parent           string
 	getObjects       func(context.Context, *Endpoint, *view.ContainerView) (objectMap, error)
 }
 
@@ -90,6 +93,15 @@ type metricQResponse struct {
 
 type multiError []error
 
+func (e *Endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, bool) {
+	if pKind, ok := e.resourceKinds[res.parent]; ok {
+		if p, ok := pKind.objects[obj.parentRef.Value]; ok {
+			return &p, true
+		}
+	}
+	return nil, false
+}
+
 // NewEndpoint returns a new connection to a vCenter based on the URL and configuration passed
 // as parameters.
 func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint, error) {
@@ -115,6 +127,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			filters:          newFilterOrPanic(parent.DatacenterMetricInclude, parent.DatacenterMetricExclude),
 			collectInstances: parent.DatacenterInstances,
 			getObjects:       getDatacenters,
+			parent:           "",
 		},
 		"cluster": {
 			name:             "cluster",
@@ -127,6 +140,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			filters:          newFilterOrPanic(parent.ClusterMetricInclude, parent.ClusterMetricExclude),
 			collectInstances: parent.ClusterInstances,
 			getObjects:       getClusters,
+			parent:           "datacenter",
 		},
 		"host": {
 			name:             "host",
@@ -139,6 +153,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			filters:          newFilterOrPanic(parent.HostMetricInclude, parent.HostMetricExclude),
 			collectInstances: parent.HostInstances,
 			getObjects:       getHosts,
+			parent:           "cluster",
 		},
 		"vm": {
 			name:             "vm",
@@ -151,6 +166,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			filters:          newFilterOrPanic(parent.VMMetricInclude, parent.VMMetricExclude),
 			collectInstances: parent.VMInstances,
 			getObjects:       getVMs,
+			parent:           "host",
 		},
 		"datastore": {
 			name:             "datastore",
@@ -162,6 +178,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			filters:          newFilterOrPanic(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
 			collectInstances: parent.DatastoreInstances,
 			getObjects:       getDatastores,
+			parent:           "",
 		},
 	}
 
@@ -645,24 +662,17 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 			fm := len(res.metrics) - mr
 			pq := types.PerfQuerySpec{
 				Entity:     object.ref,
-				MaxSample:  rtMetricLookback,
+				MaxSample:  maxSampleConst,
 				MetricId:   res.metrics[fm : fm+mc],
 				IntervalId: res.sampling,
 				Format:     "normal",
 			}
 
-			// For non-realtime metrics, we need to look back a few samples in case
-			// the vCenter is late reporting metrics.
-			if !res.realTime {
-				pq.MaxSample = metricLookback
-			}
-
 			// Look back 3 sampling periods
-			start := latest.Add(time.Duration(-res.sampling) * time.Second * (metricLookback - 1))
-			if !res.realTime {
-				pq.StartTime = &start
-				pq.EndTime = &now
-			}
+			//start := latest.Add(time.Duration(-res.sampling) * time.Second * (metricLookback - 1))
+			pq.StartTime = &latest
+			pq.EndTime = &now
+
 			pqs = append(pqs, pq)
 			mr -= mc
 			metrics += mc
@@ -733,16 +743,23 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 
 	count := int64(0)
 
+	var tsMux sync.Mutex
+	latestSample := time.Time{}
 	// Set up a worker pool for collecting chunk metrics
 	wp := NewWorkerPool(10)
 	wp.Run(ctx, func(ctx context.Context, in interface{}) interface{} {
 		chunk := in.([]types.PerfQuerySpec)
-		n, err := e.collectChunk(ctx, chunk, resourceType, &res, acc)
+		n, localLatest, err := e.collectChunk(ctx, chunk, resourceType, &res, acc)
 		log.Printf("D! [input.vsphere] CollectChunk for %s returned %d metrics", resourceType, n)
 		if err != nil {
 			return err
 		}
 		atomic.AddInt64(&count, int64(n))
+		tsMux.Lock()
+		defer tsMux.Unlock()
+		if localLatest.After(latestSample) {
+			latestSample = localLatest
+		}
 		return nil
 
 	}, e.Parent.CollectConcurrency)
@@ -765,8 +782,8 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 		}
 		return true
 	})
-	e.lastColls[resourceType] = now // Use value captured at the beginning to avoid blind spots.
-
+	log.Printf("D! [input.vsphere] Latest sample for %s set to %s", resourceType, latestSample)
+	e.lastColls[resourceType] = latestSample
 	sw.Stop()
 	SendInternalCounterWithTags("gather_count", e.URL.Host, internalTags, count)
 	if len(merr) > 0 {
@@ -776,34 +793,35 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 }
 
 func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, resourceType string,
-	res *resourceKind, acc telegraf.Accumulator) (int, error) {
+	res *resourceKind, acc telegraf.Accumulator) (int, time.Time, error) {
+	latestSample := time.Time{}
 	count := 0
 	prefix := "vsphere" + e.Parent.Separator + resourceType
 
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
-		return 0, err
+		return count, latestSample, err
 	}
 
 	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
 	defer cancel1()
 	metricInfo, err := client.Perf.CounterInfoByName(ctx1)
 	if err != nil {
-		return count, err
+		return count, latestSample, err
 	}
 
 	ctx2, cancel2 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
 	defer cancel2()
 	metrics, err := client.Perf.Query(ctx2, pqs)
 	if err != nil {
-		return count, err
+		return count, latestSample, err
 	}
 
 	ctx3, cancel3 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
 	defer cancel3()
 	ems, err := client.Perf.ToMetricSeries(ctx3, metrics)
 	if err != nil {
-		return count, err
+		return count, latestSample, err
 	}
 	log.Printf("D! [input.vsphere] Query for %s returned metrics for %d objects", resourceType, len(ems))
 
@@ -836,6 +854,9 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 			tsKey := moid + "|" + name + "|" + v.Instance
 			for idx := len(v.Value) - 1; idx >= 0; idx-- {
 				ts := em.SampleInfo[idx].Timestamp
+				if ts.After(latestSample) {
+					latestSample = ts
+				}
 
 				// For queries with a lookback, we need to check the high-water mark
 				// to determine if this should be included. Only samples not seen before should be included.
@@ -881,17 +902,7 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 			acc.AddFields(bucket.name, bucket.fields, bucket.tags, bucket.ts)
 		}
 	}
-	return count, nil
-}
-
-func (e *Endpoint) getParent(obj objectRef, res *resourceKind) (objectRef, bool) {
-	p := obj.parentRef
-	if p == nil {
-		log.Printf("D! [input.vsphere] No parent found for %s", obj.name)
-		return objectRef{}, false
-	}
-	r, ok := res.objects[p.Value]
-	return r, ok
+	return count, latestSample, nil
 }
 
 func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resource *resourceKind, t map[string]string, v *performance.MetricSeries) {
@@ -905,14 +916,14 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	}
 
 	// Map parent reference
-	parent, found := resource.objects[objectRef.parentRef.Value]
+	parent, found := e.getParent(objectRef, resource)
 	if found {
 		t[resource.parentTag] = parent.name
 		if resourceType == "vm" {
 			if objectRef.guest != "" {
 				t["guest"] = objectRef.guest
 			}
-			if c, ok := e.getParent(parent, resource); ok {
+			if c, ok := e.resourceKinds["cluster"].objects[parent.parentRef.Value]; ok {
 				t["clustername"] = c.name
 			}
 		}
