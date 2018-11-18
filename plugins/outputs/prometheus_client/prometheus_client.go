@@ -295,7 +295,7 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func sanitize(value string) string {
+func Sanitize(value string) string {
 	return invalidNameCharRE.ReplaceAllString(value, "_")
 }
 
@@ -356,7 +356,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 
 		labels := make(map[string]string)
 		for k, v := range tags {
-			labels[sanitize(k)] = v
+			labels[Sanitize(k)] = v
 		}
 
 		// Prometheus doesn't have a string value type, so convert string
@@ -365,7 +365,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			for fn, fv := range point.Fields() {
 				switch fv := fv.(type) {
 				case string:
-					labels[sanitize(fn)] = fv
+					labels[Sanitize(fn)] = fv
 				}
 			}
 		}
@@ -409,7 +409,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				Timestamp:    point.Time(),
 				Expiration:   now.Add(p.ExpirationInterval.Duration),
 			}
-			mname = sanitize(point.Name())
+			mname = Sanitize(point.Name())
 
 			p.addMetricFamily(point, sample, mname, sampleID)
 
@@ -451,7 +451,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				Timestamp:      point.Time(),
 				Expiration:     now.Add(p.ExpirationInterval.Duration),
 			}
-			mname = sanitize(point.Name())
+			mname = Sanitize(point.Name())
 
 			p.addMetricFamily(point, sample, mname, sampleID)
 
@@ -483,18 +483,18 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				switch point.Type() {
 				case telegraf.Counter:
 					if fn == "counter" {
-						mname = sanitize(point.Name())
+						mname = Sanitize(point.Name())
 					}
 				case telegraf.Gauge:
 					if fn == "gauge" {
-						mname = sanitize(point.Name())
+						mname = Sanitize(point.Name())
 					}
 				}
 				if mname == "" {
 					if fn == "value" {
-						mname = sanitize(point.Name())
+						mname = Sanitize(point.Name())
 					} else {
-						mname = sanitize(fmt.Sprintf("%s_%s", point.Name(), fn))
+						mname = Sanitize(fmt.Sprintf("%s_%s", point.Name(), fn))
 					}
 				}
 
