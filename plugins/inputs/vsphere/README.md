@@ -159,7 +159,7 @@ vm_metric_exclude = [ "*" ]
   # object_discovery_interval = "300s"
 
   ## timeout applies to any of the api request made to vcenter
-  # timeout = "20s"
+  # timeout = "60s"
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
@@ -229,7 +229,7 @@ For setting up concurrency, modify `collect_concurrency` and `discover_concurren
 - Datastore stats:
 	- Disk: Capacity, provisioned, used  
 
-For a detailed list of commonly available metrics, please refer to [METRICS.MD](METRICS.MD)
+For a detailed list of commonly available metrics, please refer to [METRICS.md](METRICS.md)
 	
 ## Tags
 

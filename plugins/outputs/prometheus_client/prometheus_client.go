@@ -144,7 +144,7 @@ func (p *PrometheusClient) auth(h http.Handler) http.Handler {
 	})
 }
 
-func (p *PrometheusClient) Start() error {
+func (p *PrometheusClient) Connect() error {
 	defaultCollectors := map[string]bool{
 		"gocollector": true,
 		"process":     true,
@@ -197,15 +197,6 @@ func (p *PrometheusClient) Start() error {
 		}
 	}()
 
-	return nil
-}
-
-func (p *PrometheusClient) Stop() {
-	// plugin gets cleaned up in Close() already.
-}
-
-func (p *PrometheusClient) Connect() error {
-	// This service output does not need to make any further connections
 	return nil
 }
 
