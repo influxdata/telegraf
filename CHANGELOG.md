@@ -1,3 +1,9 @@
+## v1.10 [unreleased]
+
+#### Features
+
+- [#4345](https://github.com/influxdata/telegraf/pull/4345): Allow for force gathering ES cluster stats.
+
 ## v1.9 [unreleased]
 
 #### Release Notes
