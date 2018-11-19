@@ -22,7 +22,9 @@ func init() {
 }
 
 type PrometheusRemoteWrite struct {
-	URL string
+	URL           string `toml:"url"`
+	BasicUsername string `toml:"basic_username"`
+	BasicPassword string `toml:"basic_password"`
 }
 
 var sampleConfig = `
@@ -104,7 +106,18 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 	}
 
 	compressed := snappy.Encode(nil, buf)
-	resp, err := http.Post(p.URL, "application/x-protobuf", bytes.NewReader(compressed))
+	httpReq, err := http.NewRequest("POST", p.URL, bytes.NewReader(compressed))
+	if err != nil {
+		return err
+	}
+	httpReq.Header.Add("Content-Encoding", "snappy")
+	httpReq.Header.Set("Content-Type", "application/x-protobuf")
+	httpReq.Header.Set("X-Prometheus-Remote-Write-Version", "0.1.0")
+	if p.BasicUsername != "" || p.BasicPassword != "" {
+		httpReq.SetBasicAuth(p.BasicUsername, p.BasicPassword)
+	}
+
+	resp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return err
 	}
