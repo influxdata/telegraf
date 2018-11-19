@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gobwas/glob"
+	"github.com/karrick/godirwalk"
 )
 
 type GlobPath struct {
@@ -55,7 +56,7 @@ func (g *GlobPath) Match() []string {
 		return []string{}
 	}
 	out := []string{}
-	walkfn := func(path string, _ os.FileInfo, _ error) error {
+	walkfn := func(path string, _ *godirwalk.Dirent) error {
 		if g.g.Match(path) {
 			out = append(out, path)
 		}
@@ -63,7 +64,20 @@ func (g *GlobPath) Match() []string {
 
 	}
 	for _, root := range roots {
-		filepath.Walk(root, walkfn)
+		fileinfo, err := os.Stat(root)
+		if err != nil {
+			continue
+		}
+		if !fileinfo.IsDir() {
+			if g.MatchString(root) {
+				out = append(out, root)
+			}
+			continue
+		}
+		godirwalk.Walk(root, &godirwalk.Options{
+			Callback: walkfn,
+			Unsorted: true,
+		})
 	}
 	return out
 }
