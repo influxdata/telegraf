@@ -104,9 +104,11 @@ const sampleConfig = `
   ##  - cluster
   # cluster_health_level = "indices"
 
-  ## Set cluster_stats to true when you want to also obtain cluster stats from the
-  ## Master node.
+  ## Set cluster_stats to true when you want to also obtain cluster stats.
   cluster_stats = false
+
+  ## Only gather cluster_stats from the master node. To work this require local = true
+  cluster_stats_only_from_master = true
 
   ## node_stats is a list of sub-stats that you want to have gathered. Valid options
   ## are "indices", "os", "process", "jvm", "thread_pool", "fs", "transport", "http",
@@ -124,13 +126,14 @@ const sampleConfig = `
 // Elasticsearch is a plugin to read stats from one or many Elasticsearch
 // servers.
 type Elasticsearch struct {
-	Local              bool
-	Servers            []string
-	HttpTimeout        internal.Duration
-	ClusterHealth      bool
-	ClusterHealthLevel string
-	ClusterStats       bool
-	NodeStats          []string
+	Local                      bool
+	Servers                    []string
+	HttpTimeout                internal.Duration
+	ClusterHealth              bool
+	ClusterHealthLevel         string
+	ClusterStats               bool
+	ClusterStatsOnlyFromMaster bool
+	NodeStats                  []string
 	tls.ClientConfig
 
 	client                  *http.Client
@@ -141,8 +144,9 @@ type Elasticsearch struct {
 // NewElasticsearch return a new instance of Elasticsearch
 func NewElasticsearch() *Elasticsearch {
 	return &Elasticsearch{
-		HttpTimeout:        internal.Duration{Duration: time.Second * 5},
-		ClusterHealthLevel: "indices",
+		HttpTimeout:                internal.Duration{Duration: time.Second * 5},
+		ClusterStatsOnlyFromMaster: true,
+		ClusterHealthLevel:         "indices",
 	}
 }
 
@@ -216,7 +220,7 @@ func (e *Elasticsearch) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 
-			if e.ClusterStats && e.isMaster {
+			if e.ClusterStats && (e.isMaster || !e.ClusterStatsOnlyFromMaster || !e.Local) {
 				if err := e.gatherClusterStats(s+"/_cluster/stats", acc); err != nil {
 					acc.AddError(fmt.Errorf(mask.ReplaceAllString(err.Error(), "http(s)://XXX:XXX@")))
 					return
