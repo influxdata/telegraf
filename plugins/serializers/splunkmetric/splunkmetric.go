@@ -68,23 +68,16 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 
 	for _, field := range metric.FieldList() {
 
-		switch field.Value.(type) {
-		case string:
+		value, valid := verifyValue(field.Value)
+
+		if !valid {
 			log.Printf("D! Can not parse value: %v for key: %v", field.Value, field.Key)
 			continue
-		case bool:
-			if field.Value == bool(true) {
-				// Store 1 for a "true" value
-				field.Value = 1
-			} else {
-				// Otherwise store 0
-				field.Value = 0
-			}
 		}
 
 		obj := map[string]interface{}{}
 		obj["metric_name"] = metric.Name() + "." + field.Key
-		obj["_value"] = field.Value
+		obj["_value"] = value
 
 		dataGroup.Event = "metric"
 		// Convert ns to float seconds since epoch.
@@ -103,8 +96,6 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 				dataGroup.Fields[n] = t
 			}
 		}
-		dataGroup.Fields["metric_name"] = metric.Name() + "." + field.Key
-		dataGroup.Fields["_value"] = field.Value
 
 		switch s.HecRouting {
 		case true:
@@ -124,4 +115,26 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 	}
 
 	return metricGroup, nil
+}
+
+func verifyValue(v interface{}) (value interface{}, valid bool) {
+	switch v.(type) {
+	case string:
+		valid = false
+		value = v
+	case bool:
+		if v == bool(true) {
+			// Store 1 for a "true" value
+			valid = true
+			value = 1
+		} else {
+			// Otherwise store 0
+			valid = true
+			value = 0
+		}
+	default:
+		valid = true
+		value = v
+	}
+	return value, valid
 }
