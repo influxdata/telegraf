@@ -9,13 +9,14 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 )
 
 func init() {
-	outputs.Add("prometheus_remotes_write", func() telegraf.Output {
+	outputs.Add("prometheus_remote_write", func() telegraf.Output {
 		return &PrometheusRemoteWrite{}
 	})
 }
