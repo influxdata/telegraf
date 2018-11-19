@@ -19,34 +19,19 @@ NET_RX:     867028		225
 TASKLET:	205			0`
 	f := bytes.NewBufferString(interruptStr)
 	parsed := []IRQ{
-		{
-			ID: "0", Type: "IO-APIC-edge", Device: "timer",
-			Cpus: []int64{int64(134), int64(0)}, Total: int64(134),
-		},
-		{
-			ID: "1", Type: "IO-APIC-edge", Device: "i8042",
-			Cpus: []int64{int64(7), int64(3)}, Total: int64(10),
-		},
-		{
-			ID: "NMI", Type: "Non-maskable interrupts",
-			Cpus: []int64{int64(0), int64(0)}, Total: int64(0),
-		},
-		{
-			ID: "LOC", Type: "Local timer interrupts",
-			Cpus:  []int64{int64(2338608687), int64(2334309625)},
-			Total: int64(4672918312),
-		},
-		{
-			ID: "MIS", Cpus: []int64{int64(0)}, Total: int64(0),
-		},
-		{
-			ID: "NET_RX", Cpus: []int64{int64(867028), int64(225)},
-			Total: int64(867253),
-		},
-		{
-			ID: "TASKLET", Cpus: []int64{int64(205), int64(0)},
-			Total: int64(205),
-		},
+		{ID: "0", Type: "IO-APIC-edge", Device: "timer", CPU: 0, Count: int64(134)},
+		{ID: "0", Type: "IO-APIC-edge", Device: "timer", CPU: 1, Count: int64(0)},
+		{ID: "1", Type: "IO-APIC-edge", Device: "i8042", CPU: 0, Count: int64(7)},
+		{ID: "1", Type: "IO-APIC-edge", Device: "i8042", CPU: 1, Count: int64(3)},
+		{ID: "NMI", Type: "Non-maskable interrupts", CPU: 0, Count: int64(0)},
+		{ID: "NMI", Type: "Non-maskable interrupts", CPU: 1, Count: int64(0)},
+		{ID: "LOC", Type: "Local timer interrupts", CPU: 0, Count: int64(2338608687)},
+		{ID: "LOC", Type: "Local timer interrupts", CPU: 1, Count: int64(2334309625)},
+		{ID: "MIS", CPU: 0, Count: int64(0)},
+		{ID: "NET_RX", CPU: 0, Count: int64(867028)},
+		{ID: "NET_RX", CPU: 1, Count: int64(225)},
+		{ID: "TASKLET", CPU: 0, Count: int64(205)},
+		{ID: "TASKLET", CPU: 1, Count: int64(0)},
 	}
 	got, err := parseInterrupts(f)
 	require.Equal(t, nil, err)
@@ -54,9 +39,6 @@ TASKLET:	205			0`
 	require.Equal(t, len(got), len(parsed))
 	for i := 0; i < len(parsed); i++ {
 		assert.Equal(t, parsed[i], got[i])
-		for k := 0; k < len(parsed[i].Cpus); k++ {
-			assert.Equal(t, parsed[i].Cpus[k], got[i].Cpus[k])
-		}
 	}
 }
 
@@ -88,94 +70,94 @@ func TestParseInterruptsBad(t *testing.T) {
    IPI6:          0          0          0          0  completion interrupts`
 	f := bytes.NewBufferString(interruptStr)
 	parsed := []IRQ{
-		{
-			ID: "16", Type: "bcm2836-timer", Device: "0 Edge arch_timer",
-			Cpus: []int64{0, 0, 0, 0},
-		},
-		{
-			ID: "17", Type: "bcm2836-timer", Device: "1 Edge arch_timer",
-			Cpus: []int64{127224250, 118424219, 127224437, 117885416}, Total: 490758322,
-		},
-		{
-			ID: "21", Type: "bcm2836-pmu", Device: "9 Edge arm-pmu",
-			Cpus: []int64{0, 0, 0, 0},
-		},
-		{
-			ID: "23", Type: "ARMCTRL-level", Device: "1 Edge 3f00b880.mailbox",
-			Cpus: []int64{1549514, 0, 0, 0}, Total: 1549514,
-		},
-		{
-			ID: "24", Type: "ARMCTRL-level", Device: "2 Edge VCHIQ doorbell",
-			Cpus: []int64{2, 0, 0, 0}, Total: 2,
-		},
-		{
-			ID: "46", Type: "ARMCTRL-level", Device: "48 Edge bcm2708_fb dma",
-			Cpus: []int64{0, 0, 0, 0},
-		},
-		{
-			ID: "48", Type: "ARMCTRL-level", Device: "50 Edge DMA IRQ",
-			Cpus: []int64{0, 0, 0, 0},
-		},
-		{
-			ID: "50", Type: "ARMCTRL-level", Device: "52 Edge DMA IRQ",
-			Cpus: []int64{0, 0, 0, 0},
-		},
-		{
-			ID: "51", Type: "ARMCTRL-level", Device: "53 Edge DMA IRQ",
-			Cpus: []int64{208, 0, 0, 0}, Total: 208,
-		},
-		{
-			ID: "54", Type: "ARMCTRL-level", Device: "56 Edge DMA IRQ",
-			Cpus: []int64{883002, 0, 0, 0}, Total: 883002,
-		},
-		{
-			ID: "59", Type: "ARMCTRL-level", Device: "61 Edge bcm2835-auxirq",
-			Cpus: []int64{0, 0, 0, 0},
-		},
-		{
-			ID: "62", Type: "ARMCTRL-level", Device: "64 Edge dwc_otg, dwc_otg_pcd, dwc_otg_hcd:usb1",
-			Cpus: []int64{521451447, 0, 0, 0}, Total: 521451447,
-		},
-		{
-			ID: "86", Type: "ARMCTRL-level", Device: "88 Edge mmc0",
-			Cpus: []int64{857597, 0, 0, 0}, Total: 857597,
-		},
-		{
-			ID: "87", Type: "ARMCTRL-level", Device: "89 Edge uart-pl011",
-			Cpus: []int64{4938, 0, 0, 0}, Total: 4938,
-		},
-		{
-			ID: "92", Type: "ARMCTRL-level", Device: "94 Edge mmc1",
-			Cpus: []int64{5669, 0, 0, 0}, Total: 5669,
-		},
-		{
-			ID: "IPI0", Type: "CPU wakeup interrupts",
-			Cpus: []int64{0, 0, 0, 0},
-		},
-		{
-			ID: "IPI1", Type: "Timer broadcast interrupts",
-			Cpus: []int64{0, 0, 0, 0},
-		},
-		{
-			ID: "IPI2", Type: "Rescheduling interrupts",
-			Cpus: []int64{23564958, 23464876, 23531165, 23040826}, Total: 93601825,
-		},
-		{
-			ID: "IPI3", Type: "Function call interrupts",
-			Cpus: []int64{148438, 639704, 644266, 588150}, Total: 2020558,
-		},
-		{
-			ID: "IPI4", Type: "CPU stop interrupts",
-			Cpus: []int64{0, 0, 0, 0},
-		},
-		{
-			ID: "IPI5", Type: "IRQ work interrupts",
-			Cpus: []int64{4348149, 1843985, 3819457, 1822877}, Total: 11834468,
-		},
-		{
-			ID: "IPI6", Type: "completion interrupts",
-			Cpus: []int64{0, 0, 0, 0},
-		},
+		{ID: "16", Type: "bcm2836-timer", Device: "0 Edge arch_timer", CPU: 0, Count: int64(0)},
+		{ID: "16", Type: "bcm2836-timer", Device: "0 Edge arch_timer", CPU: 1, Count: int64(0)},
+		{ID: "16", Type: "bcm2836-timer", Device: "0 Edge arch_timer", CPU: 2, Count: int64(0)},
+		{ID: "16", Type: "bcm2836-timer", Device: "0 Edge arch_timer", CPU: 3, Count: int64(0)},
+		{ID: "17", Type: "bcm2836-timer", Device: "1 Edge arch_timer", CPU: 0, Count: int64(127224250)},
+		{ID: "17", Type: "bcm2836-timer", Device: "1 Edge arch_timer", CPU: 1, Count: int64(118424219)},
+		{ID: "17", Type: "bcm2836-timer", Device: "1 Edge arch_timer", CPU: 2, Count: int64(127224437)},
+		{ID: "17", Type: "bcm2836-timer", Device: "1 Edge arch_timer", CPU: 3, Count: int64(117885416)},
+		{ID: "21", Type: "bcm2836-pmu", Device: "9 Edge arm-pmu", CPU: 0, Count: int64(0)},
+		{ID: "21", Type: "bcm2836-pmu", Device: "9 Edge arm-pmu", CPU: 1, Count: int64(0)},
+		{ID: "21", Type: "bcm2836-pmu", Device: "9 Edge arm-pmu", CPU: 2, Count: int64(0)},
+		{ID: "21", Type: "bcm2836-pmu", Device: "9 Edge arm-pmu", CPU: 3, Count: int64(0)},
+		{ID: "23", Type: "ARMCTRL-level", Device: "1 Edge 3f00b880.mailbox", CPU: 0, Count: int64(1549514)},
+		{ID: "23", Type: "ARMCTRL-level", Device: "1 Edge 3f00b880.mailbox", CPU: 1, Count: int64(0)},
+		{ID: "23", Type: "ARMCTRL-level", Device: "1 Edge 3f00b880.mailbox", CPU: 2, Count: int64(0)},
+		{ID: "23", Type: "ARMCTRL-level", Device: "1 Edge 3f00b880.mailbox", CPU: 3, Count: int64(0)},
+		{ID: "24", Type: "ARMCTRL-level", Device: "2 Edge VCHIQ doorbell", CPU: 0, Count: int64(2)},
+		{ID: "24", Type: "ARMCTRL-level", Device: "2 Edge VCHIQ doorbell", CPU: 1, Count: int64(0)},
+		{ID: "24", Type: "ARMCTRL-level", Device: "2 Edge VCHIQ doorbell", CPU: 2, Count: int64(0)},
+		{ID: "24", Type: "ARMCTRL-level", Device: "2 Edge VCHIQ doorbell", CPU: 3, Count: int64(0)},
+		{ID: "46", Type: "ARMCTRL-level", Device: "48 Edge bcm2708_fb dma", CPU: 0, Count: int64(0)},
+		{ID: "46", Type: "ARMCTRL-level", Device: "48 Edge bcm2708_fb dma", CPU: 1, Count: int64(0)},
+		{ID: "46", Type: "ARMCTRL-level", Device: "48 Edge bcm2708_fb dma", CPU: 2, Count: int64(0)},
+		{ID: "46", Type: "ARMCTRL-level", Device: "48 Edge bcm2708_fb dma", CPU: 3, Count: int64(0)},
+		{ID: "48", Type: "ARMCTRL-level", Device: "50 Edge DMA IRQ", CPU: 0, Count: int64(0)},
+		{ID: "48", Type: "ARMCTRL-level", Device: "50 Edge DMA IRQ", CPU: 1, Count: int64(0)},
+		{ID: "48", Type: "ARMCTRL-level", Device: "50 Edge DMA IRQ", CPU: 2, Count: int64(0)},
+		{ID: "48", Type: "ARMCTRL-level", Device: "50 Edge DMA IRQ", CPU: 3, Count: int64(0)},
+		{ID: "50", Type: "ARMCTRL-level", Device: "52 Edge DMA IRQ", CPU: 0, Count: int64(0)},
+		{ID: "50", Type: "ARMCTRL-level", Device: "52 Edge DMA IRQ", CPU: 1, Count: int64(0)},
+		{ID: "50", Type: "ARMCTRL-level", Device: "52 Edge DMA IRQ", CPU: 2, Count: int64(0)},
+		{ID: "50", Type: "ARMCTRL-level", Device: "52 Edge DMA IRQ", CPU: 3, Count: int64(0)},
+		{ID: "51", Type: "ARMCTRL-level", Device: "53 Edge DMA IRQ", CPU: 0, Count: int64(208)},
+		{ID: "51", Type: "ARMCTRL-level", Device: "53 Edge DMA IRQ", CPU: 1, Count: int64(0)},
+		{ID: "51", Type: "ARMCTRL-level", Device: "53 Edge DMA IRQ", CPU: 2, Count: int64(0)},
+		{ID: "51", Type: "ARMCTRL-level", Device: "53 Edge DMA IRQ", CPU: 3, Count: int64(0)},
+		{ID: "54", Type: "ARMCTRL-level", Device: "56 Edge DMA IRQ", CPU: 0, Count: int64(883002)},
+		{ID: "54", Type: "ARMCTRL-level", Device: "56 Edge DMA IRQ", CPU: 1, Count: int64(0)},
+		{ID: "54", Type: "ARMCTRL-level", Device: "56 Edge DMA IRQ", CPU: 2, Count: int64(0)},
+		{ID: "54", Type: "ARMCTRL-level", Device: "56 Edge DMA IRQ", CPU: 3, Count: int64(0)},
+		{ID: "59", Type: "ARMCTRL-level", Device: "61 Edge bcm2835-auxirq", CPU: 0, Count: int64(0)},
+		{ID: "59", Type: "ARMCTRL-level", Device: "61 Edge bcm2835-auxirq", CPU: 1, Count: int64(0)},
+		{ID: "59", Type: "ARMCTRL-level", Device: "61 Edge bcm2835-auxirq", CPU: 2, Count: int64(0)},
+		{ID: "59", Type: "ARMCTRL-level", Device: "61 Edge bcm2835-auxirq", CPU: 3, Count: int64(0)},
+		{ID: "62", Type: "ARMCTRL-level", Device: "64 Edge dwc_otg, dwc_otg_pcd, dwc_otg_hcd:usb1", CPU: 0, Count: int64(521451447)},
+		{ID: "62", Type: "ARMCTRL-level", Device: "64 Edge dwc_otg, dwc_otg_pcd, dwc_otg_hcd:usb1", CPU: 1, Count: int64(0)},
+		{ID: "62", Type: "ARMCTRL-level", Device: "64 Edge dwc_otg, dwc_otg_pcd, dwc_otg_hcd:usb1", CPU: 2, Count: int64(0)},
+		{ID: "62", Type: "ARMCTRL-level", Device: "64 Edge dwc_otg, dwc_otg_pcd, dwc_otg_hcd:usb1", CPU: 3, Count: int64(0)},
+		{ID: "86", Type: "ARMCTRL-level", Device: "88 Edge mmc0", CPU: 0, Count: int64(857597)},
+		{ID: "86", Type: "ARMCTRL-level", Device: "88 Edge mmc0", CPU: 1, Count: int64(0)},
+		{ID: "86", Type: "ARMCTRL-level", Device: "88 Edge mmc0", CPU: 2, Count: int64(0)},
+		{ID: "86", Type: "ARMCTRL-level", Device: "88 Edge mmc0", CPU: 3, Count: int64(0)},
+		{ID: "87", Type: "ARMCTRL-level", Device: "89 Edge uart-pl011", CPU: 0, Count: int64(4938)},
+		{ID: "87", Type: "ARMCTRL-level", Device: "89 Edge uart-pl011", CPU: 1, Count: int64(0)},
+		{ID: "87", Type: "ARMCTRL-level", Device: "89 Edge uart-pl011", CPU: 2, Count: int64(0)},
+		{ID: "87", Type: "ARMCTRL-level", Device: "89 Edge uart-pl011", CPU: 3, Count: int64(0)},
+		{ID: "92", Type: "ARMCTRL-level", Device: "94 Edge mmc1", CPU: 0, Count: int64(5669)},
+		{ID: "92", Type: "ARMCTRL-level", Device: "94 Edge mmc1", CPU: 1, Count: int64(0)},
+		{ID: "92", Type: "ARMCTRL-level", Device: "94 Edge mmc1", CPU: 2, Count: int64(0)},
+		{ID: "92", Type: "ARMCTRL-level", Device: "94 Edge mmc1", CPU: 3, Count: int64(0)},
+		{ID: "IPI0", Type: "CPU wakeup interrupts", CPU: 0, Count: int64(0)},
+		{ID: "IPI0", Type: "CPU wakeup interrupts", CPU: 1, Count: int64(0)},
+		{ID: "IPI0", Type: "CPU wakeup interrupts", CPU: 2, Count: int64(0)},
+		{ID: "IPI0", Type: "CPU wakeup interrupts", CPU: 3, Count: int64(0)},
+		{ID: "IPI1", Type: "Timer broadcast interrupts", CPU: 0, Count: int64(0)},
+		{ID: "IPI1", Type: "Timer broadcast interrupts", CPU: 1, Count: int64(0)},
+		{ID: "IPI1", Type: "Timer broadcast interrupts", CPU: 2, Count: int64(0)},
+		{ID: "IPI1", Type: "Timer broadcast interrupts", CPU: 3, Count: int64(0)},
+		{ID: "IPI2", Type: "Rescheduling interrupts", CPU: 0, Count: int64(23564958)},
+		{ID: "IPI2", Type: "Rescheduling interrupts", CPU: 1, Count: int64(23464876)},
+		{ID: "IPI2", Type: "Rescheduling interrupts", CPU: 2, Count: int64(23531165)},
+		{ID: "IPI2", Type: "Rescheduling interrupts", CPU: 3, Count: int64(23040826)},
+		{ID: "IPI3", Type: "Function call interrupts", CPU: 0, Count: int64(148438)},
+		{ID: "IPI3", Type: "Function call interrupts", CPU: 1, Count: int64(639704)},
+		{ID: "IPI3", Type: "Function call interrupts", CPU: 2, Count: int64(644266)},
+		{ID: "IPI3", Type: "Function call interrupts", CPU: 3, Count: int64(588150)},
+		{ID: "IPI4", Type: "CPU stop interrupts", CPU: 0, Count: int64(0)},
+		{ID: "IPI4", Type: "CPU stop interrupts", CPU: 1, Count: int64(0)},
+		{ID: "IPI4", Type: "CPU stop interrupts", CPU: 2, Count: int64(0)},
+		{ID: "IPI4", Type: "CPU stop interrupts", CPU: 3, Count: int64(0)},
+		{ID: "IPI5", Type: "IRQ work interrupts", CPU: 0, Count: int64(4348149)},
+		{ID: "IPI5", Type: "IRQ work interrupts", CPU: 1, Count: int64(1843985)},
+		{ID: "IPI5", Type: "IRQ work interrupts", CPU: 2, Count: int64(3819457)},
+		{ID: "IPI5", Type: "IRQ work interrupts", CPU: 3, Count: int64(1822877)},
+		{ID: "IPI6", Type: "completion interrupts", CPU: 0, Count: int64(0)},
+		{ID: "IPI6", Type: "completion interrupts", CPU: 1, Count: int64(0)},
+		{ID: "IPI6", Type: "completion interrupts", CPU: 2, Count: int64(0)},
+		{ID: "IPI6", Type: "completion interrupts", CPU: 3, Count: int64(0)},
 	}
 	got, err := parseInterrupts(f)
 	require.Equal(t, nil, err)
@@ -183,8 +165,5 @@ func TestParseInterruptsBad(t *testing.T) {
 	require.Equal(t, len(got), len(parsed))
 	for i := 0; i < len(parsed); i++ {
 		assert.Equal(t, parsed[i], got[i])
-		for k := 0; k < len(parsed[i].Cpus); k++ {
-			assert.Equal(t, parsed[i].Cpus[k], got[i].Cpus[k])
-		}
 	}
 }

@@ -18,12 +18,12 @@ type IRQ struct {
 	ID     string
 	Type   string
 	Device string
-	Total  int64
-	Cpus   []int64
+	CPU    int
+	Count  int64
 }
 
-func NewIRQ(id string) *IRQ {
-	return &IRQ{ID: id, Cpus: []int64{}}
+func NewIRQ(id string, cpu int, count int64) *IRQ {
+	return &IRQ{ID: id, CPU: cpu, Count: count}
 }
 
 const sampleConfig = `
@@ -59,28 +59,31 @@ scan:
 			continue
 		}
 		irqid := strings.TrimRight(fields[0], ":")
-		irq := NewIRQ(irqid)
 		irqvals := fields[1:]
+
+		_, err := strconv.ParseInt(irqid, 10, 64)
+		irqType := ""
+		irqDevice := ""
+		if err == nil && len(fields) >= cpucount+2 {
+			irqType = fields[cpucount+1]
+			irqDevice = strings.Join(fields[cpucount+2:], " ")
+		} else if len(fields) > cpucount {
+			irqType = strings.Join(fields[cpucount+1:], " ")
+		}
+
 		for i := 0; i < cpucount; i++ {
 			if i < len(irqvals) {
 				irqval, err := strconv.ParseInt(irqvals[i], 10, 64)
 				if err != nil {
 					continue scan
 				}
-				irq.Cpus = append(irq.Cpus, irqval)
+				irq := NewIRQ(irqid, i, irqval)
+				irq.Type = irqType
+				irq.Device = irqDevice
+				irqs = append(irqs, *irq)
 			}
 		}
-		for _, irqval := range irq.Cpus {
-			irq.Total += irqval
-		}
-		_, err := strconv.ParseInt(irqid, 10, 64)
-		if err == nil && len(fields) >= cpucount+2 {
-			irq.Type = fields[cpucount+1]
-			irq.Device = strings.Join(fields[cpucount+2:], " ")
-		} else if len(fields) > cpucount {
-			irq.Type = strings.Join(fields[cpucount+1:], " ")
-		}
-		irqs = append(irqs, *irq)
+
 	}
 	if scanner.Err() != nil {
 		return nil, fmt.Errorf("Error scanning file: %s", scanner.Err())
@@ -89,12 +92,8 @@ scan:
 }
 
 func gatherTagsFields(irq IRQ) (map[string]string, map[string]interface{}) {
-	tags := map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device}
-	fields := map[string]interface{}{"total": irq.Total}
-	for i := 0; i < len(irq.Cpus); i++ {
-		cpu := fmt.Sprintf("CPU%d", i)
-		fields[cpu] = irq.Cpus[i]
-	}
+	tags := map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device, "cpu": "cpu" + strconv.Itoa(irq.CPU)}
+	fields := map[string]interface{}{"count": irq.Count}
 	return tags, fields
 }
 
