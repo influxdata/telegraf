@@ -113,7 +113,7 @@ func TestSerializeMetricBool(t *testing.T) {
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
 
-    expS := `{"_value":1,"container-name":"telegraf-test","metric_name":"docker.oomkiller","time":0}`
+	expS := `{"_value":1,"container-name":"telegraf-test","metric_name":"docker.oomkiller","time":0}`
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -133,7 +133,7 @@ func TestSerializeMetricBoolHec(t *testing.T) {
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
 
-    expS := `{"time":0,"event":"metric","fields":{"_value":0,"container-name":"telegraf-test","metric_name":"docker.oomkiller"}}`
+	expS := `{"time":0,"event":"metric","fields":{"_value":0,"container-name":"telegraf-test","metric_name":"docker.oomkiller"}}`
 	assert.Equal(t, string(expS), string(buf))
 }
 
