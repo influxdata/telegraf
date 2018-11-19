@@ -8,10 +8,17 @@ This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefro
 ```toml
 # Configuration for Wavefront output 
 [[outputs.wavefront]]
-  ## DNS name of the wavefront proxy server
+  ## Url for Wavefront Direct Ingestion or using HTTP with Wavefront Proxy 
+  ## If using Wavefront Proxy, also specify port. example: http://proxyserver:2878  
+  url = "https://metrics.wavefront.com"
+
+  ## Authentication Token for Wavefront. Only required if using Direct Ingestion
+  #token = "DUMMY_TOKEN"  
+  
+  ## DNS name of the wavefront proxy server. Do not use if url is specified
   host = "wavefront.example.com"
 
-  ## Port that the Wavefront proxy server listens on
+  ## Port that the Wavefront proxy server listens on. Do not use if url is specified
   port = 2878
 
   ## prefix for metrics keys
@@ -32,7 +39,7 @@ This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefro
   #use_regex = false
 
   ## point tags to use as the source name for Wavefront (if none found, host will be used)
-  #source_override = ["hostname", "agent_host", "node_host"]
+  #source_override = ["hostname", "address", "agent_host", "node_host"]
 
   ## whether to convert boolean values to numeric values, with false -> 0.0 and true -> 1.0. default is true
   #convert_bool = true

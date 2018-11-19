@@ -245,3 +245,8 @@
 [[override]]
   name = "github.com/vishvananda/netlink"
   revision = "b2de5d10e38ecce8607e6b438b6d174f389a004e"
+
+[[constraint]]
+  name = "github.com/wavefronthq/wavefront-sdk-go"
+  version = "v0.9.0"
+
