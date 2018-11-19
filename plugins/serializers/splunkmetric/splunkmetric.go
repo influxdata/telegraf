@@ -68,10 +68,19 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 
 	for _, field := range metric.FieldList() {
 
-		if !verifyValue(field.Value) {
-			log.Printf("D! Can not parse value: %v for key: %v", field.Value, field.Key)
-			continue
-		}
+	    switch field.Value.(type) {
+            case string:
+			    log.Printf("D! Can not parse value: %v for key: %v", field.Value, field.Key)
+                continue
+            case bool:
+                if field.Value == bool(true) {
+                    // Store 1 for a "true" value
+                    field.Value = 1
+                } else {
+                    // Otherwise store 0
+                    field.Value = 0
+                }
+        }
 
 		obj := map[string]interface{}{}
 		obj["metric_name"] = metric.Name() + "." + field.Key
@@ -115,12 +124,4 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 	}
 
 	return metricGroup, nil
-}
-
-func verifyValue(v interface{}) bool {
-	switch v.(type) {
-	case string:
-		return false
-	}
-	return true
 }
