@@ -64,4 +64,4 @@ curl -i -XPOST 'http://localhost:8186/write' --data-binary 'cpu_load_short,host=
 ```
 
 [influxdb_http_api]: https://docs.influxdata.com/influxdb/latest/guides/writing_data/
-[http_listener_v2]: /plugins/inputs/influxdb_listener_v2/README.md
+[http_listener_v2]: /plugins/inputs/http_listener_v2/README.md
