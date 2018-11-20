@@ -1,6 +1,8 @@
 package googlecoreiot
 
 import (
+	"compress/gzip"
+	"crypto/subtle"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -16,9 +18,8 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/parsers"
 	influx "github.com/influxdata/telegraf/plugins/parsers/influx"
-
-	"github.com/influxdata/telegraf/selfstat"
 )
 
 // Attributes maps Default fields sent by Google Pub/Sub
@@ -55,72 +56,57 @@ type JSONData struct {
 	Time   int64                  `json:"time"`
 }
 
-const (
-	// DEFAULT_MAX_BODY_SIZE is the default maximum request body size, in bytes.
-	// if the request body is over this size, we will return an HTTP 413 error.
-	// 500 MB
-	DEFAULT_MAX_BODY_SIZE = 500 * 1024 * 1024
-
-	// DEFAULT_MAX_LINE_SIZE is the maximum size, in bytes, that can be allocated for
-	// a single InfluxDB point.
-	// 64 KB
-	DEFAULT_MAX_LINE_SIZE = 64 * 1024
-)
+// DEFAULT_MAX_BODY_SIZE is the default maximum request body size, in bytes.
+// if the request body is over this size, we will return an HTTP 413 error.
+// 500 MB
+const defaultMaxBodySize = 500 * 1024 * 1024
 
 type TimeFunc func() time.Time
 
-type HTTPListener struct {
+type GoogleListener struct {
 	ServiceAddress  string
+	Path            string
+	Methods         []string
 	ReadTimeout     internal.Duration
 	WriteTimeout    internal.Duration
-	MaxBodySize     int64
-	MaxLineSize     int
+	MaxBodySize     internal.Size
 	Port            int
-	MeasurementName string
 	Precision       string
-	Protocol        string
-	Path            string
+	DataFormat      string
+	MeasurementName string
+	handler         *influx.MetricHandler
 
 	tlsint.ServerConfig
 
+	BasicUsername string
+	BasicPassword string
+
 	TimeFunc
 
-	mu sync.Mutex
 	wg sync.WaitGroup
 
 	listener net.Listener
 
-	handler *influx.MetricHandler
-	acc     telegraf.Accumulator
-	pool    *pool
-
-	BytesRecv       selfstat.Stat
-	RequestsServed  selfstat.Stat
-	WritesServed    selfstat.Stat
-	QueriesServed   selfstat.Stat
-	PingsServed     selfstat.Stat
-	RequestsRecv    selfstat.Stat
-	WritesRecv      selfstat.Stat
-	QueriesRecv     selfstat.Stat
-	PingsRecv       selfstat.Stat
-	NotFoundsServed selfstat.Stat
-	BuffersCreated  selfstat.Stat
-	AuthFailures    selfstat.Stat
+	parsers.Parser
+	acc telegraf.Accumulator
 }
 
 const sampleConfig = `
 [[inputs.googlecoreiot]]
   ## Address and port to host HTTP listener on
-  service_address = ":9999"
+  # service_address = ":9999"
 
   ## Path to serve
   ## default is /write
-  path = "/write"
+  # path = "/write"
+
+  ## HTTP methods to accept.
+  # methods = ["POST", "PUT"]
 
   ## maximum duration before timing out read of the request
-  read_timeout = "10s"
+  # read_timeout = "10s"
   ## maximum duration before timing out write of the response
-  write_timeout = "10s"
+  # write_timeout = "10s"
 
   # precision of the time stamps. can be one of the following:
   # second
@@ -129,10 +115,10 @@ const sampleConfig = `
   # nanosecond
   # Default is nanosecond
   
-  precision = "nanosecond"
+  # precision = "nanosecond"
   
-  # Data Format is either line protocol or json
-  protocol="line protocol" 
+  # Data Format is either influx or json
+  # data_format="influx" 
 
   ## Set one or more allowed client CA certificate file names to 
   ## enable mutually authenticated TLS connections
@@ -141,48 +127,31 @@ const sampleConfig = `
   ## Add service certificate and key
   tls_cert = "/etc/telegraf/cert.pem"
   tls_key = "/etc/telegraf/key.pem"
-
+  ## Optional username and password to accept for HTTP basic authentication.
+  ## You probably want to make sure you have TLS configured above for this.
+  # basic_username = "foobar"
+  # basic_password = "barfoo"
 `
 
-func (h *HTTPListener) SampleConfig() string {
+func (h *GoogleListener) SampleConfig() string {
 	return sampleConfig
 }
 
-func (h *HTTPListener) Description() string {
-	return "Influx HTTP write listener"
+func (h *GoogleListener) Description() string {
+	return "Influx Google Pub/Sub write listener"
 }
 
-func (h *HTTPListener) Gather(_ telegraf.Accumulator) error {
-	h.BuffersCreated.Set(h.pool.ncreated())
+func (h *GoogleListener) Gather(_ telegraf.Accumulator) error {
 	return nil
+}
+func (h *GoogleListener) SetParser(parser parsers.Parser) {
+	h.Parser = parser
 }
 
 // Start starts the http listener service.
-func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	tags := map[string]string{
-		"address": h.ServiceAddress,
-	}
-	h.BytesRecv = selfstat.Register("http_listener", "bytes_received", tags)
-	h.RequestsServed = selfstat.Register("http_listener", "requests_served", tags)
-	h.WritesServed = selfstat.Register("http_listener", "writes_served", tags)
-	h.QueriesServed = selfstat.Register("http_listener", "queries_served", tags)
-	h.PingsServed = selfstat.Register("http_listener", "pings_served", tags)
-	h.RequestsRecv = selfstat.Register("http_listener", "requests_received", tags)
-	h.WritesRecv = selfstat.Register("http_listener", "writes_received", tags)
-	h.QueriesRecv = selfstat.Register("http_listener", "queries_received", tags)
-	h.PingsRecv = selfstat.Register("http_listener", "pings_received", tags)
-	h.NotFoundsServed = selfstat.Register("http_listener", "not_founds_served", tags)
-	h.BuffersCreated = selfstat.Register("http_listener", "buffers_created", tags)
-	h.AuthFailures = selfstat.Register("http_listener", "auth_failures", tags)
-
-	if h.MaxBodySize == 0 {
-		h.MaxBodySize = DEFAULT_MAX_BODY_SIZE
-	}
-	if h.MaxLineSize == 0 {
-		h.MaxLineSize = DEFAULT_MAX_LINE_SIZE
+func (h *GoogleListener) Start(acc telegraf.Accumulator) error {
+	if h.MaxBodySize.Size == 0 {
+		h.MaxBodySize.Size = defaultMaxBodySize
 	}
 
 	if h.ReadTimeout.Duration < time.Second {
@@ -194,15 +163,14 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 	if h.MeasurementName == "" {
 		h.MeasurementName = "Core_IoT"
 	}
-	if h.Protocol == "" {
-		h.Protocol = "line protocol"
+	if h.DataFormat == "" {
+		h.DataFormat = "influx"
 	}
 	if h.Path == "" {
 		h.Path = "/write"
 	}
 
 	h.acc = acc
-	h.pool = NewPool(200, h.MaxLineSize)
 
 	tlsConf, err := h.ServerConfig.TLSConfig()
 	if err != nil {
@@ -228,9 +196,6 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 	}
 	h.listener = listener
 	h.Port = listener.Addr().(*net.TCPAddr).Port
-
-	h.handler = influx.NewMetricHandler()
-
 	switch h.Precision {
 
 	case "second":
@@ -252,39 +217,38 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 		server.Serve(h.listener)
 	}()
 
-	log.Printf("I! Started HTTP listener service on %s%s\n", h.ServiceAddress, h.Path)
+	log.Printf("I! Started Google Core IoT service on %s\n", h.ServiceAddress)
+
 	return nil
 }
 
-// Stop cleans up all resources
-func (h *HTTPListener) Stop() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
+/// Stop cleans up all resources
+func (h *GoogleListener) Stop() {
 	h.listener.Close()
 	h.wg.Wait()
 
-	log.Println("I! Stopped HTTP listener service on ", h.ServiceAddress, h.Path)
+	log.Println("I! Stopped Google Core IoT service on ", h.ServiceAddress)
 }
 
-func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	h.RequestsRecv.Incr(1)
-	defer h.RequestsServed.Incr(1)
-	switch req.URL.Path {
-	case h.Path:
-		h.WritesRecv.Incr(1)
-		h.serveWrite(res, req)
-		defer h.WritesServed.Incr(1)
-	default:
-
-		h.serveNotFound(res, req)
-		defer h.NotFoundsServed.Incr(1)
+func (h *GoogleListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	if req.URL.Path == h.Path {
+		h.AuthenticateIfSet(h.serveWrite, res, req)
+	} else {
+		h.AuthenticateIfSet(http.NotFound, res, req)
 	}
 }
 
-func (h *HTTPListener) decodeLineProtocol(payload []byte, obj Payload) ([]telegraf.Metric, error) {
-	parser := influx.NewParser(h.handler)
-	metrics, err := parser.Parse(payload)
+func (h *GoogleListener) decodeLineProtocol(payload []byte, obj Payload) ([]telegraf.Metric, error) {
+	var metrics []telegraf.Metric
+	var config = parsers.Config{}
+	config.DataFormat = h.DataFormat
+	parser, err := parsers.NewParser(&config)
+	if err != nil {
+		log.Println("E! Parser ", err)
+		return metrics, err
+
+	}
+	metrics, err = parser.Parse(payload)
 	if err != nil {
 		log.Println("E! Parser ", err)
 		return metrics, err
@@ -301,7 +265,7 @@ func (h *HTTPListener) decodeLineProtocol(payload []byte, obj Payload) ([]telegr
 	return metrics, nil
 }
 
-func (h *HTTPListener) decodeJSON(payload []byte, obj Payload) (telegraf.Metric, error) {
+func (h *GoogleListener) decodeJSON(payload []byte, obj Payload) (telegraf.Metric, error) {
 
 	e := JSONData{}
 	err := json.Unmarshal(payload, &e)
@@ -333,28 +297,50 @@ func (h *HTTPListener) decodeJSON(payload []byte, obj Payload) (telegraf.Metric,
 
 }
 
-func (h *HTTPListener) serveNotFound(res http.ResponseWriter, req *http.Request) {
+func (h *GoogleListener) serveNotFound(res http.ResponseWriter, req *http.Request) {
 	res.Header().Set("Content-Type", "application/json")
 	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.WriteHeader(http.StatusNotFound)
 	res.Write([]byte(`{"error":"http: not found"}`))
 	return
 }
-func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
+
+func (h *GoogleListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	// Check that the content length is not too large for us to handle.
-	if req.ContentLength > h.MaxBodySize {
+	if req.ContentLength > h.MaxBodySize.Size {
 		tooLarge(res)
 		return
 	}
-	//now := h.TimeFunc()
+
+	// Check if the requested HTTP method was specified in config.
+	isAcceptedMethod := false
+	for _, method := range h.Methods {
+		if req.Method == method {
+			isAcceptedMethod = true
+			break
+		}
+	}
+	if !isAcceptedMethod {
+		methodNotAllowed(res)
+		return
+	}
 
 	// Handle gzip request bodies
 	body := req.Body
-	body = http.MaxBytesReader(res, body, h.MaxBodySize)
-	buf := h.pool.get()
-	defer h.pool.put(buf)
-	decoder := json.NewDecoder(req.Body)
+	if req.Header.Get("Content-Encoding") == "gzip" {
+		var err error
+		body, err = gzip.NewReader(req.Body)
+		if err != nil {
+			log.Println("D! " + err.Error())
+			badRequest(res)
+			return
+		}
+		defer body.Close()
+	}
 
+	body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
+
+	decoder := json.NewDecoder(body)
 	var t Payload
 	err := decoder.Decode(&t)
 	if err != nil {
@@ -371,7 +357,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	input := strings.Split(string(sDec), "\n")
 	x := 0
 	for x < len(input) {
-		if h.Protocol == "line protocol" {
+		if h.DataFormat == "influx" {
 			metrics, err := h.decodeLineProtocol([]byte(input[x]), t)
 			if err != nil {
 				log.Println("E! Line Protocol Decode failed " + err.Error())
@@ -383,7 +369,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 				h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 			}
 		}
-		if h.Protocol == "json" {
+		if h.DataFormat == "json" {
 			metrics, err := h.decodeJSON([]byte(input[x]), t)
 			if err != nil {
 				log.Println("E! JSON Decode Failed " + err.Error())
@@ -394,37 +380,57 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		}
 		x++
 	}
+
 	res.WriteHeader(http.StatusNoContent)
-
-}
-
-func (h *HTTPListener) parse(b []byte, t time.Time, precision string) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	h.handler.SetTimeFunc(func() time.Time { return t })
-	return nil
 }
 
 func tooLarge(res http.ResponseWriter) {
 	res.Header().Set("Content-Type", "application/json")
-	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.WriteHeader(http.StatusRequestEntityTooLarge)
 	res.Write([]byte(`{"error":"http: request body too large"}`))
 }
 
+func methodNotAllowed(res http.ResponseWriter) {
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusMethodNotAllowed)
+	res.Write([]byte(`{"error":"http: method not allowed"}`))
+}
+
+func internalServerError(res http.ResponseWriter) {
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusInternalServerError)
+}
+
 func badRequest(res http.ResponseWriter) {
 	res.Header().Set("Content-Type", "application/json")
-	res.Header().Set("X-Influxdb-Version", "1.0")
 	res.WriteHeader(http.StatusBadRequest)
 	res.Write([]byte(`{"error":"http: bad request"}`))
 }
 
+func (h *GoogleListener) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
+	if h.BasicUsername != "" && h.BasicPassword != "" {
+		reqUsername, reqPassword, ok := req.BasicAuth()
+		if !ok ||
+			subtle.ConstantTimeCompare([]byte(reqUsername), []byte(h.BasicUsername)) != 1 ||
+			subtle.ConstantTimeCompare([]byte(reqPassword), []byte(h.BasicPassword)) != 1 {
+
+			http.Error(res, "Unauthorized.", http.StatusUnauthorized)
+			return
+		}
+		handler(res, req)
+	} else {
+		handler(res, req)
+	}
+}
+
 func init() {
 	inputs.Add("googlecoreiot", func() telegraf.Input {
-		return &HTTPListener{
+		return &GoogleListener{
 			ServiceAddress: ":9999",
 			TimeFunc:       time.Now,
+			Path:           "/write",
+			Methods:        []string{"POST", "PUT"},
+			handler:        influx.NewMetricHandler(),
 		}
 	})
 }
