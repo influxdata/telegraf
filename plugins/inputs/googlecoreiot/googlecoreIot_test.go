@@ -7,9 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"runtime"
 	"strconv"
-	"sync"
 	"testing"
 	"time"
 
@@ -287,39 +285,6 @@ func TestWriteHTTPGzippedData(t *testing.T) {
 		)
 		x++
 	}
-}
-
-// writes 25,000 metrics to the listener with 10 different writers
-func TestWriteHTTPHighTraffic(t *testing.T) {
-	if runtime.GOOS == "darwin" {
-		t.Skip("Skipping due to hang on darwin")
-	}
-	listener := newTestGoogleListener()
-
-	acc := &testutil.Accumulator{}
-	require.NoError(t, listener.Start(acc))
-	defer listener.Stop()
-
-	// post many messages to listener
-	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
-		wg.Add(1)
-		go func(innerwg *sync.WaitGroup) {
-			defer innerwg.Done()
-			for i := 0; i < 500; i++ {
-				resp, err := http.Post(createURL(listener, "http", "/write", "db=mydb"), "", bytes.NewBuffer([]byte(testMsgs)))
-				require.NoError(t, err)
-				resp.Body.Close()
-				require.EqualValues(t, 204, resp.StatusCode)
-			}
-		}(&wg)
-	}
-
-	wg.Wait()
-	listener.Gather(acc)
-
-	acc.Wait(25000)
-	require.Equal(t, int64(25000), int64(acc.NMetrics()))
 }
 
 func TestReceive404ForInvalidEndpoint(t *testing.T) {
