@@ -1,4 +1,4 @@
-## v1.9 [unreleased]
+## v1.9 [2018-11-20]
 
 #### Release Notes
 
@@ -8,10 +8,24 @@
   transfer of metrics in any format via HTTP, it is recommended to use
   `http_listener_v2` instead.
 
+- Input plugins are no longer limited from adding metrics when the output is
+  writing, and new metrics will move into the metric buffer as needed.  This
+  will provide more robust degradation and recovery when writing to a slow
+  output at high throughput.
+
+  To avoid over consumption when reading from queue consumers: `kafka_consumer`,
+  `amqp_consumer`, `mqtt_consumer`, `nats_consumer`, and `nsq_consumer` use
+  the new option `max_undelivered_messages` to limit the number of outstanding
+  unwritten metrics.
+
 #### New Inputs
 
 - [http_listener_v2](/plugins/inputs/http_listener_v2/README.md) - Contributed by @jul1u5
-- [nginx_plus_api](/plugins/inputs/nginx_plus_api/README.md) - Contributed by Bugagazavr
+- [ipvs](/plugins/inputs/ipvs/README.md) - Contributed by @amoghe
+- [jenkins](/plugins/inputs/jenkins/README.md) - Contributed by @influxdata & @lpic10
+- [nginx_plus_api](/plugins/inputs/nginx_plus_api/README.md) - Contributed by @Bugagazavr
+- [nginx_vts](/plugins/inputs/nginx_vts/README.md) - Contributed by @monder
+- [wireless](/plugins/inputs/wireless/README.md) - Contributed by @jamesmaidment
 
 #### New Outputs
 
@@ -33,10 +47,33 @@
 - [#4864](https://github.com/influxdata/telegraf/pull/4864): Use DescribeStreamSummary in place of ListStreams in kinesis output.
 - [#4852](https://github.com/influxdata/telegraf/pull/4852): Add ability to specify bytes options as strings with units.
 - [#3903](https://github.com/influxdata/telegraf/pull/3903): Add support for TLS configuration in NSQ input.
+- [#4914](https://github.com/influxdata/telegraf/pull/4914): Collect additional stats in memcached input.
+- [#3847](https://github.com/influxdata/telegraf/pull/3847): Add wireless input plugin.
+- [#4934](https://github.com/influxdata/telegraf/pull/4934): Add LUN to datasource translation in vsphere input.
+- [#4798](https://github.com/influxdata/telegraf/pull/4798): Allow connecting to prometheus via unix socket.
+- [#4920](https://github.com/influxdata/telegraf/pull/4920): Add scraping for Prometheus endpoint in Kubernetes.
+- [#4938](https://github.com/influxdata/telegraf/pull/4938): Add per output flush_interval, metric_buffer_limit and metric_batch_size.
 
-## v1.8.3 [unreleased]
+#### Bugfixes
+
+- [#4950](https://github.com/influxdata/telegraf/pull/4950): Remove the time_key from the field values in JSON parser.
+- [#3968](https://github.com/influxdata/telegraf/issues/3968): Fix input time rounding when using a custom interval.
+- [#4938](https://github.com/influxdata/telegraf/pull/4938): Fix potential deadlock or leaked resources on restart/reload.
+- [#2919](https://github.com/influxdata/telegraf/pull/2919): Fix outputs block inputs when batch size is reached.
+- [#4789](https://github.com/influxdata/telegraf/issues/4789): Fix potential missing datastore metrics in vSphere plugin.
+- [#4982](https://github.com/influxdata/telegraf/issues/4982): Log warning when wireless plugin is used on unsupported platform.
+- [#4965](https://github.com/influxdata/telegraf/issues/4965): Handle non-tls columns for mysql input.
+- [#4983](https://github.com/influxdata/telegraf/issues/4983): Fix panic in influxdb_listener when using gzip encoding.
+
+## v1.8.3 [2018-10-30]
 
 - [#4873](https://github.com/influxdata/telegraf/pull/4873): Add DN attributes as tags in x509_cert input to avoid series overwrite.
+- [#4921](https://github.com/influxdata/telegraf/issues/4921): Prevent connection leak by closing unused connections in amqp output.
+- [#4904](https://github.com/influxdata/telegraf/issues/4904): Use default partition key when tag does not exist in kinesis output.
+- [#4901](https://github.com/influxdata/telegraf/pull/4901): Log the correct error in jti_openconfig.
+- [#4937](https://github.com/influxdata/telegraf/pull/4937): Handle panic when ipmi_sensor input gets bad input.
+- [#4930](https://github.com/influxdata/telegraf/pull/4930): Don't add unserializable fields to jolokia2 input.
+- [#4866](https://github.com/influxdata/telegraf/pull/4866): Fix version check in postgresql_extensible.
 
 ## v1.8.2 [2018-10-17]
 

@@ -1,11 +1,9 @@
 package models
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -15,22 +13,24 @@ type RunningInput struct {
 	Input  telegraf.Input
 	Config *InputConfig
 
-	trace       bool
 	defaultTags map[string]string
 
 	MetricsGathered selfstat.Stat
+	GatherTime      selfstat.Stat
 }
 
-func NewRunningInput(
-	input telegraf.Input,
-	config *InputConfig,
-) *RunningInput {
+func NewRunningInput(input telegraf.Input, config *InputConfig) *RunningInput {
 	return &RunningInput{
 		Input:  input,
 		Config: config,
 		MetricsGathered: selfstat.Register(
 			"gather",
 			"metrics_gathered",
+			map[string]string{"input": config.Name},
+		),
+		GatherTime: selfstat.RegisterTiming(
+			"gather",
+			"gather_time_ns",
 			map[string]string{"input": config.Name},
 		),
 	}
@@ -52,13 +52,19 @@ func (r *RunningInput) Name() string {
 	return "inputs." + r.Config.Name
 }
 
+func (r *RunningInput) metricFiltered(metric telegraf.Metric) {
+	metric.Drop()
+}
+
 func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	if ok := r.Config.Filter.Select(metric); !ok {
+		r.metricFiltered(metric)
 		return nil
 	}
 
 	r.Config.Filter.Modify(metric)
 	if len(metric.FieldList()) == 0 {
+		r.metricFiltered(metric)
 		return nil
 	}
 
@@ -70,26 +76,17 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		r.Config.Tags,
 		r.defaultTags)
 
-	if r.trace && m != nil {
-		s := influx.NewSerializer()
-		s.SetFieldSortOrder(influx.SortFields)
-		octets, err := s.Serialize(m)
-		if err == nil {
-			fmt.Print("> " + string(octets))
-		}
-	}
-
 	r.MetricsGathered.Incr(1)
 	GlobalMetricsGathered.Incr(1)
 	return m
 }
 
-func (r *RunningInput) Trace() bool {
-	return r.trace
-}
-
-func (r *RunningInput) SetTrace(trace bool) {
-	r.trace = trace
+func (r *RunningInput) Gather(acc telegraf.Accumulator) error {
+	start := time.Now()
+	err := r.Input.Gather(acc)
+	elapsed := time.Since(start)
+	r.GatherTime.Incr(elapsed.Nanoseconds())
+	return err
 }
 
 func (r *RunningInput) SetDefaultTags(tags map[string]string) {

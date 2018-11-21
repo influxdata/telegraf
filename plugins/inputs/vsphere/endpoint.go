@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,6 +22,10 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 )
 
+var isolateLUN = regexp.MustCompile(".*/([^/]+)/?$")
+
+const metricLookback = 3
+
 // Endpoint is a high-level representation of a connected vCenter endpoint. It is backed by the lower
 // level Client type.
 type Endpoint struct {
@@ -29,6 +34,8 @@ type Endpoint struct {
 	lastColls       map[string]time.Time
 	instanceInfo    map[string]resourceInfo
 	resourceKinds   map[string]resourceKind
+	hwMarks         *TSCache
+	lun2ds          map[string]string
 	discoveryTicker *time.Ticker
 	collectMux      sync.RWMutex
 	initialized     bool
@@ -92,7 +99,9 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 		URL:           url,
 		Parent:        parent,
 		lastColls:     make(map[string]time.Time),
+		hwMarks:       NewTSCache(1 * time.Hour),
 		instanceInfo:  make(map[string]resourceInfo),
+		lun2ds:        make(map[string]string),
 		initialized:   false,
 		clientFactory: NewClientFactory(ctx, url, parent),
 	}
@@ -348,8 +357,8 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	// Populate resource objects, and endpoint instance info.
 	for k, res := range e.resourceKinds {
 		log.Printf("D! [input.vsphere] Discovering resources for %s", res.name)
-		// Need to do this for all resource types even if they are not enabled (but datastore)
-		if res.enabled || (k != "datastore" && k != "vm") {
+		// Need to do this for all resource types even if they are not enabled
+		if res.enabled || k != "vm" {
 			objects, err := res.getObjects(ctx, e, client.Root)
 			if err != nil {
 				return err
@@ -404,13 +413,24 @@ func (e *Endpoint) discover(ctx context.Context) error {
 		}
 	}
 
+	// Build lun2ds map
+	dss := resourceKinds["datastore"]
+	l2d := make(map[string]string)
+	for _, ds := range dss.objects {
+		url := ds.altID
+		m := isolateLUN.FindStringSubmatch(url)
+		if m != nil {
+			l2d[m[1]] = ds.name
+		}
+	}
+
 	// Atomically swap maps
-	//
 	e.collectMux.Lock()
 	defer e.collectMux.Unlock()
 
 	e.instanceInfo = instInfo
 	e.resourceKinds = resourceKinds
+	e.lun2ds = l2d
 
 	sw.Stop()
 	SendInternalCounter("discovered_objects", e.URL.Host, int64(len(instInfo)))
@@ -509,14 +529,21 @@ func getDatastores(ctx context.Context, e *Endpoint, root *view.ContainerView) (
 	var resources []mo.Datastore
 	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
 	defer cancel1()
-	err := root.Retrieve(ctx1, []string{"Datastore"}, []string{"name", "parent"}, &resources)
+	err := root.Retrieve(ctx1, []string{"Datastore"}, []string{"name", "parent", "info"}, &resources)
 	if err != nil {
 		return nil, err
 	}
 	m := make(objectMap)
 	for _, r := range resources {
+		url := ""
+		if r.Info != nil {
+			info := r.Info.GetDatastoreInfo()
+			if info != nil {
+				url = info.Url
+			}
+		}
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent}
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Parent, altID: url}
 	}
 	return m, nil
 }
@@ -559,10 +586,24 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 			}
 		}
 	}
+
+	// Purge old timestamps from the cache
+	e.hwMarks.Purge()
 	return nil
 }
 
 func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, now time.Time, latest time.Time) {
+	maxMetrics := e.Parent.MaxQueryMetrics
+	if maxMetrics < 1 {
+		maxMetrics = 1
+	}
+
+	// Workaround for vCenter weirdness. Cluster metrics seem to count multiple times
+	// when checking query size, so keep it at a low value.
+	// Revisit this when we better understand the reason why vCenter counts it this way!
+	if res.name == "cluster" && maxMetrics > 10 {
+		maxMetrics = 10
+	}
 	pqs := make([]types.PerfQuerySpec, 0, e.Parent.MaxQueryObjects)
 	metrics := 0
 	total := 0
@@ -575,7 +616,7 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 		mr := len(info.metrics)
 		for mr > 0 {
 			mc := mr
-			headroom := e.Parent.MaxQueryMetrics - metrics
+			headroom := maxMetrics - metrics
 			if !res.realTime && mc > headroom { // Metric query limit only applies to non-realtime metrics
 				mc = headroom
 			}
@@ -585,10 +626,19 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 				MaxSample:  1,
 				MetricId:   info.metrics[fm : fm+mc],
 				IntervalId: res.sampling,
+				Format:     "normal",
 			}
 
+			// For non-realtime metrics, we need to look back a few samples in case
+			// the vCenter is late reporting metrics.
 			if !res.realTime {
-				pq.StartTime = &latest
+				pq.MaxSample = metricLookback
+			}
+
+			// Look back 3 sampling periods
+			start := latest.Add(time.Duration(-res.sampling) * time.Second * (metricLookback - 1))
+			if !res.realTime {
+				pq.StartTime = &start
 				pq.EndTime = &now
 			}
 			pqs = append(pqs, pq)
@@ -598,8 +648,8 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 			// We need to dump the current chunk of metrics for one of two reasons:
 			// 1) We filled up the metric quota while processing the current resource
 			// 2) We are at the last resource and have no more data to process.
-			if mr > 0 || (!res.realTime && metrics >= e.Parent.MaxQueryMetrics) || nRes >= e.Parent.MaxQueryObjects {
-				log.Printf("D! [input.vsphere]: Querying %d objects, %d metrics (%d remaining) of type %s for %s. Processed objects: %d. Total objects %d",
+			if mr > 0 || (!res.realTime && metrics >= maxMetrics) || nRes >= e.Parent.MaxQueryObjects {
+				log.Printf("D! [input.vsphere]: Queueing query: %d objects, %d metrics (%d remaining) of type %s for %s. Processed objects: %d. Total objects %d",
 					len(pqs), metrics, mr, res.name, e.URL.Host, total+1, len(res.objects))
 
 				// To prevent deadlocks, don't send work items if the context has been cancelled.
@@ -621,6 +671,8 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 	//
 	if len(pqs) > 0 {
 		// Call push function
+		log.Printf("D! [input.vsphere]: Queuing query: %d objects, %d metrics (0 remaining) of type %s for %s. Total objects %d (final chunk)",
+			len(pqs), metrics, res.name, e.URL.Host, len(res.objects))
 		f(ctx, pqs)
 	}
 }
@@ -643,7 +695,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 		log.Printf("D! [input.vsphere]: Latest: %s, elapsed: %f, resource: %s", latest, elapsed, resourceType)
 		if !res.realTime && elapsed < float64(res.sampling) {
 			// No new data would be available. We're outta herE! [input.vsphere]:
-			log.Printf("D! [input.vsphere]: Sampling period for %s of %d has not elapsed for %s",
+			log.Printf("D! [input.vsphere]: Sampling period for %s of %d has not elapsed on %s",
 				resourceType, res.sampling, e.URL.Host)
 			return nil
 		}
@@ -654,7 +706,6 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	internalTags := map[string]string{"resourcetype": resourceType}
 	sw := NewStopwatchWithTags("gather_duration", e.URL.Host, internalTags)
 
-	log.Printf("D! [input.vsphere]: Start of sample period deemed to be %s", latest)
 	log.Printf("D! [input.vsphere]: Collecting metrics for %d objects of type %s for %s",
 		len(res.objects), resourceType, e.URL.Host)
 
@@ -665,7 +716,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	wp.Run(ctx, func(ctx context.Context, in interface{}) interface{} {
 		chunk := in.([]types.PerfQuerySpec)
 		n, err := e.collectChunk(ctx, chunk, resourceType, res, acc)
-		log.Printf("D! [input.vsphere]: Query returned %d metrics", n)
+		log.Printf("D! [input.vsphere] CollectChunk for %s returned %d metrics", resourceType, n)
 		if err != nil {
 			return err
 		}
@@ -697,7 +748,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	sw.Stop()
 	SendInternalCounterWithTags("gather_count", e.URL.Host, internalTags, count)
 	if len(merr) > 0 {
-		return err
+		return merr
 	}
 	return nil
 }
@@ -732,6 +783,7 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 	if err != nil {
 		return count, err
 	}
+	log.Printf("D! [input.vsphere] Query for %s returned metrics for %d objects", resourceType, len(ems))
 
 	// Iterate through results
 	for _, em := range ems {
@@ -758,9 +810,17 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 			}
 			e.populateTags(&objectRef, resourceType, &res, t, &v)
 
-			// Now deal with the values
-			for idx, value := range v.Value {
+			// Now deal with the values. Iterate backwards so we start with the latest value
+			tsKey := moid + "|" + name + "|" + v.Instance
+			for idx := len(v.Value) - 1; idx >= 0; idx-- {
 				ts := em.SampleInfo[idx].Timestamp
+
+				// Since non-realtime metrics are queries with a lookback, we need to check the high-water mark
+				// to determine if this should be included. Only samples not seen before should be included.
+				if !(res.realTime || e.hwMarks.IsNew(tsKey, ts)) {
+					continue
+				}
+				value := v.Value[idx]
 
 				// Organize the metrics into a bucket per measurement.
 				// Data SHOULD be presented to us with the same timestamp for all samples, but in case
@@ -788,6 +848,11 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 					bucket.fields[fn] = value
 				}
 				count++
+
+				// Update highwater marks for non-realtime metrics.
+				if !res.realTime {
+					e.hwMarks.Put(tsKey, ts)
+				}
 			}
 		}
 		// We've iterated through all the metrics and collected buckets for each
@@ -848,6 +913,11 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 		t["cpu"] = instance
 	} else if strings.HasPrefix(name, "datastore.") {
 		t["lun"] = instance
+		if ds, ok := e.lun2ds[instance]; ok {
+			t["dsname"] = ds
+		} else {
+			t["dsname"] = instance
+		}
 	} else if strings.HasPrefix(name, "disk.") {
 		t["disk"] = cleanDiskTag(instance)
 	} else if strings.HasPrefix(name, "net.") {
