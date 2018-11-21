@@ -321,6 +321,29 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
 ```
 
 
+### Network Interfaces with a tagdrop blacklist
+Windows can have lots of interfaces that never pass any traffic. In the config below we use tagdrop to skip interfaces that start with isatap and Local (Local Area Connection).
+```
+# Network inteface metrics
+[[inputs.win_perf_counters]]
+  [inputs.win_perf_counters.tagdrop]
+    instance = ["isatap*", "Local*"]
+  [[inputs.win_perf_counters.object]]
+    ObjectName = "Network Interface"
+    Instances = ["*"]
+    Counters = [
+      "Packets Received Discarded",
+      "Packets Received Errors",
+      "Packets Outbound Discarded",
+      "Packets Output Errors",
+      "Bytes Received/sec",
+      "Bytes Sent/sec",
+      "Packets Received/sec",
+      "Packets Sent/sec"
+    ]
+    Measurement = "win_net"
+```    
+
 ### Process
 ```
   [[inputs.win_perf_counters.object]]
