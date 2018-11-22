@@ -97,6 +97,46 @@ func TestSerializeMetricIntHec(t *testing.T) {
 	assert.Equal(t, string(expS), string(buf))
 }
 
+func TestSerializeMetricBool(t *testing.T) {
+	now := time.Unix(0, 0)
+	tags := map[string]string{
+		"container-name": "telegraf-test",
+	}
+	fields := map[string]interface{}{
+		"oomkiller": bool(true),
+	}
+	m, err := metric.New("docker", tags, fields, now)
+	assert.NoError(t, err)
+
+	s, _ := NewSerializer(false)
+	var buf []byte
+	buf, err = s.Serialize(m)
+	assert.NoError(t, err)
+
+	expS := `{"_value":1,"container-name":"telegraf-test","metric_name":"docker.oomkiller","time":0}`
+	assert.Equal(t, string(expS), string(buf))
+}
+
+func TestSerializeMetricBoolHec(t *testing.T) {
+	now := time.Unix(0, 0)
+	tags := map[string]string{
+		"container-name": "telegraf-test",
+	}
+	fields := map[string]interface{}{
+		"oomkiller": bool(false),
+	}
+	m, err := metric.New("docker", tags, fields, now)
+	assert.NoError(t, err)
+
+	s, _ := NewSerializer(true)
+	var buf []byte
+	buf, err = s.Serialize(m)
+	assert.NoError(t, err)
+
+	expS := `{"time":0,"event":"metric","fields":{"_value":0,"container-name":"telegraf-test","metric_name":"docker.oomkiller"}}`
+	assert.Equal(t, string(expS), string(buf))
+}
+
 func TestSerializeMetricString(t *testing.T) {
 	now := time.Unix(0, 0)
 	tags := map[string]string{
