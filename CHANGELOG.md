@@ -1,3 +1,9 @@
+## v1.9.1 [unreleased]
+
+### Bugfixes
+
+- [#5006](https://github.com/influxdata/telegraf/issues/5006): Fix boolean handling in splunkmetric serializer.
+
 ## v1.9 [2018-11-20]
 
 #### Release Notes
@@ -66,6 +72,8 @@
 - [#4983](https://github.com/influxdata/telegraf/issues/4983): Fix panic in influxdb_listener when using gzip encoding.
 
 ## v1.8.3 [2018-10-30]
+
+### Bugfixes
 
 - [#4873](https://github.com/influxdata/telegraf/pull/4873): Add DN attributes as tags in x509_cert input to avoid series overwrite.
 - [#4921](https://github.com/influxdata/telegraf/issues/4921): Prevent connection leak by closing unused connections in amqp output.
