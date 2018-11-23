@@ -52,9 +52,6 @@ var sampleConfig = `
   # username = "username"
   # password = "pa$$word"
 
-  ## Tag all metrics with the url
-  # tag_url = true
-
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"

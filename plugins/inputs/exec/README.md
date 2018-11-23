@@ -40,7 +40,7 @@ This script produces static values, since no timestamp is specified the values a
 echo 'example,tag1=a,tag2=b i=42i,j=43i,k=44i'
 ```
 
-It can be paired with the following configuration and will be ran at the `interval` of the agent.
+It can be paired with the following configuration and will be run at the `interval` of the agent.
 ```toml
 [[inputs.exec]]
   commands = ["sh /tmp/test.sh"]

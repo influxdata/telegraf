@@ -113,16 +113,16 @@ MEMPOOL.vbc.sz_wanted              88          .   Size requested
 `
 
 var parsedSmOutput = map[string]map[string]interface{}{
-	"MAIN": map[string]interface{}{
+	"MAIN": {
 		"uptime":     uint64(895),
 		"cache_hit":  uint64(95),
 		"cache_miss": uint64(5),
 	},
-	"MGT": map[string]interface{}{
+	"MGT": {
 		"uptime":      uint64(896),
 		"child_start": uint64(1),
 	},
-	"MEMPOOL": map[string]interface{}{
+	"MEMPOOL": {
 		"vbc.live":      uint64(0),
 		"vbc.pool":      uint64(10),
 		"vbc.sz_wanted": uint64(88),

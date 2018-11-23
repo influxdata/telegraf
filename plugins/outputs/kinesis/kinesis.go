@@ -2,7 +2,6 @@ package kinesis
 
 import (
 	"log"
-	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -37,8 +36,9 @@ type (
 	}
 
 	Partition struct {
-		Method string `toml:"method"`
-		Key    string `toml:"key"`
+		Method  string `toml:"method"`
+		Key     string `toml:"key"`
+		Default string `toml:"default"`
 	}
 )
 
@@ -91,10 +91,11 @@ var sampleConfig = `
   #    method = "measurement"
   #
   ## Use the value of a tag for all writes, if the tag is not set the empty
-  ## string will be used:
+  ## default option will be used. When no default, defaults to "telegraf"
   #  [outputs.kinesis.partition]
   #    method = "tag"
   #    key = "host"
+  #    default = "mykey"
 
 
   ## Data format to output.
@@ -115,17 +116,11 @@ func (k *KinesisOutput) Description() string {
 	return "Configuration for the AWS Kinesis output."
 }
 
-func checkstream(l []*string, s string) bool {
-	// Check if the StreamName exists in the slice returned from the ListStreams API request.
-	for _, stream := range l {
-		if *stream == s {
-			return true
-		}
-	}
-	return false
-}
-
 func (k *KinesisOutput) Connect() error {
+	if k.Partition == nil {
+		log.Print("E! kinesis : Deprecated paritionkey configuration in use, please consider using outputs.kinesis.partition")
+	}
+
 	// We attempt first to create a session to Kinesis using an IAMS role, if that fails it will fall through to using
 	// environment variables, and then Shared Credentials.
 	if k.Debug {
@@ -145,29 +140,10 @@ func (k *KinesisOutput) Connect() error {
 	configProvider := credentialConfig.Credentials()
 	svc := kinesis.New(configProvider)
 
-	KinesisParams := &kinesis.ListStreamsInput{
-		Limit: aws.Int64(100),
-	}
-
-	resp, err := svc.ListStreams(KinesisParams)
-
-	if err != nil {
-		log.Printf("E! kinesis: Error in ListSteams API call : %+v \n", err)
-	}
-
-	if checkstream(resp.StreamNames, k.StreamName) {
-		if k.Debug {
-			log.Printf("E! kinesis: Stream Exists")
-		}
-		k.svc = svc
-		return nil
-	} else {
-		log.Printf("E! kinesis : You have configured a StreamName %+v which does not exist. exiting.", k.StreamName)
-		os.Exit(1)
-	}
-	if k.Partition == nil {
-		log.Print("E! kinesis : Deprecated paritionkey configuration in use, please consider using outputs.kinesis.partition")
-	}
+	_, err := svc.DescribeStreamSummary(&kinesis.DescribeStreamSummaryInput{
+		StreamName: aws.String(k.StreamName),
+	})
+	k.svc = svc
 	return err
 }
 
@@ -213,10 +189,13 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 		case "measurement":
 			return metric.Name()
 		case "tag":
-			if metric.HasTag(k.Partition.Key) {
-				return metric.Tags()[k.Partition.Key]
+			if t, ok := metric.GetTag(k.Partition.Key); ok {
+				return t
+			} else if len(k.Partition.Default) > 0 {
+				return k.Partition.Default
 			}
-			log.Printf("E! kinesis : You have configured a Partition using tag %+v which does not exist.", k.Partition.Key)
+			// Default partition name if default is not set
+			return "telegraf"
 		default:
 			log.Printf("E! kinesis : You have configured a Partition method of %+v which is not supported", k.Partition.Method)
 		}

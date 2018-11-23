@@ -172,6 +172,7 @@ func setError(err error, fields map[string]interface{}, tags map[string]string) 
 
 // HTTPGather gathers all fields and returns any errors it encounters
 func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, error) {
+<<<<<<< HEAD
         // Prepare fields and tags
         fields := make(map[string]interface{})
         //s :=  h.Address
@@ -271,6 +272,107 @@ func (h *HTTPResponse) httpGather() (map[string]interface{}, map[string]string, 
         }
 
         return fields, tags, nil
+=======
+	// Prepare fields and tags
+	fields := make(map[string]interface{})
+	//s :=  h.Address
+
+	fullurl, err := url.Parse(h.Address)
+	if err != nil {
+		return nil, nil, err
+	}
+	domain, port, _ := net.SplitHostPort(fullurl.Host)
+
+	tags := map[string]string{"server": h.Address, "protocol": fullurl.Scheme, "source": domain, "port": port, "path": fullurl.Path, "method": h.Method}
+
+	var body io.Reader
+	if h.Body != "" {
+		body = strings.NewReader(h.Body)
+	}
+	request, err := http.NewRequest(h.Method, h.Address, body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for key, val := range h.Headers {
+		request.Header.Add(key, val)
+		if key == "Host" {
+			request.Host = val
+		}
+	}
+
+	// Start Timer
+	start := time.Now()
+	resp, err := h.client.Do(request)
+	response_time := time.Since(start).Seconds()
+
+	// If an error in returned, it means we are dealing with a network error, as
+	// HTTP error codes do not generate errors in the net/http library
+	if err != nil {
+		// Log error
+		log.Printf("D! Network error while polling %s: %s", h.Address, err.Error())
+
+		// Get error details
+		netErr := setError(err, fields, tags)
+
+		// If recognize the returnded error, get out
+		if netErr != nil {
+			return fields, tags, nil
+		}
+
+		// Any error not recognized by `set_error` is considered a "connection_failed"
+		setResult("connection_failed", fields, tags)
+
+		// If the error is a redirect we continue processing and log the HTTP code
+		urlError, isUrlError := err.(*url.Error)
+		if !h.FollowRedirects && isUrlError && urlError.Err == ErrRedirectAttempted {
+			err = nil
+		} else {
+			// If the error isn't a timeout or a redirect stop
+			// processing the request
+			return fields, tags, nil
+		}
+	}
+
+	if _, ok := fields["response_time"]; !ok {
+		fields["response_time"] = response_time
+	}
+
+	// This function closes the response body, as
+	// required by the net/http library
+	defer func() {
+		io.Copy(ioutil.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+
+	// Set log the HTTP response code
+	tags["status_code"] = strconv.Itoa(resp.StatusCode)
+	fields["http_response_code"] = resp.StatusCode
+
+	// Check the response for a regex match.
+	if h.ResponseStringMatch != "" {
+
+		bodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("D! Failed to read body of HTTP Response : %s", err)
+			setResult("body_read_error", fields, tags)
+			fields["response_string_match"] = 0
+			return fields, tags, nil
+		}
+
+		if h.compiledStringMatch.Match(bodyBytes) {
+			setResult("success", fields, tags)
+			fields["response_string_match"] = 1
+		} else {
+			setResult("response_string_mismatch", fields, tags)
+			fields["response_string_match"] = 0
+		}
+	} else {
+		setResult("success", fields, tags)
+	}
+
+	return fields, tags, nil
+>>>>>>> origin/master
 }
 
 // Gather gets all metric fields and tags and returns any errors it encounters
