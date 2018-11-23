@@ -36,6 +36,8 @@ type (
 		RateLimit   int               `toml:"ratelimit"`
 		client      cloudwatchClient
 		metricCache *MetricCache
+		windowStart time.Time
+		windowEnd   time.Time
 	}
 
 	Metric struct {
@@ -197,6 +199,11 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 
 	now := time.Now()
 
+	err = c.updateWindow(now)
+	if err != nil {
+		return err
+	}
+
 	// limit concurrency or we can easily exhaust user connection limit
 	// see cloudwatch API request limits:
 	// http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
@@ -208,10 +215,26 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 		<-lmtr.C
 		go func(inm *cloudwatch.Metric) {
 			defer wg.Done()
-			acc.AddError(c.gatherMetric(acc, inm, now))
+			acc.AddError(c.gatherMetric(acc, inm))
 		}(m)
 	}
 	wg.Wait()
+
+	return nil
+}
+
+func (c *CloudWatch) updateWindow(relativeTo time.Time) error {
+	windowEnd := relativeTo.Add(-c.Delay.Duration)
+
+	if c.windowEnd.IsZero() {
+		// this is the first run, no window info, so just get a single period
+		c.windowStart = windowEnd.Add(-c.Period.Duration)
+	} else {
+		// subsequent window, start where last window left off
+		c.windowStart = c.windowEnd
+	}
+
+	c.windowEnd = windowEnd
 
 	return nil
 }
@@ -291,9 +314,8 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]*cloudwatch.Metric, error) {
 func (c *CloudWatch) gatherMetric(
 	acc telegraf.Accumulator,
 	metric *cloudwatch.Metric,
-	now time.Time,
 ) error {
-	params := c.getStatisticsInput(metric, now)
+	params := c.getStatisticsInput(metric)
 	resp, err := c.client.GetMetricStatistics(params)
 	if err != nil {
 		return err
@@ -356,12 +378,10 @@ func snakeCase(s string) string {
 /*
  * Map Metric to *cloudwatch.GetMetricStatisticsInput for given timeframe
  */
-func (c *CloudWatch) getStatisticsInput(metric *cloudwatch.Metric, now time.Time) *cloudwatch.GetMetricStatisticsInput {
-	end := now.Add(-c.Delay.Duration)
-
+func (c *CloudWatch) getStatisticsInput(metric *cloudwatch.Metric) *cloudwatch.GetMetricStatisticsInput {
 	input := &cloudwatch.GetMetricStatisticsInput{
-		StartTime:  aws.Time(end.Add(-c.Period.Duration)),
-		EndTime:    aws.Time(end),
+		StartTime:  aws.Time(c.windowStart),
+		EndTime:    aws.Time(c.windowEnd),
 		MetricName: metric.MetricName,
 		Namespace:  metric.Namespace,
 		Period:     aws.Int64(int64(c.Period.Duration.Seconds())),

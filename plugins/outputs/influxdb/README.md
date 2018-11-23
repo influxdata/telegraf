@@ -1,6 +1,6 @@
-# InfluxDB Output Plugin
+# InfluxDB v1.x Output Plugin
 
-This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/influxdata/influxdb) HTTP or UDP service.
+The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP service.
 
 ### Configuration:
 
@@ -16,6 +16,7 @@ This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/
   # urls = ["http://127.0.0.1:8086"]
 
   ## The target database for metrics; will be created as needed.
+  ## For UDP url endpoint database needs to be configured on server side.
   # database = "telegraf"
 
   ## If true, no CREATE DATABASE queries will be sent.  Set to true when using
@@ -42,7 +43,7 @@ This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/
   # user_agent = "telegraf"
 
   ## UDP payload size is the maximum packet size to send.
-  # udp_payload = 512
+  # udp_payload = "512B"
 
   ## Optional TLS Config for use on HTTP connections.
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -68,3 +69,5 @@ This InfluxDB output plugin writes metrics to the [InfluxDB](https://github.com/
   ## existing data has been written.
   # influx_uint_support = false
 ```
+
+[InfluxDB v1.x]: https://github.com/influxdata/influxdb

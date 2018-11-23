@@ -9,7 +9,6 @@ https://en.wikipedia.org/wiki/Df_(Unix) for more details.
 ### Configuration:
 
 ```toml
-# Read metrics about disk usage by mount point
 [[inputs.disk]]
   ## By default stats will be gathered for all mount points.
   ## Set mount_points will restrict the stats to only the specified mount points.
@@ -49,6 +48,17 @@ docker run -v /:/hostfs:ro -e HOST_MOUNT_PREFIX=/hostfs -e HOST_PROC=/hostfs/pro
     - inodes_total (integer, files)
     - inodes_used (integer, files)
 
+### Troubleshooting
+
+On Linux, the list of disks is taken from the `/proc/self/mounts` file and a
+[statfs] call is made on the second column.  If any expected filesystems are
+missing ensure that the `telegraf` user can read these files:
+```
+$ sudo -u telegraf cat /proc/self/mounts | grep sda2
+/dev/sda2 /home ext4 rw,relatime,data=ordered 0 0
+$ sudo -u telegraf stat /home
+```
+
 ### Example Output:
 
 ```
@@ -58,4 +68,4 @@ disk,fstype=autofs,mode=rw,path=/net free=0i,inodes_free=0i,inodes_total=0i,inod
 disk,fstype=autofs,mode=rw,path=/home free=0i,inodes_free=0i,inodes_total=0i,inodes_used=0i,total=0i,used=0i,used_percent=0 1453832006274169688
 ```
 
-
+[statfs]: http://man7.org/linux/man-pages/man2/statfs.2.html

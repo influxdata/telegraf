@@ -995,6 +995,30 @@ func getColSlice(l int) ([]interface{}, error) {
 			&total_ssl_connections,
 			&max_statement_time_exceeded,
 		}, nil
+	case 21: // mysql 5.5
+		return []interface{}{
+			&user,
+			&total_connections,
+			&concurrent_connections,
+			&connected_time,
+			&busy_time,
+			&cpu_time,
+			&bytes_received,
+			&bytes_sent,
+			&binlog_bytes_written,
+			&rows_fetched,
+			&rows_updated,
+			&table_rows_read,
+			&select_commands,
+			&update_commands,
+			&other_commands,
+			&commit_transactions,
+			&rollback_transactions,
+			&denied_connections,
+			&lost_connections,
+			&access_denied,
+			&empty_queries,
+		}, nil
 	case 22: // percona
 		return []interface{}{
 			&user,
