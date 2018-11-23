@@ -19,7 +19,7 @@ source field is overwritten.
 
     ## Destination field to be used for the mapped value.  By default the source
     ## field is used, overwriting the original value.
-    # dest = "status_code"
+    dest = "status_code"
 
     ## Default value to be used for all values not contained in the mapping
     ## table.  When unset, the unmodified value for the field will be used if no
@@ -37,5 +37,5 @@ source field is overwritten.
 
 ```diff
 - xyzzy status="green" 1502489900000000000
-+ xyzzy status="green",status_code=1i 1502489900000000000
++ xyzzy status="green",status_code=1 1502489900000000000
 ```
