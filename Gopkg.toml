@@ -229,3 +229,8 @@
 [[constraint]]
   branch = "master"
   name = "golang.org/x/oauth2"
+
+[[override]]
+  branch = "master"
+  name = "github.com/influxdata/telegraf"
+  source = "github.com/dannybeeckman/telegraf"

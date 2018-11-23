@@ -765,6 +765,7 @@
   ]
   pruneopts = ""
   revision = "5b5b2e3b39c66498573ada11f8d69021e9a08e2b"
+  source = "github.com/dannybeeckman/telegraf"
 
 [[projects]]
   branch = "master"
