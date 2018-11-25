@@ -17,6 +17,7 @@ import (
 type Postgresql struct {
 	db                *sql.DB
 	Address           string
+	Schema            string
 	TagsAsForeignkeys bool
 	TagsAsJsonb       bool
 	FieldsAsJsonb     bool
@@ -55,6 +56,10 @@ func quoteIdent(name string) string {
 
 func quoteLiteral(name string) string {
 	return "'" + strings.Replace(name, "'", "''", -1) + "'"
+}
+
+func (p *Postgresql) fullTableName(name string) string {
+	return quoteIdent(p.Schema) + "." + quoteIdent(name)
 }
 
 func deriveDatatype(value interface{}) string {
@@ -108,6 +113,9 @@ var sampleConfig = `
   # table_template = "CREATE TABLE IF NOT EXISTS {TABLE}({COLUMNS})"
   ## Example for timescaledb
   # table_template = "CREATE TABLE IF NOT EXISTS {TABLE}({COLUMNS}); SELECT create_hypertable({TABLELITERAL},'time',chunk_time_interval := '1 week'::interval,if_not_exists := true);"
+
+  ## Schema to create the tables into
+  # schema = "public"
 
   ## Use jsonb datatype for tags
   # tags_as_jsonb = true
@@ -170,8 +178,8 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 		}
 	}
 
-	query := strings.Replace(p.TableTemplate, "{TABLE}", quoteIdent(metric.Name()), -1)
-	query = strings.Replace(query, "{TABLELITERAL}", quoteLiteral(quoteIdent(metric.Name())), -1)
+	query := strings.Replace(p.TableTemplate, "{TABLE}", p.fullTableName(metric.Name()), -1)
+	query = strings.Replace(query, "{TABLELITERAL}", quoteLiteral(p.fullTableName(metric.Name())), -1)
 	query = strings.Replace(query, "{COLUMNS}", strings.Join(columns, ","), -1)
 	query = strings.Replace(query, "{KEY_COLUMNS}", strings.Join(pk, ","), -1)
 
@@ -186,12 +194,12 @@ func (p *Postgresql) generateInsert(tablename string, columns []string) string {
 		quoted = append(quoted, quoteIdent(column))
 	}
 
-	return fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", quoteIdent(tablename), strings.Join(quoted, ","), strings.Join(placeholder, ","))
+	return fmt.Sprintf("INSERT INTO %s(%s) VALUES(%s)", p.fullTableName(tablename), strings.Join(quoted, ","), strings.Join(placeholder, ","))
 }
 
 func (p *Postgresql) tableExists(tableName string) bool {
-	stmt := "SELECT tablename FROM pg_tables WHERE tablename = $1 AND schemaname NOT IN ('information_schema','pg_catalog');"
-	result, err := p.db.Exec(stmt, tableName)
+	stmt := "SELECT tablename FROM pg_tables WHERE tablename = $1 AND schemaname = $2;"
+	result, err := p.db.Exec(stmt, tableName, p.Schema)
 	if err != nil {
 		log.Printf("E! Error checking for existence of metric table %s: %v", tableName, err)
 		return false
@@ -217,6 +225,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 			createStmt := p.generateCreateTable(metric)
 			_, err := p.db.Exec(createStmt)
 			if err != nil {
+				log.Printf("E! Creating table failed: statement: %v, error: %v", createStmt, err)
 				return err
 			}
 			p.Tables[tablename] = true
@@ -259,7 +268,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 				for i, column := range where_columns {
 					where_parts = append(where_parts, fmt.Sprintf("%s = $%d", quoteIdent(column), i+1))
 				}
-				query := fmt.Sprintf("SELECT tag_id FROM %s WHERE %s", quoteIdent(tablename+p.TagTableSuffix), strings.Join(where_parts, " AND "))
+				query := fmt.Sprintf("SELECT tag_id FROM %s WHERE %s", p.fullTableName(tablename+p.TagTableSuffix), strings.Join(where_parts, " AND "))
 
 				err := p.db.QueryRow(query, where_values...).Scan(&tag_id)
 				if err != nil {
@@ -335,7 +344,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 		for _, column := range columns {
 			quoted_columns = append(quoted_columns, quoteIdent(column))
 		}
-		table_and_cols = fmt.Sprintf("%s(%s)", quoteIdent(tablename), strings.Join(quoted_columns, ","))
+		table_and_cols = fmt.Sprintf("%s(%s)", p.fullTableName(tablename), strings.Join(quoted_columns, ","))
 		batches[table_and_cols] = append(batches[table_and_cols], values...)
 		for i, _ := range columns {
 			i += len(params[table_and_cols]) * len(columns)
@@ -361,7 +370,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 				}
 				query := "SELECT c FROM unnest(array[%s]) AS c WHERE NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE column_name=c AND table_schema=$1 AND table_name=$2)"
 				query = fmt.Sprintf(query, strings.Join(quoted_columns, ","))
-				result, err := p.db.Query(query, "public", tablename)
+				result, err := p.db.Query(query, p.Schema, tablename)
 				defer result.Close()
 				if err != nil {
 					return err
@@ -379,8 +388,8 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 							datatype = deriveDatatype(values[i])
 						}
 					}
-					query := "ALTER TABLE %s.%s ADD COLUMN IF NOT EXISTS %s %s;"
-					_, err = p.db.Exec(fmt.Sprintf(query, quoteIdent("public"), quoteIdent(tablename), quoteIdent(column), datatype))
+					query := "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;"
+					_, err = p.db.Exec(fmt.Sprintf(query, p.fullTableName(tablename), quoteIdent(column), datatype))
 					if err != nil {
 						return err
 					}
@@ -399,6 +408,7 @@ func init() {
 
 func newPostgresql() *Postgresql {
 	return &Postgresql{
+		Schema:         "public",
 		TableTemplate:  "CREATE TABLE IF NOT EXISTS {TABLE}({COLUMNS})",
 		TagsAsJsonb:    true,
 		TagTableSuffix: "_tag",
