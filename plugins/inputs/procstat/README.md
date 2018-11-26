@@ -134,6 +134,7 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - voluntary_context_switches (int)
     - write_bytes (int, *telegraf* may need to be ran as **root**)
     - write_count (int, *telegraf* may need to be ran as **root**)
+    - result_code (int)
 - procstat_lookup
   - tags:
     - exe (string)
