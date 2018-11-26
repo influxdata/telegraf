@@ -54,22 +54,17 @@ var sampleConfig = `
   # systemd_unit = "nginx.service"
   ## CGroup name or path
   # cgroup = "systemd/system.slice/nginx.service"
-
   ## Windows service name
   # win_service = ""
-
   ## override for process_name
   ## This is optional; default is sourced from /proc/<pid>/status
   # process_name = "bar"
-
   ## Field name prefix
   # prefix = ""
-
   ## Add PID as a tag instead of a field; useful to differentiate between
   ## processes whose tags are otherwise the same.  Can create a large number
   ## of series, use judiciously.
   # pid_tag = false
-
   ## Method to use when finding process IDs.  Can be one of 'pgrep', or
   ## 'native'.  The pgrep finder calls the pgrep executable in the PATH while
   ## the native finder performs the search directly in a manor dependent on the
@@ -92,7 +87,8 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	tags := map[string]string{"exe": p.Exe, "pidfile": p.PidFile, "pattern": p.Pattern, "user": p.User}
-	
+	fields := map[string]interface{}{}
+
 	if p.createPIDFinder == nil {
 		switch p.PidFinder {
 		case "native":
@@ -110,12 +106,12 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 
 	procs, err := p.updateProcesses(acc, p.procs)
 	if err != nil {
-		acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s", 
+		acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
 			p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
-		fields := map[string]interface{}{prefix+"result_code": 2}
+		fields[prefix+"result_code"] = 2
 		acc.AddFields("procstat", fields, tags)
 	} else if len(procs) == 0 {
-		fields := map[string]interface{}{prefix+"result_code": 1}
+		fields[prefix+"result_code"] = 1
 		acc.AddFields("procstat", fields, tags)
 	}
 	p.procs = procs
@@ -136,7 +132,7 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 
 	fields := map[string]interface{}{}
 	fields[prefix+"result_code"] = 0
-	
+
 	//If process_name tag is not already set, set to actual name
 	if _, nameInTags := proc.Tags()["process_name"]; !nameInTags {
 		name, err := proc.Name()
@@ -428,3 +424,4 @@ func init() {
 		return &Procstat{}
 	})
 }
+
