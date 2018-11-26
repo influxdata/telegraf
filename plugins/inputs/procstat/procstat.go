@@ -110,14 +110,14 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 
 	procs, err := p.updateProcesses(acc, p.procs)
 	if err != nil {
-          acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s", 
-            p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
-	  fields := map[string]interface{}{prefix+"result_code": 2}
-	  acc.AddFields("procstat", fields, tags)
+		acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s", 
+			p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
+		fields := map[string]interface{}{prefix+"result_code": 2}
+		acc.AddFields("procstat", fields, tags)
 	} else if len(procs) == 0 {
-          fields := map[string]interface{}{prefix+"result_code": 1}
-	  acc.AddFields("procstat", fields, tags)
-        }
+		fields := map[string]interface{}{prefix+"result_code": 1}
+		acc.AddFields("procstat", fields, tags)
+	}
 	p.procs = procs
 
 	for _, proc := range p.procs {
