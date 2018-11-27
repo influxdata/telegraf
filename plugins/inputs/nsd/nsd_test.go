@@ -35,8 +35,123 @@ func TestParseFullOutput(t *testing.T) {
 	acc.AssertContainsFields(t, "nsd", parsedFullOutput)
 }
 
+func TestParseFullOutputThreadAsTag(t *testing.T) {
+	acc := &testutil.Accumulator{}
+	v := &Nsd{
+		run:         NsdControl(fullOutput, TestTimeout, true, "", true),
+		ThreadAsTag: true,
+	}
+	err := v.Gather(acc)
+
+	assert.NoError(t, err)
+
+	assert.True(t, acc.HasMeasurement("nsd"))
+	assert.True(t, acc.HasMeasurement("nsd_threads"))
+
+	assert.Len(t, acc.Metrics, 2)
+	assert.Equal(t, acc.NFields(), 89)
+
+	acc.AssertContainsFields(t, "nsd", parsedFullOutputThreadAsTagMeasurementNsd)
+	acc.AssertContainsFields(t, "nsd_threads", parsedFullOutputThreadAsTagMeasurementNsdThreads)
+}
+
 var parsedFullOutput = map[string]interface{}{
 	"server0_queries":     float64(32),
+	"num_queries":         float64(32),
+	"time_boot":           float64(340867.515436),
+	"time_elapsed":        float64(3522.901971),
+	"size_db_disk":        float64(11275648),
+	"size_db_mem":         float64(5910672),
+	"size_xfrd_mem":       float64(83979048),
+	"size_config_disk":    float64(0),
+	"size_config_mem":     float64(15600),
+	"num_type_A":          float64(24),
+	"num_type_NS":         float64(1),
+	"num_type_MD":         float64(0),
+	"num_type_MF":         float64(0),
+	"num_type_CNAME":      float64(0),
+	"num_type_SOA":        float64(0),
+	"num_type_MB":         float64(0),
+	"num_type_MG":         float64(0),
+	"num_type_MR":         float64(0),
+	"num_type_NULL":       float64(0),
+	"num_type_WKS":        float64(0),
+	"num_type_PTR":        float64(0),
+	"num_type_HINFO":      float64(0),
+	"num_type_MINFO":      float64(0),
+	"num_type_MX":         float64(0),
+	"num_type_TXT":        float64(0),
+	"num_type_RP":         float64(0),
+	"num_type_AFSDB":      float64(0),
+	"num_type_X25":        float64(0),
+	"num_type_ISDN":       float64(0),
+	"num_type_RT":         float64(0),
+	"num_type_NSAP":       float64(0),
+	"num_type_SIG":        float64(0),
+	"num_type_KEY":        float64(0),
+	"num_type_PX":         float64(0),
+	"num_type_AAAA":       float64(0),
+	"num_type_LOC":        float64(0),
+	"num_type_NXT":        float64(0),
+	"num_type_SRV":        float64(0),
+	"num_type_NAPTR":      float64(0),
+	"num_type_KX":         float64(0),
+	"num_type_CERT":       float64(0),
+	"num_type_DNAME":      float64(0),
+	"num_type_OPT":        float64(0),
+	"num_type_APL":        float64(0),
+	"num_type_DS":         float64(5),
+	"num_type_SSHFP":      float64(0),
+	"num_type_IPSECKEY":   float64(0),
+	"num_type_RRSIG":      float64(0),
+	"num_type_NSEC":       float64(0),
+	"num_type_DNSKEY":     float64(2),
+	"num_type_DHCID":      float64(0),
+	"num_type_NSEC3":      float64(0),
+	"num_type_NSEC3PARAM": float64(0),
+	"num_type_TLSA":       float64(0),
+	"num_type_SMIMEA":     float64(0),
+	"num_type_CDS":        float64(0),
+	"num_type_CDNSKEY":    float64(0),
+	"num_type_OPENPGPKEY": float64(0),
+	"num_type_CSYNC":      float64(0),
+	"num_type_SPF":        float64(0),
+	"num_type_NID":        float64(0),
+	"num_type_L32":        float64(0),
+	"num_type_L64":        float64(0),
+	"num_type_LP":         float64(0),
+	"num_type_EUI48":      float64(0),
+	"num_type_EUI64":      float64(0),
+	"num_opcode_QUERY":    float64(32),
+	"num_class_IN":        float64(32),
+	"num_rcode_NOERROR":   float64(16),
+	"num_rcode_FORMERR":   float64(0),
+	"num_rcode_SERVFAIL":  float64(0),
+	"num_rcode_NXDOMAIN":  float64(16),
+	"num_rcode_NOTIMP":    float64(0),
+	"num_rcode_REFUSED":   float64(0),
+	"num_rcode_YXDOMAIN":  float64(0),
+	"num_edns":            float64(32),
+	"num_ednserr":         float64(0),
+	"num_udp":             float64(32),
+	"num_udp6":            float64(0),
+	"num_tcp":             float64(0),
+	"num_tcp6":            float64(0),
+	"num_answer_wo_aa":    float64(8),
+	"num_rxerr":           float64(0),
+	"num_txerr":           float64(0),
+	"num_raxfr":           float64(0),
+	"num_truncated":       float64(0),
+	"num_dropped":         float64(0),
+	"zone_master":         float64(0),
+	"zone_slave":          float64(8),
+}
+
+var parsedFullOutputThreadAsTagMeasurementNsdThreads = map[string]interface{}{
+	"queries": float64(32),
+}
+
+var parsedFullOutputThreadAsTagMeasurementNsd = map[string]interface{}{
 	"num_queries":         float64(32),
 	"time_boot":           float64(340867.515436),
 	"time_elapsed":        float64(3522.901971),
