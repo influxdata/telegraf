@@ -171,7 +171,7 @@ func (p *Postgresql) generateCreateTable(metric telegraf.Metric) string {
 	}
 
 	query := strings.Replace(p.TableTemplate, "{TABLE}", quoteIdent(metric.Name()), -1)
-	query = strings.Replace(query, "{TABLELITERAL}", quoteLiteral(metric.Name()), -1)
+	query = strings.Replace(query, "{TABLELITERAL}", quoteLiteral(quoteIdent(metric.Name())), -1)
 	query = strings.Replace(query, "{COLUMNS}", strings.Join(columns, ","), -1)
 	query = strings.Replace(query, "{KEY_COLUMNS}", strings.Join(pk, ","), -1)
 
