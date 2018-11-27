@@ -86,6 +86,14 @@ func (_ *Procstat) Description() string {
 }
 
 func (p *Procstat) Gather(acc telegraf.Accumulator) error {
+	var prefix string
+	if p.Prefix != "" {
+		prefix = p.Prefix + "_"
+	}
+
+	tags := map[string]string{"exe": p.Exe, "pidfile": p.PidFile, "pattern": p.Pattern, "user": p.User}
+	fields := map[string]interface{}{}
+
 	if p.createPIDFinder == nil {
 		switch p.PidFinder {
 		case "native":
@@ -105,6 +113,11 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
 			p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
+		fields[prefix+"result_code"] = 2
+		acc.AddFields("procstat", fields, tags)
+	} else if len(procs) == 0 {
+		fields[prefix+"result_code"] = 1
+		acc.AddFields("procstat", fields, tags)
 	}
 	p.procs = procs
 
@@ -123,6 +136,7 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 	}
 
 	fields := map[string]interface{}{}
+	fields[prefix+"result_code"] = 0
 
 	//If process_name tag is not already set, set to actual name
 	if _, nameInTags := proc.Tags()["process_name"]; !nameInTags {

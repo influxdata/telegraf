@@ -384,5 +384,5 @@ func TestProcstatLookupMetric(t *testing.T) {
 	var acc testutil.Accumulator
 	err := acc.GatherError(p.Gather)
 	require.NoError(t, err)
-	require.Equal(t, len(p.procs)+1, len(acc.Metrics))
+	require.Equal(t, len(p.procs)+2, len(acc.Metrics))
 }
