@@ -34,10 +34,10 @@ const maxSampleConst = 10
 // Endpoint is a high-level representation of a connected vCenter endpoint. It is backed by the lower
 // level Client type.
 type Endpoint struct {
-	Parent    *VSphere
-	URL       *url.URL
-	lastColls map[string]time.Time
-	//instanceInfo    map[string]resourceInfo
+	Parent          *VSphere
+	URL             *url.URL
+	lastColls       map[string]time.Time
+	lastColl        time.Time
 	resourceKinds   map[string]resourceKind
 	hwMarks         *TSCache
 	lun2ds          map[string]string
@@ -403,51 +403,54 @@ func (e *Endpoint) discover(ctx context.Context) error {
 				}
 			}
 
-			// Get metric metadata and filter metrics
-			prob := 100.0 / float64(len(objects))
-			log.Printf("D! [input.vsphere] Probability of sampling a resource: %f", prob)
-			wg := sync.WaitGroup{}
-			limiter := make(chan struct{}, e.Parent.DiscoverConcurrency)
-			for _, obj := range objects {
-				if rand.Float64() > prob {
-					continue
+			// No need to collect metric metadata if resource type is not enabled
+			if res.enabled {
+				// Get metric metadata and filter metrics
+				prob := 100.0 / float64(len(objects))
+				log.Printf("D! [input.vsphere] Probability of sampling a resource: %f", prob)
+				wg := sync.WaitGroup{}
+				limiter := make(chan struct{}, e.Parent.DiscoverConcurrency)
+				for _, obj := range objects {
+					if rand.Float64() > prob {
+						continue
+					}
+					wg.Add(1)
+					go func(obj objectRef) {
+						defer wg.Done()
+						limiter <- struct{}{}
+						defer func() {
+							<-limiter
+						}()
+						metrics, err := e.getMetadata2(ctx, obj, res.sampling)
+						if err != nil {
+							log.Printf("E! [input.vsphere]: Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
+						}
+						mMap := make(map[string]types.PerfMetricId)
+						for _, m := range metrics {
+							if m.Instance != "" && res.collectInstances {
+								m.Instance = "*"
+							} else {
+								m.Instance = ""
+							}
+							if res.filters.Match(metricNames[m.CounterId]) {
+								mMap[strconv.Itoa(int(m.CounterId))+"|"+m.Instance] = m
+							}
+						}
+						log.Printf("D! [input.vsphere] Found %d metrics for %s", len(mMap), obj.name)
+						instInfoMux.Lock()
+						defer instInfoMux.Unlock()
+						if len(mMap) > len(res.metrics) {
+							res.metrics = make(performance.MetricList, len(mMap))
+							i := 0
+							for _, m := range mMap {
+								res.metrics[i] = m
+								i++
+							}
+						}
+					}(obj)
 				}
-				wg.Add(1)
-				go func(obj objectRef) {
-					defer wg.Done()
-					limiter <- struct{}{}
-					defer func() {
-						<-limiter
-					}()
-					metrics, err := e.getMetadata2(ctx, obj, res.sampling)
-					if err != nil {
-						log.Printf("E! [input.vsphere]: Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
-					}
-					mMap := make(map[string]types.PerfMetricId)
-					for _, m := range metrics {
-						if m.Instance != "" && res.collectInstances {
-							m.Instance = "*"
-						} else {
-							m.Instance = ""
-						}
-						if res.filters.Match(metricNames[m.CounterId]) {
-							mMap[strconv.Itoa(int(m.CounterId))+"|"+m.Instance] = m
-						}
-					}
-					log.Printf("D! [input.vsphere] Found %d metrics for %s", len(mMap), obj.name)
-					instInfoMux.Lock()
-					defer instInfoMux.Unlock()
-					if len(mMap) > len(res.metrics) {
-						res.metrics = make(performance.MetricList, len(mMap))
-						i := 0
-						for _, m := range mMap {
-							res.metrics[i] = m
-							i++
-						}
-					}
-				}(obj)
+				wg.Wait()
 			}
-			wg.Wait()
 			res.objects = objects
 			resourceKinds[k] = res
 		}
@@ -601,7 +604,6 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 	// If we never managed to do a discovery, collection will be a no-op. Therefore,
 	// we need to check that a connection is available, or the collection will
 	// silently fail.
-	//
 	if _, err := e.clientFactory.GetClient(ctx); err != nil {
 		return err
 	}
@@ -614,21 +616,26 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 	}
 
 	// If discovery interval is disabled (0), discover on each collection cycle
-	//
 	if e.Parent.ObjectDiscoveryInterval.Duration == 0 {
 		err := e.discover(ctx)
 		if err != nil {
 			return err
 		}
 	}
+	var wg sync.WaitGroup
 	for k, res := range e.resourceKinds {
 		if res.enabled {
-			err := e.collectResource(ctx, k, acc)
-			if err != nil {
-				return err
-			}
+			wg.Add(1)
+			go func(k string) {
+				defer wg.Done()
+				err := e.collectResource(ctx, k, acc)
+				if err != nil {
+					acc.AddError(err)
+				}
+			}(k)
 		}
 	}
+	wg.Wait()
 
 	// Purge old timestamps from the cache
 	e.hwMarks.Purge()
@@ -668,9 +675,12 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 				Format:     "normal",
 			}
 
-			// Look back 3 sampling periods
-			//start := latest.Add(time.Duration(-res.sampling) * time.Second * (metricLookback - 1))
-			pq.StartTime = &latest
+			start, ok := e.hwMarks.Get(object.ref.Value)
+			if !ok {
+				// Look back 3 sampling periods by default
+				start = latest.Add(time.Duration(-res.sampling) * time.Second * (metricLookback - 1))
+			}
+			pq.StartTime = &start
 			pq.EndTime = &now
 
 			pqs = append(pqs, pq)
@@ -711,7 +721,6 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 
 func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc telegraf.Accumulator) error {
 
-	// Do we have new data yet?
 	res := e.resourceKinds[resourceType]
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
@@ -734,6 +743,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	} else {
 		latest = now.Add(time.Duration(-res.sampling) * time.Second)
 	}
+	e.lastColl = now
 
 	internalTags := map[string]string{"resourcetype": resourceType}
 	sw := NewStopwatchWithTags("gather_duration", e.URL.Host, internalTags)
@@ -757,7 +767,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 		atomic.AddInt64(&count, int64(n))
 		tsMux.Lock()
 		defer tsMux.Unlock()
-		if localLatest.After(latestSample) {
+		if localLatest.After(latestSample) && !localLatest.IsZero() {
 			latestSample = localLatest
 		}
 		return nil
@@ -783,7 +793,9 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 		return true
 	})
 	log.Printf("D! [input.vsphere] Latest sample for %s set to %s", resourceType, latestSample)
-	e.lastColls[resourceType] = latestSample
+	if !latestSample.IsZero() {
+		e.lastColls[resourceType] = latestSample
+	}
 	sw.Stop()
 	SendInternalCounterWithTags("gather_count", e.URL.Host, internalTags, count)
 	if len(merr) > 0 {
@@ -850,51 +862,57 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 			}
 			e.populateTags(&objectRef, resourceType, res, t, &v)
 
-			// Now deal with the values. Iterate backwards so we start with the latest value
-			tsKey := moid + "|" + name + "|" + v.Instance
-			for idx := len(v.Value) - 1; idx >= 0; idx-- {
-				ts := em.SampleInfo[idx].Timestamp
+			avg := float64(0)
+			nValues := 0
+			//log.Printf("D! [input.vsphere] %s %d samples", name, len(v.Value))
+			for idx, sample := range em.SampleInfo {
+				value := float64(v.Value[idx])
+				if value < 0 {
+					continue
+				}
+				ts := sample.Timestamp
 				if ts.After(latestSample) {
 					latestSample = ts
 				}
-
-				// For queries with a lookback, we need to check the high-water mark
-				// to determine if this should be included. Only samples not seen before should be included.
-				if !e.hwMarks.IsNew(tsKey, ts) {
-					continue
-				}
-				value := v.Value[idx]
-
-				// Organize the metrics into a bucket per measurement.
-				// Data SHOULD be presented to us with the same timestamp for all samples, but in case
-				// they don't we use the measurement name + timestamp as the key for the bucket.
-				mn, fn := e.makeMetricIdentifier(prefix, name)
-				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
-				bucket, found := buckets[bKey]
-				if !found {
-					bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: t}
-					buckets[bKey] = bucket
-				}
-				if value < 0 {
-					log.Printf("D! [input.vsphere]: Negative value for %s on %s. Indicates missing samples", name, objectRef.name)
-					continue
-				}
-
-				// Percentage values must be scaled down by 100.
-				info, ok := metricInfo[name]
-				if !ok {
-					log.Printf("E! [input.vsphere]: Could not determine unit for %s. Skipping", name)
-				}
-				if info.UnitInfo.GetElementDescription().Key == "percent" {
-					bucket.fields[fn] = float64(value) / 100.0
-				} else {
-					bucket.fields[fn] = value
-				}
-				count++
-
-				// Update highwater marks for non-realtime metrics.
-				e.hwMarks.Put(tsKey, ts)
+				avg += float64(value)
+				nValues++
 			}
+			if nValues == 0 {
+				log.Printf("D! [input.vsphere]: Missing value for: %s, %s", name, objectRef.name)
+				continue
+			}
+
+			// If we're catching up with metrics arriving late, calculate the average
+			// of them and pick the midpoint timestamp. This is a reasonable way of
+			// filling in missed collections that doesn't cause us to deliver metrics
+			// faster than the interval.
+			avg /= float64(nValues)
+			midTs := em.SampleInfo[len(em.SampleInfo)/2].Timestamp
+
+			// Organize the metrics into a bucket per measurement.
+			mn, fn := e.makeMetricIdentifier(prefix, name)
+			bKey := mn + " " + v.Instance + " " + strconv.FormatInt(midTs.UnixNano(), 10)
+			bucket, found := buckets[bKey]
+			if !found {
+				bucket = metricEntry{name: mn, ts: midTs, fields: make(map[string]interface{}), tags: t}
+				buckets[bKey] = bucket
+			}
+
+			// Percentage values must be scaled down by 100.
+			info, ok := metricInfo[name]
+			if !ok {
+				log.Printf("E! [input.vsphere]: Could not determine unit for %s. Skipping", name)
+			}
+			if info.UnitInfo.GetElementDescription().Key == "percent" {
+				bucket.fields[fn] = float64(avg) / 100.0
+			} else {
+				bucket.fields[fn] = avg
+			}
+			count++
+
+			// Update highwater marks
+			e.hwMarks.Put(moid, latestSample)
+
 		}
 		// We've iterated through all the metrics and collected buckets for each
 		// measurement name. Now emit them!
