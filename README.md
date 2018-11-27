@@ -239,6 +239,8 @@ For documentation on the latest development code see the [documentation index][d
 * [nginx_upstream_check](./plugins/inputs/nginx_upstream_check)
 * [nginx_vts](./plugins/inputs/nginx_vts)
 * [nsq_consumer](./plugins/inputs/nsq_consumer)
+* [nginx_vts](./plugins/inputs/nginx_vts)
+* [nsd](./plugins/inputs/nsd)
 * [nsq](./plugins/inputs/nsq)
 * [nstat](./plugins/inputs/nstat)
 * [ntpq](./plugins/inputs/ntpq)
