@@ -9,6 +9,7 @@
 ### Bugfixes
 
 - [#5006](https://github.com/influxdata/telegraf/issues/5006): Fix boolean handling in splunkmetric serializer.
+- [#5046](https://github.com/influxdata/telegraf/issues/5046): Set default config values in jenkins input.
 
 ## v1.9 [2018-11-20]
 
