@@ -88,6 +88,24 @@ func TestTimestampError(t *testing.T) {
 	require.Equal(t, fmt.Errorf("timestamp format must be specified"), err)
 }
 
+func TestTimestampUnixFormat(t *testing.T) {
+	p := Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimestampColumn:   "first",
+		TimestampFormat:   "unix",
+		TimeFunc:          DefaultTime,
+	}
+	testCSV := `line1,line2,line3
+1243094706,70,test_name
+1257609906,80,test_name2`
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	require.Equal(t, metrics[0].Time().UnixNano(), int64(1243094706000000000))
+	require.Equal(t, metrics[1].Time().UnixNano(), int64(1257609906000000000))
+}
+
 func TestQuotedCharacter(t *testing.T) {
 	p := Parser{
 		HeaderRowCount:    1,
