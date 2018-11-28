@@ -13,6 +13,7 @@ const DEFAULT_PATTERNS = `
 #   https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
 # All default logstash patterns are supported, these can be viewed here:
 #   https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns
+# When using default logstash patterns, a semantic name is required.
 
 # Available modifiers:
 #   string   (default if nothing is specified)
