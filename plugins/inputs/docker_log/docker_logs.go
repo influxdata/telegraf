@@ -1,4 +1,4 @@
-package docker_logs
+package docker_log
 
 import (
 	"context"
@@ -299,7 +299,7 @@ func (d *DockerLogs) Stop() {
 }
 
 func init() {
-	inputs.Add("docker_logs", func() telegraf.Input {
+	inputs.Add("docker_log", func() telegraf.Input {
 		return &DockerLogs{
 			Timeout:        internal.Duration{Duration: time.Second * 5},
 			Endpoint:       defaultEndpoint,
