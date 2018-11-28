@@ -127,7 +127,13 @@ func (s *Nsd) Gather(acc telegraf.Accumulator) error {
 		stat := cols[0]
 		value := cols[1]
 
-		fieldValue, err := strconv.ParseFloat(value, 64)
+		var fieldValue interface{}
+		// only two values are floats
+		if stat == "time.boot" || stat == "time.elapsed" {
+			fieldValue, err = strconv.ParseFloat(value, 64)
+		} else {
+			fieldValue, err = strconv.ParseUint(value, 10, 64)
+		}
 		if err != nil {
 			acc.AddError(fmt.Errorf("Expected a numerical value for %s = %v",
 				stat, value))
