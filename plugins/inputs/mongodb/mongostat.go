@@ -599,6 +599,11 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		Faults:    -1,
 	}
 
+	// set connection info
+	returnVal.CurrentC = newStat.Connections.Current
+	returnVal.AvailableC = newStat.Connections.Available
+	returnVal.TotalCreatedC = newStat.Connections.TotalCreated
+
 	// set the storage engine appropriately
 	if newStat.StorageEngine != nil && newStat.StorageEngine["name"] != "" {
 		returnVal.StorageEngine = newStat.StorageEngine["name"]
