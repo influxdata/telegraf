@@ -10,7 +10,7 @@ docker run --name telegraf
 	-v /etc:/hostfs/etc:ro
 	-v /proc:/hostfs/proc:ro
 	-v /sys:/hostfs/sys:ro
-	-v /var/run/utmp:/var/run/utmp:ro
+	-v /run/utmp:/var/run/utmp:ro
 	-e HOST_ETC=/hostfs/etc
 	-e HOST_PROC=/hostfs/proc
 	-e HOST_SYS=/hostfs/sys

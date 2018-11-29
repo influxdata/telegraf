@@ -1,10 +1,10 @@
 package grok
 
-// DEFAULT_PATTERNS SHOULD BE KEPT IN-SYNC WITH patterns/influx-patterns
 const DEFAULT_PATTERNS = `
 # Captures are a slightly modified version of logstash "grok" patterns, with
 #  the format %{<capture syntax>[:<semantic name>][:<modifier>]}
 # By default all named captures are converted into string fields.
+# If a pattern does not have a semantic name it will not be captured.
 # Modifiers can be used to convert captures to other types or tags.
 # Timestamp modifiers can be used to convert captures to the timestamp of the
 #  parsed metric.
@@ -13,7 +13,6 @@ const DEFAULT_PATTERNS = `
 #   https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
 # All default logstash patterns are supported, these can be viewed here:
 #   https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns
-# When using default logstash patterns, a semantic name is required.
 
 # Available modifiers:
 #   string   (default if nothing is specified)

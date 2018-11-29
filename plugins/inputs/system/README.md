@@ -3,10 +3,6 @@
 The system plugin gathers general stats on system load, uptime,
 and number of users logged in. It is similar to the unix `uptime` command.
 
-**Note**: If using the system plugin inside a docker container, you must
-mount the host's `/run` directory (at least `/run/utmp`) into the container
-at `/var/run` in order to avoid issues with symlinks or missing directories.
-
 ### Configuration:
 
 ```toml
