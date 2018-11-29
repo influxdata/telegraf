@@ -633,6 +633,12 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 				returnVal.TotalC = diff(newStat.Metrics.Cursor.Open.Total, oldStat.Metrics.Cursor.Open.Total, sampleSecs)
 			}
 		}
+		if newStat.Metrics.Document != nil {
+			returnVal.DeletedD = newStat.Metrics.Document.Deleted
+			returnVal.InsertedD = newStat.Metrics.Document.Inserted
+			returnVal.ReturnedD = newStat.Metrics.Document.Returned
+			returnVal.UpdatedD = newStat.Metrics.Document.Updated
+		}
 	}
 
 	if newStat.OpcountersRepl != nil && oldStat.OpcountersRepl != nil {
