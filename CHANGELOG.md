@@ -12,6 +12,7 @@
 
 - [#5006](https://github.com/influxdata/telegraf/issues/5006): Fix boolean handling in splunkmetric serializer.
 - [#5046](https://github.com/influxdata/telegraf/issues/5046): Set default config values in jenkins input.
+- [#4664](https://github.com/influxdata/telegraf/issues/4664): Fix server connection and document stats in mongodb input.
 
 ## v1.9 [2018-11-20]
 
