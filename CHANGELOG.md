@@ -3,6 +3,7 @@
 #### Features
 
 - [#4345](https://github.com/influxdata/telegraf/pull/4345): Allow for force gathering ES cluster stats.
+- [#5047](https://github.com/influxdata/telegraf/pull/5047): Add support for unix and unix_ms timestamps to csv parser.
 
 ## v1.9.1 [unreleased]
 
