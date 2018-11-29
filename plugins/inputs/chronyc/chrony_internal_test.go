@@ -172,7 +172,7 @@ func TestDoubleTracking(t *testing.T) {
 		t.Fatalf("An error has been returned: %v", err)
 	}
 
-	t.Logf("Acc: ", acc)
+	t.Logf("acc: %v", acc)
 
 	if acc.NMetrics() != 2 {
 		t.Fatalf("%d metrics total, must be 2", acc.NMetrics())
