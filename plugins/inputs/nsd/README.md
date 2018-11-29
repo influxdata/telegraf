@@ -19,13 +19,6 @@ This plugin gathers stats from [NSD](https://nlnetlabs.nl/projects/nsd/about/) -
  
    ## The default timeout of 1s can be overriden with:
    # timeout = "1s"
- 
-   ## When set to true, thread metrics are tagged with the thread id.
-   ##
-   ## The default is false for backwards compatibility, and will be change to
-   ## true in a future version.  It is recommended to set to true on new
-   ## deployments.
-   thread_as_tag = false
 ```
 
 #### Permissions:
@@ -65,8 +58,6 @@ Please use the solution you see as most appropriate.
 This is the full list of stats provided by nsd-control and potentially collected
 depending of your nsd configuration. In the output, the dots in the nsd-control stat name are replaced by underscores(see
 https://nlnetlabs.nl/documentation/nsd/nsd-control for details).
-
-Shown metrics are with `thread_as_tag` enabled.
 
 - nsd
   - fields:
@@ -159,15 +150,15 @@ Shown metrics are with `thread_as_tag` enabled.
     - zone_master
     - zone_slave
     
-- nsd_thread
+- nsd_server
   - tags:
-    - thread
+    - server
   - fields:
     - queries
 
 ### Example Output:
 ```
 nsd,host=localhost, num_queries=32,time_boot=340867_515436,time_elapsed=3522_901971,size_db_disk=11275648,size_db_mem=5910672,size_xfrd_mem=83979048,size_config_disk=0,size_config_mem=15600num_type_A=24,num_type_NS=1 num_opcode_QUERY=32,num_class_IN=32,num_rcode_NOERROR=16,zone_slave=8
-nsd_threads,host=localhost,thread=0 num_queries=19
-nsd_threads,host=localhost,thread=1 num_queries=13
+nsd_server,host=localhost,server=0 num_queries=19
+nsd_server,host=localhost,server=1 num_queries=13
 ```

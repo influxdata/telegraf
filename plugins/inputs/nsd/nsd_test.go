@@ -12,8 +12,8 @@ import (
 
 var TestTimeout = internal.Duration{Duration: time.Second}
 
-func NsdControl(output string, Timeout internal.Duration, useSudo bool, Server string, ThreadAsTag bool) func(string, internal.Duration, bool, string, bool) (*bytes.Buffer, error) {
-	return func(string, internal.Duration, bool, string, bool) (*bytes.Buffer, error) {
+func NsdControl(output string, Timeout internal.Duration, useSudo bool, Server string) func(string, internal.Duration, bool, string) (*bytes.Buffer, error) {
+	return func(string, internal.Duration, bool, string) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -21,42 +21,25 @@ func NsdControl(output string, Timeout internal.Duration, useSudo bool, Server s
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Nsd{
-		run: NsdControl(fullOutput, TestTimeout, true, "", false),
+		run: NsdControl(fullOutput, TestTimeout, true, ""),
 	}
 	err := v.Gather(acc)
 
 	assert.NoError(t, err)
 
 	assert.True(t, acc.HasMeasurement("nsd"))
-
-	assert.Len(t, acc.Metrics, 1)
-	assert.Equal(t, acc.NFields(), 89)
-
-	acc.AssertContainsFields(t, "nsd", parsedFullOutput)
-}
-
-func TestParseFullOutputThreadAsTag(t *testing.T) {
-	acc := &testutil.Accumulator{}
-	v := &Nsd{
-		run:         NsdControl(fullOutput, TestTimeout, true, "", true),
-		ThreadAsTag: true,
-	}
-	err := v.Gather(acc)
-
-	assert.NoError(t, err)
-
-	assert.True(t, acc.HasMeasurement("nsd"))
-	assert.True(t, acc.HasMeasurement("nsd_threads"))
+	assert.True(t, acc.HasTag("nsd_server", "server"))
 
 	assert.Len(t, acc.Metrics, 2)
 	assert.Equal(t, acc.NFields(), 89)
 
-	acc.AssertContainsFields(t, "nsd", parsedFullOutputThreadAsTagMeasurementNsd)
-	acc.AssertContainsFields(t, "nsd_threads", parsedFullOutputThreadAsTagMeasurementNsdThreads)
+	tags := make(map[string]string)
+	tags["server"] = "0"
+	acc.AssertContainsFields(t, "nsd", parsedFullOutput)
+	acc.AssertContainsTaggedFields(t, "nsd_server", parsedFullOutputServerAsTagMeasurementNsdServers, tags)
 }
 
 var parsedFullOutput = map[string]interface{}{
-	"server0_queries":     uint64(32),
 	"num_queries":         uint64(32),
 	"time_boot":           float64(340867.515436),
 	"time_elapsed":        float64(3522.901971),
@@ -147,99 +130,8 @@ var parsedFullOutput = map[string]interface{}{
 	"zone_slave":          uint64(8),
 }
 
-var parsedFullOutputThreadAsTagMeasurementNsdThreads = map[string]interface{}{
+var parsedFullOutputServerAsTagMeasurementNsdServers = map[string]interface{}{
 	"queries": uint64(32),
-}
-
-var parsedFullOutputThreadAsTagMeasurementNsd = map[string]interface{}{
-	"num_queries":         uint64(32),
-	"time_boot":           float64(340867.515436),
-	"time_elapsed":        float64(3522.901971),
-	"size_db_disk":        uint64(11275648),
-	"size_db_mem":         uint64(5910672),
-	"size_xfrd_mem":       uint64(83979048),
-	"size_config_disk":    uint64(0),
-	"size_config_mem":     uint64(15600),
-	"num_type_A":          uint64(24),
-	"num_type_NS":         uint64(1),
-	"num_type_MD":         uint64(0),
-	"num_type_MF":         uint64(0),
-	"num_type_CNAME":      uint64(0),
-	"num_type_SOA":        uint64(0),
-	"num_type_MB":         uint64(0),
-	"num_type_MG":         uint64(0),
-	"num_type_MR":         uint64(0),
-	"num_type_NULL":       uint64(0),
-	"num_type_WKS":        uint64(0),
-	"num_type_PTR":        uint64(0),
-	"num_type_HINFO":      uint64(0),
-	"num_type_MINFO":      uint64(0),
-	"num_type_MX":         uint64(0),
-	"num_type_TXT":        uint64(0),
-	"num_type_RP":         uint64(0),
-	"num_type_AFSDB":      uint64(0),
-	"num_type_X25":        uint64(0),
-	"num_type_ISDN":       uint64(0),
-	"num_type_RT":         uint64(0),
-	"num_type_NSAP":       uint64(0),
-	"num_type_SIG":        uint64(0),
-	"num_type_KEY":        uint64(0),
-	"num_type_PX":         uint64(0),
-	"num_type_AAAA":       uint64(0),
-	"num_type_LOC":        uint64(0),
-	"num_type_NXT":        uint64(0),
-	"num_type_SRV":        uint64(0),
-	"num_type_NAPTR":      uint64(0),
-	"num_type_KX":         uint64(0),
-	"num_type_CERT":       uint64(0),
-	"num_type_DNAME":      uint64(0),
-	"num_type_OPT":        uint64(0),
-	"num_type_APL":        uint64(0),
-	"num_type_DS":         uint64(5),
-	"num_type_SSHFP":      uint64(0),
-	"num_type_IPSECKEY":   uint64(0),
-	"num_type_RRSIG":      uint64(0),
-	"num_type_NSEC":       uint64(0),
-	"num_type_DNSKEY":     uint64(2),
-	"num_type_DHCID":      uint64(0),
-	"num_type_NSEC3":      uint64(0),
-	"num_type_NSEC3PARAM": uint64(0),
-	"num_type_TLSA":       uint64(0),
-	"num_type_SMIMEA":     uint64(0),
-	"num_type_CDS":        uint64(0),
-	"num_type_CDNSKEY":    uint64(0),
-	"num_type_OPENPGPKEY": uint64(0),
-	"num_type_CSYNC":      uint64(0),
-	"num_type_SPF":        uint64(0),
-	"num_type_NID":        uint64(0),
-	"num_type_L32":        uint64(0),
-	"num_type_L64":        uint64(0),
-	"num_type_LP":         uint64(0),
-	"num_type_EUI48":      uint64(0),
-	"num_type_EUI64":      uint64(0),
-	"num_opcode_QUERY":    uint64(32),
-	"num_class_IN":        uint64(32),
-	"num_rcode_NOERROR":   uint64(16),
-	"num_rcode_FORMERR":   uint64(0),
-	"num_rcode_SERVFAIL":  uint64(0),
-	"num_rcode_NXDOMAIN":  uint64(16),
-	"num_rcode_NOTIMP":    uint64(0),
-	"num_rcode_REFUSED":   uint64(0),
-	"num_rcode_YXDOMAIN":  uint64(0),
-	"num_edns":            uint64(32),
-	"num_ednserr":         uint64(0),
-	"num_udp":             uint64(32),
-	"num_udp6":            uint64(0),
-	"num_tcp":             uint64(0),
-	"num_tcp6":            uint64(0),
-	"num_answer_wo_aa":    uint64(8),
-	"num_rxerr":           uint64(0),
-	"num_txerr":           uint64(0),
-	"num_raxfr":           uint64(0),
-	"num_truncated":       uint64(0),
-	"num_dropped":         uint64(0),
-	"zone_master":         uint64(0),
-	"zone_slave":          uint64(8),
 }
 
 var fullOutput = `

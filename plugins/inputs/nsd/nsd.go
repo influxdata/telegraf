@@ -16,14 +16,13 @@ import (
 	"time"
 )
 
-type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool) (*bytes.Buffer, error)
+type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string) (*bytes.Buffer, error)
 
 type Nsd struct {
-	Binary      string
-	Timeout     internal.Duration
-	UseSudo     bool
-	Server      string
-	ThreadAsTag bool
+	Binary  string
+	Timeout internal.Duration
+	UseSudo bool
+	Server  string
 
 	filter filter.Filter
 	run    runner
@@ -45,13 +44,6 @@ var sampleConfig = `
 
   ## The default timeout of 1s can be overridden with:
   # timeout = "1s"
-
-  ## When set to true, thread metrics are tagged with the thread id.
-  ##
-  ## The default is false for backwards compatibility, and will be change to
-  ## true in a future version.  It is recommended to set to true on new
-  ## deployments.
-  thread_as_tag = false
 `
 
 func (s *Nsd) SampleConfig() string {
@@ -62,7 +54,7 @@ func (s *Nsd) Description() string {
 	return "A plugin to collect stats from the NSD DNS Server"
 }
 
-func nsdRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string, ThreadAsTag bool) (*bytes.Buffer, error) {
+func nsdRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
 
 	if Server != "" {
@@ -108,13 +100,13 @@ func nsdRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server s
 }
 
 func (s *Nsd) Gather(acc telegraf.Accumulator) error {
-	out, err := s.run(s.Binary, s.Timeout, s.UseSudo, s.Server, s.ThreadAsTag)
+	out, err := s.run(s.Binary, s.Timeout, s.UseSudo, s.Server)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}
 
 	fields := make(map[string]interface{})
-	fieldsThreads := make(map[string]map[string]interface{})
+	fieldsServers := make(map[string]map[string]interface{})
 
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
@@ -140,17 +132,17 @@ func (s *Nsd) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		if s.ThreadAsTag && strings.HasPrefix(stat, "server") {
+		if strings.HasPrefix(stat, "server") {
 			statTokens := strings.Split(stat, ".")
 			if len(statTokens) > 1 {
-				threadID := strings.TrimPrefix(statTokens[0], "server")
-				if _, err = strconv.Atoi(threadID); err == nil {
-					threadTokens := statTokens[1:]
-					field := strings.Join(threadTokens[:], "_")
-					if fieldsThreads[threadID] == nil {
-						fieldsThreads[threadID] = make(map[string]interface{})
+				serverID := strings.TrimPrefix(statTokens[0], "server")
+				if _, err = strconv.Atoi(serverID); err == nil {
+					serverTokens := statTokens[1:]
+					field := strings.Join(serverTokens[:], "_")
+					if fieldsServers[serverID] == nil {
+						fieldsServers[serverID] = make(map[string]interface{})
 					}
-					fieldsThreads[threadID][field] = fieldValue
+					fieldsServers[serverID][field] = fieldValue
 				}
 			}
 		} else {
@@ -161,10 +153,10 @@ func (s *Nsd) Gather(acc telegraf.Accumulator) error {
 
 	acc.AddFields("nsd", fields, nil)
 
-	if s.ThreadAsTag && len(fieldsThreads) > 0 {
-		for thisThreadID, thisThreadFields := range fieldsThreads {
-			thisThreadTag := map[string]string{"thread": thisThreadID}
-			acc.AddFields("nsd_threads", thisThreadFields, thisThreadTag)
+	if len(fieldsServers) > 0 {
+		for thisServerID, thisServerFields := range fieldsServers {
+			thisServerTag := map[string]string{"server": thisServerID}
+			acc.AddFields("nsd_server", thisServerFields, thisServerTag)
 		}
 	}
 
@@ -174,12 +166,11 @@ func (s *Nsd) Gather(acc telegraf.Accumulator) error {
 func init() {
 	inputs.Add("nsd", func() telegraf.Input {
 		return &Nsd{
-			run:         nsdRunner,
-			Binary:      defaultBinary,
-			Timeout:     defaultTimeout,
-			UseSudo:     false,
-			Server:      "",
-			ThreadAsTag: false,
+			run:     nsdRunner,
+			Binary:  defaultBinary,
+			Timeout: defaultTimeout,
+			UseSudo: false,
+			Server:  "",
 		}
 	})
 }
