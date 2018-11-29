@@ -61,6 +61,25 @@ func newTestKafka() (*Kafka, *TestConsumer) {
 	return &k, consumer
 }
 
+func newTestKafkaWithTopicTag() (*Kafka, *TestConsumer) {
+	consumer := &TestConsumer{
+		errors:   make(chan error),
+		messages: make(chan *sarama.ConsumerMessage, 1000),
+	}
+	k := Kafka{
+		cluster:                consumer,
+		ConsumerGroup:          "test",
+		Topics:                 []string{"telegraf"},
+		Brokers:                []string{"localhost:9092"},
+		Offset:                 "oldest",
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		doNotCommitMsgs:        true,
+		messages:               make(map[telegraf.TrackingID]*sarama.ConsumerMessage),
+		TopicTag:               "topic",
+	}
+	return &k, consumer
+}
+
 // Test that the parser parses kafka messages into points
 func TestRunParser(t *testing.T) {
 	k, consumer := newTestKafka()
@@ -73,6 +92,22 @@ func TestRunParser(t *testing.T) {
 	acc.Wait(1)
 
 	assert.Equal(t, acc.NFields(), 1)
+}
+
+// Test that the parser parses kafka messages into points
+// and adds the topic tag
+func TestRunParserWithTopic(t *testing.T) {
+	k, consumer := newTestKafkaWithTopicTag()
+	acc := testutil.Accumulator{}
+	ctx := context.Background()
+
+	k.parser, _ = parsers.NewInfluxParser()
+	go k.receiver(ctx, &acc)
+	consumer.Inject(saramaMsgWithTopic(testMsg, "test_topic"))
+	acc.Wait(1)
+
+	assert.Equal(t, acc.NFields(), 1)
+	assert.True(t, acc.HasTag("cpu_load_short", "topic"))
 }
 
 // Test that the parser ignores invalid messages
@@ -171,5 +206,15 @@ func saramaMsg(val string) *sarama.ConsumerMessage {
 		Value:     []byte(val),
 		Offset:    0,
 		Partition: 0,
+	}
+}
+
+func saramaMsgWithTopic(val string, topic string) *sarama.ConsumerMessage {
+	return &sarama.ConsumerMessage{
+		Key:       nil,
+		Value:     []byte(val),
+		Offset:    0,
+		Partition: 0,
+		Topic:     topic,
 	}
 }

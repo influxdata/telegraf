@@ -14,6 +14,8 @@ and use the old zookeeper connection method.
   brokers = ["localhost:9092"]
   ## topic(s) to consume
   topics = ["telegraf"]
+  ## Add topic as tag if topic_tag is not empty
+  # topic_tag = ""
 
   ## Optional Client id
   # client_id = "Telegraf"
