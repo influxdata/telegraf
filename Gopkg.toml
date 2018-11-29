@@ -88,7 +88,7 @@
 
 [[constraint]]
   name = "github.com/jackc/pgx"
-  version = "3.1.0"
+  version = "3.2.0"
 
 [[constraint]]
   name = "github.com/kardianos/service"
