@@ -14,6 +14,7 @@
 - [#5046](https://github.com/influxdata/telegraf/issues/5046): Set default config values in jenkins input.
 - [#4664](https://github.com/influxdata/telegraf/issues/4664): Fix server connection and document stats in mongodb input.
 - [#5010](https://github.com/influxdata/telegraf/issues/5010): Add X-Requested-By header to graylog input.
+- [#5052](https://github.com/influxdata/telegraf/issues/5052): Fix metric memory not freed from the metric buffer on write.
 
 ## v1.9 [2018-11-20]
 
