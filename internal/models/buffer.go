@@ -175,9 +175,10 @@ func (b *Buffer) Accept(batch []telegraf.Metric) {
 		b.metricWritten(m)
 	}
 
-	if b.batchSize > 0 {
-		b.size -= b.batchSize
-		b.first += b.batchSize
+	b.size -= b.batchSize
+	for i := 0; i < b.batchSize; i++ {
+		b.buf[b.first] = nil
+		b.first++
 		b.first %= b.cap
 	}
 
