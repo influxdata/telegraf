@@ -37,5 +37,5 @@ source field is overwritten.
 
 ```diff
 - xyzzy status="green" 1502489900000000000
-+ xyzzy status="green",status_code=1 1502489900000000000
++ xyzzy status="green",status_code=1i 1502489900000000000
 ```
