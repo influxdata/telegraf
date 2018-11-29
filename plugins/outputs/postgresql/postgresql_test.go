@@ -26,22 +26,22 @@ func TestPostgresqlCreateStatement(t *testing.T) {
 
 	var m telegraf.Metric
 	m, _ = metric.New("m", nil, map[string]interface{}{"f": float64(3.14)}, timestamp)
-	assert.Equal(t, `CREATE TABLE IF NOT EXISTS "m"(time timestamptz,fields jsonb)`, p.generateCreateTable(m))
+	assert.Equal(t, `CREATE TABLE IF NOT EXISTS "public"."m"(time timestamptz,fields jsonb)`, p.generateCreateTable(m))
 
 	m, _ = metric.New("m", map[string]string{"k": "v"}, map[string]interface{}{"i": int(3)}, timestamp)
-	assert.Equal(t, `CREATE TABLE IF NOT EXISTS "m"(time timestamptz,tags jsonb,fields jsonb)`, p.generateCreateTable(m))
+	assert.Equal(t, `CREATE TABLE IF NOT EXISTS "public"."m"(time timestamptz,tags jsonb,fields jsonb)`, p.generateCreateTable(m))
 
 	p.TagsAsJsonb = false
 	p.FieldsAsJsonb = false
 
 	m, _ = metric.New("m", nil, map[string]interface{}{"f": float64(3.14)}, timestamp)
-	assert.Equal(t, `CREATE TABLE IF NOT EXISTS "m"(time timestamptz,"f" float8)`, p.generateCreateTable(m))
+	assert.Equal(t, `CREATE TABLE IF NOT EXISTS "public"."m"(time timestamptz,"f" float8)`, p.generateCreateTable(m))
 
 	m, _ = metric.New("m", nil, map[string]interface{}{"i": int(3)}, timestamp)
-	assert.Equal(t, `CREATE TABLE IF NOT EXISTS "m"(time timestamptz,"i" int8)`, p.generateCreateTable(m))
+	assert.Equal(t, `CREATE TABLE IF NOT EXISTS "public"."m"(time timestamptz,"i" int8)`, p.generateCreateTable(m))
 
 	m, _ = metric.New("m", map[string]string{"k": "v"}, map[string]interface{}{"i": int(3)}, timestamp)
-	assert.Equal(t, `CREATE TABLE IF NOT EXISTS "m"(time timestamptz,"k" text,"i" int8)`, p.generateCreateTable(m))
+	assert.Equal(t, `CREATE TABLE IF NOT EXISTS "public"."m"(time timestamptz,"k" text,"i" int8)`, p.generateCreateTable(m))
 
 }
 
@@ -52,17 +52,17 @@ func TestPostgresqlInsertStatement(t *testing.T) {
 	p.FieldsAsJsonb = false
 
 	sql := p.generateInsert("m", []string{"time", "f"})
-	assert.Equal(t, `INSERT INTO "m"("time","f") VALUES($1,$2)`, sql)
+	assert.Equal(t, `INSERT INTO "public"."m"("time","f") VALUES($1,$2)`, sql)
 
 	sql = p.generateInsert("m", []string{"time", "i"})
-	assert.Equal(t, `INSERT INTO "m"("time","i") VALUES($1,$2)`, sql)
+	assert.Equal(t, `INSERT INTO "public"."m"("time","i") VALUES($1,$2)`, sql)
 
 	sql = p.generateInsert("m", []string{"time", "f", "i"})
-	assert.Equal(t, `INSERT INTO "m"("time","f","i") VALUES($1,$2,$3)`, sql)
+	assert.Equal(t, `INSERT INTO "public"."m"("time","f","i") VALUES($1,$2,$3)`, sql)
 
 	sql = p.generateInsert("m", []string{"time", "k", "i"})
-	assert.Equal(t, `INSERT INTO "m"("time","k","i") VALUES($1,$2,$3)`, sql)
+	assert.Equal(t, `INSERT INTO "public"."m"("time","k","i") VALUES($1,$2,$3)`, sql)
 
 	sql = p.generateInsert("m", []string{"time", "k1", "k2", "i"})
-	assert.Equal(t, `INSERT INTO "m"("time","k1","k2","i") VALUES($1,$2,$3,$4)`, sql)
+	assert.Equal(t, `INSERT INTO "public"."m"("time","k1","k2","i") VALUES($1,$2,$3,$4)`, sql)
 }
