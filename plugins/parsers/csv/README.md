@@ -75,7 +75,8 @@ document.
 
 The `csv_timestamp_column` option specifies the column name containing the
 time value and `csv_timestamp_format` must be set to a Go "reference time"
-which is defined to be the specific time: `Mon Jan 2 15:04:05 MST 2006`.
+which is defined to be the specific time: `Mon Jan 2 15:04:05 MST 2006`, 
+it can also be `unix` (for epoch in ms format like 1257894000 )
 
 Consult the Go [time][time parse] package for details and additional examples
 on how to set the time format.
