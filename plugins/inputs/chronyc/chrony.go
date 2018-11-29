@@ -179,13 +179,13 @@ func parseSources(fields []string) (map[string]interface{}, map[string]string, e
 		case 2:
 			clockRef = field
 		case 3:
-			stratum, err = strconv.ParseInt(field, 10, 0)
+			stratum, err = strconv.ParseInt(field, 10, 64)
 		case 4:
-			poll, err = strconv.ParseInt(field, 10, 0)
+			poll, err = strconv.ParseInt(field, 10, 64)
 		case 5:
 			reach, err = strconv.ParseInt(field, 8, 0)
 		case 6:
-			lastRx, err = strconv.ParseInt(field, 10, 0)
+			lastRx, err = strconv.ParseInt(field, 10, 64)
 		case 7:
 			offset, err = strconv.ParseFloat(field, 64)
 		case 8:
@@ -448,7 +448,7 @@ func parseTracking(fields []string) (map[string]interface{}, map[string]string, 
 		case 1:
 			refId = field
 		case 2:
-			stratum, err = strconv.ParseInt(field, 10, 0)
+			stratum, err = strconv.ParseInt(field, 10, 64)
 		case 3:
 			refTime, err = strconv.ParseFloat(field, 64)
 		case 4:

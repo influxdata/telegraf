@@ -172,7 +172,7 @@ func TestDoubleTracking(t *testing.T) {
 		t.Fatalf("An error has been returned: %v", err)
 	}
 
-	t.Logf("acc: %v", acc)
+	t.Logf("acc: %v", &acc)
 
 	if acc.NMetrics() != 2 {
 		t.Fatalf("%d metrics total, must be 2", acc.NMetrics())
@@ -200,7 +200,7 @@ func TestParseClients(t *testing.T) {
 		t.Fatalf("%d metrics total, must be 4 (including summary)", acc.NMetrics())
 	}
 
-	t.Logf("acc: %v", acc)
+	t.Logf("acc: %v", &acc)
 
 	rFields := map[string]interface{}{
 		"ntpRequests":    int64(123),
@@ -237,7 +237,7 @@ func TestParseClientsSummary(t *testing.T) {
 		t.Fatalf("An error has been returned: %v", err)
 	}
 
-	t.Logf("acc: %v", acc)
+	t.Logf("acc: %v", &acc)
 
 	if acc.NMetrics() != 1 {
 		t.Fatalf("%d metrics total, must be 1 (summary only)", acc.NMetrics())
