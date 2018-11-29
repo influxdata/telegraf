@@ -10,6 +10,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"net"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -108,6 +109,28 @@ func (s *Nsd) Gather(acc telegraf.Accumulator) error {
 	fields := make(map[string]interface{})
 	fieldsServers := make(map[string]map[string]interface{})
 
+	host, port, err := net.SplitHostPort(s.Server)
+	// the port is nil since we already checked for other errors in the nsdRunner
+	if err != nil {
+		port = "8952"
+	}
+	_, localhostNet, _ := net.ParseCIDR("127.0.0.1/8")
+	_, localhostNetv6, _ := net.ParseCIDR("::1/128")
+	// this should only occur in tests
+	hostIP := net.ParseIP(host)
+	if hostIP == nil {
+		host = "localhost"
+	} else if localhostNet.Contains(hostIP) || localhostNetv6.Contains(hostIP) {
+		hostname, err := os.Hostname()
+		if err != nil {
+			host = "localhost"
+		} else {
+			host = hostname
+		}
+	}
+
+	tags := map[string]string{"source": host, "port": port}
+
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
 		cols := strings.Split(scanner.Text(), "=")
@@ -151,12 +174,12 @@ func (s *Nsd) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	acc.AddFields("nsd", fields, nil)
+	acc.AddFields("nsd", fields, tags)
 
 	if len(fieldsServers) > 0 {
 		for thisServerID, thisServerFields := range fieldsServers {
-			thisServerTag := map[string]string{"server": thisServerID}
-			acc.AddFields("nsd_server", thisServerFields, thisServerTag)
+			tags["server"] = thisServerID
+			acc.AddFields("nsd_server", thisServerFields, tags)
 		}
 	}
 

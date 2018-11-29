@@ -33,8 +33,11 @@ func TestParseFullOutput(t *testing.T) {
 	assert.Len(t, acc.Metrics, 2)
 	assert.Equal(t, acc.NFields(), 89)
 
-	tags := make(map[string]string)
-	tags["server"] = "0"
+	tags := map[string]string{
+		"server": "0",
+		"source": "localhost",
+		"port":   "8952",
+	}
 	acc.AssertContainsFields(t, "nsd", parsedFullOutput)
 	acc.AssertContainsTaggedFields(t, "nsd_server", parsedFullOutputServerAsTagMeasurementNsdServers, tags)
 }
