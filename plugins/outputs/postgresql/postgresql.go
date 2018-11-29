@@ -360,6 +360,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 		_, err := p.db.Exec(sql, values...)
 		if err != nil {
 			// check if insert error was caused by column mismatch
+			retry := false
 			if p.FieldsAsJsonb == false {
 				log.Printf("E! Error during insert: %v", err)
 				tablename := tabmap[table_and_cols]
@@ -393,10 +394,19 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 					if err != nil {
 						return err
 					}
+					retry = true
 				}
 			}
 
-			return err
+			// We  added some columns and insert might work now. Try again immediately to
+			// avoid long lead time in getting metrics when there are several columns missing
+			// from the original create statement and they get added in small drops.
+			if retry {
+				_, err = p.db.Exec(sql, values...)
+			}
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
