@@ -372,12 +372,12 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 				query := "SELECT c FROM unnest(array[%s]) AS c WHERE NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE column_name=c AND table_schema=$1 AND table_name=$2)"
 				query = fmt.Sprintf(query, strings.Join(quoted_columns, ","))
 				result, err := p.db.Query(query, p.Schema, tablename)
-				defer result.Close()
 				if err != nil {
 					return err
 				}
-				// some columns are missing
+				defer result.Close()
 
+				// some columns are missing
 				var column, datatype string
 				for result.Next() {
 					err := result.Scan(&column)
