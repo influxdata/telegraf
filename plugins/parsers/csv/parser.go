@@ -219,9 +219,12 @@ outer:
 	return m, nil
 }
 
-// ParseTimestamp return a timestamp, if there is no timestamp on the csv it will be the current timestamp, else it will try to parse the time according to the format
-// if the format is "unix" it tries to parse assuming that on the csv it will find an epoch in ms.
-func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{}, timestampColumn, timestampFormat string) (metricTime time.Time, err error) {
+// ParseTimestamp return a timestamp, if there is no timestamp on the csv it
+// will be the current timestamp, else it will try to parse the time according
+// to the format.
+func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
+	timestampColumn, timestampFormat string,
+) (metricTime time.Time, err error) {
 	metricTime = timeFunc()
 
 	if timestampColumn != "" {
@@ -243,6 +246,13 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 				return
 			}
 			metricTime = time.Unix(unixTime, 0)
+		case "unix_ms":
+			var unixTime int64
+			unixTime, err = strconv.ParseInt(tStr, 10, 64)
+			if err != nil {
+				return
+			}
+			metricTime = time.Unix(unixTime/1000, (unixTime%1000)*1e6)
 		default:
 			metricTime, err = time.Parse(timestampFormat, tStr)
 			if err != nil {

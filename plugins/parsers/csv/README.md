@@ -73,10 +73,10 @@ time using the JSON document you can use the `csv_timestamp_column` and
 `csv_timestamp_format` options together to set the time to a value in the parsed
 document.
 
-The `csv_timestamp_column` option specifies the column name containing the
-time value and `csv_timestamp_format` must be set to a Go "reference time"
-which is defined to be the specific time: `Mon Jan 2 15:04:05 MST 2006`, 
-it can also be `unix` (for epoch in ms format like 1257894000 )
+The `csv_timestamp_column` option specifies the key containing the time value and
+`csv_timestamp_format` must be set to `unix`, `unix_ms`, or a format string in
+using the Go "reference time" which is defined to be the **specific time**:
+`Mon Jan 2 15:04:05 MST 2006`.
 
 Consult the Go [time][time parse] package for details and additional examples
 on how to set the time format.
