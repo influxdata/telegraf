@@ -258,6 +258,21 @@ interpreted as part of the tagpass/tagdrop map.
     fstype = [ "ext4", "xfs" ]
     # Globs can also be used on the tag values
     path = [ "/opt", "/home*" ]
+    
+    
+[[inputs.win_perf_counters]]
+  [[inputs.win_perf_counters.object]]
+    ObjectName = "Network Interface"
+    Instances = ["*"]
+    Counters = [
+      "Bytes Received/sec",
+      "Bytes Sent/sec"
+    ]
+    Measurement = "win_net"
+  # Don't send metrics where the Windows interface name (instance) begins with isatap or Local
+  [inputs.win_perf_counters.tagdrop]
+    instance = ["isatap*", "Local*"]
+    
 ```
 
 #### Input Config: fieldpass and fielddrop
