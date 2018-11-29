@@ -4,6 +4,7 @@
 
 - [#4345](https://github.com/influxdata/telegraf/pull/4345): Allow for force gathering ES cluster stats.
 - [#5047](https://github.com/influxdata/telegraf/pull/5047): Add support for unix and unix_ms timestamps to csv parser.
+- [#5038](https://github.com/influxdata/telegraf/pull/5038): Add ability to tag metrics with topic in kafka_consumer.
 
 ## v1.9.1 [unreleased]
 
