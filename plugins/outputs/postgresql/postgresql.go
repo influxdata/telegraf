@@ -211,6 +211,112 @@ func (p *Postgresql) tableExists(tableName string) bool {
 	return false
 }
 
+func (p *Postgresql) getTagId(metric telegraf.Metric) (int, error) {
+	var tag_id int
+	var where_columns []string
+	var where_values []interface{}
+	tablename := metric.Name()
+
+	if p.TagsAsJsonb {
+		if len(metric.Tags()) > 0 {
+			d, err := buildJsonbTags(metric.Tags())
+			if err != nil {
+				return tag_id, err
+			}
+
+			where_columns = append(where_columns, "tags")
+			where_values = append(where_values, d)
+		}
+	} else {
+		for column, value := range metric.Tags() {
+			where_columns = append(where_columns, column)
+			where_values = append(where_values, value)
+		}
+	}
+
+	var where_parts []string
+	for i, column := range where_columns {
+		where_parts = append(where_parts, fmt.Sprintf("%s = $%d", quoteIdent(column), i+1))
+	}
+	query := fmt.Sprintf("SELECT tag_id FROM %s WHERE %s", p.fullTableName(tablename+p.TagTableSuffix), strings.Join(where_parts, " AND "))
+
+	err := p.db.QueryRow(query, where_values...).Scan(&tag_id)
+	if err != nil {
+		query := p.generateInsert(tablename+p.TagTableSuffix, where_columns) + " RETURNING tag_id"
+		err := p.db.QueryRow(query, where_values...).Scan(&tag_id)
+		if err != nil {
+			// check if insert error was caused by column mismatch
+			retry := false
+			if p.TagsAsJsonb == false {
+				log.Printf("E! Error during insert: %v", err)
+				tablename := tablename + p.TagTableSuffix
+				columns := where_columns
+				var quoted_columns []string
+				for _, column := range columns {
+					quoted_columns = append(quoted_columns, quoteLiteral(column))
+				}
+				query := "SELECT c FROM unnest(array[%s]) AS c WHERE NOT EXISTS(SELECT 1 FROM information_schema.columns WHERE column_name=c AND table_schema=$1 AND table_name=$2)"
+				query = fmt.Sprintf(query, strings.Join(quoted_columns, ","))
+				result, err := p.db.Query(query, p.Schema, tablename)
+				if err != nil {
+					return tag_id, err
+				}
+				defer result.Close()
+
+				// some columns are missing
+				var column, datatype string
+				for result.Next() {
+					err := result.Scan(&column)
+					if err != nil {
+						log.Println(err)
+					}
+					for i, name := range columns {
+						if name == column {
+							datatype = deriveDatatype(where_values[i])
+						}
+					}
+					query := "ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;"
+					_, err = p.db.Exec(fmt.Sprintf(query, p.fullTableName(tablename), quoteIdent(column), datatype))
+					if err != nil {
+						return tag_id, err
+					}
+					retry = true
+				}
+			}
+
+			// We added some columns and insert might work now. Try again immediately to
+			// avoid long lead time in getting metrics when there are several columns missing
+			// from the original create statement and they get added in small drops.
+			if retry {
+				err := p.db.QueryRow(query, where_values...).Scan(&tag_id)
+				if err != nil {
+					return tag_id, err
+				}
+			}
+		}
+	}
+	return tag_id, nil
+}
+
+func buildJsonbTags(tags map[string]string) ([]byte, error) {
+	js := make(map[string]interface{})
+	for column, value := range tags {
+		js[column] = value
+	}
+
+	return buildJsonb(js)
+}
+
+func buildJsonb(data map[string]interface{}) ([]byte, error) {
+	if len(data) > 0 {
+		d, err := json.Marshal(data)
+		if err != nil {
+			return d, err
+		}
+	}
+	return nil, nil
+}
+
 func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 	batches := make(map[string][]interface{})
 	params := make(map[string][]string)
@@ -233,68 +339,25 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 
 		columns := []string{"time"}
 		values := []interface{}{metric.Time()}
-		var js map[string]interface{}
 
 		if len(metric.Tags()) > 0 {
 			if p.TagsAsForeignkeys {
 				// tags in separate table
-				var tag_id int
-				var where_columns []string
-				var where_values []interface{}
-
-				if p.TagsAsJsonb {
-					js = make(map[string]interface{})
-					for column, value := range metric.Tags() {
-						js[column] = value
-					}
-
-					if len(js) > 0 {
-						d, err := json.Marshal(js)
-						if err != nil {
-							return err
-						}
-
-						where_columns = append(where_columns, "tags")
-						where_values = append(where_values, d)
-					}
-				} else {
-					for column, value := range metric.Tags() {
-						where_columns = append(where_columns, column)
-						where_values = append(where_values, value)
-					}
-				}
-
-				var where_parts []string
-				for i, column := range where_columns {
-					where_parts = append(where_parts, fmt.Sprintf("%s = $%d", quoteIdent(column), i+1))
-				}
-				query := fmt.Sprintf("SELECT tag_id FROM %s WHERE %s", p.fullTableName(tablename+p.TagTableSuffix), strings.Join(where_parts, " AND "))
-
-				err := p.db.QueryRow(query, where_values...).Scan(&tag_id)
+				tag_id, err := p.getTagId(metric)
 				if err != nil {
-					query := p.generateInsert(tablename+p.TagTableSuffix, where_columns) + " RETURNING tag_id"
-					err := p.db.QueryRow(query, where_values...).Scan(&tag_id)
-					if err != nil {
-						return err
-					}
+					return err
 				}
-
 				columns = append(columns, "tag_id")
 				values = append(values, tag_id)
 			} else {
 				// tags in measurement table
 				if p.TagsAsJsonb {
-					js = make(map[string]interface{})
-					for column, value := range metric.Tags() {
-						js[column] = value
+					d, err := buildJsonbTags(metric.Tags())
+					if err != nil {
+						return err
 					}
 
-					if len(js) > 0 {
-						d, err := json.Marshal(js)
-						if err != nil {
-							return err
-						}
-
+					if d != nil {
 						columns = append(columns, "tags")
 						values = append(values, d)
 					}
@@ -314,12 +377,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 		}
 
 		if p.FieldsAsJsonb {
-			js = make(map[string]interface{})
-			for column, value := range metric.Fields() {
-				js[column] = value
-			}
-
-			d, err := json.Marshal(js)
+			d, err := buildJsonb(metric.Fields())
 			if err != nil {
 				return err
 			}
@@ -398,7 +456,7 @@ func (p *Postgresql) Write(metrics []telegraf.Metric) error {
 				}
 			}
 
-			// We  added some columns and insert might work now. Try again immediately to
+			// We added some columns and insert might work now. Try again immediately to
 			// avoid long lead time in getting metrics when there are several columns missing
 			// from the original create statement and they get added in small drops.
 			if retry {
