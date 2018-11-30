@@ -5,7 +5,7 @@ The interrupts plugin gathers metrics about IRQs from `/proc/interrupts` and `/p
 ### Configuration
 ```
 [[inputs.interrupts]]
-  # To report cpus as tags instead of fields use cpus_as_tags
+  # To report cpus as tags instead of fields use cpu_as_tags
     # cpu_as_tags = false
   #
   ## To filter which IRQs to collect, make use of tagpass / tagdrop, i.e.
@@ -19,10 +19,10 @@ There are two measurements reported by this plugin.
 - `soft_interrupts` gathers metrics from the `/proc/softirqs` file
 
 ### Fields
-For cpus_as_tags=false (default):
+For cpu_as_tags=false (default):
 - CPUx: the amount of interrupts for the IRQ handled by the CPU
 - Total: sum of interrupts for the IRS for all CPUs
-For cpus_as_tags=true ():
+For cpu_as_tags=true ():
 - Count: the amount of interrupts for the IRQ handled by CPU described in CPU tag
 
 ### Tags

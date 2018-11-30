@@ -29,7 +29,7 @@ func NewIRQ(id string) *IRQ {
 }
 
 const sampleConfig = `
-  ## To report cpus as tags instead of fields use cpus_as_tags
+  ## To report cpus as tags instead of fields use cpu_as_tags
     # cpu_as_tags = false
   #
   ## To filter which IRQs to collect, make use of tagpass / tagdrop, i.e.
