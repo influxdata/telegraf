@@ -13,7 +13,7 @@ import (
 )
 
 type Interrupts struct {
-	CpuAsTags bool
+	CpuAsTag bool `toml:"cpu_as_tag"`
 }
 
 type IRQ struct {
@@ -29,12 +29,17 @@ func NewIRQ(id string) *IRQ {
 }
 
 const sampleConfig = `
-  ## To report cpus as tags instead of fields use cpu_as_tags
-    # cpu_as_tags = false
-  #
+  ## When set to true, cpu metrics are tagged with the cpu.  Otherwise cpu is
+  ## stored as a field.
+  ##
+  ## The default is false for backwards compatibility, and will be changed to
+  ## true in a future version.  It is recommended to set to true on new
+  ## deployments.
+  # cpu_as_tag = false
+
   ## To filter which IRQs to collect, make use of tagpass / tagdrop, i.e.
   # [inputs.interrupts.tagdrop]
-    # irq = [ "NET_RX", "TASKLET" ]
+  #   irq = [ "NET_RX", "TASKLET" ]
 `
 
 func (s *Interrupts) Description() string {
@@ -116,7 +121,7 @@ func (s *Interrupts) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("Parsing %s: %s", file, err))
 			continue
 		}
-		reportMetrics(measurement, irqs, acc, s.CpuAsTags)
+		reportMetrics(measurement, irqs, acc, s.CpuAsTag)
 	}
 	return nil
 }
