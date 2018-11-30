@@ -104,6 +104,14 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 
 	pids, tags, err := p.findPids(acc)
 	if err != nil {
+		fields := map[string]interface{}{
+			"pid_count":   0,
+			"running":     0,
+			"result_code": 1,
+		}
+		tags["pid_finder"] = p.PidFinder
+		tags["result"] = "lookup_error"
+		acc.AddFields("procstat_lookup", fields, tags)
 		return err
 	}
 
@@ -119,10 +127,12 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	}
 
 	fields := map[string]interface{}{
-		"pid_count": len(pids),
-		"running":   len(procs),
+		"pid_count":   len(pids),
+		"running":     len(procs),
+		"result_code": 0,
 	}
 	tags["pid_finder"] = p.PidFinder
+	tags["result"] = "success"
 	acc.AddFields("procstat_lookup", fields, tags)
 
 	return nil
