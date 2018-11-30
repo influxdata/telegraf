@@ -23,7 +23,7 @@ a validating, recursive, and caching DNS resolver.
 
   ## When set to true, thread metrics are tagged with the thread id.
   ##
-  ## The default is false for backwards compatibility, and will be change to
+  ## The default is false for backwards compatibility, and will be changed to
   ## true in a future version.  It is recommended to set to true on new
   ## deployments.
   thread_as_tag = false
