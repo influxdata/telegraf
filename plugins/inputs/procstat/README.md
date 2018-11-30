@@ -147,6 +147,7 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - win_service (string)
   - fields:
     - pid_count (int)
+    - running (int)
 *NOTE: Resource limit > 2147483647 will be reported as 2147483647.*
 
 ### Example Output:
