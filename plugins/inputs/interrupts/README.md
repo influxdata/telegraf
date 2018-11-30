@@ -5,13 +5,12 @@ The interrupts plugin gathers metrics about IRQs from `/proc/interrupts` and `/p
 ### Configuration
 ```
 [[inputs.interrupts]]
+  # To report cpus as tags instead of fields use cpus_as_tags
+    # cpu_as_tags = false
+  #
   ## To filter which IRQs to collect, make use of tagpass / tagdrop, i.e.
   # [inputs.interrupts.tagdrop]
     # irq = [ "NET_RX", "TASKLET" ]
-  #
-  # To report cpus as tags instead of fields use cpus_as_tags
-  # cpus_as_tags = false
-
 ```
 
 ### Measurements

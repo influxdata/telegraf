@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
-	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/stretchr/testify/mock"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,22 +13,13 @@ import (
 //	Setup and helper functions
 // =====================================================================================
 
-type MockAccumulator struct {
-	telegraf.Accumulator
-	mock.Mock
-}
-
-func (acc *MockAccumulator) AddFields(measurement string, fields map[string]interface{}, tags map[string]string, t ...time.Time) {
-	acc.Called(measurement, fields, tags)
-}
-
-func expectIrqTags(m *MockAccumulator, t *testing.T, measurement string, irq IRQ) {
+func expectCpuAsTags(m *testutil.Accumulator, t *testing.T, measurement string, irq IRQ) {
 	for idx, value := range irq.Cpus {
-		m.AssertCalled(t, "AddFields", measurement, map[string]interface{}{"count": value}, map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device, "cpu": fmt.Sprintf("cpu%d", idx)})
+		m.AssertContainsTaggedFields(t, measurement, map[string]interface{}{"count": value}, map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device, "cpu": fmt.Sprintf("cpu%d", idx)})
 	}
 }
 
-func expectIrqFields(m *MockAccumulator, t *testing.T, measurement string, irq IRQ) {
+func expectCpuAsFields(m *testutil.Accumulator, t *testing.T, measurement string, irq IRQ) {
 	fields := map[string]interface{}{}
 	total := int64(0)
 	for idx, count := range irq.Cpus {
@@ -39,18 +28,17 @@ func expectIrqFields(m *MockAccumulator, t *testing.T, measurement string, irq I
 	}
 	fields["total"] = total
 
-	m.AssertCalled(t, "AddFields", measurement, fields, map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device})
+	m.AssertContainsTaggedFields(t, measurement, fields, map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device})
 }
 
-func setup(t *testing.T, irqString string, cpusAsTags bool) (*MockAccumulator, []IRQ) {
+func setup(t *testing.T, irqString string, cpuAsTags bool) (*testutil.Accumulator, []IRQ) {
 	f := bytes.NewBufferString(irqString)
 	irqs, err := parseInterrupts(f)
 	require.Equal(t, nil, err)
 	require.NotEqual(t, 0, len(irqs))
 
-	acc := new(MockAccumulator)
-	acc.On("AddFields", mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	reportMetrics("soft_interrupts", irqs, acc, cpusAsTags)
+	acc := new(testutil.Accumulator)
+	reportMetrics("soft_interrupts", irqs, acc, cpuAsTags)
 
 	return acc, irqs
 }
@@ -77,21 +65,21 @@ var softIrqsExpectedArgs = []IRQ{
 	{ID: "TASKLET", Cpus: []int64{205, 0}},
 }
 
-func TestCpusAsTagsSoftIrqs(t *testing.T) {
+func TestCpuAsTagsSoftIrqs(t *testing.T) {
 	acc, irqs := setup(t, softIrqsString, true)
 	reportMetrics("soft_interrupts", irqs, acc, true)
 
 	for _, irq := range softIrqsExpectedArgs {
-		expectIrqTags(acc, t, "soft_interrupts", irq)
+		expectCpuAsTags(acc, t, "soft_interrupts", irq)
 	}
 }
 
-func TestCpusAsFieldsSoftIrqs(t *testing.T) {
+func TestCpuAsFieldsSoftIrqs(t *testing.T) {
 	acc, irqs := setup(t, softIrqsString, false)
 	reportMetrics("soft_interrupts", irqs, acc, false)
 
 	for _, irq := range softIrqsExpectedArgs {
-		expectIrqFields(acc, t, "soft_interrupts", irq)
+		expectCpuAsFields(acc, t, "soft_interrupts", irq)
 	}
 }
 
@@ -149,20 +137,20 @@ var hwIrqsExpectedArgs = []IRQ{
 	{ID: "IPI6", Type: "completion interrupts", Cpus: []int64{0, 0, 0, 0}},
 }
 
-func TestCpusAsTagsHwIrqs(t *testing.T) {
+func TestCpuAsTagsHwIrqs(t *testing.T) {
 	acc, irqs := setup(t, hwIrqsString, true)
 	reportMetrics("interrupts", irqs, acc, true)
 
 	for _, irq := range hwIrqsExpectedArgs {
-		expectIrqTags(acc, t, "interrupts", irq)
+		expectCpuAsTags(acc, t, "interrupts", irq)
 	}
 }
 
-func TestCpusAsFieldsHwIrqs(t *testing.T) {
+func TestCpuAsFieldsHwIrqs(t *testing.T) {
 	acc, irqs := setup(t, hwIrqsString, false)
 	reportMetrics("interrupts", irqs, acc, false)
 
 	for _, irq := range hwIrqsExpectedArgs {
-		expectIrqFields(acc, t, "interrupts", irq)
+		expectCpuAsFields(acc, t, "interrupts", irq)
 	}
 }

@@ -13,11 +13,7 @@ import (
 )
 
 type Interrupts struct {
-	CpusAsTags bool
-}
-
-func NewInterrupts() *Interrupts {
-	return &Interrupts{false}
+	CpuAsTags bool
 }
 
 type IRQ struct {
@@ -33,12 +29,12 @@ func NewIRQ(id string) *IRQ {
 }
 
 const sampleConfig = `
+  ## To report cpus as tags instead of fields use cpus_as_tags
+    # cpu_as_tags = false
+  #
   ## To filter which IRQs to collect, make use of tagpass / tagdrop, i.e.
   # [inputs.interrupts.tagdrop]
-	# irq = [ "NET_RX", "TASKLET" ]
-  #
-  # To report cpus as tags instead of fields use cpus_as_tags
-  # cpus_as_tags = false
+    # irq = [ "NET_RX", "TASKLET" ]
 `
 
 func (s *Interrupts) Description() string {
@@ -120,7 +116,7 @@ func (s *Interrupts) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("Parsing %s: %s", file, err))
 			continue
 		}
-		reportMetrics(measurement, irqs, acc, s.CpusAsTags)
+		reportMetrics(measurement, irqs, acc, s.CpuAsTags)
 	}
 	return nil
 }
