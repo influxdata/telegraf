@@ -15,6 +15,7 @@
 - [#4664](https://github.com/influxdata/telegraf/issues/4664): Fix server connection and document stats in mongodb input.
 - [#5010](https://github.com/influxdata/telegraf/issues/5010): Add X-Requested-By header to graylog input.
 - [#5052](https://github.com/influxdata/telegraf/issues/5052): Fix metric memory not freed from the metric buffer on write.
+- [#3817](https://github.com/influxdata/telegraf/issues/3817): Add support for client tls certificates in postgresql inputs.
 
 ## v1.9 [2018-11-20]
 
