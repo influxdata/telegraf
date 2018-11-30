@@ -389,30 +389,6 @@ if any of the combinations of ObjectName/Instances/Counters are invalid.
     #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
 ```
 
-### Multiple plugins with unique tags
-```
-[[inputs.win_perf_counters]]
-  [inputs.win_perf_counters.tags]
-    monitorgroup = "process"
-  [[inputs.win_perf_counters.object]]
-    # Process metrics, in this case for IIS only
-    ObjectName = "Process"
-    Counters = ["% Processor Time","Handle Count","Private Bytes","Thread Count","Virtual Bytes","Working Set"]
-    Instances = ["w3wp"]
-    Measurement = "win_proc"
-    #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
-
-[[inputs.win_perf_counters]]
-  [inputs.win_perf_counters.tags]
-    monitorgroup = "dns"
-  [[inputs.win_perf_counters.object]]
-    ObjectName = "DNS"
-    Counters = ["Dynamic Update Received","Dynamic Update Rejected","Recursive Queries","Recursive Queries Failure","Secure Update Failure","Secure Update Received","TCP Query Received","TCP Response Sent","UDP Query Received","UDP Response Sent","Total Query Received","Total Response Sent"]
-    Instances = ["------"]
-    Measurement = "win_dns"
-    #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
-```
-
 ## Troubleshooting
 
 If you are getting an error about an invalid counter, use the `typeperf` command to check the counter path
