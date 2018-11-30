@@ -45,6 +45,13 @@ A list of databases to pull metrics about. If not specified, metrics for all dat
 
   `databases = ["app_production", "testing"]`
 
+### TLS Configuration
+
+Add the `sslkey`, `sslcert` and `sslrootcert` options to your DSN:
+```
+host=localhost user=pgotest dbname=app_production sslmode=require sslkey=/etc/telegraf/key.pem sslcert=/etc/telegraf/cert.pem sslrootcert=/etc/telegraf/ca.pem
+```
+
 ### Configuration example
 ```
 [[inputs.postgresql]]
