@@ -60,7 +60,7 @@ type resourceKind struct {
 	metrics          performance.MetricList
 	collectInstances bool
 	parent           string
-	getObjects       func(context.Context, *Endpoint, *view.ContainerView) (objectMap, error)
+	getObjects       func(context.Context, *Client, *Endpoint, *view.ContainerView) (objectMap, error)
 }
 
 type metricEntry struct {
@@ -276,10 +276,7 @@ func (e *Endpoint) getMetricNameMap(ctx context.Context) (map[int32]string, erro
 		return nil, err
 	}
 
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-	defer cancel1()
-	mn, err := client.Perf.CounterInfoByName(ctx1)
-
+	mn, err := client.CounterInfoByName(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +287,7 @@ func (e *Endpoint) getMetricNameMap(ctx context.Context) (map[int32]string, erro
 	return names, nil
 }
 
-func (e *Endpoint) getMetadata2(ctx context.Context, obj objectRef, sampling int32) (performance.MetricList, error) {
+func (e *Endpoint) getMetadata(ctx context.Context, obj objectRef, sampling int32) (performance.MetricList, error) {
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
 		return nil, err
@@ -299,26 +296,10 @@ func (e *Endpoint) getMetadata2(ctx context.Context, obj objectRef, sampling int
 	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
 	defer cancel1()
 	metrics, err := client.Perf.AvailableMetric(ctx1, obj.ref.Reference(), sampling)
-	if err != nil && err != context.Canceled {
+	if err != nil {
 		return nil, err
 	}
 	return metrics, nil
-}
-
-func (e *Endpoint) getMetadata(ctx context.Context, in interface{}) interface{} {
-	client, err := e.clientFactory.GetClient(ctx)
-	if err != nil {
-		return err
-	}
-
-	rq := in.(*metricQRequest)
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-	defer cancel1()
-	metrics, err := client.Perf.AvailableMetric(ctx1, rq.obj.ref.Reference(), rq.res.sampling)
-	if err != nil && err != context.Canceled {
-		log.Printf("E! [input.vsphere]: Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
-	}
-	return &metricQResponse{metrics: &metrics, obj: rq.obj}
 }
 
 func (e *Endpoint) getDatacenterName(ctx context.Context, client *Client, cache map[string]string, r types.ManagedObjectReference) string {
@@ -388,7 +369,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 		log.Printf("D! [input.vsphere] Discovering resources for %s", res.name)
 		// Need to do this for all resource types even if they are not enabled
 		if res.enabled || k != "vm" {
-			objects, err := res.getObjects(ctx, e, client.Root)
+			objects, err := res.getObjects(ctx, client, e, client.Root)
 			if err != nil {
 				return err
 			}
@@ -421,7 +402,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 						defer func() {
 							<-limiter
 						}()
-						metrics, err := e.getMetadata2(ctx, obj, res.sampling)
+						metrics, err := e.getMetadata(ctx, obj, res.sampling)
 						if err != nil {
 							log.Printf("E! [input.vsphere]: Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
 						}
@@ -479,11 +460,9 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	return nil
 }
 
-func getDatacenters(ctx context.Context, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getDatacenters(ctx context.Context, client *Client, e *Endpoint, root *view.ContainerView) (objectMap, error) {
 	var resources []mo.Datacenter
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-	defer cancel1()
-	err := root.Retrieve(ctx1, []string{"Datacenter"}, []string{"name", "parent"}, &resources)
+	err := client.ListResources(ctx, root, []string{"Datacenter"}, []string{"name", "parent"}, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -495,11 +474,9 @@ func getDatacenters(ctx context.Context, e *Endpoint, root *view.ContainerView) 
 	return m, nil
 }
 
-func getClusters(ctx context.Context, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getClusters(ctx context.Context, client *Client, e *Endpoint, root *view.ContainerView) (objectMap, error) {
 	var resources []mo.ClusterComputeResource
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-	defer cancel1()
-	err := root.Retrieve(ctx1, []string{"ClusterComputeResource"}, []string{"name", "parent"}, &resources)
+	err := client.ListResources(ctx, root, []string{"ClusterComputeResource"}, []string{"name", "parent"}, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -529,9 +506,9 @@ func getClusters(ctx context.Context, e *Endpoint, root *view.ContainerView) (ob
 	return m, nil
 }
 
-func getHosts(ctx context.Context, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getHosts(ctx context.Context, client *Client, e *Endpoint, root *view.ContainerView) (objectMap, error) {
 	var resources []mo.HostSystem
-	err := root.Retrieve(ctx, []string{"HostSystem"}, []string{"name", "parent"}, &resources)
+	err := client.ListResources(ctx, root, []string{"HostSystem"}, []string{"name", "parent"}, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -543,11 +520,9 @@ func getHosts(ctx context.Context, e *Endpoint, root *view.ContainerView) (objec
 	return m, nil
 }
 
-func getVMs(ctx context.Context, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getVMs(ctx context.Context, client *Client, e *Endpoint, root *view.ContainerView) (objectMap, error) {
 	var resources []mo.VirtualMachine
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-	defer cancel1()
-	err := root.Retrieve(ctx1, []string{"VirtualMachine"}, []string{"name", "runtime.host", "runtime.powerState", "config.guestId", "config.uuid"}, &resources)
+	err := client.ListResources(ctx, root, []string{"VirtualMachine"}, []string{"name", "runtime.host", "runtime.powerState", "config.guestId", "config.uuid"}, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -571,11 +546,9 @@ func getVMs(ctx context.Context, e *Endpoint, root *view.ContainerView) (objectM
 	return m, nil
 }
 
-func getDatastores(ctx context.Context, e *Endpoint, root *view.ContainerView) (objectMap, error) {
+func getDatastores(ctx context.Context, client *Client, e *Endpoint, root *view.ContainerView) (objectMap, error) {
 	var resources []mo.Datastore
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-	defer cancel1()
-	err := root.Retrieve(ctx1, []string{"Datastore"}, []string{"name", "parent", "info"}, &resources)
+	err := client.ListResources(ctx, root, []string{"Datastore"}, []string{"name", "parent", "info"}, &resources)
 	if err != nil {
 		return nil, err
 	}
@@ -720,7 +693,6 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 }
 
 func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc telegraf.Accumulator) error {
-
 	res := e.resourceKinds[resourceType]
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
@@ -815,26 +787,16 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 		return count, latestSample, err
 	}
 
-	ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-	defer cancel1()
-	metricInfo, err := client.Perf.CounterInfoByName(ctx1)
+	metricInfo, err := client.CounterInfoByName(ctx)
 	if err != nil {
 		return count, latestSample, err
 	}
 
-	ctx2, cancel2 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-	defer cancel2()
-	metrics, err := client.Perf.Query(ctx2, pqs)
+	ems, err := client.QueryMetrics(ctx, pqs)
 	if err != nil {
 		return count, latestSample, err
 	}
 
-	ctx3, cancel3 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
-	defer cancel3()
-	ems, err := client.Perf.ToMetricSeries(ctx3, metrics)
-	if err != nil {
-		return count, latestSample, err
-	}
 	log.Printf("D! [input.vsphere] Query for %s returned metrics for %d objects", resourceType, len(ems))
 
 	// Iterate through results
