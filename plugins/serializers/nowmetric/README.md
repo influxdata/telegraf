@@ -29,7 +29,7 @@ To send this data to a ServiceNow MID Server with Web Server extension activated
 ```toml
 [[outputs.http]]
   ## URL is the address to send metrics to
-  url = "http://ec2-52-57-154-43.eu-central-1.compute.amazonaws.com:9082/api/mid/sa/metrics"
+  url = "http://<mid server fqdn or ip address>:9082/api/mid/sa/metrics"
 
   ## Timeout for HTTP message
   # timeout = "5s"
@@ -39,7 +39,7 @@ To send this data to a ServiceNow MID Server with Web Server extension activated
 
   ## HTTP Basic Auth credentials
   username = 'evt.integration'
-  password = 'ServiceN0w!'
+  password = 'P@$$w0rd!'
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -59,4 +59,25 @@ To send this data to a ServiceNow MID Server with Web Server extension activated
   #   # Should be set manually to "application/json" for json data_format
   Content-Type = "application/json"
   Accept = "application/json"
+```
+
+Starting with the London release, you also need to explicitly create event rule to allow binding of metric events to host CIs.
+
+https://docs.servicenow.com/bundle/london-it-operations-management/page/product/event-management/task/event-rule-bind-metrics-to-host.html
+
+## Using with the File output
+
+You can use the file output to output the payload in a file. 
+In this case, just add the following section to your telegraf config file
+
+```toml
+[[outputs.file]]
+  ## Files to write to, "stdout" is a specially handled file.
+  files = ["C:/Telegraf/metrics.out"]
+
+  ## Data format to output.
+  ## Each data format has its own unique set of configuration options, read
+  ## more about them here:
+  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
+  data_format = "nowmetric"
 ```

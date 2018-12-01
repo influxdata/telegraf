@@ -3,7 +3,6 @@ package nowmetric
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -13,7 +12,28 @@ type serializer struct {
 	TimestampUnits time.Duration
 }
 
-const METRICFMT string = "{ \"metric_type\": \"%s\", \"resource\": \"%s\", \"node\": \"%s\", \"value\": %v, \"timestamp\": %d, \"ci2metric_id\": { \"node\": \"%s\" }, \"source\": \"Telegraf\" }"
+/*
+Example for the JSON generated and pushed to the MID
+{
+	"metric_type":"cpu_usage_system",
+	"resource":"",
+	"node":"ASGARD",
+	"value": 0.89,
+	"timestamp":1487365430,
+	"ci2metric_id":{"node":"ASGARD"},
+	"source":"Telegraf"
+}
+*/
+
+type OIMetric struct {
+	Metric    string                 `json:"metric_type"`
+	Resource  string                 `json:"resource"`
+	Node      string                 `json:"node"`
+	Value     interface{}            `json:"value"`
+	Timestamp int64                  `json:"timestamp"`
+	CiMapping map[string]interface{} `json:"ci2metric_id"`
+	Source    string                 `json:"source"`
+}
 
 func NewSerializer(timestampUnits time.Duration) (*serializer, error) {
 	s := &serializer{
@@ -22,18 +42,18 @@ func NewSerializer(timestampUnits time.Duration) (*serializer, error) {
 	return s, nil
 }
 
-func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	serialized := s.createObject(metric)
+func (s *serializer) Serialize(metric telegraf.Metric) (out []byte, err error) {
+	serialized := s.createObject(metric, err)
 	if serialized == nil {
 		return []byte{}, nil
 	}
 	return serialized, nil
 }
 
-func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
+func (s *serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err error) {
 	objects := make([]byte, 0)
 	for _, metric := range metrics {
-		m := s.createObject(metric)
+		m := s.createObject(metric, err)
 		objects = append(objects, m...)
 	}
 
@@ -43,11 +63,12 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	return objects, nil
 }
 
-func (s *serializer) createObject(metric telegraf.Metric) []byte {
-	var payload string
-	var resourcename string
-	var hostname string
-	var utime int64
+func (s *serializer) createObject(metric telegraf.Metric, err error) []byte {
+	var payload []byte
+	var oimetric OIMetric
+	var metricJson []byte
+
+	oimetric.Source = "Telegraf"
 
 	// Process Tags to extract node & resource name info
 	for _, tag := range metric.TagList() {
@@ -56,16 +77,16 @@ func (s *serializer) createObject(metric telegraf.Metric) []byte {
 		}
 
 		if tag.Key == "objectname" {
-			resourcename = tag.Value
+			oimetric.Resource = tag.Value
 		}
 
 		if tag.Key == "host" {
-			hostname = tag.Value
+			oimetric.Node = tag.Value
 		}
 	}
 
 	// Format timestamp to UNIX epoch
-	utime = (metric.Time().UnixNano() / int64(s.TimestampUnits)) * 1000
+	oimetric.Timestamp = (metric.Time().UnixNano() / int64(s.TimestampUnits)) * 1000
 
 	nbdatapoint := 0
 	// Loop of fields value pair and build datapoint for each of them
@@ -80,9 +101,18 @@ func (s *serializer) createObject(metric telegraf.Metric) []byte {
 		}
 
 		if nbdatapoint >= 1 {
-			payload = payload + ",\n"
+			payload = append(payload, ",\n"...)
 		}
-		payload = payload + fmt.Sprintf(METRICFMT, field.Key, resourcename, hostname, field.Value, utime, hostname)
+		oimetric.Metric = field.Key
+		oimetric.Value = field.Value
+
+		cimapping := map[string]interface{}{}
+		cimapping["node"] = oimetric.Node
+		oimetric.CiMapping = cimapping
+
+		metricJson, err = json.Marshal(oimetric)
+		payload = append(payload, metricJson...)
+
 		nbdatapoint++
 	}
 
