@@ -2,6 +2,7 @@ package vsphere
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -57,6 +58,8 @@ type resourceKind struct {
 	sampling         int32
 	objects          objectMap
 	filters          filter.Filter
+	include          []string
+	simple           bool
 	metrics          performance.MetricList
 	collectInstances bool
 	parent           string
@@ -91,8 +94,6 @@ type metricQResponse struct {
 	metrics *performance.MetricList
 }
 
-type multiError []error
-
 func (e *Endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, bool) {
 	if pKind, ok := e.resourceKinds[res.parent]; ok {
 		if p, ok := pKind.objects[obj.parentRef.Value]; ok {
@@ -125,6 +126,8 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			sampling:         300,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.DatacenterMetricInclude, parent.DatacenterMetricExclude),
+			simple:           isSimple(parent.DatacenterMetricInclude, parent.DatacenterMetricExclude),
+			include:          parent.DatacenterMetricInclude,
 			collectInstances: parent.DatacenterInstances,
 			getObjects:       getDatacenters,
 			parent:           "",
@@ -138,6 +141,8 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			sampling:         300,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.ClusterMetricInclude, parent.ClusterMetricExclude),
+			simple:           isSimple(parent.ClusterMetricInclude, parent.ClusterMetricExclude),
+			include:          parent.ClusterMetricInclude,
 			collectInstances: parent.ClusterInstances,
 			getObjects:       getClusters,
 			parent:           "datacenter",
@@ -151,6 +156,8 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			sampling:         20,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.HostMetricInclude, parent.HostMetricExclude),
+			simple:           isSimple(parent.HostMetricInclude, parent.HostMetricExclude),
+			include:          parent.HostMetricInclude,
 			collectInstances: parent.HostInstances,
 			getObjects:       getHosts,
 			parent:           "cluster",
@@ -164,6 +171,8 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			sampling:         20,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.VMMetricInclude, parent.VMMetricExclude),
+			simple:           isSimple(parent.VMMetricInclude, parent.VMMetricExclude),
+			include:          parent.VMMetricInclude,
 			collectInstances: parent.VMInstances,
 			getObjects:       getVMs,
 			parent:           "host",
@@ -176,6 +185,8 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			sampling:         300,
 			objects:          make(objectMap),
 			filters:          newFilterOrPanic(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
+			simple:           isSimple(parent.DatastoreMetricInclude, parent.DatastoreMetricExclude),
+			include:          parent.DatastoreMetricInclude,
 			collectInstances: parent.DatastoreInstances,
 			getObjects:       getDatastores,
 			parent:           "",
@@ -186,24 +197,6 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 	err := e.init(ctx)
 
 	return &e, err
-}
-
-func (m multiError) Error() string {
-	switch len(m) {
-	case 0:
-		return "No error recorded. Something is wrong!"
-	case 1:
-		return m[0].Error()
-	default:
-		s := "Multiple errors detected concurrently: "
-		for i, e := range m {
-			if i != 0 {
-				s += ", "
-			}
-			s += e.Error()
-		}
-		return s
-	}
 }
 
 func anythingEnabled(ex []string) bool {
@@ -221,6 +214,18 @@ func newFilterOrPanic(include []string, exclude []string) filter.Filter {
 		panic(fmt.Sprintf("Include/exclude filters are invalid: %s", err))
 	}
 	return f
+}
+
+func isSimple(include []string, exclude []string) bool {
+	if len(exclude) > 0 || len(include) == 0 {
+		return false
+	}
+	for _, s := range include {
+		if strings.Contains(s, "*") {
+			return false
+		}
+	}
+	return true
 }
 
 func (e *Endpoint) startDiscovery(ctx context.Context) {
@@ -359,8 +364,6 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	}
 
 	log.Printf("D! [input.vsphere]: Discover new objects for %s", e.URL.Host)
-
-	instInfoMux := sync.Mutex{}
 	resourceKinds := make(map[string]resourceKind)
 	dcNameCache := make(map[string]string)
 
@@ -386,51 +389,11 @@ func (e *Endpoint) discover(ctx context.Context) error {
 
 			// No need to collect metric metadata if resource type is not enabled
 			if res.enabled {
-				// Get metric metadata and filter metrics
-				prob := 100.0 / float64(len(objects))
-				log.Printf("D! [input.vsphere] Probability of sampling a resource: %f", prob)
-				wg := sync.WaitGroup{}
-				limiter := make(chan struct{}, e.Parent.DiscoverConcurrency)
-				for _, obj := range objects {
-					if rand.Float64() > prob {
-						continue
-					}
-					wg.Add(1)
-					go func(obj objectRef) {
-						defer wg.Done()
-						limiter <- struct{}{}
-						defer func() {
-							<-limiter
-						}()
-						metrics, err := e.getMetadata(ctx, obj, res.sampling)
-						if err != nil {
-							log.Printf("E! [input.vsphere]: Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
-						}
-						mMap := make(map[string]types.PerfMetricId)
-						for _, m := range metrics {
-							if m.Instance != "" && res.collectInstances {
-								m.Instance = "*"
-							} else {
-								m.Instance = ""
-							}
-							if res.filters.Match(metricNames[m.CounterId]) {
-								mMap[strconv.Itoa(int(m.CounterId))+"|"+m.Instance] = m
-							}
-						}
-						log.Printf("D! [input.vsphere] Found %d metrics for %s", len(mMap), obj.name)
-						instInfoMux.Lock()
-						defer instInfoMux.Unlock()
-						if len(mMap) > len(res.metrics) {
-							res.metrics = make(performance.MetricList, len(mMap))
-							i := 0
-							for _, m := range mMap {
-								res.metrics[i] = m
-								i++
-							}
-						}
-					}(obj)
+				if res.simple {
+					e.simpleMetadataSelect(ctx, client, &res)
+				} else {
+					e.complexMetadataSelect(ctx, &res, objects, metricNames)
 				}
-				wg.Wait()
 			}
 			res.objects = objects
 			resourceKinds[k] = res
@@ -458,6 +421,74 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	sw.Stop()
 	// SendInternalCounter("discovered_objects", e.URL.Host, int64(len(instInfo))) TODO: Count the correct way
 	return nil
+}
+
+func (e *Endpoint) simpleMetadataSelect(ctx context.Context, client *Client, res *resourceKind) {
+	log.Printf("D! [input.vsphere] Using fast metric metadata selection for %s", res.name)
+	m, err := client.CounterInfoByName(ctx)
+	if err != nil {
+		log.Printf("E! [input.vsphere]: Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
+		return
+	}
+	res.metrics = make(performance.MetricList, 0, len(res.include))
+	for _, s := range res.include {
+		if pci, ok := m[s]; ok {
+			cnt := types.PerfMetricId{
+				CounterId: pci.Key,
+			}
+			if res.collectInstances {
+				cnt.Instance = "*"
+			} else {
+				cnt.Instance = ""
+			}
+			res.metrics = append(res.metrics, cnt)
+		} else {
+			log.Printf("W! [input.vsphere] Metric name %s is unknown. Will not be collected", s)
+		}
+	}
+}
+
+func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind, objects objectMap, metricNames map[int32]string) {
+	prob := 100.0 / float64(len(objects))
+	log.Printf("D! [input.vsphere] Probability of sampling a resource: %f", prob)
+	instInfoMux := sync.Mutex{}
+	te := NewThrottledExecutor(e.Parent.DiscoverConcurrency)
+	for _, obj := range objects {
+		if rand.Float64() > prob {
+			continue
+		}
+		func(obj objectRef) {
+			te.Run(func() {
+				metrics, err := e.getMetadata(ctx, obj, res.sampling)
+				if err != nil {
+					log.Printf("E! [input.vsphere]: Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
+				}
+				mMap := make(map[string]types.PerfMetricId)
+				for _, m := range metrics {
+					if m.Instance != "" && res.collectInstances {
+						m.Instance = "*"
+					} else {
+						m.Instance = ""
+					}
+					if res.filters.Match(metricNames[m.CounterId]) {
+						mMap[strconv.Itoa(int(m.CounterId))+"|"+m.Instance] = m
+					}
+				}
+				log.Printf("D! [input.vsphere] Found %d metrics for %s", len(mMap), obj.name)
+				instInfoMux.Lock()
+				defer instInfoMux.Unlock()
+				if len(mMap) > len(res.metrics) {
+					res.metrics = make(performance.MetricList, len(mMap))
+					i := 0
+					for _, m := range mMap {
+						res.metrics[i] = m
+						i++
+					}
+				}
+			})
+		}(obj)
+	}
+	te.Wait()
 }
 
 func getDatacenters(ctx context.Context, client *Client, e *Endpoint, root *view.ContainerView) (objectMap, error) {
@@ -615,7 +646,15 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 	return nil
 }
 
-func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, now time.Time, latest time.Time) {
+// Workaround to make sure pqs is a copy of the loop variable and won't change.
+func submitChunkJob(te *ThrottledExecutor, job func([]types.PerfQuerySpec), pqs []types.PerfQuerySpec) {
+	te.Run(func() {
+		job(pqs)
+	})
+}
+
+func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Time, latest time.Time, acc telegraf.Accumulator, job func([]types.PerfQuerySpec)) {
+	te := NewThrottledExecutor(e.Parent.CollectConcurrency)
 	maxMetrics := e.Parent.MaxQueryMetrics
 	if maxMetrics < 1 {
 		maxMetrics = 1
@@ -664,17 +703,17 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 			// 1) We filled up the metric quota while processing the current resource
 			// 2) We are at the last resource and have no more data to process.
 			// 3) The query contains more than 100,000 individual metrics
-			if mr > 0 || (!res.realTime && metrics >= maxMetrics) || nRes >= e.Parent.MaxQueryObjects || len(pqs) > 100000 {
+			if mr > 0 || nRes >= e.Parent.MaxQueryObjects || len(pqs) > 100000 {
 				log.Printf("D! [input.vsphere]: Queueing query: %d objects, %d metrics (%d remaining) of type %s for %s. Processed objects: %d. Total objects %d",
 					len(pqs), metrics, mr, res.name, e.URL.Host, total+1, len(res.objects))
 
-				// To prevent deadlocks, don't send work items if the context has been cancelled.
+				// Don't send work items if the context has been cancelled.
 				if ctx.Err() == context.Canceled {
 					return
 				}
 
-				// Call push function
-				f(ctx, pqs)
+				// Run collection job
+				submitChunkJob(te, job, pqs)
 				pqs = make([]types.PerfQuerySpec, 0, e.Parent.MaxQueryObjects)
 				metrics = 0
 				nRes = 0
@@ -683,13 +722,16 @@ func (e *Endpoint) chunker(ctx context.Context, f PushFunc, res *resourceKind, n
 		total++
 		nRes++
 	}
-	// There may be dangling stuff in the queue. Handle them
+	// Handle final partially filled chunk
 	if len(pqs) > 0 {
-		// Call push function
+		// Run collection job
 		log.Printf("D! [input.vsphere]: Queuing query: %d objects, %d metrics (0 remaining) of type %s for %s. Total objects %d (final chunk)",
 			len(pqs), metrics, res.name, e.URL.Host, len(res.objects))
-		f(ctx, pqs)
+		submitChunkJob(te, job, pqs)
 	}
+
+	// Wait for background collection to finish
+	te.Wait()
 }
 
 func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc telegraf.Accumulator) error {
@@ -728,58 +770,35 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	var tsMux sync.Mutex
 	latestSample := time.Time{}
 	// Set up a worker pool for collecting chunk metrics
-	wp := NewWorkerPool(10)
-	wp.Run(ctx, func(ctx context.Context, in interface{}) interface{} {
-		chunk := in.([]types.PerfQuerySpec)
-		n, localLatest, err := e.collectChunk(ctx, chunk, resourceType, &res, acc)
-		log.Printf("D! [input.vsphere] CollectChunk for %s returned %d metrics", resourceType, n)
-		if err != nil {
-			return err
-		}
-		atomic.AddInt64(&count, int64(n))
-		tsMux.Lock()
-		defer tsMux.Unlock()
-		if localLatest.After(latestSample) && !localLatest.IsZero() {
-			latestSample = localLatest
-		}
-		return nil
+	e.chunkify(ctx, &res, now, latest, acc,
+		func(chunk []types.PerfQuerySpec) {
+			n, localLatest, err := e.collectChunk(ctx, chunk, &res, acc)
+			log.Printf("D! [input.vsphere] CollectChunk for %s returned %d metrics", resourceType, n)
+			if err != nil {
+				acc.AddError(errors.New("While collecting " + res.name + ": " + err.Error()))
+			}
+			atomic.AddInt64(&count, int64(n))
+			tsMux.Lock()
+			defer tsMux.Unlock()
+			if localLatest.After(latestSample) && !localLatest.IsZero() {
+				latestSample = localLatest
+			}
+		})
 
-	}, e.Parent.CollectConcurrency)
-
-	// Fill the input channel of the worker queue by running the chunking
-	// logic implemented in chunker()
-	wp.Fill(ctx, func(ctx context.Context, f PushFunc) {
-		e.chunker(ctx, f, &res, now, latest)
-	})
-
-	// Drain the pool. We're getting errors back. They should all be nil
-	var mux sync.Mutex
-	merr := make(multiError, 0)
-	wp.Drain(ctx, func(ctx context.Context, in interface{}) bool {
-		if in != nil {
-			mux.Lock()
-			defer mux.Unlock()
-			merr = append(merr, in.(error))
-			return false
-		}
-		return true
-	})
 	log.Printf("D! [input.vsphere] Latest sample for %s set to %s", resourceType, latestSample)
 	if !latestSample.IsZero() {
 		e.lastColls[resourceType] = latestSample
 	}
 	sw.Stop()
 	SendInternalCounterWithTags("gather_count", e.URL.Host, internalTags, count)
-	if len(merr) > 0 {
-		return merr
-	}
 	return nil
 }
 
-func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, resourceType string,
-	res *resourceKind, acc telegraf.Accumulator) (int, time.Time, error) {
+func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, res *resourceKind, acc telegraf.Accumulator) (int, time.Time, error) {
+	log.Printf("D! [input.vsphere] Query for %s has %d QuerySpecs", res.name, len(pqs))
 	latestSample := time.Time{}
 	count := 0
+	resourceType := res.name
 	prefix := "vsphere" + e.Parent.Separator + resourceType
 
 	client, err := e.clientFactory.GetClient(ctx)

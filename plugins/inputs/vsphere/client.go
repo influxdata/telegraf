@@ -261,6 +261,7 @@ func (c *Client) GetMaxQueryMetrics(ctx context.Context) (int, error) {
 	return 256, nil
 }
 
+// QueryMetrics wraps performance.Query to give it proper timeouts
 func (c *Client) QueryMetrics(ctx context.Context, pqs []types.PerfQuerySpec) ([]performance.EntityMetric, error) {
 	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
 	defer cancel1()
@@ -274,12 +275,21 @@ func (c *Client) QueryMetrics(ctx context.Context, pqs []types.PerfQuerySpec) ([
 	return c.Perf.ToMetricSeries(ctx2, metrics)
 }
 
+// CounterInfoByName wraps performance.CounterInfoByName to give it proper timeouts
 func (c *Client) CounterInfoByName(ctx context.Context) (map[string]*types.PerfCounterInfo, error) {
 	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
 	defer cancel1()
 	return c.Perf.CounterInfoByName(ctx1)
 }
 
+// CounterInfoByKey wraps performance.CounterInfoByKey to give it proper timeouts
+func (c *Client) CounterInfoByKey(ctx context.Context) (map[int32]*types.PerfCounterInfo, error) {
+	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
+	defer cancel1()
+	return c.Perf.CounterInfoByKey(ctx1)
+}
+
+// ListResources wraps property.Collector.Retrieve to give it proper timeouts
 func (c *Client) ListResources(ctx context.Context, root *view.ContainerView, kind []string, ps []string, dst interface{}) error {
 	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
 	defer cancel1()
