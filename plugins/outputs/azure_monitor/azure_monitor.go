@@ -359,8 +359,15 @@ func translate(m telegraf.Metric, prefix string) (*azureMonitorMetric, error) {
 			continue
 		}
 
-		if tag.Key == "" || tag.Value == "" {
+		var key = tag.Key
+		var value = tag.Value
+
+		if key == "" {
 			continue
+		}
+
+		if value == "" {
+			value = "<empty>"
 		}
 
 		dimensionNames = append(dimensionNames, tag.Key)
