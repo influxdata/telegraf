@@ -417,8 +417,16 @@ func (p *Postgresql) generateInsertWithValues(tablename string, columns []string
 			sval := fmt.Sprintf("'%s'", qval.(time.Time).Format("2006-01-02 15:04:05"))
 			qvals = append(qvals, sval)
 			break
-		default:
+		case []uint8:
+			var sval []string
+			for _, v := range qval.([]uint8) {
+				sval = append(sval, fmt.Sprintf("%d", v))
+			}
+			qvals = append(qvals, strings.Join(sval, ","))
+		case string:
 			qvals = append(qvals, quoteLiteral(qval.(string)))
+			break
+		default:
 			break
 		}
 		quoted = append(quoted, quoteIdent(column))
@@ -474,7 +482,7 @@ func (p *Postgresql) WriteMetrics(id int) {
 		if maxItems > p.MaxItems {
 			maxItems = p.MaxItems
 		}
-		log.Printf("(%d): Size [%d] Items [%d]\n", id, queueLength, maxItems)
+
 		for i = 0; i < maxItems; i++ {
 			m := <-p.inputQueue
 			metrics = append(metrics, m...)

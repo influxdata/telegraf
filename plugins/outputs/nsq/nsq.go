@@ -2,10 +2,13 @@ package nsq
 
 import (
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/nsqio/go-nsq"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
@@ -15,8 +18,11 @@ type NSQ struct {
 	Topic        string
 	producer     *nsq.Producer
 	BatchMessage bool `toml:"batch"`
+	ConnectRate  internal.Duration
 
-	serializer serializers.Serializer
+	connectable  bool
+	last_connect time.Time
+	serializer   serializers.Serializer
 }
 
 var sampleConfig = `
@@ -68,6 +74,11 @@ func (n *NSQ) Write(metrics []telegraf.Metric) error {
 
 	metricsmap := make(map[string][]telegraf.Metric)
 
+	if !n.connectable && time.Since(n.last_connect) < n.ConnectRate.Duration {
+		// We are not connected yet, and it's not time to try again. Throw away everything
+		return nil
+	}
+
 	for _, metric := range metrics {
 		if n.BatchMessage {
 			metricsmap[n.Topic] = append(metricsmap[n.Topic], metric)
@@ -79,6 +90,11 @@ func (n *NSQ) Write(metrics []telegraf.Metric) error {
 
 			err = n.producer.Publish(n.Topic, buf)
 			if err != nil {
+				if strings.Contains(err.Error(), "timeout") {
+					n.last_connect = time.Now()
+					n.connectable = false
+					return nil
+				}
 				return fmt.Errorf("FAILED to send NSQD message: %s", err)
 			}
 		}
@@ -90,16 +106,23 @@ func (n *NSQ) Write(metrics []telegraf.Metric) error {
 		if err != nil {
 			return err
 		}
-		publisherr := n.producer.Publish(n.Topic, buf)
-		if publisherr != nil {
-			return fmt.Errorf("Could not write to MQTT server, %s", publisherr)
+		err = n.producer.Publish(n.Topic, buf)
+		if err != nil {
+			if strings.Contains(err.Error(), "timeout") {
+				n.last_connect = time.Now()
+				n.connectable = false
+				return nil
+			}
+			return fmt.Errorf("Could not write to NSQ server, %s", err)
 		}
 	}
+
+	n.connectable = true
 	return nil
 }
 
 func init() {
 	outputs.Add("nsq", func() telegraf.Output {
-		return &NSQ{}
+		return &NSQ{connectable: false, last_connect: time.Now()}
 	})
 }

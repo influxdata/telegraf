@@ -1,9 +1,11 @@
 package wmi
 
 import (
+	"fmt"
 	"log"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/StackExchange/wmi"
@@ -35,14 +37,16 @@ type WmiObject struct {
 	Columns   []WmiColumnDef
 	Where     string
 
-	cmap  map[string]WmiColumnDef
-	names []string
-	typ   reflect.Type
+	measurement string
+	cmap        map[string]WmiColumnDef
+	names       []string
+	dst         reflect.Value
 }
 
 type WmiInput struct {
-	Object []WmiObject
+	Object map[string][]*WmiObject
 
+	service      *wmi.SWbemServices
 	configParsed bool
 }
 
@@ -56,28 +60,47 @@ func (w *WmiInput) Description() string {
 	return "Gathers data from WMI/WQL Requests"
 }
 
-func (mi *WmiMetricItem) Process(measurement string, cmap map[string]WmiColumnDef, dataIn reflect.Value, acc telegraf.Accumulator) error {
+func (mi *WmiMetricItem) Process(cmap map[string]WmiColumnDef, dataIn reflect.Value) error {
 	if dataIn.Kind() == reflect.Ptr {
-		mi.Process(measurement, cmap, dataIn.Elem(), acc)
+		mi.Process(cmap, dataIn.Elem())
 	} else if dataIn.Kind() == reflect.Slice {
 		for i := 0; i < dataIn.Len(); i++ {
-			mi.Process(measurement, cmap, dataIn.Index(i), acc)
+			mi.Process(cmap, dataIn.Index(i))
 		}
 	} else if dataIn.Kind() == reflect.Struct {
-		mi.tags = make(map[string]string)
-		mi.fields = make(map[string]interface{})
 		for i := 0; i < dataIn.NumField(); i++ {
+			var typ string
 			field := dataIn.Field(i)
 			name := dataIn.Type().Field(i).Name
+			fmt.Println(field.Type())
 			if _, ok := cmap[name]; ok {
+				typ = cmap[name].Type
 				if len(cmap[name].As) > 0 {
 					name = cmap[name].As
 				}
 			}
-			mi.fields[name] = field.Interface()
-			acc.AddFields(measurement, mi.fields, mi.tags)
+
+			if typ == "tag" {
+				mi.tags[name] = field.String()
+			} else {
+				mi.fields[name] = field.Interface()
+			}
 		}
 	}
+
+	return nil
+}
+
+func (w *WmiInput) Process(measurement string, acc telegraf.Accumulator) error {
+	var mi WmiMetricItem
+	mi.tags = make(map[string]string)
+	mi.fields = make(map[string]interface{})
+
+	for _, object := range w.Object[measurement] {
+		mi.Process(object.cmap, object.dst)
+	}
+
+	acc.AddFields(measurement, mi.fields, mi.tags)
 
 	return nil
 }
@@ -123,45 +146,74 @@ func getType(s string) reflect.Type {
 	case "float64":
 		i = float64(1.0)
 		break
+	case "tag":
+		i = "string"
+		break
+	case "[]string":
+		i = [2]string{"string", "string"}
+		break
 	}
 
 	return reflect.TypeOf(i)
 }
 
-func (w *WmiInput) ParseConfig() error {
-	for i, object := range w.Object {
-		w.Object[i].cmap = make(map[string]WmiColumnDef)
-		var fields []reflect.StructField
-		for _, columnDef := range object.Columns {
-			fields = append(fields, reflect.StructField{
-				Name: columnDef.Name,
-				Type: getType(columnDef.Type),
-			})
-			w.Object[i].names = append(w.Object[i].names, columnDef.Name)
-			w.Object[i].cmap[columnDef.Name] = columnDef
-		}
-
-		w.Object[i].typ = reflect.SliceOf(reflect.StructOf(fields))
+func (w *WmiInput) ConnectWmi() error {
+	var err error
+	w.service, err = wmi.InitializeSWbemServices(&wmi.Client{})
+	if err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (w *WmiInput) Collect(acc telegraf.Accumulator, object WmiObject) error {
-	dst := reflect.New(object.typ)
-	query := "SELECT " + strings.Join(object.names, ",") + " FROM " + object.Table + " " + object.Where
-	err := wmi.Query(query, dst.Interface(), object.Host, object.Namespace, object.User, object.Password)
-	if err != nil {
-		log.Println("ERROR [wmi.query]: ", err)
-		return err
+func (w *WmiInput) ParseConfig() error {
+	for name, objArr := range w.Object {
+		for _, obj := range objArr {
+			obj.measurement = name
+			obj.cmap = make(map[string]WmiColumnDef)
+			var fields []reflect.StructField
+			for _, columnDef := range obj.Columns {
+				fields = append(fields, reflect.StructField{
+					Name: columnDef.Name,
+					Type: getType(columnDef.Type),
+				})
+				obj.names = append(obj.names, columnDef.Name)
+				obj.cmap[columnDef.Name] = columnDef
+			}
+
+			typ := reflect.SliceOf(reflect.StructOf(fields))
+			obj.dst = reflect.New(typ)
+		}
 	}
 
-	name := object.Table
-	if object.As != "" {
-		name = object.As
+	return nil
+}
+
+func (wo *WmiObject) Query(pwg *sync.WaitGroup, wmi *wmi.SWbemServices) {
+	defer pwg.Done()
+	query := "SELECT " + strings.Join(wo.names, ",") + " FROM " + wo.Table + " " + wo.Where
+	fmt.Println("Query", query, wo.Host, wo.Namespace)
+	err := wmi.Query(query, wo.dst.Interface(), wo.Host, wo.Namespace, wo.User, wo.Password)
+	fmt.Println("Result", wo.Host, wo.Namespace, wo.dst)
+	if err != nil {
+		log.Println("ERROR [wmi.query]: ", err)
 	}
-	wmiItem := WmiMetricItem{}
-	wmiItem.Process(name, object.cmap, dst, acc)
+}
+
+func (w *WmiInput) Collect(acc telegraf.Accumulator, measurement string, wmiObjects []*WmiObject) error {
+	var wg sync.WaitGroup
+	for i, _ := range wmiObjects {
+		wo := wmiObjects[i]
+		wg.Add(1)
+		go wo.Query(&wg, w.service)
+	}
+	wg.Wait()
+
+	err := w.Process(measurement, acc)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -172,14 +224,20 @@ func (w *WmiInput) Gather(acc telegraf.Accumulator) error {
 	// Parse the config once
 	if !w.configParsed {
 		err := w.ParseConfig()
-		w.configParsed = true
 		if err != nil {
 			return err
 		}
+
+		err = w.ConnectWmi()
+		if err != nil {
+			return err
+		}
+
+		w.configParsed = true
 	}
 
-	for _, object := range w.Object {
-		w.Collect(acc, object)
+	for measurement, object := range w.Object {
+		w.Collect(acc, measurement, object)
 	}
 
 	return nil

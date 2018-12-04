@@ -165,9 +165,7 @@ func (m *Sqlquery) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	fmt.Println("sqlquery init...")
 	inputs.Add("sqlquery", func() telegraf.Input {
 		return &Sqlquery{}
 	})
-	fmt.Println("sqlquery init done...")
 }

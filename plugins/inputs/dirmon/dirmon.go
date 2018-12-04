@@ -363,20 +363,20 @@ func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accum
 
 	// If we are just doing fileinfo... end here.
 	if ddo.DataFormat != "fileinfo" {
-		s, err := getFileScanner(fileName)
+		//s, err := getFileScanner(fileName)
+		//if err != nil {
+		//	log.Println("ERROR [getFileScanner]", err)
+		//	return err
+		//}
+
+		//for s.Scan() {
+		fileLines, err := fileHandler(fileName)
 		if err != nil {
-			log.Println("ERROR [getFileScanner]", err)
 			return err
 		}
-
-		for s.Scan() {
-			//fileLines, err := fileHandler(fileName)
-			//if err != nil {
-			//	return err
-			//}
-			line := s.Text()
-			groupedMetrics := make(map[uint64][]telegraf.Metric)
-			//for _, line := range fileLines {
+		//line := s.Text()
+		groupedMetrics := make(map[uint64][]telegraf.Metric)
+		for _, line := range fileLines {
 			if len(line) == 0 {
 				continue
 			}
@@ -390,36 +390,34 @@ func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accum
 				id := HashID(m)
 				groupedMetrics[id] = append(groupedMetrics[id], m)
 			}
-			//}
-
-			for _, metrics := range groupedMetrics {
-				metric := metrics[0]
-				for i := 1; i < len(metrics); i++ {
-					m := metrics[i]
-					for fieldkey, fieldval := range m.Fields() {
-						metric.AddField(fieldkey, fieldval)
-					}
-				}
-
-				name := metric.Name()
-				if ddo.metricMatch != nil {
-					match := ddo.metricMatch.FindStringSubmatch(fileName)
-					if len(match) > 1 {
-						name = match[1]
-					}
-				}
-
-				for key, regex := range ddo.fileTagMatch {
-					match := regex.FindStringSubmatch(fileName)
-					if len(match) > 1 {
-						metric.AddTag(key, match[1])
-					}
-				}
-
-				acc.AddFields(name, metric.Fields(), metric.Tags(), metric.Time())
-			}
 		}
 
+		for _, metrics := range groupedMetrics {
+			metric := metrics[0]
+			for i := 1; i < len(metrics); i++ {
+				m := metrics[i]
+				for fieldkey, fieldval := range m.Fields() {
+					metric.AddField(fieldkey, fieldval)
+				}
+			}
+
+			name := metric.Name()
+			if ddo.metricMatch != nil {
+				match := ddo.metricMatch.FindStringSubmatch(fileName)
+				if len(match) > 1 {
+					name = match[1]
+				}
+			}
+
+			for key, regex := range ddo.fileTagMatch {
+				match := regex.FindStringSubmatch(fileName)
+				if len(match) > 1 {
+					metric.AddTag(key, match[1])
+				}
+			}
+
+			acc.AddFields(name, metric.Fields(), metric.Tags(), metric.Time())
+		}
 	}
 
 	return nil

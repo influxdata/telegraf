@@ -31,24 +31,27 @@ var timeLayouts = map[string]string{
 	"ts-httpd":       "02/Jan/2006:15:04:05 -0700",
 	// These three are not exactly "layouts", but they are special cases that
 	// will get handled in the ParseLine function.
-	"ts-epoch":     "EPOCH",
-	"ts-epochnano": "EPOCH_NANO",
-	"ts-syslog":    "SYSLOG_TIMESTAMP",
-	"ts":           "GENERIC_TIMESTAMP", // try parsing all known timestamp layouts.
+	"ts-epoch":      "EPOCH",
+	"ts-epochnano":  "EPOCH_NANO",
+	"ts-syslog":     "SYSLOG_TIMESTAMP",
+	"ts-ciscodebug": "CISCO_DEBUG_TIMESTAMP",
+	"ts":            "GENERIC_TIMESTAMP", // try parsing all known timestamp layouts.
 }
 
 const (
-	MEASUREMENT       = "measurement"
-	INT               = "int"
-	TAG               = "tag"
-	FLOAT             = "float"
-	STRING            = "string"
-	DURATION          = "duration"
-	DROP              = "drop"
-	EPOCH             = "EPOCH"
-	EPOCH_NANO        = "EPOCH_NANO"
-	SYSLOG_TIMESTAMP  = "SYSLOG_TIMESTAMP"
-	GENERIC_TIMESTAMP = "GENERIC_TIMESTAMP"
+	MEASUREMENT           = "measurement"
+	INT                   = "int"
+	TAG                   = "tag"
+	FLOAT                 = "float"
+	STRING                = "string"
+	DURATION              = "duration"
+	DROP                  = "drop"
+	HEX                   = "hex"
+	EPOCH                 = "EPOCH"
+	EPOCH_NANO            = "EPOCH_NANO"
+	CISCO_DEBUG_TIMESTAMP = "CISCO_DEBUG_TIMESTAMP"
+	SYSLOG_TIMESTAMP      = "SYSLOG_TIMESTAMP"
+	GENERIC_TIMESTAMP     = "GENERIC_TIMESTAMP"
 )
 
 var (
@@ -262,6 +265,13 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 			} else {
 				fields[k] = int64(d)
 			}
+		case HEX:
+			hv, err := strconv.ParseInt(v, 16, 64)
+			if err != nil {
+				log.Printf("E! Error parsing hex %s to int: %s", v, err)
+			} else {
+				fields[k] = hv
+			}
 		case TAG:
 			tags[k] = v
 		case STRING:
@@ -307,6 +317,15 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				timestamp = ts
 			} else {
 				log.Printf("E! Error parsing %s to time layout [%s]: %s", v, t, err)
+			}
+		case CISCO_DEBUG_TIMESTAMP:
+			now := time.Now()
+			strts := fmt.Sprintf("%d %v", now.Year(), v)
+			ts, err := time.ParseInLocation("2006 Jan  2 15:04:05.000", strts, p.loc)
+			if err != nil {
+				log.Printf("E! Error parsing %s to timestamp: %s", v, err)
+			} else {
+				timestamp = ts
 			}
 		case GENERIC_TIMESTAMP:
 			var foundTs bool

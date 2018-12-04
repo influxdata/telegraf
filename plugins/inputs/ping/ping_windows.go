@@ -5,6 +5,7 @@ package ping
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os/exec"
 	"regexp"
@@ -16,6 +17,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/plugins/inputs/ping/pinger"
 )
 
 // HostPinger is a function that runs the "ping" function using a list of
@@ -44,6 +46,7 @@ type Ping struct {
 
 	// host ping function
 	pingHost HostPinger
+	pinger   *pinger.Pinger
 }
 
 func (s *Ping) Description() string {
@@ -80,12 +83,47 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
 		p.wg.Add(1)
-		go p.pingToURL(url, acc)
+		go p.pingToHost(url, acc)
 	}
 
 	p.wg.Wait()
 
 	return nil
+}
+
+func (p *Ping) pingToHost(h string, acc telegraf.Accumulator) {
+	defer p.wg.Done()
+
+	tags := map[string]string{"url": h}
+	fields := map[string]interface{}{"result_code": 0}
+
+	_, err := net.LookupHost(h)
+	if err != nil {
+		acc.AddError(err)
+		fields["result_code"] = 1
+		acc.AddFields("ping", fields, tags)
+		return
+	}
+
+	timeout := int64(p.Timeout)
+	result, err := p.pinger.Send(h, timeout)
+
+	if err != nil {
+		fields["packets_transmitted"] = 1
+		fields["packets_received"] = 0
+		fields["percent_packet_loss"] = float64(100.0)
+		fields["ping_response_ms"] = 0
+		if err.Error() == "timed out" {
+			fields["ping_response_ms"] = int64(result.Rtt / 1000000)
+		}
+	} else {
+		fields["packets_transmitted"] = result.PacketsSent
+		fields["packets_received"] = result.PacketsRecv
+		fields["percent_packet_loss"] = float64(0.0)
+		fields["ping_response_ms"] = int64(result.Rtt / 1000000)
+	}
+
+	acc.AddFields("ping", fields, tags)
 }
 
 func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
@@ -249,7 +287,14 @@ func (p *Ping) timeout() float64 {
 
 func init() {
 	inputs.Add("ping", func() telegraf.Input {
+		pinger, err := pinger.NewPinger(true)
+		if err != nil {
+			log.Println("ERROR: [ping.NewPinger]", err)
+			return nil
+		}
+
 		return &Ping{
+			pinger:    pinger,
 			pingHost:  hostPinger,
 			Count:     1,
 			Binary:    "ping",

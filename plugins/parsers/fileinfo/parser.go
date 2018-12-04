@@ -102,6 +102,10 @@ func (p *FileInfoParser) ParseLine(line string) (telegraf.Metric, error) {
 		log.Println("[ERROR]: Could not get file info for line", line)
 		return nil, err
 	}
+	if fi == nil {
+		log.Printf("[ERROR]: No file info for line: %s", line)
+		return nil, errors.New("No file info for line")
+	}
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 	fields["filename"] = fi.Base

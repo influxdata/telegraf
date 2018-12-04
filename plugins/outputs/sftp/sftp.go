@@ -73,7 +73,7 @@ func (s *Sftp) Transferer(id int, conn *sftp.Client) {
 		item := <-s.queue
 
 		// Create the destination file
-		fmt.Printf("Sending (%d)[%d]: %s\n", id, len(item.Data), item.Dest)
+		log.Printf("Sending (%d)[%d]: %s\n", id, len(item.Data), item.Dest)
 		dstFile, err := conn.Create(item.Temp)
 		if err != nil {
 			// We could try to create the dest dir, but for now... just throw the file away
@@ -129,7 +129,7 @@ func (s *Sftp) HandleSftpItem(item *SftpItem) {
 		var masterItem SftpItem
 		err := queueItem.ToObject(&masterItem)
 		if err != nil {
-			fmt.Println("ERROR [peek]: ", err)
+			log.Println("ERROR [peek]: ", err)
 		}
 
 		masterItem.Data = append(masterItem.Data, item.Data...)
@@ -140,7 +140,7 @@ func (s *Sftp) HandleSftpItem(item *SftpItem) {
 		} else {
 			_, err = s.pq.UpdateObject(id, queueItem.ID, masterItem)
 			if err != nil {
-				fmt.Println("ERROR [update]: ", err)
+				log.Println("ERROR [update]: ", err)
 			}
 		}
 	} else {
