@@ -52,8 +52,17 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	defer f.Close()
 
 	scnr := bufio.NewScanner(f)
+	var devlinks strings.Builder
 	for scnr.Scan() {
 		l := scnr.Text()
+		if l[:2] == "S:" {
+		    if devlinks.Len > 0 {
+				devlinks.WriteString(" " + l[2:])
+			} else {
+				devlinks.WriteString(l[2:])
+			}
+			continue
+		}
 		if len(l) < 4 || l[:2] != "E:" {
 			continue
 		}
@@ -62,6 +71,9 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 			continue
 		}
 		di[kv[0]] = kv[1]
+	}
+	if devlinks.Len() > 0 {
+		di["DEVLINKS"] = devlinks.String()
 	}
 
 	return di, nil
