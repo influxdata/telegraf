@@ -56,7 +56,7 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	for scnr.Scan() {
 		l := scnr.Text()
 		if l[:2] == "S:" {
-		        if devlinks.Len > 0 {
+			if devlinks.Len > 0 {
 				devlinks.WriteString(" " + l[2:])
 			} else {
 				devlinks.WriteString(l[2:])
