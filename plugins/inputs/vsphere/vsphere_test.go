@@ -177,6 +177,8 @@ func defaultVSphere() *VSphere {
 		ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 		Timeout:                 internal.Duration{Duration: time.Second * 20},
 		ForceDiscoverOnInit:     true,
+		DiscoverConcurrency:     1,
+		CollectConcurrency:      1,
 	}
 }
 
@@ -251,7 +253,7 @@ func TestTimeout(t *testing.T) {
 	require.NoError(t, v.Start(nil)) // We're not using the Accumulator, so it can be nil.
 	defer v.Stop()
 	err = v.Gather(&acc)
-	require.NotNil(t, err, "Error should not be nil here")
+	require.True(t, len(acc.Errors) > 0, "Errors should not be empty here")
 
 	// The accumulator must contain exactly one error and it must be a deadline exceeded.
 	require.Equal(t, 1, len(acc.Errors))

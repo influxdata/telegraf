@@ -12,6 +12,9 @@ type ThrottledExecutor struct {
 // NewThrottledExecutor creates a new ThrottlesExecutor with a specified maximum
 // number of concurrent jobs
 func NewThrottledExecutor(limit int) *ThrottledExecutor {
+	if limit == 0 {
+		panic("Limit must be > 0")
+	}
 	return &ThrottledExecutor{limiter: make(chan struct{}, limit)}
 }
 
