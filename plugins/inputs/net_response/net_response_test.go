@@ -13,6 +13,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestSample(t *testing.T) {
+	c := &NetResponse{}
+	output := c.SampleConfig()
+	if output != sampleConfig {
+		t.Error("Sample config doesn't match")
+	}
+}
+
+func TestDescription(t *testing.T) {
+	c := &NetResponse{}
+	output := c.Description()
+	if output != description {
+		t.Error("Description output is not correct")
+	}
+}
 func TestBadProtocol(t *testing.T) {
 	var acc testutil.Accumulator
 	// Init plugin
@@ -24,6 +39,50 @@ func TestBadProtocol(t *testing.T) {
 	err1 := c.Gather(&acc)
 	require.Error(t, err1)
 	assert.Equal(t, "Bad protocol", err1.Error())
+}
+
+func TestNoPort(t *testing.T) {
+	var acc testutil.Accumulator
+	c := NetResponse{
+		Protocol: "tcp",
+		Address:  ":",
+	}
+	err1 := c.Gather(&acc)
+	require.Error(t, err1)
+	assert.Equal(t, "Bad port", err1.Error())
+}
+
+func TestAddressOnly(t *testing.T) {
+	var acc testutil.Accumulator
+	c := NetResponse{
+		Protocol: "tcp",
+		Address:  "127.0.0.1",
+	}
+	err1 := c.Gather(&acc)
+	require.Error(t, err1)
+	assert.Equal(t, "address 127.0.0.1: missing port in address", err1.Error())
+}
+
+func TestSendExpectStrings(t *testing.T) {
+	var acc testutil.Accumulator
+	tc := NetResponse{
+		Protocol: "udp",
+		Address:  "127.0.0.1:7",
+		Send:     "",
+		Expect:   "toast",
+	}
+	uc := NetResponse{
+		Protocol: "udp",
+		Address:  "127.0.0.1:7",
+		Send:     "toast",
+		Expect:   "",
+	}
+	err1 := tc.Gather(&acc)
+	require.Error(t, err1)
+	assert.Equal(t, "Send string cannot be empty", err1.Error())
+	err2 := uc.Gather(&acc)
+	require.Error(t, err2)
+	assert.Equal(t, "Expected string cannot be empty", err2.Error())
 }
 
 func TestTCPError(t *testing.T) {
@@ -39,12 +98,14 @@ func TestTCPError(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
+			"result_code": uint64(2),
 			"result_type": "connection_failed",
 		},
 		map[string]string{
 			"server":   "",
 			"port":     "9999",
 			"protocol": "tcp",
+			"result":   "connection_failed",
 		},
 	)
 }
@@ -77,11 +138,14 @@ func TestTCPOK1(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
+			"result_code":   uint64(0),
 			"result_type":   "success",
 			"string_found":  true,
 			"response_time": 1.0,
 		},
-		map[string]string{"server": "127.0.0.1",
+		map[string]string{
+			"result":   "success",
+			"server":   "127.0.0.1",
 			"port":     "2004",
 			"protocol": "tcp",
 		},
@@ -118,11 +182,14 @@ func TestTCPOK2(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
+			"result_code":   uint64(4),
 			"result_type":   "string_mismatch",
 			"string_found":  false,
 			"response_time": 1.0,
 		},
-		map[string]string{"server": "127.0.0.1",
+		map[string]string{
+			"result":   "string_mismatch",
+			"server":   "127.0.0.1",
 			"port":     "2004",
 			"protocol": "tcp",
 		},
@@ -131,7 +198,7 @@ func TestTCPOK2(t *testing.T) {
 	wg.Wait()
 }
 
-func TestUDPrror(t *testing.T) {
+func TestUDPError(t *testing.T) {
 	var acc testutil.Accumulator
 	// Init plugin
 	c := NetResponse{
@@ -151,10 +218,13 @@ func TestUDPrror(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
+			"result_code":   uint64(3),
 			"result_type":   "read_failed",
 			"response_time": 1.0,
+			"string_found":  false,
 		},
 		map[string]string{
+			"result":   "read_failed",
 			"server":   "",
 			"port":     "9999",
 			"protocol": "udp",
@@ -190,11 +260,14 @@ func TestUDPOK1(t *testing.T) {
 	acc.AssertContainsTaggedFields(t,
 		"net_response",
 		map[string]interface{}{
+			"result_code":   uint64(0),
 			"result_type":   "success",
 			"string_found":  true,
 			"response_time": 1.0,
 		},
-		map[string]string{"server": "127.0.0.1",
+		map[string]string{
+			"result":   "success",
+			"server":   "127.0.0.1",
 			"port":     "2004",
 			"protocol": "udp",
 		},

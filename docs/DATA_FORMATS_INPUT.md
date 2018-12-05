@@ -9,6 +9,7 @@ Telegraf is able to parse the following input data formats into metrics:
 1. [Nagios](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#nagios) (exec input only)
 1. [Collectd](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#collectd)
 1. [Dropwizard](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#dropwizard)
+1. [Grok](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#grok)
 
 Telegraf metrics, like InfluxDB
 [points](https://docs.influxdata.com/influxdb/v0.10/write_protocols/line/),
@@ -479,6 +480,12 @@ You can also change the path to the typesdb or add additional typesdb using
   collectd_security_level = "encrypt"
   ## Path of to TypesDB specifications
   collectd_typesdb = ["/usr/share/collectd/types.db"]
+
+  # Multi-value plugins can be handled two ways.  
+  # "split" will parse and store the multi-value plugin data into separate measurements
+  # "join" will parse and store the multi-value plugin as a single multi-value measurement.  
+  # "split" is the default behavior for backward compatability with previous versions of influxdb.
+  collectd_parse_multivalue = "split"
 ```
 
 # Dropwizard:
@@ -651,5 +658,107 @@ For more information about the dropwizard json format see
   # [inputs.exec.dropwizard_tag_paths]
   #   tag1 = "tags.tag1"
   #   tag2 = "tags.tag2"
+```
 
+#### Grok
+Parse logstash-style "grok" patterns. Patterns can be added to patterns, or custom patterns read from custom_pattern_files.
+
+# View logstash grok pattern docs here:
+#   https://www.elastic.co/guide/en/logstash/current/plugins-filters-grok.html
+# All default logstash patterns are supported, these can be viewed here:
+#   https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns
+
+# Available modifiers:
+#   string   (default if nothing is specified)
+#   int
+#   float
+#   duration (ie, 5.23ms gets converted to int nanoseconds)
+#   tag      (converts the field into a tag)
+#   drop     (drops the field completely)
+# Timestamp modifiers:
+#   ts-ansic         ("Mon Jan _2 15:04:05 2006")
+#   ts-unix          ("Mon Jan _2 15:04:05 MST 2006")
+#   ts-ruby          ("Mon Jan 02 15:04:05 -0700 2006")
+#   ts-rfc822        ("02 Jan 06 15:04 MST")
+#   ts-rfc822z       ("02 Jan 06 15:04 -0700")
+#   ts-rfc850        ("Monday, 02-Jan-06 15:04:05 MST")
+#   ts-rfc1123       ("Mon, 02 Jan 2006 15:04:05 MST")
+#   ts-rfc1123z      ("Mon, 02 Jan 2006 15:04:05 -0700")
+#   ts-rfc3339       ("2006-01-02T15:04:05Z07:00")
+#   ts-rfc3339nano   ("2006-01-02T15:04:05.999999999Z07:00")
+#   ts-httpd         ("02/Jan/2006:15:04:05 -0700")
+#   ts-epoch         (seconds since unix epoch)
+#   ts-epochnano     (nanoseconds since unix epoch)
+#   ts-"CUSTOM"
+# CUSTOM time layouts must be within quotes and be the representation of the
+# "reference time", which is Mon Jan 2 15:04:05 -0700 MST 2006
+# See https://golang.org/pkg/time/#Parse for more details.
+
+# Example log file pattern, example log looks like this:
+#   [04/Jun/2016:12:41:45 +0100] 1.25 200 192.168.1.1 5.432µs
+# Breakdown of the DURATION pattern below:
+#   NUMBER  is a builtin logstash grok pattern matching float & int numbers.
+#   [nuµm]? is a regex specifying 0 or 1 of the characters within brackets.
+#   s       is also regex, this pattern must end in "s".
+# so DURATION will match something like '5.324ms' or '6.1µs' or '10s'
+DURATION %{NUMBER}[nuµm]?s
+RESPONSE_CODE %{NUMBER:response_code:tag}
+RESPONSE_TIME %{DURATION:response_time_ns:duration}
+EXAMPLE_LOG \[%{HTTPDATE:ts:ts-httpd}\] %{NUMBER:myfloat:float} %{RESPONSE_CODE} %{IPORHOST:clientip} %{RESPONSE_TIME}
+
+# Wider-ranging username matching vs. logstash built-in %{USER}
+NGUSERNAME [a-zA-Z0-9\.\@\-\+_%]+
+NGUSER %{NGUSERNAME}
+# Wider-ranging client IP matching
+CLIENT (?:%{IPORHOST}|%{HOSTPORT}|::1)
+
+##
+## COMMON LOG PATTERNS
+##
+
+# apache & nginx logs, this is also known as the "common log format"
+#   see https://en.wikipedia.org/wiki/Common_Log_Format
+COMMON_LOG_FORMAT %{CLIENT:client_ip} %{NOTSPACE:ident} %{NOTSPACE:auth} \[%{HTTPDATE:ts:ts-httpd}\] "(?:%{WORD:verb:tag} %{NOTSPACE:request}(?: HTTP/%{NUMBER:http_version:float})?|%{DATA})" %{NUMBER:resp_code:tag} (?:%{NUMBER:resp_bytes:int}|-)
+
+# Combined log format is the same as the common log format but with the addition
+# of two quoted strings at the end for "referrer" and "agent"
+#   See Examples at http://httpd.apache.org/docs/current/mod/mod_log_config.html
+COMBINED_LOG_FORMAT %{COMMON_LOG_FORMAT} %{QS:referrer} %{QS:agent}
+
+# HTTPD log formats
+HTTPD20_ERRORLOG \[%{HTTPDERROR_DATE:timestamp}\] \[%{LOGLEVEL:loglevel:tag}\] (?:\[client %{IPORHOST:clientip}\] ){0,1}%{GREEDYDATA:errormsg}
+HTTPD24_ERRORLOG \[%{HTTPDERROR_DATE:timestamp}\] \[%{WORD:module}:%{LOGLEVEL:loglevel:tag}\] \[pid %{POSINT:pid:int}:tid %{NUMBER:tid:int}\]( \(%{POSINT:proxy_errorcode:int}\)%{DATA:proxy_errormessage}:)?( \[client %{IPORHOST:client}:%{POSINT:clientport}\])? %{DATA:errorcode}: %{GREEDYDATA:message}
+HTTPD_ERRORLOG %{HTTPD20_ERRORLOG}|%{HTTPD24_ERRORLOG}
+
+#### Grok Configuration:
+```toml
+[[inputs.reader]]
+  ## This is a list of patterns to check the given log file(s) for.
+  ## Note that adding patterns here increases processing time. The most
+  ## efficient configuration is to have one pattern per logparser.
+  ## Other common built-in patterns are:
+  ##   %{COMMON_LOG_FORMAT}   (plain apache & nginx access logs)
+  ##   %{COMBINED_LOG_FORMAT} (access logs + referrer & agent)
+  grok_patterns = ["%{COMBINED_LOG_FORMAT}"]
+
+  ## Name of the outputted measurement name.
+  grok_name_override = "apache_access_log"
+
+  ## Full path(s) to custom pattern files.
+  grok_custom_pattern_files = []
+
+  ## Custom patterns can also be defined here. Put one pattern per line.
+  grok_custom_patterns = '''
+  '''
+
+  ## Timezone allows you to provide an override for timestamps that
+  ## don't already include an offset
+  ## e.g. 04/06/2016 12:41:45 data one two 5.43µs
+  ##
+  ## Default: "" which renders UTC
+  ## Options are as follows:
+  ##   1. Local             -- interpret based on machine localtime
+  ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+  ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
+  grok_timezone = "Canada/Eastern"
 ```

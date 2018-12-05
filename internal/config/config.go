@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+
 	"regexp"
 	"runtime"
 	"sort"
@@ -151,6 +152,24 @@ func (c *Config) InputNames() []string {
 	var name []string
 	for _, input := range c.Inputs {
 		name = append(name, input.Name())
+	}
+	return name
+}
+
+// Outputs returns a list of strings of the configured aggregators.
+func (c *Config) AggregatorNames() []string {
+	var name []string
+	for _, aggregator := range c.Aggregators {
+		name = append(name, aggregator.Name())
+	}
+	return name
+}
+
+// Outputs returns a list of strings of the configured processors.
+func (c *Config) ProcessorNames() []string {
+	var name []string
+	for _, processor := range c.Processors {
+		name = append(name, processor.Name)
 	}
 	return name
 }
@@ -518,7 +537,13 @@ func (c *Config) LoadDirectory(path string) error {
 			log.Printf("W! Telegraf is not permitted to read %s", thispath)
 			return nil
 		}
+
 		if info.IsDir() {
+			if strings.HasPrefix(info.Name(), "..") {
+				// skip Kubernetes mounts, prevening loading the same config twice
+				return filepath.SkipDir
+			}
+
 			return nil
 		}
 		name := info.Name()
@@ -1260,6 +1285,14 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["collectd_parse_multivalue"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.CollectdSplit = str.Value
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["collectd_typesdb"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if ary, ok := kv.Value.(*ast.Array); ok {
@@ -1313,6 +1346,59 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 		}
 	}
 
+	//for grok data_format
+	if node, ok := tbl.Fields["grok_named_patterns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.GrokNamedPatterns = append(c.GrokNamedPatterns, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["grok_patterns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.GrokPatterns = append(c.GrokPatterns, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["grok_custom_patterns"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.GrokCustomPatterns = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["grok_custom_pattern_files"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.GrokCustomPatternFiles = append(c.GrokCustomPatternFiles, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["grok_timezone"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.GrokTimeZone = str.Value
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1323,11 +1409,17 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	delete(tbl.Fields, "collectd_auth_file")
 	delete(tbl.Fields, "collectd_security_level")
 	delete(tbl.Fields, "collectd_typesdb")
+	delete(tbl.Fields, "collectd_parse_multivalue")
 	delete(tbl.Fields, "dropwizard_metric_registry_path")
 	delete(tbl.Fields, "dropwizard_time_path")
 	delete(tbl.Fields, "dropwizard_time_format")
 	delete(tbl.Fields, "dropwizard_tags_path")
 	delete(tbl.Fields, "dropwizard_tag_paths")
+	delete(tbl.Fields, "grok_named_patterns")
+	delete(tbl.Fields, "grok_patterns")
+	delete(tbl.Fields, "grok_custom_patterns")
+	delete(tbl.Fields, "grok_custom_pattern_files")
+	delete(tbl.Fields, "grok_timezone")
 
 	return parsers.NewParser(c)
 }
@@ -1366,6 +1458,54 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["influx_max_line_bytes"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if integer, ok := kv.Value.(*ast.Integer); ok {
+				v, err := integer.Int()
+				if err != nil {
+					return nil, err
+				}
+				c.InfluxMaxLineBytes = int(v)
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["influx_sort_fields"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.InfluxSortFields, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["influx_uint_support"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.InfluxUintSupport, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["graphite_tag_support"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.GraphiteTagSupport, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["json_timestamp_units"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -1382,6 +1522,10 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	delete(tbl.Fields, "influx_max_line_bytes")
+	delete(tbl.Fields, "influx_sort_fields")
+	delete(tbl.Fields, "influx_uint_support")
+	delete(tbl.Fields, "graphite_tag_support")
 	delete(tbl.Fields, "data_format")
 	delete(tbl.Fields, "prefix")
 	delete(tbl.Fields, "template")

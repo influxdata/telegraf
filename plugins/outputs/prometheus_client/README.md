@@ -23,4 +23,8 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
 
   # Expiration interval for each metric. 0 == no expiration
   expiration_interval = "60s"
+
+  # Send string metrics as Prometheus labels.
+  # Unless set to false all string metrics will be sent as labels.
+  string_as_label = true
 ```

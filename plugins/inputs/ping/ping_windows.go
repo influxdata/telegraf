@@ -93,32 +93,32 @@ func processPingOutput(out string) (int, int, int, int, int, int, error) {
 
 	// stats data should contain 4 members: entireExpression + ( Send, Receive, Lost )
 	if len(stats) != 4 {
-		return 0, 0, 0, 0, 0, 0, err
+		return 0, 0, 0, -1, -1, -1, err
 	}
 	trans, err := strconv.Atoi(stats[1])
 	if err != nil {
-		return 0, 0, 0, 0, 0, 0, err
+		return 0, 0, 0, -1, -1, -1, err
 	}
 	receivedPacket, err := strconv.Atoi(stats[2])
 	if err != nil {
-		return 0, 0, 0, 0, 0, 0, err
+		return 0, 0, 0, -1, -1, -1, err
 	}
 
 	// aproxs data should contain 4 members: entireExpression + ( min, max, avg )
 	if len(aproxs) != 4 {
-		return trans, receivedReply, receivedPacket, 0, 0, 0, err
+		return trans, receivedReply, receivedPacket, -1, -1, -1, err
 	}
 	min, err := strconv.Atoi(aproxs[1])
 	if err != nil {
-		return trans, receivedReply, receivedPacket, 0, 0, 0, err
+		return trans, receivedReply, receivedPacket, -1, -1, -1, err
 	}
 	max, err := strconv.Atoi(aproxs[2])
 	if err != nil {
-		return trans, receivedReply, receivedPacket, 0, 0, 0, err
+		return trans, receivedReply, receivedPacket, -1, -1, -1, err
 	}
 	avg, err := strconv.Atoi(aproxs[3])
 	if err != nil {
-		return 0, 0, 0, 0, 0, 0, err
+		return 0, 0, 0, -1, -1, -1, err
 	}
 
 	return trans, receivedReply, receivedPacket, avg, min, max, err
@@ -201,13 +201,13 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			fields["packets_received"] = receivePacket
 			fields["percent_packet_loss"] = lossPackets
 			fields["percent_reply_loss"] = lossReply
-			if avg > 0 {
+			if avg >= 0 {
 				fields["average_response_ms"] = float64(avg)
 			}
-			if min > 0 {
+			if min >= 0 {
 				fields["minimum_response_ms"] = float64(min)
 			}
-			if max > 0 {
+			if max >= 0 {
 				fields["maximum_response_ms"] = float64(max)
 			}
 			acc.AddFields("ping", fields, tags)

@@ -59,7 +59,7 @@ func TestConcurrentConns(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
+	time.Sleep(time.Millisecond * 250)
 	_, err := net.Dial("tcp", "127.0.0.1:8125")
 	assert.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8125")
@@ -72,7 +72,7 @@ func TestConcurrentConns(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = conn.Write([]byte(testMsg))
 	assert.NoError(t, err)
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 100)
 	assert.Zero(t, acc.NFields())
 }
 
@@ -89,7 +89,7 @@ func TestConcurrentConns1(t *testing.T) {
 	require.NoError(t, listener.Start(acc))
 	defer listener.Stop()
 
-	time.Sleep(time.Millisecond * 25)
+	time.Sleep(time.Millisecond * 250)
 	_, err := net.Dial("tcp", "127.0.0.1:8125")
 	assert.NoError(t, err)
 
@@ -100,7 +100,7 @@ func TestConcurrentConns1(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = conn.Write([]byte(testMsg))
 	assert.NoError(t, err)
-	time.Sleep(time.Millisecond * 10)
+	time.Sleep(time.Millisecond * 100)
 	assert.Zero(t, acc.NFields())
 }
 
@@ -116,7 +116,7 @@ func TestCloseConcurrentConns(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	require.NoError(t, listener.Start(acc))
 
-	time.Sleep(time.Millisecond * 25)
+	time.Sleep(time.Millisecond * 250)
 	_, err := net.Dial("tcp", "127.0.0.1:8125")
 	assert.NoError(t, err)
 	_, err = net.Dial("tcp", "127.0.0.1:8125")
@@ -141,7 +141,7 @@ func BenchmarkUDP(b *testing.B) {
 			panic(err)
 		}
 
-		time.Sleep(time.Millisecond * 25)
+		time.Sleep(time.Millisecond * 250)
 		conn, err := net.Dial("udp", "127.0.0.1:8125")
 		if err != nil {
 			panic(err)
@@ -172,7 +172,7 @@ func BenchmarkTCP(b *testing.B) {
 			panic(err)
 		}
 
-		time.Sleep(time.Millisecond * 25)
+		time.Sleep(time.Millisecond * 250)
 		conn, err := net.Dial("tcp", "127.0.0.1:8125")
 		if err != nil {
 			panic(err)

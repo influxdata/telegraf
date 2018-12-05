@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/influxdata/telegraf/agent"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/logger"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
@@ -57,7 +58,7 @@ var fService = flag.String("service", "",
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
 var (
-	nextVersion = "1.6.0"
+	nextVersion = "1.8.0"
 	version     string
 	commit      string
 	branch      string
@@ -72,48 +73,6 @@ func init() {
 		branch = "unknown"
 	}
 }
-
-const usage = `Telegraf, The plugin-driven server agent for collecting and reporting metrics.
-
-Usage:
-
-  telegraf [commands|flags]
-
-The commands & flags are:
-
-  config              print out full sample configuration to stdout
-  version             print the version to stdout
-
-  --config <file>     configuration file to load
-  --test              gather metrics once, print them to stdout, and exit
-  --config-directory  directory containing additional *.conf files
-  --input-filter      filter the input plugins to enable, separator is :
-  --output-filter     filter the output plugins to enable, separator is :
-  --usage             print usage for a plugin, ie, 'telegraf --usage mysql'
-  --debug             print metrics as they're generated to stdout
-  --pprof-addr        pprof address to listen on, format: localhost:6060 or :6060
-  --quiet             run in quiet mode
-
-Examples:
-
-  # generate a telegraf config file:
-  telegraf config > telegraf.conf
-
-  # generate config with only cpu input & influxdb output plugins defined
-  telegraf --input-filter cpu --output-filter influxdb config
-
-  # run a single telegraf collection, outputing metrics to stdout
-  telegraf --config telegraf.conf --test
-
-  # run telegraf with all plugins defined in config file
-  telegraf --config telegraf.conf
-
-  # run telegraf, enabling the cpu & memory input, and influxdb output plugins
-  telegraf --config telegraf.conf --input-filter cpu:mem --output-filter influxdb
-
-  # run telegraf with pprof
-  telegraf --config telegraf.conf --pprof-addr localhost:6060
-`
 
 var stop chan struct{}
 
@@ -188,11 +147,11 @@ func reloadLoop(
 
 		shutdown := make(chan struct{})
 		signals := make(chan os.Signal)
-		signal.Notify(signals, os.Interrupt, syscall.SIGHUP)
+		signal.Notify(signals, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
 		go func() {
 			select {
 			case sig := <-signals:
-				if sig == os.Interrupt {
+				if sig == os.Interrupt || sig == syscall.SIGTERM {
 					close(shutdown)
 				}
 				if sig == syscall.SIGHUP {
@@ -207,8 +166,10 @@ func reloadLoop(
 		}()
 
 		log.Printf("I! Starting Telegraf %s\n", displayVersion())
-		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
 		log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
+		log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
+		log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
+		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
 		log.Printf("I! Tags enabled: %s", c.ListTags())
 
 		if *fPidfile != "" {
@@ -234,7 +195,7 @@ func reloadLoop(
 }
 
 func usageExit(rc int) {
-	fmt.Println(usage)
+	fmt.Println(internal.Usage)
 	os.Exit(rc)
 }
 
@@ -365,7 +326,7 @@ func main() {
 			DisplayName: "Telegraf Data Collector Service",
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",
-			Arguments: []string{"-config", "C:\\Program Files\\Telegraf\\telegraf.conf"},
+			Arguments: []string{"--config", "C:\\Program Files\\Telegraf\\telegraf.conf"},
 		}
 
 		prg := &program{
@@ -378,14 +339,14 @@ func main() {
 		if err != nil {
 			log.Fatal("E! " + err.Error())
 		}
-		// Handle the -service flag here to prevent any issues with tooling that
+		// Handle the --service flag here to prevent any issues with tooling that
 		// may not have an interactive session, e.g. installing from Ansible.
 		if *fService != "" {
 			if *fConfig != "" {
-				(*svcConfig).Arguments = []string{"-config", *fConfig}
+				(*svcConfig).Arguments = []string{"--config", *fConfig}
 			}
 			if *fConfigDirectory != "" {
-				(*svcConfig).Arguments = append((*svcConfig).Arguments, "-config-directory", *fConfigDirectory)
+				(*svcConfig).Arguments = append((*svcConfig).Arguments, "--config-directory", *fConfigDirectory)
 			}
 			err := service.Control(s, *fService)
 			if err != nil {

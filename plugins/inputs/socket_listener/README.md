@@ -35,6 +35,13 @@ This is a sample configuration for the plugin.
   ## 0 (default) is unlimited.
   # read_timeout = "30s"
 
+  ## Optional TLS configuration.
+  ## Only applies to stream sockets (e.g. TCP).
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key  = "/etc/telegraf/key.pem"
+  ## Enables client authentication if set.
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+
   ## Maximum socket buffer size in bytes.
   ## For stream sockets, once the buffer fills up, the sender will start backing up.
   ## For datagram sockets, once the buffer fills up, metrics will start dropping.
