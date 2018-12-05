@@ -26,11 +26,13 @@ import (
 
 var isolateLUN = regexp.MustCompile(".*/([^/]+)/?$")
 
-const metricLookback = 3
+const metricLookback = 3 // Number of time periods to look back at for non-realtime metrics
 
-const rtMetricLookback = 3
+const rtMetricLookback = 3 // Number of time periods to look back at for realtime metrics
 
-const maxSampleConst = 10
+const maxSampleConst = 10 // Absolute maximim number of samples regardless of period
+
+const maxMetadataSamples = 100 // Number of resources to sample for metric metadata
 
 // Endpoint is a high-level representation of a connected vCenter endpoint. It is backed by the lower
 // level Client type.
@@ -449,14 +451,29 @@ func (e *Endpoint) simpleMetadataSelect(ctx context.Context, client *Client, res
 }
 
 func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind, objects objectMap, metricNames map[int32]string) {
-	prob := 100.0 / float64(len(objects))
-	log.Printf("D! [input.vsphere] Probability of sampling a resource: %f", prob)
+	// We're only going to get metadata from maxMetadataSamples resources. If we have
+	// more resources than that, we pick maxMetadataSamples samples at random.
+	sampledObjects := make([]objectRef, len(objects))
+	i := 0
+	for _, obj := range objects {
+		sampledObjects[i] = obj
+		i++
+	}
+	n := len(sampledObjects)
+	if n > maxMetadataSamples {
+		// Shuffle samples into the maxMetadatSamples positions
+		for i := 0; i < maxMetadataSamples; i++ {
+			j := int(rand.Int31n(int32(i + 1)))
+			t := sampledObjects[i]
+			sampledObjects[i] = sampledObjects[j]
+			sampledObjects[j] = t
+		}
+		sampledObjects = sampledObjects[0:maxMetadataSamples]
+	}
+
 	instInfoMux := sync.Mutex{}
 	te := NewThrottledExecutor(e.Parent.DiscoverConcurrency)
-	for _, obj := range objects {
-		if rand.Float64() > prob {
-			continue
-		}
+	for _, obj := range sampledObjects {
 		func(obj objectRef) {
 			te.Run(func() {
 				metrics, err := e.getMetadata(ctx, obj, res.sampling)
@@ -560,7 +577,6 @@ func getVMs(ctx context.Context, client *Client, e *Endpoint, root *view.Contain
 	m := make(objectMap)
 	for _, r := range resources {
 		if r.Runtime.PowerState != "poweredOn" {
-			log.Printf("D! [input.vsphere] Skipped powered off VM: %s", r.Name)
 			continue
 		}
 		guest := "unknown"

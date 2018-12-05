@@ -155,7 +155,7 @@ var sampleConfig = `
   ## Clusters 
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
-  # cluster_instances = true ## true by default
+  # cluster_instances = false ## false by default
 
   ## Datastores 
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
@@ -286,7 +286,7 @@ func init() {
 		return &VSphere{
 			Vcenters: []string{},
 
-			ClusterInstances:       true,
+			ClusterInstances:       false,
 			ClusterMetricInclude:   nil,
 			ClusterMetricExclude:   nil,
 			HostInstances:          true,

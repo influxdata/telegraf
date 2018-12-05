@@ -122,17 +122,17 @@ vm_metric_exclude = [ "*" ]
   ## Clusters 
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
-  # cluster_instances = true ## true by default
+  # cluster_instances = false ## false by default 
 
   ## Datastores 
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
-  # datastore_instances = false ## false by default for Datastores only
+  # datastore_instances = false ## false by default 
 
   ## Datacenters
   datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
-  # datacenter_instances = false ## false by default for Datastores only
+  # datacenter_instances = false ## false by default 
 
   ## Plugin Settings  
   ## separator character to use for measurement and field names (default: "_")
