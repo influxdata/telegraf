@@ -55,6 +55,9 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	var devlinks strings.Builder
 	for scnr.Scan() {
 		l := scnr.Text()
+		if len(l) < 4 {
+			continue
+		}
 		if l[:2] == "S:" {
 			if devlinks.Len() > 0 {
 				devlinks.WriteString(" " + l[2:])
@@ -63,7 +66,7 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 			}
 			continue
 		}
-		if len(l) < 4 || l[:2] != "E:" {
+		if l[:2] != "E:" {
 			continue
 		}
 		kv := strings.SplitN(l[2:], "=", 2)
