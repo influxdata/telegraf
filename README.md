@@ -311,6 +311,7 @@ For documentation on the latest development code see the [documentation index][d
 * [rename](./plugins/processors/rename)
 * [strings](./plugins/processors/strings)
 * [topk](./plugins/processors/topk)
+* [javascript](./plugins/processors/javascript)
 
 ## Aggregator Plugins
 
