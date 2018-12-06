@@ -627,7 +627,7 @@
   revision = "7c63b0a71ef8300adc255344d275e10e5c3a71ec"
 
 [[projects]]
-  digest = "1:2de1791b9e43f26c696e36950e42676565e7da7499a870bc02213da4b59b1d14"
+  digest = "1:5544f7badae00bc5b9ec6829857bc08f88fce4d3ef73fb616ee57d49abbf7f48"
   name = "github.com/jackc/pgx"
   packages = [
     ".",
@@ -639,8 +639,8 @@
     "stdlib",
   ]
   pruneopts = ""
-  revision = "da3231b0b66e2e74cdb779f1d46c5e958ba8be27"
-  version = "v3.1.0"
+  revision = "89f1e6ac7276b61d885db5e5aed6fcbedd1c7e31"
+  version = "v3.2.0"
 
 [[projects]]
   digest = "1:6f49eae0c1e5dab1dafafee34b207aeb7a42303105960944828c2079b92fc88e"
@@ -1172,7 +1172,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "0:"
+  digest = "1:b697592485cb412be4188c08ca0beed9aab87f36b86418e21acc4a3998f63734"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
@@ -1253,7 +1253,7 @@
   revision = "19ff8768a5c0b8e46ea281065664787eefc24121"
 
 [[projects]]
-  digest = "0:"
+  digest = "1:c1771ca6060335f9768dff6558108bc5ef6c58506821ad43377ee23ff059e472"
   name = "google.golang.org/appengine"
   packages = [
     ".",

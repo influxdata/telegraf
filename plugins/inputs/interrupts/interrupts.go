@@ -12,7 +12,9 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type Interrupts struct{}
+type Interrupts struct {
+	CpuAsTag bool `toml:"cpu_as_tag"`
+}
 
 type IRQ struct {
 	ID     string
@@ -27,9 +29,17 @@ func NewIRQ(id string) *IRQ {
 }
 
 const sampleConfig = `
+  ## When set to true, cpu metrics are tagged with the cpu.  Otherwise cpu is
+  ## stored as a field.
+  ##
+  ## The default is false for backwards compatibility, and will be changed to
+  ## true in a future version.  It is recommended to set to true on new
+  ## deployments.
+  # cpu_as_tag = false
+
   ## To filter which IRQs to collect, make use of tagpass / tagdrop, i.e.
   # [inputs.interrupts.tagdrop]
-    # irq = [ "NET_RX", "TASKLET" ]
+  #   irq = [ "NET_RX", "TASKLET" ]
 `
 
 func (s *Interrupts) Description() string {
@@ -92,7 +102,7 @@ func gatherTagsFields(irq IRQ) (map[string]string, map[string]interface{}) {
 	tags := map[string]string{"irq": irq.ID, "type": irq.Type, "device": irq.Device}
 	fields := map[string]interface{}{"total": irq.Total}
 	for i := 0; i < len(irq.Cpus); i++ {
-		cpu := fmt.Sprintf("CPU%d", i)
+		cpu := fmt.Sprintf("cpu%d", i)
 		fields[cpu] = irq.Cpus[i]
 	}
 	return tags, fields
@@ -111,12 +121,26 @@ func (s *Interrupts) Gather(acc telegraf.Accumulator) error {
 			acc.AddError(fmt.Errorf("Parsing %s: %s", file, err))
 			continue
 		}
-		for _, irq := range irqs {
-			tags, fields := gatherTagsFields(irq)
+		reportMetrics(measurement, irqs, acc, s.CpuAsTag)
+	}
+	return nil
+}
+
+func reportMetrics(measurement string, irqs []IRQ, acc telegraf.Accumulator, cpusAsTags bool) {
+	for _, irq := range irqs {
+		tags, fields := gatherTagsFields(irq)
+		if cpusAsTags {
+			for cpu, count := range irq.Cpus {
+				cpuTags := map[string]string{"cpu": fmt.Sprintf("cpu%d", cpu)}
+				for k, v := range tags {
+					cpuTags[k] = v
+				}
+				acc.AddFields(measurement, map[string]interface{}{"count": count}, cpuTags)
+			}
+		} else {
 			acc.AddFields(measurement, fields, tags)
 		}
 	}
-	return nil
 }
 
 func init() {
