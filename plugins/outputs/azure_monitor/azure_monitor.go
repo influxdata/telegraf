@@ -370,8 +370,8 @@ func translate(m telegraf.Metric, prefix string) (*azureMonitorMetric, error) {
 			value = "<empty>"
 		}
 
-		dimensionNames = append(dimensionNames, tag.Key)
-		dimensionValues = append(dimensionValues, tag.Value)
+		dimensionNames = append(dimensionNames, key)
+		dimensionValues = append(dimensionValues, value)
 	}
 
 	min, err := getFloatField(m, "min")
