@@ -920,6 +920,22 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:76695a5588998a21701d17ea689a45fa39a8c5f52c47607f74f9a92416bb6961"
+  name = "github.com/robertkrimen/otto"
+  packages = [
+    ".",
+    "ast",
+    "dbg",
+    "file",
+    "parser",
+    "registry",
+    "token",
+  ]
+  pruneopts = ""
+  revision = "15f95af6e78dcd2030d8195a138bd88d4f403546"
+
+[[projects]]
+  branch = "master"
   digest = "1:7fc2f428767a2521abc63f1a663d981f61610524275d6c0ea645defadd4e916f"
   name = "github.com/samuel/go-zookeeper"
   packages = ["zk"]
@@ -1407,6 +1423,17 @@
   version = "v5.0.70"
 
 [[projects]]
+  digest = "1:be5b8bdf182abbef3c4e0d0926bba912ef41b097f001259cb5d2187370bb2e5b"
+  name = "gopkg.in/sourcemap.v1"
+  packages = [
+    ".",
+    "base64vlq",
+  ]
+  pruneopts = ""
+  revision = "6e83acea0053641eff084973fee085f0c193c61a"
+  version = "v1.0.5"
+
+[[projects]]
   branch = "v1"
   digest = "1:a96d16bd088460f2e0685d46c39bcf1208ba46e0a977be2df49864ec7da447dd"
   name = "gopkg.in/tomb.v1"
@@ -1495,6 +1522,7 @@
     "github.com/prometheus/client_model/go",
     "github.com/prometheus/common/expfmt",
     "github.com/prometheus/common/log",
+    "github.com/robertkrimen/otto",
     "github.com/satori/go.uuid",
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/disk",
