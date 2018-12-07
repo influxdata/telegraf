@@ -58,10 +58,10 @@ var sampleConfig = `
   ## The value will then be resetted into the metric, replacing the original one.
   ## If field is not found, it will be ignored and an error message will appear.
   [[processors.javascript.get_fields]]
-	name = "myfield",
+	name = "myfield"
 	data_type = "string"
   [[processors.javascript.get_fields]]
-	name = "myotherfield",
+	name = "myotherfield"
 	data_type = "integer"
 `
 
