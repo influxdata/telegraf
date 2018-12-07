@@ -861,8 +861,13 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 
 			avg := float64(0)
 			nValues := 0
-			//log.Printf("D! [input.vsphere] %s %d samples", name, len(v.Value))
 			for idx, sample := range em.SampleInfo {
+				// According to the docs, SampleInfo and Value should have the same length, but we've seen corrupted
+				// data coming back with missing values. Take care of that gracefully!
+				if idx >= len(v.Value) {
+					log.Printf("D! [input.vsphere] len(SampleInfo)>len(Value) %d > %d", len(em.SampleInfo), len(v.Value))
+					break
+				}
 				value := float64(v.Value[idx])
 				if value < 0 {
 					continue
