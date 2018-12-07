@@ -199,10 +199,10 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, smartctl, no
 
 	device_tags := map[string]string{}
 	device_node := strings.SplitN(device, " ", 2)
-	if device_node[1] == "" {
-		device_tags["device"] = path.Base(device_node[0])
-	} else {
+	if len(device_node) == 2 && device_node[1] != "" {
 		device_tags["device"] = path.Base(device_node[0]) + " " + device_node[1]
+	} else if len(device_node) < 2 {
+		device_tags["device"] = path.Base(device_node[0])
 	}
 	device_fields := make(map[string]interface{})
 	device_fields["exit_status"] = exitStatus
