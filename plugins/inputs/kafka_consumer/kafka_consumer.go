@@ -275,6 +275,7 @@ func (k *Kafka) onDelivery(track telegraf.DeliveryInfo) {
 	msg, ok := k.messages[track.ID()]
 	if !ok {
 		log.Printf("E! [inputs.kafka_consumer] Could not mark message delivered: %d", track.ID())
+		return
 	}
 
 	if track.Delivered() {
