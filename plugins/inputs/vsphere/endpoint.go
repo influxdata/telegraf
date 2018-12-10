@@ -86,16 +86,6 @@ type objectRef struct {
 	dcname    string
 }
 
-type metricQRequest struct {
-	res *resourceKind
-	obj objectRef
-}
-
-type metricQResponse struct {
-	obj     objectRef
-	metrics *performance.MetricList
-}
-
 func (e *Endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, bool) {
 	if pKind, ok := e.resourceKinds[res.parent]; ok {
 		if p, ok := pKind.objects[obj.parentRef.Value]; ok {
