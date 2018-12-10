@@ -1,6 +1,8 @@
 package vsphere
 
-import "sync"
+import (
+	"sync"
+)
 
 // ThrottledExecutor provides a simple mechanism for running jobs in separate
 // goroutines while limit the number of concurrent jobs running at any given time.
@@ -24,10 +26,12 @@ func (t *ThrottledExecutor) Run(job func()) {
 	t.wg.Add(1)
 	t.limiter <- struct{}{}
 	go func() {
+		// Last resort panic handler.
+		defer HandlePanic()
+		defer t.wg.Done()
 		defer func() {
 			<-t.limiter
 		}()
-		defer t.wg.Done()
 		job()
 	}()
 }

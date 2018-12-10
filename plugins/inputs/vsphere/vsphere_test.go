@@ -308,7 +308,8 @@ func TestAll(t *testing.T) {
 	var acc testutil.Accumulator
 	v := defaultVSphere()
 	v.Vcenters = []string{s.URL.String()}
-	v.Start(nil) // We're not using the Accumulator, so it can be nil.
+	v.Start(&acc)
 	defer v.Stop()
 	require.NoError(t, v.Gather(&acc))
+	require.Equal(t, 0, len(acc.Errors), fmt.Sprintf("Errors found: %s", acc.Errors))
 }
