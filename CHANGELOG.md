@@ -1,4 +1,4 @@
-## v1.9.1 [unreleased]
+## v1.9.1 [2018-12-11]
 
 ### Bugfixes
 
