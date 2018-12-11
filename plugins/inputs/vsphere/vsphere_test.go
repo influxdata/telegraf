@@ -9,8 +9,11 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/influxdata/telegraf/internal"
 	itls "github.com/influxdata/telegraf/internal/tls"
@@ -185,6 +188,8 @@ func defaultVSphere() *VSphere {
 		ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 		Timeout:                 internal.Duration{Duration: time.Second * 20},
 		ForceDiscoverOnInit:     true,
+		DiscoverConcurrency:     1,
+		CollectConcurrency:      1,
 	}
 }
 
@@ -215,32 +220,37 @@ func TestParseConfig(t *testing.T) {
 }
 
 func TestWorkerPool(t *testing.T) {
-	wp := NewWorkerPool(100)
-	ctx := context.Background()
-	wp.Run(ctx, func(ctx context.Context, p interface{}) interface{} {
-		return p.(int) * 2
-	}, 10)
-
-	n := 100000
-	wp.Fill(ctx, func(ctx context.Context, f PushFunc) {
-		for i := 0; i < n; i++ {
-			f(ctx, i)
-		}
-	})
-	results := make([]int, n)
-	i := 0
-	wp.Drain(ctx, func(ctx context.Context, p interface{}) bool {
-		results[i] = p.(int)
-		i++
-		return true
-	})
+	max := int64(0)
+	ngr := int64(0)
+	n := 10000
+	var mux sync.Mutex
+	results := make([]int, 0, n)
+	te := NewThrottledExecutor(5)
+	for i := 0; i < n; i++ {
+		func(i int) {
+			te.Run(func() {
+				atomic.AddInt64(&ngr, 1)
+				mux.Lock()
+				defer mux.Unlock()
+				results = append(results, i*2)
+				if ngr > max {
+					max = ngr
+				}
+				time.Sleep(100 * time.Microsecond)
+				atomic.AddInt64(&ngr, -1)
+			})
+		}(i)
+	}
+	te.Wait()
 	sort.Ints(results)
 	for i := 0; i < n; i++ {
-		require.Equal(t, results[i], i*2)
+		require.Equal(t, results[i], i*2, "Some jobs didn't run")
 	}
+	require.Equal(t, int64(5), max, "Wrong number of goroutines spawned")
 }
 
 func TestTimeout(t *testing.T) {
+<<<<<<< HEAD
 	v := defaultVSphere()
 	url := os.Getenv("TGF_TEST_VSPHERE_URL")
 	if url != "" {
@@ -254,6 +264,18 @@ func TestTimeout(t *testing.T) {
 	} else {
 		v.Username = os.Getenv("TGF_TEST_VSPHERE_USER")
 		v.Password = os.Getenv("TGF_TEST_VSPHERE_PASSWORD")
+=======
+	// Don't run test on 32-bit machines due to bug in simulator.
+	// https://github.com/vmware/govmomi/issues/1330
+	var i int
+	if unsafe.Sizeof(i) < 8 {
+		return
+	}
+
+	m, s, err := createSim()
+	if err != nil {
+		t.Fatal(err)
+>>>>>>> origin/prydin-scale-improvement
 	}
 
 	var acc testutil.Accumulator
@@ -261,8 +283,13 @@ func TestTimeout(t *testing.T) {
 	v.Timeout = internal.Duration{Duration: 1 * time.Nanosecond}
 	require.NoError(t, v.Start(nil)) // We're not using the Accumulator, so it can be nil.
 	defer v.Stop()
+<<<<<<< HEAD
 	err := v.Gather(&acc)
 	require.NotNil(t, err, "Error should not be nil here")
+=======
+	err = v.Gather(&acc)
+	require.True(t, len(acc.Errors) > 0, "Errors should not be empty here")
+>>>>>>> origin/prydin-scale-improvement
 
 	// The accumulator must contain exactly one error and it must be a deadline exceeded.
 	require.Equal(t, 1, len(acc.Errors))
@@ -270,6 +297,12 @@ func TestTimeout(t *testing.T) {
 }
 
 func TestMaxQuery(t *testing.T) {
+	// Don't run test on 32-bit machines due to bug in simulator.
+	// https://github.com/vmware/govmomi/issues/1330
+	var i int
+	if unsafe.Sizeof(i) < 8 {
+		return
+	}
 	m, s, err := createSim()
 	if err != nil {
 		t.Fatal(err)
@@ -436,6 +469,13 @@ func TestExternalFinder(t *testing.T) {
 }
 
 func TestAll(t *testing.T) {
+	// Don't run test on 32-bit machines due to bug in simulator.
+	// https://github.com/vmware/govmomi/issues/1330
+	var i int
+	if unsafe.Sizeof(i) < 8 {
+		return
+	}
+
 	m, s, err := createSim()
 	if err != nil {
 		t.Fatal(err)
@@ -446,7 +486,8 @@ func TestAll(t *testing.T) {
 	var acc testutil.Accumulator
 	v := defaultVSphere()
 	v.Vcenters = []string{s.URL.String()}
-	v.Start(nil) // We're not using the Accumulator, so it can be nil.
+	v.Start(&acc)
 	defer v.Stop()
 	require.NoError(t, v.Gather(&acc))
+	require.Equal(t, 0, len(acc.Errors), fmt.Sprintf("Errors found: %s", acc.Errors))
 }

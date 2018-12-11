@@ -40,6 +40,8 @@ type Kafka struct {
 	Offset                 string   `toml:"offset"`
 	SASLUsername           string   `toml:"sasl_username"`
 	SASLPassword           string   `toml:"sasl_password"`
+	TopicTag               string   `toml:"topic_tag"`
+
 	tls.ClientConfig
 
 	cluster Consumer
@@ -60,6 +62,8 @@ var sampleConfig = `
   brokers = ["localhost:9092"]
   ## topic(s) to consume
   topics = ["telegraf"]
+  ## Add topic as tag if topic_tag is not empty
+  # topic_tag = ""
 
   ## Optional Client id
   # client_id = "Telegraf"
@@ -256,7 +260,11 @@ func (k *Kafka) onMessage(acc telegraf.TrackingAccumulator, msg *sarama.Consumer
 	if err != nil {
 		return err
 	}
-
+	if len(k.TopicTag) > 0 {
+		for _, metric := range metrics {
+			metric.AddTag(k.TopicTag, msg.Topic)
+		}
+	}
 	id := acc.AddTrackingMetricGroup(metrics)
 	k.messages[id] = msg
 

@@ -438,6 +438,10 @@ func mapResultCode(s string) int {
 
 func init() {
 	inputs.Add("jenkins", func() telegraf.Input {
-		return &Jenkins{}
+		return &Jenkins{
+			MaxBuildAge:       internal.Duration{Duration: time.Duration(time.Hour)},
+			MaxConnections:    5,
+			MaxSubJobPerLayer: 10,
+		}
 	})
 }
