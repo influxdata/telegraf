@@ -109,6 +109,7 @@ func (r *RunningAggregator) metricDropped(metric telegraf.Metric) {
 // Add a metric to the aggregator and return true if the original metric
 // should be dropped.
 func (r *RunningAggregator) Add(metric telegraf.Metric) bool {
+
 	if ok := r.Config.Filter.Select(metric); !ok {
 		return false
 	}
@@ -121,9 +122,9 @@ func (r *RunningAggregator) Add(metric telegraf.Metric) bool {
 	r.Lock()
 	defer r.Unlock()
 
-	if r.periodStart.IsZero() || metric.Time().Before(r.periodStart) || metric.Time().After(r.periodEnd) {
+	if r.periodStart.IsZero() || metric.Time().After(r.periodEnd) {
 		r.metricDropped(metric)
-		return false
+		return r.Config.DropOriginal
 	}
 
 	r.Aggregator.Add(metric)
