@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/influxdata/telegraf/internal"
 	itls "github.com/influxdata/telegraf/internal/tls"
@@ -239,6 +240,13 @@ func TestWorkerPool(t *testing.T) {
 }
 
 func TestTimeout(t *testing.T) {
+	// Don't run test on 32-bit machines due to bug in simulator.
+	// https://github.com/vmware/govmomi/issues/1330
+	var i int
+	if unsafe.Sizeof(i) < 8 {
+		return
+	}
+
 	m, s, err := createSim()
 	if err != nil {
 		t.Fatal(err)
@@ -261,6 +269,12 @@ func TestTimeout(t *testing.T) {
 }
 
 func TestMaxQuery(t *testing.T) {
+	// Don't run test on 32-bit machines due to bug in simulator.
+	// https://github.com/vmware/govmomi/issues/1330
+	var i int
+	if unsafe.Sizeof(i) < 8 {
+		return
+	}
 	m, s, err := createSim()
 	if err != nil {
 		t.Fatal(err)
@@ -298,6 +312,13 @@ func TestMaxQuery(t *testing.T) {
 }
 
 func TestAll(t *testing.T) {
+	// Don't run test on 32-bit machines due to bug in simulator.
+	// https://github.com/vmware/govmomi/issues/1330
+	var i int
+	if unsafe.Sizeof(i) < 8 {
+		return
+	}
+
 	m, s, err := createSim()
 	if err != nil {
 		t.Fatal(err)
