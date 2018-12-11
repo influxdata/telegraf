@@ -19,6 +19,7 @@
 - [#3817](https://github.com/influxdata/telegraf/issues/3817): Add support for client tls certificates in postgresql inputs.
 - [#5118](https://github.com/influxdata/telegraf/issues/5118): Prevent panic when marking the offset in kafka_consumer.
 - [#5085](https://github.com/influxdata/telegraf/issues/5085): Add early metrics to aggregator and honor drop_original setting.
+- [#5112](https://github.com/influxdata/telegraf/issues/5112): Use -W flag on bsd variants in ping input.
 
 ## v1.9 [2018-11-20]
 
