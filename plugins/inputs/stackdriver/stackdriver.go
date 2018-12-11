@@ -46,8 +46,8 @@ project = "projects/erudite-bloom-151019"
 ## Collection Delay Seconds (required - must account for metrics availability via Stackdriver Monitoring API)
 # delaySeconds = 60
 
-## Recommended: use metric 'interval' that equals to 'lookbackSeconds' to avoid
-## gaps or overlap in pulled data
+## Recommended: use metric 'interval' that is not greater than 'lookbackSeconds' to avoid
+## gaps in pulled data
 interval = "10m"
 
 ## Configure the TTL for the internal cache of timeseries requests.
