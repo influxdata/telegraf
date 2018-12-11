@@ -7,7 +7,7 @@
 - [#5038](https://github.com/influxdata/telegraf/pull/5038): Add ability to tag metrics with topic in kafka_consumer.
 - [#5024](https://github.com/influxdata/telegraf/pull/5024): Add option to store cpu as a tag in interrupts input.
 
-## v1.9.1 [unreleased]
+## v1.9.1 [2018-12-11]
 
 ### Bugfixes
 
