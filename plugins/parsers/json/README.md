@@ -43,7 +43,10 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
 
   ## Time format is the time layout that should be used to interprete the
   ## json_time_key.  The time must be `unix`, `unix_ms` or a time in the
-  ## "reference time".
+  ## "reference time".  To define a different format, arrange the values from
+  ## the "reference time" in the example to match the format you will be
+  ## using.  For more information on the "reference time", visit
+  ## https://golang.org/pkg/time/#Time.Format
   ##   ex: json_time_format = "Mon Jan 2 15:04:05 -0700 MST 2006"
   ##       json_time_format = "2006-01-02T15:04:05Z07:00"
   ##       json_time_format = "unix"

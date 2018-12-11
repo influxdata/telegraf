@@ -76,6 +76,7 @@ line and the `semantic_name` is used to name the field or tag.  The extension
 other special handling.
 
 By default all named captures are converted into string fields.
+If a pattern does not have a semantic name it will not be captured.
 Timestamp modifiers can be used to convert captures to the timestamp of the
 parsed metric.  If no timestamp is parsed the metric will be created using the
 current time.
