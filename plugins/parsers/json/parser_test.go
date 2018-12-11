@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"log"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -596,6 +599,72 @@ func TestTimeParser(t *testing.T) {
 	require.Equal(t, false, metrics[0].Time() == metrics[1].Time())
 }
 
+func TestUnixTimeParser(t *testing.T) {
+	testString := `[
+		{
+			"a": 5,
+			"b": {
+				"c": 6,
+				"time": "1536001411.1234567890"
+			},
+			"my_tag_1": "foo",
+			"my_tag_2": "baz"
+		},
+		{
+			"a": 7,
+			"b": {
+				"c": 8,
+				"time": 1536002769.123
+			},
+			"my_tag_1": "bar",
+			"my_tag_2": "baz"
+		}
+	]`
+
+	parser := JSONParser{
+		MetricName:     "json_test",
+		JSONTimeKey:    "b_time",
+		JSONTimeFormat: "unix",
+	}
+	metrics, err := parser.Parse([]byte(testString))
+	require.NoError(t, err)
+	require.Equal(t, 2, len(metrics))
+	require.Equal(t, false, metrics[0].Time() == metrics[1].Time())
+}
+
+func TestUnixMsTimeParser(t *testing.T) {
+	testString := `[
+		{
+			"a": 5,
+			"b": {
+				"c": 6,
+				"time": "1536001411100"
+			},
+			"my_tag_1": "foo",
+			"my_tag_2": "baz"
+		},
+		{
+			"a": 7,
+			"b": {
+				"c": 8,
+				"time": 1536002769123
+			},
+			"my_tag_1": "bar",
+			"my_tag_2": "baz"
+		}
+	]`
+
+	parser := JSONParser{
+		MetricName:     "json_test",
+		JSONTimeKey:    "b_time",
+		JSONTimeFormat: "unix_ms",
+	}
+	metrics, err := parser.Parse([]byte(testString))
+	require.NoError(t, err)
+	require.Equal(t, 2, len(metrics))
+	require.Equal(t, false, metrics[0].Time() == metrics[1].Time())
+}
+
 func TestTimeErrors(t *testing.T) {
 	testString := `{
 		"a": 5,
@@ -657,4 +726,28 @@ func TestNameKey(t *testing.T) {
 	metrics, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
 	require.Equal(t, "this is my name", metrics[0].Name())
+}
+
+func TestTimeKeyDelete(t *testing.T) {
+	data := `{
+		"timestamp": 1541183052,
+		"value": 42
+	}`
+
+	parser := JSONParser{
+		MetricName:     "json",
+		JSONTimeKey:    "timestamp",
+		JSONTimeFormat: "unix",
+	}
+
+	metrics, err := parser.Parse([]byte(data))
+	require.NoError(t, err)
+	expected := []telegraf.Metric{
+		testutil.MustMetric("json",
+			map[string]string{},
+			map[string]interface{}{"value": 42.0},
+			time.Unix(1541183052, 0)),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, metrics)
 }

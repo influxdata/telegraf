@@ -144,7 +144,7 @@ func (p *PrometheusClient) auth(h http.Handler) http.Handler {
 	})
 }
 
-func (p *PrometheusClient) Start() error {
+func (p *PrometheusClient) Connect() error {
 	defaultCollectors := map[string]bool{
 		"gocollector": true,
 		"process":     true,
@@ -154,7 +154,7 @@ func (p *PrometheusClient) Start() error {
 	}
 
 	registry := prometheus.NewRegistry()
-	for collector, _ := range defaultCollectors {
+	for collector := range defaultCollectors {
 		switch collector {
 		case "gocollector":
 			registry.Register(prometheus.NewGoCollector())
@@ -200,15 +200,6 @@ func (p *PrometheusClient) Start() error {
 	return nil
 }
 
-func (p *PrometheusClient) Stop() {
-	// plugin gets cleaned up in Close() already.
-}
-
-func (p *PrometheusClient) Connect() error {
-	// This service output does not need to make any further connections
-	return nil
-}
-
 func (p *PrometheusClient) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
@@ -236,7 +227,7 @@ func (p *PrometheusClient) Expire() {
 	for name, family := range p.fam {
 		for key, sample := range family.Samples {
 			if p.ExpirationInterval.Duration != 0 && now.After(sample.Expiration) {
-				for k, _ := range sample.Labels {
+				for k := range sample.Labels {
 					family.LabelSet[k]--
 				}
 				delete(family.Samples, key)
@@ -323,7 +314,7 @@ func CreateSampleID(tags map[string]string) SampleID {
 
 func addSample(fam *MetricFamily, sample *Sample, sampleID SampleID) {
 
-	for k, _ := range sample.Labels {
+	for k := range sample.Labels {
 		fam.LabelSet[k]++
 	}
 

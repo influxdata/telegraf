@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/outputs/influxdb"
 	"github.com/stretchr/testify/require"
@@ -246,6 +247,8 @@ func TestHTTP_Write(t *testing.T) {
 	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
 	require.NoError(t, err)
 
+	internal.SetVersion("1.2.3")
+
 	tests := []struct {
 		name             string
 		config           *influxdb.HTTPConfig
@@ -292,6 +295,17 @@ func TestHTTP_Write(t *testing.T) {
 			},
 			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, r.Header.Get("User-Agent"), "telegraf")
+				w.WriteHeader(http.StatusNoContent)
+			},
+		},
+		{
+			name: "default user agent",
+			config: &influxdb.HTTPConfig{
+				URL:      u,
+				Database: "telegraf",
+			},
+			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, r.Header.Get("User-Agent"), "Telegraf/1.2.3")
 				w.WriteHeader(http.StatusNoContent)
 			},
 		},
