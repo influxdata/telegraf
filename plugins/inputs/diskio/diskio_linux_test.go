@@ -14,7 +14,8 @@ import (
 var nullDiskInfo = []byte(`
 E:MY_PARAM_1=myval1
 E:MY_PARAM_2=myval2
-S:foo/bar/devlink foo/bar/devlink1
+S:foo/bar/devlink
+S:foo/bar/devlink1
 `)
 
 // setupNullDisk sets up fake udev info as if /dev/null were a disk.
