@@ -60,6 +60,9 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 			continue
 		}
 		if l[:2] == "S:" {
+			if devlinks.Len() > 0 {
+				devlinks.WriteString(" ")
+			}
 			devlinks.WriteString("/dev/")
 			devlinks.WriteString(l[2:])
 			continue
