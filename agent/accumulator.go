@@ -82,6 +82,7 @@ func (ac *accumulator) AddHistogram(
 }
 
 func (ac *accumulator) AddMetric(m telegraf.Metric) {
+	m.SetTime(m.Time().Round(ac.precision))
 	if m := ac.maker.MakeMetric(m); m != nil {
 		ac.metrics <- m
 	}

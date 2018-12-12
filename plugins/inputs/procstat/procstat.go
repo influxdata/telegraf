@@ -93,6 +93,7 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		case "pgrep":
 			p.createPIDFinder = NewPgrep
 		default:
+			p.PidFinder = "pgrep"
 			p.createPIDFinder = defaultPIDFinder
 		}
 
@@ -101,7 +102,22 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		p.createProcess = defaultProcess
 	}
 
-	procs, err := p.updateProcesses(acc, p.procs)
+	pids, tags, err := p.findPids(acc)
+	if err != nil {
+		fields := map[string]interface{}{
+			"pid_count":   0,
+			"running":     0,
+			"result_code": 1,
+		}
+		tags := map[string]string{
+			"pid_finder": p.PidFinder,
+			"result":     "lookup_error",
+		}
+		acc.AddFields("procstat_lookup", fields, tags)
+		return err
+	}
+
+	procs, err := p.updateProcesses(pids, tags, p.procs)
 	if err != nil {
 		acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
 			p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
@@ -109,14 +125,23 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	p.procs = procs
 
 	for _, proc := range p.procs {
-		p.addMetrics(proc, acc)
+		p.addMetric(proc, acc)
 	}
+
+	fields := map[string]interface{}{
+		"pid_count":   len(pids),
+		"running":     len(procs),
+		"result_code": 0,
+	}
+	tags["pid_finder"] = p.PidFinder
+	tags["result"] = "success"
+	acc.AddFields("procstat_lookup", fields, tags)
 
 	return nil
 }
 
 // Add metrics a single Process
-func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
+func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 	var prefix string
 	if p.Prefix != "" {
 		prefix = p.Prefix + "_"
@@ -242,12 +267,7 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 }
 
 // Update monitored Processes
-func (p *Procstat) updateProcesses(acc telegraf.Accumulator, prevInfo map[PID]Process) (map[PID]Process, error) {
-	pids, tags, err := p.findPids(acc)
-	if err != nil {
-		return nil, err
-	}
-
+func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo map[PID]Process) (map[PID]Process, error) {
 	procs := make(map[PID]Process, len(prevInfo))
 
 	for _, pid := range pids {
@@ -327,18 +347,7 @@ func (p *Procstat) findPids(acc telegraf.Accumulator) ([]PID, map[string]string,
 		err = fmt.Errorf("Either exe, pid_file, user, pattern, systemd_unit, cgroup, or win_service must be specified")
 	}
 
-	rTags := make(map[string]string)
-	for k, v := range tags {
-		rTags[k] = v
-	}
-
-	//adds a metric with info on the pgrep query
-	fields := make(map[string]interface{})
-	tags["pid_finder"] = p.PidFinder
-	fields["pid_count"] = len(pids)
-	acc.AddFields("procstat_lookup", fields, tags)
-
-	return pids, rTags, err
+	return pids, tags, err
 }
 
 // execCommand is so tests can mock out exec.Command usage.
