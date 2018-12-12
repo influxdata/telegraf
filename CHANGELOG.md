@@ -6,6 +6,14 @@
 - [#5047](https://github.com/influxdata/telegraf/pull/5047): Add support for unix and unix_ms timestamps to csv parser.
 - [#5038](https://github.com/influxdata/telegraf/pull/5038): Add ability to tag metrics with topic in kafka_consumer.
 - [#5024](https://github.com/influxdata/telegraf/pull/5024): Add option to store cpu as a tag in interrupts input.
+- [#5074](https://github.com/influxdata/telegraf/pull/5074): Add support for sending a request body to http input.
+- [#5069](https://github.com/influxdata/telegraf/pull/5069): Add running field to procstat_lookup.
+
+## v1.9.2 [unreleased]
+
+### Bugfixes
+
+- [#5130](https://github.com/influxdata/telegraf/pull/5130): Increase varnishstat timeout.
 
 ## v1.9.1 [2018-12-11]
 
