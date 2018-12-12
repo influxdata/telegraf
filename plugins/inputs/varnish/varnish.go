@@ -78,7 +78,7 @@ func varnishRunner(cmdName string, UseSudo bool, InstanceName string) (*bytes.Bu
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, time.Millisecond*200)
+	err := internal.RunTimeout(cmd, time.Millisecond*500)
 	if err != nil {
 		return &out, fmt.Errorf("error running varnishstat: %s", err)
 	}
