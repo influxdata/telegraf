@@ -143,7 +143,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5a5f28fcfe3a74247733a31ceaac0e53bfc2723e43c596b2e3f110eda9378575"
+  digest = "1:0828d8c0f95689f832cf348fe23827feb7640cd698d612ef59e2f9d041f54c68"
   name = "github.com/apache/thrift"
   packages = ["lib/go/thrift"]
   pruneopts = ""
@@ -289,7 +289,7 @@
   revision = "edc3ab29cdff8694dd6feb85cfeb4b5f1b38ed9c"
 
 [[projects]]
-  digest = "1:d2ca9295cce7d0e7b26b498c6b59ff903d8315e8ead97f0f6cadf9e7d613e1e8"
+  digest = "1:d149605f1b00713fdc48150122892d77d49d30c825f690dd92f497aeb6cf18f5"
   name = "github.com/docker/docker"
   packages = [
     "api",
@@ -568,7 +568,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e1c91a91cc738cebecbf12fc98f554f6f932c8b97e2052ad63ea43948df5bcb0"
+  digest = "1:ff65bf6fc4d1116f94ac305342725c21b55c16819c2606adc8f527755716937f"
   name = "github.com/hashicorp/go-rootcerts"
   packages = ["."]
   pruneopts = ""
