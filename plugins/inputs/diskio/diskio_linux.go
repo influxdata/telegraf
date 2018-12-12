@@ -75,7 +75,7 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	}
 
 	var devlink_str string
-	if len(devlinks) > 0 {
+	if devlinks.Len() > 0 {
 		di["DEVLINKS"] = devlinks.String()
 	}
 
