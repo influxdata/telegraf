@@ -340,6 +340,10 @@ func hashIDWithTagKeysOnly(m telegraf.Metric) uint64 {
 	h.Write([]byte(m.Name()))
 	h.Write([]byte("\n"))
 	for _, tag := range m.TagList() {
+		if tag.Key == "" || tag.Value == "" {
+			continue
+		}
+
 		h.Write([]byte(tag.Key))
 		h.Write([]byte("\n"))
 	}
@@ -359,19 +363,12 @@ func translate(m telegraf.Metric, prefix string) (*azureMonitorMetric, error) {
 			continue
 		}
 
-		var key = tag.Key
-		var value = tag.Value
-
-		if key == "" {
+		if tag.Key == "" || tag.Value == "" {
 			continue
 		}
 
-		if value == "" {
-			value = "<empty>"
-		}
-
-		dimensionNames = append(dimensionNames, key)
-		dimensionValues = append(dimensionValues, value)
+		dimensionNames = append(dimensionNames, tag.Key)
+		dimensionValues = append(dimensionValues, tag.Value)
 	}
 
 	min, err := getFloatField(m, "min")
