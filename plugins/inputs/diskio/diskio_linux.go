@@ -59,7 +59,8 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 			continue
 		}
 		if l[:2] == "S:" {
-			devlinks = append(devlinks, "/dev/" + l[2:])
+			devlinks = append(devlinks, "/dev/")
+			devlinks = append(devlinks, l[2:])
 			continue
 		}
 		if l[:2] != "E:" {
