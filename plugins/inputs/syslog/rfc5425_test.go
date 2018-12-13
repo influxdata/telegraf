@@ -355,9 +355,10 @@ func newTCPSyslogReceiver(address string, keepAlive *internal.Duration, maxConn 
 		now: func() time.Time {
 			return defaultTime
 		},
-		ReadTimeout: d,
-		BestEffort:  bestEffort,
-		Separator:   "_",
+		TransparentFraming: true,
+		ReadTimeout:        d,
+		BestEffort:         bestEffort,
+		Separator:          "_",
 	}
 	if keepAlive != nil {
 		s.KeepAlivePeriod = keepAlive
