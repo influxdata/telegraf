@@ -72,7 +72,7 @@
 
 [[constraint]]
   name = "github.com/influxdata/go-syslog"
-  version = "1.0.1"
+  version = "feature/rfc6587"
 
 [[constraint]]
   name = "github.com/influxdata/tail"
