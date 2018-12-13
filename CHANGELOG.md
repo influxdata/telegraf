@@ -14,6 +14,7 @@
 ### Bugfixes
 
 - [#5130](https://github.com/influxdata/telegraf/pull/5130): Increase varnishstat timeout.
+- [#5135](https://github.com/influxdata/telegraf/pull/5135): Remove storage calculation for non Azure managed instances and add server version.
 
 ## v1.9.1 [2018-12-11]
 
