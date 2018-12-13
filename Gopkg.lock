@@ -666,6 +666,14 @@
   revision = "615a14ed75099c9eaac6949e22ac2341bf9d3197"
 
 [[projects]]
+  digest = "1:a12b6f20a7e5eb7412d2e5cd15e1262a021f735fa958d664d9e7ba2160eefd0a"
+  name = "github.com/karrick/godirwalk"
+  packages = ["."]
+  pruneopts = ""
+  revision = "2de2192f9e35ce981c152a873ed943b93b79ced4"
+  version = "v1.7.5"
+
+[[projects]]
   branch = "master"
   digest = "1:63e7368fcf6b54804076eaec26fd9cf0c4466166b272393db4b93102e1e962df"
   name = "github.com/kballard/go-shellquote"
@@ -1480,6 +1488,7 @@
     "github.com/jackc/pgx/pgtype",
     "github.com/jackc/pgx/stdlib",
     "github.com/kardianos/service",
+    "github.com/karrick/godirwalk",
     "github.com/kballard/go-shellquote",
     "github.com/matttproud/golang_protobuf_extensions/pbutil",
     "github.com/miekg/dns",
