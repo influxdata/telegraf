@@ -340,6 +340,10 @@ func hashIDWithTagKeysOnly(m telegraf.Metric) uint64 {
 	h.Write([]byte(m.Name()))
 	h.Write([]byte("\n"))
 	for _, tag := range m.TagList() {
+		if tag.Key == "" || tag.Value == "" {
+			continue
+		}
+
 		h.Write([]byte(tag.Key))
 		h.Write([]byte("\n"))
 	}
