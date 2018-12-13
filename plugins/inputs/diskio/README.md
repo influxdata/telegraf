@@ -19,6 +19,10 @@ The diskio input plugin gathers metrics about disk traffic and timing.
   ## Currently only Linux is supported via udev properties. You can view
   ## available properties for a device by running:
   ## 'udevadm info -q property -n /dev/sda'
+  ## Note: Most, but not all, udev properties can be accessed this way. Properties
+  ## that are currently inaccessible include DEVTYPE, DEVNAME, and DEVPATH. 
+  ## DEVLINKS, however, can be used as a tag as of Telegraf 1.10
+  ## For more info see https://github.com/influxdata/telegraf/issues/3663
   # device_tags = ["ID_FS_TYPE", "ID_FS_USAGE"]
   #
   ## Using the same metadata source as device_tags, you can also customize the

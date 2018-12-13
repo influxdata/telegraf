@@ -2,6 +2,7 @@ package diskio
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -52,9 +53,21 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	defer f.Close()
 
 	scnr := bufio.NewScanner(f)
+	var devlinks bytes.Buffer
 	for scnr.Scan() {
 		l := scnr.Text()
-		if len(l) < 4 || l[:2] != "E:" {
+		if len(l) < 4 {
+			continue
+		}
+		if l[:2] == "S:" {
+			if devlinks.Len() > 0 {
+				devlinks.WriteString(" ")
+			}
+			devlinks.WriteString("/dev/")
+			devlinks.WriteString(l[2:])
+			continue
+		}
+		if l[:2] != "E:" {
 			continue
 		}
 		kv := strings.SplitN(l[2:], "=", 2)
@@ -62,6 +75,10 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 			continue
 		}
 		di[kv[0]] = kv[1]
+	}
+
+	if devlinks.Len() > 0 {
+		di["DEVLINKS"] = devlinks.String()
 	}
 
 	return di, nil

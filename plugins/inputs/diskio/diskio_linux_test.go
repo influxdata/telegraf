@@ -14,6 +14,8 @@ import (
 var nullDiskInfo = []byte(`
 E:MY_PARAM_1=myval1
 E:MY_PARAM_2=myval2
+S:foo/bar/devlink
+S:foo/bar/devlink1
 `)
 
 // setupNullDisk sets up fake udev info as if /dev/null were a disk.
@@ -47,6 +49,7 @@ func TestDiskInfo(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "myval1", di["MY_PARAM_1"])
 	assert.Equal(t, "myval2", di["MY_PARAM_2"])
+	assert.Equal(t, "/dev/foo/bar/devlink /dev/foo/bar/devlink1", di["DEVLINKS"])
 
 	// test that data is cached
 	err = clean()
@@ -56,6 +59,7 @@ func TestDiskInfo(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "myval1", di["MY_PARAM_1"])
 	assert.Equal(t, "myval2", di["MY_PARAM_2"])
+	assert.Equal(t, "/dev/foo/bar/devlink /dev/foo/bar/devlink1", di["DEVLINKS"])
 
 	// unfortunately we can't adjust mtime on /dev/null to test cache invalidation
 }
