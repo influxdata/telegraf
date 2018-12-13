@@ -38,8 +38,6 @@ const maxMetadataSamples = 100 // Number of resources to sample for metric metad
 type Endpoint struct {
 	Parent          *VSphere
 	URL             *url.URL
-	lastColls       map[string]time.Time
-	lastColl        time.Time
 	resourceKinds   map[string]resourceKind
 	hwMarks         *TSCache
 	lun2ds          map[string]string
@@ -67,6 +65,7 @@ type resourceKind struct {
 	simple           bool
 	metrics          performance.MetricList
 	parent           string
+	lastColl         time.Time
 }
 
 type metricEntry struct {
@@ -102,7 +101,6 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 	e := Endpoint{
 		URL:           url,
 		Parent:        parent,
-		lastColls:     make(map[string]time.Time),
 		hwMarks:       NewTSCache(1 * time.Hour),
 		lun2ds:        make(map[string]string),
 		initialized:   false,
@@ -786,8 +784,8 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	if err != nil {
 		return err
 	}
-	latest, hasLatest := e.lastColls[resourceType]
-	if hasLatest {
+	latest := res.lastColl
+	if !latest.IsZero() {
 		elapsed := now.Sub(latest).Seconds() + 5.0 // Allow 5 second jitter.
 		log.Printf("D! [input.vsphere]: Latest: %s, elapsed: %f, resource: %s", latest, elapsed, resourceType)
 		if !res.realTime && elapsed < float64(res.sampling) {
@@ -799,7 +797,6 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	} else {
 		latest = now.Add(time.Duration(-res.sampling) * time.Second)
 	}
-	e.lastColl = now
 
 	internalTags := map[string]string{"resourcetype": resourceType}
 	sw := NewStopwatchWithTags("gather_duration", e.URL.Host, internalTags)
@@ -834,7 +831,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 
 	log.Printf("D! [input.vsphere] Latest sample for %s set to %s", resourceType, latestSample)
 	if !latestSample.IsZero() {
-		e.lastColls[resourceType] = latestSample
+		res.lastColl = latestSample
 	}
 	sw.Stop()
 	SendInternalCounterWithTags("gather_count", e.URL.Host, internalTags, count)
@@ -856,6 +853,10 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 	metricInfo, err := client.CounterInfoByName(ctx)
 	if err != nil {
 		return count, latestSample, err
+	}
+
+	for _, pq := range pqs {
+		log.Printf("D! [input.vsphere] StartTime: %s, EndTime: %s", *pq.StartTime, *pq.EndTime)
 	}
 
 	ems, err := client.QueryMetrics(ctx, pqs)

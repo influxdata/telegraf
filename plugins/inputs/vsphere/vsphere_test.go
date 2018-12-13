@@ -4,8 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"net/url"
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -117,61 +115,89 @@ func defaultVSphere() *VSphere {
 		ClusterMetricExclude: nil,
 		ClusterInclude:       []string{"/**"},
 		HostMetricInclude: []string{
-			"cpu.ready.summation.delta.millisecond",
-			"cpu.latency.average.rate.percent",
-			"cpu.coreUtilization.average.rate.percent",
-			"mem.usage.average.absolute.percent",
-			"mem.swapinRate.average.rate.kiloBytesPerSecond",
-			"mem.state.latest.absolute.number",
-			"mem.latency.average.absolute.percent",
-			"mem.vmmemctl.average.absolute.kiloBytes",
-			"disk.read.average.rate.kiloBytesPerSecond",
-			"disk.write.average.rate.kiloBytesPerSecond",
-			"disk.numberReadAveraged.average.rate.number",
-			"disk.numberWriteAveraged.average.rate.number",
-			"disk.deviceReadLatency.average.absolute.millisecond",
-			"disk.deviceWriteLatency.average.absolute.millisecond",
-			"disk.totalReadLatency.average.absolute.millisecond",
-			"disk.totalWriteLatency.average.absolute.millisecond",
-			"storageAdapter.read.average.rate.kiloBytesPerSecond",
-			"storageAdapter.write.average.rate.kiloBytesPerSecond",
-			"storageAdapter.numberReadAveraged.average.rate.number",
-			"storageAdapter.numberWriteAveraged.average.rate.number",
-			"net.errorsRx.summation.delta.number",
-			"net.errorsTx.summation.delta.number",
-			"net.bytesRx.average.rate.kiloBytesPerSecond",
-			"net.bytesTx.average.rate.kiloBytesPerSecond",
-			"cpu.used.summation.delta.millisecond",
-			"cpu.usage.average.rate.percent",
-			"cpu.utilization.average.rate.percent",
-			"cpu.wait.summation.delta.millisecond",
-			"cpu.idle.summation.delta.millisecond",
-			"cpu.readiness.average.rate.percent",
-			"cpu.costop.summation.delta.millisecond",
-			"cpu.swapwait.summation.delta.millisecond",
-			"mem.swapoutRate.average.rate.kiloBytesPerSecond",
-			"disk.kernelReadLatency.average.absolute.millisecond",
-			"disk.kernelWriteLatency.average.absolute.millisecond"},
+			"cpu.coreUtilization.average",
+			"cpu.costop.summation",
+			"cpu.demand.average",
+			"cpu.idle.summation",
+			"cpu.latency.average",
+			"cpu.readiness.average",
+			"cpu.ready.summation",
+			"cpu.swapwait.summation",
+			"cpu.usage.average",
+			"cpu.usagemhz.average",
+			"cpu.used.summation",
+			"cpu.utilization.average",
+			"cpu.wait.summation",
+			"disk.deviceReadLatency.average",
+			"disk.deviceWriteLatency.average",
+			"disk.kernelReadLatency.average",
+			"disk.kernelWriteLatency.average",
+			"disk.numberReadAveraged.average",
+			"disk.numberWriteAveraged.average",
+			"disk.read.average",
+			"disk.totalReadLatency.average",
+			"disk.totalWriteLatency.average",
+			"disk.write.average",
+			"mem.active.average",
+			"mem.latency.average",
+			"mem.state.latest",
+			"mem.swapin.average",
+			"mem.swapinRate.average",
+			"mem.swapout.average",
+			"mem.swapoutRate.average",
+			"mem.totalCapacity.average",
+			"mem.usage.average",
+			"mem.vmmemctl.average",
+			"net.bytesRx.average",
+			"net.bytesTx.average",
+			"net.droppedRx.summation",
+			"net.droppedTx.summation",
+			"net.errorsRx.summation",
+			"net.errorsTx.summation",
+			"net.usage.average",
+			"power.power.average",
+			"storageAdapter.numberReadAveraged.average",
+			"storageAdapter.numberWriteAveraged.average",
+			"storageAdapter.read.average",
+			"storageAdapter.write.average",
+			"sys.uptime.latest"},
 		HostMetricExclude: nil,
 		HostInclude:       []string{"/**"},
 		VMMetricInclude: []string{
-			"cpu.ready.summation.delta.millisecond",
-			"mem.swapinRate.average.rate.kiloBytesPerSecond",
-			"virtualDisk.numberReadAveraged.average.rate.number",
-			"virtualDisk.numberWriteAveraged.average.rate.number",
-			"virtualDisk.totalReadLatency.average.absolute.millisecond",
-			"virtualDisk.totalWriteLatency.average.absolute.millisecond",
-			"virtualDisk.readOIO.latest.absolute.number",
-			"virtualDisk.writeOIO.latest.absolute.number",
-			"net.bytesRx.average.rate.kiloBytesPerSecond",
-			"net.bytesTx.average.rate.kiloBytesPerSecond",
-			"net.droppedRx.summation.delta.number",
-			"net.droppedTx.summation.delta.number",
-			"cpu.run.summation.delta.millisecond",
-			"cpu.used.summation.delta.millisecond",
-			"mem.swapoutRate.average.rate.kiloBytesPerSecond",
-			"virtualDisk.read.average.rate.kiloBytesPerSecond",
-			"virtualDisk.write.average.rate.kiloBytesPerSecond"},
+			"cpu.demand.average",
+			"cpu.idle.summation",
+			"cpu.latency.average",
+			"cpu.readiness.average",
+			"cpu.ready.summation",
+			"cpu.run.summation",
+			"cpu.usagemhz.average",
+			"cpu.used.summation",
+			"cpu.wait.summation",
+			"mem.active.average",
+			"mem.granted.average",
+			"mem.latency.average",
+			"mem.swapin.average",
+			"mem.swapinRate.average",
+			"mem.swapout.average",
+			"mem.swapoutRate.average",
+			"mem.usage.average",
+			"mem.vmmemctl.average",
+			"net.bytesRx.average",
+			"net.bytesTx.average",
+			"net.droppedRx.summation",
+			"net.droppedTx.summation",
+			"net.usage.average",
+			"power.power.average",
+			"virtualDisk.numberReadAveraged.average",
+			"virtualDisk.numberWriteAveraged.average",
+			"virtualDisk.read.average",
+			"virtualDisk.readOIO.latest",
+			"virtualDisk.throughput.usage.average",
+			"virtualDisk.totalReadLatency.average",
+			"virtualDisk.totalWriteLatency.average",
+			"virtualDisk.write.average",
+			"virtualDisk.writeOIO.latest",
+			"sys.uptime.latest"},
 		VMMetricExclude: nil,
 		VMInclude:       []string{"/**"},
 		DatastoreMetricInclude: []string{
@@ -185,6 +211,7 @@ func defaultVSphere() *VSphere {
 		ClientConfig:            itls.ClientConfig{InsecureSkipVerify: true},
 
 		MaxQueryObjects:         256,
+		MaxQueryMetrics:         256,
 		ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 		Timeout:                 internal.Duration{Duration: time.Second * 20},
 		ForceDiscoverOnInit:     true,
@@ -219,7 +246,7 @@ func TestParseConfig(t *testing.T) {
 	require.NotNil(t, tab)
 }
 
-func TestWorkerPool(t *testing.T) {
+func TestThrottledExecutor(t *testing.T) {
 	max := int64(0)
 	ngr := int64(0)
 	n := 10000
@@ -250,21 +277,6 @@ func TestWorkerPool(t *testing.T) {
 }
 
 func TestTimeout(t *testing.T) {
-<<<<<<< HEAD
-	v := defaultVSphere()
-	url := os.Getenv("TGF_TEST_VSPHERE_URL")
-	if url != "" {
-		m, s, err := createSim()
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer m.Remove()
-		defer s.Close()
-		url = s.URL.String()
-	} else {
-		v.Username = os.Getenv("TGF_TEST_VSPHERE_USER")
-		v.Password = os.Getenv("TGF_TEST_VSPHERE_PASSWORD")
-=======
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
 	var i int
@@ -275,21 +287,18 @@ func TestTimeout(t *testing.T) {
 	m, s, err := createSim()
 	if err != nil {
 		t.Fatal(err)
->>>>>>> origin/prydin-scale-improvement
 	}
+	defer m.Remove()
+	defer s.Close()
 
+	v := defaultVSphere()
 	var acc testutil.Accumulator
-	v.Vcenters = []string{url}
+	v.Vcenters = []string{s.URL.String()}
 	v.Timeout = internal.Duration{Duration: 1 * time.Nanosecond}
 	require.NoError(t, v.Start(nil)) // We're not using the Accumulator, so it can be nil.
 	defer v.Stop()
-<<<<<<< HEAD
-	err := v.Gather(&acc)
-	require.NotNil(t, err, "Error should not be nil here")
-=======
-	err = v.Gather(&acc)
+	require.NoError(t, v.Gather(&acc))
 	require.True(t, len(acc.Errors) > 0, "Errors should not be empty here")
->>>>>>> origin/prydin-scale-improvement
 
 	// The accumulator must contain exactly one error and it must be a deadline exceeded.
 	require.Equal(t, 1, len(acc.Errors))
@@ -435,39 +444,6 @@ func TestFinder(t *testing.T) {
 	require.Equal(t, 4, len(vm))
 }
 
-func TestExternalFinder(t *testing.T) {
-	os.Setenv("TGF_TEST_VSPHERE_URL", "https://10.198.15.245/sdk")
-	os.Setenv("TGF_TEST_VSPHERE_USER", "administrator@vsphere.local")
-	os.Setenv("TGF_TEST_VSPHERE_PASSWORD", "Admin!23")
-
-	v := defaultVSphere()
-	vu := os.Getenv("TGF_TEST_VSPHERE_URL")
-	if vu == "" {
-		t.Skip("No external vCenter specified. Skipping")
-	} else {
-		v.Username = os.Getenv("TGF_TEST_VSPHERE_USER")
-		v.Password = os.Getenv("TGF_TEST_VSPHERE_PASSWORD")
-	}
-
-	ctx := context.Background()
-	u, err := url.Parse(vu)
-	require.NoError(t, err, "Error parsing URL")
-	c, err := NewClient(ctx, u, v)
-	require.NoError(t, err, "Error connecting to vCenter")
-
-	f := Finder{c}
-
-	vm := []mo.VirtualMachine{}
-	err = f.Find(ctx, "VirtualMachine", "/**", &vm)
-	require.NoError(t, err)
-	require.True(t, len(vm) > 0)
-
-	dc := []mo.Datacenter{}
-	err = f.Find(ctx, "Datacenter", "/*", &dc)
-	require.NoError(t, err)
-	require.Equal(t, 1, len(dc))
-}
-
 func TestAll(t *testing.T) {
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330
@@ -490,4 +466,5 @@ func TestAll(t *testing.T) {
 	defer v.Stop()
 	require.NoError(t, v.Gather(&acc))
 	require.Equal(t, 0, len(acc.Errors), fmt.Sprintf("Errors found: %s", acc.Errors))
+	require.True(t, len(acc.Metrics) > 0, "No metrics were collected")
 }
