@@ -8,6 +8,7 @@
 - [#5024](https://github.com/influxdata/telegraf/pull/5024): Add option to store cpu as a tag in interrupts input.
 - [#5074](https://github.com/influxdata/telegraf/pull/5074): Add support for sending a request body to http input.
 - [#5069](https://github.com/influxdata/telegraf/pull/5069): Add running field to procstat_lookup.
+- [#5116](https://github.com/influxdata/telegraf/pull/5116): Include DEVLINKS in available diskio udev properties.
 
 ## v1.9.2 [unreleased]
 
