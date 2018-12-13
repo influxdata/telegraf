@@ -401,7 +401,6 @@ const sqlServerPropertiesV2 = `DECLARE @sys_info TABLE (
 
 IF OBJECT_ID('master.sys.dm_os_sys_info') IS NOT NULL
 BEGIN
-
 	IF SERVERPROPERTY('EngineEdition') = 8  -- Managed Instance
 		INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
 		SELECT 	TOP(1)
@@ -418,19 +417,6 @@ BEGIN
 
 	ELSE
 	BEGIN
-		DECLARE @total_disk_size_mb BIGINT,
-				@available_space_mb BIGINT
-
-		SELECT	@total_disk_size_mb = sum(total_disk_size_mb),
-				@available_space_mb = sum(free_disk_space_mb)
-		FROM	(
-					SELECT	distinct logical_volume_name AS LogicalName,
-							total_bytes/(1024*1024)as total_disk_size_mb,
-							available_bytes /(1024*1024) free_disk_space_mb
-					FROM	sys.master_files AS f
-							CROSS APPLY sys.dm_os_volume_stats(f.database_id, f.file_id)
-				) as osVolumes
-
 		INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
 		SELECT	cpu_count,
 				(SELECT total_physical_memory_kb FROM sys.dm_os_sys_memory) AS server_memory,
@@ -440,13 +426,12 @@ BEGIN
 					WHEN 'NONE' THEN 'PHYSICAL Machine'
 					ELSE virtual_machine_type_desc
 				END AS hardware_type,
-				@total_disk_size_mb,
-				@available_space_mb,
+				NULL,
+				NULL,
 				 DATEDIFF(MINUTE,sqlserver_start_time,GETDATE())
 		FROM	sys.dm_os_sys_info
 	END
 END
-
 SELECT	'sqlserver_server_properties' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 		s.cpu_count,
@@ -457,6 +442,7 @@ SELECT	'sqlserver_server_properties' AS [measurement],
 		s.total_storage_mb,
 		s.available_storage_mb,
 		s.uptime,
+		SERVERPROPERTY('ProductVersion') AS sql_version,
 		db_online,
 		db_restoring,
 		db_recovering,
