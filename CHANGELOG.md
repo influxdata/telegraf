@@ -16,6 +16,7 @@
 
 - [#5130](https://github.com/influxdata/telegraf/pull/5130): Increase varnishstat timeout.
 - [#5135](https://github.com/influxdata/telegraf/pull/5135): Remove storage calculation for non Azure managed instances and add server version.
+- [#5083](https://github.com/influxdata/telegraf/pull/5083): Fix error sending empty tag value in azure_monitor output.
 
 ## v1.9.1 [2018-12-11]
 
