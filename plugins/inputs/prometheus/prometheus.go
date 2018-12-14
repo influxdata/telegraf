@@ -305,7 +305,9 @@ func (p *Prometheus) Start(a telegraf.Accumulator) error {
 }
 
 func (p *Prometheus) Stop() {
-	p.cancel()
+	if p.MonitorPods {
+		p.cancel()
+	}
 	p.wg.Wait()
 }
 
