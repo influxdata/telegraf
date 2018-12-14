@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func getTestCasesForRFC6587() []testCaseStream {
+func getTestCasesForNonTransparent() []testCaseStream {
 	testCases := []testCaseStream{
 		{
 			name: "1st/avg/ok",
@@ -68,13 +68,74 @@ func getTestCasesForRFC6587() []testCaseStream {
 					Time: defaultTime,
 				},
 			},
+			werr: 1,
+		},
+		{
+			name: "1st/min/ok//2nd/min/ok",
+			data: []byte("<1>2 - - - - - -\n<4>11 - - - - - -\n"),
+			wantStrict: []testutil.Metric{
+				{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version":       uint16(2),
+						"severity_code": 1,
+						"facility_code": 0,
+					},
+					Tags: map[string]string{
+						"severity": "alert",
+						"facility": "kern",
+					},
+					Time: defaultTime,
+				},
+				{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version":       uint16(11),
+						"severity_code": 4,
+						"facility_code": 0,
+					},
+					Tags: map[string]string{
+						"severity": "warning",
+						"facility": "kern",
+					},
+					Time: defaultTime.Add(time.Nanosecond),
+				},
+			},
+			wantBestEffort: []testutil.Metric{
+				{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version":       uint16(2),
+						"severity_code": 1,
+						"facility_code": 0,
+					},
+					Tags: map[string]string{
+						"severity": "alert",
+						"facility": "kern",
+					},
+					Time: defaultTime,
+				},
+				{
+					Measurement: "syslog",
+					Fields: map[string]interface{}{
+						"version":       uint16(11),
+						"severity_code": 4,
+						"facility_code": 0,
+					},
+					Tags: map[string]string{
+						"severity": "warning",
+						"facility": "kern",
+					},
+					Time: defaultTime.Add(time.Nanosecond),
+				},
+			},
 		},
 	}
 	return testCases
 }
 
-func testStrictRFC6587(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
-	for _, tc := range getTestCasesForRFC6587() {
+func testStrictNonTransparent(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
+	for _, tc := range getTestCasesForNonTransparent() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
 			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false, false)
@@ -135,8 +196,8 @@ func testStrictRFC6587(t *testing.T, protocol string, address string, wantTLS bo
 	}
 }
 
-func testBestEffortRFC6587(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
-	for _, tc := range getTestCasesForRFC6587() {
+func testBestEffortNonTransparent(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
+	for _, tc := range getTestCasesForNonTransparent() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
 			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, true, false)
@@ -190,58 +251,58 @@ func testBestEffortRFC6587(t *testing.T, protocol string, address string, wantTL
 	}
 }
 
-func TestRFC6587Strict_tcp(t *testing.T) {
-	testStrictRFC6587(t, "tcp", address, false, nil)
+func TestNonTransparentStrict_tcp(t *testing.T) {
+	testStrictNonTransparent(t, "tcp", address, false, nil)
 }
 
-func TestRFC6587BestEffort_tcp(t *testing.T) {
-	testBestEffortRFC6587(t, "tcp", address, false, nil)
+func TestNonTransparentBestEffort_tcp(t *testing.T) {
+	testBestEffortNonTransparent(t, "tcp", address, false, nil)
 }
 
-func TestRFC6587Strict_tcp_tls(t *testing.T) {
-	testStrictRFC6587(t, "tcp", address, true, nil)
+func TestNonTransparentStrict_tcp_tls(t *testing.T) {
+	testStrictNonTransparent(t, "tcp", address, true, nil)
 }
 
-func TestRFC6587BestEffort_tcp_tls(t *testing.T) {
-	testBestEffortRFC6587(t, "tcp", address, true, nil)
+func TestNonTransparentBestEffort_tcp_tls(t *testing.T) {
+	testBestEffortNonTransparent(t, "tcp", address, true, nil)
 }
 
-func TestRFC6587StrictWithKeepAlive_tcp_tls(t *testing.T) {
-	testStrictRFC6587(t, "tcp", address, true, &internal.Duration{Duration: time.Minute})
+func TestNonTransparentStrictWithKeepAlive_tcp_tls(t *testing.T) {
+	testStrictNonTransparent(t, "tcp", address, true, &internal.Duration{Duration: time.Minute})
 }
 
-func TestRFC6587StrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
-	testStrictRFC6587(t, "tcp", address, true, &internal.Duration{Duration: 0})
+func TestNonTransparentStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
+	testStrictNonTransparent(t, "tcp", address, true, &internal.Duration{Duration: 0})
 }
 
-func TestRFC6587Strict_unix(t *testing.T) {
+func TestNonTransparentStrict_unix(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix.sock")
-	testStrictRFC6587(t, "unix", sock, false, nil)
+	testStrictNonTransparent(t, "unix", sock, false, nil)
 }
 
-func TestRFC6587BestEffort_unix(t *testing.T) {
+func TestNonTransparentBestEffort_unix(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix.sock")
-	testBestEffortRFC6587(t, "unix", sock, false, nil)
+	testBestEffortNonTransparent(t, "unix", sock, false, nil)
 }
 
-func TestRFC6587Strict_unix_tls(t *testing.T) {
+func TestNonTransparentStrict_unix_tls(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix_tls.sock")
-	testStrictRFC6587(t, "unix", sock, true, nil)
+	testStrictNonTransparent(t, "unix", sock, true, nil)
 }
 
-func TestRFC6587BestEffort_unix_tls(t *testing.T) {
+func TestNonTransparentBestEffort_unix_tls(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix_tls.sock")
-	testBestEffortRFC6587(t, "unix", sock, true, nil)
+	testBestEffortNonTransparent(t, "unix", sock, true, nil)
 }

@@ -2,7 +2,8 @@
 
 The syslog plugin listens for syslog messages transmitted over
 [UDP](https://tools.ietf.org/html/rfc5426) or
-[TCP](https://tools.ietf.org/html/rfc5425).
+[TCP](https://tools.ietf.org/html/rfc6587) or
+[TLS](https://tools.ietf.org/html/rfc5425), with or without the octet couting framing.
 
 Syslog messages should be formatted according to
 [RFC 5424](https://tools.ietf.org/html/rfc5424).

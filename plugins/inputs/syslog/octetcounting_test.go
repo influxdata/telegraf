@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func getTestCasesForRFC5425() []testCaseStream {
+func getTestCasesForOctetCounting() []testCaseStream {
 	testCases := []testCaseStream{
 		{
 			name: "1st/avg/ok",
@@ -334,8 +334,8 @@ func getTestCasesForRFC5425() []testCaseStream {
 	return testCases
 }
 
-func testStrictRFC5425(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
-	for _, tc := range getTestCasesForRFC5425() {
+func testStrictOctetCounting(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
+	for _, tc := range getTestCasesForOctetCounting() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
 			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false, true)
@@ -396,8 +396,8 @@ func testStrictRFC5425(t *testing.T, protocol string, address string, wantTLS bo
 	}
 }
 
-func testBestEffortRFC5425(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
-	for _, tc := range getTestCasesForRFC5425() {
+func testBestEffortOctetCounting(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
+	for _, tc := range getTestCasesForOctetCounting() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
 			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, true, true)
@@ -451,58 +451,58 @@ func testBestEffortRFC5425(t *testing.T, protocol string, address string, wantTL
 	}
 }
 
-func TestRFC5425Strict_tcp(t *testing.T) {
-	testStrictRFC5425(t, "tcp", address, false, nil)
+func TestOctetCountingStrict_tcp(t *testing.T) {
+	testStrictOctetCounting(t, "tcp", address, false, nil)
 }
 
-func TestRFC5425BestEffort_tcp(t *testing.T) {
-	testBestEffortRFC5425(t, "tcp", address, false, nil)
+func TestOctetCountingBestEffort_tcp(t *testing.T) {
+	testBestEffortOctetCounting(t, "tcp", address, false, nil)
 }
 
-func TestRFC5425Strict_tcp_tls(t *testing.T) {
-	testStrictRFC5425(t, "tcp", address, true, nil)
+func TestOctetCountingStrict_tcp_tls(t *testing.T) {
+	testStrictOctetCounting(t, "tcp", address, true, nil)
 }
 
-func TestRFC5425BestEffort_tcp_tls(t *testing.T) {
-	testBestEffortRFC5425(t, "tcp", address, true, nil)
+func TestOctetCountingBestEffort_tcp_tls(t *testing.T) {
+	testBestEffortOctetCounting(t, "tcp", address, true, nil)
 }
 
-func TestRFC5425StrictWithKeepAlive_tcp_tls(t *testing.T) {
-	testStrictRFC5425(t, "tcp", address, true, &internal.Duration{Duration: time.Minute})
+func TestOctetCountingStrictWithKeepAlive_tcp_tls(t *testing.T) {
+	testStrictOctetCounting(t, "tcp", address, true, &internal.Duration{Duration: time.Minute})
 }
 
-func TestRFC5425StrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
-	testStrictRFC5425(t, "tcp", address, true, &internal.Duration{Duration: 0})
+func TestOctetCountingStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
+	testStrictOctetCounting(t, "tcp", address, true, &internal.Duration{Duration: 0})
 }
 
-func TestRFC5425Strict_unix(t *testing.T) {
+func TestOctetCountingStrict_unix(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix.sock")
-	testStrictRFC5425(t, "unix", sock, false, nil)
+	testStrictOctetCounting(t, "unix", sock, false, nil)
 }
 
-func TestRFC5425BestEffort_unix(t *testing.T) {
+func TestOctetCountingBestEffort_unix(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix.sock")
-	testBestEffortRFC5425(t, "unix", sock, false, nil)
+	testBestEffortOctetCounting(t, "unix", sock, false, nil)
 }
 
-func TestRFC5425Strict_unix_tls(t *testing.T) {
+func TestOctetCountingStrict_unix_tls(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix_tls.sock")
-	testStrictRFC5425(t, "unix", sock, true, nil)
+	testStrictOctetCounting(t, "unix", sock, true, nil)
 }
 
-func TestRFC5425BestEffort_unix_tls(t *testing.T) {
+func TestOctetCountingBestEffort_unix_tls(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix_tls.sock")
-	testBestEffortRFC5425(t, "unix", sock, true, nil)
+	testBestEffortOctetCounting(t, "unix", sock, true, nil)
 }

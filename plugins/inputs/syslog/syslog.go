@@ -13,9 +13,9 @@ import (
 	"unicode"
 
 	"github.com/influxdata/go-syslog"
+	"github.com/influxdata/go-syslog/nontransparent"
+	"github.com/influxdata/go-syslog/octetcounting"
 	"github.com/influxdata/go-syslog/rfc5424"
-	"github.com/influxdata/go-syslog/rfc5425"
-	"github.com/influxdata/go-syslog/rfc6587"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	tlsConfig "github.com/influxdata/telegraf/internal/tls"
@@ -33,7 +33,7 @@ type Syslog struct {
 	MaxConnections     int
 	ReadTimeout        *internal.Duration
 	TransparentFraming bool
-	Trailer            rfc6587.TrailerType
+	Trailer            nontransparent.TrailerType
 	BestEffort         bool
 	Separator          string `toml:"sdparam_separator"`
 
@@ -82,7 +82,7 @@ var sampleConfig = `
 
   ## Whether the messages come using the transparent framing or not (default = false).
   ## When false messages come using non-transparent framing technique (RFC6587#section-3.4.2).
-  ## True means messages come using octect-counting framing technique (RFC5425#section-4.3.1).
+  ## True means messages come using octect-counting framing technique (RFC5425#section-4.3.1 and RFC6587#section-3.4.1).
   # transparent_framing = false
 
   ## The trailer to be expected in case of non-trasparent framing (default = "LF").
@@ -313,12 +313,12 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 
 	// Select the parser to use depeding on transport framing
 	if s.TransparentFraming {
-		// Octet-counting transparent framing
-		p = rfc5425.NewParser(opts...)
+		// Octet counting transparent framing
+		p = octetcounting.NewParser(opts...)
 	} else {
 		// Non-transparent framing
-		opts = append(opts, rfc6587.WithTrailer(s.Trailer))
-		p = rfc6587.NewParser(opts...)
+		opts = append(opts, nontransparent.WithTrailer(s.Trailer))
+		p = nontransparent.NewParser(opts...)
 	}
 
 	p.Parse(conn)
@@ -443,7 +443,7 @@ func init() {
 		ReadTimeout: &internal.Duration{
 			Duration: defaultReadTimeout,
 		},
-		Trailer:   rfc6587.LF,
+		Trailer:   nontransparent.LF,
 		Separator: "_",
 	}
 
