@@ -37,6 +37,15 @@ Syslog messages should be formatted according to
   ## 0 means unlimited.
   # read_timeout = "5s"
 
+  ## Whether the messages come using the transparent framing or not (default = false).
+  ## When false messages come using non-transparent framing technique (RFC6587#section-3.4.2).
+  ## True means messages come using octect-counting framing technique (RFC5425#section-4.3.1 and RFC6587#section-3.4.1).
+  # transparent_framing = false
+
+  ## The trailer to be expected in case of non-trasparent framing (default = "LF").
+  ## Must be one of "LF", or "NUL".
+  # trailer = "LF"
+
   ## Whether to parse in best effort mode or not (default = false).
   ## By default best effort parsing is off.
   # best_effort = false
@@ -49,11 +58,18 @@ Syslog messages should be formatted according to
   # sdparam_separator = "_"
 ```
 
-#### Best Effort
+#### Message transport
+
+The `transparent_framing` option only applies to streams. It governs the way we expect to receive messages within the stream.
+With the [octet counting](https://tools.ietf.org/html/rfc5425#section-4.3) technique or with the [non-transparent](https://tools.ietf.org/html/rfc6587#section-3.4.2) framing.
+
+The `trailer` option only applies when `transparent_framing` is `false` - ie., non-transparent transport.
+
+#### Best effort
 
 The [`best_effort`](https://github.com/influxdata/go-syslog#best-effort-mode)
 option instructs the parser to extract partial but valid info from syslog
-messages.  If unset only full messages will be collected.
+messages. If unset only full messages will be collected.
 
 #### Rsyslog Integration
 
