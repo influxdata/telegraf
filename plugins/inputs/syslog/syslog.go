@@ -28,14 +28,14 @@ const ipMaxPacketSize = 64 * 1024
 // Syslog is a syslog plugin
 type Syslog struct {
 	tlsConfig.ServerConfig
-	Address            string `toml:"server"`
-	KeepAlivePeriod    *internal.Duration
-	MaxConnections     int
-	ReadTimeout        *internal.Duration
-	TransparentFraming bool
-	Trailer            nontransparent.TrailerType
-	BestEffort         bool
-	Separator          string `toml:"sdparam_separator"`
+	Address         string `toml:"server"`
+	KeepAlivePeriod *internal.Duration
+	MaxConnections  int
+	ReadTimeout     *internal.Duration
+	Framing         framing
+	Trailer         nontransparent.TrailerType
+	BestEffort      bool
+	Separator       string `toml:"sdparam_separator"`
 
 	now      func() time.Time
 	lastTime time.Time
@@ -80,10 +80,11 @@ var sampleConfig = `
   ## 0 means unlimited.
   # read_timeout = "5s"
 
-  ## Whether the messages come using the transparent framing or not (default = false).
-  ## When false messages come using non-transparent framing technique (RFC6587#section-3.4.2).
-  ## True means messages come using octect-counting framing technique (RFC5425#section-4.3.1 and RFC6587#section-3.4.1).
-  # transparent_framing = false
+  ## The framing technique with which it is expected that messages are transported (default = "octet-counting").
+  ## Whether the messages come using the octect-counting (RFC5425#section-4.3.1, RFC6587#section-3.4.1),
+  ## or the non-transparent framing technique (RFC6587#section-3.4.2).
+  ## Must be one of "octect-counting", "non-transparent".
+  # framing = "octet-counting"
 
   ## The trailer to be expected in case of non-trasparent framing (default = "LF").
   ## Must be one of "LF", or "NUL".
@@ -312,7 +313,7 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 	}
 
 	// Select the parser to use depeding on transport framing
-	if s.TransparentFraming {
+	if s.Framing == OctetCounting {
 		// Octet counting transparent framing
 		p = octetcounting.NewParser(opts...)
 	} else {
@@ -443,6 +444,7 @@ func init() {
 		ReadTimeout: &internal.Duration{
 			Duration: defaultReadTimeout,
 		},
+		Framing:   OctetCounting,
 		Trailer:   nontransparent.LF,
 		Separator: "_",
 	}

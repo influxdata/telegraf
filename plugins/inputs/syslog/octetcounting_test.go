@@ -338,7 +338,7 @@ func testStrictOctetCounting(t *testing.T, protocol string, address string, want
 	for _, tc := range getTestCasesForOctetCounting() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
-			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false, true)
+			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false, OctetCounting)
 			require.NotNil(t, receiver)
 			if wantTLS {
 				receiver.ServerConfig = *pki.TLSServerConfig()
@@ -400,7 +400,7 @@ func testBestEffortOctetCounting(t *testing.T, protocol string, address string, 
 	for _, tc := range getTestCasesForOctetCounting() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
-			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, true, true)
+			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, true, OctetCounting)
 			require.NotNil(t, receiver)
 			if wantTLS {
 				receiver.ServerConfig = *pki.TLSServerConfig()
