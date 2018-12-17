@@ -62,12 +62,6 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		return nil
 	}
 
-	r.Config.Filter.Modify(metric)
-	if len(metric.FieldList()) == 0 {
-		r.metricFiltered(metric)
-		return nil
-	}
-
 	m := makemetric(
 		metric,
 		r.Config.NameOverride,
@@ -75,6 +69,12 @@ func (r *RunningInput) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 		r.Config.MeasurementSuffix,
 		r.Config.Tags,
 		r.defaultTags)
+
+	r.Config.Filter.Modify(metric)
+	if len(metric.FieldList()) == 0 {
+		r.metricFiltered(metric)
+		return nil
+	}
 
 	r.MetricsGathered.Incr(1)
 	GlobalMetricsGathered.Incr(1)
