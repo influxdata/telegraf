@@ -38,10 +38,11 @@ Syslog messages should be formatted according to
   ## 0 means unlimited.
   # read_timeout = "5s"
 
-  ## Whether the messages come using the transparent framing or not (default = false).
-  ## When false messages come using non-transparent framing technique (RFC6587#section-3.4.2).
-  ## True means messages come using octect-counting framing technique (RFC5425#section-4.3.1 and RFC6587#section-3.4.1).
-  # transparent_framing = false
+  ## The framing technique with which it is expected that messages are transported (default = "octet-counting").
+  ## Whether the messages come using the octect-counting (RFC5425#section-4.3.1, RFC6587#section-3.4.1),
+  ## or the non-transparent framing technique (RFC6587#section-3.4.2).
+  ## Must be one of "octect-counting", "non-transparent".
+  # framing = "octet-counting"
 
   ## The trailer to be expected in case of non-trasparent framing (default = "LF").
   ## Must be one of "LF", or "NUL".
@@ -61,10 +62,10 @@ Syslog messages should be formatted according to
 
 #### Message transport
 
-The `transparent_framing` option only applies to streams. It governs the way we expect to receive messages within the stream.
-With the [octet counting](https://tools.ietf.org/html/rfc5425#section-4.3) technique or with the [non-transparent](https://tools.ietf.org/html/rfc6587#section-3.4.2) framing.
+The `framing` option only applies to streams. It governs the way we expect to receive messages within the stream.
+Namely, with the [`"octet counting"`](https://tools.ietf.org/html/rfc5425#section-4.3) technique (default) or with the [`"non-transparent"`](https://tools.ietf.org/html/rfc6587#section-3.4.2) framing.
 
-The `trailer` option only applies when `transparent_framing` is `false` - ie., non-transparent transport.
+The `trailer` option only applies when `framing` option is `"non-transparent"`. It must have one of the following values: `"LF"` (default), or `"NUL"`.
 
 #### Best effort
 
