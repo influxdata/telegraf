@@ -5,16 +5,17 @@ import (
 	"strings"
 )
 
-type framing int
+// Framing represents the framing technique we expect the messages to come.
+type Framing int
 
 const (
 	// OctetCounting indicates the transparent framing technique for syslog transport.
-	OctetCounting framing = iota
+	OctetCounting Framing = iota
 	// NonTransparent indicates the non-transparent framing technique for syslog transport.
 	NonTransparent
 )
 
-func (f framing) String() string {
+func (f Framing) String() string {
 	switch f {
 	case OctetCounting:
 		return "OCTET-COUNTING"
@@ -24,20 +25,37 @@ func (f framing) String() string {
 	return ""
 }
 
+// UnmarshalTOML implements ability to unmarshal framing from TOML files.
+func (f *Framing) UnmarshalTOML(data []byte) (err error) {
+	return f.UnmarshalText(data)
+}
+
 // UnmarshalText implements encoding.TextUnmarshaler
-func (f *framing) UnmarshalText(data []byte) (err error) {
+func (f *Framing) UnmarshalText(data []byte) (err error) {
 	s := string(data)
 	switch strings.ToUpper(s) {
-	case "OCTET-COUNTING":
+	case `OCTET-COUNTING`:
+		fallthrough
+	case `"OCTET-COUNTING"`:
+		fallthrough
+	case `'OCTET-COUNTING'`:
 		*f = OctetCounting
-	case "NON-TRANSPARENT":
+		return
+
+	case `NON-TRANSPARENT`:
+		fallthrough
+	case `"NON-TRANSPARENT"`:
+		fallthrough
+	case `'NON-TRANSPARENT'`:
 		*f = NonTransparent
+		return
 	}
-	return err
+	*f = -1
+	return fmt.Errorf("unknown framing")
 }
 
 // MarshalText implements encoding.TextMarshaler
-func (f framing) MarshalText() ([]byte, error) {
+func (f Framing) MarshalText() ([]byte, error) {
 	s := f.String()
 	if s != "" {
 		return []byte(s), nil

@@ -37,7 +37,7 @@ func newUDPSyslogReceiver(address string, bestEffort bool) *Syslog {
 	}
 }
 
-func newTCPSyslogReceiver(address string, keepAlive *internal.Duration, maxConn int, bestEffort bool, framing framing) *Syslog {
+func newTCPSyslogReceiver(address string, keepAlive *internal.Duration, maxConn int, bestEffort bool, f Framing) *Syslog {
 	d := &internal.Duration{
 		Duration: defaultReadTimeout,
 	}
@@ -46,7 +46,7 @@ func newTCPSyslogReceiver(address string, keepAlive *internal.Duration, maxConn 
 		now: func() time.Time {
 			return defaultTime
 		},
-		Framing:     framing,
+		Framing:     f,
 		ReadTimeout: d,
 		BestEffort:  bestEffort,
 		Separator:   "_",

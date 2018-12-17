@@ -32,7 +32,7 @@ type Syslog struct {
 	KeepAlivePeriod *internal.Duration
 	MaxConnections  int
 	ReadTimeout     *internal.Duration
-	Framing         framing
+	Framing         Framing
 	Trailer         nontransparent.TrailerType
 	BestEffort      bool
 	Separator       string `toml:"sdparam_separator"`
