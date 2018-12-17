@@ -11,12 +11,9 @@ import (
 )
 
 type diskInfoCache struct {
-	modifiedAt   int64 // Unix Nano timestamp of the last modification of the device. This value is used to invalidate the cache
-	udevDataPath string
-	values       map[string]string
+	modifiedAt int64 // Unix Nano timestamp of the last modification of the device. This value is used to invalidate the cache
+	values     map[string]string
 }
-
-var udevPath = "/run/udev/data"
 
 func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	var err error
@@ -39,23 +36,29 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 
 	major := unix.Major(uint64(stat.Rdev))
 	minor := unix.Minor(uint64(stat.Rdev))
-	udevDataPath := fmt.Sprintf("%s/b%d:%d", udevPath, major, minor)
+	udevV1 := fmt.Sprintf("/dev/.udev/db/block:%s", devName)     // Non-systemd
+	udevV2 := fmt.Sprintf("/run/udev/data/b%d:%d", major, minor) // Systemd
 
 	di := map[string]string{}
 
 	s.infoCache[devName] = diskInfoCache{
-		modifiedAt:   stat.Mtim.Nano(),
-		udevDataPath: udevDataPath,
-		values:       di,
+		modifiedAt: stat.Mtim.Nano(),
+		values:     di,
 	}
 
-	f, err := os.Open(udevDataPath)
-	if err != nil {
-		return nil, err
+	var udevPath *os.File
+	f1, err1 := os.Open(udevV1)
+	if err1 == nil {
+		udevPath = f1
+		defer f1.Close()
 	}
-	defer f.Close()
+	f2, err2 := os.Open(udevV2)
+	if err2 == nil {
+		udevPath = f2
+		defer f2.Close()
+	}
 
-	scnr := bufio.NewScanner(f)
+	scnr := bufio.NewScanner(udevPath)
 	var devlinks bytes.Buffer
 	for scnr.Scan() {
 		l := scnr.Text()
