@@ -74,4 +74,4 @@ More information about the Wavefront data format is available [here](https://com
 
 ### Allowed values for metrics
 Wavefront allows `integers` and `floats` as input values.  By default it also maps `bool` values to numeric, false -> 0.0, 
-true -> 1.0.  To map `strings` use the [enum](../processor/enum) processor plugin.
+true -> 1.0.  To map `strings` use the [enum](../../processors/enum) processor plugin.
