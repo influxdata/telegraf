@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gobwas/glob"
+	"github.com/karrick/godirwalk"
 )
 
 type GlobPath struct {
@@ -41,38 +42,42 @@ func Compile(path string) (*GlobPath, error) {
 }
 
 // Match returns all files matching the expression
-func (g *GlobPath) Match() map[string]os.FileInfo {
-	out := make(map[string]os.FileInfo)
+// If it's a static path, returns path
+func (g *GlobPath) Match() []string {
 	if !g.hasMeta {
-		info, err := os.Stat(g.path)
-		if err == nil {
-			out[g.path] = info
-		}
-		return out
+		return []string{g.path}
 	}
 	if !g.HasSuperMeta {
 		files, _ := filepath.Glob(g.path)
-		for _, file := range files {
-			info, err := os.Stat(file)
-			if err == nil {
-				out[file] = info
-			}
-		}
-		return out
+		return files
 	}
 	roots, err := filepath.Glob(g.rootGlob)
 	if err != nil {
-		return out
+		return []string{}
 	}
-	walkfn := func(path string, info os.FileInfo, _ error) error {
+	out := []string{}
+	walkfn := func(path string, _ *godirwalk.Dirent) error {
 		if g.g.Match(path) {
-			out[path] = info
+			out = append(out, path)
 		}
 		return nil
 
 	}
 	for _, root := range roots {
-		filepath.Walk(root, walkfn)
+		fileinfo, err := os.Stat(root)
+		if err != nil {
+			continue
+		}
+		if !fileinfo.IsDir() {
+			if g.MatchString(root) {
+				out = append(out, root)
+			}
+			continue
+		}
+		godirwalk.Walk(root, &godirwalk.Options{
+			Callback: walkfn,
+			Unsorted: true,
+		})
 	}
 	return out
 }

@@ -75,10 +75,7 @@ func (f *File) refreshFilePaths() error {
 		if len(files) <= 0 {
 			return fmt.Errorf("could not find file: %v", file)
 		}
-
-		for k := range files {
-			allFiles = append(allFiles, k)
-		}
+		allFiles = append(allFiles, files...)
 	}
 
 	f.filenames = allFiles

@@ -1,7 +1,6 @@
 package globpath
 
 import (
-	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -34,7 +33,7 @@ func TestCompileAndMatch(t *testing.T) {
 	matches = g3.Match()
 	require.Len(t, matches, 1)
 	matches = g4.Match()
-	require.Len(t, matches, 0)
+	require.Len(t, matches, 1)
 	matches = g5.Match()
 	require.Len(t, matches, 0)
 }
@@ -75,10 +74,10 @@ func getTestdataDir() string {
 func TestMatch_ErrPermission(t *testing.T) {
 	tests := []struct {
 		input    string
-		expected map[string]os.FileInfo
+		expected []string
 	}{
-		{"/root/foo", map[string]os.FileInfo{}},
-		{"/root/f*", map[string]os.FileInfo{}},
+		{"/root/foo", []string{"/root/foo"}},
+		{"/root/f*", []string(nil)},
 	}
 
 	for _, test := range tests {
