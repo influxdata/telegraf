@@ -583,15 +583,17 @@
   version = "v0.8.1"
 
 [[projects]]
-  digest = "1:a39ef049cdeee03a57b132e7d60e32711b9d949c78458da78e702d9864c54369"
+  digest = "1:824c4cd143ee15735f1c75d9072aad46e51dd27a4ef8bf6ce723a138265b7fb3"
   name = "github.com/influxdata/go-syslog"
   packages = [
+    ".",
+    "nontransparent",
+    "octetcounting",
     "rfc5424",
-    "rfc5425",
   ]
   pruneopts = ""
-  revision = "eecd51df3ad85464a2bab9b7d3a45bc1e299059e"
-  version = "v1.0.1"
+  revision = "0cd00a9f0a5e5607d5ef9a294c260f77a74e3b5a"
+  version = "v2.0.0"
 
 [[projects]]
   branch = "master"
@@ -688,6 +690,17 @@
   packages = ["."]
   pruneopts = ""
   revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
+
+[[projects]]
+  branch = "develop"
+  digest = "1:3e66a61a57bbbe832c338edb3a623be0deb3dec650c2f3515149658898287e37"
+  name = "github.com/leodido/ragel-machinery"
+  packages = [
+    ".",
+    "parser",
+  ]
+  pruneopts = ""
+  revision = "299bdde78165d4ca4bc7d064d8d6a4f39ac6de8c"
 
 [[projects]]
   branch = "master"
@@ -1478,8 +1491,10 @@
     "github.com/google/go-cmp/cmp",
     "github.com/gorilla/mux",
     "github.com/hashicorp/consul/api",
+    "github.com/influxdata/go-syslog",
+    "github.com/influxdata/go-syslog/nontransparent",
+    "github.com/influxdata/go-syslog/octetcounting",
     "github.com/influxdata/go-syslog/rfc5424",
-    "github.com/influxdata/go-syslog/rfc5425",
     "github.com/influxdata/tail",
     "github.com/influxdata/toml",
     "github.com/influxdata/toml/ast",

@@ -15,16 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type testCase5426 struct {
-	name           string
-	data           []byte
-	wantBestEffort *testutil.Metric
-	wantStrict     *testutil.Metric
-	werr           bool
-}
-
-func getTestCasesForRFC5426() []testCase5426 {
-	testCases := []testCase5426{
+func getTestCasesForRFC5426() []testCasePacket {
+	testCases := []testCasePacket{
 		{
 			name: "empty",
 			data: []byte(""),
@@ -237,17 +229,6 @@ func getTestCasesForRFC5426() []testCase5426 {
 	}
 
 	return testCases
-}
-
-func newUDPSyslogReceiver(address string, bestEffort bool) *Syslog {
-	return &Syslog{
-		Address: address,
-		now: func() time.Time {
-			return defaultTime
-		},
-		BestEffort: bestEffort,
-		Separator:  "_",
-	}
 }
 
 func testRFC5426(t *testing.T, protocol string, address string, bestEffort bool) {
