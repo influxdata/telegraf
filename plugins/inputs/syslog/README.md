@@ -2,7 +2,8 @@
 
 The syslog plugin listens for syslog messages transmitted over
 [UDP](https://tools.ietf.org/html/rfc5426) or
-[TCP](https://tools.ietf.org/html/rfc5425).
+[TCP](https://tools.ietf.org/html/rfc6587) or
+[TLS](https://tools.ietf.org/html/rfc5425), with or without the octet counting framing.
 
 Syslog messages should be formatted according to
 [RFC 5424](https://tools.ietf.org/html/rfc5424).
@@ -37,6 +38,16 @@ Syslog messages should be formatted according to
   ## 0 means unlimited.
   # read_timeout = "5s"
 
+  ## The framing technique with which it is expected that messages are transported (default = "octet-counting").
+  ## Whether the messages come using the octect-counting (RFC5425#section-4.3.1, RFC6587#section-3.4.1),
+  ## or the non-transparent framing technique (RFC6587#section-3.4.2).
+  ## Must be one of "octect-counting", "non-transparent".
+  # framing = "octet-counting"
+
+  ## The trailer to be expected in case of non-trasparent framing (default = "LF").
+  ## Must be one of "LF", or "NUL".
+  # trailer = "LF"
+
   ## Whether to parse in best effort mode or not (default = false).
   ## By default best effort parsing is off.
   # best_effort = false
@@ -49,11 +60,18 @@ Syslog messages should be formatted according to
   # sdparam_separator = "_"
 ```
 
-#### Best Effort
+#### Message transport
+
+The `framing` option only applies to streams. It governs the way we expect to receive messages within the stream.
+Namely, with the [`"octet counting"`](https://tools.ietf.org/html/rfc5425#section-4.3) technique (default) or with the [`"non-transparent"`](https://tools.ietf.org/html/rfc6587#section-3.4.2) framing.
+
+The `trailer` option only applies when `framing` option is `"non-transparent"`. It must have one of the following values: `"LF"` (default), or `"NUL"`.
+
+#### Best effort
 
 The [`best_effort`](https://github.com/influxdata/go-syslog#best-effort-mode)
 option instructs the parser to extract partial but valid info from syslog
-messages.  If unset only full messages will be collected.
+messages. If unset only full messages will be collected.
 
 #### Rsyslog Integration
 
