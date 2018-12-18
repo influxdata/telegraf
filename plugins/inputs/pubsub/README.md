@@ -1,4 +1,4 @@
-# GCP PubSub Input Plugin
+# Google Cloud PubSub Input Plugin
 
 The GCP PubSub plugin ingests metrics from [Google Cloud PubSub][pubsub]
 and creates metrics using one of the supported [input data formats][].
