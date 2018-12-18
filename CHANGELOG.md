@@ -20,6 +20,7 @@
 - [#5083](https://github.com/influxdata/telegraf/pull/5083): Fix error sending empty tag value in azure_monitor output.
 - [#5143](https://github.com/influxdata/telegraf/issues/5143): Fix panic with prometheus input plugin on shutdown.
 - [#4482](https://github.com/influxdata/telegraf/issues/4482): Support non-transparent framing of syslog messages.
+- [#5151](https://github.com/influxdata/telegraf/issues/5151): Apply global and plugin level metric modifications before filtering.
 
 ## v1.9.1 [2018-12-11]
 
