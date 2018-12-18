@@ -22,24 +22,24 @@ This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefro
   ## prefix for metrics keys
   #prefix = "my.specific.prefix."
 
-  ## whether to use "value" for name of simple fields
+  ## whether to use "value" for name of simple fields. default is false
   #simple_fields = false
 
-  ## character to use between metric and field name.  defaults to . (dot)
+  ## character to use between metric and field name.  default is . (dot)
   #metric_separator = "."
 
   ## Convert metric name paths to use metricSeparator character
-  ## When true (default) will convert all _ (underscore) characters in final metric name
+  ## When true (default) will convert all _ (underscore) characters in final metric name. default is true
   #convert_paths = true
 
   ## Use Regex to sanitize metric and tag names from invalid characters
-  ## Regex is more thorough, but significantly slower
+  ## Regex is more thorough, but significantly slower. default is false
   #use_regex = false
 
   ## point tags to use as the source name for Wavefront (if none found, host will be used)
   #source_override = ["hostname", "address", agent_host", "node_host"]
 
-  ## whether to convert boolean values to numeric values, with false -> 0.0 and true -> 1.0.  default true
+  ## whether to convert boolean values to numeric values, with false -> 0.0 and true -> 1.0. default is true
   #convert_bool = true
 ```
 
