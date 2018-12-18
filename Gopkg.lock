@@ -583,7 +583,6 @@
   version = "v0.8.1"
 
 [[projects]]
-  branch = "feature/rfc6587"
   digest = "1:824c4cd143ee15735f1c75d9072aad46e51dd27a4ef8bf6ce723a138265b7fb3"
   name = "github.com/influxdata/go-syslog"
   packages = [
@@ -593,7 +592,8 @@
     "rfc5424",
   ]
   pruneopts = ""
-  revision = "55af43430773a14e1614702e67f39f9ca4867b60"
+  revision = "0cd00a9f0a5e5607d5ef9a294c260f77a74e3b5a"
+  version = "v2.0.0"
 
 [[projects]]
   branch = "master"
