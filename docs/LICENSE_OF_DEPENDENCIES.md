@@ -63,6 +63,7 @@ following works:
 - github.com/kardianos/service [zlib License](https://github.com/kardianos/service/blob/master/LICENSE)
 - github.com/kballard/go-shellquote [MIT License](https://github.com/kballard/go-shellquote/blob/master/LICENSE)
 - github.com/kr/logfmt [MIT License](https://github.com/kr/logfmt/blob/master/Readme)
+- github.com/leodido/ragel-machinery [MIT License](https://github.com/leodido/ragel-machinery/blob/develop/LICENSE)
 - github.com/mailru/easyjson [MIT License](https://github.com/mailru/easyjson/blob/master/LICENSE)
 - github.com/matttproud/golang_protobuf_extensions [Apache License 2.0](https://github.com/matttproud/golang_protobuf_extensions/blob/master/LICENSE)
 - github.com/Microsoft/ApplicationInsights-Go [MIT License](https://github.com/Microsoft/ApplicationInsights-Go/blob/master/LICENSE)
