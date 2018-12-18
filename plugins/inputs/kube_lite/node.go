@@ -2,6 +2,8 @@ package kube_lite
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
 	"github.com/ericchiang/k8s/apis/core/v1"
 
@@ -35,11 +37,20 @@ func (ks *KubernetesState) gatherNode(n v1.Node, acc telegraf.Accumulator) error
 	capacity := n.Status.Capacity
 	for resourceName, val := range capacity {
 		if resourceName == "pods" {
-			// todo: ensure `Size` is what we expect
-			fields["status_capacity_pods"] = val.Size() / 1000
+			// todo: better way to get value
+			fields["status_capacity_pods"] = atoi(*val.String_)
 		}
 	}
 
 	acc.AddFields(nodeMeasurement, fields, tags)
 	return nil
+}
+
+func atoi(s string) int64 {
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		fmt.Println(err)
+		return 0
+	}
+	return int64(i)
 }

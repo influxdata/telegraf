@@ -71,21 +71,21 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 	for resourceName, val := range req {
 		switch resourceName {
 		case "cpu":
-			// todo: ensure `Size` is what we expect
-			fields["resource_requests_cpu_cores"] = val.Size() / 1000
-		default:
-			// todo: ensure `Size` is what we expect
-			fields["resource_requests_"+sanitizeLabelName(string(resourceName))+"_bytes"] = val.Size()
+			// todo: use terrible atoi?
+			fields["resource_requests_cpu_cores"] = *val.String_
+			// default:
+			// 	// todo: ensure `Size` is what we expect
+			// 	fields["resource_requests_"+sanitizeLabelName(string(resourceName))+"_bytes"] = val.Size()
 		}
 	}
 	for resourceName, val := range lim {
 		switch resourceName {
 		case "cpu":
-			// todo: ensure `Size` is what we expect
-			fields["resource_limits_cpu_cores"] = val.Size() / 1000
-		default:
-			// todo: ensure `Size` is what we expect
-			fields["resource_limits_"+sanitizeLabelName(string(resourceName))+"_bytes"] = val.Size()
+			// todo: use terrible atoi?
+			fields["resource_limits_cpu_cores"] = *val.String_
+			// default:
+			// 	// todo: ensure `Size` is what we expect
+			// 	fields["resource_limits_"+sanitizeLabelName(string(resourceName))+"_bytes"] = val.Size()
 		}
 	}
 

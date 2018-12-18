@@ -28,8 +28,8 @@ func registerDeploymentCollector(ctx context.Context, acc telegraf.Accumulator, 
 
 func (ks *KubernetesState) gatherDeployment(d v1beta1.Deployment, acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{
-		"status_replicas_available":   d.Status.AvailableReplicas,
-		"status_replicas_unavailable": d.Status.UnavailableReplicas,
+		"status_replicas_available":   *d.Status.AvailableReplicas,
+		"status_replicas_unavailable": *d.Status.UnavailableReplicas,
 	}
 	tags := map[string]string{
 		"name":      *d.Metadata.Name,

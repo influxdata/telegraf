@@ -29,11 +29,11 @@ func registerStatefulSetCollector(ctx context.Context, acc telegraf.Accumulator,
 func (ks *KubernetesState) gatherStatefulSet(statefulSet v1beta1.StatefulSet, acc telegraf.Accumulator) error {
 	status := statefulSet.Status
 	fields := map[string]interface{}{
-		"metadata_generation":     statefulSet.Metadata.Generation,
-		"status_replicas":         status.Replicas,
-		"status_replicas_current": status.CurrentReplicas,
-		"status_replicas_ready":   status.ReadyReplicas,
-		"status_replicas_updated": status.UpdatedReplicas,
+		"metadata_generation":     *statefulSet.Metadata.Generation,
+		"status_replicas":         *status.Replicas,
+		"status_replicas_current": *status.CurrentReplicas,
+		"status_replicas_ready":   *status.ReadyReplicas,
+		"status_replicas_updated": *status.UpdatedReplicas,
 	}
 	tags := map[string]string{
 		"name":      *statefulSet.Metadata.Name,

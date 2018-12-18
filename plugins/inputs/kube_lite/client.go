@@ -40,7 +40,7 @@ func (c *client) getAPIResourceList(ctx context.Context) (rList *metav1.APIResou
 	if err = c.doGet(ctx, "", rList); err != nil {
 		return nil, err
 	}
-	if *rList.GroupVersion == "" {
+	if rList.GroupVersion == nil {
 		return nil, &APIError{
 			URL:        c.baseURL,
 			StatusCode: http.StatusOK,
