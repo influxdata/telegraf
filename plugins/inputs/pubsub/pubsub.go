@@ -235,7 +235,7 @@ const sampleConfig = `
   google_project = "my-project"
 
   ## Name of PubSub subscriptions
-  subscriptions = ["sub-one, sub-two"]
+  subscription = "my-subscription"
 
   ## Optional filepath for GCP credentials JSON file to authorize calls to 
   ## PubSub APIs. If not set explicitly, Telegraf will attempt to use 
