@@ -42,10 +42,6 @@ var sanitizedRegex = regexp.MustCompile("[^a-zA-Z\\d_.-]")
 
 var tagValueReplacer = strings.NewReplacer("*", "-")
 
-/*
-var tagValueReplacer = strings.NewReplacer("\"", "\\\"", "*", "-")
-*/
-
 var pathReplacer = strings.NewReplacer("_", "_")
 
 var sampleConfig = `
@@ -71,8 +67,8 @@ var sampleConfig = `
   ## character to use between metric and field name.  defaults to . (dot)
   #metric_separator = "."
 
-  ## Convert metric name paths to use metricSeperator character
-  ## When true (default) will convert all _ (underscore) chartacters in final metric name
+  ## Convert metric name paths to use metricSeparator character
+  ## When true (default) will convert all _ (underscore) characters in final metric name
   #convert_paths = true
 
   ## Use Regex to sanitize metric and tag names from invalid characters
@@ -86,8 +82,7 @@ var sampleConfig = `
   #convert_bool = true
 
   ## Define a mapping, namespaced by metric prefix, from string values to numeric values
-  ## The example below maps "green" -> 1.0, "yellow" -> 0.5, "red" -> 0.0 for
-  ## any metrics beginning with "elasticsearch"
+  ##   deprecated in 1.9; use the enum processor plugin
   #[[outputs.wavefront.string_to_number.elasticsearch]]
   #  green = 1.0
   #  yellow = 0.5
@@ -104,8 +99,12 @@ type MetricPoint struct {
 
 func (w *Wavefront) Connect() error {
 
+	if len(w.StringToNumber) > 0 {
+		log.Print("W! [outputs.wavefront] The string_to_number option is deprecated; please use the enum processor instead")
+	}
+
 	if w.Url != "" {
-		log.Printf("D! Output [wavefront] connecting over http/https using Url: %s", w.Url)
+		log.Printf("D! [outputs.wavefront] connecting over http/https using Url: %s", w.Url)
 		sender, err := wavefront.NewDirectSender(&wavefront.DirectConfiguration{
 			Server:               w.Url,
 			Token:                w.Token,
@@ -127,19 +126,6 @@ func (w *Wavefront) Connect() error {
 		}
 		w.sender = sender
 	}
-	/*
-		// Test Connection to Wavefront proxy Server
-		uri := fmt.Sprintf("%s:%d", w.Host, w.Port)
-		_, err := net.ResolveTCPAddr("tcp", uri)
-		if err != nil {
-			return fmt.Errorf("Wavefront: TCP address cannot be resolved %s", err.Error())
-		}
-		connection, err := net.Dial("tcp", uri)
-		if err != nil {
-			return fmt.Errorf("Wavefront: TCP connect fail %s", err.Error())
-		}
-		defer connection.Close()
-	*/
 
 	if w.ConvertPaths && w.MetricSeparator == "_" {
 		w.ConvertPaths = false
@@ -151,19 +137,6 @@ func (w *Wavefront) Connect() error {
 }
 
 func (w *Wavefront) Write(metrics []telegraf.Metric) error {
-
-	/*
-		// Send Data to Wavefront proxy Server
-		uri := fmt.Sprintf("%s:%d", w.Host, w.Port)
-		connection, err := net.Dial("tcp", uri)
-		if err != nil {
-			return fmt.Errorf("Wavefront: TCP connect fail %s", err.Error())
-		}
-		defer connection.Close()
-		connection.SetWriteDeadline(time.Now().Add(5 * time.Second))
-	*/
-
-	// defer w.sender.Flush()
 
 	for _, m := range metrics {
 		for _, point := range buildMetrics(m, w) {
@@ -209,7 +182,7 @@ func buildMetrics(m telegraf.Metric, w *Wavefront) []*MetricPoint {
 
 		metricValue, buildError := buildValue(value, metric.Metric, w)
 		if buildError != nil {
-			log.Printf("D! Output [wavefront] %s\n", buildError.Error())
+			log.Printf("D! [outputs.wavefront] %s\n", buildError.Error())
 			continue
 		}
 		metric.Value = metricValue
@@ -313,36 +286,6 @@ func buildValue(v interface{}, name string, w *Wavefront) (float64, error) {
 
 	return 0, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
 }
-
-/*
-func formatMetricPoint(metricPoint *MetricPoint, w *Wavefront) string {
-	buffer := bytes.NewBufferString("")
-	buffer.WriteString(metricPoint.Metric)
-	buffer.WriteString(" ")
-	buffer.WriteString(strconv.FormatFloat(metricPoint.Value, 'f', 6, 64))
-	buffer.WriteString(" ")
-	buffer.WriteString(strconv.FormatInt(metricPoint.Timestamp, 10))
-	buffer.WriteString(" source=\"")
-	buffer.WriteString(metricPoint.Source)
-	buffer.WriteString("\"")
-
-	for k, v := range metricPoint.Tags {
-		buffer.WriteString(" ")
-		if w.UseRegex {
-			buffer.WriteString(sanitizedRegex.ReplaceAllLiteralString(k, "-"))
-		} else {
-			buffer.WriteString(sanitizedChars.Replace(k))
-		}
-		buffer.WriteString("=\"")
-		buffer.WriteString(tagValueReplacer.Replace(v))
-		buffer.WriteString("\"")
-	}
-
-	buffer.WriteString("\n")
-
-	return buffer.String()
-}
-*/
 
 func (w *Wavefront) SampleConfig() string {
 	return sampleConfig
