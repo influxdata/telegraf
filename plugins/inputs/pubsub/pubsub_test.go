@@ -1,11 +1,11 @@
 package pubsub
 
 import (
-	"testing"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 	"context"
 	"github.com/influxdata/telegraf/plugins/parsers"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 const (
@@ -24,8 +24,8 @@ func TestRunParse(t *testing.T) {
 	go ps.receiveDelivered(ctx)
 
 	testTracker := &testTracker{}
-	msg := &testMsg {
-		value: msgInflux,
+	msg := &testMsg{
+		value:   msgInflux,
 		tracker: testTracker,
 	}
 	s.messages <- msg
@@ -52,8 +52,8 @@ func TestRunParseWithSubTag(t *testing.T) {
 	go ps.receiveDelivered(ctx)
 
 	testTracker := &testTracker{}
-	msg := &testMsg {
-		value: msgInflux,
+	msg := &testMsg{
+		value:   msgInflux,
 		tracker: testTracker,
 	}
 	s.messages <- msg
@@ -81,8 +81,8 @@ func TestRunInvalidMessages(t *testing.T) {
 	testTracker := &testTracker{}
 
 	// Use invalid message
-	msg := &testMsg {
-		value: "~invalidInfluxMsg~",
+	msg := &testMsg{
+		value:   "~invalidInfluxMsg~",
 		tracker: testTracker,
 	}
 	s.messages <- msg
@@ -109,8 +109,8 @@ func TestRunOverlongMessages(t *testing.T) {
 	go ps.receiveDelivered(ctx)
 
 	testTracker := &testTracker{}
-	msg := &testMsg {
-		value: msgInflux,
+	msg := &testMsg{
+		value:   msgInflux,
 		tracker: testTracker,
 	}
 	s.messages <- msg
@@ -129,13 +129,13 @@ func getTestPubsub(cancel context.CancelFunc, acc *testutil.Accumulator, subId s
 	testParser, _ := parsers.NewInfluxParser()
 
 	s := &testSub{
-		id: subId,
+		id:       subId,
 		messages: make(chan *testMsg, 100),
 	}
 	ps := &PubSub{
-		sub: s,
-		acc: acc,
-		sem: make(semaphore, 100),
+		sub:    s,
+		acc:    acc,
+		sem:    make(semaphore, 100),
 		parser: testParser,
 		cancel: cancel,
 	}

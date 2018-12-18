@@ -1,9 +1,9 @@
 package pubsub
 
 import (
-	"time"
 	"cloud.google.com/go/pubsub"
 	"context"
+	"time"
 )
 
 type (
@@ -30,14 +30,14 @@ type (
 	}
 )
 
-func (s* subWrapper) ID() string {
+func (s *subWrapper) ID() string {
 	if s.sub == nil {
 		return ""
 	}
 	return s.sub.ID()
 }
 
-func (s* subWrapper) Receive(ctx context.Context, f func(context.Context, message)) error {
+func (s *subWrapper) Receive(ctx context.Context, f func(context.Context, message)) error {
 	return s.sub.Receive(ctx, func(cctx context.Context, m *pubsub.Message) {
 		f(cctx, &msgWrapper{m})
 	})

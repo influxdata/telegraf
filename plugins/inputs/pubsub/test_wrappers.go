@@ -1,13 +1,13 @@
 package pubsub
 
 import (
-	"time"
-	"sync"
 	"context"
+	"sync"
+	"time"
 )
 
 type testSub struct {
-	id string
+	id       string
 	messages chan *testMsg
 }
 
@@ -20,7 +20,7 @@ func (s *testSub) Receive(ctx context.Context, f func(context.Context, message))
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case m := <- s.messages:
+		case m := <-s.messages:
 			f(ctx, m)
 		}
 	}
@@ -28,9 +28,9 @@ func (s *testSub) Receive(ctx context.Context, f func(context.Context, message))
 }
 
 type testMsg struct {
-	id string
-	value string
-	attributes map[string]string
+	id          string
+	value       string
+	attributes  map[string]string
 	publishTime time.Time
 
 	tracker *testTracker
@@ -64,7 +64,7 @@ type testTracker struct {
 	sync.Mutex
 	*sync.Cond
 
-	numAcks int
+	numAcks  int
 	numNacks int
 }
 
