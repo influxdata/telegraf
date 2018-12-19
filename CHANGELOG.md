@@ -22,6 +22,7 @@
 - [#5143](https://github.com/influxdata/telegraf/issues/5143): Fix panic with prometheus input plugin on shutdown.
 - [#4482](https://github.com/influxdata/telegraf/issues/4482): Support non-transparent framing of syslog messages.
 - [#5151](https://github.com/influxdata/telegraf/issues/5151): Apply global and plugin level metric modifications before filtering.
+- [#5167](https://github.com/influxdata/telegraf/pull/5167): Fix num_remapped_pgs field in ceph plugin.
 
 ## v1.9.1 [2018-12-11]
 
