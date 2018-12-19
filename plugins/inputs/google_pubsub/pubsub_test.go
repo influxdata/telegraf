@@ -12,23 +12,50 @@ const (
 	msgInflux = "cpu_load_short,host=server01 value=23422.0 1422568543702900257\n"
 )
 
+func dummySubGetter(t *testing.T, sub *testSub) subscriptionGetter {
+	return func(id string, ctx context.Context) (subscription, error) {
+		if id != sub.id {
+			t.Fatalf("unexpected subscription - expected id %s, got %s", sub.id, id)
+		}
+		return sub, nil
+	}
+}
+
 // Test ingesting InfluxDB-format PubSub message
 func TestRunParse(t *testing.T) {
 	subId := "sub-run-parse"
 
-	acc := &testutil.Accumulator{}
-	ctx, cancel := context.WithCancel(context.Background())
-	ps, s := getTestPubsub(cancel, acc, subId)
+	testParser, _ := parsers.NewInfluxParser()
 
-	go ps.subReceive(ctx)
-	go ps.receiveDelivered(ctx)
+	sub := &testSub{
+		id:       subId,
+		messages: make(chan *testMsg, 100),
+	}
+
+	ps := &PubSub{
+		parser:                 testParser,
+		subGetter:              dummySubGetter(t, sub),
+		Project:                "projectIDontMatterForTests",
+		Subscription:           subId,
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+	}
+
+	acc := &testutil.Accumulator{}
+	if err := ps.Start(acc); err != nil {
+		t.Fatalf("test PubSub failed to start: %s", err)
+	}
+	defer ps.Stop()
+
+	if ps.sub == nil {
+		t.Fatal("expected plugin subscription to be non-nil")
+	}
 
 	testTracker := &testTracker{}
 	msg := &testMsg{
 		value:   msgInflux,
 		tracker: testTracker,
 	}
-	s.messages <- msg
+	sub.messages <- msg
 
 	acc.Wait(1)
 	assert.Equal(t, acc.NFields(), 1)
@@ -39,21 +66,37 @@ func TestRunParse(t *testing.T) {
 func TestRunInvalidMessages(t *testing.T) {
 	subId := "sub-invalid-messages"
 
-	acc := &testutil.Accumulator{}
-	ctx, cancel := context.WithCancel(context.Background())
-	ps, s := getTestPubsub(cancel, acc, subId)
+	testParser, _ := parsers.NewInfluxParser()
 
-	go ps.subReceive(ctx)
-	go ps.receiveDelivered(ctx)
+	sub := &testSub{
+		id:       subId,
+		messages: make(chan *testMsg, 100),
+	}
+
+	ps := &PubSub{
+		parser:                 testParser,
+		subGetter:              dummySubGetter(t, sub),
+		Project:                "projectIDontMatterForTests",
+		Subscription:           subId,
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+	}
+
+	acc := &testutil.Accumulator{}
+
+	if err := ps.Start(acc); err != nil {
+		t.Fatalf("test PubSub failed to start: %s", err)
+	}
+	defer ps.Stop()
+	if ps.sub == nil {
+		t.Fatal("expected plugin subscription to be non-nil")
+	}
 
 	testTracker := &testTracker{}
-
-	// Use invalid message
 	msg := &testMsg{
 		value:   "~invalidInfluxMsg~",
 		tracker: testTracker,
 	}
-	s.messages <- msg
+	sub.messages <- msg
 
 	acc.WaitError(1)
 
@@ -67,21 +110,38 @@ func TestRunOverlongMessages(t *testing.T) {
 	subId := "sub-message-too-long"
 
 	acc := &testutil.Accumulator{}
-	ctx, cancel := context.WithCancel(context.Background())
-	ps, s := getTestPubsub(cancel, acc, subId)
 
-	// Add MaxMessageLen param
-	ps.MaxMessageLen = 1
+	testParser, _ := parsers.NewInfluxParser()
 
-	go ps.subReceive(ctx)
-	go ps.receiveDelivered(ctx)
+	sub := &testSub{
+		id:       subId,
+		messages: make(chan *testMsg, 100),
+	}
+
+	ps := &PubSub{
+		parser:                 testParser,
+		subGetter:              dummySubGetter(t, sub),
+		Project:                "projectIDontMatterForTests",
+		Subscription:           subId,
+		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+		// Add MaxMessageLen Param
+		MaxMessageLen: 1,
+	}
+
+	if err := ps.Start(acc); err != nil {
+		t.Fatalf("test PubSub failed to start: %s", err)
+	}
+	defer ps.Stop()
+	if ps.sub == nil {
+		t.Fatal("expected plugin subscription to be non-nil")
+	}
 
 	testTracker := &testTracker{}
 	msg := &testMsg{
 		value:   msgInflux,
 		tracker: testTracker,
 	}
-	s.messages <- msg
+	sub.messages <- msg
 
 	acc.WaitError(1)
 
@@ -89,26 +149,6 @@ func TestRunOverlongMessages(t *testing.T) {
 	testTracker.WaitForAck(1)
 
 	assert.Equal(t, acc.NFields(), 0)
-
-}
-
-// Test ingesting InfluxDB-format PubSub message
-func getTestPubsub(cancel context.CancelFunc, acc *testutil.Accumulator, subId string) (*PubSub, *testSub) {
-	testParser, _ := parsers.NewInfluxParser()
-
-	s := &testSub{
-		id:       subId,
-		messages: make(chan *testMsg, 100),
-	}
-	ps := &PubSub{
-		sub:    s,
-		acc:    acc,
-		sem:    make(semaphore, 100),
-		parser: testParser,
-		cancel: cancel,
-	}
-
-	return ps, s
 }
 
 func validateTestInfluxMetric(t *testing.T, m *testutil.Metric) {

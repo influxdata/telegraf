@@ -15,6 +15,7 @@ import (
 
 type empty struct{}
 type semaphore chan empty
+type subscriptionGetter func(id string, ctx context.Context) (subscription, error)
 
 const defaultMaxUndeliveredMessages = 1000
 
@@ -33,14 +34,15 @@ type PubSub struct {
 	MaxMessageLen          int `toml:"max_message_len"`
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
-	sub    subscription
-	client *pubsub.Client
+	sub       subscription
+	subGetter subscriptionGetter
+
 	cancel context.CancelFunc
+
 	parser parsers.Parser
 	wg     *sync.WaitGroup
 	acc    telegraf.TrackingAccumulator
-
-	mu sync.Mutex
+	mu     sync.Mutex
 
 	undelivered map[telegraf.TrackingID]message
 	sem         semaphore
@@ -68,11 +70,22 @@ func (ps *PubSub) SetParser(parser parsers.Parser) {
 // Two goroutines are started - one pulling for the subscription, one
 // receiving delivery notifications from the accumulator.
 func (ps *PubSub) Start(ac telegraf.Accumulator) error {
+	if ps.Subscription == "" {
+		return fmt.Errorf(`"subscription" is required`)
+	}
+
+	if ps.Project == "" {
+		return fmt.Errorf(`"project" is required`)
+	}
+
 	cctx, cancel := context.WithCancel(context.Background())
 	ps.cancel = cancel
-	if err := ps.initPubSubHandles(cctx); err != nil {
+
+	subRef, err := ps.subGetter(ps.Subscription, cctx)
+	if err != nil {
 		return err
 	}
+	ps.sub = subRef
 
 	ps.wg = &sync.WaitGroup{}
 	ps.acc = ac.WithTracking(ps.MaxUndeliveredMessages)
@@ -176,47 +189,51 @@ func (ps *PubSub) removeDelivered(id telegraf.TrackingID) message {
 	return msg
 }
 
-func (ps *PubSub) initPubSubHandles(ctx context.Context) error {
-	var credsOpt option.ClientOption
-	if ps.CredentialsFile != "" {
-		credsOpt = option.WithCredentialsFile(ps.CredentialsFile)
-	} else {
-		creds, err := google.FindDefaultCredentials(ctx, pubsub.ScopeCloudPlatform)
-		if err != nil {
-			return fmt.Errorf("credentials JSON file not provided and unable to find GCP Application Default Credentials: %v", err)
+func gcpSubscriptionGetter(ps *PubSub) subscriptionGetter {
+	return func(subId string, ctx context.Context) (subscription, error) {
+		var credsOpt option.ClientOption
+		if ps.CredentialsFile != "" {
+			credsOpt = option.WithCredentialsFile(ps.CredentialsFile)
+		} else {
+			creds, err := google.FindDefaultCredentials(ctx, pubsub.ScopeCloudPlatform)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"credentials JSON file not provided and unable to find GCP "+
+						"Application Default Credentials: %v", err)
+			}
+			credsOpt = option.WithCredentials(creds)
 		}
-		credsOpt = option.WithCredentials(creds)
-	}
 
-	client, err := pubsub.NewClient(
-		ctx,
-		ps.Project,
-		credsOpt,
-		option.WithScopes(pubsub.ScopeCloudPlatform),
-		option.WithUserAgent(internal.ProductToken()),
-	)
-	if err != nil {
-		return fmt.Errorf("unable to generate PubSub client: %v", err)
-	}
+		client, err := pubsub.NewClient(
+			ctx,
+			ps.Project,
+			credsOpt,
+			option.WithScopes(pubsub.ScopeCloudPlatform),
+			option.WithUserAgent(internal.ProductToken()),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("unable to generate PubSub client: %v", err)
+		}
 
-	ps.client = client
-	s := ps.client.Subscription(ps.Subscription)
-	s.ReceiveSettings = pubsub.ReceiveSettings{
-		NumGoroutines:          ps.MaxReceiverGoRoutines,
-		MaxExtension:           ps.MaxExtension.Duration,
-		MaxOutstandingMessages: ps.MaxOutstandingMessages,
-		MaxOutstandingBytes:    ps.MaxOutstandingBytes,
-	}
+		s := client.Subscription(subId)
+		s.ReceiveSettings = pubsub.ReceiveSettings{
+			NumGoroutines:          ps.MaxReceiverGoRoutines,
+			MaxExtension:           ps.MaxExtension.Duration,
+			MaxOutstandingMessages: ps.MaxOutstandingMessages,
+			MaxOutstandingBytes:    ps.MaxOutstandingBytes,
+		}
 
-	ps.sub = &subWrapper{s}
-	return nil
+		return &subWrapper{s}, nil
+	}
 }
 
 func init() {
 	inputs.Add("pubsub", func() telegraf.Input {
-		return &PubSub{
+		ps := &PubSub{
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}
+		ps.subGetter = gcpSubscriptionGetter(ps)
+		return ps
 	})
 }
 
