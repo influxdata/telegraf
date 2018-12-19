@@ -234,10 +234,8 @@ func createSim() (*simulator.Model, *simulator.Server, error) {
 	return model, s, nil
 }
 
-func TestAlignMetrics(t *testing.T) {
-	// 20s to 60s aligmentn of all 1.0
+func testAlignUniform(t *testing.T, n int) {
 	now := time.Now().Truncate(60 * time.Second)
-	n := 30
 	info := make([]types.PerfSampleInfo, n)
 	values := make([]int64, n)
 	for i := 0; i < n; i++ {
@@ -247,17 +245,24 @@ func TestAlignMetrics(t *testing.T) {
 		}
 		values[i] = 1
 	}
-	newInfo, newValues := alignSamples(info, values, 60)
+	newInfo, newValues := alignSamples(info, values, 60*time.Second)
 	require.Equal(t, n/3, len(newInfo), "Aligned infos have wrong size")
 	require.Equal(t, n/3, len(newValues), "Aligned values have wrong size")
 	for _, v := range newValues {
 		require.Equal(t, 1.0, v, "Aligned value should be 1")
 	}
+}
+
+func TestAlignMetrics(t *testing.T) {
+	testAlignUniform(t, 3)
+	testAlignUniform(t, 30)
+	testAlignUniform(t, 333)
 
 	// 20s to 60s of 1,2,3,1,2,3... (should average to 2)
-	n = 30
-	info = make([]types.PerfSampleInfo, n)
-	values = make([]int64, n)
+	n := 30
+	now := time.Now().Truncate(60 * time.Second)
+	info := make([]types.PerfSampleInfo, n)
+	values := make([]int64, n)
 	for i := 0; i < n; i++ {
 		info[i] = types.PerfSampleInfo{
 			Timestamp: now.Add(time.Duration(20*i) * time.Second),
@@ -265,7 +270,7 @@ func TestAlignMetrics(t *testing.T) {
 		}
 		values[i] = int64(i%3 + 1)
 	}
-	newInfo, newValues = alignSamples(info, values, 60)
+	newInfo, newValues := alignSamples(info, values, 60*time.Second)
 	require.Equal(t, n/3, len(newInfo), "Aligned infos have wrong size")
 	require.Equal(t, n/3, len(newValues), "Aligned values have wrong size")
 	for _, v := range newValues {
