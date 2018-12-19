@@ -80,7 +80,9 @@ type (
 	}
 
 	CouchDB struct {
-		Hosts []string `toml:"hosts"`
+		Hosts         []string `toml:"hosts"`
+		BasicUsername string   `toml:"basic_username"`
+		BasicPassword string   `toml:"basic_password"`
 
 		client *http.Client
 	}
@@ -95,6 +97,10 @@ func (*CouchDB) SampleConfig() string {
   ## Works with CouchDB stats endpoints out of the box
   ## Multiple Hosts from which to read CouchDB stats:
   hosts = ["http://localhost:8086/_stats"]
+
+  ## Use HTTP Basic Authentication.
+  # basic_username = "telegraf"
+  # basic_password = "p@ssw0rd"
 `
 }
 
@@ -124,7 +130,17 @@ func (c *CouchDB) fetchAndInsertData(accumulator telegraf.Accumulator, host stri
 			Timeout: time.Duration(4 * time.Second),
 		}
 	}
-	response, error := c.client.Get(host)
+
+	req, err := http.NewRequest("GET", host, nil)
+	if err != nil {
+		return err
+	}
+
+	if c.BasicUsername != "" || c.BasicPassword != "" {
+		req.SetBasicAuth(c.BasicUsername, c.BasicPassword)
+	}
+
+	response, error := c.client.Do(req)
 	if error != nil {
 		return error
 	}
