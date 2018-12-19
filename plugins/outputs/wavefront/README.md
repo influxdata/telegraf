@@ -29,7 +29,7 @@ This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefro
   #metric_separator = "."
 
   ## Convert metric name paths to use metricSeparator character
-  ## When true (default) will convert all _ (underscore) characters in final metric name. default is true
+  ## When true will convert all _ (underscore) characters in final metric name. default is true
   #convert_paths = true
 
   ## Use Regex to sanitize metric and tag names from invalid characters
