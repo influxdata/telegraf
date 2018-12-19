@@ -10,6 +10,7 @@
 - [#5069](https://github.com/influxdata/telegraf/pull/5069): Add running field to procstat_lookup.
 - [#5116](https://github.com/influxdata/telegraf/pull/5116): Include DEVLINKS in available diskio udev properties.
 - [#5149](https://github.com/influxdata/telegraf/pull/5149): Add micro and nanosecond unix timestamp support to JSON parser.
+- [#5160](https://github.com/influxdata/telegraf/pull/5160): Add support for basic auth to couchdb input.
 
 ## v1.9.2 [unreleased]
 
