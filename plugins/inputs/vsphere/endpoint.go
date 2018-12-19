@@ -65,6 +65,7 @@ type resourceKind struct {
 	simple           bool
 	metrics          performance.MetricList
 	parent           string
+	latestSample     time.Time
 	lastColl         time.Time
 }
 
@@ -735,6 +736,14 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 			pq.StartTime = &start
 			pq.EndTime = &now
 
+			// Make sure endtime is always after start time. We may occasionally see samples from the future
+			// returned from vCenter. This is presumably due to time drift between vCenter and EXSi nodes.
+			if pq.StartTime.After(*pq.EndTime) {
+				log.Printf("D! [input.vsphere] Future sample. Res: %s, StartTime: %s, EndTime: %s, Now: %s", pq.Entity, *pq.StartTime, *pq.EndTime, now)
+				end := start.Add(time.Second)
+				pq.EndTime = &end
+			}
+
 			pqs = append(pqs, pq)
 			mr -= mc
 			metrics += mc
@@ -784,7 +793,17 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	if err != nil {
 		return err
 	}
-	latest := res.lastColl
+
+	// Estimate the interval at which we're invoked. Use local time (not server time)
+	// since this is about how we got invoked locally.
+	localNow := time.Now()
+	estInterval := time.Duration(time.Minute)
+	if !res.lastColl.IsZero() {
+		estInterval = localNow.Sub(res.lastColl).Truncate(time.Duration(res.sampling) * time.Second)
+	}
+	log.Printf("D! [input.vsphere] Interval estimated to %s", estInterval)
+
+	latest := res.latestSample
 	if !latest.IsZero() {
 		elapsed := now.Sub(latest).Seconds() + 5.0 // Allow 5 second jitter.
 		log.Printf("D! [input.vsphere]: Latest: %s, elapsed: %f, resource: %s", latest, elapsed, resourceType)
@@ -816,7 +835,7 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 			// Handle panics gracefully
 			defer HandlePanicWithAcc(acc)
 
-			n, localLatest, err := e.collectChunk(ctx, chunk, &res, acc)
+			n, localLatest, err := e.collectChunk(ctx, chunk, &res, acc, now, estInterval)
 			log.Printf("D! [input.vsphere] CollectChunk for %s returned %d metrics", resourceType, n)
 			if err != nil {
 				acc.AddError(errors.New("While collecting " + res.name + ": " + err.Error()))
@@ -831,14 +850,49 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 
 	log.Printf("D! [input.vsphere] Latest sample for %s set to %s", resourceType, latestSample)
 	if !latestSample.IsZero() {
-		res.lastColl = latestSample
+		res.latestSample = latestSample
 	}
 	sw.Stop()
 	SendInternalCounterWithTags("gather_count", e.URL.Host, internalTags, count)
 	return nil
 }
 
-func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, res *resourceKind, acc telegraf.Accumulator) (int, time.Time, error) {
+func alignSamples(info []types.PerfSampleInfo, values []int64, interval time.Duration) ([]types.PerfSampleInfo, []float64) {
+	rInfo := make([]types.PerfSampleInfo, 0, len(info))
+	rValues := make([]float64, 0, len(values))
+	bi := 1.0
+	var lastBucket time.Time
+	for idx := range info {
+		// According to the docs, SampleInfo and Value should have the same length, but we've seen corrupted
+		// data coming back with missing values. Take care of that gracefully!
+		if idx >= len(values) {
+			log.Printf("D! [input.vsphere] len(SampleInfo)>len(Value) %d > %d", len(info), len(values))
+			break
+		}
+		v := float64(values[idx])
+		if v < 0 {
+			continue
+		}
+		ts := info[idx].Timestamp
+		roundedTs := ts.Truncate(interval)
+
+		// Are we still working on the same bucket?
+		if roundedTs == lastBucket {
+			bi++
+			p := len(rValues) - 1
+			rValues[p] = ((bi-1)/bi)*float64(rValues[p]) + v/bi
+		} else {
+			rValues = append(rValues, v)
+			rInfo = append(rInfo, info[idx])
+			bi = 1.0
+			lastBucket = roundedTs
+		}
+	}
+	//log.Printf("D! [input.vsphere] Aligned samples: %d collapsed into %d", len(info), len(rInfo))
+	return rInfo, rValues
+}
+
+func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, res *resourceKind, acc telegraf.Accumulator, now time.Time, interval time.Duration) (int, time.Time, error) {
 	log.Printf("D! [input.vsphere] Query for %s has %d QuerySpecs", res.name, len(pqs))
 	latestSample := time.Time{}
 	count := 0
@@ -853,10 +907,6 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 	metricInfo, err := client.CounterInfoByName(ctx)
 	if err != nil {
 		return count, latestSample, err
-	}
-
-	for _, pq := range pqs {
-		log.Printf("D! [input.vsphere] StartTime: %s, EndTime: %s", *pq.StartTime, *pq.EndTime)
 	}
 
 	ems, err := client.QueryMetrics(ctx, pqs)
@@ -891,62 +941,51 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 			}
 			e.populateTags(&objectRef, resourceType, res, t, &v)
 
-			avg := float64(0)
 			nValues := 0
-			for idx, sample := range em.SampleInfo {
+			alignedInfo, alignedValues := alignSamples(em.SampleInfo, v.Value, interval) // TODO: Estimate interval
+
+			for idx, sample := range alignedInfo {
 				// According to the docs, SampleInfo and Value should have the same length, but we've seen corrupted
 				// data coming back with missing values. Take care of that gracefully!
-				if idx >= len(v.Value) {
-					log.Printf("D! [input.vsphere] len(SampleInfo)>len(Value) %d > %d", len(em.SampleInfo), len(v.Value))
+				if idx >= len(alignedValues) {
+					log.Printf("D! [input.vsphere] len(SampleInfo)>len(Value) %d > %d", len(alignedInfo), len(alignedValues))
 					break
-				}
-				value := float64(v.Value[idx])
-				if value < 0 {
-					continue
 				}
 				ts := sample.Timestamp
 				if ts.After(latestSample) {
 					latestSample = ts
 				}
-				avg += float64(value)
 				nValues++
+
+				// Organize the metrics into a bucket per measurement.
+				mn, fn := e.makeMetricIdentifier(prefix, name)
+				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
+				bucket, found := buckets[bKey]
+				if !found {
+					bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: t}
+					buckets[bKey] = bucket
+				}
+
+				// Percentage values must be scaled down by 100.
+				info, ok := metricInfo[name]
+				if !ok {
+					log.Printf("E! [input.vsphere]: Could not determine unit for %s. Skipping", name)
+				}
+				v := alignedValues[idx]
+				if info.UnitInfo.GetElementDescription().Key == "percent" {
+					bucket.fields[fn] = float64(v) / 100.0
+				} else {
+					bucket.fields[fn] = v
+				}
+				count++
+
+				// Update highwater marks
+				e.hwMarks.Put(moid, ts)
 			}
 			if nValues == 0 {
 				log.Printf("D! [input.vsphere]: Missing value for: %s, %s", name, objectRef.name)
 				continue
 			}
-
-			// If we're catching up with metrics arriving late, calculate the average
-			// of them and pick the midpoint timestamp. This is a reasonable way of
-			// filling in missed collections that doesn't cause us to deliver metrics
-			// faster than the interval.
-			avg /= float64(nValues)
-			midTs := em.SampleInfo[len(em.SampleInfo)/2].Timestamp
-
-			// Organize the metrics into a bucket per measurement.
-			mn, fn := e.makeMetricIdentifier(prefix, name)
-			bKey := mn + " " + v.Instance + " " + strconv.FormatInt(midTs.UnixNano(), 10)
-			bucket, found := buckets[bKey]
-			if !found {
-				bucket = metricEntry{name: mn, ts: midTs, fields: make(map[string]interface{}), tags: t}
-				buckets[bKey] = bucket
-			}
-
-			// Percentage values must be scaled down by 100.
-			info, ok := metricInfo[name]
-			if !ok {
-				log.Printf("E! [input.vsphere]: Could not determine unit for %s. Skipping", name)
-			}
-			if info.UnitInfo.GetElementDescription().Key == "percent" {
-				bucket.fields[fn] = float64(avg) / 100.0
-			} else {
-				bucket.fields[fn] = avg
-			}
-			count++
-
-			// Update highwater marks
-			e.hwMarks.Put(moid, latestSample)
-
 		}
 		// We've iterated through all the metrics and collected buckets for each
 		// measurement name. Now emit them!

@@ -234,6 +234,45 @@ func createSim() (*simulator.Model, *simulator.Server, error) {
 	return model, s, nil
 }
 
+func TestAlignMetrics(t *testing.T) {
+	// 20s to 60s aligmentn of all 1.0
+	now := time.Now().Truncate(60 * time.Second)
+	n := 30
+	info := make([]types.PerfSampleInfo, n)
+	values := make([]int64, n)
+	for i := 0; i < n; i++ {
+		info[i] = types.PerfSampleInfo{
+			Timestamp: now.Add(time.Duration(20*i) * time.Second),
+			Interval:  20,
+		}
+		values[i] = 1
+	}
+	newInfo, newValues := alignSamples(info, values, 60)
+	require.Equal(t, n/3, len(newInfo), "Aligned infos have wrong size")
+	require.Equal(t, n/3, len(newValues), "Aligned values have wrong size")
+	for _, v := range newValues {
+		require.Equal(t, 1.0, v, "Aligned value should be 1")
+	}
+
+	// 20s to 60s of 1,2,3,1,2,3... (should average to 2)
+	n = 30
+	info = make([]types.PerfSampleInfo, n)
+	values = make([]int64, n)
+	for i := 0; i < n; i++ {
+		info[i] = types.PerfSampleInfo{
+			Timestamp: now.Add(time.Duration(20*i) * time.Second),
+			Interval:  20,
+		}
+		values[i] = int64(i%3 + 1)
+	}
+	newInfo, newValues = alignSamples(info, values, 60)
+	require.Equal(t, n/3, len(newInfo), "Aligned infos have wrong size")
+	require.Equal(t, n/3, len(newValues), "Aligned values have wrong size")
+	for _, v := range newValues {
+		require.Equal(t, 2.0, v, "Aligned value should be 2")
+	}
+}
+
 func TestParseConfig(t *testing.T) {
 	v := VSphere{}
 	c := v.SampleConfig()
