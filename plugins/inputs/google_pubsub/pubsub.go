@@ -33,8 +33,6 @@ type PubSub struct {
 	MaxMessageLen          int `toml:"max_message_len"`
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
-	SubscriptionTag string `toml:"subscription_tag"`
-
 	sub    subscription
 	client *pubsub.Client
 	cancel context.CancelFunc
@@ -129,12 +127,6 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 	if len(metrics) == 0 {
 		msg.Ack()
 		return nil
-	}
-
-	if len(ps.SubscriptionTag) > 0 {
-		for _, m := range metrics {
-			m.AddTag(ps.SubscriptionTag, ps.sub.ID())
-		}
 	}
 
 	select {
@@ -246,10 +238,6 @@ const sampleConfig = `
   ## PubSub APIs. If not set explicitly, Telegraf will attempt to use 
   ## Application Default Credentials, which is preferred. 
   # credentials_file = "path/to/my/creds.json"
-
-  ## Optional. If non-empty, this tag is added to each metrics with the
-  ## subscription ID as its value.
-  # subscription_tag = "sub_id"
 
   ## Optional. Maximum byte length of a message to consume. 
   ## Larger messages are dropped with an error. If less than 0 or unspecified, 

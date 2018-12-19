@@ -36,38 +36,6 @@ func TestRunParse(t *testing.T) {
 	validateTestInfluxMetric(t, metric)
 }
 
-// Test ingesting InfluxDB-format PubSub message with added subscription tag
-func TestRunParseWithSubTag(t *testing.T) {
-	subId := "sub-run-parse-subtagged"
-	tag := "my-sub-tag"
-
-	acc := &testutil.Accumulator{}
-	ctx, cancel := context.WithCancel(context.Background())
-	ps, s := getTestPubsub(cancel, acc, subId)
-
-	// Add SubscriptionTag param
-	ps.SubscriptionTag = tag
-
-	go ps.subReceive(ctx)
-	go ps.receiveDelivered(ctx)
-
-	testTracker := &testTracker{}
-	msg := &testMsg{
-		value:   msgInflux,
-		tracker: testTracker,
-	}
-	s.messages <- msg
-
-	acc.Wait(1)
-
-	assert.Equal(t, acc.NFields(), 1)
-	metric := acc.Metrics[0]
-	validateTestInfluxMetric(t, metric)
-
-	assert.Contains(t, metric.Tags, tag)
-	assert.Equal(t, metric.Tags[tag], subId)
-}
-
 func TestRunInvalidMessages(t *testing.T) {
 	subId := "sub-invalid-messages"
 

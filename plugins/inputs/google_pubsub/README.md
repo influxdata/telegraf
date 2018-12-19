@@ -29,10 +29,6 @@ generate it using `telegraf --usage pubsub`.
   ## Application Default Credentials, which is preferred. 
   # credentials_file = "path/to/my/creds.json"
 
-  ## Optional. If non-empty, this tag is added to each metrics with the
-  ## subscription ID as its value.
-  # subscription_tag = "sub_id"
-
   ## Optional. Maximum byte length of a message to consume. 
   ## Larger messages are dropped with an error. If less than 0 or unspecified, 
   ## treated as no limit.
