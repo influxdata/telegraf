@@ -393,6 +393,13 @@ func TestMaxQuery(t *testing.T) {
 }
 
 func TestFinder(t *testing.T) {
+	// Don't run test on 32-bit machines due to bug in simulator.
+	// https://github.com/vmware/govmomi/issues/1330
+	var i int
+	if unsafe.Sizeof(i) < 8 {
+		return
+	}
+
 	m, s, err := createSim()
 	if err != nil {
 		t.Fatal(err)
