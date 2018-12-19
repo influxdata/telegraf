@@ -383,7 +383,9 @@ func (e *Endpoint) discover(ctx context.Context) error {
 				resType: res.vcName,
 				paths:   res.paths}
 
-			objects, err := res.getObjects(ctx, e, &rf)
+			ctx1, cancel1 := context.WithTimeout(ctx, e.Parent.Timeout.Duration)
+			defer cancel1()
+			objects, err := res.getObjects(ctx1, e, &rf)
 			if err != nil {
 				return err
 			}
@@ -883,7 +885,11 @@ func alignSamples(info []types.PerfSampleInfo, values []int64, interval time.Dur
 			rValues[p] = ((bi-1)/bi)*float64(rValues[p]) + v/bi
 		} else {
 			rValues = append(rValues, v)
-			rInfo = append(rInfo, info[idx])
+			roundedInfo := types.PerfSampleInfo{
+				Timestamp: roundedTs,
+				Interval:  info[idx].Interval,
+			}
+			rInfo = append(rInfo, roundedInfo)
 			bi = 1.0
 			lastBucket = roundedTs
 		}
