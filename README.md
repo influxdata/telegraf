@@ -50,6 +50,11 @@ Telegraf requires golang version 1.9 or newer, the Makefile requires GNU make.
    make
    ```
 
+### Changelog
+
+View the [changelog](/CHANGELOG.md) for the latest updates and changes by
+version.
+
 ### Nightly Builds
 
 These builds are generated from the master branch:
@@ -171,7 +176,6 @@ For documentation on the latest development code see the [documentation index][d
 * [http_response](./plugins/inputs/http_response)
 * [icinga2](./plugins/inputs/icinga2)
 * [influxdb](./plugins/inputs/influxdb)
-* [influxdb_v2](./plugins/inputs/influxdb_v2)
 * [influxdb_listener](./plugins/inputs/influxdb_listener)
 * [internal](./plugins/inputs/internal)
 * [interrupts](./plugins/inputs/interrupts)
@@ -179,6 +183,7 @@ For documentation on the latest development code see the [documentation index][d
 * [ipset](./plugins/inputs/ipset)
 * [iptables](./plugins/inputs/iptables)
 * [ipvs](./plugins/inputs/ipvs)
+* [jenkins](./plugins/inputs/jenkins)
 * [jolokia2](./plugins/inputs/jolokia2) (java, cassandra, kafka)
 * [jolokia](./plugins/inputs/jolokia) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
 * [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry)
@@ -316,7 +321,8 @@ For documentation on the latest development code see the [documentation index][d
 
 ## Output Plugins
 
-* [influxdb](./plugins/outputs/influxdb)
+* [influxdb](./plugins/outputs/influxdb) (InfluxDB 1.x)
+* [influxdb_v2](./plugins/outputs/influxdb_v2) ([InfluxDB 2.x](https://github.com/influxdata/platform))
 * [amon](./plugins/outputs/amon)
 * [amqp](./plugins/outputs/amqp) (rabbitmq)
 * [application_insights](./plugins/outputs/application_insights)

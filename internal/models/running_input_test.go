@@ -6,10 +6,43 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestMakeMetricFilterAfterApplyingGlobalTags(t *testing.T) {
+	now := time.Now()
+	ri := NewRunningInput(&testInput{}, &InputConfig{
+		Filter: Filter{
+			TagInclude: []string{"b"},
+		},
+	})
+	require.NoError(t, ri.Config.Filter.Compile())
+	ri.SetDefaultTags(map[string]string{"a": "x", "b": "y"})
+
+	m, err := metric.New("cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"value": 42,
+		},
+		now)
+	require.NoError(t, err)
+
+	actual := ri.MakeMetric(m)
+
+	expected, err := metric.New("cpu",
+		map[string]string{
+			"b": "y",
+		},
+		map[string]interface{}{
+			"value": 42,
+		},
+		now)
+	require.NoError(t, err)
+
+	testutil.RequireMetricEqual(t, expected, actual)
+}
 
 func TestMakeMetricNoFields(t *testing.T) {
 	now := time.Now()
@@ -66,17 +99,13 @@ func TestMakeMetricWithPluginTags(t *testing.T) {
 		},
 	})
 
-	ri.SetTrace(true)
-	assert.Equal(t, true, ri.Trace())
-
-	m, err := metric.New("RITest",
+	m := testutil.MustMetric("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
 		now,
 		telegraf.Untyped)
-	require.NoError(t, err)
 	m = ri.MakeMetric(m)
 
 	expected, err := metric.New("RITest",
@@ -102,8 +131,6 @@ func TestMakeMetricFilteredOut(t *testing.T) {
 		Filter: Filter{NamePass: []string{"foobar"}},
 	})
 
-	ri.SetTrace(true)
-	assert.Equal(t, true, ri.Trace())
 	assert.NoError(t, ri.Config.Filter.Compile())
 
 	m, err := metric.New("RITest",
@@ -127,17 +154,13 @@ func TestMakeMetricWithDaemonTags(t *testing.T) {
 		"foo": "bar",
 	})
 
-	ri.SetTrace(true)
-	assert.Equal(t, true, ri.Trace())
-
-	m, err := metric.New("RITest",
+	m := testutil.MustMetric("RITest",
 		map[string]string{},
 		map[string]interface{}{
 			"value": int64(101),
 		},
 		now,
 		telegraf.Untyped)
-	require.NoError(t, err)
 	m = ri.MakeMetric(m)
 	expected, err := metric.New("RITest",
 		map[string]string{
