@@ -57,7 +57,7 @@ func (f *Finder) Find(ctx context.Context, resType, path string, dst interface{}
 		return err
 	}
 	objectContentToTypedArray(objs, dst)
-	log.Printf("D! [input.vsphere] Find(%s, %s) returned %d objects", resType, path, len(objs))
+	log.Printf("D! [inputs.vsphere] Find(%s, %s) returned %d objects", resType, path, len(objs))
 	return nil
 }
 

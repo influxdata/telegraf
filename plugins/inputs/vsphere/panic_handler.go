@@ -23,6 +23,6 @@ func HandlePanicWithAcc(acc telegraf.Accumulator) {
 
 func HandlePanic() {
 	if p := recover(); p != nil {
-		log.Printf("E! [input.vsphere] PANIC (recovered): %s", p)
+		log.Printf("E! [inputs.vsphere] PANIC (recovered): %s", p)
 	}
 }
