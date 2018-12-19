@@ -136,17 +136,21 @@ implemented as a WMI query.  The pattern allows fuzzy matching using only
     - write_count (int, *telegraf* may need to be ran as **root**)
 - procstat_lookup
   - tags:
-    - exe (string)
-    - pid_finder (string)
-    - pid_file (string)
-    - pattern (string)
-    - prefix (string)
-    - user (string)
-    - systemd_unit (string)
-    - cgroup (string)
-    - win_service (string)
+    - exe
+    - pid_finder
+    - pid_file
+    - pattern
+    - prefix
+    - user
+    - systemd_unit
+    - cgroup
+    - win_service
+    - result
   - fields:
     - pid_count (int)
+    - running (int)
+    - result_code (int, success = 0, lookup_error = 1)
+
 *NOTE: Resource limit > 2147483647 will be reported as 2147483647.*
 
 ### Example Output:

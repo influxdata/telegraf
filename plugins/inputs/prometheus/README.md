@@ -14,6 +14,17 @@ in Prometheus format.
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
 
+  ## Kubernetes config file to create client from.
+  # kube_config = "/path/to/kubernetes.config"
+
+  ## Scrape Kubernetes pods for the following prometheus annotations:
+  ## - prometheus.io/scrape: Enable scraping for this pod
+  ## - prometheus.io/scheme: If the metrics endpoint is secured then you will need to
+  ##     set this to `https` & most likely set the tls config.
+  ## - prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
+  ## - prometheus.io/port: If port is not 9102 use this annotation
+  # monitor_kubernetes_pods = true
+
   ## Use bearer token for authorization
   # bearer_token = /path/to/bearer/token
 
@@ -38,6 +49,18 @@ by looking up all A records assigned to the hostname as described in
 
 This method can be used to locate all
 [Kubernetes headless services](https://kubernetes.io/docs/concepts/services-networking/service/#headless-services).
+
+#### Kubernetes scraping
+
+Enabling this option will allow the plugin to scrape for prometheus annotation on Kubernetes
+pods. Currently, you can run this plugin in your kubernetes cluster, or we use the kubeconfig
+file to determine where to monitor.
+Currently the following annotation are supported:
+
+* `prometheus.io/scrape` Enable scraping for this pod.
+* `prometheus.io/scheme` If the metrics endpoint is secured then you will need to set this to `https` & most likely set the tls config. (default 'http')
+* `prometheus.io/path` Override the path for the metrics endpoint on the service. (default '/metrics')
+* `prometheus.io/port` Used to override the port. (default 9102)
 
 #### Bearer Token
 

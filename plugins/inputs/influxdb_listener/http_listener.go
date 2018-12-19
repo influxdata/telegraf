@@ -254,12 +254,12 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 	if req.Header.Get("Content-Encoding") == "gzip" {
 		var err error
 		body, err = gzip.NewReader(req.Body)
-		defer body.Close()
 		if err != nil {
 			log.Println("D! " + err.Error())
 			badRequest(res, err.Error())
 			return
 		}
+		defer body.Close()
 	}
 	body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
 

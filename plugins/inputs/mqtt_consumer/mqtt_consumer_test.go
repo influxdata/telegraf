@@ -3,12 +3,9 @@ package mqtt_consumer
 import (
 	"testing"
 
-	"github.com/influxdata/telegraf/plugins/parsers"
-	"github.com/influxdata/telegraf/testutil"
-
-	"github.com/stretchr/testify/assert"
-
 	"github.com/eclipse/paho.mqtt.golang"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -69,47 +66,6 @@ func TestPersistentClientIDFail(t *testing.T) {
 	acc := testutil.Accumulator{}
 	err := m1.Start(&acc)
 	assert.Error(t, err)
-}
-
-func TestRunParser(t *testing.T) {
-	n := newTestMQTTConsumer()
-	acc := testutil.Accumulator{}
-	n.acc = &acc
-	n.parser, _ = parsers.NewInfluxParser()
-
-	n.recvMessage(nil, mqttMsg(testMsg))
-
-	if a := acc.NFields(); a != 1 {
-		t.Errorf("got %v, expected %v", a, 1)
-	}
-}
-
-// Test that the parser ignores invalid messages
-func TestRunParserInvalidMsg(t *testing.T) {
-	n := newTestMQTTConsumer()
-	acc := testutil.Accumulator{}
-	n.acc = &acc
-	n.parser, _ = parsers.NewInfluxParser()
-
-	n.recvMessage(nil, mqttMsg(invalidMsg))
-
-	if a := acc.NFields(); a != 0 {
-		t.Errorf("got %v, expected %v", a, 0)
-	}
-	assert.Len(t, acc.Errors, 1)
-}
-
-// Test that the parser parses line format messages into metrics
-func TestRunParserAndGather(t *testing.T) {
-	n := newTestMQTTConsumer()
-	acc := testutil.Accumulator{}
-	n.acc = &acc
-	n.parser, _ = parsers.NewInfluxParser()
-
-	n.recvMessage(nil, mqttMsg(testMsg))
-
-	acc.AssertContainsFields(t, "cpu_load_short",
-		map[string]interface{}{"value": float64(23422)})
 }
 
 func mqttMsg(val string) mqtt.Message {

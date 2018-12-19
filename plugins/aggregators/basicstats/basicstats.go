@@ -133,7 +133,6 @@ func (m *BasicStats) Add(in telegraf.Metric) {
 }
 
 func (m *BasicStats) Push(acc telegraf.Accumulator) {
-
 	config := getConfiguredStats(m)
 
 	for _, aggregate := range m.cache {

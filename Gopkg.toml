@@ -72,7 +72,7 @@
 
 [[constraint]]
   name = "github.com/influxdata/go-syslog"
-  version = "1.0.1"
+  version = "2.0.0"
 
 [[constraint]]
   name = "github.com/influxdata/tail"
@@ -88,7 +88,7 @@
 
 [[constraint]]
   name = "github.com/jackc/pgx"
-  version = "3.1.0"
+  version = "3.2.0"
 
 [[constraint]]
   name = "github.com/kardianos/service"
@@ -249,4 +249,8 @@
 [[constraint]]
   name = "github.com/wavefronthq/wavefront-sdk-go"
   version = "v0.9.0"
+
+[[constraint]]
+  name = "github.com/karrick/godirwalk"
+  version = "1.7.5"
 

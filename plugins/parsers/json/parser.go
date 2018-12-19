@@ -52,6 +52,8 @@ func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
 
 // format = "unix": epoch is assumed to be in seconds and can come as number or string. Can have a decimal part.
 // format = "unix_ms": epoch is assumed to be in milliseconds and can come as number or string. Cannot have a decimal part.
+// format = "unix_us": epoch is assumed to be in microseconds and can come as number or string. Cannot have a decimal part.
+// format = "unix_ns": epoch is assumed to be in nanoseconds and can come as number or string. Cannot have a decimal part.
 func parseUnixTimestamp(jsonValue interface{}, format string) (time.Time, error) {
 	timeInt, timeFractional := int64(0), int64(0)
 	timeEpochStr, ok := jsonValue.(string)
@@ -88,6 +90,10 @@ func parseUnixTimestamp(jsonValue interface{}, format string) (time.Time, error)
 		return time.Unix(timeInt, timeFractional).UTC(), nil
 	} else if strings.EqualFold(format, "unix_ms") {
 		return time.Unix(timeInt/1000, (timeInt%1000)*1e6).UTC(), nil
+	} else if strings.EqualFold(format, "unix_us") {
+		return time.Unix(0, timeInt*1e3).UTC(), nil
+	} else if strings.EqualFold(format, "unix_ns") {
+		return time.Unix(0, timeInt).UTC(), nil
 	} else {
 		return time.Time{}, errors.New("Invalid unix format")
 	}
@@ -126,7 +132,10 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 			return nil, err
 		}
 
-		if strings.EqualFold(p.JSONTimeFormat, "unix") || strings.EqualFold(p.JSONTimeFormat, "unix_ms") {
+		if strings.EqualFold(p.JSONTimeFormat, "unix") ||
+			strings.EqualFold(p.JSONTimeFormat, "unix_ms") ||
+			strings.EqualFold(p.JSONTimeFormat, "unix_us") ||
+			strings.EqualFold(p.JSONTimeFormat, "unix_ns") {
 			nTime, err = parseUnixTimestamp(f.Fields[p.JSONTimeKey], p.JSONTimeFormat)
 			if err != nil {
 				return nil, err
