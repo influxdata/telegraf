@@ -36,7 +36,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/filecount"
 	_ "github.com/influxdata/telegraf/plugins/inputs/filestat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/fluentd"
-	_ "github.com/influxdata/telegraf/plugins/inputs/google_pubsub"
+	_ "github.com/influxdata/telegraf/plugins/inputs/cloud_pubsub"
 	_ "github.com/influxdata/telegraf/plugins/inputs/graylog"
 	_ "github.com/influxdata/telegraf/plugins/inputs/haproxy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/hddtemp"
