@@ -140,10 +140,6 @@ func (w *Wavefront) Write(metrics []telegraf.Metric) error {
 
 	for _, m := range metrics {
 		for _, point := range buildMetrics(m, w) {
-			/*
-				metricLine := formatMetricPoint(point, w)
-				_, err := connection.Write([]byte(metricLine))
-			*/
 			err := w.sender.SendMetric(point.Metric, point.Value, point.Timestamp, point.Source, point.Tags)
 			if err != nil {
 				return fmt.Errorf("Wavefront sending error: %s", err.Error())

@@ -269,29 +269,6 @@ func TestBuildValueString(t *testing.T) {
 
 }
 
-/*
-func TestFormatMetricPoint(t *testing.T) {
-	w := defaultWavefront()
-
-	testpoint := &MetricPoint{
-		Metric:    "test.metric.something",
-		Value:     123.456,
-		Timestamp: 1257894000,
-		Source:    "testSource",
-		Tags:      map[string]string{"sp*c!@l\"-ch/rs": "sp*c!@l/ val\"ue"},
-	}
-
-	expected := "test.metric.something 123.456000 1257894000 source=\"testSource\" sp-c--l--ch-rs=\"sp-c!@l/ val\\\"ue\"\n"
-
-	received := formatMetricPoint(testpoint, w)
-
-	if expected != received {
-		t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", expected, received)
-
-	}
-}
-*/
-
 // Benchmarks to test performance of string replacement via Regex and Replacer
 var testString = "this_is*my!test/string\\for=replacement"
 
