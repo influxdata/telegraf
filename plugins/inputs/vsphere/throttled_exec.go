@@ -1,6 +1,7 @@
 package vsphere
 
 import (
+	"context"
 	"sync"
 )
 
@@ -22,17 +23,21 @@ func NewThrottledExecutor(limit int) *ThrottledExecutor {
 
 // Run schedules a job for execution as soon as possible while respecting the
 // maximum concurrency limit.
-func (t *ThrottledExecutor) Run(job func()) {
+func (t *ThrottledExecutor) Run(ctx context.Context, job func()) {
 	t.wg.Add(1)
-	t.limiter <- struct{}{}
 	go func() {
 		// Last resort panic handler.
 		defer HandlePanic()
 		defer t.wg.Done()
-		defer func() {
-			<-t.limiter
-		}()
-		job()
+		select {
+		case t.limiter <- struct{}{}:
+			defer func() {
+				<-t.limiter
+			}()
+			job()
+		case <-ctx.Done():
+			return
+		}
 	}()
 }
 
