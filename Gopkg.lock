@@ -1094,6 +1094,17 @@
   version = "v0.18.0"
 
 [[projects]]
+  digest = "1:c1855527c165f0224708fbc7d76843b4b20bcb74b328f212f8d0e9c855d4c49d"
+  name = "github.com/wavefronthq/wavefront-sdk-go"
+  packages = [
+    "internal",
+    "senders",
+  ]
+  pruneopts = ""
+  revision = "12511c8b82654d412b0334768d94dc080b617fd1"
+  version = "v0.9.0"
+
+[[projects]]
   branch = "master"
   digest = "1:98ed05e9796df287b90c1d96854e3913c8e349dbc546412d3cabb472ecf4b417"
   name = "github.com/wvanbergen/kafka"
@@ -1545,6 +1556,7 @@
     "github.com/vmware/govmomi/vim25/mo",
     "github.com/vmware/govmomi/vim25/soap",
     "github.com/vmware/govmomi/vim25/types",
+    "github.com/wavefronthq/wavefront-sdk-go/senders",
     "github.com/wvanbergen/kafka/consumergroup",
     "golang.org/x/net/context",
     "golang.org/x/net/html/charset",
