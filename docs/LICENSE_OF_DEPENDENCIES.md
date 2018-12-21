@@ -107,6 +107,7 @@ following works:
 - github.com/vishvananda/netns [Apache License 2.0](https://github.com/vishvananda/netns/blob/master/LICENSE)
 - github.com/vjeantet/grok [Apache License 2.0](https://github.com/vjeantet/grok/blob/master/LICENSE)
 - github.com/vmware/govmomi [Apache License 2.0](https://github.com/vmware/govmomi/blob/master/LICENSE.txt)
+- github.com/wavefrontHQ/wavefront-sdk-go [Apache License 2.0](https://github.com/wavefrontHQ/wavefront-sdk-go/blob/master/LICENSE)
 - github.com/wvanbergen/kafka [MIT License](https://github.com/wvanbergen/kafka/blob/master/LICENSE)
 - github.com/wvanbergen/kazoo-go [MIT License](https://github.com/wvanbergen/kazoo-go/blob/master/MIT-LICENSE)
 - github.com/yuin/gopher-lua [MIT License](https://github.com/yuin/gopher-lua/blob/master/LICENSE)

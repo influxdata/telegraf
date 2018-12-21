@@ -11,6 +11,7 @@
 - [#5116](https://github.com/influxdata/telegraf/pull/5116): Include DEVLINKS in available diskio udev properties.
 - [#5149](https://github.com/influxdata/telegraf/pull/5149): Add micro and nanosecond unix timestamp support to JSON parser.
 - [#5160](https://github.com/influxdata/telegraf/pull/5160): Add support for basic auth to couchdb input.
+- [#5161](https://github.com/influxdata/telegraf/pull/5161): Add support in wavefront output for the Wavefront Direction Ingestion API.
 
 ## v1.9.2 [unreleased]
 
