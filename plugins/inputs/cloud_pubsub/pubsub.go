@@ -228,7 +228,7 @@ func gcpSubscriptionGetter(ps *PubSub) subscriptionGetter {
 }
 
 func init() {
-	inputs.Add("pubsub", func() telegraf.Input {
+	inputs.Add("cloud_pubsub", func() telegraf.Input {
 		ps := &PubSub{
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}
