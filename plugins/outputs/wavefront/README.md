@@ -6,25 +6,30 @@ This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefro
 ### Configuration:
 
 ```toml
-# Configuration for Wavefront output 
-[[outputs.wavefront]]
-  ## DNS name of the wavefront proxy server
-  host = "wavefront.example.com"
+  ## Url for Wavefront Direct Ingestion or using HTTP with Wavefront Proxy
+  ## If using Wavefront Proxy, also specify port. example: http://proxyserver:2878
+  url = "https://metrics.wavefront.com"
 
-  ## Port that the Wavefront proxy server listens on
-  port = 2878
+  ## Authentication Token for Wavefront. Only required if using Direct Ingestion
+  #token = "DUMMY_TOKEN"  
+  
+  ## DNS name of the wavefront proxy server. Do not use if url is specified
+  #host = "wavefront.example.com"
+
+  ## Port that the Wavefront proxy server listens on. Do not use if url is specified
+  #port = 2878
 
   ## prefix for metrics keys
   #prefix = "my.specific.prefix."
 
-  ## wether to use "value" for name of simple fields. default is false
+  ## whether to use "value" for name of simple fields. default is false
   #simple_fields = false
 
-  ## character to use between metric and field name. default is . (dot)
+  ## character to use between metric and field name.  default is . (dot)
   #metric_separator = "."
 
-  ## Convert metric name paths to use metricSeperator character
-  ## When true will convert all _ (underscore) chartacters in final metric name. default is true
+  ## Convert metric name paths to use metricSeparator character
+  ## When true will convert all _ (underscore) characters in final metric name. default is true
   #convert_paths = true
 
   ## Use Regex to sanitize metric and tag names from invalid characters
@@ -32,18 +37,10 @@ This plugin writes to a [Wavefront](https://www.wavefront.com) proxy, in Wavefro
   #use_regex = false
 
   ## point tags to use as the source name for Wavefront (if none found, host will be used)
-  #source_override = ["hostname", "agent_host", "node_host"]
+  #source_override = ["hostname", "address", "agent_host", "node_host"]
 
   ## whether to convert boolean values to numeric values, with false -> 0.0 and true -> 1.0. default is true
   #convert_bool = true
-
-  ## Define a mapping, namespaced by metric prefix, from string values to numeric values
-  ## The example below maps "green" -> 1.0, "yellow" -> 0.5, "red" -> 0.0 for
-  ## any metrics beginning with "elasticsearch"
-  #[[outputs.wavefront.string_to_number.elasticsearch]]
-  #  green = 1.0
-  #  yellow = 0.5
-  #  red = 0.0
 ```
 
 
@@ -76,6 +73,5 @@ More information about the Wavefront data format is available [here](https://com
 
 
 ### Allowed values for metrics
-Wavefront allows `integers` and `floats` as input values.  It will ignore most `strings`, but when configured
-will map certain `strings` to numeric values.  By default it also maps `bool` values to numeric, false -> 0.0, 
-true -> 1.0
+Wavefront allows `integers` and `floats` as input values.  By default it also maps `bool` values to numeric, false -> 0.0, 
+true -> 1.0.  To map `strings` use the [enum](../../processors/enum) processor plugin.
