@@ -218,7 +218,7 @@ func TestWorkerPool(t *testing.T) {
 	te := NewThrottledExecutor(5)
 	for i := 0; i < n; i++ {
 		func(i int) {
-			te.Run(func() {
+			te.Run(context.Background(), func() {
 				atomic.AddInt64(&ngr, 1)
 				mux.Lock()
 				defer mux.Unlock()

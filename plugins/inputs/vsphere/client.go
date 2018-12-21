@@ -3,6 +3,7 @@ package vsphere
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"log"
 	"net/url"
 	"strconv"
@@ -77,7 +78,7 @@ func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 		ctx2, cancel2 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
 		defer cancel2()
 		if cf.client.Client.SessionManager.Login(ctx2, url.UserPassword(cf.parent.Username, cf.parent.Password)) != nil {
-			return nil.fmt.Errorf("Renewing authentication failed: %v", err)
+			return nil, fmt.Errorf("Renewing authentication failed: %v", err)
 		}
 	}
 
