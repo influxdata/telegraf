@@ -3,14 +3,13 @@ package vsphere
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"log"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/vmware/govmomi/vim25/types"
 
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/object"
@@ -20,6 +19,7 @@ import (
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/soap"
+	"github.com/vmware/govmomi/vim25/types"
 )
 
 // The highest number of metrics we can query for, no matter what settings
@@ -78,8 +78,7 @@ func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 		ctx2, cancel2 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
 		defer cancel2()
 		if cf.client.Client.SessionManager.Login(ctx2, url.UserPassword(cf.parent.Username, cf.parent.Password)) != nil {
-			log.Printf("W! [inputs.vsphere]: Client reauthentication failed.")
-			return nil, err
+			return nil, fmt.Errorf("Renewing authentication failed: %v", err)
 		}
 	}
 

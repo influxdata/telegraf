@@ -373,6 +373,8 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	resourceKinds := make(map[string]resourceKind)
 	dcNameCache := make(map[string]string)
 
+	numRes := int64(0)
+
 	// Populate resource objects, and endpoint instance info.
 	for k, res := range e.resourceKinds {
 		log.Printf("D! [inputs.vsphere] Discovering resources for %s", res.name)
@@ -410,6 +412,9 @@ func (e *Endpoint) discover(ctx context.Context) error {
 			}
 			res.objects = objects
 			resourceKinds[k] = res
+
+			SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": res.name}, int64(len(objects)))
+			numRes += int64(len(objects))
 		}
 	}
 
@@ -432,7 +437,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	e.lun2ds = l2d
 
 	sw.Stop()
-	// SendInternalCounter("discovered_objects", e.URL.Host, int64(len(instInfo))) TODO: Count the correct way
+	SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": "instance-total"}, numRes)
 	return nil
 }
 
@@ -486,7 +491,7 @@ func (e *Endpoint) complexMetadataSelect(ctx context.Context, res *resourceKind,
 	te := NewThrottledExecutor(e.Parent.DiscoverConcurrency)
 	for _, obj := range sampledObjects {
 		func(obj objectRef) {
-			te.Run(func() {
+			te.Run(ctx, func() {
 				metrics, err := e.getMetadata(ctx, obj, res.sampling)
 				if err != nil {
 					log.Printf("E! [inputs.vsphere]: Error while getting metric metadata. Discovery will be incomplete. Error: %s", err)
@@ -690,8 +695,8 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 }
 
 // Workaround to make sure pqs is a copy of the loop variable and won't change.
-func submitChunkJob(te *ThrottledExecutor, job func([]types.PerfQuerySpec), pqs []types.PerfQuerySpec) {
-	te.Run(func() {
+func submitChunkJob(ctx context.Context, te *ThrottledExecutor, job func([]types.PerfQuerySpec), pqs []types.PerfQuerySpec) {
+	te.Run(ctx, func() {
 		job(pqs)
 	})
 }
@@ -764,7 +769,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 				}
 
 				// Run collection job
-				submitChunkJob(te, job, pqs)
+				submitChunkJob(ctx, te, job, pqs)
 				pqs = make([]types.PerfQuerySpec, 0, e.Parent.MaxQueryObjects)
 				metrics = 0
 				nRes = 0
@@ -778,7 +783,7 @@ func (e *Endpoint) chunkify(ctx context.Context, res *resourceKind, now time.Tim
 		// Run collection job
 		log.Printf("D! [inputs.vsphere]: Queuing query: %d objects, %d metrics (0 remaining) of type %s for %s. Total objects %d (final chunk)",
 			len(pqs), metrics, res.name, e.URL.Host, len(res.objects))
-		submitChunkJob(te, job, pqs)
+		submitChunkJob(ctx, te, job, pqs)
 	}
 
 	// Wait for background collection to finish
