@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ericchiang/k8s/apis/apps/v1beta1"
+	"github.com/ericchiang/k8s/apis/apps/v1beta2"
 	"github.com/ericchiang/k8s/apis/core/v1"
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
 )
@@ -50,6 +51,22 @@ func (c *client) getAPIResourceList(ctx context.Context) (rList *metav1.APIResou
 	return rList, nil
 }
 
+func (c *client) getConfigMaps(ctx context.Context) (list *v1.ConfigMapList, err error) {
+	list = new(v1.ConfigMapList)
+	if err = c.doGet(ctx, "/configmaps/", list); err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (c *client) getDaemonSets(ctx context.Context) (list *v1beta2.DaemonSetList, err error) {
+	list = new(v1beta2.DaemonSetList)
+	if err = c.doGet(ctx, "/daemonsets/", list); err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
 func (c *client) getDeployments(ctx context.Context) (list *v1beta1.DeploymentList, err error) {
 	list = new(v1beta1.DeploymentList)
 	if err = c.doGet(ctx, "/deployments/", list); err != nil {
@@ -61,6 +78,22 @@ func (c *client) getDeployments(ctx context.Context) (list *v1beta1.DeploymentLi
 func (c *client) getNodes(ctx context.Context) (list *v1.NodeList, err error) {
 	list = new(v1.NodeList)
 	if err = c.doGet(ctx, "/nodes/", list); err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (c *client) getPersistentVolumes(ctx context.Context) (list *v1.PersistentVolumeList, err error) {
+	list = new(v1.PersistentVolumeList)
+	if err = c.doGet(ctx, "/persistentvolumes/", list); err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
+func (c *client) getPersistentVolumeClaims(ctx context.Context) (list *v1.PersistentVolumeClaimList, err error) {
+	list = new(v1.PersistentVolumeClaimList)
+	if err = c.doGet(ctx, "/persistentvolumeclaims/", list); err != nil {
 		return nil, err
 	}
 	return list, nil

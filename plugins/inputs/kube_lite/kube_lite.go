@@ -44,6 +44,8 @@ type KubernetesState struct {
 	firstTimeGather           bool
 	ResourceListCheckInterval *internal.Duration `toml:"resouce_list_check_interval"`
 	ResourceExclude           []string           `toml:"resource_exclude"`
+
+	MaxConfigMapAge internal.Duration `toml:"max_config_map_age"`
 }
 
 var sampleConfig = `
@@ -210,4 +212,11 @@ var invalidLabelCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
 
 func sanitizeLabelName(s string) string {
 	return invalidLabelCharRE.ReplaceAllString(s, "_")
+}
+
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }

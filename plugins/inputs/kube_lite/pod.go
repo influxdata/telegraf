@@ -8,6 +8,7 @@ package kube_lite
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/ericchiang/k8s/apis/core/v1"
@@ -35,13 +36,9 @@ func registerPodCollector(ctx context.Context, acc telegraf.Accumulator, ks *Kub
 }
 
 func (ks *KubernetesState) gatherPod(p v1.Pod, acc telegraf.Accumulator) error {
+	// todo: size is likely wrong
 	if p.Metadata.CreationTimestamp.Size() == 0 {
 		return nil
-	}
-
-	fields := map[string]interface{}{}
-	tags := map[string]string{
-		"namespace": *p.Metadata.Namespace,
 	}
 
 	for i, cs := range p.Status.ContainerStatuses {
@@ -53,16 +50,25 @@ func (ks *KubernetesState) gatherPod(p v1.Pod, acc telegraf.Accumulator) error {
 		if c.LastTransitionTime.Size() == 0 {
 			continue
 		}
-		gatherPodStatus(tags, fields, *c, acc)
+		gatherPodStatus(p, *c, acc)
 	}
 
 	return nil
 }
 
 func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.Container, acc telegraf.Accumulator) {
-	fields := map[string]interface{}{}
+	fields := map[string]interface{}{
+		"status_restarts_total":    cs.GetRestartCount(),
+		"status_running":           boolInt(cs.State.Running != nil),
+		"status_terminated":        boolInt(cs.State.Terminated != nil),
+		"status_terminated_reasom": cs.State.Terminated.GetReason(),
+	}
 	tags := map[string]string{
 		"namespace": *p.Metadata.Namespace,
+		"name":      *c.Name,
+		"node":      *p.Spec.NodeName,
+		"pod":       *p.Metadata.Name,
+		// "reason":      ,
 	}
 
 	req := c.Resources.Requests
@@ -73,9 +79,9 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 		case "cpu":
 			// todo: use terrible atoi?
 			fields["resource_requests_cpu_cores"] = *val.String_
-			// default:
-			// 	// todo: ensure `Size` is what we expect
-			// 	fields["resource_requests_"+sanitizeLabelName(string(resourceName))+"_bytes"] = val.Size()
+		default:
+			// todo: ensure `Size` is what we expect
+			fields["resource_requests_"+sanitizeLabelName(string(resourceName))+"_bytes"] = val.Size()
 		}
 	}
 	for resourceName, val := range lim {
@@ -83,30 +89,30 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 		case "cpu":
 			// todo: use terrible atoi?
 			fields["resource_limits_cpu_cores"] = *val.String_
-			// default:
-			// 	// todo: ensure `Size` is what we expect
-			// 	fields["resource_limits_"+sanitizeLabelName(string(resourceName))+"_bytes"] = val.Size()
+		default:
+			// todo: ensure `Size` is what we expect
+			fields["resource_limits_"+sanitizeLabelName(string(resourceName))+"_bytes"] = val.Size()
 		}
 	}
 
 	acc.AddFields(podContainerMeasurement, fields, tags)
 }
 
-func gatherPodStatus(t map[string]string, f map[string]interface{}, c v1.PodCondition, acc telegraf.Accumulator) {
-	tags := make(map[string]string)
-	for k, v := range t {
-		tags[k] = v
-	}
-	fields := make(map[string]interface{})
-	for k, v := range f {
-		fields[k] = v
+func gatherPodStatus(p v1.Pod, c v1.PodCondition, acc telegraf.Accumulator) {
+	tags := map[string]string{
+		"namespace": p.Metadata.GetNamespace(),
+		"name":      p.Metadata.GetName(),
+		"node":      p.Spec.GetNodeName(),
+		"reason":    p.Status.GetReason(),
 	}
 
-	switch *c.Type {
+	fields := make(map[string]interface{})
+
+	switch strings.ToLower(*c.Type) {
 	case "ready":
-		tags["ready"] = "true"
+		fields["ready"] = "true"
 	default:
-		tags["ready"] = "false"
+		fields["ready"] = "false"
 	}
 
 	// todo: ensure time works properly

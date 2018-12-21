@@ -28,12 +28,14 @@ func registerDeploymentCollector(ctx context.Context, acc telegraf.Accumulator, 
 
 func (ks *KubernetesState) gatherDeployment(d v1beta1.Deployment, acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{
-		"status_replicas_available":   *d.Status.AvailableReplicas,
-		"status_replicas_unavailable": *d.Status.UnavailableReplicas,
+		"status_replicas_available":   d.Status.GetAvailableReplicas(),
+		"status_replicas_unavailable": d.Status.GetUnavailableReplicas(),
+		"created":                     d.Metadata.CreationTimestamp.GetSeconds(),
+		// "created":                     time.Unix(*d.Metadata.CreationTimestamp.Seconds, int64(*d.Metadata.CreationTimestamp.Nanos)),
 	}
 	tags := map[string]string{
-		"name":      *d.Metadata.Name,
-		"namespace": *d.Metadata.Namespace,
+		"name":      d.Metadata.GetName(),
+		"namespace": d.Metadata.GetNamespace(),
 	}
 
 	acc.AddFields(deploymentMeasurement, fields, tags)

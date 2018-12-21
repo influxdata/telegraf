@@ -112,6 +112,9 @@ func TestPod(t *testing.T) {
 												Running: &v1.ContainerStateRunning{
 													StartedAt: &metav1.Time{Seconds: toInt64Ptr(cond2.Unix())},
 												},
+												// Terminated: &v1.ContainerStateTerminated{
+												// 	Reason: toStrPtr("completed"),
+												// },
 											},
 											Ready:        toBoolPtr(true),
 											RestartCount: toInt32Ptr(3),
@@ -179,19 +182,20 @@ func TestPod(t *testing.T) {
 					{
 						Measurement: podContainerMeasurement,
 						Fields: map[string]interface{}{
-							// "status_restarts_total": int32(3),
-							// "status_waiting":        0,
-							// "status_running":        1,
-							// "status_terminated":     0,
-							// "status_ready":          1,
+							"status_restarts_total": int32(3),
+							"status_running":        1,
+							"status_terminated":     0,
+							// "status_terminated_reason":    "completed",
 							"resource_requests_cpu_cores": "8",
 							"resource_limits_cpu_cores":   "8",
+							// "status_waiting":        0,
+							// "status_ready":          1,
 						},
 						Tags: map[string]string{
 							"namespace": "ns1",
-							// "pod_name":                 "pod1",
-							// "node_name":                "node1",
-							// "container":                "forwarder",
+							"name":      "forwarder",
+							"node":      "node1",
+							"pod":       "pod1",
 							// "image":                    "image1",
 							// "image_id":                 "image_id1",
 							// "container_id":             "docker://54abe32d0094479d3d",
@@ -199,29 +203,17 @@ func TestPod(t *testing.T) {
 							// "status_terminated_reason": "",
 						},
 					},
-					// {
-					// 	Measurement: podStatusMeasurement,
-					// 	Fields: map[string]interface{}{
-					// 		"start_time":             started.Unix(),
-					// 		"status_phase_pending":   0,
-					// 		"status_phase_succeeded": 0,
-					// 		"status_phase_failed":    0,
-					// 		"status_phase_running":   1,
-					// 		"status_phase_unknown":   0,
-					// 		"resource_requests_cpu_cores": "8",
-					// 		"resource_limits_cpu_cores":   "8",
-					// 	},
-					// 	Tags: map[string]string{
-					// 		"namespace": "ns1",
-					// 		"pod":          "pod1",
-					// 		"node":         "node1",
-					// 		"host_ip":      "180.12.10.18",
-					// 		"pod_ip":       "10.244.2.15",
-					// 		"status_phase": "running",
-					// 		"ready":        "false",
-					// 		"scheduled":    "false",
-					// 	},
-					// },
+					{
+						Measurement: podStatusMeasurement,
+						Fields: map[string]interface{}{
+							"ready": "false",
+						},
+						Tags: map[string]string{
+							"namespace": "ns1",
+							"name":      "pod1",
+							"node":      "node1",
+						},
+					},
 					// {
 					// 	Measurement: podStatusMeasurement,
 					// 	Fields: map[string]interface{}{
