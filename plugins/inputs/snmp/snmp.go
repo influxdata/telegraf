@@ -327,7 +327,6 @@ func Errorf(err error, msg string, format ...interface{}) error {
 }
 
 func init() {
-	fmt.Println("snmp init...")
 	inputs.Add("snmp", func() telegraf.Input {
 		return &Snmp{
 			Name:           "snmp",
@@ -338,7 +337,6 @@ func init() {
 			Community:      "public",
 		}
 	})
-	fmt.Println("snmp init done...")
 }
 
 // SampleConfig returns the default configuration of the input.

@@ -41,11 +41,9 @@ var sampleConfig = `
 `
 
 func init() {
-	fmt.Println("nsq_consumer init...")
 	inputs.Add("nsq_consumer", func() telegraf.Input {
 		return &NSQConsumer{}
 	})
-	fmt.Println("nsq_consumer init done...")
 }
 
 // SetParser takes the data_format from the config and finds the right parser for that format

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -42,6 +43,7 @@ type Postgresql struct {
 	inputQueue chan []telegraf.Metric
 	//inputQueue  *goque.Queue
 	insertTypes map[string]map[string]string
+	exclude     []*regexp.Regexp
 }
 
 type InsertKey struct {
@@ -152,21 +154,12 @@ func (p *Postgresql) HandleInserts_Copy(i int, insertItem InsertItem, pwg *sync.
 func (p *Postgresql) PostgreSQL_Batch(txn *sql.Tx, insertItems map[string]InsertItem) error {
 	//var insertSqlArray []string
 	//defer pwg.Done()
-
 	for _, insert := range insertItems {
 		sql := p.generateInsertWithValues(insert.TableName, insert.Columns, insert.Values)
 		_, err := txn.Exec(sql)
 		if err != nil {
-			log.Println("ERROR: [insert.Values]: ", err)
 			return err
 		}
-		//insertSqlArray = append(insertSqlArray, sql)
-		// for column, t := range insert.Types {
-		// 	if _, ok := p.insertTypes[insert.TableName]; !ok {
-		// 		p.insertTypes[insert.TableName] = make(map[string]string)
-		// 	}
-		// 	p.insertTypes[insert.TableName][column] = t
-		// }
 	}
 
 	return nil
@@ -176,70 +169,63 @@ func (p *Postgresql) HandleInserts_Batch(i int, insertItems map[string]InsertIte
 	//defer pwg.Done()
 	txn, err := p.db.Begin()
 	if err != nil {
-		log.Println("ERROR: [db.Begin]: ", err)
 		return err
 	}
 
 	err = p.PostgreSQL_Batch(txn, insertItems)
 	if err != nil {
-		err = txn.Rollback()
-		if err != nil {
+		err2 := txn.Rollback()
+		if err2 != nil {
 			log.Println("ERROR: [txn.Rollback]: ", err)
-			return err
+		}
+
+		exists, table, column := p.ColumnExists(err)
+		if !exists {
+			err = p.AddColumn(table, column)
+			if err != nil {
+				log.Println("ERROR [batch.AddColumn]: ", err)
+			}
 		}
 	} else {
 		err = txn.Commit()
 		if err != nil {
 			log.Println("ERROR: [txn.Commit]: ", err)
-			return err
 		}
 	}
 
-	return nil
+	return err
 }
 
-// if len(insertSqlArray) > 0 {
-// 	keepTrying := true
-// 	for keepTrying {
-// 		_, err := txn.Exec(sql)
-// 		if err != nil {
-// 			// check if insert error was caused by column mismatch
-// 			if p.FieldsAsJsonb == false {
-// 				log.Printf("E! Error during insert: %v", err)
-// 				missingColumnRegex := regexp.MustCompile("ERROR: column \"(.*?)\" of relation \"(.*?)\" does not exist.*$")
-// 				dpInvalidInput := regexp.MustCompile("ERROR: invalid input syntax for type (.*?): \"(.*?)\".*$")
-// 				matches1 := missingColumnRegex.FindStringSubmatch(err.Error())
-// 				if matches1 != nil {
-// 					column := matches1[1]
-// 					table := matches1[2]
-// 					query := "ALTER TABLE %s.%s ADD COLUMN %s %s;"
-// 					dbquery := fmt.Sprintf(query, quoteIdent("public"), quoteIdent(table), quoteIdent(column), p.insertTypes[table][column])
-// 					log.Println(dbquery)
-// 					_, err = p.db.Exec(dbquery)
-// 					if err != nil {
-// 						fmt.Println("Error 1", err)
-// 					}
-// 					continue
-// 				}
+func (p *Postgresql) ColumnExists(err error) (bool, string, string) {
+	if p.FieldsAsJsonb == false {
+		missingColumnRegex := regexp.MustCompile("pq: column \"(.*?)\" of relation \"(.*?)\" does not exist.*$")
+		//dpInvalidInput := regexp.MustCompile("ERROR: invalid input syntax for type (.*?): \"(.*?)\".*$")
+		matches := missingColumnRegex.FindStringSubmatch(err.Error())
+		if matches != nil && len(matches) > 2 {
+			table := matches[2]
+			column := matches[1]
 
-// 				matches2 := dpInvalidInput.FindStringSubmatch(err.Error())
-// 				if matches2 != nil {
-// 					inType := matches2[1]
-// 					inVal := matches2[2]
+			return false, table, column
+		}
 
-// 					idx := strings.Index(sql, inVal)
-// 					fmt.Println(inType, inVal, idx, len(sql))
-// 					continue
-// 				}
+		return true, "", ""
+	}
 
-// 				keepTrying = false
-// 			}
-// 		} else {
-// 			keepTrying = false
-// 		}
-// 	}
+	return true, "", ""
+}
 
-// }
+func (p *Postgresql) AddColumn(table string, column string) error {
+	query := "ALTER TABLE %s.%s ADD COLUMN %s %s;"
+	dbquery := fmt.Sprintf(query, quoteIdent("public"), quoteIdent(table), quoteIdent(column), "double precision")
+	log.Println(dbquery)
+	_, err := p.db.Exec(dbquery)
+	if err != nil {
+		return err
+	}
+
+	log.Println("Added Column", column, "to table", table)
+	return nil
+}
 
 func (p *Postgresql) Close() error {
 	return p.db.Close()
@@ -247,7 +233,7 @@ func (p *Postgresql) Close() error {
 
 func contains(haystack []string, needle string) bool {
 	for _, key := range haystack {
-		if key == needle {
+		if found, _ := regexp.MatchString(needle, key); found {
 			return true
 		}
 	}

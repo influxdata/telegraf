@@ -16,7 +16,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
-	"github.com/influxdata/telegraf/plugins/parsers/phdcsv"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/vqtcsv"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
@@ -120,8 +119,6 @@ type Config struct {
 	// an optional map containing tag names as keys and json paths to retrieve the tag values from as values
 	// used if TagsPath is empty or doesn't return any tags
 	DropwizardTagPathsMap map[string]string
-	// Custom args for a particular parser
-	Args map[string]interface{}
 
 	//grok patterns
 	GrokPatterns           []string
@@ -129,6 +126,9 @@ type Config struct {
 	GrokCustomPatterns     string
 	GrokCustomPatternFiles []string
 	GrokTimezone           string
+
+	//VQTCSV
+	VqtcsvTimezone string
 
 	//csv configuration
 	CSVColumnNames       []string `toml:"csv_column_names"`
@@ -163,8 +163,6 @@ func NewParser(config *Config) (Parser, error) {
 		parser, err = NewFileInfoParser()
 	case "vqtcsv":
 		parser, err = NewVqtCsvParser(config)
-	case "phdcsv":
-		parser, err = NewPhdCsvParser(config)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.DefaultTags)
@@ -226,17 +224,9 @@ func NewFileInfoParser() (Parser, error) {
 	return f, err
 }
 
-func NewPhdCsvParser(config *Config) (Parser, error) {
-	v, err := phdcsv.NewPhdCsvParser(
-		config.Args["acc"].(telegraf.Accumulator))
-	return v, err
-}
-
 func NewVqtCsvParser(config *Config) (Parser, error) {
 	v, err := vqtcsv.NewVqtCsvParser(
-		config.MetricName,
-		config.Args["location"].(*time.Location),
-		config.Args["fieldreplace"].(map[string]string),
+		config.VqtcsvTimezone,
 	)
 	return v, err
 }

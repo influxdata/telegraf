@@ -813,9 +813,7 @@ func (h *Host) HandleResponse(
 }
 
 func init() {
-	fmt.Println("snmp_legacy init...")
 	inputs.Add("snmp_legacy", func() telegraf.Input {
 		return &Snmp{}
 	})
-	fmt.Println("snmp_legacy init done...")
 }

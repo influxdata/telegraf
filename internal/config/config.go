@@ -1213,6 +1213,7 @@ func buildParser(name string, tbl *ast.Table) (parsers.Parser, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return parsers.NewParser(config)
 }
 
@@ -1574,6 +1575,15 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	// VQTCSV
+	if node, ok := tbl.Fields["vqtcsv_timezone"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.VqtcsvTimezone = str.Value
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1613,6 +1623,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "csv_timestamp_column")
 	delete(tbl.Fields, "csv_timestamp_format")
 	delete(tbl.Fields, "csv_trim_space")
+	delete(tbl.Fields, "vqtcsv_timezone")
 
 	return c, nil
 }

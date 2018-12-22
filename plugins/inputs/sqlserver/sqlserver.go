@@ -2,7 +2,6 @@ package sqlserver
 
 import (
 	"database/sql"
-	"fmt"
 	"sync"
 	"time"
 
@@ -236,11 +235,9 @@ func (s *SQLServer) accRow(query Query, acc telegraf.Accumulator, row scanner) e
 }
 
 func init() {
-	fmt.Println("sqlserver init...")
 	inputs.Add("sqlserver", func() telegraf.Input {
 		return &SQLServer{}
 	})
-	fmt.Println("sqlserver init done...")
 }
 
 // Queries - V2

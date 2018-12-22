@@ -341,7 +341,5 @@ func (uc unixCloser) Close() error {
 }
 
 func init() {
-	fmt.Println("socket_listener init...")
 	inputs.Add("socket_listener", func() telegraf.Input { return newSocketListener() })
-	fmt.Println("socket_listener init done...")
 }

@@ -3,8 +3,11 @@ package all
 import (
 	_ "github.com/influxdata/telegraf/plugins/processors/converter"
 	_ "github.com/influxdata/telegraf/plugins/processors/enum"
+	_ "github.com/influxdata/telegraf/plugins/processors/eval"
+	_ "github.com/influxdata/telegraf/plugins/processors/expr"
 	_ "github.com/influxdata/telegraf/plugins/processors/geohash"
 	_ "github.com/influxdata/telegraf/plugins/processors/lookup"
+	_ "github.com/influxdata/telegraf/plugins/processors/luascript"
 	_ "github.com/influxdata/telegraf/plugins/processors/override"
 	_ "github.com/influxdata/telegraf/plugins/processors/parser"
 	_ "github.com/influxdata/telegraf/plugins/processors/printer"

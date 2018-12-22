@@ -224,9 +224,7 @@ func (t *Tail) SetParserFunc(fn parsers.ParserFunc) {
 }
 
 func init() {
-	fmt.Println("tail init...")
 	inputs.Add("tail", func() telegraf.Input {
 		return NewTail()
 	})
-	fmt.Println("tail init done...")
 }

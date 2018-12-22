@@ -247,12 +247,10 @@ func (k *Kapacitor) gatherURL(
 }
 
 func init() {
-	fmt.Println("kapacitor init...")
 	inputs.Add("kapacitor", func() telegraf.Input {
 		return &Kapacitor{
 			URLs:    []string{defaultURL},
 			Timeout: internal.Duration{Duration: time.Second * 5},
 		}
 	})
-	fmt.Println("kapacitor init done...")
 }

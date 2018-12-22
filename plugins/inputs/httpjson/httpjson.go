@@ -284,7 +284,6 @@ func (h *HttpJson) sendRequest(serverURL string) (string, float64, error) {
 }
 
 func init() {
-	fmt.Println("httpjson init...")
 	inputs.Add("httpjson", func() telegraf.Input {
 		return &HttpJson{
 			client: &RealHTTPClient{},
@@ -293,5 +292,4 @@ func init() {
 			},
 		}
 	})
-	fmt.Println("httpjson init done...")
 }

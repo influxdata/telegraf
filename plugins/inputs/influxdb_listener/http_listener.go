@@ -433,5 +433,4 @@ func init() {
 			TimeFunc:       time.Now,
 		}
 	})
-	fmt.Println("http_listener init done...")
 }

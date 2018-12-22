@@ -298,7 +298,5 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	fmt.Println("win_perf_counters_2 init...")
 	inputs.Add("win_perf_counters_2", func() telegraf.Input { return &Win_PerfCounters{} })
-	fmt.Println("win_perf_counters_2 init done...")
 }

@@ -51,11 +51,9 @@ const (
 )
 
 func init() {
-	fmt.Println("nsq init...")
 	inputs.Add("nsq", func() telegraf.Input {
 		return &NSQ{}
 	})
-	fmt.Println("nsq init done...")
 }
 
 func (n *NSQ) SampleConfig() string {

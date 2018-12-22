@@ -50,130 +50,16 @@ func NewVqtCsvMetric(measurement string, timestamp time.Time) *VqtCsvMetric {
 	return m
 }
 
-func NewVqtCsvParser(metricName string, location *time.Location, fieldReplace map[string]string) (*VqtCsvParser, error) {
+func NewVqtCsvParser(timezone string) (*VqtCsvParser, error) {
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		return nil, err
+	}
 	v := &VqtCsvParser{
-		metricName:   metricName,
-		Location:     location,
-		FieldReplace: fieldReplace,
+		Location: loc,
 	}
 
 	return v, nil
-}
-
-func parseOpcQuality(qualityIn int64) string {
-	qualityStr := "Good [Non-Specific]"
-	switch qualityIn {
-	case 0:
-		qualityStr = "Bad [Non-Specific]"
-		break
-	case 4:
-		qualityStr = "Bad [Configuration Error]"
-		break
-	case 8:
-		qualityStr = "Bad [Not Connected]"
-		break
-	case 12:
-		qualityStr = "Bad [Device Failure]"
-		break
-	case 16:
-		qualityStr = "Bad [Sensor Failure]"
-		break
-	case 20:
-		qualityStr = "Bad [Last Known Value]"
-		break
-	case 24:
-		qualityStr = "Bad [Communication Failure]"
-		break
-	case 28:
-		qualityStr = "Bad [Out of Service]"
-		break
-	case 64:
-		qualityStr = "Uncertain [Non-Specific]"
-		break
-	case 65:
-		qualityStr = "Uncertain [Non-Specific] (Low Limited)"
-		break
-	case 66:
-		qualityStr = "Uncertain [Non-Specific] (High Limited)"
-		break
-	case 67:
-		qualityStr = "Uncertain [Non-Specific] (Constant)"
-		break
-	case 68:
-		qualityStr = "Uncertain [Last Usable]"
-		break
-	case 69:
-		qualityStr = "Uncertain [Last Usable] (Low Limited)"
-		break
-	case 70:
-		qualityStr = "Uncertain [Last Usable] (High Limited)"
-		break
-	case 71:
-		qualityStr = "Uncertain [Last Usable] (Constant)"
-		break
-	case 80:
-		qualityStr = "Uncertain [Sensor Not Accurate]"
-		break
-	case 81:
-		qualityStr = "Uncertain [Sensor Not Accurate] (Low Limited)"
-		break
-	case 82:
-		qualityStr = "Uncertain [Sensor Not Accurate] (High Limited)"
-		break
-	case 83:
-		qualityStr = "Uncertain [Sensor Not Accurate] (Constant)"
-		break
-	case 84:
-		qualityStr = "Uncertain [EU Exceeded]"
-		break
-	case 85:
-		qualityStr = "Uncertain [EU Exceeded] (Low Limited)"
-		break
-	case 86:
-		qualityStr = "Uncertain [EU Exceeded] (High Limited)"
-		break
-	case 87:
-		qualityStr = "Uncertain [EU Exceeded] (Constant)"
-		break
-	case 88:
-		qualityStr = "Uncertain [Sub-Normal]"
-		break
-	case 89:
-		qualityStr = "Uncertain [Sub-Normal] (Low Limited)"
-		break
-	case 90:
-		qualityStr = "Uncertain [Sub-Normal] (High Limited)"
-		break
-	case 91:
-		qualityStr = "Uncertain [Sub-Normal] (Constant)"
-		break
-	case 192:
-		qualityStr = "Good [Non-Specific]"
-		break
-	case 193:
-		qualityStr = "Good [Non-Specific] (Low Limited)"
-		break
-	case 194:
-		qualityStr = "Good [Non-Specific] (High Limited)"
-		break
-	case 195:
-		qualityStr = "Good [Non-Specific] (Constant)"
-		break
-	case 216:
-		qualityStr = "Good [Local Override]"
-		break
-	case 217:
-		qualityStr = "Good [Local Override] (Low Limited)"
-		break
-	case 218:
-		qualityStr = "Good [Local Override] (High Limited)"
-		break
-	case 219:
-		qualityStr = "Good [Local Override] (Constant)"
-		break
-	}
-
-	return qualityStr
 }
 
 func (p *VqtCsvParser) Process(csvline []string) (telegraf.Metric, error) {
@@ -222,7 +108,7 @@ func (p *VqtCsvParser) Process(csvline []string) (telegraf.Metric, error) {
 			tagClean := strings.TrimRight(tag, ")")
 			tagPair := strings.Split(tagClean, "=")
 			if len(tagPair) != 2 {
-				log.Println("ERROR: [parse]: Expected )")
+				log.Println("ERROR: [parse]: Expected )", csvline)
 				continue
 			}
 
@@ -249,7 +135,7 @@ func (p *VqtCsvParser) Process(csvline []string) (telegraf.Metric, error) {
 			log.Println("Error parsing quality", csvline[i+2], err)
 		}
 
-		currentMetric.Tags["quality"] = parseOpcQuality(qualityInt)
+		currentMetric.Fields["quality"] = qualityInt
 		currentMetric.Fields[fieldName] = value
 	}
 

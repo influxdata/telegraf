@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
-	"fmt"
 	"hash/fnv"
 	"io"
 	"io/ioutil"
@@ -26,7 +25,6 @@ import (
 )
 
 type DirDefObject struct {
-	Name            string
 	Incoming        string
 	Outgoing        string
 	Error           string
@@ -48,10 +46,9 @@ type DirDefObject struct {
 	histQueue    chan string
 	rtQueue      chan string
 	location     *time.Location
-	metricMatch  *regexp.Regexp
 	fileTagMatch map[string]*regexp.Regexp
-	parser       parsers.Parser
 	fiParser     *fileinfo.FileInfoParser
+	parser       parsers.Parser
 	acc          telegraf.Accumulator
 }
 
@@ -60,7 +57,8 @@ type DirMon struct {
 	FieldReplace map[string]string
 
 	currDir DirDefObject
-	acc     telegraf.Accumulator
+	parsers.Parser
+	acc telegraf.Accumulator
 }
 
 const sampleConfig = `
@@ -76,10 +74,6 @@ func (dm *DirMon) SampleConfig() string {
 
 func (dm *DirMon) Description() string {
 	return "Monitor a directory for DL Files"
-}
-
-func (dm *DirMon) Gather(acc telegraf.Accumulator) error {
-	return nil
 }
 
 func fileHandlerMultiGzip(fileName string) ([]string, error) {
@@ -187,8 +181,14 @@ func fileHandler(fileName string) ([]string, error) {
 		return nil, err
 	}
 
-	lines := strings.Split(string(content), "\n")
-	return lines, nil
+	strcontent := string(content)
+	if strings.Contains(strcontent, "\r\n") {
+		return strings.Split(string(content), "\r\n"), nil
+	} else if strings.Contains(strcontent, "\n") {
+		return strings.Split(string(content), "\n"), nil
+	}
+
+	return nil, nil
 }
 
 func getFileScanner(fileName string) (*bufio.Scanner, error) {
@@ -401,14 +401,6 @@ func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accum
 				}
 			}
 
-			name := metric.Name()
-			if ddo.metricMatch != nil {
-				match := ddo.metricMatch.FindStringSubmatch(fileName)
-				if len(match) > 1 {
-					name = match[1]
-				}
-			}
-
 			for key, regex := range ddo.fileTagMatch {
 				match := regex.FindStringSubmatch(fileName)
 				if len(match) > 1 {
@@ -416,7 +408,10 @@ func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accum
 				}
 			}
 
-			acc.AddFields(name, metric.Fields(), metric.Tags(), metric.Time())
+			if len(metric.Name()) == 0 {
+				metric.SetName("dirmon")
+			}
+			acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
 		}
 	}
 
@@ -578,7 +573,7 @@ func (ddo DirDefObject) RealtimeHandler(dir string) {
 	}
 }
 
-func (ddo DirDefObject) Start(acc telegraf.Accumulator, gFieldReplace map[string]string) error {
+func (ddo DirDefObject) Start(acc telegraf.Accumulator, parser parsers.Parser, gFieldReplace map[string]string) error {
 	var err error
 
 	ddo.histQueue = make(chan string, ddo.ConcurrentTasks*ddo.NumProcessors)
@@ -600,26 +595,10 @@ func (ddo DirDefObject) Start(acc telegraf.Accumulator, gFieldReplace map[string
 	args["fieldreplace"] = ddo.FieldReplace
 	args["location"] = ddo.location
 
+	ddo.parser = parser
 	ddo.fiParser, err = fileinfo.NewFileInfoParser()
 	if err != nil {
 		return err
-	}
-
-	p, err := parsers.NewParser(&parsers.Config{
-		DataFormat: ddo.DataFormat,
-		MetricName: ddo.MetricName,
-		Args:       args,
-	})
-
-	if err != nil {
-		log.Fatalf("ERROR [parser:%s]: %s", p, err)
-	}
-	ddo.parser = p
-
-	if strings.HasPrefix(ddo.MetricName, "/") && strings.HasSuffix(ddo.MetricName, "/") {
-		// This is a regular expression. Parse it and use it as the name.
-		name := strings.Trim(ddo.MetricName, "/")
-		ddo.metricMatch = regexp.MustCompile(name)
 	}
 
 	ddo.fileTagMatch = make(map[string]*regexp.Regexp)
@@ -635,7 +614,7 @@ func (ddo DirDefObject) Start(acc telegraf.Accumulator, gFieldReplace map[string
 	if err != nil {
 		log.Fatalln("ERROR [receiver]: ", err)
 	}
-	if results == nil || len(results) == 0 {
+	if results == nil {
 		log.Fatalln("ERROR [results]: No directory found to monitor")
 	}
 
@@ -656,8 +635,8 @@ func (dm *DirMon) Start(acc telegraf.Accumulator) error {
 	dm.acc = acc
 	// Create a monitor for each directory
 	for _, d := range dm.Directory {
-		if err := d.Start(acc, dm.FieldReplace); err != nil {
-			log.Println("Error starting", d.Name)
+		if err := d.Start(acc, dm.Parser, dm.FieldReplace); err != nil {
+			log.Println("Error starting", d.Incoming)
 			return err
 		}
 
@@ -666,14 +645,19 @@ func (dm *DirMon) Start(acc telegraf.Accumulator) error {
 	return nil
 }
 
+func (dm *DirMon) SetParser(p parsers.Parser) {
+	dm.Parser = p
+}
+
+func (dm *DirMon) Gather(_ telegraf.Accumulator) error {
+	return nil
+}
+
 func (dm *DirMon) Stop() {
 }
 
 func init() {
-	fmt.Println("dirmon init...")
 	inputs.Add("dirmon", func() telegraf.Input {
-		dm := DirMon{}
-		return &dm
+		return &DirMon{}
 	})
-	fmt.Println("dirmon init done...")
 }

@@ -290,7 +290,6 @@ func (t *TcpListener) remember(id string, conn *net.TCPConn) {
 }
 
 func init() {
-	fmt.Println("tcp_listener init...")
 	inputs.Add("tcp_listener", func() telegraf.Input {
 		return &TcpListener{
 			ServiceAddress:         ":8094",
@@ -298,5 +297,4 @@ func init() {
 			MaxTCPConnections:      250,
 		}
 	})
-	fmt.Println("tcp_listener init done...")
 }

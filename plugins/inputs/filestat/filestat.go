@@ -123,9 +123,7 @@ func getMd5(file string) (string, error) {
 }
 
 func init() {
-	fmt.Println("filestat init...")
 	inputs.Add("filestat", func() telegraf.Input {
 		return NewFileStat()
 	})
-	fmt.Println("filestat init done...")
 }

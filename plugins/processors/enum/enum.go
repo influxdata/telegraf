@@ -1,6 +1,7 @@
 package enum
 
 import (
+	"regexp"
 	"strconv"
 
 	"github.com/influxdata/telegraf"
@@ -29,7 +30,8 @@ var sampleConfig = `
 `
 
 type EnumMapper struct {
-	Mappings []Mapping `toml:"mapping"`
+	Mappings   []Mapping `toml:"mapping"`
+	configured bool
 }
 
 type Mapping struct {
@@ -37,6 +39,8 @@ type Mapping struct {
 	Dest          string
 	Default       interface{}
 	ValueMappings map[string]interface{}
+
+	valueMappings map[interface{}]interface{}
 }
 
 func (mapper *EnumMapper) SampleConfig() string {
@@ -47,7 +51,39 @@ func (mapper *EnumMapper) Description() string {
 	return "Map enum values according to given table."
 }
 
+func (mapper *EnumMapper) configure() bool {
+	// Go through and identify the types. They all come in as strings. Cast them as their proper
+	// type so that when values come in, we cast cast appropriately.
+	intregex := regexp.MustCompile("^[-+]?[0-9]+$")
+	floatregex := regexp.MustCompile("^[-+]?[0-9]*\\.?[0-9]+([eE][-+]?[0-9]+)?$")
+
+	for i := range mapper.Mappings {
+		mapping := &mapper.Mappings[i]
+		mapping.valueMappings = make(map[interface{}]interface{})
+		for key, value := range mapping.ValueMappings {
+			if intregex.MatchString(key) {
+				k, err := strconv.ParseInt(key, 10, 64)
+				if err == nil {
+					mapping.valueMappings[k] = value
+				}
+			} else if floatregex.MatchString(key) {
+				k, err := strconv.ParseFloat(key, 64)
+				if err == nil {
+					mapping.valueMappings[k] = value
+				}
+			} else {
+				mapping.valueMappings[key] = value
+			}
+		}
+	}
+
+	return true
+}
+
 func (mapper *EnumMapper) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	if !mapper.configured {
+		mapper.configured = mapper.configure()
+	}
 	for i := 0; i < len(in); i++ {
 		in[i] = mapper.applyMappings(in[i])
 	}
@@ -57,14 +93,31 @@ func (mapper *EnumMapper) Apply(in ...telegraf.Metric) []telegraf.Metric {
 func (mapper *EnumMapper) applyMappings(metric telegraf.Metric) telegraf.Metric {
 	for _, mapping := range mapper.Mappings {
 		if originalValue, isPresent := metric.GetField(mapping.Field); isPresent == true {
-			if adjustedValue, isString := adjustBoolValue(originalValue).(string); isString == true {
-				if mappedValue, isMappedValuePresent := mapping.mapValue(adjustedValue); isMappedValuePresent == true {
-					writeField(metric, mapping.getDestination(), mappedValue)
-				}
+			if mappedValue, isMappedValuePresent := mapping.mapValue(originalValue); isMappedValuePresent == true {
+				writeField(metric, mapping.getDestination(), mappedValue)
 			}
 		}
 	}
 	return metric
+}
+
+func getType(in interface{}) string {
+	switch in.(type) {
+	case int:
+		return "int64"
+	case int64:
+		return "int64"
+	case int32:
+		return "int64"
+	case float32:
+		return "float64"
+	case float64:
+		return "float64"
+	case string:
+		return "string"
+	default:
+		return "unknown"
+	}
 }
 
 func adjustBoolValue(in interface{}) interface{} {
@@ -74,8 +127,8 @@ func adjustBoolValue(in interface{}) interface{} {
 	return in
 }
 
-func (mapping *Mapping) mapValue(original string) (interface{}, bool) {
-	if mapped, found := mapping.ValueMappings[original]; found == true {
+func (mapping *Mapping) mapValue(original interface{}) (interface{}, bool) {
+	if mapped, found := mapping.valueMappings[original]; found == true {
 		return mapped, true
 	}
 	if mapping.Default != nil {
@@ -98,6 +151,6 @@ func writeField(metric telegraf.Metric, name string, value interface{}) {
 
 func init() {
 	processors.Add("enum", func() telegraf.Processor {
-		return &EnumMapper{}
+		return &EnumMapper{configured: false}
 	})
 }
