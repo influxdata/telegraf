@@ -3,6 +3,7 @@ package mongodb
 import (
 	"log"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -26,6 +27,10 @@ type oplogEntry struct {
 	Timestamp bson.MongoTimestamp `bson:"ts"`
 }
 
+func IsAuthorization(err error) bool {
+	return strings.Contains(err.Error(), "not authorized")
+}
+
 func (s *Server) gatherOplogStats() *OplogStats {
 	stats := &OplogStats{}
 	localdb := s.Session.DB("local")
@@ -39,14 +44,22 @@ func (s *Server) gatherOplogStats() *OplogStats {
 			if err == mgo.ErrNotFound {
 				continue
 			}
-			log.Println("E! Error getting first oplog entry (" + err.Error() + ")")
+			if IsAuthorization(err) {
+				log.Println("D! Error getting first oplog entry (" + err.Error() + ")")
+			} else {
+				log.Println("E! Error getting first oplog entry (" + err.Error() + ")")
+			}
 			return stats
 		}
 		if err := localdb.C(collection_name).Find(query).Sort("-$natural").Limit(1).One(&op_last); err != nil {
-			if err == mgo.ErrNotFound {
+			if err == mgo.ErrNotFound || IsAuthorization(err) {
 				continue
 			}
-			log.Println("E! Error getting last oplog entry (" + err.Error() + ")")
+			if IsAuthorization(err) {
+				log.Println("D! Error getting first oplog entry (" + err.Error() + ")")
+			} else {
+				log.Println("E! Error getting first oplog entry (" + err.Error() + ")")
+			}
 			return stats
 		}
 	}
@@ -98,7 +111,11 @@ func (s *Server) gatherData(acc telegraf.Accumulator, gatherDbStats bool) error 
 		},
 	}, &resultShards)
 	if err != nil {
-		log.Println("E! Error getting database shard stats (" + err.Error() + ")")
+		if IsAuthorization(err) {
+			log.Println("D! Error getting database shard stats (" + err.Error() + ")")
+		} else {
+			log.Println("E! Error getting database shard stats (" + err.Error() + ")")
+		}
 	}
 
 	oplogStats := s.gatherOplogStats()

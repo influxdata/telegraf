@@ -95,7 +95,7 @@ supported_packages = {
     "freebsd": [ "tar" ]
 }
 
-next_version = '1.8.0'
+next_version = '1.10.0'
 
 ################
 #### Telegraf Functions
@@ -155,12 +155,8 @@ def go_get(branch, update=False, no_uncommitted=False):
     if local_changes() and no_uncommitted:
         logging.error("There are uncommitted changes in the current directory.")
         return False
-    if not check_path_for("dep"):
-        logging.info("Downloading `dep`...")
-        get_command = "go get -u github.com/golang/dep/cmd/dep"
-        run(get_command)
     logging.info("Retrieving dependencies with `dep`...")
-    run("{}/bin/dep ensure -v".format(os.environ.get("GOPATH",
+    run("{}/bin/dep ensure -v -vendor-only".format(os.environ.get("GOPATH",
         os.path.expanduser("~/go"))))
     return True
 
@@ -452,13 +448,14 @@ def build(version=None,
             build_command += "CGO_ENABLED=0 "
 
         # Handle variations in architecture output
+        goarch = arch
         if arch == "i386" or arch == "i686":
-            arch = "386"
+            goarch = "386"
         elif "arm64" in arch:
-            arch = "arm64"
+            goarch = "arm64"
         elif "arm" in arch:
-            arch = "arm"
-        build_command += "GOOS={} GOARCH={} ".format(platform, arch)
+            goarch = "arm"
+        build_command += "GOOS={} GOARCH={} ".format(platform, goarch)
 
         if "arm" in arch:
             if arch == "armel":

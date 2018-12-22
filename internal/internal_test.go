@@ -1,11 +1,15 @@
 package internal
 
 import (
+	"bytes"
+	"compress/gzip"
+	"io/ioutil"
 	"os/exec"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type SnakeTest struct {
@@ -161,4 +165,108 @@ func TestDuration(t *testing.T) {
 	d = Duration{}
 	d.UnmarshalTOML([]byte(`1.5`))
 	assert.Equal(t, time.Second, d.Duration)
+}
+
+func TestSize(t *testing.T) {
+	var s Size
+
+	s.UnmarshalTOML([]byte(`"1B"`))
+	assert.Equal(t, int64(1), s.Size)
+
+	s = Size{}
+	s.UnmarshalTOML([]byte(`1`))
+	assert.Equal(t, int64(1), s.Size)
+
+	s = Size{}
+	s.UnmarshalTOML([]byte(`'1'`))
+	assert.Equal(t, int64(1), s.Size)
+
+	s = Size{}
+	s.UnmarshalTOML([]byte(`"1GB"`))
+	assert.Equal(t, int64(1000*1000*1000), s.Size)
+
+	s = Size{}
+	s.UnmarshalTOML([]byte(`"12GiB"`))
+	assert.Equal(t, int64(12*1024*1024*1024), s.Size)
+}
+
+func TestCompressWithGzip(t *testing.T) {
+	testData := "the quick brown fox jumps over the lazy dog"
+	inputBuffer := bytes.NewBuffer([]byte(testData))
+
+	outputBuffer, err := CompressWithGzip(inputBuffer)
+	assert.NoError(t, err)
+
+	gzipReader, err := gzip.NewReader(outputBuffer)
+	assert.NoError(t, err)
+	defer gzipReader.Close()
+
+	output, err := ioutil.ReadAll(gzipReader)
+	assert.NoError(t, err)
+
+	assert.Equal(t, testData, string(output))
+}
+
+func TestVersionAlreadySet(t *testing.T) {
+	err := SetVersion("foo")
+	assert.Nil(t, err)
+
+	err = SetVersion("bar")
+
+	assert.NotNil(t, err)
+	assert.IsType(t, VersionAlreadySetError, err)
+
+	assert.Equal(t, "foo", Version())
+}
+
+func TestAlignDuration(t *testing.T) {
+	tests := []struct {
+		name     string
+		now      time.Time
+		interval time.Duration
+		expected time.Duration
+	}{
+		{
+			name:     "aligned",
+			now:      time.Date(2018, 1, 1, 1, 1, 0, 0, time.UTC),
+			interval: 10 * time.Second,
+			expected: 0 * time.Second,
+		},
+		{
+			name:     "standard interval",
+			now:      time.Date(2018, 1, 1, 1, 1, 1, 0, time.UTC),
+			interval: 10 * time.Second,
+			expected: 9 * time.Second,
+		},
+		{
+			name:     "odd interval",
+			now:      time.Date(2018, 1, 1, 1, 1, 1, 0, time.UTC),
+			interval: 3 * time.Second,
+			expected: 2 * time.Second,
+		},
+		{
+			name:     "sub second interval",
+			now:      time.Date(2018, 1, 1, 1, 1, 0, 5e8, time.UTC),
+			interval: 1 * time.Second,
+			expected: 500 * time.Millisecond,
+		},
+		{
+			name:     "non divisible not aligned on minutes",
+			now:      time.Date(2018, 1, 1, 1, 0, 0, 0, time.UTC),
+			interval: 1*time.Second + 100*time.Millisecond,
+			expected: 400 * time.Millisecond,
+		},
+		{
+			name:     "long interval",
+			now:      time.Date(2018, 1, 1, 1, 1, 0, 0, time.UTC),
+			interval: 1 * time.Hour,
+			expected: 59 * time.Minute,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := AlignDuration(tt.now, tt.interval)
+			require.Equal(t, tt.expected, actual)
+		})
+	}
 }

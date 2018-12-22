@@ -416,7 +416,9 @@ func (d *Docker) gatherContainer(
 	daemonOSType := r.OSType
 
 	// use common (printed at `docker ps`) name for container
-	tags["container_name"] = strings.TrimPrefix(v.Name, "/")
+	if v.Name != "" {
+		tags["container_name"] = strings.TrimPrefix(v.Name, "/")
+	}
 
 	// Add labels to tags
 	for k, label := range container.Labels {
@@ -442,6 +444,7 @@ func (d *Docker) gatherContainer(
 			}
 		}
 	}
+
 	if info.State != nil {
 		tags["container_status"] = info.State.Status
 		statefields := map[string]interface{}{
@@ -458,14 +461,14 @@ func (d *Docker) gatherContainer(
 			statefields["finished_at"] = container_time.UnixNano()
 		}
 		acc.AddFields("docker_container_status", statefields, tags, time.Now())
-	}
 
-	if info.State.Health != nil {
-		healthfields := map[string]interface{}{
-			"health_status":  info.State.Health.Status,
-			"failing_streak": info.ContainerJSONBase.State.Health.FailingStreak,
+		if info.State.Health != nil {
+			healthfields := map[string]interface{}{
+				"health_status":  info.State.Health.Status,
+				"failing_streak": info.ContainerJSONBase.State.Health.FailingStreak,
+			}
+			acc.AddFields("docker_container_health", healthfields, tags, time.Now())
 		}
-		acc.AddFields("docker_container_health", healthfields, tags, time.Now())
 	}
 
 	parseContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total, daemonOSType)

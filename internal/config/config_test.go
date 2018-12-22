@@ -32,13 +32,13 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
 		TagDrop: []models.TagFilter{
-			models.TagFilter{
+			{
 				Name:   "badtag",
 				Filter: []string{"othertag"},
 			},
 		},
 		TagPass: []models.TagFilter{
-			models.TagFilter{
+			{
 				Name:   "goodtag",
 				Filter: []string{"mytag"},
 			},
@@ -71,13 +71,13 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
 		TagDrop: []models.TagFilter{
-			models.TagFilter{
+			{
 				Name:   "badtag",
 				Filter: []string{"othertag"},
 			},
 		},
 		TagPass: []models.TagFilter{
-			models.TagFilter{
+			{
 				Name:   "goodtag",
 				Filter: []string{"mytag"},
 			},
@@ -117,13 +117,13 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
 		TagDrop: []models.TagFilter{
-			models.TagFilter{
+			{
 				Name:   "badtag",
 				Filter: []string{"othertag"},
 			},
 		},
 		TagPass: []models.TagFilter{
-			models.TagFilter{
+			{
 				Name:   "goodtag",
 				Filter: []string{"mytag"},
 			},
@@ -143,7 +143,10 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		"Testdata did not produce correct memcached metadata.")
 
 	ex := inputs.Inputs["exec"]().(*exec.Exec)
-	p, err := parsers.NewJSONParser("exec", nil, nil)
+	p, err := parsers.NewParser(&parsers.Config{
+		MetricName: "exec",
+		DataFormat: "json",
+	})
 	assert.NoError(t, err)
 	ex.SetParser(p)
 	ex.Command = "/usr/bin/myothercollector --foo=bar"

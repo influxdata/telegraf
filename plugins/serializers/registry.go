@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/vqtcsv"
 	"github.com/influxdata/telegraf/plugins/serializers/wwfastload"
 )
@@ -62,6 +63,9 @@ type Config struct {
 
 	// Timestamp units to use for JSON formatted output
 	TimestampUnits time.Duration
+
+	// Include HEC routing fields for splunkmetric output
+	HecRouting bool
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -79,6 +83,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewVqtCsvFileSerializer()
 	case "wwfastload":
 		serializer, err = wwfastload.NewWwFastLoadSerializer(config.Template)
+	case "splunkmetric":
+		serializer, err = NewSplunkmetricSerializer(config.HecRouting)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -87,6 +93,10 @@ func NewSerializer(config *Config) (Serializer, error) {
 
 func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return json.NewSerializer(timestampUnits)
+}
+
+func NewSplunkmetricSerializer(splunkmetric_hec_routing bool) (Serializer, error) {
+	return splunkmetric.NewSerializer(splunkmetric_hec_routing)
 }
 
 func NewInfluxSerializerConfig(config *Config) (Serializer, error) {

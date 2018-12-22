@@ -8,11 +8,10 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/swarm"
 	docker "github.com/docker/docker/client"
-	"github.com/docker/go-connections/sockets"
 )
 
 var (
-	version        = "1.24"
+	version        = "1.21" // 1.24 is when server first started returning its version
 	defaultHeaders = map[string]string{"User-Agent": "engine-api-cli-1.0"}
 )
 
@@ -27,7 +26,7 @@ type Client interface {
 }
 
 func NewEnvClient() (Client, error) {
-	client, err := docker.NewEnvClient()
+	client, err := docker.NewClientWithOpts(docker.FromEnv)
 	if err != nil {
 		return nil, err
 	}
@@ -35,21 +34,20 @@ func NewEnvClient() (Client, error) {
 }
 
 func NewClient(host string, tlsConfig *tls.Config) (Client, error) {
-	proto, addr, _, err := docker.ParseHost(host)
-	if err != nil {
-		return nil, err
-	}
-
 	transport := &http.Transport{
 		TLSClientConfig: tlsConfig,
 	}
-	sockets.ConfigureTransport(transport, proto, addr)
 	httpClient := &http.Client{Transport: transport}
 
-	client, err := docker.NewClient(host, version, httpClient, defaultHeaders)
+	client, err := docker.NewClientWithOpts(
+		docker.WithHTTPHeaders(defaultHeaders),
+		docker.WithHTTPClient(httpClient),
+		docker.WithVersion(version),
+		docker.WithHost(host))
 	if err != nil {
 		return nil, err
 	}
+
 	return &SocketClient{client}, nil
 }
 

@@ -41,7 +41,7 @@ type InfluxDB struct {
 	RetentionPolicy      string
 	WriteConsistency     string
 	Timeout              internal.Duration
-	UDPPayload           int               `toml:"udp_payload"`
+	UDPPayload           internal.Size     `toml:"udp_payload"`
 	HTTPProxy            string            `toml:"http_proxy"`
 	HTTPHeaders          map[string]string `toml:"http_headers"`
 	ContentEncoding      string            `toml:"content_encoding"`
@@ -69,6 +69,7 @@ var sampleConfig = `
   # urls = ["http://127.0.0.1:8086"]
 
   ## The target database for metrics; will be created as needed.
+  ## For UDP url endpoint database needs to be configured on server side.
   # database = "telegraf"
 
   ## If true, no CREATE DATABASE queries will be sent.  Set to true when using
@@ -95,7 +96,7 @@ var sampleConfig = `
   # user_agent = "telegraf"
 
   ## UDP payload size is the maximum packet size to send.
-  # udp_payload = 512
+  # udp_payload = "512B"
 
   ## Optional TLS Config for use on HTTP connections.
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -141,36 +142,36 @@ func (i *InfluxDB) Connect() error {
 	}
 
 	for _, u := range urls {
-		u, err := url.Parse(u)
+		parts, err := url.Parse(u)
 		if err != nil {
-			return fmt.Errorf("error parsing url [%s]: %v", u, err)
+			return fmt.Errorf("error parsing url [%q]: %v", u, err)
 		}
 
 		var proxy *url.URL
 		if len(i.HTTPProxy) > 0 {
 			proxy, err = url.Parse(i.HTTPProxy)
 			if err != nil {
-				return fmt.Errorf("error parsing proxy_url [%s]: %v", proxy, err)
+				return fmt.Errorf("error parsing proxy_url [%s]: %v", i.HTTPProxy, err)
 			}
 		}
 
-		switch u.Scheme {
+		switch parts.Scheme {
 		case "udp", "udp4", "udp6":
-			c, err := i.udpClient(u)
+			c, err := i.udpClient(parts)
 			if err != nil {
 				return err
 			}
 
 			i.clients = append(i.clients, c)
 		case "http", "https", "unix":
-			c, err := i.httpClient(ctx, u, proxy)
+			c, err := i.httpClient(ctx, parts, proxy)
 			if err != nil {
 				return err
 			}
 
 			i.clients = append(i.clients, c)
 		default:
-			return fmt.Errorf("unsupported scheme [%s]: %q", u, u.Scheme)
+			return fmt.Errorf("unsupported scheme [%q]: %q", u, parts.Scheme)
 		}
 	}
 
@@ -216,7 +217,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			}
 		}
 
-		log.Printf("E! [outputs.influxdb]: when writing to [%s]: %v", client.URL(), err)
+		log.Printf("E! [outputs.influxdb] when writing to [%s]: %v", client.URL(), err)
 	}
 
 	return errors.New("could not write any address")
@@ -225,7 +226,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 func (i *InfluxDB) udpClient(url *url.URL) (Client, error) {
 	config := &UDPConfig{
 		URL:            url,
-		MaxPayloadSize: i.UDPPayload,
+		MaxPayloadSize: int(i.UDPPayload.Size),
 		Serializer:     i.serializer,
 	}
 
