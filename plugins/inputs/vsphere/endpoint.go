@@ -39,8 +39,6 @@ const maxMetadataSamples = 100 // Number of resources to sample for metric metad
 type Endpoint struct {
 	Parent          *VSphere
 	URL             *url.URL
-	lastColls       map[string]time.Time
-	lastColl        time.Time
 	resourceKinds   map[string]resourceKind
 	hwMarks         *TSCache
 	lun2ds          map[string]string
@@ -66,6 +64,8 @@ type resourceKind struct {
 	collectInstances bool
 	parent           string
 	getObjects       func(context.Context, *Client, *Endpoint, *view.ContainerView) (objectMap, error)
+	latestSample     time.Time
+	lastColl         time.Time
 }
 
 type metricEntry struct {
@@ -101,7 +101,6 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 	e := Endpoint{
 		URL:           url,
 		Parent:        parent,
-		lastColls:     make(map[string]time.Time),
 		hwMarks:       NewTSCache(1 * time.Hour),
 		lun2ds:        make(map[string]string),
 		initialized:   false,
@@ -761,25 +760,34 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	if err != nil {
 		return err
 	}
-	latest, hasLatest := e.lastColls[resourceType]
-	if hasLatest {
+
+	// Estimate the interval at which we're invoked. Use local time (not server time)
+	// since this is about how we got invoked locally.
+	localNow := time.Now()
+	estInterval := time.Duration(time.Minute)
+	if !res.lastColl.IsZero() {
+		estInterval = localNow.Sub(res.lastColl).Truncate(time.Duration(res.sampling) * time.Second)
+	}
+	log.Printf("D! [inputs.vsphere] Interval estimated to %s", estInterval)
+
+	latest := res.latestSample
+	if !latest.IsZero() {
 		elapsed := now.Sub(latest).Seconds() + 5.0 // Allow 5 second jitter.
-		log.Printf("D! [input.vsphere]: Latest: %s, elapsed: %f, resource: %s", latest, elapsed, resourceType)
+		log.Printf("D! [inputs.vsphere]: Latest: %s, elapsed: %f, resource: %s", latest, elapsed, resourceType)
 		if !res.realTime && elapsed < float64(res.sampling) {
 			// No new data would be available. We're outta here!
-			log.Printf("D! [input.vsphere]: Sampling period for %s of %d has not elapsed on %s",
+			log.Printf("D! [inputs.vsphere]: Sampling period for %s of %d has not elapsed on %s",
 				resourceType, res.sampling, e.URL.Host)
 			return nil
 		}
 	} else {
 		latest = now.Add(time.Duration(-res.sampling) * time.Second)
 	}
-	e.lastColl = now
 
 	internalTags := map[string]string{"resourcetype": resourceType}
 	sw := NewStopwatchWithTags("gather_duration", e.URL.Host, internalTags)
 
-	log.Printf("D! [input.vsphere]: Collecting metrics for %d objects of type %s for %s",
+	log.Printf("D! [inputs.vsphere]: Collecting metrics for %d objects of type %s for %s",
 		len(res.objects), resourceType, e.URL.Host)
 
 	count := int64(0)
@@ -794,8 +802,8 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 			// Handle panics gracefully
 			defer HandlePanicWithAcc(acc)
 
-			n, localLatest, err := e.collectChunk(ctx, chunk, &res, acc)
-			log.Printf("D! [input.vsphere] CollectChunk for %s returned %d metrics", resourceType, n)
+			n, localLatest, err := e.collectChunk(ctx, chunk, &res, acc, now, estInterval)
+			log.Printf("D! [inputs.vsphere] CollectChunk for %s returned %d metrics", resourceType, n)
 			if err != nil {
 				acc.AddError(errors.New("While collecting " + res.name + ": " + err.Error()))
 			}
@@ -807,17 +815,56 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 			}
 		})
 
-	log.Printf("D! [input.vsphere] Latest sample for %s set to %s", resourceType, latestSample)
+	log.Printf("D! [inputs.vsphere] Latest sample for %s set to %s", resourceType, latestSample)
 	if !latestSample.IsZero() {
-		e.lastColls[resourceType] = latestSample
+		res.latestSample = latestSample
 	}
 	sw.Stop()
 	SendInternalCounterWithTags("gather_count", e.URL.Host, internalTags, count)
 	return nil
 }
 
-func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, res *resourceKind, acc telegraf.Accumulator) (int, time.Time, error) {
-	log.Printf("D! [input.vsphere] Query for %s has %d QuerySpecs", res.name, len(pqs))
+func alignSamples(info []types.PerfSampleInfo, values []int64, interval time.Duration) ([]types.PerfSampleInfo, []float64) {
+	rInfo := make([]types.PerfSampleInfo, 0, len(info))
+	rValues := make([]float64, 0, len(values))
+	bi := 1.0
+	var lastBucket time.Time
+	for idx := range info {
+		// According to the docs, SampleInfo and Value should have the same length, but we've seen corrupted
+		// data coming back with missing values. Take care of that gracefully!
+		if idx >= len(values) {
+			log.Printf("D! [inputs.vsphere] len(SampleInfo)>len(Value) %d > %d", len(info), len(values))
+			break
+		}
+		v := float64(values[idx])
+		if v < 0 {
+			continue
+		}
+		ts := info[idx].Timestamp
+		roundedTs := ts.Truncate(interval)
+
+		// Are we still working on the same bucket?
+		if roundedTs == lastBucket {
+			bi++
+			p := len(rValues) - 1
+			rValues[p] = ((bi-1)/bi)*float64(rValues[p]) + v/bi
+		} else {
+			rValues = append(rValues, v)
+			roundedInfo := types.PerfSampleInfo{
+				Timestamp: roundedTs,
+				Interval:  info[idx].Interval,
+			}
+			rInfo = append(rInfo, roundedInfo)
+			bi = 1.0
+			lastBucket = roundedTs
+		}
+	}
+	//log.Printf("D! [inputs.vsphere] Aligned samples: %d collapsed into %d", len(info), len(rInfo))
+	return rInfo, rValues
+}
+
+func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, res *resourceKind, acc telegraf.Accumulator, now time.Time, interval time.Duration) (int, time.Time, error) {
+	log.Printf("D! [inputs.vsphere] Query for %s has %d QuerySpecs", res.name, len(pqs))
 	latestSample := time.Time{}
 	count := 0
 	resourceType := res.name
@@ -838,14 +885,14 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 		return count, latestSample, err
 	}
 
-	log.Printf("D! [input.vsphere] Query for %s returned metrics for %d objects", resourceType, len(ems))
+	log.Printf("D! [inputs.vsphere] Query for %s returned metrics for %d objects", resourceType, len(ems))
 
 	// Iterate through results
 	for _, em := range ems {
 		moid := em.Entity.Reference().Value
 		instInfo, found := res.objects[moid]
 		if !found {
-			log.Printf("E! [input.vsphere]: MOID %s not found in cache. Skipping! (This should not happen!)", moid)
+			log.Printf("E! [inputs.vsphere]: MOID %s not found in cache. Skipping! (This should not happen!)", moid)
 			continue
 		}
 		buckets := make(map[string]metricEntry)
@@ -860,67 +907,56 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 			// Populate tags
 			objectRef, ok := res.objects[moid]
 			if !ok {
-				log.Printf("E! [input.vsphere]: MOID %s not found in cache. Skipping", moid)
+				log.Printf("E! [inputs.vsphere]: MOID %s not found in cache. Skipping", moid)
 				continue
 			}
 			e.populateTags(&objectRef, resourceType, res, t, &v)
 
-			avg := float64(0)
 			nValues := 0
-			for idx, sample := range em.SampleInfo {
+			alignedInfo, alignedValues := alignSamples(em.SampleInfo, v.Value, interval) // TODO: Estimate interval
+
+			for idx, sample := range alignedInfo {
 				// According to the docs, SampleInfo and Value should have the same length, but we've seen corrupted
 				// data coming back with missing values. Take care of that gracefully!
-				if idx >= len(v.Value) {
-					log.Printf("D! [input.vsphere] len(SampleInfo)>len(Value) %d > %d", len(em.SampleInfo), len(v.Value))
+				if idx >= len(alignedValues) {
+					log.Printf("D! [inputs.vsphere] len(SampleInfo)>len(Value) %d > %d", len(alignedInfo), len(alignedValues))
 					break
-				}
-				value := float64(v.Value[idx])
-				if value < 0 {
-					continue
 				}
 				ts := sample.Timestamp
 				if ts.After(latestSample) {
 					latestSample = ts
 				}
-				avg += float64(value)
 				nValues++
+
+				// Organize the metrics into a bucket per measurement.
+				mn, fn := e.makeMetricIdentifier(prefix, name)
+				bKey := mn + " " + v.Instance + " " + strconv.FormatInt(ts.UnixNano(), 10)
+				bucket, found := buckets[bKey]
+				if !found {
+					bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: t}
+					buckets[bKey] = bucket
+				}
+
+				// Percentage values must be scaled down by 100.
+				info, ok := metricInfo[name]
+				if !ok {
+					log.Printf("E! [inputs.vsphere]: Could not determine unit for %s. Skipping", name)
+				}
+				v := alignedValues[idx]
+				if info.UnitInfo.GetElementDescription().Key == "percent" {
+					bucket.fields[fn] = float64(v) / 100.0
+				} else {
+					bucket.fields[fn] = v
+				}
+				count++
+
+				// Update highwater marks
+				e.hwMarks.Put(moid, ts)
 			}
 			if nValues == 0 {
-				log.Printf("D! [input.vsphere]: Missing value for: %s, %s", name, objectRef.name)
+				log.Printf("D! [inputs.vsphere]: Missing value for: %s, %s", name, objectRef.name)
 				continue
 			}
-
-			// If we're catching up with metrics arriving late, calculate the average
-			// of them and pick the midpoint timestamp. This is a reasonable way of
-			// filling in missed collections that doesn't cause us to deliver metrics
-			// faster than the interval.
-			avg /= float64(nValues)
-			midTs := em.SampleInfo[len(em.SampleInfo)/2].Timestamp
-
-			// Organize the metrics into a bucket per measurement.
-			mn, fn := e.makeMetricIdentifier(prefix, name)
-			bKey := mn + " " + v.Instance + " " + strconv.FormatInt(midTs.UnixNano(), 10)
-			bucket, found := buckets[bKey]
-			if !found {
-				bucket = metricEntry{name: mn, ts: midTs, fields: make(map[string]interface{}), tags: t}
-				buckets[bKey] = bucket
-			}
-
-			// Percentage values must be scaled down by 100.
-			info, ok := metricInfo[name]
-			if !ok {
-				log.Printf("E! [input.vsphere]: Could not determine unit for %s. Skipping", name)
-			}
-			if info.UnitInfo.GetElementDescription().Key == "percent" {
-				bucket.fields[fn] = float64(avg) / 100.0
-			} else {
-				bucket.fields[fn] = avg
-			}
-			count++
-
-			// Update highwater marks
-			e.hwMarks.Put(moid, latestSample)
-
 		}
 		// We've iterated through all the metrics and collected buckets for each
 		// measurement name. Now emit them!
