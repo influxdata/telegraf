@@ -15,6 +15,9 @@
   ## If no port is specified, 6379 is used
   servers = ["tcp://localhost:6379"]
 
+  ## specify server password
+  # password = "s#cr@t%"
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"

@@ -31,7 +31,7 @@ type HTTPListenerV2 struct {
 	Methods        []string
 	ReadTimeout    internal.Duration
 	WriteTimeout   internal.Duration
-	MaxBodySize    int64
+	MaxBodySize    internal.Size
 	Port           int
 
 	tlsint.ServerConfig
@@ -65,8 +65,8 @@ const sampleConfig = `
   # write_timeout = "10s"
 
   ## Maximum allowed http request body size in bytes.
-  ## 0 means to use the default of 536,870,912 bytes (500 mebibytes)
-  # max_body_size = 0
+  ## 0 means to use the default of 524,288,00 bytes (500 mebibytes)
+  # max_body_size = "500MB"
 
   ## Set one or more allowed client CA certificate file names to 
   ## enable mutually authenticated TLS connections
@@ -106,8 +106,8 @@ func (h *HTTPListenerV2) SetParser(parser parsers.Parser) {
 
 // Start starts the http listener service.
 func (h *HTTPListenerV2) Start(acc telegraf.Accumulator) error {
-	if h.MaxBodySize == 0 {
-		h.MaxBodySize = defaultMaxBodySize
+	if h.MaxBodySize.Size == 0 {
+		h.MaxBodySize.Size = defaultMaxBodySize
 	}
 
 	if h.ReadTimeout.Duration < time.Second {
@@ -173,7 +173,7 @@ func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) {
 	// Check that the content length is not too large for us to handle.
-	if req.ContentLength > h.MaxBodySize {
+	if req.ContentLength > h.MaxBodySize.Size {
 		tooLarge(res)
 		return
 	}
@@ -204,7 +204,7 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 		defer body.Close()
 	}
 
-	body = http.MaxBytesReader(res, body, h.MaxBodySize)
+	body = http.MaxBytesReader(res, body, h.MaxBodySize.Size)
 	bytes, err := ioutil.ReadAll(body)
 	if err != nil {
 		tooLarge(res)

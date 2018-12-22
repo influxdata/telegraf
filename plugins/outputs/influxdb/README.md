@@ -16,6 +16,7 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP ser
   # urls = ["http://127.0.0.1:8086"]
 
   ## The target database for metrics; will be created as needed.
+  ## For UDP url endpoint database needs to be configured on server side.
   # database = "telegraf"
 
   ## If true, no CREATE DATABASE queries will be sent.  Set to true when using
@@ -42,7 +43,7 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP ser
   # user_agent = "telegraf"
 
   ## UDP payload size is the maximum packet size to send.
-  # udp_payload = 512
+  # udp_payload = "512B"
 
   ## Optional TLS Config for use on HTTP connections.
   # tls_ca = "/etc/telegraf/ca.pem"

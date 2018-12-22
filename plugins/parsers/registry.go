@@ -151,6 +151,14 @@ func NewParser(config *Config) (Parser, error) {
 	var parser Parser
 	switch config.DataFormat {
 	case "json":
+		parser, err = NewJSONParser(config.MetricName,
+			config.TagKeys, config.DefaultTags)
+	case "fileinfo":
+		parser, err = NewFileInfoParser()
+	case "vqtcsv":
+		parser, err = NewVqtCsvParser(config)
+	case "phdcsv":
+		parser, err = NewPhdCsvParser(config)
 		parser = newJSONParser(config.MetricName,
 			config.TagKeys,
 			config.JSONNameKey,
@@ -247,7 +255,7 @@ func newCSVParser(metricName string,
 	defaultTags map[string]string) (Parser, error) {
 
 	if headerRowCount == 0 && len(columnNames) == 0 {
-		return nil, fmt.Errorf("there must be a header if `csv_column_names` is not specified")
+		return nil, fmt.Errorf("`csv_header_row_count` must be defined if `csv_column_names` is not specified")
 	}
 
 	if delimiter != "" {

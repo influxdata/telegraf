@@ -85,6 +85,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewVqtCsvFileSerializer()
 	case "wwfastload":
 		serializer, err = wwfastload.NewWwFastLoadSerializer(config.Template)
+	case "splunkmetric":
+		serializer, err = NewSplunkmetricSerializer(config.HecRouting)
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}

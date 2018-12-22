@@ -220,7 +220,7 @@ func (c *httpClient) Database() string {
 	return c.database
 }
 
-// CreateDatabase attemps to create a new database in the InfluxDB server.
+// CreateDatabase attempts to create a new database in the InfluxDB server.
 // Note that some names are not allowed by the server, notably those with
 // non-printable characters or slashes.
 func (c *httpClient) CreateDatabase(ctx context.Context) error {

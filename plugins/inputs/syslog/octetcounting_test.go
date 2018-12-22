@@ -16,25 +16,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
-	pki = testutil.NewPKI("../../../testutil/pki")
-)
-
-type testCase5425 struct {
-	name           string
-	data           []byte
-	wantBestEffort []testutil.Metric
-	wantStrict     []testutil.Metric
-	werr           int // how many errors we expect in the strict mode?
-}
-
-func getTestCasesForRFC5425() []testCase5425 {
-	testCases := []testCase5425{
+func getTestCasesForOctetCounting() []testCaseStream {
+	testCases := []testCaseStream{
 		{
 			name: "1st/avg/ok",
 			data: []byte(`188 <29>1 2016-02-21T04:32:57+00:00 web1 someservice 2341 2 [origin][meta sequence="14125553" service="someservice"] "GET /v1/ok HTTP/1.1" 200 145 "-" "hacheck 0.9.0" 24306 127.0.0.1:40124 575`),
 			wantStrict: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(1),
@@ -58,7 +46,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 				},
 			},
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(1),
@@ -86,7 +74,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			name: "1st/min/ok//2nd/min/ok",
 			data: []byte("16 <1>2 - - - - - -17 <4>11 - - - - - -"),
 			wantStrict: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(2),
@@ -99,7 +87,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 					},
 					Time: defaultTime,
 				},
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(11),
@@ -114,7 +102,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 				},
 			},
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(2),
@@ -127,7 +115,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 					},
 					Time: defaultTime,
 				},
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(11),
@@ -146,7 +134,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			name: "1st/utf8/ok",
 			data: []byte("23 <1>1 - - - - - - hellø"),
 			wantStrict: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(1),
@@ -162,7 +150,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 				},
 			},
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(1),
@@ -182,7 +170,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			name: "1st/nl/ok", // newline
 			data: []byte("28 <1>3 - - - - - - hello\nworld"),
 			wantStrict: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(3),
@@ -198,7 +186,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 				},
 			},
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(3),
@@ -219,7 +207,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			data:       []byte("16 <1>2"),
 			wantStrict: nil,
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(2),
@@ -239,7 +227,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			name: "1st/min/ok",
 			data: []byte("16 <1>1 - - - - - -"),
 			wantStrict: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(1),
@@ -254,7 +242,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 				},
 			},
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(1),
@@ -274,7 +262,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			data:       []byte("16 <1>217 <11>1 - - - - - -"),
 			wantStrict: nil,
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       uint16(217),
@@ -299,7 +287,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 			name: "1st/max/ok",
 			data: []byte(fmt.Sprintf("8192 <%d>%d %s %s %s %s %s - %s", maxP, maxV, maxTS, maxH, maxA, maxPID, maxMID, message7681)),
 			wantStrict: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       maxV,
@@ -320,7 +308,7 @@ func getTestCasesForRFC5425() []testCase5425 {
 				},
 			},
 			wantBestEffort: []testutil.Metric{
-				testutil.Metric{
+				{
 					Measurement: "syslog",
 					Fields: map[string]interface{}{
 						"version":       maxV,
@@ -346,34 +334,11 @@ func getTestCasesForRFC5425() []testCase5425 {
 	return testCases
 }
 
-func newTCPSyslogReceiver(address string, keepAlive *internal.Duration, maxConn int, bestEffort bool) *Syslog {
-	d := &internal.Duration{
-		Duration: defaultReadTimeout,
-	}
-	s := &Syslog{
-		Address: address,
-		now: func() time.Time {
-			return defaultTime
-		},
-		ReadTimeout: d,
-		BestEffort:  bestEffort,
-		Separator:   "_",
-	}
-	if keepAlive != nil {
-		s.KeepAlivePeriod = keepAlive
-	}
-	if maxConn > 0 {
-		s.MaxConnections = maxConn
-	}
-
-	return s
-}
-
-func testStrictRFC5425(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
-	for _, tc := range getTestCasesForRFC5425() {
+func testStrictOctetCounting(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
+	for _, tc := range getTestCasesForOctetCounting() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a strict mode receiver
-			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false)
+			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, false, OctetCounting)
 			require.NotNil(t, receiver)
 			if wantTLS {
 				receiver.ServerConfig = *pki.TLSServerConfig()
@@ -431,11 +396,11 @@ func testStrictRFC5425(t *testing.T, protocol string, address string, wantTLS bo
 	}
 }
 
-func testBestEffortRFC5425(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
-	for _, tc := range getTestCasesForRFC5425() {
+func testBestEffortOctetCounting(t *testing.T, protocol string, address string, wantTLS bool, keepAlive *internal.Duration) {
+	for _, tc := range getTestCasesForOctetCounting() {
 		t.Run(tc.name, func(t *testing.T) {
 			// Creation of a best effort mode receiver
-			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, true)
+			receiver := newTCPSyslogReceiver(protocol+"://"+address, keepAlive, 0, true, OctetCounting)
 			require.NotNil(t, receiver)
 			if wantTLS {
 				receiver.ServerConfig = *pki.TLSServerConfig()
@@ -486,58 +451,58 @@ func testBestEffortRFC5425(t *testing.T, protocol string, address string, wantTL
 	}
 }
 
-func TestStrict_tcp(t *testing.T) {
-	testStrictRFC5425(t, "tcp", address, false, nil)
+func TestOctetCountingStrict_tcp(t *testing.T) {
+	testStrictOctetCounting(t, "tcp", address, false, nil)
 }
 
-func TestBestEffort_tcp(t *testing.T) {
-	testBestEffortRFC5425(t, "tcp", address, false, nil)
+func TestOctetCountingBestEffort_tcp(t *testing.T) {
+	testBestEffortOctetCounting(t, "tcp", address, false, nil)
 }
 
-func TestStrict_tcp_tls(t *testing.T) {
-	testStrictRFC5425(t, "tcp", address, true, nil)
+func TestOctetCountingStrict_tcp_tls(t *testing.T) {
+	testStrictOctetCounting(t, "tcp", address, true, nil)
 }
 
-func TestBestEffort_tcp_tls(t *testing.T) {
-	testBestEffortRFC5425(t, "tcp", address, true, nil)
+func TestOctetCountingBestEffort_tcp_tls(t *testing.T) {
+	testBestEffortOctetCounting(t, "tcp", address, true, nil)
 }
 
-func TestStrictWithKeepAlive_tcp_tls(t *testing.T) {
-	testStrictRFC5425(t, "tcp", address, true, &internal.Duration{Duration: time.Minute})
+func TestOctetCountingStrictWithKeepAlive_tcp_tls(t *testing.T) {
+	testStrictOctetCounting(t, "tcp", address, true, &internal.Duration{Duration: time.Minute})
 }
 
-func TestStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
-	testStrictRFC5425(t, "tcp", address, true, &internal.Duration{Duration: 0})
+func TestOctetCountingStrictWithZeroKeepAlive_tcp_tls(t *testing.T) {
+	testStrictOctetCounting(t, "tcp", address, true, &internal.Duration{Duration: 0})
 }
 
-func TestStrict_unix(t *testing.T) {
+func TestOctetCountingStrict_unix(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix.sock")
-	testStrictRFC5425(t, "unix", sock, false, nil)
+	testStrictOctetCounting(t, "unix", sock, false, nil)
 }
 
-func TestBestEffort_unix(t *testing.T) {
+func TestOctetCountingBestEffort_unix(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix.sock")
-	testBestEffortRFC5425(t, "unix", sock, false, nil)
+	testBestEffortOctetCounting(t, "unix", sock, false, nil)
 }
 
-func TestStrict_unix_tls(t *testing.T) {
+func TestOctetCountingStrict_unix_tls(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestStrict_unix_tls.sock")
-	testStrictRFC5425(t, "unix", sock, true, nil)
+	testStrictOctetCounting(t, "unix", sock, true, nil)
 }
 
-func TestBestEffort_unix_tls(t *testing.T) {
+func TestOctetCountingBestEffort_unix_tls(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "telegraf")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpdir)
 	sock := filepath.Join(tmpdir, "syslog.TestBestEffort_unix_tls.sock")
-	testBestEffortRFC5425(t, "unix", sock, true, nil)
+	testBestEffortOctetCounting(t, "unix", sock, true, nil)
 }

@@ -599,6 +599,11 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		Faults:    -1,
 	}
 
+	// set connection info
+	returnVal.CurrentC = newStat.Connections.Current
+	returnVal.AvailableC = newStat.Connections.Available
+	returnVal.TotalCreatedC = newStat.Connections.TotalCreated
+
 	// set the storage engine appropriately
 	if newStat.StorageEngine != nil && newStat.StorageEngine["name"] != "" {
 		returnVal.StorageEngine = newStat.StorageEngine["name"]
@@ -627,6 +632,12 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 				returnVal.PinnedC = diff(newStat.Metrics.Cursor.Open.Pinned, oldStat.Metrics.Cursor.Open.Pinned, sampleSecs)
 				returnVal.TotalC = diff(newStat.Metrics.Cursor.Open.Total, oldStat.Metrics.Cursor.Open.Total, sampleSecs)
 			}
+		}
+		if newStat.Metrics.Document != nil {
+			returnVal.DeletedD = newStat.Metrics.Document.Deleted
+			returnVal.InsertedD = newStat.Metrics.Document.Inserted
+			returnVal.ReturnedD = newStat.Metrics.Document.Returned
+			returnVal.UpdatedD = newStat.Metrics.Document.Updated
 		}
 	}
 

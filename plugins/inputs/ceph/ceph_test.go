@@ -81,7 +81,7 @@ func TestGather(t *testing.T) {
 	}()
 
 	findSockets = func(c *Ceph) ([]*socket, error) {
-		return []*socket{&socket{"osd.1", typeOsd, ""}}, nil
+		return []*socket{{"osd.1", typeOsd, ""}}, nil
 	}
 
 	perfDump = func(binary string, s *socket) (string, error) {
@@ -190,17 +190,17 @@ type SockTest struct {
 }
 
 var sockTestParams = []*SockTest{
-	&SockTest{
+	{
 		osds: 2,
 		mons: 2,
 	},
-	&SockTest{
+	{
 		mons: 1,
 	},
-	&SockTest{
+	{
 		osds: 1,
 	},
-	&SockTest{},
+	{},
 }
 
 var monPerfDump = `
@@ -851,13 +851,13 @@ var cephStatusResults = []expectedResult{
 	{
 		metric: "ceph_osdmap",
 		fields: map[string]interface{}{
-			"epoch":             float64(21734),
-			"num_osds":          float64(24),
-			"num_up_osds":       float64(24),
-			"num_in_osds":       float64(24),
-			"full":              false,
-			"nearfull":          false,
-			"num_rempapped_pgs": float64(0),
+			"epoch":            float64(21734),
+			"num_osds":         float64(24),
+			"num_up_osds":      float64(24),
+			"num_in_osds":      float64(24),
+			"full":             false,
+			"nearfull":         false,
+			"num_remapped_pgs": float64(0),
 		},
 		tags: map[string]string{},
 	},

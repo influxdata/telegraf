@@ -163,7 +163,7 @@ func TestCPUCountIncrease(t *testing.T) {
 
 	mps.On("CPUTimes").Return(
 		[]cpu.TimesStat{
-			cpu.TimesStat{
+			{
 				CPU: "cpu0",
 			},
 		}, nil)
@@ -173,10 +173,10 @@ func TestCPUCountIncrease(t *testing.T) {
 
 	mps2.On("CPUTimes").Return(
 		[]cpu.TimesStat{
-			cpu.TimesStat{
+			{
 				CPU: "cpu0",
 			},
-			cpu.TimesStat{
+			{
 				CPU: "cpu1",
 			},
 		}, nil)

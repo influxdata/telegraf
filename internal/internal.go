@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/rand"
 	"errors"
 	"io"
@@ -16,6 +17,8 @@ import (
 	"syscall"
 	"time"
 	"unicode"
+
+	"github.com/alecthomas/units"
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -34,6 +37,11 @@ var version string
 // Duration just wraps time.Duration
 type Duration struct {
 	Duration time.Duration
+}
+
+// Size just wraps an int64
+type Size struct {
+	Size int64
 }
 
 // SetVersion sets the telegraf agent version
@@ -82,6 +90,27 @@ func (d *Duration) UnmarshalTOML(b []byte) error {
 		return nil
 	}
 
+	return nil
+}
+
+func (s *Size) UnmarshalTOML(b []byte) error {
+	var err error
+	b = bytes.Trim(b, `'`)
+
+	val, err := strconv.ParseInt(string(b), 10, 64)
+	if err == nil {
+		s.Size = val
+		return nil
+	}
+	uq, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	val, err = units.ParseStrictBytes(uq)
+	if err != nil {
+		return err
+	}
+	s.Size = val
 	return nil
 }
 
@@ -216,6 +245,51 @@ func RandomSleep(max time.Duration, shutdown chan struct{}) {
 		t.Stop()
 		return
 	}
+}
+
+// RandomDuration returns a random duration between 0 and max.
+func RandomDuration(max time.Duration) time.Duration {
+	if max == 0 {
+		return 0
+	}
+
+	var sleepns int64
+	maxSleep := big.NewInt(max.Nanoseconds())
+	if j, err := rand.Int(rand.Reader, maxSleep); err == nil {
+		sleepns = j.Int64()
+	}
+
+	return time.Duration(sleepns)
+}
+
+// SleepContext sleeps until the context is closed or the duration is reached.
+func SleepContext(ctx context.Context, duration time.Duration) error {
+	if duration == 0 {
+		return nil
+	}
+
+	t := time.NewTimer(duration)
+	select {
+	case <-t.C:
+		return nil
+	case <-ctx.Done():
+		t.Stop()
+		return ctx.Err()
+	}
+}
+
+// AlignDuration returns the duration until next aligned interval.
+func AlignDuration(tm time.Time, interval time.Duration) time.Duration {
+	return AlignTime(tm, interval).Sub(tm)
+}
+
+// AlignTime returns the time of the next aligned interval.
+func AlignTime(tm time.Time, interval time.Duration) time.Time {
+	truncated := tm.Truncate(interval)
+	if truncated == tm {
+		return tm
+	}
+	return truncated.Add(interval)
 }
 
 // Exit status takes the error from exec.Command
