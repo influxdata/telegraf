@@ -1,6 +1,6 @@
 package neptune_apex
 
-import(
+import (
 	"bytes"
 	"context"
 	"net"
@@ -23,20 +23,20 @@ func TestGather(t *testing.T) {
 	n := &NeptuneApex{
 		httpClient: c,
 	}
-	tests := []struct{
-		name string
+	tests := []struct {
+		name    string
 		servers []string
 	}{
 		{
-			name: "Good case, 2 servers",
+			name:    "Good case, 2 servers",
 			servers: []string{"abc", "def"},
 		},
 		{
-			name: "Good case, 0 servers",
+			name:    "Good case, 0 servers",
 			servers: []string{},
 		},
 		{
-			name: "Good case nil",
+			name:    "Good case nil",
 			servers: nil,
 		},
 	}
@@ -51,107 +51,107 @@ func TestGather(t *testing.T) {
 				t.Errorf("number of servers mismatch. got=%d, want=%d", len(acc.Errors), len(test.servers))
 			}
 
-		}	)
+		})
 	}
 }
 
 func TestParseXML(t *testing.T) {
 	n := &NeptuneApex{}
 	goodTime := time.Date(2018, 12, 22, 21, 55, 37, 0, time.FixedZone("PST", 3600*-8))
-	tests := []struct{
-		name string
+	tests := []struct {
+		name        string
 		xmlResponse []byte
-		nFields int
+		nFields     int
 		wantMetrics []*testutil.Metric
-		wantErr bool
+		wantErr     bool
 	}{
 		{
-			name: "Good test",
+			name:        "Good test",
 			xmlResponse: []byte(APEX2016),
-			nFields: 17,
+			nFields:     17,
 			wantMetrics: []*testutil.Metric{
 				{
 					Measurement: MEASUREMENT,
-					Time: goodTime,
-					Tags: map[string]string{"hostname": "apex"},
+					Time:        goodTime,
+					Tags:        map[string]string{"hostname": "apex"},
 					Fields: map[string]interface{}{
-						"software": "5.04_7A18",
-						"serial": "AC5:12345",
-						"hardware": "1.0",
-						"timezone": -8.0,
-						"power_failed": "12/14/2018 11:00:00",
+						"software":       "5.04_7A18",
+						"serial":         "AC5:12345",
+						"hardware":       "1.0",
+						"timezone":       -8.0,
+						"power_failed":   "12/14/2018 11:00:00",
 						"power_restored": "12/14/2018 16:31:15",
 					},
 				},
 				{
 					Measurement: MEASUREMENT,
-					Time: goodTime,
-					Tags: map[string]string{"hostname": "apex", "output_id": "0", "device_id": "base_Var1", "name": "VarSpd1_I1"},
-					Fields: map[string]interface{}{"state": "PF1"},
+					Time:        goodTime,
+					Tags:        map[string]string{"hostname": "apex", "output_id": "0", "device_id": "base_Var1", "name": "VarSpd1_I1"},
+					Fields:      map[string]interface{}{"state": "PF1"},
 				},
 				{
 					Measurement: MEASUREMENT,
-					Time: goodTime,
-					Tags: map[string]string{"hostname": "apex", "output_id": "6", "device_id": "base_email", "name": "EmailAlm_I5"},
-					Fields: map[string]interface{}{"state": "AOF"},
+					Time:        goodTime,
+					Tags:        map[string]string{"hostname": "apex", "output_id": "6", "device_id": "base_email", "name": "EmailAlm_I5"},
+					Fields:      map[string]interface{}{"state": "AOF"},
 				},
 				{
 					Measurement: MEASUREMENT,
-					Time:  goodTime,
-					Tags: map[string]string{"hostname": "apex", "output_id": "8", "device_id": "2_1", "name": "RETURN_2_1"},
-					Fields: map[string]interface{}{"state": "AON", "watt": 35.0, "amp": 0.3},
+					Time:        goodTime,
+					Tags:        map[string]string{"hostname": "apex", "output_id": "8", "device_id": "2_1", "name": "RETURN_2_1"},
+					Fields:      map[string]interface{}{"state": "AON", "watt": 35.0, "amp": 0.3},
 				},
 				{
 					Measurement: MEASUREMENT,
-					Time:  goodTime,
-					Tags: map[string]string{"hostname": "apex", "output_id": "18", "device_id": "3_1", "name": "RVortech_3_1"},
-					Fields: map[string]interface{}{"state": "TBL", "xstatus": "OK"},
+					Time:        goodTime,
+					Tags:        map[string]string{"hostname": "apex", "output_id": "18", "device_id": "3_1", "name": "RVortech_3_1"},
+					Fields:      map[string]interface{}{"state": "TBL", "xstatus": "OK"},
 				},
 				{
 					Measurement: MEASUREMENT,
-					Time:  goodTime,
-					Tags: map[string]string{"hostname": "apex", "output_id": "28", "device_id": "4_9", "name": "LinkA_4_9"},
-					Fields: map[string]interface{}{"state": "AOF"},
+					Time:        goodTime,
+					Tags:        map[string]string{"hostname": "apex", "output_id": "28", "device_id": "4_9", "name": "LinkA_4_9"},
+					Fields:      map[string]interface{}{"state": "AOF"},
 				},
 				{
 					Measurement: MEASUREMENT,
-					Time:  goodTime,
-					Tags: map[string]string{"hostname": "apex", "output_id": "32", "device_id": "Cntl_A2", "name": "LEAK"},
-					Fields: map[string]interface{}{"state": "AOF"},
+					Time:        goodTime,
+					Tags:        map[string]string{"hostname": "apex", "output_id": "32", "device_id": "Cntl_A2", "name": "LEAK"},
+					Fields:      map[string]interface{}{"state": "AOF"},
 				},
 				{
 					Measurement: MEASUREMENT,
-					Time:  goodTime,
-					Tags: map[string]string{"hostname": "apex", "name": "Salt", "type": "Cond"},
-					Fields: map[string]interface{}{"value": 30.1},
+					Time:        goodTime,
+					Tags:        map[string]string{"hostname": "apex", "name": "Salt", "type": "Cond"},
+					Fields:      map[string]interface{}{"value": 30.1},
 				},
 				{
 					Measurement: MEASUREMENT,
-					Time:  goodTime,
-					Tags: map[string]string{"hostname": "apex", "name": "Volt_2"},
-					Fields: map[string]interface{}{"value": 115.0},
+					Time:        goodTime,
+					Tags:        map[string]string{"hostname": "apex", "name": "Volt_2"},
+					Fields:      map[string]interface{}{"value": 115.0},
 				},
 			},
 		},
 		{
-			name: "Unmarshal error",
+			name:        "Unmarshal error",
 			xmlResponse: []byte("Invalid"),
-			wantErr: true,
+			wantErr:     true,
 		},
 		{
-			name: "Report time failure",
+			name:        "Report time failure",
 			xmlResponse: []byte(`<status><date>abc</date></status>`),
-			wantErr: true,
+			wantErr:     true,
 		},
 		{
-			name: "Power restored time failure",
+			name:        "Power restored time failure",
 			xmlResponse: []byte(`<status><power><restored>abc</restored></power></status>`),
-			wantErr: true,
+			wantErr:     true,
 		},
 		{
-			name: "Power failed failure",
+			name:        "Power failed failure",
 			xmlResponse: []byte(`<status><power><failed>abc</failed></power></status>`),
-			wantErr: true,
+			wantErr:     true,
 		},
 	}
 	for _, test := range tests {
@@ -160,7 +160,7 @@ func TestParseXML(t *testing.T) {
 			t.Parallel()
 			var acc testutil.Accumulator
 			err := n.parseXML(&acc, []byte(test.xmlResponse))
-			if (err != nil) != test.wantErr  {
+			if (err != nil) != test.wantErr {
 				t.Errorf("err mismatch. got=%v, want=%t", err, test.wantErr)
 			}
 			if test.wantErr {
@@ -193,25 +193,25 @@ func TestParseXML(t *testing.T) {
 }
 
 func TestSendRequest(t *testing.T) {
-	tests := []struct{
-		name string
+	tests := []struct {
+		name       string
 		statusCode int
-		wantErr bool
+		wantErr    bool
 	}{
-	{
-		name: "Good case",
-		statusCode: http.StatusOK,
-	},
-	{
-		name: "Get error",
-		statusCode: http.StatusNotFound,
-		wantErr: true,
-	},
-	{
-		name: "Status 301",
-		statusCode: http.StatusMovedPermanently,
-		wantErr: true,
-	}}
+		{
+			name:       "Good case",
+			statusCode: http.StatusOK,
+		},
+		{
+			name:       "Get error",
+			statusCode: http.StatusNotFound,
+			wantErr:    true,
+		},
+		{
+			name:       "Status 301",
+			statusCode: http.StatusMovedPermanently,
+			wantErr:    true,
+		}}
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
@@ -241,28 +241,28 @@ func TestSendRequest(t *testing.T) {
 }
 
 func TestParseTime(t *testing.T) {
-	tests := []struct{
-		name string
-		input string
+	tests := []struct {
+		name     string
+		input    string
 		timeZone float64
 		wantTime time.Time
-		wantErr bool
+		wantErr  bool
 	}{
 		{
-			name: "Good case - Timezone positive",
-			input: "01/01/2023 12:34:56",
+			name:     "Good case - Timezone positive",
+			input:    "01/01/2023 12:34:56",
 			timeZone: 5,
 			wantTime: time.Date(2023, 1, 1, 12, 34, 56, 0, time.FixedZone("a", 3600*5)),
 		},
 		{
-			name: "Good case - Timezone negative",
-			input: "01/01/2023 12:34:56",
+			name:     "Good case - Timezone negative",
+			input:    "01/01/2023 12:34:56",
 			timeZone: -8,
 			wantTime: time.Date(2023, 1, 1, 12, 34, 56, 0, time.FixedZone("a", 3600*-8)),
 		},
 		{
-			name: "Cannot parse",
-			input: "Not a date",
+			name:    "Cannot parse",
+			input:   "Not a date",
 			wantErr: true,
 		},
 	}
@@ -288,24 +288,24 @@ func TestParseTime(t *testing.T) {
 func TestFindProbe(t *testing.T) {
 	fakeProbes := []probe{
 		{
-		Name: "test1",
-	},
-	{
-		Name: "good",
-	},
+			Name: "test1",
+		},
+		{
+			Name: "good",
+		},
 	}
-	tests := []struct{
-		name string
+	tests := []struct {
+		name      string
 		probeName string
 		wantIndex int
 	}{
 		{
-			name: "Good case - Found",
+			name:      "Good case - Found",
 			probeName: "good",
 			wantIndex: 1,
 		},
 		{
-			name: "Not found",
+			name:      "Not found",
 			probeName: "bad",
 			wantIndex: -1,
 		},

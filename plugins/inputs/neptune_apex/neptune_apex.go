@@ -18,38 +18,37 @@ import (
 const MEASUREMENT = "neptune_apex"
 
 type xmlReply struct {
-	SoftwareVersion string `xml:"software,attr"`
-	HardwareVersion string `xml:"hardware,attr"`
-	Hostname string `xml:"hostname"`
-	Serial string `xml:"serial"`
-	Timezone float64 `xml:"timezone"`
-	Date string `xml:"date"`
-	PowerFailed string `xml:"power>failed"`
-	PowerRestored string `xml:"power>restored"`
-	Probe []probe `xml:"probes>probe"`
-	Outlet []outlet `xml:"outlets>outlet"`
+	SoftwareVersion string   `xml:"software,attr"`
+	HardwareVersion string   `xml:"hardware,attr"`
+	Hostname        string   `xml:"hostname"`
+	Serial          string   `xml:"serial"`
+	Timezone        float64  `xml:"timezone"`
+	Date            string   `xml:"date"`
+	PowerFailed     string   `xml:"power>failed"`
+	PowerRestored   string   `xml:"power>restored"`
+	Probe           []probe  `xml:"probes>probe"`
+	Outlet          []outlet `xml:"outlets>outlet"`
 }
 
 type probe struct {
-	Name string `xml:"name"`
+	Name  string  `xml:"name"`
 	Value float64 `xml:"value"`
-	Type *string `xml:"type"`
+	Type  *string `xml:"type"`
 }
 
 type outlet struct {
-	Name string `xml:"name"`
-	OutputID string `xml:"outputID"`
-	State string `xml:"state"`
-	DeviceID string `xml:"deviceID"`
-	Xstatus *string `xml:"xstatus"`
-
+	Name     string  `xml:"name"`
+	OutputID string  `xml:"outputID"`
+	State    string  `xml:"state"`
+	DeviceID string  `xml:"deviceID"`
+	Xstatus  *string `xml:"xstatus"`
 }
 
 // NeptuneApex implements telegraf.Input.
 type NeptuneApex struct {
-	Servers []string
+	Servers         []string
 	ResponseTimeout internal.Duration
-	httpClient *http.Client
+	httpClient      *http.Client
 }
 
 func (_ *NeptuneApex) Description() string {
@@ -109,11 +108,11 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 	}
 
 	mainFields := map[string]interface{}{
-		"software": r.SoftwareVersion,
-		"hardware": r.HardwareVersion,
-		"serial": r.Serial,
-		"timezone": r.Timezone,
-		"power_failed": r.PowerFailed,
+		"software":       r.SoftwareVersion,
+		"hardware":       r.HardwareVersion,
+		"serial":         r.Serial,
+		"timezone":       r.Timezone,
+		"power_failed":   r.PowerFailed,
 		"power_restored": r.PowerRestored,
 	}
 	acc.AddFields(MEASUREMENT, mainFields, map[string]string{"hostname": r.Hostname}, reportTime)
@@ -124,12 +123,12 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 			"state": o.State,
 		}
 		// Find Amp and Watt probes and add them as fields. Remove the redundant probe.
-		if  pos := findProbe(fmt.Sprintf("%sW",o.Name), r.Probe); pos>-1 {
+		if pos := findProbe(fmt.Sprintf("%sW", o.Name), r.Probe); pos > -1 {
 			fields["watt"] = r.Probe[pos].Value
 			r.Probe[pos] = r.Probe[len(r.Probe)-1]
 			r.Probe = r.Probe[:len(r.Probe)-1]
 		}
-		if  pos := findProbe(fmt.Sprintf("%sA",o.Name), r.Probe); pos>-1 {
+		if pos := findProbe(fmt.Sprintf("%sA", o.Name), r.Probe); pos > -1 {
 			fields["amp"] = r.Probe[pos].Value
 			r.Probe[pos] = r.Probe[len(r.Probe)-1]
 			r.Probe = r.Probe[:len(r.Probe)-1]
@@ -138,10 +137,10 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 			fields["xstatus"] = *o.Xstatus
 		}
 		tags := map[string]string{
-			"hostname": r.Hostname,
+			"hostname":  r.Hostname,
 			"output_id": o.OutputID,
 			"device_id": o.DeviceID,
-			"name": o.Name,
+			"name":      o.Name,
 		}
 		acc.AddFields(MEASUREMENT, fields, tags, reportTime)
 	}
@@ -153,7 +152,7 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 		}
 		tags := map[string]string{
 			"hostname": r.Hostname,
-			"name": p.Name,
+			"name":     p.Name,
 		}
 		if p.Type != nil {
 			tags["type"] = *p.Type
@@ -214,9 +213,11 @@ func (n *NeptuneApex) sendRequest(server string) ([]byte, error) {
 }
 
 func init() {
-	inputs.Add("neptune_apex", func() telegraf.Input { return &NeptuneApex{
-		httpClient: &http.Client{
-			Timeout: 5 * time.Second,
-		},
-	} })
+	inputs.Add("neptune_apex", func() telegraf.Input {
+		return &NeptuneApex{
+			httpClient: &http.Client{
+				Timeout: 5 * time.Second,
+			},
+		}
+	})
 }
