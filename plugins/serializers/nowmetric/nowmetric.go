@@ -1,7 +1,6 @@
 package nowmetric
 
 import (
-	"bytes"
 	"encoding/json"
 	"time"
 
@@ -26,14 +25,16 @@ Example for the JSON generated and pushed to the MID
 */
 
 type OIMetric struct {
-	Metric    string                 `json:"metric_type"`
-	Resource  string                 `json:"resource"`
-	Node      string                 `json:"node"`
-	Value     interface{}            `json:"value"`
-	Timestamp int64                  `json:"timestamp"`
-	CiMapping map[string]interface{} `json:"ci2metric_id"`
-	Source    string                 `json:"source"`
+	Metric    string            `json:"metric_type"`
+	Resource  string            `json:"resource"`
+	Node      string            `json:"node"`
+	Value     interface{}       `json:"value"`
+	Timestamp int64             `json:"timestamp"`
+	CiMapping map[string]string `json:"ci2metric_id"`
+	Source    string            `json:"source"`
 }
+
+type OIMetrics []OIMetric
 
 func NewSerializer(timestampUnits time.Duration) (*serializer, error) {
 	s := &serializer{
@@ -64,9 +65,18 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err 
 }
 
 func (s *serializer) createObject(metric telegraf.Metric, err error) []byte {
-	var payload []byte
+	/*  ServiceNow Operational Intelligence supports an array of JSON objects.
+	** Following elements accepted in the request body:
+		 ** metric_type: 	The name of the metric
+		 ** resource:   	Information about the resource for which metric data is being collected. In the example below, C:\ is the resource for which metric data is collected
+		 ** node:       	IP, FQDN, name of the CI, or host
+		 ** value:      	Value of the metric
+		 ** timestamp: 		Epoch timestamp of the metric in milliseconds
+		 ** ci2metric_id:	List of key-value pairs to identify the CI.
+		 ** source:			Data source monitoring the metric type
+	*/
+	var allmetrics OIMetrics
 	var oimetric OIMetric
-	var metricJson []byte
 
 	oimetric.Source = "Telegraf"
 
@@ -86,9 +96,8 @@ func (s *serializer) createObject(metric telegraf.Metric, err error) []byte {
 	}
 
 	// Format timestamp to UNIX epoch
-	oimetric.Timestamp = (metric.Time().UnixNano() / int64(s.TimestampUnits)) * 1000
+	oimetric.Timestamp = (metric.Time().UnixNano() / int64(time.Millisecond))
 
-	nbdatapoint := 0
 	// Loop of fields value pair and build datapoint for each of them
 	for _, field := range metric.FieldList() {
 		if !verifyValue(field.Value) {
@@ -96,35 +105,26 @@ func (s *serializer) createObject(metric telegraf.Metric, err error) []byte {
 			continue
 		}
 
-		if field.Key == "" || field.Value == "" {
+		if field.Key == "" {
+			// Ignore Empty Key
 			continue
 		}
 
-		if nbdatapoint >= 1 {
-			payload = append(payload, ",\n"...)
-		}
 		oimetric.Metric = field.Key
 		oimetric.Value = field.Value
 
-		cimapping := map[string]interface{}{}
-		cimapping["node"] = oimetric.Node
-		oimetric.CiMapping = cimapping
+		if oimetric.Node != "" {
+			cimapping := map[string]string{}
+			cimapping["node"] = oimetric.Node
+			oimetric.CiMapping = cimapping
+		}
 
-		metricJson, err = json.Marshal(oimetric)
-		payload = append(payload, metricJson...)
-
-		nbdatapoint++
+		allmetrics = append(allmetrics, oimetric)
 	}
 
-	raw := make([]byte, 0)
-	raw = append(raw, "[ "...)
-	raw = append(raw, payload...)
-	raw = append(raw, " ]\n"...)
+	metricsJson, err := json.Marshal(allmetrics)
 
-	out := new(bytes.Buffer)
-	json.HTMLEscape(out, raw)
-
-	return out.Bytes()
+	return metricsJson
 }
 
 func truncateDuration(units time.Duration) time.Duration {
