@@ -34,7 +34,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	var buf []byte
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
-	expS := []byte(fmt.Sprintf(`[{"metric_type":"usage_idle","resource":"","node":"","value":91.5,"timestamp":%d,"ci2metric_id":{"node":""},"source":"Telegraf"}]`, now.UnixNano()/int64(time.Millisecond))
+	expS := []byte(fmt.Sprintf(`[{"metric_type":"usage_idle","resource":"","node":"","value":91.5,"timestamp":%d,"ci2metric_id":{"node":""},"source":"Telegraf"}]`, (now.UnixNano() / int64(time.Millisecond))))
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -101,7 +101,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`[{"metric_type":"usage_idle","resource":"","node":"","value":90,"timestamp":%d,"ci2metric_id":{"node":""},"source":"Telegraf"}]`, now.UnixNano()/int64(time.Millisecond)))
+	expS := []byte(fmt.Sprintf(`[{"metric_type":"usage_idle","resource":"","node":"","value":90,"timestamp":%d,"ci2metric_id":{"node":""},"source":"Telegraf"}]`, (now.UnixNano()/int64(time.Millisecond)) ))
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -142,7 +142,7 @@ func TestSerializeMultiFields(t *testing.T) {
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`[{"metric_type":"usage_idle","resource":"","node":"","value":90,"timestamp":%d,"ci2metric_id":{"node":""},"source":"Telegraf"},{"metric_type":"usage_total","resource":"","node":"","value":8559615,"timestamp":%d,"ci2metric_id":{"node":""},"source":"Telegraf"}]`, now.UnixNano()/int64(time.Millisecond), now.UnixNano()/int64(time.Millisecond)))
+	expS := []byte(fmt.Sprintf(`[{"metric_type":"usage_idle","resource":"","node":"","value":90,"timestamp":%d,"ci2metric_id":{"node":""},"source":"Telegraf"},{"metric_type":"usage_total","resource":"","node":"","value":8559615,"timestamp":%d,"ci2metric_id":{"node":""},"source":"Telegraf"}]`, (now.UnixNano()/int64(time.Millisecond)), (now.UnixNano()/int64(time.Millisecond)) )
 	assert.Equal(t, string(expS), string(buf))
 }
 
@@ -161,7 +161,7 @@ func TestSerializeMetricWithEscapes(t *testing.T) {
 	buf, err := s.Serialize(m)
 	assert.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`[{"metric_type":"U,age=Idle","resource":"","node":"","value":90,"timestamp":%d,"ci2metric_id":{"node":""},"source":"Telegraf"}]`, now.UnixNano()/int64(time.Millisecond)))
+	expS := []byte(fmt.Sprintf(`[{"metric_type":"U,age=Idle","resource":"","node":"","value":90,"timestamp":%d,"ci2metric_id":{"node":""},"source":"Telegraf"}]`, (now.UnixNano()/int64(time.Millisecond)) ))
 	assert.Equal(t, string(expS), string(buf))
 }
 
