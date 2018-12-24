@@ -52,17 +52,17 @@ func TestSerialize_TimestampUnits(t *testing.T) {
 		{
 			name:           "10ms",
 			timestampUnits: 10 * time.Millisecond,
-			expected:       `[{"metric_type":"value","resource":"","node":"","value":42,"timestamp":152547879512,"ci2metric_id":null,"source":"Telegraf"}]`,
+			expected:       `[{"metric_type":"value","resource":"","node":"","value":42,"timestamp":1525478795123,"ci2metric_id":null,"source":"Telegraf"}]`,
 		},
 		{
 			name:           "15ms is reduced to 10ms",
 			timestampUnits: 15 * time.Millisecond,
-			expected:       `[{"metric_type":"value","resource":"","node":"","value":42,"timestamp":152547879512,"ci2metric_id":null,"source":"Telegraf"}]`,
+			expected:       `[{"metric_type":"value","resource":"","node":"","value":42,"timestamp":1525478795123,"ci2metric_id":null,"source":"Telegraf"}]`,
 		},
 		{
 			name:           "65ms is reduced to 10ms",
 			timestampUnits: 65 * time.Millisecond,
-			expected:       `[{"metric_type":"value","resource":"","node":"","value":42,"timestamp":152547879512,"ci2metric_id":null,"source":"Telegraf"}]`,
+			expected:       `[{"metric_type":"value","resource":"","node":"","value":42,"timestamp":1525478795123,"ci2metric_id":null,"source":"Telegraf"}]`,
 		},
 	}
 	for _, tt := range tests {
@@ -80,7 +80,7 @@ func TestSerialize_TimestampUnits(t *testing.T) {
 			s, _ := NewSerializer(tt.timestampUnits)
 			actual, err := s.Serialize(m)
 			require.NoError(t, err)
-			require.Equal(t, tt.expected+"\n", string(actual))
+			require.Equal(t, tt.expected, string(actual))
 		})
 	}
 }
@@ -121,8 +121,7 @@ func TestSerializeMetricString(t *testing.T) {
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
 
-	expS := []byte(fmt.Sprintf(`[]`))
-	assert.Equal(t, string(expS), string(buf))
+	assert.Equal(t, "null", string(buf))
 }
 
 func TestSerializeMultiFields(t *testing.T) {
