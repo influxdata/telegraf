@@ -596,7 +596,7 @@ func TestGatherError(t *testing.T) {
 	var acc1 testutil.Accumulator
 	err = m.Gather(&acc1)
 	require.Error(t, err)
-	require.Equal(t, string(expected_error), err.Error())
+	require.Equal(t, expected_error, err.Error())
 
 	m.UseWildcardsExpansion = true
 	m.counters = nil
@@ -606,7 +606,7 @@ func TestGatherError(t *testing.T) {
 
 	err = m.Gather(&acc2)
 	require.Error(t, err)
-	require.Equal(t, string(expected_error), err.Error())
+	require.Equal(t, expected_error, err.Error())
 }
 
 func TestGatherInvalidDataIgnore(t *testing.T) {
