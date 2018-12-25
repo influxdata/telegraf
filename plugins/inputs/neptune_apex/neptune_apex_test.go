@@ -62,7 +62,6 @@ func TestParseXML(t *testing.T) {
 	tests := []struct {
 		name        string
 		xmlResponse []byte
-		nFields     int
 		wantMetrics []*testutil.Metric
 		wantErr     bool
 	}{
