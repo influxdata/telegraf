@@ -1,3 +1,4 @@
+// package neptune_apex implements an input plugin for the Neptune Apex aquarium controller.
 package neptune_apex
 
 import (
@@ -6,6 +7,7 @@ import (
 	"io/ioutil"
 	"math"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -60,8 +62,8 @@ func (_ *NeptuneApex) SampleConfig() string {
   ## The Neptune Apex plugin reads the publicly available status.xml data from a local Apex.
   ## Measurements will be logged under "apex".
 
-  ## The hostname/IP of the local Apex(es). If you specify more than one server, the will
-  ## be differentiated by a "hostname" tag.
+  ## The hostname/IP of the local Apex(es). If you specify more than one server, they will
+  ## be differentiated by the "hostname" tag.
   servers = [
     "apex.local",
   ]
@@ -115,10 +117,17 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 		"power_failed":   r.PowerFailed,
 		"power_restored": r.PowerRestored,
 	}
-	acc.AddFields(MEASUREMENT, mainFields, map[string]string{"hostname": r.Hostname}, reportTime)
+	acc.AddFields(MEASUREMENT, mainFields, map[string]string{"hostname": r.Hostname, "type": "controller"}, reportTime)
 
 	// Outlets
 	for _, o := range r.Outlet {
+		tags := map[string]string{
+			"hostname":  r.Hostname,
+			"output_id": o.OutputID,
+			"device_id": o.DeviceID,
+			"name":      o.Name,
+			"type":      "output",
+		}
 		fields := map[string]interface{}{
 			"state": o.State,
 		}
@@ -136,12 +145,25 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 		if o.Xstatus != nil {
 			fields["xstatus"] = *o.Xstatus
 		}
-		tags := map[string]string{
-			"hostname":  r.Hostname,
-			"output_id": o.OutputID,
-			"device_id": o.DeviceID,
-			"name":      o.Name,
+		// Try to determine outlet type. Focus on accuracy, leaving the outlet_type "unknown" when ambiguous.
+		// 24v and vortech cannot be determined.
+		switch {
+		case strings.HasPrefix(o.DeviceID, "base_Var"):
+			tags["output_type"] = "variable"
+		case o.DeviceID == "base_Alarm":
+			fallthrough
+		case o.DeviceID == "base_Warn":
+			fallthrough
+		case strings.HasPrefix(o.DeviceID, "base_email"):
+			tags["output_type"] = "alert"
+		case fields["watt"] != nil || fields["amp"] != nil:
+			tags["output_type"] = "outlet"
+		case strings.HasPrefix(o.DeviceID, "Cntl_"):
+			tags["output_type"] = "virtual"
+		default:
+			tags["output_type"] = "unknown"
 		}
+
 		acc.AddFields(MEASUREMENT, fields, tags, reportTime)
 	}
 
@@ -152,10 +174,11 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 		}
 		tags := map[string]string{
 			"hostname": r.Hostname,
+			"type":     "probe",
 			"name":     p.Name,
 		}
 		if p.Type != nil {
-			tags["type"] = *p.Type
+			tags["probe_type"] = *p.Type
 		}
 		acc.AddFields(MEASUREMENT, fields, tags, reportTime)
 	}
