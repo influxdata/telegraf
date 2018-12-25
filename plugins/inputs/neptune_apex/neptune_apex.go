@@ -91,7 +91,6 @@ func (n *NeptuneApex) gatherServer(acc telegraf.Accumulator, server string) erro
 	if err != nil {
 		return err
 	}
-
 	return n.parseXML(acc, resp)
 }
 
@@ -119,7 +118,7 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 	}
 	acc.AddFields(MEASUREMENT, mainFields, map[string]string{"hostname": r.Hostname, "type": "controller"}, reportTime)
 
-	// Outlets
+	// Outlets.
 	for _, o := range r.Outlet {
 		tags := map[string]string{
 			"hostname":  r.Hostname,
@@ -167,7 +166,7 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 		acc.AddFields(MEASUREMENT, fields, tags, reportTime)
 	}
 
-	// Probes
+	// Probes.
 	for _, p := range r.Probe {
 		fields := map[string]interface{}{
 			"value": p.Value,
@@ -231,7 +230,6 @@ func (n *NeptuneApex) sendRequest(server string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to read output from %q: %v", url, err)
 	}
-
 	return body, nil
 }
 

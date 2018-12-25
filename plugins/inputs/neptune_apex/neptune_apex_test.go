@@ -40,6 +40,7 @@ func TestGather(t *testing.T) {
 			servers: nil,
 		},
 	}
+
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
@@ -68,7 +69,6 @@ func TestParseXML(t *testing.T) {
 		{
 			name:        "Good test",
 			xmlResponse: []byte(APEX2016),
-			nFields:     17,
 			wantMetrics: []*testutil.Metric{
 				{
 					Measurement: MEASUREMENT,
@@ -154,6 +154,7 @@ func TestParseXML(t *testing.T) {
 			wantErr:     true,
 		},
 	}
+
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
@@ -170,22 +171,18 @@ func TestParseXML(t *testing.T) {
 				t.Errorf("accumulator errors. got=%v, want=none", acc.Errors)
 			}
 
-			if acc.NFields() != test.nFields {
-				t.Errorf("number of fields mismatch. got=%d, want=%d", acc.NFields(), test.nFields)
-			}
-
 			for i, m := range acc.Metrics {
 				if m.Measurement != test.wantMetrics[i].Measurement {
-					t.Errorf("Metric measurement mismatch at position %d:\nGOT:\n%s\nWANT:\n%s", i, m.Measurement, test.wantMetrics[i].Measurement)
+					t.Errorf("Metric measurement mismatch at position %d:\ngot=\n%s\nWant=\n%s", i, m.Measurement, test.wantMetrics[i].Measurement)
 				}
 				if !reflect.DeepEqual(m.Tags, test.wantMetrics[i].Tags) {
-					t.Errorf("Metric measurement mismatch at position %d:\nGOT:\n%v\nWANT:\n%v", i, m.Tags, test.wantMetrics[i].Tags)
+					t.Errorf("Metric measurement mismatch at position %d:\ngot=\n%v\nwant=\n%v", i, m.Tags, test.wantMetrics[i].Tags)
 				}
 				if !reflect.DeepEqual(m.Fields, test.wantMetrics[i].Fields) {
-					t.Errorf("Metric measurement mismatch at position %d:\nGOT:\n%v\nWANT:\n%v", i, m.Fields, test.wantMetrics[i].Fields)
+					t.Errorf("Metric measurement mismatch at position %d:\ngot=\n%v\nwant=:\n%v", i, m.Fields, test.wantMetrics[i].Fields)
 				}
 				if !m.Time.Equal(test.wantMetrics[i].Time) {
-					t.Errorf("Metric time mismatch at position %d:\nGOT:\n%s\nWANT:\n%s", i, m.Time, test.wantMetrics[i].Time)
+					t.Errorf("Metric time mismatch at position %d:\ngot=\n%s\nwant=\n%s", i, m.Time, test.wantMetrics[i].Time)
 				}
 			}
 		})
@@ -211,7 +208,9 @@ func TestSendRequest(t *testing.T) {
 			name:       "Status 301",
 			statusCode: http.StatusMovedPermanently,
 			wantErr:    true,
-		}}
+		},
+	}
+
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
@@ -237,7 +236,6 @@ func TestSendRequest(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestParseTime(t *testing.T) {
@@ -266,6 +264,7 @@ func TestParseTime(t *testing.T) {
 			wantErr: true,
 		},
 	}
+
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
@@ -281,7 +280,6 @@ func TestParseTime(t *testing.T) {
 				t.Errorf("err mismatch. got=%s, want=%s", res, test.wantTime)
 			}
 		})
-
 	}
 }
 
@@ -310,6 +308,7 @@ func TestFindProbe(t *testing.T) {
 			wantIndex: -1,
 		},
 	}
+
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
@@ -319,7 +318,6 @@ func TestFindProbe(t *testing.T) {
 				t.Errorf("probe index mismatch; got=%d, want %d", index, test.wantIndex)
 			}
 		})
-
 	}
 }
 
