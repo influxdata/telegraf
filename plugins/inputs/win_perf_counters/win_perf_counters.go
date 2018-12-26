@@ -394,7 +394,8 @@ func addCounterMeasurement(metric *counter, instanceName string, value float64, 
 func isKnownCounterDataError(err error) bool {
 	if pdhErr, ok := err.(*PdhError); ok && (pdhErr.ErrorCode == PDH_INVALID_DATA ||
 		pdhErr.ErrorCode == PDH_CALC_NEGATIVE_VALUE ||
-		pdhErr.ErrorCode == PDH_CSTATUS_INVALID_DATA) {
+		pdhErr.ErrorCode == PDH_CSTATUS_INVALID_DATA ||
+		pdhErr.ErrorCode == PDH_NO_DATA) {
 		return true
 	}
 	return false
