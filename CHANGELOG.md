@@ -13,9 +13,13 @@
 - [#5160](https://github.com/influxdata/telegraf/pull/5160): Add support for basic auth to couchdb input.
 - [#5161](https://github.com/influxdata/telegraf/pull/5161): Add support in wavefront output for the Wavefront Direction Ingestion API.
 
+#### Bugfixes
+
+- [#4610](https://github.com/influxdata/telegraf/pull/4610): Fix initscript removes pidfile of restarted Telegraf process.
+
 ## v1.9.2 [unreleased]
 
-### Bugfixes
+#### Bugfixes
 
 - [#5130](https://github.com/influxdata/telegraf/pull/5130): Increase varnishstat timeout.
 - [#5135](https://github.com/influxdata/telegraf/pull/5135): Remove storage calculation for non Azure managed instances and add server version.
@@ -28,7 +32,7 @@
 
 ## v1.9.1 [2018-12-11]
 
-### Bugfixes
+#### Bugfixes
 
 - [#5006](https://github.com/influxdata/telegraf/issues/5006): Fix boolean handling in splunkmetric serializer.
 - [#5046](https://github.com/influxdata/telegraf/issues/5046): Set default config values in jenkins input.
