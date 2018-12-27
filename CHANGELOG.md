@@ -13,6 +13,7 @@
 - [#5160](https://github.com/influxdata/telegraf/pull/5160): Add support for basic auth to couchdb input.
 - [#5161](https://github.com/influxdata/telegraf/pull/5161): Add support in wavefront output for the Wavefront Direction Ingestion API.
 - [#5168](https://github.com/influxdata/telegraf/pull/5168): Allow counting float values in valuecounter aggregator.
+- [#5177](https://github.com/influxdata/telegraf/pull/5177): Add log send and redo queue fields to sqlserver input.
 
 #### Bugfixes
 
