@@ -122,9 +122,9 @@ func (c *converter) convertField(metric telegraf.Metric) {
 		fields[c.Field] = fv
 	}
 
-	for tag, value := range fields {
-		dest := tag
-		if c.Tag != "*" && c.Dest != "" {
+	for key, value := range fields {
+		dest := key
+		if c.Field != "*" && c.Dest != "" {
 			dest = c.Dest
 		}
 		if fv, ok := value.(string); ok {
