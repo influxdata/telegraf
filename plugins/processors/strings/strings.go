@@ -72,8 +72,8 @@ const sampleConfig = `
   #   field = "read_count"
   #   suffix = "_count"
 
-  ## Replace substrings within field names
-  # [[processors.strings.trim_suffix]]
+  ## Replace all non-overlapping instances of old with new
+  # [[processors.strings.replace]]
   #   measurement = "*"
   #   old = ":"
   #   new = "_"
@@ -100,8 +100,8 @@ func (c *converter) convertTag(metric telegraf.Metric) {
 		tags[c.Tag] = tv
 	}
 
-	for tag, value := range tags {
-		dest := tag
+	for key, value := range tags {
+		dest := key
 		if c.Tag != "*" && c.Dest != "" {
 			dest = c.Dest
 		}
@@ -122,9 +122,9 @@ func (c *converter) convertField(metric telegraf.Metric) {
 		fields[c.Field] = fv
 	}
 
-	for tag, value := range fields {
-		dest := tag
-		if c.Tag != "*" && c.Dest != "" {
+	for key, value := range fields {
+		dest := key
+		if c.Field != "*" && c.Dest != "" {
 			dest = c.Dest
 		}
 		if fv, ok := value.(string); ok {
@@ -170,6 +170,7 @@ func (s *Strings) initOnce() {
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.Trim {
+		c := c
 		if c.Cutset != "" {
 			c.fn = func(s string) string { return strings.Trim(s, c.Cutset) }
 		} else {
@@ -178,6 +179,7 @@ func (s *Strings) initOnce() {
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.TrimLeft {
+		c := c
 		if c.Cutset != "" {
 			c.fn = func(s string) string { return strings.TrimLeft(s, c.Cutset) }
 		} else {
@@ -186,6 +188,7 @@ func (s *Strings) initOnce() {
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.TrimRight {
+		c := c
 		if c.Cutset != "" {
 			c.fn = func(s string) string { return strings.TrimRight(s, c.Cutset) }
 		} else {
@@ -194,14 +197,17 @@ func (s *Strings) initOnce() {
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.TrimPrefix {
+		c := c
 		c.fn = func(s string) string { return strings.TrimPrefix(s, c.Prefix) }
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.TrimSuffix {
+		c := c
 		c.fn = func(s string) string { return strings.TrimSuffix(s, c.Suffix) }
 		s.converters = append(s.converters, c)
 	}
 	for _, c := range s.Replace {
+		c := c
 		c.fn = func(s string) string {
 			newString := strings.Replace(s, c.Old, c.New, -1)
 			if newString == "" {
