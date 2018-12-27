@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -124,6 +123,21 @@ func TestSetPrecision(t *testing.T) {
 
 			close(metrics)
 		})
+	}
+}
+
+func TestAddTrackingMetricGroupEmpty(t *testing.T) {
+	ch := make(chan telegraf.Metric, 10)
+	metrics := []telegraf.Metric{}
+	acc := NewAccumulator(&TestMetricMaker{}, ch).WithTracking(1)
+
+	id := acc.AddTrackingMetricGroup(metrics)
+
+	select {
+	case tracking := <-acc.Delivered():
+		require.Equal(t, tracking.ID(), id)
+	default:
+		t.Fatal("empty group should be delivered immediately")
 	}
 }
 
