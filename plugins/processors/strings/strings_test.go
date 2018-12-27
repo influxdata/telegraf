@@ -25,24 +25,6 @@ func newM1() telegraf.Metric {
 	return m1
 }
 
-func newM2() telegraf.Metric {
-	m2, _ := metric.New("IIS_log",
-		map[string]string{
-			"verb":           "GET",
-			"resp_code":      "200",
-			"s-computername": "MIXEDCASE_hostname",
-		},
-		map[string]interface{}{
-			"request":       "/mixed/CASE/paTH/?from=-1D&to=now",
-			"cs-host":       "AAAbbb",
-			"ignore_number": int64(200),
-			"ignore_bool":   true,
-		},
-		time.Now(),
-	)
-	return m2
-}
-
 func TestFieldConversions(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -404,9 +386,38 @@ func TestMultipleConversions(t *testing.T) {
 				Tag: "verb",
 			},
 		},
+		Replace: []converter{
+			{
+				Tag: "foo",
+				Old: "a",
+				New: "x",
+			},
+			{
+				Tag: "bar",
+				Old: "b",
+				New: "y",
+			},
+		},
 	}
 
-	processed := plugin.Apply(newM2())
+	m, _ := metric.New("IIS_log",
+		map[string]string{
+			"verb":           "GET",
+			"resp_code":      "200",
+			"s-computername": "MIXEDCASE_hostname",
+			"foo":            "a",
+			"bar":            "b",
+		},
+		map[string]interface{}{
+			"request":       "/mixed/CASE/paTH/?from=-1D&to=now",
+			"cs-host":       "AAAbbb",
+			"ignore_number": int64(200),
+			"ignore_bool":   true,
+		},
+		time.Now(),
+	)
+
+	processed := plugin.Apply(m)
 
 	expectedFields := map[string]interface{}{
 		"request":           "/mixed/case/path/?from=-1d&to=now",
@@ -419,6 +430,8 @@ func TestMultipleConversions(t *testing.T) {
 		"verb":           "GET",
 		"resp_code":      "200",
 		"s-computername": "mixedcase_hostname",
+		"foo":            "x",
+		"bar":            "y",
 	}
 
 	assert.Equal(t, expectedFields, processed[0].Fields())
