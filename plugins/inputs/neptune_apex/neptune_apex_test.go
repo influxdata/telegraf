@@ -29,7 +29,7 @@ func TestGather(t *testing.T) {
 	}{
 		{
 			name:    "Good case, 2 servers",
-			servers: []string{"abc", "def"},
+			servers: []string{"http://abc", "https://def"},
 		},
 		{
 			name:    "Good case, 0 servers",
@@ -49,7 +49,8 @@ func TestGather(t *testing.T) {
 			n.Servers = test.servers
 			n.Gather(&acc)
 			if len(acc.Errors) != len(test.servers) {
-				t.Errorf("Number of servers mismatch. got=%d, want=%d", len(acc.Errors), len(test.servers))
+				t.Errorf("Number of servers mismatch. got=%d, want=%d",
+					len(acc.Errors), len(test.servers))
 			}
 
 		})
@@ -58,7 +59,8 @@ func TestGather(t *testing.T) {
 
 func TestParseXML(t *testing.T) {
 	n := &NeptuneApex{}
-	goodTime := time.Date(2018, 12, 22, 21, 55, 37, 0, time.FixedZone("PST", 3600*-8))
+	goodTime := time.Date(2018, 12, 22, 21, 55, 37, 0,
+		time.FixedZone("PST", 3600*-8))
 	tests := []struct {
 		name        string
 		xmlResponse []byte
@@ -73,63 +75,139 @@ func TestParseXML(t *testing.T) {
 				{
 					Measurement: Measurement,
 					Time:        goodTime,
-					Tags:        map[string]string{"hostname": "apex", "type": "controller"},
+					Tags: map[string]string{
+						"source":   "apex",
+						"type":     "controller",
+						"software": "5.04_7A18",
+						"hardware": "1.0",
+					},
 					Fields: map[string]interface{}{
-						"software":       "5.04_7A18",
 						"serial":         "AC5:12345",
-						"hardware":       "1.0",
-						"timezone":       -8.0,
-						"power_failed":   "12/14/2018 11:00:00",
-						"power_restored": "12/14/2018 16:31:15",
+						"power_failed":   int64(1544814000000000000),
+						"power_restored": int64(1544833875000000000),
 					},
 				},
 				{
 					Measurement: Measurement,
 					Time:        goodTime,
-					Tags:        map[string]string{"hostname": "apex", "output_id": "0", "device_id": "base_Var1", "name": "VarSpd1_I1", "output_type": "variable", "type": "output"},
-					Fields:      map[string]interface{}{"state": "PF1"},
+					Tags: map[string]string{
+						"source":      "apex",
+						"output_id":   "0",
+						"device_id":   "base_Var1",
+						"name":        "VarSpd1_I1",
+						"output_type": "variable",
+						"type":        "output",
+						"software":    "5.04_7A18",
+						"hardware":    "1.0",
+					},
+					Fields: map[string]interface{}{"state": "PF1"},
 				},
 				{
 					Measurement: Measurement,
 					Time:        goodTime,
-					Tags:        map[string]string{"hostname": "apex", "output_id": "6", "device_id": "base_email", "name": "EmailAlm_I5", "output_type": "alert", "type": "output"},
-					Fields:      map[string]interface{}{"state": "AOF"},
+					Tags: map[string]string{
+						"source":      "apex",
+						"output_id":   "6",
+						"device_id":   "base_email",
+						"name":        "EmailAlm_I5",
+						"output_type": "alert",
+						"type":        "output",
+						"software":    "5.04_7A18",
+						"hardware":    "1.0",
+					},
+					Fields: map[string]interface{}{"state": "AOF"},
 				},
 				{
 					Measurement: Measurement,
 					Time:        goodTime,
-					Tags:        map[string]string{"hostname": "apex", "output_id": "8", "device_id": "2_1", "name": "RETURN_2_1", "output_type": "outlet", "type": "output"},
-					Fields:      map[string]interface{}{"state": "AON", "watt": 35.0, "amp": 0.3},
+					Tags: map[string]string{
+						"source":      "apex",
+						"output_id":   "8",
+						"device_id":   "2_1",
+						"name":        "RETURN_2_1",
+						"output_type": "outlet",
+						"type":        "output",
+						"software":    "5.04_7A18",
+						"hardware":    "1.0",
+					},
+					Fields: map[string]interface{}{
+						"state": "AON",
+						"watt":  35.0,
+						"amp":   0.3,
+					},
 				},
 				{
 					Measurement: Measurement,
 					Time:        goodTime,
-					Tags:        map[string]string{"hostname": "apex", "output_id": "18", "device_id": "3_1", "name": "RVortech_3_1", "output_type": "unknown", "type": "output"},
-					Fields:      map[string]interface{}{"state": "TBL", "xstatus": "OK"},
+					Tags: map[string]string{
+						"source":      "apex",
+						"output_id":   "18",
+						"device_id":   "3_1",
+						"name":        "RVortech_3_1",
+						"output_type": "unknown",
+						"type":        "output",
+						"software":    "5.04_7A18",
+						"hardware":    "1.0",
+					},
+					Fields: map[string]interface{}{
+						"state":   "TBL",
+						"xstatus": "OK",
+					},
 				},
 				{
 					Measurement: Measurement,
 					Time:        goodTime,
-					Tags:        map[string]string{"hostname": "apex", "output_id": "28", "device_id": "4_9", "name": "LinkA_4_9", "output_type": "unknown", "type": "output"},
-					Fields:      map[string]interface{}{"state": "AOF"},
+					Tags: map[string]string{
+						"source":      "apex",
+						"output_id":   "28",
+						"device_id":   "4_9",
+						"name":        "LinkA_4_9",
+						"output_type": "unknown",
+						"type":        "output",
+						"software":    "5.04_7A18",
+						"hardware":    "1.0",
+					},
+					Fields: map[string]interface{}{"state": "AOF"},
 				},
 				{
 					Measurement: Measurement,
 					Time:        goodTime,
-					Tags:        map[string]string{"hostname": "apex", "output_id": "32", "device_id": "Cntl_A2", "name": "LEAK", "output_type": "virtual", "type": "output"},
-					Fields:      map[string]interface{}{"state": "AOF"},
+					Tags: map[string]string{
+						"source":      "apex",
+						"output_id":   "32",
+						"device_id":   "Cntl_A2",
+						"name":        "LEAK",
+						"output_type": "virtual",
+						"type":        "output",
+						"software":    "5.04_7A18",
+						"hardware":    "1.0",
+					},
+					Fields: map[string]interface{}{"state": "AOF"},
 				},
 				{
 					Measurement: Measurement,
 					Time:        goodTime,
-					Tags:        map[string]string{"hostname": "apex", "name": "Salt", "type": "probe", "probe_type": "Cond"},
-					Fields:      map[string]interface{}{"value": 30.1},
+					Tags: map[string]string{
+						"source":     "apex",
+						"name":       "Salt",
+						"type":       "probe",
+						"probe_type": "Cond",
+						"software":   "5.04_7A18",
+						"hardware":   "1.0",
+					},
+					Fields: map[string]interface{}{"value": 30.1},
 				},
 				{
 					Measurement: Measurement,
 					Time:        goodTime,
-					Tags:        map[string]string{"hostname": "apex", "name": "Volt_2", "type": "probe"},
-					Fields:      map[string]interface{}{"value": 115.0},
+					Tags: map[string]string{
+						"source":   "apex",
+						"name":     "Volt_2",
+						"type":     "probe",
+						"software": "5.04_7A18",
+						"hardware": "1.0",
+					},
+					Fields: map[string]interface{}{"value": 115.0},
 				},
 			},
 		},
@@ -144,59 +222,110 @@ func TestParseXML(t *testing.T) {
 			wantErr:     true,
 		},
 		{
-			name:        "Power restored time failure",
-			xmlResponse: []byte(`<status><power><restored>abc</restored></power></status>`),
-			wantErr:     true,
+			name: "Power Failed time failure",
+			xmlResponse: []byte(
+				`<status><date>12/22/2018 21:55:37</date>
+				<timezone>-8.0</timezone><power><failed>a</failed>
+				<restored>12/22/2018 22:55:37</restored></power></status>`),
+			wantErr: true,
 		},
 		{
-			name:        "Power failed failure",
-			xmlResponse: []byte(`<status><power><failed>abc</failed></power></status>`),
-			wantErr:     true,
+			name: "Power restored time failure",
+			xmlResponse: []byte(
+				`<status><date>12/22/2018 21:55:37</date>
+				<timezone>-8.0</timezone><power><restored>a</restored>
+				<failed>12/22/2018 22:55:37</failed></power></status>`),
+			wantErr: true,
+		},
+		{
+			name: "Power failed failure",
+			xmlResponse: []byte(
+				`<status><power><failed>abc</failed></power></status>`),
+			wantErr: true,
 		},
 		{
 			name: "Failed to parse watt to float",
-			xmlResponse: []byte(`<?xml version="1.0"?><status><date>12/22/2018 21:55:37</date><timezone>-8.0</timezone>
-								 <outlets><outlet><name>o1</name></outlet></outlets>
-								 <probes><probe><name>o1W</name><value>abc</value></probe></probes></status>`),
+			xmlResponse: []byte(
+				`<?xml version="1.0"?><status>
+				<date>12/22/2018 21:55:37</date><timezone>-8.0</timezone>
+				<power><failed>12/22/2018 21:55:37</failed>
+				<restored>12/22/2018 21:55:37</restored></power>
+				<outlets><outlet><name>o1</name></outlet></outlets>
+				<probes><probe><name>o1W</name><value>abc</value></probe>
+				</probes></status>`),
 			wantAccErr: true,
 			wantMetrics: []*testutil.Metric{
 				{
 					Measurement: Measurement,
 					Time:        goodTime,
-					Tags:        map[string]string{"hostname": "", "type": "controller"},
-					Fields: map[string]interface{}{"serial": "", "timezone": -8.0, "power_failed": "",
-						"power_restored": "", "software": "", "hardware": ""},
+					Tags: map[string]string{
+						"source":   "",
+						"type":     "controller",
+						"hardware": "",
+						"software": "",
+					},
+					Fields: map[string]interface{}{
+						"serial":         "",
+						"power_failed":   int64(1545544537000000000),
+						"power_restored": int64(1545544537000000000),
+					},
 				},
 			},
 		},
 		{
 			name: "Failed to parse amp to float",
-			xmlResponse: []byte(`<?xml version="1.0"?><status><date>12/22/2018 21:55:37</date><timezone>-8.0</timezone>
-								 <outlets><outlet><name>o1</name></outlet></outlets>
-								 <probes><probe><name>o1A</name><value>abc</value></probe></probes></status>`),
+			xmlResponse: []byte(
+				`<?xml version="1.0"?><status>
+				<date>12/22/2018 21:55:37</date><timezone>-8.0</timezone>
+				<power><failed>12/22/2018 21:55:37</failed>
+				<restored>12/22/2018 21:55:37</restored></power>
+				<outlets><outlet><name>o1</name></outlet></outlets>
+				<probes><probe><name>o1A</name><value>abc</value></probe>
+				</probes></status>`),
 			wantAccErr: true,
 			wantMetrics: []*testutil.Metric{
 				{
 					Measurement: Measurement,
 					Time:        goodTime,
-					Tags:        map[string]string{"hostname": "", "type": "controller"},
-					Fields: map[string]interface{}{"serial": "", "timezone": -8.0, "power_failed": "",
-						"power_restored": "", "software": "", "hardware": ""},
+					Tags: map[string]string{
+						"source":   "",
+						"type":     "controller",
+						"hardware": "",
+						"software": "",
+					},
+					Fields: map[string]interface{}{
+						"serial":         "",
+						"power_failed":   int64(1545544537000000000),
+						"power_restored": int64(1545544537000000000),
+					},
 				},
 			},
 		},
 		{
 			name: "Failed to parse probe value to float",
-			xmlResponse: []byte(`<?xml version="1.0"?><status><date>12/22/2018 21:55:37</date><timezone>-8.0</timezone>
-								 <probes><probe><name>p1</name><value>abc</value></probe></probes></status>`),
+			xmlResponse: []byte(
+				`<?xml version="1.0"?><status>
+				<date>12/22/2018 21:55:37</date><timezone>-8.0</timezone>
+				<power><failed>12/22/2018 21:55:37</failed>
+				<restored>12/22/2018 21:55:37</restored></power>
+				<probes><probe><name>p1</name><value>abc</value></probe>
+				</probes></status>`),
 			wantAccErr: true,
 			wantMetrics: []*testutil.Metric{
 				{
 					Measurement: Measurement,
 					Time:        goodTime,
-					Tags:        map[string]string{"hostname": "", "type": "controller"},
-					Fields: map[string]interface{}{"serial": "", "timezone": -8.0, "power_failed": "",
-						"power_restored": "", "software": "", "hardware": ""},
+					Tags: map[string]string{
+						"source":   "",
+						"type":     "controller",
+						"hardware": "",
+						"software": "",
+					},
+					Fields: map[string]interface{}{
+						"serial":         "",
+						"power_failed":   int64(1545544537000000000),
+						"power_restored": int64(1545544537000000000),
+					},
 				},
 			},
 		},
@@ -264,7 +393,8 @@ func TestSendRequest(t *testing.T) {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h := http.HandlerFunc(func(
+				w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(test.statusCode)
 				w.Write([]byte("data"))
 			})
@@ -273,7 +403,7 @@ func TestSendRequest(t *testing.T) {
 			n := &NeptuneApex{
 				httpClient: c,
 			}
-			resp, err := n.sendRequest("abc")
+			resp, err := n.sendRequest("http://abc")
 			if (err != nil) != test.wantErr {
 				t.Errorf("err mismatch. got=%v, want=%t", err, test.wantErr)
 			}
@@ -281,7 +411,8 @@ func TestSendRequest(t *testing.T) {
 				return
 			}
 			if bytes.Compare(resp, []byte("data")) != 0 {
-				t.Errorf("Response data mismatch. got=%q, want=%q", resp, "data")
+				t.Errorf(
+					"Response data mismatch. got=%q, want=%q", resp, "data")
 			}
 		})
 	}
@@ -299,13 +430,15 @@ func TestParseTime(t *testing.T) {
 			name:     "Good case - Timezone positive",
 			input:    "01/01/2023 12:34:56",
 			timeZone: 5,
-			wantTime: time.Date(2023, 1, 1, 12, 34, 56, 0, time.FixedZone("a", 3600*5)),
+			wantTime: time.Date(2023, 1, 1, 12, 34, 56, 0,
+				time.FixedZone("a", 3600*5)),
 		},
 		{
 			name:     "Good case - Timezone negative",
 			input:    "01/01/2023 12:34:56",
 			timeZone: -8,
-			wantTime: time.Date(2023, 1, 1, 12, 34, 56, 0, time.FixedZone("a", 3600*-8)),
+			wantTime: time.Date(2023, 1, 1, 12, 34, 56, 0,
+				time.FixedZone("a", 3600*-8)),
 		},
 		{
 			name:    "Cannot parse",
@@ -384,13 +517,15 @@ func TestSampleConfig(t *testing.T) {
 	}
 }
 
-// This fakeHttpClient creates a server and binds a client to it. That way, it is possible to contril the http
+// This fakeHttpClient creates a server and binds a client to it.
+// That way, it is possible to control the http
 // output from within the test without changes to the main code.
 func fakeHTTPClient(h http.Handler) (*http.Client, func()) {
 	s := httptest.NewServer(h)
 	c := &http.Client{
 		Transport: &http.Transport{
-			DialContext: func(_ context.Context, network, _ string) (net.Conn, error) {
+			DialContext: func(
+				_ context.Context, network, _ string) (net.Conn, error) {
 				return net.Dial(network, s.Listener.Addr().String())
 			},
 		},

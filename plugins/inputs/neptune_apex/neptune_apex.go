@@ -1,4 +1,5 @@
-// Package neptuneapex implements an input plugin for the Neptune Apex aquarium controller.
+// Package neptuneapex implements an input plugin for the Neptune Apex
+// aquarium controller.
 package neptuneapex
 
 import (
@@ -65,10 +66,10 @@ func (*NeptuneApex) SampleConfig() string {
   ## The Neptune Apex plugin reads the publicly available status.xml data from a local Apex.
   ## Measurements will be logged under "apex".
 
-  ## The hostname/IP of the local Apex(es). If you specify more than one server, they will
-  ## be differentiated by the "hostname" tag.
+  ## The base URL of the local Apex(es). If you specify more than one server, they will
+  ## be differentiated by the "source" tag.
   servers = [
-    "apex.local",
+    "http://apex.local",
   ]
 
   ## The response_timeout specifies how long to wait for a reply from the Apex.
@@ -90,7 +91,8 @@ func (n *NeptuneApex) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (n *NeptuneApex) gatherServer(acc telegraf.Accumulator, server string) error {
+func (n *NeptuneApex) gatherServer(
+	acc telegraf.Accumulator, server string) error {
 	resp, err := n.sendRequest(server)
 	if err != nil {
 		return err
@@ -98,48 +100,70 @@ func (n *NeptuneApex) gatherServer(acc telegraf.Accumulator, server string) erro
 	return n.parseXML(acc, resp)
 }
 
-// parseXML is strict on the input and does not do best-effort parsing. This is because of the life-support nature
-// of the Neptune Apex.
+// parseXML is strict on the input and does not do best-effort parsing.
+//This is because of the life-support nature of the Neptune Apex.
 func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 	r := xmlReply{}
 	err := xml.Unmarshal(data, &r)
 	if err != nil {
-		return fmt.Errorf("unable to unmarshal XML: %v\nXML DATA: %q", err, data)
+		return fmt.Errorf("unable to unmarshal XML: %v\nXML DATA: %q",
+			err, data)
 	}
 
 	var reportTime time.Time
+	var powerFailed, powerRestored int64
 	if reportTime, err = parseTime(r.Date, r.Timezone); err != nil {
 		return err
 	}
+	if val, err := parseTime(r.PowerFailed, r.Timezone); err != nil {
+		return err
+	} else {
+		powerFailed = val.UnixNano()
+	}
+	if val, err := parseTime(r.PowerRestored, r.Timezone); err != nil {
+		return err
+	} else {
+		powerRestored = val.UnixNano()
+	}
 
 	mainFields := map[string]interface{}{
-		"software":       r.SoftwareVersion,
-		"hardware":       r.HardwareVersion,
 		"serial":         r.Serial,
-		"timezone":       r.Timezone,
-		"power_failed":   r.PowerFailed,
-		"power_restored": r.PowerRestored,
+		"power_failed":   powerFailed,
+		"power_restored": powerRestored,
 	}
-	acc.AddFields(Measurement, mainFields, map[string]string{"hostname": r.Hostname, "type": "controller"}, reportTime)
+	acc.AddFields(Measurement, mainFields,
+		map[string]string{
+			"source":   r.Hostname,
+			"type":     "controller",
+			"software": r.SoftwareVersion,
+			"hardware": r.HardwareVersion,
+		},
+		reportTime)
 
 	// Outlets.
 	for _, o := range r.Outlet {
 		tags := map[string]string{
-			"hostname":  r.Hostname,
+			"source":    r.Hostname,
 			"output_id": o.OutputID,
 			"device_id": o.DeviceID,
 			"name":      o.Name,
 			"type":      "output",
+			"software":  r.SoftwareVersion,
+			"hardware":  r.HardwareVersion,
 		}
 		fields := map[string]interface{}{
 			"state": o.State,
 		}
-		// Find Amp and Watt probes and add them as fields. Remove the redundant probe.
+		// Find Amp and Watt probes and add them as fields.
+		// Remove the redundant probe.
 		if pos := findProbe(fmt.Sprintf("%sW", o.Name), r.Probe); pos > -1 {
-			value, err := strconv.ParseFloat(strings.TrimSpace(r.Probe[pos].Value), 64)
+			value, err := strconv.ParseFloat(
+				strings.TrimSpace(r.Probe[pos].Value), 64)
 			if err != nil {
 				acc.AddError(
-					fmt.Errorf("cannot convert string value %q to float64: %v", r.Probe[pos].Value, err))
+					fmt.Errorf(
+						"cannot convert string value %q to float64: %v",
+						r.Probe[pos].Value, err))
 				continue // Skip the whole outlet.
 			}
 			fields["watt"] = value
@@ -147,10 +171,13 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 			r.Probe = r.Probe[:len(r.Probe)-1]
 		}
 		if pos := findProbe(fmt.Sprintf("%sA", o.Name), r.Probe); pos > -1 {
-			value, err := strconv.ParseFloat(strings.TrimSpace(r.Probe[pos].Value), 64)
+			value, err := strconv.ParseFloat(
+				strings.TrimSpace(r.Probe[pos].Value), 64)
 			if err != nil {
 				acc.AddError(
-					fmt.Errorf("cannot convert string value %q to float64: %v", r.Probe[pos].Value, err))
+					fmt.Errorf(
+						"cannot convert string value %q to float64: %v",
+						r.Probe[pos].Value, err))
 				break // // Skip the whole outlet.
 			}
 			fields["amp"] = value
@@ -160,8 +187,9 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 		if o.Xstatus != nil {
 			fields["xstatus"] = *o.Xstatus
 		}
-		// Try to determine outlet type. Focus on accuracy, leaving the outlet_type "unknown" when ambiguous.
-		// 24v and vortech cannot be determined.
+		// Try to determine outlet type. Focus on accuracy, leaving the
+		//outlet_type "unknown" when ambiguous. 24v and vortech cannot be
+		// determined.
 		switch {
 		case strings.HasPrefix(o.DeviceID, "base_Var"):
 			tags["output_type"] = "variable"
@@ -186,16 +214,20 @@ func (n *NeptuneApex) parseXML(acc telegraf.Accumulator, data []byte) error {
 	for _, p := range r.Probe {
 		value, err := strconv.ParseFloat(strings.TrimSpace(p.Value), 64)
 		if err != nil {
-			acc.AddError(fmt.Errorf("cannot convert string value %q to float64: %v", p.Value, err))
+			acc.AddError(fmt.Errorf(
+				"cannot convert string value %q to float64: %v",
+				p.Value, err))
 			continue
 		}
 		fields := map[string]interface{}{
 			"value": value,
 		}
 		tags := map[string]string{
-			"hostname": r.Hostname,
+			"source":   r.Hostname,
 			"type":     "probe",
 			"name":     p.Name,
+			"software": r.SoftwareVersion,
+			"hardware": r.HardwareVersion,
 		}
 		if p.Type != nil {
 			tags["probe_type"] = *p.Type
@@ -215,7 +247,8 @@ func findProbe(probe string, probes []probe) int {
 	return -1
 }
 
-// parseTime takes a Neptune Apex date/time string with a timezone and returns a time.Time struct.
+// parseTime takes a Neptune Apex date/time string with a timezone and
+// returns a time.Time struct.
 func parseTime(val string, tz float64) (time.Time, error) {
 	// Magic time constant from https://golang.org/pkg/time/#Parse
 	const TimeLayout = "01/02/2006 15:04:05 -0700"
@@ -237,15 +270,17 @@ func parseTime(val string, tz float64) (time.Time, error) {
 }
 
 func (n *NeptuneApex) sendRequest(server string) ([]byte, error) {
-	url := fmt.Sprintf("http://%s/cgi-bin/status.xml", server)
+	url := fmt.Sprintf("%s/cgi-bin/status.xml", server)
 	resp, err := n.httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("http GET failed: %v", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("response from server URL %q returned %d (%s), expected %d (%s)",
-			url, resp.StatusCode, http.StatusText(resp.StatusCode), http.StatusOK, http.StatusText(http.StatusOK))
+		return nil, fmt.Errorf(
+			"response from server URL %q returned %d (%s), expected %d (%s)",
+			url, resp.StatusCode, http.StatusText(resp.StatusCode),
+			http.StatusOK, http.StatusText(http.StatusOK))
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
