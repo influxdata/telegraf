@@ -3,6 +3,7 @@ package vsphere
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"log"
 	"net/url"
 	"strconv"
@@ -18,6 +19,7 @@ import (
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/soap"
+	"github.com/vmware/govmomi/vim25/types"
 )
 
 // The highest number of metrics we can query for, no matter what settings
@@ -76,7 +78,7 @@ func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 		ctx2, cancel2 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
 		defer cancel2()
 		if cf.client.Client.SessionManager.Login(ctx2, url.UserPassword(cf.parent.Username, cf.parent.Password)) != nil {
-			return nil, err
+			return nil, fmt.Errorf("Renewing authentication failed: %v", err)
 		}
 	}
 
@@ -205,6 +207,8 @@ func (c *Client) close() {
 
 // GetServerTime returns the time at the vCenter server
 func (c *Client) GetServerTime(ctx context.Context) (time.Time, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.Timeout)
+	defer cancel()
 	t, err := methods.GetCurrentTime(ctx, c.Client)
 	if err != nil {
 		return time.Time{}, err
@@ -235,7 +239,7 @@ func (c *Client) GetMaxQueryMetrics(ctx context.Context) (int, error) {
 			// Fall through version-based inference if value isn't usable
 		}
 	} else {
-		log.Println("I! [input.vsphere] Option query for maxQueryMetrics failed. Using default")
+		log.Println("D! [input.vsphere] Option query for maxQueryMetrics failed. Using default")
 	}
 
 	// No usable maxQueryMetrics setting. Infer based on version
@@ -254,4 +258,39 @@ func (c *Client) GetMaxQueryMetrics(ctx context.Context) (int, error) {
 		return 64, nil
 	}
 	return 256, nil
+}
+
+// QueryMetrics wraps performance.Query to give it proper timeouts
+func (c *Client) QueryMetrics(ctx context.Context, pqs []types.PerfQuerySpec) ([]performance.EntityMetric, error) {
+	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
+	defer cancel1()
+	metrics, err := c.Perf.Query(ctx1, pqs)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx2, cancel2 := context.WithTimeout(ctx, c.Timeout)
+	defer cancel2()
+	return c.Perf.ToMetricSeries(ctx2, metrics)
+}
+
+// CounterInfoByName wraps performance.CounterInfoByName to give it proper timeouts
+func (c *Client) CounterInfoByName(ctx context.Context) (map[string]*types.PerfCounterInfo, error) {
+	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
+	defer cancel1()
+	return c.Perf.CounterInfoByName(ctx1)
+}
+
+// CounterInfoByKey wraps performance.CounterInfoByKey to give it proper timeouts
+func (c *Client) CounterInfoByKey(ctx context.Context) (map[int32]*types.PerfCounterInfo, error) {
+	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
+	defer cancel1()
+	return c.Perf.CounterInfoByKey(ctx1)
+}
+
+// ListResources wraps property.Collector.Retrieve to give it proper timeouts
+func (c *Client) ListResources(ctx context.Context, root *view.ContainerView, kind []string, ps []string, dst interface{}) error {
+	ctx1, cancel1 := context.WithTimeout(ctx, c.Timeout)
+	defer cancel1()
+	return root.Retrieve(ctx1, kind, ps, dst)
 }

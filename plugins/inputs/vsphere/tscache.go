@@ -49,6 +49,14 @@ func (t *TSCache) IsNew(key string, tm time.Time) bool {
 	return !tm.Before(v)
 }
 
+// Get returns a timestamp (if present)
+func (t *TSCache) Get(key string) (time.Time, bool) {
+	t.mux.RLock()
+	defer t.mux.RUnlock()
+	ts, ok := t.table[key]
+	return ts, ok
+}
+
 // Put updates the latest timestamp for the supplied key.
 func (t *TSCache) Put(key string, time time.Time) {
 	t.mux.Lock()
