@@ -15,7 +15,6 @@ import (
 
 type empty struct{}
 type semaphore chan empty
-type subscriptionGetter func(id string, ctx context.Context) (subscription, error)
 
 const defaultMaxUndeliveredMessages = 1000
 
@@ -34,8 +33,8 @@ type PubSub struct {
 	MaxMessageLen          int `toml:"max_message_len"`
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
-	sub       subscription
-	subGetter subscriptionGetter
+	sub     subscription
+	stubSub func() subscription
 
 	cancel context.CancelFunc
 
@@ -81,11 +80,15 @@ func (ps *PubSub) Start(ac telegraf.Accumulator) error {
 	cctx, cancel := context.WithCancel(context.Background())
 	ps.cancel = cancel
 
-	subRef, err := ps.subGetter(ps.Subscription, cctx)
-	if err != nil {
-		return err
+	if ps.stubSub != nil {
+		ps.sub = ps.stubSub()
+	} else {
+		subRef, err := ps.getGCPSubscription(cctx, ps.Subscription)
+		if err != nil {
+			return err
+		}
+		ps.sub = subRef
 	}
-	ps.sub = subRef
 
 	ps.wg = &sync.WaitGroup{}
 	ps.acc = ac.WithTracking(ps.MaxUndeliveredMessages)
@@ -189,42 +192,45 @@ func (ps *PubSub) removeDelivered(id telegraf.TrackingID) message {
 	return msg
 }
 
-func gcpSubscriptionGetter(ps *PubSub) subscriptionGetter {
-	return func(subId string, ctx context.Context) (subscription, error) {
-		var credsOpt option.ClientOption
-		if ps.CredentialsFile != "" {
-			credsOpt = option.WithCredentialsFile(ps.CredentialsFile)
-		} else {
-			creds, err := google.FindDefaultCredentials(ctx, pubsub.ScopeCloudPlatform)
-			if err != nil {
-				return nil, fmt.Errorf(
-					"credentials JSON file not provided and unable to find GCP "+
-						"Application Default Credentials: %v", err)
-			}
-			credsOpt = option.WithCredentials(creds)
-		}
-
-		client, err := pubsub.NewClient(
-			ctx,
-			ps.Project,
-			credsOpt,
-			option.WithScopes(pubsub.ScopeCloudPlatform),
-			option.WithUserAgent(internal.ProductToken()),
-		)
+func (ps *PubSub) getPubSubClient() (*pubsub.Client, error) {
+	var credsOpt option.ClientOption
+	if ps.CredentialsFile != "" {
+		credsOpt = option.WithCredentialsFile(ps.CredentialsFile)
+	} else {
+		creds, err := google.FindDefaultCredentials(context.Background(), pubsub.ScopeCloudPlatform)
 		if err != nil {
-			return nil, fmt.Errorf("unable to generate PubSub client: %v", err)
+			return nil, fmt.Errorf(
+				"unable to find GCP Application Default Credentials: %v."+
+					"Either set ADC or provide CredentialsFile config", err)
 		}
-
-		s := client.Subscription(subId)
-		s.ReceiveSettings = pubsub.ReceiveSettings{
-			NumGoroutines:          ps.MaxReceiverGoRoutines,
-			MaxExtension:           ps.MaxExtension.Duration,
-			MaxOutstandingMessages: ps.MaxOutstandingMessages,
-			MaxOutstandingBytes:    ps.MaxOutstandingBytes,
-		}
-
-		return &subWrapper{s}, nil
+		credsOpt = option.WithCredentials(creds)
 	}
+	client, err := pubsub.NewClient(
+		context.Background(),
+		ps.Project,
+		credsOpt,
+		option.WithScopes(pubsub.ScopeCloudPlatform),
+		option.WithUserAgent(internal.ProductToken()),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to generate PubSub client: %v", err)
+	}
+	return client, nil
+}
+
+func (ps *PubSub) getGCPSubscription(ctx context.Context, subId string) (subscription, error) {
+	client, err := ps.getPubSubClient()
+	if err != nil {
+		return nil, err
+	}
+	s := client.Subscription(subId)
+	s.ReceiveSettings = pubsub.ReceiveSettings{
+		NumGoroutines:          ps.MaxReceiverGoRoutines,
+		MaxExtension:           ps.MaxExtension.Duration,
+		MaxOutstandingMessages: ps.MaxOutstandingMessages,
+		MaxOutstandingBytes:    ps.MaxOutstandingBytes,
+	}
+	return &gcpSubscription{s}, nil
 }
 
 func init() {
@@ -232,7 +238,6 @@ func init() {
 		ps := &PubSub{
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}
-		ps.subGetter = gcpSubscriptionGetter(ps)
 		return ps
 	})
 }

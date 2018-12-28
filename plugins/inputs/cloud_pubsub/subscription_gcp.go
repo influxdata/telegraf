@@ -21,48 +21,48 @@ type (
 		PublishTime() time.Time
 	}
 
-	subWrapper struct {
+	gcpSubscription struct {
 		sub *pubsub.Subscription
 	}
 
-	msgWrapper struct {
+	gcpMessage struct {
 		msg *pubsub.Message
 	}
 )
 
-func (s *subWrapper) ID() string {
+func (s *gcpSubscription) ID() string {
 	if s.sub == nil {
 		return ""
 	}
 	return s.sub.ID()
 }
 
-func (s *subWrapper) Receive(ctx context.Context, f func(context.Context, message)) error {
+func (s *gcpSubscription) Receive(ctx context.Context, f func(context.Context, message)) error {
 	return s.sub.Receive(ctx, func(cctx context.Context, m *pubsub.Message) {
-		f(cctx, &msgWrapper{m})
+		f(cctx, &gcpMessage{m})
 	})
 }
 
-func (env *msgWrapper) Ack() {
+func (env *gcpMessage) Ack() {
 	env.msg.Ack()
 }
 
-func (env *msgWrapper) Nack() {
+func (env *gcpMessage) Nack() {
 	env.msg.Nack()
 }
 
-func (env *msgWrapper) ID() string {
+func (env *gcpMessage) ID() string {
 	return env.msg.ID
 }
 
-func (env *msgWrapper) Data() []byte {
+func (env *gcpMessage) Data() []byte {
 	return env.msg.Data
 }
 
-func (env *msgWrapper) Attributes() map[string]string {
+func (env *gcpMessage) Attributes() map[string]string {
 	return env.msg.Attributes
 }
 
-func (env *msgWrapper) PublishTime() time.Time {
+func (env *gcpMessage) PublishTime() time.Time {
 	return env.msg.PublishTime
 }

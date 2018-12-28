@@ -6,16 +6,16 @@ import (
 	"time"
 )
 
-type testSub struct {
+type stubSub struct {
 	id       string
 	messages chan *testMsg
 }
 
-func (s *testSub) ID() string {
+func (s *stubSub) ID() string {
 	return s.id
 }
 
-func (s *testSub) Receive(ctx context.Context, f func(context.Context, message)) error {
+func (s *stubSub) Receive(ctx context.Context, f func(context.Context, message)) error {
 	for {
 		select {
 		case <-ctx.Done():

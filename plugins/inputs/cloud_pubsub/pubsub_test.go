@@ -1,7 +1,6 @@
 package cloud_pubsub
 
 import (
-	"context"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -12,29 +11,20 @@ const (
 	msgInflux = "cpu_load_short,host=server01 value=23422.0 1422568543702900257\n"
 )
 
-func dummySubGetter(t *testing.T, sub *testSub) subscriptionGetter {
-	return func(id string, ctx context.Context) (subscription, error) {
-		if id != sub.id {
-			t.Fatalf("unexpected subscription - expected id %s, got %s", sub.id, id)
-		}
-		return sub, nil
-	}
-}
-
 // Test ingesting InfluxDB-format PubSub message
 func TestRunParse(t *testing.T) {
 	subId := "sub-run-parse"
 
 	testParser, _ := parsers.NewInfluxParser()
 
-	sub := &testSub{
+	sub := &stubSub{
 		id:       subId,
 		messages: make(chan *testMsg, 100),
 	}
 
 	ps := &PubSub{
 		parser:                 testParser,
-		subGetter:              dummySubGetter(t, sub),
+		stubSub:                func() subscription { return sub },
 		Project:                "projectIDontMatterForTests",
 		Subscription:           subId,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
@@ -68,14 +58,14 @@ func TestRunInvalidMessages(t *testing.T) {
 
 	testParser, _ := parsers.NewInfluxParser()
 
-	sub := &testSub{
+	sub := &stubSub{
 		id:       subId,
 		messages: make(chan *testMsg, 100),
 	}
 
 	ps := &PubSub{
 		parser:                 testParser,
-		subGetter:              dummySubGetter(t, sub),
+		stubSub:                func() subscription { return sub },
 		Project:                "projectIDontMatterForTests",
 		Subscription:           subId,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
@@ -113,14 +103,14 @@ func TestRunOverlongMessages(t *testing.T) {
 
 	testParser, _ := parsers.NewInfluxParser()
 
-	sub := &testSub{
+	sub := &stubSub{
 		id:       subId,
 		messages: make(chan *testMsg, 100),
 	}
 
 	ps := &PubSub{
 		parser:                 testParser,
-		subGetter:              dummySubGetter(t, sub),
+		stubSub:                func() subscription { return sub },
 		Project:                "projectIDontMatterForTests",
 		Subscription:           subId,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
