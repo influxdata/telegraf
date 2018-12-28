@@ -17,6 +17,7 @@ This section is for developers who want to create a new aggregator plugin.
   through it. This should be done using the builtin `HashID()` function of
   each metric.
 * When the `Reset()` function is called, all caches should be cleared.
+- Follow the recommended [CodeStyle][].
 
 ### Aggregator Plugin Example
 
@@ -124,3 +125,4 @@ func init() {
 
 [telegraf.Aggregator]: https://godoc.org/github.com/influxdata/telegraf#Aggregator
 [SampleConfig]: https://github.com/influxdata/telegraf/wiki/SampleConfig
+[CodeStyle]: https://github.com/influxdata/telegraf/wiki/CodeStyle
