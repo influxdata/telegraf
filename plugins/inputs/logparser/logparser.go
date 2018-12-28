@@ -182,7 +182,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 		}
 		files := g.Match()
 
-		for file := range files {
+		for _, file := range files {
 			if _, ok := l.tailers[file]; ok {
 				// we're already tailing this file
 				continue
