@@ -14,6 +14,7 @@
 - [#5161](https://github.com/influxdata/telegraf/pull/5161): Add support in wavefront output for the Wavefront Direction Ingestion API.
 - [#5168](https://github.com/influxdata/telegraf/pull/5168): Allow counting float values in valuecounter aggregator.
 - [#5177](https://github.com/influxdata/telegraf/pull/5177): Add log send and redo queue fields to sqlserver input.
+- [#5113](https://github.com/influxdata/telegraf/pull/5113): Improve scalability of vsphere input.
 
 #### Bugfixes
 
