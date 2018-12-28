@@ -222,7 +222,6 @@ func isSimple(include []string, exclude []string) bool {
 func (e *Endpoint) startDiscovery(ctx context.Context) {
 	e.discoveryTicker = time.NewTicker(e.Parent.ObjectDiscoveryInterval.Duration)
 	go func() {
-		defer HandlePanic()
 		for {
 			select {
 			case <-e.discoveryTicker.C:
@@ -261,7 +260,6 @@ func (e *Endpoint) init(ctx context.Context) error {
 			// Otherwise, just run it in the background. We'll probably have an incomplete first metric
 			// collection this way.
 			go func() {
-				defer HandlePanic()
 				e.initalDiscovery(ctx)
 			}()
 		}
@@ -646,7 +644,6 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 		if res.enabled {
 			wg.Add(1)
 			go func(k string) {
-				defer HandlePanic()
 				defer wg.Done()
 				err := e.collectResource(ctx, k, acc)
 				if err != nil {
@@ -798,10 +795,6 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	// Divide workload into chunks and process them concurrently
 	e.chunkify(ctx, &res, now, latest, acc,
 		func(chunk []types.PerfQuerySpec) {
-
-			// Handle panics gracefully
-			defer HandlePanicWithAcc(acc)
-
 			n, localLatest, err := e.collectChunk(ctx, chunk, &res, acc, now, estInterval)
 			log.Printf("D! [inputs.vsphere] CollectChunk for %s returned %d metrics", resourceType, n)
 			if err != nil {

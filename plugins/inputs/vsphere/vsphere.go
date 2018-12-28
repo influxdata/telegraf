@@ -264,7 +264,6 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 	for _, ep := range v.endpoints {
 		wg.Add(1)
 		go func(endpoint *Endpoint) {
-			defer HandlePanicWithAcc(acc)
 			defer wg.Done()
 			err := endpoint.Collect(context.Background(), acc)
 			if err == context.Canceled {
