@@ -33,10 +33,6 @@ const sampleConfig = `
   ## Application Default Credentials, which is preferred. 
   # credentials_file = "path/to/my/creds.json"
 
-  ## Optional. PubSub attributes to add to metrics.
-  # [[inputs.pubsub.attributes]]
-  #   my_attr = "tag_value"
-
   ## Optional. If true, will send all metrics per write in one PubSub message.
   send_batched = true
 
@@ -55,10 +51,14 @@ const sampleConfig = `
   publish_byte_threshold = 1000000
 
   ## Optional. Specifically configures requests made to the PubSub API.
-  publish_num_go_routines = 50
+  # publish_num_go_routines = 2
 
   ## Optional. Specifies a timeout for requests to the PubSub API.
-  publish_timeout = "10m"
+  # publish_timeout = "1m"
+  
+  ## Optional. PubSub attributes to add to metrics.
+  # [[inputs.pubsub.attributes]]
+  #   my_attr = "tag_value"
 `
 
 type PubSub struct {
