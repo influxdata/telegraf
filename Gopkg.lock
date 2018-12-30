@@ -1056,6 +1056,40 @@
   revision = "bb4de0191aa41b5507caa14b0650cdbddcd9280b"
 
 [[projects]]
+  branch = "master"
+  digest = "1:ec0b4406ee4d860a33d6cf6748ec4c4546f6890e7c90d8fcf541e1ac7d9add91"
+  name = "github.com/signalfx/com_signalfx_metrics_protobuf"
+  packages = ["."]
+  pruneopts = ""
+  revision = "93e507b42f43f458a109ca278d1542a26a0b87fc"
+
+[[projects]]
+  branch = "master"
+  digest = "1:970b1463f5a08bf6790ad497c47ffe87ca75d37f0dd76bd7cd24b1318900a93e"
+  name = "github.com/signalfx/gohistogram"
+  packages = ["."]
+  pruneopts = ""
+  revision = "1ccfd2ff508314074672f4450a917011a2060408"
+
+[[projects]]
+  digest = "1:3d52a2ff8fabf5cb15a88e8451a524af87f203c80ad8a33209fd52e15eaa4997"
+  name = "github.com/signalfx/golib"
+  packages = [
+    "datapoint",
+    "errors",
+    "event",
+    "eventcounter",
+    "log",
+    "sfxclient",
+    "timekeeper",
+    "trace",
+    "trace/format",
+  ]
+  pruneopts = ""
+  revision = "271e7b77c46c2cb201be901a302cb181a9d1645a"
+  version = "v2.0.0"
+
+[[projects]]
   digest = "1:8cf46b6c18a91068d446e26b67512cf16f1540b45d90b28b9533706a127f0ca6"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
@@ -1513,6 +1547,14 @@
   version = "v2.5.1"
 
 [[projects]]
+  digest = "1:df89444601379b2e1ee82bf8e6b72af9901cbeed4b469fa380a519c89c339310"
+  name = "gopkg.in/logfmt.v0"
+  packages = ["."]
+  pruneopts = ""
+  revision = "07c9b44f60d7ffdfb7d8efe1ad539965737836dc"
+  version = "v0.4.0"
+
+[[projects]]
   branch = "v2"
   digest = "1:f54ba71a035aac92ced3e902d2bff3734a15d1891daff73ec0f90ef236750139"
   name = "gopkg.in/mgo.v2"
@@ -1537,6 +1579,14 @@
   pruneopts = ""
   revision = "52741dc2ce53629cbe1e673869040d886cba2cd5"
   version = "v5.0.70"
+
+[[projects]]
+  digest = "1:a01080d20c45c031c13f3828c56e58f4f51d926a482ad10cc0316225097eb7ea"
+  name = "gopkg.in/stack.v1"
+  packages = ["."]
+  pruneopts = ""
+  revision = "2fee6af1a9795aafbe0253a0cfbdf668e1fb8a9a"
+  version = "v1.8.0"
 
 [[projects]]
   branch = "v1"
@@ -1653,6 +1703,7 @@
     "github.com/shirou/gopsutil/mem",
     "github.com/shirou/gopsutil/net",
     "github.com/shirou/gopsutil/process",
+    "github.com/signalfx/golib/sfxclient",
     "github.com/soniah/gosnmp",
     "github.com/streadway/amqp",
     "github.com/stretchr/testify/assert",
