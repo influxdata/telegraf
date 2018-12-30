@@ -2,6 +2,7 @@ package nowmetric
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -36,35 +37,33 @@ type OIMetric struct {
 
 type OIMetrics []OIMetric
 
-func NewSerializer(timestampUnits time.Duration) (*serializer, error) {
-	s := &serializer{
-		TimestampUnits: truncateDuration(timestampUnits),
-	}
+func NewSerializer() (*serializer, error) {
+	s := &serializer{}
 	return s, nil
 }
 
 func (s *serializer) Serialize(metric telegraf.Metric) (out []byte, err error) {
-	serialized := s.createObject(metric, err)
-	if serialized == nil {
+	serialized, err := s.createObject(metric)
+	if err != nil {
 		return []byte{}, nil
 	}
-	return serialized, nil
+	return serialized, err
 }
 
 func (s *serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err error) {
 	objects := make([]byte, 0)
 	for _, metric := range metrics {
-		m := s.createObject(metric, err)
-		objects = append(objects, m...)
-	}
-
-	if objects == nil {
-		return []byte{}, nil
+		m, err := s.createObject(metric)
+		if err != nil {
+			return nil, fmt.Errorf("D! [serializer.nowmetric] Dropping invalid metric: %s", metric.Name())
+		} else if m != nil {
+			objects = append(objects, m...)
+		}
 	}
 	return objects, nil
 }
 
-func (s *serializer) createObject(metric telegraf.Metric, err error) []byte {
+func (s *serializer) createObject(metric telegraf.Metric) ([]byte, error) {
 	/*  ServiceNow Operational Intelligence supports an array of JSON objects.
 	** Following elements accepted in the request body:
 		 ** metric_type: 	The name of the metric
@@ -124,23 +123,7 @@ func (s *serializer) createObject(metric telegraf.Metric, err error) []byte {
 
 	metricsJson, err := json.Marshal(allmetrics)
 
-	return metricsJson
-}
-
-func truncateDuration(units time.Duration) time.Duration {
-	// Default precision is 1s
-	if units <= 0 {
-		return time.Second
-	}
-
-	// Search for the power of ten less than the duration
-	d := time.Nanosecond
-	for {
-		if d*10 > units {
-			return d
-		}
-		d = d * 10
-	}
+	return metricsJson, err
 }
 
 func verifyValue(v interface{}) bool {

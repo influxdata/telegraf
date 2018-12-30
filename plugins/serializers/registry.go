@@ -81,7 +81,7 @@ func NewSerializer(config *Config) (Serializer, error) {
 	case "splunkmetric":
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting)
 	case "nowmetric":
-		serializer, err = NewNowSerializer(config.TimestampUnits)
+		serializer, err = NewNowSerializer()
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -96,8 +96,8 @@ func NewSplunkmetricSerializer(splunkmetric_hec_routing bool) (Serializer, error
 	return splunkmetric.NewSerializer(splunkmetric_hec_routing)
 }
 
-func NewNowSerializer(timestampUnits time.Duration) (Serializer, error) {
-	return nowmetric.NewSerializer(timestampUnits)
+func NewNowSerializer() (Serializer, error) {
+	return nowmetric.NewSerializer()
 }
 
 func NewInfluxSerializerConfig(config *Config) (Serializer, error) {

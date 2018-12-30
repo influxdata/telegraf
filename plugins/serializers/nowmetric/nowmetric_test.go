@@ -30,7 +30,7 @@ func TestSerializeMetricFloat(t *testing.T) {
 	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
-	s, _ := NewSerializer(0)
+	s, _ := NewSerializer()
 	var buf []byte
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
@@ -77,7 +77,7 @@ func TestSerialize_TimestampUnits(t *testing.T) {
 					time.Unix(1525478795, 123456789),
 				),
 			)
-			s, _ := NewSerializer(tt.timestampUnits)
+			s, _ := NewSerializer()
 			actual, err := s.Serialize(m)
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, string(actual))
@@ -96,7 +96,7 @@ func TestSerializeMetricInt(t *testing.T) {
 	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
-	s, _ := NewSerializer(0)
+	s, _ := NewSerializer()
 	var buf []byte
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
@@ -116,7 +116,7 @@ func TestSerializeMetricString(t *testing.T) {
 	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
-	s, _ := NewSerializer(0)
+	s, _ := NewSerializer()
 	var buf []byte
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
@@ -136,7 +136,7 @@ func TestSerializeMultiFields(t *testing.T) {
 	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
 
-	s, _ := NewSerializer(0)
+	s, _ := NewSerializer()
 	var buf []byte
 	buf, err = s.Serialize(m)
 	assert.NoError(t, err)
@@ -156,7 +156,7 @@ func TestSerializeMetricWithEscapes(t *testing.T) {
 	m, err := metric.New("My CPU", tags, fields, now)
 	assert.NoError(t, err)
 
-	s, _ := NewSerializer(0)
+	s, _ := NewSerializer()
 	buf, err := s.Serialize(m)
 	assert.NoError(t, err)
 
@@ -177,7 +177,7 @@ func TestSerializeBatch(t *testing.T) {
 	)
 
 	metrics := []telegraf.Metric{m, m}
-	s, _ := NewSerializer(0)
+	s, _ := NewSerializer()
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
 	require.Equal(t, []byte(`[{"metric_type":"value","resource":"","node":"","value":42,"timestamp":0,"ci2metric_id":null,"source":"Telegraf"}][{"metric_type":"value","resource":"","node":"","value":42,"timestamp":0,"ci2metric_id":null,"source":"Telegraf"}]`), buf)
