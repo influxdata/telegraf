@@ -179,20 +179,25 @@ func (ps *PubSub) refreshTopic() {
 }
 
 func (ps *PubSub) publishSettings() pubsub.PublishSettings {
-	settings := pubsub.PublishSettings{
-		ByteThreshold: ps.PublishByteThreshold,
-		NumGoroutines: ps.PublishNumGoroutines,
-		Timeout:       ps.PublishTimeout.Duration,
+	settings := pubsub.PublishSettings{}
+	if ps.PublishNumGoroutines > 0 {
+		settings.NumGoroutines = ps.PublishNumGoroutines
 	}
-	if ps.PublishCountThreshold > 0 {
+	
+	if ps.PublishTimeout.Duration > 0 {
+		settings.CountThreshold = 1
+	}
+
+	if ps.SendBatched {
+		settings.CountThreshold = 1
+	} else if ps.PublishCountThreshold > 0 {
 		settings.CountThreshold = ps.PublishCountThreshold
 	}
+
 	if ps.PublishByteThreshold > 0 {
 		settings.ByteThreshold = ps.PublishByteThreshold
 	}
-	if ps.SendBatched {
-		settings.CountThreshold = 1
-	}
+
 	return settings
 }
 
