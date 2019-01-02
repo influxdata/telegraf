@@ -30,7 +30,7 @@ generate it using `telegraf --usage pubsub`.
   # credentials_file = "path/to/my/creds.json"
 
   ## Optional. If true, will send all metrics per write in one PubSub message.
-  send_batched = true
+  # send_batched = true
 
   ## The following publish_* parameters specifically configures batching
   ## requests made to the GCP Cloud PubSub API via the PubSub Golang library. Read
@@ -39,12 +39,12 @@ generate it using `telegraf --usage pubsub`.
   ## Optional. Send a request to PubSub (i.e. actually publish a batch)
   ## when it has this many PubSub messages. If send_batched is true,
   ## this is ignored and treated as if it were 1.
-  publish_count_threshold = 1000
+  # publish_count_threshold = 1000
 
   ## Optional. Send a request to PubSub (i.e. actually publish a batch)
   ## when it has this many PubSub messages. If send_batched is true,
   ## this is ignored and treated as if it were 1
-  publish_byte_threshold = 1000000
+  # publish_byte_threshold = 1000000
 
   ## Optional. Specifically configures requests made to the PubSub API.
   # publish_num_go_routines = 2
