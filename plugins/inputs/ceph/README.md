@@ -108,7 +108,9 @@ All fields are collected under the **ceph** measurement and stored as float64s. 
   * bytes\_used (float)
   * data\_bytes (float)
   * num\_pgs (float)
-  * op\_per\_sec (float)
+  * op\_per\_sec (float, ceph < 10)
+  * read_op\_per\_sec (float)
+  * write_op\_per\_sec (float)
   * read\_bytes\_sec (float)
   * version (float)
   * write\_bytes\_sec (float)
@@ -132,7 +134,9 @@ All fields are collected under the **ceph** measurement and stored as float64s. 
   * objects (float)
 
 * ceph\_pool\_stats
-  * op\_per\_sec (float)
+  * op\_per\_sec (float, ceph < 10)
+  * read_op\_per\_sec (float)
+  * write_op\_per\_sec (float)
   * read\_bytes\_sec (float)
   * write\_bytes\_sec (float)
   * recovering\_object\_per\_sec (float)
