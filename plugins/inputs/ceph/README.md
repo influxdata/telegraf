@@ -135,6 +135,8 @@ All fields are collected under the **ceph** measurement and stored as float64s. 
 
 * ceph\_pool\_stats
   * op\_per\_sec (float)
+  * read_op\_per\_sec (float)
+  * write_op\_per\_sec (float)
   * read\_bytes\_sec (float)
   * write\_bytes\_sec (float)
   * recovering\_object\_per\_sec (float)
