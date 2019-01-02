@@ -109,6 +109,8 @@ All fields are collected under the **ceph** measurement and stored as float64s. 
   * data\_bytes (float)
   * num\_pgs (float)
   * op\_per\_sec (float)
+  * read_op\_per\_sec (float)
+  * write_op\_per\_sec (float)
   * read\_bytes\_sec (float)
   * version (float)
   * write\_bytes\_sec (float)
