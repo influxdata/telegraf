@@ -907,6 +907,7 @@ func TestNewlineInPatterns(t *testing.T) {
 }
 
 func TestSyslogTimestamp(t *testing.T) {
+	currentYear := time.Now().Year()
 	tests := []struct {
 		name     string
 		line     string
@@ -915,17 +916,17 @@ func TestSyslogTimestamp(t *testing.T) {
 		{
 			name:     "two digit day of month",
 			line:     "Sep 25 09:01:55 value=42",
-			expected: time.Date(2018, time.September, 25, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(currentYear, time.September, 25, 9, 1, 55, 0, time.UTC),
 		},
 		{
 			name:     "one digit day of month single space",
 			line:     "Sep 2 09:01:55 value=42",
-			expected: time.Date(2018, time.September, 2, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(currentYear, time.September, 2, 9, 1, 55, 0, time.UTC),
 		},
 		{
 			name:     "one digit day of month double space",
 			line:     "Sep  2 09:01:55 value=42",
-			expected: time.Date(2018, time.September, 2, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(currentYear, time.September, 2, 9, 1, 55, 0, time.UTC),
 		},
 	}
 	for _, tt := range tests {
@@ -1023,5 +1024,5 @@ func TestEmptyYearInTimestamp(t *testing.T) {
 	m, err := p.ParseLine("Nov  6 13:57:03 generic iTunes[6504]: objc[6504]: Object descriptor was null.")
 	require.NoError(t, err)
 	require.NotNil(t, m)
-	require.Equal(t, 2018, m.Time().Year())
+	require.Equal(t, time.Now().Year(), m.Time().Year())
 }
