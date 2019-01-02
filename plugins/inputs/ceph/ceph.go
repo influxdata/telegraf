@@ -475,6 +475,8 @@ type CephOSDPoolStats []struct {
 		ReadBytesSec  float64 `json:"read_bytes_sec"`
 		WriteBytesSec float64 `json:"write_bytes_sec"`
 		OpPerSec      float64 `json:"op_per_sec"`
+		ReadOpPerSec  float64 `json:"read_op_per_sec"`
+		WriteOpPerSec float64 `json:"write_op_per_sec"`
 	} `json:"client_io_rate"`
 	RecoveryRate struct {
 		RecoveringObjectsPerSec float64 `json:"recovering_objects_per_sec"`
@@ -499,6 +501,8 @@ func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
 			"read_bytes_sec":             pool.ClientIORate.ReadBytesSec,
 			"write_bytes_sec":            pool.ClientIORate.WriteBytesSec,
 			"op_per_sec":                 pool.ClientIORate.OpPerSec,
+			"read_op_per_sec":            pool.ClientIORate.ReadOpPerSec,
+			"write_op_per_sec":           pool.ClientIORate.WriteOpPerSec,
 			"recovering_objects_per_sec": pool.RecoveryRate.RecoveringObjectsPerSec,
 			"recovering_bytes_per_sec":   pool.RecoveryRate.RecoveringBytesPerSec,
 			"recovering_keys_per_sec":    pool.RecoveryRate.RecoveringKeysPerSec,

@@ -1018,7 +1018,9 @@ var cephODSPoolStatsDump = `
           "recovering_keys_per_sec": 0},
       "client_io_rate": { "read_bytes_sec": 10566067,
           "write_bytes_sec": 15165220376,
-          "op_per_sec": 9828}}]`
+          "op_per_sec": 9828,
+          "read_op_per_sec": 182,
+          "write_op_per_sec": 473}}]`
 
 var cephOSDPoolStatsResults = []expectedResult{
 	{
@@ -1027,6 +1029,8 @@ var cephOSDPoolStatsResults = []expectedResult{
 			"read_bytes_sec":             float64(0),
 			"write_bytes_sec":            float64(0),
 			"op_per_sec":                 float64(0),
+			"read_op_per_sec":            float64(0),
+			"write_op_per_sec":           float64(0),
 			"recovering_objects_per_sec": float64(0),
 			"recovering_bytes_per_sec":   float64(0),
 			"recovering_keys_per_sec":    float64(0),
@@ -1041,6 +1045,8 @@ var cephOSDPoolStatsResults = []expectedResult{
 			"read_bytes_sec":             float64(10566067),
 			"write_bytes_sec":            float64(15165220376),
 			"op_per_sec":                 float64(9828),
+			"read_op_per_sec":            float64(182),
+			"write_op_per_sec":           float64(473),
 			"recovering_objects_per_sec": float64(279),
 			"recovering_bytes_per_sec":   float64(176401059),
 			"recovering_keys_per_sec":    float64(0),
