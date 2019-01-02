@@ -835,7 +835,9 @@ var clusterStatusDump = `
     "bytes_total": 17335810048000,
     "read_bytes_sec": 0,
     "write_bytes_sec": 367217,
-    "op_per_sec": 98
+    "op_per_sec": 98,
+    "read_op_per_sec": 322,
+    "write_op_per_sec": 1022
   },
   "mdsmap": {
     "epoch": 1,
@@ -864,15 +866,17 @@ var cephStatusResults = []expectedResult{
 	{
 		metric: "ceph_pgmap",
 		fields: map[string]interface{}{
-			"version":         float64(52314277),
-			"num_pgs":         float64(2560),
-			"data_bytes":      float64(2700031960713),
-			"bytes_used":      float64(7478347665408),
-			"bytes_avail":     float64(9857462382592),
-			"bytes_total":     float64(17335810048000),
-			"read_bytes_sec":  float64(0),
-			"write_bytes_sec": float64(367217),
-			"op_per_sec":      float64(98),
+			"version":          float64(52314277),
+			"num_pgs":          float64(2560),
+			"data_bytes":       float64(2700031960713),
+			"bytes_used":       float64(7478347665408),
+			"bytes_avail":      float64(9857462382592),
+			"bytes_total":      float64(17335810048000),
+			"read_bytes_sec":   float64(0),
+			"write_bytes_sec":  float64(367217),
+			"op_per_sec":       float64(98),
+			"read_op_per_sec":  float64(322),
+			"write_op_per_sec": float64(1022),
 		},
 		tags: map[string]string{},
 	},

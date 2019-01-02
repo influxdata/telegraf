@@ -345,6 +345,8 @@ type CephStatus struct {
 		ReadBytesSec  float64 `json:"read_bytes_sec"`
 		WriteBytesSec float64 `json:"write_bytes_sec"`
 		OpPerSec      float64 `json:"op_per_sec"`
+		ReadOpPerSec  float64 `json:"read_op_per_sec"`
+		WriteOpPerSec float64 `json:"write_op_per_sec"`
 	} `json:"pgmap"`
 }
 
@@ -388,15 +390,17 @@ func decodeStatusOsdmap(acc telegraf.Accumulator, data *CephStatus) error {
 // decodeStatusPgmap decodes the PG map portion of the output of 'ceph -s'
 func decodeStatusPgmap(acc telegraf.Accumulator, data *CephStatus) error {
 	fields := map[string]interface{}{
-		"version":         data.PGMap.Version,
-		"num_pgs":         data.PGMap.NumPGs,
-		"data_bytes":      data.PGMap.DataBytes,
-		"bytes_used":      data.PGMap.BytesUsed,
-		"bytes_avail":     data.PGMap.BytesAvail,
-		"bytes_total":     data.PGMap.BytesTotal,
-		"read_bytes_sec":  data.PGMap.ReadBytesSec,
-		"write_bytes_sec": data.PGMap.WriteBytesSec,
-		"op_per_sec":      data.PGMap.OpPerSec,
+		"version":          data.PGMap.Version,
+		"num_pgs":          data.PGMap.NumPGs,
+		"data_bytes":       data.PGMap.DataBytes,
+		"bytes_used":       data.PGMap.BytesUsed,
+		"bytes_avail":      data.PGMap.BytesAvail,
+		"bytes_total":      data.PGMap.BytesTotal,
+		"read_bytes_sec":   data.PGMap.ReadBytesSec,
+		"write_bytes_sec":  data.PGMap.WriteBytesSec,
+		"op_per_sec":       data.PGMap.OpPerSec,
+		"read_op_per_sec":  data.PGMap.ReadOpPerSec,
+		"write_op_per_sec": data.PGMap.WriteOpPerSec,
 	}
 	acc.AddFields("ceph_pgmap", fields, map[string]string{})
 	return nil
