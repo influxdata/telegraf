@@ -248,7 +248,7 @@
 
 [[constraint]]
   name = "github.com/wavefronthq/wavefront-sdk-go"
-  version = "v0.9.0"
+  version = "v0.9.1"
 
 [[constraint]]
   name = "github.com/karrick/godirwalk"
