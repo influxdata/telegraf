@@ -15,6 +15,7 @@
 - [#5168](https://github.com/influxdata/telegraf/pull/5168): Allow counting float values in valuecounter aggregator.
 - [#5177](https://github.com/influxdata/telegraf/pull/5177): Add log send and redo queue fields to sqlserver input.
 - [#5113](https://github.com/influxdata/telegraf/pull/5113): Improve scalability of vsphere input.
+- [#5210](https://github.com/influxdata/telegraf/pull/5210): Add read and write op per second fields.
 
 #### Bugfixes
 
