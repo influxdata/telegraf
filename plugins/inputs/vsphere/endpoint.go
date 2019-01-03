@@ -39,7 +39,7 @@ const maxMetadataSamples = 100 // Number of resources to sample for metric metad
 type Endpoint struct {
 	Parent          *VSphere
 	URL             *url.URL
-	resourceKinds   map[string]resourceKind
+	resourceKinds   map[string]*resourceKind
 	hwMarks         *TSCache
 	lun2ds          map[string]string
 	discoveryTicker *time.Ticker
@@ -107,7 +107,7 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 		clientFactory: NewClientFactory(ctx, url, parent),
 	}
 
-	e.resourceKinds = map[string]resourceKind{
+	e.resourceKinds = map[string]*resourceKind{
 		"datacenter": {
 			name:             "datacenter",
 			pKey:             "dcname",
@@ -363,6 +363,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	numRes := int64(0)
 
 	// Populate resource objects, and endpoint instance info.
+	newObjects := make(map[string]objectMap)
 	for k, res := range e.resourceKinds {
 		log.Printf("D! [input.vsphere] Discovering resources for %s", res.name)
 		// Need to do this for all resource types even if they are not enabled
@@ -385,13 +386,12 @@ func (e *Endpoint) discover(ctx context.Context) error {
 			// No need to collect metric metadata if resource type is not enabled
 			if res.enabled {
 				if res.simple {
-					e.simpleMetadataSelect(ctx, client, &res)
+					e.simpleMetadataSelect(ctx, client, res)
 				} else {
-					e.complexMetadataSelect(ctx, &res, objects, metricNames)
+					e.complexMetadataSelect(ctx, res, objects, metricNames)
 				}
 			}
-			res.objects = objects
-			resourceKinds[k] = res
+			newObjects[k] = objects
 
 			SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": res.name}, int64(len(objects)))
 			numRes += int64(len(objects))
@@ -413,7 +413,9 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	e.collectMux.Lock()
 	defer e.collectMux.Unlock()
 
-	e.resourceKinds = resourceKinds
+	for k, v := range newObjects {
+		e.resourceKinds[k].objects = v
+	}
 	e.lun2ds = l2d
 
 	sw.Stop()
@@ -793,9 +795,9 @@ func (e *Endpoint) collectResource(ctx context.Context, resourceType string, acc
 	latestSample := time.Time{}
 
 	// Divide workload into chunks and process them concurrently
-	e.chunkify(ctx, &res, now, latest, acc,
+	e.chunkify(ctx, res, now, latest, acc,
 		func(chunk []types.PerfQuerySpec) {
-			n, localLatest, err := e.collectChunk(ctx, chunk, &res, acc, now, estInterval)
+			n, localLatest, err := e.collectChunk(ctx, chunk, res, acc, now, estInterval)
 			log.Printf("D! [inputs.vsphere] CollectChunk for %s returned %d metrics", resourceType, n)
 			if err != nil {
 				acc.AddError(errors.New("While collecting " + res.name + ": " + err.Error()))
