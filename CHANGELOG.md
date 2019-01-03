@@ -15,6 +15,7 @@
 - [#5168](https://github.com/influxdata/telegraf/pull/5168): Allow counting float values in valuecounter aggregator.
 - [#5177](https://github.com/influxdata/telegraf/pull/5177): Add log send and redo queue fields to sqlserver input.
 - [#5113](https://github.com/influxdata/telegraf/pull/5113): Improve scalability of vsphere input.
+- [#5210](https://github.com/influxdata/telegraf/pull/5210): Add read and write op per second fields to ceph input.
 
 #### Bugfixes
 
@@ -34,6 +35,8 @@
 - [#5179](https://github.com/influxdata/telegraf/issues/5179): Add PDH_NO_DATA to known counter error codes in win_perf_counters.
 - [#5170](https://github.com/influxdata/telegraf/issues/5170): Fix amqp_consumer stops consuming on empty message.
 - [#4906](https://github.com/influxdata/telegraf/issues/4906): Fix multiple replace tables not working in strings processor.
+- [#5219](https://github.com/influxdata/telegraf/issues/5219): Allow non local udp connections in net_response.
+- [#5218](https://github.com/influxdata/telegraf/issues/5218): Fix toml option names in parser processor.
 
 ## v1.9.1 [2018-12-11]
 
