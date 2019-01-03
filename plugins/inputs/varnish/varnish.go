@@ -17,7 +17,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, UseSudo bool, InstanceName string) (*bytes.Buffer, error)
+type runner func(cmdName string, UseSudo bool, InstanceName string, Timeout internal.Duration) (*bytes.Buffer, error)
 
 // Varnish is used to store configuration values
 type Varnish struct {
@@ -25,6 +25,7 @@ type Varnish struct {
 	Binary       string
 	UseSudo      bool
 	InstanceName string
+	Timeout      internal.Duration
 
 	filter filter.Filter
 	run    runner
@@ -32,6 +33,7 @@ type Varnish struct {
 
 var defaultStats = []string{"MAIN.cache_hit", "MAIN.cache_miss", "MAIN.uptime"}
 var defaultBinary = "/usr/bin/varnishstat"
+var defaultTimeout = internal.Duration{Duration: time.Second}
 
 var sampleConfig = `
   ## If running as a restricted user you can prepend sudo for additional access:
@@ -49,6 +51,9 @@ var sampleConfig = `
   ## Optional name for the varnish instance (or working directory) to query
   ## Usually appened after -n in varnish cli
   # instance_name = instanceName
+
+  ## Timeout for varnishstat command
+  # timeout = "1s"
 `
 
 func (s *Varnish) Description() string {
@@ -61,7 +66,7 @@ func (s *Varnish) SampleConfig() string {
 }
 
 // Shell out to varnish_stat and return the output
-func varnishRunner(cmdName string, UseSudo bool, InstanceName string) (*bytes.Buffer, error) {
+func varnishRunner(cmdName string, UseSudo bool, InstanceName string, Timeout internal.Duration) (*bytes.Buffer, error) {
 	cmdArgs := []string{"-1"}
 
 	if InstanceName != "" {
@@ -78,7 +83,8 @@ func varnishRunner(cmdName string, UseSudo bool, InstanceName string) (*bytes.Bu
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, time.Millisecond*200)
+
+	err := internal.RunTimeout(cmd, Timeout.Duration)
 	if err != nil {
 		return &out, fmt.Errorf("error running varnishstat: %s", err)
 	}
@@ -109,7 +115,7 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 
-	out, err := s.run(s.Binary, s.UseSudo, s.InstanceName)
+	out, err := s.run(s.Binary, s.UseSudo, s.InstanceName, s.Timeout)
 	if err != nil {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}
@@ -170,6 +176,7 @@ func init() {
 			Binary:       defaultBinary,
 			UseSudo:      false,
 			InstanceName: "",
+			Timeout:      defaultTimeout,
 		}
 	})
 }

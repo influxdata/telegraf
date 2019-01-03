@@ -16,6 +16,7 @@ This section is for developers who want to create a new processor plugin.
   plugin can be configured. This is included in `telegraf config`.  Please
   consult the [SampleConfig][] page for the latest style guidelines.
 * The `Description` function should say in one line what this processor does.
+- Follow the recommended [CodeStyle][].
 
 ### Processor Plugin Example
 
@@ -60,4 +61,5 @@ func init() {
 ```
 
 [SampleConfig]: https://github.com/influxdata/telegraf/wiki/SampleConfig
+[CodeStyle]: https://github.com/influxdata/telegraf/wiki/CodeStyle
 [telegraf.Processor]: https://godoc.org/github.com/influxdata/telegraf#Processor

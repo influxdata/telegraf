@@ -41,9 +41,12 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
   ## metric.
   json_time_key = ""
 
-  ## Time format is the time layout that should be used to interprete the
-  ## json_time_key.  The time must be `unix`, `unix_ms` or a time in the
-  ## "reference time".
+  ## Time format is the time layout that should be used to interprete the json_time_key.
+  ## The time must be `unix`, `unix_ms`, `unix_us`, `unix_ns`, or a time in the
+  ## "reference time".  To define a different format, arrange the values from
+  ## the "reference time" in the example to match the format you will be
+  ## using.  For more information on the "reference time", visit
+  ## https://golang.org/pkg/time/#Time.Format
   ##   ex: json_time_format = "Mon Jan 2 15:04:05 -0700 MST 2006"
   ##       json_time_format = "2006-01-02T15:04:05Z07:00"
   ##       json_time_format = "unix"
@@ -67,8 +70,9 @@ time using the JSON document you can use the `json_time_key` and
 document.
 
 The `json_time_key` option specifies the key containing the time value and
-`json_time_format` must be set to `unix`, `unix_ms`, or the Go "reference
-time" which is defined to be the specific time: `Mon Jan 2 15:04:05 MST 2006`.
+`json_time_format` must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`, or
+the Go "reference time" which is defined to be the specific time:
+`Mon Jan 2 15:04:05 MST 2006`.
 
 Consult the Go [time][time parse] package for details and additional examples
 on how to set the time format.
@@ -152,14 +156,14 @@ Input:
         "b": {
             "c": 6,
             "time":"04 Jan 06 15:04 MST"
-        },
+        }
     },
     {
         "a": 7,
         "b": {
             "c": 8,
             "time":"11 Jan 07 15:04 MST"
-        },
+        }
     }
 ]
 ```

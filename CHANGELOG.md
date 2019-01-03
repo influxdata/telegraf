@@ -6,10 +6,42 @@
 - [#5047](https://github.com/influxdata/telegraf/pull/5047): Add support for unix and unix_ms timestamps to csv parser.
 - [#5038](https://github.com/influxdata/telegraf/pull/5038): Add ability to tag metrics with topic in kafka_consumer.
 - [#5024](https://github.com/influxdata/telegraf/pull/5024): Add option to store cpu as a tag in interrupts input.
+- [#5074](https://github.com/influxdata/telegraf/pull/5074): Add support for sending a request body to http input.
+- [#5069](https://github.com/influxdata/telegraf/pull/5069): Add running field to procstat_lookup.
+- [#5116](https://github.com/influxdata/telegraf/pull/5116): Include DEVLINKS in available diskio udev properties.
+- [#5149](https://github.com/influxdata/telegraf/pull/5149): Add micro and nanosecond unix timestamp support to JSON parser.
+- [#5160](https://github.com/influxdata/telegraf/pull/5160): Add support for basic auth to couchdb input.
+- [#5161](https://github.com/influxdata/telegraf/pull/5161): Add support in wavefront output for the Wavefront Direction Ingestion API.
+- [#5168](https://github.com/influxdata/telegraf/pull/5168): Allow counting float values in valuecounter aggregator.
+- [#5177](https://github.com/influxdata/telegraf/pull/5177): Add log send and redo queue fields to sqlserver input.
+- [#5113](https://github.com/influxdata/telegraf/pull/5113): Improve scalability of vsphere input.
+- [#5210](https://github.com/influxdata/telegraf/pull/5210): Add read and write op per second fields to ceph input.
+- [#5214](https://github.com/influxdata/telegraf/pull/5214): Add configurable timeout to varnish input.
 
-## v1.9.1 [unreleased]
+#### Bugfixes
 
-### Bugfixes
+- [#4610](https://github.com/influxdata/telegraf/pull/4610): Fix initscript removes pidfile of restarted Telegraf process.
+
+## v1.9.2 [unreleased]
+
+#### Bugfixes
+
+- [#5130](https://github.com/influxdata/telegraf/pull/5130): Increase varnishstat timeout.
+- [#5135](https://github.com/influxdata/telegraf/pull/5135): Remove storage calculation for non Azure managed instances and add server version.
+- [#5083](https://github.com/influxdata/telegraf/pull/5083): Fix error sending empty tag value in azure_monitor output.
+- [#5143](https://github.com/influxdata/telegraf/issues/5143): Fix panic with prometheus input plugin on shutdown.
+- [#4482](https://github.com/influxdata/telegraf/issues/4482): Support non-transparent framing of syslog messages.
+- [#5151](https://github.com/influxdata/telegraf/issues/5151): Apply global and plugin level metric modifications before filtering.
+- [#5167](https://github.com/influxdata/telegraf/pull/5167): Fix num_remapped_pgs field in ceph plugin.
+- [#5179](https://github.com/influxdata/telegraf/issues/5179): Add PDH_NO_DATA to known counter error codes in win_perf_counters.
+- [#5170](https://github.com/influxdata/telegraf/issues/5170): Fix amqp_consumer stops consuming on empty message.
+- [#4906](https://github.com/influxdata/telegraf/issues/4906): Fix multiple replace tables not working in strings processor.
+- [#5219](https://github.com/influxdata/telegraf/issues/5219): Allow non local udp connections in net_response.
+- [#5218](https://github.com/influxdata/telegraf/issues/5218): Fix toml option names in parser processor.
+
+## v1.9.1 [2018-12-11]
+
+#### Bugfixes
 
 - [#5006](https://github.com/influxdata/telegraf/issues/5006): Fix boolean handling in splunkmetric serializer.
 - [#5046](https://github.com/influxdata/telegraf/issues/5046): Set default config values in jenkins input.
@@ -17,6 +49,10 @@
 - [#5010](https://github.com/influxdata/telegraf/issues/5010): Add X-Requested-By header to graylog input.
 - [#5052](https://github.com/influxdata/telegraf/issues/5052): Fix metric memory not freed from the metric buffer on write.
 - [#3817](https://github.com/influxdata/telegraf/issues/3817): Add support for client tls certificates in postgresql inputs.
+- [#5082](https://github.com/influxdata/telegraf/issues/5082): Prevent panic when marking the offset in kafka_consumer.
+- [#5084](https://github.com/influxdata/telegraf/issues/5084): Add early metrics to aggregator and honor drop_original setting.
+- [#5112](https://github.com/influxdata/telegraf/pull/5112): Use -W flag on bsd variants in ping input.
+- [#5114](https://github.com/influxdata/telegraf/issues/5114): Allow delta metrics in wavefront parser.
 
 ## v1.9 [2018-11-20]
 

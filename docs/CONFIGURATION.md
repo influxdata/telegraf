@@ -24,11 +24,47 @@ telegraf --input-filter cpu:mem:net:swap --output-filter influxdb:kafka config
 ### Environment Variables
 
 Environment variables can be used anywhere in the config file, simply prepend
-them with $. For strings the variable must be within quotes (ie, "$STR_VAR"),
-for numbers and booleans they should be plain (ie, $INT_VAR, $BOOL_VAR)
+them with `$`.  Replacement occurs before file parsing.   For strings
+the variable must be within quotes, e.g., `"$STR_VAR"`, for numbers and booleans
+they should be unquoted, e.g., `$INT_VAR`, `$BOOL_VAR`.
 
 When using the `.deb` or `.rpm` packages, you can define environment variables
 in the `/etc/default/telegraf` file.
+
+**Example**:
+
+`/etc/default/telegraf`:
+```
+USER="alice"
+INFLUX_URL="http://localhost:8086"
+INFLUX_SKIP_DATABASE_CREATION="true"
+INFLUX_PASSWORD="monkey123"
+```
+
+`/etc/telegraf.conf`:
+```toml
+[global_tags]
+  user = "$USER"
+
+[[inputs.mem]]
+
+[[outputs.influxdb]]
+  urls = ["$INFLUX_URL"]
+  skip_database_creation = $INFLUX_SKIP_DATABASE_CREATION
+  password = "$INFLUX_PASSWORD"
+```
+
+The above files will produce the following effective configuration file to be
+parsed:
+```toml
+[global_tags]
+  user = "alice"
+
+[[outputs.influxdb]]
+  urls = "http://localhost:8086"
+  skip_database_creation = true
+  password = "monkey123"
+```
 
 ### Configuration file locations
 

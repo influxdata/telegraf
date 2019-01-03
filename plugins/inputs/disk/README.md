@@ -59,6 +59,11 @@ $ sudo -u telegraf cat /proc/self/mounts | grep sda2
 $ sudo -u telegraf stat /home
 ```
 
+It may be desired to use POSIX ACLs to provide additional access:
+```
+sudo setfacl -R -m u:telegraf:X /var/lib/docker/volumes/
+```
+
 ### Example Output:
 
 ```
