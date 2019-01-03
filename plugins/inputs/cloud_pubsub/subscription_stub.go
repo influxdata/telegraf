@@ -24,7 +24,6 @@ func (s *stubSub) Receive(ctx context.Context, f func(context.Context, message))
 			f(ctx, m)
 		}
 	}
-	return nil
 }
 
 type testMsg struct {
