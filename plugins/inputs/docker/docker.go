@@ -130,11 +130,12 @@ func (d *Docker) SampleConfig() string { return sampleConfig }
 func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	if d.client == nil {
 		var c Client
+		var tlsConfig *tls.Config
 		var err error
 		if d.Endpoint == "ENV" {
 			c, err = d.newEnvClient()
 		} else {
-			tlsConfig, err := d.ClientConfig.TLSConfig()
+			tlsConfig, err = d.ClientConfig.TLSConfig()
 			if err != nil {
 				return err
 			}
@@ -219,7 +220,6 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 }
 
 func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
-
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
 	services, err := d.client.ServiceList(ctx, types.ServiceListOptions{})
@@ -228,7 +228,6 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 	}
 
 	if len(services) > 0 {
-
 		tasks, err := d.client.TaskList(ctx, types.TaskListOptions{})
 		if err != nil {
 			return err
