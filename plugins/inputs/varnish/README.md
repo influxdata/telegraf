@@ -21,14 +21,11 @@ This plugin gathers stats from [Varnish HTTP Cache](https://varnish-cache.org/)
    ## Optional name for the varnish instance (or working directory) to query
    ## Usually appened after -n in varnish cli
    # instance_name = instanceName
-
-   ## Timeout for varnishstat command
-   # timeout = "1s"
 ```
 
 ### Measurements & Fields:
 
-This is the full list of stats provided by varnish. Stats will be grouped by their capitalized prefix (eg MAIN,
+This is the full list of stats provided by varnish. Stats will be grouped by their capitalized prefix (eg MAIN, 
 MEMPOOL, etc). In the output, the prefix will be used as a tag, and removed from field names.
 
 - varnish
@@ -329,7 +326,7 @@ MEMPOOL, etc). In the output, the prefix will be used as a tag, and removed from
 
 ### Tags:
 
-As indicated above, the  prefix of a varnish stat will be used as it's 'section' tag. So section tag may have one of
+As indicated above, the  prefix of a varnish stat will be used as it's 'section' tag. So section tag may have one of 
 the following values:
 - section:
   - MAIN
@@ -338,8 +335,8 @@ the following values:
   - SMA
   - VBE
   - LCK
-
-
+  
+  
 
 ### Permissions:
 

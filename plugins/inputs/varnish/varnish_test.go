@@ -12,8 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func fakeVarnishStat(output string, useSudo bool, InstanceName string, Timeout string) func(string, bool, string, string) (*bytes.Buffer, error) {
-	return func(string, bool, string, string) (*bytes.Buffer, error) {
+func fakeVarnishStat(output string, useSudo bool, InstanceName string) func(string, bool, string) (*bytes.Buffer, error) {
+	return func(string, bool, string) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}
 }
@@ -21,7 +21,7 @@ func fakeVarnishStat(output string, useSudo bool, InstanceName string, Timeout s
 func TestGather(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(smOutput, false, "", "5s"),
+		run:   fakeVarnishStat(smOutput, false, ""),
 		Stats: []string{"*"},
 	}
 	v.Gather(acc)
@@ -37,7 +37,7 @@ func TestGather(t *testing.T) {
 func TestParseFullOutput(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput, true, "", "5s"),
+		run:   fakeVarnishStat(fullOutput, true, ""),
 		Stats: []string{"*"},
 	}
 	err := v.Gather(acc)
@@ -52,7 +52,7 @@ func TestParseFullOutput(t *testing.T) {
 func TestFilterSomeStats(t *testing.T) {
 	acc := &testutil.Accumulator{}
 	v := &Varnish{
-		run:   fakeVarnishStat(fullOutput, false, "", "5s"),
+		run:   fakeVarnishStat(fullOutput, false, ""),
 		Stats: []string{"MGT.*", "VBE.*"},
 	}
 	err := v.Gather(acc)
@@ -75,7 +75,7 @@ func TestFieldConfig(t *testing.T) {
 	for fieldCfg, expected := range expect {
 		acc := &testutil.Accumulator{}
 		v := &Varnish{
-			run:   fakeVarnishStat(fullOutput, true, "", "5s"),
+			run:   fakeVarnishStat(fullOutput, true, ""),
 			Stats: strings.Split(fieldCfg, ","),
 		}
 		err := v.Gather(acc)
