@@ -16,6 +16,7 @@
 - [#5177](https://github.com/influxdata/telegraf/pull/5177): Add log send and redo queue fields to sqlserver input.
 - [#5113](https://github.com/influxdata/telegraf/pull/5113): Improve scalability of vsphere input.
 - [#5210](https://github.com/influxdata/telegraf/pull/5210): Add read and write op per second fields to ceph input.
+- [#5214](https://github.com/influxdata/telegraf/pull/5214): Add configurable timeout to varnish input.
 
 #### Bugfixes
 
