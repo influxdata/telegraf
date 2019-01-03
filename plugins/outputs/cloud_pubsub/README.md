@@ -50,7 +50,7 @@ generate it using `telegraf --usage pubsub`.
   # publish_num_go_routines = 2
 
   ## Optional. Specifies a timeout for requests to the PubSub API.
-  # publish_timeout = "1m"
+  # publish_timeout = "30s"
   
   ## Optional. PubSub attributes to add to metrics.
   # [[inputs.pubsub.attributes]]
