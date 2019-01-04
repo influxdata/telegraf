@@ -1,5 +1,9 @@
 ## v1.10 [unreleased]
 
+#### New Inputs
+
+- [cloud_pubsub](/plugins/inputs/cloud_pubsub/README.md) - Contributed by @emilymye
+
 #### Features
 
 - [#4345](https://github.com/influxdata/telegraf/pull/4345): Allow for force gathering ES cluster stats.

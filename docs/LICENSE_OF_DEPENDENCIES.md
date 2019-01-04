@@ -115,6 +115,7 @@ following works:
 - golang.org/x/crypto [BSD 3-Clause Clear License](https://github.com/golang/crypto/blob/master/LICENSE)
 - golang.org/x/net [BSD 3-Clause Clear License](https://github.com/golang/net/blob/master/LICENSE)
 - golang.org/x/oauth2 [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/oauth2/blob/master/LICENSE)
+- golang.org/x/sync [BSD 3-Clause "New" or "Revised" License](https://github.com/golang/sync/blob/master/LICENSE)
 - golang.org/x/sys [BSD 3-Clause Clear License](https://github.com/golang/sys/blob/master/LICENSE)
 - golang.org/x/text [BSD 3-Clause Clear License](https://github.com/golang/text/blob/master/LICENSE)
 - google.golang.org/api [BSD 3-Clause "New" or "Revised" License](https://github.com/googleapis/google-api-go-client/blob/master/LICENSE)
