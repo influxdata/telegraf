@@ -120,13 +120,13 @@ func (ps *PubSub) Close() error {
 func (ps *PubSub) Write(metrics []telegraf.Metric) error {
 	ps.refreshTopic()
 
-	cctx, cancel := context.WithCancel(context.Background())
-
 	// Serialize metrics and package into appropriate PubSub messages
 	msgs, err := ps.toMessages(metrics)
 	if err != nil {
 		return err
 	}
+
+	cctx, cancel := context.WithCancel(context.Background())
 
 	// Publish all messages - each call to Publish returns a future.
 	ps.publishResults = make([]publishResult, len(msgs))
