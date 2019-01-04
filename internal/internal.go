@@ -18,7 +18,9 @@ import (
 	"time"
 	"unicode"
 
+	"fmt"
 	"github.com/alecthomas/units"
+	"runtime"
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -56,6 +58,11 @@ func SetVersion(v string) error {
 // Version returns the telegraf agent version
 func Version() string {
 	return version
+}
+
+// ProductToken returns a tag for Telegraf that can be used in user agents.
+func ProductToken() string {
+	return fmt.Sprintf("Telegraf/%s Go/%s", Version(), runtime.Version())
 }
 
 // UnmarshalTOML parses the duration from the TOML config file

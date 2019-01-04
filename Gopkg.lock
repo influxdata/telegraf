@@ -7,8 +7,13 @@
   packages = [
     "civil",
     "compute/metadata",
+    "iam",
+    "internal/optional",
     "internal/version",
     "monitoring/apiv3",
+    "pubsub",
+    "pubsub/apiv1",
+    "pubsub/internal/distribution",
   ]
   pruneopts = ""
   revision = "c728a003b238b26cef9ab6753a5dc424b331c3ad"
@@ -1219,6 +1224,17 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:88ecca26e54f601a8733c9a31d9f0883b915216a177673f0467f6b864fd0d90f"
+  name = "golang.org/x/sync"
+  packages = [
+    "errgroup",
+    "semaphore",
+  ]
+  pruneopts = ""
+  revision = "42b317875d0fa942474b76e1b46a6060d720ae6e"
+
+[[projects]]
+  branch = "master"
   digest = "1:6a6eed3727d0e15703d9e930d8dbe333bea09eda309d75a015d3c6dc4e5c92a6"
   name = "golang.org/x/sys"
   packages = [
@@ -1277,6 +1293,7 @@
     "internal",
     "iterator",
     "option",
+    "support/bundler",
     "transport",
     "transport/grpc",
     "transport/http",
@@ -1316,7 +1333,9 @@
     "googleapis/api/label",
     "googleapis/api/metric",
     "googleapis/api/monitoredres",
+    "googleapis/iam/v1",
     "googleapis/monitoring/v3",
+    "googleapis/pubsub/v1",
     "googleapis/rpc/status",
     "protobuf/field_mask",
   ]
@@ -1459,6 +1478,7 @@
   analyzer-version = 1
   input-imports = [
     "cloud.google.com/go/monitoring/apiv3",
+    "cloud.google.com/go/pubsub",
     "collectd.org/api",
     "collectd.org/network",
     "github.com/Azure/go-autorest/autorest",
@@ -1562,6 +1582,7 @@
     "golang.org/x/net/html/charset",
     "golang.org/x/oauth2",
     "golang.org/x/oauth2/clientcredentials",
+    "golang.org/x/oauth2/google",
     "golang.org/x/sys/unix",
     "golang.org/x/sys/windows",
     "golang.org/x/sys/windows/svc",
