@@ -750,7 +750,7 @@ func loadConfig(config string) ([]byte, error) {
 	}
 
 	switch u.Scheme {
-	case "https": // http not permitted
+	case "https", "http":
 		return fetchConfig(u)
 	default:
 		// If it isn't a https scheme, try it as a file.
