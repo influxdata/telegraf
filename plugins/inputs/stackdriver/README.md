@@ -10,7 +10,7 @@ This plugin uses a [Google Service Account](https://cloud.google.com/docs/authen
 
 ```toml
 [[inputs.stackdriver]]
-  ## GCP Project
+  ## GCP Project (required - must be prefixed with "projects/")
   project = "projects/{project_id_or_number}"
   
   ## API rate limit. On a default project, it seems that a single user can make
