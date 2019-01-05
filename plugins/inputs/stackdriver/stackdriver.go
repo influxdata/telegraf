@@ -28,7 +28,7 @@ const (
 	description  = "Plugin that scrapes Google's v3 monitoring API."
 	sampleConfig = `
 ## GCP Project
-project = "projects/erudite-bloom-151019"
+project = "projects/{project_id_or_number}"
 
 ## API rate limit. On a default project, it seems that a single user can make
 ## ~14 requests per second. This might be configurable. Each API request can
@@ -37,18 +37,20 @@ project = "projects/erudite-bloom-151019"
 ## custom ones) every 60s.
 # rateLimit = 14
 
-## Every query to stackdriver queries for data points that have timestamp t
-## such that: (now() - lookbackSeconds) <= t < now(). Note that influx will
-## de-dedupe points that are pulled twice, so it's best to be safe here, just
-## in case it takes GCP awhile to get around to recording the data you seek.
-# lookbackSeconds = 600
-
 ## Collection Delay Seconds (required - must account for metrics availability via Stackdriver Monitoring API)
 # delaySeconds = 60
 
-## Recommended: use metric 'interval' that is not greater than 'lookbackSeconds' to avoid
-## gaps in pulled data
-interval = "10m"
+## The first query to stackdriver queries for data points that have timestamp t
+## such that: (now() - delaySeconds - lookbackSeconds) <= t <= (now() - delaySeconds).
+## The subsequence queries to stackdriver query for data points that have timestamp t
+## such that: lastQueryEndTime <= t <= (now() - delaySeconds).
+## Note that influx will de-dedupe points that are pulled twice,
+## so it's best to be safe here, just in case it takes GCP awhile
+## to get around to recording the data you seek.
+# lookbackSeconds = 120
+
+## Metric collection period
+interval = "1m"
 
 ## Configure the TTL for the internal cache of timeseries requests.
 ## Defaults to 1 hr if not specified
@@ -232,7 +234,7 @@ func init() {
 	f := func() telegraf.Input {
 		return &Stackdriver{
 			RateLimit:                       14,
-			LookbackSeconds:                 600,
+			LookbackSeconds:                 120,
 			DelaySeconds:                    60,
 			ScrapeDistributionBuckets:       true,
 			DistributionAggregationAligners: []string{},
