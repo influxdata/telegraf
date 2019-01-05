@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 	"time"
+	"regexp"
 
 	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
@@ -21,6 +22,8 @@ var (
 	defaultConnectionTimeout = internal.Duration{Duration: 30 * time.Second}
 
 	defaultMaxUndeliveredMessages = 1000
+
+	defaultMetricName = 0
 )
 
 type ConnectionState int
@@ -41,6 +44,7 @@ type MQTTConsumer struct {
 	QoS                    int               `toml:"qos"`
 	ConnectionTimeout      internal.Duration `toml:"connection_timeout"`
 	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
+	MetricName             int		 `toml:"metric_name"`
 
 	parser parsers.Parser
 
@@ -88,6 +92,12 @@ var sampleConfig = `
   ## full batch is collected and the write is triggered immediately without
   ## waiting until the next flush_interval.
   # max_undelivered_messages = 1000
+
+  ## Option for determining the name the metric will take
+  ## 	0 = Default behaviour. The metric will receive "mqtt_consumer" as name
+  ##	1 = The name of the metric will be conformed by the last string of the topic (for example if the topic is test/test1, the metric's name will be test1)
+  ##	2 = The name of the metric will be conformed by all the strings in the topic, except from the first one (for example if the topic is test/test1/test2, the metric's name will be test1_test2)
+  # metric_name = 0
 
   ## Topics to subscribe to
   topics = [
@@ -232,9 +242,17 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 		return err
 	}
 
+	r, _ := regexp.Compile("([a-z]+)$")
+	r2, _ := regexp.Compile("^([a-z]+)/")
 	topic := msg.Topic()
+
 	for _, metric := range metrics {
 		metric.AddTag("topic", topic)
+		if m.MetricName == 1 {
+			metric.SetName(r.FindString(topic))
+		} else if m.TopicName == 2 {
+			metric.SetName(strings.Replace(r2.ReplaceAllString (topic,""),"/","_",-1))
+		}
 	}
 
 	id := acc.AddTrackingMetricGroup(metrics)
@@ -321,6 +339,7 @@ func init() {
 		return &MQTTConsumer{
 			ConnectionTimeout:      defaultConnectionTimeout,
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
+			MetricName:		defaultMetricName,
 			state: Disconnected,
 		}
 	})
