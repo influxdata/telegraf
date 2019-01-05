@@ -314,7 +314,7 @@ func TestListTimeSeries(t *testing.T) {
 func TestInit(t *testing.T) {
 	s := &Stackdriver{
 		RateLimit:                       14,
-		LookbackSeconds:                 600,
+		LookbackSeconds:                 120,
 		DelaySeconds:                    60,
 		ScrapeDistributionBuckets:       true,
 		DistributionAggregationAligners: []string{},
