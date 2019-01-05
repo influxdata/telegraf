@@ -27,7 +27,7 @@ import (
 const (
 	description  = "Plugin that scrapes Google's v3 monitoring API."
 	sampleConfig = `
-## GCP Project
+## GCP Project (required - must be prefixed with "projects/")
 project = "projects/{project_id_or_number}"
 
 ## API rate limit. On a default project, it seems that a single user can make
