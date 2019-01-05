@@ -12,7 +12,10 @@ The Kubernete State Plugin gathers information based on [kube-state-metrics](htt
 ```toml
 [[inputs.kube_state]]
   ## URL for the kubelet
-  url = "http://1.1.1.1:10255"
+  url = "https://1.1.1.1"
+
+  ## Namespace to use
+  namespace = "default"
 
   ## Use bearer token for authorization
   #  bearer_token = /path/to/bearer/token
@@ -20,39 +23,22 @@ The Kubernete State Plugin gathers information based on [kube-state-metrics](htt
   ## Set response_timeout (default 5 seconds)
   #  response_timeout = "5s"
 
-  ## Optional TLS Config
-  #  tls_ca = /path/to/cafile
-  #  tls_cert = /path/to/certfile
-  #  tls_key = /path/to/keyfile
-  ## Use TLS but skip chain & host verification
-  #  insecure_skip_verify = false
-
-  ## Worker pool for kube_state_metric plugin only
-  #  empty this field will use default value 30
-  #  max_connections = 5
-
-  ## Optional Max Config Map Age, this will ignore
-  ## old config map for the second time of gathering.
-  ## Blank will use the default value 24 hours
-  #  max_config_map_age = "24h"
-
-  ## Optional Max Job Age, this will ignore
-  ## old job created for kube_job metrics for the second time of gathering.
-  ## Blank will collect all jobs
-  #  max_job_age = "24h"
-
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
-  ## Values can be "cronjobs", "daemonsets", "deployments",
-  ## "jobs", "limitranges", "nodes", "pods", "replicasets", "replicationcontrollers",
-  ## "resourcequotas", "services", "statefulsets", "persistentvolumes",
-  ## "persistentvolumeclaims", "namespaces", "horizontalpodautoscalers",
-  ## "endpoints", "secrets", "configmaps"
-  #  resource_exclude = [ "cronjobs", "daemonsets", "deployments" ]
+  ## Values can be - "configmaps", "deployments", "nodes",
+  ## "persistentvolumes", "persistentvolumeclaims", "pods", "statefulsets"
+  #  resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
-  ## Optional Resouce List Check Interval, leave blank will use the default
-  #  value of 1 hour. This is the interval to check available resource lists.
-  #  resouce_list_check_interval = "1h"
+  ## Optional Resources to include when gathering
+  ## Overrides resource_exclude if both set.
+  #  resource_include = [ "deployments", "nodes", "statefulsets" ]
+
+  ## Optional max age for config map
+  # max_config_map_age = "1h"
+
+  ## Optional TLS Config
+  ## Use TLS but skip chain & host verification
+  #  insecure_skip_verify = false
 ```
 
 ### Metrics:

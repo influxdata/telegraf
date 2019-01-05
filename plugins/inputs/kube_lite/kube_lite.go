@@ -32,19 +32,20 @@ type KubernetesState struct {
 	// try to collect everything on first run
 	firstTimeGather bool     // apparently for configmaps
 	ResourceExclude []string `toml:"resource_exclude"`
+	ResourceInclude []string `toml:"resource_include"`
 
 	MaxConfigMapAge internal.Duration `toml:"max_config_map_age"`
 }
 
 var sampleConfig = `
   ## URL for the kubelet
-  url = "https://1.1.1.1:10255"
-
-  ## Use bearer token for authorization
-  #  bearer_token = /path/to/bearer/token
+  url = "https://1.1.1.1"
 
   ## Namespace to use
   namespace = "default"
+
+  ## Use bearer token for authorization
+  #  bearer_token = /path/to/bearer/token
 
   ## Set response_timeout (default 5 seconds)
   #  response_timeout = "5s"
@@ -54,6 +55,10 @@ var sampleConfig = `
   ## Values can be - "configmaps", "deployments", "nodes",
   ## "persistentvolumes", "persistentvolumeclaims", "pods", "statefulsets"
   #  resource_exclude = [ "deployments", "nodes", "statefulsets" ]
+
+  ## Optional Resources to include when gathering
+  ## Overrides resource_exclude if both set.
+  #  resource_include = [ "deployments", "nodes", "statefulsets" ]
 
   ## Optional max age for config map
   # max_config_map_age = "1h"
@@ -83,14 +88,27 @@ func (ks *KubernetesState) Gather(acc telegraf.Accumulator) (err error) {
 	}
 
 	var wg sync.WaitGroup
-	for n, f := range availableCollectors {
-		ctx := context.Background()
-		wg.Add(1)
-		go func(n string, f func(ctx context.Context, acc telegraf.Accumulator, k *KubernetesState)) {
-			defer wg.Done()
-			f(ctx, acc, ks)
-		}(n, f)
+	// todo: reimplement better include/exclude filter
+	if len(ks.ResourceInclude) == 0 {
+		for n, f := range availableCollectors {
+			ctx := context.Background()
+			wg.Add(1)
+			go func(n string, f func(ctx context.Context, acc telegraf.Accumulator, k *KubernetesState)) {
+				defer wg.Done()
+				f(ctx, acc, ks)
+			}(n, f)
+		}
+	} else {
+		for _, n := range ks.ResourceInclude {
+			ctx := context.Background()
+			wg.Add(1)
+			go func(n string, f func(ctx context.Context, acc telegraf.Accumulator, k *KubernetesState)) {
+				defer wg.Done()
+				f(ctx, acc, ks)
+			}(n, availableCollectors[n])
+		}
 	}
+
 	wg.Wait()
 	// always set ks.firstTimeGather to false
 	ks.firstTimeGather = false
@@ -115,9 +133,11 @@ func (ks *KubernetesState) initClient() (*client, error) {
 	}
 	ks.firstTimeGather = true
 
-	for i := range ks.ResourceExclude {
-		// todo: likely to break reloading config file
-		delete(availableCollectors, ks.ResourceExclude[i])
+	if len(ks.ResourceInclude) == 0 {
+		for i := range ks.ResourceExclude {
+			// todo: likely to break reloading config file
+			delete(availableCollectors, ks.ResourceExclude[i])
+		}
 	}
 
 	return newClient(ks.URL, ks.Namespace, ks.BearerToken, ks.ResponseTimeout.Duration, tlsCfg)
