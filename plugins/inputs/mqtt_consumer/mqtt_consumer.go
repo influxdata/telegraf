@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"regexp"
 	"strings"
 	"time"
-	"regexp"
 
 	"github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
@@ -44,7 +44,7 @@ type MQTTConsumer struct {
 	QoS                    int               `toml:"qos"`
 	ConnectionTimeout      internal.Duration `toml:"connection_timeout"`
 	MaxUndeliveredMessages int               `toml:"max_undelivered_messages"`
-	MetricName             int		 `toml:"metric_name"`
+	MetricName             int               `toml:"metric_name"`
 
 	parser parsers.Parser
 
@@ -258,7 +258,7 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 		if m.MetricName == 1 {
 			metric.SetName(r.FindString(topic))
 		} else if m.MetricName == 2 {
-			metric.SetName(strings.Replace(r2.ReplaceAllString (topic,""),"/","_",-1))
+			metric.SetName(strings.Replace(r2.ReplaceAllString(topic, ""), "/", "_", -1))
 		}
 	}
 
@@ -346,8 +346,8 @@ func init() {
 		return &MQTTConsumer{
 			ConnectionTimeout:      defaultConnectionTimeout,
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
-			MetricName:		defaultMetricName,
-			state: Disconnected,
+			MetricName:             defaultMetricName,
+			state:                  Disconnected,
 		}
 	})
 }
