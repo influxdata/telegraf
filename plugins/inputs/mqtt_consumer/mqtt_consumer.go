@@ -96,12 +96,14 @@ var sampleConfig = `
   ## Option for determining the name the metric will take
   ## 	0 = Default behaviour. The metric will receive "mqtt_consumer" as name
   ##	1 = The name of the metric will be conformed by the last string of the 
-  ##	    topic (For example if the topic is test/test1, the metric's name will 
-  ##	    be test1)
+  ##	    topic. In case the topic is composed by a single string, that string 
+  ##	    will be taken as the name of the metric (For example if the topic is 
+  ##	    test/test1, the metric's name will be test1)
   ##	2 = The name of the metric will be conformed by the concatenation of all 
-  ##	    the strings of the topic separated by "_", except from the first one 
-  ##	    (For example if the topic is test/test1/test2, the metric's name will 
-  ##	    be test1_test2)
+  ##	    the strings of the topic separated by "_", except from the first one.
+  ## 	    In case the topic is composed by a single string, that string will be 
+  ##	    taken as the name of the metric (For example if the topic is test/test1/test2,
+  ##	    the metric's name will be test1_test2)
   # metric_name = 0
 
   ## Topics to subscribe to
@@ -255,7 +257,7 @@ func (m *MQTTConsumer) onMessage(acc telegraf.TrackingAccumulator, msg mqtt.Mess
 		metric.AddTag("topic", topic)
 		if m.MetricName == 1 {
 			metric.SetName(r.FindString(topic))
-		} else if m.TopicName == 2 {
+		} else if m.MetricName == 2 {
 			metric.SetName(strings.Replace(r2.ReplaceAllString (topic,""),"/","_",-1))
 		}
 	}
