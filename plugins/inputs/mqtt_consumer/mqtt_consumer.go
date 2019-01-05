@@ -95,8 +95,13 @@ var sampleConfig = `
 
   ## Option for determining the name the metric will take
   ## 	0 = Default behaviour. The metric will receive "mqtt_consumer" as name
-  ##	1 = The name of the metric will be conformed by the last string of the topic (for example if the topic is test/test1, the metric's name will be test1)
-  ##	2 = The name of the metric will be conformed by all the strings in the topic, except from the first one (for example if the topic is test/test1/test2, the metric's name will be test1_test2)
+  ##	1 = The name of the metric will be conformed by the last string of the 
+  ##	    topic (For example if the topic is test/test1, the metric's name will 
+  ##	    be test1)
+  ##	2 = The name of the metric will be conformed by the concatenation of all 
+  ##	    the strings of the topic separated by "_", except from the first one 
+  ##	    (For example if the topic is test/test1/test2, the metric's name will 
+  ##	    be test1_test2)
   # metric_name = 0
 
   ## Topics to subscribe to
