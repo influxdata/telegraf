@@ -14,6 +14,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers/json"
 	"github.com/influxdata/telegraf/plugins/parsers/logfmt"
 	"github.com/influxdata/telegraf/plugins/parsers/nagios"
+	"github.com/influxdata/telegraf/plugins/parsers/statsd"
 	"github.com/influxdata/telegraf/plugins/parsers/value"
 	"github.com/influxdata/telegraf/plugins/parsers/wavefront"
 )
@@ -62,9 +63,9 @@ type Config struct {
 	// Dataformat can be one of: json, influx, graphite, value, nagios
 	DataFormat string `toml:"data_format"`
 
-	// Separator only applied to Graphite data.
+	// Separator applied to Graphite & Statsd data.
 	Separator string `toml:"separator"`
-	// Templates only apply to Graphite data.
+	// Templates apply to Graphite & Statsd data.
 	Templates []string `toml:"templates"`
 
 	// TagKeys only apply to JSON data
@@ -163,6 +164,8 @@ func NewParser(config *Config) (Parser, error) {
 	case "graphite":
 		parser, err = NewGraphiteParser(config.Separator,
 			config.Templates, config.DefaultTags)
+	case "statsd":
+		parser, err = NewStatsdParser(config.Separator, config.Templates, config.DefaultTags)
 	case "collectd":
 		parser, err = NewCollectdParser(config.CollectdAuthFile,
 			config.CollectdSecurityLevel, config.CollectdTypesDB, config.CollectdSplit)
@@ -392,4 +395,8 @@ func NewLogFmtParser(metricName string, defaultTags map[string]string) (Parser, 
 
 func NewWavefrontParser(defaultTags map[string]string) (Parser, error) {
 	return wavefront.NewWavefrontParser(defaultTags), nil
+}
+
+func NewStatsdParser(separator string, templates []string, defaultTags map[string]string) (Parser, error) {
+	return statsd.NewParser(separator, templates, defaultTags)
 }
