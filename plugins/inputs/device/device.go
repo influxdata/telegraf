@@ -2,6 +2,8 @@ package device
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"path"
 	"strconv"
@@ -57,12 +59,18 @@ func (d *Device) Description() string {
 }
 
 func (d *Device) Gather(acc telegraf.Accumulator) error {
-	devicetype := d.devicetypes[d.Type]
+	devicetype, ok := d.devicetypes[d.Type]
+
+	if !ok {
+		return errors.New(fmt.Sprintf("unknown device type %s", d.Type))
+	}
+
 	now := time.Now()
 
 	for _, devpath := range d.Devices {
 		tags := map[string]string{
 			"device": devpath,
+			"type":   d.Type,
 		}
 
 		fields := make(map[string]interface{})
