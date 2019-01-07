@@ -68,7 +68,7 @@ func TestCreateGetRequest(t *testing.T) {
 					Host:   "goodurl",
 				},
 				Header: map[string][]string{
-					"Accept": []string{"application/json"},
+					"Accept": {"application/json"},
 				},
 				Proto:      "HTTP/1.1",
 				ProtoMajor: 1,
@@ -88,8 +88,8 @@ func TestCreateGetRequest(t *testing.T) {
 					Host:   "goodurl",
 				},
 				Header: map[string][]string{
-					"Accept": []string{"application/json"},
-					"Authorization": []string{
+					"Accept": {"application/json"},
+					"Authorization": {
 						"Bearer tok",
 					},
 				},

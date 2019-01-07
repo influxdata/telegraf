@@ -60,10 +60,10 @@ func TestPod(t *testing.T) {
 											},
 											Resources: &v1.ResourceRequirements{
 												Limits: map[string]*resource.Quantity{
-													"cpu": &resource.Quantity{String_: toStrPtr("8")},
+													"cpu": {String_: toStrPtr("8")},
 												},
 												Requests: map[string]*resource.Quantity{
-													"cpu": &resource.Quantity{String_: toStrPtr("8")},
+													"cpu": {String_: toStrPtr("8")},
 												},
 											},
 										},
