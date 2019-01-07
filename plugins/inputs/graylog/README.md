@@ -33,7 +33,7 @@ Note: if namespace end point specified metrics array will be ignored for that ca
 
   ## Metrics list
   ## List of metrics can be found on Graylog webservice documentation.
-  ## Or by hitting the the web service api at:
+  ## Or by hitting the web service api at:
   ##   http://[graylog-host]:12900/system/metrics
   metrics = [
     "jvm.cl.loaded",
