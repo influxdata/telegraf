@@ -101,9 +101,9 @@ format. All metrics that are gathered will be tagged with the tags specified.
 
 The agent table configures Telegraf and the defaults used across all plugins.
 
-- **interval**: Default data collection interval for all inputs.
+- **interval**: Default data collection [interval][] for all inputs.
 
-- **round_interval**: Rounds collection interval to 'interval'
+- **round_interval**: Rounds collection interval to [interval][]
   ie, if interval="10s" then always collect on :00, :10, :20, etc.
 
 - **metric_batch_size**:
@@ -118,22 +118,22 @@ The agent table configures Telegraf and the defaults used across all plugins.
   This buffer only fills when writes fail to output plugin(s).
 
 - **collection_jitter**:
-  Collection jitter is used to jitter the collection by a random amount.
+  Collection jitter is used to jitter the collection by a random [interval][].
   Each plugin will sleep for a random time within jitter before collecting.
   This can be used to avoid many plugins querying things like sysfs at the
   same time, which can have a measurable effect on the system.
 
 - **flush_interval**:
-  Default flushing interval for all outputs. Maximum flush_interval will be
+  Default flushing [interval][] for all outputs. Maximum flush_interval will be
   flush_interval + flush_jitter
 
 - **flush_jitter**:
-  Jitter the flush interval by a random amount. This is primarily to avoid
+  Jitter the flush [interval][] by a random amount. This is primarily to avoid
   large write spikes for users running a large number of telegraf instances.
   ie, a jitter of 5s and interval 10s means flushes will happen every 10-15s
 
 - **precision**:
-  Collected metrics are rounded to the precision specified as a duration.
+  Collected metrics are rounded to the precision specified as an [interval][].
 
   Precision will NOT be used for service inputs. It is up to each individual
   service input to set the timestamp at the appropriate precision.
@@ -537,6 +537,7 @@ output.  The tag is removed in the outputs before writing.
 
 [TOML]: https://github.com/toml-lang/toml#toml
 [global tags]: #global-tags
+[interval]: #intervals
 [agent]: #agent
 [plugins]: #plugins
 [inputs]: #input-plugins
