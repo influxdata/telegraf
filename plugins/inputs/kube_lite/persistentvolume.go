@@ -11,7 +11,7 @@ import (
 
 var persistentVolumeMeasurement = "kube_persistentvolume"
 
-func registerPersistentVolumeCollector(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
+func collectPersistentVolumes(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
 	list, err := ks.client.getPersistentVolumes(ctx)
 	if err != nil {
 		acc.AddError(err)

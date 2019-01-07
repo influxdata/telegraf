@@ -102,7 +102,7 @@ func TestDaemonSet(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		registerDaemonSetCollector(context.Background(), acc, ks)
+		collectDaemonSets(context.Background(), acc, ks)
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)

@@ -1,7 +1,5 @@
 package kube_lite
 
-// todo: review this
-
 import (
 	"context"
 	"fmt"
@@ -17,24 +15,19 @@ import (
 
 // KubernetesState represents the config object for the plugin.
 type KubernetesState struct {
-	URL string
-
-	// Bearer Token authorization file path
-	BearerToken string `toml:"bearer_token"`
-	Namespace   string `toml:"namespace"`
-
-	// HTTP Timeout specified as a string - 3s, 1m, 1h
-	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	URL             string            `toml:url`
+	BearerToken     string            `toml:"bearer_token"`
+	Namespace       string            `toml:"namespace"`
+	ResponseTimeout internal.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
+	ResourceExclude []string          `toml:"resource_exclude"`
+	ResourceInclude []string          `toml:"resource_include"`
+	MaxConfigMapAge internal.Duration `toml:"max_config_map_age"`
 
 	tls.ClientConfig
 
-	client *client
 	// try to collect everything on first run
-	firstTimeGather bool     // apparently for configmaps
-	ResourceExclude []string `toml:"resource_exclude"`
-	ResourceInclude []string `toml:"resource_include"`
-
-	MaxConfigMapAge internal.Duration `toml:"max_config_map_age"`
+	firstTimeGather bool // apparently for configmaps
+	client          *client
 }
 
 var sampleConfig = `
@@ -45,14 +38,14 @@ var sampleConfig = `
   namespace = "default"
 
   ## Use bearer token for authorization
-  #  bearer_token = /path/to/bearer/token
+  #  bearer_token = "abc123"
 
   ## Set response_timeout (default 5 seconds)
   #  response_timeout = "5s"
 
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
-  ## Values can be - "configmaps", "deployments", "nodes",
+  ## Values can be - "configmaps", "daemonsets", deployments", "nodes",
   ## "persistentvolumes", "persistentvolumeclaims", "pods", "statefulsets"
   #  resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
@@ -61,7 +54,7 @@ var sampleConfig = `
   #  resource_include = [ "deployments", "nodes", "statefulsets" ]
 
   ## Optional max age for config map
-  # max_config_map_age = "1h"
+  #  max_config_map_age = "1h"
 
   ## Optional TLS Config
   ## Use TLS but skip chain & host verification
@@ -117,13 +110,14 @@ func (ks *KubernetesState) Gather(acc telegraf.Accumulator) (err error) {
 }
 
 var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState){
-	"configmaps":             registerConfigMapCollector,
-	"deployments":            registerDeploymentCollector,
-	"nodes":                  registerNodeCollector,
-	"persistentvolumes":      registerPersistentVolumeCollector,
-	"persistentvolumeclaims": registerPersistentVolumeClaimCollector,
-	"pods":                   registerPodCollector,
-	"statefulsets":           registerStatefulSetCollector,
+	"configmaps":             collectConfigMaps,
+	"daemonsets":             collectDaemonSets,
+	"deployments":            collectDeployments,
+	"nodes":                  collectNodes,
+	"persistentvolumes":      collectPersistentVolumes,
+	"persistentvolumeclaims": collectPersistentVolumeClaims,
+	"pods":         collectPods,
+	"statefulsets": collectStatefulSets,
 }
 
 func (ks *KubernetesState) initClient() (*client, error) {
@@ -146,7 +140,7 @@ func (ks *KubernetesState) initClient() (*client, error) {
 func init() {
 	inputs.Add("kube_state", func() telegraf.Input {
 		return &KubernetesState{
-			ResponseTimeout: internal.Duration{Duration: time.Second},
+			ResponseTimeout: internal.Duration{Duration: time.Second * 5},
 		}
 	})
 }

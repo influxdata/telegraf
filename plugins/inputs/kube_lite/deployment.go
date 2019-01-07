@@ -12,7 +12,7 @@ var (
 	deploymentMeasurement = "kube_deployment"
 )
 
-func registerDeploymentCollector(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
+func collectDeployments(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
 	list, err := ks.client.getDeployments(ctx)
 	if err != nil {
 		acc.AddError(err)

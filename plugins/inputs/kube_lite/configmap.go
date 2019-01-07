@@ -11,7 +11,7 @@ import (
 
 var configMapMeasurement = "kube_configmap"
 
-func registerConfigMapCollector(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
+func collectConfigMaps(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
 	list, err := ks.client.getConfigMaps(ctx)
 	if err != nil {
 		acc.AddError(err)

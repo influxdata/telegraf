@@ -21,7 +21,7 @@ var (
 	podContainerMeasurement = "kube_pod_container"
 )
 
-func registerPodCollector(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
+func collectPods(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
 	list, err := ks.client.getPods(ctx)
 	if err != nil {
 		acc.AddError(err)
@@ -77,21 +77,21 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 	for resourceName, val := range req {
 		switch resourceName {
 		case "cpu":
-			// todo: use terrible atoi?
-			fields["resource_requests_cpu_cores"] = *val.String_
+			// todo: better way to get value
+			fields["resource_requests_cpu_cores"] = atoi(*val.String_)
 		default:
-			// todo: ensure `Size` is what we expect
-			fields["resource_requests_"+sanitizeLabelName(string(resourceName))+"_bytes"] = val.Size()
+			// todo: better way to get value
+			fields["resource_requests_"+sanitizeLabelName(string(resourceName))+"_bytes"] = atoi(*val.String_)
 		}
 	}
 	for resourceName, val := range lim {
 		switch resourceName {
 		case "cpu":
-			// todo: use terrible atoi?
-			fields["resource_limits_cpu_cores"] = *val.String_
+			// todo: better way to get value
+			fields["resource_limits_cpu_cores"] = atoi(*val.String_)
 		default:
-			// todo: ensure `Size` is what we expect
-			fields["resource_limits_"+sanitizeLabelName(string(resourceName))+"_bytes"] = val.Size()
+			// todo: better way to get value
+			fields["resource_limits_"+sanitizeLabelName(string(resourceName))+"_bytes"] = atoi(*val.String_)
 		}
 	}
 

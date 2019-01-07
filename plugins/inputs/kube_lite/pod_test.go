@@ -275,7 +275,7 @@ func TestPod(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		registerPodCollector(context.Background(), acc, ks)
+		collectPods(context.Background(), acc, ks)
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)

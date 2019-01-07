@@ -13,7 +13,7 @@ var (
 	statefulSetMeasurement = "kube_statefulset"
 )
 
-func registerStatefulSetCollector(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
+func collectStatefulSets(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
 	list, err := ks.client.getStatefulSets(ctx)
 	if err != nil {
 		acc.AddError(err)

@@ -102,7 +102,7 @@ func TestStatefulSet(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		registerStatefulSetCollector(context.Background(), acc, ks)
+		collectStatefulSets(context.Background(), acc, ks)
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)

@@ -14,7 +14,7 @@ var (
 	nodeMeasurement = "kube_node"
 )
 
-func registerNodeCollector(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
+func collectNodes(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
 	list, err := ks.client.getNodes(ctx)
 	if err != nil {
 		acc.AddError(err)

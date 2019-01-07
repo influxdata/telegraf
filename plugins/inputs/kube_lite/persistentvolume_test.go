@@ -92,7 +92,7 @@ func TestPersistentVolume(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		registerPersistentVolumeCollector(context.Background(), acc, ks)
+		collectPersistentVolumes(context.Background(), acc, ks)
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)

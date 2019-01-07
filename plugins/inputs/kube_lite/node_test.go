@@ -55,7 +55,7 @@ func TestNode(t *testing.T) {
 									},
 									Phase: toStrPtr("Running"),
 									Capacity: map[string]*resource.Quantity{
-										"cpu":                     {String_: toStrPtr("16")},
+										"cpu": {String_: toStrPtr("16")},
 										"ephemeral_storage_bytes": {String_: toStrPtr("49536401408")},
 										"hugepages_1Gi_bytes":     {String_: toStrPtr("0")},
 										"hugepages_2Mi_bytes":     {String_: toStrPtr("0")},
@@ -63,7 +63,7 @@ func TestNode(t *testing.T) {
 										"pods":                    {String_: toStrPtr("110")},
 									},
 									Allocatable: map[string]*resource.Quantity{
-										"cpu":                     {String_: toStrPtr("16")},
+										"cpu": {String_: toStrPtr("16")},
 										"ephemeral_storage_bytes": {String_: toStrPtr("44582761194")},
 										"hugepages_1Gi_bytes":     {String_: toStrPtr("0")},
 										"hugepages_2Mi_bytes":     {String_: toStrPtr("0")},
@@ -152,7 +152,7 @@ func TestNode(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		registerNodeCollector(context.Background(), acc, ks)
+		collectNodes(context.Background(), acc, ks)
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)

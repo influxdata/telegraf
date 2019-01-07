@@ -169,7 +169,7 @@ func TestConfigMap(t *testing.T) {
 			firstTimeGather: v.firstGather,
 		}
 		acc := new(testutil.Accumulator)
-		registerConfigMapCollector(context.Background(), acc, ks)
+		collectConfigMaps(context.Background(), acc, ks)
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)

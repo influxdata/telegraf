@@ -121,7 +121,7 @@ func TestDeployment(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		registerDeploymentCollector(context.Background(), acc, ks)
+		collectDeployments(context.Background(), acc, ks)
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)

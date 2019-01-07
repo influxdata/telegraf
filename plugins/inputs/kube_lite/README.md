@@ -18,14 +18,14 @@ The Kubernete State Plugin gathers information based on [kube-state-metrics](htt
   namespace = "default"
 
   ## Use bearer token for authorization
-  #  bearer_token = /path/to/bearer/token
+  #  bearer_token = "abc123"
 
   ## Set response_timeout (default 5 seconds)
   #  response_timeout = "5s"
 
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
-  ## Values can be - "configmaps", "deployments", "nodes",
+  ## Values can be - "configmaps", "daemonsets", deployments", "nodes",
   ## "persistentvolumes", "persistentvolumeclaims", "pods", "statefulsets"
   #  resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
@@ -34,7 +34,7 @@ The Kubernete State Plugin gathers information based on [kube-state-metrics](htt
   #  resource_include = [ "deployments", "nodes", "statefulsets" ]
 
   ## Optional max age for config map
-  # max_config_map_age = "1h"
+  #  max_config_map_age = "1h"
 
   ## Optional TLS Config
   ## Use TLS but skip chain & host verification
@@ -44,542 +44,149 @@ The Kubernete State Plugin gathers information based on [kube-state-metrics](htt
 ### Metrics:
 
 #### kube_configmap
-- ts: configmap created
-- fields:
-  - gauge (always 1)
-- tags:
-  - namespace
-  - configmap
-  - resource_version
+```
+TS: created
 
-#### kube_cronjob
-- ts: now
-- fields:
-  - status_active ( # of active jobs)
-  - spec_starting_deadline_seconds
-  - next_schedule_time
-  - schedule
-  - created
-  - status_last_schedule_time
-- tags:
-  - namespace
-  - cronjob
-  - concurrency_policy
-  - label_* 
+Fields:
+    gauge
+Tags:
+    name
+    namespace
+    resource_version
+```
 
 #### kube_daemonset
-- ts: now
-- fields:
-  - metadata_generation
-  - created
-  - status_current_number_scheduled
-  - status_desired_number_scheduled
-  - status_number_available
-  - status_number_misscheduled
-  - status_number_ready
-  - status_number_unavailable
-  - status_updated_number_scheduled
-- tags:
-  - namespace
-  - daemonset
-  - label_*
+```
+TS: now
+
+Fields:
+    metadata_generation
+    created
+    status_current_number_scheduled
+    status_desired_number_scheduled
+    status_number_available
+    status_number_misscheduled
+    status_number_ready
+    status_number_unavailable
+    status_updated_number_scheduled
+
+Tags:
+    name
+    namespace
+```
 
 #### kube_deployment
-- ts: now
-- fields:
-  - created
-  - spec_replicas
-  - metadata_generation
-  - spec_strategy_rollingupdate_max_unavailable
-  - spec_strategy_rollingupdate_max_surge
-  - status_replicas
-  - status_replicas_available
-  - status_replicas_unavailable
-  - status_replicas_updated
-  - status_observed_generation
-- tags:
-  - namespace
-  - deployment
-  - spec_paused ("true", "false")
+```
+TS: now
 
-#### kube_endpoint
-- ts: now
-- fields:
-  - created
-  - address_available
-  - address_not_ready
-- tags:
-  - namespace
-  - endpoint
-
-#### kube_hpa
-- ts: hpa created
-- fields:
-  - metadata_generation
-  - spec_max_replicas
-  - spec_min_replicas
-- tags:
-  - namespace
-  - hpa
-  - label_*
-
-#### kube_hpa_status
-- ts: now
-- fields:
-  - current_replicas
-  - desired_replicas
-  - condition_true (1 = "true", 0 = "false")
-  - condition_false (1 = "true", 0 = "false")
-  - condition_unknown
-- tags:
-  - namespace
-  - hpa
-  - condition ("true", "false", "unkown")
-  
-#### kube_job
-- ts: job completion time
-- measurement & fields:
-  - status_succeeded
-  - status_failed
-  - status_active
-  - spec_parallelism
-  - spec_completions
-  - created
-  - spec_active_deadline_seconds
-  - status_start_time
-- tags:
-  - namespace
-  - job_name
-  - label_*
-
-#### kube_job_condition
-- ts: job condition last transition time
-- fields:
-  - completed (1 = "true", 0 = "false")
-  - failed (1 = "true", 0 = "false")
-- tags:
-  - namespace
-  - job_name
-  - condition
-
-#### kube_limitrange
-- ts: now
-- fields:
-  - created
-  - min_pod_cpu
-  - min_pod_memory
-  - min_pod_storage
-  - min_pod_ephemeral_storage
-  - min_container_cpu
-  - min_container_memory
-  - min_container_storage
-  - min_container_ephemeral_storage
-  - min_persistentvolumeclaim_cpu
-  - min_persistentvolumeclaim_memory
-  - min_persistentvolumeclaim_storage
-  - min_persistentvolumeclaim_ephemeral_storage
-  - max_pod_cpu
-  - max_pod_memory
-  - max_pod_storage
-  - max_pod_ephemeral_storage
-  - max_container_cpu
-  - max_container_memory
-  - max_container_storage
-  - max_container_ephemeral_storage
-  - max_persistentvolumeclaim_cpu
-  - max_persistentvolumeclaim_memory
-  - max_persistentvolumeclaim_storage
-  - max_persistentvolumeclaim_ephemeral_storage
-  - default_pod_cpu
-  - default_pod_memory
-  - default_pod_storage
-  - default_pod_ephemeral_storage
-  - default_container_cpu
-  - default_container_memory
-  - default_container_storage
-  - default_container_ephemeral_storage
-  - default_persistentvolumeclaim_cpu
-  - default_persistentvolumeclaim_memory
-  - default_persistentvolumeclaim_storage
-  - default_persistentvolumeclaim_ephemeral_storage
-  - default_request_pod_cpu
-  - default_request_pod_memory
-  - default_request_pod_storage
-  - default_request_pod_ephemeral_storage
-  - default_request_container_cpu
-  - default_request_container_memory
-  - default_request_container_storage
-  - default_request_container_ephemeral_storage
-  - default_request_persistentvolumeclaim_cpu
-  - default_request_persistentvolumeclaim_memory
-  - default_request_persistentvolumeclaim_storage
-  - default_request_persistentvolumeclaim_ephemeral_storage
-  - max_limit_request_ratio_pod_cpu
-  - max_limit_request_ratio_pod_memory
-  - max_limit_request_ratio_pod_storage
-  - max_limit_request_ratio_pod_ephemeral_storage
-  - max_limit_request_ratio_container_cpu
-  - max_limit_request_ratio_container_memory
-  - max_limit_request_ratio_container_storage
-  - max_limit_request_ratio_container_ephemeral_storage
-  - max_limit_request_ratio_persistentvolumeclaim_cpu
-  - max_limit_request_ratio_persistentvolumeclaim_memory
-  - max_limit_request_ratio_persistentvolumeclaim_storage
-  - max_limit_request_ratio_persistentvolumeclaim_ephemeral_storage
-- tags:
-  - namespace
-  - limitrange
-
-#### kube_namespace
-- ts: now
-- fields:
-  - created
-  - status_phase_code (1="Active", 0="Terminating")
-- tags
-  - namespace
-  - status_phase
-  - label_*
-  - annotation_*
+Fields:
+    status_replicas_available
+    status_replicas_unavailable
+    created
+Tags:
+    namespace
+    name
+```
 
 #### kube_node
-- ts: now
-- fields:
-  - created
-  - status_capacity_cpu_cores
-  - status_capacity_ephemera_storage_bytes
-  - status_capacity_memory_bytes
-  - status_capacity_pods
-  - status_capacity_*
-  - status_allocatable_cpu_cores
-  - status_allocatable_ephemera_storage_bytes
-  - status_allocatable_memory_bytes
-  - status_allocatable_pods
-  - status_allocatable_*
-- tags:
-  - node
-  - kernel_version
-  - os_image
-  - container_runtime_version
-  - kubelet_version
-  - kubeproxy_version
-  - status_phase
-  - provider_id
-  - spec_unschedulable
-  - label_*
+```
+TS: now
 
-#### kube_node_spec_taint
-- ts: now
-- fields:
-  - gauge (always 1)
-- tags:
-  - node
-  - key
-  - value
-  - effect
-
-#### kube_node_status_conditions  
-- ts: condition last transition time
-- fields:
-  - gauge (always 1)
-- tags:
-  - node
-  - condition
-  - status
+Fields:
+    status_allocatable_cpu_cores
+    status_allocatable_memory_bytes
+    status_allocatable_pods
+    status_capacity_pods
+    status_capacity_cpu_cores
+    status_capacity_memory_bytes
+Tags:
+    name
+```
 
 #### kube_persistentvolume
-- ts: now
-- fields:
-  - status_pending (1 = "true", 0 = "false")
-  - status_available (1 = "true", 0 = "false")
-  - status_bound (1 = "true", 0 = "false")
-  - status_released (1 = "true", 0 = "false")
-  - status_failed (1 = "true", 0 = "false")
-- tags:
-  - persistentvolume
-  - storageclass
-  - status
-  - label_*
+```
+TS: now
+
+Fields:
+    status_available
+    status_bound
+    status_failed
+    status_pending
+    status_released
+
+Tags:
+    name
+    storageclass
+    status
+```
 
 #### kube_persistentvolumeclaim
-- ts: now
-- fields:
-  - status_lost (1 = "true", 0 = "false")
-  - status_bound (1 = "true", 0 = "false")
-  - status_failed (1 = "true", 0 = "false")
-  - resource_requests_storage_bytes
-- tags:
-  - namespace
-  - persistentvolumeclaim
-  - storageclass
-  - volumename
-  - status
-  - label_*
+```
+TS: now
 
-#### kube_pod
+Fields:
+    status_lost
+    status_pending
+    status_bound
 
-- ts: pod created
-- fields:
-  - gauge (always 1)
-- tags:
-  - namespace
-  - pod
-  - node
-  - created_by_kind
-  - created_by_name
-  - owner_kind
-  - owner_name
-  - owner_is_controller ("true", "false")
-  - label_*
-
-#### kube_pod_status
-
-- ts: now
-- fields:
-  - status_phase_pending (1 = "true", 0 = "false")
-  - status_phase_succeeded (1 = "true", 0 = "false")
-  - status_phase_failed (1 = "true", 0 = "false")
-  - status_phase_running (1 = "true", 0 = "false")
-  - status_phase_unknown (1 = "true", 0 = "false")
-  - completion_time
-  - scheduled_time
-- tags:
-  - namespace
-  - pod
-  - node
-  - host_ip
-  - pod_ip
-  - status_phase ("pending", "succeeded", "failed", "running", "unknown")
-  - ready ("true", "false")
-  - scheduled ("true", "false")
+Tags:
+    name
+    namespace
+    status
+    storageclass
+```
 
 #### kube_pod_container
+```
+TS: now
 
-- ts: now
-- fields:
-  - status_restarts_total
-  - status_waiting (1 = "true", 0 = "false")
-  - status_running (1 = "true", 0 = "false")
-  - status_terminated (1 = "true", 0 = "false")
-  - status_ready (1 = "true", 0 = "false")
-  - resource_requests_cpu_cores
-  - resource_requests_memory_bytes
-  - resource_requests_storage_bytes
-  - resource_requests_ephemeral_storage_bytes
-  - resource_limits_cpu_cores
-  - resource_limits_memory_bytes
-  - resource_limits_storage_bytes
-  - resource_limits_ephemeral_storage_bytes
-- tags:
-  - namespace
-  - pod_name
-  - node_name
-  - container
-  - image
-  - image_id
-  - container_id
-  - status_waiting_reason
-  - status_terminated_reason
+Fields:
+    status_restarts_total
+    status_running
+    status_terminated
+    status_terminated_reason
+    resource_requests_cpu_cores
+    resource_requests_memory_bytes
+    resource_requests_limits_cpu_cores
+    resource_requests_limits_memory_bytes
 
+Tags:
+    name
+    namespace
+    node
+    pod
+```
 
-#### kube_pod_volume
-- ts: now
-- fields:
-  - read_only (1 = "true", 0 = "false")
-- tags:
-  - namespace
-  - pod
-  - volume
-  - persistentvolumeclaim
+#### kube_pod_status
+```
+TS: now
 
-#### kube_replicasets  
-- ts: now
-- fields:
-  - created
-  - metadata_generation
-  - spec_replicas
-  - status_replicas
-  - status_fully_labeled_replicas
-  - status_ready_replicas
-  - status_observed_generation
-- tags
-  - namespace
-  - replicaset 
-  
-#### kube_replicationcontroller
-- ts: now
-- fields:
-  - created
-  - metadata_generation
-  - spec_replicas
-  - status_replicas
-  - status_fully_labeled_replicas
-  - status_ready_replicas
-  - status_available_replicas
-  - status_observed_generation
-
-- tags
-  - namespace
-  - replicationcontroller
-
-#### kube_resourcequota
-- ts: resourcequota creation time
-- fields:
-  - gauge
-- tags:
-  - namespace
-  - resourcequota
-  - resource
-  - type ("hard", "used")
-
-#### kube_secret
-- ts: secret creation time
-- fields:
-  - gauge (always 1)
-- tags:
-  - namespace
-  - secret
-  - resource_version
-  - label_*
-
-#### kube_service
-- ts: service creation time
-- fields:
-  - gauge (always 1)
-- tags:
-  - namespace
-  - service
-  - type
-  - cluster_ip
-  - label_*
+Fields:
+    ready
+Tags:
+    name
+    namespace
+    node
+    reason  [Completed,ContainerCannotRun,Error,OOMKilled]
+```
 
 #### kube_statefulset
-- ts: statefulset creation time
-- fields:
-  - metadata_generation
-  - replicas
-  - status_replicas
-  - status_replicas_current
-  - status_replicas_ready
-  - status_replicas_updated
-  - status_observed_generation
-- tags:
-  - namespace
-  - statefulset
-  - label_*
+```
+TS: statefulset creation time
 
-### Sample Queries:
+Fields:
+    metadata_generation
+    replicas
+    status_replicas
+    status_replicas_current
+    status_replicas_ready
+    status_replicas_updated
+    status_observed_generation
 
-  ```
-    select gauge from kube_configmap where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select status_active from kube_cronjob where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select status_current_number_scheduled,status_desired_number_scheduled,
-    status_number_available,
-    status_number_misscheduled,
-    status_number_ready, status_number_unavailable, status_updated_number_scheduled from kube_daemonset where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select spec_replicas, metadata_generation, status_replicas, status_replicas_available, status_replicas_unavailable, status_replicas_updated, status_observed_generation from kube_deployment where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select address_available, address_not_ready from kube_endpoint where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select metadata_generation, spec_max_replicas, spec_min_replicas from kube_hpa where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select current_replicas, desired_replicas, condition_true,condition_false from kube_hpa_status where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select status_succeeded, status_failed, status_active, spec_parallelism, spec_completions from kube_job where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select completed, failed from kube_job_condition where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select max_container_memory, default_request_persistentvolumeclaim_cpu from kube_limitrange where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select status_phase_code from kube_namespace where label_xf = fs1 AND time > now() - 1h GROUP BY label_xf
-  ```
-
-  ```
-    select status_capacity_cpu_cores, status_capacity_ephemeral_storage_bytes from kube_node where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select gauge from kube_node_spec_taint where namespace = ns1 AND key = s1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select gauge from kube_node_status_conditions where namespace = ns1 and condition = outofdisk AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select status_lost, status_pending, status_bound from kube_persistentvolume where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select status_lost, status_pending, status_bound from kube_persistentvolumeclaim where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select gauge from kube_pod where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select scheduled_time, status_phase_pending, status_phase_succeeded, status_phase_failed, status_phase_running, status_phase_unknown from kube_pod_status where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select status_restarts_total, status_waiting, status_running, status_terminated, status_ready from kube_pod_container where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select read_only from kube_pod_spec_volumes where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select metadata_generation, status_replicas, status_fully_labeled_replicas, status_ready_replicas, status_observed_generation, spec_replicas from kube_replicasets where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select metadata_generation, status_replicas, status_fully_labeled_replicas, status_ready_replicas,   status_available_replicas, status_observed_generation, spec_replicas from kube_replicationcontroller where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select gauge from kube_resourcequota where namespace = ns1 AND type = used AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select gauge from kube_secret where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select gauge from kube_service where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-  ```
-    select metadata_generation, status_replicas, status_replicas_current, status_replicas_ready, status_replicas_updated from kube_statefulset where namespace = ns1 AND time > now() - 1h GROUP BY namespace
-  ```
-
-
-
-
-
+Tags:
+    name
+    namespace
+```
 
 
 ### Example Output:

@@ -12,7 +12,7 @@ var (
 	daemonSetMeasurement = "kube_daemonset"
 )
 
-func registerDaemonSetCollector(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
+func collectDaemonSets(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
 	list, err := ks.client.getDaemonSets(ctx)
 	if err != nil {
 		acc.AddError(err)
