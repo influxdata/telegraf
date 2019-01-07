@@ -18,14 +18,14 @@ func collectPersistentVolumes(ctx context.Context, acc telegraf.Accumulator, ks 
 		return
 	}
 	for _, pv := range list.Items {
-		if err = ks.collectPersistentVolume(*pv, acc); err != nil {
+		if err = ks.gatherPersistentVolume(*pv, acc); err != nil {
 			acc.AddError(err)
 			return
 		}
 	}
 }
 
-func (ks *KubernetesState) collectPersistentVolume(pv v1.PersistentVolume, acc telegraf.Accumulator) error {
+func (ks *KubernetesState) gatherPersistentVolume(pv v1.PersistentVolume, acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{}
 	tags := map[string]string{
 		"name":         pv.Metadata.GetName(),

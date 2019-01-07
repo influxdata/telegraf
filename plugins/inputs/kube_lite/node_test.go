@@ -1,9 +1,6 @@
 package kube_lite
 
 import (
-	"context"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -15,10 +12,7 @@ import (
 )
 
 func TestNode(t *testing.T) {
-	cli := &client{
-		httpClient: &http.Client{Transport: &http.Transport{}},
-		semaphore:  make(chan struct{}, 1),
-	}
+	cli := &client{}
 	now := time.Now()
 	//started := time.Date(now.Year(), now.Month(), now.Day(), now.Hour()-1, 1, 36, 0, now.Location())
 	created := time.Date(now.Year(), now.Month(), now.Day(), now.Hour()-2, 1, 36, 0, now.Location())
@@ -33,7 +27,7 @@ func TestNode(t *testing.T) {
 			name: "no nodes",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/nodes/": &v1.ServiceStatus{},
+					"/nodes/": &v1.NodeList{},
 				},
 			},
 			hasError: false,
@@ -143,16 +137,19 @@ func TestNode(t *testing.T) {
 			hasError: false,
 		},
 	}
-	for _, v := range tests {
-		ts := httptest.NewServer(v.handler)
-		defer ts.Close()
 
-		cli.baseURL = ts.URL
+	for _, v := range tests {
 		ks := &KubernetesState{
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		collectNodes(context.Background(), acc, ks)
+		for _, node := range ((v.handler.responseMap["/nodes/"]).(*v1.NodeList)).Items {
+			err := ks.gatherNode(*node, acc)
+			if err != nil {
+				t.Errorf("Failed to gather node - %s", err.Error())
+			}
+		}
+
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)
@@ -189,22 +186,5 @@ func TestNode(t *testing.T) {
 				}
 			}
 		}
-
 	}
-}
-
-func toStrPtr(s string) *string {
-	return &s
-}
-
-func toInt32Ptr(i int32) *int32 {
-	return &i
-}
-
-func toInt64Ptr(i int64) *int64 {
-	return &i
-}
-
-func toBoolPtr(b bool) *bool {
-	return &b
 }

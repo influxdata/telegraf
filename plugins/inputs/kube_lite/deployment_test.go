@@ -1,24 +1,17 @@
 package kube_lite
 
 import (
-	"context"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/ericchiang/k8s/apis/apps/v1beta1"
-	"github.com/ericchiang/k8s/apis/core/v1"
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
 	"github.com/ericchiang/k8s/util/intstr"
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestDeployment(t *testing.T) {
-	cli := &client{
-		httpClient: &http.Client{Transport: &http.Transport{}},
-		semaphore:  make(chan struct{}, 1),
-	}
+	cli := &client{}
 
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
@@ -55,7 +48,7 @@ func TestDeployment(t *testing.T) {
 			name: "no deployments",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/deployments/": &v1.ServiceStatus{},
+					"/deployments/": &v1beta1.DeploymentList{},
 				},
 			},
 			hasError: false,
@@ -113,15 +106,17 @@ func TestDeployment(t *testing.T) {
 	}
 
 	for _, v := range tests {
-		ts := httptest.NewServer(v.handler)
-		defer ts.Close()
-
-		cli.baseURL = ts.URL
 		ks := &KubernetesState{
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		collectDeployments(context.Background(), acc, ks)
+		for _, deployment := range ((v.handler.responseMap["/deployments/"]).(*v1beta1.DeploymentList)).Items {
+			err := ks.gatherDeployment(*deployment, acc)
+			if err != nil {
+				t.Errorf("Failed to gather deployment - %s", err.Error())
+			}
+		}
+
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)
@@ -144,6 +139,5 @@ func TestDeployment(t *testing.T) {
 				}
 			}
 		}
-
 	}
 }

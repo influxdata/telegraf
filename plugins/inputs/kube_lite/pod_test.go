@@ -1,9 +1,6 @@
 package kube_lite
 
 import (
-	"context"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -14,10 +11,7 @@ import (
 )
 
 func TestPod(t *testing.T) {
-	cli := &client{
-		httpClient: &http.Client{Transport: &http.Transport{}},
-		semaphore:  make(chan struct{}, 1),
-	}
+	cli := &client{}
 	now := time.Now()
 	started := time.Date(now.Year(), now.Month(), now.Day(), now.Hour()-1, 1, 36, 0, now.Location())
 	created := time.Date(now.Year(), now.Month(), now.Day(), now.Hour()-2, 1, 36, 0, now.Location())
@@ -34,7 +28,7 @@ func TestPod(t *testing.T) {
 			name: "no pods",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/pods/": &v1.ServiceStatus{},
+					"/pods/": &v1.PodList{},
 				},
 			},
 			hasError: false,
@@ -186,8 +180,8 @@ func TestPod(t *testing.T) {
 							"status_running":        1,
 							"status_terminated":     0,
 							// "status_terminated_reason":    "completed",
-							"resource_requests_cpu_cores": "8",
-							"resource_limits_cpu_cores":   "8",
+							"resource_requests_cpu_cores": int64(8),
+							"resource_limits_cpu_cores":   int64(8),
 							// "status_waiting":        0,
 							// "status_ready":          1,
 						},
@@ -267,15 +261,17 @@ func TestPod(t *testing.T) {
 		},
 	}
 	for _, v := range tests {
-		ts := httptest.NewServer(v.handler)
-		defer ts.Close()
-
-		cli.baseURL = ts.URL
 		ks := &KubernetesState{
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		collectPods(context.Background(), acc, ks)
+		for _, pod := range ((v.handler.responseMap["/pods/"]).(*v1.PodList)).Items {
+			err := ks.gatherPod(*pod, acc)
+			if err != nil {
+				t.Errorf("Failed to gather pod - %s", err.Error())
+			}
+		}
+
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)
@@ -298,6 +294,5 @@ func TestPod(t *testing.T) {
 				}
 			}
 		}
-
 	}
 }

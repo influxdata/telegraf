@@ -1,24 +1,17 @@
 package kube_lite
 
 import (
-	"context"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/ericchiang/k8s/apis/apps/v1beta2"
-	"github.com/ericchiang/k8s/apis/core/v1"
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
 
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestDaemonSet(t *testing.T) {
-	cli := &client{
-		httpClient: &http.Client{Transport: &http.Transport{}},
-		semaphore:  make(chan struct{}, 1),
-	}
+	cli := &client{}
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 	tests := []struct {
@@ -31,7 +24,7 @@ func TestDaemonSet(t *testing.T) {
 			name: "no daemon set",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/daemonsets/": &v1.ServiceStatus{},
+					"/daemonsets/": &v1beta2.DaemonSetList{},
 				},
 			},
 			hasError: false,
@@ -93,16 +86,19 @@ func TestDaemonSet(t *testing.T) {
 			hasError: false,
 		},
 	}
-	for _, v := range tests {
-		ts := httptest.NewServer(v.handler)
-		defer ts.Close()
 
-		cli.baseURL = ts.URL
+	for _, v := range tests {
 		ks := &KubernetesState{
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		collectDaemonSets(context.Background(), acc, ks)
+		for _, dset := range ((v.handler.responseMap["/daemonsets/"]).(*v1beta2.DaemonSetList)).Items {
+			err := ks.gatherDaemonSet(*dset, acc)
+			if err != nil {
+				t.Errorf("Failed to gather daemonset - %s", err.Error())
+			}
+		}
+
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)
@@ -125,6 +121,5 @@ func TestDaemonSet(t *testing.T) {
 				}
 			}
 		}
-
 	}
 }

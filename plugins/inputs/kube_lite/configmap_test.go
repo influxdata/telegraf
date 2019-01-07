@@ -1,9 +1,6 @@
 package kube_lite
 
 import (
-	"context"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -14,10 +11,7 @@ import (
 )
 
 func TestConfigMap(t *testing.T) {
-	cli := &client{
-		httpClient: &http.Client{Transport: &http.Transport{}},
-		semaphore:  make(chan struct{}, 1),
-	}
+	cli := &client{}
 	oldtime := metav1.Time{
 		Seconds: toInt64Ptr(1094505756),
 	}
@@ -32,7 +26,7 @@ func TestConfigMap(t *testing.T) {
 			name: "no config map",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/configmaps/": &v1.ServiceStatus{},
+					"/configmaps/": &v1.ConfigMapList{},
 				},
 			},
 			hasError: false,
@@ -159,17 +153,21 @@ func TestConfigMap(t *testing.T) {
 			hasError: false,
 		},
 	}
-	for _, v := range tests {
-		ts := httptest.NewServer(v.handler)
-		defer ts.Close()
 
-		cli.baseURL = ts.URL
+	for _, v := range tests {
 		ks := &KubernetesState{
 			client:          cli,
 			firstTimeGather: v.firstGather,
 		}
 		acc := new(testutil.Accumulator)
-		collectConfigMaps(context.Background(), acc, ks)
+
+		for _, cmap := range ((v.handler.responseMap["/configmaps/"]).(*v1.ConfigMapList)).Items {
+			err := ks.gatherConfigMap(*cmap, acc)
+			if err != nil {
+				t.Errorf("Failed to gather config map - %s", err.Error())
+			}
+		}
+
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)
@@ -192,6 +190,5 @@ func TestConfigMap(t *testing.T) {
 				}
 			}
 		}
-
 	}
 }

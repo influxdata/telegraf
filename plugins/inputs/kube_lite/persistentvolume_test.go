@@ -1,9 +1,6 @@
 package kube_lite
 
 import (
-	"context"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -14,10 +11,7 @@ import (
 )
 
 func TestPersistentVolume(t *testing.T) {
-	cli := &client{
-		httpClient: &http.Client{Transport: &http.Transport{}},
-		semaphore:  make(chan struct{}, 1),
-	}
+	cli := &client{}
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 
@@ -31,7 +25,7 @@ func TestPersistentVolume(t *testing.T) {
 			name: "no pv",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/persistentvolumes/": &v1.ServiceStatus{},
+					"/persistentvolumes/": &v1.PersistentVolumeList{},
 				},
 			},
 			hasError: false,
@@ -83,16 +77,19 @@ func TestPersistentVolume(t *testing.T) {
 			hasError: false,
 		},
 	}
-	for _, v := range tests {
-		ts := httptest.NewServer(v.handler)
-		defer ts.Close()
 
-		cli.baseURL = ts.URL
+	for _, v := range tests {
 		ks := &KubernetesState{
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		collectPersistentVolumes(context.Background(), acc, ks)
+		for _, pv := range ((v.handler.responseMap["/persistentvolumes/"]).(*v1.PersistentVolumeList)).Items {
+			err := ks.gatherPersistentVolume(*pv, acc)
+			if err != nil {
+				t.Errorf("Failed to gather pv - %s", err.Error())
+			}
+		}
+
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)
@@ -115,6 +112,5 @@ func TestPersistentVolume(t *testing.T) {
 				}
 			}
 		}
-
 	}
 }

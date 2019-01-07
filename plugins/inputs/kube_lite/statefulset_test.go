@@ -1,24 +1,17 @@
 package kube_lite
 
 import (
-	"context"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/ericchiang/k8s/apis/apps/v1beta1"
-	"github.com/ericchiang/k8s/apis/core/v1"
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
 
 	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestStatefulSet(t *testing.T) {
-	cli := &client{
-		httpClient: &http.Client{Transport: &http.Transport{}},
-		semaphore:  make(chan struct{}, 1),
-	}
+	cli := &client{}
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 	tests := []struct {
@@ -31,7 +24,7 @@ func TestStatefulSet(t *testing.T) {
 			name: "no statefulsets",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/statefulsets/": &v1.ServiceStatus{},
+					"/statefulsets/": &v1beta1.StatefulSetList{},
 				},
 			},
 			hasError: false,
@@ -62,6 +55,7 @@ func TestStatefulSet(t *testing.T) {
 										"lab2": "v2",
 									},
 									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
+									// CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix()), Nanos: toInt32Ptr(0)},
 								},
 							},
 						},
@@ -93,16 +87,19 @@ func TestStatefulSet(t *testing.T) {
 			hasError: false,
 		},
 	}
-	for _, v := range tests {
-		ts := httptest.NewServer(v.handler)
-		defer ts.Close()
 
-		cli.baseURL = ts.URL
+	for _, v := range tests {
 		ks := &KubernetesState{
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		collectStatefulSets(context.Background(), acc, ks)
+		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1beta1.StatefulSetList)).Items {
+			err := ks.gatherStatefulSet(*ss, acc)
+			if err != nil {
+				t.Errorf("Failed to gather ss - %s", err.Error())
+			}
+		}
+
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)
@@ -125,6 +122,5 @@ func TestStatefulSet(t *testing.T) {
 				}
 			}
 		}
-
 	}
 }

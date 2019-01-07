@@ -1,9 +1,6 @@
 package kube_lite
 
 import (
-	"context"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -14,10 +11,7 @@ import (
 )
 
 func TestPersistentVolumeClaim(t *testing.T) {
-	cli := &client{
-		httpClient: &http.Client{Transport: &http.Transport{}},
-		semaphore:  make(chan struct{}, 1),
-	}
+	cli := &client{}
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 
@@ -31,7 +25,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 			name: "no pv claims",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/persistentvolumeclaims/": &v1.ServiceStatus{},
+					"/persistentvolumeclaims/": &v1.PersistentVolumeClaimList{},
 				},
 			},
 			hasError: false,
@@ -87,16 +81,19 @@ func TestPersistentVolumeClaim(t *testing.T) {
 			hasError: false,
 		},
 	}
-	for _, v := range tests {
-		ts := httptest.NewServer(v.handler)
-		defer ts.Close()
 
-		cli.baseURL = ts.URL
+	for _, v := range tests {
 		ks := &KubernetesState{
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		collectPersistentVolumeClaims(context.Background(), acc, ks)
+		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*v1.PersistentVolumeClaimList)).Items {
+			err := ks.gatherPersistentVolumeClaim(*pvc, acc)
+			if err != nil {
+				t.Errorf("Failed to gather pvc - %s", err.Error())
+			}
+		}
+
 		err := acc.FirstError()
 		if err == nil && v.hasError {
 			t.Fatalf("%s failed, should have error", v.name)
@@ -119,6 +116,5 @@ func TestPersistentVolumeClaim(t *testing.T) {
 				}
 			}
 		}
-
 	}
 }
