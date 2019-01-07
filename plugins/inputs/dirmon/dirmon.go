@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/binary"
+	"fmt"
 	"hash/fnv"
 	"io"
 	"io/ioutil"
@@ -25,23 +26,16 @@ import (
 )
 
 type DirDefObject struct {
-	Incoming        string
-	Outgoing        string
-	Error           string
+	Directory       string
 	DirInclude      []string
 	DirExclude      []string
 	FileInclude     []string
 	FileExclude     []string
-	DataFormat      string
-	Tags            []string
-	ParseByGroup    bool
 	NumProcessors   int
 	ConcurrentTasks int
-	MetricName      string
 	FieldReplace    map[string]string
 	FileTagRegex    map[string]string
 	TempExtension   string
-	Timezone        string
 
 	histQueue    chan string
 	rtQueue      chan string
@@ -253,97 +247,8 @@ func HashID(metric telegraf.Metric) uint64 {
 	return h.Sum64()
 }
 
-func MoveFile(from string, to string) error {
-	// open files r and w
-	var r *os.File
-	var err error
-
-	for i := 0; i < 10; i++ {
-		r, err = os.Open(from)
-		if err != nil {
-			time.Sleep(100 * time.Millisecond)
-			continue
-		}
-
-		break
-	}
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-
-	w, err := os.Create(to)
-	if err != nil {
-		return err
-	}
-	defer w.Close()
-
-	// do the actual work
-	_, err = io.Copy(w, r)
-	if err != nil {
-		return err
-	}
-
-	err = w.Sync()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (ddo *DirDefObject) MoveFile(id int, filename string, success bool) {
-	relativePath := strings.TrimPrefix(filename, ddo.Incoming)
-	from := filename
-	to := ddo.Outgoing + "/" + relativePath
-	bad := ddo.Error + "/" + relativePath
-	var final string
-	var err error
-
-	if len(ddo.TempExtension) > 0 {
-		final = to
-		to = to + ddo.TempExtension
-	}
-
-	if success {
-		// Move to Archive dir
-		err := MoveFile(from, to)
-		if err != nil {
-			log.Println("ERROR [outgoing.rename]", err)
-		}
-	} else {
-		// Move to Bad dir
-		err := MoveFile(from, bad)
-		if err != nil {
-			log.Println("ERROR [error.rename]", err)
-		}
-	}
-
-	// Delete the original file
-	for i := 0; i < 10; i++ {
-		err = os.Remove(from)
-		if err != nil {
-			time.Sleep(100 * time.Millisecond)
-			continue
-		}
-
-		break
-	}
-	if err != nil {
-		log.Println("ERROR [remove.from]", err)
-	}
-
-	// Rename the file to the proper extension
-	if len(ddo.TempExtension) > 0 {
-		err = os.Rename(to, final)
-		if err != nil {
-			log.Println("ERROR [rename.to]", err)
-		}
-	}
-}
-
 func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accumulator) error {
-	ddo.fiParser.SetIncomingDir(ddo.Incoming)
+	ddo.fiParser.SetRelativeDir(ddo.Directory)
 	fiMetrics, err := ddo.fiParser.Parse([]byte(fileName))
 	if err != nil {
 		log.Printf("ERROR [%s]: %s", fileName, err)
@@ -362,7 +267,7 @@ func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accum
 	}
 
 	// If we are just doing fileinfo... end here.
-	if ddo.DataFormat != "fileinfo" {
+	if ddo.parser != nil {
 		//s, err := getFileScanner(fileName)
 		//if err != nil {
 		//	log.Println("ERROR [getFileScanner]", err)
@@ -529,13 +434,8 @@ func (ddo DirDefObject) FileProcessor(id int) {
 		}
 
 		err := ddo.ProcessFile(id, filename, ddo.acc)
-		if len(ddo.Outgoing) > 0 {
-			if err != nil {
-				ddo.MoveFile(id, filename, false)
-				continue
-			}
-
-			ddo.MoveFile(id, filename, true)
+		if err != nil {
+			log.Printf("E!: Error processing file [%i] [%s]", id, filename)
 		}
 	}
 }
@@ -585,16 +485,6 @@ func (ddo DirDefObject) Start(acc telegraf.Accumulator, parser parsers.Parser, g
 	}
 	ddo.FieldReplace = gFieldReplace
 
-	ddo.location, err = time.LoadLocation(ddo.Timezone)
-	if err != nil {
-		log.Fatalln("FATAL [timezone]: ", err)
-	}
-
-	args := make(map[string]interface{})
-	args["acc"] = ddo.acc
-	args["fieldreplace"] = ddo.FieldReplace
-	args["location"] = ddo.location
-
 	ddo.parser = parser
 	ddo.fiParser, err = fileinfo.NewFileInfoParser()
 	if err != nil {
@@ -610,7 +500,7 @@ func (ddo DirDefObject) Start(acc telegraf.Accumulator, parser parsers.Parser, g
 		}
 	}
 
-	results, err := ddo.OSReadDir(ddo.Incoming)
+	results, err := ddo.OSReadDir(ddo.Directory)
 	if err != nil {
 		log.Fatalln("ERROR [receiver]: ", err)
 	}
@@ -636,7 +526,7 @@ func (dm *DirMon) Start(acc telegraf.Accumulator) error {
 	// Create a monitor for each directory
 	for _, d := range dm.Directory {
 		if err := d.Start(acc, dm.Parser, dm.FieldReplace); err != nil {
-			log.Println("Error starting", d.Incoming)
+			log.Println("Error starting", d.Directory)
 			return err
 		}
 
@@ -657,7 +547,9 @@ func (dm *DirMon) Stop() {
 }
 
 func init() {
+	fmt.Println("dirmon starting")
 	inputs.Add("dirmon", func() telegraf.Input {
 		return &DirMon{}
 	})
+	fmt.Println("dirmon finished")
 }

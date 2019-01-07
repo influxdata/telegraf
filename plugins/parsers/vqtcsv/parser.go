@@ -35,6 +35,7 @@ type VqtCsvParser struct {
 	DefaultTags  map[string]string
 	FieldReplace map[string]string
 	Location     *time.Location
+	Format       string
 
 	metricName string
 }
@@ -50,19 +51,20 @@ func NewVqtCsvMetric(measurement string, timestamp time.Time) *VqtCsvMetric {
 	return m
 }
 
-func NewVqtCsvParser(timezone string) (*VqtCsvParser, error) {
+func NewVqtCsvParser(format string, timezone string) (*VqtCsvParser, error) {
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
 		return nil, err
 	}
 	v := &VqtCsvParser{
 		Location: loc,
+		Format:   format,
 	}
 
 	return v, nil
 }
 
-func (p *VqtCsvParser) Process(csvline []string) (telegraf.Metric, error) {
+func (p *VqtCsvParser) ProcessFull(csvline []string) (telegraf.Metric, error) {
 	if len(csvline) < 4 {
 		l := fmt.Sprintf("%s: Does not meet the length requirements", csvline)
 		return nil, errors.New(l)
@@ -148,6 +150,60 @@ func (p *VqtCsvParser) Process(csvline []string) (telegraf.Metric, error) {
 	return newMetric, nil
 }
 
+func (p *VqtCsvParser) ProcessSimple(csvline []string) (telegraf.Metric, error) {
+	if len(csvline) < 4 {
+		l := fmt.Sprintf("%s: Does not meet the length requirements", csvline)
+		return nil, errors.New(l)
+	}
+
+	timestamp, err := time.ParseInLocation("02-01-2006 15:04:05.000", csvline[3], p.Location)
+	if err != nil {
+		log.Println("Error parsing time", csvline[3], err)
+		return nil, err
+	}
+
+	currentMetric := NewVqtCsvMetric(p.metricName, timestamp)
+
+	for i := 0; i < len(csvline); i += 4 {
+		if (len(csvline)-i)%4 != 0 {
+			continue
+		}
+
+		fieldName := csvline[0]
+
+		var value interface{}
+		//intval, err := strconv.ParseInt(csvline[i+1], 10, 64)
+		//if err != nil {
+		// Not an integer
+		floatval, err := strconv.ParseFloat(csvline[i+1], 64)
+		if err != nil {
+			// Not a float. Use the string value then.
+			value = string(csvline[i+1])
+		} else {
+			value = floatval
+		}
+		//} else {
+		//	value = intval
+		//}
+
+		qualityInt, err := strconv.ParseInt(csvline[i+2], 10, 16)
+		if err != nil {
+			log.Println("Error parsing quality", csvline[i+2], err)
+		}
+
+		currentMetric.Fields["quality"] = qualityInt
+		currentMetric.Fields[fieldName] = value
+	}
+
+	newMetric, err := metric.New(currentMetric.Measurement, currentMetric.Tags, currentMetric.Fields, currentMetric.Timestamp)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return newMetric, nil
+}
+
 func (p *VqtCsvParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	l := len(buf)
 	content := string(buf[:l])
@@ -169,9 +225,18 @@ func (p *VqtCsvParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 }
 
 func (p *VqtCsvParser) ParseLine(line string) (telegraf.Metric, error) {
+	var ret telegraf.Metric
+	var err error
 	trimline := strings.Trim(line, "\r\n")
 	csvline := strings.Split(trimline, ",")
-	return p.Process(csvline)
+	switch p.Format {
+	case "simple":
+		ret, err = p.ProcessSimple(csvline)
+	case "full":
+		ret, err = p.ProcessFull(csvline)
+	}
+
+	return ret, err
 }
 
 func (p *VqtCsvParser) SetDefaultTags(tags map[string]string) {

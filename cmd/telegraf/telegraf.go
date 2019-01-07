@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
+	//_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
 	"os/signal"
 	"runtime"
@@ -18,12 +18,16 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/logger"
-	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
+	//_ "github.com/influxdata/telegraf/plugins/aggregators/all"
+	_ "github.com/influxdata/telegraf/plugins/aggregators/filtered"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	_ "github.com/influxdata/telegraf/plugins/inputs/all"
+	//_ "github.com/influxdata/telegraf/plugins/inputs/all"
+	_ "github.com/influxdata/telegraf/plugins/inputs/filtered"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	_ "github.com/influxdata/telegraf/plugins/outputs/all"
-	_ "github.com/influxdata/telegraf/plugins/processors/all"
+	//_ "github.com/influxdata/telegraf/plugins/outputs/all"
+	_ "github.com/influxdata/telegraf/plugins/outputs/filtered"
+	//_ "github.com/influxdata/telegraf/plugins/processors/all"
+	_ "github.com/influxdata/telegraf/plugins/processors/filtered"
 	"github.com/kardianos/service"
 )
 
@@ -344,6 +348,7 @@ func main() {
 		log.Println("Telegraf version already configured to: " + internal.Version())
 	}
 
+	fmt.Println("6")
 	if runtime.GOOS == "windows" && !(*fRunAsConsole) {
 		svcConfig := &service.Config{
 			Name:        *fServiceName,

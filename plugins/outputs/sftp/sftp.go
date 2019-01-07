@@ -79,6 +79,7 @@ func (s *Sftp) Transferer(id int, conn *sftp.Client) {
 			// We could try to create the dest dir, but for now... just throw the file away
 			log.Printf("ERROR [sftp.create] [%s]: %s", item.Dest, err)
 			item.Move(s.Incoming, s.Outgoing, s.Error, false)
+			continue
 		}
 
 		// Move the file
@@ -86,6 +87,7 @@ func (s *Sftp) Transferer(id int, conn *sftp.Client) {
 		if err != nil {
 			log.Println("ERROR [sftp.write]: ", err)
 			item.Move(s.Incoming, s.Outgoing, s.Error, false)
+			continue
 		}
 
 		item.Move(s.Incoming, s.Outgoing, s.Error, true)
@@ -96,6 +98,7 @@ func (s *Sftp) Transferer(id int, conn *sftp.Client) {
 			err = conn.Rename(item.Temp, item.Dest)
 			if err != nil {
 				log.Println("ERROR [sftp.rename]: ", err)
+				continue
 			}
 		}
 	}

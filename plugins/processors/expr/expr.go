@@ -43,7 +43,14 @@ func (em *ExprMetric) SeparateFieldToTag(field string, newfield string, newtag s
 		val, _ := em.GetField(field)
 		em.RemoveField(field)
 		em.AddField(newfield, val)
+
+		switch field {
+		case "__AlarmValue":
+			field = "ShovelAlarm"
+		}
+
 		em.AddTag(newtag, field)
+		em.AddTag("grokable", "yes")
 	}
 }
 
@@ -51,9 +58,8 @@ func (p *Expr) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
 		emetric := ExprMetric{metric}
 		env := map[string]interface{}{
-			"Print":              log.Println,
-			"SetField":           emetric.SetField,
-			"SetTag":             emetric.SetTag,
+			"print":              log.Println,
+			"metric":             emetric,
 			"SeparateFieldToTag": emetric.SeparateFieldToTag,
 		}
 

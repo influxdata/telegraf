@@ -15,6 +15,7 @@ import (
 type FileInfo struct {
 	Dir        string
 	Base       string
+	Name       string
 	Time       time.Time
 	Type       string
 	Equipment  string
@@ -28,7 +29,7 @@ type FileInfo struct {
 
 type FileInfoParser struct {
 	DefaultTags map[string]string
-	IncomingDir string
+	relativeDir string
 }
 
 func NewFileInfoParser() (*FileInfoParser, error) {
@@ -37,23 +38,24 @@ func NewFileInfoParser() (*FileInfoParser, error) {
 
 // Provided so that you can accurately calcuate the relative path against
 // A specific source directory
-func (p *FileInfoParser) SetIncomingDir(dir string) {
-	p.IncomingDir = dir
+func (p *FileInfoParser) SetRelativeDir(dir string) {
+	p.relativeDir = dir
 }
 
 func (p *FileInfoParser) GetFileInfo(fileName string) (*FileInfo, error) {
-	var baseName = filepath.Base(fileName)
-	var dirName = filepath.Dir(fileName)
+	var baseName = strings.Replace(filepath.Base(fileName), "\\", "/", -1)
+	var dirName = strings.Replace(filepath.Dir(fileName), "\\", "/", -1)
 	var splitName = strings.Split(baseName, "_")
-	if len(splitName) < 5 {
+	if len(splitName) < 6 {
 		return nil, errors.New("Not a fileinfo parseable file")
 	}
 	var equipment = splitName[4]
 	var site = equipment[0:3]
 	var splitExt = strings.Split(splitName[5], ".")
 	var relative = fileName
-	if len(p.IncomingDir) > 0 {
-		relative = strings.TrimPrefix(fileName, p.IncomingDir)
+	if len(p.relativeDir) > 0 {
+		relative = strings.TrimPrefix(fileName, p.relativeDir)
+		relative = strings.TrimSuffix(relative, baseName)
 	}
 
 	var fi FileInfo
@@ -64,6 +66,7 @@ func (p *FileInfoParser) GetFileInfo(fileName string) (*FileInfo, error) {
 	}
 	fi.Base = baseName
 	fi.Dir = dirName
+	fi.Name = fileName
 	fi.Equipment = equipment
 	fi.Type = splitExt[0]
 	fi.Extension = filepath.Ext(fileName)
@@ -108,8 +111,12 @@ func (p *FileInfoParser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
-	fields["filename"] = fi.Base
+	fields["base"] = fi.Base
+	fields["dir"] = fi.Dir
 	fields["relative"] = fi.Relative
+	if len(p.relativeDir) > 0 {
+		fields["prefix"] = p.relativeDir
+	}
 	fields["filesize"] = fi.OsFileInfo.Size()
 	fields["modtime"] = fi.OsFileInfo.ModTime().String()
 	fields["parsetime"] = time.Now().String()

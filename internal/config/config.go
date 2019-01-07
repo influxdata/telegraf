@@ -585,6 +585,7 @@ func getDefaultConfigPath() (string, error) {
 
 // LoadConfig loads the given config file and applies it to c
 func (c *Config) LoadConfig(path string) error {
+	fmt.Println("Loading Config...")
 	var err error
 	if path == "" {
 		if path, err = getDefaultConfigPath(); err != nil {
@@ -799,7 +800,10 @@ func (c *Config) addAggregator(name string, table *ast.Table) error {
 	if !ok {
 		return fmt.Errorf("Undefined but requested aggregator: %s", name)
 	}
+	t1 := time.Now()
 	aggregator := creator()
+	t2 := time.Now()
+	fmt.Println("Aggregator", name, creator, t2.Sub(t1))
 
 	conf, err := buildAggregator(name, table)
 	if err != nil {
@@ -819,7 +823,10 @@ func (c *Config) addProcessor(name string, table *ast.Table) error {
 	if !ok {
 		return fmt.Errorf("Undefined but requested processor: %s", name)
 	}
+	t1 := time.Now()
 	processor := creator()
+	t2 := time.Now()
+	fmt.Println("Processor", name, creator, t2.Sub(t1))
 
 	processorConfig, err := buildProcessor(name, table)
 	if err != nil {
@@ -849,7 +856,10 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	if !ok {
 		return fmt.Errorf("Undefined but requested output: %s", name)
 	}
+	t1 := time.Now()
 	output := creator()
+	t2 := time.Now()
+	fmt.Println("Output", name, creator, t2.Sub(t1))
 
 	// If the output has a SetSerializer function, then this means it can write
 	// arbitrary types of output, so build the serializer and set it.
@@ -890,7 +900,10 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	if !ok {
 		return fmt.Errorf("Undefined but requested input: %s", name)
 	}
+	t1 := time.Now()
 	input := creator()
+	t2 := time.Now()
+	fmt.Println("Input", name, creator, t2.Sub(t1))
 
 	// If the input has a SetParser function, then this means it can accept
 	// arbitrary types of input, so build the parser and set it.
@@ -1279,6 +1292,9 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	// Legacy support, exec plugin originally parsed JSON by default.
 	if name == "exec" && c.DataFormat == "" {
 		c.DataFormat = "json"
+		// Dirmon does fileinfo by default. If the users want no other parsing, let them.
+	} else if c.DataFormat == "" && name == "dirmon" {
+		c.DataFormat = "none"
 	} else if c.DataFormat == "" {
 		c.DataFormat = "influx"
 	}
@@ -1632,6 +1648,14 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["vqtcsv_format"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.VqtcsvFormat = str.Value
+			}
+		}
+	}
+
 	c.MetricName = name
 
 	delete(tbl.Fields, "data_format")
@@ -1672,6 +1696,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "csv_timestamp_format")
 	delete(tbl.Fields, "csv_trim_space")
 	delete(tbl.Fields, "vqtcsv_timezone")
+	delete(tbl.Fields, "vqtcsv_format")
 
 	return c, nil
 }

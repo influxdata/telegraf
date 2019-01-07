@@ -79,8 +79,6 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport)
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
-	case "splunkmetric":
-		serializer, err = NewSplunkmetricSerializer(config.HecRouting)
 	case "vqtcsv":
 		serializer, err = NewVqtCsvFileSerializer()
 	case "wwfastload":

@@ -129,6 +129,7 @@ type Config struct {
 
 	//VQTCSV
 	VqtcsvTimezone string
+	VqtcsvFormat   string
 
 	//csv configuration
 	CSVColumnNames       []string `toml:"csv_column_names"`
@@ -150,15 +151,11 @@ func NewParser(config *Config) (Parser, error) {
 	var err error
 	var parser Parser
 	switch config.DataFormat {
-	case "json":
-		parser, err = NewJSONParser(config.MetricName,
-			config.TagKeys, config.DefaultTags)
 	case "fileinfo":
 		parser, err = NewFileInfoParser()
 	case "vqtcsv":
 		parser, err = NewVqtCsvParser(config)
-	case "phdcsv":
-		parser, err = NewPhdCsvParser(config)
+	case "json":
 		parser = newJSONParser(config.MetricName,
 			config.TagKeys,
 			config.JSONNameKey,
@@ -167,10 +164,6 @@ func NewParser(config *Config) (Parser, error) {
 			config.JSONTimeKey,
 			config.JSONTimeFormat,
 			config.DefaultTags)
-	case "fileinfo":
-		parser, err = NewFileInfoParser()
-	case "vqtcsv":
-		parser, err = NewVqtCsvParser(config)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
 			config.DataType, config.DefaultTags)
@@ -221,6 +214,9 @@ func NewParser(config *Config) (Parser, error) {
 			config.DefaultTags)
 	case "logfmt":
 		parser, err = NewLogFmtParser(config.MetricName, config.DefaultTags)
+	case "none":
+		parser = nil
+		err = nil
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -234,6 +230,7 @@ func NewFileInfoParser() (Parser, error) {
 
 func NewVqtCsvParser(config *Config) (Parser, error) {
 	v, err := vqtcsv.NewVqtCsvParser(
+		config.VqtcsvFormat,
 		config.VqtcsvTimezone,
 	)
 	return v, err

@@ -5,7 +5,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
-	"github.com/yuin/gopher-lua"
+	lua "github.com/yuin/gopher-lua"
 )
 
 var sampleConfig = `
@@ -30,8 +30,10 @@ func (p *LuaScript) Description() string {
 
 func (p *LuaScript) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
-		//p.luaVM.SetGlobal("metric", metric)
-		//lua.LValue
+		lud := &lua.LUserData{
+			Value: metric,
+		}
+		p.luaVM.SetGlobal("metric", lud)
 		if err := p.luaVM.DoString(p.Script); err != nil {
 			log.Println("metric", metric, "err", err)
 		}

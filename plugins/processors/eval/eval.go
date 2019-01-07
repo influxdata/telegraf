@@ -14,6 +14,7 @@ type Eval struct {
 	Statement string
 
 	interp      *fast.Interp
+	expr        *fast.Expr
 	initialized bool
 }
 
@@ -29,12 +30,12 @@ func (p *Eval) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	if !p.initialized {
 		p.interp = fast.New()
 		p.initialized = true
+		p.expr = p.interp.Compile(p.Statement)
 	}
 
-	for _, metric := range in {
-		p.interp.DeclVar("metric", p.interp.TypeOf(metric), metric)
-		p.interp.Eval(p.Statement)
-	}
+	//for _, metric := range in {
+	//	fast.NewEnv()
+	//}
 	return in
 }
 
