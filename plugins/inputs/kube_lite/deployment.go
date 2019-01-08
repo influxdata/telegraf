@@ -2,6 +2,7 @@ package kube_lite
 
 import (
 	"context"
+	"time"
 
 	"github.com/ericchiang/k8s/apis/apps/v1beta1"
 
@@ -30,8 +31,7 @@ func (ks *KubernetesState) gatherDeployment(d v1beta1.Deployment, acc telegraf.A
 	fields := map[string]interface{}{
 		"status_replicas_available":   d.Status.GetAvailableReplicas(),
 		"status_replicas_unavailable": d.Status.GetUnavailableReplicas(),
-		"created":                     d.Metadata.CreationTimestamp.GetSeconds(),
-		// "created":                     time.Unix(*d.Metadata.CreationTimestamp.Seconds, int64(*d.Metadata.CreationTimestamp.Nanos)),
+		"created":                     time.Unix(*d.Metadata.CreationTimestamp.Seconds, int64(*d.Metadata.CreationTimestamp.Nanos)).UnixNano(),
 	}
 	tags := map[string]string{
 		"name":      d.Metadata.GetName(),

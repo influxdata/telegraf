@@ -1,7 +1,7 @@
 package kube_lite
 
-// - resource_requests_cpu_cores
-// - resource_limits_cpu_cores
+// - resource_requests_cpu_units
+// - resource_limits_cpu_units
 // - resource_requests_memory_bytes
 // - resource_limits_memory_bytes
 // - status_ready
@@ -61,7 +61,7 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 		"status_restarts_total":    cs.GetRestartCount(),
 		"status_running":           boolInt(cs.State.Running != nil),
 		"status_terminated":        boolInt(cs.State.Terminated != nil),
-		"status_terminated_reasom": cs.State.Terminated.GetReason(),
+		"status_terminated_reason": cs.State.Terminated.GetReason(),
 	}
 	tags := map[string]string{
 		"namespace": *p.Metadata.Namespace,
@@ -77,21 +77,17 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 	for resourceName, val := range req {
 		switch resourceName {
 		case "cpu":
-			// todo: better way to get value
-			fields["resource_requests_cpu_cores"] = atoi(*val.String_)
-		default:
-			// todo: better way to get value
-			fields["resource_requests_"+sanitizeLabelName(string(resourceName))+"_bytes"] = atoi(*val.String_)
+			fields["resource_requests_cpu_units"] = *val.String_
+		case "memory":
+			fields["resource_requests_memory_bytes"] = *val.String_
 		}
 	}
 	for resourceName, val := range lim {
 		switch resourceName {
 		case "cpu":
-			// todo: better way to get value
-			fields["resource_limits_cpu_cores"] = atoi(*val.String_)
-		default:
-			// todo: better way to get value
-			fields["resource_limits_"+sanitizeLabelName(string(resourceName))+"_bytes"] = atoi(*val.String_)
+			fields["resource_limits_cpu_units"] = *val.String_
+		case "memory":
+			fields["resource_limits_memory_bytes"] = *val.String_
 		}
 	}
 

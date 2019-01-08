@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 
@@ -116,8 +117,8 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 	"nodes":                  collectNodes,
 	"persistentvolumes":      collectPersistentVolumes,
 	"persistentvolumeclaims": collectPersistentVolumeClaims,
-	"pods":                   collectPods,
-	"statefulsets":           collectStatefulSets,
+	"pods":         collectPods,
+	"statefulsets": collectStatefulSets,
 }
 
 func (ks *KubernetesState) initClient() (*client, error) {
@@ -156,4 +157,13 @@ func boolInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+func atoi(s string) int64 {
+	i, err := strconv.Atoi(s)
+	if err != nil {
+		fmt.Println(err) // todo: remove
+		return 0
+	}
+	return int64(i)
 }

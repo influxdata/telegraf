@@ -2,6 +2,7 @@ package kube_lite
 
 import (
 	"context"
+	"time"
 
 	"github.com/ericchiang/k8s/apis/apps/v1beta2"
 
@@ -42,8 +43,7 @@ func (ks *KubernetesState) gatherDaemonSet(d v1beta2.DaemonSet, acc telegraf.Acc
 		"name":      d.Metadata.GetName(),
 	}
 	if d.Metadata.CreationTimestamp.GetSeconds() != 0 {
-		fields["created"] = d.Metadata.CreationTimestamp.GetSeconds()
-		// fields["created"] = time.Unix(d.Metadata.CreationTimestamp.GetSeconds(), int64(d.Metadata.CreationTimestamp.GetNanos()))
+		fields["created"] = time.Unix(d.Metadata.CreationTimestamp.GetSeconds(), int64(d.Metadata.CreationTimestamp.GetNanos())).UnixNano()
 	}
 
 	acc.AddFields(daemonSetMeasurement, fields, tags)

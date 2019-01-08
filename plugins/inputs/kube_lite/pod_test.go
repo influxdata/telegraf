@@ -54,10 +54,10 @@ func TestPod(t *testing.T) {
 											},
 											Resources: &v1.ResourceRequirements{
 												Limits: map[string]*resource.Quantity{
-													"cpu": {String_: toStrPtr("8")},
+													"cpu": {String_: toStrPtr("100m")},
 												},
 												Requests: map[string]*resource.Quantity{
-													"cpu": {String_: toStrPtr("8")},
+													"cpu": {String_: toStrPtr("100m")},
 												},
 											},
 										},
@@ -180,8 +180,8 @@ func TestPod(t *testing.T) {
 							"status_running":        1,
 							"status_terminated":     0,
 							// "status_terminated_reason":    "completed",
-							"resource_requests_cpu_cores": int64(8),
-							"resource_limits_cpu_cores":   int64(8),
+							"resource_requests_cpu_cores": "100m",
+							"resource_limits_cpu_cores":   "100m",
 							// "status_waiting":        0,
 							// "status_ready":          1,
 						},
@@ -217,8 +217,8 @@ func TestPod(t *testing.T) {
 					// 		"status_phase_failed":    0,
 					// 		"status_phase_running":   1,
 					// 		"status_phase_unknown":   0,
-					// 		"resource_requests_cpu_cores": "8",
-					// 		"resource_limits_cpu_cores":   "8",
+					// 		"resource_requests_cpu_cores": "100m",
+					// 		"resource_limits_cpu_cores":   "100m",
 					// 	},
 					// 	Tags: map[string]string{
 					// 		"namespace": "ns1",
@@ -240,8 +240,8 @@ func TestPod(t *testing.T) {
 					// 		"status_phase_succeeded": 0,
 					// 		"status_phase_failed":    0,
 					// 		"status_phase_running":   1,
-					// 		"resource_requests_cpu_cores": "8",
-					// 		"resource_limits_cpu_cores":   "8",
+					// 		"resource_requests_cpu_cores": "100m",
+					// 		"resource_limits_cpu_cores":   "100m",
 					// 		"status_phase_unknown":        0,
 					// 	},
 					// 	Tags: map[string]string{
