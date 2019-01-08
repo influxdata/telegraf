@@ -40,6 +40,7 @@ func (ks *KubernetesState) gatherStatefulSet(s v1beta1.StatefulSet, acc telegraf
 		"name":      *s.Metadata.Name,
 		"namespace": *s.Metadata.Namespace,
 	}
+
 	if s.Spec.Replicas != nil {
 		fields["replicas"] = *s.Spec.Replicas
 	}
@@ -47,16 +48,7 @@ func (ks *KubernetesState) gatherStatefulSet(s v1beta1.StatefulSet, acc telegraf
 		fields["status_observed_generation"] = *s.Status.ObservedGeneration
 	}
 
-	sec := int64(0)
-	nan := int32(0)
-	if ct := s.Metadata.CreationTimestamp; ct != nil {
-		if ct.Seconds != nil {
-			sec = *ct.Seconds
-		}
-		if ct.Nanos != nil {
-			nan = *ct.Nanos
-		}
-	}
-	acc.AddFields(statefulSetMeasurement, fields, tags, time.Unix(sec, int64(nan)))
+	acc.AddFields(statefulSetMeasurement, fields, tags, time.Unix(s.Metadata.CreationTimestamp.GetSeconds(), int64(s.Metadata.CreationTimestamp.GetNanos())))
+
 	return nil
 }

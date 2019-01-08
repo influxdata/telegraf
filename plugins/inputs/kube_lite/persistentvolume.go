@@ -43,5 +43,6 @@ func (ks *KubernetesState) gatherPersistentVolume(pv v1.PersistentVolume, acc te
 	}
 
 	acc.AddFields(persistentVolumeMeasurement, fields, tags)
+
 	return nil
 }

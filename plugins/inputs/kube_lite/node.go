@@ -59,5 +59,6 @@ func (ks *KubernetesState) gatherNode(n v1.Node, acc telegraf.Accumulator) error
 	}
 
 	acc.AddFields(nodeMeasurement, fields, tags)
+
 	return nil
 }

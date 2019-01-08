@@ -15,7 +15,6 @@ func TestDeployment(t *testing.T) {
 
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
-	nowSeconds := now.Unix()
 	outputMetric := &testutil.Metric{
 		Fields: map[string]interface{}{
 			// "spec_replicas":               int32(4),
@@ -25,7 +24,7 @@ func TestDeployment(t *testing.T) {
 			"status_replicas_unavailable": int32(4),
 			// "status_replicas_updated":     int32(2),
 			// "status_observed_generation":  int64(9121),
-			"created": nowSeconds,
+			"created": now.UnixNano(),
 			// "spec_strategy_rollingupdate_max_unavailable": 30,
 			// "spec_strategy_rollingupdate_max_surge":       20,
 		},
@@ -89,7 +88,7 @@ func TestDeployment(t *testing.T) {
 										"lab1": "v1",
 										"lab2": "v2",
 									},
-									CreationTimestamp: &metav1.Time{Seconds: &nowSeconds},
+									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
 								},
 							},
 						},

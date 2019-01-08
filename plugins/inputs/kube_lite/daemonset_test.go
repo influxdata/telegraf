@@ -72,7 +72,7 @@ func TestDaemonSet(t *testing.T) {
 							"status_number_ready":             int32(1),
 							"status_number_unavailable":       int32(1),
 							"status_updated_number_scheduled": int32(2),
-							"created":                         now.Unix(),
+							"created":                         now.UnixNano(),
 						},
 						Tags: map[string]string{
 							// "label_lab1": "v1",

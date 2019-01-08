@@ -31,7 +31,7 @@ func (ks *KubernetesState) gatherDeployment(d v1beta1.Deployment, acc telegraf.A
 	fields := map[string]interface{}{
 		"status_replicas_available":   d.Status.GetAvailableReplicas(),
 		"status_replicas_unavailable": d.Status.GetUnavailableReplicas(),
-		"created":                     time.Unix(*d.Metadata.CreationTimestamp.Seconds, int64(*d.Metadata.CreationTimestamp.Nanos)).UnixNano(),
+		"created":                     time.Unix(d.Metadata.CreationTimestamp.GetSeconds(), int64(d.Metadata.CreationTimestamp.GetNanos())).UnixNano(),
 	}
 	tags := map[string]string{
 		"name":      d.Metadata.GetName(),
@@ -39,5 +39,6 @@ func (ks *KubernetesState) gatherDeployment(d v1beta1.Deployment, acc telegraf.A
 	}
 
 	acc.AddFields(deploymentMeasurement, fields, tags)
+
 	return nil
 }

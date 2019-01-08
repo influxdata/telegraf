@@ -42,10 +42,12 @@ func (ks *KubernetesState) gatherDaemonSet(d v1beta2.DaemonSet, acc telegraf.Acc
 		"namespace": d.Metadata.GetNamespace(),
 		"name":      d.Metadata.GetName(),
 	}
+
 	if d.Metadata.CreationTimestamp.GetSeconds() != 0 {
 		fields["created"] = time.Unix(d.Metadata.CreationTimestamp.GetSeconds(), int64(d.Metadata.CreationTimestamp.GetNanos())).UnixNano()
 	}
 
 	acc.AddFields(daemonSetMeasurement, fields, tags)
+
 	return nil
 }

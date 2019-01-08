@@ -35,7 +35,6 @@ func (ks *KubernetesState) gatherConfigMap(s v1.ConfigMap, acc telegraf.Accumula
 		return nil
 	}
 
-	creationTime := time.Unix(s.Metadata.CreationTimestamp.GetSeconds(), int64(s.Metadata.CreationTimestamp.GetNanos()))
 	fields := map[string]interface{}{
 		"gauge": 1,
 	}
@@ -44,6 +43,8 @@ func (ks *KubernetesState) gatherConfigMap(s v1.ConfigMap, acc telegraf.Accumula
 		"namespace":        s.Metadata.GetNamespace(),
 		"resource_version": s.Metadata.GetResourceVersion(),
 	}
-	acc.AddFields(configMapMeasurement, fields, tags, creationTime)
+
+	acc.AddFields(configMapMeasurement, fields, tags, time.Unix(s.Metadata.CreationTimestamp.GetSeconds(), int64(s.Metadata.CreationTimestamp.GetNanos())))
+
 	return nil
 }

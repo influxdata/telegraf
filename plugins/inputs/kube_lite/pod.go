@@ -111,6 +111,5 @@ func gatherPodStatus(p v1.Pod, c v1.PodCondition, acc telegraf.Accumulator) {
 		fields["ready"] = "false"
 	}
 
-	// todo: ensure time works properly
 	acc.AddFields(podStatusMeasurement, fields, tags, time.Unix(c.LastTransitionTime.GetSeconds(), int64(c.LastTransitionTime.GetNanos())))
 }
