@@ -44,7 +44,6 @@ func TestGather(t *testing.T) {
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
 			var acc testutil.Accumulator
 			n.Servers = test.servers
 			n.Gather(&acc)
@@ -334,7 +333,6 @@ func TestParseXML(t *testing.T) {
 	for _, test := range tests {
 		test := test
 		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
 			var acc testutil.Accumulator
 			err := n.parseXML(&acc, []byte(test.xmlResponse))
 			if (err != nil) != test.wantErr {
