@@ -1,6 +1,7 @@
 package nowmetric
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -51,19 +52,17 @@ func (s *serializer) Serialize(metric telegraf.Metric) (out []byte, err error) {
 }
 
 func (s *serializer) SerializeBatch(metrics []telegraf.Metric) (out []byte, err error) {
-	objects := make([]interface{}, 0, len(metrics))
+	objects := make([]byte, 0)
 	for _, metric := range metrics {
-		objects["tags"] = append(objects, metric.Tags())
-		objects["fields"] = append(objects, metric.Fields())
-		objects["name"] = append(objects, metric.Name())
-		objects["timestamp"] = metric.Time().UnixNano() / int64(s.TimestampUnits)
+		m, err := s.createObject(metric)
+		if err != nil {
+			return nil, fmt.Errorf("D! [serializer.nowmetric] Dropping invalid metric: %s", metric.Name())
+		} else if m != nil {
+			objects = append(objects, m...)
+		}
 	}
-
-	serialized, err := json.Marshal(objects)
-	if err != nil {
-		return []byte{}, err
-	}
-	return serialized, nil
+	replaced := bytes.Replace(objects, []byte("]["), []byte(","), -1)
+	return replaced, nil
 }
 
 func (s *serializer) createObject(metric telegraf.Metric) ([]byte, error) {

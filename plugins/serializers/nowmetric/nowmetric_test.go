@@ -180,5 +180,5 @@ func TestSerializeBatch(t *testing.T) {
 	s, _ := NewSerializer()
 	buf, err := s.SerializeBatch(metrics)
 	require.NoError(t, err)
-	require.Equal(t, []byte(`[{"metric_type":"value","resource":"","node":"","value":42,"timestamp":0,"ci2metric_id":null,"source":"Telegraf"}][{"metric_type":"value","resource":"","node":"","value":42,"timestamp":0,"ci2metric_id":null,"source":"Telegraf"}]`), buf)
+	require.Equal(t, []byte(`[{"metric_type":"value","resource":"","node":"","value":42,"timestamp":0,"ci2metric_id":null,"source":"Telegraf"},{"metric_type":"value","resource":"","node":"","value":42,"timestamp":0,"ci2metric_id":null,"source":"Telegraf"}]`), buf)
 }
