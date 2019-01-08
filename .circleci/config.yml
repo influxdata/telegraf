@@ -36,30 +36,30 @@ jobs:
     steps:
       - attach_workspace:
           at: '/go/src'
-      - run: 'make check'
+      # disabled due to gofmt differences (1.10 vs 1.11).
+      #- run: 'make check'
       - run: 'make test'
   test-go-1.10:
     <<: [ *defaults, *go-1_10 ]
     steps:
       - attach_workspace:
           at: '/go/src'
-      - run: 'make check'
+      # disabled due to gofmt differences (1.10 vs 1.11).
+      #- run: 'make check'
       - run: 'make test'
   test-go-1.11:
     <<: [ *defaults, *go-1_11 ]
     steps:
       - attach_workspace:
           at: '/go/src'
-      # disabled due to gofmt differences (1.10 vs 1.11).
-      # - run: 'make check'
+      - run: 'make check'
       - run: 'make test'
   test-go-1.11-386:
     <<: [ *defaults, *go-1_11 ]
     steps:
       - attach_workspace:
           at: '/go/src'
-      # disabled due to gofmt differences (1.10 vs 1.11).
-      # - run: 'GOARCH=386 make check'
+      - run: 'GOARCH=386 make check'
       - run: 'GOARCH=386 make test'
 
   package:

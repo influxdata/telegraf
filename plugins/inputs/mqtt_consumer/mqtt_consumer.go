@@ -321,7 +321,7 @@ func init() {
 		return &MQTTConsumer{
 			ConnectionTimeout:      defaultConnectionTimeout,
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
-			state: Disconnected,
+			state:                  Disconnected,
 		}
 	})
 }
