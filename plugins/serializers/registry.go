@@ -9,6 +9,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
 )
 
@@ -79,6 +80,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
 	case "splunkmetric":
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting)
+	case "nowmetric":
+		serializer, err = NewNowSerializer()
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -91,6 +94,10 @@ func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 
 func NewSplunkmetricSerializer(splunkmetric_hec_routing bool) (Serializer, error) {
 	return splunkmetric.NewSerializer(splunkmetric_hec_routing)
+}
+
+func NewNowSerializer() (Serializer, error) {
+	return nowmetric.NewSerializer()
 }
 
 func NewInfluxSerializerConfig(config *Config) (Serializer, error) {
