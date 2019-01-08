@@ -15,7 +15,7 @@ import (
 
 // KubernetesState represents the config object for the plugin.
 type KubernetesState struct {
-	URL             string            `toml:url`
+	URL             string            `toml:"url"`
 	BearerToken     string            `toml:"bearer_token"`
 	Namespace       string            `toml:"namespace"`
 	ResponseTimeout internal.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
