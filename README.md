@@ -209,6 +209,7 @@ For documentation on the latest development code see the [documentation index][d
 * [mysql](./plugins/inputs/mysql)
 * [nats_consumer](./plugins/inputs/nats_consumer)
 * [nats](./plugins/inputs/nats)
+* [neptune_apex](./plugins/inputs/neptune_apex)
 * [net](./plugins/inputs/net)
 * [net_response](./plugins/inputs/net_response)
 * [netstat](./plugins/inputs/net)
