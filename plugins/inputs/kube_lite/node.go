@@ -34,15 +34,11 @@ func (ks *KubernetesState) gatherNode(n v1.Node, acc telegraf.Accumulator) error
 
 	for resourceName, val := range n.Status.Capacity {
 		switch resourceName {
-		// todo: cpu or cpu_cores
 		case "cpu":
-			// todo: better way to get value
 			fields["status_capacity_cpu_cores"] = atoi(*val.String_)
 		case "memory":
-			// todo: better way to get value, verify
-			fields["status_capacity_"+sanitizeLabelName(resourceName)+"_bytes"] = atoi(*val.String_)
+			fields["status_capacity_"+sanitizeLabelName(resourceName)+"_bytes"] = *val.String_
 		case "pods":
-			// todo: better way to get value
 			fields["status_capacity_pods"] = atoi(*val.String_)
 		}
 	}
@@ -52,7 +48,7 @@ func (ks *KubernetesState) gatherNode(n v1.Node, acc telegraf.Accumulator) error
 		case "cpu":
 			fields["status_allocatable_cpu_cores"] = atoi(*val.String_)
 		case "memory":
-			fields["status_allocatable_"+sanitizeLabelName(string(resourceName))+"_bytes"] = atoi(*val.String_)
+			fields["status_allocatable_"+sanitizeLabelName(string(resourceName))+"_bytes"] = *val.String_
 		case "pods":
 			fields["status_allocatable_pods"] = atoi(*val.String_)
 		}

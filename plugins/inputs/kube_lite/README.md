@@ -199,8 +199,8 @@ Tags:
 kube_configmap,name=envoy-config,namespace=default,resource_version=56593031 gauge=1i 1544103867000000000
 kube_daemonset
 kube_deployment,name=tasks,namespace=default created=1544102512000000000i,status_replicas_available=1i,status_replicas_unavailable=0i 1546915265000000000
-kube_node
-kube_persistentvolume
+kube_node,name=ip-172-17-0-1.internal status_capacity_memory_bytes="125817904Ki",status_capacity_pods=110i,status_allocatable_cpu_cores=16i,status_allocatable_memory_bytes="125715504Ki",status_allocatable_pods=110i,status_capacity_cpu_cores=16i 1546978191000000000
+kube_persistentvolume,name=pvc-aaaaaaaa-bbbb-cccc-1111-222222222222,status=Bound,storageclass=ebs-1 status_available=0i,status_bound=1i,status_failed=0i,status_pending=0i,status_released=0i 1546978191000000000
 kube_persistentvolumeclaim,name=storage-7,namespace=default,status=Bound,storageclass=ebs-1-retain status_lost=0i,status_bound=1i,status_pending=0i 1546912925000000000
 kube_pod_container,name=telegraf,namespace=default,node=ip-172-17-0-1.internal,pod=devicepathdirtyd-789bc7dbdf-wczng resource_requests_cpu_units="100m",resource_requests_memory_bytes="500Mi",resource_limits_cpu_units="500m",resource_limits_memory_bytes="500Mi",status_restarts_total=1i,status_running=1i,status_terminated=0i,status_terminated_reasom="" 1546912926000000000
 kube_pod_status,name=storage-7,namespace=default,node=ip-172-17-0-2.internal ready="true" 1546910783000000000

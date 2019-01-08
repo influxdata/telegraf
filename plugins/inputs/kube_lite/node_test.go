@@ -53,7 +53,7 @@ func TestNode(t *testing.T) {
 										"ephemeral_storage_bytes": {String_: toStrPtr("49536401408")},
 										"hugepages_1Gi_bytes":     {String_: toStrPtr("0")},
 										"hugepages_2Mi_bytes":     {String_: toStrPtr("0")},
-										"memory":                  {String_: toStrPtr("128837615616")},
+										"memory":                  {String_: toStrPtr("125817904Ki")},
 										"pods":                    {String_: toStrPtr("110")},
 									},
 									Allocatable: map[string]*resource.Quantity{
@@ -61,7 +61,7 @@ func TestNode(t *testing.T) {
 										"ephemeral_storage_bytes": {String_: toStrPtr("44582761194")},
 										"hugepages_1Gi_bytes":     {String_: toStrPtr("0")},
 										"hugepages_2Mi_bytes":     {String_: toStrPtr("0")},
-										"memory":                  {String_: toStrPtr("128732758016")},
+										"memory":                  {String_: toStrPtr("125715504Ki")},
 										"pods":                    {String_: toStrPtr("110")},
 									},
 									Conditions: []*v1.NodeCondition{
@@ -105,10 +105,10 @@ func TestNode(t *testing.T) {
 						Measurement: nodeMeasurement,
 						Fields: map[string]interface{}{
 							"status_capacity_cpu_cores":       int64(16),
-							"status_capacity_memory_bytes":    int64(128837615616),
+							"status_capacity_memory_bytes":    "125817904Ki",
 							"status_capacity_pods":            int64(110),
 							"status_allocatable_cpu_cores":    int64(16),
-							"status_allocatable_memory_bytes": int64(128732758016),
+							"status_allocatable_memory_bytes": "125715504Ki",
 							"status_allocatable_pods":         int64(110),
 							// "created":                                    created.Unix(),
 							// "status_capacity_ephemeral_storage_bytes":    int64(49536401408),
