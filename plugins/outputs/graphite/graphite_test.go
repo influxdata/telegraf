@@ -158,6 +158,169 @@ func TestGraphiteOkWithTags(t *testing.T) {
 	g.Close()
 }
 
+func TestGraphiteOKMapByMetricName(t *testing.T) {
+	var wg sync.WaitGroup
+	// Start TCP server
+	wg.Add(1)
+	t.Log("Starting server")
+	TCPServer3(t, &wg)
+
+	// Init plugin
+	g := Graphite{
+		Prefix:   "my.prefix",
+		Template: "measurement.field",
+		TemplateMap: map[string]string{
+			"my_measurement":    "measurement.type.name.field",
+			"other_measurement": "measurement.host.field",
+		},
+	}
+
+	// Init metrics
+	m1, _ := metric.New(
+		"my_measurement",
+		map[string]string{"host": "192.168.0.1", "type": "my", "name": "a"},
+		map[string]interface{}{"myfield": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	m2, _ := metric.New(
+		"my_measurement",
+		map[string]string{"host": "192.168.0.1", "type": "my", "name": "b"},
+		map[string]interface{}{"myfield": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	m3, _ := metric.New(
+		"other_measurement",
+		map[string]string{"host": "192.168.0.1", "type": "other", "name": "c"},
+		map[string]interface{}{"other_field": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	// Prepare point list
+	metrics := []telegraf.Metric{m1, m2, m3}
+	err1 := g.Connect()
+	require.NoError(t, err1)
+	// Send Data
+	t.Log("Send first data")
+	err2 := g.Write(metrics)
+	require.NoError(t, err2)
+
+	// Waiting TCPserver, should reconnect and resend
+	wg.Wait()
+	t.Log("Finished Waiting for data")
+	g.Close()
+}
+
+func TestGraphiteOKMapByTagValue(t *testing.T) {
+	var wg sync.WaitGroup
+	// Start TCP server
+	wg.Add(1)
+	t.Log("Starting server")
+	TCPServer3(t, &wg)
+
+	// Init plugin
+	g := Graphite{
+		Prefix:      "my.prefix",
+		Template:    "measurement.field",
+		SelectorTag: "type",
+		TemplateMap: map[string]string{
+			"my":    "measurement.type.name.field",
+			"other": "measurement.host.field",
+		},
+	}
+
+	// Init metrics
+	m1, _ := metric.New(
+		"my_measurement",
+		map[string]string{"host": "192.168.0.1", "type": "my", "name": "a"},
+		map[string]interface{}{"myfield": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	m2, _ := metric.New(
+		"my_measurement",
+		map[string]string{"host": "192.168.0.1", "type": "my", "name": "b"},
+		map[string]interface{}{"myfield": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	m3, _ := metric.New(
+		"other_measurement",
+		map[string]string{"host": "192.168.0.1", "type": "other", "name": "c"},
+		map[string]interface{}{"other_field": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	// Prepare point list
+	metrics := []telegraf.Metric{m1, m2, m3}
+	err1 := g.Connect()
+	require.NoError(t, err1)
+	// Send Data
+	t.Log("Send first data")
+	err2 := g.Write(metrics)
+	require.NoError(t, err2)
+
+	// Waiting TCPserver, should reconnect and resend
+	wg.Wait()
+	t.Log("Finished Waiting for data")
+	g.Close()
+}
+
+func TestGraphiteOKMapWithSkip(t *testing.T) {
+	var wg sync.WaitGroup
+	// Start TCP server
+	wg.Add(1)
+	t.Log("Starting server")
+	TCPServer4(t, &wg)
+
+	// Init plugin
+	g := Graphite{
+		Prefix:        "my.prefix",
+		Template:      "measurement.field",
+		SkipUnmatched: true,
+		TemplateMap: map[string]string{
+			"my_measurement": "measurement.type.name.field",
+		},
+	}
+
+	// Init metrics
+	m1, _ := metric.New(
+		"my_measurement",
+		map[string]string{"host": "192.168.0.1", "type": "my", "name": "a"},
+		map[string]interface{}{"myfield": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	m2, _ := metric.New(
+		"my_measurement",
+		map[string]string{"host": "192.168.0.1", "type": "my", "name": "b"},
+		map[string]interface{}{"myfield": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	m3, _ := metric.New(
+		"other_measurement",
+		map[string]string{"host": "192.168.0.1", "type": "other", "name": "c"},
+		map[string]interface{}{"other_field": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+	m4, _ := metric.New(
+		"my_measurement",
+		map[string]string{"host": "192.168.0.1", "type": "my", "name": "d"},
+		map[string]interface{}{"myfield": float64(3.14)},
+		time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC),
+	)
+
+	// Prepare point list
+	metrics := []telegraf.Metric{m1, m2, m3, m4}
+	err1 := g.Connect()
+	require.NoError(t, err1)
+	// Send Data
+	t.Log("Send first data")
+	err2 := g.Write(metrics)
+	require.NoError(t, err2)
+
+	// Waiting TCPserver, should reconnect and resend
+	wg.Wait()
+	t.Log("Finished Waiting for data")
+	g.Close()
+}
+
 func TCPServer1(t *testing.T, wg *sync.WaitGroup) {
 	tcpServer, _ := net.Listen("tcp", "127.0.0.1:2003")
 	go func() {
@@ -183,6 +346,42 @@ func TCPServer2(t *testing.T, wg *sync.WaitGroup) {
 		assert.Equal(t, "my.prefix.192_168_0_1.mymeasurement 3.14 1289430000", data2)
 		data3, _ := tp.ReadLine()
 		assert.Equal(t, "my.prefix.192_168_0_1.my_measurement 3.14 1289430000", data3)
+		conn2.Close()
+		tcpServer.Close()
+	}()
+}
+
+func TCPServer3(t *testing.T, wg *sync.WaitGroup) {
+	tcpServer, _ := net.Listen("tcp", "127.0.0.1:2003")
+	go func() {
+		defer wg.Done()
+		conn2, _ := (tcpServer).Accept()
+		reader := bufio.NewReader(conn2)
+		tp := textproto.NewReader(reader)
+		data1, _ := tp.ReadLine()
+		assert.Equal(t, "my.prefix.my_measurement.my.a.myfield 3.14 1289430000", data1)
+		data2, _ := tp.ReadLine()
+		assert.Equal(t, "my.prefix.my_measurement.my.b.myfield 3.14 1289430000", data2)
+		data3, _ := tp.ReadLine()
+		assert.Equal(t, "my.prefix.other_measurement.192_168_0_1.other_field 3.14 1289430000", data3)
+		conn2.Close()
+		tcpServer.Close()
+	}()
+}
+
+func TCPServer4(t *testing.T, wg *sync.WaitGroup) {
+	tcpServer, _ := net.Listen("tcp", "127.0.0.1:2003")
+	go func() {
+		defer wg.Done()
+		conn2, _ := (tcpServer).Accept()
+		reader := bufio.NewReader(conn2)
+		tp := textproto.NewReader(reader)
+		data1, _ := tp.ReadLine()
+		assert.Equal(t, "my.prefix.my_measurement.my.a.myfield 3.14 1289430000", data1)
+		data2, _ := tp.ReadLine()
+		assert.Equal(t, "my.prefix.my_measurement.my.b.myfield 3.14 1289430000", data2)
+		data3, _ := tp.ReadLine()
+		assert.Equal(t, "my.prefix.my_measurement.my.d.myfield 3.14 1289430000", data3)
 		conn2.Close()
 		tcpServer.Close()
 	}()

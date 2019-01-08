@@ -17,25 +17,45 @@ import (
 
 type Graphite struct {
 	GraphiteTagSupport bool
-	// URL is only for backwards compatibility
-	Servers  []string
-	Prefix   string
-	Template string
-	Timeout  int
-	conns    []net.Conn
+	Servers            []string
+	Prefix             string
+	Template           string
+	SelectorTag        string
+	TemplateMap        map[string]string
+	SkipUnmatched      bool
+	Timeout            int
+
+	serializerMap   map[string]serializers.Serializer
+	serializerBasic serializers.Serializer
+	conns           []net.Conn
 	tlsint.ClientConfig
 }
 
 var sampleConfig = `
   ## TCP endpoint for your graphite instance.
-  ## If multiple endpoints are configured, output will be load balanced.
+  ## If multiple endpoints are configured, the output will be load balanced.
   ## Only one of the endpoints will be written to with each iteration.
   servers = ["localhost:2003"]
+  
   ## Prefix metrics name
   prefix = ""
+  
   ## Graphite output template
   ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   template = "host.tags.measurement.field"
+
+  ## Graphite output map
+  ## Use this tag's value as a template selector
+  ## Otherwise use the metric name if this option is not set.
+  # selector_tag = "input_type"
+  
+  ## Select a template variant according to a tag value or the measurement name.
+  ## The matched template will be used instead of the default one.
+  # template_map = { "test" : "input_type.measurement.field" }
+
+  ## Skip a metric if no match was found in the map.
+  ## Otherwise use the base output template for this metric.
+  # skip_unmatched = true
 
   ## Enable Graphite tags support
   # graphite_tag_support = false
@@ -52,12 +72,31 @@ var sampleConfig = `
 `
 
 func (g *Graphite) Connect() error {
+	var err error
+
 	// Set default values
 	if g.Timeout <= 0 {
 		g.Timeout = 2
 	}
 	if len(g.Servers) == 0 {
 		g.Servers = append(g.Servers, "localhost:2003")
+	}
+
+	// Initialize and save the basic graphite serializer
+	g.serializerBasic, err = serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport)
+	if err != nil {
+		return err
+	}
+
+	// Initialize the serializer map if the template map was provided
+	if len(g.TemplateMap) > 0 {
+		g.serializerMap = make(map[string]serializers.Serializer)
+		for selectorValue, template := range g.TemplateMap {
+			g.serializerMap[selectorValue], err = serializers.NewGraphiteSerializer(g.Prefix, template, g.GraphiteTagSupport)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	// Set tls config
@@ -129,25 +168,88 @@ func checkEOF(conn net.Conn) {
 	}
 }
 
+// serializeByBasicTemplate serialize a list o metrics using only
+// the basic template serializer from the "template" option
+func (g *Graphite) serializeByBasicTemplate(metrics []telegraf.Metric) []byte {
+	var batch []byte
+
+	for _, metric := range metrics {
+		buf, err := g.serializerBasic.Serialize(metric)
+		if err != nil {
+			log.Printf("E! Error serializing metric '%s' to graphite: %s",
+				metric.Name(),
+				err.Error(),
+			)
+		}
+		batch = append(batch, buf...)
+	}
+
+	return batch
+}
+
+// getSelectorKey get a serializer selector key from a metric.
+// It can be either a tag value or the metric name
+func (g *Graphite) getSelectorKey(metric telegraf.Metric) string {
+	if g.SelectorTag == "" {
+		return metric.Name()
+	}
+
+	tags := metric.Tags()
+	key, found := tags[g.SelectorTag]
+	if found {
+		return key
+	}
+
+	log.Printf("W! Cound not find selector tag '%s' in metric '%s'",
+		g.SelectorTag,
+		metric.Name(),
+	)
+
+	return ""
+}
+
+// serializeByTemplateMap use the template map to serialize metrics
+// while selecting a right serializer by the selector key
+func (g *Graphite) serializeByTemplateMap(metrics []telegraf.Metric) []byte {
+	var batch []byte
+
+	for _, metric := range metrics {
+		selectorKey := g.getSelectorKey(metric)
+		serializer, found := g.serializerMap[selectorKey]
+		if !found {
+			if g.SkipUnmatched {
+				continue
+			} else {
+				serializer = g.serializerBasic
+			}
+		}
+
+		buf, err := serializer.Serialize(metric)
+		if err != nil {
+			log.Printf("E! Error serializing metric '%s' to graphite: %s",
+				metric.Name(),
+				err.Error(),
+			)
+		}
+		batch = append(batch, buf...)
+	}
+
+	return batch
+}
+
 // Choose a random server in the cluster to write to until a successful write
 // occurs, logging each unsuccessful. If all servers fail, return error.
 func (g *Graphite) Write(metrics []telegraf.Metric) error {
 	// Prepare data
 	var batch []byte
-	s, err := serializers.NewGraphiteSerializer(g.Prefix, g.Template, g.GraphiteTagSupport)
-	if err != nil {
-		return err
+
+	if len(g.TemplateMap) > 0 {
+		batch = g.serializeByTemplateMap(metrics)
+	} else {
+		batch = g.serializeByBasicTemplate(metrics)
 	}
 
-	for _, metric := range metrics {
-		buf, err := s.Serialize(metric)
-		if err != nil {
-			log.Printf("E! Error serializing some metrics to graphite: %s", err.Error())
-		}
-		batch = append(batch, buf...)
-	}
-
-	err = g.send(batch)
+	err := g.send(batch)
 
 	// try to reconnect and retry to send
 	if err != nil {

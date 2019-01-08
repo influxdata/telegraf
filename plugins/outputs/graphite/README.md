@@ -15,11 +15,26 @@ see the [Graphite Data Format](../../../docs/DATA_FORMATS_OUTPUT.md)
   ## If multiple endpoints are configured, the output will be load balanced.
   ## Only one of the endpoints will be written to with each iteration.
   servers = ["localhost:2003"]
+  
   ## Prefix metrics name
   prefix = ""
+  
   ## Graphite output template
   ## see https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
   template = "host.tags.measurement.field"
+
+  ## Graphite output map
+  ## Use this tag's value as a template selector
+  ## Otherwise use the metric name if this option is not set.
+  # selector_tag = "input_type"
+  
+  ## Select a template variant according to a tag value or the measurement name.
+  ## The matched template will be used instead of the default one.
+  # template_map = { "test" : "input_type.measurement.field" }
+
+  ## Skip a metric if no match was found in the map.
+  ## Otherwise use the base output template for this metric.
+  # skip_unmatched = true
 
   ## Enable Graphite tags support
   # graphite_tag_support = false
