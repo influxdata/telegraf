@@ -3,6 +3,7 @@
 #### New Inputs
 
 - [cloud_pubsub](/plugins/inputs/cloud_pubsub/README.md) - Contributed by @emilymye
+- [neptune_apex](/plugins/inputs/neptune_apex/README.md) - Contributed by @MaxRenaud
 
 #### Features
 
