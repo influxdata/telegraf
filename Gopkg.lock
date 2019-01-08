@@ -1588,6 +1588,7 @@
     "golang.org/x/sys/windows/svc",
     "golang.org/x/sys/windows/svc/mgr",
     "google.golang.org/api/option",
+    "google.golang.org/api/support/bundler",
     "google.golang.org/genproto/googleapis/api/metric",
     "google.golang.org/genproto/googleapis/api/monitoredres",
     "google.golang.org/genproto/googleapis/monitoring/v3",
