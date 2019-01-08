@@ -5,6 +5,10 @@
 - [cloud_pubsub](/plugins/inputs/cloud_pubsub/README.md) - Contributed by @emilymye
 - [neptune_apex](/plugins/inputs/neptune_apex/README.md) - Contributed by @MaxRenaud
 
+### New Serializers
+
+- [nowmetric](/plugins/serializers/nowmetric/README.md) - Contributed by @JefMuller
+
 #### Features
 
 - [#4345](https://github.com/influxdata/telegraf/pull/4345): Allow for force gathering ES cluster stats.
