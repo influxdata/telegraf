@@ -1,4 +1,4 @@
-# Kubernete_State Plugin
+# Kube_State Plugin
 [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) is an open source project designed to generate metrics derived from the state of Kubernetes objects – the abstractions Kubernetes uses to represent your cluster. This plugin collects metrics in a similar manner for the following kubernetes resources:
  - configmaps
  - daemonsets
@@ -47,7 +47,7 @@
 
 #### kube_configmap
 ```
-TS: created
+TS: creation time
 
 Fields:
     gauge
@@ -164,7 +164,7 @@ Tags:
 
 #### kube_pod_status
 ```
-TS: now
+TS: creation time
 
 Fields:
     ready
@@ -178,7 +178,7 @@ Tags:
 
 #### kube_statefulset
 ```
-TS: statefulset creation time
+TS: creation time
 
 Fields:
     metadata_generation
