@@ -300,6 +300,7 @@ For documentation on the latest development code see the [documentation index][d
 - [InfluxDB Line Protocol](/plugins/serializers/influx)
 - [JSON](/plugins/serializers/json)
 - [Graphite](/plugins/serializers/graphite)
+- [ServiceNow](/plugins/serializers/nowmetric)
 - [SplunkMetric](/plugins/serializers/splunkmetric)
 
 ## Processor Plugins
