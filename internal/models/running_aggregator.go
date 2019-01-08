@@ -109,10 +109,11 @@ func (r *RunningAggregator) metricDropped(metric telegraf.Metric) {
 // Add a metric to the aggregator and return true if the original metric
 // should be dropped.
 func (r *RunningAggregator) Add(metric telegraf.Metric) bool {
-
 	if ok := r.Config.Filter.Select(metric); !ok {
 		return false
 	}
+
+	metric = metric.Copy()
 
 	r.Config.Filter.Modify(metric)
 	if len(metric.FieldList()) == 0 {
