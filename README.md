@@ -332,6 +332,7 @@ For documentation on the latest development code see the [documentation index][d
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
 * [azure_monitor](./plugins/outputs/azure_monitor)
+* [cloud_pubsub](./plugins/outputs/cloud_pubsub) Google Cloud Pub/Sub
 * [cratedb](./plugins/outputs/cratedb)
 * [datadog](./plugins/outputs/datadog)
 * [discard](./plugins/outputs/discard)

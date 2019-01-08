@@ -5,7 +5,11 @@
 - [cloud_pubsub](/plugins/inputs/cloud_pubsub/README.md) - Contributed by @emilymye
 - [neptune_apex](/plugins/inputs/neptune_apex/README.md) - Contributed by @MaxRenaud
 
-### New Serializers
+#### New Outputs
+
+- [cloud_pubsub](/plugins/outputs/cloud_pubsub/README.md) - Contributed by @emilymye
+
+#### New Serializers
 
 - [nowmetric](/plugins/serializers/nowmetric/README.md) - Contributed by @JefMuller
 
