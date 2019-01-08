@@ -1,5 +1,9 @@
 ## v1.10 [unreleased]
 
+#### New Inputs
+
+- [cloud_pubsub](/plugins/inputs/cloud_pubsub/README.md) - Contributed by @emilymye
+
 #### Features
 
 - [#4345](https://github.com/influxdata/telegraf/pull/4345): Allow for force gathering ES cluster stats.
@@ -38,6 +42,7 @@
 - [#4906](https://github.com/influxdata/telegraf/issues/4906): Fix multiple replace tables not working in strings processor.
 - [#5219](https://github.com/influxdata/telegraf/issues/5219): Allow non local udp connections in net_response.
 - [#5218](https://github.com/influxdata/telegraf/issues/5218): Fix toml option names in parser processor.
+- [#5225](https://github.com/influxdata/telegraf/issues/5225): Fix panic in docker input with bad endpoint.
 
 ## v1.9.1 [2018-12-11]
 
