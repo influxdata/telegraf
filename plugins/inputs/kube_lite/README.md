@@ -1,11 +1,13 @@
 # Kubernete_State Plugin
-[kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) is an open source project designed to generate metrics derived from the state of Kubernetes objects – the abstractions Kubernetes uses to represent your cluster. With this information you can monitor details such as:
-
-State of nodes, pods, and jobs
-Compliance with replicaSets specs
-Resource requests and min/max limits
-
-The Kubernete State Plugin gathers information based on [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics)
+[kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) is an open source project designed to generate metrics derived from the state of Kubernetes objects – the abstractions Kubernetes uses to represent your cluster. This plugin collects metrics in a similar manner for the following kubernetes resources:
+ - configmaps
+ - daemonsets
+ - deployments
+ - nodes
+ - persistentvolumes
+ - persistentvolumeclaims
+ - pods (containers/status)
+ - statefulsets
 
 ### Configuration:
 
@@ -205,4 +207,51 @@ kube_persistentvolumeclaim,name=storage-7,namespace=default,status=Bound,storage
 kube_pod_container,name=telegraf,namespace=default,node=ip-172-17-0-1.internal,pod=devicepathdirtyd-789bc7dbdf-wczng resource_requests_cpu_units="100m",resource_requests_memory_bytes="500Mi",resource_limits_cpu_units="500m",resource_limits_memory_bytes="500Mi",status_restarts_total=1i,status_running=1i,status_terminated=0i,status_terminated_reasom="" 1546912926000000000
 kube_pod_status,name=storage-7,namespace=default,node=ip-172-17-0-2.internal ready="true" 1546910783000000000
 kube_statefulset,name=kafka,namespace=default status_replicas=8i,status_replicas_current=8i,status_replicas_ready=8i,status_replicas_updated=8i,replicas=8i,status_observed_generation=4i,metadata_generation=4i 1544101819000000000
+```
+
+
+### Kubernetes Permissions
+
+If using [RBAC authorization](https://kubernetes.io/docs/reference/access-authn-authz/rbac/), you will need to create a cluster role to list "persistentvolumes" and "nodes". You will then need to make an [aggregated ClusterRole](https://kubernetes.io/docs/reference/access-authn-authz/rbac/#aggregated-clusterroles) that will eventually be bound to a user or group.
+```yaml
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: influx:cluster:viewer
+  labels:
+    rbac.authorization.k8s.io/aggregate-view-telegraf: "true"
+rules:
+- apiGroups: [""]
+  resources: ["persistentvolumes","nodes"]
+  verbs: ["get","list"]
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: influx:telegraf
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      rbac.authorization.k8s.io/aggregate-view-telegraf: "true"
+      rbac.authorization.k8s.io/aggregate-to-view: "true"
+rules: [] # Rules are automatically filled in by the controller manager.
+```
+
+Bind the newly created aggregated ClusterRole with the following config file, updating the subjects as needed.
+```yaml
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: influx:telegraf:viewer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: influx:telegraf
+subjects:
+- kind: ServiceAccount
+  name: telegraf
+  namespace: default
 ```
