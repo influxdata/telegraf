@@ -1,16 +1,17 @@
 package cloud_pubsub
 
 import (
-	"cloud.google.com/go/pubsub"
 	"context"
 	"fmt"
+	"sync"
+
+	"cloud.google.com/go/pubsub"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
-	"sync"
 )
 
 const sampleConfig = `
@@ -28,9 +29,9 @@ const sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 
-  ## Optional. Filepath for GCP credentials JSON file to authorize calls to 
-  ## PubSub APIs. If not set explicitly, Telegraf will attempt to use 
-  ## Application Default Credentials, which is preferred. 
+  ## Optional. Filepath for GCP credentials JSON file to authorize calls to
+  ## PubSub APIs. If not set explicitly, Telegraf will attempt to use
+  ## Application Default Credentials, which is preferred.
   # credentials_file = "path/to/my/creds.json"
 
   ## Optional. If true, will send all metrics per write in one PubSub message.
@@ -55,7 +56,7 @@ const sampleConfig = `
 
   ## Optional. Specifies a timeout for requests to the PubSub API.
   # publish_timeout = "30s"
-  
+
   ## Optional. PubSub attributes to add to metrics.
   # [[inputs.pubsub.attributes]]
   #   my_attr = "tag_value"

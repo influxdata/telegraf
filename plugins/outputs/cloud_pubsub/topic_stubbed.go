@@ -1,18 +1,20 @@
 package cloud_pubsub
 
 import (
-	"cloud.google.com/go/pubsub"
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
+	"sync"
+	"testing"
+	"time"
+
+	"cloud.google.com/go/pubsub"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"google.golang.org/api/support/bundler"
-	"runtime"
-	"sync"
-	"testing"
 )
 
 const (
@@ -138,7 +140,7 @@ func (t *stubTopic) SetPublishSettings(settings pubsub.PublishSettings) {
 
 func (t *stubTopic) initBundler() *stubTopic {
 	t.bundler = bundler.NewBundler(&bundledMsg{}, t.sendBundle())
-	t.bundler.DelayThreshold = t.Settings.DelayThreshold
+	t.bundler.DelayThreshold = 10 * time.Second
 	t.bundler.BundleCountThreshold = t.Settings.CountThreshold
 	if t.bundler.BundleCountThreshold > pubsub.MaxPublishRequestCount {
 		t.bundler.BundleCountThreshold = pubsub.MaxPublishRequestCount
@@ -159,13 +161,14 @@ func (t *stubTopic) sendBundle() func(items interface{}) {
 
 		for _, msg := range bundled {
 			r := msg.stubResult
+			for _, id := range r.metricIds {
+				t.published[id] = msg.Message
+			}
+
 			if r.sendError {
 				r.err <- errors.New(errMockFail)
 			} else {
 				r.done <- struct{}{}
-			}
-			for _, id := range r.metricIds {
-				t.published[id] = msg.Message
 			}
 		}
 
