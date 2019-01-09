@@ -2,14 +2,14 @@ package nowmetric
 
 import (
 	"fmt"
+	"sort"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func MustMetric(v telegraf.Metric, err error) telegraf.Metric {
@@ -135,6 +135,11 @@ func TestSerializeMultiFields(t *testing.T) {
 	}
 	m, err := metric.New("cpu", tags, fields, now)
 	assert.NoError(t, err)
+
+	// Sort for predictable field order
+	sort.Slice(m.FieldList(), func(i, j int) bool {
+		return m.FieldList()[i].Key < m.FieldList()[j].Key
+	})
 
 	s, _ := NewSerializer()
 	var buf []byte
