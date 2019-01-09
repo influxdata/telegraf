@@ -9,8 +9,6 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-var persistentVolumeClaimMeasurement = "kube_persistentvolumeclaim"
-
 func collectPersistentVolumeClaims(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
 	list, err := ks.client.getPersistentVolumeClaims(ctx)
 	if err != nil {
@@ -28,7 +26,7 @@ func collectPersistentVolumeClaims(ctx context.Context, acc telegraf.Accumulator
 func (ks *KubernetesState) gatherPersistentVolumeClaim(pvc v1.PersistentVolumeClaim, acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{}
 	tags := map[string]string{
-		"name":         pvc.Metadata.GetName(),
+		"pvc_name":     pvc.Metadata.GetName(),
 		"namespace":    pvc.Metadata.GetNamespace(),
 		"status":       pvc.Status.GetPhase(),
 		"storageclass": pvc.Spec.GetStorageClassName(),

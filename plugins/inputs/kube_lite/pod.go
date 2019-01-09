@@ -16,11 +16,6 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-var (
-	podStatusMeasurement    = "kube_pod_status"
-	podContainerMeasurement = "kube_pod_container"
-)
-
 func collectPods(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
 	list, err := ks.client.getPods(ctx)
 	if err != nil {
@@ -64,10 +59,10 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 		"status_terminated_reason": cs.State.Terminated.GetReason(),
 	}
 	tags := map[string]string{
-		"namespace": *p.Metadata.Namespace,
-		"name":      *c.Name,
-		"node":      *p.Spec.NodeName,
-		"pod":       *p.Metadata.Name,
+		"container_name": *c.Name,
+		"namespace":      *p.Metadata.Namespace,
+		"node_name":      *p.Spec.NodeName,
+		"pod_name":       *p.Metadata.Name,
 		// "reason":      ,
 	}
 
@@ -97,8 +92,8 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 func gatherPodStatus(p v1.Pod, c v1.PodCondition, acc telegraf.Accumulator) {
 	tags := map[string]string{
 		"namespace": p.Metadata.GetNamespace(),
-		"name":      p.Metadata.GetName(),
-		"node":      p.Spec.GetNodeName(),
+		"pod_name":  p.Metadata.GetName(),
+		"node_name": p.Spec.GetNodeName(),
 		"reason":    p.Status.GetReason(),
 	}
 

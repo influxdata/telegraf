@@ -9,10 +9,6 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-var (
-	deploymentMeasurement = "kube_deployment"
-)
-
 func collectDeployments(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
 	list, err := ks.client.getDeployments(ctx)
 	if err != nil {
@@ -34,8 +30,8 @@ func (ks *KubernetesState) gatherDeployment(d v1beta1.Deployment, acc telegraf.A
 		"created":                     time.Unix(d.Metadata.CreationTimestamp.GetSeconds(), int64(d.Metadata.CreationTimestamp.GetNanos())).UnixNano(),
 	}
 	tags := map[string]string{
-		"name":      d.Metadata.GetName(),
-		"namespace": d.Metadata.GetNamespace(),
+		"deployment_name": d.Metadata.GetName(),
+		"namespace":       d.Metadata.GetNamespace(),
 	}
 
 	acc.AddFields(deploymentMeasurement, fields, tags)

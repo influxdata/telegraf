@@ -9,8 +9,6 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-var configMapMeasurement = "kube_configmap"
-
 func collectConfigMaps(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
 	list, err := ks.client.getConfigMaps(ctx)
 	if err != nil {
@@ -39,7 +37,7 @@ func (ks *KubernetesState) gatherConfigMap(s v1.ConfigMap, acc telegraf.Accumula
 		"gauge": 1,
 	}
 	tags := map[string]string{
-		"name":             s.Metadata.GetName(),
+		"configmap_name":   s.Metadata.GetName(),
 		"namespace":        s.Metadata.GetNamespace(),
 		"resource_version": s.Metadata.GetResourceVersion(),
 	}

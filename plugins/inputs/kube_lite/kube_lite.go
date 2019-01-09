@@ -117,8 +117,8 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 	"nodes":                  collectNodes,
 	"persistentvolumes":      collectPersistentVolumes,
 	"persistentvolumeclaims": collectPersistentVolumeClaims,
-	"pods":                   collectPods,
-	"statefulsets":           collectStatefulSets,
+	"pods":         collectPods,
+	"statefulsets": collectStatefulSets,
 }
 
 func (ks *KubernetesState) initClient() (*client, error) {
@@ -167,3 +167,15 @@ func atoi(s string) int64 {
 	}
 	return int64(i)
 }
+
+var (
+	configMapMeasurement             = "kubernetes_configmap"
+	daemonSetMeasurement             = "kubernetes_daemonset"
+	deploymentMeasurement            = "kubernetes_deployment"
+	nodeMeasurement                  = "kubernetes_node"
+	persistentVolumeMeasurement      = "kubernetes_persistentvolume"
+	persistentVolumeClaimMeasurement = "kubernetes_persistentvolumeclaim"
+	podStatusMeasurement             = "kubernetes_pod_status"
+	podContainerMeasurement          = "kubernetes_pod_container"
+	statefulSetMeasurement           = "kubernetes_statefulset"
+)

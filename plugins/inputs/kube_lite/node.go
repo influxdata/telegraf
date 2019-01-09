@@ -8,10 +8,6 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-var (
-	nodeMeasurement = "kube_node"
-)
-
 func collectNodes(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
 	list, err := ks.client.getNodes(ctx)
 	if err != nil {
@@ -29,7 +25,7 @@ func collectNodes(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesS
 func (ks *KubernetesState) gatherNode(n v1.Node, acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{}
 	tags := map[string]string{
-		"name": *n.Metadata.Name,
+		"node_name": *n.Metadata.Name,
 	}
 
 	for resourceName, val := range n.Status.Capacity {

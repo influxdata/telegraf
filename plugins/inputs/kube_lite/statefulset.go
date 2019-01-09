@@ -9,10 +9,6 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-var (
-	statefulSetMeasurement = "kube_statefulset"
-)
-
 func collectStatefulSets(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
 	list, err := ks.client.getStatefulSets(ctx)
 	if err != nil {
@@ -37,7 +33,7 @@ func (ks *KubernetesState) gatherStatefulSet(s v1beta1.StatefulSet, acc telegraf
 		"status_replicas_updated": *status.UpdatedReplicas,
 	}
 	tags := map[string]string{
-		"name":      *s.Metadata.Name,
+		"ss_name":   *s.Metadata.Name,
 		"namespace": *s.Metadata.Namespace,
 	}
 

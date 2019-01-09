@@ -9,10 +9,6 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-var (
-	daemonSetMeasurement = "kube_daemonset"
-)
-
 func collectDaemonSets(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
 	list, err := ks.client.getDaemonSets(ctx)
 	if err != nil {
@@ -39,8 +35,8 @@ func (ks *KubernetesState) gatherDaemonSet(d v1beta2.DaemonSet, acc telegraf.Acc
 		"status_updated_number_scheduled": d.Status.GetUpdatedNumberScheduled(),
 	}
 	tags := map[string]string{
-		"namespace": d.Metadata.GetNamespace(),
-		"name":      d.Metadata.GetName(),
+		"daemonset_name": d.Metadata.GetName(),
+		"namespace":      d.Metadata.GetNamespace(),
 	}
 
 	if d.Metadata.CreationTimestamp.GetSeconds() != 0 {
