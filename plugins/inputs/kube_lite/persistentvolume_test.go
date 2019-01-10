@@ -67,7 +67,7 @@ func TestPersistentVolume(t *testing.T) {
 							"status_failed":    0,
 						},
 						Tags: map[string]string{
-							"name":         "pv1",
+							"pv_name":      "pv1",
 							"storageclass": "ebs-1",
 							"status":       "pending",
 						},

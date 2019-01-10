@@ -79,7 +79,7 @@ func TestStatefulSet(t *testing.T) {
 							// "label_lab1":  "v1",
 							// "label_lab2":  "v2",
 							"namespace": "ns1",
-							"name":      "sts1",
+							"ss_name":   "sts1",
 						},
 					},
 				},

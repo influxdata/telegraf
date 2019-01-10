@@ -86,7 +86,7 @@ func TestConfigMap(t *testing.T) {
 							"gauge": 1,
 						},
 						Tags: map[string]string{
-							"name":             "name1",
+							"configmap_name":   "name1",
 							"namespace":        "ns1",
 							"resource_version": "rv1",
 						},
@@ -131,7 +131,7 @@ func TestConfigMap(t *testing.T) {
 							"gauge": 1,
 						},
 						Tags: map[string]string{
-							"name":             "name1",
+							"configmap_name":   "name1",
 							"namespace":        "ns1",
 							"resource_version": "rv1",
 						},
@@ -143,7 +143,7 @@ func TestConfigMap(t *testing.T) {
 							"gauge": 1,
 						},
 						Tags: map[string]string{
-							"name":             "name2",
+							"configmap_name":   "name2",
 							"namespace":        "ns2",
 							"resource_version": "rv2",
 						},

@@ -67,7 +67,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 							"status_bound":   1,
 						},
 						Tags: map[string]string{
-							"name":         "pc1",
+							"pvc_name":     "pc1",
 							"namespace":    "ns1",
 							"storageclass": "ebs-1",
 							"status":       "bound",

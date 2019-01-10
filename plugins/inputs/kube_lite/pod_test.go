@@ -186,10 +186,10 @@ func TestPod(t *testing.T) {
 							// "status_ready":          1,
 						},
 						Tags: map[string]string{
-							"namespace": "ns1",
-							"name":      "forwarder",
-							"node":      "node1",
-							"pod":       "pod1",
+							"namespace":      "ns1",
+							"container_name": "forwarder",
+							"node_name":      "node1",
+							"pod_name":       "pod1",
 							// "image":                    "image1",
 							// "image_id":                 "image_id1",
 							// "container_id":             "docker://54abe32d0094479d3d",
@@ -204,8 +204,8 @@ func TestPod(t *testing.T) {
 						},
 						Tags: map[string]string{
 							"namespace": "ns1",
-							"name":      "pod1",
-							"node":      "node1",
+							"pod_name":  "pod1",
+							"node_name": "node1",
 						},
 					},
 					// {

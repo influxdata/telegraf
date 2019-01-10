@@ -31,8 +31,8 @@ func TestDeployment(t *testing.T) {
 		Tags: map[string]string{
 			// "label_lab1":  "v1",
 			// "label_lab2":  "v2",
-			"namespace": "ns1",
-			"name":      "deploy1",
+			"namespace":       "ns1",
+			"deployment_name": "deploy1",
 			// "spec_paused": "false",
 		},
 	}

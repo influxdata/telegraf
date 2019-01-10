@@ -49,7 +49,7 @@ func TestNode(t *testing.T) {
 									},
 									Phase: toStrPtr("Running"),
 									Capacity: map[string]*resource.Quantity{
-										"cpu":                     {String_: toStrPtr("16")},
+										"cpu": {String_: toStrPtr("16")},
 										"ephemeral_storage_bytes": {String_: toStrPtr("49536401408")},
 										"hugepages_1Gi_bytes":     {String_: toStrPtr("0")},
 										"hugepages_2Mi_bytes":     {String_: toStrPtr("0")},
@@ -57,7 +57,7 @@ func TestNode(t *testing.T) {
 										"pods":                    {String_: toStrPtr("110")},
 									},
 									Allocatable: map[string]*resource.Quantity{
-										"cpu":                     {String_: toStrPtr("16")},
+										"cpu": {String_: toStrPtr("16")},
 										"ephemeral_storage_bytes": {String_: toStrPtr("44582761194")},
 										"hugepages_1Gi_bytes":     {String_: toStrPtr("0")},
 										"hugepages_2Mi_bytes":     {String_: toStrPtr("0")},
@@ -119,7 +119,7 @@ func TestNode(t *testing.T) {
 							// "status_allocatable_hugepages_2Mi_bytes":     int64(0),
 						},
 						Tags: map[string]string{
-							"name": "node1",
+							"node_name": "node1",
 							// "label_lab1":                "v1",
 							// "label_lab2":                "v2",
 							// "kernel_version":            "4.14.48-coreos-r2",
