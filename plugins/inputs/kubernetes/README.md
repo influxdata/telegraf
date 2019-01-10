@@ -119,9 +119,9 @@ Architecture][k8s-telegraf] or view the [Helm charts][tick-charts].
 ### Example Output
 
 ```
-kubernetes_pod_container,host=ip-10-0-0-0.ec2.internal,container_name=deis-controller,namespace=deis,node_name=ip-10-0-0-0.ec2.internal,pod_name=deis-controller-3058870187-xazsr cpu_usage_core_nanoseconds=2432835i,cpu_usage_nanocores=0i,logsfs_avaialble_bytes=121128271872i,logsfs_capacity_bytes=153567944704i,logsfs_used_bytes=20787200i,memory_major_page_faults=0i,memory_page_faults=175i,memory_rss_bytes=0i,memory_usage_bytes=0i,memory_working_set_bytes=0i,rootfs_available_bytes=121128271872i,rootfs_capacity_bytes=153567944704i,rootfs_used_bytes=1110016i 1476477530000000000
-kubernetes_pod_volume,host=ip-10-0-0-0.ec2.internal,name=default-token-f7wts,namespace=kube-system,node_name=ip-10-0-0-0.ec2.internal,pod_name=kubernetes-dashboard-v1.1.1-t4x4t available_bytes=8415240192i,capacity_bytes=8415252480i,used_bytes=12288i 1476477530000000000
-kubernetes_pod_network,host=ip-10-0-0-0.ec2.internal,namespace=deis,node_name=ip-10-0-0-0.ec2.internal,pod_name=deis-controller-3058870187-xazsr rx_bytes=120671099i,rx_errors=0i,tx_bytes=102451983i,tx_errors=0i 1476477530000000000
+kubernetes_pod_container,container_name=deis-controller,namespace=deis,node_name=ip-10-0-0-0.ec2.internal,pod_name=deis-controller-3058870187-xazsr cpu_usage_core_nanoseconds=2432835i,cpu_usage_nanocores=0i,logsfs_avaialble_bytes=121128271872i,logsfs_capacity_bytes=153567944704i,logsfs_used_bytes=20787200i,memory_major_page_faults=0i,memory_page_faults=175i,memory_rss_bytes=0i,memory_usage_bytes=0i,memory_working_set_bytes=0i,rootfs_available_bytes=121128271872i,rootfs_capacity_bytes=153567944704i,rootfs_used_bytes=1110016i 1476477530000000000
+kubernetes_pod_volume,name=default-token-f7wts,namespace=kube-system,node_name=ip-10-0-0-0.ec2.internal,pod_name=kubernetes-dashboard-v1.1.1-t4x4t available_bytes=8415240192i,capacity_bytes=8415252480i,used_bytes=12288i 1476477530000000000
+kubernetes_pod_network,namespace=deis,node_name=ip-10-0-0-0.ec2.internal,pod_name=deis-controller-3058870187-xazsr rx_bytes=120671099i,rx_errors=0i,tx_bytes=102451983i,tx_errors=0i 1476477530000000000
 ```
 
 [metric filtering]: https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md#metric-filtering

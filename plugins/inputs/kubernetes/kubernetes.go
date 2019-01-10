@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -70,13 +70,7 @@ func (k *Kubernetes) Description() string {
 
 //Gather collects kubernetes metrics from a given URL
 func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func(k *Kubernetes) {
-		defer wg.Done()
-		acc.AddError(k.gatherSummary(k.URL, acc))
-	}(k)
-	wg.Wait()
+	acc.AddError(k.gatherSummary(k.URL, acc))
 	return nil
 }
 
@@ -117,8 +111,9 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 		if err != nil {
 			return err
 		}
-		req.Header.Set("Authorization", "Bearer "+string(token))
+		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(string(token)))
 	}
+	req.Header.Add("Accept", "application/json")
 
 	resp, err = k.RoundTripper.RoundTrip(req)
 	if err != nil {
