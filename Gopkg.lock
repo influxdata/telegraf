@@ -147,6 +147,14 @@
   revision = "1ccc43bfb9c93cb401a4025e49c64ba71e5e668b"
 
 [[projects]]
+  digest = "1:25625f96d4c28aefd3c7a85608519b3b33ce4be39d1a87d064f148d245ccbcc1"
+  name = "github.com/apache/incubator-pulsar"
+  packages = ["pulsar-client-go/pulsar"]
+  pruneopts = ""
+  revision = "3cfa81250e49b24b4b195f8e2d510fcd24b93745"
+  version = "v2.2.1"
+
+[[projects]]
   branch = "master"
   digest = "1:0828d8c0f95689f832cf348fe23827feb7640cd698d612ef59e2f9d041f54c68"
   name = "github.com/apache/thrift"
