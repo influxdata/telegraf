@@ -148,7 +148,8 @@ func (p *Pulsar) Write(metrics []telegraf.Metric) error {
 			return err
 		}
 
-		ctx, _ := context.WithTimeout(context.Background(), p.sendTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), p.sendTimeout)
+		defer cancel()
 		_, err = p.producer.Send(ctx, buf)
 		if err != nil {
 			return fmt.Errorf("FAILED to send Pulsar message: %s", err)
