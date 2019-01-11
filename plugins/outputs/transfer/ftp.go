@@ -45,7 +45,12 @@ func (f *FtpTransferer) getConnection(host string, user string, pass string) (*f
 		return nil, err
 	}
 
+	f.connections[host] = conn
 	return conn, nil
+}
+
+func (f *FtpTransferer) Rename(from *url.URL, to string) error {
+	return nil
 }
 
 func (f *FtpTransferer) Send(source string, dest *url.URL) error {

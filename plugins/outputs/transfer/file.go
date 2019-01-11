@@ -17,6 +17,10 @@ func NewFileTransferer() *FileTransferer {
 	return &FileTransferer{}
 }
 
+func (f *FileTransferer) Rename(from *url.URL, to string) error {
+	return nil
+}
+
 func (f *FileTransferer) Send(source string, dest *url.URL) error {
 	// open files r and w
 	var r *os.File

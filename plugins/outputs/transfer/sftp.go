@@ -21,7 +21,15 @@ func NewSftpTransferer() *SftpTransferer {
 	}
 }
 
-func (s *SftpTransferer) createConnection(host string, user string, pass string) (*sftp.Client, error) {
+func (s *SftpTransferer) createConnection(url *url.URL) (*sftp.Client, error) {
+	port := "22"
+	if url.Port() != "" {
+		port = url.Port()
+	}
+	host := url.Hostname() + ":" + port
+	user := url.User.Username()
+	pass, _ := url.User.Password()
+
 	sshCommonConfig := ssh.Config{
 		Ciphers: []string{
 			"3des-cbc",
@@ -59,19 +67,20 @@ func (s *SftpTransferer) createConnection(host string, user string, pass string)
 			continue
 		}
 
+		s.connections[url.Hostname()] = sftpConn
 		return sftpConn, nil
 	}
 
 	return nil, err
 }
 
-func (s *SftpTransferer) getConnection(host string, user string, pass string) (*sftp.Client, error) {
-	if conn, found := s.connections[host]; found {
+func (s *SftpTransferer) getConnection(url *url.URL) (*sftp.Client, error) {
+	if conn, found := s.connections[url.Hostname()]; found {
 		return conn, nil
 	}
 
 	// New connection
-	conn, err := s.createConnection(host, user, pass)
+	conn, err := s.createConnection(url)
 	if err != nil {
 		return nil, err
 	}
@@ -79,27 +88,37 @@ func (s *SftpTransferer) getConnection(host string, user string, pass string) (*
 	return conn, nil
 }
 
-func (s *SftpTransferer) Send(source string, dest *url.URL) error {
-	pass, _ := dest.User.Password()
-	user := dest.User.Username()
-	host := dest.Hostname()
-
-	conn, err := s.getConnection(host, user, pass)
+func (s *SftpTransferer) Rename(from *url.URL, to string) error {
+	conn, err := s.getConnection(from)
 	if err != nil {
 		return err
 	}
 
-	tmpFile := dest.Path + ".xtp"
+	err = conn.Rename(from.Path, to)
+	if err != nil {
+		log.Println("ERROR [sftp.rename]: ", err)
+		return err
+	}
+
+	return nil
+}
+
+func (s *SftpTransferer) Send(source string, dest *url.URL) error {
+	conn, err := s.getConnection(dest)
+	if err != nil {
+		return err
+	}
+
 	_, data, err := s.ReadFile(source)
 	if err != nil {
 		return err
 	}
 
 	// Create the destination file
-	dstFile, err := conn.Create(tmpFile)
+	dstFile, err := conn.Create(dest.Path)
 	if err != nil {
 		// We could try to create the dest dir, but for now... just throw the file away
-		log.Printf("ERROR [sftp.create] [%s]: %s", tmpFile, err)
+		log.Printf("ERROR [sftp.create] [%s]: %s", dest.Path, err)
 		return err
 	}
 
@@ -110,13 +129,6 @@ func (s *SftpTransferer) Send(source string, dest *url.URL) error {
 		return err
 	}
 	dstFile.Close()
-
-	// Rename the file if we are using a temporary extension
-	err = conn.Rename(tmpFile, dest.Path)
-	if err != nil {
-		log.Println("ERROR [sftp.rename]: ", err)
-		return err
-	}
 
 	return nil
 }

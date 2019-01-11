@@ -44,6 +44,10 @@ func (this *AnkoScript) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	return in
 }
 
+func String(i interface{}) string {
+	return i.(string)
+}
+
 func init() {
 	processors.Add("ankoscript", func() telegraf.Processor {
 		anko := &AnkoScript{
@@ -56,6 +60,11 @@ func init() {
 		}
 
 		err = anko.env.Define("sprintf", fmt.Sprintf)
+		if err != nil {
+			log.Printf("E! [Define]: %s", err)
+		}
+
+		err = anko.env.Define("String", String)
 		if err != nil {
 			log.Printf("E! [Define]: %s", err)
 		}
