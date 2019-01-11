@@ -3,8 +3,6 @@
 The statsd data format tranlsates statsd *dot* buckets directly into telegraf measurement names, with a single value field, more than one tags.
 This parser default use [Template Patterns](/docs/TEMPLATE_PATTERN) with separator `_`.
 
-**Note**: Most of the time, please use this parser with [statsd aggregator](/plugins/aggregators/statsd).
-
 ### Configuration
 ```toml
 [[inputs.socket_listener]]
