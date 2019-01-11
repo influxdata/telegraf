@@ -16,10 +16,11 @@ func TestConnectAndWrite(t *testing.T) {
 	server := "pulsar://" + testutil.GetLocalHost() + ":6650"
 	s, _ := serializers.NewInfluxSerializer()
 	p := &Pulsar{
-		URL: server,
-		Producer: &ProducerOpts{
-			Topic: "telegraf",
-		},
+		URL:         server,
+		Topic:       "telegraf",
+		Name:        "telegraf",
+		DialTimeout: "5s",
+		SendTimeout: "5s",
 
 		serializer: s,
 	}

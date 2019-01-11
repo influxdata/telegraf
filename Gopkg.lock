@@ -62,6 +62,18 @@
   version = "v10.12.0"
 
 [[projects]]
+  digest = "1:b9576ba27c52743508719376f55ddd3190f4822fae560537324ddab10045b166"
+  name = "github.com/Comcast/pulsar-client-go"
+  packages = [
+    ".",
+    "api",
+    "frame",
+  ]
+  pruneopts = ""
+  revision = "8be7e2508cd67e25b077fffe0191a36a5f9d1805"
+  version = "v0.1.0"
+
+[[projects]]
   branch = "master"
   digest = "1:298712a3ee36b59c3ca91f4183bd75d174d5eaa8b4aed5072831f126e2e752f6"
   name = "github.com/Microsoft/ApplicationInsights-Go"
@@ -145,14 +157,6 @@
   ]
   pruneopts = ""
   revision = "1ccc43bfb9c93cb401a4025e49c64ba71e5e668b"
-
-[[projects]]
-  digest = "1:25625f96d4c28aefd3c7a85608519b3b33ce4be39d1a87d064f148d245ccbcc1"
-  name = "github.com/apache/incubator-pulsar"
-  packages = ["pulsar-client-go/pulsar"]
-  pruneopts = ""
-  revision = "3cfa81250e49b24b4b195f8e2d510fcd24b93745"
-  version = "v2.2.1"
 
 [[projects]]
   branch = "master"
@@ -1491,6 +1495,7 @@
     "collectd.org/network",
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/azure/auth",
+    "github.com/Comcast/pulsar-client-go",
     "github.com/Microsoft/ApplicationInsights-Go/appinsights",
     "github.com/Shopify/sarama",
     "github.com/StackExchange/wmi",

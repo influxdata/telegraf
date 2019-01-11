@@ -255,5 +255,5 @@
   version = "1.7.5"
 
 [[constraint]]
-  name = "github.com/apache/incubator-pulsar"
-  version = "2.2.1"
+  name = "github.com/Comcast/pulsar-client-go"
+  version = "0.1.0"
