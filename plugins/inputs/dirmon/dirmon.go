@@ -37,13 +37,12 @@ type DirDefObject struct {
 	FileTagRegex    map[string]string
 	TempExtension   string
 
-	histQueue    chan string
-	rtQueue      chan string
-	location     *time.Location
-	fileTagMatch map[string]*regexp.Regexp
-	fiParser     *fileinfo.FileInfoParser
-	parser       parsers.Parser
-	acc          telegraf.Accumulator
+	histQueue chan string
+	rtQueue   chan string
+	location  *time.Location
+	fiParser  *fileinfo.FileInfoParser
+	parser    parsers.Parser
+	acc       telegraf.Accumulator
 }
 
 type DirMon struct {
@@ -306,13 +305,6 @@ func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accum
 				}
 			}
 
-			for key, regex := range ddo.fileTagMatch {
-				match := regex.FindStringSubmatch(fileName)
-				if len(match) > 1 {
-					metric.AddTag(key, match[1])
-				}
-			}
-
 			if len(metric.Name()) == 0 {
 				metric.SetName("dirmon")
 			}
@@ -486,18 +478,9 @@ func (ddo DirDefObject) Start(acc telegraf.Accumulator, parser parsers.Parser, g
 	ddo.FieldReplace = gFieldReplace
 
 	ddo.parser = parser
-	ddo.fiParser, err = fileinfo.NewFileInfoParser()
+	ddo.fiParser, err = fileinfo.NewFileInfoParser(ddo.FileTagRegex)
 	if err != nil {
 		return err
-	}
-
-	ddo.fileTagMatch = make(map[string]*regexp.Regexp)
-	for key, sRegex := range ddo.FileTagRegex {
-		if strings.HasPrefix(sRegex, "/") && strings.HasSuffix(sRegex, "/") {
-			// This is a regular expression. Parse it and use it as the name.
-			name := strings.Trim(sRegex, "/")
-			ddo.fileTagMatch[key] = regexp.MustCompile(name)
-		}
 	}
 
 	results, err := ddo.OSReadDir(ddo.Directory)

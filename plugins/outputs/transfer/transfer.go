@@ -42,6 +42,7 @@ type TransferEntry struct {
 }
 
 type Transfer struct {
+	Source       string
 	Entry        []*TransferEntry
 	RemoveSource int
 }
@@ -249,18 +250,9 @@ func (t *Transfer) Write(metrics []telegraf.Metric) error {
 			log.Printf("E!: Only fileinfo format accepted by transfer output")
 			continue
 		}
-		if !metric.HasField("dir") {
-			log.Println("E!: Fileinfo needs 'dir' field", metric)
-			continue
-		}
-		if !metric.HasField("base") {
-			log.Println("E! Fileinfo needs 'base' field", metric)
-			continue
-		}
 
 		fields := metric.Fields()
 		tags := metric.Tags()
-		source := fmt.Sprintf("%s/%s", fields["dir"].(string), fields["base"].(string))
 		attributes := make(map[string]interface{})
 		for key, val := range fields {
 			attributes[key] = val
@@ -270,6 +262,7 @@ func (t *Transfer) Write(metrics []telegraf.Metric) error {
 			attributes[key] = val
 		}
 
+		var source string
 		for _, entry := range t.Entry {
 			filtered := false
 			for _, filters := range entry.namepass {
@@ -300,12 +293,13 @@ func (t *Transfer) Write(metrics []telegraf.Metric) error {
 
 			if !filtered {
 				wg.Add(1)
+				source = entry.Template(t.Source, attributes)
 				go entry.Write(source, attributes, &wg)
 			}
 		}
 		wg.Wait()
 
-		if t.RemoveSource == 1 {
+		if t.RemoveSource == 1 && len(source) > 0 {
 			err := os.Remove(source)
 			if err != nil {
 				log.Printf("ERROR (Remove): %v", err)
