@@ -8,6 +8,8 @@ The multifile input plugin allows telegraf to gather data from multiple files in
 Base directory for all files. If empty, all file paths are seen as absolute.
 * `tags`:
 Table of additional tags.
+* `fail_early`:
+If true, abort after a single file failed to read or parse. If false, leave out the corresponding field and continue reading other files. Defaults to `true`.
 * `file.file`:
 Filename, relative to `base_dir`
 * `file.dest`:
