@@ -6,9 +6,8 @@
  - nodes
  - persistentvolumes
  - persistentvolumeclaims
- - pods (containers/status, volume/network)
+ - pods (containers/status)
  - statefulsets
- - systemcontainers
 
 #### Series Cardinality Warning
 
@@ -56,18 +55,9 @@ avoid cardinality issues:
   #  max_config_map_age = "1h"
 
   ## Optional TLS Config
-  # tls_ca = /path/to/cafile # for '/stats/summary' only
-  # tls_cert = /path/to/certfile # for '/stats/summary' only
-  # tls_key = /path/to/keyfile # for '/stats/summary' only
   ## Use TLS but skip chain & host verification
   #  insecure_skip_verify = false
 ```
-
-
-### DaemonSet
-
-For recommendations on running Telegraf as a DaemonSet see [Monitoring Kubernetes
-Architecture][k8s-telegraf] or view the [Helm charts][tick-charts].
 
 
 ### Metrics:
@@ -124,24 +114,6 @@ Tags:
 TS: now
 
 Fields:
-    cpu_usage_nanocores
-    cpu_usage_core_nanoseconds
-    fs_available_bytes
-    fs_capacity_bytes
-    fs_used_bytes
-    memory_available_bytes
-    memory_usage_bytes
-    memory_working_set_bytes
-    memory_rss_bytes
-    memory_page_faults
-    memory_major_page_faults
-    network_rx_bytes
-    network_rx_errors
-    network_tx_bytes
-    network_tx_errors
-    runtime_image_fs_available_bytes
-    runtime_image_fs_capacity_bytes
-    runtime_image_fs_used_bytes
     status_allocatable_cpu_cores
     status_allocatable_memory_bytes
     status_allocatable_pods
@@ -191,19 +163,6 @@ Tags:
 TS: now
 
 Fields:
-    cpu_usage_nanocores
-    cpu_usage_core_nanoseconds
-    logsfs_avaialble_bytes
-    logsfs_capacity_bytes
-    logsfs_used_bytes
-    memory_usage_bytes
-    memory_working_set_bytes
-    memory_rss_bytes
-    memory_page_faults
-    memory_major_page_faults
-    rootfs_available_bytes
-    rootfs_capacity_bytes
-    rootfs_used_bytes
     status_restarts_total
     status_running
     status_terminated
@@ -234,38 +193,6 @@ Tags:
     reason  [Completed,ContainerCannotRun,Error,OOMKilled]
 ```
 
-#### kubernetes_pod_volume
-```
-TS: now
-
-Fields:
-    available_bytes
-    capacity_bytes
-    used_bytes
-
-Tags:
-    volume_name
-    namespace
-    node_name
-    pod_name
-```
-
-#### kubernetes_pod_network
-```
-TS: now
-
-Fields:
-    rx_bytes
-    rx_errors
-    tx_bytes
-    tx_errors
-
-Tags:
-    namespace
-    node_name
-    pod_name
-```
-
 #### kubernetes_statefulset
 ```
 TS: creation time
@@ -284,28 +211,6 @@ Tags:
     namespace
 ```
 
-#### kubernetes_system_container
-```
-TS: now
-
-Fields:
-    cpu_usage_nanocores
-    cpu_usage_core_nanoseconds
-    memory_usage_bytes
-    memory_working_set_bytes
-    memory_rss_bytes
-    memory_page_faults
-    memory_major_page_faults
-    rootfs_available_bytes
-    rootfs_capacity_bytes
-    logsfs_avaialble_bytes
-    logsfs_capacity_bytes
-
-Tags:
-    container_name
-    node_name
-```
-
 
 ### Example Output:
 
@@ -316,12 +221,9 @@ kubernetes_deployment,deployment_name=tasks,namespace=default created=1544102512
 kubernetes_node,node_name=ip-172-17-0-1.internal status_capacity_memory_bytes="125817904Ki",status_capacity_pods=110i,status_allocatable_cpu_cores=16i,status_allocatable_memory_bytes="125715504Ki",status_allocatable_pods=110i,status_capacity_cpu_cores=16i 1546978191000000000
 kubernetes_persistentvolume,pv_name=pvc-aaaaaaaa-bbbb-cccc-1111-222222222222,status=Bound,storageclass=ebs-1 status_available=0i,status_bound=1i,status_failed=0i,status_pending=0i,status_released=0i 1546978191000000000
 kubernetes_persistentvolumeclaim,pvc_name=storage-7,namespace=default,status=Bound,storageclass=ebs-1-retain status_lost=0i,status_bound=1i,status_pending=0i 1546912925000000000
-kubernetes_pod_container,container_name=telegraf,namespace=default,node_name=ip-172-17-0-1.internal,pod_name=storage-7 resource_requests_cpu_units="100m",resource_requests_memory_bytes="500Mi",resource_limits_cpu_units="500m",resource_limits_memory_bytes="500Mi",status_restarts_total=1i,status_running=1i,status_terminated=0i,status_terminated_reason="",cpu_usage_core_nanoseconds=2432835i,cpu_usage_nanocores=0i,logsfs_avaialble_bytes=121128271872i,logsfs_capacity_bytes=153567944704i,logsfs_used_bytes=20787200i,memory_major_page_faults=0i,memory_page_faults=175i,memory_rss_bytes=0i,memory_usage_bytes=0i,memory_working_set_bytes=0i,rootfs_available_bytes=121128271872i,rootfs_capacity_bytes=153567944704i,rootfs_used_bytes=1110016i 1546912926000000000
-kubernetes_pod_network,namespace=default,node_name=ip-172-17-0-1.internal,pod_name=storage-7 rx_bytes=120671099i,rx_errors=0i,tx_bytes=102451983i,tx_errors=0i 1546910783000000000
+kubernetes_pod_container,container_name=telegraf,namespace=default,node_name=ip-172-17-0-1.internal,pod_name=storage-7 resource_requests_cpu_units="100m",resource_requests_memory_bytes="500Mi",resource_limits_cpu_units="500m",resource_limits_memory_bytes="500Mi",status_restarts_total=1i,status_running=1i,status_terminated=0i,status_terminated_reason="" 1546912926000000000
 kubernetes_pod_status,pod_name=storage-7,namespace=default,node_name=ip-172-17-0-2.internal ready="true" 1546910783000000000
-kubernetes_pod_volume,volume_name=default-token-f7wts,namespace=default,node_name=ip-172-17-0-1.internal,pod_name=storage-7 available_bytes=8415240192i,capacity_bytes=8415252480i,used_bytes=12288i 1546910783000000000
 kubernetes_statefulset,ss_name=kafka,namespace=default status_replicas=8i,status_replicas_current=8i,status_replicas_ready=8i,status_replicas_updated=8i,replicas=8i,status_observed_generation=4i,metadata_generation=4i 1544101819000000000
-kubernetes_system_container
 ```
 
 
