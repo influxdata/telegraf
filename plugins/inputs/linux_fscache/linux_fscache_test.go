@@ -60,7 +60,7 @@ func TestEmpty(t *testing.T) {
 
 	acc := testutil.Accumulator{}
 	err := f.Gather(&acc)
-	assert.Error(t, err)
+	assert.NoError(t, err)
 }
 
 func TestMissing(t *testing.T) {
