@@ -1,19 +1,20 @@
-package kube_lite
+package kube_state
 
 import (
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/apps/v1beta1"
+	"github.com/ericchiang/k8s/apis/core/v1"
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
 
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestStatefulSet(t *testing.T) {
+func TestPersistentVolumeClaim(t *testing.T) {
 	cli := &client{}
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
+
 	tests := []struct {
 		name     string
 		handler  *mockHandler
@@ -21,41 +22,36 @@ func TestStatefulSet(t *testing.T) {
 		hasError bool
 	}{
 		{
-			name: "no statefulsets",
+			name: "no pv claims",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/statefulsets/": &v1beta1.StatefulSetList{},
+					"/persistentvolumeclaims/": &v1.PersistentVolumeClaimList{},
 				},
 			},
 			hasError: false,
 		},
 		{
-			name: "collect statefulsets",
+			name: "collect pv claims",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/statefulsets/": &v1beta1.StatefulSetList{
-						Items: []*v1beta1.StatefulSet{
+					"/persistentvolumeclaims/": &v1.PersistentVolumeClaimList{
+						Items: []*v1.PersistentVolumeClaim{
 							{
-								Status: &v1beta1.StatefulSetStatus{
-									Replicas:           toInt32Ptr(2),
-									CurrentReplicas:    toInt32Ptr(4),
-									ReadyReplicas:      toInt32Ptr(1),
-									UpdatedReplicas:    toInt32Ptr(3),
-									ObservedGeneration: toInt64Ptr(119),
+								Status: &v1.PersistentVolumeClaimStatus{
+									Phase: toStrPtr("bound"),
 								},
-								Spec: &v1beta1.StatefulSetSpec{
-									Replicas: toInt32Ptr(3),
+								Spec: &v1.PersistentVolumeClaimSpec{
+									VolumeName:       toStrPtr("pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8"),
+									StorageClassName: toStrPtr("ebs-1"),
 								},
 								Metadata: &metav1.ObjectMeta{
-									Generation: toInt64Ptr(332),
-									Namespace:  toStrPtr("ns1"),
-									Name:       toStrPtr("sts1"),
+									Namespace: toStrPtr("ns1"),
+									Name:      toStrPtr("pc1"),
 									Labels: map[string]string{
 										"lab1": "v1",
 										"lab2": "v2",
 									},
 									CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix())},
-									// CreationTimestamp: &metav1.Time{Seconds: toInt64Ptr(now.Unix()), Nanos: toInt32Ptr(0)},
 								},
 							},
 						},
@@ -66,20 +62,18 @@ func TestStatefulSet(t *testing.T) {
 				Metrics: []*testutil.Metric{
 					{
 						Fields: map[string]interface{}{
-							"metadata_generation": int64(332),
-							// "created":                    now.Unix(),
-							// "replicas":                   int32(3),
-							"status_replicas":         int32(2),
-							"status_replicas_current": int32(4),
-							"status_replicas_ready":   int32(1),
-							"status_replicas_updated": int32(3),
-							// "status_observed_generation": int64(119),
+							"status_lost":    0,
+							"status_pending": 0,
+							"status_bound":   1,
 						},
 						Tags: map[string]string{
-							// "label_lab1":  "v1",
-							// "label_lab2":  "v2",
-							"namespace": "ns1",
-							"ss_name":   "sts1",
+							"pvc_name":     "pc1",
+							"namespace":    "ns1",
+							"storageclass": "ebs-1",
+							"status":       "bound",
+							// "label_lab1":            "v1",
+							// "label_lab2":            "v2",
+							// "volumename":            "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
 						},
 					},
 				},
@@ -93,10 +87,10 @@ func TestStatefulSet(t *testing.T) {
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1beta1.StatefulSetList)).Items {
-			err := ks.gatherStatefulSet(*ss, acc)
+		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*v1.PersistentVolumeClaimList)).Items {
+			err := ks.gatherPersistentVolumeClaim(*pvc, acc)
 			if err != nil {
-				t.Errorf("Failed to gather ss - %s", err.Error())
+				t.Errorf("Failed to gather pvc - %s", err.Error())
 			}
 		}
 

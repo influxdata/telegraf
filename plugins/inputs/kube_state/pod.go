@@ -1,4 +1,4 @@
-package kube_lite
+package kube_state
 
 // - resource_requests_cpu_units
 // - resource_limits_cpu_units
