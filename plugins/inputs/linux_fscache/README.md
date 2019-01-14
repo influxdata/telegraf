@@ -133,4 +133,27 @@ None
 ```
 $ telegraf --config ~/ws/telegraf.conf --input-filter linux_fscache --test
 * Plugin: linux_fscache, Collection 1
+> linux_fscache cookies_idx=1i,cookies_dat=0i,cookies_spc=18i,
+objects_alc=0i,objects_nal=0i,objects_avl=0i,objects_ded=0i,
+chk_aux_non=0i,chk_aux_ok=0i,chk_aux_upd=0i,chk_aux_obs=0i,
+pages_mrk=13i,pages_unc=0i,
+acquire_n=0i,acquire_nul=0i,acquire_noc=0i,acquire_ok=0i,acquire_nbf=0i,acquire_oom=0i,
+lookups_n=0i,lookups_neg=0i,lookups_pos=0i,lookups_crt=0i,lookups_tmo=0i,
+invals_n=0i,invals_run=0i,
+updates_n=0i,updates_nul=27i,updates_run=0i,
+relinqs_n=0i,relinqs_nul=0i,relinqs_wcr=0i,relinqs_rtr=0i,
+attr_chg_n=0i,attr_chg_ok=0i,attr_chg_nbf=0i,attr_chg_oom=0i,attr_chg_run=0i,
+allocs_n=0i,allocs_ok=0i,allocs_wt=0i,allocs_nbf=0i,allocs_int=0i,
+allocs_ops=0i,allocs_owt=0i,allocs_abt=0i,
+retrvls_n=0i,retrvls_ok=0i,retrvls_wt=0i,retrvls_nod=0i,retrvls_nbf=0i,retrvls_int=0i,retrvls_oom=0i,
+retrvls_ops=0i,retrvls_owt=0i,retrvls_abt=0i,
+stores_n=45i,stores_ok=0i,stores_agn=0i,stores_nbf=0i,stores_oom=0i,stores_wrxd=0i,stores_sol=0i,
+stores_ops=0i,stores_run=0i,stores_pgs=0i,stores_rxd=0i,stores_irxd=0i,stores_olm=42i,stores_ipp=0i,
+vm_scan_nos=0i,vm_scan_gon=0i,vm_scan_bsy=0i,vm_scan_can=0i,vm_scan_wt=0i,
+ops_pend=0i,ops_run=0i,ops_enq=0i,ops_can=0i,ops_rej=0i,
+ops_ini=0i,ops_dfr=0i,ops_rel=0i,ops_gc=0i,
+cache_op_alo=0i,cache_op_luo=92i,cache_op_luc=0i,cache_op_gro=0i,
+cache_op_inv=12i,cache_op_upo=0i,cache_op_dro=0i,cache_op_pto=0i,cache_op_atc=0i,cache_op_syn=0i,
+cache_op_rap=0i,cache_op_ras=0i,cache_op_alp=0i,cache_op_als=0i,cache_op_wrp=0i,cache_op_ucp=0i,cache_op_dsp=0i,
+cache_ev_nsp=0i,cache_ev_stl=0i,cache_ev_rtr=0i,cache_ev_cul=89765121i,
 ```
