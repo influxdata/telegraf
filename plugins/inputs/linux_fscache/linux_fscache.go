@@ -53,7 +53,7 @@ func (f *FSCache) Gather(acc telegraf.Accumulator) error {
 					if err != nil {
 						return err
 					}
-					sn := internal.SnakeCase(prefix+"_"+values[0])
+					sn := internal.SnakeCase(prefix + "_" + values[0])
 					fields[sn] = int64(v)
 				}
 			}
