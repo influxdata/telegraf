@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -52,7 +53,8 @@ func (f *FSCache) Gather(acc telegraf.Accumulator) error {
 					if err != nil {
 						return err
 					}
-					fields[prefix+"_"+values[0]] = int64(v)
+					sn := internal.SnakeCase(prefix+"_"+values[0])
+					fields[sn] = int64(v)
 				}
 			}
 		}
