@@ -1,7 +1,6 @@
 package linux_fscache
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -27,7 +26,7 @@ func (f *FSCache) Gather(acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	} else if s.Size() == 0 {
-		return fmt.Errorf("fscache: %s zero length!", f.statFile)
+		return nil
 	}
 
 	data, err := ioutil.ReadFile(f.statFile)
@@ -36,19 +35,25 @@ func (f *FSCache) Gather(acc telegraf.Accumulator) error {
 	}
 
 	lines := strings.Split(string(data), "\n")
+	if len(lines) <= 1 {
+		return nil
+	}
+
 	fields := make(map[string]interface{})
-	for i := 1; i < len(lines); i++ {
-		parts := strings.Split(lines[i], ":")
-		prefix := strings.TrimSpace(parts[0])
-		subparts := strings.Split(parts[1], " ")
-		for j := 0; j < len(subparts); j++ {
-			values := strings.Split(strings.TrimSpace(subparts[j]), "=")
-			if len(values) == 2 {
-				v, err := strconv.ParseInt(values[1], 10, 64)
-				if err != nil {
-					return err
+	for _, line := range lines[1:] {
+		parts := strings.Split(line, ":")
+		if len(parts) >= 2 {
+			prefix := strings.TrimSpace(parts[0])
+			subparts := strings.Fields(parts[1])
+			for _, subpart := range subparts {
+				values := strings.Split(strings.TrimSpace(subpart), "=")
+				if len(values) == 2 {
+					v, err := strconv.ParseInt(values[1], 10, 64)
+					if err != nil {
+						return err
+					}
+					fields[prefix+"_"+values[0]] = int64(v)
 				}
-				fields[prefix+"_"+values[0]] = int64(v)
 			}
 		}
 	}
