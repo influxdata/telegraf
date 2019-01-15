@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -20,7 +20,8 @@ type Kubernetes struct {
 	URL string
 
 	// Bearer Token authorization file path
-	BearerToken string `toml:"bearer_token"`
+	BearerToken       string `toml:"bearer_token"`
+	BearerTokenString string `toml:"bearer_token_string"`
 
 	// HTTP Timeout specified as a string - 3s, 1m, 1h
 	ResponseTimeout internal.Duration
@@ -32,10 +33,12 @@ type Kubernetes struct {
 
 var sampleConfig = `
   ## URL for the kubelet
-  url = "http://1.1.1.1:10255"
+  url = "http://127.0.0.1:10255"
 
-  ## Use bearer token for authorization
-  # bearer_token = /path/to/bearer/token
+  ## Use bearer token for authorization. ('bearer_token' takes priority)
+  # bearer_token = "/path/to/bearer/token"
+  ## OR
+  # bearer_token_string = "abc_123"
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
@@ -70,13 +73,7 @@ func (k *Kubernetes) Description() string {
 
 //Gather collects kubernetes metrics from a given URL
 func (k *Kubernetes) Gather(acc telegraf.Accumulator) error {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func(k *Kubernetes) {
-		defer wg.Done()
-		acc.AddError(k.gatherSummary(k.URL, acc))
-	}(k)
-	wg.Wait()
+	acc.AddError(k.gatherSummary(k.URL, acc))
 	return nil
 }
 
@@ -92,7 +89,6 @@ func buildURL(endpoint string, base string) (*url.URL, error) {
 func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) error {
 	url := fmt.Sprintf("%s/stats/summary", baseURL)
 	var req, err = http.NewRequest("GET", url, nil)
-	var token []byte
 	var resp *http.Response
 
 	tlsCfg, err := k.ClientConfig.TLSConfig()
@@ -113,12 +109,15 @@ func (k *Kubernetes) gatherSummary(baseURL string, acc telegraf.Accumulator) err
 	}
 
 	if k.BearerToken != "" {
-		token, err = ioutil.ReadFile(k.BearerToken)
+		token, err := ioutil.ReadFile(k.BearerToken)
 		if err != nil {
 			return err
 		}
-		req.Header.Set("Authorization", "Bearer "+string(token))
+		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(string(token)))
+	} else if k.BearerTokenString != "" {
+		req.Header.Set("Authorization", "Bearer "+k.BearerTokenString)
 	}
+	req.Header.Add("Accept", "application/json")
 
 	resp, err = k.RoundTripper.RoundTrip(req)
 	if err != nil {
