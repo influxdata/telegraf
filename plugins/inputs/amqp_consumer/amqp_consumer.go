@@ -430,6 +430,14 @@ func (a *AMQPConsumer) process(ctx context.Context, msgs <-chan amqp.Delivery, a
 func (a *AMQPConsumer) onMessage(acc telegraf.TrackingAccumulator, d amqp.Delivery) error {
 	metrics, err := a.parser.Parse(d.Body)
 	if err != nil {
+		// Discard the message from the queue; will never be able to process
+		// this message.
+		rejErr := d.Ack(false)
+		if rejErr != nil {
+			log.Printf("E! [inputs.amqp_consumer] Unable to reject message: %d: %v",
+				d.DeliveryTag, rejErr)
+			a.conn.Close()
+		}
 		return err
 	}
 
