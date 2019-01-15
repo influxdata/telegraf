@@ -45,7 +45,7 @@ var DefaultStats = map[string]string{
 	"commands_per_sec":          "Command",
 	"flushes":                   "FlushesCnt",
 	"flushes_per_sec":           "Flushes",
-	"flushes_total_time":        "FlushesTotalTime",
+	"flushes_total_time_ns":     "FlushesTotalTime",
 	"vsize_megabytes":           "Virtual",
 	"resident_megabytes":        "Resident",
 	"queued_reads":              "QueuedReaders",

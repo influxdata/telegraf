@@ -522,7 +522,7 @@ type StatLine struct {
 	ReplLag                              int64
 	OplogTimeDiff                        int64
 	Flushes, FlushesCnt                  int64
-	FlushesTotalTime                     float64
+	FlushesTotalTime                     int64
 	Mapped, Virtual, Resident, NonMapped int64
 	Faults, FaultsCnt                    int64
 	HighestLocked                        *LockStatus
@@ -701,7 +701,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.ModifiedPagesEvicted = newStat.WiredTiger.Cache.ModifiedPagesEvicted
 		returnVal.UnmodifiedPagesEvicted = newStat.WiredTiger.Cache.UnmodifiedPagesEvicted
 
-		returnVal.FlushesTotalTime = float64(newStat.WiredTiger.Transaction.TransCheckpointsTotalTimeMsecs) / float64(time.Millisecond)
+		returnVal.FlushesTotalTime = newStat.WiredTiger.Transaction.TransCheckpointsTotalTimeMsecs * int64(time.Millisecond)
 	}
 	if newStat.WiredTiger != nil && oldStat.WiredTiger != nil {
 		returnVal.Flushes, returnVal.FlushesCnt = diff(newStat.WiredTiger.Transaction.TransCheckpoints, oldStat.WiredTiger.Transaction.TransCheckpoints, sampleSecs)

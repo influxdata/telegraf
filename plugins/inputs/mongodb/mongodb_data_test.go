@@ -203,7 +203,7 @@ func TestStateTag(t *testing.T) {
 		"deletes_per_sec":           int64(0),
 		"flushes":                   int64(0),
 		"flushes_per_sec":           int64(0),
-		"flushes_total_time":        float64(0),
+		"flushes_total_time_ns":     int64(0),
 		"getmores":                  int64(0),
 		"getmores_per_sec":          int64(0),
 		"inserts":                   int64(0),
