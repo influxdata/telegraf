@@ -45,6 +45,7 @@ var DefaultStats = map[string]string{
 	"commands_per_sec":          "Command",
 	"flushes":                   "FlushesCnt",
 	"flushes_per_sec":           "Flushes",
+	"flushes_total_time_ns":     "FlushesTotalTime",
 	"vsize_megabytes":           "Virtual",
 	"resident_megabytes":        "Resident",
 	"queued_reads":              "QueuedReaders",
@@ -137,8 +138,13 @@ var WiredTigerExtStats = map[string]string{
 	"wtcache_bytes_read_into":              "BytesReadInto",
 	"wtcache_pages_evicted_by_app_thread":  "PagesEvictedByAppThread",
 	"wtcache_pages_queued_for_eviction":    "PagesQueuedForEviction",
+	"wtcache_pages_read_info":              "PagesReadIntoCache",
+	"wtcache_pages_requested_from":         "PagesRequestedFromCache",
 	"wtcache_server_evicting_pages":        "ServerEvictingPages",
 	"wtcache_worker_thread_evictingpages":  "WorkerThreadEvictingPages",
+	"wtcache_internal_pages_evicted":       "InternalPagesEvicted",
+	"wtcache_modified_pages_evicted":       "ModifiedPagesEvicted",
+	"wtcache_unmodified_pages_evicted":     "UnmodifiedPagesEvicted",
 }
 
 var DbDataStats = map[string]string{

@@ -168,13 +168,19 @@ type CacheStats struct {
 	BytesReadInto             int64 `bson:"bytes read into cache"`
 	PagesEvictedByAppThread   int64 `bson:"pages evicted by application threads"`
 	PagesQueuedForEviction    int64 `bson:"pages queued for eviction"`
+	PagesReadIntoCache        int64 `bson:"pages read into cache"`
+	PagesRequestedFromCache   int64 `bson:"pages requested from the cache"`
 	ServerEvictingPages       int64 `bson:"eviction server evicting pages"`
 	WorkerThreadEvictingPages int64 `bson:"eviction worker thread evicting pages"`
+	InternalPagesEvicted      int64 `bson:"internal pages evicted"`
+	ModifiedPagesEvicted      int64 `bson:"modified pages evicted"`
+	UnmodifiedPagesEvicted    int64 `bson:"unmodified pages evicted"`
 }
 
 // TransactionStats stores transaction checkpoints in WiredTiger.
 type TransactionStats struct {
-	TransCheckpoints int64 `bson:"transaction checkpoints"`
+	TransCheckpointsTotalTimeMsecs int64 `bson:"transaction checkpoint total time (msecs)"`
+	TransCheckpoints               int64 `bson:"transaction checkpoints"`
 }
 
 // ReplStatus stores data related to replica sets.
@@ -498,8 +504,13 @@ type StatLine struct {
 	BytesReadInto             int64
 	PagesEvictedByAppThread   int64
 	PagesQueuedForEviction    int64
+	PagesReadIntoCache        int64
+	PagesRequestedFromCache   int64
 	ServerEvictingPages       int64
 	WorkerThreadEvictingPages int64
+	InternalPagesEvicted      int64
+	ModifiedPagesEvicted      int64
+	UnmodifiedPagesEvicted    int64
 
 	// Replicated Opcounter fields
 	InsertR, InsertRCnt                  int64
@@ -511,6 +522,7 @@ type StatLine struct {
 	ReplLag                              int64
 	OplogTimeDiff                        int64
 	Flushes, FlushesCnt                  int64
+	FlushesTotalTime                     int64
 	Mapped, Virtual, Resident, NonMapped int64
 	Faults, FaultsCnt                    int64
 	HighestLocked                        *LockStatus
@@ -666,8 +678,7 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 
 	returnVal.CacheDirtyPercent = -1
 	returnVal.CacheUsedPercent = -1
-	if newStat.WiredTiger != nil && oldStat.WiredTiger != nil {
-		returnVal.Flushes, returnVal.FlushesCnt = diff(newStat.WiredTiger.Transaction.TransCheckpoints, oldStat.WiredTiger.Transaction.TransCheckpoints, sampleSecs)
+	if newStat.WiredTiger != nil {
 		returnVal.CacheDirtyPercent = float64(newStat.WiredTiger.Cache.TrackedDirtyBytes) / float64(newStat.WiredTiger.Cache.MaxBytesConfigured)
 		returnVal.CacheUsedPercent = float64(newStat.WiredTiger.Cache.CurrentCachedBytes) / float64(newStat.WiredTiger.Cache.MaxBytesConfigured)
 
@@ -681,8 +692,19 @@ func NewStatLine(oldMongo, newMongo MongoStatus, key string, all bool, sampleSec
 		returnVal.BytesReadInto = newStat.WiredTiger.Cache.BytesReadInto
 		returnVal.PagesEvictedByAppThread = newStat.WiredTiger.Cache.PagesEvictedByAppThread
 		returnVal.PagesQueuedForEviction = newStat.WiredTiger.Cache.PagesQueuedForEviction
+		returnVal.PagesReadIntoCache = newStat.WiredTiger.Cache.PagesReadIntoCache
+		returnVal.PagesRequestedFromCache = newStat.WiredTiger.Cache.PagesRequestedFromCache
 		returnVal.ServerEvictingPages = newStat.WiredTiger.Cache.ServerEvictingPages
 		returnVal.WorkerThreadEvictingPages = newStat.WiredTiger.Cache.WorkerThreadEvictingPages
+
+		returnVal.InternalPagesEvicted = newStat.WiredTiger.Cache.InternalPagesEvicted
+		returnVal.ModifiedPagesEvicted = newStat.WiredTiger.Cache.ModifiedPagesEvicted
+		returnVal.UnmodifiedPagesEvicted = newStat.WiredTiger.Cache.UnmodifiedPagesEvicted
+
+		returnVal.FlushesTotalTime = newStat.WiredTiger.Transaction.TransCheckpointsTotalTimeMsecs * int64(time.Millisecond)
+	}
+	if newStat.WiredTiger != nil && oldStat.WiredTiger != nil {
+		returnVal.Flushes, returnVal.FlushesCnt = diff(newStat.WiredTiger.Transaction.TransCheckpoints, oldStat.WiredTiger.Transaction.TransCheckpoints, sampleSecs)
 	} else if newStat.BackgroundFlushing != nil && oldStat.BackgroundFlushing != nil {
 		returnVal.Flushes, returnVal.FlushesCnt = diff(newStat.BackgroundFlushing.Flushes, oldStat.BackgroundFlushing.Flushes, sampleSecs)
 	}
