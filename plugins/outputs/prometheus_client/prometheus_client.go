@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -38,6 +37,8 @@ type Sample struct {
 	// Histograms and Summaries need a count and a sum
 	Count uint64
 	Sum   float64
+	// Metric timestamp
+	Timestamp time.Time
 	// Expiration is the deadline that this Sample is valid until.
 	Expiration time.Time
 }
@@ -159,7 +160,7 @@ func (p *PrometheusClient) Connect() error {
 		case "gocollector":
 			registry.Register(prometheus.NewGoCollector())
 		case "process":
-			registry.Register(prometheus.NewProcessCollector(os.Getpid(), ""))
+			registry.Register(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 		default:
 			return fmt.Errorf("unrecognized collector %s", collector)
 		}
@@ -282,7 +283,7 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 					name, labels, err.Error())
 			}
 
-			ch <- metric
+			ch <- prometheus.NewMetricWithTimestamp(sample.Timestamp, metric)
 		}
 	}
 }
@@ -398,6 +399,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				SummaryValue: summaryvalue,
 				Count:        count,
 				Sum:          sum,
+				Timestamp:    point.Time(),
 				Expiration:   now.Add(p.ExpirationInterval.Duration),
 			}
 			mname = sanitize(point.Name())
@@ -439,6 +441,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				HistogramValue: histogramvalue,
 				Count:          count,
 				Sum:            sum,
+				Timestamp:      point.Time(),
 				Expiration:     now.Add(p.ExpirationInterval.Duration),
 			}
 			mname = sanitize(point.Name())
@@ -463,6 +466,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				sample := &Sample{
 					Labels:     labels,
 					Value:      value,
+					Timestamp:  point.Time(),
 					Expiration: now.Add(p.ExpirationInterval.Duration),
 				}
 
