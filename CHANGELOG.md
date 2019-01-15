@@ -30,6 +30,7 @@
 - [#5113](https://github.com/influxdata/telegraf/pull/5113): Improve scalability of vsphere input.
 - [#5210](https://github.com/influxdata/telegraf/pull/5210): Add read and write op per second fields to ceph input.
 - [#5214](https://github.com/influxdata/telegraf/pull/5214): Add configurable timeout to varnish input.
+- [#5273](https://github.com/influxdata/telegraf/pull/5273): Add flush_total_time_ns and additional wired tiger fields to mongodb input.
 
 #### Bugfixes
 
