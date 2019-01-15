@@ -31,7 +31,8 @@ type Prometheus struct {
 	KubeConfig string
 
 	// Bearer Token authorization file path
-	BearerToken string `toml:"bearer_token"`
+	BearerToken       string `toml:"bearer_token"`
+	BearerTokenString string `toml:"bearer_token_string"`
 
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
@@ -65,8 +66,10 @@ var sampleConfig = `
   ## - prometheus.io/port: If port is not 9102 use this annotation
   # monitor_kubernetes_pods = true
 
-  ## Use bearer token for authorization
-  # bearer_token = /path/to/bearer/token
+  ## Use bearer token for authorization. ('bearer_token' takes priority)
+  # bearer_token = "/path/to/bearer/token"
+  ## OR
+  # bearer_token_string = "abc_123"
 
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"
@@ -230,13 +233,14 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 
 	req.Header.Add("Accept", acceptHeader)
 
-	var token []byte
 	if p.BearerToken != "" {
-		token, err = ioutil.ReadFile(p.BearerToken)
+		token, err := ioutil.ReadFile(p.BearerToken)
 		if err != nil {
 			return err
 		}
 		req.Header.Set("Authorization", "Bearer "+string(token))
+	} else if p.BearerTokenString != "" {
+		req.Header.Set("Authorization", "Bearer "+p.BearerTokenString)
 	}
 
 	var resp *http.Response
