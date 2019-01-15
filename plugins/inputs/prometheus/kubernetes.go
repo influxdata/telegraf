@@ -45,6 +45,7 @@ func (p *Prometheus) start(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("Failed to get current user - %v", err)
 		}
+
 		configLocation := filepath.Join(u.HomeDir, ".kube/config")
 		if p.KubeConfig != "" {
 			configLocation = p.KubeConfig
@@ -98,13 +99,42 @@ func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 
 			switch eventType {
 			case k8s.EventAdded:
-				registerPod(pod, p)
-			case k8s.EventDeleted:
-				unregisterPod(pod, p)
+				if podReady(pod.Status.GetContainerStatuses()) {
+					registerPod(pod, p)
+				}
 			case k8s.EventModified:
+				if pod.Metadata.GetDeletionTimestamp() != nil && podConditionReady(pod.Status.GetConditions()) {
+					unregisterPod(pod, p)
+				} else if podReady(pod.Status.GetContainerStatuses()) && podConditionReady(pod.Status.GetConditions()) {
+					registerPod(pod, p)
+				}
 			}
 		}
 	}
+}
+
+func podReady(statuss []*corev1.ContainerStatus) bool {
+	if len(statuss) == 0 {
+		return false
+	}
+	for _, cs := range statuss {
+		if !cs.GetReady() {
+			return false
+		}
+	}
+	return true
+}
+
+func podConditionReady(statuss []*corev1.PodCondition) bool {
+	if len(statuss) < 3 {
+		return false
+	}
+	for _, pc := range statuss {
+		if pc.GetType() == "Ready" && pc.GetStatus() == "False" {
+			return false
+		}
+	}
+	return true
 }
 
 func registerPod(pod *corev1.Pod, p *Prometheus) {
@@ -116,6 +146,9 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	log.Printf("D! [inputs.prometheus] will scrape metrics from %s", *targetURL)
 	// add annotation as metrics tags
 	tags := pod.GetMetadata().GetAnnotations()
+	if tags == nil {
+		tags = map[string]string{}
+	}
 	tags["pod_name"] = pod.GetMetadata().GetName()
 	tags["namespace"] = pod.GetMetadata().GetNamespace()
 	// add labels as metrics tags
@@ -143,6 +176,7 @@ func getScrapeURL(pod *corev1.Pod) *string {
 	if scrape != "true" {
 		return nil
 	}
+
 	ip := pod.Status.GetPodIP()
 	if ip == "" {
 		// return as if scrape was disabled, we will be notified again once the pod
