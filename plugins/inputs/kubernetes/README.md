@@ -29,8 +29,10 @@ avoid cardinality issues:
   ## URL for the kubelet
   url = "http://127.0.0.1:10255"
 
-  ## Use bearer token for authorization
-  # bearer_token = /path/to/bearer/token
+  ## Use bearer token for authorization. ('bearer_token' takes priority)
+  # bearer_token = "/path/to/bearer/token"
+  ## OR
+  # bearer_token_string = "abc_123"
 
   ## Set response_timeout (default 5 seconds)
   # response_timeout = "5s"
