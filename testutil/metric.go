@@ -19,6 +19,10 @@ type metricDiff struct {
 }
 
 func newMetricDiff(metric telegraf.Metric) *metricDiff {
+	if metric == nil {
+		return nil
+	}
+
 	m := &metricDiff{}
 	m.Measurement = metric.Name()
 

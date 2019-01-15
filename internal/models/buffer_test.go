@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,13 +30,17 @@ func (m *MockMetric) Drop() {
 }
 
 func Metric() telegraf.Metric {
+	return MetricTime(0)
+}
+
+func MetricTime(sec int64) telegraf.Metric {
 	m, err := metric.New(
 		"cpu",
 		map[string]string{},
 		map[string]interface{}{
 			"value": 42.0,
 		},
-		time.Unix(0, 0),
+		time.Unix(sec, 0),
 	)
 	if err != nil {
 		panic(err)
@@ -147,6 +152,256 @@ func TestBuffer_BatchWrap(t *testing.T) {
 	require.Len(t, batch, 5)
 }
 
+func TestBuffer_BatchLatest(t *testing.T) {
+	b := setup(NewBuffer("test", 4))
+	b.Add(MetricTime(1))
+	b.Add(MetricTime(2))
+	b.Add(MetricTime(3))
+	batch := b.Batch(2)
+
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			MetricTime(3),
+			MetricTime(2),
+		}, batch)
+}
+
+func TestBuffer_BatchLatestWrap(t *testing.T) {
+	b := setup(NewBuffer("test", 4))
+	b.Add(MetricTime(1))
+	b.Add(MetricTime(2))
+	b.Add(MetricTime(3))
+	b.Add(MetricTime(4))
+	b.Add(MetricTime(5))
+	batch := b.Batch(2)
+
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			MetricTime(5),
+			MetricTime(4),
+		}, batch)
+}
+
+func TestBuffer_MultipleBatch(t *testing.T) {
+	b := setup(NewBuffer("test", 10))
+	b.Add(MetricTime(1))
+	b.Add(MetricTime(2))
+	b.Add(MetricTime(3))
+	b.Add(MetricTime(4))
+	b.Add(MetricTime(5))
+	b.Add(MetricTime(6))
+	batch := b.Batch(5)
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			MetricTime(6),
+			MetricTime(5),
+			MetricTime(4),
+			MetricTime(3),
+			MetricTime(2),
+		}, batch)
+	b.Accept(batch)
+	batch = b.Batch(5)
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			MetricTime(1),
+		}, batch)
+	b.Accept(batch)
+}
+
+func TestBuffer_RejectWithRoom(t *testing.T) {
+	b := setup(NewBuffer("test", 5))
+	b.Add(MetricTime(1))
+	b.Add(MetricTime(2))
+	b.Add(MetricTime(3))
+	batch := b.Batch(2)
+	b.Add(MetricTime(4))
+	b.Add(MetricTime(5))
+	b.Reject(batch)
+
+	require.Equal(t, int64(0), b.MetricsDropped.Get())
+
+	batch = b.Batch(5)
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			MetricTime(5),
+			MetricTime(4),
+			MetricTime(3),
+			MetricTime(2),
+			MetricTime(1),
+		}, batch)
+}
+
+func TestBuffer_RejectNothingNewFull(t *testing.T) {
+	b := setup(NewBuffer("test", 5))
+	b.Add(MetricTime(1))
+	b.Add(MetricTime(2))
+	b.Add(MetricTime(3))
+	b.Add(MetricTime(4))
+	b.Add(MetricTime(5))
+	batch := b.Batch(2)
+	b.Reject(batch)
+
+	require.Equal(t, int64(0), b.MetricsDropped.Get())
+
+	batch = b.Batch(5)
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			MetricTime(5),
+			MetricTime(4),
+			MetricTime(3),
+			MetricTime(2),
+			MetricTime(1),
+		}, batch)
+}
+
+func TestBuffer_RejectNoRoom(t *testing.T) {
+	b := setup(NewBuffer("test", 5))
+	b.Add(MetricTime(1))
+
+	b.Add(MetricTime(2))
+	b.Add(MetricTime(3))
+	batch := b.Batch(2)
+
+	b.Add(MetricTime(4))
+	b.Add(MetricTime(5))
+	b.Add(MetricTime(6))
+	b.Add(MetricTime(7))
+	b.Add(MetricTime(8))
+
+	b.Reject(batch)
+
+	require.Equal(t, int64(3), b.MetricsDropped.Get())
+
+	batch = b.Batch(5)
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			MetricTime(8),
+			MetricTime(7),
+			MetricTime(6),
+			MetricTime(5),
+			MetricTime(4),
+		}, batch)
+}
+
+func TestBuffer_RejectRoomExact(t *testing.T) {
+	b := setup(NewBuffer("test", 5))
+	b.Add(MetricTime(1))
+	b.Add(MetricTime(2))
+	batch := b.Batch(2)
+	b.Add(MetricTime(3))
+	b.Add(MetricTime(4))
+	b.Add(MetricTime(5))
+
+	b.Reject(batch)
+
+	require.Equal(t, int64(0), b.MetricsDropped.Get())
+
+	batch = b.Batch(5)
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			MetricTime(5),
+			MetricTime(4),
+			MetricTime(3),
+			MetricTime(2),
+			MetricTime(1),
+		}, batch)
+}
+
+func TestBuffer_RejectRoomOverwriteOld(t *testing.T) {
+	b := setup(NewBuffer("test", 5))
+	b.Add(MetricTime(1))
+	b.Add(MetricTime(2))
+	b.Add(MetricTime(3))
+	batch := b.Batch(1)
+	b.Add(MetricTime(4))
+	b.Add(MetricTime(5))
+	b.Add(MetricTime(6))
+
+	b.Reject(batch)
+
+	require.Equal(t, int64(1), b.MetricsDropped.Get())
+
+	batch = b.Batch(5)
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			MetricTime(6),
+			MetricTime(5),
+			MetricTime(4),
+			MetricTime(3),
+			MetricTime(2),
+		}, batch)
+}
+
+func TestBuffer_RejectPartialRoom(t *testing.T) {
+	b := setup(NewBuffer("test", 5))
+	b.Add(MetricTime(1))
+
+	b.Add(MetricTime(2))
+	b.Add(MetricTime(3))
+	batch := b.Batch(2)
+
+	b.Add(MetricTime(4))
+	b.Add(MetricTime(5))
+	b.Add(MetricTime(6))
+	b.Add(MetricTime(7))
+	b.Reject(batch)
+
+	require.Equal(t, int64(2), b.MetricsDropped.Get())
+
+	batch = b.Batch(5)
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			MetricTime(7),
+			MetricTime(6),
+			MetricTime(5),
+			MetricTime(4),
+			MetricTime(3),
+		}, batch)
+}
+
+func TestBuffer_RejectWrapped(t *testing.T) {
+	b := setup(NewBuffer("test", 5))
+	b.Add(MetricTime(1))
+	b.Add(MetricTime(2))
+	b.Add(MetricTime(3))
+	batch := b.Batch(2)
+	b.Add(MetricTime(4))
+	b.Add(MetricTime(5))
+
+	// buffer: 1, 4, 5; batch: 2, 3
+	require.Equal(t, int64(0), b.MetricsDropped.Get())
+
+	b.Add(MetricTime(6))
+	b.Add(MetricTime(7))
+	b.Add(MetricTime(8))
+	b.Add(MetricTime(9))
+	b.Add(MetricTime(10))
+
+	// buffer: 8, 9, 10, 6, 7; batch: 2, 3
+	require.Equal(t, int64(3), b.MetricsDropped.Get())
+
+	b.Add(MetricTime(11))
+	b.Add(MetricTime(12))
+	b.Add(MetricTime(13))
+	b.Add(MetricTime(14))
+	b.Add(MetricTime(15))
+	// buffer: 13, 14, 15, 11, 12; batch: 2, 3
+	require.Equal(t, int64(8), b.MetricsDropped.Get())
+	b.Reject(batch)
+
+	require.Equal(t, int64(10), b.MetricsDropped.Get())
+
+	batch = b.Batch(5)
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			MetricTime(15),
+			MetricTime(14),
+			MetricTime(13),
+			MetricTime(12),
+			MetricTime(11),
+		}, batch)
+}
+
 func TestBuffer_AddDropsOverwrittenMetrics(t *testing.T) {
 	m := Metric()
 	b := setup(NewBuffer("test", 5))
@@ -210,8 +465,8 @@ func TestBuffer_MetricsOverwriteBatchAccept(t *testing.T) {
 	batch := b.Batch(3)
 	b.Add(m, m, m)
 	b.Accept(batch)
-	require.Equal(t, int64(0), b.MetricsDropped.Get())
-	require.Equal(t, int64(3), b.MetricsWritten.Get())
+	require.Equal(t, int64(0), b.MetricsDropped.Get(), "dropped")
+	require.Equal(t, int64(3), b.MetricsWritten.Get(), "written")
 }
 
 func TestBuffer_MetricsOverwriteBatchReject(t *testing.T) {
@@ -254,7 +509,7 @@ func TestBuffer_BatchNotRemoved(t *testing.T) {
 	b := setup(NewBuffer("test", 5))
 	b.Add(m, m, m, m, m)
 	b.Batch(2)
-	require.Equal(t, 5, b.Len())
+	require.Equal(t, 3, b.Len())
 }
 
 func TestBuffer_BatchRejectAcceptNoop(t *testing.T) {
@@ -310,10 +565,8 @@ func TestBuffer_AddCallsMetricRejectWhenNotInBatch(t *testing.T) {
 	b.Add(mm, mm, mm, mm, mm)
 	batch := b.Batch(2)
 	b.Add(mm, mm, mm, mm)
-	// metric[2] and metric[3] rejected
 	require.Equal(t, 2, reject)
 	b.Reject(batch)
-	// metric[1] and metric[2] now rejected
 	require.Equal(t, 4, reject)
 }
 
