@@ -32,6 +32,8 @@
 - [#5210](https://github.com/influxdata/telegraf/pull/5210): Add read and write op per second fields to ceph input.
 - [#5214](https://github.com/influxdata/telegraf/pull/5214): Add configurable timeout to varnish input.
 - [#5273](https://github.com/influxdata/telegraf/pull/5273): Add flush_total_time_ns and additional wired tiger fields to mongodb input.
+- [#5295](https://github.com/influxdata/telegraf/pull/5295): Support passing bearer token directly in k8s input.
+- [#5294](https://github.com/influxdata/telegraf/pull/5294): Support passing bearer token directly in prometheus input.
 
 #### Bugfixes
 
