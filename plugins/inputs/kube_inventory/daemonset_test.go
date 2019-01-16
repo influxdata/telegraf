@@ -1,16 +1,16 @@
-package kube_state
+package kube_inventory
 
 import (
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/apps/v1beta1"
+	"github.com/ericchiang/k8s/apis/apps/v1beta2"
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
 
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestStatefulSet(t *testing.T) {
+func TestDaemonSet(t *testing.T) {
 	cli := &client{}
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
@@ -21,35 +21,34 @@ func TestStatefulSet(t *testing.T) {
 		hasError bool
 	}{
 		{
-			name: "no statefulsets",
+			name: "no daemon set",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/statefulsets/": &v1beta1.StatefulSetList{},
+					"/daemonsets/": &v1beta2.DaemonSetList{},
 				},
 			},
 			hasError: false,
 		},
 		{
-			name: "collect statefulsets",
+			name: "collect daemonsets",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/statefulsets/": &v1beta1.StatefulSetList{
-						Items: []*v1beta1.StatefulSet{
+					"/daemonsets/": &v1beta2.DaemonSetList{
+						Items: []*v1beta2.DaemonSet{
 							{
-								Status: &v1beta1.StatefulSetStatus{
-									Replicas:           toInt32Ptr(2),
-									CurrentReplicas:    toInt32Ptr(4),
-									ReadyReplicas:      toInt32Ptr(1),
-									UpdatedReplicas:    toInt32Ptr(3),
-									ObservedGeneration: toInt64Ptr(119),
-								},
-								Spec: &v1beta1.StatefulSetSpec{
-									Replicas: toInt32Ptr(3),
+								Status: &v1beta2.DaemonSetStatus{
+									CurrentNumberScheduled: toInt32Ptr(3),
+									DesiredNumberScheduled: toInt32Ptr(5),
+									NumberAvailable:        toInt32Ptr(2),
+									NumberMisscheduled:     toInt32Ptr(2),
+									NumberReady:            toInt32Ptr(1),
+									NumberUnavailable:      toInt32Ptr(1),
+									UpdatedNumberScheduled: toInt32Ptr(2),
 								},
 								Metadata: &metav1.ObjectMeta{
-									Generation: toInt64Ptr(332),
+									Generation: toInt64Ptr(11221),
 									Namespace:  toStrPtr("ns1"),
-									Name:       toStrPtr("sts1"),
+									Name:       toStrPtr("daemon1"),
 									Labels: map[string]string{
 										"lab1": "v1",
 										"lab2": "v2",
@@ -65,18 +64,19 @@ func TestStatefulSet(t *testing.T) {
 				Metrics: []*testutil.Metric{
 					{
 						Fields: map[string]interface{}{
-							"generation":          int64(332),
-							"observed_generation": int64(119),
-							"created":             now.UnixNano(),
-							"spec_replicas":       int32(3),
-							"replicas":            int32(2),
-							"replicas_current":    int32(4),
-							"replicas_ready":      int32(1),
-							"replicas_updated":    int32(3),
+							"generation":               int64(11221),
+							"current_number_scheduled": int32(3),
+							"desired_number_scheduled": int32(5),
+							"number_available":         int32(2),
+							"number_misscheduled":      int32(2),
+							"number_ready":             int32(1),
+							"number_unavailable":       int32(1),
+							"updated_number_scheduled": int32(2),
+							"created":                  now.UnixNano(),
 						},
 						Tags: map[string]string{
-							"namespace":        "ns1",
-							"statefulset_name": "sts1",
+							"daemonset_name": "daemon1",
+							"namespace":      "ns1",
 						},
 					},
 				},
@@ -86,14 +86,14 @@ func TestStatefulSet(t *testing.T) {
 	}
 
 	for _, v := range tests {
-		ks := &KubernetesState{
+		ks := &KubernetesInventory{
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1beta1.StatefulSetList)).Items {
-			err := ks.gatherStatefulSet(*ss, acc)
+		for _, dset := range ((v.handler.responseMap["/daemonsets/"]).(*v1beta2.DaemonSetList)).Items {
+			err := ks.gatherDaemonSet(*dset, acc)
 			if err != nil {
-				t.Errorf("Failed to gather ss - %s", err.Error())
+				t.Errorf("Failed to gather daemonset - %s", err.Error())
 			}
 		}
 

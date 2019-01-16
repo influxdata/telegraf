@@ -1,4 +1,4 @@
-package kube_state
+package kube_inventory
 
 import (
 	"context"
@@ -9,21 +9,21 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-func collectDaemonSets(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
-	list, err := ks.client.getDaemonSets(ctx)
+func collectDaemonSets(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory) {
+	list, err := ki.client.getDaemonSets(ctx)
 	if err != nil {
 		acc.AddError(err)
 		return
 	}
 	for _, d := range list.Items {
-		if err = ks.gatherDaemonSet(*d, acc); err != nil {
+		if err = ki.gatherDaemonSet(*d, acc); err != nil {
 			acc.AddError(err)
 			return
 		}
 	}
 }
 
-func (ks *KubernetesState) gatherDaemonSet(d v1beta2.DaemonSet, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherDaemonSet(d v1beta2.DaemonSet, acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{
 		"generation":               d.Metadata.GetGeneration(),
 		"current_number_scheduled": d.Status.GetCurrentNumberScheduled(),

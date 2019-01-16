@@ -1,4 +1,4 @@
-package kube_state
+package kube_inventory
 
 import (
 	"context"
@@ -9,21 +9,21 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-func collectPersistentVolumes(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
-	list, err := ks.client.getPersistentVolumes(ctx)
+func collectPersistentVolumes(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory) {
+	list, err := ki.client.getPersistentVolumes(ctx)
 	if err != nil {
 		acc.AddError(err)
 		return
 	}
 	for _, pv := range list.Items {
-		if err = ks.gatherPersistentVolume(*pv, acc); err != nil {
+		if err = ki.gatherPersistentVolume(*pv, acc); err != nil {
 			acc.AddError(err)
 			return
 		}
 	}
 }
 
-func (ks *KubernetesState) gatherPersistentVolume(pv v1.PersistentVolume, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherPersistentVolume(pv v1.PersistentVolume, acc telegraf.Accumulator) error {
 	phaseType := 5
 	switch strings.ToLower(pv.Status.GetPhase()) {
 	case "bound":

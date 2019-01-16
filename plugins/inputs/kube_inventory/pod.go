@@ -1,30 +1,28 @@
-package kube_state
+package kube_inventory
 
 import (
 	"context"
-	"strings"
-	"time"
 
 	"github.com/ericchiang/k8s/apis/core/v1"
 
 	"github.com/influxdata/telegraf"
 )
 
-func collectPods(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
-	list, err := ks.client.getPods(ctx)
+func collectPods(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory) {
+	list, err := ki.client.getPods(ctx)
 	if err != nil {
 		acc.AddError(err)
 		return
 	}
 	for _, p := range list.Items {
-		if err = ks.gatherPod(*p, acc); err != nil {
+		if err = ki.gatherPod(*p, acc); err != nil {
 			acc.AddError(err)
 			return
 		}
 	}
 }
 
-func (ks *KubernetesState) gatherPod(p v1.Pod, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherPod(p v1.Pod, acc telegraf.Accumulator) error {
 	if p.Metadata.CreationTimestamp.GetSeconds() == 0 && p.Metadata.CreationTimestamp.GetNanos() == 0 {
 		return nil
 	}
@@ -32,13 +30,6 @@ func (ks *KubernetesState) gatherPod(p v1.Pod, acc telegraf.Accumulator) error {
 	for i, cs := range p.Status.ContainerStatuses {
 		c := p.Spec.Containers[i]
 		gatherPodContainer(*p.Spec.NodeName, p, *cs, *c, acc)
-	}
-
-	for _, c := range p.Status.Conditions {
-		if c.LastTransitionTime.GetSeconds() == 0 && c.LastTransitionTime.GetNanos() == 0 {
-			continue
-		}
-		gatherPodStatus(p, *c, acc)
 	}
 
 	return nil
@@ -88,25 +79,4 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 	}
 
 	acc.AddFields(podContainerMeasurement, fields, tags)
-}
-
-func gatherPodStatus(p v1.Pod, c v1.PodCondition, acc telegraf.Accumulator) {
-	tags := map[string]string{
-		"namespace": p.Metadata.GetNamespace(),
-		"pod_name":  p.Metadata.GetName(),
-		"node_name": p.Spec.GetNodeName(),
-		"reason":    p.Status.GetReason(),
-	}
-	fields := map[string]interface{}{
-		"last_transition_time": time.Unix(c.LastTransitionTime.GetSeconds(), int64(c.LastTransitionTime.GetNanos())).UnixNano(),
-	}
-
-	switch strings.ToLower(*c.Type) {
-	case "ready":
-		fields["ready"] = "true"
-	default:
-		fields["ready"] = "false"
-	}
-
-	acc.AddFields(podStatusMeasurement, fields, tags)
 }

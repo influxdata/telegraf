@@ -1,4 +1,4 @@
-package kube_state
+package kube_inventory
 
 import (
 	"testing"

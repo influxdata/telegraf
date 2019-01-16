@@ -1,4 +1,4 @@
-package kube_state
+package kube_inventory
 
 import (
 	"context"
@@ -9,21 +9,21 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-func collectStatefulSets(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
-	list, err := ks.client.getStatefulSets(ctx)
+func collectStatefulSets(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory) {
+	list, err := ki.client.getStatefulSets(ctx)
 	if err != nil {
 		acc.AddError(err)
 		return
 	}
 	for _, s := range list.Items {
-		if err = ks.gatherStatefulSet(*s, acc); err != nil {
+		if err = ki.gatherStatefulSet(*s, acc); err != nil {
 			acc.AddError(err)
 			return
 		}
 	}
 }
 
-func (ks *KubernetesState) gatherStatefulSet(s v1beta1.StatefulSet, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherStatefulSet(s v1beta1.StatefulSet, acc telegraf.Accumulator) error {
 	status := s.Status
 	fields := map[string]interface{}{
 		"created":             time.Unix(s.Metadata.CreationTimestamp.GetSeconds(), int64(s.Metadata.CreationTimestamp.GetNanos())).UnixNano(),

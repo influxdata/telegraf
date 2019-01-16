@@ -1,4 +1,4 @@
-package kube_state
+package kube_inventory
 
 import (
 	"context"
@@ -8,21 +8,21 @@ import (
 	"github.com/influxdata/telegraf"
 )
 
-func collectNodes(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState) {
-	list, err := ks.client.getNodes(ctx)
+func collectNodes(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory) {
+	list, err := ki.client.getNodes(ctx)
 	if err != nil {
 		acc.AddError(err)
 		return
 	}
 	for _, n := range list.Items {
-		if err = ks.gatherNode(*n, acc); err != nil {
+		if err = ki.gatherNode(*n, acc); err != nil {
 			acc.AddError(err)
 			return
 		}
 	}
 }
 
-func (ks *KubernetesState) gatherNode(n v1.Node, acc telegraf.Accumulator) error {
+func (ki *KubernetesInventory) gatherNode(n v1.Node, acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{}
 	tags := map[string]string{
 		"node_name": *n.Metadata.Name,

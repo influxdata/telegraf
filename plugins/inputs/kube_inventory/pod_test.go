@@ -1,4 +1,4 @@
-package kube_state
+package kube_inventory
 
 import (
 	"testing"
@@ -155,25 +155,13 @@ func TestPod(t *testing.T) {
 							"pod_name":       "pod1",
 						},
 					},
-					{
-						Measurement: podStatusMeasurement,
-						Fields: map[string]interface{}{
-							"last_transition_time": cond1.UnixNano(),
-							"ready":                "false",
-						},
-						Tags: map[string]string{
-							"namespace": "ns1",
-							"pod_name":  "pod1",
-							"node_name": "node1",
-						},
-					},
 				},
 			},
 			hasError: false,
 		},
 	}
 	for _, v := range tests {
-		ks := &KubernetesState{
+		ks := &KubernetesInventory{
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)

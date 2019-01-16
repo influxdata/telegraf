@@ -1,4 +1,4 @@
-package kube_state
+package kube_inventory
 
 import (
 	"context"
@@ -45,13 +45,6 @@ func newClient(baseURL, namespace, bearerToken string, timeout time.Duration, tl
 		timeout:   timeout,
 		namespace: namespace,
 	}, nil
-}
-
-func (c *client) getConfigMaps(ctx context.Context) (*v1.ConfigMapList, error) {
-	list := new(v1.ConfigMapList)
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-	return list, c.List(ctx, c.namespace, list)
 }
 
 func (c *client) getDaemonSets(ctx context.Context) (*v1beta2.DaemonSetList, error) {

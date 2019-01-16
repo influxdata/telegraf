@@ -1,19 +1,31 @@
-package kube_state
+package kube_inventory
 
 import (
 	"testing"
 	"time"
 
-	"github.com/ericchiang/k8s/apis/core/v1"
+	"github.com/ericchiang/k8s/apis/apps/v1beta1"
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
-
+	"github.com/ericchiang/k8s/util/intstr"
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestPersistentVolumeClaim(t *testing.T) {
+func TestDeployment(t *testing.T) {
 	cli := &client{}
+
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
+	outputMetric := &testutil.Metric{
+		Fields: map[string]interface{}{
+			"replicas_available":   int32(1),
+			"replicas_unavailable": int32(4),
+			"created":              now.UnixNano(),
+		},
+		Tags: map[string]string{
+			"namespace":       "ns1",
+			"deployment_name": "deploy1",
+		},
+	}
 
 	tests := []struct {
 		name     string
@@ -22,31 +34,45 @@ func TestPersistentVolumeClaim(t *testing.T) {
 		hasError bool
 	}{
 		{
-			name: "no pv claims",
+			name: "no deployments",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/persistentvolumeclaims/": &v1.PersistentVolumeClaimList{},
+					"/deployments/": &v1beta1.DeploymentList{},
 				},
 			},
 			hasError: false,
 		},
 		{
-			name: "collect pv claims",
+			name: "collect deployments",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/persistentvolumeclaims/": &v1.PersistentVolumeClaimList{
-						Items: []*v1.PersistentVolumeClaim{
+					"/deployments/": &v1beta1.DeploymentList{
+						Items: []*v1beta1.Deployment{
 							{
-								Status: &v1.PersistentVolumeClaimStatus{
-									Phase: toStrPtr("bound"),
+								Status: &v1beta1.DeploymentStatus{
+									Replicas:            toInt32Ptr(3),
+									AvailableReplicas:   toInt32Ptr(1),
+									UnavailableReplicas: toInt32Ptr(4),
+									UpdatedReplicas:     toInt32Ptr(2),
+									ObservedGeneration:  toInt64Ptr(9121),
 								},
-								Spec: &v1.PersistentVolumeClaimSpec{
-									VolumeName:       toStrPtr("pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8"),
-									StorageClassName: toStrPtr("ebs-1"),
+								Spec: &v1beta1.DeploymentSpec{
+									Strategy: &v1beta1.DeploymentStrategy{
+										RollingUpdate: &v1beta1.RollingUpdateDeployment{
+											MaxUnavailable: &intstr.IntOrString{
+												IntVal: toInt32Ptr(30),
+											},
+											MaxSurge: &intstr.IntOrString{
+												IntVal: toInt32Ptr(20),
+											},
+										},
+									},
+									Replicas: toInt32Ptr(4),
 								},
 								Metadata: &metav1.ObjectMeta{
-									Namespace: toStrPtr("ns1"),
-									Name:      toStrPtr("pc1"),
+									Generation: toInt64Ptr(11221),
+									Namespace:  toStrPtr("ns1"),
+									Name:       toStrPtr("deploy1"),
 									Labels: map[string]string{
 										"lab1": "v1",
 										"lab2": "v2",
@@ -60,17 +86,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 			},
 			output: &testutil.Accumulator{
 				Metrics: []*testutil.Metric{
-					{
-						Fields: map[string]interface{}{
-							"phase_type": 0,
-						},
-						Tags: map[string]string{
-							"pvc_name":     "pc1",
-							"namespace":    "ns1",
-							"storageclass": "ebs-1",
-							"phase":        "bound",
-						},
-					},
+					outputMetric,
 				},
 			},
 			hasError: false,
@@ -78,14 +94,14 @@ func TestPersistentVolumeClaim(t *testing.T) {
 	}
 
 	for _, v := range tests {
-		ks := &KubernetesState{
+		ks := &KubernetesInventory{
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		for _, pvc := range ((v.handler.responseMap["/persistentvolumeclaims/"]).(*v1.PersistentVolumeClaimList)).Items {
-			err := ks.gatherPersistentVolumeClaim(*pvc, acc)
+		for _, deployment := range ((v.handler.responseMap["/deployments/"]).(*v1beta1.DeploymentList)).Items {
+			err := ks.gatherDeployment(*deployment, acc)
 			if err != nil {
-				t.Errorf("Failed to gather pvc - %s", err.Error())
+				t.Errorf("Failed to gather deployment - %s", err.Error())
 			}
 		}
 
@@ -101,7 +117,7 @@ func TestPersistentVolumeClaim(t *testing.T) {
 			for i := range v.output.Metrics {
 				for k, m := range v.output.Metrics[i].Tags {
 					if acc.Metrics[i].Tags[k] != m {
-						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s\n", v.name, k, m, acc.Metrics[i].Tags[k])
+						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got '%v'\n", v.name, k, m, acc.Metrics[i].Tags[k])
 					}
 				}
 				for k, m := range v.output.Metrics[i].Fields {

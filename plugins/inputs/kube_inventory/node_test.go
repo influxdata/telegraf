@@ -1,4 +1,4 @@
-package kube_state
+package kube_inventory
 
 import (
 	"testing"
@@ -121,7 +121,7 @@ func TestNode(t *testing.T) {
 	}
 
 	for _, v := range tests {
-		ks := &KubernetesState{
+		ks := &KubernetesInventory{
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)

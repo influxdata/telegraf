@@ -1,12 +1,11 @@
-# Kube_State Plugin
-[kube-state-metrics](https://github.com/kubernetes/kube-state-metrics) is an open source project designed to generate metrics derived from the state of Kubernetes objects – the abstractions Kubernetes uses to represent your cluster. This plugin collects metrics in a similar manner for the following Kubernetes resources:
- - configmaps
+# Kube_Inventory Plugin
+This plugin generates metrics derived from the state of the following Kubernetes resources:
  - daemonsets
  - deployments
  - nodes
  - persistentvolumes
  - persistentvolumeclaims
- - pods (containers/status)
+ - pods (containers)
  - statefulsets
 
 #### Series Cardinality Warning
@@ -26,7 +25,7 @@ avoid cardinality issues:
 ### Configuration:
 
 ```toml
-[[inputs.kube_state]]
+[[inputs.kube_inventory]]
   ## URL for the kubelet
   url = "https://127.0.0.1"
 
@@ -43,8 +42,8 @@ avoid cardinality issues:
 
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
-  ## Values can be - "configmaps", "daemonsets", deployments", "nodes",
-  ## "persistentvolumes", "persistentvolumeclaims", "pods", "statefulsets"
+  ## Values can be - "daemonsets", deployments", "nodes", "persistentvolumes",
+  ## "persistentvolumeclaims", "pods", "statefulsets"
   # resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
   ## Optional Resources to include when gathering
@@ -111,14 +110,6 @@ subjects:
 
 ### Metrics:
 
-- kubernetes_configmap
-  - tags:
-    - configmap_name
-    - namespace
-    - resource_version
-  - fields:
-    - created
-
 + kubernetes_daemonset
   - tags:
     - daemonset_name
@@ -159,7 +150,7 @@ subjects:
     - phase
     - storageclass
   - fields:
-    - phase_type
+    - phase_type (int, [see below](#pv-phase_type))
 
 + kubernetes_persistentvolumeclaim
   - tags:
@@ -168,7 +159,7 @@ subjects:
     - phase
     - storageclass
   - fields:
-    - phase_type
+    - phase_type (int, [see below](#pvc-phase_type))
 
 - kubernetes_pod_container
   - tags:
@@ -185,17 +176,7 @@ subjects:
     - resource_limits_cpu_units
     - resource_limits_memory_bytes
 
-+ kubernetes_pod
-  - tags:
-    - namespace
-    - pod_name
-    - node_name
-    - reason
-  - fields:
-    - last_transition_time
-    - ready
-
-- kubernetes_statefulset
++ kubernetes_statefulset
   - tags:
     - statefulset_name
     - namespace
@@ -208,6 +189,34 @@ subjects:
     - replicas_updated
     - spec_replicas
     - observed_generation
+
+
+
+    - result_code 
+
+#### pv `phase_type`
+
+The persistentvolume "phase" is saved in the `phase` tag with a correlated numeric field called `phase_type` corresponding with that tag value.
+
+|Tag value |Corresponding field value|
+-----------|-------------------------|
+|bound     | 0                       |
+|failed    | 1                       |
+|pending   | 2                       |
+|released  | 3                       |
+|available | 4                       |
+|unknown   | 5                       |
+
+#### pvc `phase_type`
+
+The persistentvolumeclaim "phase" is saved in the `phase` tag with a correlated numeric field called `phase_type` corresponding with that tag value.
+
+|Tag value |Corresponding field value|
+-----------|-------------------------|
+|bound     | 0                       |
+|lost      | 1                       |
+|pending   | 2                       |
+|unknown   | 3                       |
 
 
 ### Example Output:

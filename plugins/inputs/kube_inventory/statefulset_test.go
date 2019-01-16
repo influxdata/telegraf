@@ -1,4 +1,4 @@
-package kube_state
+package kube_inventory
 
 import (
 	"testing"
@@ -6,27 +6,14 @@ import (
 
 	"github.com/ericchiang/k8s/apis/apps/v1beta1"
 	metav1 "github.com/ericchiang/k8s/apis/meta/v1"
-	"github.com/ericchiang/k8s/util/intstr"
+
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestDeployment(t *testing.T) {
+func TestStatefulSet(t *testing.T) {
 	cli := &client{}
-
 	now := time.Now()
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
-	outputMetric := &testutil.Metric{
-		Fields: map[string]interface{}{
-			"replicas_available":   int32(1),
-			"replicas_unavailable": int32(4),
-			"created":              now.UnixNano(),
-		},
-		Tags: map[string]string{
-			"namespace":       "ns1",
-			"deployment_name": "deploy1",
-		},
-	}
-
 	tests := []struct {
 		name     string
 		handler  *mockHandler
@@ -34,45 +21,35 @@ func TestDeployment(t *testing.T) {
 		hasError bool
 	}{
 		{
-			name: "no deployments",
+			name: "no statefulsets",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/deployments/": &v1beta1.DeploymentList{},
+					"/statefulsets/": &v1beta1.StatefulSetList{},
 				},
 			},
 			hasError: false,
 		},
 		{
-			name: "collect deployments",
+			name: "collect statefulsets",
 			handler: &mockHandler{
 				responseMap: map[string]interface{}{
-					"/deployments/": &v1beta1.DeploymentList{
-						Items: []*v1beta1.Deployment{
+					"/statefulsets/": &v1beta1.StatefulSetList{
+						Items: []*v1beta1.StatefulSet{
 							{
-								Status: &v1beta1.DeploymentStatus{
-									Replicas:            toInt32Ptr(3),
-									AvailableReplicas:   toInt32Ptr(1),
-									UnavailableReplicas: toInt32Ptr(4),
-									UpdatedReplicas:     toInt32Ptr(2),
-									ObservedGeneration:  toInt64Ptr(9121),
+								Status: &v1beta1.StatefulSetStatus{
+									Replicas:           toInt32Ptr(2),
+									CurrentReplicas:    toInt32Ptr(4),
+									ReadyReplicas:      toInt32Ptr(1),
+									UpdatedReplicas:    toInt32Ptr(3),
+									ObservedGeneration: toInt64Ptr(119),
 								},
-								Spec: &v1beta1.DeploymentSpec{
-									Strategy: &v1beta1.DeploymentStrategy{
-										RollingUpdate: &v1beta1.RollingUpdateDeployment{
-											MaxUnavailable: &intstr.IntOrString{
-												IntVal: toInt32Ptr(30),
-											},
-											MaxSurge: &intstr.IntOrString{
-												IntVal: toInt32Ptr(20),
-											},
-										},
-									},
-									Replicas: toInt32Ptr(4),
+								Spec: &v1beta1.StatefulSetSpec{
+									Replicas: toInt32Ptr(3),
 								},
 								Metadata: &metav1.ObjectMeta{
-									Generation: toInt64Ptr(11221),
+									Generation: toInt64Ptr(332),
 									Namespace:  toStrPtr("ns1"),
-									Name:       toStrPtr("deploy1"),
+									Name:       toStrPtr("sts1"),
 									Labels: map[string]string{
 										"lab1": "v1",
 										"lab2": "v2",
@@ -86,7 +63,22 @@ func TestDeployment(t *testing.T) {
 			},
 			output: &testutil.Accumulator{
 				Metrics: []*testutil.Metric{
-					outputMetric,
+					{
+						Fields: map[string]interface{}{
+							"generation":          int64(332),
+							"observed_generation": int64(119),
+							"created":             now.UnixNano(),
+							"spec_replicas":       int32(3),
+							"replicas":            int32(2),
+							"replicas_current":    int32(4),
+							"replicas_ready":      int32(1),
+							"replicas_updated":    int32(3),
+						},
+						Tags: map[string]string{
+							"namespace":        "ns1",
+							"statefulset_name": "sts1",
+						},
+					},
 				},
 			},
 			hasError: false,
@@ -94,14 +86,14 @@ func TestDeployment(t *testing.T) {
 	}
 
 	for _, v := range tests {
-		ks := &KubernetesState{
+		ks := &KubernetesInventory{
 			client: cli,
 		}
 		acc := new(testutil.Accumulator)
-		for _, deployment := range ((v.handler.responseMap["/deployments/"]).(*v1beta1.DeploymentList)).Items {
-			err := ks.gatherDeployment(*deployment, acc)
+		for _, ss := range ((v.handler.responseMap["/statefulsets/"]).(*v1beta1.StatefulSetList)).Items {
+			err := ks.gatherStatefulSet(*ss, acc)
 			if err != nil {
-				t.Errorf("Failed to gather deployment - %s", err.Error())
+				t.Errorf("Failed to gather ss - %s", err.Error())
 			}
 		}
 
@@ -117,7 +109,7 @@ func TestDeployment(t *testing.T) {
 			for i := range v.output.Metrics {
 				for k, m := range v.output.Metrics[i].Tags {
 					if acc.Metrics[i].Tags[k] != m {
-						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got '%v'\n", v.name, k, m, acc.Metrics[i].Tags[k])
+						t.Fatalf("%s: tag %s metrics unmatch Expected %s, got %s\n", v.name, k, m, acc.Metrics[i].Tags[k])
 					}
 				}
 				for k, m := range v.output.Metrics[i].Fields {

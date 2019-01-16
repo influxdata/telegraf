@@ -1,4 +1,4 @@
-package kube_state
+package kube_inventory
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// KubernetesState represents the config object for the plugin.
-type KubernetesState struct {
+// KubernetesInventory represents the config object for the plugin.
+type KubernetesInventory struct {
 	URL               string            `toml:"url"`
 	BearerToken       string            `toml:"bearer_token"`
 	BearerTokenString string            `toml:"bearer_token_string"`
@@ -49,8 +49,8 @@ var sampleConfig = `
 
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
-  ## Values can be - "configmaps", "daemonsets", deployments", "nodes",
-  ## "persistentvolumes", "persistentvolumeclaims", "pods", "statefulsets"
+  ## Values can be - "daemonsets", deployments", "nodes", "persistentvolumes",
+  ## "persistentvolumeclaims", "pods", "statefulsets"
   # resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
   ## Optional Resources to include when gathering
@@ -69,53 +69,52 @@ var sampleConfig = `
 `
 
 // SampleConfig returns a sample config
-func (ks *KubernetesState) SampleConfig() string {
+func (ki *KubernetesInventory) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description returns the description of this plugin
-func (ks *KubernetesState) Description() string {
+func (ki *KubernetesInventory) Description() string {
 	return "Read metrics from the Kubernetes api"
 }
 
 // Gather collects kubernetes metrics from a given URL.
-func (ks *KubernetesState) Gather(acc telegraf.Accumulator) (err error) {
-	if ks.client == nil {
-		if ks.client, err = ks.initClient(); err != nil {
+func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
+	if ki.client == nil {
+		if ki.client, err = ki.initClient(); err != nil {
 			return err
 		}
 	}
 
 	var wg sync.WaitGroup
 
-	if len(ks.ResourceInclude) == 0 {
+	if len(ki.ResourceInclude) == 0 {
 		for _, f := range availableCollectors {
 			ctx := context.Background()
 			wg.Add(1)
-			go func(f func(ctx context.Context, acc telegraf.Accumulator, k *KubernetesState)) {
+			go func(f func(ctx context.Context, acc telegraf.Accumulator, k *KubernetesInventory)) {
 				defer wg.Done()
-				f(ctx, acc, ks)
+				f(ctx, acc, ki)
 			}(f)
 		}
 	} else {
-		for _, n := range ks.ResourceInclude {
+		for _, n := range ki.ResourceInclude {
 			ctx := context.Background()
 			wg.Add(1)
-			go func(f func(ctx context.Context, acc telegraf.Accumulator, k *KubernetesState)) {
+			go func(f func(ctx context.Context, acc telegraf.Accumulator, k *KubernetesInventory)) {
 				defer wg.Done()
-				f(ctx, acc, ks)
+				f(ctx, acc, ki)
 			}(availableCollectors[n])
 		}
 	}
 
 	wg.Wait()
-	ks.firstTimeGather = false
+	ki.firstTimeGather = false
 
 	return nil
 }
 
-var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesState){
-	"configmaps":             collectConfigMaps,
+var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accumulator, ki *KubernetesInventory){
 	"daemonsets":             collectDaemonSets,
 	"deployments":            collectDeployments,
 	"nodes":                  collectNodes,
@@ -125,24 +124,24 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 	"statefulsets":           collectStatefulSets,
 }
 
-func (ks *KubernetesState) initClient() (*client, error) {
-	ks.firstTimeGather = true
+func (ki *KubernetesInventory) initClient() (*client, error) {
+	ki.firstTimeGather = true
 
-	if len(ks.ResourceInclude) == 0 {
-		for i := range ks.ResourceExclude {
-			delete(availableCollectors, ks.ResourceExclude[i])
+	if len(ki.ResourceInclude) == 0 {
+		for i := range ki.ResourceExclude {
+			delete(availableCollectors, ki.ResourceExclude[i])
 		}
 	}
 
-	if ks.BearerToken != "" {
-		token, err := ioutil.ReadFile(ks.BearerToken)
+	if ki.BearerToken != "" {
+		token, err := ioutil.ReadFile(ki.BearerToken)
 		if err != nil {
 			return nil, err
 		}
-		ks.BearerTokenString = strings.TrimSpace(string(token))
+		ki.BearerTokenString = strings.TrimSpace(string(token))
 	}
 
-	return newClient(ks.URL, ks.Namespace, ks.BearerTokenString, ks.ResponseTimeout.Duration, ks.ClientConfig)
+	return newClient(ki.URL, ki.Namespace, ki.BearerTokenString, ki.ResponseTimeout.Duration, ki.ClientConfig)
 }
 
 func boolInt(b bool) int {
@@ -161,20 +160,18 @@ func atoi(s string) int64 {
 }
 
 var (
-	configMapMeasurement             = "kubernetes_configmap"
 	daemonSetMeasurement             = "kubernetes_daemonset"
 	deploymentMeasurement            = "kubernetes_deployment"
 	nodeMeasurement                  = "kubernetes_node"
 	persistentVolumeMeasurement      = "kubernetes_persistentvolume"
 	persistentVolumeClaimMeasurement = "kubernetes_persistentvolumeclaim"
-	podStatusMeasurement             = "kubernetes_pod"
 	podContainerMeasurement          = "kubernetes_pod_container"
 	statefulSetMeasurement           = "kubernetes_statefulset"
 )
 
 func init() {
-	inputs.Add("kube_state", func() telegraf.Input {
-		return &KubernetesState{
+	inputs.Add("kube_inventory", func() telegraf.Input {
+		return &KubernetesInventory{
 			ResponseTimeout: internal.Duration{Duration: time.Second * 5},
 			Namespace:       "default",
 		}
