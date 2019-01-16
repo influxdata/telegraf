@@ -185,7 +185,7 @@ subjects:
     - resource_limits_cpu_units
     - resource_limits_memory_bytes
 
-+ kubernetes_pod_status
++ kubernetes_pod
   - tags:
     - namespace
     - pod_name
