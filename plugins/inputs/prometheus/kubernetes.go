@@ -77,6 +77,10 @@ func (p *Prometheus) start(ctx context.Context) error {
 	return nil
 }
 
+// An edge case exists if a pod goes offline at the same time a new pod is created
+// (without the scrape annotations). K8s may re-assign the old pod ip to the non-scrape
+// pod, causing errors in the logs. This is only true if the pod going offline is not
+// directed to do so by K8s.
 func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 	pod := &corev1.Pod{}
 	watcher, err := client.Watch(ctx, "", &corev1.Pod{})
@@ -97,15 +101,21 @@ func (p *Prometheus) watch(ctx context.Context, client *k8s.Client) error {
 				return err
 			}
 
+			// If the pod is not "ready", there will be no ip associated with it.
+			if pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"] != "true" ||
+				!podReady(pod.Status.GetContainerStatuses()) {
+				continue
+			}
+
 			switch eventType {
 			case k8s.EventAdded:
-				if podReady(pod.Status.GetContainerStatuses()) {
-					registerPod(pod, p)
-				}
+				registerPod(pod, p)
 			case k8s.EventModified:
-				if pod.Metadata.GetDeletionTimestamp() != nil && podConditionReady(pod.Status.GetConditions()) {
+				// To avoid multiple actions for each event, unregister on the first event
+				// in the delete sequence, when the containers are still "ready".
+				if pod.Metadata.GetDeletionTimestamp() != nil {
 					unregisterPod(pod, p)
-				} else if podReady(pod.Status.GetContainerStatuses()) && podConditionReady(pod.Status.GetConditions()) {
+				} else {
 					registerPod(pod, p)
 				}
 			}
@@ -119,18 +129,6 @@ func podReady(statuss []*corev1.ContainerStatus) bool {
 	}
 	for _, cs := range statuss {
 		if !cs.GetReady() {
-			return false
-		}
-	}
-	return true
-}
-
-func podConditionReady(statuss []*corev1.PodCondition) bool {
-	if len(statuss) < 3 {
-		return false
-	}
-	for _, pc := range statuss {
-		if pc.GetType() == "Ready" && pc.GetStatus() == "False" {
 			return false
 		}
 	}
@@ -162,21 +160,16 @@ func registerPod(pod *corev1.Pod, p *Prometheus) {
 	}
 	podURL := p.AddressToURL(URL, URL.Hostname())
 	p.lock.Lock()
-	p.kubernetesPods = append(p.kubernetesPods,
-		URLAndAddress{
-			URL:         podURL,
-			Address:     URL.Hostname(),
-			OriginalURL: URL,
-			Tags:        tags})
+	p.kubernetesPods[podURL.String()] = URLAndAddress{
+		URL:         podURL,
+		Address:     URL.Hostname(),
+		OriginalURL: URL,
+		Tags:        tags,
+	}
 	p.lock.Unlock()
 }
 
 func getScrapeURL(pod *corev1.Pod) *string {
-	scrape := pod.GetMetadata().GetAnnotations()["prometheus.io/scrape"]
-	if scrape != "true" {
-		return nil
-	}
-
 	ip := pod.Status.GetPodIP()
 	if ip == "" {
 		// return as if scrape was disabled, we will be notified again once the pod
@@ -215,18 +208,13 @@ func unregisterPod(pod *corev1.Pod, p *Prometheus) {
 		return
 	}
 
-	p.lock.Lock()
-	defer p.lock.Unlock()
 	log.Printf("D! [inputs.prometheus] registered a delete request for %s in namespace %s",
 		pod.GetMetadata().GetName(), pod.GetMetadata().GetNamespace())
-	var result []URLAndAddress
-	for _, v := range p.kubernetesPods {
-		if v.URL.String() != *url {
-			result = append(result, v)
-		} else {
-			log.Printf("D! [inputs.prometheus] will stop scraping for %s", *url)
-		}
 
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	if _, ok := p.kubernetesPods[*url]; ok {
+		delete(p.kubernetesPods, *url)
+		log.Printf("D! [inputs.prometheus] will stop scraping for %s", *url)
 	}
-	p.kubernetesPods = result
 }

@@ -42,7 +42,7 @@ type Prometheus struct {
 	// Should we scrape Kubernetes services for prometheus annotations
 	MonitorPods    bool `toml:"monitor_kubernetes_pods"`
 	lock           sync.Mutex
-	kubernetesPods []URLAndAddress
+	kubernetesPods map[string]URLAndAddress
 	cancel         context.CancelFunc
 	wg             sync.WaitGroup
 }
@@ -115,21 +115,23 @@ type URLAndAddress struct {
 	Tags        map[string]string
 }
 
-func (p *Prometheus) GetAllURLs() ([]URLAndAddress, error) {
-	allURLs := make([]URLAndAddress, 0)
+func (p *Prometheus) GetAllURLs() (map[string]URLAndAddress, error) {
+	allURLs := make(map[string]URLAndAddress, 0)
 	for _, u := range p.URLs {
 		URL, err := url.Parse(u)
 		if err != nil {
 			log.Printf("prometheus: Could not parse %s, skipping it. Error: %s", u, err.Error())
 			continue
 		}
-
-		allURLs = append(allURLs, URLAndAddress{URL: URL, OriginalURL: URL})
+		allURLs[URL.String()] = URLAndAddress{URL: URL, OriginalURL: URL}
 	}
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	// loop through all pods scraped via the prometheus annotation on the pods
-	allURLs = append(allURLs, p.kubernetesPods...)
+	for k, v := range p.kubernetesPods {
+		allURLs[k] = v
+	}
 
 	for _, service := range p.KubernetesServices {
 		URL, err := url.Parse(service)
@@ -144,7 +146,11 @@ func (p *Prometheus) GetAllURLs() ([]URLAndAddress, error) {
 		}
 		for _, resolved := range resolvedAddresses {
 			serviceURL := p.AddressToURL(URL, resolved)
-			allURLs = append(allURLs, URLAndAddress{URL: serviceURL, Address: resolved, OriginalURL: URL})
+			allURLs[serviceURL.String()] = URLAndAddress{
+				URL:         serviceURL,
+				Address:     resolved,
+				OriginalURL: URL,
+			}
 		}
 	}
 	return allURLs, nil
@@ -313,6 +319,9 @@ func (p *Prometheus) Stop() {
 
 func init() {
 	inputs.Add("prometheus", func() telegraf.Input {
-		return &Prometheus{ResponseTimeout: internal.Duration{Duration: time.Second * 3}}
+		return &Prometheus{
+			ResponseTimeout: internal.Duration{Duration: time.Second * 3},
+			kubernetesPods:  map[string]URLAndAddress{},
+		}
 	})
 }
