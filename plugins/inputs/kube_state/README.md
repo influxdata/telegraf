@@ -211,15 +211,15 @@ subjects:
 ### Example Output:
 
 ```
-kubernetes_configmap,configmap_name=envoy-config,namespace=default,resource_version=56593031 gauge=1i 1544103867000000000
+kubernetes_configmap,configmap_name=envoy-config,namespace=default,resource_version=56593031 created=1544103867000000000i 1547597616000000000
 kubernetes_daemonset
-kubernetes_deployment,deployment_name=tasks,namespace=default created=1544102512000000000i,status_replicas_available=1i,status_replicas_unavailable=0i 1546915265000000000
-kubernetes_node,node_name=ip-172-17-0-1.internal status_capacity_memory_bytes="125817904Ki",status_capacity_pods=110i,status_allocatable_cpu_cores=16i,status_allocatable_memory_bytes="125715504Ki",status_allocatable_pods=110i,status_capacity_cpu_cores=16i 1546978191000000000
-kubernetes_persistentvolume,pv_name=pvc-aaaaaaaa-bbbb-cccc-1111-222222222222,status=Bound,storageclass=ebs-1 status_available=0i,status_bound=1i,status_failed=0i,status_pending=0i,status_released=0i 1546978191000000000
-kubernetes_persistentvolumeclaim,pvc_name=storage-7,namespace=default,status=Bound,storageclass=ebs-1-retain status_lost=0i,status_bound=1i,status_pending=0i 1546912925000000000
-kubernetes_pod_container,container_name=telegraf,namespace=default,node_name=ip-172-17-0-1.internal,pod_name=storage-7 resource_requests_cpu_units="100m",resource_requests_memory_bytes="500Mi",resource_limits_cpu_units="500m",resource_limits_memory_bytes="500Mi",status_restarts_total=1i,status_running=1i,status_terminated=0i,status_terminated_reason="" 1546912926000000000
-kubernetes_pod_status,pod_name=storage-7,namespace=default,node_name=ip-172-17-0-2.internal ready="true" 1546910783000000000
-kubernetes_statefulset,ss_name=kafka,namespace=default status_replicas=8i,status_replicas_current=8i,status_replicas_ready=8i,status_replicas_updated=8i,replicas=8i,status_observed_generation=4i,metadata_generation=4i 1544101819000000000
+kubernetes_deployment,deployment_name=deployd,namespace=default replicas_unavailable=0i,created=1544103082000000000i,replicas_available=1i 1547597616000000000
+kubernetes_node,node_name=ip-172-17-0-2.internal allocatable_pods=110i,capacity_memory_bytes="125817904Ki",capacity_pods=110i,capacity_cpu_cores=16i,allocatable_cpu_cores=16i,allocatable_memory_bytes="125715504Ki" 1547597616000000000
+kubernetes_persistentvolume,phase=Released,pv_name=pvc-aaaaaaaa-bbbb-cccc-1111-222222222222,storageclass=ebs-1-retain phase_type=3i 1547597616000000000
+kubernetes_persistentvolumeclaim,namespace=default,phase=Bound,pvc_name=data-etcd-0,storageclass=ebs-1-retain phase_type=0i 1547597615000000000
+kubernetes_pod,namespace=default,node_name=ip-172-17-0-2.internal,pod_name=tick1 last_transition_time=1547578322000000000i,ready="false" 1547597616000000000
+kubernetes_pod_container,container_name=telegraf,namespace=default,node_name=ip-172-17-0-2.internal,pod_name=tick1 restarts_total=0i,running=1i,terminated=0i,terminated_reason="" 1547597616000000000
+kubernetes_statefulset,namespace=default,statefulset_name=etcd replicas_updated=3i,spec_replicas=3i,observed_generation=1i,created=1544101669000000000i,generation=1i,replicas=3i,replicas_current=3i,replicas_ready=3i 1547597616000000000
 ```
 
 
