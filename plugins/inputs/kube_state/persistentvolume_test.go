@@ -60,16 +60,12 @@ func TestPersistentVolume(t *testing.T) {
 				Metrics: []*testutil.Metric{
 					{
 						Fields: map[string]interface{}{
-							"status_pending":   1,
-							"status_available": 0,
-							"status_bound":     0,
-							"status_released":  0,
-							"status_failed":    0,
+							"phase_type": 2,
 						},
 						Tags: map[string]string{
 							"pv_name":      "pv1",
 							"storageclass": "ebs-1",
-							"status":       "pending",
+							"phase":        "pending",
 						},
 					},
 				},

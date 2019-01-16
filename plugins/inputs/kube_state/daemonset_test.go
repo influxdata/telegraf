@@ -64,19 +64,17 @@ func TestDaemonSet(t *testing.T) {
 				Metrics: []*testutil.Metric{
 					{
 						Fields: map[string]interface{}{
-							"metadata_generation":             int64(11221),
-							"status_current_number_scheduled": int32(3),
-							"status_desired_number_scheduled": int32(5),
-							"status_number_available":         int32(2),
-							"status_number_misscheduled":      int32(2),
-							"status_number_ready":             int32(1),
-							"status_number_unavailable":       int32(1),
-							"status_updated_number_scheduled": int32(2),
-							"created":                         now.UnixNano(),
+							"generation":               int64(11221),
+							"current_number_scheduled": int32(3),
+							"desired_number_scheduled": int32(5),
+							"number_available":         int32(2),
+							"number_misscheduled":      int32(2),
+							"number_ready":             int32(1),
+							"number_unavailable":       int32(1),
+							"updated_number_scheduled": int32(2),
+							"created":                  now.UnixNano(),
 						},
 						Tags: map[string]string{
-							// "label_lab1": "v1",
-							// "label_lab2": "v2",
 							"daemonset_name": "daemon1",
 							"namespace":      "ns1",
 						},

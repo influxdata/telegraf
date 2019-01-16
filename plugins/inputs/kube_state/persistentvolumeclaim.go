@@ -24,20 +24,23 @@ func collectPersistentVolumeClaims(ctx context.Context, acc telegraf.Accumulator
 }
 
 func (ks *KubernetesState) gatherPersistentVolumeClaim(pvc v1.PersistentVolumeClaim, acc telegraf.Accumulator) error {
-	fields := map[string]interface{}{}
+	phaseType := 3
+	switch strings.ToLower(pvc.Status.GetPhase()) {
+	case "bound":
+		phaseType = 0
+	case "lost":
+		phaseType = 1
+	case "pending":
+		phaseType = 2
+	}
+	fields := map[string]interface{}{
+		"phase_type": phaseType,
+	}
 	tags := map[string]string{
 		"pvc_name":     pvc.Metadata.GetName(),
 		"namespace":    pvc.Metadata.GetNamespace(),
-		"status":       pvc.Status.GetPhase(),
+		"phase":        pvc.Status.GetPhase(),
 		"storageclass": pvc.Spec.GetStorageClassName(),
-		// "volumename":   pvc.Spec.GetVolumeName(),
-	}
-
-	// Set current phase to 1, others to 0 if it is set.
-	if p := pvc.Status.GetPhase(); p != "" {
-		fields["status_lost"] = boolInt(strings.ToLower(p) == "lost")
-		fields["status_bound"] = boolInt(strings.ToLower(p) == "bound")
-		fields["status_pending"] = boolInt(strings.ToLower(p) == "pending")
 	}
 
 	acc.AddFields(persistentVolumeClaimMeasurement, fields, tags)

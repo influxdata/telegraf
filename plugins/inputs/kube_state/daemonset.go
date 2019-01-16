@@ -25,14 +25,14 @@ func collectDaemonSets(ctx context.Context, acc telegraf.Accumulator, ks *Kubern
 
 func (ks *KubernetesState) gatherDaemonSet(d v1beta2.DaemonSet, acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{
-		"metadata_generation":             d.Metadata.GetGeneration(),
-		"status_current_number_scheduled": d.Status.GetCurrentNumberScheduled(),
-		"status_desired_number_scheduled": d.Status.GetDesiredNumberScheduled(),
-		"status_number_available":         d.Status.GetNumberAvailable(),
-		"status_number_misscheduled":      d.Status.GetNumberMisscheduled(),
-		"status_number_ready":             d.Status.GetNumberReady(),
-		"status_number_unavailable":       d.Status.GetNumberUnavailable(),
-		"status_updated_number_scheduled": d.Status.GetUpdatedNumberScheduled(),
+		"generation":               d.Metadata.GetGeneration(),
+		"current_number_scheduled": d.Status.GetCurrentNumberScheduled(),
+		"desired_number_scheduled": d.Status.GetDesiredNumberScheduled(),
+		"number_available":         d.Status.GetNumberAvailable(),
+		"number_misscheduled":      d.Status.GetNumberMisscheduled(),
+		"number_ready":             d.Status.GetNumberReady(),
+		"number_unavailable":       d.Status.GetNumberUnavailable(),
+		"updated_number_scheduled": d.Status.GetUpdatedNumberScheduled(),
 	}
 	tags := map[string]string{
 		"daemonset_name": d.Metadata.GetName(),

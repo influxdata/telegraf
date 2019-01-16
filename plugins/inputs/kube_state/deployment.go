@@ -25,9 +25,9 @@ func collectDeployments(ctx context.Context, acc telegraf.Accumulator, ks *Kuber
 
 func (ks *KubernetesState) gatherDeployment(d v1beta1.Deployment, acc telegraf.Accumulator) error {
 	fields := map[string]interface{}{
-		"status_replicas_available":   d.Status.GetAvailableReplicas(),
-		"status_replicas_unavailable": d.Status.GetUnavailableReplicas(),
-		"created":                     time.Unix(d.Metadata.CreationTimestamp.GetSeconds(), int64(d.Metadata.CreationTimestamp.GetNanos())).UnixNano(),
+		"replicas_available":   d.Status.GetAvailableReplicas(),
+		"replicas_unavailable": d.Status.GetUnavailableReplicas(),
+		"created":              time.Unix(d.Metadata.CreationTimestamp.GetSeconds(), int64(d.Metadata.CreationTimestamp.GetNanos())).UnixNano(),
 	}
 	tags := map[string]string{
 		"deployment_name": d.Metadata.GetName(),

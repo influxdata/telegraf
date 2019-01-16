@@ -31,22 +31,22 @@ func (ks *KubernetesState) gatherNode(n v1.Node, acc telegraf.Accumulator) error
 	for resourceName, val := range n.Status.Capacity {
 		switch resourceName {
 		case "cpu":
-			fields["status_capacity_cpu_cores"] = atoi(*val.String_)
+			fields["capacity_cpu_cores"] = atoi(*val.String_)
 		case "memory":
-			fields["status_capacity_"+sanitizeLabelName(resourceName)+"_bytes"] = *val.String_
+			fields["capacity_memory_bytes"] = *val.String_
 		case "pods":
-			fields["status_capacity_pods"] = atoi(*val.String_)
+			fields["capacity_pods"] = atoi(*val.String_)
 		}
 	}
 
 	for resourceName, val := range n.Status.Allocatable {
 		switch resourceName {
 		case "cpu":
-			fields["status_allocatable_cpu_cores"] = atoi(*val.String_)
+			fields["allocatable_cpu_cores"] = atoi(*val.String_)
 		case "memory":
-			fields["status_allocatable_"+sanitizeLabelName(string(resourceName))+"_bytes"] = *val.String_
+			fields["allocatable_memory_bytes"] = *val.String_
 		case "pods":
-			fields["status_allocatable_pods"] = atoi(*val.String_)
+			fields["allocatable_pods"] = atoi(*val.String_)
 		}
 	}
 

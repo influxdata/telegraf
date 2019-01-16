@@ -1,11 +1,5 @@
 package kube_state
 
-// - resource_requests_cpu_units
-// - resource_limits_cpu_units
-// - resource_requests_memory_bytes
-// - resource_limits_memory_bytes
-// - status_ready
-
 import (
 	"context"
 	"strings"
@@ -31,8 +25,7 @@ func collectPods(ctx context.Context, acc telegraf.Accumulator, ks *KubernetesSt
 }
 
 func (ks *KubernetesState) gatherPod(p v1.Pod, acc telegraf.Accumulator) error {
-	// todo: size is likely wrong
-	if p.Metadata.CreationTimestamp.Size() == 0 {
+	if p.Metadata.CreationTimestamp.GetSeconds() == 0 && p.Metadata.CreationTimestamp.GetNanos() == 0 {
 		return nil
 	}
 
@@ -42,7 +35,7 @@ func (ks *KubernetesState) gatherPod(p v1.Pod, acc telegraf.Accumulator) error {
 	}
 
 	for _, c := range p.Status.Conditions {
-		if c.LastTransitionTime.Size() == 0 {
+		if c.LastTransitionTime.GetSeconds() == 0 && c.LastTransitionTime.GetNanos() == 0 {
 			continue
 		}
 		gatherPodStatus(p, *c, acc)
@@ -53,17 +46,16 @@ func (ks *KubernetesState) gatherPod(p v1.Pod, acc telegraf.Accumulator) error {
 
 func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.Container, acc telegraf.Accumulator) {
 	fields := map[string]interface{}{
-		"status_restarts_total":    cs.GetRestartCount(),
-		"status_running":           boolInt(cs.State.Running != nil),
-		"status_terminated":        boolInt(cs.State.Terminated != nil),
-		"status_terminated_reason": cs.State.Terminated.GetReason(),
+		"restarts_total":    cs.GetRestartCount(),
+		"running":           boolInt(cs.State.Running != nil),
+		"terminated":        boolInt(cs.State.Terminated != nil),
+		"terminated_reason": cs.State.Terminated.GetReason(),
 	}
 	tags := map[string]string{
 		"container_name": *c.Name,
 		"namespace":      *p.Metadata.Namespace,
 		"node_name":      *p.Spec.NodeName,
 		"pod_name":       *p.Metadata.Name,
-		// "reason":      ,
 	}
 
 	req := c.Resources.Requests
@@ -96,8 +88,9 @@ func gatherPodStatus(p v1.Pod, c v1.PodCondition, acc telegraf.Accumulator) {
 		"node_name": p.Spec.GetNodeName(),
 		"reason":    p.Status.GetReason(),
 	}
-
-	fields := make(map[string]interface{})
+	fields := map[string]interface{}{
+		"last_transition_time": time.Unix(c.LastTransitionTime.GetSeconds(), int64(c.LastTransitionTime.GetNanos())).UnixNano(),
+	}
 
 	switch strings.ToLower(*c.Type) {
 	case "ready":
@@ -106,5 +99,5 @@ func gatherPodStatus(p v1.Pod, c v1.PodCondition, acc telegraf.Accumulator) {
 		fields["ready"] = "false"
 	}
 
-	acc.AddFields(podStatusMeasurement, fields, tags, time.Unix(c.LastTransitionTime.GetSeconds(), int64(c.LastTransitionTime.GetNanos())))
+	acc.AddFields(podStatusMeasurement, fields, tags)
 }

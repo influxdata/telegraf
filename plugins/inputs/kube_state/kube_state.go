@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,14 +17,14 @@ import (
 
 // KubernetesState represents the config object for the plugin.
 type KubernetesState struct {
-	URL             string            `toml:"url"`
-	BearerToken     string            `toml:"bearer_token"`
-	BearerTokenFile string            `toml:"bearer_token_file"`
-	Namespace       string            `toml:"namespace"`
-	ResponseTimeout internal.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
-	ResourceExclude []string          `toml:"resource_exclude"`
-	ResourceInclude []string          `toml:"resource_include"`
-	MaxConfigMapAge internal.Duration `toml:"max_config_map_age"`
+	URL               string            `toml:"url"`
+	BearerToken       string            `toml:"bearer_token"`
+	BearerTokenString string            `toml:"bearer_token_string"`
+	Namespace         string            `toml:"namespace"`
+	ResponseTimeout   internal.Duration `toml:"response_timeout"` // Timeout specified as a string - 3s, 1m, 1h
+	ResourceExclude   []string          `toml:"resource_exclude"`
+	ResourceInclude   []string          `toml:"resource_include"`
+	MaxConfigMapAge   internal.Duration `toml:"max_config_map_age"`
 
 	tls.ClientConfig
 
@@ -36,35 +35,35 @@ type KubernetesState struct {
 
 var sampleConfig = `
   ## URL for the kubelet
-  url = "https://1.1.1.1"
+  url = "https://127.0.0.1"
 
   ## Namespace to use
-  namespace = "default"
+  # namespace = "default"
 
-  ## Use bearer token for authorization (token has priority over file)
-  # bearer_token = abc123
-  ## or
-  # bearer_token_file = /path/to/bearer/token
+  ## Use bearer token for authorization. ('bearer_token' takes priority)
+  # bearer_token = "/path/to/bearer/token"
+  ## OR
+  # bearer_token_string = "abc_123"
 
   ## Set response_timeout (default 5 seconds)
-  #  response_timeout = "5s"
+  # response_timeout = "5s"
 
   ## Optional Resources to exclude from gathering
   ## Leave them with blank with try to gather everything available.
   ## Values can be - "configmaps", "daemonsets", deployments", "nodes",
   ## "persistentvolumes", "persistentvolumeclaims", "pods", "statefulsets"
-  #  resource_exclude = [ "deployments", "nodes", "statefulsets" ]
+  # resource_exclude = [ "deployments", "nodes", "statefulsets" ]
 
   ## Optional Resources to include when gathering
   ## Overrides resource_exclude if both set.
-  #  resource_include = [ "deployments", "nodes", "statefulsets" ]
+  # resource_include = [ "deployments", "nodes", "statefulsets" ]
 
   ## Optional max age for config map
-  #  max_config_map_age = "1h"
+  # max_config_map_age = "1h"
 
   ## Optional TLS Config
   ## Use TLS but skip chain & host verification
-  #  insecure_skip_verify = false
+  # insecure_skip_verify = false
 `
 
 // SampleConfig returns a sample config
@@ -74,11 +73,10 @@ func (ks *KubernetesState) SampleConfig() string {
 
 // Description returns the description of this plugin
 func (ks *KubernetesState) Description() string {
-	return "Read metrics from the kubernetes kubelet api"
+	return "Read metrics from the Kubernetes api"
 }
 
 // Gather collects kubernetes metrics from a given URL.
-// todo: convert to service?
 func (ks *KubernetesState) Gather(acc telegraf.Accumulator) (err error) {
 	if ks.client == nil {
 		if ks.client, err = ks.initClient(); err != nil {
@@ -88,7 +86,6 @@ func (ks *KubernetesState) Gather(acc telegraf.Accumulator) (err error) {
 
 	var wg sync.WaitGroup
 
-	// todo: reimplement better include/exclude filter
 	if len(ks.ResourceInclude) == 0 {
 		for _, f := range availableCollectors {
 			ctx := context.Background()
@@ -122,8 +119,8 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 	"nodes":                  collectNodes,
 	"persistentvolumes":      collectPersistentVolumes,
 	"persistentvolumeclaims": collectPersistentVolumeClaims,
-	"pods":                   collectPods,
-	"statefulsets":           collectStatefulSets,
+	"pods":         collectPods,
+	"statefulsets": collectStatefulSets,
 }
 
 func (ks *KubernetesState) initClient() (*client, error) {
@@ -135,26 +132,19 @@ func (ks *KubernetesState) initClient() (*client, error) {
 
 	if len(ks.ResourceInclude) == 0 {
 		for i := range ks.ResourceExclude {
-			// todo: likely to break reloading config file
 			delete(availableCollectors, ks.ResourceExclude[i])
 		}
 	}
 
-	if ks.BearerToken == "" && ks.BearerTokenFile != "" {
-		token, err := ioutil.ReadFile(ks.BearerTokenFile)
+	if ks.BearerToken != "" {
+		token, err := ioutil.ReadFile(ks.BearerToken)
 		if err != nil {
 			return nil, err
 		}
-		ks.BearerToken = strings.TrimSpace(string(token))
+		ks.BearerTokenString = strings.TrimSpace(string(token))
 	}
 
-	return newClient(ks.URL, ks.Namespace, ks.BearerToken, ks.ResponseTimeout.Duration, tlsCfg)
-}
-
-var invalidLabelCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
-
-func sanitizeLabelName(s string) string {
-	return invalidLabelCharRE.ReplaceAllString(s, "_")
+	return newClient(ks.URL, ks.Namespace, ks.BearerTokenString, ks.ResponseTimeout.Duration, tlsCfg)
 }
 
 func boolInt(b bool) int {
@@ -165,9 +155,8 @@ func boolInt(b bool) int {
 }
 
 func atoi(s string) int64 {
-	i, err := strconv.Atoi(s)
+	i, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		fmt.Println(err) // todo: remove
 		return 0
 	}
 	return int64(i)
@@ -180,7 +169,7 @@ var (
 	nodeMeasurement                  = "kubernetes_node"
 	persistentVolumeMeasurement      = "kubernetes_persistentvolume"
 	persistentVolumeClaimMeasurement = "kubernetes_persistentvolumeclaim"
-	podStatusMeasurement             = "kubernetes_pod_status"
+	podStatusMeasurement             = "kubernetes_pod"
 	podContainerMeasurement          = "kubernetes_pod_container"
 	statefulSetMeasurement           = "kubernetes_statefulset"
 )
@@ -189,6 +178,7 @@ func init() {
 	inputs.Add("kube_state", func() telegraf.Input {
 		return &KubernetesState{
 			ResponseTimeout: internal.Duration{Duration: time.Second * 5},
+			Namespace:       "default",
 		}
 	})
 }

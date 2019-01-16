@@ -17,23 +17,13 @@ func TestDeployment(t *testing.T) {
 	now = time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), 1, 36, 0, now.Location())
 	outputMetric := &testutil.Metric{
 		Fields: map[string]interface{}{
-			// "spec_replicas":               int32(4),
-			// "metadata_generation":         int64(11221),
-			// "status_replicas":             int32(3),
-			"status_replicas_available":   int32(1),
-			"status_replicas_unavailable": int32(4),
-			// "status_replicas_updated":     int32(2),
-			// "status_observed_generation":  int64(9121),
-			"created": now.UnixNano(),
-			// "spec_strategy_rollingupdate_max_unavailable": 30,
-			// "spec_strategy_rollingupdate_max_surge":       20,
+			"replicas_available":   int32(1),
+			"replicas_unavailable": int32(4),
+			"created":              now.UnixNano(),
 		},
 		Tags: map[string]string{
-			// "label_lab1":  "v1",
-			// "label_lab2":  "v2",
 			"namespace":       "ns1",
 			"deployment_name": "deploy1",
-			// "spec_paused": "false",
 		},
 	}
 
@@ -67,7 +57,6 @@ func TestDeployment(t *testing.T) {
 									ObservedGeneration:  toInt64Ptr(9121),
 								},
 								Spec: &v1beta1.DeploymentSpec{
-									// Paused: toBoolPtr(false),
 									Strategy: &v1beta1.DeploymentStrategy{
 										RollingUpdate: &v1beta1.RollingUpdateDeployment{
 											MaxUnavailable: &intstr.IntOrString{

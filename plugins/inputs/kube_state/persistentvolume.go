@@ -24,20 +24,26 @@ func collectPersistentVolumes(ctx context.Context, acc telegraf.Accumulator, ks 
 }
 
 func (ks *KubernetesState) gatherPersistentVolume(pv v1.PersistentVolume, acc telegraf.Accumulator) error {
-	fields := map[string]interface{}{}
+	phaseType := 5
+	switch strings.ToLower(pv.Status.GetPhase()) {
+	case "bound":
+		phaseType = 0
+	case "failed":
+		phaseType = 1
+	case "pending":
+		phaseType = 2
+	case "released":
+		phaseType = 3
+	case "available":
+		phaseType = 4
+	}
+	fields := map[string]interface{}{
+		"phase_type": phaseType,
+	}
 	tags := map[string]string{
 		"pv_name":      pv.Metadata.GetName(),
-		"status":       pv.Status.GetPhase(),
+		"phase":        pv.Status.GetPhase(),
 		"storageclass": pv.Spec.GetStorageClassName(),
-	}
-
-	// Set current phase to 1, others to 0 if it is set.
-	if p := pv.Status.GetPhase(); p != "" {
-		fields["status_available"] = boolInt(strings.ToLower(p) == "available")
-		fields["status_bound"] = boolInt(strings.ToLower(p) == "bound")
-		fields["status_failed"] = boolInt(strings.ToLower(p) == "failed")
-		fields["status_pending"] = boolInt(strings.ToLower(p) == "pending")
-		fields["status_released"] = boolInt(strings.ToLower(p) == "released")
 	}
 
 	acc.AddFields(persistentVolumeMeasurement, fields, tags)

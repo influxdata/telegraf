@@ -62,18 +62,13 @@ func TestPersistentVolumeClaim(t *testing.T) {
 				Metrics: []*testutil.Metric{
 					{
 						Fields: map[string]interface{}{
-							"status_lost":    0,
-							"status_pending": 0,
-							"status_bound":   1,
+							"phase_type": 0,
 						},
 						Tags: map[string]string{
 							"pvc_name":     "pc1",
 							"namespace":    "ns1",
 							"storageclass": "ebs-1",
-							"status":       "bound",
-							// "label_lab1":            "v1",
-							// "label_lab2":            "v2",
-							// "volumename":            "pvc-dc870fd6-1e08-11e8-b226-02aa4bc06eb8",
+							"phase":        "bound",
 						},
 					},
 				},

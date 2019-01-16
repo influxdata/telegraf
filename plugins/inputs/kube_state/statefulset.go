@@ -26,25 +26,21 @@ func collectStatefulSets(ctx context.Context, acc telegraf.Accumulator, ks *Kube
 func (ks *KubernetesState) gatherStatefulSet(s v1beta1.StatefulSet, acc telegraf.Accumulator) error {
 	status := s.Status
 	fields := map[string]interface{}{
-		"metadata_generation":     *s.Metadata.Generation,
-		"status_replicas":         *status.Replicas,
-		"status_replicas_current": *status.CurrentReplicas,
-		"status_replicas_ready":   *status.ReadyReplicas,
-		"status_replicas_updated": *status.UpdatedReplicas,
+		"created":             time.Unix(s.Metadata.CreationTimestamp.GetSeconds(), int64(s.Metadata.CreationTimestamp.GetNanos())).UnixNano(),
+		"generation":          *s.Metadata.Generation,
+		"replicas":            *status.Replicas,
+		"replicas_current":    *status.CurrentReplicas,
+		"replicas_ready":      *status.ReadyReplicas,
+		"replicas_updated":    *status.UpdatedReplicas,
+		"spec_replicas":       *s.Spec.Replicas,
+		"observed_generation": *s.Status.ObservedGeneration,
 	}
 	tags := map[string]string{
-		"ss_name":   *s.Metadata.Name,
-		"namespace": *s.Metadata.Namespace,
+		"statefulset_name": *s.Metadata.Name,
+		"namespace":        *s.Metadata.Namespace,
 	}
 
-	if s.Spec.Replicas != nil {
-		fields["replicas"] = *s.Spec.Replicas
-	}
-	if s.Status.ObservedGeneration != nil {
-		fields["status_observed_generation"] = *s.Status.ObservedGeneration
-	}
-
-	acc.AddFields(statefulSetMeasurement, fields, tags, time.Unix(s.Metadata.CreationTimestamp.GetSeconds(), int64(s.Metadata.CreationTimestamp.GetNanos())))
+	acc.AddFields(statefulSetMeasurement, fields, tags)
 
 	return nil
 }

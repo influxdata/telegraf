@@ -81,9 +81,8 @@ func TestConfigMap(t *testing.T) {
 			output: &testutil.Accumulator{
 				Metrics: []*testutil.Metric{
 					{
-						Time: time.Unix(oldtime.GetSeconds(), int64(oldtime.GetNanos())),
 						Fields: map[string]interface{}{
-							"gauge": 1,
+							"created": time.Unix(oldtime.GetSeconds(), int64(oldtime.GetNanos())).UnixNano(),
 						},
 						Tags: map[string]string{
 							"configmap_name":   "name1",
@@ -126,9 +125,8 @@ func TestConfigMap(t *testing.T) {
 				Metrics: []*testutil.Metric{
 					{
 						Measurement: configMapMeasurement,
-						Time:        time.Unix(oldtime.GetSeconds(), int64(oldtime.GetNanos())),
 						Fields: map[string]interface{}{
-							"gauge": 1,
+							"created": time.Unix(oldtime.GetSeconds(), int64(oldtime.GetNanos())).UnixNano(),
 						},
 						Tags: map[string]string{
 							"configmap_name":   "name1",
@@ -138,9 +136,8 @@ func TestConfigMap(t *testing.T) {
 					},
 					{
 						Measurement: configMapMeasurement,
-						Time:        time.Unix(oldtime.GetSeconds()+3600, int64(oldtime.GetNanos())),
 						Fields: map[string]interface{}{
-							"gauge": 1,
+							"created": time.Unix(oldtime.GetSeconds()+3600, int64(oldtime.GetNanos())).UnixNano(),
 						},
 						Tags: map[string]string{
 							"configmap_name":   "name2",

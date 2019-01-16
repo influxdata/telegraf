@@ -14,7 +14,6 @@ import (
 func TestNode(t *testing.T) {
 	cli := &client{}
 	now := time.Now()
-	//started := time.Date(now.Year(), now.Month(), now.Day(), now.Hour()-1, 1, 36, 0, now.Location())
 	created := time.Date(now.Year(), now.Month(), now.Day(), now.Hour()-2, 1, 36, 0, now.Location())
 
 	tests := []struct {
@@ -49,7 +48,7 @@ func TestNode(t *testing.T) {
 									},
 									Phase: toStrPtr("Running"),
 									Capacity: map[string]*resource.Quantity{
-										"cpu":                     {String_: toStrPtr("16")},
+										"cpu": {String_: toStrPtr("16")},
 										"ephemeral_storage_bytes": {String_: toStrPtr("49536401408")},
 										"hugepages_1Gi_bytes":     {String_: toStrPtr("0")},
 										"hugepages_2Mi_bytes":     {String_: toStrPtr("0")},
@@ -57,7 +56,7 @@ func TestNode(t *testing.T) {
 										"pods":                    {String_: toStrPtr("110")},
 									},
 									Allocatable: map[string]*resource.Quantity{
-										"cpu":                     {String_: toStrPtr("16")},
+										"cpu": {String_: toStrPtr("16")},
 										"ephemeral_storage_bytes": {String_: toStrPtr("44582761194")},
 										"hugepages_1Gi_bytes":     {String_: toStrPtr("0")},
 										"hugepages_2Mi_bytes":     {String_: toStrPtr("0")},
@@ -104,32 +103,15 @@ func TestNode(t *testing.T) {
 					{
 						Measurement: nodeMeasurement,
 						Fields: map[string]interface{}{
-							"status_capacity_cpu_cores":       int64(16),
-							"status_capacity_memory_bytes":    "125817904Ki",
-							"status_capacity_pods":            int64(110),
-							"status_allocatable_cpu_cores":    int64(16),
-							"status_allocatable_memory_bytes": "125715504Ki",
-							"status_allocatable_pods":         int64(110),
-							// "created":                                    created.Unix(),
-							// "status_capacity_ephemeral_storage_bytes":    int64(49536401408),
-							// "status_capacity_hugepages_1Gi_bytes":        int64(0),
-							// "status_capacity_hugepages_2Mi_bytes":        int64(0),
-							// "status_allocatable_ephemeral_storage_bytes": int64(44582761194),
-							// "status_allocatable_hugepages_1Gi_bytes":     int64(0),
-							// "status_allocatable_hugepages_2Mi_bytes":     int64(0),
+							"capacity_cpu_cores":       int64(16),
+							"capacity_memory_bytes":    "125817904Ki",
+							"capacity_pods":            int64(110),
+							"allocatable_cpu_cores":    int64(16),
+							"allocatable_memory_bytes": "125715504Ki",
+							"allocatable_pods":         int64(110),
 						},
 						Tags: map[string]string{
 							"node_name": "node1",
-							// "label_lab1":                "v1",
-							// "label_lab2":                "v2",
-							// "kernel_version":            "4.14.48-coreos-r2",
-							// "os_image":                  "Container Linux by CoreOS 1745.7.0 (Rhyolite)",
-							// "container_runtime_version": "docker://18.3.1",
-							// "kubelet_version":           "v1.10.3",
-							// "kubeproxy_version":         "v1.10.3",
-							// "status_phase":              "running",
-							// "provider_id":               "aws:///us-east-1c/i-0c00",
-							// "spec_unschedulable":        "false",
 						},
 					},
 				},
