@@ -2,13 +2,14 @@ package kube_state
 
 import (
 	"context"
-	"crypto/tls"
 	"time"
 
 	"github.com/ericchiang/k8s"
 	"github.com/ericchiang/k8s/apis/apps/v1beta1"
 	"github.com/ericchiang/k8s/apis/apps/v1beta2"
 	"github.com/ericchiang/k8s/apis/core/v1"
+
+	"github.com/influxdata/telegraf/internal/tls"
 )
 
 type client struct {
@@ -17,11 +18,23 @@ type client struct {
 	*k8s.Client
 }
 
-func newClient(baseURL, namespace, bearerToken string, timeout time.Duration, tlsConfig *tls.Config) (*client, error) {
+func newClient(baseURL, namespace, bearerToken string, timeout time.Duration, tlsConfig tls.ClientConfig) (*client, error) {
 	c, err := k8s.NewClient(&k8s.Config{
-		Clusters:  []k8s.NamedCluster{{Name: "cluster", Cluster: k8s.Cluster{Server: baseURL, InsecureSkipTLSVerify: tlsConfig.InsecureSkipVerify}}},
-		Contexts:  []k8s.NamedContext{{Name: "context", Context: k8s.Context{Cluster: "cluster", AuthInfo: "auth", Namespace: namespace}}},
-		AuthInfos: []k8s.NamedAuthInfo{{Name: "auth", AuthInfo: k8s.AuthInfo{Token: bearerToken}}},
+		Clusters: []k8s.NamedCluster{{Name: "cluster", Cluster: k8s.Cluster{
+			Server:                baseURL,
+			InsecureSkipTLSVerify: tlsConfig.InsecureSkipVerify,
+			CertificateAuthority:  tlsConfig.TLSCA,
+		}}},
+		Contexts: []k8s.NamedContext{{Name: "context", Context: k8s.Context{
+			Cluster:   "cluster",
+			AuthInfo:  "auth",
+			Namespace: namespace,
+		}}},
+		AuthInfos: []k8s.NamedAuthInfo{{Name: "auth", AuthInfo: k8s.AuthInfo{
+			Token:             bearerToken,
+			ClientCertificate: tlsConfig.TLSCert,
+			ClientKey:         tlsConfig.TLSKey,
+		}}},
 	})
 	if err != nil {
 		return nil, err

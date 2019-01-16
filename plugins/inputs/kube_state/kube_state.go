@@ -2,7 +2,6 @@ package kube_state
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"strconv"
 	"strings"
@@ -62,6 +61,9 @@ var sampleConfig = `
   # max_config_map_age = "1h"
 
   ## Optional TLS Config
+  # tls_ca = "/path/to/cafile"
+  # tls_cert = "/path/to/certfile"
+  # tls_key = "/path/to/keyfile"
   ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
@@ -119,15 +121,11 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 	"nodes":                  collectNodes,
 	"persistentvolumes":      collectPersistentVolumes,
 	"persistentvolumeclaims": collectPersistentVolumeClaims,
-	"pods":         collectPods,
-	"statefulsets": collectStatefulSets,
+	"pods":                   collectPods,
+	"statefulsets":           collectStatefulSets,
 }
 
 func (ks *KubernetesState) initClient() (*client, error) {
-	tlsCfg, err := ks.ClientConfig.TLSConfig()
-	if err != nil {
-		return nil, fmt.Errorf("error parse kube state metrics config[%s]: %v", ks.URL, err)
-	}
 	ks.firstTimeGather = true
 
 	if len(ks.ResourceInclude) == 0 {
@@ -144,7 +142,7 @@ func (ks *KubernetesState) initClient() (*client, error) {
 		ks.BearerTokenString = strings.TrimSpace(string(token))
 	}
 
-	return newClient(ks.URL, ks.Namespace, ks.BearerTokenString, ks.ResponseTimeout.Duration, tlsCfg)
+	return newClient(ks.URL, ks.Namespace, ks.BearerTokenString, ks.ResponseTimeout.Duration, ks.ClientConfig)
 }
 
 func boolInt(b bool) int {

@@ -45,10 +45,19 @@ func (ks *KubernetesState) gatherPod(p v1.Pod, acc telegraf.Accumulator) error {
 }
 
 func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.Container, acc telegraf.Accumulator) {
+	state := 3
+	switch {
+	case cs.State.Running != nil:
+		state = 0
+	case cs.State.Terminated != nil:
+		state = 1
+	case cs.State.Waiting != nil:
+		state = 2
+	}
+
 	fields := map[string]interface{}{
 		"restarts_total":    cs.GetRestartCount(),
-		"running":           boolInt(cs.State.Running != nil),
-		"terminated":        boolInt(cs.State.Terminated != nil),
+		"state":             state,
 		"terminated_reason": cs.State.Terminated.GetReason(),
 	}
 	tags := map[string]string{

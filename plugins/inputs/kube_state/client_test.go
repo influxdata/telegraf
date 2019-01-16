@@ -1,9 +1,10 @@
 package kube_state
 
 import (
-	"crypto/tls"
 	"testing"
 	"time"
+
+	"github.com/influxdata/telegraf/internal/tls"
 )
 
 type mockHandler struct {
@@ -27,7 +28,7 @@ func toBoolPtr(b bool) *bool {
 }
 
 func TestNewClient(t *testing.T) {
-	_, err := newClient("https://localhost:443/", "default", "abc123", time.Second, &tls.Config{})
+	_, err := newClient("https://localhost:443/", "default", "abc123", time.Second, tls.ClientConfig{})
 	if err != nil {
 		t.Errorf("Failed to create new client - %s", err.Error())
 	}
