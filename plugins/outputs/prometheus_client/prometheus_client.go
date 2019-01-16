@@ -65,6 +65,7 @@ type PrometheusClient struct {
 	Path               string            `toml:"path"`
 	CollectorsExclude  []string          `toml:"collectors_exclude"`
 	StringAsLabel      bool              `toml:"string_as_label"`
+	ExportTimestamp    bool              `toml:"export_timestamp"`
 
 	server *http.Server
 
@@ -104,6 +105,9 @@ var sampleConfig = `
   ## If set, enable TLS with the given certificate.
   # tls_cert = "/etc/ssl/telegraf.crt"
   # tls_key = "/etc/ssl/telegraf.key"
+
+  ## Export metric collection time.
+  # export_timestamp = true
 `
 
 func (p *PrometheusClient) auth(h http.Handler) http.Handler {
@@ -283,7 +287,10 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 					name, labels, err.Error())
 			}
 
-			ch <- prometheus.NewMetricWithTimestamp(sample.Timestamp, metric)
+			if p.ExportTimestamp {
+				metric = prometheus.NewMetricWithTimestamp(sample.Timestamp, metric)
+			}
+			ch <- metric
 		}
 	}
 }
@@ -504,6 +511,7 @@ func init() {
 		return &PrometheusClient{
 			ExpirationInterval: internal.Duration{Duration: time.Second * 60},
 			StringAsLabel:      true,
+			ExportTimestamp:    true,
 			fam:                make(map[string]*MetricFamily),
 			now:                time.Now,
 		}
