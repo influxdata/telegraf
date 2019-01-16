@@ -136,6 +136,9 @@ func podReady(statuss []*corev1.ContainerStatus) bool {
 }
 
 func registerPod(pod *corev1.Pod, p *Prometheus) {
+	if p.kubernetesPods == nil {
+		p.kubernetesPods = map[string]URLAndAddress{}
+	}
 	targetURL := getScrapeURL(pod)
 	if targetURL == nil {
 		return
