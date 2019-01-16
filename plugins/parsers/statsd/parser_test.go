@@ -81,7 +81,7 @@ func TestParse(t *testing.T) {
 	}{
 		{
 			test:  "counter",
-			input: `cpu.a.b.foo.bar:50|c`,
+			input: "cpu.a.b.foo.bar:50|c",
 			template: []string{
 				"cpu.* .measurement.measurement.tag_foo.tag_bar",
 			},
@@ -91,7 +91,7 @@ func TestParse(t *testing.T) {
 					tags: map[string]string{
 						"tag_foo":     "foo",
 						"tag_bar":     "bar",
-						"statsd_type": "c",
+						"metric_type": "counter",
 					},
 					value: int64(50),
 				},
@@ -99,7 +99,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			test:  "counter with samplerate",
-			input: `cpu.a.b.foo.bar:50|c|@0.25`,
+			input: "cpu.a.b.foo.bar:50|c|@0.25",
 			template: []string{
 				"cpu.* .measurement.measurement.tag_foo.tag_bar",
 			},
@@ -109,7 +109,7 @@ func TestParse(t *testing.T) {
 					tags: map[string]string{
 						"tag_foo":     "foo",
 						"tag_bar":     "bar",
-						"statsd_type": "c",
+						"metric_type": "counter",
 					},
 					value: int64(200),
 				},
@@ -117,7 +117,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			test:  "gauge",
-			input: `cpu.a.b.foo.bar:50|g`,
+			input: "cpu.a.b.foo.bar:50|g",
 			template: []string{
 				"cpu.* .measurement.measurement.tag_foo.tag_bar",
 			},
@@ -127,15 +127,15 @@ func TestParse(t *testing.T) {
 					tags: map[string]string{
 						"tag_foo":     "foo",
 						"tag_bar":     "bar",
-						"statsd_type": "g",
+						"metric_type": "gauge",
 					},
-					value: "50",
+					value: float64(50),
 				},
 			},
 		},
 		{
 			test:  "gauge with additive",
-			input: `cpu.a.b.foo.bar:+50|g`,
+			input: "cpu.a.b.foo.bar:+50|g\ncpu.a.b.foo.bar:-50|g",
 			template: []string{
 				"cpu.* .measurement.measurement.tag_foo.tag_bar",
 			},
@@ -145,15 +145,25 @@ func TestParse(t *testing.T) {
 					tags: map[string]string{
 						"tag_foo":     "foo",
 						"tag_bar":     "bar",
-						"statsd_type": "g",
+						"metric_type": "gauge",
+						"operation":   "additive",
 					},
-					value: "+50",
+					value: float64(50),
+				}, {
+					measurement: "a_b",
+					tags: map[string]string{
+						"tag_foo":     "foo",
+						"tag_bar":     "bar",
+						"metric_type": "gauge",
+						"operation":   "additive",
+					},
+					value: float64(-50),
 				},
 			},
 		},
 		{
 			test:  "timing",
-			input: `cpu.a.b.foo.bar:50|ms`,
+			input: "cpu.a.b.foo.bar:50|ms",
 			template: []string{
 				"cpu.* .measurement.measurement.tag_foo.tag_bar",
 			},
@@ -163,7 +173,7 @@ func TestParse(t *testing.T) {
 					tags: map[string]string{
 						"tag_foo":     "foo",
 						"tag_bar":     "bar",
-						"statsd_type": "ms",
+						"metric_type": "timing",
 					},
 					value: float64(50.0),
 				},
@@ -171,7 +181,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			test:  "timing with samplerate",
-			input: `cpu.a.b.foo.bar:50|ms|@0.5`,
+			input: "cpu.a.b.foo.bar:50|ms|@0.5",
 			template: []string{
 				"cpu.* .measurement.measurement.tag_foo.tag_bar",
 			},
@@ -181,7 +191,7 @@ func TestParse(t *testing.T) {
 					tags: map[string]string{
 						"tag_foo":     "foo",
 						"tag_bar":     "bar",
-						"statsd_type": "ms",
+						"metric_type": "timing",
 					},
 					value: float64(50.0),
 				},
@@ -190,7 +200,7 @@ func TestParse(t *testing.T) {
 					tags: map[string]string{
 						"tag_foo":     "foo",
 						"tag_bar":     "bar",
-						"statsd_type": "ms",
+						"metric_type": "timing",
 					},
 					value: float64(50.0),
 				},
@@ -198,7 +208,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			test:  "histogram",
-			input: `cpu.a.b.foo.bar:50|h`,
+			input: "cpu.a.b.foo.bar:50|h",
 			template: []string{
 				"cpu.* .measurement.measurement.tag_foo.tag_bar",
 			},
@@ -208,7 +218,7 @@ func TestParse(t *testing.T) {
 					tags: map[string]string{
 						"tag_foo":     "foo",
 						"tag_bar":     "bar",
-						"statsd_type": "h",
+						"metric_type": "histogram",
 					},
 					value: float64(50.0),
 				},
@@ -216,7 +226,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			test:  "set",
-			input: `cpu.a.b.foo.bar:user|s`,
+			input: "cpu.a.b.foo.bar:user|s",
 			template: []string{
 				"cpu.* .measurement.measurement.tag_foo.tag_bar",
 			},
@@ -226,7 +236,7 @@ func TestParse(t *testing.T) {
 					tags: map[string]string{
 						"tag_foo":     "foo",
 						"tag_bar":     "bar",
-						"statsd_type": "s",
+						"metric_type": "set",
 					},
 					value: "user",
 				},
@@ -234,7 +244,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			test:  "multi metric in one line",
-			input: `cpu.a.b.foo.bar:11|c:12|c:13|ms`,
+			input: "cpu.a.b.foo.bar:11|c:12|c:13|ms",
 			template: []string{
 				"cpu.* .measurement.measurement.tag_foo.tag_bar",
 			},
@@ -244,7 +254,7 @@ func TestParse(t *testing.T) {
 					tags: map[string]string{
 						"tag_foo":     "foo",
 						"tag_bar":     "bar",
-						"statsd_type": "c",
+						"metric_type": "counter",
 					},
 					value: int64(11),
 				},
@@ -253,7 +263,7 @@ func TestParse(t *testing.T) {
 					tags: map[string]string{
 						"tag_foo":     "foo",
 						"tag_bar":     "bar",
-						"statsd_type": "c",
+						"metric_type": "counter",
 					},
 					value: int64(12),
 				},
@@ -262,13 +272,12 @@ func TestParse(t *testing.T) {
 					tags: map[string]string{
 						"tag_foo":     "foo",
 						"tag_bar":     "bar",
-						"statsd_type": "ms",
+						"metric_type": "timing",
 					},
 					value: float64(13),
 				},
 			},
 		},
-		// TODO invalid line
 	}
 
 	for _, test := range tests {
@@ -300,12 +309,12 @@ func TestParse(t *testing.T) {
 			}
 
 			var valueIsEqual bool
-			switch actual.Tags()["statsd_type"] {
-			case "s", "g":
+			switch actual.Tags()["metric_type"] {
+			case "set":
 				l := actual.Fields()["value"].(string)
 				r := expected.value.(string)
 				valueIsEqual = l == r
-			case "c":
+			case "counter":
 				l := actual.Fields()["value"].(int64)
 				r := expected.value.(int64)
 				valueIsEqual = l == r

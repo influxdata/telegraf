@@ -18,7 +18,7 @@ import (
 const (
 	defaultFieldName = "value"
 	defaultSeparator = "_"
-	defaultTagKey    = "statsd_type"
+	defaultTagKey    = "metric_type"
 )
 
 type Parser struct {
@@ -150,9 +150,12 @@ func (p *Parser) parseLine(line string) ([]telegraf.Metric, error) {
 			return nil, errors.New("Error Parsing statsd line")
 		}
 
-		v, err := parseFieldValue(mtype, pipesplit[0])
+		v, newTags, err := parseField(mtype, pipesplit[0])
 		if err != nil {
 			return nil, err
+		}
+		for k, v := range newTags {
+			tags[k] = v
 		}
 
 		// samplerate with counter
@@ -163,7 +166,18 @@ func (p *Parser) parseLine(line string) ([]telegraf.Metric, error) {
 		fields := map[string]interface{}{
 			defaultFieldName: v,
 		}
-		tags[defaultTagKey] = mtype
+		switch mtype {
+		case "c":
+			tags[defaultTagKey] = "counter"
+		case "g":
+			tags[defaultTagKey] = "gauge"
+		case "s":
+			tags[defaultTagKey] = "set"
+		case "ms":
+			tags[defaultTagKey] = "timing"
+		case "h":
+			tags[defaultTagKey] = "histogram"
+		}
 
 		m, err := metric.New(name, tags, fields, time.Now())
 		if err != nil {
@@ -244,29 +258,40 @@ func parseKeyValue(keyvalue string) (string, string) {
 	return key, val
 }
 
-func parseFieldValue(mtype string, value string) (interface{}, error) {
+func parseField(mtype string, value string) (interface{}, map[string]string, error) {
 	switch mtype {
 	case "ms", "h":
 		v, err := strconv.ParseFloat(value, 64)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		return v, nil
+		return v, nil, nil
 	case "c":
 		v, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
 			v2, err2 := strconv.ParseFloat(value, 64)
 			if err2 != nil {
-				return nil, errors.New("Error Parsing statsd line")
+				return nil, nil, errors.New("Error Parsing statsd line")
 			}
 			v = int64(v2)
 		}
-		return v, nil
-	case "s", "g":
+		return v, nil, nil
+	case "g":
+		newTags := map[string]string{}
+		if strings.HasPrefix(value, "-") || strings.HasPrefix(value, "+") {
+			newTags["operation"] = "additive"
+		}
+
+		v, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return nil, nil, errors.New("Error Parsing statsd line")
+		}
+		return v, newTags, nil
+	case "s":
 		// s & g should be dealed by [aggregator statsd]
 		v := value
-		return v, nil
+		return v, nil, nil
 	default:
-		return nil, errors.New("Unexpected type of statsd line")
+		return nil, nil, errors.New("Unexpected type of statsd line")
 	}
 }
