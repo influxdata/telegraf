@@ -97,7 +97,7 @@ Error in input [mongodb]: not authorized on admin to execute command { serverSta
     - wtcache_app_threads_page_write_count (integer)
     - wtcache_bytes_read_into (integer)
     - wtcache_bytes_written_from (integer)
-    - wtcache_pages_read_info (integer)
+    - wtcache_pages_read_into (integer)
     - wtcache_pages_requested_from (integer)
     - wtcache_current_bytes (integer)
     - wtcache_max_bytes_configured (integer)
