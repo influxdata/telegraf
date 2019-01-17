@@ -14,13 +14,10 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-// `toml:"name_override"`
-
 type MultiFile struct {
 	BaseDir   string
 	FailEarly bool
 	Files     []File `toml:"file"`
-	Tags      map[string]string
 
 	initialized bool
 }
@@ -32,14 +29,15 @@ type File struct {
 }
 
 const sampleConfig = `
-  name_override = "sensor"
+  ## Base directory where telegraf will look for files.
+  ## Omit this option to use absolute paths.
   base_dir = "/sys/bus/i2c/devices/1-0076/iio:device0"
-  [inputs.multifile.tags]
-    location = "server_room"
-  [[inputs.multifile.file]]
-    file = "name"
-    dest = "type"
-    conversion = "tag"
+
+  ## If true, Telegraf discard all data when a single file can't be read.
+  ## Else, Telegraf omits the field generated from this file.
+  # fail_early = true
+
+  ## Files to parse each interval.
   [[inputs.multifile.file]]
     file = "in_pressure_input"
     dest = "pressure"
@@ -86,10 +84,6 @@ func (m *MultiFile) Gather(acc telegraf.Accumulator) error {
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 
-	for key, value := range m.Tags {
-		tags[key] = value
-	}
-
 	for _, file := range m.Files {
 		fileContents, err := ioutil.ReadFile(file.Name)
 
@@ -115,10 +109,6 @@ func (m *MultiFile) Gather(acc telegraf.Accumulator) error {
 
 		if file.Conversion == "int" {
 			value, err = strconv.ParseInt(vStr, 10, 64)
-		}
-
-		if file.Conversion == "bool" {
-			value, err = strconv.ParseBool(vStr)
 		}
 
 		if file.Conversion == "string" || file.Conversion == "" {
@@ -151,7 +141,6 @@ func init() {
 	inputs.Add("multifile", func() telegraf.Input {
 		return &MultiFile{
 			FailEarly: true,
-			Tags:      make(map[string]string),
 		}
 	})
 }
