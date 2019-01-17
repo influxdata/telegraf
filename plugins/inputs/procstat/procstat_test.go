@@ -44,12 +44,9 @@ func TestMockExecCommand(t *testing.T) {
 	}
 	cmdline := strings.Join(cmd, " ")
 
-	if cmdline == "systemctl show TestGather_systemdUnitPIDs" {
-		fmt.Printf(`PIDFile=
-GuessMainPID=yes
-MainPID=11408
-ControlPID=0
-ExecMainPID=11408
+	if cmdline == "systemctl show --property ActiveState --property MainPID TestGather_systemdUnitPIDs" {
+		fmt.Printf(`MainPID=11408
+ActiveState=active
 `)
 		os.Exit(0)
 	}

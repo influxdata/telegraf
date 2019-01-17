@@ -360,7 +360,7 @@ func (p *Procstat) systemdUnitPIDs() ([]PID, error) {
 	cmd := execCommand("systemctl", "show", "--property", "ActiveState", "--property", "MainPID", p.SystemdUnit)
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%v: %s", err, out)
 	}
 
 	var pid PID = -1
