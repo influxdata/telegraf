@@ -357,21 +357,36 @@ func (p *Procstat) findPids(acc telegraf.Accumulator) ([]PID, map[string]string,
 var execCommand = exec.Command
 
 func (p *Procstat) systemdUnitPIDs() ([]PID, error) {
-	cmd := execCommand("systemctl", "show", "--property", "ActiveState", p.SystemdUnit)
+	cmd := execCommand("systemctl", "show", "--property", "ActiveState", "--property", "MainPID", p.SystemdUnit)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
-	out = bytes.TrimSpace(out)
-	kv := bytes.SplitN(out, []byte{'='}, 2)
-	if len(kv) != 2 {
-		return nil, fmt.Errorf("ActiveState not found")
-	}
-	if !bytes.Equal(kv[1], []byte("active")) {
-		return nil, nil
+
+	var pid PID = -1
+
+	for _, line := range bytes.Split(out, []byte{'\n'}) {
+		kv := bytes.SplitN(line, []byte{'='}, 2)
+		if len(kv) != 2 {
+			continue
+		}
+		if bytes.Equal(kv[0], []byte("MainPID")) {
+			if len(kv[1]) == 0 {
+				return nil, nil
+			}
+			p, err := strconv.Atoi(string(kv[1]))
+			if err != nil {
+				return nil, fmt.Errorf("invalid pid '%s'", kv[1])
+			}
+			pid = PID(p)
+		} else if pid == 0 {
+			if !bytes.Equal(kv[1], []byte("active")) {
+				return nil, nil
+			}
+		}
 	}
 
-	return []PID{0}, nil
+	return []PID{pid}, nil
 }
 
 func (p *Procstat) cgroupPIDs() ([]PID, error) {
