@@ -37,5 +37,5 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
   # tls_key = "/etc/ssl/telegraf.key"
 
   ## Export metric collection time.
-  # export_timestamp = true
+  # export_timestamp = false
 ```

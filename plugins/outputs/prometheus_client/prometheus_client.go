@@ -107,7 +107,7 @@ var sampleConfig = `
   # tls_key = "/etc/ssl/telegraf.key"
 
   ## Export metric collection time.
-  # export_timestamp = true
+  # export_timestamp = false
 `
 
 func (p *PrometheusClient) auth(h http.Handler) http.Handler {
