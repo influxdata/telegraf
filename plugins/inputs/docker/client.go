@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net/http"
+	"runtime"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/swarm"
@@ -34,6 +35,9 @@ func NewEnvClient() (Client, error) {
 }
 
 func NewClient(host string, tlsConfig *tls.Config) (Client, error) {
+	if runtime.GOOS == "windows" {
+		version = "1.24"
+	}
 	transport := &http.Transport{
 		TLSClientConfig: tlsConfig,
 	}
