@@ -4,6 +4,29 @@
 The multifile input plugin allows telegraf to gather data from multiple files into a single point, creating one field or tag per file.
 
 ### Configuration
+#### Configuration
+* `base_dir`:
+Base directory for all files. If empty, all file paths are seen as absolute.
+* `tags`:
+Table of additional tags.
+* `fail_early`:
+If true, abort after a single file failed to read or parse. If false, leave out the corresponding field and continue reading other files. Defaults to `true`.
+* `file.file`:
+Filename, relative to `base_dir`
+* `file.dest`:
+Name of the field/tag created, defaults to `$(basename file)`
+* `file.conversion`:
+Data format used to parse the file contents
+
+    - `float(X)`: Converts the input value into a float and divides by the Xth power of 10. Efficively just moves the decimal left X places. For example a value of `123` with `float(2)` will result in `1.23`.
+    - `float`: Converts the value into a float with no adjustment. Same as `float(0)`.
+    - `int`: Convertes the value into an integer.
+    - `string`, `""`: No conversion
+    - `bool`: Convertes the value into a boolean
+    - `tag`: File content is used as a tag
+
+#### Example for using a BMP280 with the Raspberry Pi 3B
+Connect a BMP280 to the board's GPIO pins and register the BME280 device driver
 ```
 [[inputs.multifile]]
   ## Base directory where telegraf will look for files.

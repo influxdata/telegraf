@@ -88,7 +88,10 @@ func (m *MultiFile) Gather(acc telegraf.Accumulator) error {
 		fileContents, err := ioutil.ReadFile(file.Name)
 
 		if err != nil {
-			return err
+			if m.FailEarly {
+				return err
+			}
+			continue
 		}
 
 		vStr := string(bytes.TrimSpace(bytes.Trim(fileContents, "\x00")))
