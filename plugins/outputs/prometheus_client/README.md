@@ -35,4 +35,7 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
   ## If set, enable TLS with the given certificate.
   # tls_cert = "/etc/ssl/telegraf.crt"
   # tls_key = "/etc/ssl/telegraf.key"
+
+  ## Export metric collection time.
+  # export_timestamp = false
 ```
