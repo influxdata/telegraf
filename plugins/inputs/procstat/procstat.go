@@ -133,6 +133,9 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 		"running":     len(procs),
 		"result_code": 0,
 	}
+	if p.SystemdUnit != "" && len(procs) == 0 {
+		fields["running"] = len(pids)
+	}
 	tags["pid_finder"] = p.PidFinder
 	tags["result"] = "success"
 	acc.AddFields("procstat_lookup", fields, tags)
@@ -354,30 +357,21 @@ func (p *Procstat) findPids(acc telegraf.Accumulator) ([]PID, map[string]string,
 var execCommand = exec.Command
 
 func (p *Procstat) systemdUnitPIDs() ([]PID, error) {
-	var pids []PID
-	cmd := execCommand("systemctl", "show", p.SystemdUnit)
+	cmd := execCommand("systemctl", "show", "--property", "ActiveState", p.SystemdUnit)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
-	for _, line := range bytes.Split(out, []byte{'\n'}) {
-		kv := bytes.SplitN(line, []byte{'='}, 2)
-		if len(kv) != 2 {
-			continue
-		}
-		if !bytes.Equal(kv[0], []byte("MainPID")) {
-			continue
-		}
-		if len(kv[1]) == 0 {
-			return nil, nil
-		}
-		pid, err := strconv.Atoi(string(kv[1]))
-		if err != nil {
-			return nil, fmt.Errorf("invalid pid '%s'", kv[1])
-		}
-		pids = append(pids, PID(pid))
+	out = bytes.TrimSpace(out)
+	kv := bytes.SplitN(out, []byte{'='}, 2)
+	if len(kv) != 2 {
+		return nil, fmt.Errorf("ActiveState not found")
 	}
-	return pids, nil
+	if !bytes.Equal(kv[1], []byte("active")) {
+		return nil, nil
+	}
+
+	return []PID{0}, nil
 }
 
 func (p *Procstat) cgroupPIDs() ([]PID, error) {
