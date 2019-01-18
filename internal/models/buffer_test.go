@@ -587,7 +587,7 @@ func TestBuffer_BatchNotRemoved(t *testing.T) {
 	b := setup(NewBuffer("test", 5))
 	b.Add(m, m, m, m, m)
 	b.Batch(2)
-	require.Equal(t, 3, b.Len())
+	require.Equal(t, 5, b.Len())
 }
 
 func TestBuffer_BatchRejectAcceptNoop(t *testing.T) {

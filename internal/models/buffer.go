@@ -27,6 +27,8 @@ type Buffer struct {
 	MetricsAdded   selfstat.Stat
 	MetricsWritten selfstat.Stat
 	MetricsDropped selfstat.Stat
+	BufferSize     selfstat.Stat
+	BufferLimit    selfstat.Stat
 }
 
 // NewBuffer returns a new empty Buffer with the given capacity.
@@ -53,7 +55,19 @@ func NewBuffer(name string, capacity int) *Buffer {
 			"metrics_dropped",
 			map[string]string{"output": name},
 		),
+		BufferSize: selfstat.Register(
+			"write",
+			"buffer_size",
+			map[string]string{"output": name},
+		),
+		BufferLimit: selfstat.Register(
+			"write",
+			"buffer_limit",
+			map[string]string{"output": name},
+		),
 	}
+	b.BufferSize.Set(int64(0))
+	b.BufferLimit.Set(int64(capacity))
 	return b
 }
 
@@ -62,7 +76,11 @@ func (b *Buffer) Len() int {
 	b.Lock()
 	defer b.Unlock()
 
-	return b.size
+	return b.length()
+}
+
+func (b *Buffer) length() int {
+	return min(b.size+b.batchSize, b.cap)
 }
 
 func (b *Buffer) metricAdded() {
@@ -112,6 +130,8 @@ func (b *Buffer) Add(metrics ...telegraf.Metric) {
 	for i := range metrics {
 		b.add(metrics[i])
 	}
+
+	b.BufferSize.Set(int64(b.length()))
 }
 
 // Batch returns a slice containing up to batchSize of the most recently added
@@ -153,6 +173,7 @@ func (b *Buffer) Accept(batch []telegraf.Metric) {
 	}
 
 	b.resetBatch()
+	b.BufferSize.Set(int64(b.length()))
 }
 
 // Reject returns the batch, acquired from Batch(), to the buffer and marks it
@@ -196,6 +217,7 @@ func (b *Buffer) Reject(batch []telegraf.Metric) {
 	}
 
 	b.resetBatch()
+	b.BufferSize.Set(int64(b.length()))
 }
 
 // dist returns the distance between two indexes.  Because this data structure
