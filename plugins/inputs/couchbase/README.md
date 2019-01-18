@@ -48,16 +48,6 @@ Fields:
 ## Example output
 
 ```
-$ telegraf --config telegraf.conf --input-filter couchbase --test
-* Plugin: couchbase, Collection 1
-> couchbase_node,cluster=https://couchbase-0.example.com/,hostname=172.16.10.187:8091 memory_free=22927384576,memory_total=64424656896 1458381183695864929
-> couchbase_node,cluster=https://couchbase-0.example.com/,hostname=172.16.10.65:8091 memory_free=23520161792,memory_total=64424656896 1458381183695972112
-> couchbase_node,cluster=https://couchbase-0.example.com/,hostname=172.16.13.105:8091 memory_free=23531704320,memory_total=64424656896 1458381183695995259
-> couchbase_node,cluster=https://couchbase-0.example.com/,hostname=172.16.13.173:8091 memory_free=23628767232,memory_total=64424656896 1458381183696010870
-> couchbase_node,cluster=https://couchbase-0.example.com/,hostname=172.16.15.120:8091 memory_free=23616692224,memory_total=64424656896 1458381183696027406
-> couchbase_node,cluster=https://couchbase-0.example.com/,hostname=172.16.8.127:8091 memory_free=23431770112,memory_total=64424656896 1458381183696041040
-> couchbase_node,cluster=https://couchbase-0.example.com/,hostname=172.16.8.148:8091 memory_free=23811371008,memory_total=64424656896 1458381183696059060
-> couchbase_bucket,bucket=default,cluster=https://couchbase-0.example.com/ data_used=25743360,disk_fetches=0,disk_used=31744886,item_count=0,mem_used=77729224,ops_per_sec=0,quota_percent_used=10.58976636614118 1458381183696210074
-> couchbase_bucket,bucket=demoncat,cluster=https://couchbase-0.example.com/ data_used=38157584951,disk_fetches=0,disk_used=62730302441,item_count=14662532,mem_used=24015304256,ops_per_sec=1207.753207753208,quota_percent_used=79.87855353525707 1458381183696242695
-> couchbase_bucket,bucket=blastro-df,cluster=https://couchbase-0.example.com/ data_used=212552491622,disk_fetches=0,disk_used=413323157621,item_count=944655680,mem_used=202421103760,ops_per_sec=1692.176692176692,quota_percent_used=68.9442170551845 1458381183696272206
+couchbase_node,cluster=http://localhost:8091/,hostname=172.17.0.2:8091 memory_free=7705575424,memory_total=16558182400 1547829754000000000
+couchbase_bucket,bucket=beer-sample,cluster=http://localhost:8091/ quota_percent_used=27.09285736083984,ops_per_sec=0,disk_fetches=0,item_count=7303,disk_used=21662946,data_used=9325087,mem_used=28408920 1547829754000000000
 ```
