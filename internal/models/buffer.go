@@ -176,6 +176,7 @@ func (b *Buffer) Reject(batch []telegraf.Metric) {
 
 		if b.buf[re] != nil {
 			b.metricDropped(b.buf[re])
+			b.first = b.next(b.first)
 		}
 
 		b.buf[re] = b.buf[rp]
@@ -188,7 +189,7 @@ func (b *Buffer) Reject(batch []telegraf.Metric) {
 		if i < restore {
 			re = b.prev(re)
 			b.buf[re] = batch[i]
-			b.size++
+			b.size = min(b.size+1, b.cap)
 		} else {
 			b.metricDropped(batch[i])
 		}
@@ -204,7 +205,7 @@ func (b *Buffer) dist(begin, end int) int {
 	if begin <= end {
 		return end - begin
 	} else {
-		return b.cap - begin - 1 + end
+		return b.cap - begin + end
 	}
 }
 
