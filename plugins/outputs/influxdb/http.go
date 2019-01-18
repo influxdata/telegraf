@@ -1,7 +1,6 @@
 package influxdb
 
 import (
-	"compress/gzip"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -16,6 +15,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
@@ -27,10 +27,8 @@ const (
 )
 
 const (
-	defaultRequestTimeout = time.Second * 5
-	defaultDatabase       = "telegraf"
-	defaultUserAgent      = "telegraf"
-
+	defaultRequestTimeout          = time.Second * 5
+	defaultDatabase                = "telegraf"
 	errStringDatabaseNotFound      = "database not found"
 	errStringHintedHandoffNotEmpty = "hinted handoff queue not empty"
 	errStringPartialWrite          = "partial write"
@@ -138,7 +136,7 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 
 	userAgent := config.UserAgent
 	if userAgent == "" {
-		userAgent = defaultUserAgent
+		userAgent = "Telegraf/" + internal.Version()
 	}
 
 	var headers = make(map[string]string, len(config.Headers)+1)
@@ -222,7 +220,7 @@ func (c *httpClient) Database() string {
 	return c.database
 }
 
-// CreateDatabase attemps to create a new database in the InfluxDB server.
+// CreateDatabase attempts to create a new database in the InfluxDB server.
 // Note that some names are not allowed by the server, notably those with
 // non-printable characters or slashes.
 func (c *httpClient) CreateDatabase(ctx context.Context) error {
@@ -360,7 +358,7 @@ func (c *httpClient) makeQueryRequest(query string) (*http.Request, error) {
 func (c *httpClient) makeWriteRequest(body io.Reader) (*http.Request, error) {
 	var err error
 	if c.ContentEncoding == "gzip" {
-		body, err = compressWithGzip(body)
+		body, err = internal.CompressWithGzip(body)
 		if err != nil {
 			return nil, err
 		}
@@ -379,20 +377,6 @@ func (c *httpClient) makeWriteRequest(body io.Reader) (*http.Request, error) {
 	}
 
 	return req, nil
-}
-
-func compressWithGzip(data io.Reader) (io.Reader, error) {
-	pr, pw := io.Pipe()
-	gw := gzip.NewWriter(pw)
-	var err error
-
-	go func() {
-		_, err = io.Copy(gw, data)
-		gw.Close()
-		pw.Close()
-	}()
-
-	return pr, err
 }
 
 func (c *httpClient) addHeaders(req *http.Request) {

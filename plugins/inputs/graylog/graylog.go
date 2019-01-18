@@ -235,6 +235,9 @@ func (h *GrayLog) sendRequest(serverURL string) (string, float64, error) {
 	if err != nil {
 		return "", -1, fmt.Errorf("Invalid server URL \"%s\"", serverURL)
 	}
+	// Add X-Requested-By header
+	headers["X-Requested-By"] = "Telegraf"
+
 	if strings.Contains(requestURL.String(), "multiple") {
 		m := &Messagebody{Metrics: h.Metrics}
 		http_body, err := json.Marshal(m)

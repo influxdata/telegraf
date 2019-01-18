@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -38,6 +37,8 @@ type Sample struct {
 	// Histograms and Summaries need a count and a sum
 	Count uint64
 	Sum   float64
+	// Metric timestamp
+	Timestamp time.Time
 	// Expiration is the deadline that this Sample is valid until.
 	Expiration time.Time
 }
@@ -64,6 +65,7 @@ type PrometheusClient struct {
 	Path               string            `toml:"path"`
 	CollectorsExclude  []string          `toml:"collectors_exclude"`
 	StringAsLabel      bool              `toml:"string_as_label"`
+	ExportTimestamp    bool              `toml:"export_timestamp"`
 
 	server *http.Server
 
@@ -103,6 +105,9 @@ var sampleConfig = `
   ## If set, enable TLS with the given certificate.
   # tls_cert = "/etc/ssl/telegraf.crt"
   # tls_key = "/etc/ssl/telegraf.key"
+
+  ## Export metric collection time.
+  # export_timestamp = false
 `
 
 func (p *PrometheusClient) auth(h http.Handler) http.Handler {
@@ -144,7 +149,7 @@ func (p *PrometheusClient) auth(h http.Handler) http.Handler {
 	})
 }
 
-func (p *PrometheusClient) Start() error {
+func (p *PrometheusClient) Connect() error {
 	defaultCollectors := map[string]bool{
 		"gocollector": true,
 		"process":     true,
@@ -154,12 +159,12 @@ func (p *PrometheusClient) Start() error {
 	}
 
 	registry := prometheus.NewRegistry()
-	for collector, _ := range defaultCollectors {
+	for collector := range defaultCollectors {
 		switch collector {
 		case "gocollector":
 			registry.Register(prometheus.NewGoCollector())
 		case "process":
-			registry.Register(prometheus.NewProcessCollector(os.Getpid(), ""))
+			registry.Register(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 		default:
 			return fmt.Errorf("unrecognized collector %s", collector)
 		}
@@ -200,15 +205,6 @@ func (p *PrometheusClient) Start() error {
 	return nil
 }
 
-func (p *PrometheusClient) Stop() {
-	// plugin gets cleaned up in Close() already.
-}
-
-func (p *PrometheusClient) Connect() error {
-	// This service output does not need to make any further connections
-	return nil
-}
-
 func (p *PrometheusClient) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
@@ -236,7 +232,7 @@ func (p *PrometheusClient) Expire() {
 	for name, family := range p.fam {
 		for key, sample := range family.Samples {
 			if p.ExpirationInterval.Duration != 0 && now.After(sample.Expiration) {
-				for k, _ := range sample.Labels {
+				for k := range sample.Labels {
 					family.LabelSet[k]--
 				}
 				delete(family.Samples, key)
@@ -291,6 +287,9 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 					name, labels, err.Error())
 			}
 
+			if p.ExportTimestamp {
+				metric = prometheus.NewMetricWithTimestamp(sample.Timestamp, metric)
+			}
 			ch <- metric
 		}
 	}
@@ -323,7 +322,7 @@ func CreateSampleID(tags map[string]string) SampleID {
 
 func addSample(fam *MetricFamily, sample *Sample, sampleID SampleID) {
 
-	for k, _ := range sample.Labels {
+	for k := range sample.Labels {
 		fam.LabelSet[k]++
 	}
 
@@ -407,6 +406,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				SummaryValue: summaryvalue,
 				Count:        count,
 				Sum:          sum,
+				Timestamp:    point.Time(),
 				Expiration:   now.Add(p.ExpirationInterval.Duration),
 			}
 			mname = sanitize(point.Name())
@@ -448,6 +448,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				HistogramValue: histogramvalue,
 				Count:          count,
 				Sum:            sum,
+				Timestamp:      point.Time(),
 				Expiration:     now.Add(p.ExpirationInterval.Duration),
 			}
 			mname = sanitize(point.Name())
@@ -472,6 +473,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				sample := &Sample{
 					Labels:     labels,
 					Value:      value,
+					Timestamp:  point.Time(),
 					Expiration: now.Add(p.ExpirationInterval.Duration),
 				}
 
@@ -509,6 +511,7 @@ func init() {
 		return &PrometheusClient{
 			ExpirationInterval: internal.Duration{Duration: time.Second * 60},
 			StringAsLabel:      true,
+			ExportTimestamp:    true,
 			fam:                make(map[string]*MetricFamily),
 			now:                time.Now,
 		}

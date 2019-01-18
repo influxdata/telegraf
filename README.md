@@ -38,7 +38,7 @@ Ansible role: https://github.com/rossmcdonald/telegraf
 
 Telegraf requires golang version 1.9 or newer, the Makefile requires GNU make.
 
-1. [Install Go](https://golang.org/doc/install) >=1.9 (1.10 recommended)
+1. [Install Go](https://golang.org/doc/install) >=1.9 (1.11 recommended)
 2. [Install dep](https://golang.github.io/dep/docs/installation.html) ==v0.5.0
 3. Download Telegraf source:
    ```
@@ -49,6 +49,11 @@ Telegraf requires golang version 1.9 or newer, the Makefile requires GNU make.
    cd "$HOME/go/src/github.com/influxdata/telegraf"
    make
    ```
+
+### Changelog
+
+View the [changelog](/CHANGELOG.md) for the latest updates and changes by
+version.
 
 ### Nightly Builds
 
@@ -140,6 +145,7 @@ For documentation on the latest development code see the [documentation index][d
 * [ceph](./plugins/inputs/ceph)
 * [cgroup](./plugins/inputs/cgroup)
 * [chrony](./plugins/inputs/chrony)
+* [cloud_pubsub](./plugins/inputs/cloud_pubsub) Google Cloud Pub/Sub
 * [conntrack](./plugins/inputs/conntrack)
 * [consul](./plugins/inputs/consul)
 * [couchbase](./plugins/inputs/couchbase)
@@ -165,17 +171,20 @@ For documentation on the latest development code see the [documentation index][d
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
 * [httpjson](./plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
-* [http_listener](./plugins/inputs/http_listener)
+* [http_listener](./plugins/inputs/influxdb_listener) (deprecated, renamed to [influxdb_listener](/plugins/inputs/influxdb_listener))
+* [http_listener_v2](./plugins/inputs/http_listener_v2)
 * [http](./plugins/inputs/http) (generic HTTP plugin, supports using input data formats)
 * [http_response](./plugins/inputs/http_response)
 * [icinga2](./plugins/inputs/icinga2)
 * [influxdb](./plugins/inputs/influxdb)
-* [influxdb_v2](./plugins/inputs/influxdb_v2)
+* [influxdb_listener](./plugins/inputs/influxdb_listener)
 * [internal](./plugins/inputs/internal)
 * [interrupts](./plugins/inputs/interrupts)
 * [ipmi_sensor](./plugins/inputs/ipmi_sensor)
 * [ipset](./plugins/inputs/ipset)
 * [iptables](./plugins/inputs/iptables)
+* [ipvs](./plugins/inputs/ipvs)
+* [jenkins](./plugins/inputs/jenkins)
 * [jolokia2](./plugins/inputs/jolokia2) (java, cassandra, kafka)
 * [jolokia](./plugins/inputs/jolokia) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
 * [jti_openconfig_telemetry](./plugins/inputs/jti_openconfig_telemetry)
@@ -200,11 +209,15 @@ For documentation on the latest development code see the [documentation index][d
 * [mysql](./plugins/inputs/mysql)
 * [nats_consumer](./plugins/inputs/nats_consumer)
 * [nats](./plugins/inputs/nats)
+* [neptune_apex](./plugins/inputs/neptune_apex)
 * [net](./plugins/inputs/net)
 * [net_response](./plugins/inputs/net_response)
 * [netstat](./plugins/inputs/net)
 * [nginx](./plugins/inputs/nginx)
+* [nginx_plus_api](./plugins/inputs/nginx_plus_api)
 * [nginx_plus](./plugins/inputs/nginx_plus)
+* [nginx_upstream_check](./plugins/inputs/nginx_upstream_check)
+* [nginx_vts](./plugins/inputs/nginx_vts)
 * [nsq_consumer](./plugins/inputs/nsq_consumer)
 * [nsq](./plugins/inputs/nsq)
 * [nstat](./plugins/inputs/nstat)
@@ -263,6 +276,7 @@ For documentation on the latest development code see the [documentation index][d
   * [rollbar](./plugins/inputs/webhooks/rollbar)
 * [win_perf_counters](./plugins/inputs/win_perf_counters) (windows performance counters)
 * [win_services](./plugins/inputs/win_services)
+* [wireless](./plugins/inputs/wireless)
 * [zfs](./plugins/inputs/zfs)
 * [zipkin](./plugins/inputs/zipkin)
 * [zookeeper](./plugins/inputs/zookeeper)
@@ -286,15 +300,19 @@ For documentation on the latest development code see the [documentation index][d
 - [InfluxDB Line Protocol](/plugins/serializers/influx)
 - [JSON](/plugins/serializers/json)
 - [Graphite](/plugins/serializers/graphite)
+- [ServiceNow](/plugins/serializers/nowmetric)
 - [SplunkMetric](/plugins/serializers/splunkmetric)
 
 ## Processor Plugins
 
 * [converter](./plugins/processors/converter)
+* [enum](./plugins/processors/enum)
 * [override](./plugins/processors/override)
+* [parser](./plugins/processors/parser)
 * [printer](./plugins/processors/printer)
 * [regex](./plugins/processors/regex)
 * [rename](./plugins/processors/rename)
+* [strings](./plugins/processors/strings)
 * [topk](./plugins/processors/topk)
 
 ## Aggregator Plugins
@@ -306,13 +324,15 @@ For documentation on the latest development code see the [documentation index][d
 
 ## Output Plugins
 
-* [influxdb](./plugins/outputs/influxdb)
+* [influxdb](./plugins/outputs/influxdb) (InfluxDB 1.x)
+* [influxdb_v2](./plugins/outputs/influxdb_v2) ([InfluxDB 2.x](https://github.com/influxdata/platform))
 * [amon](./plugins/outputs/amon)
 * [amqp](./plugins/outputs/amqp) (rabbitmq)
 * [application_insights](./plugins/outputs/application_insights)
 * [aws kinesis](./plugins/outputs/kinesis)
 * [aws cloudwatch](./plugins/outputs/cloudwatch)
 * [azure_monitor](./plugins/outputs/azure_monitor)
+* [cloud_pubsub](./plugins/outputs/cloud_pubsub) Google Cloud Pub/Sub
 * [cratedb](./plugins/outputs/cratedb)
 * [datadog](./plugins/outputs/datadog)
 * [discard](./plugins/outputs/discard)
@@ -332,6 +352,7 @@ For documentation on the latest development code see the [documentation index][d
 * [riemann](./plugins/outputs/riemann)
 * [riemann_legacy](./plugins/outputs/riemann_legacy)
 * [socket_writer](./plugins/outputs/socket_writer)
+* [stackdriver](./plugins/outputs/stackdriver)
 * [tcp](./plugins/outputs/socket_writer)
 * [udp](./plugins/outputs/socket_writer)
 * [wavefront](./plugins/outputs/wavefront)

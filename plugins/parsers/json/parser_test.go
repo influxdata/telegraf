@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"log"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -723,4 +726,28 @@ func TestNameKey(t *testing.T) {
 	metrics, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
 	require.Equal(t, "this is my name", metrics[0].Name())
+}
+
+func TestTimeKeyDelete(t *testing.T) {
+	data := `{
+		"timestamp": 1541183052,
+		"value": 42
+	}`
+
+	parser := JSONParser{
+		MetricName:     "json",
+		JSONTimeKey:    "timestamp",
+		JSONTimeFormat: "unix",
+	}
+
+	metrics, err := parser.Parse([]byte(data))
+	require.NoError(t, err)
+	expected := []telegraf.Metric{
+		testutil.MustMetric("json",
+			map[string]string{},
+			map[string]interface{}{"value": 42.0},
+			time.Unix(1541183052, 0)),
+	}
+
+	testutil.RequireMetricsEqual(t, expected, metrics)
 }

@@ -155,7 +155,7 @@ var sampleConfig = `
   ## Clusters 
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
-  # cluster_instances = true ## true by default
+  # cluster_instances = false ## false by default
 
   ## Datastores 
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
@@ -192,7 +192,7 @@ var sampleConfig = `
   # object_discovery_interval = "300s"
 
   ## timeout applies to any of the api request made to vcenter
-  # timeout = "20s"
+  # timeout = "60s"
 
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
@@ -286,7 +286,7 @@ func init() {
 		return &VSphere{
 			Vcenters: []string{},
 
-			ClusterInstances:       true,
+			ClusterInstances:       false,
 			ClusterMetricInclude:   nil,
 			ClusterMetricExclude:   nil,
 			HostInstances:          true,
@@ -306,7 +306,7 @@ func init() {
 			DiscoverConcurrency:     1,
 			ForceDiscoverOnInit:     false,
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
-			Timeout:                 internal.Duration{Duration: time.Second * 20},
+			Timeout:                 internal.Duration{Duration: time.Second * 60},
 		}
 	})
 }

@@ -133,6 +133,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
 				status = ws.ExitStatus()
+				fields["result_code"] = status
 			}
 		}
 
@@ -205,7 +206,7 @@ func (p *Ping) args(url string, system string) []string {
 		case "darwin":
 			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
 		case "freebsd", "netbsd", "openbsd":
-			args = append(args, "-w", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
+			args = append(args, "-W", strconv.FormatFloat(p.Timeout*1000, 'f', -1, 64))
 		case "linux":
 			args = append(args, "-W", strconv.FormatFloat(p.Timeout, 'f', -1, 64))
 		default:

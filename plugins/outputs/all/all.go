@@ -5,6 +5,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/amqp"
 	_ "github.com/influxdata/telegraf/plugins/outputs/application_insights"
 	_ "github.com/influxdata/telegraf/plugins/outputs/azure_monitor"
+	_ "github.com/influxdata/telegraf/plugins/outputs/cloud_pubsub"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cratedb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/datadog"
@@ -28,5 +29,6 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann"
 	_ "github.com/influxdata/telegraf/plugins/outputs/riemann_legacy"
 	_ "github.com/influxdata/telegraf/plugins/outputs/socket_writer"
+	_ "github.com/influxdata/telegraf/plugins/outputs/stackdriver"
 	_ "github.com/influxdata/telegraf/plugins/outputs/wavefront"
 )

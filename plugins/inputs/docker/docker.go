@@ -129,18 +129,7 @@ func (d *Docker) SampleConfig() string { return sampleConfig }
 
 func (d *Docker) Gather(acc telegraf.Accumulator) error {
 	if d.client == nil {
-		var c Client
-		var err error
-		if d.Endpoint == "ENV" {
-			c, err = d.newEnvClient()
-		} else {
-			tlsConfig, err := d.ClientConfig.TLSConfig()
-			if err != nil {
-				return err
-			}
-
-			c, err = d.newClient(d.Endpoint, tlsConfig)
-		}
+		c, err := d.getNewClient()
 		if err != nil {
 			return err
 		}
@@ -219,7 +208,6 @@ func (d *Docker) Gather(acc telegraf.Accumulator) error {
 }
 
 func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
-
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
 	services, err := d.client.ServiceList(ctx, types.ServiceListOptions{})
@@ -228,7 +216,6 @@ func (d *Docker) gatherSwarmInfo(acc telegraf.Accumulator) error {
 	}
 
 	if len(services) > 0 {
-
 		tasks, err := d.client.TaskList(ctx, types.TaskListOptions{})
 		if err != nil {
 			return err
@@ -416,7 +403,9 @@ func (d *Docker) gatherContainer(
 	daemonOSType := r.OSType
 
 	// use common (printed at `docker ps`) name for container
-	tags["container_name"] = strings.TrimPrefix(v.Name, "/")
+	if v.Name != "" {
+		tags["container_name"] = strings.TrimPrefix(v.Name, "/")
+	}
 
 	// Add labels to tags
 	for k, label := range container.Labels {
@@ -442,6 +431,7 @@ func (d *Docker) gatherContainer(
 			}
 		}
 	}
+
 	if info.State != nil {
 		tags["container_status"] = info.State.Status
 		statefields := map[string]interface{}{
@@ -458,14 +448,14 @@ func (d *Docker) gatherContainer(
 			statefields["finished_at"] = container_time.UnixNano()
 		}
 		acc.AddFields("docker_container_status", statefields, tags, time.Now())
-	}
 
-	if info.State.Health != nil {
-		healthfields := map[string]interface{}{
-			"health_status":  info.State.Health.Status,
-			"failing_streak": info.ContainerJSONBase.State.Health.FailingStreak,
+		if info.State.Health != nil {
+			healthfields := map[string]interface{}{
+				"health_status":  info.State.Health.Status,
+				"failing_streak": info.ContainerJSONBase.State.Health.FailingStreak,
+			}
+			acc.AddFields("docker_container_health", healthfields, tags, time.Now())
 		}
-		acc.AddFields("docker_container_health", healthfields, tags, time.Now())
 	}
 
 	parseContainerStats(v, acc, tags, container.ID, d.PerDevice, d.Total, daemonOSType)
@@ -829,6 +819,19 @@ func (d *Docker) createContainerStateFilters() error {
 	}
 	d.stateFilter = filter
 	return nil
+}
+
+func (d *Docker) getNewClient() (Client, error) {
+	if d.Endpoint == "ENV" {
+		return d.newEnvClient()
+	}
+
+	tlsConfig, err := d.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	return d.newClient(d.Endpoint, tlsConfig)
 }
 
 func init() {

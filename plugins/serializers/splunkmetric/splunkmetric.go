@@ -52,7 +52,7 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 		 ** metric_name: The name of the metric
 		 ** _value:      The value for the metric
 		 ** time:       The timestamp for the metric
-		 ** All other index fields become deminsions.
+		 ** All other index fields become dimensions.
 	*/
 	type HECTimeSeries struct {
 		Time   float64                `json:"time"`
@@ -68,14 +68,16 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 
 	for _, field := range metric.FieldList() {
 
-		if !verifyValue(field.Value) {
+		value, valid := verifyValue(field.Value)
+
+		if !valid {
 			log.Printf("D! Can not parse value: %v for key: %v", field.Value, field.Key)
 			continue
 		}
 
 		obj := map[string]interface{}{}
 		obj["metric_name"] = metric.Name() + "." + field.Key
-		obj["_value"] = field.Value
+		obj["_value"] = value
 
 		dataGroup.Event = "metric"
 		// Convert ns to float seconds since epoch.
@@ -94,8 +96,6 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 				dataGroup.Fields[n] = t
 			}
 		}
-		dataGroup.Fields["metric_name"] = metric.Name() + "." + field.Key
-		dataGroup.Fields["_value"] = field.Value
 
 		switch s.HecRouting {
 		case true:
@@ -117,10 +117,24 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 	return metricGroup, nil
 }
 
-func verifyValue(v interface{}) bool {
+func verifyValue(v interface{}) (value interface{}, valid bool) {
 	switch v.(type) {
 	case string:
-		return false
+		valid = false
+		value = v
+	case bool:
+		if v == bool(true) {
+			// Store 1 for a "true" value
+			valid = true
+			value = 1
+		} else {
+			// Otherwise store 0
+			valid = true
+			value = 0
+		}
+	default:
+		valid = true
+		value = v
 	}
-	return true
+	return value, valid
 }

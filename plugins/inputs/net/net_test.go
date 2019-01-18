@@ -31,7 +31,7 @@ func TestNetStats(t *testing.T) {
 	mps.On("NetIO").Return([]net.IOCountersStat{netio}, nil)
 
 	netprotos := []net.ProtoCountersStat{
-		net.ProtoCountersStat{
+		{
 			Protocol: "Udp",
 			Stats: map[string]int64{
 				"InDatagrams": 4655,
@@ -42,16 +42,16 @@ func TestNetStats(t *testing.T) {
 	mps.On("NetProto").Return(netprotos, nil)
 
 	netstats := []net.ConnectionStat{
-		net.ConnectionStat{
+		{
 			Type: syscall.SOCK_DGRAM,
 		},
-		net.ConnectionStat{
+		{
 			Status: "ESTABLISHED",
 		},
-		net.ConnectionStat{
+		{
 			Status: "ESTABLISHED",
 		},
-		net.ConnectionStat{
+		{
 			Status: "CLOSE",
 		},
 	}
