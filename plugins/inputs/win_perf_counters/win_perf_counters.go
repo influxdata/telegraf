@@ -31,7 +31,7 @@ var sampleConfig = `
   # Period after which counters will be reread from configuration and wildcards in counter paths expanded
   CountersRefreshInterval="1m"
   # Fail on unknown errors
-  FailOnUnknownErrors = true
+  # IgnoreUnknownCounterReadErrors = false
 
   [[inputs.win_perf_counters.object]]
     # Processor usage, alternative to native, reports on a per core.
@@ -85,7 +85,7 @@ type Win_PerfCounters struct {
 	Object                  []perfobject
 	CountersRefreshInterval internal.Duration
 	UseWildcardsExpansion   bool
-	FailOnUnknownErrors     bool
+	IgnoreUnknownCounterReadErrors     bool
 
 	lastRefreshed time.Time
 	counters      []*counter
@@ -329,7 +329,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				addCounterMeasurement(metric, metric.instance, value, collectFields)
 			} else {
 				//ignore invalid data  as some counters from process instances returns this sometimes
-				if m.FailOnUnknownErrors && !isKnownCounterDataError(err) {
+				if !m.IgnoreUnknownCounterReadErrors && !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
 				}
 			}
@@ -362,7 +362,7 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 				}
 			} else {
 				//ignore invalid data as some counters from process instances returns this sometimes
-				if m.FailOnUnknownErrors && !isKnownCounterDataError(err) {
+				if !m.IgnoreUnknownCounterReadErrors && !isKnownCounterDataError(err) {
 					return fmt.Errorf("error while getting value for counter %s: %v", metric.counterPath, err)
 				}
 			}
