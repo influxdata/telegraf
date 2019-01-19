@@ -14,7 +14,7 @@ func TestFileTypes(t *testing.T) {
 	wd, _ := os.Getwd()
 
 	m := MultiFile{
-		BaseDir:   path.Join(wd, `dev`),
+		BaseDir:   path.Join(wd, `testdata`),
 		FailEarly: true,
 		Files: []File{
 			{Name: `bool.txt`, Dest: `examplebool`, Conversion: `bool`},
@@ -47,7 +47,7 @@ func FailEarly(failEarly bool, t *testing.T) error {
 	wd, _ := os.Getwd()
 
 	m := MultiFile{
-		BaseDir:   path.Join(wd, `dev`),
+		BaseDir:   path.Join(wd, `testdata`),
 		FailEarly: failEarly,
 		Files: []File{
 			{Name: `int.txt`, Dest: `exampleint`, Conversion: `int`},

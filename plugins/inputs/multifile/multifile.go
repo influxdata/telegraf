@@ -104,7 +104,7 @@ func (m *MultiFile) Gather(acc telegraf.Accumulator) error {
 		var value interface{}
 
 		var d int = 0
-		if _, err := fmt.Sscanf(file.Conversion, "float(%d)", &d); err == nil || file.Conversion == "float" {
+		if _, errfmt := fmt.Sscanf(file.Conversion, "float(%d)", &d); errfmt == nil || file.Conversion == "float" {
 			var v float64
 			v, err = strconv.ParseFloat(vStr, 64)
 			value = v / math.Pow10(d)
