@@ -16,7 +16,7 @@ type Consul struct {
 	Token      string
 	Username   string
 	Password   string
-	Datacentre string
+	Datacenter string
 	tls.ClientConfig
 	TagDelimiter string
 
@@ -38,8 +38,8 @@ var sampleConfig = `
   # username = ""
   # password = ""
 
-  ## Data centre to query the health checks from
-  # datacentre = ""
+  ## Data center to query the health checks from
+  # datacenter = ""
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -73,8 +73,8 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 		config.Scheme = c.Scheme
 	}
 
-	if c.Datacentre != "" {
-		config.Datacenter = c.Datacentre
+	if c.Datacenter != "" {
+		config.Datacenter = c.Datacenter
 	}
 
 	if c.Token != "" {
