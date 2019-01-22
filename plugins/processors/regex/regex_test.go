@@ -4,9 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
-	"github.com/stretchr/testify/assert"
 )
 
 func newM1() telegraf.Metric {
@@ -44,6 +45,7 @@ func TestFieldConversions(t *testing.T) {
 		message        string
 		converter      converter
 		expectedFields map[string]interface{}
+		expectedTags   map[string]string
 	}{
 		{
 			message: "Should change existing field",
@@ -54,6 +56,10 @@ func TestFieldConversions(t *testing.T) {
 			},
 			expectedFields: map[string]interface{}{
 				"request": "/users/{id}/",
+			},
+			expectedTags: map[string]string{
+				"verb":      "GET",
+				"resp_code": "200",
 			},
 		},
 		{
@@ -68,6 +74,28 @@ func TestFieldConversions(t *testing.T) {
 				"request":            "/users/42/",
 				"normalized_request": "/users/{id}/",
 			},
+			expectedTags: map[string]string{
+				"verb":      "GET",
+				"resp_code": "200",
+			},
+		},
+		{
+			message: "Should add new tag",
+			converter: converter{
+				Key:         "request",
+				Pattern:     "^/users/\\d+/$",
+				Replacement: "/users/{id}/",
+				ResultKey:   "normalized_request",
+				ResultType:  "tag",
+			},
+			expectedFields: map[string]interface{}{
+				"request": "/users/42/",
+			},
+			expectedTags: map[string]string{
+				"verb":               "GET",
+				"resp_code":          "200",
+				"normalized_request": "/users/{id}/",
+			},
 		},
 	}
 
@@ -79,22 +107,18 @@ func TestFieldConversions(t *testing.T) {
 
 		processed := regex.Apply(newM1())
 
-		expectedTags := map[string]string{
-			"verb":      "GET",
-			"resp_code": "200",
-		}
-
 		assert.Equal(t, test.expectedFields, processed[0].Fields(), test.message)
-		assert.Equal(t, expectedTags, processed[0].Tags(), "Should not change tags")
+		assert.Equal(t, test.expectedTags, processed[0].Tags(), test.message)
 		assert.Equal(t, "access_log", processed[0].Name(), "Should not change name")
 	}
 }
 
 func TestTagConversions(t *testing.T) {
 	tests := []struct {
-		message      string
-		converter    converter
-		expectedTags map[string]string
+		message        string
+		converter      converter
+		expectedFields map[string]interface{}
+		expectedTags   map[string]string
 	}{
 		{
 			message: "Should change existing tag",
@@ -102,6 +126,9 @@ func TestTagConversions(t *testing.T) {
 				Key:         "resp_code",
 				Pattern:     "^(\\d)\\d\\d$",
 				Replacement: "${1}xx",
+			},
+			expectedFields: map[string]interface{}{
+				"request": "/users/42/",
 			},
 			expectedTags: map[string]string{
 				"verb":      "GET",
@@ -116,10 +143,31 @@ func TestTagConversions(t *testing.T) {
 				Replacement: "${1}xx",
 				ResultKey:   "resp_code_group",
 			},
+			expectedFields: map[string]interface{}{
+				"request": "/users/42/",
+			},
 			expectedTags: map[string]string{
 				"verb":            "GET",
 				"resp_code":       "200",
 				"resp_code_group": "2xx",
+			},
+		},
+		{
+			message: "Should add new field",
+			converter: converter{
+				Key:         "resp_code",
+				Pattern:     "^(\\d)\\d\\d$",
+				Replacement: "${1}xx",
+				ResultKey:   "resp_code_group",
+				ResultType:  "field",
+			},
+			expectedFields: map[string]interface{}{
+				"request":         "/users/42/",
+				"resp_code_group": "2xx",
+			},
+			expectedTags: map[string]string{
+				"verb":      "GET",
+				"resp_code": "200",
 			},
 		},
 	}
@@ -132,11 +180,7 @@ func TestTagConversions(t *testing.T) {
 
 		processed := regex.Apply(newM1())
 
-		expectedFields := map[string]interface{}{
-			"request": "/users/42/",
-		}
-
-		assert.Equal(t, expectedFields, processed[0].Fields(), test.message, "Should not change fields")
+		assert.Equal(t, test.expectedFields, processed[0].Fields(), test.message)
 		assert.Equal(t, test.expectedTags, processed[0].Tags(), test.message)
 		assert.Equal(t, "access_log", processed[0].Name(), "Should not change name")
 	}
@@ -157,6 +201,13 @@ func TestMultipleConversions(t *testing.T) {
 			Replacement: "OK",
 			ResultKey:   "resp_code_text",
 		},
+		{
+			Key:         "resp_code_group",
+			Pattern:     "2xx",
+			Replacement: "OK",
+			ResultKey:   "resp_code_text_field",
+			ResultType:  "field",
+		},
 	}
 	regex.Fields = []converter{
 		{
@@ -171,22 +222,31 @@ func TestMultipleConversions(t *testing.T) {
 			Replacement: "${1}",
 			ResultKey:   "search_category",
 		},
+		{
+			Key:         "request",
+			Pattern:     ".*category=(\\w+).*",
+			Replacement: "${1}",
+			ResultKey:   "search_category_tag",
+			ResultType:  "tag",
+		},
 	}
 
 	processed := regex.Apply(newM2())
 
 	expectedFields := map[string]interface{}{
-		"request":         "/api/search/?category=plugins&q=regex&sort=asc",
-		"method":          "/search/",
-		"search_category": "plugins",
-		"ignore_number":   int64(200),
-		"ignore_bool":     true,
+		"request":              "/api/search/?category=plugins&q=regex&sort=asc",
+		"method":               "/search/",
+		"search_category":      "plugins",
+		"ignore_number":        int64(200),
+		"ignore_bool":          true,
+		"resp_code_text_field": "OK",
 	}
 	expectedTags := map[string]string{
-		"verb":            "GET",
-		"resp_code":       "200",
-		"resp_code_group": "2xx",
-		"resp_code_text":  "OK",
+		"verb":                "GET",
+		"resp_code":           "200",
+		"resp_code_group":     "2xx",
+		"resp_code_text":      "OK",
+		"search_category_tag": "plugins",
 	}
 
 	assert.Equal(t, expectedFields, processed[0].Fields())

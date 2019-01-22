@@ -18,6 +18,7 @@ type converter struct {
 	Pattern     string
 	Replacement string
 	ResultKey   string
+	ResultType  string
 }
 
 const sampleConfig = `
@@ -39,6 +40,9 @@ const sampleConfig = `
   #   ## If result_key is present, a new field will be created
   #   ## instead of changing existing field
   #   result_key = "method"
+  #   ## If result_type is also present, result_key will be used to create
+  #   ## a field or tag instead of the existing type
+  #   result_type = "tag"
 
   ## Multiple conversions may be applied for one field sequentially
   ## Let's extract one more value
@@ -67,8 +71,12 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	for _, metric := range in {
 		for _, converter := range r.Tags {
 			if value, ok := metric.GetTag(converter.Key); ok {
-				if key, newValue := r.convert(converter, value); newValue != "" {
-					metric.AddTag(key, newValue)
+				if key, newValue, kind := r.convert(converter, value); newValue != "" {
+					if kind == "field" {
+						metric.AddField(key, newValue)
+					} else {
+						metric.AddTag(key, newValue)
+					}
 				}
 			}
 		}
@@ -77,8 +85,12 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 			if value, ok := metric.GetField(converter.Key); ok {
 				switch value := value.(type) {
 				case string:
-					if key, newValue := r.convert(converter, value); newValue != "" {
-						metric.AddField(key, newValue)
+					if key, newValue, kind := r.convert(converter, value); newValue != "" {
+						if kind == "tag" {
+							metric.AddTag(key, newValue)
+						} else {
+							metric.AddField(key, newValue)
+						}
 					}
 				}
 			}
@@ -88,7 +100,7 @@ func (r *Regex) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	return in
 }
 
-func (r *Regex) convert(c converter, src string) (string, string) {
+func (r *Regex) convert(c converter, src string) (string, string, string) {
 	regex, compiled := r.regexCache[c.Pattern]
 	if !compiled {
 		regex = regexp.MustCompile(c.Pattern)
@@ -101,10 +113,10 @@ func (r *Regex) convert(c converter, src string) (string, string) {
 	}
 
 	if c.ResultKey != "" {
-		return c.ResultKey, value
+		return c.ResultKey, value, c.ResultType
 	}
 
-	return c.Key, value
+	return c.Key, value, ""
 }
 
 func init() {
