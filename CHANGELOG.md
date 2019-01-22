@@ -40,7 +40,7 @@
 
 - [#4610](https://github.com/influxdata/telegraf/pull/4610): Fix initscript removes pidfile of restarted Telegraf process.
 
-## v1.9.3 [unreleased]
+## v1.9.3 [2019-01-22]
 
 #### Bugfixes
 
