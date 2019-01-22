@@ -359,7 +359,7 @@ func TestBuffer_RejectPartialRoom(t *testing.T) {
 		}, batch)
 }
 
-func TestBuffer_RejectWrapped(t *testing.T) {
+func TestBuffer_RejectNewMetricsWrapped(t *testing.T) {
 	b := setup(NewBuffer("test", 5))
 	b.Add(MetricTime(1))
 	b.Add(MetricTime(2))
@@ -399,6 +399,84 @@ func TestBuffer_RejectWrapped(t *testing.T) {
 			MetricTime(13),
 			MetricTime(12),
 			MetricTime(11),
+		}, batch)
+}
+
+func TestBuffer_RejectWrapped(t *testing.T) {
+	b := setup(NewBuffer("test", 5))
+	b.Add(MetricTime(1))
+	b.Add(MetricTime(2))
+	b.Add(MetricTime(3))
+	b.Add(MetricTime(4))
+	b.Add(MetricTime(5))
+
+	b.Add(MetricTime(6))
+	b.Add(MetricTime(7))
+	b.Add(MetricTime(8))
+	batch := b.Batch(3)
+
+	b.Add(MetricTime(9))
+	b.Add(MetricTime(10))
+	b.Add(MetricTime(11))
+	b.Add(MetricTime(12))
+
+	b.Reject(batch)
+
+	batch = b.Batch(5)
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			MetricTime(12),
+			MetricTime(11),
+			MetricTime(10),
+			MetricTime(9),
+			MetricTime(8),
+		}, batch)
+}
+
+func TestBuffer_RejectAdjustFirst(t *testing.T) {
+	b := setup(NewBuffer("test", 10))
+	b.Add(MetricTime(1))
+	b.Add(MetricTime(2))
+	b.Add(MetricTime(3))
+	batch := b.Batch(3)
+	b.Add(MetricTime(4))
+	b.Add(MetricTime(5))
+	b.Add(MetricTime(6))
+	b.Reject(batch)
+
+	b.Add(MetricTime(7))
+	b.Add(MetricTime(8))
+	b.Add(MetricTime(9))
+	batch = b.Batch(3)
+	b.Add(MetricTime(10))
+	b.Add(MetricTime(11))
+	b.Add(MetricTime(12))
+	b.Reject(batch)
+
+	b.Add(MetricTime(13))
+	b.Add(MetricTime(14))
+	b.Add(MetricTime(15))
+	batch = b.Batch(3)
+	b.Add(MetricTime(16))
+	b.Add(MetricTime(17))
+	b.Add(MetricTime(18))
+	b.Reject(batch)
+
+	b.Add(MetricTime(19))
+
+	batch = b.Batch(10)
+	testutil.RequireMetricsEqual(t,
+		[]telegraf.Metric{
+			MetricTime(19),
+			MetricTime(18),
+			MetricTime(17),
+			MetricTime(16),
+			MetricTime(15),
+			MetricTime(14),
+			MetricTime(13),
+			MetricTime(12),
+			MetricTime(11),
+			MetricTime(10),
 		}, batch)
 }
 
@@ -509,7 +587,7 @@ func TestBuffer_BatchNotRemoved(t *testing.T) {
 	b := setup(NewBuffer("test", 5))
 	b.Add(m, m, m, m, m)
 	b.Batch(2)
-	require.Equal(t, 3, b.Len())
+	require.Equal(t, 5, b.Len())
 }
 
 func TestBuffer_BatchRejectAcceptNoop(t *testing.T) {
