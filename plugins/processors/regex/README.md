@@ -26,6 +26,9 @@ The `regex` plugin transforms tag and field values with regex pattern. If `resul
     ## If result_key is present, a new field will be created
     ## instead of changing existing field
     result_key = "method"
+    ## If result_type is also present, result_key will be used to create
+    ## a field or tag instead of the existing type
+    result_type = "tag"
 
   # Multiple conversions may be applied for one field sequentially
   # Let's extract one more value
