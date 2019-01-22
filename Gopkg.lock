@@ -188,6 +188,7 @@
     "private/protocol/xml/xmlutil",
     "service/cloudwatch",
     "service/kinesis",
+    "service/kinesis/kinesisiface",
     "service/sts",
   ]
   pruneopts = ""
@@ -554,6 +555,14 @@
   packages = ["."]
   pruneopts = ""
   revision = "e80d13ce29ede4452c43dea11e79b9bc8a15b478"
+
+[[projects]]
+  digest = "1:246b499d8f7560ae59abe71e5db51c6f405c106376e80591c37160532513bda3"
+  name = "github.com/harlow/kinesis-consumer"
+  packages = ["."]
+  pruneopts = ""
+  revision = "c061203d5b35a05cea03419a659da60f1bb9fd49"
+  version = "v0.3.0"
 
 [[projects]]
   digest = "1:e7224669901bab4094e6d6697c136557b7177db6ceb01b7fc8b20d08f4b5aacd"
@@ -1522,6 +1531,7 @@
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/google/go-cmp/cmp",
     "github.com/gorilla/mux",
+    "github.com/harlow/kinesis-consumer",
     "github.com/hashicorp/consul/api",
     "github.com/influxdata/go-syslog",
     "github.com/influxdata/go-syslog/nontransparent",
