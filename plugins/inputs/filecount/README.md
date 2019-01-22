@@ -1,11 +1,10 @@
-# filecount Input Plugin
+# Filecount Input Plugin
 
 Counts files in directories that match certain criteria.
 
 ### Configuration:
 
 ```toml
-# Count files in a directory
 [[inputs.filecount]]
   ## Directory to gather stats about.
   ##   deprecated in 1.9; use the directories option
@@ -40,21 +39,18 @@ Counts files in directories that match certain criteria.
   mtime = "0s"
 ```
 
-### Measurements & Fields:
+### Metrics
 
 - filecount
-    - count (int)
-    - size_bytes (int)
-
-### Tags:
-
-- All measurements have the following tags:
+  - tags:
     - directory (the directory path)
+  - fields:
+    - count (integer)
+    - size_bytes (integer)
 
 ### Example Output:
 
 ```
-$ telegraf --config /etc/telegraf/telegraf.conf --input-filter filecount --test
-> filecount,directory=/var/cache/apt,host=czernobog count=7i,size=7438336i 1530034445000000000
-> filecount,directory=/tmp,host=czernobog count=17i,size=28934786i 1530034445000000000
+filecount,directory=/var/cache/apt count=7i,size_bytes=7438336i 1530034445000000000
+filecount,directory=/tmp count=17i,size_bytes=28934786i 1530034445000000000
 ```
