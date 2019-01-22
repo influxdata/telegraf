@@ -1,7 +1,7 @@
 # SQL Server Input Plugin
 
 The `sqlserver` plugin provides metrics for your SQL Server instance. It
-currently works with SQL Server versions 2008+. Recorded metrics are
+currently works with SQL Server 2008 SP3 and newer. Recorded metrics are
 lightweight and use Dynamic Management Views supplied by SQL Server.
 
 ### Additional Setup:
