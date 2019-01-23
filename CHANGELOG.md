@@ -39,6 +39,7 @@
 #### Bugfixes
 
 - [#4610](https://github.com/influxdata/telegraf/pull/4610): Fix initscript removes pidfile of restarted Telegraf process.
+- [#5320](https://github.com/influxdata/telegraf/pull/5320): Use datacenter option spelling in consul input.
 
 ## v1.9.4 [unreleased]
 
