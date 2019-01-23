@@ -16,7 +16,7 @@ type Consul struct {
 	Token      string
 	Username   string
 	Password   string
-	Datacentre string
+	Datacentre string // deprecated in 1.10; use Datacenter
 	Datacenter string
 	tls.ClientConfig
 	TagDelimiter string
