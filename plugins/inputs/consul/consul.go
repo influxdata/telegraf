@@ -16,6 +16,7 @@ type Consul struct {
 	Token      string
 	Username   string
 	Password   string
+	Datacentre string
 	Datacenter string
 	tls.ClientConfig
 	TagDelimiter string
@@ -71,6 +72,10 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 
 	if c.Scheme != "" {
 		config.Scheme = c.Scheme
+	}
+
+	if c.Datacentre != "" {
+		config.Datacenter = c.Datacentre
 	}
 
 	if c.Datacenter != "" {
