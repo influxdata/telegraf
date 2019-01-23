@@ -1,3 +1,9 @@
+## v1.9.4 [unreleased]
+
+#### Bugfixes
+
+- [#5334](https://github.com/influxdata/telegraf/issues/5334): Fix skip_rows and skip_columns options in csv parser.
+
 ## v1.9.3 [2019-01-22]
 
 #### Bugfixes
