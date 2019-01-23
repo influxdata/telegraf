@@ -1,4 +1,4 @@
-package http
+package azure_loganalytics
 
 import (
 	"time"
@@ -6,7 +6,6 @@ import (
 	"github.com/influxdata/telegraf"
 	// "github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
-	// "github.com/influxdata/telegraf/plugins/serializers/influx"
 	// "github.com/stretchr/testify/require"
 )
 
