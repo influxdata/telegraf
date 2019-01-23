@@ -46,6 +46,7 @@
 #### Bugfixes
 
 - [#5334](https://github.com/influxdata/telegraf/issues/5334): Fix skip_rows and skip_columns options in csv parser.
+- [#5181](https://github.com/influxdata/telegraf/issues/5181): Always send basic auth in jenkins input.
 
 ## v1.9.3 [2019-01-22]
 
