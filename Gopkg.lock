@@ -557,12 +557,12 @@
   revision = "e80d13ce29ede4452c43dea11e79b9bc8a15b478"
 
 [[projects]]
-  digest = "1:246b499d8f7560ae59abe71e5db51c6f405c106376e80591c37160532513bda3"
+  branch = "master"
+  digest = "1:c191ec4c50122cdfeedba867d25bbe2ed63ed6dd2130729220c6c0d654361ea4"
   name = "github.com/harlow/kinesis-consumer"
   packages = ["."]
   pruneopts = ""
-  revision = "c061203d5b35a05cea03419a659da60f1bb9fd49"
-  version = "v0.3.0"
+  revision = "2f58b136fee036f5de256b81a8461cc724fdf9df"
 
 [[projects]]
   digest = "1:e7224669901bab4094e6d6697c136557b7177db6ceb01b7fc8b20d08f4b5aacd"

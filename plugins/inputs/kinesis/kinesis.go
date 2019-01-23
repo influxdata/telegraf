@@ -15,15 +15,16 @@ import (
 
 type (
 	KinesisConsumer struct {
-		Region      string `toml:"region"`
-		AccessKey   string `toml:"access_key"`
-		SecretKey   string `toml:"secret_key"`
-		RoleARN     string `toml:"role_arn"`
-		Profile     string `toml:"profile"`
-		Filename    string `toml:"shared_credential_file"`
-		Token       string `toml:"token"`
-		EndpointURL string `toml:"endpoint_url"`
-		StreamName  string `toml:"streamname"`
+		Region            string `toml:"region"`
+		AccessKey         string `toml:"access_key"`
+		SecretKey         string `toml:"secret_key"`
+		RoleARN           string `toml:"role_arn"`
+		Profile           string `toml:"profile"`
+		Filename          string `toml:"shared_credential_file"`
+		Token             string `toml:"token"`
+		EndpointURL       string `toml:"endpoint_url"`
+		StreamName        string `toml:"streamname"`
+		ShardIteratorType string `toml:"shard_iterator_type"`
 
 		consumer *consumer.Consumer
 		parser   parsers.Parser
@@ -59,6 +60,9 @@ var sampleConfig = `
 
   ## Kinesis StreamName must exist prior to starting telegraf.
   streamname = "StreamName"
+
+  ## Shard iterator type (only 'TRIM_HORIZON' and 'LATEST' currently supported)
+  # shard_iterator_type = "TRIM_HORIZON"
 
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
@@ -97,7 +101,7 @@ func (k *KinesisConsumer) connect() error {
 		StreamName: aws.String(k.StreamName),
 	})
 
-	consumer, err := consumer.New("telegraftest", consumer.WithClient(client))
+	consumer, err := consumer.New("telegraftest", consumer.WithClient(client), consumer.WithShardIteratorType(k.ShardIteratorType))
 	if err != nil {
 		return err
 	}
@@ -157,6 +161,6 @@ func (k *KinesisConsumer) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("kinesis", func() telegraf.Input {
-		return &KinesisConsumer{}
+		return &KinesisConsumer{ShardIteratorType: "TRIM_HORIZON"}
 	})
 }
