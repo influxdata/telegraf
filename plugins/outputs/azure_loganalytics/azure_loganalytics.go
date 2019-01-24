@@ -27,10 +27,12 @@ var sampleConfig = `
 `
 
 const (
-	defaultClientTimeout = 5 * time.Second
-	defaultContentType   = "application/json"
-	defaultMethod        = http.MethodPost
-	defaultURL           = "https://%s.ods.opinsights.azure.com/api/logs?api-version=2016-04-01"
+	baseURL                = "https://%s.ods.opinsights.azure.com/api/logs?api-version=2016-04-01"
+	contentType            = "application/json"
+	httpMethod             = http.MethodPost
+	timeGeneratedFieldName = "DateTime"
+	defaultPrefix          = "Telegraf"
+	defaultClientTimeout   = 5 * time.Second
 )
 
 type AzLogAnalytics struct {
@@ -91,24 +93,25 @@ func (a *AzLogAnalytics) write(logType string, reqBody []byte) error {
 	dateString := time.Now().UTC().Format(time.RFC1123)
 	dateString = strings.Replace(dateString, "UTC", "GMT", -1)
 
-	stringToHash := defaultMethod + "\n" + strconv.Itoa(utf8.RuneCount(reqBody)) + "\n" + defaultContentType + "\n" + "x-ms-date:" + dateString + "\n/api/logs"
+	stringToHash := httpMethod + "\n" + strconv.Itoa(utf8.RuneCount(reqBody)) + "\n" + contentType + "\n" + "x-ms-date:" + dateString + "\n/api/logs"
 	signature, err := a.buildSignature(stringToHash)
 	if err != nil {
 		log.Println(err.Error())
 		return err
 	}
 
-	url := fmt.Sprintf(defaultURL, a.CustomerID)
-	req, err := http.NewRequest(defaultMethod, url, bytes.NewReader(reqBody))
+	url := fmt.Sprintf(baseURL, a.CustomerID)
+	req, err := http.NewRequest(httpMethod, url, bytes.NewReader(reqBody))
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
-	req.Header.Add("Log-Type", "Telegraf"+strings.Title(logType))
+	req.Header.Add("Log-Type", defaultPrefix+strings.Title(logType))
 	req.Header.Add("Authorization", signature)
-	req.Header.Add("Content-Type", defaultContentType)
+	req.Header.Add("Content-Type", contentType)
 	req.Header.Add("x-ms-date", dateString)
+	req.Header.Add("time-generated-field", timeGeneratedFieldName)
 
 	resp, err := a.client.Do(req)
 	if err != nil {
@@ -164,7 +167,7 @@ func (a *AzLogAnalytics) buildSignature(message string) (string, error) {
 
 func createObject(metric telegraf.Metric) (map[string]interface{}, string) {
 	m := make(map[string]interface{}, len(metric.Fields())+len(metric.Tags())+1)
-	m["Name"] = metric.Name()
+	m[timeGeneratedFieldName] = metric.Time().UTC().Format(time.RFC3339)
 	for k, v := range metric.Tags() {
 		v := convertField(v)
 		if v == nil {
@@ -183,10 +186,9 @@ func createObject(metric telegraf.Metric) (map[string]interface{}, string) {
 			continue
 		}
 
-		m["m_"+underscoreToCaml(k)] = v
+		m[underscoreToCaml(k)] = v
 	}
 
-	fmt.Println(m)
 	return m, metric.Name()
 }
 
