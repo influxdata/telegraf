@@ -56,7 +56,9 @@ You will also need to update your sudoers file:
 ```bash
 $ visudo
 # Add the following line:
-telegraf ALL=(ALL) NOPASSWD: /usr/sbin/unbound-control
+Cmnd_Alias UNBOUNDCTL = /usr/sbin/unbound-control
+telegraf  ALL=(ALL) NOPASSWD: UNBOUNDCTL
+Defaults!UNBOUNDCTL !logfile, !syslog, !pam_session
 ```
 
 Please use the solution you see as most appropriate.
