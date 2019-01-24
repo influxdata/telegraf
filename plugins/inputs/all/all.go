@@ -76,6 +76,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/minecraft"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mongodb"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mqtt_consumer"
+	_ "github.com/influxdata/telegraf/plugins/inputs/multifile"
 	_ "github.com/influxdata/telegraf/plugins/inputs/mysql"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nats"
 	_ "github.com/influxdata/telegraf/plugins/inputs/nats_consumer"
