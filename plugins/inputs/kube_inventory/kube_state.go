@@ -2,11 +2,15 @@ package kube_inventory
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
+	"log"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/kubernetes/apimachinery/pkg/api/resource"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -30,7 +34,7 @@ type KubernetesInventory struct {
 }
 
 var sampleConfig = `
-  ## URL for the kubelet
+  ## URL for the Kubernetes API
   url = "https://127.0.0.1"
 
   ## Namespace to use
@@ -140,6 +144,20 @@ func atoi(s string) int64 {
 		return 0
 	}
 	return int64(i)
+}
+
+func convertQuantity(s string) float64 {
+	q, err := resource.ParseQuantity(s)
+	if err != nil {
+		log.Printf("E! Failed to parse quantity - %v", err)
+		return 0
+	}
+	f, err := strconv.ParseFloat(fmt.Sprint(q.AsDec()), 64)
+	if err != nil {
+		log.Printf("E! Failed to parse float - %v", err)
+		return 0
+	}
+	return f
 }
 
 var (

@@ -145,8 +145,8 @@ func TestPod(t *testing.T) {
 						Fields: map[string]interface{}{
 							"restarts_total":              int32(3),
 							"state_code":                  0,
-							"resource_requests_cpu_units": "100m",
-							"resource_limits_cpu_units":   "100m",
+							"resource_requests_cpu_units": .1,
+							"resource_limits_cpu_units":   .1,
 						},
 						Tags: map[string]string{
 							"namespace":      "ns1",
