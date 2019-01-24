@@ -391,7 +391,9 @@ You will also need to update your sudoers file:
 ```bash
 $ visudo
 # Add the following line:
-telegraf ALL=(ALL) NOPASSWD: /usr/bin/varnishstat
+Cmnd_Alias VARNISHSTAT = /usr/bin/varnishstat
+telegraf  ALL=(ALL) NOPASSWD: VARNISHSTAT
+Defaults!VARNISHSTAT !logfile, !syslog, !pam_session
 ```
 
 Please use the solution you see as most appropriate.

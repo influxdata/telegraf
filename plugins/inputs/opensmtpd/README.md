@@ -86,7 +86,9 @@ You will also need to update your sudoers file:
 ```bash
 $ visudo
 # Add the following line:
-telegraf ALL=(ALL) NOPASSWD: /usr/sbin/smtpctl
+Cmnd_Alias SMTPCTL = /usr/sbin/smtpctl
+telegraf  ALL=(ALL) NOPASSWD: SMTPCTL
+Defaults!SMTPCTL !logfile, !syslog, !pam_session
 ```
 
 Please use the solution you see as most appropriate.

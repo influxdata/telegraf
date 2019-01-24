@@ -10,15 +10,24 @@ Acquiring the required permissions can be done using several methods:
 
 ### Using sudo
 
-You may edit your sudo configuration with the following:
+You will need the following in your telegraf config:
+```toml
+[[inputs.fail2ban]]
+  use_sudo = true
+```
 
-``` sudo
-telegraf ALL=(root) NOEXEC: NOPASSWD: /usr/bin/fail2ban-client status, /usr/bin/fail2ban-client status *
+You will also need to update your sudoers file:
+```bash
+$ visudo
+# Add the following line:
+Cmnd_Alias FAIL2BAN = /usr/bin/fail2ban-client status, /usr/bin/fail2ban-client status *
+telegraf  ALL=(root) NOEXEC: NOPASSWD: FAIL2BAN
+Defaults!FAIL2BAN !logfile, !syslog, !pam_session
 ```
 
 ### Configuration:
 
-``` toml
+```toml
 # Read metrics from fail2ban.
 [[inputs.fail2ban]]
   ## Use sudo to run fail2ban-client
