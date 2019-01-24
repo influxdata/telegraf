@@ -5,6 +5,7 @@
 - [cloud_pubsub](/plugins/inputs/cloud_pubsub/README.md) - Contributed by @emilymye
 - [neptune_apex](/plugins/inputs/neptune_apex/README.md) - Contributed by @MaxRenaud
 - [nginx_upstream_check](/plugins/inputs/nginx_upstream_check/README.md) - Contributed by @dmitryilyin
+- [multifile](/plugins/inputs/multifile/README.md) - Contributed by @martin2250
 
 #### New Outputs
 
