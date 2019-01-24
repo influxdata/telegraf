@@ -26,10 +26,7 @@ type KubernetesInventory struct {
 	MaxConfigMapAge   internal.Duration `toml:"max_config_map_age"`
 
 	tls.ClientConfig
-
-	// try to collect everything on first run
-	firstTimeGather bool // apparently for configmaps
-	client          *client
+	client *client
 }
 
 var sampleConfig = `
@@ -57,9 +54,6 @@ var sampleConfig = `
   ## Overrides resource_exclude if both set.
   # resource_include = [ "deployments", "nodes", "statefulsets" ]
 
-  ## Optional max age for config map
-  # max_config_map_age = "1h"
-
   ## Optional TLS Config
   # tls_ca = "/path/to/cafile"
   # tls_cert = "/path/to/certfile"
@@ -86,11 +80,11 @@ func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
 		}
 	}
 
-	var wg sync.WaitGroup
+	wg := sync.WaitGroup{}
+	ctx := context.Background()
 
 	if len(ki.ResourceInclude) == 0 {
 		for _, f := range availableCollectors {
-			ctx := context.Background()
 			wg.Add(1)
 			go func(f func(ctx context.Context, acc telegraf.Accumulator, k *KubernetesInventory)) {
 				defer wg.Done()
@@ -99,7 +93,6 @@ func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
 		}
 	} else {
 		for _, n := range ki.ResourceInclude {
-			ctx := context.Background()
 			wg.Add(1)
 			go func(f func(ctx context.Context, acc telegraf.Accumulator, k *KubernetesInventory)) {
 				defer wg.Done()
@@ -109,7 +102,6 @@ func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
 	}
 
 	wg.Wait()
-	ki.firstTimeGather = false
 
 	return nil
 }
@@ -125,8 +117,6 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 }
 
 func (ki *KubernetesInventory) initClient() (*client, error) {
-	ki.firstTimeGather = true
-
 	if len(ki.ResourceInclude) == 0 {
 		for i := range ki.ResourceExclude {
 			delete(availableCollectors, ki.ResourceExclude[i])
@@ -142,13 +132,6 @@ func (ki *KubernetesInventory) initClient() (*client, error) {
 	}
 
 	return newClient(ki.URL, ki.Namespace, ki.BearerTokenString, ki.ResponseTimeout.Duration, ki.ClientConfig)
-}
-
-func boolInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
 }
 
 func atoi(s string) int64 {

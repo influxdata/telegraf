@@ -36,19 +36,23 @@ func (ki *KubernetesInventory) gatherPod(p v1.Pod, acc telegraf.Accumulator) err
 }
 
 func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.Container, acc telegraf.Accumulator) {
-	state := 3
+	stateCode := 3
+	state := "unknown"
 	switch {
 	case cs.State.Running != nil:
-		state = 0
+		stateCode = 0
+		state = "running"
 	case cs.State.Terminated != nil:
-		state = 1
+		stateCode = 1
+		state = "terminated"
 	case cs.State.Waiting != nil:
-		state = 2
+		stateCode = 2
+		state = "waiting"
 	}
 
 	fields := map[string]interface{}{
 		"restarts_total":    cs.GetRestartCount(),
-		"state":             state,
+		"state_code":        stateCode,
 		"terminated_reason": cs.State.Terminated.GetReason(),
 	}
 	tags := map[string]string{
@@ -56,6 +60,7 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 		"namespace":      *p.Metadata.Namespace,
 		"node_name":      *p.Spec.NodeName,
 		"pod_name":       *p.Metadata.Name,
+		"state":          state,
 	}
 
 	req := c.Resources.Requests

@@ -144,7 +144,7 @@ func TestPod(t *testing.T) {
 						Measurement: podContainerMeasurement,
 						Fields: map[string]interface{}{
 							"restarts_total":              int32(3),
-							"state":                       0,
+							"state_code":                  0,
 							"resource_requests_cpu_units": "100m",
 							"resource_limits_cpu_units":   "100m",
 						},
@@ -153,6 +153,7 @@ func TestPod(t *testing.T) {
 							"container_name": "forwarder",
 							"node_name":      "node1",
 							"pod_name":       "pod1",
+							"state":          "running",
 						},
 					},
 				},

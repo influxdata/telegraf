@@ -26,7 +26,7 @@ avoid cardinality issues:
 
 ```toml
 [[inputs.kube_inventory]]
-  ## URL for the kubelet
+  ## URL for the Kubernetes API
   url = "https://127.0.0.1"
 
   ## Namespace to use
@@ -49,9 +49,6 @@ avoid cardinality issues:
   ## Optional Resources to include when gathering
   ## Overrides resource_exclude if both set.
   # resource_include = [ "deployments", "nodes", "statefulsets" ]
-
-  ## Optional max age for config map
-  # max_config_map_age = "1h"
 
   ## Optional TLS Config
   # tls_ca = "/path/to/cafile"
@@ -189,10 +186,6 @@ subjects:
     - replicas_updated
     - spec_replicas
     - observed_generation
-
-
-
-    - result_code 
 
 #### pv `phase_type`
 
