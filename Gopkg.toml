@@ -254,3 +254,7 @@
   name = "github.com/karrick/godirwalk"
   version = "1.7.5"
 
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/kubernetes/apimachinery"
