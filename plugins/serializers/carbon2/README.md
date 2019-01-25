@@ -16,8 +16,6 @@ The `carbon2` serializer translates the Telegraf metric format to the [Carbon2 f
   data_format = "carbon2"
 ```
 
-#### example_option
-
 Standard form:
 ```
 metric=name field=field_1 host=foo  30 1234567890
