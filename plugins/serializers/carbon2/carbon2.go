@@ -1,6 +1,7 @@
 package carbon2
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"strconv"
@@ -28,7 +29,7 @@ func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 }
 
 func (s *serializer) createObject(metric telegraf.Metric) string {
-	var m strings.Builder
+	var m bytes.Buffer
 	for fieldName, fieldValue := range metric.Fields() {
 		if isNumeric(fieldValue) {
 			m.WriteString("metric=")
