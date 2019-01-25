@@ -44,3 +44,6 @@ metric=weather field=wind location=us-midwest season=summer  100 1234567890
 
 ### Fields and Tags with spaces
 When a field key or tag key/value have spaces, spaces will be replaced with `_`.
+
+### Tags with empty values
+When a tag's value is empty, it will be replaced with `null`

@@ -40,6 +40,9 @@ func (s *serializer) createObject(metric telegraf.Metric) string {
 			for k, v := range metric.Tags() {
 				m.WriteString(strings.Replace(k, " ", "_", -1))
 				m.WriteString("=")
+				if len(v) == 0 {
+					v = "null"
+				}
 				m.WriteString(strings.Replace(v, " ", "_", -1))
 				m.WriteString(" ")
 			}

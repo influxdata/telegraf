@@ -37,6 +37,25 @@ func TestSerializeMetricFloat(t *testing.T) {
 	assert.Equal(t, string(expS), string(buf))
 }
 
+func TestSerializeMetricWithEmptyStringTag(t *testing.T) {
+	now := time.Now()
+	tags := map[string]string{
+		"cpu": "",
+	}
+	fields := map[string]interface{}{
+		"usage_idle": float64(91.5),
+	}
+	m, err := metric.New("cpu", tags, fields, now)
+	assert.NoError(t, err)
+
+	s, _ := NewSerializer()
+	var buf []byte
+	buf, err = s.Serialize(m)
+	assert.NoError(t, err)
+	expS := []byte(fmt.Sprintf(`metric=cpu field=usage_idle cpu=null  91.5 %d`, now.Unix()) + "\n")
+	assert.Equal(t, string(expS), string(buf))
+}
+
 func TestSerializeWithSpaces(t *testing.T) {
 	now := time.Now()
 	tags := map[string]string{
