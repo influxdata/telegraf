@@ -21,7 +21,7 @@ func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
 }
 
 func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
-	var batch strings.Builder
+	var batch bytes.Buffer
 	for _, metric := range metrics {
 		batch.WriteString(s.createObject(metric))
 	}
