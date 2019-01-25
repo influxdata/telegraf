@@ -22,8 +22,17 @@ import (
 )
 
 var sampleConfig = `
+  ## Customer ID (Workstation ID) and Key for Azure Log Analytics resource.
   # customer_id = "<Workstation ID>"
   # shared_key = "<Secret>"
+
+  ## Timeout for closing (default: 5s).
+  # timeout = "5s"
+
+  ## Table Namespace Prefix (default: "Telegraf").
+  ## Namespace Prefex is used in "Log-Type" header
+  ## Restrictions can be found here (https://docs.microsoft.com/en-us/azure/azure-monitor/platform/data-collector-api#request-headers)
+  # namespace_prefix = "Telegraf"
 `
 
 const (
@@ -31,17 +40,23 @@ const (
 	contentType            = "application/json"
 	httpMethod             = http.MethodPost
 	timeGeneratedFieldName = "DateTime"
-	defaultPrefix          = "Telegraf"
+
 	defaultClientTimeout   = 5 * time.Second
+	defaultNamespacePrefix = "Telegraf"
 )
 
+// AzLogAnalytics contains information about a azure log analytics service metadata
 type AzLogAnalytics struct {
 	CustomerID string `toml:"customer_id"`
 	SharedKey  string `toml:"shared_key"`
 
+	NamespacePrefix string `toml:"namespace_prefix"`
+	ClientTimeout   internal.Duration
+
 	client *http.Client
 }
 
+// Connect initializes the plugin and validates connectivity
 func (a *AzLogAnalytics) Connect() error {
 	ctx := context.Background()
 	client, err := a.createClient(ctx)
@@ -54,18 +69,22 @@ func (a *AzLogAnalytics) Connect() error {
 	return nil
 }
 
+// Close shuts down an any active connections
 func (a *AzLogAnalytics) Close() error {
 	return nil
 }
 
+// Description provides a description of the plugin
 func (a *AzLogAnalytics) Description() string {
 	return "A plugin that can transmit metrics to Azure Log Analytics"
 }
 
+// SampleConfig provides a sample configuration for the plugin
 func (a *AzLogAnalytics) SampleConfig() string {
 	return sampleConfig
 }
 
+// Write writes metrics to the remote endpoint
 func (a *AzLogAnalytics) Write(metrics []telegraf.Metric) error {
 
 	objects := make(map[string][]interface{}, len(metrics))
@@ -107,7 +126,7 @@ func (a *AzLogAnalytics) write(logType string, reqBody []byte) error {
 	}
 
 	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
-	req.Header.Add("Log-Type", defaultPrefix+strings.Title(logType))
+	req.Header.Add("Log-Type", a.NamespacePrefix+strings.Title(logType))
 	req.Header.Add("Authorization", signature)
 	req.Header.Add("Content-Type", contentType)
 	req.Header.Add("x-ms-date", dateString)
@@ -132,7 +151,7 @@ func (a *AzLogAnalytics) createClient(ctx context.Context) (*http.Client, error)
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		},
-		Timeout: defaultClientTimeout,
+		Timeout: a.ClientTimeout.Duration,
 	}
 
 	return client, nil
@@ -168,12 +187,8 @@ func (a *AzLogAnalytics) buildSignature(message string) (string, error) {
 func createObject(metric telegraf.Metric) (map[string]interface{}, string) {
 	m := make(map[string]interface{}, len(metric.Fields())+len(metric.Tags())+1)
 	m[timeGeneratedFieldName] = metric.Time().UTC().Format(time.RFC3339)
+	fmt.Println(m[timeGeneratedFieldName])
 	for k, v := range metric.Tags() {
-		v := convertField(v)
-		if v == nil {
-			continue
-		}
-
 		if k == "host" {
 			m["Computer"] = v
 		} else {
@@ -181,57 +196,17 @@ func createObject(metric telegraf.Metric) (map[string]interface{}, string) {
 		}
 	}
 	for k, v := range metric.Fields() {
-		v := convertField(v)
-		if v == nil {
-			continue
-		}
-
 		m[underscoreToCaml(k)] = v
 	}
 
 	return m, metric.Name()
 }
 
-// Convert field to a supported type or nil if unconvertible
-func convertField(v interface{}) interface{} {
-	switch v := v.(type) {
-	case float64:
-		return v
-	case int64:
-		return v
-	case string:
-		return v
-	case bool:
-		return v
-	case int:
-		return int64(v)
-	case uint:
-		return uint64(v)
-	case uint64:
-		return uint64(v)
-	case []byte:
-		return string(v)
-	case int32:
-		return int64(v)
-	case int16:
-		return int64(v)
-	case int8:
-		return int64(v)
-	case uint32:
-		return uint64(v)
-	case uint16:
-		return uint64(v)
-	case uint8:
-		return uint64(v)
-	case float32:
-		return float64(v)
-	default:
-		return nil
-	}
-}
-
 func init() {
 	outputs.Add("azure_loganalytics", func() telegraf.Output {
-		return &AzLogAnalytics{}
+		return &AzLogAnalytics{
+			ClientTimeout:   internal.Duration{Duration: defaultClientTimeout},
+			NamespacePrefix: defaultNamespacePrefix,
+		}
 	})
 }
