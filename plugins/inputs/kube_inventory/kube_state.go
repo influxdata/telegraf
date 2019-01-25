@@ -138,7 +138,7 @@ func atoi(s string) int64 {
 	return int64(i)
 }
 
-func convertQuantity(s string) float64 {
+func convertQuantity(s string, m float64) int64 {
 	q, err := resource.ParseQuantity(s)
 	if err != nil {
 		log.Printf("E! Failed to parse quantity - %v", err)
@@ -149,7 +149,10 @@ func convertQuantity(s string) float64 {
 		log.Printf("E! Failed to parse float - %v", err)
 		return 0
 	}
-	return f
+	if m < 1 {
+		m = 1
+	}
+	return int64(f * m)
 }
 
 var (

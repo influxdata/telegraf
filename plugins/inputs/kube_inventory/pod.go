@@ -69,17 +69,17 @@ func gatherPodContainer(nodeName string, p v1.Pod, cs v1.ContainerStatus, c v1.C
 	for resourceName, val := range req {
 		switch resourceName {
 		case "cpu":
-			fields["resource_requests_cpu_units"] = convertQuantity(val.GetString_())
+			fields["resource_requests_millicpu_units"] = convertQuantity(val.GetString_(), 1000)
 		case "memory":
-			fields["resource_requests_memory_bytes"] = convertQuantity(val.GetString_())
+			fields["resource_requests_memory_bytes"] = convertQuantity(val.GetString_(), 1)
 		}
 	}
 	for resourceName, val := range lim {
 		switch resourceName {
 		case "cpu":
-			fields["resource_limits_cpu_units"] = convertQuantity(val.GetString_())
+			fields["resource_limits_millicpu_units"] = convertQuantity(val.GetString_(), 1000)
 		case "memory":
-			fields["resource_limits_memory_bytes"] = convertQuantity(val.GetString_())
+			fields["resource_limits_memory_bytes"] = convertQuantity(val.GetString_(), 1)
 		}
 	}
 

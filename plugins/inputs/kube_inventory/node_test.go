@@ -104,10 +104,10 @@ func TestNode(t *testing.T) {
 						Measurement: nodeMeasurement,
 						Fields: map[string]interface{}{
 							"capacity_cpu_cores":       int64(16),
-							"capacity_memory_bytes":    1.28837533696e+11,
+							"capacity_memory_bytes":    int64(1.28837533696e+11),
 							"capacity_pods":            int64(110),
 							"allocatable_cpu_cores":    int64(16),
-							"allocatable_memory_bytes": 1.28732676096e+11,
+							"allocatable_memory_bytes": int64(1.28732676096e+11),
 							"allocatable_pods":         int64(110),
 						},
 						Tags: map[string]string{
