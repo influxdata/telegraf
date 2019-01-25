@@ -404,6 +404,14 @@
   version = "v1.2.0"
 
 [[projects]]
+  digest = "1:eb53021a8aa3f599d29c7102e65026242bdedce998a54837dc67f14b6a97c5fd"
+  name = "github.com/fsnotify/fsnotify"
+  packages = ["."]
+  pruneopts = ""
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  version = "v1.4.7"
+
+[[projects]]
   branch = "master"
   digest = "1:ec95c1c49fbec27ab5383b9c47fae5c2fe1d97ac5b41d36d78e17588a44e9f3f"
   name = "github.com/ghodss/yaml"
@@ -638,20 +646,6 @@
   pruneopts = ""
   revision = "0cd00a9f0a5e5607d5ef9a294c260f77a74e3b5a"
   version = "v2.0.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:bc3eb5ddfd59781ea1183f2b3d1eb105a1495d421f09b2ccd360c7fced0b612d"
-  name = "github.com/influxdata/tail"
-  packages = [
-    ".",
-    "ratelimiter",
-    "util",
-    "watch",
-    "winfile",
-  ]
-  pruneopts = ""
-  revision = "c43482518d410361b6c383d7aebce33d0471d7bc"
 
 [[projects]]
   branch = "telegraf"
@@ -1006,6 +1000,19 @@
   pruneopts = ""
   revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
   version = "v1.2.0"
+
+[[projects]]
+  digest = "1:a1225914e8139b1304e9358394e0c6d0ce49ca9e60367331de2ffedebbbd841c"
+  name = "github.com/sgtsquiggs/tail"
+  packages = [
+    "logger",
+    "logline",
+    "tailer",
+    "watcher",
+  ]
+  pruneopts = ""
+  revision = "03e9ae54be6ec1c0540d94cc7d82e0240d4fa22f"
+  version = "v1.0.3"
 
 [[projects]]
   digest = "1:d77a85cf43b70ae61fa2543d402d782b40dca0f5f41413839b5f916782b0fab9"
@@ -1615,6 +1622,10 @@
     "github.com/prometheus/client_model/go",
     "github.com/prometheus/common/expfmt",
     "github.com/satori/go.uuid",
+    "github.com/sgtsquiggs/tail/logger",
+    "github.com/sgtsquiggs/tail/logline",
+    "github.com/sgtsquiggs/tail/tailer",
+    "github.com/sgtsquiggs/tail/watcher",
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/disk",
     "github.com/shirou/gopsutil/host",

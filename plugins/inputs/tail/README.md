@@ -1,6 +1,10 @@
-# Tail Input Plugin
+# Tail2 Input Plugin
 
 The tail plugin "tails" a logfile and parses each log message.
+
+It is a port of the old tail plugin using https://gitlab.tower-research.com/SEFO/tail.
+It is a port of the tail plugin using https://github.com/sgtsquiggs/tail instead 
+of https://github.com/influxdata/tail.
 
 By default, the tail plugin acts like the following unix tail command:
 
@@ -36,8 +40,6 @@ The plugin expects messages in one of the
   files = ["/var/mymetrics.out"]
   ## Read file from beginning.
   from_beginning = false
-  ## Whether file is a named pipe
-  pipe = false
 
   ## Method used to watch for file updates.  Can be either "inotify" or "poll".
   # watch_method = "inotify"

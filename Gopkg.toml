@@ -75,8 +75,8 @@
   version = "2.0.0"
 
 [[constraint]]
-  name = "github.com/influxdata/tail"
-  branch = "master"
+  name = "github.com/sgtsquiggs/tail"
+  version = "1.0.3"
 
 [[constraint]]
   name = "github.com/influxdata/toml"

@@ -3,9 +3,9 @@ package tail
 import (
 	"io/ioutil"
 	"os"
-	"runtime"
 	"testing"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 
@@ -24,9 +24,12 @@ func TestTailFromBeginning(t *testing.T) {
 	_, err = tmpfile.WriteString("cpu,mytag=foo usage_idle=100\n")
 	require.NoError(t, err)
 
-	tt := NewTail()
-	tt.FromBeginning = true
-	tt.Files = []string{tmpfile.Name()}
+	tt := &Tail{
+		WatchMethod:   defaultWatchMethod,
+		PollInterval:  internal.Duration{Duration: defaultPollInterval},
+		FromBeginning: true,
+		Files:         []string{tmpfile.Name()},
+	}
 	tt.SetParserFunc(parsers.NewInfluxParser)
 	defer tt.Stop()
 	defer tmpfile.Close()
@@ -57,20 +60,18 @@ func TestTailFromEnd(t *testing.T) {
 	_, err = tmpfile.WriteString("cpu,mytag=foo usage_idle=100\n")
 	require.NoError(t, err)
 
-	tt := NewTail()
-	tt.Files = []string{tmpfile.Name()}
+	tt := &Tail{
+		WatchMethod:   defaultWatchMethod,
+		PollInterval:  internal.Duration{Duration: defaultPollInterval},
+		FromBeginning: false,
+		Files:         []string{tmpfile.Name()},
+	}
 	tt.SetParserFunc(parsers.NewInfluxParser)
 	defer tt.Stop()
 	defer tmpfile.Close()
 
 	acc := testutil.Accumulator{}
 	require.NoError(t, tt.Start(&acc))
-	for _, tailer := range tt.tailers {
-		for n, err := tailer.Tell(); err == nil && n == 0; n, err = tailer.Tell() {
-			// wait for tailer to jump to end
-			runtime.Gosched()
-		}
-	}
 
 	_, err = tmpfile.WriteString("cpu,othertag=foo usage_idle=100\n")
 	require.NoError(t, err)
@@ -93,9 +94,12 @@ func TestTailBadLine(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 
-	tt := NewTail()
-	tt.FromBeginning = true
-	tt.Files = []string{tmpfile.Name()}
+	tt := &Tail{
+		WatchMethod:   defaultWatchMethod,
+		PollInterval:  internal.Duration{Duration: defaultPollInterval},
+		FromBeginning: true,
+		Files:         []string{tmpfile.Name()},
+	}
 	tt.SetParserFunc(parsers.NewInfluxParser)
 	defer tt.Stop()
 	defer tmpfile.Close()
@@ -118,9 +122,12 @@ func TestTailDosLineendings(t *testing.T) {
 	_, err = tmpfile.WriteString("cpu usage_idle=100\r\ncpu2 usage_idle=200\r\n")
 	require.NoError(t, err)
 
-	tt := NewTail()
-	tt.FromBeginning = true
-	tt.Files = []string{tmpfile.Name()}
+	tt := &Tail{
+		WatchMethod:   defaultWatchMethod,
+		PollInterval:  internal.Duration{Duration: defaultPollInterval},
+		FromBeginning: true,
+		Files:         []string{tmpfile.Name()},
+	}
 	tt.SetParserFunc(parsers.NewInfluxParser)
 	defer tt.Stop()
 	defer tmpfile.Close()
