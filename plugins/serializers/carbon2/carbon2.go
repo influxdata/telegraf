@@ -17,18 +17,18 @@ func NewSerializer() (*serializer, error) {
 }
 
 func (s *serializer) Serialize(metric telegraf.Metric) ([]byte, error) {
-	return []byte(s.createObject(metric)), nil
+	return s.createObject(metric), nil
 }
 
 func (s *serializer) SerializeBatch(metrics []telegraf.Metric) ([]byte, error) {
 	var batch bytes.Buffer
 	for _, metric := range metrics {
-		batch.WriteString(s.createObject(metric))
+		batch.Write(s.createObject(metric))
 	}
-	return []byte(batch.String()), nil
+	return batch.Bytes(), nil
 }
 
-func (s *serializer) createObject(metric telegraf.Metric) string {
+func (s *serializer) createObject(metric telegraf.Metric) []byte {
 	var m bytes.Buffer
 	for fieldName, fieldValue := range metric.Fields() {
 		if isNumeric(fieldValue) {
@@ -37,13 +37,14 @@ func (s *serializer) createObject(metric telegraf.Metric) string {
 			m.WriteString(" field=")
 			m.WriteString(strings.Replace(fieldName, " ", "_", -1))
 			m.WriteString(" ")
-			for k, v := range metric.Tags() {
-				m.WriteString(strings.Replace(k, " ", "_", -1))
+			for _, tag := range metric.TagList() {
+				m.WriteString(strings.Replace(tag.Key, " ", "_", -1))
 				m.WriteString("=")
-				if len(v) == 0 {
-					v = "null"
+				value := tag.Value
+				if len(value) == 0 {
+					value = "null"
 				}
-				m.WriteString(strings.Replace(v, " ", "_", -1))
+				m.WriteString(strings.Replace(value, " ", "_", -1))
 				m.WriteString(" ")
 			}
 			m.WriteString(" ")
@@ -53,7 +54,7 @@ func (s *serializer) createObject(metric telegraf.Metric) string {
 			m.WriteString("\n")
 		}
 	}
-	return m.String()
+	return m.Bytes()
 }
 
 func isNumeric(v interface{}) bool {
