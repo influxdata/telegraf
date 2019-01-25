@@ -32,14 +32,14 @@ func (s *serializer) createObject(metric telegraf.Metric) string {
 	for fieldName, fieldValue := range metric.Fields() {
 		if isNumeric(fieldValue) {
 			m.WriteString("metric=")
-			m.WriteString(metric.Name())
+			m.WriteString(strings.Replace(metric.Name(), " ", "_", -1))
 			m.WriteString(" field=")
-			m.WriteString(fieldName)
+			m.WriteString(strings.Replace(fieldName, " ", "_", -1))
 			m.WriteString(" ")
 			for k, v := range metric.Tags() {
-				m.WriteString(k)
+				m.WriteString(strings.Replace(k, " ", "_", -1))
 				m.WriteString("=")
-				m.WriteString(v)
+				m.WriteString(strings.Replace(v, " ", "_", -1))
 				m.WriteString(" ")
 			}
 			m.WriteString(" ")

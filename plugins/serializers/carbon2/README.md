@@ -41,3 +41,6 @@ after serializing in Carbon2, the result would be:
 metric=weather field=temperature location=us-midwest season=summer  82 1234567890
 metric=weather field=wind location=us-midwest season=summer  100 1234567890
 ```
+
+### Fields and Tags with spaces
+When a field key or tag key/value have spaces, spaces will be replaced with `_`.
