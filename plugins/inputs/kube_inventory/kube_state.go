@@ -13,6 +13,7 @@ import (
 	"github.com/kubernetes/apimachinery/pkg/api/resource"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -84,24 +85,21 @@ func (ki *KubernetesInventory) Gather(acc telegraf.Accumulator) (err error) {
 		}
 	}
 
+	resourceFilter, err := filter.NewIncludeExcludeFilter(ki.ResourceInclude, ki.ResourceExclude)
+	if err != nil {
+		return err
+	}
+
 	wg := sync.WaitGroup{}
 	ctx := context.Background()
 
-	if len(ki.ResourceInclude) == 0 {
-		for _, f := range availableCollectors {
+	for collector, f := range availableCollectors {
+		if resourceFilter.Match(collector) {
 			wg.Add(1)
 			go func(f func(ctx context.Context, acc telegraf.Accumulator, k *KubernetesInventory)) {
 				defer wg.Done()
 				f(ctx, acc, ki)
 			}(f)
-		}
-	} else {
-		for _, n := range ki.ResourceInclude {
-			wg.Add(1)
-			go func(f func(ctx context.Context, acc telegraf.Accumulator, k *KubernetesInventory)) {
-				defer wg.Done()
-				f(ctx, acc, ki)
-			}(availableCollectors[n])
 		}
 	}
 
@@ -121,12 +119,6 @@ var availableCollectors = map[string]func(ctx context.Context, acc telegraf.Accu
 }
 
 func (ki *KubernetesInventory) initClient() (*client, error) {
-	if len(ki.ResourceInclude) == 0 {
-		for i := range ki.ResourceExclude {
-			delete(availableCollectors, ki.ResourceExclude[i])
-		}
-	}
-
 	if ki.BearerToken != "" {
 		token, err := ioutil.ReadFile(ki.BearerToken)
 		if err != nil {
