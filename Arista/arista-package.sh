@@ -158,6 +158,10 @@ rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
 cp $CONFIG_FILES_DIR/telegraf-qubit-spin.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
 fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-qubit-spin" etc lib || cleanup_exit 1
 
+# Varnish config
+rm -rf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/*
+cp $CONFIG_FILES_DIR/telegraf-varnish.conf $TMP_CONFIG_DIR/etc/telegraf/telegraf.d/
+fpm -s dir -t rpm $CONFIG_FPM_ARGS --description "$DESCRIPTION" -n "telegraf-varnish" etc lib || cleanup_exit 1
 
 mv ./*.rpm RPMS
 
