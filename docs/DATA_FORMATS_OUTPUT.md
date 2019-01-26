@@ -8,6 +8,7 @@ plugins.
 1. [JSON](/plugins/serializers/json)
 1. [Graphite](/plugins/serializers/graphite)
 1. [SplunkMetric](/plugins/serializers/splunkmetric)
+1. [Carbon2](/plugins/serializers/carbon2)
 
 You will be able to identify the plugins with support by the presence of a
 `data_format` config option, for example, in the `file` output plugin:

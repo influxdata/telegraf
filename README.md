@@ -303,6 +303,7 @@ For documentation on the latest development code see the [documentation index][d
 - [Graphite](/plugins/serializers/graphite)
 - [ServiceNow](/plugins/serializers/nowmetric)
 - [SplunkMetric](/plugins/serializers/splunkmetric)
+- [Carbon2](/plugins/serializers/carbon2)
 
 ## Processor Plugins
 

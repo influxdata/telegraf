@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 
+	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
@@ -82,6 +83,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewSplunkmetricSerializer(config.HecRouting)
 	case "nowmetric":
 		serializer, err = NewNowSerializer()
+	case "carbon2":
+		serializer, err = NewCarbon2Serializer()
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -90,6 +93,10 @@ func NewSerializer(config *Config) (Serializer, error) {
 
 func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return json.NewSerializer(timestampUnits)
+}
+
+func NewCarbon2Serializer() (Serializer, error) {
+	return carbon2.NewSerializer()
 }
 
 func NewSplunkmetricSerializer(splunkmetric_hec_routing bool) (Serializer, error) {
