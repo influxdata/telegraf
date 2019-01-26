@@ -14,6 +14,7 @@
 #### New Serializers
 
 - [nowmetric](/plugins/serializers/nowmetric/README.md) - Contributed by @JefMuller
+- [carbon2](/plugins/serializers/carbon2/README.md) - Contributed by @frankreno
 
 #### Features
 
