@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -29,20 +30,20 @@ var sampleConfig = `
   ## Timeout for closing (default: 5s).
   # timeout = "5s"
 
-  ## Table Namespace Prefix (default: "Telegraf").
-  ## Namespace Prefex is used in "Log-Type" header
-  ## Restrictions can be found here (https://docs.microsoft.com/en-us/azure/azure-monitor/platform/data-collector-api#request-headers)
-  # namespace_prefix = "Telegraf"
+  ## Table Namespace Prefix (default: "").
+  ## Namespace Prefix is used in "Log-Type" header
+  ## Prefix can only contain alphaNumeric characters
+  # namespace_prefix = ""
 `
 
 const (
 	baseURL                = "https://%s.ods.opinsights.azure.com/api/logs?api-version=2016-04-01"
 	contentType            = "application/json"
-	httpMethod             = http.MethodPost
 	timeGeneratedFieldName = "DateTime"
+	namespacePrefixRegex   = "^[a-zA-Z0-9]*$"
+	httpMethod             = http.MethodPost
 
-	defaultClientTimeout   = 5 * time.Second
-	defaultNamespacePrefix = "Telegraf"
+	defaultClientTimeout = 5 * time.Second
 )
 
 // AzLogAnalytics contains information about a azure log analytics service metadata
@@ -50,14 +51,43 @@ type AzLogAnalytics struct {
 	CustomerID string `toml:"customer_id"`
 	SharedKey  string `toml:"shared_key"`
 
-	NamespacePrefix string `toml:"namespace_prefix"`
-	ClientTimeout   internal.Duration
+	NamespacePrefix string            `toml:"namespace_prefix"`
+	ClientTimeout   internal.Duration `toml:"timeout"`
 
-	client *http.Client
+	serviceURL string
+	client     *http.Client
 }
 
 // Connect initializes the plugin and validates connectivity
 func (a *AzLogAnalytics) Connect() error {
+
+	if a.CustomerID == "" {
+		return fmt.Errorf("customer_id not configured")
+	}
+
+	if a.SharedKey == "" {
+		return fmt.Errorf("shared_key not configured")
+	}
+
+	if len(a.NamespacePrefix) > 25 {
+		return fmt.Errorf("namespace_prefix length is greater than 25 characters")
+	}
+
+	if a.ClientTimeout.Duration == 0 {
+		a.ClientTimeout.Duration = defaultClientTimeout
+	}
+
+	if len(a.NamespacePrefix) > 25 {
+		return fmt.Errorf("namespace_prefix length is greater than 25 characters")
+	}
+
+	match, err := regexp.MatchString(namespacePrefixRegex, a.NamespacePrefix)
+	if err != nil {
+		return err
+	} else if !match {
+		return fmt.Errorf("namespace_prefix contains invalid characters")
+	}
+
 	ctx := context.Background()
 	client, err := a.createClient(ctx)
 	if err != nil {
@@ -65,6 +95,7 @@ func (a *AzLogAnalytics) Connect() error {
 	}
 
 	a.client = client
+	a.serviceURL = fmt.Sprintf(baseURL, a.CustomerID)
 
 	return nil
 }
@@ -89,7 +120,7 @@ func (a *AzLogAnalytics) Write(metrics []telegraf.Metric) error {
 
 	objects := make(map[string][]interface{}, len(metrics))
 	for _, metric := range metrics {
-		m, name := createObject(metric)
+		m, name := a.createObject(metric)
 		objects[name] = append(objects[name], m)
 	}
 
@@ -119,14 +150,15 @@ func (a *AzLogAnalytics) write(logType string, reqBody []byte) error {
 		return err
 	}
 
-	url := fmt.Sprintf(baseURL, a.CustomerID)
-	req, err := http.NewRequest(httpMethod, url, bytes.NewReader(reqBody))
+	req, err := http.NewRequest(httpMethod, a.serviceURL, bytes.NewReader(reqBody))
 	if err != nil {
 		return err
 	}
 
+	tableName := a.NamespacePrefix + underscoreToCaml(logType)
+
 	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())
-	req.Header.Add("Log-Type", a.NamespacePrefix+strings.Title(logType))
+	req.Header.Add("Log-Type", tableName)
 	req.Header.Add("Authorization", signature)
 	req.Header.Add("Content-Type", contentType)
 	req.Header.Add("x-ms-date", dateString)
@@ -140,7 +172,7 @@ func (a *AzLogAnalytics) write(logType string, reqBody []byte) error {
 	_, err = ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("when writing to [%s] received status code: %d", url, resp.StatusCode)
+		return fmt.Errorf("when writing to [%s] received status code: %d", a.serviceURL, resp.StatusCode)
 	}
 
 	return nil
@@ -184,10 +216,10 @@ func (a *AzLogAnalytics) buildSignature(message string) (string, error) {
 	return signiture, nil
 }
 
-func createObject(metric telegraf.Metric) (map[string]interface{}, string) {
-	m := make(map[string]interface{}, len(metric.Fields())+len(metric.Tags())+1)
+func (a *AzLogAnalytics) createObject(metric telegraf.Metric) (map[string]interface{}, string) {
+	m := make(map[string]interface{}, len(metric.Fields())+len(metric.Tags())+2)
+	m["MetricName"] = metric.Name()
 	m[timeGeneratedFieldName] = metric.Time().UTC().Format(time.RFC3339)
-	fmt.Println(m[timeGeneratedFieldName])
 	for k, v := range metric.Tags() {
 		if k == "host" {
 			m["Computer"] = v
@@ -204,9 +236,6 @@ func createObject(metric telegraf.Metric) (map[string]interface{}, string) {
 
 func init() {
 	outputs.Add("azure_loganalytics", func() telegraf.Output {
-		return &AzLogAnalytics{
-			ClientTimeout:   internal.Duration{Duration: defaultClientTimeout},
-			NamespacePrefix: defaultNamespacePrefix,
-		}
+		return &AzLogAnalytics{}
 	})
 }
