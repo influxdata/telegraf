@@ -5,6 +5,7 @@
 - [cloud_pubsub](/plugins/inputs/cloud_pubsub/README.md) - Contributed by @emilymye
 - [neptune_apex](/plugins/inputs/neptune_apex/README.md) - Contributed by @MaxRenaud
 - [nginx_upstream_check](/plugins/inputs/nginx_upstream_check/README.md) - Contributed by @dmitryilyin
+- [multifile](/plugins/inputs/multifile/README.md) - Contributed by @martin2250
 
 #### New Outputs
 
@@ -25,7 +26,7 @@
 - [#5116](https://github.com/influxdata/telegraf/pull/5116): Include DEVLINKS in available diskio udev properties.
 - [#5149](https://github.com/influxdata/telegraf/pull/5149): Add micro and nanosecond unix timestamp support to JSON parser.
 - [#5160](https://github.com/influxdata/telegraf/pull/5160): Add support for basic auth to couchdb input.
-- [#5161](https://github.com/influxdata/telegraf/pull/5161): Add support in wavefront output for the Wavefront Direction Ingestion API.
+- [#5161](https://github.com/influxdata/telegraf/pull/5161): Add support in wavefront output for the Wavefront Direct Ingestion API.
 - [#5168](https://github.com/influxdata/telegraf/pull/5168): Allow counting float values in valuecounter aggregator.
 - [#5177](https://github.com/influxdata/telegraf/pull/5177): Add log send and redo queue fields to sqlserver input.
 - [#5113](https://github.com/influxdata/telegraf/pull/5113): Improve scalability of vsphere input.
@@ -39,8 +40,17 @@
 #### Bugfixes
 
 - [#4610](https://github.com/influxdata/telegraf/pull/4610): Fix initscript removes pidfile of restarted Telegraf process.
+- [#5320](https://github.com/influxdata/telegraf/pull/5320): Use datacenter option spelling in consul input.
+- [#5316](https://github.com/influxdata/telegraf/pull/5316): Remove auth from /ping route in influxdb_listener.
 
-## v1.9.3 [unreleased]
+## v1.9.4 [unreleased]
+
+#### Bugfixes
+
+- [#5334](https://github.com/influxdata/telegraf/issues/5334): Fix skip_rows and skip_columns options in csv parser.
+- [#5181](https://github.com/influxdata/telegraf/issues/5181): Always send basic auth in jenkins input.
+
+## v1.9.3 [2019-01-22]
 
 #### Bugfixes
 
@@ -48,6 +58,8 @@
 - [#5194](https://github.com/influxdata/telegraf/issues/5194): Fix latest metrics not sent first when output fails.
 - [#5285](https://github.com/influxdata/telegraf/issues/5285): Fix amqp_consumer stops consuming when it receives unparsable messages.
 - [#5281](https://github.com/influxdata/telegraf/issues/5281): Fix prometheus input not detecting added and removed pods.
+- [#5215](https://github.com/influxdata/telegraf/issues/5215): Remove userinfo from cluster tag in couchbase.
+- [#5298](https://github.com/influxdata/telegraf/issues/5298): Fix internal_write buffer_size not reset on timed writes.
 
 ## v1.9.2 [2019-01-08]
 
