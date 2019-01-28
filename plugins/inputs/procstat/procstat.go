@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -287,6 +288,32 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 				fields[prefix+name] = rlim.Used
 			}
 		}
+	}
+
+	netconns, err := getConnectionsByPid("all", int32(proc.PID()))
+	if err == nil {
+		counts := make(map[string]int)
+		for _, netcon := range netconns {
+			if netcon.Type == syscall.SOCK_DGRAM {
+				counts["UDP"] += 1
+				continue // UDP has no status
+			}
+			counts[netcon.Status] += 1
+		}
+
+		fields[prefix+"tcp_established"] = counts["ESTABLISHED"]
+		fields[prefix+"tcp_syn_sent"] = counts["SYN_SENT"]
+		fields[prefix+"tcp_syn_recv"] = counts["SYN_RECV"]
+		fields[prefix+"tcp_fin_wait1"] = counts["FIN_WAIT1"]
+		fields[prefix+"tcp_fin_wait2"] = counts["FIN_WAIT2"]
+		fields[prefix+"tcp_time_wait"] = counts["TIME_WAIT"]
+		fields[prefix+"tcp_close"] = counts["CLOSE"]
+		fields[prefix+"tcp_close_wait"] = counts["CLOSE_WAIT"]
+		fields[prefix+"tcp_last_ack"] = counts["LAST_ACK"]
+		fields[prefix+"tcp_listen"] = counts["LISTEN"]
+		fields[prefix+"tcp_closing"] = counts["CLOSING"]
+		fields[prefix+"tcp_none"] = counts["NONE"]
+		fields[prefix+"udp_socket"] = counts["UDP"]
 	}
 
 	acc.AddFields("procstat", fields, proc.Tags())
