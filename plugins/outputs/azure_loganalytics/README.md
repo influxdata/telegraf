@@ -16,6 +16,7 @@ This plugin sends metrics in a Azure Log Analytics.
 
   ## Table Namespace Prefix (default: "").
   ## Namespace Prefix is used in "Log-Type" header
+  ## Limited to 25 chars as not to exceed the max limit
   ## Prefix can only contain alphaNumeric characters
   # namespace_prefix = ""
 ```
