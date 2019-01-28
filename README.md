@@ -197,6 +197,7 @@ For documentation on the latest development code see the [documentation index][d
 * [kube_inventory](./plugins/inputs/kube_inventory)
 * [leofs](./plugins/inputs/leofs)
 * [linux_sysctl_fs](./plugins/inputs/linux_sysctl_fs)
+* [loggregator_forwarder_agent](./plugins/inputs/loggregator_forwarder_agent)
 * [logparser](./plugins/inputs/logparser)
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)

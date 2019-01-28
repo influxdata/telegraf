@@ -28,6 +28,41 @@
   revision = "02e53af36e6c978af692887ed449b74026d76fec"
 
 [[projects]]
+  branch = "master"
+  digest = "1:f320951b97c5f1ef4c4ab5e85d34dcaf0ed05761837f64ecc109db895f751e80"
+  name = "code.cloudfoundry.org/go-diodes"
+  packages = ["."]
+  pruneopts = ""
+  revision = "72629b5276e3e1512ff8c943470848634bf0cabd"
+
+[[projects]]
+  digest = "1:3243ef4ec5f42910fa9b5459a543974cc1f645d51cd5d30795f9583472f63809"
+  name = "code.cloudfoundry.org/go-loggregator"
+  packages = [
+    ".",
+    "rpc/loggregator_v2",
+  ]
+  pruneopts = ""
+  revision = "7eacadc7c6c75fbf98bf9ed618e7d88fbb67ea44"
+  version = "v7.2.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:dbc35f71ccc89b9ef89f02efb7aa91606a815f20e2a6079dbe6201eb78f2835f"
+  name = "code.cloudfoundry.org/loggregator-agent"
+  packages = ["pkg/diodes"]
+  pruneopts = ""
+  revision = "692d4deafcbd4b9abd7af85053d1dbe24827c27f"
+
+[[projects]]
+  branch = "master"
+  digest = "1:68e76d18ba2432722d6eafdcf28bf3fcda73a918eb4a8afc1d7757bc5dc6a6c6"
+  name = "code.cloudfoundry.org/rfc5424"
+  packages = ["."]
+  pruneopts = ""
+  revision = "236a6d29298aea12f69978f33393d12465abc429"
+
+[[projects]]
   digest = "1:ca3acef20fd660d4df327accbf3ca2df9a12213d914f3113305dcd56579324b9"
   name = "collectd.org"
   packages = [
@@ -483,6 +518,7 @@
   digest = "1:f958a1c137db276e52f0b50efee41a1a389dcdded59a69711f3e872757dab34b"
   name = "github.com/golang/protobuf"
   packages = [
+    "jsonpb",
     "proto",
     "protoc-gen-go/descriptor",
     "ptypes",
@@ -589,6 +625,20 @@
   pruneopts = ""
   revision = "d6574a5bb1226678d7010325fb6c985db20ee458"
   version = "v0.8.1"
+
+[[projects]]
+  digest = "1:b3c5b95e56c06f5aa72cb2500e6ee5f44fcd122872d4fec2023a488e561218bc"
+  name = "github.com/hpcloud/tail"
+  packages = [
+    ".",
+    "ratelimiter",
+    "util",
+    "watch",
+    "winfile",
+  ]
+  pruneopts = ""
+  revision = "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:824c4cd143ee15735f1c75d9072aad46e51dd27a4ef8bf6ce723a138265b7fb3"
@@ -820,6 +870,54 @@
   pruneopts = ""
   revision = "eee57a3ac4174c55924125bb15eeeda8cffb6e6f"
   version = "v1.0.7"
+
+[[projects]]
+  digest = "1:a754db3c70741eeaeba73ec4cd970dc8918d06ced993d24891e9c0386d74f588"
+  name = "github.com/onsi/ginkgo"
+  packages = [
+    ".",
+    "config",
+    "internal/codelocation",
+    "internal/containernode",
+    "internal/failer",
+    "internal/leafnodes",
+    "internal/remote",
+    "internal/spec",
+    "internal/spec_iterator",
+    "internal/specrunner",
+    "internal/suite",
+    "internal/testingtproxy",
+    "internal/writer",
+    "reporters",
+    "reporters/stenographer",
+    "reporters/stenographer/support/go-colorable",
+    "reporters/stenographer/support/go-isatty",
+    "types",
+  ]
+  pruneopts = ""
+  revision = "2e1be8f7d90e9d3e3e58b0ce470f2f14d075406f"
+  version = "v1.7.0"
+
+[[projects]]
+  digest = "1:c8f0c8c28c9c1c51db72d0e7f04797cfe5d0d50528274099b6b2d6c314db7f97"
+  name = "github.com/onsi/gomega"
+  packages = [
+    ".",
+    "format",
+    "internal/assertion",
+    "internal/asyncassertion",
+    "internal/oraclematcher",
+    "internal/testingtsupport",
+    "matchers",
+    "matchers/support/goraph/bipartitegraph",
+    "matchers/support/goraph/edge",
+    "matchers/support/goraph/node",
+    "matchers/support/goraph/util",
+    "types",
+  ]
+  pruneopts = ""
+  revision = "65fb64232476ad9046e57c26cd0bff3d3a8dc6cd"
+  version = "v1.4.3"
 
 [[projects]]
   digest = "1:5d9b668b0b4581a978f07e7d2e3314af18eb27b3fb5d19b70185b7c575723d11"
@@ -1499,6 +1597,10 @@
   input-imports = [
     "cloud.google.com/go/monitoring/apiv3",
     "cloud.google.com/go/pubsub",
+    "code.cloudfoundry.org/go-diodes",
+    "code.cloudfoundry.org/go-loggregator",
+    "code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2",
+    "code.cloudfoundry.org/loggregator-agent/pkg/diodes",
     "collectd.org/api",
     "collectd.org/network",
     "github.com/Azure/go-autorest/autorest",
@@ -1567,6 +1669,8 @@
     "github.com/nats-io/gnatsd/server",
     "github.com/nats-io/go-nats",
     "github.com/nsqio/go-nsq",
+    "github.com/onsi/ginkgo",
+    "github.com/onsi/gomega",
     "github.com/openzipkin/zipkin-go-opentracing",
     "github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore",
     "github.com/prometheus/client_golang/prometheus",
