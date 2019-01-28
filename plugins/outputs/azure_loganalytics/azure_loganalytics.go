@@ -77,10 +77,6 @@ func (a *AzLogAnalytics) Connect() error {
 		a.ClientTimeout.Duration = defaultClientTimeout
 	}
 
-	if len(a.NamespacePrefix) > 25 {
-		return fmt.Errorf("namespace_prefix length is greater than 25 characters")
-	}
-
 	match, err := regexp.MatchString(namespacePrefixRegex, a.NamespacePrefix)
 	if err != nil {
 		return err
