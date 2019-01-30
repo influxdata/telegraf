@@ -20,7 +20,7 @@ func getMetric(name string) telegraf.Metric {
 		name,
 		map[string]string{
 			"host": "test-machine",
-			"env":  "development",
+			"env":  "testing",
 		},
 		map[string]interface{}{
 			"value": 42.0,
@@ -210,12 +210,32 @@ func TestWrite(t *testing.T) {
 		{
 			name: "single azure metric",
 			metrics: []telegraf.Metric{
-				getMetric("cpu"),
+				getMetric("cpu_test"),
 			},
 			handler: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				// Header should be camel case
+				require.Equal(t, "CpuTest", r.Header.Get("Log-Type"))
+
+				// body should only contain 1 metric
 				azmetrics, err := readBody(r)
 				require.NoError(t, err)
 				require.Len(t, azmetrics, 1)
+
+				// check host value
+				value, ok := azmetrics[0]["Computer"]
+				require.True(t, ok) // key exists
+				require.Equal(t, "test-machine", value)
+
+				// check env value
+				value, ok = azmetrics[0]["Env"]
+				require.True(t, ok) // key exists
+				require.Equal(t, "testing", value)
+
+				// check metric value
+				value, ok = azmetrics[0]["Value"]
+				require.True(t, ok) // key exists
+				require.Equal(t, 42.0, value)
+
 				w.WriteHeader(http.StatusOK)
 			},
 		},

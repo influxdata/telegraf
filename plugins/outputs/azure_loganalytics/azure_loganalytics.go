@@ -189,12 +189,12 @@ func underscoreToCaml(s string) string {
 
 	arr := strings.Split(s, "_")
 
-	var sb strings.Builder
+	var buffer bytes.Buffer
 	for _, item := range arr {
-		sb.WriteString(strings.Title(item))
+		buffer.WriteString(strings.Title(item))
 	}
 
-	return sb.String()
+	return buffer.String()
 }
 
 func (a *AzLogAnalytics) buildSignature(message string) (string, error) {
