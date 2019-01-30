@@ -44,11 +44,13 @@ to control which metrics are passed through a processor or aggregator.  If a
 metric is filtered out the metric bypasses the plugin and is passed downstream
 to the next plugin.
 
-**Processor** plugins process metrics as they pass through and immediately emit
+### Processor
+Processor plugins process metrics as they pass through and immediately emit
 results based on the values they process. For example, this could be printing
 all metrics or adding a tag to all metrics that pass through.
 
-**Aggregator** plugins, on the other hand, are a bit more complicated. Aggregators
+### Aggregator
+Aggregator plugins, on the other hand, are a bit more complicated. Aggregators
 are typically for emitting new _aggregate_ metrics, such as a running mean,
 minimum, maximum, quantiles, or standard deviation. For this reason, all _aggregator_
 plugins are configured with a `period`. The `period` is the size of the window
@@ -57,6 +59,10 @@ _aggregate_ metric will be the aggregated value of the past `period` seconds.
 Since many users will only care about their aggregates and not every single metric
 gathered, there is also a `drop_original` argument, which tells Telegraf to only
 emit the aggregates and not the original metrics.
+
+Since aggregates are created for each measurement, field, and unique tag combination
+the plugin receives, you can make use of `taginclude` to group
+aggregates by specific tags only. 
 
 **NOTE** That since aggregators only aggregate metrics within their period, that
 historical data is not supported. In other words, if your metric timestamp is more
