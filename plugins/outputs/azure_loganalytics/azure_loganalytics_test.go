@@ -18,7 +18,10 @@ import (
 func getMetric(name string) telegraf.Metric {
 	m, err := metric.New(
 		name,
-		map[string]string{},
+		map[string]string{
+			"host": "test-machine",
+			"env":  "development",
+		},
 		map[string]interface{}{
 			"value": 42.0,
 		},
@@ -51,6 +54,17 @@ func TestInvalidNamespacePrefix(t *testing.T) {
 		CustomerID:      "dummy_id",
 		SharedKey:       "ZHVtbXlfa2V5",
 		NamespacePrefix: "Testing_",
+	}
+
+	err := plugin.Connect()
+	require.Error(t, err)
+}
+
+func TestInvalidNamespacePrefixLength(t *testing.T) {
+	plugin := &AzLogAnalytics{
+		CustomerID:      "dummy_id",
+		SharedKey:       "ZHVtbXlfa2V5",
+		NamespacePrefix: "ThisIsALongStringToTestTheMaxLength",
 	}
 
 	err := plugin.Connect()
