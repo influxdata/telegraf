@@ -8,20 +8,14 @@ emitting the aggregate every `period` seconds.
 ```toml
 # Keep the aggregate basicstats of each metric passing through.
 [[aggregators.basicstats]]
-
-  ## General Aggregator Arguments:
-
   ## The period on which to flush & clear the aggregator.
   period = "30s"
-
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
   drop_original = false
 
-  ## BasicStats Arguments:
-
   ## Configures which basic stats to push as fields
-  stats = ["count","min","max","mean","stdev","s2","sum"]
+  # stats = ["count", "min", "max", "mean", "stdev", "s2", "sum"]
 ```
 
 - stats
