@@ -15,7 +15,6 @@ import (
 )
 
 const sampleConfig = `
-[[inputs.pubsub]]
   ## Required. Name of Google Cloud Platform (GCP) Project that owns
   ## the given PubSub subscription.
   project = "my-project"
