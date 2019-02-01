@@ -10,6 +10,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
+	"github.com/prometheus/prometheus/prompb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -33,11 +34,11 @@ func mustNew(
 func TestWrite(t *testing.T) {
 	for i, tc := range []struct {
 		metrics  []telegraf.Metric
-		expected WriteRequest
+		expected prompb.WriteRequest
 	}{
 		{
 			metrics:  []telegraf.Metric{},
-			expected: WriteRequest{},
+			expected: prompb.WriteRequest{},
 		},
 
 		{
@@ -45,13 +46,13 @@ func TestWrite(t *testing.T) {
 				mustNew(t, "foo", map[string]string{"bar": "baz"},
 					map[string]interface{}{"blip": 0.0}, time.Unix(0, 0), telegraf.Counter),
 			},
-			expected: WriteRequest{
-				Timeseries: []*TimeSeries{{
-					Labels: []*Label{
+			expected: prompb.WriteRequest{
+				Timeseries: []prompb.TimeSeries{{
+					Labels: []prompb.Label{
 						{Name: "__name__", Value: "foo_blip"},
 						{Name: "bar", Value: "baz"},
 					},
-					Samples: []*Sample{
+					Samples: []prompb.Sample{
 						{Timestamp: 0, Value: 0.0},
 					},
 				}},
@@ -59,7 +60,7 @@ func TestWrite(t *testing.T) {
 		},
 	} {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			var actual WriteRequest
+			var actual prompb.WriteRequest
 
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				buf, err := ioutil.ReadAll(r.Body)

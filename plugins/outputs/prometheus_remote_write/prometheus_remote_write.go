@@ -9,6 +9,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
+	"github.com/prometheus/prometheus/prompb"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -54,22 +55,22 @@ func (p *PrometheusRemoteWrite) SampleConfig() string {
 }
 
 func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
-	var req WriteRequest
+	var req prompb.WriteRequest
 
 	for _, metric := range metrics {
 		tags := metric.TagList()
-		commonLabels := make([]*Label, 0, len(tags))
+		commonLabels := make([]prompb.Label, 0, len(tags))
 		for _, tag := range tags {
-			commonLabels = append(commonLabels, &Label{
+			commonLabels = append(commonLabels, prompb.Label{
 				Name:  prometheus_client.Sanitize(tag.Key),
 				Value: tag.Value,
 			})
 		}
 
 		for _, field := range metric.FieldList() {
-			labels := make([]*Label, len(commonLabels), len(commonLabels)+1)
+			labels := make([]prompb.Label, len(commonLabels), len(commonLabels)+1)
 			copy(labels, commonLabels)
-			labels = append(labels, &Label{
+			labels = append(labels, prompb.Label{
 				Name:  "__name__",
 				Value: metric.Name() + "_" + field.Key,
 			})
@@ -94,9 +95,9 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 				continue
 			}
 
-			req.Timeseries = append(req.Timeseries, &TimeSeries{
+			req.Timeseries = append(req.Timeseries, prompb.TimeSeries{
 				Labels: labels,
-				Samples: []*Sample{{
+				Samples: []prompb.Sample{{
 					Timestamp: metric.Time().UnixNano() / int64(time.Millisecond),
 					Value:     value,
 				}},
@@ -134,7 +135,7 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 	return nil
 }
 
-type byName []*Label
+type byName []prompb.Label
 
 func (a byName) Len() int           { return len(a) }
 func (a byName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
