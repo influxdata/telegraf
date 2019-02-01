@@ -11,6 +11,7 @@ import (
 	"github.com/golang/snappy"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 )
@@ -30,6 +31,10 @@ type PrometheusRemoteWrite struct {
 var sampleConfig = `
   ## URL to send Prometheus remote write requests to.
   url = "http://localhost/push"
+
+  ## HTTP asic auth credentials (optional).
+  # basic_username = "username"
+  # basic_password = "pa55w0rd"
 `
 
 func (p *PrometheusRemoteWrite) Connect() error {
@@ -61,7 +66,6 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 			})
 		}
 
-	fields:
 		for _, field := range metric.FieldList() {
 			labels := make([]*Label, len(commonLabels), len(commonLabels)+1)
 			copy(labels, commonLabels)
@@ -74,7 +78,7 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 			// Ignore histograms and summaries.
 			switch metric.Type() {
 			case telegraf.Histogram, telegraf.Summary:
-				continue fields
+				continue
 			}
 
 			// Ignore string and bool fields.
@@ -87,13 +91,13 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 			case float64:
 				value = fv
 			default:
-				continue fields
+				continue
 			}
 
 			req.Timeseries = append(req.Timeseries, &TimeSeries{
 				Labels: labels,
 				Samples: []*Sample{{
-					Timestamp: metric.Time().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond)),
+					Timestamp: metric.Time().UnixNano() / int64(time.Millisecond),
 					Value:     value,
 				}},
 			})
@@ -113,6 +117,7 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 	httpReq.Header.Add("Content-Encoding", "snappy")
 	httpReq.Header.Set("Content-Type", "application/x-protobuf")
 	httpReq.Header.Set("X-Prometheus-Remote-Write-Version", "0.1.0")
+	httpReq.Header.Set("User-Agent", "Telegraf/"+internal.Version())
 	if p.BasicUsername != "" || p.BasicPassword != "" {
 		httpReq.SetBasicAuth(p.BasicUsername, p.BasicPassword)
 	}
