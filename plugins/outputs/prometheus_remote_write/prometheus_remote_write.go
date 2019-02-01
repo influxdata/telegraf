@@ -13,6 +13,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 )
@@ -27,18 +28,38 @@ type PrometheusRemoteWrite struct {
 	URL           string `toml:"url"`
 	BasicUsername string `toml:"basic_username"`
 	BasicPassword string `toml:"basic_password"`
+	tls.ClientConfig
+
+	client http.Client
 }
 
 var sampleConfig = `
   ## URL to send Prometheus remote write requests to.
   url = "http://localhost/push"
 
-  ## HTTP asic auth credentials (optional).
+  ## Optional HTTP asic auth credentials.
   # basic_username = "username"
   # basic_password = "pa55w0rd"
+
+  ## Optional TLS Config for use on HTTP connections.
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 func (p *PrometheusRemoteWrite) Connect() error {
+	tlsConfig, err := p.ClientConfig.TLSConfig()
+	if err != nil {
+		return err
+	}
+
+	p.client = http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: tlsConfig,
+		},
+	}
 	return nil
 }
 
@@ -123,7 +144,7 @@ func (p *PrometheusRemoteWrite) Write(metrics []telegraf.Metric) error {
 		httpReq.SetBasicAuth(p.BasicUsername, p.BasicPassword)
 	}
 
-	resp, err := http.DefaultClient.Do(httpReq)
+	resp, err := p.client.Do(httpReq)
 	if err != nil {
 		return err
 	}

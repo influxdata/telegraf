@@ -17,4 +17,3 @@ This plugin sends metrics to services which speak the [Prometheus Remote Write](
 
 ## TODO
 - Handle summaries and histograms.
-- Add support for certificates and authentication.
