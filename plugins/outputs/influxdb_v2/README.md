@@ -19,7 +19,7 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v2.x] HTTP service.
   ## Organization is the name of the organization you wish to write to.
   organization = ""
 
-  ## Bucket to the name fo the bucketwrite into; must exist.
+  ## Destination bucket to write into.
   bucket = ""
 
   ## Timeout for HTTP messages.
