@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/miekg/dns"
@@ -70,32 +71,39 @@ func (d *DnsQuery) Description() string {
 	return "Query given DNS server and gives statistics"
 }
 func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
 	d.setDefaultValues()
 
 	for _, domain := range d.Domains {
 		for _, server := range d.Servers {
-			fields := make(map[string]interface{}, 2)
-			tags := map[string]string{
-				"server":      server,
-				"domain":      domain,
-				"record_type": d.RecordType,
-			}
+			wg.Add(1)
+			go func(domain, server string) {
+				fields := make(map[string]interface{}, 2)
+				tags := map[string]string{
+					"server":      server,
+					"domain":      domain,
+					"record_type": d.RecordType,
+				}
 
-			dnsQueryTime, err := d.getDnsQueryTime(domain, server)
-			if err == nil {
-				setResult(Success, fields, tags)
-				fields["query_time_ms"] = dnsQueryTime
-			} else if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
-				setResult(Timeout, fields, tags)
-			} else if err != nil {
-				setResult(Error, fields, tags)
-				acc.AddError(err)
-			}
+				dnsQueryTime, err := d.getDnsQueryTime(domain, server)
+				if err == nil {
+					setResult(Success, fields, tags)
+					fields["query_time_ms"] = dnsQueryTime
+				} else if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+					setResult(Timeout, fields, tags)
+				} else if err != nil {
+					setResult(Error, fields, tags)
+					acc.AddError(err)
+				}
 
-			acc.AddFields("dns_query", fields, tags)
+				acc.AddFields("dns_query", fields, tags)
+
+				wg.Done()
+			}(domain, server)
 		}
 	}
 
+	wg.Wait()
 	return nil
 }
 

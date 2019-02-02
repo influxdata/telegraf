@@ -27,6 +27,11 @@ values.
   ## If `csv_header_row_count` is set to 0, this config must be used
   csv_column_names = []
 
+  ## For assigning explicit data types to columns.
+  ## Supported types: "int", "float", "bool", "string".
+  ## If this is not specified, type conversion will be done on the types above.
+  csv_column_types = []
+
   ## Indicates the number of rows to skip before looking for header information.
   csv_skip_rows = 0
 
@@ -68,9 +73,10 @@ time using the JSON document you can use the `csv_timestamp_column` and
 `csv_timestamp_format` options together to set the time to a value in the parsed
 document.
 
-The `csv_timestamp_column` option specifies the column name containing the
-time value and `csv_timestamp_format` must be set to a Go "reference time"
-which is defined to be the specific time: `Mon Jan 2 15:04:05 MST 2006`.
+The `csv_timestamp_column` option specifies the key containing the time value and
+`csv_timestamp_format` must be set to `unix`, `unix_ms`, or a format string in
+using the Go "reference time" which is defined to be the **specific time**:
+`Mon Jan 2 15:04:05 MST 2006`.
 
 Consult the Go [time][time parse] package for details and additional examples
 on how to set the time format.

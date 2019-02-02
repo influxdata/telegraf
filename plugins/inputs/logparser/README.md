@@ -7,6 +7,7 @@ regex patterns.
 ### Configuration:
 
 ```toml
+# Stream and parse log file(s).
 [[inputs.logparser]]
   ## Log files to parse.
   ## These accept standard unix glob matching rules, but with the addition of
@@ -25,7 +26,6 @@ regex patterns.
   # watch_method = "inotify"
 
   ## Parse logstash-style "grok" patterns:
-  ##   Telegraf built-in parsing patterns: https://goo.gl/dkay10
   [inputs.logparser.grok]
     ## This is a list of patterns to check the given log file(s) for.
     ## Note that adding patterns here increases processing time. The most
@@ -54,7 +54,7 @@ regex patterns.
     ##   1. Local             -- interpret based on machine localtime
     ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
     ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
-    timezone = "Canada/Eastern"
+    # timezone = "Canada/Eastern"
 ```
 
 ### Grok Parser
@@ -76,6 +76,7 @@ line and the `semantic_name` is used to name the field or tag.  The extension
 other special handling.
 
 By default all named captures are converted into string fields.
+If a pattern does not have a semantic name it will not be captured.
 Timestamp modifiers can be used to convert captures to the timestamp of the
 parsed metric.  If no timestamp is parsed the metric will be created using the
 current time.

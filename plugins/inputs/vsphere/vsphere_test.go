@@ -6,15 +6,21 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/influxdata/telegraf/internal"
 	itls "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/require"
+	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/simulator"
+	"github.com/vmware/govmomi/vim25/types"
 )
 
 var configHeader = `
@@ -172,6 +178,8 @@ func defaultVSphere() *VSphere {
 		ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 		Timeout:                 internal.Duration{Duration: time.Second * 20},
 		ForceDiscoverOnInit:     true,
+		DiscoverConcurrency:     1,
+		CollectConcurrency:      1,
 	}
 }
 
@@ -186,8 +194,6 @@ func createSim() (*simulator.Model, *simulator.Server, error) {
 	model.Service.TLS = new(tls.Config)
 
 	s := model.Service.NewServer()
-	//fmt.Printf("Server created at: %s\n", s.URL)
-
 	return model, s, nil
 }
 
@@ -204,32 +210,43 @@ func TestParseConfig(t *testing.T) {
 }
 
 func TestWorkerPool(t *testing.T) {
-	wp := NewWorkerPool(100)
-	ctx := context.Background()
-	wp.Run(ctx, func(ctx context.Context, p interface{}) interface{} {
-		return p.(int) * 2
-	}, 10)
-
-	n := 100000
-	wp.Fill(ctx, func(ctx context.Context, f PushFunc) {
-		for i := 0; i < n; i++ {
-			f(ctx, i)
-		}
-	})
-	results := make([]int, n)
-	i := 0
-	wp.Drain(ctx, func(ctx context.Context, p interface{}) bool {
-		results[i] = p.(int)
-		i++
-		return true
-	})
+	max := int64(0)
+	ngr := int64(0)
+	n := 10000
+	var mux sync.Mutex
+	results := make([]int, 0, n)
+	te := NewThrottledExecutor(5)
+	for i := 0; i < n; i++ {
+		func(i int) {
+			te.Run(context.Background(), func() {
+				atomic.AddInt64(&ngr, 1)
+				mux.Lock()
+				defer mux.Unlock()
+				results = append(results, i*2)
+				if ngr > max {
+					max = ngr
+				}
+				time.Sleep(100 * time.Microsecond)
+				atomic.AddInt64(&ngr, -1)
+			})
+		}(i)
+	}
+	te.Wait()
 	sort.Ints(results)
 	for i := 0; i < n; i++ {
-		require.Equal(t, results[i], i*2)
+		require.Equal(t, results[i], i*2, "Some jobs didn't run")
 	}
+	require.Equal(t, int64(5), max, "Wrong number of goroutines spawned")
 }
 
-func TestAll(t *testing.T) {
+func TestTimeout(t *testing.T) {
+	// Don't run test on 32-bit machines due to bug in simulator.
+	// https://github.com/vmware/govmomi/issues/1330
+	var i int
+	if unsafe.Sizeof(i) < 8 {
+		return
+	}
+
 	m, s, err := createSim()
 	if err != nil {
 		t.Fatal(err)
@@ -240,7 +257,80 @@ func TestAll(t *testing.T) {
 	var acc testutil.Accumulator
 	v := defaultVSphere()
 	v.Vcenters = []string{s.URL.String()}
-	v.Start(nil) // We're not using the Accumulator, so it can be nil.
+	v.Timeout = internal.Duration{Duration: 1 * time.Nanosecond}
+	require.NoError(t, v.Start(nil)) // We're not using the Accumulator, so it can be nil.
+	defer v.Stop()
+	err = v.Gather(&acc)
+	require.True(t, len(acc.Errors) > 0, "Errors should not be empty here")
+
+	// The accumulator must contain exactly one error and it must be a deadline exceeded.
+	require.Equal(t, 1, len(acc.Errors))
+	require.True(t, strings.Contains(acc.Errors[0].Error(), "context deadline exceeded"))
+}
+
+func TestMaxQuery(t *testing.T) {
+	// Don't run test on 32-bit machines due to bug in simulator.
+	// https://github.com/vmware/govmomi/issues/1330
+	var i int
+	if unsafe.Sizeof(i) < 8 {
+		return
+	}
+	m, s, err := createSim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Remove()
+	defer s.Close()
+
+	v := defaultVSphere()
+	v.MaxQueryMetrics = 256
+	ctx := context.Background()
+	c, err := NewClient(ctx, s.URL, v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	require.Equal(t, 256, v.MaxQueryMetrics)
+
+	om := object.NewOptionManager(c.Client.Client, *c.Client.Client.ServiceContent.Setting)
+	err = om.Update(ctx, []types.BaseOptionValue{&types.OptionValue{
+		Key:   "config.vpxd.stats.maxQueryMetrics",
+		Value: "42",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	v.MaxQueryMetrics = 256
+	ctx = context.Background()
+	c2, err := NewClient(ctx, s.URL, v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	require.Equal(t, 42, v.MaxQueryMetrics)
+	c.close()
+	c2.close()
+}
+
+func TestAll(t *testing.T) {
+	// Don't run test on 32-bit machines due to bug in simulator.
+	// https://github.com/vmware/govmomi/issues/1330
+	var i int
+	if unsafe.Sizeof(i) < 8 {
+		return
+	}
+
+	m, s, err := createSim()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer m.Remove()
+	defer s.Close()
+
+	var acc testutil.Accumulator
+	v := defaultVSphere()
+	v.Vcenters = []string{s.URL.String()}
+	v.Start(&acc)
 	defer v.Stop()
 	require.NoError(t, v.Gather(&acc))
+	require.Equal(t, 0, len(acc.Errors), fmt.Sprintf("Errors found: %s", acc.Errors))
 }

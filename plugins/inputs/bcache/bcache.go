@@ -59,7 +59,7 @@ func prettyToBytes(v string) uint64 {
 	}
 	var factor uint64
 	factor = 1
-	prefix := v[len(v)-1 : len(v)]
+	prefix := v[len(v)-1:]
 	if factors[prefix] != 0 {
 		v = v[:len(v)-1]
 		factor = factors[prefix]

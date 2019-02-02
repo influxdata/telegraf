@@ -88,6 +88,42 @@ func TestTimestampError(t *testing.T) {
 	require.Equal(t, fmt.Errorf("timestamp format must be specified"), err)
 }
 
+func TestTimestampUnixFormat(t *testing.T) {
+	p := Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimestampColumn:   "first",
+		TimestampFormat:   "unix",
+		TimeFunc:          DefaultTime,
+	}
+	testCSV := `line1,line2,line3
+1243094706,70,test_name
+1257609906,80,test_name2`
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	require.Equal(t, metrics[0].Time().UnixNano(), int64(1243094706000000000))
+	require.Equal(t, metrics[1].Time().UnixNano(), int64(1257609906000000000))
+}
+
+func TestTimestampUnixMSFormat(t *testing.T) {
+	p := Parser{
+		HeaderRowCount:    1,
+		ColumnNames:       []string{"first", "second", "third"},
+		MeasurementColumn: "third",
+		TimestampColumn:   "first",
+		TimestampFormat:   "unix_ms",
+		TimeFunc:          DefaultTime,
+	}
+	testCSV := `line1,line2,line3
+1243094706123,70,test_name
+1257609906123,80,test_name2`
+	metrics, err := p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+	require.Equal(t, metrics[0].Time().UnixNano(), int64(1243094706123000000))
+	require.Equal(t, metrics[1].Time().UnixNano(), int64(1257609906123000000))
+}
+
 func TestQuotedCharacter(t *testing.T) {
 	p := Parser{
 		HeaderRowCount:    1,
@@ -143,6 +179,18 @@ func TestValueConversion(t *testing.T) {
 	expectedMetric, err1 := metric.New("test_value", expectedTags, expectedFields, time.Unix(0, 0))
 	returnedMetric, err2 := metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
 	require.NoError(t, err1)
+	require.NoError(t, err2)
+
+	//deep equal fields
+	require.Equal(t, expectedMetric.Fields(), returnedMetric.Fields())
+
+	// Test explicit type conversion.
+	p.ColumnTypes = []string{"float", "int", "bool", "string"}
+
+	metrics, err = p.Parse([]byte(testCSV))
+	require.NoError(t, err)
+
+	returnedMetric, err2 = metric.New(metrics[0].Name(), metrics[0].Tags(), metrics[0].Fields(), time.Unix(0, 0))
 	require.NoError(t, err2)
 
 	//deep equal fields

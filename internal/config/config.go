@@ -7,9 +7,10 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
-
 	"regexp"
 	"runtime"
 	"sort"
@@ -26,7 +27,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
-
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 )
@@ -591,7 +591,12 @@ func (c *Config) LoadConfig(path string) error {
 			return err
 		}
 	}
-	tbl, err := parseFile(path)
+	data, err := loadConfig(path)
+	if err != nil {
+		return fmt.Errorf("Error loading %s, %s", path, err)
+	}
+
+	tbl, err := parseConfig(data)
 	if err != nil {
 		return fmt.Errorf("Error parsing %s, %s", path, err)
 	}
@@ -620,6 +625,19 @@ func (c *Config) LoadConfig(path string) error {
 			log.Printf("E! Could not parse [agent] config\n")
 			return fmt.Errorf("Error parsing %s, %s", path, err)
 		}
+	}
+
+	if !c.Agent.OmitHostname {
+		if c.Agent.Hostname == "" {
+			hostname, err := os.Hostname()
+			if err != nil {
+				return err
+			}
+
+			c.Agent.Hostname = hostname
+		}
+
+		c.Tags["host"] = c.Agent.Hostname
 	}
 
 	// Parse all the rest of the plugins:
@@ -709,6 +727,7 @@ func (c *Config) LoadConfig(path string) error {
 	if len(c.Processors) > 1 {
 		sort.Sort(c.Processors)
 	}
+
 	return nil
 }
 
@@ -724,15 +743,43 @@ func escapeEnv(value string) string {
 	return envVarEscaper.Replace(value)
 }
 
-// parseFile loads a TOML configuration from a provided path and
-// returns the AST produced from the TOML parser. When loading the file, it
-// will find environment variables and replace them.
-func parseFile(fpath string) (*ast.Table, error) {
-	contents, err := ioutil.ReadFile(fpath)
+func loadConfig(config string) ([]byte, error) {
+	u, err := url.Parse(config)
 	if err != nil {
 		return nil, err
 	}
-	// ugh windows why
+
+	switch u.Scheme {
+	case "https", "http":
+		return fetchConfig(u)
+	default:
+		// If it isn't a https scheme, try it as a file.
+	}
+	return ioutil.ReadFile(config)
+
+}
+
+func fetchConfig(u *url.URL) ([]byte, error) {
+	v := os.Getenv("INFLUX_TOKEN")
+
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", "Token "+v)
+	req.Header.Add("Accept", "application/toml")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return ioutil.ReadAll(resp.Body)
+}
+
+// parseConfig loads a TOML configuration from a provided path and
+// returns the AST produced from the TOML parser. When loading the file, it
+// will find environment variables and replace them.
+func parseConfig(contents []byte) (*ast.Table, error) {
 	contents = trimBOM(contents)
 
 	env_vars := envVarRe.FindAll(contents, -1)
@@ -876,6 +923,7 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 	}
 
 	rp := models.NewRunningInput(input, pluginConfig)
+	rp.SetDefaultTags(c.Tags)
 	c.Inputs = append(c.Inputs, rp)
 	return nil
 }
@@ -884,14 +932,6 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 // builds the filter and returns a
 // models.AggregatorConfig to be inserted into models.RunningAggregator
 func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, error) {
-	unsupportedFields := []string{"tagexclude", "taginclude"}
-	for _, field := range unsupportedFields {
-		if _, ok := tbl.Fields[field]; ok {
-			return nil, fmt.Errorf("%s is not supported for aggregator plugins (%s).",
-				field, name)
-		}
-	}
-
 	conf := &models.AggregatorConfig{
 		Name:   name,
 		Delay:  time.Millisecond * 100,
@@ -989,13 +1029,6 @@ func buildAggregator(name string, tbl *ast.Table) (*models.AggregatorConfig, err
 // models.ProcessorConfig to be inserted into models.RunningProcessor
 func buildProcessor(name string, tbl *ast.Table) (*models.ProcessorConfig, error) {
 	conf := &models.ProcessorConfig{Name: name}
-	unsupportedFields := []string{"tagexclude", "taginclude", "fielddrop", "fieldpass"}
-	for _, field := range unsupportedFields {
-		if _, ok := tbl.Fields[field]; ok {
-			return nil, fmt.Errorf("%s is not supported for processor plugins (%s).",
-				field, name)
-		}
-	}
 
 	if node, ok := tbl.Fields["order"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -1457,7 +1490,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	if node, ok := tbl.Fields["grok_timezone"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
-				c.GrokTimeZone = str.Value
+				c.GrokTimezone = str.Value
 			}
 		}
 	}
@@ -1469,6 +1502,18 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 				for _, elem := range ary.Value {
 					if str, ok := elem.(*ast.String); ok {
 						c.CSVColumnNames = append(c.CSVColumnNames, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["csv_column_types"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.CSVColumnTypes = append(c.CSVColumnTypes, str.Value)
 					}
 				}
 			}
@@ -1546,7 +1591,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 				if err != nil {
 					return nil, err
 				}
-				c.CSVHeaderRowCount = int(v)
+				c.CSVSkipRows = int(v)
 			}
 		}
 	}
@@ -1558,7 +1603,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 				if err != nil {
 					return nil, err
 				}
-				c.CSVHeaderRowCount = int(v)
+				c.CSVSkipColumns = int(v)
 			}
 		}
 	}
@@ -1603,6 +1648,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "grok_custom_pattern_files")
 	delete(tbl.Fields, "grok_timezone")
 	delete(tbl.Fields, "csv_column_names")
+	delete(tbl.Fields, "csv_column_types")
 	delete(tbl.Fields, "csv_comment")
 	delete(tbl.Fields, "csv_delimiter")
 	delete(tbl.Fields, "csv_field_columns")
@@ -1753,6 +1799,8 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 		Name:   name,
 		Filter: filter,
 	}
+
+	// TODO
 	// Outputs don't support FieldDrop/FieldPass, so set to NameDrop/NamePass
 	if len(oc.Filter.FieldDrop) > 0 {
 		oc.Filter.NameDrop = oc.Filter.FieldDrop
@@ -1760,5 +1808,47 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 	if len(oc.Filter.FieldPass) > 0 {
 		oc.Filter.NamePass = oc.Filter.FieldPass
 	}
+
+	if node, ok := tbl.Fields["flush_interval"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				dur, err := time.ParseDuration(str.Value)
+				if err != nil {
+					return nil, err
+				}
+
+				oc.FlushInterval = dur
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["metric_buffer_limit"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if integer, ok := kv.Value.(*ast.Integer); ok {
+				v, err := integer.Int()
+				if err != nil {
+					return nil, err
+				}
+				oc.MetricBufferLimit = int(v)
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["metric_batch_size"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if integer, ok := kv.Value.(*ast.Integer); ok {
+				v, err := integer.Int()
+				if err != nil {
+					return nil, err
+				}
+				oc.MetricBatchSize = int(v)
+			}
+		}
+	}
+
+	delete(tbl.Fields, "flush_interval")
+	delete(tbl.Fields, "metric_buffer_limit")
+	delete(tbl.Fields, "metric_batch_size")
+
 	return oc, nil
 }

@@ -487,7 +487,7 @@ func TestCompileFileAndParse(t *testing.T) {
 		time.Date(2016, time.June, 4, 12, 41, 45, 0, time.FixedZone("foo", 60*60)).Nanosecond(),
 		metricA.Time().Nanosecond())
 
-	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:46] 1.25 mystring dropme nomodifier`)
 	require.NotNil(t, metricB)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -499,7 +499,7 @@ func TestCompileFileAndParse(t *testing.T) {
 		metricB.Fields())
 	assert.Equal(t, map[string]string{}, metricB.Tags())
 	assert.Equal(t,
-		time.Date(2016, time.June, 4, 12, 41, 45, 0, time.FixedZone("foo", 60*60)).Nanosecond(),
+		time.Date(2016, time.June, 4, 12, 41, 46, 0, time.FixedZone("foo", 60*60)).Nanosecond(),
 		metricB.Time().Nanosecond())
 }
 
@@ -736,7 +736,7 @@ func TestTimezoneEmptyCompileFileAndParse(t *testing.T) {
 	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
 	assert.Equal(t, int64(1465040505000000000), metricA.Time().UnixNano())
 
-	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:46] 1.25 mystring dropme nomodifier`)
 	require.NotNil(t, metricB)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -747,7 +747,7 @@ func TestTimezoneEmptyCompileFileAndParse(t *testing.T) {
 		},
 		metricB.Fields())
 	assert.Equal(t, map[string]string{}, metricB.Tags())
-	assert.Equal(t, int64(1465044105000000000), metricB.Time().UnixNano())
+	assert.Equal(t, int64(1465044106000000000), metricB.Time().UnixNano())
 }
 
 func TestTimezoneMalformedCompileFileAndParse(t *testing.T) {
@@ -772,7 +772,7 @@ func TestTimezoneMalformedCompileFileAndParse(t *testing.T) {
 	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
 	assert.Equal(t, int64(1465040505000000000), metricA.Time().UnixNano())
 
-	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:46] 1.25 mystring dropme nomodifier`)
 	require.NotNil(t, metricB)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -783,7 +783,7 @@ func TestTimezoneMalformedCompileFileAndParse(t *testing.T) {
 		},
 		metricB.Fields())
 	assert.Equal(t, map[string]string{}, metricB.Tags())
-	assert.Equal(t, int64(1465044105000000000), metricB.Time().UnixNano())
+	assert.Equal(t, int64(1465044106000000000), metricB.Time().UnixNano())
 }
 
 func TestTimezoneEuropeCompileFileAndParse(t *testing.T) {
@@ -808,7 +808,7 @@ func TestTimezoneEuropeCompileFileAndParse(t *testing.T) {
 	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
 	assert.Equal(t, int64(1465040505000000000), metricA.Time().UnixNano())
 
-	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:46] 1.25 mystring dropme nomodifier`)
 	require.NotNil(t, metricB)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -819,7 +819,7 @@ func TestTimezoneEuropeCompileFileAndParse(t *testing.T) {
 		},
 		metricB.Fields())
 	assert.Equal(t, map[string]string{}, metricB.Tags())
-	assert.Equal(t, int64(1465036905000000000), metricB.Time().UnixNano())
+	assert.Equal(t, int64(1465036906000000000), metricB.Time().UnixNano())
 }
 
 func TestTimezoneAmericasCompileFileAndParse(t *testing.T) {
@@ -844,7 +844,7 @@ func TestTimezoneAmericasCompileFileAndParse(t *testing.T) {
 	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
 	assert.Equal(t, int64(1465040505000000000), metricA.Time().UnixNano())
 
-	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:46] 1.25 mystring dropme nomodifier`)
 	require.NotNil(t, metricB)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -855,7 +855,7 @@ func TestTimezoneAmericasCompileFileAndParse(t *testing.T) {
 		},
 		metricB.Fields())
 	assert.Equal(t, map[string]string{}, metricB.Tags())
-	assert.Equal(t, int64(1465058505000000000), metricB.Time().UnixNano())
+	assert.Equal(t, int64(1465058506000000000), metricB.Time().UnixNano())
 }
 
 func TestTimezoneLocalCompileFileAndParse(t *testing.T) {
@@ -880,7 +880,7 @@ func TestTimezoneLocalCompileFileAndParse(t *testing.T) {
 	assert.Equal(t, map[string]string{"response_code": "200"}, metricA.Tags())
 	assert.Equal(t, int64(1465040505000000000), metricA.Time().UnixNano())
 
-	metricB, err := p.ParseLine(`[04/06/2016--12:41:45] 1.25 mystring dropme nomodifier`)
+	metricB, err := p.ParseLine(`[04/06/2016--12:41:46] 1.25 mystring dropme nomodifier`)
 	require.NotNil(t, metricB)
 	assert.NoError(t, err)
 	assert.Equal(t,
@@ -891,7 +891,7 @@ func TestTimezoneLocalCompileFileAndParse(t *testing.T) {
 		},
 		metricB.Fields())
 	assert.Equal(t, map[string]string{}, metricB.Tags())
-	assert.Equal(t, time.Date(2016, time.June, 4, 12, 41, 45, 0, time.Local).UnixNano(), metricB.Time().UnixNano())
+	assert.Equal(t, time.Date(2016, time.June, 4, 12, 41, 46, 0, time.Local).UnixNano(), metricB.Time().UnixNano())
 }
 
 func TestNewlineInPatterns(t *testing.T) {
@@ -907,6 +907,7 @@ func TestNewlineInPatterns(t *testing.T) {
 }
 
 func TestSyslogTimestamp(t *testing.T) {
+	currentYear := time.Now().Year()
 	tests := []struct {
 		name     string
 		line     string
@@ -915,17 +916,17 @@ func TestSyslogTimestamp(t *testing.T) {
 		{
 			name:     "two digit day of month",
 			line:     "Sep 25 09:01:55 value=42",
-			expected: time.Date(2018, time.September, 25, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(currentYear, time.September, 25, 9, 1, 55, 0, time.UTC),
 		},
 		{
 			name:     "one digit day of month single space",
 			line:     "Sep 2 09:01:55 value=42",
-			expected: time.Date(2018, time.September, 2, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(currentYear, time.September, 2, 9, 1, 55, 0, time.UTC),
 		},
 		{
 			name:     "one digit day of month double space",
 			line:     "Sep  2 09:01:55 value=42",
-			expected: time.Date(2018, time.September, 2, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(currentYear, time.September, 2, 9, 1, 55, 0, time.UTC),
 		},
 	}
 	for _, tt := range tests {
@@ -957,7 +958,7 @@ func TestReplaceTimestampComma(t *testing.T) {
 	require.Equal(t, 2018, m.Time().Year())
 	require.Equal(t, 13, m.Time().Hour())
 	require.Equal(t, 34, m.Time().Second())
-	//Convert Nanosecond to milisecond for compare
+	// Convert nanosecond to millisecond for compare
 	require.Equal(t, 555, m.Time().Nanosecond()/1000000)
 }
 
@@ -1023,5 +1024,5 @@ func TestEmptyYearInTimestamp(t *testing.T) {
 	m, err := p.ParseLine("Nov  6 13:57:03 generic iTunes[6504]: objc[6504]: Object descriptor was null.")
 	require.NoError(t, err)
 	require.NotNil(t, m)
-	require.Equal(t, 2018, m.Time().Year())
+	require.Equal(t, time.Now().Year(), m.Time().Year())
 }

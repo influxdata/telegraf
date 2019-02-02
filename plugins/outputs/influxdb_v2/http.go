@@ -1,7 +1,6 @@
 package influxdb_v2
 
 import (
-	"compress/gzip"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -17,6 +16,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
@@ -40,7 +40,6 @@ const (
 	defaultRequestTimeout = time.Second * 5
 	defaultMaxWait        = 10 // seconds
 	defaultDatabase       = "telegraf"
-	defaultUserAgent      = "telegraf"
 )
 
 type HTTPConfig struct {
@@ -82,7 +81,7 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 
 	userAgent := config.UserAgent
 	if userAgent == "" {
-		userAgent = defaultUserAgent
+		userAgent = "Telegraf/" + internal.Version()
 	}
 
 	var headers = make(map[string]string, len(config.Headers)+2)
@@ -194,7 +193,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 	err = json.NewDecoder(resp.Body).Decode(writeResp)
 	desc := writeResp.Error()
 	if err != nil {
-		desc = err.Error()
+		desc = resp.Status
 	}
 
 	switch resp.StatusCode {
@@ -231,7 +230,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 func (c *httpClient) makeWriteRequest(body io.Reader) (*http.Request, error) {
 	var err error
 	if c.ContentEncoding == "gzip" {
-		body, err = compressWithGzip(body)
+		body, err = internal.CompressWithGzip(body)
 		if err != nil {
 			return nil, err
 		}
@@ -258,20 +257,6 @@ func (c *httpClient) addHeaders(req *http.Request) {
 	}
 }
 
-func compressWithGzip(data io.Reader) (io.Reader, error) {
-	pipeReader, pipeWriter := io.Pipe()
-	gzipWriter := gzip.NewWriter(pipeWriter)
-	var err error
-
-	go func() {
-		_, err = io.Copy(gzipWriter, data)
-		gzipWriter.Close()
-		pipeWriter.Close()
-	}()
-
-	return pipeReader, err
-}
-
 func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 	params := url.Values{}
 	params.Set("bucket", bucket)
@@ -281,9 +266,9 @@ func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
 	case "unix":
 		loc.Scheme = "http"
 		loc.Host = "127.0.0.1"
-		loc.Path = "v2/write"
+		loc.Path = "/api/v2/write"
 	case "http", "https":
-		loc.Path = path.Join(loc.Path, "v2/write")
+		loc.Path = path.Join(loc.Path, "/api/v2/write")
 	default:
 		return "", fmt.Errorf("unsupported scheme: %q", loc.Scheme)
 	}

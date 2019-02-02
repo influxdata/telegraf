@@ -37,7 +37,10 @@ type LiteralParser struct {
 func (ep *NameParser) parse(p *PointParser, pt *Point) error {
 	//Valid characters are: a-z, A-Z, 0-9, hyphen ("-"), underscore ("_"), dot (".").
 	// Forward slash ("/") and comma (",") are allowed if metricName is enclosed in double quotes.
+	// Delta (U+2206) is allowed as the first characeter of the
+	// metricName
 	name, err := parseLiteral(p)
+
 	if err != nil {
 		return err
 	}
@@ -225,6 +228,9 @@ func parseLiteral(p *PointParser) (string, error) {
 	for tok != EOF && tok > literal_beg && tok < literal_end {
 		p.writeBuf.WriteString(lit)
 		tok, lit = p.scan()
+		if tok == DELTA {
+			return "", errors.New("found delta inside metric name")
+		}
 	}
 	if tok == QUOTES {
 		return "", errors.New("found quote inside unquoted literal")

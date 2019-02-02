@@ -241,7 +241,7 @@ func TestParseLine(t *testing.T) {
 				len(test.tags), len(metric.Tags()))
 		}
 		f := metric.Fields()["value"].(float64)
-		if metric.Fields()["value"] != f {
+		if f != test.value {
 			t.Fatalf("floatValue value mismatch.  expected %v, got %v",
 				test.value, f)
 		}

@@ -22,9 +22,8 @@ func NewTestValueCounter(fields []string) telegraf.Aggregator {
 var m1, _ = metric.New("m1",
 	map[string]string{"foo": "bar"},
 	map[string]interface{}{
-		"status":    200,
-		"somefield": 20.1,
-		"foobar":    "bar",
+		"status": 200,
+		"foobar": "bar",
 	},
 	time.Now(),
 )

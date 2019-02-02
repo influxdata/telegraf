@@ -152,11 +152,17 @@ case $1 in
         if [ -e $pidfile ]; then
             pidofproc -p $pidfile $daemon > /dev/null 2>&1 && status="0" || status="$?"
             if [ "$status" = 0 ]; then
-                if killproc -p $pidfile SIGTERM && /bin/rm -rf $pidfile; then
-                    log_success_msg "$name process was stopped"
-                else
-                    log_failure_msg "$name failed to stop service"
-                fi
+                # periodically signal until process exists
+                while true; do
+                        if ! pidofproc -p $pidfile $daemon > /dev/null; then
+                                break
+                        fi
+                        killproc -p $pidfile SIGTERM 2>&1 >/dev/null
+                        sleep 2
+                done
+
+                log_success_msg "$name process was stopped"
+                rm -f $pidfile
             fi
         else
             log_failure_msg "$name process is not running"
