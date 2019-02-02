@@ -3,3 +3,4 @@ build
 /telegraf.gz
 *~
 *#
+cmd/telegraf/telegraf
