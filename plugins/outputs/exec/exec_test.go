@@ -56,7 +56,7 @@ func TestExecNonExistingFile(t *testing.T) {
 func getBasicExec(scriptFile, outFile string) *Exec {
 	s, _ := serializers.NewInfluxSerializer()
 	exec := &Exec{
-		Commands:   []string{getTestScriptCmd(scriptFile, outFile)},
+		Command:    getTestScriptCmd(scriptFile, outFile),
 		Timeout:    internal.Duration{Duration: time.Second * 5},
 		runner:     CommandRunner{},
 		serializer: s,

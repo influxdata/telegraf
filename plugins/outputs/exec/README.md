@@ -9,9 +9,9 @@ The external program is free to do what it wants with the data.
 
 ```toml
 [[outputs.exec]]
-  # Shell/commands array
-  # Full command line to executable with parameters, or a glob pattern to run all matching files.
-  commands = ["/usr/local/bin/telegraf-output --config /etc/telegraf-output.conf"]
+  # Shell/command
+  # Full command line to executable with parameters.
+  command = "/usr/local/bin/telegraf-output --config /etc/telegraf-output.conf"
   
   # Timeout for each command to complete.
   timeout = "30s"
