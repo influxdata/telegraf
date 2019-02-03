@@ -571,6 +571,8 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                     shutil.copy(fr, to)
 
                 for package_type in supported_packages[platform]:
+                    if package_type == "rpm" and arch == "mipsel":
+                        continue
                     # Package the directory structure for each package type for the platform
                     logging.debug("Packaging directory '{}' as '{}'.".format(build_root, package_type))
                     name = pkg_name
