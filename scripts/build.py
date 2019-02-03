@@ -85,7 +85,7 @@ targets = {
 
 supported_builds = {
     "windows": [ "amd64", "i386" ],
-    "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64", "s390x", "mipsle"],
+    "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64", "s390x", "mipsel"],
     "freebsd": [ "amd64", "i386" ]
 }
 
@@ -455,6 +455,8 @@ def build(version=None,
             goarch = "arm64"
         elif "arm" in arch:
             goarch = "arm"
+        elif arch == "mipsel":
+            goarch = "mipsle"
         build_command += "GOOS={} GOARCH={} ".format(platform, goarch)
 
         if "arm" in arch:
