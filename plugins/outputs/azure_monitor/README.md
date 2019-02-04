@@ -98,13 +98,7 @@ following configurations:
 
 1. **Client Credentials**: Azure AD Application ID and Secret.
 
-    Set the following Telegraf configuration variables:
-
-    - `azure_tenant_id`: Specifies the Tenant to which to authenticate.
-    - `azure_client_id`: Specifies the app client ID to use.
-    - `azure_client_secret`: Specifies the app secret to use.
-
-    Or set the following environment variables:
+    Set the following environment variables:
 
     - `AZURE_TENANT_ID`: Specifies the Tenant to which to authenticate.
     - `AZURE_CLIENT_ID`: Specifies the app client ID to use.
