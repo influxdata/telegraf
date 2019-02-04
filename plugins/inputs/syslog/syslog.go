@@ -438,16 +438,16 @@ func getNanoNow() time.Time {
 }
 
 func init() {
-	receiver := &Syslog{
-		Address: ":6514",
-		now:     getNanoNow,
-		ReadTimeout: &internal.Duration{
-			Duration: defaultReadTimeout,
-		},
-		Framing:   OctetCounting,
-		Trailer:   nontransparent.LF,
-		Separator: "_",
-	}
-
-	inputs.Add("syslog", func() telegraf.Input { return receiver })
+	inputs.Add("syslog", func() telegraf.Input {
+		return &Syslog{
+			Address: ":6514",
+			now:     getNanoNow,
+			ReadTimeout: &internal.Duration{
+				Duration: defaultReadTimeout,
+			},
+			Framing:   OctetCounting,
+			Trailer:   nontransparent.LF,
+			Separator: "_",
+		}
+	})
 }
