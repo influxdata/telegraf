@@ -13,7 +13,7 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	"gopkg.in/olivere/elastic.v6"
+	"gopkg.in/olivere/elastic"
 )
 
 type Elasticsearch struct {
