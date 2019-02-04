@@ -38,6 +38,7 @@
 - [#5295](https://github.com/influxdata/telegraf/pull/5295): Support passing bearer token directly in k8s input.
 - [#5294](https://github.com/influxdata/telegraf/pull/5294): Support passing bearer token directly in prometheus input.
 - [#5292](https://github.com/influxdata/telegraf/pull/5292): Add option to report input timestamp in prometheus output.
+- [#5234](https://github.com/influxdata/telegraf/pull/5234): Add Linux mipsle packages.
 
 #### Bugfixes
 
