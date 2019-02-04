@@ -255,5 +255,9 @@
   version = "1.7.5"
 
 [[constraint]]
+  branch = "master"
+  name = "github.com/kubernetes/apimachinery"
+
+[[constraint]]
   name = "github.com/go-logfmt/logfmt"
   version = "0.4.0"
