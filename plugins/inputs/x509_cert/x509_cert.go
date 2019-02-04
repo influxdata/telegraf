@@ -2,16 +2,20 @@
 package x509_cert
 
 import (
+	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/url"
+	"runtime"
 	"strings"
+	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -21,7 +25,8 @@ import (
 
 const sampleConfig = `
   ## List certificate sources
-  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443"]
+  ## On windows also available stores LocalMachine, CurrentUser
+  sources = ["LocalMachine/My",/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443"]
 
   ## Timeout for SSL connection
   # timeout = "5s"
@@ -53,7 +58,67 @@ func (c *X509Cert) SampleConfig() string {
 	return sampleConfig
 }
 
+//storeName may be: My, Root, AuthRoot, CA, AddressBook, TrustedPeople, TrustedPublisher, Disallowed
+func loadCertificatesFromWinStore(location string, storeName string) ([]*x509.Certificate, error) {
+	const (
+		CRYPT_E_NOT_FOUND                          = 0x80092004
+		CERT_STORE_PROV_SYSTEM_W           uintptr = 10
+		CERT_SYSTEM_STORE_CURRENT_USER_ID  uintptr = 1
+		CERT_SYSTEM_STORE_LOCAL_MACHINE_ID uintptr = 2
+		CERT_SYSTEM_STORE_LOCATION_SHIFT   uintptr = 16
+		CERT_STORE_READONLY_FLAG                   = 0x00008000
+		CERT_SYSTEM_STORE_CURRENT_USER             = uint32(CERT_SYSTEM_STORE_CURRENT_USER_ID << CERT_SYSTEM_STORE_LOCATION_SHIFT)
+		CERT_SYSTEM_STORE_LOCAL_MACHINE            = uint32(CERT_SYSTEM_STORE_LOCAL_MACHINE_ID << CERT_SYSTEM_STORE_LOCATION_SHIFT)
+	)
+
+	var locations = map[string]uint32{
+		"LocalMachine": CERT_SYSTEM_STORE_LOCAL_MACHINE,
+		"CurrentUser":  CERT_SYSTEM_STORE_CURRENT_USER,
+	}
+	store, err := syscall.CertOpenStore(
+		CERT_STORE_PROV_SYSTEM_W,
+		0,
+		0,
+		locations[location]|CERT_STORE_READONLY_FLAG,
+		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(storeName))))
+	if err != nil {
+		return nil, fmt.Errorf("failed to load cert - - %s\n", err.Error())
+	}
+	fmt.Println(store)
+	defer syscall.CertCloseStore(store, 0)
+	var certificates []*x509.Certificate
+	var cert *syscall.CertContext
+	for {
+		cert, err = syscall.CertEnumCertificatesInStore(store, cert)
+		if err != nil {
+			if errno, ok := err.(syscall.Errno); ok {
+				if errno == CRYPT_E_NOT_FOUND {
+					break
+				}
+			}
+			return nil, err
+		}
+		if cert == nil {
+			break
+		}
+		buf := (*[1 << 20]byte)(unsafe.Pointer(cert.EncodedCert))[:]
+		buf2 := make([]byte, cert.Length)
+		copy(buf2, buf)
+		if c, err := x509.ParseCertificate(buf2); err == nil {
+			certificates = append(certificates, c)
+		}
+	}
+	return certificates, nil
+}
+
 func (c *X509Cert) getCert(location string, timeout time.Duration) ([]*x509.Certificate, error) {
+	if strings.HasPrefix(location, "LocalMachine") || strings.HasPrefix(location, "CurrentUser") {
+		if runtime.GOOS == "windows" {
+			location = "winstore://" + location
+		} else {
+			return nil, fmt.Errorf("windows stores works only in windows")
+		}
+	}
 	if strings.HasPrefix(location, "/") {
 		location = "file://" + location
 	}
@@ -113,6 +178,13 @@ func (c *X509Cert) getCert(location string, timeout time.Duration) ([]*x509.Cert
 		}
 
 		return []*x509.Certificate{cert}, nil
+	case "winstore":
+		store := strings.TrimLeft(u.Path, "/")
+		certs, err := loadCertificatesFromWinStore(u.Host, store)
+		if err != nil {
+			return nil, err
+		}
+		return certs, nil
 	default:
 		return nil, fmt.Errorf("unsuported scheme '%s' in location %s\n", u.Scheme, location)
 	}
@@ -134,12 +206,14 @@ func getFields(cert *x509.Certificate, now time.Time) map[string]interface{} {
 	return fields
 }
 
-func getTags(subject pkix.Name, location string) map[string]string {
+func getTags(cert *x509.Certificate, location string) map[string]string {
+	subject := cert.Subject
+	thumbprint := sha1.Sum(cert.Raw)
 	tags := map[string]string{
-		"source":      location,
-		"common_name": subject.CommonName,
+		"source":         location,
+		"common_name":    subject.CommonName,
+		"sha1thumbprint": hex.EncodeToString(thumbprint[:]),
 	}
-
 	if len(subject.Organization) > 0 {
 		tags["organization"] = subject.Organization[0]
 	}
@@ -171,7 +245,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 
 		for _, cert := range certs {
 			fields := getFields(cert, now)
-			tags := getTags(cert.Subject, location)
+			tags := getTags(cert, location)
 
 			acc.AddFields("x509_cert", fields, tags)
 		}
