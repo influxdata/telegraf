@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	consumer "github.com/harlow/kinesis-consumer"
+	"github.com/harlow/kinesis-consumer/checkpoint/ddb"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
@@ -14,17 +15,23 @@ import (
 )
 
 type (
+	DynamoDB struct {
+		AppName   string `toml:"app_name"`
+		TableName string `toml:"table_name"`
+	}
+
 	KinesisConsumer struct {
-		Region            string `toml:"region"`
-		AccessKey         string `toml:"access_key"`
-		SecretKey         string `toml:"secret_key"`
-		RoleARN           string `toml:"role_arn"`
-		Profile           string `toml:"profile"`
-		Filename          string `toml:"shared_credential_file"`
-		Token             string `toml:"token"`
-		EndpointURL       string `toml:"endpoint_url"`
-		StreamName        string `toml:"streamname"`
-		ShardIteratorType string `toml:"shard_iterator_type"`
+		Region            string    `toml:"region"`
+		AccessKey         string    `toml:"access_key"`
+		SecretKey         string    `toml:"secret_key"`
+		RoleARN           string    `toml:"role_arn"`
+		Profile           string    `toml:"profile"`
+		Filename          string    `toml:"shared_credential_file"`
+		Token             string    `toml:"token"`
+		EndpointURL       string    `toml:"endpoint_url"`
+		StreamName        string    `toml:"streamname"`
+		ShardIteratorType string    `toml:"shard_iterator_type"`
+		DynamoDB          *DynamoDB `toml:"dynamo_db"`
 
 		consumer *consumer.Consumer
 		parser   parsers.Parser
@@ -69,6 +76,11 @@ var sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## Configuration for a dynamo db checkpoint
+  [inputs.kinesis_consumer.dynamo_db]
+	app_name = "default"
+	table_name = "default"
 `
 
 func (k *KinesisConsumer) SampleConfig() string {
@@ -82,6 +94,11 @@ func (k *KinesisConsumer) Description() string {
 func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
 	k.parser = parser
 }
+
+type noopCheckpoint struct{}
+
+func (n noopCheckpoint) Set(string, string, string) error   { return nil }
+func (n noopCheckpoint) Get(string, string) (string, error) { return "", nil }
 
 func (k *KinesisConsumer) connect() error {
 	credentialConfig := &internalaws.CredentialConfig{
@@ -101,7 +118,20 @@ func (k *KinesisConsumer) connect() error {
 		StreamName: aws.String(k.StreamName),
 	})
 
-	consumer, err := consumer.New("telegraftest", consumer.WithClient(client), consumer.WithShardIteratorType(k.ShardIteratorType))
+	var checkpoint consumer.Checkpoint = &noopCheckpoint{}
+	if k.DynamoDB != nil {
+		checkpoint, err = ddb.New(k.DynamoDB.AppName, k.DynamoDB.TableName)
+		if err != nil {
+			return err
+		}
+	}
+
+	consumer, err := consumer.New(
+		k.StreamName,
+		consumer.WithClient(client),
+		consumer.WithShardIteratorType(k.ShardIteratorType),
+		consumer.WithCheckpoint(checkpoint),
+	)
 	if err != nil {
 		return err
 	}
@@ -160,7 +190,7 @@ func (k *KinesisConsumer) Gather(acc telegraf.Accumulator) error {
 }
 
 func init() {
-	inputs.Add("kinesis", func() telegraf.Input {
+	inputs.Add("kinesis_consumer", func() telegraf.Input {
 		return &KinesisConsumer{ShardIteratorType: "TRIM_HORIZON"}
 	})
 }
