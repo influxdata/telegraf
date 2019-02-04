@@ -388,8 +388,11 @@
   packages = [
     ".",
     "apis/apiextensions/v1beta1",
+    "apis/apps/v1beta1",
+    "apis/apps/v1beta2",
     "apis/core/v1",
     "apis/meta/v1",
+    "apis/policy/v1beta1",
     "apis/resource",
     "runtime",
     "runtime/schema",
@@ -409,12 +412,12 @@
   version = "v1.38.1"
 
 [[projects]]
-  digest = "1:6a4a01d58b227c4b6b11111b9f172ec5c17682b82724e58e6daf3f19f4faccd8"
+  digest = "1:df89444601379b2e1ee82bf8e6b72af9901cbeed4b469fa380a519c89c339310"
   name = "github.com/go-logfmt/logfmt"
   packages = ["."]
   pruneopts = ""
-  revision = "390ab7935ee28ec6b286364bba9b4dd6410cb3d5"
-  version = "v0.3.0"
+  revision = "07c9b44f60d7ffdfb7d8efe1ad539965737836dc"
+  version = "v0.4.0"
 
 [[projects]]
   digest = "1:96c4a6ff4206086347bfe28e96e092642882128f45ecb8dc8f15f3e6f6703af0"
@@ -704,6 +707,14 @@
   packages = ["."]
   pruneopts = ""
   revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:e7737c09200582508f4f67227c39e7c4667cc6067a6d2b2e679654e43e8a8cb4"
+  name = "github.com/kubernetes/apimachinery"
+  packages = ["pkg/api/resource"]
+  pruneopts = ""
+  revision = "d41becfba9ee9bf8e55cec1dd3934cd7cfc04b99"
 
 [[projects]]
   branch = "develop"
@@ -1434,6 +1445,14 @@
   version = "v3.0.5"
 
 [[projects]]
+  digest = "1:75fb3fcfc73a8c723efde7777b40e8e8ff9babf30d8c56160d01beffea8a95a6"
+  name = "gopkg.in/inf.v0"
+  packages = ["."]
+  pruneopts = ""
+  revision = "d2d2541c53f18d2a059457998ce2876cc8e67cbf"
+  version = "v0.9.1"
+
+[[projects]]
   digest = "1:367baf06b7dbd0ef0bbdd785f6a79f929c96b0c18e9d3b29c0eed1ac3f5db133"
   name = "gopkg.in/ldap.v2"
   packages = ["."]
@@ -1520,8 +1539,12 @@
     "github.com/docker/libnetwork/ipvs",
     "github.com/eclipse/paho.mqtt.golang",
     "github.com/ericchiang/k8s",
+    "github.com/ericchiang/k8s/apis/apps/v1beta1",
+    "github.com/ericchiang/k8s/apis/apps/v1beta2",
     "github.com/ericchiang/k8s/apis/core/v1",
     "github.com/ericchiang/k8s/apis/meta/v1",
+    "github.com/ericchiang/k8s/apis/resource",
+    "github.com/ericchiang/k8s/util/intstr",
     "github.com/go-logfmt/logfmt",
     "github.com/go-redis/redis",
     "github.com/go-sql-driver/mysql",
@@ -1547,6 +1570,7 @@
     "github.com/kardianos/service",
     "github.com/karrick/godirwalk",
     "github.com/kballard/go-shellquote",
+    "github.com/kubernetes/apimachinery/pkg/api/resource",
     "github.com/matttproud/golang_protobuf_extensions/pbutil",
     "github.com/miekg/dns",
     "github.com/multiplay/go-ts3",

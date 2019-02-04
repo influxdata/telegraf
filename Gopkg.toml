@@ -257,3 +257,11 @@
 [[override]]
   name = "github.com/harlow/kinesis-consumer"
   branch = "master"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/kubernetes/apimachinery"
+
+[[constraint]]
+  name = "github.com/go-logfmt/logfmt"
+  version = "0.4.0"

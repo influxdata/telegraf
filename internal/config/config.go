@@ -1591,7 +1591,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 				if err != nil {
 					return nil, err
 				}
-				c.CSVHeaderRowCount = int(v)
+				c.CSVSkipRows = int(v)
 			}
 		}
 	}
@@ -1603,7 +1603,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 				if err != nil {
 					return nil, err
 				}
-				c.CSVHeaderRowCount = int(v)
+				c.CSVSkipColumns = int(v)
 			}
 		}
 	}

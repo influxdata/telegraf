@@ -194,6 +194,7 @@ For documentation on the latest development code see the [documentation index][d
 * [kernel_vmstat](./plugins/inputs/kernel_vmstat)
 * [kibana](./plugins/inputs/kibana)
 * [kubernetes](./plugins/inputs/kubernetes)
+* [kube_inventory](./plugins/inputs/kube_inventory)
 * [leofs](./plugins/inputs/leofs)
 * [linux_sysctl_fs](./plugins/inputs/linux_sysctl_fs)
 * [logparser](./plugins/inputs/logparser)
@@ -206,6 +207,7 @@ For documentation on the latest development code see the [documentation index][d
 * [minecraft](./plugins/inputs/minecraft)
 * [mongodb](./plugins/inputs/mongodb)
 * [mqtt_consumer](./plugins/inputs/mqtt_consumer)
+* [multifile](./plugins/inputs/multifile)
 * [mysql](./plugins/inputs/mysql)
 * [nats_consumer](./plugins/inputs/nats_consumer)
 * [nats](./plugins/inputs/nats)
@@ -302,6 +304,7 @@ For documentation on the latest development code see the [documentation index][d
 - [Graphite](/plugins/serializers/graphite)
 - [ServiceNow](/plugins/serializers/nowmetric)
 - [SplunkMetric](/plugins/serializers/splunkmetric)
+- [Carbon2](/plugins/serializers/carbon2)
 
 ## Processor Plugins
 
