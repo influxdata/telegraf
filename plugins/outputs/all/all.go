@@ -5,6 +5,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/amqp"
 	_ "github.com/influxdata/telegraf/plugins/outputs/application_insights"
 	_ "github.com/influxdata/telegraf/plugins/outputs/azure_monitor"
+	_ "github.com/influxdata/telegraf/plugins/outputs/cloud_pubsub"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cloudwatch"
 	_ "github.com/influxdata/telegraf/plugins/outputs/cratedb"
 	_ "github.com/influxdata/telegraf/plugins/outputs/datadog"

@@ -3,6 +3,18 @@
 #### New Inputs
 
 - [cloud_pubsub](/plugins/inputs/cloud_pubsub/README.md) - Contributed by @emilymye
+- [neptune_apex](/plugins/inputs/neptune_apex/README.md) - Contributed by @MaxRenaud
+- [nginx_upstream_check](/plugins/inputs/nginx_upstream_check/README.md) - Contributed by @dmitryilyin
+- [multifile](/plugins/inputs/multifile/README.md) - Contributed by @martin2250
+
+#### New Outputs
+
+- [cloud_pubsub](/plugins/outputs/cloud_pubsub/README.md) - Contributed by @emilymye
+
+#### New Serializers
+
+- [nowmetric](/plugins/serializers/nowmetric/README.md) - Contributed by @JefMuller
+- [carbon2](/plugins/serializers/carbon2/README.md) - Contributed by @frankreno
 
 #### Features
 
@@ -15,18 +27,43 @@
 - [#5116](https://github.com/influxdata/telegraf/pull/5116): Include DEVLINKS in available diskio udev properties.
 - [#5149](https://github.com/influxdata/telegraf/pull/5149): Add micro and nanosecond unix timestamp support to JSON parser.
 - [#5160](https://github.com/influxdata/telegraf/pull/5160): Add support for basic auth to couchdb input.
-- [#5161](https://github.com/influxdata/telegraf/pull/5161): Add support in wavefront output for the Wavefront Direction Ingestion API.
+- [#5161](https://github.com/influxdata/telegraf/pull/5161): Add support in wavefront output for the Wavefront Direct Ingestion API.
 - [#5168](https://github.com/influxdata/telegraf/pull/5168): Allow counting float values in valuecounter aggregator.
 - [#5177](https://github.com/influxdata/telegraf/pull/5177): Add log send and redo queue fields to sqlserver input.
 - [#5113](https://github.com/influxdata/telegraf/pull/5113): Improve scalability of vsphere input.
 - [#5210](https://github.com/influxdata/telegraf/pull/5210): Add read and write op per second fields to ceph input.
 - [#5214](https://github.com/influxdata/telegraf/pull/5214): Add configurable timeout to varnish input.
+- [#5273](https://github.com/influxdata/telegraf/pull/5273): Add flush_total_time_ns and additional wired tiger fields to mongodb input.
+- [#5295](https://github.com/influxdata/telegraf/pull/5295): Support passing bearer token directly in k8s input.
+- [#5294](https://github.com/influxdata/telegraf/pull/5294): Support passing bearer token directly in prometheus input.
+- [#5292](https://github.com/influxdata/telegraf/pull/5292): Add option to report input timestamp in prometheus output.
 
 #### Bugfixes
 
 - [#4610](https://github.com/influxdata/telegraf/pull/4610): Fix initscript removes pidfile of restarted Telegraf process.
+- [#5320](https://github.com/influxdata/telegraf/pull/5320): Use datacenter option spelling in consul input.
+- [#5316](https://github.com/influxdata/telegraf/pull/5316): Remove auth from /ping route in influxdb_listener.
 
-## v1.9.2 [unreleased]
+## v1.9.4 [unreleased]
+
+#### Bugfixes
+
+- [#5334](https://github.com/influxdata/telegraf/issues/5334): Fix skip_rows and skip_columns options in csv parser.
+- [#5181](https://github.com/influxdata/telegraf/issues/5181): Always send basic auth in jenkins input.
+- [#5346](https://github.com/influxdata/telegraf/pull/5346): Build official packages with Go 1.11.5.
+
+## v1.9.3 [2019-01-22]
+
+#### Bugfixes
+
+- [#5261](https://github.com/influxdata/telegraf/pull/5261):  Fix arithmetic overflow in sqlserver input.
+- [#5194](https://github.com/influxdata/telegraf/issues/5194): Fix latest metrics not sent first when output fails.
+- [#5285](https://github.com/influxdata/telegraf/issues/5285): Fix amqp_consumer stops consuming when it receives unparsable messages.
+- [#5281](https://github.com/influxdata/telegraf/issues/5281): Fix prometheus input not detecting added and removed pods.
+- [#5215](https://github.com/influxdata/telegraf/issues/5215): Remove userinfo from cluster tag in couchbase.
+- [#5298](https://github.com/influxdata/telegraf/issues/5298): Fix internal_write buffer_size not reset on timed writes.
+
+## v1.9.2 [2019-01-08]
 
 #### Bugfixes
 
@@ -43,6 +80,7 @@
 - [#5219](https://github.com/influxdata/telegraf/issues/5219): Allow non local udp connections in net_response.
 - [#5218](https://github.com/influxdata/telegraf/issues/5218): Fix toml option names in parser processor.
 - [#5225](https://github.com/influxdata/telegraf/issues/5225): Fix panic in docker input with bad endpoint.
+- [#5209](https://github.com/influxdata/telegraf/issues/5209): Fix original metric modified by aggregator filters.
 
 ## v1.9.1 [2018-12-11]
 
