@@ -63,6 +63,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/kernel"
 	_ "github.com/influxdata/telegraf/plugins/inputs/kernel_vmstat"
 	_ "github.com/influxdata/telegraf/plugins/inputs/kibana"
+	_ "github.com/influxdata/telegraf/plugins/inputs/kube_inventory"
 	_ "github.com/influxdata/telegraf/plugins/inputs/kubernetes"
 	_ "github.com/influxdata/telegraf/plugins/inputs/leofs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/linux_sysctl_fs"
