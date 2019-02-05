@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"path"
+	"sort"
+	"strings"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3" // Imports the Stackdriver Monitoring client package.
 	googlepb "github.com/golang/protobuf/ptypes/timestamp"
@@ -38,6 +40,9 @@ const (
 	StartTime = int64(1)
 	// MaxInt is the max int64 value.
 	MaxInt = int(^uint(0) >> 1)
+
+	errStringPointsOutOfOrder = "One or more of the points specified had an older end time than the most recent point"
+	errStringPointsTooOld     = "Data points cannot be written more than 24h in the past"
 )
 
 var sampleConfig = `
@@ -70,11 +75,25 @@ func (s *Stackdriver) Connect() error {
 	return nil
 }
 
+// sorted returns a copy of the metrics in time ascending order
+func sorted(metrics []telegraf.Metric) []telegraf.Metric {
+	batch := make([]telegraf.Metric, 0, len(metrics))
+	for i := len(metrics) - 1; i >= 0; i-- {
+		batch = append(batch, metrics[i])
+	}
+	sort.Slice(batch, func(i, j int) bool {
+		return batch[i].Time().Before(batch[j].Time())
+	})
+	return batch
+}
+
 // Write the metrics to Google Cloud Stackdriver.
 func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 
-	for _, m := range metrics {
+	batch := sorted(metrics)
+
+	for _, m := range batch {
 		timeSeries := []*monitoringpb.TimeSeries{}
 
 		for _, f := range m.FieldList() {
@@ -139,6 +158,11 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 		// Create the time series in Stackdriver.
 		err := s.client.CreateTimeSeries(ctx, timeSeriesRequest)
 		if err != nil {
+			if strings.Contains(err.Error(), errStringPointsOutOfOrder) ||
+				strings.Contains(err.Error(), errStringPointsTooOld) {
+				log.Printf("D! [output.stackdriver] unable to write to Stackdriver: %s", err)
+				return nil
+			}
 			log.Printf("E! [output.stackdriver] unable to write to Stackdriver: %s", err)
 			return err
 		}
