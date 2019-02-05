@@ -6,12 +6,10 @@ import (
 	"log"
 	"path"
 
+	monitoring "cloud.google.com/go/monitoring/apiv3" // Imports the Stackdriver Monitoring client package.
+	googlepb "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-
-	// Imports the Stackdriver Monitoring client package.
-	monitoring "cloud.google.com/go/monitoring/apiv3"
-	googlepb "github.com/golang/protobuf/ptypes/timestamp"
 	metricpb "google.golang.org/genproto/googleapis/api/metric"
 	monitoredrespb "google.golang.org/genproto/googleapis/api/monitoredres"
 	monitoringpb "google.golang.org/genproto/googleapis/monitoring/v3"
@@ -83,6 +81,10 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 			value, err := getStackdriverTypedValue(f.Value)
 			if err != nil {
 				log.Printf("E! [output.stackdriver] get type failed: %s", err)
+				continue
+			}
+
+			if value == nil {
 				continue
 			}
 
@@ -222,11 +224,8 @@ func getStackdriverTypedValue(value interface{}) (*monitoringpb.TypedValue, erro
 			},
 		}, nil
 	case string:
-		return &monitoringpb.TypedValue{
-			Value: &monitoringpb.TypedValue_StringValue{
-				StringValue: string(v),
-			},
-		}, nil
+		// String value types are not available for custom metrics
+		return nil, nil
 	default:
 		return nil, fmt.Errorf("value type \"%T\" not supported for stackdriver custom metrics", v)
 	}
