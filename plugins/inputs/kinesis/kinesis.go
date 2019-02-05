@@ -31,7 +31,7 @@ type (
 		EndpointURL       string    `toml:"endpoint_url"`
 		StreamName        string    `toml:"streamname"`
 		ShardIteratorType string    `toml:"shard_iterator_type"`
-		DynamoDB          *DynamoDB `toml:"dynamo_db"`
+		DynamoDB          *DynamoDB `toml:"checkpoint_dynamodb"`
 
 		consumer *consumer.Consumer
 		parser   parsers.Parser
@@ -77,8 +77,9 @@ var sampleConfig = `
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
 
-  ## Configuration for a dynamo db checkpoint
-  [inputs.kinesis_consumer.dynamo_db]
+  ## Optional
+  ## Configuration for a dynamodb checkpoint
+  [inputs.kinesis_consumer.checkpoint_dynamodb]
 	app_name = "default"
 	table_name = "default"
 `
