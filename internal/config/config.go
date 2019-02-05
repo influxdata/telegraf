@@ -750,7 +750,7 @@ func loadConfig(config string) ([]byte, error) {
 	}
 
 	switch u.Scheme {
-	case "https": // http not permitted
+	case "https", "http":
 		return fetchConfig(u)
 	default:
 		// If it isn't a https scheme, try it as a file.
@@ -1591,7 +1591,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 				if err != nil {
 					return nil, err
 				}
-				c.CSVHeaderRowCount = int(v)
+				c.CSVSkipRows = int(v)
 			}
 		}
 	}
@@ -1603,7 +1603,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 				if err != nil {
 					return nil, err
 				}
-				c.CSVHeaderRowCount = int(v)
+				c.CSVSkipColumns = int(v)
 			}
 		}
 	}

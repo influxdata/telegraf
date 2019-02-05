@@ -15,6 +15,7 @@ func TestScrapeURLNoAnnotations(t *testing.T) {
 	url := getScrapeURL(p)
 	assert.Nil(t, url)
 }
+
 func TestScrapeURLAnnotationsNoScrape(t *testing.T) {
 	p := &v1.Pod{Metadata: &metav1.ObjectMeta{}}
 	p.Metadata.Name = str("myPod")
@@ -22,18 +23,21 @@ func TestScrapeURLAnnotationsNoScrape(t *testing.T) {
 	url := getScrapeURL(p)
 	assert.Nil(t, url)
 }
+
 func TestScrapeURLAnnotations(t *testing.T) {
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	url := getScrapeURL(p)
 	assert.Equal(t, "http://127.0.0.1:9102/metrics", *url)
 }
+
 func TestScrapeURLAnnotationsCustomPort(t *testing.T) {
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/port": "9000"}
 	url := getScrapeURL(p)
 	assert.Equal(t, "http://127.0.0.1:9000/metrics", *url)
 }
+
 func TestScrapeURLAnnotationsCustomPath(t *testing.T) {
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true", "prometheus.io/path": "mymetrics"}
@@ -50,12 +54,14 @@ func TestScrapeURLAnnotationsCustomPathWithSep(t *testing.T) {
 
 func TestAddPod(t *testing.T) {
 	prom := &Prometheus{}
+
 	p := pod()
 	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
 	registerPod(p, prom)
 	assert.Equal(t, 1, len(prom.kubernetesPods))
 }
-func TestAddMultiplePods(t *testing.T) {
+
+func TestAddMultipleDuplicatePods(t *testing.T) {
 	prom := &Prometheus{}
 
 	p := pod()
@@ -63,8 +69,21 @@ func TestAddMultiplePods(t *testing.T) {
 	registerPod(p, prom)
 	p.Metadata.Name = str("Pod2")
 	registerPod(p, prom)
+	assert.Equal(t, 1, len(prom.kubernetesPods))
+}
+
+func TestAddMultiplePods(t *testing.T) {
+	prom := &Prometheus{}
+
+	p := pod()
+	p.Metadata.Annotations = map[string]string{"prometheus.io/scrape": "true"}
+	registerPod(p, prom)
+	p.Metadata.Name = str("Pod2")
+	p.Status.PodIP = str("127.0.0.2")
+	registerPod(p, prom)
 	assert.Equal(t, 2, len(prom.kubernetesPods))
 }
+
 func TestDeletePods(t *testing.T) {
 	prom := &Prometheus{}
 

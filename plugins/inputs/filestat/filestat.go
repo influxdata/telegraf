@@ -73,12 +73,16 @@ func (f *FileStat) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		for fileName, fileInfo := range files {
+		for _, fileName := range files {
 			tags := map[string]string{
 				"file": fileName,
 			}
 			fields := map[string]interface{}{
 				"exists": int64(1),
+			}
+			fileInfo, err := os.Stat(fileName)
+			if os.IsNotExist(err) {
+				fields["exists"] = int64(0)
 			}
 
 			if fileInfo == nil {

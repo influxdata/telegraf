@@ -19,6 +19,26 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, parsedMetrics[0].Name(), testMetric.Name())
 	assert.Equal(t, parsedMetrics[0].Fields(), testMetric.Fields())
 
+	parsedMetrics, err = parser.Parse([]byte("\u2206test.delta 1 1530939936"))
+	assert.NoError(t, err)
+	testMetric, err = metric.New("\u2206test.delta", map[string]string{},
+		map[string]interface{}{"value": 1.}, time.Unix(1530939936, 0))
+	assert.NoError(t, err)
+	assert.EqualValues(t, parsedMetrics[0], testMetric)
+
+	parsedMetrics, err = parser.Parse([]byte("\u0394test.delta 1 1530939936"))
+	assert.NoError(t, err)
+	testMetric, err = metric.New("\u0394test.delta", map[string]string{},
+		map[string]interface{}{"value": 1.}, time.Unix(1530939936, 0))
+	assert.NoError(t, err)
+	assert.EqualValues(t, parsedMetrics[0], testMetric)
+
+	parsedMetrics, err = parser.Parse([]byte("\u0394test.delta 1.234 1530939936 source=\"mysource\" tag2=value2"))
+	assert.NoError(t, err)
+	testMetric, err = metric.New("\u0394test.delta", map[string]string{"source": "mysource", "tag2": "value2"}, map[string]interface{}{"value": 1.234}, time.Unix(1530939936, 0))
+	assert.NoError(t, err)
+	assert.EqualValues(t, parsedMetrics[0], testMetric)
+
 	parsedMetrics, err = parser.Parse([]byte("test.metric 1 1530939936"))
 	assert.NoError(t, err)
 	testMetric, err = metric.New("test.metric", map[string]string{}, map[string]interface{}{"value": 1.}, time.Unix(1530939936, 0))
@@ -164,6 +184,9 @@ func TestParseInvalid(t *testing.T) {
 	assert.Error(t, err)
 
 	_, err = parser.Parse([]byte("test.metric 1 string"))
+	assert.Error(t, err)
+
+	_, err = parser.Parse([]byte("test.\u2206delta 1"))
 	assert.Error(t, err)
 
 	_, err = parser.Parse([]byte("test.metric 1 1530939936 tag_no_pair"))

@@ -25,10 +25,19 @@ AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
 
 ### Using sudo
 
-You may edit your sudo configuration with the following:
+You will need the following in your telegraf config:
+```toml
+[[inputs.ipset]]
+  use_sudo = true
+```
 
-```sudo
-telegraf ALL=(root) NOPASSWD: /sbin/ipset save
+You will also need to update your sudoers file:
+```bash
+$ visudo
+# Add the following line:
+Cmnd_Alias IPSETSAVE = /sbin/ipset save
+telegraf  ALL=(root) NOPASSWD: IPSETSAVE
+Defaults!IPSETSAVE !logfile, !syslog, !pam_session
 ```
 
 ### Configuration

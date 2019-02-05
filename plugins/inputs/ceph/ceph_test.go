@@ -835,7 +835,9 @@ var clusterStatusDump = `
     "bytes_total": 17335810048000,
     "read_bytes_sec": 0,
     "write_bytes_sec": 367217,
-    "op_per_sec": 98
+    "op_per_sec": 98,
+    "read_op_per_sec": 322,
+    "write_op_per_sec": 1022
   },
   "mdsmap": {
     "epoch": 1,
@@ -851,28 +853,30 @@ var cephStatusResults = []expectedResult{
 	{
 		metric: "ceph_osdmap",
 		fields: map[string]interface{}{
-			"epoch":             float64(21734),
-			"num_osds":          float64(24),
-			"num_up_osds":       float64(24),
-			"num_in_osds":       float64(24),
-			"full":              false,
-			"nearfull":          false,
-			"num_rempapped_pgs": float64(0),
+			"epoch":            float64(21734),
+			"num_osds":         float64(24),
+			"num_up_osds":      float64(24),
+			"num_in_osds":      float64(24),
+			"full":             false,
+			"nearfull":         false,
+			"num_remapped_pgs": float64(0),
 		},
 		tags: map[string]string{},
 	},
 	{
 		metric: "ceph_pgmap",
 		fields: map[string]interface{}{
-			"version":         float64(52314277),
-			"num_pgs":         float64(2560),
-			"data_bytes":      float64(2700031960713),
-			"bytes_used":      float64(7478347665408),
-			"bytes_avail":     float64(9857462382592),
-			"bytes_total":     float64(17335810048000),
-			"read_bytes_sec":  float64(0),
-			"write_bytes_sec": float64(367217),
-			"op_per_sec":      float64(98),
+			"version":          float64(52314277),
+			"num_pgs":          float64(2560),
+			"data_bytes":       float64(2700031960713),
+			"bytes_used":       float64(7478347665408),
+			"bytes_avail":      float64(9857462382592),
+			"bytes_total":      float64(17335810048000),
+			"read_bytes_sec":   float64(0),
+			"write_bytes_sec":  float64(367217),
+			"op_per_sec":       float64(98),
+			"read_op_per_sec":  float64(322),
+			"write_op_per_sec": float64(1022),
 		},
 		tags: map[string]string{},
 	},
@@ -1014,7 +1018,9 @@ var cephODSPoolStatsDump = `
           "recovering_keys_per_sec": 0},
       "client_io_rate": { "read_bytes_sec": 10566067,
           "write_bytes_sec": 15165220376,
-          "op_per_sec": 9828}}]`
+          "op_per_sec": 9828,
+          "read_op_per_sec": 182,
+          "write_op_per_sec": 473}}]`
 
 var cephOSDPoolStatsResults = []expectedResult{
 	{
@@ -1023,6 +1029,8 @@ var cephOSDPoolStatsResults = []expectedResult{
 			"read_bytes_sec":             float64(0),
 			"write_bytes_sec":            float64(0),
 			"op_per_sec":                 float64(0),
+			"read_op_per_sec":            float64(0),
+			"write_op_per_sec":           float64(0),
 			"recovering_objects_per_sec": float64(0),
 			"recovering_bytes_per_sec":   float64(0),
 			"recovering_keys_per_sec":    float64(0),
@@ -1037,6 +1045,8 @@ var cephOSDPoolStatsResults = []expectedResult{
 			"read_bytes_sec":             float64(10566067),
 			"write_bytes_sec":            float64(15165220376),
 			"op_per_sec":                 float64(9828),
+			"read_op_per_sec":            float64(182),
+			"write_op_per_sec":           float64(473),
 			"recovering_objects_per_sec": float64(279),
 			"recovering_bytes_per_sec":   float64(176401059),
 			"recovering_keys_per_sec":    float64(0),

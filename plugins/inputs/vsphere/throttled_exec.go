@@ -26,8 +26,6 @@ func NewThrottledExecutor(limit int) *ThrottledExecutor {
 func (t *ThrottledExecutor) Run(ctx context.Context, job func()) {
 	t.wg.Add(1)
 	go func() {
-		// Last resort panic handler.
-		defer HandlePanic()
 		defer t.wg.Done()
 		select {
 		case t.limiter <- struct{}{}:
