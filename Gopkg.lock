@@ -973,7 +973,7 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:02135a4151567d48ebff6cf36f73b5d8dee566855df84ffd96111d5225848bb7"
+  digest = "1:066c1020d667e25a0614b56aee1f9ac47e75c77de98eddfb51e9be02c68c1577"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -986,8 +986,8 @@
     "process",
   ]
   pruneopts = ""
-  revision = "ccc1c1016bc5d10e803189ee43417c50cdde7f1b"
-  version = "v2.18.12"
+  revision = "071446942108a03a13cf0717275ad3bdbcb691b4"
+  version = "v2.19.01"
 
 [[projects]]
   branch = "master"
