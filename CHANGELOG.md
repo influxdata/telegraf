@@ -45,6 +45,7 @@
 - [#4610](https://github.com/influxdata/telegraf/pull/4610): Fix initscript removes pidfile of restarted Telegraf process.
 - [#5320](https://github.com/influxdata/telegraf/pull/5320): Use datacenter option spelling in consul input.
 - [#5316](https://github.com/influxdata/telegraf/pull/5316): Remove auth from /ping route in influxdb_listener.
+- [#5304](https://github.com/influxdata/telegraf/issues/5304): Fix x509_cert input stops checking certs after first error.
 
 ## v1.9.4 [2019-02-05]
 
