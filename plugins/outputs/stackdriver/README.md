@@ -17,3 +17,8 @@ Metrics are grouped by the `namespace` variable and metric key - eg: `custom.goo
   # The namespace for the metric descriptor
   namespace = "telegraf"
 ```
+
+### Restrictions
+
+Stackdriver does not support string values in custom metrics, any string
+fields will not be written.
