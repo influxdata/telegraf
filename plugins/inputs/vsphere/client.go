@@ -74,7 +74,7 @@ func (cf *ClientFactory) GetClient(ctx context.Context) (*Client, error) {
 	ctx1, cancel1 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
 	defer cancel1()
 	if _, err := methods.GetCurrentTime(ctx1, cf.client.Client); err != nil {
-		log.Printf("I! [input.vsphere]: Client session seems to have time out. Reauthenticating!")
+		log.Printf("I! [inputs.vsphere]: Client session seems to have time out. Reauthenticating!")
 		ctx2, cancel2 := context.WithTimeout(ctx, cf.parent.Timeout.Duration)
 		defer cancel2()
 		if cf.client.Client.SessionManager.Login(ctx2, url.UserPassword(cf.parent.Username, cf.parent.Password)) != nil {
@@ -102,7 +102,7 @@ func NewClient(ctx context.Context, u *url.URL, vs *VSphere) (*Client, error) {
 		u.User = url.UserPassword(vs.Username, vs.Password)
 	}
 
-	log.Printf("D! [input.vsphere]: Creating client: %s", u.Host)
+	log.Printf("D! [inputs.vsphere]: Creating client: %s", u.Host)
 	soapClient := soap.NewClient(u, tlsCfg.InsecureSkipVerify)
 
 	// Add certificate if we have it. Use it to log us in.
@@ -173,9 +173,9 @@ func NewClient(ctx context.Context, u *url.URL, vs *VSphere) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("D! [input.vsphere] vCenter says max_query_metrics should be %d", n)
+	log.Printf("D! [inputs.vsphere] vCenter says max_query_metrics should be %d", n)
 	if n < vs.MaxQueryMetrics {
-		log.Printf("W! [input.vsphere] Configured max_query_metrics is %d, but server limits it to %d. Reducing.", vs.MaxQueryMetrics, n)
+		log.Printf("W! [inputs.vsphere] Configured max_query_metrics is %d, but server limits it to %d. Reducing.", vs.MaxQueryMetrics, n)
 		vs.MaxQueryMetrics = n
 	}
 	return client, nil
@@ -199,7 +199,7 @@ func (c *Client) close() {
 		defer cancel()
 		if c.Client != nil {
 			if err := c.Client.Logout(ctx); err != nil {
-				log.Printf("E! [input.vsphere]: Error during logout: %s", err)
+				log.Printf("E! [inputs.vsphere]: Error during logout: %s", err)
 			}
 		}
 	})
@@ -228,7 +228,7 @@ func (c *Client) GetMaxQueryMetrics(ctx context.Context) (int, error) {
 			if s, ok := res[0].GetOptionValue().Value.(string); ok {
 				v, err := strconv.Atoi(s)
 				if err == nil {
-					log.Printf("D! [input.vsphere] vCenter maxQueryMetrics is defined: %d", v)
+					log.Printf("D! [inputs.vsphere] vCenter maxQueryMetrics is defined: %d", v)
 					if v == -1 {
 						// Whatever the server says, we never ask for more metrics than this.
 						return absoluteMaxMetrics, nil
@@ -239,17 +239,17 @@ func (c *Client) GetMaxQueryMetrics(ctx context.Context) (int, error) {
 			// Fall through version-based inference if value isn't usable
 		}
 	} else {
-		log.Println("D! [input.vsphere] Option query for maxQueryMetrics failed. Using default")
+		log.Println("D! [inputs.vsphere] Option query for maxQueryMetrics failed. Using default")
 	}
 
 	// No usable maxQueryMetrics setting. Infer based on version
 	ver := c.Client.Client.ServiceContent.About.Version
 	parts := strings.Split(ver, ".")
 	if len(parts) < 2 {
-		log.Printf("W! [input.vsphere] vCenter returned an invalid version string: %s. Using default query size=64", ver)
+		log.Printf("W! [inputs.vsphere] vCenter returned an invalid version string: %s. Using default query size=64", ver)
 		return 64, nil
 	}
-	log.Printf("D! [input.vsphere] vCenter version is: %s", ver)
+	log.Printf("D! [inputs.vsphere] vCenter version is: %s", ver)
 	major, err := strconv.Atoi(parts[0])
 	if err != nil {
 		return 0, err

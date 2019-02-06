@@ -1111,17 +1111,6 @@
   version = "v0.19.0"
 
 [[projects]]
-  digest = "1:c3bdfb7e9b2a66bafbd47517a1a4e489706f75af37ad5bfb57621bf41c16b556"
-  name = "github.com/wavefronthq/wavefront-sdk-go"
-  packages = [
-    "internal",
-    "senders",
-  ]
-  pruneopts = ""
-  revision = "7821ac6d8ae05fe70c6d090ebda380c64f1416e4"
-  version = "v0.9.1"
-
-[[projects]]
   branch = "master"
   digest = "1:98ed05e9796df287b90c1d96854e3913c8e349dbc546412d3cabb472ecf4b417"
   name = "github.com/wvanbergen/kafka"
