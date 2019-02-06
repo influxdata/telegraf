@@ -1,4 +1,4 @@
-// +build !windows
+// +build windows
 
 package x509_cert
 
@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"runtime"
 	"testing"
 	"time"
 
@@ -129,19 +128,17 @@ func TestGatherRemote(t *testing.T) {
 	}
 }
 
-func TestGatherLocal(t *testing.T) {
+func TestGatherLocalWin(t *testing.T) {
 	wrongCert := fmt.Sprintf("-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n", base64.StdEncoding.EncodeToString([]byte("test")))
 
 	tests := []struct {
 		name    string
-		mode    os.FileMode
 		content string
 		error   bool
 	}{
-		{name: "permission denied", mode: 0001, error: true},
-		{name: "not a certificate", mode: 0640, content: "test", error: true},
-		{name: "wrong certificate", mode: 0640, content: wrongCert, error: true},
-		{name: "correct certificate", mode: 0640, content: pki.ReadServerCert()},
+		{name: "open store", content: "CurrentUser/My", error: true},
+		{name: "wrong certificate", content: wrongCert, error: true},
+		{name: "correct certificate", content: pki.ReadServerCert()},
 	}
 
 	for _, test := range tests {
@@ -155,13 +152,6 @@ func TestGatherLocal(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if runtime.GOOS != "windows" {
-				err = f.Chmod(test.mode)
-				if err != nil {
-					t.Fatal(err)
-				}
-			}
-
 			err = f.Close()
 			if err != nil {
 				t.Fatal(err)
