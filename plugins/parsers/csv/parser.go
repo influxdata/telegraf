@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -239,22 +240,8 @@ func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface
 		case "":
 			err = fmt.Errorf("timestamp format must be specified")
 			return
-		case "unix":
-			var unixTime int64
-			unixTime, err = strconv.ParseInt(tStr, 10, 64)
-			if err != nil {
-				return
-			}
-			metricTime = time.Unix(unixTime, 0)
-		case "unix_ms":
-			var unixTime int64
-			unixTime, err = strconv.ParseInt(tStr, 10, 64)
-			if err != nil {
-				return
-			}
-			metricTime = time.Unix(unixTime/1000, (unixTime%1000)*1e6)
 		default:
-			metricTime, err = time.Parse(timestampFormat, tStr)
+			metricTime, err = internal.ParseTimestamp(tStr, timestampFormat)
 			if err != nil {
 				return
 			}

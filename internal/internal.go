@@ -7,20 +7,22 @@ import (
 	"context"
 	"crypto/rand"
 	"errors"
+	"fmt"
 	"io"
 	"log"
+	"math"
 	"math/big"
 	"os"
 	"os/exec"
+	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
 	"unicode"
 
-	"fmt"
 	"github.com/alecthomas/units"
-	"runtime"
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -329,4 +331,54 @@ func CompressWithGzip(data io.Reader) (io.Reader, error) {
 	}()
 
 	return pipeReader, err
+}
+
+// ParseTimestamp parses a timestamp value as a unix epoch of various precision.
+//
+// format = "unix": epoch is assumed to be in seconds and can come as number or string. Can have a decimal part.
+// format = "unix_ms": epoch is assumed to be in milliseconds and can come as number or string. Cannot have a decimal part.
+// format = "unix_us": epoch is assumed to be in microseconds and can come as number or string. Cannot have a decimal part.
+// format = "unix_ns": epoch is assumed to be in nanoseconds and can come as number or string. Cannot have a decimal part.
+func ParseTimestamp(timestamp interface{}, format string) (time.Time, error) {
+	timeInt, timeFractional := int64(0), int64(0)
+	timeEpochStr, ok := timestamp.(string)
+	var err error
+
+	if !ok {
+		timeEpochFloat, ok := timestamp.(float64)
+		if !ok {
+			return time.Time{}, fmt.Errorf("time: %v could not be converted to string nor float64", timestamp)
+		}
+		intPart, frac := math.Modf(timeEpochFloat)
+		timeInt, timeFractional = int64(intPart), int64(frac*1e9)
+	} else {
+		splitted := regexp.MustCompile("[.,]").Split(timeEpochStr, 2)
+		timeInt, err = strconv.ParseInt(splitted[0], 10, 64)
+		if err != nil {
+			return time.Parse(format, timeEpochStr)
+		}
+
+		if len(splitted) == 2 {
+			if len(splitted[1]) > 9 {
+				splitted[1] = splitted[1][:9] //truncates decimal part to nanoseconds precision
+			}
+			nanosecStr := splitted[1] + strings.Repeat("0", 9-len(splitted[1])) //adds 0's to the right to obtain a valid number of nanoseconds
+
+			timeFractional, err = strconv.ParseInt(nanosecStr, 10, 64)
+			if err != nil {
+				return time.Time{}, err
+			}
+		}
+	}
+	if strings.EqualFold(format, "unix") {
+		return time.Unix(timeInt, timeFractional).UTC(), nil
+	} else if strings.EqualFold(format, "unix_ms") {
+		return time.Unix(timeInt/1000, (timeInt%1000)*1e6).UTC(), nil
+	} else if strings.EqualFold(format, "unix_us") {
+		return time.Unix(0, timeInt*1e3).UTC(), nil
+	} else if strings.EqualFold(format, "unix_ns") {
+		return time.Unix(0, timeInt).UTC(), nil
+	} else {
+		return time.Time{}, errors.New("Invalid unix format")
+	}
 }
