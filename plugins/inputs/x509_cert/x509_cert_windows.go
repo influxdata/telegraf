@@ -21,7 +21,6 @@ func loadCertificatesFromWinStore(location string, storeName string) ([]*x509.Ce
 		CERT_SYSTEM_STORE_CURRENT_USER             = uint32(CERT_SYSTEM_STORE_CURRENT_USER_ID << CERT_SYSTEM_STORE_LOCATION_SHIFT)
 		CERT_SYSTEM_STORE_LOCAL_MACHINE            = uint32(CERT_SYSTEM_STORE_LOCAL_MACHINE_ID << CERT_SYSTEM_STORE_LOCATION_SHIFT)
 	)
-
 	var locations = map[string]uint32{
 		"LocalMachine": CERT_SYSTEM_STORE_LOCAL_MACHINE,
 		"CurrentUser":  CERT_SYSTEM_STORE_CURRENT_USER,
@@ -35,7 +34,6 @@ func loadCertificatesFromWinStore(location string, storeName string) ([]*x509.Ce
 	if err != nil {
 		return nil, fmt.Errorf("failed to load cert - - %s\n", err.Error())
 	}
-	fmt.Println(store)
 	defer syscall.CertCloseStore(store, 0)
 	var certificates []*x509.Certificate
 	var cert *syscall.CertContext
