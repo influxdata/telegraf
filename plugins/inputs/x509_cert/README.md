@@ -10,7 +10,8 @@ file or network connection.
 # Reads metrics from a SSL certificate
 [[inputs.x509_cert]]
   ## List certificate sources
-  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "https://example.org:443"]
+  ## On windows also available stores LocalMachine, CurrentUser
+  sources = ["LocalMachine/My","/etc/ssl/certs/ssl-cert-snakeoil.pem", "https://example.org:443"]
 
   ## Timeout for SSL connection
   # timeout = "5s"
@@ -35,6 +36,7 @@ file or network connection.
     - country
     - province
     - locality
+    - sha1thumbprint
   - fields:
     - expiry (int, seconds)
     - age (int, seconds)
@@ -45,6 +47,6 @@ file or network connection.
 ### Example output
 
 ```
-x509_cert,host=myhost,source=https://example.org age=1753627i,expiry=5503972i,startdate=1516092060i,enddate=1523349660i 1517845687000000000
-x509_cert,host=myhost,source=/etc/ssl/certs/ssl-cert-snakeoil.pem age=7522207i,expiry=308002732i,startdate=1510323480i,enddate=1825848420i 1517845687000000000
+x509_cert,host=myhost,source=https://example.org,sha1thumbprint=f18b538d1be903b6a6f056435b171589caf36bf2 age=1753627i,expiry=5503972i,startdate=1516092060i,enddate=1523349660i 1517845687000000000
+x509_cert,host=myhost,source=/etc/ssl/certs/ssl-cert-snakeoil.pem,sha1thumbprint=f18b538d1be903b6a6f056435b171589caf36bf2 age=7522207i,expiry=308002732i,startdate=1510323480i,enddate=1825848420i 1517845687000000000
 ```

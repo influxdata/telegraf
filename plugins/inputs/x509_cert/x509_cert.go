@@ -2,14 +2,16 @@
 package x509_cert
 
 import (
+	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/url"
+	"runtime"
 	"strings"
 	"time"
 
@@ -21,7 +23,8 @@ import (
 
 const sampleConfig = `
   ## List certificate sources
-  sources = ["/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443"]
+  ## On windows also available stores LocalMachine, CurrentUser
+  sources = ["LocalMachine/My",/etc/ssl/certs/ssl-cert-snakeoil.pem", "tcp://example.org:443"]
 
   ## Timeout for SSL connection
   # timeout = "5s"
@@ -54,6 +57,13 @@ func (c *X509Cert) SampleConfig() string {
 }
 
 func (c *X509Cert) getCert(location string, timeout time.Duration) ([]*x509.Certificate, error) {
+	if strings.HasPrefix(location, "LocalMachine") || strings.HasPrefix(location, "CurrentUser") {
+		if runtime.GOOS == "windows" {
+			location = "winstore://" + location
+		} else {
+			return nil, fmt.Errorf("windows stores works only in windows")
+		}
+	}
 	if strings.HasPrefix(location, "/") {
 		location = "file://" + location
 	}
@@ -113,6 +123,13 @@ func (c *X509Cert) getCert(location string, timeout time.Duration) ([]*x509.Cert
 		}
 
 		return []*x509.Certificate{cert}, nil
+	case "winstore":
+		store := strings.TrimLeft(u.Path, "/")
+		certs, err := loadCertificatesFromWinStore(u.Host, store)
+		if err != nil {
+			return nil, err
+		}
+		return certs, nil
 	default:
 		return nil, fmt.Errorf("unsuported scheme '%s' in location %s\n", u.Scheme, location)
 	}
@@ -134,12 +151,14 @@ func getFields(cert *x509.Certificate, now time.Time) map[string]interface{} {
 	return fields
 }
 
-func getTags(subject pkix.Name, location string) map[string]string {
+func getTags(cert *x509.Certificate, location string) map[string]string {
+	subject := cert.Subject
+	thumbprint := sha1.Sum(cert.Raw)
 	tags := map[string]string{
-		"source":      location,
-		"common_name": subject.CommonName,
+		"source":         location,
+		"common_name":    subject.CommonName,
+		"sha1thumbprint": hex.EncodeToString(thumbprint[:]),
 	}
-
 	if len(subject.Organization) > 0 {
 		tags["organization"] = subject.Organization[0]
 	}
@@ -166,12 +185,12 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	for _, location := range c.Sources {
 		certs, err := c.getCert(location, c.Timeout.Duration*time.Second)
 		if err != nil {
-			return fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error())
+			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
 		}
 
 		for _, cert := range certs {
 			fields := getFields(cert, now)
-			tags := getTags(cert.Subject, location)
+			tags := getTags(cert, location)
 
 			acc.AddFields("x509_cert", fields, tags)
 		}
