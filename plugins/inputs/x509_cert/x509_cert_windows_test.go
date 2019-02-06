@@ -4,7 +4,6 @@ package x509_cert
 
 import (
 	"crypto/tls"
-	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -122,57 +121,6 @@ func TestGatherRemote(t *testing.T) {
 			}
 
 			if testErr != test.error {
-				t.Errorf("%s", err)
-			}
-		})
-	}
-}
-
-func TestGatherLocal(t *testing.T) {
-	wrongCert := fmt.Sprintf("-----BEGIN CERTIFICATE-----\n%s\n-----END CERTIFICATE-----\n", base64.StdEncoding.EncodeToString([]byte("test")))
-
-	tests := []struct {
-		name    string
-		mode    os.FileMode
-		content string
-		error   bool
-	}{
-		{name: "not a certificate", content: "test", error: true},
-		{name: "wrong certificate", content: wrongCert, error: true},
-		{name: "correct certificate", content: pki.ReadServerCert()},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			f, err := ioutil.TempFile("", "x509_cert")
-			if err != nil {
-				t.Fatal(err)
-			}
-			_, err = f.Write([]byte(test.content))
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			err = f.Close()
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			defer os.Remove(f.Name())
-
-			sc := X509Cert{
-				Sources: []string{f.Name()},
-			}
-
-			error := false
-
-			acc := testutil.Accumulator{}
-			err = sc.Gather(&acc)
-			if len(acc.Errors) > 0 {
-				error = true
-			}
-
-			if error != test.error {
 				t.Errorf("%s", err)
 			}
 		})
