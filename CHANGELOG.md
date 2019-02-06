@@ -39,6 +39,7 @@
 - [#5294](https://github.com/influxdata/telegraf/pull/5294): Support passing bearer token directly in prometheus input.
 - [#5292](https://github.com/influxdata/telegraf/pull/5292): Add option to report input timestamp in prometheus output.
 - [#5234](https://github.com/influxdata/telegraf/pull/5234): Add Linux mipsle packages.
+- [#5382](https://github.com/influxdata/telegraf/pull/5382): Support unix_us and unix_ns timestamp format in csv parser.
 
 #### Bugfixes
 
