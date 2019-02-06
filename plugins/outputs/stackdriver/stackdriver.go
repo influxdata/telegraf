@@ -76,7 +76,9 @@ func (s *Stackdriver) Connect() error {
 	return nil
 }
 
-// sorted returns a copy of the metrics in time ascending order
+// Sorted returns a copy of the metrics in time ascending order.  A copy is
+// made to avoid modifying the input metric slice since doing so is not
+// allowed.
 func sorted(metrics []telegraf.Metric) []telegraf.Metric {
 	batch := make([]telegraf.Metric, 0, len(metrics))
 	for i := len(metrics) - 1; i >= 0; i-- {
