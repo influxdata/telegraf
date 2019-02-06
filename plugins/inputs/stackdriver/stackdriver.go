@@ -24,8 +24,8 @@ import (
 const (
 	description  = "Plugin that scrapes Google's v3 monitoring API."
 	sampleConfig = `
-  ## GCP Project (required - must be prefixed with "projects/")
-  project = "projects/{project_id_or_number}"
+  ## GCP Project
+  project = "erudite-bloom-151019"
 
   ## API rate limit. On a default project, it seems that a single user can make
   ## ~14 requests per second. This might be configurable. Each API request can
@@ -371,7 +371,7 @@ func (s *Stackdriver) newTimeSeriesConf(metricType string) *timeSeriesConf {
 		StartTime: &googlepbts.Timestamp{Seconds: s.windowStart.Unix()},
 	}
 	tsReq := &monitoringpb.ListTimeSeriesRequest{
-		Name:     s.Project,
+		Name:     monitoring.MetricProjectPath(s.Project),
 		Filter:   filter,
 		Interval: interval,
 	}
@@ -507,7 +507,7 @@ func (s *Stackdriver) generatetimeSeriesConfs() ([]*timeSeriesConf, error) {
 	}
 
 	ret := []*timeSeriesConf{}
-	req := &monitoringpb.ListMetricDescriptorsRequest{Name: s.Project}
+	req := &monitoringpb.ListMetricDescriptorsRequest{Name: monitoring.MetricProjectPath(s.Project)}
 
 	filters := s.newListMetricDescriptorsFilters()
 	if len(filters) == 0 {
