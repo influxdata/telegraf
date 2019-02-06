@@ -186,6 +186,10 @@ func TestWriteIgnoredErrors(t *testing.T) {
 			err:  errors.New(errStringPointsOutOfOrder),
 		},
 		{
+			name: "points too frequent",
+			err:  errors.New(errStringPointsTooFrequent),
+		},
+		{
 			name:        "other errors reported",
 			err:         errors.New("test"),
 			expectedErr: true,

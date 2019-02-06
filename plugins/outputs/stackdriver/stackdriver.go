@@ -41,8 +41,9 @@ const (
 	// MaxInt is the max int64 value.
 	MaxInt = int(^uint(0) >> 1)
 
-	errStringPointsOutOfOrder = "One or more of the points specified had an older end time than the most recent point"
-	errStringPointsTooOld     = "Data points cannot be written more than 24h in the past"
+	errStringPointsOutOfOrder  = "One or more of the points specified had an older end time than the most recent point"
+	errStringPointsTooOld      = "Data points cannot be written more than 24h in the past"
+	errStringPointsTooFrequent = "One or more points were written more frequently than the maximum sampling period configured for the metric"
 )
 
 var sampleConfig = `
@@ -99,7 +100,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 		for _, f := range m.FieldList() {
 			value, err := getStackdriverTypedValue(f.Value)
 			if err != nil {
-				log.Printf("E! [output.stackdriver] get type failed: %s", err)
+				log.Printf("E! [outputs.stackdriver] get type failed: %s", err)
 				continue
 			}
 
@@ -109,13 +110,13 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 
 			metricKind, err := getStackdriverMetricKind(m.Type())
 			if err != nil {
-				log.Printf("E! [output.stackdriver] get metric failed: %s", err)
+				log.Printf("E! [outputs.stackdriver] get metric failed: %s", err)
 				continue
 			}
 
 			timeInterval, err := getStackdriverTimeInterval(metricKind, StartTime, m.Time().Unix())
 			if err != nil {
-				log.Printf("E! [output.stackdriver] get time interval failed: %s", err)
+				log.Printf("E! [outputs.stackdriver] get time interval failed: %s", err)
 				continue
 			}
 
@@ -159,11 +160,12 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 		err := s.client.CreateTimeSeries(ctx, timeSeriesRequest)
 		if err != nil {
 			if strings.Contains(err.Error(), errStringPointsOutOfOrder) ||
-				strings.Contains(err.Error(), errStringPointsTooOld) {
-				log.Printf("D! [output.stackdriver] unable to write to Stackdriver: %s", err)
+				strings.Contains(err.Error(), errStringPointsTooOld) ||
+				strings.Contains(err.Error(), errStringPointsTooFrequent) {
+				log.Printf("D! [outputs.stackdriver] unable to write to Stackdriver: %s", err)
 				return nil
 			}
-			log.Printf("E! [output.stackdriver] unable to write to Stackdriver: %s", err)
+			log.Printf("E! [outputs.stackdriver] unable to write to Stackdriver: %s", err)
 			return err
 		}
 	}
@@ -263,7 +265,7 @@ func getStackdriverLabels(tags []*telegraf.Tag) map[string]string {
 	for k, v := range labels {
 		if len(k) > QuotaStringLengthForLabelKey {
 			log.Printf(
-				"W! [output.stackdriver] removing tag [%s] key exceeds string length for label key [%d]",
+				"W! [outputs.stackdriver] removing tag [%s] key exceeds string length for label key [%d]",
 				k,
 				QuotaStringLengthForLabelKey,
 			)
@@ -272,7 +274,7 @@ func getStackdriverLabels(tags []*telegraf.Tag) map[string]string {
 		}
 		if len(v) > QuotaStringLengthForLabelValue {
 			log.Printf(
-				"W! [output.stackdriver] removing tag [%s] value exceeds string length for label value [%d]",
+				"W! [outputs.stackdriver] removing tag [%s] value exceeds string length for label value [%d]",
 				k,
 				QuotaStringLengthForLabelValue,
 			)
@@ -283,7 +285,7 @@ func getStackdriverLabels(tags []*telegraf.Tag) map[string]string {
 	if len(labels) > QuotaLabelsPerMetricDescriptor {
 		excess := len(labels) - QuotaLabelsPerMetricDescriptor
 		log.Printf(
-			"W! [output.stackdriver] tag count [%d] exceeds quota for stackdriver labels [%d] removing [%d] random tags",
+			"W! [outputs.stackdriver] tag count [%d] exceeds quota for stackdriver labels [%d] removing [%d] random tags",
 			len(labels),
 			QuotaLabelsPerMetricDescriptor,
 			excess,
