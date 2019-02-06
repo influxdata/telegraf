@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"runtime"
 	"testing"
 	"time"
 
@@ -118,7 +117,7 @@ func TestGatherRemote(t *testing.T) {
 
 			acc := testutil.Accumulator{}
 			err = sc.Gather(&acc)
-			if err != nil {
+			if len(acc.Errors) > 0 {
 				testErr = true
 			}
 
@@ -155,11 +154,10 @@ func TestGatherLocal(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if runtime.GOOS != "windows" {
-				err = f.Chmod(test.mode)
-				if err != nil {
-					t.Fatal(err)
-				}
+
+			err = f.Chmod(test.mode)
+			if err != nil {
+				t.Fatal(err)
 			}
 
 			err = f.Close()
@@ -177,7 +175,7 @@ func TestGatherLocal(t *testing.T) {
 
 			acc := testutil.Accumulator{}
 			err = sc.Gather(&acc)
-			if err != nil {
+			if len(acc.Errors) > 0 {
 				error = true
 			}
 
