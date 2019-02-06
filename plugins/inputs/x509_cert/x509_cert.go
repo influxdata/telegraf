@@ -166,7 +166,7 @@ func (c *X509Cert) Gather(acc telegraf.Accumulator) error {
 	for _, location := range c.Sources {
 		certs, err := c.getCert(location, c.Timeout.Duration*time.Second)
 		if err != nil {
-			return fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error())
+			acc.AddError(fmt.Errorf("cannot get SSL cert '%s': %s", location, err.Error()))
 		}
 
 		for _, cert := range certs {
