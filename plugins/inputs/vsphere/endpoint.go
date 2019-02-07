@@ -46,6 +46,7 @@ type Endpoint struct {
 	initialized     bool
 	clientFactory   *ClientFactory
 	busy            sync.Mutex
+	customFields    map[int32]string
 }
 
 type resourceKind struct {
@@ -79,12 +80,13 @@ type metricEntry struct {
 type objectMap map[string]objectRef
 
 type objectRef struct {
-	name      string
-	altID     string
-	ref       types.ManagedObjectReference
-	parentRef *types.ManagedObjectReference //Pointer because it must be nillable
-	guest     string
-	dcname    string
+	name         string
+	altID        string
+	ref          types.ManagedObjectReference
+	parentRef    *types.ManagedObjectReference //Pointer because it must be nillable
+	guest        string
+	dcname       string
+	customValues map[string]string
 }
 
 func (e *Endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, bool) {
@@ -259,6 +261,18 @@ func (e *Endpoint) initalDiscovery(ctx context.Context) {
 }
 
 func (e *Endpoint) init(ctx context.Context) error {
+	client, err := e.clientFactory.GetClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Initial load of custom field metadata
+	fields, err := client.GetCustomFields(ctx)
+	if err != nil {
+		log.Println("W! [inputs.vsphere] Could not load custom field metadata")
+	} else {
+		e.customFields = fields
+	}
 
 	if e.Parent.ObjectDiscoveryInterval.Duration > 0 {
 
@@ -428,6 +442,13 @@ func (e *Endpoint) discover(ctx context.Context) error {
 		}
 	}
 
+	// Load custom field metadata
+	fields, err := client.GetCustomFields(ctx)
+	if err != nil {
+		log.Println("W! [inputs.vsphere] Could not load custom field metadata")
+		fields = nil
+	}
+
 	// Atomically swap maps
 	e.collectMux.Lock()
 	defer e.collectMux.Unlock()
@@ -436,6 +457,12 @@ func (e *Endpoint) discover(ctx context.Context) error {
 		e.resourceKinds[k].objects = v
 	}
 	e.lun2ds = l2d
+
+	if fields != nil {
+		e.customFields = fields
+	}
+
+	log.Printf("D! [inputs.vsphere] Fields: %s", fields)
 
 	sw.Stop()
 	SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": "instance-total"}, numRes)
@@ -610,14 +637,24 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 		}
 		guest := "unknown"
 		uuid := ""
+
 		// Sometimes Config is unknown and returns a nil pointer
-		//
 		if r.Config != nil {
 			guest = cleanGuestID(r.Config.GuestId)
 			uuid = r.Config.Uuid
 		}
+		cvs := make(map[string]string)
+		for _, cv := range r.Summary.CustomValue {
+			val := cv.(*types.CustomFieldStringValue)
+			key, ok := e.customFields[val.Key]
+			if !ok {
+				log.Printf("W! [inputs.vsphere] Metadata for custom field %d not found. Skipping", val.Key)
+				continue
+			}
+			cvs[key] = val.Value
+		}
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host, guest: guest, altID: uuid}
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host, guest: guest, altID: uuid, customValues: cvs}
 	}
 	return m, nil
 }
@@ -1064,6 +1101,11 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 	} else if v.Instance != "" {
 		// default
 		t["instance"] = v.Instance
+	}
+
+	// Fill in custom values if they exist (TODO: Filter)
+	for k, v := range objectRef.customValues {
+		t[k] = v
 	}
 }
 
