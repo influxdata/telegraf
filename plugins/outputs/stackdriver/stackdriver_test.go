@@ -100,9 +100,10 @@ func TestWrite(t *testing.T) {
 
 	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
 	require.Equal(t, request.TimeSeries[0].Resource.Type, "global")
+	require.Equal(t, request.TimeSeries[0].Resource.Labels["project_id"], "projects/[PROJECT]")
 }
 
-func TestWriteResourceType(t *testing.T) {
+func TestWriteResourceTypeAndLabels(t *testing.T) {
 	expectedResponse := &emptypb.Empty{}
 	mockMetric.err = nil
 	mockMetric.reqs = nil
@@ -117,7 +118,10 @@ func TestWriteResourceType(t *testing.T) {
 		Project:      fmt.Sprintf("projects/%s", "[PROJECT]"),
 		Namespace:    "test",
 		ResourceType: "foo",
-		client:       c,
+		ResourceLabels: map[string]string{
+			"mylabel": "myvalue",
+		},
+		client: c,
 	}
 
 	err = s.Connect()
@@ -127,6 +131,8 @@ func TestWriteResourceType(t *testing.T) {
 
 	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
 	require.Equal(t, request.TimeSeries[0].Resource.Type, "foo")
+	require.Equal(t, request.TimeSeries[0].Resource.Labels["project_id"], "projects/[PROJECT]")
+	require.Equal(t, request.TimeSeries[0].Resource.Labels["mylabel"], "myvalue")
 }
 
 func TestWriteAscendingTime(t *testing.T) {

@@ -19,9 +19,10 @@ import (
 
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
-	Project      string
-	Namespace    string
-	ResourceType string `toml:"resource_type"`
+	Project        string
+	Namespace      string
+	ResourceType   string            `toml:"resource_type"`
+	ResourceLabels map[string]string `toml:"resource_labels"`
 
 	client *monitoring.MetricClient
 }
@@ -48,11 +49,21 @@ const (
 )
 
 var sampleConfig = `
-  # GCP Project
-  project = "erudite-bloom-151019"
+  [[outputs.stackdriver]]
+    # GCP Project
+    project = "erudite-bloom-151019"
 
-  # The namespace for the metric descriptor
-  namespace = "telegraf"
+    # The namespace for the metric descriptor
+    namespace = "telegraf"
+
+    # Custom resource type
+    resource_type = "generic_node"
+
+  # Additonal resource labels
+  [outputs.stackdriver.resource_labels]
+    node_id = "$HOSTNAME"
+    namespace = "myapp"
+    location = "eu-north0"
 `
 
 // Connect initiates the primary connection to the GCP project.
@@ -68,6 +79,12 @@ func (s *Stackdriver) Connect() error {
 	if s.ResourceType == "" {
 		s.ResourceType = "global"
 	}
+
+	if s.ResourceLabels == nil {
+		s.ResourceLabels = make(map[string]string, 1)
+	}
+
+	s.ResourceLabels["project_id"] = s.Project
 
 	if s.client == nil {
 		ctx := context.Background()
@@ -142,10 +159,8 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 					},
 					MetricKind: metricKind,
 					Resource: &monitoredrespb.MonitoredResource{
-						Type: s.ResourceType,
-						Labels: map[string]string{
-							"project_id": s.Project,
-						},
+						Type:   s.ResourceType,
+						Labels: s.ResourceLabels,
 					},
 					Points: []*monitoringpb.Point{
 						dataPoint,
