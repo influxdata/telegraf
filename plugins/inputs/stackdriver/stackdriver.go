@@ -179,7 +179,7 @@ func (c *stackdriverMetricClient) ListMetricDescriptors(
 			mdDesc, mdErr := mdResp.Next()
 			if mdErr != nil {
 				if mdErr != iterator.Done {
-					log.Printf("D! Request %s failure: %s\n", req.String(), mdErr)
+					log.Printf("E! Request %s failure: %s\n", req.String(), mdErr)
 				}
 				break
 			}
@@ -207,7 +207,7 @@ func (c *stackdriverMetricClient) ListTimeSeries(
 			tsDesc, tsErr := tsResp.Next()
 			if tsErr != nil {
 				if tsErr != iterator.Done {
-					log.Printf("D! Request %s failure: %s\n", req.String(), tsErr)
+					log.Printf("E! Request %s failure: %s\n", req.String(), tsErr)
 				}
 				break
 			}
@@ -223,23 +223,22 @@ func (s *stackdriverMetricClient) Close() error {
 	return s.conn.Close()
 }
 
-// Description implements telegraf.inputs interface
+// Description implements telegraf.Input interface
 func (s *Stackdriver) Description() string {
 	return description
 }
 
-// SampleConfig implements telegraf.inputs interface
+// SampleConfig implements telegraf.Input interface
 func (s *Stackdriver) SampleConfig() string {
 	return sampleConfig
 }
 
-// Gather implements telegraf.inputs interface
+// Gather implements telegraf.Input interface
 func (s *Stackdriver) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 
 	err := s.initializeStackdriverClient(ctx)
 	if err != nil {
-		log.Printf("E! Failed to create stackdriver monitoring client: %v", err)
 		return err
 	}
 
@@ -248,14 +247,13 @@ func (s *Stackdriver) Gather(acc telegraf.Accumulator) error {
 
 	tsConfs, err := s.generatetimeSeriesConfs(ctx, start, end)
 	if err != nil {
-		log.Printf("E! Failed to get metrics: %s\n", err)
 		return err
 	}
 
-	var wg sync.WaitGroup
 	lmtr := limiter.NewRateLimiter(s.RateLimit, time.Second)
 	defer lmtr.Stop()
 
+	var wg sync.WaitGroup
 	wg.Add(len(tsConfs))
 	for _, tsConf := range tsConfs {
 		<-lmtr.C
@@ -414,7 +412,7 @@ func (s *Stackdriver) initializeStackdriverClient(ctx context.Context) error {
 	if s.client == nil {
 		client, err := monitoring.NewMetricClient(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create stackdriver monitoring client: %v", err)
 		}
 		s.client = &stackdriverMetricClient{conn: client}
 	}
