@@ -19,8 +19,9 @@ import (
 
 // Stackdriver is the Google Stackdriver config info.
 type Stackdriver struct {
-	Project   string
-	Namespace string
+	Project      string
+	Namespace    string
+	ResourceType string `toml:"resource_type"`
 
 	client *monitoring.MetricClient
 }
@@ -62,6 +63,10 @@ func (s *Stackdriver) Connect() error {
 
 	if s.Namespace == "" {
 		return fmt.Errorf("Namespace is a required field for stackdriver output")
+	}
+
+	if s.ResourceType == "" {
+		s.ResourceType = "global"
 	}
 
 	if s.client == nil {
@@ -137,7 +142,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 					},
 					MetricKind: metricKind,
 					Resource: &monitoredrespb.MonitoredResource{
-						Type: "global",
+						Type: s.ResourceType,
 						Labels: map[string]string{
 							"project_id": s.Project,
 						},

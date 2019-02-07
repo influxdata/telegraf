@@ -7,6 +7,8 @@ Requires `project` to specify where Stackdriver metrics will be delivered to.
 
 Metrics are grouped by the `namespace` variable and metric key - eg: `custom.googleapis.com/telegraf/system/load5`
 
+[Resource type](https://cloud.google.com/monitoring/api/resources) is configured by the `resource_type` variable (default `global`).
+
 ### Configuration
 
 ```toml
