@@ -1087,6 +1087,42 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["fieldvaluepass"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					fieldfilter := &models.FieldFilter{Name: name}
+					if ary, ok := kv.Value.(*ast.Array); ok {
+						for _, elem := range ary.Value {
+							if str, ok := elem.(*ast.String); ok {
+								fieldfilter.Filter = append(fieldfilter.Filter, str.Value)
+							}
+						}
+					}
+					f.FieldValuePass = append(f.FieldValuePass, *fieldfilter)
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["fieldvaluedrop"]; ok {
+		if subtbl, ok := node.(*ast.Table); ok {
+			for name, val := range subtbl.Fields {
+				if kv, ok := val.(*ast.KeyValue); ok {
+					fieldfilter := &models.FieldFilter{Name: name}
+					if ary, ok := kv.Value.(*ast.Array); ok {
+						for _, elem := range ary.Value {
+							if str, ok := elem.(*ast.String); ok {
+								fieldfilter.Filter = append(fieldfilter.Filter, str.Value)
+							}
+						}
+					}
+					f.FieldValueDrop = append(f.FieldValueDrop, *fieldfilter)
+				}
+			}
+		}
+	}
+
 	fields := []string{"pass", "fieldpass"}
 	for _, field := range fields {
 		if node, ok := tbl.Fields[field]; ok {
@@ -1182,6 +1218,8 @@ func buildFilter(tbl *ast.Table) (models.Filter, error) {
 
 	delete(tbl.Fields, "namedrop")
 	delete(tbl.Fields, "namepass")
+	delete(tbl.Fields, "fieldvaluedrop")
+	delete(tbl.Fields, "fieldvaluepass")
 	delete(tbl.Fields, "fielddrop")
 	delete(tbl.Fields, "fieldpass")
 	delete(tbl.Fields, "drop")

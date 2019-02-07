@@ -382,6 +382,15 @@ a pattern in this list are emitted.
 The inverse of `namepass`.  If a match is found the metric is discarded. This
 is tested on metrics after they have passed the `namepass` test.
 
+- **fieldvaluepass**:
+A table mapping field keys to arrays of glob pattern strings.  Only metrics
+that contain a field key in the table and a field value matching one of its
+patterns is emitted.
+
+- **fieldvaluedrop**:
+The inverse of `fieldvaluepass`.  If a match is found the metric is discarded. This
+is tested on metrics after they have passed the `fieldvaluepass` test.
+
 - **tagpass**:
 A table mapping tag keys to arrays of glob pattern strings.  Only metrics
 that contain a tag key in the table and a tag value matching one of its
@@ -418,6 +427,26 @@ will be discarded from the metric.  Any tag can be filtered including global
 tags and the agent `host` tag.
 
 ##### Filtering Examples
+
+Using fieldvaluepass and fieldvaluedrop:
+```toml
+[[inputs.tail]]
+  # Only collect lines related to deletions
+  [inputs.tail.fieldvaluepass]
+    message = [ "*delete*" ]
+  # But exclude lines containing /tmp
+  [inputs.tail.fieldvaluedrop]
+    message = [ "*/tmp*" ]
+
+[[inputs.socket_listener]]
+  [inputs.socket_listener.tagpass]
+    # fieldvaluepass conditions are OR, not AND.
+    # If the (target is space or land) OR (the comment is culture or code)
+    # then the metric passes
+    target = [ "space", "land" ]
+    # Globs can also be used on the field values
+    comment = [ "culture", "code*" ]
+```
 
 Using tagpass and tagdrop:
 ```toml

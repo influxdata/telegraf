@@ -243,6 +243,96 @@ func TestFilter_FieldDrop(t *testing.T) {
 	}
 }
 
+func TestFilter_FieldValuePass(t *testing.T) {
+	filters := []FieldFilter{
+		{
+			Name:   "cpu",
+			Filter: []string{"cpu-*"},
+		},
+		{
+			Name:   "mem",
+			Filter: []string{"mem_free"},
+		}}
+	f := Filter{
+		FieldValuePass: filters,
+	}
+	require.NoError(t, f.Compile())
+
+	passes := [][]*telegraf.Field{
+		{{Key: "cpu", Value: "cpu-total"}},
+		{{Key: "cpu", Value: "cpu-0"}},
+		{{Key: "cpu", Value: "cpu-1"}},
+		{{Key: "cpu", Value: "cpu-2"}},
+		{{Key: "mem", Value: "mem_free"}},
+		{{Key: "mem_pct", Value: 1.0}},
+	}
+
+	drops := [][]*telegraf.Field{
+		{{Key: "cpu", Value: "cputotal"}},
+		{{Key: "cpu", Value: "cpu0"}},
+		{{Key: "cpu", Value: "cpu1"}},
+		{{Key: "cpu", Value: "cpu2"}},
+		{{Key: "mem", Value: "mem_used"}},
+		{{Key: "mem_pct", Value: 0.8}},
+	}
+
+	for _, measurement := range passes {
+		if !f.shouldFieldsPass(measurement) {
+			t.Errorf("Expected measurement %s to pass", measurement)
+		}
+	}
+
+	for _, measurement := range drops {
+		if f.shouldFieldsPass(measurement) {
+			t.Errorf("Expected measurement %s to drop", measurement)
+		}
+	}
+}
+
+func TestFilter_FieldValueDrop(t *testing.T) {
+	filters := []FieldFilter{
+		{
+			Name:   "cpu",
+			Filter: []string{"cpu-*"},
+		},
+		{
+			Name:   "mem",
+			Filter: []string{"mem_free"},
+		}}
+	f := Filter{
+		FieldValueDrop: filters,
+	}
+	require.NoError(t, f.Compile())
+
+	drops := [][]*telegraf.Field{
+		{{Key: "cpu", Value: "cpu-total"}},
+		{{Key: "cpu", Value: "cpu-0"}},
+		{{Key: "cpu", Value: "cpu-1"}},
+		{{Key: "cpu", Value: "cpu-2"}},
+		{{Key: "mem", Value: "mem_free"}},
+	}
+
+	passes := [][]*telegraf.Field{
+		{{Key: "cpu", Value: "cputotal"}},
+		{{Key: "cpu", Value: "cpu0"}},
+		{{Key: "cpu", Value: "cpu1"}},
+		{{Key: "cpu", Value: "cpu2"}},
+		{{Key: "mem", Value: "mem_used"}},
+	}
+
+	for _, measurement := range passes {
+		if !f.shouldFieldsPass(measurement) {
+			t.Errorf("Expected measurement %s to pass", measurement)
+		}
+	}
+
+	for _, measurement := range drops {
+		if f.shouldFieldsPass(measurement) {
+			t.Errorf("Expected measurement %s to drop", measurement)
+		}
+	}
+}
+
 func TestFilter_TagPass(t *testing.T) {
 	filters := []TagFilter{
 		{
@@ -436,6 +526,50 @@ func TestFilter_FilterFieldPassAndDrop(t *testing.T) {
 	for i, field := range inputData {
 		require.Equal(t, f.shouldFieldPass(field), expectedResult[i])
 	}
+}
+
+// TestFilter_FilterFieldValuesPassAndDrop used for check case when
+// both parameters were defined
+// see: https://github.com/influxdata/telegraf/issues/2860
+func TestFilter_FilterFieldValuesPassAndDrop(t *testing.T) {
+	inputData := [][]*telegraf.Field{
+		{{Key: "field1", Value: 1}, {Key: "field2", Value: 3}},
+		{{Key: "field1", Value: 1}, {Key: "field2", Value: 2}},
+		{{Key: "field1", Value: 2}, {Key: "field2", Value: 1}},
+		{{Key: "field1", Value: 4}, {Key: "field2", Value: 1}},
+	}
+
+	expectedResult := []bool{false, true, false, false}
+
+	filterPass := []FieldFilter{
+		{
+			Name:   "field1",
+			Filter: []string{"1", "4"},
+		},
+	}
+
+	filterDrop := []FieldFilter{
+		{
+			Name:   "field1",
+			Filter: []string{"4"},
+		},
+		{
+			Name:   "field2",
+			Filter: []string{"3"},
+		},
+	}
+
+	f := Filter{
+		FieldValueDrop: filterDrop,
+		FieldValuePass: filterPass,
+	}
+
+	require.NoError(t, f.Compile())
+
+	for i, field := range inputData {
+		require.Equal(t, f.shouldFieldsPass(field), expectedResult[i])
+	}
+
 }
 
 // TestFilter_FilterTagsPassAndDrop used for check case when

@@ -14,6 +14,13 @@ type TagFilter struct {
 	filter filter.Filter
 }
 
+// FieldFilter is the name of a field, and the values on which to filter
+type FieldFilter struct {
+	Name string
+	Filter []string
+	filter filter.Filter
+}
+
 // Filter containing drop/pass and tagdrop/tagpass rules
 type Filter struct {
 	NameDrop []string
@@ -25,6 +32,9 @@ type Filter struct {
 	fieldDrop filter.Filter
 	FieldPass []string
 	fieldPass filter.Filter
+
+	FieldValueDrop []FieldFilter
+	FieldValuePass []FieldFilter
 
 	TagDrop []TagFilter
 	TagPass []TagFilter
@@ -46,7 +56,9 @@ func (f *Filter) Compile() error {
 		len(f.TagInclude) == 0 &&
 		len(f.TagExclude) == 0 &&
 		len(f.TagPass) == 0 &&
-		len(f.TagDrop) == 0 {
+		len(f.TagDrop) == 0 &&
+		len(f.FieldValueDrop) == 0 &&
+		len(f.FieldValuePass) == 0 {
 		return nil
 	}
 
@@ -91,6 +103,19 @@ func (f *Filter) Compile() error {
 			return fmt.Errorf("Error compiling 'tagpass', %s", err)
 		}
 	}
+
+	for i := range f.FieldValueDrop {
+		f.FieldValueDrop[i].filter, err = filter.Compile(f.FieldValueDrop[i].Filter)
+		if err != nil {
+			return fmt.Errorf("Error compiling 'fieldfilterdrop', %s", err)
+		}
+	}
+	for i := range f.FieldValuePass {
+		f.FieldValuePass[i].filter, err = filter.Compile(f.FieldValuePass[i].Filter)
+		if err != nil {
+			return fmt.Errorf("Error compiling 'fieldfilterpass', %s", err)
+		}
+	}
 	return nil
 }
 
@@ -106,6 +131,10 @@ func (f *Filter) Select(metric telegraf.Metric) bool {
 	}
 
 	if !f.shouldTagsPass(metric.TagList()) {
+		return false
+	}
+
+	if !f.shouldFieldsPass(metric.FieldList()) {
 		return false
 	}
 
@@ -213,6 +242,64 @@ func (f *Filter) shouldTagsPass(tags []*telegraf.Tag) bool {
 	} else if f.TagPass != nil {
 		return pass(f)
 	} else if f.TagDrop != nil {
+		return drop(f)
+	}
+
+	return true
+}
+
+// shouldFieldsPass returns true if the metric should pass, false if should drop
+// based on the fieldvaluedrop/fieldvaluepass filter parameters
+func (f *Filter) shouldFieldsPass(fields []*telegraf.Field) bool {
+	pass := func(f *Filter) bool {
+		for _, pat := range f.FieldValuePass {
+			if pat.filter == nil {
+				continue
+			}
+			for _, field := range fields {
+				if field.Key == pat.Name {
+					value, ok := field.Value.(string)
+					if !ok {
+						value = fmt.Sprintf("%v", field.Value)
+					}
+					if pat.filter.Match(value) {
+						return true
+					}
+				}
+			}
+		}
+		return false
+	}
+
+	drop := func(f *Filter) bool {
+		for _, pat := range f.FieldValueDrop {
+			if pat.filter == nil {
+				continue
+			}
+			for _, field := range fields {
+				if field.Key == pat.Name {
+					value, ok := field.Value.(string)
+					if !ok {
+						value = fmt.Sprintf("%v", field.Value)
+					}
+					if pat.filter.Match(value) {
+						return false
+					}
+				}
+			}
+		}
+		return true
+	}
+
+	// Add additional logic in case where both parameters are set.
+	// see: https://github.com/influxdata/telegraf/issues/2860
+	if f.FieldValuePass != nil && f.FieldValueDrop != nil {
+		// return true only in case when field pass and won't be dropped (true, true).
+		// in case when the same field should be passed and dropped it will be dropped (true, false).
+		return pass(f) && drop(f)
+	} else if f.FieldValuePass != nil {
+		return pass(f)
+	} else if f.FieldValueDrop != nil {
 		return drop(f)
 	}
 
