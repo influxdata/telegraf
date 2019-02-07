@@ -123,7 +123,6 @@ type (
 
 		client              metricClient
 		timeSeriesConfCache *TimeSeriesConfCache
-		ctx                 context.Context
 		prevEnd             time.Time
 	}
 
@@ -216,8 +215,8 @@ func (c *stackdriverMetricClient) ListTimeSeries(
 }
 
 // Close implements metricClient interface
-func (c *stackdriverMetricClient) Close() error {
-	return c.conn.Close()
+func (s *stackdriverMetricClient) Close() error {
+	return s.conn.Close()
 }
 
 // Description implements telegraf.inputs interface
@@ -232,7 +231,9 @@ func (s *Stackdriver) SampleConfig() string {
 
 // Gather implements telegraf.inputs interface
 func (s *Stackdriver) Gather(acc telegraf.Accumulator) error {
-	err := s.initializeStackdriverClient()
+	ctx := context.Background()
+
+	err := s.initializeStackdriverClient(ctx)
 	if err != nil {
 		log.Printf("E! Failed to create stackdriver monitoring client: %v", err)
 		return err
@@ -241,7 +242,7 @@ func (s *Stackdriver) Gather(acc telegraf.Accumulator) error {
 	start, end := s.updateWindow(s.prevEnd)
 	s.prevEnd = end
 
-	tsConfs, err := s.generatetimeSeriesConfs(start, end)
+	tsConfs, err := s.generatetimeSeriesConfs(ctx, start, end)
 	if err != nil {
 		log.Printf("E! Failed to get metrics: %s\n", err)
 		return err
@@ -256,7 +257,7 @@ func (s *Stackdriver) Gather(acc telegraf.Accumulator) error {
 		<-lmtr.C
 		go func(tsConf *timeSeriesConf) {
 			defer wg.Done()
-			acc.AddError(s.scrapeTimeSeries(acc, tsConf))
+			acc.AddError(s.scrapeTimeSeries(ctx, acc, tsConf))
 		}(tsConf)
 	}
 	wg.Wait()
@@ -406,12 +407,9 @@ func (c *TimeSeriesConfCache) IsValid() bool {
 	return c.TimeSeriesConfs != nil && time.Since(c.Generated) < c.TTL
 }
 
-func (s *Stackdriver) initializeStackdriverClient() error {
+func (s *Stackdriver) initializeStackdriverClient(ctx context.Context) error {
 	if s.client == nil {
-		s.ctx = context.Background()
-
-		// Creates a client.
-		client, err := monitoring.NewMetricClient(s.ctx)
+		client, err := monitoring.NewMetricClient(ctx)
 		if err != nil {
 			return err
 		}
@@ -467,7 +465,7 @@ func (s *Stackdriver) newListMetricDescriptorsFilters() []string {
 
 // Generate a list of timeSeriesConfig structs by making a ListMetricDescriptors
 // API request and filtering the result against our configuration.
-func (s *Stackdriver) generatetimeSeriesConfs(startTime, endTime time.Time) ([]*timeSeriesConf, error) {
+func (s *Stackdriver) generatetimeSeriesConfs(ctx context.Context, startTime, endTime time.Time) ([]*timeSeriesConf, error) {
 	if s.timeSeriesConfCache != nil && s.timeSeriesConfCache.IsValid() {
 		// Update interval for timeseries requests in timeseries cache
 		interval := &monitoringpb.TimeInterval{
@@ -494,7 +492,7 @@ func (s *Stackdriver) generatetimeSeriesConfs(startTime, endTime time.Time) ([]*
 		// this is more effecient than iterating over
 		// all metric descriptors
 		req.Filter = filter
-		mdRespChan, err := s.client.ListMetricDescriptors(s.ctx, req)
+		mdRespChan, err := s.client.ListMetricDescriptors(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -535,13 +533,13 @@ func (s *Stackdriver) generatetimeSeriesConfs(startTime, endTime time.Time) ([]*
 
 // Do the work to scrape an individual time series. Runs inside a
 // timeseries-specific goroutine.
-func (s *Stackdriver) scrapeTimeSeries(acc telegraf.Accumulator,
+func (s *Stackdriver) scrapeTimeSeries(ctx context.Context, acc telegraf.Accumulator,
 	tsConf *timeSeriesConf) error {
 
 	tsReq := tsConf.listTimeSeriesRequest
 	measurement := tsConf.measurement
 	fieldPrefix := tsConf.fieldPrefix
-	tsRespChan, err := s.client.ListTimeSeries(s.ctx, tsReq)
+	tsRespChan, err := s.client.ListTimeSeries(ctx, tsReq)
 	if err != nil {
 		return err
 	}
