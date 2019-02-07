@@ -293,10 +293,6 @@ type timeSeriesConf struct {
 
 // Generate filter string for ListTimeSeriesRequest
 func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
-	if s.Filter == nil {
-		return ""
-	}
-
 	functions := []string{
 		"starts_with",
 		"ends_with",
@@ -304,6 +300,9 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 		"one_of",
 	}
 	filterString := fmt.Sprintf(`metric.type = "%s"`, metricType)
+	if s.Filter == nil {
+		return filterString
+	}
 
 	var valueFmt string
 	if len(s.Filter.ResourceLabels) > 0 {
