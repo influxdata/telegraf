@@ -48,11 +48,15 @@ elif [[ -f /etc/debian_version ]]; then
     fi
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release
-    if [[ $ID = "amzn" ]]; then
-        # Amazon Linux logic
-        if [[ "$1" = "0" ]]; then
-            # InfluxDB is no longer installed, remove from init system
-            rm -f /etc/default/telegraf
+    if [[ "$ID" = "amzn" ]] && [[ "$1" = "0" ]]; then
+        # InfluxDB is no longer installed, remove from init system
+        rm -f /etc/default/telegraf
+
+        if [[ "$NAME" = "Amazon Linux" ]]; then
+            # Amazon Linux 2+ logic
+            disable_systemd /usr/lib/systemd/system/telegraf.service
+        elif [[ "$NAME" = "Amazon Linux AMI" ]]; then
+            # Amazon Linux logic
             disable_chkconfig
         fi
     fi
