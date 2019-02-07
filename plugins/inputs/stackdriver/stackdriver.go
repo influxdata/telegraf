@@ -23,10 +23,19 @@ import (
 )
 
 const (
-	description  = "Plugin that scrapes Google's v3 monitoring API."
+	description  = "Gather timeseries from Google Cloud Platform v3 monitoring API"
 	sampleConfig = `
   ## GCP Project
   project = "erudite-bloom-151019"
+
+  ## Select all timeseries that start with the given metric type.
+  metric_type_prefix_include = [
+    "custom.googleapis.com/",
+    "compute.googleapis.com/",
+  ]
+
+  ## Exclude timeseries that start with the given metric type.
+  metric_type_prefix_exclude = []
 
   ## API rate limit. On a default project, it seems that a single user can make
   ## ~14 requests per second. This might be configurable. Each API request can
@@ -35,7 +44,7 @@ const (
   ## custom ones) every 60s.
   # rate_limit = 14
 
-  ## Collection Delay Seconds (required - must account for metrics availability via Stackdriver Monitoring API)
+  ## Collection delay; if set too low metrics may not yet be available.
   # delay = "5m"
 
   ## The first query to stackdriver queries for data points that have timestamp t
@@ -45,13 +54,20 @@ const (
   ## Note that influx will de-dedupe points that are pulled twice,
   ## so it's best to be safe here, just in case it takes GCP awhile
   ## to get around to recording the data you seek.
+  ## Collection window size.
+  ##
+  ## Along with the delay option, controls the number of points selected on
+  ## each gather.  When set, metrics are gathered between:
+  ##   now() - delay and now() - delay - window.
+  ##
+  ## If unset, the window will start at 1m and be set dynamically to span the time
+  ## between calls; which will be approximately the length of the interval.
   # window = "1m"
 
-  ## Metric collection period
+  ## Override data collection interval; recommended to set to 1m or larger.
   interval = "1m"
 
   ## Configure the TTL for the internal cache of timeseries requests.
-  ## Defaults to 1 hr if not specified
   # cache_ttl = "1h"
 
   ## Sets whether or not to scrape all bucket counts for metrics whose value
@@ -60,18 +76,6 @@ const (
   ## configuration option, wherein you may specifiy a list of aggregate functions
   ## (e.g., ALIGN_PERCENTILE_99) that might be more useful to you.
   # scrape_distribution_buckets = true
-
-  ## Excluded GCP metric types. Any string prefix works.
-  ## Only declare either this or includeMetricTypePrefixes
-  exclude_metric_type_prefixes = [
-  	"agent",
-  	"aws",
-  	"custom"
-  ]
-
-  ## *Only* include these GCP metric types. Any string prefix works
-  ## Only declare either this or excludeMetricTypePrefixes
-  # include_metric_type_prefixes = []
 
   ## Declares a list of aggregate functions to be used for metric types whose
   ## value type is "distribution". These aggregate values are recorded in the
@@ -115,8 +119,8 @@ type (
 		Window                          internal.Duration     `toml:"window"`
 		Delay                           internal.Duration     `toml:"delay"`
 		CacheTTL                        internal.Duration     `toml:"cache_ttl"`
-		IncludeMetricTypePrefixes       []string              `toml:"include_metric_type_prefixes"`
-		ExcludeMetricTypePrefixes       []string              `toml:"exclude_metric_type_prefixes"`
+		MetricTypePrefixInclude         []string              `toml:"metric_type_prefix_include"`
+		MetricTypePrefixExclude         []string              `toml:"metric_type_prefix_exclude"`
 		ScrapeDistributionBuckets       bool                  `toml:"scrape_distribution_buckets"`
 		DistributionAggregationAligners []string              `toml:"distribution_aggregation_aligners"`
 		Filter                          *ListTimeSeriesFilter `toml:"filter"`
@@ -443,20 +447,20 @@ func includeExcludeHelper(key string, includes []string, excludes []string) bool
 // "includeMetricTypePrefixes" and "excludeMetricTypePrefixes"
 func (s *Stackdriver) includeMetricType(metricType string) bool {
 	k := metricType
-	inc := s.IncludeMetricTypePrefixes
-	exc := s.ExcludeMetricTypePrefixes
+	inc := s.MetricTypePrefixInclude
+	exc := s.MetricTypePrefixExclude
 
 	return includeExcludeHelper(k, inc, exc)
 }
 
 // Generates filter for list metric descriptors request
 func (s *Stackdriver) newListMetricDescriptorsFilters() []string {
-	if len(s.IncludeMetricTypePrefixes) == 0 {
+	if len(s.MetricTypePrefixInclude) == 0 {
 		return nil
 	}
 
-	metricTypeFilters := make([]string, len(s.IncludeMetricTypePrefixes))
-	for i, metricTypePrefix := range s.IncludeMetricTypePrefixes {
+	metricTypeFilters := make([]string, len(s.MetricTypePrefixInclude))
+	for i, metricTypePrefix := range s.MetricTypePrefixInclude {
 		metricTypeFilters[i] = fmt.Sprintf(`metric.type = starts_with("%s")`, metricTypePrefix)
 	}
 	return metricTypeFilters
@@ -547,7 +551,6 @@ func (s *Stackdriver) scrapeTimeSeries(ctx context.Context, acc telegraf.Accumul
 		tags := map[string]string{
 			"resource_type": tsDesc.Resource.Type,
 		}
-		fmt.Println(len(tsDesc.Points))
 		for k, v := range tsDesc.Resource.Labels {
 			tags[k] = v
 		}
