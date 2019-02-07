@@ -73,16 +73,6 @@ const (
   ## Only declare either this or excludeMetricTypePrefixes
   # include_metric_type_prefixes = []
 
-  ## Excluded GCP metric and resource tags. Any string prefix works.
-  ## Only declare either this or includeTagPrefixes
-  exclude_tag_prefixes = [
-  	"pod_id",
-  ]
-
-  ## *Only* include these GCP metric and resource tags. Any string prefix works
-  ## Only declare either this or excludeTagPrefixes
-  # include_tag_prefixes = nil
-
   ## Declares a list of aggregate functions to be used for metric types whose
   ## value type is "distribution". These aggregate values are recorded in the
   ## distribution's measurement *in addition* to the bucket counts. That is to
@@ -127,8 +117,6 @@ type (
 		CacheTTL                        internal.Duration     `toml:"cache_ttl"`
 		IncludeMetricTypePrefixes       []string              `toml:"include_metric_type_prefixes"`
 		ExcludeMetricTypePrefixes       []string              `toml:"exclude_metric_type_prefixes"`
-		IncludeTagPrefixes              []string              `toml:"include_tag_prefixes"`
-		ExcludeTagPrefixes              []string              `toml:"exclude_tag_prefixes"`
 		ScrapeDistributionBuckets       bool                  `toml:"scrape_distribution_buckets"`
 		DistributionAggregationAligners []string              `toml:"distribution_aggregation_aligners"`
 		Filter                          *ListTimeSeriesFilter `toml:"filter"`
@@ -464,14 +452,6 @@ func (s *Stackdriver) includeMetricType(metricType string) bool {
 	return includeExcludeHelper(k, inc, exc)
 }
 
-func (s *Stackdriver) includeTag(tagKey string) bool {
-	k := tagKey
-	inc := s.IncludeTagPrefixes
-	exc := s.ExcludeTagPrefixes
-
-	return includeExcludeHelper(k, inc, exc)
-}
-
 // Generates filter for list metric descriptors request
 func (s *Stackdriver) newListMetricDescriptorsFilters() []string {
 	if len(s.IncludeMetricTypePrefixes) == 0 {
@@ -569,16 +549,6 @@ func (s *Stackdriver) scrapeTimeSeries(acc telegraf.Accumulator,
 	for tsDesc := range tsRespChan {
 		tags := map[string]string{
 			"resource_type": tsDesc.Resource.Type,
-		}
-		for k, v := range tsDesc.Resource.Labels {
-			if s.includeTag(k) {
-				tags[k] = v
-			}
-		}
-		for k, v := range tsDesc.Metric.Labels {
-			if s.includeTag(k) {
-				tags[k] = v
-			}
 		}
 		for _, p := range tsDesc.Points {
 			ts := time.Unix(p.Interval.EndTime.Seconds, 0)
