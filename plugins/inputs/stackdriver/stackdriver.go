@@ -270,7 +270,7 @@ func (s *Stackdriver) updateWindow(prevEnd time.Time) (time.Time, time.Time) {
 	if s.Window.Duration != 0 {
 		start = time.Now().Add(-s.Delay.Duration).Add(-s.Window.Duration)
 	} else if prevEnd.IsZero() {
-		start = time.Now().Add(-s.Delay.Duration).Add(defaultWindow.Duration)
+		start = time.Now().Add(-s.Delay.Duration).Add(-defaultWindow.Duration)
 	} else {
 		start = prevEnd
 	}
