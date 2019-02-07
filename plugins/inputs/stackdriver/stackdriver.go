@@ -13,6 +13,7 @@ import (
 	googlepbduration "github.com/golang/protobuf/ptypes/duration"
 	googlepbts "github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/plugins/inputs" // Imports the Stackdriver Monitoring client package.
 	"google.golang.org/api/iterator"
@@ -35,7 +36,7 @@ const (
   # rate_limit = 14
 
   ## Collection Delay Seconds (required - must account for metrics availability via Stackdriver Monitoring API)
-  # delay_seconds = 60
+  # delay = "5m"
 
   ## The first query to stackdriver queries for data points that have timestamp t
   ## such that: (now() - delaySeconds - lookbackSeconds) <= t <= (now() - delaySeconds).
@@ -44,14 +45,14 @@ const (
   ## Note that influx will de-dedupe points that are pulled twice,
   ## so it's best to be safe here, just in case it takes GCP awhile
   ## to get around to recording the data you seek.
-  # lookback_seconds = 120
+  # window = "1m"
 
   ## Metric collection period
   interval = "1m"
 
   ## Configure the TTL for the internal cache of timeseries requests.
   ## Defaults to 1 hr if not specified
-  # cache_ttl_seconds = 3600
+  # cache_ttl = "1h"
 
   ## Sets whether or not to scrape all bucket counts for metrics whose value
   ## type is "distribution". If those ~70 fields per metric
@@ -111,14 +112,19 @@ const (
 `
 )
 
+var (
+	defaultWindow = internal.Duration{Duration: 1 * time.Minute}
+	defaultDelay  = internal.Duration{Duration: 5 * time.Minute}
+)
+
 type (
 	// Stackdriver is the Google Stackdriver config info.
 	Stackdriver struct {
 		Project                         string                `toml:"project"`
 		RateLimit                       int                   `toml:"rate_limit"`
-		LookbackSeconds                 int64                 `toml:"lookback_seconds"`
-		DelaySeconds                    int64                 `toml:"delay_seconds"`
-		CacheTTLSeconds                 int64                 `toml:"cache_ttl_seconds"`
+		Window                          internal.Duration     `toml:"window"`
+		Delay                           internal.Duration     `toml:"delay"`
+		CacheTTL                        internal.Duration     `toml:"cache_ttl"`
 		IncludeMetricTypePrefixes       []string              `toml:"include_metric_type_prefixes"`
 		ExcludeMetricTypePrefixes       []string              `toml:"exclude_metric_type_prefixes"`
 		IncludeTagPrefixes              []string              `toml:"include_tag_prefixes"`
@@ -130,8 +136,7 @@ type (
 		client              metricClient
 		timeSeriesConfCache *TimeSeriesConfCache
 		ctx                 context.Context
-		windowStart         time.Time
-		windowEnd           time.Time
+		prevEnd             time.Time
 	}
 
 	// ListTimeSeriesFilter contains resource labels and metric labels
@@ -227,20 +232,6 @@ func (c *stackdriverMetricClient) Close() error {
 	return c.conn.Close()
 }
 
-func init() {
-	f := func() telegraf.Input {
-		return &Stackdriver{
-			RateLimit:                       14,
-			LookbackSeconds:                 120,
-			DelaySeconds:                    60,
-			ScrapeDistributionBuckets:       true,
-			DistributionAggregationAligners: []string{},
-		}
-	}
-
-	inputs.Add("stackdriver", f)
-}
-
 // Description implements telegraf.inputs interface
 func (s *Stackdriver) Description() string {
 	return description
@@ -259,9 +250,10 @@ func (s *Stackdriver) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	s.updateWindow()
+	start, end := s.updateWindow(s.prevEnd)
+	s.prevEnd = end
 
-	tsConfs, err := s.generatetimeSeriesConfs()
+	tsConfs, err := s.generatetimeSeriesConfs(start, end)
 	if err != nil {
 		log.Printf("E! Failed to get metrics: %s\n", err)
 		return err
@@ -284,15 +276,17 @@ func (s *Stackdriver) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (s *Stackdriver) updateWindow() {
-	windowEnd := time.Now().Add(-time.Duration(s.DelaySeconds) * time.Second)
-
-	if s.windowEnd.IsZero() {
-		s.windowStart = windowEnd.Add(-time.Duration(s.LookbackSeconds) * time.Second)
+func (s *Stackdriver) updateWindow(prevEnd time.Time) (time.Time, time.Time) {
+	var start time.Time
+	if s.Window.Duration != 0 {
+		start = time.Now().Add(-s.Delay.Duration).Add(-s.Window.Duration)
+	} else if prevEnd.IsZero() {
+		start = time.Now().Add(-s.Delay.Duration).Add(defaultWindow.Duration)
 	} else {
-		s.windowStart = s.windowEnd
+		start = prevEnd
 	}
-	s.windowEnd = windowEnd
+	end := time.Now().Add(-s.Delay.Duration)
+	return start, end
 }
 
 // Internal structure which holds our configuration for a particular GCP time
@@ -364,11 +358,11 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 
 // Create and initialize a timeSeriesConf for a given GCP metric type with
 // defaults taken from the gcp_stackdriver plugin configuration.
-func (s *Stackdriver) newTimeSeriesConf(metricType string) *timeSeriesConf {
+func (s *Stackdriver) newTimeSeriesConf(metricType string, startTime, endTime time.Time) *timeSeriesConf {
 	filter := s.newListTimeSeriesFilter(metricType)
 	interval := &monitoringpb.TimeInterval{
-		EndTime:   &googlepbts.Timestamp{Seconds: s.windowEnd.Unix()},
-		StartTime: &googlepbts.Timestamp{Seconds: s.windowStart.Unix()},
+		EndTime:   &googlepbts.Timestamp{Seconds: endTime.Unix()},
+		StartTime: &googlepbts.Timestamp{Seconds: startTime.Unix()},
 	}
 	tsReq := &monitoringpb.ListTimeSeriesRequest{
 		Name:     monitoring.MetricProjectPath(s.Project),
@@ -493,12 +487,12 @@ func (s *Stackdriver) newListMetricDescriptorsFilters() []string {
 
 // Generate a list of timeSeriesConfig structs by making a ListMetricDescriptors
 // API request and filtering the result against our configuration.
-func (s *Stackdriver) generatetimeSeriesConfs() ([]*timeSeriesConf, error) {
+func (s *Stackdriver) generatetimeSeriesConfs(startTime, endTime time.Time) ([]*timeSeriesConf, error) {
 	if s.timeSeriesConfCache != nil && s.timeSeriesConfCache.IsValid() {
 		// Update interval for timeseries requests in timeseries cache
 		interval := &monitoringpb.TimeInterval{
-			EndTime:   &googlepbts.Timestamp{Seconds: s.windowEnd.Unix()},
-			StartTime: &googlepbts.Timestamp{Seconds: s.windowStart.Unix()},
+			EndTime:   &googlepbts.Timestamp{Seconds: endTime.Unix()},
+			StartTime: &googlepbts.Timestamp{Seconds: startTime.Unix()},
 		}
 		for _, timeSeriesConf := range s.timeSeriesConfCache.TimeSeriesConfs {
 			timeSeriesConf.listTimeSeriesRequest.Interval = interval
@@ -535,17 +529,17 @@ func (s *Stackdriver) generatetimeSeriesConfs() ([]*timeSeriesConf, error) {
 
 			if valueType == metricpb.MetricDescriptor_DISTRIBUTION {
 				if s.ScrapeDistributionBuckets {
-					tsConf := s.newTimeSeriesConf(metricType)
+					tsConf := s.newTimeSeriesConf(metricType, startTime, endTime)
 					tsConf.initForDistribution()
 					ret = append(ret, tsConf)
 				}
 				for _, alignerStr := range s.DistributionAggregationAligners {
-					tsConf := s.newTimeSeriesConf(metricType)
+					tsConf := s.newTimeSeriesConf(metricType, startTime, endTime)
 					tsConf.initForAggregate(alignerStr)
 					ret = append(ret, tsConf)
 				}
 			} else {
-				ret = append(ret, s.newTimeSeriesConf(metricType))
+				ret = append(ret, s.newTimeSeriesConf(metricType, startTime, endTime))
 			}
 		}
 	}
@@ -553,7 +547,7 @@ func (s *Stackdriver) generatetimeSeriesConfs() ([]*timeSeriesConf, error) {
 	s.timeSeriesConfCache = &TimeSeriesConfCache{
 		TimeSeriesConfs: ret,
 		Generated:       time.Now(),
-		TTL:             time.Duration(s.CacheTTLSeconds) * time.Second,
+		TTL:             s.CacheTTL.Duration,
 	}
 
 	return ret, nil
@@ -684,4 +678,17 @@ func (s *Stackdriver) scrapeDistribution(
 	}
 
 	return fields
+}
+
+func init() {
+	f := func() telegraf.Input {
+		return &Stackdriver{
+			RateLimit:                       14,
+			Delay:                           defaultDelay,
+			ScrapeDistributionBuckets:       true,
+			DistributionAggregationAligners: []string{},
+		}
+	}
+
+	inputs.Add("stackdriver", f)
 }
