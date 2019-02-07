@@ -38,6 +38,16 @@ and creates metrics using one of the supported [input data formats][].
   ## Shard iterator type (only 'TRIM_HORIZON' and 'LATEST' currently supported)
   # shard_iterator_type = "TRIM_HORIZON"
 
+  ## Maximum messages to read from the broker that have not been written by an
+  ## output.  For best throughput set based on the number of metrics within
+  ## each message and the size of the output's metric_batch_size.
+  ##
+  ## For example, if each message from the queue contains 10 metrics and the
+  ## output metric_batch_size is 1000, setting this to 100 will ensure that a
+  ## full batch is collected and the write is triggered immediately without
+  ## waiting until the next flush_interval.
+  # max_undelivered_messages = 1000
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -47,9 +57,24 @@ and creates metrics using one of the supported [input data formats][].
   ## Optional
   ## Configuration for a dynamodb checkpoint
   [inputs.kinesis_consumer.checkpoint_dynamodb]
-	app_name = "default"
-	table_name = "default"
+    ## unique name for this consumer
+    app_name = "default"
+    table_name = "default"
 ```
+
+
+#### DynamoDB Checkpoint
+
+The DynamoDB checkpoint stores the last processed record in a DynamoDB. To leverage
+this functionality, create a table with the folowing keys:
+
+```
+Partition key: namespace
+Sort key: shard_id
+```
+
+<img width="727" alt="screen shot 2017-11-22 at 7 59 36 pm" src="https://user-images.githubusercontent.com/739782/33158557-b90e4228-cfbf-11e7-9a99-73b56a446f5f.png">
+
 
 [kinesis]: https://aws.amazon.com/kinesis/
 [input data formats]: /docs/DATA_FORMATS_INPUT.md
