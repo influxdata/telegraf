@@ -126,7 +126,7 @@ type (
 		Filter                          *ListTimeSeriesFilter `toml:"filter"`
 
 		client              metricClient
-		timeSeriesConfCache *TimeSeriesConfCache
+		timeSeriesConfCache *timeSeriesConfCache
 		prevEnd             time.Time
 	}
 
@@ -143,7 +143,7 @@ type (
 	}
 
 	// TimeSeriesConfCache caches generated timeseries configurations
-	TimeSeriesConfCache struct {
+	timeSeriesConfCache struct {
 		TTL             time.Duration
 		Generated       time.Time
 		TimeSeriesConfs []*timeSeriesConf
@@ -404,7 +404,7 @@ func (t *timeSeriesConf) initForDistribution() {
 }
 
 // IsValid checks timeseriesconf cache validity
-func (c *TimeSeriesConfCache) IsValid() bool {
+func (c *timeSeriesConfCache) IsValid() bool {
 	return c.TimeSeriesConfs != nil && time.Since(c.Generated) < c.TTL
 }
 
@@ -459,7 +459,7 @@ func (s *Stackdriver) newListMetricDescriptorsFilters() []string {
 
 	metricTypeFilters := make([]string, len(s.MetricTypePrefixInclude))
 	for i, metricTypePrefix := range s.MetricTypePrefixInclude {
-		metricTypeFilters[i] = fmt.Sprintf(`metric.type = starts_with("%s")`, metricTypePrefix)
+		metricTypeFilters[i] = fmt.Sprintf(`metric.type = starts_with(%q)`, metricTypePrefix)
 	}
 	return metricTypeFilters
 }
@@ -523,7 +523,7 @@ func (s *Stackdriver) generatetimeSeriesConfs(ctx context.Context, startTime, en
 		}
 	}
 
-	s.timeSeriesConfCache = &TimeSeriesConfCache{
+	s.timeSeriesConfCache = &timeSeriesConfCache{
 		TimeSeriesConfs: ret,
 		Generated:       time.Now(),
 		TTL:             s.CacheTTL.Duration,
