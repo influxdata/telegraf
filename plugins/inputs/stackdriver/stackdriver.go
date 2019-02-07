@@ -547,6 +547,13 @@ func (s *Stackdriver) scrapeTimeSeries(ctx context.Context, acc telegraf.Accumul
 		tags := map[string]string{
 			"resource_type": tsDesc.Resource.Type,
 		}
+		fmt.Println(len(tsDesc.Points))
+		for k, v := range tsDesc.Resource.Labels {
+			tags[k] = v
+		}
+		for k, v := range tsDesc.Metric.Labels {
+			tags[k] = v
+		}
 		for _, p := range tsDesc.Points {
 			ts := time.Unix(p.Interval.EndTime.Seconds, 0)
 
