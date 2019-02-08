@@ -40,6 +40,7 @@
 - [#5292](https://github.com/influxdata/telegraf/pull/5292): Add option to report input timestamp in prometheus output.
 - [#5234](https://github.com/influxdata/telegraf/pull/5234): Add Linux mipsle packages.
 - [#5382](https://github.com/influxdata/telegraf/pull/5382): Support unix_us and unix_ns timestamp format in csv parser.
+- [#5391](https://github.com/influxdata/telegraf/pull/5391): Add resource type and resource label support to stackdriver output.
 
 #### Bugfixes
 
@@ -49,6 +50,7 @@
 - [#5304](https://github.com/influxdata/telegraf/issues/5304): Fix x509_cert input stops checking certs after first error.
 - [#5315](https://github.com/influxdata/telegraf/issues/5315): Skip string fields when writing to stackdriver output.
 - [#5364](https://github.com/influxdata/telegraf/issues/5364): Send metrics in ascending time order in stackdriver output.
+- [#5117](https://github.com/influxdata/telegraf/issues/5117): Use systemd in Amazon Linux 2 rpm.
 
 ## v1.9.4 [2019-02-05]
 
