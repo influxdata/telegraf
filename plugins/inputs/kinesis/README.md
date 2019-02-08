@@ -63,6 +63,18 @@ and creates metrics using one of the supported [input data formats][].
 ```
 
 
+#### Required AWS IAM permissions
+
+Kinesis:
+ - DescribeStream
+ - GetRecords
+ - GetShardIterator
+
+DynamoDB:
+ - GetItem
+ - PutItem
+
+
 #### DynamoDB Checkpoint
 
 The DynamoDB checkpoint stores the last processed record in a DynamoDB. To leverage
