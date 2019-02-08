@@ -7,6 +7,10 @@ Requires `project` to specify where Stackdriver metrics will be delivered to.
 
 Metrics are grouped by the `namespace` variable and metric key - eg: `custom.googleapis.com/telegraf/system/load5`
 
+[Resource type](https://cloud.google.com/monitoring/api/resources) is configured by the `resource_type` variable (default `global`).
+
+Additional resource labels can be configured by `resource_labels`. By default the required `project_id` label is always set to the `project` variable.
+
 ### Configuration
 
 ```toml
@@ -16,6 +20,15 @@ Metrics are grouped by the `namespace` variable and metric key - eg: `custom.goo
 
   # The namespace for the metric descriptor
   namespace = "telegraf"
+
+  # Custom resource type
+  resource_type = "generic_node"
+
+# Additonal resource labels
+[outputs.stackdriver.resource_labels]
+  node_id = "$HOSTNAME"
+  namespace = "myapp"
+  location = "eu-north0"
 ```
 
 ### Restrictions

@@ -97,6 +97,42 @@ func TestWrite(t *testing.T) {
 	require.NoError(t, err)
 	err = s.Write(testutil.MockMetrics())
 	require.NoError(t, err)
+
+	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Equal(t, request.TimeSeries[0].Resource.Type, "global")
+	require.Equal(t, request.TimeSeries[0].Resource.Labels["project_id"], "projects/[PROJECT]")
+}
+
+func TestWriteResourceTypeAndLabels(t *testing.T) {
+	expectedResponse := &emptypb.Empty{}
+	mockMetric.err = nil
+	mockMetric.reqs = nil
+	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
+
+	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := &Stackdriver{
+		Project:      fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Namespace:    "test",
+		ResourceType: "foo",
+		ResourceLabels: map[string]string{
+			"mylabel": "myvalue",
+		},
+		client: c,
+	}
+
+	err = s.Connect()
+	require.NoError(t, err)
+	err = s.Write(testutil.MockMetrics())
+	require.NoError(t, err)
+
+	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Equal(t, request.TimeSeries[0].Resource.Type, "foo")
+	require.Equal(t, request.TimeSeries[0].Resource.Labels["project_id"], "projects/[PROJECT]")
+	require.Equal(t, request.TimeSeries[0].Resource.Labels["mylabel"], "myvalue")
 }
 
 func TestWriteAscendingTime(t *testing.T) {
