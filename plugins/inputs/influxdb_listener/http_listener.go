@@ -326,7 +326,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		i := bytes.LastIndexByte(buf, '\n')
 		if i == -1 {
 			// drop any line longer than the max buffer size
-			log.Printf("D! http_listener received a single line longer than the maximum of %d bytes",
+			log.Printf("E! http_listener received a single line longer than the maximum of %d bytes",
 				len(buf))
 			hangingBytes = true
 			return400 = true
