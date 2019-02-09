@@ -1,102 +1,162 @@
 # Stackdriver Input Plugin
 
-Stackdriver scrapes metrics from Google Cloud Monitoring.
+Stackdriver gathers metrics from the [Stackdriver Monitoring API][stackdriver].
 
-### Credentials
+This plugin accesses APIs which are [chargeable][pricing]; you might incur
+costs.
 
-This plugin uses a [Google Service Account](https://cloud.google.com/docs/authentication/getting-started) to interacting with the Stackdriver Monitoring API.
-
-### Configuration:
+### Configuration
 
 ```toml
 [[inputs.stackdriver]]
-  ## GCP Project (required - must be prefixed with "projects/")
-  project = "projects/{project_id_or_number}"
+  ## GCP Project
+  project = "erudite-bloom-151019"
 
-  ## API rate limit. On a default project, it seems that a single user can make
-  ## ~14 requests per second. This might be configurable. Each API request can
-  ## fetch every time series for a single metric type, though -- this is plenty
-  ## fast for scraping all the builtin metric types (and even a handful of
-  ## custom ones) every 60s.
-  # rate_limit = 14
+  ## Include timeseries that start with the given metric type.
+  metric_type_prefix_include = [
+    "compute.googleapis.com/",
+  ]
 
-  ## Collection Delay Seconds (required - must account for metrics availability via Stackdriver Monitoring API)
-  # delay_seconds = 60
+  ## Exclude timeseries that start with the given metric type.
+  # metric_type_prefix_exclude = []
 
-  ## The first query to stackdriver queries for data points that have timestamp t
-  ## such that: (now() - delaySeconds - lookbackSeconds) <= t <= (now() - delaySeconds).
-  ## The subsequence queries to stackdriver query for data points that have timestamp t
-  ## such that: lastQueryEndTime <= t <= (now() - delaySeconds).
-  ## Note that influx will de-dedupe points that are pulled twice,
-  ## so it's best to be safe here, just in case it takes GCP awhile
-  ## to get around to recording the data you seek.
-  # lookback_seconds = 120
-
-  ## Metric collection period
+  ## Most metrics are updated no more than once per minute; it is recommended
+  ## to override the agent level interval with a value of 1m or greater.
   interval = "1m"
 
-  ## Configure the TTL for the internal cache of timeseries requests.
-  ## Defaults to 1 hr if not specified
-  # cache_ttl_seconds = 3600
+  ## Maximum number of API calls to make per second.  The quota for accounts
+  ## varies, it can be viewed on the API dashboard:
+  ##   https://cloud.google.com/monitoring/quotas#quotas_and_limits
+  # rate_limit = 14
 
-  ## Sets whether or not to scrape all bucket counts for metrics whose value
-  ## type is "distribution". If those ~70 fields per metric
-  ## type are annoying to you, try out the distributionAggregationAligners
-  ## configuration option, wherein you may specifiy a list of aggregate functions
-  ## (e.g., ALIGN_PERCENTILE_99) that might be more useful to you.
-  # scrape_distribution_buckets = true
+  ## The delay and window options control the number of points selected on
+  ## each gather.  When set, metrics are gathered between:
+  ##   start: now() - delay - window
+  ##   end:   now() - delay
+  #
+  ## Collection delay; if set too low metrics may not yet be available.
+  # delay = "5m"
+  #
+  ## If unset, the window will start at 1m and be updated dynamically to span
+  ## the time between calls (approximately the length of the plugin interval).
+  # window = "1m"
 
-  ## Excluded GCP metric types. Any string prefix works.
-  ## Only declare either this or includeMetricTypePrefixes
-  exclude_metric_type_prefixes = [
-        "agent",
-        "aws",
-        "custom"
-  ]
+  ## TTL for cached list of metric types.  This is the maximum amount of time
+  ## it may take to discover new metrics.
+  # cache_ttl = "1h"
 
-  ## *Only* include these GCP metric types. Any string prefix works
-  ## Only declare either this or excludeMetricTypePrefixes
-  # include_metric_type_prefixes = []
+  ## If true, raw bucket counts are collected for distribution value types.
+  ## For a more lightweight collection, you may wish to disable and use
+  ## distribution_aggregation_aligners instead.
+  # gather_raw_distribution_buckets = true
 
-  ## Excluded GCP metric and resource tags. Any string prefix works.
-  ## Only declare either this or includeTagPrefixes
-  exclude_tag_prefixes = [
-        "pod_id",
-  ]
+  ## Aggregate functions to be used for metrics whose value type is
+  ## distribution.  These aggregate values are recorded in in addition to raw
+  ## bucket counts; if they are enabled.
+  ##
+  ## For a list of aligner strings see:
+  ##   https://cloud.google.com/monitoring/api/ref_v3/rpc/google.monitoring.v3#aligner
+  # distribution_aggregation_aligners = [
+  # 	"ALIGN_PERCENTILE_99",
+  # 	"ALIGN_PERCENTILE_95",
+  # 	"ALIGN_PERCENTILE_50",
+  # ]
 
-  ## *Only* include these GCP metric and resource tags. Any string prefix works
-  ## Only declare either this or excludeTagPrefixes
-  # include_tag_prefixes = nil
-
-  ## Declares a list of aggregate functions to be used for metric types whose
-  ## value type is "distribution". These aggregate values are recorded in the
-  ## distribution's measurement *in addition* to the bucket counts. That is to
-  ## say: setting this option is not mutually exclusive with
-  ## scrapeDistributionBuckets.
-  distribution_aggregation_aligners = [
-        "ALIGN_PERCENTILE_99",
-        "ALIGN_PERCENTILE_95",
-        "ALIGN_PERCENTILE_50",
-  ]
-
-  ## The filter string consists of logical AND of the
-  ## resource labels and metric labels if both of them
-  ## are specified. (optional)
-  ## See: https://cloud.google.com/monitoring/api/v3/filters
-  ## Declares resource labels to filter GCP metrics
-  ## that match any of them.
+  ## Filters can be added to reduce the number of time series matched.  All
+  ## functions are supported: starts_with, ends_with, has_substring, and
+  ## one_of.  Only the '=' operator is supported.
+  ##
+  ## The logical operators when combining filters are defined statically using
+  ## the following values:
+  ##   filter ::= <resource_labels> {AND <metric_labels>}
+  ##   resource_labels ::= <resource_labels> {OR <resource_label>}
+  ##   metric_labels ::= <metric_labels> {OR <metric_label>}
+  ##
+  ## For more details, see https://cloud.google.com/monitoring/api/v3/filters
+  #
+  ## Resource labels refine the time series selection with the following expression:
+  ##   resource.labels.<key> = <value>
   # [[inputs.stackdriver.filter.resource_labels]]
   #   key = "instance_name"
   #   value = 'starts_with("localhost")'
-
-  ## Declares metric labels to filter GCP metrics
-  ## that match any of them.
+  #
+  ## Metric labels refine the time series selection with the following expression:
+  ##   metric.labels.<key> = <value>
   #  [[inputs.stackdriver.filter.metric_labels]]
-  #      key = "device_name"
-  #      value = 'one_of("sda", "sdb")'
+  #  	 key = "device_name"
+  #  	 value = 'one_of("sda", "sdb")'
 ```
 
-### Tips
+#### Authentication
 
-- If `includeMetricTypePrefixes` field is specified, this plugin will add filter string into list metric descriptors request which is more efficient.
-- If `includeMetricTypePrefixes` field is left blank, this plugin will fetch all metric descriptors. Usually this will cause more API cost.
+It is recommended to use a service account to authenticate with the
+Stackdriver Monitoring API.  [Getting Started with Authentication][auth].
+
+### Metrics
+
+Metrics are created using one of there patterns depending on if the value type
+is a scalar value, raw distribution buckets, or aligned bucket values.
+
+In all cases, the Stackdriver metric type is split on the last component into
+the measurement and field:
+```
+compute.googleapis.com/instance/disk/read_bytes_count
+└──────────  measurement  ─────────┘ └──  field  ───┘
+```
+
+**Scalar Values:**
+
+- measurement
+  - tags:
+    - resource_labels
+    - metric_labels
+  - fields:
+    - field
+
+
+**Distributions:**
+
+Distributions are represented by a set of fields along with the bucket values
+tagged with the bucket boundary.  Buckets are non-cumulative: each bucket
+represents the number of items less than the `lt` tag and greater than the
+next largest bucket.
+
+- measurement
+  - tags:
+    - resource_labels
+    - metric_labels
+  - fields:
+    - field_count
+    - field_mean
+    - field_sum_of_squared_deviation
+    - field_range_min
+    - field_range_max
+
++ measurement
+  - tags:
+    - resource_labels
+    - metric_labels
+    - lt (less than)
+  - fields:
+    - field_bucket
+
+**Aligned Aggregations:**
+
+- measurement
+  - tags:
+    - resource_labels
+    - metric_labels
+  - fields:
+    - field_alignment_function
+
+### Troubleshooting
+
+When Telegraf is ran with `--debug`, detailed information about the performed
+queries will be logged.
+
+### Example Output
+```
+```
+[stackdriver]: https://cloud.google.com/monitoring/api/v3/
+[auth]: https://cloud.google.com/docs/authentication/getting-started
+[pricing]: https://cloud.google.com/stackdriver/pricing#stackdriver_monitoring_services
