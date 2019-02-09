@@ -267,11 +267,13 @@ func (e *Endpoint) init(ctx context.Context) error {
 	}
 
 	// Initial load of custom field metadata
-	fields, err := client.GetCustomFields(ctx)
-	if err != nil {
-		log.Println("W! [inputs.vsphere] Could not load custom field metadata")
-	} else {
-		e.customFields = fields
+	if e.Parent.CustomAttributes {
+		fields, err := client.GetCustomFields(ctx)
+		if err != nil {
+			log.Println("W! [inputs.vsphere] Could not load custom field metadata")
+		} else {
+			e.customFields = fields
+		}
 	}
 
 	if e.Parent.ObjectDiscoveryInterval.Duration > 0 {
@@ -443,10 +445,13 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	}
 
 	// Load custom field metadata
-	fields, err := client.GetCustomFields(ctx)
-	if err != nil {
-		log.Println("W! [inputs.vsphere] Could not load custom field metadata")
-		fields = nil
+	var fields map[int32]string
+	if e.Parent.CustomAttributes {
+		fields, err = client.GetCustomFields(ctx)
+		if err != nil {
+			log.Println("W! [inputs.vsphere] Could not load custom field metadata")
+			fields = nil
+		}
 	}
 
 	// Atomically swap maps
@@ -461,8 +466,6 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	if fields != nil {
 		e.customFields = fields
 	}
-
-	log.Printf("D! [inputs.vsphere] Fields: %s", fields)
 
 	sw.Stop()
 	SendInternalCounterWithTags("discovered_objects", e.URL.Host, map[string]string{"type": "instance-total"}, numRes)
@@ -644,14 +647,19 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 			uuid = r.Config.Uuid
 		}
 		cvs := make(map[string]string)
-		for _, cv := range r.Summary.CustomValue {
-			val := cv.(*types.CustomFieldStringValue)
-			key, ok := e.customFields[val.Key]
-			if !ok {
-				log.Printf("W! [inputs.vsphere] Metadata for custom field %d not found. Skipping", val.Key)
-				continue
+		if e.Parent.CustomAttributes {
+			for _, cv := range r.Summary.CustomValue {
+				val := cv.(*types.CustomFieldStringValue)
+				if val.Value == "" {
+					continue
+				}
+				key, ok := e.customFields[val.Key]
+				if !ok {
+					log.Printf("W! [inputs.vsphere] Metadata for custom field %d not found. Skipping", val.Key)
+					continue
+				}
+				cvs[key] = val.Value
 			}
-			cvs[key] = val.Value
 		}
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
 			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: r.Runtime.Host, guest: guest, altID: uuid, customValues: cvs}
@@ -1103,9 +1111,13 @@ func (e *Endpoint) populateTags(objectRef *objectRef, resourceType string, resou
 		t["instance"] = v.Instance
 	}
 
-	// Fill in custom values if they exist (TODO: Filter)
-	for k, v := range objectRef.customValues {
-		t[k] = v
+	// Fill in custom values if they exist
+	if objectRef.customValues != nil {
+		for k, v := range objectRef.customValues {
+			if v != "" {
+				t[k] = v
+			}
+		}
 	}
 }
 

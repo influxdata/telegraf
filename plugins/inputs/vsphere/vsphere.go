@@ -40,6 +40,7 @@ type VSphere struct {
 	DatastoreMetricExclude  []string
 	DatastoreInclude        []string
 	Separator               string
+	CustomAttributes        bool
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
@@ -171,6 +172,9 @@ var sampleConfig = `
   datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default for Datastores only
+
+  ## Send custom attributes of hosts and VMs as tags
+  # custom_attributes = false
 
   ## Plugin Settings  
   ## separator character to use for measurement and field names (default: "_")
@@ -313,6 +317,7 @@ func init() {
 			DatastoreMetricExclude:  nil,
 			DatastoreInclude:        []string{"/*/datastore/**"},
 			Separator:               "_",
+			CustomAttributes:        false,
 
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,
