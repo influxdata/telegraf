@@ -275,6 +275,10 @@ func (s *Stackdriver) SampleConfig() string {
 func (s *Stackdriver) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 
+	if s.RateLimit == 0 {
+		s.RateLimit = defaultRateLimit
+	}
+
 	err := s.initializeStackdriverClient(ctx)
 	if err != nil {
 		return err
@@ -693,7 +697,7 @@ func init() {
 	f := func() telegraf.Input {
 		return &Stackdriver{
 			CacheTTL:                        defaultCacheTTL,
-			RateLimit:                       defaultRateLimit, // FIXME: fix if not zero
+			RateLimit:                       defaultRateLimit,
 			Delay:                           defaultDelay,
 			GatherRawDistributionBuckets:    true,
 			DistributionAggregationAligners: []string{},
