@@ -15,20 +15,20 @@ Additional resource labels can be configured by `resource_labels`. By default th
 
 ```toml
 [[outputs.stackdriver]]
-  # GCP Project
+  ## GCP Project
   project = "erudite-bloom-151019"
 
-  # The namespace for the metric descriptor
+  ## The namespace for the metric descriptor
   namespace = "telegraf"
 
-  # Custom resource type
-  resource_type = "generic_node"
+  ## Custom resource type
+  # resource_type = "generic_node"
 
-# Additonal resource labels
-[outputs.stackdriver.resource_labels]
-  node_id = "$HOSTNAME"
-  namespace = "myapp"
-  location = "eu-north0"
+  ## Additonal resource labels
+  # [outputs.stackdriver.resource_labels]
+  #   node_id = "$HOSTNAME"
+  #   namespace = "myapp"
+  #   location = "eu-north0"
 ```
 
 ### Restrictions
