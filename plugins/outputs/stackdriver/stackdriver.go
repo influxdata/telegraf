@@ -49,21 +49,20 @@ const (
 )
 
 var sampleConfig = `
-  [[outputs.stackdriver]]
-    # GCP Project
-    project = "erudite-bloom-151019"
+  ## GCP Project
+  project = "erudite-bloom-151019"
 
-    # The namespace for the metric descriptor
-    namespace = "telegraf"
+  ## The namespace for the metric descriptor
+  namespace = "telegraf"
 
-    # Custom resource type
-    resource_type = "generic_node"
+  ## Custom resource type
+  # resource_type = "generic_node"
 
-  # Additonal resource labels
-  [outputs.stackdriver.resource_labels]
-    node_id = "$HOSTNAME"
-    namespace = "myapp"
-    location = "eu-north0"
+  ## Additonal resource labels
+  # [outputs.stackdriver.resource_labels]
+  #   node_id = "$HOSTNAME"
+  #   namespace = "myapp"
+  #   location = "eu-north0"
 `
 
 // Connect initiates the primary connection to the GCP project.
