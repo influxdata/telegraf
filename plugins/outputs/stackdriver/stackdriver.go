@@ -3,6 +3,7 @@ package stackdriver
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 	"log"
 	"path"
 	"sort"
@@ -112,15 +113,30 @@ func sorted(metrics []telegraf.Metric) []telegraf.Metric {
 	return batch
 }
 
+func getFieldHash(m telegraf.Metric, f *telegraf.Field) uint64 {
+	h := fnv.New64a()
+	h.Write([]byte(m.Name()))
+	h.Write([]byte("\n"))
+	h.Write([]byte(f.Key))
+	h.Write([]byte("\n"))
+	for key, value := range m.Tags() {
+		h.Write([]byte(key))
+		h.Write([]byte("\n"))
+		h.Write([]byte(value))
+		h.Write([]byte("\n"))
+	}
+	return h.Sum64()
+}
+
 // Write the metrics to Google Cloud Stackdriver.
 func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 
 	batch := sorted(metrics)
+	timeSeries := []*monitoringpb.TimeSeries{}
+	processedTimeSeries := map[uint64]bool{}
 
 	for _, m := range batch {
-		timeSeries := []*monitoringpb.TimeSeries{}
-
 		for _, f := range m.FieldList() {
 			value, err := getStackdriverTypedValue(f.Value)
 			if err != nil {
@@ -130,6 +146,32 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 
 			if value == nil {
 				continue
+			}
+
+			fieldHash := getFieldHash(m, f)
+			_, duplicateInRequest := processedTimeSeries[fieldHash]
+
+			if duplicateInRequest || len(timeSeries) >= 200 {
+				// Prepare time series request.
+				timeSeriesRequest := &monitoringpb.CreateTimeSeriesRequest{
+					Name:       monitoring.MetricProjectPath(s.Project),
+					TimeSeries: timeSeries,
+				}
+
+				// Create the time series in Stackdriver.
+				err := s.client.CreateTimeSeries(ctx, timeSeriesRequest)
+				if err != nil {
+					if strings.Contains(err.Error(), errStringPointsOutOfOrder) ||
+						strings.Contains(err.Error(), errStringPointsTooOld) ||
+						strings.Contains(err.Error(), errStringPointsTooFrequent) {
+						log.Printf("D! [outputs.stackdriver] unable to write to Stackdriver: %s", err)
+						return nil
+					}
+					log.Printf("E! [outputs.stackdriver] unable to write to Stackdriver: %s", err)
+					return err
+				}
+				timeSeries = []*monitoringpb.TimeSeries{}
+				processedTimeSeries = map[uint64]bool{}
 			}
 
 			metricKind, err := getStackdriverMetricKind(m.Type())
@@ -166,12 +208,11 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 						dataPoint,
 					},
 				})
+			processedTimeSeries[fieldHash] = true
 		}
+	}
 
-		if len(timeSeries) < 1 {
-			continue
-		}
-
+	if len(timeSeries) > 0 {
 		// Prepare time series request.
 		timeSeriesRequest := &monitoringpb.CreateTimeSeriesRequest{
 			Name:       monitoring.MetricProjectPath(s.Project),
