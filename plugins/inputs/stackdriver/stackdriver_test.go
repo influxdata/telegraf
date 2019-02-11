@@ -239,7 +239,7 @@ func TestGather(t *testing.T) {
 					},
 				},
 				Points: []*monitoringpb.Point{
-					&monitoringpb.Point{
+					{
 						Interval: &monitoringpb.TimeInterval{
 							EndTime: &timestamp.Timestamp{
 								Seconds: now.Unix(),
@@ -840,7 +840,7 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
 				Filter: &ListTimeSeriesFilter{
 					ResourceLabels: []*Label{
-						&Label{
+						{
 							Key:   "instance_name",
 							Value: `localhost`,
 						},
@@ -869,7 +869,7 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
 				Filter: &ListTimeSeriesFilter{
 					ResourceLabels: []*Label{
-						&Label{
+						{
 							Key:   "instance_name",
 							Value: `starts_with("localhost")`,
 						},
@@ -898,11 +898,11 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
 				Filter: &ListTimeSeriesFilter{
 					ResourceLabels: []*Label{
-						&Label{
+						{
 							Key:   "instance_name",
 							Value: `localhost`,
 						},
-						&Label{
+						{
 							Key:   "zone",
 							Value: `starts_with("us-")`,
 						},
@@ -931,7 +931,7 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
 				Filter: &ListTimeSeriesFilter{
 					MetricLabels: []*Label{
-						&Label{
+						{
 							Key:   "resource_type",
 							Value: `instance`,
 						},
@@ -960,7 +960,7 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
 				Filter: &ListTimeSeriesFilter{
 					MetricLabels: []*Label{
-						&Label{
+						{
 							Key:   "resource_id",
 							Value: `starts_with("abc-")`,
 						},
@@ -989,11 +989,11 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
 				Filter: &ListTimeSeriesFilter{
 					MetricLabels: []*Label{
-						&Label{
+						{
 							Key:   "resource_type",
 							Value: "instance",
 						},
-						&Label{
+						{
 							Key:   "resource_id",
 							Value: `starts_with("abc-")`,
 						},
@@ -1022,21 +1022,21 @@ func TestListMetricDescriptorFilter(t *testing.T) {
 				MetricTypePrefixInclude: []string{"telegraf/cpu/usage"},
 				Filter: &ListTimeSeriesFilter{
 					ResourceLabels: []*Label{
-						&Label{
+						{
 							Key:   "instance_name",
 							Value: `localhost`,
 						},
-						&Label{
+						{
 							Key:   "zone",
 							Value: `starts_with("us-")`,
 						},
 					},
 					MetricLabels: []*Label{
-						&Label{
+						{
 							Key:   "resource_type",
 							Value: "instance",
 						},
-						&Label{
+						{
 							Key:   "resource_id",
 							Value: `starts_with("abc-")`,
 						},
