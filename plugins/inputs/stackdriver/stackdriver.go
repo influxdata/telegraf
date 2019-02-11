@@ -666,6 +666,7 @@ func (s *Stackdriver) addDistribution(
 	}
 
 	var i int32
+	var count int64
 	for i = 0; i < numBuckets; i++ {
 		// The last bucket is the overflow bucket, and includes all values
 		// greater than the previous bound.
@@ -684,12 +685,12 @@ func (s *Stackdriver) addDistribution(
 			tags["lt"] = strconv.FormatFloat(upperBound, 'f', -1, 64)
 		}
 
+		// Add to the cumulative count; trailing buckets with value 0 are
+		// omitted from the response.
 		if i < int32(len(metric.BucketCounts)) {
-			grouper.Add(name, tags, ts, field+"_bucket", metric.BucketCounts[i])
-		} else {
-			// trailing buckets with value 0 are omitted from the response
-			grouper.Add(name, tags, ts, field+"_bucket", 0)
+			count += metric.BucketCounts[i]
 		}
+		grouper.Add(name, tags, ts, field+"_bucket", count)
 	}
 }
 

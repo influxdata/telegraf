@@ -117,9 +117,8 @@ compute.googleapis.com/instance/disk/read_bytes_count
 **Distributions:**
 
 Distributions are represented by a set of fields along with the bucket values
-tagged with the bucket boundary.  Buckets are non-cumulative: each bucket
-represents the number of items less than the `lt` tag and greater than the
-next largest bucket.
+tagged with the bucket boundary.  Buckets are cumulative: each bucket
+represents the total number of items less than the `lt` tag.
 
 - measurement
   - tags:

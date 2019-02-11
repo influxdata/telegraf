@@ -346,7 +346,7 @@ func TestGather(t *testing.T) {
 						"lt":            "3",
 					},
 					map[string]interface{}{
-						"usage_bucket": int64(3),
+						"usage_bucket": int64(4),
 					},
 					now),
 				testutil.MustMetric("telegraf/cpu",
@@ -356,7 +356,7 @@ func TestGather(t *testing.T) {
 						"lt":            "+Inf",
 					},
 					map[string]interface{}{
-						"usage_bucket": int64(0),
+						"usage_bucket": int64(4),
 					},
 					now),
 			},
@@ -441,7 +441,7 @@ func TestGather(t *testing.T) {
 						"lt":            "4",
 					},
 					map[string]interface{}{
-						"usage_bucket": int64(3),
+						"usage_bucket": int64(4),
 					},
 					now),
 				testutil.MustMetric("telegraf/cpu",
@@ -451,7 +451,7 @@ func TestGather(t *testing.T) {
 						"lt":            "+Inf",
 					},
 					map[string]interface{}{
-						"usage_bucket": int64(0),
+						"usage_bucket": int64(4),
 					},
 					now),
 			},
@@ -534,7 +534,7 @@ func TestGather(t *testing.T) {
 						"lt":            "+Inf",
 					},
 					map[string]interface{}{
-						"usage_bucket": int64(3),
+						"usage_bucket": int64(4),
 					},
 					now),
 			},
@@ -619,7 +619,7 @@ func TestGather(t *testing.T) {
 						"lt":            "3",
 					},
 					map[string]interface{}{
-						"usage_bucket": int64(0),
+						"usage_bucket": int64(1),
 					},
 					now),
 				testutil.MustMetric("telegraf/cpu",
@@ -629,7 +629,7 @@ func TestGather(t *testing.T) {
 						"lt":            "+Inf",
 					},
 					map[string]interface{}{
-						"usage_bucket": int64(0),
+						"usage_bucket": int64(1),
 					},
 					now),
 			},
