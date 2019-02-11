@@ -221,6 +221,52 @@ func TestGather(t *testing.T) {
 			},
 		},
 		{
+			name: "metric labels",
+			descriptor: &metricpb.MetricDescriptor{
+				Type:      "telegraf/cpu/usage",
+				ValueType: metricpb.MetricDescriptor_DOUBLE,
+			},
+			timeseries: &monitoringpb.TimeSeries{
+				Metric: &metricpb.Metric{
+					Labels: map[string]string{
+						"resource_type": "instance",
+					},
+				},
+				Resource: &monitoredres.MonitoredResource{
+					Type: "global",
+					Labels: map[string]string{
+						"project_id": "test",
+					},
+				},
+				Points: []*monitoringpb.Point{
+					&monitoringpb.Point{
+						Interval: &monitoringpb.TimeInterval{
+							EndTime: &timestamp.Timestamp{
+								Seconds: now.Unix(),
+							},
+						},
+						Value: &monitoringpb.TypedValue{
+							Value: &monitoringpb.TypedValue_DoubleValue{
+								DoubleValue: 42.0,
+							},
+						},
+					},
+				},
+				ValueType: metricpb.MetricDescriptor_DOUBLE,
+			},
+			expected: []telegraf.Metric{
+				testutil.MustMetric("telegraf/cpu",
+					map[string]string{
+						"resource_type": "instance",
+						"project_id":    "test",
+					},
+					map[string]interface{}{
+						"usage": 42.0,
+					},
+					now),
+			},
+		},
+		{
 			name: "linear buckets",
 			descriptor: &metricpb.MetricDescriptor{
 				Type:      "telegraf/cpu/usage",
@@ -489,6 +535,101 @@ func TestGather(t *testing.T) {
 					},
 					map[string]interface{}{
 						"usage_bucket": int64(3),
+					},
+					now),
+			},
+		},
+		{
+			name: "implicit buckets are zero",
+			descriptor: &metricpb.MetricDescriptor{
+				Type:      "telegraf/cpu/usage",
+				ValueType: metricpb.MetricDescriptor_DISTRIBUTION,
+			},
+			timeseries: createTimeSeries(
+				&monitoringpb.Point{
+					Interval: &monitoringpb.TimeInterval{
+						EndTime: &timestamp.Timestamp{
+							Seconds: now.Unix(),
+						},
+					},
+					Value: &monitoringpb.TypedValue{
+						Value: &monitoringpb.TypedValue_DistributionValue{
+							DistributionValue: &distribution.Distribution{
+								Count:                 2,
+								Mean:                  2.0,
+								SumOfSquaredDeviation: 1.0,
+								Range: &distribution.Distribution_Range{
+									Min: 0.0,
+									Max: 3.0,
+								},
+								BucketCounts: []int64{0, 1},
+								BucketOptions: &distribution.Distribution_BucketOptions{
+									Options: &distribution.Distribution_BucketOptions_LinearBuckets{
+										LinearBuckets: &distribution.Distribution_BucketOptions_Linear{
+											NumFiniteBuckets: 2,
+											Width:            1,
+											Offset:           1,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				metricpb.MetricDescriptor_DISTRIBUTION,
+			),
+			expected: []telegraf.Metric{
+				testutil.MustMetric("telegraf/cpu",
+					map[string]string{
+						"resource_type": "global",
+						"project_id":    "test",
+					},
+					map[string]interface{}{
+						"usage_count":                    int64(2),
+						"usage_range_min":                0.0,
+						"usage_range_max":                3.0,
+						"usage_mean":                     2.0,
+						"usage_sum_of_squared_deviation": 1.0,
+					},
+					now),
+				testutil.MustMetric("telegraf/cpu",
+					map[string]string{
+						"resource_type": "global",
+						"project_id":    "test",
+						"lt":            "1",
+					},
+					map[string]interface{}{
+						"usage_bucket": int64(0),
+					},
+					now),
+				testutil.MustMetric("telegraf/cpu",
+					map[string]string{
+						"resource_type": "global",
+						"project_id":    "test",
+						"lt":            "2",
+					},
+					map[string]interface{}{
+						"usage_bucket": int64(1),
+					},
+					now),
+				testutil.MustMetric("telegraf/cpu",
+					map[string]string{
+						"resource_type": "global",
+						"project_id":    "test",
+						"lt":            "3",
+					},
+					map[string]interface{}{
+						"usage_bucket": int64(0),
+					},
+					now),
+				testutil.MustMetric("telegraf/cpu",
+					map[string]string{
+						"resource_type": "global",
+						"project_id":    "test",
+						"lt":            "+Inf",
+					},
+					map[string]interface{}{
+						"usage_bucket": int64(0),
 					},
 					now),
 			},
