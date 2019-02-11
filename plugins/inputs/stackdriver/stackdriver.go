@@ -26,8 +26,9 @@ import (
 )
 
 const (
-	description  = "Gather timeseries from Google Cloud Platform v3 monitoring API"
-	sampleConfig = `
+	defaultRateLimit = 14
+	description      = "Gather timeseries from Google Cloud Platform v3 monitoring API"
+	sampleConfig     = `
   ## GCP Project
   project = "erudite-bloom-151019"
 
@@ -381,7 +382,9 @@ func (s *Stackdriver) newListTimeSeriesFilter(metricType string) string {
 
 // Create and initialize a timeSeriesConf for a given GCP metric type with
 // defaults taken from the gcp_stackdriver plugin configuration.
-func (s *Stackdriver) newTimeSeriesConf(metricType string, startTime, endTime time.Time) *timeSeriesConf {
+func (s *Stackdriver) newTimeSeriesConf(
+	metricType string, startTime, endTime time.Time,
+) *timeSeriesConf {
 	filter := s.newListTimeSeriesFilter(metricType)
 	interval := &monitoringpb.TimeInterval{
 		EndTime:   &googlepbts.Timestamp{Seconds: endTime.Unix()},
@@ -443,11 +446,12 @@ func (s *Stackdriver) initializeStackdriverClient(ctx context.Context) error {
 		}
 
 		tags := map[string]string{
-			"project": s.Project,
+			"project_id": s.Project,
 		}
-
-		listMetricDescriptorsCalls := selfstat.Register("stackdriver", "list_metric_descriptors_calls", tags)
-		listTimeSeriesCalls := selfstat.Register("stackdriver", "list_timeseries_calls", tags)
+		listMetricDescriptorsCalls := selfstat.Register(
+			"stackdriver", "list_metric_descriptors_calls", tags)
+		listTimeSeriesCalls := selfstat.Register(
+			"stackdriver", "list_timeseries_calls", tags)
 
 		s.client = &stackdriverMetricClient{
 			conn:                       client,
@@ -505,7 +509,9 @@ func (s *Stackdriver) newListMetricDescriptorsFilters() []string {
 
 // Generate a list of timeSeriesConfig structs by making a ListMetricDescriptors
 // API request and filtering the result against our configuration.
-func (s *Stackdriver) generatetimeSeriesConfs(ctx context.Context, startTime, endTime time.Time) ([]*timeSeriesConf, error) {
+func (s *Stackdriver) generatetimeSeriesConfs(
+	ctx context.Context, startTime, endTime time.Time,
+) ([]*timeSeriesConf, error) {
 	if s.timeSeriesConfCache != nil && s.timeSeriesConfCache.IsValid() {
 		// Update interval for timeseries requests in timeseries cache
 		interval := &monitoringpb.TimeInterval{
@@ -519,7 +525,9 @@ func (s *Stackdriver) generatetimeSeriesConfs(ctx context.Context, startTime, en
 	}
 
 	ret := []*timeSeriesConf{}
-	req := &monitoringpb.ListMetricDescriptorsRequest{Name: monitoring.MetricProjectPath(s.Project)}
+	req := &monitoringpb.ListMetricDescriptorsRequest{
+		Name: monitoring.MetricProjectPath(s.Project),
+	}
 
 	filters := s.newListMetricDescriptorsFilters()
 	if len(filters) == 0 {
@@ -685,7 +693,7 @@ func init() {
 	f := func() telegraf.Input {
 		return &Stackdriver{
 			CacheTTL:                        defaultCacheTTL,
-			RateLimit:                       14,
+			RateLimit:                       defaultRateLimit, // FIXME: fix if not zero
 			Delay:                           defaultDelay,
 			GatherRawDistributionBuckets:    true,
 			DistributionAggregationAligners: []string{},
