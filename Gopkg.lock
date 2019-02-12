@@ -148,7 +148,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:0828d8c0f95689f832cf348fe23827feb7640cd698d612ef59e2f9d041f54c68"
+  digest = "1:5a5f28fcfe3a74247733a31ceaac0e53bfc2723e43c596b2e3f110eda9378575"
   name = "github.com/apache/thrift"
   packages = ["lib/go/thrift"]
   pruneopts = ""
@@ -294,7 +294,7 @@
   revision = "edc3ab29cdff8694dd6feb85cfeb4b5f1b38ed9c"
 
 [[projects]]
-  digest = "1:d149605f1b00713fdc48150122892d77d49d30c825f690dd92f497aeb6cf18f5"
+  digest = "1:d2ca9295cce7d0e7b26b498c6b59ff903d8315e8ead97f0f6cadf9e7d613e1e8"
   name = "github.com/docker/docker"
   packages = [
     "api",
@@ -576,7 +576,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ff65bf6fc4d1116f94ac305342725c21b55c16819c2606adc8f527755716937f"
+  digest = "1:e1c91a91cc738cebecbf12fc98f554f6f932c8b97e2052ad63ea43948df5bcb0"
   name = "github.com/hashicorp/go-rootcerts"
   packages = ["."]
   pruneopts = ""
@@ -616,6 +616,7 @@
   ]
   pruneopts = ""
   revision = "c43482518d410361b6c383d7aebce33d0471d7bc"
+
 
 [[projects]]
   branch = "master"
@@ -676,7 +677,7 @@
   revision = "615a14ed75099c9eaac6949e22ac2341bf9d3197"
 
 [[projects]]
-  digest = "1:a12b6f20a7e5eb7412d2e5cd15e1262a021f735fa958d664d9e7ba2160eefd0a"
+  digest = "1:0d97611ddd908fff3a022d98776d0e21cf0bdf9145c705178293cec430d4ce6f"
   name = "github.com/karrick/godirwalk"
   packages = ["."]
   pruneopts = ""
@@ -820,6 +821,17 @@
   pruneopts = ""
   revision = "eee57a3ac4174c55924125bb15eeeda8cffb6e6f"
   version = "v1.0.7"
+
+[[projects]]
+  digest = "1:15904bf2ce6c7115ecea6ab1c33a40ac4fe7ca085973ed20fa9cd9d11b72484c"
+  name = "github.com/olivere/elastic"
+  packages = [
+    "config",
+    "uritemplates",
+  ]
+  pruneopts = ""
+  revision = "407a1d940dcc89e279c579eb393d0bdde8fd9ac4"
+  version = "v6.2.16"
 
 [[projects]]
   digest = "1:5d9b668b0b4581a978f07e7d2e3314af18eb27b3fb5d19b70185b7c575723d11"
@@ -1478,6 +1490,14 @@
   version = "v5.0.70"
 
 [[projects]]
+  digest = "1:15904bf2ce6c7115ecea6ab1c33a40ac4fe7ca085973ed20fa9cd9d11b72484c"
+  name = "gopkg.in/olivere/elastic.v6"
+  packages = ["."]
+  pruneopts = ""
+  revision = "407a1d940dcc89e279c579eb393d0bdde8fd9ac4"
+  version = "v6.2.16"
+
+[[projects]]
   branch = "v1"
   digest = "1:a96d16bd088460f2e0685d46c39bcf1208ba46e0a977be2df49864ec7da447dd"
   name = "gopkg.in/tomb.v1"
@@ -1627,6 +1647,7 @@
     "gopkg.in/mgo.v2",
     "gopkg.in/mgo.v2/bson",
     "gopkg.in/olivere/elastic.v5",
+    "gopkg.in/olivere/elastic.v6",
     "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"

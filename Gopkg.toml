@@ -215,6 +215,10 @@
   version = "^5.0.69"
 
 [[constraint]]
+  name = "gopkg.in/olivere/elastic.v6"
+  version = "^6.0.0"
+
+[[constraint]]
   name = "gopkg.in/yaml.v2"
   version = "^2.2.1"
 
