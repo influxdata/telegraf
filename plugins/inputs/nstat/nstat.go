@@ -83,14 +83,16 @@ func (ns *Nstat) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	// collect SNMP6 data
-	snmp6, err := ioutil.ReadFile(ns.ProcNetSNMP6)
-	if err != nil {
-		return err
-	}
-	err = ns.gatherSNMP6(snmp6, acc)
-	if err != nil {
-		return err
+	// collect SNMP6 data, if SNMP6 directory exists (IPv6 enabled)
+	if _, err := os.Stat(ns.ProcNetSNMP6); err == nil {
+		snmp6, err := ioutil.ReadFile(ns.ProcNetSNMP6)
+		if err != nil {
+			return err
+		}
+		err = ns.gatherSNMP6(snmp6, acc)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
