@@ -290,11 +290,7 @@ func TestParseConfig(t *testing.T) {
 	require.NotNil(t, tab)
 }
 
-<<<<<<< HEAD
 func TestThrottledExecutor(t *testing.T) {
-=======
-func TestWorkerPool(t *testing.T) {
->>>>>>> upstream/master
 	max := int64(0)
 	ngr := int64(0)
 	n := 10000
@@ -345,12 +341,7 @@ func TestTimeout(t *testing.T) {
 	v.Timeout = internal.Duration{Duration: 1 * time.Nanosecond}
 	require.NoError(t, v.Start(nil)) // We're not using the Accumulator, so it can be nil.
 	defer v.Stop()
-<<<<<<< HEAD
-	require.NoError(t, v.Gather(&acc))
-=======
 	err = v.Gather(&acc)
->>>>>>> upstream/master
-	require.True(t, len(acc.Errors) > 0, "Errors should not be empty here")
 
 	// The accumulator must contain exactly one error and it must be a deadline exceeded.
 	require.Equal(t, 1, len(acc.Errors))
@@ -525,8 +516,5 @@ func TestAll(t *testing.T) {
 	defer v.Stop()
 	require.NoError(t, v.Gather(&acc))
 	require.Equal(t, 0, len(acc.Errors), fmt.Sprintf("Errors found: %s", acc.Errors))
-<<<<<<< HEAD
 	require.True(t, len(acc.Metrics) > 0, "No metrics were collected")
-=======
->>>>>>> upstream/master
 }

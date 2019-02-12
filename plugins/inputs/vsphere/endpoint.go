@@ -233,7 +233,6 @@ func isSimple(include []string, exclude []string) bool {
 func (e *Endpoint) startDiscovery(ctx context.Context) {
 	e.discoveryTicker = time.NewTicker(e.Parent.ObjectDiscoveryInterval.Duration)
 	go func() {
-		defer HandlePanic()
 		for {
 			select {
 			case <-e.discoveryTicker.C:
