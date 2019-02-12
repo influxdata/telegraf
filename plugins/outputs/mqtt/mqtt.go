@@ -6,13 +6,12 @@ import (
 	"sync"
 	"time"
 
+	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-
-	paho "github.com/eclipse/paho.mqtt.golang"
 )
 
 var sampleConfig = `
@@ -49,10 +48,10 @@ var sampleConfig = `
   ## When true, metrics will be sent in one MQTT message per flush.  Otherwise,
   ## metrics are written one metric per MQTT message.
   # batch = false
-  
+
   ## When true, metric will have RETAIN flag set, making broker cache entries until someone
   ## actually reads it
-  # retain = flase
+  # retain = false
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
@@ -72,7 +71,7 @@ type MQTT struct {
 	ClientID    string `toml:"client_id"`
 	tls.ClientConfig
 	BatchMessage bool `toml:"batch"`
-	Retain       bool
+	Retain       bool `toml:"retain"`
 
 	client paho.Client
 	opts   *paho.ClientOptions
