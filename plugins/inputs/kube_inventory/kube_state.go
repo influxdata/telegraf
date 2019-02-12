@@ -38,7 +38,7 @@ var sampleConfig = `
   ## URL for the Kubernetes API
   url = "https://127.0.0.1"
 
-  ## Namespace to use
+  ## Namespace to use. Set to "" to use all namespaces.
   # namespace = "default"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
