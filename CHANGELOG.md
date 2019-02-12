@@ -52,6 +52,7 @@
 - [#5315](https://github.com/influxdata/telegraf/issues/5315): Skip string fields when writing to stackdriver output.
 - [#5364](https://github.com/influxdata/telegraf/issues/5364): Send metrics in ascending time order in stackdriver output.
 - [#5117](https://github.com/influxdata/telegraf/issues/5117): Use systemd in Amazon Linux 2 rpm.
+- [#4988](https://github.com/influxdata/telegraf/issues/4988): Set deadlock priority in sqlserver input.
 
 ## v1.9.4 [2019-02-05]
 
