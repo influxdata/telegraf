@@ -1121,7 +1121,7 @@
   revision = "7821ac6d8ae05fe70c6d090ebda380c64f1416e4"
   version = "v0.9.1"
 
-[[projects]]  
+[[projects]]
   branch = "master"
   digest = "1:98ed05e9796df287b90c1d96854e3913c8e349dbc546412d3cabb472ecf4b417"
   name = "github.com/wvanbergen/kafka"
