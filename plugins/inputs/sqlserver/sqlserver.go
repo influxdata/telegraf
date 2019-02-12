@@ -244,7 +244,8 @@ func init() {
 // Thanks Bob Ward (http://aka.ms/bobwardms)
 // and the folks at Stack Overflow (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
 // for putting most of the memory clerk definitions online!
-const sqlMemoryClerkV2 = `DECLARE @SQL NVARCHAR(MAX) = 'SELECT
+const sqlMemoryClerkV2 = `SET DEADLOCK_PRIORITY -10;
+DECLARE @SQL NVARCHAR(MAX) = 'SELECT
 "sqlserver_memory_clerks" As [measurement],
 REPLACE(@@SERVERNAME,"\",":") AS [sql_instance],
 ISNULL(clerk_names.name,mc.type) AS clerk_type,
@@ -348,7 +349,8 @@ ELSE
 EXEC(@SQL)
 `
 
-const sqlDatabaseIOV2 = `IF SERVERPROPERTY('EngineEdition') = 5
+const sqlDatabaseIOV2 = `SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') = 5
 BEGIN
 SELECT
 'sqlserver_database_io' As [measurement],
@@ -388,7 +390,8 @@ inner join sys.master_files b on b.database_id = vfs.database_id and b.file_id =
 END
 `
 
-const sqlServerPropertiesV2 = `DECLARE @sys_info TABLE (
+const sqlServerPropertiesV2 = `SET DEADLOCK_PRIORITY -10;
+DECLARE @sys_info TABLE (
 	cpu_count INT,
 	server_memory BIGINT,
 	sku NVARCHAR(64),
@@ -465,7 +468,7 @@ FROM	(
 OPTION( RECOMPILE )
 `
 
-const sqlPerformanceCountersV2 string = `
+const sqlPerformanceCountersV2 string = `SET DEADLOCK_PRIORITY -10;
 DECLARE @PCounters TABLE
 (
 	object_name nvarchar(128),
@@ -627,7 +630,8 @@ WHERE	pc.counter_name NOT LIKE '% base'
 OPTION(RECOMPILE);
 `
 
-const sqlWaitStatsCategorizedV2 string = `SELECT
+const sqlWaitStatsCategorizedV2 string = `SET DEADLOCK_PRIORITY -10;
+SELECT
 'sqlserver_waitstats' AS [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 ws.wait_type,
@@ -1186,7 +1190,8 @@ AND wait_time_ms > 100
 OPTION (RECOMPILE);
 `
 
-const sqlAzureDB string = `IF OBJECT_ID('sys.dm_db_resource_stats') IS NOT NULL
+const sqlAzureDB string = `SET DEADLOCK_PRIORITY -10;
+IF OBJECT_ID('sys.dm_db_resource_stats') IS NOT NULL
 BEGIN
 	SELECT TOP(1)
 		'sqlserver_azurestats' AS [measurement],
@@ -1213,7 +1218,8 @@ BEGIN
 END`
 
 // Queries V1
-const sqlPerformanceMetrics string = `SET NOCOUNT ON;
+const sqlPerformanceMetrics string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET ARITHABORT ON;
 SET QUOTED_IDENTIFIER ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
@@ -1306,7 +1312,8 @@ PIVOT(SUM(cntr_value) FOR counter_name IN (' + @ColumnName + ')) AS PVTTable
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlMemoryClerk string = `SET NOCOUNT ON;
+const sqlMemoryClerk string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
 DECLARE @sqlVers numeric(4,2)
@@ -1419,7 +1426,8 @@ PIVOT
 ) as T;
 `
 
-const sqlDatabaseSize string = `SET NOCOUNT ON;
+const sqlDatabaseSize string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
 
 IF OBJECT_ID('tempdb..#baseline') IS NOT NULL
@@ -1512,7 +1520,8 @@ PIVOT(SUM(database_max_size_8k_pages) FOR database_name IN (' + @ColumnName + ')
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlDatabaseStats string = `SET NOCOUNT ON;
+const sqlDatabaseStats string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
 IF OBJECT_ID('tempdb..#baseline') IS NOT NULL
@@ -1646,7 +1655,8 @@ PIVOT(SUM(AvgBytesPerWrite) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTab
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlDatabaseIO string = `SET NOCOUNT ON;
+const sqlDatabaseIO string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 DECLARE @secondsBetween tinyint = 5;
 DECLARE @delayInterval char(8) = CONVERT(Char(8), DATEADD(SECOND, @secondsBetween, '00:00:00'), 108);
@@ -1783,7 +1793,8 @@ PIVOT(SUM(num_of_reads_persec) FOR database_name IN (' + @ColumnName + ')) AS PV
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlDatabaseProperties string = `SET NOCOUNT ON;
+const sqlDatabaseProperties string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET ARITHABORT ON;
 SET QUOTED_IDENTIFIER ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
@@ -1998,7 +2009,8 @@ PIVOT(SUM(Value) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlCPUHistory string = `SET NOCOUNT ON;
+const sqlCPUHistory string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET ARITHABORT ON;
 SET QUOTED_IDENTIFIER ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -2034,7 +2046,8 @@ ORDER BY timestamp_ms Desc
 ) as T;
 `
 
-const sqlPerformanceCounters string = `SET NOCOUNT ON;
+const sqlPerformanceCounters string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 IF OBJECT_ID('tempdb..#PCounters') IS NOT NULL DROP TABLE #PCounters
 CREATE TABLE #PCounters
@@ -2133,7 +2146,8 @@ IF OBJECT_ID('tempdb..#CCounters') IS NOT NULL DROP TABLE #CCounters;
 IF OBJECT_ID('tempdb..#PCounters') IS NOT NULL DROP TABLE #PCounters;
 `
 
-const sqlWaitStatsCategorized string = `SET NOCOUNT ON;
+const sqlWaitStatsCategorized string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
 DECLARE @secondsBetween tinyint = 5
 DECLARE @delayInterval char(8) = CONVERT(Char(8), DATEADD(SECOND, @secondsBetween, '00:00:00'), 108);
@@ -2538,7 +2552,8 @@ PIVOT
 ) as T;
 `
 
-const sqlVolumeSpace string = `SET NOCOUNT ON;
+const sqlVolumeSpace string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
 IF OBJECT_ID('tempdb..#volumestats') IS NOT NULL
