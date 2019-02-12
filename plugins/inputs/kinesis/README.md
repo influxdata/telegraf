@@ -78,14 +78,12 @@ DynamoDB:
 #### DynamoDB Checkpoint
 
 The DynamoDB checkpoint stores the last processed record in a DynamoDB. To leverage
-this functionality, create a table with the folowing keys:
+this functionality, create a table with the folowing string type keys:
 
 ```
 Partition key: namespace
 Sort key: shard_id
 ```
-
-<img width="727" alt="screen shot 2017-11-22 at 7 59 36 pm" src="https://user-images.githubusercontent.com/739782/33158557-b90e4228-cfbf-11e7-9a99-73b56a446f5f.png">
 
 
 [kinesis]: https://aws.amazon.com/kinesis/

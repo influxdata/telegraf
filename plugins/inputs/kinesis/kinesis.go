@@ -41,8 +41,10 @@ type (
 
 		consumer *consumer.Consumer
 		parser   parsers.Parser
-		ctx      context.Context
 		cancel   context.CancelFunc
+		ctx      context.Context
+		acc      telegraf.TrackingAccumulator
+		sem      chan struct{}
 
 		checkpoint    consumer.Checkpoint
 		checkpoints   map[string]checkpoint
@@ -132,7 +134,7 @@ func (k *KinesisConsumer) SetParser(parser parsers.Parser) {
 	k.parser = parser
 }
 
-func (k *KinesisConsumer) connect() error {
+func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 	credentialConfig := &internalaws.CredentialConfig{
 		Region:      k.Region,
 		AccessKey:   k.AccessKey,
@@ -183,45 +185,52 @@ func (k *KinesisConsumer) connect() error {
 	}
 
 	k.consumer = consumer
-	return nil
-}
 
-func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
-	if k.consumer == nil {
-		err := k.connect()
-		if err != nil {
-			return err
-		}
-	}
-
-	acc := ac.WithTracking(k.MaxUndeliveredMessages)
+	k.acc = ac.WithTracking(k.MaxUndeliveredMessages)
 	k.records = make(map[telegraf.TrackingID]string, k.MaxUndeliveredMessages)
 	k.checkpoints = make(map[string]checkpoint, k.MaxUndeliveredMessages)
-	sem := make(chan struct{}, k.MaxUndeliveredMessages)
+	k.sem = make(chan struct{}, k.MaxUndeliveredMessages)
 
-	ctx := context.Background()
-	ctx, k.cancel = context.WithCancel(ctx)
+	k.ctx = context.Background()
+	k.ctx, k.cancel = context.WithCancel(k.ctx)
 
+	k.wg.Add(1)
 	go func() {
-		err := k.consumer.Scan(ctx, func(r *consumer.Record) consumer.ScanStatus {
-			sem <- struct{}{}
-			err := k.onMessage(acc, r)
+		defer k.wg.Done()
+		err := k.consumer.Scan(k.ctx, func(r *consumer.Record) consumer.ScanStatus {
+			select {
+			case <-k.ctx.Done():
+				return consumer.ScanStatus{Error: k.ctx.Err()}
+			case k.sem <- struct{}{}:
+				break
+			}
+			err := k.onMessage(k.acc, r)
 			if err != nil {
+				k.sem <- struct{}{}
 				return consumer.ScanStatus{Error: err}
 			}
 
 			return consumer.ScanStatus{}
 		})
 		if err != nil {
-			log.Printf("E! Scan encounterred an error - %s", err.Error())
+			log.Printf("E! [inputs.kinesis_consumer] Scan encounterred an error - %s", err.Error())
 			k.consumer = nil
 		}
 	}()
 
+	return nil
+}
+
+func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
+	err := k.connect(ac)
+	if err != nil {
+		return err
+	}
+
 	k.wg.Add(1)
 	go func() {
 		defer k.wg.Done()
-		k.onDelivery(ctx, acc, sem)
+		k.onDelivery()
 	}()
 
 	return nil
@@ -241,19 +250,19 @@ func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consume
 	return nil
 }
 
-func (k *KinesisConsumer) onDelivery(ctx context.Context, acc telegraf.TrackingAccumulator, sem chan struct{}) {
+func (k *KinesisConsumer) onDelivery() {
 	for {
 		select {
-		case <-ctx.Done():
+		case <-k.ctx.Done():
 			return
-		case info := <-acc.Delivered():
+		case info := <-k.acc.Delivered():
 			k.recordsTex.Lock()
 			sequenceNum, ok := k.records[info.ID()]
 			if !ok {
 				k.recordsTex.Unlock()
 				continue
 			}
-			<-sem
+			<-k.sem
 			delete(k.records, info.ID())
 			k.recordsTex.Unlock()
 
@@ -275,7 +284,7 @@ func (k *KinesisConsumer) onDelivery(ctx context.Context, acc telegraf.TrackingA
 				k.lastSeqNum = sequenceNum
 				k.checkpoint.Set(chk.streamName, chk.shardID, sequenceNum)
 			} else {
-				log.Println("D! Metric group failed to process")
+				log.Println("D! [inputs.kinesis_consumer] Metric group failed to process")
 			}
 		}
 	}
@@ -288,7 +297,7 @@ func (k *KinesisConsumer) Stop() {
 
 func (k *KinesisConsumer) Gather(acc telegraf.Accumulator) error {
 	if k.consumer == nil {
-		return k.connect()
+		return k.connect(acc)
 	}
 	k.lastSeqNum = maxSeq
 
