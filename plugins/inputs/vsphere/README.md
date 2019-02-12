@@ -27,6 +27,7 @@ vm_metric_exclude = [ "*" ]
 
   ## VMs
   ## Typical VM metrics (if omitted or empty, all metrics are collected)
+  # vm_include = [ "/*/vm/**"] # Inventory path to VMs to collect (by default all are collected)
   vm_metric_include = [
     "cpu.demand.average",
     "cpu.idle.summation",
@@ -68,6 +69,7 @@ vm_metric_exclude = [ "*" ]
 
   ## Hosts 
   ## Typical host metrics (if omitted or empty, all metrics are collected)
+  # host_include = [ "/*/host/**"] # Inventory path to hosts to collect (by default all are collected)
   host_metric_include = [
     "cpu.coreUtilization.average",
     "cpu.costop.summation",
@@ -120,16 +122,19 @@ vm_metric_exclude = [ "*" ]
   # host_instances = true ## true by default
 
   ## Clusters 
+  # cluster_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
   # cluster_instances = false ## false by default 
 
   ## Datastores 
+  # cluster_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
   # datastore_instances = false ## false by default 
 
   ## Datacenters
+  # datacenter_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
   datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default 
@@ -196,6 +201,48 @@ For setting up concurrency, modify `collect_concurrency` and `discover_concurren
   # discover_concurrency = 1
 ```
 
+### Inventory Paths
+Resources to be monitored can be selected using Inventory Paths. This treats the vSphere inventory as a tree structure similar
+to a file system. A vSphere inventory has a structure similar to this:
+
+```
+<root>
++-DC0 # Virtual datacenter
+   +-datastore # Datastore folder (created by system)
+   | +-Datastore1
+   +-host # Host folder (created by system)
+   | +-Cluster1
+   | | +-Host1
+   | | | +-VM1
+   | | | +-VM2
+   | | | +-hadoop1
+   | +-Host2 # Dummy cluster created for non-clustered host
+   | | +-Host2
+   | | | +-VM3
+   | | | +-VM4
+   +-vm # VM folder (created by system)
+   | +-VM1
+   | +-VM2
+   | +-Folder1
+   | | +-hadoop1
+   | | +-NestedFolder1
+   | | | +-VM3
+   | | | +-VM4
+```
+
+#### Using Inventory Paths
+Using familiar UNIX-style paths, one could select e.g. VM2 with the path ```/DC0/vm/VM2```.
+
+Often, we want to select a group of resource, such as all the VMs in a folder. We could use the path ```/DC0/vm/Folder1/*``` for that. 
+
+Another possibility is to select objects using a partial name, such as ```/DC0/vm/Folder1/hadoop*``` yielding all vms in Folder1 with a name starting with "hadoop".
+
+Finally, due to the arbitrary nesting of the folder structure, we need a "recursive wildcard" for traversing multiple folders. We use the "**" symbol for that. If we want to look for a VM with a name starting with "hadoop" in any folder, we could use the following path: ```/DC0/vm/**/hadoop*```
+
+#### Multiple paths to VMs
+As we can see from the example tree above, VMs appear both in its on folder under the datacenter, as well as under the hosts. This is useful when you like to select VMs on a specific host. For example, ```/DC0/host/Cluster1/Host1/hadoop*``` selects all VMs with a name starting with "hadoop" that are running on Host1. 
+
+We can extend this to looking at a cluster level: ```/DC0/host/Cluster1/*/hadoop*```. This selects any VM matching "hadoop*" on any host in Cluster1.
 ## Performance Considerations
 
 ### Realtime vs. historical metrics
