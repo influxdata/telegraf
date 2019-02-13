@@ -132,7 +132,8 @@ type Config struct {
 	VqtcsvFormat   string
 
 	//FileInfo
-	FileInfoRegex map[string]string
+	FileInfoRegex    map[string]string
+	FileInfoTagRegex map[string]string
 
 	//csv configuration
 	CSVColumnNames       []string `toml:"csv_column_names"`
@@ -155,7 +156,7 @@ func NewParser(config *Config) (Parser, error) {
 	var parser Parser
 	switch config.DataFormat {
 	case "fileinfo":
-		parser, err = NewFileInfoParser(config.FileInfoRegex)
+		parser, err = NewFileInfoParser(config.FileInfoRegex, config.FileInfoTagRegex)
 	case "vqtcsv":
 		parser, err = NewVqtCsvParser(config)
 	case "json":
@@ -226,8 +227,8 @@ func NewParser(config *Config) (Parser, error) {
 	return parser, err
 }
 
-func NewFileInfoParser(fileRegexps map[string]string) (Parser, error) {
-	f, err := fileinfo.NewFileInfoParser(fileRegexps)
+func NewFileInfoParser(fileRegexp map[string]string, fileTagRegexp map[string]string) (Parser, error) {
+	f, err := fileinfo.NewFileInfoParser(fileRegexp, fileTagRegexp)
 	return f, err
 }
 

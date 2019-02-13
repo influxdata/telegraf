@@ -176,15 +176,17 @@ func (p *Postgresql) HandleInserts_Batch(i int, insertItems map[string]InsertIte
 	if err != nil {
 		err2 := txn.Rollback()
 		if err2 != nil {
-			log.Println("ERROR: [txn.Rollback]: ", err)
+			log.Println("ERROR: [txn.Rollback]: ", err2)
 		}
 
 		exists, table, column := p.ColumnExists(err)
 		if !exists {
-			err = p.AddColumn(table, column)
-			if err != nil {
-				log.Println("ERROR [batch.AddColumn]: ", err)
+			err2 = p.AddColumn(table, column)
+			if err2 != nil {
+				log.Println("ERROR [batch.AddColumn]: ", err2)
 			}
+		} else {
+			log.Println("ERROR [batch.Write]: ", err)
 		}
 	} else {
 		err = txn.Commit()

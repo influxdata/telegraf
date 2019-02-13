@@ -13,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
+	"github.com/influxdata/telegraf/pubsub"
 )
 
 // Agent runs a set of plugins.
@@ -48,6 +49,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	inputC := make(chan telegraf.Metric, 100)
 	procC := make(chan telegraf.Metric, 100)
 	outputC := make(chan telegraf.Metric, 100)
+	msgbus := pubsub.New(100)
 
 	startTime := time.Now()
 
@@ -79,6 +81,21 @@ func (a *Agent) Run(ctx context.Context) error {
 	}(dst)
 
 	src = dst
+
+	if len(a.Config.Services) > 0 {
+		wg.Add(1)
+		go func(dst *pubsub.PubSub) {
+			defer wg.Done()
+
+			err := a.runServices(dst)
+			if err != nil {
+				log.Printf("E! [agent] Error running service: %v", err)
+			}
+			dst.Close()
+			dst.Shutdown()
+			log.Printf("D! [agent] Service channel closed")
+		}(msgbus)
+	}
 
 	if len(a.Config.Processors) > 0 {
 		dst = procC
@@ -249,6 +266,24 @@ func (a *Agent) runInputs(
 
 			a.gatherOnInterval(ctx, acc, input, interval, jitter)
 		}(input)
+	}
+	wg.Wait()
+
+	return nil
+}
+
+func (a *Agent) runServices(
+	dst *pubsub.PubSub,
+) error {
+	var wg sync.WaitGroup
+	for _, service := range a.Config.Services {
+		wg.Add(1)
+		go func(service *models.RunningService) {
+			defer wg.Done()
+			service.Connect()
+			service.Run(dst)
+			service.Close()
+		}(service)
 	}
 	wg.Wait()
 

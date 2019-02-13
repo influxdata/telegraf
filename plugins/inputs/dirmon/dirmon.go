@@ -26,23 +26,25 @@ import (
 )
 
 type DirDefObject struct {
-	Directory       string
-	DirInclude      []string
-	DirExclude      []string
-	FileInclude     []string
-	FileExclude     []string
-	NumProcessors   int
-	ConcurrentTasks int
-	FieldReplace    map[string]string
-	FileTagRegex    map[string]string
-	TempExtension   string
+	Directory      string
+	DirInclude     []string
+	DirExclude     []string
+	FileInclude    []string
+	FileExclude    []string
+	NumProcessors  int
+	FieldReplace   map[string]string
+	FileRegex      map[string]string
+	FileTagRegex   map[string]string
+	MetricTagRegex map[string]string
+	TempExtension  string
 
-	histQueue chan string
-	rtQueue   chan string
-	location  *time.Location
-	fiParser  *fileinfo.FileInfoParser
-	parser    parsers.Parser
-	acc       telegraf.Accumulator
+	histQueue      chan string
+	rtQueue        chan string
+	location       *time.Location
+	metricTagMatch map[string]*regexp.Regexp
+	fiParser       *fileinfo.FileInfoParser
+	parser         parsers.Parser
+	acc            telegraf.Accumulator
 }
 
 type DirMon struct {
@@ -305,6 +307,13 @@ func (ddo *DirDefObject) ProcessFile(id int, fileName string, acc telegraf.Accum
 				}
 			}
 
+			for key, regex := range ddo.metricTagMatch {
+				match := regex.FindStringSubmatch(fileName)
+				if len(match) > 1 {
+					metric.AddTag(key, match[1])
+				}
+			}
+
 			if len(metric.Name()) == 0 {
 				metric.SetName("dirmon")
 			}
@@ -468,8 +477,8 @@ func (ddo DirDefObject) RealtimeHandler(dir string) {
 func (ddo DirDefObject) Start(acc telegraf.Accumulator, parser parsers.Parser, gFieldReplace map[string]string) error {
 	var err error
 
-	ddo.histQueue = make(chan string, ddo.ConcurrentTasks*ddo.NumProcessors)
-	ddo.rtQueue = make(chan string, 2000)
+	ddo.histQueue = make(chan string, ddo.NumProcessors)
+	ddo.rtQueue = make(chan string, ddo.NumProcessors)
 	ddo.acc = acc
 
 	for key, value := range ddo.FieldReplace {
@@ -478,11 +487,15 @@ func (ddo DirDefObject) Start(acc telegraf.Accumulator, parser parsers.Parser, g
 	ddo.FieldReplace = gFieldReplace
 
 	ddo.parser = parser
-	ddo.fiParser, err = fileinfo.NewFileInfoParser(ddo.FileTagRegex)
+	ddo.fiParser, err = fileinfo.NewFileInfoParser(ddo.FileRegex, ddo.FileTagRegex)
 	if err != nil {
 		return err
 	}
 
+	ddo.metricTagMatch = make(map[string]*regexp.Regexp)
+	for key, sRegex := range ddo.MetricTagRegex {
+		ddo.metricTagMatch[key] = regexp.MustCompile(sRegex)
+	}
 	results, err := ddo.OSReadDir(ddo.Directory)
 	if err != nil {
 		log.Fatalln("ERROR [receiver]: ", err)

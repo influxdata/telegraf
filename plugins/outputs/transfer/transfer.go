@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"sync"
 	"text/template"
 	"time"
 
@@ -45,6 +44,9 @@ type Transfer struct {
 	Source       string
 	Entry        []*TransferEntry
 	RemoveSource int
+	Concurrency  int
+
+	queue chan telegraf.Metric
 }
 
 var sampleConfig = `
@@ -207,8 +209,7 @@ func (t *TransferItem) AddDest(d string) error {
 	return nil
 }
 
-func (t *TransferEntry) Write(source string, attributes map[string]interface{}, pwg *sync.WaitGroup) error {
-	defer pwg.Done()
+func (t *TransferEntry) Write(source string, attributes map[string]interface{}) error {
 	errTemplate := t.Template(t.Error, attributes)
 	errUrl, err := url.Parse(errTemplate)
 	if err != nil || len(errUrl.String()) == 0 {
@@ -222,7 +223,7 @@ func (t *TransferEntry) Write(source string, attributes map[string]interface{}, 
 		d := t.Template(dest, attributes)
 		err := transfer.AddDest(d)
 		if err != nil {
-			log.Println("E! ERROR adding destination")
+			log.Println("E! ERROR adding destination", err)
 		}
 	}
 
@@ -232,6 +233,11 @@ func (t *TransferEntry) Write(source string, attributes map[string]interface{}, 
 }
 
 func (t *Transfer) Connect() error {
+	t.queue = make(chan telegraf.Metric, 100)
+	for i := 0; i < t.Concurrency; i++ {
+		go t.Handle()
+	}
+
 	for _, entry := range t.Entry {
 		err := entry.Connect()
 		if err != nil {
@@ -243,9 +249,11 @@ func (t *Transfer) Connect() error {
 	return nil
 }
 
-func (t *Transfer) Write(metrics []telegraf.Metric) error {
-	var wg sync.WaitGroup
-	for _, metric := range metrics {
+func (t *Transfer) Handle() {
+	var metric telegraf.Metric
+	for true {
+		metric = <-t.queue
+
 		if metric.Name() != "fileinfo" {
 			log.Printf("E!: Only fileinfo format accepted by transfer output")
 			continue
@@ -283,29 +291,50 @@ func (t *Transfer) Write(metrics []telegraf.Metric) error {
 			}
 
 			for id, filters := range entry.fieldpass {
-				field := metric.Fields()[id].(string)
-				for _, filter := range filters {
-					if !filter.Match(field) {
-						filtered = true
+				fields := metric.Fields()[id]
+				if fields != nil {
+					field := fields.(string)
+					for _, filter := range filters {
+						if !filter.Match(field) {
+							filtered = true
+						}
 					}
 				}
 			}
 
 			if !filtered {
-				wg.Add(1)
 				source = entry.Template(t.Source, attributes)
-				go entry.Write(source, attributes, &wg)
+				entry.Write(source, attributes)
 			}
 		}
-		wg.Wait()
 
 		if t.RemoveSource == 1 && len(source) > 0 {
-			err := os.Remove(source)
+			var err error
+			for i := 0; i < 10; i++ {
+				err = os.Remove(source)
+				if err != nil {
+					time.Sleep(100 * time.Millisecond)
+					continue
+				}
+
+				break
+			}
+
 			if err != nil {
 				log.Printf("ERROR (Remove): %v", err)
 			}
 		}
+
+		// Sleep until next cycle
+		time.Sleep(10 * time.Millisecond)
 	}
+}
+
+func (t *Transfer) Write(metrics []telegraf.Metric) error {
+	for _, metric := range metrics {
+		t.queue <- metric
+	}
+
 	return nil
 }
 

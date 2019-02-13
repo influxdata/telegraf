@@ -1,12 +1,9 @@
 package geohash
 
 import (
-	"log"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/mmcloughlin/geohash"
-	"github.com/srclosson/telegraf/metric"
 )
 
 var sampleConfig = `
@@ -19,8 +16,6 @@ type GeoHash struct {
 	Name      string
 
 	configParsed bool
-	lat          telegraf.Metric
-	lng          telegraf.Metric
 }
 
 func (p *GeoHash) SampleConfig() string {
@@ -40,30 +35,18 @@ func (p *GeoHash) Apply(in ...telegraf.Metric) []telegraf.Metric {
 		p.configParsed = p.ParseConfig()
 	}
 
+	var metrics []telegraf.Metric
 	for _, m := range in {
-		if _, latOk := m.Fields()[p.Latitude]; latOk {
-			p.lat = m
-		}
-
-		if _, lngOk := m.Fields()[p.Longitude]; lngOk {
-			p.lng = m
+		if m.HasField(p.Longitude) && m.HasField(p.Latitude) {
+			metrics = append(metrics, m)
 		}
 	}
 
-	if p.lat != nil && p.lng != nil && p.lat.Time() == p.lng.Time() {
-		fields := make(map[string]interface{})
-		lat := p.lat.Fields()[p.Latitude].(float64)
-		lng := p.lng.Fields()[p.Longitude].(float64)
-		fields[p.Name] = geohash.Encode(lat, lng)
-		ghMetric, err := metric.New(p.lat.Name(), p.lat.Tags(), fields, p.lat.Time())
-		if err != nil {
-			log.Println("ERROR [geohash.Apply]: Could not create a new metric")
-		}
-		in = append(in, ghMetric)
-
-		/* We don't need these anymore */
-		p.lat = nil
-		p.lng = nil
+	for _, m := range metrics {
+		lat := m.Fields()[p.Latitude].(float64)
+		lng := m.Fields()[p.Longitude].(float64)
+		gh := geohash.Encode(lat, lng)
+		m.AddField(p.Name, gh)
 	}
 
 	return in

@@ -12,17 +12,26 @@ import (
 type FileInfoParser struct {
 	DefaultTags map[string]string
 
-	relativeDir string
-	fileRegexp  map[string]*regexp.Regexp
+	relativeDir   string
+	fileRegexp    map[string]*regexp.Regexp
+	fileTagRegexp map[string]*regexp.Regexp
 }
 
-func NewFileInfoParser(regex map[string]string) (*FileInfoParser, error) {
+func NewFileInfoParser(fileRegex map[string]string, fileTagRegex map[string]string) (*FileInfoParser, error) {
 	r := make(map[string]*regexp.Regexp)
-	for key, value := range regex {
+	tr := make(map[string]*regexp.Regexp)
+	for key, value := range fileRegex {
 		r[key] = regexp.MustCompile(value)
 	}
 
-	return &FileInfoParser{fileRegexp: r}, nil
+	for key, value := range fileTagRegex {
+		tr[key] = regexp.MustCompile(value)
+	}
+
+	return &FileInfoParser{
+		fileRegexp:    r,
+		fileTagRegexp: tr,
+	}, nil
 }
 
 // Provided so that you can accurately calcuate the relative path against
@@ -50,6 +59,13 @@ func (p *FileInfoParser) ParseLine(line string) (telegraf.Metric, error) {
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 	for name, regex := range p.fileRegexp {
+		match := regex.FindStringSubmatch(line)
+		if len(match) > 1 {
+			fields[name] = match[1]
+		}
+	}
+
+	for name, regex := range p.fileTagRegexp {
 		match := regex.FindStringSubmatch(line)
 		if len(match) > 1 {
 			tags[name] = match[1]

@@ -76,23 +76,25 @@ func (s *Ping) SampleConfig() string {
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
+
 	if p.Count < 1 {
 		p.Count = 1
 	}
 
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
-		p.wg.Add(1)
-		go p.pingToHost(url, acc)
+		wg.Add(1)
+		go p.pingToHost(url, acc, &wg)
 	}
 
-	p.wg.Wait()
+	wg.Wait()
 
 	return nil
 }
 
-func (p *Ping) pingToHost(h string, acc telegraf.Accumulator) {
-	defer p.wg.Done()
+func (p *Ping) pingToHost(h string, acc telegraf.Accumulator, pwg *sync.WaitGroup) {
+	defer pwg.Done()
 
 	tags := map[string]string{"url": h}
 	fields := map[string]interface{}{"result_code": 0}

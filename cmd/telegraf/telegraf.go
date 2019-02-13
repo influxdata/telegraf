@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
 	//_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
 	"os/signal"
@@ -18,16 +19,20 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/config"
 	"github.com/influxdata/telegraf/logger"
+
 	//_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/filtered"
 	"github.com/influxdata/telegraf/plugins/inputs"
+
 	//_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	_ "github.com/influxdata/telegraf/plugins/inputs/filtered"
 	"github.com/influxdata/telegraf/plugins/outputs"
+
 	//_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	_ "github.com/influxdata/telegraf/plugins/outputs/filtered"
 	//_ "github.com/influxdata/telegraf/plugins/processors/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/filtered"
+	_ "github.com/influxdata/telegraf/plugins/services/all"
 	"github.com/kardianos/service"
 )
 
@@ -136,11 +141,11 @@ func runAgent(ctx context.Context,
 			return err
 		}
 	}
-	if !*fTest && len(c.Outputs) == 0 {
-		return errors.New("Error: no outputs found, did you provide a valid config file?")
+	if !*fTest && len(c.Outputs) == 0 && len(c.Services) == 0 {
+		return errors.New("Error: no outputs or services found, did you provide a valid config file?")
 	}
-	if len(c.Inputs) == 0 {
-		return errors.New("Error: no inputs found, did you provide a valid config file?")
+	if len(c.Inputs) == 0 && len(c.Services) == 0 {
+		return errors.New("Error: no inputs or services found, did you provide a valid config file?")
 	}
 
 	if int64(c.Agent.Interval.Duration) <= 0 {
@@ -173,6 +178,7 @@ func runAgent(ctx context.Context,
 	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
 	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
 	log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
+	log.Printf("I! Loaded services: %s", strings.Join(c.ServiceNames(), " "))
 	log.Printf("I! Tags enabled: %s", c.ListTags())
 
 	if *fPidfile != "" {
@@ -348,7 +354,6 @@ func main() {
 		log.Println("Telegraf version already configured to: " + internal.Version())
 	}
 
-	fmt.Println("6")
 	if runtime.GOOS == "windows" && !(*fRunAsConsole) {
 		svcConfig := &service.Config{
 			Name:        *fServiceName,

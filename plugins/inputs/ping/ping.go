@@ -5,6 +5,7 @@ package ping
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os/exec"
 	"runtime"
@@ -100,9 +101,27 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 		go p.pingToURL(url, acc)
 	}
 
-	p.wg.Wait()
+	if p.waitTimeout(p.Timeout * time.Millisecond) {
+		log.Println("Wait timeout exceeded")
+	}
 
 	return nil
+}
+
+// waitTimeout waits for the waitgroup for the specified max timeout.
+// Returns true if waiting timed out.
+func (p *Ping) waitTimeout(timeout time.Duration) bool {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		p.wg.Wait()
+	}()
+	select {
+	case <-c:
+		return false // completed normally
+	case <-time.After(timeout):
+		return true // timed out
+	}
 }
 
 func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {

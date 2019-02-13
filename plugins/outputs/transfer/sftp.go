@@ -111,6 +111,7 @@ func (s *SftpTransferer) Send(source string, dest *url.URL) error {
 
 	_, data, err := s.ReadFile(source)
 	if err != nil {
+		log.Printf("ERROR [sftp.read] [%s]: %s", source, err)
 		return err
 	}
 

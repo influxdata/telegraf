@@ -27,6 +27,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/telegraf/plugins/services"
 	"github.com/influxdata/toml"
 	"github.com/influxdata/toml/ast"
 )
@@ -52,13 +53,16 @@ var (
 // will be logging to, as well as all the plugins that the user has
 // specified
 type Config struct {
-	Tags          map[string]string
-	InputFilters  []string
-	OutputFilters []string
+	Tags            map[string]string
+	InputFilters    []string
+	OutputFilters   []string
+	ReceiverFilters []string
+	HandlerFilters  []string
 
 	Agent       *AgentConfig
 	Inputs      []*models.RunningInput
 	Outputs     []*models.RunningOutput
+	Services    []*models.RunningService
 	Aggregators []*models.RunningAggregator
 	// Processors have a slice wrapper type because they need to be sorted
 	Processors models.RunningProcessors
@@ -77,6 +81,7 @@ func NewConfig() *Config {
 		Inputs:        make([]*models.RunningInput, 0),
 		Outputs:       make([]*models.RunningOutput, 0),
 		Processors:    make([]*models.RunningProcessor, 0),
+		Services:      make([]*models.RunningService, 0),
 		InputFilters:  make([]string, 0),
 		OutputFilters: make([]string, 0),
 	}
@@ -179,6 +184,15 @@ func (c *Config) OutputNames() []string {
 	var name []string
 	for _, output := range c.Outputs {
 		name = append(name, output.Name)
+	}
+	return name
+}
+
+// ReceiverNames returns a list of strings of the configured listeners
+func (c *Config) ServiceNames() []string {
+	var name []string
+	for _, service := range c.Services {
+		name = append(name, service.Name())
 	}
 	return name
 }
@@ -474,6 +488,24 @@ func printFilteredOutputs(outputFilters []string, commented bool) {
 	}
 }
 
+func printFilteredServices(serviceFilters []string, commented bool) {
+	// Filter receivers
+	var filtered []string
+	for name := range services.Services {
+		if sliceContains(name, serviceFilters) {
+			filtered = append(filtered, name)
+		}
+	}
+	sort.Strings(filtered)
+
+	// Print Receivers
+	for _, name := range filtered {
+		creator := services.Services[name]
+		obj := creator()
+		printConfig(name, obj, "services", commented)
+	}
+}
+
 type printer interface {
 	Description() string
 	SampleConfig() string
@@ -716,6 +748,20 @@ func (c *Config) LoadConfig(path string) error {
 						pluginName, path)
 				}
 			}
+		case "services":
+			for pluginName, pluginVal := range subTable.Fields {
+				switch pluginSubTable := pluginVal.(type) {
+				case []*ast.Table:
+					for _, t := range pluginSubTable {
+						if err = c.addService(pluginName, t); err != nil {
+							return fmt.Errorf("Error parsing %s, %s", path, err)
+						}
+					}
+				default:
+					return fmt.Errorf("Unsupported config format: %s, file %s",
+						pluginName, path)
+				}
+			}
 		// Assume it's an input input for legacy config file support if no other
 		// identifiers are present
 		default:
@@ -887,23 +933,67 @@ func (c *Config) addOutput(name string, table *ast.Table) error {
 	return nil
 }
 
+func (c *Config) addService(name string, table *ast.Table) error {
+	fmt.Println(services.Services)
+	creator, ok := services.Services[name]
+	if !ok {
+		return fmt.Errorf("Undefined but requested service: %s", name)
+	}
+	t1 := time.Now()
+	service := creator()
+	t2 := time.Now()
+	fmt.Println("Service", name, creator, t2.Sub(t1))
+
+	// If the input has a SetParser function, then this means it can accept
+	// arbitrary types of input, so build the parser and set it.
+	switch t := service.(type) {
+	case parsers.ParserInput:
+		parser, err := buildParser(name, table)
+		if err != nil {
+			return err
+		}
+		t.SetParser(parser)
+	}
+
+	switch t := service.(type) {
+	case parsers.ParserFuncInput:
+		config, err := getParserConfig(name, table)
+		if err != nil {
+			return err
+		}
+		t.SetParserFunc(func() (parsers.Parser, error) {
+			return parsers.NewParser(config)
+		})
+	}
+
+	pluginConfig, err := buildService(name, table)
+	if err != nil {
+		return err
+	}
+
+	if err := toml.UnmarshalTable(table, service); err != nil {
+		return err
+	}
+
+	rs := models.NewRunningService(service, pluginConfig)
+	rs.SetDefaultTags(c.Tags)
+	c.Services = append(c.Services, rs)
+	return nil
+}
+
 func (c *Config) addInput(name string, table *ast.Table) error {
 	if len(c.InputFilters) > 0 && !sliceContains(name, c.InputFilters) {
 		return nil
 	}
-	// Legacy support renaming io input to diskio
-	if name == "io" {
-		name = "diskio"
-	}
 
 	creator, ok := inputs.Inputs[name]
 	if !ok {
-		return fmt.Errorf("Undefined but requested input: %s", name)
+		return fmt.Errorf("Undefined but requested receiver: %s", name)
 	}
 	t1 := time.Now()
 	input := creator()
 	t2 := time.Now()
-	fmt.Println("Input", name, creator, t2.Sub(t1))
+	fmt.Println("input", name, creator, t2.Sub(t1))
 
 	// If the input has a SetParser function, then this means it can accept
 	// arbitrary types of input, so build the parser and set it.
@@ -936,9 +1026,9 @@ func (c *Config) addInput(name string, table *ast.Table) error {
 		return err
 	}
 
-	rp := models.NewRunningInput(input, pluginConfig)
-	rp.SetDefaultTags(c.Tags)
-	c.Inputs = append(c.Inputs, rp)
+	ri := models.NewRunningInput(input, pluginConfig)
+	ri.SetDefaultTags(c.Tags)
+	c.Inputs = append(c.Inputs, ri)
 	return nil
 }
 
@@ -1888,4 +1978,17 @@ func buildOutput(name string, tbl *ast.Table) (*models.OutputConfig, error) {
 	delete(tbl.Fields, "metric_batch_size")
 
 	return oc, nil
+}
+
+func buildService(name string, tbl *ast.Table) (*models.ServiceConfig, error) {
+	filter, err := buildFilter(tbl)
+	if err != nil {
+		return nil, err
+	}
+	ret := &models.ServiceConfig{
+		Name:   name,
+		Filter: filter,
+	}
+
+	return ret, nil
 }

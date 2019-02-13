@@ -6,6 +6,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/processors"
+	"github.com/mattn/anko/core"
 	"github.com/mattn/anko/vm"
 )
 
@@ -54,7 +55,12 @@ func init() {
 			env: vm.NewEnv(),
 		}
 
-		err := anko.env.Define("println", fmt.Println)
+		err := anko.env.Define("log", log.Println)
+		if err != nil {
+			log.Printf("E! [Define]: %s", err)
+		}
+
+		err = anko.env.Define("println", fmt.Println)
 		if err != nil {
 			log.Printf("E! [Define]: %s", err)
 		}
@@ -68,7 +74,8 @@ func init() {
 		if err != nil {
 			log.Printf("E! [Define]: %s", err)
 		}
-
+		core.Import(anko.env)
+		//packages.DefineImport(env)
 		return anko
 	})
 }
