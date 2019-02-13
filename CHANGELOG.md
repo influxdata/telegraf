@@ -44,6 +44,7 @@
 - [#5396](https://github.com/influxdata/telegraf/pull/5396): Add internal metric for line too long in influxdb_listener.
 - [#4892](https://github.com/influxdata/telegraf/pull/4892): Add option to set retain flag on messages to mqtt output.
 - [#5165](https://github.com/influxdata/telegraf/pull/5165): Add resource path based filtering to vsphere input.
+- [#5417](https://github.com/influxdata/telegraf/pull/5417): Add rcode tag and field to dns_query input.
 
 #### Bugfixes
 
