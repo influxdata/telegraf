@@ -113,19 +113,25 @@ func sorted(metrics []telegraf.Metric) []telegraf.Metric {
 	return batch
 }
 
-func getFieldHash(m telegraf.Metric, f *telegraf.Field) uint64 {
+type timeSeriesBuckets map[uint64][]*monitoringpb.TimeSeries
+
+func (tsb timeSeriesBuckets) Add(m telegraf.Metric, f *telegraf.Field, ts *monitoringpb.TimeSeries) {
 	h := fnv.New64a()
 	h.Write([]byte(m.Name()))
-	h.Write([]byte("\n"))
+	h.Write([]byte{'\n'})
 	h.Write([]byte(f.Key))
-	h.Write([]byte("\n"))
+	h.Write([]byte{'\n'})
 	for key, value := range m.Tags() {
 		h.Write([]byte(key))
-		h.Write([]byte("\n"))
+		h.Write([]byte{'\n'})
 		h.Write([]byte(value))
-		h.Write([]byte("\n"))
+		h.Write([]byte{'\n'})
 	}
-	return h.Sum64()
+	k := h.Sum64()
+
+	s := tsb[k]
+	s = append(s, ts)
+	tsb[k] = s
 }
 
 // Write the metrics to Google Cloud Stackdriver.
@@ -133,9 +139,7 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 	ctx := context.Background()
 
 	batch := sorted(metrics)
-	timeSeries := []*monitoringpb.TimeSeries{}
-	processedTimeSeries := map[uint64]bool{}
-
+	buckets := make(timeSeriesBuckets)
 	for _, m := range batch {
 		for _, f := range m.FieldList() {
 			value, err := getStackdriverTypedValue(f.Value)
@@ -146,32 +150,6 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 
 			if value == nil {
 				continue
-			}
-
-			fieldHash := getFieldHash(m, f)
-			_, duplicateInRequest := processedTimeSeries[fieldHash]
-
-			if duplicateInRequest || len(timeSeries) >= 200 {
-				// Prepare time series request.
-				timeSeriesRequest := &monitoringpb.CreateTimeSeriesRequest{
-					Name:       monitoring.MetricProjectPath(s.Project),
-					TimeSeries: timeSeries,
-				}
-
-				// Create the time series in Stackdriver.
-				err := s.client.CreateTimeSeries(ctx, timeSeriesRequest)
-				if err != nil {
-					if strings.Contains(err.Error(), errStringPointsOutOfOrder) ||
-						strings.Contains(err.Error(), errStringPointsTooOld) ||
-						strings.Contains(err.Error(), errStringPointsTooFrequent) {
-						log.Printf("D! [outputs.stackdriver] unable to write to Stackdriver: %s", err)
-						return nil
-					}
-					log.Printf("E! [outputs.stackdriver] unable to write to Stackdriver: %s", err)
-					return err
-				}
-				timeSeries = []*monitoringpb.TimeSeries{}
-				processedTimeSeries = map[uint64]bool{}
 			}
 
 			metricKind, err := getStackdriverMetricKind(m.Type())
@@ -193,26 +171,52 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 			}
 
 			// Prepare time series.
-			timeSeries = append(timeSeries,
-				&monitoringpb.TimeSeries{
-					Metric: &metricpb.Metric{
-						Type:   path.Join("custom.googleapis.com", s.Namespace, m.Name(), f.Key),
-						Labels: getStackdriverLabels(m.TagList()),
-					},
-					MetricKind: metricKind,
-					Resource: &monitoredrespb.MonitoredResource{
-						Type:   s.ResourceType,
-						Labels: s.ResourceLabels,
-					},
-					Points: []*monitoringpb.Point{
-						dataPoint,
-					},
-				})
-			processedTimeSeries[fieldHash] = true
+			timeSeries := &monitoringpb.TimeSeries{
+				Metric: &metricpb.Metric{
+					Type:   path.Join("custom.googleapis.com", s.Namespace, m.Name(), f.Key),
+					Labels: getStackdriverLabels(m.TagList()),
+				},
+				MetricKind: metricKind,
+				Resource: &monitoredrespb.MonitoredResource{
+					Type:   s.ResourceType,
+					Labels: s.ResourceLabels,
+				},
+				Points: []*monitoringpb.Point{
+					dataPoint,
+				},
+			}
+
+			buckets.Add(m, f, timeSeries)
 		}
 	}
 
-	if len(timeSeries) > 0 {
+	// process the buckets in order
+	keys := make([]uint64, 0, len(buckets))
+	for k := range buckets {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool { return keys[i] < keys[j] })
+
+	for len(buckets) != 0 {
+		// can send up to 200 time series to stackdriver
+		timeSeries := make([]*monitoringpb.TimeSeries, 0, 200)
+		for i, k := range keys {
+			s := buckets[k]
+			timeSeries = append(timeSeries, s[0])
+			if len(s) == 1 {
+				delete(buckets, k)
+				keys = append(keys[:i], keys[i+1:]...)
+				continue
+			}
+
+			s = s[1:]
+			buckets[k] = s
+
+			if len(timeSeries) == cap(timeSeries) {
+				break
+			}
+		}
+
 		// Prepare time series request.
 		timeSeriesRequest := &monitoringpb.CreateTimeSeriesRequest{
 			Name:       monitoring.MetricProjectPath(s.Project),

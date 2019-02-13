@@ -242,6 +242,15 @@ func TestWriteBatchable(t *testing.T) {
 			map[string]interface{}{
 				"value": 43,
 			},
+			time.Unix(3, 0),
+		),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"foo": "bar",
+			},
+			map[string]interface{}{
+				"value": 43,
+			},
 			time.Unix(1, 0),
 		),
 	}
@@ -251,14 +260,14 @@ func TestWriteBatchable(t *testing.T) {
 	err = s.Write(metrics)
 	require.NoError(t, err)
 
-	require.Len(t, mockMetric.reqs, 1)
+	require.Len(t, mockMetric.reqs, 2)
 	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
 	require.Len(t, request.TimeSeries, 2)
 	ts := request.TimeSeries[0]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
 		EndTime: &googlepb.Timestamp{
-			Seconds: 1,
+			Seconds: 3,
 		},
 	})
 	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
@@ -271,12 +280,12 @@ func TestWriteBatchable(t *testing.T) {
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
 		EndTime: &googlepb.Timestamp{
-			Seconds: 2,
+			Seconds: 1,
 		},
 	})
 	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
 		Value: &monitoringpb.TypedValue_Int64Value{
-			Int64Value: int64(42),
+			Int64Value: int64(43),
 		},
 	})
 }
