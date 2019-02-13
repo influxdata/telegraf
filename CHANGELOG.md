@@ -55,6 +55,7 @@
 - [#5364](https://github.com/influxdata/telegraf/issues/5364): Send metrics in ascending time order in stackdriver output.
 - [#5117](https://github.com/influxdata/telegraf/issues/5117): Use systemd in Amazon Linux 2 rpm.
 - [#4988](https://github.com/influxdata/telegraf/issues/4988): Set deadlock priority in sqlserver input.
+- [#5403](https://github.com/influxdata/telegraf/issues/5403): Remove error log when snmp6 directory does not exists with nstat input.
 
 ## v1.9.4 [2019-02-05]
 
