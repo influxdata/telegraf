@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers/json"
 	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
 	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
+	"github.com/influxdata/telegraf/plugins/serializers/prometheus"
 )
 
 // SerializerOutput is an interface for output plugins that are able to
@@ -85,6 +86,8 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewNowSerializer()
 	case "carbon2":
 		serializer, err = NewCarbon2Serializer()
+	case "prometheus":
+		serializer, err = NewPrometheusSerializer()
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -97,6 +100,10 @@ func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 
 func NewCarbon2Serializer() (Serializer, error) {
 	return carbon2.NewSerializer()
+}
+
+func NewPrometheusSerializer() (Serializer, error) {
+	return prometheus.NewSerializer()
 }
 
 func NewSplunkmetricSerializer(splunkmetric_hec_routing bool) (Serializer, error) {
