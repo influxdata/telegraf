@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -63,8 +64,10 @@ type (
 
 const (
 	defaultMaxUndeliveredMessages = 1000
-	maxSeq                        = "99999999999999999999999999999999999999999999999999999999"
 )
+
+// this is the largest sequence number allowed - https://docs.aws.amazon.com/kinesis/latest/APIReference/API_SequenceNumberRange.html
+var maxSeq = strings.Repeat("9", 129)
 
 var sampleConfig = `
   ## Amazon REGION of kinesis endpoint.
