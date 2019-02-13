@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/kinesis"
 	consumer "github.com/harlow/kinesis-consumer"
@@ -39,12 +38,12 @@ type (
 		DynamoDB               *DynamoDB `toml:"checkpoint_dynamodb"`
 		MaxUndeliveredMessages int       `toml:"max_undelivered_messages"`
 
-		consumer *consumer.Consumer
-		parser   parsers.Parser
-		cancel   context.CancelFunc
-		ctx      context.Context
-		acc      telegraf.TrackingAccumulator
-		sem      chan struct{}
+		cons   *consumer.Consumer
+		parser parsers.Parser
+		cancel context.CancelFunc
+		ctx    context.Context
+		acc    telegraf.TrackingAccumulator
+		sem    chan struct{}
 
 		checkpoint    consumer.Checkpoint
 		checkpoints   map[string]checkpoint
@@ -148,12 +147,9 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 	configProvider := credentialConfig.Credentials()
 	client := kinesis.New(configProvider)
 
-	_, err := client.DescribeStreamSummary(&kinesis.DescribeStreamSummaryInput{
-		StreamName: aws.String(k.StreamName),
-	})
-
 	k.checkpoint = &noopCheckpoint{}
 	if k.DynamoDB != nil {
+		var err error
 		k.checkpoint, err = ddb.New(
 			k.DynamoDB.AppName,
 			k.DynamoDB.TableName,
@@ -174,7 +170,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 		}
 	}
 
-	consumer, err := consumer.New(
+	cons, err := consumer.New(
 		k.StreamName,
 		consumer.WithClient(client),
 		consumer.WithShardIteratorType(k.ShardIteratorType),
@@ -184,7 +180,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 		return err
 	}
 
-	k.consumer = consumer
+	k.cons = cons
 
 	k.acc = ac.WithTracking(k.MaxUndeliveredMessages)
 	k.records = make(map[telegraf.TrackingID]string, k.MaxUndeliveredMessages)
@@ -197,7 +193,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 	k.wg.Add(1)
 	go func() {
 		defer k.wg.Done()
-		err := k.consumer.Scan(k.ctx, func(r *consumer.Record) consumer.ScanStatus {
+		err := k.cons.Scan(k.ctx, func(r *consumer.Record) consumer.ScanStatus {
 			select {
 			case <-k.ctx.Done():
 				return consumer.ScanStatus{Error: k.ctx.Err()}
@@ -214,7 +210,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 		})
 		if err != nil {
 			log.Printf("E! [inputs.kinesis_consumer] Scan encounterred an error - %s", err.Error())
-			k.consumer = nil
+			k.cons = nil
 		}
 	}()
 
@@ -296,7 +292,7 @@ func (k *KinesisConsumer) Stop() {
 }
 
 func (k *KinesisConsumer) Gather(acc telegraf.Accumulator) error {
-	if k.consumer == nil {
+	if k.cons == nil {
 		return k.connect(acc)
 	}
 	k.lastSeqNum = maxSeq
