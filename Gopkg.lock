@@ -427,7 +427,7 @@
   version = "v1.2.1"
 
 [[projects]]
-  digest = "1:3dfd659219b6f63dc0677a62b8d4e8f10b5cf53900aef40858db10a19407e41d"
+  digest = "1:b73fabc1ff8f2417bc5cc51d3f7274d6af5300b5ad9b8606967213134c1700dc"
   name = "github.com/go-redis/redis"
   packages = [
     ".",
@@ -436,13 +436,12 @@
     "internal/hashtag",
     "internal/pool",
     "internal/proto",
-    "internal/singleflight",
-    "internal/util",
+    "internal/util"
   ]
   pruneopts = ""
-  revision = "83fb42932f6145ce52df09860384a4653d2d332a"
-  version = "v6.12.0"
-
+  revision = "22be8a3eaf992c828cecb69dc07348313bf08d2e"
+  version = "v6.15.1"
+  
 [[projects]]
   digest = "1:c07de423ca37dc2765396d6971599ab652a339538084b9b58c9f7fc533b28525"
   name = "github.com/go-sql-driver/mysql"

@@ -15,26 +15,26 @@ var sampleConfig = `
 `
 
 type RedisTimeSeries struct {
-	Addr            string "localhost:6379"
-	Password        string ""
-	Client    		*redis.Client
+	addr            string "localhost:6379"
+	password        string ""
+	client    		*redis.Client
 }
 
 func (i *RedisTimeSeries) Connect() error {
 
 	client := redis.NewClient(&redis.Options{
-		Addr:     i.Addr,
-		Password: i.Password,
+		Addr:     i.addr,
+		Password: i.password,
 		DB:       0,  // use default DB
 	})
 
 	_, err := client.Ping().Result()
-	i.Client = client
+	i.client = client
 	return err
 }
 
 func (i *RedisTimeSeries) Close() error {
-	return i.Client.Close()
+	return i.client.Close()
 }
 
 func (i *RedisTimeSeries) Description() string {
@@ -58,14 +58,14 @@ func (i *RedisTimeSeries) Write(metrics []telegraf.Metric) error {
 
 		for fieldName, value := range m.Fields() {			
 			key := name + "_" + fieldName
-			_, err := i.Client.Do("TS.ADD", key, now, value).Result()
+			_, err := i.client.Do("TS.ADD", key, now, value).Result()
 			if err  != nil {
 				// TODO add tags 
-				_, err2 := i.Client.Do("TS.CREATE", key).Result()
+				_, err2 := i.client.Do("TS.CREATE", key).Result()
 				if err2  != nil {
 					return err
 				}
-				_, err3 := i.Client.Do("TS.ADD", key, now, value).Result()
+				_, err3 := i.client.Do("TS.ADD", key, now, value).Result()
 				if err3  != nil {
 					return err
 				}
