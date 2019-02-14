@@ -511,7 +511,6 @@ func init() {
 		return &PrometheusClient{
 			ExpirationInterval: internal.Duration{Duration: time.Second * 60},
 			StringAsLabel:      true,
-			ExportTimestamp:    true,
 			fam:                make(map[string]*MetricFamily),
 			now:                time.Now,
 		}
