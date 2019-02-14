@@ -17,4 +17,4 @@ The RedisTimeSeries output plugin writes metrics to the RedisTimeSeries server.
 * `addr`: The address of the RedisTimeSeries server
 
 ### Optional parameters:
-* `password`: The password to connect MQTT server.
+* `password`: The password to connect RedisTimeSeries server.
