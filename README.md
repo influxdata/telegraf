@@ -323,6 +323,7 @@ For documentation on the latest development code see the [documentation index][d
 * [basicstats](./plugins/aggregators/basicstats)
 * [minmax](./plugins/aggregators/minmax)
 * [histogram](./plugins/aggregators/histogram)
+* [prometheus_histogram](./plugins/aggregators/prometheus_histogram)
 * [valuecounter](./plugins/aggregators/valuecounter)
 
 ## Output Plugins
