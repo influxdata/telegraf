@@ -15,26 +15,30 @@ import (
 	"github.com/influxdata/telegraf/internal/tls"
 )
 
+// LoggregatorForwarderAgentInput configures the Loggregator ingress API
 type LoggregatorForwarderAgentInput struct {
 	Port                    uint16 `toml:"port"`
 	InternalMetricsInterval string `toml:"internal_metrics_interval"`
 
 	tls.ServerConfig
 
-	envelopeWriter          *EnvelopeWriter
-	grpcServer              *grpc.Server
+	envelopeWriter *EnvelopeWriter
+	grpcServer     *grpc.Server
 }
 
+// NewLoggregator creates a default LoggregatorForwarderAgentInput
 func NewLoggregator() *LoggregatorForwarderAgentInput {
 	return &LoggregatorForwarderAgentInput{
 		InternalMetricsInterval: "30s",
 	}
 }
 
+// Description returns the description of this plugin
 func (_ *LoggregatorForwarderAgentInput) Description() string {
 	return "Read metrics from a Loggregator Forwarder Agent"
 }
 
+// SampleConfig returns a sample configuration for this plugin
 func (_ *LoggregatorForwarderAgentInput) SampleConfig() string {
 	return `
   ## A uint16 port for the LoggregatorForwarderAgentInput Ingress server to listen on
@@ -54,10 +58,12 @@ func (_ *LoggregatorForwarderAgentInput) SampleConfig() string {
 `
 }
 
+// Gather is a no-op to conform with the Input interface
 func (l *LoggregatorForwarderAgentInput) Gather(_ telegraf.Accumulator) error {
 	return nil
 }
 
+// Start begins collecting metrics from the Loggregator Forwarder Agent
 func (l *LoggregatorForwarderAgentInput) Start(acc telegraf.Accumulator) error {
 	internalMetricsInterval, err := time.ParseDuration(l.InternalMetricsInterval)
 	if err != nil {
@@ -97,12 +103,14 @@ func (l *LoggregatorForwarderAgentInput) buildTLSCreds() grpc.ServerOption {
 	return grpc.Creds(credentials.NewTLS(tlsConfig))
 }
 
+// Stop stops collecting metrics from the Loggregator Forwarder Agent
 func (l *LoggregatorForwarderAgentInput) Stop() {
 	log.Printf("Info: Stopping GRPC server")
 	l.grpcServer.Stop()
 	l.envelopeWriter.Stop()
 }
 
+// Sender allows forwarding from the Loggregator Forwarder Agent via GRPC. Needed to implement Loggregator v2 API.
 func (l *LoggregatorForwarderAgentInput) Sender(sender loggregator_v2.Ingress_SenderServer) error {
 	for {
 		env, err := sender.Recv()
@@ -115,6 +123,7 @@ func (l *LoggregatorForwarderAgentInput) Sender(sender loggregator_v2.Ingress_Se
 	}
 }
 
+// BatchSender allows batch forwarding from the Loggregator Forwarder Agent via GRPC. Needed to implement Loggregator v2 API.
 func (l *LoggregatorForwarderAgentInput) BatchSender(sender loggregator_v2.Ingress_BatchSenderServer) error {
 	for {
 		envelopes, err := sender.Recv()
@@ -129,6 +138,7 @@ func (l *LoggregatorForwarderAgentInput) BatchSender(sender loggregator_v2.Ingre
 	}
 }
 
+// Send allows forwarding from the Loggregator Forwarder Agent via GRPC. Needed to implement Loggregator v2 API.
 func (l *LoggregatorForwarderAgentInput) Send(ctx context.Context, batch *loggregator_v2.EnvelopeBatch) (*loggregator_v2.SendResponse, error) {
 	for _, e := range batch.GetBatch() {
 		l.envelopeWriter.Write(e)

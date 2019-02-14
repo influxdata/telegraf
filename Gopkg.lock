@@ -38,10 +38,7 @@
 [[projects]]
   digest = "1:3243ef4ec5f42910fa9b5459a543974cc1f645d51cd5d30795f9583472f63809"
   name = "code.cloudfoundry.org/go-loggregator"
-  packages = [
-    ".",
-    "rpc/loggregator_v2",
-  ]
+  packages = ["rpc/loggregator_v2"]
   pruneopts = ""
   revision = "7eacadc7c6c75fbf98bf9ed618e7d88fbb67ea44"
   version = "v7.2.0"
@@ -518,7 +515,6 @@
   digest = "1:f958a1c137db276e52f0b50efee41a1a389dcdded59a69711f3e872757dab34b"
   name = "github.com/golang/protobuf"
   packages = [
-    "jsonpb",
     "proto",
     "protoc-gen-go/descriptor",
     "ptypes",
@@ -625,20 +621,6 @@
   pruneopts = ""
   revision = "d6574a5bb1226678d7010325fb6c985db20ee458"
   version = "v0.8.1"
-
-[[projects]]
-  digest = "1:b3c5b95e56c06f5aa72cb2500e6ee5f44fcd122872d4fec2023a488e561218bc"
-  name = "github.com/hpcloud/tail"
-  packages = [
-    ".",
-    "ratelimiter",
-    "util",
-    "watch",
-    "winfile",
-  ]
-  pruneopts = ""
-  revision = "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
-  version = "v1.0.0"
 
 [[projects]]
   digest = "1:824c4cd143ee15735f1c75d9072aad46e51dd27a4ef8bf6ce723a138265b7fb3"
@@ -870,33 +852,6 @@
   pruneopts = ""
   revision = "eee57a3ac4174c55924125bb15eeeda8cffb6e6f"
   version = "v1.0.7"
-
-[[projects]]
-  digest = "1:a754db3c70741eeaeba73ec4cd970dc8918d06ced993d24891e9c0386d74f588"
-  name = "github.com/onsi/ginkgo"
-  packages = [
-    ".",
-    "config",
-    "internal/codelocation",
-    "internal/containernode",
-    "internal/failer",
-    "internal/leafnodes",
-    "internal/remote",
-    "internal/spec",
-    "internal/spec_iterator",
-    "internal/specrunner",
-    "internal/suite",
-    "internal/testingtproxy",
-    "internal/writer",
-    "reporters",
-    "reporters/stenographer",
-    "reporters/stenographer/support/go-colorable",
-    "reporters/stenographer/support/go-isatty",
-    "types",
-  ]
-  pruneopts = ""
-  revision = "2e1be8f7d90e9d3e3e58b0ce470f2f14d075406f"
-  version = "v1.7.0"
 
 [[projects]]
   digest = "1:c8f0c8c28c9c1c51db72d0e7f04797cfe5d0d50528274099b6b2d6c314db7f97"
@@ -1598,7 +1553,6 @@
     "cloud.google.com/go/monitoring/apiv3",
     "cloud.google.com/go/pubsub",
     "code.cloudfoundry.org/go-diodes",
-    "code.cloudfoundry.org/go-loggregator",
     "code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2",
     "code.cloudfoundry.org/loggregator-agent/pkg/diodes",
     "collectd.org/api",
@@ -1669,7 +1623,6 @@
     "github.com/nats-io/gnatsd/server",
     "github.com/nats-io/go-nats",
     "github.com/nsqio/go-nsq",
-    "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
     "github.com/openzipkin/zipkin-go-opentracing",
     "github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore",

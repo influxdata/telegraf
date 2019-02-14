@@ -225,7 +225,7 @@ func TestParsingSourceID(t *testing.T) {
 	sourceIdType3 := &loggregator_v2.Envelope{
 		SourceId: "",
 		DeprecatedTags: map[string]*loggregator_v2.Value{"origin": {
-			Data: &loggregator_v2.Value_Text{"origin-source-v1"},
+			Data: &loggregator_v2.Value_Text{Text: "origin-source-v1"},
 		}},
 		Message: &loggregator_v2.Envelope_Counter{
 			Counter: &loggregator_v2.Counter{

@@ -24,6 +24,7 @@ var (
 	validLabelExpression      = regexp.MustCompile(`^[a-zA-Z_\-.][a-zA-Z0-9_\-.]*$`)
 )
 
+// EnvelopeWriter translates Loggregator envelopes to Telegraf metrics
 type EnvelopeWriter struct {
 	acc            telegraf.Accumulator
 	envelopesQueue *diodes.OneToOneEnvelopeV2
@@ -36,6 +37,7 @@ type EnvelopeWriter struct {
 	droppedDeltaCounters *uint64
 }
 
+// NewEnvelopeWriter creates a new EnvelopeWriter
 func NewEnvelopeWriter(acc telegraf.Accumulator, internalMetricsInterval time.Duration) *EnvelopeWriter {
 	w := &EnvelopeWriter{
 		acc:  acc,
@@ -200,11 +202,13 @@ func sourceID(env *loggregator_v2.Envelope) string {
 	return getTag(env, "origin")
 }
 
+// Write writes a Loggregator envelope to the EnvelopeWriter queue
 func (w *EnvelopeWriter) Write(env *loggregator_v2.Envelope) {
 	w.envelopesQueue.Set(env)
 	w.incrementMetric(w.ingressedEnvelopes, 1)
 }
 
+// Stop stops converting Loggregator envelopes
 func (w *EnvelopeWriter) Stop() {
 	close(w.stop)
 	w.wg.Wait()
