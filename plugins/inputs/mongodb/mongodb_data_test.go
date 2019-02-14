@@ -56,7 +56,7 @@ func TestAddNonReplStats(t *testing.T) {
 	d.flush(&acc)
 
 	for key := range DefaultStats {
-		assert.True(t, acc.HasInt64Field("mongodb", key))
+		assert.True(t, acc.HasFloatField("mongodb", key) || acc.HasInt64Field("mongodb", key), key)
 	}
 }
 
@@ -77,7 +77,7 @@ func TestAddReplStats(t *testing.T) {
 	d.flush(&acc)
 
 	for key := range MmapStats {
-		assert.True(t, acc.HasInt64Field("mongodb", key))
+		assert.True(t, acc.HasInt64Field("mongodb", key), key)
 	}
 }
 
@@ -109,7 +109,11 @@ func TestAddWiredTigerStats(t *testing.T) {
 	d.flush(&acc)
 
 	for key := range WiredTigerStats {
-		assert.True(t, acc.HasFloatField("mongodb", key))
+		assert.True(t, acc.HasFloatField("mongodb", key), key)
+	}
+
+	for key := range WiredTigerExtStats {
+		assert.True(t, acc.HasFloatField("mongodb", key) || acc.HasInt64Field("mongodb", key), key)
 	}
 }
 
@@ -199,6 +203,7 @@ func TestStateTag(t *testing.T) {
 		"deletes_per_sec":           int64(0),
 		"flushes":                   int64(0),
 		"flushes_per_sec":           int64(0),
+		"flushes_total_time_ns":     int64(0),
 		"getmores":                  int64(0),
 		"getmores_per_sec":          int64(0),
 		"inserts":                   int64(0),

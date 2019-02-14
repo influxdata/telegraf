@@ -3,6 +3,7 @@ package models
 import (
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -29,6 +30,9 @@ type OutputConfig struct {
 
 // RunningOutput contains the output configuration
 type RunningOutput struct {
+	// Must be 64-bit aligned
+	newMetricsCount int64
+
 	Name              string
 	Output            telegraf.Output
 	Config            *OutputConfig
@@ -36,16 +40,13 @@ type RunningOutput struct {
 	MetricBatchSize   int
 
 	MetricsFiltered selfstat.Stat
-	BufferSize      selfstat.Stat
-	BufferLimit     selfstat.Stat
 	WriteTime       selfstat.Stat
 
-	batch      []telegraf.Metric
-	buffer     *Buffer
 	BatchReady chan time.Time
 
-	aggMutex   sync.Mutex
-	batchMutex sync.Mutex
+	buffer *Buffer
+
+	aggMutex sync.Mutex
 }
 
 func NewRunningOutput(
@@ -69,7 +70,6 @@ func NewRunningOutput(
 	}
 	ro := &RunningOutput{
 		Name:              name,
-		batch:             make([]telegraf.Metric, 0, batchSize),
 		buffer:            NewBuffer(name, bufferLimit),
 		BatchReady:        make(chan time.Time, 1),
 		Output:            output,
@@ -81,16 +81,6 @@ func NewRunningOutput(
 			"metrics_filtered",
 			map[string]string{"output": name},
 		),
-		BufferSize: selfstat.Register(
-			"write",
-			"buffer_size",
-			map[string]string{"output": name},
-		),
-		BufferLimit: selfstat.Register(
-			"write",
-			"buffer_limit",
-			map[string]string{"output": name},
-		),
 		WriteTime: selfstat.RegisterTiming(
 			"write",
 			"write_time_ns",
@@ -98,7 +88,6 @@ func NewRunningOutput(
 		),
 	}
 
-	ro.BufferLimit.Set(int64(ro.MetricBufferLimit))
 	return ro
 }
 
@@ -129,28 +118,16 @@ func (ro *RunningOutput) AddMetric(metric telegraf.Metric) {
 		return
 	}
 
-	ro.batchMutex.Lock()
+	ro.buffer.Add(metric)
 
-	ro.batch = append(ro.batch, metric)
-	if len(ro.batch) == ro.MetricBatchSize {
-		ro.addBatchToBuffer()
-
-		nBuffer := ro.buffer.Len()
-		ro.BufferSize.Set(int64(nBuffer))
-
+	count := atomic.AddInt64(&ro.newMetricsCount, 1)
+	if count == int64(ro.MetricBatchSize) {
+		atomic.StoreInt64(&ro.newMetricsCount, 0)
 		select {
 		case ro.BatchReady <- time.Now():
 		default:
 		}
 	}
-
-	ro.batchMutex.Unlock()
-}
-
-// AddBatchToBuffer moves the metrics from the batch into the metric buffer.
-func (ro *RunningOutput) addBatchToBuffer() {
-	ro.buffer.Add(ro.batch...)
-	ro.batch = ro.batch[:0]
 }
 
 // Write writes all metrics to the output, stopping when all have been sent on
@@ -163,15 +140,12 @@ func (ro *RunningOutput) Write() error {
 		output.Reset()
 		ro.aggMutex.Unlock()
 	}
-	// add and write can be called concurrently
-	ro.batchMutex.Lock()
-	ro.addBatchToBuffer()
-	ro.batchMutex.Unlock()
 
-	nBuffer := ro.buffer.Len()
+	atomic.StoreInt64(&ro.newMetricsCount, 0)
 
 	// Only process the metrics in the buffer now.  Metrics added while we are
 	// writing will be sent on the next call.
+	nBuffer := ro.buffer.Len()
 	nBatches := nBuffer/ro.MetricBatchSize + 1
 	for i := 0; i < nBatches; i++ {
 		batch := ro.buffer.Batch(ro.MetricBatchSize)
@@ -189,7 +163,7 @@ func (ro *RunningOutput) Write() error {
 	return nil
 }
 
-// WriteBatch writes only the batch metrics to the output.
+// WriteBatch writes a single batch of metrics to the output.
 func (ro *RunningOutput) WriteBatch() error {
 	batch := ro.buffer.Batch(ro.MetricBatchSize)
 	if len(batch) == 0 {

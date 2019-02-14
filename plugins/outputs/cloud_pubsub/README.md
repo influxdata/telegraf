@@ -7,16 +7,16 @@ as one of the supported [output data formats][].
 ### Configuration
 
 This section contains the default TOML to configure the plugin.  You can
-generate it using `telegraf --usage pubsub`.
+generate it using `telegraf --usage cloud_pubsub`.
 
 ```toml
-[[inputs.pubsub]]
+[[outputs.cloud_pubsub]]
   ## Required. Name of Google Cloud Platform (GCP) Project that owns
-  ## the given PubSub subscription.
+  ## the given PubSub topic.
   project = "my-project"
 
-  ## Required. Name of PubSub subscription to ingest metrics from.
-  subscription = "my-subscription"
+  ## Required. Name of PubSub topic to publish metrics to.
+  topic = "my-topic"
 
   ## Required. Data format to consume.
   ## Each data format has its own unique set of configuration options.

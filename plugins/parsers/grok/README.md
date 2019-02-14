@@ -220,4 +220,14 @@ the file output will only print once per `flush_interval`.
 - If successful, add the next token, update the pattern and retest.
 - Continue one token at a time until the entire line is successfully parsed.
 
+#### Performance
 
+Performance depends heavily on the regular expressions that you use, but there
+are a few techniques that can help:
+
+- Avoid using patterns such as `%{DATA}` that will always match.
+- If possible, add `^` and `$` anchors to your pattern:
+  ```
+  [[inputs.file]]
+    grok_patterns = ["^%{COMBINED_LOG_FORMAT}$"]
+  ```

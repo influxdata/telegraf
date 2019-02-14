@@ -22,18 +22,23 @@ type VSphere struct {
 	DatacenterInstances     bool
 	DatacenterMetricInclude []string
 	DatacenterMetricExclude []string
+	DatacenterInclude       []string
 	ClusterInstances        bool
 	ClusterMetricInclude    []string
 	ClusterMetricExclude    []string
+	ClusterInclude          []string
 	HostInstances           bool
 	HostMetricInclude       []string
 	HostMetricExclude       []string
+	HostInclude             []string
 	VMInstances             bool     `toml:"vm_instances"`
 	VMMetricInclude         []string `toml:"vm_metric_include"`
 	VMMetricExclude         []string `toml:"vm_metric_exclude"`
+	VMInclude               []string `toml:"vm_include"`
 	DatastoreInstances      bool
 	DatastoreMetricInclude  []string
 	DatastoreMetricExclude  []string
+	DatastoreInclude        []string
 	Separator               string
 
 	MaxQueryObjects         int
@@ -216,7 +221,7 @@ func (v *VSphere) Description() string {
 // Start is called from telegraf core when a plugin is started and allows it to
 // perform initialization tasks.
 func (v *VSphere) Start(acc telegraf.Accumulator) error {
-	log.Println("D! [input.vsphere]: Starting plugin")
+	log.Println("D! [inputs.vsphere]: Starting plugin")
 	ctx, cancel := context.WithCancel(context.Background())
 	v.cancel = cancel
 
@@ -239,7 +244,7 @@ func (v *VSphere) Start(acc telegraf.Accumulator) error {
 // Stop is called from telegraf core when a plugin is stopped and allows it to
 // perform shutdown tasks.
 func (v *VSphere) Stop() {
-	log.Println("D! [input.vsphere]: Stopping plugin")
+	log.Println("D! [inputs.vsphere]: Stopping plugin")
 	v.cancel()
 
 	// Wait for all endpoints to finish. No need to wait for
@@ -248,7 +253,7 @@ func (v *VSphere) Stop() {
 	// wait for any discovery to complete by trying to grab the
 	// "busy" mutex.
 	for _, ep := range v.endpoints {
-		log.Printf("D! [input.vsphere]: Waiting for endpoint %s to finish", ep.URL.Host)
+		log.Printf("D! [inputs.vsphere]: Waiting for endpoint %s to finish", ep.URL.Host)
 		func() {
 			ep.busy.Lock() // Wait until discovery is finished
 			defer ep.busy.Unlock()
@@ -286,19 +291,27 @@ func init() {
 		return &VSphere{
 			Vcenters: []string{},
 
-			ClusterInstances:       false,
-			ClusterMetricInclude:   nil,
-			ClusterMetricExclude:   nil,
-			HostInstances:          true,
-			HostMetricInclude:      nil,
-			HostMetricExclude:      nil,
-			VMInstances:            true,
-			VMMetricInclude:        nil,
-			VMMetricExclude:        nil,
-			DatastoreInstances:     false,
-			DatastoreMetricInclude: nil,
-			DatastoreMetricExclude: nil,
-			Separator:              "_",
+			DatacenterInstances:     false,
+			DatacenterMetricInclude: nil,
+			DatacenterMetricExclude: nil,
+			DatacenterInclude:       []string{"/*"},
+			ClusterInstances:        false,
+			ClusterMetricInclude:    nil,
+			ClusterMetricExclude:    nil,
+			ClusterInclude:          []string{"/*/host/**"},
+			HostInstances:           true,
+			HostMetricInclude:       nil,
+			HostMetricExclude:       nil,
+			HostInclude:             []string{"/*/host/**"},
+			VMInstances:             true,
+			VMMetricInclude:         nil,
+			VMMetricExclude:         nil,
+			VMInclude:               []string{"/*/vm/**"},
+			DatastoreInstances:      false,
+			DatastoreMetricInclude:  nil,
+			DatastoreMetricExclude:  nil,
+			DatastoreInclude:        []string{"/*/datastore/**"},
+			Separator:               "_",
 
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,
