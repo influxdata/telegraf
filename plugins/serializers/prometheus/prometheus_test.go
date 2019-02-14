@@ -1,14 +1,14 @@
 package prometheus
 
 import (
-	"testing"
-	"time"
 	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/stretchr/testify/assert"
-	"log"
 	"github.com/stretchr/testify/require"
+	"log"
+	"testing"
+	"time"
 )
 
 func MustMetric(v telegraf.Metric, err error) telegraf.Metric {

@@ -2,20 +2,20 @@ package prometheus
 
 import (
 	"bytes"
-	"sync"
-	"time"
-	"sort"
-	"strings"
-	"regexp"
 	"fmt"
 	"log"
+	"regexp"
+	"sort"
 	"strconv"
+	"strings"
+	"sync"
+	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/prometheus/common/expfmt"
-	"github.com/golang/protobuf/proto"
 	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/common/expfmt"
 )
 
 var invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
@@ -281,7 +281,7 @@ func (s *serializer) metricHandler() ([]byte, error) {
 
 		dtofamily := s.convertToMetricFamily(family, name)
 		o := &bytes.Buffer{}
-		if _, err := expfmt.MetricFamilyToText(o, dtofamily); err != nil{
+		if _, err := expfmt.MetricFamilyToText(o, dtofamily); err != nil {
 			log.Printf("E! Metric convert to text format failed: %s\n.", err.Error())
 		}
 
@@ -295,41 +295,41 @@ func (s *serializer) convertToMetricFamily(fam *MetricFamily, name string) *dto.
 	switch fam.TelegrafValueType {
 	case telegraf.Counter:
 		in := &dto.MetricFamily{
-			Name: proto.String(name),
-			Help: proto.String("Telegraf collected metric"),
-			Type: dto.MetricType_COUNTER.Enum(),
+			Name:   proto.String(name),
+			Help:   proto.String("Telegraf collected metric"),
+			Type:   dto.MetricType_COUNTER.Enum(),
 			Metric: getdtoMetric(fam.Samples, telegraf.Counter),
 		}
 		return in
 	case telegraf.Gauge:
 		in := &dto.MetricFamily{
-			Name: proto.String(name),
-			Help: proto.String("Telegraf collected metric"),
-			Type: dto.MetricType_GAUGE.Enum(),
+			Name:   proto.String(name),
+			Help:   proto.String("Telegraf collected metric"),
+			Type:   dto.MetricType_GAUGE.Enum(),
 			Metric: getdtoMetric(fam.Samples, telegraf.Gauge),
 		}
 		return in
 	case telegraf.Untyped:
 		in := &dto.MetricFamily{
-			Name: proto.String(name),
-			Help: proto.String("Telegraf collected metric"),
-			Type: dto.MetricType_UNTYPED.Enum(),
+			Name:   proto.String(name),
+			Help:   proto.String("Telegraf collected metric"),
+			Type:   dto.MetricType_UNTYPED.Enum(),
 			Metric: getdtoMetric(fam.Samples, telegraf.Untyped),
 		}
 		return in
 	case telegraf.Summary:
 		in := &dto.MetricFamily{
-			Name: proto.String(name),
-			Help: proto.String("Telegraf collected metric"),
-			Type: dto.MetricType_SUMMARY.Enum(),
+			Name:   proto.String(name),
+			Help:   proto.String("Telegraf collected metric"),
+			Type:   dto.MetricType_SUMMARY.Enum(),
 			Metric: getdtoMetric(fam.Samples, telegraf.Summary),
 		}
 		return in
 	case telegraf.Histogram:
 		in := &dto.MetricFamily{
-			Name: proto.String(name),
-			Help: proto.String("Telegraf collected metric"),
-			Type: dto.MetricType_HISTOGRAM.Enum(),
+			Name:   proto.String(name),
+			Help:   proto.String("Telegraf collected metric"),
+			Type:   dto.MetricType_HISTOGRAM.Enum(),
 			Metric: getdtoMetric(fam.Samples, telegraf.Histogram),
 		}
 		return in
@@ -405,8 +405,8 @@ func getdtoMetric(samples map[SampleID]*Sample, tt telegraf.ValueType) []*dto.Me
 			metric := &dto.Metric{
 				Summary: &dto.Summary{
 					SampleCount: proto.Uint64(sample.Count),
-					SampleSum: proto.Float64(sample.Sum),
-					Quantile: getSummaryQuantile(sample.SummaryValue),
+					SampleSum:   proto.Float64(sample.Sum),
+					Quantile:    getSummaryQuantile(sample.SummaryValue),
 				},
 			}
 			metrics = append(metrics, metric)
@@ -416,8 +416,8 @@ func getdtoMetric(samples map[SampleID]*Sample, tt telegraf.ValueType) []*dto.Me
 			metric := &dto.Metric{
 				Histogram: &dto.Histogram{
 					SampleCount: proto.Uint64(sample.Count),
-					SampleSum: proto.Float64(sample.Sum),
-					Bucket: getHistogramBucket(sample.HistogramValue),
+					SampleSum:   proto.Float64(sample.Sum),
+					Bucket:      getHistogramBucket(sample.HistogramValue),
 				},
 			}
 			metrics = append(metrics, metric)
@@ -430,9 +430,9 @@ func getdtoMetric(samples map[SampleID]*Sample, tt telegraf.ValueType) []*dto.Me
 
 func getHistogramBucket(histogramValue map[float64]uint64) []*dto.Bucket {
 	var la []*dto.Bucket
-	for q, v := range histogramValue{
+	for q, v := range histogramValue {
 		qu := &dto.Bucket{
-			UpperBound: proto.Float64(q),
+			UpperBound:      proto.Float64(q),
 			CumulativeCount: proto.Uint64(v),
 		}
 		la = append(la, qu)
@@ -443,7 +443,7 @@ func getHistogramBucket(histogramValue map[float64]uint64) []*dto.Bucket {
 
 func getSummaryQuantile(summaryValue map[float64]float64) []*dto.Quantile {
 	var la []*dto.Quantile
-	for q, v := range summaryValue{
+	for q, v := range summaryValue {
 		qu := &dto.Quantile{
 			Quantile: proto.Float64(q),
 			Value:    proto.Float64(v),
@@ -458,7 +458,7 @@ func getLabels(labels map[string]string) []*dto.LabelPair {
 	var la []*dto.LabelPair
 	for name, value := range labels {
 		label := &dto.LabelPair{
-			Name: proto.String(name),
+			Name:  proto.String(name),
 			Value: proto.String(value),
 		}
 		la = append(la, label)
