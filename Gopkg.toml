@@ -253,7 +253,3 @@
 [[constraint]]
   name = "github.com/karrick/godirwalk"
   version = "1.7.5"
-
-[[constraint]]
-  name = "github.com/gomodule/redigo"
-  version = "^2.0.0"

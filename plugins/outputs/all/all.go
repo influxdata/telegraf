@@ -31,5 +31,5 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/socket_writer"
 	_ "github.com/influxdata/telegraf/plugins/outputs/stackdriver"
 	_ "github.com/influxdata/telegraf/plugins/outputs/wavefront"
-	_ "github.com/influxdata/telegraf/plugins/outputs/redists"
+	_ "github.com/influxdata/telegraf/plugins/outputs/redistimeseries"
 )

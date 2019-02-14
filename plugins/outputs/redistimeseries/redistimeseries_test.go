@@ -1,4 +1,4 @@
-package redists
+package redistimeseries
 
 import (
 	"testing"
@@ -13,15 +13,15 @@ func TestConnectAndWrite(t *testing.T) {
 	}
 
 	address := testutil.GetLocalHost() + ":6379"
-	redis := &RedisTS{
+	redis := &RedisTimeSeries{
 		Addr: address,
 	}
 
-	// Verify that we can connect to the RedisTS server
+	// Verify that we can connect to the RedisTimeSeries server
 	err := redis.Connect()
 	require.NoError(t, err)
 
-	// Verify that we can successfully write data to the RedisTS server
+	// Verify that we can successfully write data to the RedisTimeSeries server
 	err = redis.Write(testutil.MockMetrics())
 	require.NoError(t, err)
 }
