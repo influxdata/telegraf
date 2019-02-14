@@ -1,10 +1,9 @@
 package redistimeseries
 
 import (
-	"testing"
-	
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func TestConnectAndWrite(t *testing.T) {
