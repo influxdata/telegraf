@@ -424,7 +424,6 @@ func getdtoMetric(samples map[SampleID]*Sample, tt telegraf.ValueType) []*dto.Me
 		}
 	}
 
-	log.Printf("D! The length of metrics is %d", len(metrics))
 	return metrics
 }
 
