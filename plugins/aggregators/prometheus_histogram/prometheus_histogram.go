@@ -17,8 +17,8 @@ type PrometheusHistogramAggregator struct {
 
 // Config is a histogram configuration for a given measurement.
 type Config struct {
-	MeasurementName string  `toml:"measurement_name"`
-	Unit            string  `toml:"measurement_unit"`
+	MeasurementName string    `toml:"measurement_name"`
+	Unit            string    `toml:"measurement_unit"`
 	Buckets         []float64 `toml:"buckets"`
 }
 
