@@ -772,6 +772,11 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to retrieve remote config: %s", resp.Status)
+	}
+
 	defer resp.Body.Close()
 	return ioutil.ReadAll(resp.Body)
 }
@@ -1591,7 +1596,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 				if err != nil {
 					return nil, err
 				}
-				c.CSVHeaderRowCount = int(v)
+				c.CSVSkipRows = int(v)
 			}
 		}
 	}
@@ -1603,7 +1608,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 				if err != nil {
 					return nil, err
 				}
-				c.CSVHeaderRowCount = int(v)
+				c.CSVSkipColumns = int(v)
 			}
 		}
 	}

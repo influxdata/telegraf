@@ -387,8 +387,11 @@
   packages = [
     ".",
     "apis/apiextensions/v1beta1",
+    "apis/apps/v1beta1",
+    "apis/apps/v1beta2",
     "apis/core/v1",
     "apis/meta/v1",
+    "apis/policy/v1beta1",
     "apis/resource",
     "runtime",
     "runtime/schema",
@@ -408,12 +411,12 @@
   version = "v1.38.1"
 
 [[projects]]
-  digest = "1:6a4a01d58b227c4b6b11111b9f172ec5c17682b82724e58e6daf3f19f4faccd8"
+  digest = "1:df89444601379b2e1ee82bf8e6b72af9901cbeed4b469fa380a519c89c339310"
   name = "github.com/go-logfmt/logfmt"
   packages = ["."]
   pruneopts = ""
-  revision = "390ab7935ee28ec6b286364bba9b4dd6410cb3d5"
-  version = "v0.3.0"
+  revision = "07c9b44f60d7ffdfb7d8efe1ad539965737836dc"
+  version = "v0.4.0"
 
 [[projects]]
   digest = "1:96c4a6ff4206086347bfe28e96e092642882128f45ecb8dc8f15f3e6f6703af0"
@@ -696,6 +699,14 @@
   revision = "b84e30acd515aadc4b783ad4ff83aff3299bdfe0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:e7737c09200582508f4f67227c39e7c4667cc6067a6d2b2e679654e43e8a8cb4"
+  name = "github.com/kubernetes/apimachinery"
+  packages = ["pkg/api/resource"]
+  pruneopts = ""
+  revision = "d41becfba9ee9bf8e55cec1dd3934cd7cfc04b99"
+
+[[projects]]
   branch = "develop"
   digest = "1:3e66a61a57bbbe832c338edb3a623be0deb3dec650c2f3515149658898287e37"
   name = "github.com/leodido/ragel-machinery"
@@ -891,15 +902,16 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:4142d94383572e74b42352273652c62afec5b23f325222ed09198f46009022d1"
+  digest = "1:6f218995d6a74636cfcab45ce03005371e682b4b9bee0e5eb0ccfd83ef85364f"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
+    "prometheus/internal",
     "prometheus/promhttp",
   ]
   pruneopts = ""
-  revision = "c5b7fccd204277076155f10851dad72b76a49317"
-  version = "v0.8.0"
+  revision = "505eaef017263e299324067d40ca2c48f6a2cf50"
+  version = "v0.9.2"
 
 [[projects]]
   branch = "master"
@@ -960,7 +972,7 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:02715a2fb4b9279af36651a59a51dd4164eb689bd6785874811899f43eeb2a54"
+  digest = "1:066c1020d667e25a0614b56aee1f9ac47e75c77de98eddfb51e9be02c68c1577"
   name = "github.com/shirou/gopsutil"
   packages = [
     "cpu",
@@ -973,8 +985,8 @@
     "process",
   ]
   pruneopts = ""
-  revision = "8048a2e9c5773235122027dd585cf821b2af1249"
-  version = "v2.18.07"
+  revision = "071446942108a03a13cf0717275ad3bdbcb691b4"
+  version = "v2.19.01"
 
 [[projects]]
   branch = "master"
@@ -1423,6 +1435,14 @@
   version = "v3.0.5"
 
 [[projects]]
+  digest = "1:75fb3fcfc73a8c723efde7777b40e8e8ff9babf30d8c56160d01beffea8a95a6"
+  name = "gopkg.in/inf.v0"
+  packages = ["."]
+  pruneopts = ""
+  revision = "d2d2541c53f18d2a059457998ce2876cc8e67cbf"
+  version = "v0.9.1"
+
+[[projects]]
   digest = "1:367baf06b7dbd0ef0bbdd785f6a79f929c96b0c18e9d3b29c0eed1ac3f5db133"
   name = "gopkg.in/ldap.v2"
   packages = ["."]
@@ -1509,8 +1529,12 @@
     "github.com/docker/libnetwork/ipvs",
     "github.com/eclipse/paho.mqtt.golang",
     "github.com/ericchiang/k8s",
+    "github.com/ericchiang/k8s/apis/apps/v1beta1",
+    "github.com/ericchiang/k8s/apis/apps/v1beta2",
     "github.com/ericchiang/k8s/apis/core/v1",
     "github.com/ericchiang/k8s/apis/meta/v1",
+    "github.com/ericchiang/k8s/apis/resource",
+    "github.com/ericchiang/k8s/util/intstr",
     "github.com/go-logfmt/logfmt",
     "github.com/go-redis/redis",
     "github.com/go-sql-driver/mysql",
@@ -1535,6 +1559,7 @@
     "github.com/kardianos/service",
     "github.com/karrick/godirwalk",
     "github.com/kballard/go-shellquote",
+    "github.com/kubernetes/apimachinery/pkg/api/resource",
     "github.com/matttproud/golang_protobuf_extensions/pbutil",
     "github.com/miekg/dns",
     "github.com/multiplay/go-ts3",
@@ -1543,7 +1568,6 @@
     "github.com/nsqio/go-nsq",
     "github.com/openzipkin/zipkin-go-opentracing",
     "github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore",
-    "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/client_model/go",
@@ -1567,6 +1591,7 @@
     "github.com/vmware/govmomi",
     "github.com/vmware/govmomi/object",
     "github.com/vmware/govmomi/performance",
+    "github.com/vmware/govmomi/property",
     "github.com/vmware/govmomi/session",
     "github.com/vmware/govmomi/simulator",
     "github.com/vmware/govmomi/view",

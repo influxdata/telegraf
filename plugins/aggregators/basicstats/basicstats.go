@@ -47,12 +47,14 @@ type basicstats struct {
 }
 
 var sampleConfig = `
-  ## General Aggregator Arguments:
   ## The period on which to flush & clear the aggregator.
   period = "30s"
   ## If true, the original metric will be dropped by the
   ## aggregator and will not get sent to the output plugins.
   drop_original = false
+
+  ## Configures which basic stats to push as fields
+  # stats = ["count", "min", "max", "mean", "stdev", "s2", "sum"]
 `
 
 func (m *BasicStats) SampleConfig() string {
