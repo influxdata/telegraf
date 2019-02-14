@@ -317,9 +317,34 @@ func (s *serializer) convertToMetricFamily(fam *MetricFamily, name string) *dto.
 			Metric: getdtoMetric(fam.Samples, telegraf.Untyped),
 		}
 		return in
+	case telegraf.Summary:
+		in := &dto.MetricFamily{
+			Name: proto.String(name),
+			Help: proto.String("Telegraf collected metric"),
+			Type: dto.MetricType_SUMMARY.Enum(),
+			Metric: getdtoMetric(fam.Samples, telegraf.Summary),
+		}
+		return in
+	case telegraf.Histogram:
+		in := &dto.MetricFamily{
+			Name: proto.String(name),
+			Help: proto.String("Telegraf collected metric"),
+			Type: dto.MetricType_HISTOGRAM.Enum(),
+			Metric: getdtoMetric(fam.Samples, telegraf.Histogram),
+		}
+		return in
 	}
 
 	return nil
+}
+
+func addSample(fam *MetricFamily, sample *Sample, sampleID SampleID) {
+
+	for k := range sample.Labels {
+		fam.LabelSet[k]++
+	}
+
+	fam.Samples[sampleID] = sample
 }
 
 func (s *serializer) addMetricFamily(point telegraf.Metric, sample *Sample, mname string, sampleID SampleID) {
@@ -334,7 +359,8 @@ func (s *serializer) addMetricFamily(point telegraf.Metric, sample *Sample, mnam
 		s.fam[mname] = fam
 	}
 
-	log.Printf("family %s has samples len %d", mname, len(s.fam[mname].Samples))
+	addSample(fam, sample, sampleID)
+	//log.Printf("family %s has samples len %d", mname, len(s.fam[mname].Samples))
 }
 
 func getdtoMetric(samples map[SampleID]*Sample, tt telegraf.ValueType) []*dto.Metric {
@@ -347,11 +373,11 @@ func getdtoMetric(samples map[SampleID]*Sample, tt telegraf.ValueType) []*dto.Me
 				Counter: &dto.Counter{
 					Value: proto.Float64(sample.Value),
 				},
-				TimestampMs: proto.Int64(sample.Timestamp.Unix()),
+				//TimestampMs: proto.Int64(sample.Timestamp.Unix()),
 			}
-
 			metrics = append(metrics, metric)
 		}
+
 	case telegraf.Gauge:
 		for _, sample := range samples {
 			metric := &dto.Metric{
@@ -359,11 +385,10 @@ func getdtoMetric(samples map[SampleID]*Sample, tt telegraf.ValueType) []*dto.Me
 				Gauge: &dto.Gauge{
 					Value: proto.Float64(sample.Value),
 				},
-				TimestampMs: proto.Int64(sample.Timestamp.Unix()),
 			}
-
 			metrics = append(metrics, metric)
 		}
+
 	case telegraf.Untyped:
 		for _, sample := range samples {
 			metric := &dto.Metric{
@@ -371,16 +396,62 @@ func getdtoMetric(samples map[SampleID]*Sample, tt telegraf.ValueType) []*dto.Me
 				Untyped: &dto.Untyped{
 					Value: proto.Float64(sample.Value),
 				},
-				TimestampMs: proto.Int64(sample.Timestamp.Unix()),
 			}
+			metrics = append(metrics, metric)
+		}
 
+	case telegraf.Summary:
+		for _, sample := range samples {
+			metric := &dto.Metric{
+				Summary: &dto.Summary{
+					SampleCount: proto.Uint64(sample.Count),
+					SampleSum: proto.Float64(sample.Sum),
+					Quantile: getSummaryQuantile(sample.SummaryValue),
+				},
+			}
+			metrics = append(metrics, metric)
+		}
+	case telegraf.Histogram:
+		for _, sample := range samples {
+			metric := &dto.Metric{
+				Histogram: &dto.Histogram{
+					SampleCount: proto.Uint64(sample.Count),
+					SampleSum: proto.Float64(sample.Sum),
+					Bucket: getHistogramBucket(sample.HistogramValue),
+				},
+			}
 			metrics = append(metrics, metric)
 		}
 	}
 
-	log.Printf("The len of metrics is %d, the sample len is %d", len(metrics), len(samples))
-
+	log.Printf("D! The length of metrics is %d", len(metrics))
 	return metrics
+}
+
+func getHistogramBucket(histogramValue map[float64]uint64) []*dto.Bucket {
+	var la []*dto.Bucket
+	for q, v := range histogramValue{
+		qu := &dto.Bucket{
+			UpperBound: proto.Float64(q),
+			CumulativeCount: proto.Uint64(v),
+		}
+		la = append(la, qu)
+	}
+
+	return la
+}
+
+func getSummaryQuantile(summaryValue map[float64]float64) []*dto.Quantile {
+	var la []*dto.Quantile
+	for q, v := range summaryValue{
+		qu := &dto.Quantile{
+			Quantile: proto.Float64(q),
+			Value:    proto.Float64(v),
+		}
+		la = append(la, qu)
+	}
+
+	return la
 }
 
 func getLabels(labels map[string]string) []*dto.LabelPair {
@@ -395,17 +466,6 @@ func getLabels(labels map[string]string) []*dto.LabelPair {
 
 	return la
 }
-
-//func getPromValueType(tt telegraf.ValueType) prometheus.ValueType {
-//	switch tt {
-//	case telegraf.Counter:
-//		return prometheus.CounterValue
-//	case telegraf.Gauge:
-//		return prometheus.GaugeValue
-//	default:
-//		return prometheus.UntypedValue
-//	}
-//}
 
 func sanitize(value string) string {
 	return invalidNameCharRE.ReplaceAllString(value, "_")
