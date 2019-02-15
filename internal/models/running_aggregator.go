@@ -113,6 +113,8 @@ func (r *RunningAggregator) Add(metric telegraf.Metric) bool {
 		return false
 	}
 
+	metric = metric.Copy()
+
 	r.Config.Filter.Modify(metric)
 	if len(metric.FieldList()) == 0 {
 		return r.Config.DropOriginal
@@ -121,9 +123,9 @@ func (r *RunningAggregator) Add(metric telegraf.Metric) bool {
 	r.Lock()
 	defer r.Unlock()
 
-	if r.periodStart.IsZero() || metric.Time().Before(r.periodStart) || metric.Time().After(r.periodEnd) {
+	if r.periodStart.IsZero() || metric.Time().After(r.periodEnd) {
 		r.metricDropped(metric)
-		return false
+		return r.Config.DropOriginal
 	}
 
 	r.Aggregator.Add(metric)

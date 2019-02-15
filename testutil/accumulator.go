@@ -83,6 +83,10 @@ func (a *Accumulator) AddFields(
 		return
 	}
 
+	if len(fields) == 0 {
+		return
+	}
+
 	tagsCopy := map[string]string{}
 	for k, v := range tags {
 		tagsCopy[k] = v
@@ -91,10 +95,6 @@ func (a *Accumulator) AddFields(
 	fieldsCopy := map[string]interface{}{}
 	for k, v := range fields {
 		fieldsCopy[k] = v
-	}
-
-	if len(fields) == 0 {
-		return
 	}
 
 	var t time.Time
@@ -114,7 +114,7 @@ func (a *Accumulator) AddFields(
 
 	p := &Metric{
 		Measurement: measurement,
-		Fields:      fields,
+		Fields:      fieldsCopy,
 		Tags:        tagsCopy,
 		Time:        t,
 	}
@@ -340,9 +340,10 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 			continue
 		}
 
-		if p.Measurement == measurement {
-			assert.Equal(t, fields, p.Fields)
-			msg := fmt.Sprintf("found measurement %s with tags %v which should not be there", measurement, tags)
+		if p.Measurement == measurement && reflect.DeepEqual(fields, p.Fields) {
+			msg := fmt.Sprintf(
+				"found measurement %s with tagged fields (tags %v) which should not be there",
+				measurement, tags)
 			assert.Fail(t, msg)
 		}
 	}

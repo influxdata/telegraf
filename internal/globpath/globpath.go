@@ -1,20 +1,18 @@
 package globpath
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/gobwas/glob"
+	"github.com/karrick/godirwalk"
 )
-
-var sepStr = fmt.Sprintf("%v", string(os.PathSeparator))
 
 type GlobPath struct {
 	path         string
 	hasMeta      bool
-	hasSuperMeta bool
+	HasSuperMeta bool
 	rootGlob     string
 	g            glob.Glob
 }
@@ -22,13 +20,13 @@ type GlobPath struct {
 func Compile(path string) (*GlobPath, error) {
 	out := GlobPath{
 		hasMeta:      hasMeta(path),
-		hasSuperMeta: hasSuperMeta(path),
+		HasSuperMeta: hasSuperMeta(path),
 		path:         path,
 	}
 
 	// if there are no glob meta characters in the path, don't bother compiling
 	// a glob object
-	if !out.hasMeta || !out.hasSuperMeta {
+	if !out.hasMeta || !out.HasSuperMeta {
 		return &out, nil
 	}
 
@@ -43,40 +41,71 @@ func Compile(path string) (*GlobPath, error) {
 	return &out, nil
 }
 
-func (g *GlobPath) Match() map[string]os.FileInfo {
-	out := make(map[string]os.FileInfo)
+// Match returns all files matching the expression
+// If it's a static path, returns path
+func (g *GlobPath) Match() []string {
 	if !g.hasMeta {
-		info, err := os.Stat(g.path)
-		if err == nil {
-			out[g.path] = info
-		}
-		return out
+		return []string{g.path}
 	}
-	if !g.hasSuperMeta {
+	if !g.HasSuperMeta {
 		files, _ := filepath.Glob(g.path)
-		for _, file := range files {
-			info, err := os.Stat(file)
-			if err == nil {
-				out[file] = info
-			}
-		}
-		return out
+		return files
 	}
 	roots, err := filepath.Glob(g.rootGlob)
 	if err != nil {
-		return out
+		return []string{}
 	}
-	walkfn := func(path string, info os.FileInfo, _ error) error {
+	out := []string{}
+	walkfn := func(path string, _ *godirwalk.Dirent) error {
 		if g.g.Match(path) {
-			out[path] = info
+			out = append(out, path)
 		}
 		return nil
 
 	}
 	for _, root := range roots {
-		filepath.Walk(root, walkfn)
+		fileinfo, err := os.Stat(root)
+		if err != nil {
+			continue
+		}
+		if !fileinfo.IsDir() {
+			if g.MatchString(root) {
+				out = append(out, root)
+			}
+			continue
+		}
+		godirwalk.Walk(root, &godirwalk.Options{
+			Callback: walkfn,
+			Unsorted: true,
+		})
 	}
 	return out
+}
+
+// MatchString test a string against the glob
+func (g *GlobPath) MatchString(path string) bool {
+	if !g.HasSuperMeta {
+		res, _ := filepath.Match(g.path, path)
+		return res
+	}
+	return g.g.Match(path)
+}
+
+// GetRoots returns a list of files and directories which should be optimal
+// prefixes of matching files when you have a super-meta in your expression :
+// - any directory under these roots may contain a matching file
+// - no file outside of these roots can match the pattern
+// Note that it returns both files and directories.
+func (g *GlobPath) GetRoots() []string {
+	if !g.hasMeta {
+		return []string{g.path}
+	}
+	if !g.HasSuperMeta {
+		matches, _ := filepath.Glob(g.path)
+		return matches
+	}
+	roots, _ := filepath.Glob(g.rootGlob)
+	return roots
 }
 
 // hasMeta reports whether path contains any magic glob characters.

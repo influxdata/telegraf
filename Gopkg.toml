@@ -72,7 +72,7 @@
 
 [[constraint]]
   name = "github.com/influxdata/go-syslog"
-  version = "1.0.1"
+  version = "2.0.0"
 
 [[constraint]]
   name = "github.com/influxdata/tail"
@@ -88,7 +88,7 @@
 
 [[constraint]]
   name = "github.com/jackc/pgx"
-  version = "3.1.0"
+  version = "3.2.0"
 
 [[constraint]]
   name = "github.com/kardianos/service"
@@ -132,7 +132,7 @@
 
 [[constraint]]
   name = "github.com/prometheus/client_golang"
-  version = "0.8.0"
+  version = "0.9.2"
 
 [[constraint]]
   name = "github.com/prometheus/client_model"
@@ -148,7 +148,7 @@
 
 [[constraint]]
   name = "github.com/shirou/gopsutil"
-  version = "2.18.07"
+  version = "2.18.12"
 
 [[constraint]]
   name = "github.com/Shopify/sarama"
@@ -228,9 +228,9 @@
 
 [[constraint]]
   name = "github.com/vmware/govmomi"
-  version = "0.18.0"
+  version = "0.19.0"
 
- [[constraint]] 
+[[constraint]]
   name = "github.com/Azure/go-autorest"
   version = "10.12.0"
 
@@ -245,3 +245,19 @@
 [[override]]
   name = "github.com/vishvananda/netlink"
   revision = "b2de5d10e38ecce8607e6b438b6d174f389a004e"
+
+[[constraint]]
+  name = "github.com/wavefronthq/wavefront-sdk-go"
+  version = "v0.9.1"
+
+[[constraint]]
+  name = "github.com/karrick/godirwalk"
+  version = "1.7.5"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/kubernetes/apimachinery"
+
+[[constraint]]
+  name = "github.com/go-logfmt/logfmt"
+  version = "0.4.0"

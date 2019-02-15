@@ -4,12 +4,13 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
@@ -115,7 +116,7 @@ func TestGatherRemote(t *testing.T) {
 
 			acc := testutil.Accumulator{}
 			err = sc.Gather(&acc)
-			if err != nil {
+			if len(acc.Errors) > 0 {
 				testErr = true
 			}
 
@@ -173,7 +174,7 @@ func TestGatherLocal(t *testing.T) {
 
 			acc := testutil.Accumulator{}
 			err = sc.Gather(&acc)
-			if err != nil {
+			if len(acc.Errors) > 0 {
 				error = true
 			}
 
