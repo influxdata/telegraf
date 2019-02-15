@@ -317,8 +317,8 @@ func (p *PubSubPush) removeDelivered(id telegraf.TrackingID) *http.ResponseWrite
 func init() {
 	inputs.Add("cloud_pubsub_push", func() telegraf.Input {
 		return &PubSubPush{
-			ServiceAddress: ":8080",
-			Path:           "/",
+			ServiceAddress:         ":8080",
+			Path:                   "/",
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}
 	})
