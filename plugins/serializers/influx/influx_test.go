@@ -276,6 +276,22 @@ var tests = []struct {
 		output: []byte("cpu abc=123i 1519194109000000042\ncpu def=456i 1519194109000000042\n"),
 	},
 	{
+		name:     "split_fields_overflow",
+		maxBytes: 36,
+		input: MustMetric(
+			metric.New(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"abc": 123,
+					"def": 456,
+				},
+				time.Unix(1519194109, 42),
+			),
+		),
+		output: []byte("cpu abc=123i 1519194109000000042\ncpu def=456i 1519194109000000042\n"),
+	},
+	{
 		name: "name newline",
 		input: MustMetric(
 			metric.New(
