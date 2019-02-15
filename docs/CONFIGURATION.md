@@ -527,7 +527,7 @@ output.  The tag is removed in the outputs before writing.
   urls = ["http://influxdb.example.com"]
   database = "db_other"
   tagexclude = ["influxdb_database"]
-  [ouputs.influxdb.tagpass]
+  [outputs.influxdb.tagpass]
     influxdb_database = ["other"]
 
 [[inputs.disk]]
