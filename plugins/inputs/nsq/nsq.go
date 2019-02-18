@@ -33,17 +33,27 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // Might add Lookupd endpoints for cluster discovery
 type NSQ struct {
 	Endpoints []string
+	tls.ClientConfig
+	httpClient *http.Client
 }
 
 var sampleConfig = `
   ## An array of NSQD HTTP API endpoints
-  endpoints = ["http://localhost:4151"]
+  endpoints  = ["http://localhost:4151"]
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = false
 `
 
 const (
@@ -52,8 +62,12 @@ const (
 
 func init() {
 	inputs.Add("nsq", func() telegraf.Input {
-		return &NSQ{}
+		return New()
 	})
+}
+
+func New() *NSQ {
+	return &NSQ{}
 }
 
 func (n *NSQ) SampleConfig() string {
@@ -65,6 +79,15 @@ func (n *NSQ) Description() string {
 }
 
 func (n *NSQ) Gather(acc telegraf.Accumulator) error {
+	var err error
+
+	if n.httpClient == nil {
+		n.httpClient, err = n.getHttpClient()
+		if err != nil {
+			return err
+		}
+	}
+
 	var wg sync.WaitGroup
 	for _, e := range n.Endpoints {
 		wg.Add(1)
@@ -78,13 +101,19 @@ func (n *NSQ) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-var tr = &http.Transport{
-	ResponseHeaderTimeout: time.Duration(3 * time.Second),
-}
-
-var client = &http.Client{
-	Transport: tr,
-	Timeout:   time.Duration(4 * time.Second),
+func (n *NSQ) getHttpClient() (*http.Client, error) {
+	tlsConfig, err := n.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
+	}
+	tr := &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+	httpClient := &http.Client{
+		Transport: tr,
+		Timeout:   time.Duration(4 * time.Second),
+	}
+	return httpClient, nil
 }
 
 func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
@@ -92,7 +121,7 @@ func (n *NSQ) gatherEndpoint(e string, acc telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-	r, err := client.Get(u.String())
+	r, err := n.httpClient.Get(u.String())
 	if err != nil {
 		return fmt.Errorf("Error while polling %s: %s", u.String(), err)
 	}

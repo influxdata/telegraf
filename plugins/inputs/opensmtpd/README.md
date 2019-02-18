@@ -5,8 +5,7 @@ This plugin gathers stats from [OpenSMTPD - a FREE implementation of the server-
 ### Configuration:
 
 ```toml
- # A plugin to collect stats from OpenSMTPD - a FREE implementation of the server-side SMTP protocol
- [[inputs.smtpctl]]
+ [[inputs.opensmtpd]]
    ## If running as a restricted user you can prepend sudo for additional access:
    #use_sudo = false
 
@@ -87,7 +86,9 @@ You will also need to update your sudoers file:
 ```bash
 $ visudo
 # Add the following line:
-telegraf ALL=(ALL) NOPASSWD: /usr/sbin/smtpctl
+Cmnd_Alias SMTPCTL = /usr/sbin/smtpctl
+telegraf  ALL=(ALL) NOPASSWD: SMTPCTL
+Defaults!SMTPCTL !logfile, !syslog, !pam_session
 ```
 
 Please use the solution you see as most appropriate.

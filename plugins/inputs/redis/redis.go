@@ -13,11 +13,14 @@ import (
 
 	"github.com/go-redis/redis"
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type Redis struct {
-	Servers []string
+	Servers  []string
+	Password string
+	tls.ClientConfig
 
 	clients     []Client
 	initialized bool
@@ -56,6 +59,16 @@ var sampleConfig = `
   ## If no servers are specified, then localhost is used as the host.
   ## If no port is specified, 6379 is used
   servers = ["tcp://localhost:6379"]
+
+  ## specify server password
+  # password = "s#cr@t%"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = true
 `
 
 func (r *Redis) SampleConfig() string {
@@ -101,6 +114,9 @@ func (r *Redis) init(acc telegraf.Accumulator) error {
 				password = pw
 			}
 		}
+		if len(r.Password) > 0 {
+			password = r.Password
+		}
 
 		var address string
 		if u.Scheme == "unix" {
@@ -109,12 +125,18 @@ func (r *Redis) init(acc telegraf.Accumulator) error {
 			address = u.Host
 		}
 
+		tlsConfig, err := r.ClientConfig.TLSConfig()
+		if err != nil {
+			return err
+		}
+
 		client := redis.NewClient(
 			&redis.Options{
-				Addr:     address,
-				Password: password,
-				Network:  u.Scheme,
-				PoolSize: 1,
+				Addr:      address,
+				Password:  password,
+				Network:   u.Scheme,
+				PoolSize:  1,
+				TLSConfig: tlsConfig,
 			},
 		)
 

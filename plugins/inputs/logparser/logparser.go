@@ -3,9 +3,7 @@
 package logparser
 
 import (
-	"fmt"
 	"log"
-	"reflect"
 	"strings"
 	"sync"
 
@@ -14,9 +12,8 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
+	"github.com/influxdata/telegraf/plugins/parsers"
 	// Parsers
-	"github.com/influxdata/telegraf/plugins/inputs/logparser/grok"
 )
 
 const (
@@ -24,9 +21,13 @@ const (
 )
 
 // LogParser in the primary interface for the plugin
-type LogParser interface {
-	ParseLine(line string) (telegraf.Metric, error)
-	Compile() error
+type GrokConfig struct {
+	MeasurementName    string `toml:"measurement"`
+	Patterns           []string
+	NamedPatterns      []string
+	CustomPatterns     string
+	CustomPatternFiles []string
+	Timezone           string
 }
 
 type logEntry struct {
@@ -45,11 +46,11 @@ type LogParserPlugin struct {
 	done    chan struct{}
 	wg      sync.WaitGroup
 	acc     telegraf.Accumulator
-	parsers []LogParser
 
 	sync.Mutex
 
-	GrokParser *grok.Parser `toml:"grok"`
+	GrokParser parsers.Parser
+	GrokConfig GrokConfig `toml:"grok"`
 }
 
 const sampleConfig = `
@@ -87,6 +88,7 @@ const sampleConfig = `
 
     ## Custom patterns can also be defined here. Put one pattern per line.
     custom_patterns = '''
+    '''
 
     ## Timezone allows you to provide an override for timestamps that
     ## don't already include an offset
@@ -97,8 +99,7 @@ const sampleConfig = `
     ##   1. Local             -- interpret based on machine localtime
     ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
     ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
-    timezone = "Canada/Eastern"
-    '''
+    # timezone = "Canada/Eastern"
 `
 
 // SampleConfig returns the sample configuration for the plugin
@@ -130,33 +131,26 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 	l.done = make(chan struct{})
 	l.tailers = make(map[string]*tail.Tail)
 
+	mName := "logparser"
+	if l.GrokConfig.MeasurementName != "" {
+		mName = l.GrokConfig.MeasurementName
+	}
+
 	// Looks for fields which implement LogParser interface
-	l.parsers = []LogParser{}
-	s := reflect.ValueOf(l).Elem()
-	for i := 0; i < s.NumField(); i++ {
-		f := s.Field(i)
-
-		if !f.CanInterface() {
-			continue
-		}
-
-		if lpPlugin, ok := f.Interface().(LogParser); ok {
-			if reflect.ValueOf(lpPlugin).IsNil() {
-				continue
-			}
-			l.parsers = append(l.parsers, lpPlugin)
-		}
+	config := &parsers.Config{
+		MetricName:             mName,
+		GrokPatterns:           l.GrokConfig.Patterns,
+		GrokNamedPatterns:      l.GrokConfig.NamedPatterns,
+		GrokCustomPatterns:     l.GrokConfig.CustomPatterns,
+		GrokCustomPatternFiles: l.GrokConfig.CustomPatternFiles,
+		GrokTimezone:           l.GrokConfig.Timezone,
+		DataFormat:             "grok",
 	}
 
-	if len(l.parsers) == 0 {
-		return fmt.Errorf("logparser input plugin: no parser defined")
-	}
-
-	// compile log parser patterns:
-	for _, parser := range l.parsers {
-		if err := parser.Compile(); err != nil {
-			return err
-		}
+	var err error
+	l.GrokParser, err = parsers.NewParser(config)
+	if err != nil {
+		return err
 	}
 
 	l.wg.Add(1)
@@ -188,7 +182,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 		}
 		files := g.Match()
 
-		for file := range files {
+		for _, file := range files {
 			if _, ok := l.tailers[file]; ok {
 				// we're already tailing this file
 				continue
@@ -207,6 +201,8 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 				l.acc.AddError(err)
 				continue
 			}
+
+			log.Printf("D! [inputs.logparser] tail added for file: %v", file)
 
 			// create a goroutine for each "tailer"
 			l.wg.Add(1)
@@ -247,8 +243,8 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 	}
 }
 
-// parser is launched as a goroutine to watch the l.lines channel.
-// when a line is available, parser parses it and adds the metric(s) to the
+// parse is launched as a goroutine to watch the l.lines channel.
+// when a line is available, parse parses it and adds the metric(s) to the
 // accumulator.
 func (l *LogParserPlugin) parser() {
 	defer l.wg.Done()
@@ -265,18 +261,17 @@ func (l *LogParserPlugin) parser() {
 				continue
 			}
 		}
-		for _, parser := range l.parsers {
-			m, err = parser.ParseLine(entry.line)
-			if err == nil {
-				if m != nil {
-					tags := m.Tags()
-					tags["path"] = entry.path
-					l.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
-				}
-			} else {
-				log.Println("E! Error parsing log line: " + err.Error())
+		m, err = l.GrokParser.ParseLine(entry.line)
+		if err == nil {
+			if m != nil {
+				tags := m.Tags()
+				tags["path"] = entry.path
+				l.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
 			}
+		} else {
+			log.Println("E! Error parsing log line: " + err.Error())
 		}
+
 	}
 }
 
@@ -287,6 +282,10 @@ func (l *LogParserPlugin) Stop() {
 
 	for _, t := range l.tailers {
 		err := t.Stop()
+
+		//message for a stopped tailer
+		log.Printf("D! tail dropped for file: %v", t.Filename)
+
 		if err != nil {
 			log.Printf("E! Error stopping tail on file %s\n", t.Filename)
 		}

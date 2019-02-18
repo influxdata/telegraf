@@ -6,9 +6,12 @@ import (
 
 	"github.com/influxdata/telegraf"
 
+	"github.com/influxdata/telegraf/plugins/serializers/carbon2"
 	"github.com/influxdata/telegraf/plugins/serializers/graphite"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/influxdata/telegraf/plugins/serializers/json"
+	"github.com/influxdata/telegraf/plugins/serializers/nowmetric"
+	"github.com/influxdata/telegraf/plugins/serializers/splunkmetric"
 )
 
 // SerializerOutput is an interface for output plugins that are able to
@@ -60,6 +63,9 @@ type Config struct {
 
 	// Timestamp units to use for JSON formatted output
 	TimestampUnits time.Duration
+
+	// Include HEC routing fields for splunkmetric output
+	HecRouting bool
 }
 
 // NewSerializer a Serializer interface based on the given config.
@@ -73,6 +79,12 @@ func NewSerializer(config *Config) (Serializer, error) {
 		serializer, err = NewGraphiteSerializer(config.Prefix, config.Template, config.GraphiteTagSupport)
 	case "json":
 		serializer, err = NewJsonSerializer(config.TimestampUnits)
+	case "splunkmetric":
+		serializer, err = NewSplunkmetricSerializer(config.HecRouting)
+	case "nowmetric":
+		serializer, err = NewNowSerializer()
+	case "carbon2":
+		serializer, err = NewCarbon2Serializer()
 	default:
 		err = fmt.Errorf("Invalid data format: %s", config.DataFormat)
 	}
@@ -81,6 +93,18 @@ func NewSerializer(config *Config) (Serializer, error) {
 
 func NewJsonSerializer(timestampUnits time.Duration) (Serializer, error) {
 	return json.NewSerializer(timestampUnits)
+}
+
+func NewCarbon2Serializer() (Serializer, error) {
+	return carbon2.NewSerializer()
+}
+
+func NewSplunkmetricSerializer(splunkmetric_hec_routing bool) (Serializer, error) {
+	return splunkmetric.NewSerializer(splunkmetric_hec_routing)
+}
+
+func NewNowSerializer() (Serializer, error) {
+	return nowmetric.NewSerializer()
 }
 
 func NewInfluxSerializerConfig(config *Config) (Serializer, error) {

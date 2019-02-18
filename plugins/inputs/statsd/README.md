@@ -10,7 +10,7 @@
 
   ## MaxTCPConnection - applicable when protocol is set to tcp (default=250)
   max_tcp_connections = 250
-  
+
   ## Enable TCP keep alive probes (default=false)
   tcp_keep_alive = false
 
@@ -45,7 +45,7 @@
   parse_data_dog_tags = false
 
   ## Statsd data translation templates, more info can be read here:
-  ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite
+  ## https://github.com/influxdata/telegraf/blob/master/docs/TEMPLATE_PATTERN.md
   # templates = [
   #     "cpu.* measurement*"
   # ]
@@ -58,6 +58,10 @@
   ## calculation of percentiles. Raising this limit increases the accuracy
   ## of percentiles but also increases the memory usage and cpu time.
   percentile_limit = 1000
+
+  ## Maximum socket buffer size in bytes, once the buffer fills up, metrics
+  ## will start dropping.  Defaults to the OS default.
+  # read_buffer_size = 65535
 ```
 
 ### Description
@@ -223,5 +227,5 @@ mem.cached.localhost:256|g
 => mem_cached,host=localhost 256
 ```
 
-There are many more options available,
-[More details can be found here](https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md#graphite)
+Consult the [Template Patterns](/docs/TEMPLATE_PATTERN.md) documentation for
+additional details.

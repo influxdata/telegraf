@@ -1,18 +1,18 @@
 # Converter Processor
 
 The converter processor is used to change the type of tag or field values.  In
-addition to changing field types it can convert fields to tags and vis versa.
+addition to changing field types it can convert between fields and tags.
 
 Values that cannot be converted are dropped.
 
-**Note:** When converting tags to fields, take care not to ensure the series is still
+**Note:** When converting tags to fields, take care to ensure the series is still
 uniquely identifiable.  Fields with the same series key (measurement + tags)
 will overwrite one another.
 
 ### Configuration:
 ```toml
 # Convert values to another metric value type
-[processors.converter]
+[[processors.converter]]
   ## Tags to convert
   ##
   ## The table key determines the target type, and the array of key-values
@@ -42,13 +42,13 @@ will overwrite one another.
 ### Examples:
 
 ```toml
-[processors.converter]
+[[processors.converter]]
   [processors.converter.tags]
     string = ["port"]
 
   [processors.converter.fields]
     integer = ["scboard_*"]
-    tag = ["ParseServerConfigGeneration"]
+    tag = ["ParentServerConfigGeneration"]
 ```
 
 ```diff

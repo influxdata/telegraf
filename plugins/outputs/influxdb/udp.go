@@ -3,11 +3,11 @@ package influxdb
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/plugins/serializers"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 )
 
@@ -28,7 +28,7 @@ type Conn interface {
 type UDPConfig struct {
 	MaxPayloadSize int
 	URL            *url.URL
-	Serializer     serializers.Serializer
+	Serializer     *influx.Serializer
 	Dialer         Dialer
 }
 
@@ -65,7 +65,7 @@ func NewUDPClient(config *UDPConfig) (*udpClient, error) {
 type udpClient struct {
 	conn       Conn
 	dialer     Dialer
-	serializer serializers.Serializer
+	serializer *influx.Serializer
 	url        *url.URL
 }
 
@@ -89,7 +89,11 @@ func (c *udpClient) Write(ctx context.Context, metrics []telegraf.Metric) error 
 	for _, metric := range metrics {
 		octets, err := c.serializer.Serialize(metric)
 		if err != nil {
-			return fmt.Errorf("could not serialize metric: %v", err)
+			// Since we are serializing multiple metrics, don't fail the
+			// entire batch just because of one unserializable metric.
+			log.Printf("E! [outputs.influxdb] when writing to [%s] could not serialize metric: %v",
+				c.URL(), err)
+			continue
 		}
 
 		_, err = c.conn.Write(octets)
