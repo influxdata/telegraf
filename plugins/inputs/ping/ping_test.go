@@ -126,6 +126,7 @@ func TestArgs(t *testing.T) {
 
 func TestArguments(t *testing.T) {
 	arguments := []string{"-c", "3"}
+	expected := append(arguments, "www.google.com")
 	p := Ping{
 		Count:        2,
 		Interface:    "eth0",
@@ -137,7 +138,7 @@ func TestArguments(t *testing.T) {
 
 	for _, system := range []string{"darwin", "linux", "anything else"} {
 		actual := p.args("www.google.com", system)
-		require.True(t, reflect.DeepEqual(actual, arguments), "Expected: %s Actual: %s", arguments, actual)
+		require.True(t, reflect.DeepEqual(actual, expected), "Expected: %s Actual: %s", expected, actual)
 	}
 }
 
