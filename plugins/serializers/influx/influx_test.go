@@ -277,7 +277,7 @@ var tests = []struct {
 	},
 	{
 		name:     "split_fields_overflow",
-		maxBytes: 36,
+		maxBytes: 43,
 		input: MustMetric(
 			metric.New(
 				"cpu",
@@ -285,11 +285,13 @@ var tests = []struct {
 				map[string]interface{}{
 					"abc": 123,
 					"def": 456,
+					"ghi": 789,
+					"jkl": 123,
 				},
 				time.Unix(1519194109, 42),
 			),
 		),
-		output: []byte("cpu abc=123i 1519194109000000042\ncpu def=456i 1519194109000000042\n"),
+		output: []byte("cpu abc=123i,def=456i 1519194109000000042\ncpu ghi=789i,jkl=123i 1519194109000000042\n"),
 	},
 	{
 		name: "name newline",
