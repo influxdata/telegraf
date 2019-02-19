@@ -57,6 +57,7 @@
 - [#5117](https://github.com/influxdata/telegraf/issues/5117): Use systemd in Amazon Linux 2 rpm.
 - [#4988](https://github.com/influxdata/telegraf/issues/4988): Set deadlock priority in sqlserver input.
 - [#5403](https://github.com/influxdata/telegraf/issues/5403): Remove error log when snmp6 directory does not exists with nstat input.
+- [#5437](https://github.com/influxdata/telegraf/issues/5437): Host not added when using custom arguments in ping plugin.
 
 ## v1.9.4 [2019-02-05]
 
