@@ -20,6 +20,19 @@ You can generate it using `telegraf --usage jira`.
   # Create tags based on these fields values
   tag_fields = ["custom_field_666"]
 
+
+# Define here the preffered authentication values
+# You should prefere the API-Token and leave username and password clear
+[[inputs.jira.authentication]]
+  # Username amd Password for BasicAuth - this may be deprecated in your Jira-Installation
+  username = MyUser
+  password = MyPass
+
+  # If you're using the new API-Token, fill in these values
+  email = myjira@example.com
+  token = my-generated-api-token
+
+
 # ${DATE} will be replaced with the current date on every request
 # Define as much JQLs as you need and give them each a name for having statistics on the count of issues
 [[inputs.jira.jql]]
@@ -34,6 +47,14 @@ You can generate it using `telegraf --usage jira`.
   name = "total"
   jql = "Team in (DevTeam, TestingTeam) AND issuetype = Bug AND status was in (\"Ready for develope\", Development, QA) on ${DATE}"
 ```
+
+### Authentication:
+
+Atlassian announced that [BasicAuth will be deprecated](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-basic-auth-and-cookie-based-auth/). Therefore you should not use this anymore.
+
+For BasicAuth you can use the `username` and `password` fields in the `inputs.jira.authentication` section. Just enter the plain values there.
+If you're using the API-Token, what is also a Basic-Authentication in the background, use the `email` and `token` fields.
+
 
 ### Metrics:
 

@@ -18,6 +18,7 @@ import (
 type (
 	Jira struct {
 		Servers []string `toml:"hosts"`
+		Auth    Auth     `toml:"authentication"`
 		Fields  []string `toml:"fields"`
 		Tags    []string `toml:"tag_fields"`
 		Jql     []Jql    `toml:"jql"`
@@ -26,6 +27,12 @@ type (
 	Jql struct {
 		Key   string `toml:"name"`
 		Value string `toml:"jql"`
+	}
+	Auth struct {
+		Username string `toml:"username"`
+		Password string `toml:"password"`
+		Email    string `toml:"email"`
+		Token    string `toml:"token"`
 	}
 )
 
@@ -68,6 +75,19 @@ func (j *Jira) SampleConfig() string {
 
   # Create tags based on these fields values
   tag_fields = ["customfield_666"]
+
+
+# Define here the preffered authentication values
+# You should prefere the API-Token and leave username and password clear
+[[inputs.jira.authentication]]
+  # Username amd Password for BasicAuth - this may be deprecated in your Jira-Installation
+  username = MyUser
+  password = MyPass
+
+  # If you're using the new API-Token, fill in these values
+  email = myjira@example.com
+  token = my-generated-api-token
+
 
 # ${DATE} will be replaced with the current date on every request
 # Define as much JQLs as you need and give them each a name for having statistics on the count of issues
@@ -124,7 +144,14 @@ func (j *Jira) fetchAndProcess(accumulator telegraf.Accumulator, host string) er
     "maxResults": 9999,
     "fields": ["` + strings.Join(append(j.Fields, j.Tags...)[:], `","`) + `"]
   }`)
-		response, error := j.client.Post(uri, "application/json", bytes.NewBuffer(post))
+		request, error := http.NewRequest("POST", uri, bytes.NewBuffer(post))
+		request.Header.Add("Content-Type", "application/json")
+		if len(j.Auth.Username) > 0 {
+			request.SetBasicAuth(j.Auth.Username, j.Auth.Password)
+		} else if len(j.Auth.Email) > 0 {
+			request.SetBasicAuth(j.Auth.Email, j.Auth.Token)
+		}
+		response, error := j.client.Do(request)
 		if error != nil {
 			return error
 		}
