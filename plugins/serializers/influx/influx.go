@@ -240,6 +240,7 @@ func (s *Serializer) writeMetric(w io.Writer, m telegraf.Metric) error {
 				return err
 			}
 
+			pairsLen = 0
 			firstField = true
 			bytesNeeded = len(s.header) + len(s.pair) + len(s.footer)
 
