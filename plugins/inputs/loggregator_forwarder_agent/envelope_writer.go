@@ -132,6 +132,10 @@ func (w *EnvelopeWriter) writeTimer(env *loggregator_v2.Envelope) {
 		return
 	}
 
+	if isServerPeerType(buildTags(env)) {
+		return
+	}
+
 	difference := float64(timer.Stop-timer.Start) / float64(time.Second)
 	w.acc.AddGauge(
 		timer.GetName(),
@@ -141,6 +145,16 @@ func (w *EnvelopeWriter) writeTimer(env *loggregator_v2.Envelope) {
 		buildTimerTags(env),
 		time.Unix(0, env.GetTimestamp()),
 	)
+}
+
+func isServerPeerType(tags map[string]string) bool {
+	if peerType, ok := tags["peer_type"]; ok {
+		if peerType == "server" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func validName(name string) bool {

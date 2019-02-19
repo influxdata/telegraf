@@ -29,7 +29,7 @@ func setup(t *testing.T) *envelopeWriterTestContext {
 	}
 }
 
-func (tc *envelopeWriterTestContext) nextMetric() *testutil.Metric {
+func (tc *envelopeWriterTestContext) popNextMetric() *testutil.Metric {
 	tc.Eventually(tc.accumulator.NMetrics).Should(BeEquivalentTo(1))
 
 	tc.accumulator.Lock()
@@ -78,7 +78,7 @@ func TestRemovesTagsWithLeadingDoubleUnderscore(t *testing.T) {
 			},
 		},
 	})
-	metric := tc.nextMetric()
+	metric := tc.popNextMetric()
 
 	tc.Expect(metric.Tags).ToNot(And(
 		HaveKey("__two_underscores"),
@@ -99,7 +99,7 @@ func TestTimersTransformsToGauges_CalculatesDifferenceBetweenStartAndStop(t *tes
 
 	now := time.Now()
 	tc.writer.Write(buildHttpTimerEnvelope(now))
-	metric := tc.nextMetric()
+	metric := tc.popNextMetric()
 
 	tc.Expect(metric.Measurement).To(Equal("http"))
 	tc.Expect(metric.Fields).To(HaveKeyWithValue("gauge", BeEquivalentTo(7)))
@@ -126,7 +126,7 @@ func TestTimersTransformsToGauges_DropsExtraTags(t *testing.T) {
 	env.DeprecatedTags["extra-deprecated"] = makeTextValue("stuff")
 
 	tc.writer.Write(env)
-	metric := tc.nextMetric()
+	metric := tc.popNextMetric()
 
 	tc.Expect(metric.Tags).To(Equal(map[string]string{
 		"source_id":   "source",
@@ -144,7 +144,7 @@ func TestTimersTransformsToGauges_PreservesSubSecondAccuracy(t *testing.T) {
 	env.GetTimer().Stop = int64(float64(7.5) * float64(time.Second))
 
 	tc.writer.Write(env)
-	metric := tc.nextMetric()
+	metric := tc.popNextMetric()
 
 	tc.Expect(metric.Fields).To(HaveKeyWithValue("gauge", 6.5))
 }
@@ -156,13 +156,26 @@ func TestTimersTransformsToGauges_DefaultsToSourceIdFromOriginTag(t *testing.T) 
 	env.Tags["origin"] = "origin_value"
 	env.DeprecatedTags["origin"] = makeTextValue("deprecated_origin_value")
 	tc.writer.Write(env)
-	tc.Expect(tc.nextMetric().Tags).To(HaveKeyWithValue("source_id", "origin_value"))
+	tc.Expect(tc.popNextMetric().Tags).To(HaveKeyWithValue("source_id", "origin_value"))
 
 	env2 := buildHttpTimerEnvelope(time.Now())
 	env2.SourceId = ""
 	env2.DeprecatedTags["origin"] = makeTextValue("deprecated_origin_value")
 	tc.writer.Write(env2)
-	tc.Expect(tc.nextMetric().Tags).To(HaveKeyWithValue("source_id", "deprecated_origin_value"))
+	tc.Expect(tc.popNextMetric().Tags).To(HaveKeyWithValue("source_id", "deprecated_origin_value"))
+}
+
+func TestTimersTransformsToGauges_IgnoresPeerTypeOfServer(t *testing.T) {
+	tc := setup(t)
+	env := buildHttpTimerEnvelope(time.Now())
+	env.Tags["peer_type"] = "client"
+	tc.writer.Write(env)
+	tc.Expect(tc.popNextMetric().Tags).ToNot(HaveKey("peer_type"))
+
+	env2 := buildHttpTimerEnvelope(time.Now())
+	env2.Tags["peer_type"] = "server"
+	tc.writer.Write(env2)
+	tc.Consistently(tc.accumulator.NMetrics).Should(BeZero())
 }
 
 func TestIgnoreMetricsWithInvalidNames(t *testing.T) {
@@ -183,7 +196,7 @@ func TestIgnoreLabelsWithInvalidNames(t *testing.T) {
 		"invalid:":  "value",
 	}))
 
-	metric := tc.nextMetric()
+	metric := tc.popNextMetric()
 	tc.Expect(metric.Tags).ToNot(HaveKey("7_invalid"))
 	tc.Expect(metric.Tags).ToNot(HaveKey("*invalid"))
 	tc.Expect(metric.Tags).ToNot(HaveKey("invali&d"))
