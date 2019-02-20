@@ -12,14 +12,19 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
+	"log"
+	"time"
 )
 
 type empty struct{}
 type semaphore chan empty
 
 const defaultMaxUndeliveredMessages = 1000
+const defaultRetryDelaySeconds = 5
 
 type PubSub struct {
+	sync.Mutex
+
 	CredentialsFile string `toml:"credentials_file"`
 	Project         string `toml:"project"`
 	Subscription    string `toml:"subscription"`
@@ -31,18 +36,19 @@ type PubSub struct {
 	MaxReceiverGoRoutines  int               `toml:"max_receiver_go_routines"`
 
 	// Agent settings
-	MaxMessageLen          int `toml:"max_message_len"`
-	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
+	MaxMessageLen            int `toml:"max_message_len"`
+	MaxUndeliveredMessages   int `toml:"max_undelivered_messages"`
+	RetryReceiveDelaySeconds int `toml:"retry_delay_seconds"`
 
 	sub     subscription
 	stubSub func() subscription
 
+	ctx    context.Context
 	cancel context.CancelFunc
 
 	parser parsers.Parser
 	wg     *sync.WaitGroup
 	acc    telegraf.TrackingAccumulator
-	mu     sync.Mutex
 
 	undelivered map[telegraf.TrackingID]message
 	sem         semaphore
@@ -78,35 +84,37 @@ func (ps *PubSub) Start(ac telegraf.Accumulator) error {
 		return fmt.Errorf(`"project" is required`)
 	}
 
-	cctx, cancel := context.WithCancel(context.Background())
+	ps.sem = make(semaphore, ps.MaxUndeliveredMessages)
+	ps.acc = ac.WithTracking(ps.MaxUndeliveredMessages)
+
+	// Create top-level context with cancel that will be called on Stop().
+	ctx, cancel := context.WithCancel(context.Background())
+	ps.ctx = ctx
 	ps.cancel = cancel
 
 	if ps.stubSub != nil {
 		ps.sub = ps.stubSub()
 	} else {
-		subRef, err := ps.getGCPSubscription(cctx, ps.Subscription)
+		subRef, err := ps.getGCPSubscription(ps.Subscription)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to create subscription handle: %v", err)
 		}
 		ps.sub = subRef
 	}
 
 	ps.wg = &sync.WaitGroup{}
-	ps.acc = ac.WithTracking(ps.MaxUndeliveredMessages)
-	ps.sem = make(semaphore, ps.MaxUndeliveredMessages)
-
-	// Start receiver in new goroutine for each subscription.
-	ps.wg.Add(1)
-	go func() {
-		defer ps.wg.Done()
-		ps.subReceive(cctx)
-	}()
-
 	// Start goroutine to handle delivery notifications from accumulator.
 	ps.wg.Add(1)
 	go func() {
 		defer ps.wg.Done()
-		ps.receiveDelivered(cctx)
+		ps.waitForDelivery()
+	}()
+
+	// Start goroutine for subscription receiver.
+	ps.wg.Add(1)
+	go func() {
+		defer ps.wg.Done()
+		ps.receiveWithRetry()
 	}()
 
 	return nil
@@ -119,13 +127,47 @@ func (ps *PubSub) Stop() {
 	ps.wg.Wait()
 }
 
-func (ps *PubSub) subReceive(cctx context.Context) {
+// startReceiver is called within a goroutine and manages keeping a
+// subscription.Receive() up and running while the plugin has not been stopped.
+func (ps *PubSub) receiveWithRetry() {
+	err := ps.startReceiver()
+	
+	for err != nil && ps.ctx.Err() == nil {
+		log.Printf("E! Receiver for subscription %s exited with error: %v", ps.sub.ID(), err)
+
+		delay := defaultRetryDelaySeconds
+		if ps.RetryReceiveDelaySeconds > 0 {
+			delay = ps.RetryReceiveDelaySeconds
+		}
+
+		log.Printf("I! Waiting %d seconds before attempting to restart receiver...", delay)
+		time.Sleep(time.Duration(delay) * time.Second)
+
+		err = ps.startReceiver()
+	}
+}
+
+func (ps *PubSub) startReceiver() error {
+	cctx, ccancel := context.WithCancel(ps.ctx)
+
+	log.Printf("I! Starting receiver for subscription %s...", ps.sub.ID())
+	return ps.receiveOnSub(cctx, ccancel)
+}
+
+
+func (ps *PubSub) receiveOnSub(cctx context.Context, ccancel context.CancelFunc) error {
 	err := ps.sub.Receive(cctx, func(ctx context.Context, msg message) {
 		if err := ps.onMessage(ctx, msg); err != nil {
 			ps.acc.AddError(fmt.Errorf("unable to add message from subscription %s: %v", ps.sub.ID(), err))
 		}
 	})
-	ps.acc.AddError(fmt.Errorf("receiver for subscription %s exited: %v", ps.sub.ID(), err))
+	if err != nil {
+		ps.acc.AddError(fmt.Errorf("receiver for subscription %s exited: %v", ps.sub.ID(), err))
+	} else {
+		log.Printf("I! subscription pull ended (no error, most likely stopped)")
+	}
+	ccancel()
+	return err
 }
 
 // onMessage handles parsing and adding a received message to the accumulator.
@@ -153,8 +195,8 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 		break
 	}
 
-	ps.mu.Lock()
-	defer ps.mu.Unlock()
+	ps.Lock()
+	defer ps.Unlock()
 
 	id := ps.acc.AddTrackingMetricGroup(metrics)
 	if ps.undelivered == nil {
@@ -165,10 +207,10 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 	return nil
 }
 
-func (ps *PubSub) receiveDelivered(ctx context.Context) {
+func (ps *PubSub) waitForDelivery() {
 	for {
 		select {
-		case <-ctx.Done():
+		case <-ps.ctx.Done():
 			return
 		case info := <-ps.acc.Delivered():
 			<-ps.sem
@@ -182,8 +224,8 @@ func (ps *PubSub) receiveDelivered(ctx context.Context) {
 }
 
 func (ps *PubSub) removeDelivered(id telegraf.TrackingID) message {
-	ps.mu.Lock()
-	defer ps.mu.Unlock()
+	ps.Lock()
+	defer ps.Unlock()
 
 	msg, ok := ps.undelivered[id]
 	if !ok {
@@ -219,7 +261,7 @@ func (ps *PubSub) getPubSubClient() (*pubsub.Client, error) {
 	return client, nil
 }
 
-func (ps *PubSub) getGCPSubscription(ctx context.Context, subId string) (subscription, error) {
+func (ps *PubSub) getGCPSubscription(subId string) (subscription, error) {
 	client, err := ps.getPubSubClient()
 	if err != nil {
 		return nil, err
