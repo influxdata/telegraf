@@ -131,7 +131,7 @@ func (ps *PubSub) Stop() {
 // subscription.Receive() up and running while the plugin has not been stopped.
 func (ps *PubSub) receiveWithRetry() {
 	err := ps.startReceiver()
-	
+
 	for err != nil && ps.ctx.Err() == nil {
 		log.Printf("E! Receiver for subscription %s exited with error: %v", ps.sub.ID(), err)
 
@@ -303,6 +303,12 @@ const sampleConfig = `
   ## PubSub APIs. If not set explicitly, Telegraf will attempt to use
   ## Application Default Credentials, which is preferred.
   # credentials_file = "path/to/my/creds.json"
+
+  ## Optional. Number of seconds to wait before attempting to restart the 
+  ## PubSub subscription receiver after an unexpected error. 
+  ## If the streaming pull for a PubSub Subscription fails (receiver),
+  ## the agent attempts to restart receiving messages after this many seconds.
+  # retry_delay_seconds = 5
 
   ## Optional. Maximum byte length of a message to consume.
   ## Larger messages are dropped with an error. If less than 0 or unspecified,
