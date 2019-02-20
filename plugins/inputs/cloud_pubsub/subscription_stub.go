@@ -20,16 +20,16 @@ func (s *stubSub) Receive(ctx context.Context, f func(context.Context, message))
 	return s.receiver(ctx, f)
 }
 
-type receiveFunc func (ctx context.Context, f func(context.Context, message)) error
+type receiveFunc func(ctx context.Context, f func(context.Context, message)) error
 
 func testMessagesError(s *stubSub, expectedErr error) receiveFunc {
-	return func (ctx context.Context, f func(context.Context, message)) error {
+	return func(ctx context.Context, f func(context.Context, message)) error {
 		return expectedErr
 	}
 }
 
 func testMessagesReceive(s *stubSub) receiveFunc {
-	return func (ctx context.Context, f func(context.Context, message)) error {
+	return func(ctx context.Context, f func(context.Context, message)) error {
 		for {
 			select {
 			case <-ctx.Done():

@@ -1,11 +1,11 @@
 package cloud_pubsub
 
 import (
+	"errors"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"errors"
 )
 
 const (

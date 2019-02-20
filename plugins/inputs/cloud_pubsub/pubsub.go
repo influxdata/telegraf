@@ -154,7 +154,6 @@ func (ps *PubSub) startReceiver() error {
 	return ps.receiveOnSub(cctx, ccancel)
 }
 
-
 func (ps *PubSub) receiveOnSub(cctx context.Context, ccancel context.CancelFunc) error {
 	err := ps.sub.Receive(cctx, func(ctx context.Context, msg message) {
 		if err := ps.onMessage(ctx, msg); err != nil {
