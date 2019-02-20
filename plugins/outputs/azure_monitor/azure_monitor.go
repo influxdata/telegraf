@@ -31,7 +31,7 @@ type AzureMonitor struct {
 	StringsAsDimensions bool   `toml:"strings_as_dimensions"`
 	Region              string
 	ResourceID          string `toml:"resource_id"`
-	EndpointOverride    string `toml:"endpoint_override"`
+	EndpointURL         string `toml:"endpoint_url"`
 
 	url    string
 	auth   autorest.Authorizer
@@ -66,7 +66,7 @@ const (
 	vmInstanceMetadataURL = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
 	resourceIDTemplate    = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s"
 	urlTemplate           = "https://%s.monitoring.azure.com%s/metrics"
-	urlOverrideTemplate   = "https://monitoring.%s%s/metrics"
+	urlOverrideTemplate   = "%s%s/metrics"
 	maxRequestBodySize    = 4000000
 )
 
@@ -127,7 +127,7 @@ func (a *AzureMonitor) Connect() error {
 	var err error
 	var region string
 	var resourceID string
-	var endpointOverride string
+	var endpointUrl string
 
 	if a.Region == "" || a.ResourceID == "" {
 		// Pull region and resource identifier
@@ -142,8 +142,8 @@ func (a *AzureMonitor) Connect() error {
 	if a.ResourceID != "" {
 		resourceID = a.ResourceID
 	}
-	if a.EndpointOverride != "" {
-		endpointOverride = a.EndpointOverride
+	if a.EndpointUrl != "" {
+		endpointUrl = a.EndpointUrl
 	}
 
 	if resourceID == "" {
@@ -152,10 +152,10 @@ func (a *AzureMonitor) Connect() error {
 		return fmt.Errorf("no region configured or available via VM instance metadata")
 	}
 
-	if endpointOverride == "" {
+	if endpointUrl == "" {
 		a.url = fmt.Sprintf(urlTemplate, region, resourceID)
 	} else {
-		a.url = fmt.Sprintf(urlOverrideTemplate, endpointOverride, resourceID)
+		a.url = fmt.Sprintf(urlOverrideTemplate, endpointUrl, resourceID)
 	}
 
 	log.Printf("D! Writing to Azure Monitor URL: %s", a.url)

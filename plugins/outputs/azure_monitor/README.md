@@ -44,7 +44,7 @@ written as a dimension on each Azure Monitor metric.
   ## Optionally, if in Azure US Government, China, or other sovereign
   ## cloud environment, set the appropriate REST endpoint for receiving
   ## metrics. (Note: region may be  unused in this context)
-  # endpoint_override = "monitoring.core.usgovcloudapi.net"
+  # endpoint_url = "https://monitoring.core.usgovcloudapi.net"
 ```
 
 ### Setup
