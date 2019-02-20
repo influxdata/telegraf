@@ -61,6 +61,27 @@ smartctl -s on <device>
   # devices = [ "/dev/ada0 -d atacam" ]
 ```
 
+### Permissions:
+
+It's important to note that this plugin references smartctl, which may require additional permissions to execute successfully.
+Depending on the user/group permissions of the telegraf user executing this plugin, you may need to  use sudo.
+
+
+You will need the following in your telegraf config:
+```toml
+[[inputs.smart]]
+  use_sudo = true
+```
+
+You will also need to update your sudoers file:
+```bash
+$ visudo
+# Add the following line:
+Cmnd_Alias SMARTCTL = /usr/bin/smartctl
+telegraf  ALL=(ALL) NOPASSWD: SMARTCTL
+Defaults!SMARTCTL !logfile, !syslog, !pam_session
+```
+
 ### Metrics:
 
 - smart_device:

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/serializers/influx"
 	"github.com/stretchr/testify/require"
@@ -421,4 +422,34 @@ func TestOAuthClientCredentialsGrant(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestDefaultUserAgent(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	internal.SetVersion("1.2.3")
+
+	t.Run("default-user-agent", func(t *testing.T) {
+		ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			require.Equal(t, "Telegraf/1.2.3", r.Header.Get("User-Agent"))
+			w.WriteHeader(http.StatusOK)
+		})
+
+		client := &HTTP{
+			URL:    u.String(),
+			Method: defaultMethod,
+		}
+
+		serializer := influx.NewSerializer()
+		client.SetSerializer(serializer)
+		err = client.Connect()
+		require.NoError(t, err)
+
+		err = client.Write([]telegraf.Metric{getMetric()})
+		require.NoError(t, err)
+	})
 }

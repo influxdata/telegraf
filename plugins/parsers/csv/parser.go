@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 )
 
@@ -207,21 +208,9 @@ outer:
 		measurementName = fmt.Sprintf("%v", recordFields[p.MeasurementColumn])
 	}
 
-	metricTime := p.TimeFunc()
-	if p.TimestampColumn != "" {
-		if recordFields[p.TimestampColumn] == nil {
-			return nil, fmt.Errorf("timestamp column: %v could not be found", p.TimestampColumn)
-		}
-		tStr := fmt.Sprintf("%v", recordFields[p.TimestampColumn])
-		if p.TimestampFormat == "" {
-			return nil, fmt.Errorf("timestamp format must be specified")
-		}
-
-		var err error
-		metricTime, err = time.Parse(p.TimestampFormat, tStr)
-		if err != nil {
-			return nil, err
-		}
+	metricTime, err := parseTimestamp(p.TimeFunc, recordFields, p.TimestampColumn, p.TimestampFormat)
+	if err != nil {
+		return nil, err
 	}
 
 	m, err := metric.New(measurementName, tags, recordFields, metricTime)
@@ -231,6 +220,37 @@ outer:
 	return m, nil
 }
 
+// ParseTimestamp return a timestamp, if there is no timestamp on the csv it
+// will be the current timestamp, else it will try to parse the time according
+// to the format.
+func parseTimestamp(timeFunc func() time.Time, recordFields map[string]interface{},
+	timestampColumn, timestampFormat string,
+) (metricTime time.Time, err error) {
+	metricTime = timeFunc()
+
+	if timestampColumn != "" {
+		if recordFields[timestampColumn] == nil {
+			err = fmt.Errorf("timestamp column: %v could not be found", timestampColumn)
+			return
+		}
+
+		tStr := fmt.Sprintf("%v", recordFields[timestampColumn])
+
+		switch timestampFormat {
+		case "":
+			err = fmt.Errorf("timestamp format must be specified")
+			return
+		default:
+			metricTime, err = internal.ParseTimestamp(tStr, timestampFormat)
+			if err != nil {
+				return
+			}
+		}
+	}
+	return
+}
+
+// SetDefaultTags set the DefaultTags
 func (p *Parser) SetDefaultTags(tags map[string]string) {
 	p.DefaultTags = tags
 }

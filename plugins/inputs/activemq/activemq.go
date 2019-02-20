@@ -91,7 +91,7 @@ var sampleConfig = `
 
   ## Required ActiveMQ port
   # port = 8161
-  
+
   ## Credentials for basic HTTP authentication
   # username = "admin"
   # password = "admin"
@@ -101,7 +101,7 @@ var sampleConfig = `
 
   ## Maximum time to receive response.
   # response_timeout = "5s"
-  
+
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
   # tls_cert = "/etc/telegraf/cert.pem"

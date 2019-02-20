@@ -19,6 +19,10 @@ type metricDiff struct {
 }
 
 func newMetricDiff(metric telegraf.Metric) *metricDiff {
+	if metric == nil {
+		return nil
+	}
+
 	m := &metricDiff{}
 	m.Measurement = metric.Name()
 
@@ -41,6 +45,18 @@ func newMetricDiff(metric telegraf.Metric) *metricDiff {
 	return m
 }
 
+func MetricEqual(expected, actual telegraf.Metric) bool {
+	var lhs, rhs *metricDiff
+	if expected != nil {
+		lhs = newMetricDiff(expected)
+	}
+	if actual != nil {
+		rhs = newMetricDiff(actual)
+	}
+
+	return cmp.Equal(lhs, rhs)
+}
+
 func RequireMetricEqual(t *testing.T, expected, actual telegraf.Metric) {
 	t.Helper()
 
@@ -60,11 +76,11 @@ func RequireMetricEqual(t *testing.T, expected, actual telegraf.Metric) {
 func RequireMetricsEqual(t *testing.T, expected, actual []telegraf.Metric) {
 	t.Helper()
 
-	lhs := make([]*metricDiff, len(expected))
+	lhs := make([]*metricDiff, 0, len(expected))
 	for _, m := range expected {
 		lhs = append(lhs, newMetricDiff(m))
 	}
-	rhs := make([]*metricDiff, len(actual))
+	rhs := make([]*metricDiff, 0, len(actual))
 	for _, m := range actual {
 		rhs = append(rhs, newMetricDiff(m))
 	}

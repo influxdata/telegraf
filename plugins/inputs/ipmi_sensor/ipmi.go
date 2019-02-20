@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -228,7 +229,12 @@ func parseV2(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_
 func extractFieldsFromRegex(re *regexp.Regexp, input string) map[string]string {
 	submatches := re.FindStringSubmatch(input)
 	results := make(map[string]string)
-	for i, name := range re.SubexpNames() {
+	subexpNames := re.SubexpNames()
+	if len(subexpNames) > len(submatches) {
+		log.Printf("D! No matches found in '%s'", input)
+		return results
+	}
+	for i, name := range subexpNames {
 		if name != input && name != "" && input != "" {
 			results[name] = trim(submatches[i])
 		}

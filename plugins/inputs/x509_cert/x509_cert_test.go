@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
@@ -113,7 +116,7 @@ func TestGatherRemote(t *testing.T) {
 
 			acc := testutil.Accumulator{}
 			err = sc.Gather(&acc)
-			if err != nil {
+			if len(acc.Errors) > 0 {
 				testErr = true
 			}
 
@@ -171,6 +174,55 @@ func TestGatherLocal(t *testing.T) {
 
 			acc := testutil.Accumulator{}
 			err = sc.Gather(&acc)
+			if len(acc.Errors) > 0 {
+				error = true
+			}
+
+			if error != test.error {
+				t.Errorf("%s", err)
+			}
+		})
+	}
+}
+
+func TestGatherChain(t *testing.T) {
+	cert := fmt.Sprintf("%s\n%s", pki.ReadServerCert(), pki.ReadCACert())
+
+	tests := []struct {
+		name    string
+		content string
+		error   bool
+	}{
+		{name: "chain certificate", content: cert},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			f, err := ioutil.TempFile("", "x509_cert")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = f.Write([]byte(test.content))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = f.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			defer os.Remove(f.Name())
+
+			sc := X509Cert{
+				Sources: []string{f.Name()},
+			}
+
+			error := false
+
+			acc := testutil.Accumulator{}
+			err = sc.Gather(&acc)
 			if err != nil {
 				error = true
 			}
@@ -180,6 +232,7 @@ func TestGatherLocal(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 func TestStrings(t *testing.T) {
@@ -202,4 +255,20 @@ func TestStrings(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGatherCert(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode")
+	}
+
+	m := &X509Cert{
+		Sources: []string{"https://www.influxdata.com:443"},
+	}
+
+	var acc testutil.Accumulator
+	err := m.Gather(&acc)
+	require.NoError(t, err)
+
+	assert.True(t, acc.HasMeasurement("x509_cert"))
 }
