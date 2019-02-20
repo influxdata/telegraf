@@ -7,6 +7,7 @@
 - [neptune_apex](/plugins/inputs/neptune_apex/README.md) - Contributed by @MaxRenaud
 - [nginx_upstream_check](/plugins/inputs/nginx_upstream_check/README.md) - Contributed by @dmitryilyin
 - [multifile](/plugins/inputs/multifile/README.md) - Contributed by @martin2250
+- [stackdriver](/plugins/inputs/stackdriver/README.md) - Contributed by @WuHan0608
 
 #### New Outputs
 
