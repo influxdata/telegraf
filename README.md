@@ -253,6 +253,7 @@ For documentation on the latest development code see the [documentation index][d
 * [socket_listener](./plugins/inputs/socket_listener)
 * [solr](./plugins/inputs/solr)
 * [sql server](./plugins/inputs/sqlserver) (microsoft)
+* [stackdriver](./plugins/inputs/stackdriver)
 * [statsd](./plugins/inputs/statsd)
 * [swap](./plugins/inputs/swap)
 * [syslog](./plugins/inputs/syslog)
