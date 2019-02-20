@@ -93,6 +93,11 @@ var sampleConfig = `
   ## The Azure Resource ID against which metric will be logged, e.g.
   ##   ex: resource_id = "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
   # resource_id = ""
+
+  ## Optionall, if in Azure US Government, China or other sovereign
+  ## cloud environment, set appropriate REST endpoint for receiving
+  ## metrics. (Note: region may be unused in this context)
+  # endpoint_url = "https://monitoring.core.usgovcloudapi.net"
 `
 
 // Description provides a description of the plugin
