@@ -128,7 +128,7 @@ func (a *AzureMonitor) Connect() error {
 	var region string
 	var resourceID string
 	var endpointOverride string
-	
+
 	if a.Region == "" || a.ResourceID == "" {
 		// Pull region and resource identifier
 		region, resourceID, err = vmInstanceMetadata(a.client)
@@ -143,7 +143,7 @@ func (a *AzureMonitor) Connect() error {
 		resourceID = a.ResourceID
 	}
 	if a.EndpointOverride != "" {
-	        endpointOverride = a.EndpointOverride
+		endpointOverride = a.EndpointOverride
 	}
 
 	if resourceID == "" {
@@ -152,10 +152,10 @@ func (a *AzureMonitor) Connect() error {
 		return fmt.Errorf("no region configured or available via VM instance metadata")
 	}
 
-        if endpointOverride == "" {
-	        a.url = fmt.Sprintf(urlTemplate, region, resourceID)
+	if endpointOverride == "" {
+		a.url = fmt.Sprintf(urlTemplate, region, resourceID)
 	} else {
-	        a.url = fmt.Sprintf(urlOverrideTemplate, endpointOverride, resourceID)
+		a.url = fmt.Sprintf(urlOverrideTemplate, endpointOverride, resourceID)
 	}
 
 	log.Printf("D! Writing to Azure Monitor URL: %s", a.url)
