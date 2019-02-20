@@ -207,6 +207,89 @@ func TestWriteAscendingTime(t *testing.T) {
 	})
 }
 
+func TestWriteBatchable(t *testing.T) {
+	expectedResponse := &emptypb.Empty{}
+	mockMetric.err = nil
+	mockMetric.reqs = nil
+	mockMetric.resps = append(mockMetric.resps[:0], expectedResponse)
+
+	c, err := monitoring.NewMetricClient(context.Background(), clientOpt)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	s := &Stackdriver{
+		Project:   fmt.Sprintf("projects/%s", "[PROJECT]"),
+		Namespace: "test",
+		client:    c,
+	}
+
+	// Metrics in descending order of timestamp
+	metrics := []telegraf.Metric{
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"foo": "bar",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Unix(2, 0),
+		),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"foo": "foo",
+			},
+			map[string]interface{}{
+				"value": 43,
+			},
+			time.Unix(3, 0),
+		),
+		testutil.MustMetric("cpu",
+			map[string]string{
+				"foo": "bar",
+			},
+			map[string]interface{}{
+				"value": 43,
+			},
+			time.Unix(1, 0),
+		),
+	}
+
+	err = s.Connect()
+	require.NoError(t, err)
+	err = s.Write(metrics)
+	require.NoError(t, err)
+
+	require.Len(t, mockMetric.reqs, 2)
+	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
+	require.Len(t, request.TimeSeries, 2)
+	ts := request.TimeSeries[0]
+	require.Len(t, ts.Points, 1)
+	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
+		EndTime: &googlepb.Timestamp{
+			Seconds: 3,
+		},
+	})
+	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
+		Value: &monitoringpb.TypedValue_Int64Value{
+			Int64Value: int64(43),
+		},
+	})
+
+	ts = request.TimeSeries[1]
+	require.Len(t, ts.Points, 1)
+	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
+		EndTime: &googlepb.Timestamp{
+			Seconds: 1,
+		},
+	})
+	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
+		Value: &monitoringpb.TypedValue_Int64Value{
+			Int64Value: int64(43),
+		},
+	})
+}
+
 func TestWriteIgnoredErrors(t *testing.T) {
 	tests := []struct {
 		name        string
