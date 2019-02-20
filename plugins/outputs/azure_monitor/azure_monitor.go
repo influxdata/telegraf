@@ -31,7 +31,7 @@ type AzureMonitor struct {
 	StringsAsDimensions bool   `toml:"strings_as_dimensions"`
 	Region              string
 	ResourceID          string `toml:"resource_id"`
-	EndpointURL         string `toml:"endpoint_url"`
+	EndpointUrl         string `toml:"endpoint_url"`
 
 	url    string
 	auth   autorest.Authorizer
