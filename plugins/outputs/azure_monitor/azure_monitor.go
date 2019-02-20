@@ -66,6 +66,7 @@ const (
 	vmInstanceMetadataURL = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
 	resourceIDTemplate    = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s"
 	urlTemplate           = "https://%s.monitoring.azure.com%s/metrics"
+	urlOverrideTemplate   = "https://monitoring.%s%s/metrics"
 	maxRequestBodySize    = 4000000
 )
 
@@ -152,7 +153,7 @@ func (a *AzureMonitor) Connect() error {
         if endpointOverride == "" {
 	        a.url = fmt.Sprintf(urlTemplate, region, resourceID)
 	} else {
-	        a.url = fmt.Sprintf("https://%s%s/metrics", endpointOverride, resourceID)
+	        a.url = fmt.Sprintf(urlOverrideTemplate, endpointOverride, resourceID)
 	}
 
 	log.Printf("D! Writing to Azure Monitor URL: %s", a.url)
