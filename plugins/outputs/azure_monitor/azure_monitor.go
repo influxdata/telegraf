@@ -149,10 +149,10 @@ func (a *AzureMonitor) Connect() error {
 		return fmt.Errorf("no region configured or available via VM instance metadata")
 	}
 
-        if EndpointOverride == "" {
+        if endpointOverride == "" {
 	        a.url = fmt.Sprintf(urlTemplate, region, resourceID)
 	} else {
-	        a.url = fmt.Sprintf("https://%s%s/metrics", EndpointOverride, resourceID)
+	        a.url = fmt.Sprintf("https://%s%s/metrics", endpointOverride, resourceID)
 	}
 
 	log.Printf("D! Writing to Azure Monitor URL: %s", a.url)
