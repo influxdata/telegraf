@@ -31,6 +31,7 @@ type AzureMonitor struct {
 	StringsAsDimensions bool   `toml:"strings_as_dimensions"`
 	Region              string
 	ResourceID          string `toml:"resource_id"`
+	EndpointOverride    string `toml:"endpoint_override"`
 
 	url    string
 	auth   autorest.Authorizer
@@ -138,13 +139,21 @@ func (a *AzureMonitor) Connect() error {
 	if a.ResourceID != "" {
 		resourceID = a.ResourceID
 	}
+	if a.EndpointOverride != "" {
+	        endpointOverride = a.EndpointOverride
+	}
 
 	if resourceID == "" {
 		return fmt.Errorf("no resource ID configured or available via VM instance metadata")
 	} else if region == "" {
 		return fmt.Errorf("no region configured or available via VM instance metadata")
 	}
-	a.url = fmt.Sprintf(urlTemplate, region, resourceID)
+
+        if EndpointOverride == "" {
+	        a.url = fmt.Sprintf(urlTemplate, region, resourceID)
+	} else {
+	        a.url = fmt.Sprintf("https://%s%s/metrics", EndpointOverride, resourceID)
+	}
 
 	log.Printf("D! Writing to Azure Monitor URL: %s", a.url)
 
