@@ -127,6 +127,8 @@ func (a *AzureMonitor) Connect() error {
 	var err error
 	var region string
 	var resourceID string
+	var endpointOverride string
+	
 	if a.Region == "" || a.ResourceID == "" {
 		// Pull region and resource identifier
 		region, resourceID, err = vmInstanceMetadata(a.client)
