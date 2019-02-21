@@ -1,6 +1,7 @@
 package cloud_pubsub
 
 import (
+	"errors"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -21,6 +22,7 @@ func TestRunParse(t *testing.T) {
 		id:       subId,
 		messages: make(chan *testMsg, 100),
 	}
+	sub.receiver = testMessagesReceive(sub)
 
 	ps := &PubSub{
 		parser:                 testParser,
@@ -62,6 +64,7 @@ func TestRunInvalidMessages(t *testing.T) {
 		id:       subId,
 		messages: make(chan *testMsg, 100),
 	}
+	sub.receiver = testMessagesReceive(sub)
 
 	ps := &PubSub{
 		parser:                 testParser,
@@ -107,6 +110,7 @@ func TestRunOverlongMessages(t *testing.T) {
 		id:       subId,
 		messages: make(chan *testMsg, 100),
 	}
+	sub.receiver = testMessagesReceive(sub)
 
 	ps := &PubSub{
 		parser:                 testParser,
@@ -139,6 +143,41 @@ func TestRunOverlongMessages(t *testing.T) {
 	testTracker.WaitForAck(1)
 
 	assert.Equal(t, acc.NFields(), 0)
+}
+
+func TestRunErrorInSubscriber(t *testing.T) {
+	subId := "sub-unexpected-error"
+
+	acc := &testutil.Accumulator{}
+
+	testParser, _ := parsers.NewInfluxParser()
+
+	sub := &stubSub{
+		id:       subId,
+		messages: make(chan *testMsg, 100),
+	}
+	fakeErrStr := "a fake error"
+	sub.receiver = testMessagesError(sub, errors.New("a fake error"))
+
+	ps := &PubSub{
+		parser:                   testParser,
+		stubSub:                  func() subscription { return sub },
+		Project:                  "projectIDontMatterForTests",
+		Subscription:             subId,
+		MaxUndeliveredMessages:   defaultMaxUndeliveredMessages,
+		RetryReceiveDelaySeconds: 1,
+	}
+
+	if err := ps.Start(acc); err != nil {
+		t.Fatalf("test PubSub failed to start: %s", err)
+	}
+	defer ps.Stop()
+
+	if ps.sub == nil {
+		t.Fatal("expected plugin subscription to be non-nil")
+	}
+	acc.WaitError(1)
+	assert.Regexp(t, fakeErrStr, acc.Errors[0])
 }
 
 func validateTestInfluxMetric(t *testing.T, m *testutil.Metric) {

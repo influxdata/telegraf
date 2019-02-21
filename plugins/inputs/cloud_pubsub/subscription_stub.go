@@ -9,6 +9,7 @@ import (
 type stubSub struct {
 	id       string
 	messages chan *testMsg
+	receiver receiveFunc
 }
 
 func (s *stubSub) ID() string {
@@ -16,12 +17,26 @@ func (s *stubSub) ID() string {
 }
 
 func (s *stubSub) Receive(ctx context.Context, f func(context.Context, message)) error {
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case m := <-s.messages:
-			f(ctx, m)
+	return s.receiver(ctx, f)
+}
+
+type receiveFunc func(ctx context.Context, f func(context.Context, message)) error
+
+func testMessagesError(s *stubSub, expectedErr error) receiveFunc {
+	return func(ctx context.Context, f func(context.Context, message)) error {
+		return expectedErr
+	}
+}
+
+func testMessagesReceive(s *stubSub) receiveFunc {
+	return func(ctx context.Context, f func(context.Context, message)) error {
+		for {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case m := <-s.messages:
+				f(ctx, m)
+			}
 		}
 	}
 }
