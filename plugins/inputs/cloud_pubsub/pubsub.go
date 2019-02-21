@@ -43,7 +43,6 @@ type PubSub struct {
 	sub     subscription
 	stubSub func() subscription
 
-	ctx    context.Context
 	cancel context.CancelFunc
 
 	parser parsers.Parser
@@ -89,7 +88,6 @@ func (ps *PubSub) Start(ac telegraf.Accumulator) error {
 
 	// Create top-level context with cancel that will be called on Stop().
 	ctx, cancel := context.WithCancel(context.Background())
-	ps.ctx = ctx
 	ps.cancel = cancel
 
 	if ps.stubSub != nil {
@@ -107,14 +105,14 @@ func (ps *PubSub) Start(ac telegraf.Accumulator) error {
 	ps.wg.Add(1)
 	go func() {
 		defer ps.wg.Done()
-		ps.waitForDelivery()
+		ps.waitForDelivery(ctx)
 	}()
 
 	// Start goroutine for subscription receiver.
 	ps.wg.Add(1)
 	go func() {
 		defer ps.wg.Done()
-		ps.receiveWithRetry()
+		ps.receiveWithRetry(ctx)
 	}()
 
 	return nil
@@ -129,32 +127,27 @@ func (ps *PubSub) Stop() {
 
 // startReceiver is called within a goroutine and manages keeping a
 // subscription.Receive() up and running while the plugin has not been stopped.
-func (ps *PubSub) receiveWithRetry() {
-	err := ps.startReceiver()
+func (ps *PubSub) receiveWithRetry(parentCtx context.Context) {
+	err := ps.startReceiver(parentCtx)
 
-	for err != nil && ps.ctx.Err() == nil {
-		log.Printf("E! Receiver for subscription %s exited with error: %v", ps.sub.ID(), err)
+	for err != nil && parentCtx.Err() == nil {
+		log.Printf("E! [inputs.cloud_pubsub] Receiver for subscription %s exited with error: %v", ps.sub.ID(), err)
 
 		delay := defaultRetryDelaySeconds
 		if ps.RetryReceiveDelaySeconds > 0 {
 			delay = ps.RetryReceiveDelaySeconds
 		}
 
-		log.Printf("I! Waiting %d seconds before attempting to restart receiver...", delay)
+		log.Printf("I! [inputs.cloud_pubsub] Waiting %d seconds before attempting to restart receiver...", delay)
 		time.Sleep(time.Duration(delay) * time.Second)
 
-		err = ps.startReceiver()
+		err = ps.startReceiver(parentCtx)
 	}
 }
 
-func (ps *PubSub) startReceiver() error {
-	cctx, ccancel := context.WithCancel(ps.ctx)
-
-	log.Printf("I! Starting receiver for subscription %s...", ps.sub.ID())
-	return ps.receiveOnSub(cctx, ccancel)
-}
-
-func (ps *PubSub) receiveOnSub(cctx context.Context, ccancel context.CancelFunc) error {
+func (ps *PubSub) startReceiver(parentCtx context.Context) error {
+	log.Printf("I! [inputs.cloud_pubsub] Starting receiver for subscription %s...", ps.sub.ID())
+	cctx, ccancel := context.WithCancel(parentCtx)
 	err := ps.sub.Receive(cctx, func(ctx context.Context, msg message) {
 		if err := ps.onMessage(ctx, msg); err != nil {
 			ps.acc.AddError(fmt.Errorf("unable to add message from subscription %s: %v", ps.sub.ID(), err))
@@ -163,7 +156,7 @@ func (ps *PubSub) receiveOnSub(cctx context.Context, ccancel context.CancelFunc)
 	if err != nil {
 		ps.acc.AddError(fmt.Errorf("receiver for subscription %s exited: %v", ps.sub.ID(), err))
 	} else {
-		log.Printf("I! subscription pull ended (no error, most likely stopped)")
+		log.Printf("I! [inputs.cloud_pubsub] subscription pull ended (no error, most likely stopped)")
 	}
 	ccancel()
 	return err
@@ -206,10 +199,10 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 	return nil
 }
 
-func (ps *PubSub) waitForDelivery() {
+func (ps *PubSub) waitForDelivery(parentCtx context.Context) {
 	for {
 		select {
-		case <-ps.ctx.Done():
+		case <-parentCtx.Done():
 			return
 		case info := <-ps.acc.Delivered():
 			<-ps.sem
