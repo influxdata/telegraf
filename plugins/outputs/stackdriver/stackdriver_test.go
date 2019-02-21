@@ -253,6 +253,51 @@ func TestWriteBatchable(t *testing.T) {
 			},
 			time.Unix(1, 0),
 		),
+		testutil.MustMetric("ram",
+			map[string]string{
+				"foo": "bar",
+			},
+			map[string]interface{}{
+				"value": 42,
+			},
+			time.Unix(4, 0),
+		),
+		testutil.MustMetric("ram",
+			map[string]string{
+				"foo": "foo",
+			},
+			map[string]interface{}{
+				"value": 43,
+			},
+			time.Unix(5, 0),
+		),
+		testutil.MustMetric("ram",
+			map[string]string{
+				"foo": "bar",
+			},
+			map[string]interface{}{
+				"value": 43,
+			},
+			time.Unix(3, 0),
+		),
+		testutil.MustMetric("disk",
+			map[string]string{
+				"foo": "foo",
+			},
+			map[string]interface{}{
+				"value": 43,
+			},
+			time.Unix(3, 0),
+		),
+		testutil.MustMetric("disk",
+			map[string]string{
+				"foo": "bar",
+			},
+			map[string]interface{}{
+				"value": 43,
+			},
+			time.Unix(1, 0),
+		),
 	}
 
 	err = s.Connect()
@@ -262,7 +307,7 @@ func TestWriteBatchable(t *testing.T) {
 
 	require.Len(t, mockMetric.reqs, 2)
 	request := mockMetric.reqs[0].(*monitoringpb.CreateTimeSeriesRequest)
-	require.Len(t, request.TimeSeries, 2)
+	require.Len(t, request.TimeSeries, 6)
 	ts := request.TimeSeries[0]
 	require.Len(t, ts.Points, 1)
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
@@ -281,6 +326,32 @@ func TestWriteBatchable(t *testing.T) {
 	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
 		EndTime: &googlepb.Timestamp{
 			Seconds: 1,
+		},
+	})
+	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
+		Value: &monitoringpb.TypedValue_Int64Value{
+			Int64Value: int64(43),
+		},
+	})
+
+	ts = request.TimeSeries[2]
+	require.Len(t, ts.Points, 1)
+	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
+		EndTime: &googlepb.Timestamp{
+			Seconds: 3,
+		},
+	})
+	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
+		Value: &monitoringpb.TypedValue_Int64Value{
+			Int64Value: int64(43),
+		},
+	})
+
+	ts = request.TimeSeries[4]
+	require.Len(t, ts.Points, 1)
+	require.Equal(t, ts.Points[0].Interval, &monitoringpb.TimeInterval{
+		EndTime: &googlepb.Timestamp{
+			Seconds: 5,
 		},
 	})
 	require.Equal(t, ts.Points[0].Value, &monitoringpb.TypedValue{
