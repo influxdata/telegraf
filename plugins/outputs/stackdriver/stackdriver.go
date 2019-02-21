@@ -199,12 +199,14 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 	for len(buckets) != 0 {
 		// can send up to 200 time series to stackdriver
 		timeSeries := make([]*monitoringpb.TimeSeries, 0, 200)
-		for i, k := range keys {
+		for i := 0; i < len(keys); i++ {
+			k := keys[i]
 			s := buckets[k]
 			timeSeries = append(timeSeries, s[0])
 			if len(s) == 1 {
 				delete(buckets, k)
 				keys = append(keys[:i], keys[i+1:]...)
+				i--
 				continue
 			}
 
