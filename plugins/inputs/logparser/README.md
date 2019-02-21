@@ -114,7 +114,7 @@ To match a comma decimal point you can use a period.  For example `%{TIMESTAMP:t
 To match a comma decimal point you can use a period in the pattern string.
 See https://golang.org/pkg/time/#Parse for more details.
 
-Telegraf has many of its own [built-in patterns](/plugins/parsers/grok/influx-patterns.go),
+Telegraf has many of its own [built-in patterns](/plugins/parsers/grok/influx_patterns.go),
 as well as support for most of
 [logstash's builtin patterns](https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns).
 _Golang regular expressions do not support lookahead or lookbehind.
