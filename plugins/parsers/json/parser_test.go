@@ -613,7 +613,7 @@ func TestTimeParserWithTimezone(t *testing.T) {
 	metrics, err := parser.Parse([]byte(testString))
 	require.NoError(t, err)
 	require.Equal(t, 1, len(metrics))
-	require.EqualValues(t, 1136405040000000000, metrics[0].Time().UnixNano())
+	require.EqualValues(t, int64(1136405040000000000), metrics[0].Time().UnixNano())
 }
 
 func TestUnixTimeParser(t *testing.T) {
