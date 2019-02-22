@@ -333,7 +333,7 @@ func CompressWithGzip(data io.Reader) (io.Reader, error) {
 	return pipeReader, err
 }
 
-  // ParseTimestamp with no location provided parses a timestamp value as UTC
+// ParseTimestamp with no location provided parses a timestamp value as UTC
 func ParseTimestamp(timestamp interface{}, format string) (time.Time, error) {
 	return ParseTimestampWithLocation(timestamp, format, "UTC")
 }
