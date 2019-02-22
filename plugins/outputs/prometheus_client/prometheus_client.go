@@ -3,7 +3,10 @@ package prometheus_client
 import (
 	"context"
 	"crypto/subtle"
+	cryptotls "crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -16,6 +19,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -56,8 +60,6 @@ type MetricFamily struct {
 
 type PrometheusClient struct {
 	Listen             string
-	TLSCert            string            `toml:"tls_cert"`
-	TLSKey             string            `toml:"tls_key"`
 	BasicUsername      string            `toml:"basic_username"`
 	BasicPassword      string            `toml:"basic_password"`
 	IPRange            []string          `toml:"ip_range"`
@@ -67,6 +69,7 @@ type PrometheusClient struct {
 	StringAsLabel      bool              `toml:"string_as_label"`
 	ExportTimestamp    bool              `toml:"export_timestamp"`
 
+	tls.ClientConfig
 	server *http.Server
 
 	sync.Mutex
@@ -105,6 +108,12 @@ var sampleConfig = `
   ## If set, enable TLS with the given certificate.
   # tls_cert = "/etc/ssl/telegraf.crt"
   # tls_key = "/etc/ssl/telegraf.key"
+  
+  ## If set, enable TLS client authentication with the given CA.
+  # tls_ca = "/etc/ssl/telegraf_ca.crt"
+
+  ## Boolean value indicating whether or not to skip SSL verification
+  # insecure_skip_verify = false
 
   ## Export metric collection time.
   # export_timestamp = false
@@ -184,9 +193,18 @@ func (p *PrometheusClient) Connect() error {
 	mux.Handle(p.Path, p.auth(promhttp.HandlerFor(
 		registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})))
 
-	p.server = &http.Server{
-		Addr:    p.Listen,
-		Handler: mux,
+	if p.TLSCA != "" {
+		log.Printf("Starting Prometheus Output Plugin Server with Mutual TLS enabled.\n")
+		p.server = &http.Server{
+			Addr:      p.Listen,
+			Handler:   mux,
+			TLSConfig: p.buildMutualTLSConfig(),
+		}
+	} else {
+		p.server = &http.Server{
+			Addr:    p.Listen,
+			Handler: mux,
+		}
 	}
 
 	go func() {
@@ -203,6 +221,34 @@ func (p *PrometheusClient) Connect() error {
 	}()
 
 	return nil
+}
+
+func (p *PrometheusClient) buildMutualTLSConfig() *cryptotls.Config {
+	certPool := x509.NewCertPool()
+	caCert, err := ioutil.ReadFile(p.TLSCA)
+	if err != nil {
+		log.Printf("failed to read client ca cert: %s", err.Error())
+		panic(err)
+	}
+	ok := certPool.AppendCertsFromPEM(caCert)
+	if !ok {
+		log.Printf("failed to append client certs: %s", err.Error())
+		panic(err)
+	}
+
+	clientAuth := cryptotls.RequireAndVerifyClientCert
+	if p.InsecureSkipVerify {
+		clientAuth = cryptotls.RequestClientCert
+	}
+
+	return &cryptotls.Config{
+		ClientAuth:               clientAuth,
+		ClientCAs:                certPool,
+		MinVersion:               cryptotls.VersionTLS12,
+		CipherSuites:             []uint16{cryptotls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, cryptotls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
+		PreferServerCipherSuites: true,
+		InsecureSkipVerify:       p.InsecureSkipVerify,
+	}
 }
 
 func (p *PrometheusClient) Close() error {
