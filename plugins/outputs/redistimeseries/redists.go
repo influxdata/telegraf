@@ -15,8 +15,8 @@ var sampleConfig = `
 `
 
 type RedisTimeSeries struct {
-	addr     string "localhost:6379"
-	password string ""
+	addr     string
+	password string
 	client   *redis.Client
 }
 
