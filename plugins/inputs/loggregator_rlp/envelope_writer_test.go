@@ -1,12 +1,13 @@
 package loggregator_rlp_test
 
 import (
+	"testing"
+	"time"
+
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"github.com/influxdata/telegraf/plugins/inputs/loggregator_rlp"
 	"github.com/influxdata/telegraf/testutil"
 	. "github.com/onsi/gomega"
-	"testing"
-	"time"
 )
 
 type envelopeWriterTestContext struct {

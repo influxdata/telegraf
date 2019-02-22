@@ -2,12 +2,7 @@ package loggregator_rlp_test
 
 import (
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"testing"
 
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
@@ -18,10 +13,7 @@ import (
 )
 
 var (
-	tempDir, _ = ioutil.TempDir(os.TempDir(), "rlp")
-	ca, _      = filepath.Abs(tempDir + "/loggregatorCA.crt")
-	cert, _    = filepath.Abs(tempDir + "/telegraf.crt")
-	key, _     = filepath.Abs(tempDir + "/telegraf.key")
+	pki = testutil.NewPKI("../../../testutil/pki")
 )
 
 type rlpTestContext struct {
@@ -38,22 +30,14 @@ func (tc *rlpTestContext) teardown() {
 	tc.StopRLP()
 }
 
-func init() {
-	path, _ := filepath.Abs("scripts/generate_certs.sh")
-	output, err := exec.Command(path, tempDir).CombinedOutput()
-	if err != nil {
-		panic(string(output))
-	}
-}
-
 func TestParseConfigWithTLS(t *testing.T) {
 	tc := buildTestContext(t, nil)
 
 	rlpInput := tc.Input
 
-	tc.Expect(rlpInput.CAPath).To(Equal(ca))
-	tc.Expect(rlpInput.CertPath).To(Equal(cert))
-	tc.Expect(rlpInput.KeyPath).To(Equal(key))
+	tc.Expect(rlpInput.TLSCA).To(Equal(pki.CACertPath()))
+	tc.Expect(rlpInput.TLSCert).To(Equal(pki.ClientCertPath()))
+	tc.Expect(rlpInput.TLSKey).To(Equal(pki.ClientKeyPath()))
 }
 
 func TestReceivesSelectedMetricsFromRLP(t *testing.T) {
@@ -160,12 +144,18 @@ func buildTestContext(t *testing.T, envelopeResponse *loggregator_v2.Envelope, o
 	}
 	configWithTLS := []byte(fmt.Sprintf(`
   rlp_address = "%s"
-  rlp_common_name = "telegraf"
-  tls_ca_path = "%s"
-  tls_cert_path = "%s"
-  tls_key_path = "%s"
+  tls_common_name = "localhost"
+  tls_ca = "%s"
+  tls_cert = "%s"
+  tls_key = "%s"
   internal_metrics_interval = "%s"
-`, mockRlp.Addr, ca, cert, key, interval))
+`,
+		mockRlp.Addr,
+		pki.CACertPath(),
+		pki.ClientCertPath(),
+		pki.ClientKeyPath(),
+		interval,
+	))
 	input := loggregator_rlp.NewLoggregatorRLP()
 	err := toml.Unmarshal(configWithTLS, input)
 	if err != nil {
@@ -182,28 +172,10 @@ func buildTestContext(t *testing.T, envelopeResponse *loggregator_v2.Envelope, o
 }
 
 func buildRLPWithTLS(envelopeResponse *loggregator_v2.Envelope) (*MockRLP, func()) {
-	cert, err := tls.LoadX509KeyPair(cert, key)
+	tlsConfig, err := pki.TLSServerConfig().TLSConfig()
 	if err != nil {
-		panic(err.Error())
+		panic(err)
 	}
-
-	tlsConfig := &tls.Config{
-		ServerName:         "telegraf",
-		Certificates:       []tls.Certificate{cert},
-		InsecureSkipVerify: false,
-	}
-
-	caCertBytes, err := ioutil.ReadFile(ca)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	caCertPool := x509.NewCertPool()
-	if ok := caCertPool.AppendCertsFromPEM(caCertBytes); !ok {
-		panic("cannot parse ca cert")
-	}
-
-	tlsConfig.RootCAs = caCertPool
 
 	return buildRLP(envelopeResponse, tlsConfig)
 }

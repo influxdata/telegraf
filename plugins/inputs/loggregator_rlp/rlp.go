@@ -2,10 +2,11 @@ package loggregator_rlp
 
 import (
 	"context"
-	"crypto/tls"
 	"log"
 	"os"
 	"time"
+
+	"github.com/influxdata/telegraf/internal/tls"
 
 	"code.cloudfoundry.org/go-loggregator"
 	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
@@ -14,15 +15,13 @@ import (
 )
 
 type LoggregatorRLPInput struct {
-	CAPath                  string `toml:"tls_ca_path"`
-	CertPath                string `toml:"tls_cert_path"`
-	KeyPath                 string `toml:"tls_key_path"`
-	InsecureSkipVerify      bool   `toml:"insecure_skip_verify"`
-	RlpCommonName           string `toml:"rlp_common_name"`
+	TlsCommonName           string `toml:"tls_common_name"`
 	RlpAddress              string `toml:"rlp_address"`
 	InternalMetricsInterval string `toml:"internal_metrics_interval"`
 	stopRlpConsumer         context.CancelFunc
 	envelopeWriter          *EnvelopeWriter
+
+	tls.ClientConfig
 }
 
 func NewLoggregatorRLP() *LoggregatorRLPInput {
@@ -38,19 +37,19 @@ func (_ *LoggregatorRLPInput) Description() string {
 func (_ *LoggregatorRLPInput) SampleConfig() string {
 	return `
   ## A string path to the tls ca certificate
-  tls_ca_path = "/path/to/tls_ca_cert.pem"
+  tls_ca = "/path/to/tls_ca_cert.pem"
 
   ## A string path to the tls server certificate
-  tls_cert_path = "/path/to/tls_cert.pem"
+  tls_cert = "/path/to/tls_cert.pem"
 
   ## A string path to the tls server private key
-  tls_key_path = "/path/to/tls_cert.key"
+  tls_key = "/path/to/tls_cert.key"
 
   ## Boolean value indicating whether or not to skip SSL verification
   insecure_skip_verify = false
-
-  ## A string server name that the certificate is valid for
-  rlp_common_name = "metron"
+  
+## A string server name that the certificate is valid for
+  tls_common_name = "foo"
   
   ## A string address of the RLP server to get logs from
   rlp_address = "bar"
@@ -72,23 +71,14 @@ func (l *LoggregatorRLPInput) Start(acc telegraf.Accumulator) error {
 	envelopeWriter := NewEnvelopeWriter(acc, internalMetricsInterval)
 	l.envelopeWriter = envelopeWriter
 
-	reverseLogProxyTLS := &tls.Config{}
-	if l.CAPath != "" || l.CertPath != "" || l.KeyPath != "" {
-		reverseLogProxyTLS, err = loggregator.NewEgressTLSConfig(
-			l.CAPath,
-			l.CertPath,
-			l.KeyPath,
-		)
-		if err != nil {
-			return err
-		}
+	tlsConfig, err := l.TLSConfig()
+	if err != nil {
+		return err
 	}
-
-	reverseLogProxyTLS.ServerName = l.RlpCommonName
-	reverseLogProxyTLS.InsecureSkipVerify = l.InsecureSkipVerify
+	tlsConfig.ServerName = l.TlsCommonName
 	rlpConnector := loggregator.NewEnvelopeStreamConnector(
 		l.RlpAddress,
-		reverseLogProxyTLS,
+		tlsConfig,
 		loggregator.WithEnvelopeStreamLogger(log.New(os.Stderr, "RLP: ", log.LstdFlags)),
 	)
 
