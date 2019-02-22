@@ -3,10 +3,7 @@ package prometheus_client
 import (
 	"context"
 	"crypto/subtle"
-	cryptotls "crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -69,7 +66,8 @@ type PrometheusClient struct {
 	StringAsLabel      bool              `toml:"string_as_label"`
 	ExportTimestamp    bool              `toml:"export_timestamp"`
 
-	tls.ClientConfig
+	tls.ServerConfig
+
 	server *http.Server
 
 	sync.Mutex
@@ -193,24 +191,20 @@ func (p *PrometheusClient) Connect() error {
 	mux.Handle(p.Path, p.auth(promhttp.HandlerFor(
 		registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})))
 
-	if p.TLSCA != "" {
-		log.Printf("Starting Prometheus Output Plugin Server with Mutual TLS enabled.\n")
-		p.server = &http.Server{
-			Addr:      p.Listen,
-			Handler:   mux,
-			TLSConfig: p.buildMutualTLSConfig(),
-		}
-	} else {
-		p.server = &http.Server{
-			Addr:    p.Listen,
-			Handler: mux,
-		}
+	tlsConfig, err := p.TLSConfig()
+	if err != nil {
+		return err
+	}
+	p.server = &http.Server{
+		Addr:      p.Listen,
+		Handler:   mux,
+		TLSConfig: tlsConfig,
 	}
 
 	go func() {
 		var err error
 		if p.TLSCert != "" && p.TLSKey != "" {
-			err = p.server.ListenAndServeTLS(p.TLSCert, p.TLSKey)
+			err = p.server.ListenAndServeTLS("", "")
 		} else {
 			err = p.server.ListenAndServe()
 		}
@@ -221,34 +215,6 @@ func (p *PrometheusClient) Connect() error {
 	}()
 
 	return nil
-}
-
-func (p *PrometheusClient) buildMutualTLSConfig() *cryptotls.Config {
-	certPool := x509.NewCertPool()
-	caCert, err := ioutil.ReadFile(p.TLSCA)
-	if err != nil {
-		log.Printf("failed to read client ca cert: %s", err.Error())
-		panic(err)
-	}
-	ok := certPool.AppendCertsFromPEM(caCert)
-	if !ok {
-		log.Printf("failed to append client certs: %s", err.Error())
-		panic(err)
-	}
-
-	clientAuth := cryptotls.RequireAndVerifyClientCert
-	if p.InsecureSkipVerify {
-		clientAuth = cryptotls.RequestClientCert
-	}
-
-	return &cryptotls.Config{
-		ClientAuth:               clientAuth,
-		ClientCAs:                certPool,
-		MinVersion:               cryptotls.VersionTLS12,
-		CipherSuites:             []uint16{cryptotls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384, cryptotls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256},
-		PreferServerCipherSuites: true,
-		InsecureSkipVerify:       p.InsecureSkipVerify,
-	}
 }
 
 func (p *PrometheusClient) Close() error {
