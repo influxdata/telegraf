@@ -19,6 +19,9 @@ This is a sample configuration for the plugin.
   ## Address and port to host HTTP listener on
   service_address = ":8080"
 
+  ## Application secret to verify messages originate from Cloud Pub/Sub
+  # token = ""
+
   ## Path to listen to.
   # path = "/"
 
@@ -31,6 +34,9 @@ This is a sample configuration for the plugin.
   ## 0 means to use the default of 524,288,00 bytes (500 mebibytes)
   # max_body_size = "500MB"
 
+  ## Whether to add the pubsub metadata, such as message attributes and subscription as a tag.
+  # add_meta = false
+
   ## Optional. Maximum messages to read from PubSub that have not been written
   ## to an output. Defaults to 1000.
   ## For best throughput set based on the number of metrics within
@@ -40,7 +46,7 @@ This is a sample configuration for the plugin.
   ## metric_batch_size is 1000, setting this to 100 will ensure that a
   ## full batch is collected and the write is triggered immediately without
   ## waiting until the next flush_interval.
-	# max_undelivered_messages = 1000
+  # max_undelivered_messages = 1000
 
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections

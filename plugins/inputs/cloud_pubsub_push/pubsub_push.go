@@ -1,7 +1,6 @@
 package cloud_pubsub_push
 
 import (
-	"compress/gzip"
 	"context"
 	"crypto/tls"
 	"encoding/base64"
@@ -28,10 +27,12 @@ const defaultMaxUndeliveredMessages = 1000
 
 type PubSubPush struct {
 	ServiceAddress string
+	Token          string
 	Path           string
 	ReadTimeout    internal.Duration
 	WriteTimeout   internal.Duration
 	MaxBodySize    internal.Size
+	AddMeta        bool
 
 	MaxUndeliveredMessages int `toml:"max_undelivered_messages"`
 
@@ -39,6 +40,7 @@ type PubSubPush struct {
 	parsers.Parser
 
 	listener net.Listener
+	server   *http.Server
 	acc      telegraf.TrackingAccumulator
 	ctx      context.Context
 	cancel   context.CancelFunc
@@ -66,6 +68,9 @@ const sampleConfig = `
   ## Address and port to host HTTP listener on
   service_address = ":8080"
 
+  ## Application secret to verify messages originate from Cloud Pub/Sub
+  # token = ""
+
   ## Path to listen to.
   # path = "/"
 
@@ -78,6 +83,9 @@ const sampleConfig = `
   ## 0 means to use the default of 524,288,00 bytes (500 mebibytes)
   # max_body_size = "500MB"
 
+  ## Whether to add the pubsub metadata, such as message attributes and subscription as a tag.
+  # add_meta = false
+
   ## Optional. Maximum messages to read from PubSub that have not been written
   ## to an output. Defaults to 1000.
   ## For best throughput set based on the number of metrics within
@@ -87,7 +95,7 @@ const sampleConfig = `
   ## metric_batch_size is 1000, setting this to 100 will ensure that a
   ## full batch is collected and the write is triggered immediately without
   ## waiting until the next flush_interval.
-	# max_undelivered_messages = 1000
+  # max_undelivered_messages = 1000
 
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
@@ -138,7 +146,7 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	server := &http.Server{
+	p.server = &http.Server{
 		Addr:         p.ServiceAddress,
 		Handler:      p,
 		ReadTimeout:  p.ReadTimeout.Duration,
@@ -164,7 +172,7 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
-		server.Serve(p.listener)
+		p.server.Serve(p.listener)
 	}()
 
 	p.wg.Add(1)
@@ -178,6 +186,7 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 
 // Stop cleans up all resources
 func (p *PubSubPush) Stop() {
+	p.server.Shutdown(p.ctx)
 	p.listener.Close()
 	p.cancel()
 	p.wg.Wait()
@@ -185,16 +194,19 @@ func (p *PubSubPush) Stop() {
 
 func (p *PubSubPush) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	if req.URL.Path == p.Path {
-		p.serveWrite(res, req)
+		p.AuthenticateIfSet(p.serveWrite, res, req)
 		<-p.rsem
 	} else {
-		http.NotFound(res, req)
+		p.AuthenticateIfSet(http.NotFound, res, req)
 	}
 	res.WriteHeader(http.StatusInternalServerError)
 }
 
 func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 	select {
+	case <-req.Context().Done():
+		p.rsem <- struct{}{}
+		return
 	case <-p.ctx.Done():
 		log.Printf("E! [inputs.cloud_pubsub_push] %s", p.ctx.Err())
 		p.rsem <- struct{}{}
@@ -216,22 +228,7 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// todo: may not be necessary
-	// Handle gzip request bodies
-	body := req.Body
-	if req.Header.Get("Content-Encoding") == "gzip" {
-		var err error
-		body, err = gzip.NewReader(req.Body)
-		if err != nil {
-			log.Println("D! [inputs.cloud_pubsub_push] " + err.Error())
-			res.WriteHeader(http.StatusBadRequest)
-			p.rsem <- struct{}{}
-			return
-		}
-		defer body.Close()
-	}
-
-	body = http.MaxBytesReader(res, body, p.MaxBodySize.Size)
+	body := http.MaxBytesReader(res, req.Body, p.MaxBodySize.Size)
 	bytes, err := ioutil.ReadAll(body)
 	if err != nil {
 		res.WriteHeader(http.StatusRequestEntityTooLarge)
@@ -263,11 +260,13 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	for i := range metrics {
-		for k, v := range payload.Msg.Atts {
-			metrics[i].AddTag(k, v)
+	if p.AddMeta {
+		for i := range metrics {
+			for k, v := range payload.Msg.Atts {
+				metrics[i].AddTag(k, v)
+			}
+			metrics[i].AddTag("subscription", payload.Subscription)
 		}
-		metrics[i].AddTag("subscription", payload.Subscription)
 	}
 
 	p.mu.Lock()
@@ -314,11 +313,24 @@ func (p *PubSubPush) removeDelivered(id telegraf.TrackingID) *http.ResponseWrite
 	return msg
 }
 
+func (p *PubSubPush) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
+	if p.Token != "" {
+		reqToken := req.FormValue("token")
+		if reqToken != p.Token {
+			http.Error(res, "Unauthorized.", http.StatusUnauthorized)
+			return
+		}
+		handler(res, req)
+	} else {
+		handler(res, req)
+	}
+}
+
 func init() {
 	inputs.Add("cloud_pubsub_push", func() telegraf.Input {
 		return &PubSubPush{
-			ServiceAddress:         ":8080",
-			Path:                   "/",
+			ServiceAddress: ":8080",
+			Path:           "/",
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}
 	})
