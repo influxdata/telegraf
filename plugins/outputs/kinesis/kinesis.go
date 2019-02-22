@@ -236,7 +236,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		if sz == 500 {
 			// Max Messages Per PutRecordRequest is 500
 			elapsed := writekinesis(k, r)
-			log.Printf("I! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
+			log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 			sz = 0
 			r = nil
 		}
@@ -244,7 +244,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 	}
 	if sz > 0 {
 		elapsed := writekinesis(k, r)
-		log.Printf("I! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
+		log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
 	}
 
 	return nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/big"
 	"strings"
 	"sync"
 	"time"
@@ -53,7 +54,7 @@ type (
 		recordsTex    sync.Mutex
 		wg            sync.WaitGroup
 
-		lastSeqNum string
+		lastSeqNum *big.Int
 	}
 
 	checkpoint struct {
@@ -67,7 +68,7 @@ const (
 )
 
 // this is the largest sequence number allowed - https://docs.aws.amazon.com/kinesis/latest/APIReference/API_SequenceNumberRange.html
-var maxSeq = strings.Repeat("9", 129)
+var maxSeq = strToBint(strings.Repeat("9", 129))
 
 var sampleConfig = `
   ## Amazon REGION of kinesis endpoint.
@@ -190,16 +191,22 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 	k.checkpoints = make(map[string]checkpoint, k.MaxUndeliveredMessages)
 	k.sem = make(chan struct{}, k.MaxUndeliveredMessages)
 
-	k.ctx = context.Background()
-	k.ctx, k.cancel = context.WithCancel(k.ctx)
+	ctx := context.Background()
+	ctx, k.cancel = context.WithCancel(ctx)
 
 	k.wg.Add(1)
 	go func() {
 		defer k.wg.Done()
-		err := k.cons.Scan(k.ctx, func(r *consumer.Record) consumer.ScanStatus {
+		k.onDelivery(ctx)
+	}()
+
+	k.wg.Add(1)
+	go func() {
+		defer k.wg.Done()
+		err := k.cons.Scan(ctx, func(r *consumer.Record) consumer.ScanStatus {
 			select {
-			case <-k.ctx.Done():
-				return consumer.ScanStatus{Error: k.ctx.Err()}
+			case <-ctx.Done():
+				return consumer.ScanStatus{Error: ctx.Err()}
 			case k.sem <- struct{}{}:
 				break
 			}
@@ -212,6 +219,7 @@ func (k *KinesisConsumer) connect(ac telegraf.Accumulator) error {
 			return consumer.ScanStatus{}
 		})
 		if err != nil {
+			k.cancel()
 			log.Printf("E! [inputs.kinesis_consumer] Scan encounterred an error - %s", err.Error())
 			k.cons = nil
 		}
@@ -225,12 +233,6 @@ func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
 	if err != nil {
 		return err
 	}
-
-	k.wg.Add(1)
-	go func() {
-		defer k.wg.Done()
-		k.onDelivery()
-	}()
 
 	return nil
 }
@@ -249,10 +251,10 @@ func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consume
 	return nil
 }
 
-func (k *KinesisConsumer) onDelivery() {
+func (k *KinesisConsumer) onDelivery(ctx context.Context) {
 	for {
 		select {
-		case <-k.ctx.Done():
+		case <-ctx.Done():
 			return
 		case info := <-k.acc.Delivered():
 			k.recordsTex.Lock()
@@ -276,17 +278,27 @@ func (k *KinesisConsumer) onDelivery() {
 				k.checkpointTex.Unlock()
 
 				// at least once
-				if sequenceNum > k.lastSeqNum {
+				if strToBint(sequenceNum).Cmp(k.lastSeqNum) > 0 {
 					continue
 				}
 
-				k.lastSeqNum = sequenceNum
+				k.lastSeqNum = strToBint(sequenceNum)
 				k.checkpoint.Set(chk.streamName, chk.shardID, sequenceNum)
 			} else {
 				log.Println("D! [inputs.kinesis_consumer] Metric group failed to process")
 			}
 		}
 	}
+}
+
+var negOne *big.Int
+
+func strToBint(s string) *big.Int {
+	n, ok := new(big.Int).SetString(s, 10)
+	if !ok {
+		return negOne
+	}
+	return n
 }
 
 func (k *KinesisConsumer) Stop() {
@@ -327,6 +339,8 @@ func (n noopCheckpoint) Set(string, string, string) error   { return nil }
 func (n noopCheckpoint) Get(string, string) (string, error) { return "", nil }
 
 func init() {
+	negOne, _ = new(big.Int).SetString("-1", 10)
+
 	inputs.Add("kinesis_consumer", func() telegraf.Input {
 		return &KinesisConsumer{
 			ShardIteratorType:      "TRIM_HORIZON",
