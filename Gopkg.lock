@@ -211,6 +211,14 @@
   version = "v2.1.13"
 
 [[projects]]
+  digest = "1:e5691038f8e87e7da05280095d968e50c17d624e25cca095d4e4cd947a805563"
+  name = "github.com/caio/go-tdigest"
+  packages = ["."]
+  pruneopts = ""
+  revision = "f3c8d94f65d3096ac96eda54ffcd10c0fe1477f1"
+  version = "v2.3.0"
+
+[[projects]]
   digest = "1:f619cb9b07aebe5416262cdd8b86082e8d5bdc5264cb3b615ff858df0b645f97"
   name = "github.com/cenkalti/backoff"
   packages = ["."]
@@ -1111,15 +1119,16 @@
   version = "v0.19.0"
 
 [[projects]]
-  digest = "1:c3bdfb7e9b2a66bafbd47517a1a4e489706f75af37ad5bfb57621bf41c16b556"
+  digest = "1:4cb7eb45ed9a5129bc77c726328c130abcbaae566c1fe4d82693fae86c8c621d"
   name = "github.com/wavefronthq/wavefront-sdk-go"
   packages = [
+    "histogram",
     "internal",
     "senders",
   ]
   pruneopts = ""
-  revision = "7821ac6d8ae05fe70c6d090ebda380c64f1416e4"
-  version = "v0.9.1"
+  revision = "fa87530cd02a8ad08bd179e1c39fb319a0cc0dae"
+  version = "v0.9.2"
 
 [[projects]]
   branch = "master"
