@@ -89,6 +89,7 @@ type InfluxDB struct {
 	ContentEncoding string            `toml:"content_encoding"`
 	UintSupport     bool              `toml:"influx_uint_support"`
 	tls.ClientConfig
+	TimePrecision string `toml:"time_precision"`
 
 	clients    []Client
 	serializer *influx.Serializer
@@ -104,6 +105,10 @@ func (i *InfluxDB) Connect() error {
 	i.serializer = influx.NewSerializer()
 	if i.UintSupport {
 		i.serializer.SetFieldTypeSupport(influx.UintSupport)
+	}
+
+	if i.TimePrecision != "" {
+		i.serializer.SetTimeFormat(i.TimePrecision)
 	}
 
 	for _, u := range i.URLs {

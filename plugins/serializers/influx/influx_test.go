@@ -24,6 +24,7 @@ var tests = []struct {
 	input       telegraf.Metric
 	output      []byte
 	errReason   string
+	timeFormat  string
 }{
 	{
 		name: "minimal",
@@ -244,6 +245,21 @@ var tests = []struct {
 		output: []byte("cpu value=42 1519194109000000042\n"),
 	},
 	{
+		name:       "timestamp in milliseconds",
+		timeFormat: "ms",
+		input: MustMetric(
+			metric.New(
+				"cpu",
+				map[string]string{},
+				map[string]interface{}{
+					"value": 42.0,
+				},
+				time.Unix(1519194109, 42),
+			),
+		),
+		output: []byte("cpu value=42 1519194109000\n"),
+	},
+	{
 		name:     "split fields exact",
 		maxBytes: 33,
 		input: MustMetric(
@@ -444,6 +460,7 @@ func TestSerializer(t *testing.T) {
 			serializer.SetMaxLineBytes(tt.maxBytes)
 			serializer.SetFieldSortOrder(SortFields)
 			serializer.SetFieldTypeSupport(tt.typeSupport)
+			serializer.SetTimeFormat(tt.timeFormat)
 			output, err := serializer.Serialize(tt.input)
 			if tt.errReason != "" {
 				require.Error(t, err)

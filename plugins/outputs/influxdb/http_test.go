@@ -359,6 +359,18 @@ func TestHTTP_Write(t *testing.T) {
 			},
 		},
 		{
+			name: "send time precision",
+			config: influxdb.HTTPConfig{
+				URL:           u,
+				Database:      "telegraf",
+				TimePrecision: "ms",
+			},
+			queryHandlerFunc: func(t *testing.T, w http.ResponseWriter, r *http.Request) {
+				require.Equal(t, "ms", r.FormValue("precision"))
+				w.WriteHeader(http.StatusNoContent)
+			},
+		},
+		{
 			name: "hinted handoff not empty no log no error",
 			config: influxdb.HTTPConfig{
 				URL:      u,

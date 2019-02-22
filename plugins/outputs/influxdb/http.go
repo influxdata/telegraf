@@ -97,6 +97,7 @@ type HTTPConfig struct {
 	RetentionPolicy      string
 	Consistency          string
 	SkipDatabaseCreation bool
+	TimePrecision        string
 
 	InfluxUintSupport bool `toml:"influx_uint_support"`
 	Serializer        *influx.Serializer
@@ -272,7 +273,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, db string, metrics []telegraf.Metric) error {
-	url, err := makeWriteURL(c.config.URL, db, c.config.RetentionPolicy, c.config.Consistency)
+	url, err := makeWriteURL(c.config.URL, db, c.config.RetentionPolicy, c.config.Consistency, c.config.TimePrecision)
 	if err != nil {
 		return err
 	}
@@ -407,7 +408,7 @@ func (c *httpClient) addHeaders(req *http.Request) {
 	}
 }
 
-func makeWriteURL(loc *url.URL, db, rp, consistency string) (string, error) {
+func makeWriteURL(loc *url.URL, db, rp, consistency, timePrecision string) (string, error) {
 	params := url.Values{}
 	params.Set("db", db)
 
@@ -417,6 +418,10 @@ func makeWriteURL(loc *url.URL, db, rp, consistency string) (string, error) {
 
 	if consistency != "one" && consistency != "" {
 		params.Set("consistency", consistency)
+	}
+
+	if timePrecision != "" {
+		params.Set("precision", timePrecision)
 	}
 
 	u := *loc

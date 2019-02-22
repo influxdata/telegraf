@@ -51,6 +51,7 @@ type HTTPConfig struct {
 	UserAgent       string
 	ContentEncoding string
 	TLSConfig       *tls.Config
+	TimePrecision   string
 
 	Serializer *influx.Serializer
 }
@@ -62,6 +63,7 @@ type httpClient struct {
 	Organization    string
 	Bucket          string
 	BucketTag       string
+	TimePrecision   string
 
 	client     *http.Client
 	serializer *influx.Serializer
@@ -137,6 +139,7 @@ func NewHTTPClient(config *HTTPConfig) (*httpClient, error) {
 		Organization:    config.Organization,
 		Bucket:          config.Bucket,
 		BucketTag:       config.BucketTag,
+		TimePrecision:   config.TimePrecision,
 	}
 	return client, nil
 }
@@ -199,7 +202,7 @@ func (c *httpClient) Write(ctx context.Context, metrics []telegraf.Metric) error
 }
 
 func (c *httpClient) writeBatch(ctx context.Context, bucket string, metrics []telegraf.Metric) error {
-	url, err := makeWriteURL(*c.url, c.Organization, bucket)
+	url, err := makeWriteURL(*c.url, c.Organization, bucket, c.TimePrecision)
 	if err != nil {
 		return err
 	}
@@ -288,10 +291,13 @@ func (c *httpClient) addHeaders(req *http.Request) {
 	}
 }
 
-func makeWriteURL(loc url.URL, org, bucket string) (string, error) {
+func makeWriteURL(loc url.URL, org, bucket, timePrecision string) (string, error) {
 	params := url.Values{}
 	params.Set("bucket", bucket)
 	params.Set("org", org)
+	if timePrecision != "" {
+		params.Set("precision", timePrecision)
+	}
 
 	switch loc.Scheme {
 	case "unix":

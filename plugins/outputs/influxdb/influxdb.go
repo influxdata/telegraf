@@ -48,6 +48,7 @@ type InfluxDB struct {
 	SkipDatabaseCreation bool              `toml:"skip_database_creation"`
 	InfluxUintSupport    bool              `toml:"influx_uint_support"`
 	tls.ClientConfig
+	TimePrecision string `toml:"time_precision"`
 
 	Precision string // precision deprecated in 1.0; value is ignored
 
@@ -125,6 +126,10 @@ var sampleConfig = `
   ## integer values.  Enabling this option will result in field type errors if
   ## existing data has been written.
   # influx_uint_support = false
+
+  ## When writing data to InfluxDB, time precision that should be used (s, ms, us, ns)
+  ## defaults to "ns"
+  # time_precision = ""
 `
 
 func (i *InfluxDB) Connect() error {
@@ -141,8 +146,13 @@ func (i *InfluxDB) Connect() error {
 	}
 
 	i.serializer = influx.NewSerializer()
+
 	if i.InfluxUintSupport {
 		i.serializer.SetFieldTypeSupport(influx.UintSupport)
+	}
+
+	if i.TimePrecision != "" {
+		i.serializer.SetTimeFormat(i.TimePrecision)
 	}
 
 	for _, u := range urls {
@@ -262,6 +272,7 @@ func (i *InfluxDB) httpClient(ctx context.Context, url *url.URL, proxy *url.URL)
 		RetentionPolicy:      i.RetentionPolicy,
 		Consistency:          i.WriteConsistency,
 		Serializer:           i.serializer,
+		TimePrecision:        i.TimePrecision,
 	}
 
 	c, err := i.CreateHTTPClientF(config)

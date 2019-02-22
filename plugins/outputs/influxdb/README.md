@@ -72,6 +72,10 @@ The InfluxDB output plugin writes metrics to the [InfluxDB v1.x] HTTP or UDP ser
   ## integer values.  Enabling this option will result in field type errors if
   ## existing data has been written.
   # influx_uint_support = false
+
+  ## When writing data to InfluxDB, time precision that should be used (s, ms, us, ns)
+  ## defaults to "ns"
+  # time_precision = ""
 ```
 
 [InfluxDB v1.x]: https://github.com/influxdata/influxdb

@@ -20,11 +20,11 @@ func TestMakeWriteURL(t *testing.T) {
 	}{
 		{
 			url: genURL("http://localhost:9999"),
-			act: "http://localhost:9999/api/v2/write?bucket=telegraf&org=influx",
+			act: "http://localhost:9999/api/v2/write?bucket=telegraf&org=influx&precision=ms",
 		},
 		{
 			url: genURL("unix://var/run/influxd.sock"),
-			act: "http://127.0.0.1/api/v2/write?bucket=telegraf&org=influx",
+			act: "http://127.0.0.1/api/v2/write?bucket=telegraf&org=influx&precision=ms",
 		},
 		{
 			err: true,
@@ -33,7 +33,7 @@ func TestMakeWriteURL(t *testing.T) {
 	}
 
 	for i := range tests {
-		rURL, err := makeWriteURL(*tests[i].url, "influx", "telegraf")
+		rURL, err := makeWriteURL(*tests[i].url, "influx", "telegraf", "ms")
 		if !tests[i].err {
 			require.NoError(t, err)
 		} else {
