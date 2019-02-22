@@ -35,6 +35,12 @@ This plugin starts a [Prometheus](https://prometheus.io/) Client, it exposes all
   ## If set, enable TLS with the given certificate.
   # tls_cert = "/etc/ssl/telegraf.crt"
   # tls_key = "/etc/ssl/telegraf.key"
+  
+  ## If set, enable TLS client authentication with the given CA.
+  # tls_ca = "/etc/ssl/telegraf_ca.crt"
+
+  ## Boolean value indicating whether or not to skip SSL verification
+  # insecure_skip_verify = false
 
   ## Export metric collection time.
   # export_timestamp = false
