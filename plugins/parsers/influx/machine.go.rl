@@ -83,7 +83,12 @@ action found_metric {
 }
 
 action name {
-	m.handler.SetMeasurement(m.text())
+	err = m.handler.SetMeasurement(m.text())
+	if err != nil {
+		fhold;
+		fnext discard_line;
+		fbreak;
+	}
 }
 
 action tagkey {
@@ -91,7 +96,12 @@ action tagkey {
 }
 
 action tagvalue {
-	m.handler.AddTag(key, m.text())
+	err = m.handler.AddTag(key, m.text())
+	if err != nil {
+		fhold;
+		fnext discard_line;
+		fbreak;
+	}
 }
 
 action fieldkey {
@@ -99,31 +109,57 @@ action fieldkey {
 }
 
 action integer {
-	m.handler.AddInt(key, m.text())
+	err = m.handler.AddInt(key, m.text())
+	if err != nil {
+		fhold;
+		fnext discard_line;
+		fbreak;
+	}
 }
 
 action unsigned {
-	m.handler.AddUint(key, m.text())
+	err = m.handler.AddUint(key, m.text())
+	if err != nil {
+		fhold;
+		fnext discard_line;
+		fbreak;
+	}
 }
 
 action float {
-	m.handler.AddFloat(key, m.text())
-}
-
-action floateof {
-	m.handler.AddFloat(key, m.text())
+	err = m.handler.AddFloat(key, m.text())
+	if err != nil {
+		fhold;
+		fnext discard_line;
+		fbreak;
+	}
 }
 
 action bool {
-	m.handler.AddBool(key, m.text())
+	err = m.handler.AddBool(key, m.text())
+	if err != nil {
+		fhold;
+		fnext discard_line;
+		fbreak;
+	}
 }
 
 action string {
-	m.handler.AddString(key, m.text())
+	err = m.handler.AddString(key, m.text())
+	if err != nil {
+		fhold;
+		fnext discard_line;
+		fbreak;
+	}
 }
 
 action timestamp {
-	m.handler.SetTimestamp(m.text())
+	err = m.handler.SetTimestamp(m.text())
+	if err != nil {
+		fhold;
+		fnext discard_line;
+		fbreak;
+	}
 }
 
 action incr_newline {
@@ -285,14 +321,14 @@ series :=
 %% write data;
 
 type Handler interface {
-	SetMeasurement(name []byte)
-	AddTag(key []byte, value []byte)
-	AddInt(key []byte, value []byte)
-	AddUint(key []byte, value []byte)
-	AddFloat(key []byte, value []byte)
-	AddString(key []byte, value []byte)
-	AddBool(key []byte, value []byte)
-	SetTimestamp(tm []byte)
+	SetMeasurement(name []byte) error
+	AddTag(key []byte, value []byte) error
+	AddInt(key []byte, value []byte) error
+	AddUint(key []byte, value []byte) error
+	AddFloat(key []byte, value []byte) error
+	AddString(key []byte, value []byte) error
+	AddBool(key []byte, value []byte) error
+	SetTimestamp(tm []byte) error
 }
 
 type machine struct {

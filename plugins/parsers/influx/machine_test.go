@@ -1,6 +1,7 @@
 package influx_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -12,15 +13,16 @@ type TestingHandler struct {
 	results []Result
 }
 
-func (h *TestingHandler) SetMeasurement(name []byte) {
+func (h *TestingHandler) SetMeasurement(name []byte) error {
 	mname := Result{
 		Name:  Measurement,
 		Value: name,
 	}
 	h.results = append(h.results, mname)
+	return nil
 }
 
-func (h *TestingHandler) AddTag(key []byte, value []byte) {
+func (h *TestingHandler) AddTag(key []byte, value []byte) error {
 	tagkey := Result{
 		Name:  TagKey,
 		Value: key,
@@ -30,9 +32,10 @@ func (h *TestingHandler) AddTag(key []byte, value []byte) {
 		Value: value,
 	}
 	h.results = append(h.results, tagkey, tagvalue)
+	return nil
 }
 
-func (h *TestingHandler) AddInt(key []byte, value []byte) {
+func (h *TestingHandler) AddInt(key []byte, value []byte) error {
 	fieldkey := Result{
 		Name:  FieldKey,
 		Value: key,
@@ -42,9 +45,10 @@ func (h *TestingHandler) AddInt(key []byte, value []byte) {
 		Value: value,
 	}
 	h.results = append(h.results, fieldkey, fieldvalue)
+	return nil
 }
 
-func (h *TestingHandler) AddUint(key []byte, value []byte) {
+func (h *TestingHandler) AddUint(key []byte, value []byte) error {
 	fieldkey := Result{
 		Name:  FieldKey,
 		Value: key,
@@ -54,9 +58,10 @@ func (h *TestingHandler) AddUint(key []byte, value []byte) {
 		Value: value,
 	}
 	h.results = append(h.results, fieldkey, fieldvalue)
+	return nil
 }
 
-func (h *TestingHandler) AddFloat(key []byte, value []byte) {
+func (h *TestingHandler) AddFloat(key []byte, value []byte) error {
 	fieldkey := Result{
 		Name:  FieldKey,
 		Value: key,
@@ -66,9 +71,10 @@ func (h *TestingHandler) AddFloat(key []byte, value []byte) {
 		Value: value,
 	}
 	h.results = append(h.results, fieldkey, fieldvalue)
+	return nil
 }
 
-func (h *TestingHandler) AddString(key []byte, value []byte) {
+func (h *TestingHandler) AddString(key []byte, value []byte) error {
 	fieldkey := Result{
 		Name:  FieldKey,
 		Value: key,
@@ -78,9 +84,10 @@ func (h *TestingHandler) AddString(key []byte, value []byte) {
 		Value: value,
 	}
 	h.results = append(h.results, fieldkey, fieldvalue)
+	return nil
 }
 
-func (h *TestingHandler) AddBool(key []byte, value []byte) {
+func (h *TestingHandler) AddBool(key []byte, value []byte) error {
 	fieldkey := Result{
 		Name:  FieldKey,
 		Value: key,
@@ -90,14 +97,16 @@ func (h *TestingHandler) AddBool(key []byte, value []byte) {
 		Value: value,
 	}
 	h.results = append(h.results, fieldkey, fieldvalue)
+	return nil
 }
 
-func (h *TestingHandler) SetTimestamp(tm []byte) {
+func (h *TestingHandler) SetTimestamp(tm []byte) error {
 	timestamp := Result{
 		Name:  Timestamp,
 		Value: tm,
 	}
 	h.results = append(h.results, timestamp)
+	return nil
 }
 
 func (h *TestingHandler) Result(err error) {
@@ -122,28 +131,36 @@ func (h *TestingHandler) Results() []Result {
 type BenchmarkingHandler struct {
 }
 
-func (h *BenchmarkingHandler) SetMeasurement(name []byte) {
+func (h *BenchmarkingHandler) SetMeasurement(name []byte) error {
+	return nil
 }
 
-func (h *BenchmarkingHandler) AddTag(key []byte, value []byte) {
+func (h *BenchmarkingHandler) AddTag(key []byte, value []byte) error {
+	return nil
 }
 
-func (h *BenchmarkingHandler) AddInt(key []byte, value []byte) {
+func (h *BenchmarkingHandler) AddInt(key []byte, value []byte) error {
+	return nil
 }
 
-func (h *BenchmarkingHandler) AddUint(key []byte, value []byte) {
+func (h *BenchmarkingHandler) AddUint(key []byte, value []byte) error {
+	return nil
 }
 
-func (h *BenchmarkingHandler) AddFloat(key []byte, value []byte) {
+func (h *BenchmarkingHandler) AddFloat(key []byte, value []byte) error {
+	return nil
 }
 
-func (h *BenchmarkingHandler) AddString(key []byte, value []byte) {
+func (h *BenchmarkingHandler) AddString(key []byte, value []byte) error {
+	return nil
 }
 
-func (h *BenchmarkingHandler) AddBool(key []byte, value []byte) {
+func (h *BenchmarkingHandler) AddBool(key []byte, value []byte) error {
+	return nil
 }
 
-func (h *BenchmarkingHandler) SetTimestamp(tm []byte) {
+func (h *BenchmarkingHandler) SetTimestamp(tm []byte) error {
+	return nil
 }
 
 type TokenType int
@@ -735,6 +752,27 @@ var tests = []struct {
 			{
 				Name:  FieldInt,
 				Value: []byte("-0i"),
+			},
+			{
+				Name: Success,
+			},
+		},
+	},
+	{
+		name:  "integer field overflow okay",
+		input: []byte("cpu value=9223372036854775808i"),
+		results: []Result{
+			{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			{
+				Name:  FieldKey,
+				Value: []byte("value"),
+			},
+			{
+				Name:  FieldInt,
+				Value: []byte("9223372036854775808i"),
 			},
 			{
 				Name: Success,
@@ -1747,6 +1785,209 @@ func TestSeriesMachine(t *testing.T) {
 			}
 
 			results := handler.Results()
+			require.Equal(t, tt.results, results)
+		})
+	}
+}
+
+type MockHandler struct {
+	SetMeasurementF func(name []byte) error
+	AddTagF         func(key []byte, value []byte) error
+	AddIntF         func(key []byte, value []byte) error
+	AddUintF        func(key []byte, value []byte) error
+	AddFloatF       func(key []byte, value []byte) error
+	AddStringF      func(key []byte, value []byte) error
+	AddBoolF        func(key []byte, value []byte) error
+	SetTimestampF   func(tm []byte) error
+
+	TestingHandler
+}
+
+func (h *MockHandler) SetMeasurement(name []byte) error {
+	h.TestingHandler.SetMeasurement(name)
+	return h.SetMeasurementF(name)
+}
+
+func (h *MockHandler) AddTag(name, value []byte) error {
+	return h.AddTagF(name, value)
+}
+
+func (h *MockHandler) AddInt(name, value []byte) error {
+	err := h.AddIntF(name, value)
+	if err != nil {
+		return err
+	}
+	h.TestingHandler.AddInt(name, value)
+	return nil
+}
+
+func (h *MockHandler) AddUint(name, value []byte) error {
+	err := h.AddUintF(name, value)
+	if err != nil {
+		return err
+	}
+	h.TestingHandler.AddUint(name, value)
+	return nil
+}
+
+func (h *MockHandler) AddFloat(name, value []byte) error {
+	return h.AddFloatF(name, value)
+}
+
+func (h *MockHandler) AddString(name, value []byte) error {
+	return h.AddStringF(name, value)
+}
+
+func (h *MockHandler) AddBool(name, value []byte) error {
+	return h.AddBoolF(name, value)
+}
+
+func (h *MockHandler) SetTimestamp(tm []byte) error {
+	return h.SetTimestampF(tm)
+}
+
+func TestHandlerErrorRecovery(t *testing.T) {
+	var tests = []struct {
+		name    string
+		input   []byte
+		handler *MockHandler
+		results []Result
+	}{
+		{
+			name:  "integer",
+			input: []byte("cpu value=43i\ncpu value=42i"),
+			handler: &MockHandler{
+				SetMeasurementF: func(name []byte) error {
+					return nil
+				},
+				AddIntF: func(name, value []byte) error {
+					if string(value) != "42i" {
+						return errors.New("handler error")
+					}
+					return nil
+				},
+			},
+			results: []Result{
+				{
+					Name:  Measurement,
+					Value: []byte("cpu"),
+				},
+				{
+					Name: Error,
+					err:  errors.New("handler error"),
+				},
+				{
+					Name:  Measurement,
+					Value: []byte("cpu"),
+				},
+				{
+					Name:  FieldKey,
+					Value: []byte("value"),
+				},
+				{
+					Name:  FieldInt,
+					Value: []byte("42i"),
+				},
+				{
+					Name: Success,
+				},
+			},
+		},
+		{
+			name:  "integer with timestamp",
+			input: []byte("cpu value=43i 1516241192000000000\ncpu value=42i"),
+			handler: &MockHandler{
+				SetMeasurementF: func(name []byte) error {
+					return nil
+				},
+				AddIntF: func(name, value []byte) error {
+					if string(value) != "42i" {
+						return errors.New("handler error")
+					}
+					return nil
+				},
+			},
+			results: []Result{
+				{
+					Name:  Measurement,
+					Value: []byte("cpu"),
+				},
+				{
+					Name: Error,
+					err:  errors.New("handler error"),
+				},
+				{
+					Name:  Measurement,
+					Value: []byte("cpu"),
+				},
+				{
+					Name:  FieldKey,
+					Value: []byte("value"),
+				},
+				{
+					Name:  FieldInt,
+					Value: []byte("42i"),
+				},
+				{
+					Name: Success,
+				},
+			},
+		},
+		{
+			name:  "unsigned",
+			input: []byte("cpu value=43u\ncpu value=42u"),
+			handler: &MockHandler{
+				SetMeasurementF: func(name []byte) error {
+					return nil
+				},
+				AddUintF: func(name, value []byte) error {
+					if string(value) != "42u" {
+						return errors.New("handler error")
+					}
+					return nil
+				},
+			},
+			results: []Result{
+				{
+					Name:  Measurement,
+					Value: []byte("cpu"),
+				},
+				{
+					Name: Error,
+					err:  errors.New("handler error"),
+				},
+				{
+					Name:  Measurement,
+					Value: []byte("cpu"),
+				},
+				{
+					Name:  FieldKey,
+					Value: []byte("value"),
+				},
+				{
+					Name:  FieldUint,
+					Value: []byte("42u"),
+				},
+				{
+					Name: Success,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fsm := influx.NewMachine(tt.handler)
+			fsm.SetData(tt.input)
+
+			for i := 0; i < 20; i++ {
+				err := fsm.Next()
+				if err != nil && err == influx.EOF {
+					break
+				}
+				tt.handler.Result(err)
+			}
+
+			results := tt.handler.Results()
 			require.Equal(t, tt.results, results)
 		})
 	}

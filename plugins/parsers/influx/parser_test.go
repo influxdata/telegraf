@@ -1,6 +1,7 @@
 package influx
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -259,19 +260,14 @@ var ptests = []struct {
 		err: nil,
 	},
 	{
-		name:  "field int overflow dropped",
-		input: []byte("cpu value=9223372036854775808i"),
-		metrics: []telegraf.Metric{
-			Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{},
-					time.Unix(42, 0),
-				),
-			),
+		name:    "field int overflow",
+		input:   []byte("cpu value=9223372036854775808i"),
+		metrics: nil,
+		err: &ParseError{
+			Offset: 30,
+			msg:    strconv.ErrRange.Error(),
+			buf:    "cpu value=9223372036854775808i",
 		},
-		err: nil,
 	},
 	{
 		name:  "field int max value",
@@ -308,19 +304,14 @@ var ptests = []struct {
 		err: nil,
 	},
 	{
-		name:  "field uint overflow dropped",
-		input: []byte("cpu value=18446744073709551616u"),
-		metrics: []telegraf.Metric{
-			Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{},
-					time.Unix(42, 0),
-				),
-			),
+		name:    "field uint overflow",
+		input:   []byte("cpu value=18446744073709551616u"),
+		metrics: nil,
+		err: &ParseError{
+			Offset: 31,
+			msg:    strconv.ErrRange.Error(),
+			buf:    "cpu value=18446744073709551616u",
 		},
-		err: nil,
 	},
 	{
 		name:  "field uint max value",
