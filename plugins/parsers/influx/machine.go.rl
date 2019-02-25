@@ -236,7 +236,7 @@ fieldset =
 	field ( ',' field )*;
 
 tagchar =
-	[^\t\n\f\r ,=\\] | ( '\\' [^\t\n\f\r] );
+	[^\t\n\f\r ,=\\] | ( '\\' [^\t\n\f\r\\] ) | '\\\\' %to{ fhold; };
 
 tagkey =
 	tagchar+ >begin %tagkey;

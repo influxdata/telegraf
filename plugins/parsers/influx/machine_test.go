@@ -989,6 +989,93 @@ var tests = []struct {
 		},
 	},
 	{
+		name:  "tag value escape space",
+		input: []byte(`cpu,host=two\ words value=42`),
+		results: []Result{
+			{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			{
+				Name:  TagKey,
+				Value: []byte("host"),
+			},
+			{
+				Name:  TagValue,
+				Value: []byte(`two\ words`),
+			},
+			{
+				Name:  FieldKey,
+				Value: []byte("value"),
+			},
+			{
+				Name:  FieldFloat,
+				Value: []byte("42"),
+			},
+			{
+				Name: Success,
+			},
+		},
+	},
+	{
+		name:  "tag value double escape space",
+		input: []byte(`cpu,host=two\\ words value=42`),
+		results: []Result{
+			{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			{
+				Name:  TagKey,
+				Value: []byte("host"),
+			},
+			{
+				Name:  TagValue,
+				Value: []byte(`two\\ words`),
+			},
+			{
+				Name:  FieldKey,
+				Value: []byte("value"),
+			},
+			{
+				Name:  FieldFloat,
+				Value: []byte("42"),
+			},
+			{
+				Name: Success,
+			},
+		},
+	},
+	{
+		name:  "tag value triple escape space",
+		input: []byte(`cpu,host=two\\\ words value=42`),
+		results: []Result{
+			{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			{
+				Name:  TagKey,
+				Value: []byte("host"),
+			},
+			{
+				Name:  TagValue,
+				Value: []byte(`two\\\ words`),
+			},
+			{
+				Name:  FieldKey,
+				Value: []byte("value"),
+			},
+			{
+				Name:  FieldFloat,
+				Value: []byte("42"),
+			},
+			{
+				Name: Success,
+			},
+		},
+	},
+	{
 		name:  "tag invalid missing separator",
 		input: []byte("cpu,xyzzy value=42"),
 		results: []Result{

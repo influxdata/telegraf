@@ -175,6 +175,63 @@ var ptests = []struct {
 		err: nil,
 	},
 	{
+		name:  "tag value escape space",
+		input: []byte(`cpu,host=two\ words value=42`),
+		metrics: []telegraf.Metric{
+			Metric(
+				metric.New(
+					"cpu",
+					map[string]string{
+						"host": "two words",
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(42, 0),
+				),
+			),
+		},
+		err: nil,
+	},
+	{
+		name:  "tag value double escape space",
+		input: []byte(`cpu,host=two\\ words value=42`),
+		metrics: []telegraf.Metric{
+			Metric(
+				metric.New(
+					"cpu",
+					map[string]string{
+						"host": `two\ words`,
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(42, 0),
+				),
+			),
+		},
+		err: nil,
+	},
+	{
+		name:  "tag value triple escape space",
+		input: []byte(`cpu,host=two\\\ words value=42`),
+		metrics: []telegraf.Metric{
+			Metric(
+				metric.New(
+					"cpu",
+					map[string]string{
+						"host": `two\\ words`,
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(42, 0),
+				),
+			),
+		},
+		err: nil,
+	},
+	{
 		name:  "field key escape not escapable",
 		input: []byte(`cpu va\lue=42`),
 		metrics: []telegraf.Metric{
