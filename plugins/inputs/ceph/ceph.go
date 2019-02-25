@@ -319,10 +319,6 @@ func (c *Ceph) exec(command string) (string, error) {
 
 // CephStatus is used to unmarshal "ceph -s" output
 type CephStatus struct {
-	Health struct {
-		Status        string `json:"status"`
-		OverallStatus string `json:"overall_status"`
-	} `json:"health"`
 	OSDMap struct {
 		OSDMap struct {
 			Epoch          float64 `json:"epoch"`
@@ -361,7 +357,6 @@ func decodeStatus(acc telegraf.Accumulator, input string) error {
 	}
 
 	decoders := []func(telegraf.Accumulator, *CephStatus) error{
-		decodeStatusHealth,
 		decodeStatusOsdmap,
 		decodeStatusPgmap,
 		decodeStatusPgmapState,
@@ -373,16 +368,6 @@ func decodeStatus(acc telegraf.Accumulator, input string) error {
 		}
 	}
 
-	return nil
-}
-
-// decodeStatusHealth decodes the health portion of the output of 'ceph status'
-func decodeStatusHealth(acc telegraf.Accumulator, data *CephStatus) error {
-	fields := map[string]interface{}{
-		"status":         data.Health.Status,
-		"overall_status": data.Health.OverallStatus,
-	}
-	acc.AddFields("ceph_health", fields, map[string]string{})
 	return nil
 }
 
