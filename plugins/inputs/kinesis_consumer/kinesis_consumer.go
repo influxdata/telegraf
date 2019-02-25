@@ -1,4 +1,4 @@
-package kinesis
+package kinesis_consumer
 
 import (
 	"context"
