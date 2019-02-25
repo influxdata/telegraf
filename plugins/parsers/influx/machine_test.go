@@ -815,6 +815,27 @@ var tests = []struct {
 		},
 	},
 	{
+		name:  "newline in string field",
+		input: []byte("cpu value=\"4\n2\""),
+		results: []Result{
+			{
+				Name:  Measurement,
+				Value: []byte("cpu"),
+			},
+			{
+				Name:  FieldKey,
+				Value: []byte("value"),
+			},
+			{
+				Name:  FieldString,
+				Value: []byte("4\n2"),
+			},
+			{
+				Name: Success,
+			},
+		},
+	},
+	{
 		name:  "bool field",
 		input: []byte("cpu value=true"),
 		results: []Result{
@@ -1468,28 +1489,6 @@ var tests = []struct {
 			{
 				Name: Error,
 				err:  influx.ErrFieldParse,
-			},
-		},
-	},
-	{
-		name:  "invalid newline in string field",
-		input: []byte("cpu value=\"4\n2\""),
-		results: []Result{
-			{
-				Name:  Measurement,
-				Value: []byte("cpu"),
-			},
-			{
-				Name: Error,
-				err:  influx.ErrFieldParse,
-			},
-			{
-				Name:  Measurement,
-				Value: []byte("2\""),
-			},
-			{
-				Name: Error,
-				err:  influx.ErrTagParse,
 			},
 		},
 	},

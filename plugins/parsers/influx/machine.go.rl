@@ -176,6 +176,13 @@ action eol {
 ws =
 	[\t\v\f ];
 
+newline =
+	'\r'? '\n' %to(incr_newline) %to(eol);
+
+newline_incr_only =
+	'\r'? '\n' %to(incr_newline)
+	;
+
 non_zero_digit =
 	[1-9];
 
@@ -219,7 +226,7 @@ fieldbool =
 	(true | false) >begin %bool;
 
 fieldstringchar =
-	[^\n\f\r\\"] | '\\' [\\"];
+	[^\f\r\n\\"] | '\\' [\\"] | newline_incr_only;
 
 fieldstring =
 	fieldstringchar* >begin %string;
@@ -255,13 +262,6 @@ measurement_start =
 
 measurement =
 	(measurement_start measurement_chars*) >begin %eof(name) %name;
-
-newline =
-	'\r'? '\n' %to(incr_newline) %to(eol);
-
-newline_incr_only =
-	'\r'? '\n' %to(incr_newline)
-	;
 
 eol =
 	newline

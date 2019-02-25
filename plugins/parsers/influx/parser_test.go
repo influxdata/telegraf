@@ -456,6 +456,23 @@ var ptests = []struct {
 		err: nil,
 	},
 	{
+		name:  "field string newline",
+		input: []byte("cpu value=\"4\n2\""),
+		metrics: []telegraf.Metric{
+			Metric(
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"value": "4\n2",
+					},
+					time.Unix(42, 0),
+				),
+			),
+		},
+		err: nil,
+	},
+	{
 		name:  "no timestamp",
 		input: []byte("cpu value=42"),
 		metrics: []telegraf.Metric{
