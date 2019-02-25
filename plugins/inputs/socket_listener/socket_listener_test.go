@@ -3,6 +3,7 @@ package socket_listener
 import (
 	"bytes"
 	"crypto/tls"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/wlog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,11 +25,22 @@ var pki = testutil.NewPKI("../../../testutil/pki")
 // Should be called at the start of the test, and returns a function which should run at the end.
 func testEmptyLog(t *testing.T) func() {
 	buf := bytes.NewBuffer(nil)
-	log.SetOutput(buf)
+	log.SetOutput(wlog.NewWriter(buf))
+
+	level := wlog.WARN
+	wlog.SetLevel(level)
 
 	return func() {
 		log.SetOutput(os.Stderr)
-		assert.Empty(t, string(buf.Bytes()), "log not empty")
+
+		for {
+			line, err := buf.ReadBytes('\n')
+			if err != nil {
+				assert.Equal(t, io.EOF, err)
+				break
+			}
+			assert.Empty(t, string(line), "log not empty")
+		}
 	}
 }
 
