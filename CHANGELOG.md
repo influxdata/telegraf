@@ -70,6 +70,7 @@
 - [#5437](https://github.com/influxdata/telegraf/issues/5437): Host not added when using custom arguments in ping plugin.
 - [#5438](https://github.com/influxdata/telegraf/issues/5438): Fix InfluxDB output UDP line splitting.
 - [#5456](https://github.com/influxdata/telegraf/issues/5456): Disable results by row in azuredb query.
+- [#5277](https://github.com/influxdata/telegraf/issues/5456): Add backwards compatibility fields in ceph usage and pool stats.
 
 ## v1.9.4 [2019-02-05]
 
