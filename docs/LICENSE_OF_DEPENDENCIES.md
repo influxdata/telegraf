@@ -49,6 +49,7 @@ following works:
 - github.com/gorilla/context [BSD 3-Clause "New" or "Revised" License](https://github.com/gorilla/context/blob/master/LICENSE)
 - github.com/gorilla/mux [BSD 3-Clause "New" or "Revised" License](https://github.com/gorilla/mux/blob/master/LICENSE)
 - github.com/hailocab/go-hostpool [MIT License](https://github.com/hailocab/go-hostpool/blob/master/LICENSE)
+- github.com/harlow/kinesis-consumer [MIT License](https://github.com/harlow/kinesis-consumer/blob/master/MIT-LICENSE)
 - github.com/hashicorp/consul [Mozilla Public License 2.0](https://github.com/hashicorp/consul/blob/master/LICENSE)
 - github.com/hashicorp/go-cleanhttp [Mozilla Public License 2.0](https://github.com/hashicorp/go-cleanhttp/blob/master/LICENSE)
 - github.com/hashicorp/go-rootcerts [Mozilla Public License 2.0](https://github.com/hashicorp/go-rootcerts/blob/master/LICENSE)
