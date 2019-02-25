@@ -254,6 +254,10 @@
   name = "github.com/karrick/godirwalk"
   version = "1.7.5"
 
+[[override]]
+  name = "github.com/harlow/kinesis-consumer"
+  branch = "master"
+
 [[constraint]]
   branch = "master"
   name = "github.com/kubernetes/apimachinery"
