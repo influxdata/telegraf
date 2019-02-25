@@ -1,16 +1,19 @@
 package filecount
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/karrick/godirwalk"
+	"github.com/pkg/errors"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/karrick/godirwalk"
 )
 
 const sampleConfig = `
@@ -152,6 +155,7 @@ func (fc *FileCount) initFileFilters() {
 func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpath.GlobPath) {
 	childCount := make(map[string]int64)
 	childSize := make(map[string]int64)
+
 	walkFn := func(path string, de *godirwalk.Dirent) error {
 		if path == basedir {
 			return nil
@@ -178,6 +182,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 		}
 		return nil
 	}
+
 	postChildrenFn := func(path string, de *godirwalk.Dirent) error {
 		if glob.MatchString(path) {
 			gauge := map[string]interface{}{
@@ -205,7 +210,11 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 		Unsorted:             true,
 	})
 	if err != nil {
-		acc.AddError(err)
+		if os.IsPermission(errors.Cause(err)) {
+			log.Println("D! [inputs.filecount]", err)
+		} else {
+			acc.AddError(err)
+		}
 	}
 }
 
