@@ -85,6 +85,9 @@ type Config struct {
 	// time format
 	JSONTimeFormat string `toml:"json_time_format"`
 
+	// default timezone
+	JSONTimezone string `toml:"json_timezone"`
+
 	// Authentication file for collectd
 	CollectdAuthFile string `toml:"collectd_auth_file"`
 	// One of none (default), sign, or encrypt
@@ -152,6 +155,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.JSONQuery,
 			config.JSONTimeKey,
 			config.JSONTimeFormat,
+			config.JSONTimezone,
 			config.DefaultTags)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
@@ -275,6 +279,7 @@ func newJSONParser(
 	jsonQuery string,
 	timeKey string,
 	timeFormat string,
+	timezone string,
 	defaultTags map[string]string,
 ) Parser {
 	parser := &json.JSONParser{
@@ -285,6 +290,7 @@ func newJSONParser(
 		JSONQuery:      jsonQuery,
 		JSONTimeKey:    timeKey,
 		JSONTimeFormat: timeFormat,
+		JSONTimezone:   timezone,
 		DefaultTags:    defaultTags,
 	}
 	return parser

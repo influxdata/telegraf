@@ -270,3 +270,34 @@ func TestAlignDuration(t *testing.T) {
 		})
 	}
 }
+
+func TestParseTimestamp(t *testing.T) {
+	time, err := ParseTimestamp("2019-02-20 21:50:34.029665", "2006-01-02 15:04:05.000000")
+	assert.Nil(t, err)
+	assert.EqualValues(t, int64(1550699434029665000), time.UnixNano())
+
+	time, err = ParseTimestamp("2019-02-20 21:50:34.029665-04:00", "2006-01-02 15:04:05.000000-07:00")
+	assert.Nil(t, err)
+	assert.EqualValues(t, int64(1550713834029665000), time.UnixNano())
+
+	time, err = ParseTimestamp("2019-02-20 21:50:34.029665", "2006-01-02 15:04:05.000000-06:00")
+	assert.NotNil(t, err)
+}
+
+func TestParseTimestampWithLocation(t *testing.T) {
+	time, err := ParseTimestampWithLocation("2019-02-20 21:50:34.029665", "2006-01-02 15:04:05.000000", "UTC")
+	assert.Nil(t, err)
+	assert.EqualValues(t, int64(1550699434029665000), time.UnixNano())
+
+	time, err = ParseTimestampWithLocation("2019-02-20 21:50:34.029665", "2006-01-02 15:04:05.000000", "America/New_York")
+	assert.Nil(t, err)
+	assert.EqualValues(t, int64(1550717434029665000), time.UnixNano())
+
+	//Provided location is ignored if an offset is successfully parsed
+	time, err = ParseTimestampWithLocation("2019-02-20 21:50:34.029665-07:00", "2006-01-02 15:04:05.000000-07:00", "America/New_York")
+	assert.Nil(t, err)
+	assert.EqualValues(t, int64(1550724634029665000), time.UnixNano())
+
+	time, err = ParseTimestampWithLocation("2019-02-20 21:50:34.029665", "2006-01-02 15:04:05.000000", "InvalidTimeZone")
+	assert.NotNil(t, err)
+}

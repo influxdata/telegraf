@@ -1362,6 +1362,14 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["json_timezone"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.JSONTimezone = str.Value
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["data_type"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -1637,6 +1645,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "json_string_fields")
 	delete(tbl.Fields, "json_time_format")
 	delete(tbl.Fields, "json_time_key")
+	delete(tbl.Fields, "json_timezone")
 	delete(tbl.Fields, "data_type")
 	delete(tbl.Fields, "collectd_auth_file")
 	delete(tbl.Fields, "collectd_security_level")

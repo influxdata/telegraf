@@ -28,6 +28,7 @@ type JSONParser struct {
 	JSONQuery      string
 	JSONTimeKey    string
 	JSONTimeFormat string
+	JSONTimezone   string
 	DefaultTags    map[string]string
 }
 
@@ -82,7 +83,7 @@ func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]i
 			return nil, err
 		}
 
-		nTime, err = internal.ParseTimestamp(f.Fields[p.JSONTimeKey], p.JSONTimeFormat)
+		nTime, err = internal.ParseTimestampWithLocation(f.Fields[p.JSONTimeKey], p.JSONTimeFormat, p.JSONTimezone)
 		if err != nil {
 			return nil, err
 		}
