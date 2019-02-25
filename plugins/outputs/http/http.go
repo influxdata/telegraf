@@ -33,6 +33,9 @@ var sampleConfig = `
   # username = "username"
   # password = "pa$$word"
 
+  ## HTTP Token Auth
+  # token = "aToken"
+
   ## OAuth2 Client Credentials Grant
   # client_id = "clientid"
   # client_secret = "secret"
@@ -74,6 +77,7 @@ type HTTP struct {
 	Method          string            `toml:"method"`
 	Username        string            `toml:"username"`
 	Password        string            `toml:"password"`
+	Token           string            `toml:"token"`
 	Headers         map[string]string `toml:"headers"`
 	ClientID        string            `toml:"client_id"`
 	ClientSecret    string            `toml:"client_secret"`
@@ -185,6 +189,10 @@ func (h *HTTP) write(reqBody []byte) error {
 
 	if h.Username != "" || h.Password != "" {
 		req.SetBasicAuth(h.Username, h.Password)
+	}
+
+	if h.Token != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Token %s", h.Token))
 	}
 
 	req.Header.Set("User-Agent", "Telegraf/"+internal.Version())

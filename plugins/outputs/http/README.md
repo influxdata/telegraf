@@ -21,6 +21,9 @@ data formats.  For data_formats that support batching, metrics are sent in batch
   # username = "username"
   # password = "pa$$word"
 
+  ## HTTP Token Auth
+  # token = "aToken"
+
   ## OAuth2 Client Credentials Grant
   # client_id = "clientid"
   # client_secret = "secret"

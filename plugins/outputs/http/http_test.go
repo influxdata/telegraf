@@ -351,6 +351,55 @@ func TestBasicAuth(t *testing.T) {
 	}
 }
 
+func TestTokenAuth(t *testing.T) {
+	ts := httptest.NewServer(http.NotFoundHandler())
+	defer ts.Close()
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", ts.Listener.Addr().String()))
+	require.NoError(t, err)
+
+	tests := []struct {
+		name   string
+		plugin *HTTP
+	}{
+		{
+			name: "default",
+			plugin: &HTTP{
+				URL: u.String(),
+			},
+		},
+		{
+			name: "with token",
+			plugin: &HTTP{
+				URL:   u.String(),
+				Token: "aTok",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				var token string
+				auth := r.Header.Get("Authorization")
+				if auth != "" {
+					token = auth[len("Token "):]
+				}
+				require.Equal(t, tt.plugin.Token, token)
+				w.WriteHeader(http.StatusOK)
+			})
+
+			serializer := influx.NewSerializer()
+			tt.plugin.SetSerializer(serializer)
+			err = tt.plugin.Connect()
+			require.NoError(t, err)
+
+			err = tt.plugin.Write([]telegraf.Metric{getMetric()})
+			require.NoError(t, err)
+		})
+	}
+}
+
 type TestHandlerFunc func(t *testing.T, w http.ResponseWriter, r *http.Request)
 
 func TestOAuthClientCredentialsGrant(t *testing.T) {
