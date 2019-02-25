@@ -3,6 +3,7 @@
 #### New Inputs
 
 - [cloud_pubsub](/plugins/inputs/cloud_pubsub/README.md) - Contributed by @emilymye
+- [kinesis_consumer](/plugins/inputs/kinesis_consumer/README.md) - Contributed by @influxdata
 - [kube_inventory](/plugins/inputs/kube_inventory/README.md) - Contributed by @influxdata
 - [neptune_apex](/plugins/inputs/neptune_apex/README.md) - Contributed by @MaxRenaud
 - [nginx_upstream_check](/plugins/inputs/nginx_upstream_check/README.md) - Contributed by @dmitryilyin
