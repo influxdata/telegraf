@@ -197,6 +197,7 @@ func (p *PubSubPush) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	} else {
 		p.AuthenticateIfSet(http.NotFound, res, req)
 	}
+	res.WriteHeader(http.StatusInternalServerError)
 }
 
 func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
@@ -279,7 +280,7 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 			res.WriteHeader(http.StatusInternalServerError)
 		}
 	case <-time.After(p.ReadTimeout.Duration):
-		res.WriteHeader(http.StatusExpectationFailed)
+		res.WriteHeader(http.StatusRequestTimeout)
 	}
 }
 

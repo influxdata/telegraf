@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
@@ -45,6 +46,7 @@ func TestServeHTTP(t *testing.T) {
 		maxsize  int64
 		expected string
 		fail     bool
+		timeout  bool
 	}{
 		{
 			name:   "bad method get",
@@ -72,6 +74,15 @@ func TestServeHTTP(t *testing.T) {
 			maxsize: 500 * 1024 * 1024,
 			status:  http.StatusNoContent,
 			body:    strings.NewReader(`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`),
+		},
+		{
+			name:    "post valid data, timeout",
+			method:  "POST",
+			path:    "/",
+			maxsize: 500 * 1024 * 1024,
+			status:  http.StatusRequestTimeout,
+			body:    strings.NewReader(`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`),
+			timeout: true,
 		},
 		{
 			name:    "fail write",
@@ -132,11 +143,19 @@ func TestServeHTTP(t *testing.T) {
 			sem: make(chan struct{}, 1),
 		}
 		pubPush.ctx, pubPush.cancel = context.WithCancel(context.Background())
+		pubPush.ReadTimeout = internal.Duration{
+			Duration: time.Second * 3,
+		}
 
 		if test.fail {
 			// fill buffer with fake message
 			pubPush.sem <- struct{}{}
 			pubPush.cancel()
+		}
+		if test.timeout {
+			pubPush.ReadTimeout = internal.Duration{
+				Duration: time.Second * 0,
+			}
 		}
 
 		p, _ := parsers.NewParser(&parsers.Config{
