@@ -47,6 +47,7 @@
 - [#5165](https://github.com/influxdata/telegraf/pull/5165): Add resource path based filtering to vsphere input.
 - [#5417](https://github.com/influxdata/telegraf/pull/5417): Add rcode tag and field to dns_query input.
 - [#5453](https://github.com/influxdata/telegraf/pull/5453): Support Azure Sovereign Environments with endpoint_url option.
+- [#5472](https://github.com/influxdata/telegraf/pull/5472): Support configuring a default timezone in JSON parser.
 
 #### Bugfixes
 
