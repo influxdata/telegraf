@@ -599,6 +599,23 @@ func TestTimeParser(t *testing.T) {
 	require.Equal(t, false, metrics[0].Time() == metrics[1].Time())
 }
 
+func TestTimeParserWithTimezone(t *testing.T) {
+	testString := `{
+		"time": "04 Jan 06 15:04"
+	}`
+
+	parser := JSONParser{
+		MetricName:     "json_test",
+		JSONTimeKey:    "time",
+		JSONTimeFormat: "02 Jan 06 15:04",
+		JSONTimezone:   "America/New_York",
+	}
+	metrics, err := parser.Parse([]byte(testString))
+	require.NoError(t, err)
+	require.Equal(t, 1, len(metrics))
+	require.EqualValues(t, int64(1136405040000000000), metrics[0].Time().UnixNano())
+}
+
 func TestUnixTimeParser(t *testing.T) {
 	testString := `[
 		{
