@@ -21,7 +21,6 @@ func TestStartStop(t *testing.T) {
 	pubPush := PubSubPush{
 		Path: "/",
 		sem:  make(chan struct{}, 5),
-		rsem: make(chan struct{}, 5),
 	}
 	pubPush.ctx, pubPush.cancel = context.WithCancel(context.Background())
 
@@ -130,8 +129,7 @@ func TestServeHTTP(t *testing.T) {
 			MaxBodySize: internal.Size{
 				Size: test.maxsize,
 			},
-			sem:  make(chan struct{}, 1),
-			rsem: make(chan struct{}, 1),
+			sem: make(chan struct{}, 1),
 		}
 		pubPush.ctx, pubPush.cancel = context.WithCancel(context.Background())
 

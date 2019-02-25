@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -47,9 +48,8 @@ type PubSubPush struct {
 	wg       *sync.WaitGroup
 	mu       sync.Mutex
 
-	undelivered map[telegraf.TrackingID]*http.ResponseWriter
+	undelivered map[telegraf.TrackingID]chan bool
 	sem         chan struct{}
-	rsem        chan struct{}
 }
 
 // Message defines the structure of a Google Pub/Sub message.
@@ -166,14 +166,7 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 	p.ctx, p.cancel = context.WithCancel(context.Background())
 	p.wg = &sync.WaitGroup{}
 	p.acc = acc.WithTracking(p.MaxUndeliveredMessages)
-	p.rsem = make(chan struct{}, p.MaxUndeliveredMessages)
 	p.sem = make(chan struct{}, p.MaxUndeliveredMessages)
-
-	p.wg.Add(1)
-	go func() {
-		defer p.wg.Done()
-		p.server.Serve(p.listener)
-	}()
 
 	p.wg.Add(1)
 	go func() {
@@ -181,35 +174,37 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 		p.receiveDelivered()
 	}()
 
+	p.wg.Add(1)
+	go func() {
+		defer p.wg.Done()
+		p.server.Serve(p.listener)
+	}()
+
 	return nil
 }
 
 // Stop cleans up all resources
 func (p *PubSubPush) Stop() {
+	p.cancel()
 	p.server.Shutdown(p.ctx)
 	p.listener.Close()
-	p.cancel()
 	p.wg.Wait()
 }
 
 func (p *PubSubPush) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	if req.URL.Path == p.Path {
 		p.AuthenticateIfSet(p.serveWrite, res, req)
-		<-p.rsem
 	} else {
 		p.AuthenticateIfSet(http.NotFound, res, req)
 	}
-	res.WriteHeader(http.StatusInternalServerError)
 }
 
 func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 	select {
 	case <-req.Context().Done():
-		p.rsem <- struct{}{}
 		return
 	case <-p.ctx.Done():
 		log.Printf("E! [inputs.cloud_pubsub_push] %s", p.ctx.Err())
-		p.rsem <- struct{}{}
 		return
 	case p.sem <- struct{}{}:
 		break
@@ -218,13 +213,11 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 	// Check that the content length is not too large for us to handle.
 	if req.ContentLength > p.MaxBodySize.Size {
 		res.WriteHeader(http.StatusRequestEntityTooLarge)
-		p.rsem <- struct{}{}
 		return
 	}
 
 	if req.Method != "POST" {
 		res.WriteHeader(http.StatusMethodNotAllowed)
-		p.rsem <- struct{}{}
 		return
 	}
 
@@ -232,7 +225,6 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 	bytes, err := ioutil.ReadAll(body)
 	if err != nil {
 		res.WriteHeader(http.StatusRequestEntityTooLarge)
-		p.rsem <- struct{}{}
 		return
 	}
 
@@ -240,7 +232,6 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 	if err = json.Unmarshal(bytes, &payload); err != nil {
 		log.Printf("E! [inputs.cloud_pubsub_push] Error decoding payload %s", err.Error())
 		res.WriteHeader(http.StatusBadRequest)
-		p.rsem <- struct{}{}
 		return
 	}
 
@@ -248,7 +239,6 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Printf("E! [inputs.cloud_pubsub_push] Base64-Decode Failed %s", err.Error())
 		res.WriteHeader(http.StatusBadRequest)
-		p.rsem <- struct{}{}
 		return
 	}
 
@@ -256,7 +246,6 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Println("D! [inputs.cloud_pubsub_push] " + err.Error())
 		res.WriteHeader(http.StatusBadRequest)
-		p.rsem <- struct{}{}
 		return
 	}
 
@@ -269,14 +258,29 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	id := p.acc.AddTrackingMetricGroup(metrics)
 	if p.undelivered == nil {
-		p.undelivered = make(map[telegraf.TrackingID]*http.ResponseWriter)
+		p.undelivered = make(map[telegraf.TrackingID]chan bool)
 	}
-	p.undelivered[id] = &res
+
+	ch := make(chan bool, 1)
+	p.mu.Lock()
+	p.undelivered[id] = ch
+	p.mu.Unlock()
+
+	select {
+	case <-req.Context().Done():
+		fmt.Println("DONECONTEXT")
+		return
+	case success := <-ch:
+		if success {
+			res.WriteHeader(http.StatusNoContent)
+		} else {
+			res.WriteHeader(http.StatusInternalServerError)
+		}
+	case <-time.After(p.ReadTimeout.Duration):
+		res.WriteHeader(http.StatusExpectationFailed)
+	}
 }
 
 func (p *PubSubPush) receiveDelivered() {
@@ -286,31 +290,25 @@ func (p *PubSubPush) receiveDelivered() {
 			return
 		case info := <-p.acc.Delivered():
 			<-p.sem
-			res := p.removeDelivered(info.ID())
 
-			if res != nil {
-				if info.Delivered() {
-					(*res).WriteHeader(http.StatusNoContent)
-				} else {
-					log.Println("D! [inputs.cloud_pubsub_push] Metric group failed to process")
-				}
+			p.mu.Lock()
+			ch, ok := p.undelivered[info.ID()]
+			if !ok {
+				p.mu.Unlock()
+				continue
 			}
-			p.rsem <- struct{}{}
+
+			delete(p.undelivered, info.ID())
+			p.mu.Unlock()
+
+			if info.Delivered() {
+				ch <- true
+			} else {
+				ch <- false
+				log.Println("D! [inputs.cloud_pubsub_push] Metric group failed to process")
+			}
 		}
 	}
-}
-
-func (p *PubSubPush) removeDelivered(id telegraf.TrackingID) *http.ResponseWriter {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
-	msg, ok := p.undelivered[id]
-	if !ok {
-		return nil
-	}
-
-	delete(p.undelivered, id)
-	return msg
 }
 
 func (p *PubSubPush) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
@@ -329,8 +327,8 @@ func (p *PubSubPush) AuthenticateIfSet(handler http.HandlerFunc, res http.Respon
 func init() {
 	inputs.Add("cloud_pubsub_push", func() telegraf.Input {
 		return &PubSubPush{
-			ServiceAddress: ":8080",
-			Path:           "/",
+			ServiceAddress:         ":8080",
+			Path:                   "/",
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}
 	})
