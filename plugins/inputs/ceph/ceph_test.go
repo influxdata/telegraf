@@ -874,7 +874,7 @@ var cephStatusResults = []expectedResult{
 			"bytes_total":      float64(17335810048000),
 			"read_bytes_sec":   float64(0),
 			"write_bytes_sec":  float64(367217),
-			"op_per_sec":       float64(98),
+			"op_per_sec":       pf(98),
 			"read_op_per_sec":  float64(322),
 			"write_op_per_sec": float64(1022),
 		},
@@ -912,7 +912,10 @@ var cephStatusResults = []expectedResult{
 var cephDFDump = `
 { "stats": { "total_space": 472345880,
       "total_used": 71058504,
-      "total_avail": 377286864},
+      "total_avail": 377286864,
+      "total_bytes": 472345880,
+      "total_used_bytes": 71058504,
+      "total_avail_bytes": 377286864},
   "pools": [
         { "name": "data",
           "id": 0,
@@ -939,18 +942,23 @@ var cephDfResults = []expectedResult{
 	{
 		metric: "ceph_usage",
 		fields: map[string]interface{}{
-			"total_space": float64(472345880),
-			"total_used":  float64(71058504),
-			"total_avail": float64(377286864),
+			"total_space":       pf(472345880),
+			"total_used":        pf(71058504),
+			"total_avail":       pf(377286864),
+			"total_bytes":       pf(472345880),
+			"total_used_bytes":  pf(71058504),
+			"total_avail_bytes": pf(377286864),
 		},
 		tags: map[string]string{},
 	},
 	{
 		metric: "ceph_pool_usage",
 		fields: map[string]interface{}{
-			"kb_used":    float64(0),
-			"bytes_used": float64(0),
-			"objects":    float64(0),
+			"kb_used":      float64(0),
+			"bytes_used":   float64(0),
+			"objects":      float64(0),
+			"percent_used": (*float64)(nil),
+			"max_avail":    (*float64)(nil),
 		},
 		tags: map[string]string{
 			"name": "data",
@@ -959,9 +967,11 @@ var cephDfResults = []expectedResult{
 	{
 		metric: "ceph_pool_usage",
 		fields: map[string]interface{}{
-			"kb_used":    float64(25),
-			"bytes_used": float64(25052),
-			"objects":    float64(53),
+			"kb_used":      float64(25),
+			"bytes_used":   float64(25052),
+			"objects":      float64(53),
+			"percent_used": (*float64)(nil),
+			"max_avail":    (*float64)(nil),
 		},
 		tags: map[string]string{
 			"name": "metadata",
@@ -970,9 +980,11 @@ var cephDfResults = []expectedResult{
 	{
 		metric: "ceph_pool_usage",
 		fields: map[string]interface{}{
-			"kb_used":    float64(0),
-			"bytes_used": float64(0),
-			"objects":    float64(0),
+			"kb_used":      float64(0),
+			"bytes_used":   float64(0),
+			"objects":      float64(0),
+			"percent_used": (*float64)(nil),
+			"max_avail":    (*float64)(nil),
 		},
 		tags: map[string]string{
 			"name": "rbd",
@@ -981,9 +993,11 @@ var cephDfResults = []expectedResult{
 	{
 		metric: "ceph_pool_usage",
 		fields: map[string]interface{}{
-			"kb_used":    float64(55476),
-			"bytes_used": float64(56806602),
-			"objects":    float64(1),
+			"kb_used":      float64(55476),
+			"bytes_used":   float64(56806602),
+			"objects":      float64(1),
+			"percent_used": (*float64)(nil),
+			"max_avail":    (*float64)(nil),
 		},
 		tags: map[string]string{
 			"name": "test",
@@ -1028,7 +1042,7 @@ var cephOSDPoolStatsResults = []expectedResult{
 		fields: map[string]interface{}{
 			"read_bytes_sec":             float64(0),
 			"write_bytes_sec":            float64(0),
-			"op_per_sec":                 float64(0),
+			"op_per_sec":                 (*float64)(nil),
 			"read_op_per_sec":            float64(0),
 			"write_op_per_sec":           float64(0),
 			"recovering_objects_per_sec": float64(0),
@@ -1044,7 +1058,7 @@ var cephOSDPoolStatsResults = []expectedResult{
 		fields: map[string]interface{}{
 			"read_bytes_sec":             float64(10566067),
 			"write_bytes_sec":            float64(15165220376),
-			"op_per_sec":                 float64(9828),
+			"op_per_sec":                 pf(9828),
 			"read_op_per_sec":            float64(182),
 			"write_op_per_sec":           float64(473),
 			"recovering_objects_per_sec": float64(279),
@@ -1055,4 +1069,8 @@ var cephOSDPoolStatsResults = []expectedResult{
 			"name": "pbench",
 		},
 	},
+}
+
+func pf(i float64) *float64 {
+	return &i
 }
