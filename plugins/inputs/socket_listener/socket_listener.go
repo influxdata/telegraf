@@ -242,14 +242,17 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		return fmt.Errorf("invalid service address: %s", sl.ServiceAddress)
 	}
 
-	if spl[0] == "unix" || spl[0] == "unixpacket" || spl[0] == "unixgram" {
+	protocol := spl[0]
+	addr := spl[1]
+
+	if protocol == "unix" || protocol == "unixpacket" || protocol == "unixgram" {
 		// no good way of testing for "file does not exist".
 		// Instead just ignore error and blow up when we try to listen, which will
 		// indicate "address already in use" if file existed and we couldn't remove.
-		os.Remove(spl[1])
+		os.Remove(addr)
 	}
 
-	switch spl[0] {
+	switch protocol {
 	case "tcp", "tcp4", "tcp6", "unix", "unixpacket":
 		var (
 			err error
@@ -262,13 +265,15 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		}
 
 		if tlsCfg == nil {
-			l, err = net.Listen(spl[0], spl[1])
+			l, err = net.Listen(protocol, addr)
 		} else {
-			l, err = tls.Listen(spl[0], spl[1], tlsCfg)
+			l, err = tls.Listen(protocol, addr, tlsCfg)
 		}
 		if err != nil {
 			return err
 		}
+
+		log.Printf("I! [inputs.socket_listener] Listening on %s://%s", protocol, l.Addr())
 
 		ssl := &streamSocketListener{
 			Listener:       l,
@@ -279,7 +284,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		sl.Closer = ssl
 		go ssl.listen()
 	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
-		pc, err := net.ListenPacket(spl[0], spl[1])
+		pc, err := net.ListenPacket(protocol, addr)
 		if err != nil {
 			return err
 		}
@@ -288,9 +293,11 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 			if srb, ok := pc.(setReadBufferer); ok {
 				srb.SetReadBuffer(int(sl.ReadBufferSize.Size))
 			} else {
-				log.Printf("W! Unable to set read buffer on a %s socket", spl[0])
+				log.Printf("W! Unable to set read buffer on a %s socket", protocol)
 			}
 		}
+
+		log.Printf("I! [inputs.socket_listener] Listening on %s://%s", protocol, pc.LocalAddr())
 
 		psl := &packetSocketListener{
 			PacketConn:     pc,
@@ -300,10 +307,10 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		sl.Closer = psl
 		go psl.listen()
 	default:
-		return fmt.Errorf("unknown protocol '%s' in '%s'", spl[0], sl.ServiceAddress)
+		return fmt.Errorf("unknown protocol '%s' in '%s'", protocol, sl.ServiceAddress)
 	}
 
-	if spl[0] == "unix" || spl[0] == "unixpacket" || spl[0] == "unixgram" {
+	if protocol == "unix" || protocol == "unixpacket" || protocol == "unixgram" {
 		sl.Closer = unixCloser{path: spl[1], closer: sl.Closer}
 	}
 
