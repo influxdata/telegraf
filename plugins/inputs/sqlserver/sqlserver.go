@@ -5,11 +5,9 @@ import (
 	"sync"
 	"time"
 
+	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	// go-mssqldb initialization
-	_ "github.com/denisenkom/go-mssqldb"
 )
 
 // SQLServer struct
@@ -90,7 +88,7 @@ func initQueries(s *SQLServer) {
 
 	// If this is an AzureDB instance, grab some extra metrics
 	if s.AzureDB {
-		queries["AzureDB"] = Query{Script: sqlAzureDB, ResultByRow: true}
+		queries["AzureDB"] = Query{Script: sqlAzureDB, ResultByRow: false}
 	}
 
 	// Decide if we want to run version 1 or version 2 queries
