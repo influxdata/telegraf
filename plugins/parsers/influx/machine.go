@@ -17,7 +17,7 @@ var (
 )
 
 
-//line plugins/parsers/influx/machine.go.rl:319
+//line plugins/parsers/influx/machine.go.rl:312
 
 
 
@@ -32,7 +32,7 @@ const LineProtocol_en_align int = 715
 const LineProtocol_en_series int = 250
 
 
-//line plugins/parsers/influx/machine.go.rl:322
+//line plugins/parsers/influx/machine.go.rl:315
 
 type Handler interface {
 	SetMeasurement(name []byte) error
@@ -63,24 +63,24 @@ func NewMachine(handler Handler) *machine {
 	}
 
 	
-//line plugins/parsers/influx/machine.go.rl:352
+//line plugins/parsers/influx/machine.go.rl:345
 	
-//line plugins/parsers/influx/machine.go.rl:353
+//line plugins/parsers/influx/machine.go.rl:346
 	
-//line plugins/parsers/influx/machine.go.rl:354
+//line plugins/parsers/influx/machine.go.rl:347
 	
-//line plugins/parsers/influx/machine.go.rl:355
+//line plugins/parsers/influx/machine.go.rl:348
 	
-//line plugins/parsers/influx/machine.go.rl:356
+//line plugins/parsers/influx/machine.go.rl:349
 	
-//line plugins/parsers/influx/machine.go.rl:357
+//line plugins/parsers/influx/machine.go.rl:350
 	
 //line plugins/parsers/influx/machine.go:79
 	{
 	( m.cs) = LineProtocol_start
 	}
 
-//line plugins/parsers/influx/machine.go.rl:358
+//line plugins/parsers/influx/machine.go.rl:351
 
 	return m
 }
@@ -92,22 +92,22 @@ func NewSeriesMachine(handler Handler) *machine {
 	}
 
 	
-//line plugins/parsers/influx/machine.go.rl:369
+//line plugins/parsers/influx/machine.go.rl:362
 	
-//line plugins/parsers/influx/machine.go.rl:370
+//line plugins/parsers/influx/machine.go.rl:363
 	
-//line plugins/parsers/influx/machine.go.rl:371
+//line plugins/parsers/influx/machine.go.rl:364
 	
-//line plugins/parsers/influx/machine.go.rl:372
+//line plugins/parsers/influx/machine.go.rl:365
 	
-//line plugins/parsers/influx/machine.go.rl:373
+//line plugins/parsers/influx/machine.go.rl:366
 	
 //line plugins/parsers/influx/machine.go:106
 	{
 	( m.cs) = LineProtocol_start
 	}
 
-//line plugins/parsers/influx/machine.go.rl:374
+//line plugins/parsers/influx/machine.go.rl:367
 
 	return m
 }
@@ -127,7 +127,7 @@ func (m *machine) SetData(data []byte) {
 	( m.cs) = LineProtocol_start
 	}
 
-//line plugins/parsers/influx/machine.go.rl:388
+//line plugins/parsers/influx/machine.go.rl:381
 	m.cs = m.initState
 }
 
@@ -4254,7 +4254,7 @@ tr66:
 		}
 		goto st19
 	st22:
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:242
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -4307,7 +4307,7 @@ tr58:
 		}
 		goto st17
 	st24:
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:242
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -4360,7 +4360,7 @@ tr53:
 		}
 		goto st15
 	st26:
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:242
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -10146,7 +10146,7 @@ tr153:
 		}
 		goto st17
 	st65:
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:242
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -10414,7 +10414,7 @@ tr205:
 		}
 		goto st19
 	st70:
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:242
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -10473,7 +10473,7 @@ tr193:
 		}
 		goto st15
 	st72:
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:242
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -12267,7 +12267,7 @@ tr237:
 		}
 		goto st19
 	st86:
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:242
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -12326,7 +12326,7 @@ tr229:
 		}
 		goto st17
 	st88:
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:242
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -12385,7 +12385,7 @@ tr224:
 		}
 		goto st15
 	st90:
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:242
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -13675,7 +13675,7 @@ tr135:
 		}
 		goto st46
 	st102:
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:242
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -17801,7 +17801,7 @@ tr279:
 		}
 		goto st46
 	st124:
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:242
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -19635,7 +19635,7 @@ tr259:
 		}
 		goto st46
 	st139:
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:242
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -28889,16 +28889,11 @@ tr421:
 	m.sol = m.p
 	m.sol++ // next char will be the first column in the line
 
-//line plugins/parsers/influx/machine.go.rl:171
-
-	( m.cs) = 715;
-	{( m.p)++; goto _out }
-
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof714
 		}
 	st_case_714:
-//line plugins/parsers/influx/machine.go:28902
+//line plugins/parsers/influx/machine.go:28897
 		goto st0
 	st250:
 		if ( m.p)++; ( m.p) == ( m.pe) {
@@ -28939,7 +28934,7 @@ tr424:
 			goto _test_eof717
 		}
 	st_case_717:
-//line plugins/parsers/influx/machine.go:28943
+//line plugins/parsers/influx/machine.go:28938
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr2
@@ -28999,7 +28994,7 @@ tr1030:
 			goto _test_eof718
 		}
 	st_case_718:
-//line plugins/parsers/influx/machine.go:29003
+//line plugins/parsers/influx/machine.go:28998
 		goto st0
 tr1027:
 	( m.cs) = 251
@@ -29032,7 +29027,7 @@ tr1031:
 			goto _test_eof251
 		}
 	st_case_251:
-//line plugins/parsers/influx/machine.go:29036
+//line plugins/parsers/influx/machine.go:29031
 		if ( m.data)[( m.p)] == 10 {
 			goto st718
 		}
@@ -29068,7 +29063,7 @@ tr1032:
 			goto _test_eof252
 		}
 	st_case_252:
-//line plugins/parsers/influx/machine.go:29072
+//line plugins/parsers/influx/machine.go:29067
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr2
@@ -29099,7 +29094,7 @@ tr427:
 			goto _test_eof253
 		}
 	st_case_253:
-//line plugins/parsers/influx/machine.go:29103
+//line plugins/parsers/influx/machine.go:29098
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr2
@@ -29130,7 +29125,7 @@ tr430:
 			goto _test_eof254
 		}
 	st_case_254:
-//line plugins/parsers/influx/machine.go:29134
+//line plugins/parsers/influx/machine.go:29129
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr2
@@ -29161,7 +29156,7 @@ tr432:
 			goto _test_eof719
 		}
 	st_case_719:
-//line plugins/parsers/influx/machine.go:29165
+//line plugins/parsers/influx/machine.go:29160
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr2
@@ -29192,7 +29187,7 @@ tr433:
 			goto _test_eof255
 		}
 	st_case_255:
-//line plugins/parsers/influx/machine.go:29196
+//line plugins/parsers/influx/machine.go:29191
 		if ( m.data)[( m.p)] == 92 {
 			goto st720
 		}
@@ -29206,14 +29201,14 @@ tr433:
 		}
 		goto st719
 	st720:
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:242
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof720
 		}
 	st_case_720:
-//line plugins/parsers/influx/machine.go:29217
+//line plugins/parsers/influx/machine.go:29212
 		switch ( m.data)[( m.p)] {
 		case 9:
 			goto tr2
@@ -29244,7 +29239,7 @@ tr428:
 			goto _test_eof256
 		}
 	st_case_256:
-//line plugins/parsers/influx/machine.go:29248
+//line plugins/parsers/influx/machine.go:29243
 		if ( m.data)[( m.p)] == 92 {
 			goto st257
 		}
@@ -29258,14 +29253,14 @@ tr428:
 		}
 		goto st253
 	st257:
-//line plugins/parsers/influx/machine.go.rl:246
+//line plugins/parsers/influx/machine.go.rl:242
  ( m.p)--
  
 		if ( m.p)++; ( m.p) == ( m.pe) {
 			goto _test_eof257
 		}
 	st_case_257:
-//line plugins/parsers/influx/machine.go:29269
+//line plugins/parsers/influx/machine.go:29264
 		switch ( m.data)[( m.p)] {
 		case 32:
 			goto tr2
@@ -29300,7 +29295,7 @@ tr425:
 			goto _test_eof258
 		}
 	st_case_258:
-//line plugins/parsers/influx/machine.go:29304
+//line plugins/parsers/influx/machine.go:29299
 		switch {
 		case ( m.data)[( m.p)] > 10:
 			if 12 <= ( m.data)[( m.p)] && ( m.data)[( m.p)] <= 13 {
@@ -29340,7 +29335,7 @@ tr425:
 			goto _test_eof716
 		}
 	st_case_716:
-//line plugins/parsers/influx/machine.go:29344
+//line plugins/parsers/influx/machine.go:29339
 		switch ( m.data)[( m.p)] {
 		case 10:
 			goto st716
@@ -30743,14 +30738,14 @@ tr425:
 	( m.cs) = 247;
 	{( m.p)++; ( m.cs) = 0; goto _out }
 
-//line plugins/parsers/influx/machine.go:30747
+//line plugins/parsers/influx/machine.go:30742
 		}
 	}
 
 	_out: {}
 	}
 
-//line plugins/parsers/influx/machine.go.rl:405
+//line plugins/parsers/influx/machine.go.rl:398
 
 	if err != nil {
 		return err

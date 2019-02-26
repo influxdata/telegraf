@@ -177,11 +177,7 @@ ws =
 	[\t\v\f ];
 
 newline =
-	'\r'? '\n' %to(incr_newline) %to(eol);
-
-newline_incr_only =
-	'\r'? '\n' %to(incr_newline)
-	;
+	'\r'? '\n' %to(incr_newline);
 
 non_zero_digit =
 	[1-9];
@@ -226,7 +222,7 @@ fieldbool =
 	(true | false) >begin %bool;
 
 fieldstringchar =
-	[^\f\r\n\\"] | '\\' [\\"] | newline_incr_only;
+	[^\f\r\n\\"] | '\\' [\\"] | newline;
 
 fieldstring =
 	fieldstringchar* >begin %string;
@@ -263,8 +259,8 @@ measurement_start =
 measurement =
 	(measurement_start measurement_chars*) >begin %eof(name) %name;
 
-eol =
-	newline
+eol_break =
+	newline %to(eol)
 	;
 
 metric =
@@ -275,7 +271,7 @@ metric =
 	;
 
 line_with_term =
-	ws* metric ws* eol
+	ws* metric ws* eol_break
 	;
 
 line_without_term =
@@ -284,10 +280,7 @@ line_without_term =
 
 main :=
 	(line_with_term*
-	(
-		line_with_term
-      | (line_without_term?)
-    )
+	(line_with_term | line_without_term?)
     ) >found_metric
 	;
 
@@ -297,10 +290,10 @@ discard_line :=
 	(any -- newline)* newline @goto_align;
 
 commentline =
-	ws* '#' (any -- newline_incr_only)* newline_incr_only;
+	ws* '#' (any -- newline)* newline;
 
 emptyline =
-	ws* newline_incr_only;
+	ws* newline;
 
 # The align machine scans forward to the start of the next line.  This machine
 # is used to skip over whitespace and comments, keeping this logic out of the
@@ -313,7 +306,7 @@ align :=
 
 # Series is a machine for matching measurement+tagset
 series :=
-	(measurement >err(name_error) tagset eol?)
+	(measurement >err(name_error) tagset eol_break?)
 	>found_metric
 	;
 }%%
