@@ -335,7 +335,7 @@ var tests = []struct {
 				time.Unix(0, 0),
 			),
 		),
-		output: []byte("cpu value=\"x\\ny\" 0\n"),
+		output: []byte("cpu value=\"x\ny\" 0\n"),
 	},
 	{
 		name:     "need more space",
