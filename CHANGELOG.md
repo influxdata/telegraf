@@ -59,7 +59,7 @@
 - [#5304](https://github.com/influxdata/telegraf/issues/5304): Fix x509_cert input stops checking certs after first error.
 - [#5404](https://github.com/influxdata/telegraf/issues/5404): Group stackdriver requests to send one point per timeseries.
 
-## v1.9.5 [unreleased]
+## v1.9.5 [2019-02-26]
 
 #### Bugfixes
 
