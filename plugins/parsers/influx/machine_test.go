@@ -1820,7 +1820,7 @@ func TestSeriesMachine(t *testing.T) {
 					Name:  Measurement,
 					Value: []byte("cpu"),
 				},
-				Result{
+				{
 					Name: Success,
 				},
 			},
@@ -1849,7 +1849,7 @@ func TestSeriesMachine(t *testing.T) {
 					Name:  TagValue,
 					Value: []byte("y"),
 				},
-				Result{
+				{
 					Name: Success,
 				},
 			},
