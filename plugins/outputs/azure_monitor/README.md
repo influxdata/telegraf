@@ -40,6 +40,11 @@ written as a dimension on each Azure Monitor metric.
   ## The Azure Resource ID against which metric will be logged, e.g.
   ##   ex: resource_id = "/subscriptions/<subscription_id>/resourceGroups/<resource_group>/providers/Microsoft.Compute/virtualMachines/<vm_name>"
   # resource_id = ""
+  
+  ## Optionally, if in Azure US Government, China, or other sovereign
+  ## cloud environment, set the appropriate REST endpoint for receiving
+  ## metrics. (Note: region may be  unused in this context)
+  # endpoint_url = "https://monitoring.core.usgovcloudapi.net"
 ```
 
 ### Setup
@@ -98,13 +103,7 @@ following configurations:
 
 1. **Client Credentials**: Azure AD Application ID and Secret.
 
-    Set the following Telegraf configuration variables:
-
-    - `azure_tenant_id`: Specifies the Tenant to which to authenticate.
-    - `azure_client_id`: Specifies the app client ID to use.
-    - `azure_client_secret`: Specifies the app secret to use.
-
-    Or set the following environment variables:
+    Set the following environment variables:
 
     - `AZURE_TENANT_ID`: Specifies the Tenant to which to authenticate.
     - `AZURE_CLIENT_ID`: Specifies the app client ID to use.
