@@ -176,7 +176,7 @@ func TestServeHTTP(t *testing.T) {
 			}
 		}(test.status, dst)
 
-		ctx, _ := context.WithTimeout(req.Context(), pubPush.WriteTimeout.Duration)
+		ctx, cancel := context.WithTimeout(req.Context(), pubPush.WriteTimeout.Duration)
 		req = req.WithContext(ctx)
 
 		pubPush.ServeHTTP(rr, req)
@@ -187,6 +187,7 @@ func TestServeHTTP(t *testing.T) {
 		}
 
 		pubPush.cancel()
+		cancel()
 		close(dst)
 		wg.Wait()
 	}
