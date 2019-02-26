@@ -19,7 +19,7 @@ import (
 const sampleConfig = `
   ## Directory to gather stats about.
   ##   deprecated in 1.9; use the directories option
-  directory = "/var/cache/apt/archives"
+  # directory = "/var/cache/apt/archives"
 
   ## Directories to gather stats about.
   ## This accept standard unit glob matching rules, but with the addition of
