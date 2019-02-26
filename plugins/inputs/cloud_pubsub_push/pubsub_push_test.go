@@ -20,22 +20,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
-func TestStartStop(t *testing.T) {
-	pubPush := PubSubPush{
-		Path: "/",
-		sem:  make(chan struct{}, 5),
-	}
-	pubPush.ctx, pubPush.cancel = context.WithCancel(context.Background())
-
-	dst := make(chan telegraf.Metric, 5)
-	acc := agent.NewAccumulator(&testMetricMaker{}, dst)
-
-	err := pubPush.Start(acc)
-	require.NoError(t, err)
-
-	pubPush.Stop()
-}
-
 func TestServeHTTP(t *testing.T) {
 	tests := []struct {
 		name     string
