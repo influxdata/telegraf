@@ -6,7 +6,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"testing"
 )
@@ -28,8 +28,6 @@ type PrometheusClientTestContext struct {
 	Output      *prometheus_client.PrometheusClient
 	Accumulator *testutil.Accumulator
 	Client      *http.Client
-
-	*GomegaWithT
 }
 
 func TestWorksWithoutTLS(t *testing.T) {
@@ -37,47 +35,29 @@ func TestWorksWithoutTLS(t *testing.T) {
 	err := tc.Output.Connect()
 	defer tc.Output.Close()
 
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, err)
 
-	var response *http.Response
-	tc.Eventually(func() bool {
-		response, err = tc.Client.Get("http://localhost:9090/metrics")
-		return err == nil
-	}, "5s").Should(BeTrue())
+	response, err := tc.Client.Get("http://localhost:9090/metrics")
+	require.NoError(t, err)
 
-	if err != nil {
-		panic(err)
-	}
-
-	tc.Expect(response.StatusCode).To(Equal(http.StatusOK))
+	require.NoError(t, err)
+	require.Equal(t, response.StatusCode, http.StatusOK)
 }
 
 func TestWorksWithTLS(t *testing.T) {
 	tc := buildTestContext(t, []byte(configWithTLS))
 	err := tc.Output.Connect()
 	defer tc.Output.Close()
+	require.NoError(t, err)
 
-	if err != nil {
-		panic(err)
-	}
+	response, err := tc.Client.Get("https://localhost:9090/metrics")
+	require.NoError(t, err)
 
-	var response *http.Response
-	tc.Eventually(func() bool {
-		response, err = tc.Client.Get("https://localhost:9090/metrics")
-		return err == nil
-	}, "5s").Should(BeTrue())
-
-	if err != nil {
-		panic(err)
-	}
-
-	tc.Expect(response.StatusCode).To(Equal(http.StatusOK))
+	require.NoError(t, err)
+	require.Equal(t, response.StatusCode, http.StatusOK)
 
 	response, err = tc.Client.Get("http://localhost:9090/metrics")
-
-	tc.Expect(err).To(HaveOccurred())
+	require.Error(t, err)
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -86,23 +66,20 @@ func TestWorksWithTLS(t *testing.T) {
 	client := &http.Client{Transport: tr}
 	response, err = client.Get("https://localhost:9090/metrics")
 
-	tc.Expect(err).To(HaveOccurred())
+	require.Error(t, err)
 }
 
 func buildTestContext(t *testing.T, config []byte) *PrometheusClientTestContext {
 	output := prometheus_client.NewClient()
 	err := toml.Unmarshal(config, output)
-
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, err)
 
 	var (
 		httpClient *http.Client
 	)
 
 	if len(output.TLSAllowedCACerts) != 0 {
-		httpClient = buildClientWithTLS(output)
+		httpClient = buildClientWithTLS(t, output)
 	} else {
 		httpClient = buildClientWithoutTLS()
 	}
@@ -111,7 +88,6 @@ func buildTestContext(t *testing.T, config []byte) *PrometheusClientTestContext 
 		Output:      output,
 		Accumulator: &testutil.Accumulator{},
 		Client:      httpClient,
-		GomegaWithT: NewGomegaWithT(t),
 	}
 }
 
@@ -119,11 +95,10 @@ func buildClientWithoutTLS() *http.Client {
 	return &http.Client{}
 }
 
-func buildClientWithTLS(output *prometheus_client.PrometheusClient) *http.Client {
+func buildClientWithTLS(t *testing.T, output *prometheus_client.PrometheusClient) *http.Client {
 	tlsConfig, err := pki.TLSClientConfig().TLSConfig()
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, err)
+
 	transport := &http.Transport{TLSClientConfig: tlsConfig}
 	return &http.Client{Transport: transport}
 }
