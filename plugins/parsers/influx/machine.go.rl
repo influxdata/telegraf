@@ -7,7 +7,6 @@ import (
 var (
 	ErrNameParse = errors.New("expected measurement name")
 	ErrFieldParse = errors.New("expected field")
-	ErrTagFieldParse = errors.New("expected tagset or fieldset")
 	ErrTagParse = errors.New("expected tag")
 	ErrTimestampParse = errors.New("expected timestamp")
 	ErrParse = errors.New("parse error")
@@ -23,13 +22,6 @@ action begin {
 
 action name_error {
 	err = ErrNameParse
-	fhold;
-	fnext discard_line;
-	fbreak;
-}
-
-action tag_field_error {
-	err = ErrTagFieldParse
 	fhold;
 	fnext discard_line;
 	fbreak;
