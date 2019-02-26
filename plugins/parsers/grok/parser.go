@@ -86,6 +86,9 @@ type Parser struct {
 	Timezone string
 	loc      *time.Location
 
+	// DisableTimeMod will not increment the timestamp if there is a duplicate.
+	DisableTimeMod bool
+
 	// typeMap is a map of patterns -> capture name -> modifier,
 	//   ie, {
 	//          "%{TESTLOG}":
@@ -356,6 +359,10 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 
 	if len(fields) == 0 {
 		return nil, fmt.Errorf("grok: must have one or more fields")
+	}
+
+	if p.DisableTimeMod {
+		return metric.New(p.Measurement, tags, fields, timestamp)
 	}
 
 	return metric.New(p.Measurement, tags, fields, p.tsModder.tsMod(timestamp))
