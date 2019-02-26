@@ -136,6 +136,11 @@ All admin measurements will have the following tags:
 
 *Cluster Stats*
 
++ ceph_health
+  - fields:
+    - status
+    - overall_status
+
 - ceph_osdmap
   - fields:
     - epoch (float)
@@ -209,6 +214,7 @@ ceph_pool_usage,name=telegraf kb_used=0,bytes_used=0,objects=0 15506589110000000
 ceph_pgmap_state,state=undersized+peered count=30 1550658910000000000
 ceph_pgmap bytes_total=10733223936,read_op_per_sec=0,write_op_per_sec=0,num_pgs=30,data_bytes=0,bytes_avail=9654697984,read_bytes_sec=0,write_bytes_sec=0,version=0,bytes_used=1078525952 1550658910000000000
 ceph_osdmap num_up_osds=1,num_in_osds=1,full=false,nearfull=false,num_remapped_pgs=0,epoch=34,num_osds=1 1550658910000000000
+ceph_health status="HEALTH_WARN",overall_status="HEALTH_WARN" 1550658910000000000
 ```
 
 *Admin Socket Stats*
