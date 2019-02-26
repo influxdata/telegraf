@@ -259,11 +259,9 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	id := p.acc.AddTrackingMetricGroup(metrics)
-
 	ch := make(chan bool, 1)
 	p.mu.Lock()
-	p.undelivered[id] = ch
+	p.undelivered[p.acc.AddTrackingMetricGroup(metrics)] = ch
 	p.mu.Unlock()
 
 	select {
