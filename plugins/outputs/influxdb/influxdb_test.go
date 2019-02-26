@@ -16,25 +16,25 @@ import (
 
 type MockClient struct {
 	URLF            func() string
-	DatabaseF       func() string
 	WriteF          func(context.Context, []telegraf.Metric) error
-	CreateDatabaseF func(ctx context.Context) error
+	CreateDatabaseF func(ctx context.Context, database string) error
+	DatabaseF       func() string
 }
 
 func (c *MockClient) URL() string {
 	return c.URLF()
 }
 
-func (c *MockClient) Database() string {
-	return c.DatabaseF()
-}
-
 func (c *MockClient) Write(ctx context.Context, metrics []telegraf.Metric) error {
 	return c.WriteF(ctx, metrics)
 }
 
-func (c *MockClient) CreateDatabase(ctx context.Context) error {
-	return c.CreateDatabaseF(ctx)
+func (c *MockClient) CreateDatabase(ctx context.Context, database string) error {
+	return c.CreateDatabaseF(ctx, database)
+}
+
+func (c *MockClient) Database() string {
+	return c.DatabaseF()
 }
 
 func TestDeprecatedURLSupport(t *testing.T) {
@@ -58,7 +58,10 @@ func TestDefaultURL(t *testing.T) {
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			actual = config
 			return &MockClient{
-				CreateDatabaseF: func(ctx context.Context) error {
+				DatabaseF: func() string {
+					return "telegraf"
+				},
+				CreateDatabaseF: func(ctx context.Context, database string) error {
 					return nil
 				},
 			}, nil
@@ -113,7 +116,10 @@ func TestConnectHTTPConfig(t *testing.T) {
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			actual = config
 			return &MockClient{
-				CreateDatabaseF: func(ctx context.Context) error {
+				DatabaseF: func() string {
+					return "telegraf"
+				},
+				CreateDatabaseF: func(ctx context.Context, database string) error {
 					return nil
 				},
 			}, nil
@@ -145,15 +151,19 @@ func TestWriteRecreateDatabaseIfDatabaseNotFound(t *testing.T) {
 
 		CreateHTTPClientF: func(config *influxdb.HTTPConfig) (influxdb.Client, error) {
 			return &MockClient{
-				CreateDatabaseF: func(ctx context.Context) error {
+				DatabaseF: func() string {
+					return "telegraf"
+				},
+				CreateDatabaseF: func(ctx context.Context, database string) error {
 					return nil
 				},
 				WriteF: func(ctx context.Context, metrics []telegraf.Metric) error {
-					return &influxdb.APIError{
-						StatusCode:  http.StatusNotFound,
-						Title:       "404 Not Found",
-						Description: `database not found "telegraf"`,
-						Type:        influxdb.DatabaseNotFound,
+					return &influxdb.DatabaseNotFoundError{
+						APIError: influxdb.APIError{
+							StatusCode:  http.StatusNotFound,
+							Title:       "404 Not Found",
+							Description: `database not found "telegraf"`,
+						},
 					}
 				},
 				URLF: func() string {

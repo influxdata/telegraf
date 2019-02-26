@@ -34,7 +34,7 @@ type UDPConfig struct {
 	Dialer         Dialer
 }
 
-func NewUDPClient(config *UDPConfig) (*udpClient, error) {
+func NewUDPClient(config UDPConfig) (*udpClient, error) {
 	if config.URL == nil {
 		return nil, ErrMissingURL
 	}
@@ -113,7 +113,7 @@ func (c *udpClient) Write(ctx context.Context, metrics []telegraf.Metric) error 
 	return nil
 }
 
-func (c *udpClient) CreateDatabase(ctx context.Context) error {
+func (c *udpClient) CreateDatabase(ctx context.Context, database string) error {
 	return nil
 }
 
