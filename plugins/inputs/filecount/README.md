@@ -1,6 +1,6 @@
 # Filecount Input Plugin
 
-Counts files in directories that match certain criteria.
+Reports the number and total size of files in specified directories.
 
 ### Configuration:
 
@@ -8,7 +8,7 @@ Counts files in directories that match certain criteria.
 [[inputs.filecount]]
   ## Directory to gather stats about.
   ##   deprecated in 1.9; use the directories option
-  directory = "/var/cache/apt/archives"
+  # directory = "/var/cache/apt/archives"
 
   ## Directories to gather stats about.
   ## This accept standard unit glob matching rules, but with the addition of
@@ -16,13 +16,13 @@ Counts files in directories that match certain criteria.
   ##   /var/log/**    -> recursively find all directories in /var/log and count files in each directories
   ##   /var/log/*/*   -> find all directories with a parent dir in /var/log and count files in each directories
   ##   /var/log       -> count all files in /var/log and all of its subdirectories
-  directories = ["/var/cache/apt/archives"]
+  directories = ["/var/cache/apt", "/tmp"]
 
   ## Only count files that match the name pattern. Defaults to "*".
-  name = "*.deb"
+  name = "*"
 
   ## Count files in subdirectories. Defaults to true.
-  recursive = false
+  recursive = true
 
   ## Only count regular files. Defaults to true.
   regular_only = true
