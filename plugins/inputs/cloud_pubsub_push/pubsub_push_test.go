@@ -47,7 +47,6 @@ func TestServeHTTP(t *testing.T) {
 		expected string
 		fail     bool
 		full     bool
-		timeout  bool
 	}{
 		{
 			name:   "bad method get",
@@ -75,15 +74,6 @@ func TestServeHTTP(t *testing.T) {
 			maxsize: 500 * 1024 * 1024,
 			status:  http.StatusNoContent,
 			body:    strings.NewReader(`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`),
-		},
-		{
-			name:    "post valid data, timeout",
-			method:  "POST",
-			path:    "/",
-			maxsize: 500 * 1024 * 1024,
-			status:  http.StatusServiceUnavailable,
-			body:    strings.NewReader(`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`),
-			timeout: true,
 		},
 		{
 			name:    "fail write",
@@ -137,36 +127,28 @@ func TestServeHTTP(t *testing.T) {
 		},
 	}
 
-	wg := &sync.WaitGroup{}
 	for _, test := range tests {
+		wg := &sync.WaitGroup{}
 		req, err := http.NewRequest(test.method, test.path, test.body)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		rr := httptest.NewRecorder()
-		pubPush := PubSubPush{
+		pubPush := &PubSubPush{
 			Path: "/",
 			MaxBodySize: internal.Size{
 				Size: test.maxsize,
 			},
-			sem:         make(chan struct{}, 1),
-			undelivered: make(map[telegraf.TrackingID]chan bool),
+			sem:          make(chan struct{}, 1),
+			undelivered:  make(map[telegraf.TrackingID]chan bool),
+			mu:           &sync.Mutex{},
+			WriteTimeout: internal.Duration{Duration: time.Second * 1},
 		}
 
 		pubPush.ctx, pubPush.cancel = context.WithCancel(context.Background())
-		pubPush.WriteTimeout = internal.Duration{
-			Duration: time.Second * 2,
-		}
 
 		if test.full {
 			// fill buffer with fake message
 			pubPush.sem <- struct{}{}
-		}
-		if test.timeout {
-			pubPush.WriteTimeout = internal.Duration{
-				Duration: time.Second * 0,
-			}
 		}
 
 		p, _ := parsers.NewParser(&parsers.Config{
@@ -175,7 +157,7 @@ func TestServeHTTP(t *testing.T) {
 		})
 		pubPush.SetParser(p)
 
-		dst := make(chan telegraf.Metric)
+		dst := make(chan telegraf.Metric, 1)
 		ro := models.NewRunningOutput("test", &testOutput{failWrite: test.fail}, &models.OutputConfig{}, 1, 1)
 		pubPush.acc = agent.NewAccumulator(&testMetricMaker{}, dst).WithTracking(1)
 
@@ -190,19 +172,14 @@ func TestServeHTTP(t *testing.T) {
 			defer wg.Done()
 			for m := range d {
 				ro.AddMetric(m)
-				for ro.Write() != nil {
-					select {
-					case <-pubPush.ctx.Done():
-						return
-					default:
-						<-time.After(time.Millisecond * 500)
-					}
-				}
+				ro.Write()
 			}
 		}(test.status, dst)
 
-		http.TimeoutHandler(http.HandlerFunc(pubPush.ServeHTTP), pubPush.WriteTimeout.Duration, "timed out").ServeHTTP(rr, req)
+		ctx, _ := context.WithTimeout(req.Context(), pubPush.WriteTimeout.Duration)
+		req = req.WithContext(ctx)
 
+		pubPush.ServeHTTP(rr, req)
 		require.Equal(t, test.status, rr.Code, test.name)
 
 		if test.expected != "" {

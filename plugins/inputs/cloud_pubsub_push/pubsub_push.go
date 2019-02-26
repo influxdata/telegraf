@@ -3,7 +3,6 @@ package cloud_pubsub_push
 import (
 	"context"
 	"crypto/subtle"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
@@ -46,7 +45,7 @@ type PubSubPush struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	wg       *sync.WaitGroup
-	mu       sync.Mutex
+	mu       *sync.Mutex
 
 	undelivered map[telegraf.TrackingID]chan bool
 	sem         chan struct{}
@@ -155,20 +154,12 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 		TLSConfig:   tlsConf,
 	}
 
-	if tlsConf != nil {
-		p.listener, err = tls.Listen("tcp", p.ServiceAddress, tlsConf)
-	} else {
-		p.listener, err = net.Listen("tcp", p.ServiceAddress)
-	}
-	if err != nil {
-		return err
-	}
-
 	p.ctx, p.cancel = context.WithCancel(context.Background())
 	p.wg = &sync.WaitGroup{}
 	p.acc = acc.WithTracking(p.MaxUndeliveredMessages)
 	p.sem = make(chan struct{}, p.MaxUndeliveredMessages)
 	p.undelivered = make(map[telegraf.TrackingID]chan bool)
+	p.mu = &sync.Mutex{}
 
 	p.wg.Add(1)
 	go func() {
@@ -179,7 +170,11 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
-		p.server.Serve(p.listener)
+		if tlsConf != nil {
+			p.server.ListenAndServeTLS("", "")
+		} else {
+			p.server.ListenAndServe()
+		}
 	}()
 
 	return nil
@@ -189,7 +184,6 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 func (p *PubSubPush) Stop() {
 	p.cancel()
 	p.server.Shutdown(p.ctx)
-	p.listener.Close()
 	p.wg.Wait()
 }
 
@@ -204,8 +198,10 @@ func (p *PubSubPush) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 	select {
 	case <-req.Context().Done():
+		res.WriteHeader(http.StatusServiceUnavailable)
 		return
 	case <-p.ctx.Done():
+		res.WriteHeader(http.StatusServiceUnavailable)
 		return
 	case p.sem <- struct{}{}:
 		break
@@ -266,6 +262,7 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 	select {
 	case <-req.Context().Done():
+		res.WriteHeader(http.StatusServiceUnavailable)
 		return
 	case success := <-ch:
 		if success {
@@ -318,8 +315,8 @@ func (p *PubSubPush) AuthenticateIfSet(handler http.HandlerFunc, res http.Respon
 func init() {
 	inputs.Add("cloud_pubsub_push", func() telegraf.Input {
 		return &PubSubPush{
-			ServiceAddress:         ":8080",
-			Path:                   "/",
+			ServiceAddress: ":8080",
+			Path:           "/",
 			MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
 		}
 	})
