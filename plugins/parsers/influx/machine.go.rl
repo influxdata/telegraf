@@ -237,7 +237,7 @@ tagkey =
 	tagchar+ >begin %tagkey;
 
 tagvalue =
-	tagchar+ >begin %eof(tagvalue) %tagvalue;
+	tagchar+ >begin %tagvalue;
 
 tagset =
 	((',' tagkey '=' tagvalue) $err(tagset_error))*;
