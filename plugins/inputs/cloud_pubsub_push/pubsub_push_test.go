@@ -188,16 +188,14 @@ func TestServeHTTP(t *testing.T) {
 		wg.Add(1)
 		go func(status int, d chan telegraf.Metric) {
 			defer wg.Done()
-			if status == http.StatusNoContent || test.fail || test.full {
-				for m := range d {
-					ro.AddMetric(m)
-					for ro.Write() != nil {
-						select {
-						case <-pubPush.ctx.Done():
-							return
-						default:
-							<-time.After(time.Millisecond * 500)
-						}
+			for m := range d {
+				ro.AddMetric(m)
+				for ro.Write() != nil {
+					select {
+					case <-pubPush.ctx.Done():
+						return
+					default:
+						<-time.After(time.Millisecond * 500)
 					}
 				}
 			}
