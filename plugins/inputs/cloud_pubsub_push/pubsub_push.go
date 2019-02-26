@@ -2,10 +2,10 @@ package cloud_pubsub_push
 
 import (
 	"context"
+	"crypto/subtle"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -74,9 +74,11 @@ const sampleConfig = `
   ## Path to listen to.
   # path = "/"
 
-  ## maximum duration before timing out read of the request
+  ## Maximum duration before timing out read of the request
   # read_timeout = "10s"
-  ## maximum duration before timing out write of the response
+  ## Maximum duration before timing out write of the response. This should be set to a value
+  ## large enough that you can send at least 'metric_batch_size' number of messages within the
+  ## duration.
   # write_timeout = "10s"
 
   ## Maximum allowed http request body size in bytes.
@@ -147,11 +149,10 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 	}
 
 	p.server = &http.Server{
-		Addr:         p.ServiceAddress,
-		Handler:      p,
-		ReadTimeout:  p.ReadTimeout.Duration,
-		WriteTimeout: p.WriteTimeout.Duration,
-		TLSConfig:    tlsConf,
+		Addr:        p.ServiceAddress,
+		Handler:     http.TimeoutHandler(p, p.WriteTimeout.Duration, "timed out processing metric"),
+		ReadTimeout: p.ReadTimeout.Duration,
+		TLSConfig:   tlsConf,
 	}
 
 	if tlsConf != nil {
@@ -167,6 +168,7 @@ func (p *PubSubPush) Start(acc telegraf.Accumulator) error {
 	p.wg = &sync.WaitGroup{}
 	p.acc = acc.WithTracking(p.MaxUndeliveredMessages)
 	p.sem = make(chan struct{}, p.MaxUndeliveredMessages)
+	p.undelivered = make(map[telegraf.TrackingID]chan bool)
 
 	p.wg.Add(1)
 	go func() {
@@ -197,7 +199,6 @@ func (p *PubSubPush) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	} else {
 		p.AuthenticateIfSet(http.NotFound, res, req)
 	}
-	res.WriteHeader(http.StatusInternalServerError)
 }
 
 func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
@@ -205,7 +206,6 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 	case <-req.Context().Done():
 		return
 	case <-p.ctx.Done():
-		log.Printf("E! [inputs.cloud_pubsub_push] %s", p.ctx.Err())
 		return
 	case p.sem <- struct{}{}:
 		break
@@ -217,7 +217,7 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if req.Method != "POST" {
+	if req.Method != http.MethodPost {
 		res.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
@@ -260,9 +260,6 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 	}
 
 	id := p.acc.AddTrackingMetricGroup(metrics)
-	if p.undelivered == nil {
-		p.undelivered = make(map[telegraf.TrackingID]chan bool)
-	}
 
 	ch := make(chan bool, 1)
 	p.mu.Lock()
@@ -271,7 +268,6 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 
 	select {
 	case <-req.Context().Done():
-		fmt.Println("DONECONTEXT")
 		return
 	case success := <-ch:
 		if success {
@@ -279,8 +275,6 @@ func (p *PubSubPush) serveWrite(res http.ResponseWriter, req *http.Request) {
 		} else {
 			res.WriteHeader(http.StatusInternalServerError)
 		}
-	case <-time.After(p.ReadTimeout.Duration):
-		res.WriteHeader(http.StatusRequestTimeout)
 	}
 }
 
@@ -314,15 +308,13 @@ func (p *PubSubPush) receiveDelivered() {
 
 func (p *PubSubPush) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
 	if p.Token != "" {
-		reqToken := req.FormValue("token")
-		if reqToken != p.Token {
+		if subtle.ConstantTimeCompare([]byte(req.FormValue("token")), []byte(p.Token)) != 1 {
 			http.Error(res, "Unauthorized.", http.StatusUnauthorized)
 			return
 		}
-		handler(res, req)
-	} else {
-		handler(res, req)
 	}
+
+	handler(res, req)
 }
 
 func init() {

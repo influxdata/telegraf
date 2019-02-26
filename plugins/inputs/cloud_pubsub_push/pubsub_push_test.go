@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/agent"
 	"github.com/influxdata/telegraf/internal"
@@ -29,9 +31,7 @@ func TestStartStop(t *testing.T) {
 	acc := agent.NewAccumulator(&testMetricMaker{}, dst)
 
 	err := pubPush.Start(acc)
-	if err != nil {
-		t.Errorf("Failed to start - %s", err.Error())
-	}
+	require.NoError(t, err)
 
 	pubPush.Stop()
 }
@@ -46,6 +46,7 @@ func TestServeHTTP(t *testing.T) {
 		maxsize  int64
 		expected string
 		fail     bool
+		full     bool
 		timeout  bool
 	}{
 		{
@@ -80,7 +81,7 @@ func TestServeHTTP(t *testing.T) {
 			method:  "POST",
 			path:    "/",
 			maxsize: 500 * 1024 * 1024,
-			status:  http.StatusRequestTimeout,
+			status:  http.StatusServiceUnavailable,
 			body:    strings.NewReader(`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`),
 			timeout: true,
 		},
@@ -89,9 +90,18 @@ func TestServeHTTP(t *testing.T) {
 			method:  "POST",
 			path:    "/",
 			maxsize: 500 * 1024 * 1024,
-			status:  http.StatusInternalServerError,
+			status:  http.StatusServiceUnavailable,
 			body:    strings.NewReader(`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`),
 			fail:    true,
+		},
+		{
+			name:    "full buffer",
+			method:  "POST",
+			path:    "/",
+			maxsize: 500 * 1024 * 1024,
+			status:  http.StatusServiceUnavailable,
+			body:    strings.NewReader(`{"message":{"attributes":{"deviceId":"myPi","deviceNumId":"2808946627307959","deviceRegistryId":"my-registry","deviceRegistryLocation":"us-central1","projectId":"conference-demos","subFolder":""},"data":"dGVzdGluZ0dvb2dsZSxzZW5zb3I9Ym1lXzI4MCB0ZW1wX2M9MjMuOTUsaHVtaWRpdHk9NjIuODMgMTUzNjk1Mjk3NDU1MzUxMDIzMQ==","messageId":"204004313210337","message_id":"204004313210337","publishTime":"2018-09-14T19:22:54.587Z","publish_time":"2018-09-14T19:22:54.587Z"},"subscription":"projects/conference-demos/subscriptions/my-subscription"}`),
+			full:    true,
 		},
 		{
 			name:    "post invalid body",
@@ -140,20 +150,21 @@ func TestServeHTTP(t *testing.T) {
 			MaxBodySize: internal.Size{
 				Size: test.maxsize,
 			},
-			sem: make(chan struct{}, 1),
-		}
-		pubPush.ctx, pubPush.cancel = context.WithCancel(context.Background())
-		pubPush.ReadTimeout = internal.Duration{
-			Duration: time.Second * 3,
+			sem:         make(chan struct{}, 1),
+			undelivered: make(map[telegraf.TrackingID]chan bool),
 		}
 
-		if test.fail {
+		pubPush.ctx, pubPush.cancel = context.WithCancel(context.Background())
+		pubPush.WriteTimeout = internal.Duration{
+			Duration: time.Second * 2,
+		}
+
+		if test.full {
 			// fill buffer with fake message
 			pubPush.sem <- struct{}{}
-			pubPush.cancel()
 		}
 		if test.timeout {
-			pubPush.ReadTimeout = internal.Duration{
+			pubPush.WriteTimeout = internal.Duration{
 				Duration: time.Second * 0,
 			}
 		}
@@ -164,7 +175,7 @@ func TestServeHTTP(t *testing.T) {
 		})
 		pubPush.SetParser(p)
 
-		dst := make(chan telegraf.Metric, 1)
+		dst := make(chan telegraf.Metric)
 		ro := models.NewRunningOutput("test", &testOutput{failWrite: test.fail}, &models.OutputConfig{}, 1, 1)
 		pubPush.acc = agent.NewAccumulator(&testMetricMaker{}, dst).WithTracking(1)
 
@@ -177,26 +188,27 @@ func TestServeHTTP(t *testing.T) {
 		wg.Add(1)
 		go func(status int, d chan telegraf.Metric) {
 			defer wg.Done()
-			if status == http.StatusNoContent {
+			if status == http.StatusNoContent || test.fail || test.full {
 				for m := range d {
 					ro.AddMetric(m)
-					ro.Write()
+					for ro.Write() != nil {
+						select {
+						case <-pubPush.ctx.Done():
+							return
+						default:
+							<-time.After(time.Millisecond * 500)
+						}
+					}
 				}
 			}
 		}(test.status, dst)
 
-		http.HandlerFunc(pubPush.ServeHTTP).ServeHTTP(rr, req)
+		http.TimeoutHandler(http.HandlerFunc(pubPush.ServeHTTP), pubPush.WriteTimeout.Duration, "timed out").ServeHTTP(rr, req)
 
-		if status := rr.Code; status != test.status {
-			t.Errorf("%s - handler returned wrong status code: got %d want %d",
-				test.name, status, test.status)
-		}
+		require.Equal(t, test.status, rr.Code, test.name)
 
 		if test.expected != "" {
-			if rr.Body.String() != test.expected {
-				t.Errorf("%s - handler returned unexpected body: got %s want %s",
-					test.name, rr.Body.String(), test.expected)
-			}
+			require.Equal(t, test.expected, rr.Body.String(), test.name)
 		}
 
 		pubPush.cancel()

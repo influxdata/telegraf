@@ -25,9 +25,11 @@ This is a sample configuration for the plugin.
   ## Path to listen to.
   # path = "/"
 
-  ## maximum duration before timing out read of the request
+  ## Maximum duration before timing out read of the request
   # read_timeout = "10s"
-  ## maximum duration before timing out write of the response
+  ## Maximum duration before timing out write of the response. This should be set to a value
+  ## large enough that you can send at least 'metric_batch_size' number of messages within the
+  ## duration.
   # write_timeout = "10s"
 
   ## Maximum allowed http request body size in bytes.
