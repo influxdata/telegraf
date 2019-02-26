@@ -86,8 +86,8 @@ type Parser struct {
 	Timezone string
 	loc      *time.Location
 
-	// DisableTimeMod will not increment the timestamp if there is a duplicate.
-	DisableTimeMod bool
+	// UniqueTimestamp when set to "disable", timestamp will not incremented if there is a duplicate.
+	UniqueTimestamp string
 
 	// typeMap is a map of patterns -> capture name -> modifier,
 	//   ie, {
@@ -135,6 +135,10 @@ func (p *Parser) Compile() error {
 	p.g, err = grok.NewWithConfig(&grok.Config{NamedCapturesOnly: true})
 	if err != nil {
 		return err
+	}
+
+	if p.UniqueTimestamp == "" {
+		p.UniqueTimestamp = "auto"
 	}
 
 	// Give Patterns fake names so that they can be treated as named
@@ -361,7 +365,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		return nil, fmt.Errorf("grok: must have one or more fields")
 	}
 
-	if p.DisableTimeMod {
+	if p.UniqueTimestamp != "auto" {
 		return metric.New(p.Measurement, tags, fields, timestamp)
 	}
 
