@@ -210,7 +210,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 		Unsorted:             true,
 		ErrorCallback: func(osPathname string, err error) godirwalk.ErrorAction {
 			if os.IsPermission(errors.Cause(err)) {
-				log.Println("I! [inputs.filecount]", err)
+				log.Println("D! [inputs.filecount]", err)
 				return godirwalk.SkipNode
 			}
 			return godirwalk.Halt
