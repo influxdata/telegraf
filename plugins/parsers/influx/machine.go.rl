@@ -425,6 +425,11 @@ func (m *machine) Position() int {
 	return m.p
 }
 
+// LineOffset returns the byte offset of the current line.
+func (m *machine) LineOffset() int {
+	return m.sol
+}
+
 // LineNumber returns the current line number.  Lines are counted based on the
 // regular expression `\r?\n`.
 func (m *machine) LineNumber() int {
