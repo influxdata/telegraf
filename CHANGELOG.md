@@ -52,6 +52,7 @@
 - [#5472](https://github.com/influxdata/telegraf/pull/5472): Support configuring a default timezone in JSON parser.
 - [#5482](https://github.com/influxdata/telegraf/pull/5482): Add ceph_health metrics to ceph input.
 - [#5488](https://github.com/influxdata/telegraf/pull/5488): Add option to disable unique timestamp adjustment in grok parser.
+- [#5473](https://github.com/influxdata/telegraf/pull/5473): Add mutual TLS support to prometheus_client output.
 
 #### Bugfixes
 
