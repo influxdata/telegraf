@@ -151,7 +151,7 @@ type AgentConfig struct {
 func (c *Config) InputNames() []string {
 	var name []string
 	for _, input := range c.Inputs {
-		name = append(name, input.Name())
+		name = append(name, input.Config.Name)
 	}
 	return name
 }
@@ -160,7 +160,7 @@ func (c *Config) InputNames() []string {
 func (c *Config) AggregatorNames() []string {
 	var name []string
 	for _, aggregator := range c.Aggregators {
-		name = append(name, aggregator.Name())
+		name = append(name, aggregator.Config.Name)
 	}
 	return name
 }
