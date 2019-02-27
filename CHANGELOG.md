@@ -54,6 +54,8 @@
 - [#5488](https://github.com/influxdata/telegraf/pull/5488): Add option to disable unique timestamp adjustment in grok parser.
 - [#5473](https://github.com/influxdata/telegraf/pull/5473): Add mutual TLS support to prometheus_client output.
 - [#4308](https://github.com/influxdata/telegraf/pull/4308): Add additional metrics to rabbitmq input.
+- [#5388](https://github.com/influxdata/telegraf/pull/5388): Add multicast support to socket_listener input.
+- [#5490](https://github.com/influxdata/telegraf/pull/5490): Add tag based routing in influxdb/influxdb_v2 outputs.
 
 #### Bugfixes
 
