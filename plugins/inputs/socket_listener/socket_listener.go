@@ -114,7 +114,7 @@ func (ssl *streamSocketListener) read(c net.Conn) {
 		metrics, err := ssl.Parse(scnr.Bytes())
 		if err != nil {
 			ssl.AddError(fmt.Errorf("unable to parse incoming line: %s", err))
-			//TODO rate limit
+			// TODO rate limit
 			continue
 		}
 		for _, m := range metrics {
@@ -150,7 +150,7 @@ func (psl *packetSocketListener) listen() {
 		metrics, err := psl.Parse(buf[:n])
 		if err != nil {
 			psl.AddError(fmt.Errorf("unable to parse incoming packet: %s", err))
-			//TODO rate limit
+			// TODO rate limit
 			continue
 		}
 		for _, m := range metrics {
@@ -284,7 +284,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		sl.Closer = ssl
 		go ssl.listen()
 	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
-		pc, err := net.ListenPacket(protocol, addr)
+		pc, err := udpListen(protocol, addr)
 		if err != nil {
 			return err
 		}
@@ -315,6 +315,31 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 	}
 
 	return nil
+}
+
+func udpListen(network string, address string) (net.PacketConn, error) {
+	switch network {
+	case "udp", "udp4", "udp6":
+		var addr *net.UDPAddr
+		var err error
+		var ifi *net.Interface
+		if spl := strings.SplitN(address, "%", 2); len(spl) == 2 {
+			address = spl[0]
+			ifi, err = net.InterfaceByName(spl[1])
+			if err != nil {
+				return nil, err
+			}
+		}
+		addr, err = net.ResolveUDPAddr(network, address)
+		if err != nil {
+			return nil, err
+		}
+		if addr.IP.IsMulticast() {
+			return net.ListenMulticastUDP(network, ifi, addr)
+		}
+		return net.ListenUDP(network, addr)
+	}
+	return net.ListenPacket(network, address)
 }
 
 func (sl *SocketListener) Stop() {
