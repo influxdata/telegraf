@@ -110,6 +110,9 @@ you will find the https://grokdebug.herokuapp.com application quite useful!
   ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
   ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
   grok_timezone = "Canada/Eastern"
+
+  ## When grok_unique_timestamp is set to "disable", timestamp will not incremented if there is a duplicate. Default is "auto"
+  # grok_unique_timestamp = "auto"
 ```
 
 #### Timestamp Examples
