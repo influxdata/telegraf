@@ -284,7 +284,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		sl.Closer = ssl
 		go ssl.listen()
 	case "udp", "udp4", "udp6", "ip", "ip4", "ip6", "unixgram":
-    pc, err := udpListen(protocol, addr)
+		pc, err := udpListen(protocol, addr)
 		if err != nil {
 			return err
 		}
