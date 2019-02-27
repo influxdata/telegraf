@@ -68,20 +68,42 @@ For additional details reference the [RabbitMQ Management HTTP Stats](https://cd
   - queues (int, queues)
   - clustering_listeners (int, cluster nodes)
   - amqp_listeners (int, amqp nodes up)
+  - return_unroutable (int, number of unroutable messages)
+  - return_unroutable_rate (float, number of unroutable messages per second)
 
 - rabbitmq_node
   - disk_free (int, bytes)
   - disk_free_limit (int, bytes)
+  - disk_free_alarm (int, disk alarm)
   - fd_total (int, file descriptors)
   - fd_used (int, file descriptors)
   - mem_limit (int, bytes)
   - mem_used (int, bytes)
+  - mem_alarm (int, memory a)
   - proc_total (int, erlang processes)
   - proc_used (int, erlang processes)
   - run_queue (int, erlang processes)
   - sockets_total (int, sockets)
   - sockets_used (int, sockets)
   - running (int, node up)
+  - uptime (int, milliseconds)
+  - health_check_status (int, 1 or 0)
+  - mnesia_disk_tx_count (int, number of disk transaction)
+  - mnesia_ram_tx_count (int, number of ram transaction)
+  - mnesia_disk_tx_count_rate (float, number of disk transaction per second)
+  - mnesia_ram_tx_count_rate (float, number of ram transaction per second)
+  - gc_num (int, number of garbage collection)
+  - gc_bytes_reclaimed (int, bytes)
+  - gc_num_rate (float, number of garbage collection per second)
+  - gc_bytes_reclaimed_rate (float, bytes per second)
+  - io_read_avg_time (float, number of read operations)
+  - io_read_avg_time_rate (int, number of read operations per second)
+  - io_read_bytes (int, bytes)
+  - io_read_bytes_rate (float, bytes per second)
+  - io_write_avg_time (int, milliseconds)
+  - io_write_avg_time_rate (float, milliseconds per second)
+  - io_write_bytes (int, bytes)
+  - io_write_bytes_rate (float, bytes per second)
 
 - rabbitmq_queue
   - consumer_utilisation (float, percent)
@@ -109,7 +131,9 @@ For additional details reference the [RabbitMQ Management HTTP Stats](https://cd
 
 - rabbitmq_exchange
   - messages_publish_in (int, count)
+  - messages_publish_in_rate (int, messages per second)
   - messages_publish_out (int, count)
+  - messages_publish_out_rate (int, messages per second)
 
 ### Tags:
 
@@ -121,6 +145,7 @@ For additional details reference the [RabbitMQ Management HTTP Stats](https://cd
 
 - rabbitmq_node
   - node
+  - url
 
 - rabbitmq_queue
   - url
