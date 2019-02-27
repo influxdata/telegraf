@@ -111,7 +111,8 @@ you will find the https://grokdebug.herokuapp.com application quite useful!
   ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
   grok_timezone = "Canada/Eastern"
 
-  ## When grok_unique_timestamp is set to "disable", timestamp will not incremented if there is a duplicate. Default is "auto"
+  ## When set to "disable" timestamp will not incremented if there is a
+  ## duplicate.
   # grok_unique_timestamp = "auto"
 ```
 

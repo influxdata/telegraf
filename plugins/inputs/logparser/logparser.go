@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/influxdata/tail"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -28,6 +27,7 @@ type GrokConfig struct {
 	CustomPatterns     string
 	CustomPatternFiles []string
 	Timezone           string
+	UniqueTimestamp    string
 }
 
 type logEntry struct {
@@ -100,6 +100,10 @@ const sampleConfig = `
     ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
     ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
     # timezone = "Canada/Eastern"
+
+	## When set to "disable", timestamp will not incremented if there is a
+	## duplicate.
+    # unique_timestamp = "auto"
 `
 
 // SampleConfig returns the sample configuration for the plugin
@@ -144,6 +148,7 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 		GrokCustomPatterns:     l.GrokConfig.CustomPatterns,
 		GrokCustomPatternFiles: l.GrokConfig.CustomPatternFiles,
 		GrokTimezone:           l.GrokConfig.Timezone,
+		GrokUniqueTimestamp:    l.GrokConfig.UniqueTimestamp,
 		DataFormat:             "grok",
 	}
 
