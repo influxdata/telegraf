@@ -38,6 +38,10 @@ var sampleConfig = `
   ## Destination bucket to write into.
   bucket = ""
 
+  ## The value of this tag will be used to determine the bucket.  If this
+  ## tag is not set the 'bucket' option is used as the default.
+  # bucket_tag = ""
+
   ## Timeout for HTTP messages.
   # timeout = "5s"
 
@@ -77,6 +81,7 @@ type InfluxDB struct {
 	Token           string            `toml:"token"`
 	Organization    string            `toml:"organization"`
 	Bucket          string            `toml:"bucket"`
+	BucketTag       string            `toml:"bucket_tag"`
 	Timeout         internal.Duration `toml:"timeout"`
 	HTTPHeaders     map[string]string `toml:"http_headers"`
 	HTTPProxy       string            `toml:"http_proxy"`
@@ -174,6 +179,7 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.U
 		Token:           i.Token,
 		Organization:    i.Organization,
 		Bucket:          i.Bucket,
+		BucketTag:       i.BucketTag,
 		Timeout:         i.Timeout.Duration,
 		Headers:         i.HTTPHeaders,
 		Proxy:           proxy,
