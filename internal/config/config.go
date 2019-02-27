@@ -1508,6 +1508,14 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["grok_unique_timestamp"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.GrokUniqueTimestamp = str.Value
+			}
+		}
+	}
+
 	//for csv parser
 	if node, ok := tbl.Fields["csv_column_names"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
@@ -1661,6 +1669,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "grok_custom_patterns")
 	delete(tbl.Fields, "grok_custom_pattern_files")
 	delete(tbl.Fields, "grok_timezone")
+	delete(tbl.Fields, "grok_unique_timestamp")
 	delete(tbl.Fields, "csv_column_names")
 	delete(tbl.Fields, "csv_column_types")
 	delete(tbl.Fields, "csv_comment")

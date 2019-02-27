@@ -126,6 +126,7 @@ type Config struct {
 	GrokCustomPatterns     string   `toml:"grok_custom_patterns"`
 	GrokCustomPatternFiles []string `toml:"grok_custom_pattern_files"`
 	GrokTimezone           string   `toml:"grok_timezone"`
+	GrokUniqueTimestamp    string   `toml:"grok_unique_timestamp"`
 
 	//csv configuration
 	CSVColumnNames       []string `toml:"csv_column_names"`
@@ -189,7 +190,8 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokNamedPatterns,
 			config.GrokCustomPatterns,
 			config.GrokCustomPatternFiles,
-			config.GrokTimezone)
+			config.GrokTimezone,
+			config.GrokUniqueTimestamp)
 	case "csv":
 		parser, err = newCSVParser(config.MetricName,
 			config.CSVHeaderRowCount,
@@ -298,10 +300,9 @@ func newJSONParser(
 
 //Deprecated: Use NewParser to get a JSONParser object
 func newGrokParser(metricName string,
-	patterns []string,
-	nPatterns []string,
-	cPatterns string,
-	cPatternFiles []string, tZone string) (Parser, error) {
+	patterns []string, nPatterns []string,
+	cPatterns string, cPatternFiles []string,
+	tZone string, uniqueTimestamp string) (Parser, error) {
 	parser := grok.Parser{
 		Measurement:        metricName,
 		Patterns:           patterns,
@@ -309,6 +310,7 @@ func newGrokParser(metricName string,
 		CustomPatterns:     cPatterns,
 		CustomPatternFiles: cPatternFiles,
 		Timezone:           tZone,
+		UniqueTimestamp:    uniqueTimestamp,
 	}
 
 	err := parser.Compile()
