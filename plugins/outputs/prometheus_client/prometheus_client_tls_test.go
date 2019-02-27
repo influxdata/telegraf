@@ -3,12 +3,14 @@ package prometheus_client_test
 import (
 	"crypto/tls"
 	"fmt"
-	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/influxdata/toml"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"testing"
+
+	"github.com/naoina/toml"
+	"github.com/stretchr/testify/require"
+
+	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 var pki = testutil.NewPKI("../../../testutil/pki")

@@ -6,11 +6,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/naoina/toml"
+	"github.com/naoina/toml/ast"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/influxdata/toml"
-	"github.com/influxdata/toml/ast"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestJolokia2_ScalarValues(t *testing.T) {

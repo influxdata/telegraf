@@ -118,17 +118,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a74730e052a45a3fab1d310fdef2ec17ae3d6af16228421e238320846f2aaec8"
-  name = "github.com/alecthomas/template"
-  packages = [
-    ".",
-    "parse",
-  ]
-  pruneopts = ""
-  revision = "a0175ee3bccc567396460bf5acd36800cb10c49c"
-
-[[projects]]
-  branch = "master"
   digest = "1:8483994d21404c8a1d489f6be756e25bfccd3b45d65821f25695577791a08e68"
   name = "github.com/alecthomas/units"
   packages = ["."]
@@ -642,17 +631,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7fb6cc9607eaa6ef309edebc42b57f704244bd4b9ab23bff128829c4ad09b95d"
-  name = "github.com/influxdata/toml"
-  packages = [
-    ".",
-    "ast",
-  ]
-  pruneopts = ""
-  revision = "2a2e3012f7cfbef64091cc79776311e65dfa211b"
-
-[[projects]]
-  branch = "master"
   digest = "1:a0c157916be0b4de1d4565b1f094b8d746109f94968140dff40a42780fa6ccef"
   name = "github.com/influxdata/wlog"
   packages = ["."]
@@ -801,6 +779,17 @@
   pruneopts = ""
   revision = "6b638e95a32d0c1131db0e7fe83775cbea4a0d0b"
   version = "v0.1.0"
+
+[[projects]]
+  digest = "1:df66a67798b8af6094b5ccef81006b2cffa2bf98b7033304cc2cafa992447a54"
+  name = "github.com/naoina/toml"
+  packages = [
+    ".",
+    "ast",
+  ]
+  pruneopts = ""
+  revision = "e6f5723bf2a66af014955e0888881314cf294129"
+  version = "v0.1.1"
 
 [[projects]]
   digest = "1:e5ec850ce66beb0014fc40d8e64b7482172eee71d86d734d66def5e9eac16797"
@@ -952,7 +941,6 @@
   packages = [
     "expfmt",
     "internal/bitbucket.org/ww/goautoneg",
-    "log",
     "model",
   ]
   pruneopts = ""
@@ -1414,14 +1402,6 @@
   version = "v1.13.0"
 
 [[projects]]
-  digest = "1:15d017551627c8bb091bde628215b2861bed128855343fdd570c62d08871f6e1"
-  name = "gopkg.in/alecthomas/kingpin.v2"
-  packages = ["."]
-  pruneopts = ""
-  revision = "947dcec5ba9c011838740e680966fd7087a71d0d"
-  version = "v2.2.6"
-
-[[projects]]
   digest = "1:3cad99e0d1f94b8c162787c12e59d0a0b9df1ef75590eb145cdd625479091efe"
   name = "gopkg.in/asn1-ber.v1"
   packages = ["."]
@@ -1579,8 +1559,6 @@
     "github.com/influxdata/go-syslog/octetcounting",
     "github.com/influxdata/go-syslog/rfc5424",
     "github.com/influxdata/tail",
-    "github.com/influxdata/toml",
-    "github.com/influxdata/toml/ast",
     "github.com/influxdata/wlog",
     "github.com/jackc/pgx",
     "github.com/jackc/pgx/pgtype",
@@ -1592,16 +1570,18 @@
     "github.com/matttproud/golang_protobuf_extensions/pbutil",
     "github.com/miekg/dns",
     "github.com/multiplay/go-ts3",
+    "github.com/naoina/toml",
+    "github.com/naoina/toml/ast",
     "github.com/nats-io/gnatsd/server",
     "github.com/nats-io/go-nats",
     "github.com/nsqio/go-nsq",
     "github.com/openzipkin/zipkin-go-opentracing",
     "github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore",
+    "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/client_model/go",
     "github.com/prometheus/common/expfmt",
-    "github.com/prometheus/common/log",
     "github.com/satori/go.uuid",
     "github.com/shirou/gopsutil/cpu",
     "github.com/shirou/gopsutil/disk",
