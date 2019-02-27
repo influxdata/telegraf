@@ -187,7 +187,11 @@
     "private/protocol/rest",
     "private/protocol/xml/xmlutil",
     "service/cloudwatch",
+    "service/dynamodb",
+    "service/dynamodb/dynamodbattribute",
+    "service/dynamodb/dynamodbiface",
     "service/kinesis",
+    "service/kinesis/kinesisiface",
     "service/sts",
   ]
   pruneopts = ""
@@ -209,6 +213,14 @@
   pruneopts = ""
   revision = "cf455bc755fe41ac9bb2861e7a961833d9c2ecc3"
   version = "v2.1.13"
+
+[[projects]]
+  digest = "1:e5691038f8e87e7da05280095d968e50c17d624e25cca095d4e4cd947a805563"
+  name = "github.com/caio/go-tdigest"
+  packages = ["."]
+  pruneopts = ""
+  revision = "f3c8d94f65d3096ac96eda54ffcd10c0fe1477f1"
+  version = "v2.3.0"
 
 [[projects]]
   digest = "1:f619cb9b07aebe5416262cdd8b86082e8d5bdc5264cb3b615ff858df0b645f97"
@@ -557,6 +569,17 @@
   packages = ["."]
   pruneopts = ""
   revision = "e80d13ce29ede4452c43dea11e79b9bc8a15b478"
+
+[[projects]]
+  branch = "master"
+  digest = "1:c191ec4c50122cdfeedba867d25bbe2ed63ed6dd2130729220c6c0d654361ea4"
+  name = "github.com/harlow/kinesis-consumer"
+  packages = [
+    ".",
+    "checkpoint/ddb",
+  ]
+  pruneopts = ""
+  revision = "2f58b136fee036f5de256b81a8461cc724fdf9df"
 
 [[projects]]
   digest = "1:e7224669901bab4094e6d6697c136557b7177db6ceb01b7fc8b20d08f4b5aacd"
@@ -1111,15 +1134,16 @@
   version = "v0.19.0"
 
 [[projects]]
-  digest = "1:c3bdfb7e9b2a66bafbd47517a1a4e489706f75af37ad5bfb57621bf41c16b556"
+  digest = "1:4cb7eb45ed9a5129bc77c726328c130abcbaae566c1fe4d82693fae86c8c621d"
   name = "github.com/wavefronthq/wavefront-sdk-go"
   packages = [
+    "histogram",
     "internal",
     "senders",
   ]
   pruneopts = ""
-  revision = "7821ac6d8ae05fe70c6d090ebda380c64f1416e4"
-  version = "v0.9.1"
+  revision = "fa87530cd02a8ad08bd179e1c39fb319a0cc0dae"
+  version = "v0.9.2"
 
 [[projects]]
   branch = "master"
@@ -1516,6 +1540,7 @@
     "github.com/aws/aws-sdk-go/aws/credentials/stscreds",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/cloudwatch",
+    "github.com/aws/aws-sdk-go/service/dynamodb",
     "github.com/aws/aws-sdk-go/service/kinesis",
     "github.com/bsm/sarama-cluster",
     "github.com/couchbase/go-couchbase",
@@ -1541,10 +1566,13 @@
     "github.com/go-sql-driver/mysql",
     "github.com/gobwas/glob",
     "github.com/golang/protobuf/proto",
+    "github.com/golang/protobuf/ptypes/duration",
     "github.com/golang/protobuf/ptypes/empty",
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/google/go-cmp/cmp",
     "github.com/gorilla/mux",
+    "github.com/harlow/kinesis-consumer",
+    "github.com/harlow/kinesis-consumer/checkpoint/ddb",
     "github.com/hashicorp/consul/api",
     "github.com/influxdata/go-syslog",
     "github.com/influxdata/go-syslog/nontransparent",
@@ -1569,7 +1597,6 @@
     "github.com/nsqio/go-nsq",
     "github.com/openzipkin/zipkin-go-opentracing",
     "github.com/openzipkin/zipkin-go-opentracing/thrift/gen-go/zipkincore",
-    "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/client_model/go",
@@ -1593,6 +1620,7 @@
     "github.com/vmware/govmomi",
     "github.com/vmware/govmomi/object",
     "github.com/vmware/govmomi/performance",
+    "github.com/vmware/govmomi/property",
     "github.com/vmware/govmomi/session",
     "github.com/vmware/govmomi/simulator",
     "github.com/vmware/govmomi/view",
@@ -1612,8 +1640,10 @@
     "golang.org/x/sys/windows",
     "golang.org/x/sys/windows/svc",
     "golang.org/x/sys/windows/svc/mgr",
+    "google.golang.org/api/iterator",
     "google.golang.org/api/option",
     "google.golang.org/api/support/bundler",
+    "google.golang.org/genproto/googleapis/api/distribution",
     "google.golang.org/genproto/googleapis/api/metric",
     "google.golang.org/genproto/googleapis/api/monitoredres",
     "google.golang.org/genproto/googleapis/monitoring/v3",

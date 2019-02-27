@@ -248,11 +248,15 @@
 
 [[constraint]]
   name = "github.com/wavefronthq/wavefront-sdk-go"
-  version = "v0.9.1"
+  version = "^0.9.1"
 
 [[constraint]]
   name = "github.com/karrick/godirwalk"
   version = "1.7.5"
+
+[[override]]
+  name = "github.com/harlow/kinesis-consumer"
+  branch = "master"
 
 [[constraint]]
   branch = "master"

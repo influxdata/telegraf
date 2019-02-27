@@ -16,6 +16,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -56,8 +57,6 @@ type MetricFamily struct {
 
 type PrometheusClient struct {
 	Listen             string
-	TLSCert            string            `toml:"tls_cert"`
-	TLSKey             string            `toml:"tls_key"`
 	BasicUsername      string            `toml:"basic_username"`
 	BasicPassword      string            `toml:"basic_password"`
 	IPRange            []string          `toml:"ip_range"`
@@ -66,6 +65,8 @@ type PrometheusClient struct {
 	CollectorsExclude  []string          `toml:"collectors_exclude"`
 	StringAsLabel      bool              `toml:"string_as_label"`
 	ExportTimestamp    bool              `toml:"export_timestamp"`
+
+	tls.ServerConfig
 
 	server *http.Server
 
@@ -105,6 +106,10 @@ var sampleConfig = `
   ## If set, enable TLS with the given certificate.
   # tls_cert = "/etc/ssl/telegraf.crt"
   # tls_key = "/etc/ssl/telegraf.key"
+  
+  ## Set one or more allowed client CA certificate file names to
+  ## enable mutually authenticated TLS connections
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
   ## Export metric collection time.
   # export_timestamp = false
@@ -184,15 +189,20 @@ func (p *PrometheusClient) Connect() error {
 	mux.Handle(p.Path, p.auth(promhttp.HandlerFor(
 		registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})))
 
+	tlsConfig, err := p.TLSConfig()
+	if err != nil {
+		return err
+	}
 	p.server = &http.Server{
-		Addr:    p.Listen,
-		Handler: mux,
+		Addr:      p.Listen,
+		Handler:   mux,
+		TLSConfig: tlsConfig,
 	}
 
 	go func() {
 		var err error
 		if p.TLSCert != "" && p.TLSKey != "" {
-			err = p.server.ListenAndServeTLS(p.TLSCert, p.TLSKey)
+			err = p.server.ListenAndServeTLS("", "")
 		} else {
 			err = p.server.ListenAndServe()
 		}
@@ -511,7 +521,6 @@ func init() {
 		return &PrometheusClient{
 			ExpirationInterval: internal.Duration{Duration: time.Second * 60},
 			StringAsLabel:      true,
-			ExportTimestamp:    true,
 			fam:                make(map[string]*MetricFamily),
 			now:                time.Now,
 		}

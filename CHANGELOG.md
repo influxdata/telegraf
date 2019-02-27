@@ -3,10 +3,13 @@
 #### New Inputs
 
 - [cloud_pubsub](/plugins/inputs/cloud_pubsub/README.md) - Contributed by @emilymye
+- [cloud_pubsub_push](/plugins/inputs/cloud_pubsub_push/README.md) - Contributed by @influxdata
+- [kinesis_consumer](/plugins/inputs/kinesis_consumer/README.md) - Contributed by @influxdata
 - [kube_inventory](/plugins/inputs/kube_inventory/README.md) - Contributed by @influxdata
 - [neptune_apex](/plugins/inputs/neptune_apex/README.md) - Contributed by @MaxRenaud
 - [nginx_upstream_check](/plugins/inputs/nginx_upstream_check/README.md) - Contributed by @dmitryilyin
 - [multifile](/plugins/inputs/multifile/README.md) - Contributed by @martin2250
+- [stackdriver](/plugins/inputs/stackdriver/README.md) - Contributed by @WuHan0608
 
 #### New Outputs
 
@@ -43,6 +46,14 @@
 - [#5391](https://github.com/influxdata/telegraf/pull/5391): Add resource type and resource label support to stackdriver output.
 - [#5396](https://github.com/influxdata/telegraf/pull/5396): Add internal metric for line too long in influxdb_listener.
 - [#4892](https://github.com/influxdata/telegraf/pull/4892): Add option to set retain flag on messages to mqtt output.
+- [#5165](https://github.com/influxdata/telegraf/pull/5165): Add resource path based filtering to vsphere input.
+- [#5417](https://github.com/influxdata/telegraf/pull/5417): Add rcode tag and field to dns_query input.
+- [#5453](https://github.com/influxdata/telegraf/pull/5453): Support Azure Sovereign Environments with endpoint_url option.
+- [#5472](https://github.com/influxdata/telegraf/pull/5472): Support configuring a default timezone in JSON parser.
+- [#5482](https://github.com/influxdata/telegraf/pull/5482): Add ceph_health metrics to ceph input.
+- [#5488](https://github.com/influxdata/telegraf/pull/5488): Add option to disable unique timestamp adjustment in grok parser.
+- [#5473](https://github.com/influxdata/telegraf/pull/5473): Add mutual TLS support to prometheus_client output.
+- [#4308](https://github.com/influxdata/telegraf/pull/4308): Add additional metrics to rabbitmq input.
 
 #### Bugfixes
 
@@ -50,10 +61,22 @@
 - [#5320](https://github.com/influxdata/telegraf/pull/5320): Use datacenter option spelling in consul input.
 - [#5316](https://github.com/influxdata/telegraf/pull/5316): Remove auth from /ping route in influxdb_listener.
 - [#5304](https://github.com/influxdata/telegraf/issues/5304): Fix x509_cert input stops checking certs after first error.
+- [#5404](https://github.com/influxdata/telegraf/issues/5404): Group stackdriver requests to send one point per timeseries.
+- [#5449](https://github.com/influxdata/telegraf/issues/5449): Log permission error and ignore in filecount input.
+
+## v1.9.5 [2019-02-26]
+
+#### Bugfixes
+
 - [#5315](https://github.com/influxdata/telegraf/issues/5315): Skip string fields when writing to stackdriver output.
 - [#5364](https://github.com/influxdata/telegraf/issues/5364): Send metrics in ascending time order in stackdriver output.
 - [#5117](https://github.com/influxdata/telegraf/issues/5117): Use systemd in Amazon Linux 2 rpm.
 - [#4988](https://github.com/influxdata/telegraf/issues/4988): Set deadlock priority in sqlserver input.
+- [#5403](https://github.com/influxdata/telegraf/issues/5403): Remove error log when snmp6 directory does not exists with nstat input.
+- [#5437](https://github.com/influxdata/telegraf/issues/5437): Host not added when using custom arguments in ping plugin.
+- [#5438](https://github.com/influxdata/telegraf/issues/5438): Fix InfluxDB output UDP line splitting.
+- [#5456](https://github.com/influxdata/telegraf/issues/5456): Disable results by row in azuredb query.
+- [#5277](https://github.com/influxdata/telegraf/issues/5277): Add backwards compatibility fields in ceph usage and pool stats.
 
 ## v1.9.4 [2019-02-05]
 
