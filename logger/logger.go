@@ -50,16 +50,10 @@ func SetupLogging(debug, quiet bool, logfile string) {
 
 	var oFile *os.File
 	if logfile != "" {
-		if _, err := os.Stat(logfile); os.IsNotExist(err) {
-			if oFile, err = os.Create(logfile); err != nil {
-				log.Printf("E! Unable to create %s (%s), using stderr", logfile, err)
-				oFile = os.Stderr
-			}
-		} else {
-			if oFile, err = os.OpenFile(logfile, os.O_APPEND|os.O_WRONLY, os.ModeAppend); err != nil {
-				log.Printf("E! Unable to append to %s (%s), using stderr", logfile, err)
-				oFile = os.Stderr
-			}
+		var err error
+		if oFile, err = os.OpenFile(logfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend|0644); err != nil {
+			log.Printf("E! Unable to open %s (%s), using stderr", logfile, err)
+			oFile = os.Stderr
 		}
 	} else {
 		oFile = os.Stderr
