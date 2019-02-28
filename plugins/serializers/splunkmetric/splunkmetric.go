@@ -55,12 +55,13 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 		 ** All other index fields become dimensions.
 	*/
 	type HECTimeSeries struct {
-		Time   float64                `json:"time"`
-		Event  string                 `json:"event"`
-		Host   string                 `json:"host,omitempty"`
-		Index  string                 `json:"index,omitempty"`
-		Source string                 `json:"source,omitempty"`
-		Fields map[string]interface{} `json:"fields"`
+		Time       float64                `json:"time"`
+		Event      string                 `json:"event"`
+		Host       string                 `json:"host,omitempty"`
+		Index      string                 `json:"index,omitempty"`
+		Source     string                 `json:"source,omitempty"`
+		SourceType string                 `json:"sourcetype,omitempty"`
+		Fields     map[string]interface{} `json:"fields"`
 	}
 
 	dataGroup := HECTimeSeries{}
@@ -86,12 +87,24 @@ func (s *serializer) createObject(metric telegraf.Metric) (metricGroup []byte, e
 
 		// Break tags out into key(n)=value(t) pairs
 		for n, t := range metric.Tags() {
-			if n == "host" {
+			if n == "splunkmetric_host" {
 				dataGroup.Host = t
-			} else if n == "index" {
+			} else if n == "host" {
+				// Use the default host if available, will be overridden if splunk_source is specified
+				if dataGroup.Host == "" {
+					dataGroup.Host = t
+				}
+			} else if n == "splunkmetric_index" {
 				dataGroup.Index = t
-			} else if n == "source" {
+			} else if n == "splunkmetric_source" {
 				dataGroup.Source = t
+			} else if n == "source" {
+				// Use the default source if available, will be overridden if splunk_source is specified
+				if dataGroup.Source == "" {
+					dataGroup.Source = t
+				}
+			} else if n == "splunkmetric_sourcetype" {
+				dataGroup.SourceType = t
 			} else {
 				dataGroup.Fields[n] = t
 			}
