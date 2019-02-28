@@ -80,6 +80,8 @@ The following metadata will be included in the JSON payload and can be overridde
 * sourcetype
 
 Here is an example of the metadata that will be pre-pended to the metric data.
+
+```javascript
 {  
    "time":1551372240,
    "event":"metric",
@@ -89,6 +91,7 @@ Here is an example of the metadata that will be pre-pended to the metric data.
    "sourcetype":"host:cpu",
    "fields":{  .....................}
  }
+```
 
 You can either use `[global_tags]` or using a more advanced configuration as documented [here](https://github.com/influxdata/telegraf/blob/master/docs/CONFIGURATION.md). These fields are only applied if 'splunkmetric_hec_routing = true'.
 
