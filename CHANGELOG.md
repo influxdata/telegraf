@@ -65,6 +65,7 @@
 - [#5304](https://github.com/influxdata/telegraf/issues/5304): Fix x509_cert input stops checking certs after first error.
 - [#5404](https://github.com/influxdata/telegraf/issues/5404): Group stackdriver requests to send one point per timeseries.
 - [#5449](https://github.com/influxdata/telegraf/issues/5449): Log permission error and ignore in filecount input.
+- [#5497](https://github.com/influxdata/telegraf/pull/5497): Create log file in append mode.
 
 ## v1.9.5 [2019-02-26]
 
