@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/naoina/toml"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/toml"
 )
 
 var pki = testutil.NewPKI("../../../testutil/pki")

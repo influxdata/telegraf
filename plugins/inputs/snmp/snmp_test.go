@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/naoina/toml"
 	"github.com/soniah/gosnmp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/toml"
 )
 
 type testSNMPConnection struct {

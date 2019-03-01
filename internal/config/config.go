@@ -18,9 +18,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/naoina/toml"
-	"github.com/naoina/toml/ast"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/models"
@@ -30,6 +27,8 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/processors"
 	"github.com/influxdata/telegraf/plugins/serializers"
+	"github.com/influxdata/toml"
+	"github.com/influxdata/toml/ast"
 )
 
 var (

@@ -207,13 +207,19 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 	// assert.Equal(t, "Error parsing ./testdata/wrong_field_type.toml, line 4: http_listener_v2.HTTPListenerV2.Port: `string' type is not assignable to `int' type", err.Error())
 	assert.Equal(t, "Error parsing ./testdata/wrong_field_type.toml, line 4: (http_listener_v2.HTTPListenerV2.Port) cannot unmarshal TOML string into int", err.Error())
 
+	c = NewConfig()
+	err = c.LoadConfig("./testdata/wrong_field_type2.toml")
+	require.Error(t, err, "invalid field type2")
+	// assert.Equal(t, "Error parsing ./testdata/wrong_field_type.toml, line 4: http_listener_v2.HTTPListenerV2.Port: `string' type is not assignable to `int' type", err.Error())
+	assert.Equal(t, "Error parsing ./testdata/wrong_field_type2.toml, line 2: (http_listener_v2.HTTPListenerV2.Methods) cannot unmarshal TOML string into []string", err.Error())
+
 	// #4098
 	c = NewConfig()
 	err = c.LoadConfig("./testdata/inline_table.toml")
 	assert.NoError(t, err)
-	require.Equal(t, 1, len(c.Outputs))
+	require.Equal(t, 2, len(c.Outputs))
 
-	outputHTTP, ok := c.Outputs[0].Output.(*httpOut.HTTP)
+	outputHTTP, ok := c.Outputs[1].Output.(*httpOut.HTTP)
 	assert.Equal(t, true, ok)
 	assert.Equal(t, map[string]string{"Authorization": "Token $TOKEN", "Content-Type": "application/json"}, outputHTTP.Headers)
 	assert.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)

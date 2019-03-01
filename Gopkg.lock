@@ -630,6 +630,17 @@
   revision = "c43482518d410361b6c383d7aebce33d0471d7bc"
 
 [[projects]]
+  branch = "telegraf"
+  digest = "1:3d75726537c79af84f496eec535121f1e356679ea923c9f9675ada42a4c25de9"
+  name = "github.com/influxdata/toml"
+  packages = [
+    ".",
+    "ast",
+  ]
+  pruneopts = ""
+  revision = "c55dff9bbf54d8d6bf07f64058a12d38ef8451f3"
+
+[[projects]]
   branch = "master"
   digest = "1:a0c157916be0b4de1d4565b1f094b8d746109f94968140dff40a42780fa6ccef"
   name = "github.com/influxdata/wlog"
@@ -784,10 +795,7 @@
   branch = "master"
   digest = "1:1c96351a94bb68711cd7790e64cffa35d11da796c052aca1fe2b83bda856ef44"
   name = "github.com/naoina/toml"
-  packages = [
-    ".",
-    "ast",
-  ]
+  packages = ["ast"]
   pruneopts = ""
   revision = "9fafd69674167c06933b1787ae235618431ce87f"
 
@@ -1559,6 +1567,8 @@
     "github.com/influxdata/go-syslog/octetcounting",
     "github.com/influxdata/go-syslog/rfc5424",
     "github.com/influxdata/tail",
+    "github.com/influxdata/toml",
+    "github.com/influxdata/toml/ast",
     "github.com/influxdata/wlog",
     "github.com/jackc/pgx",
     "github.com/jackc/pgx/pgtype",
@@ -1570,8 +1580,6 @@
     "github.com/matttproud/golang_protobuf_extensions/pbutil",
     "github.com/miekg/dns",
     "github.com/multiplay/go-ts3",
-    "github.com/naoina/toml",
-    "github.com/naoina/toml/ast",
     "github.com/nats-io/gnatsd/server",
     "github.com/nats-io/go-nats",
     "github.com/nsqio/go-nsq",
