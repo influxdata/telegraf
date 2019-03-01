@@ -781,15 +781,15 @@
   version = "v0.1.0"
 
 [[projects]]
-  digest = "1:df66a67798b8af6094b5ccef81006b2cffa2bf98b7033304cc2cafa992447a54"
+  branch = "master"
+  digest = "1:1c96351a94bb68711cd7790e64cffa35d11da796c052aca1fe2b83bda856ef44"
   name = "github.com/naoina/toml"
   packages = [
     ".",
     "ast",
   ]
   pruneopts = ""
-  revision = "e6f5723bf2a66af014955e0888881314cf294129"
-  version = "v0.1.1"
+  revision = "9fafd69674167c06933b1787ae235618431ce87f"
 
 [[projects]]
   digest = "1:e5ec850ce66beb0014fc40d8e64b7482172eee71d86d734d66def5e9eac16797"

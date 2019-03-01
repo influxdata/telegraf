@@ -5,14 +5,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/models"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/exec"
+	"github.com/influxdata/telegraf/plugins/inputs/http_listener_v2"
 	"github.com/influxdata/telegraf/plugins/inputs/memcached"
 	"github.com/influxdata/telegraf/plugins/inputs/procstat"
+	httpOut "github.com/influxdata/telegraf/plugins/outputs/http"
 	"github.com/influxdata/telegraf/plugins/parsers"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
@@ -176,4 +180,52 @@ func TestConfig_LoadDirectory(t *testing.T) {
 		"Merged Testdata did not produce a correct procstat struct.")
 	assert.Equal(t, pConfig, c.Inputs[3].Config,
 		"Merged Testdata did not produce correct procstat metadata.")
+}
+
+func TestConfig_LoadSpecialTypes(t *testing.T) {
+	c := NewConfig()
+	err := c.LoadConfig("./testdata/special_types.toml")
+	assert.NoError(t, err)
+	require.Equal(t, 1, len(c.Inputs))
+
+	inputHTTPListener, ok := c.Inputs[0].Input.(*http_listener_v2.HTTPListenerV2)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, internal.Duration{Duration: time.Second}, inputHTTPListener.WriteTimeout)
+	assert.Equal(t, internal.Size{Size: 1024 * 1024}, inputHTTPListener.MaxBodySize)
+	assert.Equal(t, "/path/to/my/cert\n", inputHTTPListener.TLSCert)
+
+	c = NewConfig()
+	err = c.LoadConfig("./testdata/invalid_field.toml")
+	require.Error(t, err, "invalid field name")
+	// commented out asserts are differences in error output from influxdata/toml and naoina/toml
+	// assert.Equal(t, "Error parsing ./testdata/invalid_field.toml, line 2: field corresponding to `not_a_field' is not defined in `*http_listener_v2.HTTPListenerV2'", err.Error())
+	assert.Equal(t, "Error parsing ./testdata/invalid_field.toml, line 2: field corresponding to `not_a_field' is not defined in http_listener_v2.HTTPListenerV2", err.Error())
+
+	c = NewConfig()
+	err = c.LoadConfig("./testdata/wrong_field_type.toml")
+	require.Error(t, err, "invalid field type")
+	// assert.Equal(t, "Error parsing ./testdata/wrong_field_type.toml, line 4: http_listener_v2.HTTPListenerV2.Port: `string' type is not assignable to `int' type", err.Error())
+	assert.Equal(t, "Error parsing ./testdata/wrong_field_type.toml, line 4: (http_listener_v2.HTTPListenerV2.Port) cannot unmarshal TOML string into int", err.Error())
+
+	// #4098
+	c = NewConfig()
+	err = c.LoadConfig("./testdata/inline_table.toml")
+	assert.NoError(t, err)
+	require.Equal(t, 1, len(c.Outputs))
+
+	outputHTTP, ok := c.Outputs[0].Output.(*httpOut.HTTP)
+	assert.Equal(t, true, ok)
+	assert.Equal(t, map[string]string{"Authorization": "Token $TOKEN", "Content-Type": "application/json"}, outputHTTP.Headers)
+	assert.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)
+
+	// #3444 & #3642
+	// c = NewConfig()
+	// err = c.LoadConfig("./testdata/non_slice_slice.toml")
+	// assert.NoError(t, err)
+	// require.Equal(t, 1, len(c.Outputs))
+
+	// outputHTTP, ok = c.Outputs[0].Output.(*httpOut.HTTP)
+	// assert.Equal(t, true, ok)
+	// assert.Equal(t, map[string]string{"Authorization": "Token $TOKEN", "Content-Type": "application/json"}, outputHTTP.Headers)
+	// assert.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)
 }

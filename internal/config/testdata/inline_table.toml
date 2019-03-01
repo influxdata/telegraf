@@ -1,0 +1,7 @@
+[[outputs.http]]
+    method = "POST"
+    data_format = "json"
+    url = "http://localhost:1234/"
+    headers = { Authorization = "Token $TOKEN",Content-Type = "application/json" }
+    namepass = ["storage_usage_bytes"]
+    taginclude = ["org_id"]

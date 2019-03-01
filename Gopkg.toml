@@ -79,10 +79,6 @@
   branch = "master"
 
 [[constraint]]
-  name = "github.com/influxdata/toml"
-  branch = "master"
-
-[[constraint]]
   name = "github.com/influxdata/wlog"
   branch = "master"
 
@@ -113,6 +109,10 @@
 [[constraint]]
   name = "github.com/multiplay/go-ts3"
   version = "1.0.0"
+
+[[constraint]]
+  name = "github.com/naoina/toml"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/nats-io/gnatsd"

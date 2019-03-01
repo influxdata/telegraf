@@ -1,0 +1,4 @@
+[[inputs.http_listener_v2]]
+  write_timeout = "1s"
+  max_body_size = 1024 # valid
+  port = "80"
