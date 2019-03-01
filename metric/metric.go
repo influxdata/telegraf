@@ -62,6 +62,28 @@ func New(
 	return m, nil
 }
 
+// FromMetric returns a deep copy of the metric with any tracking information
+// removed.
+func FromMetric(other telegraf.Metric) telegraf.Metric {
+	m := &metric{
+		name:      other.Name(),
+		tags:      make([]*telegraf.Tag, len(other.TagList())),
+		fields:    make([]*telegraf.Field, len(other.FieldList())),
+		tm:        other.Time(),
+		tp:        other.Type(),
+		aggregate: other.IsAggregate(),
+	}
+
+	for i, tag := range other.TagList() {
+		m.tags[i] = &telegraf.Tag{Key: tag.Key, Value: tag.Value}
+	}
+
+	for i, field := range other.FieldList() {
+		m.fields[i] = &telegraf.Field{Key: field.Key, Value: field.Value}
+	}
+	return m
+}
+
 func (m *metric) String() string {
 	return fmt.Sprintf("%s %v %v %d", m.name, m.Tags(), m.Fields(), m.tm.UnixNano())
 }
