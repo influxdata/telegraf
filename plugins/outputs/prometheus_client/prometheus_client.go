@@ -176,7 +176,10 @@ func (p *PrometheusClient) Connect() error {
 		}
 	}
 
-	registry.Register(p)
+	err := registry.Register(p)
+	if err != nil {
+		return err
+	}
 
 	if p.Listen == "" {
 		p.Listen = "localhost:9273"
@@ -301,6 +304,7 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 				log.Printf("E! Error creating prometheus metric, "+
 					"key: %s, labels: %v,\nerr: %s\n",
 					name, labels, err.Error())
+				continue
 			}
 
 			if p.ExportTimestamp {
