@@ -3,6 +3,7 @@ package prometheus_client
 import (
 	"context"
 	"crypto/subtle"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -16,7 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -66,7 +67,7 @@ type PrometheusClient struct {
 	StringAsLabel      bool              `toml:"string_as_label"`
 	ExportTimestamp    bool              `toml:"export_timestamp"`
 
-	tls.ServerConfig
+	tlsint.ServerConfig
 
 	server *http.Server
 
@@ -199,13 +200,18 @@ func (p *PrometheusClient) Connect() error {
 		TLSConfig: tlsConfig,
 	}
 
+	var listener net.Listener
+	if tlsConfig != nil {
+		listener, err = tls.Listen("tcp", p.Listen, tlsConfig)
+	} else {
+		listener, err = net.Listen("tcp", p.Listen)
+	}
+	if err != nil {
+		return err
+	}
+
 	go func() {
-		var err error
-		if p.TLSCert != "" && p.TLSKey != "" {
-			err = p.server.ListenAndServeTLS("", "")
-		} else {
-			err = p.server.ListenAndServe()
-		}
+		err := p.server.Serve(listener)
 		if err != nil && err != http.ErrServerClosed {
 			log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
 				err.Error())
