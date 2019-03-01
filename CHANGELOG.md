@@ -66,6 +66,7 @@
 - [#5404](https://github.com/influxdata/telegraf/issues/5404): Group stackdriver requests to send one point per timeseries.
 - [#5449](https://github.com/influxdata/telegraf/issues/5449): Log permission error and ignore in filecount input.
 - [#5497](https://github.com/influxdata/telegraf/pull/5497): Create log file in append mode.
+- [#5325](https://github.com/influxdata/telegraf/issues/5325): Ignore tracking for metrics added to aggregator.
 
 ## v1.9.5 [2019-02-26]
 
