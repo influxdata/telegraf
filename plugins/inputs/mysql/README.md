@@ -58,6 +58,9 @@ This plugin gathers the statistic data from MySQL server
   ## gather metrics from SHOW SLAVE STATUS command output
   gather_slave_status                       = true
   #
+  ## gather metrics from all channels from SHOW SLAVE STATUS command output
+  gather_all_slave_channels                 = false
+  #
   ## gather metrics from SHOW BINARY LOGS command output
   gather_binary_logs                        = false
   #
@@ -177,7 +180,7 @@ measurement name.
 * Slave status - metrics from `SHOW SLAVE STATUS` the metrics are gathered when
 the single-source replication is on. If the multi-source replication is set,
 then everything works differently, this metric does not work with multi-source
-replication.
+replication, unless you set `gather_all_slave_channels = true`
     * slave_[column name]()
 * Binary logs - all metrics including size and count of all binary files.
 Requires to be turned on in configuration.
