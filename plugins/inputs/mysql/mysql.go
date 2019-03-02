@@ -28,6 +28,7 @@ type Mysql struct {
 	GatherInfoSchemaAutoInc             bool     `toml:"gather_info_schema_auto_inc"`
 	GatherInnoDBMetrics                 bool     `toml:"gather_innodb_metrics"`
 	GatherSlaveStatus                   bool     `toml:"gather_slave_status"`
+	GatherAllSlaveChannels              bool     `toml:"gather_all_slave_channels"`
 	GatherBinaryLogs                    bool     `toml:"gather_binary_logs"`
 	GatherTableIOWaits                  bool     `toml:"gather_table_io_waits"`
 	GatherTableLockWaits                bool     `toml:"gather_table_lock_waits"`
@@ -90,6 +91,9 @@ var sampleConfig = `
   #
   ## gather metrics from SHOW SLAVE STATUS command output
   gather_slave_status                       = true
+  #
+  ## gather metrics from all channels from SHOW SLAVE STATUS command output
+  gather_all_slave_channels                 = false
   #
   ## gather metrics from SHOW BINARY LOGS command output
   gather_binary_logs                        = false
@@ -202,10 +206,10 @@ var (
 		"deleting":                  uint32(0),
 		"executing":                 uint32(0),
 		"execution of init_command": uint32(0),
-		"end":                       uint32(0),
-		"freeing items":             uint32(0),
-		"flushing tables":           uint32(0),
-		"fulltext initialization":   uint32(0),
+		"end":                     uint32(0),
+		"freeing items":           uint32(0),
+		"flushing tables":         uint32(0),
+		"fulltext initialization": uint32(0),
 		"idle":                      uint32(0),
 		"init":                      uint32(0),
 		"killed":                    uint32(0),
@@ -241,8 +245,8 @@ var (
 	}
 	// plaintext statuses
 	stateStatusMappings = map[string]string{
-		"user sleep":     "idle",
-		"creating index": "altering table",
+		"user sleep":                               "idle",
+		"creating index":                           "altering table",
 		"committing alter table to storage engine": "altering table",
 		"discard or import tablespace":             "altering table",
 		"rename":                                   "altering table",
@@ -457,7 +461,7 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 	}
 
 	if m.GatherSlaveStatus {
-		err = m.gatherSlaveStatuses(db, serv, acc)
+		err = m.gatherSlaveStatuses(db, serv, acc, m.GatherAllSlaveChannels)
 		if err != nil {
 			return err
 		}
@@ -575,7 +579,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 // When the server is slave, then it returns only one row.
 // If the multi-source replication is set, then everything works differently
 // This code does not work with multi-source replication.
-func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
+func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumulator, gatherAllChannels bool) error {
 	// run query
 	rows, err := db.Query(slaveStatusQuery)
 	if err != nil {
@@ -588,9 +592,11 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 	tags := map[string]string{"server": servtag}
 	fields := make(map[string]interface{})
 
-	// to save the column names as a field key
-	// scanning keys and values separately
-	if rows.Next() {
+	// for each channel record
+	for rows.Next() != false {
+		// to save the column names as a field key
+		// scanning keys and values separately
+
 		// get columns names, and create an array with its length
 		cols, err := rows.Columns()
 		if err != nil {
@@ -609,11 +615,24 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 			if m.MetricVersion >= 2 {
 				col = strings.ToLower(col)
 			}
-			if value, ok := m.parseValue(*vals[i].(*sql.RawBytes)); ok {
+
+			if gatherAllChannels && strings.ToLower(col) == "channel_name" {
+				// Since the default channel name is empty, we need this block
+				channelName := "default"
+				if len(*vals[i].(*sql.RawBytes)) > 0 {
+					channelName = string(*vals[i].(*sql.RawBytes))
+				}
+				tags["channel"] = channelName
+				acc.AddError(fmt.Errorf("DEBUG! %s = (%s)", col, channelName))
+			} else if value, ok := m.parseValue(*vals[i].(*sql.RawBytes)); ok {
 				fields["slave_"+col] = value
 			}
 		}
 		acc.AddFields("mysql", fields, tags)
+
+		if !gatherAllChannels {
+			break
+		}
 	}
 
 	return nil
