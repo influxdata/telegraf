@@ -336,7 +336,7 @@ func toInteger(v interface{}) (int64, bool) {
 		} else if value > float64(math.MaxInt64) {
 			return math.MaxInt64, true
 		} else {
-			return int64(value), true
+			return int64(math.Round(value)), true
 		}
 	case bool:
 		if value {
@@ -345,8 +345,11 @@ func toInteger(v interface{}) (int64, bool) {
 			return 0, true
 		}
 	case string:
-		result, err := strconv.ParseInt(value, 10, 64)
-		return result, err == nil
+		result, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return 0, false
+		}
+		return toInteger(result)
 	}
 	return 0, false
 }
@@ -367,7 +370,7 @@ func toUnsigned(v interface{}) (uint64, bool) {
 		} else if value > float64(math.MaxUint64) {
 			return math.MaxUint64, true
 		} else {
-			return uint64(value), true
+			return uint64(math.Round(value)), true
 		}
 	case bool:
 		if value {
@@ -376,8 +379,11 @@ func toUnsigned(v interface{}) (uint64, bool) {
 			return 0, true
 		}
 	case string:
-		result, err := strconv.ParseUint(value, 10, 64)
-		return result, err == nil
+		result, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return 0, false
+		}
+		return toUnsigned(result)
 	}
 	return 0, false
 }
