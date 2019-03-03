@@ -33,7 +33,7 @@ func expectCpuAsFields(m *testutil.Accumulator, t *testing.T, measurement string
 
 func setup(t *testing.T, irqString string, cpuAsTags bool) (*testutil.Accumulator, []IRQ) {
 	f := bytes.NewBufferString(irqString)
-	irqs, err := parseInterrupts(f)
+	irqs, err := parseInterrupts(f, false)
 	require.Equal(t, nil, err)
 	require.NotEqual(t, 0, len(irqs))
 
@@ -153,4 +153,25 @@ func TestCpuAsFieldsHwIrqs(t *testing.T) {
 	for _, irq := range hwIrqsExpectedArgs {
 		expectCpuAsFields(acc, t, "interrupts", irq)
 	}
+}
+
+// =====================================================================================
+//	spurious interrupts
+//
+// Note: the spurious interrupt ID is gathered from /proc/interrupts as part of the
+// hardware interrupts, so its test is not recreated here.
+// =====================================================================================
+
+const spuriousIrqsString = `
+count 12345
+unhandled 89
+last_unhandled 6677
+`
+
+func TestSpuriousParser(t *testing.T) {
+	f := bytes.NewBufferString(spuriousIrqsString)
+	hasSpurious, count, unhandled := parseSpurious(f)
+	require.True(t, hasSpurious, "spurious data found")
+	require.Equal(t, uint64(12345), count, "incorrect parsed count")
+	require.Equal(t, uint64(89), unhandled, "incorrect parsed unhandled")
 }
