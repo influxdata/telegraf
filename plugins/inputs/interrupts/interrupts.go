@@ -203,7 +203,7 @@ func reportMetrics(measurement string, irqs []IRQ, acc telegraf.Accumulator, cpu
 	}
 }
 
-func reportSpuriousMetrics(irqs []IRQ, acc telegraf.Accumulator, ) {
+func reportSpuriousMetrics(irqs []IRQ, acc telegraf.Accumulator) {
 	for _, irq := range irqs {
 		if !irq.HasSpurious {
 			continue
