@@ -336,7 +336,7 @@ func toInteger(v interface{}) (int64, bool) {
 		} else if value > float64(math.MaxInt64) {
 			return math.MaxInt64, true
 		} else {
-			return int64(math.Round(value)), true
+			return int64(Round(value)), true
 		}
 	case bool:
 		if value {
@@ -370,7 +370,7 @@ func toUnsigned(v interface{}) (uint64, bool) {
 		} else if value > float64(math.MaxUint64) {
 			return math.MaxUint64, true
 		} else {
-			return uint64(math.Round(value)), true
+			return uint64(Round(value)), true
 		}
 	case bool:
 		if value {
@@ -423,6 +423,16 @@ func toString(v interface{}) (string, bool) {
 		return value, true
 	}
 	return "", false
+}
+
+// math.Round was not added until Go 1.10, can be removed when support for Go
+// 1.9 is dropped.
+func Round(x float64) float64 {
+	t := math.Trunc(x)
+	if math.Abs(x-t) >= 0.5 {
+		return t + math.Copysign(1, x)
+	}
+	return t
 }
 
 func logPrintf(format string, v ...interface{}) {
