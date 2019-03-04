@@ -55,7 +55,7 @@ type Statsd struct {
 
 	// Percentiles specifies the percentiles that will be calculated for timing
 	// and histogram stats.
-	Percentiles     []int
+	Percentiles     []float64
 	PercentileLimit int
 
 	DeleteGauges   bool
@@ -206,7 +206,7 @@ const sampleConfig = `
   delete_timings = true
 
   ## Percentiles to calculate for timing & histogram stats
-  percentiles = [90]
+  percentiles = [90.0]
 
   ## separator to use between elements of a statsd metric
   metric_separator = "_"
