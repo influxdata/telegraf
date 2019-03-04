@@ -34,8 +34,9 @@
   ## Reset timings & histograms every interval (default=true)
   delete_timings = true
 
-  ## Percentiles to calculate for timing & histogram stats
-  percentiles = [90]
+  ## Percentiles to calculate for timing & histogram stats.
+  ## These always have to be passed as floating-point numbers.
+  percentiles = [90.0]
 
   ## separator to use between elements of a statsd metric
   metric_separator = "_"
