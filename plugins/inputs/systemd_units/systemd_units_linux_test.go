@@ -1,4 +1,4 @@
-package services
+package systemd_units
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 )
 
-func TestServices(t *testing.T) {
+func TestSystemdUnits(t *testing.T) {
 	tests := []struct {
 		name   string
 		line   string
@@ -24,8 +24,9 @@ func TestServices(t *testing.T) {
 			line: "example.service                loaded active running example service description",
 			tags: map[string]string{"name": "example.service"},
 			fields: map[string]interface{}{
-				"state":  "active/running",
-				"status": 0,
+				"load":   0,
+				"active": 0,
+				"sub":    0,
 			},
 		},
 		{
@@ -33,8 +34,9 @@ func TestServices(t *testing.T) {
 			line: "example.service                loaded active exited  example service description",
 			tags: map[string]string{"name": "example.service"},
 			fields: map[string]interface{}{
-				"state":  "active/exited",
-				"status": 0,
+				"load":   0,
+				"active": 0,
+				"sub":    4,
 			},
 		},
 		{
@@ -42,8 +44,9 @@ func TestServices(t *testing.T) {
 			line: "example.service                loaded failed failed  example service description",
 			tags: map[string]string{"name": "example.service"},
 			fields: map[string]interface{}{
-				"state":  "failed/failed",
-				"status": 2,
+				"load":   0,
+				"active": 3,
+				"sub":    12,
 			},
 		},
 		{
@@ -51,8 +54,9 @@ func TestServices(t *testing.T) {
 			line: "example.service                not-found inactive dead  example service description",
 			tags: map[string]string{"name": "example.service"},
 			fields: map[string]interface{}{
-				"state":  "inactive/dead",
-				"status": 0,
+				"load":   2,
+				"active": 2,
+				"sub":    1,
 			},
 		},
 		{
@@ -60,8 +64,9 @@ func TestServices(t *testing.T) {
 			line: "example.service                unknown unknown unknown  example service description",
 			tags: map[string]string{"name": "example.service"},
 			fields: map[string]interface{}{
-				"state":  "unknown/unknown",
-				"status": 3,
+				"load":   -1,
+				"active": -1,
+				"sub":    -1,
 			},
 		},
 		{
@@ -73,13 +78,13 @@ func TestServices(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			services := &Services{
-				systemctl: func(Timeout internal.Duration) (*bytes.Buffer, error) {
+			systemd_units := &SystemdUnits{
+				systemctl: func(Timeout internal.Duration, UnitType string) (*bytes.Buffer, error) {
 					return bytes.NewBufferString(tt.line), nil
 				},
 			}
 			acc := new(testutil.Accumulator)
-			err := acc.GatherError(services.Gather)
+			err := acc.GatherError(systemd_units.Gather)
 			if !reflect.DeepEqual(tt.err, err) {
 				t.Errorf("%s: expected error '%#v' got '%#v'", tt.name, tt.err, err)
 			}
