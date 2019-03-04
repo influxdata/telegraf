@@ -86,7 +86,7 @@ func (r *Couchbase) gatherServer(addr string, acc telegraf.Accumulator, pool *co
 	}
 
 	for bucketName := range pool.BucketMap {
-		tags := map[string]string{"cluster": addr, "bucket": bucketName}
+		tags := map[string]string{"cluster": regexpURI.ReplaceAllString(addr, "${1}"), "bucket": bucketName}
 		bs := pool.BucketMap[bucketName].BasicStats
 		fields := make(map[string]interface{})
 		fields["quota_percent_used"] = bs["quotaPercentUsed"]

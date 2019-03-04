@@ -2,7 +2,6 @@ package influx
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"log"
 
@@ -54,17 +53,11 @@ func (r *reader) Read(p []byte) (int, error) {
 		r.offset += 1
 		if err != nil {
 			r.buf.Reset()
-			switch err.(type) {
-			case *MetricError:
-				// Since we are serializing an array of metrics, don't fail
+			if err != nil {
+				// Since we are serializing multiple metrics, don't fail the
 				// the entire batch just because of one unserializable metric.
-				log.Printf(
-					"D! [serializers.influx] could not serialize metric %q: %v; discarding metric",
-					metric.Name(), err)
+				log.Printf("E! [serializers.influx] could not serialize metric: %v; discarding metric", err)
 				continue
-			default:
-				fmt.Println(err)
-				return 0, err
 			}
 		}
 		break

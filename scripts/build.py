@@ -85,7 +85,7 @@ targets = {
 
 supported_builds = {
     "windows": [ "amd64", "i386" ],
-    "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64", "s390x"],
+    "linux": [ "amd64", "i386", "armhf", "armel", "arm64", "static_amd64", "s390x", "mipsel"],
     "freebsd": [ "amd64", "i386" ]
 }
 
@@ -95,7 +95,7 @@ supported_packages = {
     "freebsd": [ "tar" ]
 }
 
-next_version = '1.8.0'
+next_version = '1.11.0'
 
 ################
 #### Telegraf Functions
@@ -448,13 +448,16 @@ def build(version=None,
             build_command += "CGO_ENABLED=0 "
 
         # Handle variations in architecture output
+        goarch = arch
         if arch == "i386" or arch == "i686":
-            arch = "386"
+            goarch = "386"
         elif "arm64" in arch:
-            arch = "arm64"
+            goarch = "arm64"
         elif "arm" in arch:
-            arch = "arm"
-        build_command += "GOOS={} GOARCH={} ".format(platform, arch)
+            goarch = "arm"
+        elif arch == "mipsel":
+            goarch = "mipsle"
+        build_command += "GOOS={} GOARCH={} ".format(platform, goarch)
 
         if "arm" in arch:
             if arch == "armel":
@@ -568,6 +571,8 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                     shutil.copy(fr, to)
 
                 for package_type in supported_packages[platform]:
+                    if package_type == "rpm" and arch == "mipsel":
+                        continue
                     # Package the directory structure for each package type for the platform
                     logging.debug("Packaging directory '{}' as '{}'.".format(build_root, package_type))
                     name = pkg_name

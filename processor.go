@@ -7,6 +7,6 @@ type Processor interface {
 	// Description returns a one-sentence description on the Input
 	Description() string
 
-	// Apply the filter to the given metric
+	// Apply the filter to the given metric.
 	Apply(in ...Metric) []Metric
 }

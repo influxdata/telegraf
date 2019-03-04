@@ -1,8 +1,6 @@
 package powerdns
 
 import (
-	"crypto/rand"
-	"encoding/binary"
 	"fmt"
 	"net"
 	"testing"
@@ -70,10 +68,9 @@ func (s statServer) serverSocket(l net.Listener) {
 	}
 }
 
-func TestMemcachedGeneratesMetrics(t *testing.T) {
+func TestPowerdnsGeneratesMetrics(t *testing.T) {
 	// We create a fake server to return test data
-	var randomNumber int64
-	binary.Read(rand.Reader, binary.LittleEndian, &randomNumber)
+	randomNumber := int64(5239846799706671610)
 	socket, err := net.Listen("unix", fmt.Sprintf("/tmp/pdns%d.controlsocket", randomNumber))
 	if err != nil {
 		t.Fatal("Cannot initialize server on port ")

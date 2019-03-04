@@ -106,9 +106,9 @@ func TestParseValidEmbeddedCounterJSON(t *testing.T) {
 		"count": float64(1),
 	}, metrics[0].Fields())
 	assert.Equal(t, map[string]string{
-		"metric_type": "counter",
-		"tag1":        "green",
-		"tag2":        "yellow",
+		"metric_type":             "counter",
+		"tag1":                    "green",
+		"tag2":                    "yellow",
 		"tag3 space,comma=equals": "red ,=",
 	}, metrics[0].Tags())
 	assert.True(t, metricTime.Equal(metrics[0].Time()), fmt.Sprintf("%s should be equal to %s", metrics[0].Time(), metricTime))

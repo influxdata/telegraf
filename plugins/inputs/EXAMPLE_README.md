@@ -4,18 +4,22 @@ The example plugin gathers metrics about example things.  This description
 explains at a high level what the plugin does and provides links to where
 additional information can be found.
 
-### Configuration:
+### Configuration
 
 This section contains the default TOML to configure the plugin.  You can
 generate it using `telegraf --usage <plugin-name>`.
 
 ```toml
-# Description
 [[inputs.example]]
   example_option = "example_value"
 ```
 
-### Metrics:
+#### example_option
+
+A more in depth description of an option can be provided here, but only do so
+if the option cannot be fully described in the sample config.
+
+### Metrics
 
 Here you should add an optional description and links to where the user can
 get more information about the measurements.
@@ -38,10 +42,10 @@ mapped to the output.
   - fields:
     - field3 (integer, bytes)
 
-### Sample Queries:
+### Sample Queries
 
-This section should contain some useful InfluxDB queries that can be used to
-get started with the plugin or to generate dashboards.  For each query listed,
+This section can contain some useful InfluxDB queries that can be used to get
+started with the plugin or to generate dashboards.  For each query listed,
 describe at a high level what data is returned.
 
 Get the max, mean, and min for the measurement in the last hour:
@@ -49,7 +53,12 @@ Get the max, mean, and min for the measurement in the last hour:
 SELECT max(field1), mean(field1), min(field1) FROM measurement1 WHERE tag1=bar AND time > now() - 1h GROUP BY tag
 ```
 
-### Example Output:
+### Troubleshooting
+
+This optional section can provide basic troubleshooting steps that a user can
+perform.
+
+### Example Output
 
 This section shows example output in Line Protocol format.  You can often use
 `telegraf --input-filter <plugin-name> --test` or use the `file` output to get

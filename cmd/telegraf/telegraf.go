@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -35,7 +37,7 @@ var fTest = flag.Bool("test", false, "gather metrics, print them out, and exit")
 var fConfig = flag.String("config", "", "configuration file to load")
 var fConfigDirectory = flag.String("config-directory", "",
 	"directory containing additional *.conf files")
-var fVersion = flag.Bool("version", false, "display the version")
+var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
@@ -54,25 +56,15 @@ var fProcessorFilters = flag.String("processor-filter", "",
 var fUsage = flag.String("usage", "",
 	"print usage for a plugin, ie, 'telegraf --usage mysql'")
 var fService = flag.String("service", "",
-	"operate on the service")
+	"operate on the service (windows only)")
+var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
 var (
-	nextVersion = "1.8.0"
-	version     string
-	commit      string
-	branch      string
+	version string
+	commit  string
+	branch  string
 )
-
-func init() {
-	// If commit or branch are not set, make that clear.
-	if commit == "" {
-		commit = "unknown"
-	}
-	if branch == "" {
-		branch = "unknown"
-	}
-}
 
 var stop chan struct{}
 
@@ -88,110 +80,114 @@ func reloadLoop(
 	for <-reload {
 		reload <- false
 
-		// If no other options are specified, load the config file and run.
-		c := config.NewConfig()
-		c.OutputFilters = outputFilters
-		c.InputFilters = inputFilters
-		err := c.LoadConfig(*fConfig)
-		if err != nil {
-			log.Fatal("E! " + err.Error())
-		}
+		ctx, cancel := context.WithCancel(context.Background())
 
-		if *fConfigDirectory != "" {
-			err = c.LoadDirectory(*fConfigDirectory)
-			if err != nil {
-				log.Fatal("E! " + err.Error())
-			}
-		}
-		if !*fTest && len(c.Outputs) == 0 {
-			log.Fatalf("E! Error: no outputs found, did you provide a valid config file?")
-		}
-		if len(c.Inputs) == 0 {
-			log.Fatalf("E! Error: no inputs found, did you provide a valid config file?")
-		}
-
-		if int64(c.Agent.Interval.Duration) <= 0 {
-			log.Fatalf("E! Agent interval must be positive, found %s",
-				c.Agent.Interval.Duration)
-		}
-
-		if int64(c.Agent.FlushInterval.Duration) <= 0 {
-			log.Fatalf("E! Agent flush_interval must be positive; found %s",
-				c.Agent.Interval.Duration)
-		}
-
-		ag, err := agent.NewAgent(c)
-		if err != nil {
-			log.Fatal("E! " + err.Error())
-		}
-
-		// Setup logging
-		logger.SetupLogging(
-			ag.Config.Agent.Debug || *fDebug,
-			ag.Config.Agent.Quiet || *fQuiet,
-			ag.Config.Agent.Logfile,
-		)
-
-		if *fTest {
-			err = ag.Test()
-			if err != nil {
-				log.Fatal("E! " + err.Error())
-			}
-			os.Exit(0)
-		}
-
-		err = ag.Connect()
-		if err != nil {
-			log.Fatal("E! " + err.Error())
-		}
-
-		shutdown := make(chan struct{})
 		signals := make(chan os.Signal)
-		signal.Notify(signals, os.Interrupt, syscall.SIGHUP, syscall.SIGTERM)
+		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
+			syscall.SIGTERM, syscall.SIGINT)
 		go func() {
 			select {
 			case sig := <-signals:
-				if sig == os.Interrupt || sig == syscall.SIGTERM {
-					close(shutdown)
-				}
 				if sig == syscall.SIGHUP {
-					log.Printf("I! Reloading Telegraf config\n")
+					log.Printf("I! Reloading Telegraf config")
 					<-reload
 					reload <- true
-					close(shutdown)
 				}
+				cancel()
 			case <-stop:
-				close(shutdown)
+				cancel()
 			}
 		}()
 
-		log.Printf("I! Starting Telegraf %s\n", displayVersion())
-		log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
-		log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
-		log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
-		log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
-		log.Printf("I! Tags enabled: %s", c.ListTags())
-
-		if *fPidfile != "" {
-			f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				log.Printf("E! Unable to create pidfile: %s", err)
-			} else {
-				fmt.Fprintf(f, "%d\n", os.Getpid())
-
-				f.Close()
-
-				defer func() {
-					err := os.Remove(*fPidfile)
-					if err != nil {
-						log.Printf("E! Unable to remove pidfile: %s", err)
-					}
-				}()
-			}
+		err := runAgent(ctx, inputFilters, outputFilters)
+		if err != nil {
+			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
-
-		ag.Run(shutdown)
 	}
+}
+
+func runAgent(ctx context.Context,
+	inputFilters []string,
+	outputFilters []string,
+) error {
+	// Setup default logging. This may need to change after reading the config
+	// file, but we can configure it to use our logger implementation now.
+	logger.SetupLogging(false, false, "")
+	log.Printf("I! Starting Telegraf %s", version)
+
+	// If no other options are specified, load the config file and run.
+	c := config.NewConfig()
+	c.OutputFilters = outputFilters
+	c.InputFilters = inputFilters
+	err := c.LoadConfig(*fConfig)
+	if err != nil {
+		return err
+	}
+
+	if *fConfigDirectory != "" {
+		err = c.LoadDirectory(*fConfigDirectory)
+		if err != nil {
+			return err
+		}
+	}
+	if !*fTest && len(c.Outputs) == 0 {
+		return errors.New("Error: no outputs found, did you provide a valid config file?")
+	}
+	if len(c.Inputs) == 0 {
+		return errors.New("Error: no inputs found, did you provide a valid config file?")
+	}
+
+	if int64(c.Agent.Interval.Duration) <= 0 {
+		return fmt.Errorf("Agent interval must be positive, found %s",
+			c.Agent.Interval.Duration)
+	}
+
+	if int64(c.Agent.FlushInterval.Duration) <= 0 {
+		return fmt.Errorf("Agent flush_interval must be positive; found %s",
+			c.Agent.Interval.Duration)
+	}
+
+	ag, err := agent.NewAgent(c)
+	if err != nil {
+		return err
+	}
+
+	// Setup logging as configured.
+	logger.SetupLogging(
+		ag.Config.Agent.Debug || *fDebug,
+		ag.Config.Agent.Quiet || *fQuiet,
+		ag.Config.Agent.Logfile,
+	)
+
+	if *fTest {
+		return ag.Test(ctx)
+	}
+
+	log.Printf("I! Loaded inputs: %s", strings.Join(c.InputNames(), " "))
+	log.Printf("I! Loaded aggregators: %s", strings.Join(c.AggregatorNames(), " "))
+	log.Printf("I! Loaded processors: %s", strings.Join(c.ProcessorNames(), " "))
+	log.Printf("I! Loaded outputs: %s", strings.Join(c.OutputNames(), " "))
+	log.Printf("I! Tags enabled: %s", c.ListTags())
+
+	if *fPidfile != "" {
+		f, err := os.OpenFile(*fPidfile, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Printf("E! Unable to create pidfile: %s", err)
+		} else {
+			fmt.Fprintf(f, "%d\n", os.Getpid())
+
+			f.Close()
+
+			defer func() {
+				err := os.Remove(*fPidfile)
+				if err != nil {
+					log.Printf("E! Unable to remove pidfile: %s", err)
+				}
+			}()
+		}
+	}
+
+	return ag.Run(ctx)
 }
 
 func usageExit(rc int) {
@@ -225,11 +221,27 @@ func (p *program) Stop(s service.Service) error {
 	return nil
 }
 
-func displayVersion() string {
-	if version == "" {
-		return fmt.Sprintf("v%s~%s", nextVersion, commit)
+func formatFullVersion() string {
+	var parts = []string{"Telegraf"}
+
+	if version != "" {
+		parts = append(parts, version)
+	} else {
+		parts = append(parts, "unknown")
 	}
-	return "v" + version
+
+	if branch != "" || commit != "" {
+		if branch == "" {
+			branch = "unknown"
+		}
+		if commit == "" {
+			commit = "unknown"
+		}
+		git := fmt.Sprintf("(git: %s %s)", branch, commit)
+		parts = append(parts, git)
+	}
+
+	return strings.Join(parts, " ")
 }
 
 func main() {
@@ -273,7 +285,7 @@ func main() {
 	if len(args) > 0 {
 		switch args[0] {
 		case "version":
-			fmt.Printf("Telegraf %s (git: %s %s)\n", displayVersion(), branch, commit)
+			fmt.Println(formatFullVersion())
 			return
 		case "config":
 			config.PrintSampleConfig(
@@ -290,18 +302,18 @@ func main() {
 	switch {
 	case *fOutputList:
 		fmt.Println("Available Output Plugins:")
-		for k, _ := range outputs.Outputs {
+		for k := range outputs.Outputs {
 			fmt.Printf("  %s\n", k)
 		}
 		return
 	case *fInputList:
 		fmt.Println("Available Input Plugins:")
-		for k, _ := range inputs.Inputs {
+		for k := range inputs.Inputs {
 			fmt.Printf("  %s\n", k)
 		}
 		return
 	case *fVersion:
-		fmt.Printf("Telegraf %s (git: %s %s)\n", displayVersion(), branch, commit)
+		fmt.Println(formatFullVersion())
 		return
 	case *fSampleConfig:
 		config.PrintSampleConfig(
@@ -320,9 +332,19 @@ func main() {
 		return
 	}
 
+	shortVersion := version
+	if shortVersion == "" {
+		shortVersion = "unknown"
+	}
+
+	// Configure version
+	if err := internal.SetVersion(shortVersion); err != nil {
+		log.Println("Telegraf version already configured to: " + internal.Version())
+	}
+
 	if runtime.GOOS == "windows" && !(*fRunAsConsole) {
 		svcConfig := &service.Config{
-			Name:        "telegraf",
+			Name:        *fServiceName,
 			DisplayName: "Telegraf Data Collector Service",
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",

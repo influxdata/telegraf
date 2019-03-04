@@ -1,6 +1,8 @@
 package influx
 
 import (
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -174,6 +176,63 @@ var ptests = []struct {
 		err: nil,
 	},
 	{
+		name:  "tag value escape space",
+		input: []byte(`cpu,host=two\ words value=42`),
+		metrics: []telegraf.Metric{
+			Metric(
+				metric.New(
+					"cpu",
+					map[string]string{
+						"host": "two words",
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(42, 0),
+				),
+			),
+		},
+		err: nil,
+	},
+	{
+		name:  "tag value double escape space",
+		input: []byte(`cpu,host=two\\ words value=42`),
+		metrics: []telegraf.Metric{
+			Metric(
+				metric.New(
+					"cpu",
+					map[string]string{
+						"host": `two\ words`,
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(42, 0),
+				),
+			),
+		},
+		err: nil,
+	},
+	{
+		name:  "tag value triple escape space",
+		input: []byte(`cpu,host=two\\\ words value=42`),
+		metrics: []telegraf.Metric{
+			Metric(
+				metric.New(
+					"cpu",
+					map[string]string{
+						"host": `two\\ words`,
+					},
+					map[string]interface{}{
+						"value": 42.0,
+					},
+					time.Unix(42, 0),
+				),
+			),
+		},
+		err: nil,
+	},
+	{
 		name:  "field key escape not escapable",
 		input: []byte(`cpu va\lue=42`),
 		metrics: []telegraf.Metric{
@@ -259,19 +318,16 @@ var ptests = []struct {
 		err: nil,
 	},
 	{
-		name:  "field int overflow dropped",
-		input: []byte("cpu value=9223372036854775808i"),
-		metrics: []telegraf.Metric{
-			Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{},
-					time.Unix(42, 0),
-				),
-			),
+		name:    "field int overflow",
+		input:   []byte("cpu value=9223372036854775808i"),
+		metrics: nil,
+		err: &ParseError{
+			Offset:     30,
+			LineNumber: 1,
+			Column:     31,
+			msg:        strconv.ErrRange.Error(),
+			buf:        "cpu value=9223372036854775808i",
 		},
-		err: nil,
 	},
 	{
 		name:  "field int max value",
@@ -308,19 +364,16 @@ var ptests = []struct {
 		err: nil,
 	},
 	{
-		name:  "field uint overflow dropped",
-		input: []byte("cpu value=18446744073709551616u"),
-		metrics: []telegraf.Metric{
-			Metric(
-				metric.New(
-					"cpu",
-					map[string]string{},
-					map[string]interface{}{},
-					time.Unix(42, 0),
-				),
-			),
+		name:    "field uint overflow",
+		input:   []byte("cpu value=18446744073709551616u"),
+		metrics: nil,
+		err: &ParseError{
+			Offset:     31,
+			LineNumber: 1,
+			Column:     32,
+			msg:        strconv.ErrRange.Error(),
+			buf:        "cpu value=18446744073709551616u",
 		},
-		err: nil,
 	},
 	{
 		name:  "field uint max value",
@@ -400,6 +453,23 @@ var ptests = []struct {
 					map[string]string{},
 					map[string]interface{}{
 						`value`: `how\dy`,
+					},
+					time.Unix(42, 0),
+				),
+			),
+		},
+		err: nil,
+	},
+	{
+		name:  "field string newline",
+		input: []byte("cpu value=\"4\n2\""),
+		metrics: []telegraf.Metric{
+			Metric(
+				metric.New(
+					"cpu",
+					map[string]string{},
+					map[string]interface{}{
+						"value": "4\n2",
 					},
 					time.Unix(42, 0),
 				),
@@ -497,9 +567,11 @@ var ptests = []struct {
 		input:   []byte("cpu"),
 		metrics: nil,
 		err: &ParseError{
-			Offset: 3,
-			msg:    ErrFieldParse.Error(),
-			buf:    "cpu",
+			Offset:     3,
+			LineNumber: 1,
+			Column:     4,
+			msg:        ErrTagParse.Error(),
+			buf:        "cpu",
 		},
 	},
 	{
@@ -667,9 +739,11 @@ func TestSeriesParser(t *testing.T) {
 			input:   []byte("cpu,a="),
 			metrics: []telegraf.Metric{},
 			err: &ParseError{
-				Offset: 6,
-				msg:    ErrTagParse.Error(),
-				buf:    "cpu,a=",
+				Offset:     6,
+				LineNumber: 1,
+				Column:     7,
+				msg:        ErrTagParse.Error(),
+				buf:        "cpu,a=",
 			},
 		},
 	}
@@ -693,6 +767,40 @@ func TestSeriesParser(t *testing.T) {
 				require.Equal(t, expected.Name(), metrics[i].Name())
 				require.Equal(t, expected.Tags(), metrics[i].Tags())
 			}
+		})
+	}
+}
+
+func TestParserErrorString(t *testing.T) {
+	var ptests = []struct {
+		name      string
+		input     []byte
+		errString string
+	}{
+		{
+			name:      "multiple line error",
+			input:     []byte("cpu value=42\ncpu value=invalid\ncpu value=42"),
+			errString: `metric parse error: expected field at 2:11: "cpu value=invalid"`,
+		},
+		{
+			name:      "handler error",
+			input:     []byte("cpu value=9223372036854775808i\ncpu value=42"),
+			errString: `metric parse error: value out of range at 1:31: "cpu value=9223372036854775808i"`,
+		},
+		{
+			name:      "buffer too long",
+			input:     []byte("cpu " + strings.Repeat("ab", maxErrorBufferSize) + "=invalid\ncpu value=42"),
+			errString: "metric parse error: expected field at 1:2054: \"cpu " + strings.Repeat("ab", maxErrorBufferSize)[:maxErrorBufferSize-4] + "...\"",
+		},
+	}
+
+	for _, tt := range ptests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := NewMetricHandler()
+			parser := NewParser(handler)
+
+			_, err := parser.Parse(tt.input)
+			require.Equal(t, tt.errString, err.Error())
 		})
 	}
 }

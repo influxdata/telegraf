@@ -42,11 +42,11 @@ This is a sample configuration for the plugin.
   ## Enables client authentication if set.
   # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
 
-  ## Maximum socket buffer size in bytes.
+  ## Maximum socket buffer size (in bytes when no unit specified).
   ## For stream sockets, once the buffer fills up, the sender will start backing up.
   ## For datagram sockets, once the buffer fills up, metrics will start dropping.
   ## Defaults to the OS default.
-  # read_buffer_size = 65535
+  # read_buffer_size = "64KiB"
 
   ## Period between keep alive probes.
   ## Only applies to TCP sockets.

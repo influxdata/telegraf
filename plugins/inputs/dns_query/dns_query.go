@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/miekg/dns"
@@ -70,32 +71,43 @@ func (d *DnsQuery) Description() string {
 	return "Query given DNS server and gives statistics"
 }
 func (d *DnsQuery) Gather(acc telegraf.Accumulator) error {
+	var wg sync.WaitGroup
 	d.setDefaultValues()
 
 	for _, domain := range d.Domains {
 		for _, server := range d.Servers {
-			fields := make(map[string]interface{}, 2)
-			tags := map[string]string{
-				"server":      server,
-				"domain":      domain,
-				"record_type": d.RecordType,
-			}
+			wg.Add(1)
+			go func(domain, server string) {
+				fields := make(map[string]interface{}, 2)
+				tags := map[string]string{
+					"server":      server,
+					"domain":      domain,
+					"record_type": d.RecordType,
+				}
 
-			dnsQueryTime, err := d.getDnsQueryTime(domain, server)
-			if err == nil {
-				setResult(Success, fields, tags)
-				fields["query_time_ms"] = dnsQueryTime
-			} else if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
-				setResult(Timeout, fields, tags)
-			} else if err != nil {
-				setResult(Error, fields, tags)
-				acc.AddError(err)
-			}
+				dnsQueryTime, rcode, err := d.getDnsQueryTime(domain, server)
+				if rcode >= 0 {
+					tags["rcode"] = dns.RcodeToString[rcode]
+					fields["rcode_value"] = rcode
+				}
+				if err == nil {
+					setResult(Success, fields, tags)
+					fields["query_time_ms"] = dnsQueryTime
+				} else if opErr, ok := err.(*net.OpError); ok && opErr.Timeout() {
+					setResult(Timeout, fields, tags)
+				} else if err != nil {
+					setResult(Error, fields, tags)
+					acc.AddError(err)
+				}
 
-			acc.AddFields("dns_query", fields, tags)
+				acc.AddFields("dns_query", fields, tags)
+
+				wg.Done()
+			}(domain, server)
 		}
 	}
 
+	wg.Wait()
 	return nil
 }
 
@@ -122,7 +134,7 @@ func (d *DnsQuery) setDefaultValues() {
 	}
 }
 
-func (d *DnsQuery) getDnsQueryTime(domain string, server string) (float64, error) {
+func (d *DnsQuery) getDnsQueryTime(domain string, server string) (float64, int, error) {
 	dnsQueryTime := float64(0)
 
 	c := new(dns.Client)
@@ -132,20 +144,20 @@ func (d *DnsQuery) getDnsQueryTime(domain string, server string) (float64, error
 	m := new(dns.Msg)
 	recordType, err := d.parseRecordType()
 	if err != nil {
-		return dnsQueryTime, err
+		return dnsQueryTime, -1, err
 	}
 	m.SetQuestion(dns.Fqdn(domain), recordType)
 	m.RecursionDesired = true
 
 	r, rtt, err := c.Exchange(m, net.JoinHostPort(server, strconv.Itoa(d.Port)))
 	if err != nil {
-		return dnsQueryTime, err
+		return dnsQueryTime, -1, err
 	}
 	if r.Rcode != dns.RcodeSuccess {
-		return dnsQueryTime, errors.New(fmt.Sprintf("Invalid answer name %s after %s query for %s\n", domain, d.RecordType, domain))
+		return dnsQueryTime, r.Rcode, fmt.Errorf("Invalid answer (%s) from %s after %s query for %s", dns.RcodeToString[r.Rcode], server, d.RecordType, domain)
 	}
 	dnsQueryTime = float64(rtt.Nanoseconds()) / 1e6
-	return dnsQueryTime, nil
+	return dnsQueryTime, r.Rcode, nil
 }
 
 func (d *DnsQuery) parseRecordType() (uint16, error) {

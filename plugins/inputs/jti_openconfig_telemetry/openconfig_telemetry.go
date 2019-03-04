@@ -394,7 +394,7 @@ func (m *OpenConfigTelemetry) Start(acc telegraf.Accumulator) error {
 				&authentication.LoginRequest{UserName: m.Username,
 					Password: m.Password, ClientId: m.ClientID})
 			if loginErr != nil {
-				log.Printf("E! Could not initiate login check for %s: %v", server, err)
+				log.Printf("E! Could not initiate login check for %s: %v", server, loginErr)
 				continue
 			}
 
