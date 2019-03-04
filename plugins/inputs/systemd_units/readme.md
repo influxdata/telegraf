@@ -6,8 +6,8 @@ The systemd_units plugin gathers systemd unit status on Linux. It relies on
 The results are tagged with the unit name and provide enumerated fields for
 loaded, active and running fields, indicating the unit health.
 
-This plugin is related to the win_services module, which fulfills the same
-purpose on windows.
+This plugin is related to the [win_services module](../win_services/), which
+fulfills the same purpose on windows.
 
 In addition to services, this plugin can gather other unit types as well,
 see ```systemctl list-units --type help``` for possible options.
@@ -31,6 +31,8 @@ see ```systemctl list-units --type help``` for possible options.
 
 #### Loaded
 
+enumeration of [unit_load_state_table](https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L87)
+
 | Value | Meaning     | Description                     |
 | ----- | -------     | -----------                     |
 | 0     | loaded      | unit is ~                       |
@@ -44,6 +46,8 @@ see ```systemctl list-units --type help``` for possible options.
 
 #### Active
 
+enumeration of [unit_active_state_table](https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L99)
+
 | Value | Meaning   | Description                        |
 | ----- | -------   | -----------                        |
 | 0     | active       | unit is ~                       |
@@ -55,6 +59,10 @@ see ```systemctl list-units --type help``` for possible options.
 | -1    | err          | field not found in lookup table |
 
 #### Running
+
+enumeration of sub states, see various [<unittype>_state_tables](https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L163);
+duplicates were removed, tables are hex aligned to keep some space for future
+values
 
 | Value  | Meaning               | Description                         |
 | -----  | -------               | -----------                         |
