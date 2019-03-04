@@ -411,7 +411,7 @@ func TestParse_Counters(t *testing.T) {
 // Tests low-level functionality of timings
 func TestParse_Timings(t *testing.T) {
 	s := NewTestStatsd()
-	s.Percentiles = []int{90}
+	s.Percentiles = []float64{90.0}
 	acc := &testutil.Accumulator{}
 
 	// Test that counters work
@@ -1156,7 +1156,7 @@ func TestParse_MeasurementsWithMultipleValues(t *testing.T) {
 func TestParse_Timings_MultipleFieldsWithTemplate(t *testing.T) {
 	s := NewTestStatsd()
 	s.Templates = []string{"measurement.field"}
-	s.Percentiles = []int{90}
+	s.Percentiles = []float64{90.0}
 	acc := &testutil.Accumulator{}
 
 	validLines := []string{
@@ -1207,7 +1207,7 @@ func TestParse_Timings_MultipleFieldsWithTemplate(t *testing.T) {
 func TestParse_Timings_MultipleFieldsWithoutTemplate(t *testing.T) {
 	s := NewTestStatsd()
 	s.Templates = []string{}
-	s.Percentiles = []int{90}
+	s.Percentiles = []float64{90.0}
 	acc := &testutil.Accumulator{}
 
 	validLines := []string{
