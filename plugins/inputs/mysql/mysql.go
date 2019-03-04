@@ -593,7 +593,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 	fields := make(map[string]interface{})
 
 	// for each channel record
-	for rows.Next() != false {
+	for rows.Next() {
 		// to save the column names as a field key
 		// scanning keys and values separately
 
