@@ -461,7 +461,7 @@ func (m *Mysql) gatherServer(serv string, acc telegraf.Accumulator) error {
 	}
 
 	if m.GatherSlaveStatus {
-		err = m.gatherSlaveStatuses(db, serv, acc, m.GatherAllSlaveChannels)
+		err = m.gatherSlaveStatuses(db, serv, acc)
 		if err != nil {
 			return err
 		}
@@ -579,7 +579,7 @@ func (m *Mysql) gatherGlobalVariables(db *sql.DB, serv string, acc telegraf.Accu
 // When the server is slave, then it returns only one row.
 // If the multi-source replication is set, then everything works differently
 // This code does not work with multi-source replication.
-func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumulator, gatherAllChannels bool) error {
+func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumulator) error {
 	// run query
 	rows, err := db.Query(slaveStatusQuery)
 	if err != nil {
@@ -616,7 +616,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 				col = strings.ToLower(col)
 			}
 
-			if gatherAllChannels && strings.ToLower(col) == "channel_name" {
+			if m.GatherAllSlaveChannels && strings.ToLower(col) == "channel_name" {
 				// Since the default channel name is empty, we need this block
 				channelName := "default"
 				if len(*vals[i].(*sql.RawBytes)) > 0 {
@@ -630,7 +630,7 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 		}
 		acc.AddFields("mysql", fields, tags)
 
-		if !gatherAllChannels {
+		if !m.GatherAllSlaveChannels {
 			break
 		}
 	}
