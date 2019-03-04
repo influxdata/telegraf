@@ -182,6 +182,10 @@ func (b *Buffer) Reject(batch []telegraf.Metric) {
 	b.Lock()
 	defer b.Unlock()
 
+	if len(batch) == 0 {
+		return
+	}
+
 	older := b.dist(b.first, b.batchFirst)
 	free := b.cap - b.size
 	restore := min(len(batch), free+older)
@@ -191,7 +195,8 @@ func (b *Buffer) Reject(batch []telegraf.Metric) {
 	rp := b.last
 	re := b.nextby(rp, restore)
 	b.last = re
-	for rb != rp {
+
+	for rb != rp && rp != re {
 		rp = b.prev(rp)
 		re = b.prev(re)
 
