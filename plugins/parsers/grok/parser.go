@@ -11,10 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vjeantet/grok"
-
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/vjeantet/grok"
 )
 
 var timeLayouts = map[string]string{
@@ -359,10 +358,6 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 				log.Printf("E! Error parsing %s to time layout [%s]: %s", v, t, err)
 			}
 		}
-	}
-
-	if len(fields) == 0 {
-		return nil, fmt.Errorf("grok: must have one or more fields")
 	}
 
 	if p.UniqueTimestamp != "auto" {
