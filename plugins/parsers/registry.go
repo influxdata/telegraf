@@ -298,7 +298,6 @@ func newJSONParser(
 	return parser
 }
 
-//Deprecated: Use NewParser to get a JSONParser object
 func newGrokParser(metricName string,
 	patterns []string, nPatterns []string,
 	cPatterns string, cPatternFiles []string,

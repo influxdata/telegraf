@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -571,61 +572,81 @@ func TestCompileErrors(t *testing.T) {
 	assert.Error(t, p.Compile())
 }
 
-func TestParseErrors(t *testing.T) {
-	// Parse fails because the pattern doesn't exist
+func TestParseErrors_MissingPattern(t *testing.T) {
 	p := &Parser{
-		Patterns: []string{"%{TEST_LOG_B}"},
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_B}"},
 		CustomPatterns: `
 			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:int} %{}
 		`,
 	}
-	assert.Error(t, p.Compile())
+	require.Error(t, p.Compile())
 	_, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] notnumber 200 192.168.1.1 5.432µs 101`)
-	assert.Error(t, err)
+	require.Error(t, err)
+}
 
-	// Parse fails because myword is not an int
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
+func TestParseErrors_WrongIntegerType(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
 		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:int}
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:int}
 		`,
 	}
-	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
 
-	// Parse fails because myword is not a float
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
+func TestParseErrors_WrongFloatType(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
 		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:float}
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:float}
 		`,
 	}
-	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
 
-	// Parse fails because myword is not a duration
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
+func TestParseErrors_WrongDurationType(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
 		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:duration}
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:duration}
 		`,
 	}
-	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
 
-	// Parse fails because the time layout is wrong.
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
+func TestParseErrors_WrongTimeLayout(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
 		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-unix} %{WORD:myword:duration}
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:duration}
 		`,
 	}
-	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
 }
 
 func TestTsModder(t *testing.T) {
