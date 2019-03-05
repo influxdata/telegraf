@@ -364,13 +364,27 @@ func (p *PrometheusClient) addMetricFamily(point telegraf.Metric, sample *Sample
 	addSample(fam, sample, sampleID)
 }
 
+// Sorted returns a copy of the metrics in time ascending order.  A copy is
+// made to avoid modifying the input metric slice since doing so is not
+// allowed.
+func sorted(metrics []telegraf.Metric) []telegraf.Metric {
+	batch := make([]telegraf.Metric, 0, len(metrics))
+	for i := len(metrics) - 1; i >= 0; i-- {
+		batch = append(batch, metrics[i])
+	}
+	sort.Slice(batch, func(i, j int) bool {
+		return batch[i].Time().Before(batch[j].Time())
+	})
+	return batch
+}
+
 func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 	p.Lock()
 	defer p.Unlock()
 
 	now := p.now()
 
-	for _, point := range metrics {
+	for _, point := range sorted(metrics) {
 		tags := point.Tags()
 		sampleID := CreateSampleID(tags)
 
