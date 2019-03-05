@@ -87,7 +87,6 @@ vet:
 
 .PHONY: check
 check: fmtcheck vet
-	dep check
 
 .PHONY: test-all
 test-all: fmtcheck vet
