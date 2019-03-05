@@ -56,6 +56,7 @@
 - [#4308](https://github.com/influxdata/telegraf/pull/4308): Add additional metrics to rabbitmq input.
 - [#5388](https://github.com/influxdata/telegraf/pull/5388): Add multicast support to socket_listener input.
 - [#5490](https://github.com/influxdata/telegraf/pull/5490): Add tag based routing in influxdb/influxdb_v2 outputs.
+- [#5533](https://github.com/influxdata/telegraf/pull/5533): Allow grok parser to produce metrics with no fields.
 
 #### Bugfixes
 
@@ -69,6 +70,7 @@
 - [#5325](https://github.com/influxdata/telegraf/issues/5325): Ignore tracking for metrics added to aggregator.
 - [#5514](https://github.com/influxdata/telegraf/issues/5514): Fix panic when rejecting empty batch.
 - [#5518](https://github.com/influxdata/telegraf/pull/5518): Fix conversion from string float to integer.
+- [#5431](https://github.com/influxdata/telegraf/pull/5431): Sort metrics by timestamp in prometheus output.
 
 ## v1.9.5 [2019-02-26]
 
