@@ -21,6 +21,7 @@ jobs:
       - restore_cache:
           key: vendor-{{ checksum "Gopkg.lock" }}
       - run: 'make deps'
+      - run: 'dep check'
       - save_cache:
           name: 'vendored deps'
           key: vendor-{{ checksum "Gopkg.lock" }}
