@@ -1,4 +1,4 @@
-## v1.10 [unreleased]
+## v1.10 [2019-03-05]
 
 #### New Inputs
 
