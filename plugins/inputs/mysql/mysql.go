@@ -623,7 +623,6 @@ func (m *Mysql) gatherSlaveStatuses(db *sql.DB, serv string, acc telegraf.Accumu
 					channelName = string(*vals[i].(*sql.RawBytes))
 				}
 				tags["channel"] = channelName
-				acc.AddError(fmt.Errorf("DEBUG! %s = (%s)", col, channelName))
 			} else if value, ok := m.parseValue(*vals[i].(*sql.RawBytes)); ok {
 				fields["slave_"+col] = value
 			}
