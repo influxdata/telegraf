@@ -10,12 +10,12 @@ import (
 	"time"
 
 	"cloud.google.com/go/pubsub"
+	"encoding/base64"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"google.golang.org/api/support/bundler"
-	"encoding/base64"
 )
 
 const (

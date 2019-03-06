@@ -1,12 +1,12 @@
 package cloud_pubsub
 
 import (
+	"encoding/base64"
 	"errors"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"testing"
-	"encoding/base64"
 )
 
 const (
@@ -74,7 +74,7 @@ func TestRunBase64(t *testing.T) {
 		Project:                "projectIDontMatterForTests",
 		Subscription:           subId,
 		MaxUndeliveredMessages: defaultMaxUndeliveredMessages,
-		Base64Data: true,
+		Base64Data:             true,
 	}
 
 	acc := &testutil.Accumulator{}
