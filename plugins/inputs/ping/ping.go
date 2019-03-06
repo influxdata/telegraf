@@ -114,6 +114,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 	if err != nil {
 		acc.AddError(err)
 		fields["result_code"] = 1
+		fields["percent_packet_loss"] = float64(100.0)
 		acc.AddFields("ping", fields, tags)
 		return
 	}
@@ -146,6 +147,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 				acc.AddError(fmt.Errorf("host %s: %s", u, err))
 			}
 			fields["result_code"] = 2
+			fields["percent_packet_loss"] = float64(100.0)
 			acc.AddFields("ping", fields, tags)
 			return
 		}
@@ -156,6 +158,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 		// fatal error
 		acc.AddError(fmt.Errorf("%s: %s", err, u))
 		fields["result_code"] = 2
+		fields["percent_packet_loss"] = float64(100.0)
 		acc.AddFields("ping", fields, tags)
 		return
 	}
