@@ -15,6 +15,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/plugins/serializers"
 	"google.golang.org/api/support/bundler"
+	"encoding/base64"
 )
 
 const (
@@ -180,8 +181,17 @@ func (t *stubTopic) parseIDs(msg *pubsub.Message) []string {
 	p, _ := parsers.NewInfluxParser()
 	metrics, err := p.Parse(msg.Data)
 	if err != nil {
-		t.Fatalf("unexpected parsing error: %v", err)
+		// Just attempt to base64-decode first before returning error.
+		d, err := base64.StdEncoding.DecodeString(string(msg.Data))
+		if err != nil {
+			t.Errorf("unable to base64-decode potential test message: %v", err)
+		}
+		metrics, err = p.Parse(d)
+		if err != nil {
+			t.Fatalf("unexpected parsing error: %v", err)
+		}
 	}
+
 	ids := make([]string, len(metrics))
 	for i, met := range metrics {
 		id, _ := met.GetField("value")
