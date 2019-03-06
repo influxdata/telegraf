@@ -58,7 +58,7 @@ const sampleConfig = `
   # publish_timeout = "30s"
 
   ## Optional. If true, published PubSub message data will be base64-encoded.
-  # base_64_data = true
+  # base64_data = false
 
   ## Optional. PubSub attributes to add to metrics.
   # [[inputs.pubsub.attributes]]
@@ -76,7 +76,7 @@ type PubSub struct {
 	PublishByteThreshold  int               `toml:"publish_byte_threshold"`
 	PublishNumGoroutines  int               `toml:"publish_num_go_routines"`
 	PublishTimeout        internal.Duration `toml:"publish_timeout"`
-	Base64Data            bool              `toml:"base_64_data"`
+	Base64Data            bool              `toml:"base64_data"`
 
 	t topic
 	c *pubsub.Client

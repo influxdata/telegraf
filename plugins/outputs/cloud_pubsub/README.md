@@ -53,7 +53,7 @@ generate it using `telegraf --usage cloud_pubsub`.
   # publish_timeout = "30s"
   
   ## Optional. If true, published PubSub message data will be base64-encoded.
-  # base_64_data = true
+  # base64_data = false
   
   ## Optional. PubSub attributes to add to metrics.
   # [[inputs.pubsub.attributes]]

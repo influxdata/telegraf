@@ -79,7 +79,7 @@ and creates metrics using one of the supported [input data formats][].
   ## Optional. If true, Telegraf will attempt to base64 decode the 
   ## PubSub message data before parsing. Many GCP services that
   ## output JSON to Google PubSub base64-encode the JSON payload.
-  # base_64_data = true
+  # base64_data = false
 ```
 
 ### Multiple Subscriptions and Topics

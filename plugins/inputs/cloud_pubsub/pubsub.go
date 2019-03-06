@@ -41,7 +41,7 @@ type PubSub struct {
 	MaxUndeliveredMessages   int `toml:"max_undelivered_messages"`
 	RetryReceiveDelaySeconds int `toml:"retry_delay_seconds"`
 
-	Base64Data bool `toml:"base_64_data"`
+	Base64Data bool `toml:"base64_data"`
 
 	sub     subscription
 	stubSub func() subscription
@@ -362,5 +362,5 @@ const sampleConfig = `
 
   ## Optional. If true, Telegraf will attempt to base64 decode the 
   ## PubSub message data before parsing
-  # base_64_data = true
+  # base64_data = false
 `
