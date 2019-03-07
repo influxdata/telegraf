@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"cloud.google.com/go/pubsub"
+	"encoding/base64"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
@@ -26,7 +27,7 @@ func TestPubSub_WriteSingle(t *testing.T) {
 	}
 
 	for _, testM := range testMetrics {
-		verifyMetricPublished(t, testM.m, topic.published)
+		verifyRawMetricPublished(t, testM.m, topic.published)
 	}
 }
 
@@ -48,7 +49,7 @@ func TestPubSub_WriteWithAttribute(t *testing.T) {
 	}
 
 	for _, testM := range testMetrics {
-		msg := verifyMetricPublished(t, testM.m, topic.published)
+		msg := verifyRawMetricPublished(t, testM.m, topic.published)
 		assert.Equalf(t, "bar1", msg.Attributes["foo1"], "expected attribute foo1=bar1")
 		assert.Equalf(t, "bar2", msg.Attributes["foo2"], "expected attribute foo2=bar2")
 	}
@@ -70,7 +71,7 @@ func TestPubSub_WriteMultiple(t *testing.T) {
 	}
 
 	for _, testM := range testMetrics {
-		verifyMetricPublished(t, testM.m, topic.published)
+		verifyRawMetricPublished(t, testM.m, topic.published)
 	}
 	assert.Equalf(t, 1, topic.bundleCount, "unexpected bundle count")
 }
@@ -94,7 +95,7 @@ func TestPubSub_WriteOverCountThreshold(t *testing.T) {
 	}
 
 	for _, testM := range testMetrics {
-		verifyMetricPublished(t, testM.m, topic.published)
+		verifyRawMetricPublished(t, testM.m, topic.published)
 	}
 	assert.Equalf(t, 2, topic.bundleCount, "unexpected bundle count")
 }
@@ -117,9 +118,31 @@ func TestPubSub_WriteOverByteThreshold(t *testing.T) {
 	}
 
 	for _, testM := range testMetrics {
-		verifyMetricPublished(t, testM.m, topic.published)
+		verifyRawMetricPublished(t, testM.m, topic.published)
 	}
 	assert.Equalf(t, 2, topic.bundleCount, "unexpected bundle count")
+}
+
+func TestPubSub_WriteBase64Single(t *testing.T) {
+
+	testMetrics := []testMetric{
+		{testutil.TestMetric("value_1", "test"), false /*return error */},
+		{testutil.TestMetric("value_2", "test"), false},
+	}
+
+	settings := pubsub.DefaultPublishSettings
+	settings.CountThreshold = 1
+	ps, topic, metrics := getTestResources(t, settings, testMetrics)
+	ps.Base64Data = true
+
+	err := ps.Write(metrics)
+	if err != nil {
+		t.Fatalf("got unexpected error: %v", err)
+	}
+
+	for _, testM := range testMetrics {
+		verifyMetricPublished(t, testM.m, topic.published, true /* base64encoded */)
+	}
 }
 
 func TestPubSub_Error(t *testing.T) {
@@ -141,7 +164,11 @@ func TestPubSub_Error(t *testing.T) {
 	}
 }
 
-func verifyMetricPublished(t *testing.T, m telegraf.Metric, published map[string]*pubsub.Message) *pubsub.Message {
+func verifyRawMetricPublished(t *testing.T, m telegraf.Metric, published map[string]*pubsub.Message) *pubsub.Message {
+	return verifyMetricPublished(t, m, published, false)
+}
+
+func verifyMetricPublished(t *testing.T, m telegraf.Metric, published map[string]*pubsub.Message, base64Encoded bool) *pubsub.Message {
 	p, _ := parsers.NewInfluxParser()
 
 	v, _ := m.GetField("value")
@@ -150,7 +177,16 @@ func verifyMetricPublished(t *testing.T, m telegraf.Metric, published map[string
 		t.Fatalf("expected metric to get published (value: %s)", v.(string))
 	}
 
-	parsed, err := p.Parse(psMsg.Data)
+	data := psMsg.Data
+	if base64Encoded {
+		v, err := base64.StdEncoding.DecodeString(string(psMsg.Data))
+		if err != nil {
+			t.Fatalf("Unable to decode expected base64-encoded message: %s", err)
+		}
+		data = []byte(v)
+	}
+
+	parsed, err := p.Parse(data)
 	if err != nil {
 		t.Fatalf("could not parse influxdb metric from published message: %s", string(psMsg.Data))
 	}
