@@ -11,9 +11,10 @@ import (
 )
 
 type File struct {
-	Files []string
+	Files        []string
+	RotateMaxAge string
 
-	writers []io.Writer
+	writer  io.Writer
 	closers []io.Closer
 
 	serializer serializers.Serializer
@@ -22,6 +23,9 @@ type File struct {
 var sampleConfig = `
   ## Files to write to, "stdout" is a specially handled file.
   files = ["stdout", "/tmp/metrics.out"]
+
+  ## If this is defined, files will be rotated by the time.Duration specified
+  #rotate_max_age = "1m"
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
@@ -35,23 +39,35 @@ func (f *File) SetSerializer(serializer serializers.Serializer) {
 }
 
 func (f *File) Connect() error {
+	writers := []io.Writer{}
+
 	if len(f.Files) == 0 {
 		f.Files = []string{"stdout"}
 	}
 
 	for _, file := range f.Files {
 		if file == "stdout" {
-			f.writers = append(f.writers, os.Stdout)
+			writers = append(writers, os.Stdout)
 		} else {
-			of, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend|0644)
+			var of io.WriteCloser
+			var err error
+			if f.RotateMaxAge != "" {
+				of, err = NewRotatingWriter(file, f.RotateMaxAge)
+			} else {
+				if _, err := os.Stat(file); os.IsNotExist(err) {
+					of, err = os.Create(file)
+				}
+				of, err = os.OpenFile(file, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+			}
+
 			if err != nil {
 				return err
 			}
-
-			f.writers = append(f.writers, of)
+			writers = append(writers, of)
 			f.closers = append(f.closers, of)
 		}
 	}
+	f.writer = io.MultiWriter(writers...)
 	return nil
 }
 
@@ -76,19 +92,19 @@ func (f *File) Description() string {
 
 func (f *File) Write(metrics []telegraf.Metric) error {
 	var writeErr error = nil
+
 	for _, metric := range metrics {
 		b, err := f.serializer.Serialize(metric)
 		if err != nil {
 			return fmt.Errorf("failed to serialize message: %s", err)
 		}
 
-		for _, writer := range f.writers {
-			_, err = writer.Write(b)
-			if err != nil && writer != os.Stdout {
-				writeErr = fmt.Errorf("E! failed to write message: %s, %s", b, err)
-			}
+		_, err = f.writer.Write(b)
+		if err != nil && f.writer != os.Stdout {
+			writeErr = fmt.Errorf("E! failed to write message: %s, %s", b, err)
 		}
 	}
+
 	return writeErr
 }
 
