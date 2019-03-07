@@ -261,7 +261,7 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 
 		tlsCfg, err := sl.ServerConfig.TLSConfig()
 		if err != nil {
-			return nil
+			return err
 		}
 
 		if tlsCfg == nil {
