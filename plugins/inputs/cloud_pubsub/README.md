@@ -75,6 +75,11 @@ and creates metrics using one of the supported [input data formats][].
   ## 1. Note this setting does not limit the number of messages that can be
   ## processed concurrently (use "max_outstanding_messages" instead).
   # max_receiver_go_routines = 0
+  
+  ## Optional. If true, Telegraf will attempt to base64 decode the 
+  ## PubSub message data before parsing. Many GCP services that
+  ## output JSON to Google PubSub base64-encode the JSON payload.
+  # base64_data = false
 ```
 
 ### Multiple Subscriptions and Topics

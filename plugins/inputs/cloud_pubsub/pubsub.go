@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"cloud.google.com/go/pubsub"
+	"encoding/base64"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -39,6 +40,8 @@ type PubSub struct {
 	MaxMessageLen            int `toml:"max_message_len"`
 	MaxUndeliveredMessages   int `toml:"max_undelivered_messages"`
 	RetryReceiveDelaySeconds int `toml:"retry_delay_seconds"`
+
+	Base64Data bool `toml:"base64_data"`
 
 	sub     subscription
 	stubSub func() subscription
@@ -169,7 +172,18 @@ func (ps *PubSub) onMessage(ctx context.Context, msg message) error {
 		return fmt.Errorf("message longer than max_message_len (%d > %d)", len(msg.Data()), ps.MaxMessageLen)
 	}
 
-	metrics, err := ps.parser.Parse(msg.Data())
+	var data []byte
+	if ps.Base64Data {
+		strData, err := base64.StdEncoding.DecodeString(string(msg.Data()))
+		if err != nil {
+			return fmt.Errorf("unable to base64 decode message: %v", err)
+		}
+		data = []byte(strData)
+	} else {
+		data = msg.Data()
+	}
+
+	metrics, err := ps.parser.Parse(data)
 	if err != nil {
 		msg.Ack()
 		return err
@@ -345,4 +359,8 @@ const sampleConfig = `
   ## 1. Note this setting does not limit the number of messages that can be
   ## processed concurrently (use "max_outstanding_messages" instead).
   # max_receiver_go_routines = 0
+
+  ## Optional. If true, Telegraf will attempt to base64 decode the 
+  ## PubSub message data before parsing
+  # base64_data = false
 `
