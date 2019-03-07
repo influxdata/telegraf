@@ -1,3 +1,10 @@
+## v1.10.1 [unreleased]
+
+#### Bugfixes
+
+- [#5448](https://github.com/influxdata/telegraf/pull/5448): Show error when TLS configuration cannot be loaded.
+- [#5543](https://github.com/influxdata/telegraf/pull/5543): Add Base64-encoding/decoding for Google Cloud PubSub plugins.
+
 ## v1.10 [2019-03-05]
 
 #### New Inputs
