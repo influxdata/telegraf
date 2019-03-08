@@ -827,7 +827,12 @@ func (c *Chrony) parseChronycOutput(commandList []string, out string, acc telegr
 	var cmd *commandRef
 	var commandName string
 
-	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+	lines := strings.Split(out, "\n")
+	// There are always >=1 elements in the slice. Of them, last line is always empty.
+	// But we better test it before throwaway.
+	if lines[len(lines)-1] == "" {
+		lines = lines[:len(lines)-1]
+	}
 	lineDone := -1
 	cmdList := commandList
 
