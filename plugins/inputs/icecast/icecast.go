@@ -64,14 +64,17 @@ var sampleConfig = `
   # insecure_skip_verify = false
 `
 
+// SampleConfig is called upon when auto-creating a configuration
 func (n *Icecast) SampleConfig() string {
 	return sampleConfig
 }
 
+// Description is used to describe the input module
 func (n *Icecast) Description() string {
 	return "Read listeners from an Icecast instance per mount"
 }
 
+// Gather will fetch the metrics from Icecast
 func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 	if len(n.Urls) == 0 {
 		n.Urls = []string{"http://localhost"}
@@ -85,7 +88,7 @@ func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 
 	for _, u := range n.Urls {
 		// Default admin listmounts page of Icecast
-		adminPageUrl := "/admin/listmounts"
+		adminPageURL := "/admin/listmounts"
 
 		// Check to see if there is an alias
 		var alias string
@@ -103,15 +106,15 @@ func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 		}
 
 		// Parsing the URL to see if it's ok
-		hosturl := u + adminPageUrl
+		hosturl := u + adminPageURL
 		addr, err := url.Parse(hosturl)
 		if err != nil {
 			return fmt.Errorf("Unable to parse address '%s': %s", u, err)
 		}
-		tempUrl := u
+		tempURL := u
 
 		go func(addr *url.URL) {
-			errch <- n.gatherUrl(addr, tempUrl, alias, acc)
+			errch <- n.gatherURL(addr, tempURL, alias, acc)
 		}(addr)
 	}
 
@@ -125,7 +128,7 @@ func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 	return outerr
 }
 
-func (n *Icecast) gatherUrl(
+func (n *Icecast) gatherURL(
 	addr *url.URL,
 	host string,
 	alias string,
@@ -158,7 +161,7 @@ func (n *Icecast) gatherUrl(
 
 	req, err := http.NewRequest("GET", addr.String(), nil)
 	if err != nil {
-		return fmt.Errorf("error on new request to %s : %s\n", addr.String(), err)
+		return fmt.Errorf("error on new request to %s : %s", addr.String(), err)
 	}
 
 	if len(n.Username) != 0 && len(n.Password) != 0 {
@@ -167,7 +170,7 @@ func (n *Icecast) gatherUrl(
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error on request to %s : %s\n", addr.String(), err)
+		return fmt.Errorf("error on request to %s : %s", addr.String(), err)
 	}
 	defer resp.Body.Close()
 
@@ -211,14 +214,14 @@ func (n *Icecast) gatherUrl(
 	}
 
 	// Report total listeners as well
-	tags_total := map[string]string{
+	tagsTotal := map[string]string{
 		"host":  host,
 		"mount": "Total",
 	}
-	fields_total := map[string]interface{}{
+	fieldsTotal := map[string]interface{}{
 		"listeners": total,
 	}
-	acc.AddFields("icecast", fields_total, tags_total)
+	acc.AddFields("icecast", fieldsTotal, tagsTotal)
 
 	return nil
 }
