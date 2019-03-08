@@ -190,7 +190,7 @@ func TestPingGather(t *testing.T) {
 		"packets_transmitted":   5,
 		"packets_received":      5,
 		"percent_packet_loss":   0.0,
-		"first_packet_ttl":      63,
+		"ttl":                   63,
 		"minimum_response_ms":   35.225,
 		"average_response_ms":   43.628,
 		"maximum_response_ms":   51.806,
@@ -232,7 +232,7 @@ func TestLossyPingGather(t *testing.T) {
 		"packets_transmitted":   5,
 		"packets_received":      3,
 		"percent_packet_loss":   40.0,
-		"first_packet_ttl":      63,
+		"ttl":                   63,
 		"minimum_response_ms":   35.225,
 		"average_response_ms":   44.033,
 		"maximum_response_ms":   51.806,
@@ -294,7 +294,7 @@ func TestFatalPingGather(t *testing.T) {
 		"Fatal ping should not have packet measurements")
 	assert.False(t, acc.HasMeasurement("percent_packet_loss"),
 		"Fatal ping should not have packet measurements")
-	assert.False(t, acc.HasMeasurement("first_packet_ttl"),
+	assert.False(t, acc.HasMeasurement("ttl"),
 		"Fatal ping should not have packet measurements")
 	assert.False(t, acc.HasMeasurement("minimum_response_ms"),
 		"Fatal ping should not have packet measurements")
