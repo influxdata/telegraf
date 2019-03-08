@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -151,7 +152,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 		}
 	}
 
-	trans, rec, min, avg, max, stddev, err := processPingOutput(out)
+	trans, rec, ttl, min, avg, max, stddev, err := processPingOutput(out)
 	if err != nil {
 		// fatal error
 		acc.AddError(fmt.Errorf("%s: %s", err, u))
@@ -164,6 +165,9 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 	fields["packets_transmitted"] = trans
 	fields["packets_received"] = rec
 	fields["percent_packet_loss"] = loss
+	if ttl >= 0 {
+		fields["ttl"] = ttl
+	}
 	if min >= 0 {
 		fields["minimum_response_ms"] = min
 	}
@@ -253,50 +257,74 @@ func (p *Ping) args(url string, system string) []string {
 //     round-trip min/avg/max/stddev = 34.843/43.508/52.172/8.664 ms
 //
 // It returns (<transmitted packets>, <received packets>, <average response>)
-func processPingOutput(out string) (int, int, float64, float64, float64, float64, error) {
-	var trans, recv int
+func processPingOutput(out string) (int, int, int, float64, float64, float64, float64, error) {
+	var trans, recv, ttl int = 0, 0, -1
 	var min, avg, max, stddev float64 = -1.0, -1.0, -1.0, -1.0
 	// Set this error to nil if we find a 'transmitted' line
 	err := errors.New("Fatal error processing ping output")
 	lines := strings.Split(out, "\n")
 	for _, line := range lines {
-		if strings.Contains(line, "transmitted") &&
+		// Reading only first TTL, ignoring other TTL messages
+		if ttl == -1 && strings.Contains(line, "ttl=") {
+			ttl, err = getTTL(line)
+		} else if strings.Contains(line, "transmitted") &&
 			strings.Contains(line, "received") {
-			stats := strings.Split(line, ", ")
-			// Transmitted packets
-			trans, err = strconv.Atoi(strings.Split(stats[0], " ")[0])
+			trans, recv, err = getPacketStats(line, trans, recv)
 			if err != nil {
-				return trans, recv, min, avg, max, stddev, err
-			}
-			// Received packets
-			recv, err = strconv.Atoi(strings.Split(stats[1], " ")[0])
-			if err != nil {
-				return trans, recv, min, avg, max, stddev, err
+				return trans, recv, ttl, min, avg, max, stddev, err
 			}
 		} else if strings.Contains(line, "min/avg/max") {
-			stats := strings.Split(line, " ")[3]
-			data := strings.Split(stats, "/")
-			min, err = strconv.ParseFloat(data[0], 64)
+			min, avg, max, stddev, err = checkRoundTripTimeStats(line, min, avg, max, stddev)
 			if err != nil {
-				return trans, recv, min, avg, max, stddev, err
-			}
-			avg, err = strconv.ParseFloat(data[1], 64)
-			if err != nil {
-				return trans, recv, min, avg, max, stddev, err
-			}
-			max, err = strconv.ParseFloat(data[2], 64)
-			if err != nil {
-				return trans, recv, min, avg, max, stddev, err
-			}
-			if len(data) == 4 {
-				stddev, err = strconv.ParseFloat(data[3], 64)
-				if err != nil {
-					return trans, recv, min, avg, max, stddev, err
-				}
+				return trans, recv, ttl, min, avg, max, stddev, err
 			}
 		}
 	}
-	return trans, recv, min, avg, max, stddev, err
+	return trans, recv, ttl, min, avg, max, stddev, err
+}
+
+func getPacketStats(line string, trans, recv int) (int, int, error) {
+	stats := strings.Split(line, ", ")
+	// Transmitted packets
+	trans, err := strconv.Atoi(strings.Split(stats[0], " ")[0])
+	if err != nil {
+		return trans, recv, err
+	}
+	// Received packets
+	recv, err = strconv.Atoi(strings.Split(stats[1], " ")[0])
+	return trans, recv, err
+}
+
+func getTTL(line string) (int, error) {
+	ttlLine := regexp.MustCompile(`ttl=(\d+)`)
+	ttlMatch := ttlLine.FindStringSubmatch(line)
+	return strconv.Atoi(ttlMatch[1])
+}
+
+func checkRoundTripTimeStats(line string, min, avg, max,
+	stddev float64) (float64, float64, float64, float64, error) {
+	stats := strings.Split(line, " ")[3]
+	data := strings.Split(stats, "/")
+
+	min, err := strconv.ParseFloat(data[0], 64)
+	if err != nil {
+		return min, avg, max, stddev, err
+	}
+	avg, err = strconv.ParseFloat(data[1], 64)
+	if err != nil {
+		return min, avg, max, stddev, err
+	}
+	max, err = strconv.ParseFloat(data[2], 64)
+	if err != nil {
+		return min, avg, max, stddev, err
+	}
+	if len(data) == 4 {
+		stddev, err = strconv.ParseFloat(data[3], 64)
+		if err != nil {
+			return min, avg, max, stddev, err
+		}
+	}
+	return min, avg, max, stddev, err
 }
 
 func init() {
