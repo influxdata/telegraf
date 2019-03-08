@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
@@ -70,6 +71,7 @@ type PrometheusClient struct {
 	tlsint.ServerConfig
 
 	server *http.Server
+	url    string
 
 	sync.Mutex
 	// fam is the non-expired MetricFamily by Prometheus metric name.
@@ -107,7 +109,7 @@ var sampleConfig = `
   ## If set, enable TLS with the given certificate.
   # tls_cert = "/etc/ssl/telegraf.crt"
   # tls_key = "/etc/ssl/telegraf.key"
-  
+
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
   # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
@@ -213,6 +215,8 @@ func (p *PrometheusClient) Connect() error {
 		return err
 	}
 
+	p.url = createURL(tlsConfig, listener, p.Path)
+
 	go func() {
 		err := p.server.Serve(listener)
 		if err != nil && err != http.ErrServerClosed {
@@ -224,11 +228,31 @@ func (p *PrometheusClient) Connect() error {
 	return nil
 }
 
+// Address returns the address the plugin is listening on.  If not listening
+// an empty string is returned.
+func (p *PrometheusClient) URL() string {
+	return p.url
+}
+
+func createURL(tlsConfig *tls.Config, listener net.Listener, path string) string {
+	u := url.URL{
+		Scheme: "http",
+		Host:   listener.Addr().String(),
+		Path:   path,
+	}
+
+	if tlsConfig != nil {
+		u.Scheme = "https"
+	}
+	return u.String()
+}
+
 func (p *PrometheusClient) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	err := p.server.Shutdown(ctx)
 	prometheus.Unregister(p)
+	p.url = ""
 	return err
 }
 

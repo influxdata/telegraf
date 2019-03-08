@@ -3,25 +3,26 @@ package prometheus_client_test
 import (
 	"crypto/tls"
 	"fmt"
+	"net/http"
+	"testing"
+
 	"github.com/influxdata/telegraf/plugins/outputs/prometheus_client"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/require"
-	"net/http"
-	"testing"
 )
 
 var pki = testutil.NewPKI("../../../testutil/pki")
 
 var configWithTLS = fmt.Sprintf(`
- listen = "127.0.0.1:9090"
+ listen = "127.0.0.1:0"
  tls_allowed_cacerts = ["%s"]
  tls_cert = "%s"
  tls_key = "%s"
 `, pki.TLSServerConfig().TLSAllowedCACerts[0], pki.TLSServerConfig().TLSCert, pki.TLSServerConfig().TLSKey)
 
 var configWithoutTLS = `
-  listen = "127.0.0.1:9090"
+  listen = "127.0.0.1:0"
 `
 
 type PrometheusClientTestContext struct {
@@ -33,11 +34,10 @@ type PrometheusClientTestContext struct {
 func TestWorksWithoutTLS(t *testing.T) {
 	tc := buildTestContext(t, []byte(configWithoutTLS))
 	err := tc.Output.Connect()
+	require.NoError(t, err)
 	defer tc.Output.Close()
 
-	require.NoError(t, err)
-
-	response, err := tc.Client.Get("http://localhost:9090/metrics")
+	response, err := tc.Client.Get(tc.Output.URL())
 	require.NoError(t, err)
 
 	require.NoError(t, err)
@@ -47,24 +47,21 @@ func TestWorksWithoutTLS(t *testing.T) {
 func TestWorksWithTLS(t *testing.T) {
 	tc := buildTestContext(t, []byte(configWithTLS))
 	err := tc.Output.Connect()
-	defer tc.Output.Close()
 	require.NoError(t, err)
+	defer tc.Output.Close()
 
-	response, err := tc.Client.Get("https://localhost:9090/metrics")
+	response, err := tc.Client.Get(tc.Output.URL())
 	require.NoError(t, err)
 
 	require.NoError(t, err)
 	require.Equal(t, response.StatusCode, http.StatusOK)
-
-	response, err = tc.Client.Get("http://localhost:9090/metrics")
-	require.Error(t, err)
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
 	client := &http.Client{Transport: tr}
-	response, err = client.Get("https://localhost:9090/metrics")
+	response, err = client.Get(tc.Output.URL())
 
 	require.Error(t, err)
 }
