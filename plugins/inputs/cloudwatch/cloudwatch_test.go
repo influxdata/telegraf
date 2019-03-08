@@ -17,7 +17,7 @@ type mockGatherCloudWatchClient struct{}
 func (m *mockGatherCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
 	return &cloudwatch.ListMetricsOutput{
 		Metrics: []*cloudwatch.Metric{
-			&cloudwatch.Metric{
+			{
 				Namespace:  params.Namespace,
 				MetricName: aws.String("Latency"),
 				Dimensions: []*cloudwatch.Dimension{
@@ -34,7 +34,7 @@ func (m *mockGatherCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsI
 func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricDataInput) (*cloudwatch.GetMetricDataOutput, error) {
 	return &cloudwatch.GetMetricDataOutput{
 		MetricDataResults: []*cloudwatch.MetricDataResult{
-			&cloudwatch.MetricDataResult{
+			{
 				Id:         aws.String("latency_minimum"),
 				Label:      aws.String("minimum thing"),
 				StatusCode: aws.String("completed"),
@@ -45,7 +45,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 					aws.Float64(0.1),
 				},
 			},
-			&cloudwatch.MetricDataResult{
+			{
 				Id:         aws.String("latency_maximum"),
 				Label:      aws.String("maximum thing"),
 				StatusCode: aws.String("completed"),
@@ -56,7 +56,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 					aws.Float64(0.3),
 				},
 			},
-			&cloudwatch.MetricDataResult{
+			{
 				Id:         aws.String("latency_average"),
 				Label:      aws.String("average thing"),
 				StatusCode: aws.String("completed"),
@@ -67,7 +67,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 					aws.Float64(0.2),
 				},
 			},
-			&cloudwatch.MetricDataResult{
+			{
 				Id:         aws.String("latency_sum"),
 				Label:      aws.String("sum thing"),
 				StatusCode: aws.String("completed"),
@@ -78,7 +78,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 					aws.Float64(123),
 				},
 			},
-			&cloudwatch.MetricDataResult{
+			{
 				Id:         aws.String("latency_sample_count"),
 				Label:      aws.String("sample count thing"),
 				StatusCode: aws.String("completed"),

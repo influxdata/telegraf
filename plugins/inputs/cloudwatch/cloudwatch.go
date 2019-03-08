@@ -377,7 +377,7 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 	dataQueries := []*cloudwatch.MetricDataQuery{}
 	for _, metric := range metrics {
 		dataQuery := []*cloudwatch.MetricDataQuery{
-			&cloudwatch.MetricDataQuery{
+			{
 				Id: aws.String(snakeCase(*metric.MetricName + "_average")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
@@ -385,7 +385,7 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 					Stat:   aws.String(cloudwatch.StatisticAverage),
 				},
 			},
-			&cloudwatch.MetricDataQuery{
+			{
 				Id: aws.String(snakeCase(*metric.MetricName + "_maximum")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
@@ -393,7 +393,7 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 					Stat:   aws.String(cloudwatch.StatisticMaximum),
 				},
 			},
-			&cloudwatch.MetricDataQuery{
+			{
 				Id: aws.String(snakeCase(*metric.MetricName + "_minimum")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
@@ -401,7 +401,7 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 					Stat:   aws.String(cloudwatch.StatisticMinimum),
 				},
 			},
-			&cloudwatch.MetricDataQuery{
+			{
 				Id: aws.String(snakeCase(*metric.MetricName + "_sum")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
@@ -409,7 +409,7 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 					Stat:   aws.String(cloudwatch.StatisticSum),
 				},
 			},
-			&cloudwatch.MetricDataQuery{
+			{
 				Id: aws.String(snakeCase(*metric.MetricName + "_sampleCount")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
