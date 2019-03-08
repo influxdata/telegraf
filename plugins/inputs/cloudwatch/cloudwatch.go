@@ -314,7 +314,7 @@ func (c *CloudWatch) gatherMetrics(
 		results := getResults(*metric.MetricName, resp.MetricDataResults)
 		for _, result := range results {
 			for _, dimension := range metric.Dimensions {
-				tags[*dimension.Name] = *dimension.Value
+				tags[snakeCase(*dimension.Name)] = *dimension.Value
 			}
 			fields[*result.Id] = *result.Values[0]
 			if len(result.Timestamps) == 0 || result.Timestamps[0] == nil {
@@ -352,7 +352,7 @@ func nameMatch(name, id string) bool {
 	if strings.TrimSuffix(id, "_sum") == snakeCase(name) {
 		return true
 	}
-	if strings.TrimSuffix(id, "_sampleCount") == snakeCase(name) {
+	if strings.TrimSuffix(id, "_sample_count") == snakeCase(name) {
 		return true
 	}
 	return false

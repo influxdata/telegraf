@@ -9,43 +9,88 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type mockGatherCloudWatchClient struct{}
 
 func (m *mockGatherCloudWatchClient) ListMetrics(params *cloudwatch.ListMetricsInput) (*cloudwatch.ListMetricsOutput, error) {
-	metric := &cloudwatch.Metric{
-		Namespace:  params.Namespace,
-		MetricName: aws.String("Latency"),
-		Dimensions: []*cloudwatch.Dimension{
-			{
-				Name:  aws.String("LoadBalancerName"),
-				Value: aws.String("p-example"),
+	return &cloudwatch.ListMetricsOutput{
+		Metrics: []*cloudwatch.Metric{
+			&cloudwatch.Metric{
+				Namespace:  params.Namespace,
+				MetricName: aws.String("Latency"),
+				Dimensions: []*cloudwatch.Dimension{
+					{
+						Name:  aws.String("LoadBalancerName"),
+						Value: aws.String("p-example"),
+					},
+				},
 			},
 		},
-	}
-
-	result := &cloudwatch.ListMetricsOutput{
-		Metrics: []*cloudwatch.Metric{metric},
-	}
-	return result, nil
+	}, nil
 }
 
-func (m *mockGatherCloudWatchClient) GetMetricStatistics(params *cloudwatch.GetMetricStatisticsInput) (*cloudwatch.GetMetricStatisticsOutput, error) {
-	dataPoint := &cloudwatch.Datapoint{
-		Timestamp:   params.EndTime,
-		Minimum:     aws.Float64(0.1),
-		Maximum:     aws.Float64(0.3),
-		Average:     aws.Float64(0.2),
-		Sum:         aws.Float64(123),
-		SampleCount: aws.Float64(100),
-		Unit:        aws.String("Seconds"),
-	}
-	result := &cloudwatch.GetMetricStatisticsOutput{
-		Label:      aws.String("Latency"),
-		Datapoints: []*cloudwatch.Datapoint{dataPoint},
-	}
-	return result, nil
+func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricDataInput) (*cloudwatch.GetMetricDataOutput, error) {
+	return &cloudwatch.GetMetricDataOutput{
+		MetricDataResults: []*cloudwatch.MetricDataResult{
+			&cloudwatch.MetricDataResult{
+				Id:         aws.String("latency_minimum"),
+				Label:      aws.String("minimum thing"),
+				StatusCode: aws.String("completed"),
+				Timestamps: []*time.Time{
+					params.EndTime,
+				},
+				Values: []*float64{
+					aws.Float64(0.1),
+				},
+			},
+			&cloudwatch.MetricDataResult{
+				Id:         aws.String("latency_maximum"),
+				Label:      aws.String("maximum thing"),
+				StatusCode: aws.String("completed"),
+				Timestamps: []*time.Time{
+					params.EndTime,
+				},
+				Values: []*float64{
+					aws.Float64(0.3),
+				},
+			},
+			&cloudwatch.MetricDataResult{
+				Id:         aws.String("latency_average"),
+				Label:      aws.String("average thing"),
+				StatusCode: aws.String("completed"),
+				Timestamps: []*time.Time{
+					params.EndTime,
+				},
+				Values: []*float64{
+					aws.Float64(0.2),
+				},
+			},
+			&cloudwatch.MetricDataResult{
+				Id:         aws.String("latency_sum"),
+				Label:      aws.String("sum thing"),
+				StatusCode: aws.String("completed"),
+				Timestamps: []*time.Time{
+					params.EndTime,
+				},
+				Values: []*float64{
+					aws.Float64(123),
+				},
+			},
+			&cloudwatch.MetricDataResult{
+				Id:         aws.String("latency_sample_count"),
+				Label:      aws.String("sample count thing"),
+				StatusCode: aws.String("completed"),
+				Timestamps: []*time.Time{
+					params.EndTime,
+				},
+				Values: []*float64{
+					aws.Float64(100),
+				},
+			},
+		},
+	}, nil
 }
 
 func TestGather(t *testing.T) {
@@ -64,7 +109,7 @@ func TestGather(t *testing.T) {
 	var acc testutil.Accumulator
 	c.client = &mockGatherCloudWatchClient{}
 
-	acc.GatherError(c.Gather)
+	assert.NoError(t, acc.GatherError(c.Gather))
 
 	fields := map[string]interface{}{}
 	fields["latency_minimum"] = 0.1
@@ -74,13 +119,11 @@ func TestGather(t *testing.T) {
 	fields["latency_sample_count"] = 100.0
 
 	tags := map[string]string{}
-	tags["unit"] = "seconds"
 	tags["region"] = "us-east-1"
 	tags["load_balancer_name"] = "p-example"
 
 	assert.True(t, acc.HasMeasurement("cloudwatch_aws_elb"))
 	acc.AssertContainsTaggedFields(t, "cloudwatch_aws_elb", fields, tags)
-
 }
 
 type mockSelectMetricsCloudWatchClient struct{}
@@ -132,7 +175,7 @@ func (m *mockSelectMetricsCloudWatchClient) ListMetrics(params *cloudwatch.ListM
 	return result, nil
 }
 
-func (m *mockSelectMetricsCloudWatchClient) GetMetricStatistics(params *cloudwatch.GetMetricStatisticsInput) (*cloudwatch.GetMetricStatisticsOutput, error) {
+func (m *mockSelectMetricsCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricDataInput) (*cloudwatch.GetMetricDataOutput, error) {
 	return nil, nil
 }
 
@@ -199,13 +242,13 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 
 	c.updateWindow(now)
 
-	params := c.getStatisticsInput(m)
+	params := c.getDataInputs([]*cloudwatch.Metric{m})
 
 	assert.EqualValues(t, *params.EndTime, now.Add(-c.Delay.Duration))
 	assert.EqualValues(t, *params.StartTime, now.Add(-c.Period.Duration).Add(-c.Delay.Duration))
-	assert.Len(t, params.Dimensions, 1)
-	assert.Len(t, params.Statistics, 5)
-	assert.EqualValues(t, *params.Period, 60)
+	require.Len(t, params.MetricDataQueries, 5)
+	assert.Len(t, params.MetricDataQueries[0].MetricStat.Metric.Dimensions, 1)
+	assert.EqualValues(t, *params.MetricDataQueries[0].MetricStat.Period, 60)
 }
 
 func TestMetricsCacheTimeout(t *testing.T) {
