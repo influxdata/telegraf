@@ -5,11 +5,9 @@ import (
 	"sync"
 	"time"
 
+	_ "github.com/denisenkom/go-mssqldb" // go-mssqldb initialization
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
-	// go-mssqldb initialization
-	_ "github.com/denisenkom/go-mssqldb"
 )
 
 // SQLServer struct
@@ -90,7 +88,7 @@ func initQueries(s *SQLServer) {
 
 	// If this is an AzureDB instance, grab some extra metrics
 	if s.AzureDB {
-		queries["AzureDB"] = Query{Script: sqlAzureDB, ResultByRow: true}
+		queries["AzureDB"] = Query{Script: sqlAzureDB, ResultByRow: false}
 	}
 
 	// Decide if we want to run version 1 or version 2 queries
@@ -244,7 +242,8 @@ func init() {
 // Thanks Bob Ward (http://aka.ms/bobwardms)
 // and the folks at Stack Overflow (https://github.com/opserver/Opserver/blob/9c89c7e9936b58ad237b30e6f4cc6cd59c406889/Opserver.Core/Data/SQL/SQLInstance.Memory.cs)
 // for putting most of the memory clerk definitions online!
-const sqlMemoryClerkV2 = `DECLARE @SQL NVARCHAR(MAX) = 'SELECT
+const sqlMemoryClerkV2 = `SET DEADLOCK_PRIORITY -10;
+DECLARE @SQL NVARCHAR(MAX) = 'SELECT
 "sqlserver_memory_clerks" As [measurement],
 REPLACE(@@SERVERNAME,"\",":") AS [sql_instance],
 ISNULL(clerk_names.name,mc.type) AS clerk_type,
@@ -348,7 +347,8 @@ ELSE
 EXEC(@SQL)
 `
 
-const sqlDatabaseIOV2 = `IF SERVERPROPERTY('EngineEdition') = 5
+const sqlDatabaseIOV2 = `SET DEADLOCK_PRIORITY -10;
+IF SERVERPROPERTY('EngineEdition') = 5
 BEGIN
 SELECT
 'sqlserver_database_io' As [measurement],
@@ -388,7 +388,8 @@ inner join sys.master_files b on b.database_id = vfs.database_id and b.file_id =
 END
 `
 
-const sqlServerPropertiesV2 = `DECLARE @sys_info TABLE (
+const sqlServerPropertiesV2 = `SET DEADLOCK_PRIORITY -10;
+DECLARE @sys_info TABLE (
 	cpu_count INT,
 	server_memory BIGINT,
 	sku NVARCHAR(64),
@@ -401,7 +402,6 @@ const sqlServerPropertiesV2 = `DECLARE @sys_info TABLE (
 
 IF OBJECT_ID('master.sys.dm_os_sys_info') IS NOT NULL
 BEGIN
-
 	IF SERVERPROPERTY('EngineEdition') = 8  -- Managed Instance
 		INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
 		SELECT 	TOP(1)
@@ -418,19 +418,6 @@ BEGIN
 
 	ELSE
 	BEGIN
-		DECLARE @total_disk_size_mb BIGINT,
-				@available_space_mb BIGINT
-
-		SELECT	@total_disk_size_mb = sum(total_disk_size_mb),
-				@available_space_mb = sum(free_disk_space_mb)
-		FROM	(
-					SELECT	distinct logical_volume_name AS LogicalName,
-							total_bytes/(1024*1024)as total_disk_size_mb,
-							available_bytes /(1024*1024) free_disk_space_mb
-					FROM	sys.master_files AS f
-							CROSS APPLY sys.dm_os_volume_stats(f.database_id, f.file_id)
-				) as osVolumes
-
 		INSERT INTO @sys_info ( cpu_count, server_memory, sku, engine_edition, hardware_type, total_storage_mb, available_storage_mb, uptime )
 		SELECT	cpu_count,
 				(SELECT total_physical_memory_kb FROM sys.dm_os_sys_memory) AS server_memory,
@@ -440,13 +427,12 @@ BEGIN
 					WHEN 'NONE' THEN 'PHYSICAL Machine'
 					ELSE virtual_machine_type_desc
 				END AS hardware_type,
-				@total_disk_size_mb,
-				@available_space_mb,
+				NULL,
+				NULL,
 				 DATEDIFF(MINUTE,sqlserver_start_time,GETDATE())
 		FROM	sys.dm_os_sys_info
 	END
 END
-
 SELECT	'sqlserver_server_properties' AS [measurement],
 		REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 		s.cpu_count,
@@ -457,6 +443,7 @@ SELECT	'sqlserver_server_properties' AS [measurement],
 		s.total_storage_mb,
 		s.available_storage_mb,
 		s.uptime,
+		SERVERPROPERTY('ProductVersion') AS sql_version,
 		db_online,
 		db_restoring,
 		db_recovering,
@@ -479,7 +466,7 @@ FROM	(
 OPTION( RECOMPILE )
 `
 
-const sqlPerformanceCountersV2 string = `
+const sqlPerformanceCountersV2 string = `SET DEADLOCK_PRIORITY -10;
 DECLARE @PCounters TABLE
 (
 	object_name nvarchar(128),
@@ -573,7 +560,9 @@ WHERE	(
 				'Used memory (KB)',
 				'Forwarded Records/sec',
 				'Background Writer pages/sec',
-				'Percent Log Used'
+				'Percent Log Used',
+				'Log Send Queue KB',
+				'Redo Queue KB'
 			)
 		) OR (
 			object_name LIKE '%User Settable%'
@@ -639,7 +628,8 @@ WHERE	pc.counter_name NOT LIKE '% base'
 OPTION(RECOMPILE);
 `
 
-const sqlWaitStatsCategorizedV2 string = `SELECT
+const sqlWaitStatsCategorizedV2 string = `SET DEADLOCK_PRIORITY -10;
+SELECT
 'sqlserver_waitstats' AS [measurement],
 REPLACE(@@SERVERNAME,'\',':') AS [sql_instance],
 ws.wait_type,
@@ -1198,7 +1188,8 @@ AND wait_time_ms > 100
 OPTION (RECOMPILE);
 `
 
-const sqlAzureDB string = `IF OBJECT_ID('sys.dm_db_resource_stats') IS NOT NULL
+const sqlAzureDB string = `SET DEADLOCK_PRIORITY -10;
+IF OBJECT_ID('sys.dm_db_resource_stats') IS NOT NULL
 BEGIN
 	SELECT TOP(1)
 		'sqlserver_azurestats' AS [measurement],
@@ -1225,7 +1216,8 @@ BEGIN
 END`
 
 // Queries V1
-const sqlPerformanceMetrics string = `SET NOCOUNT ON;
+const sqlPerformanceMetrics string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET ARITHABORT ON;
 SET QUOTED_IDENTIFIER ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
@@ -1318,7 +1310,8 @@ PIVOT(SUM(cntr_value) FOR counter_name IN (' + @ColumnName + ')) AS PVTTable
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlMemoryClerk string = `SET NOCOUNT ON;
+const sqlMemoryClerk string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
 DECLARE @sqlVers numeric(4,2)
@@ -1431,7 +1424,8 @@ PIVOT
 ) as T;
 `
 
-const sqlDatabaseSize string = `SET NOCOUNT ON;
+const sqlDatabaseSize string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
 
 IF OBJECT_ID('tempdb..#baseline') IS NOT NULL
@@ -1524,7 +1518,8 @@ PIVOT(SUM(database_max_size_8k_pages) FOR database_name IN (' + @ColumnName + ')
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlDatabaseStats string = `SET NOCOUNT ON;
+const sqlDatabaseStats string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
 IF OBJECT_ID('tempdb..#baseline') IS NOT NULL
@@ -1658,7 +1653,8 @@ PIVOT(SUM(AvgBytesPerWrite) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTab
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlDatabaseIO string = `SET NOCOUNT ON;
+const sqlDatabaseIO string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 DECLARE @secondsBetween tinyint = 5;
 DECLARE @delayInterval char(8) = CONVERT(Char(8), DATEADD(SECOND, @secondsBetween, '00:00:00'), 108);
@@ -1795,7 +1791,8 @@ PIVOT(SUM(num_of_reads_persec) FOR database_name IN (' + @ColumnName + ')) AS PV
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlDatabaseProperties string = `SET NOCOUNT ON;
+const sqlDatabaseProperties string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET ARITHABORT ON;
 SET QUOTED_IDENTIFIER ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
@@ -2010,7 +2007,8 @@ PIVOT(SUM(Value) FOR DatabaseName IN (' + @ColumnName + ')) AS PVTTable
 EXEC sp_executesql @DynamicPivotQuery;
 `
 
-const sqlCPUHistory string = `SET NOCOUNT ON;
+const sqlCPUHistory string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET ARITHABORT ON;
 SET QUOTED_IDENTIFIER ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
@@ -2046,7 +2044,8 @@ ORDER BY timestamp_ms Desc
 ) as T;
 `
 
-const sqlPerformanceCounters string = `SET NOCOUNT ON;
+const sqlPerformanceCounters string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 IF OBJECT_ID('tempdb..#PCounters') IS NOT NULL DROP TABLE #PCounters
 CREATE TABLE #PCounters
@@ -2109,10 +2108,10 @@ SELECT
 -- value
 , value = CAST(CASE cc.cntr_type
     When 65792 Then cc.cntr_value -- Count
-    When 537003264 Then IsNull(Cast(cc.cntr_value as Money) / NullIf(cbc.cntr_value, 0), 0) -- Ratio
+    When 537003264 Then IsNull(Cast(cc.cntr_value as decimal(19,4)) / NullIf(cbc.cntr_value, 0), 0) -- Ratio
     When 272696576 Then cc.cntr_value - pc.cntr_value -- Per Second
-    When 1073874176 Then IsNull(Cast(cc.cntr_value - pc.cntr_value as Money) / NullIf(cbc.cntr_value - pbc.cntr_value, 0), 0) -- Avg
-    When 272696320 Then IsNull(Cast(cc.cntr_value - pc.cntr_value as Money) / NullIf(cbc.cntr_value - pbc.cntr_value, 0), 0) -- Avg/sec
+    When 1073874176 Then IsNull(Cast(cc.cntr_value - pc.cntr_value as decimal(19,4)) / NullIf(cbc.cntr_value - pbc.cntr_value, 0), 0) -- Avg
+    When 272696320 Then IsNull(Cast(cc.cntr_value - pc.cntr_value as decimal(19,4)) / NullIf(cbc.cntr_value - pbc.cntr_value, 0), 0) -- Avg/sec
     When 1073939712 Then cc.cntr_value - pc.cntr_value -- Base
     Else cc.cntr_value End as bigint)
 --, currentvalue= CAST(cc.cntr_value as bigint)
@@ -2145,7 +2144,8 @@ IF OBJECT_ID('tempdb..#CCounters') IS NOT NULL DROP TABLE #CCounters;
 IF OBJECT_ID('tempdb..#PCounters') IS NOT NULL DROP TABLE #PCounters;
 `
 
-const sqlWaitStatsCategorized string = `SET NOCOUNT ON;
+const sqlWaitStatsCategorized string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED
 DECLARE @secondsBetween tinyint = 5
 DECLARE @delayInterval char(8) = CONVERT(Char(8), DATEADD(SECOND, @secondsBetween, '00:00:00'), 108);
@@ -2550,7 +2550,8 @@ PIVOT
 ) as T;
 `
 
-const sqlVolumeSpace string = `SET NOCOUNT ON;
+const sqlVolumeSpace string = `SET DEADLOCK_PRIORITY -10;
+SET NOCOUNT ON;
 SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
 IF OBJECT_ID('tempdb..#volumestats') IS NOT NULL

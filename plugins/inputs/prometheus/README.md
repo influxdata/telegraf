@@ -25,8 +25,10 @@ in Prometheus format.
   ## - prometheus.io/port: If port is not 9102 use this annotation
   # monitor_kubernetes_pods = true
 
-  ## Use bearer token for authorization
-  # bearer_token = /path/to/bearer/token
+  ## Use bearer token for authorization. ('bearer_token' takes priority)
+  # bearer_token = "/path/to/bearer/token"
+  ## OR
+  # bearer_token_string = "abc_123"
 
   ## Specify timeout duration for slower prometheus clients (default is 3s)
   # response_timeout = "3s"

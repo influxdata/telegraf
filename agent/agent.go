@@ -134,6 +134,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		return err
 	}
 
+	log.Printf("D! [agent] Stopped Successfully")
 	return nil
 }
 

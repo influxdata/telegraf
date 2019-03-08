@@ -48,7 +48,7 @@ will overwrite one another.
 
   [processors.converter.fields]
     integer = ["scboard_*"]
-    tag = ["ParseServerConfigGeneration"]
+    tag = ["ParentServerConfigGeneration"]
 ```
 
 ```diff

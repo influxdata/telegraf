@@ -19,7 +19,7 @@ source field is overwritten.
 
     ## Destination field to be used for the mapped value.  By default the source
     ## field is used, overwriting the original value.
-    # dest = "status_code"
+    dest = "status_code"
 
     ## Default value to be used for all values not contained in the mapping
     ## table.  When unset, the unmodified value for the field will be used if no
