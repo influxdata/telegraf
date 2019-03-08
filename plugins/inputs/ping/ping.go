@@ -152,7 +152,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 		}
 	}
 
-	ttl, trans, rec, min, avg, max, stddev, err := processPingOutput(out)
+	trans, rec, ttl, min, avg, max, stddev, err := processPingOutput(out)
 	if err != nil {
 		// fatal error
 		acc.AddError(fmt.Errorf("%s: %s", err, u))
@@ -166,7 +166,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 	fields["packets_received"] = rec
 	fields["percent_packet_loss"] = loss
 	if ttl >= 0 {
-		fields["first_ttl"] = ttl
+		fields["ttl"] = ttl
 	}
 	if min >= 0 {
 		fields["minimum_response_ms"] = min
@@ -280,7 +280,7 @@ func processPingOutput(out string) (int, int, int, float64, float64, float64, fl
 			}
 		}
 	}
-	return ttl, trans, recv, min, avg, max, stddev, err
+	return trans, recv, ttl, min, avg, max, stddev, err
 }
 
 func getPacketStats(line string, trans, recv int) (int, int, error) {

@@ -61,7 +61,7 @@ ping: -i interval too short: Operation not permitted
 
 // Test that ping command output is processed properly
 func TestProcessPingOutput(t *testing.T) {
-	ttl, trans, rec, min, avg, max, stddev, err := processPingOutput(bsdPingOutput)
+	trans, rec, ttl, min, avg, max, stddev, err := processPingOutput(bsdPingOutput)
 	assert.NoError(t, err)
 	assert.Equal(t, 55, ttl, "ttl value is 55")
 	assert.Equal(t, 5, trans, "5 packets were transmitted")
@@ -71,7 +71,7 @@ func TestProcessPingOutput(t *testing.T) {
 	assert.InDelta(t, 27.263, max, 0.001)
 	assert.InDelta(t, 4.076, stddev, 0.001)
 
-	ttl, trans, rec, min, avg, max, stddev, err = processPingOutput(linuxPingOutput)
+	trans, rec, ttl, min, avg, max, stddev, err = processPingOutput(linuxPingOutput)
 	assert.NoError(t, err)
 	assert.Equal(t, 63, ttl, "ttl value is 63")
 	assert.Equal(t, 5, trans, "5 packets were transmitted")
@@ -81,7 +81,7 @@ func TestProcessPingOutput(t *testing.T) {
 	assert.InDelta(t, 51.806, max, 0.001)
 	assert.InDelta(t, 5.325, stddev, 0.001)
 
-	ttl, trans, rec, min, avg, max, stddev, err = processPingOutput(busyBoxPingOutput)
+	trans, rec, ttl, min, avg, max, stddev, err = processPingOutput(busyBoxPingOutput)
 	assert.NoError(t, err)
 	assert.Equal(t, 56, ttl, "ttl value is 56")
 	assert.Equal(t, 4, trans, "4 packets were transmitted")
@@ -108,7 +108,7 @@ rtt min/avg/max/mdev = 35.225/43.628/51.806/5.325 ms
 
 // Test that ping command output is processed properly
 func TestProcessPingOutputWithVaryingTTL(t *testing.T) {
-	ttl, trans, rec, min, avg, max, stddev, err := processPingOutput(linuxPingOutputWithVaryingTTL)
+	trans, rec, ttl, min, avg, max, stddev, err := processPingOutput(linuxPingOutputWithVaryingTTL)
 	assert.NoError(t, err)
 	assert.Equal(t, 63, ttl, "ttl value is 63")
 	assert.Equal(t, 5, trans, "5 packets were transmitted")
