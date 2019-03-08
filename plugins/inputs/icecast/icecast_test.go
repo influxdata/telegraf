@@ -22,9 +22,12 @@ func TestHTTPicecast(t *testing.T) {
 	}))
 	defer ts.Close()
 
+	// Fetch it 2 times to catch possible data races.
+	testURLs := make([][]string, 2)
+	testURLs[0] = []string{ts.URL}
+	testURLs[1] = []string{ts.URL}
 	a := Icecast{
-		// Fetch it 2 times to catch possible data races.
-		URLs: []string{ts.URL, ts.URL},
+		URLs: testURLs,
 	}
 
 	var acc testutil.Accumulator
@@ -42,9 +45,12 @@ func TestHTTPicecastAlias(t *testing.T) {
 	}))
 	defer ts.Close()
 
+	// Fetch it 2 times to catch possible data races.
+	testURLs := make([][]string, 2)
+	testURLs[0] = []string{ts.URL, "alias"}
+	testURLs[1] = []string{ts.URL, "alias"}
 	a := Icecast{
-		// Fetch it 2 times to catch possible data races.
-		URLs: []string{ts.URL + ";alias", ts.URL + ";alias"},
+		URLs: testURLs,
 	}
 
 	var acc testutil.Accumulator
