@@ -13,7 +13,36 @@ $ cp config.conf.new /etc/telegraf/telegraf.conf
 $ sudo service telegraf start
 ```
 
-## Available webhooks
+
+### Configuration:
+
+```toml
+[[inputs.webhooks]]
+  ## Address and port to host Webhook listener on
+  service_address = ":1619"
+
+  [inputs.webhooks.filestack]
+    path = "/filestack"
+
+  [inputs.webhooks.github]
+    path = "/github"
+    # secret = ""
+
+  [inputs.webhooks.mandrill]
+    path = "/mandrill"
+
+  [inputs.webhooks.rollbar]
+    path = "/rollbar"
+
+  [inputs.webhooks.papertrail]
+    path = "/papertrail"
+
+  [inputs.webhooks.particle]
+    path = "/particle"
+```
+
+
+### Available webhooks
 
 - [Filestack](filestack/)
 - [Github](github/)
@@ -23,7 +52,7 @@ $ sudo service telegraf start
 - [Particle](particle/)
 
 
-## Adding new webhooks plugin
+### Adding new webhooks plugin
 
 1. Add your webhook plugin inside the `webhooks` folder
 1. Your plugin must implement the `Webhook` interface
