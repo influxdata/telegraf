@@ -1,3 +1,9 @@
+## v1.11 [unreleased]
+
+#### Features
+
+- [#5556](https://github.com/influxdata/telegraf/pull/5556): Add TTL field to ping input.
+
 ## v1.10.1 [unreleased]
 
 #### Bugfixes
