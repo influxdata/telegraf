@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,26 +18,40 @@ var icecastStatus = `
 
 func TestHTTPicecast(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
 		fmt.Fprintln(w, icecastStatus)
 	}))
 	defer ts.Close()
 
 	a := Icecast{
 		// Fetch it 2 times to catch possible data races.
-		Urls: []string{ts.URL, ts.URL},
+		URLs: []string{ts.URL, ts.URL},
 	}
 
 	var acc testutil.Accumulator
 	require.NoError(t, acc.GatherError(a.Gather))
 
-	// Report total listeners as well
-	tags := map[string]string{
-		"host":  string("localhost"),
-		"mount": string("/mount.aac"),
+	fmt.Println(acc.TagValue("icecast", "host"))
+	assert.True(t, acc.HasField("icecast", "listeners"))
+	assert.True(t, acc.TagValue("icecast", "host") == "127.0.0.1")
+	assert.True(t, acc.TagValue("icecast", "mount") == "mount.aac")
+}
+
+func TestHTTPicecastAlias(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, icecastStatus)
+	}))
+	defer ts.Close()
+
+	a := Icecast{
+		// Fetch it 2 times to catch possible data races.
+		URLs: []string{ts.URL + ";alias", ts.URL + ";alias"},
 	}
-	fields := map[string]interface{}{
-		"listeners": int32(420),
-	}
-	acc.AssertContainsTaggedFields(t, "icecast", fields, tags)
+
+	var acc testutil.Accumulator
+	require.NoError(t, acc.GatherError(a.Gather))
+
+	fmt.Println(acc.TagValue("icecast", "host"))
+	assert.True(t, acc.HasField("icecast", "listeners"))
+	assert.True(t, acc.TagValue("icecast", "host") == "alias")
+	assert.True(t, acc.TagValue("icecast", "mount") == "mount.aac")
 }

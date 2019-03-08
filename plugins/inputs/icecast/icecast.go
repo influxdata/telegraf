@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -27,16 +28,13 @@ type Listmounts struct {
 	Sources []SourceListmounts `xml:"source"`
 }
 
+// Icecast contains all the required details to connect to
 type Icecast struct {
-	Urls               []string          `toml:"urls"`
-	ResponseTimeout    internal.Duration `toml:"response_timeout"`
-	Username           string            `toml:"username"`
-	Password           string            `toml:"password"`
-	Slash              bool              `toml:"slash"`
-	SSLCA              string            `toml:"ssl_ca"`   // Path to CA file
-	SSLCert            string            `toml:"ssl_cert"` // Path to host cert file
-	SSLKey             string            `toml:"ssl_key"`  // Path to cert key file
-	InsecureSkipVerify bool              // Use SSL but skip chain & host verification
+	URLs            []string          `toml:"urls"`
+	ResponseTimeout internal.Duration `toml:"response_timeout"`
+	Username        string            `toml:"username"`
+	Password        string            `toml:"password"`
+	Slash           bool              `toml:"slash"`
 }
 
 var sampleConfig = `
@@ -55,13 +53,6 @@ var sampleConfig = `
 
   ## Include the slash in mountpoint names or not
   slash = false
-
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
-  # insecure_skip_verify = false
 `
 
 // SampleConfig is called upon when auto-creating a configuration
@@ -76,8 +67,8 @@ func (n *Icecast) Description() string {
 
 // Gather will fetch the metrics from Icecast
 func (n *Icecast) Gather(acc telegraf.Accumulator) error {
-	if len(n.Urls) == 0 {
-		n.Urls = []string{"http://localhost"}
+	if len(n.URLs) == 0 {
+		n.URLs = []string{"http://localhost"}
 	}
 	if n.ResponseTimeout.Duration < time.Second {
 		n.ResponseTimeout.Duration = time.Second * 5
@@ -86,7 +77,7 @@ func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 	var outerr error
 	var errch = make(chan error)
 
-	for _, u := range n.Urls {
+	for _, u := range n.URLs {
 		// Default admin listmounts page of Icecast
 		adminPageURL := "/admin/listmounts"
 
@@ -98,28 +89,20 @@ func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 			u = urlAlais[0]
 		}
 
-		// Check to see if the user isn't adding a / at the end
-		if u[len(u)-1:] == "/" {
-			if last := len(u) - 1; last >= 0 && u[last] == '/' {
-				u = u[:last]
-			}
-		}
-
 		// Parsing the URL to see if it's ok
-		hosturl := u + adminPageURL
-		addr, err := url.Parse(hosturl)
+		addr, err := url.Parse(u)
 		if err != nil {
 			return fmt.Errorf("Unable to parse address '%s': %s", u, err)
 		}
-		tempURL := u
+		addr.Path = path.Join(addr.Path, adminPageURL)
 
 		go func(addr *url.URL) {
-			errch <- n.gatherURL(addr, tempURL, alias, acc)
+			errch <- n.gatherURL(addr, alias, acc)
 		}(addr)
 	}
 
 	// Drain channel, waiting for all requests to finish and save last error.
-	for range n.Urls {
+	for range n.URLs {
 		if err := <-errch; err != nil {
 			outerr = err
 		}
@@ -130,33 +113,17 @@ func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 
 func (n *Icecast) gatherURL(
 	addr *url.URL,
-	host string,
 	alias string,
 	acc telegraf.Accumulator,
 ) error {
-	var tr *http.Transport
 	var listmounts Listmounts
 	var total int32
 
-	if addr.Scheme == "https" {
-		tlsCfg, err := internal.GetTLSConfig(
-			n.SSLCert, n.SSLKey, n.SSLCA, n.InsecureSkipVerify)
-		if err != nil {
-			return err
-		}
-		tr = &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
-			TLSClientConfig:       tlsCfg,
-		}
-	} else {
-		tr = &http.Transport{
-			ResponseHeaderTimeout: time.Duration(3 * time.Second),
-		}
-	}
-
 	client := &http.Client{
-		Transport: tr,
-		Timeout:   n.ResponseTimeout.Duration,
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: time.Duration(3 * time.Second),
+		},
+		Timeout: n.ResponseTimeout.Duration,
 	}
 
 	req, err := http.NewRequest("GET", addr.String(), nil)
@@ -187,9 +154,12 @@ func (n *Icecast) gatherURL(
 		return fmt.Errorf("Read error: %s", err)
 	}
 
-	// Setting alias if availible
+	var host string
+	// Setting alias if available
 	if len(alias) != 0 {
 		host = alias
+	} else {
+		host = addr.Hostname()
 	}
 
 	// Run trough each mountpoint
