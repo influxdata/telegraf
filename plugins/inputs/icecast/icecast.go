@@ -30,7 +30,7 @@ type Listmounts struct {
 
 // Icecast contains all the required details to connect to
 type Icecast struct {
-	URLs            []string          `toml:"urls"`
+	URLs            [][]string        `toml:"urls"`
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 	Username        string            `toml:"username"`
 	Password        string            `toml:"password"`
@@ -38,10 +38,13 @@ type Icecast struct {
 }
 
 var sampleConfig = `
-  ## Specify the IP adress to where the '/admin/listmounts' can be found. You can include port if needed.
-  ## If you'd like to report under an alias, use ; (e.g. https://localhost;Server 1)
-  ## You can use multiple hosts who use the same login credentials by dividing with , (e.g. "http://localhost","https://127.0.0.1")
-  urls = ["http://localhost"]
+  ## Specify the IP adress/hostname to where the '/admin/listmounts' can be found. You can include port if needed.
+  ## If you'd like to report under an alias, specify it in the second field (optional)
+  ## You can use multiple hosts who use the same login credentials
+  ## For example:
+  ## urls = [ [ "http://localhost", "Server 1" ],
+  			  [ "http://example.org" ] ]
+  urls = [ [ "http://localhost", "Server 1" ] ]
 
   ## Timeout to the complete conection and reponse time in seconds. Default (5 seconds)
   # response_timeout = "25s"
@@ -68,7 +71,7 @@ func (n *Icecast) Description() string {
 // Gather will fetch the metrics from Icecast
 func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 	if len(n.URLs) == 0 {
-		n.URLs = []string{"http://localhost"}
+		return fmt.Errorf("No hostname/IP given")
 	}
 	if n.ResponseTimeout.Duration < time.Second {
 		n.ResponseTimeout.Duration = time.Second * 5
@@ -83,16 +86,14 @@ func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 
 		// Check to see if there is an alias
 		var alias string
-		if strings.Contains(u, ";") {
-			urlAlais := strings.Split(u, ";")
-			alias = urlAlais[1]
-			u = urlAlais[0]
+		if len(u) > 1 {
+			alias = u[1]
 		}
 
 		// Parsing the URL to see if it's ok
-		addr, err := url.Parse(u)
+		addr, err := url.Parse(u[0])
 		if err != nil {
-			return fmt.Errorf("Unable to parse address '%s': %s", u, err)
+			return fmt.Errorf("Unable to parse address '%s': %s", u[0], err)
 		}
 		addr.Path = path.Join(addr.Path, adminPageURL)
 
