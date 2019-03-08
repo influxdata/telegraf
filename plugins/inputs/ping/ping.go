@@ -284,7 +284,6 @@ func processPingOutput(out string) (int, int, int, float64, float64, float64, fl
 }
 
 func getPacketStats(line string, trans, recv int) (int, int, error) {
-
 	stats := strings.Split(line, ", ")
 	// Transmitted packets
 	trans, err := strconv.Atoi(strings.Split(stats[0], " ")[0])
