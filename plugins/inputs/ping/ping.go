@@ -166,7 +166,7 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 	fields["packets_received"] = rec
 	fields["percent_packet_loss"] = loss
 	if ttl >= 0 {
-		fields["ttl"] = ttl
+		fields["first_packet_ttl"] = ttl
 	}
 	if min >= 0 {
 		fields["minimum_response_ms"] = min
