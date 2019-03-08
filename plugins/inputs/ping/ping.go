@@ -271,12 +271,12 @@ func processPingOutput(out string) (int, int, int, float64, float64, float64, fl
 			strings.Contains(line, "received") {
 			trans, recv, err = getPacketStats(line, trans, recv)
 			if err != nil {
-				return ttl, trans, recv, min, avg, max, stddev, err
+				return trans, recv, ttl, min, avg, max, stddev, err
 			}
 		} else if strings.Contains(line, "min/avg/max") {
 			min, avg, max, stddev, err = checkRoundTripTimeStats(line, min, avg, max, stddev)
 			if err != nil {
-				return ttl, trans, recv, min, avg, max, stddev, err
+				return trans, recv, ttl, min, avg, max, stddev, err
 			}
 		}
 	}
