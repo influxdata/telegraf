@@ -9,503 +9,35 @@ import (
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io/ioutil"
 )
-
-const sampleOverviewResponse = `
-{
-    "message_stats": {
-        "ack": 5246,
-        "ack_details": {
-            "rate": 0.0
-        },
-        "deliver": 5246,
-        "deliver_details": {
-            "rate": 0.0
-        },
-        "deliver_get": 5246,
-        "deliver_get_details": {
-            "rate": 0.0
-        },
-        "publish": 5258,
-        "publish_details": {
-            "rate": 0.0
-        }
-    },
-    "object_totals": {
-        "channels": 44,
-        "connections": 44,
-        "consumers": 65,
-        "exchanges": 43,
-        "queues": 62
-    },
-    "queue_totals": {
-        "messages": 0,
-        "messages_details": {
-            "rate": 0.0
-        },
-        "messages_ready": 0,
-        "messages_ready_details": {
-            "rate": 0.0
-        },
-        "messages_unacknowledged": 0,
-        "messages_unacknowledged_details": {
-            "rate": 0.0
-        }
-    },
-    "listeners": [
-        {
-            "name": "rabbit@node-a",
-            "protocol": "amqp"
-        },
-        {
-            "name": "rabbit@node-b",
-            "protocol": "amqp"
-        },
-        {
-            "name": "rabbit@node-a",
-            "protocol": "clustering"
-        },
-        {
-            "name": "rabbit@node-b",
-            "protocol": "clustering"
-        }
-    ]
-}
-`
-
-const sampleNodesResponse = `
-[
-    {
-        "db_dir": "/var/lib/rabbitmq/mnesia/rabbit@vagrant-ubuntu-trusty-64",
-        "disk_free": 37768282112,
-        "disk_free_alarm": false,
-        "disk_free_details": {
-            "rate": 0.0
-        },
-        "disk_free_limit": 50000000,
-        "enabled_plugins": [
-            "rabbitmq_management"
-        ],
-        "fd_total": 1024,
-        "fd_used": 63,
-        "fd_used_details": {
-            "rate": 0.0
-        },
-        "io_read_avg_time": 0,
-        "io_read_avg_time_details": {
-            "rate": 0.0
-        },
-        "io_read_bytes": 1,
-        "io_read_bytes_details": {
-            "rate": 0.0
-        },
-        "io_read_count": 1,
-        "io_read_count_details": {
-            "rate": 0.0
-        },
-        "io_sync_avg_time": 0,
-        "io_sync_avg_time_details": {
-            "rate": 0.0
-        },
-        "io_write_avg_time": 0,
-        "io_write_avg_time_details": {
-            "rate": 0.0
-        },
-        "log_file": "/var/log/rabbitmq/rabbit@vagrant-ubuntu-trusty-64.log",
-        "mem_alarm": false,
-        "mem_limit": 2503771750,
-        "mem_used": 159707080,
-        "mem_used_details": {
-            "rate": 15185.6
-        },
-        "mnesia_disk_tx_count": 16,
-        "mnesia_disk_tx_count_details": {
-            "rate": 0.0
-        },
-        "mnesia_ram_tx_count": 296,
-        "mnesia_ram_tx_count_details": {
-            "rate": 0.0
-        },
-        "name": "rabbit@vagrant-ubuntu-trusty-64",
-        "net_ticktime": 60,
-        "os_pid": "14244",
-        "partitions": [],
-        "proc_total": 1048576,
-        "proc_used": 783,
-        "proc_used_details": {
-            "rate": 0.0
-        },
-        "processors": 1,
-        "rates_mode": "basic",
-        "run_queue": 0,
-        "running": true,
-        "sasl_log_file": "/var/log/rabbitmq/rabbit@vagrant-ubuntu-trusty-64-sasl.log",
-        "sockets_total": 829,
-        "sockets_used": 45,
-        "sockets_used_details": {
-            "rate": 0.0
-        },
-        "type": "disc",
-        "uptime": 7464827
-    }
-]
-`
-const sampleQueuesResponse = `
-[
-  {
-    "memory": 21960,
-    "messages": 0,
-    "messages_details": {
-      "rate": 0
-    },
-    "messages_ready": 0,
-    "messages_ready_details": {
-      "rate": 0
-    },
-    "messages_unacknowledged": 0,
-    "messages_unacknowledged_details": {
-      "rate": 0
-    },
-    "idle_since": "2015-11-01 8:22:15",
-    "consumer_utilisation": "",
-    "policy": "federator",
-    "exclusive_consumer_tag": "",
-    "consumers": 0,
-    "recoverable_slaves": "",
-    "state": "running",
-    "messages_ram": 0,
-    "messages_ready_ram": 0,
-    "messages_unacknowledged_ram": 0,
-    "messages_persistent": 0,
-    "message_bytes": 0,
-    "message_bytes_ready": 0,
-    "message_bytes_unacknowledged": 0,
-    "message_bytes_ram": 0,
-    "message_bytes_persistent": 0,
-    "disk_reads": 0,
-    "disk_writes": 0,
-    "backing_queue_status": {
-      "q1": 0,
-      "q2": 0,
-      "delta": [
-        "delta",
-        "undefined",
-        0,
-        "undefined"
-      ],
-      "q3": 0,
-      "q4": 0,
-      "len": 0,
-      "target_ram_count": "infinity",
-      "next_seq_id": 0,
-      "avg_ingress_rate": 0,
-      "avg_egress_rate": 0,
-      "avg_ack_ingress_rate": 0,
-      "avg_ack_egress_rate": 0
-    },
-    "name": "collectd-queue",
-    "vhost": "collectd",
-    "durable": true,
-    "auto_delete": false,
-    "arguments": {},
-    "node": "rabbit@testhost"
-  },
-  {
-    "memory": 55528,
-    "message_stats": {
-    "ack": 223654927,
-    "ack_details": {
-      "rate": 0
-    },
-    "deliver": 224518745,
-    "deliver_details": {
-      "rate": 0
-    },
-    "deliver_get": 224518829,
-    "deliver_get_details": {
-      "rate": 0
-    },
-    "get": 19,
-    "get_details": {
-      "rate": 0
-    },
-    "get_no_ack": 65,
-    "get_no_ack_details": {
-      "rate": 0
-    },
-    "publish": 223883765,
-    "publish_details": {
-      "rate": 0
-    },
-    "redeliver": 863805,
-    "redeliver_details": {
-      "rate": 0
-    }
-    },
-    "messages": 24,
-    "messages_details": {
-      "rate": 0
-    },
-    "messages_ready": 24,
-    "messages_ready_details": {
-      "rate": 0
-    },
-    "messages_unacknowledged": 0,
-    "messages_unacknowledged_details": {
-      "rate": 0
-    },
-    "idle_since": "2015-11-01 8:22:14",
-    "consumer_utilisation": "",
-    "policy": "",
-    "exclusive_consumer_tag": "",
-    "consumers": 0,
-    "recoverable_slaves": "",
-    "state": "running",
-    "messages_ram": 24,
-    "messages_ready_ram": 24,
-    "messages_unacknowledged_ram": 0,
-    "messages_persistent": 0,
-    "message_bytes": 149220,
-    "message_bytes_ready": 149220,
-    "message_bytes_unacknowledged": 0,
-    "message_bytes_ram": 149220,
-    "message_bytes_persistent": 0,
-    "disk_reads": 0,
-    "disk_writes": 0,
-    "backing_queue_status": {
-      "q1": 0,
-      "q2": 0,
-      "delta": [
-        "delta",
-        "undefined",
-        0,
-        "undefined"
-      ],
-      "q3": 0,
-      "q4": 24,
-      "len": 24,
-      "target_ram_count": "infinity",
-      "next_seq_id": 223883765,
-      "avg_ingress_rate": 0,
-      "avg_egress_rate": 0,
-      "avg_ack_ingress_rate": 0,
-      "avg_ack_egress_rate": 0
-    },
-    "name": "telegraf",
-    "vhost": "collectd",
-    "durable": true,
-    "auto_delete": false,
-    "arguments": {},
-    "node": "rabbit@testhost"
-  },
-  {
-    "message_stats": {
-      "ack": 1296077,
-      "ack_details": {
-        "rate": 0
-      },
-      "deliver": 1513176,
-      "deliver_details": {
-        "rate": 0.4
-      },
-      "deliver_get": 1513239,
-      "deliver_get_details": {
-        "rate": 0.4
-      },
-      "disk_writes": 7976,
-      "disk_writes_details": {
-        "rate": 0
-      },
-      "get": 40,
-      "get_details": {
-        "rate": 0
-      },
-      "get_no_ack": 23,
-      "get_no_ack_details": {
-        "rate": 0
-      },
-      "publish": 1325628,
-      "publish_details": {
-        "rate": 0.4
-      },
-      "redeliver": 216034,
-      "redeliver_details": {
-        "rate": 0
-      }
-    },
-    "messages": 5,
-    "messages_details": {
-      "rate": 0.4
-    },
-    "messages_ready": 0,
-    "messages_ready_details": {
-      "rate": 0
-    },
-    "messages_unacknowledged": 5,
-    "messages_unacknowledged_details": {
-      "rate": 0.4
-    },
-    "policy": "federator",
-    "exclusive_consumer_tag": "",
-    "consumers": 1,
-    "consumer_utilisation": 1,
-    "memory": 122856,
-    "recoverable_slaves": "",
-    "state": "running",
-    "messages_ram": 5,
-    "messages_ready_ram": 0,
-    "messages_unacknowledged_ram": 5,
-    "messages_persistent": 0,
-    "message_bytes": 150096,
-    "message_bytes_ready": 0,
-    "message_bytes_unacknowledged": 150096,
-    "message_bytes_ram": 150096,
-    "message_bytes_persistent": 0,
-    "disk_reads": 0,
-    "disk_writes": 7976,
-    "backing_queue_status": {
-      "q1": 0,
-      "q2": 0,
-      "delta": [
-        "delta",
-        "undefined",
-        0,
-        "undefined"
-      ],
-      "q3": 0,
-      "q4": 0,
-      "len": 0,
-      "target_ram_count": "infinity",
-      "next_seq_id": 1325628,
-      "avg_ingress_rate": 0.19115840579934168,
-      "avg_egress_rate": 0.19115840579934168,
-      "avg_ack_ingress_rate": 0.19115840579934168,
-      "avg_ack_egress_rate": 0.1492766485341716
-    },
-    "name": "telegraf",
-    "vhost": "metrics",
-    "durable": true,
-    "auto_delete": false,
-    "arguments": {},
-    "node": "rabbit@testhost"
-  }
-]
-`
-
-const sampleExchangesResponse = `
-[
-  {
-    "arguments": { },
-    "internal": false,
-    "auto_delete": false,
-    "durable": true,
-    "type": "direct",
-    "vhost": "\/",
-    "name": ""
-  },
-  {
-    "message_stats": {
-      "publish_in_details": {
-        "rate": 0
-      },
-      "publish_in": 2,
-      "publish_out_details": {
-        "rate": 0
-      },
-      "publish_out": 1
-    },
-    "arguments": { },
-    "internal": false,
-    "auto_delete": false,
-    "durable": true,
-    "type": "fanout",
-    "vhost": "\/",
-    "name": "telegraf"
-  },
-  {
-    "arguments": { },
-    "internal": false,
-    "auto_delete": false,
-    "durable": true,
-    "type": "direct",
-    "vhost": "\/",
-    "name": "amq.direct"
-  },
-  {
-    "arguments": { },
-    "internal": false,
-    "auto_delete": false,
-    "durable": true,
-    "type": "fanout",
-    "vhost": "\/",
-    "name": "amq.fanout"
-  },
-  {
-    "arguments": { },
-    "internal": false,
-    "auto_delete": false,
-    "durable": true,
-    "type": "headers",
-    "vhost": "\/",
-    "name": "amq.headers"
-  },
-  {
-    "arguments": { },
-    "internal": false,
-    "auto_delete": false,
-    "durable": true,
-    "type": "headers",
-    "vhost": "\/",
-    "name": "amq.match"
-  },
-  {
-    "arguments": { },
-    "internal": true,
-    "auto_delete": false,
-    "durable": true,
-    "type": "topic",
-    "vhost": "\/",
-    "name": "amq.rabbitmq.log"
-  },
-  {
-    "arguments": { },
-    "internal": true,
-    "auto_delete": false,
-    "durable": true,
-    "type": "topic",
-    "vhost": "\/",
-    "name": "amq.rabbitmq.trace"
-  },
-  {
-    "arguments": { },
-    "internal": false,
-    "auto_delete": false,
-    "durable": true,
-    "type": "topic",
-    "vhost": "\/",
-    "name": "amq.topic"
-  }
-]
-`
 
 func TestRabbitMQGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var rsp string
+		var jsonFilePath string
 
 		switch r.URL.Path {
 		case "/api/overview":
-			rsp = sampleOverviewResponse
+			jsonFilePath = "testdata/overview.json"
 		case "/api/nodes":
-			rsp = sampleNodesResponse
+			jsonFilePath = "testdata/nodes.json"
 		case "/api/queues":
-			rsp = sampleQueuesResponse
+			jsonFilePath = "testdata/queues.json"
 		case "/api/exchanges":
-			rsp = sampleExchangesResponse
+			jsonFilePath = "testdata/exchanges.json"
+		case "/api/healthchecks/node/rabbit@vagrant-ubuntu-trusty-64":
+			jsonFilePath = "testdata/healthchecks.json"
 		default:
 			panic("Cannot handle request")
 		}
 
-		fmt.Fprintln(w, rsp)
+		data, err := ioutil.ReadFile(jsonFilePath)
+
+		if err != nil {
+			panic(fmt.Sprintf("could not read from data file %s", jsonFilePath))
+		}
+
+		w.Write(data)
 	}))
 	defer ts.Close()
 
@@ -513,60 +45,118 @@ func TestRabbitMQGeneratesMetrics(t *testing.T) {
 		URL: ts.URL,
 	}
 
-	var acc testutil.Accumulator
+	acc := &testutil.Accumulator{}
 
 	err := acc.GatherError(r.Gather)
 	require.NoError(t, err)
 
-	intMetrics := []string{
-		"messages",
-		"messages_ready",
-		"messages_unacked",
-
-		"messages_acked",
-		"messages_delivered",
-		"messages_published",
-
-		"channels",
-		"connections",
-		"consumers",
-		"exchanges",
-		"queues",
-		"clustering_listeners",
-		"amqp_listeners",
+	overviewMetrics := map[string]interface{}{
+		"messages":               5,
+		"messages_ready":         32,
+		"messages_unacked":       27,
+		"messages_acked":         5246,
+		"messages_delivered":     5234,
+		"messages_delivered_get": 3333,
+		"messages_published":     5258,
+		"channels":               44,
+		"connections":            44,
+		"consumers":              65,
+		"exchanges":              43,
+		"queues":                 62,
+		"clustering_listeners":   2,
+		"amqp_listeners":         2,
+		"return_unroutable":      10,
+		"return_unroutable_rate": 3.3,
 	}
+	compareMetrics(t, overviewMetrics, acc, "rabbitmq_overview")
 
-	for _, metric := range intMetrics {
-		assert.True(t, acc.HasInt64Field("rabbitmq_overview", metric))
+	queuesMetrics := map[string]interface{}{
+		"consumers":                 3,
+		"consumer_utilisation":      1.0,
+		"memory":                    143776,
+		"message_bytes":             3,
+		"message_bytes_ready":       4,
+		"message_bytes_unacked":     5,
+		"message_bytes_ram":         6,
+		"message_bytes_persist":     7,
+		"messages":                  44,
+		"messages_ready":            32,
+		"messages_unack":            44,
+		"messages_ack":              3457,
+		"messages_ack_rate":         9.9,
+		"messages_deliver":          22222,
+		"messages_deliver_rate":     333.4,
+		"messages_deliver_get":      3457,
+		"messages_deliver_get_rate": 0.2,
+		"messages_publish":          3457,
+		"messages_publish_rate":     11.2,
+		"messages_redeliver":        33,
+		"messages_redeliver_rate":   2.5,
+		"idle_since":                "2015-11-01 8:22:14",
 	}
+	compareMetrics(t, queuesMetrics, acc, "rabbitmq_queue")
 
-	nodeIntMetrics := []string{
-		"disk_free",
-		"disk_free_limit",
-		"fd_total",
-		"fd_used",
-		"mem_limit",
-		"mem_used",
-		"proc_total",
-		"proc_used",
-		"run_queue",
-		"sockets_total",
-		"sockets_used",
-		"running",
+	nodeMetrics := map[string]interface{}{
+		"disk_free":                 3776,
+		"disk_free_limit":           50000000,
+		"disk_free_alarm":           0,
+		"fd_total":                  1024,
+		"fd_used":                   63,
+		"mem_limit":                 2503,
+		"mem_used":                  159707080,
+		"mem_alarm":                 1,
+		"proc_total":                1048576,
+		"proc_used":                 783,
+		"run_queue":                 0,
+		"sockets_total":             829,
+		"sockets_used":              45,
+		"uptime":                    7464827,
+		"running":                   1,
+		"health_check_status":       1,
+		"mnesia_disk_tx_count":      16,
+		"mnesia_ram_tx_count":       296,
+		"mnesia_disk_tx_count_rate": 1.1,
+		"mnesia_ram_tx_count_rate":  2.2,
+		"gc_num":                    57280132,
+		"gc_bytes_reclaimed":        2533,
+		"gc_num_rate":               274.2,
+		"gc_bytes_reclaimed_rate":   16490856.3,
+		"io_read_avg_time":          983,
+		"io_read_avg_time_rate":     88.77,
+		"io_read_bytes":             1111,
+		"io_read_bytes_rate":        99.99,
+		"io_write_avg_time":         134,
+		"io_write_avg_time_rate":    4.32,
+		"io_write_bytes":            823,
+		"io_write_bytes_rate":       32.8,
 	}
+	compareMetrics(t, nodeMetrics, acc, "rabbitmq_node")
 
-	for _, metric := range nodeIntMetrics {
-		assert.True(t, acc.HasInt64Field("rabbitmq_node", metric))
+	exchangeMetrics := map[string]interface{}{
+		"messages_publish_in":       3678,
+		"messages_publish_in_rate":  3.2,
+		"messages_publish_out":      3677,
+		"messages_publish_out_rate": 5.1,
 	}
+	compareMetrics(t, exchangeMetrics, acc, "rabbitmq_exchange")
+}
 
-	assert.True(t, acc.HasMeasurement("rabbitmq_queue"))
+func compareMetrics(t *testing.T, expectedMetrics map[string]interface{},
+	accumulator *testutil.Accumulator, measurementKey string) {
+	measurement, exist := accumulator.Get(measurementKey)
 
-	exchangeIntMetrics := []string{
-		"messages_publish_in",
-		"messages_publish_out",
-	}
+	assert.True(t, exist, "There is measurement %s", measurementKey)
+	assert.Equal(t, len(expectedMetrics), len(measurement.Fields))
 
-	for _, metric := range exchangeIntMetrics {
-		assert.True(t, acc.HasInt64Field("rabbitmq_exchange", metric))
+	for metricName, metricValue := range expectedMetrics {
+		actualMetricValue := measurement.Fields[metricName]
+
+		if accumulator.HasStringField(measurementKey, metricName) {
+			assert.Equal(t, metricValue, actualMetricValue,
+				"Metric name: %s", metricName)
+		} else {
+			assert.InDelta(t, metricValue, actualMetricValue, 0e5,
+				"Metric name: %s", metricName)
+		}
 	}
 }

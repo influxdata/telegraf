@@ -41,14 +41,29 @@ ignored unless specified in the `tag_key` or `json_string_fields` options.
   ## metric.
   json_time_key = ""
 
-  ## Time format is the time layout that should be used to interprete the
-  ## json_time_key.  The time must be `unix`, `unix_ms` or a time in the
-  ## "reference time".
+  ## Time format is the time layout that should be used to interprete the json_time_key.
+  ## The time must be `unix`, `unix_ms`, `unix_us`, `unix_ns`, or a time in the
+  ## "reference time".  To define a different format, arrange the values from
+  ## the "reference time" in the example to match the format you will be
+  ## using.  For more information on the "reference time", visit
+  ## https://golang.org/pkg/time/#Time.Format
   ##   ex: json_time_format = "Mon Jan 2 15:04:05 -0700 MST 2006"
   ##       json_time_format = "2006-01-02T15:04:05Z07:00"
+  ##       json_time_format = "01/02/2006 15:04:05"
   ##       json_time_format = "unix"
   ##       json_time_format = "unix_ms"
   json_time_format = ""
+
+  ## Timezone allows you to provide an override for timestamps that
+  ## don't already include an offset
+  ## e.g. 04/06/2016 12:41:45
+  ##
+  ## Default: "" which renders UTC
+  ## Options are as follows:
+  ##   1. Local               -- interpret based on machine localtime
+  ##   2. "America/New_York"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+  ##   3. UTC                 -- or blank/unspecified, will return timestamp in UTC
+  json_timezone = ""
 ```
 
 #### json_query
@@ -59,7 +74,7 @@ query should contain a JSON object or an array of objects.
 
 Consult the GJSON [path syntax][gjson syntax] for details and examples.
 
-#### json_time_key, json_time_format
+#### json_time_key, json_time_format, json_timezone
 
 By default the current time will be used for all created metrics, to set the
 time using the JSON document you can use the `json_time_key` and
@@ -67,11 +82,18 @@ time using the JSON document you can use the `json_time_key` and
 document.
 
 The `json_time_key` option specifies the key containing the time value and
-`json_time_format` must be set to `unix`, `unix_ms`, or the Go "reference
-time" which is defined to be the specific time: `Mon Jan 2 15:04:05 MST 2006`.
+`json_time_format` must be set to `unix`, `unix_ms`, `unix_us`, `unix_ns`, or
+the Go "reference time" which is defined to be the specific time:
+`Mon Jan 2 15:04:05 MST 2006`.
 
 Consult the Go [time][time parse] package for details and additional examples
 on how to set the time format.
+
+When parsing times that don't include a timezone specifier, times are assumed
+to be UTC. To default to another timezone, or to local time, specify the
+`json_timezone` option.  This option should be set to a
+[Unix TZ value](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones),
+such as `America/New_York`, to `Local` to utilize the system timezone, or to `UTC`.
 
 ### Examples
 
@@ -152,14 +174,14 @@ Input:
         "b": {
             "c": 6,
             "time":"04 Jan 06 15:04 MST"
-        },
+        }
     },
     {
         "a": 7,
         "b": {
             "c": 8,
             "time":"11 Jan 07 15:04 MST"
-        },
+        }
     }
 ]
 ```

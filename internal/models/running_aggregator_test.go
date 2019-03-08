@@ -7,7 +7,6 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/testutil"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -87,7 +86,7 @@ func TestAddMetricsOutsideCurrentPeriod(t *testing.T) {
 
 	ra.Push(&acc)
 	require.Equal(t, 1, len(acc.Metrics))
-	require.Equal(t, int64(101), acc.Metrics[0].Fields["sum"])
+	require.Equal(t, int64(202), acc.Metrics[0].Fields["sum"])
 }
 
 func TestAddAndPushOnePeriod(t *testing.T) {
@@ -150,6 +149,32 @@ func TestAddDropOriginal(t *testing.T) {
 		now,
 		telegraf.Untyped)
 	require.False(t, ra.Add(m2))
+}
+
+func TestAddDoesNotModifyMetric(t *testing.T) {
+	ra := NewRunningAggregator(&TestAggregator{}, &AggregatorConfig{
+		Name: "TestRunningAggregator",
+		Filter: Filter{
+			FieldPass: []string{"a"},
+		},
+		DropOriginal: true,
+	})
+	require.NoError(t, ra.Config.Filter.Compile())
+
+	now := time.Now()
+
+	m := testutil.MustMetric(
+		"cpu",
+		map[string]string{},
+		map[string]interface{}{
+			"a": int64(42),
+			"b": int64(42),
+		},
+		now)
+	expected := m.Copy()
+	ra.Add(m)
+
+	testutil.RequireMetricEqual(t, expected, m)
 }
 
 type TestAggregator struct {

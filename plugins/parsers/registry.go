@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
 	"github.com/influxdata/telegraf/plugins/parsers/collectd"
 	"github.com/influxdata/telegraf/plugins/parsers/csv"
 	"github.com/influxdata/telegraf/plugins/parsers/dropwizard"
@@ -61,69 +60,73 @@ type Parser interface {
 // and can be used to instantiate _any_ of the parsers.
 type Config struct {
 	// Dataformat can be one of: json, influx, graphite, value, nagios
-	DataFormat string
+	DataFormat string `toml:"data_format"`
 
 	// Separator only applied to Graphite data.
-	Separator string
+	Separator string `toml:"separator"`
 	// Templates only apply to Graphite data.
-	Templates []string
+	Templates []string `toml:"templates"`
 
 	// TagKeys only apply to JSON data
-	TagKeys []string
+	TagKeys []string `toml:"tag_keys"`
 	// FieldKeys only apply to JSON
-	JSONStringFields []string
+	JSONStringFields []string `toml:"json_string_fields"`
 
-	JSONNameKey string
+	JSONNameKey string `toml:"json_name_key"`
 	// MetricName applies to JSON & value. This will be the name of the measurement.
-	MetricName string
+	MetricName string `toml:"metric_name"`
 
 	// holds a gjson path for json parser
-	JSONQuery string
+	JSONQuery string `toml:"json_query"`
 
 	// key of time
-	JSONTimeKey string
+	JSONTimeKey string `toml:"json_time_key"`
 
 	// time format
-	JSONTimeFormat string
+	JSONTimeFormat string `toml:"json_time_format"`
+
+	// default timezone
+	JSONTimezone string `toml:"json_timezone"`
 
 	// Authentication file for collectd
-	CollectdAuthFile string
+	CollectdAuthFile string `toml:"collectd_auth_file"`
 	// One of none (default), sign, or encrypt
-	CollectdSecurityLevel string
+	CollectdSecurityLevel string `toml:"collectd_security_level"`
 	// Dataset specification for collectd
-	CollectdTypesDB []string
+	CollectdTypesDB []string `toml:"collectd_types_db"`
 
 	// whether to split or join multivalue metrics
-	CollectdSplit string
+	CollectdSplit string `toml:"collectd_split"`
 
 	// DataType only applies to value, this will be the type to parse value to
-	DataType string
+	DataType string `toml:"data_type"`
 
 	// DefaultTags are the default tags that will be added to all parsed metrics.
-	DefaultTags map[string]string
+	DefaultTags map[string]string `toml:"default_tags"`
 
 	// an optional json path containing the metric registry object
 	// if left empty, the whole json object is parsed as a metric registry
-	DropwizardMetricRegistryPath string
+	DropwizardMetricRegistryPath string `toml:"dropwizard_metric_registry_path"`
 	// an optional json path containing the default time of the metrics
 	// if left empty, the processing time is used
-	DropwizardTimePath string
+	DropwizardTimePath string `toml:"dropwizard_time_path"`
 	// time format to use for parsing the time field
 	// defaults to time.RFC3339
-	DropwizardTimeFormat string
+	DropwizardTimeFormat string `toml:"dropwizard_time_format"`
 	// an optional json path pointing to a json object with tag key/value pairs
 	// takes precedence over DropwizardTagPathsMap
-	DropwizardTagsPath string
+	DropwizardTagsPath string `toml:"dropwizard_tags_path"`
 	// an optional map containing tag names as keys and json paths to retrieve the tag values from as values
 	// used if TagsPath is empty or doesn't return any tags
-	DropwizardTagPathsMap map[string]string
+	DropwizardTagPathsMap map[string]string `toml:"dropwizard_tag_paths_map"`
 
 	//grok patterns
-	GrokPatterns           []string
-	GrokNamedPatterns      []string
-	GrokCustomPatterns     string
-	GrokCustomPatternFiles []string
-	GrokTimezone           string
+	GrokPatterns           []string `toml:"grok_patterns"`
+	GrokNamedPatterns      []string `toml:"grok_named_patterns"`
+	GrokCustomPatterns     string   `toml:"grok_custom_patterns"`
+	GrokCustomPatternFiles []string `toml:"grok_custom_pattern_files"`
+	GrokTimezone           string   `toml:"grok_timezone"`
+	GrokUniqueTimestamp    string   `toml:"grok_unique_timestamp"`
 
 	//csv configuration
 	CSVColumnNames       []string `toml:"csv_column_names"`
@@ -153,6 +156,7 @@ func NewParser(config *Config) (Parser, error) {
 			config.JSONQuery,
 			config.JSONTimeKey,
 			config.JSONTimeFormat,
+			config.JSONTimezone,
 			config.DefaultTags)
 	case "value":
 		parser, err = NewValueParser(config.MetricName,
@@ -186,7 +190,8 @@ func NewParser(config *Config) (Parser, error) {
 			config.GrokNamedPatterns,
 			config.GrokCustomPatterns,
 			config.GrokCustomPatternFiles,
-			config.GrokTimezone)
+			config.GrokTimezone,
+			config.GrokUniqueTimestamp)
 	case "csv":
 		parser, err = newCSVParser(config.MetricName,
 			config.CSVHeaderRowCount,
@@ -276,6 +281,7 @@ func newJSONParser(
 	jsonQuery string,
 	timeKey string,
 	timeFormat string,
+	timezone string,
 	defaultTags map[string]string,
 ) Parser {
 	parser := &json.JSONParser{
@@ -286,17 +292,16 @@ func newJSONParser(
 		JSONQuery:      jsonQuery,
 		JSONTimeKey:    timeKey,
 		JSONTimeFormat: timeFormat,
+		JSONTimezone:   timezone,
 		DefaultTags:    defaultTags,
 	}
 	return parser
 }
 
-//Deprecated: Use NewParser to get a JSONParser object
 func newGrokParser(metricName string,
-	patterns []string,
-	nPatterns []string,
-	cPatterns string,
-	cPatternFiles []string, tZone string) (Parser, error) {
+	patterns []string, nPatterns []string,
+	cPatterns string, cPatternFiles []string,
+	tZone string, uniqueTimestamp string) (Parser, error) {
 	parser := grok.Parser{
 		Measurement:        metricName,
 		Patterns:           patterns,
@@ -304,6 +309,7 @@ func newGrokParser(metricName string,
 		CustomPatterns:     cPatterns,
 		CustomPatternFiles: cPatternFiles,
 		Timezone:           tZone,
+		UniqueTimestamp:    uniqueTimestamp,
 	}
 
 	err := parser.Compile()

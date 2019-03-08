@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -571,61 +572,81 @@ func TestCompileErrors(t *testing.T) {
 	assert.Error(t, p.Compile())
 }
 
-func TestParseErrors(t *testing.T) {
-	// Parse fails because the pattern doesn't exist
+func TestParseErrors_MissingPattern(t *testing.T) {
 	p := &Parser{
-		Patterns: []string{"%{TEST_LOG_B}"},
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_B}"},
 		CustomPatterns: `
 			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:int} %{}
 		`,
 	}
-	assert.Error(t, p.Compile())
+	require.Error(t, p.Compile())
 	_, err := p.ParseLine(`[04/Jun/2016:12:41:45 +0100] notnumber 200 192.168.1.1 5.432µs 101`)
-	assert.Error(t, err)
+	require.Error(t, err)
+}
 
-	// Parse fails because myword is not an int
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
+func TestParseErrors_WrongIntegerType(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
 		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:int}
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:int}
 		`,
 	}
-	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
 
-	// Parse fails because myword is not a float
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
+func TestParseErrors_WrongFloatType(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
 		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:float}
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:float}
 		`,
 	}
-	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
 
-	// Parse fails because myword is not a duration
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
+func TestParseErrors_WrongDurationType(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
 		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-httpd} %{WORD:myword:duration}
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:duration}
 		`,
 	}
-	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
+}
 
-	// Parse fails because the time layout is wrong.
-	p = &Parser{
-		Patterns: []string{"%{TEST_LOG_A}"},
+func TestParseErrors_WrongTimeLayout(t *testing.T) {
+	p := &Parser{
+		Measurement: "grok",
+		Patterns:    []string{"%{TEST_LOG_A}"},
 		CustomPatterns: `
-			TEST_LOG_A %{HTTPDATE:ts:ts-unix} %{WORD:myword:duration}
+			TEST_LOG_A %{NUMBER:ts:ts-epoch} %{WORD:myword:duration}
 		`,
 	}
-	assert.NoError(t, p.Compile())
-	_, err = p.ParseLine(`04/Jun/2016:12:41:45 +0100 notnumber`)
-	assert.Error(t, err)
+	require.NoError(t, p.Compile())
+	m, err := p.ParseLine(`0 notnumber`)
+	require.NoError(t, err)
+	testutil.RequireMetricEqual(t,
+		m,
+		testutil.MustMetric("grok", map[string]string{}, map[string]interface{}{}, time.Unix(0, 0)))
 }
 
 func TestTsModder(t *testing.T) {
@@ -907,6 +928,7 @@ func TestNewlineInPatterns(t *testing.T) {
 }
 
 func TestSyslogTimestamp(t *testing.T) {
+	currentYear := time.Now().Year()
 	tests := []struct {
 		name     string
 		line     string
@@ -915,17 +937,17 @@ func TestSyslogTimestamp(t *testing.T) {
 		{
 			name:     "two digit day of month",
 			line:     "Sep 25 09:01:55 value=42",
-			expected: time.Date(2018, time.September, 25, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(currentYear, time.September, 25, 9, 1, 55, 0, time.UTC),
 		},
 		{
 			name:     "one digit day of month single space",
 			line:     "Sep 2 09:01:55 value=42",
-			expected: time.Date(2018, time.September, 2, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(currentYear, time.September, 2, 9, 1, 55, 0, time.UTC),
 		},
 		{
 			name:     "one digit day of month double space",
 			line:     "Sep  2 09:01:55 value=42",
-			expected: time.Date(2018, time.September, 2, 9, 1, 55, 0, time.UTC),
+			expected: time.Date(currentYear, time.September, 2, 9, 1, 55, 0, time.UTC),
 		},
 	}
 	for _, tt := range tests {
@@ -1023,5 +1045,5 @@ func TestEmptyYearInTimestamp(t *testing.T) {
 	m, err := p.ParseLine("Nov  6 13:57:03 generic iTunes[6504]: objc[6504]: Object descriptor was null.")
 	require.NoError(t, err)
 	require.NotNil(t, m)
-	require.Equal(t, 2018, m.Time().Year())
+	require.Equal(t, time.Now().Year(), m.Time().Year())
 }

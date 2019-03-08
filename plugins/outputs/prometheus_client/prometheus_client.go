@@ -3,11 +3,11 @@ package prometheus_client
 import (
 	"context"
 	"crypto/subtle"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -17,6 +17,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -38,6 +39,8 @@ type Sample struct {
 	// Histograms and Summaries need a count and a sum
 	Count uint64
 	Sum   float64
+	// Metric timestamp
+	Timestamp time.Time
 	// Expiration is the deadline that this Sample is valid until.
 	Expiration time.Time
 }
@@ -55,8 +58,6 @@ type MetricFamily struct {
 
 type PrometheusClient struct {
 	Listen             string
-	TLSCert            string            `toml:"tls_cert"`
-	TLSKey             string            `toml:"tls_key"`
 	BasicUsername      string            `toml:"basic_username"`
 	BasicPassword      string            `toml:"basic_password"`
 	IPRange            []string          `toml:"ip_range"`
@@ -64,6 +65,9 @@ type PrometheusClient struct {
 	Path               string            `toml:"path"`
 	CollectorsExclude  []string          `toml:"collectors_exclude"`
 	StringAsLabel      bool              `toml:"string_as_label"`
+	ExportTimestamp    bool              `toml:"export_timestamp"`
+
+	tlsint.ServerConfig
 
 	server *http.Server
 
@@ -103,6 +107,13 @@ var sampleConfig = `
   ## If set, enable TLS with the given certificate.
   # tls_cert = "/etc/ssl/telegraf.crt"
   # tls_key = "/etc/ssl/telegraf.key"
+  
+  ## Set one or more allowed client CA certificate file names to
+  ## enable mutually authenticated TLS connections
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+
+  ## Export metric collection time.
+  # export_timestamp = false
 `
 
 func (p *PrometheusClient) auth(h http.Handler) http.Handler {
@@ -159,13 +170,16 @@ func (p *PrometheusClient) Connect() error {
 		case "gocollector":
 			registry.Register(prometheus.NewGoCollector())
 		case "process":
-			registry.Register(prometheus.NewProcessCollector(os.Getpid(), ""))
+			registry.Register(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
 		default:
 			return fmt.Errorf("unrecognized collector %s", collector)
 		}
 	}
 
-	registry.Register(p)
+	err := registry.Register(p)
+	if err != nil {
+		return err
+	}
 
 	if p.Listen == "" {
 		p.Listen = "localhost:9273"
@@ -179,18 +193,28 @@ func (p *PrometheusClient) Connect() error {
 	mux.Handle(p.Path, p.auth(promhttp.HandlerFor(
 		registry, promhttp.HandlerOpts{ErrorHandling: promhttp.ContinueOnError})))
 
+	tlsConfig, err := p.TLSConfig()
+	if err != nil {
+		return err
+	}
 	p.server = &http.Server{
-		Addr:    p.Listen,
-		Handler: mux,
+		Addr:      p.Listen,
+		Handler:   mux,
+		TLSConfig: tlsConfig,
+	}
+
+	var listener net.Listener
+	if tlsConfig != nil {
+		listener, err = tls.Listen("tcp", p.Listen, tlsConfig)
+	} else {
+		listener, err = net.Listen("tcp", p.Listen)
+	}
+	if err != nil {
+		return err
 	}
 
 	go func() {
-		var err error
-		if p.TLSCert != "" && p.TLSKey != "" {
-			err = p.server.ListenAndServeTLS(p.TLSCert, p.TLSKey)
-		} else {
-			err = p.server.ListenAndServe()
-		}
+		err := p.server.Serve(listener)
 		if err != nil && err != http.ErrServerClosed {
 			log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
 				err.Error())
@@ -280,8 +304,12 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 				log.Printf("E! Error creating prometheus metric, "+
 					"key: %s, labels: %v,\nerr: %s\n",
 					name, labels, err.Error())
+				continue
 			}
 
+			if p.ExportTimestamp {
+				metric = prometheus.NewMetricWithTimestamp(sample.Timestamp, metric)
+			}
 			ch <- metric
 		}
 	}
@@ -336,13 +364,27 @@ func (p *PrometheusClient) addMetricFamily(point telegraf.Metric, sample *Sample
 	addSample(fam, sample, sampleID)
 }
 
+// Sorted returns a copy of the metrics in time ascending order.  A copy is
+// made to avoid modifying the input metric slice since doing so is not
+// allowed.
+func sorted(metrics []telegraf.Metric) []telegraf.Metric {
+	batch := make([]telegraf.Metric, 0, len(metrics))
+	for i := len(metrics) - 1; i >= 0; i-- {
+		batch = append(batch, metrics[i])
+	}
+	sort.Slice(batch, func(i, j int) bool {
+		return batch[i].Time().Before(batch[j].Time())
+	})
+	return batch
+}
+
 func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 	p.Lock()
 	defer p.Unlock()
 
 	now := p.now()
 
-	for _, point := range metrics {
+	for _, point := range sorted(metrics) {
 		tags := point.Tags()
 		sampleID := CreateSampleID(tags)
 
@@ -398,6 +440,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				SummaryValue: summaryvalue,
 				Count:        count,
 				Sum:          sum,
+				Timestamp:    point.Time(),
 				Expiration:   now.Add(p.ExpirationInterval.Duration),
 			}
 			mname = sanitize(point.Name())
@@ -439,6 +482,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				HistogramValue: histogramvalue,
 				Count:          count,
 				Sum:            sum,
+				Timestamp:      point.Time(),
 				Expiration:     now.Add(p.ExpirationInterval.Duration),
 			}
 			mname = sanitize(point.Name())
@@ -463,6 +507,7 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				sample := &Sample{
 					Labels:     labels,
 					Value:      value,
+					Timestamp:  point.Time(),
 					Expiration: now.Add(p.ExpirationInterval.Duration),
 				}
 

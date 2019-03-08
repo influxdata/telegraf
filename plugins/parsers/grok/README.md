@@ -20,6 +20,7 @@ line and the `semantic_name` is used to name the field or tag.  The extension
 other special handling.
 
 By default all named captures are converted into string fields.
+If a pattern does not have a semantic name it will not be captured.
 Timestamp modifiers can be used to convert captures to the timestamp of the
 parsed metric.  If no timestamp is parsed the metric will be created using the
 current time.
@@ -58,7 +59,7 @@ To match a comma decimal point you can use a period.  For example `%{TIMESTAMP:t
 To match a comma decimal point you can use a period in the pattern string.
 See https://golang.org/pkg/time/#Parse for more details.
 
-Telegraf has many of its own [built-in patterns](./grok/patterns/influx-patterns),
+Telegraf has many of its own [built-in patterns](/plugins/parsers/grok/influx_patterns.go),
 as well as support for most of
 [logstash's builtin patterns](https://github.com/logstash-plugins/logstash-patterns-core/blob/master/patterns/grok-patterns).
 _Golang regular expressions do not support lookahead or lookbehind.
@@ -109,6 +110,10 @@ you will find the https://grokdebug.herokuapp.com application quite useful!
   ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
   ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
   grok_timezone = "Canada/Eastern"
+
+  ## When set to "disable" timestamp will not incremented if there is a
+  ## duplicate.
+  # grok_unique_timestamp = "auto"
 ```
 
 #### Timestamp Examples
@@ -219,4 +224,14 @@ the file output will only print once per `flush_interval`.
 - If successful, add the next token, update the pattern and retest.
 - Continue one token at a time until the entire line is successfully parsed.
 
+#### Performance
 
+Performance depends heavily on the regular expressions that you use, but there
+are a few techniques that can help:
+
+- Avoid using patterns such as `%{DATA}` that will always match.
+- If possible, add `^` and `$` anchors to your pattern:
+  ```
+  [[inputs.file]]
+    grok_patterns = ["^%{COMBINED_LOG_FORMAT}$"]
+  ```

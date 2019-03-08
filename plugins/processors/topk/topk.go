@@ -43,8 +43,8 @@ func New() *TopK {
 	topk.Aggregation = "mean"
 	topk.GroupBy = []string{"*"}
 	topk.AddGroupByTag = ""
-	topk.AddRankFields = []string{""}
-	topk.AddAggregateFields = []string{""}
+	topk.AddRankFields = []string{}
+	topk.AddAggregateFields = []string{}
 
 	// Initialize cache
 	topk.Reset()
@@ -203,7 +203,9 @@ func (t *TopK) Apply(in ...telegraf.Metric) []telegraf.Metric {
 	if t.aggFieldSet == nil {
 		t.aggFieldSet = make(map[string]bool)
 		for _, f := range t.AddAggregateFields {
-			t.aggFieldSet[f] = true
+			if f != "" {
+				t.aggFieldSet[f] = true
+			}
 		}
 	}
 
@@ -279,7 +281,6 @@ func (t *TopK) push() []telegraf.Metric {
 
 	// Get the top K metrics for each field and add them to the return value
 	addedKeys := make(map[string]bool)
-	groupTag := t.AddGroupByTag
 	for _, field := range t.Fields {
 
 		// Sort the aggregations
@@ -288,9 +289,8 @@ func (t *TopK) push() []telegraf.Metric {
 		// Create a one dimensional list with the top K metrics of each key
 		for i, ag := range aggregations[0:min(t.K, len(aggregations))] {
 			// Check whether of not we need to add fields of tags to the selected metrics
-			if len(t.aggFieldSet) != 0 || len(t.rankFieldSet) != 0 || groupTag != "" {
+			if len(t.aggFieldSet) != 0 || len(t.rankFieldSet) != 0 || t.AddGroupByTag != "" {
 				for _, m := range t.cache[ag.groupbykey] {
-
 					// Add the aggregation final value if requested
 					_, addAggField := t.aggFieldSet[field]
 					if addAggField && m.HasField(field) {
@@ -330,7 +330,6 @@ func (t *TopK) push() []telegraf.Metric {
 
 // Function that generates the aggregation functions
 func (t *TopK) getAggregationFunction(aggOperation string) (func([]telegraf.Metric, []string) map[string]float64, error) {
-
 	// This is a function aggregates a set of metrics using a given aggregation function
 	var aggregator = func(ms []telegraf.Metric, fields []string, f func(map[string]float64, float64, string)) map[string]float64 {
 		agg := make(map[string]float64)

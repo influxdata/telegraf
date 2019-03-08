@@ -19,6 +19,10 @@ type metricDiff struct {
 }
 
 func newMetricDiff(metric telegraf.Metric) *metricDiff {
+	if metric == nil {
+		return nil
+	}
+
 	m := &metricDiff{}
 	m.Measurement = metric.Name()
 
@@ -94,6 +98,14 @@ func MustMetric(
 	tp ...telegraf.ValueType,
 ) telegraf.Metric {
 	m, err := metric.New(name, tags, fields, tm, tp...)
+	if err != nil {
+		panic("MustMetric")
+	}
+	return m
+}
+
+func FromTestMetric(met *Metric) telegraf.Metric {
+	m, err := metric.New(met.Measurement, met.Tags, met.Fields, met.Time)
 	if err != nil {
 		panic("MustMetric")
 	}
