@@ -19,7 +19,6 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 	}
 
 	brokerPeers := []string{testutil.GetLocalHost() + ":9092"}
-	zkPeers := []string{testutil.GetLocalHost() + ":2181"}
 	testTopic := fmt.Sprintf("telegraf_test_topic_%d", time.Now().Unix())
 
 	// Send a Kafka message to the kafka host
@@ -36,11 +35,10 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 
 	// Start the Kafka Consumer
 	k := &Kafka{
-		ConsumerGroup:  "telegraf_test_consumers",
-		Topics:         []string{testTopic},
-		ZookeeperPeers: zkPeers,
-		PointBuffer:    100000,
-		Offset:         "oldest",
+		ConsumerGroup: "telegraf_test_consumers",
+		Topics:        []string{testTopic},
+		Brokers:       brokerPeers,
+		Offset:        "oldest",
 	}
 	p, _ := parsers.NewInfluxParser()
 	k.SetParser(p)

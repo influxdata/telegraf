@@ -41,9 +41,13 @@ The example below has two queries are specified, with the following parameters:
   # "SELECT * FROM pg_stat_database where datname IN ('postgres', 'pgbench')"
   # because the databases variable was set to ['postgres', 'pgbench' ] and the
   # withdbname was true.
-  # Be careful that if the withdbname is set to false you d'ont have to define
+  # Be careful that if the withdbname is set to false you don't have to define
   # the where clause (aka with the dbname)
-  # the tagvalue field is used to define custom tags (separated by comas)
+  #
+  # the tagvalue field is used to define custom tags (separated by comas).
+  # the query is expected to return columns which match the names of the
+  # defined tags. The values in these columns must be of a string-type,
+  # a number-type or a blob-type.
   #
   # Structure :
   # [[inputs.postgresql_extensible.query]]
@@ -109,6 +113,15 @@ using postgreql extensions ([pg_stat_statements](http://www.postgresql.org/docs/
   version=901
   withdbname=false
   tagvalue="db"
+[[inputs.postgresql_extensible.query]]
+  sqlquery="""
+    SELECT type, (enabled || '') AS enabled, COUNT(*)
+      FROM application_users
+      GROUP BY type, enabled
+  """
+  version=901
+  withdbname=false
+  tagvalue="type,enabled"
 ```
 
 # Postgresql Side
@@ -130,9 +143,9 @@ create extension pg_proctab;
  - pg_stat_kcache is available on the postgresql.org yum repo
  - pg_proctab is available at : https://github.com/markwkm/pg_proctab
 
- ##Views
+ ## Views
  - Blocking sessions
-```
+```sql
 CREATE OR REPLACE VIEW public.blocking_procs AS
  SELECT a.datname AS db,
     kl.pid AS blocking_pid,
@@ -156,7 +169,7 @@ CREATE OR REPLACE VIEW public.blocking_procs AS
   ORDER BY a.query_start;
 ```
   - Sessions Statistics
-```
+```sql
 CREATE OR REPLACE VIEW public.sessions AS
  WITH proctab AS (
          SELECT pg_proctab.pid,

@@ -45,7 +45,7 @@ The tag values and field values show the place on the incoming JSON object where
 * 'forks' = `event.repository.forks_count` int
 * 'issues' = `event.repository.open_issues_count` int
 * 'ref' = `event.ref` string
-* 'issues' = `event.ref_type` string
+* 'refType' = `event.ref_type` string
 
 #### [`delete` event](https://developer.github.com/v3/activity/events/types/#deleteevent)
 
@@ -61,7 +61,7 @@ The tag values and field values show the place on the incoming JSON object where
 * 'forks' = `event.repository.forks_count` int
 * 'issues' = `event.repository.open_issues_count` int
 * 'ref' = `event.ref` string
-* 'issues' = `event.ref_type` string
+* 'refType' = `event.ref_type` string
 
 #### [`deployment` event](https://developer.github.com/v3/activity/events/types/#deploymentevent)
 

@@ -14,6 +14,16 @@
   ## If no servers are specified, then localhost is used as the host.
   ## If no port is specified, 6379 is used
   servers = ["tcp://localhost:6379"]
+
+  ## specify server password
+  # password = "s#cr@t%"
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
+  # insecure_skip_verify = true
 ```
 
 ### Measurements & Fields:
@@ -30,6 +40,7 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
     **Server**
     - uptime(int, seconds)
     - lru_clock(int, number)
+    - redis_version(string)
 
     **Clients**
     - clients(int, number)
@@ -86,7 +97,10 @@ Additionally the plugin also calculates the hit/miss ratio (keyspace\_hitrate) a
 
     **Replication**
     - connected_slaves(int, number)
+    - master_link_down_since_seconds(int, number)
+    - master_link_status(string)
     - master_repl_offset(int, number)
+    - second_repl_offset(int, number)
     - repl_backlog_active(int, number)
     - repl_backlog_size(int, bytes)
     - repl_backlog_first_byte_offset(int, number)
@@ -134,7 +148,7 @@ Using this configuration:
 
 When run with:
 ```
-./telegraf -config telegraf.conf -input-filter redis -test
+./telegraf --config telegraf.conf --input-filter redis --test
 ```
 
 It produces:

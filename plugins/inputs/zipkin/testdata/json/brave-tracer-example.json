@@ -1,0 +1,188 @@
+[
+  {
+    "traceId": "7312f822d43d0fd8",
+    "id": "b26412d1ac16767d",
+    "name": "http:/hi2",
+    "parentId": "7312f822d43d0fd8",
+    "annotations": [
+      {
+        "timestamp": 1503031538791000,
+        "value": "sr",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      },
+      {
+        "timestamp": 1503031538794000,
+        "value": "ss",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      }
+    ],
+    "binaryAnnotations": [
+      {
+        "key": "mvc.controller.class",
+        "value": "Demo2Application",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      },
+      {
+        "key": "mvc.controller.method",
+        "value": "hi2",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      },
+      {
+        "key": "spring.instance_id",
+        "value": "192.168.0.8:test:8010",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      }
+    ]
+  },
+  {
+    "traceId": "7312f822d43d0fd8",
+    "id": "b26412d1ac16767d",
+    "name": "http:/hi2",
+    "parentId": "7312f822d43d0fd8",
+    "timestamp": 1503031538786000,
+    "duration": 10000,
+    "annotations": [
+      {
+        "timestamp": 1503031538786000,
+        "value": "cs",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      },
+      {
+        "timestamp": 1503031538796000,
+        "value": "cr",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      }
+    ],
+    "binaryAnnotations": [
+      {
+        "key": "http.host",
+        "value": "localhost",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      },
+      {
+        "key": "http.method",
+        "value": "GET",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      },
+      {
+        "key": "http.path",
+        "value": "/hi2",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      },
+      {
+        "key": "http.url",
+        "value": "http://localhost:8010/hi2",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      },
+      {
+        "key": "spring.instance_id",
+        "value": "192.168.0.8:test:8010",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      }
+    ]
+  },
+  {
+    "traceId": "7312f822d43d0fd8",
+    "id": "7312f822d43d0fd8",
+    "name": "http:/hi",
+    "timestamp": 1503031538778000,
+    "duration": 23393,
+    "annotations": [
+      {
+        "timestamp": 1503031538778000,
+        "value": "sr",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      },
+      {
+        "timestamp": 1503031538801000,
+        "value": "ss",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      }
+    ],
+    "binaryAnnotations": [
+      {
+        "key": "mvc.controller.class",
+        "value": "Demo2Application",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      },
+      {
+        "key": "mvc.controller.method",
+        "value": "hi",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      },
+      {
+        "key": "spring.instance_id",
+        "value": "192.168.0.8:test:8010",
+        "endpoint": {
+          "serviceName": "test",
+          "ipv4": "192.168.0.8",
+          "port": 8010
+        }
+      }
+    ]
+  }
+]

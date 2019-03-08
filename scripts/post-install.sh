@@ -74,7 +74,7 @@ elif [[ -f /etc/debian_version ]]; then
     # Debian/Ubuntu logic
     if [[ "$(readlink /proc/1/exe)" == */systemd ]]; then
         install_systemd /lib/systemd/system/telegraf.service
-        systemctl restart telegraf || echo "WARNING: systemd not running."
+        deb-systemd-invoke restart telegraf.service || echo "WARNING: systemd not running."
     else
         # Assuming SysVinit
         install_init
@@ -88,7 +88,10 @@ elif [[ -f /etc/debian_version ]]; then
     fi
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release
-    if [[ $ID = "amzn" ]]; then
+    if [[ "$NAME" = "Amazon Linux" ]]; then
+        # Amazon Linux 2+ logic
+        install_systemd /usr/lib/systemd/system/telegraf.service
+    elif [[ "$NAME" = "Amazon Linux AMI" ]]; then
         # Amazon Linux logic
         install_init
         # Run update-rc.d or fallback to chkconfig if not available
@@ -97,6 +100,5 @@ elif [[ -f /etc/os-release ]]; then
         else
             install_chkconfig
         fi
-        /etc/init.d/telegraf restart
     fi
 fi

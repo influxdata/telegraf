@@ -1,11 +1,15 @@
 package models
 
 import (
+	"sync"
+
 	"github.com/influxdata/telegraf"
 )
 
 type RunningProcessor struct {
-	Name      string
+	Name string
+
+	sync.Mutex
 	Processor telegraf.Processor
 	Config    *ProcessorConfig
 }
@@ -23,18 +27,39 @@ type ProcessorConfig struct {
 	Filter Filter
 }
 
+func (rp *RunningProcessor) metricFiltered(metric telegraf.Metric) {
+	metric.Drop()
+}
+
+func containsMetric(item telegraf.Metric, metrics []telegraf.Metric) bool {
+	for _, m := range metrics {
+		if item == m {
+			return true
+		}
+	}
+	return false
+}
+
 func (rp *RunningProcessor) Apply(in ...telegraf.Metric) []telegraf.Metric {
+	rp.Lock()
+	defer rp.Unlock()
+
 	ret := []telegraf.Metric{}
 
 	for _, metric := range in {
-		if rp.Config.Filter.IsActive() {
-			// check if the filter should be applied to this metric
-			if ok := rp.Config.Filter.Apply(metric.Name(), metric.Fields(), metric.Tags()); !ok {
-				// this means filter should not be applied
-				ret = append(ret, metric)
-				continue
-			}
+		// In processors when a filter selects a metric it is sent through the
+		// processor.  Otherwise the metric continues downstream unmodified.
+		if ok := rp.Config.Filter.Select(metric); !ok {
+			ret = append(ret, metric)
+			continue
 		}
+
+		rp.Config.Filter.Modify(metric)
+		if len(metric.FieldList()) == 0 {
+			rp.metricFiltered(metric)
+			continue
+		}
+
 		// This metric should pass through the filter, so call the filter Apply
 		// function and append results to the output slice.
 		ret = append(ret, rp.Processor.Apply(metric)...)

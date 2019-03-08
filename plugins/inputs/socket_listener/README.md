@@ -30,11 +30,23 @@ This is a sample configuration for the plugin.
   ## 0 (default) is unlimited.
   # max_connections = 1024
 
-  ## Maximum socket buffer size in bytes.
+  ## Read timeout.
+  ## Only applies to stream sockets (e.g. TCP).
+  ## 0 (default) is unlimited.
+  # read_timeout = "30s"
+
+  ## Optional TLS configuration.
+  ## Only applies to stream sockets (e.g. TCP).
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key  = "/etc/telegraf/key.pem"
+  ## Enables client authentication if set.
+  # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
+
+  ## Maximum socket buffer size (in bytes when no unit specified).
   ## For stream sockets, once the buffer fills up, the sender will start backing up.
   ## For datagram sockets, once the buffer fills up, metrics will start dropping.
   ## Defaults to the OS default.
-  # read_buffer_size = 65535
+  # read_buffer_size = "64KiB"
 
   ## Period between keep alive probes.
   ## Only applies to TCP sockets.

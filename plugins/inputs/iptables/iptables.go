@@ -17,6 +17,7 @@ import (
 type Iptables struct {
 	UseSudo bool
 	UseLock bool
+	Binary  string
 	Table   string
 	Chains  []string
 	lister  chainLister
@@ -38,6 +39,8 @@ func (ipt *Iptables) SampleConfig() string {
   ## Setting 'use_lock' to true runs iptables with the "-w" option.
   ## Adjust your sudo settings appropriately if using this option ("iptables -wnvl")
   use_lock = false
+  ## Define an alternate executable, such as "ip6tables". Default is "iptables".
+  # binary = "ip6tables"
   ## defines the table to monitor:
   table = "filter"
   ## defines the chains to monitor.
@@ -70,7 +73,13 @@ func (ipt *Iptables) Gather(acc telegraf.Accumulator) error {
 }
 
 func (ipt *Iptables) chainList(table, chain string) (string, error) {
-	iptablePath, err := exec.LookPath("iptables")
+	var binary string
+	if ipt.Binary != "" {
+		binary = ipt.Binary
+	} else {
+		binary = "iptables"
+	}
+	iptablePath, err := exec.LookPath(binary)
 	if err != nil {
 		return "", err
 	}
@@ -95,7 +104,7 @@ const measurement = "iptables"
 var errParse = errors.New("Cannot parse iptables list information")
 var chainNameRe = regexp.MustCompile(`^Chain\s+(\S+)`)
 var fieldsHeaderRe = regexp.MustCompile(`^\s*pkts\s+bytes\s+`)
-var valuesRe = regexp.MustCompile(`^\s*([0-9]+)\s+([0-9]+)\s+.*?(/\*\s(.*)\s\*/)?$`)
+var valuesRe = regexp.MustCompile(`^\s*(\d+)\s+(\d+)\s+.*?/\*\s*(.+?)\s*\*/\s*`)
 
 func (ipt *Iptables) parseAndGather(data string, acc telegraf.Accumulator) error {
 	lines := strings.Split(data, "\n")
@@ -110,17 +119,27 @@ func (ipt *Iptables) parseAndGather(data string, acc telegraf.Accumulator) error
 		return errParse
 	}
 	for _, line := range lines[2:] {
-		mv := valuesRe.FindAllStringSubmatch(line, -1)
-		// best effort : if line does not match or rule is not commented forget about it
-		if len(mv) == 0 || len(mv[0]) != 5 || mv[0][4] == "" {
+		matches := valuesRe.FindStringSubmatch(line)
+		if len(matches) != 4 {
 			continue
 		}
-		tags := map[string]string{"table": ipt.Table, "chain": mchain[1], "ruleid": mv[0][4]}
+
+		pkts := matches[1]
+		bytes := matches[2]
+		comment := matches[3]
+
+		tags := map[string]string{"table": ipt.Table, "chain": mchain[1], "ruleid": comment}
 		fields := make(map[string]interface{})
-		// since parse error is already catched by the regexp,
-		// we never enter ther error case here => no error check (but still need a test to cover the case)
-		fields["pkts"], _ = strconv.ParseUint(mv[0][1], 10, 64)
-		fields["bytes"], _ = strconv.ParseUint(mv[0][2], 10, 64)
+
+		var err error
+		fields["pkts"], err = strconv.ParseUint(pkts, 10, 64)
+		if err != nil {
+			continue
+		}
+		fields["bytes"], err = strconv.ParseUint(bytes, 10, 64)
+		if err != nil {
+			continue
+		}
 		acc.AddFields(measurement, fields, tags)
 	}
 	return nil

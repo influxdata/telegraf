@@ -51,6 +51,6 @@ This input does not use tags.
 ### Example Output:
 
 ```
-$ ./telegraf -config telegraf.conf -input-filter conntrack -test
+$ ./telegraf --config telegraf.conf --input-filter conntrack --test
 conntrack,host=myhost ip_conntrack_count=2,ip_conntrack_max=262144 1461620427667995735
 ```

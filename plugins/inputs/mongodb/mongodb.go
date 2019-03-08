@@ -4,13 +4,15 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"gopkg.in/mgo.v2"
 )
@@ -20,15 +22,7 @@ type MongoDB struct {
 	Ssl              Ssl
 	mongos           map[string]*Server
 	GatherPerdbStats bool
-
-	// Path to CA file
-	SSLCA string `toml:"ssl_ca"`
-	// Path to host cert file
-	SSLCert string `toml:"ssl_cert"`
-	// Path to cert key file
-	SSLKey string `toml:"ssl_key"`
-	// Use SSL but skip chain & host verification
-	InsecureSkipVerify bool
+	tlsint.ClientConfig
 }
 
 type Ssl struct {
@@ -37,19 +31,21 @@ type Ssl struct {
 }
 
 var sampleConfig = `
-  ## An array of URI to gather stats about. Specify an ip or hostname
-  ## with optional port add password. ie,
+  ## An array of URLs of the form:
+  ##   "mongodb://" [user ":" pass "@"] host [ ":" port]
+  ## For example:
   ##   mongodb://user:auth_key@10.10.3.30:27017,
   ##   mongodb://10.10.3.33:18832,
-  ##   10.0.0.1:10000, etc.
-  servers = ["127.0.0.1:27017"]
-  gather_perdb_stats = false
+  servers = ["mongodb://127.0.0.1:27017"]
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## When true, collect per database stats
+  # gather_perdb_stats = false
+
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 `
 
@@ -61,7 +57,7 @@ func (*MongoDB) Description() string {
 	return "Read metrics from one or many MongoDB servers"
 }
 
-var localhost = &url.URL{Host: "127.0.0.1:27017"}
+var localhost = &url.URL{Host: "mongodb://127.0.0.1:27017"}
 
 // Reads stats from all configured servers accumulates stats.
 // Returns one of the errors encountered while gather stats (if any).
@@ -72,19 +68,25 @@ func (m *MongoDB) Gather(acc telegraf.Accumulator) error {
 	}
 
 	var wg sync.WaitGroup
-	for _, serv := range m.Servers {
+	for i, serv := range m.Servers {
+		if !strings.HasPrefix(serv, "mongodb://") {
+			// Preserve backwards compatibility for hostnames without a
+			// scheme, broken in go 1.8. Remove in Telegraf 2.0
+			serv = "mongodb://" + serv
+			log.Printf("W! [inputs.mongodb] Using %q as connection URL; please update your configuration to use an URL", serv)
+			m.Servers[i] = serv
+		}
+
 		u, err := url.Parse(serv)
 		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse to address '%s': %s", serv, err))
+			acc.AddError(fmt.Errorf("Unable to parse address %q: %s", serv, err))
 			continue
-		} else if u.Scheme == "" {
-			u.Scheme = "mongodb"
-			// fallback to simple string based address (i.e. "10.0.0.1:10000")
-			u.Host = serv
-			if u.Path == u.Host {
-				u.Path = ""
-			}
 		}
+		if u.Host == "" {
+			acc.AddError(fmt.Errorf("Unable to parse address %q", serv))
+			continue
+		}
+
 		wg.Add(1)
 		go func(srv *Server) {
 			defer wg.Done()
@@ -124,7 +126,7 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 		var tlsConfig *tls.Config
 
 		if m.Ssl.Enabled {
-			// Deprecated SSL config
+			// Deprecated TLS config
 			tlsConfig = &tls.Config{}
 			if len(m.Ssl.CaCerts) > 0 {
 				roots := x509.NewCertPool()
@@ -139,8 +141,10 @@ func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 				tlsConfig.InsecureSkipVerify = true
 			}
 		} else {
-			tlsConfig, err = internal.GetTLSConfig(
-				m.SSLCert, m.SSLKey, m.SSLCA, m.InsecureSkipVerify)
+			tlsConfig, err = m.ClientConfig.TLSConfig()
+			if err != nil {
+				return err
+			}
 		}
 
 		// If configured to use TLS, add a dial function

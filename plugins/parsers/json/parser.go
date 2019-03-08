@@ -4,18 +4,32 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/tidwall/gjson"
+
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/metric"
 )
 
+var (
+	utf8BOM = []byte("\xef\xbb\xbf")
+)
+
 type JSONParser struct {
-	MetricName  string
-	TagKeys     []string
-	DefaultTags map[string]string
+	MetricName     string
+	TagKeys        []string
+	StringFields   []string
+	JSONNameKey    string
+	JSONQuery      string
+	JSONTimeKey    string
+	JSONTimeFormat string
+	JSONTimezone   string
+	DefaultTags    map[string]string
 }
 
 func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
@@ -29,44 +43,130 @@ func (p *JSONParser) parseArray(buf []byte) ([]telegraf.Metric, error) {
 	}
 	for _, item := range jsonOut {
 		metrics, err = p.parseObject(metrics, item)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return metrics, nil
 }
 
 func (p *JSONParser) parseObject(metrics []telegraf.Metric, jsonOut map[string]interface{}) ([]telegraf.Metric, error) {
-
 	tags := make(map[string]string)
 	for k, v := range p.DefaultTags {
 		tags[k] = v
 	}
 
-	for _, tag := range p.TagKeys {
-		switch v := jsonOut[tag].(type) {
-		case string:
-			tags[tag] = v
-		case bool:
-			tags[tag] = strconv.FormatBool(v)
-		case float64:
-			tags[tag] = strconv.FormatFloat(v, 'f', -1, 64)
-		}
-		delete(jsonOut, tag)
-	}
-
 	f := JSONFlattener{}
-	err := f.FlattenJSON("", jsonOut)
+	err := f.FullFlattenJSON("", jsonOut, true, true)
 	if err != nil {
 		return nil, err
 	}
 
-	metric, err := metric.New(p.MetricName, tags, f.Fields, time.Now().UTC())
+	//checks if json_name_key is set
+	if p.JSONNameKey != "" {
+		switch field := f.Fields[p.JSONNameKey].(type) {
+		case string:
+			p.MetricName = field
+		}
+	}
 
+	//if time key is specified, set it to nTime
+	nTime := time.Now().UTC()
+	if p.JSONTimeKey != "" {
+		if p.JSONTimeFormat == "" {
+			err := fmt.Errorf("use of 'json_time_key' requires 'json_time_format'")
+			return nil, err
+		}
+
+		if f.Fields[p.JSONTimeKey] == nil {
+			err := fmt.Errorf("JSON time key could not be found")
+			return nil, err
+		}
+
+		nTime, err = internal.ParseTimestampWithLocation(f.Fields[p.JSONTimeKey], p.JSONTimeFormat, p.JSONTimezone)
+		if err != nil {
+			return nil, err
+		}
+
+		delete(f.Fields, p.JSONTimeKey)
+
+		//if the year is 0, set to current year
+		if nTime.Year() == 0 {
+			nTime = nTime.AddDate(time.Now().Year(), 0, 0)
+		}
+	}
+
+	tags, nFields := p.switchFieldToTag(tags, f.Fields)
+	metric, err := metric.New(p.MetricName, tags, nFields, nTime)
 	if err != nil {
 		return nil, err
 	}
 	return append(metrics, metric), nil
 }
 
+//will take in field map with strings and bools,
+//search for TagKeys that match fieldnames and add them to tags
+//will delete any strings/bools that shouldn't be fields
+//assumes that any non-numeric values in TagKeys should be displayed as tags
+func (p *JSONParser) switchFieldToTag(tags map[string]string, fields map[string]interface{}) (map[string]string, map[string]interface{}) {
+	for _, name := range p.TagKeys {
+		//switch any fields in tagkeys into tags
+		if fields[name] == nil {
+			continue
+		}
+		switch value := fields[name].(type) {
+		case string:
+			tags[name] = value
+			delete(fields, name)
+		case bool:
+			tags[name] = strconv.FormatBool(value)
+			delete(fields, name)
+		case float64:
+			tags[name] = strconv.FormatFloat(value, 'f', -1, 64)
+			delete(fields, name)
+		default:
+			log.Printf("E! [parsers.json] Unrecognized type %T", value)
+		}
+	}
+
+	//remove any additional string/bool values from fields
+	for k := range fields {
+		//check if field is in StringFields
+		sField := false
+		for _, v := range p.StringFields {
+			if v == k {
+				sField = true
+			}
+		}
+		if sField {
+			continue
+		}
+
+		switch fields[k].(type) {
+		case string:
+			delete(fields, k)
+		case bool:
+			delete(fields, k)
+		}
+	}
+	return tags, fields
+}
+
 func (p *JSONParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	if p.JSONQuery != "" {
+		result := gjson.GetBytes(buf, p.JSONQuery)
+		buf = []byte(result.Raw)
+		if !result.IsArray() && !result.IsObject() {
+			err := fmt.Errorf("E! Query path must lead to a JSON object or array of objects, but lead to: %v", result.Type)
+			return nil, err
+		}
+	}
+
+	buf = bytes.TrimSpace(buf)
+	buf = bytes.TrimPrefix(buf, utf8BOM)
+	if len(buf) == 0 {
+		return make([]telegraf.Metric, 0), nil
+	}
 
 	if !isarray(buf) {
 		metrics := make([]telegraf.Metric, 0)
@@ -89,7 +189,7 @@ func (p *JSONParser) ParseLine(line string) (telegraf.Metric, error) {
 	}
 
 	if len(metrics) < 1 {
-		return nil, fmt.Errorf("Can not parse the line: %s, for data format: influx ", line)
+		return nil, fmt.Errorf("can not parse the line: %s, for data format: json ", line)
 	}
 
 	return metrics[0], nil
@@ -110,6 +210,7 @@ func (f *JSONFlattener) FlattenJSON(
 	if f.Fields == nil {
 		f.Fields = make(map[string]interface{})
 	}
+
 	return f.FullFlattenJSON(fieldname, v, false, false)
 }
 
@@ -155,8 +256,6 @@ func (f *JSONFlattener) FullFlattenJSON(
 			return nil
 		}
 	case nil:
-		// ignored types
-		fmt.Println("json parser ignoring " + fieldname)
 		return nil
 	default:
 		return fmt.Errorf("JSON Flattener: got unexpected type %T with value %v (%s)",

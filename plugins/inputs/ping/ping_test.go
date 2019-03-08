@@ -5,12 +5,12 @@ package ping
 import (
 	"errors"
 	"reflect"
-	"runtime"
 	"sort"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // BSD/Darwin ping output
@@ -41,6 +41,19 @@ PING www.google.com (216.58.218.164) 56(84) bytes of data.
 rtt min/avg/max/mdev = 35.225/43.628/51.806/5.325 ms
 `
 
+// BusyBox v1.24.1 (2017-02-28 03:28:13 CET) multi-call binary
+var busyBoxPingOutput = `
+PING 8.8.8.8 (8.8.8.8): 56 data bytes
+64 bytes from 8.8.8.8: seq=0 ttl=56 time=22.559 ms
+64 bytes from 8.8.8.8: seq=1 ttl=56 time=15.810 ms
+64 bytes from 8.8.8.8: seq=2 ttl=56 time=16.262 ms
+64 bytes from 8.8.8.8: seq=3 ttl=56 time=15.815 ms
+
+--- 8.8.8.8 ping statistics ---
+4 packets transmitted, 4 packets received, 0% packet loss
+round-trip min/avg/max = 15.810/17.611/22.559 ms
+`
+
 // Fatal ping output (invalid argument)
 var fatalPingOutput = `
 ping: -i interval too short: Operation not permitted
@@ -48,91 +61,88 @@ ping: -i interval too short: Operation not permitted
 
 // Test that ping command output is processed properly
 func TestProcessPingOutput(t *testing.T) {
-	trans, rec, avg, stddev, err := processPingOutput(bsdPingOutput)
+	trans, rec, min, avg, max, stddev, err := processPingOutput(bsdPingOutput)
 	assert.NoError(t, err)
 	assert.Equal(t, 5, trans, "5 packets were transmitted")
 	assert.Equal(t, 5, rec, "5 packets were transmitted")
+	assert.InDelta(t, 15.087, min, 0.001)
 	assert.InDelta(t, 20.224, avg, 0.001)
+	assert.InDelta(t, 27.263, max, 0.001)
 	assert.InDelta(t, 4.076, stddev, 0.001)
 
-	trans, rec, avg, stddev, err = processPingOutput(linuxPingOutput)
+	trans, rec, min, avg, max, stddev, err = processPingOutput(linuxPingOutput)
 	assert.NoError(t, err)
 	assert.Equal(t, 5, trans, "5 packets were transmitted")
 	assert.Equal(t, 5, rec, "5 packets were transmitted")
+	assert.InDelta(t, 35.225, min, 0.001)
 	assert.InDelta(t, 43.628, avg, 0.001)
+	assert.InDelta(t, 51.806, max, 0.001)
 	assert.InDelta(t, 5.325, stddev, 0.001)
+
+	trans, rec, min, avg, max, stddev, err = processPingOutput(busyBoxPingOutput)
+	assert.NoError(t, err)
+	assert.Equal(t, 4, trans, "4 packets were transmitted")
+	assert.Equal(t, 4, rec, "4 packets were transmitted")
+	assert.InDelta(t, 15.810, min, 0.001)
+	assert.InDelta(t, 17.611, avg, 0.001)
+	assert.InDelta(t, 22.559, max, 0.001)
+	assert.InDelta(t, -1.0, stddev, 0.001)
 }
 
 // Test that processPingOutput returns an error when 'ping' fails to run, such
 // as when an invalid argument is provided
 func TestErrorProcessPingOutput(t *testing.T) {
-	_, _, _, _, err := processPingOutput(fatalPingOutput)
+	_, _, _, _, _, _, err := processPingOutput(fatalPingOutput)
 	assert.Error(t, err, "Error was expected from processPingOutput")
 }
 
 // Test that arg lists and created correctly
 func TestArgs(t *testing.T) {
 	p := Ping{
-		Count: 2,
+		Count:        2,
+		Interface:    "eth0",
+		Timeout:      12.0,
+		Deadline:     24,
+		PingInterval: 1.2,
 	}
 
-	// Actual and Expected arg lists must be sorted for reflect.DeepEqual
-
-	actual := p.args("www.google.com")
-	expected := []string{"-c", "2", "-n", "-s", "16", "www.google.com"}
-	sort.Strings(actual)
-	sort.Strings(expected)
-	assert.True(t, reflect.DeepEqual(expected, actual),
-		"Expected: %s Actual: %s", expected, actual)
-
-	p.Interface = "eth0"
-	actual = p.args("www.google.com")
-	expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0",
-		"www.google.com"}
-	sort.Strings(actual)
-	sort.Strings(expected)
-	assert.True(t, reflect.DeepEqual(expected, actual),
-		"Expected: %s Actual: %s", expected, actual)
-
-	p.Timeout = 12.0
-	actual = p.args("www.google.com")
-	switch runtime.GOOS {
-	case "darwin":
-		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
-			"12000.0", "www.google.com"}
-	case "freebsd":
-		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-t",
-			"12.0", "www.google.com"}
-	default:
-		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
-			"12.0", "www.google.com"}
+	var systemCases = []struct {
+		system string
+		output []string
+	}{
+		{"darwin", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12000", "-t", "24", "-I", "eth0", "www.google.com"}},
+		{"linux", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-I", "eth0", "www.google.com"}},
+		{"anything else", []string{"-c", "2", "-n", "-s", "16", "-i", "1.2", "-W", "12", "-w", "24", "-i", "eth0", "www.google.com"}},
 	}
-
-	sort.Strings(actual)
-	sort.Strings(expected)
-	assert.True(t, reflect.DeepEqual(expected, actual),
-		"Expected: %s Actual: %s", expected, actual)
-
-	p.PingInterval = 1.2
-	actual = p.args("www.google.com")
-	switch runtime.GOOS {
-	case "darwin":
-		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
-			"12000.0", "-i", "1.2", "www.google.com"}
-	case "freebsd":
-		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-t",
-			"12.0", "-i", "1.2", "www.google.com"}
-	default:
-		expected = []string{"-c", "2", "-n", "-s", "16", "-I", "eth0", "-W",
-			"12.0", "-i", "1.2", "www.google.com"}
+	for i := range systemCases {
+		actual := p.args("www.google.com", systemCases[i].system)
+		expected := systemCases[i].output
+		sort.Strings(actual)
+		sort.Strings(expected)
+		require.True(t, reflect.DeepEqual(expected, actual),
+			"Expected: %s Actual: %s", expected, actual)
 	}
-	sort.Strings(actual)
-	sort.Strings(expected)
-	assert.True(t, reflect.DeepEqual(expected, actual),
-		"Expected: %s Actual: %s", expected, actual)
 }
 
-func mockHostPinger(timeout float64, args ...string) (string, error) {
+func TestArguments(t *testing.T) {
+	arguments := []string{"-c", "3"}
+	expected := append(arguments, "www.google.com")
+	p := Ping{
+		Count:        2,
+		Interface:    "eth0",
+		Timeout:      12.0,
+		Deadline:     24,
+		PingInterval: 1.2,
+		Arguments:    arguments,
+	}
+
+	for _, system := range []string{"darwin", "linux", "anything else"} {
+		actual := p.args("www.google.com", system)
+		require.True(t, reflect.DeepEqual(actual, expected), "Expected: %s Actual: %s", expected, actual)
+	}
+}
+
+func mockHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return linuxPingOutput, nil
 }
 
@@ -150,8 +160,11 @@ func TestPingGather(t *testing.T) {
 		"packets_transmitted":   5,
 		"packets_received":      5,
 		"percent_packet_loss":   0.0,
+		"minimum_response_ms":   35.225,
 		"average_response_ms":   43.628,
+		"maximum_response_ms":   51.806,
 		"standard_deviation_ms": 5.325,
+		"result_code":           0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 
@@ -170,7 +183,7 @@ PING www.google.com (216.58.218.164) 56(84) bytes of data.
 rtt min/avg/max/mdev = 35.225/44.033/51.806/5.325 ms
 `
 
-func mockLossyHostPinger(timeout float64, args ...string) (string, error) {
+func mockLossyHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return lossyPingOutput, nil
 }
 
@@ -188,8 +201,11 @@ func TestLossyPingGather(t *testing.T) {
 		"packets_transmitted":   5,
 		"packets_received":      3,
 		"percent_packet_loss":   40.0,
+		"minimum_response_ms":   35.225,
 		"average_response_ms":   44.033,
+		"maximum_response_ms":   51.806,
 		"standard_deviation_ms": 5.325,
+		"result_code":           0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
@@ -202,8 +218,9 @@ Request timeout for icmp_seq 0
 2 packets transmitted, 0 packets received, 100.0% packet loss
 `
 
-func mockErrorHostPinger(timeout float64, args ...string) (string, error) {
-	return errorPingOutput, errors.New("No packets received")
+func mockErrorHostPinger(binary string, timeout float64, args ...string) (string, error) {
+	// This error will not trigger correct error paths
+	return errorPingOutput, nil
 }
 
 // Test that Gather works on a ping with no transmitted packets, even though the
@@ -221,11 +238,12 @@ func TestBadPingGather(t *testing.T) {
 		"packets_transmitted": 2,
 		"packets_received":    0,
 		"percent_packet_loss": 100.0,
+		"result_code":         0,
 	}
 	acc.AssertContainsTaggedFields(t, "ping", fields, tags)
 }
 
-func mockFatalHostPinger(timeout float64, args ...string) (string, error) {
+func mockFatalHostPinger(binary string, timeout float64, args ...string) (string, error) {
 	return fatalPingOutput, errors.New("So very bad")
 }
 
@@ -244,6 +262,46 @@ func TestFatalPingGather(t *testing.T) {
 		"Fatal ping should not have packet measurements")
 	assert.False(t, acc.HasMeasurement("percent_packet_loss"),
 		"Fatal ping should not have packet measurements")
+	assert.False(t, acc.HasMeasurement("minimum_response_ms"),
+		"Fatal ping should not have packet measurements")
 	assert.False(t, acc.HasMeasurement("average_response_ms"),
 		"Fatal ping should not have packet measurements")
+	assert.False(t, acc.HasMeasurement("maximum_response_ms"),
+		"Fatal ping should not have packet measurements")
+}
+
+func TestErrorWithHostNamePingGather(t *testing.T) {
+	params := []struct {
+		out   string
+		error error
+	}{
+		{"", errors.New("host www.amazon.com: So very bad")},
+		{"so bad", errors.New("host www.amazon.com: so bad, So very bad")},
+	}
+
+	for _, param := range params {
+		var acc testutil.Accumulator
+		p := Ping{
+			Urls: []string{"www.amazon.com"},
+			pingHost: func(binary string, timeout float64, args ...string) (string, error) {
+				return param.out, errors.New("So very bad")
+			},
+		}
+		acc.GatherError(p.Gather)
+		assert.True(t, len(acc.Errors) > 0)
+		assert.Contains(t, acc.Errors, param.error)
+	}
+}
+
+func TestPingBinary(t *testing.T) {
+	var acc testutil.Accumulator
+	p := Ping{
+		Urls:   []string{"www.google.com"},
+		Binary: "ping6",
+		pingHost: func(binary string, timeout float64, args ...string) (string, error) {
+			assert.True(t, binary == "ping6")
+			return "", nil
+		},
+	}
+	acc.GatherError(p.Gather)
 }

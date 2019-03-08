@@ -27,6 +27,18 @@ See [webhook doc](https://rollbar.com/docs/webhooks/)
 **Fields:**
 * 'id' = `event.data.item.id` int
 
+#### `occurrence` event
+
+**Tags:**
+* 'event' = `event.event_name` string
+* 'environment' = `event.data.item.environment` string
+* 'project_id = `event.data.item.project_id` int
+* 'language' = `event.data.occurrence.language` string
+* 'level' = `event.data.occurrence.level` string
+
+**Fields:**
+* 'id' = `event.data.item.id` int
+
 #### `deploy` event
 
 **Tags:**

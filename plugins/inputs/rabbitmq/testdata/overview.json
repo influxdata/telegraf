@@ -1,0 +1,63 @@
+{
+  "message_stats": {
+    "ack": 5246,
+    "ack_details": {
+      "rate": 0.0
+    },
+    "deliver": 5234,
+    "deliver_details": {
+      "rate": 0.0
+    },
+    "deliver_get": 3333,
+    "deliver_get_details": {
+      "rate": 0.0
+    },
+    "publish": 5258,
+    "publish_details": {
+      "rate": 0.0
+    },
+    "return_unroutable": 10,
+    "return_unroutable_details": {
+      "rate": 3.3
+    }
+  },
+  "object_totals": {
+    "channels": 44,
+    "connections": 44,
+    "consumers": 65,
+    "exchanges": 43,
+    "queues": 62
+  },
+  "queue_totals": {
+    "messages": 5,
+    "messages_details": {
+      "rate": 0.0
+    },
+    "messages_ready": 32,
+    "messages_ready_details": {
+      "rate": 0.0
+    },
+    "messages_unacknowledged": 27,
+    "messages_unacknowledged_details": {
+      "rate": 0.0
+    }
+  },
+  "listeners": [
+    {
+      "name": "rabbit@node-a",
+      "protocol": "amqp"
+    },
+    {
+      "name": "rabbit@node-b",
+      "protocol": "amqp"
+    },
+    {
+      "name": "rabbit@node-a",
+      "protocol": "clustering"
+    },
+    {
+      "name": "rabbit@node-b",
+      "protocol": "clustering"
+    }
+  ]
+}

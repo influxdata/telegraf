@@ -2,12 +2,15 @@ package system
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/mem"
 	"github.com/shirou/gopsutil/net"
 )
@@ -21,6 +24,7 @@ type PS interface {
 	VMStat() (*mem.VirtualMemoryStat, error)
 	SwapStat() (*mem.SwapMemoryStat, error)
 	NetConnections() ([]net.ConnectionStat, error)
+	Temperature() ([]host.TemperatureStat, error)
 }
 
 type PSDiskDeps interface {
@@ -37,17 +41,17 @@ func add(acc telegraf.Accumulator,
 	}
 }
 
-func newSystemPS() *systemPS {
-	return &systemPS{&systemPSDisk{}}
+func NewSystemPS() *SystemPS {
+	return &SystemPS{&SystemPSDisk{}}
 }
 
-type systemPS struct {
+type SystemPS struct {
 	PSDiskDeps
 }
 
-type systemPSDisk struct{}
+type SystemPSDisk struct{}
 
-func (s *systemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error) {
+func (s *SystemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error) {
 	var cpuTimes []cpu.TimesStat
 	if perCPU {
 		if perCPUTimes, err := cpu.Times(true); err == nil {
@@ -66,7 +70,7 @@ func (s *systemPS) CPUTimes(perCPU, totalCPU bool) ([]cpu.TimesStat, error) {
 	return cpuTimes, nil
 }
 
-func (s *systemPS) DiskUsage(
+func (s *SystemPS) DiskUsage(
 	mountPointFilter []string,
 	fstypeExclude []string,
 ) ([]*disk.UsageStat, []*disk.PartitionStat, error) {
@@ -84,9 +88,19 @@ func (s *systemPS) DiskUsage(
 	for _, filter := range fstypeExclude {
 		fstypeExcludeSet[filter] = true
 	}
+	paths := make(map[string]bool)
+	for _, part := range parts {
+		paths[part.Mountpoint] = true
+	}
+
+	// Autofs mounts indicate a potential mount, the partition will also be
+	// listed with the actual filesystem when mounted.  Ignore the autofs
+	// partition to avoid triggering a mount.
+	fstypeExcludeSet["autofs"] = true
 
 	var usage []*disk.UsageStat
 	var partitions []*disk.PartitionStat
+	hostMountPrefix := s.OSGetenv("HOST_MOUNT_PREFIX")
 
 	for i := range parts {
 		p := parts[i]
@@ -105,15 +119,20 @@ func (s *systemPS) DiskUsage(
 			continue
 		}
 
-		mountpoint := s.OSGetenv("HOST_MOUNT_PREFIX") + p.Mountpoint
-		if _, err := s.OSStat(mountpoint); err != nil {
+		// If there's a host mount prefix, exclude any paths which conflict
+		// with the prefix.
+		if len(hostMountPrefix) > 0 &&
+			!strings.HasPrefix(p.Mountpoint, hostMountPrefix) &&
+			paths[hostMountPrefix+p.Mountpoint] {
 			continue
 		}
-		du, err := s.PSDiskUsage(mountpoint)
+
+		du, err := s.PSDiskUsage(p.Mountpoint)
 		if err != nil {
 			continue
 		}
-		du.Path = p.Mountpoint
+
+		du.Path = filepath.Join("/", strings.TrimPrefix(p.Mountpoint, hostMountPrefix))
 		du.Fstype = p.Fstype
 		usage = append(usage, du)
 		partitions = append(partitions, &p)
@@ -122,19 +141,19 @@ func (s *systemPS) DiskUsage(
 	return usage, partitions, nil
 }
 
-func (s *systemPS) NetProto() ([]net.ProtoCountersStat, error) {
+func (s *SystemPS) NetProto() ([]net.ProtoCountersStat, error) {
 	return net.ProtoCounters(nil)
 }
 
-func (s *systemPS) NetIO() ([]net.IOCountersStat, error) {
+func (s *SystemPS) NetIO() ([]net.IOCountersStat, error) {
 	return net.IOCounters(true)
 }
 
-func (s *systemPS) NetConnections() ([]net.ConnectionStat, error) {
+func (s *SystemPS) NetConnections() ([]net.ConnectionStat, error) {
 	return net.Connections("all")
 }
 
-func (s *systemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error) {
+func (s *SystemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error) {
 	m, err := disk.IOCounters(names...)
 	if err == internal.NotImplementedError {
 		return nil, nil
@@ -143,26 +162,30 @@ func (s *systemPS) DiskIO(names []string) (map[string]disk.IOCountersStat, error
 	return m, err
 }
 
-func (s *systemPS) VMStat() (*mem.VirtualMemoryStat, error) {
+func (s *SystemPS) VMStat() (*mem.VirtualMemoryStat, error) {
 	return mem.VirtualMemory()
 }
 
-func (s *systemPS) SwapStat() (*mem.SwapMemoryStat, error) {
+func (s *SystemPS) SwapStat() (*mem.SwapMemoryStat, error) {
 	return mem.SwapMemory()
 }
 
-func (s *systemPSDisk) Partitions(all bool) ([]disk.PartitionStat, error) {
+func (s *SystemPS) Temperature() ([]host.TemperatureStat, error) {
+	return host.SensorsTemperatures()
+}
+
+func (s *SystemPSDisk) Partitions(all bool) ([]disk.PartitionStat, error) {
 	return disk.Partitions(all)
 }
 
-func (s *systemPSDisk) OSGetenv(key string) string {
+func (s *SystemPSDisk) OSGetenv(key string) string {
 	return os.Getenv(key)
 }
 
-func (s *systemPSDisk) OSStat(name string) (os.FileInfo, error) {
+func (s *SystemPSDisk) OSStat(name string) (os.FileInfo, error) {
 	return os.Stat(name)
 }
 
-func (s *systemPSDisk) PSDiskUsage(path string) (*disk.UsageStat, error) {
+func (s *SystemPSDisk) PSDiskUsage(path string) (*disk.UsageStat, error) {
 	return disk.Usage(path)
 }

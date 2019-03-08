@@ -154,7 +154,7 @@ With the configuration below:
 
 you get the following output:
 ```
-$ telegraf -config telegraf.conf -input-filter sysstat -test
+$ telegraf --config telegraf.conf --input-filter sysstat --test
 * Plugin: sysstat, Collection 1
 > cpu_util,device=all pct_idle=98.85,pct_iowait=0,pct_nice=0.38,pct_steal=0,pct_system=0.64,pct_user=0.13 1459255626657883725
 > swap pswpin_per_s=0,pswpout_per_s=0 1459255626658387650

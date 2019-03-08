@@ -16,21 +16,21 @@ const metricName = "dmcache"
 
 type cacheStatus struct {
 	device            string
-	length            int
+	length            int64
 	target            string
-	metadataBlocksize int
-	metadataUsed      int
-	metadataTotal     int
-	cacheBlocksize    int
-	cacheUsed         int
-	cacheTotal        int
-	readHits          int
-	readMisses        int
-	writeHits         int
-	writeMisses       int
-	demotions         int
-	promotions        int
-	dirty             int
+	metadataBlocksize int64
+	metadataUsed      int64
+	metadataTotal     int64
+	cacheBlocksize    int64
+	cacheUsed         int64
+	cacheTotal        int64
+	readHits          int64
+	readMisses        int64
+	writeHits         int64
+	writeMisses       int64
+	demotions         int64
+	promotions        int64
+	dirty             int64
 }
 
 func (c *DMCache) Gather(acc telegraf.Accumulator) error {
@@ -69,12 +69,12 @@ func parseDMSetupStatus(line string) (cacheStatus, error) {
 	}
 
 	status.device = strings.TrimRight(values[0], ":")
-	status.length, err = strconv.Atoi(values[2])
+	status.length, err = strconv.ParseInt(values[2], 10, 64)
 	if err != nil {
 		return cacheStatus{}, err
 	}
 	status.target = values[3]
-	status.metadataBlocksize, err = strconv.Atoi(values[4])
+	status.metadataBlocksize, err = strconv.ParseInt(values[4], 10, 64)
 	if err != nil {
 		return cacheStatus{}, err
 	}
@@ -82,15 +82,15 @@ func parseDMSetupStatus(line string) (cacheStatus, error) {
 	if len(metadata) != 2 {
 		return cacheStatus{}, parseError
 	}
-	status.metadataUsed, err = strconv.Atoi(metadata[0])
+	status.metadataUsed, err = strconv.ParseInt(metadata[0], 10, 64)
 	if err != nil {
 		return cacheStatus{}, err
 	}
-	status.metadataTotal, err = strconv.Atoi(metadata[1])
+	status.metadataTotal, err = strconv.ParseInt(metadata[1], 10, 64)
 	if err != nil {
 		return cacheStatus{}, err
 	}
-	status.cacheBlocksize, err = strconv.Atoi(values[6])
+	status.cacheBlocksize, err = strconv.ParseInt(values[6], 10, 64)
 	if err != nil {
 		return cacheStatus{}, err
 	}
@@ -98,39 +98,39 @@ func parseDMSetupStatus(line string) (cacheStatus, error) {
 	if len(cache) != 2 {
 		return cacheStatus{}, parseError
 	}
-	status.cacheUsed, err = strconv.Atoi(cache[0])
+	status.cacheUsed, err = strconv.ParseInt(cache[0], 10, 64)
 	if err != nil {
 		return cacheStatus{}, err
 	}
-	status.cacheTotal, err = strconv.Atoi(cache[1])
+	status.cacheTotal, err = strconv.ParseInt(cache[1], 10, 64)
 	if err != nil {
 		return cacheStatus{}, err
 	}
-	status.readHits, err = strconv.Atoi(values[8])
+	status.readHits, err = strconv.ParseInt(values[8], 10, 64)
 	if err != nil {
 		return cacheStatus{}, err
 	}
-	status.readMisses, err = strconv.Atoi(values[9])
+	status.readMisses, err = strconv.ParseInt(values[9], 10, 64)
 	if err != nil {
 		return cacheStatus{}, err
 	}
-	status.writeHits, err = strconv.Atoi(values[10])
+	status.writeHits, err = strconv.ParseInt(values[10], 10, 64)
 	if err != nil {
 		return cacheStatus{}, err
 	}
-	status.writeMisses, err = strconv.Atoi(values[11])
+	status.writeMisses, err = strconv.ParseInt(values[11], 10, 64)
 	if err != nil {
 		return cacheStatus{}, err
 	}
-	status.demotions, err = strconv.Atoi(values[12])
+	status.demotions, err = strconv.ParseInt(values[12], 10, 64)
 	if err != nil {
 		return cacheStatus{}, err
 	}
-	status.promotions, err = strconv.Atoi(values[13])
+	status.promotions, err = strconv.ParseInt(values[13], 10, 64)
 	if err != nil {
 		return cacheStatus{}, err
 	}
-	status.dirty, err = strconv.Atoi(values[14])
+	status.dirty, err = strconv.ParseInt(values[14], 10, 64)
 	if err != nil {
 		return cacheStatus{}, err
 	}

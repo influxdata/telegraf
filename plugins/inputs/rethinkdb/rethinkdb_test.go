@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/dancannon/gorethink.v1"
+	"gopkg.in/gorethink/gorethink.v3"
 )
 
-var connect_url, authKey string
+var connect_url, authKey, username, password string
 var server *Server
 
 func init() {
@@ -22,17 +22,31 @@ func init() {
 		connect_url = "127.0.0.1:28015"
 	}
 	authKey = os.Getenv("RETHINKDB_AUTHKEY")
-
+	username = os.Getenv("RETHINKDB_USERNAME")
+	password = os.Getenv("RETHINKDB_PASSWORD")
 }
 
 func testSetup(m *testing.M) {
 	var err error
 	server = &Server{Url: &url.URL{Host: connect_url}}
-	server.session, _ = gorethink.Connect(gorethink.ConnectOpts{
-		Address:       server.Url.Host,
-		AuthKey:       authKey,
-		DiscoverHosts: false,
-	})
+
+	if authKey {
+		server.session, _ = gorethink.Connect(gorethink.ConnectOpts{
+			Address:          server.Url.Host,
+			AuthKey:          authKey,
+			HandshakeVersion: gorethink.HandshakeV0_4,
+			DiscoverHosts:    false,
+		})
+	} else {
+		server.session, _ = gorethink.Connect(gorethink.ConnectOpts{
+			Address:          server.Url.Host,
+			Username:         username,
+			Password:         password,
+			HandshakeVersion: gorethink.HandshakeV1_0,
+			DiscoverHosts:    false,
+		})
+	}
+
 	if err != nil {
 		log.Fatalln(err.Error())
 	}

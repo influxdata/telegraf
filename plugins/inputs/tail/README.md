@@ -1,4 +1,4 @@
-# tail Input Plugin
+# Tail Input Plugin
 
 The tail plugin "tails" a logfile and parses each log message.
 
@@ -39,6 +39,9 @@ The plugin expects messages in one of the
   ## Whether file is a named pipe
   pipe = false
 
+  ## Method used to watch for file updates.  Can be either "inotify" or "poll".
+  # watch_method = "inotify"
+
   ## Data format to consume.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -46,3 +49,7 @@ The plugin expects messages in one of the
   data_format = "influx"
 ```
 
+### Metrics:
+
+Metrics are produced according to the `data_format` option.  Additionally a
+tag labeled `path` is added to the metric containing the filename being tailed.

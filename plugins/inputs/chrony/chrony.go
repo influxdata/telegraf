@@ -1,5 +1,3 @@
-// +build linux
-
 package chrony
 
 import (
@@ -92,7 +90,7 @@ func processChronycOutput(out string) (map[string]interface{}, map[string]string
 		}
 		name := strings.ToLower(strings.Replace(strings.TrimSpace(stats[0]), " ", "_", -1))
 		// ignore reference time
-		if strings.Contains(name, "time") {
+		if strings.Contains(name, "ref_time") {
 			continue
 		}
 		valueFields := strings.Fields(stats[1])
