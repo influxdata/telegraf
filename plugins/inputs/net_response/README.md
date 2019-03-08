@@ -30,7 +30,7 @@ verify text in the response.
   # expect = "ssh"
 
   ## Uncomment to remove deprecated fields; recommended for new deploys
-  # fieldexclude = ["result_type", "string_found"]
+  # fielddrop = ["result_type", "string_found"]
 ```
 
 ### Metrics:

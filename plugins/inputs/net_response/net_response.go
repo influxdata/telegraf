@@ -63,7 +63,7 @@ var sampleConfig = `
   # expect = "ssh"
 
   ## Uncomment to remove deprecated fields
-  # fieldexclude = ["result_type", "string_found"]
+  # fielddrop = ["result_type", "string_found"]
 `
 
 // SampleConfig will return a complete configuration example with details about each field.
