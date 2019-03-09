@@ -983,7 +983,7 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 					bucket.fields[fn] = float64(v) / 100.0
 				} else {
 					if e.Parent.UseIntSamples {
-						bucket.fields[fn] = int64(math.Round(v))
+						bucket.fields[fn] = int64(round(v))
 					} else {
 						bucket.fields[fn] = v
 					}
@@ -1088,7 +1088,7 @@ func cleanDiskTag(disk string) string {
 	return strings.TrimSuffix(strings.TrimPrefix(disk, "<"), ">")
 }
 
-func Round(x float64) float64 {
+func round(x float64) float64 {
 	t := math.Trunc(x)
 	if math.Abs(x-t) >= 0.5 {
 		return t + math.Copysign(1, x)
