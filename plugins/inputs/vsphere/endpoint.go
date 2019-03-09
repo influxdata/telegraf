@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"math/rand"
 	"net/url"
 	"regexp"
@@ -948,7 +949,7 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 			e.populateTags(&objectRef, resourceType, res, t, &v)
 
 			nValues := 0
-			alignedInfo, alignedValues := alignSamples(em.SampleInfo, v.Value, interval) // TODO: Estimate interval
+			alignedInfo, alignedValues := alignSamples(em.SampleInfo, v.Value, interval)
 
 			for idx, sample := range alignedInfo {
 				// According to the docs, SampleInfo and Value should have the same length, but we've seen corrupted
@@ -981,7 +982,11 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 				if info.UnitInfo.GetElementDescription().Key == "percent" {
 					bucket.fields[fn] = float64(v) / 100.0
 				} else {
-					bucket.fields[fn] = v
+					if e.Parent.UseIntSamples {
+						bucket.fields[fn] = int64(math.Round(v))
+					} else {
+						bucket.fields[fn] = v
+					}
 				}
 				count++
 
