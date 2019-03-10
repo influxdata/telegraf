@@ -27,7 +27,7 @@ Bit access:
 ### Configuration:
 
 ```toml
-[[inputs.bond]]
+[[inputs.modbus]]
 	## Set Modbus Config (Either TCP or RTU Client)
 	## Modbust TCP Client
 	## TCP Client = "localhost:502"
