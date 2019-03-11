@@ -35,8 +35,8 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 	return &cloudwatch.GetMetricDataOutput{
 		MetricDataResults: []*cloudwatch.MetricDataResult{
 			{
-				Id:         aws.String("latency_minimum"),
-				Label:      aws.String("minimum thing"),
+				Id:         aws.String("latency_p_example_minimum"),
+				Label:      aws.String("latency_minimum"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
 					params.EndTime,
@@ -46,8 +46,8 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("latency_maximum"),
-				Label:      aws.String("maximum thing"),
+				Id:         aws.String("latency_p_example_maximum"),
+				Label:      aws.String("latency_maximum"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
 					params.EndTime,
@@ -57,8 +57,8 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("latency_average"),
-				Label:      aws.String("average thing"),
+				Id:         aws.String("latency_p_example_average"),
+				Label:      aws.String("latency_average"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
 					params.EndTime,
@@ -68,8 +68,8 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("latency_sum"),
-				Label:      aws.String("sum thing"),
+				Id:         aws.String("latency_p_example_sum"),
+				Label:      aws.String("latency_sum"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
 					params.EndTime,
@@ -79,8 +79,8 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("latency_sample_count"),
-				Label:      aws.String("sample count thing"),
+				Id:         aws.String("latency_p_example_sample_count"),
+				Label:      aws.String("latency_sample_count"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
 					params.EndTime,

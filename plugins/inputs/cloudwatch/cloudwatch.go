@@ -1,7 +1,10 @@
 package cloudwatch
 
 import (
+	"errors"
+	"log"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -10,6 +13,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
+	"github.com/influxdata/telegraf/internal/limiter"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
@@ -34,6 +38,8 @@ type (
 		metricCache *MetricCache
 		windowStart time.Time
 		windowEnd   time.Time
+
+		Debug bool `toml:"debug"`
 	}
 
 	Metric struct {
@@ -200,7 +206,33 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	acc.AddError(c.gatherMetrics(acc, metrics))
+	// limit concurrency or we can easily exhaust user connection limit
+	// see cloudwatch API request limits:
+	// http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
+	lmtr := limiter.NewRateLimiter(c.RateLimit, time.Second)
+	defer lmtr.Stop()
+	wg := sync.WaitGroup{}
+
+	// loop through metrics and send groups of 100 at a time to gatherMetrics
+	// gatherMetrics(acc, metrics[min:max]...)
+	groups := len(metrics) / 20
+	for i := 0; i < groups; i++ {
+		wg.Add(1)
+		<-lmtr.C
+		go func(inm []*cloudwatch.Metric) {
+			defer wg.Done()
+			acc.AddError(c.gatherMetrics(acc, inm))
+		}(metrics[i*20 : (i+1)*20])
+	}
+
+	<-lmtr.C
+	wg.Add(1)
+	go func(inm []*cloudwatch.Metric) {
+		defer wg.Done()
+		acc.AddError(c.gatherMetrics(acc, inm))
+	}(metrics[(groups * 20):])
+
+	wg.Wait()
 
 	return nil
 }
@@ -247,7 +279,12 @@ func (c *CloudWatch) initializeCloudWatch() error {
 	}
 	configProvider := credentialConfig.Credentials()
 
-	c.client = cloudwatch.New(configProvider)
+	cfg := &aws.Config{}
+	loglevel := aws.LogOff
+	if c.Debug {
+		loglevel = aws.LogDebug
+	}
+	c.client = cloudwatch.New(configProvider, cfg.WithLogLevel(loglevel))
 	return nil
 }
 
@@ -300,9 +337,13 @@ func (c *CloudWatch) gatherMetrics(
 	params := c.getDataInputs(metrics)
 	resp, err := c.client.GetMetricData(params)
 	if err != nil {
-		return err
+		return errors.New("Failed to get metric data - " + err.Error())
 	}
-	// todo: handle pagination (resp.NextToken)
+
+	// todo: determine if we need to handle pagination.
+	if resp.NextToken != nil {
+		log.Println("[inputs.cloudwatch] W! UNHANDLED PAGINATED RESULTS!!", *resp.NextToken)
+	}
 
 	for _, metric := range metrics {
 		timestamp := time.Now()
@@ -311,15 +352,20 @@ func (c *CloudWatch) gatherMetrics(
 			"region": c.Region,
 		}
 
-		results := getResults(*metric.MetricName, resp.MetricDataResults)
+		results := getResults(*metric, resp.MetricDataResults)
 		for _, result := range results {
 			for _, dimension := range metric.Dimensions {
 				tags[snakeCase(*dimension.Name)] = *dimension.Value
 			}
-			fields[*result.Id] = *result.Values[0]
 			if len(result.Timestamps) == 0 || result.Timestamps[0] == nil {
 				continue
 			}
+			// todo: determine if we need to handle multiple values.
+			if len(result.Values) > 1 {
+				log.Printf("[inputs.cloudwatch] W! UNHANDLED MULTIPLE RESULT VALUES!! %+v\n", result.Values)
+			}
+
+			fields[*result.Label] = *result.Values[0]
 			timestamp = *result.Timestamps[0]
 		}
 
@@ -329,10 +375,10 @@ func (c *CloudWatch) gatherMetrics(
 	return nil
 }
 
-func getResults(name string, results []*cloudwatch.MetricDataResult) []*cloudwatch.MetricDataResult {
+func getResults(metric cloudwatch.Metric, results []*cloudwatch.MetricDataResult) []*cloudwatch.MetricDataResult {
 	list := []*cloudwatch.MetricDataResult{}
 	for _, result := range results {
-		if nameMatch(name, *result.Id) {
+		if nameMatch(genName(metric), *result.Id) {
 			list = append(list, result)
 		}
 	}
@@ -378,7 +424,8 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 	for _, metric := range metrics {
 		dataQuery := []*cloudwatch.MetricDataQuery{
 			{
-				Id: aws.String(snakeCase(*metric.MetricName + "_average")),
+				Id:    aws.String(genName(*metric) + "_average"),
+				Label: aws.String(snakeCase(*metric.MetricName + "_average")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
 					Period: aws.Int64(int64(c.Period.Duration.Seconds())),
@@ -386,7 +433,8 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 				},
 			},
 			{
-				Id: aws.String(snakeCase(*metric.MetricName + "_maximum")),
+				Id:    aws.String(genName(*metric) + "_maximum"),
+				Label: aws.String(snakeCase(*metric.MetricName + "_maximum")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
 					Period: aws.Int64(int64(c.Period.Duration.Seconds())),
@@ -394,7 +442,8 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 				},
 			},
 			{
-				Id: aws.String(snakeCase(*metric.MetricName + "_minimum")),
+				Id:    aws.String(genName(*metric) + "_minimum"),
+				Label: aws.String(snakeCase(*metric.MetricName + "_minimum")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
 					Period: aws.Int64(int64(c.Period.Duration.Seconds())),
@@ -402,7 +451,8 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 				},
 			},
 			{
-				Id: aws.String(snakeCase(*metric.MetricName + "_sum")),
+				Id:    aws.String(genName(*metric) + "_sum"),
+				Label: aws.String(snakeCase(*metric.MetricName + "_sum")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
 					Period: aws.Int64(int64(c.Period.Duration.Seconds())),
@@ -410,7 +460,8 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 				},
 			},
 			{
-				Id: aws.String(snakeCase(*metric.MetricName + "_sampleCount")),
+				Id:    aws.String(genName(*metric) + "_sampleCount"),
+				Label: aws.String(snakeCase(*metric.MetricName + "_sampleCount")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
 					Period: aws.Int64(int64(c.Period.Duration.Seconds())),
@@ -426,6 +477,22 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 		EndTime:           aws.Time(c.windowEnd),
 		MetricDataQueries: dataQueries,
 	}
+}
+
+func genName(metric cloudwatch.Metric) string {
+	dVals := []string{}
+	for _, dimension := range metric.Dimensions {
+		val := strings.Replace(*dimension.Value, "-", "_", -1)
+		val = strings.Replace(val, ".", "_", -1)
+		dVals = append(dVals, val)
+	}
+	if strings.Contains(*metric.MetricName, "EBSIOBalance") || strings.Contains(*metric.MetricName, "EBSByteBalance") {
+		*metric.MetricName = strings.TrimRight(*metric.MetricName, "%")
+	}
+	if len(dVals) > 0 {
+		return snakeCase(*metric.MetricName + "_" + strings.Join(dVals, "_"))
+	}
+	return snakeCase(*metric.MetricName)
 }
 
 /*
