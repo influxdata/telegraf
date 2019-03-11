@@ -40,6 +40,7 @@ type VSphere struct {
 	DatastoreMetricExclude  []string
 	DatastoreInclude        []string
 	Separator               string
+	UseIntSamples           bool
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
@@ -199,6 +200,12 @@ var sampleConfig = `
   ## timeout applies to any of the api request made to vcenter
   # timeout = "60s"
 
+  ## When set to true, all samples are sent as integers. This makes the output data types backwards compatible
+  ## with Telegraf 1.9 or lower. Normally all samples from vCenter, with the exception of percentages, are 
+  ## integer values, but under some conditions, some averaging takes place internally in the plugin. Setting this
+  ## flag to "false" will send values as floats to preserve the full precision when averaging takes place.
+  # use_int_samples = true
+
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
   # ssl_cert = "/path/to/certfile"
@@ -312,6 +319,7 @@ func init() {
 			DatastoreMetricExclude:  nil,
 			DatastoreInclude:        []string{"/*/datastore/**"},
 			Separator:               "_",
+			UseIntSamples:           true,
 
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,
