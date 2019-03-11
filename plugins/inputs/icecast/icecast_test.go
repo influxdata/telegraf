@@ -25,10 +25,10 @@ func TestHTTPicecast(t *testing.T) {
 	// Fetch it 2 times to catch possible data races.
 	a := Icecast{
 		Servers: map[string]server{
-			"1": server{
+			"1": {
 				URL: ts.URL,
 			},
-			"2": server{
+			"2": {
 				URL: ts.URL,
 			},
 		},
@@ -55,11 +55,11 @@ func TestHTTPicecastAlias(t *testing.T) {
 	testURLs[1] = []string{ts.URL, "alias"}
 	a := Icecast{
 		Servers: map[string]server{
-			"1": server{
+			"1": {
 				URL:   ts.URL,
 				Alias: "alias",
 			},
-			"2": server{
+			"2": {
 				URL:   ts.URL,
 				Alias: "alias",
 			},
