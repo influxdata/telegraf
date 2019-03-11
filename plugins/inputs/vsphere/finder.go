@@ -79,7 +79,6 @@ func (f *Finder) descend(ctx context.Context, root types.ManagedObjectReference,
 	}
 
 	m := view.NewManager(f.client.Client.Client)
-	defer m.Destroy(ctx)
 	v, err := m.CreateContainerView(ctx, root, ct, false)
 	if err != nil {
 		return err
