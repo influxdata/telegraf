@@ -83,6 +83,7 @@ aggregationRule:
   clusterRoleSelectors:
   - matchLabels:
       rbac.authorization.k8s.io/aggregate-view-telegraf: "true"
+  - matchLabels:
       rbac.authorization.k8s.io/aggregate-to-view: "true"
 rules: [] # Rules are automatically filled in by the controller manager.
 ```
