@@ -8,8 +8,10 @@
 
 #### Bugfixes
 
-- [#5448](https://github.com/influxdata/telegraf/pull/5448): Show error when TLS configuration cannot be loaded.
+- [#5448](https://github.com/influxdata/telegraf/issues/5448): Show error when TLS configuration cannot be loaded.
 - [#5543](https://github.com/influxdata/telegraf/pull/5543): Add Base64-encoding/decoding for Google Cloud PubSub plugins.
+- [#5565](https://github.com/influxdata/telegraf/issues/5565): Fix type compatibility in vsphere plugin with use_int_samples option.
+- [#5492](https://github.com/influxdata/telegraf/issues/5492): Fix vsphere input shows failed task in vCenter.
 
 ## v1.10 [2019-03-05]
 
