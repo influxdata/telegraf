@@ -30,29 +30,30 @@ type Listmounts struct {
 
 // Icecast contains all the required details to connect to
 type Icecast struct {
-	URLs            [][]string        `toml:"urls"`
+	Servers         map[string]server `toml:"servers"`
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
-	Username        string            `toml:"username"`
-	Password        string            `toml:"password"`
 	Slash           bool              `toml:"slash"`
+}
+
+type server struct {
+	URL      string
+	Alias    string
+	Username string
+	Password string
 }
 
 var sampleConfig = `
   ## Specify the IP adress/hostname to where the '/admin/listmounts' can be found. You can include port if needed.
-  ## If you'd like to report under an alias, specify it in the second field (optional)
-  ## You can use multiple hosts who use the same login credentials
-  ## For example:
-  ## urls = [ [ "http://localhost", "Server 1" ],
-  			  [ "http://example.org" ] ]
-  urls = [ [ "http://localhost", "Server 1" ] ]
+  ## You can also specify an alias. If none is given, the hostname will be used. Multiple servers can also be specified
+  [servers]
+	[server.1]
+	url = "http://localhost"
+	alias = "Server 1"
+	username = "telegraf"
+	password = "passwd"	
 
   ## Timeout to the complete conection and reponse time in seconds. Default (5 seconds)
   # response_timeout = "25s"
-
-  ## The username/password combination needed to read the listmounts page.
-  ## These must be equal to the admin login details specified in your Icecast configuration
-  username = "admin"
-  password = "hackme"
 
   ## Include the slash in mountpoint names or not
   slash = false
@@ -70,9 +71,6 @@ func (n *Icecast) Description() string {
 
 // Gather will fetch the metrics from Icecast
 func (n *Icecast) Gather(acc telegraf.Accumulator) error {
-	if len(n.URLs) == 0 {
-		return fmt.Errorf("No hostname/IP given")
-	}
 	if n.ResponseTimeout.Duration < time.Second {
 		n.ResponseTimeout.Duration = time.Second * 5
 	}
@@ -80,30 +78,25 @@ func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 	var outerr error
 	var errch = make(chan error)
 
-	for _, u := range n.URLs {
+	for _, s := range n.Servers {
+		server := s
+
 		// Default admin listmounts page of Icecast
 		adminPageURL := "/admin/listmounts"
 
-		// Check to see if there is an alias
-		var alias string
-		if len(u) > 1 {
-			alias = u[1]
-		}
-
 		// Parsing the URL to see if it's ok
-		addr, err := url.Parse(u[0])
+		addr, err := url.Parse(server.URL)
 		if err != nil {
-			return fmt.Errorf("Unable to parse address '%s': %s", u[0], err)
+			return fmt.Errorf("Unable to parse address '%s': %s", server.URL, err)
 		}
 		addr.Path = path.Join(addr.Path, adminPageURL)
-
 		go func(addr *url.URL) {
-			errch <- n.gatherURL(addr, alias, acc)
+			errch <- n.gatherURL(addr, server, acc)
 		}(addr)
 	}
 
 	// Drain channel, waiting for all requests to finish and save last error.
-	for range n.URLs {
+	for range n.Servers {
 		if err := <-errch; err != nil {
 			outerr = err
 		}
@@ -114,7 +107,7 @@ func (n *Icecast) Gather(acc telegraf.Accumulator) error {
 
 func (n *Icecast) gatherURL(
 	addr *url.URL,
-	alias string,
+	s server,
 	acc telegraf.Accumulator,
 ) error {
 	var listmounts Listmounts
@@ -129,16 +122,16 @@ func (n *Icecast) gatherURL(
 
 	req, err := http.NewRequest("GET", addr.String(), nil)
 	if err != nil {
-		return fmt.Errorf("error on new request to %s : %s", addr.String(), err)
+		return fmt.Errorf("Error on new request to %s : %s", addr.String(), err)
 	}
 
-	if len(n.Username) != 0 && len(n.Password) != 0 {
-		req.SetBasicAuth(n.Username, n.Password)
+	if len(s.Username) != 0 && len(s.Password) != 0 {
+		req.SetBasicAuth(s.Username, s.Password)
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("error on request to %s : %s", addr.String(), err)
+		return fmt.Errorf("Error on request to %s : %s", addr.String(), err)
 	}
 	defer resp.Body.Close()
 
@@ -157,8 +150,8 @@ func (n *Icecast) gatherURL(
 
 	var host string
 	// Setting alias if available
-	if len(alias) != 0 {
-		host = alias
+	if len(s.Alias) != 0 {
+		host = s.Alias
 	} else {
 		host = addr.Hostname()
 	}
