@@ -36,7 +36,7 @@ func (s *DiskIO) diskInfo(devName string) (map[string]string, error) {
 	}
 
 	major := stat.Rdev >> 8 & 0xff
-	minor := stat.Rdev & 0xff
+	minor := (stat.Rdev & 0xff) | (stat.Rdev>>12)&^0xff
 	udevDataPath := fmt.Sprintf("%s/b%d:%d", udevPath, major, minor)
 
 	di := map[string]string{}
