@@ -5,6 +5,7 @@ import (
 	"log"
 	"math"
 	"strconv"
+	"strings"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/filter"
@@ -345,11 +346,22 @@ func toInteger(v interface{}) (int64, bool) {
 			return 0, true
 		}
 	case string:
-		result, err := strconv.ParseFloat(value, 64)
-		if err != nil {
-			return 0, false
+		if strings.HasPrefix(value, "0x") {
+			result, err := strconv.ParseInt(value, 0, 64)
+
+			if err != nil {
+				return 0, false
+			}
+			return result, true
+
+		} else {
+			result, err := strconv.ParseFloat(value, 64)
+
+			if err != nil {
+				return 0, false
+			}
+			return toInteger(result)
 		}
-		return toInteger(result)
 	}
 	return 0, false
 }

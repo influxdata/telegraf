@@ -129,7 +129,7 @@ func TestConverter(t *testing.T) {
 			converter: &Converter{
 				Fields: &Conversion{
 					String:   []string{"a"},
-					Integer:  []string{"b", "b1", "b2"},
+					Integer:  []string{"b", "b1", "b2", "b3"},
 					Unsigned: []string{"c", "c1", "c2"},
 					Boolean:  []string{"d"},
 					Float:    []string{"e"},
@@ -145,6 +145,7 @@ func TestConverter(t *testing.T) {
 						"b":  "42",
 						"b1": "42.2",
 						"b2": "42.5",
+						"b3": "0x2A",
 						"c":  "42",
 						"c1": "42.2",
 						"c2": "42.5",
@@ -166,6 +167,7 @@ func TestConverter(t *testing.T) {
 						"b":  int64(42),
 						"b1": int64(42),
 						"b2": int64(43),
+						"b3": int64(42),
 						"c":  uint64(42),
 						"c1": uint64(42),
 						"c2": uint64(43),
