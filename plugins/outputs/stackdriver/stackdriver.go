@@ -1,6 +1,7 @@
 package stackdriver
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"hash/fnv"
@@ -22,6 +23,7 @@ import (
 type Stackdriver struct {
 	Project        string
 	Namespace      string
+	GroupMetrics   bool              `toml:"group_metrics"`
 	ResourceType   string            `toml:"resource_type"`
 	ResourceLabels map[string]string `toml:"resource_labels"`
 
@@ -58,6 +60,9 @@ var sampleConfig = `
 
   ## Custom resource type
   # resource_type = "generic_node"
+
+  ## Compact by type
+  # GroupMetrics = false
 
   ## Additonal resource labels
   # [outputs.stackdriver.resource_labels]
@@ -169,10 +174,20 @@ func (s *Stackdriver) Write(metrics []telegraf.Metric) error {
 				Value:    value,
 			}
 
+			metricType := path.Join("custom.googleapis.com", s.Namespace, m.Name(), f.Key)
+			if s.GroupMetrics {
+				var buffer bytes.Buffer
+				buffer.WriteString(m.Name())
+				buffer.WriteString("-")
+				buffer.WriteString(f.Key)
+				m.AddTag("name", buffer.String())
+				metricType = path.Join("custom.googleapis.com", s.Namespace, getStackdriverMetricGroupName(m.Type(), f.Value))
+			}
+
 			// Prepare time series.
 			timeSeries := &monitoringpb.TimeSeries{
 				Metric: &metricpb.Metric{
-					Type:   path.Join("custom.googleapis.com", s.Namespace, m.Name(), f.Key),
+					Type:   metricType,
 					Labels: getStackdriverLabels(m.TagList()),
 				},
 				MetricKind: metricKind,
@@ -262,6 +277,28 @@ func getStackdriverTimeInterval(
 		fallthrough
 	default:
 		return nil, fmt.Errorf("unsupported metric kind %T", m)
+	}
+}
+
+func getStackdriverMetricGroupName(vt telegraf.ValueType, value interface{}) string {
+	switch vt {
+	case telegraf.Untyped:
+		switch value.(type) {
+		case uint64:
+			return "counter"
+		case int64:
+			return "counter"
+		case float64:
+			return "gauge"
+		default:
+			return "untag"
+		}
+	case telegraf.Gauge:
+		return "gauge"
+	case telegraf.Counter:
+		return "derive"
+	default:
+		return "unspecified"
 	}
 }
 
