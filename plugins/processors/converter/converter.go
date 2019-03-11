@@ -345,11 +345,16 @@ func toInteger(v interface{}) (int64, bool) {
 			return 0, true
 		}
 	case string:
-		result, err := strconv.ParseFloat(value, 64)
+		result, err := strconv.ParseInt(value, 0, 64)
+
 		if err != nil {
-			return 0, false
+			result, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return 0, false
+			}
+			return toInteger(result)
 		}
-		return toInteger(result)
+		return result, true
 	}
 	return 0, false
 }
@@ -379,11 +384,16 @@ func toUnsigned(v interface{}) (uint64, bool) {
 			return 0, true
 		}
 	case string:
-		result, err := strconv.ParseFloat(value, 64)
+		result, err := strconv.ParseUint(value, 0, 64)
+
 		if err != nil {
-			return 0, false
+			result, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return 0, false
+			}
+			return toUnsigned(result)
 		}
-		return toUnsigned(result)
+		return result, true
 	}
 	return 0, false
 }
