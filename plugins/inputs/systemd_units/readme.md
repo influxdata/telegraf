@@ -60,7 +60,7 @@ enumeration of [unit_active_state_table](https://github.com/systemd/systemd/blob
 
 #### Running
 
-enumeration of sub states, see various [<unittype>_state_tables](https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L163);
+enumeration of sub states, see various [unittype_state_tables](https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L163);
 duplicates were removed, tables are hex aligned to keep some space for future
 values
 
