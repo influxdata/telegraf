@@ -70,6 +70,7 @@ LimitNOFILE=4096
     - packets_transmitted (integer)
     - packets_received (integer)
     - percent_packets_loss (float)
+    - ttl (integer, Not available on Windows)
     - average_response_ms (integer)
     - minimum_response_ms (integer)
     - maximum_response_ms (integer)
@@ -92,5 +93,5 @@ ping,url=example.org result_code=0i,average_response_ms=7i,maximum_response_ms=9
 
 **Linux:**
 ```
-ping,url=example.org average_response_ms=23.066,maximum_response_ms=24.64,minimum_response_ms=22.451,packets_received=5i,packets_transmitted=5i,percent_packet_loss=0,result_code=0i,standard_deviation_ms=0.809 1535747258000000000
+ping,url=example.org average_response_ms=23.066,ttl=63,maximum_response_ms=24.64,minimum_response_ms=22.451,packets_received=5i,packets_transmitted=5i,percent_packet_loss=0,result_code=0i,standard_deviation_ms=0.809 1535747258000000000
 ```

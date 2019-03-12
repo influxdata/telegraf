@@ -1,4 +1,21 @@
-## v1.10 [unreleased]
+## v1.11 [unreleased]
+
+#### Features
+
+- [#5556](https://github.com/influxdata/telegraf/pull/5556): Add TTL field to ping input.
+- [#5569](https://github.com/influxdata/telegraf/pull/5569): Add hexadecimal string to integer conversion to converter processor.
+
+
+## v1.10.1 [unreleased]
+
+#### Bugfixes
+
+- [#5448](https://github.com/influxdata/telegraf/issues/5448): Show error when TLS configuration cannot be loaded.
+- [#5543](https://github.com/influxdata/telegraf/pull/5543): Add Base64-encoding/decoding for Google Cloud PubSub plugins.
+- [#5565](https://github.com/influxdata/telegraf/issues/5565): Fix type compatibility in vsphere plugin with use_int_samples option.
+- [#5492](https://github.com/influxdata/telegraf/issues/5492): Fix vsphere input shows failed task in vCenter.
+
+## v1.10 [2019-03-05]
 
 #### New Inputs
 
@@ -56,6 +73,7 @@
 - [#4308](https://github.com/influxdata/telegraf/pull/4308): Add additional metrics to rabbitmq input.
 - [#5388](https://github.com/influxdata/telegraf/pull/5388): Add multicast support to socket_listener input.
 - [#5490](https://github.com/influxdata/telegraf/pull/5490): Add tag based routing in influxdb/influxdb_v2 outputs.
+- [#5533](https://github.com/influxdata/telegraf/pull/5533): Allow grok parser to produce metrics with no fields.
 
 #### Bugfixes
 
@@ -67,6 +85,9 @@
 - [#5449](https://github.com/influxdata/telegraf/issues/5449): Log permission error and ignore in filecount input.
 - [#5497](https://github.com/influxdata/telegraf/pull/5497): Create log file in append mode.
 - [#5325](https://github.com/influxdata/telegraf/issues/5325): Ignore tracking for metrics added to aggregator.
+- [#5514](https://github.com/influxdata/telegraf/issues/5514): Fix panic when rejecting empty batch.
+- [#5518](https://github.com/influxdata/telegraf/pull/5518): Fix conversion from string float to integer.
+- [#5431](https://github.com/influxdata/telegraf/pull/5431): Sort metrics by timestamp in prometheus output.
 
 ## v1.9.5 [2019-02-26]
 
