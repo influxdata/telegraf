@@ -119,7 +119,7 @@ func runAgent(ctx context.Context,
 	c := config.NewConfig()
 	c.OutputFilters = outputFilters
 	c.InputFilters = inputFilters
-	err := c.LoadConfig(*fConfig)
+	err := c.LoadConfig(*fConfig, *fConfigDirectory != "")
 	if err != nil {
 		return err
 	}

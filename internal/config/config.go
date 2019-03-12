@@ -550,7 +550,7 @@ func (c *Config) LoadDirectory(path string) error {
 		if len(name) < 6 || name[len(name)-5:] != ".conf" {
 			return nil
 		}
-		err := c.LoadConfig(thispath)
+		err := c.LoadConfig(thispath, false)
 		if err != nil {
 			return err
 		}
@@ -584,10 +584,13 @@ func getDefaultConfigPath() (string, error) {
 }
 
 // LoadConfig loads the given config file and applies it to c
-func (c *Config) LoadConfig(path string) error {
+func (c *Config) LoadConfig(path string, dirPath bool) error {
 	var err error
 	if path == "" {
 		if path, err = getDefaultConfigPath(); err != nil {
+			if dirPath {
+				return nil
+			}
 			return err
 		}
 	}

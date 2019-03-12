@@ -21,7 +21,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 	assert.NoError(t, err)
 	err = os.Setenv("TEST_INTERVAL", "10s")
 	assert.NoError(t, err)
-	c.LoadConfig("./testdata/single_plugin_env_vars.toml")
+	c.LoadConfig("./testdata/single_plugin_env_vars.toml", false)
 
 	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"192.168.1.1"}
@@ -60,7 +60,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 
 func TestConfig_LoadSingleInput(t *testing.T) {
 	c := NewConfig()
-	c.LoadConfig("./testdata/single_plugin.toml")
+	c.LoadConfig("./testdata/single_plugin.toml", false)
 
 	memcached := inputs.Inputs["memcached"]().(*memcached.Memcached)
 	memcached.Servers = []string{"localhost"}
@@ -99,7 +99,7 @@ func TestConfig_LoadSingleInput(t *testing.T) {
 
 func TestConfig_LoadDirectory(t *testing.T) {
 	c := NewConfig()
-	err := c.LoadConfig("./testdata/single_plugin.toml")
+	err := c.LoadConfig("./testdata/single_plugin.toml", false)
 	if err != nil {
 		t.Error(err)
 	}
