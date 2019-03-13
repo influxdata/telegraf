@@ -35,7 +35,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 	return &cloudwatch.GetMetricDataOutput{
 		MetricDataResults: []*cloudwatch.MetricDataResult{
 			{
-				Id:         aws.String("latency_p_example_minimum"),
+				Id:         aws.String("minimum_latency_p_example"),
 				Label:      aws.String("latency_minimum"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
@@ -46,7 +46,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("latency_p_example_maximum"),
+				Id:         aws.String("maximum_latency_p_example"),
 				Label:      aws.String("latency_maximum"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
@@ -57,7 +57,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("latency_p_example_average"),
+				Id:         aws.String("average_latency_p_example"),
 				Label:      aws.String("latency_average"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
@@ -68,7 +68,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("latency_p_example_sum"),
+				Id:         aws.String("sum_latency_p_example"),
 				Label:      aws.String("latency_sum"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
@@ -79,7 +79,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("latency_p_example_sample_count"),
+				Id:         aws.String("sample_count_latency_p_example"),
 				Label:      aws.String("latency_sample_count"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{

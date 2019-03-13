@@ -386,19 +386,19 @@ func getResults(metric cloudwatch.Metric, results []*cloudwatch.MetricDataResult
 }
 
 func nameMatch(name, id string) bool {
-	if strings.TrimSuffix(id, "_average") == snakeCase(name) {
+	if strings.TrimPrefix(id, "average_") == snakeCase(name) {
 		return true
 	}
-	if strings.TrimSuffix(id, "_maximum") == snakeCase(name) {
+	if strings.TrimPrefix(id, "maximum_") == snakeCase(name) {
 		return true
 	}
-	if strings.TrimSuffix(id, "_minimum") == snakeCase(name) {
+	if strings.TrimPrefix(id, "minimum_") == snakeCase(name) {
 		return true
 	}
-	if strings.TrimSuffix(id, "_sum") == snakeCase(name) {
+	if strings.TrimPrefix(id, "sum_") == snakeCase(name) {
 		return true
 	}
-	if strings.TrimSuffix(id, "_sample_count") == snakeCase(name) {
+	if strings.TrimPrefix(id, "sample_count_") == snakeCase(name) {
 		return true
 	}
 	return false
@@ -424,7 +424,7 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 	for _, metric := range metrics {
 		dataQuery := []*cloudwatch.MetricDataQuery{
 			{
-				Id:    aws.String(genName(*metric) + "_average"),
+				Id:    aws.String("average_" + genName(*metric)),
 				Label: aws.String(snakeCase(*metric.MetricName + "_average")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
@@ -433,7 +433,7 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 				},
 			},
 			{
-				Id:    aws.String(genName(*metric) + "_maximum"),
+				Id:    aws.String("maximum_" + genName(*metric)),
 				Label: aws.String(snakeCase(*metric.MetricName + "_maximum")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
@@ -442,7 +442,7 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 				},
 			},
 			{
-				Id:    aws.String(genName(*metric) + "_minimum"),
+				Id:    aws.String("minimum_" + genName(*metric)),
 				Label: aws.String(snakeCase(*metric.MetricName + "_minimum")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
@@ -451,7 +451,7 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 				},
 			},
 			{
-				Id:    aws.String(genName(*metric) + "_sum"),
+				Id:    aws.String("sum_" + genName(*metric)),
 				Label: aws.String(snakeCase(*metric.MetricName + "_sum")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
@@ -460,8 +460,8 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 				},
 			},
 			{
-				Id:    aws.String(genName(*metric) + "_sampleCount"),
-				Label: aws.String(snakeCase(*metric.MetricName + "_sampleCount")),
+				Id:    aws.String("sample_count_" + genName(*metric)),
+				Label: aws.String(snakeCase(*metric.MetricName + "_sample_count")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
 					Period: aws.Int64(int64(c.Period.Duration.Seconds())),
