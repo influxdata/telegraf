@@ -204,7 +204,7 @@ outer:
 
 	// will default to plugin name
 	measurementName := p.MetricName
-	if recordFields[p.MeasurementColumn] != nil {
+	if recordFields[p.MeasurementColumn] != nil && recordFields[p.MeasurementColumn] != "" {
 		measurementName = fmt.Sprintf("%v", recordFields[p.MeasurementColumn])
 	}
 
