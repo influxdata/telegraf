@@ -5,7 +5,7 @@ The syslog output plugin sends syslog messages transmitted over
 [TCP](https://tools.ietf.org/html/rfc6587) or
 [TLS](https://tools.ietf.org/html/rfc5425), with or without the octet counting framing.
 
-Syslog messages areformatted according to
+Syslog messages are formatted according to
 [RFC 5424](https://tools.ietf.org/html/rfc5424).
 
 ### Configuration
@@ -45,7 +45,8 @@ Syslog messages areformatted according to
 # trailer = "LF"
 
 ### SD-PARAMs settings
-### A syslog message can contain multiple parameters and multiple identifiers within structured data section
+### A syslog message can contain multiple structured data sections.
+### Thus multiple identifiers (one per section) and multiple parameters (multiple pairs per SD SECTION).
 ### For each unrecognised metric field a SD-PARAMS can be created. 
 ### Example
 ### Configuration =>
@@ -60,10 +61,10 @@ sdparam_separator = "_"
 
 ## Default sdid used for for fields that don't contain a prefix defined in the explict sdids setting below
 ## If no default is specified, no SD-PARAMs will be used for unrecognised field.
-#default_sdid = "default@32473"
+# default_sdid = "default@32473"
 
 ##List of explicit prefixes to extract from fields and use as the SDID, if they match (see above example for more details):
-#sdids = ["foo@123", "bar@456"]
+# sdids = ["foo@123", "bar@456"]
 ###
 
 # Default PRI value (RFC5424#section-6.2.1) If no metric Field with key "PRI" is defined, this default value is used.
