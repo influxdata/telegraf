@@ -328,8 +328,15 @@ func PrintSampleConfig(
 	aggregatorFilters []string,
 	processorFilters []string,
 ) {
+	printHeaders := true
+	if len(headerFilters) == 3 && headerFilters[1] == "none" {
+		printHeaders = false
+	}
+
 	// print headers
-	fmt.Printf(header)
+	if printHeaders {
+		fmt.Printf(header)
+	}
 	if len(headerFilters) != 0 {
 		printFilteredHeaders(headerFilters, false)
 	} else {
@@ -337,7 +344,9 @@ func PrintSampleConfig(
 	}
 
 	// print output plugins
-	fmt.Printf(outputHeader)
+	if printHeaders {
+		fmt.Printf(outputHeader)
+	}
 	if len(outputFilters) != 0 {
 		printFilteredOutputs(outputFilters, false)
 	} else {
@@ -354,7 +363,9 @@ func PrintSampleConfig(
 	}
 
 	// print processor plugins
-	fmt.Printf(processorHeader)
+	if printHeaders {
+		fmt.Printf(processorHeader)
+	}
 	if len(processorFilters) != 0 {
 		printFilteredProcessors(processorFilters, false)
 	} else {
@@ -367,7 +378,9 @@ func PrintSampleConfig(
 	}
 
 	// pring aggregator plugins
-	fmt.Printf(aggregatorHeader)
+	if printHeaders {
+		fmt.Printf(aggregatorHeader)
+	}
 	if len(aggregatorFilters) != 0 {
 		printFilteredAggregators(aggregatorFilters, false)
 	} else {
@@ -380,11 +393,13 @@ func PrintSampleConfig(
 	}
 
 	// print input plugins
-	fmt.Printf(inputHeader)
+	if printHeaders {
+		fmt.Printf(inputHeader)
+	}
 	if len(inputFilters) != 0 {
-		printFilteredInputs(inputFilters, false)
+		printFilteredInputs(inputFilters, false, printHeaders)
 	} else {
-		printFilteredInputs(inputDefaults, false)
+		printFilteredInputs(inputDefaults, false, printHeaders)
 		// Print non-default inputs, commented
 		var pnames []string
 		for pname := range inputs.Inputs {
@@ -393,7 +408,7 @@ func PrintSampleConfig(
 			}
 		}
 		sort.Strings(pnames)
-		printFilteredInputs(pnames, true)
+		printFilteredInputs(pnames, true, printHeaders)
 	}
 }
 
@@ -433,7 +448,7 @@ func printFilteredAggregators(aggregatorFilters []string, commented bool) {
 	}
 }
 
-func printFilteredInputs(inputFilters []string, commented bool) {
+func printFilteredInputs(inputFilters []string, commented, printHeader bool) {
 	// Filter inputs
 	var pnames []string
 	for pname := range inputs.Inputs {
@@ -468,7 +483,9 @@ func printFilteredInputs(inputFilters []string, commented bool) {
 		return
 	}
 	sort.Strings(servInputNames)
-	fmt.Printf(serviceInputHeader)
+	if printHeader {
+		fmt.Printf(serviceInputHeader)
+	}
 	for _, name := range servInputNames {
 		printConfig(name, servInputs[name], "inputs", commented)
 	}
