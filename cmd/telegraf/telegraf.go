@@ -41,6 +41,8 @@ var fVersion = flag.Bool("version", false, "display the version and exit")
 var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
+var fHeaderFilters = flag.String("header-filter", "",
+	"filter the headers to print, separator is ':'. used only for 'config'")
 var fInputFilters = flag.String("input-filter", "",
 	"filter the inputs to enable, separator is :")
 var fInputList = flag.Bool("input-list", false,
@@ -249,7 +251,10 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
-	inputFilters, outputFilters := []string{}, []string{}
+	headerFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
+	if *fHeaderFilters != "" {
+		headerFilters = strings.Split(":"+strings.TrimSpace(*fHeaderFilters)+":", ":")
+	}
 	if *fInputFilters != "" {
 		inputFilters = strings.Split(":"+strings.TrimSpace(*fInputFilters)+":", ":")
 	}
@@ -289,6 +294,7 @@ func main() {
 			return
 		case "config":
 			config.PrintSampleConfig(
+				headerFilters,
 				inputFilters,
 				outputFilters,
 				aggregatorFilters,
@@ -317,6 +323,7 @@ func main() {
 		return
 	case *fSampleConfig:
 		config.PrintSampleConfig(
+			headerFilters,
 			inputFilters,
 			outputFilters,
 			aggregatorFilters,

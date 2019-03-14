@@ -32,6 +32,9 @@ import (
 )
 
 var (
+	// Default headers
+	headerDefaults = []string{"global_tags", "agent"}
+
 	// Default input plugins
 	inputDefaults = []string{"cpu", "mem", "swap", "system", "kernel",
 		"processes", "disk", "diskio"}
@@ -197,6 +200,8 @@ func (c *Config) ListTags() string {
 	return strings.Join(tags, " ")
 }
 
+var headers = map[string]string{"global_tags": globalTagsConfig, "agent": agentConfig}
+
 var header = `# Telegraf Configuration
 #
 # Telegraf is entirely plugin driven. All metrics are gathered from the
@@ -212,7 +217,8 @@ var header = `# Telegraf Configuration
 # them with $. For strings the variable must be within quotes (ie, "$STR_VAR"),
 # for numbers and booleans they should be plain (ie, $INT_VAR, $BOOL_VAR)
 
-
+`
+var globalTagsConfig = `
 # Global tags can be specified here in key="value" format.
 [global_tags]
   # dc = "us-east-1" # will tag all metrics with dc=us-east-1
@@ -220,7 +226,8 @@ var header = `# Telegraf Configuration
   ## Environment variables can be used as tags, and throughout the config file
   # user = "$USER"
 
-
+`
+var agentConfig = `
 # Configuration for telegraf agent
 [agent]
   ## Default data collection interval for all inputs
@@ -276,50 +283,61 @@ var header = `# Telegraf Configuration
   ## If set to true, do no set the "host" tag in the telegraf agent.
   omit_hostname = false
 
+`
 
+var outputHeader = `
 ###############################################################################
 #                            OUTPUT PLUGINS                                   #
 ###############################################################################
+
 `
 
 var processorHeader = `
-
 ###############################################################################
 #                            PROCESSOR PLUGINS                                #
 ###############################################################################
+
 `
 
 var aggregatorHeader = `
-
 ###############################################################################
 #                            AGGREGATOR PLUGINS                               #
 ###############################################################################
+
 `
 
 var inputHeader = `
-
 ###############################################################################
 #                            INPUT PLUGINS                                    #
 ###############################################################################
+
 `
 
 var serviceInputHeader = `
-
 ###############################################################################
 #                            SERVICE INPUT PLUGINS                            #
 ###############################################################################
+
 `
 
 // PrintSampleConfig prints the sample config
 func PrintSampleConfig(
+	headerFilters []string,
 	inputFilters []string,
 	outputFilters []string,
 	aggregatorFilters []string,
 	processorFilters []string,
 ) {
+	// print headers
 	fmt.Printf(header)
+	if len(headerFilters) != 0 {
+		printFilteredHeaders(headerFilters, false)
+	} else {
+		printFilteredHeaders(headerDefaults, false)
+	}
 
 	// print output plugins
+	fmt.Printf(outputHeader)
 	if len(outputFilters) != 0 {
 		printFilteredOutputs(outputFilters, false)
 	} else {
@@ -471,6 +489,21 @@ func printFilteredOutputs(outputFilters []string, commented bool) {
 		creator := outputs.Outputs[oname]
 		output := creator()
 		printConfig(oname, output, "outputs", commented)
+	}
+}
+
+func printFilteredHeaders(headerFilters []string, commented bool) {
+	// Filter headers
+	var hnames []string
+	for hname := range headers {
+		if sliceContains(hname, headerFilters) {
+			hnames = append(hnames, hname)
+		}
+	}
+
+	// Print Headers
+	for _, hname := range hnames {
+		fmt.Printf(headers[hname])
 	}
 }
 
