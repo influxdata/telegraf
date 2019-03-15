@@ -27,7 +27,7 @@ func TestBuildInsert(t *testing.T) {
 	assert.Contains(t, p.Columns[table], "host")
 	assert.Contains(t, p.Columns[table], "zone")
 	assert.Contains(t, p.Columns[table], "cpu_perc")
-	assert.Contains(t, p.Inserts[table], "INSERT INTO \"" + table + "\"(")
+	assert.Contains(t, p.Inserts[table], "INSERT INTO \""+table+"\"(")
 	assert.Contains(t, p.Inserts[table], "\"host\"")
 	assert.Contains(t, p.Inserts[table], "\"zone\"")
 	assert.Contains(t, p.Inserts[table], "\"cpu_perc\"")

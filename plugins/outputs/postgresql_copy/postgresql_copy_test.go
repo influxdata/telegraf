@@ -27,14 +27,13 @@ func TestBuildColumns(t *testing.T) {
 	assert.Contains(t, p.Columns[table], "zone")
 }
 
-
 func TestBuildValues(t *testing.T) {
 	timestamp := time.Date(2010, time.November, 10, 23, 0, 0, 0, time.UTC)
 	table := "cpu_usage"
 	tags := map[string]string{"host": "address", "zone": "west"}
 	fields := map[string]interface{}{"cpu_perc": float64(0.2)}
 	m, _ := metric.New(table, tags, fields, timestamp)
-	
+
 	p := newPostgresqlCopy()
 	p.Columns = make(map[string][]string)
 	p.buildColumns(table, m)

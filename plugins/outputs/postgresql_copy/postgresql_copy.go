@@ -44,10 +44,10 @@ func (p *PostgresqlCopy) buildColumns(metrics []telegraf.Metric) {
 		if table_columns[table] == nil {
 			table_columns[table] = map[string]bool{}
 		}
-		for key, _ := range metric.Fields() {
+		for key := range metric.Fields() {
 			table_columns[table][key] = true
 		}
-		for key, _ := range metric.Tags() {
+		for key := range metric.Tags() {
 			table_columns[table][key] = true
 		}
 	}

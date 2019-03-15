@@ -60,10 +60,10 @@ func (p *PostgresqlBatch) generateInsert(tablename string, columns []string) str
 func (p *PostgresqlBatch) buildTableInsert(metric telegraf.Metric) {
 	table := metric.Name()
 	if p.Inserts[table] == "" {
-		for key, _ := range metric.Tags() {
+		for key := range metric.Tags() {
 			p.Columns[table] = append(p.Columns[table], key)
 		}
-		for key, _ := range metric.Fields() {
+		for key := range metric.Fields() {
 			p.Columns[table] = append(p.Columns[table], key)
 		}
 		p.Inserts[table] = p.generateInsert(table, append(p.Columns[table], "time"))
