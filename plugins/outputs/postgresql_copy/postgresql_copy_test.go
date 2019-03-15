@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 
 	"github.com/stretchr/testify/assert"
@@ -20,7 +21,7 @@ func TestBuildColumns(t *testing.T) {
 	p.Columns = make(map[string][]string)
 	assert.Empty(t, p.Columns[table])
 
-	p.buildColumns(table, m)
+	p.buildColumns([]telegraf.Metric{m})
 	assert.Equal(t, len(p.Columns[table]), 3)
 	assert.Equal(t, p.Columns[table][0], "cpu_perc")
 	assert.Contains(t, p.Columns[table], "host")
@@ -36,7 +37,7 @@ func TestBuildValues(t *testing.T) {
 
 	p := newPostgresqlCopy()
 	p.Columns = make(map[string][]string)
-	p.buildColumns(table, m)
+	p.buildColumns([]telegraf.Metric{m})
 
 	values := buildValues(m, p.Columns[table])
 	assert.Equal(t, len(values), 4)
