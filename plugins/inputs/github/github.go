@@ -17,7 +17,7 @@ import (
 // GitHub - plugin main structure
 type GitHub struct {
 	Repositories []string          `toml:"repositories"`
-	APIKey       string            `toml:"api_key"`
+	AccessToken  string            `toml:"access_token"`
 	HTTPTimeout  internal.Duration `toml:"http_timeout"`
 	githubClient *gh.Client
 }
@@ -54,10 +54,10 @@ func (github *GitHub) Description() string {
 func (github *GitHub) createGitHubClient() (*gh.Client, error) {
 	var githubClient *gh.Client
 
-	if github.APIKey != "" {
+	if github.AccessToken != "" {
 		ctx := context.Background()
 		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: github.APIKey},
+			&oauth2.Token{AccessToken: github.AccessToken},
 		)
 		tc := oauth2.NewClient(ctx, ts)
 

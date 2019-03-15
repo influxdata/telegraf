@@ -11,7 +11,7 @@ The [GitHub](https://www.github.com) input plugin gathers statistics from GitHub
     ]
 
     ## Optional: Unauthenticated requests are limited to 60 per hour
-    api_key = "SOME_KEY"
+    access_token = "personal access token"
 
     ## Optional: Default 5s
     http_timeout = "5s"
