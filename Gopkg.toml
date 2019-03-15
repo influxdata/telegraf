@@ -265,3 +265,7 @@
 [[constraint]]
   name = "github.com/go-logfmt/logfmt"
   version = "0.4.0"
+
+[[constraint]]
+  name = "github.com/golang/snappy"
+  revision = "2a8bb927dd31d8daada140a5d09578521ce5c36a"
