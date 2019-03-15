@@ -16,15 +16,18 @@ import (
 
 // GitHub - plugin main structure
 type GitHub struct {
-	Repositories []string
-	apiKey       string
-	httpTimeout  internal.Duration
+	Repositories []string          `toml:"repositories"`
+	APIKey       string            `toml:"api_key"`
+	HTTPTimeout  internal.Duration `toml:"http_timeout"`
 	githubClient *gh.Client
 }
 
 const sampleConfig = `
   ## Specify a list of repositories
   repositories = ["influxdata/influxdb"]
+
+  ## API Key for GitHub API requests
+  api_key = ""
 
   ## Timeout for GitHub API requests
   http_timeout = "5s"
@@ -33,7 +36,7 @@ const sampleConfig = `
 // NewGitHub returns a new instance of the GitHub input plugin
 func NewGitHub() *GitHub {
 	return &GitHub{
-		httpTimeout: internal.Duration{Duration: time.Second * 5},
+		HTTPTimeout: internal.Duration{Duration: time.Second * 5},
 	}
 }
 
@@ -51,10 +54,10 @@ func (github *GitHub) Description() string {
 func (github *GitHub) createGitHubClient() (*gh.Client, error) {
 	var githubClient *gh.Client
 
-	if github.apiKey != "" {
+	if github.APIKey != "" {
 		ctx := context.Background()
 		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: github.apiKey},
+			&oauth2.Token{AccessToken: github.APIKey},
 		)
 		tc := oauth2.NewClient(ctx, ts)
 
@@ -103,12 +106,18 @@ func (github *GitHub) Gather(acc telegraf.Accumulator) error {
 
 			fields := make(map[string]interface{})
 
+			license := "None"
+
+			if repository.GetLicense() != nil {
+				license = *repository.License.Name
+			}
+
 			tags := map[string]string{
 				"full_name": *repository.FullName,
 				"owner":     *repository.Owner.Login,
 				"name":      *repository.Name,
 				"language":  *repository.Language,
-				"license":   *repository.License.Name,
+				"license":   license,
 			}
 
 			fields["stars"] = repository.StargazersCount
@@ -120,13 +129,13 @@ func (github *GitHub) Gather(acc telegraf.Accumulator) error {
 
 			acc.AddFields("github_repository", fields, tags, now)
 
-			rate_fields := make(map[string]interface{})
-			rate_tags := map[string]string{}
+			rateFields := make(map[string]interface{})
+			rateTags := map[string]string{}
 
-			rate_fields["limit"] = response.Rate.Limit
-			rate_fields["remaining"] = response.Rate.Remaining
+			rateFields["limit"] = response.Rate.Limit
+			rateFields["remaining"] = response.Rate.Remaining
 
-			acc.AddFields("github_rate_limit", rate_fields, rate_tags, now)
+			acc.AddFields("github_rate_limit", rateFields, rateTags, now)
 		}(repository, acc)
 	}
 

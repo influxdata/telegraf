@@ -9,6 +9,12 @@ The [GitHub](https://www.github.com) input plugin gathers statistics from GitHub
     repositories = [
       "owner/repository",
     ]
+
+    ## Optional: Unauthenticated requests are limited to 60 per hour
+    api_key = "SOME_KEY"
+
+    ## Optional: Default 5s
+    http_timeout = "5s"
 ```
 
 ### Metrics:
