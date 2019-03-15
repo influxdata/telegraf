@@ -74,6 +74,11 @@ func (handler *putRecordsHandler) addSlugs(partitionKey string, slugs ...[]byte)
 	}
 }
 
+// packageMetrics is responsible to get the metrics split into payloads that we no larger than 1020kb.
+// Each partition key will have metrics that need to then be split into payloads.
+// If the partition key is random then it will create payloads ready to be split between as many shards
+// that you have available.
+// packageMetrics can't be called again until init is called. Really it is designed to be used once.
 func (handler *putRecordsHandler) packageMetrics(shards int64) error {
 	if handler.readyToSendLock {
 		return fmt.Errorf("Already setup to send data")
@@ -136,7 +141,6 @@ func (handler *putRecordsHandler) packageMetrics(shards int64) error {
 		}
 
 		requiredBlocks := (len(tryOne) / maxRecordSizeBytes) + 1
-		fmt.Println("Required Blocks", requiredBlocks)
 
 		if requiredBlocks == 1 {
 			// we are ok and we can carry on
@@ -178,7 +182,7 @@ func (handler *putRecordsHandler) gzipCompressSlugs() error {
 	return nil
 }
 
-//convertToKinesisPutRequests will return a slice that contains a []*kinesis.PutRecordsRequestEntry
+// convertToKinesisPutRequests will return a slice that contains a []*kinesis.PutRecordsRequestEntry
 // sized to fit into a PutRecords calls. The number of of outer slices is how many times you would
 // need to call kinesis.PutRecords.
 // The Inner slices ad hear to the current rules. No more than 500 records at once and no more than
