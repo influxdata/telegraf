@@ -153,14 +153,12 @@ func getTags(repositoryInfo *gh.Repository) map[string]string {
 }
 
 func getFields(repositoryInfo *gh.Repository) map[string]interface{} {
-	fields := make(map[string]interface{})
-
-	fields["stars"] = repositoryInfo.StargazersCount
-	fields["forks"] = repositoryInfo.ForksCount
-	fields["open_issues"] = repositoryInfo.OpenIssuesCount
-	fields["size"] = repositoryInfo.Size
-
-	return fields
+	return map[string]interface{}{
+		"stars":       *repositoryInfo.StargazersCount,
+		"forks":       *repositoryInfo.ForksCount,
+		"open_issues": *repositoryInfo.OpenIssuesCount,
+		"size":        *repositoryInfo.Size,
+	}
 }
 
 func init() {
