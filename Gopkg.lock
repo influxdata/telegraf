@@ -731,6 +731,17 @@
   revision = "299bdde78165d4ca4bc7d064d8d6a4f39ac6de8c"
 
 [[projects]]
+  digest = "1:29145d7af4adafd72a79df5e41456ac9e232d5a28c1cd4dacf3ff008a217fc10"
+  name = "github.com/lib/pq"
+  packages = [
+    ".",
+    "oid",
+  ]
+  pruneopts = ""
+  revision = "4ded0e9383f75c197b3a2aaa6d590ac52df6fd79"
+  version = "v1.0.0"
+
+[[projects]]
   branch = "master"
   digest = "1:7e9956922e349af0190afa0b6621befcd201072679d8e51a9047ff149f2afe93"
   name = "github.com/mailru/easyjson"
@@ -1569,6 +1580,7 @@
     "github.com/karrick/godirwalk",
     "github.com/kballard/go-shellquote",
     "github.com/kubernetes/apimachinery/pkg/api/resource",
+    "github.com/lib/pq",
     "github.com/matttproud/golang_protobuf_extensions/pbutil",
     "github.com/miekg/dns",
     "github.com/multiplay/go-ts3",
