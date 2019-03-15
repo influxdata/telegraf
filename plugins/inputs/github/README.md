@@ -19,9 +19,6 @@ The [GitHub](https://www.github.com) input plugin gathers statistics from GitHub
 
 ### Metrics:
 
-For more details about collected metrics reference the [HAProxy CSV format
-documentation](https://cbonte.github.io/haproxy-dconv/1.8/management.html#9.1).
-
 - github_repository
   - tags:
     - `full_name` - The full name of the repository, including owner/organization
