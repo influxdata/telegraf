@@ -42,8 +42,7 @@ func quoteIdent(name string) string {
 
 var sampleConfig = `
   # Send metrics to PostgreSQL using COPY
-  [[outputs.postgresql_batch]]
-  	address = "host=localhost user=postgres sslmode=verify-full"
+  address = "host=localhost user=postgres sslmode=verify-full"
 `
 
 func (p *PostgresqlBatch) SampleConfig() string { return sampleConfig }
@@ -73,12 +72,12 @@ func (p *PostgresqlBatch) buildTableInsert(metric telegraf.Metric) {
 
 func quoted(value interface{}) interface{} {
 	switch value.(type) {
-		case string:
-			return "'" + value.(string) + "'"
-		case time.Time:
-			return quoted(value.(time.Time).Format("2006-01-02 15:04:05"))
-		default:
-			return value
+	case string:
+		return "'" + value.(string) + "'"
+	case time.Time:
+		return quoted(value.(time.Time).Format("2006-01-02 15:04:05"))
+	default:
+		return value
 	}
 }
 
@@ -94,8 +93,8 @@ func buildValues(metric telegraf.Metric, columns []string) string {
 	var values []interface{}
 	mapString := metric.Tags()
 	for key, value := range metric.Fields() {
-        mapString[key] = fmt.Sprintf("%v", value)
-    }
+		mapString[key] = fmt.Sprintf("%v", value)
+	}
 	for _, column := range columns {
 		values = append(values, quoted(mapString[column]))
 	}

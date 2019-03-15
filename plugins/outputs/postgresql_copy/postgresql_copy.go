@@ -31,8 +31,7 @@ func (p *PostgresqlCopy) Close() error {
 
 var sampleConfig = `
   # Send metrics to PostgreSQL using COPY
-  [[outputs.postgresql_copy]]
-    address = "postgres://USER:PWD@HOST:PORT/DATABASE?sslmode=disable"
+  address = "postgres://USER:PWD@HOST:PORT/DATABASE?sslmode=disable"
 `
 
 func (p *PostgresqlCopy) SampleConfig() string { return sampleConfig }
