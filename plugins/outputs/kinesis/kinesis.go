@@ -14,6 +14,12 @@ import (
 	"github.com/influxdata/telegraf/plugins/serializers"
 )
 
+func init() {
+	outputs.Add("kinesis", func() telegraf.Output {
+		return &KinesisOutput{}
+	})
+}
+
 type (
 	KinesisOutput struct {
 		Region      string `toml:"region"`
@@ -30,7 +36,12 @@ type (
 		RandomPartitionKey bool       `toml:"use_random_partitionkey"`
 		Partition          *Partition `toml:"partition"`
 		Debug              bool       `toml:"debug"`
-		svc                *kinesis.Kinesis
+		AggregateMetrics   bool       `toml:"aggregate_metrics"`
+		GZipRecords        bool       `toml:"gzip_records"`
+		SnappyRecords      bool       `toml:"snappy_records"`
+
+		svc     *kinesis.Kinesis
+		nShards int64
 
 		serializer serializers.Serializer
 	}
@@ -48,7 +59,7 @@ var sampleConfig = `
 
   ## Amazon Credentials
   ## Credentials are loaded in the following order
-  ## 1) Assumed credentials via STS if role_arn is specified
+  ## 1) Assumed credentials via STS if role_arn is specified	
   ## 2) explicit credentials from 'access_key' and 'secret_key'
   ## 3) shared profile from 'profile'
   ## 4) environment variables
@@ -140,10 +151,11 @@ func (k *KinesisOutput) Connect() error {
 	configProvider := credentialConfig.Credentials()
 	svc := kinesis.New(configProvider)
 
-	_, err := svc.DescribeStreamSummary(&kinesis.DescribeStreamSummaryInput{
+	describeOutput, err := svc.DescribeStreamSummary(&kinesis.DescribeStreamSummaryInput{
 		StreamName: aws.String(k.StreamName),
 	})
 	k.svc = svc
+	k.nShards = *describeOutput.StreamDescriptionSummary.OpenShardCount
 	return err
 }
 
@@ -162,30 +174,32 @@ func writekinesis(k *KinesisOutput, r []*kinesis.PutRecordsRequestEntry) time.Du
 		StreamName: aws.String(k.StreamName),
 	}
 
+	resp, err := k.svc.PutRecords(payload)
+	if err != nil {
+		log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
+	}
 	if k.Debug {
-		resp, err := k.svc.PutRecords(payload)
-		if err != nil {
-			log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
-		}
 		log.Printf("I! Wrote: '%+v'", resp)
-
-	} else {
-		_, err := k.svc.PutRecords(payload)
-		if err != nil {
-			log.Printf("E! kinesis: Unable to write to Kinesis : %s", err.Error())
-		}
 	}
 	return time.Since(start)
 }
 
 func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
+	randomKey := func() string {
+		if k.AggregateMetrics {
+			return randomPartitionKey
+		}
+
+		u := uuid.NewV4()
+		return u.String()
+	}
+
 	if k.Partition != nil {
 		switch k.Partition.Method {
 		case "static":
 			return k.Partition.Key
 		case "random":
-			u := uuid.NewV4()
-			return u.String()
+			return randomKey()
 		case "measurement":
 			return metric.Name()
 		case "tag":
@@ -201,18 +215,26 @@ func (k *KinesisOutput) getPartitionKey(metric telegraf.Metric) string {
 		}
 	}
 	if k.RandomPartitionKey {
-		u := uuid.NewV4()
-		return u.String()
+		return randomKey()
 	}
 	return k.PartitionKey
 }
 
 func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
-	var sz uint32
-
 	if len(metrics) == 0 {
 		return nil
 	}
+
+	switch {
+	case k.AggregateMetrics:
+		return k.aggregatedWrite(metrics)
+	default:
+		return k.writeDefault(metrics)
+	}
+}
+
+func (k *KinesisOutput) writeDefault(metrics []telegraf.Metric) error {
+	var sz uint32
 
 	r := []*kinesis.PutRecordsRequestEntry{}
 
@@ -236,7 +258,7 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 		if sz == 500 {
 			// Max Messages Per PutRecordRequest is 500
 			elapsed := writekinesis(k, r)
-			log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
+			log.Printf("D! Wrote a %d point batch to Kinesis in %+v.\n", sz, elapsed)
 			sz = 0
 			r = nil
 		}
@@ -244,14 +266,46 @@ func (k *KinesisOutput) Write(metrics []telegraf.Metric) error {
 	}
 	if sz > 0 {
 		elapsed := writekinesis(k, r)
-		log.Printf("D! Wrote a %d point batch to Kinesis in %+v.", sz, elapsed)
+		log.Printf("D! Wrote a %d point batch to Kinesis in %+v.\n", sz, elapsed)
 	}
 
 	return nil
 }
 
-func init() {
-	outputs.Add("kinesis", func() telegraf.Output {
-		return &KinesisOutput{}
-	})
+func (k *KinesisOutput) aggregatedWrite(metrics []telegraf.Metric) error {
+	log.Printf("D! Starting aggregated writer with %d metrics.", len(metrics))
+
+	handler := newPutRecordsHandler()
+	handler.setSerializer(k.serializer)
+
+	for _, metric := range metrics {
+		err := handler.addMetric(k.getPartitionKey(metric), metric)
+		if err != nil {
+			return err
+		}
+	}
+	handler.packageMetrics(k.nShards)
+
+	switch {
+	case k.GZipRecords:
+		if err := handler.gzipCompressSlugs(); err != nil {
+			log.Printf("E! Failed to compress with gzip")
+			return err
+		}
+	case k.SnappyRecords:
+		if err := handler.snappyCompressSlugs(); err != nil {
+			log.Printf("E! Failed to compress with snappy")
+			return err
+		}
+	}
+
+	var elapsed time.Duration
+	for _, writeRequests := range handler.convertToKinesisPutRequests() {
+		t := writekinesis(k, writeRequests)
+		elapsed = elapsed + t
+	}
+
+	log.Printf("D! Wrote aggregated metrics in %+v.\n", elapsed)
+
+	return nil
 }
