@@ -23,7 +23,7 @@ func TestBuildColumns(t *testing.T) {
 
 	p.buildColumns([]telegraf.Metric{m})
 	assert.Equal(t, len(p.Columns[table]), 3)
-	assert.Equal(t, p.Columns[table][0], "cpu_perc")
+	assert.Contains(t, p.Columns[table], "cpu_perc")
 	assert.Contains(t, p.Columns[table], "host")
 	assert.Contains(t, p.Columns[table], "zone")
 }
@@ -41,8 +41,8 @@ func TestBuildValues(t *testing.T) {
 
 	values := buildValues(m, p.Columns[table])
 	assert.Equal(t, len(values), 4)
-	assert.Equal(t, values[0], 0.2)
 	assert.Contains(t, values, "address")
 	assert.Contains(t, values, "west")
-	assert.Equal(t, values[3], m.Time())
+	assert.Contains(t, values, 0.2)
+	assert.Contains(t, values, m.Time())
 }
