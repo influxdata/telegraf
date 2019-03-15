@@ -16,7 +16,7 @@ The [GitHub](https://www.github.com) input plugin gathers statistics from GitHub
 For more details about collected metrics reference the [HAProxy CSV format
 documentation](https://cbonte.github.io/haproxy-dconv/1.8/management.html#9.1).
 
-- github
+- github_repository
   - tags:
     - `full_name` - The full name of the repository, including owner/organization
     - `name` - The repository name
@@ -27,9 +27,15 @@ documentation](https://cbonte.github.io/haproxy-dconv/1.8/management.html#9.1).
     - `forks` (int)
     - `open_issues` (int)
     - `size` (int)
+- github_rate_limit
+  - tags:
+  - fields:
+    - `limit` - How many requests you are limited to (per hour)
+    - `remaining` - How many requests you have remaining (per hour)
 
 ### Example Output:
 
 ```
 github,full_name=influxdata/telegraf,language=Go,license=MIT\ License,name=telegraf,owner=influxdata stars=6401i,forks=2421i,open_issues=722i,size=22611i 1552651811000000000
+github_rate_limit,host=p4x-639.lan remaining=59i,limit=60i 1552653551000000000
 ```

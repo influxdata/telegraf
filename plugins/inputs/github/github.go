@@ -94,7 +94,12 @@ func (github *GitHub) Gather(acc telegraf.Accumulator) error {
 				return
 			}
 
-			repository, _, _ := github.githubClient.Repositories.Get(ctx, splits[0], splits[1])
+			repository, response, err := github.githubClient.Repositories.Get(ctx, splits[0], splits[1])
+
+			if _, ok := err.(*gh.RateLimitError); ok {
+				log.Printf("E! [github]: %v of %v requests remaining", response.Rate.Remaining, response.Rate.Limit)
+				return
+			}
 
 			fields := make(map[string]interface{})
 
@@ -113,7 +118,15 @@ func (github *GitHub) Gather(acc telegraf.Accumulator) error {
 
 			now := time.Now()
 
-			acc.AddFields("github", fields, tags, now)
+			acc.AddFields("github_repository", fields, tags, now)
+
+			rate_fields := make(map[string]interface{})
+			rate_tags := map[string]string{}
+
+			rate_fields["limit"] = response.Rate.Limit
+			rate_fields["remaining"] = response.Rate.Remaining
+
+			acc.AddFields("github_rate_limit", rate_fields, rate_tags, now)
 		}(repository, acc)
 	}
 
