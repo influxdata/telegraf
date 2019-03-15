@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -85,47 +86,27 @@ func (github *GitHub) Gather(acc telegraf.Accumulator) error {
 	wg.Add(len(github.Repositories))
 
 	for _, repository := range github.Repositories {
-		go func(s string, acc telegraf.Accumulator) {
+		go func(repositoryName string, acc telegraf.Accumulator) {
 			defer wg.Done()
 
 			ctx := context.Background()
 
-			splits := strings.Split(s, "/")
-
-			if len(splits) != 2 {
-				log.Printf("E! [github]: Error in plugin: %v is not of format 'owner/repository'", s)
+			owner, repository, err := splitRepositoryName(repositoryName)
+			if err != nil {
+				log.Printf("E! [github]: %v", err)
 				return
 			}
 
-			repository, response, err := github.githubClient.Repositories.Get(ctx, splits[0], splits[1])
+			repositoryInfo, response, err := github.githubClient.Repositories.Get(ctx, owner, repository)
 
 			if _, ok := err.(*gh.RateLimitError); ok {
 				log.Printf("E! [github]: %v of %v requests remaining", response.Rate.Remaining, response.Rate.Limit)
 				return
 			}
 
-			fields := make(map[string]interface{})
-
-			license := "None"
-
-			if repository.GetLicense() != nil {
-				license = *repository.License.Name
-			}
-
-			tags := map[string]string{
-				"full_name": *repository.FullName,
-				"owner":     *repository.Owner.Login,
-				"name":      *repository.Name,
-				"language":  *repository.Language,
-				"license":   license,
-			}
-
-			fields["stars"] = repository.StargazersCount
-			fields["forks"] = repository.ForksCount
-			fields["open_issues"] = repository.OpenIssuesCount
-			fields["size"] = repository.Size
-
 			now := time.Now()
+			tags := getTags(repositoryInfo)
+			fields := getFields(repositoryInfo)
 
 			acc.AddFields("github_repository", fields, tags, now)
 
@@ -141,6 +122,45 @@ func (github *GitHub) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 	return nil
+}
+
+func splitRepositoryName(repositoryName string) (string, string, error) {
+	splits := strings.Split(repositoryName, "/")
+
+	if len(splits) != 2 {
+		return "", "", fmt.Errorf("%v is not of format 'owner/repository'", repositoryName)
+	}
+
+	return splits[0], splits[1], nil
+}
+
+func getLicense(repositoryInfo *gh.Repository) string {
+	if repositoryInfo.GetLicense() != nil {
+		return *repositoryInfo.License.Name
+	}
+
+	return "None"
+}
+
+func getTags(repositoryInfo *gh.Repository) map[string]string {
+	return map[string]string{
+		"full_name": *repositoryInfo.FullName,
+		"owner":     *repositoryInfo.Owner.Login,
+		"name":      *repositoryInfo.Name,
+		"language":  *repositoryInfo.Language,
+		"license":   getLicense(repositoryInfo),
+	}
+}
+
+func getFields(repositoryInfo *gh.Repository) map[string]interface{} {
+	fields := make(map[string]interface{})
+
+	fields["stars"] = repositoryInfo.StargazersCount
+	fields["forks"] = repositoryInfo.ForksCount
+	fields["open_issues"] = repositoryInfo.OpenIssuesCount
+	fields["size"] = repositoryInfo.Size
+
+	return fields
 }
 
 func init() {
