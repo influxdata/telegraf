@@ -47,22 +47,22 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 	now := time.Now()
 	acc.AddGauge("system", fields, nil, now)
 
-	hostinfo, err := host.Info()
+	uptime, err := host.Uptime()
 	if err != nil {
 		return err
 	}
 
 	acc.AddCounter("system", map[string]interface{}{
-		"uptime": hostinfo.Uptime,
+		"uptime": uptime,
 	}, nil, now)
 	acc.AddFields("system", map[string]interface{}{
-		"uptime_format": format_uptime(hostinfo.Uptime),
+		"uptime_format": formatUptime(uptime),
 	}, nil, now)
 
 	return nil
 }
 
-func format_uptime(uptime uint64) string {
+func formatUptime(uptime uint64) string {
 	buf := new(bytes.Buffer)
 	w := bufio.NewWriter(buf)
 
