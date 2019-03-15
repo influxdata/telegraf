@@ -22,6 +22,7 @@ documentation](https://cbonte.github.io/haproxy-dconv/1.8/management.html#9.1).
     - `name` - The repository name
     - `owner` - The owner of the repository
     - `language` - The primary language of the repository
+    - `license` - The license set for the repository
   - fields:
     - `stars` (int)
     - `forks` (int)
