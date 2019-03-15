@@ -20,8 +20,33 @@ will attempt to authenticate.
 5. [Shared Credentials](https://github.com/aws/aws-sdk-go/wiki/configuring-sdk#shared-credentials-file)
 6. [EC2 Instance Profile](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html)
 
+## Example Configuration
+
+```toml
+  access_key = "AWSKEYVALUE"
+  secret_key = "AWSSecretKeyValue"
+  region = "eu-west-1"
+  streamname = "KinesisStreamName"
+  aggregate_metrics = true
+  gzip_records = true
+  snappy_records = true
+  partition = { method = "random" }
+  debug = true
+```
 
 ## Config
+
+## AWS Configration
+
+The following AWS configuration variables are available and map directly to the normal AWS settings. If you don't know what they are then you most likely don't need to touch them.
+
+* access_key
+* secret_key
+* role_arn
+* profile
+* shared_credential_file
+* token
+* endpoint_url
 
 For this output plugin to function correctly the following variables must be configured.
 
@@ -31,6 +56,7 @@ For this output plugin to function correctly the following variables must be con
 ### region
 
 The region is the Amazon region that you wish to connect to. Examples include but are not limited to
+
 * us-west-1
 * us-west-2
 * us-east-1
@@ -89,3 +115,26 @@ String is defined using the default Point.String() value and translated to []byt
 #### custom
 
 Custom is a string defined by a number of values in the FormatMetric() function.
+
+### aggregate_metrics
+
+This will make the plugin gather the metrics and send them as blocks of metrics in Kinesis records. The number of put requests depends on a few factors.
+
+1. If a random key is in use then a block for each shard in the stream will be created unless there isn't enough metrics then as many blocks as metrics.
+1. Each record will be 1020kb in size + partition key
+
+### gzip_records
+
+This will make the plugin compress the data using GZip before the data is shipped to Kinesis.
+GZip is slower than snappy but generally fast enough and gives much better compression. Use GZip in most cases.
+
+If both gzip and snappy are true. GZip wins.
+
+### snappy_records
+
+This will make the plugin compress the data using Google's Snappy compression before the data is shipped to Kinesis.
+Snappy is much quicker and would be used if you are taking too long to compress and write before the next flush interval.
+
+### debug
+
+Prints debugging data into the logs.
