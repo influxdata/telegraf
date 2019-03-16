@@ -55,6 +55,19 @@ regex patterns.
     ##   2. "Canada/Eastern"  -- Unix TZ values like those found in https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
     ##   3. UTC               -- or blank/unspecified, will return timestamp in UTC
     # timezone = "Canada/Eastern"
+  
+  ## multiline parser/code
+  ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
+  #[inputs.logparser.multiline]
+    ## The pattern should be a regexp which matches what you believe to be an indicator that the field is part of an event consisting of multiple lines of log data.
+    #pattern = "^\s"
+
+    ## The what must be previous or next and indicates the relation to the multi-line event.
+    #what = "previous"
+
+    ## The negate can be true or false (defaults to false). 
+    ## If true, a message not matching the pattern will constitute a match of the multiline filter and the what will be applied. (vice-versa is also true)
+    #negate = false
 ```
 
 ### Grok Parser

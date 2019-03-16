@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-
+	
 	"github.com/stretchr/testify/assert"
 )
 
@@ -67,7 +67,7 @@ func TestGrokParseLogFiles(t *testing.T) {
 		},
 		map[string]string{
 			"response_code": "200",
-			"path":          thisdir + "testdata/test_a.log",
+			"path":	strings.Replace(thisdir+"testdata/test_a.log", "/", string(os.PathSeparator), -1),
 		})
 
 	acc.AssertContainsTaggedFields(t, "logparser_grok",
@@ -77,7 +77,7 @@ func TestGrokParseLogFiles(t *testing.T) {
 			"nomodifier": "nomodifier",
 		},
 		map[string]string{
-			"path": thisdir + "testdata/test_b.log",
+			"path": strings.Replace(thisdir+"testdata/test_b.log", "/", string(os.PathSeparator), -1),
 		})
 }
 
@@ -154,6 +154,57 @@ func TestGrokParseLogFilesOneBad(t *testing.T) {
 		map[string]string{
 			"response_code": "200",
 			"path":          thisdir + "testdata/test_a.log",
+		})
+}
+
+func TestGrokParseLogFilesWithMultiline(t *testing.T) {
+	thisdir := getCurrentDir()
+
+	logparser := &LogParserPlugin{
+		GrokConfig: GrokConfig{
+			MeasurementName:    "logparser_grok",
+			Patterns:           []string{"%{TEST_LOG_MULTILINE}"},
+			CustomPatternFiles: []string{thisdir + "testdata/test-patterns"},
+		},
+		MultilineConfig: MultilineConfig{
+			Pattern: `^[^\[]`,
+			What:    Previous,
+			Negate:  false,
+		},
+		FromBeginning: true,
+		Files:         []string{thisdir + "testdata/multiline/test_multiline.log"},
+	}
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, logparser.Start(&acc))
+	acc.Wait(3)
+
+	logparser.Stop()
+
+	expectedPath := thisdir + "testdata/multiline/test_multiline.log"
+	acc.AssertContainsTaggedFields(t, "logparser_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is debug",
+		},
+		map[string]string{
+			"path": expectedPath,
+			"loglevel": "DEBUG",
+		})
+	acc.AssertContainsTaggedFields(t, "logparser_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is info",
+		},
+		map[string]string{
+			"path": expectedPath,
+			"loglevel": "INFO",
+		})
+	acc.AssertContainsTaggedFields(t, "logparser_grok",
+		map[string]interface{}{
+			"message": "HelloExample: Sorry, something wrong! java.lang.ArithmeticException: / by zero\tat com.foo.HelloExample2.divide(HelloExample2.java:24)\tat com.foo.HelloExample2.main(HelloExample2.java:14)",
+		},
+		map[string]string{
+			"path": expectedPath,
+			"loglevel": "ERROR",
 		})
 }
 

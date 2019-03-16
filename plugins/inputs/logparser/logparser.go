@@ -3,6 +3,7 @@
 package logparser
 
 import (
+	"bytes"
 	"log"
 	"strings"
 	"sync"
@@ -51,6 +52,8 @@ type LogParserPlugin struct {
 
 	GrokParser parsers.Parser
 	GrokConfig GrokConfig `toml:"grok"`
+	MultilineConfig MultilineConfig `toml:"multiline"`
+	multiline *Multiline
 }
 
 const sampleConfig = `
@@ -103,7 +106,20 @@ const sampleConfig = `
 
 	## When set to "disable", timestamp will not incremented if there is a
 	## duplicate.
-    # unique_timestamp = "auto"
+		# unique_timestamp = "auto"
+
+	## multiline parser/code
+	## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
+	#[inputs.logparser.multiline]
+		## The pattern should be a regexp which matches what you believe to be an indicator that the field is part of an event consisting of multiple lines of log data.
+		#pattern = "^\s"
+				
+		## The what must be previous or next and indicates the relation to the multi-line event.
+		#what = "previous"
+	
+		## The negate can be true or false (defaults to false). 
+		## If true, a message not matching the pattern will constitute a match of the multiline filter and the what will be applied. (vice-versa is also true)
+		#negate = false
 `
 
 // SampleConfig returns the sample configuration for the plugin
@@ -154,6 +170,11 @@ func (l *LogParserPlugin) Start(acc telegraf.Accumulator) error {
 
 	var err error
 	l.GrokParser, err = parsers.NewParser(config)
+	if err != nil {
+		return err
+	}
+
+	l.multiline, err = l.MultilineConfig.NewMultiline()
 	if err != nil {
 		return err
 	}
@@ -224,6 +245,7 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 	defer l.wg.Done()
 
+	var buffer bytes.Buffer
 	var line *tail.Line
 	for line = range tailer.Lines {
 
@@ -235,6 +257,12 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 
 		// Fix up files with Windows line endings.
 		text := strings.TrimRight(line.Text, "\r")
+
+		if(l.multiline.IsEnabled()) {
+			if text = l.multiline.ProcessLine(text, &buffer); text == "" {
+				continue
+			}
+		}
 
 		entry := logEntry{
 			path: tailer.Filename,
