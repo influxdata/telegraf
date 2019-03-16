@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -67,7 +67,7 @@ func TestGrokParseLogFiles(t *testing.T) {
 		},
 		map[string]string{
 			"response_code": "200",
-			"path":	strings.Replace(thisdir+"testdata/test_a.log", "/", string(os.PathSeparator), -1),
+			"path":          strings.Replace(thisdir+"testdata/test_a.log", "/", string(os.PathSeparator), -1),
 		})
 
 	acc.AssertContainsTaggedFields(t, "logparser_grok",
@@ -187,7 +187,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 			"message": "HelloExample: This is debug",
 		},
 		map[string]string{
-			"path": expectedPath,
+			"path":     expectedPath,
 			"loglevel": "DEBUG",
 		})
 	acc.AssertContainsTaggedFields(t, "logparser_grok",
@@ -195,7 +195,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 			"message": "HelloExample: This is info",
 		},
 		map[string]string{
-			"path": expectedPath,
+			"path":     expectedPath,
 			"loglevel": "INFO",
 		})
 	acc.AssertContainsTaggedFields(t, "logparser_grok",
@@ -203,7 +203,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 			"message": "HelloExample: Sorry, something wrong! java.lang.ArithmeticException: / by zero\tat com.foo.HelloExample2.divide(HelloExample2.java:24)\tat com.foo.HelloExample2.main(HelloExample2.java:14)",
 		},
 		map[string]string{
-			"path": expectedPath,
+			"path":     expectedPath,
 			"loglevel": "ERROR",
 		})
 }

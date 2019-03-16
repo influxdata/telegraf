@@ -13,7 +13,7 @@ func TestMultilineConfigOK(t *testing.T) {
 		What:    Previous,
 	}
 
-	_,err := c.NewMultiline()
+	_, err := c.NewMultiline()
 
 	assert.NoError(t, err, "Configuration was OK.")
 }
@@ -23,8 +23,8 @@ func TestMultilineConfigError(t *testing.T) {
 		Pattern: "\xA0",
 		What:    Previous,
 	}
-	
-	_,err := c.NewMultiline()
+
+	_, err := c.NewMultiline()
 
 	assert.Error(t, err, "The pattern was invalid")
 }
@@ -34,7 +34,7 @@ func TestMultilineIsEnabled(t *testing.T) {
 		Pattern: ".*",
 		What:    Previous,
 	}
-	m,err := c.NewMultiline()
+	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
 
 	isEnabled := m.IsEnabled()
@@ -46,7 +46,7 @@ func TestMultilineIsDisabled(t *testing.T) {
 	c := &MultilineConfig{
 		What: Previous,
 	}
-	m,err := c.NewMultiline()
+	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
 
 	isEnabled := m.IsEnabled()
@@ -59,7 +59,7 @@ func TestMultiLineProcessLinePrevious(t *testing.T) {
 		Pattern: "^=>",
 		What:    Previous,
 	}
-	m,err := c.NewMultiline()
+	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
 	var buffer bytes.Buffer
 
@@ -89,7 +89,7 @@ func TestMultiLineProcessLineNext(t *testing.T) {
 		Pattern: "=>$",
 		What:    Next,
 	}
-	m,err := c.NewMultiline()
+	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
 	var buffer bytes.Buffer
 
@@ -114,13 +114,13 @@ func TestMultiLineProcessLineNext(t *testing.T) {
 	assert.Zero(t, buffer.Len())
 }
 
-func TestMultiLineMatchStringWithNegateFalse(t *testing.T){
+func TestMultiLineMatchStringWithNegateFalse(t *testing.T) {
 	c := &MultilineConfig{
 		Pattern: "=>$",
 		What:    Next,
-		Negate: false,
+		Negate:  false,
 	}
-	m,err := c.NewMultiline()
+	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
 
 	matches1 := m.matchString("t=>")
@@ -130,13 +130,13 @@ func TestMultiLineMatchStringWithNegateFalse(t *testing.T){
 	assert.False(t, matches2)
 }
 
-func TestMultiLineMatchStringWithNegateTrue(t *testing.T){
+func TestMultiLineMatchStringWithNegateTrue(t *testing.T) {
 	c := &MultilineConfig{
 		Pattern: "=>$",
 		What:    Next,
-		Negate: true,
+		Negate:  true,
 	}
-	m,err := c.NewMultiline()
+	m, err := c.NewMultiline()
 	assert.NoError(t, err, "Configuration was OK.")
 
 	matches1 := m.matchString("t=>")

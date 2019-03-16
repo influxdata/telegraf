@@ -50,10 +50,10 @@ type LogParserPlugin struct {
 
 	sync.Mutex
 
-	GrokParser parsers.Parser
-	GrokConfig GrokConfig `toml:"grok"`
+	GrokParser      parsers.Parser
+	GrokConfig      GrokConfig      `toml:"grok"`
 	MultilineConfig MultilineConfig `toml:"multiline"`
-	multiline *Multiline
+	multiline       *Multiline
 }
 
 const sampleConfig = `
@@ -258,7 +258,7 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 		// Fix up files with Windows line endings.
 		text := strings.TrimRight(line.Text, "\r")
 
-		if(l.multiline.IsEnabled()) {
+		if l.multiline.IsEnabled() {
 			if text = l.multiline.ProcessLine(text, &buffer); text == "" {
 				continue
 			}
