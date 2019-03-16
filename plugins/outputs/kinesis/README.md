@@ -1,4 +1,4 @@
-## Amazon Kinesis Output for Telegraf
+# Amazon Kinesis Output for Telegraf
 
 This is an experimental plugin that is still in the early stages of development. It will batch up all of the Points
 in one Put request to Kinesis. This should save the number of API requests by a considerable level.
@@ -13,6 +13,7 @@ maybe useful for users to review Amazons official documentation which is availab
 
 This plugin uses a credential chain for Authentication with the Kinesis API endpoint. In the following order the plugin
 will attempt to authenticate.
+
 1. Assumed credentials via STS if `role_arn` attribute is specified (source credentials are evaluated from subsequent rules)
 2. Explicit credentials from `access_key`, `secret_key`, and `token` attributes
 3. Shared profile from `profile` attribute
@@ -28,8 +29,8 @@ will attempt to authenticate.
   region = "eu-west-1"
   streamname = "KinesisStreamName"
   aggregate_metrics = true
-  gzip_records = true
-  snappy_records = true
+  # Either "gzip", "snappy"
+  compress_metrics_with = gzip
   partition = { method = "random" }
   debug = true
 ```
@@ -123,14 +124,23 @@ This will make the plugin gather the metrics and send them as blocks of metrics 
 1. If a random key is in use then a block for each shard in the stream will be created unless there isn't enough metrics then as many blocks as metrics.
 1. Each record will be 1020kb in size + partition key
 
-### gzip_records
+### compress_metrics_with
+
+`compress_with` has the following values. If no value is set then compression is skipped.
+
+* gzip
+* snappy
+
+They are explained below.
+
+#### gzip
 
 This will make the plugin compress the data using GZip before the data is shipped to Kinesis.
 GZip is slower than snappy but generally fast enough and gives much better compression. Use GZip in most cases.
 
 If both gzip and snappy are true. GZip wins.
 
-### snappy_records
+#### snappy
 
 This will make the plugin compress the data using Google's Snappy compression before the data is shipped to Kinesis.
 Snappy is much quicker and would be used if you are taking too long to compress and write before the next flush interval.

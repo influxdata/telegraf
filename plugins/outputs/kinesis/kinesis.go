@@ -37,8 +37,7 @@ type (
 		Partition          *Partition `toml:"partition"`
 		Debug              bool       `toml:"debug"`
 		AggregateMetrics   bool       `toml:"aggregate_metrics"`
-		GZipRecords        bool       `toml:"gzip_records"`
-		SnappyRecords      bool       `toml:"snappy_records"`
+		CompressWith       string     `toml:"compress_metrics_with"`
 
 		svc     *kinesis.Kinesis
 		nShards int64
@@ -113,7 +112,19 @@ var sampleConfig = `
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_OUTPUT.md
-  data_format = "influx"
+	data_format = "influx"
+	
+	# Aggregate metrics into payloads that will fit into the Kinesis records. This
+	# is designed to save money by making more efficient use of Kinesis.
+	aggregate_metrics = true
+
+	# Kinesis cares little for what you send into it via the records.
+	# We can therefore save more money by compressing the aggregated metrics.
+	# Note, this only works with the aggregated metrics set to true.
+	# valid options: "gzip", "snappy"
+	# See https://github.com/influxdata/telegraf/tree/master/plugins/outputs/kinesis
+	# for more details on each compression method.
+	compress_metrics_with = "gzip"
 
   ## debug will show upstream aws messages.
   debug = false
@@ -286,13 +297,13 @@ func (k *KinesisOutput) aggregatedWrite(metrics []telegraf.Metric) error {
 	}
 	handler.packageMetrics(k.nShards)
 
-	switch {
-	case k.GZipRecords:
+	switch k.CompressWith {
+	case "gzip":
 		if err := handler.gzipCompressSlugs(); err != nil {
 			log.Printf("E! Failed to compress with gzip")
 			return err
 		}
-	case k.SnappyRecords:
+	case "snappy":
 		if err := handler.snappyCompressSlugs(); err != nil {
 			log.Printf("E! Failed to compress with snappy")
 			return err
