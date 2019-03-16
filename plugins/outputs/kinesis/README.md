@@ -126,7 +126,7 @@ This will make the plugin gather the metrics and send them as blocks of metrics 
 
 ### compress_metrics_with
 
-`compress_with` has the following values. If no value is set then compression is skipped.
+`compress_metrics_with` has the following values. If no value is set then compression is skipped.
 
 * gzip
 * snappy
