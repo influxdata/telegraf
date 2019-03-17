@@ -7,6 +7,7 @@ import (
 	"log"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/tail"
 	"github.com/influxdata/telegraf"
@@ -120,6 +121,9 @@ const sampleConfig = `
 		## The negate can be true or false (defaults to false). 
 		## If true, a message not matching the pattern will constitute a match of the multiline filter and the what will be applied. (vice-versa is also true)
 		#negate = false
+
+		#After the specified timeout, this plugin sends the multiline event even if no new pattern is found to start a new event. The default is 5s.
+		#timeout = 5s
 `
 
 // SampleConfig returns the sample configuration for the plugin
@@ -232,7 +236,12 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 
 			// create a goroutine for each "tailer"
 			l.wg.Add(1)
-			go l.receiver(tailer)
+
+			if l.multiline.IsEnabled() {
+				go l.multilineReceiver(tailer)
+			} else {
+				go l.receiver(tailer)
+			}
 			l.tailers[file] = tailer
 		}
 	}
@@ -245,7 +254,6 @@ func (l *LogParserPlugin) tailNewfiles(fromBeginning bool) error {
 func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 	defer l.wg.Done()
 
-	var buffer bytes.Buffer
 	var line *tail.Line
 	for line = range tailer.Lines {
 
@@ -258,10 +266,62 @@ func (l *LogParserPlugin) receiver(tailer *tail.Tail) {
 		// Fix up files with Windows line endings.
 		text := strings.TrimRight(line.Text, "\r")
 
-		if l.multiline.IsEnabled() {
+		entry := logEntry{
+			path: tailer.Filename,
+			line: text,
+		}
+
+		select {
+		case <-l.done:
+		case l.lines <- entry:
+		}
+	}
+}
+
+// same as the receiver method but multiline aware
+// it buffers lines according to the multiline class
+// it uses timeout channel to flush buffered lines
+func (l *LogParserPlugin) multilineReceiver(tailer *tail.Tail) {
+	defer l.wg.Done()
+
+	var buffer bytes.Buffer
+
+	for {
+		var line *tail.Line
+		timeout := time.After(l.MultilineConfig.Timeout.Duration)
+		isTimeout := false
+
+		select {
+		case <-l.done:
+			return
+		case line = <-tailer.Lines:
+		case <-timeout:
+			line = nil
+			isTimeout = true
+		}
+
+		var text string
+		if line != nil {
+			if line.Err != nil {
+				log.Printf("E! Error tailing file %s, Error: %s\n",
+					tailer.Filename, line.Err)
+				continue
+			}
+
+			// Fix up files with Windows line endings.
+			text = strings.TrimRight(line.Text, "\r")
+
 			if text = l.multiline.ProcessLine(text, &buffer); text == "" {
 				continue
 			}
+		} else if isTimeout {
+			//timeout
+			//flush buffer
+			if text = l.multiline.Flush(&buffer); text == "" {
+				continue
+			}
+		} else {
+			continue
 		}
 
 		entry := logEntry{

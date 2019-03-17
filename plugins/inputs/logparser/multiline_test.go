@@ -3,7 +3,9 @@ package logparser
 import (
 	"bytes"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,6 +31,31 @@ func TestMultilineConfigError(t *testing.T) {
 	assert.Error(t, err, "The pattern was invalid")
 }
 
+func TestMultilineConfigTimeoutSpecified(t *testing.T) {
+	duration, _ := time.ParseDuration("10s")
+	c := &MultilineConfig{
+		Pattern: ".*",
+		What:    Previous,
+		Timeout: &internal.Duration{Duration: duration},
+	}
+	m, err := c.NewMultiline()
+	assert.NoError(t, err, "Configuration was OK.")
+
+	assert.Equal(t, duration, m.config.Timeout.Duration)
+}
+
+func TestMultilineConfigDefaultTimeout(t *testing.T) {
+	duration, _ := time.ParseDuration("5s")
+	c := &MultilineConfig{
+		Pattern: ".*",
+		What:    Previous,
+	}
+	m, err := c.NewMultiline()
+	assert.NoError(t, err, "Configuration was OK.")
+
+	assert.Equal(t, duration, m.config.Timeout.Duration)
+}
+
 func TestMultilineIsEnabled(t *testing.T) {
 	c := &MultilineConfig{
 		Pattern: ".*",
@@ -52,6 +79,36 @@ func TestMultilineIsDisabled(t *testing.T) {
 	isEnabled := m.IsEnabled()
 
 	assert.False(t, isEnabled, "Should have been disabled")
+}
+
+func TestMultilineFlushEmpty(t *testing.T) {
+	c := &MultilineConfig{
+		Pattern: "^=>",
+		What:    Previous,
+	}
+	m, err := c.NewMultiline()
+	assert.NoError(t, err, "Configuration was OK.")
+	var buffer bytes.Buffer
+
+	text := m.Flush(&buffer)
+
+	assert.Empty(t, text)
+}
+
+func TestMultilineFlush(t *testing.T) {
+	c := &MultilineConfig{
+		Pattern: "^=>",
+		What:    Previous,
+	}
+	m, err := c.NewMultiline()
+	assert.NoError(t, err, "Configuration was OK.")
+	var buffer bytes.Buffer
+	buffer.WriteString("foo")
+
+	text := m.Flush(&buffer)
+
+	assert.Equal(t, "foo", text)
+	assert.Zero(t, buffer.Len())
 }
 
 func TestMultiLineProcessLinePrevious(t *testing.T) {

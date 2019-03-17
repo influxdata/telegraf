@@ -68,6 +68,9 @@ regex patterns.
     ## The negate can be true or false (defaults to false). 
     ## If true, a message not matching the pattern will constitute a match of the multiline filter and the what will be applied. (vice-versa is also true)
     #negate = false
+
+    #After the specified timeout, this plugin sends the multiline event even if no new pattern is found to start a new event. The default is 5s.
+		#timeout = 5s
 ```
 
 ### Grok Parser

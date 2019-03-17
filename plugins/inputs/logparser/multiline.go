@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
+
+	"github.com/influxdata/telegraf/internal"
 )
 
-// Indicates relation to the multiline event
+// Indicates relation to the multiline event: previous or next
 type MultilineWhat int
 
 type Multiline struct {
@@ -20,6 +23,7 @@ type MultilineConfig struct {
 	Pattern string
 	What    MultilineWhat
 	Negate  bool
+	Timeout *internal.Duration
 }
 
 const (
@@ -38,6 +42,10 @@ func (m *MultilineConfig) NewMultiline() (*Multiline, error) {
 		enabled = true
 		if r, err = regexp.Compile(m.Pattern); err != nil {
 			return nil, err
+		}
+		if m.Timeout == nil || m.Timeout.Duration.Nanoseconds() == int64(0) {
+			duration, _ := time.ParseDuration("5s")
+			m.Timeout = &internal.Duration{Duration: duration}
 		}
 	}
 
@@ -70,6 +78,15 @@ func (m *Multiline) ProcessLine(text string, buffer *bytes.Buffer) string {
 		}
 	}
 
+	return text
+}
+
+func (m *Multiline) Flush(buffer *bytes.Buffer) string {
+	if buffer.Len() == 0 {
+		return ""
+	}
+	text := buffer.String()
+	buffer.Reset()
 	return text
 }
 

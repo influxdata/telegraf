@@ -6,7 +6,9 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 
 	"github.com/stretchr/testify/assert"
@@ -159,6 +161,8 @@ func TestGrokParseLogFilesOneBad(t *testing.T) {
 
 func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 	thisdir := getCurrentDir()
+	//we make sure the timeout won't kick in
+	duration, _ := time.ParseDuration("100s")
 
 	logparser := &LogParserPlugin{
 		GrokConfig: GrokConfig{
@@ -170,6 +174,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 			Pattern: `^[^\[]`,
 			What:    Previous,
 			Negate:  false,
+			Timeout: &internal.Duration{Duration: duration},
 		},
 		FromBeginning: true,
 		Files:         []string{thisdir + "testdata/multiline/test_multiline.log"},
@@ -181,6 +186,7 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 
 	logparser.Stop()
 
+	assert.Equal(t, uint64(3), acc.NMetrics())
 	expectedPath := thisdir + "testdata/multiline/test_multiline.log"
 	acc.AssertContainsTaggedFields(t, "logparser_grok",
 		map[string]interface{}{
@@ -205,6 +211,45 @@ func TestGrokParseLogFilesWithMultiline(t *testing.T) {
 		map[string]string{
 			"path":     expectedPath,
 			"loglevel": "ERROR",
+		})
+}
+
+func TestGrokParseLogFilesWithMultilineWithTimeout(t *testing.T) {
+	thisdir := getCurrentDir()
+	// set tight timeout for tests
+	duration, _ := time.ParseDuration("10ms")
+
+	logparser := &LogParserPlugin{
+		GrokConfig: GrokConfig{
+			MeasurementName:    "logparser_grok",
+			Patterns:           []string{"%{TEST_LOG_MULTILINE}"},
+			CustomPatternFiles: []string{thisdir + "testdata/test-patterns"},
+		},
+		MultilineConfig: MultilineConfig{
+			Pattern: `^[^\[]`,
+			What:    Previous,
+			Negate:  false,
+			Timeout: &internal.Duration{Duration: duration},
+		},
+		FromBeginning: true,
+		Files:         []string{thisdir + "testdata/multiline/test_multiline.log"},
+	}
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, logparser.Start(&acc))
+	acc.Wait(4)
+
+	logparser.Stop()
+
+	assert.Equal(t, uint64(4), acc.NMetrics())
+	expectedPath := thisdir + "testdata/multiline/test_multiline.log"
+	acc.AssertContainsTaggedFields(t, "logparser_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is warn",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "WARN",
 		})
 }
 
