@@ -103,6 +103,12 @@ func TestConfig_LoadDirectory(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	err = os.Rename("./testdata/subconfig/dotdot4984_10_04_08_28_06.119", "./testdata/subconfig/..4984_10_04_08_28_06.119")
+	if err != nil {
+		t.Error(err)
+	}
+	defer os.Rename("./testdata/subconfig/..4984_10_04_08_28_06.119", "./testdata/subconfig/dotdot4984_10_04_08_28_06.119")
+
 	err = c.LoadDirectory("./testdata/subconfig")
 	if err != nil {
 		t.Error(err)
