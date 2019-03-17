@@ -288,13 +288,15 @@ func (l *LogParserPlugin) multilineReceiver(tailer *tail.Tail) {
 
 	for {
 		var line *tail.Line
-		timeout := time.After(l.MultilineConfig.Timeout.Duration)
+		timer := time.NewTimer(l.MultilineConfig.Timeout.Duration)
+		timeout := timer.C
 		isTimeout := false
 
 		select {
 		case <-l.done:
 			return
 		case line = <-tailer.Lines:
+			timer.Stop()
 		case <-timeout:
 			line = nil
 			isTimeout = true
