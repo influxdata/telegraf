@@ -4,8 +4,11 @@ import (
 	"io/ioutil"
 	"os"
 	"runtime"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/parsers"
 	"github.com/influxdata/telegraf/testutil"
 
@@ -138,4 +141,139 @@ func TestTailDosLineendings(t *testing.T) {
 		map[string]interface{}{
 			"usage_idle": float64(200),
 		})
+}
+
+func TestGrokParseLogFilesWithMultiline(t *testing.T) {
+	thisdir := getCurrentDir()
+	//we make sure the timeout won't kick in
+	duration, _ := time.ParseDuration("100s")
+
+	tt := NewTail()
+	tt.FromBeginning = true
+	tt.Files = []string{thisdir + "testdata/test_multiline.log"}
+	tt.MultilineConfig = MultilineConfig{
+		Pattern: `^[^\[]`,
+		What:    Previous,
+		Negate:  false,
+		Timeout: &internal.Duration{Duration: duration},
+	}
+	tt.SetParserFunc(createGrokParser)
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, tt.Start(&acc))
+	acc.Wait(3)
+
+	expectedPath := thisdir + "testdata/test_multiline.log"
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is debug",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "DEBUG",
+		})
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is info",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "INFO",
+		})
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: Sorry, something wrong! java.lang.ArithmeticException: / by zero\tat com.foo.HelloExample2.divide(HelloExample2.java:24)\tat com.foo.HelloExample2.main(HelloExample2.java:14)",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "ERROR",
+		})
+
+	assert.Equal(t, uint64(3), acc.NMetrics())
+	tt.Stop()
+}
+
+func TestGrokParseLogFilesWithMultilineTimeout(t *testing.T) {
+	thisdir := getCurrentDir()
+	// set tight timeout for tests
+	duration, _ := time.ParseDuration("10ms")
+
+	tt := NewTail()
+	tt.FromBeginning = true
+	tt.Files = []string{thisdir + "testdata/test_multiline.log"}
+	tt.MultilineConfig = MultilineConfig{
+		Pattern: `^[^\[]`,
+		What:    Previous,
+		Negate:  false,
+		Timeout: &internal.Duration{Duration: duration},
+	}
+	tt.SetParserFunc(createGrokParser)
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, tt.Start(&acc))
+	acc.Wait(4)
+
+	assert.Equal(t, uint64(4), acc.NMetrics())
+	expectedPath := thisdir + "testdata/test_multiline.log"
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is warn",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "WARN",
+		})
+
+	tt.Stop()
+}
+
+func TestGrokParseLogFilesWithMultilineTailerCloseFlushesMultilineBuffer(t *testing.T) {
+	thisdir := getCurrentDir()
+	//we make sure the timeout won't kick in
+	duration, _ := time.ParseDuration("100s")
+
+	tt := NewTail()
+	tt.FromBeginning = true
+	tt.Files = []string{thisdir + "testdata/test_multiline.log"}
+	tt.MultilineConfig = MultilineConfig{
+		Pattern: `^[^\[]`,
+		What:    Previous,
+		Negate:  false,
+		Timeout: &internal.Duration{Duration: duration},
+	}
+	tt.SetParserFunc(createGrokParser)
+
+	acc := testutil.Accumulator{}
+	assert.NoError(t, tt.Start(&acc))
+	acc.Wait(3)
+	assert.Equal(t, uint64(3), acc.NMetrics())
+	// Close tailer, so multiline buffer is flushed
+	tt.Stop()
+	acc.Wait(4)
+
+	expectedPath := thisdir + "testdata/test_multiline.log"
+	acc.AssertContainsTaggedFields(t, "tail_grok",
+		map[string]interface{}{
+			"message": "HelloExample: This is warn",
+		},
+		map[string]string{
+			"path":     expectedPath,
+			"loglevel": "WARN",
+		})
+}
+
+func createGrokParser() (parsers.Parser, error) {
+	grokConfig := &parsers.Config{
+		MetricName:             "tail_grok",
+		GrokPatterns:           []string{"%{TEST_LOG_MULTILINE}"},
+		GrokCustomPatternFiles: []string{getCurrentDir() + "testdata/test-patterns"},
+		DataFormat:             "grok",
+	}
+	parser, err := parsers.NewParser(grokConfig)
+	return parser, err
+}
+
+func getCurrentDir() string {
+	_, filename, _, _ := runtime.Caller(1)
+	return strings.Replace(filename, "tail_test.go", "", 1)
 }

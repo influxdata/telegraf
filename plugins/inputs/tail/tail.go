@@ -3,10 +3,12 @@
 package tail
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/influxdata/tail"
 
@@ -32,6 +34,9 @@ type Tail struct {
 	acc        telegraf.Accumulator
 
 	sync.Mutex
+
+	MultilineConfig MultilineConfig `toml:"multiline"`
+	multiline       *Multiline
 }
 
 func NewTail() *Tail {
@@ -64,6 +69,22 @@ const sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## multiline parser/codec
+  ## https://www.elastic.co/guide/en/logstash/2.4/plugins-filters-multiline.html
+  #[inputs.logparser.multiline]
+    ## The pattern should be a regexp which matches what you believe to be an indicator that the field is part of an event consisting of multiple lines of log data.
+    #pattern = "^\s"
+
+    ## The what must be previous or next and indicates the relation to the multi-line event.
+    #what = "previous"
+
+    ## The negate can be true or false (defaults to false). 
+    ## If true, a message not matching the pattern will constitute a match of the multiline filter and the what will be applied. (vice-versa is also true)
+    #negate = false
+
+    #After the specified timeout, this plugin sends the multiline event even if no new pattern is found to start a new event. The default is 5s.
+		#timeout = 5s
 `
 
 func (t *Tail) SampleConfig() string {
@@ -84,6 +105,12 @@ func (t *Tail) Gather(acc telegraf.Accumulator) error {
 func (t *Tail) Start(acc telegraf.Accumulator) error {
 	t.Lock()
 	defer t.Unlock()
+
+	var err error
+	t.multiline, err = t.MultilineConfig.NewMultiline()
+	if err != nil {
+		return err
+	}
 
 	t.acc = acc
 	t.tailers = make(map[string]*tail.Tail)
@@ -141,7 +168,11 @@ func (t *Tail) tailNewFiles(fromBeginning bool) error {
 
 			// create a goroutine for each "tailer"
 			t.wg.Add(1)
-			go t.receiver(parser, tailer)
+			if t.multiline.IsEnabled() {
+				go t.receiverMultiline(parser, tailer)
+			} else {
+				go t.receiver(parser, tailer)
+			}
 			t.tailers[tailer.Filename] = tailer
 		}
 	}
@@ -154,51 +185,109 @@ func (t *Tail) receiver(parser parsers.Parser, tailer *tail.Tail) {
 	defer t.wg.Done()
 
 	var firstLine = true
-	var metrics []telegraf.Metric
-	var m telegraf.Metric
-	var err error
 	var line *tail.Line
+
 	for line = range tailer.Lines {
-		if line.Err != nil {
-			t.acc.AddError(fmt.Errorf("E! Error tailing file %s, Error: %s\n",
-				tailer.Filename, err))
+		if text := t.getLineText(line, tailer.Filename); text == "" {
 			continue
-		}
-		// Fix up files with Windows line endings.
-		text := strings.TrimRight(line.Text, "\r")
-
-		if firstLine {
-			metrics, err = parser.Parse([]byte(text))
-			if err == nil {
-				if len(metrics) == 0 {
-					firstLine = false
-					continue
-				} else {
-					m = metrics[0]
-				}
-			}
-			firstLine = false
 		} else {
-			m, err = parser.ParseLine(text)
+			t.parse(parser, tailer.Filename, text, &firstLine)
+		}
+	}
+	t.handleTailerExit(tailer)
+}
+
+// same as the receiver method but multiline aware
+// it buffers lines according to the multiline class
+// it uses timeout channel to flush buffered lines
+func (t *Tail) receiverMultiline(parser parsers.Parser, tailer *tail.Tail) {
+	defer t.wg.Done()
+
+	var buffer bytes.Buffer
+	var firstLine = true
+	for {
+		var line *tail.Line
+		timer := time.NewTimer(t.MultilineConfig.Timeout.Duration)
+		timeout := timer.C
+		var channelOpen bool
+
+		select {
+		case line, channelOpen = <-tailer.Lines:
+		case <-timeout:
 		}
 
-		if err == nil {
-			if m != nil {
-				tags := m.Tags()
-				tags["path"] = tailer.Filename
-				t.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
+		timer.Stop()
+
+		var text string
+		if line != nil {
+			if text = t.getLineText(line, tailer.Filename); text == "" {
+				continue
+			}
+			if text = t.multiline.ProcessLine(text, &buffer); text == "" {
+				continue
 			}
 		} else {
-			t.acc.AddError(fmt.Errorf("E! Malformed log line in %s: [%s], Error: %s\n",
-				tailer.Filename, line.Text, err))
+			//timeout or channel closed
+			//flush buffer
+			if text = t.multiline.Flush(&buffer); text == "" {
+				continue
+			}
+		}
+		t.parse(parser, tailer.Filename, text, &firstLine)
+
+		if !channelOpen {
+			break
 		}
 	}
 
+	t.handleTailerExit(tailer)
+}
+
+func (t *Tail) handleTailerExit(tailer *tail.Tail) {
 	log.Printf("D! [inputs.tail] tail removed for file: %v", tailer.Filename)
 
 	if err := tailer.Err(); err != nil {
 		t.acc.AddError(fmt.Errorf("E! Error tailing file %s, Error: %s\n",
 			tailer.Filename, err))
+	}
+}
+
+func (t *Tail) getLineText(line *tail.Line, filename string) string {
+	if line.Err != nil {
+		t.acc.AddError(fmt.Errorf("E! Error tailing file %s, Error: %s\n",
+			filename, line.Err))
+		return ""
+	}
+	// Fix up files with Windows line endings.
+	return strings.TrimRight(line.Text, "\r")
+}
+
+func (t *Tail) parse(parser parsers.Parser, filename string, text string, firstLine *bool) {
+	var err error
+	var metrics []telegraf.Metric
+	var m telegraf.Metric
+	if *firstLine {
+		metrics, err = parser.Parse([]byte(text))
+		*firstLine = false
+		if err == nil {
+			if len(metrics) == 0 {
+				return
+			}
+			m = metrics[0]
+		}
+	} else {
+		m, err = parser.ParseLine(text)
+	}
+
+	if err == nil {
+		if m != nil {
+			tags := m.Tags()
+			tags["path"] = filename
+			t.acc.AddFields(m.Name(), m.Fields(), tags, m.Time())
+		}
+	} else {
+		t.acc.AddError(fmt.Errorf("E! Malformed log line in %s: [%s], Error: %s\n",
+			filename, text, err))
 	}
 }
 
