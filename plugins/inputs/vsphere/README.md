@@ -121,6 +121,7 @@ vm_metric_exclude = [ "*" ]
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
+
   ## Clusters
   # cluster_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
@@ -241,7 +242,7 @@ to a file system. A vSphere inventory has a structure similar to this:
 #### Using Inventory Paths
 Using familiar UNIX-style paths, one could select e.g. VM2 with the path ```/DC0/vm/VM2```.
 
-Often, we want to select a group of resource, such as all the VMs in a folder. We could use the path ```/DC0/vm/Folder1/*``` for that.
+Often, we want to select a group of resource, such as all the VMs in a folder. We could use the path ```/DC0/vm/Folder1/*``` for that. 
 
 Another possibility is to select objects using a partial name, such as ```/DC0/vm/Folder1/hadoop*``` yielding all vms in Folder1 with a name starting with "hadoop".
 
