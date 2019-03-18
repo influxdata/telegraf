@@ -100,8 +100,8 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	s := bufio.NewScanner(bytes.NewReader(buf))
 
-	var msg strings.Builder
-	var longmsg strings.Builder
+	var msg bytes.Buffer
+	var longmsg bytes.Buffer
 
 	metrics := make([]telegraf.Metric, 0)
 
