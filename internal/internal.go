@@ -333,13 +333,18 @@ func CompressWithGzip(data io.Reader) (io.Reader, error) {
 	return pipeReader, err
 }
 
+// ParseTimestamp with no location provided parses a timestamp value as UTC
+func ParseTimestamp(timestamp interface{}, format string) (time.Time, error) {
+	return ParseTimestampWithLocation(timestamp, format, "UTC")
+}
+
 // ParseTimestamp parses a timestamp value as a unix epoch of various precision.
 //
 // format = "unix": epoch is assumed to be in seconds and can come as number or string. Can have a decimal part.
 // format = "unix_ms": epoch is assumed to be in milliseconds and can come as number or string. Cannot have a decimal part.
 // format = "unix_us": epoch is assumed to be in microseconds and can come as number or string. Cannot have a decimal part.
 // format = "unix_ns": epoch is assumed to be in nanoseconds and can come as number or string. Cannot have a decimal part.
-func ParseTimestamp(timestamp interface{}, format string) (time.Time, error) {
+func ParseTimestampWithLocation(timestamp interface{}, format string, location string) (time.Time, error) {
 	timeInt, timeFractional := int64(0), int64(0)
 	timeEpochStr, ok := timestamp.(string)
 	var err error
@@ -355,7 +360,11 @@ func ParseTimestamp(timestamp interface{}, format string) (time.Time, error) {
 		splitted := regexp.MustCompile("[.,]").Split(timeEpochStr, 2)
 		timeInt, err = strconv.ParseInt(splitted[0], 10, 64)
 		if err != nil {
-			return time.Parse(format, timeEpochStr)
+			loc, err := time.LoadLocation(location)
+			if err != nil {
+				return time.Time{}, fmt.Errorf("location: %s could not be loaded as a location", location)
+			}
+			return time.ParseInLocation(format, timeEpochStr, loc)
 		}
 
 		if len(splitted) == 2 {

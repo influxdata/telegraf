@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/selfstat"
 )
 
@@ -96,39 +97,37 @@ func (r *RunningAggregator) MakeMetric(metric telegraf.Metric) telegraf.Metric {
 	return m
 }
 
-func (r *RunningAggregator) metricFiltered(metric telegraf.Metric) {
-	r.MetricsFiltered.Incr(1)
-	metric.Accept()
-}
-
 func (r *RunningAggregator) metricDropped(metric telegraf.Metric) {
 	r.MetricsDropped.Incr(1)
-	metric.Accept()
 }
 
 // Add a metric to the aggregator and return true if the original metric
 // should be dropped.
-func (r *RunningAggregator) Add(metric telegraf.Metric) bool {
-	if ok := r.Config.Filter.Select(metric); !ok {
+func (r *RunningAggregator) Add(m telegraf.Metric) bool {
+	if ok := r.Config.Filter.Select(m); !ok {
 		return false
 	}
 
-	metric = metric.Copy()
+	// Make a copy of the metric but don't retain tracking; it doesn't make
+	// sense to fail a metric's delivery due to the aggregation not being
+	// sent because we can't create aggregations of historical data.
+	m = metric.FromMetric(m)
 
-	r.Config.Filter.Modify(metric)
-	if len(metric.FieldList()) == 0 {
+	r.Config.Filter.Modify(m)
+	if len(m.FieldList()) == 0 {
+		r.metricDropped(m)
 		return r.Config.DropOriginal
 	}
 
 	r.Lock()
 	defer r.Unlock()
 
-	if r.periodStart.IsZero() || metric.Time().After(r.periodEnd) {
-		r.metricDropped(metric)
+	if r.periodStart.IsZero() || m.Time().After(r.periodEnd) {
+		r.metricDropped(m)
 		return r.Config.DropOriginal
 	}
 
-	r.Aggregator.Add(metric)
+	r.Aggregator.Add(m)
 	return r.Config.DropOriginal
 }
 

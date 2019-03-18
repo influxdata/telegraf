@@ -6,13 +6,12 @@ import (
 	"sync"
 	"time"
 
+	paho "github.com/eclipse/paho.mqtt.golang"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-
-	paho "github.com/eclipse/paho.mqtt.golang"
 )
 
 var sampleConfig = `
@@ -50,6 +49,10 @@ var sampleConfig = `
   ## metrics are written one metric per MQTT message.
   # batch = false
 
+  ## When true, metric will have RETAIN flag set, making broker cache entries until someone
+  ## actually reads it
+  # retain = false
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -68,6 +71,7 @@ type MQTT struct {
 	ClientID    string `toml:"client_id"`
 	tls.ClientConfig
 	BatchMessage bool `toml:"batch"`
+	Retain       bool `toml:"retain"`
 
 	client paho.Client
 	opts   *paho.ClientOptions
@@ -174,7 +178,7 @@ func (m *MQTT) Write(metrics []telegraf.Metric) error {
 }
 
 func (m *MQTT) publish(topic string, body []byte) error {
-	token := m.client.Publish(topic, byte(m.QoS), false, body)
+	token := m.client.Publish(topic, byte(m.QoS), m.Retain, body)
 	token.WaitTimeout(m.Timeout.Duration)
 	if token.Error() != nil {
 		return token.Error()

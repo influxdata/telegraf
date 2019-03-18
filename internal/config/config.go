@@ -151,7 +151,7 @@ type AgentConfig struct {
 func (c *Config) InputNames() []string {
 	var name []string
 	for _, input := range c.Inputs {
-		name = append(name, input.Name())
+		name = append(name, input.Config.Name)
 	}
 	return name
 }
@@ -160,7 +160,7 @@ func (c *Config) InputNames() []string {
 func (c *Config) AggregatorNames() []string {
 	var name []string
 	for _, aggregator := range c.Aggregators {
-		name = append(name, aggregator.Name())
+		name = append(name, aggregator.Config.Name)
 	}
 	return name
 }
@@ -1362,6 +1362,14 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		}
 	}
 
+	if node, ok := tbl.Fields["json_timezone"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.JSONTimezone = str.Value
+			}
+		}
+	}
+
 	if node, ok := tbl.Fields["data_type"]; ok {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
@@ -1496,6 +1504,14 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 		if kv, ok := node.(*ast.KeyValue); ok {
 			if str, ok := kv.Value.(*ast.String); ok {
 				c.GrokTimezone = str.Value
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["grok_unique_timestamp"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if str, ok := kv.Value.(*ast.String); ok {
+				c.GrokUniqueTimestamp = str.Value
 			}
 		}
 	}
@@ -1637,6 +1653,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "json_string_fields")
 	delete(tbl.Fields, "json_time_format")
 	delete(tbl.Fields, "json_time_key")
+	delete(tbl.Fields, "json_timezone")
 	delete(tbl.Fields, "data_type")
 	delete(tbl.Fields, "collectd_auth_file")
 	delete(tbl.Fields, "collectd_security_level")
@@ -1652,6 +1669,7 @@ func getParserConfig(name string, tbl *ast.Table) (*parsers.Config, error) {
 	delete(tbl.Fields, "grok_custom_patterns")
 	delete(tbl.Fields, "grok_custom_pattern_files")
 	delete(tbl.Fields, "grok_timezone")
+	delete(tbl.Fields, "grok_unique_timestamp")
 	delete(tbl.Fields, "csv_column_names")
 	delete(tbl.Fields, "csv_column_types")
 	delete(tbl.Fields, "csv_comment")

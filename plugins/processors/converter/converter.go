@@ -336,7 +336,7 @@ func toInteger(v interface{}) (int64, bool) {
 		} else if value > float64(math.MaxInt64) {
 			return math.MaxInt64, true
 		} else {
-			return int64(value), true
+			return int64(Round(value)), true
 		}
 	case bool:
 		if value {
@@ -345,8 +345,16 @@ func toInteger(v interface{}) (int64, bool) {
 			return 0, true
 		}
 	case string:
-		result, err := strconv.ParseInt(value, 10, 64)
-		return result, err == nil
+		result, err := strconv.ParseInt(value, 0, 64)
+
+		if err != nil {
+			result, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return 0, false
+			}
+			return toInteger(result)
+		}
+		return result, true
 	}
 	return 0, false
 }
@@ -367,7 +375,7 @@ func toUnsigned(v interface{}) (uint64, bool) {
 		} else if value > float64(math.MaxUint64) {
 			return math.MaxUint64, true
 		} else {
-			return uint64(value), true
+			return uint64(Round(value)), true
 		}
 	case bool:
 		if value {
@@ -376,8 +384,16 @@ func toUnsigned(v interface{}) (uint64, bool) {
 			return 0, true
 		}
 	case string:
-		result, err := strconv.ParseUint(value, 10, 64)
-		return result, err == nil
+		result, err := strconv.ParseUint(value, 0, 64)
+
+		if err != nil {
+			result, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				return 0, false
+			}
+			return toUnsigned(result)
+		}
+		return result, true
 	}
 	return 0, false
 }
@@ -417,6 +433,16 @@ func toString(v interface{}) (string, bool) {
 		return value, true
 	}
 	return "", false
+}
+
+// math.Round was not added until Go 1.10, can be removed when support for Go
+// 1.9 is dropped.
+func Round(x float64) float64 {
+	t := math.Trunc(x)
+	if math.Abs(x-t) >= 0.5 {
+		return t + math.Copysign(1, x)
+	}
+	return t
 }
 
 func logPrintf(format string, v ...interface{}) {
