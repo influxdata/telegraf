@@ -18,5 +18,5 @@ func (m PerformanceManager) Reference() types.ManagedObjectReference {
 }
 
 func init() {
-	t["PerformanceManager"] = reflect.TypeOf((*PerformanceManager)(nil)).Elem()
+	 types.Add("PerformanceManager", reflect.TypeOf((*PerformanceManager)(nil)).Elem())
 }
