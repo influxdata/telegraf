@@ -162,7 +162,7 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 			return nil
 		}
 
-		log.Printf("E! [outputs.influxdb] when writing to [%s]: %v", client.URL(), err)
+		log.Printf("E! [outputs.influxdb] when writing to [%s - %s/%s]: %v", client.URL(), i.Organization, i.Bucket, err)
 	}
 
 	return errors.New("could not write any address")
