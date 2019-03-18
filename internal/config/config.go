@@ -33,7 +33,7 @@ import (
 
 var (
 	// Default headers
-	headerDefaults = []string{"global_tags", "agent"}
+	sectionDefaults = []string{"global_tags", "agent"}
 
 	// Default input plugins
 	inputDefaults = []string{"cpu", "mem", "swap", "system", "kernel",
@@ -322,34 +322,28 @@ var serviceInputHeader = `
 
 // PrintSampleConfig prints the sample config
 func PrintSampleConfig(
-	headerFilters []string,
+	sectionFilters []string,
 	inputFilters []string,
 	outputFilters []string,
 	aggregatorFilters []string,
 	processorFilters []string,
 ) {
-	printHeaders := true
-	if len(headerFilters) == 3 && headerFilters[1] == "none" {
-		printHeaders = false
-	}
-
 	// print headers
-	if printHeaders {
-		fmt.Printf(header)
-	}
-	if len(headerFilters) != 0 {
-		printFilteredHeaders(headerFilters, false)
+	fmt.Printf(header)
+	if len(sectionFilters) != 0 {
+		printFilteredSections(sectionFilters)
 	} else {
-		printFilteredHeaders(headerDefaults, false)
+		printFilteredSections(sectionDefaults)
 	}
 
 	// print output plugins
-	if printHeaders {
-		fmt.Printf(outputHeader)
-	}
 	if len(outputFilters) != 0 {
+		if len(outputFilters) >= 3 && outputFilters[1] != "none" {
+			fmt.Printf(outputHeader)
+		}
 		printFilteredOutputs(outputFilters, false)
 	} else {
+		fmt.Printf(outputHeader)
 		printFilteredOutputs(outputDefaults, false)
 		// Print non-default outputs, commented
 		var pnames []string
@@ -363,12 +357,13 @@ func PrintSampleConfig(
 	}
 
 	// print processor plugins
-	if printHeaders {
-		fmt.Printf(processorHeader)
-	}
 	if len(processorFilters) != 0 {
+		if len(processorFilters) >= 3 && processorFilters[1] != "none" {
+			fmt.Printf(processorHeader)
+		}
 		printFilteredProcessors(processorFilters, false)
 	} else {
+		fmt.Printf(processorHeader)
 		pnames := []string{}
 		for pname := range processors.Processors {
 			pnames = append(pnames, pname)
@@ -378,12 +373,13 @@ func PrintSampleConfig(
 	}
 
 	// pring aggregator plugins
-	if printHeaders {
-		fmt.Printf(aggregatorHeader)
-	}
 	if len(aggregatorFilters) != 0 {
+		if len(aggregatorFilters) >= 3 && aggregatorFilters[1] != "none" {
+			fmt.Printf(aggregatorHeader)
+		}
 		printFilteredAggregators(aggregatorFilters, false)
 	} else {
+		fmt.Printf(aggregatorHeader)
 		pnames := []string{}
 		for pname := range aggregators.Aggregators {
 			pnames = append(pnames, pname)
@@ -393,13 +389,14 @@ func PrintSampleConfig(
 	}
 
 	// print input plugins
-	if printHeaders {
-		fmt.Printf(inputHeader)
-	}
 	if len(inputFilters) != 0 {
-		printFilteredInputs(inputFilters, false, printHeaders)
+		if len(inputFilters) >= 3 && inputFilters[1] != "none" {
+			fmt.Printf(inputHeader)
+		}
+		printFilteredInputs(inputFilters, false)
 	} else {
-		printFilteredInputs(inputDefaults, false, printHeaders)
+		fmt.Printf(inputHeader)
+		printFilteredInputs(inputDefaults, false)
 		// Print non-default inputs, commented
 		var pnames []string
 		for pname := range inputs.Inputs {
@@ -408,7 +405,7 @@ func PrintSampleConfig(
 			}
 		}
 		sort.Strings(pnames)
-		printFilteredInputs(pnames, true, printHeaders)
+		printFilteredInputs(pnames, true)
 	}
 }
 
@@ -448,7 +445,7 @@ func printFilteredAggregators(aggregatorFilters []string, commented bool) {
 	}
 }
 
-func printFilteredInputs(inputFilters []string, commented, printHeader bool) {
+func printFilteredInputs(inputFilters []string, commented bool) {
 	// Filter inputs
 	var pnames []string
 	for pname := range inputs.Inputs {
@@ -483,9 +480,8 @@ func printFilteredInputs(inputFilters []string, commented, printHeader bool) {
 		return
 	}
 	sort.Strings(servInputNames)
-	if printHeader {
-		fmt.Printf(serviceInputHeader)
-	}
+
+	fmt.Printf(serviceInputHeader)
 	for _, name := range servInputNames {
 		printConfig(name, servInputs[name], "inputs", commented)
 	}
@@ -509,18 +505,18 @@ func printFilteredOutputs(outputFilters []string, commented bool) {
 	}
 }
 
-func printFilteredHeaders(headerFilters []string, commented bool) {
+func printFilteredSections(sectionFilters []string) {
 	// Filter headers
-	var hnames []string
-	for hname := range headers {
-		if sliceContains(hname, headerFilters) {
-			hnames = append(hnames, hname)
+	var snames []string
+	for sname := range headers {
+		if sliceContains(sname, sectionFilters) {
+			snames = append(snames, sname)
 		}
 	}
 
-	// Print Headers
-	for _, hname := range hnames {
-		fmt.Printf(headers[hname])
+	// Print sections
+	for _, sname := range snames {
+		fmt.Printf(headers[sname])
 	}
 }
 
