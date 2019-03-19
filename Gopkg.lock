@@ -1579,7 +1579,6 @@
     "cloud.google.com/go/pubsub",
     "collectd.org/api",
     "collectd.org/network",
-    "github.com/Azure/azure-pipeline-go/pipeline",
     "github.com/Azure/azure-storage-queue-go/azqueue",
     "github.com/Azure/go-autorest/autorest",
     "github.com/Azure/go-autorest/autorest/azure/auth",

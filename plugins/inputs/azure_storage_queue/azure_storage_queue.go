@@ -7,14 +7,16 @@ import (
 	"log"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 type AzureStorageQueue struct {
-	StorageAccountName string `toml:"azure_storage_account_name"`
-	StorageAccountKey  string `toml:"azure_storage_account_key"`
+	StorageAccountName   string `toml:"azure_storage_account_name"`
+	StorageAccountKey    string `toml:"azure_storage_account_key"`
+	PeekOldestMessageAge bool   `toml:"peek_oldest_message_age"`
 
 	serviceURL *azqueue.ServiceURL
 }
@@ -25,6 +27,9 @@ var sampleConfig = `
 
   ## Required Azure Storage Account access key
   azure_storage_account_key = "TODO"
+
+  ## Uncomment to disable peeking age of oldest message (saves time)
+  # peek_oldest_message_age = false
   `
 
 func (a *AzureStorageQueue) Description() string {
@@ -75,12 +80,15 @@ func (a *AzureStorageQueue) GetServiceURL() (azqueue.ServiceURL, error) {
 	return *a.serviceURL, nil
 }
 
-func (a *AzureStorageQueue) GatherQueueMetrics(acc telegraf.Accumulator, queueItem azqueue.QueueItem, properties *azqueue.QueueGetPropertiesResponse) {
+func (a *AzureStorageQueue) GatherQueueMetrics(acc telegraf.Accumulator, queueItem azqueue.QueueItem, properties *azqueue.QueueGetPropertiesResponse, peekedMessage *azqueue.PeekedMessage) {
 	records := make(map[string]interface{})
 	tags := make(map[string]string)
 	tags["name"] = strings.TrimSpace(queueItem.Name)
 	tags["storage_account"] = a.StorageAccountName
 	records["size"] = properties.ApproximateMessagesCount()
+	if peekedMessage != nil {
+		records["oldest_message_age"] = time.Now().Unix() - peekedMessage.InsertionTime.Unix()
+	}
 	acc.AddFields("azure_storage_queues", records, tags)
 }
 
@@ -109,7 +117,18 @@ func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
 			if err != nil {
 				log.Fatal(err)
 			} else {
-				a.GatherQueueMetrics(acc, queueItem, properties)
+				var peekedMessage *azqueue.PeekedMessage
+				if a.PeekOldestMessageAge {
+					messagesURL := queueURL.NewMessagesURL()
+					messagesResponse, err := messagesURL.Peek(ctx, 1)
+					if err != nil {
+						log.Print(err)
+					} else if messagesResponse.NumMessages() > 0 {
+						peekedMessage = messagesResponse.Message(0)
+					}
+				}
+
+				a.GatherQueueMetrics(acc, queueItem, properties, peekedMessage)
 			}
 		}
 	}
@@ -118,6 +137,6 @@ func (a *AzureStorageQueue) Gather(acc telegraf.Accumulator) error {
 
 func init() {
 	inputs.Add("azure_storage_queue", func() telegraf.Input {
-		return &AzureStorageQueue{}
+		return &AzureStorageQueue{PeekOldestMessageAge: true}
 	})
 }
