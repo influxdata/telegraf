@@ -2,6 +2,7 @@ version: "{build}"
 
 cache:
  - C:\Cache
+ - C:\gopath\pkg\dep\sources -> Gopkg.lock
 
 clone_folder: C:\gopath\src\github.com\influxdata\telegraf
 
