@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/consul/api"
+
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -126,12 +127,12 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 		for _, checkTag := range check.ServiceTags {
 			if c.TagDelimiter != "" {
 				splittedTag := strings.SplitN(checkTag, c.TagDelimiter, 2)
-				if len(splittedTag) == 1 {
+				if len(splittedTag) == 1 && checkTag != "" {
 					tags[checkTag] = checkTag
-				} else if len(splittedTag) == 2 {
+				} else if len(splittedTag) == 2 && splittedTag[1] != "" {
 					tags[splittedTag[0]] = splittedTag[1]
 				}
-			} else {
+			} else if checkTag != "" {
 				tags[checkTag] = checkTag
 			}
 		}
