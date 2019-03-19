@@ -16,6 +16,7 @@
 - [#5492](https://github.com/influxdata/telegraf/issues/5492): Fix vsphere input shows failed task in vCenter.
 - [#5530](https://github.com/influxdata/telegraf/issues/5530): Fix invalid measurement name and skip column in csv parser.
 - [#5589](https://github.com/influxdata/telegraf/issues/5589): Fix system input causing high cpu usage on Raspbian.
+- [#5575](https://github.com/influxdata/telegraf/issues/5575): Don't add empty healthcheck tags to consul input.
 
 ## v1.10 [2019-03-05]
 
