@@ -6,7 +6,7 @@
 - [#5569](https://github.com/influxdata/telegraf/pull/5569): Add hexadecimal string to integer conversion to converter processor.
 
 
-## v1.10.1 [unreleased]
+## v1.10.1 [2019-03-19]
 
 #### Bugfixes
 
