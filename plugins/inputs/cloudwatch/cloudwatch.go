@@ -378,7 +378,7 @@ func (c *CloudWatch) gatherMetrics(
 func getResults(metric cloudwatch.Metric, results []*cloudwatch.MetricDataResult) []*cloudwatch.MetricDataResult {
 	list := []*cloudwatch.MetricDataResult{}
 	for _, result := range results {
-		if nameMatch(genName(metric), *result.Id) {
+		if nameMatch(genID(metric), *result.Id) {
 			list = append(list, result)
 		}
 	}
@@ -424,7 +424,7 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 	for _, metric := range metrics {
 		dataQuery := []*cloudwatch.MetricDataQuery{
 			{
-				Id:    aws.String("average_" + genName(*metric)),
+				Id:    aws.String("average_" + genID(*metric)),
 				Label: aws.String(snakeCase(*metric.MetricName + "_average")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
@@ -433,7 +433,7 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 				},
 			},
 			{
-				Id:    aws.String("maximum_" + genName(*metric)),
+				Id:    aws.String("maximum_" + genID(*metric)),
 				Label: aws.String(snakeCase(*metric.MetricName + "_maximum")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
@@ -442,7 +442,7 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 				},
 			},
 			{
-				Id:    aws.String("minimum_" + genName(*metric)),
+				Id:    aws.String("minimum_" + genID(*metric)),
 				Label: aws.String(snakeCase(*metric.MetricName + "_minimum")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
@@ -451,7 +451,7 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 				},
 			},
 			{
-				Id:    aws.String("sum_" + genName(*metric)),
+				Id:    aws.String("sum_" + genID(*metric)),
 				Label: aws.String(snakeCase(*metric.MetricName + "_sum")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
@@ -460,7 +460,7 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 				},
 			},
 			{
-				Id:    aws.String("sample_count_" + genName(*metric)),
+				Id:    aws.String("sample_count_" + genID(*metric)),
 				Label: aws.String(snakeCase(*metric.MetricName + "_sample_count")),
 				MetricStat: &cloudwatch.MetricStat{
 					Metric: metric,
@@ -479,18 +479,24 @@ func (c *CloudWatch) getDataInputs(metrics []*cloudwatch.Metric) *cloudwatch.Get
 	}
 }
 
-func genName(metric cloudwatch.Metric) string {
+// while a regex of "[^a-zA-Z0-9_]+" doing a ReplaceAllString would cover more, strings.Replacer is ~10x faster.
+var replacer = strings.NewReplacer("/", "_", "-", "_", ".", "_", " ", "_", ":", "_", "{", "", "}", "", "%", "")
+
+func genID(metric cloudwatch.Metric) string {
 	dVals := []string{}
 	for _, dimension := range metric.Dimensions {
-		val := strings.Replace(*dimension.Value, "-", "_", -1)
-		val = strings.Replace(val, ".", "_", -1)
-		dVals = append(dVals, val)
+		dVals = append(dVals, replacer.Replace(*dimension.Value))
 	}
 	if strings.Contains(*metric.MetricName, "EBSIOBalance") || strings.Contains(*metric.MetricName, "EBSByteBalance") {
 		*metric.MetricName = strings.TrimRight(*metric.MetricName, "%")
 	}
 	if len(dVals) > 0 {
-		return snakeCase(*metric.MetricName + "_" + strings.Join(dVals, "_"))
+		id := snakeCase(*metric.MetricName + "_" + strings.Join(dVals, "_"))
+		if len(id) > 255 {
+			log.Printf("[inputs.cloudwatch] W! ID TOO LARGE, TRIMMING; POSSIBLE DUPLICATE ID!! %+v\n", len(id))
+			return id[:255]
+		}
+		return id
 	}
 	return snakeCase(*metric.MetricName)
 }
