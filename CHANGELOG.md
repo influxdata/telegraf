@@ -5,6 +5,9 @@
 - [#5556](https://github.com/influxdata/telegraf/pull/5556): Add TTL field to ping input.
 - [#5569](https://github.com/influxdata/telegraf/pull/5569): Add hexadecimal string to integer conversion to converter processor.
 
+## v1.10.2 [unreleased]
+
+- [#5612](https://github.com/influxdata/telegraf/pull/5612): Fix deadlock when Telegraf is aligning aggregators.
 
 ## v1.10.1 [2019-03-19]
 
