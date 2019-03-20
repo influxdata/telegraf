@@ -18,6 +18,8 @@ type RunningStats struct {
 	ex  float64
 	ex2 float64
 
+	diff float64
+
 	// Array used to calculate estimated percentiles
 	// We will store a maximum of PercLimit values, at which point we will start
 	// randomly replacing old values, hence it is an estimated percentile.
@@ -47,6 +49,8 @@ func (rs *RunningStats) AddValue(v float64) {
 		}
 		rs.perc = make([]float64, 0, rs.PercLimit)
 	}
+
+	rs.diff = v - rs.k
 
 	// These are used for the running mean and variance
 	rs.n++
@@ -121,4 +125,8 @@ func clamp(i float64, min int, max int) int {
 		return max
 	}
 	return int(i)
+}
+
+func (rs *RunningStats) Diff() float64 {
+	return rs.diff
 }

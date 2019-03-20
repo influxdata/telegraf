@@ -1,6 +1,6 @@
 # BasicStats Aggregator Plugin
 
-The BasicStats aggregator plugin give us count,diff,max,min,mean,non_negative_diff,sum,s2(variance), stdev for a set of values,
+The BasicStats aggregator plugin give us count, diff, max, min, mean, sum, s2(variance), stdev and percentiles for a set of values,
 emitting the aggregate every `period` seconds.
 
 ### Configuration:
@@ -15,13 +15,28 @@ emitting the aggregate every `period` seconds.
   ## aggregator and will not get sent to the output plugins.
   drop_original = false
 
-  ## Configures which basic stats to push as fields
-  # stats = ["count","diff","min","max","mean","non_negative_diff","stdev","s2","sum"]
+  ## Configures which basic stats to push as fields. This option
+  ## is deprecated and only kept for backward compatibility. If any
+  ## fields is configured, this option will be ignored.
+  # stats = ["count", "min", "max", "mean", "stdev", "s2", "sum"]
+
+  ## Configures which basic stats to push as fields. "*" is the default configuration for all fields.
+  ## Use strings like "p95" to add 95th percentile. Supported percentile range is [0, 100].
+  # [aggregators.basicstats.fields]
+  #   "*" = ["count", "min", "max", "mean", "stdev", "s2", "sum"]
+  #   "some_field" = ["count", "p90", "p95"]
+  ## If "*" is not specified, unmatched fields will be dropped.
+  # [aggregators.basicstats.fields]
+  #   "only_field" = ["count", "sum"]
 ```
 
 - stats
-    - If not specified, then `count`, `min`, `max`, `mean`, `stdev`, and `s2` are aggregated and pushed as fields.  `sum`, `diff` and `non_negative_diff` are not aggregated by default to maintain backwards compatibility.
-    - If empty array, no stats are aggregated
+    - Deprecated, use `fields` instead.
+
+- fields
+    - If not specified, then `count`, `min`, `max`, `mean`, `stdev`, and `s2` are aggregated and pushed as fields.  `sum` and percentiles are not aggregated by default to maintain backwards compatibility.
+    - If empty array, no stats are aggregated.
+    - If `"*"` not specified, unmatched fields will be dropped.
 
 ### Measurements & Fields:
 
@@ -35,6 +50,8 @@ emitting the aggregate every `period` seconds.
     - field1_sum
     - field1_s2 (variance)
     - field1_stdev (standard deviation)
+    - field1_pX (Xth percentile)
+    - field1_pY (Yth percentile)
 
 ### Tags:
 
@@ -49,5 +66,5 @@ system,host=tars load1=1 1475583990000000000
 system,host=tars load1_count=2,load1_diff=0,load1_max=1,load1_min=1,load1_mean=1,load1_sum=2,load1_s2=0,load1_stdev=0 1475584010000000000
 system,host=tars load1=1 1475584020000000000
 system,host=tars load1=3 1475584030000000000
-system,host=tars load1_count=2,load1_diff=2,load1_max=3,load1_min=1,load1_mean=2,load1_sum=4,load1_s2=2,load1_stdev=1.414162 1475584010000000000
+system,host=tars load1_count=2,load1_diff=2,load1_max=3,load1_min=1,load1_mean=2,load1_sum=4,load1_s2=1,load1_stdev=1 1475584010000000000
 ```
