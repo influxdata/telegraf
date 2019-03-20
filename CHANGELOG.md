@@ -7,7 +7,10 @@
 
 ## v1.10.2 [unreleased]
 
+#### Bugfixes
+
 - [#5612](https://github.com/influxdata/telegraf/pull/5612): Fix deadlock when Telegraf is aligning aggregators.
+- [#5523](https://github.com/influxdata/telegraf/issues/5523): Fix missing cluster stats in ceph input.
 
 ## v1.10.1 [2019-03-19]
 
