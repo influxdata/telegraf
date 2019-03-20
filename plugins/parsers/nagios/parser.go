@@ -129,7 +129,7 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		if bytes.Contains(s.Bytes(), []byte{'|'}) {
 			parts := bytes.Split(s.Bytes(), []byte{'|'})
 			if longmsg.Len() != 0 {
-				longmsg.WriteByte('\n')
+				longmsg.WriteByte(' ')
 			}
 			longmsg.Write(bytes.TrimSpace(parts[0]))
 
@@ -141,7 +141,7 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			break
 		}
 		if longmsg.Len() != 0 {
-			longmsg.WriteByte('\n')
+			longmsg.WriteByte(' ')
 		}
 		longmsg.Write(bytes.TrimSpace((s.Bytes())))
 	}

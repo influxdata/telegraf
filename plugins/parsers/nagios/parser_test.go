@@ -153,7 +153,7 @@ with three lines
 				assertNagiosState(t, metrics[2], map[string]interface{}{
 					"state":   int64(0),
 					"msg":     "PING OK - Packet loss = 0%, RTA = 0.30 ms",
-					"longmsg": "This is a long output\nwith three lines",
+					"longmsg": "This is a long output with three lines",
 				})
 			},
 		},
@@ -353,7 +353,7 @@ with three lines
 				assertNagiosState(t, metrics[4], map[string]interface{}{
 					"state":   int64(0),
 					"msg":     "DISK OK - free space: / 3326 MB (56%);",
-					"longmsg": "/ 15272 MB (77%);\n/boot 68 MB (69%);\n/home 69357 MB (27%);\n/var/log 819 MB (84%);",
+					"longmsg": "/ 15272 MB (77%); /boot 68 MB (69%); /home 69357 MB (27%); /var/log 819 MB (84%);",
 				})
 			},
 		},
