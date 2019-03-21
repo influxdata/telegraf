@@ -151,9 +151,9 @@ with three lines
 				}, metrics[1].Fields())
 
 				assertNagiosState(t, metrics[2], map[string]interface{}{
-					"state":   int64(0),
-					"msg":     "PING OK - Packet loss = 0%, RTA = 0.30 ms",
-					"longmsg": "This is a long output with three lines",
+					"state":               int64(0),
+					"service_output":      "PING OK - Packet loss = 0%, RTA = 0.30 ms",
+					"long_service_output": "This is a long output\nwith three lines",
 				})
 			},
 		},
@@ -175,8 +175,8 @@ with three lines
 				}, metrics[0].Fields())
 
 				assertNagiosState(t, metrics[1], map[string]interface{}{
-					"state": int64(0),
-					"msg":   "TCP OK - 0.008 second response time on port 80",
+					"state":          int64(0),
+					"service_output": "TCP OK - 0.008 second response time on port 80",
 				})
 			},
 		},
@@ -195,8 +195,8 @@ with three lines
 				}, metrics[0].Fields())
 
 				assertNagiosState(t, metrics[1], map[string]interface{}{
-					"state": int64(0),
-					"msg":   "TCP OK - 0.008 second response time on port 80",
+					"state":          int64(0),
+					"service_output": "TCP OK - 0.008 second response time on port 80",
 				})
 			},
 		},
@@ -246,8 +246,8 @@ with three lines
 				}, metrics[2].Fields())
 
 				assertNagiosState(t, metrics[3], map[string]interface{}{
-					"state": int64(0),
-					"msg":   "OK: Load average: 0.00, 0.01, 0.05",
+					"state":          int64(0),
+					"service_output": "OK: Load average: 0.00, 0.01, 0.05",
 				})
 			},
 		},
@@ -259,8 +259,8 @@ with three lines
 				require.Len(t, metrics, 1)
 
 				assertNagiosState(t, metrics[0], map[string]interface{}{
-					"state": int64(0),
-					"msg":   "PING OK - Packet loss = 0%, RTA = 0.30 ms",
+					"state":          int64(0),
+					"service_output": "PING OK - Packet loss = 0%, RTA = 0.30 ms",
 				})
 			},
 		},
@@ -272,8 +272,8 @@ with three lines
 				require.Len(t, metrics, 1)
 
 				assertNagiosState(t, metrics[0], map[string]interface{}{
-					"state": int64(0),
-					"msg":   "PING OK - Packet loss = 0%, RTA = 0.30 ms",
+					"state":          int64(0),
+					"service_output": "PING OK - Packet loss = 0%, RTA = 0.30 ms",
 				})
 			},
 		},
@@ -351,9 +351,9 @@ with three lines
 				}, metrics[3].Fields())
 
 				assertNagiosState(t, metrics[4], map[string]interface{}{
-					"state":   int64(0),
-					"msg":     "DISK OK - free space: / 3326 MB (56%);",
-					"longmsg": "/ 15272 MB (77%); /boot 68 MB (69%); /home 69357 MB (27%); /var/log 819 MB (84%);",
+					"state":               int64(0),
+					"service_output":      "DISK OK - free space: / 3326 MB (56%);",
+					"long_service_output": "/ 15272 MB (77%);\n/boot 68 MB (69%);\n/home 69357 MB (27%);\n/var/log 819 MB (84%);",
 				})
 			},
 		},

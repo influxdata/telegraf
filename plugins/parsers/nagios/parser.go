@@ -129,7 +129,7 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 		if bytes.Contains(s.Bytes(), []byte{'|'}) {
 			parts := bytes.Split(s.Bytes(), []byte{'|'})
 			if longmsg.Len() != 0 {
-				longmsg.WriteByte(' ')
+				longmsg.WriteByte('\n')
 			}
 			longmsg.Write(bytes.TrimSpace(parts[0]))
 
@@ -141,7 +141,7 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 			break
 		}
 		if longmsg.Len() != 0 {
-			longmsg.WriteByte(' ')
+			longmsg.WriteByte('\n')
 		}
 		longmsg.Write(bytes.TrimSpace((s.Bytes())))
 	}
@@ -161,11 +161,11 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	// Create nagios state.
 	fields := map[string]interface{}{
-		"state": state,
-		"msg":   msg.String(),
+		"state":          state,
+		"service_output": msg.String(),
 	}
 	if longmsg.Len() != 0 {
-		fields["longmsg"] = longmsg.String()
+		fields["long_service_output"] = longmsg.String()
 	}
 
 	m, err := metric.New("nagios_state", nil, fields, ts)
