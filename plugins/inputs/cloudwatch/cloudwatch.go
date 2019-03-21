@@ -446,8 +446,10 @@ func snakeCase(s string) string {
 	return s
 }
 
+// todo: make member function and actually have in config file ability to specify which queries to include/exclude
+// todo: make this a filter!
 func collect(check string) bool {
-	// if check matches a specified statistic type to collect
+	// todo: if check matches a specified statistic type to collect
 	return true
 }
 
