@@ -1,3 +1,29 @@
+## v1.11 [unreleased]
+
+#### Features
+
+- [#5556](https://github.com/influxdata/telegraf/pull/5556): Add TTL field to ping input.
+- [#5569](https://github.com/influxdata/telegraf/pull/5569): Add hexadecimal string to integer conversion to converter processor.
+
+## v1.10.2 [unreleased]
+
+#### Bugfixes
+
+- [#5612](https://github.com/influxdata/telegraf/pull/5612): Fix deadlock when Telegraf is aligning aggregators.
+- [#5523](https://github.com/influxdata/telegraf/issues/5523): Fix missing cluster stats in ceph input.
+
+## v1.10.1 [2019-03-19]
+
+#### Bugfixes
+
+- [#5448](https://github.com/influxdata/telegraf/issues/5448): Show error when TLS configuration cannot be loaded.
+- [#5543](https://github.com/influxdata/telegraf/pull/5543): Add Base64-encoding/decoding for Google Cloud PubSub plugins.
+- [#5565](https://github.com/influxdata/telegraf/issues/5565): Fix type compatibility in vsphere plugin with use_int_samples option.
+- [#5492](https://github.com/influxdata/telegraf/issues/5492): Fix vsphere input shows failed task in vCenter.
+- [#5530](https://github.com/influxdata/telegraf/issues/5530): Fix invalid measurement name and skip column in csv parser.
+- [#5589](https://github.com/influxdata/telegraf/issues/5589): Fix system input causing high cpu usage on Raspbian.
+- [#5575](https://github.com/influxdata/telegraf/issues/5575): Don't add empty healthcheck tags to consul input.
+
 ## v1.10 [2019-03-05]
 
 #### New Inputs

@@ -1,6 +1,6 @@
 # rollbar webhooks
 
-You should configure your Rollbar's Webhooks to point at the `webhooks` service. To do this go to `rollbar.com/` and click `Settings > Notifications > Webhook`. In the resulting page set `URL` to `http://<my_ip>:1619/rollbar`, and click on `Enable Webhook Integration`.
+You should configure your Rollbar's Webhooks to point at the `webhooks` service. To do this go to [rollbar.com](https://rollbar.com/) and click `Settings > Notifications > Webhook`. In the resulting page set `URL` to `http://<my_ip>:1619/rollbar`, and click on `Enable Webhook Integration`.
 
 ## Events
 

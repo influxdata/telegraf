@@ -378,7 +378,10 @@ func (a *Agent) runAggregators(
 	for _, agg := range a.Config.Aggregators {
 		wg.Add(1)
 		go func(agg *models.RunningAggregator) {
-			defer wg.Done()
+			defer func() {
+				wg.Done()
+				close(aggregations)
+			}()
 
 			if a.Config.Agent.RoundInterval {
 				// Aggregators are aligned to the agent interval regardless of
@@ -394,7 +397,6 @@ func (a *Agent) runAggregators(
 			acc := NewAccumulator(agg, aggregations)
 			acc.SetPrecision(precision, interval)
 			a.push(ctx, agg, acc)
-			close(aggregations)
 		}(agg)
 	}
 

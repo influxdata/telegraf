@@ -67,7 +67,7 @@ func (wb *Webhooks) SampleConfig() string {
 
   [inputs.webhooks.particle]
     path = "/particle"
- `
+`
 }
 
 func (wb *Webhooks) Description() string {
