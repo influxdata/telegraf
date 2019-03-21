@@ -243,7 +243,7 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 
 	c.updateWindow(now)
 
-	params := c.getDataInputs([]*cloudwatch.Metric{m})
+	params := c.getDataInputs(c.getDataQueries([]*cloudwatch.Metric{m}))
 
 	assert.EqualValues(t, *params.EndTime, now.Add(-c.Delay.Duration))
 	assert.EqualValues(t, *params.StartTime, now.Add(-c.Period.Duration).Add(-c.Delay.Duration))
