@@ -2,6 +2,7 @@ package cloudwatch
 
 import (
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -245,7 +246,8 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 	c.updateWindow(now)
 
 	statFilter, _ := filter.NewIncludeExcludeFilter(nil, nil)
-	params := c.getDataInputs(c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}}))
+	queries, _ := c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}})
+	params := c.getDataInputs(queries)
 
 	assert.EqualValues(t, *params.EndTime, now.Add(-c.Delay.Duration))
 	assert.EqualValues(t, *params.StartTime, now.Add(-c.Period.Duration).Add(-c.Delay.Duration))
@@ -283,7 +285,8 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 	c.updateWindow(now)
 
 	statFilter, _ := filter.NewIncludeExcludeFilter([]string{"average", "sample_count"}, nil)
-	params := c.getDataInputs(c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}}))
+	queries, _ := c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}})
+	params := c.getDataInputs(queries)
 
 	assert.EqualValues(t, *params.EndTime, now.Add(-c.Delay.Duration))
 	assert.EqualValues(t, *params.StartTime, now.Add(-c.Period.Duration).Add(-c.Delay.Duration))
@@ -365,7 +368,7 @@ func TestEquals(t *testing.T) {
 
 	stringSlice := make([]string, len(testStrings))
 	for i, name := range testStrings {
-		stringSlice[i] = replacer.Replace(name)
+		stringSlice[i] = validID.ReplaceAllString(name, "_")
 	}
 
 	if len(regexSlice) != len(stringSlice) {
@@ -379,6 +382,8 @@ func TestEquals(t *testing.T) {
 		}
 	}
 }
+
+var replacer = strings.NewReplacer("/", "_", "-", "_", ".", "_", " ", "_", ":", "_", "{", "", "}", "", "%", "")
 
 func BenchmarkStrings(b *testing.B) {
 	for n := 0; n < b.N; n++ {
