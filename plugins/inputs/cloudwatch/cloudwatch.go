@@ -3,6 +3,7 @@ package cloudwatch
 import (
 	"errors"
 	"log"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -39,6 +40,7 @@ type (
 		RateLimit   int               `toml:"ratelimit"`
 		client      cloudwatchClient
 		metricCache *MetricCache
+		queryCache  []*cloudwatch.MetricDataQuery
 		windowStart time.Time
 		windowEnd   time.Time
 
@@ -246,10 +248,10 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// get all of the possible queries so we can send groups of 100
-	// todo: cache these as well and do the regexp replace to cover all possible bad chars.
-	queries := c.getDataQueries(metrics)
-	if len(queries) == 0 {
-		return errors.New("No metrics found to collect")
+	// note: these are cached using metricCache's specs
+	queries, err := c.getDataQueries(metrics)
+	if err != nil {
+		return err
 	}
 
 	// limit concurrency or we can easily exhaust user connection limit
@@ -428,7 +430,7 @@ func (c *CloudWatch) aggregateMetrics(
 			"region": c.Region,
 		}
 
-		// todo: groupt these once beforehand if possible to avoid looping through all results metrics number of times
+		// todo: group these once beforehand if possible to avoid looping through all results metrics number of times
 		results := getResults(*metric, metricDataResults)
 		for _, result := range results {
 			for _, dimension := range metric.Dimensions {
@@ -497,7 +499,11 @@ func snakeCase(s string) string {
 }
 
 // get all of the possible queries so we can send groups of 100
-func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) []*cloudwatch.MetricDataQuery {
+func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudwatch.MetricDataQuery, error) {
+	if c.queryCache != nil && c.metricCache.IsValid() {
+		return c.queryCache, nil
+	}
+
 	dataQueries := []*cloudwatch.MetricDataQuery{}
 	for _, filtered := range filteredMetrics {
 		for _, metric := range filtered.metrics {
@@ -558,7 +564,13 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) []*cloudwa
 			}
 		}
 	}
-	return dataQueries
+
+	if len(dataQueries) == 0 {
+		return nil, errors.New("No metrics found to collect")
+	}
+
+	c.queryCache = dataQueries
+	return dataQueries, nil
 }
 
 func (c *CloudWatch) getDataInputs(dataQueries []*cloudwatch.MetricDataQuery) *cloudwatch.GetMetricDataInput {
@@ -569,13 +581,13 @@ func (c *CloudWatch) getDataInputs(dataQueries []*cloudwatch.MetricDataQuery) *c
 	}
 }
 
-// while a regex of "[^a-zA-Z0-9_]+" doing a ReplaceAllString would cover more, strings.Replacer is ~10x faster.
-var replacer = strings.NewReplacer("/", "_", "-", "_", ".", "_", " ", "_", ":", "_", "{", "", "}", "", "%", "")
+// if this proves too slow, use strings.NewReplacer("/", "_", "-", "_", ".", "_", " ", "_", ":", "_", "{", "", "}", "", "%", "")
+var validID = regexp.MustCompile("[^a-zA-Z0-9_]+")
 
 func genID(metric cloudwatch.Metric) string {
 	dVals := []string{}
 	for _, dimension := range metric.Dimensions {
-		dVals = append(dVals, replacer.Replace(*dimension.Value))
+		dVals = append(dVals, validID.ReplaceAllString(*dimension.Value, "_"))
 	}
 	if strings.Contains(*metric.MetricName, "EBSIOBalance") || strings.Contains(*metric.MetricName, "EBSByteBalance") {
 		*metric.MetricName = strings.TrimRight(*metric.MetricName, "%")
