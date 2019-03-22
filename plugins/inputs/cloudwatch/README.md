@@ -68,11 +68,19 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## See http://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_limits.html
   ratelimit = 200
 
+  ## Namespace-wide statistic filters (only gets used if no metrics are defined). Optional.
+  # statistic_exclude = [ "average", "sum", min", "max", sample_count" ]
+  # statistic_include = [ "average", "sum", min", "max", sample_count" ]
+
   ## Metrics to Pull (optional)
   ## Defaults to all Metrics in Namespace if nothing is provided
   ## Refreshes Namespace available metrics every 1h
   [[inputs.cloudwatch.metrics]]
     names = ["Latency", "RequestCount"]
+
+    ## Statistic filters for metric.  Optional.
+    # statistic_exclude = [ "average", "sum", min", "max", sample_count" ]
+    # statistic_include = [ "average", "sum", min", "max", sample_count" ]
 
     ## Dimension filters for Metric.  These are optional however all dimensions
     ## defined for the metric names must be specified in order to retrieve

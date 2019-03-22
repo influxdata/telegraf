@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	internalaws "github.com/influxdata/telegraf/internal/config/aws"
 	"github.com/influxdata/telegraf/internal/limiter"
@@ -19,14 +20,16 @@ import (
 
 type (
 	CloudWatch struct {
-		Region      string `toml:"region"`
-		AccessKey   string `toml:"access_key"`
-		SecretKey   string `toml:"secret_key"`
-		RoleARN     string `toml:"role_arn"`
-		Profile     string `toml:"profile"`
-		Filename    string `toml:"shared_credential_file"`
-		Token       string `toml:"token"`
-		EndpointURL string `toml:"endpoint_url"`
+		Region           string   `toml:"region"`
+		AccessKey        string   `toml:"access_key"`
+		SecretKey        string   `toml:"secret_key"`
+		RoleARN          string   `toml:"role_arn"`
+		Profile          string   `toml:"profile"`
+		Filename         string   `toml:"shared_credential_file"`
+		Token            string   `toml:"token"`
+		EndpointURL      string   `toml:"endpoint_url"`
+		StatisticExclude []string `toml:"statistic_exclude"`
+		StatisticInclude []string `toml:"statistic_include"`
 
 		Period      internal.Duration `toml:"period"`
 		Delay       internal.Duration `toml:"delay"`
@@ -43,8 +46,10 @@ type (
 	}
 
 	Metric struct {
-		MetricNames []string     `toml:"names"`
-		Dimensions  []*Dimension `toml:"dimensions"`
+		StatisticExclude []string     `toml:"statistic_exclude"`
+		StatisticInclude []string     `toml:"statistic_include"`
+		MetricNames      []string     `toml:"names"`
+		Dimensions       []*Dimension `toml:"dimensions"`
 	}
 
 	Dimension struct {
@@ -120,11 +125,19 @@ func (c *CloudWatch) SampleConfig() string {
   ## See http://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_limits.html
   ratelimit = 200
 
+  ## Namespace-wide statistic filters (only gets used if no metrics are defined). Optional.
+  # statistic_exclude = [ "average", "sum", min", "max", sample_count" ]
+  # statistic_include = [ "average", "sum", min", "max", sample_count" ]
+
   ## Metrics to Pull (optional)
   ## Defaults to all Metrics in Namespace if nothing is provided
   ## Refreshes Namespace available metrics every 1h
   #[[inputs.cloudwatch.metrics]]
   #  names = ["Latency", "RequestCount"]
+	#
+  #  ## Statistic filters for metric.  Optional.
+  #  # statistic_exclude = [ "average", "sum", min", "max", sample_count" ]
+  #  # statistic_include = [ "average", "sum", min", "max", sample_count" ]
   #
   #  ## Dimension filters for Metric.  These are optional however all dimensions
   #  ## defined for the metric names must be specified in order to retrieve
@@ -139,13 +152,19 @@ func (c *CloudWatch) Description() string {
 	return "Pull Metric Statistics from Amazon CloudWatch"
 }
 
-func SelectMetrics(c *CloudWatch) ([]*cloudwatch.Metric, error) {
+type filteredMetric struct {
+	metrics    []*cloudwatch.Metric
+	statFilter filter.Filter
+}
+
+func SelectMetrics(c *CloudWatch) ([]filteredMetric, error) {
+	fMetrics := []filteredMetric{}
 	var metrics []*cloudwatch.Metric
 
 	// check for provided metric filter
 	if c.Metrics != nil {
-		metrics = []*cloudwatch.Metric{}
 		for _, m := range c.Metrics {
+			metrics = []*cloudwatch.Metric{}
 			if !hasWilcard(m.Dimensions) {
 				dimensions := make([]*cloudwatch.Dimension, len(m.Dimensions))
 				for k, d := range m.Dimensions {
@@ -178,6 +197,15 @@ func SelectMetrics(c *CloudWatch) ([]*cloudwatch.Metric, error) {
 					}
 				}
 			}
+			statFilter, err := filter.NewIncludeExcludeFilter(m.StatisticInclude, m.StatisticExclude)
+			if err != nil {
+				return nil, err
+			}
+
+			fMetrics = append(fMetrics, filteredMetric{
+				metrics:    metrics,
+				statFilter: statFilter,
+			})
 		}
 	} else {
 		var err error
@@ -185,8 +213,19 @@ func SelectMetrics(c *CloudWatch) ([]*cloudwatch.Metric, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		// use config level filters
+		statFilter, err := filter.NewIncludeExcludeFilter(c.StatisticInclude, c.StatisticExclude)
+		if err != nil {
+			return nil, err
+		}
+
+		fMetrics = []filteredMetric{{
+			metrics:    metrics,
+			statFilter: statFilter,
+		}}
 	}
-	return metrics, nil
+	return fMetrics, nil
 }
 
 func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
@@ -206,16 +245,19 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	// get all of the possible queries so we can send groups of 100
+	// todo: cache these as well and do the regexp replace to cover all possible bad chars.
+	queries := c.getDataQueries(metrics)
+	if len(queries) == 0 {
+		return errors.New("No metrics found to collect")
+	}
+
 	// limit concurrency or we can easily exhaust user connection limit
 	// see cloudwatch API request limits:
 	// http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
 	lmtr := limiter.NewRateLimiter(c.RateLimit, time.Second)
 	defer lmtr.Stop()
 	wg := sync.WaitGroup{}
-
-	// get all of the possible queries so we can send groups of 100
-	// todo: cache these as well and do the regexp replace to cover all possible bad chars.
-	queries := c.getDataQueries(metrics)
 
 	// create master list of results so aggregation works the best way.
 	results := []*cloudwatch.MetricDataResult{}
@@ -253,7 +295,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 
-	acc.AddError(c.aggregateMetrics(acc, metrics, results))
+	acc.AddError(c.aggregateMetrics(acc, aggregateFiltered(metrics), results))
 
 	return nil
 }
@@ -366,6 +408,14 @@ func (c *CloudWatch) gatherMetrics(
 	return resp.MetricDataResults, nil
 }
 
+func aggregateFiltered(filteredMetrics []filteredMetric) []*cloudwatch.Metric {
+	metrics := []*cloudwatch.Metric{}
+	for _, filtered := range filteredMetrics {
+		metrics = append(metrics, filtered.metrics...)
+	}
+	return metrics
+}
+
 func (c *CloudWatch) aggregateMetrics(
 	acc telegraf.Accumulator,
 	metrics []*cloudwatch.Metric,
@@ -446,71 +496,66 @@ func snakeCase(s string) string {
 	return s
 }
 
-// todo: make member function and actually have in config file ability to specify which queries to include/exclude
-// todo: make this a filter!
-func collect(check string) bool {
-	// todo: if check matches a specified statistic type to collect
-	return true
-}
-
 // get all of the possible queries so we can send groups of 100
-func (c *CloudWatch) getDataQueries(metrics []*cloudwatch.Metric) []*cloudwatch.MetricDataQuery {
+func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) []*cloudwatch.MetricDataQuery {
 	dataQueries := []*cloudwatch.MetricDataQuery{}
-	for _, metric := range metrics {
-		if collect("average") {
-			dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
-				Id:    aws.String("average_" + genID(*metric)),
-				Label: aws.String(snakeCase(*metric.MetricName + "_average")),
-				MetricStat: &cloudwatch.MetricStat{
-					Metric: metric,
-					Period: aws.Int64(int64(c.Period.Duration.Seconds())),
-					Stat:   aws.String(cloudwatch.StatisticAverage),
-				},
-			})
-		}
-		if collect("maximum") {
-			dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
-				Id:    aws.String("maximum_" + genID(*metric)),
-				Label: aws.String(snakeCase(*metric.MetricName + "_maximum")),
-				MetricStat: &cloudwatch.MetricStat{
-					Metric: metric,
-					Period: aws.Int64(int64(c.Period.Duration.Seconds())),
-					Stat:   aws.String(cloudwatch.StatisticMaximum),
-				},
-			})
-		}
-		if collect("minimum") {
-			dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
-				Id:    aws.String("minimum_" + genID(*metric)),
-				Label: aws.String(snakeCase(*metric.MetricName + "_minimum")),
-				MetricStat: &cloudwatch.MetricStat{
-					Metric: metric,
-					Period: aws.Int64(int64(c.Period.Duration.Seconds())),
-					Stat:   aws.String(cloudwatch.StatisticMinimum),
-				},
-			})
-		}
-		if collect("sum") {
-			dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
-				Id:    aws.String("sum_" + genID(*metric)),
-				Label: aws.String(snakeCase(*metric.MetricName + "_sum")),
-				MetricStat: &cloudwatch.MetricStat{
-					Metric: metric,
-					Period: aws.Int64(int64(c.Period.Duration.Seconds())),
-					Stat:   aws.String(cloudwatch.StatisticSum),
-				},
-			})
-		}
-		if collect("sample_count") {
-			dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
-				Id:    aws.String("sample_count_" + genID(*metric)),
-				Label: aws.String(snakeCase(*metric.MetricName + "_sample_count")),
-				MetricStat: &cloudwatch.MetricStat{
-					Metric: metric,
-					Period: aws.Int64(int64(c.Period.Duration.Seconds())),
-					Stat:   aws.String(cloudwatch.StatisticSampleCount),
-				},
-			})
+	for _, filtered := range filteredMetrics {
+		for _, metric := range filtered.metrics {
+			if filtered.statFilter.Match("average") {
+				dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
+					Id:    aws.String("average_" + genID(*metric)),
+					Label: aws.String(snakeCase(*metric.MetricName + "_average")),
+					MetricStat: &cloudwatch.MetricStat{
+						Metric: metric,
+						Period: aws.Int64(int64(c.Period.Duration.Seconds())),
+						Stat:   aws.String(cloudwatch.StatisticAverage),
+					},
+				})
+			}
+			if filtered.statFilter.Match("maximum") {
+				dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
+					Id:    aws.String("maximum_" + genID(*metric)),
+					Label: aws.String(snakeCase(*metric.MetricName + "_maximum")),
+					MetricStat: &cloudwatch.MetricStat{
+						Metric: metric,
+						Period: aws.Int64(int64(c.Period.Duration.Seconds())),
+						Stat:   aws.String(cloudwatch.StatisticMaximum),
+					},
+				})
+			}
+			if filtered.statFilter.Match("minimum") {
+				dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
+					Id:    aws.String("minimum_" + genID(*metric)),
+					Label: aws.String(snakeCase(*metric.MetricName + "_minimum")),
+					MetricStat: &cloudwatch.MetricStat{
+						Metric: metric,
+						Period: aws.Int64(int64(c.Period.Duration.Seconds())),
+						Stat:   aws.String(cloudwatch.StatisticMinimum),
+					},
+				})
+			}
+			if filtered.statFilter.Match("sum") {
+				dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
+					Id:    aws.String("sum_" + genID(*metric)),
+					Label: aws.String(snakeCase(*metric.MetricName + "_sum")),
+					MetricStat: &cloudwatch.MetricStat{
+						Metric: metric,
+						Period: aws.Int64(int64(c.Period.Duration.Seconds())),
+						Stat:   aws.String(cloudwatch.StatisticSum),
+					},
+				})
+			}
+			if filtered.statFilter.Match("sample_count") {
+				dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
+					Id:    aws.String("sample_count_" + genID(*metric)),
+					Label: aws.String(snakeCase(*metric.MetricName + "_sample_count")),
+					MetricStat: &cloudwatch.MetricStat{
+						Metric: metric,
+						Period: aws.Int64(int64(c.Period.Duration.Seconds())),
+						Stat:   aws.String(cloudwatch.StatisticSampleCount),
+					},
+				})
+			}
 		}
 	}
 	return dataQueries

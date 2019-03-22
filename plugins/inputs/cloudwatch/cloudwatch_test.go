@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -208,10 +209,10 @@ func TestSelectMetrics(t *testing.T) {
 		},
 	}
 	c.client = &mockSelectMetricsCloudWatchClient{}
-	metrics, err := SelectMetrics(c)
+	filtered, err := SelectMetrics(c)
 	// We've asked for 2 (out of 4) metrics, over all 3 load balancers in all 2
 	// AZs. We should get 12 metrics.
-	assert.Equal(t, 12, len(metrics))
+	assert.Equal(t, 12, len(aggregateFiltered(filtered)))
 	assert.Nil(t, err)
 }
 
@@ -243,11 +244,50 @@ func TestGenerateStatisticsInputParams(t *testing.T) {
 
 	c.updateWindow(now)
 
-	params := c.getDataInputs(c.getDataQueries([]*cloudwatch.Metric{m}))
+	statFilter, _ := filter.NewIncludeExcludeFilter(nil, nil)
+	params := c.getDataInputs(c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}}))
 
 	assert.EqualValues(t, *params.EndTime, now.Add(-c.Delay.Duration))
 	assert.EqualValues(t, *params.StartTime, now.Add(-c.Period.Duration).Add(-c.Delay.Duration))
 	require.Len(t, params.MetricDataQueries, 5)
+	assert.Len(t, params.MetricDataQueries[0].MetricStat.Metric.Dimensions, 1)
+	assert.EqualValues(t, *params.MetricDataQueries[0].MetricStat.Period, 60)
+}
+
+func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
+	d := &cloudwatch.Dimension{
+		Name:  aws.String("LoadBalancerName"),
+		Value: aws.String("p-example"),
+	}
+
+	m := &cloudwatch.Metric{
+		MetricName: aws.String("Latency"),
+		Dimensions: []*cloudwatch.Dimension{d},
+	}
+
+	duration, _ := time.ParseDuration("1m")
+	internalDuration := internal.Duration{
+		Duration: duration,
+	}
+
+	c := &CloudWatch{
+		Namespace: "AWS/ELB",
+		Delay:     internalDuration,
+		Period:    internalDuration,
+	}
+
+	c.initializeCloudWatch()
+
+	now := time.Now()
+
+	c.updateWindow(now)
+
+	statFilter, _ := filter.NewIncludeExcludeFilter([]string{"average", "sample_count"}, nil)
+	params := c.getDataInputs(c.getDataQueries([]filteredMetric{{metrics: []*cloudwatch.Metric{m}, statFilter: statFilter}}))
+
+	assert.EqualValues(t, *params.EndTime, now.Add(-c.Delay.Duration))
+	assert.EqualValues(t, *params.StartTime, now.Add(-c.Period.Duration).Add(-c.Delay.Duration))
+	require.Len(t, params.MetricDataQueries, 2)
 	assert.Len(t, params.MetricDataQueries[0].MetricStat.Metric.Dimensions, 1)
 	assert.EqualValues(t, *params.MetricDataQueries[0].MetricStat.Period, 60)
 }
