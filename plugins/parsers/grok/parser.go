@@ -271,7 +271,7 @@ func (p *Parser) ParseLine(line string) (telegraf.Metric, error) {
 		case TAG:
 			tags[k] = v
 		case STRING:
-			fields[k] = strings.Trim(v, `"`)
+			fields[k] = v
 		case EPOCH:
 			parts := strings.SplitN(v, ".", 2)
 			if len(parts) == 0 {
