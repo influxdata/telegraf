@@ -11,10 +11,19 @@
 
 ## v1.10.2 [unreleased]
 
+#### Release Notes
+
+- String fields no longer have leading and trailing quotating marks removed in
+  the grok parser.  If you are capturing quoted strings you may need to update
+  the patterns.
+
 #### Bugfixes
 
 - [#5612](https://github.com/influxdata/telegraf/pull/5612): Fix deadlock when Telegraf is aligning aggregators.
 - [#5523](https://github.com/influxdata/telegraf/issues/5523): Fix missing cluster stats in ceph input.
+- [#5566](https://github.com/influxdata/telegraf/pull/5566): Fix reading major and minor block devices identifiers in diskio input.
+- [#5607](https://github.com/influxdata/telegraf/pull/5607): Add owned directories to rpm package spec.
+- [#5608](https://github.com/influxdata/telegraf/pull/5607): Fix last character removed from string field in grok parser.
 
 ## v1.10.1 [2019-03-19]
 
