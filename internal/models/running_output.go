@@ -180,6 +180,13 @@ func (ro *RunningOutput) WriteBatch() error {
 	return nil
 }
 
+func (ro *RunningOutput) Close() {
+	err := ro.Output.Close()
+	if err != nil {
+		log.Printf("E! [outputs.%s] Error closing output: %v", ro.Name, err)
+	}
+}
+
 func (ro *RunningOutput) write(metrics []telegraf.Metric) error {
 	start := time.Now()
 	err := ro.Output.Write(metrics)

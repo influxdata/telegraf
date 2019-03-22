@@ -129,10 +129,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	wg.Wait()
 
 	log.Printf("D! [agent] Closing outputs")
-	err = a.closeOutputs()
-	if err != nil {
-		return err
-	}
+	a.closeOutputs()
 
 	log.Printf("D! [agent] Stopped Successfully")
 	return nil
@@ -589,12 +586,10 @@ func (a *Agent) connectOutputs(ctx context.Context) error {
 }
 
 // closeOutputs closes all outputs.
-func (a *Agent) closeOutputs() error {
-	var err error
+func (a *Agent) closeOutputs() {
 	for _, output := range a.Config.Outputs {
-		err = output.Output.Close()
+		output.Close()
 	}
-	return err
 }
 
 // startServiceInputs starts all service inputs.
