@@ -69,7 +69,7 @@ COMMON_LOG_FORMAT %{CLIENT:client_ip} %{NOTSPACE:ident} %{NOTSPACE:auth} \[%{HTT
 # Combined log format is the same as the common log format but with the addition
 # of two quoted strings at the end for "referrer" and "agent"
 #   See Examples at http://httpd.apache.org/docs/current/mod/mod_log_config.html
-COMBINED_LOG_FORMAT %{COMMON_LOG_FORMAT} %{QS:referrer} %{QS:agent}
+COMBINED_LOG_FORMAT %{COMMON_LOG_FORMAT} "%{DATA:referrer}" "%{DATA:agent}"
 
 # HTTPD log formats
 HTTPD20_ERRORLOG \[%{HTTPDERROR_DATE:timestamp}\] \[%{LOGLEVEL:loglevel:tag}\] (?:\[client %{IPORHOST:clientip}\] ){0,1}%{GREEDYDATA:errormsg}
