@@ -31,7 +31,8 @@ The [GitHub](https://www.github.com) input plugin gathers statistics from GitHub
     - `forks` (int)
     - `open_issues` (int)
     - `size` (int)
-- github_rate_limit
+
+* github_rate_limit
   - tags:
   - fields:
     - `limit` - How many requests you are limited to (per hour)
