@@ -12,6 +12,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/influxdata/telegraf/selfstat"
 	"golang.org/x/oauth2"
 )
 
@@ -21,16 +22,20 @@ type GitHub struct {
 	AccessToken  string            `toml:"access_token"`
 	HTTPTimeout  internal.Duration `toml:"http_timeout"`
 	githubClient *gh.Client
+
+	RateLimit     selfstat.Stat
+	RateRemaining selfstat.Stat
 }
 
 const sampleConfig = `
-  ## Specify a list of repositories
-  repositories = ["influxdata/influxdb"]
+  ## Specify a list of repositories.
+  # eg: repositories = ["influxdata/influxdb"]
+  repositories = []
 
-  ## API Key for GitHub API requests
+  ## API Key for GitHub API requests.
   api_key = ""
 
-  ## Timeout for GitHub API requests
+  ## Timeout for GitHub API requests.
   http_timeout = "5s"
 `
 
@@ -110,13 +115,11 @@ func (github *GitHub) Gather(acc telegraf.Accumulator) error {
 
 			acc.AddFields("github_repository", fields, tags, now)
 
-			rateFields := make(map[string]interface{})
-			rateTags := map[string]string{}
+			github.RateLimit = selfstat.Register("github", "rate_limit", tags)
+			github.RateLimit.Set(int64(response.Rate.Limit))
 
-			rateFields["limit"] = response.Rate.Limit
-			rateFields["remaining"] = response.Rate.Remaining
-
-			acc.AddFields("github_rate_limit", rateFields, rateTags, now)
+			github.RateRemaining = selfstat.Register("github", "rate_remaining", tags)
+			github.RateRemaining.Set(int64(response.Rate.Remaining))
 		}(repository, acc)
 	}
 
