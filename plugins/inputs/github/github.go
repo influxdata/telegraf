@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	gh "github.com/google/go-github/github"
+	"github.com/google/go-github/github"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -21,7 +21,7 @@ type GitHub struct {
 	Repositories []string          `toml:"repositories"`
 	AccessToken  string            `toml:"access_token"`
 	HTTPTimeout  internal.Duration `toml:"http_timeout"`
-	githubClient *gh.Client
+	githubClient *github.Client
 
 	RateLimit     selfstat.Stat
 	RateRemaining selfstat.Stat
@@ -40,50 +40,50 @@ const sampleConfig = `
 `
 
 // SampleConfig returns sample configuration for this plugin.
-func (github *GitHub) SampleConfig() string {
+func (g *GitHub) SampleConfig() string {
 	return sampleConfig
 }
 
 // Description returns the plugin description.
-func (github *GitHub) Description() string {
+func (g *GitHub) Description() string {
 	return "Read repository information from GitHub, including forks, stars, and more."
 }
 
 // Create HTTP Client
-func (github *GitHub) createGitHubClient() (*gh.Client, error) {
-	var githubClient *gh.Client
+func (g *GitHub) createGitHubClient() (*github.Client, error) {
+	var githubClient *github.Client
 
-	if github.AccessToken != "" {
+	if g.AccessToken != "" {
 		ctx := context.Background()
 		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: github.AccessToken},
+			&oauth2.Token{AccessToken: g.AccessToken},
 		)
 		tc := oauth2.NewClient(ctx, ts)
 
-		githubClient = gh.NewClient(tc)
+		githubClient = github.NewClient(tc)
 	} else {
-		githubClient = gh.NewClient(nil)
+		githubClient = github.NewClient(nil)
 	}
 
 	return githubClient, nil
 }
 
 // Gather GitHub Metrics
-func (github *GitHub) Gather(acc telegraf.Accumulator) error {
-	if github.githubClient == nil {
-		githubClient, err := github.createGitHubClient()
+func (g *GitHub) Gather(acc telegraf.Accumulator) error {
+	if g.githubClient == nil {
+		githubClient, err := g.createGitHubClient()
 
 		if err != nil {
 			return err
 		}
 
-		github.githubClient = githubClient
+		g.githubClient = githubClient
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(len(github.Repositories))
+	wg.Add(len(g.Repositories))
 
-	for _, repository := range github.Repositories {
+	for _, repository := range g.Repositories {
 		go func(repositoryName string, acc telegraf.Accumulator) {
 			defer wg.Done()
 
@@ -95,9 +95,9 @@ func (github *GitHub) Gather(acc telegraf.Accumulator) error {
 				return
 			}
 
-			repositoryInfo, response, err := github.githubClient.Repositories.Get(ctx, owner, repository)
+			repositoryInfo, response, err := g.githubClient.Repositories.Get(ctx, owner, repository)
 
-			if _, ok := err.(*gh.RateLimitError); ok {
+			if _, ok := err.(*github.RateLimitError); ok {
 				log.Printf("E! [github]: %v of %v requests remaining", response.Rate.Remaining, response.Rate.Limit)
 				return
 			}
@@ -108,11 +108,11 @@ func (github *GitHub) Gather(acc telegraf.Accumulator) error {
 
 			acc.AddFields("github_repository", fields, tags, now)
 
-			github.RateLimit = selfstat.Register("github", "rate_limit", tags)
-			github.RateLimit.Set(int64(response.Rate.Limit))
+			g.RateLimit = selfstat.Register("github", "rate_limit", tags)
+			g.RateLimit.Set(int64(response.Rate.Limit))
 
-			github.RateRemaining = selfstat.Register("github", "rate_remaining", tags)
-			github.RateRemaining.Set(int64(response.Rate.Remaining))
+			g.RateRemaining = selfstat.Register("github", "rate_remaining", tags)
+			g.RateRemaining.Set(int64(response.Rate.Remaining))
 		}(repository, acc)
 	}
 
@@ -130,7 +130,7 @@ func splitRepositoryName(repositoryName string) (string, string, error) {
 	return splits[0], splits[1], nil
 }
 
-func getLicense(repositoryInfo *gh.Repository) string {
+func getLicense(repositoryInfo *github.Repository) string {
 	if repositoryInfo.GetLicense() != nil {
 		return *repositoryInfo.License.Name
 	}
@@ -138,7 +138,7 @@ func getLicense(repositoryInfo *gh.Repository) string {
 	return "None"
 }
 
-func getTags(repositoryInfo *gh.Repository) map[string]string {
+func getTags(repositoryInfo *github.Repository) map[string]string {
 	return map[string]string{
 		"full_name": *repositoryInfo.FullName,
 		"owner":     *repositoryInfo.Owner.Login,
@@ -148,7 +148,7 @@ func getTags(repositoryInfo *gh.Repository) map[string]string {
 	}
 }
 
-func getFields(repositoryInfo *gh.Repository) map[string]interface{} {
+func getFields(repositoryInfo *github.Repository) map[string]interface{} {
 	return map[string]interface{}{
 		"stars":       *repositoryInfo.StargazersCount,
 		"forks":       *repositoryInfo.ForksCount,
