@@ -47,6 +47,7 @@ type Endpoint struct {
 	initialized     bool
 	clientFactory   *ClientFactory
 	busy            sync.Mutex
+	apiVersion      float32 // Fetch the apiVersion string and save it as float.
 }
 
 type resourceKind struct {
@@ -86,6 +87,8 @@ type objectRef struct {
 	parentRef *types.ManagedObjectReference //Pointer because it must be nillable
 	guest     string
 	dcname    string
+	// placeholder for properties specific to this objectRef.
+	properties map[string]interface{}
 }
 
 func (e *Endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, bool) {
@@ -368,7 +371,19 @@ func (e *Endpoint) discover(ctx context.Context) error {
 		return err
 	}
 
-	log.Printf("D! [inputs.vsphere]: Discover new objects for %s", e.URL.Host)
+	// get the vSphere API version
+	apiVersionStr := client.Client.ServiceContent.About.ApiVersion
+	apiVersion, err := strconv.ParseFloat(apiVersionStr, 32)
+
+	if err != nil {
+		log.Printf("I! Cannot determine API Version: %s. Error: %s", apiVersionStr, err)
+	} else {
+		// ParseFloat always returns float 64, but it's safe to convert to
+		// float32 as long as we pass in 32 as the `byteSize` arg to it.
+		e.apiVersion = float32(apiVersion)
+	}
+
+	log.Printf("D! [inputs.vsphere] Discover new objects for %s", e.URL.Host)
 	resourceKinds := make(map[string]resourceKind)
 	dcNameCache := make(map[string]string)
 
@@ -377,7 +392,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	// Populate resource objects, and endpoint instance info.
 	newObjects := make(map[string]objectMap)
 	for k, res := range e.resourceKinds {
-		log.Printf("D! [inputs.vsphere] Discovering resources for %s", res.name)
+		log.Printf("D! [inputs.vsphere]  Discovering resources for %s", res.name)
 		// Need to do this for all resource types even if they are not enabled
 		if res.enabled || k != "vm" {
 			rf := ResourceFilter{
@@ -551,6 +566,7 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 	}
 	cache := make(map[string]*types.ManagedObjectReference)
 	m := make(objectMap, len(resources))
+	var clusterProps map[string]interface{}
 	for _, r := range resources {
 		// We're not interested in the immediate parent (a folder), but the data center.
 		p, ok := cache[r.Parent.Value]
@@ -574,9 +590,24 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 				p = &pp
 				cache[r.Parent.Value] = p
 			}
+
+			// For clusters, check if vSAN is enabled or not.
+			// NOTE: apiVersion of 5.5 is required for VsanConfigInfo object to exist
+			// in cluster config
+			if e.apiVersion > 5.5 {
+				cluster := object.NewClusterComputeResource(client.Client.Client, r.ExtensibleManagedObject.Reference())
+				clusterConfig, err := cluster.Configuration(ctx)
+
+				if err != nil {
+					log.Printf("D! Failed to get cluster config: %s. Skipping '%s' for vSAN collection", err, r.Name)
+				}
+
+				clusterProps = make(map[string]interface{})
+				clusterProps["vsanEnabled"] = *clusterConfig.VsanConfigInfo.Enabled
+			}
 		}
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{
-			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: p}
+			name: r.Name, ref: r.ExtensibleManagedObject.Reference(), parentRef: p, properties: clusterProps}
 	}
 	return m, nil
 }
@@ -650,6 +681,31 @@ func (e *Endpoint) Close() {
 	e.clientFactory.Close()
 }
 
+func (e *Endpoint) collectVsan(ctx context.Context, res *resourceKind, wg *sync.WaitGroup, acc telegraf.Accumulator) {
+	// Start vSAN Collection for each vSAN enabled cluster
+	for _, obj := range res.objects {
+		client, err := e.clientFactory.GetClient(ctx)
+
+		if err != nil {
+			log.Printf("D! Failed to get client: %s", err)
+			continue
+		}
+
+		// bail out if vSphere API Version is < 5.5
+		if e.apiVersion < 5.5 {
+			log.Printf("I! Minimum API Version 5.5 required for vSAN. Found: %.1f. Skipping Cluster: %s", e.apiVersion, obj.ref.String())
+			continue
+		}
+
+		val, ok := obj.properties["vsanEnabled"].(bool)
+		if ok && val {
+			wg.Add(1)
+			log.Printf("D! [inputs.vsphere][vSAN] vSAN Configured for cluster: %s", obj.name)
+			go CollectVsan(ctx, client.Client.Client, obj, wg, e.URL.Host, acc)
+		}
+	}
+}
+
 // Collect runs a round of data collections as specified in the configuration.
 func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error {
 
@@ -685,6 +741,10 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 					acc.AddError(err)
 				}
 			}(k)
+
+			if res.name == "cluster" && e.Parent.VsanCollectionEnabled {
+				e.collectVsan(ctx, res, &wg, acc)
+			}
 		}
 	}
 	wg.Wait()
