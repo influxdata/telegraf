@@ -39,13 +39,6 @@ const sampleConfig = `
   http_timeout = "5s"
 `
 
-// NewGitHub returns a new instance of the GitHub input plugin
-func NewGitHub() *GitHub {
-	return &GitHub{
-		HTTPTimeout: internal.Duration{Duration: time.Second * 5},
-	}
-}
-
 // SampleConfig returns sample configuration for this plugin.
 func (github *GitHub) SampleConfig() string {
 	return sampleConfig
@@ -166,6 +159,8 @@ func getFields(repositoryInfo *gh.Repository) map[string]interface{} {
 
 func init() {
 	inputs.Add("github", func() telegraf.Input {
-		return &GitHub{}
+		return &GitHub{
+			HTTPTimeout: internal.Duration{Duration: time.Second * 5},
+		}
 	})
 }
