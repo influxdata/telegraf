@@ -10,6 +10,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
+	"github.com/influxdata/telegraf/testutil"
 )
 
 func TestGetExitCode(t *testing.T) {
@@ -93,6 +94,16 @@ func (b *metricBuilder) b() telegraf.Metric {
 	return m
 }
 
+// assertEqual asserts two slices to be equal. Note, that the order
+// of the entries matters.
+func assertEqual(t *testing.T, exp, actual []telegraf.Metric) {
+	require.Equal(t, len(exp), len(actual))
+	for i := 0; i < len(exp); i++ {
+		ok := testutil.MetricEqual(exp[i], actual[i])
+		require.True(t, ok)
+	}
+}
+
 func TestTryAddState(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -123,7 +134,7 @@ func TestTryAddState(t *testing.T) {
 						f("service_output", "OK: system working").
 						f("state", 0).b(),
 				}
-				require.Equal(t, exp, metrics)
+				assertEqual(t, exp, metrics)
 				require.NoError(t, err)
 			},
 		},
@@ -146,7 +157,7 @@ func TestTryAddState(t *testing.T) {
 						n("nagios_state").
 						f("state", 0).b(),
 				}
-				require.Equal(t, exp, metrics)
+				assertEqual(t, exp, metrics)
 				require.NoError(t, err)
 			},
 		},
@@ -185,7 +196,7 @@ func TestTryAddState(t *testing.T) {
 				}
 				expErr := "exec: get exit code: expected *exec.ExitError"
 
-				require.Equal(t, exp, metrics)
+				assertEqual(t, exp, metrics)
 				require.Equal(t, expErr, err.Error())
 			},
 		},
