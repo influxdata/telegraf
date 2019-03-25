@@ -47,7 +47,7 @@ type Endpoint struct {
 	initialized     bool
 	clientFactory   *ClientFactory
 	busy            sync.Mutex
-	apiVersion      float32 // Fetch the apiVersion string and save it as float.
+	apiVersion      string
 }
 
 type resourceKind struct {
@@ -372,16 +372,8 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	}
 
 	// get the vSphere API version
-	apiVersionStr := client.Client.ServiceContent.About.ApiVersion
-	apiVersion, err := strconv.ParseFloat(apiVersionStr, 32)
-
-	if err != nil {
-		log.Printf("I! Cannot determine API Version: %s. Error: %s", apiVersionStr, err)
-	} else {
-		// ParseFloat always returns float 64, but it's safe to convert to
-		// float32 as long as we pass in 32 as the `byteSize` arg to it.
-		e.apiVersion = float32(apiVersion)
-	}
+	apiVersion := client.Client.ServiceContent.About.ApiVersion
+	e.apiVersion = apiVersion
 
 	log.Printf("D! [inputs.vsphere] Discover new objects for %s", e.URL.Host)
 	resourceKinds := make(map[string]resourceKind)
@@ -594,7 +586,7 @@ func getClusters(ctx context.Context, e *Endpoint, filter *ResourceFilter) (obje
 			// For clusters, check if vSAN is enabled or not.
 			// NOTE: apiVersion of 5.5 is required for VsanConfigInfo object to exist
 			// in cluster config
-			if e.apiVersion > 5.5 {
+			if VersionSupportsVsan(e.apiVersion) {
 				cluster := object.NewClusterComputeResource(client.Client.Client, r.ExtensibleManagedObject.Reference())
 				clusterConfig, err := cluster.Configuration(ctx)
 
@@ -692,8 +684,8 @@ func (e *Endpoint) collectVsan(ctx context.Context, res *resourceKind, wg *sync.
 		}
 
 		// bail out if vSphere API Version is < 5.5
-		if e.apiVersion < 5.5 {
-			log.Printf("I! Minimum API Version 5.5 required for vSAN. Found: %.1f. Skipping Cluster: %s", e.apiVersion, obj.ref.String())
+		if !VersionSupportsVsan(e.apiVersion) {
+			log.Printf("I! Minimum API Version 5.5 required for vSAN. Found: %s. Skipping Cluster: %s", e.apiVersion, obj.ref.String())
 			continue
 		}
 

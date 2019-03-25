@@ -494,6 +494,39 @@ func TestFinder(t *testing.T) {
 	require.Equal(t, 4, len(vm))
 }
 
+func TestVsanAPIVersionCheck(t *testing.T) {
+	// Supported
+	require.True(t, VersionSupportsVsan("5.5"))
+	require.True(t, VersionSupportsVsan("5.5.1.1.1"))
+	require.True(t, VersionSupportsVsan("10.0"))
+	require.True(t, VersionSupportsVsan("6.7.1"))
+	require.True(t, VersionSupportsVsan("6.7.1.1.1.1.1.1.111111.2221.121.1.3232.34.2.3.42.32.32.2.32.32.24.53.53.2.3.5.34.2"))
+
+	// Not supported
+	require.False(t, VersionSupportsVsan("5.4"))
+	require.False(t, VersionSupportsVsan("5.4.1"))
+	require.False(t, VersionSupportsVsan("0.0.0.1000190219029.1"))
+}
+
+func testTZOffset(t *testing.T, offset time.Duration, expected time.Duration) {
+	now := time.Now()
+	ts := now.Add(offset)
+	o := inferTimezoneOffset(ts)
+	require.Equal(t, expected, o)
+}
+
+func TestTZOffset(t *testing.T) {
+	testTZOffset(t, -35*time.Minute, -30*time.Minute)
+	testTZOffset(t, 35*time.Minute, 30*time.Minute)
+	testTZOffset(t, -40*time.Minute, -30*time.Minute)
+	testTZOffset(t, 40*time.Minute, 30*time.Minute)
+	testTZOffset(t, (4*60+5)*time.Minute, 4*time.Hour)
+	testTZOffset(t, -(4*60+5)*time.Minute, -4*time.Hour)
+	testTZOffset(t, (4*60+5)*time.Minute, 4*time.Hour)
+	testTZOffset(t, -(4*60+55)*time.Minute, -5*time.Hour)
+	testTZOffset(t, (4*60+55)*time.Minute, 5*time.Hour)
+}
+
 func TestAll(t *testing.T) {
 	// Don't run test on 32-bit machines due to bug in simulator.
 	// https://github.com/vmware/govmomi/issues/1330

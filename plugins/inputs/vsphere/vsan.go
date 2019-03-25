@@ -46,6 +46,15 @@ var (
 	}
 )
 
+func inferTimezoneOffset(ts time.Time) time.Duration {
+	// Compare timestamp to UTC from our local clock. Round the difference to the nearest 30 minutes (because India and Newfoundland).
+	// This SHOULD be our timezone offset. As far as I can tell, this should handle daylight savings weirdness etc. as well.
+	now := time.Now() // TODO: Get server time instead!
+	delta := ts.Sub(now)
+	ds := delta.Seconds() / 1800.0
+	return time.Duration(time.Duration(round(ds)*1800.0) * time.Second)
+}
+
 /*
 All this cryptic code in formatAndSendVsanMetric is to parse the vsanTypes.VsanPerfEntityMetricCSV type, which has the structure:
 {
@@ -135,10 +144,22 @@ func formatAndSendVsanMetric(entity vsanTypes.VsanPerfEntityMetricCSV, defaultTa
 	}
 
 	var timeStamps []string
+	log.Printf("D! [inputs.vsphere] SampleInfo: %s", entity.SampleInfo)
 	for _, t := range strings.Split(entity.SampleInfo, ",") {
 		tsParts := strings.Split(t, " ")
 		timeStamps = append(timeStamps, fmt.Sprintf("%sT%sZ", tsParts[0], tsParts[1]))
 	}
+
+	// Workaround for vSAN sending timestamps in local time, rather than UTC (yuck!)
+	n := len(timeStamps) - 1
+	ts, ok := time.Parse(time.RFC3339, timeStamps[n])
+	if ok != nil {
+		// can't do much if we couldn't parse time
+		log.Printf("E! [inputs.vsphere][vSAN]Failed to parse final timestamp: %s. Bailing out", timeStamps[n])
+		return
+	}
+	tzOffset := -inferTimezoneOffset(ts)
+
 	for _, counter := range entity.Value {
 		metricLabel := counter.MetricId.Label
 		for i, values := range strings.Split(counter.Values, ",") {
@@ -148,6 +169,7 @@ func formatAndSendVsanMetric(entity vsanTypes.VsanPerfEntityMetricCSV, defaultTa
 				log.Printf("E! [inputs.vsphere][vSAN]Failed to parse a timestamp: %s", timeStamps[i])
 				continue
 			}
+			ts = ts.Add(tzOffset)
 			fields := make(map[string]interface{})
 			field := fmt.Sprintf("%s_%s", entityName, metricLabel)
 			if v, err := strconv.ParseFloat(values, 32); err == nil {
@@ -268,4 +290,24 @@ func CollectVsan(ctx context.Context, client *vim25.Client, clusterObj objectRef
 	// vSAN Client
 	vsanClient := client.NewServiceClient(vsanPath, vsanNamespace)
 	getAllVsanMetrics(ctx, vsanClient, cluster, tags, cmmds, acc)
+}
+
+// VersionSupportsVsan returns true if the supplied API version supports vSAN (i.e. version <= 5.5)
+func VersionSupportsVsan(version string) bool {
+	v := strings.Split(version, ".")
+	major, err := strconv.Atoi(v[0])
+	if err != nil {
+		log.Printf("E! [inputs.vsphere][vSAN] Failed to parse version: %s", version)
+	}
+	if major < 5 {
+		return false
+	}
+	minor, err := strconv.Atoi(v[1])
+	if err != nil {
+		log.Printf("E! [inputs.vsphere][vSAN] Failed to parse version: %s.", version)
+	}
+	if major == 5 && minor < 5 {
+		return false
+	}
+	return true
 }
