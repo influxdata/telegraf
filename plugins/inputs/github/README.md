@@ -6,15 +6,15 @@ The [GitHub](https://www.github.com) input plugin gathers statistics from GitHub
 
 ```toml
 [[inputs.github]]
-    repositories = [
-      "owner/repository",
-    ]
+  ## List of repositories to monitor
+  ## ex: repositories = ["influxdata/telegraf"]
+  # repositories = []
 
-    ## Optional: Unauthenticated requests are limited to 60 per hour
-    access_token = "personal access token"
+  ## Optional: Unauthenticated requests are limited to 60 per hour.
+  # access_token = ""
 
-    ## Optional: Default 5s
-    http_timeout = "5s"
+  ## Optional: Default 5s.
+  # http_timeout = "5s"
 ```
 
 ### Metrics:
