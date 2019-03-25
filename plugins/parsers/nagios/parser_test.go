@@ -1,97 +1,200 @@
 package nagios
 
 import (
-	"bytes"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
-func TestAppendExitCode(t *testing.T) {
+func TestGetExitCode(t *testing.T) {
 	tests := []struct {
-		name     string
-		exitCode int
-		exp      []byte
+		name    string
+		errF    func() error
+		expCode int
+		expErr  error
 	}{
 		{
-			name:     "exit 0",
-			exitCode: 0,
-			exp:      []byte{0, 0, 0, 0, 0, 0, 0, 0, 0},
+			name: "nil error passed is ok",
+			errF: func() error {
+				return nil
+			},
+			expCode: 0,
+			expErr:  nil,
 		},
 		{
-			name:     "exit 123",
-			exitCode: 123,
-			exp:      []byte{0, 123, 0, 0, 0, 0, 0, 0, 0},
-		},
-		{
-			name:     "exit -1",
-			exitCode: -1,
-			exp:      []byte{0, 255, 255, 255, 255, 255, 255, 255, 255},
+			name: "unexpected error type",
+			errF: func() error {
+				return errors.New("I am not *exec.ExitError")
+			},
+			expCode: 0,
+			expErr:  errors.New("expected *exec.ExitError"),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			AppendExitCode(&buf, tt.exitCode)
-			require.Equal(t, tt.exp, buf.Bytes())
+			e := tt.errF()
+			code, err := getExitCode(e)
+
+			require.Equal(t, tt.expCode, code)
+			require.Equal(t, tt.expErr, err)
 		})
 	}
 }
 
-func TestExtractExitCode(t *testing.T) {
+type metricBuilder struct {
+	name      string
+	tags      map[string]string
+	fields    map[string]interface{}
+	timestamp time.Time
+}
+
+func mb() *metricBuilder {
+	return &metricBuilder{}
+}
+
+func (b *metricBuilder) n(v string) *metricBuilder {
+	b.name = v
+	return b
+}
+
+func (b *metricBuilder) t(k, v string) *metricBuilder {
+	if b.tags == nil {
+		b.tags = make(map[string]string)
+	}
+	b.tags[k] = v
+	return b
+}
+
+func (b *metricBuilder) f(k string, v interface{}) *metricBuilder {
+	if b.fields == nil {
+		b.fields = make(map[string]interface{})
+	}
+	b.fields[k] = v
+	return b
+}
+
+func (b *metricBuilder) ts(v time.Time) *metricBuilder {
+	b.timestamp = v
+	return b
+}
+
+func (b *metricBuilder) b() telegraf.Metric {
+	m, err := metric.New(b.name, b.tags, b.fields, b.timestamp)
+	if err != nil {
+		panic(err)
+	}
+	return m
+}
+
+func TestTryAddState(t *testing.T) {
 	tests := []struct {
-		name   string
-		buf    []byte
-		expBuf []byte
-		exp    int
+		name    string
+		runErrF func() error
+		metrics []telegraf.Metric
+		assertF func(*testing.T, []telegraf.Metric, error)
 	}{
 		{
-			name:   "code 0",
-			buf:    []byte{0, 0, 0, 0, 0, 0, 0, 0, 0},
-			expBuf: []byte{},
-			exp:    0,
+			name: "should append state=0 field to existing metric",
+			runErrF: func() error {
+				return nil
+			},
+			metrics: []telegraf.Metric{
+				mb().
+					n("nagios").
+					f("perfdata", 0).b(),
+				mb().
+					n("nagios_state").
+					f("service_output", "OK: system working").b(),
+			},
+			assertF: func(t *testing.T, metrics []telegraf.Metric, err error) {
+				exp := []telegraf.Metric{
+					mb().
+						n("nagios").
+						f("perfdata", 0).b(),
+					mb().
+						n("nagios_state").
+						f("service_output", "OK: system working").
+						f("state", 0).b(),
+				}
+				require.Equal(t, exp, metrics)
+				require.NoError(t, err)
+			},
 		},
 		{
-			name:   "code 123",
-			buf:    []byte{0, 123, 0, 0, 0, 0, 0, 0, 0},
-			expBuf: []byte{},
-			exp:    123,
+			name: "should create 'nagios_state state=0' and same timestamp as others",
+			runErrF: func() error {
+				return nil
+			},
+			metrics: []telegraf.Metric{
+				mb().
+					n("nagios").
+					f("perfdata", 0).b(),
+			},
+			assertF: func(t *testing.T, metrics []telegraf.Metric, err error) {
+				exp := []telegraf.Metric{
+					mb().
+						n("nagios").
+						f("perfdata", 0).b(),
+					mb().
+						n("nagios_state").
+						f("state", 0).b(),
+				}
+				require.Equal(t, exp, metrics)
+				require.NoError(t, err)
+			},
 		},
 		{
-			name:   "code -1",
-			buf:    []byte{0, 255, 255, 255, 255, 255, 255, 255, 255},
-			expBuf: []byte{},
-			exp:    -1,
+			name: "should create 'nagios_state state=0' and recent timestamp",
+			runErrF: func() error {
+				return nil
+			},
+			metrics: []telegraf.Metric{},
+			assertF: func(t *testing.T, metrics []telegraf.Metric, err error) {
+				require.Len(t, metrics, 1)
+				m := metrics[0]
+				require.Equal(t, "nagios_state", m.Name())
+				s, ok := m.GetField("state")
+				require.True(t, ok)
+				require.Equal(t, int64(0), s)
+				require.WithinDuration(t, time.Now().UTC(), m.Time(), 10*time.Second)
+				require.NoError(t, err)
+			},
 		},
 		{
-			name:   "expect default due to short input",
-			buf:    []byte{0, 255, 255, 255, 255, 255, 255, 255},
-			expBuf: []byte{0, 255, 255, 255, 255, 255, 255, 255},
-			exp:    defaultExitCode,
-		},
-		{
-			name:   "expect default due to unsatisfied encoding",
-			buf:    []byte{0, 1, 255, 255, 255, 255, 255, 255, 255, 255},
-			expBuf: []byte{0, 1, 255, 255, 255, 255, 255, 255, 255, 255},
-			exp:    defaultExitCode,
-		},
-		{
-			name:   "expect encoded exit code trimmed",
-			buf:    []byte{1, 0, 123, 0, 0, 0, 0, 0, 0, 0},
-			expBuf: []byte{1},
-			exp:    123,
+			name: "should return original metrics and an error",
+			runErrF: func() error {
+				return errors.New("non parsable error")
+			},
+			metrics: []telegraf.Metric{
+				mb().
+					n("nagios").
+					f("perfdata", 0).b(),
+			},
+			assertF: func(t *testing.T, metrics []telegraf.Metric, err error) {
+				exp := []telegraf.Metric{
+					mb().
+						n("nagios").
+						f("perfdata", 0).b(),
+				}
+				expErr := "exec: get exit code: expected *exec.ExitError"
+
+				require.Equal(t, exp, metrics)
+				require.Equal(t, expErr, err.Error())
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			buf, ec := ExtractExitCode(tt.buf)
-			require.Equal(t, tt.expBuf, buf)
-			require.Equal(t, tt.exp, ec)
+			metrics, err := TryAddState(tt.runErrF(), tt.metrics)
+			tt.assertF(t, metrics, err)
 		})
 	}
 }
@@ -109,7 +212,6 @@ func TestParse(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
-		inputF  func(string) []byte
 		assertF func(*testing.T, []telegraf.Metric, error)
 	}{
 		{
@@ -151,7 +253,6 @@ with three lines
 				}, metrics[1].Fields())
 
 				assertNagiosState(t, metrics[2], map[string]interface{}{
-					"state":               int64(0),
 					"service_output":      "PING OK - Packet loss = 0%, RTA = 0.30 ms",
 					"long_service_output": "This is a long output\nwith three lines",
 				})
@@ -175,7 +276,6 @@ with three lines
 				}, metrics[0].Fields())
 
 				assertNagiosState(t, metrics[1], map[string]interface{}{
-					"state":          int64(0),
 					"service_output": "TCP OK - 0.008 second response time on port 80",
 				})
 			},
@@ -195,7 +295,6 @@ with three lines
 				}, metrics[0].Fields())
 
 				assertNagiosState(t, metrics[1], map[string]interface{}{
-					"state":          int64(0),
 					"service_output": "TCP OK - 0.008 second response time on port 80",
 				})
 			},
@@ -246,7 +345,6 @@ with three lines
 				}, metrics[2].Fields())
 
 				assertNagiosState(t, metrics[3], map[string]interface{}{
-					"state":          int64(0),
 					"service_output": "OK: Load average: 0.00, 0.01, 0.05",
 				})
 			},
@@ -259,7 +357,6 @@ with three lines
 				require.Len(t, metrics, 1)
 
 				assertNagiosState(t, metrics[0], map[string]interface{}{
-					"state":          int64(0),
 					"service_output": "PING OK - Packet loss = 0%, RTA = 0.30 ms",
 				})
 			},
@@ -272,7 +369,6 @@ with three lines
 				require.Len(t, metrics, 1)
 
 				assertNagiosState(t, metrics[0], map[string]interface{}{
-					"state":          int64(0),
 					"service_output": "PING OK - Packet loss = 0%, RTA = 0.30 ms",
 				})
 			},
@@ -351,7 +447,6 @@ with three lines
 				}, metrics[3].Fields())
 
 				assertNagiosState(t, metrics[4], map[string]interface{}{
-					"state":               int64(0),
 					"service_output":      "DISK OK - free space: / 3326 MB (56%);",
 					"long_service_output": "/ 15272 MB (77%);\n/boot 68 MB (69%);\n/home 69357 MB (27%);\n/var/log 819 MB (84%);",
 				})
@@ -361,14 +456,7 @@ with three lines
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var in []byte
-			if tt.inputF != nil {
-				in = tt.inputF(tt.input)
-			} else {
-				in = []byte(tt.input)
-			}
-
-			metrics, err := parser.Parse(in)
+			metrics, err := parser.Parse([]byte(tt.input))
 			tt.assertF(t, metrics, err)
 		})
 	}

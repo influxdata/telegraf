@@ -3,6 +3,7 @@ package exec
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -60,19 +61,18 @@ func NewExec() *Exec {
 }
 
 type Runner interface {
-	Run(*Exec, string, telegraf.Accumulator) ([]byte, error)
+	Run(string, time.Duration) ([]byte, []byte, error)
 }
 
 type CommandRunner struct{}
 
 func (c CommandRunner) Run(
-	e *Exec,
 	command string,
-	acc telegraf.Accumulator,
-) ([]byte, error) {
+	timeout time.Duration,
+) ([]byte, []byte, error) {
 	split_cmd, err := shellquote.Split(command)
 	if err != nil || len(split_cmd) == 0 {
-		return nil, fmt.Errorf("exec: unable to parse command, %s", err)
+		return nil, nil, fmt.Errorf("exec: unable to parse command, %s", err)
 	}
 
 	cmd := exec.Command(split_cmd[0], split_cmd[1:]...)
@@ -84,47 +84,35 @@ func (c CommandRunner) Run(
 	cmd.Stdout = &out
 	cmd.Stderr = &stderr
 
-	_, isNagiosParser := e.parser.(*nagios.NagiosParser)
-
-	err = internal.RunTimeout(cmd, e.Timeout.Duration)
-	nagiosErr := err
-	if err != nil && !isNagiosParser {
-		var errMessage = ""
-		if stderr.Len() > 0 {
-			stderr = removeCarriageReturns(stderr)
-			// Limit the number of bytes.
-			didTruncate := false
-			if stderr.Len() > MaxStderrBytes {
-				stderr.Truncate(MaxStderrBytes)
-				didTruncate = true
-			}
-			if i := bytes.IndexByte(stderr.Bytes(), '\n'); i > 0 {
-				// Only show truncation if the newline wasn't the last character.
-				if i < stderr.Len()-1 {
-					didTruncate = true
-				}
-				stderr.Truncate(i)
-			}
-			if didTruncate {
-				stderr.WriteString("...")
-			}
-
-			errMessage = fmt.Sprintf(": %s", stderr.String())
-		}
-		return nil, fmt.Errorf("exec: %s for command '%s'%s", err, command, errMessage)
-	}
+	runErr := internal.RunTimeout(cmd, timeout)
 
 	out = removeCarriageReturns(out)
-
-	if isNagiosParser {
-		exitCode, err := nagios.GetExitCode(nagiosErr)
-		if err != nil {
-			return nil, fmt.Errorf("exec: get exit code: %s", err)
-		}
-		nagios.AppendExitCode(&out, exitCode)
+	if stderr.Len() > 0 {
+		stderr = removeCarriageReturns(stderr)
+		stderr = truncate(stderr)
 	}
 
-	return out.Bytes(), nil
+	return out.Bytes(), stderr.Bytes(), runErr
+}
+
+func truncate(buf bytes.Buffer) bytes.Buffer {
+	// Limit the number of bytes.
+	didTruncate := false
+	if buf.Len() > MaxStderrBytes {
+		buf.Truncate(MaxStderrBytes)
+		didTruncate = true
+	}
+	if i := bytes.IndexByte(buf.Bytes(), '\n'); i > 0 {
+		// Only show truncation if the newline wasn't the last character.
+		if i < buf.Len()-1 {
+			didTruncate = true
+		}
+		buf.Truncate(i)
+	}
+	if didTruncate {
+		buf.WriteString("...")
+	}
+	return buf
 }
 
 // removeCarriageReturns removes all carriage returns from the input if the
@@ -155,9 +143,11 @@ func removeCarriageReturns(b bytes.Buffer) bytes.Buffer {
 
 func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync.WaitGroup) {
 	defer wg.Done()
+	_, isNagios := e.parser.(*nagios.NagiosParser)
 
-	out, err := e.runner.Run(e, command, acc)
-	if err != nil {
+	out, errbuf, runErr := e.runner.Run(command, e.Timeout.Duration)
+	if !isNagios && runErr != nil {
+		err := fmt.Errorf("exec: %s for command '%s': %s", runErr, command, string(errbuf))
 		acc.AddError(err)
 		return
 	}
@@ -165,10 +155,18 @@ func (e *Exec) ProcessCommand(command string, acc telegraf.Accumulator, wg *sync
 	metrics, err := e.parser.Parse(out)
 	if err != nil {
 		acc.AddError(err)
-	} else {
-		for _, metric := range metrics {
-			acc.AddFields(metric.Name(), metric.Fields(), metric.Tags(), metric.Time())
+		return
+	}
+
+	if isNagios {
+		metrics, err = nagios.TryAddState(runErr, metrics)
+		if err != nil {
+			log.Printf("E! [inputs.exec] failed to add nagios state: %s", err)
 		}
+	}
+
+	for _, m := range metrics {
+		acc.AddMetric(m)
 	}
 }
 

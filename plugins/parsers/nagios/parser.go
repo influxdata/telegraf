@@ -3,8 +3,8 @@ package nagios
 import (
 	"bufio"
 	"bytes"
-	"encoding/binary"
 	"errors"
+	"fmt"
 	"log"
 	"os/exec"
 	"regexp"
@@ -17,9 +17,9 @@ import (
 	"github.com/influxdata/telegraf/metric"
 )
 
-// GetExitCode get the exit code from an error value which is the result
+// getExitCode get the exit code from an error value which is the result
 // of running a command through exec package api.
-func GetExitCode(err error) (int, error) {
+func getExitCode(err error) (int, error) {
 	if err == nil {
 		return 0, nil
 	}
@@ -40,35 +40,37 @@ func GetExitCode(err error) (int, error) {
 	return ws.ExitStatus(), nil
 }
 
-// AppendExitCode appends exit code to the given buffer.
-// The exit code is encoded as uint64 in the little endian notation. An
-// empty byte is inserted before the 8 bytes of the code.
-//
-// See ExtractExitCode.
-func AppendExitCode(buf *bytes.Buffer, exitCode int) {
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, uint64(exitCode))
-
-	buf.WriteByte(0)
-	buf.Write(bytes)
-}
-
-const defaultExitCode int = 0
-
-// ExtractExitCode extracts exit code from the given byte slice.
-//
-// See AppendExitCode.
-func ExtractExitCode(buf []byte) ([]byte, int) {
-	n := len(buf)
-
-	if n < 9 {
-		return buf, defaultExitCode
-	}
-	if buf[n-9] == 0 {
-		return buf[:n-9], int(binary.LittleEndian.Uint64(buf[n-8:]))
+// TryAddState attempts to add a state derived from the runErr.
+// If any error occurs, it is guaranteed to be returned along with
+// the initial metric slice.
+func TryAddState(runErr error, metrics []telegraf.Metric) ([]telegraf.Metric, error) {
+	state, err := getExitCode(runErr)
+	if err != nil {
+		return metrics, fmt.Errorf("exec: get exit code: %s", err)
 	}
 
-	return buf, defaultExitCode
+	for _, m := range metrics {
+		if m.Name() == "nagios_state" {
+			m.AddField("state", state)
+			return metrics, nil
+		}
+	}
+
+	var ts time.Time
+	if len(metrics) != 0 {
+		ts = metrics[0].Time()
+	} else {
+		ts = time.Now().UTC()
+	}
+	f := map[string]interface{}{
+		"state": state,
+	}
+	m, err := metric.New("nagios_state", nil, f, ts)
+	if err != nil {
+		return metrics, err
+	}
+	metrics = append(metrics, m)
+	return metrics, nil
 }
 
 type NagiosParser struct {
@@ -94,9 +96,6 @@ func (p *NagiosParser) SetDefaultTags(tags map[string]string) {
 
 func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	ts := time.Now().UTC()
-
-	var state int
-	buf, state = ExtractExitCode(buf)
 
 	s := bufio.NewScanner(bytes.NewReader(buf))
 
@@ -161,7 +160,6 @@ func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 
 	// Create nagios state.
 	fields := map[string]interface{}{
-		"state":          state,
 		"service_output": msg.String(),
 	}
 	if longmsg.Len() != 0 {
