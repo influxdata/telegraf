@@ -19,6 +19,7 @@ type VSphere struct {
 	Vcenters                []string
 	Username                string
 	Password                string
+	PasswordEncrypted       bool
 	DatacenterInstances     bool
 	DatacenterMetricInclude []string
 	DatacenterMetricExclude []string
@@ -63,6 +64,7 @@ var sampleConfig = `
   vcenters = [ "https://vcenter.local/sdk" ]
   username = "user@corp.local"
   password = "secret"
+  password_encrypted = "false"
 
   ## VMs
   ## Typical VM metrics (if omitted or empty, all metrics are collected)

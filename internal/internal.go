@@ -5,7 +5,10 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -26,6 +29,8 @@ import (
 )
 
 const alphanum string = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+const enc_key_v1 string = "a2fe1b105239d829aa993df2b20e9093a226abcdc6c4914003f242f80ac52edb"
+const nonce_v1 string = "1a848424e81d54839a0992ba"
 
 var (
 	TimeoutErr = errors.New("Command timed out.")
@@ -391,3 +396,56 @@ func ParseTimestampWithLocation(timestamp interface{}, format string, location s
 		return time.Time{}, errors.New("Invalid unix format")
 	}
 }
+
+func EncryptPassword(passwordString string) (string, error) {
+	aesgcm, err := createAesGcm()
+	nonce, err := hex.DecodeString(nonce_v1)
+	if err != nil {
+		return "", err
+	}
+	cipherText := aesgcm.Seal(nil, nonce, []byte(passwordString), nil)
+	return fmt.Sprintf("%x", cipherText), nil
+}
+
+func DecryptPassword(cipherHexStr string) (string, error) {
+	aesgcm, err := createAesGcm()
+	if err != nil {
+		return "", err
+	}
+
+	nonce, err := hex.DecodeString(nonce_v1)
+	if err != nil {
+		return "", err
+	}
+
+	cipherText, err := hex.DecodeString(cipherHexStr)
+	if err != nil {
+		return "", err
+	}
+
+	plainText, err := aesgcm.Open(nil, nonce, []byte(cipherText), nil)
+	if err != nil {
+		return "", err
+	}
+	return string(plainText), nil
+}
+
+func createAesGcm()(cipher.AEAD, error) {
+	key, err := hex.DecodeString(enc_key_v1)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	return aesgcm, nil
+}
+

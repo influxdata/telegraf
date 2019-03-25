@@ -25,6 +25,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
 	"github.com/kardianos/service"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 var fDebug = flag.Bool("debug", false,
@@ -284,6 +285,18 @@ func main() {
 
 	if len(args) > 0 {
 		switch args[0] {
+		case "encrypt":
+			fmt.Println("Enter string to encrypt: ")
+			bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+			if err != nil {
+				panic(err.Error())
+			}
+			ciphertext, err := internal.EncryptPassword(string(bytePassword))
+			if err != nil {
+				panic(err.Error())
+			}
+			fmt.Println(ciphertext)
+			return
 		case "version":
 			fmt.Println(formatFullVersion())
 			return

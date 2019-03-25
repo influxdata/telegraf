@@ -1,6 +1,7 @@
 package mongodb
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -12,16 +13,18 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"gopkg.in/mgo.v2"
 )
 
 type MongoDB struct {
-	Servers          []string
-	Ssl              Ssl
-	mongos           map[string]*Server
-	GatherPerdbStats bool
+	Servers           []string
+	Ssl               Ssl
+	mongos            map[string]*Server
+	PasswordEncrypted bool
+	GatherPerdbStats  bool
 	tlsint.ClientConfig
 }
 
@@ -37,6 +40,7 @@ var sampleConfig = `
   ##   mongodb://user:auth_key@10.10.3.30:27017,
   ##   mongodb://10.10.3.33:18832,
   servers = ["mongodb://127.0.0.1:27017"]
+  password_encrypted = false
 
   ## When true, collect per database stats
   # gather_perdb_stats = false
@@ -107,11 +111,40 @@ func (m *MongoDB) getMongoServer(url *url.URL) *Server {
 	return m.mongos[url.Host]
 }
 
+func decrypt(s string) (string, error) {
+	if c := strings.Index(s, "@"); c != -1 {
+		pair := strings.SplitN(s[:c], ":", 3)
+		password := pair[2]
+		decryptedPassword, err := internal.DecryptPassword(password)
+		if err != nil {
+			return "", err
+		}
+		var buffer bytes.Buffer
+		buffer.WriteString(pair[0])
+		buffer.WriteString(":")
+		buffer.WriteString(pair[1])
+		buffer.WriteString(":")
+		buffer.WriteString(string(decryptedPassword))
+		buffer.WriteString(s[c:])
+		dec_pass := buffer.String()
+		return dec_pass, nil
+	}
+	return "", fmt.Errorf("Failed to extract encrypted password.")
+}
+
 func (m *MongoDB) gatherServer(server *Server, acc telegraf.Accumulator) error {
 	if server.Session == nil {
 		var dialAddrs []string
 		if server.Url.User != nil {
-			dialAddrs = []string{server.Url.String()}
+			if m.PasswordEncrypted {
+				password, err := decrypt(server.Url.String())
+				if err != nil {
+					return err
+				}
+				dialAddrs = []string{password}
+			} else {
+				dialAddrs = []string{server.Url.String()}
+			}
 		} else {
 			dialAddrs = []string{server.Url.Host}
 		}

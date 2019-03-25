@@ -20,6 +20,7 @@ import (
 	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
+	"github.com/influxdata/telegraf/internal"
 )
 
 // The highest number of metrics we can query for, no matter what settings
@@ -99,7 +100,15 @@ func NewClient(ctx context.Context, u *url.URL, vs *VSphere) (*Client, error) {
 		tlsCfg = &tls.Config{}
 	}
 	if vs.Username != "" {
-		u.User = url.UserPassword(vs.Username, vs.Password)
+		if vs.PasswordEncrypted {
+			password, err := internal.DecryptPassword(vs.Password)
+			if err != nil {
+				return nil, err
+			}
+			u.User = url.UserPassword(vs.Username, password)
+		} else {
+			u.User = url.UserPassword(vs.Username, vs.Password)
+		}
 	}
 
 	log.Printf("D! [inputs.vsphere]: Creating client: %s", u.Host)
