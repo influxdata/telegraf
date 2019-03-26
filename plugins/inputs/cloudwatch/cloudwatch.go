@@ -3,11 +3,10 @@ package cloudwatch
 import (
 	"errors"
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/satori/go.uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -506,8 +505,8 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 
 	dataQueries := []*cloudwatch.MetricDataQuery{}
 	for _, filtered := range filteredMetrics {
-		for _, metric := range filtered.metrics {
-			id := strings.Replace(uuid.NewV4().String(), "-", "", -1)
+		for i, metric := range filtered.metrics {
+			id := strconv.Itoa(i)
 			c.queries = append(c.queries, queryData{metric: metric, id: id})
 
 			if filtered.statFilter.Match("average") {

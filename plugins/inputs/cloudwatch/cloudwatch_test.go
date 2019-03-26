@@ -36,7 +36,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 	return &cloudwatch.GetMetricDataOutput{
 		MetricDataResults: []*cloudwatch.MetricDataResult{
 			{
-				Id:         aws.String("minimum_latency_p_example"),
+				Id:         aws.String("minimum_0"),
 				Label:      aws.String("latency_minimum"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
@@ -47,7 +47,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("maximum_latency_p_example"),
+				Id:         aws.String("maximum_0"),
 				Label:      aws.String("latency_maximum"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
@@ -58,7 +58,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("average_latency_p_example"),
+				Id:         aws.String("average_0"),
 				Label:      aws.String("latency_average"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
@@ -69,7 +69,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("sum_latency_p_example"),
+				Id:         aws.String("sum_0"),
 				Label:      aws.String("latency_sum"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
@@ -80,7 +80,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("sample_count_latency_p_example"),
+				Id:         aws.String("sample_count_0"),
 				Label:      aws.String("latency_sample_count"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
@@ -211,7 +211,7 @@ func TestSelectMetrics(t *testing.T) {
 	filtered, err := SelectMetrics(c)
 	// We've asked for 2 (out of 4) metrics, over all 3 load balancers in all 2
 	// AZs. We should get 12 metrics.
-	assert.Equal(t, 12, len(filtered))
+	assert.Equal(t, 12, len(filtered[0].metrics))
 	assert.Nil(t, err)
 }
 
