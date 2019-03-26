@@ -1,8 +1,6 @@
 package cloudwatch
 
 import (
-	"regexp"
-	"strings"
 	"testing"
 	"time"
 
@@ -213,7 +211,7 @@ func TestSelectMetrics(t *testing.T) {
 	filtered, err := SelectMetrics(c)
 	// We've asked for 2 (out of 4) metrics, over all 3 load balancers in all 2
 	// AZs. We should get 12 metrics.
-	assert.Equal(t, 12, len(aggregateFiltered(filtered)))
+	assert.Equal(t, 12, len(filtered))
 	assert.Nil(t, err)
 }
 
@@ -338,57 +336,4 @@ func TestUpdateWindow(t *testing.T) {
 	// subsequent window uses previous end time as start time
 	assert.EqualValues(t, c.windowEnd, now.Add(-c.Delay.Duration))
 	assert.EqualValues(t, c.windowStart, newStartTime)
-}
-
-var testStrings = []string{
-	"average_integration_latency_snake_case1/snake_case2/{ver}/snake_case3/snake_case4/snake_case5",
-	"average_request_count_targetgroup/snake_case1/snake_case2/snake_case3/snake_case4",
-	"average_returned_records_count_snake_case_2018_02_05t19:05:07_516_get_records",
-	"average_cluster_status.snake_case1",
-	"average_throttles_snake_case1:snake_case2",
-	"average_processed_bytes_net/snake_case1/snake_case2",
-	"average_execution_time_arn:aws:states:snake_case1:01234567890:snake_case2:snake_case3",
-}
-
-var serviceIDRegex = regexp.MustCompile("[^a-zA-Z0-9_]+")
-
-func BenchmarkRegex(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		for _, name := range testStrings {
-			serviceIDRegex.ReplaceAllString(name, "_")
-		}
-	}
-}
-
-func TestEquals(t *testing.T) {
-	regexSlice := make([]string, len(testStrings))
-	for i, name := range testStrings {
-		regexSlice[i] = serviceIDRegex.ReplaceAllString(name, "_")
-	}
-
-	stringSlice := make([]string, len(testStrings))
-	for i, name := range testStrings {
-		stringSlice[i] = validID.ReplaceAllString(name, "_")
-	}
-
-	if len(regexSlice) != len(stringSlice) {
-		t.Errorf("Lengths do not match")
-		t.FailNow()
-	}
-	for i := range regexSlice {
-		if regexSlice[i] != stringSlice[i] {
-			t.Errorf("Expected '%s'; Got '%s'", regexSlice[i], stringSlice[i])
-			t.FailNow()
-		}
-	}
-}
-
-var replacer = strings.NewReplacer("/", "_", "-", "_", ".", "_", " ", "_", ":", "_", "{", "", "}", "", "%", "")
-
-func BenchmarkStrings(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		for _, name := range testStrings {
-			replacer.Replace(name)
-		}
-	}
 }

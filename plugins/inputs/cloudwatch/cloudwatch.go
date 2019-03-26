@@ -3,10 +3,11 @@ package cloudwatch
 import (
 	"errors"
 	"log"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/satori/go.uuid"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/cloudwatch"
@@ -41,6 +42,7 @@ type (
 		client      cloudwatchClient
 		metricCache *MetricCache
 		queryCache  []*cloudwatch.MetricDataQuery
+		queries     []queryData
 		windowStart time.Time
 		windowEnd   time.Time
 
@@ -128,8 +130,8 @@ func (c *CloudWatch) SampleConfig() string {
   ratelimit = 200
 
   ## Namespace-wide statistic filters (only gets used if no metrics are defined). Optional.
-  # statistic_exclude = [ "average", "sum", min", "max", sample_count" ]
-  # statistic_include = [ "average", "sum", min", "max", sample_count" ]
+  # statistic_exclude = [ "average", "sum", minimum", "maximum", sample_count" ]
+  # statistic_include = [ "average", "sum", minimum", "maximum", sample_count" ]
 
   ## Metrics to Pull (optional)
   ## Defaults to all Metrics in Namespace if nothing is provided
@@ -138,8 +140,8 @@ func (c *CloudWatch) SampleConfig() string {
   #  names = ["Latency", "RequestCount"]
 	#
   #  ## Statistic filters for metric.  Optional.
-  #  # statistic_exclude = [ "average", "sum", min", "max", sample_count" ]
-  #  # statistic_include = [ "average", "sum", min", "max", sample_count" ]
+  #  # statistic_exclude = [ "average", "sum", minimum", "maximum", sample_count" ]
+  #  # statistic_include = [ "average", "sum", minimum", "maximum", sample_count" ]
   #
   #  ## Dimension filters for Metric.  These are optional however all dimensions
   #  ## defined for the metric names must be specified in order to retrieve
@@ -248,7 +250,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	}
 
 	// get all of the possible queries so we can send groups of 100
-	// note: these are cached using metricCache's specs
+	// note: these are cached using metricCache's specs (when only namespace is defined)
 	queries, err := c.getDataQueries(metrics)
 	if err != nil {
 		return err
@@ -297,7 +299,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 
 	wg.Wait()
 
-	acc.AddError(c.aggregateMetrics(acc, aggregateFiltered(metrics), results))
+	acc.AddError(c.aggregateMetrics(acc, results))
 
 	return nil
 }
@@ -410,74 +412,63 @@ func (c *CloudWatch) gatherMetrics(
 	return resp.MetricDataResults, nil
 }
 
-func aggregateFiltered(filteredMetrics []filteredMetric) []*cloudwatch.Metric {
-	metrics := []*cloudwatch.Metric{}
-	for _, filtered := range filteredMetrics {
-		metrics = append(metrics, filtered.metrics...)
-	}
-	return metrics
-}
-
 func (c *CloudWatch) aggregateMetrics(
 	acc telegraf.Accumulator,
-	metrics []*cloudwatch.Metric,
 	metricDataResults []*cloudwatch.MetricDataResult,
 ) error {
-	for _, metric := range metrics {
-		timestamp := time.Now()
-		fields := map[string]interface{}{}
+	namespace := formatMeasurement(c.Namespace)
+
+	for _, query := range c.queries {
 		tags := map[string]string{
 			"region": c.Region,
 		}
 
-		// todo: group these once beforehand if possible to avoid looping through all results metrics number of times
-		results := getResults(*metric, metricDataResults)
-		for _, result := range results {
-			for _, dimension := range metric.Dimensions {
-				tags[snakeCase(*dimension.Name)] = *dimension.Value
-			}
-			if len(result.Timestamps) == 0 || result.Timestamps[0] == nil {
-				continue
-			}
-			// todo: determine if we need to handle multiple values.
-			if len(result.Values) > 1 {
-				log.Printf("[inputs.cloudwatch] W! UNHANDLED MULTIPLE RESULT VALUES!! %+v\n", result.Values)
-			}
+		type metric struct {
+			fields map[string]interface{}
+			tags   map[string]string
+		}
+		thing := map[time.Time]metric{}
+		for _, result := range metricDataResults {
+			if nameMatch(query.id, *result.Id) {
+				for _, dimension := range query.metric.Dimensions {
+					tags[snakeCase(*dimension.Name)] = *dimension.Value
+				}
+				if len(result.Timestamps) != len(result.Values) {
+					log.Println("[inputs.cloudwatch] W! MISMATCHED TIMESTAMP/VALUE LENGTH!!", len(result.Timestamps), len(result.Values))
+					continue
+				}
 
-			fields[*result.Label] = *result.Values[0]
-			timestamp = *result.Timestamps[0]
+				for j := range result.Values {
+					if _, ok := thing[*result.Timestamps[j]]; !ok {
+						thing[*result.Timestamps[j]] = metric{fields: map[string]interface{}{*result.Label: *result.Values[j]}, tags: tags}
+					}
+					thing[*result.Timestamps[j]].fields[*result.Label] = *result.Values[j]
+				}
+			}
 		}
 
-		acc.AddFields(formatMeasurement(c.Namespace), fields, tags, timestamp)
+		for t, m := range thing {
+			acc.AddFields(namespace, m.fields, m.tags, t)
+		}
 	}
 
 	return nil
 }
 
-func getResults(metric cloudwatch.Metric, results []*cloudwatch.MetricDataResult) []*cloudwatch.MetricDataResult {
-	list := []*cloudwatch.MetricDataResult{}
-	for _, result := range results {
-		if nameMatch(genID(metric), *result.Id) {
-			list = append(list, result)
-		}
-	}
-	return list
-}
-
 func nameMatch(name, id string) bool {
-	if strings.TrimPrefix(id, "average_") == snakeCase(name) {
+	if strings.TrimPrefix(id, "average_") == name {
 		return true
 	}
-	if strings.TrimPrefix(id, "maximum_") == snakeCase(name) {
+	if strings.TrimPrefix(id, "maximum_") == name {
 		return true
 	}
-	if strings.TrimPrefix(id, "minimum_") == snakeCase(name) {
+	if strings.TrimPrefix(id, "minimum_") == name {
 		return true
 	}
-	if strings.TrimPrefix(id, "sum_") == snakeCase(name) {
+	if strings.TrimPrefix(id, "sum_") == name {
 		return true
 	}
-	if strings.TrimPrefix(id, "sample_count_") == snakeCase(name) {
+	if strings.TrimPrefix(id, "sample_count_") == name {
 		return true
 	}
 	return false
@@ -498,18 +489,30 @@ func snakeCase(s string) string {
 	return s
 }
 
+type queryData struct {
+	metric *cloudwatch.Metric
+	id     string
+}
+
 // get all of the possible queries so we can send groups of 100
 func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudwatch.MetricDataQuery, error) {
-	if c.queryCache != nil && c.metricCache.IsValid() {
+	if c.queryCache != nil && c.metricCache != nil && c.metricCache.IsValid() {
 		return c.queryCache, nil
 	}
+
+	// todo: lock
+	// clear slice
+	c.queries = []queryData{}
 
 	dataQueries := []*cloudwatch.MetricDataQuery{}
 	for _, filtered := range filteredMetrics {
 		for _, metric := range filtered.metrics {
+			id := strings.Replace(uuid.NewV4().String(), "-", "", -1)
+			c.queries = append(c.queries, queryData{metric: metric, id: id})
+
 			if filtered.statFilter.Match("average") {
 				dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
-					Id:    aws.String("average_" + genID(*metric)),
+					Id:    aws.String("average_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_average")),
 					MetricStat: &cloudwatch.MetricStat{
 						Metric: metric,
@@ -520,7 +523,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 			}
 			if filtered.statFilter.Match("maximum") {
 				dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
-					Id:    aws.String("maximum_" + genID(*metric)),
+					Id:    aws.String("maximum_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_maximum")),
 					MetricStat: &cloudwatch.MetricStat{
 						Metric: metric,
@@ -531,7 +534,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 			}
 			if filtered.statFilter.Match("minimum") {
 				dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
-					Id:    aws.String("minimum_" + genID(*metric)),
+					Id:    aws.String("minimum_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_minimum")),
 					MetricStat: &cloudwatch.MetricStat{
 						Metric: metric,
@@ -542,7 +545,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 			}
 			if filtered.statFilter.Match("sum") {
 				dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
-					Id:    aws.String("sum_" + genID(*metric)),
+					Id:    aws.String("sum_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_sum")),
 					MetricStat: &cloudwatch.MetricStat{
 						Metric: metric,
@@ -553,7 +556,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 			}
 			if filtered.statFilter.Match("sample_count") {
 				dataQueries = append(dataQueries, &cloudwatch.MetricDataQuery{
-					Id:    aws.String("sample_count_" + genID(*metric)),
+					Id:    aws.String("sample_count_" + id),
 					Label: aws.String(snakeCase(*metric.MetricName + "_sample_count")),
 					MetricStat: &cloudwatch.MetricStat{
 						Metric: metric,
@@ -579,28 +582,6 @@ func (c *CloudWatch) getDataInputs(dataQueries []*cloudwatch.MetricDataQuery) *c
 		EndTime:           aws.Time(c.windowEnd),
 		MetricDataQueries: dataQueries,
 	}
-}
-
-// if this proves too slow, use strings.NewReplacer("/", "_", "-", "_", ".", "_", " ", "_", ":", "_", "{", "", "}", "", "%", "")
-var validID = regexp.MustCompile("[^a-zA-Z0-9_]+")
-
-func genID(metric cloudwatch.Metric) string {
-	dVals := []string{}
-	for _, dimension := range metric.Dimensions {
-		dVals = append(dVals, validID.ReplaceAllString(*dimension.Value, "_"))
-	}
-	if strings.Contains(*metric.MetricName, "EBSIOBalance") || strings.Contains(*metric.MetricName, "EBSByteBalance") {
-		*metric.MetricName = strings.TrimRight(*metric.MetricName, "%")
-	}
-	if len(dVals) > 0 {
-		id := snakeCase(*metric.MetricName + "_" + strings.Join(dVals, "_"))
-		if len(id) > 255 {
-			log.Printf("[inputs.cloudwatch] W! ID TOO LARGE, TRIMMING; POSSIBLE DUPLICATE ID!! %+v\n", len(id))
-			return id[:255]
-		}
-		return id
-	}
-	return snakeCase(*metric.MetricName)
 }
 
 /*
