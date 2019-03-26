@@ -16,7 +16,8 @@ const bucketInf = "+Inf"
 
 // HistogramAggregator is aggregator with histogram configs and particular histograms for defined metrics
 type HistogramAggregator struct {
-	Configs []config `toml:"config"`
+	Configs      []config `toml:"config"`
+	ResetBuckets bool     `toml:"reset"`
 
 	buckets bucketsByMetrics
 	cache   map[uint64]metricHistogramCollection
@@ -203,7 +204,11 @@ func (h *HistogramAggregator) groupField(
 
 // Reset does nothing, because we need to collect counts for a long time, otherwise if config parameter 'reset' has
 // small value, we will get a histogram with a small amount of the distribution.
-func (h *HistogramAggregator) Reset() {}
+func (h *HistogramAggregator) Reset() {
+	if h.ResetBuckets {
+		h.resetCache()
+	}
+}
 
 // resetCache resets cached counts(hits) in the buckets
 func (h *HistogramAggregator) resetCache() {
