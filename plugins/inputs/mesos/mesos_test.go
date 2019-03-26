@@ -6,10 +6,12 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
+	"github.com/stretchr/testify/require"
 )
 
 var masterMetrics map[string]interface{}
@@ -377,4 +379,20 @@ func TestSlaveFilter(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestWithPathDoesNotModify(t *testing.T) {
+	u, err := url.Parse("http://localhost:5051")
+	require.NoError(t, err)
+	v := withPath(u, "/xyzzy")
+	require.Equal(t, u.String(), "http://localhost:5051")
+	require.Equal(t, v.String(), "http://localhost:5051/xyzzy")
+}
+
+func TestURLTagDoesNotModify(t *testing.T) {
+	u, err := url.Parse("http://a:b@localhost:5051?timeout=1ms")
+	require.NoError(t, err)
+	v := urlTag(u)
+	require.Equal(t, u.String(), "http://a:b@localhost:5051?timeout=1ms")
+	require.Equal(t, v, "http://localhost:5051")
 }

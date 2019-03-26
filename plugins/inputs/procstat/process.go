@@ -21,6 +21,14 @@ type Process interface {
 	Percent(interval time.Duration) (float64, error)
 	Times() (*cpu.TimesStat, error)
 	RlimitUsage(bool) ([]process.RlimitStat, error)
+	Username() (string, error)
+}
+
+type PIDFinder interface {
+	PidFile(path string) ([]PID, error)
+	Pattern(pattern string) ([]PID, error)
+	Uid(user string) ([]PID, error)
+	FullPattern(path string) ([]PID, error)
 }
 
 type Proc struct {
@@ -49,6 +57,10 @@ func (p *Proc) Tags() map[string]string {
 
 func (p *Proc) PID() PID {
 	return PID(p.Process.Pid)
+}
+
+func (p *Proc) Username() (string, error) {
+	return p.Process.Username()
 }
 
 func (p *Proc) Percent(interval time.Duration) (float64, error) {

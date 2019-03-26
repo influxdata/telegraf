@@ -1,0 +1,87 @@
+[
+  {
+    "db_dir": "/var/lib/rabbitmq/mnesia/rabbit@vagrant-ubuntu-trusty-64",
+    "disk_free": 3776,
+    "disk_free_alarm": false,
+    "disk_free_details": {
+      "rate": 0.0
+    },
+    "disk_free_limit": 50000000,
+    "enabled_plugins": [
+      "rabbitmq_management"
+    ],
+    "gc_num": 57280132,
+    "gc_num_details": {
+      "rate": 274.2
+    },
+    "gc_bytes_reclaimed": 2533,
+    "gc_bytes_reclaimed_details": {
+      "rate": 16490856.3
+    },
+    "fd_total": 1024,
+    "fd_used": 63,
+    "fd_used_details": {
+      "rate": 0.0
+    },
+    "io_read_avg_time": 983,
+    "io_read_avg_time_details": {
+      "rate": 88.77
+    },
+    "io_read_bytes": 1111,
+    "io_read_bytes_details": {
+      "rate": 99.99
+    },
+    "io_read_count": 1,
+    "io_read_count_details": {
+      "rate": 0.0
+    },
+    "io_sync_avg_time": 0,
+    "io_sync_avg_time_details": {
+      "rate": 0.0
+    },
+    "io_write_avg_time": 134,
+    "io_write_avg_time_details": {
+      "rate": 4.32
+    },
+    "io_write_bytes": 823,
+    "io_write_bytes_details": {
+      "rate": 32.8
+    },
+    "log_file": "/var/log/rabbitmq/rabbit@vagrant-ubuntu-trusty-64.log",
+    "mem_alarm": true,
+    "mem_limit": 2503,
+    "mem_used": 159707080,
+    "mem_used_details": {
+      "rate": 15185.6
+    },
+    "mnesia_disk_tx_count": 16,
+    "mnesia_disk_tx_count_details": {
+      "rate": 1.1
+    },
+    "mnesia_ram_tx_count": 296,
+    "mnesia_ram_tx_count_details": {
+      "rate": 2.2
+    },
+    "name": "rabbit@vagrant-ubuntu-trusty-64",
+    "net_ticktime": 60,
+    "os_pid": "14244",
+    "partitions": [],
+    "proc_total": 1048576,
+    "proc_used": 783,
+    "proc_used_details": {
+      "rate": 0.0
+    },
+    "processors": 1,
+    "rates_mode": "basic",
+    "run_queue": 0,
+    "running": true,
+    "sasl_log_file": "/var/log/rabbitmq/rabbit@vagrant-ubuntu-trusty-64-sasl.log",
+    "sockets_total": 829,
+    "sockets_used": 45,
+    "sockets_used_details": {
+      "rate": 0.0
+    },
+    "type": "disc",
+    "uptime": 7464827
+  }
+]

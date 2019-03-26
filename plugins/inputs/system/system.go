@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/shirou/gopsutil/host"
 	"github.com/shirou/gopsutil/load"
@@ -28,34 +30,39 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	hostinfo, err := host.Info()
-	if err != nil {
-		return err
+	fields := map[string]interface{}{
+		"load1":  loadavg.Load1,
+		"load5":  loadavg.Load5,
+		"load15": loadavg.Load15,
+		"n_cpus": runtime.NumCPU(),
 	}
 
 	users, err := host.Users()
+	if err == nil {
+		fields["n_users"] = len(users)
+	} else if !os.IsPermission(err) {
+		return err
+	}
+
+	now := time.Now()
+	acc.AddGauge("system", fields, nil, now)
+
+	uptime, err := host.Uptime()
 	if err != nil {
 		return err
 	}
 
-	acc.AddGauge("system", map[string]interface{}{
-		"load1":   loadavg.Load1,
-		"load5":   loadavg.Load5,
-		"load15":  loadavg.Load15,
-		"n_users": len(users),
-		"n_cpus":  runtime.NumCPU(),
-	}, nil)
 	acc.AddCounter("system", map[string]interface{}{
-		"uptime": hostinfo.Uptime,
-	}, nil)
+		"uptime": uptime,
+	}, nil, now)
 	acc.AddFields("system", map[string]interface{}{
-		"uptime_format": format_uptime(hostinfo.Uptime),
-	}, nil)
+		"uptime_format": formatUptime(uptime),
+	}, nil, now)
 
 	return nil
 }
 
-func format_uptime(uptime uint64) string {
+func formatUptime(uptime uint64) string {
 	buf := new(bytes.Buffer)
 	w := bufio.NewWriter(buf)
 

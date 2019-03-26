@@ -23,13 +23,13 @@ func TestPfctlInvocation(t *testing.T) {
 
 	var testCases = []pfctlInvocationTestCase{
 		// 0: no sudo
-		pfctlInvocationTestCase{
+		{
 			config: PF{UseSudo: false},
 			cmd:    "fakepfctl",
 			args:   []string{"-s", "info"},
 		},
 		// 1: with sudo
-		pfctlInvocationTestCase{
+		{
 			config: PF{UseSudo: true},
 			cmd:    "fakesudo",
 			args:   []string{"fakepfctl", "-s", "info"},
@@ -60,9 +60,9 @@ func TestPfMeasurements(t *testing.T) {
 
 	testCases := []pfTestCase{
 		// 0: nil input should raise an error
-		pfTestCase{TestInput: "", err: errParseHeader},
+		{TestInput: "", err: errParseHeader},
 		// 1: changes to pfctl output should raise an error
-		pfTestCase{TestInput: `Status: Enabled for 161 days 21:24:45         Debug: Urgent
+		{TestInput: `Status: Enabled for 161 days 21:24:45         Debug: Urgent
 
 Interface Stats for re1               IPv4             IPv6
   Bytes In                   2585823744614    1059233657221
@@ -99,7 +99,7 @@ Counters
 			err: errMissingData("current entries"),
 		},
 		// 2: bad numbers should raise an error
-		pfTestCase{TestInput: `Status: Enabled for 0 days 00:26:05           Debug: Urgent
+		{TestInput: `Status: Enabled for 0 days 00:26:05           Debug: Urgent
 
 State Table                          Total             Rate
   current entries                      -23               
@@ -125,7 +125,7 @@ Counters
 `,
 			err: errMissingData("current entries"),
 		},
-		pfTestCase{TestInput: `Status: Enabled for 0 days 00:26:05           Debug: Urgent
+		{TestInput: `Status: Enabled for 0 days 00:26:05           Debug: Urgent
 
 State Table                          Total             Rate
   current entries                        2               
@@ -150,17 +150,32 @@ Counters
   synproxy                               0            0.0/s
 `,
 			measurements: []measurementResult{
-				measurementResult{
+				{
 					fields: map[string]interface{}{
-						"entries":  int64(2),
-						"searches": int64(11325),
-						"inserts":  int64(5),
-						"removals": int64(3)},
+						"entries":        int64(2),
+						"searches":       int64(11325),
+						"inserts":        int64(5),
+						"removals":       int64(3),
+						"match":          int64(11226),
+						"bad-offset":     int64(0),
+						"fragment":       int64(0),
+						"short":          int64(0),
+						"normalize":      int64(0),
+						"memory":         int64(0),
+						"bad-timestamp":  int64(0),
+						"congestion":     int64(0),
+						"ip-option":      int64(0),
+						"proto-cksum":    int64(0),
+						"state-mismatch": int64(0),
+						"state-insert":   int64(0),
+						"state-limit":    int64(0),
+						"src-limit":      int64(0),
+						"synproxy":       int64(0)},
 					tags: map[string]string{},
 				},
 			},
 		},
-		pfTestCase{TestInput: `Status: Enabled for 161 days 21:24:45         Debug: Urgent
+		{TestInput: `Status: Enabled for 161 days 21:24:45         Debug: Urgent
 
 Interface Stats for re1               IPv4             IPv6
   Bytes In                   2585823744614    1059233657221
@@ -195,12 +210,27 @@ Counters
   synproxy                               0            0.0/s
 `,
 			measurements: []measurementResult{
-				measurementResult{
+				{
 					fields: map[string]interface{}{
-						"entries":  int64(649),
-						"searches": int64(18421725761),
-						"inserts":  int64(156762508),
-						"removals": int64(156761859)},
+						"entries":        int64(649),
+						"searches":       int64(18421725761),
+						"inserts":        int64(156762508),
+						"removals":       int64(156761859),
+						"match":          int64(473002784),
+						"bad-offset":     int64(0),
+						"fragment":       int64(2729),
+						"short":          int64(107),
+						"normalize":      int64(1685),
+						"memory":         int64(101),
+						"bad-timestamp":  int64(0),
+						"congestion":     int64(0),
+						"ip-option":      int64(152301),
+						"proto-cksum":    int64(108),
+						"state-mismatch": int64(24393),
+						"state-insert":   int64(92),
+						"state-limit":    int64(0),
+						"src-limit":      int64(0),
+						"synproxy":       int64(0)},
 					tags: map[string]string{},
 				},
 			},

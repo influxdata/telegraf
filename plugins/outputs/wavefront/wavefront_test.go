@@ -140,6 +140,11 @@ func TestBuildTags(t *testing.T) {
 			"aaa",
 			map[string]string{"dc": "bbb"},
 		},
+		{
+			map[string]string{"host": "aaa", "dc": "a*$a\\abbb\"som/et|hing else", "bad#k%e/y that*sho\\uld work": "value1"},
+			"aaa",
+			map[string]string{"dc": "a-$a\\abbb\"som/et|hing else", "bad-k-e-y-that-sho-uld-work": "value1"},
+		},
 	}
 
 	for _, tt := range tagtests {
@@ -189,7 +194,7 @@ func TestBuildTagsWithSource(t *testing.T) {
 		},
 		{
 			map[string]string{"something": "abc", "host": "r*@l\"Ho/st"},
-			"r-@l\\\"Ho/st",
+			"r-@l\"Ho/st",
 			map[string]string{"something": "abc"},
 		},
 	}
@@ -262,27 +267,6 @@ func TestBuildValueString(t *testing.T) {
 		}
 	}
 
-}
-
-func TestFormatMetricPoint(t *testing.T) {
-	w := defaultWavefront()
-
-	testpoint := &MetricPoint{
-		Metric:    "test.metric.something",
-		Value:     123.456,
-		Timestamp: 1257894000,
-		Source:    "testSource",
-		Tags:      map[string]string{"sp*c!@l\"-ch/rs": "sp*c!@l/ val\"ue"},
-	}
-
-	expected := "test.metric.something 123.456000 1257894000 source=\"testSource\" sp-c--l--ch-rs=\"sp-c!@l/ val\\\"ue\"\n"
-
-	received := formatMetricPoint(testpoint, w)
-
-	if expected != received {
-		t.Errorf("\nexpected\t%+v\nreceived\t%+v\n", expected, received)
-
-	}
 }
 
 // Benchmarks to test performance of string replacement via Regex and Replacer

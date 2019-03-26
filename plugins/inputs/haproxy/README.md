@@ -28,11 +28,11 @@ or [HTTP statistics page](https://cbonte.github.io/haproxy-dconv/1.9/management.
   ## field names.
   # keep_field_names = false
 
-  ## Optional SSL Config
-  # ssl_ca = "/etc/telegraf/ca.pem"
-  # ssl_cert = "/etc/telegraf/cert.pem"
-  # ssl_key = "/etc/telegraf/key.pem"
-  ## Use SSL but skip chain & host verification
+  ## Optional TLS Config
+  # tls_ca = "/etc/telegraf/ca.pem"
+  # tls_cert = "/etc/telegraf/cert.pem"
+  # tls_key = "/etc/telegraf/key.pem"
+  ## Use TLS but skip chain & host verification
   # insecure_skip_verify = false
 ```
 
@@ -58,8 +58,8 @@ When using socket names, wildcard expansion is supported so plugin can gather
 stats from multiple sockets at once.
 
 To use HTTP Basic Auth add the username and password in the userinfo section
-of the URL: `http://user:password@1.2.3.4/haproxy?stats`.  The credentials sent via the
-`Authorization` header and not using the request URL.
+of the URL: `http://user:password@1.2.3.4/haproxy?stats`.  The credentials are
+sent via the `Authorization` header and not using the request URL.
 
 
 #### keep_field_names

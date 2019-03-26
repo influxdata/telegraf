@@ -31,6 +31,21 @@ telegraf ALL=(root) NOPASSWD: /sbin/pfctl -s info
     - searches (integer, count)
     - inserts (integer, count)
     - removals (integer, count)
+    - match (integer, count)
+    - bad-offset (integer, count)
+    - fragment (integer, count)
+    - short (integer, count)
+    - normalize (integer, count)
+    - memory (integer, count)
+    - bad-timestamp (integer, count)
+    - congestion (integer, count)
+    - ip-option (integer, count)
+    - proto-cksum (integer, count)
+    - state-mismatch (integer, count)
+    - state-insert (integer, count)
+    - state-limit (integer, count)
+    - src-limit (integer, count)
+    - synproxy (integer, count)
 
 ### Example Output:
 

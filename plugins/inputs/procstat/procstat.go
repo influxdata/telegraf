@@ -22,6 +22,7 @@ var (
 type PID int32
 
 type Procstat struct {
+	PidFinder   string `toml:"pid_finder"`
 	PidFile     string `toml:"pid_file"`
 	Exe         string
 	Pattern     string
@@ -31,15 +32,16 @@ type Procstat struct {
 	SystemdUnit string
 	CGroup      string `toml:"cgroup"`
 	PidTag      bool
+	WinService  string `toml:"win_service"`
 
-	pidFinder       PIDFinder
+	finder PIDFinder
+
 	createPIDFinder func() (PIDFinder, error)
 	procs           map[PID]Process
 	createProcess   func(PID) (Process, error)
 }
 
 var sampleConfig = `
-  ## Must specify one of: pid_file, exe, or pattern
   ## PID file to monitor process
   pid_file = "/var/run/nginx.pid"
   ## executable name (ie, pgrep <exe>)
@@ -53,15 +55,26 @@ var sampleConfig = `
   ## CGroup name or path
   # cgroup = "systemd/system.slice/nginx.service"
 
+  ## Windows service name
+  # win_service = ""
+
   ## override for process_name
   ## This is optional; default is sourced from /proc/<pid>/status
   # process_name = "bar"
+
   ## Field name prefix
-  prefix = ""
-  ## comment this out if you want raw cpu_time stats
-  fielddrop = ["cpu_time_*"]
-  ## This is optional; moves pid into a tag instead of a field
-  pid_tag = false
+  # prefix = ""
+
+  ## Add PID as a tag instead of a field; useful to differentiate between
+  ## processes whose tags are otherwise the same.  Can create a large number
+  ## of series, use judiciously.
+  # pid_tag = false
+
+  ## Method to use when finding process IDs.  Can be one of 'pgrep', or
+  ## 'native'.  The pgrep finder calls the pgrep executable in the PATH while
+  ## the native finder performs the search directly in a manor dependent on the
+  ## platform.  Default is 'pgrep'
+  # pid_finder = "pgrep"
 `
 
 func (_ *Procstat) SampleConfig() string {
@@ -74,13 +87,37 @@ func (_ *Procstat) Description() string {
 
 func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	if p.createPIDFinder == nil {
-		p.createPIDFinder = defaultPIDFinder
+		switch p.PidFinder {
+		case "native":
+			p.createPIDFinder = NewNativeFinder
+		case "pgrep":
+			p.createPIDFinder = NewPgrep
+		default:
+			p.PidFinder = "pgrep"
+			p.createPIDFinder = defaultPIDFinder
+		}
+
 	}
 	if p.createProcess == nil {
 		p.createProcess = defaultProcess
 	}
 
-	procs, err := p.updateProcesses(p.procs)
+	pids, tags, err := p.findPids(acc)
+	if err != nil {
+		fields := map[string]interface{}{
+			"pid_count":   0,
+			"running":     0,
+			"result_code": 1,
+		}
+		tags := map[string]string{
+			"pid_finder": p.PidFinder,
+			"result":     "lookup_error",
+		}
+		acc.AddFields("procstat_lookup", fields, tags)
+		return err
+	}
+
+	procs, err := p.updateProcesses(pids, tags, p.procs)
 	if err != nil {
 		acc.AddError(fmt.Errorf("E! Error: procstat getting process, exe: [%s] pidfile: [%s] pattern: [%s] user: [%s] %s",
 			p.Exe, p.PidFile, p.Pattern, p.User, err.Error()))
@@ -88,14 +125,23 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 	p.procs = procs
 
 	for _, proc := range p.procs {
-		p.addMetrics(proc, acc)
+		p.addMetric(proc, acc)
 	}
+
+	fields := map[string]interface{}{
+		"pid_count":   len(pids),
+		"running":     len(procs),
+		"result_code": 0,
+	}
+	tags["pid_finder"] = p.PidFinder
+	tags["result"] = "success"
+	acc.AddFields("procstat_lookup", fields, tags)
 
 	return nil
 }
 
 // Add metrics a single Process
-func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
+func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 	var prefix string
 	if p.Prefix != "" {
 		prefix = p.Prefix + "_"
@@ -108,6 +154,14 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 		name, err := proc.Name()
 		if err == nil {
 			proc.Tags()["process_name"] = name
+		}
+	}
+
+	//If user tag is not already set, set to actual name
+	if _, ok := proc.Tags()["user"]; !ok {
+		user, err := proc.Username()
+		if err == nil {
+			proc.Tags()["user"] = user
 		}
 	}
 
@@ -213,12 +267,7 @@ func (p *Procstat) addMetrics(proc Process, acc telegraf.Accumulator) {
 }
 
 // Update monitored Processes
-func (p *Procstat) updateProcesses(prevInfo map[PID]Process) (map[PID]Process, error) {
-	pids, tags, err := p.findPids()
-	if err != nil {
-		return nil, err
-	}
-
+func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo map[PID]Process) (map[PID]Process, error) {
 	procs := make(map[PID]Process, len(prevInfo))
 
 	for _, pid := range pids {
@@ -252,20 +301,20 @@ func (p *Procstat) updateProcesses(prevInfo map[PID]Process) (map[PID]Process, e
 
 // Create and return PIDGatherer lazily
 func (p *Procstat) getPIDFinder() (PIDFinder, error) {
-	if p.pidFinder == nil {
+	if p.finder == nil {
 		f, err := p.createPIDFinder()
 		if err != nil {
 			return nil, err
 		}
-		p.pidFinder = f
+		p.finder = f
 	}
-	return p.pidFinder, nil
+	return p.finder, nil
 }
 
 // Get matching PIDs and their initial tags
-func (p *Procstat) findPids() ([]PID, map[string]string, error) {
+func (p *Procstat) findPids(acc telegraf.Accumulator) ([]PID, map[string]string, error) {
 	var pids []PID
-	var tags map[string]string
+	tags := make(map[string]string)
 	var err error
 
 	f, err := p.getPIDFinder()
@@ -291,8 +340,11 @@ func (p *Procstat) findPids() ([]PID, map[string]string, error) {
 	} else if p.CGroup != "" {
 		pids, err = p.cgroupPIDs()
 		tags = map[string]string{"cgroup": p.CGroup}
+	} else if p.WinService != "" {
+		pids, err = p.winServicePIDs()
+		tags = map[string]string{"win_service": p.WinService}
 	} else {
-		err = fmt.Errorf("Either exe, pid_file, user, or pattern has to be specified")
+		err = fmt.Errorf("Either exe, pid_file, user, pattern, systemd_unit, cgroup, or win_service must be specified")
 	}
 
 	return pids, tags, err
@@ -350,6 +402,19 @@ func (p *Procstat) cgroupPIDs() ([]PID, error) {
 		}
 		pids = append(pids, PID(pid))
 	}
+
+	return pids, nil
+}
+
+func (p *Procstat) winServicePIDs() ([]PID, error) {
+	var pids []PID
+
+	pid, err := queryPidWithWinServiceName(p.WinService)
+	if err != nil {
+		return pids, err
+	}
+
+	pids = append(pids, PID(pid))
 
 	return pids, nil
 }

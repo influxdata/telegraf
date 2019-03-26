@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"os/exec"
@@ -15,7 +16,7 @@ import (
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
-
+	"github.com/influxdata/wlog"
 	"github.com/soniah/gosnmp"
 )
 
@@ -84,6 +85,14 @@ var execCommand = exec.Command
 // execCmd executes the specified command, returning the STDOUT content.
 // If command exits with error status, the output is captured into the returned error.
 func execCmd(arg0 string, args ...string) ([]byte, error) {
+	if wlog.LogLevel() == wlog.DEBUG {
+		quoted := make([]string, 0, len(args))
+		for _, arg := range args {
+			quoted = append(quoted, fmt.Sprintf("%q", arg))
+		}
+		log.Printf("D! [inputs.snmp] Executing %q %s", arg0, strings.Join(quoted, " "))
+	}
+
 	out, err := execCommand(arg0, args...).Output()
 	if err != nil {
 		if err, ok := err.(*exec.ExitError); ok {
@@ -218,10 +227,20 @@ func (t *Table) initBuild() error {
 	if err != nil {
 		return err
 	}
+
 	if t.Name == "" {
 		t.Name = oidText
 	}
-	t.Fields = append(t.Fields, fields...)
+
+	knownOIDs := map[string]bool{}
+	for _, f := range t.Fields {
+		knownOIDs[f.Oid] = true
+	}
+	for _, f := range fields {
+		if !knownOIDs[f.Oid] {
+			t.Fields = append(t.Fields, f)
+		}
+	}
 
 	return nil
 }
@@ -237,6 +256,8 @@ type Field struct {
 	Oid string
 	// OidIndexSuffix is the trailing sub-identifier on a table record OID that will be stripped off to get the record's index.
 	OidIndexSuffix string
+	// OidIndexLength specifies the length of the index in OID path segments. It can be used to remove sub-identifiers that vary in content or length.
+	OidIndexLength int
 	// IsTag controls whether this OID is output as a tag or a value.
 	IsTag bool
 	// Conversion controls any type conversion that is done on the value.
@@ -461,6 +482,18 @@ func (t Table) Build(gs snmpConnection, walk bool) (*RTable, error) {
 						return nil
 					}
 					idx = idx[:len(idx)-len(f.OidIndexSuffix)]
+				}
+				if f.OidIndexLength != 0 {
+					i := f.OidIndexLength + 1 // leading separator
+					idx = strings.Map(func(r rune) rune {
+						if r == '.' {
+							i -= 1
+						}
+						if i < 1 {
+							return -1
+						}
+						return r
+					}, idx)
 				}
 
 				fv, err := fieldConvert(f.Conversion, ent.Value)
@@ -986,7 +1019,7 @@ func snmpTranslateCall(oid string) (mibName string, oidNum string, oidText strin
 			switch tc {
 			case "MacAddress", "PhysAddress":
 				conversion = "hwaddr"
-			case "InetAddressIPv4", "InetAddressIPv6", "InetAddress":
+			case "InetAddressIPv4", "InetAddressIPv6", "InetAddress", "IPSIpAddress":
 				conversion = "ipaddr"
 			}
 		} else if strings.HasPrefix(line, "::= { ") {

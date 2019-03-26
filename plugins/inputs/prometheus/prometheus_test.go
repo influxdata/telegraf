@@ -37,7 +37,7 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Urls: []string{ts.URL},
+		URLs: []string{ts.URL},
 	}
 
 	var acc testutil.Accumulator
@@ -50,7 +50,7 @@ func TestPrometheusGeneratesMetrics(t *testing.T) {
 	assert.True(t, acc.HasFloatField("test_metric", "value"))
 	assert.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
 	assert.False(t, acc.HasTag("test_metric", "address"))
-	assert.True(t, acc.TagValue("test_metric", "url") == ts.URL)
+	assert.True(t, acc.TagValue("test_metric", "url") == ts.URL+"/metrics")
 }
 
 func TestPrometheusGeneratesMetricsWithHostNameTag(t *testing.T) {
@@ -89,7 +89,7 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFails(t *testing.T) {
 	defer ts.Close()
 
 	p := &Prometheus{
-		Urls:               []string{ts.URL},
+		URLs:               []string{ts.URL},
 		KubernetesServices: []string{"http://random.telegraf.local:88/metrics"},
 	}
 
