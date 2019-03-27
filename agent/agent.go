@@ -364,6 +364,8 @@ func (a *Agent) runAggregators(
 
 			if !dropOriginal {
 				dst <- metric
+			} else {
+				metric.Drop()
 			}
 		}
 		cancel()
