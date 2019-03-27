@@ -4,11 +4,14 @@ import (
 	"encoding/xml"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 // XML path: //statistics
@@ -66,7 +69,10 @@ type v3CounterGroup struct {
 }
 
 // addStatsXMLv3 walks a v3Stats struct and adds the values to the telegraf.Accumulator.
-func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, urlTag string) {
+func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort string) {
+	grouper := metric.NewSeriesGrouper()
+	ts := time.Now()
+	host, port, _ := net.SplitHostPort(hostPort)
 	// Counter groups
 	for _, cg := range stats.Server.CounterGroups {
 		for _, c := range cg.Counters {
@@ -74,10 +80,9 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, urlTag str
 				continue
 			}
 
-			tags := map[string]string{"url": urlTag, "type": cg.Type, "name": c.Name}
-			fields := map[string]interface{}{"value": c.Value}
+			tags := map[string]string{"url": hostPort, "source": host, "port": port}
 
-			acc.AddCounter("bind_counter", fields, tags)
+			grouper.Add("bind_counter_"+cg.Type, tags, ts, c.Name, c.Value)
 		}
 	}
 
@@ -89,12 +94,12 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, urlTag str
 		"context_size": stats.Memory.Summary.ContextSize,
 		"lost":         stats.Memory.Summary.Lost,
 	}
-	acc.AddGauge("bind_memory", fields, map[string]string{"url": urlTag})
+	acc.AddGauge("bind_memory", fields, map[string]string{"url": hostPort, "source": host, "port": port})
 
 	// Detailed, per-context memory stats
 	if b.GatherMemoryContexts {
 		for _, c := range stats.Memory.Contexts {
-			tags := map[string]string{"url": urlTag, "id": c.Id, "name": c.Name}
+			tags := map[string]string{"url": hostPort, "source": host, "port": port, "id": c.Id, "name": c.Name}
 			fields := map[string]interface{}{"total": c.Total, "in_use": c.InUse}
 
 			acc.AddGauge("bind_memory_context", fields, tags)
@@ -107,17 +112,21 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, urlTag str
 			for _, cg := range v.CounterGroups {
 				for _, c := range cg.Counters {
 					tags := map[string]string{
-						"url":  urlTag,
-						"view": v.Name,
-						"type": cg.Type,
-						"name": c.Name,
+						"url":    hostPort,
+						"source": host,
+						"port":   port,
+						"view":   v.Name,
 					}
-					fields := map[string]interface{}{"value": c.Value}
 
-					acc.AddCounter("bind_counter", fields, tags)
+					grouper.Add("bind_counter_"+cg.Type, tags, ts, c.Name, c.Value)
 				}
 			}
 		}
+	}
+
+	//Add grouped metrics
+	for _, metric := range grouper.Metrics() {
+		acc.AddMetric(metric)
 	}
 }
 
