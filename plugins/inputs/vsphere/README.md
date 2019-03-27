@@ -17,17 +17,22 @@ vm_metric_exclude = [ "*" ]
 ```
 
 ```
-# Read metrics from one or many vCenters
 [[inputs.vsphere]]
-    ## List of vCenter URLs to be monitored. These three lines must be uncommented
-  ## and edited for the plugin to work.
-  vcenters = [ "https://vcenter.local/sdk" ]
+  ## List of vCenter URLs to be monitored.
+  vcenters = ["https://vcenter.local/sdk"]
+
+  ## vCenter Username
   username = "user@corp.local"
+
+  ## vCenter Password
   password = "secret"
 
-  ## VMs
-  ## Typical VM metrics (if omitted or empty, all metrics are collected)
-  # vm_include = [ "/*/vm/**"] # Inventory path to VMs to collect (by default all are collected)
+  ## Inventory paths for the virtual machines to gather metrics on.  If empty,
+  ## all VMs are included.
+  ##   ex: vm_include = ["/*/vm/**"]
+  # vm_include = []
+
+  ## Virtual machine metrics to gather.
   vm_metric_include = [
     "cpu.demand.average",
     "cpu.idle.summation",
@@ -64,12 +69,17 @@ vm_metric_exclude = [ "*" ]
     "virtualDisk.writeOIO.latest",
     "sys.uptime.latest",
   ]
-  # vm_metric_exclude = [] ## Nothing is excluded by default
-  # vm_instances = true ## true by default
+  vm_metric_exclude = []
 
-  ## Hosts
-  ## Typical host metrics (if omitted or empty, all metrics are collected)
-  # host_include = [ "/*/host/**"] # Inventory path to hosts to collect (by default all are collected)
+  ## If true, gather virtual machine instance metrics.
+  # vm_instances = true
+
+  ## Inventory path of the hosts to gather metrics on.  If empty, all hosts
+  ## are included.
+  ##   ex: host_include = [ "/*/host/**"]
+  # host_include = []
+
+  ## Host metrics to gather.
   host_metric_include = [
     "cpu.coreUtilization.average",
     "cpu.costop.summation",
@@ -118,52 +128,73 @@ vm_metric_exclude = [ "*" ]
     "storageAdapter.write.average",
     "sys.uptime.latest",
   ]
-  # host_metric_exclude = [] ## Nothing excluded by default
-  # host_instances = true ## true by default
+  host_metric_exclude = []
 
-  ## Clusters
-  # cluster_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
-  # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
-  # cluster_metric_exclude = [] ## Nothing excluded by default
-  # cluster_instances = false ## false by default
+  ## If true, gather host instance metrics.
+  # host_instances = true
 
-  ## Datastores
-  # cluster_include = [ "/*/datastore/**"] # Inventory path to datastores to collect (by default all are collected)
-  # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
-  # datastore_metric_exclude = [] ## Nothing excluded by default
-  # datastore_instances = false ## false by default
+  ## Inventory paths for the clusters to gather metrics on.  If empty,
+  ## all clusters are included.
+  ##   ex: cluster_include = ["/*/cluster/**"]
+  # cluster_include = []
 
-  ## Datacenters
-  # datacenter_include = [ "/*/host/**"] # Inventory path to clusters to collect (by default all are collected)
-  datacenter_metric_include = [] ## if omitted or empty, all metrics are collected
-  datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
-  # datacenter_instances = false ## false by default
+  ## Cluster metrics to gather.
+  cluster_metric_include = []
+  cluster_metric_exclude = []
 
-  ## Plugin Settings
-  ## separator character to use for measurement and field names (default: "_")
+  ## If true, gather cluster instance metrics.
+  # cluster_instances = false
+
+  ## Inventory paths for the datastores to gather metrics on.  If empty,
+  ## all datastores are included.
+  ##   ex: datastore_include = ["/*/datastore/**"]
+  # datastore_include = []
+
+  ## Datastore metrics to gather.
+  datastore_metric_include = []
+  datastore_metric_exclude = []
+
+  ## If true, gather datastore instance metrics.
+  # datastore_instances = false
+
+  ## Inventory paths for the datacenter to gather metrics on.  If empty,
+  ## all datacenter are included.
+  ##   ex: datacenter_include = ["/*/datacenter/**"]
+  # datacenter_include = []
+
+  ## Datacenter metrics to gather.
+  datacenter_metric_include = []
+  datacenter_metric_exclude = ["*"]
+
+  ## If true, gather datacenter instance metrics.
+  # datacenter_instances = false
+
+  ## Separator character to use for measurement and field names
   # separator = "_"
 
-  ## number of objects to retreive per query for realtime resources (vms and hosts)
-  ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
+  ## Number of objects to retreive per query for realtime resources (vms and
+  ## hosts).  Set to 64 for vCenter 5.5 and 6.0.
   # max_query_objects = 256
 
-  ## number of metrics to retreive per query for non-realtime resources (clusters and datastores)
-  ## set to 64 for vCenter 5.5 and 6.0 (default: 256)
+  ## Number of metrics to retreive per query for non-realtime resources
+  ## (clusters and datastores) Set to 64 for vCenter 5.5 and 6.0.
   # max_query_metrics = 256
 
-  ## number of go routines to use for collection and discovery of objects and metrics
+  ## Number of goroutines to use for collection and discovery of objects and
+  ## metrics.
   # collect_concurrency = 1
   # discover_concurrency = 1
 
-  ## whether or not to force discovery of new objects on initial gather call before collecting metrics
-  ## when true for large environments this may cause errors for time elapsed while collecting metrics
-  ## when false (default) the first collection cycle may result in no or limited metrics while objects are discovered
+  ## Force discovery of new objects on initial gather call before collecting
+  ## metrics.  When true, in large environments this may cause errors for time
+  ## elapsed while collecting metrics.  When false, the first collection cycle
+  ## may result in no or limited metrics while objects are discovered.
   # force_discover_on_init = false
 
-  ## the interval before (re)discovering objects subject to metrics collection (default: 300s)
+  ## The interval before (re)discovering objects subject to metrics collection.
   # object_discovery_interval = "300s"
 
-  ## timeout applies to any of the api request made to vcenter
+  ## Timeout applies to any API request made to vCenter.
   # timeout = "60s"
 
   ## When set to true, all samples are sent as integers. This makes the output
