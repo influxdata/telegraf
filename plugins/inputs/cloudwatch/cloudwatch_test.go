@@ -94,6 +94,10 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 	}, nil
 }
 
+func TestSnakeCase(t *testing.T) {
+	assert.Equal(t, "cluster_name", snakeCase("Cluster Name"))
+	assert.Equal(t, "broker_id", snakeCase("Broker ID"))
+}
 func TestGather(t *testing.T) {
 	duration, _ := time.ParseDuration("1m")
 	internalDuration := internal.Duration{

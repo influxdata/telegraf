@@ -484,6 +484,7 @@ func formatMeasurement(namespace string) string {
 
 func snakeCase(s string) string {
 	s = internal.SnakeCase(s)
+	s = strings.Replace(s, " ", "_", -1)
 	s = strings.Replace(s, "__", "_", -1)
 	return s
 }
