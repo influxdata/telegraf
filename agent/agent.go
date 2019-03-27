@@ -391,19 +391,28 @@ func (a *Agent) runAggregators(
 	}()
 
 	aggregations := make(chan telegraf.Metric, 100)
-	for _, agg := range a.Config.Aggregators {
-		wg.Add(1)
-		go func(agg *models.RunningAggregator) {
-			defer func() {
-				wg.Done()
-				close(aggregations)
-			}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 
-			acc := NewAccumulator(agg, aggregations)
-			acc.SetPrecision(a.Precision())
-			a.push(ctx, agg, acc)
-		}(agg)
-	}
+		var aggWg sync.WaitGroup
+		for _, agg := range a.Config.Aggregators {
+			aggWg.Add(1)
+			go func(agg *models.RunningAggregator) {
+				defer aggWg.Done()
+
+				acc := NewAccumulator(agg, aggregations)
+				acc.SetPrecision(a.Precision())
+				fmt.Println(1)
+				a.push(ctx, agg, acc)
+				fmt.Println(2)
+			}(agg)
+		}
+
+		aggWg.Wait()
+		fmt.Println(3)
+		close(aggregations)
+	}()
 
 	for metric := range aggregations {
 		metrics := a.applyProcessors(metric)
@@ -411,8 +420,10 @@ func (a *Agent) runAggregators(
 			dst <- metric
 		}
 	}
+	fmt.Println(4)
 
 	wg.Wait()
+	fmt.Println(5)
 	return nil
 }
 
