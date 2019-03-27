@@ -8,8 +8,6 @@
 
 #### Bugfixes
 
-- [#5540](https://github.com/influxdata/telegraf/pull/5540): Fix open file error handling in file output.
-
 ## v1.10.2 [unreleased]
 
 #### Release Notes
@@ -25,6 +23,11 @@
 - [#5566](https://github.com/influxdata/telegraf/pull/5566): Fix reading major and minor block devices identifiers in diskio input.
 - [#5607](https://github.com/influxdata/telegraf/pull/5607): Add owned directories to rpm package spec.
 - [#5608](https://github.com/influxdata/telegraf/pull/5607): Fix last character removed from string field in grok parser.
+- [#5632](https://github.com/influxdata/telegraf/pull/5632): Fix drop tracking of metrics removed with aggregator drop_original.
+- [#5540](https://github.com/influxdata/telegraf/pull/5540): Fix open file error handling in file output.
+- [#5627](https://github.com/influxdata/telegraf/pull/5627): Fix plugin name in influxdb_v2 output logging.
+- [#5630](https://github.com/influxdata/telegraf/pull/5630): Fix basedir check and parent dir extraction in filecount input.
+- [#5628](https://github.com/influxdata/telegraf/pull/5628): Listen before leaving start in statsd.
 
 ## v1.10.1 [2019-03-19]
 
