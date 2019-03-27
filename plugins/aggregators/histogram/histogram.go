@@ -202,11 +202,14 @@ func (h *HistogramAggregator) groupField(
 	)
 }
 
-// Reset does nothing, because we need to collect counts for a long time, otherwise if config parameter 'reset' has
-// small value, we will get a histogram with a small amount of the distribution.
+// Reset does nothing by default, because we need to collect counts for a long time,
+// otherwise if config parameter 'reset' has small value, we will get a histogram
+// with a small amount of the distribution. However in some use cases a reset is useful.
+
 func (h *HistogramAggregator) Reset() {
 	if h.ResetBuckets {
 		h.resetCache()
+		h.buckets = make(bucketsByMetrics)
 	}
 }
 
