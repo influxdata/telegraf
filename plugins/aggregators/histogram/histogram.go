@@ -73,6 +73,10 @@ var sampleConfig = `
   ## aggregator and will not get sent to the output plugins.
   drop_original = false
 
+  ## If true, the histogram will be reset on flush instead
+  ## of accumulating the results.
+  reset = false
+
   ## Example config that aggregates all fields of the metric.
   # [[aggregators.histogram.config]]
   #   ## The set of buckets.
