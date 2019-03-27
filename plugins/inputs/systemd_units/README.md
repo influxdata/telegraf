@@ -25,11 +25,11 @@ see ```systemctl list-units --all --type help``` for possible options.
   - tags:
     - name (string, unit name)
   - fields:
-    - loaded (int, see below)
+    - load (int, see below)
     - active (int, see below)
-    - running (int, see below)
+    - sub (int, see below)
 
-#### Loaded
+#### Load
 
 enumeration of [unit_load_state_table](https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L87)
 
@@ -58,7 +58,7 @@ enumeration of [unit_active_state_table](https://github.com/systemd/systemd/blob
 | 5     | deactivating | unit is ~                       |
 | -1    | err          | field not found in lookup table |
 
-#### Running
+#### Sub
 
 enumeration of sub states, see various [unittype_state_tables](https://github.com/systemd/systemd/blob/c87700a1335f489be31cd3549927da68b5638819/src/basic/unit-def.c#L163);
 duplicates were removed, tables are hex aligned to keep some space for future
