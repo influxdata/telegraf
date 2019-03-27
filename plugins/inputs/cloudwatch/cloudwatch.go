@@ -241,9 +241,7 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	now := time.Now()
-
-	err = c.updateWindow(now)
+	err = c.updateWindow(time.Now())
 	if err != nil {
 		return err
 	}
