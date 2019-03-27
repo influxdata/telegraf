@@ -4,16 +4,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
-
-	"github.com/karrick/godirwalk"
-	"github.com/pkg/errors"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/globpath"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	"github.com/karrick/godirwalk"
+	"github.com/pkg/errors"
 )
 
 const sampleConfig = `
@@ -157,7 +155,8 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 	childSize := make(map[string]int64)
 
 	walkFn := func(path string, de *godirwalk.Dirent) error {
-		if path == basedir {
+		rel, err := filepath.Rel(basedir, path)
+		if err == nil && rel == "." {
 			return nil
 		}
 		file, err := os.Stat(path)
@@ -173,7 +172,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 			return nil
 		}
 		if match {
-			parent := path[:strings.LastIndex(path, "/")]
+			parent := filepath.Dir(path)
 			childCount[parent]++
 			childSize[parent] += file.Size()
 		}
@@ -194,7 +193,7 @@ func (fc *FileCount) count(acc telegraf.Accumulator, basedir string, glob globpa
 					"directory": path,
 				})
 		}
-		parent := path[:strings.LastIndex(path, "/")]
+		parent := filepath.Dir(path)
 		if fc.Recursive {
 			childCount[parent] += childCount[path]
 			childSize[parent] += childSize[path]
