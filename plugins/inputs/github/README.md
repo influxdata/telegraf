@@ -41,6 +41,6 @@ The [GitHub](https://www.github.com) input plugin gathers statistics from GitHub
 ### Example Output:
 
 ```
-github,full_name=influxdata/telegraf,language=Go,license=MIT\ License,name=telegraf,owner=influxdata stars=6401i,forks=2421i,open_issues=722i,size=22611i 1552651811000000000
-github_rate_limit,host=p4x-639.lan remaining=59i,limit=60i 1552653551000000000
+github,full_name=influxdata/telegraf,name=telegraf,owner=influxdata,language=Go,license=MIT\ License stars=6401i,forks=2421i,open_issues=722i,size=22611i 1552651811000000000
+github_rate_limit, remaining=59i,limit=60i 1552653551000000000
 ```
