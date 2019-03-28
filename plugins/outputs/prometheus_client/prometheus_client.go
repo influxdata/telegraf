@@ -3,10 +3,12 @@ package prometheus_client
 import (
 	"context"
 	"crypto/subtle"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
@@ -16,7 +18,7 @@ import (
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/internal/tls"
+	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -66,9 +68,10 @@ type PrometheusClient struct {
 	StringAsLabel      bool              `toml:"string_as_label"`
 	ExportTimestamp    bool              `toml:"export_timestamp"`
 
-	tls.ServerConfig
+	tlsint.ServerConfig
 
 	server *http.Server
+	url    string
 
 	sync.Mutex
 	// fam is the non-expired MetricFamily by Prometheus metric name.
@@ -106,7 +109,7 @@ var sampleConfig = `
   ## If set, enable TLS with the given certificate.
   # tls_cert = "/etc/ssl/telegraf.crt"
   # tls_key = "/etc/ssl/telegraf.key"
-  
+
   ## Set one or more allowed client CA certificate file names to
   ## enable mutually authenticated TLS connections
   # tls_allowed_cacerts = ["/etc/telegraf/clientca.pem"]
@@ -175,7 +178,10 @@ func (p *PrometheusClient) Connect() error {
 		}
 	}
 
-	registry.Register(p)
+	err := registry.Register(p)
+	if err != nil {
+		return err
+	}
 
 	if p.Listen == "" {
 		p.Listen = "localhost:9273"
@@ -199,13 +205,20 @@ func (p *PrometheusClient) Connect() error {
 		TLSConfig: tlsConfig,
 	}
 
+	var listener net.Listener
+	if tlsConfig != nil {
+		listener, err = tls.Listen("tcp", p.Listen, tlsConfig)
+	} else {
+		listener, err = net.Listen("tcp", p.Listen)
+	}
+	if err != nil {
+		return err
+	}
+
+	p.url = createURL(tlsConfig, listener, p.Path)
+
 	go func() {
-		var err error
-		if p.TLSCert != "" && p.TLSKey != "" {
-			err = p.server.ListenAndServeTLS("", "")
-		} else {
-			err = p.server.ListenAndServe()
-		}
+		err := p.server.Serve(listener)
 		if err != nil && err != http.ErrServerClosed {
 			log.Printf("E! Error creating prometheus metric endpoint, err: %s\n",
 				err.Error())
@@ -215,11 +228,31 @@ func (p *PrometheusClient) Connect() error {
 	return nil
 }
 
+// Address returns the address the plugin is listening on.  If not listening
+// an empty string is returned.
+func (p *PrometheusClient) URL() string {
+	return p.url
+}
+
+func createURL(tlsConfig *tls.Config, listener net.Listener, path string) string {
+	u := url.URL{
+		Scheme: "http",
+		Host:   listener.Addr().String(),
+		Path:   path,
+	}
+
+	if tlsConfig != nil {
+		u.Scheme = "https"
+	}
+	return u.String()
+}
+
 func (p *PrometheusClient) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	err := p.server.Shutdown(ctx)
 	prometheus.Unregister(p)
+	p.url = ""
 	return err
 }
 
@@ -295,6 +328,7 @@ func (p *PrometheusClient) Collect(ch chan<- prometheus.Metric) {
 				log.Printf("E! Error creating prometheus metric, "+
 					"key: %s, labels: %v,\nerr: %s\n",
 					name, labels, err.Error())
+				continue
 			}
 
 			if p.ExportTimestamp {
@@ -354,13 +388,27 @@ func (p *PrometheusClient) addMetricFamily(point telegraf.Metric, sample *Sample
 	addSample(fam, sample, sampleID)
 }
 
+// Sorted returns a copy of the metrics in time ascending order.  A copy is
+// made to avoid modifying the input metric slice since doing so is not
+// allowed.
+func sorted(metrics []telegraf.Metric) []telegraf.Metric {
+	batch := make([]telegraf.Metric, 0, len(metrics))
+	for i := len(metrics) - 1; i >= 0; i-- {
+		batch = append(batch, metrics[i])
+	}
+	sort.Slice(batch, func(i, j int) bool {
+		return batch[i].Time().Before(batch[j].Time())
+	})
+	return batch
+}
+
 func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 	p.Lock()
 	defer p.Unlock()
 
 	now := p.now()
 
-	for _, point := range metrics {
+	for _, point := range sorted(metrics) {
 		tags := point.Tags()
 		sampleID := CreateSampleID(tags)
 

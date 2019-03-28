@@ -17,7 +17,7 @@ services:
       - KAFKA_ADVERTISED_HOST_NAME=localhost
       - KAFKA_ADVERTISED_PORT=9092
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_CREATE_TOPICS="test:1:1"
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - JAVA_OPTS="-Xms256m -Xmx256m"
     ports:
       - "9092:9092"
@@ -38,7 +38,7 @@ services:
       - "3306:3306"
   memcached:
     image: memcached
-    ports: 
+    ports:
       - "11211:11211"
   pgbouncer:
     image: mbed/pgbouncer

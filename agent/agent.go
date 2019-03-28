@@ -129,10 +129,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	wg.Wait()
 
 	log.Printf("D! [agent] Closing outputs")
-	err = a.closeOutputs()
-	if err != nil {
-		return err
-	}
+	a.closeOutputs()
 
 	log.Printf("D! [agent] Stopped Successfully")
 	return nil
@@ -367,6 +364,8 @@ func (a *Agent) runAggregators(
 
 			if !dropOriginal {
 				dst <- metric
+			} else {
+				metric.Drop()
 			}
 		}
 		cancel()
@@ -378,7 +377,10 @@ func (a *Agent) runAggregators(
 	for _, agg := range a.Config.Aggregators {
 		wg.Add(1)
 		go func(agg *models.RunningAggregator) {
-			defer wg.Done()
+			defer func() {
+				wg.Done()
+				close(aggregations)
+			}()
 
 			if a.Config.Agent.RoundInterval {
 				// Aggregators are aligned to the agent interval regardless of
@@ -394,7 +396,6 @@ func (a *Agent) runAggregators(
 			acc := NewAccumulator(agg, aggregations)
 			acc.SetPrecision(precision, interval)
 			a.push(ctx, agg, acc)
-			close(aggregations)
 		}(agg)
 	}
 
@@ -587,12 +588,10 @@ func (a *Agent) connectOutputs(ctx context.Context) error {
 }
 
 // closeOutputs closes all outputs.
-func (a *Agent) closeOutputs() error {
-	var err error
+func (a *Agent) closeOutputs() {
 	for _, output := range a.Config.Outputs {
-		err = output.Output.Close()
+		output.Close()
 	}
-	return err
 }
 
 // startServiceInputs starts all service inputs.
