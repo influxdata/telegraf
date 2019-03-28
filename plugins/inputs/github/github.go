@@ -70,6 +70,8 @@ func (g *GitHub) createGitHubClient() (*github.Client, error) {
 
 // Gather GitHub Metrics
 func (g *GitHub) Gather(acc telegraf.Accumulator) error {
+	ctx := context.Background()
+
 	if g.githubClient == nil {
 		githubClient, err := g.createGitHubClient()
 
@@ -86,8 +88,6 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 	for _, repository := range g.Repositories {
 		go func(repositoryName string, acc telegraf.Accumulator) {
 			defer wg.Done()
-
-			ctx := context.Background()
 
 			owner, repository, err := splitRepositoryName(repositoryName)
 			if err != nil {

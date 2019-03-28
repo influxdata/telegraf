@@ -1,31 +1,24 @@
 package github
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
 	gh "github.com/google/go-github/github"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSplitRepositoryNameWithWorkingExample(t *testing.T) {
 	owner, repository, _ := splitRepositoryName("influxdata/influxdb")
 
-	if owner != "influxdata" {
-		t.Errorf("Owner from 'influxdata/influxdb' should return 'influxdata'")
-	}
-
-	if repository != "influxdb" {
-		t.Errorf("Repository from 'influxdata/influxdb' should return 'influxdb'")
-	}
+	require.Equal(t, "influxdata", owner)
+	require.Equal(t, "influxdb", repository)
 }
 
 func TestSplitRepositoryNameWithNoSlash(t *testing.T) {
 	_, _, error := splitRepositoryName("influxdata-influxdb")
 
-	if error == nil {
-		t.Errorf("Repository name without a slash should return an error")
-	}
+	require.NotNil(t, error)
 }
 
 func TestGetLicenseWhenExists(t *testing.T) {
@@ -35,9 +28,7 @@ func TestGetLicenseWhenExists(t *testing.T) {
 
 	getLicenseReturn := getLicense(&repository)
 
-	if getLicenseReturn != "MIT" {
-		t.Errorf("GetLicense doesn't return the correct variable")
-	}
+	require.Equal(t, "MIT", getLicenseReturn)
 }
 
 func TestGetLicenseWhenMissing(t *testing.T) {
@@ -45,9 +36,7 @@ func TestGetLicenseWhenMissing(t *testing.T) {
 
 	getLicenseReturn := getLicense(&repository)
 
-	if getLicenseReturn != "None" {
-		t.Errorf("GetLicense doesn't return 'None' when no license exists")
-	}
+	require.Equal(t, "None", getLicenseReturn)
 }
 
 func TestGetTags(t *testing.T) {
@@ -74,9 +63,7 @@ func TestGetTags(t *testing.T) {
 		"license":   licenseName,
 	}
 
-	if !reflect.DeepEqual(getTagsReturn, correctTagsReturn) {
-		t.Errorf("GetTags doesn't return the correct values")
-	}
+	require.True(t, reflect.DeepEqual(getTagsReturn, correctTagsReturn))
 }
 
 func TestGetFields(t *testing.T) {
@@ -96,10 +83,5 @@ func TestGetFields(t *testing.T) {
 	correctFieldReturn["open_issues"] = 3
 	correctFieldReturn["size"] = 4
 
-	fmt.Printf("%v\n\n", getFieldsReturn)
-	fmt.Printf("%v\n\n", correctFieldReturn)
-
-	if !reflect.DeepEqual(getFieldsReturn, correctFieldReturn) {
-		t.Errorf("GetFields doesn't return the correct values")
-	}
+	require.True(t, reflect.DeepEqual(getFieldsReturn, correctFieldReturn))
 }
