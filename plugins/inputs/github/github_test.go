@@ -9,16 +9,38 @@ import (
 )
 
 func TestSplitRepositoryNameWithWorkingExample(t *testing.T) {
-	owner, repository, _ := splitRepositoryName("influxdata/influxdb")
+	var validRepositoryNames = []struct {
+		fullName   string
+		owner      string
+		repository string
+	}{
+		{"influxdata/telegraf", "influxdata", "telegraf"},
+		{"influxdata/influxdb", "influxdata", "influxdb"},
+		{"rawkode/saltstack-dotfiles", "rawkode", "saltstack-dotfiles"},
+	}
 
-	require.Equal(t, "influxdata", owner)
-	require.Equal(t, "influxdb", repository)
+	for _, tt := range validRepositoryNames {
+		t.Run(tt.fullName, func(t *testing.T) {
+			owner, repository, _ := splitRepositoryName(tt.fullName)
+
+			require.Equal(t, tt.owner, owner)
+			require.Equal(t, tt.repository, repository)
+		})
+	}
 }
 
 func TestSplitRepositoryNameWithNoSlash(t *testing.T) {
-	_, _, error := splitRepositoryName("influxdata-influxdb")
+	var invalidRepositoryNames = []string{
+		"influxdata-influxdb",
+	}
 
-	require.NotNil(t, error)
+	for _, tt := range invalidRepositoryNames {
+		t.Run(tt, func(t *testing.T) {
+			_, _, err := splitRepositoryName(tt)
+
+			require.NotNil(t, err)
+		})
+	}
 }
 
 func TestGetLicenseWhenExists(t *testing.T) {
