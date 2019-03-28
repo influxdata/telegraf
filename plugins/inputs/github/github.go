@@ -52,8 +52,6 @@ func (g *GitHub) Description() string {
 
 // Create GitHub Client
 func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error) {
-	var githubClient *github.Client
-
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
@@ -79,7 +77,7 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 	ctx := context.Background()
 
 	if g.githubClient == nil {
-		githubClient, err := g.createGitHubClient()
+		githubClient, err := g.createGitHubClient(ctx)
 
 		if err != nil {
 			return err
