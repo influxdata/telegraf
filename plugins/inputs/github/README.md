@@ -34,13 +34,15 @@ The [GitHub](https://www.github.com) input plugin gathers statistics from GitHub
 
 * github_rate_limit
   - tags:
+    - `access_token` - An obfusticated reference to the configured access token or "Unauthenticated"
   - fields:
     - `limit` - How many requests you are limited to (per hour)
     - `remaining` - How many requests you have remaining (per hour)
+    - `blocks` - How many requests have been blocked due to rate limit
 
 ### Example Output:
 
 ```
 github,full_name=influxdata/telegraf,name=telegraf,owner=influxdata,language=Go,license=MIT\ License stars=6401i,forks=2421i,open_issues=722i,size=22611i 1552651811000000000
-github_rate_limit, remaining=59i,limit=60i 1552653551000000000
+github_rate_limit,access_token=Unauthenticated remaining=59i,limit=60i,blocks=0i 1552653551000000000
 ```

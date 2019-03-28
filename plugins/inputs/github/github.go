@@ -23,6 +23,8 @@ type GitHub struct {
 	HTTPTimeout  internal.Duration `toml:"http_timeout"`
 	githubClient *github.Client
 
+	obfusticatedToken string
+
 	RateLimit       selfstat.Stat
 	RateLimitErrors selfstat.Stat
 	RateRemaining   selfstat.Stat
@@ -59,12 +61,16 @@ func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error)
 		Timeout: g.HTTPTimeout.Duration,
 	}
 
+	g.obfusticatedToken = "Unauthenticated"
+
 	if g.AccessToken != "" {
 		tokenSource := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: g.AccessToken},
 		)
 		oauthClient := oauth2.NewClient(ctx, tokenSource)
 		ctx = context.WithValue(ctx, oauth2.HTTPClient, oauthClient)
+
+		g.obfusticatedToken = g.AccessToken[0:4] + "..." + g.AccessToken[len(g.AccessToken)-3:]
 
 		return github.NewClient(oauthClient), nil
 	}
@@ -99,10 +105,14 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 				return
 			}
 
+			tokenTags := map[string]string{
+				"access_token": g.obfusticatedToken,
+			}
+
 			repositoryInfo, response, err := g.githubClient.Repositories.Get(ctx, owner, repository)
 
 			if _, ok := err.(*github.RateLimitError); ok {
-				g.RateLimitErrors = selfstat.Register("github", "rate_limit_blocks", map[string]string{})
+				g.RateLimitErrors = selfstat.Register("github", "rate_limit_blocks", tokenTags)
 				g.RateLimitErrors.Incr(1)
 			}
 
@@ -111,17 +121,17 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 				return
 			}
 
+			g.RateLimit = selfstat.Register("github", "rate_limit_limit", tokenTags)
+			g.RateLimit.Set(int64(response.Rate.Limit))
+
+			g.RateRemaining = selfstat.Register("github", "rate_limit_remaining", tokenTags)
+			g.RateRemaining.Set(int64(response.Rate.Remaining))
+
 			now := time.Now()
 			tags := getTags(repositoryInfo)
 			fields := getFields(repositoryInfo)
 
 			acc.AddFields("github_repository", fields, tags, now)
-
-			g.RateLimit = selfstat.Register("github", "rate_limit_limit", tags)
-			g.RateLimit.Set(int64(response.Rate.Limit))
-
-			g.RateRemaining = selfstat.Register("github", "rate_limit_remaining", tags)
-			g.RateRemaining.Set(int64(response.Rate.Remaining))
 		}(repository, acc)
 	}
 
