@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -49,23 +50,28 @@ func (g *GitHub) Description() string {
 	return "Read repository information from GitHub, including forks, stars, and more."
 }
 
-// Create HTTP Client
-func (g *GitHub) createGitHubClient() (*github.Client, error) {
+// Create GitHub Client
+func (g *GitHub) createGitHubClient(ctx context.Context) (*github.Client, error) {
 	var githubClient *github.Client
 
-	if g.AccessToken != "" {
-		ctx := context.Background()
-		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: g.AccessToken},
-		)
-		tc := oauth2.NewClient(ctx, ts)
-
-		githubClient = github.NewClient(tc)
-	} else {
-		githubClient = github.NewClient(nil)
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
+		Timeout: g.HTTPTimeout.Duration,
 	}
 
-	return githubClient, nil
+	if g.AccessToken != "" {
+		tokenSource := oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: g.AccessToken},
+		)
+		oauthClient := oauth2.NewClient(ctx, tokenSource)
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, oauthClient)
+
+		return github.NewClient(oauthClient), nil
+	}
+
+	return github.NewClient(httpClient), nil
 }
 
 // Gather GitHub Metrics
