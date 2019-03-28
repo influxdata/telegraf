@@ -120,7 +120,7 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 }
 
 func splitRepositoryName(repositoryName string) (string, string, error) {
-	splits := strings.Split(repositoryName, "/")
+	splits := strings.SplitN(repositoryName, "/", 2)
 
 	if len(splits) != 2 {
 		return "", "", fmt.Errorf("%v is not of format 'owner/repository'", repositoryName)
