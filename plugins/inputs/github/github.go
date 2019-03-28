@@ -3,7 +3,6 @@ package github
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"sync"
 	"time"
@@ -91,14 +90,14 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 
 			owner, repository, err := splitRepositoryName(repositoryName)
 			if err != nil {
-				log.Printf("E! [github]: %v", err)
+				acc.AddError(err)
 				return
 			}
 
 			repositoryInfo, response, err := g.githubClient.Repositories.Get(ctx, owner, repository)
 
 			if _, ok := err.(*github.RateLimitError); ok {
-				log.Printf("E! [github]: %v of %v requests remaining", response.Rate.Remaining, response.Rate.Limit)
+				acc.AddError(err)
 				return
 			}
 
