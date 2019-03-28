@@ -22,8 +22,9 @@ type GitHub struct {
 	HTTPTimeout  internal.Duration `toml:"http_timeout"`
 	githubClient *github.Client
 
-	RateLimit     selfstat.Stat
-	RateRemaining selfstat.Stat
+	RateLimit       selfstat.Stat
+	RateLimitErrors selfstat.Stat
+	RateRemaining   selfstat.Stat
 }
 
 const sampleConfig = `
@@ -97,6 +98,11 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 			repositoryInfo, response, err := g.githubClient.Repositories.Get(ctx, owner, repository)
 
 			if _, ok := err.(*github.RateLimitError); ok {
+				g.RateLimitErrors = selfstat.Register("github", "rate_limit_blocks", map[string]string{})
+				g.RateLimitErrors.Incr(1)
+			}
+
+			if err != nil {
 				acc.AddError(err)
 				return
 			}
@@ -107,10 +113,10 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 
 			acc.AddFields("github_repository", fields, tags, now)
 
-			g.RateLimit = selfstat.Register("github", "rate_limit", tags)
+			g.RateLimit = selfstat.Register("github", "rate_limit_limit", tags)
 			g.RateLimit.Set(int64(response.Rate.Limit))
 
-			g.RateRemaining = selfstat.Register("github", "rate_remaining", tags)
+			g.RateRemaining = selfstat.Register("github", "rate_limit_remaining", tags)
 			g.RateRemaining.Set(int64(response.Rate.Remaining))
 		}(repository, acc)
 	}
