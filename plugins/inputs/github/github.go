@@ -31,15 +31,15 @@ type GitHub struct {
 }
 
 const sampleConfig = `
-  ## Specify a list of repositories.
-  # eg: repositories = ["influxdata/influxdb"]
-  repositories = []
+  ## List of repositories to monitor
+  ## ex: repositories = ["influxdata/telegraf"]
+  # repositories = []
 
-  ## API Key for GitHub API requests.
-  api_key = ""
+  ## Optional: Unauthenticated requests are limited to 60 per hour.
+  # access_token = ""
 
-  ## Timeout for GitHub API requests.
-  http_timeout = "5s"
+  ## Optional: Default 5s.
+  # http_timeout = "5s"
 `
 
 // SampleConfig returns sample configuration for this plugin.
