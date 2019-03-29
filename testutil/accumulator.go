@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -204,7 +203,7 @@ func (a *Accumulator) AddError(err error) {
 	a.Unlock()
 }
 
-func (a *Accumulator) SetPrecision(precision, interval time.Duration) {
+func (a *Accumulator) SetPrecision(precision time.Duration) {
 	return
 }
 

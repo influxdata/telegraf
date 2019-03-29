@@ -41,11 +41,10 @@ type Accumulator interface {
 	// AddMetric adds an metric to the accumulator.
 	AddMetric(Metric)
 
-	// SetPrecision takes two time.Duration objects. If the first is non-zero,
-	// it sets that as the precision. Otherwise, it takes the second argument
-	// as the order of time that the metrics should be rounded to, with the
-	// maximum being 1s.
-	SetPrecision(precision, interval time.Duration)
+	// SetPrecision sets the timestamp rounding precision.  All metrics addeds
+	// added to the accumulator will have their timestamp rounded to the
+	// nearest multiple of precision.
+	SetPrecision(precision time.Duration)
 
 	// Report an error.
 	AddError(err error)
