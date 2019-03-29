@@ -4,11 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 type jsonStats struct {
@@ -40,6 +43,8 @@ type jsonView struct {
 
 // addJSONCounter adds a counter array to a Telegraf Accumulator, with the specified tags.
 func addJSONCounter(acc telegraf.Accumulator, commonTags map[string]string, stats map[string]int) {
+	grouper := metric.NewSeriesGrouper()
+	ts := time.Now()
 	for name, value := range stats {
 		if commonTags["type"] == "opcode" && strings.HasPrefix(name, "RESERVED") {
 			continue
@@ -52,16 +57,23 @@ func addJSONCounter(acc telegraf.Accumulator, commonTags map[string]string, stat
 			tags[k] = v
 		}
 
-		tags["name"] = name
-		fields := map[string]interface{}{"value": value}
+		grouper.Add("bind_counter", tags, ts, name, value)
+	}
 
-		acc.AddCounter("bind_counter", fields, tags)
+	//Add grouped metrics
+	for _, metric := range grouper.Metrics() {
+		acc.AddMetric(metric)
 	}
 }
 
 // addStatsJson walks a jsonStats struct and adds the values to the telegraf.Accumulator.
 func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag string) {
+	grouper := metric.NewSeriesGrouper()
+	ts := time.Now()
 	tags := map[string]string{"url": urlTag}
+	host, port, _ := net.SplitHostPort(urlTag)
+	tags["source"] = host
+	tags["port"] = port
 
 	// Opcodes
 	tags["type"] = "opcode"
@@ -105,17 +117,22 @@ func (b *Bind) addStatsJSON(stats jsonStats, acc telegraf.Accumulator, urlTag st
 			for cntrType, counters := range view.Resolver {
 				for cntrName, value := range counters {
 					tags := map[string]string{
-						"url":  urlTag,
-						"view": vName,
-						"type": cntrType,
-						"name": cntrName,
+						"url":    urlTag,
+						"source": host,
+						"port":   port,
+						"view":   vName,
+						"type":   cntrType,
 					}
-					fields := map[string]interface{}{"value": value}
 
-					acc.AddCounter("bind_counter", fields, tags)
+					grouper.Add("bind_counter", tags, ts, cntrName, value)
 				}
 			}
 		}
+	}
+
+	//Add grouped metrics
+	for _, metric := range grouper.Metrics() {
+		acc.AddMetric(metric)
 	}
 }
 

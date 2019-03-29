@@ -4,10 +4,13 @@ import (
 	"encoding/xml"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/metric"
 )
 
 type v2Root struct {
@@ -63,6 +66,8 @@ type v2Counter struct {
 
 // addXMLv2Counter adds a v2Counter array to a Telegraf Accumulator, with the specified tags
 func addXMLv2Counter(acc telegraf.Accumulator, commonTags map[string]string, stats []v2Counter) {
+	grouper := metric.NewSeriesGrouper()
+	ts := time.Now()
 	for _, c := range stats {
 		tags := make(map[string]string)
 
@@ -71,10 +76,12 @@ func addXMLv2Counter(acc telegraf.Accumulator, commonTags map[string]string, sta
 			tags[k] = v
 		}
 
-		tags["name"] = c.Name
-		fields := map[string]interface{}{"value": c.Value}
+		grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
+	}
 
-		acc.AddCounter("bind_counter", fields, tags)
+	//Add grouped metrics
+	for _, metric := range grouper.Metrics() {
+		acc.AddMetric(metric)
 	}
 }
 
@@ -101,6 +108,9 @@ func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator) error {
 	}
 
 	tags := map[string]string{"url": addr.Host}
+	host, port, _ := net.SplitHostPort(addr.Host)
+	tags["source"] = host
+	tags["port"] = port
 
 	// Opcodes
 	tags["type"] = "opcode"

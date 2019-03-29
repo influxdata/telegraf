@@ -80,9 +80,9 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 				continue
 			}
 
-			tags := map[string]string{"url": hostPort, "source": host, "port": port}
+			tags := map[string]string{"url": hostPort, "source": host, "port": port, "type": cg.Type}
 
-			grouper.Add("bind_counter_"+cg.Type, tags, ts, c.Name, c.Value)
+			grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
 		}
 	}
 
@@ -116,9 +116,10 @@ func (b *Bind) addStatsXMLv3(stats v3Stats, acc telegraf.Accumulator, hostPort s
 						"source": host,
 						"port":   port,
 						"view":   v.Name,
+						"type":   cg.Type,
 					}
 
-					grouper.Add("bind_counter_"+cg.Type, tags, ts, c.Name, c.Value)
+					grouper.Add("bind_counter", tags, ts, c.Name, c.Value)
 				}
 			}
 		}
