@@ -948,6 +948,17 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 			}
 			e.populateTags(&objectRef, resourceType, res, t, &v)
 
+
+			// --- Change Start
+			hostname, found := t["esxhostname"]
+			if found {
+				var hss []mo.HostSystem
+				err = client.Root.RetrieveWithFilter(ctx, []string{"HostSystem"}, []string{"summary"}, &hss, map[string]types.AnyType{"name": hostname,})
+				t["build"] = hss[0].Summary.Config.Product.Build
+			}
+			// --- Change End
+
+
 			nValues := 0
 			alignedInfo, alignedValues := alignSamples(em.SampleInfo, v.Value, interval)
 
