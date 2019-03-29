@@ -63,3 +63,69 @@ Here is the configuration that you add to your `telegraf.conf`:
       oid = "IF-MIB::ifDescr"
       is_tag = true
 ```
+
+
+See below for SNMPv3 Examples of configs against Cisco Switches: 
+
+```
+[[inputs.snmp]]
+  agents = [AGENTS]
+  version = 3
+  auth_password = "TOKEN"
+  auth_protocol = "MD5"
+  priv_password = "TOKEN"
+  priv_protocol = "AES"
+  sec_name = "test"
+  sec_level = "authPriv"
+  max_repetitions = 10
+  timeout = "10s"
+  retries = 1
+  name_prefix = "dev."
+  
+  [[inputs.snmp.field]]
+    name = "hostname"
+    oid = ".1.3.6.1.2.1.1.5.0"
+    is_tag = true
+  [inputs.snmp.tagdrop]
+    ifName=["Vlan[0-9]*", "loopback*"]
+    fieldpass = ["ifInUcastPkts", "ifInNUcastPkts", "ifInDiscards", "ifInErrors", "ifOutUcastPkts", "ifOutNUcastPkts", "ifOutDiscards", "ifOutErrors", "ifType", "ifMtu", "ifSpeed", "ifAdminStatus", "ifOperStatus"]
+  [[inputs.snmp.table]]
+    name = "interfaceStats"
+    inherit_tags = ["hostname"]
+  [inputs.snmp.tagdrop]
+    ifAlias = [""]
+    [[inputs.snmp.table.field]]
+      name = "ifAlias"
+      oid = ".1.3.6.1.2.1.31.1.1.1.18"
+      is_tag = true
+    [[inputs.snmp.table.field]]
+      name = "ifName"
+      oid = ".1.3.6.1.2.1.31.1.1.1.1"
+      is_tag = true
+    [[inputs.snmp.table.field]]
+	    name = "ifType"
+  	  oid = ".1.3.6.1.2.1.2.2.1.3"
+    [[inputs.snmp.table.field]]
+      name = "ifInNUcastPkts"
+      oid = "1.3.6.1.2.1.2.2.1.12"
+    [[inputs.snmp.table.field]]
+      name = "ifInDiscards"
+      oid = "1.3.6.1.2.1.2.2.1.13"
+    [[inputs.snmp.table.field]]
+      name = "ifInErrors"
+      oid = "1.3.6.1.2.1.2.2.1.14"
+    [[inputs.snmp.table.field]]
+      name = "ifOutUcastPkts"
+      oid = "1.3.6.1.2.1.2.2.1.14"
+    [[inputs.snmp.table.field]]
+      name = "ifOutNUcastPkts"
+      oid = "1.3.6.1.2.1.2.2.1.18"
+    [[inputs.snmp.table.field]]
+      name = "ifOutDiscards"
+      oid = "1.3.6.1.2.1.2.2.1.19"
+    [[inputs.snmp.table.field]]
+      name = "ifOutErrors"
+      oid = "1.3.6.1.2.1.2.2.1.20"
+    [[inputs.snmp.table.field]]
+      name = "ifMtu"
+  
