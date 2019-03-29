@@ -44,5 +44,5 @@ The [GitHub](https://www.github.com) input plugin gathers statistics from GitHub
 
 ```
 github,full_name=influxdata/telegraf,name=telegraf,owner=influxdata,language=Go,license=MIT\ License stars=6401i,forks=2421i,open_issues=722i,size=22611i 1552651811000000000
-github_rate_limit,access_token=Unauthenticated remaining=59i,limit=60i,blocks=0i 1552653551000000000
+internal_github,access_token=Unauthenticated rate_limit_remaining=59i,rate_limit_limit=60i,rate_limit_blocks=0i 1552653551000000000
 ```
