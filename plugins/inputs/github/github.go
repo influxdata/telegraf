@@ -90,6 +90,14 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 		}
 
 		g.githubClient = githubClient
+
+		tokenTags := map[string]string{
+			"access_token": g.obfusticatedToken,
+		}
+
+		g.RateLimitErrors = selfstat.Register("github", "rate_limit_blocks", tokenTags)
+		g.RateLimit = selfstat.Register("github", "rate_limit_limit", tokenTags)
+		g.RateRemaining = selfstat.Register("github", "rate_limit_remaining", tokenTags)
 	}
 
 	var wg sync.WaitGroup
@@ -105,14 +113,9 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 				return
 			}
 
-			tokenTags := map[string]string{
-				"access_token": g.obfusticatedToken,
-			}
-
 			repositoryInfo, response, err := g.githubClient.Repositories.Get(ctx, owner, repository)
 
 			if _, ok := err.(*github.RateLimitError); ok {
-				g.RateLimitErrors = selfstat.Register("github", "rate_limit_blocks", tokenTags)
 				g.RateLimitErrors.Incr(1)
 			}
 
@@ -121,10 +124,7 @@ func (g *GitHub) Gather(acc telegraf.Accumulator) error {
 				return
 			}
 
-			g.RateLimit = selfstat.Register("github", "rate_limit_limit", tokenTags)
 			g.RateLimit.Set(int64(response.Rate.Limit))
-
-			g.RateRemaining = selfstat.Register("github", "rate_limit_remaining", tokenTags)
 			g.RateRemaining.Set(int64(response.Rate.Remaining))
 
 			now := time.Now()
