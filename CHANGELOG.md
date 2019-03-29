@@ -5,6 +5,7 @@
 - [#5556](https://github.com/influxdata/telegraf/pull/5556): Add TTL field to ping input.
 - [#5569](https://github.com/influxdata/telegraf/pull/5569): Add hexadecimal string to integer conversion to converter processor.
 - [#5601](https://github.com/influxdata/telegraf/pull/5601): Add support for multiple line text and perfdata to nagios parser.
+- [#5648](https://github.com/influxdata/telegraf/pull/5648): Allow env vars ${} expansion syntax in configuration file.
 
 #### Bugfixes
 
