@@ -21,7 +21,6 @@ The [GitHub](https://www.github.com) input plugin gathers statistics from GitHub
 
 - github_repository
   - tags:
-    - `full_name` - The full name of the repository, including owner/organization
     - `name` - The repository name
     - `owner` - The owner of the repository
     - `language` - The primary language of the repository

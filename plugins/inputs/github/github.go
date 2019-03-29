@@ -159,11 +159,10 @@ func getLicense(repositoryInfo *github.Repository) string {
 
 func getTags(repositoryInfo *github.Repository) map[string]string {
 	return map[string]string{
-		"full_name": *repositoryInfo.FullName,
-		"owner":     *repositoryInfo.Owner.Login,
-		"name":      *repositoryInfo.Name,
-		"language":  *repositoryInfo.Language,
-		"license":   getLicense(repositoryInfo),
+		"owner":    *repositoryInfo.Owner.Login,
+		"name":     *repositoryInfo.Name,
+		"language": *repositoryInfo.Language,
+		"license":  getLicense(repositoryInfo),
 	}
 }
 
