@@ -40,7 +40,7 @@ var (
 	outputDefaults = []string{"influxdb"}
 
 	// envVarRe is a regex to find environment variables in the config file
-	envVarRe = regexp.MustCompile(`\$\w+`)
+	envVarRe = regexp.MustCompile(`\$\{(\w+)\}|\$(\w+)`)
 
 	envVarEscaper = strings.NewReplacer(
 		`"`, `\"`,
@@ -208,9 +208,9 @@ var header = `# Telegraf Configuration
 # Use 'telegraf -config telegraf.conf -test' to see what metrics a config
 # file would generate.
 #
-# Environment variables can be used anywhere in this config file, simply prepend
-# them with $. For strings the variable must be within quotes (ie, "$STR_VAR"),
-# for numbers and booleans they should be plain (ie, $INT_VAR, $BOOL_VAR)
+# Environment variables can be used anywhere in this config file, simply surround
+# them with ${}. For strings the variable must be within quotes (ie, "${STR_VAR}"),
+# for numbers and booleans they should be plain (ie, ${INT_VAR}, ${BOOL_VAR})
 
 
 # Global tags can be specified here in key="value" format.
@@ -787,12 +787,25 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 func parseConfig(contents []byte) (*ast.Table, error) {
 	contents = trimBOM(contents)
 
-	env_vars := envVarRe.FindAll(contents, -1)
-	for _, env_var := range env_vars {
+	parameters := envVarRe.FindAllSubmatch(contents, -1)
+	for _, parameter := range parameters {
+		if len(parameter) != 3 {
+			continue
+		}
+
+		var env_var []byte
+		if parameter[1] != nil {
+			env_var = parameter[1]
+		} else if parameter[2] != nil {
+			env_var = parameter[2]
+		} else {
+			continue
+		}
+
 		env_val, ok := os.LookupEnv(strings.TrimPrefix(string(env_var), "$"))
 		if ok {
 			env_val = escapeEnv(env_val)
-			contents = bytes.Replace(contents, env_var, []byte(env_val), 1)
+			contents = bytes.Replace(contents, parameter[0], []byte(env_val), 1)
 		}
 	}
 

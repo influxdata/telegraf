@@ -11,7 +11,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/memcached"
 	"github.com/influxdata/telegraf/plugins/inputs/procstat"
 	"github.com/influxdata/telegraf/plugins/parsers"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,7 +27,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 
 	filter := models.Filter{
 		NameDrop:  []string{"metricname2"},
-		NamePass:  []string{"metricname1"},
+		NamePass:  []string{"metricname1", "ip_192.168.1.1_name"},
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
 		TagDrop: []models.TagFilter{

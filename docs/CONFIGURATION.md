@@ -34,10 +34,10 @@ configuration files.
 
 ### Environment Variables
 
-Environment variables can be used anywhere in the config file, simply prepend
-them with `$`.  Replacement occurs before file parsing.   For strings
-the variable must be within quotes, e.g., `"$STR_VAR"`, for numbers and booleans
-they should be unquoted, e.g., `$INT_VAR`, `$BOOL_VAR`.
+Environment variables can be used anywhere in the config file, simply surround
+them with `${}`.  Replacement occurs before file parsing.   For strings
+the variable must be within quotes, e.g., `"${STR_VAR}"`, for numbers and booleans
+they should be unquoted, e.g., `${INT_VAR}`, `${BOOL_VAR}`.
 
 When using the `.deb` or `.rpm` packages, you can define environment variables
 in the `/etc/default/telegraf` file.
@@ -55,14 +55,14 @@ INFLUX_PASSWORD="monkey123"
 `/etc/telegraf.conf`:
 ```toml
 [global_tags]
-  user = "$USER"
+  user = "${USER}"
 
 [[inputs.mem]]
 
 [[outputs.influxdb]]
-  urls = ["$INFLUX_URL"]
-  skip_database_creation = $INFLUX_SKIP_DATABASE_CREATION
-  password = "$INFLUX_PASSWORD"
+  urls = ["${INFLUX_URL}"]
+  skip_database_creation = ${INFLUX_SKIP_DATABASE_CREATION}
+  password = "${INFLUX_PASSWORD}"
 ```
 
 The above files will produce the following effective configuration file to be
