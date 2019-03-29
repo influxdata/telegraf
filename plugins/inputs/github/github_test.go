@@ -73,28 +73,38 @@ func TestGetTags(t *testing.T) {
 
 	language := "Go"
 
-	repository := gh.Repository{FullName: &fullName, Name: &repositoryName, License: &license, Owner: &owner, Language: &language}
+	repository := gh.Repository{
+		FullName: &fullName,
+		Name:     &repositoryName,
+		License:  &license,
+		Owner:    &owner,
+		Language: &language,
+	}
 
 	getTagsReturn := getTags(&repository)
 
 	correctTagsReturn := map[string]string{
-		"full_name": fullName,
-		"owner":     ownerName,
-		"name":      repositoryName,
-		"language":  language,
-		"license":   licenseName,
+		"owner":    ownerName,
+		"name":     repositoryName,
+		"language": language,
+		"license":  licenseName,
 	}
 
-	require.True(t, reflect.DeepEqual(getTagsReturn, correctTagsReturn))
+	require.Equal(t, true, reflect.DeepEqual(getTagsReturn, correctTagsReturn))
 }
 
 func TestGetFields(t *testing.T) {
 	stars := 1
 	forks := 2
-	open_issues := 3
+	openIssues := 3
 	size := 4
 
-	repository := gh.Repository{StargazersCount: &stars, ForksCount: &forks, OpenIssuesCount: &open_issues, Size: &size}
+	repository := gh.Repository{
+		StargazersCount: &stars,
+		ForksCount:      &forks,
+		OpenIssuesCount: &openIssues,
+		Size:            &size,
+	}
 
 	getFieldsReturn := getFields(&repository)
 
@@ -105,5 +115,5 @@ func TestGetFields(t *testing.T) {
 	correctFieldReturn["open_issues"] = 3
 	correctFieldReturn["size"] = 4
 
-	require.True(t, reflect.DeepEqual(getFieldsReturn, correctFieldReturn))
+	require.Equal(t, true, reflect.DeepEqual(getFieldsReturn, correctFieldReturn))
 }
