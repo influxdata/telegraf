@@ -140,12 +140,12 @@ func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator) error {
 		"context_size": stats.Statistics.Memory.Summary.ContextSize,
 		"lost":         stats.Statistics.Memory.Summary.Lost,
 	}
-	acc.AddGauge("bind_memory", fields, map[string]string{"url": addr.Host})
+	acc.AddGauge("bind_memory", fields, map[string]string{"url": addr.Host, "source": host, "port": port})
 
 	// Detailed, per-context memory stats
 	if b.GatherMemoryContexts {
 		for _, c := range stats.Statistics.Memory.Contexts {
-			tags := map[string]string{"url": addr.Host, "id": c.Id, "name": c.Name}
+			tags := map[string]string{"url": addr.Host, "id": c.Id, "name": c.Name, "source": host, "port": port}
 			fields := map[string]interface{}{"total": c.Total, "in_use": c.InUse}
 
 			acc.AddGauge("bind_memory_context", fields, tags)
