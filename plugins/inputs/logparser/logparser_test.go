@@ -1,3 +1,5 @@
+// +build go1.10
+
 package logparser
 
 import (
