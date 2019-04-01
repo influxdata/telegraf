@@ -77,7 +77,7 @@ var ModbusConfig = `
  slaveId = 1
  timeout = 1
 
- [[inputs.modbus.Registers.InputRegisters.Tags]]
+  [[inputs.modbus.Registers.InputRegisters.Tags]]
    name = "Voltage"
    order ="AB"	
    scale = "/10"
