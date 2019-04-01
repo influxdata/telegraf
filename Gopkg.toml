@@ -265,3 +265,7 @@
 [[constraint]]
   name = "github.com/go-logfmt/logfmt"
   version = "0.4.0"
+
+[[constraint]]
+  name = "github.com/goburrow/modbus"
+  version = "master"
