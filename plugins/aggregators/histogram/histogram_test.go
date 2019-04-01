@@ -12,8 +12,8 @@ import (
 )
 
 // NewTestHistogram creates new test histogram aggregation with specified config
-func NewTestHistogram(cfg []config) telegraf.Aggregator {
-	htm := &HistogramAggregator{Configs: cfg}
+func NewTestHistogram(cfg []config, reset bool) telegraf.Aggregator {
+	htm := &HistogramAggregator{Configs: cfg, ResetBuckets: reset}
 	htm.buckets = make(bucketsByMetrics)
 	htm.resetCache()
 
@@ -69,11 +69,12 @@ func BenchmarkApply(b *testing.B) {
 func TestHistogramWithPeriodAndOneField(t *testing.T) {
 	var cfg []config
 	cfg = append(cfg, config{Metric: "first_metric_name", Fields: []string{"a"}, Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}})
-	histogram := NewTestHistogram(cfg)
+	histogram := NewTestHistogram(cfg, false)
 
 	acc := &testutil.Accumulator{}
 
 	histogram.Add(firstMetric1)
+	histogram.Reset()
 	histogram.Add(firstMetric2)
 	histogram.Push(acc)
 
@@ -88,12 +89,36 @@ func TestHistogramWithPeriodAndOneField(t *testing.T) {
 	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(2)}, bucketInf)
 }
 
+// TestHistogramWithPeriodAndOneField tests metrics for one period and for one field
+func TestHistogramWithReset(t *testing.T) {
+	var cfg []config
+	cfg = append(cfg, config{Metric: "first_metric_name", Fields: []string{"a"}, Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}})
+	histogram := NewTestHistogram(cfg, true)
+
+	acc := &testutil.Accumulator{}
+
+	histogram.Add(firstMetric1)
+	histogram.Reset()
+	histogram.Add(firstMetric2)
+	histogram.Push(acc)
+
+	if len(acc.Metrics) != 6 {
+		assert.Fail(t, "Incorrect number of metrics")
+	}
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(0)}, "0")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(0)}, "10")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(1)}, "20")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(1)}, "30")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(1)}, "40")
+	assertContainsTaggedField(t, acc, "first_metric_name", map[string]interface{}{"a_bucket": int64(1)}, bucketInf)
+}
+
 // TestHistogramWithPeriodAndAllFields tests two metrics for one period and for all fields
 func TestHistogramWithPeriodAndAllFields(t *testing.T) {
 	var cfg []config
 	cfg = append(cfg, config{Metric: "first_metric_name", Buckets: []float64{0.0, 15.5, 20.0, 30.0, 40.0}})
 	cfg = append(cfg, config{Metric: "second_metric_name", Buckets: []float64{0.0, 4.0, 10.0, 23.0, 30.0}})
-	histogram := NewTestHistogram(cfg)
+	histogram := NewTestHistogram(cfg, false)
 
 	acc := &testutil.Accumulator{}
 
@@ -127,7 +152,7 @@ func TestHistogramDifferentPeriodsAndAllFields(t *testing.T) {
 
 	var cfg []config
 	cfg = append(cfg, config{Metric: "first_metric_name", Buckets: []float64{0.0, 10.0, 20.0, 30.0, 40.0}})
-	histogram := NewTestHistogram(cfg)
+	histogram := NewTestHistogram(cfg, false)
 
 	acc := &testutil.Accumulator{}
 	histogram.Add(firstMetric1)
@@ -166,7 +191,7 @@ func TestWrongBucketsOrder(t *testing.T) {
 
 	var cfg []config
 	cfg = append(cfg, config{Metric: "first_metric_name", Buckets: []float64{0.0, 90.0, 20.0, 30.0, 40.0}})
-	histogram := NewTestHistogram(cfg)
+	histogram := NewTestHistogram(cfg, false)
 	histogram.Add(firstMetric2)
 }
 
