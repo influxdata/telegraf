@@ -40,6 +40,27 @@ apt-get install iputils-ping
   # arguments = ["-c", "3"]
 ```
 
+#### File Limit
+
+Since this plugin runs the ping command, it may need to open several files per
+host.  With a large host list you may receive a `too many open files` error.
+
+To increase this limit on platforms using systemd it must be done in the
+service file.
+
+
+Find the service unit file:
+```
+$ systemctl show telegraf.service -p FragmentPath
+FragmentPath=/lib/systemd/system/telegraf.service
+```
+
+Set the file number limit:
+```
+[Service]
+LimitNOFILE=4096
+```
+
 ### Metrics:
 
 - ping
@@ -49,6 +70,7 @@ apt-get install iputils-ping
     - packets_transmitted (integer)
     - packets_received (integer)
     - percent_packets_loss (float)
+    - ttl (integer, Not available on Windows)
     - average_response_ms (integer)
     - minimum_response_ms (integer)
     - maximum_response_ms (integer)
@@ -71,5 +93,5 @@ ping,url=example.org result_code=0i,average_response_ms=7i,maximum_response_ms=9
 
 **Linux:**
 ```
-ping,url=example.org average_response_ms=23.066,maximum_response_ms=24.64,minimum_response_ms=22.451,packets_received=5i,packets_transmitted=5i,percent_packet_loss=0,result_code=0i,standard_deviation_ms=0.809 1535747258000000000
+ping,url=example.org average_response_ms=23.066,ttl=63,maximum_response_ms=24.64,minimum_response_ms=22.451,packets_received=5i,packets_transmitted=5i,percent_packet_loss=0,result_code=0i,standard_deviation_ms=0.809 1535747258000000000
 ```

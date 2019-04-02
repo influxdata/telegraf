@@ -72,6 +72,8 @@ type HTTPListener struct {
 	NotFoundsServed selfstat.Stat
 	BuffersCreated  selfstat.Stat
 	AuthFailures    selfstat.Stat
+
+	longLines selfstat.Stat
 }
 
 const sampleConfig = `
@@ -138,6 +140,7 @@ func (h *HTTPListener) Start(acc telegraf.Accumulator) error {
 	h.NotFoundsServed = selfstat.Register("http_listener", "not_founds_served", tags)
 	h.BuffersCreated = selfstat.Register("http_listener", "buffers_created", tags)
 	h.AuthFailures = selfstat.Register("http_listener", "auth_failures", tags)
+	h.longLines = selfstat.Register("http_listener", "long_lines", tags)
 
 	if h.MaxBodySize.Size == 0 {
 		h.MaxBodySize.Size = DEFAULT_MAX_BODY_SIZE
@@ -325,6 +328,7 @@ func (h *HTTPListener) serveWrite(res http.ResponseWriter, req *http.Request) {
 		// final newline, then push the rest of the bytes into the next buffer.
 		i := bytes.LastIndexByte(buf, '\n')
 		if i == -1 {
+			h.longLines.Incr(1)
 			// drop any line longer than the max buffer size
 			log.Printf("D! http_listener received a single line longer than the maximum of %d bytes",
 				len(buf))

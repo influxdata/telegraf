@@ -22,19 +22,25 @@ type VSphere struct {
 	DatacenterInstances     bool
 	DatacenterMetricInclude []string
 	DatacenterMetricExclude []string
+	DatacenterInclude       []string
 	ClusterInstances        bool
 	ClusterMetricInclude    []string
 	ClusterMetricExclude    []string
+	ClusterInclude          []string
 	HostInstances           bool
 	HostMetricInclude       []string
 	HostMetricExclude       []string
+	HostInclude             []string
 	VMInstances             bool     `toml:"vm_instances"`
 	VMMetricInclude         []string `toml:"vm_metric_include"`
 	VMMetricExclude         []string `toml:"vm_metric_exclude"`
+	VMInclude               []string `toml:"vm_include"`
 	DatastoreInstances      bool
 	DatastoreMetricInclude  []string
 	DatastoreMetricExclude  []string
+	DatastoreInclude        []string
 	Separator               string
+	UseIntSamples           bool
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
@@ -84,7 +90,7 @@ var sampleConfig = `
     "net.droppedRx.summation",
     "net.droppedTx.summation",
     "net.usage.average",
-    "power.power.average",    
+    "power.power.average",
     "virtualDisk.numberReadAveraged.average",
     "virtualDisk.numberWriteAveraged.average",
     "virtualDisk.read.average",
@@ -99,7 +105,7 @@ var sampleConfig = `
   # vm_metric_exclude = [] ## Nothing is excluded by default
   # vm_instances = true ## true by default
 
-  ## Hosts 
+  ## Hosts
   ## Typical host metrics (if omitted or empty, all metrics are collected)
   host_metric_include = [
     "cpu.coreUtilization.average",
@@ -152,12 +158,12 @@ var sampleConfig = `
   # host_metric_exclude = [] ## Nothing excluded by default
   # host_instances = true ## true by default
 
-  ## Clusters 
+  ## Clusters
   # cluster_metric_include = [] ## if omitted or empty, all metrics are collected
   # cluster_metric_exclude = [] ## Nothing excluded by default
   # cluster_instances = false ## false by default
 
-  ## Datastores 
+  ## Datastores
   # datastore_metric_include = [] ## if omitted or empty, all metrics are collected
   # datastore_metric_exclude = [] ## Nothing excluded by default
   # datastore_instances = false ## false by default for Datastores only
@@ -167,7 +173,7 @@ var sampleConfig = `
   datacenter_metric_exclude = [ "*" ] ## Datacenters are not collected by default.
   # datacenter_instances = false ## false by default for Datastores only
 
-  ## Plugin Settings  
+  ## Plugin Settings
   ## separator character to use for measurement and field names (default: "_")
   # separator = "_"
 
@@ -194,6 +200,14 @@ var sampleConfig = `
   ## timeout applies to any of the api request made to vcenter
   # timeout = "60s"
 
+  ## When set to true, all samples are sent as integers. This makes the output
+  ## data types backwards compatible with Telegraf 1.9 or lower. Normally all
+  ## samples from vCenter, with the exception of percentages, are integer
+  ## values, but under some conditions, some averaging takes place internally in
+  ## the plugin. Setting this flag to "false" will send values as floats to
+  ## preserve the full precision when averaging takes place.
+  # use_int_samples = true
+
   ## Optional SSL Config
   # ssl_ca = "/path/to/cafile"
   # ssl_cert = "/path/to/certfile"
@@ -216,7 +230,7 @@ func (v *VSphere) Description() string {
 // Start is called from telegraf core when a plugin is started and allows it to
 // perform initialization tasks.
 func (v *VSphere) Start(acc telegraf.Accumulator) error {
-	log.Println("D! [input.vsphere]: Starting plugin")
+	log.Println("D! [inputs.vsphere]: Starting plugin")
 	ctx, cancel := context.WithCancel(context.Background())
 	v.cancel = cancel
 
@@ -239,7 +253,7 @@ func (v *VSphere) Start(acc telegraf.Accumulator) error {
 // Stop is called from telegraf core when a plugin is stopped and allows it to
 // perform shutdown tasks.
 func (v *VSphere) Stop() {
-	log.Println("D! [input.vsphere]: Stopping plugin")
+	log.Println("D! [inputs.vsphere]: Stopping plugin")
 	v.cancel()
 
 	// Wait for all endpoints to finish. No need to wait for
@@ -248,7 +262,7 @@ func (v *VSphere) Stop() {
 	// wait for any discovery to complete by trying to grab the
 	// "busy" mutex.
 	for _, ep := range v.endpoints {
-		log.Printf("D! [input.vsphere]: Waiting for endpoint %s to finish", ep.URL.Host)
+		log.Printf("D! [inputs.vsphere]: Waiting for endpoint %s to finish", ep.URL.Host)
 		func() {
 			ep.busy.Lock() // Wait until discovery is finished
 			defer ep.busy.Unlock()
@@ -286,19 +300,28 @@ func init() {
 		return &VSphere{
 			Vcenters: []string{},
 
-			ClusterInstances:       false,
-			ClusterMetricInclude:   nil,
-			ClusterMetricExclude:   nil,
-			HostInstances:          true,
-			HostMetricInclude:      nil,
-			HostMetricExclude:      nil,
-			VMInstances:            true,
-			VMMetricInclude:        nil,
-			VMMetricExclude:        nil,
-			DatastoreInstances:     false,
-			DatastoreMetricInclude: nil,
-			DatastoreMetricExclude: nil,
-			Separator:              "_",
+			DatacenterInstances:     false,
+			DatacenterMetricInclude: nil,
+			DatacenterMetricExclude: nil,
+			DatacenterInclude:       []string{"/*"},
+			ClusterInstances:        false,
+			ClusterMetricInclude:    nil,
+			ClusterMetricExclude:    nil,
+			ClusterInclude:          []string{"/*/host/**"},
+			HostInstances:           true,
+			HostMetricInclude:       nil,
+			HostMetricExclude:       nil,
+			HostInclude:             []string{"/*/host/**"},
+			VMInstances:             true,
+			VMMetricInclude:         nil,
+			VMMetricExclude:         nil,
+			VMInclude:               []string{"/*/vm/**"},
+			DatastoreInstances:      false,
+			DatastoreMetricInclude:  nil,
+			DatastoreMetricExclude:  nil,
+			DatastoreInclude:        []string{"/*/datastore/**"},
+			Separator:               "_",
+			UseIntSamples:           true,
 
 			MaxQueryObjects:         256,
 			MaxQueryMetrics:         256,

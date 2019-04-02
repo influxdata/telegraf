@@ -189,10 +189,12 @@
 [[constraint]]
   name = "golang.org/x/net"
   branch = "master"
+  source = "https://github.com/golang/net.git"
 
 [[constraint]]
   name = "golang.org/x/sys"
   branch = "master"
+  source = "https://github.com/golang/sys.git"
 
 [[constraint]]
   name = "google.golang.org/grpc"
@@ -230,13 +232,14 @@
   name = "github.com/vmware/govmomi"
   version = "0.19.0"
 
- [[constraint]] 
+[[constraint]]
   name = "github.com/Azure/go-autorest"
   version = "10.12.0"
 
 [[constraint]]
   branch = "master"
   name = "golang.org/x/oauth2"
+  source = "https://github.com/golang/oauth2.git"
 
 [[constraint]]
   branch = "master"
@@ -248,9 +251,32 @@
 
 [[constraint]]
   name = "github.com/wavefronthq/wavefront-sdk-go"
-  version = "v0.9.1"
+  version = "^0.9.1"
 
 [[constraint]]
   name = "github.com/karrick/godirwalk"
   version = "1.7.5"
 
+[[override]]
+  name = "github.com/harlow/kinesis-consumer"
+  branch = "master"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/kubernetes/apimachinery"
+
+[[constraint]]
+  name = "github.com/go-logfmt/logfmt"
+  version = "0.4.0"
+
+[[override]]
+  name = "golang.org/x/crypto"
+  source = "https://github.com/golang/crypto.git"
+
+[[override]]
+  name = "golang.org/x/sync"
+  source = "https://github.com/golang/sync.git"
+
+[[override]]
+  name = "golang.org/x/text"
+  source = "https://github.com/golang/text.git"

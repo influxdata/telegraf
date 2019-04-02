@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -204,7 +203,7 @@ func (a *Accumulator) AddError(err error) {
 	a.Unlock()
 }
 
-func (a *Accumulator) SetPrecision(precision, interval time.Duration) {
+func (a *Accumulator) SetPrecision(precision time.Duration) {
 	return
 }
 
@@ -340,9 +339,10 @@ func (a *Accumulator) AssertDoesNotContainsTaggedFields(
 			continue
 		}
 
-		if p.Measurement == measurement {
-			assert.Equal(t, fields, p.Fields)
-			msg := fmt.Sprintf("found measurement %s with tags %v which should not be there", measurement, tags)
+		if p.Measurement == measurement && reflect.DeepEqual(fields, p.Fields) {
+			msg := fmt.Sprintf(
+				"found measurement %s with tagged fields (tags %v) which should not be there",
+				measurement, tags)
 			assert.Fail(t, msg)
 		}
 	}
