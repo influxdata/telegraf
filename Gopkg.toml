@@ -269,6 +269,10 @@
   name = "github.com/go-logfmt/logfmt"
   version = "0.4.0"
 
+[[constraint]]
+  branch = "master"
+  name = "github.com/ghodss/yaml"
+
 [[override]]
   name = "golang.org/x/crypto"
   source = "https://github.com/golang/crypto.git"
