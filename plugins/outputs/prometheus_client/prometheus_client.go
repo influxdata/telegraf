@@ -24,7 +24,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-var invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
+var (
+	invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
+	validNameCharRE   = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*`)
+)
 
 // SampleID uniquely identifies a Sample
 type SampleID string
@@ -343,6 +346,10 @@ func sanitize(value string) string {
 	return invalidNameCharRE.ReplaceAllString(value, "_")
 }
 
+func isValidTagName(tag string) bool {
+	return validNameCharRE.MatchString(tag)
+}
+
 func getPromValueType(tt telegraf.ValueType) prometheus.ValueType {
 	switch tt {
 	case telegraf.Counter:
@@ -414,7 +421,11 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 
 		labels := make(map[string]string)
 		for k, v := range tags {
-			labels[sanitize(k)] = v
+			tName := sanitize(k)
+			if !isValidTagName(tName) {
+				continue
+			}
+			labels[tName] = v
 		}
 
 		// Prometheus doesn't have a string value type, so convert string
@@ -423,7 +434,11 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			for fn, fv := range point.Fields() {
 				switch fv := fv.(type) {
 				case string:
-					labels[sanitize(fn)] = fv
+					tName := sanitize(fn)
+					if !isValidTagName(tName) {
+						continue
+					}
+					labels[tName] = fv
 				}
 			}
 		}
@@ -469,6 +484,10 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 			}
 			mname = sanitize(point.Name())
 
+			if !isValidTagName(mname) {
+				continue
+			}
+
 			p.addMetricFamily(point, sample, mname, sampleID)
 
 		case telegraf.Histogram:
@@ -510,6 +529,10 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 				Expiration:     now.Add(p.ExpirationInterval.Duration),
 			}
 			mname = sanitize(point.Name())
+
+			if !isValidTagName(mname) {
+				continue
+			}
 
 			p.addMetricFamily(point, sample, mname, sampleID)
 
@@ -555,7 +578,9 @@ func (p *PrometheusClient) Write(metrics []telegraf.Metric) error {
 						mname = sanitize(fmt.Sprintf("%s_%s", point.Name(), fn))
 					}
 				}
-
+				if !isValidTagName(mname) {
+					continue
+				}
 				p.addMetricFamily(point, sample, mname, sampleID)
 
 			}
