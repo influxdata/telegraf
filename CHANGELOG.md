@@ -17,7 +17,7 @@
 
 #### Release Notes
 
-- String fields no longer have leading and trailing quotating marks removed in
+- String fields no longer have leading and trailing quotation marks removed in
   the grok parser.  If you are capturing quoted strings you may need to update
   the patterns.
 
