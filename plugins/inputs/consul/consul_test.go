@@ -5,7 +5,6 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/influxdata/telegraf/testutil"
-	"github.com/stretchr/testify/assert"
 )
 
 var sampleChecks = []*api.HealthCheck{
@@ -20,12 +19,6 @@ var sampleChecks = []*api.HealthCheck{
 		ServiceName: "foo",
 		ServiceTags: []string{"bar", "env:sandbox", "tagkey:value:stillvalue"},
 	},
-}
-
-func TestValidTagName(t *testing.T) {
-	for _, tag := range []string{"0193068a-3ddb-44e7-81c1-0528d28419e0", "", "0193068a_3ddb_44e7_81c1_0528d28419e0"} {
-		assert.False(t, isValidTagName(tag))
-	}
 }
 
 func TestGatherHealthCheck(t *testing.T) {

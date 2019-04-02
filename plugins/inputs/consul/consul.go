@@ -2,7 +2,6 @@ package consul
 
 import (
 	"net/http"
-	"regexp"
 	"strings"
 
 	"github.com/hashicorp/consul/api"
@@ -129,13 +128,9 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 			if c.TagDelimiter != "" {
 				splittedTag := strings.SplitN(checkTag, c.TagDelimiter, 2)
 				if len(splittedTag) == 1 && checkTag != "" {
-					if isValidTagName(checkTag) {
-						tags[checkTag] = checkTag
-					}
+					tags[checkTag] = checkTag
 				} else if len(splittedTag) == 2 && splittedTag[1] != "" {
-					if isValidTagName(splittedTag[0]) {
-						tags[splittedTag[0]] = splittedTag[1]
-					}
+					tags[splittedTag[0]] = splittedTag[1]
 				}
 			} else if checkTag != "" {
 				tags[checkTag] = checkTag
@@ -144,14 +139,6 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 
 		acc.AddFields("consul_health_checks", record, tags)
 	}
-}
-
-func isValidTagName(tag string) bool {
-	matched, err := regexp.MatchString(`^[a-zA-Z_][a-zA-Z0-9_]*`, tag)
-	if err != nil {
-		return false
-	}
-	return matched
 }
 
 func (c *Consul) Gather(acc telegraf.Accumulator) error {
