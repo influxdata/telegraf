@@ -14,7 +14,7 @@ import (
 
 	"github.com/ericchiang/k8s"
 	corev1 "github.com/ericchiang/k8s/apis/core/v1"
-	"gopkg.in/yaml.v2"
+	"github.com/ghodss/yaml"
 )
 
 type payload struct {
