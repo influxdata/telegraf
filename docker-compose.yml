@@ -90,7 +90,7 @@ services:
     ports:
       - "4200:4200"
       - "4230:4230"
-      - "5432:5432"
+      - "6543:5432"
     command:
       - crate
       - -Cnetwork.host=0.0.0.0
