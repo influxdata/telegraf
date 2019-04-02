@@ -23,3 +23,20 @@ vsphere_host_sys,clustername=VSAN-Cluster,dcname=VSAN-DC,esxhostname=10.160.77.1
 vsphere_host_sys,clustername=VSAN-Cluster,dcname=VSAN-DC,esxhostname=10.160.85.149,host=zyuxin-a01.vmware.com,moid=host-22,resource=host/vim/vimuser/terminal/ssh,source=10.160.85.149,vcenter=10.160.65.184 resourceFdUsage_latest=0i,resourceMemMapped_latest=0i,resourceMemShared_latest=0i,resourceMemTouched_latest=0i,resourceMemSwapped_latest=0i,resourceMemConsumed_latest=0i,resourceMemZero_latest=0i,resourceMemCow_latest=0i,resourceMemOverhead_latest=0i,resourceCpuUsage_average=0i 1552601520000000000
 
 
+vsphere_cluster_vsan,
+clustername=VSAN-Cluster,
+dcname=VSAN-DC,
+deviceName=mpx.vmhba2:C0:T1:L0:2,
+host=zyuxin-a01.vmware.com,
+hostname=sc2-rdops-vm04-dhcp-144-246.eng.vmware.com,
+moid=domain-c8,
+source=VSAN-Cluster,
+ssdUuid=52bb0fde-61b8-49ce-3fdc-380163009ab4,
+vcenter=10.192.155.193
+
+capacity-disk_latencyDevWrite=0
+
+1553893800000000000
+
+
+

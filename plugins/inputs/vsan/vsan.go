@@ -2,12 +2,10 @@ package vsan
 
 import (
 	"context"
-	"fmt"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/inputs/vsan/vsan-sdk/methods"
 	vsantypes "github.com/influxdata/telegraf/plugins/inputs/vsan/vsan-sdk/types"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -64,7 +62,8 @@ func (v *VSan) Gather(acc telegraf.Accumulator) error {
 	var err error
 	v.client, err = NewVSANClient(ctx, v.VCenter, v.Username, v.Password)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("E! [inputs.vsan]: Error while create a new client. Error: %s", err)
+		return err
 	}
 
 	c := v.client.Client
@@ -94,28 +93,30 @@ func (v *VSan) Gather(acc telegraf.Accumulator) error {
 	}
 
 	res, err := methods.VsanPerfQueryPerf(ctx, c, &perfRequest)
+
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("E! [inputs.vsan]: Error while query performance data. Please check vsan performace is enabled. Error: %s", err)
+		return err
 	}
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Fprintf(os.Stdout, "res: %+v\n", res)
+
 	count := 0
 
 	for _, em := range res.Returnval {
 		buckets := make(map[string]metricEntry)
+		log.Printf("D! [inputs.vsan]\tSuccessfully Fetched data for Entity ==> %s:%d\n", em.EntityRefId, len(em.Value))
+		timestamps := strings.Split(em.SampleInfo, ",")
+
 		for _, value := range em.Value {
-			name := value.MetricId.Label
+			name := value.MetricId.Label // Metrics name
 			tag := map[string]string{
-				"vcenter": v.VCenter,
+				"vCenter": v.VCenter,
 			}
 
 			// Now deal with the values. Iterate backwards so we start with the latest value
 			// tsKey := em.EntityRefId
 			valuesSlice := strings.Split(value.Values, ",")
 			for idx := len(valuesSlice) - 1; idx >= 0; idx-- {
-				ts, _ := time.Parse("2006-01-02 15:04:05", strings.Split(em.SampleInfo, ",")[idx])
+				ts, _ := time.Parse("2006-01-02 15:04:05", timestamps[idx])
 
 				// Since non-realtime metrics are queries with a lookback, we need to check the high-water mark
 				// to determine if this should be included. Only samples not seen before should be included.
@@ -125,7 +126,7 @@ func (v *VSan) Gather(acc telegraf.Accumulator) error {
 				// Organize the metrics into a bucket per measurement.
 				// Data SHOULD be presented to us with the same timestamp for all samples, but in case
 				// they don't we use the measurement name + timestamp as the key for the bucket.
-				mn, fn := "vsan"+name, "vsan"+name //mn=bucket-name=measurement name, fn=field-name
+				mn, fn := "vsan"+name, "vsan"+name                            //mn=bucket-name=measurement name, fn=field-name
 				bKey := mn + " " + " " + strconv.FormatInt(ts.UnixNano(), 10) //bucket key
 				bucket, found := buckets[bKey]
 				if !found {
