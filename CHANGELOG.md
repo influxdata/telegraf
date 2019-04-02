@@ -1,5 +1,9 @@
 ## v1.11 [unreleased]
 
+#### New Inputs
+
+- [github](/plugins/inputs/github/README.md) - Contributed by @influxdata
+
 #### Features
 
 - [#5556](https://github.com/influxdata/telegraf/pull/5556): Add TTL field to ping input.

@@ -31,14 +31,13 @@ type GitHub struct {
 }
 
 const sampleConfig = `
-  ## List of repositories to monitor
-  ## ex: repositories = ["influxdata/telegraf"]
-  # repositories = []
+  ## List of repositories to monitor.
+  repositories = ["influxdata/telegraf"]
 
-  ## Optional: Unauthenticated requests are limited to 60 per hour.
+  ## Github API access token.  Unauthenticated requests are limited to 60 per hour.
   # access_token = ""
 
-  ## Optional: Default 5s.
+  ## Timeout for HTTP requests.
   # http_timeout = "5s"
 `
 
@@ -49,7 +48,7 @@ func (g *GitHub) SampleConfig() string {
 
 // Description returns the plugin description.
 func (g *GitHub) Description() string {
-	return "Read repository information from GitHub, including forks, stars, and more."
+	return "Gather repository information from GitHub hosted repositories."
 }
 
 // Create GitHub Client
