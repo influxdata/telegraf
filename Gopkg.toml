@@ -284,3 +284,7 @@
 [[override]]
   name = "golang.org/x/text"
   source = "https://github.com/golang/text.git"
+
+[[constraint]]
+  name = "github.com/google/go-github"
+  version = "24.0.1"

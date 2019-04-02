@@ -528,6 +528,22 @@
   version = "v0.2.0"
 
 [[projects]]
+  digest = "1:e38ad2825940d58bd8425be40bcd4211099d0c1988c158c35828197413b3cf85"
+  name = "github.com/google/go-github"
+  packages = ["github"]
+  pruneopts = ""
+  revision = "7462feb2032c2da9e3b85e9b04e6853a6e9e14ca"
+  version = "v24.0.1"
+
+[[projects]]
+  digest = "1:cea4aa2038169ee558bf507d5ea02c94ca85bcca28a4c7bb99fd59b31e43a686"
+  name = "github.com/google/go-querystring"
+  packages = ["query"]
+  pruneopts = ""
+  revision = "44c6ddd0a2342c386950e880b658017258da92fc"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:c1d7e883c50a26ea34019320d8ae40fad86c9e5d56e63a1ba2cb618cef43e986"
   name = "github.com/google/uuid"
   packages = ["."]
@@ -1565,6 +1581,7 @@
     "github.com/golang/protobuf/ptypes/empty",
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/google/go-cmp/cmp",
+    "github.com/google/go-github/github",
     "github.com/gorilla/mux",
     "github.com/harlow/kinesis-consumer",
     "github.com/harlow/kinesis-consumer/checkpoint/ddb",
