@@ -34,6 +34,7 @@
 - [#5618](https://github.com/influxdata/telegraf/issues/5618): Listen before leaving start in statsd.
 - [#5595](https://github.com/influxdata/telegraf/issues/5595): Fix aggregator window alignment.
 - [#5637](https://github.com/influxdata/telegraf/issues/5637): Fix panic during shutdown of multiple aggregators.
+- [#5642](https://github.com/influxdata/telegraf/issues/5642): Fix parsing of kube config certificate-authority-data in prometheus input.
 
 ## v1.10.1 [2019-03-19]
 
