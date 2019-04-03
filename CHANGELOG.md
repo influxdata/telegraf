@@ -2,6 +2,7 @@
 
 #### New Inputs
 
+- [bind](/plugins/inputs/bind/README.md) - Contributed by @dswarbrick & @danielllek
 - [github](/plugins/inputs/github/README.md) - Contributed by @influxdata
 
 #### Features
