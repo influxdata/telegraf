@@ -359,3 +359,4 @@ For documentation on the latest development code see the [documentation index][d
 * [tcp](./plugins/outputs/socket_writer)
 * [udp](./plugins/outputs/socket_writer)
 * [wavefront](./plugins/outputs/wavefront)
+
