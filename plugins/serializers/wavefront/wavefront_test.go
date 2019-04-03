@@ -123,9 +123,9 @@ func TestFormatMetricPoint(t *testing.T) {
 				Value:     1,
 				Timestamp: 1554172967,
 				Source:    "testHost",
-				Tags:      map[string]string{"aaa": "bbb", "sp&c!al/chars,": "get*replaced"},
+				Tags:      map[string]string{"sp&c!al/chars,": "get*replaced"},
 			},
-			"\"cpu.idle\" 1.000000 1554172967 source=\"testHost\" \"aaa\"=\"bbb\" \"sp-c-al-chars-\"=\"get-replaced\"\n",
+			"\"cpu.idle\" 1.000000 1554172967 source=\"testHost\" \"sp-c-al-chars-\"=\"get-replaced\"\n",
 		},
 	}
 
@@ -151,9 +151,9 @@ func TestUseStrict(t *testing.T) {
 				Value:     1,
 				Timestamp: 1554172967,
 				Source:    "testHost",
-				Tags:      map[string]string{"aaa": "bbb", "sp&c!al/chars,": "get*replaced"},
+				Tags:      map[string]string{"sp&c!al/chars,": "get*replaced"},
 			},
-			"\"cpu.idle\" 1.000000 1554172967 source=\"testHost\" \"aaa\"=\"bbb\" \"sp-c-al/chars,\"=\"get-replaced\"\n",
+			"\"cpu.idle\" 1.000000 1554172967 source=\"testHost\" \"sp-c-al/chars,\"=\"get-replaced\"\n",
 		},
 	}
 
