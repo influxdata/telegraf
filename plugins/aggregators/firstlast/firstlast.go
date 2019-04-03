@@ -10,28 +10,26 @@ import (
 )
 
 type FirstLast struct {
-	LastTimeout internal.Duration `toml:"timeout"`
-	WarmupTime  internal.Duration `toml:"warmup"`
-	EnableFirst bool              `toml:"first"`
-	EnableLast  bool              `toml:"last"`
-	FirstSuffix string            `toml:"first_suffix"`
-	LastSuffix  string            `toml:"last_suffix"`
+	SeriesTimeout internal.Duration `toml:"series_timeout"`
+	Warmup        internal.Duration `toml:"warmup"`
+	EnableFirst   bool              `toml:"first"`
+	EnableLast    bool              `toml:"last"`
 
-	// caches for metric fields, names, and tags
-	startTime        time.Time
-	metricCache      map[uint64]telegraf.Metric
+	// Time when Telegraf is started
+	startTime time.Time
+	// The latest metric for all series which are active
+	metricCache map[uint64]telegraf.Metric
+	// First metrics of the series which have newly appeared in this interval
 	firstMetricCache map[uint64]telegraf.Metric
 }
 
-func NewFirstLast() telegraf.Aggregator {
+func NewFirstLast() *FirstLast {
 	return &FirstLast{
 		startTime:        time.Now(),
-		LastTimeout:      internal.Duration{Duration: 20 * time.Second},
-		WarmupTime:       internal.Duration{Duration: 10 * time.Second},
+		SeriesTimeout:    internal.Duration{Duration: 30 * time.Second},
+		Warmup:           internal.Duration{Duration: 10 * time.Second},
 		EnableFirst:      true,
 		EnableLast:       true,
-		FirstSuffix:      "_first",
-		LastSuffix:       "_last",
 		metricCache:      make(map[uint64]telegraf.Metric),
 		firstMetricCache: make(map[uint64]telegraf.Metric),
 	}
@@ -41,25 +39,22 @@ func (m *FirstLast) Reset() {
 }
 
 var sampleConfig = `
-  ## period is the flush & clear interval of the aggregator.
+[[aggregators.firstlast]]
+  ## General Aggregator Arguments:
+  ## The period on which to flush & clear the aggregator.
   period = "30s"
-  ## If true drop_original will drop the original metrics and
-  ## only send aggregates.
+  ## If true, the original metric will be dropped by the
+  ## aggregator and will not get sent to the output plugins.
   drop_original = false
-  ## The amount of time until a series is considered ended
-  timeout = "30s"
-  ## The amount of time before we start issuing _first 
+  ## The time that a series is not updated until considering it ended
+  series_timeout = "30s"
+  ## The amount of time to wait after Telegraf startup until evaluating new series
   warmup = "10s"
   ## Emit first entry of a series
   first = true
-  ## Suffix for the measurement names of first entries
-  first_suffix = "_first"
   ## Emit last entry of a series
   last = true
-  ## Suffix for the measurement names of last entries
-  last_suffix = "_last"
-
- `
+`
 
 func (m *FirstLast) SampleConfig() string {
 	return sampleConfig
@@ -71,6 +66,7 @@ func (m *FirstLast) Description() string {
 
 func (m *FirstLast) Add(in telegraf.Metric) {
 	id := in.HashID()
+	// Check if this is a new series
 	if _, ok := m.metricCache[id]; !ok {
 		m.firstMetricCache[id] = in
 	}
@@ -79,17 +75,29 @@ func (m *FirstLast) Add(in telegraf.Metric) {
 
 func (m *FirstLast) Push(acc telegraf.Accumulator) {
 	acc.SetPrecision(time.Nanosecond)
+
+	// Check if there are any new series
 	for id, metric := range m.firstMetricCache {
-		if time.Since(metric.Time()) > m.WarmupTime.Duration && m.EnableFirst {
-			acc.AddFields(metric.Name()+m.FirstSuffix, metric.Fields(), metric.Tags(), metric.Time())
+		if metric.Time().After(m.startTime.Add(m.Warmup.Duration)) && m.EnableFirst {
+			fields := map[string]interface{}{}
+			for k, v := range metric.Fields() {
+				fields[k+"_first"] = v
+			}
+			acc.AddFields(metric.Name(), fields, metric.Tags(), metric.Time())
 		}
+		// We clear all the firstMetricCache entries at the end of the interval
 		delete(m.firstMetricCache, id)
 	}
 	for id, metric := range m.metricCache {
-		if time.Since(metric.Time()) > m.LastTimeout.Duration {
+		if time.Since(metric.Time()) > m.SeriesTimeout.Duration {
 			if m.EnableLast {
-				acc.AddFields(metric.Name()+m.LastSuffix, metric.Fields(), metric.Tags(), metric.Time())
+				fields := map[string]interface{}{}
+				for k, v := range metric.Fields() {
+					fields[k+"_last"] = v
+				}
+				acc.AddFields(metric.Name(), fields, metric.Tags(), metric.Time())
 			}
+			// Only clear timed out entries
 			delete(m.metricCache, id)
 		}
 	}
