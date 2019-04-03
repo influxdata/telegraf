@@ -139,6 +139,7 @@ For documentation on the latest development code see the [documentation index][d
 * [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
 * [beanstalkd](./plugins/inputs/beanstalkd)
+* [bind](./plugins/inputs/bind)
 * [bond](./plugins/inputs/bond)
 * [burrow](./plugins/inputs/burrow)
 * [cassandra](./plugins/inputs/cassandra) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
