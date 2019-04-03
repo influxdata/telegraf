@@ -3,7 +3,6 @@ package bind
 import (
 	"encoding/xml"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -100,8 +99,6 @@ func (b *Bind) readStatsXMLv2(addr *url.URL, acc telegraf.Accumulator) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s returned HTTP status: %s", addr, resp.Status)
 	}
-
-	log.Printf("D! HTTP response content length: %d", resp.ContentLength)
 
 	if err := xml.NewDecoder(resp.Body).Decode(&stats); err != nil {
 		return fmt.Errorf("Unable to decode XML document: %s", err)

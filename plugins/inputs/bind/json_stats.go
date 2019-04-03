@@ -3,7 +3,6 @@ package bind
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -156,8 +155,6 @@ func (b *Bind) readStatsJSON(addr *url.URL, acc telegraf.Accumulator) error {
 		if resp.StatusCode != http.StatusOK {
 			return fmt.Errorf("%s returned HTTP status: %s", scrapeUrl, resp.Status)
 		}
-
-		log.Printf("D! HTTP response content length: %d", resp.ContentLength)
 
 		if err := json.NewDecoder(resp.Body).Decode(&stats); err != nil {
 			return fmt.Errorf("Unable to decode JSON blob: %s", err)
