@@ -26,7 +26,7 @@ type (
 		SecretKey        string   `toml:"secret_key"`
 		RoleARN          string   `toml:"role_arn"`
 		Profile          string   `toml:"profile"`
-		Filename         string   `toml:"shared_credential_file"`
+		CredentialPath   string   `toml:"shared_credential_file"`
 		Token            string   `toml:"token"`
 		EndpointURL      string   `toml:"endpoint_url"`
 		StatisticExclude []string `toml:"statistic_exclude"`
@@ -128,7 +128,8 @@ func (c *CloudWatch) SampleConfig() string {
   ## See http://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_limits.html
   ratelimit = 200
 
-  ## Namespace-wide statistic filters (only gets used if no metrics are defined). Optional.
+  ## Namespace-wide statistic filters (only gets used if no metrics are defined). These
+  ## are optional and allow fewer queries to be made to cloudwatch.
   # statistic_exclude = [ "average", "sum", minimum", "maximum", sample_count" ]
   # statistic_include = [ "average", "sum", minimum", "maximum", sample_count" ]
 
@@ -137,8 +138,9 @@ func (c *CloudWatch) SampleConfig() string {
   ## Refreshes Namespace available metrics every 1h
   #[[inputs.cloudwatch.metrics]]
   #  names = ["Latency", "RequestCount"]
-	#
-  #  ## Statistic filters for metric.  Optional.
+  #
+  #  ## Statistic filters for Metric.  These are optional and allow for retrieving
+  #  ## specific statistics for an individual metric.
   #  # statistic_exclude = [ "average", "sum", minimum", "maximum", sample_count" ]
   #  # statistic_include = [ "average", "sum", minimum", "maximum", sample_count" ]
   #
@@ -259,40 +261,37 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	lmtr := limiter.NewRateLimiter(c.RateLimit, time.Second)
 	defer lmtr.Stop()
 	wg := sync.WaitGroup{}
-
+	rLock := sync.Mutex{}
 	// create master list of results so aggregation works the best way.
 	results := []*cloudwatch.MetricDataResult{}
 
-	// loop through metrics and send groups of 100 at a time to gatherMetrics
-	// gatherMetrics(acc, metrics[min:max]...)
+	var aggregateResults = func(inm []*cloudwatch.MetricDataQuery) {
+		defer wg.Done()
+		result, err := c.gatherMetrics(c.getDataInputs(inm))
+		if err != nil {
+			acc.AddError(err)
+			return
+		}
+
+		rLock.Lock()
+		results = append(results, result...)
+		rLock.Unlock()
+	}
+
+	// loop through metrics and send groups of 100 at a time to gatherMetrics in order
+	// to maximize the request body, thus lowering the total number of requests required.
+	// 100 is the maximum number of queries a request can contain.
 	groups := len(queries) / 100
 	for i := 0; i < groups; i++ {
 		wg.Add(1)
 		<-lmtr.C
-		go func(inm []*cloudwatch.MetricDataQuery) {
-			defer wg.Done()
-			result, err := c.gatherMetrics(c.getDataInputs(inm))
-			if err != nil {
-				acc.AddError(err)
-				// return
-			}
-			results = append(results, result...)
-
-		}(queries[i*100 : (i+1)*100])
+		go aggregateResults(queries[i*100 : (i+1)*100])
 	}
 
 	// gather remainder (or initial) group
 	<-lmtr.C
 	wg.Add(1)
-	go func(inm []*cloudwatch.MetricDataQuery) {
-		defer wg.Done()
-		result, err := c.gatherMetrics(c.getDataInputs(inm))
-		if err != nil {
-			acc.AddError(err)
-			// return
-		}
-		results = append(results, result...)
-	}(queries[(groups * 100):])
+	go aggregateResults(queries[(groups * 100):])
 
 	wg.Wait()
 
@@ -337,7 +336,7 @@ func (c *CloudWatch) initializeCloudWatch() error {
 		SecretKey:   c.SecretKey,
 		RoleARN:     c.RoleARN,
 		Profile:     c.Profile,
-		Filename:    c.Filename,
+		Filename:    c.CredentialPath,
 		Token:       c.Token,
 		EndpointURL: c.EndpointURL,
 	}
@@ -397,23 +396,28 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]*cloudwatch.Metric, error) {
 func (c *CloudWatch) gatherMetrics(
 	params *cloudwatch.GetMetricDataInput,
 ) ([]*cloudwatch.MetricDataResult, error) {
-	resp, err := c.client.GetMetricData(params)
-	if err != nil {
-		return nil, errors.New("Failed to get metric data - " + err.Error())
+	results := []*cloudwatch.MetricDataResult{}
+
+	for {
+		resp, err := c.client.GetMetricData(params)
+		if err != nil {
+			return nil, errors.New("Failed to get metric data - " + err.Error())
+		}
+
+		results = append(results, resp.MetricDataResults...)
+		if resp.NextToken == nil {
+			break
+		}
 	}
 
-	// todo: determine if we need to handle pagination.
-	if resp.NextToken != nil {
-		log.Println("[inputs.cloudwatch] W! UNHANDLED PAGINATED RESULTS!!", *resp.NextToken)
-	}
-	return resp.MetricDataResults, nil
+	return results, nil
 }
 
 func (c *CloudWatch) aggregateMetrics(
 	acc telegraf.Accumulator,
 	metricDataResults []*cloudwatch.MetricDataResult,
 ) error {
-	namespace := formatMeasurement(c.Namespace)
+	namespace := sanitizeMeasurement(c.Namespace)
 
 	for _, query := range c.queries {
 		tags := map[string]string{
@@ -424,7 +428,7 @@ func (c *CloudWatch) aggregateMetrics(
 			fields map[string]interface{}
 			tags   map[string]string
 		}
-		thing := map[time.Time]metric{}
+		results := map[time.Time]metric{}
 		for _, result := range metricDataResults {
 			if nameMatch(query.id, *result.Id) {
 				for _, dimension := range query.metric.Dimensions {
@@ -436,15 +440,15 @@ func (c *CloudWatch) aggregateMetrics(
 				}
 
 				for j := range result.Values {
-					if _, ok := thing[*result.Timestamps[j]]; !ok {
-						thing[*result.Timestamps[j]] = metric{fields: map[string]interface{}{*result.Label: *result.Values[j]}, tags: tags}
+					if _, ok := results[*result.Timestamps[j]]; !ok {
+						results[*result.Timestamps[j]] = metric{fields: map[string]interface{}{*result.Label: *result.Values[j]}, tags: tags}
 					}
-					thing[*result.Timestamps[j]].fields[*result.Label] = *result.Values[j]
+					results[*result.Timestamps[j]].fields[*result.Label] = *result.Values[j]
 				}
 			}
 		}
 
-		for t, m := range thing {
+		for t, m := range results {
 			acc.AddFields(namespace, m.fields, m.tags, t)
 		}
 	}
@@ -474,7 +478,7 @@ func nameMatch(name, id string) bool {
 /*
  * Formatting helpers
  */
-func formatMeasurement(namespace string) string {
+func sanitizeMeasurement(namespace string) string {
 	namespace = strings.Replace(namespace, "/", "_", -1)
 	namespace = snakeCase(namespace)
 	return "cloudwatch_" + namespace
@@ -498,7 +502,6 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 		return c.queryCache, nil
 	}
 
-	// todo: lock
 	// clear slice
 	c.queries = []queryData{}
 
