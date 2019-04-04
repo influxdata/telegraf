@@ -77,7 +77,7 @@ func (s *WavefrontSerializer) Serialize(m telegraf.Metric) ([]byte, error) {
 
 		metricValue, buildError := buildValue(value, metric.Metric)
 		if buildError != nil {
-			log.Printf("E! Serializer [wavefront] %s\n", buildError.Error())
+			// bad value continue to next metric
 			continue
 		}
 		metric.Value = metricValue
@@ -161,8 +161,14 @@ func buildValue(v interface{}, name string) (float64, error) {
 		return float64(v.(uint64)), nil
 	case float64:
 		return v.(float64), nil
+	case string:
+		// return an error but don't log
+		return 0, fmt.Errorf("string type not supported")
 	default:
-		return 0, fmt.Errorf("unexpected type: %T, with value: %v, for: %s", v, v, name)
+		// return an error and log a debug message
+		err := fmt.Errorf("unexpected type: %T, with value: %v, for :%s", v, v, name)
+		log.Printf("D! Serializer [wavefront] %s\n", err.Error())
+		return 0, err
 	}
 }
 
