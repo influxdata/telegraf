@@ -18,6 +18,12 @@
 
 - [#5631](https://github.com/influxdata/telegraf/pull/5631): Create Windows service only when specified or in service manager.
 
+## v1.10.3 [unreleased]
+
+#### Bugfixes
+
+- [#5680](https://github.com/influxdata/telegraf/pull/5680): Allow colons in metric names in prometheus_client output.
+
 ## v1.10.2 [2019-04-02]
 
 #### Release Notes
