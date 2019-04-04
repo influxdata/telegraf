@@ -170,6 +170,11 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields["pid"] = int32(proc.PID())
 	}
 
+	Cmdline, err := proc.Cmdline()
+	if err == nil {
+		fields[prefix+"cmdline"] = Cmdline
+	}
+
 	numThreads, err := proc.NumThreads()
 	if err == nil {
 		fields[prefix+"num_threads"] = numThreads
