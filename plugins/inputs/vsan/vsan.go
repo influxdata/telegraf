@@ -4,8 +4,6 @@ import (
 	"context"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/inputs"
-	"github.com/influxdata/telegraf/plugins/inputs/vsan/vsan-sdk/methods"
-	vsantypes "github.com/influxdata/telegraf/plugins/inputs/vsan/vsan-sdk/types"
 	"strconv"
 	"strings"
 	"time"
@@ -13,12 +11,17 @@ import (
 	"log"
 )
 
+const FirstDuration = 5 * 300
+
 type VSan struct {
-	VCenter  string
+	VCenter  string `toml:"vcenter"`
 	Username string
 	Password string
-	client   *Client // a soap client for VSan
-	cancel   context.CancelFunc
+	//VSanPerfInclude []string `toml:"vsan_perf_exclude"`
+	//VSanPerfExclude []string `toml:"vsan_perf_exclude"`
+	client  *Client // a client for VSan
+	cancel  context.CancelFunc
+	hwMarks *TSCache
 }
 
 type metricEntry struct {
@@ -36,84 +39,65 @@ func (v *VSan) Description() string {
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
 // Telegraf.
 func (v *VSan) SampleConfig() string {
-	return `
-  ## Sample config here
-`
+	return ""
 }
 
 // Start is called from telegraf core when a plugin is started and allows it to
 // perform initialization tasks.
 func (v *VSan) Start(acc telegraf.Accumulator) error {
-	//log.Println("D! [inputs.vsan]: Starting plugin")
-	//ctx, cancel := context.WithCancel(context.Background())
-	//v.cancel = cancel
-	//var err error
-	//v.client, err = NewVSANClient(ctx, v.VCenter, v.Username, v.Password)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
+	v.hwMarks = NewTSCache(1 * time.Hour)
 	return nil
+}
+
+func (v *VSan) Stop() {
+
 }
 
 func (v *VSan) Gather(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithCancel(context.Background())
-
 	v.cancel = cancel
+	defer cancel()
+
 	var err error
-	v.client, err = NewVSANClient(ctx, v.VCenter, v.Username, v.Password)
+	v.client, err = NewClient(ctx, v.VCenter, v.Username, v.Password)
 	if err != nil {
 		log.Printf("E! [inputs.vsan]: Error while create a new client. Error: %s", err)
 		return err
 	}
 
-	c := v.client.Client
-	defer cancel()
-	var perfSpecs []vsantypes.VsanPerfQuerySpec
-	startTime := time.Now()
-	perfSpec := vsantypes.VsanPerfQuerySpec{
-		EntityRefId: "host-domclient:*",
-		StartTime:   &startTime,
+	entityRefId := "host-domclient"
+	startTime, ok := v.hwMarks.Get(entityRefId)
+	if !ok {
+		startTime = time.Now().Add(time.Duration(-FirstDuration) * time.Second)
 	}
-	perfSpecs = append(perfSpecs, perfSpec)
+	log.Printf("D! [inputs.vsan]: Query Start Time : %s", startTime)
 
-	cluster := vsantypes.ManagedObjectReference{
-		Type:  "ClusterComputeResource",
-		Value: "domain-c8",
-	}
-
-	perfManager := vsantypes.ManagedObjectReference{
-		Type:  "VsanPerformanceManager",
-		Value: "vsan-performance-manager",
-	}
-
-	perfRequest := vsantypes.VsanPerfQueryPerf{
-		This:       perfManager,
-		QuerySpecs: perfSpecs,
-		Cluster:    &cluster,
-	}
-
-	res, err := methods.VsanPerfQueryPerf(ctx, c, &perfRequest)
+	res, err := v.client.QueryPerf(ctx, startTime, entityRefId)
 
 	if err != nil {
 		log.Printf("E! [inputs.vsan]: Error while query performance data. Please check vsan performace is enabled. Error: %s", err)
 		return err
 	}
 
-	count := 0
+	cmmds, err := v.client.QueryCmmds(ctx)
+	if err != nil {
+		log.Printf("E! [inputs.vsan]: Error while query cmmds data. Error: %s", err)
+		return err //todo: we don't want shut down because cmmds are not collected
+	}
 
 	for _, em := range res.Returnval {
 		buckets := make(map[string]metricEntry)
 		log.Printf("D! [inputs.vsan]\tSuccessfully Fetched data for Entity ==> %s:%d\n", em.EntityRefId, len(em.Value))
 		timestamps := strings.Split(em.SampleInfo, ",")
 
+		vals := strings.Split(em.EntityRefId, ":") //host-domclient:5ca25228-f047-558e-2b73-02001491d8eb
+		entityName, uuid := vals[0], vals[1]
+
 		for _, value := range em.Value {
-			name := value.MetricId.Label // Metrics name
-			tag := map[string]string{
-				"vCenter": v.VCenter,
-			}
+			metricName := value.MetricId.Label
+			tags := v.PopulateTags(entityName, uuid, metricName, cmmds)
 
 			// Now deal with the values. Iterate backwards so we start with the latest value
-			// tsKey := em.EntityRefId
 			valuesSlice := strings.Split(value.Values, ",")
 			for idx := len(valuesSlice) - 1; idx >= 0; idx-- {
 				ts, _ := time.Parse("2006-01-02 15:04:05", timestamps[idx])
@@ -122,39 +106,99 @@ func (v *VSan) Gather(acc telegraf.Accumulator) error {
 				// to determine if this should be included. Only samples not seen before should be included.
 
 				value, _ := strconv.ParseFloat(valuesSlice[idx], 64)
+				log.Printf("D! [inputs.vsan]: Time Stamp : %s", ts)
 
 				// Organize the metrics into a bucket per measurement.
-				// Data SHOULD be presented to us with the same timestamp for all samples, but in case
-				// they don't we use the measurement name + timestamp as the key for the bucket.
-				mn, fn := "vsan"+name, "vsan"+name                            //mn=bucket-name=measurement name, fn=field-name
-				bKey := mn + " " + " " + strconv.FormatInt(ts.UnixNano(), 10) //bucket key
+				// For now each measurement has one field, so measurement is equal to field label
+				measurement := "vsan-" + metricName
+				field := "vsan-" + metricName
+				bKey := measurement + " " + strconv.FormatInt(ts.UnixNano(), 10) //bucket key
 				bucket, found := buckets[bKey]
 				if !found {
-					bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: tag}
+					bucket = metricEntry{name: measurement, ts: ts, fields: make(map[string]interface{}), tags: tags}
 					buckets[bKey] = bucket
 				}
-				bucket.fields[fn] = value
-
-				// Percentage values must be scaled down by 100.
-
-				count++
-
-				// Update highwater marks for non-realtime metrics.
-				//if !res.realTime {
-				//	e.hwMarks.Put(tsKey, ts)
-				//}
+				bucket.fields[field] = value
 			}
 		}
+
+		// Update highwater marks
+		if lens := len(timestamps); lens > 0 {
+			latest, _ := time.Parse("2006-01-02 15:04:05", timestamps[lens-1])
+			v.hwMarks.Put(entityRefId, latest)
+		}
+
 		for _, bucket := range buckets {
 			acc.AddFields(bucket.name, bucket.fields, bucket.tags, bucket.ts)
 		}
 	}
-	count++
 
 	return nil
 
 }
 
+func (v *VSan) PopulateTags(entityName string, uuid string, metricName string, cmmds map[string]CmmdsEntity) map[string]string {
+	tags := make(map[string]string)
+	tags["vcenter"] = v.VCenter
+
+	//Add additional tags based on CMMDS data
+	if strings.Contains(entityName, "-disk") {
+		if e, ok := cmmds[uuid]; ok {
+			if host, ok := cmmds[e.Owner]; ok {
+				if c, ok := host.Content.(map[string]interface{}); ok {
+					tags["hostname"] = c["hostname"].(string)
+				}
+			}
+			if c, ok := e.Content.(map[string]interface{}); ok {
+				tags["deviceName"] = c["devName"].(string)
+				if int(c["isSsd"].(float64)) == 0 {
+					tags["ssdUuid"] = c["ssdUuid"].(string)
+				}
+			}
+		}
+	} else if strings.Contains(entityName, "host-") {
+		if e, ok := cmmds[uuid]; ok {
+			if c, ok := e.Content.(map[string]interface{}); ok {
+				tags["hostname"] = c["hostname"].(string)
+			}
+		}
+	} else if strings.Contains(entityName, "vnic-net") {
+		nicInfo := strings.Split(uuid, "|")
+		tags["stackName"] = nicInfo[1]
+		tags["vnic"] = nicInfo[2]
+		if e, ok := cmmds[nicInfo[0]]; ok {
+			if c, ok := e.Content.(map[string]interface{}); ok {
+				tags["hostname"] = c["hostname"].(string)
+			}
+		}
+	} else if strings.Contains(entityName, "pnic-net") {
+		nicInfo := strings.Split(uuid, "|")
+		tags["pnic"] = nicInfo[1]
+		if e, ok := cmmds[nicInfo[0]]; ok {
+			if c, ok := e.Content.(map[string]interface{}); ok {
+				tags["hostname"] = c["hostname"].(string)
+			}
+		}
+	} else if strings.Contains(entityName, "world-cpu") {
+		cpuInfo := strings.Split(uuid, "|")
+		tags["worldName"] = cpuInfo[1]
+		//tags["worldId"] = cpuInfo[2]
+		if e, ok := cmmds[cpuInfo[0]]; ok {
+			if c, ok := e.Content.(map[string]interface{}); ok {
+				tags["hostname"] = c["hostname"].(string)
+			}
+		}
+	} else {
+		tags["uuid"] = uuid
+	}
+	return tags
+}
+
 func init() {
-	inputs.Add("vsan", func() telegraf.Input { return &VSan{} })
+	inputs.Add("vsan", func() telegraf.Input {
+		return &VSan{
+			//VSanPerfInclude: []string{"*"},
+			//VSanPerfExclude: nil,
+		}
+	})
 }

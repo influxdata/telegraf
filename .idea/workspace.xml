@@ -1,11 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="344a9339-7b27-4865-a868-f93f94240900" name="Default Changelist" comment="">
+    <list default="true" id="344a9339-7b27-4865-a868-f93f94240900" name="Default Changelist" comment="vSan Plugin enabled">
+      <change afterPath="$PROJECT_DIR$/plugins/inputs/vsan/tscache.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/methods/methods.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/mo/mo.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/mo/registry.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/base.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/enum.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/if.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/registry.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/types.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/util/diskMappings.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/util/diskMappings_test.go" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/plugins/inputs/vsphere/vsan.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/log.txt" beforeDir="false" afterPath="$PROJECT_DIR$/log.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/inputs/vsan/client.go" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/inputs/vsan/client.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/util/vsanClient.go" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/plugins/inputs/vsan/vsan.go" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/inputs/vsan/vsan.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/inputs/vsphere/endpoint.go" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/inputs/vsphere/endpoint.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/inputs/vsphere/vsphere.go" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/inputs/vsphere/vsphere.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/vsan.conf" beforeDir="false" afterPath="$PROJECT_DIR$/vsan.conf" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/vsphere.conf" beforeDir="false" afterPath="$PROJECT_DIR$/vsphere.conf" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -54,8 +70,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/endpoint.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="100">
-              <caret line="677" column="41" selection-start-line="677" selection-start-column="41" selection-end-line="677" selection-end-column="41" />
+            <state relative-caret-position="493">
+              <caret line="701" column="29" selection-start-line="701" selection-start-column="29" selection-end-line="701" selection-end-column="29" />
               <folding>
                 <element signature="e#17#390#0" expanded="true" />
               </folding>
@@ -64,15 +80,10 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/filter/filter.go">
-          <provider selected="true" editor-type-id="text-editor" />
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/vsphere.conf">
+        <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="420">
-              <caret line="69" selection-start-line="69" selection-end-line="73" selection-end-column="14" />
+            <state relative-caret-position="405">
+              <caret line="45" column="1" lean-forward="true" selection-start-line="45" selection-start-column="1" selection-end-line="45" selection-end-column="1" />
             </state>
           </provider>
         </entry>
@@ -80,65 +91,58 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/vsan.conf">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="210">
-              <caret line="14" column="14" selection-start-line="14" selection-start-column="14" selection-end-line="14" selection-end-column="14" />
+            <state relative-caret-position="165">
+              <caret line="11" selection-start-line="11" selection-end-line="15" selection-end-column="14" />
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/processor.go">
+        <entry file="file://$PROJECT_DIR$/vsphere.conf">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="240">
+              <caret line="16" column="32" lean-forward="true" selection-start-line="16" selection-start-column="32" selection-end-line="16" selection-end-column="32" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/mo/registry.go">
           <provider selected="true" editor-type-id="text-editor" />
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/client.go">
+        <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/base.go">
+          <provider selected="true" editor-type-id="text-editor" />
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/enum.go">
+          <provider selected="true" editor-type-id="text-editor" />
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/if.go">
+          <provider selected="true" editor-type-id="text-editor" />
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/registry.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="54">
-              <caret line="206" selection-start-line="206" selection-end-line="206" />
+            <state relative-caret-position="270">
+              <caret line="18" selection-start-line="18" selection-end-line="18" />
               <folding>
-                <element signature="e#17#452#0" expanded="true" />
+                <element signature="e#600#621#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/metric.go">
+        <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/types.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-613" />
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/client.go">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="217">
-              <caret line="45" selection-start-line="45" selection-end-line="48" selection-end-column="8" />
-              <folding>
-                <element signature="e#14#206#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan.go">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="100">
-              <caret line="109" column="45" selection-start-line="109" selection-start-column="45" selection-end-line="109" selection-end-column="45" />
-              <folding>
-                <element signature="e#14#319#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsphere_test.go">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="7111">
-              <caret line="514" column="17" selection-start-line="514" selection-start-column="17" selection-end-line="514" selection-end-column="17" />
+            <state relative-caret-position="85">
+              <caret line="18" column="8" lean-forward="true" selection-start-line="18" selection-start-column="8" selection-end-line="18" selection-end-column="8" />
             </state>
           </provider>
         </entry>
@@ -154,37 +158,40 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>envURL</find>
-      <find>Client</find>
-      <find>ClientFactory</find>
-      <find>soap</find>
-      <find>endpo</find>
-      <find>Perfor</find>
-      <find>pqs</find>
-      <find>makeMetricIdentifier</find>
-      <find>hwMarks</find>
-      <find>Iden</find>
-      <find>tsKey</find>
-      <find>Perf</find>
-      <find>dom</find>
-      <find />
-      <find>collect</find>
-      <find>resourceKind</find>
-      <find>getObjects</find>
-      <find>getClusters</find>
-      <find>NewEndpoint</find>
       <find>collectResource</find>
-      <find>resource</find>
-      <find>acc</find>
-      <find>objects</find>
-      <find>resourceKinds</find>
-      <find>e.resourceKinds</find>
-      <find>I!</find>
-      <find>err</find>
-      <find>filter</find>
-      <find>object</find>
-      <find>res</find>
+      <find>chunk</find>
+      <find>collectre</find>
+      <find>job</find>
+      <find>simple</find>
+      <find>metrics</find>
+      <find>collectVsan</find>
+      <find>collect</find>
+      <find>go</find>
+      <find>chunkify</find>
+      <find>collectVSan</find>
+      <find>wg</find>
+      <find>chun</find>
+      <find>maxMetrics</find>
+      <find>hwMarks</find>
+      <find>Client</find>
+      <find>collectVSAN</find>
+      <find>starttime</find>
+      <find>perf</find>
+      <find>start</find>
+      <find>soap</find>
+      <find>vsanmethods</find>
+      <find>VsanPerfQueryPerf</find>
+      <find>metricName</find>
+      <find>300</find>
+      <find>urn</find>
+      <find>query</find>
+      <find>vsan</find>
+      <find>quer</find>
+      <find>vsan-sdk</find>
     </findStrings>
+    <replaceStrings>
+      <replace>vsan</replace>
+    </replaceStrings>
     <dirStrings>
       <dir>$PROJECT_DIR$/plugins/inputs/vsphere</dir>
     </dirStrings>
@@ -222,22 +229,28 @@
         <option value="$PROJECT_DIR$/plugins/inputs/file/file_test.go" />
         <option value="$PROJECT_DIR$/plugins/inputs/file/file.go" />
         <option value="$PROJECT_DIR$/plugins/inputs/filecount/filecount_test.go" />
+        <option value="$PROJECT_DIR$/log.txt" />
         <option value="$PROJECT_DIR$/examples/testGovmomi/main.go" />
         <option value="$PROJECT_DIR$/examples/examples.go" />
         <option value="$PROJECT_DIR$/examples/hosts/main.go" />
-        <option value="$PROJECT_DIR$/vsphere.conf" />
         <option value="$PROJECT_DIR$/agent/accumulator_test.go" />
         <option value="$PROJECT_DIR$/plugins/inputs/all/all.go" />
-        <option value="$PROJECT_DIR$/plugins/inputs/vsphere/vsphere.go" />
         <option value="$PROJECT_DIR$/plugins/inputs/vsan/main.go" />
         <option value="$PROJECT_DIR$/plugins/inputs/vsphere/client.go" />
         <option value="$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/mo/mo.go" />
-        <option value="$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/methods/methods.go" />
-        <option value="$PROJECT_DIR$/log.txt" />
-        <option value="$PROJECT_DIR$/plugins/inputs/vsan/client.go" />
-        <option value="$PROJECT_DIR$/vsan.conf" />
-        <option value="$PROJECT_DIR$/plugins/inputs/vsan/vsan.go" />
+        <option value="$PROJECT_DIR$/plugins/inputs/vsan/tscache.go" />
+        <option value="$PROJECT_DIR$/plugins/inputs/vsphere/vsphere.go" />
+        <option value="$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/types.go" />
         <option value="$PROJECT_DIR$/plugins/inputs/vsphere/endpoint.go" />
+        <option value="$PROJECT_DIR$/plugins/inputs/vsan/client.go" />
+        <option value="$PROJECT_DIR$/plugins/inputs/vsan/vsan.go" />
+        <option value="$PROJECT_DIR$/vsan.conf" />
+        <option value="$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/types/enum.go" />
+        <option value="$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/methods/methods.go" />
+        <option value="$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/methods/methods.go" />
+        <option value="$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/mo/mo.go" />
+        <option value="$PROJECT_DIR$/vsphere.conf" />
+        <option value="$PROJECT_DIR$/plugins/inputs/vsphere/vsan.go" />
       </list>
     </option>
   </component>
@@ -263,6 +276,22 @@
             <path>
               <item name="telegraf" type="b2602c69:ProjectViewProjectNode" />
               <item name="telegraf" type="462c0819:PsiDirectoryNode" />
+              <item name="cmd" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="telegraf" type="b2602c69:ProjectViewProjectNode" />
+              <item name="telegraf" type="462c0819:PsiDirectoryNode" />
+              <item name="cmd" type="462c0819:PsiDirectoryNode" />
+              <item name="telegraf" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="telegraf" type="b2602c69:ProjectViewProjectNode" />
+              <item name="telegraf" type="462c0819:PsiDirectoryNode" />
+              <item name="filter" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="telegraf" type="b2602c69:ProjectViewProjectNode" />
+              <item name="telegraf" type="462c0819:PsiDirectoryNode" />
               <item name="plugins" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
@@ -276,12 +305,14 @@
               <item name="telegraf" type="462c0819:PsiDirectoryNode" />
               <item name="plugins" type="462c0819:PsiDirectoryNode" />
               <item name="inputs" type="462c0819:PsiDirectoryNode" />
-              <item name="varnish" type="462c0819:PsiDirectoryNode" />
+              <item name="vsan" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="telegraf" type="b2602c69:ProjectViewProjectNode" />
               <item name="telegraf" type="462c0819:PsiDirectoryNode" />
-              <item name="scripts" type="462c0819:PsiDirectoryNode" />
+              <item name="plugins" type="462c0819:PsiDirectoryNode" />
+              <item name="inputs" type="462c0819:PsiDirectoryNode" />
+              <item name="vsphere" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -327,6 +358,7 @@
   </component>
   <component name="PropertiesComponent">
     <property name="DefaultGoTemplateProperty" value="Go File" />
+    <property name="GO_FMT" value="true" />
     <property name="Git.Branch.Popup.ShowAllRemotes" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="go.gopath.indexing.explicitly.defined" value="true" />
@@ -337,6 +369,7 @@
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/plugins/inputs/vsphere" />
       <recent name="$PROJECT_DIR$/plugins/inputs/vsan" />
     </key>
   </component>
@@ -352,7 +385,26 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Go Test.TestThrottledExecutor in github.com/influxdata/telegraf/plugins/inputs/vsphere">
+  <component name="RunManager" selected="Go Build.go build telegraf.go">
+    <configuration name="go build telegraf.go" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
+      <module name="telegraf" />
+      <working_directory value="$PROJECT_DIR$/" />
+      <parameters value="--config vsphere.conf" />
+      <kind value="FILE" />
+      <filePath value="$PROJECT_DIR$/cmd/telegraf/telegraf.go" />
+      <package value="github.com/influxdata/telegraf" />
+      <directory value="$PROJECT_DIR$/" />
+      <method v="2" />
+    </configuration>
+    <configuration name="go build vsan.go" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
+      <module name="telegraf" />
+      <working_directory value="$PROJECT_DIR$/" />
+      <kind value="FILE" />
+      <filePath value="$PROJECT_DIR$/plugins/inputs/vsan/vsan.go" />
+      <package value="github.com/influxdata/telegraf" />
+      <directory value="$PROJECT_DIR$/" />
+      <method v="2" />
+    </configuration>
     <configuration name="TestAll in github.com/influxdata/telegraf/plugins/inputs/vsphere" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
       <module name="telegraf" />
       <working_directory value="$PROJECT_DIR$/plugins/inputs/vsphere" />
@@ -364,26 +416,15 @@
       <pattern value="^TestAll$" />
       <method v="2" />
     </configuration>
-    <configuration name="TestFinder in github.com/influxdata/telegraf/plugins/inputs/vsphere" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
+    <configuration name="TestIncludeExclude in github.com/influxdata/telegraf/filter" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
       <module name="telegraf" />
-      <working_directory value="$PROJECT_DIR$/plugins/inputs/vsphere" />
+      <working_directory value="$PROJECT_DIR$/filter" />
       <framework value="gotest" />
       <kind value="PACKAGE" />
-      <package value="github.com/influxdata/telegraf/plugins/inputs/vsphere" />
+      <package value="github.com/influxdata/telegraf/filter" />
       <directory value="$PROJECT_DIR$/" />
       <filePath value="$PROJECT_DIR$/" />
-      <pattern value="^TestFinder$" />
-      <method v="2" />
-    </configuration>
-    <configuration name="TestMaxQuery in github.com/influxdata/telegraf/plugins/inputs/vsphere" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
-      <module name="telegraf" />
-      <working_directory value="$PROJECT_DIR$/plugins/inputs/vsphere" />
-      <framework value="gotest" />
-      <kind value="PACKAGE" />
-      <package value="github.com/influxdata/telegraf/plugins/inputs/vsphere" />
-      <directory value="$PROJECT_DIR$/" />
-      <filePath value="$PROJECT_DIR$/" />
-      <pattern value="^TestMaxQuery$" />
+      <pattern value="^TestIncludeExclude$" />
       <method v="2" />
     </configuration>
     <configuration name="TestThrottledExecutor in github.com/influxdata/telegraf/plugins/inputs/vsphere" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
@@ -397,41 +438,24 @@
       <pattern value="^TestThrottledExecutor$" />
       <method v="2" />
     </configuration>
-    <configuration name="TestTimeout in github.com/influxdata/telegraf/plugins/inputs/vsphere" type="GoTestRunConfiguration" factoryName="Go Test" temporary="true" nameIsGenerated="true">
-      <module name="telegraf" />
-      <working_directory value="$PROJECT_DIR$/plugins/inputs/vsphere" />
-      <framework value="gotest" />
-      <kind value="PACKAGE" />
-      <package value="github.com/influxdata/telegraf/plugins/inputs/vsphere" />
-      <directory value="$PROJECT_DIR$/" />
-      <filePath value="$PROJECT_DIR$/" />
-      <pattern value="^TestTimeout$" />
-      <method v="2" />
-    </configuration>
     <list>
+      <item itemvalue="Go Build.go build telegraf.go" />
+      <item itemvalue="Go Build.go build vsan.go" />
       <item itemvalue="Go Test.TestThrottledExecutor in github.com/influxdata/telegraf/plugins/inputs/vsphere" />
-      <item itemvalue="Go Test.TestTimeout in github.com/influxdata/telegraf/plugins/inputs/vsphere" />
-      <item itemvalue="Go Test.TestMaxQuery in github.com/influxdata/telegraf/plugins/inputs/vsphere" />
-      <item itemvalue="Go Test.TestFinder in github.com/influxdata/telegraf/plugins/inputs/vsphere" />
       <item itemvalue="Go Test.TestAll in github.com/influxdata/telegraf/plugins/inputs/vsphere" />
+      <item itemvalue="Go Test.TestIncludeExclude in github.com/influxdata/telegraf/filter" />
     </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Go Test.TestAll in github.com/influxdata/telegraf/plugins/inputs/vsphere" />
-        <item itemvalue="Go Test.TestFinder in github.com/influxdata/telegraf/plugins/inputs/vsphere" />
-        <item itemvalue="Go Test.TestMaxQuery in github.com/influxdata/telegraf/plugins/inputs/vsphere" />
-        <item itemvalue="Go Test.TestTimeout in github.com/influxdata/telegraf/plugins/inputs/vsphere" />
+        <item itemvalue="Go Build.go build telegraf.go" />
+        <item itemvalue="Go Test.TestIncludeExclude in github.com/influxdata/telegraf/filter" />
+        <item itemvalue="Go Build.go build vsan.go" />
         <item itemvalue="Go Test.TestThrottledExecutor in github.com/influxdata/telegraf/plugins/inputs/vsphere" />
+        <item itemvalue="Go Test.TestAll in github.com/influxdata/telegraf/plugins/inputs/vsphere" />
       </list>
     </recent_temporary>
   </component>
   <component name="TestHistory">
-    <history-entry file="TestAll_in_github_com_influxdata_telegraf_plugins_inputs_vsphere - 2019.03.15 at 16h 41m 02s.xml">
-      <configuration name="TestAll in github.com/influxdata/telegraf/plugins/inputs/vsphere" configurationId="GoTestRunConfiguration" />
-    </history-entry>
-    <history-entry file="TestAll_in_github_com_influxdata_telegraf_plugins_inputs_vsphere - 2019.03.18 at 09h 45m 43s.xml">
-      <configuration name="TestAll in github.com/influxdata/telegraf/plugins/inputs/vsphere" configurationId="GoTestRunConfiguration" />
-    </history-entry>
     <history-entry file="TestAll_in_github_com_influxdata_telegraf_plugins_inputs_vsphere - 2019.03.19 at 11h 19m 29s.xml">
       <configuration name="TestAll in github.com/influxdata/telegraf/plugins/inputs/vsphere" configurationId="GoTestRunConfiguration" />
     </history-entry>
@@ -456,6 +480,12 @@
     <history-entry file="TestAll_in_github_com_influxdata_telegraf_plugins_inputs_vsphere - 2019.03.19 at 12h 51m 01s.xml">
       <configuration name="TestAll in github.com/influxdata/telegraf/plugins/inputs/vsphere" configurationId="GoTestRunConfiguration" />
     </history-entry>
+    <history-entry file="TestThrottledExecutor_in_github_com_influxdata_telegraf_plugins_inputs_vsphere - 2019.04.02 at 17h 10m 42s.xml">
+      <configuration name="TestThrottledExecutor in github.com/influxdata/telegraf/plugins/inputs/vsphere" configurationId="GoTestRunConfiguration" />
+    </history-entry>
+    <history-entry file="TestIncludeExclude_in_github_com_influxdata_telegraf_filter - 2019.04.03 at 17h 11m 18s.xml">
+      <configuration name="TestIncludeExclude in github.com/influxdata/telegraf/filter" configurationId="GoTestRunConfiguration" />
+    </history-entry>
   </component>
   <component name="TodoView" selected-index="2">
     <todo-panel id="selected-file">
@@ -468,24 +498,22 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="0" width="1440" height="900" extended-state="6" />
-    <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.39341918" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.14735337" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
-      <window_info anchor="bottom" id="Thumbnails" visible="true" weight="0.32891566" />
       <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Find" order="1" weight="0.42048192" />
-      <window_info anchor="bottom" id="Run" order="2" weight="0.36746988" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.12771085" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.41807228" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.7975904" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.3109589" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
-      <window_info anchor="bottom" id="TODO" order="6" sideWeight="0.4984375" weight="0.57710844" />
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.3283186" />
       <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
       <window_info anchor="bottom" id="Database Changes" order="8" />
       <window_info anchor="bottom" id="Version Control" order="9" weight="0.6221239" />
-      <window_info anchor="bottom" id="Terminal" order="10" sideWeight="0.4983845" weight="0.23373494" />
-      <window_info anchor="bottom" id="Event Log" order="11" sideWeight="0.5015625" side_tool="true" weight="0.31824234" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="10" sideWeight="0.49919224" visible="true" weight="0.3" />
+      <window_info anchor="bottom" id="Event Log" order="11" sideWeight="0.50080776" side_tool="true" weight="0.39178082" />
       <window_info anchor="bottom" id="Messages" order="12" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -493,6 +521,29 @@
       <window_info anchor="right" id="Database" order="3" />
       <window_info anchor="right" id="Coverage" order="4" side_tool="true" weight="0.3290735" />
     </layout>
+    <layout-to-restore>
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.14378029" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info id="Favorites" order="2" side_tool="true" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.41917807" />
+      <window_info anchor="bottom" id="Run" order="2" visible="true" weight="0.24109589" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.3109589" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.3283186" />
+      <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Database Changes" order="8" />
+      <window_info anchor="bottom" id="Version Control" order="9" weight="0.6221239" />
+      <window_info anchor="bottom" id="Terminal" order="10" sideWeight="0.49919224" weight="0.33975902" />
+      <window_info anchor="bottom" id="Event Log" order="11" sideWeight="0.50080776" side_tool="true" weight="0.39178082" />
+      <window_info anchor="bottom" id="Messages" order="12" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="right" id="Database" order="3" />
+      <window_info anchor="right" id="Coverage" order="4" side_tool="true" weight="0.3290735" />
+    </layout-to-restore>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
@@ -510,6 +561,10 @@
       </list>
     </option>
   </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="vSan Plugin enabled" />
+    <option name="LAST_COMMIT_MESSAGE" value="vSan Plugin enabled" />
+  </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
@@ -522,135 +577,10 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/examples/testGovmomi/main.go" />
-    <entry file="file://$PROJECT_DIR$/examples/hosts/main.go" />
-    <entry file="file://$PROJECT_DIR$/examples/examples.go" />
-    <entry file="file://$PROJECT_DIR$/vendor/github.com/vmware/govmomi/vim25/types/types.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="513990">
-          <caret line="34269" column="5" selection-start-line="34269" selection-start-column="5" selection-end-line="34269" selection-end-column="5" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/vendor/github.com/vmware/govmomi/performance/manager.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="5055">
-          <caret line="351" column="5" selection-start-line="351" selection-start-column="5" selection-end-line="351" selection-end-column="5" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/finder.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="273">
-          <caret line="212" column="28" selection-start-line="212" selection-start-column="28" selection-end-line="212" selection-end-column="28" />
-          <folding>
-            <element signature="e#17#219#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file:///usr/local/Cellar/go/1.12/libexec/src/context/context.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="112">
-          <caret line="317" column="63" lean-forward="true" selection-start-line="317" selection-start-column="63" selection-end-line="317" selection-end-column="63" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/agent/agent.go">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/throttled_exec.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="180">
-          <caret line="15" column="28" selection-start-line="15" selection-start-column="28" selection-end-line="15" selection-end-column="28" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/selfhealth.go">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/tscache.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="615">
-          <caret line="45" column="12" selection-start-line="45" selection-start-column="12" selection-end-line="45" selection-end-column="12" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/agent/accumulator.go">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/agent/accumulator_test.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="90">
-          <caret line="17" column="24" selection-start-line="17" selection-start-column="24" selection-end-line="17" selection-end-column="24" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file:///usr/local/Cellar/go/1.12/libexec/src/runtime/asm_amd64.s">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="20055">
-          <caret line="1337" selection-start-line="1337" selection-end-line="1337" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/docker-compose.yml">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/zookeeper/dev/docker-compose.yml">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="255">
-          <caret line="17" selection-start-line="17" selection-end-line="17" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/all/all.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="245">
-          <caret line="148" column="7" selection-start-line="148" selection-start-column="7" selection-end-line="148" selection-end-column="7" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/file/dev/docker-compose.yml">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/file/file.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="21">
-          <caret line="69" column="34" selection-start-line="69" selection-start-column="27" selection-end-line="69" selection-end-column="34" />
-          <folding>
-            <element signature="e#14#230#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/varnish/varnish.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-2154">
-          <folding>
-            <element signature="e#37#281#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/temp/temp.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-189" />
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/internal/tls/config.go">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="54">
           <caret line="11" column="45" selection-start-line="11" selection-start-column="45" selection-end-line="11" selection-end-column="45" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsphere.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="231">
-          <caret line="281" column="31" selection-start-line="281" selection-start-column="31" selection-end-line="281" selection-end-column="31" />
-          <folding>
-            <element signature="e#17#275#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -663,36 +593,8 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/types/base.go" />
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/types/enum.go" />
     <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/types/if.go" />
     <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/types/registry.go" />
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/types/types.go" />
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/mo/mo.go" />
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/mo/registry.go" />
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/methods/methods.go" />
-    <entry file="file://$PROJECT_DIR$/mysql.conf" />
-    <entry file="file://$PROJECT_DIR$/Makefile">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/README.md">
-      <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
-        <state split_layout="SPLIT">
-          <first_editor />
-          <second_editor />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/cmd/telegraf/telegraf.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1140">
-          <caret line="101" selection-start-line="101" selection-end-line="101" />
-          <folding>
-            <element signature="e#14#735#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file:///usr/local/Cellar/go/1.12/libexec/src/reflect/value.go">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="32805">
@@ -707,84 +609,297 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/log.txt">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="357">
-          <caret line="30" column="27" selection-start-line="30" selection-start-column="27" selection-end-line="30" selection-end-column="27" />
+    <entry file="file://$PROJECT_DIR$/mysql.conf" />
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/README.md">
+      <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
+        <state split_layout="SPLIT">
+          <first_editor relative-caret-position="-6737" />
+          <second_editor />
         </state>
       </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/processor.go">
-      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/metric.go">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-613" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/vsphere.conf">
+    <entry file="file://$PROJECT_DIR$/Makefile">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/input.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="420">
-          <caret line="69" selection-start-line="69" selection-end-line="73" selection-end-column="14" />
+        <state relative-caret-position="120">
+          <caret line="8" selection-start-line="8" selection-end-line="8" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/client.go">
+    <entry file="file:///usr/local/Cellar/go/1.12/libexec/src/sync/rwmutex.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="217">
-          <caret line="45" selection-start-line="45" selection-end-line="48" selection-end-column="8" />
-          <folding>
-            <element signature="e#14#206#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="95">
+          <caret line="47" selection-start-line="47" selection-end-line="47" />
         </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/selfhealth.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-72" />
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsphere_test.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="7111">
+        <state relative-caret-position="745">
           <caret line="514" column="17" selection-start-line="514" selection-start-column="17" selection-end-line="514" selection-end-column="17" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/vsan.conf">
+    <entry file="file://$PROJECT_DIR$/log.txt">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="210">
-          <caret line="14" column="14" selection-start-line="14" selection-start-column="14" selection-end-line="14" selection-end-column="14" />
+        <state relative-caret-position="-31" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/README.md">
+      <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
+        <state split_layout="SPLIT">
+          <first_editor relative-caret-position="240">
+            <caret line="16" column="48" selection-start-line="16" selection-start-column="48" selection-end-line="16" selection-end-column="48" />
+          </first_editor>
+          <second_editor />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan.go">
+    <entry file="file://$PROJECT_DIR$/processor.go">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/tscache.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="100">
-          <caret line="109" column="45" selection-start-line="109" selection-start-column="45" selection-end-line="109" selection-end-column="45" />
+        <state relative-caret-position="475">
+          <caret line="49" column="1" lean-forward="true" selection-start-line="49" selection-start-column="1" selection-end-line="49" selection-end-column="1" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/filter/filter.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-987" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/filter/filter_test.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="358">
+          <caret line="41" column="56" selection-start-line="41" selection-start-column="56" selection-end-line="41" selection-end-column="56" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/cmd/telegraf/telegraf.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="88">
+          <caret line="385" selection-start-line="385" selection-end-line="385" />
           <folding>
-            <element signature="e#14#319#0" expanded="true" />
+            <element signature="e#14#735#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/agent/agent.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="88">
+          <caret line="613" selection-start-line="613" selection-end-line="613" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/finder.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="88">
+          <caret line="94" selection-start-line="94" selection-end-line="94" />
+          <folding>
+            <element signature="e#17#219#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/types/types.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="165">
+          <caret line="57605" column="5" selection-start-line="57605" selection-start-column="5" selection-end-line="57605" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file:///usr/local/Cellar/go/1.12/libexec/src/sync/waitgroup.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="225">
+          <caret line="19" column="5" selection-start-line="19" selection-start-column="5" selection-end-line="19" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/throttled_exec.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="195">
+          <caret line="16" column="5" selection-start-line="16" selection-start-column="5" selection-end-line="16" selection-end-column="5" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/client.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="54">
-          <caret line="206" selection-start-line="206" selection-end-line="206" />
+        <state relative-caret-position="3855">
+          <caret line="277" column="79" selection-start-line="277" selection-start-column="75" selection-end-line="277" selection-end-column="79" />
           <folding>
             <element signature="e#17#452#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsphere.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="630">
+          <caret line="42" column="25" selection-start-line="42" selection-start-column="4" selection-end-line="42" selection-end-column="25" />
+          <folding>
+            <element signature="e#17#275#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="210">
+          <caret line="14" selection-start-line="14" selection-end-line="14" />
+          <folding>
+            <element signature="e#14#156#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/tscache.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="487">
+          <caret line="54" selection-start-line="54" selection-end-line="54" />
+          <folding>
+            <element signature="e#14#47#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/client.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-516">
+          <caret line="37" column="4" selection-start-line="37" selection-start-column="4" selection-end-line="37" selection-end-column="4" />
+          <folding>
+            <element signature="e#14#479#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/types/base.go">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/util/vsanClient.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-957">
+          <caret line="9" column="66" lean-forward="true" selection-start-line="9" selection-start-column="66" selection-end-line="9" selection-end-column="66" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/mo/registry.go">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/mo/mo.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="11700">
+          <caret line="780" column="35" selection-start-line="780" selection-start-column="35" selection-end-line="780" selection-end-column="35" />
+          <folding>
+            <element signature="e#602#743#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/methods/methods.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-201">
+          <caret line="23" column="39" selection-end-line="19343" />
+          <folding>
+            <element signature="e#607#764#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsan/vsan-sdk/types/enum.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="69135">
+          <caret line="4609" column="1" selection-start-line="4609" selection-start-column="1" selection-end-line="4609" selection-end-column="1" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/methods/methods.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="297">
+          <caret line="20" column="72" selection-start-line="20" selection-start-column="65" selection-end-line="20" selection-end-column="72" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/mo/mo.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="299">
+          <caret line="20" column="58" selection-start-line="20" selection-start-column="58" selection-end-line="20" selection-end-column="58" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/mo/registry.go">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/base.go">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/enum.go">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/if.go">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/registry.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="270">
+          <caret line="18" selection-start-line="18" selection-end-line="18" />
+          <folding>
+            <element signature="e#600#621#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan-sdk/types/types.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="85">
+          <caret line="18" column="8" lean-forward="true" selection-start-line="18" selection-start-column="8" selection-end-line="18" selection-end-column="8" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vsan.conf">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="165">
+          <caret line="11" selection-start-line="11" selection-end-line="15" selection-end-column="14" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vsphere.conf">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="240">
+          <caret line="16" column="32" lean-forward="true" selection-start-line="16" selection-start-column="32" selection-end-line="16" selection-end-column="32" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/endpoint.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="100">
-          <caret line="677" column="41" selection-start-line="677" selection-start-column="41" selection-end-line="677" selection-end-column="41" />
+        <state relative-caret-position="493">
+          <caret line="701" column="29" selection-start-line="701" selection-start-column="29" selection-end-line="701" selection-end-column="29" />
           <folding>
             <element signature="e#17#390#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/filter/filter.go">
-      <provider selected="true" editor-type-id="text-editor" />
+    <entry file="file://$PROJECT_DIR$/plugins/inputs/vsphere/vsan.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="405">
+          <caret line="45" column="1" lean-forward="true" selection-start-line="45" selection-start-column="1" selection-end-line="45" selection-end-column="1" />
+        </state>
+      </provider>
     </entry>
   </component>
 </project>

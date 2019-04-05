@@ -194,6 +194,24 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			getObjects:       getDatastores,
 			parent:           "",
 		},
+		"vsan": {
+			name:             "vsan",
+			vcName:           "ClusterComputeResource",
+			pKey:             "clustername",
+			parentTag:        "dcname",
+			enabled:          anythingEnabled(parent.VSANPerfMetricExclude),
+			realTime:         false,
+			sampling:         300,
+			objects:          make(objectMap),
+			filters:          newFilterOrPanic(parent.VSANPerfMetricInclude, parent.VSANPerfMetricExclude),
+			paths:            parent.ClusterInclude,
+			simple:           isSimple(parent.VSANPerfMetricInclude, parent.VSANPerfMetricExclude),
+			include:          parent.VSANPerfMetricInclude,
+			collectInstances: parent.VSANInstances,
+			getObjects:       getClusters,
+			parent:           "datacenter",
+			metrics:          nil, // We will not use vSphere metric for vSAN
+		},
 	}
 
 	// Start discover and other goodness
@@ -402,8 +420,8 @@ func (e *Endpoint) discover(ctx context.Context) error {
 				}
 			}
 
-			// No need to collect metric metadata if resource type is not enabled
-			if res.enabled {
+			// No need to collect metric metadata if resource type is not enabled, and skip vsan type
+			if res.enabled && k != "vsan" {
 				if res.simple {
 					e.simpleMetadataSelect(ctx, client, res)
 				} else {
@@ -680,7 +698,12 @@ func (e *Endpoint) Collect(ctx context.Context, acc telegraf.Accumulator) error 
 			wg.Add(1)
 			go func(k string) {
 				defer wg.Done()
-				err := e.collectResource(ctx, k, acc)
+				var err error
+				if k == "vsan" {
+					err = e.collectVSan(ctx, k, acc)
+				} else {
+					err = e.collectResource(ctx, k, acc)
+				}
 				if err != nil {
 					acc.AddError(err)
 				}
@@ -947,17 +970,6 @@ func (e *Endpoint) collectChunk(ctx context.Context, pqs []types.PerfQuerySpec, 
 				continue
 			}
 			e.populateTags(&objectRef, resourceType, res, t, &v)
-
-
-			// --- Change Start
-			hostname, found := t["esxhostname"]
-			if found {
-				var hss []mo.HostSystem
-				err = client.Root.RetrieveWithFilter(ctx, []string{"HostSystem"}, []string{"summary"}, &hss, map[string]types.AnyType{"name": hostname,})
-				t["build"] = hss[0].Summary.Config.Product.Build
-			}
-			// --- Change End
-
 
 			nValues := 0
 			alignedInfo, alignedValues := alignSamples(em.SampleInfo, v.Value, interval)

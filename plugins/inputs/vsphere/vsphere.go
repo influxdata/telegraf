@@ -39,8 +39,13 @@ type VSphere struct {
 	DatastoreMetricInclude  []string
 	DatastoreMetricExclude  []string
 	DatastoreInclude        []string
-	Separator               string
-	UseIntSamples           bool
+	VSANInstances           bool     `toml:"vsan_instances"`
+	VSANPerfMetricInclude   []string `toml:"vsan_perf_metric_include"`
+	VSANPerfMetricExclude   []string `toml:"vsan_perf_metric_exclude"`
+	VSANClusterInclude      []string //todo
+
+	Separator     string
+	UseIntSamples bool
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
