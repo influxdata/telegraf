@@ -5,6 +5,10 @@
 - [bind](/plugins/inputs/bind/README.md) - Contributed by @dswarbrick & @danielllek
 - [github](/plugins/inputs/github/README.md) - Contributed by @influxdata
 
+#### New Serializers
+
+- [wavefront](/plugins/serializers/wavefront/README.md) - Contributed by @puckpuck
+
 #### Features
 
 - [#5556](https://github.com/influxdata/telegraf/pull/5556): Add TTL field to ping input.
