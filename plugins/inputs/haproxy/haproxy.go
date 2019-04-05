@@ -241,7 +241,8 @@ func (g *haproxy) importCsvResult(r io.Reader, acc telegraf.Accumulator, host st
 			return err
 		}
 
-		fields := make(map[string]interface{})
+		fieldsG := make(map[string]interface{})
+		fieldsC := make(map[string]interface{})
 		tags := map[string]string{
 			"server": host,
 		}
@@ -278,24 +279,28 @@ func (g *haproxy) importCsvResult(r io.Reader, acc telegraf.Accumulator, host st
 				// do nothing. These fields are just a more verbose description of the check_status & agent_status fields
 			case "status", "check_status", "last_chk", "mode", "tracked", "agent_status", "last_agt", "addr", "cookie":
 				// these are string fields
-				fields[fieldName] = v
+				fieldsG[fieldName] = v
+			case "bin", "bout", "chkdown", "cli_abrt", "cli_abort", "comp_byp", "comp_in", "comp_out", "comp_rsp", "conn_tot", "dcon", "dreq", "dresp", "dses", "ereq", "hrsp_1xx", "hrsp_2xx", "hrsp_3xx", "hrsp_5xx", "hrsp_other", "http_response.1xx", "http_response.2xx", "http_response.3xx", "http_response.4xx", "http_response.5xx", "http_response.other", "intercepted", "lbtot", "req_tot", "slim", "srv_abrt", "srv_abort", "stot", "vwredis", "wretr":
+				// these are counter fields
+				fieldsC[fieldName] = v
 			case "lastsess":
 				vi, err := strconv.ParseInt(v, 10, 64)
 				if err != nil {
 					//TODO log the error. And just once (per column) so we don't spam the log
 					continue
 				}
-				fields[fieldName] = vi
+				fieldsG[fieldName] = vi
 			default:
 				vi, err := strconv.ParseUint(v, 10, 64)
 				if err != nil {
 					//TODO log the error. And just once (per column) so we don't spam the log
 					continue
 				}
-				fields[fieldName] = vi
+				fieldsG[fieldName] = vi
 			}
 		}
-		acc.AddFields("haproxy", fields, tags, now)
+		acc.AddFields("haproxy", fieldsG, tags, now)
+		acc.AddCounter("haproxy", fieldsC, tags, now)
 	}
 	return err
 }
