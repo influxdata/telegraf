@@ -1,6 +1,6 @@
 # Example
 
-The `wavefront` serializer translates the Telegraf metric format to the [Wavefront Data Format](https://docs.wavefront.com/wavefront_data_format.html).  
+The `wavefront` serializer translates the Telegraf metric format to the [Wavefront Data Format](https://docs.wavefront.com/wavefront_data_format.html).
 
 ### Configuration
 
@@ -10,10 +10,10 @@ The `wavefront` serializer translates the Telegraf metric format to the [Wavefro
 
   ## Use Strict rules to sanitize metric and tag names from invalid characters
   ## When enabled forward slash (/) and comma (,) will be accpeted
-  # use_strict = false
-  
+  # wavefront_use_strict = false
+
   ## point tags to use as the source name for Wavefront (if none found, host will be used)
-  # source_override = ["hostname", "address", "agent_host", "node_host"]
+  # wavefront_source_override = ["hostname", "address", "agent_host", "node_host"]
 
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
