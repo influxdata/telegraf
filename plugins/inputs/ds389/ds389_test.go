@@ -106,14 +106,14 @@ func Test389dsNetscapeRootDbAttrs(t *testing.T) {
 		Host:         testutil.GetLocalHost(),
 		Port:         389,
 		BindDn:       "cn=Directory manager",
-		BindPassword: "secret",
-		Dbtomonitor:  []string{"NetscapeRoot"},
+		BindPassword: "secret", //shoul be something else
+		Dbtomonitor:  []string{"userRoot"},
 	}
 
 	var acc testutil.Accumulator
 	err := o.Gather(&acc)
 	require.NoError(t, err)
-	assert.True(t, acc.HasInt64Field("ds389", "netscaperoot_dncachehits"), "Has an integer field called netscaperoot_dncachehits")
+	assert.True(t, acc.HasInt64Field("ds389", "userroot_dncachehits"), "Has an integer field called userroot_dncachehits")
 }
 
 func Test389dsInvalidSSL(t *testing.T) {
