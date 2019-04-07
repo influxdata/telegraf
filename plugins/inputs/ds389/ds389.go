@@ -3,6 +3,7 @@ package ds389
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/influxdata/telegraf/internal/tls"
 	ldap "gopkg.in/ldap.v2"
@@ -45,10 +46,11 @@ const sampleConfig string = `
 
   #Gather dbname monitor
   # Comma separated list of db filename
-  dbtomonitor = ["exampleDB"]
+  # dbtomonitor = ["exampleDB"]
 `
 
 var searchMonitor = "cn=Monitor"
+var searchLdbmMonitor = "cn=monitor,cn=ldbm database,cn=plugins,cn=config"
 
 var searchFilter = "(objectClass=*)"
 var searchAttrs = []string{
@@ -95,6 +97,16 @@ var searchAttrs = []string{
 	"cacheentries",
 	"cachehits",
 	"slavehits",
+}
+
+var searchLdbmAttrs = []string{
+	"dbcachehitratio",
+	"dbcachehits",
+	"dbcachepagein",
+	"dbcachepageout",
+	"dbcacheroevict",
+	"dbcacherwevict",
+	"dbcachetries",
 }
 
 var searchDbAttrs = []string{}
@@ -202,6 +214,27 @@ func (o *ds389) Gather(acc telegraf.Accumulator) error {
 
 	gatherSearchResult(sr, o, acc)
 
+	searchLdbmRequest := ldap.NewSearchRequest(
+		searchLdbmMonitor,
+		ldap.ScopeWholeSubtree,
+		ldap.NeverDerefAliases,
+		0,
+		0,
+		false,
+		searchFilter,
+		searchLdbmAttrs,
+		nil,
+	)
+
+	sldbmr, err := l.Search(searchLdbmRequest)
+
+	if err != nil {
+		acc.AddError(err)
+		return nil
+	}
+
+	gatherSearchResult(sldbmr, o, acc)
+
 	if len(o.Dbtomonitor) > 0 {
 		for _, db := range o.Dbtomonitor {
 			var searchDbMonitor = fmt.Sprintf("cn=monitor,cn=%s,cn=ldbm database,cn=plugins,cn=config", db)
@@ -222,7 +255,7 @@ func (o *ds389) Gather(acc telegraf.Accumulator) error {
 				acc.AddError(err)
 				return nil
 			}
-			gatherSearchResult(sdbr, o, acc)
+			gatherDbSearchResult(sdbr, o, acc, db)
 		}
 	}
 	return nil
@@ -238,8 +271,29 @@ func gatherSearchResult(sr *ldap.SearchResult, o *ds389, acc telegraf.Accumulato
 		for _, attr := range entry.Attributes {
 			if len(attr.Values[0]) >= 1 {
 				if v, err := strconv.ParseInt(attr.Values[0], 10, 64); err == nil {
-					fmt.Println(attr.Name, v)
+					//fmt.Println(attr.Name, v)
 					fields[attr.Name] = v
+				}
+			}
+		}
+	}
+	acc.AddFields("ds389", fields, tags)
+	return
+}
+
+func gatherDbSearchResult(sr *ldap.SearchResult, o *ds389, acc telegraf.Accumulator, dbname string) {
+	fields := map[string]interface{}{}
+	tags := map[string]string{
+		"server": o.Host,
+		"port":   strconv.Itoa(o.Port),
+	}
+	for _, entry := range sr.Entries {
+		for _, attr := range entry.Attributes {
+			if len(attr.Values[0]) >= 1 {
+				if v, err := strconv.ParseInt(attr.Values[0], 10, 64); err == nil {
+					attrName := fmt.Sprint(strings.ToLower(dbname), "_", attr.Name)
+					//fmt.Println(attrName, v)
+					fields[attrName] = v
 				}
 			}
 		}
