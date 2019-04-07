@@ -1,6 +1,7 @@
 package lanz_consumer
 
 import (
+	"net/url"
 	"strconv"
 	"testing"
 
@@ -61,13 +62,16 @@ func TestLanzConsumerGeneratesMetrics(t *testing.T) {
 	c2.acc = &acc
 	l.Clients[c2.Server] = c2
 
+	u1, _ := url.Parse(c1.Server)
+
 	c1.Lock()
 	defer c1.Unlock()
-	go c1.receiver()
+	go c1.receiver(u1)
 
+	u2, _ := url.Parse(c2.Server)
 	c2.Lock()
 	defer c2.Unlock()
-	go c2.receiver()
+	go c2.receiver(u2)
 
 	c1.in <- testProtoBufCongestionRecord1
 	acc.Wait(1)

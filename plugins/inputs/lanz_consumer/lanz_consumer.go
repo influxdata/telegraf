@@ -82,14 +82,12 @@ func NewLanzClient() *LanzClient {
 }
 
 func (c *LanzClient) Start(acc telegraf.Accumulator) error {
-	c.Lock()
-	defer c.Unlock()
 	c.acc = acc
-	u, err := url.Parse(c.Server)
+	deviceUrl, err := url.Parse(c.Server)
 	if err != nil {
 		return err
 	}
-	client := lanz.New(lanz.WithAddr(u.Host), lanz.WithBackoff(1*time.Second), lanz.WithTimeout(10*time.Second))
+	client := lanz.New(lanz.WithAddr(deviceUrl.Host), lanz.WithBackoff(1*time.Second), lanz.WithTimeout(10*time.Second))
 	c.client = &client
 	c.in = make(chan *pb.LanzRecord)
 	c.done = make(chan bool)
@@ -97,13 +95,11 @@ func (c *LanzClient) Start(acc telegraf.Accumulator) error {
 		client.Run(c.in)
 		c.done <- true
 	}()
-	go c.receiver()
+	go c.receiver(deviceUrl)
 	return nil
 }
 
-func (c *LanzClient) receiver() {
-
-	u, _ := url.Parse(c.Server)
+func (c *LanzClient) receiver(deviceUrl *url.URL) {
 
 	for {
 
@@ -127,8 +123,8 @@ func (c *LanzClient) receiver() {
 					"entry_type":            strconv.FormatInt(int64(cr.GetEntryType()), 10),
 					"traffic_class":         strconv.FormatInt(int64(cr.GetTrafficClass()), 10),
 					"fabric_peer_intf_name": cr.GetFabricPeerIntfName(),
-					"hostname":              u.Hostname(),
-					"port":                  u.Port(),
+					"hostname":              deviceUrl.Hostname(),
+					"port":                  deviceUrl.Port(),
 				}
 				c.acc.AddFields("congestion_record", vals, tags)
 			}
@@ -142,8 +138,8 @@ func (c *LanzClient) receiver() {
 				}
 				tags := map[string]string{
 					"entry_type": strconv.FormatInt(int64(gbur.GetEntryType()), 10),
-					"hostname":   u.Hostname(),
-					"port":       u.Port(),
+					"hostname":   deviceUrl.Hostname(),
+					"port":       deviceUrl.Port(),
 				}
 				c.acc.AddFields("global_buffer_usage_record", vals, tags)
 			}
