@@ -17,7 +17,7 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 
 ```toml
 [[inputs.cloudwatch]]
-  ## Amazon Region (required)
+  ## Amazon Region
   region = "us-east-1"
 
   ## Amazon Credentials
@@ -54,42 +54,44 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   ## Collection Delay (required - must account for metrics availability via CloudWatch API)
   delay = "5m"
 
-  ## Override global run interval (optional - defaults to global interval)
-  ## Recomended: use metric 'interval' that is a multiple of 'period' to avoid
+  ## Recommended: use metric 'interval' that is a multiple of 'period' to avoid
   ## gaps or overlap in pulled data
   interval = "5m"
+
+  ## Configure the TTL for the internal cache of metrics.
+  ## Defaults to 1 hr if not specified
+  # cache_ttl = "1h"
 
   ## Metric Statistic Namespace (required)
   namespace = "AWS/ELB"
 
   ## Maximum requests per second. Note that the global default AWS rate limit is
   ## 400 reqs/sec, so if you define multiple namespaces, these should add up to a
-  ## maximum of 400. Optional - default value is 200.
+  ## maximum of 400. Default value is 200.
   ## See http://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_limits.html
-  ratelimit = 200
+  # ratelimit = 200
 
-  ## Namespace-wide statistic filters (only gets used if no metrics are defined). These
-  ## are optional and allow fewer queries to be made to cloudwatch.
+  ## Namespace-wide statistic filters. These allow fewer queries to be made to
+  ## cloudwatch.
   # statistic_exclude = [ "average", "sum", minimum", "maximum", sample_count" ]
-  # statistic_include = [ "average", "sum", minimum", "maximum", sample_count" ]
+  # statistic_include = []
 
-  ## Metrics to Pull (optional)
+  ## Metrics to Pull
   ## Defaults to all Metrics in Namespace if nothing is provided
   ## Refreshes Namespace available metrics every 1h
-  [[inputs.cloudwatch.metrics]]
-    names = ["Latency", "RequestCount"]
-  
-    ## Statistic filters for Metric.  These are optional and allow for retrieving
-    ## specific statistics for an individual metric.
-    # statistic_exclude = [ "average", "sum", minimum", "maximum", sample_count" ]
-    # statistic_include = [ "average", "sum", minimum", "maximum", sample_count" ]
-  
-    ## Dimension filters for Metric.  These are optional however all dimensions
-    ## defined for the metric names must be specified in order to retrieve
-    ## the metric statistics.
-    [[inputs.cloudwatch.metrics.dimensions]]
-      name = "LoadBalancerName"
-      value = "p-example"
+  #[[inputs.cloudwatch.metrics]]
+  #  names = ["Latency", "RequestCount"]
+  #
+  #  ## Statistic filters for Metric.  These allow for retrieving specific
+  #  ## statistics for an individual metric.
+  #  # statistic_exclude = [ "average", "sum", minimum", "maximum", sample_count" ]
+  #  # statistic_include = []
+  #
+  #  ## Dimension filters for Metric.  All dimensions defined for the metric names
+  #  ## must be specified in order to retrieve the metric statistics.
+  #  [[inputs.cloudwatch.metrics.dimensions]]
+  #    name = "LoadBalancerName"
+  #    value = "p-example"
 ```
 #### Requirements and Terminology
 
@@ -157,7 +159,6 @@ Tag Dimension names are represented in [snake case](https://en.wikipedia.org/wik
 
 - All measurements have the following tags:
   - region           (CloudWatch Region)
-  - unit             (CloudWatch Metric Unit)
   - {dimension-name} (Cloudwatch Dimension value - one for each metric dimension)
 
 ### Troubleshooting:

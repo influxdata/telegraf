@@ -213,7 +213,7 @@ func TestSelectMetrics(t *testing.T) {
 		},
 	}
 	c.client = &mockSelectMetricsCloudWatchClient{}
-	filtered, err := SelectMetrics(c)
+	filtered, err := selectMetrics(c)
 	// We've asked for 2 (out of 4) metrics, over all 3 load balancers in all 2
 	// AZs. We should get 12 metrics.
 	assert.Equal(t, 12, len(filtered[0].metrics))
@@ -305,9 +305,9 @@ func TestMetricsCacheTimeout(t *testing.T) {
 		TTL:     time.Minute,
 	}
 
-	assert.True(t, cache.IsValid())
+	assert.True(t, cache.isValid())
 	cache.Fetched = time.Now().Add(-time.Minute)
-	assert.False(t, cache.IsValid())
+	assert.False(t, cache.isValid())
 }
 
 func TestUpdateWindow(t *testing.T) {

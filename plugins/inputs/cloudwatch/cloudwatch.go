@@ -2,7 +2,7 @@ package cloudwatch
 
 import (
 	"errors"
-	"log"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,6 +20,7 @@ import (
 )
 
 type (
+	// CloudWatch contains the configuration and cache for the cloudwatch plugin.
 	CloudWatch struct {
 		Region           string   `toml:"region"`
 		AccessKey        string   `toml:"access_key"`
@@ -44,22 +45,23 @@ type (
 		queries     []queryData
 		windowStart time.Time
 		windowEnd   time.Time
-
-		Debug bool `toml:"debug"`
 	}
 
+	// Metric defines a simplified Cloudwatch metric.
 	Metric struct {
-		StatisticExclude []string     `toml:"statistic_exclude"`
-		StatisticInclude []string     `toml:"statistic_include"`
+		StatisticExclude *[]string    `toml:"statistic_exclude"`
+		StatisticInclude *[]string    `toml:"statistic_include"`
 		MetricNames      []string     `toml:"names"`
 		Dimensions       []*Dimension `toml:"dimensions"`
 	}
 
+	// Dimension defines a simplified Cloudwatch dimension (provides metric filtering).
 	Dimension struct {
 		Name  string `toml:"name"`
 		Value string `toml:"value"`
 	}
 
+	// MetricCache caches automatically fetched metrics.
 	MetricCache struct {
 		TTL     time.Duration
 		Fetched time.Time
@@ -72,6 +74,7 @@ type (
 	}
 )
 
+// SampleConfig returns the default configuration of the Cloudwatch input plugin.
 func (c *CloudWatch) SampleConfig() string {
 	return `
   ## Amazon Region
@@ -117,42 +120,42 @@ func (c *CloudWatch) SampleConfig() string {
 
   ## Configure the TTL for the internal cache of metrics.
   ## Defaults to 1 hr if not specified
-  # cache_ttl = "10m"
+  # cache_ttl = "1h"
 
   ## Metric Statistic Namespace (required)
   namespace = "AWS/ELB"
 
   ## Maximum requests per second. Note that the global default AWS rate limit is
   ## 400 reqs/sec, so if you define multiple namespaces, these should add up to a
-  ## maximum of 400. Optional - default value is 200.
+  ## maximum of 400. Default value is 200.
   ## See http://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_limits.html
-  ratelimit = 200
+  # ratelimit = 200
 
-  ## Namespace-wide statistic filters (only gets used if no metrics are defined). These
-  ## are optional and allow fewer queries to be made to cloudwatch.
+  ## Namespace-wide statistic filters. These allow fewer queries to be made to
+  ## cloudwatch.
   # statistic_exclude = [ "average", "sum", minimum", "maximum", sample_count" ]
-  # statistic_include = [ "average", "sum", minimum", "maximum", sample_count" ]
+  # statistic_include = []
 
-  ## Metrics to Pull (optional)
+  ## Metrics to Pull
   ## Defaults to all Metrics in Namespace if nothing is provided
   ## Refreshes Namespace available metrics every 1h
   #[[inputs.cloudwatch.metrics]]
   #  names = ["Latency", "RequestCount"]
   #
-  #  ## Statistic filters for Metric.  These are optional and allow for retrieving
-  #  ## specific statistics for an individual metric.
+  #  ## Statistic filters for Metric.  These allow for retrieving specific
+  #  ## statistics for an individual metric.
   #  # statistic_exclude = [ "average", "sum", minimum", "maximum", sample_count" ]
-  #  # statistic_include = [ "average", "sum", minimum", "maximum", sample_count" ]
+  #  # statistic_include = []
   #
-  #  ## Dimension filters for Metric.  These are optional however all dimensions
-  #  ## defined for the metric names must be specified in order to retrieve
-  #  ## the metric statistics.
+  #  ## Dimension filters for Metric.  All dimensions defined for the metric names
+  #  ## must be specified in order to retrieve the metric statistics.
   #  [[inputs.cloudwatch.metrics.dimensions]]
   #    name = "LoadBalancerName"
   #    value = "p-example"
 `
 }
 
+// Description returns a one-sentence description on the Cloudwatch input plugin.
 func (c *CloudWatch) Description() string {
 	return "Pull Metric Statistics from Amazon CloudWatch"
 }
@@ -162,7 +165,8 @@ type filteredMetric struct {
 	statFilter filter.Filter
 }
 
-func SelectMetrics(c *CloudWatch) ([]filteredMetric, error) {
+// selectMetrics returns metrics specified in the config file or metrics listed from Cloudwatch.
+func selectMetrics(c *CloudWatch) ([]filteredMetric, error) {
 	fMetrics := []filteredMetric{}
 	var metrics []*cloudwatch.Metric
 
@@ -202,7 +206,14 @@ func SelectMetrics(c *CloudWatch) ([]filteredMetric, error) {
 					}
 				}
 			}
-			statFilter, err := filter.NewIncludeExcludeFilter(m.StatisticInclude, m.StatisticExclude)
+
+			if m.StatisticExclude == nil {
+				m.StatisticExclude = &c.StatisticExclude
+			}
+			if m.StatisticInclude == nil {
+				m.StatisticInclude = &c.StatisticInclude
+			}
+			statFilter, err := filter.NewIncludeExcludeFilter(*m.StatisticInclude, *m.StatisticExclude)
 			if err != nil {
 				return nil, err
 			}
@@ -233,12 +244,14 @@ func SelectMetrics(c *CloudWatch) ([]filteredMetric, error) {
 	return fMetrics, nil
 }
 
+// Gather takes in an accumulator and adds the metrics that the Input
+// gathers. This is called every "interval".
 func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	if c.client == nil {
 		c.initializeCloudWatch()
 	}
 
-	metrics, err := SelectMetrics(c)
+	metrics, err := selectMetrics(c)
 	if err != nil {
 		return err
 	}
@@ -248,15 +261,15 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
-	// get all of the possible queries so we can send groups of 100
+	// Get all of the possible queries so we can send groups of 100.
 	// note: these are cached using metricCache's specs (when only namespace is defined)
 	queries, err := c.getDataQueries(metrics)
 	if err != nil {
 		return err
 	}
 
-	// limit concurrency or we can easily exhaust user connection limit
-	// see cloudwatch API request limits:
+	// Limit concurrency or we can easily exhaust user connection limit.
+	// See cloudwatch API request limits:
 	// http://docs.aws.amazon.com/AmazonCloudWatch/latest/DeveloperGuide/cloudwatch_limits.html
 	lmtr := limiter.NewRateLimiter(c.RateLimit, time.Second)
 	defer lmtr.Stop()
@@ -278,26 +291,24 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 		rLock.Unlock()
 	}
 
-	// loop through metrics and send groups of 100 at a time to gatherMetrics in order
-	// to maximize the request body, thus lowering the total number of requests required.
-	// 100 is the maximum number of queries a request can contain.
-	groups := len(queries) / 100
-	for i := 0; i < groups; i++ {
+	// 100 is the maximum number of queries a `GetMetricData` request can contain.
+	batchSize := 100
+	var batches [][]*cloudwatch.MetricDataQuery
+
+	for batchSize < len(queries) {
+		queries, batches = queries[batchSize:], append(batches, queries[0:batchSize:batchSize])
+	}
+	batches = append(batches, queries)
+
+	for i := range batches {
 		wg.Add(1)
 		<-lmtr.C
-		go aggregateResults(queries[i*100 : (i+1)*100])
+		go aggregateResults(batches[i])
 	}
-
-	// gather remainder (or initial) group
-	<-lmtr.C
-	wg.Add(1)
-	go aggregateResults(queries[(groups * 100):])
 
 	wg.Wait()
 
-	acc.AddError(c.aggregateMetrics(acc, results))
-
-	return nil
+	return c.aggregateMetrics(acc, results)
 }
 
 func (c *CloudWatch) updateWindow(relativeTo time.Time) error {
@@ -326,9 +337,6 @@ func init() {
 	})
 }
 
-/*
- * Initialize CloudWatch client
- */
 func (c *CloudWatch) initializeCloudWatch() error {
 	credentialConfig := &internalaws.CredentialConfig{
 		Region:      c.Region,
@@ -344,18 +352,13 @@ func (c *CloudWatch) initializeCloudWatch() error {
 
 	cfg := &aws.Config{}
 	loglevel := aws.LogOff
-	if c.Debug {
-		loglevel = aws.LogDebug
-	}
 	c.client = cloudwatch.New(configProvider, cfg.WithLogLevel(loglevel))
 	return nil
 }
 
-/*
- * Fetch available metrics for given CloudWatch Namespace
- */
+// fetchNamespaceMetrics retrieves available metrics for a given CloudWatch namespace.
 func (c *CloudWatch) fetchNamespaceMetrics() ([]*cloudwatch.Metric, error) {
-	if c.metricCache != nil && c.metricCache.IsValid() {
+	if c.metricCache != nil && c.metricCache.isValid() {
 		return c.metricCache.Metrics, nil
 	}
 
@@ -390,9 +393,7 @@ func (c *CloudWatch) fetchNamespaceMetrics() ([]*cloudwatch.Metric, error) {
 	return metrics, nil
 }
 
-/*
- * Gather given Metric and emit any error
- */
+// gatherMetrics gets metric data from Cloudwatch.
 func (c *CloudWatch) gatherMetrics(
 	params *cloudwatch.GetMetricDataInput,
 ) ([]*cloudwatch.MetricDataResult, error) {
@@ -401,13 +402,14 @@ func (c *CloudWatch) gatherMetrics(
 	for {
 		resp, err := c.client.GetMetricData(params)
 		if err != nil {
-			return nil, errors.New("Failed to get metric data - " + err.Error())
+			return nil, fmt.Errorf("failed to get metric data: %v", err)
 		}
 
 		results = append(results, resp.MetricDataResults...)
 		if resp.NextToken == nil {
 			break
 		}
+		params.NextToken = resp.NextToken
 	}
 
 	return results, nil
@@ -433,10 +435,6 @@ func (c *CloudWatch) aggregateMetrics(
 			if nameMatch(query.id, *result.Id) {
 				for _, dimension := range query.metric.Dimensions {
 					tags[snakeCase(*dimension.Name)] = *dimension.Value
-				}
-				if len(result.Timestamps) != len(result.Values) {
-					log.Println("[inputs.cloudwatch] W! MISMATCHED TIMESTAMP/VALUE LENGTH!!", len(result.Timestamps), len(result.Values))
-					continue
 				}
 
 				for j := range result.Values {
@@ -475,9 +473,6 @@ func nameMatch(name, id string) bool {
 	return false
 }
 
-/*
- * Formatting helpers
- */
 func sanitizeMeasurement(namespace string) string {
 	namespace = strings.Replace(namespace, "/", "_", -1)
 	namespace = snakeCase(namespace)
@@ -496,19 +491,18 @@ type queryData struct {
 	id     string
 }
 
-// get all of the possible queries so we can send groups of 100
+// getDataQueries gets all of the possible queries so we can maximize the request payload.
 func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudwatch.MetricDataQuery, error) {
-	if c.queryCache != nil && c.metricCache != nil && c.metricCache.IsValid() {
+	if c.queryCache != nil && c.metricCache != nil && c.metricCache.isValid() {
 		return c.queryCache, nil
 	}
 
-	// clear slice
 	c.queries = []queryData{}
 
 	dataQueries := []*cloudwatch.MetricDataQuery{}
-	for _, filtered := range filteredMetrics {
-		for i, metric := range filtered.metrics {
-			id := strconv.Itoa(i)
+	for i, filtered := range filteredMetrics {
+		for j, metric := range filtered.metrics {
+			id := strconv.Itoa(j) + "_" + strconv.Itoa(i)
 			c.queries = append(c.queries, queryData{metric: metric, id: id})
 
 			if filtered.statFilter.Match("average") {
@@ -570,7 +564,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 	}
 
 	if len(dataQueries) == 0 {
-		return nil, errors.New("No metrics found to collect")
+		return nil, errors.New("no metrics found to collect")
 	}
 
 	c.queryCache = dataQueries
@@ -585,10 +579,8 @@ func (c *CloudWatch) getDataInputs(dataQueries []*cloudwatch.MetricDataQuery) *c
 	}
 }
 
-/*
- * Check Metric Cache validity
- */
-func (c *MetricCache) IsValid() bool {
+// isValid checks the validity of the metric cache.
+func (c *MetricCache) isValid() bool {
 	return c.Metrics != nil && time.Since(c.Fetched) < c.TTL
 }
 
