@@ -20,6 +20,11 @@ import (
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
 
+const (
+	compressionGZIP   = "gzip"
+	compressionSnappy = "snappy"
+)
+
 type (
 	DynamoDB struct {
 		AppName   string `toml:"app_name"`
@@ -39,6 +44,8 @@ type (
 		ShardIteratorType      string    `toml:"shard_iterator_type"`
 		DynamoDB               *DynamoDB `toml:"checkpoint_dynamodb"`
 		MaxUndeliveredMessages int       `toml:"max_undelivered_messages"`
+		CompressedMetrics      bool      `toml:"compressed_metrics"`
+		CompressionType        string    `tome:"compression_type"`
 
 		cons   *consumer.Consumer
 		parser parsers.Parser
@@ -123,6 +130,13 @@ var sampleConfig = `
 	## unique name for this consumer
 	app_name = "default"
 	table_name = "default"
+
+	## Configuration for compressed metrics
+	## Set to true if you have compressed metrics in your Kinesis stream.
+	## Set to false by default.
+	compressed_metrics = false
+	## compression_type can be equal to either "gzip" or "snappy"
+	compression_type = gzip
 `
 
 func (k *KinesisConsumer) SampleConfig() string {
@@ -237,7 +251,42 @@ func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
 	return nil
 }
 
+func (k *KinesisConsumer) decompress(input []byte) ([]byte, error) {
+	var decompressedData []byte
+	var err error
+
+	switch k.CompressionType {
+	case compressionSnappy:
+		decompressedData, err = decompressSnappy(input)
+		if err != nil {
+			return nil, err
+		}
+	case compressionGZIP:
+		decompressedData, err = decompressGZip(input)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		decompressedData, err = decompressGZip(input)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return decompressedData, nil
+}
+
 func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consumer.Record) error {
+	// If the metrics are compressed then we need to decompress them first.
+	if k.CompressedMetrics {
+		decompressedData, err := k.decompress(r.Data)
+		if err != nil {
+			return err
+		}
+		// At this point a successful decompression has occurred and we can replace the data in the
+		// record Data field and carry on.
+		r.Data = decompressedData
+	}
 	metrics, err := k.parser.Parse(r.Data)
 	if err != nil {
 		return err

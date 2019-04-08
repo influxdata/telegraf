@@ -85,6 +85,16 @@ Partition key: namespace
 Sort key: shard_id
 ```
 
+#### Compressed metrics
+
+Kinesis cares very little about what is in the payloads of the records. Therefore you can store compressed metrics like that of the Kinesis output plugin.
+You will need to tell telegraf what is in the records before hand.
+Currently supported compression formats: `["gzip", "snappy"]`
+
+```toml
+compressed_metrics = true
+compression_type = gzip
+```
 
 [kinesis]: https://aws.amazon.com/kinesis/
 [input data formats]: /docs/DATA_FORMATS_INPUT.md
