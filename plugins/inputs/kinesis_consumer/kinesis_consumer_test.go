@@ -18,12 +18,15 @@ func TestDecompression(t *testing.T) {
 			name:  "gzip",
 			input: []byte{31, 139, 8, 0, 0, 0, 0, 0, 0, 255, 42, 73, 45, 46, 73, 73, 44, 73, 52, 52, 50, 54, 81, 84, 58, 180, 88, 133, 176, 0, 32, 0, 0, 255, 255, 54, 208, 10, 134, 51, 0, 0, 0},
 		},
+		{
+			name:  "none",
+			input: expectedOutput,
+		},
 	}
 
 	for _, test := range tests {
 		k := KinesisConsumer{
-			CompressedMetrics: true,
-			CompressionType:   test.name,
+			Compression: test.name,
 		}
 
 		output, err := k.decompress(test.input)

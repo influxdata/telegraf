@@ -60,27 +60,31 @@ and creates metrics using one of the supported [input data formats][].
     ## unique name for this consumer
     app_name = "default"
     table_name = "default"
+  
+  ## Configuration for compressed metrics
+  ## compression_type can be equal to either "gzip", "snappy" or the
+  ## default of none
+  compression_type = "none"
 ```
 
 
 #### Required AWS IAM permissions
 
-Kinesis:
- - DescribeStream
- - GetRecords
- - GetShardIterator
+- Kinesis
+  - DescribeStream
+  - GetRecords
+  - GetShardIterator
 
-DynamoDB:
- - GetItem
- - PutItem
-
+- DynamoDB
+  - GetItem
+  - PutItem
 
 #### DynamoDB Checkpoint
 
 The DynamoDB checkpoint stores the last processed record in a DynamoDB. To leverage
-this functionality, create a table with the folowing string type keys:
+this functionality, create a table with the following string type keys:
 
-```
+```none
 Partition key: namespace
 Sort key: shard_id
 ```
@@ -88,12 +92,11 @@ Sort key: shard_id
 #### Compressed metrics
 
 Kinesis cares very little about what is in the payloads of the records. Therefore you can store compressed metrics like that of the Kinesis output plugin.
-You will need to tell telegraf what is in the records before hand.
-Currently supported compression formats: `["gzip", "snappy"]`
+You will need to tell telegraf, what is in the records before hand.
+Currently supported compression formats: `["gzip", "snappy", "none"]`
 
 ```toml
-compressed_metrics = true
-compression_type = gzip
+compression_type = "gzip"
 ```
 
 [kinesis]: https://aws.amazon.com/kinesis/

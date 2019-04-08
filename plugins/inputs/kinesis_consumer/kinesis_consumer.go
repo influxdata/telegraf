@@ -23,6 +23,7 @@ import (
 const (
 	compressionGZIP   = "gzip"
 	compressionSnappy = "snappy"
+	compressionNone   = "none"
 )
 
 type (
@@ -44,8 +45,7 @@ type (
 		ShardIteratorType      string    `toml:"shard_iterator_type"`
 		DynamoDB               *DynamoDB `toml:"checkpoint_dynamodb"`
 		MaxUndeliveredMessages int       `toml:"max_undelivered_messages"`
-		CompressedMetrics      bool      `toml:"compressed_metrics"`
-		CompressionType        string    `tome:"compression_type"`
+		Compression            string    `toml:"compression"`
 
 		cons   *consumer.Consumer
 		parser parsers.Parser
@@ -132,11 +132,9 @@ var sampleConfig = `
 	table_name = "default"
 
 	## Configuration for compressed metrics
-	## Set to true if you have compressed metrics in your Kinesis stream.
-	## Set to false by default.
-	compressed_metrics = false
-	## compression_type can be equal to either "gzip" or "snappy"
-	compression_type = gzip
+	## compression_type can be equal to either "gzip", "snappy" or the
+	## default of none
+	compression_type = "none"
 `
 
 func (k *KinesisConsumer) SampleConfig() string {
@@ -252,41 +250,36 @@ func (k *KinesisConsumer) Start(ac telegraf.Accumulator) error {
 }
 
 func (k *KinesisConsumer) decompress(input []byte) ([]byte, error) {
-	var decompressedData []byte
-	var err error
-
-	switch k.CompressionType {
+	switch k.Compression {
 	case compressionSnappy:
-		decompressedData, err = decompressSnappy(input)
+		decompressedData, err := decompressSnappy(input)
 		if err != nil {
 			return nil, err
 		}
+		return decompressedData, nil
 	case compressionGZIP:
-		decompressedData, err = decompressGZip(input)
+		decompressedData, err := decompressGZip(input)
 		if err != nil {
 			return nil, err
 		}
+		return decompressedData, nil
+	case compressionNone:
+		return input, nil
 	default:
-		decompressedData, err = decompressGZip(input)
-		if err != nil {
-			return nil, err
-		}
+		return input, nil
 	}
-
-	return decompressedData, nil
 }
 
 func (k *KinesisConsumer) onMessage(acc telegraf.TrackingAccumulator, r *consumer.Record) error {
 	// If the metrics are compressed then we need to decompress them first.
-	if k.CompressedMetrics {
-		decompressedData, err := k.decompress(r.Data)
-		if err != nil {
-			return err
-		}
-		// At this point a successful decompression has occurred and we can replace the data in the
-		// record Data field and carry on.
-		r.Data = decompressedData
+	decompressedData, err := k.decompress(r.Data)
+	if err != nil {
+		return err
 	}
+	// At this point a successful decompression has occurred and we can replace the data in the
+	// record Data field and carry on.
+	r.Data = decompressedData
+
 	metrics, err := k.parser.Parse(r.Data)
 	if err != nil {
 		return err
