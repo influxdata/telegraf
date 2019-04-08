@@ -36,7 +36,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 	return &cloudwatch.GetMetricDataOutput{
 		MetricDataResults: []*cloudwatch.MetricDataResult{
 			{
-				Id:         aws.String("minimum_0"),
+				Id:         aws.String("minimum_0_0"),
 				Label:      aws.String("latency_minimum"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
@@ -47,7 +47,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("maximum_0"),
+				Id:         aws.String("maximum_0_0"),
 				Label:      aws.String("latency_maximum"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
@@ -58,7 +58,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("average_0"),
+				Id:         aws.String("average_0_0"),
 				Label:      aws.String("latency_average"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
@@ -69,7 +69,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("sum_0"),
+				Id:         aws.String("sum_0_0"),
 				Label:      aws.String("latency_sum"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
@@ -80,7 +80,7 @@ func (m *mockGatherCloudWatchClient) GetMetricData(params *cloudwatch.GetMetricD
 				},
 			},
 			{
-				Id:         aws.String("sample_count_0"),
+				Id:         aws.String("sample_count_0_0"),
 				Label:      aws.String("latency_sample_count"),
 				StatusCode: aws.String("completed"),
 				Timestamps: []*time.Time{
@@ -213,7 +213,7 @@ func TestSelectMetrics(t *testing.T) {
 		},
 	}
 	c.client = &mockSelectMetricsCloudWatchClient{}
-	filtered, err := selectMetrics(c)
+	filtered, err := getFilteredMetrics(c)
 	// We've asked for 2 (out of 4) metrics, over all 3 load balancers in all 2
 	// AZs. We should get 12 metrics.
 	assert.Equal(t, 12, len(filtered[0].metrics))
@@ -299,14 +299,14 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 }
 
 func TestMetricsCacheTimeout(t *testing.T) {
-	cache := &MetricCache{
-		Metrics: []*cloudwatch.Metric{},
-		Fetched: time.Now(),
-		TTL:     time.Minute,
+	cache := &metricCache{
+		metrics: []*cloudwatch.Metric{},
+		fetched: time.Now(),
+		ttl:     time.Minute,
 	}
 
 	assert.True(t, cache.isValid())
-	cache.Fetched = time.Now().Add(-time.Minute)
+	cache.fetched = time.Now().Add(-time.Minute)
 	assert.False(t, cache.isValid())
 }
 
