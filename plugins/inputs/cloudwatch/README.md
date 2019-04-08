@@ -109,17 +109,21 @@ wildcard dimension is ignored.
 
 Example:
 ```
-[[inputs.cloudwatch.metrics]]
-  names = ["Latency"]
+[[inputs.cloudwatch]]
+  period = "1m"
+  interval = "5m"
 
-  ## Dimension filters for Metric (optional)
-  [[inputs.cloudwatch.metrics.dimensions]]
-    name = "LoadBalancerName"
-    value = "p-example"
+  [[inputs.cloudwatch.metrics]]
+    names = ["Latency"]
 
-  [[inputs.cloudwatch.metrics.dimensions]]
-    name = "AvailabilityZone"
-    value = "*"
+    ## Dimension filters for Metric (optional)
+    [[inputs.cloudwatch.metrics.dimensions]]
+      name = "LoadBalancerName"
+      value = "p-example"
+
+    [[inputs.cloudwatch.metrics.dimensions]]
+      name = "AvailabilityZone"
+      value = "*"
 ```
 
 If the following ELBs are available:
@@ -136,9 +140,11 @@ Then 2 metrics will be output:
 If the `AvailabilityZone` wildcard dimension was omitted, then a single metric (name: `p-example`)
 would be exported containing the aggregate values of the ELB across availability zones.
 
+To maximize efficiency and savings, consider making fewer requests by increasing `interval` but keeping `period` at the duration you would like metrics to be reported. The above example will request metrics from Cloudwatch every 5 minutes but will output five metrics timestamped one minute apart.
+
 #### Restrictions and Limitations
 - CloudWatch metrics are not available instantly via the CloudWatch API. You should adjust your collection `delay` to account for this lag in metrics availability based on your [monitoring subscription level](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-cloudwatch-new.html)
-- CloudWatch API usage incurs cost - see [GetMetricStatistics Pricing](https://aws.amazon.com/cloudwatch/pricing/)
+- CloudWatch API usage incurs cost - see [GetMetricDat Pricing](https://aws.amazon.com/cloudwatch/pricing/)
 
 ### Measurements & Fields:
 
