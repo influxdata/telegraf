@@ -333,6 +333,8 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
+require github.com/datadope-io/go-zabbix v1.5.1
+
 require (
 	github.com/aws/aws-sdk-go v1.38.3 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.2.0 // indirect
