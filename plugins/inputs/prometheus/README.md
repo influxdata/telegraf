@@ -24,6 +24,8 @@ in Prometheus format.
   ## - prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
   ## - prometheus.io/port: If port is not 9102 use this annotation
   # monitor_kubernetes_pods = true
+  ## Only monitor one namespace
+  # monitor_kubernetes_pods_namespace = "test-namespace"
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   # bearer_token = "/path/to/bearer/token"
@@ -63,6 +65,8 @@ Currently the following annotation are supported:
 * `prometheus.io/scheme` If the metrics endpoint is secured then you will need to set this to `https` & most likely set the tls config. (default 'http')
 * `prometheus.io/path` Override the path for the metrics endpoint on the service. (default '/metrics')
 * `prometheus.io/port` Used to override the port. (default 9102)
+
+Using the `monitor_kubernetes_pods_namespace` option allows you to limit which pods you are scraping.
 
 #### Bearer Token
 
