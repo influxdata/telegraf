@@ -153,16 +153,22 @@ case $1 in
             pidofproc -p $pidfile $daemon > /dev/null 2>&1 && status="0" || status="$?"
             if [ "$status" = 0 ]; then
                 # periodically signal until process exists
-                while true; do
+                retries=0
+                while [ $retries -le 15 ]; do
                         if ! pidofproc -p $pidfile $daemon > /dev/null; then
                                 break
                         fi
                         killproc -p $pidfile SIGTERM 2>&1 >/dev/null
+                        let "retries++"
                         sleep 2
                 done
 
-                log_success_msg "$name process was stopped"
-                rm -f $pidfile
+                if pidofproc -p $pidfile $daemon > /dev/null; then 
+                        log_failure_msg "$name could not be stopped"
+                else
+                        log_success_msg "$name process was stopped"
+                        rm -f $pidfile
+                fi
             fi
         else
             log_failure_msg "$name process is not running"
