@@ -288,7 +288,6 @@
 [[constraint]]
   name = "github.com/google/go-github"
   version = "24.0.1"
-  
 [[constraint]]
+  branch = "master"
   name = "github.com/golang/snappy"
-  revision = "2a8bb927dd31d8daada140a5d09578521ce5c36a"
