@@ -2,8 +2,9 @@
 
 Sends a ping message by executing the system ping command and reports the results.
 
-Currently there is no support for GNU Inetutils, use with iputils-ping
-instead:
+Most ping command implementations are supported, one notable exception being
+that there is currently no support for GNU Inetutils ping.  You may instead
+use the iputils-ping implementation:
 ```
 apt-get install iputils-ping
 ```
