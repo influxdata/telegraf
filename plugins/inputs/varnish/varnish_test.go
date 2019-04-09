@@ -47,8 +47,8 @@ func TestParseFullOutput(t *testing.T) {
 	assert.NoError(t, err)
 	acc.HasMeasurement("varnish")
 	flat := flatten(acc.Metrics)
-	assert.Len(t, acc.Metrics, 6)
-	assert.Equal(t, 293, len(flat))
+	assert.Len(t, acc.Metrics, 11)
+	assert.Equal(t, 334, len(flat))
 }
 
 func TestFilterSomeStats(t *testing.T) {
@@ -62,16 +62,16 @@ func TestFilterSomeStats(t *testing.T) {
 	assert.NoError(t, err)
 	acc.HasMeasurement("varnish")
 	flat := flatten(acc.Metrics)
-	assert.Len(t, acc.Metrics, 2)
-	assert.Equal(t, 16, len(flat))
+	assert.Len(t, acc.Metrics, 4)
+	assert.Equal(t, 27, len(flat))
 }
 
 func TestFieldConfig(t *testing.T) {
 	expect := map[string]int{
-		"*":                                     293,
-		"":                                      0, // default
-		"MAIN.uptime":                           1,
-		"MEMPOOL.req0.sz_needed,MAIN.fetch_bad": 2,
+		"*":                                      334,
+		"":                                       0, // default
+		"MAIN.uptime":                            1,
+		"MEMPOOL.sess1.sz_actual,MAIN.fetch_bad": 2,
 	}
 
 	for fieldCfg, expected := range expect {
@@ -103,326 +103,2082 @@ func flatten(metrics []*testutil.Metric) map[string]interface{} {
 	return flat
 }
 
-var smOutput = `
-MAIN.uptime                895         1.00 Child process uptime
-MAIN.cache_hit                     95         0.00 Cache hits
-MAIN.cache_miss                    5          0.00 Cache misses
-MGT.uptime                         896         1.00 Management process uptime
-MGT.child_start                    1         0.00 Child process started
-MEMPOOL.vbc.live                   0          .   In use
-MEMPOOL.vbc.pool                   10          .   In Pool
-MEMPOOL.vbc.sz_wanted              88          .   Size requested
-`
-
 var parsedSmOutput = map[string]map[string]interface{}{
 	"MAIN": {
-		"uptime":     uint64(895),
-		"cache_hit":  uint64(95),
-		"cache_miss": uint64(5),
+		"uptime":     uint64(17276),
+		"cache_hit":  uint64(4144),
+		"cache_miss": uint64(600),
 	},
 	"MGT": {
-		"uptime":      uint64(896),
+		"uptime":      uint64(17275),
 		"child_start": uint64(1),
 	},
 	"MEMPOOL": {
-		"vbc.live":      uint64(0),
-		"vbc.pool":      uint64(10),
-		"vbc.sz_wanted": uint64(88),
+		"req0.live":      uint64(0),
+		"req0.pool":      uint64(10),
+		"req0.sz_wanted": uint64(65536),
 	},
 }
 
+var smOutput = `
+{
+    "timestamp": "2019-04-08T20:06:38",
+    "MAIN.uptime": {
+        "description": "Child process uptime",
+        "flag": "c",
+        "format": "d",
+        "value": 17276
+    },
+    "MAIN.cache_hit": {
+        "description": "Cache hits",
+        "flag": "c",
+        "format": "i",
+        "value": 4144
+    },
+    "MAIN.cache_miss": {
+        "description": "Cache misses",
+        "flag": "c",
+        "format": "i",
+        "value": 600
+    },
+    "MGT.uptime": {
+        "description": "Management process uptime",
+        "flag": "c",
+        "format": "d",
+        "value": 17275
+    },
+    "MGT.child_start": {
+        "description": "Child process started",
+        "flag": "c",
+        "format": "i",
+        "value": 1
+    },
+    "MEMPOOL.req0.live": {
+        "description": "In use",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.req0.pool": {
+        "description": "In Pool",
+        "flag": "g",
+        "format": "i",
+        "value": 10
+    },
+    "MEMPOOL.req0.sz_wanted": {
+        "description": "Size requested",
+        "flag": "g",
+        "format": "B",
+        "value": 65536
+    }
+}`
+
 var fullOutput = `
-MAIN.uptime               2872         1.00 Child process uptime
-MAIN.sess_conn               0         0.00 Sessions accepted
-MAIN.sess_drop               0         0.00 Sessions dropped
-MAIN.sess_fail               0         0.00 Session accept failures
-MAIN.sess_pipe_overflow            0         0.00 Session pipe overflow
-MAIN.client_req_400                0         0.00 Client requests received, subject to 400 errors
-MAIN.client_req_411                0         0.00 Client requests received, subject to 411 errors
-MAIN.client_req_413                0         0.00 Client requests received, subject to 413 errors
-MAIN.client_req_417                0         0.00 Client requests received, subject to 417 errors
-MAIN.client_req                    0         0.00 Good client requests received
-MAIN.cache_hit                     0         0.00 Cache hits
-MAIN.cache_hitpass                 0         0.00 Cache hits for pass
-MAIN.cache_miss                    0         0.00 Cache misses
-MAIN.backend_conn                  0         0.00 Backend conn. success
-MAIN.backend_unhealthy             0         0.00 Backend conn. not attempted
-MAIN.backend_busy                  0         0.00 Backend conn. too many
-MAIN.backend_fail                  0         0.00 Backend conn. failures
-MAIN.backend_reuse                 0         0.00 Backend conn. reuses
-MAIN.backend_toolate               0         0.00 Backend conn. was closed
-MAIN.backend_recycle               0         0.00 Backend conn. recycles
-MAIN.backend_retry                 0         0.00 Backend conn. retry
-MAIN.fetch_head                    0         0.00 Fetch no body (HEAD)
-MAIN.fetch_length                  0         0.00 Fetch with Length
-MAIN.fetch_chunked                 0         0.00 Fetch chunked
-MAIN.fetch_eof                     0         0.00 Fetch EOF
-MAIN.fetch_bad                     0         0.00 Fetch bad T-E
-MAIN.fetch_close                   0         0.00 Fetch wanted close
-MAIN.fetch_oldhttp                 0         0.00 Fetch pre HTTP/1.1 closed
-MAIN.fetch_zero                    0         0.00 Fetch zero len body
-MAIN.fetch_1xx                     0         0.00 Fetch no body (1xx)
-MAIN.fetch_204                     0         0.00 Fetch no body (204)
-MAIN.fetch_304                     0         0.00 Fetch no body (304)
-MAIN.fetch_failed                  0         0.00 Fetch failed (all causes)
-MAIN.fetch_no_thread               0         0.00 Fetch failed (no thread)
-MAIN.pools                         2          .   Number of thread pools
-MAIN.threads                     200          .   Total number of threads
-MAIN.threads_limited               0         0.00 Threads hit max
-MAIN.threads_created             200         0.07 Threads created
-MAIN.threads_destroyed             0         0.00 Threads destroyed
-MAIN.threads_failed                0         0.00 Thread creation failed
-MAIN.thread_queue_len              0          .   Length of session queue
-MAIN.busy_sleep                    0         0.00 Number of requests sent to sleep on busy objhdr
-MAIN.busy_wakeup                   0         0.00 Number of requests woken after sleep on busy objhdr
-MAIN.sess_queued                   0         0.00 Sessions queued for thread
-MAIN.sess_dropped                  0         0.00 Sessions dropped for thread
-MAIN.n_object                      0          .   object structs made
-MAIN.n_vampireobject               0          .   unresurrected objects
-MAIN.n_objectcore                  0          .   objectcore structs made
-MAIN.n_objecthead                  0          .   objecthead structs made
-MAIN.n_waitinglist                 0          .   waitinglist structs made
-MAIN.n_backend                     1          .   Number of backends
-MAIN.n_expired                     0          .   Number of expired objects
-MAIN.n_lru_nuked                   0          .   Number of LRU nuked objects
-MAIN.n_lru_moved                   0          .   Number of LRU moved objects
-MAIN.losthdr                       0         0.00 HTTP header overflows
-MAIN.s_sess                        0         0.00 Total sessions seen
-MAIN.s_req                         0         0.00 Total requests seen
-MAIN.s_pipe                        0         0.00 Total pipe sessions seen
-MAIN.s_pass                        0         0.00 Total pass-ed requests seen
-MAIN.s_fetch                       0         0.00 Total backend fetches initiated
-MAIN.s_synth                       0         0.00 Total synthethic responses made
-MAIN.s_req_hdrbytes                0         0.00 Request header bytes
-MAIN.s_req_bodybytes               0         0.00 Request body bytes
-MAIN.s_resp_hdrbytes               0         0.00 Response header bytes
-MAIN.s_resp_bodybytes              0         0.00 Response body bytes
-MAIN.s_pipe_hdrbytes               0         0.00 Pipe request header bytes
-MAIN.s_pipe_in                     0         0.00 Piped bytes from client
-MAIN.s_pipe_out                    0         0.00 Piped bytes to client
-MAIN.sess_closed                   0         0.00 Session Closed
-MAIN.sess_pipeline                 0         0.00 Session Pipeline
-MAIN.sess_readahead                0         0.00 Session Read Ahead
-MAIN.sess_herd                     0         0.00 Session herd
-MAIN.shm_records                1918         0.67 SHM records
-MAIN.shm_writes                 1918         0.67 SHM writes
-MAIN.shm_flushes                   0         0.00 SHM flushes due to overflow
-MAIN.shm_cont                      0         0.00 SHM MTX contention
-MAIN.shm_cycles                    0         0.00 SHM cycles through buffer
-MAIN.sms_nreq                      0         0.00 SMS allocator requests
-MAIN.sms_nobj                      0          .   SMS outstanding allocations
-MAIN.sms_nbytes                    0          .   SMS outstanding bytes
-MAIN.sms_balloc                    0          .   SMS bytes allocated
-MAIN.sms_bfree                     0          .   SMS bytes freed
-MAIN.backend_req                   0         0.00 Backend requests made
-MAIN.n_vcl                         1         0.00 Number of loaded VCLs in total
-MAIN.n_vcl_avail                   1         0.00 Number of VCLs available
-MAIN.n_vcl_discard                 0         0.00 Number of discarded VCLs
-MAIN.bans                          1          .   Count of bans
-MAIN.bans_completed                1          .   Number of bans marked 'completed'
-MAIN.bans_obj                      0          .   Number of bans using obj.*
-MAIN.bans_req                      0          .   Number of bans using req.*
-MAIN.bans_added                    1         0.00 Bans added
-MAIN.bans_deleted                  0         0.00 Bans deleted
-MAIN.bans_tested                   0         0.00 Bans tested against objects (lookup)
-MAIN.bans_obj_killed               0         0.00 Objects killed by bans (lookup)
-MAIN.bans_lurker_tested            0         0.00 Bans tested against objects (lurker)
-MAIN.bans_tests_tested             0         0.00 Ban tests tested against objects (lookup)
-MAIN.bans_lurker_tests_tested            0         0.00 Ban tests tested against objects (lurker)
-MAIN.bans_lurker_obj_killed              0         0.00 Objects killed by bans (lurker)
-MAIN.bans_dups                           0         0.00 Bans superseded by other bans
-MAIN.bans_lurker_contention              0         0.00 Lurker gave way for lookup
-MAIN.bans_persisted_bytes               13          .   Bytes used by the persisted ban lists
-MAIN.bans_persisted_fragmentation            0          .   Extra bytes in persisted ban lists due to fragmentation
-MAIN.n_purges                                0          .   Number of purge operations executed
-MAIN.n_obj_purged                            0          .   Number of purged objects
-MAIN.exp_mailed                              0         0.00 Number of objects mailed to expiry thread
-MAIN.exp_received                            0         0.00 Number of objects received by expiry thread
-MAIN.hcb_nolock                              0         0.00 HCB Lookups without lock
-MAIN.hcb_lock                                0         0.00 HCB Lookups with lock
-MAIN.hcb_insert                              0         0.00 HCB Inserts
-MAIN.esi_errors                              0         0.00 ESI parse errors (unlock)
-MAIN.esi_warnings                            0         0.00 ESI parse warnings (unlock)
-MAIN.vmods                                   0          .   Loaded VMODs
-MAIN.n_gzip                                  0         0.00 Gzip operations
-MAIN.n_gunzip                                0         0.00 Gunzip operations
-MAIN.vsm_free                           972528          .   Free VSM space
-MAIN.vsm_used                         83962080          .   Used VSM space
-MAIN.vsm_cooling                             0          .   Cooling VSM space
-MAIN.vsm_overflow                            0          .   Overflow VSM space
-MAIN.vsm_overflowed                          0         0.00 Overflowed VSM space
-MGT.uptime                                2871         1.00 Management process uptime
-MGT.child_start                              1         0.00 Child process started
-MGT.child_exit                               0         0.00 Child process normal exit
-MGT.child_stop                               0         0.00 Child process unexpected exit
-MGT.child_died                               0         0.00 Child process died (signal)
-MGT.child_dump                               0         0.00 Child process core dumped
-MGT.child_panic                              0         0.00 Child process panic
-MEMPOOL.vbc.live                             0          .   In use
-MEMPOOL.vbc.pool                            10          .   In Pool
-MEMPOOL.vbc.sz_wanted                       88          .   Size requested
-MEMPOOL.vbc.sz_needed                      120          .   Size allocated
-MEMPOOL.vbc.allocs                           0         0.00 Allocations
-MEMPOOL.vbc.frees                            0         0.00 Frees
-MEMPOOL.vbc.recycle                          0         0.00 Recycled from pool
-MEMPOOL.vbc.timeout                          0         0.00 Timed out from pool
-MEMPOOL.vbc.toosmall                         0         0.00 Too small to recycle
-MEMPOOL.vbc.surplus                          0         0.00 Too many for pool
-MEMPOOL.vbc.randry                           0         0.00 Pool ran dry
-MEMPOOL.busyobj.live                         0          .   In use
-MEMPOOL.busyobj.pool                        10          .   In Pool
-MEMPOOL.busyobj.sz_wanted                65536          .   Size requested
-MEMPOOL.busyobj.sz_needed                65568          .   Size allocated
-MEMPOOL.busyobj.allocs                       0         0.00 Allocations
-MEMPOOL.busyobj.frees                        0         0.00 Frees
-MEMPOOL.busyobj.recycle                      0         0.00 Recycled from pool
-MEMPOOL.busyobj.timeout                      0         0.00 Timed out from pool
-MEMPOOL.busyobj.toosmall                     0         0.00 Too small to recycle
-MEMPOOL.busyobj.surplus                      0         0.00 Too many for pool
-MEMPOOL.busyobj.randry                       0         0.00 Pool ran dry
-MEMPOOL.req0.live                            0          .   In use
-MEMPOOL.req0.pool                           10          .   In Pool
-MEMPOOL.req0.sz_wanted                   65536          .   Size requested
-MEMPOOL.req0.sz_needed                   65568          .   Size allocated
-MEMPOOL.req0.allocs                          0         0.00 Allocations
-MEMPOOL.req0.frees                           0         0.00 Frees
-MEMPOOL.req0.recycle                         0         0.00 Recycled from pool
-MEMPOOL.req0.timeout                         0         0.00 Timed out from pool
-MEMPOOL.req0.toosmall                        0         0.00 Too small to recycle
-MEMPOOL.req0.surplus                         0         0.00 Too many for pool
-MEMPOOL.req0.randry                          0         0.00 Pool ran dry
-MEMPOOL.sess0.live                           0          .   In use
-MEMPOOL.sess0.pool                          10          .   In Pool
-MEMPOOL.sess0.sz_wanted                    384          .   Size requested
-MEMPOOL.sess0.sz_needed                    416          .   Size allocated
-MEMPOOL.sess0.allocs                         0         0.00 Allocations
-MEMPOOL.sess0.frees                          0         0.00 Frees
-MEMPOOL.sess0.recycle                        0         0.00 Recycled from pool
-MEMPOOL.sess0.timeout                        0         0.00 Timed out from pool
-MEMPOOL.sess0.toosmall                       0         0.00 Too small to recycle
-MEMPOOL.sess0.surplus                        0         0.00 Too many for pool
-MEMPOOL.sess0.randry                         0         0.00 Pool ran dry
-MEMPOOL.req1.live                            0          .   In use
-MEMPOOL.req1.pool                           10          .   In Pool
-MEMPOOL.req1.sz_wanted                   65536          .   Size requested
-MEMPOOL.req1.sz_needed                   65568          .   Size allocated
-MEMPOOL.req1.allocs                          0         0.00 Allocations
-MEMPOOL.req1.frees                           0         0.00 Frees
-MEMPOOL.req1.recycle                         0         0.00 Recycled from pool
-MEMPOOL.req1.timeout                         0         0.00 Timed out from pool
-MEMPOOL.req1.toosmall                        0         0.00 Too small to recycle
-MEMPOOL.req1.surplus                         0         0.00 Too many for pool
-MEMPOOL.req1.randry                          0         0.00 Pool ran dry
-MEMPOOL.sess1.live                           0          .   In use
-MEMPOOL.sess1.pool                          10          .   In Pool
-MEMPOOL.sess1.sz_wanted                    384          .   Size requested
-MEMPOOL.sess1.sz_needed                    416          .   Size allocated
-MEMPOOL.sess1.allocs                         0         0.00 Allocations
-MEMPOOL.sess1.frees                          0         0.00 Frees
-MEMPOOL.sess1.recycle                        0         0.00 Recycled from pool
-MEMPOOL.sess1.timeout                        0         0.00 Timed out from pool
-MEMPOOL.sess1.toosmall                       0         0.00 Too small to recycle
-MEMPOOL.sess1.surplus                        0         0.00 Too many for pool
-MEMPOOL.sess1.randry                         0         0.00 Pool ran dry
-SMA.s0.c_req                                 0         0.00 Allocator requests
-SMA.s0.c_fail                                0         0.00 Allocator failures
-SMA.s0.c_bytes                               0         0.00 Bytes allocated
-SMA.s0.c_freed                               0         0.00 Bytes freed
-SMA.s0.g_alloc                               0          .   Allocations outstanding
-SMA.s0.g_bytes                               0          .   Bytes outstanding
-SMA.s0.g_space                       268435456          .   Bytes available
-SMA.Transient.c_req                          0         0.00 Allocator requests
-SMA.Transient.c_fail                         0         0.00 Allocator failures
-SMA.Transient.c_bytes                        0         0.00 Bytes allocated
-SMA.Transient.c_freed                        0         0.00 Bytes freed
-SMA.Transient.g_alloc                        0          .   Allocations outstanding
-SMA.Transient.g_bytes                        0          .   Bytes outstanding
-SMA.Transient.g_space                        0          .   Bytes available
-VBE.default(127.0.0.1,,8080).vcls            1          .   VCL references
-VBE.default(127.0.0.1,,8080).happy            0          .   Happy health probes
-VBE.default(127.0.0.1,,8080).bereq_hdrbytes            0         0.00 Request header bytes
-VBE.default(127.0.0.1,,8080).bereq_bodybytes            0         0.00 Request body bytes
-VBE.default(127.0.0.1,,8080).beresp_hdrbytes            0         0.00 Response header bytes
-VBE.default(127.0.0.1,,8080).beresp_bodybytes            0         0.00 Response body bytes
-VBE.default(127.0.0.1,,8080).pipe_hdrbytes               0         0.00 Pipe request header bytes
-VBE.default(127.0.0.1,,8080).pipe_out                    0         0.00 Piped bytes to backend
-VBE.default(127.0.0.1,,8080).pipe_in                     0         0.00 Piped bytes from backend
-LCK.sms.creat                                            0         0.00 Created locks
-LCK.sms.destroy                                          0         0.00 Destroyed locks
-LCK.sms.locks                                            0         0.00 Lock Operations
-LCK.smp.creat                                            0         0.00 Created locks
-LCK.smp.destroy                                          0         0.00 Destroyed locks
-LCK.smp.locks                                            0         0.00 Lock Operations
-LCK.sma.creat                                            2         0.00 Created locks
-LCK.sma.destroy                                          0         0.00 Destroyed locks
-LCK.sma.locks                                            0         0.00 Lock Operations
-LCK.smf.creat                                            0         0.00 Created locks
-LCK.smf.destroy                                          0         0.00 Destroyed locks
-LCK.smf.locks                                            0         0.00 Lock Operations
-LCK.hsl.creat                                            0         0.00 Created locks
-LCK.hsl.destroy                                          0         0.00 Destroyed locks
-LCK.hsl.locks                                            0         0.00 Lock Operations
-LCK.hcb.creat                                            1         0.00 Created locks
-LCK.hcb.destroy                                          0         0.00 Destroyed locks
-LCK.hcb.locks                                           16         0.01 Lock Operations
-LCK.hcl.creat                                            0         0.00 Created locks
-LCK.hcl.destroy                                          0         0.00 Destroyed locks
-LCK.hcl.locks                                            0         0.00 Lock Operations
-LCK.vcl.creat                                            1         0.00 Created locks
-LCK.vcl.destroy                                          0         0.00 Destroyed locks
-LCK.vcl.locks                                            2         0.00 Lock Operations
-LCK.sessmem.creat                                        0         0.00 Created locks
-LCK.sessmem.destroy                                      0         0.00 Destroyed locks
-LCK.sessmem.locks                                        0         0.00 Lock Operations
-LCK.sess.creat                                           0         0.00 Created locks
-LCK.sess.destroy                                         0         0.00 Destroyed locks
-LCK.sess.locks                                           0         0.00 Lock Operations
-LCK.wstat.creat                                          1         0.00 Created locks
-LCK.wstat.destroy                                        0         0.00 Destroyed locks
-LCK.wstat.locks                                        930         0.32 Lock Operations
-LCK.herder.creat                                         0         0.00 Created locks
-LCK.herder.destroy                                       0         0.00 Destroyed locks
-LCK.herder.locks                                         0         0.00 Lock Operations
-LCK.wq.creat                                             3         0.00 Created locks
-LCK.wq.destroy                                           0         0.00 Destroyed locks
-LCK.wq.locks                                          1554         0.54 Lock Operations
-LCK.objhdr.creat                                         1         0.00 Created locks
-LCK.objhdr.destroy                                       0         0.00 Destroyed locks
-LCK.objhdr.locks                                         0         0.00 Lock Operations
-LCK.exp.creat                                            1         0.00 Created locks
-LCK.exp.destroy                                          0         0.00 Destroyed locks
-LCK.exp.locks                                          915         0.32 Lock Operations
-LCK.lru.creat                                            2         0.00 Created locks
-LCK.lru.destroy                                          0         0.00 Destroyed locks
-LCK.lru.locks                                            0         0.00 Lock Operations
-LCK.cli.creat                                            1         0.00 Created locks
-LCK.cli.destroy                                          0         0.00 Destroyed locks
-LCK.cli.locks                                          970         0.34 Lock Operations
-LCK.ban.creat                                            1         0.00 Created locks
-LCK.ban.destroy                                          0         0.00 Destroyed locks
-LCK.ban.locks                                         9413         3.28 Lock Operations
-LCK.vbp.creat                                            1         0.00 Created locks
-LCK.vbp.destroy                                          0         0.00 Destroyed locks
-LCK.vbp.locks                                            0         0.00 Lock Operations
-LCK.backend.creat                                        1         0.00 Created locks
-LCK.backend.destroy                                      0         0.00 Destroyed locks
-LCK.backend.locks                                        0         0.00 Lock Operations
-LCK.vcapace.creat                                        1         0.00 Created locks
-LCK.vcapace.destroy                                      0         0.00 Destroyed locks
-LCK.vcapace.locks                                        0         0.00 Lock Operations
-LCK.nbusyobj.creat                                       0         0.00 Created locks
-LCK.nbusyobj.destroy                                     0         0.00 Destroyed locks
-LCK.nbusyobj.locks                                       0         0.00 Lock Operations
-LCK.busyobj.creat                                        0         0.00 Created locks
-LCK.busyobj.destroy                                      0         0.00 Destroyed locks
-LCK.busyobj.locks                                        0         0.00 Lock Operations
-LCK.mempool.creat                                        6         0.00 Created locks
-LCK.mempool.destroy                                      0         0.00 Destroyed locks
-LCK.mempool.locks                                    15306         5.33 Lock Operations
-LCK.vxid.creat                                           1         0.00 Created locks
-LCK.vxid.destroy                                         0         0.00 Destroyed locks
-LCK.vxid.locks                                           0         0.00 Lock Operations
-LCK.pipestat.creat                                       1         0.00 Created locks
-LCK.pipestat.destroy                                     0         0.00 Destroyed locks
-LCK.pipestat.locks                                       0         0.00 Lock Operations
+{
+    "timestamp": "2019-04-08T20:06:38",
+    "MGT.uptime": {
+        "description": "Management process uptime",
+        "flag": "c",
+        "format": "d",
+        "value": 17275
+    },
+    "MGT.child_start": {
+        "description": "Child process started",
+        "flag": "c",
+        "format": "i",
+        "value": 1
+    },
+    "MGT.child_exit": {
+        "description": "Child process normal exit",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MGT.child_stop": {
+        "description": "Child process unexpected exit",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MGT.child_died": {
+        "description": "Child process died (signal)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MGT.child_dump": {
+        "description": "Child process core dumped",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MGT.child_panic": {
+        "description": "Child process panic",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.summs": {
+        "description": "stat summ operations",
+        "flag": "c",
+        "format": "i",
+        "value": 17638
+    },
+    "MAIN.uptime": {
+        "description": "Child process uptime",
+        "flag": "c",
+        "format": "d",
+        "value": 17276
+    },
+    "MAIN.sess_conn": {
+        "description": "Sessions accepted",
+        "flag": "c",
+        "format": "i",
+        "value": 6068
+    },
+    "MAIN.sess_drop": {
+        "description": "Sessions dropped",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sess_fail": {
+        "description": "Session accept failures",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sess_fail_econnaborted": {
+        "description": "Session accept failures: connection aborted",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sess_fail_eintr": {
+        "description": "Session accept failures: interrupted system call",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sess_fail_emfile": {
+        "description": "Session accept failures: too many open files",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sess_fail_ebadf": {
+        "description": "Session accept failures: bad file descriptor",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sess_fail_enomem": {
+        "description": "Session accept failures: not enough memory",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sess_fail_other": {
+        "description": "Session accept failures: other",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.client_req_400": {
+        "description": "Client requests received, subject to 400 errors",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.client_req_417": {
+        "description": "Client requests received, subject to 417 errors",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.client_req": {
+        "description": "Good client requests received",
+        "flag": "c",
+        "format": "i",
+        "value": 6857
+    },
+    "MAIN.cache_hit": {
+        "description": "Cache hits",
+        "flag": "c",
+        "format": "i",
+        "value": 4144
+    },
+    "MAIN.cache_hit_grace": {
+        "description": "Cache grace hits",
+        "flag": "c",
+        "format": "i",
+        "value": 62
+    },
+    "MAIN.cache_hitpass": {
+        "description": "Cache hits for pass.",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.cache_hitmiss": {
+        "description": "Cache hits for miss.",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.cache_miss": {
+        "description": "Cache misses",
+        "flag": "c",
+        "format": "i",
+        "value": 600
+    },
+    "MAIN.backend_conn": {
+        "description": "Backend conn. success",
+        "flag": "c",
+        "format": "i",
+        "value": 1947
+    },
+    "MAIN.backend_unhealthy": {
+        "description": "Backend conn. not attempted",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.backend_busy": {
+        "description": "Backend conn. too many",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.backend_fail": {
+        "description": "Backend conn. failures",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.backend_reuse": {
+        "description": "Backend conn. reuses",
+        "flag": "c",
+        "format": "i",
+        "value": 4
+    },
+    "MAIN.backend_recycle": {
+        "description": "Backend conn. recycles",
+        "flag": "c",
+        "format": "i",
+        "value": 1955
+    },
+    "MAIN.backend_retry": {
+        "description": "Backend conn. retry",
+        "flag": "c",
+        "format": "i",
+        "value": 2
+    },
+    "MAIN.fetch_head": {
+        "description": "Fetch no body (HEAD)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.fetch_length": {
+        "description": "Fetch with Length",
+        "flag": "c",
+        "format": "i",
+        "value": 1051
+    },
+    "MAIN.fetch_chunked": {
+        "description": "Fetch chunked",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.fetch_eof": {
+        "description": "Fetch EOF",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.fetch_bad": {
+        "description": "Fetch bad T-E",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.fetch_none": {
+        "description": "Fetch no body",
+        "flag": "c",
+        "format": "i",
+        "value": 904
+    },
+    "MAIN.fetch_1xx": {
+        "description": "Fetch no body (1xx)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.fetch_204": {
+        "description": "Fetch no body (204)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.fetch_304": {
+        "description": "Fetch no body (304)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.fetch_failed": {
+        "description": "Fetch failed (all causes)",
+        "flag": "c",
+        "format": "i",
+        "value": 2
+    },
+    "MAIN.fetch_no_thread": {
+        "description": "Fetch failed (no thread)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.pools": {
+        "description": "Number of thread pools",
+        "flag": "g",
+        "format": "i",
+        "value": 2
+    },
+    "MAIN.threads": {
+        "description": "Total number of threads",
+        "flag": "g",
+        "format": "i",
+        "value": 200
+    },
+    "MAIN.threads_limited": {
+        "description": "Threads hit max",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.threads_created": {
+        "description": "Threads created",
+        "flag": "c",
+        "format": "i",
+        "value": 200
+    },
+    "MAIN.threads_destroyed": {
+        "description": "Threads destroyed",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.threads_failed": {
+        "description": "Thread creation failed",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.thread_queue_len": {
+        "description": "Length of session queue",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.busy_sleep": {
+        "description": "Number of requests sent to sleep on busy objhdr",
+        "flag": "c",
+        "format": "i",
+        "value": 789
+    },
+    "MAIN.busy_wakeup": {
+        "description": "Number of requests woken after sleep on busy objhdr",
+        "flag": "c",
+        "format": "i",
+        "value": 789
+    },
+    "MAIN.busy_killed": {
+        "description": "Number of requests killed after sleep on busy objhdr",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sess_queued": {
+        "description": "Sessions queued for thread",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sess_dropped": {
+        "description": "Sessions dropped for thread",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.req_dropped": {
+        "description": "Requests dropped",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.n_object": {
+        "description": "object structs made",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.n_vampireobject": {
+        "description": "unresurrected objects",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.n_objectcore": {
+        "description": "objectcore structs made",
+        "flag": "g",
+        "format": "i",
+        "value": 20
+    },
+    "MAIN.n_objecthead": {
+        "description": "objecthead structs made",
+        "flag": "g",
+        "format": "i",
+        "value": 21
+    },
+    "MAIN.n_backend": {
+        "description": "Number of backends",
+        "flag": "g",
+        "format": "i",
+        "value": 1
+    },
+    "MAIN.n_expired": {
+        "description": "Number of expired objects",
+        "flag": "c",
+        "format": "i",
+        "value": 600
+    },
+    "MAIN.n_lru_nuked": {
+        "description": "Number of LRU nuked objects",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.n_lru_moved": {
+        "description": "Number of LRU moved objects",
+        "flag": "c",
+        "format": "i",
+        "value": 1911
+    },
+    "MAIN.n_lru_limited": {
+        "description": "Reached nuke_limit",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.losthdr": {
+        "description": "HTTP header overflows",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.s_sess": {
+        "description": "Total sessions seen",
+        "flag": "c",
+        "format": "i",
+        "value": 6068
+    },
+    "MAIN.s_pipe": {
+        "description": "Total pipe sessions seen",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.s_pass": {
+        "description": "Total pass-ed requests seen",
+        "flag": "c",
+        "format": "i",
+        "value": 1324
+    },
+    "MAIN.s_fetch": {
+        "description": "Total backend fetches initiated",
+        "flag": "c",
+        "format": "i",
+        "value": 1924
+    },
+    "MAIN.s_synth": {
+        "description": "Total synthetic responses made",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.s_req_hdrbytes": {
+        "description": "Request header bytes",
+        "flag": "c",
+        "format": "B",
+        "value": 4224457
+    },
+    "MAIN.s_req_bodybytes": {
+        "description": "Request body bytes",
+        "flag": "c",
+        "format": "B",
+        "value": 632267
+    },
+    "MAIN.s_resp_hdrbytes": {
+        "description": "Response header bytes",
+        "flag": "c",
+        "format": "B",
+        "value": 1448471
+    },
+    "MAIN.s_resp_bodybytes": {
+        "description": "Response body bytes",
+        "flag": "c",
+        "format": "B",
+        "value": 1471664
+    },
+    "MAIN.s_pipe_hdrbytes": {
+        "description": "Pipe request header bytes",
+        "flag": "c",
+        "format": "B",
+        "value": 0
+    },
+    "MAIN.s_pipe_in": {
+        "description": "Piped bytes from client",
+        "flag": "c",
+        "format": "B",
+        "value": 0
+    },
+    "MAIN.s_pipe_out": {
+        "description": "Piped bytes to client",
+        "flag": "c",
+        "format": "B",
+        "value": 0
+    },
+    "MAIN.sess_closed": {
+        "description": "Session Closed",
+        "flag": "c",
+        "format": "i",
+        "value": 6068
+    },
+    "MAIN.sess_closed_err": {
+        "description": "Session Closed with error",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sess_readahead": {
+        "description": "Session Read Ahead",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sess_herd": {
+        "description": "Session herd",
+        "flag": "c",
+        "format": "i",
+        "value": 5
+    },
+    "MAIN.sc_rem_close": {
+        "description": "Session OK  REM_CLOSE",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_req_close": {
+        "description": "Session OK  REQ_CLOSE",
+        "flag": "c",
+        "format": "i",
+        "value": 6041
+    },
+    "MAIN.sc_req_http10": {
+        "description": "Session Err REQ_HTTP10",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_rx_bad": {
+        "description": "Session Err RX_BAD",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_rx_body": {
+        "description": "Session Err RX_BODY",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_rx_junk": {
+        "description": "Session Err RX_JUNK",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_rx_overflow": {
+        "description": "Session Err RX_OVERFLOW",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_rx_timeout": {
+        "description": "Session Err RX_TIMEOUT",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_tx_pipe": {
+        "description": "Session OK  TX_PIPE",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_tx_error": {
+        "description": "Session Err TX_ERROR",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_tx_eof": {
+        "description": "Session OK  TX_EOF",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_resp_close": {
+        "description": "Session OK  RESP_CLOSE",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_overload": {
+        "description": "Session Err OVERLOAD",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_pipe_overflow": {
+        "description": "Session Err PIPE_OVERFLOW",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_range_short": {
+        "description": "Session Err RANGE_SHORT",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_req_http20": {
+        "description": "Session Err REQ_HTTP20",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.sc_vcl_failure": {
+        "description": "Session Err VCL_FAILURE",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.client_resp_500": {
+        "description": "Delivery failed due to insufficient workspace.",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.ws_backend_overflow": {
+        "description": "workspace_backend overflows",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.ws_client_overflow": {
+        "description": "workspace_client overflows",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.ws_thread_overflow": {
+        "description": "workspace_thread overflows",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.ws_session_overflow": {
+        "description": "workspace_session overflows",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.shm_records": {
+        "description": "SHM records",
+        "flag": "c",
+        "format": "i",
+        "value": 424504
+    },
+    "MAIN.shm_writes": {
+        "description": "SHM writes",
+        "flag": "c",
+        "format": "i",
+        "value": 50963
+    },
+    "MAIN.shm_flushes": {
+        "description": "SHM flushes due to overflow",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.shm_cont": {
+        "description": "SHM MTX contention",
+        "flag": "c",
+        "format": "i",
+        "value": 1427
+    },
+    "MAIN.shm_cycles": {
+        "description": "SHM cycles through buffer",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.backend_req": {
+        "description": "Backend requests made",
+        "flag": "c",
+        "format": "i",
+        "value": 1948
+    },
+    "MAIN.n_vcl": {
+        "description": "Number of loaded VCLs in total",
+        "flag": "g",
+        "format": "i",
+        "value": 1
+    },
+    "MAIN.n_vcl_avail": {
+        "description": "Number of VCLs available",
+        "flag": "g",
+        "format": "i",
+        "value": 1
+    },
+    "MAIN.n_vcl_discard": {
+        "description": "Number of discarded VCLs",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.vcl_fail": {
+        "description": "VCL failures",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.bans": {
+        "description": "Count of bans",
+        "flag": "g",
+        "format": "i",
+        "value": 1
+    },
+    "MAIN.bans_completed": {
+        "description": "Number of bans marked 'completed'",
+        "flag": "g",
+        "format": "i",
+        "value": 1
+    },
+    "MAIN.bans_obj": {
+        "description": "Number of bans using obj.*",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.bans_req": {
+        "description": "Number of bans using req.*",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.bans_added": {
+        "description": "Bans added",
+        "flag": "c",
+        "format": "i",
+        "value": 1
+    },
+    "MAIN.bans_deleted": {
+        "description": "Bans deleted",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.bans_tested": {
+        "description": "Bans tested against objects (lookup)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.bans_obj_killed": {
+        "description": "Objects killed by bans (lookup)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.bans_lurker_tested": {
+        "description": "Bans tested against objects (lurker)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.bans_tests_tested": {
+        "description": "Ban tests tested against objects (lookup)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.bans_lurker_tests_tested": {
+        "description": "Ban tests tested against objects (lurker)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.bans_lurker_obj_killed": {
+        "description": "Objects killed by bans (lurker)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.bans_lurker_obj_killed_cutoff": {
+        "description": "Objects killed by bans for cutoff (lurker)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.bans_dups": {
+        "description": "Bans superseded by other bans",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.bans_lurker_contention": {
+        "description": "Lurker gave way for lookup",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.bans_persisted_bytes": {
+        "description": "Bytes used by the persisted ban lists",
+        "flag": "g",
+        "format": "B",
+        "value": 16
+    },
+    "MAIN.bans_persisted_fragmentation": {
+        "description": "Extra bytes in persisted ban lists due to fragmentation",
+        "flag": "g",
+        "format": "B",
+        "value": 0
+    },
+    "MAIN.n_purges": {
+        "description": "Number of purge operations executed",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.n_obj_purged": {
+        "description": "Number of purged objects",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.exp_mailed": {
+        "description": "Number of objects mailed to expiry thread",
+        "flag": "c",
+        "format": "i",
+        "value": 666
+    },
+    "MAIN.exp_received": {
+        "description": "Number of objects received by expiry thread",
+        "flag": "c",
+        "format": "i",
+        "value": 666
+    },
+    "MAIN.hcb_nolock": {
+        "description": "HCB Lookups without lock",
+        "flag": "c",
+        "format": "i",
+        "value": 4744
+    },
+    "MAIN.hcb_lock": {
+        "description": "HCB Lookups with lock",
+        "flag": "c",
+        "format": "i",
+        "value": 613
+    },
+    "MAIN.hcb_insert": {
+        "description": "HCB Inserts",
+        "flag": "c",
+        "format": "i",
+        "value": 599
+    },
+    "MAIN.esi_errors": {
+        "description": "ESI parse errors (unlock)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.esi_warnings": {
+        "description": "ESI parse warnings (unlock)",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.vmods": {
+        "description": "Loaded VMODs",
+        "flag": "g",
+        "format": "i",
+        "value": 2
+    },
+    "MAIN.n_gzip": {
+        "description": "Gzip operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.n_gunzip": {
+        "description": "Gunzip operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MAIN.n_test_gunzip": {
+        "description": "Test gunzip operations",
+        "flag": "c",
+        "format": "i",
+        "value": 207
+    },
+    "LCK.backend.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 2
+    },
+    "LCK.backend.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.backend.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 3919
+    },
+    "LCK.backend.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.backend.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.ban.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 1
+    },
+    "LCK.ban.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.ban.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 8809
+    },
+    "LCK.ban.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.ban.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.busyobj.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 7461
+    },
+    "LCK.busyobj.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 7451
+    },
+    "LCK.busyobj.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 21791
+    },
+    "LCK.busyobj.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.busyobj.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.cli.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 1
+    },
+    "LCK.cli.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.cli.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 5770
+    },
+    "LCK.cli.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.cli.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.exp.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 1
+    },
+    "LCK.exp.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.exp.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 5618
+    },
+    "LCK.exp.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.exp.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.hcb.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 1
+    },
+    "LCK.hcb.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.hcb.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 1309
+    },
+    "LCK.hcb.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.hcb.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.lru.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 2
+    },
+    "LCK.lru.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.lru.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 3177
+    },
+    "LCK.lru.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.lru.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.mempool.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 5
+    },
+    "LCK.mempool.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.mempool.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 104645
+    },
+    "LCK.mempool.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.mempool.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.objhdr.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 617
+    },
+    "LCK.objhdr.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 599
+    },
+    "LCK.objhdr.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 52500
+    },
+    "LCK.objhdr.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.objhdr.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.pipestat.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 1
+    },
+    "LCK.pipestat.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.pipestat.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.pipestat.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.pipestat.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.sess.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 6060
+    },
+    "LCK.sess.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 6066
+    },
+    "LCK.sess.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 10824
+    },
+    "LCK.sess.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.sess.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.tcp_pool.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 2
+    },
+    "LCK.tcp_pool.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.tcp_pool.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 5876
+    },
+    "LCK.tcp_pool.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.tcp_pool.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.vbe.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 1
+    },
+    "LCK.vbe.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.vbe.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 5761
+    },
+    "LCK.vbe.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.vbe.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.vcapace.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 1
+    },
+    "LCK.vcapace.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.vcapace.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.vcapace.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.vcapace.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.vcl.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 1
+    },
+    "LCK.vcl.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.vcl.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 4780
+    },
+    "LCK.vcl.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.vcl.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.vxid.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 1
+    },
+    "LCK.vxid.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.vxid.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 23
+    },
+    "LCK.vxid.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.vxid.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.waiter.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 2
+    },
+    "LCK.waiter.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.waiter.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 6039
+    },
+    "LCK.waiter.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.waiter.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.wq.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 3
+    },
+    "LCK.wq.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.wq.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 44240
+    },
+    "LCK.wq.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.wq.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.wstat.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 1
+    },
+    "LCK.wstat.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.wstat.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 11757
+    },
+    "LCK.wstat.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.wstat.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.busyobj.live": {
+        "description": "In use",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.busyobj.pool": {
+        "description": "In Pool",
+        "flag": "g",
+        "format": "i",
+        "value": 10
+    },
+    "MEMPOOL.busyobj.sz_wanted": {
+        "description": "Size requested",
+        "flag": "g",
+        "format": "B",
+        "value": 65536
+    },
+    "MEMPOOL.busyobj.sz_actual": {
+        "description": "Size allocated",
+        "flag": "g",
+        "format": "B",
+        "value": 65504
+    },
+    "MEMPOOL.busyobj.allocs": {
+        "description": "Allocations",
+        "flag": "c",
+        "format": "i",
+        "value": 1957
+    },
+    "MEMPOOL.busyobj.frees": {
+        "description": "Frees",
+        "flag": "c",
+        "format": "i",
+        "value": 1957
+    },
+    "MEMPOOL.busyobj.recycle": {
+        "description": "Recycled from pool",
+        "flag": "c",
+        "format": "i",
+        "value": 1957
+    },
+    "MEMPOOL.busyobj.timeout": {
+        "description": "Timed out from pool",
+        "flag": "c",
+        "format": "i",
+        "value": 39
+    },
+    "MEMPOOL.busyobj.toosmall": {
+        "description": "Too small to recycle",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.busyobj.surplus": {
+        "description": "Too many for pool",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.busyobj.randry": {
+        "description": "Pool ran dry",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.req0.live": {
+        "description": "In use",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.req0.pool": {
+        "description": "In Pool",
+        "flag": "g",
+        "format": "i",
+        "value": 10
+    },
+    "MEMPOOL.req0.sz_wanted": {
+        "description": "Size requested",
+        "flag": "g",
+        "format": "B",
+        "value": 65536
+    },
+    "MEMPOOL.req0.sz_actual": {
+        "description": "Size allocated",
+        "flag": "g",
+        "format": "B",
+        "value": 65504
+    },
+    "MEMPOOL.req0.allocs": {
+        "description": "Allocations",
+        "flag": "c",
+        "format": "i",
+        "value": 2994
+    },
+    "MEMPOOL.req0.frees": {
+        "description": "Frees",
+        "flag": "c",
+        "format": "i",
+        "value": 2994
+    },
+    "MEMPOOL.req0.recycle": {
+        "description": "Recycled from pool",
+        "flag": "c",
+        "format": "i",
+        "value": 2994
+    },
+    "MEMPOOL.req0.timeout": {
+        "description": "Timed out from pool",
+        "flag": "c",
+        "format": "i",
+        "value": 20
+    },
+    "MEMPOOL.req0.toosmall": {
+        "description": "Too small to recycle",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.req0.surplus": {
+        "description": "Too many for pool",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.req0.randry": {
+        "description": "Pool ran dry",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.sess0.live": {
+        "description": "In use",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.sess0.pool": {
+        "description": "In Pool",
+        "flag": "g",
+        "format": "i",
+        "value": 10
+    },
+    "MEMPOOL.sess0.sz_wanted": {
+        "description": "Size requested",
+        "flag": "g",
+        "format": "B",
+        "value": 512
+    },
+    "MEMPOOL.sess0.sz_actual": {
+        "description": "Size allocated",
+        "flag": "g",
+        "format": "B",
+        "value": 480
+    },
+    "MEMPOOL.sess0.allocs": {
+        "description": "Allocations",
+        "flag": "c",
+        "format": "i",
+        "value": 2990
+    },
+    "MEMPOOL.sess0.frees": {
+        "description": "Frees",
+        "flag": "c",
+        "format": "i",
+        "value": 2990
+    },
+    "MEMPOOL.sess0.recycle": {
+        "description": "Recycled from pool",
+        "flag": "c",
+        "format": "i",
+        "value": 2990
+    },
+    "MEMPOOL.sess0.timeout": {
+        "description": "Timed out from pool",
+        "flag": "c",
+        "format": "i",
+        "value": 20
+    },
+    "MEMPOOL.sess0.toosmall": {
+        "description": "Too small to recycle",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.sess0.surplus": {
+        "description": "Too many for pool",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.sess0.randry": {
+        "description": "Pool ran dry",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.sma.creat": {
+        "description": "Created locks",
+        "flag": "c",
+        "format": "i",
+        "value": 2
+    },
+    "LCK.sma.destroy": {
+        "description": "Destroyed locks",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.sma.locks": {
+        "description": "Lock Operations",
+        "flag": "c",
+        "format": "i",
+        "value": 28080
+    },
+    "LCK.sma.dbg_busy": {
+        "description": "Contended lock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "LCK.sma.dbg_try_fail": {
+        "description": "Contended trylock operations",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "SMA.s0.c_req": {
+        "description": "Allocator requests",
+        "flag": "c",
+        "format": "i",
+        "value": 667
+    },
+    "SMA.s0.c_fail": {
+        "description": "Allocator failures",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "SMA.s0.c_bytes": {
+        "description": "Bytes allocated",
+        "flag": "c",
+        "format": "B",
+        "value": 251077
+    },
+    "SMA.s0.c_freed": {
+        "description": "Bytes freed",
+        "flag": "c",
+        "format": "B",
+        "value": 251077
+    },
+    "SMA.s0.g_alloc": {
+        "description": "Allocations outstanding",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "SMA.s0.g_bytes": {
+        "description": "Bytes outstanding",
+        "flag": "g",
+        "format": "B",
+        "value": 0
+    },
+    "SMA.s0.g_space": {
+        "description": "Bytes available",
+        "flag": "g",
+        "format": "B",
+        "value": 104857600
+    },
+    "SMA.Transient.c_req": {
+        "description": "Allocator requests",
+        "flag": "c",
+        "format": "i",
+        "value": 13373
+    },
+    "SMA.Transient.c_fail": {
+        "description": "Allocator failures",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "SMA.Transient.c_bytes": {
+        "description": "Bytes allocated",
+        "flag": "c",
+        "format": "B",
+        "value": 2922696
+    },
+    "SMA.Transient.c_freed": {
+        "description": "Bytes freed",
+        "flag": "c",
+        "format": "B",
+        "value": 2922696
+    },
+    "SMA.Transient.g_alloc": {
+        "description": "Allocations outstanding",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "SMA.Transient.g_bytes": {
+        "description": "Bytes outstanding",
+        "flag": "g",
+        "format": "B",
+        "value": 0
+    },
+    "SMA.Transient.g_space": {
+        "description": "Bytes available",
+        "flag": "g",
+        "format": "B",
+        "value": 0
+    },
+    "MEMPOOL.req1.live": {
+        "description": "In use",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.req1.pool": {
+        "description": "In Pool",
+        "flag": "g",
+        "format": "i",
+        "value": 10
+    },
+    "MEMPOOL.req1.sz_wanted": {
+        "description": "Size requested",
+        "flag": "g",
+        "format": "B",
+        "value": 65536
+    },
+    "MEMPOOL.req1.sz_actual": {
+        "description": "Size allocated",
+        "flag": "g",
+        "format": "B",
+        "value": 65504
+    },
+    "MEMPOOL.req1.allocs": {
+        "description": "Allocations",
+        "flag": "c",
+        "format": "i",
+        "value": 3079
+    },
+    "MEMPOOL.req1.frees": {
+        "description": "Frees",
+        "flag": "c",
+        "format": "i",
+        "value": 3079
+    },
+    "MEMPOOL.req1.recycle": {
+        "description": "Recycled from pool",
+        "flag": "c",
+        "format": "i",
+        "value": 3079
+    },
+    "MEMPOOL.req1.timeout": {
+        "description": "Timed out from pool",
+        "flag": "c",
+        "format": "i",
+        "value": 20
+    },
+    "MEMPOOL.req1.toosmall": {
+        "description": "Too small to recycle",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.req1.surplus": {
+        "description": "Too many for pool",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.req1.randry": {
+        "description": "Pool ran dry",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.sess1.live": {
+        "description": "In use",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.sess1.pool": {
+        "description": "In Pool",
+        "flag": "g",
+        "format": "i",
+        "value": 10
+    },
+    "MEMPOOL.sess1.sz_wanted": {
+        "description": "Size requested",
+        "flag": "g",
+        "format": "B",
+        "value": 512
+    },
+    "MEMPOOL.sess1.sz_actual": {
+        "description": "Size allocated",
+        "flag": "g",
+        "format": "B",
+        "value": 480
+    },
+    "MEMPOOL.sess1.allocs": {
+        "description": "Allocations",
+        "flag": "c",
+        "format": "i",
+        "value": 3078
+    },
+    "MEMPOOL.sess1.frees": {
+        "description": "Frees",
+        "flag": "c",
+        "format": "i",
+        "value": 3078
+    },
+    "MEMPOOL.sess1.recycle": {
+        "description": "Recycled from pool",
+        "flag": "c",
+        "format": "i",
+        "value": 3078
+    },
+    "MEMPOOL.sess1.timeout": {
+        "description": "Timed out from pool",
+        "flag": "c",
+        "format": "i",
+        "value": 15
+    },
+    "MEMPOOL.sess1.toosmall": {
+        "description": "Too small to recycle",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.sess1.surplus": {
+        "description": "Too many for pool",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "MEMPOOL.sess1.randry": {
+        "description": "Pool ran dry",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "VBE.boot.default.happy": {
+        "description": "Happy health probes",
+        "flag": "b",
+        "format": "b",
+        "value": 0
+    },
+    "VBE.boot.default.bereq_hdrbytes": {
+        "description": "Request header bytes",
+        "flag": "c",
+        "format": "B",
+        "value": 1130105
+    },
+    "VBE.boot.default.bereq_bodybytes": {
+        "description": "Request body bytes",
+        "flag": "c",
+        "format": "B",
+        "value": 209585
+    },
+    "VBE.boot.default.beresp_hdrbytes": {
+        "description": "Response header bytes",
+        "flag": "c",
+        "format": "B",
+        "value": 156872
+    },
+    "VBE.boot.default.beresp_bodybytes": {
+        "description": "Response body bytes",
+        "flag": "c",
+        "format": "B",
+        "value": 1362629
+    },
+    "VBE.boot.default.pipe_hdrbytes": {
+        "description": "Pipe request header bytes",
+        "flag": "c",
+        "format": "B",
+        "value": 0
+    },
+    "VBE.boot.default.pipe_out": {
+        "description": "Piped bytes to backend",
+        "flag": "c",
+        "format": "B",
+        "value": 0
+    },
+    "VBE.boot.default.pipe_in": {
+        "description": "Piped bytes from backend",
+        "flag": "c",
+        "format": "B",
+        "value": 0
+    },
+    "VBE.boot.default.conn": {
+        "description": "Concurrent connections to backend",
+        "flag": "g",
+        "format": "i",
+        "value": 0
+    },
+    "VBE.boot.default.req": {
+        "description": "Backend requests sent",
+        "flag": "c",
+        "format": "i",
+        "value": 1959
+    },
+    "VBE.boot.default.unhealthy": {
+        "description": "Fetches not attempted due to backend being unhealthy",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "VBE.boot.default.busy": {
+        "description": "Fetches not attempted due to backend being busy",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "VBE.boot.default.fail": {
+        "description": "Connections failed",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "VBE.boot.default.fail_eacces": {
+        "description": "Connections failed with EACCES or EPERM",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "VBE.boot.default.fail_eaddrnotavail": {
+        "description": "Connections failed with EADDRNOTAVAIL",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "VBE.boot.default.fail_econnrefused": {
+        "description": "Connections failed with ECONNREFUSED",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "VBE.boot.default.fail_enetunreach": {
+        "description": "Connections failed with ENETUNREACH",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "VBE.boot.default.fail_etimedout": {
+        "description": "Connections failed ETIMEDOUT",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "VBE.boot.default.fail_other": {
+        "description": "Connections failed for other reason",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    },
+    "VBE.boot.default.helddown": {
+        "description": "Connection opens not attempted",
+        "flag": "c",
+        "format": "i",
+        "value": 0
+    }
+}
 `

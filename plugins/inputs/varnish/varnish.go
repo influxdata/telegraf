@@ -3,11 +3,10 @@
 package varnish
 
 import (
-	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 
@@ -67,7 +66,10 @@ func (s *Varnish) SampleConfig() string {
 
 // Shell out to varnish_stat and return the output
 func varnishRunner(cmdName string, UseSudo bool, InstanceName string, Timeout internal.Duration) (*bytes.Buffer, error) {
-	cmdArgs := []string{"-1"}
+	// Enable JSON output of stats.
+	cmdArgs := []string{"-j"}
+
+	cmdArgs = append(cmdArgs, []string{"-j"}...)
 
 	if InstanceName != "" {
 		cmdArgs = append(cmdArgs, []string{"-n", InstanceName}...)
@@ -120,52 +122,79 @@ func (s *Varnish) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("error gathering metrics: %s", err)
 	}
 
-	sectionMap := make(map[string]map[string]interface{})
-	scanner := bufio.NewScanner(out)
-	for scanner.Scan() {
-		cols := strings.Fields(scanner.Text())
-		if len(cols) < 2 {
-			continue
+	sectionMap, err := parseVarnishJSON(out.Bytes(), s.filter)
+	if err != nil {
+		return fmt.Errorf("error parsing JSON output: %s", err)
+	}
+
+	for metricType, section := range sectionMap {
+		for section, fields := range section {
+			if len(fields) == 0 {
+				continue
+			}
+			tags := map[string]string{
+				"section": section,
+			}
+			switch metricType {
+			case "c":
+				acc.AddCounter("varnish", fields, tags)
+			case "g":
+				acc.AddGauge("varnish", fields, tags)
+			default:
+				acc.AddFields("varnish", fields, tags)
+			}
 		}
-		if !strings.Contains(cols[0], ".") {
+	}
+
+	return nil
+}
+
+func parseVarnishJSON(input []byte, f filter.Filter) (map[string]map[string]map[string]interface{}, error) {
+	sectionMap := make(map[string]map[string]map[string]interface{})
+	varnishJSON := make(map[string]interface{})
+
+	err := json.Unmarshal(input, &varnishJSON)
+	if err != nil {
+		return sectionMap, err
+	}
+
+	for stat, v := range varnishJSON {
+		if stat == "timestamp" {
 			continue
 		}
 
-		stat := cols[0]
-		value := cols[1]
-
-		if s.filter != nil && !s.filter.Match(stat) {
+		if f != nil && !f.Match(stat) {
 			continue
 		}
+
+		m := v.(map[string]interface{})
+		metricValue := uint64(m["value"].(float64))
+		metricType := m["flag"].(string)
 
 		parts := strings.SplitN(stat, ".", 2)
 		section := parts[0]
 		field := parts[1]
 
+		// Init the metricType if necessary
+		if _, ok := sectionMap[metricType]; !ok {
+			sectionMap[metricType] = make(map[string]map[string]interface{})
+		}
 		// Init the section if necessary
-		if _, ok := sectionMap[section]; !ok {
-			sectionMap[section] = make(map[string]interface{})
+		if _, ok := sectionMap[metricType][section]; !ok {
+			sectionMap[metricType][section] = make(map[string]interface{})
 		}
 
-		sectionMap[section][field], err = strconv.ParseUint(value, 10, 64)
-		if err != nil {
-			acc.AddError(fmt.Errorf("Expected a numeric value for %s = %v\n",
-				stat, value))
-		}
+		sectionMap[metricType][section][field] = metricValue
 	}
 
-	for section, fields := range sectionMap {
-		tags := map[string]string{
-			"section": section,
-		}
-		if len(fields) == 0 {
-			continue
-		}
+	return sectionMap, nil
+}
 
-		acc.AddFields("varnish", fields, tags)
-	}
-
-	return nil
+type varnishMetric struct {
+	Description string `json:"description"`
+	Flag        string `json:"flag"`
+	Format      string `json:"format"`
+	Value       int    `json:"value"`
 }
 
 func init() {
