@@ -180,8 +180,7 @@ func (a *Agent) Test(ctx context.Context) error {
 			}
 
 			acc := NewAccumulator(input, metricC)
-			acc.SetPrecision(a.Config.Agent.Precision.Duration,
-				a.Config.Agent.Interval.Duration)
+			acc.SetPrecision(a.Precision())
 			input.SetDefaultTags(a.Config.Tags)
 
 			// Special instructions for some inputs. cpu, for example, needs to be
@@ -189,8 +188,7 @@ func (a *Agent) Test(ctx context.Context) error {
 			switch input.Name() {
 			case "inputs.cpu", "inputs.mongodb", "inputs.procstat":
 				nulAcc := NewAccumulator(input, nulC)
-				nulAcc.SetPrecision(a.Config.Agent.Precision.Duration,
-					a.Config.Agent.Interval.Duration)
+				nulAcc.SetPrecision(a.Precision())
 				if err := input.Input.Gather(nulAcc); err != nil {
 					return err
 				}
@@ -222,7 +220,6 @@ func (a *Agent) runInputs(
 	var wg sync.WaitGroup
 	for _, input := range a.Config.Inputs {
 		interval := a.Config.Agent.Interval.Duration
-		precision := a.Config.Agent.Precision.Duration
 		jitter := a.Config.Agent.CollectionJitter.Duration
 
 		// Overwrite agent interval if this plugin has its own.
@@ -231,7 +228,7 @@ func (a *Agent) runInputs(
 		}
 
 		acc := NewAccumulator(input, dst)
-		acc.SetPrecision(precision, interval)
+		acc.SetPrecision(a.Precision())
 
 		wg.Add(1)
 		go func(input *models.RunningInput) {
@@ -339,16 +336,40 @@ func (a *Agent) applyProcessors(m telegraf.Metric) []telegraf.Metric {
 	return metrics
 }
 
-// runAggregators triggers the periodic push for Aggregators.
+func updateWindow(start time.Time, roundInterval bool, period time.Duration) (time.Time, time.Time) {
+	var until time.Time
+	if roundInterval {
+		until = internal.AlignTime(start, period)
+		if until == start {
+			until = internal.AlignTime(start.Add(time.Nanosecond), period)
+		}
+	} else {
+		until = start.Add(period)
+	}
+
+	since := until.Add(-period)
+
+	return since, until
+}
+
+// runAggregators adds metrics to the aggregators and triggers their periodic
+// push call.
 //
-// When the context is done a final push will occur and then this function
-// will return.
+// Runs until src is closed and all metrics have been processed.  Will call
+// push one final time before returning.
 func (a *Agent) runAggregators(
 	startTime time.Time,
 	src <-chan telegraf.Metric,
 	dst chan<- telegraf.Metric,
 ) error {
 	ctx, cancel := context.WithCancel(context.Background())
+
+	// Before calling Add, initialize the aggregation window.  This ensures
+	// that any metric created after start time will be aggregated.
+	for _, agg := range a.Config.Aggregators {
+		since, until := updateWindow(startTime, a.Config.Agent.RoundInterval, agg.Period())
+		agg.UpdateWindow(since, until)
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -371,33 +392,29 @@ func (a *Agent) runAggregators(
 		cancel()
 	}()
 
-	precision := a.Config.Agent.Precision.Duration
-	interval := a.Config.Agent.Interval.Duration
 	aggregations := make(chan telegraf.Metric, 100)
-	for _, agg := range a.Config.Aggregators {
-		wg.Add(1)
-		go func(agg *models.RunningAggregator) {
-			defer func() {
-				wg.Done()
-				close(aggregations)
-			}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 
-			if a.Config.Agent.RoundInterval {
-				// Aggregators are aligned to the agent interval regardless of
-				// their period.
-				err := internal.SleepContext(ctx, internal.AlignDuration(startTime, interval))
-				if err != nil {
-					return
-				}
-			}
+		var aggWg sync.WaitGroup
+		for _, agg := range a.Config.Aggregators {
+			aggWg.Add(1)
+			go func(agg *models.RunningAggregator) {
+				defer aggWg.Done()
 
-			agg.SetPeriodStart(startTime)
+				acc := NewAccumulator(agg, aggregations)
+				acc.SetPrecision(a.Precision())
+				fmt.Println(1)
+				a.push(ctx, agg, acc)
+				fmt.Println(2)
+			}(agg)
+		}
 
-			acc := NewAccumulator(agg, aggregations)
-			acc.SetPrecision(precision, interval)
-			a.push(ctx, agg, acc)
-		}(agg)
-	}
+		aggWg.Wait()
+		fmt.Println(3)
+		close(aggregations)
+	}()
 
 	for metric := range aggregations {
 		metrics := a.applyProcessors(metric)
@@ -405,39 +422,42 @@ func (a *Agent) runAggregators(
 			dst <- metric
 		}
 	}
+	fmt.Println(4)
 
 	wg.Wait()
+	fmt.Println(5)
 	return nil
 }
 
-// push runs the push for a single aggregator every period.  More simple than
-// the output/input version as timeout should be less likely.... not really
-// because the output channel can block for now.
+// push runs the push for a single aggregator every period.
 func (a *Agent) push(
 	ctx context.Context,
 	aggregator *models.RunningAggregator,
 	acc telegraf.Accumulator,
 ) {
-	ticker := time.NewTicker(aggregator.Period())
-	defer ticker.Stop()
-
 	for {
+		// Ensures that Push will be called for each period, even if it has
+		// already elapsed before this function is called.  This is guaranteed
+		// because so long as only Push updates the EndPeriod.  This method
+		// also avoids drift by not using a ticker.
+		until := time.Until(aggregator.EndPeriod())
+
 		select {
-		case <-ticker.C:
+		case <-time.After(until):
+			aggregator.Push(acc)
 			break
 		case <-ctx.Done():
 			aggregator.Push(acc)
 			return
 		}
-
-		aggregator.Push(acc)
 	}
 }
 
 // runOutputs triggers the periodic write for Outputs.
 //
-// When the context is done, outputs continue to run until their buffer is
-// closed, afterwich they run flush once more.
+
+// Runs until src is closed and all metrics have been processed.  Will call
+// Write one final time before returning.
 func (a *Agent) runOutputs(
 	startTime time.Time,
 	src <-chan telegraf.Metric,
@@ -608,7 +628,7 @@ func (a *Agent) startServiceInputs(
 			// Gather() accumulator does apply rounding according to the
 			// precision agent setting.
 			acc := NewAccumulator(input, dst)
-			acc.SetPrecision(time.Nanosecond, 0)
+			acc.SetPrecision(time.Nanosecond)
 
 			err := si.Start(acc)
 			if err != nil {
@@ -635,6 +655,27 @@ func (a *Agent) stopServiceInputs() {
 		if si, ok := input.Input.(telegraf.ServiceInput); ok {
 			si.Stop()
 		}
+	}
+}
+
+// Returns the rounding precision for metrics.
+func (a *Agent) Precision() time.Duration {
+	precision := a.Config.Agent.Precision.Duration
+	interval := a.Config.Agent.Interval.Duration
+
+	if precision > 0 {
+		return precision
+	}
+
+	switch {
+	case interval >= time.Second:
+		return time.Second
+	case interval >= time.Millisecond:
+		return time.Millisecond
+	case interval >= time.Microsecond:
+		return time.Microsecond
+	default:
+		return time.Nanosecond
 	}
 }
 

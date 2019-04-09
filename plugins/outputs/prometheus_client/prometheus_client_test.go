@@ -186,15 +186,15 @@ func TestWrite_Sanitize(t *testing.T) {
 	client := NewClient()
 
 	p1, err := metric.New(
-		"foo.bar",
+		"foo.bar:colon",
 		map[string]string{"tag-with-dash": "localhost.local"},
-		map[string]interface{}{"field-with-dash": 42},
+		map[string]interface{}{"field-with-dash-and:colon": 42},
 		time.Now(),
 		telegraf.Counter)
 	err = client.Write([]telegraf.Metric{p1})
 	require.NoError(t, err)
 
-	fam, ok := client.fam["foo_bar_field_with_dash"]
+	fam, ok := client.fam["foo_bar:colon_field_with_dash_and:colon"]
 	require.True(t, ok)
 	require.Equal(t, map[string]int{"tag_with_dash": 1}, fam.LabelSet)
 

@@ -14,7 +14,6 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs/procstat"
 	httpOut "github.com/influxdata/telegraf/plugins/outputs/http"
 	"github.com/influxdata/telegraf/plugins/parsers"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,7 +31,7 @@ func TestConfig_LoadSingleInputWithEnvVars(t *testing.T) {
 
 	filter := models.Filter{
 		NameDrop:  []string{"metricname2"},
-		NamePass:  []string{"metricname1"},
+		NamePass:  []string{"metricname1", "ip_192.168.1.1_name"},
 		FieldDrop: []string{"other", "stuff"},
 		FieldPass: []string{"some", "strings"},
 		TagDrop: []models.TagFilter{
