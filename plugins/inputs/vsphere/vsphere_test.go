@@ -13,16 +13,15 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/influxdata/telegraf/internal"
+	itls "github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/testutil"
+	"github.com/influxdata/toml"
 	"github.com/stretchr/testify/require"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/simulator"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
-
-	"github.com/influxdata/telegraf/internal"
-	itls "github.com/influxdata/telegraf/internal/tls"
-	"github.com/influxdata/telegraf/testutil"
-	"github.com/influxdata/toml"
 )
 
 var configHeader = `
