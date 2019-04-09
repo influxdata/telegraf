@@ -7,7 +7,3 @@
   tls_key = '''
 /path/to/my/key
 '''
-  # methods = [
-  #   # comment
-  #   "POST"
-  # ]

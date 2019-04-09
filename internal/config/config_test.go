@@ -190,32 +190,38 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 
 	inputHTTPListener, ok := c.Inputs[0].Input.(*http_listener_v2.HTTPListenerV2)
 	assert.Equal(t, true, ok)
+	// Tests telegraf duration parsing.
 	assert.Equal(t, internal.Duration{Duration: time.Second}, inputHTTPListener.WriteTimeout)
+	// Tests telegraf size parsing.
 	assert.Equal(t, internal.Size{Size: 1024 * 1024}, inputHTTPListener.MaxBodySize)
+	// Tests toml multiline basic strings.
 	assert.Equal(t, "/path/to/my/cert\n", inputHTTPListener.TLSCert)
+}
 
-	c = NewConfig()
-	err = c.LoadConfig("./testdata/invalid_field.toml")
+func TestConfig_FieldNotDefined(t *testing.T) {
+	c := NewConfig()
+	err := c.LoadConfig("./testdata/invalid_field.toml")
 	require.Error(t, err, "invalid field name")
-	// commented out asserts are differences in error output from influxdata/toml and naoina/toml
-	// assert.Equal(t, "Error parsing ./testdata/invalid_field.toml, line 2: field corresponding to `not_a_field' is not defined in `*http_listener_v2.HTTPListenerV2'", err.Error())
 	assert.Equal(t, "Error parsing ./testdata/invalid_field.toml, line 2: field corresponding to `not_a_field' is not defined in http_listener_v2.HTTPListenerV2", err.Error())
 
-	c = NewConfig()
-	err = c.LoadConfig("./testdata/wrong_field_type.toml")
+}
+
+func TestConfig_WrongFieldType(t *testing.T) {
+	c := NewConfig()
+	err := c.LoadConfig("./testdata/wrong_field_type.toml")
 	require.Error(t, err, "invalid field type")
-	// assert.Equal(t, "Error parsing ./testdata/wrong_field_type.toml, line 4: http_listener_v2.HTTPListenerV2.Port: `string' type is not assignable to `int' type", err.Error())
-	assert.Equal(t, "Error parsing ./testdata/wrong_field_type.toml, line 4: (http_listener_v2.HTTPListenerV2.Port) cannot unmarshal TOML string into int", err.Error())
+	assert.Equal(t, "Error parsing ./testdata/wrong_field_type.toml, line 2: (http_listener_v2.HTTPListenerV2.Port) cannot unmarshal TOML string into int", err.Error())
 
 	c = NewConfig()
 	err = c.LoadConfig("./testdata/wrong_field_type2.toml")
 	require.Error(t, err, "invalid field type2")
-	// assert.Equal(t, "Error parsing ./testdata/wrong_field_type.toml, line 4: http_listener_v2.HTTPListenerV2.Port: `string' type is not assignable to `int' type", err.Error())
 	assert.Equal(t, "Error parsing ./testdata/wrong_field_type2.toml, line 2: (http_listener_v2.HTTPListenerV2.Methods) cannot unmarshal TOML string into []string", err.Error())
+}
 
+func TestConfig_InlineTables(t *testing.T) {
 	// #4098
-	c = NewConfig()
-	err = c.LoadConfig("./testdata/inline_table.toml")
+	c := NewConfig()
+	err := c.LoadConfig("./testdata/inline_table.toml")
 	assert.NoError(t, err)
 	require.Equal(t, 2, len(c.Outputs))
 
@@ -223,15 +229,26 @@ func TestConfig_LoadSpecialTypes(t *testing.T) {
 	assert.Equal(t, true, ok)
 	assert.Equal(t, map[string]string{"Authorization": "Token $TOKEN", "Content-Type": "application/json"}, outputHTTP.Headers)
 	assert.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)
+}
 
-	// #3444 & #3642
-	// c = NewConfig()
-	// err = c.LoadConfig("./testdata/non_slice_slice.toml")
-	// assert.NoError(t, err)
-	// require.Equal(t, 1, len(c.Outputs))
+func TestConfig_SliceComment(t *testing.T) {
+	t.Skipf("Skipping until #3642 is resolved")
 
-	// outputHTTP, ok = c.Outputs[0].Output.(*httpOut.HTTP)
-	// assert.Equal(t, true, ok)
-	// assert.Equal(t, map[string]string{"Authorization": "Token $TOKEN", "Content-Type": "application/json"}, outputHTTP.Headers)
-	// assert.Equal(t, []string{"org_id"}, c.Outputs[0].Config.Filter.TagInclude)
+	c := NewConfig()
+	err := c.LoadConfig("./testdata/slice_comment.toml")
+	assert.NoError(t, err)
+	require.Equal(t, 1, len(c.Outputs))
+
+	outputHTTP, ok := c.Outputs[0].Output.(*httpOut.HTTP)
+	assert.Equal(t, []string{"test"}, outputHTTP.Scopes)
+	assert.Equal(t, true, ok)
+}
+
+func TestConfig_BadOrdering(t *testing.T) {
+	// #3444 defines an issue that is not currently an issue as it is technically invalid yaml.
+
+	c := NewConfig()
+	err := c.LoadConfig("./testdata/non_slice_slice.toml")
+	require.Error(t, err, "bad ordering")
+	assert.Equal(t, "Error parsing ./testdata/non_slice_slice.toml, line 4: cannot unmarshal TOML array into string (need slice)", err.Error())
 }

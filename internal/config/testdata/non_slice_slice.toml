@@ -1,13 +1,4 @@
 [[outputs.http]]
-    method = "POST"
-    data_format = "json"
-    url = "http://localhost:1234/"
-    # headers = { Authorization = "Token $TOKEN",Content-Type = "application/json" }
-    [outputs.http.headers]
-      Authorization = "Token $TOKEN"
-      Content-Type = "application/json"
-    namepass = [
-      # comment
-      "storage_usage_bytes" # comment
-    ]
-    taginclude = ["org_id"]
+  [outputs.http.headers]
+    Content-Type = "application/json"
+  taginclude = ["org_id"]

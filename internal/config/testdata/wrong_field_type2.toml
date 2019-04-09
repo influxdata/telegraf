@@ -1,5 +1,2 @@
 [[inputs.http_listener_v2]]
   methods = "POST"
-  write_timeout = "1s"
-  max_body_size = "1MiB"
-  tls_cert = "/path/to/my/cert"
