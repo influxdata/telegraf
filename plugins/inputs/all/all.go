@@ -41,6 +41,7 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/graylog"
 	_ "github.com/influxdata/telegraf/plugins/inputs/haproxy"
 	_ "github.com/influxdata/telegraf/plugins/inputs/hddtemp"
+	_ "github.com/influxdata/telegraf/plugins/inputs/htcondor"
 	_ "github.com/influxdata/telegraf/plugins/inputs/http"
 	_ "github.com/influxdata/telegraf/plugins/inputs/http_listener_v2"
 	_ "github.com/influxdata/telegraf/plugins/inputs/http_response"
@@ -149,5 +150,4 @@ import (
 	_ "github.com/influxdata/telegraf/plugins/inputs/x509_cert"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zfs"
 	_ "github.com/influxdata/telegraf/plugins/inputs/zipkin"
-	_ "github.com/influxdata/telegraf/plugins/inputs/zookeeper"
 )
