@@ -325,6 +325,10 @@ func init() {
 			DatastoreMetricInclude:  nil,
 			DatastoreMetricExclude:  nil,
 			DatastoreInclude:        []string{"/*/datastore/**"},
+			VSANInstances:           false,
+			VSANPerfMetricInclude:   nil,
+			VSANPerfMetricExclude:   nil,
+			VSANClusterInclude:      []string{"/*/host/**"},
 			Separator:               "_",
 			UseIntSamples:           true,
 

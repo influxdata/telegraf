@@ -47,6 +47,7 @@ type Endpoint struct {
 	initialized     bool
 	clientFactory   *ClientFactory
 	busy            sync.Mutex
+	apiVersion      string // Fetch the apiVersion string and save it as float.
 }
 
 type resourceKind struct {
@@ -195,22 +196,21 @@ func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint,
 			parent:           "",
 		},
 		"vsan": {
-			name:             "vsan",
-			vcName:           "ClusterComputeResource",
-			pKey:             "clustername",
-			parentTag:        "dcname",
-			enabled:          anythingEnabled(parent.VSANPerfMetricExclude),
-			realTime:         false,
-			sampling:         300,
-			objects:          make(objectMap),
-			filters:          newFilterOrPanic(parent.VSANPerfMetricInclude, parent.VSANPerfMetricExclude),
-			paths:            parent.ClusterInclude,
-			simple:           isSimple(parent.VSANPerfMetricInclude, parent.VSANPerfMetricExclude),
+			name:      "vsan",
+			vcName:    "ClusterComputeResource",
+			pKey:      "clustername",
+			parentTag: "dcname",
+			enabled:   anythingEnabled(parent.VSANPerfMetricExclude),
+			realTime:  false,
+			sampling:  300,
+			objects:   make(objectMap),
+			filters:   newFilterOrPanic(parent.VSANPerfMetricInclude, parent.VSANPerfMetricExclude),
+			paths:     parent.VSANClusterInclude,
+			//simple:           isSimple(parent.VSANPerfMetricInclude, parent.VSANPerfMetricExclude),
 			include:          parent.VSANPerfMetricInclude,
 			collectInstances: parent.VSANInstances,
 			getObjects:       getClusters,
 			parent:           "datacenter",
-			metrics:          nil, // We will not use vSphere metric for vSAN
 		},
 	}
 
@@ -385,6 +385,10 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// get the vSphere API version
+	apiVersion := client.Client.ServiceContent.About.ApiVersion
+	e.apiVersion = apiVersion
 
 	log.Printf("D! [inputs.vsphere]: Discover new objects for %s", e.URL.Host)
 	resourceKinds := make(map[string]resourceKind)

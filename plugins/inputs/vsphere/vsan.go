@@ -27,26 +27,36 @@ const (
 )
 
 func (e *Endpoint) collectVSan(ctx context.Context, resourceType string, acc telegraf.Accumulator) error {
+	if !VersionSupportsVsan(e.apiVersion) {
+		log.Printf("I! [inputs.vsan]: Minimum API Version 5.5 required for vSAN. Found: %.1f. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
+		return nil
+	}
 	res := e.resourceKinds[resourceType]
 	var wg sync.WaitGroup
+
+	client, err := e.clientFactory.GetClient(ctx)
+	if err != nil {
+		return err
+	}
+	metrics := e.getVSanMetadata(ctx, client.Client.Client, res)
 	for _, obj := range res.objects {
-		client, err := e.clientFactory.GetClient(ctx)
+		client, err = e.clientFactory.GetClient(ctx)
 		if err != nil {
-			log.Printf("D! [vSAN] Failed to get client: %s", err)
-			continue
+			log.Printf("D! [inputs.vsan]: Failed to get client: %s", err)
+			return err
 		}
 		wg.Add(1)
 
 		go func(ctx context.Context, obj objectRef, vimClient *vim25.Client, acc telegraf.Accumulator) {
 			defer wg.Done()
-			e.CollectVSAN(ctx, obj, vimClient, acc)
+			e.CollectVSAN(ctx, obj, vimClient, metrics, acc)
 		}(ctx, obj, client.Client.Client, acc)
 	}
 	return nil
 }
 
-func (e *Endpoint) CollectVSAN(ctx context.Context, clusterRef objectRef, client *vim25.Client, acc telegraf.Accumulator) {
-	metrics := e.resourceKinds["vsan"].include
+func (e *Endpoint) CollectVSAN(ctx context.Context, clusterRef objectRef, client *vim25.Client, metrics []string, acc telegraf.Accumulator) {
+
 	cluster := object.NewClusterComputeResource(client, clusterRef.ref)
 	soapClient := client.NewServiceClient(Path, Namespace)
 	cmmds, err := QueryCmmds(ctx, client, cluster)
@@ -90,7 +100,7 @@ func (e *Endpoint) CollectVSAN(ctx context.Context, clusterRef objectRef, client
 		}
 
 		for _, em := range perfRes.Returnval {
-			tags := PopulateTags(clusterRef)
+			tags := PopulateClusterTags(clusterRef, e.URL.Host)
 			buckets := make(map[string]metricEntry)
 			log.Printf("D! [inputs.vsan]\tSuccessfully Fetched data for Entity ==> %s:%d\n", em.EntityRefId, len(em.Value))
 			timestamps := strings.Split(em.SampleInfo, ",")
@@ -140,22 +150,44 @@ func (e *Endpoint) CollectVSAN(ctx context.Context, clusterRef objectRef, client
 	}
 }
 
+func (e *Endpoint) getVSanMetadata(ctx context.Context, client *vim25.Client, res *resourceKind) []string {
+	perfManager := vsantypes.ManagedObjectReference{
+		Type:  "VsanPerformanceManager",
+		Value: "vsan-performance-manager",
+	}
+	soapClient := client.NewServiceClient(Path, Namespace)
+	entityRes, err := vsanmethods.VsanPerfGetSupportedEntityTypes(ctx, soapClient,
+		&vsantypes.VsanPerfGetSupportedEntityTypes{
+			This: perfManager,
+		})
+	if err != nil {
+		log.Fatal(err)
+	}
+	var metrics []string
+
+	for _, entity := range entityRes.Returnval {
+		if res.filters.Match(entity.Name) {
+			metrics = append(metrics, entity.Name)
+		}
+	}
+	log.Println("D! vSan Metric:", metrics)
+	return metrics
+}
+
 func QueryCmmds(ctx context.Context, client *vim25.Client, clusterObj *object.ClusterComputeResource) (map[string]CmmdsEntity, error) {
 
 	hosts, err := clusterObj.Hosts(ctx)
-
 	if err != nil {
 		log.Println("E! Error happen when get hosts: ", err)
 		return nil, err
 	}
 
 	if len(hosts) == 0 {
-		log.Println("I! No host in cluster: ", err)
+		log.Println("I! No host in cluster: ", clusterObj.Name())
 		return make(map[string]CmmdsEntity), nil
 	}
 
 	vis, err2 := hosts[0].ConfigManager().VsanInternalSystem(ctx)
-
 	if err2 != nil {
 		log.Println("E! Error happen when get VsanInternalSystem: ", err)
 		return nil, err2
@@ -165,11 +197,9 @@ func QueryCmmds(ctx context.Context, client *vim25.Client, clusterObj *object.Cl
 	hostnameCmmdsQuery := types.HostVsanInternalSystemCmmdsQuery{
 		Type: "HOSTNAME",
 	}
-
 	diskCmmdsQuery := types.HostVsanInternalSystemCmmdsQuery{
 		Type: "DISK",
 	}
-
 	queries = append(queries, hostnameCmmdsQuery)
 	queries = append(queries, diskCmmdsQuery)
 
@@ -177,7 +207,6 @@ func QueryCmmds(ctx context.Context, client *vim25.Client, clusterObj *object.Cl
 		This:    vis.Reference(),
 		Queries: queries,
 	}
-
 	res, err := methods.QueryCmmds(ctx, client.RoundTripper, &request)
 	if err != nil {
 		log.Println("E! Query cmmds error: ", err)
@@ -199,9 +228,9 @@ func QueryCmmds(ctx context.Context, client *vim25.Client, clusterObj *object.Cl
 	return cmmdsMap, nil
 }
 
-func PopulateTags(clusterRef objectRef) map[string]string {
+func PopulateClusterTags(clusterRef objectRef, vcenter string) map[string]string {
 	tags := make(map[string]string)
-	tags["vcenter"] = clusterRef.parentRef.Type
+	tags["vcenter"] = vcenter
 	tags["dcname"] = clusterRef.dcname
 	tags["clustername"] = clusterRef.name
 	tags["moid"] = clusterRef.ref.Value
@@ -211,12 +240,10 @@ func PopulateTags(clusterRef objectRef) map[string]string {
 
 func PopulateCMMDSTags(tags map[string]string, entityName string, uuid string, cmmds map[string]CmmdsEntity) map[string]string {
 	newTags := make(map[string]string)
-
 	//deep copy
 	for k, v := range tags {
 		newTags[k] = v
 	}
-
 	//Add additional tags based on CMMDS data
 	if strings.Contains(entityName, "-disk") {
 		if e, ok := cmmds[uuid]; ok {
@@ -268,6 +295,25 @@ func PopulateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 		newTags["uuid"] = uuid
 	}
 	return newTags
+}
+
+func VersionSupportsVsan(version string) bool {
+	v := strings.Split(version, ".")
+	major, err := strconv.Atoi(v[0])
+	if err != nil {
+		log.Printf("E! [inputs.vsphere][vSAN] Failed to parse version: %s", version)
+	}
+	if major < 5 {
+		return false
+	}
+	minor, err := strconv.Atoi(v[1])
+	if err != nil {
+		log.Printf("E! [inputs.vsphere][vSAN] Failed to parse version: %s.", version)
+	}
+	if major == 5 && minor < 5 {
+		return false
+	}
+	return true
 }
 
 type CmmdsEntity struct {
