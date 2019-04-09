@@ -190,13 +190,6 @@ func parseVarnishJSON(input []byte, f filter.Filter) (map[string]map[string]map[
 	return sectionMap, nil
 }
 
-type varnishMetric struct {
-	Description string `json:"description"`
-	Flag        string `json:"flag"`
-	Format      string `json:"format"`
-	Value       int    `json:"value"`
-}
-
 func init() {
 	inputs.Add("varnish", func() telegraf.Input {
 		return &Varnish{
