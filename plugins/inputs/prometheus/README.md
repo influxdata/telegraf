@@ -24,8 +24,9 @@ in Prometheus format.
   ## - prometheus.io/path: If the metrics path is not /metrics, define it with this annotation.
   ## - prometheus.io/port: If port is not 9102 use this annotation
   # monitor_kubernetes_pods = true
-  ## Only monitor one namespace
-  # monitor_kubernetes_pods_namespace = "test-namespace"
+  ## Restricts Kubernetes monitoring to a single namespace
+  ##   ex: monitor_kubernetes_pods_namespace = "default"
+  # monitor_kubernetes_pods_namespace = ""
 
   ## Use bearer token for authorization. ('bearer_token' takes priority)
   # bearer_token = "/path/to/bearer/token"
