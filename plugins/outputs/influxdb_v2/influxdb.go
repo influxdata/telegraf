@@ -32,8 +32,8 @@ var sampleConfig = `
   ## Token for authentication.
   token = ""
 
-  ## Organization is the name of the organization you wish to write to; must exist.
-  organization = ""
+  ## Org is the name of the organization you wish to write to; must exist.
+  org = ""
 
   ## Destination bucket to write into.
   bucket = ""
@@ -79,7 +79,8 @@ type Client interface {
 type InfluxDB struct {
 	URLs            []string          `toml:"urls"`
 	Token           string            `toml:"token"`
-	Organization    string            `toml:"organization"`
+	Org             string            `toml:"org"`
+	Organization    string            `toml:"organization"` // deprecated in 1.11
 	Bucket          string            `toml:"bucket"`
 	BucketTag       string            `toml:"bucket_tag"`
 	Timeout         internal.Duration `toml:"timeout"`
@@ -168,6 +169,14 @@ func (i *InfluxDB) Write(metrics []telegraf.Metric) error {
 	return errors.New("could not write any address")
 }
 
+func (i InfluxDB) getOrg() string {
+	if i.Org == "" {
+		return i.Organization
+	}
+
+	return i.Org
+}
+
 func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.URL) (Client, error) {
 	tlsConfig, err := i.ClientConfig.TLSConfig()
 	if err != nil {
@@ -177,7 +186,7 @@ func (i *InfluxDB) getHTTPClient(ctx context.Context, url *url.URL, proxy *url.U
 	config := &HTTPConfig{
 		URL:             url,
 		Token:           i.Token,
-		Organization:    i.Organization,
+		Organization:    i.getOrg(),
 		Bucket:          i.Bucket,
 		BucketTag:       i.BucketTag,
 		Timeout:         i.Timeout.Duration,
