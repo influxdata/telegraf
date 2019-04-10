@@ -69,8 +69,6 @@ func varnishRunner(cmdName string, UseSudo bool, InstanceName string, Timeout in
 	// Enable JSON output of stats.
 	cmdArgs := []string{"-j"}
 
-	cmdArgs = append(cmdArgs, []string{"-j"}...)
-
 	if InstanceName != "" {
 		cmdArgs = append(cmdArgs, []string{"-n", InstanceName}...)
 	}
