@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"crypto/subtle"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -231,8 +232,16 @@ func (h *HTTPListener) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	case "/ping":
 		h.PingsRecv.Incr(1)
 		defer h.PingsServed.Incr(1)
+		verbose := req.URL.Query().Get("verbose")
+
 		// respond to ping requests
-		res.WriteHeader(http.StatusNoContent)
+		if verbose != "" && verbose != "0" && verbose != "false" {
+			res.WriteHeader(http.StatusOK)
+			b, _ := json.Marshal(map[string]string{"version": "1.0"}) // based on header set above
+			res.Write(b)
+		} else {
+			res.WriteHeader(http.StatusNoContent)
+		}
 	default:
 		defer h.NotFoundsServed.Incr(1)
 		// Don't know how to respond to calls to other endpoints
