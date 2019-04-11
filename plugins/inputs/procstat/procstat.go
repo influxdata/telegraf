@@ -27,6 +27,7 @@ type Procstat struct {
 	Exe         string
 	Pattern     string
 	Prefix      string
+	CmdLineTag  bool `toml:"cmdline_tag"`
 	ProcessName string
 	User        string
 	SystemdUnit string
@@ -174,14 +175,13 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 	}
 
 	//If cmd_line tag is true and it is not already set add cmdline as a tag
-	if p.Cmdline_Tag {
+	if p.CmdLineTag {
 		if _, ok := proc.Tags()["cmdline"]; !ok {
 			Cmdline, err := proc.Cmdline()
 			if err == nil {
 				proc.Tags()["cmdline"] = Cmdline
 			}
 		}
-	}
 
 	numThreads, err := proc.NumThreads()
 	if err == nil {
