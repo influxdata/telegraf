@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_]`)
+	invalidNameCharRE = regexp.MustCompile(`[^a-zA-Z0-9_:]`)
 	validNameCharRE   = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*`)
 )
 

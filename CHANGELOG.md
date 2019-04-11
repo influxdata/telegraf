@@ -1,9 +1,18 @@
 ## v1.11 [unreleased]
 
+#### Release Notes
+
+- The `uptime_format` field in the system input has been deprecated, use the
+  `uptime` field instead.
+
 #### New Inputs
 
 - [bind](/plugins/inputs/bind/README.md) - Contributed by @dswarbrick & @danielllek
 - [github](/plugins/inputs/github/README.md) - Contributed by @influxdata
+
+#### New Serializers
+
+- [wavefront](/plugins/serializers/wavefront/README.md) - Contributed by @puckpuck
 
 #### Features
 
@@ -13,10 +22,17 @@
 - [#5648](https://github.com/influxdata/telegraf/pull/5648): Allow env vars ${} expansion syntax in configuration file.
 - [#5641](https://github.com/influxdata/telegraf/pull/5641): Add option to reset buckets on flush to histogram aggregator.
 - [#5664](https://github.com/influxdata/telegraf/pull/5664): Add option to use strict sanitization rules to wavefront output.
+- [#5697](https://github.com/influxdata/telegraf/pull/5697): Add namespace restriction to prometheus input plugin.
 
 #### Bugfixes
 
 - [#5631](https://github.com/influxdata/telegraf/pull/5631): Create Windows service only when specified or in service manager.
+
+## v1.10.3 [unreleased]
+
+#### Bugfixes
+
+- [#5680](https://github.com/influxdata/telegraf/pull/5680): Allow colons in metric names in prometheus_client output.
 
 ## v1.10.2 [2019-04-02]
 
