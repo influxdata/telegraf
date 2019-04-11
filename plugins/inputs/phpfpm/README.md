@@ -36,7 +36,8 @@ Get phpfpm stats using either HTTP status page or fpm socket.
   # tls_cert = "/etc/telegraf/cert.pem"
   # tls_key = "/etc/telegraf/key.pem"
   ## Use TLS but skip chain & host verification
-  # insecure_skip_verify = false```
+  # insecure_skip_verify = false
+```
 
 When using `unixsocket`, you have to ensure that telegraf runs on same
 host, and socket path is accessible to telegraf user.
