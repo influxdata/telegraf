@@ -27,6 +27,7 @@ type Procstat struct {
 	Exe         string
 	Pattern     string
 	Prefix      string
+	CmdLineTag  bool `toml:"cmdline_tag"`
 	ProcessName string
 	User        string
 	SystemdUnit string
@@ -64,6 +65,9 @@ var sampleConfig = `
 
   ## Field name prefix
   # prefix = ""
+
+  ## When true add the full cmdline as a tag.
+  # cmdline_tag = false
 
   ## Add PID as a tag instead of a field; useful to differentiate between
   ## processes whose tags are otherwise the same.  Can create a large number
@@ -168,6 +172,16 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 	//If pid is not present as a tag, include it as a field.
 	if _, pidInTags := proc.Tags()["pid"]; !pidInTags {
 		fields["pid"] = int32(proc.PID())
+	}
+
+	//If cmd_line tag is true and it is not already set add cmdline as a tag
+	if p.CmdLineTag {
+		if _, ok := proc.Tags()["cmdline"]; !ok {
+			Cmdline, err := proc.Cmdline()
+			if err == nil {
+				proc.Tags()["cmdline"] = Cmdline
+			}
+		}
 	}
 
 	numThreads, err := proc.NumThreads()
