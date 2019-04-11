@@ -15,9 +15,12 @@ import (
 )
 
 type LoggregatorRLPInput struct {
-	TlsCommonName           string `toml:"tls_common_name"`
-	RlpAddress              string `toml:"rlp_address"`
-	InternalMetricsInterval string `toml:"internal_metrics_interval"`
+	TlsCommonName           string   `toml:"tls_common_name"`
+	RlpAddress              string   `toml:"rlp_address"`
+	InternalMetricsInterval string   `toml:"internal_metrics_interval"`
+	DiodeBufferSize         int      `toml:"diode_buffer_size"`
+	EnvelopeTypes           []string `toml:"envelope_types"`
+	SourceIdFilters         []string `toml:"source_id_filters"`
 	stopRlpConsumer         context.CancelFunc
 	envelopeWriter          *EnvelopeWriter
 
@@ -48,7 +51,7 @@ func (_ *LoggregatorRLPInput) SampleConfig() string {
   ## Boolean value indicating whether or not to skip SSL verification
   insecure_skip_verify = false
   
-## A string server name that the certificate is valid for
+  ## A string server name that the certificate is valid for
   tls_common_name = "foo"
   
   ## A string address of the RLP server to get logs from
@@ -56,6 +59,15 @@ func (_ *LoggregatorRLPInput) SampleConfig() string {
 
   ## A string duration for how frequently to report internal metrics
   internal_metrics_interval = "30s"
+
+  ## Size of diode buffer, this is the limit of how many envelopes will be held in memory before dropping new envelopes
+  diode_buffer_size = 100000
+
+  ## Envelope type, an array of one or all of ['counter', 'gauge', 'timer']
+  envelope_types = ['counter', 'gauge']
+
+  ## Source Id filters allow the filtering of metrics out of the RLP from only the specified source ids. Should be an array of strings.
+  source_id_filters = ['router']
 `
 }
 
@@ -86,23 +98,7 @@ func (l *LoggregatorRLPInput) Start(acc telegraf.Accumulator) error {
 	l.stopRlpConsumer = cancel
 
 	envelopeStream := rlpConnector.Stream(ctx, &loggregator_v2.EgressBatchRequest{
-		Selectors: []*loggregator_v2.Selector{
-			{
-				Message: &loggregator_v2.Selector_Counter{
-					Counter: &loggregator_v2.CounterSelector{},
-				},
-			},
-			{
-				Message: &loggregator_v2.Selector_Gauge{
-					Gauge: &loggregator_v2.GaugeSelector{},
-				},
-			},
-			{
-				Message: &loggregator_v2.Selector_Timer{
-					Timer: &loggregator_v2.TimerSelector{},
-				},
-			},
-		},
+		Selectors: l.buildSelectors(),
 	})
 
 	go func() {
@@ -119,6 +115,56 @@ func (l *LoggregatorRLPInput) Start(acc telegraf.Accumulator) error {
 	}()
 
 	return nil
+}
+
+func (l *LoggregatorRLPInput) buildSelectors() []*loggregator_v2.Selector {
+	var selectors []*loggregator_v2.Selector
+
+	if len(l.EnvelopeTypes) == 0 {
+		panic("No envelope_type selectors provided.")
+	}
+
+	if len(l.SourceIdFilters) == 0 {
+		for _, envelopeType := range l.EnvelopeTypes {
+			selectors = append(selectors, buildEnvelopeTypeSelector(envelopeType))
+		}
+
+		return selectors
+	}
+
+	for _, sourceId := range l.SourceIdFilters {
+		for _, envelopeType := range l.EnvelopeTypes {
+			selector := buildEnvelopeTypeSelector(envelopeType)
+			selector.SourceId = sourceId
+			selectors = append(selectors, selector)
+		}
+	}
+	return selectors
+}
+
+func buildEnvelopeTypeSelector(envelopeType string) *loggregator_v2.Selector {
+	switch envelopeType {
+	case "counter":
+		return &loggregator_v2.Selector{
+			Message: &loggregator_v2.Selector_Counter{
+				Counter: &loggregator_v2.CounterSelector{},
+			},
+		}
+	case "gauge":
+		return &loggregator_v2.Selector{
+			Message: &loggregator_v2.Selector_Gauge{
+				Gauge: &loggregator_v2.GaugeSelector{},
+			},
+		}
+	case "timer":
+		return &loggregator_v2.Selector{
+			Message: &loggregator_v2.Selector_Timer{
+				Timer: &loggregator_v2.TimerSelector{},
+			},
+		}
+	default:
+		panic("Invalid envelope type " + envelopeType)
+	}
 }
 
 func (l *LoggregatorRLPInput) Stop() {

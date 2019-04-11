@@ -18,7 +18,7 @@ type MockRLP struct {
 	server *grpc.Server
 	Addr   string
 
-	envelopeResponse *loggregator_v2.Envelope
+	envelopeResponse []*loggregator_v2.Envelope
 	tlsConfig        *tls.Config
 
 	mu                 sync.Mutex
@@ -26,7 +26,7 @@ type MockRLP struct {
 	actualReq          *loggregator_v2.EgressBatchRequest
 }
 
-func NewMockRlp(envelopeResponse *loggregator_v2.Envelope, tlsConfig *tls.Config) *MockRLP {
+func NewMockRlp(envelopeResponse []*loggregator_v2.Envelope, tlsConfig *tls.Config) *MockRLP {
 	f := &MockRLP{
 		envelopeResponse: envelopeResponse,
 		tlsConfig:        tlsConfig,
@@ -53,9 +53,7 @@ func (f *MockRLP) BatchedReceiver(
 	var i int
 	for range time.Tick(10 * time.Millisecond) {
 		srv.Send(&loggregator_v2.EnvelopeBatch{
-			Batch: []*loggregator_v2.Envelope{
-				f.envelopeResponse,
-			},
+			Batch: f.envelopeResponse,
 		})
 		i++
 	}

@@ -1,15 +1,15 @@
 package loggregator_rlp_test
 
 import (
+	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"crypto/tls"
 	"fmt"
-	"testing"
-
-	"code.cloudfoundry.org/go-loggregator/rpc/loggregator_v2"
 	"github.com/influxdata/telegraf/plugins/inputs/loggregator_rlp"
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/influxdata/toml"
 	. "github.com/onsi/gomega"
+	"strings"
+	"testing"
 )
 
 var (
@@ -31,7 +31,7 @@ func (tc *rlpTestContext) teardown() {
 }
 
 func TestParseConfigWithTLS(t *testing.T) {
-	tc := buildTestContext(t, nil)
+	tc := buildTestContext(t, nil, []string{})
 
 	rlpInput := tc.Input
 
@@ -40,8 +40,8 @@ func TestParseConfigWithTLS(t *testing.T) {
 	tc.Expect(rlpInput.TLSKey).To(Equal(pki.ClientKeyPath()))
 }
 
-func TestReceivesSelectedMetricsFromRLP(t *testing.T) {
-	tc := buildTestContext(t, createHTTPTimer())
+func TestReceivesAllMetricTypesFromRLP(t *testing.T) {
+	tc := buildTestContext(t, createHTTPTimer("source-id"), []string{"counter", "gauge", "timer"})
 	defer tc.teardown()
 
 	tc.Expect(tc.Input.Start(tc.Accumulator)).To(Succeed())
@@ -66,8 +66,78 @@ func TestReceivesSelectedMetricsFromRLP(t *testing.T) {
 	))
 }
 
+func TestReceivesSubsetOfMetricTypesFromRLP(t *testing.T) {
+	tc := buildTestContext(t, createHTTPTimer("source-id"), []string{"counter"})
+	defer tc.teardown()
+
+	tc.Expect(tc.Input.Start(tc.Accumulator)).To(Succeed())
+
+	tc.Eventually(tc.RLP.ActualReq, "5s").ShouldNot(BeNil())
+	tc.Expect(tc.RLP.ActualReq().Selectors).To(ConsistOf(
+		&loggregator_v2.Selector{
+			Message: &loggregator_v2.Selector_Counter{
+				Counter: &loggregator_v2.CounterSelector{},
+			},
+		},
+	))
+}
+
+func TestFiltersMetricsBySourceIds(t *testing.T) {
+	tc := buildTestContextWithSourceIdFilters(
+		t,
+		[]*loggregator_v2.Envelope{
+			createHTTPTimer("source1"),
+			createHTTPTimer("other-source"),
+		},
+		[]string{"counter", "gauge", "timer"},
+		[]string{"source1", "source2"},
+	)
+	defer tc.teardown()
+
+	tc.Expect(tc.Input.Start(tc.Accumulator)).To(Succeed())
+
+	tc.Eventually(tc.RLP.ActualReq, "5s").ShouldNot(BeNil())
+	tc.Expect(tc.RLP.ActualReq().Selectors).To(HaveLen(6))
+	tc.Expect(tc.RLP.ActualReq().Selectors).To(ContainElement(&loggregator_v2.Selector{
+		SourceId: "source1",
+		Message: &loggregator_v2.Selector_Counter{
+			Counter: &loggregator_v2.CounterSelector{},
+		},
+	}))
+	tc.Expect(tc.RLP.ActualReq().Selectors).To(ContainElement(&loggregator_v2.Selector{
+		SourceId: "source2",
+		Message: &loggregator_v2.Selector_Counter{
+			Counter: &loggregator_v2.CounterSelector{},
+		},
+	}))
+	tc.Expect(tc.RLP.ActualReq().Selectors).To(ContainElement(&loggregator_v2.Selector{
+		SourceId: "source1",
+		Message: &loggregator_v2.Selector_Gauge{
+			Gauge: &loggregator_v2.GaugeSelector{},
+		},
+	}))
+	tc.Expect(tc.RLP.ActualReq().Selectors).To(ContainElement(&loggregator_v2.Selector{
+		SourceId: "source2",
+		Message: &loggregator_v2.Selector_Gauge{
+			Gauge: &loggregator_v2.GaugeSelector{},
+		},
+	}))
+	tc.Expect(tc.RLP.ActualReq().Selectors).To(ContainElement(&loggregator_v2.Selector{
+		SourceId: "source1",
+		Message: &loggregator_v2.Selector_Timer{
+			Timer: &loggregator_v2.TimerSelector{},
+		},
+	}))
+	tc.Expect(tc.RLP.ActualReq().Selectors).To(ContainElement(&loggregator_v2.Selector{
+		SourceId: "source2",
+		Message: &loggregator_v2.Selector_Timer{
+			Timer: &loggregator_v2.TimerSelector{},
+		},
+	}))
+}
+
 func TestParsesTimers(t *testing.T) {
-	tc := buildTestContext(t, createHTTPTimer())
+	tc := buildTestContext(t, createHTTPTimer("source-id"), []string{"timer"})
 	defer tc.teardown()
 
 	tc.Expect(tc.Input.Start(tc.Accumulator)).To(Succeed())
@@ -90,7 +160,7 @@ func TestParsesTimers(t *testing.T) {
 }
 
 func TestParsesCounters(t *testing.T) {
-	tc := buildTestContext(t, createCounter())
+	tc := buildTestContext(t, createCounter(), []string{"counter"})
 	defer tc.teardown()
 
 	tc.Expect(tc.Input.Start(tc.Accumulator)).To(Succeed())
@@ -113,7 +183,7 @@ func TestParsesCounters(t *testing.T) {
 }
 
 func TestParsesGauges(t *testing.T) {
-	tc := buildTestContext(t, createGauge())
+	tc := buildTestContext(t, createGauge(), []string{"gauge"})
 	defer tc.teardown()
 
 	tc.Expect(tc.Input.Start(tc.Accumulator)).To(Succeed())
@@ -135,13 +205,24 @@ func TestParsesGauges(t *testing.T) {
 	)
 }
 
-func buildTestContext(t *testing.T, envelopeResponse *loggregator_v2.Envelope, options ...interface{}) *rlpTestContext {
+func buildTestContextWithSourceIdFilters(t *testing.T, envelopeResponse []*loggregator_v2.Envelope, envelopeTypes, sourceIdFilters []string, options ...interface{}) *rlpTestContext {
 	mockRlp, stopRLP := buildRLPWithTLS(envelopeResponse)
 
 	interval := "30s"
 	if len(options) > 0 {
 		interval = options[0].(string)
 	}
+
+	for i, envelopeType := range envelopeTypes {
+		envelopeTypes[i] = fmt.Sprintf("\"%s\"", envelopeType)
+	}
+
+	for i, sourceId := range sourceIdFilters {
+		sourceIdFilters[i] = fmt.Sprintf("\"%s\"", sourceId)
+	}
+
+	envelopeTypesString := strings.Join(envelopeTypes, ",")
+	sourceIdFiltersString := strings.Join(sourceIdFilters, ",")
 	configWithTLS := []byte(fmt.Sprintf(`
   rlp_address = "%s"
   tls_common_name = "localhost"
@@ -149,12 +230,17 @@ func buildTestContext(t *testing.T, envelopeResponse *loggregator_v2.Envelope, o
   tls_cert = "%s"
   tls_key = "%s"
   internal_metrics_interval = "%s"
-`,
-		mockRlp.Addr,
+  diode_buffer_size = %d
+  envelope_types = [%s]
+  source_id_filters = [%s]
+`, mockRlp.Addr,
 		pki.CACertPath(),
 		pki.ClientCertPath(),
 		pki.ClientKeyPath(),
 		interval,
+		10000,
+		envelopeTypesString,
+		sourceIdFiltersString,
 	))
 	input := loggregator_rlp.NewLoggregatorRLP()
 	err := toml.Unmarshal(configWithTLS, input)
@@ -171,7 +257,11 @@ func buildTestContext(t *testing.T, envelopeResponse *loggregator_v2.Envelope, o
 	}
 }
 
-func buildRLPWithTLS(envelopeResponse *loggregator_v2.Envelope) (*MockRLP, func()) {
+func buildTestContext(t *testing.T, envelopeResponse *loggregator_v2.Envelope, envelopeTypes []string, options ...interface{}) *rlpTestContext {
+	return buildTestContextWithSourceIdFilters(t, []*loggregator_v2.Envelope{envelopeResponse}, envelopeTypes, []string{}, options...)
+}
+
+func buildRLPWithTLS(envelopeResponse []*loggregator_v2.Envelope) (*MockRLP, func()) {
 	tlsConfig, err := pki.TLSServerConfig().TLSConfig()
 	if err != nil {
 		panic(err)
@@ -208,9 +298,9 @@ func createCounter() *loggregator_v2.Envelope {
 	}
 }
 
-func createHTTPTimer() *loggregator_v2.Envelope {
+func createHTTPTimer(sourceId string) *loggregator_v2.Envelope {
 	return &loggregator_v2.Envelope{
-		SourceId: "source_id",
+		SourceId: sourceId,
 		Message: &loggregator_v2.Envelope_Timer{
 			Timer: &loggregator_v2.Timer{
 				Name:  "http",
@@ -221,7 +311,7 @@ func createHTTPTimer() *loggregator_v2.Envelope {
 	}
 }
 
-func buildRLP(envelopeResponse *loggregator_v2.Envelope, tlsCfg *tls.Config) (*MockRLP, func()) {
+func buildRLP(envelopeResponse []*loggregator_v2.Envelope, tlsCfg *tls.Config) (*MockRLP, func()) {
 	rlp := NewMockRlp(envelopeResponse, tlsCfg)
 	rlp.Start()
 
