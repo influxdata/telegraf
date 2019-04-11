@@ -39,7 +39,7 @@ type VSphere struct {
 	DatastoreMetricInclude  []string
 	DatastoreMetricExclude  []string
 	DatastoreInclude        []string
-	VSANInstances           bool     `toml:"vsan_instances"`
+	VSANEnabled             bool     `toml:"vsan_enabled"`
 	VSANPerfMetricInclude   []string `toml:"vsan_perf_metric_include"`
 	VSANPerfMetricExclude   []string `toml:"vsan_perf_metric_exclude"`
 	VSANClusterInclude      []string //todo
@@ -325,7 +325,7 @@ func init() {
 			DatastoreMetricInclude:  nil,
 			DatastoreMetricExclude:  nil,
 			DatastoreInclude:        []string{"/*/datastore/**"},
-			VSANInstances:           false,
+			VSANEnabled:             false,
 			VSANPerfMetricInclude:   nil,
 			VSANPerfMetricExclude:   nil,
 			VSANClusterInclude:      []string{"/*/host/**"},
