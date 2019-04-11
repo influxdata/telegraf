@@ -23,6 +23,7 @@
 - [#5641](https://github.com/influxdata/telegraf/pull/5641): Add option to reset buckets on flush to histogram aggregator.
 - [#5664](https://github.com/influxdata/telegraf/pull/5664): Add option to use strict sanitization rules to wavefront output.
 - [#5697](https://github.com/influxdata/telegraf/pull/5697): Add namespace restriction to prometheus input plugin.
+- [#5681](https://github.com/influxdata/telegraf/pull/5681): Add cmdline tag to procstat input.
 
 #### Bugfixes
 
