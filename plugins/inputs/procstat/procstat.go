@@ -65,6 +65,9 @@ var sampleConfig = `
   ## Field name prefix
   # prefix = ""
 
+  ## When true add the full cmdline as a tag.
+  # cmdline_tag = false
+
   ## Add PID as a tag instead of a field; useful to differentiate between
   ## processes whose tags are otherwise the same.  Can create a large number
   ## of series, use judiciously.
@@ -170,9 +173,14 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields["pid"] = int32(proc.PID())
 	}
 
-	Cmdline, err := proc.Cmdline()
-	if err == nil {
-		fields[prefix+"cmdline"] = Cmdline
+	//If cmd_line tag is true and it is not already set add cmdline as a tag
+	if p.Cmdline_Tag {
+		if _, ok := proc.Tags()["cmdline"]; !ok {
+			Cmdline, err := proc.Cmdline()
+			if err == nil {
+				proc.Tags()["cmdline"] = Cmdline
+			}
+		}
 	}
 
 	numThreads, err := proc.NumThreads()
