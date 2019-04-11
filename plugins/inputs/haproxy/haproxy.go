@@ -287,7 +287,7 @@ func (g *haproxy) importCsvResult(r io.Reader, acc telegraf.Accumulator, host st
 					continue
 				}
 				fieldsG[fieldName] = vi
-			case "bin", "bout", "chkdown", "chkfail", "cli_abrt", "cli_abort", "comp_byp", "comp_in", "comp_out", "comp_rsp", "conn_tot", "dcon", "downtime", "dreq", "dresp", "dses", "ereq", "econ", "eresp", "hrsp_1xx", "hrsp_2xx", "hrsp_3xx", "hrsp_5xx", "hrsp_other", "http_response.1xx", "http_response.2xx", "http_response.3xx", "http_response.4xx", "http_response.5xx", "http_response.other", "intercepted", "lbtot", "req_tot", "slim", "srv_abrt", "srv_abort", "stot", "vwredis", "wretr":
+			case "bin", "bout", "chkdown", "chkfail", "cli_abrt", "cli_abort", "comp_byp", "comp_in", "comp_out", "comp_rsp", "conn_tot", "dcon", "downtime", "dreq", "dresp", "dses", "ereq", "econ", "eresp", "hrsp_1xx", "hrsp_2xx", "hrsp_3xx", "hrsp_4xx", "hrsp_5xx", "hrsp_other", "http_response.1xx", "http_response.2xx", "http_response.3xx", "http_response.4xx", "http_response.5xx", "http_response.other", "intercepted", "lbtot", "req_tot", "slim", "srv_abrt", "srv_abort", "stot", "vwredis", "wretr":
 				// these are counter fields
 				vi, err := strconv.ParseUint(v, 10, 64)
 				if err != nil {
