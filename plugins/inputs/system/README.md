@@ -25,7 +25,7 @@ the `telegraf` user to be added to the `utmp` group on some systems.
 	- n_users (integer)
 	- n_cpus (integer)
 	- uptime (integer, seconds)
-	- uptime_format (string)
+	- uptime_format (string, deprecated in 1.10, use `uptime` field)
 
 ### Example Output:
 
