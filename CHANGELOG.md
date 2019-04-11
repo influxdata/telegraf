@@ -1,5 +1,10 @@
 ## v1.11 [unreleased]
 
+#### Release Notes
+
+- The `uptime_format` field in the system input has been deprecated, use the
+  `uptime` field instead.
+
 #### New Inputs
 
 - [bind](/plugins/inputs/bind/README.md) - Contributed by @dswarbrick & @danielllek
