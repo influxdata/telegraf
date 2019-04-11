@@ -182,6 +182,7 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 				proc.Tags()["cmdline"] = Cmdline
 			}
 		}
+	}
 
 	numThreads, err := proc.NumThreads()
 	if err == nil {
