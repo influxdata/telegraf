@@ -2,6 +2,7 @@ package loggregator_rlp
 
 import (
 	"context"
+	"github.com/influxdata/telegraf/internal"
 	"log"
 	"os"
 	"time"
@@ -15,12 +16,12 @@ import (
 )
 
 type LoggregatorRLPInput struct {
-	TlsCommonName           string   `toml:"tls_common_name"`
-	RlpAddress              string   `toml:"rlp_address"`
-	InternalMetricsInterval string   `toml:"internal_metrics_interval"`
-	DiodeBufferSize         int      `toml:"diode_buffer_size"`
-	EnvelopeTypes           []string `toml:"envelope_types"`
-	SourceIdFilters         []string `toml:"source_id_filters"`
+	TlsCommonName           string            `toml:"tls_common_name"`
+	RlpAddress              string            `toml:"rlp_address"`
+	InternalMetricsInterval internal.Duration `toml:"internal_metrics_interval"`
+	DiodeBufferSize         int               `toml:"diode_buffer_size"`
+	EnvelopeTypes           []string          `toml:"envelope_types"`
+	SourceIdFilters         []string          `toml:"source_id_filters"`
 	stopRlpConsumer         context.CancelFunc
 	envelopeWriter          *EnvelopeWriter
 
@@ -29,7 +30,9 @@ type LoggregatorRLPInput struct {
 
 func NewLoggregatorRLP() *LoggregatorRLPInput {
 	return &LoggregatorRLPInput{
-		InternalMetricsInterval: "30s",
+		InternalMetricsInterval: internal.Duration{
+			Duration: 30 * time.Second,
+		},
 	}
 }
 
@@ -76,11 +79,7 @@ func (l *LoggregatorRLPInput) Gather(_ telegraf.Accumulator) error {
 }
 
 func (l *LoggregatorRLPInput) Start(acc telegraf.Accumulator) error {
-	internalMetricsInterval, err := time.ParseDuration(l.InternalMetricsInterval)
-	if err != nil {
-		return err
-	}
-	envelopeWriter := NewEnvelopeWriter(acc, internalMetricsInterval)
+	envelopeWriter := NewEnvelopeWriter(acc, l.InternalMetricsInterval.Duration)
 	l.envelopeWriter = envelopeWriter
 
 	tlsConfig, err := l.TLSConfig()
