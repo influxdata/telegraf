@@ -24,7 +24,6 @@ import (
 const (
 	Namespace                = "vsan"
 	Path                     = "/vsanHealth"
-	firstDuration            = 300
 	vsanPerfMetricsName      = "vsphere_cluster_vsan_performance"
 	vsanHealthfMetricsName   = "vsphere_cluster_vsan_health"
 	vsanCapacityfMetricsName = "vsphere_cluster_vsan_capacity"
@@ -111,7 +110,7 @@ func (e *Endpoint) getVSanPerfMetadata(ctx context.Context, client *vim25.Client
 			metrics = append(metrics, entity.Name)
 		}
 	}
-	metrics = append(metrics, "lsom-world-cpu", "dom-world-cpu")
+	metrics = append(metrics)
 	log.Println("D! vSan Metric:", metrics)
 	return metrics
 }
@@ -167,15 +166,15 @@ func getCMMDSMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 
 func (e *Endpoint) queryPerfData(ctx context.Context, vsanClient *soap.Client, clusterRef objectRef, metrics []string, cmmds map[string]CmmdsEntity, acc telegraf.Accumulator) error {
 	for _, entityRefId := range metrics {
-		start, ok := e.hwMarks.Get(entityRefId)
+		end := time.Now().UTC()
+		start, ok := e.hwMarks.Get(fmt.Sprintf("%s-vsan", entityRefId))
 		if !ok {
-			start = time.Now().Add(time.Duration(-firstDuration) * time.Second)
+			start = end.Add(3 * time.Duration(-e.resourceKinds["vsan"].sampling) * time.Second)
 		}
-		log.Printf("D! [inputs.vsan]: Query Start Time : %s", start)
+		log.Printf("D! [inputs.vsan]: Query %s for Time interval: %s ~ %s", entityRefId, start, end)
 
 		var perfSpecs []vsantypes.VsanPerfQuerySpec
 
-		end := time.Now()
 		perfSpec := vsantypes.VsanPerfQuerySpec{
 			EntityRefId: fmt.Sprintf("%s:*", entityRefId),
 			StartTime:   &start,
@@ -206,6 +205,7 @@ func (e *Endpoint) queryPerfData(ctx context.Context, vsanClient *soap.Client, c
 			for _, t := range strings.Split(em.SampleInfo, ",") {
 				tsParts := strings.Split(t, " ")
 				if len(tsParts) >= 2 {
+					// The return time string is in UTC time
 					timeStamps = append(timeStamps, fmt.Sprintf("%sT%sZ", tsParts[0], tsParts[1]))
 				}
 			}
@@ -224,6 +224,12 @@ func (e *Endpoint) queryPerfData(ctx context.Context, vsanClient *soap.Client, c
 						fields[field] = v
 					}
 					acc.AddFields(vsanPerfMetricsName, fields, tags, ts)
+				}
+			}
+			if len(timeStamps) > 0 {
+				latest, err := time.Parse(time.RFC3339, timeStamps[len(timeStamps)-1])
+				if err == nil {
+					e.hwMarks.Put(fmt.Sprintf("%s-vsan", entityRefId), latest)
 				}
 			}
 		}
@@ -261,7 +267,17 @@ func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 		return err
 	}
 	fields := make(map[string]interface{})
-	fields["OverallHealth"] = resp.Returnval.OverallHealth
+	overallHealth := resp.Returnval.OverallHealth
+	switch overallHealth {
+	case "red":
+		fields["OverallHealth"] = 2
+	case "yellow":
+		fields["OverallHealth"] = 1
+	case "green":
+		fields["OverallHealth"] = 0
+	default:
+		fields["OverallHealth"] = -1
+	}
 	tags := PopulateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
 	acc.AddFields(vsanHealthfMetricsName, fields, tags)
 	return nil
