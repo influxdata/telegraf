@@ -5,10 +5,14 @@ about: Create a report to help us improve
 ---
 
 ### Relevant telegraf.conf:
+<!-- [Place config betweetn triple backticks '```'] -->
+```toml
+
+```
 
 ### System info:
 
-[Include Telegraf version, operating system name, and other relevant details]
+<!-- [Include Telegraf version, operating system name, and other relevant details] -->
 
 ### Steps to reproduce:
 
@@ -21,4 +25,4 @@ about: Create a report to help us improve
 
 ### Additional info:
 
-[Include gist of relevant config, logs, etc.]
+<!-- [Include gist of relevant config, logs, etc.] -->

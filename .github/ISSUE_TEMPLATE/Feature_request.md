@@ -14,4 +14,4 @@ Opening a feature request kicks off a discussion.
 
 ### Desired behavior:
 
-### Use case: [Why is this important (helps with prioritizing requests)]
+### Use case: <!-- [Why is this important (helps with prioritizing requests)] -->
