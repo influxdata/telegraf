@@ -56,7 +56,6 @@ func (s *SignalFX) Write(metrics []telegraf.Metric) error {
 	}
 	err := s.sink.AddDatapoints(context.TODO(), d)
 	if err != nil {
-		log.Println("E! Failed to add datapoints to signalfx sink:", err)
 		return err
 	}
 	return nil
@@ -68,6 +67,7 @@ func telegrafMetricToSignalFXDatapoints(m telegraf.Metric) []*datapoint.Datapoin
 
 	sfxType := telegrafTypeToSignalFXType(m.Type())
 	sfxTime := m.Time()
+	sfxTags := m.Tags()
 
 	for _, field := range fields {
 		sfxName := m.Name()
@@ -75,15 +75,24 @@ func telegrafMetricToSignalFXDatapoints(m telegraf.Metric) []*datapoint.Datapoin
 			sfxName = fmt.Sprintf("%s.%s", sfxName, field.Key)
 		}
 
+		// Send bools by converting to integers
+		if boolVal, ok := field.Value.(bool); ok {
+			if boolVal {
+				field.Value = 1
+			} else {
+				field.Value = 0
+			}
+		}
 		sfxValue, err := datapoint.CastMetricValue(field.Value)
 		if err != nil {
 			// Intentionally emitting a debug level msg (not error) since
 			// plugins can often be naughty and emit fields that are strings
 			// (i.e. not numeric/chartable). E.g. system.uptime_format
-			log.Println("D! Failed to cast value for", field.Key)
+			log.Printf("D! [outputs.signalfx] Failed to cast value for %s: %v\n",
+				field.Key, err)
 			continue
 		}
-		d := datapoint.New(sfxName, m.Tags(), sfxValue, sfxType, sfxTime)
+		d := datapoint.New(sfxName, sfxTags, sfxValue, sfxType, sfxTime)
 		datapoints = append(datapoints, d)
 	}
 	return datapoints

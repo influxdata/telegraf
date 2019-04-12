@@ -4,8 +4,7 @@ This plugin transmits metrics back to the SignalFX ingest servers.
 
 ## Configuration
 ```toml
+# A plugin that can transmit metrics to SignalFX
 [[outputs.signalfx]]
-    ## SignalFx API Token
-    APIToken = "your_api_token" # required.
-
+  api_token = xxx
 ```
