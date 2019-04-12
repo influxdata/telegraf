@@ -42,10 +42,9 @@ type VSphere struct {
 	VSANEnabled             bool     `toml:"vsan_enabled"`
 	VSANPerfMetricInclude   []string `toml:"vsan_perf_metric_include"`
 	VSANPerfMetricExclude   []string `toml:"vsan_perf_metric_exclude"`
-	VSANClusterInclude      []string //todo
-
-	Separator     string
-	UseIntSamples bool
+	VSANClusterInclude      []string
+	Separator               string
+	UseIntSamples           bool
 
 	MaxQueryObjects         int
 	MaxQueryMetrics         int
