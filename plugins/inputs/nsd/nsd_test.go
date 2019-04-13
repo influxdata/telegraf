@@ -28,7 +28,18 @@ func TestParseFullOutput(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.True(t, acc.HasMeasurement("nsd"))
-	assert.True(t, acc.HasTag("nsd_server", "server"))
+
+	hasServerTag := false
+	for _, m := range acc.Metrics {
+		_, ok := m.Tags["server"]
+		if !ok {
+			continue
+		}
+		if m.Measurement == "nsd" {
+			hasServerTag = true
+		}
+	}
+	assert.True(t, hasServerTag)
 
 	assert.Len(t, acc.Metrics, 2)
 	assert.Equal(t, acc.NFields(), 89)
@@ -39,7 +50,7 @@ func TestParseFullOutput(t *testing.T) {
 		"port":   "8952",
 	}
 	acc.AssertContainsFields(t, "nsd", parsedFullOutput)
-	acc.AssertContainsTaggedFields(t, "nsd_server", parsedFullOutputServerAsTagMeasurementNsdServers, tags)
+	acc.AssertContainsTaggedFields(t, "nsd", parsedFullOutputServerAsTagMeasurementNsdServers, tags)
 }
 
 var parsedFullOutput = map[string]interface{}{

@@ -180,7 +180,7 @@ func (s *Nsd) Gather(acc telegraf.Accumulator) error {
 	if len(fieldsServers) > 0 {
 		for thisServerID, thisServerFields := range fieldsServers {
 			tags["server"] = thisServerID
-			acc.AddFields("nsd_server", thisServerFields, tags)
+			acc.AddFields("nsd", thisServerFields, tags)
 		}
 	}
 
