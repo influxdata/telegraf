@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"encoding/binary"
+	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/influxdata/telegraf"
@@ -16,6 +18,23 @@ import (
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
+)
+
+type StdType byte
+
+const (
+	Stdin StdType = iota
+	Stdout
+	Stderr
+	Systemerr
+
+	stdWriterPrefixLen = 8
+	stdWriterFdIndex   = 0
+	stdWriterSizeIndex = 4
+
+	startingBufLen = 32*1024 + stdWriterPrefixLen + 1
+
+	ERR_PREFIX = "E! [inputs.docker_log]"
 )
 
 type DockerLogs struct {
@@ -59,8 +78,8 @@ var (
 
 var sampleConfig = `
   ## Docker Endpoint
-  ##   To use TCP, set endpoint = "tcp://[ip]:[port]"
-  ##   To use environment variables (ie, docker-machine), set endpoint = "ENV"
+  ## To use TCP, set endpoint = "tcp://[ip]:[port]"
+  ## To use environment variables (ie, docker-machine), set endpoint = "ENV"
   endpoint = "unix:///var/run/docker.sock"
   ## Containers to include and exclude. Globs accepted.
   ## Note that an empty array for both will include all containers
@@ -159,7 +178,7 @@ func (d *DockerLogs) containerListUpdate(acc telegraf.Accumulator) error {
 	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout.Duration)
 	defer cancel()
 	if d.client == nil {
-		log.Println("E! Error Dock client is null")
+		log.Printf("%s : Dock client is null", ERR_PREFIX)
 		return nil
 	}
 	containers, err := d.client.ContainerList(ctx, d.opts)
@@ -177,7 +196,7 @@ func (d *DockerLogs) containerListUpdate(acc telegraf.Accumulator) error {
 			err := d.getContainerLogs(c, acc)
 			if err != nil {
 				d.removeFromContainerList(c.ID)
-				log.Println(err)
+				log.Printf("%s : %s ", ERR_PREFIX, err.Error())
 				return
 			}
 		}(container)
@@ -200,7 +219,7 @@ func (d *DockerLogs) getContainerLogs(
 	logReader, err := d.client.ContainerLogs(context.Background(), container.ID, logOptions)
 	d.addToContainerList(container.ID, logReader)
 	if err != nil {
-		log.Printf("Error getting docker logs: %s", err.Error())
+		log.Printf("%s : %s", ERR_PREFIX, err.Error())
 		return err
 	}
 	/* Parse container name */
@@ -220,21 +239,99 @@ func (d *DockerLogs) getContainerLogs(
 			tags[k] = label
 		}
 	}
-	fields := map[string]interface{}{}
-	data := make([]byte, LOG_BYTES_MAX)
+	_, err = pushLogs(acc, tags, logReader)
+	if err != nil {
+		log.Printf("%s : %s", ERR_PREFIX, err.Error())
+		return err
+	}
+	return nil
+}
+
+/* Inspired from https://github.com/moby/moby/blob/master/pkg/stdcopy/stdcopy.go */
+func pushLogs(acc telegraf.Accumulator, tags map[string]string, src io.Reader) (written int64, err error) {
+	var (
+		buf       = make([]byte, startingBufLen)
+		bufLen    = len(buf)
+		nr        int
+		er        error
+		frameSize int
+	)
 	for {
-		num, err := logReader.Read(data)
-		if err != nil {
-			if err == io.EOF {
-				fields["log"] = data[:num]
-				acc.AddFields("docker_log", fields, tags)
+		// Make sure we have at least a full header
+		for nr < stdWriterPrefixLen {
+			var nr2 int
+			nr2, er = src.Read(buf[nr:])
+			nr += nr2
+			if er == io.EOF {
+				if nr < stdWriterPrefixLen {
+					return written, nil
+				}
+				break
 			}
-			return err
+			if er != nil {
+				return 0, er
+			}
 		}
-		if num > 0 {
-			fields["log"] = data[:num]
-			acc.AddFields("docker_log", fields, tags)
+		stream := StdType(buf[stdWriterFdIndex])
+		// Check the first byte to know where to write
+		var logType string
+		switch stream {
+		case Stdin:
+			logType = "stdin"
+			break
+		case Stdout:
+			logType = "stdout"
+			break
+		case Stderr:
+			logType = "stderr"
+			break
+		case Systemerr:
+			fallthrough
+		default:
+			return 0, fmt.Errorf("Unrecognized input header: %d", buf[stdWriterFdIndex])
 		}
+		// Retrieve the size of the frame
+		frameSize = int(binary.BigEndian.Uint32(buf[stdWriterSizeIndex : stdWriterSizeIndex+4]))
+
+		// Check if the buffer is big enough to read the frame.
+		// Extend it if necessary.
+		if frameSize+stdWriterPrefixLen > bufLen {
+			buf = append(buf, make([]byte, frameSize+stdWriterPrefixLen-bufLen+1)...)
+			bufLen = len(buf)
+		}
+
+		// While the amount of bytes read is less than the size of the frame + header, we keep reading
+		for nr < frameSize+stdWriterPrefixLen {
+			var nr2 int
+			nr2, er = src.Read(buf[nr:])
+			nr += nr2
+			if er == io.EOF {
+				if nr < frameSize+stdWriterPrefixLen {
+					return written, nil
+				}
+				break
+			}
+			if er != nil {
+				return 0, er
+			}
+		}
+
+		// we might have an error from the source mixed up in our multiplexed
+		// stream. if we do, return it.
+		if stream == Systemerr {
+			return written, fmt.Errorf("error from daemon in stream: %s", string(buf[stdWriterPrefixLen:frameSize+stdWriterPrefixLen]))
+		}
+
+		tags["logType"] = logType
+		fields := map[string]interface{}{}
+		fields["log"] = buf[stdWriterPrefixLen : frameSize+stdWriterPrefixLen]
+		acc.AddFields("docker_log", fields, tags)
+		written += int64(frameSize)
+
+		// Move the rest of the buffer to the beginning
+		copy(buf, buf[frameSize+stdWriterPrefixLen:])
+		// Move the index
+		nr -= frameSize + stdWriterPrefixLen
 	}
 }
 

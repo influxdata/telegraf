@@ -3,12 +3,12 @@ package docker_log
 import (
 	"context"
 	"crypto/tls"
+	"io"
 	"net/http"
 
 	"github.com/docker/docker/api/types"
 	docker "github.com/docker/docker/client"
 	"github.com/docker/go-connections/sockets"
-	"io"
 )
 
 /*This file is inherited from telegraf docker input plugin*/
