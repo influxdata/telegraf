@@ -12,7 +12,7 @@ import (
 
 var TestTimeout = internal.Duration{Duration: time.Second}
 
-func NsdControl(output string, Timeout internal.Duration, useSudo bool, Server string) func(string, internal.Duration, bool, string) (*bytes.Buffer, error) {
+func NsdControl(output string, timeout internal.Duration, useSudo bool, server string) func(string, internal.Duration, bool, string) (*bytes.Buffer, error) {
 	return func(string, internal.Duration, bool, string) (*bytes.Buffer, error) {
 		return bytes.NewBuffer([]byte(output)), nil
 	}

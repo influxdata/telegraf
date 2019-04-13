@@ -18,7 +18,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
-type runner func(cmdName string, Timeout internal.Duration, UseSudo bool, Server string) (*bytes.Buffer, error)
+type runner func(cmdName string, timeout internal.Duration, useSudo bool, server string) (*bytes.Buffer, error)
 
 type Nsd struct {
 	Binary  string
@@ -56,25 +56,25 @@ func (s *Nsd) Description() string {
 	return "A plugin to collect stats from the NSD DNS Server"
 }
 
-func nsdRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server string) (*bytes.Buffer, error) {
+func nsdRunner(cmdName string, timeout internal.Duration, useSudo bool, server string) (*bytes.Buffer, error) {
 	cmdArgs := []string{"stats_noreset"}
 
-	if Server != "" {
-		host, port, err := net.SplitHostPort(Server)
+	if server != "" {
+		host, port, err := net.SplitHostPort(server)
 		if err != nil {
-			host = Server
+			host = server
 			port = ""
 		}
 
 		resolver := net.Resolver{}
-		ctx, lookUpCancel := context.WithTimeout(context.Background(), Timeout.Duration)
+		ctx, lookUpCancel := context.WithTimeout(context.Background(), timeout.Duration)
 		defer lookUpCancel()
 		serverIps, err := resolver.LookupIPAddr(ctx, host)
 		if err != nil {
-			return nil, fmt.Errorf("error looking up ip for server: %s: %s", Server, err)
+			return nil, fmt.Errorf("error looking up ip for server: %s: %s", server, err)
 		}
 		if len(serverIps) == 0 {
-			return nil, fmt.Errorf("error no ip for server: %s: %s", Server, err)
+			return nil, fmt.Errorf("error no ip for server: %s: %s", server, err)
 		}
 		server := serverIps[0].IP.String()
 		if port != "" {
@@ -86,14 +86,14 @@ func nsdRunner(cmdName string, Timeout internal.Duration, UseSudo bool, Server s
 
 	cmd := exec.Command(cmdName, cmdArgs...)
 
-	if UseSudo {
+	if useSudo {
 		cmdArgs = append([]string{cmdName}, cmdArgs...)
 		cmd = exec.Command("sudo", cmdArgs...)
 	}
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := internal.RunTimeout(cmd, Timeout.Duration)
+	err := internal.RunTimeout(cmd, timeout.Duration)
 	if err != nil {
 		return &out, fmt.Errorf("error running nsd-control: %s (%s %v)", err, cmdName, cmdArgs)
 	}
