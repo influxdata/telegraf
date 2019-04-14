@@ -171,6 +171,7 @@ For documentation on the latest development code see the [documentation index][d
 * [graylog](./plugins/inputs/graylog)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
+* [htcondor](./plugins/inputs/htcondor)
 * [httpjson](./plugins/inputs/httpjson) (generic JSON-emitting http service plugin)
 * [http_listener](./plugins/inputs/influxdb_listener) (deprecated, renamed to [influxdb_listener](/plugins/inputs/influxdb_listener))
 * [http_listener_v2](./plugins/inputs/http_listener_v2)
