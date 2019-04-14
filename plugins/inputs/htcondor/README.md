@@ -15,5 +15,5 @@ Reference: https://research.cs.wisc.edu/htcondor/description.html
 ### Example Output:
 
 ```
-> htcondor,host=127.0.0.1 completed=2,held=6,idle=4,jobs=1,removed=3,running=5,suspended=7 1555271781000000000
+> htcondor,host=127.0.0.1 completed=2i,held=6i,idle=4i,jobs=1i,removed=3i,running=5i,suspended=7i 1555274373000000000
 ```
