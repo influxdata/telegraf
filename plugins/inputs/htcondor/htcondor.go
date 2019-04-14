@@ -25,21 +25,21 @@ func (htc *HTCondor) Description() string {
 
 const measurement = "htcondor"
 
-var condorOutputRe = regexp.MustCompile(`(?m)(?P<jobs>\d+\s*jobs);\s*(?P<completed>\d+\s*completed),\s*(?P<removed>\d+\s*removed),\s*(?P<idle>\d+\s*idle),\s*(?P<running>\d+\s*running),\s*(?P<held>\d+\s*held),\s*(?P<suspended>\d+\s*suspended)`)
+var condorOutputRegex = regexp.MustCompile(`(?m)(?P<jobs>\d+\s*jobs);\s*(?P<completed>\d+\s*completed),\s*(?P<removed>\d+\s*removed),\s*(?P<idle>\d+\s*idle),\s*(?P<running>\d+\s*running),\s*(?P<held>\d+\s*held),\s*(?P<suspended>\d+\s*suspended)`)
 
 // Gather outputs.
 func (htc *HTCondor) Gather(acc telegraf.Accumulator) error {
 	c := exec.Command("condor_q")
 	out, _ := c.Output()
 
-	var regexGroupMatch = condorOutputRe.FindAllStringSubmatch(string(out), -1)
+	var regexGroupMatch = condorOutputRegex.FindAllStringSubmatch(string(out), -1)
 	fields := make(map[string]interface{})
 	tags := make(map[string]string)
 
 	for i := 1; i < len(regexGroupMatch[0]); i++ {
 		var matched = strings.Split(regexGroupMatch[0][i], " ") // "1 jobs" --> ["1", "jobs"]
 		var fieldKey = matched[1]
-		var fieldvalue, _ = strconv.ParseFloat(matched[0], 64)
+		var fieldvalue, _ = strconv.ParseInt(matched[0], 10, 64)
 		fields[fieldKey] = fieldvalue
 	}
 	acc.AddFields(measurement, fields, tags)
