@@ -139,7 +139,6 @@ For documentation on the latest development code see the [documentation index][d
 * [aws cloudwatch](./plugins/inputs/cloudwatch)
 * [bcache](./plugins/inputs/bcache)
 * [beanstalkd](./plugins/inputs/beanstalkd)
-* [bind](./plugins/inputs/bind)
 * [bond](./plugins/inputs/bond)
 * [burrow](./plugins/inputs/burrow)
 * [cassandra](./plugins/inputs/cassandra) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
@@ -169,7 +168,6 @@ For documentation on the latest development code see the [documentation index][d
 * [filestat](./plugins/inputs/filestat)
 * [filecount](./plugins/inputs/filecount)
 * [fluentd](./plugins/inputs/fluentd)
-* [github](./plugins/inputs/github)
 * [graylog](./plugins/inputs/graylog)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
@@ -311,7 +309,6 @@ For documentation on the latest development code see the [documentation index][d
 - [ServiceNow](/plugins/serializers/nowmetric)
 - [SplunkMetric](/plugins/serializers/splunkmetric)
 - [Carbon2](/plugins/serializers/carbon2)
-- [Wavefront](/plugins/serializers/wavefront)
 
 ## Processor Plugins
 
@@ -354,6 +351,7 @@ For documentation on the latest development code see the [documentation index][d
 * [instrumental](./plugins/outputs/instrumental)
 * [kafka](./plugins/outputs/kafka)
 * [librato](./plugins/outputs/librato)
+* [logz.io](./plugins/outputs/logzio)
 * [mqtt](./plugins/outputs/mqtt)
 * [nats](./plugins/outputs/nats)
 * [nsq](./plugins/outputs/nsq)
