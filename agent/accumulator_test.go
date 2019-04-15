@@ -74,7 +74,6 @@ func TestSetPrecision(t *testing.T) {
 		name      string
 		unset     bool
 		precision time.Duration
-		interval  time.Duration
 		timestamp time.Time
 		expected  time.Time
 	}{
@@ -86,13 +85,13 @@ func TestSetPrecision(t *testing.T) {
 		},
 		{
 			name:      "second interval",
-			interval:  time.Second,
+			precision: time.Second,
 			timestamp: time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC),
 			expected:  time.Date(2006, time.February, 10, 12, 0, 0, 0, time.UTC),
 		},
 		{
 			name:      "microsecond interval",
-			interval:  time.Microsecond,
+			precision: time.Microsecond,
 			timestamp: time.Date(2006, time.February, 10, 12, 0, 0, 82912748, time.UTC),
 			expected:  time.Date(2006, time.February, 10, 12, 0, 0, 82913000, time.UTC),
 		},
@@ -109,7 +108,7 @@ func TestSetPrecision(t *testing.T) {
 
 			a := NewAccumulator(&TestMetricMaker{}, metrics)
 			if !tt.unset {
-				a.SetPrecision(tt.precision, tt.interval)
+				a.SetPrecision(tt.precision)
 			}
 
 			a.AddFields("acctest",

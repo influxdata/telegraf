@@ -288,11 +288,13 @@ func SleepContext(ctx context.Context, duration time.Duration) error {
 }
 
 // AlignDuration returns the duration until next aligned interval.
+// If the current time is aligned a 0 duration is returned.
 func AlignDuration(tm time.Time, interval time.Duration) time.Duration {
 	return AlignTime(tm, interval).Sub(tm)
 }
 
 // AlignTime returns the time of the next aligned interval.
+// If the current time is aligned the current time is returned.
 func AlignTime(tm time.Time, interval time.Duration) time.Time {
 	truncated := tm.Truncate(interval)
 	if truncated == tm {

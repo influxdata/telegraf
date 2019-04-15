@@ -1047,3 +1047,24 @@ func TestEmptyYearInTimestamp(t *testing.T) {
 	require.NotNil(t, m)
 	require.Equal(t, time.Now().Year(), m.Time().Year())
 }
+
+func TestTrimRegression(t *testing.T) {
+	// https://github.com/influxdata/telegraf/issues/4998
+	p := &Parser{
+		Patterns: []string{`%{GREEDYDATA:message:string}`},
+	}
+	require.NoError(t, p.Compile())
+
+	actual, err := p.ParseLine(`level=info msg="ok"`)
+	require.NoError(t, err)
+
+	expected := testutil.MustMetric(
+		"",
+		map[string]string{},
+		map[string]interface{}{
+			"message": `level=info msg="ok"`,
+		},
+		actual.Time(),
+	)
+	require.Equal(t, expected, actual)
+}
