@@ -35,6 +35,7 @@
 #### Bugfixes
 
 - [#5680](https://github.com/influxdata/telegraf/pull/5680): Allow colons in metric names in prometheus_client output.
+- [#5716](https://github.com/influxdata/telegraf/pull/5716): Set log directory attributes in rpm spec.
 
 ## v1.10.2 [2019-04-02]
 
