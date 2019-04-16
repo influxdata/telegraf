@@ -32,8 +32,9 @@ import (
 )
 
 var (
-	// Default headers
-	sectionDefaults = []string{"global_tags", "agent"}
+	// Default sections
+	sectionDefaults = []string{"agent", "global_tags", "output",
+		"processor", "aggregator", "input"}
 
 	// Default input plugins
 	inputDefaults = []string{"cpu", "mem", "swap", "system", "kernel",
@@ -200,8 +201,6 @@ func (c *Config) ListTags() string {
 	return strings.Join(tags, " ")
 }
 
-var headers = map[string]string{"global_tags": globalTagsConfig, "agent": agentConfig}
-
 var header = `# Telegraf Configuration
 #
 # Telegraf is entirely plugin driven. All metrics are gathered from the
@@ -330,82 +329,90 @@ func PrintSampleConfig(
 ) {
 	// print headers
 	fmt.Printf(header)
-	if len(sectionFilters) != 0 {
-		printFilteredSections(sectionFilters)
-	} else {
-		printFilteredSections(sectionDefaults)
+
+	if len(sectionFilters) == 0 {
+		sectionFilters = sectionDefaults
 	}
+	printFilteredGlobalSections(sectionFilters)
 
 	// print output plugins
-	if len(outputFilters) != 0 {
-		if len(outputFilters) >= 3 && outputFilters[1] != "none" {
-			fmt.Printf(outputHeader)
-		}
-		printFilteredOutputs(outputFilters, false)
-	} else {
-		fmt.Printf(outputHeader)
-		printFilteredOutputs(outputDefaults, false)
-		// Print non-default outputs, commented
-		var pnames []string
-		for pname := range outputs.Outputs {
-			if !sliceContains(pname, outputDefaults) {
-				pnames = append(pnames, pname)
+	if sliceContains("output", sectionFilters) {
+		if len(outputFilters) != 0 {
+			if len(outputFilters) >= 3 && outputFilters[1] != "none" {
+				fmt.Printf(outputHeader)
 			}
+			printFilteredOutputs(outputFilters, false)
+		} else {
+			fmt.Printf(outputHeader)
+			printFilteredOutputs(outputDefaults, false)
+			// Print non-default outputs, commented
+			var pnames []string
+			for pname := range outputs.Outputs {
+				if !sliceContains(pname, outputDefaults) {
+					pnames = append(pnames, pname)
+				}
+			}
+			sort.Strings(pnames)
+			printFilteredOutputs(pnames, true)
 		}
-		sort.Strings(pnames)
-		printFilteredOutputs(pnames, true)
 	}
 
 	// print processor plugins
-	if len(processorFilters) != 0 {
-		if len(processorFilters) >= 3 && processorFilters[1] != "none" {
+	if sliceContains("processor", sectionFilters) {
+		if len(processorFilters) != 0 {
+			if len(processorFilters) >= 3 && processorFilters[1] != "none" {
+				fmt.Printf(processorHeader)
+			}
+			printFilteredProcessors(processorFilters, false)
+		} else {
 			fmt.Printf(processorHeader)
+			pnames := []string{}
+			for pname := range processors.Processors {
+				pnames = append(pnames, pname)
+			}
+			sort.Strings(pnames)
+			printFilteredProcessors(pnames, true)
 		}
-		printFilteredProcessors(processorFilters, false)
-	} else {
-		fmt.Printf(processorHeader)
-		pnames := []string{}
-		for pname := range processors.Processors {
-			pnames = append(pnames, pname)
-		}
-		sort.Strings(pnames)
-		printFilteredProcessors(pnames, true)
 	}
 
-	// pring aggregator plugins
-	if len(aggregatorFilters) != 0 {
-		if len(aggregatorFilters) >= 3 && aggregatorFilters[1] != "none" {
+	// print aggregator plugins
+	if sliceContains("aggregator", sectionFilters) {
+		if len(aggregatorFilters) != 0 {
+			if len(aggregatorFilters) >= 3 && aggregatorFilters[1] != "none" {
+				fmt.Printf(aggregatorHeader)
+			}
+			printFilteredAggregators(aggregatorFilters, false)
+		} else {
 			fmt.Printf(aggregatorHeader)
+			pnames := []string{}
+			for pname := range aggregators.Aggregators {
+				pnames = append(pnames, pname)
+			}
+			sort.Strings(pnames)
+			printFilteredAggregators(pnames, true)
 		}
-		printFilteredAggregators(aggregatorFilters, false)
-	} else {
-		fmt.Printf(aggregatorHeader)
-		pnames := []string{}
-		for pname := range aggregators.Aggregators {
-			pnames = append(pnames, pname)
-		}
-		sort.Strings(pnames)
-		printFilteredAggregators(pnames, true)
 	}
 
 	// print input plugins
-	if len(inputFilters) != 0 {
-		if len(inputFilters) >= 3 && inputFilters[1] != "none" {
-			fmt.Printf(inputHeader)
-		}
-		printFilteredInputs(inputFilters, false)
-	} else {
-		fmt.Printf(inputHeader)
-		printFilteredInputs(inputDefaults, false)
-		// Print non-default inputs, commented
-		var pnames []string
-		for pname := range inputs.Inputs {
-			if !sliceContains(pname, inputDefaults) {
-				pnames = append(pnames, pname)
+	if sliceContains("input", sectionFilters) {
+		if len(inputFilters) != 0 {
+			if len(inputFilters) >= 3 && inputFilters[1] != "none" {
+				fmt.Printf(inputHeader)
 			}
+			printFilteredInputs(inputFilters, false)
+		} else {
+			fmt.Printf(inputHeader)
+			printFilteredInputs(inputDefaults, false)
+			// Print non-default inputs, commented
+			var pnames []string
+			for pname := range inputs.Inputs {
+				if !sliceContains(pname, inputDefaults) {
+					pnames = append(pnames, pname)
+				}
+			}
+			sort.Strings(pnames)
+			printFilteredInputs(pnames, true)
 		}
-		sort.Strings(pnames)
-		printFilteredInputs(pnames, true)
 	}
 }
 
@@ -505,18 +512,13 @@ func printFilteredOutputs(outputFilters []string, commented bool) {
 	}
 }
 
-func printFilteredSections(sectionFilters []string) {
-	// Filter headers
-	var snames []string
-	for sname := range headers {
-		if sliceContains(sname, sectionFilters) {
-			snames = append(snames, sname)
-		}
+func printFilteredGlobalSections(sectionFilters []string) {
+	if sliceContains("agent", sectionFilters) {
+		fmt.Printf(agentConfig)
 	}
 
-	// Print sections
-	for _, sname := range snames {
-		fmt.Printf(headers[sname])
+	if sliceContains("global_tags", sectionFilters) {
+		fmt.Printf(globalTagsConfig)
 	}
 }
 
