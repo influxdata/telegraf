@@ -244,8 +244,8 @@ func TestConfig_SliceComment(t *testing.T) {
 }
 
 func TestConfig_BadOrdering(t *testing.T) {
-	// #3444 defines an issue that is not currently an issue as it is technically invalid yaml.
-
+	// #3444: when not using inline tables, care has to be taken so subsequent configuration
+	// doesn't become part of the table. This is not a bug, but TOML syntax.
 	c := NewConfig()
 	err := c.LoadConfig("./testdata/non_slice_slice.toml")
 	require.Error(t, err, "bad ordering")

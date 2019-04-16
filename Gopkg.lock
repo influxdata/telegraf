@@ -655,14 +655,14 @@
 
 [[projects]]
   branch = "telegraf"
-  digest = "1:f79bd9a58ca333d2c0427184d0c94b9bf13a410adfa4f587965c38c66a653e22"
+  digest = "1:65e98c3d449a34fe4644b503148d3a7244ceabe13f8bf71c2cfecfc2bdce05e9"
   name = "github.com/influxdata/toml"
   packages = [
     ".",
     "ast",
   ]
   pruneopts = ""
-  revision = "d08dc9bfbc5f03b734bc951985b0fd639214cc5e"
+  revision = "270119a8ce653b297f12189c9099ef1409979f2b"
 
 [[projects]]
   branch = "master"
@@ -814,14 +814,6 @@
   pruneopts = ""
   revision = "6b638e95a32d0c1131db0e7fe83775cbea4a0d0b"
   version = "v0.1.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:1c96351a94bb68711cd7790e64cffa35d11da796c052aca1fe2b83bda856ef44"
-  name = "github.com/naoina/toml"
-  packages = ["ast"]
-  pruneopts = ""
-  revision = "9fafd69674167c06933b1787ae235618431ce87f"
 
 [[projects]]
   digest = "1:e5ec850ce66beb0014fc40d8e64b7482172eee71d86d734d66def5e9eac16797"
