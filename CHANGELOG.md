@@ -30,7 +30,7 @@
 
 - [#5631](https://github.com/influxdata/telegraf/pull/5631): Create Windows service only when specified or in service manager.
 
-## v1.10.3 [unreleased]
+## v1.10.3 [2019-04-16]
 
 #### Bugfixes
 
