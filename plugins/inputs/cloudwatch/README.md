@@ -144,7 +144,7 @@ To maximize efficiency and savings, consider making fewer requests by increasing
 
 #### Restrictions and Limitations
 - CloudWatch metrics are not available instantly via the CloudWatch API. You should adjust your collection `delay` to account for this lag in metrics availability based on your [monitoring subscription level](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-cloudwatch-new.html)
-- CloudWatch API usage incurs cost - see [GetMetricDat Pricing](https://aws.amazon.com/cloudwatch/pricing/)
+- CloudWatch API usage incurs cost - see [GetMetricData Pricing](https://aws.amazon.com/cloudwatch/pricing/)
 
 ### Measurements & Fields:
 

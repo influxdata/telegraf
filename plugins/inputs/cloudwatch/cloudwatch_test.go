@@ -300,13 +300,13 @@ func TestGenerateStatisticsInputParamsFiltered(t *testing.T) {
 
 func TestMetricsCacheTimeout(t *testing.T) {
 	cache := &metricCache{
-		metrics: []*cloudwatch.Metric{},
-		fetched: time.Now(),
+		metrics: []filteredMetric{},
+		built:   time.Now(),
 		ttl:     time.Minute,
 	}
 
 	assert.True(t, cache.isValid())
-	cache.fetched = time.Now().Add(-time.Minute)
+	cache.built = time.Now().Add(-time.Minute)
 	assert.False(t, cache.isValid())
 }
 

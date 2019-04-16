@@ -44,9 +44,7 @@ type (
 		client          cloudwatchClient
 		statFilter      filter.Filter
 		metricCache     *metricCache
-		queryCache      *queryCache
-		filteredCache   *filteredCache
-		queryDimensions map[string]*[]dimension
+		queryDimensions map[string]*map[string]string
 		windowStart     time.Time
 		windowEnd       time.Time
 	}
@@ -65,25 +63,12 @@ type (
 		Value string `toml:"value"`
 	}
 
-	// metricCache caches automatically fetched metrics.
+	// metricCache caches metrics, their filters, and generated queries.
 	metricCache struct {
-		ttl     time.Duration
-		fetched time.Time
-		metrics []*cloudwatch.Metric
-	}
-
-	// queryCache caches generated queries.
-	queryCache struct {
-		ttl     time.Duration
-		built   time.Time
-		queries []*cloudwatch.MetricDataQuery
-	}
-
-	// filteredCache caches defined metrics and their filters.
-	filteredCache struct {
 		ttl     time.Duration
 		built   time.Time
 		metrics []filteredMetric
+		queries []*cloudwatch.MetricDataQuery
 	}
 
 	cloudwatchClient interface {
@@ -217,21 +202,8 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	defer lmtr.Stop()
 	wg := sync.WaitGroup{}
 	rLock := sync.Mutex{}
-	// create master list of results so aggregation works the best way.
+
 	results := []*cloudwatch.MetricDataResult{}
-
-	var aggregateResults = func(inm []*cloudwatch.MetricDataQuery) {
-		defer wg.Done()
-		result, err := c.gatherMetrics(c.getDataInputs(inm))
-		if err != nil {
-			acc.AddError(err)
-			return
-		}
-
-		rLock.Lock()
-		results = append(results, result...)
-		rLock.Unlock()
-	}
 
 	// 100 is the maximum number of metric data queries a `GetMetricData` request can contain.
 	batchSize := 100
@@ -245,7 +217,18 @@ func (c *CloudWatch) Gather(acc telegraf.Accumulator) error {
 	for i := range batches {
 		wg.Add(1)
 		<-lmtr.C
-		go aggregateResults(batches[i])
+		go func(inm []*cloudwatch.MetricDataQuery) {
+			defer wg.Done()
+			result, err := c.gatherMetrics(c.getDataInputs(inm))
+			if err != nil {
+				acc.AddError(err)
+				return
+			}
+
+			rLock.Lock()
+			results = append(results, result...)
+			rLock.Unlock()
+		}(batches[i])
 	}
 
 	wg.Wait()
@@ -279,8 +262,8 @@ type filteredMetric struct {
 
 // getFilteredMetrics returns metrics specified in the config file or metrics listed from Cloudwatch.
 func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
-	if c.filteredCache != nil && c.filteredCache.isValid() {
-		return c.filteredCache.metrics, nil
+	if c.metricCache != nil && c.metricCache.isValid() {
+		return c.metricCache.metrics, nil
 	}
 
 	fMetrics := []filteredMetric{}
@@ -350,7 +333,7 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 		}}
 	}
 
-	c.filteredCache = &filteredCache{
+	c.metricCache = &metricCache{
 		metrics: fMetrics,
 		built:   time.Now(),
 		ttl:     c.CacheTTL.Duration,
@@ -361,36 +344,28 @@ func getFilteredMetrics(c *CloudWatch) ([]filteredMetric, error) {
 
 // fetchNamespaceMetrics retrieves available metrics for a given CloudWatch namespace.
 func (c *CloudWatch) fetchNamespaceMetrics() ([]*cloudwatch.Metric, error) {
-	if c.metricCache != nil && c.metricCache.isValid() {
-		return c.metricCache.metrics, nil
-	}
-
 	metrics := []*cloudwatch.Metric{}
 
 	var token *string
-	for more := true; more; {
-		params := &cloudwatch.ListMetricsInput{
-			Namespace:  aws.String(c.Namespace),
-			Dimensions: []*cloudwatch.DimensionFilter{},
-			NextToken:  token,
-			MetricName: nil,
-		}
+	params := &cloudwatch.ListMetricsInput{
+		Namespace:  aws.String(c.Namespace),
+		Dimensions: []*cloudwatch.DimensionFilter{},
+		NextToken:  token,
+		MetricName: nil,
+	}
 
+	for {
 		resp, err := c.client.ListMetrics(params)
 		if err != nil {
 			return nil, err
 		}
 
 		metrics = append(metrics, resp.Metrics...)
+		if resp.NextToken == nil {
+			break
+		}
 
-		token = resp.NextToken
-		more = token != nil
-	}
-
-	c.metricCache = &metricCache{
-		metrics: metrics,
-		fetched: time.Now(),
-		ttl:     c.CacheTTL.Duration,
+		params.NextToken = resp.NextToken
 	}
 
 	return metrics, nil
@@ -414,11 +389,11 @@ func (c *CloudWatch) updateWindow(relativeTo time.Time) error {
 
 // getDataQueries gets all of the possible queries so we can maximize the request payload.
 func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudwatch.MetricDataQuery, error) {
-	if c.queryCache != nil && c.queryCache.isValid() {
-		return c.queryCache.queries, nil
+	if c.metricCache != nil && c.metricCache.queries != nil && c.metricCache.isValid() {
+		return c.metricCache.queries, nil
 	}
 
-	c.queryDimensions = map[string]*[]dimension{}
+	c.queryDimensions = map[string]*map[string]string{}
 
 	dataQueries := []*cloudwatch.MetricDataQuery{}
 	for i, filtered := range filteredMetrics {
@@ -492,11 +467,7 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 		return nil, errors.New("no metrics found to collect")
 	}
 
-	c.queryCache = &queryCache{
-		queries: dataQueries,
-		built:   time.Now(),
-		ttl:     c.CacheTTL.Duration,
-	}
+	c.metricCache.queries = dataQueries
 
 	return dataQueries, nil
 }
@@ -533,15 +504,17 @@ func (c *CloudWatch) aggregateMetrics(
 	)
 
 	for _, result := range metricDataResults {
-		tags := map[string]string{
-			"region": c.Region,
-		}
+		tags := map[string]string{}
+		// 	"region": c.Region,
+		// }
 
 		if dimensions, ok := c.queryDimensions[*result.Id]; ok {
-			for _, dimension := range *dimensions {
-				tags[dimension.name] = dimension.value
-			}
+			tags = *dimensions
+			// for _, dimension := range *dimensions {
+			// 	tags[dimension.name] = dimension.value
+			// }
 		}
+		tags["region"] = c.Region
 
 		for i := range result.Values {
 			grouper.Add(namespace, tags, *result.Timestamps[i], *result.Label, *result.Values[i])
@@ -557,9 +530,8 @@ func (c *CloudWatch) aggregateMetrics(
 
 func init() {
 	inputs.Add("cloudwatch", func() telegraf.Input {
-		ttl, _ := time.ParseDuration("1hr")
 		return &CloudWatch{
-			CacheTTL:  internal.Duration{Duration: ttl},
+			CacheTTL:  internal.Duration{Duration: time.Hour},
 			RateLimit: 25,
 		}
 	})
@@ -584,13 +556,10 @@ type dimension struct {
 }
 
 // ctod converts cloudwatch dimensions to regular dimensions.
-func ctod(cDimensions []*cloudwatch.Dimension) *[]dimension {
-	dimensions := []dimension{}
+func ctod(cDimensions []*cloudwatch.Dimension) *map[string]string {
+	dimensions := map[string]string{}
 	for i := range cDimensions {
-		dimensions = append(dimensions, dimension{
-			name:  snakeCase(*cDimensions[i].Name),
-			value: *cDimensions[i].Value,
-		})
+		dimensions[snakeCase(*cDimensions[i].Name)] = *cDimensions[i].Value
 	}
 	return &dimensions
 }
@@ -604,15 +573,7 @@ func (c *CloudWatch) getDataInputs(dataQueries []*cloudwatch.MetricDataQuery) *c
 }
 
 // isValid checks the validity of the metric cache.
-func (c *metricCache) isValid() bool {
-	return c.metrics != nil && time.Since(c.fetched) < c.ttl
-}
-
-func (q *queryCache) isValid() bool {
-	return q.queries != nil && time.Since(q.built) < q.ttl
-}
-
-func (f *filteredCache) isValid() bool {
+func (f *metricCache) isValid() bool {
 	return f.metrics != nil && time.Since(f.built) < f.ttl
 }
 
