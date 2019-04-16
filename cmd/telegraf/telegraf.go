@@ -349,7 +349,7 @@ func main() {
 		log.Println("Telegraf version already configured to: " + internal.Version())
 	}
 
-	if runtime.GOOS == "windows" && !(*fRunAsConsole) {
+	if runtime.GOOS == "windows" && windowsRunAsService() {
 		svcConfig := &service.Config{
 			Name:        *fServiceName,
 			DisplayName: "Telegraf Data Collector Service",
@@ -398,4 +398,17 @@ func main() {
 			processorFilters,
 		)
 	}
+}
+
+// Return true if Telegraf should create a Windows service.
+func windowsRunAsService() bool {
+	if *fService != "" {
+		return true
+	}
+
+	if *fRunAsConsole {
+		return false
+	}
+
+	return !service.Interactive()
 }

@@ -43,17 +43,11 @@ func (f *File) Connect() error {
 		if file == "stdout" {
 			f.writers = append(f.writers, os.Stdout)
 		} else {
-			var of *os.File
-			var err error
-			if _, err := os.Stat(file); os.IsNotExist(err) {
-				of, err = os.Create(file)
-			} else {
-				of, err = os.OpenFile(file, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-			}
-
+			of, err := os.OpenFile(file, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend|0644)
 			if err != nil {
 				return err
 			}
+
 			f.writers = append(f.writers, of)
 			f.closers = append(f.closers, of)
 		}
@@ -62,16 +56,14 @@ func (f *File) Connect() error {
 }
 
 func (f *File) Close() error {
-	var errS string
+	var err error
 	for _, c := range f.closers {
-		if err := c.Close(); err != nil {
-			errS += err.Error() + "\n"
+		errClose := c.Close()
+		if errClose != nil {
+			err = errClose
 		}
 	}
-	if errS != "" {
-		return fmt.Errorf(errS)
-	}
-	return nil
+	return err
 }
 
 func (f *File) SampleConfig() string {

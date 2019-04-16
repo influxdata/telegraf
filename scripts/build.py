@@ -18,6 +18,8 @@ import argparse
 
 # Packaging variables
 PACKAGE_NAME = "telegraf"
+USER = "telegraf"
+GROUP = "telegraf"
 INSTALL_ROOT_DIR = "/usr/bin"
 LOG_DIR = "/var/log/telegraf"
 SCRIPT_DIR = "/usr/lib/telegraf/scripts"
@@ -66,6 +68,7 @@ fpm_common_args = "-f -s dir --log error \
  --before-install {} \
  --after-remove {} \
  --before-remove {} \
+ --rpm-attr 755,{},{}:{} \
  --description \"{}\"".format(
     VENDOR,
     PACKAGE_URL,
@@ -77,6 +80,7 @@ fpm_common_args = "-f -s dir --log error \
     PREINST_SCRIPT,
     POSTREMOVE_SCRIPT,
     PREREMOVE_SCRIPT,
+    USER, GROUP, LOG_DIR,
     DESCRIPTION)
 
 targets = {
@@ -647,7 +651,7 @@ def package(build_output, pkg_name, version, nightly=False, iteration=1, static=
                             package_build_root,
                             current_location)
                         if package_type == "rpm":
-                            fpm_command += "--depends coreutils --depends shadow-utils --rpm-posttrans {}".format(POSTINST_SCRIPT)
+                            fpm_command += "--directories /var/log/telegraf --directories /etc/telegraf --depends coreutils --depends shadow-utils --rpm-posttrans {}".format(POSTINST_SCRIPT)
                         out = run(fpm_command, shell=True)
                         matches = re.search(':path=>"(.*)"', out)
                         outfile = None
