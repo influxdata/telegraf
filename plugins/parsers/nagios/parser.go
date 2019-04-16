@@ -1,16 +1,77 @@
 package nagios
 
 import (
+	"bufio"
+	"bytes"
 	"errors"
+	"fmt"
 	"log"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/metric"
 )
+
+// getExitCode get the exit code from an error value which is the result
+// of running a command through exec package api.
+func getExitCode(err error) (int, error) {
+	if err == nil {
+		return 0, nil
+	}
+
+	ee, ok := err.(*exec.ExitError)
+	if !ok {
+		// If it is not an *exec.ExitError, then it must be
+		// an io error, but docs do not say anything about the
+		// exit code in this case.
+		return 0, errors.New("expected *exec.ExitError")
+	}
+
+	ws, ok := ee.Sys().(syscall.WaitStatus)
+	if !ok {
+		return 0, errors.New("expected syscall.WaitStatus")
+	}
+
+	return ws.ExitStatus(), nil
+}
+
+// TryAddState attempts to add a state derived from the runErr.
+// If any error occurs, it is guaranteed to be returned along with
+// the initial metric slice.
+func TryAddState(runErr error, metrics []telegraf.Metric) ([]telegraf.Metric, error) {
+	state, err := getExitCode(runErr)
+	if err != nil {
+		return metrics, fmt.Errorf("exec: get exit code: %s", err)
+	}
+
+	for _, m := range metrics {
+		if m.Name() == "nagios_state" {
+			m.AddField("state", state)
+			return metrics, nil
+		}
+	}
+
+	var ts time.Time
+	if len(metrics) != 0 {
+		ts = metrics[0].Time()
+	} else {
+		ts = time.Now().UTC()
+	}
+	f := map[string]interface{}{
+		"state": state,
+	}
+	m, err := metric.New("nagios_state", nil, f, ts)
+	if err != nil {
+		return metrics, err
+	}
+	metrics = append(metrics, m)
+	return metrics, nil
+}
 
 type NagiosParser struct {
 	MetricName  string
@@ -34,27 +95,88 @@ func (p *NagiosParser) SetDefaultTags(tags map[string]string) {
 }
 
 func (p *NagiosParser) Parse(buf []byte) ([]telegraf.Metric, error) {
+	ts := time.Now().UTC()
+
+	s := bufio.NewScanner(bytes.NewReader(buf))
+
+	var msg bytes.Buffer
+	var longmsg bytes.Buffer
+
 	metrics := make([]telegraf.Metric, 0)
-	lines := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
-	for _, line := range lines {
-		data_splitted := strings.Split(line, "|")
-
-		if len(data_splitted) != 2 {
-			// got human readable output only or bad line
-			continue
-		}
-		m, err := parsePerfData(data_splitted[1])
+	// Scan the first line.
+	if !s.Scan() && s.Err() != nil {
+		return nil, s.Err()
+	}
+	parts := bytes.Split(s.Bytes(), []byte{'|'})
+	switch len(parts) {
+	case 2:
+		ms, err := parsePerfData(string(parts[1]), ts)
 		if err != nil {
 			log.Printf("E! [parser.nagios] failed to parse performance data: %s\n", err.Error())
-			continue
 		}
-		metrics = append(metrics, m...)
+		metrics = append(metrics, ms...)
+		fallthrough
+	case 1:
+		msg.Write(bytes.TrimSpace(parts[0]))
+	default:
+		return nil, errors.New("illegal output format")
 	}
+
+	// Read long output.
+	for s.Scan() {
+		if bytes.Contains(s.Bytes(), []byte{'|'}) {
+			parts := bytes.Split(s.Bytes(), []byte{'|'})
+			if longmsg.Len() != 0 {
+				longmsg.WriteByte('\n')
+			}
+			longmsg.Write(bytes.TrimSpace(parts[0]))
+
+			ms, err := parsePerfData(string(parts[1]), ts)
+			if err != nil {
+				log.Printf("E! [parser.nagios] failed to parse performance data: %s\n", err.Error())
+			}
+			metrics = append(metrics, ms...)
+			break
+		}
+		if longmsg.Len() != 0 {
+			longmsg.WriteByte('\n')
+		}
+		longmsg.Write(bytes.TrimSpace((s.Bytes())))
+	}
+
+	// Parse extra performance data.
+	for s.Scan() {
+		ms, err := parsePerfData(s.Text(), ts)
+		if err != nil {
+			log.Printf("E! [parser.nagios] failed to parse performance data: %s\n", err.Error())
+		}
+		metrics = append(metrics, ms...)
+	}
+
+	if s.Err() != nil {
+		log.Printf("D! [parser.nagios] unexpected io error: %s\n", s.Err())
+	}
+
+	// Create nagios state.
+	fields := map[string]interface{}{
+		"service_output": msg.String(),
+	}
+	if longmsg.Len() != 0 {
+		fields["long_service_output"] = longmsg.String()
+	}
+
+	m, err := metric.New("nagios_state", nil, fields, ts)
+	if err == nil {
+		metrics = append(metrics, m)
+	} else {
+		log.Printf("E! [parser.nagios] failed to add nagios_state: %s\n", err)
+	}
+
 	return metrics, nil
 }
 
-func parsePerfData(perfdatas string) ([]telegraf.Metric, error) {
+func parsePerfData(perfdatas string, timestamp time.Time) ([]telegraf.Metric, error) {
 	metrics := make([]telegraf.Metric, 0)
 
 	for _, unParsedPerf := range perfSplitRegExp.FindAllString(perfdatas, -1) {
@@ -125,7 +247,7 @@ func parsePerfData(perfdatas string) ([]telegraf.Metric, error) {
 		}
 
 		// Create metric
-		metric, err := metric.New("nagios", tags, fields, time.Now().UTC())
+		metric, err := metric.New("nagios", tags, fields, timestamp)
 		if err != nil {
 			return nil, err
 		}
