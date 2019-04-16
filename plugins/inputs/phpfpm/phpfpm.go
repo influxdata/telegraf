@@ -115,8 +115,7 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 			return err
 		}
 		tr := &http.Transport{
-			ResponseHeaderTimeout: g.ResponseTimeout.Duration,
-			TLSClientConfig:       tlsCfg,
+			TLSClientConfig: tlsCfg,
 		}
 		g.client = &http.Client{
 			Transport: tr,
