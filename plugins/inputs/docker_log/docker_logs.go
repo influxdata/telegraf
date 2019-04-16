@@ -195,10 +195,10 @@ func (d *DockerLogs) containerListUpdate(acc telegraf.Accumulator) error {
 			defer d.wg.Done()
 			err := d.getContainerLogs(c, acc)
 			if err != nil {
-				d.removeFromContainerList(c.ID)
 				log.Printf("%s : %s ", ERR_PREFIX, err.Error())
-				return
 			}
+			d.removeFromContainerList(c.ID)
+			return
 		}(container)
 	}
 	return nil
@@ -208,6 +208,11 @@ func (d *DockerLogs) getContainerLogs(
 	container types.Container,
 	acc telegraf.Accumulator,
 ) error {
+	c, err := d.client.ContainerInspect(context.Background(), container.ID)
+	if err != nil {
+		log.Printf("%s : %s", ERR_PREFIX, err.Error())
+		return err
+	}
 	logOptions := types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
@@ -239,12 +244,38 @@ func (d *DockerLogs) getContainerLogs(
 			tags[k] = label
 		}
 	}
-	_, err = pushLogs(acc, tags, logReader)
+	if c.Config.Tty {
+		_, err = pushTtyLogs(acc, tags, logReader)
+	} else {
+		_, err = pushLogs(acc, tags, logReader)
+	}
 	if err != nil {
 		log.Printf("%s : %s", ERR_PREFIX, err.Error())
 		return err
 	}
 	return nil
+}
+func pushTtyLogs(acc telegraf.Accumulator, tags map[string]string, src io.Reader) (written int64, err error) {
+	tags["logType"] = "unknown" //in tty mode we wont be able to differentiate b/w stdout and stderr hence unknown
+	fields := map[string]interface{}{}
+	data := make([]byte, LOG_BYTES_MAX)
+	for {
+		num, err := src.Read(data)
+		if err != nil {
+			if err == io.EOF {
+				written += int64(num)
+				fields["log"] = data[:num]
+				acc.AddFields("docker_log", fields, tags)
+				return written, nil
+			}
+			return written, err
+		}
+		written += int64(num)
+		if len(data) > 0 {
+			fields["log"] = data[:num]
+			acc.AddFields("docker_log", fields, tags)
+		}
+	}
 }
 
 /* Inspired from https://github.com/moby/moby/blob/master/pkg/stdcopy/stdcopy.go */

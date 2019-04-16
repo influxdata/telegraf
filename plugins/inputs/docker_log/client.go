@@ -20,6 +20,7 @@ var (
 type Client interface {
 	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
 	ContainerLogs(ctx context.Context, containerID string, options types.ContainerLogsOptions) (io.ReadCloser, error)
+	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
 }
 
 func NewEnvClient() (Client, error) {
@@ -60,4 +61,7 @@ func (c *SocketClient) ContainerList(ctx context.Context, options types.Containe
 
 func (c *SocketClient) ContainerLogs(ctx context.Context, containerID string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
 	return c.client.ContainerLogs(ctx, containerID, options)
+}
+func (c *SocketClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+	return c.client.ContainerInspect(ctx, containerID)
 }
