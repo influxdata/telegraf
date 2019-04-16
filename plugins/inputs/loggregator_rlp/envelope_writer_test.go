@@ -98,8 +98,7 @@ func TestRemovesTagsWithLeadingDoubleUnderscore(t *testing.T) {
 func TestTimersTransformsToGauges_CalculatesDifferenceBetweenStartAndStop(t *testing.T) {
 	tc := setup(t)
 
-	now := time.Now()
-	tc.writer.Write(buildHttpTimerEnvelope(now))
+	tc.writer.Write(buildHttpTimerEnvelope(time.Now().Add(-time.Hour)))
 	metric := tc.nextMetric()
 
 	tc.Expect(metric.Measurement).To(Equal("http"))
@@ -111,7 +110,9 @@ func TestTimersTransformsToGauges_CalculatesDifferenceBetweenStartAndStop(t *tes
 		"job":         "job_value",
 		"status_code": "201",
 	}))
-	tc.Expect(metric.Time).To(BeTemporally("==", now))
+
+	// ensure time is set to now and not envelope time otherwise aggregator will drop the metric
+	tc.Expect(metric.Time).To(BeTemporally("~", time.Now(), time.Second))
 }
 
 func TestTimersTransformsToGauges_DropsExtraTags(t *testing.T) {

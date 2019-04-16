@@ -159,7 +159,7 @@ func (w *EnvelopeWriter) writeTimer(env *loggregator_v2.Envelope) {
 			"gauge": difference,
 		},
 		buildTimerTags(env),
-		time.Unix(0, env.GetTimestamp()),
+		time.Now(),
 	)
 }
 
