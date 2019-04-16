@@ -46,6 +46,7 @@ var (
 	}
 )
 
+// collectVsan is the entry point for vsan metrics collection
 func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc telegraf.Accumulator) error {
 	if !versionSupportsVsan(e.apiVersion) {
 		log.Printf("I! [inputs.vsan]: Minimum API Version 5.5 required for vSAN. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
@@ -75,6 +76,7 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 	return nil
 }
 
+// collectVsanPerCluster is called by collectVsan
 func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef objectRef, client *vim25.Client, metrics []string, acc telegraf.Accumulator) {
 	// 1. Construct a map for cmmds
 	cluster := object.NewClusterComputeResource(client, clusterRef.ref)
@@ -99,6 +101,7 @@ func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef objectR
 	}
 }
 
+// getVsanPerfMetadata returns a string list of the performance entity types that will be queried.
 func (e *Endpoint) getVsanPerfMetadata(ctx context.Context, client *vim25.Client, res *resourceKind) []string {
 	vsanClient := client.NewServiceClient(vsanPath, vsanNamespace)
 	entityRes, err := vsanmethods.VsanPerfGetSupportedEntityTypes(ctx, vsanClient,
@@ -122,6 +125,7 @@ func (e *Endpoint) getVsanPerfMetadata(ctx context.Context, client *vim25.Client
 	return metrics
 }
 
+// getCmmdsMap returns a map which maps a uuid to a CmmdsEntity
 func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.ClusterComputeResource) (map[string]CmmdsEntity, error) {
 	hosts, err := clusterObj.Hosts(ctx)
 	if err != nil {
@@ -171,6 +175,7 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 	return cmmdsMap, nil
 }
 
+// queryPerformance adds performance metrics to telegraf accumulator
 func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client, clusterRef objectRef, metrics []string, cmmds map[string]CmmdsEntity, acc telegraf.Accumulator) error {
 	end := time.Now().UTC()
 	start, ok := e.hwMarks.Get(hwMarksKey)
@@ -250,6 +255,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 	return nil
 }
 
+// queryDiskUsage adds 'FreeCapacityB' and 'TotalCapacityB' metrics to telegraf accumulator
 func (e *Endpoint) queryDiskUsage(ctx context.Context, vsanClient *soap.Client, clusterRef objectRef, acc telegraf.Accumulator) error {
 	resp, err := vsanmethods.VsanQuerySpaceUsage(ctx, vsanClient,
 		&vsantypes.VsanQuerySpaceUsage{
@@ -267,6 +273,7 @@ func (e *Endpoint) queryDiskUsage(ctx context.Context, vsanClient *soap.Client, 
 	return nil
 }
 
+// queryDiskUsage adds 'OverallHealth' metric to telegraf accumulator
 func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Client, clusterRef objectRef, acc telegraf.Accumulator) error {
 	fetchFromCache := true
 	resp, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient,
@@ -296,6 +303,7 @@ func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 	return nil
 }
 
+// populateClusterTags takes in a tag map, makes a copy, populates cluster related tags and returns the copy.
 func populateClusterTags(tags map[string]string, clusterRef objectRef, vcenter string) map[string]string {
 	newTags := make(map[string]string)
 	// deep copy
@@ -310,6 +318,7 @@ func populateClusterTags(tags map[string]string, clusterRef objectRef, vcenter s
 	return newTags
 }
 
+// populateCMMDSTags takes in a tag map, makes a copy, adds more tags using cmmds map and returns the copy.
 func populateCMMDSTags(tags map[string]string, entityName string, uuid string, cmmds map[string]CmmdsEntity) map[string]string {
 	newTags := make(map[string]string)
 	// deep copy
@@ -369,6 +378,7 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 	return newTags
 }
 
+// versionSupportsVsan returns if vsan is supported for a given version, that is version >= 5.5.
 func versionSupportsVsan(version string) bool {
 	v := strings.Split(version, ".")
 	major, err := strconv.Atoi(v[0])
