@@ -467,7 +467,15 @@ func (c *CloudWatch) getDataQueries(filteredMetrics []filteredMetric) ([]*cloudw
 		return nil, errors.New("no metrics found to collect")
 	}
 
-	c.metricCache.queries = dataQueries
+	if c.metricCache == nil {
+		c.metricCache = &metricCache{
+			queries: dataQueries,
+			built:   time.Now(),
+			ttl:     c.CacheTTL.Duration,
+		}
+	} else {
+		c.metricCache.queries = dataQueries
+	}
 
 	return dataQueries, nil
 }
