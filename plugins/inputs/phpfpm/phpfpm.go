@@ -37,8 +37,8 @@ type metric map[string]int64
 type poolStat map[string]metric
 
 type phpfpm struct {
-	Urls            []string
-	ResponseTimeout internal.Duration
+	Urls    []string
+	Timeout internal.Duration
 	tls.ClientConfig
 
 	client *http.Client
@@ -66,8 +66,8 @@ var sampleConfig = `
   ## urls = ["http://192.168.1.20/status", "/tmp/fpm.sock"]
   urls = ["http://localhost/status"]
 
-  ## Set response timeout for http[s] urls (default 5 seconds)
-  # response_timeout = "5s"
+  ## Duration allowed to complete HTTP requests.
+  # timeout = "5s"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
@@ -119,7 +119,7 @@ func (g *phpfpm) gatherServer(addr string, acc telegraf.Accumulator) error {
 		}
 		g.client = &http.Client{
 			Transport: tr,
-			Timeout:   g.ResponseTimeout.Duration,
+			Timeout:   g.Timeout.Duration,
 		}
 	}
 

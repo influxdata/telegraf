@@ -28,8 +28,8 @@ Get phpfpm stats using either HTTP status page or fpm socket.
   ## urls = ["http://192.168.1.20/status", "/tmp/fpm.sock"]
   urls = ["http://localhost/status"]
 
-  ## Set response timeout for http[s] urls (default 5 seconds)
-  # response_timeout = "5s"
+  ## Duration allowed to complete HTTP requests.
+  # timeout = "5s"
 
   ## Optional TLS Config
   # tls_ca = "/etc/telegraf/ca.pem"
