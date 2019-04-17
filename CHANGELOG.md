@@ -25,6 +25,7 @@
 - [#5697](https://github.com/influxdata/telegraf/pull/5697): Add namespace restriction to prometheus input plugin.
 - [#5681](https://github.com/influxdata/telegraf/pull/5681): Add cmdline tag to procstat input.
 - [#5704](https://github.com/influxdata/telegraf/pull/5704): Support verbose query param in ping endpoint of influxdb_listener.
+- [#5713](https://github.com/influxdata/telegraf/pull/5713): Enhance HTTP connection options for phpfpm input plugin.
 
 #### Bugfixes
 
