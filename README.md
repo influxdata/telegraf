@@ -31,6 +31,24 @@ You can try Telegraf right in your browser in the [Telegraf playground](https://
   ## queue_dir = Sprintf("%s%s%s%s%d", os.TempDir(), string(os.PathSeparator),
   ##                     "logzio-buffer", string(os.PathSeparator), time.Now().UnixNano())
 
+Telegraf is an agent for collecting, processing, aggregating, and writing metrics.
+
+Design goals are to have a minimal memory footprint with a plugin system so
+that developers in the community can easily add support for collecting
+metrics.
+
+Telegraf is plugin-driven and has the concept of 4 distinct plugin types:
+
+1. [Input Plugins](#input-plugins) collect metrics from the system, services, or 3rd party APIs
+2. [Processor Plugins](#processor-plugins) transform, decorate, and/or filter metrics
+3. [Aggregator Plugins](#aggregator-plugins) create aggregate metrics (e.g. mean, min, max, quantiles, etc.)
+4. [Output Plugins](#output-plugins) write metrics to various destinations
+
+New plugins are designed to be easy to contribute, we'll eagerly accept pull
+requests and will manage the set of plugins that Telegraf supports.
+
+## Contributing
+
 There are many ways to contribute:
 - Fix and [report bugs](https://github.com/influxdata/telegraf/issues/new)
 - [Improve documentation](https://github.com/influxdata/telegraf/issues?q=is%3Aopen+label%3Adocumentation)
@@ -71,6 +89,17 @@ Telegraf requires Go version 1.13 or newer, the Makefile requires GNU make.
 3. Run `make` from the source directory
    ```
    cd ~/src/telegraf
+Telegraf requires golang version 1.9 or newer, the Makefile requires GNU make.
+
+1. [Install Go](https://golang.org/doc/install) >=1.9 (1.11 recommended)
+2. [Install dep](https://golang.github.io/dep/docs/installation.html) ==v0.5.0
+3. Download Telegraf source:
+   ```
+   go get -d github.com/influxdata/telegraf
+   ```
+4. Run make from the source directory
+   ```
+   cd "$HOME/go/src/github.com/influxdata/telegraf"
    make
    ```
 
@@ -128,6 +157,10 @@ telegraf --section-filter agent:inputs:outputs --input-filter cpu --output-filte
 ```
 
 #### Run a single telegraf collection, outputting metrics to stdout:
+telegraf --input-filter cpu --output-filter influxdb config
+```
+
+#### Run a single telegraf collection, outputing metrics to stdout:
 
 ```
 telegraf --config telegraf.conf --test
@@ -139,6 +172,7 @@ telegraf --config telegraf.conf --test
 
   ## Use your listener URL for your Logz.io account region.
   # url = "https://listener.logz.io:8071"
+
 ```
 telegraf --config telegraf.conf
 ```
@@ -171,6 +205,10 @@ For documentation on the latest development code see the [documentation index][d
 * [bcache](./plugins/inputs/bcache)
 * [beanstalkd](./plugins/inputs/beanstalkd)
 * [bind](./plugins/inputs/bind)
+* [aurora](./plugins/inputs/aurora)
+* [aws cloudwatch](./plugins/inputs/cloudwatch)
+* [bcache](./plugins/inputs/bcache)
+* [beanstalkd](./plugins/inputs/beanstalkd)
 * [bond](./plugins/inputs/bond)
 * [burrow](./plugins/inputs/burrow)
 * [cassandra](./plugins/inputs/cassandra) (deprecated, use [jolokia2](./plugins/inputs/jolokia2))
@@ -202,6 +240,9 @@ For documentation on the latest development code see the [documentation index][d
 * [eventhub_consumer](./plugins/inputs/eventhub_consumer) (Azure Event Hubs \& Azure IoT Hub)
 * [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [execd](./plugins/inputs/execd) (generic executable "daemon" processes)
+* [dovecot](./plugins/inputs/dovecot)
+* [elasticsearch](./plugins/inputs/elasticsearch)
+* [exec](./plugins/inputs/exec) (generic executable plugin, support JSON, influx, graphite and nagios)
 * [fail2ban](./plugins/inputs/fail2ban)
 * [fibaro](./plugins/inputs/fibaro)
 * [file](./plugins/inputs/file)
@@ -211,6 +252,7 @@ For documentation on the latest development code see the [documentation index][d
 * [fluentd](./plugins/inputs/fluentd)
 * [github](./plugins/inputs/github)
 * [gnmi](./plugins/inputs/gnmi)
+* [fluentd](./plugins/inputs/fluentd)
 * [graylog](./plugins/inputs/graylog)
 * [haproxy](./plugins/inputs/haproxy)
 * [hddtemp](./plugins/inputs/hddtemp)
@@ -236,6 +278,7 @@ For documentation on the latest development code see the [documentation index][d
 * [kafka_consumer](./plugins/inputs/kafka_consumer)
 * [kapacitor](./plugins/inputs/kapacitor)
 * [aws kinesis](./plugins/inputs/kinesis_consumer) (Amazon Kinesis)
+* [kinesis](./plugins/inputs/kinesis_consumer)
 * [kernel](./plugins/inputs/kernel)
 * [kernel_vmstat](./plugins/inputs/kernel_vmstat)
 * [kibana](./plugins/inputs/kibana)
@@ -249,6 +292,11 @@ For documentation on the latest development code see the [documentation index][d
 * [lustre2](./plugins/inputs/lustre2)
 * [mailchimp](./plugins/inputs/mailchimp)
 * [marklogic](./plugins/inputs/marklogic)
+* [leofs](./plugins/inputs/leofs)
+* [linux_sysctl_fs](./plugins/inputs/linux_sysctl_fs)
+* [logparser](./plugins/inputs/logparser)
+* [lustre2](./plugins/inputs/lustre2)
+* [mailchimp](./plugins/inputs/mailchimp)
 * [mcrouter](./plugins/inputs/mcrouter)
 * [memcached](./plugins/inputs/memcached)
 * [mem](./plugins/inputs/mem)
@@ -257,6 +305,7 @@ For documentation on the latest development code see the [documentation index][d
 * [modbus](./plugins/inputs/modbus)
 * [mongodb](./plugins/inputs/mongodb)
 * [monit](./plugins/inputs/monit)
+* [mongodb](./plugins/inputs/mongodb)
 * [mqtt_consumer](./plugins/inputs/mqtt_consumer)
 * [multifile](./plugins/inputs/multifile)
 * [mysql](./plugins/inputs/mysql)
@@ -281,6 +330,7 @@ For documentation on the latest development code see the [documentation index][d
 * [openntpd](./plugins/inputs/openntpd)
 * [opensmtpd](./plugins/inputs/opensmtpd)
 * [openweathermap](./plugins/inputs/openweathermap)
+* [opensmtpd](./plugins/inputs/opensmtpd)
 * [pf](./plugins/inputs/pf)
 * [pgbouncer](./plugins/inputs/pgbouncer)
 * [phpfpm](./plugins/inputs/phpfpm)
@@ -319,6 +369,17 @@ For documentation on the latest development code see the [documentation index][d
 * [syslog](./plugins/inputs/syslog)
 * [sysstat](./plugins/inputs/sysstat)
 * [systemd_units](./plugins/inputs/systemd_units)
+* [smart](./plugins/inputs/smart)
+* [snmp_legacy](./plugins/inputs/snmp_legacy)
+* [snmp](./plugins/inputs/snmp)
+* [socket_listener](./plugins/inputs/socket_listener)
+* [solr](./plugins/inputs/solr)
+* [sql server](./plugins/inputs/sqlserver) (microsoft)
+* [stackdriver](./plugins/inputs/stackdriver)
+* [statsd](./plugins/inputs/statsd)
+* [swap](./plugins/inputs/swap)
+* [syslog](./plugins/inputs/syslog)
+* [sysstat](./plugins/inputs/sysstat)
 * [system](./plugins/inputs/system)
 * [tail](./plugins/inputs/tail)
 * [temp](./plugins/inputs/temp)
@@ -414,6 +475,30 @@ For documentation on the latest development code see the [documentation index][d
 
 * [influxdb](./plugins/outputs/influxdb) (InfluxDB 1.x)
 * [influxdb_v2](./plugins/outputs/influxdb_v2) ([InfluxDB 2.x](https://github.com/influxdata/influxdb))
+
+## Processor Plugins
+
+* [converter](./plugins/processors/converter)
+* [enum](./plugins/processors/enum)
+* [override](./plugins/processors/override)
+* [parser](./plugins/processors/parser)
+* [printer](./plugins/processors/printer)
+* [regex](./plugins/processors/regex)
+* [rename](./plugins/processors/rename)
+* [strings](./plugins/processors/strings)
+* [topk](./plugins/processors/topk)
+
+## Aggregator Plugins
+
+* [basicstats](./plugins/aggregators/basicstats)
+* [minmax](./plugins/aggregators/minmax)
+* [histogram](./plugins/aggregators/histogram)
+* [valuecounter](./plugins/aggregators/valuecounter)
+
+## Output Plugins
+
+* [influxdb](./plugins/outputs/influxdb) (InfluxDB 1.x)
+* [influxdb_v2](./plugins/outputs/influxdb_v2) ([InfluxDB 2.x](https://github.com/influxdata/platform))
 * [amon](./plugins/outputs/amon)
 * [amqp](./plugins/outputs/amqp) (rabbitmq)
 * [application_insights](./plugins/outputs/application_insights)
@@ -432,6 +517,10 @@ For documentation on the latest development code see the [documentation index][d
 * [graphite](./plugins/outputs/graphite)
 * [graylog](./plugins/outputs/graylog)
 * [health](./plugins/outputs/health)
+* [elasticsearch](./plugins/outputs/elasticsearch)
+* [file](./plugins/outputs/file)
+* [graphite](./plugins/outputs/graphite)
+* [graylog](./plugins/outputs/graylog)
 * [http](./plugins/outputs/http)
 * [instrumental](./plugins/outputs/instrumental)
 * [kafka](./plugins/outputs/kafka)
@@ -458,3 +547,7 @@ For documentation on the latest development code see the [documentation index][d
 * `drain_duration`: Time to sleep between sending attempts.
 * `queue_dir`: Metrics disk path. All the unsent metrics are saved to the disk in this location.
 * `url`: Logz.io listener URL.
+* [stackdriver](./plugins/outputs/stackdriver)
+* [tcp](./plugins/outputs/socket_writer)
+* [udp](./plugins/outputs/socket_writer)
+* [wavefront](./plugins/outputs/wavefront)
