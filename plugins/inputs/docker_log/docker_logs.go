@@ -183,6 +183,7 @@ func (d *DockerLogs) containerListUpdate(acc telegraf.Accumulator) error {
 	}
 	containers, err := d.client.ContainerList(ctx, d.opts)
 	if err != nil {
+		log.Printf("%s : %s ", ERR_PREFIX, err.Error())
 		return err
 	}
 	for _, container := range containers {
@@ -264,7 +265,7 @@ func pushTtyLogs(acc telegraf.Accumulator, tags map[string]string, src io.Reader
 		if err != nil {
 			if err == io.EOF {
 				written += int64(num)
-				fields["log"] = data[:num]
+				fields["log"] = data[1:num]
 				acc.AddFields("docker_log", fields, tags)
 				return written, nil
 			}
@@ -272,7 +273,7 @@ func pushTtyLogs(acc telegraf.Accumulator, tags map[string]string, src io.Reader
 		}
 		written += int64(num)
 		if len(data) > 0 {
-			fields["log"] = data[:num]
+			fields["log"] = data[1:num]
 			acc.AddFields("docker_log", fields, tags)
 		}
 	}
@@ -355,7 +356,7 @@ func pushLogs(acc telegraf.Accumulator, tags map[string]string, src io.Reader) (
 
 		tags["logType"] = logType
 		fields := map[string]interface{}{}
-		fields["log"] = buf[stdWriterPrefixLen : frameSize+stdWriterPrefixLen]
+		fields["log"] = buf[stdWriterPrefixLen+1 : frameSize+stdWriterPrefixLen]
 		acc.AddFields("docker_log", fields, tags)
 		written += int64(frameSize)
 
@@ -378,10 +379,10 @@ func (d *DockerLogs) Start(acc telegraf.Accumulator) error {
 		if err != nil {
 			return err
 		}
-
 		c, err = d.newClient(d.Endpoint, tlsConfig)
 	}
 	if err != nil {
+		log.Printf("%s : %s", ERR_PREFIX, err.Error())
 		return err
 	}
 	d.client = c
