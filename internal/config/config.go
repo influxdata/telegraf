@@ -234,10 +234,7 @@ var header = `# Telegraf Configuration
   ## This controls the size of writes that Telegraf sends to output plugins.
   metric_batch_size = 1000
 
-  ## For failed writes, telegraf will cache metric_buffer_limit metrics for each
-  ## output, and will flush this buffer on a successful write. Oldest metrics
-  ## are dropped first when this buffer fills.
-  ## This buffer only fills when writes fail to output plugin(s).
+  ## Maximum number of unwritten metrics per output.
   metric_buffer_limit = 10000
 
   ## Collection jitter is used to jitter the collection by a random amount.
