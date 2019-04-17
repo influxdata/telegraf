@@ -8,12 +8,13 @@ and number of users logged in. It is similar to the unix `uptime` command.
 ```toml
 # Read metrics about system load & uptime
 [[inputs.system]]
-  # no configuration
+  ## Print out when utmp is not available for n_users
+  # warn_on_missing = true
 ```
 #### Permissions:
 
 The `n_users` field requires read access to `/var/run/utmp`, and may require
-the `telegraf` user to be added to the `utmp` group on some systems.
+the `telegraf` user to be added to the `utmp` group on some systems. If this file does not exist `n_users` will be skipped.
 
 ### Metrics:
 
