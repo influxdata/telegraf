@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewLogzioOutput(t *testing.T) {
-	l := NewLogzioOutput()
+	l := CreateDefultLogizoOutput()
 	require.Equal(t, l.CheckDiskSpace, defaultLogzioCheckDiskSpace)
 	require.Equal(t, l.DiskThreshold, defaultLogzioDiskThreshold)
 	require.Equal(t, l.DrainDuration, defaultLogzioDrainDuration)
@@ -17,7 +17,7 @@ func TestNewLogzioOutput(t *testing.T) {
 }
 
 func TestConnectAndWrite(t *testing.T) {
-	l := NewLogzioOutput()
+	l := CreateDefultLogizoOutput()
 	l.Token = "123456789"
 
 	err := l.Connect()
@@ -29,7 +29,7 @@ func TestConnectAndWrite(t *testing.T) {
 }
 
 func TestLogzioConnectWitoutToken(t *testing.T) {
-	l := NewLogzioOutput()
+	l := CreateDefultLogizoOutput()
 	err := l.Connect()
 	require.Error(t, err)
 }
