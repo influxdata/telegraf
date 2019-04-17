@@ -60,7 +60,7 @@ type Logzio struct {
 	sender *lg.LogzioSender
 }
 
-func (l *Logzio) newLogzioSender() error {
+func (l *Logzio) initializeSender() error {
 	if l.Token == "" || l.Token == "your logz.io token" {
 		return fmt.Errorf("[logzio] token is required")
 	}
@@ -85,7 +85,7 @@ func (l *Logzio) newLogzioSender() error {
 	)
 
 	if err != nil {
-		return fmt.Errorf("[logzio] failed to create new logzio sender: %s", err)
+		return fmt.Errorf("[logzio] failed to create new logzio sender: %v", err)
 	}
 
 	log.Printf("I! [logzio] Successfuly created Logz.io sender: %s %s %s %d\n", l.URL, l.QueueDir,
@@ -96,7 +96,7 @@ func (l *Logzio) newLogzioSender() error {
 // Connect to the Output
 func (l *Logzio) Connect() error {
 	log.Printf("D! [logzio] Connecting to logz.io output...\n")
-	return l.newLogzioSender()
+	return l.initializeSender()
 }
 
 // Close any connections to the Output
@@ -140,14 +140,14 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 		}
 		err = l.sender.Send(serialized)
 		if err != nil {
-			return fmt.Errorf("E! [logzio] Failed to send metric: %s\n", err)
+			return fmt.Errorf("E! [logzio] Failed to send metric: %v\n", err)
 		}
 	}
 
 	return nil
 }
 
-func NewLogzioOutput() *Logzio {
+func CreateDefultLogizoOutput() *Logzio {
 	return &Logzio{
 		CheckDiskSpace: defaultLogzioCheckDiskSpace,
 		DiskThreshold:  defaultLogzioDiskThreshold,
@@ -160,6 +160,6 @@ func NewLogzioOutput() *Logzio {
 
 func init() {
 	outputs.Add("logzio", func() telegraf.Output {
-		return NewLogzioOutput()
+		return CreateDefultLogizoOutput()
 	})
 }
