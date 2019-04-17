@@ -188,6 +188,14 @@
   version = "v1.15.54"
 
 [[projects]]
+  digest = "1:d5df7148d5ce309f9d9cce9834a6ff96798d29dca942533c658465139ab5ba61"
+  name = "github.com/beeker1121/goque"
+  packages = ["."]
+  pruneopts = ""
+  revision = "e1e63ca63c14b41209e160f54c8e7669564eacc4"
+  version = "v2.0.1"
+
+[[projects]]
   branch = "master"
   digest = "1:c0bec5f9b98d0bc872ff5e834fac186b807b656683bd29cb82fb207a1513fabb"
   name = "github.com/beorn7/perks"
@@ -756,6 +764,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:6399f985518d976eeee91d08ce94d091a4eb3c3b063ad703e74d023dc83a20ab"
+  name = "github.com/logzio/logzio-go"
+  packages = ["."]
+  pruneopts = ""
+  revision = "1138f714b3b673ecb3afec265088f65d45479079"
+
+[[projects]]
+  branch = "master"
   digest = "1:7e9956922e349af0190afa0b6621befcd201072679d8e51a9047ff149f2afe93"
   name = "github.com/mailru/easyjson"
   packages = [
@@ -993,6 +1009,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:ed27c4a2ab13a1e84974ab5b8819a254e0359afe7ecef88fa8f44a7f4096b5a8"
+  name = "github.com/ricochet2200/go-disk-usage"
+  packages = ["du"]
+  pruneopts = ""
+  revision = "f0d1b743428fc09792f93233d9412f89f88fa2ab"
+
+[[projects]]
+  branch = "master"
   digest = "1:7fc2f428767a2521abc63f1a663d981f61610524275d6c0ea645defadd4e916f"
   name = "github.com/samuel/go-zookeeper"
   packages = ["zk"]
@@ -1075,6 +1099,27 @@
   pruneopts = ""
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
+
+[[projects]]
+  digest = "1:0a9834d471916f392c608d4f13225444d47b6b7a0378dce1aef683d83711179f"
+  name = "github.com/syndtr/goleveldb"
+  packages = [
+    "leveldb",
+    "leveldb/cache",
+    "leveldb/comparer",
+    "leveldb/errors",
+    "leveldb/filter",
+    "leveldb/iterator",
+    "leveldb/journal",
+    "leveldb/memdb",
+    "leveldb/opt",
+    "leveldb/storage",
+    "leveldb/table",
+    "leveldb/util",
+  ]
+  pruneopts = ""
+  revision = "9d007e481048296f09f59bd19bb7ae584563cd95"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:e139a0dfe24e723193005b291ed82a975041718cfcab9136aa6c9540df70a4ff"
@@ -1208,6 +1253,14 @@
   pruneopts = ""
   revision = "79993219becaa7e29e3b60cb67f5b8e82dee11d6"
   version = "v0.17.0"
+
+[[projects]]
+  digest = "1:74f86c458e82e1c4efbab95233e0cf51b7cc02dc03193be9f62cd81224e10401"
+  name = "go.uber.org/atomic"
+  packages = ["."]
+  pruneopts = ""
+  revision = "1ea20fb1cbb1cc08cbd0d913a96dead89aa18289"
+  version = "v1.3.2"
 
 [[projects]]
   branch = "master"
@@ -1601,6 +1654,7 @@
     "github.com/karrick/godirwalk",
     "github.com/kballard/go-shellquote",
     "github.com/kubernetes/apimachinery/pkg/api/resource",
+    "github.com/logzio/logzio-go",
     "github.com/matttproud/golang_protobuf_extensions/pbutil",
     "github.com/miekg/dns",
     "github.com/multiplay/go-ts3",
