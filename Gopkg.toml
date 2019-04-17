@@ -296,3 +296,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/cisco-ie/nx-telemetry-proto"
+
+[[constraint]]
+  name = "github.com/signalfx/golib"
+  version = "2.0.0"
