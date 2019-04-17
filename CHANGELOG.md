@@ -30,6 +30,7 @@
 #### Bugfixes
 
 - [#5631](https://github.com/influxdata/telegraf/pull/5631): Create Windows service only when specified or in service manager.
+- [#5730](https://github.com/influxdata/telegraf/pull/5730): Don't start telegraf when stale pidfile found.
 
 ## v1.10.3 [2019-04-16]
 
