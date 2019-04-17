@@ -3,6 +3,7 @@ package smart
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os/exec"
 	"path"
 	"regexp"
@@ -64,7 +65,7 @@ var sampleConfig = `
   ## On most platforms smartctl requires root access.
   ## Setting 'use_sudo' to true will make use of sudo to run smartctl.
   ## Sudo must be configured to to allow the telegraf user to run smartctl
-  ## with out password.
+  ## without a password.
   # use_sudo = false
   #
   ## Skip checking disks in this power mode. Defaults to
@@ -111,6 +112,7 @@ func (m *Smart) Gather(acc telegraf.Accumulator) error {
 			return err
 		}
 	}
+	log.Printf("D! [inputs.smart] devices: %+#v", devices)
 
 	m.getAttributes(acc, devices)
 	return nil
@@ -127,7 +129,6 @@ func sudo(sudo bool, command string, args ...string) *exec.Cmd {
 
 // Scan for S.M.A.R.T. devices
 func (m *Smart) scan() ([]string, error) {
-
 	cmd := sudo(m.UseSudo, m.Path, "--scan")
 	out, err := internal.CombinedOutputTimeout(cmd, time.Second*5)
 	if err != nil {
@@ -138,7 +139,10 @@ func (m *Smart) scan() ([]string, error) {
 	for _, line := range strings.Split(string(out), "\n") {
 		dev := strings.Split(line, " ")
 		if len(dev) > 1 && !excludedDev(m.Excludes, strings.TrimSpace(dev[0])) {
+			log.Printf("D! [inputs.smart] adding device: %+#v", dev)
 			devices = append(devices, strings.TrimSpace(dev[0]))
+		} else {
+			log.Printf("D! [inputs.smart] skipping device: %+#v", dev)
 		}
 	}
 	return devices, nil
@@ -158,7 +162,6 @@ func excludedDev(excludes []string, deviceLine string) bool {
 
 // Get info and attributes for each S.M.A.R.T. device
 func (m *Smart) getAttributes(acc telegraf.Accumulator, devices []string) {
-
 	var wg sync.WaitGroup
 	wg.Add(len(devices))
 
@@ -181,7 +184,6 @@ func exitStatus(err error) (int, error) {
 }
 
 func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, smartctl, nockeck, device string, wg *sync.WaitGroup) {
-
 	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
 	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nockeck, "--format=brief"}
@@ -202,6 +204,8 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, smartctl, no
 	device_tags["device"] = path.Base(device_node)
 	device_fields := make(map[string]interface{})
 	device_fields["exit_status"] = exitStatus
+
+	log.Printf("D! [inputs.smart] gatherDisk '%s' output: %+#v", device_node, outStr)
 
 	scanner := bufio.NewScanner(strings.NewReader(outStr))
 
