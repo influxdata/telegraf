@@ -15,20 +15,30 @@ import (
 	"github.com/shirou/gopsutil/load"
 )
 
-type SystemStats struct{}
+type SystemStats struct {
+	SkipUsers  bool
+	SkipUptime bool
+}
+
+var SystemsampleConfig = `
+
+## Uncomment to remove deprecated metrics.
+# fielddrop = ["uptime_format"]
+## Uncomment the following line to disable uptime collection
+# skip_uptime = false
+## Uncomment the following line to disable uptime collection
+# skip_users = false
+`
 
 func (_ *SystemStats) Description() string {
 	return "Read metrics about system load & uptime"
 }
 
 func (_ *SystemStats) SampleConfig() string {
-	return `
-  ## Uncomment to remove deprecated metrics.
-  # fielddrop = ["uptime_format"]
-`
+	return SystemsampleConfig
 }
 
-func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
+func (s *SystemStats) Gather(acc telegraf.Accumulator) error {
 	loadavg, err := load.Avg()
 	if err != nil && !strings.Contains(err.Error(), "not implemented") {
 		return err
@@ -41,27 +51,31 @@ func (_ *SystemStats) Gather(acc telegraf.Accumulator) error {
 		"n_cpus": runtime.NumCPU(),
 	}
 
-	users, err := host.Users()
-	if err == nil {
-		fields["n_users"] = len(users)
-	} else if !os.IsPermission(err) {
-		return err
+	if !s.SkipUsers {
+		users, err := host.Users()
+		if err == nil {
+			fields["n_users"] = len(users)
+		} else if !os.IsPermission(err) {
+			return err
+		}
 	}
 
 	now := time.Now()
 	acc.AddGauge("system", fields, nil, now)
 
-	uptime, err := host.Uptime()
-	if err != nil {
-		return err
-	}
+	if !s.SkipUptime {
+		uptime, err := host.Uptime()
+		if err != nil {
+			return err
+		}
 
-	acc.AddCounter("system", map[string]interface{}{
-		"uptime": uptime,
-	}, nil, now)
-	acc.AddFields("system", map[string]interface{}{
-		"uptime_format": formatUptime(uptime),
-	}, nil, now)
+		acc.AddCounter("system", map[string]interface{}{
+			"uptime": uptime,
+		}, nil, now)
+		acc.AddFields("system", map[string]interface{}{
+			"uptime_format": formatUptime(uptime),
+		}, nil, now)
+	}
 
 	return nil
 }

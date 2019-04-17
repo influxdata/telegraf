@@ -8,8 +8,12 @@ and number of users logged in. It is similar to the unix `uptime` command.
 ```toml
 # Read metrics about system load & uptime
 [[inputs.system]]
-  # no configuration
+  ## Uncomment the following line to disable uptime collection
+  # skip_uptime = true
+  ## Uncomment the following line to disable uptime collection
+  # skip_users = true
 ```
+
 #### Permissions:
 
 The `n_users` field requires read access to `/var/run/utmp`, and may require
