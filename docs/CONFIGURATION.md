@@ -112,10 +112,7 @@ The agent table configures Telegraf and the defaults used across all plugins.
   This controls the size of writes that Telegraf sends to output plugins.
 
 - **metric_buffer_limit**:
-  For failed writes, telegraf will cache metric_buffer_limit metrics for each
-  output, and will flush this buffer on a successful write. Oldest metrics
-  are dropped first when this buffer fills.
-  This buffer only fills when writes fail to output plugin(s).
+  Maximum number of unwritten metrics per output.
 
 - **collection_jitter**:
   Collection jitter is used to jitter the collection by a random [interval][].
