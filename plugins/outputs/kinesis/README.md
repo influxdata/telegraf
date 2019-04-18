@@ -30,7 +30,7 @@ will attempt to authenticate.
   streamname = "KinesisStreamName"
   aggregate_metrics = true
   # Either "gzip", "snappy"
-  compress_metrics_with = gzip
+  compress_metrics_with = "gzip"
   partition = { method = "random" }
   debug = true
 ```
