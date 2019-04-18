@@ -404,6 +404,14 @@
   version = "v1.2.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:ec95c1c49fbec27ab5383b9c47fae5c2fe1d97ac5b41d36d78e17588a44e9f3f"
+  name = "github.com/ghodss/yaml"
+  packages = ["."]
+  pruneopts = ""
+  revision = "25d852aebe32c875e9c044af3eef9c7dc6bc777f"
+
+[[projects]]
   digest = "1:858b7fe7b0f4bc7ef9953926828f2816ea52d01a88d72d1c45bc8c108f23c356"
   name = "github.com/go-ini/ini"
   packages = ["."]
@@ -517,6 +525,22 @@
   pruneopts = ""
   revision = "3af367b6b30c263d47e8895973edcca9a49cf029"
   version = "v0.2.0"
+
+[[projects]]
+  digest = "1:e38ad2825940d58bd8425be40bcd4211099d0c1988c158c35828197413b3cf85"
+  name = "github.com/google/go-github"
+  packages = ["github"]
+  pruneopts = ""
+  revision = "7462feb2032c2da9e3b85e9b04e6853a6e9e14ca"
+  version = "v24.0.1"
+
+[[projects]]
+  digest = "1:cea4aa2038169ee558bf507d5ea02c94ca85bcca28a4c7bb99fd59b31e43a686"
+  name = "github.com/google/go-querystring"
+  packages = ["query"]
+  pruneopts = ""
+  revision = "44c6ddd0a2342c386950e880b658017258da92fc"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:c1d7e883c50a26ea34019320d8ae40fad86c9e5d56e63a1ba2cb618cef43e986"
@@ -1201,6 +1225,7 @@
   ]
   pruneopts = ""
   revision = "a2144134853fc9a27a7b1e3eb4f19f1a76df13c9"
+  source = "https://github.com/golang/crypto.git"
 
 [[projects]]
   branch = "master"
@@ -1229,6 +1254,7 @@
   ]
   pruneopts = ""
   revision = "a680a1efc54dd51c040b3b5ce4939ea3cf2ea0d1"
+  source = "https://github.com/golang/net.git"
 
 [[projects]]
   branch = "master"
@@ -1244,6 +1270,7 @@
   ]
   pruneopts = ""
   revision = "d2e6202438beef2727060aa7cabdd924d92ebfd9"
+  source = "https://github.com/golang/oauth2.git"
 
 [[projects]]
   branch = "master"
@@ -1255,6 +1282,7 @@
   ]
   pruneopts = ""
   revision = "42b317875d0fa942474b76e1b46a6060d720ae6e"
+  source = "https://github.com/golang/sync.git"
 
 [[projects]]
   branch = "master"
@@ -1271,6 +1299,7 @@
   ]
   pruneopts = ""
   revision = "7c4c994c65f702f41ed7d6620a2cb34107576a77"
+  source = "https://github.com/golang/sys.git"
 
 [[projects]]
   digest = "1:5acd3512b047305d49e8763eef7ba423901e85d5dd2fd1e71778a0ea8de10bd4"
@@ -1305,6 +1334,7 @@
   ]
   pruneopts = ""
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
+  source = "https://github.com/golang/text.git"
   version = "v0.3.0"
 
 [[projects]]
@@ -1540,6 +1570,7 @@
     "github.com/ericchiang/k8s/apis/meta/v1",
     "github.com/ericchiang/k8s/apis/resource",
     "github.com/ericchiang/k8s/util/intstr",
+    "github.com/ghodss/yaml",
     "github.com/go-logfmt/logfmt",
     "github.com/go-redis/redis",
     "github.com/go-sql-driver/mysql",
@@ -1550,6 +1581,7 @@
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/golang/snappy",
     "github.com/google/go-cmp/cmp",
+    "github.com/google/go-github/github",
     "github.com/gorilla/mux",
     "github.com/harlow/kinesis-consumer",
     "github.com/harlow/kinesis-consumer/checkpoint/ddb",
