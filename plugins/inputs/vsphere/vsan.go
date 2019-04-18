@@ -62,7 +62,7 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 	vimClient := client.Client.Client
 	metrics := e.getVsanPerfMetadata(ctx, vimClient, res)
 	if err != nil {
-		log.Printf("D! [inputs.vsan]: Failed to get client: %s", err)
+		log.Printf("D! E! [inputs.vsphere][vSAN] Failed to get client: %s", err)
 		return err
 	}
 	// Iterate over all clusters, run a goroutine for each cluster
@@ -76,13 +76,13 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 	return nil
 }
 
-// collectVsanPerCluster is called by collectVsan
+// collectVsanPerCluster is called by goroutines in collectVsan
 func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef objectRef, client *vim25.Client, metrics []string, acc telegraf.Accumulator) {
 	// 1. Construct a map for cmmds
 	cluster := object.NewClusterComputeResource(client, clusterRef.ref)
 	cmmds, err := getCmmdsMap(ctx, client, cluster)
 	if err != nil {
-		log.Printf("E! [inputs.vsan]: Error while query cmmds data. Error: %s. Skipping", err)
+		log.Printf("E! E! [inputs.vsphere][vSAN]\tError while query cmmds data. Error: %s. Skipping", err)
 		cmmds = make(map[string]CmmdsEntity)
 	}
 	// 2. Create a vsan client
@@ -111,7 +111,7 @@ func (e *Endpoint) getVsanPerfMetadata(ctx context.Context, client *vim25.Client
 	var metrics []string
 
 	if err != nil {
-		log.Printf("E! Fail to get supported entities: %v. Skipping vsan performance data.", err)
+		log.Printf("E! [inputs.vsphere][vSAN]\tFail to get supported entities: %v. Skipping vsan performance data.", err)
 		return metrics
 	}
 	// Use the include & exclude configuration to filter all supported metrics
@@ -121,7 +121,7 @@ func (e *Endpoint) getVsanPerfMetadata(ctx context.Context, client *vim25.Client
 		}
 	}
 	metrics = append(metrics)
-	log.Printf("D! vSan Metric: %v", metrics)
+	log.Printf("D! [inputs.vsphere][vSAN]\tvSan Metric: %v", metrics)
 	return metrics
 }
 
@@ -133,7 +133,7 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 	}
 
 	if len(hosts) == 0 {
-		log.Println("I! No host in cluster: ", clusterObj.Name())
+		log.Println("I! [inputs.vsphere][vSAN]\tNo host in cluster: ", clusterObj.Name())
 		return make(map[string]CmmdsEntity), nil
 	}
 
@@ -183,7 +183,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 		// Look back 3 sampling periods by default
 		start = end.Add(metricLookback * time.Duration(-e.resourceKinds["vsan"].sampling) * time.Second)
 	}
-	log.Printf("D! [inputs.vsan]: Query vsan performance for time interval: %s ~ %s", start, end)
+	log.Printf("D! [inputs.vsphere][vSAN]\tQuery vsan performance for time interval: %s ~ %s", start, end)
 	latest := start
 
 	for _, entityRefId := range metrics {
@@ -204,7 +204,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 		resp, err := vsanmethods.VsanPerfQueryPerf(ctx, vsanClient, &perfRequest)
 
 		if err != nil {
-			log.Printf("E! [inputs.vsan]: Error while query performance data. Is vsan performace enabled? Error: %s", err)
+			log.Printf("E! [inputs.vsphere][vSAN]\tError while query performance data. Is vsan performace enabled? Error: %s", err)
 			continue
 
 		}
@@ -232,7 +232,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 				for i, values := range strings.Split(counter.Values, ",") {
 					ts, ok := time.Parse(time.RFC3339, timeStamps[i])
 					if ok != nil {
-						log.Printf("E! [inputs.vsphere][vSAN]Failed to parse a timestamp: %s. Skipping", timeStamps[i])
+						log.Printf("E! [inputs.vsphere][vSAN]\tFailed to parse a timestamp: %s. Skipping", timeStamps[i])
 						continue
 					}
 					fields := make(map[string]interface{})
@@ -318,7 +318,7 @@ func populateClusterTags(tags map[string]string, clusterRef objectRef, vcenter s
 	return newTags
 }
 
-// populateCMMDSTags takes in a tag map, makes a copy, adds more tags using cmmds map and returns the copy.
+// populateCMMDSTags takes in a tag map, makes a copy, adds more tags using a cmmds map and returns the copy.
 func populateCMMDSTags(tags map[string]string, entityName string, uuid string, cmmds map[string]CmmdsEntity) map[string]string {
 	newTags := make(map[string]string)
 	// deep copy
