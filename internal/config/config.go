@@ -33,8 +33,8 @@ import (
 
 var (
 	// Default sections
-	sectionDefaults = []string{"agent", "global_tags", "output",
-		"processor", "aggregator", "input"}
+	sectionDefaults = []string{"agent", "global_tags", "outputs",
+		"processors", "aggregators", "inputs"}
 
 	// Default input plugins
 	inputDefaults = []string{"cpu", "mem", "swap", "system", "kernel",
@@ -336,7 +336,7 @@ func PrintSampleConfig(
 	printFilteredGlobalSections(sectionFilters)
 
 	// print output plugins
-	if sliceContains("output", sectionFilters) {
+	if sliceContains("outputs", sectionFilters) {
 		if len(outputFilters) != 0 {
 			if len(outputFilters) >= 3 && outputFilters[1] != "none" {
 				fmt.Printf(outputHeader)
@@ -358,7 +358,7 @@ func PrintSampleConfig(
 	}
 
 	// print processor plugins
-	if sliceContains("processor", sectionFilters) {
+	if sliceContains("processors", sectionFilters) {
 		if len(processorFilters) != 0 {
 			if len(processorFilters) >= 3 && processorFilters[1] != "none" {
 				fmt.Printf(processorHeader)
@@ -376,7 +376,7 @@ func PrintSampleConfig(
 	}
 
 	// print aggregator plugins
-	if sliceContains("aggregator", sectionFilters) {
+	if sliceContains("aggregators", sectionFilters) {
 		if len(aggregatorFilters) != 0 {
 			if len(aggregatorFilters) >= 3 && aggregatorFilters[1] != "none" {
 				fmt.Printf(aggregatorHeader)
@@ -394,7 +394,7 @@ func PrintSampleConfig(
 	}
 
 	// print input plugins
-	if sliceContains("input", sectionFilters) {
+	if sliceContains("inputs", sectionFilters) {
 		if len(inputFilters) != 0 {
 			if len(inputFilters) >= 3 && inputFilters[1] != "none" {
 				fmt.Printf(inputHeader)

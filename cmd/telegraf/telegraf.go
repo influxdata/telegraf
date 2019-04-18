@@ -42,7 +42,7 @@ var fSampleConfig = flag.Bool("sample-config", false,
 	"print out full sample configuration")
 var fPidfile = flag.String("pidfile", "", "file to write our pid to")
 var fSectionFilters = flag.String("section-filter", "",
-	"filter the sections to print, separator is ':'. used only for 'config'. Valid values are 'global_tags' and 'agent'")
+	"filter the sections to print, separator is ':'. Valid values are 'agent', 'global_tags', 'outputs', 'processors', 'aggregators' and 'inputs'")
 var fInputFilters = flag.String("input-filter", "",
 	"filter the inputs to enable, separator is :")
 var fInputList = flag.Bool("input-list", false,
