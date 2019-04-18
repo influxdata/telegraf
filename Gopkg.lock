@@ -764,11 +764,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6399f985518d976eeee91d08ce94d091a4eb3c3b063ad703e74d023dc83a20ab"
+  digest = "1:520ba9cedd568332b1e74fa8df30a47559505fa045bcf18fdbc1db155e4efda2"
   name = "github.com/logzio/logzio-go"
   packages = ["."]
   pruneopts = ""
-  revision = "1138f714b3b673ecb3afec265088f65d45479079"
+  revision = "64e9870f9db3c60bdd8901650eab10a74e37a0a9"
 
 [[projects]]
   branch = "master"
@@ -1006,14 +1006,6 @@
   packages = ["."]
   pruneopts = ""
   revision = "e2704e165165ec55d062f5919b4b29494e9fa790"
-
-[[projects]]
-  branch = "master"
-  digest = "1:ed27c4a2ab13a1e84974ab5b8819a254e0359afe7ecef88fa8f44a7f4096b5a8"
-  name = "github.com/ricochet2200/go-disk-usage"
-  packages = ["du"]
-  pruneopts = ""
-  revision = "f0d1b743428fc09792f93233d9412f89f88fa2ab"
 
 [[projects]]
   branch = "master"
