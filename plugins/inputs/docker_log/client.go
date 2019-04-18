@@ -12,7 +12,7 @@ import (
 
 /*This file is inherited from telegraf docker input plugin*/
 var (
-	version        = "1.21"
+	version        = "1.24"
 	defaultHeaders = map[string]string{"User-Agent": "engine-api-cli-1.0"}
 )
 

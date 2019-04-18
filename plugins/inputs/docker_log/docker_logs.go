@@ -382,7 +382,6 @@ func (d *DockerLogs) Start(acc telegraf.Accumulator) error {
 		c, err = d.newClient(d.Endpoint, tlsConfig)
 	}
 	if err != nil {
-		log.Printf("%s : %s", ERR_PREFIX, err.Error())
 		return err
 	}
 	d.client = c
