@@ -53,7 +53,7 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 		return nil
 	}
 	res := e.resourceKinds[resourceType]
-	var wg sync.WaitGroup
+	var waitGroup sync.WaitGroup
 
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
@@ -61,28 +61,24 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 	}
 	vimClient := client.Client.Client
 	metrics := e.getVsanPerfMetadata(ctx, vimClient, res)
-	if err != nil {
-		log.Printf("D! E! [inputs.vsphere][vSAN] Failed to get client: %s", err)
-		return err
-	}
 	// Iterate over all clusters, run a goroutine for each cluster
 	for _, obj := range res.objects {
-		wg.Add(1)
+		waitGroup.Add(1)
 		go func(clusterObj objectRef) {
-			defer wg.Done()
+			defer waitGroup.Done()
 			e.collectVsanPerCluster(ctx, clusterObj, vimClient, metrics, acc)
 		}(obj)
 	}
 	return nil
 }
 
-// collectVsanPerCluster is called by goroutines in collectVsan
+// collectVsanPerCluster is called by goroutines in collectVsan function.
 func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef objectRef, client *vim25.Client, metrics []string, acc telegraf.Accumulator) {
 	// 1. Construct a map for cmmds
 	cluster := object.NewClusterComputeResource(client, clusterRef.ref)
 	cmmds, err := getCmmdsMap(ctx, client, cluster)
 	if err != nil {
-		log.Printf("E! E! [inputs.vsphere][vSAN]\tError while query cmmds data. Error: %s. Skipping", err)
+		log.Printf("E! [inputs.vsphere][vSAN]\tError while query cmmds data. Error: %s. Skipping", err)
 		cmmds = make(map[string]CmmdsEntity)
 	}
 	// 2. Create a vsan client
