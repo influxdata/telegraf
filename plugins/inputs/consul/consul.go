@@ -1,9 +1,9 @@
 package consul
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
-	"fmt"
 
 	"github.com/hashicorp/consul/api"
 
@@ -23,8 +23,8 @@ type Consul struct {
 	Datacenter string
 	tls.ClientConfig
 	TagDelimiter string
-	TagInclude []string
-	tagFilter filter.Filter
+	TagInclude   []string
+	tagFilter    filter.Filter
 
 	// client used to connect to Consul agnet
 	client *api.Client
@@ -106,9 +106,9 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 
 	if c.TagInclude != nil {
 		c.tagFilter, err = filter.Compile(c.TagInclude)
-                if err != nil {
+		if err != nil {
 			fmt.Errorf("error compile tag filters[%s]: %v", "tags", err)
-                }
+		}
 	}
 
 	tlsCfg, err := c.ClientConfig.TLSConfig()
@@ -142,7 +142,7 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 		tags["check_id"] = check.CheckID
 
 		for _, checkTag := range check.ServiceTags {
-			if c.tagFilter != nil && c.tagFilter.Match(checkTag) == false{
+			if c.tagFilter != nil && c.tagFilter.Match(checkTag) == false {
 				continue
 			}
 			if c.TagDelimiter != "" {
