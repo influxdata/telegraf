@@ -1,7 +1,6 @@
 package consul
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -74,7 +73,6 @@ func (c *Consul) SampleConfig() string {
 }
 
 func (c *Consul) createAPIClient() (*api.Client, error) {
-	var err error
 	config := api.DefaultConfig()
 
 	if c.Address != "" {
@@ -104,14 +102,12 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 		}
 	}
 
-	if c.TagInclude != nil {
-		c.tagFilter, err = filter.Compile(c.TagInclude)
-		if err != nil {
-			fmt.Errorf("error compile tag filters[%s]: %v", "tags", err)
-		}
+	tlsCfg, err := c.ClientConfig.TLSConfig()
+	if err != nil {
+		return nil, err
 	}
 
-	tlsCfg, err := c.ClientConfig.TLSConfig()
+	c.tagFilter, err = filter.Compile(c.TagInclude)
 	if err != nil {
 		return nil, err
 	}
@@ -124,6 +120,12 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 }
 
 func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.HealthCheck) {
+	var err error
+	c.tagFilter, err = filter.Compile(c.TagInclude)
+	if err != nil {
+
+	}
+
 	for _, check := range checks {
 		record := make(map[string]interface{})
 		tags := make(map[string]string)
