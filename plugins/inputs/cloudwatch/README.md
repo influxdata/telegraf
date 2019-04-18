@@ -59,7 +59,6 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   interval = "5m"
 
   ## Configure the TTL for the internal cache of metrics.
-  ## Defaults to 1 hr if not specified
   # cache_ttl = "1h"
 
   ## Metric Statistic Namespace (required)
@@ -67,14 +66,14 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 
   ## Maximum requests per second. Note that the global default AWS rate limit is
   ## 50 reqs/sec, so if you define multiple namespaces, these should add up to a
-  ## maximum of 50. Default value is 25.
+  ## maximum of 50.
   ## See http://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_limits.html
   # ratelimit = 25
 
   ## Namespace-wide statistic filters. These allow fewer queries to be made to
   ## cloudwatch.
-  # statistic_exclude = [ "average", "sum", minimum", "maximum", sample_count" ]
-  # statistic_include = []
+  # statistic_include = [ "average", "sum", minimum", "maximum", sample_count" ]
+  # statistic_exclude = []
 
   ## Metrics to Pull
   ## Defaults to all Metrics in Namespace if nothing is provided
@@ -84,8 +83,8 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   #
   #  ## Statistic filters for Metric.  These allow for retrieving specific
   #  ## statistics for an individual metric.
-  #  # statistic_exclude = [ "average", "sum", minimum", "maximum", sample_count" ]
-  #  # statistic_include = []
+  #  # statistic_include = [ "average", "sum", minimum", "maximum", sample_count" ]
+  #  # statistic_exclude = []
   #
   #  ## Dimension filters for Metric.  All dimensions defined for the metric names
   #  ## must be specified in order to retrieve the metric statistics.
