@@ -3,10 +3,12 @@ package consul
 import (
 	"net/http"
 	"strings"
+	"fmt"
 
 	"github.com/hashicorp/consul/api"
 
 	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/filter"
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -21,6 +23,8 @@ type Consul struct {
 	Datacenter string
 	tls.ClientConfig
 	TagDelimiter string
+	TagInclude []string
+	tagFilter filter.Filter
 
 	// client used to connect to Consul agnet
 	client *api.Client
@@ -54,6 +58,11 @@ var sampleConfig = `
   # When tags are formatted like "key:value" with ":" as a delimiter then
   # they will be splitted and reported as proper key:value in Telegraf
   # tag_delimiter = ":"
+
+  ## Consul include tags filter
+  # This filter provides the ability to receive tags that match the filter.
+  # The filter can have multiple meanings with different masks.
+  # tag_include = ["test1*", "*test2*" ,"*test3" ]
 `
 
 func (c *Consul) Description() string {
@@ -65,6 +74,7 @@ func (c *Consul) SampleConfig() string {
 }
 
 func (c *Consul) createAPIClient() (*api.Client, error) {
+	var err error
 	config := api.DefaultConfig()
 
 	if c.Address != "" {
@@ -92,6 +102,13 @@ func (c *Consul) createAPIClient() (*api.Client, error) {
 			Username: c.Username,
 			Password: c.Password,
 		}
+	}
+
+	if c.TagInclude != nil {
+		c.tagFilter, err = filter.Compile(c.TagInclude)
+                if err != nil {
+			fmt.Errorf("error compile tag filters[%s]: %v", "tags", err)
+                }
 	}
 
 	tlsCfg, err := c.ClientConfig.TLSConfig()
@@ -125,6 +142,9 @@ func (c *Consul) GatherHealthCheck(acc telegraf.Accumulator, checks []*api.Healt
 		tags["check_id"] = check.CheckID
 
 		for _, checkTag := range check.ServiceTags {
+			if c.tagFilter != nil && c.tagFilter.Match(checkTag) == false{
+				continue
+			}
 			if c.TagDelimiter != "" {
 				splittedTag := strings.SplitN(checkTag, c.TagDelimiter, 2)
 				if len(splittedTag) == 1 && checkTag != "" {
