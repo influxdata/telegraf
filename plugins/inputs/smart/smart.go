@@ -19,8 +19,6 @@ import (
 )
 
 var (
-	execCommand = exec.Command // execCommand is used to mock commands in tests.
-
 	// Device Model:     APPLE SSD SM256E
 	modelInInfo = regexp.MustCompile("^Device Model:\\s+(.*)$")
 	// Serial Number:    S0X5NZBC422720
@@ -119,20 +117,19 @@ func (m *Smart) Gather(acc telegraf.Accumulator) error {
 }
 
 // Wrap with sudo
-func sudo(sudo bool, command string, args ...string) *exec.Cmd {
+var runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+	cmd := exec.Command(command, args...)
 	if sudo {
-		return execCommand("sudo", append([]string{"-n", command}, args...)...)
+		cmd = exec.Command("sudo", append([]string{"-n", command}, args...)...)
 	}
-
-	return execCommand(command, args...)
+	return internal.CombinedOutputTimeout(cmd, time.Second*5)
 }
 
 // Scan for S.M.A.R.T. devices
 func (m *Smart) scan() ([]string, error) {
-	cmd := sudo(m.UseSudo, m.Path, "--scan")
-	out, err := internal.CombinedOutputTimeout(cmd, time.Second*5)
+	out, err := runCmd(m.UseSudo, m.Path, "--scan")
 	if err != nil {
-		return []string{}, fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), err, string(out))
+		return []string{}, fmt.Errorf("failed to run command '%s --scan': %s - %s", m.Path, err, string(out))
 	}
 
 	devices := []string{}
@@ -188,14 +185,13 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, smartctl, no
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
 	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nockeck, "--format=brief"}
 	args = append(args, strings.Split(device, " ")...)
-	cmd := sudo(usesudo, smartctl, args...)
-	out, e := internal.CombinedOutputTimeout(cmd, time.Second*5)
+	out, e := runCmd(usesudo, smartctl, args...)
 	outStr := string(out)
 
 	// Ignore all exit statuses except if it is a command line parse error
 	exitStatus, er := exitStatus(e)
 	if er != nil {
-		acc.AddError(fmt.Errorf("failed to run command %s: %s - %s", strings.Join(cmd.Args, " "), e, outStr))
+		acc.AddError(fmt.Errorf("failed to run command '%s %s': %s - %s", smartctl, strings.Join(args, " "), e, outStr))
 		return
 	}
 
@@ -295,7 +291,6 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, smartctl, no
 }
 
 func parseRawValue(rawVal string) (int64, error) {
-
 	// Integer
 	if i, err := strconv.ParseInt(rawVal, 10, 64); err == nil {
 		return i, nil
