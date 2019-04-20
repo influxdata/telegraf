@@ -49,11 +49,23 @@ This is a sample configuration for the plugin.
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## Setting this option to true will collect tags and values from query params.
+  # collect_query_params = true
+
+  ## Which query params should be collected.
+  ## Leaving an empty list means all parameters will be collected.
+  # query_params_whitelist = []
+
+  ## Which query params should be collected as tags.
+  # query_params_tag_keys = []
 ```
 
 ### Metrics:
 
 Metrics are created from the request body and are dependant on the value of `data_format`.
+
+Setting `collect_query_params` option to true, will append fields from the URL query parameters to the metrics collected from the request body. It can also be used with an empty request body which will create a single metric from the query parameters only.
 
 ### Troubleshooting:
 
@@ -65,6 +77,11 @@ curl -i -XPOST 'http://localhost:8080/telegraf' --data-binary 'cpu_load_short,ho
 **Send JSON**
 ```
 curl -i -XPOST 'http://localhost:8080/telegraf' --data-binary '{"value1": 42, "value2": 42}'
+```
+
+**Send query params**
+```
+curl -i -XGET 'http://localhost:8080/telegraf?host=server01&value=0.42'
 ```
 
 [data_format]: /docs/DATA_FORMATS_INPUT.md
