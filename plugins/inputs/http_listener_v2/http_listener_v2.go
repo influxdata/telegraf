@@ -8,12 +8,15 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	tlsint "github.com/influxdata/telegraf/internal/tls"
+	"github.com/influxdata/telegraf/metric"
 	"github.com/influxdata/telegraf/plugins/inputs"
 	"github.com/influxdata/telegraf/plugins/parsers"
 )
@@ -22,17 +25,23 @@ import (
 // if the request body is over this size, we will return an HTTP 413 error.
 // 500 MB
 const defaultMaxBodySize = 500 * 1024 * 1024
+const inputName = "http_listener_v2"
 
+// TimeFunc provides a timestamp for the metrics
 type TimeFunc func() time.Time
 
 type HTTPListenerV2 struct {
-	ServiceAddress string
-	Path           string
-	Methods        []string
-	ReadTimeout    internal.Duration
-	WriteTimeout   internal.Duration
-	MaxBodySize    internal.Size
-	Port           int
+	ServiceAddress       string
+	Path                 string
+	Methods              []string
+	CollectQueryParams   bool
+	QueryParamsWhitelist []string
+	QueryParamsTagKeys   []string
+
+	ReadTimeout  internal.Duration
+	WriteTimeout internal.Duration
+	MaxBodySize  internal.Size
+	Port         int
 
 	tlsint.ServerConfig
 
@@ -86,6 +95,16 @@ const sampleConfig = `
   ## more about them here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/DATA_FORMATS_INPUT.md
   data_format = "influx"
+
+  ## Setting this option to true will collect tags and values from query params.
+  # collect_query_params = true
+
+  ## Which query params should be collected.
+  ## Leaving an empty list means all parameters will be collected.
+  # query_params_whitelist = []
+
+  ## Which query params should be collected as tags.
+  # query_params_tag_keys = []
 `
 
 func (h *HTTPListenerV2) SampleConfig() string {
@@ -217,10 +236,87 @@ func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) 
 		badRequest(res)
 		return
 	}
+
+	query := req.URL.Query()
+	queryTags := make(map[string]string)
+	queryFields := make(map[string]float64)
+
+	if h.CollectQueryParams && len(query) > 0 {
+		collectedCount := h.collectQueryParams(query, queryTags, queryFields)
+
+		if len(metrics) == 0 && collectedCount > 0 {
+			emptyMetric, err := metric.New(inputName, nil, nil, h.TimeFunc())
+
+			if err != nil {
+				log.Println("D!" + err.Error())
+				internalServerError(res)
+				return
+			}
+
+			metrics = []telegraf.Metric{emptyMetric}
+		}
+	}
+
 	for _, m := range metrics {
+		appendToMetric(m, queryTags, queryFields)
 		h.acc.AddFields(m.Name(), m.Fields(), m.Tags(), m.Time())
 	}
+
 	res.WriteHeader(http.StatusNoContent)
+}
+
+func (h *HTTPListenerV2) collectQueryParams(query url.Values, tags map[string]string, fields map[string]float64) int {
+	count := 0
+	params := query
+
+	if len(h.QueryParamsWhitelist) > 0 {
+		params = make(url.Values)
+
+		for _, key := range h.QueryParamsWhitelist {
+			params[key] = query[key]
+		}
+	}
+
+	for _, tagKey := range h.QueryParamsTagKeys {
+		tagValues, exists := params[tagKey]
+
+		if !exists {
+			continue
+		}
+
+		tags[tagKey] = tagValues[0]
+		delete(params, tagKey)
+
+		count++
+	}
+
+	for key, values := range params {
+		if len(values) == 0 {
+			continue
+		}
+
+		field, err := strconv.ParseFloat(values[0], 64)
+
+		if err != nil {
+			continue
+		}
+
+		fields[key] = field
+
+		count++
+	}
+
+	return count
+}
+
+func appendToMetric(m telegraf.Metric, tags map[string]string, fields map[string]float64) {
+	for key, value := range tags {
+		m.AddTag(key, value)
+	}
+
+	for key, value := range fields {
+		m.AddField(key, value)
+	}
 }
 
 func tooLarge(res http.ResponseWriter) {
@@ -263,12 +359,13 @@ func (h *HTTPListenerV2) AuthenticateIfSet(handler http.HandlerFunc, res http.Re
 }
 
 func init() {
-	inputs.Add("http_listener_v2", func() telegraf.Input {
+	inputs.Add(inputName, func() telegraf.Input {
 		return &HTTPListenerV2{
-			ServiceAddress: ":8080",
-			TimeFunc:       time.Now,
-			Path:           "/telegraf",
-			Methods:        []string{"POST", "PUT"},
+			ServiceAddress:     ":8080",
+			TimeFunc:           time.Now,
+			Path:               "/telegraf",
+			Methods:            []string{"POST", "PUT"},
+			CollectQueryParams: false,
 		}
 	})
 }
