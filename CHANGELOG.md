@@ -25,16 +25,19 @@
 - [#5697](https://github.com/influxdata/telegraf/pull/5697): Add namespace restriction to prometheus input plugin.
 - [#5681](https://github.com/influxdata/telegraf/pull/5681): Add cmdline tag to procstat input.
 - [#5704](https://github.com/influxdata/telegraf/pull/5704): Support verbose query param in ping endpoint of influxdb_listener.
+- [#5713](https://github.com/influxdata/telegraf/pull/5713): Enhance HTTP connection options for phpfpm input plugin.
 
 #### Bugfixes
 
 - [#5631](https://github.com/influxdata/telegraf/pull/5631): Create Windows service only when specified or in service manager.
+- [#5730](https://github.com/influxdata/telegraf/pull/5730): Don't start telegraf when stale pidfile found.
 
-## v1.10.3 [unreleased]
+## v1.10.3 [2019-04-16]
 
 #### Bugfixes
 
 - [#5680](https://github.com/influxdata/telegraf/pull/5680): Allow colons in metric names in prometheus_client output.
+- [#5716](https://github.com/influxdata/telegraf/pull/5716): Set log directory attributes in rpm spec.
 
 ## v1.10.2 [2019-04-02]
 
