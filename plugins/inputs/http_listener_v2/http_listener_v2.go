@@ -25,11 +25,13 @@ import (
 // if the request body is over this size, we will return an HTTP 413 error.
 // 500 MB
 const defaultMaxBodySize = 500 * 1024 * 1024
+
 const inputName = "http_listener_v2"
 
 // TimeFunc provides a timestamp for the metrics
 type TimeFunc func() time.Time
 
+// HTTPListenerV2 is an input plugin that collects external metrics sent via HTTP
 type HTTPListenerV2 struct {
 	ServiceAddress       string
 	Path                 string
@@ -183,11 +185,13 @@ func (h *HTTPListenerV2) Stop() {
 }
 
 func (h *HTTPListenerV2) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	if req.URL.Path == h.Path {
-		h.AuthenticateIfSet(h.serveWrite, res, req)
-	} else {
-		h.AuthenticateIfSet(http.NotFound, res, req)
+	handler := h.serveWrite
+
+	if req.URL.Path != h.Path {
+		handler = http.NotFound
 	}
+
+	h.authenticateIfSet(handler, res, req)
 }
 
 func (h *HTTPListenerV2) serveWrite(res http.ResponseWriter, req *http.Request) {
@@ -342,7 +346,7 @@ func badRequest(res http.ResponseWriter) {
 	res.Write([]byte(`{"error":"http: bad request"}`))
 }
 
-func (h *HTTPListenerV2) AuthenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
+func (h *HTTPListenerV2) authenticateIfSet(handler http.HandlerFunc, res http.ResponseWriter, req *http.Request) {
 	if h.BasicUsername != "" && h.BasicPassword != "" {
 		reqUsername, reqPassword, ok := req.BasicAuth()
 		if !ok ||
