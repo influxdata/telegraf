@@ -277,7 +277,13 @@ func (h *HTTPListenerV2) collectQueryParams(query url.Values, tags map[string]st
 		params = make(url.Values)
 
 		for _, key := range h.QueryParamsWhitelist {
-			params[key] = query[key]
+			param, exists := query[key]
+
+			if !exists {
+				continue
+			}
+
+			params[key] = param
 		}
 	}
 
