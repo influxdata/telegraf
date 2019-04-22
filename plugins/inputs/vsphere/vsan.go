@@ -152,13 +152,13 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 		This:    vis.Reference(),
 		Queries: queries,
 	}
-	res, err := methods.QueryCmmds(ctx, client.RoundTripper, &request)
+	resp, err := methods.QueryCmmds(ctx, client.RoundTripper, &request)
 	if err != nil {
 		return nil, fmt.Errorf("fail to query cmmds: %v", err)
 	}
 	var clusterCmmds Cmmds
 
-	err = json.Unmarshal([]byte(res.Returnval), &clusterCmmds)
+	err = json.Unmarshal([]byte(resp.Returnval), &clusterCmmds)
 	if err != nil {
 		return nil, fmt.Errorf("fail to convert cmmds to json: %v", err)
 	}
@@ -322,7 +322,7 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 		newTags[k] = v
 	}
 	// Add additional tags based on CMMDS data
-	if strings.Contains(entityName, "-disk") {
+	if strings.Contains(entityName, "-disk") || strings.Contains(entityName, "disk-") {
 		if e, ok := cmmds[uuid]; ok {
 			if host, ok := cmmds[e.Owner]; ok {
 				if c, ok := host.Content.(map[string]interface{}); ok {
