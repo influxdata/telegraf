@@ -40,7 +40,7 @@ var (
 	outputDefaults = []string{"influxdb"}
 
 	// envVarRe is a regex to find environment variables in the config file
-	envVarRe = regexp.MustCompile(`\$\w+`)
+	envVarRe = regexp.MustCompile(`\$\{(\w+)\}|\$(\w+)`)
 
 	envVarEscaper = strings.NewReplacer(
 		`"`, `\"`,
@@ -208,9 +208,9 @@ var header = `# Telegraf Configuration
 # Use 'telegraf -config telegraf.conf -test' to see what metrics a config
 # file would generate.
 #
-# Environment variables can be used anywhere in this config file, simply prepend
-# them with $. For strings the variable must be within quotes (ie, "$STR_VAR"),
-# for numbers and booleans they should be plain (ie, $INT_VAR, $BOOL_VAR)
+# Environment variables can be used anywhere in this config file, simply surround
+# them with ${}. For strings the variable must be within quotes (ie, "${STR_VAR}"),
+# for numbers and booleans they should be plain (ie, ${INT_VAR}, ${BOOL_VAR})
 
 
 # Global tags can be specified here in key="value" format.
@@ -234,10 +234,7 @@ var header = `# Telegraf Configuration
   ## This controls the size of writes that Telegraf sends to output plugins.
   metric_batch_size = 1000
 
-  ## For failed writes, telegraf will cache metric_buffer_limit metrics for each
-  ## output, and will flush this buffer on a successful write. Oldest metrics
-  ## are dropped first when this buffer fills.
-  ## This buffer only fills when writes fail to output plugin(s).
+  ## Maximum number of unwritten metrics per output.
   metric_buffer_limit = 10000
 
   ## Collection jitter is used to jitter the collection by a random amount.
@@ -787,12 +784,25 @@ func fetchConfig(u *url.URL) ([]byte, error) {
 func parseConfig(contents []byte) (*ast.Table, error) {
 	contents = trimBOM(contents)
 
-	env_vars := envVarRe.FindAll(contents, -1)
-	for _, env_var := range env_vars {
+	parameters := envVarRe.FindAllSubmatch(contents, -1)
+	for _, parameter := range parameters {
+		if len(parameter) != 3 {
+			continue
+		}
+
+		var env_var []byte
+		if parameter[1] != nil {
+			env_var = parameter[1]
+		} else if parameter[2] != nil {
+			env_var = parameter[2]
+		} else {
+			continue
+		}
+
 		env_val, ok := os.LookupEnv(strings.TrimPrefix(string(env_var), "$"))
 		if ok {
 			env_val = escapeEnv(env_val)
-			contents = bytes.Replace(contents, env_var, []byte(env_val), 1)
+			contents = bytes.Replace(contents, parameter[0], []byte(env_val), 1)
 		}
 	}
 
@@ -1797,6 +1807,30 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 		}
 	}
 
+	if node, ok := tbl.Fields["wavefront_source_override"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if ary, ok := kv.Value.(*ast.Array); ok {
+				for _, elem := range ary.Value {
+					if str, ok := elem.(*ast.String); ok {
+						c.WavefrontSourceOverride = append(c.WavefrontSourceOverride, str.Value)
+					}
+				}
+			}
+		}
+	}
+
+	if node, ok := tbl.Fields["wavefront_use_strict"]; ok {
+		if kv, ok := node.(*ast.KeyValue); ok {
+			if b, ok := kv.Value.(*ast.Boolean); ok {
+				var err error
+				c.WavefrontUseStrict, err = b.Boolean()
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 	delete(tbl.Fields, "influx_max_line_bytes")
 	delete(tbl.Fields, "influx_sort_fields")
 	delete(tbl.Fields, "influx_uint_support")
@@ -1806,6 +1840,8 @@ func buildSerializer(name string, tbl *ast.Table) (serializers.Serializer, error
 	delete(tbl.Fields, "template")
 	delete(tbl.Fields, "json_timestamp_units")
 	delete(tbl.Fields, "splunkmetric_hec_routing")
+	delete(tbl.Fields, "wavefront_source_override")
+	delete(tbl.Fields, "wavefront_use_strict")
 	return serializers.NewSerializer(c)
 }
 
