@@ -16,6 +16,10 @@ Telegraf is plugin-driven and has the concept of 4 distinct plugin types:
 New plugins are designed to be easy to contribute, we'll eagerly accept pull
 requests and will manage the set of plugins that Telegraf supports.
 
+## Try in Browser :rocket:
+
+You can try Telegraf right in your browser in the [Telegraf playground](https://rootnroll.com/d/telegraf/).
+
 ## Contributing
 
 There are many ways to contribute:
