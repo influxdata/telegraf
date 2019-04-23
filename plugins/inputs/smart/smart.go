@@ -21,6 +21,8 @@ import (
 var (
 	// Device Model:     APPLE SSD SM256E
 	modelInInfo = regexp.MustCompile("^Device Model:\\s+(.*)$")
+	// Product:              HUH721212AL5204
+	productInInfo = regexp.MustCompile("^Product:\\s+(.*)$")
 	// Serial Number:    S0X5NZBC422720
 	serialInInfo = regexp.MustCompile("^Serial Number:\\s+(.*)$")
 	// LU WWN Device Id: 5 002538 655584d30
@@ -32,6 +34,15 @@ var (
 	// SMART overall-health self-assessment test result: PASSED
 	// PASSED, FAILED, UNKNOWN
 	smartOverallHealth = regexp.MustCompile("^SMART overall-health self-assessment test result:\\s+(\\w+).*$")
+	// SMART Health Status: OK
+	smartHealth = regexp.MustCompile("^SMART Health Status:\\s+(\\w+).*$")
+
+	// Accumulated start-stop cycles:  7
+	sasStartStopAttr = regexp.MustCompile("^Accumulated start-stop cycles:\\s+(.*)$")
+	// Accumulated load-unload cycles:  39
+	sasLoadCycleAttr = regexp.MustCompile("^Accumulated load-unload cycles:\\s+(.*)$")
+	// Current Drive Temperature:     34 C
+	sasTempAttr = regexp.MustCompile("^Current Drive Temperature:\\s+(.*)\\s+C(.*)$")
 
 	// ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
 	//   1 Raw_Read_Error_Rate     -O-RC-   200   200   000    -    0
@@ -59,13 +70,13 @@ type Smart struct {
 var sampleConfig = `
   ## Optionally specify the path to the smartctl executable
   # path = "/usr/bin/smartctl"
-  #
+
   ## On most platforms smartctl requires root access.
   ## Setting 'use_sudo' to true will make use of sudo to run smartctl.
   ## Sudo must be configured to to allow the telegraf user to run smartctl
   ## without a password.
   # use_sudo = false
-  #
+
   ## Skip checking disks in this power mode. Defaults to
   ## "standby" to not wake up disks that have stoped rotating.
   ## See --nocheck in the man pages for smartctl.
@@ -73,15 +84,13 @@ var sampleConfig = `
   ## power mode and might require changing this value to
   ## "never" depending on your disks.
   # nocheck = "standby"
-  #
+
   ## Gather detailed metrics for each SMART Attribute.
-  ## Defaults to "false"
-  ##
   # attributes = false
-  #
+
   ## Optionally specify devices to exclude from reporting.
   # excludes = [ "/dev/pass6" ]
-  #
+
   ## Optionally specify devices and device type, if unset
   ## a scan (smartctl --scan) for S.M.A.R.T. devices will
   ## done and all found will be included except for the
@@ -180,10 +189,10 @@ func exitStatus(err error) (int, error) {
 	return 0, err
 }
 
-func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, smartctl, nockeck, device string, wg *sync.WaitGroup) {
+func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smartctl, nocheck, device string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	// smartctl 5.41 & 5.42 have are broken regarding handling of --nocheck/-n
-	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nockeck, "--format=brief"}
+	args := []string{"--info", "--health", "--attributes", "--tolerance=verypermissive", "-n", nocheck, "--format=brief"}
 	args = append(args, strings.Split(device, " ")...)
 	out, e := runCmd(usesudo, smartctl, args...)
 	outStr := string(out)
@@ -195,13 +204,13 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, smartctl, no
 		return
 	}
 
-	device_tags := map[string]string{}
-	device_node := strings.Split(device, " ")[0]
-	device_tags["device"] = path.Base(device_node)
-	device_fields := make(map[string]interface{})
-	device_fields["exit_status"] = exitStatus
+	deviceTags := map[string]string{}
+	deviceNode := strings.Split(device, " ")[0]
+	deviceTags["device"] = path.Base(deviceNode)
+	deviceFields := make(map[string]interface{})
+	deviceFields["exit_status"] = exitStatus
 
-	log.Printf("D! [inputs.smart] gatherDisk '%s' output: %+#v", device_node, outStr)
+	log.Printf("D! [inputs.smart] gatherDisk '%s' output: %+#v", deviceNode, outStr)
 
 	scanner := bufio.NewScanner(strings.NewReader(outStr))
 
@@ -210,49 +219,51 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, smartctl, no
 
 		model := modelInInfo.FindStringSubmatch(line)
 		if len(model) > 1 {
-			device_tags["model"] = model[1]
+			deviceTags["model"] = model[1]
+		} else if product := productInInfo.FindStringSubmatch(line); len(product) > 1 {
+			deviceTags["model"] = product[1]
 		}
 
 		serial := serialInInfo.FindStringSubmatch(line)
 		if len(serial) > 1 {
-			device_tags["serial_no"] = serial[1]
+			deviceTags["serial_no"] = serial[1]
 		}
 
 		wwn := wwnInInfo.FindStringSubmatch(line)
 		if len(wwn) > 1 {
-			device_tags["wwn"] = strings.Replace(wwn[1], " ", "", -1)
+			deviceTags["wwn"] = strings.Replace(wwn[1], " ", "", -1)
 		}
 
 		capacity := usercapacityInInfo.FindStringSubmatch(line)
 		if len(capacity) > 1 {
-			device_tags["capacity"] = strings.Replace(capacity[1], ",", "", -1)
+			deviceTags["capacity"] = strings.Replace(capacity[1], ",", "", -1)
 		}
 
 		enabled := smartEnabledInInfo.FindStringSubmatch(line)
 		if len(enabled) > 1 {
-			device_tags["enabled"] = enabled[1]
+			deviceTags["enabled"] = enabled[1]
 		}
 
 		health := smartOverallHealth.FindStringSubmatch(line)
 		if len(health) > 1 {
-			device_fields["health_ok"] = (health[1] == "PASSED")
+			deviceFields["health_ok"] = (health[1] == "PASSED")
+		} else if health = smartHealth.FindStringSubmatch(line); len(health) > 1 {
+			deviceFields["health_ok"] = (health[1] == "OK")
 		}
 
+		tags := map[string]string{}
+		fields := make(map[string]interface{})
+
 		attr := attribute.FindStringSubmatch(line)
-
 		if len(attr) > 1 {
+			if collectAttributes {
+				deviceNode := strings.Split(device, " ")[0]
+				tags["device"] = path.Base(deviceNode)
 
-			if attributes {
-				tags := map[string]string{}
-				fields := make(map[string]interface{})
-
-				device_node := strings.Split(device, " ")[0]
-				tags["device"] = path.Base(device_node)
-
-				if serial, ok := device_tags["serial_no"]; ok {
+				if serial, ok := deviceTags["serial_no"]; ok {
 					tags["serial_no"] = serial
 				}
-				if wwn, ok := device_tags["wwn"]; ok {
+				if wwn, ok := deviceTags["wwn"]; ok {
 					tags["wwn"] = wwn
 				}
 				tags["id"] = attr[1]
@@ -282,12 +293,56 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, attributes bool, smartctl, no
 			// save the raw value to a field.
 			if field, ok := deviceFieldIds[attr[1]]; ok {
 				if val, err := parseRawValue(attr[8]); err == nil {
-					device_fields[field] = val
+					deviceFields[field] = val
 				}
+			}
+		} else {
+			var tempC int64
+			if collectAttributes {
+				if startStop := sasStartStopAttr.FindStringSubmatch(line); len(startStop) > 1 {
+					tags["id"] = "4"
+					tags["name"] = "Start_Stop_Count"
+					i, err := strconv.ParseInt(startStop[1], 10, 64)
+					if err != nil {
+						continue
+					}
+					fields["raw_value"] = i
+
+					acc.AddFields("smart_attribute", fields, tags)
+				}
+
+				if loadCycle := sasLoadCycleAttr.FindStringSubmatch(line); len(loadCycle) > 1 {
+					tags["id"] = "193"
+					tags["name"] = "Load_Cycle_Count"
+					i, err := strconv.ParseInt(loadCycle[1], 10, 64)
+					if err != nil {
+						continue
+					}
+					fields["raw_value"] = i
+
+					acc.AddFields("smart_attribute", fields, tags)
+				}
+
+				if temp := sasTempAttr.FindStringSubmatch(line); len(temp) > 1 {
+					tags["id"] = "194"
+					tags["name"] = "Temperature_Celsius"
+					var err error
+					tempC, err = strconv.ParseInt(temp[1], 10, 64)
+					if err != nil {
+						continue
+					}
+					fields["raw_value"] = tempC
+
+					acc.AddFields("smart_attribute", fields, tags)
+				}
+			}
+
+			if tempC != 0 {
+				deviceFields["temp_c"] = tempC
 			}
 		}
 	}
-	acc.AddFields("smart_device", device_fields, device_tags)
+	acc.AddFields("smart_device", deviceFields, deviceTags)
 }
 
 func parseRawValue(rawVal string) (int64, error) {
