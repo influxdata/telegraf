@@ -27,7 +27,6 @@ type Procstat struct {
 	Exe         string
 	Pattern     string
 	Prefix      string
-	CmdLineTag  bool `toml:"cmdline_tag"`
 	ProcessName string
 	User        string
 	SystemdUnit string
@@ -65,9 +64,6 @@ var sampleConfig = `
 
   ## Field name prefix
   # prefix = ""
-
-  ## When true add the full cmdline as a tag.
-  # cmdline_tag = false
 
   ## Add PID as a tag instead of a field; useful to differentiate between
   ## processes whose tags are otherwise the same.  Can create a large number
@@ -113,10 +109,9 @@ func (p *Procstat) Gather(acc telegraf.Accumulator) error {
 			"running":     0,
 			"result_code": 1,
 		}
-		tags := map[string]string{
-			"pid_finder": p.PidFinder,
-			"result":     "lookup_error",
-		}
+		tags["pid_finder"] = p.PidFinder
+		tags["result"] = p.PidFinder
+		
 		acc.AddFields("procstat_lookup", fields, tags)
 		return err
 	}
@@ -172,16 +167,6 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 	//If pid is not present as a tag, include it as a field.
 	if _, pidInTags := proc.Tags()["pid"]; !pidInTags {
 		fields["pid"] = int32(proc.PID())
-	}
-
-	//If cmd_line tag is true and it is not already set add cmdline as a tag
-	if p.CmdLineTag {
-		if _, ok := proc.Tags()["cmdline"]; !ok {
-			Cmdline, err := proc.Cmdline()
-			if err == nil {
-				proc.Tags()["cmdline"] = Cmdline
-			}
-		}
 	}
 
 	numThreads, err := proc.NumThreads()
@@ -359,6 +344,10 @@ func (p *Procstat) findPids(acc telegraf.Accumulator) ([]PID, map[string]string,
 		tags = map[string]string{"win_service": p.WinService}
 	} else {
 		err = fmt.Errorf("Either exe, pid_file, user, pattern, systemd_unit, cgroup, or win_service must be specified")
+	}
+
+	if len(pids) == 0 {
+		err = fmt.Errorf("No pids found")
 	}
 
 	return pids, tags, err
