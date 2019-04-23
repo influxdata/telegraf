@@ -45,10 +45,20 @@ type Accumulator struct {
 	Errors    []error
 	debug     bool
 	delivered chan telegraf.DeliveryInfo
+
+	TimeFunc func() time.Time
 }
 
 func (a *Accumulator) NMetrics() uint64 {
 	return atomic.LoadUint64(&a.nMetrics)
+}
+
+func (a *Accumulator) GetTelegrafMetrics() []telegraf.Metric {
+	metrics := []telegraf.Metric{}
+	for _, m := range a.Metrics {
+		metrics = append(metrics, FromTestMetric(m))
+	}
+	return metrics
 }
 
 func (a *Accumulator) FirstError() error {
@@ -101,6 +111,12 @@ func (a *Accumulator) AddFields(
 		t = timestamp[0]
 	} else {
 		t = time.Now()
+		if a.TimeFunc == nil {
+			t = time.Now()
+		} else {
+			t = a.TimeFunc()
+		}
+
 	}
 
 	if a.debug {
