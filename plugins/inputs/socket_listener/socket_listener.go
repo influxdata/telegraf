@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -165,6 +166,7 @@ type SocketListener struct {
 	ReadBufferSize  internal.Size      `toml:"read_buffer_size"`
 	ReadTimeout     *internal.Duration `toml:"read_timeout"`
 	KeepAlivePeriod *internal.Duration `toml:"keep_alive_period"`
+	FileMode        string
 	tlsint.ServerConfig
 
 	parsers.Parser
@@ -189,6 +191,9 @@ func (sl *SocketListener) SampleConfig() string {
   # service_address = "udp6://:8094"
   # service_address = "unix:///tmp/telegraf.sock"
   # service_address = "unixgram:///tmp/telegraf.sock"
+
+  ## File mode for unix sockets
+  # file_mode = "777"
 
   ## Maximum number of concurrent connections.
   ## Only applies to stream sockets (e.g. TCP).
@@ -275,6 +280,23 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 
 		log.Printf("I! [inputs.socket_listener] Listening on %s://%s", protocol, l.Addr())
 
+		// Set permissions on socket
+		if spl[0] == "unix" || spl[0] == "unixpacket" {
+			fileMode := uint32(0777)
+
+			if sl.FileMode != "" {
+				// Convert from octal in string to int
+				i, err := strconv.ParseUint(sl.FileMode, 8, 32)
+				if err != nil {
+					return err
+				}
+
+				fileMode = uint32(i)
+			}
+
+			os.Chmod(spl[1], os.FileMode(fileMode))
+		}
+
 		ssl := &streamSocketListener{
 			Listener:       l,
 			SocketListener: sl,
@@ -287,6 +309,23 @@ func (sl *SocketListener) Start(acc telegraf.Accumulator) error {
 		pc, err := udpListen(protocol, addr)
 		if err != nil {
 			return err
+		}
+
+		// Set permissions on socket
+		if spl[0] == "unixgram" {
+			fileMode := uint32(0777)
+
+			if sl.FileMode != "" {
+				// Convert from octal in string to int
+				i, err := strconv.ParseUint(sl.FileMode, 8, 32)
+				if err != nil {
+					return err
+				}
+
+				fileMode = uint32(i)
+			}
+
+			os.Chmod(spl[1], os.FileMode(fileMode))
 		}
 
 		if sl.ReadBufferSize.Size > 0 {
