@@ -1,8 +1,8 @@
 package powerdns_recursor
 
 import (
-	"fmt"
 	"net"
+	"os"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
@@ -113,8 +113,8 @@ func (s statServer) serverSocket(l *net.UnixConn) {
 
 func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	// We create a fake server to return test data
-	randomNumber := int64(5724354148158589552)
-	addr, err := net.ResolveUnixAddr("unixgram", fmt.Sprintf("/tmp/pdns%d.controlsocket", randomNumber))
+	controlSocket := "/tmp/pdns5724354148158589552.controlsocket"
+	addr, err := net.ResolveUnixAddr("unixgram", controlSocket)
 	if err != nil {
 		t.Fatal("Cannot parse unix socket")
 	}
@@ -124,12 +124,14 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	}
 
 	defer socket.Close()
+	defer os.Remove(controlSocket)
 
 	s := statServer{}
 	go s.serverSocket(socket)
 
 	p := &PowerdnsRecursor{
-		UnixSockets: []string{fmt.Sprintf("/tmp/pdns%d.controlsocket", randomNumber)},
+		UnixSockets: []string{controlSocket},
+		SocketDir:   "/tmp",
 	}
 
 	var acc testutil.Accumulator
