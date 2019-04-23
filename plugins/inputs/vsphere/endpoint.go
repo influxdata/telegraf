@@ -37,17 +37,19 @@ const maxMetadataSamples = 100 // Number of resources to sample for metric metad
 // Endpoint is a high-level representation of a connected vCenter endpoint. It is backed by the lower
 // level Client type.
 type Endpoint struct {
-	Parent          *VSphere
-	URL             *url.URL
-	resourceKinds   map[string]*resourceKind
-	hwMarks         *TSCache
-	lun2ds          map[string]string
-	discoveryTicker *time.Ticker
-	collectMux      sync.RWMutex
-	initialized     bool
-	clientFactory   *ClientFactory
-	busy            sync.Mutex
-	customFields    map[int32]string
+	Parent            *VSphere
+	URL               *url.URL
+	resourceKinds     map[string]*resourceKind
+	hwMarks           *TSCache
+	lun2ds            map[string]string
+	discoveryTicker   *time.Ticker
+	collectMux        sync.RWMutex
+	initialized       bool
+	clientFactory     *ClientFactory
+	busy              sync.Mutex
+	customFields      map[int32]string
+	customAttrFilter  filter.Filter
+	customAttrEnabled bool
 }
 
 type resourceKind struct {
@@ -103,12 +105,14 @@ func (e *Endpoint) getParent(obj *objectRef, res *resourceKind) (*objectRef, boo
 // as parameters.
 func NewEndpoint(ctx context.Context, parent *VSphere, url *url.URL) (*Endpoint, error) {
 	e := Endpoint{
-		URL:           url,
-		Parent:        parent,
-		hwMarks:       NewTSCache(1 * time.Hour),
-		lun2ds:        make(map[string]string),
-		initialized:   false,
-		clientFactory: NewClientFactory(ctx, url, parent),
+		URL:               url,
+		Parent:            parent,
+		hwMarks:           NewTSCache(1 * time.Hour),
+		lun2ds:            make(map[string]string),
+		initialized:       false,
+		clientFactory:     NewClientFactory(ctx, url, parent),
+		customAttrFilter:  newFilterOrPanic(parent.CustomAttributeInclude, parent.CustomAttributeExclude),
+		customAttrEnabled: anythingEnabled(parent.CustomAttributeExclude),
 	}
 
 	e.resourceKinds = map[string]*resourceKind{
@@ -236,7 +240,6 @@ func isSimple(include []string, exclude []string) bool {
 func (e *Endpoint) startDiscovery(ctx context.Context) {
 	e.discoveryTicker = time.NewTicker(e.Parent.ObjectDiscoveryInterval.Duration)
 	go func() {
-		defer HandlePanic()
 		for {
 			select {
 			case <-e.discoveryTicker.C:
@@ -268,7 +271,7 @@ func (e *Endpoint) init(ctx context.Context) error {
 	}
 
 	// Initial load of custom field metadata
-	if e.Parent.CustomAttributes {
+	if e.customAttrEnabled {
 		fields, err := client.GetCustomFields(ctx)
 		if err != nil {
 			log.Println("W! [inputs.vsphere] Could not load custom field metadata")
@@ -447,7 +450,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 
 	// Load custom field metadata
 	var fields map[int32]string
-	if e.Parent.CustomAttributes {
+	if e.customAttrEnabled {
 		fields, err = client.GetCustomFields(ctx)
 		if err != nil {
 			log.Println("W! [inputs.vsphere] Could not load custom field metadata")
@@ -648,7 +651,7 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 			uuid = r.Config.Uuid
 		}
 		cvs := make(map[string]string)
-		if e.Parent.CustomAttributes {
+		if e.customAttrEnabled {
 			for _, cv := range r.Summary.CustomValue {
 				val := cv.(*types.CustomFieldStringValue)
 				if val.Value == "" {
@@ -659,7 +662,9 @@ func getVMs(ctx context.Context, e *Endpoint, filter *ResourceFilter) (objectMap
 					log.Printf("W! [inputs.vsphere] Metadata for custom field %d not found. Skipping", val.Key)
 					continue
 				}
-				cvs[key] = val.Value
+				if e.customAttrFilter.Match(key) {
+					cvs[key] = val.Value
+				}
 			}
 		}
 		m[r.ExtensibleManagedObject.Reference().Value] = objectRef{

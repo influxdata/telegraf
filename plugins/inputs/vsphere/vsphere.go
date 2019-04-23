@@ -40,7 +40,8 @@ type VSphere struct {
 	DatastoreMetricExclude  []string
 	DatastoreInclude        []string
 	Separator               string
-	CustomAttributes        bool
+	CustomAttributeInclude  []string
+	CustomAttributeExclude  []string
 	UseIntSamples           bool
 
 	MaxQueryObjects         int
@@ -175,7 +176,8 @@ var sampleConfig = `
   # datacenter_instances = false ## false by default for Datastores only
 
   ## Send custom attributes of hosts and VMs as tags
-  # custom_attributes = false
+  # custom_attributes_include = [] ## if omitted or empty, all custom attributes are collected
+  custom_attributes_exclude = ["*] ## By default, all custom attributes are excluded, i.e. none are collected
 
   ## Plugin Settings  
   ## separator character to use for measurement and field names (default: "_")
@@ -282,7 +284,6 @@ func (v *VSphere) Gather(acc telegraf.Accumulator) error {
 	for _, ep := range v.endpoints {
 		wg.Add(1)
 		go func(endpoint *Endpoint) {
-			defer HandlePanicWithAcc(acc)
 			defer wg.Done()
 			err := endpoint.Collect(context.Background(), acc)
 			if err == context.Canceled {
@@ -326,7 +327,8 @@ func init() {
 			DatastoreMetricExclude:  nil,
 			DatastoreInclude:        []string{"/*/datastore/**"},
 			Separator:               "_",
-			CustomAttributes:        false,
+			CustomAttributeInclude:  []string{},
+			CustomAttributeExclude:  []string{"*"},
 			UseIntSamples:           true,
 
 			MaxQueryObjects:         256,
