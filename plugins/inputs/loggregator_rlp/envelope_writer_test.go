@@ -104,12 +104,12 @@ func TestTimersTransformsToGauges_CalculatesDifferenceBetweenStartAndStop(t *tes
 	tc.Expect(metric.Measurement).To(Equal("http"))
 	tc.Expect(metric.Fields).To(HaveKeyWithValue("gauge", BeEquivalentTo(7)))
 	tc.Expect(metric.Tags).To(Equal(map[string]string{
-		"source_id":   "source",
-		"instance_id": "instance",
-		"deployment":  "deployment_value",
-		"job":         "job_value",
-		"status_code": "201",
-		"process_id": "process_id",
+		"source_id":           "source",
+		"instance_id":         "instance",
+		"deployment":          "deployment_value",
+		"job":                 "job_value",
+		"status_code":         "201",
+		"process_id":          "process_id",
 		"process_instance_id": "process_instance_id",
 	}))
 
@@ -133,12 +133,12 @@ func TestTimersTransformsToGauges_DropsExtraTags(t *testing.T) {
 	metric := tc.nextMetric()
 
 	tc.Expect(metric.Tags).To(Equal(map[string]string{
-		"source_id":   "source",
-		"instance_id": "instance",
-		"deployment":  "deployment_value",
-		"job":         "job_value",
-		"status_code": "400",
-		"process_id": "process_id",
+		"source_id":           "source",
+		"instance_id":         "instance",
+		"deployment":          "deployment_value",
+		"job":                 "job_value",
+		"status_code":         "400",
+		"process_id":          "process_id",
 		"process_instance_id": "process_instance_id",
 	}))
 }
@@ -215,10 +215,10 @@ func buildHttpTimerEnvelope(t time.Time) *loggregator_v2.Envelope {
 		},
 		Tags: map[string]string{},
 		DeprecatedTags: map[string]*loggregator_v2.Value{
-			"status_code": makeTextValue("201"),
-			"job":         makeTextValue("job_value"),
-			"deployment":  makeTextValue("deployment_value"),
-			"process_id": makeTextValue("process_id"),
+			"status_code":         makeTextValue("201"),
+			"job":                 makeTextValue("job_value"),
+			"deployment":          makeTextValue("deployment_value"),
+			"process_id":          makeTextValue("process_id"),
 			"process_instance_id": makeTextValue("process_instance_id"),
 		},
 	}

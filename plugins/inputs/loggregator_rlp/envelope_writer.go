@@ -194,12 +194,12 @@ func buildTags(env *loggregator_v2.Envelope) map[string]string {
 
 func buildTimerTags(env *loggregator_v2.Envelope) map[string]string {
 	return map[string]string{
-		"source_id":   sourceID(env),
-		"instance_id": env.GetInstanceId(),
-		"job":         getTag(env, "job"),
-		"deployment":  getTag(env, "deployment"),
-		"status_code": getTag(env, "status_code"),
-		"process_id": getTag(env, "process_id"),
+		"source_id":           sourceID(env),
+		"instance_id":         env.GetInstanceId(),
+		"job":                 getTag(env, "job"),
+		"deployment":          getTag(env, "deployment"),
+		"status_code":         getTag(env, "status_code"),
+		"process_id":          getTag(env, "process_id"),
 		"process_instance_id": getTag(env, "process_instance_id"),
 	}
 }
