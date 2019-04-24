@@ -20,17 +20,19 @@ import (
 
 var (
 	// Device Model:     APPLE SSD SM256E
-	modelInInfo = regexp.MustCompile("^Device Model:\\s+(.*)$")
+	modelInfo = regexp.MustCompile("^Device Model:\\s+(.*)$")
 	// Product:              HUH721212AL5204
-	productInInfo = regexp.MustCompile("^Product:\\s+(.*)$")
+	productInfo = regexp.MustCompile("^Product:\\s+(.*)$")
+	// Model Number: TS128GMTE850
+	modelNoInfo = regexp.MustCompile("^Model Number:\\s+(.*)$")
 	// Serial Number:    S0X5NZBC422720
-	serialInInfo = regexp.MustCompile("^Serial Number:\\s+(.*)$")
+	serialInfo = regexp.MustCompile("^Serial Number:\\s+(.*)$")
 	// LU WWN Device Id: 5 002538 655584d30
-	wwnInInfo = regexp.MustCompile("^LU WWN Device Id:\\s+(.*)$")
+	wwnInfo = regexp.MustCompile("^LU WWN Device Id:\\s+(.*)$")
 	// User Capacity:    251,000,193,024 bytes [251 GB]
-	usercapacityInInfo = regexp.MustCompile("^User Capacity:\\s+([0-9,]+)\\s+bytes.*$")
+	usercapacityInfo = regexp.MustCompile("^User Capacity:\\s+([0-9,]+)\\s+bytes.*$")
 	// SMART support is: Enabled
-	smartEnabledInInfo = regexp.MustCompile("^SMART support is:\\s+(\\w+)$")
+	smartEnabledInfo = regexp.MustCompile("^SMART support is:\\s+(\\w+)$")
 	// SMART overall-health self-assessment test result: PASSED
 	// PASSED, FAILED, UNKNOWN
 	smartOverallHealth = regexp.MustCompile("^SMART overall-health self-assessment test result:\\s+(\\w+).*$")
@@ -223,29 +225,32 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		model := modelInInfo.FindStringSubmatch(line)
+		model := modelInfo.FindStringSubmatch(line)
 		if len(model) > 1 {
 			deviceTags["model"] = model[1]
-		} else if product := productInInfo.FindStringSubmatch(line); len(product) > 1 {
+		} else if product := productInfo.FindStringSubmatch(line); len(product) > 1 {
 			deviceTags["model"] = product[1]
+		} else if modelNo := modelNoInfo.FindStringSubmatch(line); len(modelNo) > 1 {
+			fmt.Println(modelNo)
+			deviceTags["model"] = modelNo[1]
 		}
 
-		serial := serialInInfo.FindStringSubmatch(line)
+		serial := serialInfo.FindStringSubmatch(line)
 		if len(serial) > 1 {
 			deviceTags["serial_no"] = serial[1]
 		}
 
-		wwn := wwnInInfo.FindStringSubmatch(line)
+		wwn := wwnInfo.FindStringSubmatch(line)
 		if len(wwn) > 1 {
 			deviceTags["wwn"] = strings.Replace(wwn[1], " ", "", -1)
 		}
 
-		capacity := usercapacityInInfo.FindStringSubmatch(line)
+		capacity := usercapacityInfo.FindStringSubmatch(line)
 		if len(capacity) > 1 {
 			deviceTags["capacity"] = strings.Replace(capacity[1], ",", "", -1)
 		}
 
-		enabled := smartEnabledInInfo.FindStringSubmatch(line)
+		enabled := smartEnabledInfo.FindStringSubmatch(line)
 		if len(enabled) > 1 {
 			deviceTags["enabled"] = enabled[1]
 		}

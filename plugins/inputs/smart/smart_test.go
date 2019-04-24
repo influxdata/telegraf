@@ -541,7 +541,7 @@ func TestGatherNvme(t *testing.T) {
 	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"id":"194", "name":"Temperature_Celsius"}, Fields:map[string]interface {}{"raw_value":38}, Time:time.Time{wall:0xbf285843cb2de7b5, ext:1630884, loc:(*time.Location)(0x9d1300)}}
 	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"id":"12", "name":"Power_Cycle_Count"}, Fields:map[string]interface {}{"raw_value":472}, Time:time.Time{wall:0xbf285843cb2e3cbe, ext:1652654, loc:(*time.Location)(0x9d1300)}}
 	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"id":"9", "name":"Power_On_Hours"}, Fields:map[string]interface {}{"raw_value":6038}, Time:time.Time{wall:0xbf285843cb2e785a, ext:1667913, loc:(*time.Location)(0x9d1300)}}
-	// &testutil.Metric{Measurement:"smart_device", Tags:map[string]string{"device":".", "serial_no":"D704940282?"}, Fields:map[string]interface {}{"exit_status":0, "health_ok":true, "temp_c":38}, Time:time.Time{wall:0xbf285843cb2ea5d0, ext:1679550, loc:(*time.Location)(0x9d1300)}}
+	// &testutil.Metric{Measurement:"smart_device", Tags:map[string]string{"device":".", "model":"TS128GMTE850", "serial_no":"D704940282?"}, Fields:map[string]interface {}{"exit_status":0, "health_ok":true, "temp_c":38}, Time:time.Time{wall:0xbf285843cb2ea5d0, ext:1679550, loc:(*time.Location)(0x9d1300)}}
 }
 
 // smartctl output
