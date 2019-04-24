@@ -24,7 +24,7 @@ type Point struct {
 }
 
 type WavefrontParser struct {
-	parsers     sync.Pool
+	parsers     *sync.Pool
 	defaultTags map[string]string
 }
 
@@ -54,7 +54,14 @@ func NewWavefrontElements() []ElementParser {
 }
 
 func NewWavefrontParser(defaultTags map[string]string) *WavefrontParser {
-	return &WavefrontParser{defaultTags: defaultTags}
+	wp := &WavefrontParser{defaultTags: defaultTags}
+	wp.parsers = &sync.Pool{
+		New: func() interface{} {
+			log.Printf("D! [parsers.wavefront] Creating new parser for %s", wp)
+			return NewPointParser(wp)
+		},
+	}
+	return wp
 }
 
 func NewPointParser(parent *WavefrontParser) *PointParser {
@@ -78,13 +85,7 @@ func (p *WavefrontParser) ParseLine(line string) (telegraf.Metric, error) {
 }
 
 func (p *WavefrontParser) Parse(buf []byte) ([]telegraf.Metric, error) {
-	pi := p.parsers.Get()
-	var pp *PointParser
-	if pi == nil {
-		pp = NewPointParser(p)
-	} else {
-		pp = pi.(*PointParser)
-	}
+	pp := p.parsers.Get().(*PointParser)
 	defer p.parsers.Put(pp)
 	return pp.Parse(buf)
 }
