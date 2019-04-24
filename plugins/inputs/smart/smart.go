@@ -43,6 +43,12 @@ var (
 	sasLoadCycleAttr = regexp.MustCompile("^Accumulated load-unload cycles:\\s+(.*)$")
 	// Current Drive Temperature:     34 C
 	sasTempAttr = regexp.MustCompile("^Current Drive Temperature:\\s+(.*)\\s+C(.*)$")
+	// Temperature: 38 Celsius
+	nvmeTempAttr = regexp.MustCompile("^Temperature:\\s+(.*)\\s+(.*)$")
+	// Power Cycles: 472
+	nvmePowerCycleAttr = regexp.MustCompile("^Power Cycles:\\s+(.*)$")
+	// Power On Hours: 6,038
+	nvmePowerOnAttr = regexp.MustCompile("^Power On Hours:\\s+(.*)$")
 
 	// ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
 	//   1 Raw_Read_Error_Rate     -O-RC-   200   200   000    -    0
@@ -302,7 +308,31 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 				if startStop := sasStartStopAttr.FindStringSubmatch(line); len(startStop) > 1 {
 					tags["id"] = "4"
 					tags["name"] = "Start_Stop_Count"
-					i, err := strconv.ParseInt(startStop[1], 10, 64)
+					i, err := strconv.ParseInt(strings.Replace(startStop[1], ",", "", -1), 10, 64)
+					if err != nil {
+						continue
+					}
+					fields["raw_value"] = i
+
+					acc.AddFields("smart_attribute", fields, tags)
+				}
+
+				if powerCycle := nvmePowerCycleAttr.FindStringSubmatch(line); len(powerCycle) > 1 {
+					tags["id"] = "12"
+					tags["name"] = "Power_Cycle_Count"
+					i, err := strconv.ParseInt(strings.Replace(powerCycle[1], ",", "", -1), 10, 64)
+					if err != nil {
+						continue
+					}
+					fields["raw_value"] = i
+
+					acc.AddFields("smart_attribute", fields, tags)
+				}
+
+				if powerOn := nvmePowerOnAttr.FindStringSubmatch(line); len(powerOn) > 1 {
+					tags["id"] = "9"
+					tags["name"] = "Power_On_Hours"
+					i, err := strconv.ParseInt(strings.Replace(powerOn[1], ",", "", -1), 10, 64)
 					if err != nil {
 						continue
 					}
@@ -314,7 +344,7 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 				if loadCycle := sasLoadCycleAttr.FindStringSubmatch(line); len(loadCycle) > 1 {
 					tags["id"] = "193"
 					tags["name"] = "Load_Cycle_Count"
-					i, err := strconv.ParseInt(loadCycle[1], 10, 64)
+					i, err := strconv.ParseInt(strings.Replace(loadCycle[1], ",", "", -1), 10, 64)
 					if err != nil {
 						continue
 					}
@@ -324,6 +354,19 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 				}
 
 				if temp := sasTempAttr.FindStringSubmatch(line); len(temp) > 1 {
+					tags["id"] = "194"
+					tags["name"] = "Temperature_Celsius"
+					var err error
+					tempC, err = strconv.ParseInt(temp[1], 10, 64)
+					if err != nil {
+						continue
+					}
+					fields["raw_value"] = tempC
+
+					acc.AddFields("smart_attribute", fields, tags)
+				}
+
+				if temp := nvmeTempAttr.FindStringSubmatch(line); len(temp) > 1 {
 					tags["id"] = "194"
 					tags["name"] = "Temperature_Celsius"
 					var err error

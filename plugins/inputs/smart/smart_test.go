@@ -523,6 +523,27 @@ func TestGatherSSDRaid(t *testing.T) {
 	// &testutil.Metric{Measurement:"smart_device", Tags:map[string]string{"device":".", "enabled":"Enabled", "model":"Samsung SSD 850 PRO 256GB", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "health_ok":true, "udma_crc_errors":0}, Time:time.Time{wall:0xbf284187788feeae, ext:1935543, loc:(*time.Location)(0x9d02e0)}}
 }
 
+func TestGatherNvme(t *testing.T) {
+	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(nvmeInfoData), nil
+	}
+
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	gatherDisk(acc, true, true, "", "", "", wg)
+	assert.Equal(t, 6, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, uint64(4), acc.NMetrics(), "Wrong number of metrics gathered")
+
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"id":"194", "name":"Temperature_Celsius"}, Fields:map[string]interface {}{"raw_value":38}, Time:time.Time{wall:0xbf285843cb2de7b5, ext:1630884, loc:(*time.Location)(0x9d1300)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"id":"12", "name":"Power_Cycle_Count"}, Fields:map[string]interface {}{"raw_value":472}, Time:time.Time{wall:0xbf285843cb2e3cbe, ext:1652654, loc:(*time.Location)(0x9d1300)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"id":"9", "name":"Power_On_Hours"}, Fields:map[string]interface {}{"raw_value":6038}, Time:time.Time{wall:0xbf285843cb2e785a, ext:1667913, loc:(*time.Location)(0x9d1300)}}
+	// &testutil.Metric{Measurement:"smart_device", Tags:map[string]string{"device":".", "serial_no":"D704940282?"}, Fields:map[string]interface {}{"exit_status":0, "health_ok":true, "temp_c":38}, Time:time.Time{wall:0xbf285843cb2ea5d0, ext:1679550, loc:(*time.Location)(0x9d1300)}}
+}
+
 // smartctl output
 var (
 	mockScanData = `/dev/ada0 -d atacam # /dev/ada0, ATA device
@@ -932,5 +953,43 @@ SMART Selective self-test log data structure revision number 1
 Selective self-test flags (0x0):
 	After scanning selected spans, do NOT read-scan remainder of disk.
 If Selective self-test is pending on power-up, resume after 0 minute delay.
+`
+
+	nvmeInfoData = `smartctl 6.5 2016-05-07 r4318 [x86_64-linux-4.1.27-gvt-yocto-standard] (local build)
+Copyright (C) 2002-16, Bruce Allen, Christian Franke, www.smartmontools.org
+
+=== START OF INFORMATION SECTION ===
+Model Number: TS128GMTE850
+Serial Number: D704940282?
+Firmware Version: C2.3.13
+PCI Vendor/Subsystem ID: 0x126f
+IEEE OUI Identifier: 0x000000
+Controller ID: 1
+Number of Namespaces: 1
+Namespace 1 Size/Capacity: 128,035,676,160 [128 GB]
+Namespace 1 Formatted LBA Size: 512
+Local Time is: Fri Jun 15 11:41:35 2018 UTC
+
+=== START OF SMART DATA SECTION ===
+SMART overall-health self-assessment test result: PASSED
+
+SMART/Health Information (NVMe Log 0x02, NSID 0xffffffff)
+Critical Warning: 0x00
+Temperature: 38 Celsius
+Available Spare: 100%
+Available Spare Threshold: 10%
+Percentage Used: 16%
+Data Units Read: 11,836,935 [6.06 TB]
+Data Units Written: 62,288,091 [31.8 TB]
+Host Read Commands: 135,924,188
+Host Write Commands: 7,715,573,429
+Controller Busy Time: 4,042
+Power Cycles: 472
+Power On Hours: 6,038
+Unsafe Shutdowns: 355
+Media and Data Integrity Errors: 0
+Error Information Log Entries: 119,699
+Warning Comp. Temperature Time: 0
+Critical Comp. Temperature Time: 0
 `
 )
