@@ -109,6 +109,8 @@ func TestTimersTransformsToGauges_CalculatesDifferenceBetweenStartAndStop(t *tes
 		"deployment":  "deployment_value",
 		"job":         "job_value",
 		"status_code": "201",
+		"process_id": "process_id",
+		"process_instance_id": "process_instance_id",
 	}))
 
 	// ensure time is set to now and not envelope time otherwise aggregator will drop the metric
@@ -136,6 +138,8 @@ func TestTimersTransformsToGauges_DropsExtraTags(t *testing.T) {
 		"deployment":  "deployment_value",
 		"job":         "job_value",
 		"status_code": "400",
+		"process_id": "process_id",
+		"process_instance_id": "process_instance_id",
 	}))
 }
 
@@ -214,6 +218,8 @@ func buildHttpTimerEnvelope(t time.Time) *loggregator_v2.Envelope {
 			"status_code": makeTextValue("201"),
 			"job":         makeTextValue("job_value"),
 			"deployment":  makeTextValue("deployment_value"),
+			"process_id": makeTextValue("process_id"),
+			"process_instance_id": makeTextValue("process_instance_id"),
 		},
 	}
 }
