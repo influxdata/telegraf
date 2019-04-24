@@ -448,6 +448,49 @@ func TestGatherHtSAS(t *testing.T) {
 	// &testutil.Metric{Measurement:"smart_device", Tags:map[string]string{"device":".", "enabled":"Enabled", "model":"HUC103030CSS600"}, Fields:map[string]interface {}{"exit_status":0, "health_ok":true, "temp_c":36}, Time:time.Time{wall:0xbf27f32fc76be571, ext:1424067, loc:(*time.Location)(0x9cd2a0)}}
 }
 
+func TestGatherSSD(t *testing.T) {
+	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(ssdInfoData), nil
+	}
+
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	gatherDisk(acc, true, true, "", "", "", wg)
+	assert.Equal(t, 105, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, uint64(26), acc.NMetrics(), "Wrong number of metrics gathered")
+
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"5", "name":"Reallocated_Sector_Ct", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":0, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac24fed36, ext:1372338, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"9", "name":"Power_On_Hours", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":6383, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac25016d5, ext:1383002, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"12", "name":"Power_Cycle_Count", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":19, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac2503634, ext:1391024, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"165", "name":"Unknown_Attribute", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":59310806, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac2504e6c, ext:1397226, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"166", "name":"Unknown_Attribute", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":1, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac25064da, ext:1402967, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"167", "name":"Unknown_Attribute", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":57, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac2508efa, ext:1413751, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"168", "name":"Unknown_Attribute", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":43, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac250a69c, ext:1419803, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"169", "name":"Unknown_Attribute", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":221, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac250bca3, ext:1425441, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"170", "name":"Unknown_Attribute", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":0, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac250d927, ext:1432740, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"171", "name":"Unknown_Attribute", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":0, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac250f012, ext:1438605, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"172", "name":"Unknown_Attribute", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":0, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac2510bde, ext:1445722, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"173", "name":"Unknown_Attribute", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":13, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac2512368, ext:1451748, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"174", "name":"Unknown_Attribute", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":4, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac251689f, ext:1469468, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"184", "name":"End-to-End_Error", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":0, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac25180f1, ext:1475695, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"187", "name":"Reported_Uncorrect", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":0, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac251969e, ext:1481243, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"188", "name":"Command_Timeout", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":0, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac251b24f, ext:1488330, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O---K", "id":"194", "name":"Temperature_Celsius", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":34, "value":66, "worst":65}, Time:time.Time{wall:0xbf2840bac251cab5, ext:1494577, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"199", "name":"UDMA_CRC_Error_Count", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":0, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac251e1b9, ext:1500470, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"230", "name":"Unknown_SSD_Attribute", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":2229110374919, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac251f98f, ext:1506573, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"PO--CK", "id":"232", "name":"Available_Reservd_Space", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":100, "threshold":4, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac25220cd, ext:1516619, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"233", "name":"Media_Wearout_Indicator", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":3129, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac252381d, ext:1522585, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"234", "name":"Unknown_Attribute", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":7444, "value":100, "worst":100}, Time:time.Time{wall:0xbf2840bac2525a30, ext:1531316, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"----CK", "id":"241", "name":"Total_LBAs_Written", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":4812, "value":253, "worst":253}, Time:time.Time{wall:0xbf2840bac2528231, ext:1541550, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"----CK", "id":"242", "name":"Total_LBAs_Read", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":671, "value":253, "worst":253}, Time:time.Time{wall:0xbf2840bac25298eb, ext:1547367, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"244", "name":"Unknown_Attribute", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":0, "value":0, "worst":100}, Time:time.Time{wall:0xbf2840bac252ae29, ext:1552807, loc:(*time.Location)(0x9ce2a0)}}
+	// &testutil.Metric{Measurement:"smart_device", Tags:map[string]string{"device":".", "enabled":"Enabled", "model":"SanDisk Ultra II 240GB", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "health_ok":true, "temp_c":34, "udma_crc_errors":0}, Time:time.Time{wall:0xbf2840bac252fe0e, ext:1573258, loc:(*time.Location)(0x9ce2a0)}}
+}
+
 // smartctl output
 var (
 	mockScanData = `/dev/ada0 -d atacam # /dev/ada0, ATA device
@@ -679,5 +722,64 @@ ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
                             |||____ S speed/performance
                             ||_____ O updated online
                             |______ P prefailure warning
+`
+
+	ssdInfoData = `smartctl 6.6 2016-05-31 r4324 [x86_64-linux-4.15.0-33-generic] (local build)
+Copyright (C) 2002-16, Bruce Allen, Christian Franke, www.smartmontools.org
+
+=== START OF INFORMATION SECTION ===
+Device Model:     SanDisk Ultra II 240GB
+Serial Number:    XXXXXXXX
+LU WWN Device Id: XXXXXXXX
+Firmware Version: XXXXXXX
+User Capacity:    240.057.409.536 bytes [240 GB]
+Sector Size:      512 bytes logical/physical
+Rotation Rate:    Solid State Device
+Form Factor:      2.5 inches
+Device is:        Not in smartctl database [for details use: -P showall]
+ATA Version is:   ACS-2 T13/2015-D revision 3
+SATA Version is:  SATA 3.2, 6.0 Gb/s (current: 6.0 Gb/s)
+Local Time is:    Mon Sep 17 13:22:19 2018 CEST
+SMART support is: Available - device has SMART capability.
+SMART support is: Enabled
+Power mode is:    ACTIVE or IDLE
+
+=== START OF READ SMART DATA SECTION ===
+SMART overall-health self-assessment test result: PASSED
+
+SMART Attributes Data Structure revision number: 4
+Vendor Specific SMART Attributes with Thresholds:
+ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
+  5 Reallocated_Sector_Ct   -O--CK   100   100   ---    -    0
+  9 Power_On_Hours          -O--CK   100   100   ---    -    6383
+ 12 Power_Cycle_Count       -O--CK   100   100   ---    -    19
+165 Unknown_Attribute       -O--CK   100   100   ---    -    59310806
+166 Unknown_Attribute       -O--CK   100   100   ---    -    1
+167 Unknown_Attribute       -O--CK   100   100   ---    -    57
+168 Unknown_Attribute       -O--CK   100   100   ---    -    43
+169 Unknown_Attribute       -O--CK   100   100   ---    -    221
+170 Unknown_Attribute       -O--CK   100   100   ---    -    0
+171 Unknown_Attribute       -O--CK   100   100   ---    -    0
+172 Unknown_Attribute       -O--CK   100   100   ---    -    0
+173 Unknown_Attribute       -O--CK   100   100   ---    -    13
+174 Unknown_Attribute       -O--CK   100   100   ---    -    4
+184 End-to-End_Error        -O--CK   100   100   ---    -    0
+187 Reported_Uncorrect      -O--CK   100   100   ---    -    0
+188 Command_Timeout         -O--CK   100   100   ---    -    0
+194 Temperature_Celsius     -O---K   066   065   ---    -    34 (Min/Max 19/65)
+199 UDMA_CRC_Error_Count    -O--CK   100   100   ---    -    0
+230 Unknown_SSD_Attribute   -O--CK   100   100   ---    -    2229110374919
+232 Available_Reservd_Space PO--CK   100   100   004    -    100
+233 Media_Wearout_Indicator -O--CK   100   100   ---    -    3129
+234 Unknown_Attribute       -O--CK   100   100   ---    -    7444
+241 Total_LBAs_Written      ----CK   253   253   ---    -    4812
+242 Total_LBAs_Read         ----CK   253   253   ---    -    671
+244 Unknown_Attribute       -O--CK   000   100   ---    -    0
+                            ||||||_ K auto-keep
+                            |||||__ C event count
+                            ||||___ R error rate
+                            |||____ S speed/performance
+                            ||_____ O updated online
+														|______ P prefailure warning
 `
 )
