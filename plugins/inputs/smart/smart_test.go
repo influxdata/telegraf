@@ -491,6 +491,38 @@ func TestGatherSSD(t *testing.T) {
 	// &testutil.Metric{Measurement:"smart_device", Tags:map[string]string{"device":".", "enabled":"Enabled", "model":"SanDisk Ultra II 240GB", "serial_no":"XXXXXXXX", "wwn":"XXXXXXXX"}, Fields:map[string]interface {}{"exit_status":0, "health_ok":true, "temp_c":34, "udma_crc_errors":0}, Time:time.Time{wall:0xbf2840bac252fe0e, ext:1573258, loc:(*time.Location)(0x9ce2a0)}}
 }
 
+func TestGatherSSDRaid(t *testing.T) {
+	runCmd = func(sudo bool, command string, args ...string) ([]byte, error) {
+		return []byte(ssdRaidInfoData), nil
+	}
+
+	var (
+		acc = &testutil.Accumulator{}
+		wg  = &sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	gatherDisk(acc, true, true, "", "", "", wg)
+	assert.Equal(t, 73, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
+
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"PO--CK", "id":"5", "name":"Reallocated_Sector_Ct", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":1, "threshold":10, "value":99, "worst":99}, Time:time.Time{wall:0xbf284187788d3439, ext:1756737, loc:(*time.Location)(0x9d02e0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"9", "name":"Power_On_Hours", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":26732, "threshold":0, "value":94, "worst":94}, Time:time.Time{wall:0xbf284187788d5953, ext:1766235, loc:(*time.Location)(0x9d02e0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"12", "name":"Power_Cycle_Count", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":51, "threshold":0, "value":99, "worst":99}, Time:time.Time{wall:0xbf284187788d733d, ext:1772869, loc:(*time.Location)(0x9d02e0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"PO--C-", "id":"177", "name":"Wear_Leveling_Count", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":7282, "threshold":0, "value":1, "worst":1}, Time:time.Time{wall:0xbf284187788d8a63, ext:1778795, loc:(*time.Location)(0x9d02e0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"PO--C-", "id":"179", "name":"Used_Rsvd_Blk_Cnt_Tot", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":1, "threshold":10, "value":99, "worst":99}, Time:time.Time{wall:0xbf284187788da21f, ext:1784871, loc:(*time.Location)(0x9d02e0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"181", "name":"Program_Fail_Cnt_Total", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":0, "threshold":10, "value":100, "worst":100}, Time:time.Time{wall:0xbf284187788ddc22, ext:1799724, loc:(*time.Location)(0x9d02e0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"182", "name":"Erase_Fail_Count_Total", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":1, "threshold":10, "value":99, "worst":99}, Time:time.Time{wall:0xbf284187788df2e2, ext:1805548, loc:(*time.Location)(0x9d02e0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"PO--C-", "id":"183", "name":"Runtime_Bad_Block", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":1, "threshold":10, "value":99, "worst":99}, Time:time.Time{wall:0xbf284187788e095a, ext:1811301, loc:(*time.Location)(0x9d02e0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"187", "name":"Uncorrectable_Error_Cnt", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":0, "threshold":0, "value":100, "worst":100}, Time:time.Time{wall:0xbf284187788e265a, ext:1818722, loc:(*time.Location)(0x9d02e0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"190", "name":"Airflow_Temperature_Cel", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":19, "threshold":0, "value":81, "worst":69}, Time:time.Time{wall:0xbf284187788e3ecc, ext:1824980, loc:(*time.Location)(0x9d02e0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O-RC-", "id":"195", "name":"ECC_Error_Rate", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":0, "threshold":0, "value":200, "worst":200}, Time:time.Time{wall:0xbf284187788e5cde, ext:1832680, loc:(*time.Location)(0x9d02e0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-OSRCK", "id":"199", "name":"CRC_Error_Count", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":0, "threshold":0, "value":100, "worst":100}, Time:time.Time{wall:0xbf284187788e7329, ext:1838386, loc:(*time.Location)(0x9d02e0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--C-", "id":"235", "name":"POR_Recovery_Count", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":50, "threshold":0, "value":99, "worst":99}, Time:time.Time{wall:0xbf284187788e9b31, ext:1848632, loc:(*time.Location)(0x9d02e0)}}
+	// &testutil.Metric{Measurement:"smart_attribute", Tags:map[string]string{"device":".", "fail":"-", "flags":"-O--CK", "id":"241", "name":"Total_LBAs_Written", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "raw_value":61956393677, "threshold":0, "value":99, "worst":99}, Time:time.Time{wall:0xbf284187788eb46f, ext:1855096, loc:(*time.Location)(0x9d02e0)}}
+	// &testutil.Metric{Measurement:"smart_device", Tags:map[string]string{"device":".", "enabled":"Enabled", "model":"Samsung SSD 850 PRO 256GB", "serial_no":"S251NX0H869353L", "wwn":"500253884027f72f"}, Fields:map[string]interface {}{"exit_status":0, "health_ok":true, "udma_crc_errors":0}, Time:time.Time{wall:0xbf284187788feeae, ext:1935543, loc:(*time.Location)(0x9d02e0)}}
+}
+
 // smartctl output
 var (
 	mockScanData = `/dev/ada0 -d atacam # /dev/ada0, ATA device
@@ -781,5 +813,124 @@ ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
                             |||____ S speed/performance
                             ||_____ O updated online
 														|______ P prefailure warning
+`
+	ssdRaidInfoData = `smartctl 6.6 2017-11-05 r4594 [FreeBSD 11.1-RELEASE-p13 amd64] (local build)
+Copyright (C) 2002-17, Bruce Allen, Christian Franke, www.smartmontools.org
+
+CHECK POWER MODE: incomplete response, ATA output registers missing
+CHECK POWER MODE not implemented, ignoring -n option
+=== START OF INFORMATION SECTION ===
+Model Family:     Samsung based SSDs
+Device Model:     Samsung SSD 850 PRO 256GB
+Serial Number:    S251NX0H869353L
+LU WWN Device Id: 5 002538 84027f72f
+Firmware Version: EXM02B6Q
+User Capacity:    256 060 514 304 bytes [256 GB]
+Sector Size:      512 bytes logical/physical
+Rotation Rate:    Solid State Device
+Device is:        In smartctl database [for details use: -P show]
+ATA Version is:   ACS-2, ATA8-ACS T13/1699-D revision 4c
+SATA Version is:  SATA 3.1, 6.0 Gb/s (current: 6.0 Gb/s)
+Local Time is:    Fri Sep 21 17:49:16 2018 CEST
+SMART support is: Available - device has SMART capability.
+SMART support is: Enabled
+
+=== START OF READ SMART DATA SECTION ===
+SMART Status not supported: Incomplete response, ATA output registers missing
+SMART overall-health self-assessment test result: PASSED
+Warning: This result is based on an Attribute check.
+
+General SMART Values:
+Offline data collection status:  (0x00)	Offline data collection activity
+					was never started.
+					Auto Offline Data Collection: Disabled.
+Self-test execution status:      (   0)	The previous self-test routine completed
+					without error or no self-test has ever
+					been run.
+Total time to complete Offline
+data collection: 		(    0) seconds.
+Offline data collection
+capabilities: 			 (0x53) SMART execute Offline immediate.
+					Auto Offline data collection on/off support.
+					Suspend Offline collection upon new
+					command.
+					No Offline surface scan supported.
+					Self-test supported.
+					No Conveyance Self-test supported.
+					Selective Self-test supported.
+SMART capabilities:            (0x0003)	Saves SMART data before entering
+					power-saving mode.
+					Supports SMART auto save timer.
+Error logging capability:        (0x01)	Error logging supported.
+					General Purpose Logging supported.
+Short self-test routine
+recommended polling time: 	 (   2) minutes.
+Extended self-test routine
+recommended polling time: 	 ( 136) minutes.
+SCT capabilities: 	       (0x003d)	SCT Status supported.
+					SCT Error Recovery Control supported.
+					SCT Feature Control supported.
+					SCT Data Table supported.
+
+SMART Attributes Data Structure revision number: 1
+Vendor Specific SMART Attributes with Thresholds:
+ID# ATTRIBUTE_NAME          FLAGS    VALUE WORST THRESH FAIL RAW_VALUE
+	5 Reallocated_Sector_Ct   PO--CK   099   099   010    -    1
+	9 Power_On_Hours          -O--CK   094   094   000    -    26732
+	12 Power_Cycle_Count       -O--CK   099   099   000    -    51
+177 Wear_Leveling_Count     PO--C-   001   001   000    -    7282
+179 Used_Rsvd_Blk_Cnt_Tot   PO--C-   099   099   010    -    1
+181 Program_Fail_Cnt_Total  -O--CK   100   100   010    -    0
+182 Erase_Fail_Count_Total  -O--CK   099   099   010    -    1
+183 Runtime_Bad_Block       PO--C-   099   099   010    -    1
+187 Uncorrectable_Error_Cnt -O--CK   100   100   000    -    0
+190 Airflow_Temperature_Cel -O--CK   081   069   000    -    19
+195 ECC_Error_Rate          -O-RC-   200   200   000    -    0
+199 CRC_Error_Count         -OSRCK   100   100   000    -    0
+235 POR_Recovery_Count      -O--C-   099   099   000    -    50
+241 Total_LBAs_Written      -O--CK   099   099   000    -    61956393677
+														||||||_ K auto-keep
+														|||||__ C event count
+														||||___ R error rate
+														|||____ S speed/performance
+														||_____ O updated online
+														|______ P prefailure warning
+
+SMART Error Log Version: 1
+No Errors Logged
+
+SMART Self-test log structure revision number 1
+Num  Test_Description    Status                  Remaining  LifeTime(hours)  LBA_of_first_error
+# 1  Short offline       Completed without error       00%     26717         -
+# 2  Short offline       Completed without error       00%     26693         -
+# 3  Short offline       Completed without error       00%     26669         -
+# 4  Short offline       Completed without error       00%     26645         -
+# 5  Short offline       Completed without error       00%     26621         -
+# 6  Short offline       Completed without error       00%     26596         -
+# 7  Extended offline    Completed without error       00%     26574         -
+# 8  Short offline       Completed without error       00%     26572         -
+# 9  Short offline       Completed without error       00%     26548         -
+#10  Short offline       Completed without error       00%     26524         -
+#11  Short offline       Completed without error       00%     26500         -
+#12  Short offline       Completed without error       00%     26476         -
+#13  Short offline       Completed without error       00%     26452         -
+#14  Short offline       Completed without error       00%     26428         -
+#15  Extended offline    Completed without error       00%     26406         -
+#16  Short offline       Completed without error       00%     26404         -
+#17  Short offline       Completed without error       00%     26380         -
+#18  Short offline       Completed without error       00%     26356         -
+#19  Short offline       Completed without error       00%     26332         -
+#20  Short offline       Completed without error       00%     26308         -
+
+SMART Selective self-test log data structure revision number 1
+	SPAN  MIN_LBA  MAX_LBA  CURRENT_TEST_STATUS
+		1        0        0  Not_testing
+		2        0        0  Not_testing
+		3        0        0  Not_testing
+		4        0        0  Not_testing
+		5        0        0  Not_testing
+Selective self-test flags (0x0):
+	After scanning selected spans, do NOT read-scan remainder of disk.
+If Selective self-test is pending on power-up, resume after 0 minute delay.
 `
 )
