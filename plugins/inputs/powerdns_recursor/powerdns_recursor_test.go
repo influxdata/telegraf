@@ -3,7 +3,9 @@ package powerdns_recursor
 import (
 	"net"
 	"os"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
@@ -95,22 +97,6 @@ var intOverflowMetrics = "all-outqueries\t18446744073709550195\nanswers-slow\t36
 	"x-our-latency\t19\nx-ourtime-slow\t632\nx-ourtime0-1\t3060079\nx-ourtime1-2\t3351\nx-ourtime16-32\t197\n" +
 	"x-ourtime2-4\t302\nx-ourtime4-8\t194\nx-ourtime8-16\t24\n"
 
-func (s statServer) serverSocket(l *net.UnixConn) {
-
-	for {
-		go func(c *net.UnixConn) {
-			buf := make([]byte, 1024)
-			n, remote, _ := c.ReadFromUnix(buf)
-
-			data := buf[:n]
-			if string(data) == "get-all\n" {
-				c.WriteToUnix([]byte(metrics), remote)
-				c.Close()
-			}
-		}(l)
-	}
-}
-
 func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	// We create a fake server to return test data
 	controlSocket := "/tmp/pdns5724354148158589552.controlsocket"
@@ -120,14 +106,35 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 	}
 	socket, err := net.ListenUnixgram("unixgram", addr)
 	if err != nil {
-		t.Fatal("Cannot initialize server on port ")
+		t.Fatal("Cannot initialize server on port")
 	}
 
-	defer socket.Close()
-	defer os.Remove(controlSocket)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer func() {
+			socket.Close()
+			os.Remove(controlSocket)
+			wg.Done()
+		}()
 
-	s := statServer{}
-	go s.serverSocket(socket)
+		for {
+			buf := make([]byte, 1024)
+			n, remote, err := socket.ReadFromUnix(buf)
+			if err != nil {
+				socket.Close()
+				return
+			}
+
+			data := buf[:n]
+			if string(data) == "get-all\n" {
+				socket.WriteToUnix([]byte(metrics), remote)
+				socket.Close()
+			}
+
+			time.Sleep(100 * time.Millisecond)
+		}
+	}()
 
 	p := &PowerdnsRecursor{
 		UnixSockets: []string{controlSocket},
@@ -138,6 +145,8 @@ func TestPowerdnsRecursorGeneratesMetrics(t *testing.T) {
 
 	err = acc.GatherError(p.Gather)
 	require.NoError(t, err)
+
+	wg.Wait()
 
 	intMetrics := []string{"all-outqueries", "answers-slow", "answers0-1", "answers1-10",
 		"answers10-100", "answers100-1000", "auth-zone-queries", "auth4-answers-slow",
