@@ -1,3 +1,9 @@
+## v1.10.4 [unreleased]
+
+#### Bugfixes
+
+- [#5764](https://github.com/influxdata/telegraf/pull/5764): Fix race condition in the Wavefront parser.
+
 ## v1.10.3 [2019-04-16]
 
 #### Bugfixes
