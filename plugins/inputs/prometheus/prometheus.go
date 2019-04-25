@@ -36,6 +36,8 @@ type Prometheus struct {
 
 	ResponseTimeout internal.Duration `toml:"response_timeout"`
 
+	MetricVersion int `toml:"metric_version"`
+
 	tls.ClientConfig
 
 	client *http.Client
@@ -52,6 +54,9 @@ type Prometheus struct {
 var sampleConfig = `
   ## An array of urls to scrape metrics from.
   urls = ["http://localhost:9100/metrics"]
+
+  ## Metric version (optional, default=1, supported values are 1 and 2)
+  # metric_version = 2
 
   ## An array of Kubernetes services to scrape metrics from.
   # kubernetes_services = ["http://my-service-dns.my-namespace:9100/metrics"]
@@ -214,6 +219,7 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 	var req *http.Request
 	var err error
 	var uClient *http.Client
+	var metrics []telegraf.Metric
 	if u.URL.Scheme == "unix" {
 		path := u.URL.Query().Get("path")
 		if path == "" {
@@ -273,7 +279,13 @@ func (p *Prometheus) gatherURL(u URLAndAddress, acc telegraf.Accumulator) error 
 		return fmt.Errorf("error reading body: %s", err)
 	}
 
-	metrics, err := Parse(body, resp.Header)
+	if p.MetricVersion == 2 {
+		metrics, err = ParseV2(body, resp.Header)
+		log.Printf("prometheus: using metric_version = %v", p.MetricVersion)
+	} else {
+		metrics, err = Parse(body, resp.Header)
+	}
+
 	if err != nil {
 		return fmt.Errorf("error reading metrics for %s: %s",
 			u.URL, err)

@@ -29,6 +29,21 @@ go_goroutines 15
 # TYPE test_metric untyped
 test_metric{label="value"} 1.0 1490802350000
 `
+const sampleSummaryTextFormat = `# HELP go_gc_duration_seconds A summary of the GC invocation durations.
+# TYPE go_gc_duration_seconds summary
+go_gc_duration_seconds{quantile="0"} 0.00010425500000000001
+go_gc_duration_seconds{quantile="0.25"} 0.000139108
+go_gc_duration_seconds{quantile="0.5"} 0.00015749400000000002
+go_gc_duration_seconds{quantile="0.75"} 0.000331463
+go_gc_duration_seconds{quantile="1"} 0.000667154
+go_gc_duration_seconds_sum 0.0018183950000000002
+go_gc_duration_seconds_count 7
+`
+const sampleGaugeTextFormat = `
+# HELP go_goroutines Number of goroutines that currently exist.
+# TYPE go_goroutines gauge
+go_goroutines 15 1490802350000
+`
 
 func TestPrometheusGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -102,4 +117,48 @@ func TestPrometheusGeneratesMetricsAlthoughFirstDNSFails(t *testing.T) {
 	assert.True(t, acc.HasFloatField("go_goroutines", "gauge"))
 	assert.True(t, acc.HasFloatField("test_metric", "value"))
 	assert.True(t, acc.HasTimestamp("test_metric", time.Unix(1490802350, 0)))
+}
+
+func TestPrometheusGeneratesSummaryMetricsV2(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, sampleSummaryTextFormat)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		URLs:          []string{ts.URL},
+		MetricVersion: 2,
+	}
+
+	var acc testutil.Accumulator
+
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
+	assert.True(t, acc.TagSetValue("prometheus", "quantile") == "0")
+	assert.True(t, acc.HasFloatField("prometheus", "go_gc_duration_seconds_sum"))
+	assert.True(t, acc.HasFloatField("prometheus", "go_gc_duration_seconds_count"))
+	assert.True(t, acc.TagValue("prometheus", "url") == ts.URL+"/metrics")
+
+}
+
+func TestPrometheusGeneratesGaugeMetricsV2(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, sampleGaugeTextFormat)
+	}))
+	defer ts.Close()
+
+	p := &Prometheus{
+		URLs:          []string{ts.URL},
+		MetricVersion: 2,
+	}
+
+	var acc testutil.Accumulator
+
+	err := acc.GatherError(p.Gather)
+	require.NoError(t, err)
+
+	assert.True(t, acc.HasFloatField("prometheus", "go_goroutines"))
+	assert.True(t, acc.TagValue("prometheus", "url") == ts.URL+"/metrics")
+	assert.True(t, acc.HasTimestamp("prometheus", time.Unix(1490802350, 0)))
 }
