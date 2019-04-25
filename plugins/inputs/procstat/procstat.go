@@ -200,6 +200,14 @@ func (p *Procstat) addMetric(proc Process, acc telegraf.Accumulator) {
 		fields[prefix+"involuntary_context_switches"] = ctx.Involuntary
 	}
 
+	faults, err := proc.PageFaults()
+	if err == nil {
+		fields[prefix+"minor_faults"] = faults.MinorFaults
+		fields[prefix+"major_faults"] = faults.MajorFaults
+		fields[prefix+"child_minor_faults"] = faults.ChildMinorFaults
+		fields[prefix+"child_major_faults"] = faults.ChildMajorFaults
+	}
+
 	io, err := proc.IOCounters()
 	if err == nil {
 		fields[prefix+"read_count"] = io.ReadCount
