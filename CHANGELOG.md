@@ -37,6 +37,12 @@
 - [#5730](https://github.com/influxdata/telegraf/pull/5730): Don't start telegraf when stale pidfile found.
 - [#5477](https://github.com/influxdata/telegraf/pull/5477): Support Minecraft server 1.13 and newer in minecraft input.
 
+## v1.10.4 [unreleased]
+
+#### Bugfixes
+
+- [#5764](https://github.com/influxdata/telegraf/pull/5764): Fix race condition in the Wavefront parser.
+
 ## v1.10.3 [2019-04-16]
 
 #### Bugfixes
