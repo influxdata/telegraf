@@ -57,7 +57,6 @@ func NewWavefrontParser(defaultTags map[string]string) *WavefrontParser {
 	wp := &WavefrontParser{defaultTags: defaultTags}
 	wp.parsers = &sync.Pool{
 		New: func() interface{} {
-			log.Printf("D! [parsers.wavefront] Creating new parser for %s", wp)
 			return NewPointParser(wp)
 		},
 	}
@@ -98,8 +97,6 @@ func (p *PointParser) Parse(buf []byte) ([]telegraf.Metric, error) {
 	if len(buf) > 0 && !bytes.HasSuffix(buf, []byte("\n")) {
 		buf = append(buf, []byte("\n")...)
 	}
-
-	//log.Printf("D! [parsers.wavefront] Received data: %s", string(buf))
 
 	points := make([]Point, 0)
 
