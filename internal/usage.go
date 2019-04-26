@@ -25,6 +25,9 @@ The commands & flags are:
   --pprof-addr <address>         pprof address to listen on, don't activate pprof if empty
   --processor-filter <filter>    filter the processors to enable, separator is :
   --quiet                        run in quiet mode
+  --section-filter               filter config sections to output, separator is :
+                                 Valid values are 'agent', 'global_tags', 'outputs',
+                                 'processors', 'aggregators' and 'inputs'
   --sample-config                print out full sample configuration
   --test                         gather metrics, print them out, and exit;
                                  processors, aggregators, and outputs are not run

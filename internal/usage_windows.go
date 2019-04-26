@@ -26,6 +26,9 @@ The commands & flags are:
   --processor-filter <filter>    filter the processors to enable, separator is :
   --quiet                        run in quiet mode
   --sample-config                print out full sample configuration
+  --section-filter               filter config sections to output, separator is :
+                                 Valid values are 'agent', 'global_tags', 'outputs',
+                                 'processors', 'aggregators' and 'inputs'
   --test                         gather metrics, print them out, and exit;
                                  processors, aggregators, and outputs are not run
   --usage <plugin>               print usage for a plugin, ie, 'telegraf --usage mysql'
