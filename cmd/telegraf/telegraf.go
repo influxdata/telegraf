@@ -60,6 +60,7 @@ var fUsage = flag.String("usage", "",
 var fService = flag.String("service", "",
 	"operate on the service (windows only)")
 var fServiceName = flag.String("service-name", "telegraf", "service name (windows only)")
+var fServiceDisplayName = flag.String("service-display-name", "Telegraf Data Collector Service", "service display name (windows only)")
 var fRunAsConsole = flag.Bool("console", false, "run as console application (windows only)")
 
 var (
@@ -352,7 +353,7 @@ func main() {
 	if runtime.GOOS == "windows" && windowsRunAsService() {
 		svcConfig := &service.Config{
 			Name:        *fServiceName,
-			DisplayName: "Telegraf Data Collector Service",
+			DisplayName: *fServiceDisplayName,
 			Description: "Collects data using a series of plugins and publishes it to" +
 				"another series of plugins.",
 			Arguments: []string{"--config", "C:\\Program Files\\Telegraf\\telegraf.conf"},
