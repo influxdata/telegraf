@@ -80,7 +80,7 @@
 
 [[constraint]]
   name = "github.com/influxdata/toml"
-  branch = "master"
+  branch = "telegraf"
 
 [[constraint]]
   name = "github.com/influxdata/wlog"

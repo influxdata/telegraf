@@ -654,15 +654,15 @@
   revision = "c43482518d410361b6c383d7aebce33d0471d7bc"
 
 [[projects]]
-  branch = "master"
-  digest = "1:7fb6cc9607eaa6ef309edebc42b57f704244bd4b9ab23bff128829c4ad09b95d"
+  branch = "telegraf"
+  digest = "1:65e98c3d449a34fe4644b503148d3a7244ceabe13f8bf71c2cfecfc2bdce05e9"
   name = "github.com/influxdata/toml"
   packages = [
     ".",
     "ast",
   ]
   pruneopts = ""
-  revision = "2a2e3012f7cfbef64091cc79776311e65dfa211b"
+  revision = "270119a8ce653b297f12189c9099ef1409979f2b"
 
 [[projects]]
   branch = "master"
