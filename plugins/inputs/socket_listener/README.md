@@ -26,7 +26,7 @@ This is a sample configuration for the plugin.
   # service_address = "unixgram:///tmp/telegraf.sock"
 
   ## Change the file mode bits on unix sockets.  These permissions may not be
-  ## repected by some platforms, to safely restrict write permissions it is best
+  ## respected by some platforms, to safely restrict write permissions it is best
   ## to place the socket into a directory that has previously been created
   ## with the desired permissions.
   ##   ex: socket_mode = "777"
