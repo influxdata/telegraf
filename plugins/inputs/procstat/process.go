@@ -12,6 +12,7 @@ type Process interface {
 	PID() PID
 	Tags() map[string]string
 
+	PageFaults() (*process.PageFaultsStat, error)
 	IOCounters() (*process.IOCountersStat, error)
 	MemoryInfo() (*process.MemoryInfoStat, error)
 	Name() (string, error)
