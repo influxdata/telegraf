@@ -30,6 +30,7 @@
 - [#5544](https://github.com/influxdata/telegraf/pull/5544): Use more efficient GetMetricData API to collect cloudwatch metrics.
 - [#5544](https://github.com/influxdata/telegraf/pull/5544): Allow selection of collected statistic types in cloudwatch input.
 - [#5757](https://github.com/influxdata/telegraf/pull/5757): Speed up interface stat collection in net input.
+- [#5769](https://github.com/influxdata/telegraf/pull/5769): Add pagefault data to procstat input plugin.
 
 #### Bugfixes
 
