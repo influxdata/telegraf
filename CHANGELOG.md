@@ -38,6 +38,8 @@
 - [#5631](https://github.com/influxdata/telegraf/pull/5631): Create Windows service only when specified or in service manager.
 - [#5730](https://github.com/influxdata/telegraf/pull/5730): Don't start telegraf when stale pidfile found.
 - [#5477](https://github.com/influxdata/telegraf/pull/5477): Support Minecraft server 1.13 and newer in minecraft input.
+- [#4098](https://github.com/influxdata/telegraf/issues/4098): Fix inline table support in configuration file.
+- [#1598](https://github.com/influxdata/telegraf/issues/1598): Fix multi-line basic strings support in configuration file.
 
 ## v1.10.4 [unreleased]
 
