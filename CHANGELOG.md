@@ -31,6 +31,7 @@
 - [#5544](https://github.com/influxdata/telegraf/pull/5544): Allow selection of collected statistic types in cloudwatch input.
 - [#5757](https://github.com/influxdata/telegraf/pull/5757): Speed up interface stat collection in net input.
 - [#5769](https://github.com/influxdata/telegraf/pull/5769): Add pagefault data to procstat input plugin.
+- [#5760](https://github.com/influxdata/telegraf/pull/5760): Add option to set permissions for unix domain sockets to socket_listener.
 
 #### Bugfixes
 
