@@ -116,6 +116,10 @@ func (p *testProc) Tags() map[string]string {
 	return p.tags
 }
 
+func (p *testProc) PageFaults() (*process.PageFaultsStat, error) {
+	return &process.PageFaultsStat{}, nil
+}
+
 func (p *testProc) IOCounters() (*process.IOCountersStat, error) {
 	return &process.IOCountersStat{}, nil
 }
