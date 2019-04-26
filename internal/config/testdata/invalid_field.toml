@@ -1,0 +1,2 @@
+[[inputs.http_listener_v2]]
+  not_a_field = true
