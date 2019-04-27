@@ -2,14 +2,11 @@ package openweathermap
 
 import (
 	"fmt"
-	"net"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"testing"
 
 	"github.com/influxdata/telegraf/testutil"
-	//"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -172,30 +169,13 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 		BaseUrl: ts.URL,
 		AppId:   "noappid",
 		Cities:  []string{"2988507"},
+		ForecastEnable:  true,
 	}
 
 	var acc testutil.Accumulator
 
 	err_openweathermap := n.Gather(&acc)
 	require.NoError(t, err_openweathermap)
-
-	addr, err := url.Parse(ts.URL)
-	if err != nil {
-		panic(err)
-	}
-
-	host, port, err := net.SplitHostPort(addr.Host)
-	if err != nil {
-		host = addr.Host
-		if addr.Scheme == "http" {
-			port = "80"
-		} else if addr.Scheme == "https" {
-			port = "443"
-		} else {
-			port = ""
-		}
-	}
-
 	acc.AssertContainsTaggedFields(
 		t,
 		"weather",
@@ -204,14 +184,12 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 			"pressure":    1018.65,
 			"temperature": 6.710000000000036,
 			"rain":        0.035,
-			"wind.deg":    228.501,
-			"wind.speed":  3.76,
+			"wind_deg":    228.501,
+			"wind_speed":  3.76,
 		},
 		map[string]string{
-			"server":   host,
-			"port":     port,
-			"base_url": addr.String(),
 			"city_id":  "2988507",
+			"forecast":  "true",
 		})
 }
 
@@ -243,23 +221,6 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 
 	require.NoError(t, err_openweathermap)
 
-	addr, err := url.Parse(ts.URL)
-	if err != nil {
-		panic(err)
-	}
-
-	host, port, err := net.SplitHostPort(addr.Host)
-	if err != nil {
-		host = addr.Host
-		if addr.Scheme == "http" {
-			port = "80"
-		} else if addr.Scheme == "https" {
-			port = "443"
-		} else {
-			port = ""
-		}
-	}
-
 	acc.AssertContainsTaggedFields(
 		t,
 		"weather",
@@ -267,14 +228,12 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 			"humidity":    int64(87),
 			"pressure":    1007.0,
 			"temperature": 9.25,
-			"wind.deg":    290.0,
-			"wind.speed":  8.7,
+			"wind_deg":    290.0,
+			"wind_speed":  8.7,
 			"rain":        0.0,
 		},
 		map[string]string{
-			"server":   host,
-			"port":     port,
-			"base_url": addr.String(),
 			"city_id":  "2988507",
+			"forecast":  "false",
 		})
 }

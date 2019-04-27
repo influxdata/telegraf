@@ -267,6 +267,7 @@ func init() {
 		}
 		return &OpenWeatherMap{
 			ResponseTimeout: tmout,
+			ForecastEnable: true,
                 }
 	})
 }
