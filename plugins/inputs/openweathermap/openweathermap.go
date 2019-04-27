@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -27,6 +26,7 @@ type OpenWeatherMap struct {
 	client *http.Client
 
 	ResponseTimeout internal.Duration
+        ForecastEnable bool
 }
 
 var sampleConfig = `
@@ -38,6 +38,7 @@ var sampleConfig = `
 
   # HTTP response timeout (default: 5s)
   response_timeout = "5s"
+  forecast_enable = true
 `
 
 func (n *OpenWeatherMap) SampleConfig() string {
@@ -71,18 +72,26 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 		var u *url.URL
 		var addr *url.URL
 
-		u, err = url.Parse(fmt.Sprintf("/data/2.5/forecast?id=%s&APPID=%s", city, n.AppId))
-		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
-			continue
-		}
-		addr = base.ResolveReference(u)
-		wg.Add(1)
-		go func(addr *url.URL) {
-			defer wg.Done()
-			acc.AddError(n.gatherUrl(addr, acc))
-		}(addr)
+		if n.ForecastEnable {
+			tags := map[string]string{
+				"forecast": "true",
+			}
+			u, err = url.Parse(fmt.Sprintf("/data/2.5/forecast?id=%s&APPID=%s", city, n.AppId))
+			if err != nil {
+				acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+				continue
+			}
+			addr = base.ResolveReference(u)
+			wg.Add(1)
+			go func(addr *url.URL) {
+				defer wg.Done()
+				acc.AddError(n.gatherUrl(addr, acc, tags))
+			}(addr)
+                }
 
+		tags := map[string]string{
+			"forecast": "false",
+		}
 		u, err = url.Parse(fmt.Sprintf("/data/2.5/weather?id=%s&APPID=%s", city, n.AppId))
 		if err != nil {
 			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
@@ -93,7 +102,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 		wg.Add(1)
 		go func(addr *url.URL) {
 			defer wg.Done()
-			acc.AddError(n.gatherUrl(addr, acc))
+			acc.AddError(n.gatherUrl(addr, acc, tags))
 		}(addr)
 	}
 
@@ -115,7 +124,7 @@ func (n *OpenWeatherMap) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (n *OpenWeatherMap) gatherUrl(addr *url.URL, acc telegraf.Accumulator) error {
+func (n *OpenWeatherMap) gatherUrl(addr *url.URL, acc telegraf.Accumulator, tags map[string]string) error {
 	resp, err := n.client.Get(addr.String())
 
 	if err != nil {
@@ -130,35 +139,15 @@ func (n *OpenWeatherMap) gatherUrl(addr *url.URL, acc telegraf.Accumulator) erro
 	case "application/json":
 		body, _ := ioutil.ReadAll(resp.Body)
 		resp.Body = ioutil.NopCloser(bytes.NewBuffer(body))
-		err = gatherStatusUrl(bufio.NewReader(resp.Body), n.getTags(addr), acc)
+		err = gatherStatusUrl(bufio.NewReader(resp.Body), tags, acc)
 		resp.Body = ioutil.NopCloser(bytes.NewBuffer(body))
-		err = gatherWeatherUrl(bufio.NewReader(resp.Body), n.getTags(addr), acc)
+		err = gatherWeatherUrl(bufio.NewReader(resp.Body), tags, acc)
 		return err
 	default:
 		return fmt.Errorf("%s returned unexpected content type %s", addr.String(), contentType)
 	}
 }
 
-func (n *OpenWeatherMap) getTags(addr *url.URL) map[string]string {
-	h := addr.Host
-	host, port, err := net.SplitHostPort(h)
-	if err != nil {
-		host = addr.Host
-		if addr.Scheme == "http" {
-			port = "80"
-		} else if addr.Scheme == "https" {
-			port = "443"
-		} else {
-			port = ""
-		}
-	}
-	tags := map[string]string{
-		"server":   host,
-		"port":     port,
-		"base_url": n.BaseUrl,
-	}
-	return tags
-}
 
 type WeatherEntry struct {
 	Dt     int64  `json:"dt"`
