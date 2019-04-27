@@ -29,6 +29,8 @@ type OpenWeatherMap struct {
         ForecastEnable bool
 }
 
+const DEFAULT_RESPONSE_TIMEOUT time.Duration = time.Second * 5
+
 var sampleConfig = `
   ## Root url of weather map REST API
   base_url = "http://api.openweathermap.org/"
@@ -113,7 +115,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 func (n *OpenWeatherMap) createHttpClient() (*http.Client, error) {
 
 	if n.ResponseTimeout.Duration < time.Second {
-		n.ResponseTimeout.Duration = time.Second * 5
+		n.ResponseTimeout.Duration = DEFAULT_RESPONSE_TIMEOUT
 	}
 
 	client := &http.Client{
@@ -260,6 +262,11 @@ func (s *Status) Gather(tags map[string]string, acc telegraf.Accumulator) {
 
 func init() {
 	inputs.Add("openweathermap", func() telegraf.Input {
-		return &OpenWeatherMap{}
+		tmout := internal.Duration{
+			Duration: DEFAULT_RESPONSE_TIMEOUT, 
+		}
+		return &OpenWeatherMap{
+			ResponseTimeout: tmout,
+                }
 	})
 }
