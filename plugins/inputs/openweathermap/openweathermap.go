@@ -247,8 +247,8 @@ func (s *Status) Gather(tags map[string]string, acc telegraf.Accumulator) {
 			"weather",
 			map[string]interface{}{
 				"rain":        e.Rain.Rain3,
-				"wind.deg":    e.Wind.Deg,
-				"wind.speed":  e.Wind.Speed,
+				"wind_deg":    e.Wind.Deg,
+				"wind_speed":  e.Wind.Speed,
 				"humidity":    e.Main.Humidity,
 				"pressure":    e.Main.Pressure,
 				"temperature": e.Main.Temp - 273.15, // Kelvin to Celsius
