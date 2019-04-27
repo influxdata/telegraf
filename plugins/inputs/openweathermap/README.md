@@ -2,7 +2,7 @@
 
 OpenWeatherMap provides the current weather and forecasts for more than 200,000 cities. To use this plugin you will need a token. For more information [click here](https://openweathermap.org/appid).
 
-Find city identifiers in this [list](http://bulk.openweathermap.org/sample/city.list.json.gz)
+Find city identifiers in this [list](http://bulk.openweathermap.org/sample/city.list.json.gz). You can also use this [url](https://openweathermap.org/find) as an alternative to downloading a file. The ID is in the url of the city: `https://openweathermap.org/city/2643743`
 
 ### Configuration:
 
