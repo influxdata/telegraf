@@ -6,16 +6,16 @@ Find city identifiers in this [list](http://bulk.openweathermap.org/sample/city.
 
 ### Configuration:
 
-```
+```toml
 [[inputs.openweathermap]]
   ## Root url of API to pull stats
-  base_url = "http://api.openweathermap.org/data/2.5/"
-  # Your personal user token from openweathermap.org
-  app_id = "xxxxxxxxxxxxxxxxxxxxxxx"
-  # List of city identifiers
-  cities = ["2988507", "519188"]
-  # HTTP response timeout (default: 5s)
-  response_timeout = "5s"
+  # base_url = "http://api.openweathermap.org/data/2.5/"
+  ## Your personal user token from openweathermap.org
+  # app_id = "xxxxxxxxxxxxxxxxxxxxxxx"
+  ## List of city identifiers
+  # cities = ["2988507", "519188"]
+  ## HTTP response timeout (default: 5s)
+  # response_timeout = "5s"
 ```
 
 ### Measurements & Fields:
@@ -39,7 +39,7 @@ Find city identifiers in this [list](http://bulk.openweathermap.org/sample/city.
 ### Example Output:
 
 Using this configuration:
-```
+```toml
 [[inputs.openweathermap]]
   base_url = "http://api.openweathermap.org/data/2.5/"
   app_id = "change_this_with_your_appid"
