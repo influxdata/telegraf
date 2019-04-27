@@ -26,7 +26,7 @@ type OpenWeatherMap struct {
 	client *http.Client
 
 	ResponseTimeout internal.Duration
-        ForecastEnable bool
+	ForecastEnable  bool
 }
 
 const DEFAULT_RESPONSE_TIMEOUT time.Duration = time.Second * 5
@@ -89,7 +89,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 				defer wg.Done()
 				acc.AddError(n.gatherUrl(addr, acc, tags))
 			}(addr)
-                }
+		}
 
 		tags := map[string]string{
 			"forecast": "false",
@@ -149,7 +149,6 @@ func (n *OpenWeatherMap) gatherUrl(addr *url.URL, acc telegraf.Accumulator, tags
 		return fmt.Errorf("%s returned unexpected content type %s", addr.String(), contentType)
 	}
 }
-
 
 type WeatherEntry struct {
 	Dt     int64  `json:"dt"`
@@ -263,11 +262,11 @@ func (s *Status) Gather(tags map[string]string, acc telegraf.Accumulator) {
 func init() {
 	inputs.Add("openweathermap", func() telegraf.Input {
 		tmout := internal.Duration{
-			Duration: DEFAULT_RESPONSE_TIMEOUT, 
+			Duration: DEFAULT_RESPONSE_TIMEOUT,
 		}
 		return &OpenWeatherMap{
 			ResponseTimeout: tmout,
-			ForecastEnable: true,
-                }
+			ForecastEnable:  true,
+		}
 	})
 }
