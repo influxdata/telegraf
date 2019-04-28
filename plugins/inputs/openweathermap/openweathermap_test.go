@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/require"
@@ -431,4 +432,39 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 			"city_id":  "2643743",
 			"forecast": "false",
 		})
+}
+
+func TestResponseTimeout(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var rsp string
+		if r.URL.Path == "/data/2.5/group" {
+			rsp = sampleWeatherResponse
+			w.Header()["Content-Type"] = []string{"application/json"}
+		} else if r.URL.Path == "/data/2.5/forecast" {
+			rsp = sampleStatusResponse
+			w.Header()["Content-Type"] = []string{"application/json"}
+		} else {
+			panic("Cannot handle request")
+		}
+
+		time.Sleep(time.Second * 6) // Cause timeout
+		fmt.Fprintln(w, rsp)
+	}))
+	defer ts.Close()
+
+	n := &OpenWeatherMap{
+		BaseUrl: ts.URL,
+		AppId:   "noappid",
+		Cities:  []string{"2988507"},
+	}
+
+	var acc testutil.Accumulator
+
+	err_openweathermap := n.Gather(&acc)
+
+	require.NoError(t, err_openweathermap)
+	acc.AssertDoesNotContainMeasurement(
+		t,
+		"weather",
+	)
 }
