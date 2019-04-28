@@ -29,6 +29,10 @@ type OpenWeatherMap struct {
 	ForecastEnable  bool
 }
 
+// https://openweathermap.org/current#severalid
+// Call for several city IDs
+// The limit of locations is 20.
+const OWM_REQUEST_SEVERAL_CITY_IDS int = 20
 const DEFAULT_RESPONSE_TIMEOUT time.Duration = time.Second * 5
 
 var sampleConfig = `
@@ -53,6 +57,7 @@ func (n *OpenWeatherMap) Description() string {
 
 func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 	var wg sync.WaitGroup
+	var strs []string
 
 	base, err := url.Parse(n.BaseUrl)
 	if err != nil {
@@ -70,14 +75,14 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 		n.client = client
 	}
 
-	for _, city := range n.Cities {
+	if n.ForecastEnable {
 		var u *url.URL
 		var addr *url.URL
 
-		if n.ForecastEnable {
-			tags := map[string]string{
-				"forecast": "true",
-			}
+		tags := map[string]string{
+			"forecast": "true",
+		}
+		for _, city := range n.Cities {
 			u, err = url.Parse(fmt.Sprintf("/data/2.5/forecast?id=%s&APPID=%s", city, n.AppId))
 			if err != nil {
 				acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
@@ -90,11 +95,22 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 				acc.AddError(n.gatherUrl(addr, acc, tags))
 			}(addr)
 		}
+	}
+	j := 0
+	for j < len(n.Cities) {
+		var u *url.URL
+		var addr *url.URL
+		strs = make([]string, 0)
+		for i := 0; j < len(n.Cities) && i < OWM_REQUEST_SEVERAL_CITY_IDS; i++ {
+			strs = append(strs, n.Cities[j])
+			j++
+		}
+		cities := strings.Join(strs, ",")
 
 		tags := map[string]string{
 			"forecast": "false",
 		}
-		u, err = url.Parse(fmt.Sprintf("/data/2.5/weather?id=%s&APPID=%s", city, n.AppId))
+		u, err = url.Parse(fmt.Sprintf("/data/2.5/group?id=%s&APPID=%s", cities, n.AppId))
 		if err != nil {
 			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
 			continue
@@ -244,6 +260,9 @@ func (s *Status) Gather(tags map[string]string, acc telegraf.Accumulator) {
 	tags["city_id"] = strconv.FormatInt(s.City.Id, 10)
 	for _, e := range s.List {
 		tm := time.Unix(e.Dt, 0)
+		if e.Id > 0 {
+			tags["city_id"] = strconv.FormatInt(e.Id, 10)
+		}
 		acc.AddFields(
 			"weather",
 			map[string]interface{}{

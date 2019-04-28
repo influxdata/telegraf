@@ -149,13 +149,133 @@ const sampleWeatherResponse = `
 }
 `
 
+const batchWeatherResponse = `
+{
+	"cnt": 3,
+	"list": [{
+		"coord": {
+			"lon": 37.62,
+			"lat": 55.75
+		},
+		"sys": {
+			"type": 1,
+			"id": 9029,
+			"message": 0.0061,
+			"country": "RU",
+			"sunrise": 1556416455,
+			"sunset": 1556470779
+		},
+		"weather": [{
+			"id": 802,
+			"main": "Clouds",
+			"description": "scattered clouds",
+			"icon": "03d"
+		}],
+		"main": {
+			"temp": 282.72,
+			"pressure": 1014,
+			"humidity": 46,
+			"temp_min": 282.15,
+			"temp_max": 283.15
+		},
+		"visibility": 10000,
+		"wind": {
+			"speed": 5,
+			"deg": 60
+		},
+		"clouds": {
+			"all": 40
+		},
+		"dt": 1556444155,
+		"id": 524901,
+		"name": "Moscow"
+	}, {
+		"coord": {
+			"lon": 30.52,
+			"lat": 50.43
+		},
+		"sys": {
+			"type": 1,
+			"id": 8903,
+			"message": 0.0076,
+			"country": "UA",
+			"sunrise": 1556419155,
+			"sunset": 1556471486
+		},
+		"weather": [{
+			"id": 520,
+			"main": "Rain",
+			"description": "light intensity shower rain",
+			"icon": "09d"
+		}],
+		"main": {
+			"temp": 292.44,
+			"pressure": 1009,
+			"humidity": 63,
+			"temp_min": 291.15,
+			"temp_max": 294.26
+		},
+		"visibility": 10000,
+		"wind": {
+			"speed": 1
+		},
+		"clouds": {
+			"all": 0
+		},
+		"dt": 1556444155,
+		"id": 703448,
+		"name": "Kiev"
+	}, {
+		"coord": {
+			"lon": -0.13,
+			"lat": 51.51
+		},
+		"sys": {
+			"type": 1,
+			"id": 1414,
+			"message": 0.0088,
+			"country": "GB",
+			"sunrise": 1556426319,
+			"sunset": 1556479032
+		},
+		"weather": [{
+			"id": 803,
+			"main": "Clouds",
+			"description": "broken clouds",
+			"icon": "04d"
+		}],
+		"main": {
+			"temp": 283.78,
+			"pressure": 1019,
+			"humidity": 66,
+			"temp_min": 282.15,
+			"temp_max": 285.37
+		},
+		"visibility": 10000,
+		"wind": {
+			"speed": 6.2,
+			"deg": 290
+		},
+		"rain": {
+			"3h": 0.072
+		},
+		"clouds": {
+			"all": 75
+		},
+		"dt": 1556444155,
+		"id": 2643743,
+		"name": "London"
+	}]
+}
+`
+
 func TestForecastGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var rsp string
 		if r.URL.Path == "/data/2.5/forecast" {
 			rsp = sampleStatusResponse
 			w.Header()["Content-Type"] = []string{"application/json"}
-		} else if r.URL.Path == "/data/2.5/weather" {
+		} else if r.URL.Path == "/data/2.5/group" {
 			rsp = sampleNoContent
 		} else {
 			panic("Cannot handle request")
@@ -196,7 +316,7 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 func TestWeatherGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var rsp string
-		if r.URL.Path == "/data/2.5/weather" {
+		if r.URL.Path == "/data/2.5/group" {
 			rsp = sampleWeatherResponse
 			w.Header()["Content-Type"] = []string{"application/json"}
 		} else if r.URL.Path == "/data/2.5/forecast" {
@@ -234,6 +354,81 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 		},
 		map[string]string{
 			"city_id":  "2988507",
+			"forecast": "false",
+		})
+}
+
+func TestBatchWeatherGeneratesMetrics(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var rsp string
+		if r.URL.Path == "/data/2.5/group" {
+			rsp = batchWeatherResponse
+			w.Header()["Content-Type"] = []string{"application/json"}
+		} else if r.URL.Path == "/data/2.5/forecast" {
+			rsp = sampleNoContent
+		} else {
+			panic("Cannot handle request")
+		}
+
+		fmt.Fprintln(w, rsp)
+	}))
+	defer ts.Close()
+
+	n := &OpenWeatherMap{
+		BaseUrl: ts.URL,
+		AppId:   "noappid",
+		Cities:  []string{"524901", "703448", "2643743"},
+	}
+
+	var acc testutil.Accumulator
+
+	err_openweathermap := n.Gather(&acc)
+
+	require.NoError(t, err_openweathermap)
+
+	acc.AssertContainsTaggedFields(
+		t,
+		"weather",
+		map[string]interface{}{
+			"humidity":    int64(46),
+			"pressure":    1014.0,
+			"temperature": 9.57000000000005,
+			"wind_deg":    60.0,
+			"wind_speed":  5.0,
+			"rain":        0.0,
+		},
+		map[string]string{
+			"city_id":  "524901",
+			"forecast": "false",
+		})
+	acc.AssertContainsTaggedFields(
+		t,
+		"weather",
+		map[string]interface{}{
+			"humidity":    int64(63),
+			"pressure":    1009.0,
+			"temperature": 19.29000000000002,
+			"wind_deg":    0.0,
+			"wind_speed":  1.0,
+			"rain":        0.0,
+		},
+		map[string]string{
+			"city_id":  "703448",
+			"forecast": "false",
+		})
+	acc.AssertContainsTaggedFields(
+		t,
+		"weather",
+		map[string]interface{}{
+			"humidity":    int64(66),
+			"pressure":    1019.0,
+			"temperature": 10.629999999999995,
+			"wind_deg":    290.0,
+			"wind_speed":  6.2,
+			"rain":        0.072,
+		},
+		map[string]string{
+			"city_id":  "2643743",
 			"forecast": "false",
 		})
 }
