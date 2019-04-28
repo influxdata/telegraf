@@ -114,7 +114,7 @@ func runAgent(ctx context.Context,
 ) error {
 	// Setup default logging. This may need to change after reading the config
 	// file, but we can configure it to use our logger implementation now.
-	logger.SetupLogging(false, false, "")
+	logger.SetupLogging(false, false, "", 0, internal.Size{Size: int64(0)}, 0)
 	log.Printf("I! Starting Telegraf %s", version)
 
 	// If no other options are specified, load the config file and run.
@@ -159,7 +159,9 @@ func runAgent(ctx context.Context,
 		ag.Config.Agent.Debug || *fDebug,
 		ag.Config.Agent.Quiet || *fQuiet,
 		ag.Config.Agent.Logfile,
-	)
+		ag.Config.Agent.LogfileInterval,
+		ag.Config.Agent.LogfileMaxSize,
+		ag.Config.Agent.LogfileMaxArchives)
 
 	if *fTest {
 		return ag.Test(ctx)
