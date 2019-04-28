@@ -1,12 +1,15 @@
 package logger
 
 import (
+	"errors"
 	"io"
 	"log"
 	"os"
 	"regexp"
 	"time"
 
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/internal/rotate"
 	"github.com/influxdata/wlog"
 )
 
@@ -33,13 +36,29 @@ func (t *telegrafLog) Write(b []byte) (n int, err error) {
 	return t.writer.Write(line)
 }
 
+func (t *telegrafLog) Close() error {
+	closer, isCloser := t.writer.(io.Closer)
+	if !isCloser {
+		return errors.New("the underlying writer cannot be closed")
+	}
+	return closer.Close()
+}
+
 // SetupLogging configures the logging output.
-//   debug   will set the log level to DEBUG
-//   quiet   will set the log level to ERROR
-//   logfile will direct the logging output to a file. Empty string is
-//           interpreted as stderr. If there is an error opening the file the
-//           logger will fallback to stderr.
-func SetupLogging(debug, quiet bool, logfile string) {
+//   debug                  will set the log level to DEBUG
+//   quiet                  will set the log level to ERROR
+//   logfile                will direct the logging output to a file. Empty string is
+//                          interpreted as stderr. If there is an error opening the file the
+//                          logger will fallback to stderr.
+//   logRotationInterval    will rotate when current file at the specified time interval.
+//   logRotationMaxSize     will rotate when current file size exceeds this parameter.
+//   logRotationMaxArchives maximum rotated files to keep (older ones will be deleted)
+func SetupLogging(debug, quiet bool, logfile string, logRotationInterval time.Duration, logRotationMaxSize internal.Size, logRotationMaxArchives int) {
+	setupLoggingAndReturnWriter(debug, quiet, logfile, logRotationInterval, logRotationMaxSize, logRotationMaxArchives)
+}
+
+func setupLoggingAndReturnWriter(debug, quiet bool, logfile string, logRotationInterval time.Duration, logRotationMaxSize internal.Size,
+	logRotationMaxArchives int) io.Writer {
 	log.SetFlags(0)
 	if debug {
 		wlog.SetLevel(wlog.DEBUG)
@@ -48,16 +67,18 @@ func SetupLogging(debug, quiet bool, logfile string) {
 		wlog.SetLevel(wlog.ERROR)
 	}
 
-	var oFile *os.File
+	var writer io.Writer
 	if logfile != "" {
 		var err error
-		if oFile, err = os.OpenFile(logfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, os.ModeAppend|0644); err != nil {
+		if writer, err = rotate.NewFileWriter(logfile, logRotationInterval, logRotationMaxSize.Size, logRotationMaxArchives); err != nil {
 			log.Printf("E! Unable to open %s (%s), using stderr", logfile, err)
-			oFile = os.Stderr
+			writer = os.Stderr
 		}
 	} else {
-		oFile = os.Stderr
+		writer = os.Stderr
 	}
 
-	log.SetOutput(newTelegrafWriter(oFile))
+	telegrafLog := newTelegrafWriter(writer)
+	log.SetOutput(telegrafLog)
+	return telegrafLog
 }
