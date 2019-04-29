@@ -8,16 +8,18 @@ import (
 	"net"
 	"os/exec"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
+	ping "github.com/sparrc/go-ping"
+	"golang.org/x/net/icmp"
+	"golang.org/x/net/ipv4"
+	"golang.org/x/net/ipv6"
 )
 
 // HostPinger is a function that runs the "ping" function using a list of
@@ -95,10 +97,48 @@ func (_ *Ping) SampleConfig() string {
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
+	// var conn *icmp.PacketConn
+	// var err error
+	// if p.ipv4 {
+	// 	if conn, err = ping.Listen(ipv4Proto[p.network], p.source); conn == nil {
+	// 		return err
+	// 	}
+	// 	conn.IPv4PacketConn().SetControlMessage(ipv4.FlagTTL, true)
+	// } else {
+	// 	if conn, err = ping.Listen(ipv6Proto[p.network], p.source); conn == nil {
+	// 		return err
+	// 	}
+	// 	conn.IPv6PacketConn().SetControlMessage(ipv6.FlagHopLimit, true)
+	// }
+	// defer conn.Close()
+
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
+		pinger, err := ping.NewPinger(url)
+		if err != nil {
+			acc.AddError(fmt.Errorf("%s: %s", err, url))
+			acc.AddFields("ping", map[string]interface{}{"result_code": 2}, map[string]string{"url": url})
+			continue
+		}
+
+		var conn *icmp.PacketConn
+		if conn, err = pinger.Listen(); err != nil {
+			// close(pinger.done)
+			return err // TODO: verify what to return if unrecoverable
+		}
+
+		if pinger.GetIpv4() {
+			conn.IPv4PacketConn().SetControlMessage(ipv4.FlagTTL, true)
+		} else {
+			conn.IPv6PacketConn().SetControlMessage(ipv6.FlagHopLimit, true)
+		}
+
+		// defer conn.Close()
+
 		p.wg.Add(1)
-		go p.pingToURL(url, acc)
+
+		go p.pingToURL(url, pinger, conn, acc)
+		// go p.pingHostNative(pinger)
 	}
 
 	p.wg.Wait()
@@ -106,7 +146,7 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	return nil
 }
 
-func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
+func (p *Ping) pingToURL(u string, pinger *ping.Pinger, conn *icmp.PacketConn, acc telegraf.Accumulator) {
 	defer p.wg.Done()
 	tags := map[string]string{"url": u}
 	fields := map[string]interface{}{"result_code": 0}
@@ -118,41 +158,52 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 		acc.AddFields("ping", fields, tags)
 		return
 	}
+	// TODO: make this conditional:
 
-	args := p.args(u, runtime.GOOS)
-	totalTimeout := 60.0
-	if len(p.Arguments) == 0 {
-		totalTimeout = float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
-	}
+	// args := p.args(u, runtime.GOOS)
+	// totalTimeout := 60.0
+	// if len(p.Arguments) == 0 {
+	// 	totalTimeout = float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
+	// }
 
-	out, err := p.pingHost(p.Binary, totalTimeout, args...)
-	if err != nil {
-		// Some implementations of ping return a 1 exit code on
-		// timeout, if this occurs we will not exit and try to parse
-		// the output.
-		status := -1
-		if exitError, ok := err.(*exec.ExitError); ok {
-			if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
-				status = ws.ExitStatus()
-				fields["result_code"] = status
-			}
-		}
+	// out, err := p.pingHost(p.Binary, totalTimeout, args...)
+	// if err != nil {
+	// 	// Some implementations of ping return a 1 exit code on
+	// 	// timeout, if this occurs we will not exit and try to parse
+	// 	// the output.
+	// 	status := -1
+	// 	if exitError, ok := err.(*exec.ExitError); ok {
+	// 		if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
+	// 			status = ws.ExitStatus()
+	// 			fields["result_code"] = status
+	// 		}
+	// 	}
 
-		if status != 1 {
-			// Combine go err + stderr output
-			out = strings.TrimSpace(out)
-			if len(out) > 0 {
-				acc.AddError(fmt.Errorf("host %s: %s, %s", u, out, err))
-			} else {
-				acc.AddError(fmt.Errorf("host %s: %s", u, err))
-			}
-			fields["result_code"] = 2
-			acc.AddFields("ping", fields, tags)
-			return
-		}
-	}
+	// 	if status != 1 {
+	// 		// Combine go err + stderr output
+	// 		out = strings.TrimSpace(out)
+	// 		if len(out) > 0 {
+	// 			acc.AddError(fmt.Errorf("host %s: %s, %s", u, out, err))
+	// 		} else {
+	// 			acc.AddError(fmt.Errorf("host %s: %s", u, err))
+	// 		}
+	// 		fields["result_code"] = 2
+	// 		acc.AddFields("ping", fields, tags)
+	// 		return
+	// 	}
+	// }
 
-	trans, rec, ttl, min, avg, max, stddev, err := processPingOutput(out)
+	pinger.Count = p.Count
+	pinger.Interval = time.Duration(p.PingInterval) * time.Second
+	pinger.Timeout = time.Duration(p.Timeout) * time.Second
+	pinger.SetPrivileged(true)
+
+	fmt.Printf("pinger timeout: %v \n", pinger.Timeout.Seconds())
+
+	results, err := p.pingHostNative(pinger, conn)
+
+	// trans, rec, ttl, min, avg, max, stddev, err := processPingOutput(out)
+
 	if err != nil {
 		// fatal error
 		acc.AddError(fmt.Errorf("%s: %s", err, u))
@@ -161,24 +212,24 @@ func (p *Ping) pingToURL(u string, acc telegraf.Accumulator) {
 		return
 	}
 	// Calculate packet loss percentage
-	loss := float64(trans-rec) / float64(trans) * 100.0
-	fields["packets_transmitted"] = trans
-	fields["packets_received"] = rec
-	fields["percent_packet_loss"] = loss
-	if ttl >= 0 {
-		fields["ttl"] = ttl
+	// loss := float64(trans-rec) / float64(trans) * 100.0
+	fields["packets_transmitted"] = results.transmitted
+	fields["packets_received"] = results.received
+	fields["percent_packet_loss"] = results.pktLoss
+	if results.ttl >= 0 {
+		fields["ttl"] = results.ttl
 	}
-	if min >= 0 {
-		fields["minimum_response_ms"] = min
+	if results.min >= 0 {
+		fields["minimum_response_ms"] = results.min
 	}
-	if avg >= 0 {
-		fields["average_response_ms"] = avg
+	if results.avg >= 0 {
+		fields["average_response_ms"] = results.avg
 	}
-	if max >= 0 {
-		fields["maximum_response_ms"] = max
+	if results.max >= 0 {
+		fields["maximum_response_ms"] = results.max
 	}
-	if stddev >= 0 {
-		fields["standard_deviation_ms"] = stddev
+	if results.stddev >= 0 {
+		fields["standard_deviation_ms"] = results.stddev
 	}
 	acc.AddFields("ping", fields, tags)
 }
