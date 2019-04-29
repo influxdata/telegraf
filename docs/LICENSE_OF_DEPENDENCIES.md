@@ -80,6 +80,7 @@ following works:
 - github.com/nats-io/go-nats [Apache License 2.0](https://github.com/nats-io/go-nats/blob/master/LICENSE)
 - github.com/nats-io/nuid [Apache License 2.0](https://github.com/nats-io/nuid/blob/master/LICENSE)
 - github.com/nsqio/go-nsq [MIT License](https://github.com/nsqio/go-nsq/blob/master/LICENSE)
+- github.com/openconfig/gnmi [Apache License 2.0](https://github.com/openconfig/gnmi/blob/master/LICENSE)
 - github.com/opencontainers/go-digest [Apache License 2.0](https://github.com/opencontainers/go-digest/blob/master/LICENSE)
 - github.com/opencontainers/image-spec [Apache License 2.0](https://github.com/opencontainers/image-spec/blob/master/LICENSE)
 - github.com/opentracing-contrib/go-observer [Apache License 2.0](https://github.com/opentracing-contrib/go-observer/blob/master/LICENSE)

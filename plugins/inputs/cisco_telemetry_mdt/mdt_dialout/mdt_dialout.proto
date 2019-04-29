@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+// Package implements gRPC Model Driven Telemetry service
+package mdt_dialout;
+
+// gRPCMdtDialout defines service used for client-side streaming pushing MdtDialoutArgs.
+service gRPCMdtDialout {
+    rpc MdtDialout(stream MdtDialoutArgs) returns(stream MdtDialoutArgs) {};
+}
+
+// MdtDialoutArgs is the content pushed to the server
+message MdtDialoutArgs {
+     int64 ReqId = 1;
+     // data carries the payload content.
+     bytes data = 2;
+     string errors = 3;
+}

@@ -1,0 +1,183 @@
+/* ----------------------------------------------------------------------------
+ * telemetry_bis.proto - Telemetry protobuf definitions
+ *
+ * August 2016
+ *
+ * Copyright (c) 2016 by Cisco Systems, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * ----------------------------------------------------------------------------
+ */
+
+syntax = "proto3";
+package telemetry;
+
+// Telemetry message is the outermost payload message used to stream
+// telemetry in a Model Driven Telemetry (MDT) system. MDT provides a
+// mechanism for an external entity to subscribe to a data set defined in
+// a Yang model and receive periodic or event-based updates of the data
+// set from an MDT-capable device.
+message Telemetry {
+  //
+  // node_id_str is a string encoded unique node ID of the MDT-capable
+  // device producing the message. (node_id_uuid alternative is not currently
+  // produced in IOS-XR)
+  oneof node_id {
+    string node_id_str = 1;
+    // bytes node_id_uuid = 2;
+  }
+  //
+  // subscription_id_str is the name of the subscription against which
+  // this content is being produced. (subscription_id alternative is not
+  //  currently produced in IOS-XR)
+  oneof subscription {
+    string   subscription_id_str = 3;
+    // uint32   subscription_id = 4;
+  }
+  //
+  // sensor_path is not currently produced in IOS-XR
+  // string   sensor_path = 5;
+  //
+  // encoding_path is the Yang path leading to the content in this message.
+  // The Yang tree encoded in the content section of this message is rooted
+  // at the point described by the encoding_path.
+  string   encoding_path = 6;
+  //
+  // model_version is not currently produced in IOS-XR
+  // string   model_version = 7;
+  //
+  // collection_id identifies messages belonging to a collection round.
+  // Multiple message may be generated from a collection round.
+  uint64   collection_id = 8;
+  //
+  // collection_start_time is the time when the collection identified by
+  // the collection_id begins - encoded as milliseconds since the epoch.
+  // If a single collection is spread over multiple Telemetry Messages,
+  // collection_start_time may be encoded in the first Telemetry Message
+  // for the collection only.
+  uint64   collection_start_time = 9;
+  //
+  // msg_timestamp is the time when the data encoded in the Telemetry
+  // message is generated - encoded as milliseconds since the epoch.
+  uint64   msg_timestamp = 10;
+  //
+  // data_gpbkv contains the payload data if data is being encoded in the
+  // self-describing GPB-KV format.
+  repeated TelemetryField data_gpbkv = 11;
+  //
+  // data_gpb contains the payload data if data is being encoded as
+  // serialised GPB messages.
+  TelemetryGPBTable data_gpb = 12;
+  //
+  // collection_end_time is the timestamp when the last Telemetry message
+  // for a collection has been encoded - encoded as milliseconds since the
+  // epoch. If a single collection is spread over multiple Telemetry
+  // messages, collection_end_time is encoded in the last Telemetry Message
+  // for the collection only.
+  uint64 collection_end_time = 13;
+  //
+  // heartbeat_sequence_number is not currently produced in IOS-XR
+  // uint64   heartbeat_sequence_number = 14; // not produced
+}
+
+//
+// TelemetryField messages are used to export content in the self
+// describing GPB KV form. The TelemetryField message is sufficient to
+// decode telemetry messages for all models. KV-GPB encoding is very
+// similar in concept, to JSON encoding
+message TelemetryField {
+  //
+  // timestamp represents the starting time of the generation of data
+  // starting from this key, value pair in this message - encoded as
+  // milliseconds since the epoch. It is encoded when different from the
+  // msg_timestamp in the containing Telemetry Message. This field can be
+  // omitted if the value is the same as a TelemetryField message up the
+  // hierarchy within the same Telemetry Message as well.
+  uint64         timestamp = 1;
+  //
+  // name: string encoding of the name in the key, value pair. It is
+  // the corresponding YANG element name.
+  string         name = 2;
+  //
+  // value_by_type, if present, for the corresponding YANG element
+  // represented by the name field in the same TelemetryField message. The
+  // value is encoded to the matching type as defined in the YANG model.
+  // YANG models often define new types (derived types) using one or more
+  // base types.  The types included in the oneof grouping is sufficient to
+  // represent such derived types. Derived types represented as a Yang
+  // container are encoded using the nesting primitive defined in this
+  // encoding proposal.
+  oneof value_by_type {
+    bytes          bytes_value = 4;
+    string         string_value = 5;
+    bool           bool_value = 6;
+    uint32         uint32_value = 7;
+    uint64         uint64_value = 8;
+    sint32         sint32_value = 9;
+    sint64         sint64_value = 10;
+    double         double_value = 11;
+    float          float_value = 12;
+  }
+  //
+  // The Yang model may include nesting (e.g hierarchy of containers). The
+  // next level of nesting, if present, is encoded, starting from fields.
+  repeated TelemetryField fields = 15;
+}
+
+// TelemetryGPBTable contains a repeated number of TelemetryRowGPB,
+// each of which represents content from a subtree instance in the
+// the YANG model. For example; a TelemetryGPBTable might contain
+// the interface statistics of a collection of interfaces.
+message TelemetryGPBTable {
+  repeated TelemetryRowGPB row = 1;
+}
+
+//
+// TelemetryRowGPB, in conjunction with the Telemetry encoding_path and
+// model_version, unambiguously represents the root of a subtree in
+// the YANG model, and content from that subtree encoded in serialised
+// GPB messages. For example; a TelemetryRowGPB might contain the
+// interface statistics of one interface. Per encoding-path .proto
+// messages are required to decode keys/content pairs below.
+message TelemetryRowGPB {
+  //
+  // timestamp at which the data for this instance of the TelemetryRowGPB
+  // message was generated by an MDT-capable device - encoded as
+  // milliseconds since the epoch.  When included, this is typically
+  // different from the msg_timestamp in the containing Telemetry message.
+  uint64 timestamp = 1;
+  //
+  // keys: if the encoding-path includes one or more list elements, and/or
+  // ends in a list element, the keys field is a GPB encoded message that
+  // contains the sequence of key values for each such list element in the
+  // encoding-path traversed starting from the root.  The set of keys
+  // unambiguously identifies the instance of data encoded in the
+  // TelemetryRowGPB message. Corresponding protobuf message definition will
+  // be required to decode the byte stream. The encoding_path field in
+  // Telemetry message, together with model_version field should be
+  // sufficient to identify the corresponding protobuf message.
+  bytes keys = 10;
+  //
+  // content: the content field is a GPB encoded message that contains the
+  // data for the corresponding encoding-path. A separate decoding pass
+  // would be performed by consumer with the content field as a GPB message
+  // and the matching .proto used to decode the message. Corresponding
+  // protobuf message definition will be required to decode the byte
+  // stream. The encoding_path field in Telemetry message, together with
+  // model_version field should be sufficient to identify the corresponding
+  // protobuf message. The decoded combination of keys (when present) and
+  // content, unambiguously represents an instance of the data set, as
+  // defined in the Yang model, identified by the encoding-path in the
+  // containing Telemetry message.
+bytes content = 11;
+}
