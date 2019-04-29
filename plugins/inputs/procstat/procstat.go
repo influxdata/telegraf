@@ -295,11 +295,19 @@ func (p *Procstat) updateProcesses(pids []PID, tags map[string]string, prevInfo 
 	for _, pid := range pids {
 		info, ok := prevInfo[pid]
 		if ok {
+			// Assumption: if a process has no name, it probably does not exist
+			if name, _ := info.Name(); name == "" {
+				continue
+			}
 			procs[pid] = info
 		} else {
 			proc, err := p.createProcess(pid)
 			if err != nil {
 				// No problem; process may have ended after we found it
+				continue
+			}
+			// Assumption: if a process has no name, it probably does not exist
+			if name, _ := proc.Name(); name == "" {
 				continue
 			}
 			procs[pid] = proc
