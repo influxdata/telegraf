@@ -48,6 +48,7 @@
 #### Bugfixes
 
 - [#5764](https://github.com/influxdata/telegraf/pull/5764): Fix race condition in the Wavefront parser.
+- [#5783](https://github.com/influxdata/telegraf/pull/5783): Create telegraf user in pre-install rpm scriptlet.
 
 ## v1.10.3 [2019-04-16]
 
