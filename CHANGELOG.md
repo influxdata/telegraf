@@ -42,6 +42,7 @@
 - [#4098](https://github.com/influxdata/telegraf/issues/4098): Fix inline table support in configuration file.
 - [#1598](https://github.com/influxdata/telegraf/issues/1598): Fix multi-line basic strings support in configuration file.
 - [#5746](https://github.com/influxdata/telegraf/issues/5746): Verify a process passed by pid_file exists in procstat input.
+- [#5455](https://github.com/influxdata/telegraf/issues/5455): Fix unsupported pkt type error in pgbouncer.
 
 ## v1.10.4 [unreleased]
 
