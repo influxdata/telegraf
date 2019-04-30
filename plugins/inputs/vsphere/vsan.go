@@ -49,7 +49,7 @@ var (
 // collectVsan is the entry point for vsan metrics collection
 func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc telegraf.Accumulator) error {
 	if !versionSupportsVsan(e.apiVersion) {
-		log.Printf("I! [inputs.vsan]: Minimum API Version 5.5 required for vSAN. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
+		log.Printf("I! [inputs.vsphere][vSAN] Minimum API Version 5.5 required for vSAN. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
 		return nil
 	}
 	res := e.resourceKinds[resourceType]
@@ -78,7 +78,7 @@ func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef objectR
 	cluster := object.NewClusterComputeResource(client, clusterRef.ref)
 	cmmds, err := getCmmdsMap(ctx, client, cluster)
 	if err != nil {
-		log.Printf("E! [inputs.vsphere][vSAN]\tError while query cmmds data. Error: %s. Skipping", err)
+		log.Printf("E! [inputs.vsphere][vSAN] Error while query cmmds data. Error: %s. Skipping", err)
 		cmmds = make(map[string]CmmdsEntity)
 	}
 	// 2. Create a vsan client
@@ -107,7 +107,7 @@ func (e *Endpoint) getVsanPerfMetadata(ctx context.Context, client *vim25.Client
 	var metrics []string
 
 	if err != nil {
-		log.Printf("E! [inputs.vsphere][vSAN]\tFail to get supported entities: %v. Skipping vsan performance data.", err)
+		log.Printf("E! [inputs.vsphere][vSAN] Fail to get supported entities: %v. Skipping vsan performance data.", err)
 		return metrics
 	}
 	// Use the include & exclude configuration to filter all supported metrics
@@ -117,7 +117,7 @@ func (e *Endpoint) getVsanPerfMetadata(ctx context.Context, client *vim25.Client
 		}
 	}
 	metrics = append(metrics)
-	log.Printf("D! [inputs.vsphere][vSAN]\tvSan Metric: %v", metrics)
+	log.Printf("D! [inputs.vsphere][vSAN]\tvSan performance Metric: %v", metrics)
 	return metrics
 }
 
@@ -129,13 +129,8 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 	}
 
 	if len(hosts) == 0 {
-		log.Println("I! [inputs.vsphere][vSAN]\tNo host in cluster: ", clusterObj.Name())
+		log.Printf("I! [inputs.vsphere][vSAN]\tNo host in cluster: %s", clusterObj.Name())
 		return make(map[string]CmmdsEntity), nil
-	}
-
-	vis, err := hosts[0].ConfigManager().VsanInternalSystem(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("fail to get VsanInternalSystem: %v", err)
 	}
 
 	queries := make([]types.HostVsanInternalSystemCmmdsQuery, 2)
@@ -148,13 +143,29 @@ func getCmmdsMap(ctx context.Context, client *vim25.Client, clusterObj *object.C
 	queries = append(queries, hostnameCmmdsQuery)
 	queries = append(queries, diskCmmdsQuery)
 
-	request := types.QueryCmmds{
-		This:    vis.Reference(),
-		Queries: queries,
+	// We will iterate cmmds querying on each host until a success.
+	// It happens that some hosts return successfully while others fail.
+	var resp *types.QueryCmmdsResponse
+	for _, host := range hosts {
+		vis, err := host.ConfigManager().VsanInternalSystem(ctx)
+		if err != nil {
+			log.Printf("I! [inputs.vsphere][vSAN] Fail to get VsanInternalSystem from %s: %s", host.Name(), err)
+			continue
+		}
+		request := types.QueryCmmds{
+			This:    vis.Reference(),
+			Queries: queries,
+		}
+		resp, err = methods.QueryCmmds(ctx, client.RoundTripper, &request)
+		if err != nil {
+			log.Printf("I! [inputs.vsphere][vSAN] Fail to query cmmds from %s: %s", host.Name(), err)
+		} else {
+			log.Printf("I! [inputs.vsphere][vSAN] Successfully get cmmds from %s", host.Name())
+			break
+		}
 	}
-	resp, err := methods.QueryCmmds(ctx, client.RoundTripper, &request)
-	if err != nil {
-		return nil, fmt.Errorf("fail to query cmmds: %v", err)
+	if resp == nil {
+		return nil, fmt.Errorf("all hosts fail to query cmmds")
 	}
 	var clusterCmmds Cmmds
 
@@ -195,19 +206,20 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 		perfRequest := vsantypes.VsanPerfQueryPerf{
 			This:       perfManagerRef,
 			QuerySpecs: perfSpecs,
-			Cluster:    &vsantypes.ManagedObjectReference{clusterRef.ref.Type, clusterRef.ref.Value},
+			Cluster:    &vsantypes.ManagedObjectReference{Type: clusterRef.ref.Type, Value: clusterRef.ref.Value},
 		}
 		resp, err := vsanmethods.VsanPerfQueryPerf(ctx, vsanClient, &perfRequest)
 
 		if err != nil {
-			log.Printf("E! [inputs.vsphere][vSAN]\tError while query performance data. Is vsan performace enabled? Error: %s", err)
+			log.Printf("E! [inputs.vsphere][vSAN] Error querying performance data for %s: %s: %s. Is vsan performace enabled?", clusterRef.name, entityRefId, err)
 			continue
 
 		}
 		tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
 
+		count := 0
 		for _, em := range resp.Returnval {
-			log.Printf("D! [inputs.vsphere][vSAN]\tSuccessfully Fetched data for Entity ==> %s:%d\n", em.EntityRefId, len(em.Value))
+			count += len(em.Value)
 			vals := strings.Split(em.EntityRefId, ":")
 			entityName, uuid := vals[0], vals[1]
 			tags := populateCMMDSTags(tags, entityName, uuid, cmmds)
@@ -246,6 +258,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 				}
 			}
 		}
+		log.Printf("I! [inputs.vsphere][vSAN] Successfully Fetched data for Entity ==> %s:%s:%d\n", clusterRef.name, entityRefId, count)
 	}
 	e.hwMarks.Put(hwMarksKey, latest)
 	return nil
@@ -256,7 +269,7 @@ func (e *Endpoint) queryDiskUsage(ctx context.Context, vsanClient *soap.Client, 
 	resp, err := vsanmethods.VsanQuerySpaceUsage(ctx, vsanClient,
 		&vsantypes.VsanQuerySpaceUsage{
 			This:    spaceManagerRef,
-			Cluster: vsantypes.ManagedObjectReference{clusterRef.ref.Type, clusterRef.ref.Value},
+			Cluster: vsantypes.ManagedObjectReference{Type: clusterRef.ref.Type, Value: clusterRef.ref.Value},
 		})
 	if err != nil {
 		return err
@@ -275,7 +288,7 @@ func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 	resp, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient,
 		&vsantypes.VsanQueryVcClusterHealthSummary{
 			This:           healthSystemRef,
-			Cluster:        vsantypes.ManagedObjectReference{clusterRef.ref.Type, clusterRef.ref.Value},
+			Cluster:        vsantypes.ManagedObjectReference{Type: clusterRef.ref.Type, Value: clusterRef.ref.Value},
 			Fields:         []string{"overallHealth", "overallHealthDescription"},
 			FetchFromCache: &fetchFromCache,
 		})
