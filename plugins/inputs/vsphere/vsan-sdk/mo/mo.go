@@ -772,19 +772,6 @@ func init() {
 	t["HostFirmwareSystem"] = reflect.TypeOf((*HostFirmwareSystem)(nil)).Elem()
 }
 
-type HostGraphicsManager struct {
-	ExtensibleManagedObject
-
-	GraphicsInfo           []types.HostGraphicsInfo          `mo:"graphicsInfo"`
-	GraphicsConfig         *types.HostGraphicsConfig         `mo:"graphicsConfig"`
-	SharedPassthruGpuTypes []string                          `mo:"sharedPassthruGpuTypes"`
-	SharedGpuCapabilities  []types.HostSharedGpuCapabilities `mo:"sharedGpuCapabilities"`
-}
-
-func init() {
-	t["HostGraphicsManager"] = reflect.TypeOf((*HostGraphicsManager)(nil)).Elem()
-}
-
 type HostHealthStatusSystem struct {
 	Self types.ManagedObjectReference
 
@@ -870,20 +857,6 @@ func init() {
 	t["HostNetworkSystem"] = reflect.TypeOf((*HostNetworkSystem)(nil)).Elem()
 }
 
-type HostNvdimmSystem struct {
-	Self types.ManagedObjectReference
-
-	NvdimmSystemInfo types.NvdimmSystemInfo `mo:"nvdimmSystemInfo"`
-}
-
-func (m HostNvdimmSystem) Reference() types.ManagedObjectReference {
-	return m.Self
-}
-
-func init() {
-	t["HostNvdimmSystem"] = reflect.TypeOf((*HostNvdimmSystem)(nil)).Elem()
-}
-
 type HostPatchManager struct {
 	Self types.ManagedObjectReference
 }
@@ -920,19 +893,6 @@ func (m HostPowerSystem) Reference() types.ManagedObjectReference {
 
 func init() {
 	t["HostPowerSystem"] = reflect.TypeOf((*HostPowerSystem)(nil)).Elem()
-}
-
-type HostProfile struct {
-	Profile
-
-	ValidationState           *string                                 `mo:"validationState"`
-	ValidationStateUpdateTime *time.Time                              `mo:"validationStateUpdateTime"`
-	ValidationFailureInfo     *types.HostProfileValidationFailureInfo `mo:"validationFailureInfo"`
-	ReferenceHost             *types.ManagedObjectReference           `mo:"referenceHost"`
-}
-
-func init() {
-	t["HostProfile"] = reflect.TypeOf((*HostProfile)(nil)).Elem()
 }
 
 type HostProfileManager struct {
@@ -991,38 +951,6 @@ type HostStorageSystem struct {
 
 func init() {
 	t["HostStorageSystem"] = reflect.TypeOf((*HostStorageSystem)(nil)).Elem()
-}
-
-type HostSystem struct {
-	ManagedEntity
-
-	Runtime                    types.HostRuntimeInfo                      `mo:"runtime"`
-	Summary                    types.HostListSummary                      `mo:"summary"`
-	Hardware                   *types.HostHardwareInfo                    `mo:"hardware"`
-	Capability                 *types.HostCapability                      `mo:"capability"`
-	LicensableResource         types.HostLicensableResourceInfo           `mo:"licensableResource"`
-	RemediationState           *types.HostSystemRemediationState          `mo:"remediationState"`
-	PrecheckRemediationResult  *types.ApplyHostProfileConfigurationSpec   `mo:"precheckRemediationResult"`
-	RemediationResult          *types.ApplyHostProfileConfigurationResult `mo:"remediationResult"`
-	ComplianceCheckState       *types.HostSystemComplianceCheckState      `mo:"complianceCheckState"`
-	ComplianceCheckResult      *types.ComplianceResult                    `mo:"complianceCheckResult"`
-	ConfigManager              types.HostConfigManager                    `mo:"configManager"`
-	Config                     *types.HostConfigInfo                      `mo:"config"`
-	Vm                         []types.ManagedObjectReference             `mo:"vm"`
-	Datastore                  []types.ManagedObjectReference             `mo:"datastore"`
-	Network                    []types.ManagedObjectReference             `mo:"network"`
-	DatastoreBrowser           types.ManagedObjectReference               `mo:"datastoreBrowser"`
-	SystemResources            *types.HostSystemResourceInfo              `mo:"systemResources"`
-	AnswerFileValidationState  *types.AnswerFileStatusResult              `mo:"answerFileValidationState"`
-	AnswerFileValidationResult *types.AnswerFileStatusResult              `mo:"answerFileValidationResult"`
-}
-
-func (m *HostSystem) Entity() *ManagedEntity {
-	return &m.ManagedEntity
-}
-
-func init() {
-	t["HostSystem"] = reflect.TypeOf((*HostSystem)(nil)).Elem()
 }
 
 type HostVFlashManager struct {
@@ -1092,26 +1020,6 @@ func (m HostVsanSystem) Reference() types.ManagedObjectReference {
 
 func init() {
 	t["HostVsanSystem"] = reflect.TypeOf((*HostVsanSystem)(nil)).Elem()
-}
-
-type HttpNfcLease struct {
-	Self types.ManagedObjectReference
-
-	InitializeProgress int32                          `mo:"initializeProgress"`
-	TransferProgress   int32                          `mo:"transferProgress"`
-	Mode               string                         `mo:"mode"`
-	Capabilities       types.HttpNfcLeaseCapabilities `mo:"capabilities"`
-	Info               *types.HttpNfcLeaseInfo        `mo:"info"`
-	State              types.HttpNfcLeaseState        `mo:"state"`
-	Error              *types.LocalizedMethodFault    `mo:"error"`
-}
-
-func (m HttpNfcLease) Reference() types.ManagedObjectReference {
-	return m.Self
-}
-
-func init() {
-	t["HttpNfcLease"] = reflect.TypeOf((*HttpNfcLease)(nil)).Elem()
 }
 
 type InventoryView struct {
