@@ -59,6 +59,9 @@ type VSphere struct {
 
 	// Mix in the TLS/SSL goodness from core
 	tls.ClientConfig
+
+	// flag governing vSAN Collection
+	VsanCollectionEnabled bool
 }
 
 var sampleConfig = `
@@ -218,6 +221,9 @@ var sampleConfig = `
   # ssl_key = "/path/to/keyfile"
   ## Use SSL but skip chain & host verification
   # insecure_skip_verify = false
+  #
+  ## Also collect vSAN Metrics on vSAN enabled clusters
+  # VsanCollectionEnabled = false
 `
 
 // SampleConfig returns a set of default configuration to be used as a boilerplate when setting up
@@ -338,6 +344,7 @@ func init() {
 			ForceDiscoverOnInit:     false,
 			ObjectDiscoveryInterval: internal.Duration{Duration: time.Second * 300},
 			Timeout:                 internal.Duration{Duration: time.Second * 60},
+			VsanCollectionEnabled:   false,
 		}
 	})
 }
