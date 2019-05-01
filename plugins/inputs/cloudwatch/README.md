@@ -177,7 +177,29 @@ aws cloudwatch list-metrics --namespace AWS/EC2 --region us-east-1 --metric-name
 If the expected metrics are not returned, you can try getting them manually
 for a short period of time:
 ```
-aws cloudwatch get-metric-statistics --namespace AWS/EC2 --region us-east-1 --period 300 --start-time 2018-07-01T00:00:00Z --end-time 2018-07-01T00:15:00Z --statistics Average --metric-name CPUCreditBalance --dimensions Name=InstanceId,Value=i-deadbeef
+aws cloudwatch get-metric-data \
+  --start-time 2018-07-01T00:00:00Z \
+  --end-time 2018-07-01T00:15:00Z \
+  --metric-data-queries '[
+  {
+    "Id": "avgCPUCreditBalance",
+    "MetricStat": {
+      "Metric": {
+        "Namespace": "AWS/EC2",
+        "MetricName": "CPUCreditBalance",
+        "Dimensions": [
+          {
+            "Name": "InstanceId",
+            "Value": "i-deadbeef"
+          }
+        ]
+      },
+      "Period": 300,
+      "Stat": "Average"
+    },
+    "Label": "avgCPUCreditBalance"
+  }
+]'
 ```
 
 ### Example Output:
