@@ -147,7 +147,7 @@ The agent table configures Telegraf and the defaults used across all plugins.
   The log file max [size][]. Log files will be rotated when they exceed this size. Default is 0 => no rotation based on file size.
 - **logfile_rotation_max_archives**:
   Maximum number of archives (rotated) files to keep. Older log files are deleted first.
-  This setting is only applicable if MaxAge and/or MaxSize settings have been specified (otherwise there is no rotation)
+  This setting is only applicable if `logfile_rotation_interval` and/or `logfile_rotation_max_size` settings have been specified (otherwise there is no rotation)
   Default is 0 => all rotated files are deleted. Use -1 to keep all archives.
 
 - **hostname**:

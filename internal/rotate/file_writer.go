@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -17,7 +16,7 @@ import (
 // the files it creates.
 const (
 	FilePerm   = os.FileMode(0644)
-	DateFormat = "2006-01-02"
+	DateFormat = "2006-01-02T150405"
 )
 
 // FileWriter implements the io.Writer interface and writes to the
@@ -44,10 +43,15 @@ func NewFileWriter(filename string, interval time.Duration, maxSizeInBytes int64
 		return openFile(filename)
 	}
 
-	w := &FileWriter{filename: filename, interval: interval, maxSizeInBytes: maxSizeInBytes,
-		maxArchives: maxArchives, filenameRotationTemplate: getFilenameRotationTemplate(filename)}
+	w := &FileWriter{
+		filename:                 filename,
+		interval:                 interval,
+		maxSizeInBytes:           maxSizeInBytes,
+		maxArchives:              maxArchives,
+		filenameRotationTemplate: getFilenameRotationTemplate(filename),
+	}
 
-	if err := w.openCurrent(true); err != nil {
+	if err := w.openCurrent(); err != nil {
 		return nil, err
 	}
 
@@ -62,8 +66,8 @@ func getFilenameRotationTemplate(filename string) string {
 	// Extract the file extension
 	fileExt := filepath.Ext(filename)
 	// Remove the file extension from the filename (if any)
-	filenameWithoutExtension := strings.TrimSuffix(filename, fileExt)
-	return filenameWithoutExtension + "-%s-%s" + fileExt
+	stem := strings.TrimSuffix(filename, fileExt)
+	return stem + ".%s" + fileExt
 }
 
 // Write writes p to the current file, then checks to see if
@@ -90,7 +94,7 @@ func (w *FileWriter) Close() (err error) {
 	defer w.Unlock()
 
 	// Rotate before closing
-	if err = w.rotate(false); err != nil {
+	if err = w.rotate(); err != nil {
 		return err
 	}
 
@@ -101,21 +105,21 @@ func (w *FileWriter) Close() (err error) {
 	return nil
 }
 
-func (w *FileWriter) openCurrent(firstRun bool) (err error) {
-	w.current, err = openFile(w.filename)
+func (w *FileWriter) openCurrent() (err error) {
+	// In case ModTime() fails, we use time.Now()
 	w.expireTime = time.Now().Add(w.interval)
 	w.bytesWritten = 0
+	w.current, err = openFile(w.filename)
 
 	if err != nil {
 		return err
 	}
-	if !firstRun {
-		return nil
-	}
 
-	// Goal here is to rotate old pre-existing files. For that we use fileInfo.ModTime, instead of time.Now(), only when the FileWriter is created (firstRun)
-	// Example: telegraf is restarted every 23 hours and the rotation interval is set to 24 hours. With time.now() as a reference we'd never rotate the file.
-	// It's only necessary to use modtime when the filewriter is created, otherwise we assume that we've been continuously running, so time.now is fine.
+	// Goal here is to rotate old pre-existing files.
+	// For that we use fileInfo.ModTime, instead of time.Now().
+	// Example: telegraf is restarted every 23 hours and
+	// the rotation interval is set to 24 hours.
+	// With time.now() as a reference we'd never rotate the file.
 	if fileInfo, err := w.current.Stat(); err == nil {
 		w.expireTime = fileInfo.ModTime().Add(w.interval)
 	}
@@ -125,18 +129,20 @@ func (w *FileWriter) openCurrent(firstRun bool) (err error) {
 func (w *FileWriter) rotateIfNeeded() error {
 	if (w.interval > 0 && time.Now().After(w.expireTime)) ||
 		(w.maxSizeInBytes > 0 && w.bytesWritten >= w.maxSizeInBytes) {
-		return w.rotate(true)
+		if err := w.rotate(); err != nil {
+			//Ignore rotation errors and keep the log open
+			fmt.Printf("unable to rotate the file '%s', %s", w.filename, err.Error())
+		}
+		return w.openCurrent()
 	}
 	return nil
 }
 
-func (w *FileWriter) rotate(createNewFile bool) (err error) {
+func (w *FileWriter) rotate() (err error) {
 	if err = w.current.Close(); err != nil {
 		return err
 	}
-	now := time.Now()
-	// Use year-month-date for readability, unix time to make archive names unique
-	rotatedFilename := fmt.Sprintf(w.filenameRotationTemplate, now.Format(DateFormat), strconv.FormatInt(now.UnixNano(), 10))
+	rotatedFilename := fmt.Sprintf(w.filenameRotationTemplate, time.Now().Format(DateFormat))
 	if err = os.Rename(w.filename, rotatedFilename); err != nil {
 		return err
 	}
@@ -145,9 +151,6 @@ func (w *FileWriter) rotate(createNewFile bool) (err error) {
 		return err
 	}
 
-	if createNewFile {
-		return w.openCurrent(false)
-	}
 	return nil
 }
 
@@ -158,7 +161,7 @@ func (w *FileWriter) purgeArchivesIfNeeded() (err error) {
 	}
 
 	var matches []string
-	if matches, err = filepath.Glob(fmt.Sprintf(w.filenameRotationTemplate, "*", "*")); err != nil {
+	if matches, err = filepath.Glob(fmt.Sprintf(w.filenameRotationTemplate, "*")); err != nil {
 		return err
 	}
 

@@ -59,7 +59,7 @@ func TestFileWriter_SizeRotation(t *testing.T) {
 	assert.Equal(t, 2, len(files))
 }
 
-func TestFileWriter_deleteArchives(t *testing.T) {
+func TestFileWriter_DeleteArchives(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "RotationDeleteArchives")
 	require.NoError(t, err)
 	maxSize := int64(5)
@@ -69,8 +69,13 @@ func TestFileWriter_deleteArchives(t *testing.T) {
 
 	_, err = writer.Write([]byte("First file"))
 	require.NoError(t, err)
+	// File names include the date with second precision
+	// So, to force rotation with different file names
+	// we need to wait
+	time.Sleep(1 * time.Second)
 	_, err = writer.Write([]byte("Second file"))
 	require.NoError(t, err)
+	time.Sleep(1 * time.Second)
 	_, err = writer.Write([]byte("Third file"))
 	require.NoError(t, err)
 
@@ -106,5 +111,5 @@ func TestFileWriter_CloseRotates(t *testing.T) {
 
 	files, _ := ioutil.ReadDir(tempDir)
 	assert.Equal(t, 1, len(files))
-	assert.Regexp(t, "^test-[^\\.]+\\.log$", files[0].Name())
+	assert.Regexp(t, "^test\\.[^\\.]+\\.log$", files[0].Name())
 }

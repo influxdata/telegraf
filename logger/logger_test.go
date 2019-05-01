@@ -19,7 +19,8 @@ func TestWriteLogToFile(t *testing.T) {
 	assert.NoError(t, err)
 	defer func() { os.Remove(tmpfile.Name()) }()
 
-	SetupLogging(false, false, tmpfile.Name(), internal.Duration{Duration: 0}, internal.Size{Size: int64(0)}, 0)
+	config := createBasicLogConfig(tmpfile.Name())
+	SetupLogging(config)
 	log.Printf("I! TEST")
 	log.Printf("D! TEST") // <- should be ignored
 
@@ -32,8 +33,9 @@ func TestDebugWriteLogToFile(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	assert.NoError(t, err)
 	defer func() { os.Remove(tmpfile.Name()) }()
-
-	SetupLogging(true, false, tmpfile.Name(), internal.Duration{Duration: 0}, internal.Size{Size: int64(0)}, 0)
+	config := createBasicLogConfig(tmpfile.Name())
+	config.Debug = true
+	SetupLogging(config)
 	log.Printf("D! TEST")
 
 	f, err := ioutil.ReadFile(tmpfile.Name())
@@ -45,8 +47,9 @@ func TestErrorWriteLogToFile(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	assert.NoError(t, err)
 	defer func() { os.Remove(tmpfile.Name()) }()
-
-	SetupLogging(false, true, tmpfile.Name(), internal.Duration{Duration: 0}, internal.Size{Size: int64(0)}, 0)
+	config := createBasicLogConfig(tmpfile.Name())
+	config.Quiet = true
+	SetupLogging(config)
 	log.Printf("E! TEST")
 	log.Printf("I! TEST") // <- should be ignored
 
@@ -59,8 +62,9 @@ func TestAddDefaultLogLevel(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	assert.NoError(t, err)
 	defer func() { os.Remove(tmpfile.Name()) }()
-
-	SetupLogging(true, false, tmpfile.Name(), internal.Duration{Duration: 0}, internal.Size{Size: int64(0)}, 0)
+	config := createBasicLogConfig(tmpfile.Name())
+	config.Debug = true
+	SetupLogging(config)
 	log.Printf("TEST")
 
 	f, err := ioutil.ReadFile(tmpfile.Name())
@@ -72,8 +76,9 @@ func TestWriteToTruncatedFile(t *testing.T) {
 	tmpfile, err := ioutil.TempFile("", "")
 	assert.NoError(t, err)
 	defer func() { os.Remove(tmpfile.Name()) }()
-
-	SetupLogging(true, false, tmpfile.Name(), internal.Duration{Duration: 0}, internal.Size{Size: int64(0)}, 0)
+	config := createBasicLogConfig(tmpfile.Name())
+	config.Debug = true
+	SetupLogging(config)
 	log.Printf("TEST")
 
 	f, err := ioutil.ReadFile(tmpfile.Name())
@@ -94,8 +99,9 @@ func TestWriteToTruncatedFile(t *testing.T) {
 func TestWriteToFileInRotation(t *testing.T) {
 	tempDir, err := ioutil.TempDir("", "LogRotation")
 	require.NoError(t, err)
-	writer := setupLoggingAndReturnWriter(false, false, filepath.Join(tempDir, "test.log"),
-		internal.Duration{Duration: 0}, internal.Size{Size: int64(30)}, -1)
+	config := createBasicLogConfig(filepath.Join(tempDir, "test.log"))
+	config.RotationMaxSize = internal.Size{Size: int64(30)}
+	writer := setupLoggingAndReturnWriter(config)
 	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
 	closer, isCloser := writer.(io.Closer)
 	assert.True(t, isCloser)
@@ -114,5 +120,12 @@ func BenchmarkTelegrafLogWrite(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		buf.Reset()
 		w.Write(msg)
+	}
+}
+
+func createBasicLogConfig(filename string) LogConfig {
+	return LogConfig{
+		Logfile:             filename,
+		RotationMaxArchives: -1,
 	}
 }

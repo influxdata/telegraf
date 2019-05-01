@@ -18,12 +18,32 @@ var prefixRegex = regexp.MustCompile("^[DIWE]!")
 // newTelegrafWriter returns a logging-wrapped writer.
 func newTelegrafWriter(w io.Writer) io.Writer {
 	return &telegrafLog{
-		writer: wlog.NewWriter(w),
+		writer:         wlog.NewWriter(w),
+		internalWriter: w,
 	}
 }
 
+// LogConfig contains the log configuration settings
+type LogConfig struct {
+	// will set the log level to DEBUG
+	Debug bool
+	//will set the log level to ERROR
+	Quiet bool
+	// will direct the logging output to a file. Empty string is
+	// interpreted as stderr. If there is an error opening the file the
+	// logger will fallback to stderr
+	Logfile string
+	// will rotate when current file at the specified time interval
+	RotationInterval internal.Duration
+	// will rotate when current file size exceeds this parameter.
+	RotationMaxSize internal.Size
+	// maximum rotated files to keep (older ones will be deleted)
+	RotationMaxArchives int
+}
+
 type telegrafLog struct {
-	writer io.Writer
+	writer         io.Writer
+	internalWriter io.Writer
 }
 
 func (t *telegrafLog) Write(b []byte) (n int, err error) {
@@ -37,7 +57,7 @@ func (t *telegrafLog) Write(b []byte) (n int, err error) {
 }
 
 func (t *telegrafLog) Close() error {
-	closer, isCloser := t.writer.(io.Closer)
+	closer, isCloser := t.internalWriter.(io.Closer)
 	if !isCloser {
 		return errors.New("the underlying writer cannot be closed")
 	}
@@ -45,33 +65,24 @@ func (t *telegrafLog) Close() error {
 }
 
 // SetupLogging configures the logging output.
-//   debug                  will set the log level to DEBUG
-//   quiet                  will set the log level to ERROR
-//   logfile                will direct the logging output to a file. Empty string is
-//                          interpreted as stderr. If there is an error opening the file the
-//                          logger will fallback to stderr.
-//   logRotationInterval    will rotate when current file at the specified time interval.
-//   logRotationMaxSize     will rotate when current file size exceeds this parameter.
-//   logRotationMaxArchives maximum rotated files to keep (older ones will be deleted)
-func SetupLogging(debug, quiet bool, logfile string, logRotationInterval internal.Duration, logRotationMaxSize internal.Size, logRotationMaxArchives int) {
-	setupLoggingAndReturnWriter(debug, quiet, logfile, logRotationInterval, logRotationMaxSize, logRotationMaxArchives)
+func SetupLogging(config LogConfig) {
+	setupLoggingAndReturnWriter(config)
 }
 
-func setupLoggingAndReturnWriter(debug, quiet bool, logfile string, logRotationInterval internal.Duration, logRotationMaxSize internal.Size,
-	logRotationMaxArchives int) io.Writer {
+func setupLoggingAndReturnWriter(config LogConfig) io.Writer {
 	log.SetFlags(0)
-	if debug {
+	if config.Debug {
 		wlog.SetLevel(wlog.DEBUG)
 	}
-	if quiet {
+	if config.Quiet {
 		wlog.SetLevel(wlog.ERROR)
 	}
 
 	var writer io.Writer
-	if logfile != "" {
+	if config.Logfile != "" {
 		var err error
-		if writer, err = rotate.NewFileWriter(logfile, logRotationInterval.Duration, logRotationMaxSize.Size, logRotationMaxArchives); err != nil {
-			log.Printf("E! Unable to open %s (%s), using stderr", logfile, err)
+		if writer, err = rotate.NewFileWriter(config.Logfile, config.RotationInterval.Duration, config.RotationMaxSize.Size, config.RotationMaxArchives); err != nil {
+			log.Printf("E! Unable to open %s (%s), using stderr", config.Logfile, err)
 			writer = os.Stderr
 		}
 	} else {
