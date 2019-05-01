@@ -33,6 +33,7 @@
 - [#5769](https://github.com/influxdata/telegraf/pull/5769): Add pagefault data to procstat input plugin.
 - [#5760](https://github.com/influxdata/telegraf/pull/5760): Add option to set permissions for unix domain sockets to socket_listener.
 - [#5585](https://github.com/influxdata/telegraf/pull/5585): Add cli support for outputting sections of the config.
+- [#5770](https://github.com/influxdata/telegraf/pull/5770): Add service-display-name option for use with Windows service.
 
 #### Bugfixes
 
