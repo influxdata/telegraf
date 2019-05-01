@@ -69,6 +69,10 @@ type Statsd struct {
 	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
 	ParseDataDogTags bool
 
+	// This flag enables parsing of data dog events from the dogstatsd extension to
+	// the statsd protocol
+	ParseDataDogEvents bool
+
 	// UDPPacketSize is deprecated, it's only here for legacy support
 	// we now always create 1 max size buffer and then copy only what we need
 	// into the in channel
@@ -101,6 +105,7 @@ type Statsd struct {
 	counters map[string]cachedcounter
 	sets     map[string]cachedset
 	timings  map[string]cachedtimings
+	events   map[string]cachedEvent
 
 	// bucket -> influx templates
 	Templates []string
@@ -144,6 +149,7 @@ type metric struct {
 	additive   bool
 	samplerate float64
 	tags       map[string]string
+	ts         time.Time // for events
 }
 
 type cachedset struct {
@@ -168,6 +174,13 @@ type cachedtimings struct {
 	name   string
 	fields map[string]RunningStats
 	tags   map[string]string
+}
+
+type cachedEvent struct {
+	name   string
+	fields map[string]interface{}
+	tags   map[string]string
+	ts     time.Time
 }
 
 func (_ *Statsd) Description() string {
