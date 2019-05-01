@@ -195,9 +195,9 @@ aws cloudwatch get-metric-data \
         ]
       },
       "Period": 300,
-      "Stat": "average",
+      "Stat": "Average"
     },
-    "Label": "avgCPUCreditBalance",
+    "Label": "avgCPUCreditBalance"
   }
 ]'
 ```
