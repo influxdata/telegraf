@@ -30,7 +30,7 @@ import (
 )
 
 type Simple struct {
-    Ok bool
+    Ok bool `toml:"ok"`
 }
 
 func (s *Simple) Description() string {
