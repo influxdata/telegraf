@@ -23,16 +23,16 @@ import (
 )
 
 const (
-	vsanNamespace           = "vsan"
-	vsanPath                = "/vsanHealth"
-	hwMarksKey              = "vsan-perf"
-	vsanPerfMetricsName     = "vsphere_cluster_vsan_performance"
-	vsanHealthMetricsName   = "vsphere_cluster_vsan_health"
-	vsanCapacityMetricsName = "vsphere_cluster_vsan_capacity"
+	vsanNamespace = "vsan"
+	vsanPath      = "/vsanHealth"
+	hwMarksKey    = "vsan-perf"
 )
 
 var (
-	perfManagerRef = vsantypes.ManagedObjectReference{
+	vsanPerfMetricsName     string
+	vsanHealthMetricsName   string
+	vsanCapacityMetricsName string
+	perfManagerRef          = vsantypes.ManagedObjectReference{
 		Type:  "VsanPerformanceManager",
 		Value: "vsan-performance-manager",
 	}
@@ -52,9 +52,10 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 		log.Printf("I! [inputs.vsphere][vSAN] Minimum API Version 5.5 required for vSAN. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
 		return nil
 	}
+	vsanPerfMetricsName = strings.Join([]string{"vsphere", "cluster", "vsan", "performance"}, e.Parent.Separator)
+	vsanHealthMetricsName = strings.Join([]string{"vsphere", "cluster", "vsan", "health"}, e.Parent.Separator)
+	vsanCapacityMetricsName = strings.Join([]string{"vsphere", "cluster", "vsan", "capacity"}, e.Parent.Separator)
 	res := e.resourceKinds[resourceType]
-	var waitGroup sync.WaitGroup
-
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
 		return fmt.Errorf("fail to get client when collect vsan: %v", err)
@@ -62,6 +63,7 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 	vimClient := client.Client.Client
 	metrics := e.getVsanPerfMetadata(ctx, vimClient, res)
 	// Iterate over all clusters, run a goroutine for each cluster
+	var waitGroup sync.WaitGroup
 	for _, obj := range res.objects {
 		waitGroup.Add(1)
 		go func(clusterObj objectRef) {
@@ -219,9 +221,10 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 
 		count := 0
 		for _, em := range resp.Returnval {
-			count += len(em.Value)
 			vals := strings.Split(em.EntityRefId, ":")
 			entityName, uuid := vals[0], vals[1]
+
+			buckets := make(map[string]metricEntry)
 			tags := populateCMMDSTags(tags, entityName, uuid, cmmds)
 			var timeStamps []string
 			// 1. Construct a timestamp list from sample info
@@ -236,19 +239,23 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 			for _, counter := range em.Value {
 				metricLabel := counter.MetricId.Label
 				// 3. Iterate on each data point.
-				// For each data point, we attach the corresponding timestamp and add it to accumulator
 				for i, values := range strings.Split(counter.Values, ",") {
 					ts, ok := time.Parse(time.RFC3339, timeStamps[i])
 					if ok != nil {
 						log.Printf("E! [inputs.vsphere][vSAN]\tFailed to parse a timestamp: %s. Skipping", timeStamps[i])
 						continue
 					}
-					fields := make(map[string]interface{})
-					field := fmt.Sprintf("%s_%s", entityName, metricLabel)
-					if v, err := strconv.ParseFloat(values, 32); err == nil {
-						fields[field] = v
+					// Organize the metrics into a bucket per measurement.
+					bKey := em.EntityRefId + " " + strconv.FormatInt(ts.UnixNano(), 10)
+					bucket, found := buckets[bKey]
+					if !found {
+						mn := vsanPerfMetricsName + e.Parent.Separator + entityName
+						bucket = metricEntry{name: mn, ts: ts, fields: make(map[string]interface{}), tags: tags}
+						buckets[bKey] = bucket
 					}
-					acc.AddFields(vsanPerfMetricsName, fields, tags, ts)
+					if v, err := strconv.ParseFloat(values, 32); err == nil {
+						bucket.fields[metricLabel] = v
+					}
 				}
 			}
 			if len(timeStamps) > 0 {
@@ -257,6 +264,11 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 					latest = lastSample
 				}
 			}
+			// We've iterated through all the metrics and collected buckets for each measurement name. Now emit them!
+			for _, bucket := range buckets {
+				acc.AddFields(bucket.name, bucket.fields, bucket.tags, bucket.ts)
+			}
+			count += len(buckets)
 		}
 		log.Printf("I! [inputs.vsphere][vSAN] Successfully Fetched data for Entity ==> %s:%s:%d\n", clusterRef.name, entityRefId, count)
 	}
