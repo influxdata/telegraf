@@ -95,7 +95,7 @@ type Statsd struct {
 	malformed int
 
 	// Channel for all incoming statsd packets
-	in   chan *bytes.Buffer
+	in   chan input
 	done chan struct{}
 
 	// Cache gauges, counters & sets so they can be aggregated as they arrive
@@ -105,7 +105,7 @@ type Statsd struct {
 	counters map[string]cachedcounter
 	sets     map[string]cachedset
 	timings  map[string]cachedtimings
-	events   map[string]cachedEvent
+	events   []cachedEvent
 
 	// bucket -> influx templates
 	Templates []string
@@ -134,6 +134,12 @@ type Statsd struct {
 
 	// A pool of byte slices to handle parsing
 	bufPool sync.Pool
+}
+
+type input struct {
+	*bytes.Buffer
+	time.Time
+	net.Addr
 }
 
 // One statsd metric, form is <bucket>:<value>|<mtype>|@<samplerate>
@@ -328,7 +334,7 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	s.PacketsRecv = selfstat.Register("statsd", "tcp_packets_received", tags)
 	s.BytesRecv = selfstat.Register("statsd", "tcp_bytes_received", tags)
 
-	s.in = make(chan *bytes.Buffer, s.AllowedPendingMessages)
+	s.in = make(chan input, s.AllowedPendingMessages)
 	s.done = make(chan struct{})
 	s.accept = make(chan bool, s.MaxTCPConnections)
 	s.conns = make(map[string]*net.TCPConn)
@@ -452,7 +458,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 		case <-s.done:
 			return nil
 		default:
-			n, _, err := conn.ReadFromUDP(buf)
+			n, addr, err := conn.ReadFromUDP(buf)
 			if err != nil && !strings.Contains(err.Error(), "closed network") {
 				log.Printf("E! Error READ: %s\n", err.Error())
 				continue
@@ -462,7 +468,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 			b.Write(buf[:n])
 
 			select {
-			case s.in <- b:
+			case s.in <- input{Buffer: b, Time: time.Now(), Addr: addr}:
 			default:
 				s.drops++
 				if s.drops == 1 || s.AllowedPendingMessages == 0 || s.drops%s.AllowedPendingMessages == 0 {
@@ -481,12 +487,16 @@ func (s *Statsd) parser() error {
 		select {
 		case <-s.done:
 			return nil
-		case buf := <-s.in:
-			lines := strings.Split(buf.String(), "\n")
-			s.bufPool.Put(buf)
+		case in := <-s.in:
+			lines := strings.Split(in.Buffer.String(), "\n")
+			s.bufPool.Put(in.Buffer)
 			for _, line := range lines {
 				line = strings.TrimSpace(line)
-				if line != "" {
+				switch {
+				case line == "":
+				case s.ParseDataDogEvents && len(line) > 2 && line[:2] == "_e":
+					s.parseDataDogEventMessage(time.Now(), line, in.Addr.String())
+				default:
 					s.parseStatsdLine(line)
 				}
 			}
@@ -512,24 +522,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		for _, segment := range pipesplit {
 			if len(segment) > 0 && segment[0] == '#' {
 				// we have ourselves a tag; they are comma separated
-				tagstr := segment[1:]
-				tags := strings.Split(tagstr, ",")
-				for _, tag := range tags {
-					ts := strings.SplitN(tag, ":", 2)
-					var k, v string
-					switch len(ts) {
-					case 1:
-						// just a tag
-						k = ts[0]
-						v = ""
-					case 2:
-						k = ts[0]
-						v = ts[1]
-					}
-					if k != "" {
-						lineTags[k] = v
-					}
-				}
+				parseDataDogTags(lineTags, segment[1:])
 			} else {
 				recombinedSegments = append(recombinedSegments, segment)
 			}
@@ -635,7 +628,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		case "h":
 			m.tags["metric_type"] = "histogram"
 		}
-
+		fmt.Println("here: name:", m.name, lineTags)
 		if len(lineTags) > 0 {
 			for k, v := range lineTags {
 				m.tags[k] = v
@@ -844,7 +837,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 			b.WriteByte('\n')
 
 			select {
-			case s.in <- b:
+			case s.in <- input{Buffer: b, Time: time.Now(), Addr: conn.RemoteAddr()}:
 			default:
 				s.drops++
 				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {

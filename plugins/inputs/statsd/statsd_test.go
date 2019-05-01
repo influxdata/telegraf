@@ -1,7 +1,6 @@
 package statsd
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"net"
@@ -17,8 +16,8 @@ const (
 	testMsg = "test.tcp.msg:100|c"
 )
 
-func newTestTcpListener() (*Statsd, chan *bytes.Buffer) {
-	in := make(chan *bytes.Buffer, 1500)
+func newTestTCPListener() (*Statsd, chan input) {
+	in := make(chan input, 1500)
 	listener := &Statsd{
 		Protocol:               "tcp",
 		ServiceAddress:         "localhost:8125",
@@ -35,7 +34,7 @@ func NewTestStatsd() *Statsd {
 
 	// Make data structures
 	s.done = make(chan struct{})
-	s.in = make(chan *bytes.Buffer, s.AllowedPendingMessages)
+	s.in = make(chan input, s.AllowedPendingMessages)
 	s.gauges = make(map[string]cachedgauge)
 	s.counters = make(map[string]cachedcounter)
 	s.sets = make(map[string]cachedset)
@@ -873,24 +872,28 @@ func TestParse_DataDogTags(t *testing.T) {
 		"my_timer:3|ms|@0.1|#live,host:localhost",
 	}
 
-	testTags := map[string]map[string]string{
+	expectedTags := map[string]map[string]string{
 		"my_counter": {
 			"host":        "localhost",
 			"environment": "prod",
 			"endpoint":    "/:tenant?/oauth/ro",
+			"metric_type": "counter",
 		},
 
 		"my_gauge": {
-			"live": "",
+			"live":        "",
+			"metric_type": "gauge",
 		},
 
 		"my_set": {
-			"host": "localhost",
+			"host":        "localhost",
+			"metric_type": "set",
 		},
 
 		"my_timer": {
-			"live": "",
-			"host": "localhost",
+			"live":        "",
+			"host":        "localhost",
+			"metric_type": "timing",
 		},
 	}
 
@@ -901,21 +904,29 @@ func TestParse_DataDogTags(t *testing.T) {
 		}
 	}
 
-	sourceTags := map[string]map[string]string{
+	actualTags := map[string]map[string]string{
 		"my_gauge":   tagsForItem(s.gauges),
 		"my_counter": tagsForItem(s.counters),
 		"my_set":     tagsForItem(s.sets),
 		"my_timer":   tagsForItem(s.timings),
 	}
-
-	for statName, tags := range testTags {
-		for k, v := range tags {
-			otherValue := sourceTags[statName][k]
-			if sourceTags[statName][k] != v {
-				t.Errorf("Error with %s, tag %s: %s != %s", statName, k, v, otherValue)
+	for name, tags := range expectedTags {
+		for expectedK, expectedV := range tags {
+			if expectedV != actualTags[name][expectedK] {
+				t.Errorf("failed: expected: %#v != %#v", tags, actualTags[name])
 			}
 		}
 	}
+
+	// for statName, tags := range expectedTags {
+	// 	for expectedK, expectedV := range tags {
+	// 		otherValue := sourceTags[statName][k]
+	// 		if sourceTags[statName][expectedK] != v {
+	// 			t.Errorf("Error with %s, tag %s: %s != %s", statName, k, v, otherValue)
+	// 			fmt.Print(sourceTags[statName])
+	// 		}
+	// 	}
+	// }
 }
 
 func tagsForItem(m interface{}) map[string]string {
