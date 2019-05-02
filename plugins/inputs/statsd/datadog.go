@@ -87,7 +87,7 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 			if len(rawMetadataFields[i]) < 2 {
 				log.Printf("W! [inputs.statsd] too short metadata field")
 			}
-			switch rawMetadataFields[i] {
+			switch rawMetadataFields[i][:2] {
 			case "d:":
 				ts, err := strconv.ParseInt(rawMetadataFields[i][2:], 10, 64)
 				if err != nil {
@@ -124,12 +124,20 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 				m.tags["aggregation-key"] = rawMetadataFields[i][2:]
 			case "s:":
 				m.fields["source-type-name"] = rawMetadataFields[i][2:]
-			case "#":
-				parseDataDogTags(m.tags, rawMetadataFields[i][2:])
 			default:
-				log.Printf("W! [inputs.statsd] unknown metadata type: '%s'", rawMetadataFields[i])
+				if rawMetadataFields[i][0] == '#' {
+					parseDataDogTags(m.tags, rawMetadataFields[i][1:])
+				} else {
+					log.Printf("W! [inputs.statsd] unknown metadata type: '%s'", rawMetadataFields[i])
+				}
 			}
 		}
+	}
+	// host is a magic tag in the system, and it expects it to replace the result of h: if it is present
+	// telegraf will add a"host" tag anyway with different meaning than dogstatsd, so we need to switch these out
+	if host, ok := m.tags["host"]; ok {
+		delete(m.tags, "host")
+		m.tags["source"] = host
 	}
 	s.Lock()
 	s.events = append(s.events, m)
@@ -139,17 +147,19 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 
 func parseDataDogTags(tags map[string]string, message string) {
 	start, i := 0, 0
-	var k, v string
+	var k string
 	var inVal bool // check if we are parsing the value part of the tag
 	for i = range message {
 		if message[i] == ',' {
-			v = message[start:i]
-			start = i + 1
 			if k == "" {
+				k = message[start:i]
+				tags[k] = ""
+				start = i + 1
 				continue
 			}
-			tags[k] = v
-			k, v, inVal = "", "", false // reset state vars
+			tags[k] = message[start:i]
+			start = i + 1
+			k, inVal = "", false // reset state vars
 		} else if message[i] == ':' && !inVal {
 			k = message[start:i]
 			start = i + 1
