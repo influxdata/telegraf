@@ -218,7 +218,7 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 	deviceFields := make(map[string]interface{})
 	deviceFields["exit_status"] = exitStatus
 
-	log.Printf("D! [inputs.smart] gatherDisk '%s' output: %+#v", deviceNode, outStr)
+	log.Printf("D! [inputs.smart] gatherDisk '%s'", deviceNode)
 
 	scanner := bufio.NewScanner(strings.NewReader(outStr))
 
@@ -308,7 +308,6 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 				}
 			}
 		} else {
-			var tempC int64
 			if collectAttributes {
 				if startStop := sasStartStopAttr.FindStringSubmatch(line); len(startStop) > 1 {
 					tags["id"] = "4"
@@ -361,12 +360,12 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 				if temp := sasTempAttr.FindStringSubmatch(line); len(temp) > 1 {
 					tags["id"] = "194"
 					tags["name"] = "Temperature_Celsius"
-					var err error
-					tempC, err = strconv.ParseInt(temp[1], 10, 64)
+					tempC, err := strconv.ParseInt(temp[1], 10, 64)
 					if err != nil {
 						continue
 					}
 					fields["raw_value"] = tempC
+					deviceFields["temp_c"] = tempC
 
 					acc.AddFields("smart_attribute", fields, tags)
 				}
@@ -374,19 +373,15 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 				if temp := nvmeTempAttr.FindStringSubmatch(line); len(temp) > 1 {
 					tags["id"] = "194"
 					tags["name"] = "Temperature_Celsius"
-					var err error
-					tempC, err = strconv.ParseInt(temp[1], 10, 64)
+					tempC, err := strconv.ParseInt(temp[1], 10, 64)
 					if err != nil {
 						continue
 					}
 					fields["raw_value"] = tempC
+					deviceFields["temp_c"] = tempC
 
 					acc.AddFields("smart_attribute", fields, tags)
 				}
-			}
-
-			if tempC != 0 {
-				deviceFields["temp_c"] = tempC
 			}
 		}
 	}
