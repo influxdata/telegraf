@@ -101,7 +101,7 @@ func TestWriteToFileInRotation(t *testing.T) {
 	require.NoError(t, err)
 	config := createBasicLogConfig(filepath.Join(tempDir, "test.log"))
 	config.RotationMaxSize = internal.Size{Size: int64(30)}
-	writer := setupLoggingAndReturnWriter(config)
+	writer := newLogWriter(config)
 	// Close the writer here, otherwise the temp folder cannot be deleted because the current log file is in use.
 	closer, isCloser := writer.(io.Closer)
 	assert.True(t, isCloser)

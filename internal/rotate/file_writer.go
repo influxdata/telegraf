@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -16,7 +17,7 @@ import (
 // the files it creates.
 const (
 	FilePerm   = os.FileMode(0644)
-	DateFormat = "2006-01-02T150405"
+	DateFormat = "2006-01-02"
 )
 
 // FileWriter implements the io.Writer interface and writes to the
@@ -67,7 +68,7 @@ func getFilenameRotationTemplate(filename string) string {
 	fileExt := filepath.Ext(filename)
 	// Remove the file extension from the filename (if any)
 	stem := strings.TrimSuffix(filename, fileExt)
-	return stem + ".%s" + fileExt
+	return stem + ".%s-%s" + fileExt
 }
 
 // Write writes p to the current file, then checks to see if
@@ -142,7 +143,10 @@ func (w *FileWriter) rotate() (err error) {
 	if err = w.current.Close(); err != nil {
 		return err
 	}
-	rotatedFilename := fmt.Sprintf(w.filenameRotationTemplate, time.Now().Format(DateFormat))
+
+	// Use year-month-date for readability, unix time to make the file name unique with second precision
+	now := time.Now()
+	rotatedFilename := fmt.Sprintf(w.filenameRotationTemplate, now.Format(DateFormat), strconv.FormatInt(now.Unix(), 10))
 	if err = os.Rename(w.filename, rotatedFilename); err != nil {
 		return err
 	}
@@ -161,7 +165,7 @@ func (w *FileWriter) purgeArchivesIfNeeded() (err error) {
 	}
 
 	var matches []string
-	if matches, err = filepath.Glob(fmt.Sprintf(w.filenameRotationTemplate, "*")); err != nil {
+	if matches, err = filepath.Glob(fmt.Sprintf(w.filenameRotationTemplate, "*", "*")); err != nil {
 		return err
 	}
 

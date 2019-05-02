@@ -66,10 +66,10 @@ func (t *telegrafLog) Close() error {
 
 // SetupLogging configures the logging output.
 func SetupLogging(config LogConfig) {
-	setupLoggingAndReturnWriter(config)
+	newLogWriter(config)
 }
 
-func setupLoggingAndReturnWriter(config LogConfig) io.Writer {
+func newLogWriter(config LogConfig) io.Writer {
 	log.SetFlags(0)
 	if config.Debug {
 		wlog.SetLevel(wlog.DEBUG)
