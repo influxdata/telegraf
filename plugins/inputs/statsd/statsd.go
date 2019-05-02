@@ -310,7 +310,6 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	if s.DeleteSets {
 		s.sets = make(map[string]cachedset)
 	}
-
 	return nil
 }
 
@@ -495,7 +494,7 @@ func (s *Statsd) parser() error {
 				switch {
 				case line == "":
 				case s.ParseDataDogEvents && len(line) > 2 && line[:2] == "_e":
-					s.parseDataDogEventMessage(time.Now(), line, in.Addr.String())
+					s.parseEventMessage(time.Now(), line, in.Addr.String())
 				default:
 					s.parseStatsdLine(line)
 				}
@@ -628,7 +627,6 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		case "h":
 			m.tags["metric_type"] = "histogram"
 		}
-		fmt.Println("here: name:", m.name, lineTags)
 		if len(lineTags) > 0 {
 			for k, v := range lineTags {
 				m.tags[k] = v

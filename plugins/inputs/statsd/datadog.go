@@ -13,9 +13,11 @@ const (
 	priorityLow    = "low"
 )
 
+var uncommenter = strings.NewReplacer("\\n", "\n")
+
 // this is adapted from datadog's apache licensed version at
 // https://github.com/DataDog/datadog-agent/blob/fcfc74f106ab1bd6991dfc6a7061c558d934158a/pkg/dogstatsd/parser.go#L173
-func (s *Statsd) parseDataDogEventMessage(now time.Time, message string, defaultHostname string) error {
+func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostname string) error {
 	// _e{title.length,text.length}:title|text
 	//  [
 	//   |d:date_happened
@@ -67,12 +69,18 @@ func (s *Statsd) parseDataDogEventMessage(now time.Time, message string, default
 	m := cachedEvent{
 		name: rawTitle,
 	}
-	m.tags = make(map[string]string, strings.Count(message[1:], ",")+2) // allocate for the approximate number of tags
+	m.tags = make(map[string]string, strings.Count(message, ",")+2) // allocate for the approximate number of tags
 	m.fields = make(map[string]interface{}, 9)
-	m.fields["alert_type"] = "info" // default event type
-	m.fields["text"] = string(rawText)
+	m.fields["alert-type"] = "info" // default event type
+	m.fields["text"] = uncommenter.Replace(string(rawText))
 	m.tags["source"] = defaultHostname
+	m.fields["priority"] = priorityNormal
 	m.ts = now
+	if len(message) == 0 {
+		s.events = append(s.events, m)
+		return nil
+	}
+
 	if len(message) > 1 {
 		rawMetadataFields := strings.Split(message[1:], "|")
 		for i := range rawMetadataFields {
@@ -91,8 +99,7 @@ func (s *Statsd) parseDataDogEventMessage(now time.Time, message string, default
 				switch rawMetadataFields[i][2:] {
 				case priorityLow:
 					m.fields["priority"] = priorityLow
-				case priorityNormal:
-					m.fields["priority"] = priorityNormal
+				case priorityNormal: // we already used this as a default
 				default:
 					log.Printf("W! [inputs.statsd] skipping priority")
 					continue
@@ -102,11 +109,11 @@ func (s *Statsd) parseDataDogEventMessage(now time.Time, message string, default
 			case "t:":
 				switch rawMetadataFields[i][2:] {
 				case "error":
-					m.fields["alert_type"] = "error"
+					m.fields["alert-type"] = "error"
 				case "warning":
-					m.fields["alert_type"] = "warning"
+					m.fields["alert-type"] = "warning"
 				case "success":
-					m.fields["alert_type"] = "success"
+					m.fields["alert-type"] = "success"
 				case "info": // already set for info
 				default:
 					log.Printf("W! [inputs.statsd] skipping alert type")
@@ -114,9 +121,9 @@ func (s *Statsd) parseDataDogEventMessage(now time.Time, message string, default
 				}
 			case "k:":
 				// TODO(docmerlin): does this make sense?
-				m.tags["aggregation_key"] = rawMetadataFields[i][2:]
+				m.tags["aggregation-key"] = rawMetadataFields[i][2:]
 			case "s:":
-				m.fields["source_type_name"] = rawMetadataFields[i][2:]
+				m.fields["source-type-name"] = rawMetadataFields[i][2:]
 			case "#":
 				parseDataDogTags(m.tags, rawMetadataFields[i][2:])
 			default:

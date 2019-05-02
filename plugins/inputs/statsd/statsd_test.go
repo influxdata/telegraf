@@ -188,7 +188,7 @@ func BenchmarkTCP(b *testing.B) {
 // Valid lines should be parsed and their values should be cached
 func TestParse_ValidLines(t *testing.T) {
 	s := NewTestStatsd()
-	valid_lines := []string{
+	validLines := []string{
 		"valid:45|c",
 		"valid:45|s",
 		"valid:45|g",
@@ -196,7 +196,7 @@ func TestParse_ValidLines(t *testing.T) {
 		"valid.timer:45|h",
 	}
 
-	for _, line := range valid_lines {
+	for _, line := range validLines {
 		err := s.parseStatsdLine(line)
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
@@ -209,7 +209,7 @@ func TestParse_Gauges(t *testing.T) {
 	s := NewTestStatsd()
 
 	// Test that gauge +- values work
-	valid_lines := []string{
+	validLines := []string{
 		"plus.minus:100|g",
 		"plus.minus:-10|g",
 		"plus.minus:+30|g",
@@ -227,7 +227,7 @@ func TestParse_Gauges(t *testing.T) {
 		"scientific.notation.minus:4.7E-5|g",
 	}
 
-	for _, line := range valid_lines {
+	for _, line := range validLines {
 		err := s.parseStatsdLine(line)
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
@@ -285,7 +285,7 @@ func TestParse_Sets(t *testing.T) {
 	s := NewTestStatsd()
 
 	// Test that sets work
-	valid_lines := []string{
+	validLines := []string{
 		"unique.user.ids:100|s",
 		"unique.user.ids:100|s",
 		"unique.user.ids:100|s",
@@ -305,7 +305,7 @@ func TestParse_Sets(t *testing.T) {
 		"string.sets:bar|s",
 	}
 
-	for _, line := range valid_lines {
+	for _, line := range validLines {
 		err := s.parseStatsdLine(line)
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
@@ -347,7 +347,7 @@ func TestParse_Counters(t *testing.T) {
 	s := NewTestStatsd()
 
 	// Test that counters work
-	valid_lines := []string{
+	validLines := []string{
 		"small.inc:1|c",
 		"big.inc:100|c",
 		"big.inc:1|c",
@@ -362,7 +362,7 @@ func TestParse_Counters(t *testing.T) {
 		"negative.test:-5|c",
 	}
 
-	for _, line := range valid_lines {
+	for _, line := range validLines {
 		err := s.parseStatsdLine(line)
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
@@ -414,7 +414,7 @@ func TestParse_Timings(t *testing.T) {
 	acc := &testutil.Accumulator{}
 
 	// Test that counters work
-	valid_lines := []string{
+	validLines := []string{
 		"test.timing:1|ms",
 		"test.timing:11|ms",
 		"test.timing:1|ms",
@@ -422,7 +422,7 @@ func TestParse_Timings(t *testing.T) {
 		"test.timing:1|ms",
 	}
 
-	for _, line := range valid_lines {
+	for _, line := range validLines {
 		err := s.parseStatsdLine(line)
 		if err != nil {
 			t.Errorf("Parsing line %s should not have resulted in an error\n", line)
