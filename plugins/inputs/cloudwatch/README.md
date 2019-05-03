@@ -72,7 +72,7 @@ API endpoint. In the following order the plugin will attempt to authenticate.
 
   ## Namespace-wide statistic filters. These allow fewer queries to be made to
   ## cloudwatch.
-  # statistic_include = [ "average", "sum", minimum", "maximum", sample_count" ]
+  # statistic_include = [ "average", "sum", "minimum", "maximum", sample_count" ]
   # statistic_exclude = []
 
   ## Metrics to Pull
@@ -83,7 +83,7 @@ API endpoint. In the following order the plugin will attempt to authenticate.
   #
   #  ## Statistic filters for Metric.  These allow for retrieving specific
   #  ## statistics for an individual metric.
-  #  # statistic_include = [ "average", "sum", minimum", "maximum", sample_count" ]
+  #  # statistic_include = [ "average", "sum", "minimum", "maximum", sample_count" ]
   #  # statistic_exclude = []
   #
   #  ## Dimension filters for Metric.  All dimensions defined for the metric names
