@@ -427,7 +427,7 @@ func TestGatherSSDRaid(t *testing.T) {
 
 	wg.Add(1)
 	gatherDisk(acc, true, true, "", "", "", wg)
-	assert.Equal(t, 73, acc.NFields(), "Wrong number of fields gathered")
+	assert.Equal(t, 74, acc.NFields(), "Wrong number of fields gathered")
 	assert.Equal(t, uint64(15), acc.NMetrics(), "Wrong number of metrics gathered")
 }
 

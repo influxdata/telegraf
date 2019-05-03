@@ -20,11 +20,9 @@ import (
 
 var (
 	// Device Model:     APPLE SSD SM256E
-	modelInfo = regexp.MustCompile("^Device Model:\\s+(.*)$")
 	// Product:              HUH721212AL5204
-	productInfo = regexp.MustCompile("^Product:\\s+(.*)$")
 	// Model Number: TS128GMTE850
-	modelNoInfo = regexp.MustCompile("^Model Number:\\s+(.*)$")
+	modelInfo = regexp.MustCompile("^(Device Model|Product|Model Number):\\s+(.*)$")
 	// Serial Number:    S0X5NZBC422720
 	serialInfo = regexp.MustCompile("^Serial Number:\\s+(.*)$")
 	// LU WWN Device Id: 5 002538 655584d30
@@ -34,10 +32,9 @@ var (
 	// SMART support is: Enabled
 	smartEnabledInfo = regexp.MustCompile("^SMART support is:\\s+(\\w+)$")
 	// SMART overall-health self-assessment test result: PASSED
-	// PASSED, FAILED, UNKNOWN
-	smartOverallHealth = regexp.MustCompile("^SMART overall-health self-assessment test result:\\s+(\\w+).*$")
 	// SMART Health Status: OK
-	smartHealth = regexp.MustCompile("^SMART Health Status:\\s+(\\w+).*$")
+	// PASSED, FAILED, UNKNOWN
+	smartOverallHealth = regexp.MustCompile("^(SMART overall-health self-assessment test result|SMART Health Status):\\s+(\\w+).*$")
 
 	// Accumulated start-stop cycles:  7
 	sasStartStopAttr = regexp.MustCompile("^Accumulated start-stop cycles:\\s+(.*)$")
@@ -61,6 +58,7 @@ var (
 	deviceFieldIds = map[string]string{
 		"1":   "read_error_rate",
 		"7":   "seek_error_rate",
+		"190": "temp_c",
 		"194": "temp_c",
 		"199": "udma_crc_errors",
 	}
@@ -226,13 +224,8 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 		line := scanner.Text()
 
 		model := modelInfo.FindStringSubmatch(line)
-		if len(model) > 1 {
-			deviceTags["model"] = model[1]
-		} else if product := productInfo.FindStringSubmatch(line); len(product) > 1 {
-			deviceTags["model"] = product[1]
-		} else if modelNo := modelNoInfo.FindStringSubmatch(line); len(modelNo) > 1 {
-			fmt.Println(modelNo)
-			deviceTags["model"] = modelNo[1]
+		if len(model) > 2 {
+			deviceTags["model"] = model[2]
 		}
 
 		serial := serialInfo.FindStringSubmatch(line)
@@ -256,10 +249,8 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 		}
 
 		health := smartOverallHealth.FindStringSubmatch(line)
-		if len(health) > 1 {
-			deviceFields["health_ok"] = (health[1] == "PASSED")
-		} else if health = smartHealth.FindStringSubmatch(line); len(health) > 1 {
-			deviceFields["health_ok"] = (health[1] == "OK")
+		if len(health) > 2 {
+			deviceFields["health_ok"] = (health[2] == "PASSED" || health[2] == "OK")
 		}
 
 		tags := map[string]string{}
@@ -319,6 +310,7 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 					fields["raw_value"] = i
 
 					acc.AddFields("smart_attribute", fields, tags)
+					continue
 				}
 
 				if powerCycle := nvmePowerCycleAttr.FindStringSubmatch(line); len(powerCycle) > 1 {
@@ -331,6 +323,7 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 					fields["raw_value"] = i
 
 					acc.AddFields("smart_attribute", fields, tags)
+					continue
 				}
 
 				if powerOn := nvmePowerOnAttr.FindStringSubmatch(line); len(powerOn) > 1 {
@@ -343,6 +336,7 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 					fields["raw_value"] = i
 
 					acc.AddFields("smart_attribute", fields, tags)
+					continue
 				}
 
 				if loadCycle := sasLoadCycleAttr.FindStringSubmatch(line); len(loadCycle) > 1 {
@@ -355,6 +349,7 @@ func gatherDisk(acc telegraf.Accumulator, usesudo, collectAttributes bool, smart
 					fields["raw_value"] = i
 
 					acc.AddFields("smart_attribute", fields, tags)
+					continue
 				}
 
 				if temp := sasTempAttr.FindStringSubmatch(line); len(temp) > 1 {
