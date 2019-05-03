@@ -145,6 +145,15 @@ type AgentConfig struct {
 	// Logfile specifies the file to send logs to
 	Logfile string
 
+	// The log file rotation interval
+	LogfileRotationInterval internal.Duration
+
+	// The log file max size. Logs will rotated when they exceed this size.
+	LogfileRotationMaxSize internal.Size
+
+	// The max number of log archives to keep
+	LogfileRotationMaxArchives int
+
 	// Quiet is the option for running in quiet mode
 	Quiet        bool
 	Hostname     string
@@ -273,6 +282,17 @@ var agentConfig = `
   quiet = false
   ## Specify the log file name. The empty string means to log to stderr.
   logfile = ""
+  ## Rotation settings, only applicable when log file name is specified.
+  ## Log file rotation time interval, e.g. "1d" means logs will rotated every day. Default is 0 => no rotation based on time.
+  # logfile_rotation_interval = "1d"
+  ## The log file max size. Log files will be rotated when they exceed this size. Default is 0 => no rotation based on file size.
+  # logfile_rotation_max_size = "10 MB"
+  ## Maximum number of archives (rotated) files to keep. Older log files are deleted first.
+  ## This setting is only applicable if logfile_rotation_interval and/or logfile_rotation_max_size settings have been specified (otherwise there is no rotation)
+  ## Default is 0 => all rotated files are deleted. 
+  ## Use -1 to keep all archives.
+  ## Analogous to logrotate "rotate" setting http://man7.org/linux/man-pages/man8/logrotate.8.html
+  # logfile_rotation_max_archives = 0
 
   ## Override default hostname, if empty use os.Hostname()
   hostname = ""

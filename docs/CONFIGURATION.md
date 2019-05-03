@@ -141,6 +141,14 @@ The agent table configures Telegraf and the defaults used across all plugins.
   Run telegraf in quiet mode (error log messages only).
 - **logfile**:
   Specify the log file name. The empty string means to log to stderr.
+- **logfile_rotation_interval**:
+  Log file rotation time [interval][], e.g. "1d" means logs will rotated every day. Default is 0 => no rotation based on time.
+- **logfile_rotation_max_size**:
+  The log file max [size][]. Log files will be rotated when they exceed this size. Default is 0 => no rotation based on file size.
+- **logfile_rotation_max_archives**:
+  Maximum number of archives (rotated) files to keep. Older log files are deleted first.
+  This setting is only applicable if `logfile_rotation_interval` and/or `logfile_rotation_max_size` settings have been specified (otherwise there is no rotation)
+  Default is 0 => all rotated files are deleted. Use -1 to keep all archives.
 
 - **hostname**:
   Override default hostname, if empty use os.Hostname()
