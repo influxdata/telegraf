@@ -19,7 +19,7 @@ type SyslogMapper struct {
 	DefaultAppname      string
 	Sdids               []string
 	Separator           string
-	reservedFields      map[string]bool
+	reservedKeys        map[string]bool
 }
 
 // MapMetricToSyslogMessage maps metrics tags/fields to syslog messages
@@ -43,23 +43,30 @@ func (sm *SyslogMapper) MapMetricToSyslogMessage(metric telegraf.Metric) (*rfc54
 }
 
 func (sm *SyslogMapper) mapStructuredData(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
-	for key, value := range metric.Fields() {
-		if sm.reservedFields[key] {
-			continue
+	for _, tag := range metric.TagList() {
+		sm.mapStructuredDataItem(tag.Key, tag.Value, msg)
+	}
+	for _, field := range metric.FieldList() {
+		sm.mapStructuredDataItem(field.Key, formatValue(field.Value), msg)
+	}
+}
+
+func (sm *SyslogMapper) mapStructuredDataItem(key string, value string, msg *rfc5424.SyslogMessage) {
+	if sm.reservedKeys[key] {
+		return
+	}
+	isExplicitSdid := false
+	for _, sdid := range sm.Sdids {
+		k := strings.TrimLeft(key, sdid+sm.Separator)
+		if len(key) > len(k) {
+			isExplicitSdid = true
+			msg.SetParameter(sdid, k, value)
+			break
 		}
-		isExplicitSdid := false
-		for _, sdid := range sm.Sdids {
-			k := strings.TrimLeft(key, sdid+sm.Separator)
-			if len(key) > len(k) {
-				isExplicitSdid = true
-				msg.SetParameter(sdid, k, formatValue(value))
-				break
-			}
-		}
-		if !isExplicitSdid && len(sm.DefaultSdid) > 0 {
-			k := strings.TrimLeft(key, sm.DefaultSdid+sm.Separator)
-			msg.SetParameter(sm.DefaultSdid, k, formatValue(value))
-		}
+	}
+	if !isExplicitSdid && len(sm.DefaultSdid) > 0 {
+		k := strings.TrimPrefix(key, sm.DefaultSdid+sm.Separator)
+		msg.SetParameter(sm.DefaultSdid, k, value)
 	}
 }
 
@@ -186,8 +193,9 @@ func getFieldCode(metric telegraf.Metric, fieldKey string) (*uint8, bool) {
 
 func newSyslogMapper() *SyslogMapper {
 	return &SyslogMapper{
-		reservedFields: map[string]bool{
+		reservedKeys: map[string]bool{
 			"version": true, "severity_code": true, "facility_code": true,
-			"procid": true, "msgid": true, "msg": true, "timestamp": true, "sdid": true},
+			"procid": true, "msgid": true, "msg": true, "timestamp": true, "sdid": true,
+			"hostname": true, "severity": true, "facility": true, "appname": true},
 	}
 }

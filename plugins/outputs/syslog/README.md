@@ -48,7 +48,7 @@ Syslog messages are formatted according to
   ### SD-PARAMs settings
   ### A syslog message can contain multiple parameters and multiple identifiers within structured data section
   ### A syslog message can contain multiple structured data sections.
-  ### For each unrecognised metric field a SD-PARAMS can be created. 
+  ### For each unrecognised metric tag/field a SD-PARAMS can be created. 
   ### Example
   ### Configuration =>
   ### sdparam_separator = "_"
@@ -57,14 +57,14 @@ Syslog messages are formatted according to
   ### input => xyzzy,x=y foo@123_value=42,bar@456_value2=84,something_else=1
   ### output (structured data only) => [foo@123 value=42][bar@456 value2=84][default@32473 something_else=1 x=y]
 
-  ## SD-PARAMs separator between the sdid and field key (default = "_") 
+  ## SD-PARAMs separator between the sdid and tag/field key (default = "_") 
   # sdparam_separator = "_"
 
-  ## Default sdid used for for fields that don't contain a prefix defined in the explict sdids setting below
+  ## Default sdid used for tags/fields that don't contain a prefix defined in the explict sdids setting below
   ## If no default is specified, no SD-PARAMs will be used for unrecognised field.
   # default_sdid = "default@32473"
 
-  ##List of explicit prefixes to extract from fields and use as the SDID, if they match (see above example for more details):
+  ##List of explicit prefixes to extract from tag/field keys and use as the SDID, if they match (see above example for more details):
   # sdids = ["foo@123", "bar@456"]
   ###
 

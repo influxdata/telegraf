@@ -70,7 +70,7 @@ var sampleConfig = `
   ### SD-PARAMs settings
   ### A syslog message can contain multiple parameters and multiple identifiers within structured data section
   ### A syslog message can contain multiple structured data sections.
-  ### For each unrecognised metric field a SD-PARAMS can be created. 
+  ### For each unrecognised metric tag/field a SD-PARAMS can be created. 
   ### Example
   ### Configuration =>
   ### sdparam_separator = "_"
@@ -79,14 +79,14 @@ var sampleConfig = `
   ### input => xyzzy,x=y foo@123_value=42,bar@456_value2=84,something_else=1
   ### output (structured data only) => [foo@123 value=42][bar@456 value2=84][default@32473 something_else=1 x=y]
 
-  ## SD-PARAMs separator between the sdid and field key (default = "_") 
+  ## SD-PARAMs separator between the sdid and tag/field key (default = "_") 
   # sdparam_separator = "_"
 
-  ## Default sdid used for for fields that don't contain a prefix defined in the explict sdids setting below
+  ## Default sdid used for tags/fields that don't contain a prefix defined in the explict sdids setting below
   ## If no default is specified, no SD-PARAMs will be used for unrecognised field.
   # default_sdid = "default@32473"
 
-  ##List of explicit prefixes to extract from fields and use as the SDID, if they match (see above example for more details):
+  ##List of explicit prefixes to extract from tag/field keys and use as the SDID, if they match (see above example for more details):
   # sdids = ["foo@123", "bar@456"]
   ###
 
@@ -171,41 +171,49 @@ func (s *Syslog) Description() string {
 	return "Configuration for Syslog server to send metrics to"
 }
 
-func (s *Syslog) Write(metrics []telegraf.Metric) error {
+func (s *Syslog) Write(metrics []telegraf.Metric) (err error) {
 	if s.Conn == nil {
 		// previous write failed with permanent error and socket was closed.
-		if err := s.Connect(); err != nil {
+		if err = s.Connect(); err != nil {
 			return err
 		}
 	}
-
 	for _, metric := range metrics {
-		if msg, err := s.mapper.MapMetricToSyslogMessage(metric); err == nil {
-			msgBytesWithObjectCounting := s.getSyslogMessageBytesWithFraming(msg)
-			if _, err := s.Conn.Write(msgBytesWithObjectCounting); err != nil {
-				if err, ok := err.(net.Error); !ok || !err.Temporary() {
-					s.Close()
-					s.Conn = nil
-					return fmt.Errorf("closing connection: %v", err)
-				}
-				return err
-			}
-		} else {
+		var msg *rfc5424.SyslogMessage
+		if msg, err = s.mapper.MapMetricToSyslogMessage(metric); err != nil {
 			log.Printf("E! [outputs.syslog] Failed to create syslog message: %v", err)
+			continue
+		}
+		var msgBytesWithFraming []byte
+		if msgBytesWithFraming, err = s.getSyslogMessageBytesWithFraming(msg); err != nil {
+			log.Printf("E! [outputs.syslog] Failed to convert syslog message with framing: %v", err)
+			continue
+		}
+		if _, err = s.Conn.Write(msgBytesWithFraming); err != nil {
+			if netErr, ok := err.(net.Error); !ok || !netErr.Temporary() {
+				s.Close()
+				s.Conn = nil
+				return fmt.Errorf("closing connection: %v", netErr)
+			}
+			return err
 		}
 	}
 	return nil
 }
 
-func (s *Syslog) getSyslogMessageBytesWithFraming(msg *rfc5424.SyslogMessage) []byte {
-	msgString, _ := msg.String()
+func (s *Syslog) getSyslogMessageBytesWithFraming(msg *rfc5424.SyslogMessage) ([]byte, error) {
+	var msgString string
+	var err error
+	if msgString, err = msg.String(); err != nil {
+		return nil, err
+	}
 	msgBytes := []byte(msgString)
 
 	if s.Framing == framing.OctetCounting {
-		return append([]byte(strconv.Itoa(len(msgBytes))+" "), msgBytes...)
+		return append([]byte(strconv.Itoa(len(msgBytes))+" "), msgBytes...), nil
 	}
 	// Non-transparent framing
-	return append(msgBytes, byte(s.Trailer))
+	return append(msgBytes, byte(s.Trailer)), nil
 }
 
 func (s *Syslog) initializeSyslogMapper() {

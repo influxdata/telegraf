@@ -31,7 +31,8 @@ func TestGetSyslogMessageWithFramingOctectCounting(t *testing.T) {
 
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(m1)
 	require.NoError(t, err)
-	messageBytesWithFraming := s.getSyslogMessageBytesWithFraming(syslogMessage)
+	messageBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(syslogMessage)
+	require.NoError(t, err)
 
 	assert.Equal(t, "59 <13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -", string(messageBytesWithFraming), "Incorrect Octect counting framing")
 }
@@ -54,7 +55,8 @@ func TestGetSyslogMessageWithFramingNonTransparent(t *testing.T) {
 
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(m1)
 	require.NoError(t, err)
-	messageBytesWithFraming := s.getSyslogMessageBytesWithFraming(syslogMessage)
+	messageBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(syslogMessage)
+	require.NoError(t, err)
 
 	assert.Equal(t, "<13>1 2010-11-10T23:00:00Z testhost Telegraf - testmetric -\x00", string(messageBytesWithFraming), "Incorrect Octect counting framing")
 }
@@ -99,7 +101,8 @@ func testSyslogWriteWithStream(t *testing.T, s *Syslog, lconn net.Conn) {
 	metrics = append(metrics, m1)
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(metrics[0])
 	require.NoError(t, err)
-	messageBytesWithFraming := s.getSyslogMessageBytesWithFraming(syslogMessage)
+	messageBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(syslogMessage)
+	require.NoError(t, err)
 
 	err = s.Write(metrics)
 	require.NoError(t, err)
@@ -122,7 +125,8 @@ func testSyslogWriteWithPacket(t *testing.T, s *Syslog, lconn net.PacketConn) {
 	metrics = append(metrics, m1)
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(metrics[0])
 	require.NoError(t, err)
-	messageBytesWithFraming := s.getSyslogMessageBytesWithFraming(syslogMessage)
+	messageBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(syslogMessage)
+	require.NoError(t, err)
 
 	err = s.Write(metrics)
 	require.NoError(t, err)
@@ -192,7 +196,8 @@ func TestSyslogWriteReconnect(t *testing.T) {
 
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(metrics[0])
 	require.NoError(t, err)
-	messageBytesWithFraming := s.getSyslogMessageBytesWithFraming(syslogMessage)
+	messageBytesWithFraming, err := s.getSyslogMessageBytesWithFraming(syslogMessage)
+	require.NoError(t, err)
 	buf := make([]byte, 256)
 	n, err := lconn.Read(buf)
 	require.NoError(t, err)

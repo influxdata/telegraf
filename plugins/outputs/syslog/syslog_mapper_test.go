@@ -97,8 +97,10 @@ func TestSyslogMapperWithDefaultSdid(t *testing.T) {
 	m1, _ := metric.New(
 		"testmetric",
 		map[string]string{
-			"appname":  "testapp",
-			"hostname": "testhost",
+			"appname":            "testapp",
+			"hostname":           "testhost",
+			"tag1":               "bar",
+			"default@32473_tag2": "foobar",
 		},
 		map[string]interface{}{
 			"severity_code":        uint64(3),
@@ -118,7 +120,7 @@ func TestSyslogMapperWithDefaultSdid(t *testing.T) {
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(m1)
 	require.NoError(t, err)
 	str, _ := syslogMessage.String()
-	assert.Equal(t, "<27>2 2010-11-10T23:30:00Z testhost testapp 25 555 [default@32473 value1=\"2\" value2=\"foo\" value3=\"1.2\"] Test message", str, "Wrong syslog message")
+	assert.Equal(t, "<27>2 2010-11-10T23:30:00Z testhost testapp 25 555 [default@32473 tag1=\"bar\" tag2=\"foobar\" value1=\"2\" value2=\"foo\" value3=\"1.2\"] Test message", str, "Wrong syslog message")
 }
 
 func TestSyslogMapperWithDefaultSdidAndOtherSdids(t *testing.T) {
@@ -131,8 +133,11 @@ func TestSyslogMapperWithDefaultSdidAndOtherSdids(t *testing.T) {
 	m1, _ := metric.New(
 		"testmetric",
 		map[string]string{
-			"appname":  "testapp",
-			"hostname": "testhost",
+			"appname":            "testapp",
+			"hostname":           "testhost",
+			"tag1":               "bar",
+			"default@32473_tag2": "foobar",
+			"bar@123_tag3":       "barfoobar",
 		},
 		map[string]interface{}{
 			"severity_code":        uint64(1),
@@ -153,7 +158,7 @@ func TestSyslogMapperWithDefaultSdidAndOtherSdids(t *testing.T) {
 	syslogMessage, err := s.mapper.MapMetricToSyslogMessage(m1)
 	require.NoError(t, err)
 	str, _ := syslogMessage.String()
-	assert.Equal(t, "<25>2 2010-11-10T23:30:00Z testhost testapp 25 555 [bar@123 value3=\"2\"][default@32473 value1=\"2\" value2=\"default\"][foo@456 value4=\"foo\"] Test message", str, "Wrong syslog message")
+	assert.Equal(t, "<25>2 2010-11-10T23:30:00Z testhost testapp 25 555 [bar@123 tag3=\"barfoobar\" value3=\"2\"][default@32473 tag1=\"bar\" tag2=\"foobar\" value1=\"2\" value2=\"default\"][foo@456 value4=\"foo\"] Test message", str, "Wrong syslog message")
 }
 
 func TestSyslogMapperWithNoSdids(t *testing.T) {
@@ -165,8 +170,12 @@ func TestSyslogMapperWithNoSdids(t *testing.T) {
 	m1, _ := metric.New(
 		"testmetric",
 		map[string]string{
-			"appname":  "testapp",
-			"hostname": "testhost",
+			"appname":            "testapp",
+			"hostname":           "testhost",
+			"tag1":               "bar",
+			"default@32473_tag2": "foobar",
+			"bar@123_tag3":       "barfoobar",
+			"foo@456_tag4":       "foobarfoo",
 		},
 		map[string]interface{}{
 			"severity_code":        uint64(2),
