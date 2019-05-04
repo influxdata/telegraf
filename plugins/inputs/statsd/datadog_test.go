@@ -4,10 +4,59 @@ import (
 	"testing"
 	"time"
 
+	"github.com/influxdata/telegraf/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+func TestEventGather(t *testing.T) {
+	acc := &testutil.Accumulator{}
+
+	now := time.Now()
+	s := NewTestStatsd()
+	err := s.parseEventMessage(now, "_e{10,9}:test title|test text", "default-hostname")
+	require.Nil(t, err)
+	err = s.parseEventMessage(now.Add(1), "_e{10,24}:test title|test\\line1\\nline2\\nline3", "default-hostname")
+	require.Nil(t, err)
+	err = s.parseEventMessage(now.Add(2), "_e{10,9}:test title|test text|d:21", "default-hostname")
+	require.Nil(t, err)
+
+	err = s.Gather(acc)
+	require.Nil(t, err)
+
+	assert.Equal(t, acc.NMetrics(), uint64(3))
+
+	assert.Equal(t, "test title", acc.Metrics[0].Measurement)
+	assert.Equal(t, "test title", acc.Metrics[1].Measurement)
+	assert.Equal(t, "test title", acc.Metrics[2].Measurement)
+
+	assert.Equal(t, map[string]string{"source": "default-hostname"}, acc.Metrics[0].Tags)
+	assert.Equal(t, map[string]string{"source": "default-hostname"}, acc.Metrics[1].Tags)
+	assert.Equal(t, map[string]string{"source": "default-hostname"}, acc.Metrics[2].Tags)
+
+	assert.Equal(t,
+		map[string]interface{}{
+			"priority":   priorityNormal,
+			"alert-type": "info",
+			"text":       "test text",
+		},
+		acc.Metrics[0].Fields)
+	assert.Equal(t, map[string]interface{}{
+		"priority":   priorityNormal,
+		"alert-type": "info",
+		"text":       "test\\line1\nline2\nline3",
+	}, acc.Metrics[1].Fields)
+	assert.Equal(t, map[string]interface{}{
+		"priority":   priorityNormal,
+		"alert-type": "info",
+		"text":       "test text",
+		"ts":         int64(21),
+	}, acc.Metrics[2].Fields)
+}
+
+// These tests adapted from tests in
+// https://github.com/DataDog/datadog-agent/blob/master/pkg/dogstatsd/parser_test.go
+// to ensure compatibility with the datadog-agent parser
 func TestEventMinimal(t *testing.T) {
 	now := time.Now()
 	s := NewTestStatsd()

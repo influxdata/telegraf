@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	// UDP packet limit, see
+	// UDP_MAX_PACKET_SIZE is the UDP packet limit, see
 	// https://en.wikipedia.org/wiki/User_Datagram_Protocol#Packet_structure
 	UDP_MAX_PACKET_SIZE int = 64 * 1024
 
@@ -41,6 +41,7 @@ var dropwarn = "E! Error: statsd message queue full. " +
 var malformedwarn = "E! Statsd over TCP has received %d malformed packets" +
 	" thus far."
 
+// Statsd allows the importing of statsd and dogstatsd data.
 type Statsd struct {
 	// Protocol used on listener - udp or tcp
 	Protocol string `toml:"protocol"`
@@ -61,6 +62,7 @@ type Statsd struct {
 	DeleteCounters bool
 	DeleteSets     bool
 	DeleteTimings  bool
+	DeleteEvents   bool
 	ConvertNames   bool
 
 	// MetricSeparator is the separator between parts of the metric name.
@@ -310,6 +312,13 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	if s.DeleteSets {
 		s.sets = make(map[string]cachedset)
 	}
+	for _, e := range s.events {
+		acc.AddFields(e.name, e.fields, e.tags, e.ts)
+	}
+	if s.DeleteEvents {
+		s.events = s.events[:0]
+	}
+
 	return nil
 }
 
@@ -918,6 +927,7 @@ func init() {
 			DeleteGauges:           true,
 			DeleteSets:             true,
 			DeleteTimings:          true,
+			DeleteEvents:           true,
 		}
 	})
 }
