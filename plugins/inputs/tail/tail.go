@@ -209,7 +209,7 @@ func (t *Tail) receiverMultiline(parser parsers.Parser, tailer *tail.Tail) {
 		var line *tail.Line
 		timer := time.NewTimer(t.MultilineConfig.Timeout.Duration)
 		timeout := timer.C
-		var channelOpen bool
+		channelOpen := true
 
 		select {
 		case line, channelOpen = <-tailer.Lines:
@@ -230,14 +230,13 @@ func (t *Tail) receiverMultiline(parser parsers.Parser, tailer *tail.Tail) {
 			//timeout or channel closed
 			//flush buffer
 			if text = t.multiline.Flush(&buffer); text == "" {
+				if !channelOpen {
+					break
+				}
 				continue
 			}
 		}
 		t.parse(parser, tailer.Filename, text, &firstLine)
-
-		if !channelOpen {
-			break
-		}
 	}
 
 	t.handleTailerExit(tailer)
