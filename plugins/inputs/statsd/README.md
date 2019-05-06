@@ -43,6 +43,7 @@
   ## Parses tags in the datadog statsd format
   ## http://docs.datadoghq.com/guides/dogstatsd/
   parse_data_dog_tags = false
+  parse_data_dog_events = false
 
   ## Statsd data translation templates, more info can be read here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/TEMPLATE_PATTERN.md
@@ -185,6 +186,7 @@ the accuracy of percentiles but also increases the memory usage and cpu time.
 - **templates** []string: Templates for transforming statsd buckets into influx
 measurements and tags.
 - **parse_data_dog_tags** boolean: Enable parsing of tags in DataDog's dogstatsd format (http://docs.datadoghq.com/guides/dogstatsd/)
+- **parse_data_dog_events** boolean: Enable parsing of events in DataDog's dogstatsd format (http://docs.datadoghq.com/guides/dogstatsd/)
 
 ### Statsd bucket -> InfluxDB line-protocol Templates
 
