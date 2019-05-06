@@ -193,6 +193,9 @@ func (h *HTTP) write(reqBody []byte) error {
 		req.Header.Set("Content-Encoding", "gzip")
 	}
 	for k, v := range h.Headers {
+		if strings.ToLower(k) == "host" {
+			req.Host = v
+		}
 		req.Header.Set(k, v)
 	}
 
