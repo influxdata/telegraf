@@ -2,6 +2,7 @@ package cpu
 
 import (
 	"fmt"
+	"runtime"
 	"time"
 
 	"github.com/influxdata/telegraf"
@@ -56,7 +57,8 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 
 	for _, cts := range times {
 		tags := map[string]string{
-			"cpu": cts.CPU,
+			"cpu":      cts.CPU,
+			"cpu_arch": runtime.GOARCH,
 		}
 
 		total := totalCpuTime(cts)
