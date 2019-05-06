@@ -46,7 +46,7 @@ var (
 
 // collectVsan is the entry point for vsan metrics collection
 func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc telegraf.Accumulator) error {
-	if !versionSupportsVsan(e.apiVersion) {
+	if versionLowerThan(e.apiVersion, "5.5") {
 		log.Printf("I! [inputs.vsphere][vSAN] Minimum API Version 5.5 required for vSAN. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
 		return nil
 	}
@@ -326,11 +326,14 @@ func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 
 // queryResyncSummary adds resync information to accumulator
 func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Client, clusterObj *object.ClusterComputeResource, clusterRef objectRef, acc telegraf.Accumulator) error {
+	if versionLowerThan(e.apiVersion, "6.7") {
+		log.Printf("I! [inputs.vsphere][vSAN] Minimum API Version 6.7 required for resync summary. Found: %s. Skipping VCenter: %s", e.apiVersion, e.URL.Host)
+		return nil
+	}
 	hosts, err := clusterObj.Hosts(ctx)
 	if err != nil {
 		return err
 	}
-
 	if len(hosts) == 0 {
 		log.Printf("I! [inputs.vsphere][vSAN]\tNo host in cluster: %s", clusterObj.Name())
 		return nil
@@ -434,24 +437,24 @@ func populateCMMDSTags(tags map[string]string, entityName string, uuid string, c
 	return newTags
 }
 
-// versionSupportsVsan returns if vsan is supported for a given version, that is version >= 5.5.
-func versionSupportsVsan(version string) bool {
-	v := strings.Split(version, ".")
-	major, err := strconv.Atoi(v[0])
+// versionLowerThan returns true is the current version < a base version
+func versionLowerThan(current string, base string) bool {
+	v1 := strings.Split(current, ".")
+	v2 := strings.Split(base, ".")
+	major1, err := strconv.Atoi(v1[0])
+	major2, _ := strconv.Atoi(v2[0])
 	if err != nil {
-		log.Printf("E! [inputs.vsphere][vSAN] Failed to parse version: %s", version)
+		log.Printf("E! [inputs.vsphere][vSAN] Failed to parse version: %s.", current)
 	}
-	if major < 5 {
-		return false
+	if len(v1) < 2 {
+		return major1 < major2
 	}
-	minor, err := strconv.Atoi(v[1])
+	minor1, err := strconv.Atoi(v1[1])
+	minor2, _ := strconv.Atoi(v2[1])
 	if err != nil {
-		log.Printf("E! [inputs.vsphere][vSAN] Failed to parse version: %s.", version)
+		log.Printf("E! [inputs.vsphere][vSAN] Failed to parse version: %s.", current)
 	}
-	if major == 5 && minor < 5 {
-		return false
-	}
-	return true
+	return major1 < major2 || major1 == major2 && minor1 < minor2
 }
 
 type CmmdsEntity struct {

@@ -399,7 +399,7 @@ func (e *Endpoint) discover(ctx context.Context) error {
 	// Populate resource objects, and endpoint instance info.
 	newObjects := make(map[string]objectMap)
 	for k, res := range e.resourceKinds {
-		log.Printf("D! [inputs.vsphere] Discovering resources for %s", res.name)
+		log.Printf("D! [inputs.vsphere]: Discovering resources for %s", res.name)
 		// Need to do this for all resource types even if they are not enabled
 		if res.enabled || k != "vm" {
 			rf := ResourceFilter{
