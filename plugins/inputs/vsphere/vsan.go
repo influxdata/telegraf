@@ -320,7 +320,42 @@ func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 		fields["OverallHealth"] = -1
 	}
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
-	acc.AddFields(vsanHealthMetricsName, fields, tags)
+	acc.AddFields(vsanSummaryMetricsName, fields, tags)
+	return nil
+}
+
+// queryResyncSummary adds resync information to accumulator
+func (e *Endpoint) queryResyncSummary(ctx context.Context, vsanClient *soap.Client, clusterObj *object.ClusterComputeResource, clusterRef objectRef, acc telegraf.Accumulator) error {
+	hosts, err := clusterObj.Hosts(ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(hosts) == 0 {
+		log.Printf("I! [inputs.vsphere][vSAN]\tNo host in cluster: %s", clusterObj.Name())
+		return nil
+	}
+	hostRefValue := hosts[0].Reference().Value
+	vsanSystemEx := types.ManagedObjectReference{
+		Type:  "VsanSystemEx",
+		Value: fmt.Sprintf("vsanSystemEx-%s", strings.Split(hostRefValue, "-")[1]),
+	}
+
+	includeSummary := true
+	request := vsantypes.VsanQuerySyncingVsanObjects{
+		This:           vsanSystemEx,
+		Uuids:          []string{}, // We only need summary information.
+		Start:          0,
+		IncludeSummary: &includeSummary,
+	}
+
+	resp, err := vsanmethods.VsanQuerySyncingVsanObjects(ctx, vsanClient, &request)
+	fields := make(map[string]interface{})
+	fields["TotalBytesToSync"] = resp.Returnval.TotalBytesToSync
+	fields["TotalObjectsToSync"] = resp.Returnval.TotalObjectsToSync
+	fields["TotalRecoveryETA"] = resp.Returnval.TotalRecoveryETA
+	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
+	acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	return nil
 }
 
