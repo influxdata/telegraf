@@ -6,14 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf"
+	vsanmethods "github.com/influxdata/telegraf/plugins/inputs/vsphere/vsan-sdk/methods"
+	vsantypes "github.com/influxdata/telegraf/plugins/inputs/vsphere/vsan-sdk/types"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
-
-	vsanmethods "github.com/influxdata/telegraf/plugins/inputs/vsphere/vsan-sdk/methods"
-	vsantypes "github.com/influxdata/telegraf/plugins/inputs/vsphere/vsan-sdk/types"
 
 	"log"
 	"strconv"
@@ -29,18 +28,17 @@ const (
 )
 
 var (
-	vsanPerfMetricsName     string
-	vsanHealthMetricsName   string
-	vsanCapacityMetricsName string
-	perfManagerRef          = vsantypes.ManagedObjectReference{
+	vsanPerfMetricsName    string
+	vsanSummaryMetricsName string
+	perfManagerRef         = types.ManagedObjectReference{
 		Type:  "VsanPerformanceManager",
 		Value: "vsan-performance-manager",
 	}
-	healthSystemRef = vsantypes.ManagedObjectReference{
+	healthSystemRef = types.ManagedObjectReference{
 		Type:  "VsanVcClusterHealthSystem",
 		Value: "vsan-cluster-health-system",
 	}
-	spaceManagerRef = vsantypes.ManagedObjectReference{
+	spaceManagerRef = types.ManagedObjectReference{
 		Type:  "VsanSpaceReportSystem",
 		Value: "vsan-cluster-space-report-system",
 	}
@@ -53,8 +51,7 @@ func (e *Endpoint) collectVsan(ctx context.Context, resourceType string, acc tel
 		return nil
 	}
 	vsanPerfMetricsName = strings.Join([]string{"vsphere", "cluster", "vsan", "performance"}, e.Parent.Separator)
-	vsanHealthMetricsName = strings.Join([]string{"vsphere", "cluster", "vsan", "health"}, e.Parent.Separator)
-	vsanCapacityMetricsName = strings.Join([]string{"vsphere", "cluster", "vsan", "capacity"}, e.Parent.Separator)
+	vsanSummaryMetricsName = strings.Join([]string{"vsphere", "cluster", "vsan", "summary"}, e.Parent.Separator)
 	res := e.resourceKinds[resourceType]
 	client, err := e.clientFactory.GetClient(ctx)
 	if err != nil {
@@ -91,6 +88,9 @@ func (e *Endpoint) collectVsanPerCluster(ctx context.Context, clusterRef objectR
 	}
 	if err = e.queryHealthSummary(ctx, vsanClient, clusterRef, acc); err != nil {
 		acc.AddError(errors.New("While querying vsan health summary:" + err.Error()))
+	}
+	if err = e.queryResyncSummary(ctx, vsanClient, cluster, clusterRef, acc); err != nil {
+		acc.AddError(errors.New("While querying vsan resync summary:" + err.Error()))
 	}
 	if len(metrics) > 0 {
 		if err = e.queryPerformance(ctx, vsanClient, clusterRef, metrics, cmmds, acc); err != nil {
@@ -208,7 +208,7 @@ func (e *Endpoint) queryPerformance(ctx context.Context, vsanClient *soap.Client
 		perfRequest := vsantypes.VsanPerfQueryPerf{
 			This:       perfManagerRef,
 			QuerySpecs: perfSpecs,
-			Cluster:    &vsantypes.ManagedObjectReference{Type: clusterRef.ref.Type, Value: clusterRef.ref.Value},
+			Cluster:    &clusterRef.ref,
 		}
 		resp, err := vsanmethods.VsanPerfQueryPerf(ctx, vsanClient, &perfRequest)
 
@@ -281,7 +281,7 @@ func (e *Endpoint) queryDiskUsage(ctx context.Context, vsanClient *soap.Client, 
 	resp, err := vsanmethods.VsanQuerySpaceUsage(ctx, vsanClient,
 		&vsantypes.VsanQuerySpaceUsage{
 			This:    spaceManagerRef,
-			Cluster: vsantypes.ManagedObjectReference{Type: clusterRef.ref.Type, Value: clusterRef.ref.Value},
+			Cluster: clusterRef.ref,
 		})
 	if err != nil {
 		return err
@@ -290,7 +290,7 @@ func (e *Endpoint) queryDiskUsage(ctx context.Context, vsanClient *soap.Client, 
 	fields["FreeCapacityB"] = resp.Returnval.FreeCapacityB
 	fields["TotalCapacityB"] = resp.Returnval.TotalCapacityB
 	tags := populateClusterTags(make(map[string]string), clusterRef, e.URL.Host)
-	acc.AddFields(vsanCapacityMetricsName, fields, tags)
+	acc.AddFields(vsanSummaryMetricsName, fields, tags)
 	return nil
 }
 
@@ -300,7 +300,7 @@ func (e *Endpoint) queryHealthSummary(ctx context.Context, vsanClient *soap.Clie
 	resp, err := vsanmethods.VsanQueryVcClusterHealthSummary(ctx, vsanClient,
 		&vsantypes.VsanQueryVcClusterHealthSummary{
 			This:           healthSystemRef,
-			Cluster:        vsantypes.ManagedObjectReference{Type: clusterRef.ref.Type, Value: clusterRef.ref.Value},
+			Cluster:        clusterRef.ref,
 			Fields:         []string{"overallHealth", "overallHealthDescription"},
 			FetchFromCache: &fetchFromCache,
 		})
