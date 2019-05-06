@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Telegraph-lite Downloader</title>
+  </head>
+  <body>
+    <h1>Welcome to Telegraf-lite Downloader</h1>
+    <h2>pick your plugins!</h2>
+    <form action="/v1/download">
+      <h3>Aggregators</h3>
+      <p>
+        {{range $plugin, $desc := .Aggregators}} 
+        _ "{{- $plugin -}}"
+        <input type="checkbox" name="a" value="{{- $plugin -}}">
+      </p>{{end}}
+      <h3>Inputs</h3>{{range $plugin, $desc := .Inputs}} 
+      <p>_ "{{- $plugin -}}"
+        <input type="checkbox" name="i" value="{{- $plugin -}}">
+      </p>{{end}}
+      <h3>Outputs</h3>{{range $plugin, $desc := .Outputs}}
+      <p>_ "{{- $plugin -}}"
+        <input type="checkbox" name="o" value="{{- $plugin -}}">
+      </p>{{end}}
+      <h3>Processors</h3>{{range $plugin, $desc := .Processors}}
+      <p>_ "{{- $plugin -}}"
+        <input type="checkbox" name="p" value="{{- $plugin -}}">
+      </p>{{end}}
+      <h3>Compression</h3>
+      <p>
+        <input type="radio" name="c" value="gzip">
+      </p>
+      <p>
+        <input type="radio" name="c" value="zip">
+      </p>
+      <h3>Architecture</h3>{{range $plugin, $desc := .GOARCH}}
+      <p>_ "{{- $desc -}}"
+        <input type="radio" name="GOARCH" value="{{- $plugin -}}">
+      </p>{{end}}
+      <h3>Operating System</h3>{{range $plugin, $desc := .GOOS}}
+      <p>_ "{{- $plugin -}}"
+        <input type="radio" name="GOOS" value="{{- $plugin -}}">
+      </p>{{end}}
+    </form>
+  </body>
+</html>
