@@ -1,7 +1,7 @@
 package ping
 
 import (
-	"fmt"
+	"time"
 
 	ping "github.com/sparrc/go-ping"
 	"golang.org/x/net/icmp"
@@ -20,24 +20,22 @@ type pingResults struct {
 
 // TODO: add privileged flag
 func (p *Ping) pingHostNative(pinger *ping.Pinger, conn *icmp.PacketConn) (*pingResults, error) {
-	results := pingResults{}
+	results := &pingResults{}
 
 	pinger.OnRecv = func(pkt *ping.Packet) {
-		fmt.Printf("packet: %#v \n", pkt)
+		// fmt.Printf("packet: %#v \n", pkt)
 		results.ttl = pkt.Ttl
 	}
 	pinger.OnFinish = func(stats *ping.Statistics) {
 		results.received = stats.PacketsRecv
 		results.transmitted = stats.PacketsSent
 		results.pktLoss = stats.PacketLoss
-		results.min = stats.MinRtt.Seconds() * 1000
-		results.avg = stats.AvgRtt.Seconds() * 1000
-		results.max = stats.MaxRtt.Seconds() * 1000
-		results.stddev = stats.StdDevRtt.Seconds() * 1000
-
-		fmt.Printf("stats: %#v \n", stats)
+		results.min = float64(stats.MinRtt.Nanoseconds()) / float64(time.Millisecond)
+		results.avg = float64(stats.AvgRtt.Nanoseconds()) / float64(time.Millisecond)
+		results.max = float64(stats.MaxRtt.Nanoseconds()) / float64(time.Millisecond)
+		results.stddev = float64(stats.StdDevRtt.Nanoseconds()) / float64(time.Millisecond)
 	}
 	pinger.DoPing(conn)
 
-	return &results, nil
+	return results, nil
 }

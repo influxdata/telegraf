@@ -13,13 +13,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/influxdata/telegraf"
-	"github.com/influxdata/telegraf/internal"
-	"github.com/influxdata/telegraf/plugins/inputs"
 	ping "github.com/sparrc/go-ping"
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
+
+	"github.com/influxdata/telegraf"
+	"github.com/influxdata/telegraf/internal"
+	"github.com/influxdata/telegraf/plugins/inputs"
 )
 
 // HostPinger is a function that runs the "ping" function using a list of
@@ -97,21 +98,6 @@ func (_ *Ping) SampleConfig() string {
 }
 
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
-	// var conn *icmp.PacketConn
-	// var err error
-	// if p.ipv4 {
-	// 	if conn, err = ping.Listen(ipv4Proto[p.network], p.source); conn == nil {
-	// 		return err
-	// 	}
-	// 	conn.IPv4PacketConn().SetControlMessage(ipv4.FlagTTL, true)
-	// } else {
-	// 	if conn, err = ping.Listen(ipv6Proto[p.network], p.source); conn == nil {
-	// 		return err
-	// 	}
-	// 	conn.IPv6PacketConn().SetControlMessage(ipv6.FlagHopLimit, true)
-	// }
-	// defer conn.Close()
-
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
 		pinger, err := ping.NewPinger(url)
@@ -121,9 +107,14 @@ func (p *Ping) Gather(acc telegraf.Accumulator) error {
 			continue
 		}
 
-		var conn *icmp.PacketConn
-		if conn, err = pinger.Listen(); err != nil {
-			// close(pinger.done)
+		pinger.Count = p.Count
+		pinger.Interval = time.Duration(p.PingInterval) * time.Second
+		pinger.Timeout = time.Duration(p.Timeout*float64(p.Count)) * time.Second
+		pinger.Size = 64
+		pinger.SetPrivileged(false)
+
+		conn, err := pinger.Listen()
+		if err != nil {
 			return err // TODO: verify what to return if unrecoverable
 		}
 
@@ -193,12 +184,7 @@ func (p *Ping) pingToURL(u string, pinger *ping.Pinger, conn *icmp.PacketConn, a
 	// 	}
 	// }
 
-	pinger.Count = p.Count
-	pinger.Interval = time.Duration(p.PingInterval) * time.Second
-	pinger.Timeout = time.Duration(p.Timeout) * time.Second
-	pinger.SetPrivileged(true)
-
-	fmt.Printf("pinger timeout: %v \n", pinger.Timeout.Seconds())
+	// fmt.Printf("pinger timeout: %v \n", pinger.Timeout.Seconds())
 
 	results, err := p.pingHostNative(pinger, conn)
 
