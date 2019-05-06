@@ -64,7 +64,9 @@ cpu  3357 0 4313 1362393
 
 Meta:
 - units: CPU Time
-- tags: `cpu=<cpuN> or <cpu-total>`
+- tags:
+  - `cpu=<cpuN> or <cpu-total>`
+  - `cpu_arch=<cpu arch>`
 
 Measurement names:
 - cpu_time_user
