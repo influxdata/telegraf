@@ -55,7 +55,6 @@ func (l *Logzio) Connect() error {
 		l.URL = defaultLogzioURL
 	}
 
-
 	if l.Timeout.Duration == 0 {
 		l.Timeout.Duration = defaultLogzioRequestTimeout
 	}
