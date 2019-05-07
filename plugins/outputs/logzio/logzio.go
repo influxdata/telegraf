@@ -55,6 +55,7 @@ func (l *Logzio) Connect() error {
 		l.URL = defaultLogzioURL
 	}
 
+
 	if l.Timeout.Duration == 0 {
 		l.Timeout.Duration = defaultLogzioRequestTimeout
 	}
@@ -124,6 +125,7 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 			}
 			body = nil
 		}
+		log.Printf("D! [logzio] Adding metric to the bulk: %+v\n", m)
 		body = append(body, serialized...)
 		body = append(body, '\n')
 	}
@@ -144,7 +146,7 @@ func (l *Logzio) sendBulk(body []byte) error {
 	if err := g.Close(); err != nil {
 		return err
 	}
-	req, err := http.NewRequest("POST", l.URL, &buf)
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/?token=%s", l.URL, l.Token), &buf)
 	if err != nil {
 		return err
 	}
@@ -162,6 +164,7 @@ func (l *Logzio) sendBulk(body []byte) error {
 	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("failed to write batch: [%v] %s", resp.StatusCode, resp.Status)
 	}
+	log.Printf("D! [logzio] Successfully sent bulk to logz.io\n")
 
 	return nil
 }
