@@ -75,6 +75,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 	}
 
 	lineCounter := 0
+	numColumns := 0
 	scanner := bufio.NewScanner(bytes.NewReader(out))
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -96,6 +97,7 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 
 		// If lineCounter == 0, then this is the header line
 		if lineCounter == 0 {
+			numColumns = len(fields)
 			for i, field := range fields {
 				// Check if field is a tag:
 				if tagKey, ok := tagHeaders[field]; ok {
@@ -116,6 +118,10 @@ func (n *NTPQ) Gather(acc telegraf.Accumulator) error {
 				}
 			}
 		} else {
+			if len(fields) != numColumns {
+				continue
+			}
+
 			mFields := make(map[string]interface{})
 
 			// Get tags from output
