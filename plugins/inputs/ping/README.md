@@ -36,8 +36,8 @@ apt-get install iputils-ping
   ## Specify the ping executable binary, default is "ping"
   # binary = "ping"
 
-  ## Arguments for ping command
-  ## when arguments is not empty, other options (ping_interval, timeout, etc) will be ignored
+  ## Arguments for ping command. When arguments is not empty, system binary will be used and
+  ## other options (ping_interval, timeout, etc) will be ignored
   # arguments = ["-c", "3"]
 ```
 

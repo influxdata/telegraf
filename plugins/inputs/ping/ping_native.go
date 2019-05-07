@@ -18,12 +18,10 @@ type pingResults struct {
 	stddev      float64
 }
 
-// TODO: add privileged flag
 func (p *Ping) pingHostNative(pinger *ping.Pinger, conn *icmp.PacketConn) (*pingResults, error) {
 	results := &pingResults{}
 
 	pinger.OnRecv = func(pkt *ping.Packet) {
-		// fmt.Printf("packet: %#v \n", pkt)
 		results.ttl = pkt.Ttl
 	}
 	pinger.OnFinish = func(stats *ping.Statistics) {

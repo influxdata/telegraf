@@ -8,9 +8,11 @@ import (
 	"net"
 	"os/exec"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	ping "github.com/sparrc/go-ping"
@@ -52,8 +54,8 @@ type Ping struct {
 	// Ping executable binary
 	Binary string
 
-	// Arguments for ping command.
-	// when `Arguments` is not empty, other options (ping_interval, timeout, etc) will be ignored
+	// Arguments for ping command. When arguments is not empty, system binary will be used and
+	// other options (ping_interval, timeout, etc) will be ignored
 	Arguments []string
 
 	// host ping function
@@ -88,8 +90,8 @@ const sampleConfig = `
   ## Specify the ping executable binary, default is "ping"
   # binary = "ping"
 
-  ## Arguments for ping command
-  ## when arguments is not empty, other options (ping_interval, timeout, etc) will be ignored
+  ## Arguments for ping command. When arguments is not empty, system binary will be used and
+  ## other options (ping_interval, timeout, etc) will be ignored
   # arguments = ["-c", "3"]
 `
 
@@ -100,36 +102,51 @@ func (_ *Ping) SampleConfig() string {
 func (p *Ping) Gather(acc telegraf.Accumulator) error {
 	// Spin off a go routine for each url to ping
 	for _, url := range p.Urls {
-		pinger, err := ping.NewPinger(url)
-		if err != nil {
-			acc.AddError(fmt.Errorf("%s: %s", err, url))
-			acc.AddFields("ping", map[string]interface{}{"result_code": 2}, map[string]string{"url": url})
-			continue
-		}
+		if len(p.Arguments) > 0 {
+			p.wg.Add(1)
 
-		pinger.Count = p.Count
-		pinger.Interval = time.Duration(p.PingInterval) * time.Second
-		pinger.Timeout = time.Duration(p.Timeout*float64(p.Count)) * time.Second
-		pinger.Size = 64
-		pinger.SetPrivileged(false)
-
-		conn, err := pinger.Listen()
-		if err != nil {
-			return err // TODO: verify what to return if unrecoverable
-		}
-
-		if pinger.GetIpv4() {
-			conn.IPv4PacketConn().SetControlMessage(ipv4.FlagTTL, true)
+			go p.pingToURL(url, nil, nil, acc)
 		} else {
-			conn.IPv6PacketConn().SetControlMessage(ipv6.FlagHopLimit, true)
+			pinger, err := ping.NewPinger(url)
+			if err != nil {
+				acc.AddError(fmt.Errorf("%s: %s", err, url))
+				acc.AddFields("ping", map[string]interface{}{"result_code": 2}, map[string]string{"url": url})
+				continue
+			}
+
+			pinger.Count = p.Count
+			if p.PingInterval <= 0 {
+				p.PingInterval = 1
+			}
+			pinger.Interval = time.Nanosecond * time.Duration(p.PingInterval*1000000000)
+			if p.Deadline != 0 {
+				pinger.Timeout = time.Duration(p.Deadline) * time.Second
+			} else {
+				if p.Timeout <= 0 {
+					p.Timeout = 1
+				}
+				pinger.Timeout = time.Duration(p.Timeout*float64(p.Count)) * time.Second
+			}
+			pinger.Size = 64
+
+			// TODO: determine need for privileged flag
+			pinger.SetPrivileged(false)
+
+			conn, err := pinger.Listen()
+			if err != nil {
+				return err // TODO: verify what to return if unrecoverable
+			}
+
+			if pinger.GetIpv4() {
+				conn.IPv4PacketConn().SetControlMessage(ipv4.FlagTTL, true)
+			} else {
+				conn.IPv6PacketConn().SetControlMessage(ipv6.FlagHopLimit, true)
+			}
+
+			p.wg.Add(1)
+
+			go p.pingToURL(url, pinger, conn, acc)
 		}
-
-		// defer conn.Close()
-
-		p.wg.Add(1)
-
-		go p.pingToURL(url, pinger, conn, acc)
-		// go p.pingHostNative(pinger)
 	}
 
 	p.wg.Wait()
@@ -149,73 +166,77 @@ func (p *Ping) pingToURL(u string, pinger *ping.Pinger, conn *icmp.PacketConn, a
 		acc.AddFields("ping", fields, tags)
 		return
 	}
-	// TODO: make this conditional:
 
-	// args := p.args(u, runtime.GOOS)
-	// totalTimeout := 60.0
-	// if len(p.Arguments) == 0 {
-	// 	totalTimeout = float64(p.Count)*p.Timeout + float64(p.Count-1)*p.PingInterval
-	// }
+	var trans, rec, ttl int
+	var loss, min, avg, max, stddev float64
 
-	// out, err := p.pingHost(p.Binary, totalTimeout, args...)
-	// if err != nil {
-	// 	// Some implementations of ping return a 1 exit code on
-	// 	// timeout, if this occurs we will not exit and try to parse
-	// 	// the output.
-	// 	status := -1
-	// 	if exitError, ok := err.(*exec.ExitError); ok {
-	// 		if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
-	// 			status = ws.ExitStatus()
-	// 			fields["result_code"] = status
-	// 		}
-	// 	}
+	if len(p.Arguments) > 0 {
+		out, err := p.pingHost(p.Binary, 60.0, p.args(u, runtime.GOOS)...)
+		if err != nil {
+			// Some implementations of ping return a 1 exit code on
+			// timeout, if this occurs we will not exit and try to parse
+			// the output.
+			status := -1
+			if exitError, ok := err.(*exec.ExitError); ok {
+				if ws, ok := exitError.Sys().(syscall.WaitStatus); ok {
+					status = ws.ExitStatus()
+					fields["result_code"] = status
+				}
+			}
 
-	// 	if status != 1 {
-	// 		// Combine go err + stderr output
-	// 		out = strings.TrimSpace(out)
-	// 		if len(out) > 0 {
-	// 			acc.AddError(fmt.Errorf("host %s: %s, %s", u, out, err))
-	// 		} else {
-	// 			acc.AddError(fmt.Errorf("host %s: %s", u, err))
-	// 		}
-	// 		fields["result_code"] = 2
-	// 		acc.AddFields("ping", fields, tags)
-	// 		return
-	// 	}
-	// }
+			if status != 1 {
+				// Combine go err + stderr output
+				out = strings.TrimSpace(out)
+				if len(out) > 0 {
+					acc.AddError(fmt.Errorf("host %s: %s, %s", u, out, err))
+				} else {
+					acc.AddError(fmt.Errorf("host %s: %s", u, err))
+				}
+				fields["result_code"] = 2
+				acc.AddFields("ping", fields, tags)
+				return
+			}
+		}
+		trans, rec, ttl, min, avg, max, stddev, err = processPingOutput(out)
+		if err != nil {
+			// fatal error
+			acc.AddError(fmt.Errorf("%s: %s", err, u))
+			fields["result_code"] = 2
+			acc.AddFields("ping", fields, tags)
+			return
+		}
 
-	// fmt.Printf("pinger timeout: %v \n", pinger.Timeout.Seconds())
-
-	results, err := p.pingHostNative(pinger, conn)
-
-	// trans, rec, ttl, min, avg, max, stddev, err := processPingOutput(out)
-
-	if err != nil {
-		// fatal error
-		acc.AddError(fmt.Errorf("%s: %s", err, u))
-		fields["result_code"] = 2
-		acc.AddFields("ping", fields, tags)
-		return
+		// Calculate packet loss percentage
+		loss = float64(trans-rec) / float64(trans) * 100.0
+	} else {
+		results, err := p.pingHostNative(pinger, conn)
+		if err != nil {
+			// fatal error
+			acc.AddError(fmt.Errorf("%s: %s", err, u))
+			fields["result_code"] = 2
+			acc.AddFields("ping", fields, tags)
+			return
+		}
+		trans, rec, ttl, loss, min, avg, max, stddev = results.transmitted, results.received, results.ttl, results.pktLoss, results.min, results.avg, results.max, results.stddev
 	}
-	// Calculate packet loss percentage
-	// loss := float64(trans-rec) / float64(trans) * 100.0
-	fields["packets_transmitted"] = results.transmitted
-	fields["packets_received"] = results.received
-	fields["percent_packet_loss"] = results.pktLoss
-	if results.ttl >= 0 {
-		fields["ttl"] = results.ttl
+
+	fields["packets_transmitted"] = trans
+	fields["packets_received"] = rec
+	fields["percent_packet_loss"] = loss
+	if ttl >= 0 {
+		fields["ttl"] = ttl
 	}
-	if results.min >= 0 {
-		fields["minimum_response_ms"] = results.min
+	if min >= 0 {
+		fields["minimum_response_ms"] = min
 	}
-	if results.avg >= 0 {
-		fields["average_response_ms"] = results.avg
+	if avg >= 0 {
+		fields["average_response_ms"] = avg
 	}
-	if results.max >= 0 {
-		fields["maximum_response_ms"] = results.max
+	if max >= 0 {
+		fields["maximum_response_ms"] = max
 	}
-	if results.stddev >= 0 {
-		fields["standard_deviation_ms"] = results.stddev
+	if stddev >= 0 {
+		fields["standard_deviation_ms"] = stddev
 	}
 	acc.AddFields("ping", fields, tags)
 }
