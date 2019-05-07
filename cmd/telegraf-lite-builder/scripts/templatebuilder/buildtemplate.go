@@ -28,16 +28,16 @@ func main() {
 			replaced = true
 			return []byte(`
 {{range $index, $plugin := .Aggregators}} 
-	_ "{{- $plugin -}}"
+	_ "github.com/influxdata/telegraf/plugins/aggregators/{{- $plugin -}}"
 {{end}}
 {{range $index, $plugin := .Inputs}} 
-	_ "{{- $plugin -}}"
+	_ "github.com/influxdata/telegraf/plugins/inputs/{{- $plugin -}}"
 {{end}}
 {{range $index, $plugin := .Outputs}} 
-	_ "{{- $plugin -}}"
+	_ "github.com/influxdata/telegraf/plugins/outputs/{{- $plugin -}}"
 {{end}}
 {{range $index, $plugin := .Processors}} 
-	_ "{{- $plugin -}}"
+	_ "github.com/influxdata/telegraf/plugins/processors/{{- $plugin -}}"
 {{end}}
 `)
 		}

@@ -1,0 +1,10 @@
+FROM golang:1.12.4-stretch
+RUN apt-get update&&\
+    apt-get install -y upx-ucl clang
+RUN mkdir -p $GOPATH/src/github.com/influxdata/telegraf/cmd/influx-lite-builder
+WORKDIR $GOPATH/src/github.com/influxdata/telegraf/cmd/influx-lite-builder
+COPY . ../../
+RUN go build .
+RUN ls ../../
+RUN ./telegraf-lite-builder serve
+ENTRYPOINT ./influx-lite-builder
