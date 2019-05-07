@@ -153,7 +153,7 @@ func parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_
 		description := ipmiFields["description"]
 
 		// handle hex description field
-		if len(description) > 1 && description[:2] == "0x" {
+		if strings.HasPrefix(description, "0x") {
 			descriptionInt, err := strconv.ParseInt(description, 0, 64)
 			if err != nil {
 				continue
