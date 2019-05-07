@@ -150,9 +150,19 @@ func parseV1(acc telegraf.Accumulator, hostname string, cmdOut []byte, measured_
 			fields["status"] = 0
 		}
 
-		if strings.Index(ipmiFields["description"], " ") > 0 {
+		description := ipmiFields["description"]
+
+		// handle hex description field
+		if strings.HasPrefix(description, "0x") {
+			descriptionInt, err := strconv.ParseInt(description, 0, 64)
+			if err != nil {
+				continue
+			}
+
+			fields["value"] = float64(descriptionInt)
+		} else if strings.Index(description, " ") > 0 {
 			// split middle column into value and unit
-			valunit := strings.SplitN(ipmiFields["description"], " ", 2)
+			valunit := strings.SplitN(description, " ", 2)
 			var err error
 			fields["value"], err = aToFloat(valunit[0])
 			if err != nil {
