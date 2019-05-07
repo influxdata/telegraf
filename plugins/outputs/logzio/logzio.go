@@ -1,108 +1,82 @@
 package logzio
 
 import (
+	. "bytes"
+	"compress/gzip"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/influxdata/telegraf/internal"
+	"io/ioutil"
 	"log"
-	"os"
+	"net/http"
 	"time"
 
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/plugins/outputs"
-	lg "github.com/logzio/logzio-go"
 )
 
 const (
-	defaultLogzioCheckDiskSpace = true
-	defaultLogzioDiskThreshold  = 98 // represent % of the disk
-	defaultLogzioDrainDuration  = "3s"
+	defaultLogzioRequestTimeout = time.Second * 5
 	defaultLogzioURL            = "https://listener.logz.io:8071"
 
-	minDiskThreshold = 0
-	maxDiskThreshold = 100
-
-	logzioDescription = "Send aggregate metrics to Logz.io"
-	logzioType        = "telegraf"
+	logzioDescription        = "Send aggregate metrics to Logz.io"
+	logzioType               = "telegraf"
+	logzioMaxRequestBodySize = 9 * 1024 * 1024 // 9MB
 )
 
 var sampleConfig = `
-  ## Set to true if Logz.io sender checks the disk space before adding metrics to the disk queue.
-  # check_disk_space = true
-
-  ## The percent of used file system space at which the sender will stop queueing. 
-  ## When we will reach that percentage, the file system in which the queue is stored will drop 
-  ## all new logs until the percentage of used space drops below that threshold.
-  # disk_threshold = 98
-
-  ## How often Logz.io sender should drain the queue.
-  ## Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-  # drain_duration = "3s"
-
-  ## Where Logz.io sender should store the queue
-  ## queue_dir = Sprintf("%s%s%s%s%d", os.TempDir(), string(os.PathSeparator),
-  ##                     "logzio-buffer", string(os.PathSeparator), time.Now().UnixNano())
-
   ## Logz.io account token
   token = "your logz.io token" # required
 
   ## Use your listener URL for your Logz.io account region.
   # url = "https://listener.logz.io:8071"
+
+  ## Timeout for HTTP requests
+  # timeout = "5s"
 `
 
 type Logzio struct {
-	CheckDiskSpace bool   `toml:"check_disk_space"`
-	DiskThreshold  int    `toml:"disk_threshold"`
-	DrainDuration  string `toml:"drain_duration"`
-	QueueDir       string `toml:"queue_dir"`
-	Token          string `toml:"token"`
-	URL            string `toml:"url"`
+	Token   string            `toml:"token"`
+	URL     string            `toml:"url"`
+	Timeout internal.Duration `toml:"timeout"`
 
-	sender *lg.LogzioSender
-}
-
-func (l *Logzio) initializeSender() error {
-	if l.Token == "" || l.Token == "your logz.io token" {
-		return fmt.Errorf("[logzio] token is required")
-	}
-
-	drainDuration, err := time.ParseDuration(l.DrainDuration)
-	if err != nil {
-		return fmt.Errorf("[logzio] failed to parse drain_duration: %s", err)
-	}
-
-	diskThreshold := l.DiskThreshold
-	if diskThreshold < minDiskThreshold || diskThreshold > maxDiskThreshold {
-		return fmt.Errorf("[logzio] threshold has to be between %d and %d", minDiskThreshold, maxDiskThreshold)
-	}
-
-	l.sender, err = lg.New(
-		l.Token,
-		lg.SetCheckDiskSpace(l.CheckDiskSpace),
-		lg.SetDrainDiskThreshold(l.DiskThreshold),
-		lg.SetDrainDuration(drainDuration),
-		lg.SetTempDirectory(l.QueueDir),
-		lg.SetUrl(l.URL),
-	)
-
-	if err != nil {
-		return fmt.Errorf("[logzio] failed to create new logzio sender: %v", err)
-	}
-
-	log.Printf("I! [logzio] Successfuly created Logz.io sender: %s %s %s %d\n", l.URL, l.QueueDir,
-		l.DrainDuration, l.DiskThreshold)
-	return nil
+	client *http.Client
 }
 
 // Connect to the Output
 func (l *Logzio) Connect() error {
 	log.Printf("D! [logzio] Connecting to logz.io output...\n")
-	return l.initializeSender()
+	if l.Token == "" || l.Token == "your logz.io token" {
+		return fmt.Errorf("[logzio] token is required")
+	}
+
+	if l.URL == "" {
+		l.URL = defaultLogzioURL
+	}
+
+	if l.Timeout.Duration == 0 {
+		l.Timeout.Duration = defaultLogzioRequestTimeout
+	}
+
+	tlsConfig := &tls.Config{}
+	transport := &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+
+	l.client = &http.Client{
+		Transport: transport,
+		Timeout:   l.Timeout.Duration,
+	}
+
+	log.Printf("I! [logzio] Successfuly created Logz.io sender: %s\n", l.URL)
+	return nil
 }
 
 // Close any connections to the Output
 func (l *Logzio) Close() error {
 	log.Printf("D! [logzio] Closing logz.io output\n")
-	l.sender.Stop()
+	l.client.CloseIdleConnections()
 	return nil
 }
 
@@ -123,13 +97,16 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 	}
 
 	log.Printf("D! [logzio] Recived %d metrics\n", len(metrics))
+	var body []byte
 	for _, metric := range metrics {
 		var name = metric.Name()
 		m := make(map[string]interface{})
 
 		m["@timestamp"] = metric.Time()
 		m["measurement_name"] = name
-		m["telegraf_tags"] = metric.Tags()
+		if len(metric.Tags()) != 0 {
+			m["telegraf_tags"] = metric.Tags()
+		}
 		m["value_type"] = metric.Type()
 		m["type"] = logzioType
 		m[name] = metric.Fields()
@@ -138,28 +115,59 @@ func (l *Logzio) Write(metrics []telegraf.Metric) error {
 		if err != nil {
 			return fmt.Errorf("E! [logzio] Failed to marshal: %+v\n", m)
 		}
-		err = l.sender.Send(serialized)
-		if err != nil {
-			return fmt.Errorf("E! [logzio] Failed to send metric: %v\n", err)
+		// Logz.io maximum request body size of 10MB. Send bulks that
+		// exceed this size (with safety buffer) via separate write requests.
+		if (len(body) + len(serialized) + 1) > logzioMaxRequestBodySize {
+			err := l.sendBulk(body)
+			if err != nil {
+				return err
+			}
+			body = nil
 		}
+		body = append(body, serialized...)
+		body = append(body, '\n')
+	}
+
+	return l.sendBulk(body)
+}
+
+func (l *Logzio) sendBulk(body []byte) error {
+	if len(body) == 0 {
+		return nil
+	}
+
+	var buf Buffer
+	g := gzip.NewWriter(&buf)
+	if _, err := g.Write(body); err != nil {
+		return err
+	}
+	if err := g.Close(); err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", l.URL, &buf)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+
+	resp, err := l.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil || resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("failed to write batch: [%v] %s", resp.StatusCode, resp.Status)
 	}
 
 	return nil
 }
 
-func CreateDefultLogizoOutput() *Logzio {
-	return &Logzio{
-		CheckDiskSpace: defaultLogzioCheckDiskSpace,
-		DiskThreshold:  defaultLogzioDiskThreshold,
-		DrainDuration:  defaultLogzioDrainDuration,
-		QueueDir: fmt.Sprintf("%s%s%s%s%d", os.TempDir(), string(os.PathSeparator),
-			"logzio-queue", string(os.PathSeparator), time.Now().UnixNano()),
-		URL: defaultLogzioURL,
-	}
-}
-
 func init() {
 	outputs.Add("logzio", func() telegraf.Output {
-		return CreateDefultLogizoOutput()
+		return &Logzio{}
 	})
 }
