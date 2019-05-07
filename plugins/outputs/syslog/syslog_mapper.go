@@ -90,7 +90,8 @@ func mapMsgID(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 
 func mapVersion(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 	if value, ok := metric.GetField("version"); ok {
-		if v, err := parseIntValue(value); err == nil {
+		switch v := value.(type) {
+		case uint64:
 			msg.SetVersion(uint16(v))
 			return
 		}
@@ -142,16 +143,12 @@ func mapHostname(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 func mapTimestamp(metric telegraf.Metric, msg *rfc5424.SyslogMessage) {
 	timestamp := metric.Time()
 	if value, ok := metric.GetField("timestamp"); ok {
-		if v, err := parseIntValue(value); err == nil {
-			timestamp = time.Unix(v, 0).UTC()
+		switch v := value.(type) {
+		case int64:
+			timestamp = time.Unix(0, v).UTC()
 		}
 	}
-
 	msg.SetTimestamp(timestamp.Format(time.RFC3339))
-}
-
-func parseIntValue(value interface{}) (int64, error) {
-	return strconv.ParseInt(formatValue(value), 10, 64)
 }
 
 func formatValue(value interface{}) string {
@@ -196,6 +193,7 @@ func newSyslogMapper() *SyslogMapper {
 		reservedKeys: map[string]bool{
 			"version": true, "severity_code": true, "facility_code": true,
 			"procid": true, "msgid": true, "msg": true, "timestamp": true, "sdid": true,
-			"hostname": true, "severity": true, "facility": true, "appname": true},
+			"hostname": true, "source": true, "host": true, "severity": true,
+			"facility": true, "appname": true},
 	}
 }
