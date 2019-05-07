@@ -401,6 +401,9 @@ func TestFailedNTPQ(t *testing.T) {
 	assert.Error(t, acc.GatherError(n.Gather))
 }
 
+// It is possible for the output of ntqp to be missing the refid column.  This
+// is believed to be http://bugs.ntp.org/show_bug.cgi?id=3484 which is fixed
+// in ntp-4.2.8p12 (included first in Debian Buster).
 func TestNoRefID(t *testing.T) {
 	now := time.Now()
 	expected := []telegraf.Metric{
