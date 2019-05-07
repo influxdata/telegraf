@@ -57,6 +57,7 @@
 - [#5792](https://github.com/influxdata/telegraf/pull/5792): Don't discard metrics on forbidden error in influxdb_v2 output.
 - [#5803](https://github.com/influxdata/telegraf/issues/5803): Fix http output cannot set Host header.
 - [#5619](https://github.com/influxdata/telegraf/issues/5619): Fix interval estimation in vsphere input.
+- [#5782](https://github.com/influxdata/telegraf/pull/5782): Skip lines with missing refid in ntpq input.
 
 ## v1.10.3 [2019-04-16]
 
