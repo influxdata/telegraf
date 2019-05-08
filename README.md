@@ -358,6 +358,7 @@ For documentation on the latest development code see the [documentation index][d
 * [http](./plugins/outputs/http)
 * [instrumental](./plugins/outputs/instrumental)
 * [kafka](./plugins/outputs/kafka)
+* [kairosdb](./plugins/outputs/kairosdb)
 * [librato](./plugins/outputs/librato)
 * [mqtt](./plugins/outputs/mqtt)
 * [nats](./plugins/outputs/nats)
