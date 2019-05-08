@@ -57,50 +57,54 @@ var sampleConfig = `
   ## Defaults to the OS configuration.
   # keep_alive_period = "5m"
 
-  ## The framing technique with which it is expected that messages are transported (default = "octet-counting").
-  ## Whether the messages come using the octect-counting (RFC5425#section-4.3.1, RFC6587#section-3.4.1),
-  ## or the non-transparent framing technique (RFC6587#section-3.4.2).
-  ## Must be one of "octect-counting", "non-transparent".
+  ## The framing technique with which it is expected that messages are
+  ## transported (default = "octet-counting").  Whether the messages come
+  ## using the octect-counting (RFC5425#section-4.3.1, RFC6587#section-3.4.1),
+  ## or the non-transparent framing technique (RFC6587#section-3.4.2).  Must
+  ## be one of "octet-counting", "non-transparent".
   # framing = "octet-counting"
 
   ## The trailer to be expected in case of non-trasparent framing (default = "LF").
   ## Must be one of "LF", or "NUL".
   # trailer = "LF"
 
-  ### SD-PARAMs settings
-  ### A syslog message can contain multiple parameters and multiple identifiers within structured data section
-  ### A syslog message can contain multiple structured data sections.
-  ### For each unrecognised metric tag/field a SD-PARAMS can be created. 
-  ### Example
-  ### Configuration =>
-  ### sdparam_separator = "_"
-  ### default_sdid = "default@32473"
-  ### sdids = ["foo@123", "bar@456"]
-  ### input => xyzzy,x=y foo@123_value=42,bar@456_value2=84,something_else=1
-  ### output (structured data only) => [foo@123 value=42][bar@456 value2=84][default@32473 something_else=1 x=y]
+  ## SD-PARAMs settings
+  ## Syslog messages can contain key/value pairs within zero or more
+  ## structured data sections.  For each unrecognised metric tag/field a
+  ## SD-PARAMS is created.
+  ##
+  ## Example:
+  ##   [[outputs.syslog]]
+  ##     sdparam_separator = "_"
+  ##     default_sdid = "default@32473"
+  ##     sdids = ["foo@123", "bar@456"]
+  ##
+  ##   input => xyzzy,x=y foo@123_value=42,bar@456_value2=84,something_else=1
+  ##   output (structured data only) => [foo@123 value=42][bar@456 value2=84][default@32473 something_else=1 x=y]
 
-  ## SD-PARAMs separator between the sdid and tag/field key (default = "_") 
+  ## SD-PARAMs separator between the sdid and tag/field key (default = "_")
   # sdparam_separator = "_"
 
-  ## Default sdid used for tags/fields that don't contain a prefix defined in the explict sdids setting below
-  ## If no default is specified, no SD-PARAMs will be used for unrecognised field.
+  ## Default sdid used for tags/fields that don't contain a prefix defined in
+  ## the explict sdids setting below If no default is specified, no SD-PARAMs
+  ## will be used for unrecognised field.
   # default_sdid = "default@32473"
 
-  ##List of explicit prefixes to extract from tag/field keys and use as the SDID, if they match (see above example for more details):
+  ## List of explicit prefixes to extract from tag/field keys and use as the
+  ## SDID, if they match (see above example for more details):
   # sdids = ["foo@123", "bar@456"]
-  ###
 
-  ## Default severity value. Severity and Facility are used to calculate the message PRI value (RFC5424#section-6.2.1) 
-  ## Used when no metric field with key "severity_code" is defined.
-  ## If unset, 5 (notice) is the default
+  ## Default severity value. Severity and Facility are used to calculate the
+  ## message PRI value (RFC5424#section-6.2.1).  Used when no metric field
+  ## with key "severity_code" is defined.  If unset, 5 (notice) is the default
   # default_severity_code = 5
 
-  ## Default facility value. Facility and Severity are used to calculate the message PRI value (RFC5424#section-6.2.1) 
-  ## Used when no metric field with key "facility_code" is defined.
-  ## If unset, 1 (user-level) is the default
+  ## Default facility value. Facility and Severity are used to calculate the
+  ## message PRI value (RFC5424#section-6.2.1).  Used when no metric field with
+  ## key "facility_code" is defined.  If unset, 1 (user-level) is the default
   # default_facility_code = 1
 
-  ## Default APP-NAME value (RFC5424#section-6.2.5) 
+  ## Default APP-NAME value (RFC5424#section-6.2.5)
   ## Used when no metric tag with key "appname" is defined.
   ## If unset, "Telegraf" is the default
   # default_appname = "Telegraf"
