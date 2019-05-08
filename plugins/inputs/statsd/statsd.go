@@ -62,18 +62,18 @@ type Statsd struct {
 	DeleteCounters bool
 	DeleteSets     bool
 	DeleteTimings  bool
-	DeleteEvents   bool
 	ConvertNames   bool
 
 	// MetricSeparator is the separator between parts of the metric name.
 	MetricSeparator string
 	// This flag enables parsing of tags in the dogstatsd extension to the
 	// statsd protocol (http://docs.datadoghq.com/guides/dogstatsd/)
-	ParseDataDogTags bool
+	ParseDataDogTags bool // depreciated in 1.10; use datadog_extensions
 
-	// This flag enables parsing of data dog events from the dogstatsd extension to
-	// the statsd protocol
-	ParseDataDogEvents bool
+	// Parses extensions to statsd in the datadog statsd format
+	// currently supports metrics and datadog tags.
+	// http://docs.datadoghq.com/guides/dogstatsd/
+	DataDogExtensions bool
 
 	// UDPPacketSize is deprecated, it's only here for legacy support
 	// we now always create 1 max size buffer and then copy only what we need
@@ -107,7 +107,6 @@ type Statsd struct {
 	counters map[string]cachedcounter
 	sets     map[string]cachedset
 	timings  map[string]cachedtimings
-	events   []cachedEvent
 
 	// bucket -> influx templates
 	Templates []string
@@ -184,7 +183,8 @@ type cachedtimings struct {
 	tags   map[string]string
 }
 
-type cachedEvent struct {
+//this is used internally for building out an event
+type event struct {
 	name   string
 	fields map[string]interface{}
 	tags   map[string]string
@@ -224,7 +224,7 @@ const sampleConfig = `
   delete_sets = true
   ## Reset timings & histograms every interval (default=true)
   delete_timings = true
-
+  
   ## Percentiles to calculate for timing & histogram stats
   percentiles = [90]
 
@@ -234,6 +234,9 @@ const sampleConfig = `
   ## Parses tags in the datadog statsd format
   ## http://docs.datadoghq.com/guides/dogstatsd/
   parse_data_dog_tags = false
+
+  ## Parses events in the datadog statsd format
+  ## http://docs.datadoghq.com/guides/dogstatsd/
   parse_data_dog_events = false
 
   ## Statsd data translation templates, more info can be read here:
@@ -261,12 +264,12 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 	defer s.Unlock()
 	now := time.Now()
 
-	for _, metric := range s.timings {
+	for _, m := range s.timings {
 		// Defining a template to parse field names for timers allows us to split
 		// out multiple fields per timer. In this case we prefix each stat with the
 		// field name and store these all in a single measurement.
 		fields := make(map[string]interface{})
-		for fieldName, stats := range metric.fields {
+		for fieldName, stats := range m.fields {
 			var prefix string
 			if fieldName != defaultFieldName {
 				prefix = fieldName + "_"
@@ -283,47 +286,43 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 			}
 		}
 
-		acc.AddFields(metric.name, fields, metric.tags, now)
+		acc.AddFields(m.name, fields, m.tags, now)
 	}
 	if s.DeleteTimings {
 		s.timings = make(map[string]cachedtimings)
 	}
 
-	for _, metric := range s.gauges {
-		acc.AddGauge(metric.name, metric.fields, metric.tags, now)
+	for _, m := range s.gauges {
+		acc.AddGauge(m.name, m.fields, m.tags, now)
 	}
 	if s.DeleteGauges {
 		s.gauges = make(map[string]cachedgauge)
 	}
 
-	for _, metric := range s.counters {
-		acc.AddCounter(metric.name, metric.fields, metric.tags, now)
+	for _, m := range s.counters {
+		acc.AddCounter(m.name, m.fields, m.tags, now)
 	}
 	if s.DeleteCounters {
 		s.counters = make(map[string]cachedcounter)
 	}
 
-	for _, metric := range s.sets {
+	for _, m := range s.sets {
 		fields := make(map[string]interface{})
-		for field, set := range metric.fields {
+		for field, set := range m.fields {
 			fields[field] = int64(len(set))
 		}
-		acc.AddFields(metric.name, fields, metric.tags, now)
+		acc.AddFields(m.name, fields, m.tags, now)
 	}
 	if s.DeleteSets {
 		s.sets = make(map[string]cachedset)
 	}
-	for _, e := range s.events {
-		acc.AddFields(e.name, e.fields, e.tags, e.ts)
-	}
-	if s.DeleteEvents {
-		s.events = s.events[:0]
-	}
-
 	return nil
 }
 
 func (s *Statsd) Start(_ telegraf.Accumulator) error {
+	if s.ParseDataDogTags {
+		s.DataDogExtensions = true
+	}
 	// Make data structures
 	s.gauges = make(map[string]cachedgauge)
 	s.counters = make(map[string]cachedcounter)
@@ -503,8 +502,8 @@ func (s *Statsd) parser() error {
 				line = strings.TrimSpace(line)
 				switch {
 				case line == "":
-				case s.ParseDataDogEvents && len(line) > 2 && line[:2] == "_e":
-					s.parseEventMessage(time.Now(), line, in.Addr.String())
+				case s.DataDogExtensions && strings.HasPrefix(line, "_e"):
+					s.parseEventMessage(in.Time, line, in.Addr.String())
 				default:
 					s.parseStatsdLine(line)
 				}
@@ -521,6 +520,9 @@ func (s *Statsd) parseStatsdLine(line string) error {
 
 	lineTags := make(map[string]string)
 	if s.ParseDataDogTags {
+		log.Printf("I! WARNING statsd: parse_data_dog_tags config option is deprecated,  please use datadog_extensions instead")
+	}
+	if s.ParseDataDogTags || s.DataDogExtensions {
 		recombinedSegments := make([]string, 0)
 		// datadog tags look like this:
 		// users.online:1|c|@0.5|#country:china,environment:production
@@ -531,6 +533,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		for _, segment := range pipesplit {
 			if len(segment) > 0 && segment[0] == '#' {
 				// we have ourselves a tag; they are comma separated
+				fmt.Println("************************", segment[1:])
 				parseDataDogTags(lineTags, segment[1:])
 			} else {
 				recombinedSegments = append(recombinedSegments, segment)
@@ -928,7 +931,6 @@ func init() {
 			DeleteGauges:           true,
 			DeleteSets:             true,
 			DeleteTimings:          true,
-			DeleteEvents:           true,
 		}
 	})
 }

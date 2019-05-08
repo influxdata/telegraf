@@ -1,7 +1,6 @@
 package statsd
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"testing"
@@ -863,7 +862,7 @@ func TestParse_Tags(t *testing.T) {
 // Test that DataDog tags are parsed
 func TestParse_DataDogTags(t *testing.T) {
 	s := NewTestStatsd()
-	s.ParseDataDogTags = true
+	s.DataDogExtensions = true
 
 	lines := []string{
 		"my_counter:1|c|#host:localhost,environment:prod,endpoint:/:tenant?/oauth/ro",
@@ -881,7 +880,7 @@ func TestParse_DataDogTags(t *testing.T) {
 		},
 
 		"my_gauge": {
-			"live":        "",
+			"live":        "true",
 			"metric_type": "gauge",
 		},
 
@@ -891,7 +890,7 @@ func TestParse_DataDogTags(t *testing.T) {
 		},
 
 		"my_timer": {
-			"live":        "",
+			"live":        "true",
 			"host":        "localhost",
 			"metric_type": "timing",
 		},
@@ -1590,12 +1589,11 @@ func testValidateGauge(
 		}
 	}
 	if !found {
-		return fmt.Errorf("Test Error: Metric name %s not found\n", name)
+		return fmt.Errorf("test Error: Metric name %s not found", name)
 	}
 
 	if valueExpected != valueActual {
-		return errors.New(fmt.Sprintf("Measurement: %s, expected %f, actual %f\n",
-			name, valueExpected, valueActual))
+		return fmt.Errorf("Measurement: %s, expected %f, actual %f", name, valueExpected, valueActual)
 	}
 	return nil
 }

@@ -34,6 +34,7 @@
   ## Reset timings & histograms every interval (default=true)
   delete_timings = true
 
+
   ## Percentiles to calculate for timing & histogram stats
   percentiles = [90]
 
@@ -42,8 +43,13 @@
 
   ## Parses tags in the datadog statsd format
   ## http://docs.datadoghq.com/guides/dogstatsd/
+  ## deprecated in 1.10; use datadog_extensions option instead
   parse_data_dog_tags = false
-  parse_data_dog_events = false
+
+  ## Parses extensions to statsd in the datadog statsd format
+  ## currently supports metrics and datadog tags.
+  ## http://docs.datadoghq.com/guides/dogstatsd/
+  datadog_extensions = false
 
   ## Statsd data translation templates, more info can be read here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/TEMPLATE_PATTERN.md
@@ -177,6 +183,7 @@ to allow. Used when protocol is set to tcp.
 - **delete_counters** boolean: Delete counters on every collection interval
 - **delete_sets** boolean: Delete set counters on every collection interval
 - **delete_timings** boolean: Delete timings on every collection interval
+
 - **percentiles** []int: Percentiles to calculate for timing & histogram stats
 - **allowed_pending_messages** integer: Number of messages allowed to queue up
 waiting to be processed. When this fills, messages will be dropped and logged.

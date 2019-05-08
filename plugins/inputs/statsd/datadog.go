@@ -6,11 +6,18 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	tmetric "github.com/influxdata/telegraf/metric"
 )
 
 const (
 	priorityNormal = "normal"
 	priorityLow    = "low"
+
+	eventInfo    = "info"
+	eventWarning = "warning"
+	eventError   = "error"
+	eventSuccess = "success"
 )
 
 var uncommenter = strings.NewReplacer("\\n", "\n")
@@ -66,82 +73,78 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 	// Handle hostname, with a priority to the h: field, then the host:
 	// tag and finally the defaultHostname value
 	// Metadata
-	m := cachedEvent{
+	m := event{
 		name: rawTitle,
 	}
 	m.tags = make(map[string]string, strings.Count(message, ",")+2) // allocate for the approximate number of tags
 	m.fields = make(map[string]interface{}, 9)
-	m.fields["alert-type"] = "info" // default event type
+	m.fields["alert_type"] = eventInfo // default event type
 	m.fields["text"] = uncommenter.Replace(string(rawText))
+	// host is a magic tag in the system, and it expects it to replace the result of h: if it is present
+	// telegraf will add a"host" tag anyway with different meaning than dogstatsd, so we need to use source instead of host.
+
 	m.tags["source"] = defaultHostname
 	m.fields["priority"] = priorityNormal
 	m.ts = now
-	if len(message) == 0 {
-		s.events = append(s.events, m)
+	if len(message) < 2 {
+		newM, err := tmetric.New(m.name, m.tags, m.fields, m.ts)
+		if err != nil {
+			return err
+		}
+		s.acc.AddMetric(newM)
 		return nil
 	}
 
-	if len(message) > 1 {
-		rawMetadataFields := strings.Split(message[1:], "|")
-		for i := range rawMetadataFields {
-			if len(rawMetadataFields[i]) < 2 {
-				log.Printf("W! [inputs.statsd] too short metadata field")
+	rawMetadataFields := strings.Split(message[1:], "|")
+	for i := range rawMetadataFields {
+		if len(rawMetadataFields[i]) < 2 {
+			log.Printf("W! [inputs.statsd] too short metadata field")
+		}
+		switch rawMetadataFields[i][:2] {
+		case "d:":
+			ts, err := strconv.ParseInt(rawMetadataFields[i][2:], 10, 64)
+			if err != nil {
+				continue
 			}
-			switch rawMetadataFields[i][:2] {
-			case "d:":
-				ts, err := strconv.ParseInt(rawMetadataFields[i][2:], 10, 64)
-				if err != nil {
-					log.Printf("W! [inputs.statsd] skipping timestamp: %s", err)
-					continue
-				}
-				m.fields["ts"] = ts
-			case "p:":
-				switch rawMetadataFields[i][2:] {
-				case priorityLow:
-					m.fields["priority"] = priorityLow
-				case priorityNormal: // we already used this as a default
-				default:
-					log.Printf("W! [inputs.statsd] skipping priority")
-					continue
-				}
-			case "h:":
-				m.tags["source"] = rawMetadataFields[i][2:]
-			case "t:":
-				switch rawMetadataFields[i][2:] {
-				case "error":
-					m.fields["alert-type"] = "error"
-				case "warning":
-					m.fields["alert-type"] = "warning"
-				case "success":
-					m.fields["alert-type"] = "success"
-				case "info": // already set for info
-				default:
-					log.Printf("W! [inputs.statsd] skipping alert type")
-					continue
-				}
-			case "k:":
-				// TODO(docmerlin): does this make sense?
-				m.tags["aggregation-key"] = rawMetadataFields[i][2:]
-			case "s:":
-				m.fields["source-type-name"] = rawMetadataFields[i][2:]
+			m.fields["ts"] = ts
+		case "p:":
+			switch rawMetadataFields[i][2:] {
+			case priorityLow:
+				m.fields["priority"] = priorityLow
+			case priorityNormal: // we already used this as a default
 			default:
-				if rawMetadataFields[i][0] == '#' {
-					parseDataDogTags(m.tags, rawMetadataFields[i][1:])
-				} else {
-					log.Printf("W! [inputs.statsd] unknown metadata type: '%s'", rawMetadataFields[i])
-				}
+				continue
+			}
+		case "h:":
+			m.tags["source"] = rawMetadataFields[i][2:]
+		case "t:":
+			switch rawMetadataFields[i][2:] {
+			case "error", "warning", "success", "info":
+				m.fields["alert_type"] = rawMetadataFields[i][2:] // already set for info
+			default:
+				continue
+			}
+		case "k:":
+			m.tags["aggregation_key"] = rawMetadataFields[i][2:]
+		case "s:":
+			m.fields["source_type_name"] = rawMetadataFields[i][2:]
+		default:
+			if rawMetadataFields[i][0] == '#' {
+				parseDataDogTags(m.tags, rawMetadataFields[i][1:])
+			} else {
+				return fmt.Errorf("unknown metadata type: '%s'", rawMetadataFields[i])
 			}
 		}
 	}
-	// host is a magic tag in the system, and it expects it to replace the result of h: if it is present
-	// telegraf will add a"host" tag anyway with different meaning than dogstatsd, so we need to switch these out
 	if host, ok := m.tags["host"]; ok {
 		delete(m.tags, "host")
 		m.tags["source"] = host
 	}
-	s.Lock()
-	s.events = append(s.events, m)
-	s.Unlock()
+	newM, err := tmetric.New(m.name, m.tags, m.fields, m.ts)
+	if err != nil {
+		return err
+	}
+	s.acc.AddMetric(newM)
 	return nil
 }
 
@@ -153,11 +156,15 @@ func parseDataDogTags(tags map[string]string, message string) {
 		if message[i] == ',' {
 			if k == "" {
 				k = message[start:i]
-				tags[k] = ""
+				tags[k] = "true" // this is because influx doesn't support empty tags
 				start = i + 1
 				continue
 			}
-			tags[k] = message[start:i]
+			v := message[start:i]
+			if v == "" {
+				v = "true"
+			}
+			tags[k] = v
 			start = i + 1
 			k, inVal = "", false // reset state vars
 		} else if message[i] == ':' && !inVal {
@@ -166,8 +173,15 @@ func parseDataDogTags(tags map[string]string, message string) {
 			inVal = true
 		}
 	}
+	if k == "" && start < i+1 {
+		tags[message[start:i+1]] = "true"
+	}
 	// grab the last value
 	if k != "" {
-		tags[k] = message[start : i+1]
+		if start < i+1 {
+			tags[k] = message[start : i+1]
+			return
+		}
+		tags[k] = "true"
 	}
 }
