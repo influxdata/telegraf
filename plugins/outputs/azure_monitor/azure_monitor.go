@@ -43,6 +43,32 @@ type AzureMonitor struct {
 	MetricOutsideWindow selfstat.Stat
 }
 
+// VirtualMachineMetadata contains information about a VM from the metadata service
+type virtualMachineMetadata struct {
+	Compute struct {
+		Location          string `json:"location"`
+		Name              string `json:"name"`
+		ResourceGroupName string `json:"resourceGroupName"`
+		SubscriptionID    string `json:"subscriptionId"`
+		VMScaleSetName    string `json:"vmScaleSetName"`
+	} `json:"compute"`
+}
+
+func (m *virtualMachineMetadata) ResourceID() string {
+	var template string
+	if m.Compute.VMScaleSetName == "" {
+		template = resourceIDTemplate
+	} else {
+		template = resourceIDScaleSetTemplate
+	}
+	return fmt.Sprintf(
+		template,
+		m.Compute.SubscriptionID,
+		m.Compute.ResourceGroupName,
+		m.Compute.Name,
+	)
+}
+
 type dimension struct {
 	name  string
 	value string
@@ -63,11 +89,12 @@ const (
 	defaultNamespacePrefix = "Telegraf/"
 	defaultAuthResource    = "https://monitoring.azure.com/"
 
-	vmInstanceMetadataURL = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
-	resourceIDTemplate    = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s"
-	urlTemplate           = "https://%s.monitoring.azure.com%s/metrics"
-	urlOverrideTemplate   = "%s%s/metrics"
-	maxRequestBodySize    = 4000000
+	vmInstanceMetadataURL      = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
+	resourceIDTemplate         = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachines/%s"
+	resourceIDScaleSetTemplate = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Compute/virtualMachineScaleSets/%s"
+	urlTemplate                = "https://%s.monitoring.azure.com%s/metrics"
+	urlOverrideTemplate        = "%s%s/metrics"
+	maxRequestBodySize         = 4000000
 )
 
 var sampleConfig = `
@@ -203,28 +230,13 @@ func vmInstanceMetadata(c *http.Client) (string, string, error) {
 		return "", "", fmt.Errorf("unable to fetch instance metadata: [%v] %s", resp.StatusCode, body)
 	}
 
-	// VirtualMachineMetadata contains information about a VM from the metadata service
-	type VirtualMachineMetadata struct {
-		Compute struct {
-			Location          string `json:"location"`
-			Name              string `json:"name"`
-			ResourceGroupName string `json:"resourceGroupName"`
-			SubscriptionID    string `json:"subscriptionId"`
-		} `json:"compute"`
-	}
-
-	var metadata VirtualMachineMetadata
+	var metadata virtualMachineMetadata
 	if err := json.Unmarshal(body, &metadata); err != nil {
 		return "", "", err
 	}
 
 	region := metadata.Compute.Location
-	resourceID := fmt.Sprintf(
-		resourceIDTemplate,
-		metadata.Compute.SubscriptionID,
-		metadata.Compute.ResourceGroupName,
-		metadata.Compute.Name,
-	)
+	resourceID := metadata.ResourceID()
 
 	return region, resourceID, nil
 }
