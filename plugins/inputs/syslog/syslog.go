@@ -18,6 +18,7 @@ import (
 	"github.com/influxdata/go-syslog/rfc5424"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
+	framing "github.com/influxdata/telegraf/internal/syslog"
 	tlsConfig "github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/inputs"
 )
@@ -32,7 +33,7 @@ type Syslog struct {
 	KeepAlivePeriod *internal.Duration
 	MaxConnections  int
 	ReadTimeout     *internal.Duration
-	Framing         Framing
+	Framing         framing.Framing
 	Trailer         nontransparent.TrailerType
 	BestEffort      bool
 	Separator       string `toml:"sdparam_separator"`
@@ -313,7 +314,7 @@ func (s *Syslog) handle(conn net.Conn, acc telegraf.Accumulator) {
 	}
 
 	// Select the parser to use depeding on transport framing
-	if s.Framing == OctetCounting {
+	if s.Framing == framing.OctetCounting {
 		// Octet counting transparent framing
 		p = octetcounting.NewParser(opts...)
 	} else {
@@ -445,7 +446,7 @@ func init() {
 			ReadTimeout: &internal.Duration{
 				Duration: defaultReadTimeout,
 			},
-			Framing:   OctetCounting,
+			Framing:   framing.OctetCounting,
 			Trailer:   nontransparent.LF,
 			Separator: "_",
 		}
