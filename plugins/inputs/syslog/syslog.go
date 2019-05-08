@@ -84,7 +84,7 @@ var sampleConfig = `
   ## The framing technique with which it is expected that messages are transported (default = "octet-counting").
   ## Whether the messages come using the octect-counting (RFC5425#section-4.3.1, RFC6587#section-3.4.1),
   ## or the non-transparent framing technique (RFC6587#section-3.4.2).
-  ## Must be one of "octect-counting", "non-transparent".
+  ## Must be one of "octet-counting", "non-transparent".
   # framing = "octet-counting"
 
   ## The trailer to be expected in case of non-trasparent framing (default = "LF").
