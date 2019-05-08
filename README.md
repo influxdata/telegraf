@@ -340,7 +340,7 @@ For documentation on the latest development code see the [documentation index][d
 ## Output Plugins
 
 * [influxdb](./plugins/outputs/influxdb) (InfluxDB 1.x)
-* [influxdb_v2](./plugins/outputs/influxdb_v2) ([InfluxDB 2.x](https://github.com/influxdata/platform))
+* [influxdb_v2](./plugins/outputs/influxdb_v2) ([InfluxDB 2.x](https://github.com/influxdata/influxdb))
 * [amon](./plugins/outputs/amon)
 * [amqp](./plugins/outputs/amqp) (rabbitmq)
 * [application_insights](./plugins/outputs/application_insights)
@@ -368,6 +368,7 @@ For documentation on the latest development code see the [documentation index][d
 * [riemann_legacy](./plugins/outputs/riemann_legacy)
 * [socket_writer](./plugins/outputs/socket_writer)
 * [stackdriver](./plugins/outputs/stackdriver)
+* [syslog](./plugins/outputs/syslog)
 * [tcp](./plugins/outputs/socket_writer)
 * [udp](./plugins/outputs/socket_writer)
 * [wavefront](./plugins/outputs/wavefront)
