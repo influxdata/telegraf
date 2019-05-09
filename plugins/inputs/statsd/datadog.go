@@ -1,8 +1,8 @@
 package statsd
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -98,7 +98,7 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 	rawMetadataFields := strings.Split(message[1:], "|")
 	for i := range rawMetadataFields {
 		if len(rawMetadataFields[i]) < 2 {
-			log.Printf("W! [inputs.statsd] too short metadata field")
+			return errors.New("too short metadata field")
 		}
 		switch rawMetadataFields[i][:2] {
 		case "d:":
@@ -119,7 +119,7 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 			m.tags["source"] = rawMetadataFields[i][2:]
 		case "t:":
 			switch rawMetadataFields[i][2:] {
-			case "error", "warning", "success", "info":
+			case eventError, eventWarning, eventSuccess, eventInfo:
 				m.fields["alert_type"] = rawMetadataFields[i][2:] // already set for info
 			default:
 				continue

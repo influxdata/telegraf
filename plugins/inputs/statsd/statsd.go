@@ -533,7 +533,6 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		for _, segment := range pipesplit {
 			if len(segment) > 0 && segment[0] == '#' {
 				// we have ourselves a tag; they are comma separated
-				fmt.Println("************************", segment[1:])
 				parseDataDogTags(lineTags, segment[1:])
 			} else {
 				recombinedSegments = append(recombinedSegments, segment)
