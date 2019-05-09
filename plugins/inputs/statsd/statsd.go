@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -140,7 +141,7 @@ type Statsd struct {
 type input struct {
 	*bytes.Buffer
 	time.Time
-	net.Addr
+	Addr string
 }
 
 // One statsd metric, form is <bucket>:<value>|<mtype>|@<samplerate>
@@ -474,9 +475,8 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 			b := s.bufPool.Get().(*bytes.Buffer)
 			b.Reset()
 			b.Write(buf[:n])
-
 			select {
-			case s.in <- input{Buffer: b, Time: time.Now(), Addr: addr}:
+			case s.in <- input{Buffer: b, Time: time.Now(), Addr: addr.IP.String()}:
 			default:
 				s.drops++
 				if s.drops == 1 || s.AllowedPendingMessages == 0 || s.drops%s.AllowedPendingMessages == 0 {
@@ -503,7 +503,7 @@ func (s *Statsd) parser() error {
 				switch {
 				case line == "":
 				case s.DataDogExtensions && strings.HasPrefix(line, "_e"):
-					s.parseEventMessage(in.Time, line, in.Addr.String())
+					s.parseEventMessage(in.Time, line, in.Addr)
 				default:
 					s.parseStatsdLine(line)
 				}
@@ -824,7 +824,17 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 		s.forget(id)
 		s.CurrentConnections.Incr(-1)
 	}()
-
+	addr := conn.RemoteAddr()
+	a, err := url.Parse(addr.String())
+	var host string
+	if err != nil {
+		// this should never happen because the conn handler should give us parsable addresses,
+		// but if it does we will know
+		host = "badhost"
+		log.Printf("E! failed to parse %s\n", addr)
+	} else {
+		host = a.Host
+	}
 	var n int
 	scanner := bufio.NewScanner(conn)
 	for {
@@ -848,7 +858,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 			b.WriteByte('\n')
 
 			select {
-			case s.in <- input{Buffer: b, Time: time.Now(), Addr: conn.RemoteAddr()}:
+			case s.in <- input{Buffer: b, Time: time.Now(), Addr: host}:
 			default:
 				s.drops++
 				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {
