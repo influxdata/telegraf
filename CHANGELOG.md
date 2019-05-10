@@ -40,6 +40,7 @@
 - [#5770](https://github.com/influxdata/telegraf/pull/5770): Add service-display-name option for use with Windows service.
 - [#5778](https://github.com/influxdata/telegraf/pull/5778): Add support for log rotation.
 - [#5765](https://github.com/influxdata/telegraf/pull/5765): Support more drive types in smart input.
+- [#5829](https://github.com/influxdata/telegraf/pull/5829): Add support for HTTP basic auth to solr input.
 
 #### Bugfixes
 
