@@ -1,13 +1,14 @@
 package statsd
 
+// this is adapted from datadog's apache licensed version at
+// https://github.com/DataDog/datadog-agent/blob/fcfc74f106ab1bd6991dfc6a7061c558d934158a/pkg/dogstatsd/parser.go#L173
+
 import (
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
-
-	tmetric "github.com/influxdata/telegraf/metric"
 )
 
 const (
@@ -22,8 +23,6 @@ const (
 
 var uncommenter = strings.NewReplacer("\\n", "\n")
 
-// this is adapted from datadog's apache licensed version at
-// https://github.com/DataDog/datadog-agent/blob/fcfc74f106ab1bd6991dfc6a7061c558d934158a/pkg/dogstatsd/parser.go#L173
 func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostname string) error {
 	// _e{title.length,text.length}:title|text
 	//  [
@@ -53,7 +52,9 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 	if err != nil {
 		return fmt.Errorf("Invalid message format, could not parse title.length: '%s'", rawLen[0])
 	}
-
+	if len(rawLen[1]) < 1 {
+		return fmt.Errorf("Invalid message format, could not parse text.length: '%s'", rawLen[0])
+	}
 	textLen, err := strconv.ParseInt(rawLen[1][:len(rawLen[1])-1], 10, 64)
 	if err != nil {
 		return fmt.Errorf("Invalid message format, could not parse text.length: '%s'", rawLen[0])
@@ -70,28 +71,16 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 		return fmt.Errorf("Invalid event message format: empty 'title' or 'text' field")
 	}
 
-	// Handle hostname, with a priority to the h: field, then the host:
-	// tag and finally the defaultHostname value
-	// Metadata
-	m := event{
-		name: rawTitle,
-	}
-	m.tags = make(map[string]string, strings.Count(message, ",")+2) // allocate for the approximate number of tags
-	m.fields = make(map[string]interface{}, 9)
-	m.fields["alert_type"] = eventInfo // default event type
-	m.fields["text"] = uncommenter.Replace(string(rawText))
-	// host is a magic tag in the system, and it expects it to replace the result of h: if it is present
-	// telegraf will add a"host" tag anyway with different meaning than dogstatsd, so we need to use source instead of host.
-
-	m.tags["source"] = defaultHostname
-	m.fields["priority"] = priorityNormal
-	m.ts = now
+	name := rawTitle
+	tags := make(map[string]string, strings.Count(message, ",")+2) // allocate for the approximate number of tags
+	fields := make(map[string]interface{}, 9)
+	fields["alert_type"] = eventInfo // default event type
+	fields["text"] = uncommenter.Replace(string(rawText))
+	tags["source"] = defaultHostname // Use source tag because host is reserved tag key in Telegraf.
+	fields["priority"] = priorityNormal
+	ts := now
 	if len(message) < 2 {
-		newM, err := tmetric.New(m.name, m.tags, m.fields, m.ts)
-		if err != nil {
-			return err
-		}
-		s.acc.AddMetric(newM)
+		s.acc.AddFields(name, fields, tags, ts)
 		return nil
 	}
 
@@ -106,45 +95,43 @@ func (s *Statsd) parseEventMessage(now time.Time, message string, defaultHostnam
 			if err != nil {
 				continue
 			}
-			m.fields["ts"] = ts
+			fields["ts"] = ts
 		case "p:":
 			switch rawMetadataFields[i][2:] {
 			case priorityLow:
-				m.fields["priority"] = priorityLow
+				fields["priority"] = priorityLow
 			case priorityNormal: // we already used this as a default
 			default:
 				continue
 			}
 		case "h:":
-			m.tags["source"] = rawMetadataFields[i][2:]
+			tags["source"] = rawMetadataFields[i][2:]
 		case "t:":
 			switch rawMetadataFields[i][2:] {
 			case eventError, eventWarning, eventSuccess, eventInfo:
-				m.fields["alert_type"] = rawMetadataFields[i][2:] // already set for info
+				fields["alert_type"] = rawMetadataFields[i][2:] // already set for info
 			default:
 				continue
 			}
 		case "k:":
-			m.tags["aggregation_key"] = rawMetadataFields[i][2:]
+			tags["aggregation_key"] = rawMetadataFields[i][2:]
 		case "s:":
-			m.fields["source_type_name"] = rawMetadataFields[i][2:]
+			fields["source_type_name"] = rawMetadataFields[i][2:]
 		default:
 			if rawMetadataFields[i][0] == '#' {
-				parseDataDogTags(m.tags, rawMetadataFields[i][1:])
+				parseDataDogTags(tags, rawMetadataFields[i][1:])
 			} else {
 				return fmt.Errorf("unknown metadata type: '%s'", rawMetadataFields[i])
 			}
 		}
 	}
-	if host, ok := m.tags["host"]; ok {
-		delete(m.tags, "host")
-		m.tags["source"] = host
+	// Use source tag because host is reserved tag key in Telegraf.
+	// In datadog the host tag and `h:` are interchangable, so we have to chech for the host tag.
+	if host, ok := tags["host"]; ok {
+		delete(tags, "host")
+		tags["source"] = host
 	}
-	newM, err := tmetric.New(m.name, m.tags, m.fields, m.ts)
-	if err != nil {
-		return err
-	}
-	s.acc.AddMetric(newM)
+	s.acc.AddFields(name, fields, tags, ts)
 	return nil
 }
 

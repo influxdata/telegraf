@@ -434,6 +434,12 @@ func TestEventError(t *testing.T) {
 	err = s.parseEventMessage(now, "_e{5,}:title|text", "default-hostname")
 	require.Error(t, err)
 
+	err = s.parseEventMessage(now, "_e{100,:title|text", "default-hostname")
+	require.Error(t, err)
+
+	err = s.parseEventMessage(now, "_e,100:title|text", "default-hostname")
+	require.Error(t, err)
+
 	err = s.parseEventMessage(now, "_e{,4}:title|text", "default-hostname")
 	require.Error(t, err)
 

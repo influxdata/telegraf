@@ -157,7 +157,6 @@ type metric struct {
 	additive   bool
 	samplerate float64
 	tags       map[string]string
-	ts         time.Time // for events
 }
 
 type cachedset struct {
@@ -185,12 +184,6 @@ type cachedtimings struct {
 }
 
 //this is used internally for building out an event
-type event struct {
-	name   string
-	fields map[string]interface{}
-	tags   map[string]string
-	ts     time.Time
-}
 
 func (_ *Statsd) Description() string {
 	return "Statsd UDP/TCP Server"
@@ -225,7 +218,7 @@ const sampleConfig = `
   delete_sets = true
   ## Reset timings & histograms every interval (default=true)
   delete_timings = true
-  
+
   ## Percentiles to calculate for timing & histogram stats
   percentiles = [90]
 
@@ -236,9 +229,8 @@ const sampleConfig = `
   ## http://docs.datadoghq.com/guides/dogstatsd/
   parse_data_dog_tags = false
 
-  ## Parses events in the datadog statsd format
-  ## http://docs.datadoghq.com/guides/dogstatsd/
-  parse_data_dog_events = false
+  ## Parses datadog extensions to the statsd format
+  datadog_extensions = false
 
   ## Statsd data translation templates, more info can be read here:
   ## https://github.com/influxdata/telegraf/blob/master/docs/TEMPLATE_PATTERN.md
@@ -323,6 +315,7 @@ func (s *Statsd) Gather(acc telegraf.Accumulator) error {
 func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	if s.ParseDataDogTags {
 		s.DataDogExtensions = true
+		log.Printf("W! [inputs.statsd] The parse_data_dog_tags option is deprecated, use datadog_extensions instead.")
 	}
 	// Make data structures
 	s.gauges = make(map[string]cachedgauge)
@@ -519,10 +512,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	defer s.Unlock()
 
 	lineTags := make(map[string]string)
-	if s.ParseDataDogTags {
-		log.Printf("I! WARNING statsd: parse_data_dog_tags config option is deprecated,  please use datadog_extensions instead")
-	}
-	if s.ParseDataDogTags || s.DataDogExtensions {
+	if s.DataDogExtensions {
 		recombinedSegments := make([]string, 0)
 		// datadog tags look like this:
 		// users.online:1|c|@0.5|#country:china,environment:production
@@ -824,15 +814,12 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 		s.CurrentConnections.Incr(-1)
 	}()
 	addr := conn.RemoteAddr()
-	a, err := url.Parse(addr.String())
-	var host string
+	parsedURL, err := url.Parse(addr.String())
 	if err != nil {
 		// this should never happen because the conn handler should give us parsable addresses,
 		// but if it does we will know
-		host = "badhost"
 		log.Printf("E! failed to parse %s\n", addr)
-	} else {
-		host = a.Host
+		return // close the connetion and return
 	}
 	var n int
 	scanner := bufio.NewScanner(conn)
@@ -857,7 +844,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 			b.WriteByte('\n')
 
 			select {
-			case s.in <- input{Buffer: b, Time: time.Now(), Addr: host}:
+			case s.in <- input{Buffer: b, Time: time.Now(), Addr: parsedURL.Host}:
 			default:
 				s.drops++
 				if s.drops == 1 || s.drops%s.AllowedPendingMessages == 0 {
