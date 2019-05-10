@@ -2,6 +2,7 @@ package amqp
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/influxdata/telegraf/internal/tls"
 	"github.com/influxdata/telegraf/plugins/outputs"
 	"github.com/influxdata/telegraf/plugins/serializers"
-
 	"github.com/streadway/amqp"
 )
 
@@ -55,6 +55,7 @@ type AMQP struct {
 	Headers            map[string]string `toml:"headers"`
 	Timeout            internal.Duration `toml:"timeout"`
 	UseBatchFormat     bool              `toml:"use_batch_format"`
+	ContentEncoding    string            `toml:"content_encoding"`
 	tls.ClientConfig
 
 	serializer   serializers.Serializer
@@ -62,6 +63,7 @@ type AMQP struct {
 	client       Client
 	config       *ClientConfig
 	sentMessages int
+	encoder      internal.ContentEncoder
 }
 
 type Client interface {
@@ -150,6 +152,10 @@ var sampleConfig = `
   ## Recommended to set to true.
   # use_batch_format = false
 
+  ## Content encoding for message payloads, can be set to "gzip" to or
+  ## "identity" to apply no encoding.
+  # content_encoding = "identity"
+
   ## Data format to output.
   ## Each data format has its own unique set of configuration options, read
   ## more about them here:
@@ -176,6 +182,19 @@ func (q *AMQP) Connect() error {
 			return err
 		}
 		q.config = config
+	}
+
+	var err error
+	switch q.ContentEncoding {
+	case "gzip":
+		q.encoder, err = internal.NewGzipEncoder()
+		if err != nil {
+			return err
+		}
+	case "identity", "":
+		q.encoder = internal.NewIdentityEncoder()
+	default:
+		return errors.New("invalid value for content_encoding")
 	}
 
 	client, err := q.connect(q.config)
@@ -224,6 +243,11 @@ func (q *AMQP) Write(metrics []telegraf.Metric) error {
 	first := true
 	for key, metrics := range batches {
 		body, err := q.serialize(metrics)
+		if err != nil {
+			return err
+		}
+
+		body, err = q.encoder.Encode(body)
 		if err != nil {
 			return err
 		}
