@@ -35,11 +35,11 @@ const (
 	MaxTCPConnections          = 250
 )
 
-var dropwarn = "E! Error: statsd message queue full. " +
+var dropwarn = "E! [inputs.statsd] Error: statsd message queue full. " +
 	"We have dropped %d messages so far. " +
 	"You may want to increase allowed_pending_messages in the config\n"
 
-var malformedwarn = "E! Statsd over TCP has received %d malformed packets" +
+var malformedwarn = "E! [inputs.statsd] Statsd over TCP has received %d malformed packets" +
 	" thus far."
 
 // Statsd allows the importing of statsd and dogstatsd data.
@@ -350,7 +350,7 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 	}
 
 	if s.ConvertNames {
-		log.Printf("I! WARNING statsd: convert_names config option is deprecated," +
+		log.Printf("W! [inputs.statsd] statsd: convert_names config option is deprecated," +
 			" please use metric_separator instead")
 	}
 
@@ -369,7 +369,7 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 			return err
 		}
 
-		log.Println("I! Statsd UDP listener listening on: ", conn.LocalAddr().String())
+		log.Println("I! [inputs.statsd] Statsd UDP listener listening on: ", conn.LocalAddr().String())
 		s.UDPlistener = conn
 
 		s.wg.Add(1)
@@ -387,7 +387,7 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 			return err
 		}
 
-		log.Println("I! TCP Statsd listening on: ", listener.Addr().String())
+		log.Println("I! [inputs.statsd] TCP Statsd listening on: ", listener.Addr().String())
 		s.TCPlistener = listener
 
 		s.wg.Add(1)
@@ -403,7 +403,7 @@ func (s *Statsd) Start(_ telegraf.Accumulator) error {
 		defer s.wg.Done()
 		s.parser()
 	}()
-	log.Printf("I! Started the statsd service on %s\n", s.ServiceAddress)
+	log.Printf("I! [inputs.statsd] Started the statsd service on %s\n", s.ServiceAddress)
 	return nil
 }
 
@@ -462,7 +462,7 @@ func (s *Statsd) udpListen(conn *net.UDPConn) error {
 		default:
 			n, addr, err := conn.ReadFromUDP(buf)
 			if err != nil && !strings.Contains(err.Error(), "closed network") {
-				log.Printf("E! Error READ: %s\n", err.Error())
+				log.Printf("E! [inputs.statsd] Error READ: %s\n", err.Error())
 				continue
 			}
 			b := s.bufPool.Get().(*bytes.Buffer)
@@ -534,7 +534,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 	// Validate splitting the line on ":"
 	bits := strings.Split(line, ":")
 	if len(bits) < 2 {
-		log.Printf("E! Error: splitting ':', Unable to parse metric: %s\n", line)
+		log.Printf("E! [inputs.statsd] Error: splitting ':', Unable to parse metric: %s\n", line)
 		return errors.New("Error Parsing statsd line")
 	}
 
@@ -550,11 +550,11 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		// Validate splitting the bit on "|"
 		pipesplit := strings.Split(bit, "|")
 		if len(pipesplit) < 2 {
-			log.Printf("E! Error: splitting '|', Unable to parse metric: %s\n", line)
+			log.Printf("E! [inputs.statsd] Error: splitting '|', Unable to parse metric: %s\n", line)
 			return errors.New("Error Parsing statsd line")
 		} else if len(pipesplit) > 2 {
 			sr := pipesplit[2]
-			errmsg := "E! Error: parsing sample rate, %s, it must be in format like: " +
+			errmsg := "E! [inputs.statsd] parsing sample rate, %s, it must be in format like: " +
 				"@0.1, @0.5, etc. Ignoring sample rate for line: %s\n"
 			if strings.Contains(sr, "@") && len(sr) > 1 {
 				samplerate, err := strconv.ParseFloat(sr[1:], 64)
@@ -574,14 +574,14 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		case "g", "c", "s", "ms", "h":
 			m.mtype = pipesplit[1]
 		default:
-			log.Printf("E! Error: Statsd Metric type %s unsupported", pipesplit[1])
+			log.Printf("E! [inputs.statsd] Error: Statsd Metric type %s unsupported", pipesplit[1])
 			return errors.New("Error Parsing statsd line")
 		}
 
 		// Parse the value
 		if strings.HasPrefix(pipesplit[0], "-") || strings.HasPrefix(pipesplit[0], "+") {
 			if m.mtype != "g" && m.mtype != "c" {
-				log.Printf("E! Error: +- values are only supported for gauges & counters: %s\n", line)
+				log.Printf("E! [inputs.statsd] Error: +- values are only supported for gauges & counters: %s\n", line)
 				return errors.New("Error Parsing statsd line")
 			}
 			m.additive = true
@@ -591,7 +591,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 		case "g", "ms", "h":
 			v, err := strconv.ParseFloat(pipesplit[0], 64)
 			if err != nil {
-				log.Printf("E! Error: parsing value to float64: %s\n", line)
+				log.Printf("E! [inputs.statsd] Error: parsing value to float64: %s\n", line)
 				return errors.New("Error Parsing statsd line")
 			}
 			m.floatvalue = v
@@ -601,7 +601,7 @@ func (s *Statsd) parseStatsdLine(line string) error {
 			if err != nil {
 				v2, err2 := strconv.ParseFloat(pipesplit[0], 64)
 				if err2 != nil {
-					log.Printf("E! Error: parsing value to int64: %s\n", line)
+					log.Printf("E! [inputs.statsd] Error: parsing value to int64: %s\n", line)
 					return errors.New("Error Parsing statsd line")
 				}
 				v = int64(v2)
@@ -818,7 +818,7 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 	if err != nil {
 		// this should never happen because the conn handler should give us parsable addresses,
 		// but if it does we will know
-		log.Printf("E! failed to parse %s\n", addr)
+		log.Printf("E! [inputs.statsd] failed to parse %s\n", addr)
 		return // close the connetion and return
 	}
 	var n int
@@ -858,8 +858,8 @@ func (s *Statsd) handler(conn *net.TCPConn, id string) {
 // refuser refuses a TCP connection
 func (s *Statsd) refuser(conn *net.TCPConn) {
 	conn.Close()
-	log.Printf("I! Refused TCP Connection from %s", conn.RemoteAddr())
-	log.Printf("I! WARNING: Maximum TCP Connections reached, you may want to" +
+	log.Printf("I! [inputs.statsd] Refused TCP Connection from %s", conn.RemoteAddr())
+	log.Printf("I! [inputs.statsd] WARNING: Maximum TCP Connections reached, you may want to" +
 		" adjust max_tcp_connections")
 }
 
@@ -879,7 +879,7 @@ func (s *Statsd) remember(id string, conn *net.TCPConn) {
 
 func (s *Statsd) Stop() {
 	s.Lock()
-	log.Println("I! Stopping the statsd service")
+	log.Println("I! [inputs.statsd] Stopping the statsd service")
 	close(s.done)
 	if s.isUDP() {
 		s.UDPlistener.Close()
