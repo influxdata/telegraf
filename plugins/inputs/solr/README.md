@@ -16,6 +16,10 @@ Tested from 3.5 to 7.*
   ##
   ## specify a list of one or more Solr cores (default - all)
   # cores = ["main"]
+  ##
+  ## Optional HTTP Basic Auth Credentials
+  # username = "username"
+  # password = "pa$$word"
 ```
 
 ### Example output of gathered metrics:
