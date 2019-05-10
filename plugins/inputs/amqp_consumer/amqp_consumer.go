@@ -40,6 +40,7 @@ type AMQPConsumer struct {
 	// Queue Name
 	Queue           string `toml:"queue"`
 	QueueDurability string `toml:"queue_durability"`
+	QueuePassive    bool   `toml:"queue_passive"`
 
 	// Binding Key
 	BindingKey string `toml:"binding_key"`
@@ -118,6 +119,9 @@ func (a *AMQPConsumer) SampleConfig() string {
 
   ## AMQP queue durability can be "transient" or "durable".
   queue_durability = "durable"
+
+  ## If true, queue will be passively declared.
+  # queue_passive = false
 
   ## Binding Key.
   binding_key = "#"
@@ -297,24 +301,13 @@ func (a *AMQPConsumer) connect(amqpConf *amqp.Config) (<-chan amqp.Delivery, err
 		return nil, err
 	}
 
-	var queueDurable = true
-	switch a.QueueDurability {
-	case "transient":
-		queueDurable = false
-	default:
-		queueDurable = true
-	}
-
-	q, err := ch.QueueDeclare(
-		a.Queue,      // queue
-		queueDurable, // durable
-		false,        // delete when unused
-		false,        // exclusive
-		false,        // no-wait
-		nil,          // arguments
-	)
+	q, err := declareQueue(
+		ch,
+		a.Queue,
+		a.QueueDurability,
+		a.QueuePassive)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to declare a queue: %s", err)
+		return nil, err
 	}
 
 	err = ch.QueueBind(
@@ -387,6 +380,48 @@ func declareExchange(
 		return fmt.Errorf("error declaring exchange: %v", err)
 	}
 	return nil
+}
+
+func declareQueue(
+	channel *amqp.Channel,
+	queueName string,
+	queueDurability string,
+	queuePassive bool,
+) (*amqp.Queue, error) {
+	var queue amqp.Queue
+	var err error
+
+	var queueDurable = true
+	switch queueDurability {
+	case "transient":
+		queueDurable = false
+	default:
+		queueDurable = true
+	}
+
+	if queuePassive {
+		queue, err = channel.QueueDeclarePassive(
+			queueName,    // queue
+			queueDurable, // durable
+			false,        // delete when unused
+			false,        // exclusive
+			false,        // no-wait
+			nil,          // arguments
+		)
+	} else {
+		queue, err = channel.QueueDeclare(
+			queueName,    // queue
+			queueDurable, // durable
+			false,        // delete when unused
+			false,        // exclusive
+			false,        // no-wait
+			nil,          // arguments
+		)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error declaring queue: %v", err)
+	}
+	return &queue, nil
 }
 
 // Read messages from queue and add them to the Accumulator

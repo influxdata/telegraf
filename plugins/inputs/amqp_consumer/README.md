@@ -49,6 +49,9 @@ The following defaults are known to work with RabbitMQ:
   ## AMQP queue durability can be "transient" or "durable".
   queue_durability = "durable"
 
+  ## If true, queue will be passively declared.
+  # queue_passive = false
+
   ## Binding Key
   binding_key = "#"
 
