@@ -154,6 +154,10 @@ var sampleConfig = `
 
   ## Content encoding for message payloads, can be set to "gzip" to or
   ## "identity" to apply no encoding.
+  ##
+  ## Please note that when use_batch_format = false each amqp message contains only
+  ## a single metric, it is recommended to use compression with batch format
+  ## for best results.
   # content_encoding = "identity"
 
   ## Data format to output.
