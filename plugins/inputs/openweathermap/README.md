@@ -16,8 +16,8 @@ Find city identifiers in this [list](http://bulk.openweathermap.org/sample/city.
   # city_id = ["2988507", "519188"]
   ## HTTP response timeout (default: 5s)
   # response_timeout = "5s"
-  ## Query the next ten days forecast (default: true)
-  # forecast_enable = true
+  ## Query the current weather and future forecast
+  # fetch = ["weather", "forecast"]
 ```
 
 ### Metrics:
@@ -43,7 +43,7 @@ Using this configuration:
   app_id = "change_this_with_your_appid"
   city_id = ["2988507", "519188"]
   response_timeout = "5s"
-  forecast_enable = true
+  fetch = ["weather", "forecast"]
 ```
 
 When run with:

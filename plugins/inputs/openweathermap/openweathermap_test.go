@@ -287,10 +287,10 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 	defer ts.Close()
 
 	n := &OpenWeatherMap{
-		BaseUrl:        ts.URL,
-		AppId:          "noappid",
-		CityId:         []string{"2988507"},
-		ForecastEnable: true,
+		BaseUrl: ts.URL,
+		AppId:   "noappid",
+		CityId:  []string{"2988507"},
+		Fetch:   []string{"weather", "forecast"},
 	}
 
 	var acc testutil.Accumulator
@@ -334,6 +334,7 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 		BaseUrl: ts.URL,
 		AppId:   "noappid",
 		CityId:  []string{"2988507"},
+		Fetch:   []string{"weather"},
 	}
 
 	var acc testutil.Accumulator
@@ -379,6 +380,7 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 		BaseUrl: ts.URL,
 		AppId:   "noappid",
 		CityId:  []string{"524901", "703448", "2643743"},
+		Fetch:   []string{"weather"},
 	}
 
 	var acc testutil.Accumulator
@@ -456,6 +458,7 @@ func TestResponseTimeout(t *testing.T) {
 		BaseUrl: ts.URL,
 		AppId:   "noappid",
 		CityId:  []string{"2988507"},
+		Fetch:   []string{"weather"},
 	}
 
 	var acc testutil.Accumulator

@@ -26,7 +26,7 @@ type OpenWeatherMap struct {
 	client *http.Client
 
 	ResponseTimeout internal.Duration
-	ForecastEnable  bool
+	Fetch           []string
 }
 
 // https://openweathermap.org/current#severalid
@@ -44,7 +44,7 @@ var sampleConfig = `
 
   # HTTP response timeout (default: 5s)
   response_timeout = "5s"
-  forecast_enable = true
+  fetch = ["weather", "forecast"]
 `
 
 func (n *OpenWeatherMap) SampleConfig() string {
@@ -75,53 +75,57 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 		n.client = client
 	}
 
-	if n.ForecastEnable {
-		var u *url.URL
-		var addr *url.URL
+	for _, fetch := range n.Fetch {
+		if fetch == "forecast" {
+			var u *url.URL
+			var addr *url.URL
 
-		tags := map[string]string{
-			"forecast": "true",
-		}
-		for _, city := range n.CityId {
-			u, err = url.Parse(fmt.Sprintf("/data/2.5/forecast?id=%s&APPID=%s", city, n.AppId))
-			if err != nil {
-				acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
-				continue
+			tags := map[string]string{
+				"forecast": "true",
 			}
-			addr = base.ResolveReference(u)
-			wg.Add(1)
-			go func(addr *url.URL) {
-				defer wg.Done()
-				acc.AddError(n.gatherUrl(addr, acc, tags))
-			}(addr)
-		}
-	}
-	j := 0
-	for j < len(n.CityId) {
-		var u *url.URL
-		var addr *url.URL
-		strs = make([]string, 0)
-		for i := 0; j < len(n.CityId) && i < owmRequestSeveralCityId; i++ {
-			strs = append(strs, n.CityId[j])
-			j++
-		}
-		cities := strings.Join(strs, ",")
+			for _, city := range n.CityId {
+				u, err = url.Parse(fmt.Sprintf("/data/2.5/forecast?id=%s&APPID=%s", city, n.AppId))
+				if err != nil {
+					acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+					continue
+				}
+				addr = base.ResolveReference(u)
+				wg.Add(1)
+				go func(addr *url.URL) {
+					defer wg.Done()
+					acc.AddError(n.gatherUrl(addr, acc, tags))
+				}(addr)
+			}
+		} else if fetch == "weather" {
+			j := 0
+			for j < len(n.CityId) {
+				var u *url.URL
+				var addr *url.URL
+				strs = make([]string, 0)
+				for i := 0; j < len(n.CityId) && i < owmRequestSeveralCityId; i++ {
+					strs = append(strs, n.CityId[j])
+					j++
+				}
+				cities := strings.Join(strs, ",")
 
-		tags := map[string]string{
-			"forecast": "false",
-		}
-		u, err = url.Parse(fmt.Sprintf("/data/2.5/group?id=%s&APPID=%s", cities, n.AppId))
-		if err != nil {
-			acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
-			continue
-		}
+				tags := map[string]string{
+					"forecast": "false",
+				}
+				u, err = url.Parse(fmt.Sprintf("/data/2.5/group?id=%s&APPID=%s", cities, n.AppId))
+				if err != nil {
+					acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
+					continue
+				}
 
-		addr = base.ResolveReference(u)
-		wg.Add(1)
-		go func(addr *url.URL) {
-			defer wg.Done()
-			acc.AddError(n.gatherUrl(addr, acc, tags))
-		}(addr)
+				addr = base.ResolveReference(u)
+				wg.Add(1)
+				go func(addr *url.URL) {
+					defer wg.Done()
+					acc.AddError(n.gatherUrl(addr, acc, tags))
+				}(addr)
+			}
+
+		}
 	}
 
 	wg.Wait()
@@ -285,7 +289,6 @@ func init() {
 		}
 		return &OpenWeatherMap{
 			ResponseTimeout: tmout,
-			ForecastEnable:  true,
 		}
 	})
 }
