@@ -25,6 +25,7 @@ type OpenWeatherMap struct {
 
 	ResponseTimeout internal.Duration
 	Fetch           []string
+	Units           string
 }
 
 // https://openweathermap.org/current#severalid
@@ -32,6 +33,7 @@ type OpenWeatherMap struct {
 // The limit of locations is 20.
 const owmRequestSeveralCityId int = 20
 const defaultResponseTimeout time.Duration = time.Second * 5
+const defaultUnits string = "metric"
 
 var sampleConfig = `
   ## Root url of weather map REST API
@@ -43,6 +45,7 @@ var sampleConfig = `
   # HTTP response timeout (default: 5s)
   response_timeout = "5s"
   fetch = ["weather", "forecast"]
+  units = "metric"
 `
 
 func (n *OpenWeatherMap) SampleConfig() string {
@@ -72,14 +75,17 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 		}
 		n.client = client
 	}
-
+	units := n.Units
+	if units == "" {
+		units = defaultUnits
+	}
 	for _, fetch := range n.Fetch {
 		if fetch == "forecast" {
 			var u *url.URL
 			var addr *url.URL
 
 			for _, city := range n.CityId {
-				u, err = url.Parse(fmt.Sprintf("/data/2.5/forecast?id=%s&APPID=%s", city, n.AppId))
+				u, err = url.Parse(fmt.Sprintf("/data/2.5/forecast?id=%s&APPID=%s&units=%s", city, n.AppId, units))
 				if err != nil {
 					acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
 					continue
@@ -103,7 +109,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 				}
 				cities := strings.Join(strs, ",")
 
-				u, err = url.Parse(fmt.Sprintf("/data/2.5/group?id=%s&APPID=%s", cities, n.AppId))
+				u, err = url.Parse(fmt.Sprintf("/data/2.5/group?id=%s&APPID=%s&units=%s", cities, n.AppId, units))
 				if err != nil {
 					acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
 					continue
@@ -250,7 +256,7 @@ func (s *Status) Gather(forecast bool, acc telegraf.Accumulator) {
 				"wind_speed":   e.Wind.Speed,
 				"humidity":     e.Main.Humidity,
 				"pressure":     e.Main.Pressure,
-				"temperature":  e.Main.Temp - 273.15, // Kelvin to Celsius
+				"temperature":  e.Main.Temp,
 			},
 			tags,
 			tm)
@@ -275,7 +281,7 @@ func (s *Status) Gather(forecast bool, acc telegraf.Accumulator) {
 					"wind_speed":   e.Wind.Speed,
 					"humidity":     e.Main.Humidity,
 					"pressure":     e.Main.Pressure,
-					"temperature":  e.Main.Temp - 273.15, // Kelvin to Celsius
+					"temperature":  e.Main.Temp,
 				},
 				tags,
 				tm)
@@ -290,6 +296,7 @@ func init() {
 		}
 		return &OpenWeatherMap{
 			ResponseTimeout: tmout,
+			Units:           defaultUnits,
 		}
 	})
 }

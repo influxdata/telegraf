@@ -18,6 +18,9 @@ Find city identifiers in this [list](http://bulk.openweathermap.org/sample/city.
   # response_timeout = "5s"
   ## Query the current weather and future forecast
   # fetch = ["weather", "forecast"]
+  ## For temperature in Fahrenheit use units=imperial
+  ## For temperature in Celsius use units=metric (default)
+  # units = "metric"
 ```
 
 ### Metrics:
@@ -44,6 +47,7 @@ Using this configuration:
   city_id = ["2988507", "519188"]
   response_timeout = "5s"
   fetch = ["weather", "forecast"]
+  units = "metric"
 ```
 
 When run with:

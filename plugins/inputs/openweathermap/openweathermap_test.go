@@ -41,10 +41,8 @@ const sampleStatusResponse = `
                 "humidity": 91,
                 "pressure": 1018.65,
                 "sea_level": 1030.99,
-                "temp": 279.86,
-                "temp_kf": -2.14,
-                "temp_max": 281.999,
-                "temp_min": 279.86
+                "temp": 6.71,
+                "temp_kf": -2.14
             },
             "rain": {
                 "3h": 0.035
@@ -76,10 +74,8 @@ const sampleStatusResponse = `
                 "humidity": 98,
                 "pressure": 1032.18,
                 "sea_level": 1044.78,
-                "temp": 279.535,
-                "temp_kf": 0,
-                "temp_max": 279.535,
-                "temp_min": 279.535
+                "temp": 6.38,
+                "temp_kf": 0
             },
             "rain": {
                 "3h": 0.049999999999997
@@ -118,9 +114,7 @@ const groupWeatherResponse = `
         "main": {
             "humidity": 87,
             "pressure": 1007,
-            "temp": 282.4,
-            "temp_max": 283.15,
-            "temp_min": 281.15
+            "temp": 9.25
         },
         "name": "Paris",
         "sys": {
@@ -171,11 +165,9 @@ const batchWeatherResponse = `
 			"icon": "03d"
 		}],
 		"main": {
-			"temp": 282.72,
+			"temp": 9.57,
 			"pressure": 1014,
-			"humidity": 46,
-			"temp_min": 282.15,
-			"temp_max": 283.15
+			"humidity": 46
 		},
 		"visibility": 10000,
 		"wind": {
@@ -208,11 +200,9 @@ const batchWeatherResponse = `
 			"icon": "09d"
 		}],
 		"main": {
-			"temp": 292.44,
+			"temp": 19.29,
 			"pressure": 1009,
-			"humidity": 63,
-			"temp_min": 291.15,
-			"temp_max": 294.26
+			"humidity": 63
 		},
 		"visibility": 10000,
 		"wind": {
@@ -244,11 +234,9 @@ const batchWeatherResponse = `
 			"icon": "04d"
 		}],
 		"main": {
-			"temp": 283.78,
+			"temp": 10.62,
 			"pressure": 1019,
-			"humidity": 66,
-			"temp_min": 282.15,
-			"temp_max": 285.37
+			"humidity": 66
 		},
 		"visibility": 10000,
 		"wind": {
@@ -289,6 +277,7 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 		AppId:   "noappid",
 		CityId:  []string{"2988507"},
 		Fetch:   []string{"weather", "forecast"},
+		Units:   "metric",
 	}
 
 	var acc testutil.Accumulator
@@ -302,7 +291,7 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 			map[string]interface{}{
 				"humidity":     int64(91),
 				"pressure":     1018.65,
-				"temperature":  6.710000000000036,
+				"temperature":  6.71,
 				"rain":         0.035,
 				"wind_degrees": 228.501,
 				"wind_speed":   3.76,
@@ -319,7 +308,7 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 			map[string]interface{}{
 				"humidity":     int64(98),
 				"pressure":     1032.18,
-				"temperature":  6.385000000000048,
+				"temperature":  6.38,
 				"rain":         0.049999999999997,
 				"wind_degrees": 335.005,
 				"wind_speed":   2.66,
@@ -352,6 +341,7 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 		AppId:   "noappid",
 		CityId:  []string{"2988507"},
 		Fetch:   []string{"weather"},
+		Units:   "metric",
 	}
 
 	var acc testutil.Accumulator
@@ -397,6 +387,7 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 		AppId:   "noappid",
 		CityId:  []string{"524901", "703448", "2643743"},
 		Fetch:   []string{"weather"},
+		Units:   "metric",
 	}
 
 	var acc testutil.Accumulator
@@ -411,7 +402,7 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 		map[string]interface{}{
 			"humidity":     int64(46),
 			"pressure":     1014.0,
-			"temperature":  9.57000000000005,
+			"temperature":  9.57,
 			"wind_degrees": 60.0,
 			"wind_speed":   5.0,
 			"rain":         0.0,
@@ -425,7 +416,7 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 		map[string]interface{}{
 			"humidity":     int64(63),
 			"pressure":     1009.0,
-			"temperature":  19.29000000000002,
+			"temperature":  19.29,
 			"wind_degrees": 0.0,
 			"wind_speed":   1.0,
 			"rain":         0.0,
@@ -439,7 +430,7 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 		map[string]interface{}{
 			"humidity":     int64(66),
 			"pressure":     1019.0,
-			"temperature":  10.629999999999995,
+			"temperature":  10.62,
 			"wind_degrees": 290.0,
 			"wind_speed":   6.2,
 			"rain":         0.072,
@@ -472,6 +463,7 @@ func TestResponseTimeout(t *testing.T) {
 		AppId:   "noappid",
 		CityId:  []string{"2988507"},
 		Fetch:   []string{"weather"},
+		Units:   "metric",
 	}
 
 	var acc testutil.Accumulator
