@@ -76,7 +76,6 @@ func (l *Logzio) Connect() error {
 // Close any connections to the Output
 func (l *Logzio) Close() error {
 	log.Printf("D! [logzio] Closing logz.io output\n")
-	l.client.CloseIdleConnections()
 	return nil
 }
 
