@@ -105,48 +105,46 @@ const sampleStatusResponse = `
 }
 `
 
-const sampleWeatherResponse = `
+const groupWeatherResponse = `
 {
-    "base": "stations",
-    "clouds": {
-        "all": 75
-    },
-    "cod": 200,
-    "coord": {
-        "lat": 48.85,
-        "lon": 2.35
-    },
-    "dt": 1544194800,
-    "id": 2988507,
-    "main": {
-        "humidity": 87,
-        "pressure": 1007,
-        "temp": 282.4,
-        "temp_max": 283.15,
-        "temp_min": 281.15
-    },
-    "name": "Paris",
-    "sys": {
-        "country": "FR",
-        "id": 6550,
-        "message": 0.002,
-        "sunrise": 1544167818,
-        "sunset": 1544198047,
-        "type": 1
-    },
-    "visibility": 10000,
-    "weather": [
-        {
-            "description": "light intensity drizzle",
-            "icon": "09d",
-            "id": 300,
-            "main": "Drizzle"
+    "cnt": 1,
+    "list": [{
+        "coord": {
+            "lat": 48.85,
+            "lon": 2.35
+        },
+        "dt": 1544194800,
+        "id": 2988507,
+        "main": {
+            "humidity": 87,
+            "pressure": 1007,
+            "temp": 282.4,
+            "temp_max": 283.15,
+            "temp_min": 281.15
+        },
+        "name": "Paris",
+        "sys": {
+            "country": "FR",
+            "id": 6550,
+            "message": 0.002,
+            "sunrise": 1544167818,
+            "sunset": 1544198047,
+            "type": 1
+        },
+        "visibility": 10000,
+        "weather": [
+            {
+                "description": "light intensity drizzle",
+                "icon": "09d",
+                "id": 300,
+                "main": "Drizzle"
+            }
+        ],
+        "wind": {
+            "deg": 290,
+            "speed": 8.7
         }
-    ],
-    "wind": {
-        "deg": 290,
-        "speed": 8.7
-    }
+    }]
 }
 `
 
@@ -318,7 +316,7 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var rsp string
 		if r.URL.Path == "/data/2.5/group" {
-			rsp = sampleWeatherResponse
+			rsp = groupWeatherResponse
 			w.Header()["Content-Type"] = []string{"application/json"}
 		} else if r.URL.Path == "/data/2.5/forecast" {
 			rsp = sampleNoContent
@@ -440,7 +438,7 @@ func TestResponseTimeout(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var rsp string
 		if r.URL.Path == "/data/2.5/group" {
-			rsp = sampleWeatherResponse
+			rsp = groupWeatherResponse
 			w.Header()["Content-Type"] = []string{"application/json"}
 		} else if r.URL.Path == "/data/2.5/forecast" {
 			rsp = sampleStatusResponse

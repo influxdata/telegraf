@@ -2,10 +2,8 @@ package openweathermap
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -159,10 +157,6 @@ func (n *OpenWeatherMap) gatherUrl(addr *url.URL, acc telegraf.Accumulator, tags
 	contentType := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
 	switch contentType {
 	case "application/json":
-		body, _ := ioutil.ReadAll(resp.Body)
-		resp.Body = ioutil.NopCloser(bytes.NewBuffer(body))
-		err = gatherStatusUrl(bufio.NewReader(resp.Body), tags, acc)
-		resp.Body = ioutil.NopCloser(bytes.NewBuffer(body))
 		err = gatherWeatherUrl(bufio.NewReader(resp.Body), tags, acc)
 		return err
 	default:
@@ -231,32 +225,13 @@ type Status struct {
 	List []WeatherEntry `json:"list"`
 }
 
-func gatherStatusUrl(r *bufio.Reader, tags map[string]string, acc telegraf.Accumulator) error {
+func gatherWeatherUrl(r *bufio.Reader, tags map[string]string, acc telegraf.Accumulator) error {
 	dec := json.NewDecoder(r)
 	status := &Status{}
 	if err := dec.Decode(status); err != nil {
 		return fmt.Errorf("Error while decoding JSON response: %s", err)
 	}
 	status.Gather(tags, acc)
-	return nil
-}
-
-func gatherWeatherUrl(r *bufio.Reader, tags map[string]string, acc telegraf.Accumulator) error {
-	dec := json.NewDecoder(r)
-	status := &Status{}
-	e := WeatherEntry{}
-	if err := dec.Decode(&e); err != nil {
-		return fmt.Errorf("Error while decoding JSON response: %s", err)
-	}
-	status.List = make([]WeatherEntry, 0)
-	if len(e.Name) > 0 {
-		status.List = append(status.List, e)
-		status.City.Coord.Lat = e.Coord.Lat
-		status.City.Coord.Lon = e.Coord.Lon
-		status.City.Id = e.Id
-		status.City.Name = e.Name
-		status.Gather(tags, acc)
-	}
 	return nil
 }
 
