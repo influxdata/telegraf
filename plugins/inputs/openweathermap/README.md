@@ -9,11 +9,11 @@ Find city identifiers in this [list](http://bulk.openweathermap.org/sample/city.
 ```toml
 [[inputs.openweathermap]]
   ## Root url of API to pull stats
-  # base_url = "http://api.openweathermap.org/data/2.5/"
+  # base_url = "https://api.openweathermap.org/data/2.5/"
   ## Your personal user token from openweathermap.org
   # app_id = "xxxxxxxxxxxxxxxxxxxxxxx"
   ## List of city identifiers
-  # cities = ["2988507", "519188"]
+  # city_id = ["2988507", "519188"]
   ## HTTP response timeout (default: 5s)
   # response_timeout = "5s"
   ## Query the next ten days forecast (default: true)
@@ -29,7 +29,7 @@ Find city identifiers in this [list](http://bulk.openweathermap.org/sample/city.
     - pressure (float, Atmospheric pressure in hPa)
     - rain (float, Rain volume for the last 3 hours, mm)
     - wind_speed (float, Wind speed. Unit Default: meter/sec)
-    - wind_deg (float,  Wind direction, degrees)
+    - wind_degrees (float,  Wind direction, degrees)
   - tags:
     - city_id
     - forecast
@@ -39,9 +39,9 @@ Find city identifiers in this [list](http://bulk.openweathermap.org/sample/city.
 Using this configuration:
 ```toml
 [[inputs.openweathermap]]
-  base_url = "http://api.openweathermap.org/data/2.5/"
+  base_url = "https://api.openweathermap.org/data/2.5/"
   app_id = "change_this_with_your_appid"
-  cities = ["2988507", "519188"]
+  city_id = ["2988507", "519188"]
   response_timeout = "5s"
   forecast_enable = true
 ```
@@ -53,12 +53,12 @@ When run with:
 
 It produces data similar to:
 ```
-> weather,city_id=4303602,forecast=false humidity=51i,pressure=1012,rain=0,temperature=16.410000000000025,wind_deg=170,wind_speed=2.6 1556393944000000000
-> weather,city_id=2988507,forecast=false humidity=87i,pressure=1020,rain=0,temperature=7.110000000000014,wind_deg=260,wind_speed=5.1 1556393841000000000
-> weather,city_id=2988507,forecast=true humidity=69i,pressure=1020.38,rain=0,temperature=5.650000000000034,wind_deg=268.456,wind_speed=5.83 1556398800000000000
-> weather,city_id=2988507,forecast=true humidity=74i,pressure=1020.87,rain=0,temperature=5.810000000000002,wind_deg=261.296,wind_speed=5.43 1556409600000000000
-> weather,city_id=4303602,forecast=true humidity=66i,pressure=1010.63,rain=0,temperature=14.740000000000009,wind_deg=196.264,wind_speed=4.3 1556398800000000000
-> weather,city_id=4303602,forecast=true humidity=92i,pressure=1008.88,rain=1.812,temperature=9.840000000000032,wind_deg=111.451,wind_speed=2.8 1556409600000000000
+> weather,city_id=4303602,forecast=false humidity=51i,pressure=1012,rain=0,temperature=16.410000000000025,wind_degrees=170,wind_speed=2.6 1556393944000000000
+> weather,city_id=2988507,forecast=false humidity=87i,pressure=1020,rain=0,temperature=7.110000000000014,wind_degrees=260,wind_speed=5.1 1556393841000000000
+> weather,city_id=2988507,forecast=true humidity=69i,pressure=1020.38,rain=0,temperature=5.650000000000034,wind_degrees=268.456,wind_speed=5.83 1556398800000000000
+> weather,city_id=2988507,forecast=true humidity=74i,pressure=1020.87,rain=0,temperature=5.810000000000002,wind_degrees=261.296,wind_speed=5.43 1556409600000000000
+> weather,city_id=4303602,forecast=true humidity=66i,pressure=1010.63,rain=0,temperature=14.740000000000009,wind_degrees=196.264,wind_speed=4.3 1556398800000000000
+> weather,city_id=4303602,forecast=true humidity=92i,pressure=1008.88,rain=1.812,temperature=9.840000000000032,wind_degrees=111.451,wind_speed=2.8 1556409600000000000
 ```
 
 

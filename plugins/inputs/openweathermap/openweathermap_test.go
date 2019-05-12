@@ -289,7 +289,7 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 	n := &OpenWeatherMap{
 		BaseUrl:        ts.URL,
 		AppId:          "noappid",
-		Cities:         []string{"2988507"},
+		CityId:         []string{"2988507"},
 		ForecastEnable: true,
 	}
 
@@ -301,12 +301,12 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 		t,
 		"weather",
 		map[string]interface{}{
-			"humidity":    int64(91),
-			"pressure":    1018.65,
-			"temperature": 6.710000000000036,
-			"rain":        0.035,
-			"wind_deg":    228.501,
-			"wind_speed":  3.76,
+			"humidity":     int64(91),
+			"pressure":     1018.65,
+			"temperature":  6.710000000000036,
+			"rain":         0.035,
+			"wind_degrees": 228.501,
+			"wind_speed":   3.76,
 		},
 		map[string]string{
 			"city_id":  "2988507",
@@ -333,7 +333,7 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 	n := &OpenWeatherMap{
 		BaseUrl: ts.URL,
 		AppId:   "noappid",
-		Cities:  []string{"2988507"},
+		CityId:  []string{"2988507"},
 	}
 
 	var acc testutil.Accumulator
@@ -346,12 +346,12 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 		t,
 		"weather",
 		map[string]interface{}{
-			"humidity":    int64(87),
-			"pressure":    1007.0,
-			"temperature": 9.25,
-			"wind_deg":    290.0,
-			"wind_speed":  8.7,
-			"rain":        0.0,
+			"humidity":     int64(87),
+			"pressure":     1007.0,
+			"temperature":  9.25,
+			"wind_degrees": 290.0,
+			"wind_speed":   8.7,
+			"rain":         0.0,
 		},
 		map[string]string{
 			"city_id":  "2988507",
@@ -378,7 +378,7 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 	n := &OpenWeatherMap{
 		BaseUrl: ts.URL,
 		AppId:   "noappid",
-		Cities:  []string{"524901", "703448", "2643743"},
+		CityId:  []string{"524901", "703448", "2643743"},
 	}
 
 	var acc testutil.Accumulator
@@ -391,12 +391,12 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 		t,
 		"weather",
 		map[string]interface{}{
-			"humidity":    int64(46),
-			"pressure":    1014.0,
-			"temperature": 9.57000000000005,
-			"wind_deg":    60.0,
-			"wind_speed":  5.0,
-			"rain":        0.0,
+			"humidity":     int64(46),
+			"pressure":     1014.0,
+			"temperature":  9.57000000000005,
+			"wind_degrees": 60.0,
+			"wind_speed":   5.0,
+			"rain":         0.0,
 		},
 		map[string]string{
 			"city_id":  "524901",
@@ -406,12 +406,12 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 		t,
 		"weather",
 		map[string]interface{}{
-			"humidity":    int64(63),
-			"pressure":    1009.0,
-			"temperature": 19.29000000000002,
-			"wind_deg":    0.0,
-			"wind_speed":  1.0,
-			"rain":        0.0,
+			"humidity":     int64(63),
+			"pressure":     1009.0,
+			"temperature":  19.29000000000002,
+			"wind_degrees": 0.0,
+			"wind_speed":   1.0,
+			"rain":         0.0,
 		},
 		map[string]string{
 			"city_id":  "703448",
@@ -421,12 +421,12 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 		t,
 		"weather",
 		map[string]interface{}{
-			"humidity":    int64(66),
-			"pressure":    1019.0,
-			"temperature": 10.629999999999995,
-			"wind_deg":    290.0,
-			"wind_speed":  6.2,
-			"rain":        0.072,
+			"humidity":     int64(66),
+			"pressure":     1019.0,
+			"temperature":  10.629999999999995,
+			"wind_degrees": 290.0,
+			"wind_speed":   6.2,
+			"rain":         0.072,
 		},
 		map[string]string{
 			"city_id":  "2643743",
@@ -455,7 +455,7 @@ func TestResponseTimeout(t *testing.T) {
 	n := &OpenWeatherMap{
 		BaseUrl: ts.URL,
 		AppId:   "noappid",
-		Cities:  []string{"2988507"},
+		CityId:  []string{"2988507"},
 	}
 
 	var acc testutil.Accumulator

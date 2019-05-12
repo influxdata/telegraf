@@ -21,7 +21,7 @@ import (
 type OpenWeatherMap struct {
 	BaseUrl string
 	AppId   string
-	Cities  []string
+	CityId  []string
 
 	client *http.Client
 
@@ -32,15 +32,15 @@ type OpenWeatherMap struct {
 // https://openweathermap.org/current#severalid
 // Call for several city IDs
 // The limit of locations is 20.
-const OWM_REQUEST_SEVERAL_CITY_IDS int = 20
-const DEFAULT_RESPONSE_TIMEOUT time.Duration = time.Second * 5
+const owmRequestSeveralCityId int = 20
+const defaultResponseTimeout time.Duration = time.Second * 5
 
 var sampleConfig = `
   ## Root url of weather map REST API
-  base_url = "http://api.openweathermap.org/"
+  base_url = "https://api.openweathermap.org/"
   # Your personal user token from openweathermap.org
   app_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  cities = ["2988507", "2988588"]
+  city_id = ["2988507", "2988588"]
 
   # HTTP response timeout (default: 5s)
   response_timeout = "5s"
@@ -82,7 +82,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 		tags := map[string]string{
 			"forecast": "true",
 		}
-		for _, city := range n.Cities {
+		for _, city := range n.CityId {
 			u, err = url.Parse(fmt.Sprintf("/data/2.5/forecast?id=%s&APPID=%s", city, n.AppId))
 			if err != nil {
 				acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
@@ -97,12 +97,12 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 		}
 	}
 	j := 0
-	for j < len(n.Cities) {
+	for j < len(n.CityId) {
 		var u *url.URL
 		var addr *url.URL
 		strs = make([]string, 0)
-		for i := 0; j < len(n.Cities) && i < OWM_REQUEST_SEVERAL_CITY_IDS; i++ {
-			strs = append(strs, n.Cities[j])
+		for i := 0; j < len(n.CityId) && i < owmRequestSeveralCityId; i++ {
+			strs = append(strs, n.CityId[j])
 			j++
 		}
 		cities := strings.Join(strs, ",")
@@ -131,7 +131,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 func (n *OpenWeatherMap) createHttpClient() (*http.Client, error) {
 
 	if n.ResponseTimeout.Duration < time.Second {
-		n.ResponseTimeout.Duration = DEFAULT_RESPONSE_TIMEOUT
+		n.ResponseTimeout.Duration = defaultResponseTimeout
 	}
 
 	client := &http.Client{
@@ -266,12 +266,12 @@ func (s *Status) Gather(tags map[string]string, acc telegraf.Accumulator) {
 		acc.AddFields(
 			"weather",
 			map[string]interface{}{
-				"rain":        e.Rain.Rain3,
-				"wind_deg":    e.Wind.Deg,
-				"wind_speed":  e.Wind.Speed,
-				"humidity":    e.Main.Humidity,
-				"pressure":    e.Main.Pressure,
-				"temperature": e.Main.Temp - 273.15, // Kelvin to Celsius
+				"rain":         e.Rain.Rain3,
+				"wind_degrees": e.Wind.Deg,
+				"wind_speed":   e.Wind.Speed,
+				"humidity":     e.Main.Humidity,
+				"pressure":     e.Main.Pressure,
+				"temperature":  e.Main.Temp - 273.15, // Kelvin to Celsius
 			},
 			tags,
 			tm)
@@ -281,7 +281,7 @@ func (s *Status) Gather(tags map[string]string, acc telegraf.Accumulator) {
 func init() {
 	inputs.Add("openweathermap", func() telegraf.Input {
 		tmout := internal.Duration{
-			Duration: DEFAULT_RESPONSE_TIMEOUT,
+			Duration: defaultResponseTimeout,
 		}
 		return &OpenWeatherMap{
 			ResponseTimeout: tmout,
