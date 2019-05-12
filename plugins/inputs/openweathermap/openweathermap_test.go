@@ -295,21 +295,40 @@ func TestForecastGeneratesMetrics(t *testing.T) {
 
 	err_openweathermap := n.Gather(&acc)
 	require.NoError(t, err_openweathermap)
-	acc.AssertContainsTaggedFields(
-		t,
-		"weather",
-		map[string]interface{}{
-			"humidity":     int64(91),
-			"pressure":     1018.65,
-			"temperature":  6.710000000000036,
-			"rain":         0.035,
-			"wind_degrees": 228.501,
-			"wind_speed":   3.76,
-		},
-		map[string]string{
-			"city_id":  "2988507",
-			"forecast": "true",
-		})
+	for _, forecast_tag := range []string{"*", "3h"} {
+		acc.AssertContainsTaggedFields(
+			t,
+			"weather",
+			map[string]interface{}{
+				"humidity":     int64(91),
+				"pressure":     1018.65,
+				"temperature":  6.710000000000036,
+				"rain":         0.035,
+				"wind_degrees": 228.501,
+				"wind_speed":   3.76,
+			},
+			map[string]string{
+				"city_id":  "2988507",
+				"forecast": forecast_tag,
+			})
+	}
+	for _, forecast_tag := range []string{"*", "6h"} {
+		acc.AssertContainsTaggedFields(
+			t,
+			"weather",
+			map[string]interface{}{
+				"humidity":     int64(98),
+				"pressure":     1032.18,
+				"temperature":  6.385000000000048,
+				"rain":         0.049999999999997,
+				"wind_degrees": 335.005,
+				"wind_speed":   2.66,
+			},
+			map[string]string{
+				"city_id":  "2988507",
+				"forecast": forecast_tag,
+			})
+	}
 }
 
 func TestWeatherGeneratesMetrics(t *testing.T) {
@@ -353,8 +372,7 @@ func TestWeatherGeneratesMetrics(t *testing.T) {
 			"rain":         0.0,
 		},
 		map[string]string{
-			"city_id":  "2988507",
-			"forecast": "false",
+			"city_id": "2988507",
 		})
 }
 
@@ -399,8 +417,7 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 			"rain":         0.0,
 		},
 		map[string]string{
-			"city_id":  "524901",
-			"forecast": "false",
+			"city_id": "524901",
 		})
 	acc.AssertContainsTaggedFields(
 		t,
@@ -414,8 +431,7 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 			"rain":         0.0,
 		},
 		map[string]string{
-			"city_id":  "703448",
-			"forecast": "false",
+			"city_id": "703448",
 		})
 	acc.AssertContainsTaggedFields(
 		t,
@@ -429,8 +445,7 @@ func TestBatchWeatherGeneratesMetrics(t *testing.T) {
 			"rain":         0.072,
 		},
 		map[string]string{
-			"city_id":  "2643743",
-			"forecast": "false",
+			"city_id": "2643743",
 		})
 }
 

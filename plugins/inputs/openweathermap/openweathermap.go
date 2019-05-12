@@ -78,9 +78,6 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 			var u *url.URL
 			var addr *url.URL
 
-			tags := map[string]string{
-				"forecast": "true",
-			}
 			for _, city := range n.CityId {
 				u, err = url.Parse(fmt.Sprintf("/data/2.5/forecast?id=%s&APPID=%s", city, n.AppId))
 				if err != nil {
@@ -91,7 +88,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 				wg.Add(1)
 				go func(addr *url.URL) {
 					defer wg.Done()
-					acc.AddError(n.gatherUrl(addr, acc, tags))
+					acc.AddError(n.gatherUrl(addr, acc, true))
 				}(addr)
 			}
 		} else if fetch == "weather" {
@@ -106,9 +103,6 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 				}
 				cities := strings.Join(strs, ",")
 
-				tags := map[string]string{
-					"forecast": "false",
-				}
 				u, err = url.Parse(fmt.Sprintf("/data/2.5/group?id=%s&APPID=%s", cities, n.AppId))
 				if err != nil {
 					acc.AddError(fmt.Errorf("Unable to parse address '%s': %s", u, err))
@@ -119,7 +113,7 @@ func (n *OpenWeatherMap) Gather(acc telegraf.Accumulator) error {
 				wg.Add(1)
 				go func(addr *url.URL) {
 					defer wg.Done()
-					acc.AddError(n.gatherUrl(addr, acc, tags))
+					acc.AddError(n.gatherUrl(addr, acc, false))
 				}(addr)
 			}
 
@@ -144,7 +138,7 @@ func (n *OpenWeatherMap) createHttpClient() (*http.Client, error) {
 	return client, nil
 }
 
-func (n *OpenWeatherMap) gatherUrl(addr *url.URL, acc telegraf.Accumulator, tags map[string]string) error {
+func (n *OpenWeatherMap) gatherUrl(addr *url.URL, acc telegraf.Accumulator, forecast bool) error {
 	resp, err := n.client.Get(addr.String())
 
 	if err != nil {
@@ -157,7 +151,7 @@ func (n *OpenWeatherMap) gatherUrl(addr *url.URL, acc telegraf.Accumulator, tags
 	contentType := strings.Split(resp.Header.Get("Content-Type"), ";")[0]
 	switch contentType {
 	case "application/json":
-		err = gatherWeatherUrl(bufio.NewReader(resp.Body), tags, acc)
+		err = gatherWeatherUrl(bufio.NewReader(resp.Body), forecast, acc)
 		return err
 	default:
 		return fmt.Errorf("%s returned unexpected content type %s", addr.String(), contentType)
@@ -225,22 +219,28 @@ type Status struct {
 	List []WeatherEntry `json:"list"`
 }
 
-func gatherWeatherUrl(r *bufio.Reader, tags map[string]string, acc telegraf.Accumulator) error {
+func gatherWeatherUrl(r *bufio.Reader, forecast bool, acc telegraf.Accumulator) error {
 	dec := json.NewDecoder(r)
 	status := &Status{}
 	if err := dec.Decode(status); err != nil {
 		return fmt.Errorf("Error while decoding JSON response: %s", err)
 	}
-	status.Gather(tags, acc)
+	status.Gather(forecast, acc)
 	return nil
 }
 
-func (s *Status) Gather(tags map[string]string, acc telegraf.Accumulator) {
-	tags["city_id"] = strconv.FormatInt(s.City.Id, 10)
-	for _, e := range s.List {
+func (s *Status) Gather(forecast bool, acc telegraf.Accumulator) {
+	tags := map[string]string{
+		"city_id": strconv.FormatInt(s.City.Id, 10),
+	}
+
+	for i, e := range s.List {
 		tm := time.Unix(e.Dt, 0)
 		if e.Id > 0 {
 			tags["city_id"] = strconv.FormatInt(e.Id, 10)
+		}
+		if forecast {
+			tags["forecast"] = fmt.Sprintf("%dh", (i+1)*3)
 		}
 		acc.AddFields(
 			"weather",
@@ -254,6 +254,32 @@ func (s *Status) Gather(tags map[string]string, acc telegraf.Accumulator) {
 			},
 			tags,
 			tm)
+	}
+	if forecast {
+		// intentional: overwrite future data points
+		// under the * tag
+		tags := map[string]string{
+			"city_id":  strconv.FormatInt(s.City.Id, 10),
+			"forecast": "*",
+		}
+		for _, e := range s.List {
+			tm := time.Unix(e.Dt, 0)
+			if e.Id > 0 {
+				tags["city_id"] = strconv.FormatInt(e.Id, 10)
+			}
+			acc.AddFields(
+				"weather",
+				map[string]interface{}{
+					"rain":         e.Rain.Rain3,
+					"wind_degrees": e.Wind.Deg,
+					"wind_speed":   e.Wind.Speed,
+					"humidity":     e.Main.Humidity,
+					"pressure":     e.Main.Pressure,
+					"temperature":  e.Main.Temp - 273.15, // Kelvin to Celsius
+				},
+				tags,
+				tm)
+		}
 	}
 }
 
